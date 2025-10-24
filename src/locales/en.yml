@@ -1,0 +1,14 @@
+home:
+  header:
+    help: Help
+    settings: Settings
+  tabs:
+    recent: Recent Creations
+    engines: Game Engines
+  search:
+    placeholder:
+      recent: Search recent creations...
+      engines: Search game engines...
+    view:
+      grid: Grid View
+      list: List View

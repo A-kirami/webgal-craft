@@ -1,0 +1,56 @@
+[package]
+name = "webgal-craft"
+version = "0.0.0"
+description = "WebGAL Visual Novel Studio"
+authors = ["akirami"]
+edition = "2021"
+
+[lib]
+name = "webgal_craft_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5", features = [] }
+
+[dependencies]
+tauri = { version = "2.9", features = ["macos-private-api"] }
+tauri-plugin-dialog = "2.3"
+tauri-plugin-log = "2.6"
+tauri-plugin-os = "2.3"
+tauri-plugin-process = "2.3"
+tauri-plugin-opener = "2.5"
+tauri-plugin-fs = { version = "2.4", features = ["watch"] }
+tauri-plugin-persisted-scope = "2.3"
+tauri-plugin-prevent-default = { version = "3.0", features = ["platform-windows"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+log = "0.4"
+axum = { version = "0.8", features = ["ws"] }
+tokio = { version = "1.48", features = ["rt", "sync", "fs"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs"] }
+portpicker = "0.1"
+regex = "1.12"
+thiserror = "2.0"
+anyhow = "1.0"
+image = "0.25"
+webp = "0.3"
+trash = "5.2"
+blake3 = "1.8"
+futures = "0.3"
+urlencoding = "2.1"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = "2.3"
+tauri-plugin-updater = "2.9"
+tauri-plugin-window-state = "2.4"
+
+[profile.dev]
+incremental = true # Compile your binary in smaller steps.
+
+[profile.release]
+codegen-units = 1 # Allows LLVM to perform better optimization.
+lto = true # Enables link-time-optimizations.
+opt-level = "s" # Prioritizes small binary size. Use `3` if you prefer speed.
+panic = "abort" # Higher performance by disabling panic handlers.
+strip = true # Ensures debug symbols are removed.

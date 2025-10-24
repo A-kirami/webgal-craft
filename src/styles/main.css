@@ -1,0 +1,32 @@
+@import "./notivue.css";
+@import "./monaco.css";
+
+@font-face {
+  font-family: FiraCode;
+  font-style: normal;
+  font-weight: 300 700;
+  src: url("/font/FiraCode-VF.woff2") format("woff2-variations");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: SourceHanSans;
+  font-style: normal;
+  font-weight: 250 900;
+  src: url("/font/SourceHanSansCN-VF.otf.woff2") format("woff2-variations");
+  font-display: swap;
+}
+
+html,
+body {
+  font-family: SourceHanSans, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  @apply m-0 select-none p-0 antialiased overflow-hidden;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}

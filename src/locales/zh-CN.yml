@@ -1,0 +1,14 @@
+home:
+  header:
+    help: 帮助
+    settings: 设置
+  tabs:
+    recent: 最近创作
+    engines: 游戏引擎
+  search:
+    placeholder:
+      recent: 搜索最近创作...
+      engines: 搜索游戏引擎...
+    view:
+      grid: 网格视图
+      list: 列表视图

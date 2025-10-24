@@ -1,0 +1,22 @@
+.monaco-editor {
+  /* stylelint-disable-next-line selector-class-pattern */
+  & .decorationsOverviewRuler {
+    @apply w-2.5!;
+  }
+
+  & .scrollbar.vertical {
+    @apply w-2.5!;
+
+    & .slider {
+      @apply w-2.5! rounded-full;
+    }
+  }
+
+  & .scrollbar.horizontal {
+    @apply h-2.5!;
+
+    & .slider {
+      @apply h-2.5! rounded-full;
+    }
+  }
+}

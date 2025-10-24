@@ -1,0 +1,14 @@
+home:
+  header:
+    help: ヘルプ
+    settings: 設定
+  tabs:
+    recent: 最近の作品
+    engines: ゲームエンジン
+  search:
+    placeholder:
+      recent: 最近の作品を検索...
+      engines: ゲームエンジンを検索...
+    view:
+      grid: グリッド表示
+      list: リスト表示
