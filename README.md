@@ -11,6 +11,6 @@
 
 ## 📄 许可证
 
-Code: MIT, 2025, Akirami
+Code: MPL-2.0, 2025, Akirami
 
 Logo: CC-BY-NC-ND, Designs by Akirami
