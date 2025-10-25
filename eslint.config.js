@@ -44,6 +44,7 @@ export default defineConfig(
     ],
   },
   {
+    files: ['**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx', '**/*.vue'],
     languageOptions: {
       parserOptions: {
         parser: tseslint.parser,
@@ -127,7 +128,7 @@ export default defineConfig(
     },
   },
   {
-    files: ['*.vue', '**/*.vue'],
+    files: ['**/*.vue'],
     rules: {
       'vue/multi-word-component-names': 'off',
       'vue/max-attributes-per-line': 'off',
