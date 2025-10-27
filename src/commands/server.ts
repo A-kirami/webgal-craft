@@ -13,7 +13,7 @@ async function startServer(host: string, port: number): Promise<string> {
     // 创建消息通道
     const channel = new Channel<string>()
 
-    channel.onmessage = async (message) => {
+    channel.onmessage = async (_message) => {
       // logger.debug(message)
     }
 

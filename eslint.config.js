@@ -37,6 +37,7 @@ export default defineConfig(
     ignores: [
       '**/.husky',
       '**/scripts',
+      '**/target',
       '**/components/ui',
       '**/auto-import?(s).d.ts',
       '**/components.d.ts',
@@ -125,6 +126,7 @@ export default defineConfig(
           ],
         },
       ],
+      'linebreak-style': ['warn', 'windows'],
     },
   },
   {
@@ -138,6 +140,7 @@ export default defineConfig(
           case: 'pascalCase',
         },
       ],
+      'linebreak-style': ['warn', 'windows'],
     },
   },
   {

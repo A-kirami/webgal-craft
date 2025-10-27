@@ -19,6 +19,6 @@ const currentEditor = $computed(() => {
 
 <template>
   <KeepAlive>
-    <component :is="currentEditor" ::state="editorStore.currentState" />
+    <component :is="currentEditor" ::state="editorStore.currentState as any" />
   </KeepAlive>
 </template>

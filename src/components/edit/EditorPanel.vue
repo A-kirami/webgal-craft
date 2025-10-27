@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useTabsStore } from '~/stores/tabs'
+// import { useTabsStore } from '~/stores/tabs'
 
-const tabsStore = useTabsStore()
+// const tabsStore = useTabsStore()
 const editorStore = useEditorStore()
 </script>
 

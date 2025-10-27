@@ -2,9 +2,9 @@
 const workspaceStore = useWorkspaceStore()
 let refreshKey = $ref(0)
 
-function refreshIframe() {
-  refreshKey++
-}
+// function refreshIframe() {
+//   refreshKey++
+// }
 </script>
 
 <template>

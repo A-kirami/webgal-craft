@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { join } from '@tauri-apps/api/path'
-import { File, FilePen, FilePlus, Folder, FolderOpen, FolderPlus, Layers } from 'lucide-vue-next'
+import { File, FilePen as _FilePen, FilePlus, Folder, FolderOpen, FolderPlus, Layers } from 'lucide-vue-next'
 import { TreeItem, TreeRoot, TreeVirtualizer } from 'reka-ui'
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip'
