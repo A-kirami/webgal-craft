@@ -126,7 +126,7 @@ export default defineConfig(
           ],
         },
       ],
-      'linebreak-style': ['warn', 'windows'],
+      'linebreak-style': ['warn', 'unix'],
     },
   },
   {
@@ -140,7 +140,7 @@ export default defineConfig(
           case: 'pascalCase',
         },
       ],
-      'linebreak-style': ['warn', 'windows'],
+      'linebreak-style': ['warn', 'unix'],
     },
   },
   {
