@@ -17,7 +17,7 @@ use axum::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         ConnectInfo, Path as AxumPath, State as AxumState,
     },
-    http::{Request, StatusCode, Uri},
+    http::{header::CACHE_CONTROL, HeaderValue, Request, StatusCode, Uri},
     response::{IntoResponse, Redirect},
     routing::get,
     Router,
@@ -31,15 +31,9 @@ use tokio::{
     task::JoinHandle,
 };
 use tower::util::ServiceExt;
-use tower_http::services::ServeDir;
+use tower_http::{services::ServeDir, set_header::SetResponseHeaderLayer};
 
 use super::{AppError, AppResult};
-use tower_http::set_header::SetResponseHeaderLayer;
-use tauri::http::{
-    header::CACHE_CONTROL,
-    HeaderValue,
-    Response,
-};
 
 /// 应用程序状态
 /// 包含：
@@ -302,13 +296,11 @@ pub async fn start_server(
             ),
         )
         .with_state(state_guard.app_state.clone())
-        .layer(
-            // 关闭文件缓存, 以便每次都能读到最新的文件
-            SetResponseHeaderLayer::overriding(
-                CACHE_CONTROL,
-                |_res: &Response<_>| Some(HeaderValue::from_static("no-store")),
-            )
-        );
+        // 统一添加禁止缓存的响应头
+        .layer(SetResponseHeaderLayer::overriding(
+            CACHE_CONTROL,
+            HeaderValue::from_static("no-store, no-cache, must-revalidate, max-age=0"),
+        ));
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
