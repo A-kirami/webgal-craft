@@ -34,6 +34,12 @@ use tower::util::ServiceExt;
 use tower_http::services::ServeDir;
 
 use super::{AppError, AppResult};
+use tower_http::set_header::SetResponseHeaderLayer;
+use tauri::http::{
+    header::CACHE_CONTROL,
+    HeaderValue,
+    Response,
+};
 
 /// 应用程序状态
 /// 包含：
@@ -295,7 +301,14 @@ pub async fn start_server(
                 },
             ),
         )
-        .with_state(state_guard.app_state.clone());
+        .with_state(state_guard.app_state.clone())
+        .layer(
+            // 关闭文件缓存, 以便每次都能读到最新的文件
+            SetResponseHeaderLayer::overriding(
+                CACHE_CONTROL,
+                |_res: &Response<_>| Some(HeaderValue::from_static("no-store")),
+            )
+        );
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
