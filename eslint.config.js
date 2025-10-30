@@ -1,4 +1,3 @@
-import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { includeIgnoreFile } from '@eslint/compat'
@@ -15,9 +14,7 @@ import eslintPluginYml from 'eslint-plugin-yml'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const gitignorePath = path.resolve(__dirname, '.gitignore')
+const gitignorePath = fileURLToPath(new URL('.gitignore', import.meta.url))
 
 export default defineConfig(
   eslint.configs.recommended,
@@ -35,8 +32,8 @@ export default defineConfig(
   includeIgnoreFile(gitignorePath),
   {
     ignores: [
-      '**/.husky',
-      '**/scripts',
+      '.husky',
+      'src-tauri',
       '**/components/ui',
       '**/auto-import?(s).d.ts',
       '**/components.d.ts',
@@ -44,7 +41,7 @@ export default defineConfig(
     ],
   },
   {
-    files: ['**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx', '**/*.vue'],
+    files: ['**/*.{js,jsx,ts,tsx,cjs,mjs,vue}'],
     languageOptions: {
       parserOptions: {
         parser: tseslint.parser,
