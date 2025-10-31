@@ -1,0 +1,26 @@
+{
+  "base": "vs",
+  "inherit": true,
+  "rules": [
+    { "token": "comment", "foreground": "75715E" }, 
+    { "token": "comment.line.webgal", "foreground": "75715E" }, 
+    { "token": "keyword.operator.webgal", "foreground": "f9005a", "fontStyle": "bold" },
+    { "token": "string.unquoted.utterance.webgal", "foreground": "998f2f" },
+    { "token": "meta.command.webgal", "foreground": "0089b3" },
+    { "token": "support.function.command.webgal", "foreground": "0089b3" },
+    { "token": "meta.character.webgal", "foreground": "8db118", "fontStyle": "bold underline" },
+    { "token": "entity.name.type.character.webgal", "foreground": "8db118", "fontStyle": "bold underline" },
+    { "token": "variable.parameter.webgal", "foreground": "cf7000" },
+    { "token": "variable.other.webgal", "foreground": "039e2a" }
+  ],
+  "colors": {
+    "editor.background": "#fafafa",
+    "editor.lineHighlightBackground": "#e6e3c3",
+    "editor.selectionBackground": "#ccc9ad8e",
+    "editor.wordHighlightBackground": "#00000011",
+    "editorCursor.foreground": "#666663",
+    "editorIndentGuide.background": "#D3D4D5",
+    "editorLineNumber.foreground": "#a2a19c",
+    "editorWhitespace.foreground": "#bbbbb7"
+  }
+}

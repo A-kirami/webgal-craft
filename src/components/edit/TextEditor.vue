@@ -2,8 +2,19 @@
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import { writeTextFile } from '@tauri-apps/plugin-fs'
 import * as monaco from 'monaco-editor'
+import { wireTmGrammars } from 'monaco-editor-textmate'
+import { Registry } from 'monaco-textmate'
 
+import webgalTextmate from '~/grammars/webgal.tmLanguage.json'
 import { useLineHolderStore } from '~/stores/line-holder'
+import lightTheme from '~/themes/vs-webgal.json'
+import { initOnigasm } from '~/utils/init-onigasm'
+
+interface languageConfig {
+  name: string
+  displayName: string
+  extension: string
+}
 
 const state = defineModel<TextModeState>('state', { required: true })
 
@@ -16,12 +27,66 @@ const MONACO_EDITOR_OPTIONS = {
   cursorSmoothCaretAnimation: 'on',
   formatOnPaste: true,
   formatOnType: true,
-  minimap: { enabled: false },
+  minimap: { enabled: true },
+  unicodeHighlight: {
+    ambiguousCharacters: false,
+    invisibleCharacters: false,
+    nonBasicASCII: false,
+  },
+  smoothScrolling: true,
 } as const satisfies monaco.editor.IEditorConstructionOptions
 
 let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
 const interactedPaths = new Set<string>()
 const lineHolderStore = useLineHolderStore()
+const languageConfigs: languageConfig[] = [
+  { name: 'unknown', displayName: '未知文件', extension: '' },
+  { name: 'plaintext', displayName: '纯文本文件', extension: 'txt' },
+  { name: 'webgal', displayName: 'WebGal 脚本', extension: 'txt' },
+  { name: 'json', displayName: 'JSON 文件', extension: 'json' },
+]
+let currentTheme = $ref('vs')
+
+// 配置 WebGal 语言支持
+const configureWebgalScript = async () => {
+  if (!editor) {
+    return
+  }
+  // 定义主题
+  monaco.editor.defineTheme('vs-webgal', lightTheme as monaco.editor.IStandaloneThemeData)
+  currentTheme = 'vs-webgal'
+  // 注册语言
+  monaco.languages.register({ id: 'webgal' })
+  monaco.languages.setLanguageConfiguration('webgal', {
+    comments: {
+      lineComment: ';',
+    },
+    brackets: [['{', '}'], ['[', ']'], ['(', ')']],
+    autoClosingPairs: [
+      { open: '{', close: '}' },
+      { open: '[', close: ']' },
+      { open: '(', close: ')' },
+      { open: '"', close: '"' },
+    ],
+  })
+  // 语法高亮
+  const registry = new Registry({
+    getGrammarDefinition: async (scopeName, _dependentScope) => {
+      if (scopeName === 'source.webgal') {
+        return {
+          format: 'json',
+          content: JSON.stringify(webgalTextmate),
+        }
+      }
+      return { format: 'json', content: '' }
+    },
+  })
+  const grammars = new Map()
+  grammars.set('webgal', 'source.webgal')
+  await initOnigasm()
+  await registry.loadGrammar('source.webgal')
+  await wireTmGrammars(monaco, registry, grammars, editor)
+}
 
 // 发送同步场景命令
 const syncScene = () => {
@@ -88,6 +153,10 @@ const handleCursorPositionChange = (event: monaco.editor.ICursorPositionChangedE
 const handleMount = (editorInstance: monaco.editor.IStandaloneCodeEditor) => {
   editor = editorInstance
   editor.onDidChangeCursorPosition(handleCursorPositionChange)
+  editor.updateOptions({
+    wordWrap: 'on', // Todo: 应该做成设置项
+  })
+  configureWebgalScript()
 }
 
 // 内容变化处理
@@ -95,6 +164,32 @@ const handleChange = (newValue: string) => {
   state.value.isDirty = true
   saveTextFile(newValue)
 }
+
+// 计算当前文件语言
+const getLanguageConfig = computed((): languageConfig => {
+  switch (state.value.visualType) {
+    case 'scene': {
+      return languageConfigs.find(lang => lang.name === 'webgal')!
+    }
+    case 'animation': {
+      return languageConfigs.find(lang => lang.name === 'json')!
+    }
+    default: {
+      break
+    }
+  }
+  // 根据文件扩展名判断
+  const extensionMatch = state.value.path.match(/\.([^.]+)$/)
+  if (!extensionMatch) {
+    return languageConfigs[0]
+  }
+  const fileType = extensionMatch[1].toLowerCase()
+  const langConfig = languageConfigs.find(lang => lang.extension === fileType)
+  if (!langConfig) {
+    return languageConfigs[0]
+  }
+  return langConfig
+})
 
 // TODO: 其实应该监听 tabs 的活动标签页，目前点击当前 tab 不会聚焦，之后再改
 watch(() => state.value.path, () => {
@@ -119,13 +214,13 @@ watch(() => state.value.path, () => {
       <VueMonacoEditor
         :path="state.path"
         ::value="state.textContent"
-        theme="vs"
-        language="plaintext"
+        :theme="currentTheme"
+        :language="getLanguageConfig.name"
         :options="MONACO_EDITOR_OPTIONS"
         @mount="handleMount"
         @change="handleChange"
       />
     </div>
-    <TextEditorStatusBar class="text-nowrap" :is-saved="!state.isDirty" :content="state.textContent" />
+    <TextEditorStatusBar class="text-nowrap" :is-saved="!state.isDirty" :content="state.textContent" :file-language="getLanguageConfig.displayName" />
   </div>
 </template>
