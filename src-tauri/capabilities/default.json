@@ -29,6 +29,7 @@
     "fs:allow-remove",
     "fs:allow-stat",
     "fs:allow-watch",
+    "fs:allow-write-text-file",
     {
       "identifier": "fs:scope",
       "allow": [{ "path": "$DOCUMENT/WebGALCraft" }, { "path": "$DOCUMENT/WebGALCraft/**" }]
