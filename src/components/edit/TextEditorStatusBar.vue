@@ -5,6 +5,7 @@ import { ChartSpline, FileText } from 'lucide-vue-next'
 const props = defineProps<{
   isSaved: boolean
   content: string
+  fileLanguage: string
 }>()
 
 let wordCount = $ref(0)
@@ -49,7 +50,7 @@ watch(() => props.content, () => {
       <div class="flex gap-1 items-center">
         <div class="flex gap-1 items-center">
           <FileText class="text-muted-foreground h-3 w-3" :stroke-width="1" />
-          <span class="font-medium">{{ $t('edit.textEditor.webgalScript') }}</span>
+          <span class="font-medium">{{ fileLanguage }}</span>
         </div>
         <ChartSpline class="text-muted-foreground h-3 w-3" />
         <span class="flex gap-2 items-center">
