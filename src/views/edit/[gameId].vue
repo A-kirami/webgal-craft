@@ -14,8 +14,10 @@ import { ResizablePanel } from '~/components/ui/resizable'
       <ResizableHandle />
       <ResizablePanel :default-size="45" :min-size="20">
         <ResizablePanelGroup direction="vertical">
-          <ResizablePanel :default-size="65" :min-size="20">
-            <PreviewPanel />
+          <ResizablePanel :default-size="65" :min-size="20" :collapsible="true">
+            <template #default="{ isCollapsed }">
+              <PreviewPanel v-if="!isCollapsed" />
+            </template>
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel :default-size="35" :min-size="20">
