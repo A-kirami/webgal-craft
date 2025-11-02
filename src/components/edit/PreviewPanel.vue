@@ -24,9 +24,16 @@ function refreshIframe() {
   refreshKey++
 }
 
-function openPreviewInBrowser() {
-  if (hasPreviewUrl) {
-    openUrl(previewUrl)
+async function openPreviewInBrowser() {
+  if (!hasPreviewUrl) {
+    return
+  }
+
+  try {
+    await openUrl(previewUrl)
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    notify.error(`打开预览失败: ${errorMessage}`)
   }
 }
 </script>
@@ -44,6 +51,7 @@ function openPreviewInBrowser() {
             <TooltipTrigger as-child>
               <Button variant="ghost" size="icon" class="size-6" @click="copyUrl">
                 <Copy class="size-4" />
+                <span class="sr-only">复制地址</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -54,6 +62,7 @@ function openPreviewInBrowser() {
             <TooltipTrigger as-child>
               <Button variant="ghost" size="icon" class="size-6" @click="refreshIframe">
                 <RotateCw class="size-4" />
+                <span class="sr-only">刷新预览</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -64,6 +73,7 @@ function openPreviewInBrowser() {
             <TooltipTrigger as-child>
               <Button variant="ghost" size="icon" class="size-6" @click="openPreviewInBrowser">
                 <ExternalLink class="size-4" />
+                <span class="sr-only">在浏览器中打开</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
