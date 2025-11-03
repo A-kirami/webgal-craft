@@ -22,6 +22,7 @@ export const i18n = createI18n({
     'default': ['zh-Hans'],
   },
   messages,
-  missingWarn: import.meta.env.DEV,
-  fallbackWarn: import.meta.env.DEV,
+  // 仅在开发模式下显示警告
+  missingWarn: !!process.env.TAURI_ENV_DEBUG,
+  fallbackWarn: !!process.env.TAURI_ENV_DEBUG,
 })
