@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable @intlify/vue-i18n/no-raw-text */
 const open = defineModel<boolean>('open')
 </script>
 
@@ -6,7 +7,7 @@ const open = defineModel<boolean>('open')
   <Dialog ::open="open">
     <DialogContent class="sm:max-w-[425px]">
       <DialogHeader>
-        <DialogTitle>设置</DialogTitle>
+        <DialogTitle>{{ $t('common.settings') }}</DialogTitle>
         <DialogDescription>
           Description
         </DialogDescription>

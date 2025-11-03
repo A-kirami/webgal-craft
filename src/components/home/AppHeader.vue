@@ -24,7 +24,7 @@ const modalStore = useModalStore()
           <CircleHelp />
         </Button>
         <Button variant="ghost" size="icon" @click="modalStore.open('SettingsModal')">
-          <span class="sr-only">{{ $t('home.header.settings') }}</span>
+          <span class="sr-only">{{ $t('common.settings') }}</span>
           <Settings />
         </Button>
       </nav>

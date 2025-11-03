@@ -1,7 +1,18 @@
+common:
+  loading: 読み込み中...
+  cancel: キャンセル
+  confirm: 確認
+  settings: 設定
+  close: 閉じる
+  saved: 保存済み
+  unsaved: 未保存
+  back: 戻る
+  or: または
+  openFolder: フォルダを開く
+
 home:
   header:
     help: ヘルプ
-    settings: 設定
   tabs:
     recent: 最近の作品
     engines: ゲームエンジン
@@ -12,3 +23,131 @@ home:
     view:
       grid: グリッド表示
       list: リスト表示
+  welcome:
+    title: WebGAL Craft へようこそ
+    subtitle: ゲーム制作の旅を始めて、あなたの物語を書いてください
+    welcomeBack: おかえりなさい
+    welcomeBackSubtitle: ゲームの編集を続けるか、新しい作品を始めてください
+    createGame: ゲームを作成
+    openGame: ゲームを開く
+  games:
+    creating: ゲーム作成中……
+    modifiedAt: 更新日時 {time}
+    noGames: 最近の作品が見つかりません
+    noGamesDesc: まだゲームを作成または開いていません
+    importGame: ゲームをインポート
+    importGameHint: クリックして参照するか、ゲームフォルダをここにドラッグ＆ドロップ
+    createNewGame: 新しいゲームを作成
+    deleteGame: ゲームを削除
+    dropGameFolder: ゲームフォルダをここにドラッグ＆ドロップしてインポート
+    gameCover: "{name} ゲームカバー"
+    gameIcon: "{name} ゲームアイコン"
+    importSuccess: ゲームのインポートに成功しました
+    importInvalidFolder: これは有効なゲームフォルダではありません
+    importUnknownError: ゲームのインポート中に不明なエラーが発生しました
+    importMultipleFolders: 一度にインポートできるゲームフォルダは1つだけです
+    importCreating: ゲームを作成中です。作成の完了をお待ちください
+  engines:
+    noEngines: 利用可能なゲームエンジンがありません
+    noEnginesDesc: ゲームを作成するにはゲームエンジンをインストールする必要があります
+    installEngine: エンジンをインストール
+    installEngineHint: クリックして参照するか、エンジンフォルダをここにドラッグ＆ドロップ
+    installGameEngine: ゲームエンジンをインストール
+    uninstallEngine: エンジンをアンインストール
+    dropEngineFolder: ゲームエンジンフォルダをここにドラッグ＆ドロップ
+    engineIcon: "{name} エンジンアイコン"
+    importSuccess: エンジンのインポートに成功しました
+    importInvalidFolder: これは有効なエンジンフォルダではありません
+    importUnknownError: エンジンのインポート中に不明なエラーが発生しました
+    importMultipleFolders: 一度にインポートできるエンジンフォルダは1つだけです
+  noEngineTitle: 利用可能なゲームエンジンがありません
+  noEngineContent: ゲームを作成するには、まずゲームエンジンをインストールする必要があります
+  goToInstall: インストールに移動
+  later: 後で
+
+modals:
+  about:
+    title: について
+  createGame:
+    title: 新しいゲームを作成
+    description: ここから新しい作品を始めましょう
+    gameName: ゲーム名
+    saveLocation: 保存場所
+    gameEngine: ゲームエンジン
+    selectEngine: ゲームエンジンを選択
+    create: 作成
+    pathNotEmpty: ゲーム保存ディレクトリは存在しないか、空である必要があります
+    selectSaveLocation: ゲーム保存場所
+  deleteGame:
+    title: ゲームを削除
+    description: ゲーム {name} を削除してもよろしいですか？
+    deleteFiles: ゲームファイルも削除
+    deleteSuccess: ゲームの削除に成功しました
+  deleteGameConfirm:
+    title: 最終確認
+    description: この操作は元に戻せません。ゲーム名 {name} を入力して削除を確認してください。
+    gameName: ゲーム名
+    placeholder: "{name} を入力して確認"
+    confirmDelete: 削除を確認
+  deleteEngine:
+    title: エンジンをアンインストール
+    description: エンジン {name} をアンインストールしてもよろしいですか？
+    warning: この操作はエンジンファイルを削除し、復元できません。
+    uninstallSuccess: エンジンのアンインストールに成功しました
+  gameConfig:
+    title: ゲーム設定
+  effectEditor:
+    title: エフェクトエディター
+  upgrade:
+    title: 更新
+  dialogs:
+    selectGameFolder: ゲームフォルダを選択
+    selectEngineFolder: エンジンフォルダを選択
+
+edit:
+  header:
+    testGame: ゲームをテスト
+    export: エクスポート
+  assetView:
+    loading: アセットを読み込み中…
+    loadFailed: 読み込みに失敗しました：{error}
+    noContent: コンテンツがありません
+  assetBreadcrumb:
+    shortPath: 短縮パス
+  assetPreview:
+    unsupportedType: サポートされていないファイルタイプ
+  textEditor:
+    webgalScript: WebGAL スクリプト
+    lines: "{count} 行,"
+    words: "{count} 字"
+  scenePanel:
+    scene: シーン
+  previewPanel:
+    copyUrl: URLをコピー
+    refreshPreview: プレビューを更新
+    openInBrowser: ブラウザで開く
+    copyUrlSuccess: URLのコピーに成功しました
+    openFailed: プレビューの開始に失敗しました：{error}
+    previewTitle: ゲームプレビュー - {name}
+  assetPanel:
+    tabs:
+      figure: 立ち絵
+      background: 背景
+      bgm: 音楽
+      vocal: 音声
+      video: 動画
+      animation: アニメーション
+    searchPlaceholder: ファイルまたはフォルダを検索
+  editorMode:
+    textMode: テキストモード
+    visualMode: ビジュアルモード
+  welcome:
+    startEditing: 編集を開始
+    selectOrCreate: ファイルを選択して編集を開始するか、新しいファイルを作成
+    newFile: 新しいファイル
+
+notFound:
+  message: ページが見つかりません
+
+notifications:
+  thumbnailLoadFailed: サムネイルの読み込みに失敗しました

@@ -7,13 +7,14 @@ const workspaceStore = useWorkspaceStore()
 const previewUrl = $computed(() => workspaceStore.currentGamePreviewUrl || '')
 const hasPreviewUrl = $computed(() => !!workspaceStore.currentGamePreviewUrl)
 
+const { t } = useI18n()
 const { copy, copied } = useClipboard({ source: previewUrl })
 
 function copyUrl() {
   if (hasPreviewUrl) {
     copy()
     if (copied) {
-      notify.success('复制地址成功')
+      notify.success(t('edit.previewPanel.copyUrlSuccess'))
     }
   }
 }
@@ -33,7 +34,7 @@ async function openPreviewInBrowser() {
     await openUrl(previewUrl)
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    notify.error(`打开预览失败: ${errorMessage}`)
+    notify.error(t('edit.previewPanel.openFailed', { error: errorMessage }))
   }
 }
 </script>
@@ -51,33 +52,33 @@ async function openPreviewInBrowser() {
             <TooltipTrigger as-child>
               <Button variant="ghost" size="icon" class="size-6" @click="copyUrl">
                 <Copy class="size-4" />
-                <span class="sr-only">复制地址</span>
+                <span class="sr-only">{{ $t('edit.previewPanel.copyUrl') }}</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>复制地址</p>
+              <p>{{ $t('edit.previewPanel.copyUrl') }}</p>
             </TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger as-child>
               <Button variant="ghost" size="icon" class="size-6" @click="refreshIframe">
                 <RotateCw class="size-4" />
-                <span class="sr-only">刷新预览</span>
+                <span class="sr-only">{{ $t('edit.previewPanel.refreshPreview') }}</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>刷新预览</p>
+              <p>{{ $t('edit.previewPanel.refreshPreview') }}</p>
             </TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger as-child>
               <Button variant="ghost" size="icon" class="size-6" @click="openPreviewInBrowser">
                 <ExternalLink class="size-4" />
-                <span class="sr-only">在浏览器中打开</span>
+                <span class="sr-only">{{ $t('edit.previewPanel.openInBrowser') }}</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>在浏览器中打开</p>
+              <p>{{ $t('edit.previewPanel.openInBrowser') }}</p>
             </TooltipContent>
           </Tooltip>
         </div>
@@ -88,7 +89,7 @@ async function openPreviewInBrowser() {
         <iframe
           :key="refreshKey"
           :src="previewUrl"
-          :title="`游戏预览 - ${workspaceStore.currentGame?.metadata.name}`"
+          :title="$t('edit.previewPanel.previewTitle', { name: workspaceStore.currentGame?.metadata.name })"
           class="size-full"
         />
       </div>

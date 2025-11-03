@@ -5,6 +5,8 @@ import { ResizablePanel } from '~/components/ui/resizable'
 //   path: string
 //   data: unknown
 // }>()
+
+/* eslint-disable @intlify/vue-i18n/no-raw-text */
 </script>
 
 <template>

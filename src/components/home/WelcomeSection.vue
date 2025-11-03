@@ -13,6 +13,7 @@ watchOnce(() => resourceStore.games, (games) => {
 })
 
 const modalStore = useModalStore()
+const { t } = useI18n()
 
 function createGame() {
   if (!resourceStore.engines) {
@@ -21,10 +22,10 @@ function createGame() {
 
   if (resourceStore.engines.length === 0) {
     modalStore.open('AlertModal', {
-      title: '没有找到可用的游戏引擎',
-      content: '需要先安装游戏引擎，才能创建游戏',
-      confirmText: '前往安装',
-      cancelText: '之后再说',
+      title: t('home.noEngineTitle'),
+      content: t('home.noEngineContent'),
+      confirmText: t('home.goToInstall'),
+      cancelText: t('home.later'),
       onConfirm: () => {
         workspaceStore.activeTab = 'engines'
       },
@@ -37,7 +38,7 @@ function createGame() {
 
 async function selectGameFolder() {
   const path = await open({
-    title: '选择游戏文件夹',
+    title: t('modals.dialogs.selectGameFolder'),
     directory: true,
     multiple: false,
   })
@@ -51,7 +52,7 @@ async function selectGameFolder() {
       if (error instanceof GameError) {
         notify.error(error.message)
       } else {
-        notify.error('导入游戏时发生未知错误')
+        notify.error(t('home.games.importUnknownError'))
       }
     }
   }
@@ -63,29 +64,29 @@ async function selectGameFolder() {
     <div :class="{ 'opacity-0': !resourceStore.games }">
       <template v-if="hasNoGames">
         <h1 class="text-3xl tracking-tight font-bold">
-          欢迎使用 WebGAL Craft
+          {{ $t('home.welcome.title') }}
         </h1>
         <p class="text-muted-foreground">
-          开始你的游戏创作之旅，编写属于你的故事
+          {{ $t('home.welcome.subtitle') }}
         </p>
       </template>
       <template v-else>
         <h1 class="text-3xl tracking-tight font-bold">
-          欢迎回来
+          {{ $t('home.welcome.welcomeBack') }}
         </h1>
         <p class="text-muted-foreground">
-          继续你的游戏编辑或开始新的创作
+          {{ $t('home.welcome.welcomeBackSubtitle') }}
         </p>
       </template>
     </div>
     <div class="ml-auto flex gap-2">
       <Button class="gap-2" @click="createGame">
         <Plus class="h-4 w-4" />
-        创建游戏
+        {{ $t('home.welcome.createGame') }}
       </Button>
       <Button variant="outline" class="gap-2" @click="selectGameFolder">
         <FolderOpen class="h-4 w-4" />
-        打开游戏
+        {{ $t('home.welcome.openGame') }}
       </Button>
     </div>
   </div>

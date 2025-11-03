@@ -38,11 +38,13 @@ const checkPath = async (path: string) => {
   }
 }
 
+const { t } = useI18n()
+
 const schema = z.object({
   gameName: z.string(),
   gamePath: z.string().refine(
     async path => await checkPath(path),
-    '游戏保存目录必须不存在或为空',
+    t('modals.createGame.pathNotEmpty'),
   ),
   gameEngine: z.string(),
 })
@@ -79,7 +81,7 @@ const handleCompositionEnd = async (event: Event) => {
 
 const handleSelectFolder = async () => {
   const selected = await openDialog({
-    title: '游戏保存位置',
+    title: t('modals.createGame.selectSaveLocation'),
     directory: true,
     multiple: false,
     defaultPath: settingsStore.gameSavePath,
@@ -115,9 +117,9 @@ const onSubmit = handleSubmit(async (values) => {
   <Dialog ::open="open">
     <DialogContent class="sm:max-w-[425px]">
       <DialogHeader>
-        <DialogTitle>创建新游戏</DialogTitle>
+        <DialogTitle>{{ $t('modals.createGame.title') }}</DialogTitle>
         <DialogDescription>
-          从这里开始你的新创作
+          {{ $t('modals.createGame.description') }}
         </DialogDescription>
       </DialogHeader>
       <form id="create-game-form" @submit="onSubmit">
@@ -125,7 +127,7 @@ const onSubmit = handleSubmit(async (values) => {
           <FormField v-slot="{ componentField }" name="gameName" :validate-on-blur="!isFieldDirty">
             <FormItem class="px-2 gap-x-4 gap-y-2 grid grid-cols-[auto_1fr] items-center space-y-0">
               <FormLabel class="text-right whitespace-nowrap">
-                游戏名称
+                {{ $t('modals.createGame.gameName') }}
               </FormLabel>
               <FormControl>
                 <Input v-bind="componentField" class="w-full" @input="handleGameNameChange" @compositionstart="handleCompositionStart" @compositionend="handleCompositionEnd" />
@@ -137,7 +139,7 @@ const onSubmit = handleSubmit(async (values) => {
           <FormField v-slot="{ componentField }" name="gamePath" :validate-on-blur="false" :validate-on-change="false">
             <FormItem class="px-2 gap-x-4 gap-y-2 grid grid-cols-[auto_1fr] items-center space-y-0">
               <FormLabel class="text-right whitespace-nowrap">
-                保存位置
+                {{ $t('modals.createGame.saveLocation') }}
               </FormLabel>
               <div class="flex gap-2">
                 <FormControl>
@@ -163,12 +165,12 @@ const onSubmit = handleSubmit(async (values) => {
           <FormField v-slot="{ componentField }" name="gameEngine" :validate-on-blur="!isFieldDirty">
             <FormItem class="px-2 gap-x-4 gap-y-2 grid grid-cols-[auto_1fr] items-center space-y-0">
               <FormLabel class="text-right whitespace-nowrap">
-                游戏引擎
+                {{ $t('modals.createGame.gameEngine') }}
               </FormLabel>
               <FormControl>
                 <Select v-bind="componentField">
                   <SelectTrigger class="w-full">
-                    <SelectValue placeholder="选择游戏引擎" />
+                    <SelectValue :placeholder="$t('modals.createGame.selectEngine')" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem v-for="engine in engineOptions" :key="engine.id" :value="engine.id">
@@ -184,7 +186,7 @@ const onSubmit = handleSubmit(async (values) => {
       </form>
       <DialogFooter>
         <Button form="create-game-form" type="submit" class="w-full">
-          创建
+          {{ $t('modals.createGame.create') }}
         </Button>
       </DialogFooter>
     </DialogContent>

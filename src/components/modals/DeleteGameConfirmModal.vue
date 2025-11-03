@@ -27,30 +27,34 @@ function handleConfirm() {
         </div>
         <DialogHeader>
           <DialogTitle class="sm:text-center">
-            最终确认
+            {{ $t('modals.deleteGameConfirm.title') }}
           </DialogTitle>
           <DialogDescription class="sm:text-center">
-            此操作无法撤销。请输入游戏名称
-            <span class="text-foreground font-bold">{{ game.metadata.name }}</span>
-            以确认删除。
+            <i18n-t keypath="modals.deleteGameConfirm.description">
+              <template #name>
+                <span class="text-foreground font-bold">{{ game.metadata.name }}</span>
+              </template>
+            </i18n-t>
           </DialogDescription>
         </DialogHeader>
       </div>
 
       <form class="space-y-5">
         <div class="space-y-2">
-          <Label for="game-name">游戏名称</Label>
+          <Label for="game-name">{{ $t('modals.deleteGameConfirm.gameName') }}</Label>
           <Input
             id="game-name"
             v-model="confirmInput"
             type="text"
-            :placeholder="`请输入 ${game.metadata.name} 以确认`"
+            :placeholder="$t('modals.deleteGameConfirm.placeholder', {
+              name: props.game.metadata.name,
+            })"
           />
         </div>
         <DialogFooter>
           <DialogClose as-child>
             <Button type="button" variant="outline" class="flex-1">
-              取消
+              {{ $t('common.cancel') }}
             </Button>
           </DialogClose>
           <Button
@@ -60,7 +64,7 @@ function handleConfirm() {
             :disabled="confirmInput !== game.metadata.name"
             @click="handleConfirm"
           >
-            确认删除
+            {{ $t('modals.deleteGameConfirm.confirmDelete') }}
           </Button>
         </DialogFooter>
       </form>

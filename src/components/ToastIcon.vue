@@ -5,6 +5,8 @@ const { type } = $defineProps<{
   type: IconType
 }>()
 
+const { t } = useI18n()
+
 type IconType = 'info' | 'warning' | 'error' | 'success' | 'loading'
 
 const Loading = (
@@ -13,7 +15,7 @@ const Loading = (
     role="status"
     aria-label="loading"
   >
-    <span class="sr-only">Loading...</span>
+    <span class="sr-only">{t('common.loading')}</span>
   </div>
 )
 

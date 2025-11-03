@@ -31,23 +31,25 @@ const { isOverDropZone: isOverDropZoneGrid } = useTauriDropZone(dropZoneGridRef,
 const dropZoneListRef = useTemplateRef<HTMLElement>('dropZoneListRef')
 const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef, handleDrop)
 
+const { t } = useI18n()
+
 // 导入游戏并处理通知
 async function importGameWithNotify(path: string) {
   try {
     await gameManager.importGame(path)
-    notify.success('游戏导入成功')
+    notify.success(t('home.games.importSuccess'))
   } catch (error: unknown) {
     if (error instanceof GameError) {
-      notify.error('这不是一个有效的游戏文件夹')
+      notify.error(t('home.games.importInvalidFolder'))
     } else {
-      notify.error('导入游戏时发生未知错误')
+      notify.error(t('home.games.importUnknownError'))
     }
   }
 }
 
 async function handleDrop(paths: string[]) {
   if (paths.length > 1) {
-    notify.error('一次只能导入一个游戏文件夹')
+    notify.error(t('home.games.importMultipleFolders'))
     return
   }
   await importGameWithNotify(paths[0])
@@ -55,7 +57,7 @@ async function handleDrop(paths: string[]) {
 
 async function selectGameFolder() {
   const path = await open({
-    title: '选择游戏文件夹',
+    title: t('modals.dialogs.selectGameFolder'),
     directory: true,
     multiple: false,
   })
@@ -77,7 +79,7 @@ async function handleDeleteGame(game: Game) {
 // 处理游戏点击
 function handleGameClick(game: Game) {
   if (hasGameProgress(game)) {
-    notify.warning('游戏正在创建中，请等待创建完成')
+    notify.warning(t('home.games.importCreating'))
     return
   }
   router.push(`/edit/${game.id}`)
@@ -92,10 +94,10 @@ function createGame() {
 
   if (resourceStore.engines.length === 0) {
     modalStore.open('AlertModal', {
-      title: '没有找到可用的游戏引擎',
-      content: '需要先安装游戏引擎，才能创建游戏',
-      confirmText: '前往安装',
-      cancelText: '之后再说',
+      title: t('home.noEngineTitle'),
+      content: t('home.noEngineContent'),
+      confirmText: t('home.goToInstall'),
+      cancelText: t('home.later'),
       onConfirm: () => {
         workspaceStore.activeTab = 'engines'
       },
@@ -120,7 +122,7 @@ function createGame() {
             <div class="bg-gray-100 w-full aspect-16/9 overflow-hidden">
               <Thumbnail
                 :path="game.metadata.cover"
-                :alt="`${game.metadata.name} 游戏封面`"
+                :alt="$t('home.games.gameCover', { name: game.metadata.name })"
                 :size="512"
                 fit="cover"
                 fallback-image="/placeholder.svg"
@@ -129,13 +131,13 @@ function createGame() {
             </div>
             <CardContent class="p-3">
               <div class="flex gap-4 items-center">
-                <Thumbnail :path="game.metadata.icon" :alt="`${game.metadata.name} 游戏图标`" class="rounded-md size-8" />
+                <Thumbnail :path="game.metadata.icon" :alt="$t('home.games.gameIcon', { name: game.metadata.name })" class="rounded-md size-8" />
                 <div>
                   <h3 class="font-medium">
                     {{ game.metadata.name }}
                   </h3>
                   <p class="text-xs text-muted-foreground/80">
-                    {{ hasGameProgress(game)? '游戏创建中……' : `修改于 ${dayjs(game.lastModified).fromNow()}` }}
+                    {{ hasGameProgress(game) ? $t('home.games.creating') : $t('home.games.modifiedAt', { time: dayjs(game.lastModified).fromNow() }) }}
                   </p>
                 </div>
               </div>
@@ -146,11 +148,11 @@ function createGame() {
         <ContextMenuContent class="w-42">
           <ContextMenuItem @click="handleOpenFolder(game)">
             <Folder class="mr-2 h-4 w-4" />
-            打开文件夹
+            {{ $t('common.openFolder') }}
           </ContextMenuItem>
           <ContextMenuItem class="text-destructive focus:text-destructive-foreground focus:bg-destructive" @click="handleDeleteGame(game)">
             <Trash2 class="mr-2 h-4 w-4" />
-            删除游戏
+            {{ $t('home.games.deleteGame') }}
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
@@ -167,10 +169,10 @@ function createGame() {
           <Scroll class="text-purple-600 h-6 w-6 dark:text-purple-400" />
         </div>
         <p class="text-sm font-medium text-center">
-          导入游戏
+          {{ $t('home.games.importGame') }}
         </p>
         <p class="text-xs text-muted-foreground mt-1 text-center">
-          点击浏览或拖放游戏文件夹到此处
+          {{ $t('home.games.importGameHint') }}
         </p>
       </div>
     </div>
@@ -186,7 +188,7 @@ function createGame() {
           <div class="rounded-md h-10 w-10 overflow-hidden">
             <Thumbnail
               :path="game.metadata.cover"
-              :alt="`${game.metadata.name} 游戏封面`"
+              :alt="$t('home.games.gameCover', { name: game.metadata.name })"
               :size="128"
               fit="cover"
               fallback-image="/placeholder.svg"
@@ -197,7 +199,7 @@ function createGame() {
               {{ game.metadata.name }}
             </h3>
             <p class="text-xs text-muted-foreground">
-              修改于 {{ dayjs(game.lastModified).fromNow() }}
+              {{ $t('home.games.modifiedAt', { time: dayjs(game.lastModified).fromNow() }) }}
             </p>
           </div>
         </div>
@@ -215,7 +217,7 @@ function createGame() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>打开文件夹</p>
+                <p>{{ $t('common.openFolder') }}</p>
               </TooltipContent>
             </Tooltip>
             <Tooltip>
@@ -230,7 +232,7 @@ function createGame() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>删除游戏</p>
+                <p>{{ $t('home.games.deleteGame') }}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -252,10 +254,10 @@ function createGame() {
           </div>
           <div>
             <h3 class="font-medium">
-              导入游戏
+              {{ $t('home.games.importGame') }}
             </h3>
             <p class="text-xs text-muted-foreground">
-              点击浏览或拖放游戏文件夹到此处
+              {{ $t('home.games.importGameHint') }}
             </p>
           </div>
         </div>
@@ -275,10 +277,10 @@ function createGame() {
       <Scroll class="text-muted-foreground h-10 w-10" />
     </div>
     <h3 class="text-lg font-medium mb-1">
-      没有找到最近的创作
+      {{ $t('home.games.noGames') }}
     </h3>
     <p class="text-sm text-muted-foreground mb-4 text-center max-w-md">
-      你还没有创建或打开过任何游戏
+      {{ $t('home.games.noGamesDesc') }}
     </p>
     <div class="mb-3 flex flex-col items-center">
       <div
@@ -289,15 +291,15 @@ function createGame() {
         }"
       >
         <Download class="text-muted-foreground mr-2 h-6 w-6" />
-        <span class="text-sm text-muted-foreground">将游戏文件夹拖放到此处导入</span>
+        <span class="text-sm text-muted-foreground">{{ $t('home.games.dropGameFolder') }}</span>
       </div>
       <p class="text-xs text-muted-foreground">
-        或者
+        {{ $t('common.or') }}
       </p>
     </div>
     <Button class="gap-2" @click="createGame">
       <Plus class="h-4 w-4" />
-      创建新游戏
+      {{ $t('home.games.createNewGame') }}
     </Button>
   </div>
 </template>

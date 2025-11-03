@@ -105,7 +105,7 @@ const handleCreateFolder = async () => {
     <div class="px-2 py-1 flex items-center justify-between">
       <h3 class="text-sm font-medium flex items-center">
         <Layers class="mr-2 h-4 w-4" />
-        场景
+        {{ $t('edit.scenePanel.scene') }}
       </h3>
       <div class="opacity-0 flex gap-1 transition-opacity group-hover/scene:opacity-100">
         <Button variant="ghost" size="icon" class="rounded h-6 w-6" @click="handleCreateFile">

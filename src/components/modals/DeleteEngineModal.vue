@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { TriangleAlert } from 'lucide-vue-next'
 
+const { t } = useI18n()
 const open = defineModel<boolean>('open')
 
 const props = defineProps<{
@@ -9,7 +10,7 @@ const props = defineProps<{
 
 function handleConfirm() {
   engineManager.uninstallEngine(props.engine)
-  notify.success('引擎卸载成功')
+  notify.success(t('modals.deleteEngine.uninstallSuccess'))
 }
 </script>
 
@@ -25,18 +26,22 @@ function handleConfirm() {
         </div>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            卸载引擎
+            {{ $t('modals.deleteEngine.title') }}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            <p>确定要卸载引擎 <span class="text-black font-bold">{{ engine.metadata.name }}</span> 吗？</p>
-            <p>此操作将删除引擎文件，且无法恢复。</p>
+            <i18n-t keypath="modals.deleteEngine.description" tag="p">
+              <template #name>
+                <span class="text-black font-bold">{{ engine.metadata.name }}</span>
+              </template>
+            </i18n-t>
+            <p>{{ $t('modals.deleteEngine.warning') }}</p>
           </AlertDialogDescription>
         </AlertDialogHeader>
       </div>
       <AlertDialogFooter>
-        <AlertDialogCancel>取消</AlertDialogCancel>
+        <AlertDialogCancel>{{ $t('common.cancel') }}</AlertDialogCancel>
         <AlertDialogAction variant="destructive" @click="handleConfirm">
-          确认
+          {{ $t('common.confirm') }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

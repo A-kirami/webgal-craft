@@ -9,14 +9,14 @@ import { FileText, Plus } from 'lucide-vue-next'
         <FileText class="mx-auto mb-2 opacity-50 h-12 w-12" />
       </div>
       <h3 class="text-lg font-medium">
-        开始编辑
+        {{ $t('edit.welcome.startEditing') }}
       </h3>
       <p class="text-muted-foreground max-w-md">
-        选择一个文件开始编辑，或创建新文件
+        {{ $t('edit.welcome.selectOrCreate') }}
       </p>
       <Button>
         <Plus class="mr-2 h-4 w-4" />
-        新建文件
+        {{ $t('edit.welcome.newFile') }}
       </Button>
     </div>
   </div>

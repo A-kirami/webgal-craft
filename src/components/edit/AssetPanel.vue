@@ -5,32 +5,34 @@ const preferenceStore = usePreferenceStore()
 
 let isSearchExpanded = $ref(false)
 
-const assetTabs = {
+const { t } = useI18n()
+
+const assetTabs = $computed(() => ({
   figure: {
     icon: UserRound,
-    label: '立绘',
+    label: t('edit.assetPanel.tabs.figure'),
   },
   background: {
     icon: Image,
-    label: '背景',
+    label: t('edit.assetPanel.tabs.background'),
   },
   bgm: {
     icon: Music,
-    label: '音乐',
+    label: t('edit.assetPanel.tabs.bgm'),
   },
   vocal: {
     icon: MicVocal,
-    label: '语音',
+    label: t('edit.assetPanel.tabs.vocal'),
   },
   video: {
     icon: Video,
-    label: '视频',
+    label: t('edit.assetPanel.tabs.video'),
   },
   animation: {
     icon: Blend,
-    label: '动画',
+    label: t('edit.assetPanel.tabs.animation'),
   },
-}
+}))
 
 type AssetTabs = keyof typeof assetTabs
 let activeTab = $ref<AssetTabs>('figure')
@@ -80,7 +82,7 @@ const isMaxZoom = $computed(() => preferenceStore.assetZoom[0] >= 150)
       <AssetBreadcrumb :asset-type="activeTab" ::current-path="currentPath" />
       <div class="gap-2 inline-grid grid-flow-col items-center">
         <Input
-          placeholder="搜索文件或文件夹"
+          :placeholder="$t('edit.assetPanel.searchPlaceholder')"
           class="text-xs h-7 transition-all duration-300 ease-in-out"
           :class="[
             isSearchExpanded ? 'w-[200px] opacity-100 px-3' : 'w-0 opacity-0 px-0'
@@ -136,7 +138,9 @@ const isMaxZoom = $computed(() => preferenceStore.assetZoom[0] >= 150)
           :step="5"
           class="flex-1 hidden @[320px]:flex"
         />
-        <span class="text-xs text-center w-8 order-none @[320px]:order-1">{{ preferenceStore.assetZoom[0] }}%</span>
+        <span class="text-xs text-center w-8 order-none @[320px]:order-1">
+          {{ $n(preferenceStore.assetZoom[0], 'percent') }}
+        </span>
         <Plus
           class="text-muted-foreground h-3.5 w-3.5"
           :class="{
