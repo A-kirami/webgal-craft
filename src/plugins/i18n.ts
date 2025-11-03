@@ -5,9 +5,21 @@ export const i18n = createI18n({
   legacy: false,
   locale: '',
   fallbackLocale: {
-    'zh-TW': ['zh-CN'],
-    'ja': ['en', 'zh-CN'],
-    'default': ['zh-CN'],
+    // 简体中文变体回退
+    'zh-CN': ['zh-Hans'],
+    'zh-SG': ['zh-Hans'],
+    'zh-MY': ['zh-Hans'],
+
+    // 繁体中文变体回退
+    'zh-TW': ['zh-Hant'],
+    'zh-HK': ['zh-Hant'],
+    'zh-MO': ['zh-Hant'],
+
+    // 日语回退
+    'ja': ['en'],
+
+    // 默认回退
+    'default': ['zh-Hans'],
   },
   messages,
   missingWarn: import.meta.env.DEV,
