@@ -1,6 +1,8 @@
 import messages from '@intlify/unplugin-vue-i18n/messages'
 import { createI18n } from 'vue-i18n'
 
+import { isDebug } from '~build/meta'
+
 // 简体中文变体区域设置列表
 const zhHansLocales = ['zh-CN', 'zh-SG', 'zh-MY']
 
@@ -33,7 +35,7 @@ export const i18n = createI18n({
     default: ['zh-Hans'],
   },
   messages,
-  // 仅在开发模式下显示警告
-  missingWarn: !!process.env.TAURI_ENV_DEBUG,
-  fallbackWarn: !!process.env.TAURI_ENV_DEBUG,
+  // 仅在开发调试模式下显示警告
+  missingWarn: isDebug,
+  fallbackWarn: isDebug,
 })
