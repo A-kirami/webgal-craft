@@ -22,10 +22,10 @@ function createGame() {
 
   if (resourceStore.engines.length === 0) {
     modalStore.open('AlertModal', {
-      title: t('home.noEngineTitle'),
-      content: t('home.noEngineContent'),
-      confirmText: t('home.goToInstall'),
-      cancelText: t('home.later'),
+      title: t('home.engines.noEngineTitle'),
+      content: t('home.engines.noEngineContent'),
+      confirmText: t('home.engines.goToInstall'),
+      cancelText: t('home.engines.later'),
       onConfirm: () => {
         workspaceStore.activeTab = 'engines'
       },
@@ -38,7 +38,7 @@ function createGame() {
 
 async function selectGameFolder() {
   const path = await open({
-    title: t('modals.dialogs.selectGameFolder'),
+    title: t('common.dialogs.selectGameFolder'),
     directory: true,
     multiple: false,
   })

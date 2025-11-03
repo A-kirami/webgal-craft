@@ -9,6 +9,12 @@ common:
   back: Back
   or: or
   openFolder: Open Folder
+  dialogs:
+    selectGameFolder: Select Game Folder
+    selectEngineFolder: Select Engine Folder
+  view:
+    grid: Grid View
+    list: List View
 
 home:
   header:
@@ -20,9 +26,6 @@ home:
     placeholder:
       recent: Search recent creations...
       engines: Search game engines...
-    view:
-      grid: Grid View
-      list: List View
   welcome:
     title: Welcome to WebGAL Craft
     subtitle: Start your game creation journey and write your story
@@ -60,10 +63,10 @@ home:
     importInvalidFolder: This is not a valid engine folder
     importUnknownError: An unknown error occurred while importing the engine
     importMultipleFolders: Only one engine folder can be imported at a time
-  noEngineTitle: No Available Game Engines
-  noEngineContent: You need to install a game engine first to create games
-  goToInstall: Go to Install
-  later: Later
+    noEngineTitle: No Available Game Engines
+    noEngineContent: You need to install a game engine first to create games
+    goToInstall: Go to Install
+    later: Later
 
 modals:
   about:
@@ -100,9 +103,13 @@ modals:
     title: Effect Editor
   upgrade:
     title: Update
-  dialogs:
-    selectGameFolder: Select Game Folder
-    selectEngineFolder: Select Engine Folder
+  settings:
+    description: Manage your settings here and personalize your experience as needed
+    tabs:
+      general: General
+      edit: Edit
+      preview: Preview
+      storage: Storage
 
 edit:
   header:
@@ -118,8 +125,9 @@ edit:
     unsupportedType: Unsupported file type
   textEditor:
     webgalScript: WebGAL Script
-    lines: "{count} lines,"
-    words: "{count} words"
+    stats:
+      lines: "{count} lines,"
+      words: "{count} words"
   scenePanel:
     scene: Scene
   previewPanel:
@@ -146,8 +154,55 @@ edit:
     selectOrCreate: Select a file to start editing, or create a new file
     newFile: New File
 
+settings:
+  experimental:
+    tooltip: This is an experimental feature and may encounter issues during use
+  general:
+    followSystem: Follow System
+    theme:
+      label: Theme
+      options:
+        light: Light
+        dark: Dark
+    language:
+      label: Language
+      placeholder: Please select a language
+    openLastProject:
+      label: Open Last Created Game on Startup
+      description: Automatically load the last edited game project when the application starts
+    autoInstallUpdates:
+      label: Auto Install Updates
+      description: Automatically download and install the latest version of the application
+  preview:
+    enableLivePreview:
+      label: Live Preview
+      description: Preview changes in real-time while editing the game
+    enableFastPreview:
+      label: Fast Preview
+      description: Enabling fast preview will significantly improve real-time preview efficiency
+  edit:
+    fontFamily:
+      label: Font Family
+      placeholder: Font Name
+    fontSize:
+      label: Font Size
+    wordWrap:
+      label: Word Wrap
+      description: Automatically wrap lines that exceed the editor width
+    minimap:
+      label: Minimap
+      description: Display code minimap on the right side of the editor for quick navigation
+    autoSave:
+      label: Auto Save
+      description: When enabled, the editor will automatically save your changes
+  storage:
+    gamePath:
+      label: Game Save Location
+      title: Select Game Save Location
+    enginePath:
+      label: Engine Save Location
+      title: Select Engine Save Location
+    browse: Browse
+
 notFound:
   message: Page not found
-
-notifications:
-  thumbnailLoadFailed: Failed to load thumbnail
