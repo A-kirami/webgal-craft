@@ -80,6 +80,7 @@ export default defineConfig({
     }),
     Info({
       meta: {
+        isDebug: !!process.env.TAURI_ENV_DEBUG,
         isBuild: process.env.GITHUB_WORKFLOW === 'Build',
         isRelease: process.env.GITHUB_WORKFLOW === 'Release',
         prNum: process.env.GITHUB_PR_NUMBER,
