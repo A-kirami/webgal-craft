@@ -16,7 +16,7 @@ const modalStore = useModalStore()
     <div class="flex gap-2 items-center">
       <Button variant="ghost" size="icon" class="size-8" @click="handleBack">
         <ArrowLeft class="size-5!" />
-        <span class="sr-only">返回</span>
+        <span class="sr-only">{{ $t('common.back') }}</span>
       </Button>
       <div class="flex gap-2 cursor-pointer items-center" @click="modalStore.open('GameConfigModal')">
         <Thumbnail :path="workspaceStore.currentGame?.metadata.icon" :alt="`${workspaceStore.currentGame?.metadata.name} 游戏图标`" fallback-image="/placeholder.svg" class="rounded-md size-6" />
@@ -26,15 +26,15 @@ const modalStore = useModalStore()
     <div class="flex gap-2 items-center">
       <Button variant="default" size="sm" class="gap-1 h-8">
         <Play class="size-4" />
-        测试游戏
+        {{ $t('edit.header.testGame') }}
       </Button>
       <Button variant="outline" size="sm" class="gap-1 h-8">
         <Download class="size-4" />
-        导出
+        {{ $t('edit.header.export') }}
       </Button>
       <Button variant="ghost" size="icon" class="h-8 w-8" @click="modalStore.open('SettingsModal')">
         <Settings class="size-4" />
-        <span class="sr-only">设置</span>
+        <span class="sr-only">{{ $t('common.settings') }}</span>
       </Button>
     </div>
   </header>

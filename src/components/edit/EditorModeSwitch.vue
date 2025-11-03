@@ -57,8 +57,8 @@ const ModeButton = ({ mode, icon: Icon, tooltip }: { mode: 'text' | 'visual', ic
 <template>
   <TooltipProvider>
     <div class="p-0.5 rounded-md bg-blue-500 flex h-6 cursor-pointer" @click="handleModeChange()">
-      <ModeButton :mode="'text'" :icon="Code" tooltip="文本模式" />
-      <ModeButton :mode="'visual'" :icon="Paintbrush" tooltip="可视化模式" />
+      <ModeButton :mode="'text'" :icon="Code" :tooltip="$t('edit.editorMode.textMode')" />
+      <ModeButton :mode="'visual'" :icon="Paintbrush" :tooltip="$t('edit.editorMode.visualMode')" />
     </div>
   </TooltipProvider>
 </template>

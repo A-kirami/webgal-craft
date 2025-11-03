@@ -1,7 +1,18 @@
+common:
+  loading: Loading...
+  cancel: Cancel
+  confirm: Confirm
+  settings: Settings
+  close: Close
+  saved: Saved
+  unsaved: Unsaved
+  back: Back
+  or: or
+  openFolder: Open Folder
+
 home:
   header:
     help: Help
-    settings: Settings
   tabs:
     recent: Recent Creations
     engines: Game Engines
@@ -12,3 +23,131 @@ home:
     view:
       grid: Grid View
       list: List View
+  welcome:
+    title: Welcome to WebGAL Craft
+    subtitle: Start your game creation journey and write your story
+    welcomeBack: Welcome Back
+    welcomeBackSubtitle: Continue editing your game or start a new creation
+    createGame: Create Game
+    openGame: Open Game
+  games:
+    creating: Creating game...
+    modifiedAt: Modified {time}
+    noGames: No Recent Creations Found
+    noGamesDesc: You haven't created or opened any games yet
+    importGame: Import Game
+    importGameHint: Click to browse or drag and drop game folder here
+    createNewGame: Create New Game
+    deleteGame: Delete Game
+    dropGameFolder: Drag and drop game folder here to import
+    gameCover: "{name} game cover"
+    gameIcon: "{name} game icon"
+    importSuccess: Game imported successfully
+    importInvalidFolder: This is not a valid game folder
+    importUnknownError: An unknown error occurred while importing the game
+    importMultipleFolders: Only one game folder can be imported at a time
+    importCreating: Game is being created, please wait for the creation to complete
+  engines:
+    noEngines: No Available Game Engines
+    noEnginesDesc: You need to install a game engine to create games
+    installEngine: Install Engine
+    installEngineHint: Click to browse or drag and drop engine folder here
+    installGameEngine: Install Game Engine
+    uninstallEngine: Uninstall Engine
+    dropEngineFolder: Drag and drop game engine folder here
+    engineIcon: "{name} engine icon"
+    importSuccess: Engine imported successfully
+    importInvalidFolder: This is not a valid engine folder
+    importUnknownError: An unknown error occurred while importing the engine
+    importMultipleFolders: Only one engine folder can be imported at a time
+  noEngineTitle: No Available Game Engines
+  noEngineContent: You need to install a game engine first to create games
+  goToInstall: Go to Install
+  later: Later
+
+modals:
+  about:
+    title: About
+  createGame:
+    title: Create New Game
+    description: Start your new creation from here
+    gameName: Game Name
+    saveLocation: Save Location
+    gameEngine: Game Engine
+    selectEngine: Select game engine
+    create: Create
+    pathNotEmpty: The game save directory must not exist or be empty
+    selectSaveLocation: Game Save Location
+  deleteGame:
+    title: Delete Game
+    description: Are you sure you want to delete the game {name}?
+    deleteFiles: Delete game files as well
+    deleteSuccess: Game deleted successfully
+  deleteGameConfirm:
+    title: Final Confirmation
+    description: "This operation cannot be undone. Please enter the game name {name} to confirm deletion."
+    gameName: Game Name
+    placeholder: "Please enter {name} to confirm"
+    confirmDelete: Confirm Delete
+  deleteEngine:
+    title: Uninstall Engine
+    description: Are you sure you want to uninstall the engine {name}?
+    warning: This operation will delete engine files and cannot be recovered.
+    uninstallSuccess: Engine uninstalled successfully
+  gameConfig:
+    title: Game Configuration
+  effectEditor:
+    title: Effect Editor
+  upgrade:
+    title: Update
+  dialogs:
+    selectGameFolder: Select Game Folder
+    selectEngineFolder: Select Engine Folder
+
+edit:
+  header:
+    testGame: Test Game
+    export: Export
+  assetView:
+    loading: Loading assets...
+    loadFailed: "Load failed: {error}"
+    noContent: No content
+  assetBreadcrumb:
+    shortPath: Short path
+  assetPreview:
+    unsupportedType: Unsupported file type
+  textEditor:
+    webgalScript: WebGAL Script
+    lines: "{count} lines,"
+    words: "{count} words"
+  scenePanel:
+    scene: Scene
+  previewPanel:
+    copyUrl: Copy URL
+    refreshPreview: Refresh Preview
+    openInBrowser: Open in Browser
+    copyUrlSuccess: URL copied successfully
+    openFailed: "Failed to open preview: {error}"
+    previewTitle: "Game Preview - {name}"
+  assetPanel:
+    tabs:
+      figure: Figure
+      background: Background
+      bgm: Music
+      vocal: Voice
+      video: Video
+      animation: Animation
+    searchPlaceholder: Search files or folders
+  editorMode:
+    textMode: Text Mode
+    visualMode: Visual Mode
+  welcome:
+    startEditing: Start Editing
+    selectOrCreate: Select a file to start editing, or create a new file
+    newFile: New File
+
+notFound:
+  message: Page not found
+
+notifications:
+  thumbnailLoadFailed: Failed to load thumbnail

@@ -1,0 +1,153 @@
+common:
+  loading: 加载中...
+  cancel: 取消
+  confirm: 确认
+  settings: 设置
+  close: 关闭
+  saved: 已保存
+  unsaved: 未保存
+  back: 返回
+  or: 或者
+  openFolder: 打开文件夹
+
+home:
+  header:
+    help: 帮助
+  tabs:
+    recent: 最近创作
+    engines: 游戏引擎
+  search:
+    placeholder:
+      recent: 搜索最近创作...
+      engines: 搜索游戏引擎...
+    view:
+      grid: 网格视图
+      list: 列表视图
+  welcome:
+    title: 欢迎使用 WebGAL Craft
+    subtitle: 开始你的游戏创作之旅，编写属于你的故事
+    welcomeBack: 欢迎回来
+    welcomeBackSubtitle: 继续你的游戏编辑或开始新的创作
+    createGame: 创建游戏
+    openGame: 打开游戏
+  games:
+    creating: 游戏创建中……
+    modifiedAt: 修改于 {time}
+    noGames: 没有找到最近的创作
+    noGamesDesc: 你还没有创建或打开过任何游戏
+    importGame: 导入游戏
+    importGameHint: 点击浏览或拖放游戏文件夹到此处
+    createNewGame: 创建新游戏
+    deleteGame: 删除游戏
+    dropGameFolder: 将游戏文件夹拖放到此处导入
+    gameCover: "{name} 游戏封面"
+    gameIcon: "{name} 游戏图标"
+    importSuccess: 游戏导入成功
+    importInvalidFolder: 这不是一个有效的游戏文件夹
+    importUnknownError: 导入游戏时发生未知错误
+    importMultipleFolders: 一次只能导入一个游戏文件夹
+    importCreating: 游戏正在创建中，请等待创建完成
+  engines:
+    noEngines: 没有可用的游戏引擎
+    noEnginesDesc: 你需要安装游戏引擎才能创建游戏
+    installEngine: 安装引擎
+    installEngineHint: 点击浏览或拖放引擎文件夹到此处
+    installGameEngine: 安装游戏引擎
+    uninstallEngine: 卸载引擎
+    dropEngineFolder: 将游戏引擎文件夹拖放到此处
+    engineIcon: "{name} 引擎图标"
+    importSuccess: 引擎导入成功
+    importInvalidFolder: 这不是一个有效的引擎文件夹
+    importUnknownError: 导入引擎时发生未知错误
+    importMultipleFolders: 一次只能导入一个引擎文件夹
+  noEngineTitle: 没有找到可用的游戏引擎
+  noEngineContent: 需要先安装游戏引擎，才能创建游戏
+  goToInstall: 前往安装
+  later: 之后再说
+
+modals:
+  about:
+    title: 关于
+  createGame:
+    title: 创建新游戏
+    description: 从这里开始你的新创作
+    gameName: 游戏名称
+    saveLocation: 保存位置
+    gameEngine: 游戏引擎
+    selectEngine: 选择游戏引擎
+    create: 创建
+    pathNotEmpty: 游戏保存目录必须不存在或为空
+    selectSaveLocation: 游戏保存位置
+  deleteGame:
+    title: 删除游戏
+    description: 确定要删除游戏 {name} 吗？
+    deleteFiles: 同时删除游戏文件
+    deleteSuccess: 游戏删除成功
+  deleteGameConfirm:
+    title: 最终确认
+    description: 此操作无法撤销。请输入游戏名称 {name} 以确认删除。
+    gameName: 游戏名称
+    placeholder: "请输入 {name} 以确认"
+    confirmDelete: 确认删除
+  deleteEngine:
+    title: 卸载引擎
+    description: 确定要卸载引擎 {name} 吗？
+    warning: 此操作将删除引擎文件，且无法恢复。
+    uninstallSuccess: 引擎卸载成功
+  gameConfig:
+    title: 游戏配置
+  effectEditor:
+    title: 效果编辑器
+  upgrade:
+    title: 更新
+  dialogs:
+    selectGameFolder: 选择游戏文件夹
+    selectEngineFolder: 选择引擎文件夹
+
+edit:
+  header:
+    testGame: 测试游戏
+    export: 导出
+  assetView:
+    loading: 正在加载资源…
+    loadFailed: 加载失败：{error}
+    noContent: 暂无内容
+  assetBreadcrumb:
+    shortPath: 简略路径
+  assetPreview:
+    unsupportedType: 不支持的文件类型
+  textEditor:
+    webgalScript: WebGAL 脚本
+    lines: "{count} 行,"
+    words: "{count} 字"
+  scenePanel:
+    scene: 场景
+  previewPanel:
+    copyUrl: 复制地址
+    refreshPreview: 刷新预览
+    openInBrowser: 在浏览器中打开
+    copyUrlSuccess: 复制地址成功
+    openFailed: "打开预览失败：{error}"
+    previewTitle: "游戏预览 - {name}"
+  assetPanel:
+    tabs:
+      figure: 立绘
+      background: 背景
+      bgm: 音乐
+      vocal: 语音
+      video: 视频
+      animation: 动画
+    searchPlaceholder: 搜索文件或文件夹
+  editorMode:
+    textMode: 文本模式
+    visualMode: 可视化模式
+  welcome:
+    startEditing: 开始编辑
+    selectOrCreate: 选择一个文件开始编辑，或创建新文件
+    newFile: 新建文件
+
+notFound:
+  message: 页面不存在
+
+notifications:
+  thumbnailLoadFailed: 加载缩略图失败

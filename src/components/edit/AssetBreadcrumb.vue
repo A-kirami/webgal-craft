@@ -124,7 +124,7 @@ function handleClick(path: string) {
           <DropdownMenu>
             <DropdownMenuTrigger class="flex gap-1 items-center">
               <BreadcrumbEllipsis class="h-4 w-4" />
-              <span class="sr-only">简略路径</span>
+              <span class="sr-only">{{ $t('edit.assetBreadcrumb.shortPath') }}</span>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               <DropdownMenuItem v-for="(segment, index) in visibleSegments.hidden" :key="index" class="cursor-pointer">

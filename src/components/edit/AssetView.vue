@@ -139,17 +139,17 @@ const handleDoubleClick = async (item: FileSystemItem) => {
     <!-- 加载中状态 -->
     <div v-if="isLoading" class="flex flex-col h-full w-full items-center justify-center">
       <div class="i-svg-spinners-ring-resize text-accent mb-2 size-8 animate-spin" />
-      <span class="text-xs text-muted-foreground">正在加载资源…</span>
+      <span class="text-xs text-muted-foreground">{{ $t('edit.assetView.loading') }}</span>
     </div>
     <!-- 加载失败状态 -->
     <div v-else-if="errorMsg" class="flex flex-col h-full w-full items-center justify-center">
       <div class="i-lucide-alert-triangle text-destructive mb-2 size-10" />
-      <span class="text-xs text-destructive">加载失败：{{ errorMsg }}</span>
+      <span class="text-xs text-destructive">{{ $t('edit.assetView.loadFailed', { error: errorMsg }) }}</span>
     </div>
     <!-- 空状态 -->
     <div v-else-if="items.length === 0" class="flex flex-col h-full w-full items-center justify-center">
       <div class="i-lucide-folder-open text-muted-foreground mb-2 size-10" />
-      <span class="text-xs text-muted-foreground">暂无内容</span>
+      <span class="text-xs text-muted-foreground">{{ $t('edit.assetView.noContent') }}</span>
     </div>
     <!-- 文件列表 -->
     <div v-else :style="{ height: `${totalSize}px`, width: '100%', position: 'relative' }">

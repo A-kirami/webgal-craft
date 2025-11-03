@@ -33,10 +33,10 @@ const handleConfirm = () => {
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel @click="handleCancel">
-          {{ cancelText || '取消' }}
+          {{ cancelText || $t('common.cancel') }}
         </AlertDialogCancel>
         <AlertDialogAction :variant="type === 'danger' ? 'destructive' : 'default'" @click="handleConfirm">
-          {{ confirmText || '确认' }}
+          {{ confirmText || $t('common.confirm') }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

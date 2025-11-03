@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { TriangleAlert } from 'lucide-vue-next'
 
+const { t } = useI18n()
 const open = defineModel<boolean>('open')
 
 const props = defineProps<{
@@ -12,7 +13,7 @@ const modalStore = useModalStore()
 
 function deleteGame() {
   gameManager.deleteGame(props.game, removeFiles)
-  notify.success('游戏删除成功')
+  notify.success(t('modals.deleteGame.deleteSuccess'))
 }
 
 function handleConfirm() {
@@ -40,26 +41,30 @@ function handleConfirm() {
         </div>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            删除游戏
+            {{ $t('modals.deleteGame.title') }}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            <p>确定要删除游戏 <span class="text-black font-bold">{{ game.metadata.name }}</span> 吗？</p>
+            <i18n-t keypath="modals.deleteGame.description" tag="p">
+              <template #name>
+                <span class="text-black font-bold">{{ game.metadata.name }}</span>
+              </template>
+            </i18n-t>
             <div class="mt-4 flex items-center space-x-2">
               <Checkbox id="removeFiles" v-model="removeFiles" class="data-[state=checked]:border-destructive data-[state=checked]:bg-destructive/80" />
               <label
                 for="removeFiles"
                 class="text-sm leading-none font-medium peer-disabled:opacity-70 peer-disabled:cursor-not-allowed"
               >
-                同时删除游戏文件
+                {{ $t('modals.deleteGame.deleteFiles') }}
               </label>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
       </div>
       <AlertDialogFooter>
-        <AlertDialogCancel>取消</AlertDialogCancel>
+        <AlertDialogCancel>{{ $t('common.cancel') }}</AlertDialogCancel>
         <AlertDialogAction variant="destructive" @click="handleConfirm">
-          确认
+          {{ $t('common.confirm') }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

@@ -28,23 +28,25 @@ const { isOverDropZone: isOverDropZoneGrid } = useTauriDropZone(dropZoneGridRef,
 const dropZoneListRef = useTemplateRef<HTMLElement>('dropZoneListRef')
 const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef, handleDrop)
 
+const { t } = useI18n()
+
 // 导入引擎并处理通知
 async function importEngineWithNotify(path: string) {
   try {
     await engineManager.importEngine(path)
-    notify.success('引擎导入成功')
+    notify.success(t('home.engines.importSuccess'))
   } catch (error: unknown) {
     if (error instanceof GameError) {
-      notify.error('这不是一个有效的引擎文件夹')
+      notify.error(t('home.engines.importInvalidFolder'))
     } else {
-      notify.error('导入引擎时发生未知错误')
+      notify.error(t('home.engines.importUnknownError'))
     }
   }
 }
 
 async function handleDrop(paths: string[]) {
   if (paths.length > 1) {
-    notify.error('一次只能导入一个引擎文件夹')
+    notify.error(t('home.engines.importMultipleFolders'))
     return
   }
   await importEngineWithNotify(paths[0])
@@ -52,7 +54,7 @@ async function handleDrop(paths: string[]) {
 
 async function selectEngineFolder() {
   const path = await open({
-    title: '选择引擎文件夹',
+    title: t('modals.dialogs.selectEngineFolder'),
     directory: true,
     multiple: false,
   })
@@ -87,7 +89,7 @@ async function handleDelete(engine: Engine) {
                 <div class="rounded shrink-0 h-15 w-15 overflow-hidden">
                   <Thumbnail
                     :path="engine.metadata.icon"
-                    :alt="`${engine.metadata.name} 引擎图标`"
+                    :alt="$t('home.engines.engineIcon', { name: engine.metadata.name })"
                     :size="128"
                     fit="cover"
                     fallback-image="/placeholder.svg"
@@ -111,11 +113,11 @@ async function handleDelete(engine: Engine) {
         <ContextMenuContent class="w-42">
           <ContextMenuItem @click="handleOpenFolder(engine)">
             <Folder class="mr-2 h-4 w-4" />
-            打开文件夹
+            {{ $t('common.openFolder') }}
           </ContextMenuItem>
           <ContextMenuItem class="text-destructive focus:text-destructive-foreground focus:bg-destructive" @click="handleDelete(engine)">
             <Trash2 class="mr-2 h-4 w-4" />
-            卸载引擎
+            {{ $t('home.engines.uninstallEngine') }}
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
@@ -133,10 +135,10 @@ async function handleDelete(engine: Engine) {
         </div>
         <div>
           <p class="text-sm font-medium">
-            安装引擎
+            {{ $t('home.engines.installEngine') }}
           </p>
           <p class="text-xs text-muted-foreground mt-1">
-            点击浏览或拖放引擎文件夹到此处
+            {{ $t('home.engines.installEngineHint') }}
           </p>
         </div>
       </div>
@@ -154,7 +156,7 @@ async function handleDelete(engine: Engine) {
           <div class="rounded h-10 w-10 overflow-hidden">
             <Thumbnail
               :path="engine.metadata.icon"
-              :alt="`${engine.metadata.name} 引擎图标`"
+              :alt="$t('home.engines.engineIcon', { name: engine.metadata.name })"
               :size="128"
               fit="cover"
               fallback-image="/placeholder.svg"
@@ -183,7 +185,7 @@ async function handleDelete(engine: Engine) {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>打开文件夹</p>
+                <p>{{ $t('common.openFolder') }}</p>
               </TooltipContent>
             </Tooltip>
             <Tooltip>
@@ -198,7 +200,7 @@ async function handleDelete(engine: Engine) {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>卸载引擎</p>
+                <p>{{ $t('home.engines.uninstallEngine') }}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -220,10 +222,10 @@ async function handleDelete(engine: Engine) {
           </div>
           <div>
             <h3 class="font-medium">
-              安装引擎
+              {{ $t('home.engines.installEngine') }}
             </h3>
             <p class="text-xs text-muted-foreground">
-              点击浏览或拖放引擎文件夹到此处
+              {{ $t('home.engines.installEngineHint') }}
             </p>
           </div>
         </div>
@@ -243,10 +245,10 @@ async function handleDelete(engine: Engine) {
       <Box class="text-muted-foreground h-10 w-10" />
     </div>
     <h3 class="text-lg font-medium mb-1">
-      没有可用的游戏引擎
+      {{ $t('home.engines.noEngines') }}
     </h3>
     <p class="text-sm text-muted-foreground mb-4 text-center max-w-md">
-      你需要安装游戏引擎才能创建游戏
+      {{ $t('home.engines.noEnginesDesc') }}
     </p>
     <div class="mb-3 flex flex-col items-center">
       <div
@@ -257,15 +259,15 @@ async function handleDelete(engine: Engine) {
         }"
       >
         <Download class="text-muted-foreground mr-2 h-6 w-6" />
-        <span class="text-sm text-muted-foreground">将游戏引擎文件夹拖放到此处</span>
+        <span class="text-sm text-muted-foreground">{{ $t('home.engines.dropEngineFolder') }}</span>
       </div>
       <p class="text-xs text-muted-foreground">
-        或者
+        {{ $t('common.or') }}
       </p>
     </div>
     <Button variant="outline" class="gap-2" @click="selectEngineFolder">
       <Plus class="h-4 w-4" />
-      安装游戏引擎
+      {{ $t('home.engines.installGameEngine') }}
     </Button>
   </div>
 </template>

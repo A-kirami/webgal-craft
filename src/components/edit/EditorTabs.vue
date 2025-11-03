@@ -79,7 +79,7 @@ function handleWheel(event: WheelEvent) {
                 ]"
               />
             </div>
-            <span class="sr-only">关闭</span>
+            <span class="sr-only">{{ $t('common.close') }}</span>
           </Button>
         </div>
       </Button>

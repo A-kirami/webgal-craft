@@ -39,9 +39,9 @@ watch(() => props.content, () => {
             'h-2 w-2 rounded-full',
             isSaved ? 'bg-green-500' : 'bg-amber-500'
           ]"
-          :title="isSaved ? '已保存' : '未保存'"
+          :title="isSaved ? $t('common.saved') : $t('common.unsaved')"
         />
-        <span class="text-muted-foreground">{{ isSaved ? '已保存' : '未保存' }}</span>
+        <span class="text-muted-foreground">{{ isSaved ? $t('common.saved') : $t('common.unsaved') }}</span>
       </div>
     </div>
 
@@ -49,12 +49,12 @@ watch(() => props.content, () => {
       <div class="flex gap-1 items-center">
         <div class="flex gap-1 items-center">
           <FileText class="text-muted-foreground h-3 w-3" :stroke-width="1" />
-          <span class="font-medium">WebGAL 脚本</span>
+          <span class="font-medium">{{ $t('edit.textEditor.webgalScript') }}</span>
         </div>
         <ChartSpline class="text-muted-foreground h-3 w-3" />
         <span class="flex gap-2 items-center">
-          <span class="font-medium">{{ lineCount }} 行,</span>
-          <span class="font-medium">{{ wordCount }} 字</span>
+          <span class="font-medium">{{ $t('edit.textEditor.lines', { count: lineCount }) }}</span>
+          <span class="font-medium">{{ $t('edit.textEditor.words', { count: wordCount }) }}</span>
         </span>
       </div>
     </div>
