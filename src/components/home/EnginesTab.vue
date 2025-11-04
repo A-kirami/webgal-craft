@@ -54,7 +54,7 @@ async function handleDrop(paths: string[]) {
 
 async function selectEngineFolder() {
   const path = await open({
-    title: t('modals.dialogs.selectEngineFolder'),
+    title: t('common.dialogs.selectEngineFolder'),
     directory: true,
     multiple: false,
   })

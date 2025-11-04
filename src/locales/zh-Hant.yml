@@ -9,6 +9,12 @@ common:
   back: 返回
   or: 或者
   openFolder: 開啟資料夾
+  dialogs:
+    selectGameFolder: 選擇遊戲資料夾
+    selectEngineFolder: 選擇引擎資料夾
+  view:
+    grid: 網格檢視
+    list: 列表檢視
 
 home:
   header:
@@ -20,9 +26,6 @@ home:
     placeholder:
       recent: 搜尋最近創作...
       engines: 搜尋遊戲引擎...
-    view:
-      grid: 網格檢視
-      list: 列表檢視
   welcome:
     title: 歡迎使用 WebGAL Craft
     subtitle: 開始你的遊戲創作之旅，編寫屬於你的故事
@@ -60,10 +63,10 @@ home:
     importInvalidFolder: 這不是一個有效的引擎資料夾
     importUnknownError: 匯入引擎時發生未知錯誤
     importMultipleFolders: 一次只能匯入一個引擎資料夾
-  noEngineTitle: 沒有找到可用的遊戲引擎
-  noEngineContent: 需要先安裝遊戲引擎，才能建立遊戲
-  goToInstall: 前往安裝
-  later: 之後再說
+    noEngineTitle: 沒有找到可用的遊戲引擎
+    noEngineContent: 需要先安裝遊戲引擎，才能建立遊戲
+    goToInstall: 前往安裝
+    later: 之後再說
 
 modals:
   about:
@@ -100,9 +103,13 @@ modals:
     title: 效果編輯器
   upgrade:
     title: 更新
-  dialogs:
-    selectGameFolder: 選擇遊戲資料夾
-    selectEngineFolder: 選擇引擎資料夾
+  settings:
+    description: 在這裡管理您的設定，根據需要個人化您的體驗
+    tabs:
+      general: 一般
+      edit: 編輯
+      preview: 預覽
+      storage: 儲存
 
 edit:
   header:
@@ -118,8 +125,9 @@ edit:
     unsupportedType: 不支援的檔案類型
   textEditor:
     webgalScript: WebGAL 腳本
-    lines: "{count} 行,"
-    words: "{count} 字"
+    stats:
+      lines: "{count} 行,"
+      words: "{count} 字"
   scenePanel:
     scene: 場景
   previewPanel:
@@ -146,8 +154,55 @@ edit:
     selectOrCreate: 選擇一個檔案開始編輯，或建立新檔案
     newFile: 新建檔案
 
+settings:
+  experimental:
+    tooltip: 這是一個實驗性功能，使用過程中可能會遇到問題
+  general:
+    followSystem: 跟隨系統
+    theme:
+      label: 主題
+      options:
+        light: 淺色
+        dark: 深色
+    language:
+      label: 語言
+      placeholder: 請選擇語言
+    openLastProject:
+      label: 啟動時開啟最後建立的遊戲
+      description: 應用啟動時自動載入最後編輯的遊戲專案
+    autoInstallUpdates:
+      label: 自動安裝更新
+      description: 自動下載並安裝最新版本的應用程式
+  preview:
+    enableLivePreview:
+      label: 即時預覽
+      description: 編輯遊戲時即時預覽變更
+    enableFastPreview:
+      label: 快速預覽
+      description: 啟用快速預覽將顯著提高即時預覽效率
+  edit:
+    fontFamily:
+      label: 字體
+      placeholder: 字體名稱
+    fontSize:
+      label: 字體大小
+    wordWrap:
+      label: 自動換行
+      description: 超出編輯器寬度的行自動換行顯示
+    minimap:
+      label: 程式碼縮圖
+      description: 在編輯器右側顯示程式碼縮圖，方便快速定位
+    autoSave:
+      label: 自動儲存
+      description: 啟用後，編輯器將自動儲存您的變更
+  storage:
+    gamePath:
+      label: 遊戲儲存位置
+      title: 選擇遊戲儲存位置
+    enginePath:
+      label: 引擎儲存位置
+      title: 選擇引擎儲存位置
+    browse: 瀏覽
+
 notFound:
   message: 頁面不存在
-
-notifications:
-  thumbnailLoadFailed: 載入縮圖失敗

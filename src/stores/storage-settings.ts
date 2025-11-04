@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 
-export const useSettingsStore = defineStore(
-  'settings',
+export const useStorageSettingsStore = defineStore(
+  'storage-settings',
   () => {
     const gameSavePath = $ref<string>('')
     const engineSavePath = $ref<string>('')

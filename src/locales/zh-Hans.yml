@@ -9,6 +9,12 @@ common:
   back: 返回
   or: 或者
   openFolder: 打开文件夹
+  dialogs:
+    selectGameFolder: 选择游戏文件夹
+    selectEngineFolder: 选择引擎文件夹
+  view:
+    grid: 网格视图
+    list: 列表视图
 
 home:
   header:
@@ -20,9 +26,6 @@ home:
     placeholder:
       recent: 搜索最近创作...
       engines: 搜索游戏引擎...
-    view:
-      grid: 网格视图
-      list: 列表视图
   welcome:
     title: 欢迎使用 WebGAL Craft
     subtitle: 开始你的游戏创作之旅，编写属于你的故事
@@ -60,10 +63,10 @@ home:
     importInvalidFolder: 这不是一个有效的引擎文件夹
     importUnknownError: 导入引擎时发生未知错误
     importMultipleFolders: 一次只能导入一个引擎文件夹
-  noEngineTitle: 没有找到可用的游戏引擎
-  noEngineContent: 需要先安装游戏引擎，才能创建游戏
-  goToInstall: 前往安装
-  later: 之后再说
+    noEngineTitle: 没有找到可用的游戏引擎
+    noEngineContent: 需要先安装游戏引擎，才能创建游戏
+    goToInstall: 前往安装
+    later: 之后再说
 
 modals:
   about:
@@ -100,9 +103,13 @@ modals:
     title: 效果编辑器
   upgrade:
     title: 更新
-  dialogs:
-    selectGameFolder: 选择游戏文件夹
-    selectEngineFolder: 选择引擎文件夹
+  settings:
+    description: 在这里管理您的设置，根据需要个性化您的体验
+    tabs:
+      general: 常规
+      edit: 编辑
+      preview: 预览
+      storage: 存储
 
 edit:
   header:
@@ -118,8 +125,9 @@ edit:
     unsupportedType: 不支持的文件类型
   textEditor:
     webgalScript: WebGAL 脚本
-    lines: "{count} 行,"
-    words: "{count} 字"
+    stats:
+      lines: "{count} 行,"
+      words: "{count} 字"
   scenePanel:
     scene: 场景
   previewPanel:
@@ -146,8 +154,55 @@ edit:
     selectOrCreate: 选择一个文件开始编辑，或创建新文件
     newFile: 新建文件
 
+settings:
+  experimental:
+    tooltip: 这是一个实验性功能，使用过程中可能会遇到问题
+  general:
+    followSystem: 跟随系统
+    theme:
+      label: 主题
+      options:
+        light: 浅色
+        dark: 深色
+    language:
+      label: 语言
+      placeholder: 请选择语言
+    openLastProject:
+      label: 启动时打开最后创建的游戏
+      description: 应用启动时自动加载最后编辑的游戏项目
+    autoInstallUpdates:
+      label: 自动安装更新
+      description: 自动下载并安装最新版本的应用程序
+  preview:
+    enableLivePreview:
+      label: 实时预览
+      description: 编辑游戏时实时预览更改
+    enableFastPreview:
+      label: 快速预览
+      description: 启用快速预览将显著提高实时预览效率
+  edit:
+    fontFamily:
+      label: 字体
+      placeholder: 字体名称
+    fontSize:
+      label: 字体大小
+    wordWrap:
+      label: 自动换行
+      description: 超出编辑器宽度的行自动换行显示
+    minimap:
+      label: 代码缩略图
+      description: 在编辑器右侧显示代码缩略图，方便快速定位
+    autoSave:
+      label: 自动保存
+      description: 启用后，编辑器将自动保存您的更改
+  storage:
+    gamePath:
+      label: 游戏保存位置
+      title: 选择游戏保存位置
+    enginePath:
+      label: 引擎保存位置
+      title: 选择引擎保存位置
+    browse: 浏览
+
 notFound:
   message: 页面不存在
-
-notifications:
-  thumbnailLoadFailed: 加载缩略图失败

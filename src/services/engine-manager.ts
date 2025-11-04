@@ -84,10 +84,10 @@ async function registerEngine(enginePath: string, metadata?: EngineMetadata, cre
  */
 async function installEngine(enginePath: string): Promise<void> {
   const resourceStore = useResourceStore()
-  const settingsStore = useSettingsStore()
+  const storageSettingsStore = useStorageSettingsStore()
   try {
     const engineName = await basename(enginePath)
-    const targetPath = await join(settingsStore.engineSavePath, engineName)
+    const targetPath = await join(storageSettingsStore.engineSavePath, engineName)
 
     logger.info(`[引擎 ${engineName}] 开始安装`)
 

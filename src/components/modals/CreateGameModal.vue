@@ -21,7 +21,7 @@ const props = defineProps<{
   onSuccess?: (gameId: string) => void
 }>()
 
-const settingsStore = useSettingsStore()
+const storageSettingsStore = useStorageSettingsStore()
 
 const checkPath = async (path: string) => {
   try {
@@ -51,7 +51,7 @@ const schema = z.object({
 
 const { handleSubmit, isFieldDirty, setFieldValue } = useForm({
   validationSchema: schema,
-  initialValues: { gamePath: settingsStore.gameSavePath },
+  initialValues: { gamePath: storageSettingsStore.gameSavePath },
 })
 
 let isComposing = $ref(false)
@@ -64,7 +64,7 @@ const handleGameNameChange = async (event: Event) => {
 
   const value = (event.target as HTMLInputElement).value
   const sanitizeGameName = sanitize(value ?? '', { replacement: '_' })
-  const gamePath = await join(settingsStore.gameSavePath, sanitizeGameName)
+  const gamePath = await join(storageSettingsStore.gameSavePath, sanitizeGameName)
   if (!isPathManuallyChanged) {
     setFieldValue('gamePath', gamePath, false)
   }
@@ -84,7 +84,7 @@ const handleSelectFolder = async () => {
     title: t('modals.createGame.selectSaveLocation'),
     directory: true,
     multiple: false,
-    defaultPath: settingsStore.gameSavePath,
+    defaultPath: storageSettingsStore.gameSavePath,
   })
 
   if (selected) {

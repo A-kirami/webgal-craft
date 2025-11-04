@@ -18,8 +18,10 @@ interface languageConfig {
 
 const state = defineModel<TextModeState>('state', { required: true })
 
-// Monaco 编辑器配置
-const MONACO_EDITOR_OPTIONS = {
+const editSettings = useEditSettingsStore()
+
+// Monaco 编辑器基础配置
+const BASE_EDITOR_OPTIONS = {
   bracketPairColorization: {
     enabled: true,
     independentColorPoolPerBracketType: true,
@@ -35,6 +37,17 @@ const MONACO_EDITOR_OPTIONS = {
   },
   smoothScrolling: true,
 } as const satisfies monaco.editor.IEditorConstructionOptions
+
+// 从用户设置合并编辑器配置
+const MONACO_EDITOR_OPTIONS = $computed<monaco.editor.IEditorConstructionOptions>(() => ({
+  ...BASE_EDITOR_OPTIONS,
+  fontFamily: editSettings.fontFamily,
+  fontSize: editSettings.fontSize,
+  wordWrap: editSettings.wordWrap ? 'on' : 'off',
+  minimap: {
+    enabled: editSettings.minimap,
+  },
+}))
 
 let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
 const interactedPaths = new Set<string>()
@@ -190,6 +203,21 @@ const getLanguageConfig = computed((): languageConfig => {
   }
   return langConfig
 })
+
+// 监听配置变化并实时更新编辑器
+watch(
+  () => [
+    editSettings.fontFamily,
+    editSettings.fontSize,
+    editSettings.wordWrap,
+    editSettings.minimap,
+  ],
+  () => {
+    if (editor) {
+      editor.updateOptions(MONACO_EDITOR_OPTIONS)
+    }
+  },
+)
 
 // TODO: 其实应该监听 tabs 的活动标签页，目前点击当前 tab 不会聚焦，之后再改
 watch(() => state.value.path, () => {
