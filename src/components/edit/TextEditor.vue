@@ -5,22 +5,29 @@ import * as monaco from 'monaco-editor'
 import { wireTmGrammars } from 'monaco-editor-textmate'
 import { Registry } from 'monaco-textmate'
 
-import { colorMode } from '~/composables/color-mode'
 import webgalTextmate from '~/plugins/editor/grammars/webgal.tmLanguage.json'
-import darkTheme from '~/plugins/editor/themes/vs-dark-webgal.json'
-import lightTheme from '~/plugins/editor/themes/vs-webgal.json'
-import { useLineHolderStore } from '~/stores/line-holder'
-import { initOnigasm } from '~/utils/init-onigasm'
+import darkTheme from '~/plugins/editor/themes/webgal-dark.json'
+import lightTheme from '~/plugins/editor/themes/webgal-light.json'
 
-interface languageConfig {
+interface LanguageConfig {
   name: string
   displayName: string
   extension: string
 }
 
 const state = defineModel<TextModeState>('state', { required: true })
-
 const editSettings = useEditSettingsStore()
+const lineHolderStore = useLineHolderStore()
+
+const LANGUAGE_CONFIGS: LanguageConfig[] = [
+  { name: 'unknown', displayName: '未知', extension: '' },
+  { name: 'plaintext', displayName: '纯文本', extension: 'txt' },
+  { name: 'webgalscript', displayName: 'WebGAL 脚本', extension: 'txt' },
+  { name: 'json', displayName: 'JSON', extension: 'json' },
+  { name: 'webgalanimation', displayName: 'WebGAL 动画', extension: 'json' },
+]
+
+const LANGUAGE_MAP = new Map(LANGUAGE_CONFIGS.map(config => [config.name, config]))
 
 // Monaco 编辑器基础配置
 const BASE_EDITOR_OPTIONS = {
@@ -40,8 +47,8 @@ const BASE_EDITOR_OPTIONS = {
   smoothScrolling: true,
 } as const satisfies monaco.editor.IEditorConstructionOptions
 
-// 从用户设置合并编辑器配置
-const MONACO_EDITOR_OPTIONS = $computed<monaco.editor.IEditorConstructionOptions>(() => ({
+// 合并用户设置的编辑器配置
+const editorOptions = $computed<monaco.editor.IEditorConstructionOptions>(() => ({
   ...BASE_EDITOR_OPTIONS,
   fontFamily: editSettings.fontFamily,
   fontSize: editSettings.fontSize,
@@ -53,206 +60,167 @@ const MONACO_EDITOR_OPTIONS = $computed<monaco.editor.IEditorConstructionOptions
 
 let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
 const interactedPaths = new Set<string>()
-const lineHolderStore = useLineHolderStore()
-const generalSettings = useGeneralSettingsStore()
-const languageConfigs: languageConfig[] = [
-  { name: 'unknown', displayName: '未知', extension: '' },
-  { name: 'plaintext', displayName: '纯文本', extension: 'txt' },
-  { name: 'webgalscript', displayName: 'WebGAL 脚本', extension: 'txt' },
-  { name: 'json', displayName: 'JSON', extension: 'json' },
-  { name: 'webgalanimation', displayName: 'WebGAL 动画', extension: 'json' },
-]
-// 获取编辑器主题
-const getThemeName = (): string => {
-  if (editor && colorMode.value === 'dark') {
-    return editor ? 'vs-dark-webgal' : 'vs-dark'
-  } else {
-    return editor ? 'vs-webgal' : 'vs'
-  }
-}
-let currentTheme = $ref(getThemeName())
 
-// 配置 WebGal 语言支持
-const configureWebgalScript = async () => {
+// 编辑器主题名称
+const THEME_LIGHT = 'webgal-light'
+const THEME_DARK = 'webgal-dark'
+
+// 编辑器主题
+const currentTheme = $computed(() => {
+  return colorMode.value === 'dark' ? THEME_DARK : THEME_LIGHT
+})
+
+// 默认光标位置
+const DEFAULT_POSITION = new monaco.Position(1, 1)
+
+// 获取存储的光标位置
+function getStoredPosition(): monaco.Position {
+  return lineHolderStore.getPosition(state.value.path) ?? DEFAULT_POSITION
+}
+
+// 计算当前文件语言配置
+const currentLanguageConfig = $computed((): LanguageConfig => {
+  // 根据可视化类型判断
+  if (state.value.visualType === 'scene') {
+    return LANGUAGE_MAP.get('webgalscript')!
+  }
+  if (state.value.visualType === 'animation') {
+    return LANGUAGE_MAP.get('webgalanimation')!
+  }
+  // 根据文件扩展名判断
+  const extension = state.value.path.split('.').pop()?.toLowerCase() ?? ''
+  return LANGUAGE_CONFIGS.find(config => config.extension === extension) ?? LANGUAGE_CONFIGS[0]
+})
+
+// 配置 WebGAL 语言支持
+async function configureWebgalScript() {
   if (!editor) {
     return
   }
-  // 定义主题
-  monaco.editor.defineTheme('vs-webgal', lightTheme as monaco.editor.IStandaloneThemeData)
-  monaco.editor.defineTheme('vs-dark-webgal', darkTheme as monaco.editor.IStandaloneThemeData)
-  currentTheme = getThemeName()
-  // 注册语言
-  monaco.languages.register({ id: 'webgalscript' })
-  monaco.languages.setLanguageConfiguration('webgalscript', {
-    comments: {
-      lineComment: ';',
-    },
-    brackets: [['{', '}'], ['[', ']'], ['(', ')']],
-    autoClosingPairs: [
-      { open: '{', close: '}' },
-      { open: '[', close: ']' },
-      { open: '(', close: ')' },
-      { open: '"', close: '"' },
-    ],
-  })
-  // 语法高亮
-  const registry = new Registry({
-    getGrammarDefinition: async (scopeName, _dependentScope) => {
-      if (scopeName === 'source.webgal') {
-        return {
-          format: 'json',
-          content: JSON.stringify(webgalTextmate),
+
+  try {
+    // 定义主题
+    monaco.editor.defineTheme(THEME_LIGHT, lightTheme as monaco.editor.IStandaloneThemeData)
+    monaco.editor.defineTheme(THEME_DARK, darkTheme as monaco.editor.IStandaloneThemeData)
+    editor.updateOptions({ theme: currentTheme })
+    // 注册语言
+    monaco.languages.register({ id: 'webgalscript' })
+    monaco.languages.setLanguageConfiguration('webgalscript', {
+      comments: { lineComment: ';' },
+      brackets: [['{', '}'], ['[', ']'], ['(', ')']],
+      autoClosingPairs: [
+        { open: '{', close: '}' },
+        { open: '[', close: ']' },
+        { open: '(', close: ')' },
+        { open: '"', close: '"' },
+      ],
+    })
+    // 语法高亮
+    const registry = new Registry({
+      getGrammarDefinition: async (scopeName) => {
+        if (scopeName === 'source.webgal') {
+          return {
+            format: 'json',
+            content: JSON.stringify(webgalTextmate),
+          }
         }
-      }
-      return { format: 'json', content: '' }
-    },
-  })
-  const grammars = new Map()
-  grammars.set('webgalscript', 'source.webgal')
-  await initOnigasm()
-  await registry.loadGrammar('source.webgal')
-  await wireTmGrammars(monaco, registry, grammars, editor)
+        return { format: 'json', content: '' }
+      },
+    })
+
+    const grammars = new Map([['webgalscript', 'source.webgal']])
+    await initOnigasm()
+    await registry.loadGrammar('source.webgal')
+    await wireTmGrammars(monaco, registry, grammars, editor)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error(`配置 WebGAL 语言支持失败: ${errorMessage}`)
+  }
 }
 
 // 发送同步场景命令
-const syncScene = () => {
-  const model = editor?.getModel()
-  if (!model || state.value.visualType !== 'scene') {
+function syncScene() {
+  if (state.value.visualType !== 'scene') {
     return
   }
-  const position = lineHolderStore.getPosition(state.value.path)
-    || { lineNumber: 1, column: 1 }
+
+  const model = editor?.getModel()
+  if (!model) {
+    return
+  }
+
+  const position = getStoredPosition()
   const currentLineText = model.getLineContent(position.lineNumber)
-  debugCommander.syncScene(state.value.path, position.lineNumber, currentLineText)
+  void debugCommander.syncScene(state.value.path, position.lineNumber, currentLineText)
 }
 
 // 保存文本文件
-const saveTextFile = useDebounceFn((newText: string) => {
-  state.value.textContent = newText
-  state.value.isDirty = true
-  writeTextFile(state.value.path, newText).then(() => {
+async function saveTextFile(newText: string) {
+  try {
+    await writeTextFile(state.value.path, newText)
     state.value.isDirty = false
     syncScene()
-  }).catch((error) => {
-    logger.error(`保存文件时出错: ${error}`)
-  })
-}, 500)
-
-// 同步光标位置到文本编辑器
-const syncCursorPosition = () => {
-  const storedPosition = lineHolderStore.getPosition(state.value.path) || { lineNumber: 1, column: 1 }
-  editor?.setPosition(storedPosition)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error(`保存文件失败: ${errorMessage}`)
+  }
 }
 
-// 储存光标位置(必要时)
-const storeCursorPositionIfNeeded = (
-  event: monaco.editor.ICursorPositionChangedEvent,
-  onStore?: () => void,
-) => {
-  // 内容刷新或原因未知时不存储
-  if (
-    event.reason === monaco.editor.CursorChangeReason.NotSet
-    || event.reason === monaco.editor.CursorChangeReason.ContentFlush
-  ) {
-    return
-  }
-  // 行数未变化时不存储
-  const position = lineHolderStore.getPosition(state.value.path)
-  if (position && position.lineNumber === event.position.lineNumber) {
-    return
-  }
-  lineHolderStore.setPosition(state.value.path, event.position)
-  onStore?.()
+const debouncedSaveTextFile = useDebounceFn(saveTextFile, 500)
+
+// 同步光标位置到编辑器
+function syncCursorPosition() {
+  editor?.setPosition(getStoredPosition())
 }
 
-// 监听光标位置变化
-const handleCursorPositionChange = (event: monaco.editor.ICursorPositionChangedEvent) => {
+// 处理光标位置变化
+function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedEvent) {
   if (state.value.path) {
     interactedPaths.add(state.value.path)
   }
-  storeCursorPositionIfNeeded(event, () => {
-    syncScene()
-  })
-}
 
-// 编辑器挂载回调
-const handleMount = (editorInstance: monaco.editor.IStandaloneCodeEditor) => {
-  editor = editorInstance
-  editor.onDidChangeCursorPosition(handleCursorPositionChange)
-  editor.updateOptions({
-    wordWrap: 'on', // Todo: 应该做成设置项
-  })
-  configureWebgalScript()
-}
-
-// 内容变化处理
-const handleChange = (newValue: string) => {
-  state.value.isDirty = true
-  saveTextFile(newValue)
-}
-
-// 计算当前文件语言
-const getLanguageConfig = computed((): languageConfig => {
-  switch (state.value.visualType) {
-    case 'scene': {
-      return languageConfigs.find(lang => lang.name === 'webgalscript')!
-    }
-    case 'animation': {
-      return languageConfigs.find(lang => lang.name === 'webgalanimation')!
-    }
-    default: {
-      break
-    }
-  }
-  // 根据文件扩展名判断
-  const extensionMatch = state.value.path.match(/\.([^.]+)$/)
-  if (!extensionMatch) {
-    return languageConfigs[0]
-  }
-  const fileType = extensionMatch[1].toLowerCase()
-  const langConfig = languageConfigs.find(lang => lang.extension === fileType)
-  if (!langConfig) {
-    return languageConfigs[0]
-  }
-  return langConfig
-})
-
-// 监听配置变化并实时更新编辑器
-watch(
-  () => [
-    editSettings.fontFamily,
-    editSettings.fontSize,
-    editSettings.wordWrap,
-    editSettings.minimap,
-  ],
-  () => {
-    if (editor) {
-      editor.updateOptions(MONACO_EDITOR_OPTIONS)
-    }
-  },
-)
-
-// TODO: 其实应该监听 tabs 的活动标签页，目前点击当前 tab 不会聚焦，之后再改
-watch(() => state.value.path, () => {
-  if (!editor) {
+  const { reason, position } = event
+  // 内容刷新或未知原因时不存储
+  if (reason === monaco.editor.CursorChangeReason.NotSet
+    || reason === monaco.editor.CursorChangeReason.ContentFlush) {
     return
   }
 
-  if (interactedPaths.has(state.value.path)) {
-    editor.focus()
-    // 延迟执行，确保编辑器文本已更新
-    setTimeout(() => {
-      syncCursorPosition()
-      syncScene()
-    }, 0)
+  // 行数未变化时不存储
+  const storedPosition = lineHolderStore.getPosition(state.value.path)
+  if (storedPosition && storedPosition.lineNumber === position.lineNumber) {
+    return
   }
-})
 
-// 监听主题变化
-watch(() => generalSettings.theme, () => {
-  currentTheme = getThemeName()
-})
+  lineHolderStore.setPosition(state.value.path, position)
+  syncScene()
+}
 
+// 处理编辑器挂载
+function handleMount(editorInstance: monaco.editor.IStandaloneCodeEditor) {
+  editor = editorInstance
+  editor.onDidChangeCursorPosition(handleCursorPositionChange)
+  configureWebgalScript()
+}
+
+// 处理内容变化
+function handleChange(newValue: string) {
+  state.value.isDirty = true
+  debouncedSaveTextFile(newValue)
+}
+
+// TODO: 其实应该监听 tabs 的活动标签页，目前点击当前 tab 不会聚焦，之后再改
+watch(() => state.value.path, () => {
+  if (!editor || !interactedPaths.has(state.value.path)) {
+    return
+  }
+
+  editor.focus()
+  nextTick(() => {
+    syncCursorPosition()
+    syncScene()
+  })
+})
 </script>
 
 <template>
@@ -262,12 +230,17 @@ watch(() => generalSettings.theme, () => {
         :path="state.path"
         ::value="state.textContent"
         :theme="currentTheme"
-        :language="getLanguageConfig.name"
-        :options="MONACO_EDITOR_OPTIONS"
+        :language="currentLanguageConfig.name"
+        :options="editorOptions"
         @mount="handleMount"
         @change="handleChange"
       />
     </div>
-    <TextEditorStatusBar class="text-nowrap" :is-saved="!state.isDirty" :content="state.textContent" :file-language="getLanguageConfig.displayName" />
+    <TextEditorStatusBar
+      class="text-nowrap"
+      :is-saved="!state.isDirty"
+      :content="state.textContent"
+      :file-language="currentLanguageConfig.displayName"
+    />
   </div>
 </template>
