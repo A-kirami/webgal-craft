@@ -124,7 +124,12 @@ edit:
   assetPreview:
     unsupportedType: サポートされていないファイルタイプ
   textEditor:
-    webgalScript: WebGAL スクリプト
+    languages:
+      unknown: 不明
+      plaintext: プレーンテキスト
+      webgalscript: WebGAL スクリプト
+      json: JSON
+      webgalanimation: WebGAL アニメーション
     stats:
       lines: "{count} 行,"
       words: "{count} 字"

@@ -18,16 +18,15 @@ interface LanguageConfig {
 const state = defineModel<TextModeState>('state', { required: true })
 const editSettings = useEditSettingsStore()
 const lineHolderStore = useLineHolderStore()
+const { t } = useI18n()
 
-const LANGUAGE_CONFIGS: LanguageConfig[] = [
-  { name: 'unknown', displayName: '未知', extension: '' },
-  { name: 'plaintext', displayName: '纯文本', extension: 'txt' },
-  { name: 'webgalscript', displayName: 'WebGAL 脚本', extension: 'txt' },
-  { name: 'json', displayName: 'JSON', extension: 'json' },
-  { name: 'webgalanimation', displayName: 'WebGAL 动画', extension: 'json' },
-]
-
-const LANGUAGE_MAP = new Map(LANGUAGE_CONFIGS.map(config => [config.name, config]))
+const LANGUAGE_CONFIGS = $computed<LanguageConfig[]>(() => [
+  { name: 'unknown', displayName: t('edit.textEditor.languages.unknown'), extension: '' },
+  { name: 'plaintext', displayName: t('edit.textEditor.languages.plaintext'), extension: 'txt' },
+  { name: 'webgalscript', displayName: t('edit.textEditor.languages.webgalscript'), extension: 'txt' },
+  { name: 'json', displayName: t('edit.textEditor.languages.json'), extension: 'json' },
+  { name: 'webgalanimation', displayName: t('edit.textEditor.languages.webgalanimation'), extension: 'json' },
+])
 
 // Monaco 编辑器基础配置
 const BASE_EDITOR_OPTIONS = {
@@ -82,10 +81,10 @@ function getStoredPosition(): monaco.Position {
 const currentLanguageConfig = $computed((): LanguageConfig => {
   // 根据可视化类型判断
   if (state.value.visualType === 'scene') {
-    return LANGUAGE_MAP.get('webgalscript')!
+    return LANGUAGE_CONFIGS.find(config => config.name === 'webgalscript')!
   }
   if (state.value.visualType === 'animation') {
-    return LANGUAGE_MAP.get('webgalanimation')!
+    return LANGUAGE_CONFIGS.find(config => config.name === 'webgalanimation')!
   }
   // 根据文件扩展名判断
   const extension = state.value.path.split('.').pop()?.toLowerCase() ?? ''

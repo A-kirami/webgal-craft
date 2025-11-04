@@ -124,7 +124,12 @@ edit:
   assetPreview:
     unsupportedType: 不支持的文件类型
   textEditor:
-    webgalScript: WebGAL 脚本
+    languages:
+      unknown: 未知
+      plaintext: 纯文本
+      webgalscript: WebGAL 脚本
+      json: JSON
+      webgalanimation: WebGAL 动画
     stats:
       lines: "{count} 行,"
       words: "{count} 字"
