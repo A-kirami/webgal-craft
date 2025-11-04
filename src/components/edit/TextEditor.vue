@@ -5,7 +5,9 @@ import * as monaco from 'monaco-editor'
 import { wireTmGrammars } from 'monaco-editor-textmate'
 import { Registry } from 'monaco-textmate'
 
+import { colorMode } from '~/composables/color-mode'
 import webgalTextmate from '~/plugins/editor/grammars/webgal.tmLanguage.json'
+import darkTheme from '~/plugins/editor/themes/vs-dark-webgal.json'
 import lightTheme from '~/plugins/editor/themes/vs-webgal.json'
 import { useLineHolderStore } from '~/stores/line-holder'
 import { initOnigasm } from '~/utils/init-onigasm'
@@ -52,6 +54,7 @@ const MONACO_EDITOR_OPTIONS = $computed<monaco.editor.IEditorConstructionOptions
 let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
 const interactedPaths = new Set<string>()
 const lineHolderStore = useLineHolderStore()
+const generalSettings = useGeneralSettingsStore()
 const languageConfigs: languageConfig[] = [
   { name: 'unknown', displayName: '未知', extension: '' },
   { name: 'plaintext', displayName: '纯文本', extension: 'txt' },
@@ -59,7 +62,15 @@ const languageConfigs: languageConfig[] = [
   { name: 'json', displayName: 'JSON', extension: 'json' },
   { name: 'webgalanimation', displayName: 'WebGAL 动画', extension: 'json' },
 ]
-let currentTheme = $ref('vs')
+// 获取编辑器主题
+const getThemeName = (): string => {
+  if (editor && colorMode.value === 'dark') {
+    return editor ? 'vs-dark-webgal' : 'vs-dark'
+  } else {
+    return editor ? 'vs-webgal' : 'vs'
+  }
+}
+let currentTheme = $ref(getThemeName())
 
 // 配置 WebGal 语言支持
 const configureWebgalScript = async () => {
@@ -68,7 +79,8 @@ const configureWebgalScript = async () => {
   }
   // 定义主题
   monaco.editor.defineTheme('vs-webgal', lightTheme as monaco.editor.IStandaloneThemeData)
-  currentTheme = 'vs-webgal'
+  monaco.editor.defineTheme('vs-dark-webgal', darkTheme as monaco.editor.IStandaloneThemeData)
+  currentTheme = getThemeName()
   // 注册语言
   monaco.languages.register({ id: 'webgalscript' })
   monaco.languages.setLanguageConfiguration('webgalscript', {
@@ -235,6 +247,12 @@ watch(() => state.value.path, () => {
     }, 0)
   }
 })
+
+// 监听主题变化
+watch(() => generalSettings.theme, () => {
+  currentTheme = getThemeName()
+})
+
 </script>
 
 <template>

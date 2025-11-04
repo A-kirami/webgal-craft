@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 
+import { colorMode } from '~/composables/color-mode'
 import { setDayjsLocale } from '~/plugins/dayjs'
 
 export const useGeneralSettingsStore = defineStore(
@@ -9,10 +10,6 @@ export const useGeneralSettingsStore = defineStore(
     const language = $ref<'system' | 'zh-Hans' | 'zh-Hant' | 'en' | 'ja'>('system')
     const openLastProject = $ref<boolean>(false)
     const autoInstallUpdates = $ref<boolean>(true)
-
-    const colorMode = useColorMode({
-      storageKey: undefined,
-    })
 
     watch($$(theme), (newTheme) => {
       const mode = newTheme === 'system' ? 'auto' : newTheme
