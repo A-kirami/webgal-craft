@@ -53,8 +53,8 @@ watch(() => props.content, () => {
         </div>
         <ChartSpline class="text-muted-foreground h-3 w-3" />
         <span class="flex gap-2 items-center">
-          <span class="font-medium">{{ $t('edit.textEditor.lines', { count: lineCount }) }}</span>
-          <span class="font-medium">{{ $t('edit.textEditor.words', { count: wordCount }) }}</span>
+          <span class="font-medium">{{ $t('edit.textEditor.stats.lines', { count: lineCount }) }}</span>
+          <span class="font-medium">{{ $t('edit.textEditor.stats.words', { count: wordCount }) }}</span>
         </span>
       </div>
     </div>

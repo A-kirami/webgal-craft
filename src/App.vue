@@ -4,20 +4,25 @@ import { documentDir, join } from '@tauri-apps/api/path'
 async function initializeApp() {
   const isInitialized = useStorage('app-initialized', false)
   if (!isInitialized.value) {
-    const settingsStore = useSettingsStore()
-    if (settingsStore.gameSavePath === '') {
+    const storageSettingsStore = useStorageSettingsStore()
+    if (storageSettingsStore.gameSavePath === '') {
       const baseDir = await documentDir()
-      settingsStore.gameSavePath = await join(baseDir, 'WebGALCraft', 'games')
+      storageSettingsStore.gameSavePath = await join(baseDir, 'WebGALCraft', 'games')
     }
-    if (settingsStore.engineSavePath === '') {
+    if (storageSettingsStore.engineSavePath === '') {
       const baseDir = await documentDir()
-      settingsStore.engineSavePath = await join(baseDir, 'WebGALCraft', 'engines')
+      storageSettingsStore.engineSavePath = await join(baseDir, 'WebGALCraft', 'engines')
     }
     isInitialized.value = true
   }
 }
 
 const workspaceStore = useWorkspaceStore()
+
+onBeforeMount(() => {
+  // 确保 GeneralSettingsStore 在应用初始化前被创建
+  useGeneralSettingsStore()
+})
 
 onMounted(async () => {
   await logger.attachConsole()

@@ -43,6 +43,7 @@
     ],
     "at-rule-no-deprecated": null,
     "@stylistic/max-line-length": null,
-    "plugin/declaration-block-no-ignored-properties": true
+    "plugin/declaration-block-no-ignored-properties": true,
+    "no-invalid-position-declaration": null
   }
 }

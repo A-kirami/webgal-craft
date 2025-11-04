@@ -37,7 +37,7 @@ const updateSearch = useDebounceFn((value: string | number) => {
         @click="preferenceStore.viewMode = 'grid'"
       >
         <Grid class="h-4 w-4" />
-        <span class="sr-only">{{ $t('home.search.view.grid') }}</span>
+        <span class="sr-only">{{ $t('common.view.grid') }}</span>
       </Button>
       <Button
         :variant="preferenceStore.viewMode === 'list' ? 'default' : 'ghost'"
@@ -45,7 +45,7 @@ const updateSearch = useDebounceFn((value: string | number) => {
         @click="preferenceStore.viewMode = 'list'"
       >
         <List class="h-4 w-4" />
-        <span class="sr-only">{{ $t('home.search.view.list') }}</span>
+        <span class="sr-only">{{ $t('common.view.list') }}</span>
       </Button>
     </div>
   </div>
