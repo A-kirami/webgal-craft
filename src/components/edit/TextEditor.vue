@@ -192,20 +192,43 @@ function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedE
   }
 
   lineHolderStore.setPosition(state.value.path, position)
-  syncScene()
+  // 只有当文件已保存时才同步场景
+  if (!state.value.isDirty) {
+    syncScene()
+  }
+}
+
+// 手动保存文件
+async function manualSave() {
+  const model = editor?.getModel()
+  if (!model) {
+    return
+  }
+
+  const currentContent = model.getValue()
+  await saveTextFile(currentContent)
 }
 
 // 处理编辑器挂载
 function handleMount(editorInstance: monaco.editor.IStandaloneCodeEditor) {
   editor = editorInstance
   editor.onDidChangeCursorPosition(handleCursorPositionChange)
+
+  // 添加 Ctrl+S / Cmd+S 快捷键处理
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+    void manualSave()
+  })
+
   configureWebgalScript()
 }
 
 // 处理内容变化
 function handleChange(newValue: string) {
   state.value.isDirty = true
-  debouncedSaveTextFile(newValue)
+  // 只有在自动保存模式下才自动保存
+  if (editSettings.autoSave) {
+    debouncedSaveTextFile(newValue)
+  }
 }
 
 // TODO: 其实应该监听 tabs 的活动标签页，目前点击当前 tab 不会聚焦，之后再改
@@ -217,7 +240,10 @@ watch(() => state.value.path, () => {
   editor.focus()
   nextTick(() => {
     syncCursorPosition()
-    syncScene()
+    // 只有当文件已保存时才同步场景
+    if (!state.value.isDirty) {
+      syncScene()
+    }
   })
 })
 </script>
