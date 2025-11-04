@@ -53,10 +53,11 @@ let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
 const interactedPaths = new Set<string>()
 const lineHolderStore = useLineHolderStore()
 const languageConfigs: languageConfig[] = [
-  { name: 'unknown', displayName: '未知文件', extension: '' },
-  { name: 'plaintext', displayName: '纯文本文件', extension: 'txt' },
-  { name: 'webgal', displayName: 'WebGal 脚本', extension: 'txt' },
-  { name: 'json', displayName: 'JSON 文件', extension: 'json' },
+  { name: 'unknown', displayName: '未知', extension: '' },
+  { name: 'plaintext', displayName: '纯文本', extension: 'txt' },
+  { name: 'webgalscript', displayName: 'WebGAL 脚本', extension: 'txt' },
+  { name: 'json', displayName: 'JSON', extension: 'json' },
+  { name: 'webgalanimation', displayName: 'WebGAL 动画', extension: 'json' },
 ]
 let currentTheme = $ref('vs')
 
@@ -69,8 +70,8 @@ const configureWebgalScript = async () => {
   monaco.editor.defineTheme('vs-webgal', lightTheme as monaco.editor.IStandaloneThemeData)
   currentTheme = 'vs-webgal'
   // 注册语言
-  monaco.languages.register({ id: 'webgal' })
-  monaco.languages.setLanguageConfiguration('webgal', {
+  monaco.languages.register({ id: 'webgalscript' })
+  monaco.languages.setLanguageConfiguration('webgalscript', {
     comments: {
       lineComment: ';',
     },
@@ -95,7 +96,7 @@ const configureWebgalScript = async () => {
     },
   })
   const grammars = new Map()
-  grammars.set('webgal', 'source.webgal')
+  grammars.set('webgalscript', 'source.webgal')
   await initOnigasm()
   await registry.loadGrammar('source.webgal')
   await wireTmGrammars(monaco, registry, grammars, editor)
@@ -182,10 +183,10 @@ const handleChange = (newValue: string) => {
 const getLanguageConfig = computed((): languageConfig => {
   switch (state.value.visualType) {
     case 'scene': {
-      return languageConfigs.find(lang => lang.name === 'webgal')!
+      return languageConfigs.find(lang => lang.name === 'webgalscript')!
     }
     case 'animation': {
-      return languageConfigs.find(lang => lang.name === 'json')!
+      return languageConfigs.find(lang => lang.name === 'webgalanimation')!
     }
     default: {
       break
