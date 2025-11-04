@@ -2,8 +2,8 @@
   "base": "vs",
   "inherit": true,
   "rules": [
-    { "token": "comment", "foreground": "75715E" }, 
-    { "token": "comment.line.webgal", "foreground": "75715E" }, 
+    { "token": "comment", "foreground": "75715E" },
+    { "token": "comment.line.webgal", "foreground": "75715E" },
     { "token": "keyword.operator.webgal", "foreground": "f9005a", "fontStyle": "bold" },
     { "token": "string.unquoted.utterance.webgal", "foreground": "998f2f" },
     { "token": "meta.command.webgal", "foreground": "0089b3" },

@@ -5,9 +5,9 @@ import * as monaco from 'monaco-editor'
 import { wireTmGrammars } from 'monaco-editor-textmate'
 import { Registry } from 'monaco-textmate'
 
-import webgalTextmate from '~/grammars/webgal.tmLanguage.json'
+import webgalTextmate from '~/plugins/editor/grammars/webgal.tmLanguage.json'
+import lightTheme from '~/plugins/editor/themes/vs-webgal.json'
 import { useLineHolderStore } from '~/stores/line-holder'
-import lightTheme from '~/themes/vs-webgal.json'
 import { initOnigasm } from '~/utils/init-onigasm'
 
 interface languageConfig {
