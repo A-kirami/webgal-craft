@@ -172,12 +172,15 @@ function syncCursorPosition() {
   editor?.setPosition(getStoredPosition())
 }
 
-// 处理光标位置变化
-function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedEvent) {
+// 处理编辑器文本聚焦
+function handleFocusEditorText() {
   if (state.value.path) {
     interactedPaths.add(state.value.path)
   }
+}
 
+// 处理光标位置变化
+function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedEvent) {
   const { reason, position } = event
   // 内容刷新或未知原因时不存储
   if (reason === monaco.editor.CursorChangeReason.NotSet
@@ -212,6 +215,7 @@ async function manualSave() {
 // 处理编辑器挂载
 function handleMount(editorInstance: monaco.editor.IStandaloneCodeEditor) {
   editor = editorInstance
+  editor.onDidFocusEditorText(handleFocusEditorText)
   editor.onDidChangeCursorPosition(handleCursorPositionChange)
 
   // 添加 Ctrl+S / Cmd+S 快捷键处理
