@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useForm } from 'vee-validate'
 import * as z from 'zod'
 
 import { FormField } from '~/components/ui/form'
@@ -11,22 +10,10 @@ const validationSchema = z.object({
   enableFastPreview: z.boolean(),
 })
 
-const { handleSubmit, values } = useForm({
+const { values } = useSettingsForm({
+  store: PreviewSettingsStore,
   validationSchema,
-  initialValues: PreviewSettingsStore.$state,
 })
-
-const onSubmit = handleSubmit((values) => {
-  PreviewSettingsStore.$patch(values)
-})
-
-watchDebounced(
-  values,
-  () => {
-    void onSubmit()
-  },
-  { debounce: 300, maxWait: 600 },
-)
 </script>
 
 <template>

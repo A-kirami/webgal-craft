@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
-import { useForm } from 'vee-validate'
 import * as z from 'zod'
 
 import { FormField } from '~/components/ui/form'
@@ -13,22 +12,10 @@ const validationSchema = z.object({
   engineSavePath: z.string(),
 })
 
-const { handleSubmit, values, setFieldValue } = useForm({
+const { setFieldValue } = useSettingsForm({
+  store: StorageSettingsStore,
   validationSchema,
-  initialValues: StorageSettingsStore.$state,
 })
-
-const onSubmit = handleSubmit((values) => {
-  StorageSettingsStore.$patch(values)
-})
-
-watchDebounced(
-  values,
-  () => {
-    void onSubmit()
-  },
-  { debounce: 300, maxWait: 600 },
-)
 
 async function handleSelectFolder(
   fieldName: 'gameSavePath' | 'engineSavePath',

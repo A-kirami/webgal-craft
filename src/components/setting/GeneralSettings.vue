@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useForm } from 'vee-validate'
 import * as z from 'zod'
 
 import { FormField } from '~/components/ui/form'
@@ -35,48 +34,11 @@ const validationSchema = $computed(() => z.object({
   autoInstallUpdates: z.boolean(),
 }))
 
-const { handleSubmit, values } = useForm({
+useSettingsForm({
+  store: GeneralSettingsStore,
   validationSchema,
-  initialValues: GeneralSettingsStore.$state,
+  immediateFields: ['theme', 'language'],
 })
-
-const onSubmit = handleSubmit((values) => {
-  GeneralSettingsStore.$patch(values)
-})
-
-// 需要立即同步的字段（用于 UI 实时反馈）
-const immediateSyncFields = new Set<string>(['theme', 'language'])
-
-// 计算立即同步的字段
-const immediateValues = $computed(() => {
-  return Object.fromEntries(
-    Object.entries(values).filter(([key]) => immediateSyncFields.has(key)),
-  ) as Record<string, unknown>
-})
-
-// 监听立即同步字段的变化
-watch(
-  () => immediateValues,
-  () => {
-    void onSubmit()
-  },
-)
-
-// 计算需要防抖同步的字段（排除立即同步的字段）
-const debouncedValues = $computed(() => {
-  return Object.fromEntries(
-    Object.entries(values).filter(([key]) => !immediateSyncFields.has(key)),
-  ) as Record<string, unknown>
-})
-
-// 防抖监听除立即同步字段外的所有字段
-watchDebounced(
-  () => debouncedValues,
-  () => {
-    void onSubmit()
-  },
-  { debounce: 300, maxWait: 600 },
-)
 </script>
 
 <template>
