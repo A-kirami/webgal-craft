@@ -41,7 +41,7 @@ useSettingsForm({
         <FormLabel>{{ $t('settings.edit.fontSize.label') }}</FormLabel>
         <FormControl>
           <NumberField
-            :model-value="value ?? null"
+            :model-value="value"
             :min="8"
             :max="48"
             :invert-wheel-change="true"
