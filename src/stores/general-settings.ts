@@ -24,32 +24,21 @@ export const useGeneralSettingsStore = defineStore(
     const i18n = useI18n()
     const { language: systemLanguage } = useNavigatorLanguage()
 
-    function applyLanguage(targetLanguage: string | 'system') {
-      const finalLanguage = targetLanguage === 'system'
+    // 计算最终语言：如果选择系统语言则使用系统语言，否则使用用户选择的语言
+    const finalLanguage = $computed(() => {
+      return language === 'system'
         ? systemLanguage.value
-        : targetLanguage
-
-      if (finalLanguage) {
-        i18n.locale.value = finalLanguage
-        setDayjsLocale(finalLanguage)
-        document.querySelector('html')?.setAttribute('lang', finalLanguage)
-      }
-    }
-
-    const systemLanguageWatcher = watch(systemLanguage, () => {
-      applyLanguage('system')
+        : language
     })
 
-    watch($$(language), (newLanguage) => {
-      if (newLanguage !== undefined) {
-        applyLanguage(newLanguage)
-
-        if (newLanguage === 'system') {
-          systemLanguageWatcher.resume()
-        } else {
-          systemLanguageWatcher.pause()
-        }
+    // 监听最终语言变化并应用
+    watch($$(finalLanguage), (lang) => {
+      if (!lang) {
+        return
       }
+      i18n.locale.value = lang
+      setDayjsLocale(lang)
+      document.querySelector('html')?.setAttribute('lang', lang)
     }, { immediate: true })
 
     return $$({
