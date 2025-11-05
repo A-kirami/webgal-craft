@@ -125,7 +125,10 @@ export const useEditorStore = defineStore('editor', () => {
 
         states.set(path, { ...baseState, visualType })
       } else {
-        // FIXME: 打开时如果预览服务器尚未启动，则会无法显示资源
+        const workspaceStore = useWorkspaceStore()
+        // 等待预览服务器启动
+        await until(() => !!workspaceStore.currentGamePreviewUrl).toBe(true)
+
         states.set(path, {
           path,
           mode: 'preview',
