@@ -13,6 +13,24 @@ import './onigasm'
 export const THEME_LIGHT = 'webgal-light'
 export const THEME_DARK = 'webgal-dark'
 
+// Monaco 编辑器基础配置
+export const BASE_EDITOR_OPTIONS = {
+  bracketPairColorization: {
+    enabled: true,
+    independentColorPoolPerBracketType: true,
+  },
+  cursorSmoothCaretAnimation: 'on',
+  formatOnPaste: true,
+  formatOnType: true,
+  minimap: { enabled: true },
+  unicodeHighlight: {
+    ambiguousCharacters: false,
+    invisibleCharacters: false,
+    nonBasicASCII: false,
+  },
+  smoothScrolling: true,
+} as const satisfies monaco.editor.IEditorConstructionOptions
+
 // 定义主题
 monaco.editor.defineTheme(THEME_LIGHT, lightTheme as monaco.editor.IStandaloneThemeData)
 monaco.editor.defineTheme(THEME_DARK, darkTheme as monaco.editor.IStandaloneThemeData)

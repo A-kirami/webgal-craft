@@ -3,7 +3,7 @@ import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import { writeTextFile } from '@tauri-apps/plugin-fs'
 import * as monaco from 'monaco-editor'
 
-import { configureWebgalSyntaxHighlighting, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
+import { BASE_EDITOR_OPTIONS, configureWebgalSyntaxHighlighting, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
 
 interface LanguageConfig {
   name: string
@@ -24,24 +24,6 @@ const LANGUAGE_CONFIGS = $computed<LanguageConfig[]>(() => [
   { name: 'json', displayName: t('edit.textEditor.languages.json'), extension: 'json' },
   { name: 'animation', displayName: t('edit.textEditor.languages.webgalanimation'), extension: 'json', editorLanguage: 'json' },
 ])
-
-// Monaco 编辑器基础配置
-const BASE_EDITOR_OPTIONS = {
-  bracketPairColorization: {
-    enabled: true,
-    independentColorPoolPerBracketType: true,
-  },
-  cursorSmoothCaretAnimation: 'on',
-  formatOnPaste: true,
-  formatOnType: true,
-  minimap: { enabled: true },
-  unicodeHighlight: {
-    ambiguousCharacters: false,
-    invisibleCharacters: false,
-    nonBasicASCII: false,
-  },
-  smoothScrolling: true,
-} as const satisfies monaco.editor.IEditorConstructionOptions
 
 // 合并用户设置的编辑器配置
 const editorOptions = $computed<monaco.editor.IEditorConstructionOptions>(() => ({
