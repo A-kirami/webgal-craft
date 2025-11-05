@@ -171,13 +171,11 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
 
-  // TODO: 感觉 watch tabsStore.activeTab 更好？目前初始化时会把所有标签页都加载一遍，有些没必要，只加载当前激活的标签页更好
-  watchArray(() => tabsStore.tabs, async (_newTabs, _oldTabs, added, _removed) => {
-    // 处理新增的标签页
-    if (added.length > 0) {
-      await Promise.all(added.map(tab => loadEditorState(tab.path)))
+  watch(() => tabsStore.activeTab, async (activeTab) => {
+    if (activeTab && !states.has(activeTab.path)) {
+      await loadEditorState(activeTab.path)
     }
-  }, { deep: true, immediate: true })
+  }, { immediate: true })
 
   return $$({
     states,
