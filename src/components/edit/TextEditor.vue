@@ -3,7 +3,7 @@ import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import { writeTextFile } from '@tauri-apps/plugin-fs'
 import * as monaco from 'monaco-editor'
 
-import { configureWebgalSyntaxHighlighting, THEME_DARK, THEME_LIGHT } from '~/plugins/editor/monaco'
+import { configureWebgalSyntaxHighlighting, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
 
 interface LanguageConfig {
   name: string
