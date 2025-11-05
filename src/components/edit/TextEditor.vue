@@ -37,7 +37,8 @@ const editorOptions = $computed<monaco.editor.IEditorConstructionOptions>(() => 
 }))
 
 let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
-const interactedPaths = new Set<string>()
+// 追踪已获得过焦点的文件路径，用于切换文件时自动聚焦编辑器
+const focusedFilePaths = new Set<string>()
 // 追踪每个文件的上一次行号，用于避免同一行内的重复同步
 const lastLineNumberMap = new Map<string, number>()
 // 追踪每个文件的上次保存时的版本ID，用于准确判断 dirty 状态
@@ -112,7 +113,7 @@ function initializeVersionId() {
 // 处理编辑器文本聚焦
 function handleFocusEditorText() {
   if (state.value.path) {
-    interactedPaths.add(state.value.path)
+    focusedFilePaths.add(state.value.path)
   }
 }
 
@@ -181,8 +182,8 @@ watch(() => state.value.path, () => {
     return
   }
 
-  // 如果路径已交互过，则聚焦编辑器
-  if (interactedPaths.has(state.value.path)) {
+  // 如果文件已获得过焦点，则聚焦编辑器
+  if (focusedFilePaths.has(state.value.path)) {
     editor.focus()
   }
 
