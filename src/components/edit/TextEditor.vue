@@ -136,12 +136,12 @@ function syncScene() {
   }
 
   const model = editor.getModel()
-  const position = editor.getPosition()
 
-  if (!model || !position) {
+  if (!model) {
     return
   }
 
+  const position = editor.getPosition() ?? { lineNumber: 1, column: 1 }
   const lineCount = model.getLineCount()
   if (position.lineNumber < 1 || position.lineNumber > lineCount) {
     return
@@ -239,11 +239,15 @@ watch(() => state.value.isDirty, (isDirty) => {
 
 // TODO: 其实应该监听 tabs 的活动标签页，目前点击当前 tab 不会聚焦，之后再改
 watch(() => state.value.path, () => {
-  if (!editor || !interactedPaths.has(state.value.path)) {
+  if (!editor) {
     return
   }
 
-  editor.focus()
+  // 如果路径已交互过，则聚焦编辑器
+  if (interactedPaths.has(state.value.path)) {
+    editor.focus()
+  }
+
   nextTick(() => {
     if (!state.value.isDirty) {
       syncScene()
