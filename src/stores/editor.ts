@@ -43,9 +43,18 @@ async function checkFileType(path: string, subPath: string, mimeType: string, ex
     return false
   }
   const workspaceStore = useWorkspaceStore()
-  if (!workspaceStore.CWD) { // FIXME: 判断时此处 Workspace 可能没有加载完成导致判断错误
+
+  // 等待 CWD 加载完成，最多等待 100 ms
+  try {
+    await until(() => !!workspaceStore.CWD).toBe(true, { timeout: 100, throwOnTimeout: true })
+  } catch {
+    logger.error('Workspace 未初始化，无法检查文件类型')
+  }
+
+  if (!workspaceStore.CWD) {
     return false
   }
+
   const targetPath = await join(workspaceStore.CWD, 'game', subPath)
   return path.startsWith(targetPath)
 }
@@ -116,7 +125,10 @@ export const useEditorStore = defineStore('editor', () => {
 
         states.set(path, { ...baseState, visualType })
       } else {
-        // FIXME: 打开时如果预览服务器尚未启动，则会无法显示资源
+        const workspaceStore = useWorkspaceStore()
+        // 等待预览服务器启动
+        await until(() => !!workspaceStore.currentGamePreviewUrl).toBe(true)
+
         states.set(path, {
           path,
           mode: 'preview',
@@ -159,13 +171,11 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
 
-  // TODO: 感觉 watch tabsStore.activeTab 更好？目前初始化时会把所有标签页都加载一遍，有些没必要，只加载当前激活的标签页更好
-  watchArray(() => tabsStore.tabs, async (_newTabs, _oldTabs, added, _removed) => {
-    // 处理新增的标签页
-    if (added.length > 0) {
-      await Promise.all(added.map(tab => loadEditorState(tab.path)))
+  watch(() => tabsStore.activeTab, async (activeTab) => {
+    if (activeTab && !states.has(activeTab.path)) {
+      await loadEditorState(activeTab.path)
     }
-  }, { deep: true, immediate: true })
+  }, { immediate: true })
 
   return $$({
     states,
