@@ -176,7 +176,7 @@ watch(() => state.value.isDirty, (isDirty) => {
   }
 }, { immediate: true })
 
-// TODO: 其实应该监听 tabs 的活动标签页，目前点击当前 tab 不会聚焦，之后再改
+// 监听路径变化（文件切换）
 watch(() => state.value.path, () => {
   if (!editor) {
     return
