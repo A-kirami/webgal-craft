@@ -18,6 +18,7 @@ interface LanguageConfig {
 const state = defineModel<TextModeState>('state', { required: true })
 const editSettings = useEditSettingsStore()
 const lineHolderStore = useLineHolderStore()
+const tabsStore = useTabsStore()
 const { t } = useI18n()
 
 const LANGUAGE_CONFIGS = $computed<LanguageConfig[]>(() => [
@@ -234,6 +235,14 @@ function handleChange(newValue: string) {
     debouncedSaveTextFile(newValue)
   }
 }
+
+// 同步 isDirty 到 tab.isModified
+watch(() => state.value.isDirty, (isDirty) => {
+  const tabIndex = tabsStore.findTabIndex(state.value.path)
+  if (tabIndex !== -1) {
+    tabsStore.updateTabModified(tabIndex, isDirty)
+  }
+}, { immediate: true })
 
 // TODO: 其实应该监听 tabs 的活动标签页，目前点击当前 tab 不会聚焦，之后再改
 watch(() => state.value.path, () => {
