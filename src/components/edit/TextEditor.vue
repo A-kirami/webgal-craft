@@ -120,7 +120,6 @@ async function configureWebgalScript() {
     })
 
     const grammars = new Map([['webgalscript', 'source.webgal']])
-    await initOnigasm()
     await registry.loadGrammar('source.webgal')
     await wireTmGrammars(monaco, registry, grammars, editor)
   } catch (error) {

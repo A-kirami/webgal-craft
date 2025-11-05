@@ -9,6 +9,7 @@ import { router } from '~/router'
 import App from './App.vue'
 
 import '~/plugins/editor/monaco'
+import '~/plugins/editor/onigasm'
 
 import 'virtual:uno.css'
 
