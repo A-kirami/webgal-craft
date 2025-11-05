@@ -123,13 +123,7 @@ function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedE
 
 // 手动保存文件
 async function manualSave() {
-  const model = editor?.getModel()
-  if (!model) {
-    return
-  }
-
-  const currentContent = model.getValue()
-  await saveTextFile(currentContent)
+  await saveTextFile(state.value.textContent)
 }
 
 // 处理编辑器挂载
@@ -139,9 +133,7 @@ function handleMount(editorInstance: monaco.editor.IStandaloneCodeEditor) {
   editor.onDidChangeCursorPosition(handleCursorPositionChange)
 
   // 添加 Ctrl+S / Cmd+S 快捷键处理
-  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-    void manualSave()
-  })
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, manualSave)
 
   void configureWebgalSyntaxHighlighting(editor)
 }
