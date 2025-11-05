@@ -77,7 +77,8 @@ const currentLanguageConfig = $computed((): LanguageConfig => {
 
 // 发送同步场景命令
 function syncScene() {
-  if (state.value.visualType !== 'scene' || !editor) {
+  // 只有当文件已保存且是场景文件时才同步场景
+  if (state.value.isDirty || state.value.visualType !== 'scene' || !editor) {
     return
   }
 
@@ -135,10 +136,7 @@ function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedE
 
   // 更新上一次行号
   lastLineNumberMap.set(state.value.path, position.lineNumber)
-  // 只有当文件已保存时才同步场景
-  if (!state.value.isDirty) {
-    syncScene()
-  }
+  syncScene()
 }
 
 // 手动保存文件
@@ -195,9 +193,7 @@ watch(() => state.value.path, () => {
   }
 
   nextTick(() => {
-    if (!state.value.isDirty) {
-      syncScene()
-    }
+    syncScene()
   })
 })
 </script>
