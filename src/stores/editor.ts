@@ -43,10 +43,17 @@ async function checkFileType(path: string, subPath: string, mimeType: string, ex
     return false
   }
   const workspaceStore = useWorkspaceStore()
-  if (!workspaceStore.CWD) { // FIXME: 判断时此处 Workspace 可能没有加载完成导致判断错误
+
+  // 等待 CWD 加载完成，最多等待 100 ms
+  try {
+    await until(() => !!workspaceStore.CWD).toBe(true, { timeout: 100, throwOnTimeout: true })
+  } catch {
+    // 如果超时，说明 workspace 可能尚未初始化，返回 false
+    logger.error('Workspace 未初始化，无法检查文件类型')
     return false
   }
-  const targetPath = await join(workspaceStore.CWD, 'game', subPath)
+
+  const targetPath = await join(workspaceStore.CWD!, 'game', subPath)
   return path.startsWith(targetPath)
 }
 
