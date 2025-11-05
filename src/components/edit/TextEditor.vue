@@ -17,7 +17,6 @@ interface LanguageConfig {
 
 const state = defineModel<TextModeState>('state', { required: true })
 const editSettings = useEditSettingsStore()
-const lineHolderStore = useLineHolderStore()
 const tabsStore = useTabsStore()
 const { t } = useI18n()
 
@@ -60,6 +59,8 @@ const editorOptions = $computed<monaco.editor.IEditorConstructionOptions>(() => 
 
 let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
 const interactedPaths = new Set<string>()
+// 追踪每个文件的上一次行号，用于避免同一行内的重复同步
+const lastLineNumberMap = new Map<string, number>()
 
 // 编辑器主题名称
 const THEME_LIGHT = 'webgal-light'
@@ -69,14 +70,6 @@ const THEME_DARK = 'webgal-dark'
 const currentTheme = $computed(() => {
   return colorMode.value === 'dark' ? THEME_DARK : THEME_LIGHT
 })
-
-// 默认光标位置
-const DEFAULT_POSITION = new monaco.Position(1, 1)
-
-// 获取存储的光标位置
-function getStoredPosition(): monaco.Position {
-  return lineHolderStore.getPosition(state.value.path) ?? DEFAULT_POSITION
-}
 
 // 计算当前文件语言配置
 const currentLanguageConfig = $computed((): LanguageConfig => {
@@ -140,16 +133,22 @@ async function configureWebgalScript() {
 
 // 发送同步场景命令
 function syncScene() {
-  if (state.value.visualType !== 'scene') {
+  if (state.value.visualType !== 'scene' || !editor) {
     return
   }
 
-  const model = editor?.getModel()
-  if (!model) {
+  const model = editor.getModel()
+  const position = editor.getPosition()
+
+  if (!model || !position) {
     return
   }
 
-  const position = getStoredPosition()
+  const lineCount = model.getLineCount()
+  if (position.lineNumber < 1 || position.lineNumber > lineCount) {
+    return
+  }
+
   const currentLineText = model.getLineContent(position.lineNumber)
   void debugCommander.syncScene(state.value.path, position.lineNumber, currentLineText)
 }
@@ -168,11 +167,6 @@ async function saveTextFile(newText: string) {
 
 const debouncedSaveTextFile = useDebounceFn(saveTextFile, 500)
 
-// 同步光标位置到编辑器
-function syncCursorPosition() {
-  editor?.setPosition(getStoredPosition())
-}
-
 // 处理编辑器文本聚焦
 function handleFocusEditorText() {
   if (state.value.path) {
@@ -189,13 +183,14 @@ function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedE
     return
   }
 
-  // 行数未变化时不存储
-  const storedPosition = lineHolderStore.getPosition(state.value.path)
-  if (storedPosition && storedPosition.lineNumber === position.lineNumber) {
+  // 行数未变化时不触发同步（避免同一行内移动光标时的重复同步）
+  const lastLineNumber = lastLineNumberMap.get(state.value.path)
+  if (lastLineNumber === position.lineNumber) {
     return
   }
 
-  lineHolderStore.setPosition(state.value.path, position)
+  // 更新上一次行号
+  lastLineNumberMap.set(state.value.path, position.lineNumber)
   // 只有当文件已保存时才同步场景
   if (!state.value.isDirty) {
     syncScene()
@@ -252,8 +247,6 @@ watch(() => state.value.path, () => {
 
   editor.focus()
   nextTick(() => {
-    syncCursorPosition()
-    // 只有当文件已保存时才同步场景
     if (!state.value.isDirty) {
       syncScene()
     }
