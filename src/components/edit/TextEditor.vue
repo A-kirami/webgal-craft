@@ -40,6 +40,8 @@ let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
 const interactedPaths = new Set<string>()
 // 追踪每个文件的上一次行号，用于避免同一行内的重复同步
 const lastLineNumberMap = new Map<string, number>()
+// 追踪每个文件的上次保存时的版本ID，用于准确判断 dirty 状态
+const lastSavedVersionIdMap = new Map<string, number>()
 
 // 编辑器主题
 const currentTheme = $computed(() => {
@@ -84,6 +86,11 @@ function syncScene() {
 async function saveTextFile(newText: string) {
   try {
     await writeTextFile(state.value.path, newText)
+    // 更新保存时的版本ID
+    const lastSavedVersionId = editor?.getModel()?.getAlternativeVersionId()
+    if (lastSavedVersionId) {
+      lastSavedVersionIdMap.set(state.value.path, lastSavedVersionId)
+    }
     state.value.isDirty = false
     syncScene()
   } catch (error) {
@@ -93,6 +100,14 @@ async function saveTextFile(newText: string) {
 }
 
 const debouncedSaveTextFile = useDebounceFn(saveTextFile, 500)
+
+// 初始化版本ID（如果还没有记录过）
+function initializeVersionId() {
+  const versionId = editor?.getModel()?.getAlternativeVersionId()
+  if (versionId && !lastSavedVersionIdMap.has(state.value.path)) {
+    lastSavedVersionIdMap.set(state.value.path, versionId)
+  }
+}
 
 // 处理编辑器文本聚焦
 function handleFocusEditorText() {
@@ -139,11 +154,16 @@ function handleMount(editorInstance: monaco.editor.IStandaloneCodeEditor) {
 }
 
 // 处理内容变化
-function handleChange(newValue: string) {
-  state.value.isDirty = true
-  // 只有在自动保存模式下才自动保存
-  if (editSettings.autoSave) {
-    debouncedSaveTextFile(newValue)
+function handleChange(value: string | undefined) {
+  // 更新 dirty 状态（基于版本ID比较）
+  const currentVersionId = editor?.getModel()?.getAlternativeVersionId()
+  if (currentVersionId) {
+    const lastSavedVersionId = lastSavedVersionIdMap.get(state.value.path)!
+    state.value.isDirty = lastSavedVersionId !== currentVersionId
+  }
+
+  if (editSettings.autoSave && value) {
+    debouncedSaveTextFile(value)
   }
 }
 
@@ -167,8 +187,13 @@ watch(() => state.value.path, () => {
   }
 
   nextTick(() => {
+    initializeVersionId()
     syncScene()
   })
+})
+
+onMounted(() => {
+  initializeVersionId()
 })
 </script>
 
