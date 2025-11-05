@@ -13,6 +13,7 @@ interface LanguageConfig {
   name: string
   displayName: string
   extension: string
+  editorLanguage?: string
 }
 
 const state = defineModel<TextModeState>('state', { required: true })
@@ -21,11 +22,11 @@ const tabsStore = useTabsStore()
 const { t } = useI18n()
 
 const LANGUAGE_CONFIGS = $computed<LanguageConfig[]>(() => [
-  { name: 'unknown', displayName: t('edit.textEditor.languages.unknown'), extension: '' },
+  { name: 'unknown', displayName: t('edit.textEditor.languages.unknown'), extension: '', editorLanguage: 'plaintext' },
   { name: 'plaintext', displayName: t('edit.textEditor.languages.plaintext'), extension: 'txt' },
-  { name: 'webgalscript', displayName: t('edit.textEditor.languages.webgalscript'), extension: 'txt' },
+  { name: 'scene', displayName: t('edit.textEditor.languages.webgalscript'), extension: 'txt', editorLanguage: 'webgalscript' },
   { name: 'json', displayName: t('edit.textEditor.languages.json'), extension: 'json' },
-  { name: 'webgalanimation', displayName: t('edit.textEditor.languages.webgalanimation'), extension: 'json' },
+  { name: 'animation', displayName: t('edit.textEditor.languages.webgalanimation'), extension: 'json', editorLanguage: 'json' },
 ])
 
 // Monaco 编辑器基础配置
@@ -74,11 +75,8 @@ const currentTheme = $computed(() => {
 // 计算当前文件语言配置
 const currentLanguageConfig = $computed((): LanguageConfig => {
   // 根据可视化类型判断
-  if (state.value.visualType === 'scene') {
-    return LANGUAGE_CONFIGS.find(config => config.name === 'webgalscript')!
-  }
-  if (state.value.visualType === 'animation') {
-    return LANGUAGE_CONFIGS.find(config => config.name === 'webgalanimation')!
+  if (state.value.visualType) {
+    return LANGUAGE_CONFIGS.find(config => config.name === state.value.visualType)!
   }
   // 根据文件扩展名判断
   const extension = state.value.path.split('.').pop()?.toLowerCase() ?? ''
@@ -261,7 +259,7 @@ watch(() => state.value.path, () => {
         :path="state.path"
         ::value="state.textContent"
         :theme="currentTheme"
-        :language="currentLanguageConfig.name"
+        :language="currentLanguageConfig.editorLanguage ?? currentLanguageConfig.name"
         :options="editorOptions"
         @mount="handleMount"
         @change="handleChange"
