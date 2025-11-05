@@ -2,12 +2,12 @@ import * as monaco from 'monaco-editor'
 import { wireTmGrammars } from 'monaco-editor-textmate'
 import { Registry } from 'monaco-textmate'
 
-import './monaco'
-import './onigasm'
-
 import webgalTextmate from './grammars/webgal.tmLanguage.json'
 import darkTheme from './themes/webgal-dark.json'
 import lightTheme from './themes/webgal-light.json'
+
+import './monaco'
+import './onigasm'
 
 // 主题名称常量
 export const THEME_LIGHT = 'webgal-light'
