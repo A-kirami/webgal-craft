@@ -2,12 +2,8 @@
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import { writeTextFile } from '@tauri-apps/plugin-fs'
 import * as monaco from 'monaco-editor'
-import { wireTmGrammars } from 'monaco-editor-textmate'
-import { Registry } from 'monaco-textmate'
 
-import webgalTextmate from '~/plugins/editor/grammars/webgal.tmLanguage.json'
-import darkTheme from '~/plugins/editor/themes/webgal-dark.json'
-import lightTheme from '~/plugins/editor/themes/webgal-light.json'
+import { configureWebgalSyntaxHighlighting, THEME_DARK, THEME_LIGHT } from '~/plugins/editor/monaco'
 
 interface LanguageConfig {
   name: string
@@ -63,10 +59,6 @@ const interactedPaths = new Set<string>()
 // 追踪每个文件的上一次行号，用于避免同一行内的重复同步
 const lastLineNumberMap = new Map<string, number>()
 
-// 编辑器主题名称
-const THEME_LIGHT = 'webgal-light'
-const THEME_DARK = 'webgal-dark'
-
 // 编辑器主题
 const currentTheme = $computed(() => {
   return colorMode.value === 'dark' ? THEME_DARK : THEME_LIGHT
@@ -82,51 +74,6 @@ const currentLanguageConfig = $computed((): LanguageConfig => {
   const extension = state.value.path.split('.').pop()?.toLowerCase() ?? ''
   return LANGUAGE_CONFIGS.find(config => config.extension === extension) ?? LANGUAGE_CONFIGS[0]
 })
-
-// 配置 WebGAL 语言支持
-async function configureWebgalScript() {
-  if (!editor) {
-    return
-  }
-
-  try {
-    // 定义主题
-    monaco.editor.defineTheme(THEME_LIGHT, lightTheme as monaco.editor.IStandaloneThemeData)
-    monaco.editor.defineTheme(THEME_DARK, darkTheme as monaco.editor.IStandaloneThemeData)
-    editor.updateOptions({ theme: currentTheme })
-    // 注册语言
-    monaco.languages.register({ id: 'webgalscript' })
-    monaco.languages.setLanguageConfiguration('webgalscript', {
-      comments: { lineComment: ';' },
-      brackets: [['{', '}'], ['[', ']'], ['(', ')']],
-      autoClosingPairs: [
-        { open: '{', close: '}' },
-        { open: '[', close: ']' },
-        { open: '(', close: ')' },
-        { open: '"', close: '"' },
-      ],
-    })
-    // 语法高亮
-    const registry = new Registry({
-      getGrammarDefinition: async (scopeName) => {
-        if (scopeName === 'source.webgal') {
-          return {
-            format: 'json',
-            content: JSON.stringify(webgalTextmate),
-          }
-        }
-        return { format: 'json', content: '' }
-      },
-    })
-
-    const grammars = new Map([['webgalscript', 'source.webgal']])
-    await registry.loadGrammar('source.webgal')
-    await wireTmGrammars(monaco, registry, grammars, editor)
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error(`配置 WebGAL 语言支持失败: ${errorMessage}`)
-  }
-}
 
 // 发送同步场景命令
 function syncScene() {
@@ -216,7 +163,7 @@ function handleMount(editorInstance: monaco.editor.IStandaloneCodeEditor) {
     void manualSave()
   })
 
-  configureWebgalScript()
+  void configureWebgalSyntaxHighlighting(editor)
 }
 
 // 处理内容变化
