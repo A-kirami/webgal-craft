@@ -155,7 +155,7 @@ export default defineConfig(
       '@intlify/vue-i18n/no-raw-text': [
         'warn',
         {
-          ignorePattern: String.raw`^\d+$`,
+          ignorePattern: '^[-0-9+*/.,!@#$%^&()\\[\\]{}<>?;:"\'`~|\\\\]+$',
         },
       ],
     },

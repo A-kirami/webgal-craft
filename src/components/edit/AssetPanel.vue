@@ -139,7 +139,7 @@ const isMaxZoom = $computed(() => preferenceStore.assetZoom[0] >= 150)
           class="flex-1 hidden @[320px]:flex"
         />
         <span class="text-xs text-center w-8 order-none @[320px]:order-1">
-          {{ $n(preferenceStore.assetZoom[0], 'percent') }}
+          {{ preferenceStore.assetZoom[0] }}%
         </span>
         <Plus
           class="text-muted-foreground h-3.5 w-3.5"
