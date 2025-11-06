@@ -1,5 +1,5 @@
-import { basename, join } from '@tauri-apps/api/path'
-import { remove } from '@tauri-apps/plugin-fs'
+import { join } from '@tauri-apps/api/path'
+import { readFile, remove } from '@tauri-apps/plugin-fs'
 
 import { EngineMetadata, GameError } from './types'
 
@@ -33,13 +33,15 @@ async function validateEngine(enginePath: string): Promise<boolean> {
  */
 async function getEngineMetadata(enginePath: string): Promise<EngineMetadata> {
   try {
-    const name = await basename(enginePath)
     const iconPath = await join(enginePath, 'icons', 'favicon.ico')
+    const metaBuffer = (await readFile(enginePath + '/manifest.json'))
+    const decoder = new TextDecoder('utf8')
+    const { name, description } = JSON.parse(decoder.decode(metaBuffer)) as EngineMetadata
 
     return {
       name,
       icon: iconPath,
-      description: '',
+      description,
     }
   } catch (error) {
     throw new GameError(
@@ -86,16 +88,17 @@ async function installEngine(enginePath: string): Promise<void> {
   const resourceStore = useResourceStore()
   const storageSettingsStore = useStorageSettingsStore()
   try {
-    const engineName = await basename(enginePath)
+    const metaData = await getEngineMetadata(enginePath)
+    const engineName = metaData.name
     const targetPath = await join(storageSettingsStore.engineSavePath, engineName)
 
     logger.info(`[引擎 ${engineName}] 开始安装`)
 
     // 1. 先注册到数据库
     const id = await registerEngine(targetPath, {
-      name: engineName,
-      icon: '',
-      description: '',
+      name: metaData.name,
+      icon: metaData.icon,
+      description: metaData.description,
     }, true)
     logger.info(`[引擎 ${engineName}] 注册到数据库`)
 
