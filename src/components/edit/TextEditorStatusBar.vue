@@ -2,11 +2,39 @@
 import { countLines, countWords } from 'alfaaz'
 import { ChartSpline, FileText } from 'lucide-vue-next'
 
+import dayjs from '~/plugins/dayjs'
+
 const props = defineProps<{
   isSaved: boolean
   content: string
   fileLanguage: string
+  lastSavedTime?: Date | undefined
 }>()
+
+const { locale } = useI18n()
+
+// 只在需要显示时间时启用定时器
+const shouldShowTime = $computed(() => props.isSaved && !!props.lastSavedTime)
+const { now, pause, resume } = useNow({
+  interval: 30 * 1000,
+  controls: true,
+})
+
+watch(() => shouldShowTime, (show) => {
+  if (show) {
+    resume()
+  } else {
+    pause()
+  }
+}, { immediate: true })
+
+let relativeTime = $ref<string | undefined>()
+
+watch([() => shouldShowTime, now, locale, () => props.lastSavedTime], () => {
+  relativeTime = shouldShowTime && props.lastSavedTime
+    ? dayjs(props.lastSavedTime).from(now.value)
+    : undefined
+}, { immediate: true })
 
 let wordCount = $ref(0)
 let lineCount = $ref(0)
@@ -35,7 +63,10 @@ watchDebounced(() => props.content, () => {
           ]"
           :title="isSaved ? $t('common.saved') : $t('common.unsaved')"
         />
-        <span class="text-muted-foreground">{{ isSaved ? $t('common.saved') : $t('common.unsaved') }}</span>
+        <span class="text-muted-foreground">
+          {{ isSaved ? $t('common.saved') : $t('common.unsaved') }}
+          <span v-if="shouldShowTime" class="text-xs ml-1 opacity-70">{{ relativeTime }}</span>
+        </span>
       </div>
     </div>
 
