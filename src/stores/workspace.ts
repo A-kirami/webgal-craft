@@ -48,6 +48,7 @@ export const useWorkspaceStore = defineStore(
           logger.error(`停止预览失败: ${error}`)
         }
         currentGame = undefined
+        currentGamePreviewUrl = undefined
       }
 
       if (params.gameId) {
@@ -57,6 +58,7 @@ export const useWorkspaceStore = defineStore(
           try {
             currentGamePreviewUrl = await gameManager.runGamePreview(game.path)
           } catch (error) {
+            currentGamePreviewUrl = undefined
             logger.error(`获取预览链接失败: ${error}`)
           }
         }
