@@ -41,6 +41,8 @@ let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
 const focusedFilePaths = new Set<string>()
 // 追踪每个文件的上次保存时的版本ID，用于准确判断 dirty 状态
 const lastSavedVersionIdMap = new Map<string, number>()
+// 追踪每个文件的上次保存时间（使用响应式对象）
+const lastSavedTimes = $ref<Record<string, Date>>({})
 
 // 编辑器主题
 const currentTheme = $computed(() => {
@@ -90,6 +92,8 @@ async function saveTextFile(newText: string) {
     if (lastSavedVersionId) {
       lastSavedVersionIdMap.set(state.value.path, lastSavedVersionId)
     }
+    // 更新该文件的保存时间
+    lastSavedTimes[state.value.path] = new Date()
     state.value.isDirty = false
     syncScene()
   } catch (error) {
@@ -165,6 +169,11 @@ function handleChange(value: string | undefined) {
   }
 }
 
+// 计算当前文件的保存时间
+const lastSavedTime = $computed(() => {
+  return lastSavedTimes[state.value.path] ?? undefined
+})
+
 // 同步 isDirty 到 tab.isModified
 watch(() => state.value.isDirty, (isDirty) => {
   const tabIndex = tabsStore.findTabIndex(state.value.path)
@@ -213,6 +222,7 @@ onMounted(() => {
       :is-saved="!state.isDirty"
       :content="state.textContent"
       :file-language="currentLanguageConfig.displayName"
+      :last-saved-time="lastSavedTime"
     />
   </div>
 </template>
