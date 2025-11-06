@@ -39,8 +39,6 @@ const editorOptions = $computed<monaco.editor.IEditorConstructionOptions>(() => 
 let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
 // 追踪已获得过焦点的文件路径，用于切换文件时自动聚焦编辑器
 const focusedFilePaths = new Set<string>()
-// 追踪每个文件的上一次行号，用于避免同一行内的重复同步
-const lastLineNumberMap = new Map<string, number>()
 // 追踪每个文件的上次保存时的版本ID，用于准确判断 dirty 状态
 const lastSavedVersionIdMap = new Map<string, number>()
 
@@ -127,13 +125,12 @@ function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedE
   }
 
   // 行数未变化时不触发同步（避免同一行内移动光标时的重复同步）
-  const lastLineNumber = lastLineNumberMap.get(state.value.path)
-  if (lastLineNumber === position.lineNumber) {
+  if (state.value.lastLineNumber === position.lineNumber) {
     return
   }
 
   // 更新上一次行号
-  lastLineNumberMap.set(state.value.path, position.lineNumber)
+  state.value.lastLineNumber = position.lineNumber
   syncScene()
 }
 

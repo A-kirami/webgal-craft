@@ -12,6 +12,7 @@ type VisualType = 'scene' | 'animation'
 interface TextualEditorBase extends CoreEditorState {
   isDirty: boolean
   visualType?: VisualType
+  lastLineNumber?: number
 }
 
 export interface TextModeState extends TextualEditorBase {
