@@ -124,7 +124,12 @@ edit:
   assetPreview:
     unsupportedType: Unsupported file type
   textEditor:
-    webgalScript: WebGAL Script
+    languages:
+      unknown: Unknown
+      plaintext: Plain Text
+      webgalscript: WebGAL Script
+      json: JSON
+      webgalanimation: WebGAL Animation
     stats:
       lines: "{count} lines,"
       words: "{count} words"

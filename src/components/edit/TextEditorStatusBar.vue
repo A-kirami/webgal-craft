@@ -5,29 +5,23 @@ import { ChartSpline, FileText } from 'lucide-vue-next'
 const props = defineProps<{
   isSaved: boolean
   content: string
+  fileLanguage: string
 }>()
 
 let wordCount = $ref(0)
 let lineCount = $ref(0)
 
-// 使用节流进行快速更新
-const updateCountsThrottled = useThrottleFn(() => {
+// 首次加载时立即计算
+onMounted(() => {
   wordCount = countWords(props.content)
   lineCount = countLines(props.content)
-}, 500)
+})
 
-// 使用防抖进行最终更新
-const updateCountsDebounced = useDebounceFn(() => {
+// 后续变化使用防抖
+watchDebounced(() => props.content, () => {
   wordCount = countWords(props.content)
   lineCount = countLines(props.content)
-}, 1000)
-
-watch(() => props.content, () => {
-  // 先进行节流更新
-  updateCountsThrottled()
-  // 然后进行防抖更新
-  updateCountsDebounced()
-}, { immediate: true })
+}, { debounce: 500, maxWait: 1000 })
 </script>
 
 <template>
@@ -49,7 +43,7 @@ watch(() => props.content, () => {
       <div class="flex gap-1 items-center">
         <div class="flex gap-1 items-center">
           <FileText class="text-muted-foreground h-3 w-3" :stroke-width="1" />
-          <span class="font-medium">{{ $t('edit.textEditor.webgalScript') }}</span>
+          <span class="font-medium">{{ fileLanguage }}</span>
         </div>
         <ChartSpline class="text-muted-foreground h-3 w-3" />
         <span class="flex gap-2 items-center">

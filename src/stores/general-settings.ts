@@ -10,10 +10,6 @@ export const useGeneralSettingsStore = defineStore(
     const openLastProject = $ref<boolean>(false)
     const autoInstallUpdates = $ref<boolean>(true)
 
-    const colorMode = useColorMode({
-      storageKey: undefined,
-    })
-
     watch($$(theme), (newTheme) => {
       const mode = newTheme === 'system' ? 'auto' : newTheme
       if (colorMode.value !== mode) {

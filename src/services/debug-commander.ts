@@ -55,11 +55,10 @@ function isCurrentLineJump(currentLineValue: string | null): boolean {
  * @param force - 是否强制发送，忽略实时预览设置
  */
 async function syncScene(scenePath: string, lineNumber: number, lineCommandString: string, force?: boolean) {
-  const isEnableLivePreview = true
-  const isUseExpFastSync = false
+  const PreviewSettingsStore = usePreviewSettingsStore()
 
   const sceneName = await extractSceneName(scenePath)
-  if (!isEnableLivePreview && !force) {
+  if (!PreviewSettingsStore.enableLivePreview && !force) {
     return
   }
 
@@ -70,7 +69,7 @@ async function syncScene(scenePath: string, lineNumber: number, lineCommandStrin
         scene: sceneName,
         sentence: lineNumber,
       },
-      message: isUseExpFastSync ? 'exp' : 'sync',
+      message: PreviewSettingsStore.enableFastPreview ? 'exp' : 'sync',
     })
   }
 }

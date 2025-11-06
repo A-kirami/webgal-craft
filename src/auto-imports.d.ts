@@ -11,6 +11,7 @@ declare global {
   const GameError: typeof import('./services/types').GameError
   const asyncComputed: typeof import('@vueuse/core').asyncComputed
   const autoResetRef: typeof import('@vueuse/core').autoResetRef
+  const colorMode: typeof import('./composables/color-mode').colorMode
   const computed: typeof import('vue').computed
   const computedAsync: typeof import('@vueuse/core').computedAsync
   const computedEager: typeof import('@vueuse/core').computedEager
@@ -373,6 +374,7 @@ declare module 'vue' {
     readonly GameError: UnwrapRef<typeof import('./services/types')['GameError']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
+    readonly colorMode: UnwrapRef<typeof import('./composables/color-mode')['colorMode']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>

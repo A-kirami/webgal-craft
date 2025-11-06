@@ -124,7 +124,12 @@ edit:
   assetPreview:
     unsupportedType: 不支援的檔案類型
   textEditor:
-    webgalScript: WebGAL 腳本
+    languages:
+      unknown: 未知
+      plaintext: 純文字
+      webgalscript: WebGAL 腳本
+      json: JSON
+      webgalanimation: WebGAL 動畫
     stats:
       lines: "{count} 行,"
       words: "{count} 字"
