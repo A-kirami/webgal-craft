@@ -1,5 +1,5 @@
 import { join } from '@tauri-apps/api/path'
-import { readFile, remove } from '@tauri-apps/plugin-fs'
+import { readTextFile, remove } from '@tauri-apps/plugin-fs'
 
 import { EngineMetadata, GameError } from './types'
 
@@ -34,9 +34,9 @@ async function validateEngine(enginePath: string): Promise<boolean> {
 async function getEngineMetadata(enginePath: string): Promise<EngineMetadata> {
   try {
     const iconPath = await join(enginePath, 'icons', 'favicon.ico')
-    const metaBuffer = (await readFile(enginePath + '/manifest.json'))
-    const decoder = new TextDecoder('utf8')
-    const { name, description } = JSON.parse(decoder.decode(metaBuffer)) as EngineMetadata
+    const manifestPath = await join(enginePath, 'manifest.json')
+    const metaContent = await readTextFile(manifestPath)
+    const { name, description } = JSON.parse(metaContent)
 
     return {
       name,
