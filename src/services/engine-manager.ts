@@ -88,18 +88,14 @@ async function installEngine(enginePath: string): Promise<void> {
   const resourceStore = useResourceStore()
   const storageSettingsStore = useStorageSettingsStore()
   try {
-    const metaData = await getEngineMetadata(enginePath)
-    const engineName = metaData.name
+    const metadata = await getEngineMetadata(enginePath)
+    const engineName = metadata.name
     const targetPath = await join(storageSettingsStore.engineSavePath, engineName)
 
     logger.info(`[引擎 ${engineName}] 开始安装`)
 
     // 1. 先注册到数据库
-    const id = await registerEngine(targetPath, {
-      name: metaData.name,
-      icon: metaData.icon,
-      description: metaData.description,
-    }, true)
+    const id = await registerEngine(targetPath, metadata, true)
     logger.info(`[引擎 ${engineName}] 注册到数据库`)
 
     // 2. 再复制文件
@@ -111,7 +107,6 @@ async function installEngine(enginePath: string): Promise<void> {
 
     resourceStore.finishProgress(id)
 
-    const metadata = await getEngineMetadata(targetPath)
     await db.engines.update(id, {
       status: 'created',
       metadata,
