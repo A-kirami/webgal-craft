@@ -107,10 +107,7 @@ async function installEngine(enginePath: string): Promise<void> {
 
     resourceStore.finishProgress(id)
 
-    await db.engines.update(id, {
-      status: 'created',
-      metadata,
-    })
+    await db.engines.update(id, { status: 'created' })
 
     logger.info(`[引擎 ${engineName}] 安装引擎完成`)
   } catch (error) {
