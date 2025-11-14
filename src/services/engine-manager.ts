@@ -1,5 +1,5 @@
-import { basename, join } from '@tauri-apps/api/path'
-import { remove } from '@tauri-apps/plugin-fs'
+import { join } from '@tauri-apps/api/path'
+import { readTextFile, remove } from '@tauri-apps/plugin-fs'
 
 import { EngineMetadata, GameError } from './types'
 
@@ -33,13 +33,15 @@ async function validateEngine(enginePath: string): Promise<boolean> {
  */
 async function getEngineMetadata(enginePath: string): Promise<EngineMetadata> {
   try {
-    const name = await basename(enginePath)
     const iconPath = await join(enginePath, 'icons', 'favicon.ico')
+    const manifestPath = await join(enginePath, 'manifest.json')
+    const metaContent = await readTextFile(manifestPath)
+    const { name, description } = JSON.parse(metaContent)
 
     return {
       name,
       icon: iconPath,
-      description: '',
+      description,
     }
   } catch (error) {
     throw new GameError(
@@ -86,17 +88,14 @@ async function installEngine(enginePath: string): Promise<void> {
   const resourceStore = useResourceStore()
   const storageSettingsStore = useStorageSettingsStore()
   try {
-    const engineName = await basename(enginePath)
+    const metadata = await getEngineMetadata(enginePath)
+    const engineName = metadata.name
     const targetPath = await join(storageSettingsStore.engineSavePath, engineName)
 
     logger.info(`[引擎 ${engineName}] 开始安装`)
 
     // 1. 先注册到数据库
-    const id = await registerEngine(targetPath, {
-      name: engineName,
-      icon: '',
-      description: '',
-    }, true)
+    const id = await registerEngine(targetPath, metadata, true)
     logger.info(`[引擎 ${engineName}] 注册到数据库`)
 
     // 2. 再复制文件
@@ -108,11 +107,7 @@ async function installEngine(enginePath: string): Promise<void> {
 
     resourceStore.finishProgress(id)
 
-    const metadata = await getEngineMetadata(targetPath)
-    await db.engines.update(id, {
-      status: 'created',
-      metadata,
-    })
+    await db.engines.update(id, { status: 'created' })
 
     logger.info(`[引擎 ${engineName}] 安装引擎完成`)
   } catch (error) {
