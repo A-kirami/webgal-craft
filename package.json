@@ -67,6 +67,7 @@
     "vue-inline-svg": "^4.0.1",
     "vue-router": "^4.6.3",
     "vue-sonner": "^2.0.9",
+    "webgal-parser": "^4.5.16",
     "zod": "^4.1.12"
   },
   "devDependencies": {
