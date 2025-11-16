@@ -168,7 +168,9 @@ function handleChange(value: string | undefined) {
     debouncedSaveTextFile(value)
   }
 
-  tryTriggerWebgalScriptCompletion(editor)
+  if (state.value.visualType === 'scene') {
+    tryTriggerWebgalScriptCompletion(editor)
+  }
 }
 
 // 计算当前文件的保存时间
