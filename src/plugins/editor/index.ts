@@ -234,11 +234,6 @@ function getSentencePartAtPosition(line: string, column: number): SentencePart {
   const argIndex = beforeCursor.lastIndexOf(' -')
   const colonIndex = beforeCursor.lastIndexOf(':')
 
-  // 如果两者都存在，选择更靠近光标的一个
-  if (argIndex !== -1 && colonIndex !== -1) {
-    return argIndex > colonIndex ? SentencePart.Argument : SentencePart.Content
-  }
-
   if (argIndex !== -1) {
     return SentencePart.Argument
   }
@@ -342,31 +337,43 @@ async function getContentSuggestion(model: monaco.editor.ITextModel, position: m
   const command = parsedScene.sentenceList[0]?.command || commandType.say
   const content = parsedScene.sentenceList[0]?.content || ''
 
-  // say 命令不需要文件补全
-  if (command === commandType.say) {
-    return []
-  }
-
-  // choose 命令需要特殊处理
-  if (command === commandType.choose) {
-    // 找到最后一个冒号到光标位置的内容作为路径, 然后提供场景文件补全
-    // 该冒号不能为第一个冒号
-    const currentLineBeforeCursor = model.getLineContent(position.lineNumber).slice(0, position.column - 1)
-    const lastColonIndex = currentLineBeforeCursor.lastIndexOf(':')
-    const colonCount = currentLineBeforeCursor.split(':').length - 1
-    if (lastColonIndex !== -1 && colonCount >= 2) {
-      return await getFileSuggestion(model, position, 'scene', currentLineBeforeCursor.slice(lastColonIndex + 1))
+  switch (command) {
+    case commandType.say: {
+      // say 命令不需要文件补全
+      return []
     }
-    return []
+    case commandType.changeBg:
+    case commandType.changeFigure:
+    case commandType.bgm:
+    case commandType.video:
+    case commandType.changeScene:
+    case commandType.callScene:
+    case commandType.playEffect:
+    case commandType.unlockCg:
+    case commandType.unlockBgm: {
+      // 使用映射表获取文件类型
+      const fileType = COMMAND_TO_FILE_TYPE_MAP[command]
+      if (!fileType) {
+        console.warn(`[dev] 未实现的文件补全命令类型${command}，不应该出现此情况`)
+        return []
+      }
+      return await getFileSuggestion(model, position, fileType, content)
+    }
+    case commandType.choose: {
+      // 找到最后一个冒号到光标位置的内容作为路径, 然后提供场景文件补全
+      // 该冒号不能为第一个冒号
+      const currentLineBeforeCursor = model.getLineContent(position.lineNumber).slice(0, position.column - 1)
+      const lastColonIndex = currentLineBeforeCursor.lastIndexOf(':')
+      const colonCount = currentLineBeforeCursor.split(':').length - 1
+      if (lastColonIndex !== -1 && colonCount >= 2) {
+        return await getFileSuggestion(model, position, 'scene', currentLineBeforeCursor.slice(lastColonIndex + 1))
+      }
+      return []
+    }
+    default: {
+      return []
+    }
   }
-
-  // 使用映射表获取文件类型
-  const fileType = COMMAND_TO_FILE_TYPE_MAP[command]
-  if (fileType) {
-    return await getFileSuggestion(model, position, fileType, content)
-  }
-
-  return []
 }
 
 /**
@@ -378,11 +385,6 @@ async function getContentSuggestion(model: monaco.editor.ITextModel, position: m
 function getParsedSceneFromLine(model: monaco.editor.ITextModel, position: monaco.Position): IScene {
   const line = model.getLineContent(position.lineNumber)
   const lineBeforeCursor = line.slice(0, position.column - 1)
-
-  // 空行或只有空格的行
-  if (!lineBeforeCursor.trim()) {
-    return WebgalParser.parse('', TEMP_SCENE_NAME, TEMP_SCENE_URL)
-  }
 
   try {
     return WebgalParser.parse(lineBeforeCursor, TEMP_SCENE_NAME, TEMP_SCENE_URL)
