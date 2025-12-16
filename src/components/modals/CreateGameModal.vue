@@ -111,6 +111,12 @@ const onSubmit = handleSubmit(async (values) => {
   const gameId = await gameManager.createGame(values.gameName, values.gamePath, engine.path)
   props.onSuccess?.(gameId)
 })
+
+onMounted(() => {
+  if (engineOptions.value) {
+    setFieldValue('gameEngine', engineOptions.value[0].id)
+  }
+})
 </script>
 
 <template>
