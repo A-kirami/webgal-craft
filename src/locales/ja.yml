@@ -115,6 +115,85 @@ edit:
   header:
     testGame: ゲームをテスト
     export: エクスポート
+  completion:
+    commands:
+      changeBg: 背景画像を切り替え
+      changeFigure: キャラクター立ち絵を切り替え
+      bgm: 背景音楽
+      playVideo: 動画を再生
+      pixiPerform: エフェクトを適用
+      pixiInit: エフェクトを初期化/クリア
+      intro: 全画面テキスト
+      miniAvatar: コーナー小アバター
+      changeScene: シーンを切り替え
+      choose: 分岐オプション
+      end: ゲームを終了してタイトル画面に戻る
+      setComplexAnimation: 複雑なアニメーションを設定
+      label: ラベルを設定
+      jumpLabel: ラベルへジャンプ
+      setVar: 変数を設定
+      callScene: シーンを呼び出し
+      showVars: 変数を表示
+      unlockCg: CG 鑑賞を解放
+      unlockBgm: BGM 鑑賞を解放
+      filmMode: フィルムモード
+      setTextbox: テキストボックスを設定
+      setAnimation: アニメーションを設定
+      playEffect: 効果音を再生
+      setTempAnimation: 一時アニメーションを設定
+      setTransform: 変換エフェクトを設定
+      setTransition: 入退場アニメーションを設定
+      getUserInput: ユーザー入力を取得
+      applyStyle: スタイルを適用
+      wait: 一定時間待機
+    arguments:
+      when: 条件付き実行
+      continue: 次の行を自動実行
+      next: 次の行を同時に実行
+      notend: 次の行に続ける
+      concat: 前のセリフに連結
+      vocal: ボイスファイル
+      fontSize: フォントサイズ
+      fontColor: フォントカラー
+      backgroundColor: 背景色
+      backgroundImage: 背景画像
+      figureId: 立ち絵 ID
+      left: 左側位置
+      right: 右側位置
+      center: 中央位置
+      zIndex: 表示レイヤー
+      animationFlag: アニメーションフラグ
+      mouthOpen: 口開き差分
+      mouthHalfOpen: 半開き差分
+      mouthClose: 口閉じ差分
+      eyesOpen: 目開き差分
+      eyesClose: 目閉じ差分
+      motion: Live2D/Spine モーション
+      expression: Live2D 表情
+      bounds: Live2D 境界拡張
+      blink: Live2D まばたきパラメータ
+      focus: Live2D 注視パラメータ
+      transform: 変換エフェクト
+      enter: 入場アニメーション
+      exit: 退場アニメーション
+      duration: アニメーション時間（ms）
+      ease: イージングタイプ
+      animationTarget: アニメーション対象オブジェクト
+      transitionTarget: トランジション対象オブジェクト
+      animation: 各行の入場アニメーション
+      delayTime: 各行の入場遅延時間
+      writeDefault: デフォルト値を埋める
+      keep: 行をまたぐアニメーション再生
+      volume: 音量（0-100）
+      soundEffectId: 効果音 ID
+      unlockName: "解放する {type} 名"
+      unlockSeries: "{type} シリーズ"
+      skipOff: スキップ禁止
+      hold: クリック待ちで続行
+      userForward: クリックで次の行を表示
+      title: 入力欄タイトル
+      buttonText: 確認ボタンテキスト
+      defaultValue: 入力欄デフォルト値
   assetView:
     loading: アセットを読み込み中…
     loadFailed: 読み込みに失敗しました：{error}

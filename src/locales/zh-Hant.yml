@@ -115,6 +115,85 @@ edit:
   header:
     testGame: 測試遊戲
     export: 匯出
+  completion:
+    commands:
+      changeBg: 切換背景圖片
+      changeFigure: 切換角色立繪
+      bgm: 背景音樂
+      playVideo: 播放影片
+      pixiPerform: 套用特效
+      pixiInit: 初始化/清除特效
+      intro: 全螢幕文字
+      miniAvatar: 角落小頭像
+      changeScene: 切換場景
+      choose: 分支選項
+      end: 結束遊戲並返回標題介面
+      setComplexAnimation: 設定複雜動畫
+      label: 設定標籤
+      jumpLabel: 跳轉至標籤
+      setVar: 設定變數
+      callScene: 呼叫場景
+      showVars: 顯示變數
+      unlockCg: 解鎖 CG 鑑賞
+      unlockBgm: 解鎖 BGM 鑑賞
+      filmMode: 電影模式
+      setTextbox: 設定對話框
+      setAnimation: 設定動畫
+      playEffect: 播放音效
+      setTempAnimation: 設定暫時動畫
+      setTransform: 設定變換效果
+      setTransition: 設定進出場動畫
+      getUserInput: 取得使用者輸入
+      applyStyle: 套用樣式
+      wait: 等待一段時間
+    arguments:
+      when: 執行條件
+      continue: 自動執行下一句
+      next: 同時執行下一句
+      notend: 繼續播放下一段
+      concat: 接續上一段對話
+      vocal: 語音檔案
+      fontSize: 字體大小
+      fontColor: 字體顏色
+      backgroundColor: 背景顏色
+      backgroundImage: 背景圖片
+      figureId: 立繪 ID
+      left: 左側位置
+      right: 右側位置
+      center: 中間位置
+      zIndex: 顯示層級
+      animationFlag: 動畫標誌
+      mouthOpen: 立繪張嘴差分
+      mouthHalfOpen: 立繪半張嘴差分
+      mouthClose: 立繪閉嘴差分
+      eyesOpen: 立繪睜眼差分
+      eyesClose: 立繪閉眼差分
+      motion: Live2D/Spine 動作
+      expression: Live2D 表情
+      bounds: Live2D 邊界擴展
+      blink: Live2D 眨眼參數
+      focus: Live2D 注視參數
+      transform: 變換效果
+      enter: 入場動畫
+      exit: 退場動畫
+      duration: 動畫持續時間（毫秒）
+      ease: 動畫緩動類型
+      animationTarget: 動畫目標物件
+      transitionTarget: 過渡目標物件
+      animation: 每行文字入場動畫
+      delayTime: 每行文字入場延遲時間
+      writeDefault: 填充預設值
+      keep: 跨語句播放動畫
+      volume: 音量大小（0-100）
+      soundEffectId: 音效 ID
+      unlockName: "解鎖 {type} 名稱"
+      unlockSeries: "{type} 所屬系列"
+      skipOff: 禁止跳過
+      hold: 等待點擊後繼續
+      userForward: 點擊顯示下一行
+      title: 輸入框標題
+      buttonText: 確認按鈕文字
+      defaultValue: 輸入框預設值
   assetView:
     loading: 正在載入資源…
     loadFailed: 載入失敗：{error}

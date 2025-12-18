@@ -150,7 +150,13 @@ export default defineConfig(
       '@intlify/vue-i18n/no-dynamic-keys': 'error',
       '@intlify/vue-i18n/no-missing-keys-in-other-locales': 'error',
       '@intlify/vue-i18n/no-unknown-locale': 'error',
-      '@intlify/vue-i18n/no-unused-keys': 'warn',
+      '@intlify/vue-i18n/no-unused-keys': [
+        'warn',
+        {
+          src: './src',
+          extensions: ['.js', '.ts', '.vue'],
+        },
+      ],
       '@intlify/vue-i18n/prefer-sfc-lang-attr': 'warn',
       '@intlify/vue-i18n/no-raw-text': [
         'warn',

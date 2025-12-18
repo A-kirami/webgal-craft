@@ -9,6 +9,7 @@ declare global {
   const DebugCommand: typeof import('./types/debugProtocol').DebugCommand
   const EffectScope: typeof import('vue').EffectScope
   const GameError: typeof import('./services/types').GameError
+  const WebgalParser: typeof import('./utils/webgal-parser').WebgalParser
   const asyncComputed: typeof import('@vueuse/core').asyncComputed
   const autoResetRef: typeof import('@vueuse/core').autoResetRef
   const colorMode: typeof import('./composables/color-mode').colorMode
@@ -372,6 +373,7 @@ declare module 'vue' {
     readonly DebugCommand: UnwrapRef<typeof import('./types/debugProtocol')['DebugCommand']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly GameError: UnwrapRef<typeof import('./services/types')['GameError']>
+    readonly WebgalParser: UnwrapRef<typeof import('./utils/webgal-parser')['WebgalParser']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly colorMode: UnwrapRef<typeof import('./composables/color-mode')['colorMode']>

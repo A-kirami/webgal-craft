@@ -39,3 +39,10 @@ export const i18n = createI18n({
   missingWarn: isDebug,
   fallbackWarn: isDebug,
 })
+
+/**
+ * 获取当前使用的区域设置
+ */
+export function getI18nLocale(): string {
+  return unref(i18n.global.locale)
+}
