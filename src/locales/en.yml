@@ -115,6 +115,85 @@ edit:
   header:
     testGame: Test Game
     export: Export
+  completion:
+    commands:
+      changeBg: Change background image
+      changeFigure: Change character figure
+      bgm: Background music
+      playVideo: Play video
+      pixiPerform: Apply effect
+      pixiInit: Initialize/Clear effects
+      intro: Fullscreen text
+      miniAvatar: Corner mini avatar
+      changeScene: Change scene
+      choose: Branch option
+      end: End game and return to title screen
+      setComplexAnimation: Set complex animation
+      label: Set label
+      jumpLabel: Jump to label
+      setVar: Set variable
+      callScene: Call scene
+      showVars: Show variables
+      unlockCg: Unlock CG gallery
+      unlockBgm: Unlock BGM gallery
+      filmMode: Film mode
+      setTextbox: Set textbox
+      setAnimation: Set animation
+      playEffect: Play sound effect
+      setTempAnimation: Set temporary animation
+      setTransform: Set transform effect
+      setTransition: Set enter/exit animation
+      getUserInput: Get user input
+      applyStyle: Apply style
+      wait: Wait for a period of time
+    arguments:
+      when: Conditional execution
+      continue: Auto execute next line
+      next: Execute next line simultaneously
+      notend: Continue to next line
+      concat: Concatenate with previous line
+      vocal: Voice file
+      fontSize: Font size
+      fontColor: Font color
+      backgroundColor: Background color
+      backgroundImage: Background image
+      figureId: Figure ID
+      left: Left position
+      right: Right position
+      center: Center position
+      zIndex: Display layer
+      animationFlag: Animation flag
+      mouthOpen: Mouth open variant
+      mouthHalfOpen: Mouth half-open variant
+      mouthClose: Mouth closed variant
+      eyesOpen: Eyes open variant
+      eyesClose: Eyes closed variant
+      motion: Live2D/Spine motion
+      expression: Live2D expression
+      bounds: Live2D bounds expansion
+      blink: Live2D blink parameters
+      focus: Live2D focus parameters
+      transform: Transform effect
+      enter: Enter animation
+      exit: Exit animation
+      duration: Animation duration (ms)
+      ease: Animation easing type
+      animationTarget: Animation target object
+      transitionTarget: Transition target object
+      animation: Line enter animation
+      delayTime: Line enter delay time
+      writeDefault: Fill default values
+      keep: Cross-statement animation playback
+      volume: Volume (0-100)
+      soundEffectId: Sound effect ID
+      unlockName: "Unlock {type} name"
+      unlockSeries: "{type} series"
+      skipOff: Disable skipping
+      hold: Wait for click to continue
+      userForward: Click to show next line
+      title: Input box title
+      buttonText: Confirm button text
+      defaultValue: Input box default value
   assetView:
     loading: Loading assets...
     loadFailed: "Load failed: {error}"

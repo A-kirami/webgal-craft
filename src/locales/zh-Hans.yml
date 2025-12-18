@@ -115,6 +115,85 @@ edit:
   header:
     testGame: 测试游戏
     export: 导出
+  completion:
+    commands:
+      changeBg: 切换背景图片
+      changeFigure: 切换角色立绘
+      bgm: 背景音乐
+      playVideo: 播放视频
+      pixiPerform: 应用特效
+      pixiInit: 初始化/清除特效
+      intro: 全屏文字
+      miniAvatar: 角落小头像
+      changeScene: 切换场景
+      choose: 分支选项
+      end: 结束游戏并返回标题界面
+      setComplexAnimation: 设置复杂动画
+      label: 设置标签
+      jumpLabel: 跳转至标签
+      setVar: 设置变量
+      callScene: 调用场景
+      showVars: 显示变量
+      unlockCg: 解锁 CG 鉴赏
+      unlockBgm: 解锁 BGM 鉴赏
+      filmMode: 电影模式
+      setTextbox: 设置对话框
+      setAnimation: 设置动画
+      playEffect: 播放音效
+      setTempAnimation: 设置临时动画
+      setTransform: 设置变换效果
+      setTransition: 设置进出场动画
+      getUserInput: 获取用户输入
+      applyStyle: 应用样式
+      wait: 等待一段时间
+    arguments:
+      when: 执行条件
+      continue: 自动执行下一句
+      next: 同时执行下一句
+      notend: 继续播放下一段
+      concat: 接续上一段对话
+      vocal: 语音文件
+      fontSize: 字体大小
+      fontColor: 字体颜色
+      backgroundColor: 背景颜色
+      backgroundImage: 背景图片
+      figureId: 立绘 ID
+      left: 左侧位置
+      right: 右侧位置
+      center: 中间位置
+      zIndex: 显示层级
+      animationFlag: 动画标志
+      mouthOpen: 立绘张嘴差分
+      mouthHalfOpen: 立绘半张嘴差分
+      mouthClose: 立绘闭嘴差分
+      eyesOpen: 立绘睁眼差分
+      eyesClose: 立绘闭眼差分
+      motion: Live2D/Spine 动作
+      expression: Live2D 表情
+      bounds: Live2D 边界扩展
+      blink: Live2D 眨眼参数
+      focus: Live2D 注视参数
+      transform: 变换效果
+      enter: 入场动画
+      exit: 退场动画
+      duration: 动画持续时间（毫秒）
+      ease: 动画缓动类型
+      animationTarget: 动画目标对象
+      transitionTarget: 过渡目标对象
+      animation: 每行文字入场动画
+      delayTime: 每行文字入场延迟时间
+      writeDefault: 填充默认值
+      keep: 跨语句播放动画
+      volume: 音量大小（0-100）
+      soundEffectId: 音效 ID
+      unlockName: "解锁 {type} 名称"
+      unlockSeries: "{type} 所属系列"
+      skipOff: 禁止跳过
+      hold: 等待点击后继续
+      userForward: 点击显示下一行
+      title: 输入框标题
+      buttonText: 确认按钮文本
+      defaultValue: 输入框默认值
   assetView:
     loading: 正在加载资源…
     loadFailed: 加载失败：{error}

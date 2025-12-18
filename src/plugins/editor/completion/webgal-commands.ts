@@ -1,11 +1,62 @@
 import * as monaco from 'monaco-editor'
 
-interface ICompletionInfo {
+import { getI18nLocale, i18n } from '~/plugins/i18n'
+
+interface CompletionInfo {
   commandRaw: string
   detail: string
 }
 
+const { t } = i18n.global
+
+let cachedLocale: string | undefined
+let cachedCommandCompletions: CompletionInfo[] | undefined
+
+function buildCommandCompletions(): CompletionInfo[] {
+  const currentLocale = getI18nLocale()
+  if (cachedLocale === currentLocale && cachedCommandCompletions) {
+    return cachedCommandCompletions
+  }
+
+  const completions: CompletionInfo[] = [
+    { commandRaw: 'changeBg', detail: t('edit.completion.commands.changeBg') },
+    { commandRaw: 'changeFigure', detail: t('edit.completion.commands.changeFigure') },
+    { commandRaw: 'bgm', detail: t('edit.completion.commands.bgm') },
+    { commandRaw: 'playVideo', detail: t('edit.completion.commands.playVideo') },
+    { commandRaw: 'pixiPerform', detail: t('edit.completion.commands.pixiPerform') },
+    { commandRaw: 'pixiInit', detail: t('edit.completion.commands.pixiInit') },
+    { commandRaw: 'intro', detail: t('edit.completion.commands.intro') },
+    { commandRaw: 'miniAvatar', detail: t('edit.completion.commands.miniAvatar') },
+    { commandRaw: 'changeScene', detail: t('edit.completion.commands.changeScene') },
+    { commandRaw: 'choose', detail: t('edit.completion.commands.choose') },
+    { commandRaw: 'end', detail: t('edit.completion.commands.end') },
+    { commandRaw: 'setComplexAnimation', detail: t('edit.completion.commands.setComplexAnimation') },
+    { commandRaw: 'label', detail: t('edit.completion.commands.label') },
+    { commandRaw: 'jumpLabel', detail: t('edit.completion.commands.jumpLabel') },
+    { commandRaw: 'setVar', detail: t('edit.completion.commands.setVar') },
+    { commandRaw: 'callScene', detail: t('edit.completion.commands.callScene') },
+    { commandRaw: 'showVars', detail: t('edit.completion.commands.showVars') },
+    { commandRaw: 'unlockCg', detail: t('edit.completion.commands.unlockCg') },
+    { commandRaw: 'unlockBgm', detail: t('edit.completion.commands.unlockBgm') },
+    { commandRaw: 'filmMode', detail: t('edit.completion.commands.filmMode') },
+    { commandRaw: 'setTextbox', detail: t('edit.completion.commands.setTextbox') },
+    { commandRaw: 'setAnimation', detail: t('edit.completion.commands.setAnimation') },
+    { commandRaw: 'playEffect', detail: t('edit.completion.commands.playEffect') },
+    { commandRaw: 'setTempAnimation', detail: t('edit.completion.commands.setTempAnimation') },
+    { commandRaw: 'setTransform', detail: t('edit.completion.commands.setTransform') },
+    { commandRaw: 'setTransition', detail: t('edit.completion.commands.setTransition') },
+    { commandRaw: 'getUserInput', detail: t('edit.completion.commands.getUserInput') },
+    { commandRaw: 'applyStyle', detail: t('edit.completion.commands.applyStyle') },
+    { commandRaw: 'wait', detail: t('edit.completion.commands.wait') },
+  ]
+
+  cachedLocale = currentLocale
+  cachedCommandCompletions = completions
+  return completions
+}
+
 export function getCommandCompletions(range: monaco.IRange): monaco.languages.CompletionItem[] {
+  const commandCompletion = buildCommandCompletions()
   return commandCompletion.map(item => ({
     label: item.commandRaw,
     insertText: item.commandRaw + ':',
@@ -14,36 +65,3 @@ export function getCommandCompletions(range: monaco.IRange): monaco.languages.Co
     range,
   }))
 }
-
-const commandCompletion: ICompletionInfo[] = [
-  // { commandRaw: 'say', detail: '对话' }, // 暂时不需要这个
-  { commandRaw: 'changeBg', detail: '设置背景' },
-  { commandRaw: 'changeFigure', detail: '设置立绘' },
-  { commandRaw: 'bgm', detail: '设置背景音乐' },
-  { commandRaw: 'playVideo', detail: '播放视频' },
-  { commandRaw: 'pixiPerform', detail: '添加特效' },
-  { commandRaw: 'pixiInit', detail: '初始化特效/清除特效' },
-  { commandRaw: 'intro', detail: '全屏文字' },
-  { commandRaw: 'miniAvatar', detail: '设置小头像' },
-  { commandRaw: 'changeScene', detail: '切换场景' },
-  { commandRaw: 'choose', detail: '显示选项' },
-  { commandRaw: 'end', detail: '结束游戏' },
-  { commandRaw: 'setComplexAnimation', detail: '设置复杂动画' },
-  { commandRaw: 'label', detail: '设置标签' },
-  { commandRaw: 'jumpLabel', detail: '跳转至标签' },
-  { commandRaw: 'setVar', detail: '设置变量' },
-  { commandRaw: 'callScene', detail: '调用场景' },
-  { commandRaw: 'showVars', detail: '显示变量' },
-  { commandRaw: 'unlockCg', detail: '解锁CG' },
-  { commandRaw: 'unlockBgm', detail: '解锁BGM' },
-  { commandRaw: 'filmMode', detail: '设置电影模式' },
-  { commandRaw: 'setTextbox', detail: '设置对话框' },
-  { commandRaw: 'setAnimation', detail: '设置动画' },
-  { commandRaw: 'playEffect', detail: '播放音效' },
-  { commandRaw: 'setTempAnimation', detail: '设置临时动画' },
-  { commandRaw: 'setTransform', detail: '设置变换' },
-  { commandRaw: 'setTransition', detail: '设置过渡' },
-  { commandRaw: 'getUserInput', detail: '获取用户输入' },
-  { commandRaw: 'applyStyle', detail: '应用样式' },
-  { commandRaw: 'wait', detail: '等待' },
-]
