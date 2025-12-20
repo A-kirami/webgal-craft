@@ -1,0 +1,51 @@
+/* eslint-disable unicorn/no-null */
+/** @type {import('stylelint').Config} */
+export default {
+  extends: [
+    'stylelint-config-standard',
+    'stylelint-config-css-modules',
+    'stylelint-config-recess-order',
+    '@stylistic/stylelint-config',
+    'stylelint-config-standard-vue',
+  ],
+  plugins: [
+    'stylelint-declaration-block-no-ignored-properties',
+  ],
+  rules: {
+    'color-named': [
+      'never',
+      {
+        ignore: [
+          'inside-function',
+        ],
+      },
+    ],
+    'color-hex-length': 'long',
+    'function-url-no-scheme-relative': true,
+    'no-unknown-animations': true,
+    'import-notation': 'string',
+    'selector-pseudo-class-no-unknown': [
+      true,
+      {
+        ignorePseudoClasses: [
+          'global',
+          'local',
+          'deep',
+          'slotted',
+        ],
+      },
+    ],
+    'selector-pseudo-element-no-unknown': [
+      true,
+      {
+        ignorePseudoElements: [
+          'v-deep',
+        ],
+      },
+    ],
+    'at-rule-no-deprecated': null,
+    '@stylistic/max-line-length': null,
+    'plugin/declaration-block-no-ignored-properties': true,
+    'no-invalid-position-declaration': null,
+  },
+}
