@@ -2,8 +2,6 @@
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { Bug, Code, Dot, House, Tag } from 'lucide-vue-next'
 
-import { getVersion } from '~/utils/metadata'
-
 import { github } from '~build/git'
 
 const open = defineModel<boolean>('open')
