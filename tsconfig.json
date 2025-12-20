@@ -62,6 +62,7 @@
     "src/**/*.vue",
     "vite.config.ts",
     "unocss.config.ts",
-    "eslint.config.js"
+    "eslint.config.js",
+    "stylelint.config.js"
   ]
 }
