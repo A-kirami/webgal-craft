@@ -18,7 +18,7 @@ common:
 
 home:
   header:
-    help: 說明
+    about: 關於
   tabs:
     recent: 最近創作
     engines: 遊戲引擎
@@ -70,7 +70,13 @@ home:
 
 modals:
   about:
-    title: 關於
+    appName: WebGAL Craft
+    appDescription: WebGAL 視覺小說工作室
+    homepage: 官方網站
+    sourceCode: 原始碼倉庫
+    issues: 問題回報
+    copyright: "© 2025 Akirami"
+    license: License MPL-2.0
   createGame:
     title: 建立新遊戲
     description: 從這裡開始你的新創作

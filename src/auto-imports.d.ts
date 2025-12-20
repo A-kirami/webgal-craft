@@ -50,6 +50,7 @@ declare global {
   const getCurrentScope: typeof import('vue').getCurrentScope
   const getCurrentWatcher: typeof import('vue').getCurrentWatcher
   const getRelativePath: typeof import('./utils/index').getRelativePath
+  const getVersion: typeof import('./utils/metadata').getVersion
   const h: typeof import('vue').h
   const ignorableWatch: typeof import('@vueuse/core').ignorableWatch
   const inject: typeof import('vue').inject
@@ -363,6 +364,9 @@ declare global {
   // @ts-ignore
   export type { ComponentProps } from './types/index'
   import('./types/index')
+  // @ts-ignore
+  export type { isDebug, isBuild, isRelease, prNum, buildSha } from './types/info-build-meta.d'
+  import('./types/info-build-meta.d')
 }
 
 // for vue template auto import
@@ -414,6 +418,7 @@ declare module 'vue' {
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getCurrentWatcher: UnwrapRef<typeof import('vue')['getCurrentWatcher']>
     readonly getRelativePath: UnwrapRef<typeof import('./utils/index')['getRelativePath']>
+    readonly getVersion: UnwrapRef<typeof import('./utils/metadata')['getVersion']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
