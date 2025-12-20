@@ -4,21 +4,12 @@ import TextEditor from './TextEditor.vue'
 import VisualEditor from './VisualEditor.vue'
 
 const editorStore = useEditorStore()
-
-const editorMap = {
-  text: TextEditor,
-  visual: VisualEditor,
-  preview: AssetPreview,
-} as const
-
-const currentEditor = $computed(() => {
-  const mode = editorStore.currentState?.mode
-  return mode ? editorMap[mode] : undefined
-})
 </script>
 
 <template>
   <KeepAlive>
-    <component :is="currentEditor" ::state="editorStore.currentState" />
+    <TextEditor v-if="editorStore.currentState?.mode === 'text'" v-model:state="editorStore.currentState" />
+    <VisualEditor v-else-if="editorStore.currentState?.mode === 'visual'" v-model:state="editorStore.currentState" />
+    <AssetPreview v-else-if="editorStore.currentState?.mode === 'preview'" v-model:state="editorStore.currentState" />
   </KeepAlive>
 </template>
