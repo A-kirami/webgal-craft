@@ -18,7 +18,7 @@ common:
 
 home:
   header:
-    help: ヘルプ
+    about: について
   tabs:
     recent: 最近の作品
     engines: ゲームエンジン
@@ -70,7 +70,13 @@ home:
 
 modals:
   about:
-    title: について
+    appName: WebGAL Craft
+    appDescription: WebGAL ビジュアルノベルスタジオ
+    homepage: 公式サイト
+    sourceCode: ソースコード
+    issues: 問題レポート
+    copyright: "© 2025 Akirami"
+    license: License MPL-2.0
   createGame:
     title: 新しいゲームを作成
     description: ここから新しい作品を始めましょう

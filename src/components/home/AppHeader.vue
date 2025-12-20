@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { CircleHelp, Settings } from 'lucide-vue-next'
+import { Info, Settings } from 'lucide-vue-next'
 import InlineSvg from 'vue-inline-svg'
 
 import { github } from '~build/git'
@@ -20,8 +20,8 @@ const modalStore = useModalStore()
       </div>
       <nav class="ml-auto flex gap-2 items-center">
         <Button variant="ghost" size="icon" @click="modalStore.open('AboutModal')">
-          <span class="sr-only">{{ $t('home.header.help') }}</span>
-          <CircleHelp />
+          <span class="sr-only">{{ $t('home.header.about') }}</span>
+          <Info />
         </Button>
         <Button variant="ghost" size="icon" @click="modalStore.open('SettingsModal')">
           <span class="sr-only">{{ $t('common.settings') }}</span>

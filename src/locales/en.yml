@@ -18,7 +18,7 @@ common:
 
 home:
   header:
-    help: Help
+    about: About
   tabs:
     recent: Recent Creations
     engines: Game Engines
@@ -70,7 +70,13 @@ home:
 
 modals:
   about:
-    title: About
+    appName: WebGAL Craft
+    appDescription: WebGAL Visual Novel Studio
+    homepage: Official Website
+    sourceCode: Source Code Repository
+    issues: Issue Feedback
+    copyright: "© 2025 Akirami"
+    license: License MPL-2.0
   createGame:
     title: Create New Game
     description: Start your new creation from here
