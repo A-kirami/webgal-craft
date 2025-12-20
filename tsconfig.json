@@ -1,31 +1,17 @@
 {
   "compilerOptions": {
+    /* Language and Environment */
     "target": "ES2022",
-    "useDefineForClassFields": true,
-    "module": "ESNext",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "skipLibCheck": true,
+    "jsx": "preserve",
+    "jsxImportSource": "vue",
+    "useDefineForClassFields": true,
 
-    /* Bundler mode */
+    /* Modules */
+    "module": "ESNext",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "preserve",
-    "jsxImportSource": "vue",
-    "removeComments": true,
-    "esModuleInterop": true,
-
-    /* Linting */
-    "strict": true,
-    "strictNullChecks": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "forceConsistentCasingInFileNames": true,
-    "allowJs": true,
-
     "baseUrl": ".",
     "paths": {
       "~/*": ["src/*"]
@@ -36,7 +22,26 @@
       "vue-macros/macros-global",
       "unplugin-vue-router/client",
       "unplugin-info/client"
-    ]
+    ],
+
+    /* Type Checking */
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* JavaScript Support */
+    "allowJs": true,
+
+    /* Interop Constraints */
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    /* Emit */
+    "noEmit": true,
+    "removeComments": true,
+
+    /* Completeness */
+    "skipLibCheck": true
   },
   "vueCompilerOptions": {
     "plugins": ["vue-macros/volar", "unplugin-vue-reactivity-function/volar"],
