@@ -50,10 +50,11 @@ pub fn run() {
         .with_flags(tauri_plugin_prevent_default::Flags::debug());
 
     #[cfg(target_os = "windows")]
-    let prevent_default_plugin = prevent_default_plugin.platform(PlatformOptions {
-        general_autofill: false,
-        password_autosave: false,
-    });
+    let prevent_default_plugin = prevent_default_plugin.platform(
+        PlatformOptions::new()
+            .general_autofill(false)
+            .password_autosave(false),
+    );
 
     builder
         .plugin(tauri_plugin_dialog::init())
