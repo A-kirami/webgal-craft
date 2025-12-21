@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { type as getOsType } from '@tauri-apps/plugin-os'
-import InlineSvg from 'vue-inline-svg'
 
 const osType = getOsType()
 const route = useRoute()
@@ -11,11 +10,13 @@ const isHomePage = $computed(() => route.path === '/')
 <template>
   <header
     data-tauri-drag-region
-    class="text-gray-500 bg-background flex h-7 w-full"
+    class="text-gray-500 bg-background flex h-7 w-full relative"
   >
-    <div v-show="!isHomePage" class="flex gap-1.5 items-center" :class="osType === 'macos' ? 'pl-20' : 'pl-2'">
-      <InlineSvg src="/webgal-craft-logo.svg" class="size-5" alt="webgalcraft logo" />
-      <InlineSvg src="/webgal-craft-text.svg" class="h-3 w-auto" alt="webgalcraft text" />
+    <div v-show="!isHomePage" class="flex gap-1.5 pointer-events-none items-center left-1/2 top-1/2 absolute -translate-x-1/2 -translate-y-1/2">
+      <img src="/webgal-craft-logo.svg" class="size-5" alt="WebGAL Craft logo">
+      <div class="text-sm font-medium">
+        {{ $t('app.name') }}
+      </div>
     </div>
     <WindowControls v-if="osType !== 'macos'" :justify="true" />
   </header>
