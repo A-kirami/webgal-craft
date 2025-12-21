@@ -22,10 +22,10 @@ function handleVersionClick() {
         <img src="/webgal-craft-logo.svg" alt="WebGAL Craft Logo" class="size-20">
         <div class="text-center space-y-2">
           <DialogTitle class="text-2xl font-bold">
-            {{ $t('modals.about.appName') }}
+            {{ $t('app.name') }}
           </DialogTitle>
           <DialogDescription class="text-sm text-muted-foreground">
-            {{ $t('modals.about.appDescription') }}
+            {{ $t('app.description') }}
           </DialogDescription>
         </div>
         <button

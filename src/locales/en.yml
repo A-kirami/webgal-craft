@@ -16,6 +16,10 @@ common:
     grid: Grid View
     list: List View
 
+app:
+  name: WebGAL Craft
+  description: WebGAL Visual Novel Studio
+
 home:
   header:
     about: About
@@ -70,8 +74,6 @@ home:
 
 modals:
   about:
-    appName: WebGAL Craft
-    appDescription: WebGAL Visual Novel Studio
     homepage: Official Website
     sourceCode: Source Code Repository
     issues: Issue Feedback

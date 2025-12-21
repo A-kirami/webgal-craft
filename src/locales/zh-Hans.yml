@@ -16,6 +16,10 @@ common:
     grid: 网格视图
     list: 列表视图
 
+app:
+  name: WebGAL Craft
+  description: WebGAL 视觉小说工作室
+
 home:
   header:
     about: 关于
@@ -70,8 +74,6 @@ home:
 
 modals:
   about:
-    appName: WebGAL Craft
-    appDescription: WebGAL 视觉小说工作室
     homepage: 官方网站
     sourceCode: 源码仓库
     issues: 问题反馈
