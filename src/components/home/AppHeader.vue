@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { Info, Settings } from 'lucide-vue-next'
-import InlineSvg from 'vue-inline-svg'
 
 import { github } from '~build/git'
+
+import webgalCraftTextSvg from '/webgal-craft-text.svg?raw'
 
 const modalStore = useModalStore()
 </script>
@@ -15,8 +16,9 @@ const modalStore = useModalStore()
         class="mr-4 flex gap-2 items-center" :class="{ 'cursor-pointer': github }"
         @click="github && openUrl(github)"
       >
-        <InlineSvg src="/webgal-craft-logo.svg" class="size-10" alt="webgalcraft logo" />
-        <InlineSvg src="/webgal-craft-text.svg" class="h-5 w-auto" alt="webgalcraft text" />
+        <img src="/webgal-craft-logo.svg" class="size-10" alt="WebGAL Craft logo">
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <span class="text-gray-700 h-5 w-auto inline-block dark:text-gray-100" aria-hidden="true" v-html="webgalCraftTextSvg" />
       </div>
       <nav class="ml-auto flex gap-2 items-center">
         <Button variant="ghost" size="icon" @click="modalStore.open('AboutModal')">
