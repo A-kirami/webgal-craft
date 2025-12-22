@@ -100,7 +100,7 @@ export default defineConfig(
       }],
       '@typescript-eslint/no-inferrable-types': ['warn', { ignoreParameters: true, ignoreProperties: true }],
       'import-x/no-named-as-default-member': 'off',
-      'import-x/no-unresolved': ['error', { ignore: ['^virtual:', '^~(?!/).*'] }],
+      'import-x/no-unresolved': ['error', { ignore: ['^virtual:', '^~(?!/).*', String.raw`.*\?.*`] }],
       'import-x/order': [
         'warn',
         {
