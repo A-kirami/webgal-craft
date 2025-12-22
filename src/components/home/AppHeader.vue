@@ -18,7 +18,7 @@ const modalStore = useModalStore()
       >
         <img src="/webgal-craft-logo.svg" class="size-10" alt="WebGAL Craft logo">
         <!-- eslint-disable-next-line vue/no-v-html -->
-        <span class="text-gray-700 h-5 w-auto inline-block dark:text-gray-100" aria-label="WebGAL Craft text" v-html="webgalCraftTextSvg" />
+        <span class="text-gray-700 h-5 w-auto inline-block dark:text-gray-100" aria-hidden="true" v-html="webgalCraftTextSvg" />
       </div>
       <nav class="ml-auto flex gap-2 items-center">
         <Button variant="ghost" size="icon" @click="modalStore.open('AboutModal')">
