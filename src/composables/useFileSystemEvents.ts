@@ -24,6 +24,15 @@ const fileSystemEventKey: EventBusKey<FileSystemEvent> = Symbol('file-system')
 const fileSystemEventBus = useEventBus(fileSystemEventKey)
 
 /**
+ * Handler 和包装函数的映射关系
+ * 用于支持通过原始 handler 取消订阅
+ */
+const handlerMap = new WeakMap<
+  (event: FileSystemEvent) => void,
+  (event: FileSystemEvent) => void
+>()
+
+/**
  * 文件系统事件组合函数
  * 提供类型安全的事件发布和订阅
  */
@@ -46,18 +55,32 @@ export function useFileSystemEvents() {
       eventType: T,
       handler: (event: Extract<FileSystemEvent, { type: T }>) => void,
     ) => {
-      return fileSystemEventBus.on((event) => {
+      const wrappedHandler = (event: FileSystemEvent) => {
         if (event.type === eventType) {
           handler(event as Extract<FileSystemEvent, { type: T }>)
         }
-      })
+      }
+
+      handlerMap.set(handler as (event: FileSystemEvent) => void, wrappedHandler)
+
+      const unsubscribe = fileSystemEventBus.on(wrappedHandler)
+
+      return () => {
+        unsubscribe()
+        handlerMap.delete(handler as (event: FileSystemEvent) => void)
+      }
     },
 
     /**
      * 取消订阅
+     * @param handler 要取消订阅的事件处理函数
      */
     off: (handler: (event: FileSystemEvent) => void) => {
-      fileSystemEventBus.off(handler)
+      const wrappedHandler = handlerMap.get(handler)
+      if (wrappedHandler) {
+        fileSystemEventBus.off(wrappedHandler)
+        handlerMap.delete(handler)
+      }
     },
 
     /**
