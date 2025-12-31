@@ -198,6 +198,7 @@ declare global {
   const useFileDialog: typeof import('@vueuse/core').useFileDialog
   const useFileStore: typeof import('./stores/file').useFileStore
   const useFileSystemAccess: typeof import('@vueuse/core').useFileSystemAccess
+  const useFileSystemEvents: typeof import('./composables/useFileSystemEvents').useFileSystemEvents
   const useFocus: typeof import('@vueuse/core').useFocus
   const useFocusWithin: typeof import('@vueuse/core').useFocusWithin
   const useFps: typeof import('@vueuse/core').useFps
@@ -340,6 +341,9 @@ declare global {
   // @ts-ignore
   export type { ThumbnailSize } from './commands/thumbnaila'
   import('./commands/thumbnaila')
+  // @ts-ignore
+  export type { FileSystemEvent } from './composables/useFileSystemEvents'
+  import('./composables/useFileSystemEvents')
   // @ts-ignore
   export type { UseTauriDropZoneOptions, UseTauriDropZoneReturn } from './composables/useTauriDropZone'
   import('./composables/useTauriDropZone')
@@ -565,6 +569,7 @@ declare module 'vue' {
     readonly useFileDialog: UnwrapRef<typeof import('@vueuse/core')['useFileDialog']>
     readonly useFileStore: UnwrapRef<typeof import('./stores/file')['useFileStore']>
     readonly useFileSystemAccess: UnwrapRef<typeof import('@vueuse/core')['useFileSystemAccess']>
+    readonly useFileSystemEvents: UnwrapRef<typeof import('./composables/useFileSystemEvents')['useFileSystemEvents']>
     readonly useFocus: UnwrapRef<typeof import('@vueuse/core')['useFocus']>
     readonly useFocusWithin: UnwrapRef<typeof import('@vueuse/core')['useFocusWithin']>
     readonly useFps: UnwrapRef<typeof import('@vueuse/core')['useFps']>
