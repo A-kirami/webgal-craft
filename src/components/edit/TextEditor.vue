@@ -41,7 +41,7 @@ let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
 const focusedFilePaths = new Set<string>()
 // 追踪每个文件的上次保存时的版本ID，用于准确判断 dirty 状态
 const lastSavedVersionIdMap = new Map<string, number>()
-// 追踪每个文件的上次保存时间（使用响应式对象）
+// 追踪每个文件的上次保存时间
 const lastSavedTimes = $ref<Record<string, Date>>({})
 
 // 编辑器主题
@@ -114,9 +114,7 @@ function initializeVersionId() {
 
 // 处理编辑器文本聚焦
 function handleFocusEditorText() {
-  if (state.value.path) {
-    focusedFilePaths.add(state.value.path)
-  }
+  focusedFilePaths.add(state.value.path)
 }
 
 // 处理光标位置变化
@@ -160,7 +158,7 @@ function handleChange(value: string | undefined) {
   // 更新 dirty 状态（基于版本ID比较）
   const currentVersionId = editor?.getModel()?.getAlternativeVersionId()
   if (currentVersionId) {
-    const lastSavedVersionId = lastSavedVersionIdMap.get(state.value.path)!
+    const lastSavedVersionId = lastSavedVersionIdMap.get(state.value.path)
     state.value.isDirty = lastSavedVersionId !== currentVersionId
   }
 
@@ -182,14 +180,48 @@ watch(() => state.value.isDirty, (isDirty) => {
   }
 }, { immediate: true })
 
-// 监听路径变化（文件切换）
-watch(() => state.value.path, () => {
+// 监听文件重命名事件
+const fileSystemEvents = useFileSystemEvents()
+fileSystemEvents.on('file:renamed', (event) => {
+  const { oldPath, newPath } = event
+
+  const oldVersionId = lastSavedVersionIdMap.get(oldPath)
+  if (oldVersionId !== undefined) {
+    lastSavedVersionIdMap.delete(oldPath)
+    lastSavedVersionIdMap.set(newPath, oldVersionId)
+  }
+
+  const oldSavedTime = lastSavedTimes[oldPath]
+  if (oldSavedTime) {
+    delete lastSavedTimes[oldPath]
+    lastSavedTimes[newPath] = oldSavedTime
+  }
+
+  if (focusedFilePaths.has(oldPath)) {
+    focusedFilePaths.delete(oldPath)
+    focusedFilePaths.add(newPath)
+  }
+})
+
+// 当文件被外部修改时，刷新预览
+fileSystemEvents.on('file:modified', (event) => {
+  if (event.path !== state.value.path) {
+    return
+  }
+
+  nextTick(() => {
+    syncScene()
+  })
+})
+
+// 监听路径变化
+watch(() => state.value.path, (newPath) => {
   if (!editor) {
     return
   }
 
   // 如果文件已获得过焦点，则聚焦编辑器
-  if (focusedFilePaths.has(state.value.path)) {
+  if (focusedFilePaths.has(newPath)) {
     editor.focus()
   }
 
