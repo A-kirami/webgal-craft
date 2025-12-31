@@ -3,7 +3,7 @@ import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import { writeTextFile } from '@tauri-apps/plugin-fs'
 import * as monaco from 'monaco-editor'
 
-import { BASE_EDITOR_OPTIONS, configureWebgalSyntaxHighlighting, THEME_DARK, THEME_LIGHT, tryTriggerWebgalScriptCompletion } from '~/plugins/editor'
+import { BASE_EDITOR_OPTIONS, configureWebgalSyntaxHighlighting, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
 
 interface LanguageConfig {
   name: string
@@ -166,10 +166,6 @@ function handleChange(value: string | undefined) {
 
   if (editSettings.autoSave && value) {
     debouncedSaveTextFile(value)
-  }
-
-  if (state.value.visualType === 'scene') {
-    tryTriggerWebgalScriptCompletion(editor)
   }
 }
 

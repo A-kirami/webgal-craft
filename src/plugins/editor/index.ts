@@ -76,6 +76,7 @@ export const BASE_EDITOR_OPTIONS = {
     nonBasicASCII: false,
   },
   smoothScrolling: true,
+  quickSuggestions: { other: true, comments: false, strings: true },
 } as const satisfies monaco.editor.IEditorConstructionOptions
 
 // 定义主题
@@ -179,41 +180,6 @@ function isInComment(line: string, column: number): boolean {
     }
   }
   return lastCommentIndex !== -1
-}
-
-/**
- * 尝试触发补全（在特定条件下）, 可以频繁调用
- * 使用防抖优化性能
- */
-const debouncedTriggerCompletion = useDebounceFn((editor: monaco.editor.IStandaloneCodeEditor) => {
-  const model = editor.getModel()
-  const position = editor.getPosition()
-  if (!model || !position) {
-    return
-  }
-
-  const currentLine = model.getLineContent(position.lineNumber)
-  const currentLineBeforeCursor = currentLine.slice(0, position.column - 1)
-
-  // 如果光标在注释内则不触发补全
-  if (isInComment(currentLine, position.column)) {
-    return
-  }
-
-  // 当光标不在行首, 且光标前没有冒号时, 触发命令补全
-  const shouldCompleteCommands = (currentLineBeforeCursor !== '' && !currentLineBeforeCursor.includes(':'))
-  // 当光标前有空格和减号时, 触发参数补全
-  const shouldCompleteArguments = (currentLineBeforeCursor.endsWith(' -'))
-  if (shouldCompleteCommands || shouldCompleteArguments) {
-    editor.trigger('keyboard', 'editor.action.triggerSuggest', {})
-  }
-}, 150)
-
-export function tryTriggerWebgalScriptCompletion(editor: monaco.editor.IStandaloneCodeEditor | undefined) {
-  if (!editor) {
-    return
-  }
-  debouncedTriggerCompletion(editor)
 }
 
 /**
