@@ -74,6 +74,7 @@ export const useEditorStore = defineStore('editor', () => {
   const states = $ref(new Map<string, EditorState>())
 
   const tabsStore = useTabsStore()
+  const fileSystemEvents = useFileSystemEvents()
 
   const currentState = $computed(() => {
     return states.get(tabsStore.activeTab?.path ?? '')
@@ -84,33 +85,28 @@ export const useEditorStore = defineStore('editor', () => {
     return state !== undefined && isTextualEditor(state) && !!state.visualType
   })
 
-  async function loadEditorState(path: string) {
-    if (states.has(path)) {
-      return
-    }
-
-    const tab = tabsStore.tabs.find(t => t.path === path)
-    if (!tab) {
+  async function loadEditorState(tab: Tab) {
+    if (states.has(tab.path)) {
       return
     }
 
     try {
       tab.isLoading = true
-      const mimeType = mime.getType(path) ?? ''
+      const mimeType = mime.getType(tab.path) ?? ''
 
       if (editableFileTypes.has(mimeType)) {
         const preferenceStore = usePreferenceStore()
-        const content = await readTextFile(path)
+        const content = await readTextFile(tab.path)
 
         const baseState: TextModeState | VisualModeState = preferenceStore.editorMode === 'text'
           ? {
-              path,
+              path: tab.path,
               isDirty: false,
               mode: 'text',
               textContent: content,
             }
           : {
-              path,
+              path: tab.path,
               isDirty: false,
               mode: 'visual',
               visualData: content,
@@ -118,27 +114,27 @@ export const useEditorStore = defineStore('editor', () => {
 
         let visualType: VisualType | undefined
 
-        if (await isSceneFile(path, mimeType)) {
+        if (await isSceneFile(tab.path, mimeType)) {
           visualType = 'scene'
-        } else if (await isAnimationFile(path, mimeType)) {
+        } else if (await isAnimationFile(tab.path, mimeType)) {
           visualType = 'animation'
         }
 
-        states.set(path, { ...baseState, visualType })
+        states.set(tab.path, { ...baseState, visualType })
       } else {
         const workspaceStore = useWorkspaceStore()
         // 等待预览服务器启动
         await until(() => !!workspaceStore.currentGamePreviewUrl).toBe(true)
 
-        states.set(path, {
-          path,
+        states.set(tab.path, {
+          path: tab.path,
           mode: 'preview',
-          assetUrl: getAssetUrl(path),
+          assetUrl: getAssetUrl(tab.path),
           mimeType,
         })
       }
     } catch (error) {
-      logger.error(`Failed to load editor state for ${path}: ${error}`)
+      logger.error(`无法加载编辑器状态 ${tab.path}: ${error}`)
       tab.error = error instanceof Error ? error.message : 'Unknown error'
     } finally {
       tab.isLoading = false
@@ -173,10 +169,52 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   watch(() => tabsStore.activeTab, async (activeTab) => {
-    if (activeTab && !states.has(activeTab.path)) {
-      await loadEditorState(activeTab.path)
+    if (!activeTab || states.has(activeTab.path)) {
+      return
     }
+    await loadEditorState(activeTab)
   }, { immediate: true })
+
+  // 监听文件重命名事件，更新编辑器状态
+  fileSystemEvents.on('file:renamed', (event) => {
+    const oldState = states.get(event.oldPath)
+    if (oldState) {
+      oldState.path = event.newPath
+      states.delete(event.oldPath)
+      states.set(event.newPath, oldState)
+    }
+  })
+
+  // 监听文件修改事件，如果文件未编辑，同步新文件内容
+  fileSystemEvents.on('file:modified', async (event) => {
+    const state = states.get(event.path)
+    if (!state || !isTextualEditor(state)) {
+      return
+    }
+
+    // 如果文件已编辑，则不处理（避免覆盖用户的编辑）
+    if (state.isDirty) {
+      return
+    }
+
+    try {
+      const content = await readTextFile(event.path)
+
+      if (state.mode === 'text') {
+        states.set(event.path, {
+          ...state,
+          textContent: content,
+        })
+      } else {
+        states.set(event.path, {
+          ...state,
+          visualData: content,
+        })
+      }
+    } catch (error) {
+      logger.error(`同步文件内容失败 ${event.path}: ${error}`)
+    }
+  })
 
   return $$({
     states,

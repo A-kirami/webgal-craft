@@ -1,3 +1,4 @@
+import { basename } from '@tauri-apps/api/path'
 import { defineStore } from 'pinia'
 
 /**
@@ -12,7 +13,6 @@ export interface Tab {
 
   // 文件状态
   isModified?: boolean // 文件是否被修改
-  isDeleted?: boolean // 文件是否被删除
   isLoading?: boolean // 文件是否正在加载
   error?: string
 }
@@ -30,6 +30,8 @@ export const useTabsStore = defineStore(
     const activeTab = $computed(() =>
       activeTabIndex >= 0 && activeTabIndex < tabs.length ? tabs[activeTabIndex] : undefined,
     )
+
+    const fileSystemEvents = useFileSystemEvents()
 
     /**
      * 根据标签页路径查找其索引
@@ -174,6 +176,22 @@ export const useTabsStore = defineStore(
         tabs[index].isPreview = false
       }
     }
+
+    // 订阅文件系统事件
+    fileSystemEvents.on('file:removed', (event) => {
+      const index = findTabIndex(event.path)
+      if (index !== -1) {
+        closeTab(index)
+      }
+    })
+
+    fileSystemEvents.on('file:renamed', async (event) => {
+      const index = findTabIndex(event.oldPath)
+      if (index !== -1) {
+        tabs[index].path = event.newPath
+        tabs[index].name = await basename(event.newPath)
+      }
+    })
 
     // 导出所有状态与方法
     return $$({
