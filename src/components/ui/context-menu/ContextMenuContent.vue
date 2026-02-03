@@ -29,6 +29,8 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
         'z-50 min-w-32 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
         props.class,
       )"
+      alignFlip
+      prioritizePosition
     >
       <slot />
     </ContextMenuContent>

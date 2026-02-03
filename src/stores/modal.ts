@@ -4,6 +4,7 @@ import AboutModal from '~/components/modals/AboutModal.vue'
 import AlertModal from '~/components/modals/AlertModal.vue'
 import CreateGameModal from '~/components/modals/CreateGameModal.vue'
 import DeleteEngineModal from '~/components/modals/DeleteEngineModal.vue'
+import DeleteFileModal from '~/components/modals/DeleteFileModal.vue'
 import DeleteGameConfirmModal from '~/components/modals/DeleteGameConfirmModal.vue'
 import DeleteGameModal from '~/components/modals/DeleteGameModal.vue'
 import EffectEditorModal from '~/components/modals/EffectEditorModal.vue'
@@ -16,6 +17,7 @@ const ModalDialog = {
   AlertModal,
   CreateGameModal,
   DeleteEngineModal,
+  DeleteFileModal,
   DeleteGameModal,
   DeleteGameConfirmModal,
   EffectEditorModal,

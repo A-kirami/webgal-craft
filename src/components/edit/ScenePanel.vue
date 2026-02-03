@@ -1,45 +1,36 @@
 <script setup lang="ts">
-import { join } from '@tauri-apps/api/path'
-import { File, FilePen as _FilePen, FilePlus, Folder, FolderOpen, FolderPlus, Layers } from 'lucide-vue-next'
-import { TreeItem, TreeRoot, TreeVirtualizer } from 'reka-ui'
-
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip'
-import { useFileStore } from '~/stores/file'
-import { useTabsStore } from '~/stores/tabs'
-import { useWorkspaceStore } from '~/stores/workspace'
+import { dirname, join } from '@tauri-apps/api/path'
+import { CopyMinus, FilePlus, FolderPlus, Layers, RotateCw } from 'lucide-vue-next'
 
 import type { FlattenedItem } from 'reka-ui'
 
 const fileStore = useFileStore()
 const workspaceStore = useWorkspaceStore()
 const tabsStore = useTabsStore()
+const fileSystemEvents = useFileSystemEvents()
 
 interface TreeNode {
   id: string
-  title: string
+  name: string
   path: string
   children?: TreeNode[]
 }
 
-// 计算场景文件夹的完整路径
 const scenePath = computedAsync(async () => {
   if (!workspaceStore.currentGame?.path) {
     return ''
   }
-  const path = await join(workspaceStore.currentGame.path, 'game', 'scene')
-  return path
+  return await join(workspaceStore.currentGame.path, 'game', 'scene')
 })
 
-// 递归获取文件夹内容，返回嵌套结构
 async function getAllFolderContents(path: string): Promise<TreeNode[]> {
   try {
     const contents = await fileStore.getFolderContents(path)
 
-    // 使用 Promise.all 并行处理所有项目
     const nodes = await Promise.all(
       contents.map(async item => ({
         id: item.id,
-        title: item.name,
+        name: item.name,
         path: item.path,
         children: item.isDir ? await getAllFolderContents(item.path) : undefined,
       })),
@@ -47,33 +38,53 @@ async function getAllFolderContents(path: string): Promise<TreeNode[]> {
 
     return nodes
   } catch (error) {
-    console.error('🔍️ > getAllFolderContents > error:', error)
+    const errorMessage = error instanceof Error ? error.message : '获取场景文件夹内容失败'
+    void logger.error(`[ScenePanel] 获取场景文件夹内容失败: ${errorMessage}`)
     throw error
   }
 }
 
-// 初始加载场景文件夹内容
+let itemsKey = $ref(0)
+let isLoading = $ref(false)
+// 刷新模式队列：true 表示静默刷新，false 或 undefined 表示普通刷新
+let refreshModes = $ref<boolean[]>([])
+
 const items = computedAsync(async () => {
-  const path = scenePath.value
-  if (!path) {
-    return []
+  // 按触发顺序消费一次刷新模式；默认视为普通刷新，避免并发覆盖刷新语义
+  const mode = refreshModes.shift()
+  const isSilent = mode === true
+
+  if (!isSilent) {
+    isLoading = true
   }
-  return await getAllFolderContents(path)
+  try {
+    const path = scenePath.value
+    if (!path) {
+      return []
+    }
+    // 使用 itemsKey 作为无意义依赖，强制触发 computedAsync 重新计算
+    void itemsKey
+    return await getAllFolderContents(path)
+  } finally {
+    if (!isSilent) {
+      isLoading = false
+    }
+  }
 })
 
-const handleClick = async (item: FlattenedItem<Record<string, unknown>>) => {
-  const { hasChildren, value: { path, title: name } } = item as unknown as FlattenedItem<TreeNode>
-  if (hasChildren) {
+function handleClick(item: FlattenedItem<TreeNode>) {
+  if (item.hasChildren) {
     return
   }
+  const { name, path } = item.value
   tabsStore.openPreviewTab(name, path)
 }
 
-const handleDoubleClick = async (item: FlattenedItem<Record<string, unknown>>) => {
-  const { hasChildren, value: { path } } = item as unknown as FlattenedItem<TreeNode>
-  if (hasChildren) {
+function handleDoubleClick(item: FlattenedItem<TreeNode>) {
+  if (item.hasChildren) {
     return
   }
+  const { path } = item.value
   const index = tabsStore.findTabIndex(path)
   const tab = tabsStore.tabs[index]
   if (tab.isPreview) {
@@ -81,30 +92,137 @@ const handleDoubleClick = async (item: FlattenedItem<Record<string, unknown>>) =
   }
 }
 
-// 创建新文件
-const handleCreateFile = async () => {
-  if (!scenePath.value) {
-    return
+let selectedItem = $ref<TreeNode>()
+
+function findNodeByPath(nodes: TreeNode[], targetPath: string): TreeNode | undefined {
+  for (const node of nodes) {
+    if (node.path === targetPath) {
+      return node
+    }
+    if (node.children) {
+      const found = findNodeByPath(node.children, targetPath)
+      if (found) {
+        return found
+      }
+    }
   }
-  // TODO: 实现文件创建逻辑
-  console.log('创建新文件')
+  return undefined
 }
 
-// 创建新文件夹
-const handleCreateFolder = async () => {
-  if (!scenePath.value) {
+function updateSelectedItemFromActiveTab() {
+  const activeTab = tabsStore.activeTab
+  if (!activeTab) {
+    selectedItem = undefined
     return
   }
-  // TODO: 实现文件夹创建逻辑
-  console.log('创建新文件夹')
+
+  const foundNode = findNodeByPath(items.value || [], activeTab.path)
+  if (foundNode) {
+    selectedItem = foundNode
+  }
 }
+
+const fileTreeRef = $(useTemplateRef('fileTreeRef'))
+
+function scrollToSelectedItem() {
+  const viewport = fileTreeRef?.getViewportElement()
+  if (!viewport) {
+    return
+  }
+
+  const selectedElement = viewport.querySelector('[data-selected]') as HTMLElement
+  if (!selectedElement) {
+    return
+  }
+
+  const viewportRect = viewport.getBoundingClientRect()
+  const selectedRect = selectedElement.getBoundingClientRect()
+
+  const isVisible = selectedRect.top >= viewportRect.top && selectedRect.bottom <= viewportRect.bottom
+
+  if (!isVisible) {
+    selectedElement.scrollIntoView({
+      block: 'center',
+      behavior: 'auto',
+    })
+  }
+}
+
+watch($$(selectedItem), () => {
+  if (selectedItem) {
+    nextTick(() => {
+      scrollToSelectedItem()
+    })
+  }
+})
+
+watch(() => tabsStore.activeTab, updateSelectedItemFromActiveTab)
+
+watch(items, () => {
+  if (items.value?.length) {
+    updateSelectedItemFromActiveTab()
+  }
+})
+
+async function getTargetPath(): Promise<string | undefined> {
+  const rootPath = scenePath.value
+  if (!rootPath) {
+    return undefined
+  }
+
+  const selected = selectedItem
+  if (!selected) {
+    return rootPath
+  }
+
+  // 当用户选中文件时，默认在其父目录下创建新条目，以匹配主流编辑器的交互预期
+  return ('children' in selected && selected.children !== undefined)
+    ? selected.path
+    : await dirname(selected.path)
+}
+
+async function handleCreateFile() {
+  const targetPath = await getTargetPath()
+  if (targetPath) {
+    fileTreeRef?.startCreating(targetPath, 'file')
+  }
+}
+
+async function handleCreateFolder() {
+  const targetPath = await getTargetPath()
+  if (targetPath) {
+    fileTreeRef?.startCreating(targetPath, 'folder')
+  }
+}
+
+function handleRefresh() {
+  refreshModes.push(false)
+  itemsKey++
+}
+
+function handleCollapseAll() {
+  fileTreeRef?.collapseAll()
+}
+
+// 监听文件系统事件，自动刷新数据（静默刷新，不显示加载状态）
+const debouncedRefresh = useDebounceFn(() => {
+  refreshModes.push(true)
+  itemsKey++
+}, 100)
+
+fileSystemEvents.on('file:created', debouncedRefresh)
+fileSystemEvents.on('file:removed', debouncedRefresh)
+fileSystemEvents.on('file:renamed', debouncedRefresh)
+fileSystemEvents.on('directory:created', debouncedRefresh)
+fileSystemEvents.on('directory:removed', debouncedRefresh)
+fileSystemEvents.on('directory:renamed', debouncedRefresh)
 </script>
 
 <template>
   <div class="group/scene rounded flex flex-col h-full divide-y">
     <div class="px-2 py-1 flex items-center justify-between">
       <h3 class="text-sm font-medium flex items-center">
-        <Layers class="mr-2 h-4 w-4" />
+        <Layers class="mr-2 shrink-0 h-4 w-4" />
         {{ $t('edit.scenePanel.scene') }}
       </h3>
       <div class="opacity-0 flex gap-1 transition-opacity group-hover/scene:opacity-100">
@@ -114,48 +232,28 @@ const handleCreateFolder = async () => {
         <Button variant="ghost" size="icon" class="rounded h-6 w-6" @click="handleCreateFolder">
           <FolderPlus class="h-4 w-4" :stroke-width="1.5" />
         </Button>
+        <Button variant="ghost" size="icon" class="rounded h-6 w-6" :disabled="isLoading" @click="handleRefresh">
+          <RotateCw class="h-4 w-4" :stroke-width="1.5" />
+        </Button>
+        <Button variant="ghost" size="icon" class="rounded h-6 w-6" @click="handleCollapseAll">
+          <CopyMinus class="h-4 w-4" :stroke-width="1.5" />
+        </Button>
       </div>
     </div>
-    <ScrollArea class="flex-1">
-      <TreeRoot
-        :items="items"
-        :get-key="(item) => item.title"
-        class="text-13px px-2 py-1 list-none select-none"
-      >
-        <TooltipProvider :skip-delay-duration="0" :ignore-non-keyboard-focus="true">
-          <TreeVirtualizer
-            v-slot="{ item }"
-            :text-content="(opt) => opt.name"
-            :estimate-size="26"
-          >
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <TreeItem
-                  v-slot="{ isExpanded }"
-                  :key="item._id"
-                  v-bind="item.bind"
-                  :style="{ 'padding-left': `${item.level - 0.5}rem` }"
-                  class="group/item leading-6 px-2 py-1px outline-none rounded flex w-full cursor-pointer transition-colors duration-200 items-center data-[selected]:bg-gray-200 hover:bg-gray-100 data-[selected]:hover:bg-gray-200"
-                  @click="handleClick(item)"
-                  @dblclick="handleDoubleClick(item)"
-                >
-                  <template v-if="item.hasChildren">
-                    <Folder v-if="!isExpanded" class="text-gray-500 shrink-0 h-4 w-4" />
-                    <FolderOpen v-else class="text-blue-500 shrink-0 h-4 w-4" />
-                  </template>
-                  <File v-else class="text-gray-500 shrink-0 h-4 w-4" />
-                  <div class="text-gray-700 pl-1.5 whitespace-nowrap text-ellipsis overflow-hidden">
-                    {{ item.value.title }}
-                  </div>
-                </TreeItem>
-              </TooltipTrigger>
-              <TooltipContent :disabled-portal="true">
-                <p>{{ item.value.path }}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TreeVirtualizer>
-        </TooltipProvider>
-      </TreeRoot>
-    </ScrollArea>
+    <FileTree
+      v-if="items"
+      ref="fileTreeRef"
+      ::selected-item="selectedItem"
+      :items="items"
+      :get-key="(item) => item.path"
+      open-created-file-in-tab
+      :enable-tooltip="false"
+      :tooltip-content="(item) => item.value.path"
+      :is-loading="isLoading"
+      tree-name="scene"
+      default-file-name=".txt"
+      @click="handleClick"
+      @dblclick="handleDoubleClick"
+    />
   </div>
 </template>

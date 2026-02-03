@@ -95,6 +95,7 @@ pub fn run() {
             commands::fs::copy_directory,
             commands::fs::copy_directory_with_progress,
             commands::fs::validate_directory_structure,
+            commands::fs::delete_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

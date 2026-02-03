@@ -33,6 +33,8 @@
     {
       "identifier": "fs:scope",
       "allow": [{ "path": "$DOCUMENT/WebGALCraft" }, { "path": "$DOCUMENT/WebGALCraft/**" }]
-    }
+    },
+    "fs:allow-rename",
+    "fs:allow-copy-file"
   ]
 }

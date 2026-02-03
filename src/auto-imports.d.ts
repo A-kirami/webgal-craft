@@ -63,7 +63,6 @@ declare global {
   const isShallow: typeof import('vue').isShallow
   const logger: typeof import('@tauri-apps/plugin-log')
   const makeDestructurable: typeof import('@vueuse/core').makeDestructurable
-  const manualResetRef: typeof import('@vueuse/core').manualResetRef
   const markRaw: typeof import('vue').markRaw
   const nextTick: typeof import('vue').nextTick
   const notify: typeof import('notivue').push
@@ -183,6 +182,7 @@ declare global {
   const useDropZone: typeof import('@vueuse/core').useDropZone
   const useEditSettingsStore: typeof import('./stores/edit-settings').useEditSettingsStore
   const useEditorStore: typeof import('./stores/editor').useEditorStore
+  const useEditorUIStateStore: typeof import('./stores/editor-ui-state').useEditorUIStateStore
   const useElementBounding: typeof import('@vueuse/core').useElementBounding
   const useElementByPoint: typeof import('@vueuse/core').useElementByPoint
   const useElementHover: typeof import('@vueuse/core').useElementHover
@@ -195,6 +195,7 @@ declare global {
   const useEyeDropper: typeof import('@vueuse/core').useEyeDropper
   const useFavicon: typeof import('@vueuse/core').useFavicon
   const useFetch: typeof import('@vueuse/core').useFetch
+  const useFileClipboard: typeof import('./composables/useFileClipboard').useFileClipboard
   const useFileDialog: typeof import('@vueuse/core').useFileDialog
   const useFileStore: typeof import('./stores/file').useFileStore
   const useFileSystemAccess: typeof import('@vueuse/core').useFileSystemAccess
@@ -341,6 +342,9 @@ declare global {
   // @ts-ignore
   export type { ThumbnailSize } from './commands/thumbnaila'
   import('./commands/thumbnaila')
+  // @ts-ignore
+  export type { ClipboardItem } from './composables/useFileClipboard'
+  import('./composables/useFileClipboard')
   // @ts-ignore
   export type { FileSystemEvent } from './composables/useFileSystemEvents'
   import('./composables/useFileSystemEvents')
@@ -554,6 +558,7 @@ declare module 'vue' {
     readonly useDropZone: UnwrapRef<typeof import('@vueuse/core')['useDropZone']>
     readonly useEditSettingsStore: UnwrapRef<typeof import('./stores/edit-settings')['useEditSettingsStore']>
     readonly useEditorStore: UnwrapRef<typeof import('./stores/editor')['useEditorStore']>
+    readonly useEditorUIStateStore: UnwrapRef<typeof import('./stores/editor-ui-state')['useEditorUIStateStore']>
     readonly useElementBounding: UnwrapRef<typeof import('@vueuse/core')['useElementBounding']>
     readonly useElementByPoint: UnwrapRef<typeof import('@vueuse/core')['useElementByPoint']>
     readonly useElementHover: UnwrapRef<typeof import('@vueuse/core')['useElementHover']>
@@ -566,6 +571,7 @@ declare module 'vue' {
     readonly useEyeDropper: UnwrapRef<typeof import('@vueuse/core')['useEyeDropper']>
     readonly useFavicon: UnwrapRef<typeof import('@vueuse/core')['useFavicon']>
     readonly useFetch: UnwrapRef<typeof import('@vueuse/core')['useFetch']>
+    readonly useFileClipboard: UnwrapRef<typeof import('./composables/useFileClipboard')['useFileClipboard']>
     readonly useFileDialog: UnwrapRef<typeof import('@vueuse/core')['useFileDialog']>
     readonly useFileStore: UnwrapRef<typeof import('./stores/file')['useFileStore']>
     readonly useFileSystemAccess: UnwrapRef<typeof import('@vueuse/core')['useFileSystemAccess']>
