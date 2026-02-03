@@ -15,6 +15,11 @@ import { isDebug } from '~build/meta'
 const MAX_CACHE_ITEMS = 5000
 
 /**
+ * 文件系统监听延迟（毫秒）
+ */
+const WATCH_DELAY_MS = 150
+
+/**
  * 文件系统项的基础接口
  */
 interface FileSystemItemBase {
@@ -550,7 +555,7 @@ export const useFileStore = defineStore('file', () => {
     try {
       const rootPath = await join(workspaceStore.CWD, 'game')
       await getFolderContents(rootPath)
-      unwatch = await watchFs(rootPath, handleWatchEvent, { recursive: true, delayMs: 500 })
+      unwatch = await watchFs(rootPath, handleWatchEvent, { recursive: true, delayMs: WATCH_DELAY_MS })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       void logger.error(`[FileStore] 初始化工作目录 ${workspaceStore.CWD} 文件系统失败: ${errorMessage}`)

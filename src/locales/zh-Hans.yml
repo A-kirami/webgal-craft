@@ -2,6 +2,8 @@ common:
   loading: 加载中...
   cancel: 取消
   confirm: 确认
+  moveToTrash: 移动到回收站
+  delete: 删除
   settings: 设置
   close: 关闭
   saved: 已保存
@@ -94,6 +96,12 @@ modals:
     description: 确定要删除游戏 {name} 吗？
     deleteFiles: 同时删除游戏文件
     deleteSuccess: 游戏删除成功
+  deleteFile:
+    title: 确定要删除文件 {name} 吗？
+    folderTitle: 确定要删除文件夹 {name} 及其内容？
+    description: 你可以从回收站还原此文件。
+    folderDescription: 删除后你可以从回收站还原此文件夹及内容。
+    skipConfirm: 不再显示此提示
   deleteGameConfirm:
     title: 最终确认
     description: 此操作无法撤销。请输入游戏名称 {name} 以确认删除。
@@ -222,6 +230,16 @@ edit:
       words: "{count} 字"
   scenePanel:
     scene: 场景
+  fileTree:
+    newFile: 新建文件
+    newFolder: 新建文件夹
+    rename: 重命名
+    deleteSuccess: 删除成功
+    deleteFailed: 删除失败
+    copy: 复制
+    cut: 剪切
+    paste: 粘贴
+    revealInExplorer: 在文件资源管理器中显示
   previewPanel:
     copyUrl: 复制地址
     refreshPreview: 刷新预览

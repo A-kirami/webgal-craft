@@ -36,6 +36,25 @@ export default defineConfig({
       },
     ),
   ],
+  variants: [
+    // not-in-data-[...]: variant
+    (matcher) => {
+      const match = matcher.match(/^not-in-data-\[(.+?)\]:/)
+      if (!match) {
+        return matcher
+      }
+
+      const [, attrSelector] = match
+      // Convert attribute selector to data attribute format
+      // e.g., "folder=true" -> "[data-folder=true]"
+      const dataAttr = `[data-${attrSelector}]`
+
+      return {
+        matcher: matcher.slice(match[0].length),
+        selector: s => `${s}:not(:where(${dataAttr}) *)`,
+      }
+    },
+  ],
   transformers: [transformerDirectives(), transformerVariantGroup()],
   content: {
     pipeline: {

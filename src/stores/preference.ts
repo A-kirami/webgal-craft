@@ -7,12 +7,14 @@ export const usePreferenceStore = defineStore(
     const assetViewMode = $ref<'grid' | 'list'>('grid')
     const editorMode = $ref<'text' | 'visual'>('text')
     const assetZoom = $ref<[number]>([100])
+    const skipDeleteFileConfirm = $ref(false)
 
     return $$({
       viewMode,
       assetViewMode,
       editorMode,
       assetZoom,
+      skipDeleteFileConfirm,
     })
   },
   {

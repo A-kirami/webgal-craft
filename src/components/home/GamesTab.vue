@@ -147,11 +147,11 @@ function createGame() {
         </ContextMenuTrigger>
         <ContextMenuContent class="w-42">
           <ContextMenuItem @click="handleOpenFolder(game)">
-            <Folder class="mr-2 h-4 w-4" />
+            <Folder class="mr-2 size-3.5" />
             {{ $t('common.openFolder') }}
           </ContextMenuItem>
-          <ContextMenuItem class="text-destructive focus:text-destructive-foreground focus:bg-destructive" @click="handleDeleteGame(game)">
-            <Trash2 class="mr-2 h-4 w-4" />
+          <ContextMenuItem class="text-destructive text-13px! focus:text-destructive-foreground focus:bg-destructive" @click="handleDeleteGame(game)">
+            <Trash2 class="mr-2 size-3.5" />
             {{ $t('home.games.deleteGame') }}
           </ContextMenuItem>
         </ContextMenuContent>

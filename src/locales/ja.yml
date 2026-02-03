@@ -2,6 +2,8 @@ common:
   loading: 読み込み中...
   cancel: キャンセル
   confirm: 確認
+  moveToTrash: ゴミ箱に移動
+  delete: 削除
   settings: 設定
   close: 閉じる
   saved: 保存済み
@@ -94,6 +96,12 @@ modals:
     description: ゲーム {name} を削除してもよろしいですか？
     deleteFiles: ゲームファイルも削除
     deleteSuccess: ゲームの削除に成功しました
+  deleteFile:
+    title: ファイル {name} を削除しますか？
+    folderTitle: フォルダー {name} とその内容を削除しますか？
+    description: このファイルはゴミ箱から復元できます。
+    folderDescription: このフォルダーとその内容はゴミ箱から復元できます。
+    skipConfirm: 今後この確認を表示しない
   deleteGameConfirm:
     title: 最終確認
     description: この操作は元に戻せません。ゲーム名 {name} を入力して削除を確認してください。
@@ -222,6 +230,16 @@ edit:
       words: "{count} 字"
   scenePanel:
     scene: シーン
+  fileTree:
+    newFile: 新しいファイル
+    newFolder: 新しいフォルダー
+    rename: 名前を変更
+    deleteSuccess: 削除に成功しました
+    deleteFailed: 削除に失敗しました
+    copy: コピー
+    cut: 切り取り
+    paste: 貼り付け
+    revealInExplorer: エクスプローラーで表示
   previewPanel:
     copyUrl: URLをコピー
     refreshPreview: プレビューを更新

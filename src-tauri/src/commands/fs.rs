@@ -184,3 +184,30 @@ pub fn validate_directory_structure(
     // 所有检查都通过
     Ok(true)
 }
+
+/// 删除文件或文件夹
+/// 默认移动到回收站，如果 permanent 为 true 则直接删除
+#[tauri::command]
+pub async fn delete_file(path: String, permanent: Option<bool>) -> AppResult<()> {
+    let path = Path::new(&path);
+
+    if !path.exists() {
+        return Err(AppError::Server(format!("路径不存在: {}", path.display())));
+    }
+
+    let should_permanent_delete = permanent.unwrap_or(false);
+
+    if should_permanent_delete {
+        // 直接删除
+        if path.is_dir() {
+            fs::remove_dir_all(path)?;
+        } else {
+            fs::remove_file(path)?;
+        }
+    } else {
+        // 移动到回收站
+        trash::delete(path).map_err(|e| AppError::Server(format!("移动到回收站失败: {}", e)))?;
+    }
+
+    Ok(())
+}

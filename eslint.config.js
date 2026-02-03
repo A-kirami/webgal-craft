@@ -138,6 +138,7 @@ export default defineConfig(
     rules: {
       'vue/multi-word-component-names': 'off',
       'vue/max-attributes-per-line': 'off',
+      'vue/require-default-prop': 'off',
       'unicorn/filename-case': [
         'error',
         {

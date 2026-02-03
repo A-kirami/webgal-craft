@@ -2,6 +2,8 @@ common:
   loading: Loading...
   cancel: Cancel
   confirm: Confirm
+  moveToTrash: Move to Trash
+  delete: Delete
   settings: Settings
   close: Close
   saved: Saved
@@ -94,6 +96,12 @@ modals:
     description: Are you sure you want to delete the game {name}?
     deleteFiles: Delete game files as well
     deleteSuccess: Game deleted successfully
+  deleteFile:
+    title: Are you sure you want to delete the file {name}?
+    folderTitle: Are you sure you want to delete the folder {name} and its contents?
+    description: You can restore this file from the recycle bin.
+    folderDescription: You can restore this folder and its contents from the recycle bin.
+    skipConfirm: Don't show this prompt again
   deleteGameConfirm:
     title: Final Confirmation
     description: "This operation cannot be undone. Please enter the game name {name} to confirm deletion."
@@ -222,6 +230,16 @@ edit:
       words: "{count} words"
   scenePanel:
     scene: Scene
+  fileTree:
+    newFile: New File
+    newFolder: New Folder
+    rename: Rename
+    deleteSuccess: Deleted successfully
+    deleteFailed: Delete failed
+    copy: Copy
+    cut: Cut
+    paste: Paste
+    revealInExplorer: Reveal in File Explorer
   previewPanel:
     copyUrl: Copy URL
     refreshPreview: Refresh Preview

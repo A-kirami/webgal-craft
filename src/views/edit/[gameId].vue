@@ -8,7 +8,7 @@ import { ResizablePanel } from '~/components/ui/resizable'
     <ResizablePanelGroup
       direction="horizontal"
     >
-      <ResizablePanel :default-size="15" :min-size="10">
+      <ResizablePanel :default-size="15" :min-size="5" :collapsible="true">
         <ScenePanel />
       </ResizablePanel>
       <ResizableHandle />
