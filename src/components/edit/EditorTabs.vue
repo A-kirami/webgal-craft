@@ -3,7 +3,11 @@ import { FileText, X } from 'lucide-vue-next'
 
 import { useTabsStore } from '../../stores/tabs'
 
+import type { ScrollArea } from '~/components/ui/scroll-area'
+
 const tabsStore = useTabsStore()
+
+const scrollAreaRef = $(useTemplateRef('scrollAreaRef'))
 
 // 处理标签页关闭
 function handleCloseTab(index: number) {
@@ -33,10 +37,42 @@ function handleWheel(event: WheelEvent) {
   el.scrollLeft += event.deltaY
   event.preventDefault()
 }
+
+function scrollToActiveTab() {
+  const viewport = scrollAreaRef?.viewport?.viewportElement
+  if (!viewport) {
+    return
+  }
+
+  const activeTabElement = viewport.querySelector('[data-active="true"]') as HTMLElement
+  if (!activeTabElement) {
+    return
+  }
+
+  const viewportRect = viewport.getBoundingClientRect()
+  const activeTabRect = activeTabElement.getBoundingClientRect()
+
+  const isVisible = activeTabRect.left >= viewportRect.left && activeTabRect.right <= viewportRect.right
+
+  if (!isVisible) {
+    activeTabElement.scrollIntoView({
+      inline: 'nearest',
+      behavior: 'auto',
+    })
+  }
+}
+
+watch(() => tabsStore.activeTab, () => {
+  if (tabsStore.activeTab) {
+    nextTick(() => {
+      scrollToActiveTab()
+    })
+  }
+})
 </script>
 
 <template>
-  <ScrollArea @wheel="handleWheel">
+  <ScrollArea ref="scrollAreaRef" @wheel="handleWheel">
     <div class="bg-background flex h-8">
       <Button
         v-for="(tab, index) in tabsStore.tabs"
@@ -44,8 +80,12 @@ function handleWheel(event: WheelEvent) {
         variant="ghost"
         class="group pl-3 pr-1 border-r rounded-none h-full relative"
         :class="[
-          tabsStore.activeTab?.path === tab.path ? 'bg-muted' : 'hover:bg-muted/50'
+          tabsStore.activeTab?.path === tab.path
+            ? 'bg-muted before:bg-primary'
+            : 'hover:bg-muted/50'
         ]"
+        :data-active="tabsStore.activeTab?.path === tab.path"
+        un-before="h-0.5 w-full absolute top-0 inset-x-0 content-empty"
         @click="() => handleTabClick(index)"
         @dblclick="() => handleTabDblClick(index)"
       >
