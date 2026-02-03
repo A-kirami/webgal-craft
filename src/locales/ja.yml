@@ -311,6 +311,9 @@ settings:
     autoSave:
       label: 自動保存
       description: 有効にすると、エディターが自動的に変更を保存します
+    enablePreviewTab:
+      label: プレビュータブを有効にする
+      description: シングルクリックでプレビューモードでファイルを開き、ダブルクリックまたは編集で通常のタブに固定
   storage:
     gamePath:
       label: ゲーム保存場所

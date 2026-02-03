@@ -311,6 +311,9 @@ settings:
     autoSave:
       label: Auto Save
       description: When enabled, the editor will automatically save your changes
+    enablePreviewTab:
+      label: Enable Preview Tabs
+      description: Open files in preview mode on single click, pin to regular tab on double click or edit
   storage:
     gamePath:
       label: Game Save Location

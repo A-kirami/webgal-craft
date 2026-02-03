@@ -77,7 +77,7 @@ function handleClick(item: FlattenedItem<TreeNode>) {
     return
   }
   const { name, path } = item.value
-  tabsStore.openPreviewTab(name, path)
+  tabsStore.openTab(name, path)
 }
 
 function handleDoubleClick(item: FlattenedItem<TreeNode>) {

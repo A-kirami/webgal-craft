@@ -311,6 +311,9 @@ settings:
     autoSave:
       label: 自動儲存
       description: 啟用後，編輯器將自動儲存您的變更
+    enablePreviewTab:
+      label: 啟用預覽標籤頁
+      description: 單擊檔案時以預覽模式開啟，雙擊或編輯後固定為普通標籤頁
   storage:
     gamePath:
       label: 遊戲儲存位置
