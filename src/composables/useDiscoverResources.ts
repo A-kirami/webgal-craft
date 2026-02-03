@@ -86,6 +86,7 @@ function filterAlreadyImported<T extends { path: string }>(
   return discovered.filter(resource => !existingPaths.has(resource.path))
 }
 
+// 全局状态：确保每种资源类型只检测一次
 const hasChecked = {
   games: false,
   engines: false,
