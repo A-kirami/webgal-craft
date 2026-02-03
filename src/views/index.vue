@@ -1,6 +1,9 @@
 <script setup lang="ts">
 const workspaceStore = useWorkspaceStore()
 const resourceStore = useResourceStore()
+const { checkResourcesForActiveTab } = useDiscoverResources()
+
+watch(() => workspaceStore.activeTab, checkResourcesForActiveTab, { immediate: true })
 </script>
 
 <template>
