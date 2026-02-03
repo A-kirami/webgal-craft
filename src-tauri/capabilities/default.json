@@ -32,7 +32,7 @@
     "fs:allow-write-text-file",
     {
       "identifier": "fs:scope",
-      "allow": [{ "path": "$DOCUMENT/WebGALCraft" }, { "path": "$DOCUMENT/WebGALCraft/**" }]
+      "allow": ["**/*"]
     },
     "fs:allow-rename",
     "fs:allow-copy-file"
