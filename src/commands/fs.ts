@@ -145,11 +145,11 @@ async function generateUniqueFileName(parentPath: string, baseName: string, isDi
 /**
  * 创建新文件
  * @param targetPath 目标目录路径
- * @param fileName 文件名（可选，默认：新文件.txt）
+ * @param fileName 文件名
  * @returns Promise<string> 创建的文件完整路径
  * @throws 当创建失败时抛出异常
  */
-async function createFile(targetPath: string, fileName = '新文件.txt'): Promise<string> {
+async function createFile(targetPath: string, fileName: string): Promise<string> {
   const uniqueName = await generateUniqueFileName(targetPath, fileName, false)
   const filePath = await join(targetPath, uniqueName)
   await writeTextFile(filePath, '')
@@ -159,11 +159,11 @@ async function createFile(targetPath: string, fileName = '新文件.txt'): Promi
 /**
  * 创建新文件夹
  * @param targetPath 目标目录路径
- * @param folderName 文件夹名（可选，默认：新文件夹）
+ * @param folderName 文件夹名
  * @returns Promise<string> 创建的文件夹完整路径
  * @throws 当创建失败时抛出异常
  */
-async function createFolder(targetPath: string, folderName = '新文件夹'): Promise<string> {
+async function createFolder(targetPath: string, folderName: string): Promise<string> {
   const uniqueName = await generateUniqueFileName(targetPath, folderName, true)
   const folderPath = await join(targetPath, uniqueName)
   await mkdir(folderPath, { recursive: true })

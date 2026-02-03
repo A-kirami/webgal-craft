@@ -276,7 +276,7 @@ function isCreateDuplicate(): boolean {
 
 function getDefaultFileName(): string {
   if (!defaultFileName) {
-    return ''
+    return t('edit.fileTree.defaultFileName')
   }
   return typeof defaultFileName === 'function'
     ? defaultFileName()
@@ -304,7 +304,9 @@ function startCreating(parentPath: string, type: 'file' | 'folder') {
   createState.isStarting = true
   createState.parentPath = parentPath
   createState.type = type
-  createState.value = type === 'file' ? getDefaultFileName() : ''
+  createState.value = type === 'file'
+    ? getDefaultFileName()
+    : t('edit.fileTree.defaultFolderName')
 
   // 创建子项前强制展开父文件夹，避免输入框出现在折叠状态下用户看不见
   const parentItem = findParentItem(items, parentPath)
@@ -369,10 +371,10 @@ function handleCreateBlur() {
     return
   }
 
-  const defaultName = getDefaultFileName()
-  const isEmpty = createState.type === 'file'
-    ? createState.value.trim() === defaultName || createState.value.trim() === ''
-    : createState.value.trim() === ''
+  const defaultName = createState.type === 'file'
+    ? getDefaultFileName()
+    : t('edit.fileTree.defaultFolderName')
+  const isEmpty = createState.value.trim() === defaultName || createState.value.trim() === ''
 
   if (isEmpty) {
     setTimeout(() => {
@@ -555,6 +557,7 @@ const emit = defineEmits<{
 
 const selectedItem = defineModel<T>('selectedItem')
 
+const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
 const currentGameId = $computed(() => workspaceStore.currentGame?.id)
 

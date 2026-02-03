@@ -233,6 +233,8 @@ edit:
   fileTree:
     newFile: 新建檔案
     newFolder: 新建資料夾
+    defaultFileName: 新檔案.txt
+    defaultFolderName: 新資料夾
     rename: 重新命名
     deleteSuccess: 刪除成功
     deleteFailed: 刪除失敗

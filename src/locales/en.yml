@@ -233,6 +233,8 @@ edit:
   fileTree:
     newFile: New File
     newFolder: New Folder
+    defaultFileName: New File.txt
+    defaultFolderName: New Folder
     rename: Rename
     deleteSuccess: Deleted successfully
     deleteFailed: Delete failed

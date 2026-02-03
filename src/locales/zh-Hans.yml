@@ -233,6 +233,8 @@ edit:
   fileTree:
     newFile: 新建文件
     newFolder: 新建文件夹
+    defaultFileName: 新文件.txt
+    defaultFolderName: 新文件夹
     rename: 重命名
     deleteSuccess: 删除成功
     deleteFailed: 删除失败

@@ -233,6 +233,8 @@ edit:
   fileTree:
     newFile: 新しいファイル
     newFolder: 新しいフォルダー
+    defaultFileName: 新しいファイル.txt
+    defaultFolderName: 新しいフォルダー
     rename: 名前を変更
     deleteSuccess: 削除に成功しました
     deleteFailed: 削除に失敗しました
