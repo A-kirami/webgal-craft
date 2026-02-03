@@ -115,7 +115,7 @@ const handleClick = async (item: FileSystemItem) => {
     handleNavigateTo(item.path)
     return
   }
-  tabsStore.openPreviewTab(item.name, item.path)
+  tabsStore.openTab(item.name, item.path)
 }
 
 const handleDoubleClick = async (item: FileSystemItem) => {

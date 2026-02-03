@@ -355,7 +355,7 @@ async function handleCreate() {
 
     if (openCreatedFileInTab && isFile && createdPath) {
       const createdName = await basename(createdPath)
-      tabsStore.openTab(createdName, createdPath)
+      tabsStore.openTab(createdName, createdPath, true)
     }
     cancelCreating()
   } catch (error) {

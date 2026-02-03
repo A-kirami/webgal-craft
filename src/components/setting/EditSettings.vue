@@ -11,6 +11,7 @@ const validationSchema = z.object({
   wordWrap: z.boolean(),
   minimap: z.boolean(),
   autoSave: z.boolean(),
+  enablePreviewTab: z.boolean(),
 })
 
 useSettingsForm({
@@ -112,6 +113,25 @@ useSettingsForm({
           </FormLabel>
           <FormDescription class="text-xs">
             {{ $t('settings.edit.autoSave.description') }}
+          </FormDescription>
+        </div>
+        <FormControl>
+          <Switch
+            :model-value="value"
+            @update:model-value="handleChange"
+          />
+        </FormControl>
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ value, handleChange }" name="enablePreviewTab">
+      <FormItem class="flex flex-row gap-2 max-w-120 items-center justify-between space-y-0">
+        <div class="flex flex-col gap-1">
+          <FormLabel>
+            {{ $t('settings.edit.enablePreviewTab.label') }}
+          </FormLabel>
+          <FormDescription class="text-xs">
+            {{ $t('settings.edit.enablePreviewTab.description') }}
           </FormDescription>
         </div>
         <FormControl>

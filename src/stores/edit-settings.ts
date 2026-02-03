@@ -8,6 +8,7 @@ export const useEditSettingsStore = defineStore(
     const wordWrap = $ref<boolean>(true)
     const minimap = $ref<boolean>(false)
     const autoSave = $ref<boolean>(true)
+    const enablePreviewTab = $ref<boolean>(true)
 
     return $$({
       fontFamily,
@@ -15,6 +16,7 @@ export const useEditSettingsStore = defineStore(
       wordWrap,
       minimap,
       autoSave,
+      enablePreviewTab,
     })
   },
   {
