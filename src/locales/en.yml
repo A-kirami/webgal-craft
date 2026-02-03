@@ -113,6 +113,16 @@ modals:
     description: Are you sure you want to uninstall the engine {name}?
     warning: This operation will delete engine files and cannot be recovered.
     uninstallSuccess: Engine uninstalled successfully
+  discoveredResources:
+    gamesTitle: Discovered Games
+    enginesTitle: Discovered Engines
+    gamesDescription: Found {count} game(s) in the default game directory. Would you like to import them?
+    enginesDescription: Found {count} engine(s) in the default engine directory. Would you like to import them?
+    selectAll: Select All
+    deselectAll: Deselect All
+    selected: Selected {count}/{total}
+    skip: Skip
+    import: Import ({count})
   gameConfig:
     title: Game Configuration
   effectEditor:

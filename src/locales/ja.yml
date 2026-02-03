@@ -113,6 +113,16 @@ modals:
     description: エンジン {name} をアンインストールしてもよろしいですか？
     warning: この操作はエンジンファイルを削除し、復元できません。
     uninstallSuccess: エンジンのアンインストールに成功しました
+  discoveredResources:
+    gamesTitle: ゲームを発見
+    enginesTitle: エンジンを発見
+    gamesDescription: デフォルトのゲームディレクトリで {count} 個のゲームが見つかりました。インポートしますか？
+    enginesDescription: デフォルトのエンジンディレクトリで {count} 個のエンジンが見つかりました。インポートしますか？
+    selectAll: すべて選択
+    deselectAll: すべて選択解除
+    selected: 選択済み {count}/{total}
+    skip: スキップ
+    import: インポート ({count})
   gameConfig:
     title: ゲーム設定
   effectEditor:

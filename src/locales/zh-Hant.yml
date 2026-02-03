@@ -113,6 +113,16 @@ modals:
     description: 確定要卸載引擎 {name} 嗎？
     warning: 此操作將刪除引擎檔案，且無法恢復。
     uninstallSuccess: 引擎卸載成功
+  discoveredResources:
+    gamesTitle: 發現遊戲
+    enginesTitle: 發現引擎
+    gamesDescription: 在預設遊戲目錄中發現了 {count} 個遊戲，是否匯入？
+    enginesDescription: 在預設引擎目錄中發現了 {count} 個引擎，是否匯入？
+    selectAll: 全選
+    deselectAll: 取消全選
+    selected: 已選擇 {count}/{total}
+    skip: 跳過
+    import: 匯入 ({count})
   gameConfig:
     title: 遊戲設定
   effectEditor:

@@ -135,6 +135,7 @@ async function uninstallEngine(engine: Engine): Promise<void> {
  * @throws {GameError} 当导入失败时抛出
  */
 async function importEngine(enginePath: string): Promise<void> {
+  const storageSettingsStore = useStorageSettingsStore()
   const isValid = await validateEngine(enginePath)
 
   if (!isValid) {
@@ -146,7 +147,15 @@ async function importEngine(enginePath: string): Promise<void> {
     )
   }
 
-  await installEngine(enginePath)
+  const metadata = await getEngineMetadata(enginePath)
+  const targetPath = await join(storageSettingsStore.engineSavePath, metadata.name)
+
+  if (enginePath === targetPath) {
+    logger.info(`[引擎导入] 引擎已在目标位置，直接注册: ${enginePath}`)
+    await registerEngine(enginePath, metadata, false)
+  } else {
+    await installEngine(enginePath)
+  }
 }
 
 /**
