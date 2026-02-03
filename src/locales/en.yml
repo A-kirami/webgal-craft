@@ -240,6 +240,10 @@ edit:
     cut: Cut
     paste: Paste
     revealInExplorer: Reveal in File Explorer
+    pasteSuccess: Pasted successfully
+    pasteFailed: Paste failed
+    pastePartialFailed: Partial paste failed ({failed}/{total})
+    pasteMultipleSuccess: Successfully pasted {count} items
   previewPanel:
     copyUrl: Copy URL
     refreshPreview: Refresh Preview

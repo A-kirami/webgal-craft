@@ -240,6 +240,10 @@ edit:
     cut: 剪切
     paste: 粘贴
     revealInExplorer: 在文件资源管理器中显示
+    pasteSuccess: 粘贴成功
+    pasteFailed: 粘贴失败
+    pastePartialFailed: 部分粘贴失败 ({failed}/{total})
+    pasteMultipleSuccess: 成功粘贴 {count} 个项目
   previewPanel:
     copyUrl: 复制地址
     refreshPreview: 刷新预览

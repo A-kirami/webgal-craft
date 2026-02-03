@@ -240,6 +240,10 @@ edit:
     cut: 剪下
     paste: 貼上
     revealInExplorer: 在檔案總管中顯示
+    pasteSuccess: 貼上成功
+    pasteFailed: 貼上失敗
+    pastePartialFailed: 部分貼上失敗 ({failed}/{total})
+    pasteMultipleSuccess: 成功貼上 {count} 個項目
   previewPanel:
     copyUrl: 複製網址
     refreshPreview: 重新整理預覽

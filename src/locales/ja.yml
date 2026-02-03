@@ -240,6 +240,10 @@ edit:
     cut: 切り取り
     paste: 貼り付け
     revealInExplorer: エクスプローラーで表示
+    pasteSuccess: 貼り付けに成功しました
+    pasteFailed: 貼り付けに失敗しました
+    pastePartialFailed: 一部の貼り付けに失敗しました ({failed}/{total})
+    pasteMultipleSuccess: "{count} 個のアイテムを貼り付けました"
   previewPanel:
     copyUrl: URLをコピー
     refreshPreview: プレビューを更新

@@ -91,14 +91,14 @@ async function handlePaste() {
     if (failures.length > 0) {
       const errorMsg = failures.map(f => f.reason?.message || String(f.reason)).join('; ')
       logger.error(`粘贴失败: ${errorMsg}`)
-      toast.error(successCount > 0 ? `部分粘贴失败 (${failures.length}/${results.length})` : '粘贴失败')
+      toast.error(successCount > 0 ? t('edit.fileTree.pastePartialFailed', { failed: failures.length, total: results.length }) : t('edit.fileTree.pasteFailed'))
     }
 
     if (successCount > 0) {
       if (isCut) {
         clearClipboard()
       }
-      toast.success(clipboard.length === 1 ? '粘贴成功' : `成功粘贴 ${successCount} 个项目`)
+      toast.success(clipboard.length === 1 ? t('edit.fileTree.pasteSuccess') : t('edit.fileTree.pasteMultipleSuccess', { count: successCount }))
     }
   } catch (error) {
     logger.error(error instanceof Error ? error.message : String(error))
