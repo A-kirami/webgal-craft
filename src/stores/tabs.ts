@@ -69,9 +69,12 @@ export const useTabsStore = defineStore(
      * 如果标签页已存在，则激活它；否则在当前激活标签页后创建新标签页。
      * @param name 标签页名称
      * @param path 文件路径
-     * @param forceNormal 是否强制以普通模式打开，忽略 enablePreviewTab 配置（默认 false）
+     * @param options 配置选项
+     * @param options.forceNormal 是否强制以普通模式打开，忽略 enablePreviewTab 配置（默认 false）
      */
-    function openTab(name: string, path: string, forceNormal = false) {
+    function openTab(name: string, path: string, options?: { forceNormal?: boolean }) {
+      const forceNormal = options?.forceNormal ?? false
+
       if (!forceNormal && editSettingsStore.enablePreviewTab) {
         openPreviewTab(name, path)
         return
@@ -208,7 +211,6 @@ export const useTabsStore = defineStore(
       activeTab,
       activeTabIndex,
       openTab,
-      openPreviewTab,
       fixPreviewTab,
       activateTab,
       updateTabModified,
