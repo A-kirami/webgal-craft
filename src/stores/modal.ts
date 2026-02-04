@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 
 import AboutModal from '~/components/modals/AboutModal.vue'
 import AlertModal from '~/components/modals/AlertModal.vue'
+import CreateFileModal from '~/components/modals/CreateFileModal.vue'
 import CreateGameModal from '~/components/modals/CreateGameModal.vue'
 import DeleteEngineModal from '~/components/modals/DeleteEngineModal.vue'
 import DeleteFileModal from '~/components/modals/DeleteFileModal.vue'
@@ -16,6 +17,7 @@ import UpgradeModal from '~/components/modals/UpgradeModal.vue'
 const ModalDialog = {
   AboutModal,
   AlertModal,
+  CreateFileModal,
   CreateGameModal,
   DeleteEngineModal,
   DeleteFileModal,
