@@ -18,41 +18,72 @@ export interface Tab {
 }
 
 /**
+ * 项目标签页状态，用于按项目隔离标签页
+ */
+interface ProjectTabsState {
+  tabs: Tab[]
+  activeTabIndex: number
+}
+
+/**
  * 标签页 Pinia Store，负责管理所有标签页的状态与操作。
  * 支持标签页的打开、关闭、激活、预览等功能。
  */
 export const useTabsStore = defineStore(
   'tabs',
   () => {
-    const tabs = $ref<Tab[]>([])
-    let activeTabIndex = $ref<number>(-1)
+    const projectTabsMap = $ref<Record<string, ProjectTabsState>>({})
 
+    const workspaceStore = useWorkspaceStore()
+    const fileSystemEvents = useFileSystemEvents()
+    const editSettingsStore = useEditSettingsStore()
+
+    const currentProjectId = $computed(() => workspaceStore.currentGame?.id ?? '')
+
+    const currentProjectTabs = $computed((): ProjectTabsState => {
+      if (!currentProjectId || !projectTabsMap[currentProjectId]) {
+        return { tabs: [], activeTabIndex: -1 }
+      }
+      return projectTabsMap[currentProjectId]
+    })
+
+    function ensureProjectState(): ProjectTabsState | undefined {
+      if (!currentProjectId) {
+        return undefined
+      }
+      if (!projectTabsMap[currentProjectId]) {
+        projectTabsMap[currentProjectId] = { tabs: [], activeTabIndex: -1 }
+      }
+      return projectTabsMap[currentProjectId]
+    }
+
+    const tabs = $computed(() => currentProjectTabs.tabs)
+    const activeTabIndex = $computed(() => currentProjectTabs.activeTabIndex)
     const activeTab = $computed(() =>
       activeTabIndex >= 0 && activeTabIndex < tabs.length ? tabs[activeTabIndex] : undefined,
     )
 
-    const fileSystemEvents = useFileSystemEvents()
-    const editSettingsStore = useEditSettingsStore()
+    let shouldFocusEditor = $ref(false)
 
-    /**
-     * 根据标签页路径查找其索引
-     */
     function findTabIndex(path: string): number {
       return tabs.findIndex(t => t.path === path)
     }
 
-    /**
-     * 获取最后激活的标签页索引
-     */
+    function isValidTabIndex(index: number): boolean {
+      return index >= 0 && index < tabs.length
+    }
+
     function getLastActiveTabIndex(): number {
       const lastActiveTab = tabs.toSorted((a, b) => b.activeAt - a.activeAt)[0]
       return lastActiveTab ? findTabIndex(lastActiveTab.path) : -1
     }
 
-    /**
-     * 创建并插入新标签页的辅助函数
-     */
     function createAndInsertTab(name: string, path: string, isPreview: boolean) {
+      const state = ensureProjectState()
+      if (!state) {
+        return
+      }
+
       const newTab: Tab = {
         name,
         path,
@@ -60,8 +91,8 @@ export const useTabsStore = defineStore(
         isPreview,
       }
       const insertIndex = activeTabIndex + 1
-      tabs.splice(insertIndex, 0, newTab)
-      activeTabIndex = insertIndex
+      state.tabs.splice(insertIndex, 0, newTab)
+      state.activeTabIndex = insertIndex
     }
 
     /**
@@ -71,9 +102,10 @@ export const useTabsStore = defineStore(
      * @param path 文件路径
      * @param options 配置选项
      * @param options.forceNormal 是否强制以普通模式打开，忽略 enablePreviewTab 配置（默认 false）
+     * @param options.focus 是否在打开时直接聚焦编辑器（默认 false）
      */
-    function openTab(name: string, path: string, options?: { forceNormal?: boolean }) {
-      const forceNormal = options?.forceNormal ?? false
+    function openTab(name: string, path: string, options?: { forceNormal?: boolean, focus?: boolean }) {
+      const { forceNormal = false, focus = false } = options ?? {}
 
       if (!forceNormal && editSettingsStore.enablePreviewTab) {
         openPreviewTab(name, path)
@@ -82,14 +114,15 @@ export const useTabsStore = defineStore(
 
       const existIndex = findTabIndex(path)
 
-      // 如果标签页已存在，激活它
-      if (existIndex !== -1) {
+      if (existIndex === -1) {
+        createAndInsertTab(name, path, false)
+      } else {
         activateTab(existIndex)
-        return
       }
 
-      // 如果标签页不存在，创建新标签页
-      createAndInsertTab(name, path, false)
+      if (focus) {
+        shouldFocusEditor = true
+      }
     }
 
     /**
@@ -100,21 +133,24 @@ export const useTabsStore = defineStore(
      * - 如果当前激活的是预览标签页，则替换它
      * - 如果存在其他预览标签页，则移除它
      * - 在当前激活标签页后创建新的预览标签页
+     * @param name 标签页名称
+     * @param path 文件路径
      */
     function openPreviewTab(name: string, path: string) {
-      // 1. 检查标签页是否已存在
+      const state = ensureProjectState()
+      if (!state) {
+        return
+      }
+
       const existIndex = findTabIndex(path)
 
       if (existIndex !== -1) {
-        // 如果标签页已存在，激活它
         activateTab(existIndex)
         return
       }
 
-      // 2. 检查当前激活的标签页是否为预览标签页
       if (activeTabIndex !== -1 && tabs[activeTabIndex].isPreview) {
-        // 直接替换当前标签页
-        tabs[activeTabIndex] = {
+        state.tabs[activeTabIndex] = {
           name,
           path,
           activeAt: Date.now(),
@@ -123,17 +159,14 @@ export const useTabsStore = defineStore(
         return
       }
 
-      // 3. 处理其他预览标签页
       const existingPreviewIndex = tabs.findIndex(tab => tab.isPreview)
       if (existingPreviewIndex !== -1) {
-        // 移除旧的预览标签页
-        tabs.splice(existingPreviewIndex, 1)
+        state.tabs.splice(existingPreviewIndex, 1)
         if (existingPreviewIndex < activeTabIndex) {
-          activeTabIndex--
+          state.activeTabIndex--
         }
       }
 
-      // 4. 创建新的预览标签页
       createAndInsertTab(name, path, true)
     }
 
@@ -141,15 +174,20 @@ export const useTabsStore = defineStore(
      * 将预览标签页转为普通标签页。
      */
     function fixPreviewTab(index: number) {
-      tabs[index].isPreview = false
+      const state = ensureProjectState()
+      if (!state || !isValidTabIndex(index)) {
+        return
+      }
+      state.tabs[index].isPreview = false
     }
 
-    /**
-     * 激活指定标签页，并更新激活时间。
-     */
     function activateTab(index: number) {
-      activeTabIndex = index
-      tabs[index].activeAt = Date.now()
+      const state = ensureProjectState()
+      if (!state || !isValidTabIndex(index)) {
+        return
+      }
+      state.activeTabIndex = index
+      state.tabs[index].activeAt = Date.now()
     }
 
     /**
@@ -157,39 +195,45 @@ export const useTabsStore = defineStore(
      * 若关闭的是当前激活标签页，则激活最后使用的标签页。
      */
     function closeTab(index: number) {
-      tabs.splice(index, 1)
+      const state = ensureProjectState()
+      if (!state || !isValidTabIndex(index)) {
+        return
+      }
+      state.tabs.splice(index, 1)
       if (index === activeTabIndex) {
-        activeTabIndex = getLastActiveTabIndex()
+        state.activeTabIndex = getLastActiveTabIndex()
       } else if (index < activeTabIndex) {
-        activeTabIndex--
+        state.activeTabIndex--
       }
     }
 
-    /**
-     * 更新标签页加载状态
-     */
     function updateTabLoading(index: number, isLoading: boolean) {
-      tabs[index].isLoading = isLoading
+      const state = ensureProjectState()
+      if (!state || !isValidTabIndex(index)) {
+        return
+      }
+      state.tabs[index].isLoading = isLoading
     }
 
-    /**
-     * 更新标签页错误状态
-     */
     function updateTabError(index: number, error?: string) {
-      tabs[index].error = error
+      const state = ensureProjectState()
+      if (!state || !isValidTabIndex(index)) {
+        return
+      }
+      state.tabs[index].error = error
     }
 
-    /**
-     * 更新标签页修改状态
-     */
     function updateTabModified(index: number, isModified: boolean) {
-      tabs[index].isModified = isModified
-      if (tabs[index].isPreview) {
-        tabs[index].isPreview = false
+      const state = ensureProjectState()
+      if (!state || !isValidTabIndex(index)) {
+        return
+      }
+      state.tabs[index].isModified = isModified
+      if (isModified && state.tabs[index].isPreview) {
+        state.tabs[index].isPreview = false
       }
     }
 
-    // 订阅文件系统事件
     fileSystemEvents.on('file:removed', (event) => {
       const index = findTabIndex(event.path)
       if (index !== -1) {
@@ -198,18 +242,22 @@ export const useTabsStore = defineStore(
     })
 
     fileSystemEvents.on('file:renamed', async (event) => {
+      const state = ensureProjectState()
+      if (!state) {
+        return
+      }
       const index = findTabIndex(event.oldPath)
       if (index !== -1) {
-        tabs[index].path = event.newPath
-        tabs[index].name = await basename(event.newPath)
+        state.tabs[index].path = event.newPath
+        state.tabs[index].name = await basename(event.newPath)
       }
     })
 
-    // 导出所有状态与方法
     return $$({
       tabs,
       activeTab,
       activeTabIndex,
+      shouldFocusEditor,
       openTab,
       fixPreviewTab,
       activateTab,
@@ -218,9 +266,12 @@ export const useTabsStore = defineStore(
       findTabIndex,
       updateTabLoading,
       updateTabError,
+      projectTabsMap,
     })
   },
   {
-    persist: true,
+    persist: {
+      pick: ['projectTabsMap'],
+    },
   },
 )

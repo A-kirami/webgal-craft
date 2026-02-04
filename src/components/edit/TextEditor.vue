@@ -231,6 +231,20 @@ watch(() => state.value.path, (newPath) => {
   })
 })
 
+watchEffect(() => {
+  if (!tabsStore.shouldFocusEditor || !editor) {
+    return
+  }
+
+  tabsStore.shouldFocusEditor = false
+
+  nextTick(() => {
+    setTimeout(() => {
+      editor?.focus()
+    }, 100)
+  })
+})
+
 onMounted(() => {
   initializeVersionId()
 })
