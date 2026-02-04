@@ -129,6 +129,13 @@ modals:
     title: Effect Editor
   upgrade:
     title: Update
+  createFile:
+    title: Create Scene File
+    description: Start a new scene
+    fileNamePlaceholder: Enter file name
+    fileNameRequired: File name is required
+    fileExists: File already exists
+    create: Create
   settings:
     description: Manage your settings here and personalize your experience as needed
     tabs:
@@ -141,6 +148,10 @@ edit:
   header:
     testGame: Test Game
     export: Export
+  empty:
+    title: No Open Files
+    description: Select a file from the left file list to start editing, or create a new scene file
+    createScene: Create Scene File
   completion:
     commands:
       changeBg: Change background image

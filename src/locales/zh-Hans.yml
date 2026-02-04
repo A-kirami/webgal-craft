@@ -129,6 +129,13 @@ modals:
     title: 效果编辑器
   upgrade:
     title: 更新
+  createFile:
+    title: 创建场景文件
+    description: 开始一个新的场景
+    fileNamePlaceholder: 请输入文件名
+    fileNameRequired: 文件名不能为空
+    fileExists: 文件已存在
+    create: 创建
   settings:
     description: 在这里管理您的设置，根据需要个性化您的体验
     tabs:
@@ -141,6 +148,10 @@ edit:
   header:
     testGame: 测试游戏
     export: 导出
+  empty:
+    title: 没有打开的文件
+    description: 从左侧文件列表中选择一个文件开始编辑，或创建一个新的场景文件
+    createScene: 创建场景文件
   completion:
     commands:
       changeBg: 切换背景图片

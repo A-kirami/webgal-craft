@@ -129,6 +129,13 @@ modals:
     title: エフェクトエディター
   upgrade:
     title: 更新
+  createFile:
+    title: シーンファイルを作成
+    description: 新しいシーンを始める
+    fileNamePlaceholder: ファイル名を入力
+    fileNameRequired: ファイル名は必須です
+    fileExists: ファイルは既に存在します
+    create: 作成
   settings:
     description: ここで設定を管理し、必要に応じてエクスペリエンスをカスタマイズできます
     tabs:
@@ -141,6 +148,10 @@ edit:
   header:
     testGame: ゲームをテスト
     export: エクスポート
+  empty:
+    title: 開いているファイルがありません
+    description: 左側のファイルリストからファイルを選択して編集を開始するか、新しいシーンファイルを作成してください
+    createScene: シーンファイルを作成
   completion:
     commands:
       changeBg: 背景画像を切り替え

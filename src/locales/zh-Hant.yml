@@ -129,6 +129,13 @@ modals:
     title: 效果編輯器
   upgrade:
     title: 更新
+  createFile:
+    title: 建立場景檔案
+    description: 開始一個新的場景
+    fileNamePlaceholder: 請輸入檔案名稱
+    fileNameRequired: 檔案名稱不能為空
+    fileExists: 檔案已存在
+    create: 建立
   settings:
     description: 在這裡管理您的設定，根據需要個人化您的體驗
     tabs:
@@ -141,6 +148,10 @@ edit:
   header:
     testGame: 測試遊戲
     export: 匯出
+  empty:
+    title: 沒有開啟的檔案
+    description: 從左側檔案列表中選擇一個檔案開始編輯，或建立一個新的場景檔案
+    createScene: 建立場景檔案
   completion:
     commands:
       changeBg: 切換背景圖片
