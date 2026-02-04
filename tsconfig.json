@@ -20,8 +20,8 @@
       "vite/client",
       "vite-plugin-vue-meta-layouts/client",
       "vue-macros/macros-global",
-      "unplugin-vue-router/client",
-      "unplugin-info/client"
+      "unplugin-info/client",
+      "./src/route-map.d.ts"
     ],
 
     /* Type Checking */
@@ -44,7 +44,12 @@
     "skipLibCheck": true
   },
   "vueCompilerOptions": {
-    "plugins": ["vue-macros/volar", "unplugin-vue-reactivity-function/volar"],
+    "plugins": [
+      "vue-macros/volar",
+      "unplugin-vue-reactivity-function/volar",
+      "vue-router/volar/sfc-typed-router",
+      "vue-router/volar/sfc-route-blocks"
+    ],
     "vueMacros": {
       "shortVmodel": {
         "prefix": "::",

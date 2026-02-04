@@ -1,27 +1,24 @@
 <script setup lang="ts">
-import { cn } from '~/lib/utils'
+import type { ScrollAreaRootProps } from "reka-ui"
+import type { HTMLAttributes } from "vue"
+import { reactiveOmit } from "@vueuse/core"
 import {
   ScrollAreaCorner,
   ScrollAreaRoot,
-  type ScrollAreaRootProps,
   ScrollAreaViewport,
-} from 'reka-ui'
-import { computed, type HTMLAttributes } from 'vue'
-import ScrollBar from './ScrollBar.vue'
+} from "reka-ui"
+import { cn } from '~/lib/utils'
+import ScrollBar from "./ScrollBar.vue"
 
 const props = defineProps<ScrollAreaRootProps & {
-  class?: HTMLAttributes['class']
+  class?: HTMLAttributes["class"]
   onScroll?: (event: Event) => void
-  ,onWheel?: (event: WheelEvent) => void
+  onWheel?: (event: WheelEvent) => void
 }>()
 
-const delegatedProps = computed(() => {
-  const { class: _, ...delegated } = props
+const delegatedProps = reactiveOmit(props, "class")
 
-  return delegated
-})
-
-const viewportRef = useTemplateRef('viewportRef')
+const viewportRef = useTemplateRef("viewportRef")
 
 defineExpose({
   viewport: viewportRef,

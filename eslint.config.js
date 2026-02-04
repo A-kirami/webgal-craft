@@ -26,7 +26,7 @@ export default defineConfig(
   stylistic.configs.recommended,
   ...eslintPluginVue.configs['flat/recommended'],
   ...vueI18n.configs.recommended,
-  ...eslintPluginYml.configs['flat/recommended'],
+  ...eslintPluginYml.configs.recommended,
   unocss,
   vueMacros,
   includeIgnoreFile(gitignorePath),
@@ -37,7 +37,7 @@ export default defineConfig(
       '**/components/ui',
       '**/auto-import?(s).d.ts',
       '**/components.d.ts',
-      '**/typed-router.d.ts',
+      '**/route-map.d.ts',
     ],
   },
   {

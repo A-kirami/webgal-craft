@@ -11,12 +11,12 @@ import Info from 'unplugin-info/vite'
 import TurboConsole from 'unplugin-turbo-console/vite'
 import Components from 'unplugin-vue-components/vite'
 import VueReactivityFunction from 'unplugin-vue-reactivity-function/vite'
-import { VueRouterAutoImports } from 'unplugin-vue-router'
-import VueRouter from 'unplugin-vue-router/vite'
 import { defineConfig } from 'vite'
 import VueDevTools from 'vite-plugin-vue-devtools'
 import MetaLayouts from 'vite-plugin-vue-meta-layouts'
 import VueMacros from 'vue-macros/vite'
+import { VueRouterAutoImports } from 'vue-router/unplugin'
+import VueRouter from 'vue-router/vite'
 
 import type { UserConfig } from 'vite'
 
@@ -31,7 +31,7 @@ export default defineConfig({
         vueJsx: VueJsx(),
         vueRouter: VueRouter({
           routesFolder: 'src/views',
-          dts: 'src/typed-router.d.ts',
+          dts: 'src/route-map.d.ts',
         }),
       },
       shortVmodel: {
