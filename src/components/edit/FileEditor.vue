@@ -17,13 +17,7 @@ async function handleCreateScene() {
 
 // 防止在标签页从持久化存储还原期间显示空状态造成闪烁
 const ANTI_FLICKER_DELAY = 100
-let hasDelayPassed = $ref(false)
-
-onMounted(() => {
-  setTimeout(() => {
-    hasDelayPassed = true
-  }, ANTI_FLICKER_DELAY)
-})
+const hasDelayPassed = $(useTimeout(ANTI_FLICKER_DELAY))
 
 const shouldShowEmpty = $computed(() => {
   return hasDelayPassed && tabsStore.tabs.length === 0 && !editorStore.currentState
