@@ -16,9 +16,9 @@ const props = defineProps<{
 const workspaceStore = useWorkspaceStore()
 const { t } = useI18n()
 
-const checkFileExists = async (fileName: string) => {
+async function buildSceneFilePath(fileName: string): Promise<string | undefined> {
   if (!workspaceStore.CWD) {
-    return false
+    return
   }
 
   const sanitizedName = sanitize(fileName, { replacement: '_' })
@@ -27,7 +27,14 @@ const checkFileExists = async (fileName: string) => {
     : `${sanitizedName}.txt`
 
   const folderPath = await join(workspaceStore.CWD, 'game', 'scene')
-  const filePath = await join(folderPath, fileNameWithExt)
+  return await join(folderPath, fileNameWithExt)
+}
+
+async function isFileAvailable(fileName: string): Promise<boolean> {
+  const filePath = await buildSceneFilePath(fileName)
+  if (!filePath) {
+    return false
+  }
   return !(await exists(filePath))
 }
 
@@ -38,7 +45,7 @@ const schema = z.object({
   ),
 }).refine(
   async (data) => {
-    return await checkFileExists(data.fileName)
+    return await isFileAvailable(data.fileName)
   },
   {
     message: t('modals.createFile.fileExists'),
@@ -51,17 +58,10 @@ const { handleSubmit } = useForm({
 })
 
 const onSubmit = handleSubmit(async (values) => {
-  if (!workspaceStore.CWD) {
+  const filePath = await buildSceneFilePath(values.fileName)
+  if (!filePath) {
     return
   }
-
-  const sanitizedName = sanitize(values.fileName, { replacement: '_' })
-  const fileNameWithExt = sanitizedName.endsWith('.txt')
-    ? sanitizedName
-    : `${sanitizedName}.txt`
-
-  const folderPath = await join(workspaceStore.CWD, 'game', 'scene')
-  const filePath = await join(folderPath, fileNameWithExt)
 
   try {
     await writeTextFile(filePath, '')
