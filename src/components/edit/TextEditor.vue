@@ -43,7 +43,7 @@ interface FileState {
 }
 
 let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
-const fileStates = $ref<Record<string, FileState>>({})
+const fileStates = $ref(new Map<string, FileState>())
 
 // 编辑器主题
 const currentTheme = $computed(() => {
@@ -62,10 +62,10 @@ const currentLanguageConfig = $computed((): LanguageConfig => {
 })
 
 function getOrCreateFileState(path: string): FileState {
-  if (!fileStates[path]) {
-    fileStates[path] = { hasFocused: false }
+  if (!fileStates.has(path)) {
+    fileStates.set(path, { hasFocused: false })
   }
-  return fileStates[path]
+  return fileStates.get(path)!
 }
 
 function syncScene() {
@@ -90,14 +90,22 @@ function syncScene() {
 
 async function saveTextFile(newText: string) {
   try {
+    const versionIdBeforeSave = editor?.getModel()?.getAlternativeVersionId()
+
     await writeTextFile(state.path, newText)
-    const versionId = editor?.getModel()?.getAlternativeVersionId()
-    if (versionId) {
-      const fileState = getOrCreateFileState(state.path)
-      fileState.lastSavedVersionId = versionId
-      fileState.lastSavedTime = new Date()
+
+    const fileState = getOrCreateFileState(state.path)
+    fileState.lastSavedTime = new Date()
+
+    if (versionIdBeforeSave) {
+      fileState.lastSavedVersionId = versionIdBeforeSave
+
+      const currentVersionId = editor?.getModel()?.getAlternativeVersionId()
+      state.isDirty = currentVersionId !== versionIdBeforeSave
+    } else {
+      state.isDirty = false
     }
-    state.isDirty = false
+
     syncScene()
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
@@ -161,7 +169,7 @@ function handleChange(value: string | undefined) {
 }
 
 const lastSavedTime = $computed(() => {
-  return fileStates[state.path]?.lastSavedTime
+  return fileStates.get(state.path)?.lastSavedTime
 })
 
 watch(() => state.isDirty, (isDirty) => {
@@ -174,10 +182,10 @@ watch(() => state.isDirty, (isDirty) => {
 const fileSystemEvents = useFileSystemEvents()
 fileSystemEvents.on('file:renamed', (event) => {
   const { oldPath, newPath } = event
-  const oldState = fileStates[oldPath]
+  const oldState = fileStates.get(oldPath)
   if (oldState) {
-    fileStates[newPath] = oldState
-    delete fileStates[oldPath]
+    fileStates.set(newPath, oldState)
+    fileStates.delete(oldPath)
   }
 })
 
@@ -192,7 +200,7 @@ watch(() => state.path, (newPath) => {
     return
   }
 
-  const fileState = fileStates[newPath]
+  const fileState = fileStates.get(newPath)
   if (fileState?.hasFocused) {
     editor.focus()
   }
