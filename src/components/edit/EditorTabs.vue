@@ -62,11 +62,9 @@ function scrollToActiveTab() {
   }
 }
 
-watch(() => tabsStore.activeTab, () => {
+watch(() => tabsStore.activeTabIndex, () => {
   if (tabsStore.activeTab) {
-    nextTick(() => {
-      scrollToActiveTab()
-    })
+    nextTick(scrollToActiveTab)
   }
 })
 </script>
