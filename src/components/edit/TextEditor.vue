@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { writeTextFile } from '@tauri-apps/plugin-fs'
+import { LRUCache } from 'lru-cache'
 import * as monaco from 'monaco-editor'
 
 import { BASE_EDITOR_OPTIONS, configureWebgalSyntaxHighlighting, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
@@ -48,6 +49,20 @@ let editorContainer = $ref<HTMLElement>()
 const fileStates = $ref(new Map<string, FileState>())
 let hasCreatedEditorBefore = false
 
+const MAX_CACHED_MODELS = 50
+
+const modelAccessCache = $ref(new LRUCache<string, boolean>({
+  max: MAX_CACHED_MODELS,
+  dispose: (_value, path) => {
+    const uri = monaco.Uri.parse(path)
+    const model = monaco.editor.getModel(uri)
+    if (model) {
+      model.dispose()
+      logger.debug(`[TextEditor] LRU 淘汰模型: ${path}`)
+    }
+  },
+}))
+
 const currentTheme = $computed(() => {
   return colorMode.value === 'dark' ? THEME_DARK : THEME_LIGHT
 })
@@ -93,6 +108,8 @@ function getOrCreateModel(value: string, language: string, path: string): monaco
     // 模型不存在，创建新模型
     model = monaco.editor.createModel(value, language, uri)
   }
+
+  modelAccessCache.set(path, true)
 
   return model
 }
@@ -478,11 +495,19 @@ fileSystemEvents.on('file:renamed', (event) => {
     fileStates.delete(oldPath)
   }
   viewStateStore.renameViewState(oldPath, newPath)
+
+  // 更新 LRU 缓存中的路径
+  if (modelAccessCache.has(oldPath)) {
+    modelAccessCache.delete(oldPath)
+    modelAccessCache.set(newPath, true)
+  }
 })
 
 fileSystemEvents.on('file:removed', (event) => {
   fileStates.delete(event.path)
   viewStateStore.removeViewState(event.path)
+
+  modelAccessCache.delete(event.path)
 
   const uri = monaco.Uri.parse(event.path)
   const model = monaco.editor.getModel(uri)
@@ -491,14 +516,12 @@ fileSystemEvents.on('file:removed', (event) => {
   }
 })
 
-const MAX_CACHED_MODELS = 50
-
 /**
- * 清理文件的状态，并在必要时清理 Monaco 模型
+ * 清理文件的状态，并从 LRU 缓存中移除
  *
  * 清理内容：
  * - fileStates 中的状态（版本ID、保存时间、视图状态等）
- * - 超出缓存限制时，清理 Monaco 模型（LRU策略）
+ * - 从 LRU 缓存中移除该路径（如果超出限制，LRU 会自动淘汰最久未使用的模型）
  *
  * 注意：不删除持久化的视图状态，以便文件再次打开时恢复光标位置
  */
@@ -510,15 +533,7 @@ function cleanupFile(path: string) {
 
   fileStates.delete(path)
 
-  // 检查缓存的模型数量，超出限制时清理当前模型
-  const allModels = monaco.editor.getModels()
-  if (allModels.length > MAX_CACHED_MODELS) {
-    const uri = monaco.Uri.parse(path)
-    const model = monaco.editor.getModel(uri)
-    if (model) {
-      model.dispose()
-    }
-  }
+  modelAccessCache.delete(path)
 }
 
 useTabsWatcher((closedPath) => {
