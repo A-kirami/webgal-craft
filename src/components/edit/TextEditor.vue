@@ -97,7 +97,6 @@ function getOrCreateModel(value: string, language: string, path: string): monaco
   let model = monaco.editor.getModel(uri)
 
   if (model) {
-    // 模型已存在，重用并更新
     if (model.getValue() !== value) {
       model.setValue(value)
     }
@@ -105,7 +104,6 @@ function getOrCreateModel(value: string, language: string, path: string): monaco
       monaco.editor.setModelLanguage(model, language)
     }
   } else {
-    // 模型不存在，创建新模型
     model = monaco.editor.createModel(value, language, uri)
   }
 
@@ -139,7 +137,6 @@ async function saveTextFile(newText: string) {
     const fileState = getOrCreateFileState(state.path)
     const currentVersionId = editor?.getModel()?.getAlternativeVersionId()
 
-    // 如果版本ID相同，说明内容没有变化，跳过保存
     if (currentVersionId && fileState.lastSavedVersionId === currentVersionId) {
       return
     }
@@ -172,16 +169,28 @@ function initializeVersionId() {
   }
 }
 
-const debouncedSaveViewState = useDebounceFn(() => {
-  if (editor) {
-    const currentViewState = editor.saveViewState()
-    if (currentViewState) {
-      viewStateStore.saveViewState(state.path, currentViewState)
-      // 同步更新内存中的视图状态
-      const fileState = getOrCreateFileState(state.path)
-      fileState.viewState = currentViewState
+function saveEditorViewState(path: string) {
+  if (!editor) {
+    const fileState = fileStates.get(path)
+    if (fileState?.viewState) {
+      viewStateStore.saveViewState(path, fileState.viewState)
     }
+    return
   }
+
+  const currentViewState = editor.saveViewState()
+  if (!currentViewState) {
+    return
+  }
+
+  viewStateStore.saveViewState(path, currentViewState)
+
+  const fileState = getOrCreateFileState(path)
+  fileState.viewState = currentViewState
+}
+
+const debouncedSaveViewState = useDebounceFn(() => {
+  saveEditorViewState(state.path)
 }, 300)
 
 function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedEvent) {
@@ -226,6 +235,54 @@ function isCurrentTabPreview(): boolean {
   return tabsStore.activeTab?.isPreview === true
 }
 
+interface RestoreViewStateContext {
+  isCreating?: boolean
+  isSwitching?: boolean
+  isActivating?: boolean
+}
+
+/**
+ * 恢复编辑器视图状态并处理聚焦
+ *
+ * @param path - 文件路径
+ * @param context - 调用上下文（创建/切换/激活）
+ */
+function restoreEditorViewState(path: string, context: RestoreViewStateContext = {}) {
+  if (!editor) {
+    return
+  }
+
+  const fileState = getOrCreateFileState(path)
+
+  let viewStateToRestore = fileState.viewState
+  let hasPersistedViewState = false
+
+  if (!viewStateToRestore) {
+    viewStateToRestore = viewStateStore.getViewState(path)
+    if (viewStateToRestore) {
+      fileState.viewState = viewStateToRestore
+      hasPersistedViewState = true
+    }
+  }
+
+  if (viewStateToRestore) {
+    editor.restoreViewState(viewStateToRestore)
+  }
+
+  const shouldFocus = shouldFocusEditor({
+    ...context,
+    fileState,
+    hasPersistedViewState,
+  })
+
+  if (shouldFocus) {
+    if (tabsStore.shouldFocusEditor) {
+      tabsStore.shouldFocusEditor = false
+    }
+    focusEditor()
+  }
+}
+
 /**
  * 编辑器聚焦决策函数
  *
@@ -234,14 +291,15 @@ function isCurrentTabPreview(): boolean {
  * 2. 应用启动恢复文件且有视图状态
  * 3. 切换到已交互过的文件（预览标签页）
  * 4. 切换到已打开过的文件（普通标签页）
+ * 5. 组件激活时（keep-alive）
  */
 function shouldFocusEditor(context: {
   isCreating?: boolean
   isSwitching?: boolean
+  isActivating?: boolean
   fileState: FileState
   hasPersistedViewState?: boolean
 }): boolean {
-  // 强制聚焦
   if (tabsStore.shouldFocusEditor) {
     return true
   }
@@ -249,16 +307,18 @@ function shouldFocusEditor(context: {
   const isPreview = isCurrentTabPreview()
   const hasViewState = context.fileState.viewState !== undefined || context.hasPersistedViewState === true
 
-  // 创建编辑器时
   if (context.isCreating) {
     return !isPreview && !hasCreatedEditorBefore && hasViewState
   }
 
-  // 切换文件时
   if (context.isSwitching) {
     return isPreview
       ? context.fileState.hasUserInteracted === true
       : hasViewState || context.fileState.hasBeenOpened === true
+  }
+
+  if (context.isActivating) {
+    return isPreview ? context.fileState.hasUserInteracted === true : true
   }
 
   return false
@@ -295,70 +355,40 @@ function handleContentChange() {
  * 1. 保存旧文件的视图状态
  * 2. 获取或创建新文件的模型（优先重用现有模型）
  * 3. 切换编辑器显示的模型
- * 4. 恢复新文件的视图状态
- * 5. 根据策略决定是否自动聚焦
+ * 4. 恢复新文件的视图状态并处理聚焦
  */
 function switchModel(newPath: string, oldPath: string) {
   if (!editor) {
     return
   }
 
-  // 保存旧模型的视图状态
-  const oldFileState = getOrCreateFileState(oldPath)
-  const savedViewState = editor.saveViewState()
-  oldFileState.viewState = savedViewState
+  saveEditorViewState(oldPath)
 
-  // 只有非预览标签页才标记为"已打开"
+  const oldFileState = getOrCreateFileState(oldPath)
+
   const oldTab = tabsStore.tabs.find(t => t.path === oldPath)
   if (oldTab && !oldTab.isPreview) {
     oldFileState.hasBeenOpened = true
   } else if (!oldTab) {
-    // 预览标签页被替换时，清除旧文件的交互标记
     oldFileState.hasUserInteracted = false
   }
 
-  viewStateStore.saveViewState(oldPath, savedViewState)
-
-  // 获取或创建新模型
   const language = currentLanguageConfig.editorLanguage ?? currentLanguageConfig.name
   const newModel = getOrCreateModel(state.textContent, language, newPath)
 
-  // 切换模型
   editor.setModel(newModel)
 
-  // 恢复新模型的视图状态
   const newFileState = getOrCreateFileState(newPath)
-  let viewStateToRestore = newFileState.viewState
-  let hasPersistedViewState = false
 
-  if (!viewStateToRestore) {
-    viewStateToRestore = viewStateStore.getViewState(newPath)
-    if (viewStateToRestore) {
-      newFileState.viewState = viewStateToRestore
-      hasPersistedViewState = true
-    }
-  }
-
-  if (viewStateToRestore) {
-    editor.restoreViewState(viewStateToRestore)
-  }
-
-  // 只有非预览标签页才标记为"已打开"
   if (!isCurrentTabPreview()) {
     newFileState.hasBeenOpened = true
   }
 
+  restoreEditorViewState(newPath, { isSwitching: true })
+
   nextTick(() => {
     initializeVersionId()
     syncScene()
-
-    // 判断是否应该自动聚焦
-    if (shouldFocusEditor({ isSwitching: true, fileState: newFileState, hasPersistedViewState })) {
-      if (tabsStore.shouldFocusEditor) {
-        tabsStore.shouldFocusEditor = false
-      }
-      focusEditor()
-    }
   })
 }
 
@@ -388,25 +418,11 @@ function createEditor() {
 
   void configureWebgalSyntaxHighlighting(editor)
 
-  const fileState = getOrCreateFileState(state.path)
-  const persistedViewState = viewStateStore.getViewState(state.path)
-  const hasPersistedViewState = persistedViewState !== undefined
-
-  if (persistedViewState) {
-    editor.restoreViewState(persistedViewState)
-    fileState.viewState = persistedViewState
-  }
+  restoreEditorViewState(state.path, { isCreating: true })
 
   initializeVersionId()
 
-  if (shouldFocusEditor({ isCreating: true, fileState, hasPersistedViewState })) {
-    if (tabsStore.shouldFocusEditor) {
-      tabsStore.shouldFocusEditor = false
-    }
-    focusEditor()
-  }
-
-  // 只有非预览标签页才标记为"已打开"
+  const fileState = getOrCreateFileState(state.path)
   if (!isCurrentTabPreview()) {
     fileState.hasBeenOpened = true
   }
@@ -439,7 +455,6 @@ watch(() => state.textContent, (newContent) => {
     return
   }
 
-  // 只更新同一个文件的内容（URI匹配）
   const modelUri = model.uri.toString()
   const currentUri = monaco.Uri.parse(state.path).toString()
 
@@ -496,7 +511,6 @@ fileSystemEvents.on('file:renamed', (event) => {
   }
   viewStateStore.renameViewState(oldPath, newPath)
 
-  // 更新 LRU 缓存中的路径
   if (modelAccessCache.has(oldPath)) {
     modelAccessCache.delete(oldPath)
     modelAccessCache.set(newPath, true)
@@ -516,28 +530,9 @@ fileSystemEvents.on('file:removed', (event) => {
   }
 })
 
-/**
- * 清理文件的状态，并从 LRU 缓存中移除
- *
- * 清理内容：
- * - fileStates 中的状态（版本ID、保存时间、视图状态等）
- * - 从 LRU 缓存中移除该路径（如果超出限制，LRU 会自动淘汰最久未使用的模型）
- *
- * 注意：不删除持久化的视图状态，以便文件再次打开时恢复光标位置
- */
-function cleanupFile(path: string) {
-  const fileState = fileStates.get(path)
-  if (fileState?.viewState) {
-    viewStateStore.saveViewState(path, fileState.viewState)
-  }
-
-  fileStates.delete(path)
-
-  modelAccessCache.delete(path)
-}
-
 useTabsWatcher((closedPath) => {
-  cleanupFile(closedPath)
+  saveEditorViewState(closedPath)
+  fileStates.delete(closedPath)
 })
 
 fileSystemEvents.on('file:modified', (event) => {
@@ -548,8 +543,7 @@ fileSystemEvents.on('file:modified', (event) => {
 
 watch(() => tabsStore.shouldFocusEditor, (shouldFocus) => {
   if (shouldFocus && editor) {
-    tabsStore.shouldFocusEditor = false
-    focusEditor()
+    restoreEditorViewState(state.path)
   }
 })
 
@@ -558,39 +552,14 @@ onMounted(() => {
 })
 
 onActivated(() => {
-  if (!editor) {
-    return
-  }
-
-  const fileState = getOrCreateFileState(state.path)
-
-  let viewStateToRestore = fileState.viewState
-  if (!viewStateToRestore) {
-    viewStateToRestore = viewStateStore.getViewState(state.path)
-    if (viewStateToRestore) {
-      fileState.viewState = viewStateToRestore
-    }
-  }
-
-  if (viewStateToRestore) {
-    editor.restoreViewState(viewStateToRestore)
-  }
-
-  const isPreview = isCurrentTabPreview()
-
-  const shouldFocus = isPreview ? fileState.hasUserInteracted === true : true
-
-  if (shouldFocus) {
-    focusEditor()
+  if (editor) {
+    restoreEditorViewState(state.path, { isActivating: true })
   }
 })
 
 onUnmounted(() => {
   if (editor) {
-    const currentViewState = editor.saveViewState()
-    if (currentViewState) {
-      viewStateStore.saveViewState(state.path, currentViewState)
-    }
+    saveEditorViewState(state.path)
 
     editor.dispose()
     editor = undefined
