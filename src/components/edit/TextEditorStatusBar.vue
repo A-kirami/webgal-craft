@@ -32,7 +32,7 @@ let relativeTime = $ref<string | undefined>()
 
 watch([() => shouldShowTime, now, locale, () => props.lastSavedTime], () => {
   relativeTime = shouldShowTime && props.lastSavedTime
-    ? dayjs(props.lastSavedTime).from(now.value)
+    ? dayjs(props.lastSavedTime).fromNow()
     : undefined
 }, { immediate: true })
 
