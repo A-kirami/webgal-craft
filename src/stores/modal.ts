@@ -11,6 +11,7 @@ import DeleteGameModal from '~/components/modals/DeleteGameModal.vue'
 import DiscoveredResourcesModal from '~/components/modals/DiscoveredResourcesModal.vue'
 import EffectEditorModal from '~/components/modals/EffectEditorModal.vue'
 import GameConfigModal from '~/components/modals/GameConfigModal.vue'
+import SaveChangesModal from '~/components/modals/SaveChangesModal.vue'
 import SettingsModal from '~/components/modals/SettingsModal.vue'
 import UpgradeModal from '~/components/modals/UpgradeModal.vue'
 
@@ -26,6 +27,7 @@ const ModalDialog = {
   DiscoveredResourcesModal,
   EffectEditorModal,
   GameConfigModal,
+  SaveChangesModal,
   SettingsModal,
   UpgradeModal,
 } as const satisfies Record<string, Component>

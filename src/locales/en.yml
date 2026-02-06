@@ -143,6 +143,11 @@ modals:
       edit: Edit
       preview: Preview
       storage: Storage
+  saveChanges:
+    title: Do you want to save changes to {name}?
+    description: Your changes will be lost if you don't save them.
+    save: Save
+    dontSave: Don't Save
 
 edit:
   header:

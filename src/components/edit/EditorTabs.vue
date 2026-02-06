@@ -1,25 +1,48 @@
 <script setup lang="ts">
 import { FileText, X } from 'lucide-vue-next'
 
-import { useTabsStore } from '../../stores/tabs'
-
 import type { ScrollArea } from '~/components/ui/scroll-area'
 
 const tabsStore = useTabsStore()
+const editorStore = useEditorStore()
+const modalStore = useModalStore()
 
 const scrollAreaRef = $(useTemplateRef('scrollAreaRef'))
 
-// 处理标签页关闭
 function handleCloseTab(index: number) {
+  const { path, name, isModified } = tabsStore.tabs[index]
+
+  if (isModified) {
+    modalStore.open('SaveChangesModal', {
+      fileName: name,
+      onSave: async () => {
+        try {
+          await editorStore.saveFile(path)
+          const currentIndex = tabsStore.findTabIndex(path)
+          if (currentIndex !== -1) {
+            tabsStore.closeTab(currentIndex)
+          }
+        } catch (error) {
+          logger.error(`保存文件失败: ${error}`)
+        }
+      },
+      onDontSave: () => {
+        const currentIndex = tabsStore.findTabIndex(path)
+        if (currentIndex !== -1) {
+          tabsStore.closeTab(currentIndex)
+        }
+      },
+    })
+    return
+  }
+
   tabsStore.closeTab(index)
 }
 
-// 处理标签页点击：激活标签页
 function handleTabClick(index: number) {
   tabsStore.activateTab(index)
 }
 
-// 处理标签页双击：固定预览标签页
 function handleTabDblClick(index: number) {
   const tab = tabsStore.tabs[index]
   if (tab.isPreview) {
@@ -27,9 +50,9 @@ function handleTabDblClick(index: number) {
   }
 }
 
-// 处理鼠标滚轮事件
 function handleWheel(event: WheelEvent) {
   const el = event.currentTarget as HTMLElement
+  // 只处理垂直滚动，忽略已经是水平滚动的情况
   if (!el || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) {
     return
   }

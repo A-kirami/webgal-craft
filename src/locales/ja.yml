@@ -143,6 +143,11 @@ modals:
       edit: 編集
       preview: プレビュー
       storage: ストレージ
+  saveChanges:
+    title: "{name} への変更を保存しますか?"
+    description: 保存しない場合、変更は失われます。
+    save: 保存
+    dontSave: 保存しない
 
 edit:
   header:

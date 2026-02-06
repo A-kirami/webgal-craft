@@ -143,6 +143,11 @@ modals:
       edit: 編輯
       preview: 預覽
       storage: 儲存
+  saveChanges:
+    title: 是否要儲存對 {name} 的變更?
+    description: 如果不儲存，你的變更將遺失。
+    save: 儲存
+    dontSave: 不儲存
 
 edit:
   header:
