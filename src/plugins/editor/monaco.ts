@@ -1,6 +1,6 @@
 /* eslint-disable new-cap */
 /* eslint-disable import-x/default */
-import { loader } from '@guolao/vue-monaco-editor'
+import loader from '@monaco-editor/loader'
 import * as monaco from 'monaco-editor'
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'

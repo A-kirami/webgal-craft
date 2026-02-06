@@ -186,6 +186,7 @@ declare global {
   const useEditSettingsStore: typeof import('./stores/edit-settings').useEditSettingsStore
   const useEditorStore: typeof import('./stores/editor').useEditorStore
   const useEditorUIStateStore: typeof import('./stores/editor-ui-state').useEditorUIStateStore
+  const useEditorViewStateStore: typeof import('./stores/editor-view-state').useEditorViewStateStore
   const useElementBounding: typeof import('@vueuse/core').useElementBounding
   const useElementByPoint: typeof import('@vueuse/core').useElementByPoint
   const useElementHover: typeof import('@vueuse/core').useElementHover
@@ -285,6 +286,7 @@ declare global {
   const useSupported: typeof import('@vueuse/core').useSupported
   const useSwipe: typeof import('@vueuse/core').useSwipe
   const useTabsStore: typeof import('./stores/tabs').useTabsStore
+  const useTabsWatcher: typeof import('./composables/useTabsWatcher').useTabsWatcher
   const useTauriDropZone: typeof import('./composables/useTauriDropZone').useTauriDropZone
   const useTemplateRef: typeof import('vue').useTemplateRef
   const useTemplateRefsList: typeof import('@vueuse/core').useTemplateRefsList
@@ -565,6 +567,7 @@ declare module 'vue' {
     readonly useEditSettingsStore: UnwrapRef<typeof import('./stores/edit-settings')['useEditSettingsStore']>
     readonly useEditorStore: UnwrapRef<typeof import('./stores/editor')['useEditorStore']>
     readonly useEditorUIStateStore: UnwrapRef<typeof import('./stores/editor-ui-state')['useEditorUIStateStore']>
+    readonly useEditorViewStateStore: UnwrapRef<typeof import('./stores/editor-view-state')['useEditorViewStateStore']>
     readonly useElementBounding: UnwrapRef<typeof import('@vueuse/core')['useElementBounding']>
     readonly useElementByPoint: UnwrapRef<typeof import('@vueuse/core')['useElementByPoint']>
     readonly useElementHover: UnwrapRef<typeof import('@vueuse/core')['useElementHover']>
@@ -664,6 +667,7 @@ declare module 'vue' {
     readonly useSupported: UnwrapRef<typeof import('@vueuse/core')['useSupported']>
     readonly useSwipe: UnwrapRef<typeof import('@vueuse/core')['useSwipe']>
     readonly useTabsStore: UnwrapRef<typeof import('./stores/tabs')['useTabsStore']>
+    readonly useTabsWatcher: UnwrapRef<typeof import('./composables/useTabsWatcher')['useTabsWatcher']>
     readonly useTauriDropZone: UnwrapRef<typeof import('./composables/useTauriDropZone')['useTauriDropZone']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly useTemplateRefsList: UnwrapRef<typeof import('@vueuse/core')['useTemplateRefsList']>
