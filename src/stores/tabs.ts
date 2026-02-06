@@ -179,6 +179,7 @@ export const useTabsStore = defineStore(
         return
       }
       state.tabs[index].isPreview = false
+      shouldFocusEditor = true
     }
 
     function activateTab(index: number) {
