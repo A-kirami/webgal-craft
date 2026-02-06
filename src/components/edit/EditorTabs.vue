@@ -10,21 +10,27 @@ const modalStore = useModalStore()
 const scrollAreaRef = $(useTemplateRef('scrollAreaRef'))
 
 function handleCloseTab(index: number) {
-  const tab = tabsStore.tabs[index]
+  const { path, name, isModified } = tabsStore.tabs[index]
 
-  if (tab.isModified) {
+  if (isModified) {
     modalStore.open('SaveChangesModal', {
-      fileName: tab.name,
+      fileName: name,
       onSave: async () => {
         try {
-          await editorStore.saveFile(tab.path)
-          tabsStore.closeTab(index)
+          await editorStore.saveFile(path)
+          const currentIndex = tabsStore.findTabIndex(path)
+          if (currentIndex !== -1) {
+            tabsStore.closeTab(currentIndex)
+          }
         } catch (error) {
           logger.error(`保存文件失败: ${error}`)
         }
       },
       onDontSave: () => {
-        tabsStore.closeTab(index)
+        const currentIndex = tabsStore.findTabIndex(path)
+        if (currentIndex !== -1) {
+          tabsStore.closeTab(currentIndex)
+        }
       },
     })
     return
