@@ -175,6 +175,11 @@ export const useEditorStore = defineStore('editor', () => {
     await loadEditorState(activeTab)
   }, { immediate: true })
 
+  // 监听标签页关闭，清理编辑器状态
+  useTabsWatcher((closedPath) => {
+    states.delete(closedPath)
+  })
+
   // 监听文件重命名事件，更新编辑器状态
   fileSystemEvents.on('file:renamed', (event) => {
     const oldState = states.get(event.oldPath)
