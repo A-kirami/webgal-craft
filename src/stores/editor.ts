@@ -1,5 +1,5 @@
 import { join } from '@tauri-apps/api/path'
-import { readTextFile } from '@tauri-apps/plugin-fs'
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
 import mime from 'mime/lite'
 import { defineStore } from 'pinia'
 
@@ -221,10 +221,37 @@ export const useEditorStore = defineStore('editor', () => {
     }
   })
 
+  /**
+   * 保存文件
+   * @param path 文件路径
+   * @throws 如果文件不存在或不可编辑
+   */
+  async function saveFile(path: string) {
+    const state = states.get(path)
+
+    if (!state) {
+      throw new Error(`文件状态不存在: ${path}`)
+    }
+
+    if (!isTextualEditor(state)) {
+      throw new Error(`文件不可编辑: ${path}`)
+    }
+
+    const content = state.mode === 'text' ? state.textContent : state.visualData
+    await writeTextFile(path, content)
+    state.isDirty = false
+
+    const tabIndex = tabsStore.findTabIndex(path)
+    if (tabIndex !== -1) {
+      tabsStore.updateTabModified(tabIndex, false)
+    }
+  }
+
   return $$({
     states,
     currentState,
     canToggleMode,
     toggleTextualMode,
+    saveFile,
   })
 })
