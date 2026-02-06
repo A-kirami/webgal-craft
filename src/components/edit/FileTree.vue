@@ -690,7 +690,7 @@ defineExpose({
                   }
                 }"
                 @dblclick="emit('dblclick', item as FlattenedItem<T>)"
-                @auxclick="emit('auxclick', item as FlattenedItem<T>)"
+                @auxclick="(e: MouseEvent) => e.button === 1 && emit('auxclick', item as FlattenedItem<T>)"
               >
                 <Tooltip :disabled="!enableTooltip">
                   <TooltipTrigger as-child>
