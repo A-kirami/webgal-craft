@@ -92,6 +92,14 @@ function handleDoubleClick(item: FlattenedItem<TreeNode>) {
   }
 }
 
+function handleAuxClick(item: FlattenedItem<TreeNode>) {
+  if (item.hasChildren) {
+    return
+  }
+  const { name, path } = item.value
+  tabsStore.openTab(name, path, { forceNormal: true })
+}
+
 let selectedItem = $ref<TreeNode>()
 
 function findNodeByPath(nodes: TreeNode[], targetPath: string): TreeNode | undefined {
@@ -254,6 +262,7 @@ fileSystemEvents.on('directory:renamed', debouncedRefresh)
       default-file-name=".txt"
       @click="handleClick"
       @dblclick="handleDoubleClick"
+      @auxclick="handleAuxClick"
     />
   </div>
 </template>

@@ -551,6 +551,7 @@ const handleEscapeKey = (item: FlattenedItem<T>) => {
 const emit = defineEmits<{
   click: [item: FlattenedItem<T>]
   dblclick: [item: FlattenedItem<T>]
+  auxclick: [item: FlattenedItem<T>]
   createFile: [item: { path: string, name: string, isDir?: boolean }]
   createFolder: [item: { path: string, name: string, isDir?: boolean }]
 }>()
@@ -587,6 +588,12 @@ watch([$$(currentGameId), () => treeName], () => {
 }, { immediate: true })
 
 const scrollAreaRef = $(useTemplateRef('scrollAreaRef'))
+
+useEventListener($$(scrollAreaRef), 'mousedown', (e: MouseEvent) => {
+  if (e.button === 1) {
+    e.preventDefault()
+  }
+})
 
 // 暴露创建入口和折叠操作给父组件，便于 toolbar / 快捷键触发
 defineExpose({
@@ -683,6 +690,7 @@ defineExpose({
                   }
                 }"
                 @dblclick="emit('dblclick', item as FlattenedItem<T>)"
+                @auxclick="(e: MouseEvent) => e.button === 1 && emit('auxclick', item as FlattenedItem<T>)"
               >
                 <Tooltip :disabled="!enableTooltip">
                   <TooltipTrigger as-child>
