@@ -29,6 +29,13 @@ onMounted(async () => {
   await initializeApp()
   await workspaceStore.runServer()
 })
+
+// 全局阻止鼠标中键点击的默认滚动行为
+useEventListener('mousedown', (e: MouseEvent) => {
+  if (e.button === 1) {
+    e.preventDefault()
+  }
+})
 </script>
 
 <template>

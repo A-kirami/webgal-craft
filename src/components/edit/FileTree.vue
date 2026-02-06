@@ -589,12 +589,6 @@ watch([$$(currentGameId), () => treeName], () => {
 
 const scrollAreaRef = $(useTemplateRef('scrollAreaRef'))
 
-useEventListener($$(scrollAreaRef), 'mousedown', (e: MouseEvent) => {
-  if (e.button === 1) {
-    e.preventDefault()
-  }
-})
-
 // 暴露创建入口和折叠操作给父组件，便于 toolbar / 快捷键触发
 defineExpose({
   startCreating,

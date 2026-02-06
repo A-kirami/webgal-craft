@@ -109,6 +109,7 @@ watch(() => tabsStore.activeTabIndex, () => {
         un-before="h-0.5 w-full absolute top-0 inset-x-0 content-empty"
         @click="() => handleTabClick(index)"
         @dblclick="() => handleTabDblClick(index)"
+        @auxclick="(e: MouseEvent) => e.button === 1 && handleCloseTab(index)"
       >
         <div class="flex gap-1.5 items-center">
           <FileText class="size-4" />
