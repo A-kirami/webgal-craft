@@ -206,6 +206,7 @@ const handleRename = async (item: FlattenedItem<T>) => {
   try {
     const oldPath = getItemPath(item.value)
     await fsCmds.renameFile(oldPath, newName)
+    await gameManager.updateCurrentGameLastModified()
     renameState.itemKey = undefined
   } catch (error) {
     void logger.error(error instanceof Error ? error.message : '重命名失败')
@@ -357,6 +358,7 @@ async function handleCreate() {
       const createdName = await basename(createdPath)
       tabsStore.openTab(createdName, createdPath, { forceNormal: true, focus: true })
     }
+    await gameManager.updateCurrentGameLastModified()
     cancelCreating()
   } catch (error) {
     void logger.error(error instanceof Error ? error.message : '创建失败')

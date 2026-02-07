@@ -150,6 +150,8 @@ async function saveTextFile(newText: string) {
     fileState.lastSavedTime = new Date()
     state.isDirty = false
 
+    await gameManager.updateCurrentGameLastModified()
+
     syncScene()
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)

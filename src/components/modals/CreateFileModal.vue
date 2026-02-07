@@ -65,6 +65,7 @@ const onSubmit = handleSubmit(async (values) => {
 
   try {
     await writeTextFile(filePath, '')
+    await gameManager.updateCurrentGameLastModified()
     open = false
     props.onSuccess?.(filePath)
   } catch (error) {
