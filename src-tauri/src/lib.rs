@@ -15,6 +15,9 @@ pub fn run() {
             .inner_size(1280.0, 800.0)
             .center();
 
+        #[cfg(target_os = "windows")]
+        let win_builder = win_builder.additional_browser_args("--force_high_performance_gpu");
+
         #[cfg(not(target_os = "macos"))]
         let win_builder = win_builder.decorations(false).transparent(true);
 
