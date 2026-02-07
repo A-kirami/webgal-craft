@@ -27,6 +27,7 @@ async function getConfig(gamePath: string) {
 async function setConfig(gamePath: string, config: Record<string, string>) {
   try {
     await gameCmds.setGameConfig(gamePath, config)
+    await gameManager.updateCurrentGameLastModified()
   } catch (error) {
     throw new GameError(
       '设置游戏配置失败',

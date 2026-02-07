@@ -25,6 +25,7 @@ async function handleConfirm() {
     toast.success(t('edit.fileTree.deleteSuccess'))
     preferenceStore.skipDeleteFileConfirm = skipConfirm
     await props.onConfirm?.()
+    await gameManager.updateCurrentGameLastModified()
     open = false
   } catch (error) {
     toast.error(error instanceof Error ? error.message : t('edit.fileTree.deleteFailed'))

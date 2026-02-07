@@ -99,6 +99,7 @@ async function handlePaste() {
         clearClipboard()
       }
       toast.success(clipboard.length === 1 ? t('edit.fileTree.pasteSuccess') : t('edit.fileTree.pasteMultipleSuccess', { count: successCount }))
+      await gameManager.updateCurrentGameLastModified()
     }
   } catch (error) {
     logger.error(error instanceof Error ? error.message : String(error))

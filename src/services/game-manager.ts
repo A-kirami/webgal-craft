@@ -164,6 +164,8 @@ async function renameGame(id: string, newName: string): Promise<void> {
       throw new GameError('游戏不存在', 'GAME_NOT_FOUND', { id })
     }
     await gameCmds.setGameConfig(game.path, { gameName: newName })
+
+    await updateGameLastModified(id)
   } catch (error) {
     throw new GameError(
       '重命名游戏失败',
@@ -212,6 +214,40 @@ async function stopGamePreview(gameId: string) {
 }
 
 /**
+ * 更新游戏的 lastModified 字段
+ * @param gameId 游戏ID
+ * @throws {GameError} 当更新失败时抛出
+ */
+async function updateGameLastModified(gameId: string): Promise<void> {
+  try {
+    await db.games.update(gameId, {
+      lastModified: Date.now(),
+    })
+  } catch (error) {
+    throw new GameError(
+      '更新游戏最后修改时间失败',
+      'GAME_UPDATE_ERROR',
+      { gameId, originalError: error },
+    )
+  }
+}
+
+/**
+ * 更新当前游戏的 lastModified 字段
+ * @returns Promise<void>
+ */
+async function updateCurrentGameLastModified(): Promise<void> {
+  const workspaceStore = useWorkspaceStore()
+  if (workspaceStore.currentGame) {
+    try {
+      await updateGameLastModified(workspaceStore.currentGame.id)
+    } catch (error) {
+      logger.error(`更新游戏 lastModified 失败: ${error}`)
+    }
+  }
+}
+
+/**
  * 游戏管理器对象，提供游戏相关的管理功能
  */
 export const gameManager = {
@@ -224,4 +260,6 @@ export const gameManager = {
   importGame,
   runGamePreview,
   stopGamePreview,
+  updateGameLastModified,
+  updateCurrentGameLastModified,
 }
