@@ -10,6 +10,18 @@ const hasPreviewUrl = $computed(() => !!workspaceStore.currentGamePreviewUrl)
 const { t } = useI18n()
 const { copy, copied } = useClipboard({ source: previewUrl })
 
+let aspectRatio = $ref('16/9')
+
+async function updatePreviewAspectRatio() {
+  if (!workspaceStore.currentGame) {
+    return
+  }
+  const gameConfig = await gameCmds.getGameConfig(workspaceStore.currentGame.path)
+  const stageWidth = gameConfig.stageWidth ?? 2560
+  const stageHeight = gameConfig.stageHeight ?? 1440
+  aspectRatio = `${stageWidth}/${stageHeight}`
+}
+
 function copyUrl() {
   if (hasPreviewUrl) {
     copy()
@@ -23,6 +35,7 @@ let refreshKey = $ref(0)
 
 function refreshIframe() {
   refreshKey++
+  updatePreviewAspectRatio()
 }
 
 async function openPreviewInBrowser() {
@@ -37,6 +50,14 @@ async function openPreviewInBrowser() {
     notify.error(t('edit.previewPanel.openFailed', { error: errorMessage }))
   }
 }
+
+watch(
+  () => workspaceStore.currentGame,
+  () => {
+    updatePreviewAspectRatio()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -85,7 +106,7 @@ async function openPreviewInBrowser() {
       </TooltipProvider>
     </div>
     <div class="bg-muted size-full relative">
-      <div v-if="hasPreviewUrl" class="m-auto max-h-full aspect-16/9 inset-0 absolute">
+      <div v-if="hasPreviewUrl" class="m-auto max-h-full inset-0 absolute" :style="{ aspectRatio }">
         <iframe
           :key="refreshKey"
           :src="previewUrl"
