@@ -310,7 +310,7 @@ settings:
       label: 語言
       placeholder: 請選擇語言
     openLastProject:
-      label: 啟動時開啟最後建立的遊戲
+      label: 啟動時開啟最後編輯的遊戲
       description: 應用啟動時自動載入最後編輯的遊戲專案
     autoInstallUpdates:
       label: 自動安裝更新

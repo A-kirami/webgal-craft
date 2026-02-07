@@ -310,7 +310,7 @@ settings:
       label: 言語
       placeholder: 言語を選択してください
     openLastProject:
-      label: 起動時に最後に作成したゲームを開く
+      label: 起動時に最後に編集したゲームを開く
       description: アプリケーション起動時に最後に編集したゲームプロジェクトを自動的に読み込む
     autoInstallUpdates:
       label: 更新を自動インストール
