@@ -13,7 +13,8 @@ pub fn run() {
             .title("WebGAL Craft")
             .min_inner_size(620.0, 540.0)
             .inner_size(1280.0, 800.0)
-            .center();
+            .center()
+            .additional_browser_args("---force_high_performance_gpu");
 
         #[cfg(not(target_os = "macos"))]
         let win_builder = win_builder.decorations(false).transparent(true);
