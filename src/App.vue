@@ -23,18 +23,12 @@ const generalSettingsStore = useGeneralSettingsStore()
 const router = useRouter()
 
 async function openLastProjectIfNeeded() {
-  const currentRoute = router.currentRoute.value
-
-  if (!generalSettingsStore.openLastProject || currentRoute.path !== '/') {
+  if (!generalSettingsStore.openLastProject || router.currentRoute.value.path !== '/') {
     return
   }
 
   try {
-    const lastGame = await db.games
-      .orderBy('lastModified')
-      // eslint-disable-next-line unicorn/no-array-reverse
-      .reverse()
-      .first()
+    const lastGame = await db.games.orderBy('lastModified').last()
 
     if (lastGame && lastGame.status === 'created') {
       const pathExists = await exists(lastGame.path)
