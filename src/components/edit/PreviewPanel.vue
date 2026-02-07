@@ -21,13 +21,8 @@ async function updateAspectRatio() {
     const gameConfig = await gameCmds.getGameConfig(workspaceStore.currentGame.path)
     const stageWidth = Number(gameConfig.stageWidth) || 2560
     const stageHeight = Number(gameConfig.stageHeight) || 1440
-
-    if (stageWidth > 0 && stageHeight > 0 && stageWidth < 1_0000 && stageHeight < 1_0000) {
-      aspectRatio = `${stageWidth}/${stageHeight}`
-    } else {
-      logger.warn(`舞台分辨率数值异常，使用默认值: ${stageWidth}x${stageHeight}`)
-      aspectRatio = '16/9'
-    }
+    aspectRatio = `${stageWidth}/${stageHeight}`
+    logger.debug(`预览面板分辨率: ${stageWidth}x${stageHeight} (${aspectRatio})`)
   } catch (error) {
     logger.warn(`无法读取游戏配置，使用默认宽高比: ${error}`)
     aspectRatio = '16/9'
