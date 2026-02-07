@@ -4,7 +4,7 @@ import { ArrowLeft, Download, Play, Settings } from 'lucide-vue-next'
 const router = useRouter()
 
 const handleBack = () => {
-  router.back()
+  router.push('/')
 }
 
 const workspaceStore = useWorkspaceStore()

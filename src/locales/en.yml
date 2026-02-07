@@ -310,7 +310,7 @@ settings:
       label: Language
       placeholder: Please select a language
     openLastProject:
-      label: Open Last Created Game on Startup
+      label: Open Last Edited Game on Startup
       description: Automatically load the last edited game project when the application starts
     autoInstallUpdates:
       label: Auto Install Updates

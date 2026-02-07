@@ -310,7 +310,7 @@ settings:
       label: 语言
       placeholder: 请选择语言
     openLastProject:
-      label: 启动时打开最后创建的游戏
+      label: 启动时打开最后编辑的游戏
       description: 应用启动时自动加载最后编辑的游戏项目
     autoInstallUpdates:
       label: 自动安装更新
