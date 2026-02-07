@@ -12,14 +12,26 @@ const { copy, copied } = useClipboard({ source: previewUrl })
 
 let aspectRatio = $ref('16/9')
 
-async function updatePreviewAspectRatio() {
+async function updateAspectRatio() {
   if (!workspaceStore.currentGame) {
     return
   }
-  const gameConfig = await gameCmds.getGameConfig(workspaceStore.currentGame.path)
-  const stageWidth = gameConfig.stageWidth ?? 2560
-  const stageHeight = gameConfig.stageHeight ?? 1440
-  aspectRatio = `${stageWidth}/${stageHeight}`
+
+  try {
+    const gameConfig = await gameCmds.getGameConfig(workspaceStore.currentGame.path)
+    const stageWidth = Number(gameConfig.stageWidth) || 2560
+    const stageHeight = Number(gameConfig.stageHeight) || 1440
+
+    if (stageWidth > 0 && stageHeight > 0 && stageWidth < 1_0000 && stageHeight < 1_0000) {
+      aspectRatio = `${stageWidth}/${stageHeight}`
+    } else {
+      logger.warn(`舞台分辨率数值异常，使用默认值: ${stageWidth}x${stageHeight}`)
+      aspectRatio = '16/9'
+    }
+  } catch (error) {
+    logger.warn(`无法读取游戏配置，使用默认宽高比: ${error}`)
+    aspectRatio = '16/9'
+  }
 }
 
 function copyUrl() {
@@ -35,7 +47,7 @@ let refreshKey = $ref(0)
 
 function refreshIframe() {
   refreshKey++
-  updatePreviewAspectRatio()
+  updateAspectRatio()
 }
 
 async function openPreviewInBrowser() {
@@ -54,7 +66,7 @@ async function openPreviewInBrowser() {
 watch(
   () => workspaceStore.currentGame,
   () => {
-    updatePreviewAspectRatio()
+    updateAspectRatio()
   },
   { immediate: true },
 )
