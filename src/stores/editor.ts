@@ -245,6 +245,8 @@ export const useEditorStore = defineStore('editor', () => {
     if (tabIndex !== -1) {
       tabsStore.updateTabModified(tabIndex, false)
     }
+
+    await gameManager.updateCurrentGameLastModified()
   }
 
   return $$({
