@@ -81,7 +81,7 @@ async function handlePaste() {
 
     const results = await Promise.allSettled(
       clipboard.map(clipboardItem =>
-        isCut ? fsCmds.moveFile(clipboardItem.path, targetPath) : fsCmds.copyFile(clipboardItem.path, targetPath),
+        isCut ? gameFs.moveFile(clipboardItem.path, targetPath) : gameFs.copyFile(clipboardItem.path, targetPath),
       ),
     )
 
@@ -99,7 +99,6 @@ async function handlePaste() {
         clearClipboard()
       }
       toast.success(clipboard.length === 1 ? t('edit.fileTree.pasteSuccess') : t('edit.fileTree.pasteMultipleSuccess', { count: successCount }))
-      await gameManager.updateCurrentGameLastModified()
     }
   } catch (error) {
     logger.error(error instanceof Error ? error.message : String(error))

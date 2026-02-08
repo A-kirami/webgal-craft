@@ -1,5 +1,5 @@
 import { join } from '@tauri-apps/api/path'
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
+import { readTextFile } from '@tauri-apps/plugin-fs'
 import mime from 'mime/lite'
 import { defineStore } from 'pinia'
 
@@ -238,15 +238,13 @@ export const useEditorStore = defineStore('editor', () => {
     }
 
     const content = state.mode === 'text' ? state.textContent : state.visualData
-    await writeTextFile(path, content)
+    await gameFs.writeFile(path, content)
     state.isDirty = false
 
     const tabIndex = tabsStore.findTabIndex(path)
     if (tabIndex !== -1) {
       tabsStore.updateTabModified(tabIndex, false)
     }
-
-    await gameManager.updateCurrentGameLastModified()
   }
 
   return $$({

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { join } from '@tauri-apps/api/path'
-import { exists, writeTextFile } from '@tauri-apps/plugin-fs'
+import { exists } from '@tauri-apps/plugin-fs'
 import sanitize from 'sanitize-filename'
 import { useForm } from 'vee-validate'
 import * as z from 'zod'
@@ -64,8 +64,7 @@ const onSubmit = handleSubmit(async (values) => {
   }
 
   try {
-    await writeTextFile(filePath, '')
-    await gameManager.updateCurrentGameLastModified()
+    await gameFs.writeFile(filePath, '')
     open = false
     props.onSuccess?.(filePath)
   } catch (error) {
