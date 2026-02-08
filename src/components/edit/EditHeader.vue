@@ -9,6 +9,7 @@ const router = useRouter()
 const { t } = useI18n()
 
 function handleBack() {
+  void closeTestWindow()
   router.push('/')
 }
 
@@ -21,6 +22,7 @@ const testWindowLabel = $computed(() => (workspaceStore.currentGame ? `test-${wo
 let isTestOpening = $ref(false)
 let isTestWindowActive = $ref(false)
 let unlistenWindowClosed: UnlistenFn | undefined
+let lastTestWindowLabel = $ref('')
 
 async function handleTestGame() {
   const gameUrl = workspaceStore.currentGameServeUrl
@@ -80,14 +82,37 @@ async function handleTestGame() {
 
 watch(
   [() => workspaceStore.currentGame?.id, () => workspaceStore.currentGameServeUrl],
-  () => {
+  ([gameId]) => {
+    if (gameId) {
+      lastTestWindowLabel = `test-${gameId}`
+    }
     isTestWindowActive = false
     unlistenWindowClosed?.()
     unlistenWindowClosed = undefined
   },
 )
 
+async function closeTestWindow() {
+  const label = lastTestWindowLabel || testWindowLabel
+  if (!label) {
+    return
+  }
+
+  const existingWindow = await WebviewWindow.getByLabel(label)
+  if (!existingWindow) {
+    return
+  }
+
+  try {
+    await existingWindow.close()
+    isTestWindowActive = false
+  } catch (error) {
+    logger.warn(`无法关闭测试窗口: ${error}`)
+  }
+}
+
 onBeforeUnmount(() => {
+  void closeTestWindow()
   unlistenWindowClosed?.()
 })
 </script>
