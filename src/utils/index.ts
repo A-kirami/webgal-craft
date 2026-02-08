@@ -11,5 +11,5 @@ export function getAssetUrl(path: string) {
   const relativePath = getRelativePath(path)
   const workspaceStore = useWorkspaceStore()
   const normalizedPath = relativePath.replaceAll('\\', '/').replace(/^\//, '')
-  return new URL(normalizedPath, workspaceStore.currentGamePreviewUrl).href
+  return new URL(normalizedPath, workspaceStore.currentGameServeUrl).href
 }

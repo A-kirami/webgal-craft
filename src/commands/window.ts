@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 
 interface CreateWindowOptions extends Record<string, unknown> {
   label: string
-  route: string
+  target: string
   title?: string
   width?: number
   height?: number
@@ -23,7 +23,7 @@ interface CreateWindowOptions extends Record<string, unknown> {
  */
 async function createWindow(options: CreateWindowOptions): Promise<boolean> {
   try {
-    return await invoke<boolean>('create_window', options)
+    return await invoke<boolean>('create_window', { options })
   } catch (error) {
     throw new Error(`创建窗口失败: ${error}`, { cause: error })
   }

@@ -16,6 +16,9 @@ pub enum AppError {
     #[error("配置错误: {0}")]
     Config(String),
 
+    #[error("窗口错误: {0}")]
+    Window(String),
+
     #[error(transparent)]
     Tauri(#[from] tauri::Error),
 }

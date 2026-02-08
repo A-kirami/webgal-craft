@@ -153,6 +153,8 @@ edit:
   header:
     testGame: 測試遊戲
     export: 匯出
+    missingPreviewUrl: 預覽地址不存在，請先啟動預覽
+    openFailed: "開啟測試視窗失敗：{error}"
   empty:
     title: 沒有開啟的檔案
     description: 從左側檔案列表中選擇一個檔案開始編輯，或建立一個新的場景檔案
