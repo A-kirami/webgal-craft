@@ -56,7 +56,8 @@ async function checkFileType(path: string, subPath: string, mimeType: string, ex
   }
 
   const targetPath = await gameAssetDir(workspaceStore.CWD, subPath)
-  return path.startsWith(targetPath)
+  // 使用分隔符边界匹配，避免目录名存在前缀关系时误判
+  return path.startsWith(`${targetPath}\\`) || path.startsWith(`${targetPath}/`)
 }
 
 async function isSceneFile(path: string, mimeType: string) {

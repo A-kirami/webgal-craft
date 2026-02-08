@@ -442,7 +442,6 @@ declare module 'vue' {
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
     readonly fsCmds: UnwrapRef<typeof import('./commands/fs')['fsCmds']>
     readonly gameAssetDir: UnwrapRef<typeof import('./utils/app-paths')['gameAssetDir']>
-    readonly gameAssetSubDir: UnwrapRef<typeof import('./utils/app-paths')['gameAssetSubDir']>
     readonly gameCmds: UnwrapRef<typeof import('./commands/game')['gameCmds']>
     readonly gameCoverPath: UnwrapRef<typeof import('./utils/app-paths')['gameCoverPath']>
     readonly gameFs: UnwrapRef<typeof import('./services/game-fs')['gameFs']>

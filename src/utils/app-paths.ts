@@ -17,11 +17,6 @@ export function gameAssetDir(gamePath: string, assetType: string) {
   return join(gamePath, 'game', assetType)
 }
 
-/** 资产子目录: {gamePath}/game/{assetType}/{subDir} */
-export function gameAssetSubDir(gamePath: string, assetType: string, subDir: string) {
-  return join(gamePath, 'game', assetType, subDir)
-}
-
 /** 游戏图标: {gamePath}/icons/favicon.ico */
 export function gameIconPath(gamePath: string) {
   return join(gamePath, 'icons', 'favicon.ico')
@@ -46,12 +41,12 @@ export function engineManifestPath(enginePath: string) {
 
 // ==================== 应用存储路径 ====================
 
-/** 默认游戏存储: {documentDir}/WebGALCraft/games */
-export function defaultGameSavePath(documentDir: string) {
-  return join(documentDir, 'WebGALCraft', 'games')
+/** 默认游戏存储: {baseDir}/WebGALCraft/games */
+export function defaultGameSavePath(baseDir: string) {
+  return join(baseDir, 'WebGALCraft', 'games')
 }
 
-/** 默认引擎存储: {documentDir}/WebGALCraft/engines */
-export function defaultEngineSavePath(documentDir: string) {
-  return join(documentDir, 'WebGALCraft', 'engines')
+/** 默认引擎存储: {baseDir}/WebGALCraft/engines */
+export function defaultEngineSavePath(baseDir: string) {
+  return join(baseDir, 'WebGALCraft', 'engines')
 }
