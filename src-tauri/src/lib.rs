@@ -9,7 +9,8 @@ use tokio::sync::Mutex;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default().setup(|app| {
-        let _window = window::create_main(app, "WebGAL Craft")?;
+        let app_handle = app.handle();
+        let _window = window::create_main(&app_handle, "WebGAL Craft")?;
 
         #[cfg(debug_assertions)]
         _window.open_devtools();

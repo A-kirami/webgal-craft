@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use tauri::{AppHandle, Manager, WebviewUrl};
 
-use super::{AppError, AppResult};
+use super::AppResult;
 use crate::window::WindowConfig;
 
 #[derive(Debug, Deserialize)]
@@ -37,7 +37,7 @@ pub async fn create_window(
             window.set_focus()?;
             return Ok(false);
         }
-        return Err(AppError::Config("窗口已存在".into()));
+        return Ok(false);
     }
 
     let mut config = WindowConfig::new(options.label.clone(), WebviewUrl::App(route.into()));

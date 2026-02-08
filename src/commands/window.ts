@@ -25,7 +25,7 @@ async function createWindow(options: CreateWindowOptions): Promise<boolean> {
   try {
     return await invoke<boolean>('create_window', options)
   } catch (error) {
-    throw new Error(`创建窗口失败: ${error}`)
+    throw new Error(`创建窗口失败: ${error}`, { cause: error })
   }
 }
 
