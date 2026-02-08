@@ -33,8 +33,8 @@ async function validateEngine(enginePath: string): Promise<boolean> {
  */
 async function getEngineMetadata(enginePath: string): Promise<EngineMetadata> {
   try {
-    const iconPath = await join(enginePath, 'icons', 'favicon.ico')
-    const manifestPath = await join(enginePath, 'manifest.json')
+    const iconPath = await engineIconPath(enginePath)
+    const manifestPath = await engineManifestPath(enginePath)
     const metaContent = await readTextFile(manifestPath)
     const { name, description } = JSON.parse(metaContent)
 

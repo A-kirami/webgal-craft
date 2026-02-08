@@ -36,17 +36,27 @@ declare global {
   const debouncedRef: typeof import('@vueuse/core').debouncedRef
   const debouncedWatch: typeof import('@vueuse/core').debouncedWatch
   const debugCommander: typeof import('./services/debug-commander').debugCommander
+  const defaultEngineSavePath: typeof import('./utils/app-paths').defaultEngineSavePath
+  const defaultGameSavePath: typeof import('./utils/app-paths').defaultGameSavePath
   const defineAsyncComponent: typeof import('vue').defineAsyncComponent
   const defineComponent: typeof import('vue').defineComponent
   const definePage: typeof import('vue-router/experimental').definePage
   const eagerComputed: typeof import('@vueuse/core').eagerComputed
   const effectScope: typeof import('vue').effectScope
+  const engineIconPath: typeof import('./utils/app-paths').engineIconPath
   const engineManager: typeof import('./services/engine-manager').engineManager
+  const engineManifestPath: typeof import('./utils/app-paths').engineManifestPath
   const extendRef: typeof import('@vueuse/core').extendRef
   const fsCmds: typeof import('./commands/fs').fsCmds
+  const gameAssetDir: typeof import('./utils/app-paths').gameAssetDir
+  const gameAssetSubDir: typeof import('./utils/app-paths').gameAssetSubDir
   const gameCmds: typeof import('./commands/game').gameCmds
+  const gameCoverPath: typeof import('./utils/app-paths').gameCoverPath
   const gameFs: typeof import('./services/game-fs').gameFs
+  const gameIconPath: typeof import('./utils/app-paths').gameIconPath
   const gameManager: typeof import('./services/game-manager').gameManager
+  const gameRootDir: typeof import('./utils/app-paths').gameRootDir
+  const gameSceneDir: typeof import('./utils/app-paths').gameSceneDir
   const getAssetUrl: typeof import('./utils/index').getAssetUrl
   const getCurrentInstance: typeof import('vue').getCurrentInstance
   const getCurrentScope: typeof import('vue').getCurrentScope
@@ -419,17 +429,26 @@ declare module 'vue' {
     readonly debouncedRef: UnwrapRef<typeof import('@vueuse/core')['debouncedRef']>
     readonly debouncedWatch: UnwrapRef<typeof import('@vueuse/core')['debouncedWatch']>
     readonly debugCommander: UnwrapRef<typeof import('./services/debug-commander')['debugCommander']>
+    readonly defaultEngineSavePath: UnwrapRef<typeof import('./utils/app-paths')['defaultEngineSavePath']>
+    readonly defaultGameSavePath: UnwrapRef<typeof import('./utils/app-paths')['defaultGameSavePath']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly definePage: UnwrapRef<typeof import('vue-router/experimental')['definePage']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
+    readonly engineIconPath: UnwrapRef<typeof import('./utils/app-paths')['engineIconPath']>
     readonly engineManager: UnwrapRef<typeof import('./services/engine-manager')['engineManager']>
+    readonly engineManifestPath: UnwrapRef<typeof import('./utils/app-paths')['engineManifestPath']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
     readonly fsCmds: UnwrapRef<typeof import('./commands/fs')['fsCmds']>
+    readonly gameAssetDir: UnwrapRef<typeof import('./utils/app-paths')['gameAssetDir']>
     readonly gameCmds: UnwrapRef<typeof import('./commands/game')['gameCmds']>
+    readonly gameCoverPath: UnwrapRef<typeof import('./utils/app-paths')['gameCoverPath']>
     readonly gameFs: UnwrapRef<typeof import('./services/game-fs')['gameFs']>
+    readonly gameIconPath: UnwrapRef<typeof import('./utils/app-paths')['gameIconPath']>
     readonly gameManager: UnwrapRef<typeof import('./services/game-manager')['gameManager']>
+    readonly gameRootDir: UnwrapRef<typeof import('./utils/app-paths')['gameRootDir']>
+    readonly gameSceneDir: UnwrapRef<typeof import('./utils/app-paths')['gameSceneDir']>
     readonly getAssetUrl: UnwrapRef<typeof import('./utils/index')['getAssetUrl']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>

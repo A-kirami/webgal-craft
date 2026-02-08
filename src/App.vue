@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { documentDir, join } from '@tauri-apps/api/path'
+import { documentDir } from '@tauri-apps/api/path'
 import { exists } from '@tauri-apps/plugin-fs'
 
 async function initializeApp() {
@@ -8,11 +8,11 @@ async function initializeApp() {
     const storageSettingsStore = useStorageSettingsStore()
     if (storageSettingsStore.gameSavePath === '') {
       const baseDir = await documentDir()
-      storageSettingsStore.gameSavePath = await join(baseDir, 'WebGALCraft', 'games')
+      storageSettingsStore.gameSavePath = await defaultGameSavePath(baseDir)
     }
     if (storageSettingsStore.engineSavePath === '') {
       const baseDir = await documentDir()
-      storageSettingsStore.engineSavePath = await join(baseDir, 'WebGALCraft', 'engines')
+      storageSettingsStore.engineSavePath = await defaultEngineSavePath(baseDir)
     }
     isInitialized.value = true
   }

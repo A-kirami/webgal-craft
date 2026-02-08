@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { dirname, join } from '@tauri-apps/api/path'
+import { dirname } from '@tauri-apps/api/path'
 import { CopyMinus, FilePlus, FolderPlus, Layers, RotateCw } from 'lucide-vue-next'
 
 import type { FlattenedItem } from 'reka-ui'
@@ -20,7 +20,7 @@ const scenePath = computedAsync(async () => {
   if (!workspaceStore.currentGame?.path) {
     return ''
   }
-  return await join(workspaceStore.currentGame.path, 'game', 'scene')
+  return await gameSceneDir(workspaceStore.currentGame.path)
 })
 
 async function getAllFolderContents(path: string): Promise<TreeNode[]> {

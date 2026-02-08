@@ -1,4 +1,3 @@
-import { join } from '@tauri-apps/api/path'
 import { readTextFile } from '@tauri-apps/plugin-fs'
 import mime from 'mime/lite'
 import { defineStore } from 'pinia'
@@ -56,8 +55,9 @@ async function checkFileType(path: string, subPath: string, mimeType: string, ex
     return false
   }
 
-  const targetPath = await join(workspaceStore.CWD, 'game', subPath)
-  return path.startsWith(targetPath)
+  const targetPath = await gameAssetDir(workspaceStore.CWD, subPath)
+  // 使用分隔符边界匹配，避免目录名存在前缀关系时误判
+  return path.startsWith(`${targetPath}\\`) || path.startsWith(`${targetPath}/`)
 }
 
 async function isSceneFile(path: string, mimeType: string) {

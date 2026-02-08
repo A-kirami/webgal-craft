@@ -504,7 +504,7 @@ async function getPathFromFileType(
     subDir = fileName.slice(0, lastDirIndex + 1)
   }
 
-  const basePath = await join(gameDir, 'game', type)
+  const basePath = await gameAssetDir(gameDir, type)
   if (subDir) {
     // 移除 subDir 开头的斜杠（如果有）
     const normalizedSubDir = subDir.startsWith('/') ? subDir.slice(1) : subDir
