@@ -124,7 +124,7 @@ export const useEditorStore = defineStore('editor', () => {
       } else {
         const workspaceStore = useWorkspaceStore()
         // 等待预览服务器启动
-        await until(() => !!workspaceStore.currentGamePreviewUrl).toBe(true)
+        await until(() => !!workspaceStore.currentGameServeUrl).toBe(true)
 
         states.set(tab.path, {
           path: tab.path,

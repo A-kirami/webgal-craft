@@ -4,8 +4,8 @@ import { Copy, ExternalLink, Link, RotateCw } from 'lucide-vue-next'
 
 const workspaceStore = useWorkspaceStore()
 
-const previewUrl = $computed(() => workspaceStore.currentGamePreviewUrl || '')
-const hasPreviewUrl = $computed(() => !!workspaceStore.currentGamePreviewUrl)
+const previewUrl = $computed(() => workspaceStore.currentGameServeUrl || '')
+const hasPreviewUrl = $computed(() => !!workspaceStore.currentGameServeUrl)
 
 const { t } = useI18n()
 const { copy, copied } = useClipboard({ source: previewUrl })

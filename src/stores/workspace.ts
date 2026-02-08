@@ -10,7 +10,7 @@ export const useWorkspaceStore = defineStore(
 
     // 服务器状态
     let serverUrl = $ref<string>()
-    let currentGamePreviewUrl = $ref<string>()
+    let currentGameServeUrl = $ref<string>()
 
     // UI 状态
     const activeTab = $ref<'recent' | 'engines'>('recent')
@@ -48,7 +48,7 @@ export const useWorkspaceStore = defineStore(
           logger.error(`停止预览失败: ${error}`)
         }
         currentGame = undefined
-        currentGamePreviewUrl = undefined
+        currentGameServeUrl = undefined
       }
 
       if (params.gameId) {
@@ -56,9 +56,9 @@ export const useWorkspaceStore = defineStore(
         if (game) {
           currentGame = game
           try {
-            currentGamePreviewUrl = await gameManager.runGamePreview(game.path)
+            currentGameServeUrl = await gameManager.runGamePreview(game.path)
           } catch (error) {
-            currentGamePreviewUrl = undefined
+            currentGameServeUrl = undefined
             logger.error(`获取预览链接失败: ${error}`)
           }
         }
@@ -68,7 +68,7 @@ export const useWorkspaceStore = defineStore(
     return $$({
       // 工作区状态
       currentGame,
-      currentGamePreviewUrl,
+      currentGameServeUrl,
       serverUrl,
       CWD,
       refreshGameMetadata,

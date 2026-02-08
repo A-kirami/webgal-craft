@@ -153,6 +153,8 @@ edit:
   header:
     testGame: ゲームをテスト
     export: エクスポート
+    missingPreviewUrl: プレビューURLがありません。先にプレビューを起動してください。
+    openFailed: "テストウィンドウを開けませんでした：{error}"
   empty:
     title: 開いているファイルがありません
     description: 左側のファイルリストからファイルを選択して編集を開始するか、新しいシーンファイルを作成してください

@@ -153,6 +153,8 @@ edit:
   header:
     testGame: 测试游戏
     export: 导出
+    missingPreviewUrl: 预览地址不存在，请先启动预览
+    openFailed: "打开测试窗口失败：{error}"
   empty:
     title: 没有打开的文件
     description: 从左侧文件列表中选择一个文件开始编辑，或创建一个新的场景文件

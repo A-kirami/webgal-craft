@@ -153,6 +153,8 @@ edit:
   header:
     testGame: Test Game
     export: Export
+    missingPreviewUrl: Preview URL is not available. Please start preview first.
+    openFailed: "Failed to open test window: {error}"
   empty:
     title: No Open Files
     description: Select a file from the left file list to start editing, or create a new scene file
