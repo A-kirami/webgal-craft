@@ -23,6 +23,7 @@
       "unplugin-info/client",
       "./src/route-map.d.ts"
     ],
+    "rootDir": ".",
 
     /* Type Checking */
     "strict": true,
