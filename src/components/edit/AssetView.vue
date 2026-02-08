@@ -39,7 +39,7 @@ const assetBasePath = computedAsync(async () => {
   if (!workspaceStore.currentGame?.path) {
     return ''
   }
-  return await join(workspaceStore.currentGame.path, 'game', assetType)
+  return await gameAssetDir(workspaceStore.currentGame.path, assetType)
 })
 
 let isLoading = $ref(false)

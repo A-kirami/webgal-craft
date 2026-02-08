@@ -1,4 +1,3 @@
-import { join } from '@tauri-apps/api/path'
 import { remove } from '@tauri-apps/plugin-fs'
 
 import { GameError, GameMetadata } from './types'
@@ -34,8 +33,8 @@ async function validateGame(gamePath: string) {
 async function getGameMetadata(gamePath: string): Promise<GameMetadata> {
   try {
     const gameConfig = await gameCmds.getGameConfig(gamePath)
-    const iconPath = await join(gamePath, 'icons', 'favicon.ico')
-    const coverPath = await join(gamePath, 'game', 'background', gameConfig.titleImg)
+    const iconPath = await gameIconPath(gamePath)
+    const coverPath = await gameCoverPath(gamePath, gameConfig.titleImg)
 
     return {
       name: gameConfig.gameName,

@@ -26,7 +26,7 @@ async function buildSceneFilePath(fileName: string): Promise<string | undefined>
     ? sanitizedName
     : `${sanitizedName}.txt`
 
-  const folderPath = await join(workspaceStore.CWD, 'game', 'scene')
+  const folderPath = await gameSceneDir(workspaceStore.CWD)
   return await join(folderPath, fileNameWithExt)
 }
 

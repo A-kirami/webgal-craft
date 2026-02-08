@@ -553,7 +553,7 @@ export const useFileStore = defineStore('file', () => {
     }
 
     try {
-      const rootPath = await join(workspaceStore.CWD, 'game')
+      const rootPath = await gameRootDir(workspaceStore.CWD)
       await getFolderContents(rootPath)
       unwatch = await watchFs(rootPath, handleWatchEvent, { recursive: true, delayMs: WATCH_DELAY_MS })
     } catch (error) {
