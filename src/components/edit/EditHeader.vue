@@ -36,15 +36,17 @@ async function handleTestGame() {
     return
   }
 
+  const createWindowOptions = {
+    label: testWindowLabel,
+    target: gameUrl,
+    title: currentGame.metadata.name,
+    center: true,
+    reuse: true,
+  }
+
   if (isTestWindowActive && !isTestOpening) {
     try {
-      await windowCmds.createWindow({
-        label: testWindowLabel,
-        target: gameUrl,
-        title: currentGame.metadata.name,
-        center: true,
-        reuse: true,
-      })
+      await windowCmds.createWindow(createWindowOptions)
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       logger.warn(`无法聚焦测试窗口: ${errorMessage}`)
@@ -54,13 +56,7 @@ async function handleTestGame() {
 
   isTestOpening = true
   try {
-    await windowCmds.createWindow({
-      label: testWindowLabel,
-      target: gameUrl,
-      title: currentGame.metadata.name,
-      center: true,
-      reuse: true,
-    })
+    await windowCmds.createWindow(createWindowOptions)
     isTestWindowActive = true
     if (!unlistenWindowClosed) {
       const webview = await WebviewWindow.getByLabel(testWindowLabel)

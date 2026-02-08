@@ -51,10 +51,17 @@ pub async fn create_window(
         return Ok(false);
     }
 
-    let webview_url = if target.starts_with("http://") || target.starts_with("https://") {
-        let url = Url::parse(&target)
-            .map_err(|error| AppError::Window(format!("无效的 URL: {error}")))?;
-        WebviewUrl::External(url)
+    let webview_url = if target.contains("://") {
+        let url =
+            Url::parse(&target).map_err(|error| AppError::Window(format!("无效的 URL: {error}")))?;
+        match url.scheme() {
+            "http" | "https" => WebviewUrl::External(url),
+            scheme => {
+                return Err(AppError::Window(format!(
+                    "不支持的 URL 协议: {scheme}"
+                )));
+            }
+        }
     } else {
         let route = if target.starts_with('/') {
             target
