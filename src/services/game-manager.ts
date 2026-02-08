@@ -236,15 +236,28 @@ async function updateGameLastModified(gameId: string): Promise<void> {
  * 更新当前游戏的 lastModified 字段
  * @returns Promise<void>
  */
-async function updateCurrentGameLastModified(): Promise<void> {
+let lastModifiedTimer: ReturnType<typeof setTimeout> | undefined
+
+/**
+ * 更新当前游戏的 lastModified 字段（防抖，500ms）
+ *
+ * 多次快速调用时仅执行最后一次，适用于批量文件操作（如粘贴多个文件）。
+ */
+function updateCurrentGameLastModified(): void {
   const workspaceStore = useWorkspaceStore()
-  if (workspaceStore.currentGame) {
+  const gameId = workspaceStore.currentGame?.id
+  if (!gameId) {
+    return
+  }
+
+  clearTimeout(lastModifiedTimer)
+  lastModifiedTimer = setTimeout(async () => {
     try {
-      await updateGameLastModified(workspaceStore.currentGame.id)
+      await updateGameLastModified(gameId)
     } catch (error) {
       logger.error(`更新游戏 lastModified 失败: ${error}`)
     }
-  }
+  }, 500)
 }
 
 /**

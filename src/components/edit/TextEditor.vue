@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { writeTextFile } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
 import * as monaco from 'monaco-editor'
 
@@ -141,7 +140,7 @@ async function saveTextFile(newText: string) {
       return
     }
 
-    await writeTextFile(state.path, newText)
+    await gameFs.writeFile(state.path, newText)
 
     if (currentVersionId) {
       fileState.lastSavedVersionId = currentVersionId
@@ -149,8 +148,6 @@ async function saveTextFile(newText: string) {
 
     fileState.lastSavedTime = new Date()
     state.isDirty = false
-
-    await gameManager.updateCurrentGameLastModified()
 
     syncScene()
   } catch (error) {

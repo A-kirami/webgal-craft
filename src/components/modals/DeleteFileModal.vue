@@ -2,8 +2,6 @@
 import { TriangleAlert } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
-import { fsCmds } from '~/commands/fs'
-
 const { t } = useI18n()
 let open = $(defineModel<boolean>('open'))
 
@@ -21,11 +19,10 @@ const skipConfirm = $ref(preferenceStore.skipDeleteFileConfirm)
 
 async function handleConfirm() {
   try {
-    await fsCmds.deleteFile(props.file.path)
+    await gameFs.deleteFile(props.file.path)
     toast.success(t('edit.fileTree.deleteSuccess'))
     preferenceStore.skipDeleteFileConfirm = skipConfirm
     await props.onConfirm?.()
-    await gameManager.updateCurrentGameLastModified()
     open = false
   } catch (error) {
     toast.error(error instanceof Error ? error.message : t('edit.fileTree.deleteFailed'))

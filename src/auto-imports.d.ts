@@ -45,6 +45,7 @@ declare global {
   const extendRef: typeof import('@vueuse/core').extendRef
   const fsCmds: typeof import('./commands/fs').fsCmds
   const gameCmds: typeof import('./commands/game').gameCmds
+  const gameFs: typeof import('./services/game-fs').gameFs
   const gameManager: typeof import('./services/game-manager').gameManager
   const getAssetUrl: typeof import('./utils/index').getAssetUrl
   const getCurrentInstance: typeof import('vue').getCurrentInstance
@@ -427,6 +428,7 @@ declare module 'vue' {
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
     readonly fsCmds: UnwrapRef<typeof import('./commands/fs')['fsCmds']>
     readonly gameCmds: UnwrapRef<typeof import('./commands/game')['gameCmds']>
+    readonly gameFs: UnwrapRef<typeof import('./services/game-fs')['gameFs']>
     readonly gameManager: UnwrapRef<typeof import('./services/game-manager')['gameManager']>
     readonly getAssetUrl: UnwrapRef<typeof import('./utils/index')['getAssetUrl']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
