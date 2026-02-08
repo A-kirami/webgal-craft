@@ -1,6 +1,6 @@
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::Manager;
 mod commands;
-mod utils;
+mod window;
 use commands::server::ServerState;
 #[cfg(target_os = "windows")]
 use tauri_plugin_prevent_default::PlatformOptions;
@@ -9,24 +9,7 @@ use tokio::sync::Mutex;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default().setup(|app| {
-        let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
-            .title("WebGAL Craft")
-            .min_inner_size(620.0, 540.0)
-            .inner_size(1280.0, 800.0)
-            .center();
-
-        #[cfg(target_os = "windows")]
-        let win_builder = win_builder.additional_browser_args("--force_high_performance_gpu");
-
-        #[cfg(not(target_os = "macos"))]
-        let win_builder = win_builder.decorations(false).transparent(true);
-
-        #[cfg(target_os = "macos")]
-        let win_builder = win_builder
-            .hidden_title(true)
-            .title_bar_style(tauri::TitleBarStyle::Overlay);
-
-        let _window = win_builder.build().unwrap();
+        let _window = window::create_main(app, "WebGAL Craft")?;
 
         #[cfg(debug_assertions)]
         _window.open_devtools();
@@ -99,6 +82,8 @@ pub fn run() {
             commands::fs::copy_directory_with_progress,
             commands::fs::validate_directory_structure,
             commands::fs::delete_file,
+            // window
+            commands::window::create_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
