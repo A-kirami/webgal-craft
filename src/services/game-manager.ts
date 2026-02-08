@@ -244,15 +244,18 @@ let lastModifiedTimer: ReturnType<typeof setTimeout> | undefined
  * 多次快速调用时仅执行最后一次，适用于批量文件操作（如粘贴多个文件）。
  */
 function updateCurrentGameLastModified(): void {
+  const workspaceStore = useWorkspaceStore()
+  const gameId = workspaceStore.currentGame?.id
+  if (!gameId) {
+    return
+  }
+
   clearTimeout(lastModifiedTimer)
   lastModifiedTimer = setTimeout(async () => {
-    const workspaceStore = useWorkspaceStore()
-    if (workspaceStore.currentGame) {
-      try {
-        await updateGameLastModified(workspaceStore.currentGame.id)
-      } catch (error) {
-        logger.error(`更新游戏 lastModified 失败: ${error}`)
-      }
+    try {
+      await updateGameLastModified(gameId)
+    } catch (error) {
+      logger.error(`更新游戏 lastModified 失败: ${error}`)
     }
   }, 500)
 }
