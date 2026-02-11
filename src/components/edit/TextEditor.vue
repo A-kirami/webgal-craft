@@ -331,8 +331,9 @@ function shouldFocusEditor(context: {
 }
 
 async function manualSave() {
-  const value = editor?.getValue()
-  const versionId = editor?.getModel()?.getAlternativeVersionId()
+  const model = editor?.getModel()
+  const value = model?.getValue()
+  const versionId = model?.getAlternativeVersionId()
   if (value !== undefined && versionId !== undefined) {
     await saveTextFile({ path: state.path, content: value, versionId })
   }
