@@ -205,14 +205,31 @@ export const useEditorStore = defineStore('editor', () => {
     try {
       const content = await readTextFile(event.path)
 
-      if (state.mode === 'text') {
+      // await 后重新获取最新 state，防止异步期间被 toggleTextualMode 等替换导致陈旧引用
+      const freshState = states.get(event.path)
+      if (!freshState || !isTextualEditor(freshState)) {
+        return
+      }
+
+      // readTextFile 是异步的，期间 isDirty 可能已变化，再次检查
+      if (freshState.isDirty) {
+        return
+      }
+
+      // 内容相同则跳过（通常是编辑器自身写入触发的 watcher 事件）
+      const currentContent = freshState.mode === 'text' ? freshState.textContent : freshState.visualData
+      if (content === currentContent) {
+        return
+      }
+
+      if (freshState.mode === 'text') {
         states.set(event.path, {
-          ...state,
+          ...freshState,
           textContent: content,
         })
       } else {
         states.set(event.path, {
-          ...state,
+          ...freshState,
           visualData: content,
         })
       }
