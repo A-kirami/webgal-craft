@@ -2,18 +2,15 @@ import { join } from '@tauri-apps/api/path'
 import { readDir } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
 import * as monaco from 'monaco-editor'
-import { wireTmGrammars } from 'monaco-editor-textmate'
-import { Registry } from 'monaco-textmate'
+import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType, IScene } from 'webgal-parser/src/interface/sceneInterface'
 
 import { getArgKeyCompletions } from './completion/webgal-argument-keys'
 import { getCommandCompletions } from './completion/webgal-commands'
-import webgalTextmate from './grammars/webgal.tmLanguage.json'
 import darkTheme from './themes/webgal-dark.json'
 import lightTheme from './themes/webgal-light.json'
 
 import './monaco'
-import './onigasm'
 
 // 常量定义
 const TEMP_SCENE_NAME = 'tempScene'
@@ -128,32 +125,351 @@ monaco.languages.registerCompletionItemProvider('webgalscript', {
   },
 })
 
-// 配置 WebGAL 脚本语法高亮
-export async function configureWebgalSyntaxHighlighting(
-  editor: monaco.editor.IStandaloneCodeEditor,
-) {
-  try {
-    const registry = new Registry({
-      getGrammarDefinition: async (scopeName) => {
-        if (scopeName === 'source.webgal') {
-          return {
-            format: 'json',
-            content: JSON.stringify(webgalTextmate),
-          }
-        }
-        return { format: 'json', content: '' }
-      },
-    })
+// #region 配置 WebGAL 脚本语法高亮
 
-    const grammars = new Map([['webgalscript', 'source.webgal']])
-    await registry.loadGrammar('source.webgal')
-    await wireTmGrammars(monaco, registry, grammars, editor)
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error(`配置 WebGAL 脚本语法高亮失败: ${errorMessage}`)
-    throw error
-  }
-}
+// #region 准备工作
+
+// 匹配到注释符号
+const commentRule: ([RegExp, string, string] | [RegExp, string])[] = [
+  [/\\;$/, 'string.escape', '@root'],
+  [/\\;/, 'string.escape'],
+  [/;$/, 'line.comment.webgal', '@root'],
+  [/;/, 'line.comment.webgal', '@comment'],
+]
+
+// 匹配到参数符号
+const argumentKeyRule: ([RegExp, string, string] | [RegExp, string])[] = [
+  [/ -$/, 'split.common.webgal', '@root'],
+  [/ -/, 'split.common.webgal', '@argumentKey'],
+]
+
+// 提取命令字符串列表
+const commandStringList = SCRIPT_CONFIG.map(item => item.scriptString)
+
+// 部分命令内容的特殊高亮规则
+const commandNextRuleMap = new Map<commandType, string>([
+  [commandType.say, '@afterCharacter'],
+  [commandType.intro, '@afterIntro'],
+  [commandType.choose, '@afterChoose'],
+  [commandType.setVar, '@afterSetVar'],
+  [commandType.setTransform, '@afterSetTransform'],
+  [commandType.setTempAnimation, '@afterSetTempAnimation'],
+  [commandType.applyStyle, '@afterApplyStyle'],
+])
+
+// 形如 commandType: 或 commandType; 的命令匹配规则
+const commandRuleList: [RegExp | string, string, string][] = SCRIPT_CONFIG.map((config) => {
+  const pattern = new RegExp(`^${config.scriptString}(?=:|;)`)
+  // 寻找特定命令的内容高亮规则, 否则回退到默认规则
+  const nextRule = commandNextRuleMap.get(config.scriptType) || '@afterCommand'
+  return [pattern, 'command.common.webgal', nextRule]
+})
+
+// #endregion
+
+monaco.languages.setMonarchTokensProvider('webgalscript', {
+  commands: commandStringList,
+  tokenizer: {
+    root: [
+      ...commandRuleList,
+
+      // 匹配整行, 其中如果匹配到命令字符串则标记为命令, 否则进入 say 状态重新解析
+      [/^.+$/, {
+        cases: {
+          '@commands': { token: 'command.common.webgal' },
+          '@default': { token: '@rematch', next: '@say' },
+        },
+      }],
+    ],
+    comment: [
+      [/.*$/, 'line.comment.webgal', '@root'],
+    ],
+    // #region say
+    say: [
+      // 匹配行首到冒号前的内容(其中不能包括未转义的英文分号), 认为是角色名
+      [/^(\\;|[^;])*?(?=:)/, 'character.say.webgal', '@afterCharacter'],
+      // 否则认为此句是无角色名的说话内容, 直接进入 sayContent 状态
+      [/./, '@rematch', '@sayContent'],
+    ],
+    afterCharacter: [
+      [/:$/, 'split.common.webgal', '@root'],
+      [/:/, 'split.common.webgal', '@sayContent'],
+    ],
+    sayContent: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/\{$/, '', '@root'],
+      [/\{/, '', '@sayContentVariable'],
+      [/\[$/, '', '@root'],
+      [/\[/, '', '@sayContentEnhanceString'],
+      [/\\\|$/, 'string.escape', '@root'],
+      [/\\\|/, 'string.escape'],
+      [/\|$/, 'split.common.webgal', '@root'],
+      [/\|/, 'split.common.webgal'],
+      [/.$/, 'content.say.webgal', '@root'],
+      [/./, 'content.say.webgal'],
+    ],
+    sayContentVariable: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/\}$/, '', '@root'],
+      [/\}/, '', '@pop'],
+      [/.$/, 'name.variable.webgal', '@root'],
+      [/./, 'name.variable.webgal'],
+    ],
+    sayContentEnhanceString: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/\]\($/, '', '@root'],
+      [/\]\(/, '', '@sayContentEnhanceAttribute'],
+      [/\]/, '', '@sayContent'],
+      [/.$/, 'string.enhance.say.webgal', '@root'],
+      [/./, 'string.enhance.say.webgal'],
+    ],
+    sayContentEnhanceAttribute: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/\)$/, '', '@root'],
+      [/\)/, '', '@sayContent'],
+      [/(style|style-alltext|ruby|tips)(=)$/, [
+        { token: 'key.enhance.say.webgal' },
+        { token: 'split.enhance.say.webgal', next: '@root' },
+      ]],
+      [/(style|style-alltext|ruby|tips)(=)/, [
+        { token: 'key.enhance.say.webgal' },
+        { token: 'split.enhance.say.webgal', next: '@sayContentEnhanceValue' },
+      ]],
+      [/./, '@rematch', '@sayContentEnhanceValue'],
+    ],
+    sayContentEnhanceValue: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/\)$/, '', '@root'],
+      [/\)/, '', '@sayContent'],
+      [/ $/, '', '@root'],
+      [/ /, '', '@sayContentEnhanceAttribute'],
+      [/.$/, 'value.enhance.say.webgal', '@root'],
+      [/./, 'value.enhance.say.webgal'],
+    ],
+    // #endregion
+    // #region intro
+    afterIntro: [
+      ...commentRule,
+      [/:$/, 'split.common.webgal', '@root'],
+      [/:/, 'split.common.webgal', '@introContent'],
+    ],
+    introContent: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/\\\|$/, 'string.escape', '@root'],
+      [/\\\|/, 'string.escape'],
+      [/\|$/, 'split.common.webgal', '@root'],
+      [/\|/, 'split.common.webgal'],
+    ],
+    // #endregion
+    // #region choose
+    afterChoose: [
+      ...commentRule,
+      [/:$/, 'split.common.webgal', '@root'],
+      [/:/, 'split.common.webgal', '@chooseContent'],
+    ],
+    chooseContent: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/[^|:]*?->/, '@rematch', '@chooseCondition'],
+      [/./, '@rematch', '@chooseString'],
+    ],
+    chooseCondition: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/->$/, 'split.choose.webgal', '@root'],
+      [/->/, 'split.choose.webgal', '@chooseString'],
+      [/\($/, '', '@root'],
+      [/\(/, '', '@chooseShowCondition'],
+      [/\[$/, '', '@root'],
+      [/\[/, '', '@chooseEnableCondition'],
+      [/.$/, 'invalid', '@root'],
+      [/./, 'invalid'],
+    ],
+    chooseShowCondition: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/->$/, 'split.choose.webgal', '@root'],
+      [/->/, 'split.choose.webgal', '@chooseString'],
+      [/\)$/, '', '@root'],
+      [/\)/, '', '@chooseCondition'],
+      [/.$/, 'show.choose.webgal', '@root'],
+      [/./, 'show.choose.webgal'],
+    ],
+    chooseEnableCondition: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/->$/, 'split.choose.webgal', '@root'],
+      [/->/, 'split.choose.webgal', '@chooseString'],
+      [/\]$/, '', '@root'],
+      [/\]/, '', '@chooseCondition'],
+      [/.$/, 'enable.choose.webgal', '@root'],
+      [/./, 'enable.choose.webgal'],
+    ],
+    chooseString: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/\\:$/, 'string.escape', '@root'],
+      [/\\:/, 'string.escape'],
+      [/:$/, 'split.choose.webgal', '@root'],
+      [/:/, 'split.choose.webgal', '@chooseDestination'],
+      [/\\\|$/, 'string.escape', '@root'],
+      [/\\\|/, 'string.escape'],
+      [/\|$/, 'split.common.webgal', '@root'],
+      [/\|/, 'split.common.webgal', '@chooseContent'],
+      [/.$/, 'string.choose.webgal', '@root'],
+      [/./, 'string.choose.webgal'],
+    ],
+    chooseDestination: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/\\\|$/, 'string.escape', '@root'],
+      [/\\\|/, 'string.escape'],
+      [/\|$/, 'split.common.webgal', '@root'],
+      [/\|/, 'split.common.webgal', '@chooseContent'],
+      [/.$/, 'default', '@root'],
+      [/./, 'default'],
+    ],
+    // #endregion
+    // #region setVar
+    afterSetVar: [
+      ...commentRule,
+      [/:$/, 'split.common.webgal', '@root'],
+      [/:/, 'split.common.webgal', '@setVarContent'],
+    ],
+    setVarContent: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/=$/, 'split.variable.webgal', '@root'],
+      [/=/, 'split.variable.webgal', '@setVarExpression'],
+      [/.$/, 'name.variable.webgal', '@root'],
+      [/./, 'name.variable.webgal'],
+    ],
+    setVarExpression: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/.$/, 'expression.variable.webgal', '@root'],
+      [/./, 'expression.variable.webgal'],
+    ],
+    // #endregion
+    // #region applyStyle
+    afterApplyStyle: [
+      ...commentRule,
+      [/:$/, 'split.common.webgal', '@root'],
+      [/:/, 'split.common.webgal', '@applyStyleContent'],
+    ],
+    applyStyleContent: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/->$/, 'split.applyStyle.webgal', '@root'],
+      [/->/, 'split.applyStyle.webgal', '@applyStyleTarget'],
+      [/.$/, 'source.applyStyle.webgal', '@root'],
+      [/./, 'source.applyStyle.webgal'],
+    ],
+    applyStyleTarget: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/,$/, 'split.applyStyle.webgal', '@root'],
+      [/,/, 'split.applyStyle.webgal', '@applyStyleContent'],
+      [/.$/, 'target.applyStyle.webgal', '@root'],
+      [/./, 'target.applyStyle.webgal'],
+    ],
+    // #endregion
+    // #region setTransform and setTempAnimation
+    afterSetTransform: [
+      ...commentRule,
+      [/:$/, 'split.common.webgal', '@root'],
+      [/:/, 'split.common.webgal', '@jsonPart'],
+    ],
+    afterSetTempAnimation: [
+      ...commentRule,
+      [/:$/, 'split.common.webgal', '@root'],
+      [/:/, 'split.common.webgal', '@jsonPart'],
+    ],
+    // #endregion
+    // #region 命令内容默认规则
+    afterCommand: [
+      ...commentRule,
+      [/:$/, 'split.common.webgal', '@root'],
+      [/:/, 'split.common.webgal', '@commandContent'],
+    ],
+    commandContent: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/.$/, 'default', '@root'],
+      [/./, 'default'],
+    ],
+    // #endregion
+    // #region 参数
+    argumentKey: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/(transform|blink|focus)(=)$/, [
+        { token: 'key.argument.common.webgal' },
+        { token: 'split.common.webgal', next: '@root' },
+      ]],
+      [/(transform|blink|focus)(=)/, [
+        { token: 'key.argument.common.webgal' },
+        { token: 'split.common.webgal', next: '@jsonPart' },
+      ]],
+      [/=$/, 'split.common.webgal', '@root'],
+      [/=/, 'split.common.webgal', '@argumentValue'],
+      [/.$/, 'key.argument.common.webgal', '@root'],
+      [/./, 'key.argument.common.webgal'],
+    ],
+    argumentValue: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/\{$/, '', '@root'],
+      [/\{/, '', '@argumentValueVariable'],
+      [/.$/, 'value.argument.common.webgal', '@root'],
+      [/./, 'value.argument.common.webgal'],
+    ],
+    argumentValueVariable: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/\}$/, '', '@root'],
+      [/\}/, '', '@argumentValue'],
+      [/.$/, 'name.variable.webgal', '@root'],
+      [/./, 'name.variable.webgal'],
+    ],
+    // #endregion
+    // #region 其他
+    jsonPart: [
+      ...commentRule,
+      ...argumentKeyRule,
+      // 匹配属性键
+      [/(\{|,\s*)("[A-Za-z_][0-9A-Za-z_]*")(\s*:)/, ['split.json.webgal', 'key.json.webgal', 'split.json.webgal']],
+
+      // 匹配到字符串
+      [/"[^"]*"\s*(?=,$)/, 'value.json.webgal', '@root'],
+      [/"[^"]*"\s*(?=,|\})/, 'value.json.webgal'],
+
+      // 匹配数字
+      [/[-+]?\d*\.?\d+([eE][-+]?\d+)?$/, 'value.json.webgal', '@root'],
+      [/[-+]?\d*\.?\d+([eE][-+]?\d+)?/, 'value.json.webgal'],
+      [/[-+]?\d+$/, 'value.json.webgal', '@root'],
+      [/[-+]?\d+/, 'value.json.webgal'],
+
+      // 匹配布尔值和 Null
+      [/\b(true|false|null)\b$/, 'value.json.webgal', '@root'],
+      [/\b(true|false|null)\b/, 'value.json.webgal'],
+
+      [/\}\s*(,)\s*(?=\{)/, 'split.json.webgal'],
+
+      [/.$/, 'invalid', '@root'],
+      [/./, 'invalid'],
+    ],
+    // #endregion
+  },
+})
+
+// #endregion
 
 /**
  * 检查光标是否在注释内
