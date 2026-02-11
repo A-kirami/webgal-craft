@@ -131,23 +131,30 @@ function syncScene() {
   void debugCommander.syncScene(state.path, position.lineNumber, currentLineText)
 }
 
-async function saveTextFile(newText: string) {
-  try {
-    const fileState = getOrCreateFileState(state.path)
-    const currentVersionId = editor?.getModel()?.getAlternativeVersionId()
+interface SaveSnapshot {
+  path: string
+  content: string
+  versionId: number
+}
 
-    if (currentVersionId && fileState.lastSavedVersionId === currentVersionId) {
+async function saveTextFile(snapshot: SaveSnapshot) {
+  try {
+    const fileState = getOrCreateFileState(snapshot.path)
+
+    if (fileState.lastSavedVersionId === snapshot.versionId) {
       return
     }
 
-    await gameFs.writeFile(state.path, newText)
+    await gameFs.writeFile(snapshot.path, snapshot.content)
 
-    if (currentVersionId) {
-      fileState.lastSavedVersionId = currentVersionId
-    }
-
+    fileState.lastSavedVersionId = snapshot.versionId
     fileState.lastSavedTime = new Date()
-    state.isDirty = false
+
+    // 仅在保存期间内容未被修改时才清除 isDirty，防止覆盖用户新输入的脏标记
+    const latestVersionId = editor?.getModel()?.getAlternativeVersionId()
+    if (snapshot.path === state.path && latestVersionId === snapshot.versionId) {
+      state.isDirty = false
+    }
 
     syncScene()
   } catch (error) {
@@ -325,8 +332,9 @@ function shouldFocusEditor(context: {
 
 async function manualSave() {
   const value = editor?.getValue()
-  if (value !== undefined) {
-    await saveTextFile(value)
+  const versionId = editor?.getModel()?.getAlternativeVersionId()
+  if (value !== undefined && versionId !== undefined) {
+    await saveTextFile({ path: state.path, content: value, versionId })
   }
 }
 
@@ -341,8 +349,8 @@ function handleContentChange() {
   if (value !== undefined) {
     state.textContent = value
 
-    if (editSettings.autoSave) {
-      debouncedSaveTextFile(value)
+    if (editSettings.autoSave && currentVersionId) {
+      debouncedSaveTextFile({ path: state.path, content: value, versionId: currentVersionId })
     }
   }
 }
