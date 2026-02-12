@@ -59,6 +59,7 @@
     "tailwind-merge": "^3.4.0",
     "vee-validate": "^5.0.0-beta.0",
     "vue": "^3.5.27",
+    "vue-color": "^3.3.3",
     "vue-draggable-plus": "^0.6.1",
     "vue-i18n": "^11.2.8",
     "vue-inline-svg": "^4.0.1",
