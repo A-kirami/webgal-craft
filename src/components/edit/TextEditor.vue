@@ -2,7 +2,7 @@
 import { LRUCache } from 'lru-cache'
 import * as monaco from 'monaco-editor'
 
-import { BASE_EDITOR_OPTIONS, configureWebgalSyntaxHighlighting, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
+import { BASE_EDITOR_OPTIONS, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
 
 interface LanguageConfig {
   name: string
@@ -423,8 +423,6 @@ function createEditor() {
   editor.onDidScrollChange(handleScrollChange)
   editor.onMouseDown(handleEditorClick)
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, manualSave)
-
-  void configureWebgalSyntaxHighlighting(editor)
 
   restoreEditorViewState(state.path, { isCreating: true })
 
