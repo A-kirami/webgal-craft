@@ -129,18 +129,64 @@ monaco.languages.registerCompletionItemProvider('webgalscript', {
 
 // #region 准备工作
 
+/**
+ * 构建行尾匹配规则, 例如
+ * [/./, token, nextState] 变为
+ * [[/.$/, token, '@root'], [/./, token, nextState]]
+ */
+function buildEolRule(regExp: RegExp, token: string, nextState?: string): [
+  [RegExp, string, string],
+  [RegExp, string, string] | [RegExp, string],
+] {
+  const regExpWithEol = new RegExp(`${regExp.source}$`)
+
+  const rule: [RegExp, string, string] | [RegExp, string] = nextState
+    ? [regExp, token, nextState]
+    : [regExp, token]
+
+  return [[regExpWithEol, token, '@root'], rule]
+}
+
+type MonarchMatchGroup = {
+  token: string
+} | {
+  token: string
+  next: string
+}
+
+/**
+ * 构建行尾匹配规则, 是 buildEolRule 的组匹配形式, 例如
+ * [/./, [{ token }]] 变为
+ * [[/.$/, [{ token, next: '@root' }]], [/./, [{ token }]]]
+ */
+function buildEolGroupRule(regExp: RegExp, matchArray: MonarchMatchGroup[]): [
+  [RegExp, MonarchMatchGroup[]],
+  [RegExp, MonarchMatchGroup[]],
+] {
+  const regExpWithEol = new RegExp(`${regExp.source}$`)
+
+  const matchArrayWithEol: MonarchMatchGroup[] = matchArray.map((match, index) => {
+    if (index === matchArray.length - 1) {
+      return { token: match.token, next: '@root' }
+    } else {
+      return 'next' in match
+        ? { token: match.token, next: match.next }
+        : { token: match.token }
+    }
+  })
+
+  return [[regExpWithEol, matchArrayWithEol], [regExp, matchArray]]
+}
+
 // 匹配到注释符号
 const commentRule: ([RegExp, string, string] | [RegExp, string])[] = [
-  [/\\;$/, 'string.escape', '@root'],
-  [/\\;/, 'string.escape'],
-  [/;$/, 'line.comment.webgal', '@root'],
-  [/;/, 'line.comment.webgal', '@comment'],
+  ...buildEolRule(/\\;/, 'string.escape'),
+  ...buildEolRule(/;/, 'line.comment.webgal', '@comment'),
 ]
 
 // 匹配到参数符号
 const argumentKeyRule: ([RegExp, string, string] | [RegExp, string])[] = [
-  [/ -$/, 'split.common.webgal', '@root'],
-  [/ -/, 'split.common.webgal', '@argumentKey'],
+  ...buildEolRule(/ -/, 'split.common.webgal', '@argumentKey'),
 ]
 
 // 提取命令字符串列表
@@ -165,6 +211,14 @@ const commandRuleList: [RegExp | string, string, string][] = SCRIPT_CONFIG.map((
   return [pattern, 'command.common.webgal', nextRule]
 })
 
+// 构建匹配完 commandType 后的规则
+function buildAfterCommandRule(nextState: string) {
+  return [
+    ...commentRule,
+    ...buildEolRule(/:/, 'split.common.webgal', nextState),
+  ]
+}
+
 // #endregion
 
 monaco.languages.setMonarchTokensProvider('webgalscript', {
@@ -187,92 +241,69 @@ monaco.languages.setMonarchTokensProvider('webgalscript', {
     // #region say
     say: [
       // 匹配行首到冒号前的内容(其中不能包括未转义的英文分号), 认为是角色名
-      [/^(\\;|[^;])*?(?=:)/, 'character.say.webgal', '@afterCharacter'],
+      [/^(\\;|[^;])*?(?=:)/, '@rematch', '@character'],
       // 否则认为此句是无角色名的说话内容, 直接进入 sayContent 状态
       [/./, '@rematch', '@sayContent'],
     ],
-    afterCharacter: [
-      [/:$/, 'split.common.webgal', '@root'],
-      [/:/, 'split.common.webgal', '@sayContent'],
+    character: [
+      ...commentRule,
+      ...buildEolRule(/:/, 'split.common.webgal', '@sayContent'),
+      ...buildEolRule(/\{/, '', '@characterVariableInterpolation'),
+      ...buildEolRule(/./, 'character.say.webgal'),
     ],
+    // 角色名中的变量插值比较特殊,不能直接套用 variableInterpolation
+    characterVariableInterpolation: [
+      ...commentRule,
+      ...buildEolRule(/:/, 'split.common.webgal', '@sayContent'),
+      ...buildEolRule(/\}/, '', '@pop'),
+      ...buildEolRule(/./, 'name.variable.webgal'),
+    ],
+    afterCharacter: buildAfterCommandRule('@sayContent'),
     sayContent: [
       ...commentRule,
       ...argumentKeyRule,
-      [/\{$/, '', '@root'],
-      [/\{/, '', '@sayContentVariable'],
-      [/\[$/, '', '@root'],
-      [/\[/, '', '@sayContentEnhanceString'],
-      [/\\\|$/, 'string.escape', '@root'],
-      [/\\\|/, 'string.escape'],
-      [/\|$/, 'split.common.webgal', '@root'],
-      [/\|/, 'split.common.webgal'],
-      [/.$/, 'content.say.webgal', '@root'],
-      [/./, 'content.say.webgal'],
-    ],
-    sayContentVariable: [
-      ...commentRule,
-      ...argumentKeyRule,
-      [/\}$/, '', '@root'],
-      [/\}/, '', '@pop'],
-      [/.$/, 'name.variable.webgal', '@root'],
-      [/./, 'name.variable.webgal'],
+      ...buildEolRule(/\{/, '', '@variableInterpolation'),
+      ...buildEolRule(/\[/, '', '@sayContentEnhanceString'),
+      ...buildEolRule(/\\\|/, 'string.escape'),
+      ...buildEolRule(/\|/, 'split.common.webgal'),
+      ...buildEolRule(/./, 'content.say.webgal'),
     ],
     sayContentEnhanceString: [
       ...commentRule,
       ...argumentKeyRule,
-      [/\]\($/, '', '@root'],
-      [/\]\(/, '', '@sayContentEnhanceAttribute'],
-      [/\]/, '', '@sayContent'],
-      [/.$/, 'string.enhance.say.webgal', '@root'],
-      [/./, 'string.enhance.say.webgal'],
+      ...buildEolRule(/\]\(/, '', '@sayContentEnhanceAttribute'),
+      ...buildEolRule(/\]/, '', '@sayContent'),
+      ...buildEolRule(/./, 'string.enhance.say.webgal'),
     ],
     sayContentEnhanceAttribute: [
       ...commentRule,
       ...argumentKeyRule,
-      [/\)$/, '', '@root'],
-      [/\)/, '', '@sayContent'],
-      [/(style|style-alltext|ruby|tips)(=)$/, [
-        { token: 'key.enhance.say.webgal' },
-        { token: 'split.enhance.say.webgal', next: '@root' },
-      ]],
-      [/(style|style-alltext|ruby|tips)(=)/, [
+      ...buildEolRule(/\)/, '', '@sayContent'),
+      ...buildEolGroupRule(/(style|style-alltext|ruby|tips)(=)/, [
         { token: 'key.enhance.say.webgal' },
         { token: 'split.enhance.say.webgal', next: '@sayContentEnhanceValue' },
-      ]],
+      ]),
       [/./, '@rematch', '@sayContentEnhanceValue'],
     ],
     sayContentEnhanceValue: [
       ...commentRule,
       ...argumentKeyRule,
-      [/\)$/, '', '@root'],
-      [/\)/, '', '@sayContent'],
-      [/ $/, '', '@root'],
-      [/ /, '', '@sayContentEnhanceAttribute'],
-      [/.$/, 'value.enhance.say.webgal', '@root'],
-      [/./, 'value.enhance.say.webgal'],
+      ...buildEolRule(/\)/, '', '@sayContent'),
+      ...buildEolRule(/ /, '', '@sayContentEnhanceAttribute'),
+      ...buildEolRule(/./, 'value.enhance.say.webgal'),
     ],
     // #endregion
     // #region intro
-    afterIntro: [
-      ...commentRule,
-      [/:$/, 'split.common.webgal', '@root'],
-      [/:/, 'split.common.webgal', '@introContent'],
-    ],
+    afterIntro: buildAfterCommandRule('@introContent'),
     introContent: [
       ...commentRule,
       ...argumentKeyRule,
-      [/\\\|$/, 'string.escape', '@root'],
-      [/\\\|/, 'string.escape'],
-      [/\|$/, 'split.common.webgal', '@root'],
-      [/\|/, 'split.common.webgal'],
+      ...buildEolRule(/\\\|/, 'string.escape'),
+      ...buildEolRule(/\|/, 'split.common.webgal'),
     ],
     // #endregion
     // #region choose
-    afterChoose: [
-      ...commentRule,
-      [/:$/, 'split.common.webgal', '@root'],
-      [/:/, 'split.common.webgal', '@chooseContent'],
-    ],
+    afterChoose: buildAfterCommandRule('@chooseContent'),
     chooseContent: [
       ...commentRule,
       ...argumentKeyRule,
@@ -282,188 +313,134 @@ monaco.languages.setMonarchTokensProvider('webgalscript', {
     chooseCondition: [
       ...commentRule,
       ...argumentKeyRule,
-      [/->$/, 'split.choose.webgal', '@root'],
-      [/->/, 'split.choose.webgal', '@chooseString'],
-      [/\($/, '', '@root'],
-      [/\(/, '', '@chooseShowCondition'],
-      [/\[$/, '', '@root'],
-      [/\[/, '', '@chooseEnableCondition'],
-      [/.$/, 'invalid', '@root'],
-      [/./, 'invalid'],
+      ...buildEolRule(/->/, 'split.choose.webgal', '@chooseString'),
+      ...buildEolRule(/\)/, '', '@chooseShowCondition'),
+      ...buildEolRule(/\(/, '', '@chooseShowCondition'),
+      ...buildEolRule(/\[/, '', '@chooseEnableCondition'),
+      ...buildEolRule(/./, 'invalid'),
     ],
     chooseShowCondition: [
       ...commentRule,
       ...argumentKeyRule,
-      [/->$/, 'split.choose.webgal', '@root'],
-      [/->/, 'split.choose.webgal', '@chooseString'],
-      [/\)$/, '', '@root'],
-      [/\)/, '', '@chooseCondition'],
-      [/.$/, 'show.choose.webgal', '@root'],
-      [/./, 'show.choose.webgal'],
+      ...buildEolRule(/->/, 'split.choose.webgal', '@chooseString'),
+      ...buildEolRule(/\)/, '', '@chooseCondition'),
+      ...buildEolRule(/./, 'show.choose.webgal'),
     ],
     chooseEnableCondition: [
       ...commentRule,
       ...argumentKeyRule,
-      [/->$/, 'split.choose.webgal', '@root'],
-      [/->/, 'split.choose.webgal', '@chooseString'],
-      [/\]$/, '', '@root'],
-      [/\]/, '', '@chooseCondition'],
-      [/.$/, 'enable.choose.webgal', '@root'],
-      [/./, 'enable.choose.webgal'],
+      ...buildEolRule(/->/, 'split.choose.webgal', '@chooseString'),
+      ...buildEolRule(/\]/, '', '@chooseCondition'),
+      ...buildEolRule(/./, 'enable.choose.webgal'),
     ],
     chooseString: [
       ...commentRule,
       ...argumentKeyRule,
-      [/\\:$/, 'string.escape', '@root'],
-      [/\\:/, 'string.escape'],
-      [/:$/, 'split.choose.webgal', '@root'],
-      [/:/, 'split.choose.webgal', '@chooseDestination'],
-      [/\\\|$/, 'string.escape', '@root'],
-      [/\\\|/, 'string.escape'],
-      [/\|$/, 'split.common.webgal', '@root'],
-      [/\|/, 'split.common.webgal', '@chooseContent'],
-      [/.$/, 'string.choose.webgal', '@root'],
-      [/./, 'string.choose.webgal'],
+      ...buildEolRule(/\\:/, 'string.escape'),
+      ...buildEolRule(/:/, 'split.choose.webgal', '@chooseDestination'),
+      ...buildEolRule(/\\\|/, 'string.escape'),
+      ...buildEolRule(/\|/, 'split.common.webgal', '@chooseContent'),
+      ...buildEolRule(/./, 'string.choose.webgal'),
     ],
     chooseDestination: [
       ...commentRule,
       ...argumentKeyRule,
-      [/\\\|$/, 'string.escape', '@root'],
-      [/\\\|/, 'string.escape'],
-      [/\|$/, 'split.common.webgal', '@root'],
-      [/\|/, 'split.common.webgal', '@chooseContent'],
-      [/.$/, 'default', '@root'],
-      [/./, 'default'],
+      ...buildEolRule(/\\\|/, 'string.escape'),
+      ...buildEolRule(/\|/, 'split.common.webgal', '@chooseContent'),
+      ...buildEolRule(/./, 'default'),
     ],
     // #endregion
     // #region setVar
-    afterSetVar: [
-      ...commentRule,
-      [/:$/, 'split.common.webgal', '@root'],
-      [/:/, 'split.common.webgal', '@setVarContent'],
-    ],
+    afterSetVar: buildAfterCommandRule('@setVarContent'),
     setVarContent: [
       ...commentRule,
       ...argumentKeyRule,
-      [/=$/, 'split.variable.webgal', '@root'],
-      [/=/, 'split.variable.webgal', '@setVarExpression'],
-      [/.$/, 'name.variable.webgal', '@root'],
-      [/./, 'name.variable.webgal'],
+      ...buildEolRule(/=/, 'split.variable.webgal', '@setVarExpression'),
+      ...buildEolRule(/./, 'name.variable.webgal'),
     ],
     setVarExpression: [
       ...commentRule,
       ...argumentKeyRule,
-      [/.$/, 'expression.variable.webgal', '@root'],
-      [/./, 'expression.variable.webgal'],
+      ...buildEolRule(/./, 'expression.variable.webgal'),
     ],
     // #endregion
     // #region applyStyle
-    afterApplyStyle: [
-      ...commentRule,
-      [/:$/, 'split.common.webgal', '@root'],
-      [/:/, 'split.common.webgal', '@applyStyleContent'],
-    ],
+    afterApplyStyle: buildAfterCommandRule('@applyStyleContent'),
     applyStyleContent: [
       ...commentRule,
       ...argumentKeyRule,
-      [/->$/, 'split.applyStyle.webgal', '@root'],
-      [/->/, 'split.applyStyle.webgal', '@applyStyleTarget'],
-      [/.$/, 'source.applyStyle.webgal', '@root'],
-      [/./, 'source.applyStyle.webgal'],
+      ...buildEolRule(/->/, 'split.applyStyle.webgal', '@applyStyleTarget'),
+      ...buildEolRule(/./, 'source.applyStyle.webgal'),
     ],
     applyStyleTarget: [
       ...commentRule,
       ...argumentKeyRule,
-      [/,$/, 'split.applyStyle.webgal', '@root'],
-      [/,/, 'split.applyStyle.webgal', '@applyStyleContent'],
-      [/.$/, 'target.applyStyle.webgal', '@root'],
-      [/./, 'target.applyStyle.webgal'],
+      ...buildEolRule(/,/, 'split.applyStyle.webgal', '@applyStyleContent'),
+      ...buildEolRule(/./, 'target.applyStyle.webgal'),
     ],
     // #endregion
     // #region setTransform and setTempAnimation
-    afterSetTransform: [
-      ...commentRule,
-      [/:$/, 'split.common.webgal', '@root'],
-      [/:/, 'split.common.webgal', '@jsonPart'],
-    ],
-    afterSetTempAnimation: [
-      ...commentRule,
-      [/:$/, 'split.common.webgal', '@root'],
-      [/:/, 'split.common.webgal', '@jsonPart'],
-    ],
+    afterSetTransform: buildAfterCommandRule('@jsonPart'),
+    afterSetTempAnimation: buildAfterCommandRule('@jsonPart'),
     // #endregion
     // #region 命令内容默认规则
-    afterCommand: [
-      ...commentRule,
-      [/:$/, 'split.common.webgal', '@root'],
-      [/:/, 'split.common.webgal', '@commandContent'],
-    ],
+    afterCommand: buildAfterCommandRule('@commandContent'),
     commandContent: [
       ...commentRule,
       ...argumentKeyRule,
-      [/.$/, 'default', '@root'],
-      [/./, 'default'],
+      ...buildEolRule(/./, 'default'),
     ],
     // #endregion
     // #region 参数
     argumentKey: [
       ...commentRule,
       ...argumentKeyRule,
-      [/(transform|blink|focus)(=)$/, [
-        { token: 'key.argument.common.webgal' },
-        { token: 'split.common.webgal', next: '@root' },
-      ]],
-      [/(transform|blink|focus)(=)/, [
+      ...buildEolGroupRule(/(transform|blink|focus)(=)/, [
         { token: 'key.argument.common.webgal' },
         { token: 'split.common.webgal', next: '@jsonPart' },
-      ]],
-      [/=$/, 'split.common.webgal', '@root'],
-      [/=/, 'split.common.webgal', '@argumentValue'],
-      [/.$/, 'key.argument.common.webgal', '@root'],
-      [/./, 'key.argument.common.webgal'],
+      ]),
+      ...buildEolRule(/=/, 'split.common.webgal', '@argumentValue'),
+      ...buildEolRule(/./, 'key.argument.common.webgal'),
     ],
     argumentValue: [
       ...commentRule,
       ...argumentKeyRule,
-      [/\{$/, '', '@root'],
-      [/\{/, '', '@argumentValueVariable'],
-      [/.$/, 'value.argument.common.webgal', '@root'],
-      [/./, 'value.argument.common.webgal'],
-    ],
-    argumentValueVariable: [
-      ...commentRule,
-      ...argumentKeyRule,
-      [/\}$/, '', '@root'],
-      [/\}/, '', '@argumentValue'],
-      [/.$/, 'name.variable.webgal', '@root'],
-      [/./, 'name.variable.webgal'],
+      ...buildEolRule(/\{/, '', '@variableInterpolation'),
+      ...buildEolRule(/./, 'value.argument.common.webgal'),
     ],
     // #endregion
     // #region 其他
+    variableInterpolation: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/\}/, '', '@pop'),
+      ...buildEolRule(/./, 'name.variable.webgal'),
+    ],
     jsonPart: [
       ...commentRule,
       ...argumentKeyRule,
       // 匹配属性键
-      [/(\{|,\s*)("[A-Za-z_][0-9A-Za-z_]*")(\s*:)/, ['split.json.webgal', 'key.json.webgal', 'split.json.webgal']],
+      ...buildEolGroupRule(/(\{|,\s*)("[A-Za-z_][0-9A-Za-z_]*")(\s*:)/, [
+        { token: 'split.json.webgal' },
+        { token: 'key.json.webgal' },
+        { token: 'split.json.webgal' },
+      ]),
 
       // 匹配到字符串
-      [/"[^"]*"\s*(?=,$)/, 'value.json.webgal', '@root'],
-      [/"[^"]*"\s*(?=,|\})/, 'value.json.webgal'],
+      ...buildEolRule(/"[^"]*"\s*(?=,|\})/, 'value.json.webgal'),
 
       // 匹配数字
-      [/[-+]?\d*\.?\d+([eE][-+]?\d+)?$/, 'value.json.webgal', '@root'],
-      [/[-+]?\d*\.?\d+([eE][-+]?\d+)?/, 'value.json.webgal'],
-      [/[-+]?\d+$/, 'value.json.webgal', '@root'],
-      [/[-+]?\d+/, 'value.json.webgal'],
+      ...buildEolRule(/[-+]?\d*\.?\d+([eE][-+]?\d+)?/, 'value.json.webgal'),
+      ...buildEolRule(/[-+]?\d+/, 'value.json.webgal'),
 
       // 匹配布尔值和 Null
-      [/\b(true|false|null)\b$/, 'value.json.webgal', '@root'],
-      [/\b(true|false|null)\b/, 'value.json.webgal'],
+      ...buildEolRule(/\b(true|false|null)\b/, 'value.json.webgal'),
 
-      [/\}\s*(,)\s*(?=\{)/, 'split.json.webgal'],
+      // 分隔符
+      ...buildEolRule(/}\s*(,)\s*(?=\{)/, 'split.json.webgal'),
 
-      [/.$/, 'invalid', '@root'],
-      [/./, 'invalid'],
+      // 非法内容
+      ...buildEolRule(/./, 'invalid'),
     ],
     // #endregion
   },
