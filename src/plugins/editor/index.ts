@@ -300,6 +300,7 @@ monaco.languages.setMonarchTokensProvider('webgalscript', {
       ...argumentKeyRule,
       ...buildEolRule(/\\\|/, 'string.escape'),
       ...buildEolRule(/\|/, 'split.common.webgal'),
+      ...buildEolRule(/./, 'default'),
     ],
     // #endregion
     // #region choose
