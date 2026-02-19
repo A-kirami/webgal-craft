@@ -2,18 +2,15 @@ import { join } from '@tauri-apps/api/path'
 import { readDir } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
 import * as monaco from 'monaco-editor'
-import { wireTmGrammars } from 'monaco-editor-textmate'
-import { Registry } from 'monaco-textmate'
+import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType, IScene } from 'webgal-parser/src/interface/sceneInterface'
 
 import { getArgKeyCompletions } from './completion/webgal-argument-keys'
 import { getCommandCompletions } from './completion/webgal-commands'
-import webgalTextmate from './grammars/webgal.tmLanguage.json'
 import darkTheme from './themes/webgal-dark.json'
 import lightTheme from './themes/webgal-light.json'
 
 import './monaco'
-import './onigasm'
 
 // 常量定义
 const TEMP_SCENE_NAME = 'tempScene'
@@ -128,32 +125,329 @@ monaco.languages.registerCompletionItemProvider('webgalscript', {
   },
 })
 
-// 配置 WebGAL 脚本语法高亮
-export async function configureWebgalSyntaxHighlighting(
-  editor: monaco.editor.IStandaloneCodeEditor,
-) {
-  try {
-    const registry = new Registry({
-      getGrammarDefinition: async (scopeName) => {
-        if (scopeName === 'source.webgal') {
-          return {
-            format: 'json',
-            content: JSON.stringify(webgalTextmate),
-          }
-        }
-        return { format: 'json', content: '' }
-      },
-    })
+// #region 配置 WebGAL 脚本语法高亮
 
-    const grammars = new Map([['webgalscript', 'source.webgal']])
-    await registry.loadGrammar('source.webgal')
-    await wireTmGrammars(monaco, registry, grammars, editor)
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error(`配置 WebGAL 脚本语法高亮失败: ${errorMessage}`)
-    throw error
-  }
+// #region 准备工作
+
+/**
+ * 构建行尾匹配规则, 例如
+ * [/./, token, nextState] 变为
+ * [[/.$/, token, '@root'], [/./, token, nextState]]
+ */
+function buildEolRule(regExp: RegExp, token: string, nextState?: string): [
+  [RegExp, string, string],
+  [RegExp, string, string] | [RegExp, string],
+] {
+  const regExpWithEol = new RegExp(`${regExp.source}$`)
+
+  const rule: [RegExp, string, string] | [RegExp, string] = nextState
+    ? [regExp, token, nextState]
+    : [regExp, token]
+
+  return [[regExpWithEol, token, '@root'], rule]
 }
+
+type MonarchMatchGroup = {
+  token: string
+} | {
+  token: string
+  next: string
+}
+
+/**
+ * 构建行尾匹配规则, 是 buildEolRule 的组匹配形式, 例如
+ * [/./, [{ token }]] 变为
+ * [[/.$/, [{ token, next: '@root' }]], [/./, [{ token }]]]
+ */
+function buildEolGroupRule(regExp: RegExp, matchArray: MonarchMatchGroup[]): [
+  [RegExp, MonarchMatchGroup[]],
+  [RegExp, MonarchMatchGroup[]],
+] {
+  const regExpWithEol = new RegExp(`${regExp.source}$`)
+
+  const matchArrayWithEol: MonarchMatchGroup[] = matchArray.map((match, index) => {
+    if (index === matchArray.length - 1) {
+      return { token: match.token, next: '@root' }
+    } else {
+      return 'next' in match
+        ? { token: match.token, next: match.next }
+        : { token: match.token }
+    }
+  })
+
+  return [[regExpWithEol, matchArrayWithEol], [regExp, matchArray]]
+}
+
+// 匹配到注释符号
+const commentRule: ([RegExp, string, string] | [RegExp, string])[] = [
+  ...buildEolRule(/\\;/, 'string.escape'),
+  ...buildEolRule(/;/, 'line.comment.webgal', '@comment'),
+]
+
+// 匹配到参数符号
+const argumentKeyRule: ([RegExp, string, string] | [RegExp, string])[] = [
+  ...buildEolRule(/ -/, 'split.common.webgal', '@argumentKey'),
+]
+
+// 提取命令字符串列表
+const commandStringList = SCRIPT_CONFIG.map(item => item.scriptString)
+
+// 部分命令内容的特殊高亮规则
+const commandNextRuleMap = new Map<commandType, string>([
+  [commandType.say, '@afterCharacter'],
+  [commandType.intro, '@afterIntro'],
+  [commandType.choose, '@afterChoose'],
+  [commandType.setVar, '@afterSetVar'],
+  [commandType.setTransform, '@afterSetTransform'],
+  [commandType.setTempAnimation, '@afterSetTempAnimation'],
+  [commandType.applyStyle, '@afterApplyStyle'],
+])
+
+// 形如 commandType: 或 commandType; 的命令匹配规则
+const commandRuleList: [RegExp | string, string, string][] = SCRIPT_CONFIG.map((config) => {
+  const pattern = new RegExp(`^${config.scriptString}(?=:|;)`)
+  // 寻找特定命令的内容高亮规则, 否则回退到默认规则
+  const nextRule = commandNextRuleMap.get(config.scriptType) || '@afterCommand'
+  return [pattern, 'command.common.webgal', nextRule]
+})
+
+// 构建匹配完 commandType 后的规则
+function buildAfterCommandRule(nextState: string) {
+  return [
+    ...commentRule,
+    ...buildEolRule(/:/, 'split.common.webgal', nextState),
+  ]
+}
+
+// #endregion
+
+monaco.languages.setMonarchTokensProvider('webgalscript', {
+  commands: commandStringList,
+  tokenizer: {
+    root: [
+      ...commandRuleList,
+
+      // 匹配整行, 其中如果匹配到命令字符串则标记为命令, 否则进入 say 状态重新解析
+      [/^.+$/, {
+        cases: {
+          '@commands': { token: 'command.common.webgal' },
+          '@default': { token: '@rematch', next: '@say' },
+        },
+      }],
+    ],
+    comment: [
+      [/.*$/, 'line.comment.webgal', '@root'],
+    ],
+    // #region say
+    say: [
+      // 匹配行首到冒号前的内容(其中不能包括未转义的英文分号), 认为是角色名
+      [/^(\\;|[^;])*?(?=:)/, '@rematch', '@character'],
+      // 否则认为此句是无角色名的说话内容, 直接进入 sayContent 状态
+      [/./, '@rematch', '@sayContent'],
+    ],
+    character: [
+      ...commentRule,
+      ...buildEolRule(/:/, 'split.common.webgal', '@sayContent'),
+      ...buildEolRule(/\{/, '', '@characterVariableInterpolation'),
+      ...buildEolRule(/./, 'character.say.webgal'),
+    ],
+    // 角色名中的变量插值比较特殊,不能直接套用 variableInterpolation
+    characterVariableInterpolation: [
+      ...commentRule,
+      ...buildEolRule(/:/, 'split.common.webgal', '@sayContent'),
+      ...buildEolRule(/\}/, '', '@pop'),
+      ...buildEolRule(/./, 'name.variable.webgal'),
+    ],
+    afterCharacter: buildAfterCommandRule('@sayContent'),
+    sayContent: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/\{/, '', '@variableInterpolation'),
+      ...buildEolRule(/\[/, '', '@sayContentEnhanceString'),
+      ...buildEolRule(/\\\|/, 'string.escape'),
+      ...buildEolRule(/\|/, 'split.common.webgal'),
+      ...buildEolRule(/./, 'content.say.webgal'),
+    ],
+    sayContentEnhanceString: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/\]\(/, '', '@sayContentEnhanceAttribute'),
+      ...buildEolRule(/\]/, '', '@sayContent'),
+      ...buildEolRule(/./, 'string.enhance.say.webgal'),
+    ],
+    sayContentEnhanceAttribute: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/\)/, '', '@sayContent'),
+      ...buildEolGroupRule(/(style|style-alltext|ruby|tips)(=)/, [
+        { token: 'key.enhance.say.webgal' },
+        { token: 'split.enhance.say.webgal', next: '@sayContentEnhanceValue' },
+      ]),
+      [/./, '@rematch', '@sayContentEnhanceValue'],
+    ],
+    sayContentEnhanceValue: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/\)/, '', '@sayContent'),
+      ...buildEolRule(/ /, '', '@sayContentEnhanceAttribute'),
+      ...buildEolRule(/./, 'value.enhance.say.webgal'),
+    ],
+    // #endregion
+    // #region intro
+    afterIntro: buildAfterCommandRule('@introContent'),
+    introContent: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/\\\|/, 'string.escape'),
+      ...buildEolRule(/\|/, 'split.common.webgal'),
+      ...buildEolRule(/./, 'default'),
+    ],
+    // #endregion
+    // #region choose
+    afterChoose: buildAfterCommandRule('@chooseContent'),
+    chooseContent: [
+      ...commentRule,
+      ...argumentKeyRule,
+      [/[^|:]*?->/, '@rematch', '@chooseCondition'],
+      [/./, '@rematch', '@chooseString'],
+    ],
+    chooseCondition: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/->/, 'split.choose.webgal', '@chooseString'),
+      ...buildEolRule(/\)/, '', '@chooseShowCondition'),
+      ...buildEolRule(/\(/, '', '@chooseShowCondition'),
+      ...buildEolRule(/\[/, '', '@chooseEnableCondition'),
+      ...buildEolRule(/./, 'invalid'),
+    ],
+    chooseShowCondition: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/->/, 'split.choose.webgal', '@chooseString'),
+      ...buildEolRule(/\)/, '', '@chooseCondition'),
+      ...buildEolRule(/./, 'show.choose.webgal'),
+    ],
+    chooseEnableCondition: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/->/, 'split.choose.webgal', '@chooseString'),
+      ...buildEolRule(/\]/, '', '@chooseCondition'),
+      ...buildEolRule(/./, 'enable.choose.webgal'),
+    ],
+    chooseString: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/\\:/, 'string.escape'),
+      ...buildEolRule(/:/, 'split.choose.webgal', '@chooseDestination'),
+      ...buildEolRule(/\\\|/, 'string.escape'),
+      ...buildEolRule(/\|/, 'split.common.webgal', '@chooseContent'),
+      ...buildEolRule(/./, 'string.choose.webgal'),
+    ],
+    chooseDestination: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/\\\|/, 'string.escape'),
+      ...buildEolRule(/\|/, 'split.common.webgal', '@chooseContent'),
+      ...buildEolRule(/./, 'default'),
+    ],
+    // #endregion
+    // #region setVar
+    afterSetVar: buildAfterCommandRule('@setVarContent'),
+    setVarContent: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/=/, 'split.variable.webgal', '@setVarExpression'),
+      ...buildEolRule(/./, 'name.variable.webgal'),
+    ],
+    setVarExpression: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/./, 'expression.variable.webgal'),
+    ],
+    // #endregion
+    // #region applyStyle
+    afterApplyStyle: buildAfterCommandRule('@applyStyleContent'),
+    applyStyleContent: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/->/, 'split.applyStyle.webgal', '@applyStyleTarget'),
+      ...buildEolRule(/./, 'source.applyStyle.webgal'),
+    ],
+    applyStyleTarget: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/,/, 'split.applyStyle.webgal', '@applyStyleContent'),
+      ...buildEolRule(/./, 'target.applyStyle.webgal'),
+    ],
+    // #endregion
+    // #region setTransform and setTempAnimation
+    afterSetTransform: buildAfterCommandRule('@jsonPart'),
+    afterSetTempAnimation: buildAfterCommandRule('@jsonPart'),
+    // #endregion
+    // #region 命令内容默认规则
+    afterCommand: buildAfterCommandRule('@commandContent'),
+    commandContent: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/./, 'default'),
+    ],
+    // #endregion
+    // #region 参数
+    argumentKey: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolGroupRule(/(transform|blink|focus)(=)/, [
+        { token: 'key.argument.common.webgal' },
+        { token: 'split.common.webgal', next: '@jsonPart' },
+      ]),
+      ...buildEolRule(/=/, 'split.common.webgal', '@argumentValue'),
+      ...buildEolRule(/./, 'key.argument.common.webgal'),
+    ],
+    argumentValue: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/\{/, '', '@variableInterpolation'),
+      ...buildEolRule(/./, 'value.argument.common.webgal'),
+    ],
+    // #endregion
+    // #region 其他
+    variableInterpolation: [
+      ...commentRule,
+      ...argumentKeyRule,
+      ...buildEolRule(/\}/, '', '@pop'),
+      ...buildEolRule(/./, 'name.variable.webgal'),
+    ],
+    jsonPart: [
+      ...commentRule,
+      ...argumentKeyRule,
+      // 匹配属性键
+      ...buildEolGroupRule(/(\{|,\s*)("[A-Za-z_][0-9A-Za-z_]*")(\s*:)/, [
+        { token: 'split.json.webgal' },
+        { token: 'key.json.webgal' },
+        { token: 'split.json.webgal' },
+      ]),
+
+      // 匹配到字符串
+      ...buildEolRule(/"[^"]*"\s*(?=,|\})/, 'value.json.webgal'),
+
+      // 匹配数字
+      ...buildEolRule(/[-+]?\d*\.?\d+([eE][-+]?\d+)?/, 'value.json.webgal'),
+      ...buildEolRule(/[-+]?\d+/, 'value.json.webgal'),
+
+      // 匹配布尔值和 Null
+      ...buildEolRule(/\b(true|false|null)\b/, 'value.json.webgal'),
+
+      // 分隔符
+      ...buildEolRule(/}\s*(,)\s*(?=\{)/, 'split.json.webgal'),
+
+      // 非法内容
+      ...buildEolRule(/./, 'invalid'),
+    ],
+    // #endregion
+  },
+})
+
+// #endregion
 
 /**
  * 检查光标是否在注释内
