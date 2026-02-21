@@ -26,7 +26,6 @@ common:
     size: 檔案大小
     modifiedAt: 修改時間
     createdAt: 建立時間
-    separator: "·"
     unavailable: "--"
     unavailableA11y: 不可用
     directorySize: "--"

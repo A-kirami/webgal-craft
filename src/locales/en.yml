@@ -26,7 +26,6 @@ common:
     size: File size
     modifiedAt: Modified time
     createdAt: Created time
-    separator: "·"
     unavailable: "--"
     unavailableA11y: Unavailable
     directorySize: "--"
