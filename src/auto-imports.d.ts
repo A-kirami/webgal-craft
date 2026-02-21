@@ -391,6 +391,9 @@ declare global {
   export type { DebugCommand, IDebugMessage, IComponentsVisibility, IComponentVisibilityCommand } from './types/debugProtocol'
   import('./types/debugProtocol')
   // @ts-ignore
+  export type { FileViewerItem } from './types/file-viewer'
+  import('./types/file-viewer')
+  // @ts-ignore
   export type { ComponentProps } from './types/index'
   import('./types/index')
   // @ts-ignore

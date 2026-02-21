@@ -19,6 +19,9 @@ common:
     list: 列表视图
   breadcrumb:
     showHiddenSegmentsCount: 展开 {count} 个隐藏路径段
+  fileViewer:
+    loadFailed: 加载失败：{error}
+    noContent: 暂无内容
 
 app:
   name: WebGAL Craft
@@ -240,10 +243,6 @@ edit:
       title: 输入框标题
       buttonText: 确认按钮文本
       defaultValue: 输入框默认值
-  assetView:
-    loading: 正在加载资源…
-    loadFailed: 加载失败：{error}
-    noContent: 暂无内容
   assetPreview:
     unsupportedType: 不支持的文件类型
   textEditor:
