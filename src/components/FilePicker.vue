@@ -357,12 +357,31 @@ function updateRecentHistory(relativePath: string) {
   recentHistory = next
 }
 
+function setRecentHistoryList(next: string[]) {
+  if (!historyStorageKey) {
+    return
+  }
+  historyStore = { ...historyStore, [historyStorageKey]: next }
+  recentHistory = next
+}
+
+function removeRecentHistoryPaths(paths: string[]) {
+  if (!historyStorageKey || paths.length === 0) {
+    return
+  }
+  const removeSet = new Set(paths)
+  const next = recentHistory.filter(path => !removeSet.has(path))
+  if (next.length === recentHistory.length) {
+    return
+  }
+  setRecentHistoryList(next)
+}
+
 function clearRecentHistory() {
   if (!historyStorageKey) {
     return
   }
-  historyStore = { ...historyStore, [historyStorageKey]: [] }
-  recentHistory = []
+  setRecentHistoryList([])
   recentHistoryInvalidMap = {}
 }
 
@@ -380,14 +399,32 @@ async function refreshRecentHistoryInvalidState() {
     recentHistory.map(async (path) => {
       try {
         const safePath = await ensurePathWithinRoot(await join(canonicalRootPath, path), canonicalRootPath)
-        return [path, !(await exists(safePath))] as const
-      } catch {
-        return [path, true] as const
+        return {
+          path,
+          invalid: !(await exists(safePath)),
+          remove: false,
+        } as const
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        return {
+          path,
+          invalid: true,
+          remove: errorMessage.includes('路径越界'),
+        } as const
       }
     }),
   )
 
-  recentHistoryInvalidMap = Object.fromEntries(results)
+  const removedPaths = results.filter(result => result.remove).map(result => result.path)
+  if (removedPaths.length > 0) {
+    removeRecentHistoryPaths(removedPaths)
+  }
+
+  recentHistoryInvalidMap = Object.fromEntries(
+    results
+      .filter(result => !result.remove)
+      .map(result => [result.path, result.invalid] as const),
+  )
 }
 
 async function loadDirectory(relativeDir: string, keyword: string) {
@@ -610,15 +647,21 @@ async function handleHistorySelect(path: string) {
     return
   }
   if (isRecentHistoryInvalid(path)) {
+    removeRecentHistoryPaths([path])
     return
   }
   try {
     const safePath = await ensurePathWithinRoot(await join(canonicalRootPath, path), canonicalRootPath)
     if (!(await exists(safePath))) {
+      removeRecentHistoryPaths([path])
       return
     }
     commitSelection(path, true)
-  } catch {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    if (errorMessage.includes('路径越界')) {
+      removeRecentHistoryPaths([path])
+    }
     return
   }
 }
