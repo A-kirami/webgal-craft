@@ -105,7 +105,7 @@ const hasHeader = $computed(() => !!slots['popover-header'] || !!popoverTitle)
 const zoomPercent = $computed(() => ZOOM_MAP[zoomLevel])
 const normalizedHistoryScopeKey = $computed(() => historyScopeKey.trim() || 'default')
 const historyStorageKey = $computed(() =>
-  canonicalRootPath ? `${normalizeComparablePath(canonicalRootPath)}::${normalizedHistoryScopeKey}` : '',
+  canonicalRootPath ? `${toComparablePath(canonicalRootPath)}::${normalizedHistoryScopeKey}` : '',
 )
 const extensionSet = $computed(() => new Set(
   extensions
@@ -194,10 +194,6 @@ watch(
   },
 )
 
-function normalizeComparablePath(path: string): string {
-  return path.replaceAll('\\', '/').replace(/\/+$/, '').toLocaleLowerCase()
-}
-
 function resolveZoomLevelFromAssetZoom(value: number | undefined): ZoomLevel | undefined {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return undefined
@@ -212,10 +208,6 @@ function resolveZoomLevelFromAssetZoom(value: number | undefined): ZoomLevel | u
     return 'large'
   }
   return 'extraLarge'
-}
-
-function normalizeRelativePath(path: string): string {
-  return path.replaceAll('\\', '/').replace(/^\/+/, '').replace(/\/+$/, '')
 }
 
 function normalizeInputPath(path: string): string {

@@ -15,13 +15,6 @@ interface DirectoryReadResult {
   items: FileViewerItem[]
 }
 
-function toComparablePath(path: string): string {
-  return path
-    .replaceAll('\\', '/')
-    .replace(/\/+$/, '')
-    .toLocaleLowerCase()
-}
-
 function isPathInsideRoot(path: string, rootPath: string): boolean {
   const normalizedPath = toComparablePath(path)
   const normalizedRootPath = toComparablePath(rootPath)

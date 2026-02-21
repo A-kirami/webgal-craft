@@ -83,6 +83,7 @@ declare global {
   const markRaw: typeof import('vue').markRaw
   const nextTick: typeof import('vue').nextTick
   const normalizeNumber: typeof import('./utils/sort').normalizeNumber
+  const normalizeRelativePath: typeof import('./utils/path').normalizeRelativePath
   const notify: typeof import('notivue').push
   const onActivated: typeof import('vue').onActivated
   const onBeforeMount: typeof import('vue').onBeforeMount
@@ -135,6 +136,7 @@ declare global {
   const throttledRef: typeof import('@vueuse/core').throttledRef
   const throttledWatch: typeof import('@vueuse/core').throttledWatch
   const thumbnailCmds: typeof import('./commands/thumbnaila').thumbnailCmds
+  const toComparablePath: typeof import('./utils/path').toComparablePath
   const toRaw: typeof import('vue').toRaw
   const toReactive: typeof import('@vueuse/core').toReactive
   const toRef: typeof import('vue').toRef
@@ -493,6 +495,7 @@ declare module 'vue' {
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly normalizeNumber: UnwrapRef<typeof import('./utils/sort')['normalizeNumber']>
+    readonly normalizeRelativePath: UnwrapRef<typeof import('./utils/path')['normalizeRelativePath']>
     readonly notify: UnwrapRef<typeof import('notivue')['push']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
@@ -545,6 +548,7 @@ declare module 'vue' {
     readonly throttledRef: UnwrapRef<typeof import('@vueuse/core')['throttledRef']>
     readonly throttledWatch: UnwrapRef<typeof import('@vueuse/core')['throttledWatch']>
     readonly thumbnailCmds: UnwrapRef<typeof import('./commands/thumbnaila')['thumbnailCmds']>
+    readonly toComparablePath: UnwrapRef<typeof import('./utils/path')['toComparablePath']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
     readonly toReactive: UnwrapRef<typeof import('@vueuse/core')['toReactive']>
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>

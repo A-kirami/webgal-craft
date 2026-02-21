@@ -6,11 +6,6 @@ import mime from 'mime/lite'
 const MAX_DIRECTORY_CACHE_ITEMS = 256
 const DEFAULT_DIRECTORY_CACHE_TTL_MS = 5000
 
-interface DirectoryCacheEntry {
-  items: FileViewerItem[]
-  expiresAt: number
-}
-
 interface ReadDirectoryItemsOptions {
   includeStats?: boolean
   useCache?: boolean
@@ -21,60 +16,92 @@ interface InvalidateDirectoryCacheOptions {
   includeChildren?: boolean
 }
 
-const directoryCache = new LRUCache<string, DirectoryCacheEntry>({
-  max: MAX_DIRECTORY_CACHE_ITEMS,
-  updateAgeOnGet: true,
-  updateAgeOnHas: true,
-})
-
-const inFlightReadMap = new Map<string, Promise<FileViewerItem[]>>()
-
-function toComparablePath(path: string): string {
-  return path
-    .replaceAll('\\', '/')
-    .replace(/\/+$/, '')
-    .toLocaleLowerCase()
+interface DirectoryCacheKey {
+  path: string
+  includeStats: boolean
 }
 
-function createCacheKey(path: string, includeStats: boolean): string {
-  return `${toComparablePath(path)}::stats:${includeStats ? 1 : 0}`
+interface DirectoryCacheKeyPair {
+  withStats: DirectoryCacheKey
+  withoutStats: DirectoryCacheKey
+}
+
+const cacheKeyRegistry = new Map<string, DirectoryCacheKeyPair>()
+const inFlightReadMap = new Map<DirectoryCacheKey, Promise<FileViewerItem[]>>()
+
+const directoryCache = new LRUCache<DirectoryCacheKey, FileViewerItem[]>({
+  max: MAX_DIRECTORY_CACHE_ITEMS,
+  ttl: DEFAULT_DIRECTORY_CACHE_TTL_MS,
+  updateAgeOnGet: true,
+  updateAgeOnHas: true,
+  dispose: (_items, cacheKey) => {
+    cleanupCacheKeyRegistry(cacheKey.path)
+  },
+})
+
+function getOrCreateCacheKey(path: string, includeStats: boolean): DirectoryCacheKey {
+  const comparablePath = toComparablePath(path)
+  const existingPair = cacheKeyRegistry.get(comparablePath)
+  if (existingPair) {
+    return includeStats ? existingPair.withStats : existingPair.withoutStats
+  }
+
+  const withStatsKey: DirectoryCacheKey = {
+    path: comparablePath,
+    includeStats: true,
+  }
+  const withoutStatsKey: DirectoryCacheKey = {
+    path: comparablePath,
+    includeStats: false,
+  }
+  cacheKeyRegistry.set(comparablePath, {
+    withStats: withStatsKey,
+    withoutStats: withoutStatsKey,
+  })
+  return includeStats ? withStatsKey : withoutStatsKey
 }
 
 function cloneDirectoryItems(items: FileViewerItem[]): FileViewerItem[] {
   return items.map(item => ({ ...item }))
 }
 
-function createCachePrefix(path: string): string {
-  return `${toComparablePath(path)}/`
+function hasCacheEntry(cacheKey: DirectoryCacheKey): boolean {
+  return directoryCache.peek(cacheKey) !== undefined
 }
 
-function isCacheKeyMatchPath(cacheKey: string, comparablePath: string, includeChildren: boolean): boolean {
-  if (cacheKey.startsWith(`${comparablePath}::`)) {
+function cleanupCacheKeyRegistry(path: string): void {
+  const keyPair = cacheKeyRegistry.get(path)
+  if (!keyPair) {
+    return
+  }
+
+  const hasCachedItems = hasCacheEntry(keyPair.withStats) || hasCacheEntry(keyPair.withoutStats)
+  const hasInFlightRead = inFlightReadMap.has(keyPair.withStats) || inFlightReadMap.has(keyPair.withoutStats)
+  if (!hasCachedItems && !hasInFlightRead) {
+    cacheKeyRegistry.delete(path)
+  }
+}
+
+function isCacheKeyMatchPath(cacheKey: DirectoryCacheKey, comparablePath: string, includeChildren: boolean): boolean {
+  if (cacheKey.path === comparablePath) {
     return true
   }
   if (!includeChildren) {
     return false
   }
-  return cacheKey.startsWith(createCachePrefix(comparablePath))
+  return cacheKey.path.startsWith(`${comparablePath}/`)
 }
 
-function getCachedDirectoryItems(cacheKey: string): FileViewerItem[] | undefined {
-  const cacheEntry = directoryCache.get(cacheKey)
-  if (!cacheEntry) {
+function getCachedDirectoryItems(cacheKey: DirectoryCacheKey): FileViewerItem[] | undefined {
+  const cachedItems = directoryCache.get(cacheKey)
+  if (!cachedItems) {
     return undefined
   }
-  if (cacheEntry.expiresAt < Date.now()) {
-    directoryCache.delete(cacheKey)
-    return undefined
-  }
-  return cloneDirectoryItems(cacheEntry.items)
+  return cloneDirectoryItems(cachedItems)
 }
 
-function setCachedDirectoryItems(cacheKey: string, items: FileViewerItem[], ttlMs: number): void {
-  directoryCache.set(cacheKey, {
-    items: cloneDirectoryItems(items),
-    expiresAt: Date.now() + ttlMs,
-  })
+function setCachedDirectoryItems(cacheKey: DirectoryCacheKey, items: FileViewerItem[], ttlMs: number): void {
+  directoryCache.set(cacheKey, items, { ttl: ttlMs })
 }
 
 async function loadDirectoryItems(absolutePath: string, includeStats: boolean): Promise<FileViewerItem[]> {
@@ -137,9 +164,9 @@ export async function readDirectoryItemsCached(
   const useCache = options.useCache ?? true
   const cacheTtlMs = options.cacheTtlMs ?? DEFAULT_DIRECTORY_CACHE_TTL_MS
   const normalizedPath = await normalize(absolutePath)
-  const cacheKey = createCacheKey(normalizedPath, includeStats)
+  const cacheKey = useCache ? getOrCreateCacheKey(normalizedPath, includeStats) : undefined
 
-  if (useCache) {
+  if (useCache && cacheKey) {
     const cachedItems = getCachedDirectoryItems(cacheKey)
     if (cachedItems) {
       return cachedItems
@@ -152,19 +179,20 @@ export async function readDirectoryItemsCached(
   }
 
   const loadTask = loadDirectoryItems(normalizedPath, includeStats)
-  if (useCache) {
+  if (useCache && cacheKey) {
     inFlightReadMap.set(cacheKey, loadTask)
   }
 
   try {
     const items = await loadTask
-    if (useCache && inFlightReadMap.get(cacheKey) === loadTask) {
+    if (useCache && cacheKey && inFlightReadMap.get(cacheKey) === loadTask) {
       setCachedDirectoryItems(cacheKey, items, cacheTtlMs)
     }
-    return cloneDirectoryItems(items)
+    return items
   } finally {
-    if (inFlightReadMap.get(cacheKey) === loadTask) {
+    if (cacheKey && inFlightReadMap.get(cacheKey) === loadTask) {
       inFlightReadMap.delete(cacheKey)
+      cleanupCacheKeyRegistry(cacheKey.path)
     }
   }
 }
@@ -175,21 +203,29 @@ export async function invalidateDirectoryItemsCache(
 ): Promise<void> {
   const includeChildren = options.includeChildren ?? false
   const comparablePath = toComparablePath(await normalize(path))
+  const affectedPaths = new Set<string>()
 
   for (const key of directoryCache.keys()) {
     if (isCacheKeyMatchPath(key, comparablePath, includeChildren)) {
       directoryCache.delete(key)
+      affectedPaths.add(key.path)
     }
   }
 
   for (const key of inFlightReadMap.keys()) {
     if (isCacheKeyMatchPath(key, comparablePath, includeChildren)) {
       inFlightReadMap.delete(key)
+      affectedPaths.add(key.path)
     }
+  }
+
+  for (const keyPath of affectedPaths) {
+    cleanupCacheKeyRegistry(keyPath)
   }
 }
 
 export function clearDirectoryItemsCache(): void {
   directoryCache.clear()
   inFlightReadMap.clear()
+  cacheKeyRegistry.clear()
 }
