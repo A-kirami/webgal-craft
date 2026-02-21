@@ -2,7 +2,25 @@
 import { join } from '@tauri-apps/api/path'
 import { File, FileImage, FileJson2, FileMusic, FileVideo, FileVolume, Folder } from 'lucide-vue-next'
 
-const { assetType } = defineProps<{ assetType: string }>()
+interface AssetViewProps {
+  assetType: string
+  searchQuery?: string
+  sortBy?: FileViewerSortBy
+  sortOrder?: FileViewerSortOrder
+}
+
+interface AssetViewEmits {
+  'update:sortBy': [sortBy: FileViewerSortBy]
+  'update:sortOrder': [sortOrder: FileViewerSortOrder]
+}
+
+const {
+  assetType,
+  searchQuery = '',
+  sortBy = 'name',
+  sortOrder = 'asc',
+} = defineProps<AssetViewProps>()
+const emit = defineEmits<AssetViewEmits>()
 
 let currentPath = $(defineModel<string>('current-path', { required: true }))
 
@@ -16,6 +34,7 @@ const fileViewerRef = useTemplateRef<InstanceType<typeof FileViewer>>('fileViewe
 let scrollTop = 0
 let lastSelectedPath = $ref('')
 let lastSelectedAt = $ref(0)
+let latestLoadToken = 0
 
 const DOUBLE_CLICK_THRESHOLD_MS = 260
 
@@ -38,27 +57,52 @@ const assetBasePath = computedAsync(async () => {
 
 let isLoading = $ref(false)
 let errorMsg = $ref('')
-
 const items = computedAsync(async () => {
+  const basePath = assetBasePath.value
+  const relativePath = currentPath
+  const loadToken = ++latestLoadToken
   isLoading = true
   errorMsg = ''
+
+  // 确保重任务开始前先把 loading 状态提交到视图
+  await nextTick()
+
   try {
-    const basePath = assetBasePath.value
     if (!basePath) {
       return []
     }
-    const path = await join(basePath, currentPath)
+    const path = await join(basePath, relativePath)
     const result = await fileStore.getFolderContents(path)
     return result.map(item => toFileViewerItem(item))
   } catch (error) {
-    errorMsg = error instanceof Error ? error.message : String(error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    // 根目录不存在时视为空目录，避免报错
+    if (!relativePath && errorMessage.includes('目录不存在')) {
+      void logger.debug(`资源目录 ${assetBasePath.value} 不存在，返回空列表`)
+      return []
+    }
+    errorMsg = errorMessage
     return []
   } finally {
-    isLoading = false
+    if (loadToken === latestLoadToken) {
+      isLoading = false
+    }
   }
 }, [])
 
+const filteredItems = $computed(() => {
+  const keyword = searchQuery.trim().toLocaleLowerCase()
+  if (!keyword) {
+    return items.value
+  }
+  return items.value.filter(item => item.name.toLocaleLowerCase().includes(keyword))
+})
+
 watch(() => currentPath, () => {
+  fileViewerRef.value?.scrollToIndex(0)
+})
+
+watch(() => searchQuery, () => {
   fileViewerRef.value?.scrollToIndex(0)
 })
 
@@ -68,6 +112,9 @@ function toFileViewerItem(item: FileSystemItem): FileViewerItem {
     path: item.path,
     isDir: item.isDir,
     mimeType: item.isDir ? undefined : item.mimeType,
+    size: item.size,
+    modifiedAt: item.modifiedAt,
+    createdAt: item.createdAt,
   }
 }
 
@@ -120,11 +167,15 @@ function handleSelect(item: FileViewerItem) {
 <template>
   <FileViewer
     ref="fileViewerRef"
-    :items="items"
+    :items="filteredItems"
     :view-mode="preferenceStore.assetViewMode"
     :is-loading="isLoading"
     :error-msg="errorMsg"
     :zoom="preferenceStore.assetZoom[0]"
+    :sort-by="sortBy"
+    :sort-order="sortOrder"
+    @update:sort-by="(value) => emit('update:sortBy', value)"
+    @update:sort-order="(value) => emit('update:sortOrder', value)"
     @select="handleSelect"
     @navigate="handleNavigate"
   >

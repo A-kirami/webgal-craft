@@ -2,7 +2,6 @@ import { basename, join } from '@tauri-apps/api/path'
 import { exists, readDir, stat, watch as watchFs } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
 import mime from 'mime/lite'
-import naturalCompare from 'natural-compare-lite'
 import { defineStore } from 'pinia'
 
 import type { WatchEvent } from '@tauri-apps/plugin-fs'
@@ -27,6 +26,9 @@ interface FileSystemItemBase {
   name: string
   path: string
   parentId: string | undefined
+  size?: number
+  modifiedAt?: number
+  createdAt?: number
 }
 
 /**
@@ -142,6 +144,11 @@ export const useFileStore = defineStore('file', () => {
     const name = await basename(path)
     const id = getOrCreateItemId(path)
     const fileInfo = await stat(path)
+    const metadata = {
+      size: fileInfo.size,
+      modifiedAt: fileInfo.mtime?.getTime(),
+      createdAt: fileInfo.birthtime?.getTime(),
+    }
 
     if (fileInfo.isDirectory) {
       return {
@@ -152,6 +159,7 @@ export const useFileStore = defineStore('file', () => {
         isDir: true,
         childIds: [],
         isLoaded: false,
+        ...metadata,
       }
     }
 
@@ -162,25 +170,26 @@ export const useFileStore = defineStore('file', () => {
       parentId,
       isDir: false,
       mimeType: mime.getType(path) || '',
+      ...metadata,
     }
+  }
+
+  /**
+   * 刷新文件系统项元信息
+   * 元信息不可用时统一置为 undefined，避免渲染层出现不一致空值
+   */
+  async function refreshItemMetadata(item: FileSystemItem, path: string = item.path): Promise<void> {
+    const fileInfo = await stat(path)
+    item.size = fileInfo.size
+    item.modifiedAt = fileInfo.mtime?.getTime()
+    item.createdAt = fileInfo.birthtime?.getTime()
   }
 
   // ==================== 父子关系管理辅助函数 ====================
 
   /**
-   * 比较两个文件系统项
-   * 目录优先，然后按自然顺序排序
-   */
-  function compareFileSystemItems(a: FileSystemItem, b: FileSystemItem): number {
-    if (a.isDir !== b.isDir) {
-      return a.isDir ? -1 : 1
-    }
-    return naturalCompare(a.name, b.name)
-  }
-
-  /**
    * 将子项添加到父目录
-   * 添加后立即排序整个列表，确保数据始终有序
+   * 保持监听事件原始顺序，排序由展示层负责
    */
   function addChildToParent(childId: string, parentId: string | undefined): void {
     if (!parentId) {
@@ -193,14 +202,6 @@ export const useFileStore = defineStore('file', () => {
     }
 
     parent.childIds.push(childId)
-    parent.childIds.sort((a, b) => {
-      const itemA = items.get(a)
-      const itemB = items.get(b)
-      if (!itemA || !itemB) {
-        return 0
-      }
-      return compareFileSystemItems(itemA, itemB)
-    })
   }
 
   /**
@@ -232,21 +233,42 @@ export const useFileStore = defineStore('file', () => {
     try {
       parent.isLoaded = true
       const entries = await readDir(path)
-
-      const newItems = await Promise.all(
+      const createResults = await Promise.allSettled(
         entries.map(async (entry) => {
           const itemPath = await join(path, entry.name)
           return await createFileSystemItem(itemPath, parentId)
         }),
       )
 
+      const newItems: FileSystemItem[] = []
+      let failedCount = 0
+      for (const result of createResults) {
+        if (result.status === 'fulfilled') {
+          newItems.push(result.value)
+          continue
+        }
+        failedCount++
+        const reason = result.reason instanceof Error ? result.reason.message : String(result.reason)
+        void logger.warn(`[FileStore] 读取目录项失败 (${path}): ${reason}`)
+      }
+
+      if (entries.length > 0 && newItems.length === 0) {
+        parent.isLoaded = false
+        throw new FileSystemError(
+          `目录加载失败：${path} 下 ${entries.length} 个项目均读取失败`,
+          path,
+        )
+      }
+
       for (const item of newItems) {
         items.set(item.id, item)
       }
 
-      parent.childIds = newItems
-        .toSorted(compareFileSystemItems)
-        .map(item => item.id)
+      parent.childIds = newItems.map(item => item.id)
+
+      if (failedCount > 0) {
+        void logger.warn(`[FileStore] 目录 ${path} 有 ${failedCount} 个项目读取失败，已跳过`)
+      }
     } catch (error) {
       parent.isLoaded = false
       const errorMessage = error instanceof Error ? error.message : String(error)
@@ -460,6 +482,8 @@ export const useFileStore = defineStore('file', () => {
         updatePathMappings(originalPath, newPath, item.id)
       }
 
+      await refreshItemMetadata(item, newPath)
+
       emitFileSystemEvent(item, { eventType: 'renamed', oldPath, newPath })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
@@ -483,6 +507,7 @@ export const useFileStore = defineStore('file', () => {
 
     try {
       item.name = await basename(path)
+      await refreshItemMetadata(item, path)
       emitFileSystemEvent(item, { eventType: 'modified', path })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)

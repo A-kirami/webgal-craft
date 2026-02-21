@@ -13,6 +13,7 @@ declare global {
   const asyncComputed: typeof import('@vueuse/core').asyncComputed
   const autoResetRef: typeof import('@vueuse/core').autoResetRef
   const colorMode: typeof import('./composables/color-mode').colorMode
+  const compareOptionalNumber: typeof import('./utils/sort').compareOptionalNumber
   const computed: typeof import('vue').computed
   const computedAsync: typeof import('@vueuse/core').computedAsync
   const computedEager: typeof import('@vueuse/core').computedEager
@@ -25,6 +26,7 @@ declare global {
   const createEventHook: typeof import('@vueuse/core').createEventHook
   const createGlobalState: typeof import('@vueuse/core').createGlobalState
   const createInjectionState: typeof import('@vueuse/core').createInjectionState
+  const createItemComparator: typeof import('./utils/sort').createItemComparator
   const createReactiveFn: typeof import('@vueuse/core').createReactiveFn
   const createRef: typeof import('@vueuse/core').createRef
   const createReusableTemplate: typeof import('@vueuse/core').createReusableTemplate
@@ -73,10 +75,12 @@ declare global {
   const isReadonly: typeof import('vue').isReadonly
   const isRef: typeof import('vue').isRef
   const isShallow: typeof import('vue').isShallow
+  const isValidPositiveNumber: typeof import('./utils/sort').isValidPositiveNumber
   const logger: typeof import('@tauri-apps/plugin-log')
   const makeDestructurable: typeof import('@vueuse/core').makeDestructurable
   const markRaw: typeof import('vue').markRaw
   const nextTick: typeof import('vue').nextTick
+  const normalizeNumber: typeof import('./utils/sort').normalizeNumber
   const notify: typeof import('notivue').push
   const onActivated: typeof import('vue').onActivated
   const onBeforeMount: typeof import('vue').onBeforeMount
@@ -388,10 +392,13 @@ declare global {
   export type { Tab } from './stores/tabs'
   import('./stores/tabs')
   // @ts-ignore
+  export type { SortableItemAccessor } from './utils/sort'
+  import('./utils/sort')
+  // @ts-ignore
   export type { DebugCommand, IDebugMessage, IComponentsVisibility, IComponentVisibilityCommand } from './types/debugProtocol'
   import('./types/debugProtocol')
   // @ts-ignore
-  export type { FileViewerItem } from './types/file-viewer'
+  export type { FileViewerSortBy, FileViewerSortOrder, FileViewerItem } from './types/file-viewer'
   import('./types/file-viewer')
   // @ts-ignore
   export type { ComponentProps } from './types/index'
@@ -413,6 +420,7 @@ declare module 'vue' {
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly colorMode: UnwrapRef<typeof import('./composables/color-mode')['colorMode']>
+    readonly compareOptionalNumber: UnwrapRef<typeof import('./utils/sort')['compareOptionalNumber']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
@@ -425,6 +433,7 @@ declare module 'vue' {
     readonly createEventHook: UnwrapRef<typeof import('@vueuse/core')['createEventHook']>
     readonly createGlobalState: UnwrapRef<typeof import('@vueuse/core')['createGlobalState']>
     readonly createInjectionState: UnwrapRef<typeof import('@vueuse/core')['createInjectionState']>
+    readonly createItemComparator: UnwrapRef<typeof import('./utils/sort')['createItemComparator']>
     readonly createReactiveFn: UnwrapRef<typeof import('@vueuse/core')['createReactiveFn']>
     readonly createRef: UnwrapRef<typeof import('@vueuse/core')['createRef']>
     readonly createReusableTemplate: UnwrapRef<typeof import('@vueuse/core')['createReusableTemplate']>
@@ -472,10 +481,12 @@ declare module 'vue' {
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
     readonly isShallow: UnwrapRef<typeof import('vue')['isShallow']>
+    readonly isValidPositiveNumber: UnwrapRef<typeof import('./utils/sort')['isValidPositiveNumber']>
     readonly logger: UnwrapRef<typeof import('@tauri-apps/plugin-log')>
     readonly makeDestructurable: UnwrapRef<typeof import('@vueuse/core')['makeDestructurable']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
+    readonly normalizeNumber: UnwrapRef<typeof import('./utils/sort')['normalizeNumber']>
     readonly notify: UnwrapRef<typeof import('notivue')['push']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>

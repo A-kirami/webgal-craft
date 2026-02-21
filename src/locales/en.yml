@@ -22,6 +22,13 @@ common:
   fileViewer:
     loadFailed: "Load failed: {error}"
     noContent: No content
+  fileMeta:
+    size: File size
+    modifiedAt: Modified time
+    createdAt: Created time
+    unavailable: "--"
+    unavailableA11y: Unavailable
+    directorySize: "--"
 
 app:
   name: WebGAL Craft
@@ -289,6 +296,23 @@ edit:
       video: Video
       animation: Animation
     searchPlaceholder: Search files or folders
+    sort:
+      by: Sort by
+      name: Name
+      modifiedTime: Modified time
+      createdTime: Created time
+      size: File size
+      directionAsc: Ascending
+      directionDesc: Descending
+    actions:
+      toggleSearch: Toggle search
+      sortField: Sort field
+      sortOrder: Sort direction
+      viewGrid: Grid view
+      viewList: List view
+      zoomOut: Zoom out
+      zoomIn: Zoom in
+      zoomReset: Reset zoom
   editorMode:
     textMode: Text Mode
     visualMode: Visual Mode

@@ -20,6 +20,8 @@ interface Props {
   isLoading?: boolean
   treeName?: string
   openCreatedFileInTab?: boolean
+  sortBy?: FileViewerSortBy
+  sortOrder?: FileViewerSortOrder
 }
 
 const {
@@ -34,6 +36,8 @@ const {
   isLoading = false,
   treeName,
   openCreatedFileInTab = false,
+  sortBy = 'name',
+  sortOrder = 'asc',
 } = defineProps<Props>()
 
 function getItemName(item: T): string {
@@ -50,15 +54,50 @@ function getItemPath(item: T): string {
   return (item as Record<string, unknown>).path as string
 }
 
+function getItemChildren(item: T): T[] | undefined {
+  const children = (item as Record<string, unknown>).children
+  return Array.isArray(children) ? children as T[] : undefined
+}
+
+function hasItemChildren(item: T): boolean {
+  return Array.isArray((item as Record<string, unknown>).children)
+}
+
+const treeAccessor: SortableItemAccessor<T> = {
+  isDirectory: item => hasItemChildren(item),
+  name: item => getItemName(item),
+  size: item => (item as Record<string, unknown>).size as number | undefined,
+  modifiedAt: item => (item as Record<string, unknown>).modifiedAt as number | undefined,
+  createdAt: item => (item as Record<string, unknown>).createdAt as number | undefined,
+}
+
+function sortItemsRecursively(sourceItems: T[], comparator: (a: T, b: T) => number): T[] {
+  return sourceItems.toSorted(comparator).map((item) => {
+    const children = getItemChildren(item)
+    if (!children || children.length === 0) {
+      return item
+    }
+
+    return {
+      ...item,
+      children: sortItemsRecursively(children, comparator),
+    }
+  })
+}
+
+const sortedItems = $computed(() => {
+  return sortItemsRecursively(items, createItemComparator(sortBy, sortOrder, treeAccessor))
+})
+
 function getParentPath(path: string): string {
   return path.replace(/[\\/][^\\/]+$/, '')
 }
 
 function getRootPath(): string {
-  if (items.length === 0) {
+  if (sortedItems.length === 0) {
     return ''
   }
-  return getParentPath(getItemPath(items[0]))
+  return getParentPath(getItemPath(sortedItems[0]))
 }
 
 function findChildrenInParent(items: T[], targetParentPath: string): T[] {
@@ -612,7 +651,7 @@ defineExpose({
       v-slot="{ flattenItems: flattenItemsSlot }"
       v-model="selectedItem"
       ::expanded="expanded"
-      :items="items"
+      :items="sortedItems"
       :get-key="getKey"
       selection-behavior="replace"
       class="text-13px h-full"
