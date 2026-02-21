@@ -19,6 +19,9 @@ common:
     list: List View
   breadcrumb:
     showHiddenSegmentsCount: Show {count} hidden path segments
+  fileViewer:
+    loadFailed: "Load failed: {error}"
+    noContent: No content
 
 app:
   name: WebGAL Craft
@@ -240,10 +243,6 @@ edit:
       title: Input box title
       buttonText: Confirm button text
       defaultValue: Input box default value
-  assetView:
-    loading: Loading assets...
-    loadFailed: "Load failed: {error}"
-    noContent: No content
   assetPreview:
     unsupportedType: Unsupported file type
   textEditor:
