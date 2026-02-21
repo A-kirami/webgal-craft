@@ -22,6 +22,14 @@ common:
   fileViewer:
     loadFailed: 読み込みに失敗しました：{error}
     noContent: コンテンツがありません
+  fileMeta:
+    size: ファイルサイズ
+    modifiedAt: 更新日時
+    createdAt: 作成日時
+    separator: "·"
+    unavailable: "--"
+    unavailableA11y: 利用不可
+    directorySize: "--"
 
 app:
   name: WebGAL Craft
@@ -289,6 +297,23 @@ edit:
       video: 動画
       animation: アニメーション
     searchPlaceholder: ファイルまたはフォルダを検索
+    sort:
+      by: 並び替え
+      name: 名前
+      modifiedTime: 更新日時
+      createdTime: 作成日時
+      size: ファイルサイズ
+      directionAsc: 昇順
+      directionDesc: 降順
+    actions:
+      toggleSearch: 検索の切り替え
+      sortField: 並び替え項目
+      sortOrder: 並び順
+      viewGrid: グリッド表示
+      viewList: リスト表示
+      zoomOut: 縮小
+      zoomIn: 拡大
+      zoomReset: ズームをリセット
   editorMode:
     textMode: テキストモード
     visualMode: ビジュアルモード

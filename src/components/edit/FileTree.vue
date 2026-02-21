@@ -5,6 +5,7 @@ import {
   LucideFolder,
   LucideFolderOpen,
 } from 'lucide-vue-next'
+import naturalCompare from 'natural-compare-lite'
 
 import type { FlattenedItem } from 'reka-ui'
 
@@ -20,6 +21,8 @@ interface Props {
   isLoading?: boolean
   treeName?: string
   openCreatedFileInTab?: boolean
+  sortBy?: FileViewerSortBy
+  sortOrder?: FileViewerSortOrder
 }
 
 const {
@@ -34,6 +37,8 @@ const {
   isLoading = false,
   treeName,
   openCreatedFileInTab = false,
+  sortBy = 'name',
+  sortOrder = 'asc',
 } = defineProps<Props>()
 
 function getItemName(item: T): string {
@@ -50,15 +55,81 @@ function getItemPath(item: T): string {
   return (item as Record<string, unknown>).path as string
 }
 
+function getItemChildren(item: T): T[] | undefined {
+  const children = (item as Record<string, unknown>).children
+  return Array.isArray(children) ? children as T[] : undefined
+}
+
+function hasItemChildren(item: T): boolean {
+  return Array.isArray((item as Record<string, unknown>).children)
+}
+
+function getSortNumericValue(item: T): number | undefined {
+  const value = item as Record<string, unknown>
+  if (sortBy === 'size') {
+    return hasItemChildren(item) ? undefined : normalizeNumber(value.size as number | undefined)
+  }
+  if (sortBy === 'modifiedTime') {
+    return normalizeNumber(value.modifiedAt as number | undefined)
+  }
+  if (sortBy === 'createdTime') {
+    return normalizeNumber(value.createdAt as number | undefined)
+  }
+  return undefined
+}
+
+function compareByName(a: T, b: T): number {
+  return naturalCompare(getItemName(a), getItemName(b))
+}
+
+function compareTreeItems(a: T, b: T): number {
+  const aIsDirectory = hasItemChildren(a)
+  const bIsDirectory = hasItemChildren(b)
+  if (aIsDirectory !== bIsDirectory) {
+    return aIsDirectory ? -1 : 1
+  }
+
+  if (sortBy === 'name') {
+    const result = compareByName(a, b)
+    return sortOrder === 'desc' ? -result : result
+  }
+
+  const sortResult = compareOptionalNumber(getSortNumericValue(a), getSortNumericValue(b), sortOrder)
+  if (sortResult !== 0) {
+    return sortResult
+  }
+
+  const tieBreaker = compareByName(a, b)
+  return sortOrder === 'desc' ? -tieBreaker : tieBreaker
+}
+
+function sortItemsRecursively(sourceItems: T[], comparator: (a: T, b: T) => number): T[] {
+  return sourceItems.toSorted(comparator).map((item) => {
+    const children = getItemChildren(item)
+    if (!children || children.length === 0) {
+      return item
+    }
+
+    return {
+      ...item,
+      children: sortItemsRecursively(children, comparator),
+    }
+  })
+}
+
+const sortedItems = $computed(() => {
+  return sortItemsRecursively(items, compareTreeItems)
+})
+
 function getParentPath(path: string): string {
   return path.replace(/[\\/][^\\/]+$/, '')
 }
 
 function getRootPath(): string {
-  if (items.length === 0) {
+  if (sortedItems.length === 0) {
     return ''
   }
-  return getParentPath(getItemPath(items[0]))
+  return getParentPath(getItemPath(sortedItems[0]))
 }
 
 function findChildrenInParent(items: T[], targetParentPath: string): T[] {
@@ -612,7 +683,7 @@ defineExpose({
       v-slot="{ flattenItems: flattenItemsSlot }"
       v-model="selectedItem"
       ::expanded="expanded"
-      :items="items"
+      :items="sortedItems"
       :get-key="getKey"
       selection-behavior="replace"
       class="text-13px h-full"

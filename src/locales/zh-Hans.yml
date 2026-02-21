@@ -22,6 +22,14 @@ common:
   fileViewer:
     loadFailed: 加载失败：{error}
     noContent: 暂无内容
+  fileMeta:
+    size: 文件大小
+    modifiedAt: 修改时间
+    createdAt: 创建时间
+    separator: "·"
+    unavailable: "--"
+    unavailableA11y: 不可用
+    directorySize: "--"
 
 app:
   name: WebGAL Craft
@@ -289,6 +297,23 @@ edit:
       video: 视频
       animation: 动画
     searchPlaceholder: 搜索文件或文件夹
+    sort:
+      by: 排序
+      name: 名称
+      modifiedTime: 修改时间
+      createdTime: 创建时间
+      size: 文件大小
+      directionAsc: 升序
+      directionDesc: 降序
+    actions:
+      toggleSearch: 切换搜索
+      sortField: 排序字段
+      sortOrder: 排序方向
+      viewGrid: 网格视图
+      viewList: 列表视图
+      zoomOut: 缩小
+      zoomIn: 放大
+      zoomReset: 重置缩放
   editorMode:
     textMode: 文本模式
     visualMode: 可视化模式
