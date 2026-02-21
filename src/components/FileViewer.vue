@@ -302,7 +302,7 @@ defineExpose(fileViewerExpose)
     >
       <div class="flex flex-1 gap-2 min-w-0 items-center">
         <div aria-hidden="true" :style="{ width: `${listPreviewSize}px` }" />
-        <div role="columnheader" :aria-sort="getHeaderAriaSort('name')">
+        <div class="contents" role="columnheader" :aria-sort="getHeaderAriaSort('name')">
           <button
             type="button"
             class="text-[11px] text-left rounded-sm inline-flex gap-1 min-w-0 truncate items-center hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -316,7 +316,7 @@ defineExpose(fileViewerExpose)
         </div>
       </div>
       <div class="text-[11px] ml-2 flex shrink-0 gap-3 items-center">
-        <div v-if="showListSize" role="columnheader" :aria-sort="getHeaderAriaSort('size')">
+        <div v-if="showListSize" class="contents" role="columnheader" :aria-sort="getHeaderAriaSort('size')">
           <button
             type="button"
             class="text-right inline-flex gap-1 w-20 items-center justify-end"
@@ -328,7 +328,7 @@ defineExpose(fileViewerExpose)
             <ArrowDown v-else-if="isSortColumn('size') && sortOrder === 'desc'" class="size-3" />
           </button>
         </div>
-        <div role="columnheader" :aria-sort="getHeaderAriaSort('modifiedTime')">
+        <div class="contents" role="columnheader" :aria-sort="getHeaderAriaSort('modifiedTime')">
           <button
             type="button"
             class="text-left inline-flex gap-1 w-32 items-center"
@@ -340,7 +340,7 @@ defineExpose(fileViewerExpose)
             <ArrowDown v-else-if="isSortColumn('modifiedTime') && sortOrder === 'desc'" class="size-3" />
           </button>
         </div>
-        <div v-if="showListCreatedAt" role="columnheader" :aria-sort="getHeaderAriaSort('createdTime')">
+        <div v-if="showListCreatedAt" class="contents" role="columnheader" :aria-sort="getHeaderAriaSort('createdTime')">
           <button
             type="button"
             class="text-left inline-flex gap-1 w-32 items-center"
