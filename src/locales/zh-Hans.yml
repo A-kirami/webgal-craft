@@ -30,6 +30,35 @@ common:
     unavailableA11y: 不可用
     directorySize: "--"
 
+filePicker:
+  placeholder: 请选择文件路径
+  clearInput: 清空输入
+  sort:
+    name: 名称
+    modifiedTime: 修改时间
+    createdTime: 创建时间
+    size: 文件大小
+    directionAsc: 升序
+    directionDesc: 降序
+  zoom:
+    small: 小
+    medium: 中
+    large: 大
+    extraLarge: 超大
+  more:
+    title: 更多
+    sortTitle: 排序方式
+    sortFieldTitle: 排序字段
+    sortOrderTitle: 排序方向
+    filtersTitle: 过滤
+    showSupportedOnly: 隐藏不支持格式文件
+    zoomTitle: 图标尺寸
+    recentTitle: 最近历史
+    showRecentHistory: 显示最近选择栏
+    clearRecentHistory: 清空最近历史
+  recent:
+    title: 最近选择
+
 app:
   name: WebGAL Craft
   description: WebGAL 视觉小说工作室

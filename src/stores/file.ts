@@ -1,5 +1,5 @@
 import { basename, join } from '@tauri-apps/api/path'
-import { exists, readDir, stat, watch as watchFs } from '@tauri-apps/plugin-fs'
+import { exists, stat, watch as watchFs } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
 import mime from 'mime/lite'
 import { defineStore } from 'pinia'
@@ -174,6 +174,41 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
+  function createFileSystemItemFromDirectoryEntry(
+    entry: FileViewerItem,
+    parentId: string | undefined,
+  ): FileSystemItem {
+    const id = getOrCreateItemId(entry.path)
+    const metadata = {
+      size: entry.size,
+      modifiedAt: entry.modifiedAt,
+      createdAt: entry.createdAt,
+    }
+
+    if (entry.isDir) {
+      return {
+        id,
+        name: entry.name,
+        path: entry.path,
+        parentId,
+        isDir: true,
+        childIds: [],
+        isLoaded: false,
+        ...metadata,
+      }
+    }
+
+    return {
+      id,
+      name: entry.name,
+      path: entry.path,
+      parentId,
+      isDir: false,
+      mimeType: entry.mimeType || mime.getType(entry.path) || '',
+      ...metadata,
+    }
+  }
+
   /**
    * 刷新文件系统项元信息
    * 元信息不可用时统一置为 undefined，避免渲染层出现不一致空值
@@ -232,43 +267,16 @@ export const useFileStore = defineStore('file', () => {
 
     try {
       parent.isLoaded = true
-      const entries = await readDir(path)
-      const createResults = await Promise.allSettled(
-        entries.map(async (entry) => {
-          const itemPath = await join(path, entry.name)
-          return await createFileSystemItem(itemPath, parentId)
-        }),
+      const directoryItems = await readDirectoryItemsCached(path, { includeStats: true })
+      const newItems = directoryItems.map(entry =>
+        createFileSystemItemFromDirectoryEntry(entry, parentId),
       )
-
-      const newItems: FileSystemItem[] = []
-      let failedCount = 0
-      for (const result of createResults) {
-        if (result.status === 'fulfilled') {
-          newItems.push(result.value)
-          continue
-        }
-        failedCount++
-        const reason = result.reason instanceof Error ? result.reason.message : String(result.reason)
-        void logger.warn(`[FileStore] 读取目录项失败 (${path}): ${reason}`)
-      }
-
-      if (entries.length > 0 && newItems.length === 0) {
-        parent.isLoaded = false
-        throw new FileSystemError(
-          `目录加载失败：${path} 下 ${entries.length} 个项目均读取失败`,
-          path,
-        )
-      }
 
       for (const item of newItems) {
         items.set(item.id, item)
       }
 
       parent.childIds = newItems.map(item => item.id)
-
-      if (failedCount > 0) {
-        void logger.warn(`[FileStore] 目录 ${path} 有 ${failedCount} 个项目读取失败，已跳过`)
-      }
     } catch (error) {
       parent.isLoaded = false
       const errorMessage = error instanceof Error ? error.message : String(error)
@@ -411,6 +419,20 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
+  async function invalidateDirectoryCacheSafe(path: string, includeChildren: boolean = false): Promise<void> {
+    try {
+      await invalidateDirectoryItemsCache(path, { includeChildren })
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      void logger.warn(`[FileStore] 失效目录缓存失败 (${path}): ${errorMessage}`)
+    }
+  }
+
+  async function invalidateParentDirectoryCache(path: string): Promise<void> {
+    const parentPath = await join(path, '..')
+    await invalidateDirectoryCacheSafe(parentPath)
+  }
+
   /**
    * 处理文件创建事件
    */
@@ -420,6 +442,10 @@ export const useFileStore = defineStore('file', () => {
       items.set(item.id, item)
       addChildToParent(item.id, parentId)
       emitFileSystemEvent(item, { eventType: 'created', path, parentId })
+      await invalidateParentDirectoryCache(path)
+      if (item.isDir) {
+        await invalidateDirectoryCacheSafe(path, true)
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       void logger.error(`[FileStore] 处理 ${path} 创建事件失败: ${errorMessage}`)
@@ -447,9 +473,11 @@ export const useFileStore = defineStore('file', () => {
   /**
    * 处理文件删除事件
    */
-  function handleRemoveEvent(path: string): void {
+  async function handleRemoveEvent(path: string): Promise<void> {
     const item = getItemByPath(path)
     if (!item) {
+      await invalidateParentDirectoryCache(path)
+      await invalidateDirectoryCacheSafe(path, true)
       return
     }
 
@@ -458,6 +486,8 @@ export const useFileStore = defineStore('file', () => {
     pathToId.delete(path)
 
     emitFileSystemEvent(item, { eventType: 'removed', path })
+    await invalidateParentDirectoryCache(path)
+    await invalidateDirectoryCacheSafe(path, true)
   }
 
   /**
@@ -485,6 +515,14 @@ export const useFileStore = defineStore('file', () => {
       await refreshItemMetadata(item, newPath)
 
       emitFileSystemEvent(item, { eventType: 'renamed', oldPath, newPath })
+      const oldParentPath = await join(oldPath, '..')
+      const newParentPath = await join(newPath, '..')
+      await Promise.all([
+        invalidateDirectoryCacheSafe(oldParentPath),
+        invalidateDirectoryCacheSafe(newParentPath),
+        invalidateDirectoryCacheSafe(oldPath, true),
+        invalidateDirectoryCacheSafe(newPath, true),
+      ])
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       void logger.error(`[FileStore] 处理 ${oldPath} -> ${newPath} 重命名事件失败: ${errorMessage}`)
@@ -509,6 +547,10 @@ export const useFileStore = defineStore('file', () => {
       item.name = await basename(path)
       await refreshItemMetadata(item, path)
       emitFileSystemEvent(item, { eventType: 'modified', path })
+      await invalidateParentDirectoryCache(path)
+      if (item.isDir) {
+        await invalidateDirectoryCacheSafe(path, true)
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       void logger.error(`[FileStore] 处理 ${path} 修改事件失败: ${errorMessage}`)
@@ -533,7 +575,7 @@ export const useFileStore = defineStore('file', () => {
         const parentId = pathToId.get(parentPath)
         await handleCreateEvent(path, parentId)
       } else if (isEventType(type, 'remove')) {
-        handleRemoveEvent(path)
+        await handleRemoveEvent(path)
       } else if (isEventType(type, 'modify')) {
         const modifyType = type as { modify: { kind?: string } }
         if (modifyType.modify.kind === 'rename') {
@@ -563,6 +605,7 @@ export const useFileStore = defineStore('file', () => {
   function clear(): void {
     items.clear()
     pathToId.clear()
+    clearDirectoryItemsCache()
     if (unwatch) {
       unwatch()
       unwatch = undefined

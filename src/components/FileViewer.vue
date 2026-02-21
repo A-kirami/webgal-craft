@@ -2,8 +2,6 @@
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { AlertTriangle, ArrowDown, ArrowUp, File, FileImage, FileJson2, FileMusic, FileVideo, Folder, FolderOpen } from 'lucide-vue-next'
 
-import type { ScrollArea } from '~/components/ui/scroll-area'
-
 interface FileViewerProps {
   /** 要展示的文件/文件夹列表 */
   items: FileViewerItem[]
@@ -13,6 +11,8 @@ interface FileViewerProps {
   sortBy?: FileViewerSortBy
   /** 排序方向 */
   sortOrder?: FileViewerSortOrder
+  /** 列表表头是否允许点击排序 */
+  sortableHeaders?: boolean
   /** 加载中状态 */
   isLoading?: boolean
   /** 错误信息 */
@@ -48,6 +48,7 @@ const {
   viewMode = 'list',
   sortBy = 'name',
   sortOrder = 'asc',
+  sortableHeaders = true,
   isLoading = false,
   errorMsg = '',
   gridItemMinWidth = 100,
@@ -165,9 +166,7 @@ const EMPTY_LIST_ITEM: FileViewerItem = {
   path: '',
   isDir: false,
 }
-const showListHeader = $computed(() =>
-  viewMode === 'list',
-)
+const showListHeader = $computed(() => viewMode === 'list')
 
 watch(
   () => [viewMode, sortedItems.length, gridCols, gridItemHeight, listItemHeight, listPreviewSize],
@@ -260,12 +259,22 @@ function getHeaderAriaSort(field: FileViewerSortBy): 'ascending' | 'descending' 
 }
 
 function handleSortHeaderClick(field: FileViewerSortBy): void {
+  if (!sortableHeaders) {
+    return
+  }
+
   if (sortBy === field) {
     emit('update:sortOrder', sortOrder === 'asc' ? 'desc' : 'asc')
     return
   }
 
   emit('update:sortBy', field)
+}
+
+function getHeaderInteractionClass(): string {
+  return sortableHeaders
+    ? 'cursor-pointer hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring'
+    : 'cursor-default'
 }
 
 function scrollToIndex(index: number) {
@@ -305,8 +314,10 @@ defineExpose(fileViewerExpose)
         <div class="contents" role="columnheader" :aria-sort="getHeaderAriaSort('name')">
           <button
             type="button"
-            class="text-[11px] text-left rounded-sm inline-flex gap-1 min-w-0 truncate items-center hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            :class="{ 'text-foreground font-medium': isSortColumn('name'), 'text-muted-foreground': !isSortColumn('name') }"
+            :tabindex="sortableHeaders ? 0 : -1"
+            :aria-disabled="!sortableHeaders"
+            class="text-[11px] text-left rounded-sm inline-flex gap-1 min-w-0 truncate items-center"
+            :class="[getHeaderInteractionClass(), { 'text-foreground font-medium': isSortColumn('name'), 'text-muted-foreground': !isSortColumn('name') }]"
             @click="handleSortHeaderClick('name')"
           >
             <span>{{ $t('edit.assetPanel.sort.name') }}</span>
@@ -319,8 +330,10 @@ defineExpose(fileViewerExpose)
         <div v-if="showListSize" class="contents" role="columnheader" :aria-sort="getHeaderAriaSort('size')">
           <button
             type="button"
+            :tabindex="sortableHeaders ? 0 : -1"
+            :aria-disabled="!sortableHeaders"
             class="text-right inline-flex gap-1 w-20 items-center justify-end"
-            :class="{ 'text-foreground font-medium': isSortColumn('size'), 'text-muted-foreground': !isSortColumn('size') }"
+            :class="[getHeaderInteractionClass(), { 'text-foreground font-medium': isSortColumn('size'), 'text-muted-foreground': !isSortColumn('size') }]"
             @click="handleSortHeaderClick('size')"
           >
             <span>{{ $t('common.fileMeta.size') }}</span>
@@ -331,8 +344,10 @@ defineExpose(fileViewerExpose)
         <div class="contents" role="columnheader" :aria-sort="getHeaderAriaSort('modifiedTime')">
           <button
             type="button"
+            :tabindex="sortableHeaders ? 0 : -1"
+            :aria-disabled="!sortableHeaders"
             class="text-left inline-flex gap-1 w-32 items-center"
-            :class="{ 'text-foreground font-medium': isSortColumn('modifiedTime'), 'text-muted-foreground': !isSortColumn('modifiedTime') }"
+            :class="[getHeaderInteractionClass(), { 'text-foreground font-medium': isSortColumn('modifiedTime'), 'text-muted-foreground': !isSortColumn('modifiedTime') }]"
             @click="handleSortHeaderClick('modifiedTime')"
           >
             <span>{{ $t('common.fileMeta.modifiedAt') }}</span>
@@ -343,8 +358,10 @@ defineExpose(fileViewerExpose)
         <div v-if="showListCreatedAt" class="contents" role="columnheader" :aria-sort="getHeaderAriaSort('createdTime')">
           <button
             type="button"
+            :tabindex="sortableHeaders ? 0 : -1"
+            :aria-disabled="!sortableHeaders"
             class="text-left inline-flex gap-1 w-32 items-center"
-            :class="{ 'text-foreground font-medium': isSortColumn('createdTime'), 'text-muted-foreground': !isSortColumn('createdTime') }"
+            :class="[getHeaderInteractionClass(), { 'text-foreground font-medium': isSortColumn('createdTime'), 'text-muted-foreground': !isSortColumn('createdTime') }]"
             @click="handleSortHeaderClick('createdTime')"
           >
             <span>{{ $t('common.fileMeta.createdAt') }}</span>
@@ -399,6 +416,7 @@ defineExpose(fileViewerExpose)
                 v-for="item in getGridRowItems(row.index)"
                 :key="item.path"
                 type="button"
+                data-file-viewer-item="true"
                 class="p-1.5 rounded-md flex flex-col gap-1 items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
                 @click="handleItemClick(item)"
               >
@@ -432,6 +450,7 @@ defineExpose(fileViewerExpose)
               v-else
               :key="item.path"
               type="button"
+              data-file-viewer-item="true"
               class="p-2 rounded-md flex gap-2 w-full items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
               :style="{ height: `${listItemHeight}px` }"
               @click="handleItemClick(item)"

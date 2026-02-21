@@ -12,6 +12,7 @@ declare global {
   const WebgalParser: typeof import('./utils/webgal-parser').WebgalParser
   const asyncComputed: typeof import('@vueuse/core').asyncComputed
   const autoResetRef: typeof import('@vueuse/core').autoResetRef
+  const clearDirectoryItemsCache: typeof import('./services/directory-cache').clearDirectoryItemsCache
   const colorMode: typeof import('./composables/color-mode').colorMode
   const compareOptionalNumber: typeof import('./utils/sort').compareOptionalNumber
   const computed: typeof import('vue').computed
@@ -69,6 +70,7 @@ declare global {
   const ignorableWatch: typeof import('@vueuse/core').ignorableWatch
   const inject: typeof import('vue').inject
   const injectLocal: typeof import('@vueuse/core').injectLocal
+  const invalidateDirectoryItemsCache: typeof import('./services/directory-cache').invalidateDirectoryItemsCache
   const isDefined: typeof import('@vueuse/core').isDefined
   const isProxy: typeof import('vue').isProxy
   const isReactive: typeof import('vue').isReactive
@@ -81,6 +83,7 @@ declare global {
   const markRaw: typeof import('vue').markRaw
   const nextTick: typeof import('vue').nextTick
   const normalizeNumber: typeof import('./utils/sort').normalizeNumber
+  const normalizeRelativePath: typeof import('./utils/path').normalizeRelativePath
   const notify: typeof import('notivue').push
   const onActivated: typeof import('vue').onActivated
   const onBeforeMount: typeof import('vue').onBeforeMount
@@ -112,6 +115,7 @@ declare global {
   const reactiveComputed: typeof import('@vueuse/core').reactiveComputed
   const reactiveOmit: typeof import('@vueuse/core').reactiveOmit
   const reactivePick: typeof import('@vueuse/core').reactivePick
+  const readDirectoryItemsCached: typeof import('./services/directory-cache').readDirectoryItemsCached
   const readonly: typeof import('vue').readonly
   const ref: typeof import('vue').ref
   const refAutoReset: typeof import('@vueuse/core').refAutoReset
@@ -132,6 +136,7 @@ declare global {
   const throttledRef: typeof import('@vueuse/core').throttledRef
   const throttledWatch: typeof import('@vueuse/core').throttledWatch
   const thumbnailCmds: typeof import('./commands/thumbnaila').thumbnailCmds
+  const toComparablePath: typeof import('./utils/path').toComparablePath
   const toRaw: typeof import('vue').toRaw
   const toReactive: typeof import('@vueuse/core').toReactive
   const toRef: typeof import('vue').toRef
@@ -194,6 +199,7 @@ declare global {
   const useDeviceOrientation: typeof import('@vueuse/core').useDeviceOrientation
   const useDevicePixelRatio: typeof import('@vueuse/core').useDevicePixelRatio
   const useDevicesList: typeof import('@vueuse/core').useDevicesList
+  const useDirectoryReader: typeof import('./composables/useDirectoryReader').useDirectoryReader
   const useDiscoverResources: typeof import('./composables/useDiscoverResources').useDiscoverResources
   const useDisplayMedia: typeof import('@vueuse/core').useDisplayMedia
   const useDocumentVisibility: typeof import('@vueuse/core').useDocumentVisibility
@@ -419,6 +425,7 @@ declare module 'vue' {
     readonly WebgalParser: UnwrapRef<typeof import('./utils/webgal-parser')['WebgalParser']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
+    readonly clearDirectoryItemsCache: UnwrapRef<typeof import('./services/directory-cache')['clearDirectoryItemsCache']>
     readonly colorMode: UnwrapRef<typeof import('./composables/color-mode')['colorMode']>
     readonly compareOptionalNumber: UnwrapRef<typeof import('./utils/sort')['compareOptionalNumber']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
@@ -475,6 +482,7 @@ declare module 'vue' {
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly injectLocal: UnwrapRef<typeof import('@vueuse/core')['injectLocal']>
+    readonly invalidateDirectoryItemsCache: UnwrapRef<typeof import('./services/directory-cache')['invalidateDirectoryItemsCache']>
     readonly isDefined: UnwrapRef<typeof import('@vueuse/core')['isDefined']>
     readonly isProxy: UnwrapRef<typeof import('vue')['isProxy']>
     readonly isReactive: UnwrapRef<typeof import('vue')['isReactive']>
@@ -487,6 +495,7 @@ declare module 'vue' {
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly normalizeNumber: UnwrapRef<typeof import('./utils/sort')['normalizeNumber']>
+    readonly normalizeRelativePath: UnwrapRef<typeof import('./utils/path')['normalizeRelativePath']>
     readonly notify: UnwrapRef<typeof import('notivue')['push']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
@@ -518,6 +527,7 @@ declare module 'vue' {
     readonly reactiveComputed: UnwrapRef<typeof import('@vueuse/core')['reactiveComputed']>
     readonly reactiveOmit: UnwrapRef<typeof import('@vueuse/core')['reactiveOmit']>
     readonly reactivePick: UnwrapRef<typeof import('@vueuse/core')['reactivePick']>
+    readonly readDirectoryItemsCached: UnwrapRef<typeof import('./services/directory-cache')['readDirectoryItemsCached']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
     readonly refAutoReset: UnwrapRef<typeof import('@vueuse/core')['refAutoReset']>
@@ -538,6 +548,7 @@ declare module 'vue' {
     readonly throttledRef: UnwrapRef<typeof import('@vueuse/core')['throttledRef']>
     readonly throttledWatch: UnwrapRef<typeof import('@vueuse/core')['throttledWatch']>
     readonly thumbnailCmds: UnwrapRef<typeof import('./commands/thumbnaila')['thumbnailCmds']>
+    readonly toComparablePath: UnwrapRef<typeof import('./utils/path')['toComparablePath']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
     readonly toReactive: UnwrapRef<typeof import('@vueuse/core')['toReactive']>
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
@@ -600,6 +611,7 @@ declare module 'vue' {
     readonly useDeviceOrientation: UnwrapRef<typeof import('@vueuse/core')['useDeviceOrientation']>
     readonly useDevicePixelRatio: UnwrapRef<typeof import('@vueuse/core')['useDevicePixelRatio']>
     readonly useDevicesList: UnwrapRef<typeof import('@vueuse/core')['useDevicesList']>
+    readonly useDirectoryReader: UnwrapRef<typeof import('./composables/useDirectoryReader')['useDirectoryReader']>
     readonly useDiscoverResources: UnwrapRef<typeof import('./composables/useDiscoverResources')['useDiscoverResources']>
     readonly useDisplayMedia: UnwrapRef<typeof import('@vueuse/core')['useDisplayMedia']>
     readonly useDocumentVisibility: UnwrapRef<typeof import('@vueuse/core')['useDocumentVisibility']>
