@@ -189,8 +189,9 @@ defineExpose(fileViewerExpose)
 <template>
   <ScrollArea ref="scrollAreaRef">
     <!-- 加载中状态 -->
-    <div v-if="props.isLoading" class="flex flex-col h-full w-full items-center justify-center">
+    <div v-if="props.isLoading" class="flex flex-col h-full w-full items-center justify-center" role="status" aria-live="polite">
       <div class="i-svg-spinners-ring-resize text-accent mb-2 size-8 animate-spin" />
+      <span class="sr-only">{{ $t('common.loading') }}</span>
     </div>
 
     <!-- 加载失败状态 -->
