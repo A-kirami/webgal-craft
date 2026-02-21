@@ -133,7 +133,17 @@ const gridCols = $computed(() => {
   return Math.max(1, Math.floor(width / gridItemWidth))
 })
 
-const sortedItems = $computed(() => items.toSorted(compareFileViewerItems))
+const fileViewerAccessor: SortableItemAccessor<FileViewerItem> = {
+  isDirectory: item => item.isDir,
+  name: item => item.name,
+  size: item => item.size,
+  modifiedAt: item => item.modifiedAt,
+  createdAt: item => item.createdAt,
+}
+
+const sortedItems = $computed(() =>
+  items.toSorted(createItemComparator(sortBy, sortOrder, fileViewerAccessor)),
+)
 const rowCount = $computed(() => Math.ceil(sortedItems.length / gridCols))
 
 const rowVirtualizer = useVirtualizer(computed(() => ({
@@ -166,50 +176,6 @@ watch(
   },
   { flush: 'post' },
 )
-
-function compareFileViewerItems(a: FileViewerItem, b: FileViewerItem): number {
-  if (a.isDir !== b.isDir) {
-    return a.isDir ? -1 : 1
-  }
-
-  if (sortBy === 'name') {
-    const result = compareByName(a, b)
-    return sortOrder === 'desc' ? -result : result
-  }
-
-  const sortResult = compareBySortField(a, b)
-  if (sortResult !== 0) {
-    return sortResult
-  }
-
-  const tieBreaker = compareByName(a, b)
-  return sortOrder === 'desc' ? -tieBreaker : tieBreaker
-}
-
-function compareByName(a: FileViewerItem, b: FileViewerItem): number {
-  return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
-}
-
-function compareBySortField(a: FileViewerItem, b: FileViewerItem): number {
-  return compareOptionalNumber(
-    getSortNumericValue(a),
-    getSortNumericValue(b),
-    sortOrder,
-  )
-}
-
-function getSortNumericValue(item: FileViewerItem): number | undefined {
-  if (sortBy === 'size') {
-    return item.isDir ? undefined : normalizeNumber(item.size)
-  }
-  if (sortBy === 'modifiedTime') {
-    return normalizeNumber(item.modifiedAt)
-  }
-  if (sortBy === 'createdTime') {
-    return normalizeNumber(item.createdAt)
-  }
-  return undefined
-}
 
 function getDefaultIconComponent(item: FileViewerItem) {
   if (item.isDir) {
@@ -336,58 +302,56 @@ defineExpose(fileViewerExpose)
     >
       <div class="flex flex-1 gap-2 min-w-0 items-center">
         <div aria-hidden="true" :style="{ width: `${listPreviewSize}px` }" />
-        <button
-          type="button"
-          class="text-[11px] text-left rounded-sm inline-flex gap-1 min-w-0 truncate items-center hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          role="columnheader"
-          :class="{ 'text-foreground font-medium': isSortColumn('name'), 'text-muted-foreground': !isSortColumn('name') }"
-          :aria-sort="getHeaderAriaSort('name')"
-          @click="handleSortHeaderClick('name')"
-        >
-          <span>{{ $t('edit.assetPanel.sort.name') }}</span>
-          <ArrowUp v-if="isSortColumn('name') && sortOrder === 'asc'" class="size-3" />
-          <ArrowDown v-else-if="isSortColumn('name') && sortOrder === 'desc'" class="size-3" />
-        </button>
+        <div role="columnheader" :aria-sort="getHeaderAriaSort('name')">
+          <button
+            type="button"
+            class="text-[11px] text-left rounded-sm inline-flex gap-1 min-w-0 truncate items-center hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            :class="{ 'text-foreground font-medium': isSortColumn('name'), 'text-muted-foreground': !isSortColumn('name') }"
+            @click="handleSortHeaderClick('name')"
+          >
+            <span>{{ $t('edit.assetPanel.sort.name') }}</span>
+            <ArrowUp v-if="isSortColumn('name') && sortOrder === 'asc'" class="size-3" />
+            <ArrowDown v-else-if="isSortColumn('name') && sortOrder === 'desc'" class="size-3" />
+          </button>
+        </div>
       </div>
       <div class="text-[11px] ml-2 flex shrink-0 gap-3 items-center">
-        <button
-          v-if="showListSize"
-          type="button"
-          class="text-right inline-flex gap-1 w-20 items-center justify-end"
-          role="columnheader"
-          :class="{ 'text-foreground font-medium': isSortColumn('size'), 'text-muted-foreground': !isSortColumn('size') }"
-          :aria-sort="getHeaderAriaSort('size')"
-          @click="handleSortHeaderClick('size')"
-        >
-          <span>{{ $t('common.fileMeta.size') }}</span>
-          <ArrowUp v-if="isSortColumn('size') && sortOrder === 'asc'" class="size-3" />
-          <ArrowDown v-else-if="isSortColumn('size') && sortOrder === 'desc'" class="size-3" />
-        </button>
-        <button
-          type="button"
-          class="text-left inline-flex gap-1 w-32 items-center"
-          role="columnheader"
-          :class="{ 'text-foreground font-medium': isSortColumn('modifiedTime'), 'text-muted-foreground': !isSortColumn('modifiedTime') }"
-          :aria-sort="getHeaderAriaSort('modifiedTime')"
-          @click="handleSortHeaderClick('modifiedTime')"
-        >
-          <span>{{ $t('common.fileMeta.modifiedAt') }}</span>
-          <ArrowUp v-if="isSortColumn('modifiedTime') && sortOrder === 'asc'" class="size-3" />
-          <ArrowDown v-else-if="isSortColumn('modifiedTime') && sortOrder === 'desc'" class="size-3" />
-        </button>
-        <button
-          v-if="showListCreatedAt"
-          type="button"
-          class="text-left inline-flex gap-1 w-32 items-center"
-          role="columnheader"
-          :class="{ 'text-foreground font-medium': isSortColumn('createdTime'), 'text-muted-foreground': !isSortColumn('createdTime') }"
-          :aria-sort="getHeaderAriaSort('createdTime')"
-          @click="handleSortHeaderClick('createdTime')"
-        >
-          <span>{{ $t('common.fileMeta.createdAt') }}</span>
-          <ArrowUp v-if="isSortColumn('createdTime') && sortOrder === 'asc'" class="size-3" />
-          <ArrowDown v-else-if="isSortColumn('createdTime') && sortOrder === 'desc'" class="size-3" />
-        </button>
+        <div v-if="showListSize" role="columnheader" :aria-sort="getHeaderAriaSort('size')">
+          <button
+            type="button"
+            class="text-right inline-flex gap-1 w-20 items-center justify-end"
+            :class="{ 'text-foreground font-medium': isSortColumn('size'), 'text-muted-foreground': !isSortColumn('size') }"
+            @click="handleSortHeaderClick('size')"
+          >
+            <span>{{ $t('common.fileMeta.size') }}</span>
+            <ArrowUp v-if="isSortColumn('size') && sortOrder === 'asc'" class="size-3" />
+            <ArrowDown v-else-if="isSortColumn('size') && sortOrder === 'desc'" class="size-3" />
+          </button>
+        </div>
+        <div role="columnheader" :aria-sort="getHeaderAriaSort('modifiedTime')">
+          <button
+            type="button"
+            class="text-left inline-flex gap-1 w-32 items-center"
+            :class="{ 'text-foreground font-medium': isSortColumn('modifiedTime'), 'text-muted-foreground': !isSortColumn('modifiedTime') }"
+            @click="handleSortHeaderClick('modifiedTime')"
+          >
+            <span>{{ $t('common.fileMeta.modifiedAt') }}</span>
+            <ArrowUp v-if="isSortColumn('modifiedTime') && sortOrder === 'asc'" class="size-3" />
+            <ArrowDown v-else-if="isSortColumn('modifiedTime') && sortOrder === 'desc'" class="size-3" />
+          </button>
+        </div>
+        <div v-if="showListCreatedAt" role="columnheader" :aria-sort="getHeaderAriaSort('createdTime')">
+          <button
+            type="button"
+            class="text-left inline-flex gap-1 w-32 items-center"
+            :class="{ 'text-foreground font-medium': isSortColumn('createdTime'), 'text-muted-foreground': !isSortColumn('createdTime') }"
+            @click="handleSortHeaderClick('createdTime')"
+          >
+            <span>{{ $t('common.fileMeta.createdAt') }}</span>
+            <ArrowUp v-if="isSortColumn('createdTime') && sortOrder === 'asc'" class="size-3" />
+            <ArrowDown v-else-if="isSortColumn('createdTime') && sortOrder === 'desc'" class="size-3" />
+          </button>
+        </div>
       </div>
     </div>
     <div class="flex-1 min-h-0">

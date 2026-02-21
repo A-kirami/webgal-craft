@@ -26,6 +26,7 @@ declare global {
   const createEventHook: typeof import('@vueuse/core').createEventHook
   const createGlobalState: typeof import('@vueuse/core').createGlobalState
   const createInjectionState: typeof import('@vueuse/core').createInjectionState
+  const createItemComparator: typeof import('./utils/sort').createItemComparator
   const createReactiveFn: typeof import('@vueuse/core').createReactiveFn
   const createRef: typeof import('@vueuse/core').createRef
   const createReusableTemplate: typeof import('@vueuse/core').createReusableTemplate
@@ -391,6 +392,9 @@ declare global {
   export type { Tab } from './stores/tabs'
   import('./stores/tabs')
   // @ts-ignore
+  export type { SortableItemAccessor } from './utils/sort'
+  import('./utils/sort')
+  // @ts-ignore
   export type { DebugCommand, IDebugMessage, IComponentsVisibility, IComponentVisibilityCommand } from './types/debugProtocol'
   import('./types/debugProtocol')
   // @ts-ignore
@@ -429,6 +433,7 @@ declare module 'vue' {
     readonly createEventHook: UnwrapRef<typeof import('@vueuse/core')['createEventHook']>
     readonly createGlobalState: UnwrapRef<typeof import('@vueuse/core')['createGlobalState']>
     readonly createInjectionState: UnwrapRef<typeof import('@vueuse/core')['createInjectionState']>
+    readonly createItemComparator: UnwrapRef<typeof import('./utils/sort')['createItemComparator']>
     readonly createReactiveFn: UnwrapRef<typeof import('@vueuse/core')['createReactiveFn']>
     readonly createRef: UnwrapRef<typeof import('@vueuse/core')['createRef']>
     readonly createReusableTemplate: UnwrapRef<typeof import('@vueuse/core')['createReusableTemplate']>
