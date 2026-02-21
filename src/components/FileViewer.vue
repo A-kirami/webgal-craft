@@ -282,24 +282,24 @@ function formatDateTime(timestamp: number): string {
   return dateFormatter.format(timestamp)
 }
 
-function isSortColumn(sortBy: FileViewerSortBy): boolean {
-  return sortBy === sortBy
+function isSortColumn(field: FileViewerSortBy): boolean {
+  return sortBy === field
 }
 
-function getHeaderAriaSort(sortBy: FileViewerSortBy): 'ascending' | 'descending' | 'none' {
-  if (!isSortColumn(sortBy)) {
+function getHeaderAriaSort(field: FileViewerSortBy): 'ascending' | 'descending' | 'none' {
+  if (!isSortColumn(field)) {
     return 'none'
   }
   return sortOrder === 'asc' ? 'ascending' : 'descending'
 }
 
-function handleSortHeaderClick(sortBy: FileViewerSortBy): void {
-  if (sortBy === sortBy) {
+function handleSortHeaderClick(field: FileViewerSortBy): void {
+  if (sortBy === field) {
     emit('update:sortOrder', sortOrder === 'asc' ? 'desc' : 'asc')
     return
   }
 
-  emit('update:sortBy', sortBy)
+  emit('update:sortBy', field)
 }
 
 function scrollToIndex(index: number) {
