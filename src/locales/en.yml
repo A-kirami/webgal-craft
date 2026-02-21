@@ -30,6 +30,35 @@ common:
     unavailableA11y: Unavailable
     directorySize: "--"
 
+filePicker:
+  placeholder: Select a file path
+  clearInput: Clear input
+  sort:
+    name: Name
+    modifiedTime: Modified time
+    createdTime: Created time
+    size: File size
+    directionAsc: Ascending
+    directionDesc: Descending
+  zoom:
+    small: Small
+    medium: Medium
+    large: Large
+    extraLarge: Extra Large
+  more:
+    title: More
+    sortTitle: Sort mode
+    sortFieldTitle: Sort field
+    sortOrderTitle: Sort direction
+    filtersTitle: Filters
+    showSupportedOnly: Hide unsupported formats
+    zoomTitle: Icon size
+    recentTitle: Recent history
+    showRecentHistory: Show recent selection bar
+    clearRecentHistory: Clear recent history
+  recent:
+    title: Recent
+
 app:
   name: WebGAL Craft
   description: WebGAL Visual Novel Studio

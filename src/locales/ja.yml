@@ -30,6 +30,35 @@ common:
     unavailableA11y: 利用不可
     directorySize: "--"
 
+filePicker:
+  placeholder: ファイルパスを選択
+  clearInput: 入力をクリア
+  sort:
+    name: 名前
+    modifiedTime: 更新日時
+    createdTime: 作成日時
+    size: ファイルサイズ
+    directionAsc: 昇順
+    directionDesc: 降順
+  zoom:
+    small: 小
+    medium: 中
+    large: 大
+    extraLarge: 特大
+  more:
+    title: その他
+    sortTitle: 並び替え方法
+    sortFieldTitle: 並び替え項目
+    sortOrderTitle: 並び順
+    filtersTitle: フィルター
+    showSupportedOnly: 非対応形式を非表示
+    zoomTitle: アイコンサイズ
+    recentTitle: 最近の履歴
+    showRecentHistory: 最近選択バーを表示
+    clearRecentHistory: 最近の履歴をクリア
+  recent:
+    title: 最近選択
+
 app:
   name: WebGAL Craft
   description: WebGAL ビジュアルノベルスタジオ
