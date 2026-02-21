@@ -17,6 +17,8 @@ common:
   view:
     grid: Grid View
     list: List View
+  breadcrumb:
+    showHiddenSegmentsCount: Show {count} hidden path segments
 
 app:
   name: WebGAL Craft
@@ -242,8 +244,6 @@ edit:
     loading: Loading assets...
     loadFailed: "Load failed: {error}"
     noContent: No content
-  assetBreadcrumb:
-    shortPath: Short path
   assetPreview:
     unsupportedType: Unsupported file type
   textEditor:

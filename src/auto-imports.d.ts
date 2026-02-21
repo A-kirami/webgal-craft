@@ -163,6 +163,7 @@ declare global {
   const useBase64: typeof import('@vueuse/core').useBase64
   const useBattery: typeof import('@vueuse/core').useBattery
   const useBluetooth: typeof import('@vueuse/core').useBluetooth
+  const useBreadcrumbCollapse: typeof import('./composables/useBreadcrumbCollapse').useBreadcrumbCollapse
   const useBreakpoints: typeof import('@vueuse/core').useBreakpoints
   const useBroadcastChannel: typeof import('@vueuse/core').useBroadcastChannel
   const useBrowserLocation: typeof import('@vueuse/core').useBrowserLocation
@@ -360,6 +361,9 @@ declare global {
   export type { ThumbnailSize } from './commands/thumbnaila'
   import('./commands/thumbnaila')
   // @ts-ignore
+  export type { UseBreadcrumbCollapseOptions, UseBreadcrumbCollapseReturn } from './composables/useBreadcrumbCollapse'
+  import('./composables/useBreadcrumbCollapse')
+  // @ts-ignore
   export type { ClipboardItem } from './composables/useFileClipboard'
   import('./composables/useFileClipboard')
   // @ts-ignore
@@ -555,6 +559,7 @@ declare module 'vue' {
     readonly useBase64: UnwrapRef<typeof import('@vueuse/core')['useBase64']>
     readonly useBattery: UnwrapRef<typeof import('@vueuse/core')['useBattery']>
     readonly useBluetooth: UnwrapRef<typeof import('@vueuse/core')['useBluetooth']>
+    readonly useBreadcrumbCollapse: UnwrapRef<typeof import('./composables/useBreadcrumbCollapse')['useBreadcrumbCollapse']>
     readonly useBreakpoints: UnwrapRef<typeof import('@vueuse/core')['useBreakpoints']>
     readonly useBroadcastChannel: UnwrapRef<typeof import('@vueuse/core')['useBroadcastChannel']>
     readonly useBrowserLocation: UnwrapRef<typeof import('@vueuse/core')['useBrowserLocation']>

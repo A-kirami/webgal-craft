@@ -17,6 +17,8 @@ common:
   view:
     grid: 网格视图
     list: 列表视图
+  breadcrumb:
+    showHiddenSegmentsCount: 展开 {count} 个隐藏路径段
 
 app:
   name: WebGAL Craft
@@ -242,8 +244,6 @@ edit:
     loading: 正在加载资源…
     loadFailed: 加载失败：{error}
     noContent: 暂无内容
-  assetBreadcrumb:
-    shortPath: 简略路径
   assetPreview:
     unsupportedType: 不支持的文件类型
   textEditor:
