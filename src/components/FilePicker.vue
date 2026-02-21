@@ -286,23 +286,6 @@ function getFileName(path: string): string {
   return normalized.split('/').at(-1) ?? normalized
 }
 
-function resolveInputCandidatePath(input: string, fallbackDir: string): string {
-  if (!input.trim() || isAbsoluteInput(input)) {
-    return ''
-  }
-  const normalized = normalizeInputPath(input)
-  if (!normalized) {
-    return ''
-  }
-  if (normalized.includes('/')) {
-    if (normalized.endsWith('/')) {
-      return ''
-    }
-    return normalizeRelativePath(normalized)
-  }
-  return normalizeRelativePath(fallbackDir ? `${fallbackDir}/${normalized}` : normalized)
-}
-
 function resolveInputFallbackDir(input: string, previousInput: string, fallbackDir: string): string {
   const normalizedFallbackDir = normalizeRelativePath(fallbackDir)
   if (!normalizedFallbackDir) {
@@ -542,6 +525,12 @@ function handleInputFocus() {
   }
 }
 
+function commitInputValue() {
+  const normalizedPath = normalizeRelativePath(inputText)
+  modelValue = normalizedPath
+  setInputSilently(normalizedPath)
+}
+
 function scheduleBlurCommit(source: BlurCommitSource) {
   setTimeout(() => {
     if (source === 'input' && isOpen) {
@@ -554,7 +543,7 @@ function scheduleBlurCommit(source: BlurCommitSource) {
       suppressBlurCommit = false
       return
     }
-    modelValue = normalizeRelativePath(inputText)
+    commitInputValue()
   }, 0)
 }
 
@@ -569,31 +558,9 @@ function handleInputClick() {
   }
 }
 
-async function handleEnter() {
-  if (!canonicalRootPath) {
-    return
-  }
-  const candidatePath = resolveInputCandidatePath(inputText, currentDir)
-  if (!candidatePath) {
-    return
-  }
-
-  try {
-    const safePath = await ensurePathWithinRoot(await join(canonicalRootPath, candidatePath), canonicalRootPath)
-    if (!(await exists(safePath))) {
-      return
-    }
-
-    const info = await stat(safePath)
-    if (info.isDirectory) {
-      await loadDirectory(candidatePath, '')
-      setInputSilently(candidatePath ? `${candidatePath}/` : '')
-      return
-    }
-    commitSelection(candidatePath, true)
-  } catch {
-    return
-  }
+function handleEnter() {
+  commitInputValue()
+  isOpen = false
 }
 
 function handleEscape() {
