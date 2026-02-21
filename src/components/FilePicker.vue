@@ -39,6 +39,10 @@ interface InputParseResult {
 
 type BlurCommitSource = 'input' | 'popover'
 
+interface OpenPopoverOptions {
+  syncInputWithModel?: boolean
+}
+
 const ZOOM_MAP: Record<ZoomLevel, number> = { small: 80, medium: 100, large: 120, extraLarge: 140 }
 const HISTORY_STORAGE_KEY = 'webgalcraft:file-picker-history'
 
@@ -130,11 +134,20 @@ const filteredItems = $computed(() => {
 const visibleHistory = $computed(() => showRecentHistory ? recentHistory : [])
 const canOpen = $computed(() => !disabled && isRootReady && !!canonicalRootPath)
 
-const debouncedSync = useDebounceFn((input: string, previousInput: string) => {
-  if (!isOpen || !canonicalRootPath) {
+const debouncedSync = useDebounceFn(async (input: string, previousInput: string) => {
+  if (!canonicalRootPath) {
     return
   }
-  void syncByInput(input, previousInput)
+
+  if (!isOpen) {
+    if (isInputFocused && canOpen) {
+      await openPopover({ syncInputWithModel: false })
+      await syncByInput(input, previousInput)
+    }
+    return
+  }
+
+  await syncByInput(input, previousInput)
 }, 300)
 
 watch(
@@ -497,12 +510,15 @@ async function resolveOpenDir(): Promise<string> {
   }
 }
 
-async function openPopover() {
+async function openPopover(options: OpenPopoverOptions = {}) {
   if (!canOpen) {
     return
   }
+  const syncInputWithModel = options.syncInputWithModel ?? true
   isOpen = true
-  setInputSilently(modelValue)
+  if (syncInputWithModel) {
+    setInputSilently(modelValue)
+  }
 
   const openDir = await resolveOpenDir()
   await loadDirectory(openDir, '')
@@ -601,7 +617,7 @@ function handleEscape() {
 function handleInputKeydown(event: KeyboardEvent) {
   if (event.key === 'Enter') {
     event.preventDefault()
-    void handleEnter()
+    handleEnter()
     return
   }
   if (event.key === 'Escape') {
