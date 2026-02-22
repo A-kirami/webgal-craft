@@ -120,14 +120,17 @@ const extensionSet = $computed(() => new Set(
     .map(ext => ext.startsWith('.') ? ext : `.${ext}`),
 ))
 const excludeSet = $computed(() => new Set(
-  exclude.map(name => name.toLocaleLowerCase()),
+  exclude
+    .map(name => name.trim())
+    .filter(Boolean)
+    .map(name => name.toLowerCase()),
 ))
 const filteredItems = $computed(() => {
   const keyword = filterKeyword.trim().toLocaleLowerCase()
   return items
     .map(item => ({ ...item, isSupported: item.isDir || isExtensionSupported(item.name) }))
     .filter((item) => {
-      if (!item.isDir && excludeSet.size > 0 && excludeSet.has(item.name.toLocaleLowerCase())) {
+      if (!item.isDir && excludeSet.size > 0 && excludeSet.has(item.name.toLowerCase())) {
         return false
       }
       if (showSupportedOnly && item.isSupported === false) {
