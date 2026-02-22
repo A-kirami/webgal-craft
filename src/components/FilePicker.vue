@@ -11,6 +11,7 @@ interface FilePickerProps {
   class?: HTMLAttributes['class']
   rootPath: string
   extensions?: string[]
+  exclude?: string[]
   defaultSortBy?: FileViewerSortBy
   defaultSortOrder?: FileViewerSortOrder
   defaultZoomLevel?: 'small' | 'medium' | 'large' | 'extraLarge'
@@ -50,6 +51,7 @@ const {
   class: inputClass,
   rootPath,
   extensions = [],
+  exclude = [],
   defaultSortBy = 'name',
   defaultSortOrder = 'asc',
   defaultZoomLevel = 'medium',
@@ -117,11 +119,17 @@ const extensionSet = $computed(() => new Set(
     .filter(Boolean)
     .map(ext => ext.startsWith('.') ? ext : `.${ext}`),
 ))
+const excludeSet = $computed(() => new Set(
+  exclude.map(name => name.toLocaleLowerCase()),
+))
 const filteredItems = $computed(() => {
   const keyword = filterKeyword.trim().toLocaleLowerCase()
   return items
     .map(item => ({ ...item, isSupported: item.isDir || isExtensionSupported(item.name) }))
     .filter((item) => {
+      if (!item.isDir && excludeSet.size > 0 && excludeSet.has(item.name.toLocaleLowerCase())) {
+        return false
+      }
       if (showSupportedOnly && item.isSupported === false) {
         return false
       }
@@ -737,212 +745,211 @@ function handleFileListKeydown(event: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="w-full">
-    <Popover :open="isOpen" @update:open="handlePopoverOpenChange">
-      <PopoverTrigger as-child>
-        <div class="relative">
-          <Input
-            ::="inputText"
-            :disabled="disabled"
-            :placeholder="placeholder || $t('filePicker.placeholder')"
-            :class="cn(
-              {
-                'pr-8': !!inputText,
-              },
-              inputClass,
-            )"
-            @focus="handleInputFocus"
-            @blur="handleInputBlur"
-            @click.stop="handleInputClick"
-            @keydown="handleInputKeydown"
-          />
-          <button
-            v-if="inputText"
-            type="button"
-            class="text-muted-foreground size-4 right-2 top-1/2 absolute hover:text-foreground -translate-y-1/2"
-            :aria-label="$t('filePicker.clearInput')"
-            @click="handleClear"
-          >
-            <X class="size-4" />
-          </button>
-        </div>
-      </PopoverTrigger>
+  <Popover :open="isOpen" @update:open="handlePopoverOpenChange">
+    <PopoverTrigger as-child>
+      <div class="relative">
+        <Input
+          ::="inputText"
+          :disabled="disabled"
+          :placeholder="placeholder || $t('filePicker.placeholder')"
+          :class="cn(
+            {
+              'pr-8': !!inputText,
+            },
+            inputClass,
+          )"
+          @focus="handleInputFocus"
+          @blur="handleInputBlur"
+          @click.stop="handleInputClick"
+          @keydown="handleInputKeydown"
+        />
+        <button
+          v-if="inputText"
+          type="button"
+          class="text-muted-foreground size-4 right-2 top-1/2 absolute hover:text-foreground -translate-y-1/2"
+          :aria-label="$t('filePicker.clearInput')"
+          @click="handleClear"
+        >
+          <X class="size-4" />
+        </button>
+      </div>
+    </PopoverTrigger>
 
-      <PopoverContent
-        align="start"
-        :side-offset="8"
-        class="p-0 flex flex-col h-[min(64vh,496px)] w-[min(46vw,430px)]"
-        @open-auto-focus="handlePopoverOpenAutoFocus"
-        @focusin="handlePopoverFocusIn"
-        @focusout="handlePopoverFocusOut"
-      >
-        <div v-if="hasHeader" class="px-3 py-2 border-b">
-          <slot name="popover-header">
-            <h3 class="text-sm font-medium">
-              {{ popoverTitle }}
-            </h3>
-          </slot>
-        </div>
+    <PopoverContent
+      align="start"
+      :side-offset="8"
+      :collision-padding="8"
+      class="p-0 flex flex-col h-[min(64vh,496px)] max-h-[var(--reka-popover-content-available-height)] max-w-[var(--reka-popover-content-available-width)] w-[min(46vw,430px)]"
+      @open-auto-focus="handlePopoverOpenAutoFocus"
+      @focusin="handlePopoverFocusIn"
+      @focusout="handlePopoverFocusOut"
+    >
+      <div v-if="hasHeader" class="px-3 py-2 border-b">
+        <slot name="popover-header">
+          <h3 class="text-sm font-medium">
+            {{ popoverTitle }}
+          </h3>
+        </slot>
+      </div>
 
-        <div class="px-2 py-1.5 border-b flex gap-1.5 min-w-0 items-center">
-          <PathBreadcrumb
-            class="ml-1 flex-1 min-w-0"
-            :root-path="rootPath"
-            :current-path="currentDir"
-            @navigate="handleBreadcrumbNavigate"
-          />
-          <Button
-            variant="outline"
-            size="icon"
-            class="size-7 hidden shadow-none sm:inline-flex"
-            :title="viewMode === 'grid' ? $t('common.view.grid') : $t('common.view.list')"
-            :aria-label="viewMode === 'grid' ? $t('common.view.grid') : $t('common.view.list')"
-            @click="viewMode = viewMode === 'grid' ? 'list' : 'grid'"
-          >
-            <LayoutGrid v-if="viewMode === 'grid'" class="size-3.5" />
-            <LayoutList v-else class="size-3.5" />
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger as-child>
-              <Button variant="outline" size="icon" class="size-7 shadow-none" :title="$t('filePicker.more.title')" :aria-label="$t('filePicker.more.title')">
-                <EllipsisVertical class="size-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" class="w-30">
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger class="text-xs">
-                  {{ $t('filePicker.more.sortTitle') }}
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuLabel class="text-xs">
-                    {{ $t('filePicker.more.sortFieldTitle') }}
-                  </DropdownMenuLabel>
-                  <DropdownMenuRadioGroup ::="sortBy">
-                    <DropdownMenuRadioItem value="name" class="text-xs">
-                      {{ $t('filePicker.sort.name') }}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="modifiedTime" class="text-xs">
-                      {{ $t('filePicker.sort.modifiedTime') }}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="createdTime" class="text-xs">
-                      {{ $t('filePicker.sort.createdTime') }}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="size" class="text-xs">
-                      {{ $t('filePicker.sort.size') }}
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel class="text-xs">
-                    {{ $t('filePicker.more.sortOrderTitle') }}
-                  </DropdownMenuLabel>
-                  <DropdownMenuRadioGroup ::="sortOrder">
-                    <DropdownMenuRadioItem value="asc" class="text-xs">
-                      <span class="flex-1">{{ $t('filePicker.sort.directionAsc') }}</span>
-                      <ArrowUp class="text-muted-foreground shrink-0 size-3.5" />
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="desc" class="text-xs">
-                      <span class="flex-1">{{ $t('filePicker.sort.directionDesc') }}</span>
-                      <ArrowDown class="text-muted-foreground shrink-0 size-3.5" />
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger class="text-xs">
-                  {{ $t('filePicker.more.zoomTitle') }}
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuRadioGroup ::="zoomLevel">
-                    <DropdownMenuRadioItem value="small" class="text-xs">
-                      {{ $t('filePicker.zoom.small') }}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="medium" class="text-xs">
-                      {{ $t('filePicker.zoom.medium') }}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="large" class="text-xs">
-                      {{ $t('filePicker.zoom.large') }}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="extraLarge" class="text-xs">
-                      {{ $t('filePicker.zoom.extraLarge') }}
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger class="text-xs">
-                  {{ $t('filePicker.more.filtersTitle') }}
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuCheckboxItem ::="showSupportedOnly" class="text-xs">
-                    <span class="flex-1">{{ $t('filePicker.more.showSupportedOnly') }}</span>
-                  </DropdownMenuCheckboxItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger class="text-xs">
-                  {{ $t('filePicker.more.recentTitle') }}
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuCheckboxItem ::="showRecentHistory" class="text-xs">
-                    <span class="flex-1">{{ $t('filePicker.more.showRecentHistory') }}</span>
-                  </DropdownMenuCheckboxItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <div ref="fileListRef" class="flex-1 min-h-0" @keydown="handleFileListKeydown">
-          <FileViewer
-            ref="fileViewerRef"
-            :items="filteredItems"
-            :view-mode="viewMode"
-            :zoom="zoomPercent"
-            :sortable-headers="false"
-            :is-loading="isLoading"
-            :error-msg="errorMsg"
-            :sort-by="sortBy"
-            :sort-order="sortOrder"
-            @navigate="handleNavigateItem"
-            @select="handleSelectItem"
-          />
-        </div>
-
-        <div v-if="showRecentHistory && visibleHistory.length > 0" class="p-2 border-t flex flex-col">
-          <div class="flex min-w-0 items-center justify-between">
-            <div class="text-xs text-muted-foreground">
-              {{ $t('filePicker.recent.title') }}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              class="text-muted-foreground shrink-0 size-6 hover:text-primary"
-              :title="$t('filePicker.more.clearRecentHistory')"
-              :aria-label="$t('filePicker.more.clearRecentHistory')"
-              @click="clearRecentHistory"
-            >
-              <Trash2 class="size-3.5" />
+      <div class="px-2 py-1 border-b flex gap-1.5 min-w-0 items-center">
+        <PathBreadcrumb
+          class="ml-1 flex-1 min-w-0"
+          :root-path="rootPath"
+          :current-path="currentDir"
+          @navigate="handleBreadcrumbNavigate"
+        />
+        <Button
+          variant="outline"
+          size="icon"
+          class="size-7 hidden shadow-none sm:inline-flex"
+          :title="viewMode === 'grid' ? $t('common.view.grid') : $t('common.view.list')"
+          :aria-label="viewMode === 'grid' ? $t('common.view.grid') : $t('common.view.list')"
+          @click="viewMode = viewMode === 'grid' ? 'list' : 'grid'"
+        >
+          <LayoutGrid v-if="viewMode === 'grid'" class="size-3.5" />
+          <LayoutList v-else class="size-3.5" />
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger as-child>
+            <Button variant="outline" size="icon" class="size-7 shadow-none" :title="$t('filePicker.more.title')" :aria-label="$t('filePicker.more.title')">
+              <EllipsisVertical class="size-3.5" />
             </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" class="w-30">
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger class="text-xs">
+                {{ $t('filePicker.more.sortTitle') }}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuLabel class="text-xs">
+                  {{ $t('filePicker.more.sortFieldTitle') }}
+                </DropdownMenuLabel>
+                <DropdownMenuRadioGroup ::="sortBy">
+                  <DropdownMenuRadioItem value="name" class="text-xs">
+                    {{ $t('filePicker.sort.name') }}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="modifiedTime" class="text-xs">
+                    {{ $t('filePicker.sort.modifiedTime') }}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="createdTime" class="text-xs">
+                    {{ $t('filePicker.sort.createdTime') }}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="size" class="text-xs">
+                    {{ $t('filePicker.sort.size') }}
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel class="text-xs">
+                  {{ $t('filePicker.more.sortOrderTitle') }}
+                </DropdownMenuLabel>
+                <DropdownMenuRadioGroup ::="sortOrder">
+                  <DropdownMenuRadioItem value="asc" class="text-xs">
+                    <span class="flex-1">{{ $t('filePicker.sort.directionAsc') }}</span>
+                    <ArrowUp class="text-muted-foreground shrink-0 size-3.5" />
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="desc" class="text-xs">
+                    <span class="flex-1">{{ $t('filePicker.sort.directionDesc') }}</span>
+                    <ArrowDown class="text-muted-foreground shrink-0 size-3.5" />
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger class="text-xs">
+                {{ $t('filePicker.more.zoomTitle') }}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuRadioGroup ::="zoomLevel">
+                  <DropdownMenuRadioItem value="small" class="text-xs">
+                    {{ $t('filePicker.zoom.small') }}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="medium" class="text-xs">
+                    {{ $t('filePicker.zoom.medium') }}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="large" class="text-xs">
+                    {{ $t('filePicker.zoom.large') }}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="extraLarge" class="text-xs">
+                    {{ $t('filePicker.zoom.extraLarge') }}
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger class="text-xs">
+                {{ $t('filePicker.more.filtersTitle') }}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuCheckboxItem ::="showSupportedOnly" class="text-xs">
+                  <span class="flex-1">{{ $t('filePicker.more.showSupportedOnly') }}</span>
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger class="text-xs">
+                {{ $t('filePicker.more.recentTitle') }}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuCheckboxItem ::="showRecentHistory" class="text-xs">
+                  <span class="flex-1">{{ $t('filePicker.more.showRecentHistory') }}</span>
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <div ref="fileListRef" class="flex-1 min-h-0" @keydown="handleFileListKeydown">
+        <FileViewer
+          ref="fileViewerRef"
+          :items="filteredItems"
+          :view-mode="viewMode"
+          :zoom="zoomPercent"
+          :sortable-headers="false"
+          :is-loading="isLoading"
+          :error-msg="errorMsg"
+          :sort-by="sortBy"
+          :sort-order="sortOrder"
+          @navigate="handleNavigateItem"
+          @select="handleSelectItem"
+        />
+      </div>
+
+      <div v-if="showRecentHistory && visibleHistory.length > 0" class="px-2 py-1.5 border-t flex flex-col">
+        <div class="flex min-w-0 items-center justify-between">
+          <div class="text-xs text-muted-foreground">
+            {{ $t('filePicker.recent.title') }}
           </div>
-          <div class="py-1 max-h-[3.5rem] overflow-hidden">
-            <div class="flex flex-wrap gap-1">
-              <button
-                v-for="(path, index) in visibleHistory"
-                :key="path"
-                :ref="element => setRecentChipRef(index, element as Element | null)"
-                type="button"
-                class="text-[11px] px-1.5 py-0.5 border rounded inline-flex gap-0.5 max-w-32 items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
-                :class="{ 'text-muted-foreground border-dashed': isRecentHistoryInvalid(path) }"
-                :title="path"
-                @click="handleHistorySelect(path)"
-                @keydown="(event) => handleRecentChipKeydown(event, index)"
-              >
-                <span class="truncate">{{ getFileName(path) }}</span>
-              </button>
-            </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="text-muted-foreground shrink-0 size-5 hover:text-primary"
+            :title="$t('filePicker.more.clearRecentHistory')"
+            :aria-label="$t('filePicker.more.clearRecentHistory')"
+            @click="clearRecentHistory"
+          >
+            <Trash2 class="size-3!" />
+          </Button>
+        </div>
+        <div class="py-1 max-h-[3.5rem] overflow-hidden">
+          <div class="flex flex-wrap gap-1">
+            <button
+              v-for="(path, index) in visibleHistory"
+              :key="path"
+              :ref="element => setRecentChipRef(index, element as Element | null)"
+              type="button"
+              class="text-[11px] px-1.5 py-0.5 border rounded inline-flex gap-0.5 max-w-32 items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
+              :class="{ 'text-muted-foreground border-dashed': isRecentHistoryInvalid(path) }"
+              :title="path"
+              @click="handleHistorySelect(path)"
+              @keydown="(event) => handleRecentChipKeydown(event, index)"
+            >
+              <span class="truncate">{{ getFileName(path) }}</span>
+            </button>
           </div>
         </div>
-      </PopoverContent>
-    </Popover>
-  </div>
+      </div>
+    </PopoverContent>
+  </Popover>
 </template>
