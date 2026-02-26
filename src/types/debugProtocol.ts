@@ -1,7 +1,3 @@
-/**
- * 调试命令枚举
- * 用于定义调试相关的命令类型
- */
 export enum DebugCommand {
   JUMP, // 场景跳转
   SYNCFC, // 从客户端同步
@@ -11,19 +7,14 @@ export enum DebugCommand {
   SET_COMPONENT_VISIBILITY, // 设置组件可见性
   TEMP_SCENE, // 临时场景
   FONT_OPTIMIZATION, // 字体优化
+  SET_EFFECT, // 设置效果
 }
 
-/**
- * 调试消息基础数据接口
- */
-interface IDebugMessageBase<T extends DebugCommand> {
+interface DebugMessageBase<T extends DebugCommand> {
   command: T
 }
 
-/**
- * 场景跳转消息数据
- */
-interface IJumpMessageData extends IDebugMessageBase<DebugCommand.JUMP> {
+interface JumpMessageData extends DebugMessageBase<DebugCommand.JUMP> {
   sceneMsg: {
     sentence: number
     scene: string
@@ -31,65 +22,44 @@ interface IJumpMessageData extends IDebugMessageBase<DebugCommand.JUMP> {
   message: 'exp' | 'sync'
 }
 
-/**
- * 执行命令消息数据
- */
-interface IExecuteCommandMessageData extends IDebugMessageBase<DebugCommand.EXE_COMMAND> {
+interface ExecuteCommandMessageData extends DebugMessageBase<DebugCommand.EXE_COMMAND> {
   message: string
 }
 
-/**
- * 组件可见性消息数据
- */
-interface IComponentVisibilityMessageData extends IDebugMessageBase<DebugCommand.SET_COMPONENT_VISIBILITY> {
-  message: string // JSON stringified IComponentVisibilityCommand[]
+interface ComponentVisibilityMessageData extends DebugMessageBase<DebugCommand.SET_COMPONENT_VISIBILITY> {
+  message: string // JSON stringified ComponentVisibilityCommand[]
 }
 
-/**
- * 临时场景消息数据
- */
-interface ITempSceneMessageData extends IDebugMessageBase<DebugCommand.TEMP_SCENE> {
+interface TempSceneMessageData extends DebugMessageBase<DebugCommand.TEMP_SCENE> {
   message: string
 }
 
-/**
- * 字体优化消息数据
- */
-interface IFontOptimizationMessageData extends IDebugMessageBase<DebugCommand.FONT_OPTIMIZATION> {
+interface FontOptimizationMessageData extends DebugMessageBase<DebugCommand.FONT_OPTIMIZATION> {
   message: string // 'true' | 'false'
 }
 
-/**
- * 重新获取模板文件消息数据
- */
-type IRefetchTemplatesMessageData = IDebugMessageBase<DebugCommand.REFETCH_TEMPLATE_FILES>
+type RefetchTemplatesMessageData = DebugMessageBase<DebugCommand.REFETCH_TEMPLATE_FILES>
 
-/**
- * 调试消息数据映射类型
- */
-interface DebugMessageDataMap {
-  [DebugCommand.JUMP]: IJumpMessageData
-  [DebugCommand.EXE_COMMAND]: IExecuteCommandMessageData
-  [DebugCommand.SET_COMPONENT_VISIBILITY]: IComponentVisibilityMessageData
-  [DebugCommand.TEMP_SCENE]: ITempSceneMessageData
-  [DebugCommand.FONT_OPTIMIZATION]: IFontOptimizationMessageData
-  [DebugCommand.REFETCH_TEMPLATE_FILES]: IRefetchTemplatesMessageData
+interface SetEffectMessageData extends DebugMessageBase<DebugCommand.SET_EFFECT> {
+  message: string // JSON stringified effect configuration
 }
 
-/**
- * 调试消息接口
- * 用于定义调试通信的消息格式
- */
-export interface IDebugMessage<T extends DebugCommand = DebugCommand> {
+interface DebugMessageDataMap {
+  [DebugCommand.JUMP]: JumpMessageData
+  [DebugCommand.EXE_COMMAND]: ExecuteCommandMessageData
+  [DebugCommand.SET_COMPONENT_VISIBILITY]: ComponentVisibilityMessageData
+  [DebugCommand.TEMP_SCENE]: TempSceneMessageData
+  [DebugCommand.FONT_OPTIMIZATION]: FontOptimizationMessageData
+  [DebugCommand.REFETCH_TEMPLATE_FILES]: RefetchTemplatesMessageData
+  [DebugCommand.SET_EFFECT]: SetEffectMessageData
+}
+
+export interface DebugMessage<T extends DebugCommand = DebugCommand> {
   event: string
   data: T extends keyof DebugMessageDataMap ? DebugMessageDataMap[T] : never
 }
 
-/**
- * 组件可见性接口
- * 用于控制各个 UI 组件的显示状态
- */
-export interface IComponentsVisibility {
+export interface ComponentsVisibility {
   showStarter: boolean // 是否显示初始界面（用于使得 bgm 可以播放)
   showTitle: boolean // 是否显示标题界面
   showMenuPanel: boolean // 是否显示Menu界面
@@ -104,11 +74,7 @@ export interface IComponentsVisibility {
   isShowLogo: boolean // 是否显示Logo
 }
 
-/**
- * 组件可见性命令接口
- * 用于设置特定组件的可见性
- */
-export interface IComponentVisibilityCommand {
-  component: keyof IComponentsVisibility // 目标组件
+export interface ComponentVisibilityCommand {
+  component: keyof ComponentsVisibility // 目标组件
   visibility: boolean // 可见性状态
 }

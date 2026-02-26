@@ -6,10 +6,10 @@ import { normalize, sep } from '@tauri-apps/api/path'
  * @param event - 可选的事件类型，默认为 'message'
  */
 async function sendCommand<T extends DebugCommand>(
-  data: IDebugMessage<T>['data'],
-  event?: IDebugMessage<T>['event'],
+  data: DebugMessage<T>['data'],
+  event?: DebugMessage<T>['event'],
 ) {
-  const message: IDebugMessage<T> = {
+  const message: DebugMessage<T> = {
     event: event ?? 'message',
     data,
   }
@@ -23,11 +23,9 @@ async function sendCommand<T extends DebugCommand>(
  */
 async function extractSceneName(scenePath: string): Promise<string> {
   const normalizedPath = await normalize(scenePath)
-  const pathSeparator = sep()
-  const parts = normalizedPath.split(pathSeparator)
+  const parts = normalizedPath.split(sep())
   const sceneIndex = parts.indexOf('scene')
-  const afterSceneParts = parts.slice(sceneIndex + 1)
-  return afterSceneParts.join(pathSeparator)
+  return parts.slice(sceneIndex + 1).join(sep())
 }
 
 /**
@@ -97,10 +95,22 @@ async function executeCommand(command: string) {
 }
 
 /**
+ * 设置效果
+ * @param target - 目标对象
+ * @param transform - 效果变换参数
+ */
+async function setEffect(target: string, transform: Transform) {
+  await sendCommand({
+    command: DebugCommand.SET_EFFECT,
+    message: JSON.stringify({ target, transform }),
+  })
+}
+
+/**
  * 设置组件可见性
  * @param message - 组件可见性命令数组
  */
-async function setComponentVisibility(message: IComponentVisibilityCommand[]) {
+async function setComponentVisibility(message: ComponentVisibilityCommand[]) {
   await sendCommand({
     command: DebugCommand.SET_COMPONENT_VISIBILITY,
     message: JSON.stringify(message),
@@ -135,4 +145,5 @@ export const debugCommander = {
   executeCommand,
   refetchTemplates,
   setFontOptimization,
+  setEffect,
 }

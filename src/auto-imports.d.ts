@@ -401,7 +401,7 @@ declare global {
   export type { SortableItemAccessor } from './utils/sort'
   import('./utils/sort')
   // @ts-ignore
-  export type { DebugCommand, IDebugMessage, IComponentsVisibility, IComponentVisibilityCommand } from './types/debugProtocol'
+  export type { DebugCommand, DebugMessage, ComponentsVisibility, ComponentVisibilityCommand } from './types/debugProtocol'
   import('./types/debugProtocol')
   // @ts-ignore
   export type { FileViewerSortBy, FileViewerSortOrder, FileViewerItem } from './types/file-viewer'
@@ -412,6 +412,9 @@ declare global {
   // @ts-ignore
   export type { isDebug, isBuild, isRelease, prNum, buildSha } from './types/info-build-meta.d'
   import('./types/info-build-meta.d')
+  // @ts-ignore
+  export type { Transform } from './types/stage'
+  import('./types/stage')
 }
 
 // for vue template auto import
