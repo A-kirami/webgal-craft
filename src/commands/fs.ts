@@ -40,7 +40,7 @@ async function copyDirectory(source: string, destination: string): Promise<void>
       destination,
     })
   } catch (error) {
-    throw new Error(`复制目录失败: ${error}`)
+    throw new Error(`复制目录失败: ${error}`, { cause: error })
   }
 }
 
@@ -86,7 +86,7 @@ async function copyDirectoryWithProgress(
       onEvent: channel,
     })
   } catch (error) {
-    throw new Error(`复制目录失败: ${error}`)
+    throw new Error(`复制目录失败: ${error}`, { cause: error })
   }
 }
 
@@ -110,7 +110,7 @@ async function validateDirectoryStructure(
       requiredFiles,
     })
   } catch (error) {
-    throw new Error(`验证目录结构失败: ${error}`)
+    throw new Error(`验证目录结构失败: ${error}`, { cause: error })
   }
 }
 
@@ -184,7 +184,7 @@ async function deleteFile(path: string, permanent = false): Promise<void> {
       permanent,
     })
   } catch (error) {
-    throw new Error(`删除文件失败: ${error}`)
+    throw new Error(`删除文件失败: ${error}`, { cause: error })
   }
 }
 

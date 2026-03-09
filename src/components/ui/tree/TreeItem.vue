@@ -1,4 +1,4 @@
-<script setup lang="ts" generic="T">
+<script setup lang="ts" generic="T extends Record<string, any>">
 import { cn } from "~/lib/utils";
 import { TreeItem, type TreeItemProps } from "reka-ui";
 import type { HTMLAttributes } from "vue";

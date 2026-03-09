@@ -23,7 +23,7 @@ async function startServer(host: string, port: number): Promise<string> {
       onMessage: channel,
     })
   } catch (error) {
-    throw new Error(`启动服务器失败: ${error}`)
+    throw new Error(`启动服务器失败: ${error}`, { cause: error })
   }
 }
 
@@ -38,7 +38,7 @@ async function addStaticSite(path: string): Promise<string> {
   try {
     return await invoke<string>('add_static_site', { path })
   } catch (error) {
-    throw new Error(`添加静态站点失败: ${error}`)
+    throw new Error(`添加静态站点失败: ${error}`, { cause: error })
   }
 }
 
@@ -53,7 +53,7 @@ async function removeStaticSite(path: string): Promise<void> {
   try {
     await invoke<void>('remove_static_site', { path })
   } catch (error) {
-    throw new Error(`移除静态站点失败: ${error}`)
+    throw new Error(`移除静态站点失败: ${error}`, { cause: error })
   }
 }
 
@@ -67,7 +67,7 @@ async function broadcastMessage(message: string): Promise<void> {
   try {
     await invoke<void>('broadcast_message', { message })
   } catch (error) {
-    throw new Error(`广播消息失败: ${error}`)
+    throw new Error(`广播消息失败: ${error}`, { cause: error })
   }
 }
 
@@ -82,7 +82,7 @@ async function unicastMessage(clientAddr: string, message: string): Promise<void
   try {
     await invoke<void>('unicast_message', { clientAddr, message })
   } catch (error) {
-    throw new Error(`发送单播消息失败: ${error}`)
+    throw new Error(`发送单播消息失败: ${error}`, { cause: error })
   }
 }
 
@@ -96,7 +96,7 @@ async function getConnectedClients(): Promise<string[]> {
   try {
     return await invoke<string[]>('get_connected_clients')
   } catch (error) {
-    throw new Error(`获取已连接客户端列表失败: ${error}`)
+    throw new Error(`获取已连接客户端列表失败: ${error}`, { cause: error })
   }
 }
 

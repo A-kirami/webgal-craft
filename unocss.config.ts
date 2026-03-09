@@ -20,10 +20,6 @@ export default defineConfig({
     presetAttributify(),
     presetIcons({
       scale: 1.2,
-      extraProperties: {
-        'display': 'inline-block',
-        'vertical-align': 'middle',
-      },
     }),
     presetTypography(),
     presetAnimations(),
@@ -35,6 +31,9 @@ export default defineConfig({
         componentLibrary: 'reka',
       },
     ),
+  ],
+  rules: [
+    ['inline-icon', { 'display': 'inline-block', 'vertical-align': 'middle' }],
   ],
   variants: [
     // not-in-data-[...]: variant
