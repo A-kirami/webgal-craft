@@ -6,13 +6,16 @@ async function initializeApp() {
   const isInitialized = useStorage('app-initialized', false)
   if (!isInitialized.value) {
     const storageSettingsStore = useStorageSettingsStore()
-    if (storageSettingsStore.gameSavePath === '') {
+    const needsGamePath = storageSettingsStore.gameSavePath === ''
+    const needsEnginePath = storageSettingsStore.engineSavePath === ''
+    if (needsGamePath || needsEnginePath) {
       const baseDir = await documentDir()
-      storageSettingsStore.gameSavePath = await defaultGameSavePath(baseDir)
-    }
-    if (storageSettingsStore.engineSavePath === '') {
-      const baseDir = await documentDir()
-      storageSettingsStore.engineSavePath = await defaultEngineSavePath(baseDir)
+      if (needsGamePath) {
+        storageSettingsStore.gameSavePath = await defaultGameSavePath(baseDir)
+      }
+      if (needsEnginePath) {
+        storageSettingsStore.engineSavePath = await defaultEngineSavePath(baseDir)
+      }
     }
     isInitialized.value = true
   }

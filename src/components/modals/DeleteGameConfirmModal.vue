@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { TriangleAlert } from 'lucide-vue-next'
 
-const open = defineModel<boolean>('open')
-const confirmInput = ref('')
+let open = $(defineModel<boolean>('open'))
+let confirmInput = $ref('')
 
-const props = defineProps<{
+const { game, onConfirm } = defineProps<{
   game: Game
   onConfirm: () => void
 }>()
 
 function handleConfirm() {
-  props.onConfirm()
-  open.value = false
+  onConfirm()
+  open = false
 }
 </script>
 
@@ -44,10 +44,10 @@ function handleConfirm() {
           <Label for="game-name">{{ $t('modals.deleteGameConfirm.gameName') }}</Label>
           <Input
             id="game-name"
-            v-model="confirmInput"
+            ::="confirmInput"
             type="text"
             :placeholder="$t('modals.deleteGameConfirm.placeholder', {
-              name: props.game.metadata.name,
+              name: game.metadata.name,
             })"
           />
         </div>

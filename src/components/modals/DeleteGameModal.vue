@@ -2,29 +2,29 @@
 import { TriangleAlert } from 'lucide-vue-next'
 
 const { t } = useI18n()
-const open = defineModel<boolean>('open')
+let open = $(defineModel<boolean>('open'))
 
-const props = defineProps<{
+const { game } = defineProps<{
   game: Game
 }>()
 
-const removeFiles = $ref(false)
+let removeFiles = $ref(false)
 const modalStore = useModalStore()
 
 function deleteGame() {
-  gameManager.deleteGame(props.game, removeFiles)
+  gameManager.deleteGame(game, removeFiles)
   notify.success(t('modals.deleteGame.deleteSuccess'))
 }
 
 function handleConfirm() {
   if (removeFiles) {
     modalStore.open('DeleteGameConfirmModal', {
-      game: props.game,
+      game,
       onConfirm: deleteGame,
     })
   } else {
     deleteGame()
-    open.value = false
+    open = false
   }
 }
 </script>
@@ -46,11 +46,11 @@ function handleConfirm() {
           <AlertDialogDescription>
             <i18n-t keypath="modals.deleteGame.description" tag="p">
               <template #name>
-                <span class="text-black font-bold">{{ game.metadata.name }}</span>
+                <span class="text-foreground font-bold">{{ game.metadata.name }}</span>
               </template>
             </i18n-t>
             <div class="mt-4 flex items-center space-x-2">
-              <Checkbox id="removeFiles" v-model="removeFiles" class="data-[state=checked]:border-destructive data-[state=checked]:bg-destructive/80" />
+              <Checkbox id="removeFiles" ::="removeFiles" class="data-[state=checked]:border-destructive data-[state=checked]:bg-destructive/80" />
               <label
                 for="removeFiles"
                 class="text-sm leading-none font-medium peer-disabled:opacity-70 peer-disabled:cursor-not-allowed"

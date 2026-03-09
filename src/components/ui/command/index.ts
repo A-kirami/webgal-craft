@@ -18,6 +18,8 @@ export const [useCommand, provideCommandContext] = createContext<{
     search: string
     filtered: { count: number, items: Map<string, number>, groups: Set<string> }
   }
+  /** 设置高亮 item（不触发 focus/scroll），传 null 清除高亮 */
+  setHighlight: (el: HTMLElement | null) => void
 }>("Command")
 
 export const [useCommandGroup, provideCommandGroupContext] = createContext<{

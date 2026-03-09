@@ -27,7 +27,7 @@ const { filterState } = useCommand()
     <Search class="mr-2 h-4 w-4 shrink-0 opacity-50" />
     <ListboxFilter
       v-bind="{ ...forwardedProps, ...$attrs }"
-      v-model="filterState.search"
+      ::="filterState.search"
       auto-focus
       :class="cn('flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50', props.class)"
     />
