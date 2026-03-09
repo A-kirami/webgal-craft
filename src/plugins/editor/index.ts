@@ -3,12 +3,14 @@ import { readDir } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
 import * as monaco from 'monaco-editor'
 import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
-import { commandType, IScene } from 'webgal-parser/src/interface/sceneInterface'
+import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { getArgKeyCompletions } from './completion/webgal-argument-keys'
 import { getCommandCompletions } from './completion/webgal-commands'
 import darkTheme from './themes/webgal-dark.json'
 import lightTheme from './themes/webgal-light.json'
+
+import type { IScene } from 'webgal-parser/src/interface/sceneInterface'
 
 import './monaco'
 
@@ -45,12 +47,11 @@ const COMMAND_TO_FILE_TYPE_MAP: Partial<Record<commandType, FileType>> = {
 // 文件系统缓存
 interface CacheEntry {
   entries: { name: string, isDirectory: boolean }[]
-  timestamp: number
 }
 
 const fileSystemCache = new LRUCache<string, CacheEntry>({
   max: FILE_CACHE_MAX_SIZE,
-  updateAgeOnGet: true,
+  ttl: FILE_CACHE_TTL,
 })
 
 // 主题名称常量
@@ -113,12 +114,7 @@ monaco.languages.registerCompletionItemProvider('webgalscript', {
         suggestions = getArgumentSuggestion(model, position)
         break
       }
-      case SentencePart.Comment: {
-        break
-      }
-      default: {
-        break
-      }
+      // no default
     }
 
     return { suggestions }
@@ -168,11 +164,10 @@ function buildEolGroupRule(regExp: RegExp, matchArray: MonarchMatchGroup[]): [
   const matchArrayWithEol: MonarchMatchGroup[] = matchArray.map((match, index) => {
     if (index === matchArray.length - 1) {
       return { token: match.token, next: '@root' }
-    } else {
-      return 'next' in match
-        ? { token: match.token, next: match.next }
-        : { token: match.token }
     }
+    return 'next' in match
+      ? { token: match.token, next: match.next }
+      : { token: match.token }
   })
 
   return [[regExpWithEol, matchArrayWithEol], [regExp, matchArray]]
@@ -451,9 +446,6 @@ monaco.languages.setMonarchTokensProvider('webgalscript', {
 
 /**
  * 检查光标是否在注释内
- * @param line 当前行内容
- * @param column 光标列位置
- * @returns 是否在注释内
  */
 function isInComment(line: string, column: number): boolean {
   const beforeCursor = line.slice(0, column - 1)
@@ -478,9 +470,6 @@ function isInComment(line: string, column: number): boolean {
 
 /**
  * 根据光标位置计算所在句子部分
- * @param line 当前行内容
- * @param column 光标列位置
- * @returns 句子部分类型
  */
 function getSentencePartAtPosition(line: string, column: number): SentencePart {
   const beforeCursor = line.slice(0, column - 1)
@@ -505,9 +494,6 @@ function getSentencePartAtPosition(line: string, column: number): SentencePart {
 
 /**
  * 获取命令补全
- * @param model Monaco 编辑器模型
- * @param position 光标位置
- * @returns 补全建议列表
  */
 function getCommandSuggestion(model: monaco.editor.ITextModel, position: monaco.Position): monaco.languages.CompletionItem[] {
   const currentWord = model.getWordAtPosition(position)
@@ -536,11 +522,7 @@ function getCommandSuggestion(model: monaco.editor.ITextModel, position: monaco.
 }
 
 /**
- * 获取参数补全
- * 目前只实现了键补全，值补全功能待实现
- * @param model Monaco 编辑器模型
- * @param position 光标位置
- * @returns 补全建议列表
+ * 获取参数补全（目前只实现了键补全，值补全功能待实现）
  */
 function getArgumentSuggestion(model: monaco.editor.ITextModel, position: monaco.Position): monaco.languages.CompletionItem[] {
   const currentLine = model.getLineContent(position.lineNumber)
@@ -549,7 +531,7 @@ function getArgumentSuggestion(model: monaco.editor.ITextModel, position: monaco
   // 从行内容中提取命令类型
   let command: commandType = commandType.say
   try {
-    const parsedScene = WebgalParser.parse(currentLine, TEMP_SCENE_NAME, TEMP_SCENE_URL)
+    const parsedScene = webgalParser.parse(currentLine, TEMP_SCENE_NAME, TEMP_SCENE_URL)
     command = parsedScene.sentenceList[0]?.command || commandType.say
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
@@ -588,9 +570,6 @@ function getArgumentSuggestion(model: monaco.editor.ITextModel, position: monaco
 
 /**
  * 获取内容补全
- * @param model Monaco 编辑器模型
- * @param position 光标位置
- * @returns 补全建议列表
  */
 async function getContentSuggestion(model: monaco.editor.ITextModel, position: monaco.Position): Promise<monaco.languages.CompletionItem[]> {
   const parsedScene = getParsedSceneFromLine(model, position)
@@ -637,32 +616,24 @@ async function getContentSuggestion(model: monaco.editor.ITextModel, position: m
 }
 
 /**
- * 从当前行解析出场景对象
- * @param model Monaco 编辑器模型
- * @param position 光标位置
- * @returns 解析后的场景对象，如果解析失败则返回空场景
+ * 从当前行解析出场景对象，解析失败时返回空场景
  */
 function getParsedSceneFromLine(model: monaco.editor.ITextModel, position: monaco.Position): IScene {
   const line = model.getLineContent(position.lineNumber)
   const lineBeforeCursor = line.slice(0, position.column - 1)
 
   try {
-    return WebgalParser.parse(lineBeforeCursor, TEMP_SCENE_NAME, TEMP_SCENE_URL)
+    return webgalParser.parse(lineBeforeCursor, TEMP_SCENE_NAME, TEMP_SCENE_URL)
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     logger.error(`解析场景失败: ${errorMessage}`)
     // 解析失败时返回空场景
-    return WebgalParser.parse('', TEMP_SCENE_NAME, TEMP_SCENE_URL)
+    return webgalParser.parse('', TEMP_SCENE_NAME, TEMP_SCENE_URL)
   }
 }
 
 /**
  * 计算补全项的替换范围
- * @param currentLine 当前行内容
- * @param position 光标位置
- * @param currentWord 当前单词
- * @param isDirectory 是否为目录
- * @returns 替换范围
  */
 function calculateCompletionRange(
   currentLine: string,
@@ -706,15 +677,10 @@ function calculateCompletionRange(
 
 /**
  * 从缓存获取或读取目录内容
- * @param path 目录路径
- * @returns 目录条目列表
  */
 async function getDirectoryEntries(path: string): Promise<{ name: string, isDirectory: boolean }[]> {
-  const now = Date.now()
   const cached = fileSystemCache.get(path)
-
-  // 检查缓存是否有效
-  if (cached && (now - cached.timestamp) < FILE_CACHE_TTL) {
+  if (cached) {
     return cached.entries
   }
 
@@ -725,10 +691,7 @@ async function getDirectoryEntries(path: string): Promise<{ name: string, isDire
       isDirectory: entry.isDirectory,
     }))
 
-    fileSystemCache.set(path, {
-      entries,
-      timestamp: now,
-    })
+    fileSystemCache.set(path, { entries })
 
     return entries
   } catch (error) {
@@ -739,11 +702,6 @@ async function getDirectoryEntries(path: string): Promise<{ name: string, isDire
 
 /**
  * 获取文件路径补全
- * @param model Monaco 编辑器模型
- * @param position 光标位置
- * @param type 文件类型
- * @param currentPath 当前路径
- * @returns 补全建议列表
  */
 async function getFileSuggestion(
   model: monaco.editor.ITextModel,
@@ -777,10 +735,7 @@ async function getFileSuggestion(
 }
 
 /**
- * 根据文件类型和文件名获取完整路径
- * @param type 文件类型
- * @param fileName 文件名（可能包含子目录）
- * @returns 完整路径，如果游戏目录不存在则返回空字符串
+ * 根据文件类型和文件名获取完整路径，游戏目录不存在时返回空字符串
  */
 async function getPathFromFileType(
   type: FileType,
