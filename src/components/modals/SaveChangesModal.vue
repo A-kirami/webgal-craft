@@ -3,19 +3,19 @@ import { TriangleAlert } from 'lucide-vue-next'
 
 let open = $(defineModel<boolean>('open'))
 
-const props = defineProps<{
+const { fileName, onSave, onDontSave } = defineProps<{
   fileName: string
   onSave?: () => void | Promise<void>
   onDontSave?: () => void | Promise<void>
 }>()
 
 async function handleSave() {
-  await props.onSave?.()
+  await onSave?.()
   open = false
 }
 
 async function handleDontSave() {
-  await props.onDontSave?.()
+  await onDontSave?.()
   open = false
 }
 </script>
@@ -32,7 +32,7 @@ async function handleDontSave() {
         </div>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {{ $t('modals.saveChanges.title', { name: props.fileName }) }}
+            {{ $t('modals.saveChanges.title', { name: fileName }) }}
           </AlertDialogTitle>
           <AlertDialogDescription>
             {{ $t('modals.saveChanges.description') }}

@@ -47,5 +47,6 @@ export default {
     '@stylistic/max-line-length': null,
     'plugin/declaration-block-no-ignored-properties': true,
     'no-invalid-position-declaration': null,
+    'declaration-property-value-no-unknown': null,
   },
 }

@@ -12,7 +12,7 @@ watch(() => workspaceStore.activeTab, checkResourcesForActiveTab, { immediate: t
     <main class="mx-auto px-4 py-8 container lg:px-8 sm:px-6">
       <WelcomeSection />
       <div class="mb-6">
-        <Tabs v-model="workspaceStore.activeTab">
+        <Tabs ::="workspaceStore.activeTab">
           <TabsList>
             <TabsTrigger value="recent" class="py-1.5 rounded-sm">
               {{ $t('home.tabs.recent') }}

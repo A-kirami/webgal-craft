@@ -1,8 +1,6 @@
 import { getCurrentWebview } from '@tauri-apps/api/webview'
-import { onMounted, onUnmounted, ref, unref } from 'vue'
 
 import type { DragDropEvent } from '@tauri-apps/api/webview'
-import type { MaybeRefOrGetter, Ref } from 'vue'
 
 export interface UseTauriDropZoneOptions {
   /**
@@ -48,17 +46,15 @@ export function useTauriDropZone(
     ? { onDrop: options }
     : options
 
-  /** 检查元素是否在目标区域内 */
-  const isElementInTarget = (element: Element | null): boolean => {
-    const targetElement = unref(target)
+  function isElementInTarget(element: Element | null): boolean {
+    const targetElement = toValue(target)
     if (!element || !targetElement) {
       return false
     }
-    return (targetElement as Element).contains(element)
+    return targetElement.contains(element)
   }
 
-  /** 更新拖放区域状态 */
-  const updateDropZoneState = (element: Element | null, paths?: string[]): void => {
+  function updateDropZoneState(element: Element | null, paths?: string[]): void {
     const wasOverDropZone = isOverDropZone.value
     const isOverTarget = isElementInTarget(element)
 
@@ -79,29 +75,29 @@ export function useTauriDropZone(
     }
   }
 
-  /** 处理拖放事件 */
-  const handleDragDropEvent = (payload: DragDropEvent): void => {
+  function elementAtPosition(position: { x: number, y: number }): Element | null {
+    return document.elementFromPoint(position.x, position.y)
+  }
+
+  function handleDragDropEvent(payload: DragDropEvent): void {
     switch (payload.type) {
       case 'enter': {
         if (payload.position) {
-          const element = document.elementFromPoint(payload.position.x, payload.position.y)
-          updateDropZoneState(element, payload.paths)
+          updateDropZoneState(elementAtPosition(payload.position), payload.paths)
         }
         break
       }
 
       case 'over': {
         if (payload.position) {
-          const element = document.elementFromPoint(payload.position.x, payload.position.y)
-          updateDropZoneState(element)
+          updateDropZoneState(elementAtPosition(payload.position))
         }
         break
       }
 
       case 'drop': {
         if (payload.position) {
-          const element = document.elementFromPoint(payload.position.x, payload.position.y)
-          if (isElementInTarget(element) && payload.paths) {
+          if (isElementInTarget(elementAtPosition(payload.position)) && payload.paths) {
             files.value = payload.paths
             normalizedOptions.onDrop?.(payload.paths)
           }
@@ -120,9 +116,7 @@ export function useTauriDropZone(
         break
       }
 
-      default: {
-        break
-      }
+      // no default
     }
   }
 
