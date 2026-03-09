@@ -26,7 +26,7 @@ async function getThumbnail(path: string, size?: ThumbnailSize): Promise<string>
     // 创建并返回 blob URL
     return URL.createObjectURL(blob)
   } catch (error) {
-    throw new Error(`Failed to generate thumbnail: ${error}`)
+    throw new Error(`生成缩略图失败: ${error}`, { cause: error })
   }
 }
 
@@ -40,7 +40,7 @@ async function clearThumbnailCache() {
   try {
     await invoke<void>('clear_thumbnail_cache')
   } catch (error) {
-    throw new Error(`Failed to clear thumbnail cache: ${error}`)
+    throw new Error(`清理缩略图缓存失败: ${error}`, { cause: error })
   }
 }
 

@@ -57,9 +57,14 @@ export default defineConfig({
       ],
       dirs: [
         'src/commands',
-        'src/composables',
+        'src/composables/**',
         'src/database',
-        'src/helper',
+        {
+          glob: 'src/helper/**',
+          types: true,
+        },
+        '!src/helper/command-registry/common-params.ts',
+        'src/lib',
         'src/services',
         'src/stores',
         'src/utils',

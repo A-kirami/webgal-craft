@@ -131,6 +131,8 @@ export default defineConfig(
           ],
         },
       ],
+      'unicorn/no-useless-undefined': ['warn', { checkArguments: false, checkArrowFunctionBody: false }],
+      'no-useless-assignment': 'off',
     },
   },
   {
@@ -171,7 +173,7 @@ export default defineConfig(
       '@intlify/vue-i18n/no-raw-text': [
         'warn',
         {
-          ignorePattern: '^[-0-9+*/.,!@#$%^&()\\[\\]{}<>?;:"\'`~|\\\\]+$',
+          ignorePattern: '^[-\\s0-9+*/.,=!@#$%^&()\\[\\]{}<>?;:"\'`~|\\\\×]+$',
         },
       ],
     },
