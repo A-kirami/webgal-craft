@@ -41,7 +41,7 @@ export function writeJsonFieldValue(
     // 忽略 JSON 解析错误，按空对象继续
   }
 
-  if (!value || value === UNSPECIFIED) {
+  if (value === '' || value === null || value === undefined || value === UNSPECIFIED) {
     delete objectValue[fieldKey]
   } else if (fieldType === 'switch') {
     objectValue[fieldKey] = value === true || value === 'true'

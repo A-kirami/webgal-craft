@@ -14,7 +14,9 @@ export function getParamValueFromArgs(argField: ArgField, args: arg[]): string |
     }
 
     const fieldValue = readJsonFieldValue(String(foundJsonArg.value), argField.jsonMeta.fieldKey, argField.field.type)
-    return fieldValue || readFieldDefaultValue(argField.field)
+    return fieldValue === '' || fieldValue === undefined
+      ? readFieldDefaultValue(argField.field)
+      : fieldValue
   }
 
   if (argField.field.type === 'choice' && isFlagChoiceField(argField.field)) {
