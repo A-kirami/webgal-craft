@@ -26,14 +26,6 @@ export interface ColorPickerHsl {
 
 export interface ColorPickerHsla extends ColorPickerHsl, ColorPickerAlpha {}
 
-export interface ColorPickerHsv {
-  h: number
-  s: number
-  v: number
-}
-
-export interface ColorPickerHsva extends ColorPickerHsv, ColorPickerAlpha {}
-
 export type ColorPickerValue =
   | string
   | ColorPickerPrgb
@@ -42,5 +34,3 @@ export type ColorPickerValue =
   | ColorPickerRgba
   | ColorPickerHsl
   | ColorPickerHsla
-  | ColorPickerHsv
-  | ColorPickerHsva

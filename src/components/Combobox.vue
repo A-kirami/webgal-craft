@@ -23,7 +23,7 @@ function scrollToSelectedOption() {
   if (!viewport) {
     return
   }
-  const selected = viewport.querySelector('.opacity-100')?.closest('[role="option"]') as HTMLElement | null
+  const selected = viewport.querySelector('[role="option"][data-selected]') as HTMLElement | null
   if (!selected) {
     return
   }
@@ -80,6 +80,7 @@ const displayLabel = $computed(() => {
                 :key="opt.value"
                 :value="opt.label"
                 class="text-xs gap-2"
+                :data-selected="modelValue === opt.value || undefined"
                 @select="emit('update:modelValue', opt.value); open = false"
               >
                 <div class="i-lucide-check size-3.5" :class="modelValue === opt.value ? 'opacity-100' : 'opacity-0'" />
