@@ -37,7 +37,11 @@ function toOptionItems(items: string[]): { label: string, value: string }[] {
 }
 
 // 清洗 changeFigure 的 content 字段，提取并验证模型文件的相对路径。
-// 剥离查询参数（如 ?type=spine），校验路径安全性和 .json 后缀
+// 剥离查询参数（如 ?type=spine），校验路径安全性和 .json 后缀。
+// 仅接受 .json 描述文件（Live2D model.json / Spine JSON），
+// .skel（Spine 二进制骨骼）无法通过 JSON 解析提取元数据，因此不在此处理——
+// 对应的 motion/expression 字段仍会显示（由 media.ts 的 isAnimatedContent 控制），
+// 用于展示文本模式下已写入的参数值，但不提供动态选项的自动补全。
 function sanitizeModelPath(content: string): string | undefined {
   const normalized = normalizePath(content.split('?')[0]?.trim() ?? '')
   if (!normalized) {
@@ -56,16 +60,29 @@ function sanitizeModelPath(content: string): string | undefined {
   return relativePath
 }
 
-function buildFigureCacheKey(ctx: DynamicOptionsContext): string | undefined {
-  const gamePath = normalizeGamePath(ctx.gamePath)
-  if (!gamePath) {
+interface FigureModelPath {
+  gameKey: string
+  relativePath: string
+}
+
+function resolveFigureModelPath(ctx: DynamicOptionsContext): FigureModelPath | undefined {
+  const gameKey = normalizeGamePath(ctx.gamePath)
+  if (!gameKey) {
     return
   }
   const relativePath = sanitizeModelPath(ctx.content)
   if (!relativePath) {
     return
   }
-  return `${gamePath}${SPLIT_GAME_PATH_TOKEN}${relativePath.toLowerCase()}`
+  return { gameKey, relativePath }
+}
+
+function buildFigureCacheKey(ctx: DynamicOptionsContext): string | undefined {
+  const resolved = resolveFigureModelPath(ctx)
+  if (!resolved) {
+    return
+  }
+  return `${resolved.gameKey}${SPLIT_GAME_PATH_TOKEN}${resolved.relativePath.toLowerCase()}`
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -146,18 +163,14 @@ async function loadAnimationTableOptions(ctx: DynamicOptionsContext): Promise<{ 
 }
 
 async function loadFigureMetadataByContext(ctx: DynamicOptionsContext): Promise<FigureMetadata> {
-  if (!ctx.gamePath) {
-    return { motions: [], expressions: [] }
-  }
-
-  const relativePath = sanitizeModelPath(ctx.content)
-  if (!relativePath) {
+  const resolved = resolveFigureModelPath(ctx)
+  if (!resolved) {
     return { motions: [], expressions: [] }
   }
 
   try {
     const directory = await gameAssetDir(ctx.gamePath, 'figure')
-    const filePath = await join(directory, relativePath)
+    const filePath = await join(directory, resolved.relativePath)
     const content = await readTextFile(filePath)
     return parseFigureMetadata(JSON.parse(content))
   } catch (error) {

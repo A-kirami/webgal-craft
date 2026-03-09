@@ -9,6 +9,9 @@ function isLive2dContent(content: string): boolean {
   return content.endsWith('.json') && !content.includes('?type=spine')
 }
 
+// 判断 content 是否为动画类立绘（Live2D / Spine），用于控制 motion/expression 字段的可见性。
+// 包含 .skel 和 ?type=spine：虽然 .skel 二进制格式无法提供动态选项的自动补全，
+// 但仍需显示字段，确保用户在文本模式下写入的参数在可视化编辑器中可见。
 function isAnimatedContent(content: string): boolean {
   return content.endsWith('.json') || content.endsWith('.skel') || content.includes('?type=spine')
 }
