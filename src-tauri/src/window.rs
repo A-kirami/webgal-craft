@@ -110,7 +110,9 @@ impl WindowConfig {
             use_custom_title_bar,
         } = self;
 
-        log::info!("正在创建窗口 '{}'，URL: '{:?}'", label, url);
+        if label != "main" {
+            log::debug!("正在创建窗口 '{}'，URL: '{:?}'", label, url);
+        }
 
         let mut builder = WebviewWindowBuilder::new(handle, &label, url).resizable(resizable);
 
