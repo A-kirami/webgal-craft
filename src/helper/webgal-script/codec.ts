@@ -179,7 +179,7 @@ function serializeSayNode(node: SayCommandNode): ISentence {
       .string('fontSize', node.fontSize)
       .string('vocal', node.vocal)
       .number('volume', node.volume)
-      .positionFlag(node.figurePosition, ['left', 'center', 'right', 'id'])
+      .positionFlag(node.figurePosition, FIGURE_POSITION_FLAGS)
       .string('figureId', node.figureId)
       .flag('next', node.next)
       .flag('continue', node.continue)
