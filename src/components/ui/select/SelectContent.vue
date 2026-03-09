@@ -28,6 +28,8 @@ const delegatedProps = reactiveOmit(props, "class")
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 </script>
 
+<!-- https://github.com/unovue/reka-ui/discussions/1547 -->
+<!-- https://github.com/unovue/reka-ui/issues/1670 -->
 <template>
   <SelectPortal>
     <SelectContent
@@ -38,6 +40,9 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
         props.class,
       )
       "
+      :body-lock="false"
+      :disable-outside-pointer-events="false"
+      @close-auto-focus.prevent
     >
       <SelectScrollUpButton />
       <SelectViewport :class="cn('p-1', position === 'popper' && 'h-[--reka-select-trigger-height] w-full min-w-[--reka-select-trigger-width]')">

@@ -3,12 +3,13 @@ import { join, normalize } from '@tauri-apps/api/path'
 import { exists, stat } from '@tauri-apps/plugin-fs'
 import { ArrowDown, ArrowUp, EllipsisVertical, LayoutGrid, LayoutList, Trash2, X } from 'lucide-vue-next'
 
-import { cn } from '~/lib/utils'
-
 import type { HTMLAttributes } from 'vue'
 
 interface FilePickerProps {
   class?: HTMLAttributes['class']
+  inputId?: string
+  /** 仅用于控制输入框错误样式，校验逻辑由外部负责 */
+  invalid?: boolean
   rootPath: string
   extensions?: string[]
   exclude?: string[]
@@ -47,8 +48,12 @@ interface OpenPopoverOptions {
 const ZOOM_MAP: Record<ZoomLevel, number> = { small: 80, medium: 100, large: 120, extraLarge: 140 }
 const HISTORY_STORAGE_KEY = 'webgalcraft:file-picker-history'
 
+defineOptions({ inheritAttrs: false })
+
 const {
-  class: inputClass,
+  class: rootClass,
+  inputId,
+  invalid = false,
   rootPath,
   extensions = [],
   exclude = [],
@@ -750,17 +755,16 @@ function handleFileListKeydown(event: KeyboardEvent) {
 <template>
   <Popover :open="isOpen" @update:open="handlePopoverOpenChange">
     <PopoverTrigger as-child>
-      <div class="relative">
+      <div :class="cn('relative', rootClass)">
         <Input
+          :id="inputId"
           ::="inputText"
           :disabled="disabled"
           :placeholder="placeholder || $t('filePicker.placeholder')"
-          :class="cn(
-            {
-              'pr-8': !!inputText,
-            },
-            inputClass,
-          )"
+          :class="[
+            inputText ? 'pr-7' : '',
+            invalid ? 'text-destructive! bg-destructive/5 border-destructive/50 focus-visible:ring-destructive/30' : '',
+          ]"
           @focus="handleInputFocus"
           @blur="handleInputBlur"
           @click.stop="handleInputClick"
@@ -769,7 +773,8 @@ function handleFileListKeydown(event: KeyboardEvent) {
         <button
           v-if="inputText"
           type="button"
-          class="text-muted-foreground size-4 right-2 top-1/2 absolute hover:text-foreground -translate-y-1/2"
+          class="size-4 right-2 top-1/2 absolute -translate-y-1/2"
+          :class="invalid ? 'text-destructive/60 hover:text-destructive' : 'text-muted-foreground hover:text-foreground'"
           :aria-label="$t('filePicker.clearInput')"
           @click="handleClear"
         >

@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { TriangleAlert } from 'lucide-vue-next'
-import { toast } from 'vue-sonner'
 
 const { t } = useI18n()
 let open = $(defineModel<boolean>('open'))
 
-const props = defineProps<{
+const { file, onConfirm } = defineProps<{
   file: {
     path: string
     name: string
@@ -15,14 +14,14 @@ const props = defineProps<{
 }>()
 
 const preferenceStore = usePreferenceStore()
-const skipConfirm = $ref(preferenceStore.skipDeleteFileConfirm)
+let skipConfirm = $ref(preferenceStore.skipDeleteFileConfirm)
 
 async function handleConfirm() {
   try {
-    await gameFs.deleteFile(props.file.path)
+    await gameFs.deleteFile(file.path)
     toast.success(t('edit.fileTree.deleteSuccess'))
     preferenceStore.skipDeleteFileConfirm = skipConfirm
-    await props.onConfirm?.()
+    await onConfirm?.()
     open = false
   } catch (error) {
     toast.error(error instanceof Error ? error.message : t('edit.fileTree.deleteFailed'))
@@ -43,15 +42,15 @@ async function handleConfirm() {
         <AlertDialogHeader>
           <AlertDialogTitle>
             {{
-              props.file.isDir
-                ? $t('modals.deleteFile.folderTitle', { name: props.file.name })
-                : $t('modals.deleteFile.title', { name: props.file.name })
+              file.isDir
+                ? $t('modals.deleteFile.folderTitle', { name: file.name })
+                : $t('modals.deleteFile.title', { name: file.name })
             }}
           </AlertDialogTitle>
           <AlertDialogDescription>
             <span>
               {{
-                props.file.isDir
+                file.isDir
                   ? $t('modals.deleteFile.folderDescription')
                   : $t('modals.deleteFile.description')
               }}
@@ -59,7 +58,7 @@ async function handleConfirm() {
             <div class="mt-4 flex items-center space-x-2">
               <Checkbox
                 id="skipConfirm"
-                v-model="skipConfirm"
+                ::="skipConfirm"
                 class="data-[state=checked]:border-destructive data-[state=checked]:bg-destructive/80"
               />
               <label

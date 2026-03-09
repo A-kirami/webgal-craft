@@ -5,7 +5,7 @@ import * as z from 'zod'
 import { FormField } from '~/components/ui/form'
 
 const { t } = useI18n()
-const StorageSettingsStore = useStorageSettingsStore()
+const storageSettingsStore = useStorageSettingsStore()
 
 const validationSchema = z.object({
   gameSavePath: z.string(),
@@ -13,7 +13,7 @@ const validationSchema = z.object({
 })
 
 const { setFieldValue } = useSettingsForm({
-  store: StorageSettingsStore,
+  store: storageSettingsStore,
   validationSchema,
 })
 
@@ -21,7 +21,7 @@ async function handleSelectFolder(
   fieldName: 'gameSavePath' | 'engineSavePath',
   title: string,
 ) {
-  const currentPath = StorageSettingsStore[fieldName] || undefined
+  const currentPath = storageSettingsStore[fieldName] || undefined
   const selected = await openDialog({
     title,
     directory: true,

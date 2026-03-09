@@ -19,7 +19,7 @@ const languageOptions = $computed(() => [
   { label: '日本語', value: 'ja' },
 ] as const)
 
-const GeneralSettingsStore = useGeneralSettingsStore()
+const generalSettingsStore = useGeneralSettingsStore()
 
 type ThemeValue = (typeof themeOptions)[number]['value']
 type LanguageValue = (typeof languageOptions)[number]['value']
@@ -35,7 +35,7 @@ const validationSchema = $computed(() => z.object({
 }))
 
 useSettingsForm({
-  store: GeneralSettingsStore,
+  store: generalSettingsStore,
   validationSchema,
   immediateFields: ['theme', 'language'],
 })

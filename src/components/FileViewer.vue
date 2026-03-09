@@ -482,14 +482,14 @@ defineExpose(fileViewerExpose)
               <div class="text-[11px] text-muted-foreground ml-2 flex shrink-0 gap-3 [font-variant-numeric:tabular-nums] items-center" role="note">
                 <div v-if="showListSize" class="text-right w-20" :aria-label="$t('common.fileMeta.size')">
                   <template v-if="item.isDir">
-                    <span aria-hidden="true">{{ $t('common.fileMeta.directorySize') }}</span>
+                    <span aria-hidden="true">--</span>
                     <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
                   </template>
                   <template v-else-if="isValidPositiveNumber(item.size)">
                     {{ formatFileSize(item.size) }}
                   </template>
                   <template v-else>
-                    <span aria-hidden="true">{{ $t('common.fileMeta.unavailable') }}</span>
+                    <span aria-hidden="true">--</span>
                     <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
                   </template>
                 </div>
@@ -498,7 +498,7 @@ defineExpose(fileViewerExpose)
                     {{ formatDateTime(item.modifiedAt) }}
                   </template>
                   <template v-else>
-                    <span aria-hidden="true">{{ $t('common.fileMeta.unavailable') }}</span>
+                    <span aria-hidden="true">--</span>
                     <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
                   </template>
                 </div>
@@ -507,7 +507,7 @@ defineExpose(fileViewerExpose)
                     {{ formatDateTime(item.createdAt) }}
                   </template>
                   <template v-else>
-                    <span aria-hidden="true">{{ $t('common.fileMeta.unavailable') }}</span>
+                    <span aria-hidden="true">--</span>
                     <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
                   </template>
                 </div>

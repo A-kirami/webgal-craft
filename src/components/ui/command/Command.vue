@@ -3,7 +3,7 @@ import type { ListboxRootEmits, ListboxRootProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
 import { ListboxRoot, useFilter, useForwardPropsEmits } from "reka-ui"
-import { reactive, ref, watch } from "vue"
+import { onMounted, reactive, ref, watch } from "vue"
 import { cn } from '~/lib/utils'
 import { provideCommandContext } from "."
 
@@ -69,15 +69,47 @@ watch(() => filterState.search, () => {
   filterItems()
 })
 
+// Workaround: reka-ui ListboxRoot 在挂载时会自动高亮并聚焦第一个 item
+// 参见 https://github.com/unovue/reka-ui/issues/2056
+const listboxRef = ref<{ highlightedElement: HTMLElement | null }>()
+
+function setHighlight(el: HTMLElement | null) {
+  if (!listboxRef.value) return
+  if (el) {
+    listboxRef.value.highlightedElement = el
+  }
+  else {
+    // 仅清除 DOM 属性和焦点，不设置 highlightedElement = null 以避免 patch 崩溃
+    const current = listboxRef.value.highlightedElement
+    if (current instanceof HTMLElement) {
+      current.removeAttribute('data-highlighted')
+      current.blur()
+    }
+  }
+}
+
+onMounted(() => {
+  requestAnimationFrame(() => {
+    // 仅通过 DOM 操作清除初始高亮，不修改内部响应式状态以避免 patch 崩溃
+    const el = listboxRef.value?.highlightedElement
+    if (el instanceof HTMLElement) {
+      el.removeAttribute('data-highlighted')
+      el.blur()
+    }
+  })
+})
+
 provideCommandContext({
   allItems,
   allGroups,
   filterState,
+  setHighlight,
 })
 </script>
 
 <template>
   <ListboxRoot
+    ref="listboxRef"
     v-bind="forwarded"
     :class="cn('flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground', props.class)"
   >
