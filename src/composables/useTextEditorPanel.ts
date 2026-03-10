@@ -1,9 +1,4 @@
-import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
-
 import type * as monaco from 'monaco-editor'
-
-/** 所有已知命令关键字集合，用于纯文本判断 say 命令 */
-const commandKeywords = new Set(SCRIPT_CONFIG.map(c => c.scriptString))
 
 interface TextEditorPanelOptions {
   /** Monaco editor 实例 */
@@ -41,26 +36,15 @@ export function useTextEditorPanel(options: TextEditorPanelOptions) {
     return entry
   }
 
-  // 向上扫描查找最近的 say 语句说话人，用于无冒号语句的说话人继承显示。
-  // 判断逻辑：冒号前的文本如果不是已知命令关键字，则视为说话人名称。
-  // 冒号在行首（":xxx"）表示旁白，返回空字符串
-  /** 向上扫描找到最近的 say 语句说话人，用于无冒号语句的说话人继承 */
+  /** 向上扫描找到最近的说话人，用于无冒号语句的说话人继承 */
   function findPreviousSpeaker(
     model: monaco.editor.ITextModel,
     lineNumber: number,
   ): string {
     for (let i = lineNumber - 1; i >= 1; i--) {
-      const text = model.getLineContent(i)
-      const colonIdx = text.indexOf(':')
-      if (colonIdx === 0) {
-        // :xxx; 格式，旁白
-        return ''
-      }
-      if (colonIdx > 0) {
-        const prefix = text.slice(0, colonIdx)
-        if (!commandKeywords.has(prefix)) {
-          return prefix
-        }
+      const change = extractSpeakerChange(model.getLineContent(i))
+      if (change !== undefined) {
+        return change
       }
     }
     return ''

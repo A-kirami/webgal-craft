@@ -71,6 +71,10 @@ export function useStatementEditorSay(options: UseStatementEditorSayOptions) {
     if (hasConcat && options.previousSpeaker.value) {
       return options.previousSpeaker.value
     }
+    // 标准形式 say 无 speaker 参数：继承上一个说话人
+    if (isStandardForm.value && effectiveSpeaker.value === '' && options.previousSpeaker.value) {
+      return options.previousSpeaker.value
+    }
     return t('edit.visualEditor.placeholder.speaker')
   })
 

@@ -138,8 +138,29 @@ export function buildStatementPreviewParams(input: BuildStatementPreviewParamsIn
         params.push({ label: oldName ?? '', value: newName ?? '' })
       }
     } else if (statementType === 'say') {
+      let speaker: string
       const hasColon = entryRawText.includes(':')
-      const speaker = hasColon ? (parsed.commandRaw || '') : (previousSpeaker || '')
+      if (!hasColon) {
+        // 无冒号简写：继承上一个说话人
+        speaker = previousSpeaker || ''
+      } else if (parsed.commandRaw === '') {
+        // :xxx 格式：旁白
+        speaker = ''
+      } else if (parsed.commandRaw === 'say') {
+        // 标准 say: 写法：从 args 取 speaker，否则继承
+        const speakerArg = parsed.args.find((a: arg) => a.key === 'speaker')
+        const hasClear = parsed.args.some((a: arg) => a.key === 'clear' && a.value === true)
+        if (speakerArg) {
+          speaker = String(speakerArg.value)
+        } else if (hasClear) {
+          speaker = ''
+        } else {
+          speaker = previousSpeaker || ''
+        }
+      } else {
+        // 简写：角色名:对话
+        speaker = parsed.commandRaw
+      }
       params.push({
         label: speaker || t('edit.visualEditor.types.narration'),
         value: content,

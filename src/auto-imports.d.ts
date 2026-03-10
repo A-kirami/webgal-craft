@@ -86,6 +86,7 @@ declare global {
   const ensureParsed: typeof import('./helper/webgal-script/sentence').ensureParsed
   const extendRef: typeof import('@vueuse/core').extendRef
   const extractRgbColor: typeof import('./helper/color').extractRgbColor
+  const extractSpeakerChange: typeof import('./utils/speaker').extractSpeakerChange
   const fieldsToTransform: typeof import('./helper/effect-editor-config').fieldsToTransform
   const filterExtraArgs: typeof import('./helper/statement-editor/visibility').filterExtraArgs
   const fsCmds: typeof import('./commands/fs').fsCmds
@@ -725,6 +726,7 @@ declare module 'vue' {
     readonly ensureParsed: UnwrapRef<typeof import('./helper/webgal-script/sentence')['ensureParsed']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
     readonly extractRgbColor: UnwrapRef<typeof import('./helper/color')['extractRgbColor']>
+    readonly extractSpeakerChange: UnwrapRef<typeof import('./utils/speaker')['extractSpeakerChange']>
     readonly fieldsToTransform: UnwrapRef<typeof import('./helper/effect-editor-config')['fieldsToTransform']>
     readonly filterExtraArgs: UnwrapRef<typeof import('./helper/statement-editor/visibility')['filterExtraArgs']>
     readonly fsCmds: UnwrapRef<typeof import('./commands/fs')['fsCmds']>

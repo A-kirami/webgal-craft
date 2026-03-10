@@ -1,14 +1,10 @@
 <script setup lang="ts">
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 
 import { ResizablePanel } from '~/components/ui/resizable'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { ScrollArea } from '~/components/ui/scroll-area'
-
-/** 所有已知命令关键字集合，用于纯文本判断 say 命令 */
-const commandKeywords = new Set(SCRIPT_CONFIG.map(c => c.scriptString))
 
 const state = defineModel<VisualModeSceneState>('state', { required: true })
 
@@ -215,22 +211,16 @@ watch(() => state.value.path, () => restoreSelectionAndScroll())
 
 /**
  * 预计算每条语句的上一个说话人（响应式数组）
- * 纯文本对比：从 rawText 提取冒号前的部分，若非已知命令关键字则视为说话人
+ * 支持标准写法（say: -speaker=xxx / -clear）和简写（角色名:对话）
  */
 const previousSpeakers = $computed(() => {
   const result: string[] = []
   let lastSpeaker = ''
   for (const entry of state.value.statements) {
     result.push(lastSpeaker)
-    const colonIdx = entry.rawText.indexOf(':')
-    if (colonIdx === 0) {
-      // :xxx; 格式，旁白
-      lastSpeaker = ''
-    } else if (colonIdx > 0) {
-      const prefix = entry.rawText.slice(0, colonIdx)
-      if (!commandKeywords.has(prefix)) {
-        lastSpeaker = prefix
-      }
+    const change = extractSpeakerChange(entry.rawText)
+    if (change !== undefined) {
+      lastSpeaker = change
     }
   }
   return result
