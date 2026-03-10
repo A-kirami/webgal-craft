@@ -599,7 +599,7 @@ declare global {
   export type { GameError, GameMetadata, EngineMetadata } from './services/types'
   import('./services/types')
   // @ts-ignore
-  export type { TextModeState, VisualModeSceneState, VisualModeAnimationState, VisualModeState, AssetPreviewState } from './stores/editor'
+  export type { TextModeState, VisualModeSceneState, VisualModeAnimationState, VisualModeState, AssetPreviewState, UnsupportedState } from './stores/editor'
   import('./stores/editor')
   // @ts-ignore
   export type { FileItem, DirItem, FileSystemItem } from './stores/file'

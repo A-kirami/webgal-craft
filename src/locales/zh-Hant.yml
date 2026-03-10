@@ -325,8 +325,9 @@ edit:
       title: 輸入框標題
       buttonText: 確認按鈕文字
       defaultValue: 輸入框預設值
-  assetPreview:
-    unsupportedType: 不支援的檔案類型
+  unsupported:
+    binaryFile: 該檔案是二進位檔案或使用了不受支援的文字編碼，無法在編輯器中顯示。
+    loadFailed: "無法偵測檔案類型：{error}"
   textEditor:
     languages:
       unknown: 未知

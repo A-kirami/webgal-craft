@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { basename } from '@tauri-apps/api/path'
-import { File, FilePlus2 } from 'lucide-vue-next'
+import { File, FilePlus2, FileWarning } from 'lucide-vue-next'
 
 const editorStore = useEditorStore()
 const tabsStore = useTabsStore()
@@ -80,6 +80,21 @@ function handleEffectReset() {
       <TextEditor v-if="editorStore.currentState?.mode === 'text'" ::state="editorStore.currentState" />
       <VisualEditor v-else-if="editorStore.currentState?.mode === 'visual'" ::state="editorStore.currentState" />
       <AssetPreview v-else-if="editorStore.currentState?.mode === 'preview'" ::state="editorStore.currentState" />
+      <Empty
+        v-else-if="editorStore.currentState?.mode === 'unsupported'"
+        class="border-0 h-full"
+      >
+        <EmptyContent>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FileWarning />
+            </EmptyMedia>
+            <EmptyDescription>
+              {{ editorStore.currentState.reason }}
+            </EmptyDescription>
+          </EmptyHeader>
+        </EmptyContent>
+      </Empty>
       <Empty v-else-if="shouldShowEmpty" class="border-0 h-full">
         <EmptyContent>
           <EmptyHeader>

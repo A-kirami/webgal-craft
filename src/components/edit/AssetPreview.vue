@@ -7,8 +7,5 @@ const state = defineModel<AssetPreviewState>('state', { required: true })
     <img v-if="state.mimeType.startsWith('image')" :src="state.assetUrl" class="bg-checkerboard max-h-full max-w-full object-contain">
     <video v-else-if="state.mimeType.startsWith('video')" :src="state.assetUrl" controls class="max-h-full" />
     <audio v-else-if="state.mimeType.startsWith('audio')" :src="state.assetUrl" controls />
-    <div v-else class="text-sm text-gray-500">
-      {{ $t('edit.assetPreview.unsupportedType') }}
-    </div>
   </div>
 </template>
