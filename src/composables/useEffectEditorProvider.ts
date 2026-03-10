@@ -112,14 +112,10 @@ function resolveEffectTarget(target: EffectEditorOpenTarget): string {
   return target.effectTarget?.trim() || readSentenceArgString(target.baseSentence, 'target').trim()
 }
 
-function serializeDraftTransform(transform: Transform): string {
-  return serializeTransform(transform, { preserveDefaults: true })
-}
-
 function isDraftEqual(left: EffectEditorDraft, right: EffectEditorDraft): boolean {
   return left.duration === right.duration
     && left.ease === right.ease
-    && serializeDraftTransform(left.transform) === serializeDraftTransform(right.transform)
+    && isTransformEqual(left.transform, right.transform)
 }
 
 export function createEffectEditorProvider() {

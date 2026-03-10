@@ -200,11 +200,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
 
   function isLinkedSliderLocked(param: LinkedNumberField): boolean {
     const key = getLinkedSliderKey(param)
-    const locks = preferenceStore.effectEditorLinkedSliderLocks
-    if (locks[key] === undefined) {
-      locks[key] = true
-    }
-    return locks[key] ?? true
+    return preferenceStore.effectEditorLinkedSliderLocks[key] ?? true
   }
 
   function toggleLinkedSliderLock(param: LinkedNumberField) {

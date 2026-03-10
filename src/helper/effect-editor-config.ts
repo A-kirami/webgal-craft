@@ -410,6 +410,22 @@ export function serializeTransform(transform: Transform, options: EffectSerializ
   return serializeEffectJson(fields, options)
 }
 
+/** 直接比较两个 Transform 的所有效果字段是否相等（避免序列化开销） */
+export function isTransformEqual(left: Transform, right: Transform): boolean {
+  const leftObj = left as unknown as Record<string, unknown>
+  const rightObj = right as unknown as Record<string, unknown>
+  for (const rule of EFFECT_PATH_RULES) {
+    const leftRaw = getValueByPath(leftObj, rule.path)
+    const rightRaw = getValueByPath(rightObj, rule.path)
+    const leftNum = (leftRaw != null) ? coerceRuleValue(rule, leftRaw) : undefined
+    const rightNum = (rightRaw != null) ? coerceRuleValue(rule, rightRaw) : undefined
+    if (leftNum !== rightNum) {
+      return false
+    }
+  }
+  return true
+}
+
 /**
  * 解析效果 JSON，返回有非默认值的效果类别列表（用于折叠速览）。
  * 对全部参数都是 segmented（开关标志）的类别（如滤镜），展开为各个活跃的参数项。
