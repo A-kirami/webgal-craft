@@ -14,6 +14,7 @@ const emit = defineEmits<{
   update: [payload: { id: number, rawText: string, parsed: ISentence }]
   select: [id: number]
   delete: [id: number]
+  playTo: [id: number]
 }>()
 
 let collapsed = $(defineModel<boolean>('collapsed', { default: false }))
@@ -160,6 +161,15 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
         <!-- 操作按钮组 -->
         <div class="gap-1 inline-grid grid-flow-col items-center">
           <!-- 删除按钮 -->
+          <Button
+            variant="ghost"
+            size="sm"
+            class="p-0 opacity-60 h-7 w-0 transition-all overflow-hidden hover:text-green-600 group-hover:p-1 hover:opacity-100 group-hover:w-7"
+            :title="$t('edit.visualEditor.playToLine')"
+            @click.stop="emit('playTo', entry.id)"
+          >
+            <div class="i-lucide-play size-3" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"

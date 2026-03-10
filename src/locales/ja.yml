@@ -396,6 +396,7 @@ edit:
     visualMode: ビジュアルに切替
     toggleSidebar: 補助パネル切替
   visualEditor:
+    playToLine: この行まで実行
     commandPanel: コマンドパネル
     narrationMode: ナレーション
     types:

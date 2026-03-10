@@ -324,6 +324,20 @@ function handleSelect(id: number) {
 }
 
 /**
+ * 执行到此句：同步预览到指定语句
+ */
+function handlePlayTo(id: number) {
+  const entry = state.value.statements.find(s => s.id === id)
+  if (!entry) {
+    return
+  }
+  const lineNumber = computeLineNumberFromStatementId(state.value.statements, id)
+  if (lineNumber !== undefined) {
+    editorStore.syncScenePreview(state.value.path, lineNumber, entry.rawText, true)
+  }
+}
+
+/**
  * 删除语句
  */
 function handleStatementDelete(id: number) {
@@ -481,6 +495,7 @@ function scrollToSelectedStatement() {
                   @update:collapsed="val => handleCollapsedUpdate(row.index, val)"
                   @select="handleSelect"
                   @delete="handleStatementDelete"
+                  @play-to="handlePlayTo"
                 />
               </div>
             </div>
