@@ -26,9 +26,7 @@ common:
     size: 文件大小
     modifiedAt: 修改时间
     createdAt: 创建时间
-    unavailable: "--"
     unavailableA11y: 不可用
-    directorySize: "--"
 
 filePicker:
   placeholder: 请选择文件路径
@@ -168,6 +166,49 @@ modals:
     title: 游戏配置
   effectEditor:
     title: 效果编辑器
+    description: 编辑视觉变换、滤镜和效果参数
+    apply: 应用
+    reset: 还原
+    categories:
+      transform: 变换
+      effects: 效果
+      colorAdjustment: 颜色调整
+      bloom: 泛光
+      bevel: 斜面
+      filters: 滤镜
+    params:
+      positionX: X 位移
+      positionY: Y 位移
+      scaleX: X 缩放
+      scaleY: Y 缩放
+      scale: 缩放
+      rotation: 旋转
+      alpha: 不透明度
+      blur: 模糊
+      brightness: 亮度
+      contrast: 对比度
+      saturation: 饱和度
+      gamma: 伽马
+      color: 着色
+      bloom: 强度
+      bloomBrightness: 亮度
+      bloomBlur: 模糊
+      bloomThreshold: 阈值
+      bevel: 不透明度
+      bevelThickness: 厚度
+      bevelRotation: 旋转
+      bevelSoftness: 柔和度
+      bevelColor: 颜色
+      oldFilm: 老电影
+      dotFilm: 点阵
+      reflectionFilm: 反射
+      glitchFilm: 故障
+      rgbFilm: RGB 分离
+      godrayFilm: 光束
+    filterOptions:
+      default: 默认
+      "on": 开启
+      "off": 关闭
   upgrade:
     title: 更新
   createFile:
@@ -189,6 +230,11 @@ modals:
     description: 如果不保存，你的更改将丢失。
     save: 保存
     dontSave: 不保存
+  discardEffectChanges:
+    title: 是否要应用效果编辑器的更改？
+    description: 如果不应用，你的更改将被丢弃。
+    apply: 应用
+    discard: 丢弃
 
 edit:
   header:
@@ -207,13 +253,13 @@ edit:
       bgm: 背景音乐
       playVideo: 播放视频
       pixiPerform: 应用特效
-      pixiInit: 初始化/清除特效
+      pixiInit: 初始化/重置特效
       intro: 全屏文字
       miniAvatar: 角落小头像
       changeScene: 切换场景
       choose: 分支选项
       end: 结束游戏并返回标题界面
-      setComplexAnimation: 设置复杂动画
+      setComplexAnimation: 设置内置动画
       label: 设置标签
       jumpLabel: 跳转至标签
       setVar: 设置变量
@@ -223,21 +269,21 @@ edit:
       unlockBgm: 解锁 BGM 鉴赏
       filmMode: 电影模式
       setTextbox: 设置对话框
-      setAnimation: 设置动画
+      setAnimation: 调用动画
       playEffect: 播放音效
-      setTempAnimation: 设置临时动画
-      setTransform: 设置变换效果
-      setTransition: 设置进出场动画
-      getUserInput: 获取用户输入
+      setTempAnimation: 设置高级动画
+      setTransform: 设置简单动画
+      setTransition: 设置过渡动画
+      getUserInput: 获取输入
       applyStyle: 应用样式
       wait: 等待一段时间
     arguments:
       when: 执行条件
-      continue: 自动执行下一句
-      next: 同时执行下一句
+      continue: 自动续行
+      next: 并行执行
       notend: 继续播放下一段
       concat: 接续上一段对话
-      vocal: 语音文件
+      vocal: 语音
       fontSize: 字体大小
       fontColor: 字体颜色
       backgroundColor: 背景颜色
@@ -248,9 +294,9 @@ edit:
       center: 中间位置
       zIndex: 显示层级
       animationFlag: 动画标志
-      mouthOpen: 立绘张嘴差分
-      mouthHalfOpen: 立绘半张嘴差分
-      mouthClose: 立绘闭嘴差分
+      mouthOpen: 立绘张口差分
+      mouthHalfOpen: 立绘半张口差分
+      mouthClose: 立绘闭口差分
       eyesOpen: 立绘睁眼差分
       eyesClose: 立绘闭眼差分
       motion: Live2D/Spine 动作
@@ -274,8 +320,8 @@ edit:
       unlockName: "解锁 {type} 名称"
       unlockSeries: "{type} 所属系列"
       skipOff: 禁止跳过
-      hold: 等待点击后继续
-      userForward: 点击显示下一行
+      hold: 结束后停留
+      userForward: 点击显示下一句
       title: 输入框标题
       buttonText: 确认按钮文本
       defaultValue: 输入框默认值
@@ -291,6 +337,8 @@ edit:
     stats:
       lines: "{count} 行,"
       words: "{count} 字"
+    formPanel:
+      noStatement: 移动光标到语句行以编辑
   scenePanel:
     scene: 场景
   fileTree:
@@ -343,8 +391,216 @@ edit:
       zoomIn: 放大
       zoomReset: 重置缩放
   editorMode:
-    textMode: 文本模式
-    visualMode: 可视化模式
+    textMode: 切换文本
+    visualMode: 切换可视化
+    toggleSidebar: 切换辅助面板
+  visualEditor:
+    commandPanel: 命令面板
+    narrationMode: 旁白模式
+    types:
+      comment: 注释
+      narration: 旁白
+    placeholder:
+      comment: 输入注释…
+      speaker: 角色名
+      optionName: 选项文本
+      sceneFile: 场景文件名
+      oldStyleName: 原样式名
+      newStyleName: 新样式名
+      searchMotion: 搜索动作
+      searchAnimation: 搜索动画
+      searchExpression: 搜索表情
+    addOption: 添加选项
+    addStyleRule: 添加样式替换
+    advancedParams: 高级参数
+    commands:
+      say: 对话
+      comment: 注释
+      changeBg: 背景
+      changeFigure: 立绘
+      miniAvatar: 小头像
+      bgm: 背景音乐
+      playEffect: 音效
+      video: 视频
+      changeScene: 切换场景
+      callScene: 调用场景
+      choose: 分支选择
+      label: 标签
+      jumpLabel: 跳转标签
+      end: 结束游戏
+      setVar: 设置变量
+      showVars: 显示变量
+      getUserInput: 获取输入
+      wait: 等待
+      setTextbox: 文本框
+      filmMode: 电影模式
+      callSteam: 调用 Steam
+      setAnimation: 调用动画
+      setComplexAnimation: 内置动画
+      setTransform: 简单动画
+      setTransition: 过渡动画
+      pixi: 使用特效
+      pixiInit: 重置特效
+      setTempAnimation: 高级动画
+      applyStyle: 应用样式
+      intro: 全屏文字
+      unlockCg: 解锁鉴赏图片
+      unlockBgm: 解锁鉴赏音乐
+      unknown: 未识别
+    params:
+      continue: 自动续行
+      next: 并行执行
+      concat: 接续上段
+      notend: 继续播放
+      vocal: 语音
+      volume: 音量
+      associatedFigure: 关联立绘
+      fontSize: 文字大小
+      dialogue: 对话内容
+      speaker: 说话人
+      commentContent: 注释内容
+      rawText: 原始文本
+      fileName: 文件
+      figureId: ID
+      associatedFigureId: 立绘 ID
+      position: 位置
+      motion: 动作
+      spineMotion: 动画
+      expression: 表情
+      transform: 变换
+      duration: 过渡时间
+      ease: 缓动类型
+      mouthOpen: 张口差分
+      mouthHalfOpen: 半张口差分
+      mouthClose: 闭口差分
+      eyesOpen: 睁眼差分
+      eyesHalfOpen: 半睁眼差分
+      eyesClose: 闭眼差分
+      enter: 淡入时间
+      unlockname: 解锁名称
+      series: 所属系列
+      id: ID
+      achievementId: 解锁成就 ID
+      skipOff: 禁止跳过
+      choiceText: 选项文本
+      labelName: 标签名
+      varName: 变量名
+      varValue: 变量值
+      global: 全局变量
+      inputTitle: 对话框标题
+      buttonText: 确认按钮文本
+      defaultValue: 默认值
+      waitTime: 时间
+      unitMs: 毫秒
+      textboxState: 显示
+      textboxStateOff: 隐藏
+      filmModeState: 开启
+      filmModeStateOff: 关闭
+      animationName: 动画
+      target: 目标
+      transformJson: 变换 JSON
+      enterAnimation: 入场动画
+      exitAnimation: 退场动画
+      defaultEnterDuration: 默认入场动画时间
+      defaultExitDuration: 默认退场动画时间
+      effectName: 特效
+      effectCustomName: 特效名称
+      introText: 文字内容
+      introTextPlaceholder: "用 {'|'} 分隔多行"
+      backgroundColor: 背景颜色
+      backgroundImage: 背景图片
+      fontColor: 字体颜色
+      hold: 结束后停留
+      unlockDisplayName: 显示名称
+      animation: 动画效果
+      delayTime: 延迟时间
+      userForward: 点击显示下一句
+      animationFlag: 口型同步与眨眼
+      blendMode: 混合模式
+      bounds: 绘制边界
+      blink: 眨眼参数
+      blinkInterval: 眨眼间隔
+      blinkIntervalRandom: 眨眼间隔随机偏移
+      openingDuration: 睁眼时长
+      closingDuration: 闭眼时长
+      closedDuration: 保持闭眼
+      focus: 注视参数
+      focusX: 注视点X
+      focusY: 注视点Y
+      focusInstant: 立即注视
+      zIndex: 显示层级
+      writeDefault: 继承默认
+      keep: 跨语句播放
+      customTargetId: 目标 ID
+    filePicker:
+      vocal: 选择语音文件
+      background: 选择背景文件
+      figure: 选择立绘文件
+      miniAvatar: 选择小头像文件
+      bgm: 选择音乐文件
+      playEffect: 选择音效文件
+      video: 选择视频文件
+      scene: 选择场景文件
+      unlockCg: 选择鉴赏图片文件
+      unlockBgm: 选择鉴赏音乐文件
+    assetPreview:
+      loadFailed: 加载失败
+    options:
+      unspecified: 未指定
+      notSelected: 未选择
+      default: 默认
+      left: 左侧
+      center: 中间
+      right: 右侧
+      figureLeft: 左侧立绘
+      figureCenter: 中间立绘
+      figureRight: 右侧立绘
+      useFigureId: 使用立绘 ID
+      blendNormal: 正常
+      blendAdd: 线性减淡
+      blendMultiply: 正片叠底
+      blendScreen: 滤色
+      small: 小
+      medium: 中
+      large: 大
+      easeLinear: 线性
+      easeIn: 缓入
+      easeOut: 缓出
+      easeInOut: 缓入缓出
+      easeCircIn: 圆形缓入
+      easeCircOut: 圆形缓出
+      easeCircInOut: 圆形缓入缓出
+      easeBackIn: 起点回弹
+      easeBackOut: 终点回弹
+      easeBackInOut: 起止回弹
+      easeBounceIn: 起点弹跳
+      easeBounceOut: 终点弹跳
+      easeBounceInOut: 起止弹跳
+      easeAnticipate: 预先反向
+      targetFigLeft: 左侧立绘
+      targetFigCenter: 中间立绘
+      targetFigRight: 右侧立绘
+      targetBgMain: 背景图片
+      targetStageMain: 舞台画面
+      custom: 自定义
+      delaySeconds: "{seconds} 秒"
+      animFadeIn: 淡入
+      animSlideIn: 滑入
+      animTyping: 打字效果
+      animPixelate: 像素化
+      animReveal: 揭示
+      animFlagOn: 开启
+      animFlagOff: 关闭
+      effectRain: 雨
+      effectSnow: 雪
+      effectHeavySnow: 大雪
+      effectCherryBlossoms: 樱花
+      universalSoftIn: 通用透明度淡入
+      universalSoftOff: 通用透明度淡出
+    effectEditor: 效果编辑器
+    statementList: 语句列表
+    noSelection: 请选择一条语句进行编辑
+    noResults: 未找到结果
   welcome:
     startEditing: 开始编辑
     selectOrCreate: 选择一个文件开始编辑，或创建新文件
@@ -374,9 +630,15 @@ settings:
       label: 实时预览
       description: 编辑游戏时实时预览更改
     enableFastPreview:
-      label: 快速预览
+      label: 快速语句预览
       description: 启用快速预览将显著提高实时预览效率
+    enableRealtimeEffectPreview:
+      label: 实时效果预览
+      description: 在效果编辑器中调整参数时实时渲染预览效果
   edit:
+    general: 通用
+    textEditor: 文本编辑器
+    visualEditor: 可视化编辑器
     fontFamily:
       label: 字体
       placeholder: 字体名称
@@ -394,6 +656,15 @@ settings:
     enablePreviewTab:
       label: 启用预览标签页
       description: 单击文件时以预览模式打开，双击或编辑后固定为普通标签页
+    autoApplyEffectEditorChanges:
+      label: 自动应用效果编辑器改动
+      description: 开启后，效果编辑器中的参数更改会自动写回语句
+    collapseStatementsOnSidebarOpen:
+      label: 展开辅助面板时强制折叠全部语句
+      description: 打开辅助面板时，锁定所有语句卡片为折叠状态
+    showSidebarAssetPreview:
+      label: 辅助面板语句资源预览
+      description: 在编辑器辅助面板中预览语句引用的图片等资源
   storage:
     gamePath:
       label: 游戏保存位置

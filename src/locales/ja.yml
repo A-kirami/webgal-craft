@@ -26,9 +26,7 @@ common:
     size: ファイルサイズ
     modifiedAt: 更新日時
     createdAt: 作成日時
-    unavailable: "--"
     unavailableA11y: 利用不可
-    directorySize: "--"
 
 filePicker:
   placeholder: ファイルパスを選択
@@ -168,6 +166,49 @@ modals:
     title: ゲーム設定
   effectEditor:
     title: エフェクトエディター
+    description: ビジュアル変換、フィルター、エフェクトパラメータを編集
+    apply: 適用
+    reset: リセット
+    categories:
+      transform: 変換
+      effects: エフェクト
+      colorAdjustment: 色調整
+      bloom: ブルーム
+      bevel: ベベル
+      filters: フィルター
+    params:
+      positionX: X 位置
+      positionY: Y 位置
+      scaleX: X スケール
+      scaleY: Y スケール
+      scale: スケール
+      rotation: 回転
+      alpha: 不透明度
+      blur: ぼかし
+      brightness: 明るさ
+      contrast: コントラスト
+      saturation: 彩度
+      gamma: ガンマ
+      color: ティント
+      bloom: 強度
+      bloomBrightness: 明るさ
+      bloomBlur: ぼかし
+      bloomThreshold: しきい値
+      bevel: 不透明度
+      bevelThickness: 厚み
+      bevelRotation: 回転
+      bevelSoftness: 柔らかさ
+      bevelColor: 色
+      oldFilm: オールドフィルム
+      dotFilm: ドットフィルム
+      reflectionFilm: 反射
+      glitchFilm: グリッチ
+      rgbFilm: RGB 分離
+      godrayFilm: ゴッドレイ
+    filterOptions:
+      default: デフォルト
+      "on": オン
+      "off": オフ
   upgrade:
     title: 更新
   createFile:
@@ -189,6 +230,11 @@ modals:
     description: 保存しない場合、変更は失われます。
     save: 保存
     dontSave: 保存しない
+  discardEffectChanges:
+    title: エフェクトエディターの変更を適用しますか？
+    description: 適用しない場合、変更は破棄されます。
+    apply: 適用
+    discard: 破棄
 
 edit:
   header:
@@ -207,13 +253,13 @@ edit:
       bgm: 背景音楽
       playVideo: 動画を再生
       pixiPerform: エフェクトを適用
-      pixiInit: エフェクトを初期化/クリア
+      pixiInit: エフェクトを初期化/リセット
       intro: 全画面テキスト
       miniAvatar: コーナー小アバター
       changeScene: シーンを切り替え
       choose: 分岐オプション
       end: ゲームを終了してタイトル画面に戻る
-      setComplexAnimation: 複雑なアニメーションを設定
+      setComplexAnimation: 内蔵アニメーションを設定
       label: ラベルを設定
       jumpLabel: ラベルへジャンプ
       setVar: 変数を設定
@@ -223,21 +269,21 @@ edit:
       unlockBgm: BGM 鑑賞を解放
       filmMode: フィルムモード
       setTextbox: テキストボックスを設定
-      setAnimation: アニメーションを設定
+      setAnimation: アニメーションを呼び出し
       playEffect: 効果音を再生
-      setTempAnimation: 一時アニメーションを設定
-      setTransform: 変換エフェクトを設定
+      setTempAnimation: 高度アニメーションを設定
+      setTransform: シンプルアニメーションを設定
       setTransition: 入退場アニメーションを設定
-      getUserInput: ユーザー入力を取得
+      getUserInput: 入力を取得
       applyStyle: スタイルを適用
       wait: 一定時間待機
     arguments:
       when: 条件付き実行
-      continue: 次の行を自動実行
-      next: 次の行を同時に実行
+      continue: 自動続行
+      next: 並行実行
       notend: 次の行に続ける
       concat: 前のセリフに連結
-      vocal: ボイスファイル
+      vocal: ボイス
       fontSize: フォントサイズ
       fontColor: フォントカラー
       backgroundColor: 背景色
@@ -274,8 +320,8 @@ edit:
       unlockName: "解放する {type} 名"
       unlockSeries: "{type} シリーズ"
       skipOff: スキップ禁止
-      hold: クリック待ちで続行
-      userForward: クリックで次の行を表示
+      hold: 終了後に停止
+      userForward: クリックで次の文を表示
       title: 入力欄タイトル
       buttonText: 確認ボタンテキスト
       defaultValue: 入力欄デフォルト値
@@ -291,6 +337,8 @@ edit:
     stats:
       lines: "{count} 行,"
       words: "{count} 字"
+    formPanel:
+      noStatement: カーソルをステートメント行に移動して編集
   scenePanel:
     scene: シーン
   fileTree:
@@ -343,8 +391,216 @@ edit:
       zoomIn: 拡大
       zoomReset: ズームをリセット
   editorMode:
-    textMode: テキストモード
-    visualMode: ビジュアルモード
+    textMode: テキストに切替
+    visualMode: ビジュアルに切替
+    toggleSidebar: 補助パネル切替
+  visualEditor:
+    commandPanel: コマンドパネル
+    narrationMode: ナレーション
+    types:
+      comment: コメント
+      narration: ナレーション
+    placeholder:
+      comment: コメントを入力…
+      speaker: キャラクター名
+      optionName: 選択肢テキスト
+      sceneFile: シーンファイル名
+      oldStyleName: 元のスタイル名
+      newStyleName: 新しいスタイル名
+      searchMotion: モーションを検索
+      searchAnimation: アニメーションを検索
+      searchExpression: 表情を検索
+    addOption: 選択肢を追加
+    addStyleRule: スタイルルールを追加
+    advancedParams: 詳細設定
+    commands:
+      say: セリフ
+      comment: コメント
+      changeBg: 背景
+      changeFigure: 立ち絵
+      miniAvatar: ミニアバター
+      bgm: BGM
+      playEffect: 効果音
+      video: 動画
+      changeScene: シーン切替
+      callScene: シーン呼出
+      choose: 選択肢
+      label: ラベル
+      jumpLabel: ラベルジャンプ
+      end: ゲーム終了
+      setVar: 変数設定
+      showVars: 変数表示
+      getUserInput: 入力取得
+      wait: 待機
+      setTextbox: テキストボックス
+      filmMode: フィルムモード
+      callSteam: Steam呼出
+      setAnimation: 呼出アニメーション
+      setComplexAnimation: 内蔵アニメーション
+      setTransform: シンプルアニメーション
+      setTransition: トランジション
+      pixi: エフェクト使用
+      pixiInit: エフェクトリセット
+      setTempAnimation: 高度アニメーション
+      applyStyle: スタイル適用
+      intro: 全画面テキスト
+      unlockCg: CG鑑賞解放
+      unlockBgm: BGM鑑賞解放
+      unknown: 未認識
+    params:
+      continue: 自動続行
+      next: 並行実行
+      concat: 前段に接続
+      notend: 再生継続
+      vocal: ボイス
+      volume: 音量
+      associatedFigure: 関連立ち絵
+      fontSize: 文字サイズ
+      dialogue: セリフ内容
+      speaker: 話者
+      commentContent: コメント内容
+      rawText: 生テキスト
+      fileName: ファイル
+      figureId: ID
+      associatedFigureId: 立ち絵 ID
+      position: 位置
+      motion: モーション
+      spineMotion: アニメーション
+      expression: 表情
+      transform: 変換
+      duration: トランジション時間
+      ease: イージングタイプ
+      mouthOpen: 口開き差分
+      mouthHalfOpen: 口半開き差分
+      mouthClose: 口閉じ差分
+      eyesOpen: 目開き差分
+      eyesHalfOpen: 目半開き差分
+      eyesClose: 目閉じ差分
+      enter: フェードイン
+      unlockname: 解放名
+      series: シリーズ
+      id: ID
+      achievementId: 実績解除 ID
+      skipOff: スキップ禁止
+      choiceText: 選択肢テキスト
+      labelName: ラベル名
+      varName: 変数名
+      varValue: 値
+      global: グローバル変数
+      inputTitle: ダイアログタイトル
+      buttonText: 確認ボタンテキスト
+      defaultValue: デフォルト値
+      waitTime: 時間
+      unitMs: ミリ秒
+      textboxState: 表示
+      textboxStateOff: 非表示
+      filmModeState: 有効
+      filmModeStateOff: 無効
+      animationName: アニメーション
+      target: ターゲット
+      transformJson: 変換JSON
+      enterAnimation: 入場アニメーション
+      exitAnimation: 退場アニメーション
+      defaultEnterDuration: デフォルト入場アニメーション時間
+      defaultExitDuration: デフォルト退場アニメーション時間
+      effectName: エフェクト
+      effectCustomName: エフェクト名
+      introText: テキスト内容
+      introTextPlaceholder: "{'|'} で行を区切る"
+      backgroundColor: 背景色
+      backgroundImage: 背景画像
+      fontColor: フォント色
+      hold: 終了後に停止
+      unlockDisplayName: 表示名
+      animation: アニメーション
+      delayTime: 遅延時間
+      userForward: クリックで次の文を表示
+      animationFlag: リップシンクとまばたき
+      blendMode: ブレンドモード
+      bounds: 描画境界
+      blink: まばたきパラメータ
+      blinkInterval: まばたき間隔
+      blinkIntervalRandom: まばたき間隔ランダムオフセット
+      openingDuration: 開眼時間
+      closingDuration: 閉眼時間
+      closedDuration: 閉眼保持
+      focus: 注視パラメータ
+      focusX: 注視点X
+      focusY: 注視点Y
+      focusInstant: 即時注視
+      zIndex: 表示レイヤー
+      writeDefault: デフォルト継承
+      keep: 跨文再生
+      customTargetId: ターゲットID
+    filePicker:
+      vocal: 音声ファイルを選択
+      background: 背景ファイルを選択
+      figure: 立ち絵ファイルを選択
+      miniAvatar: ミニアバターファイルを選択
+      bgm: 音楽ファイルを選択
+      playEffect: 効果音ファイルを選択
+      video: 動画ファイルを選択
+      scene: シーンファイルを選択
+      unlockCg: ギャラリー画像ファイルを選択
+      unlockBgm: ギャラリー音楽ファイルを選択
+    assetPreview:
+      loadFailed: 読み込み失敗
+    options:
+      unspecified: 未指定
+      notSelected: 未選択
+      default: デフォルト
+      left: 左
+      center: 中央
+      right: 右
+      figureLeft: 左側立ち絵
+      figureCenter: 中央立ち絵
+      figureRight: 右側立ち絵
+      useFigureId: 立ち絵IDを使用
+      blendNormal: 通常
+      blendAdd: 覆い焼きリニア（加算）
+      blendMultiply: 乗算
+      blendScreen: スクリーン
+      small: 小
+      medium: 中
+      large: 大
+      easeLinear: リニア
+      easeIn: イーズイン
+      easeOut: イーズアウト
+      easeInOut: イーズインアウト
+      easeCircIn: サークルイン
+      easeCircOut: サークルアウト
+      easeCircInOut: サークルインアウト
+      easeBackIn: バックイン
+      easeBackOut: バックアウト
+      easeBackInOut: バックインアウト
+      easeBounceIn: バウンスイン
+      easeBounceOut: バウンスアウト
+      easeBounceInOut: バウンスインアウト
+      easeAnticipate: アンティシペイト
+      targetFigLeft: 左側立ち絵
+      targetFigCenter: 中央立ち絵
+      targetFigRight: 右側立ち絵
+      targetBgMain: 背景画像
+      targetStageMain: ステージ
+      custom: カスタム
+      delaySeconds: "{seconds} 秒"
+      animFadeIn: フェードイン
+      animSlideIn: スライドイン
+      animTyping: タイピング効果
+      animPixelate: ピクセル化
+      animReveal: リビール
+      animFlagOn: オン
+      animFlagOff: オフ
+      effectRain: 雨
+      effectSnow: 雪
+      effectHeavySnow: 大雪
+      effectCherryBlossoms: 桜
+      universalSoftIn: フェードイン
+      universalSoftOff: フェードアウト
+    effectEditor: エフェクトエディター
+    statementList: ステートメントリスト
+    noSelection: 編集するステートメントを選択してください
+    noResults: 検索結果がありません
   welcome:
     startEditing: 編集を開始
     selectOrCreate: ファイルを選択して編集を開始するか、新しいファイルを作成
@@ -374,9 +630,15 @@ settings:
       label: ライブプレビュー
       description: ゲームを編集する際に変更をリアルタイムでプレビュー
     enableFastPreview:
-      label: 高速プレビュー
+      label: 高速ステートメントプレビュー
       description: 高速プレビュー機能を有効にすると、リアルタイムプレビューの効率が大幅に向上します
+    enableRealtimeEffectPreview:
+      label: リアルタイムエフェクトプレビュー
+      description: エフェクトエディターでパラメータを調整中に効果をリアルタイムで描画します
   edit:
+    general: 一般
+    textEditor: テキストエディター
+    visualEditor: ビジュアルエディター
     fontFamily:
       label: フォント
       placeholder: フォント名
@@ -394,6 +656,15 @@ settings:
     enablePreviewTab:
       label: プレビュータブを有効にする
       description: シングルクリックでプレビューモードでファイルを開き、ダブルクリックまたは編集で通常のタブに固定
+    autoApplyEffectEditorChanges:
+      label: エフェクトエディターの変更を自動適用
+      description: 有効にすると、エフェクトエディターのパラメータ変更をステートメントへ自動反映します
+    collapseStatementsOnSidebarOpen:
+      label: 補助パネル展開時にすべてのステートメントを折りたたむ
+      description: 補助パネルを開いた際、すべてのステートメントカードを折りたたみ状態にロックします
+    showSidebarAssetPreview:
+      label: 補助パネルのステートメント資源プレビュー
+      description: エディターの補助パネルでステートメントが参照する画像などのアセットをプレビュー
   storage:
     gamePath:
       label: ゲーム保存場所

@@ -85,9 +85,9 @@ function sortItemsRecursively(sourceItems: T[], comparator: (a: T, b: T) => numb
   })
 }
 
-const sortedItems = $computed(() => {
-  return sortItemsRecursively(items, createItemComparator(sortBy, sortOrder, treeAccessor))
-})
+const sortedItems = $computed(() =>
+  sortItemsRecursively(items, createItemComparator(sortBy, sortOrder, treeAccessor)),
+)
 
 function getParentPath(path: string): string {
   return path.replace(/[\\/][^\\/]+$/, '')
@@ -102,12 +102,10 @@ function getRootPath(): string {
 
 function findChildrenInParent(items: T[], targetParentPath: string): T[] {
   for (const item of items) {
-    const itemPath = getItemPath(item)
-    if (itemPath === targetParentPath) {
-      const children = (item as Record<string, unknown>).children as T[] | undefined
-      return children || []
+    if (getItemPath(item) === targetParentPath) {
+      return getItemChildren(item) ?? []
     }
-    const children = (item as Record<string, unknown>).children as T[] | undefined
+    const children = getItemChildren(item)
     if (children) {
       const found = findChildrenInParent(children, targetParentPath)
       if (found.length > 0) {
@@ -201,7 +199,7 @@ function isRenameDuplicate(item: FlattenedItem<T>): boolean {
   return checkDuplicateName(parentPath, renameState.value, itemPath)
 }
 
-const startRenaming = (item: FlattenedItem<T>) => {
+function startRenaming(item: FlattenedItem<T>) {
   const key = getKey(item.value)
   renameState.itemKey = key
   renameState.value = getItemName(item.value)
@@ -223,7 +221,7 @@ const startRenaming = (item: FlattenedItem<T>) => {
   }, MENU_CLOSE_DELAY)
 }
 
-const handleRename = async (item: FlattenedItem<T>) => {
+async function handleRename(item: FlattenedItem<T>) {
   const key = getKey(item.value)
   if (renameState.itemKey !== key || renameState.isStarting || renameState.isInProgress) {
     return
@@ -255,7 +253,7 @@ const handleRename = async (item: FlattenedItem<T>) => {
   }
 }
 
-const handleRenameBlur = (item: FlattenedItem<T>) => {
+function handleRenameBlur(item: FlattenedItem<T>) {
   if (renameState.isStarting) {
     return
   }
@@ -284,11 +282,11 @@ const handleRenameBlur = (item: FlattenedItem<T>) => {
   }, RENAME_DELAY)
 }
 
-const handleCancelRename = () => {
+function handleCancelRename() {
   renameState.itemKey = undefined
 }
 
-const isRenaming = (item: FlattenedItem<T>) => {
+function isRenaming(item: FlattenedItem<T>) {
   return renameState.itemKey === getKey(item.value)
 }
 
@@ -328,7 +326,7 @@ function findParentItem(items: T[], targetPath: string): T | undefined {
     if (itemPath === targetPath) {
       return item
     }
-    const children = (item as Record<string, unknown>).children as T[] | undefined
+    const children = getItemChildren(item)
     if (children) {
       const found = findParentItem(children, targetPath)
       if (found) {
@@ -546,7 +544,7 @@ function toFileItem(item: FlattenedItem<T>) {
 
 const itemMap = new Map<string, FlattenedItem<T>>()
 
-const handleContextMenuRename = (fileItem: { path: string, name: string, isDir?: boolean }): void => {
+function handleContextMenuRename(fileItem: { path: string, name: string, isDir?: boolean }): void {
   const flattenedItem = itemMap.get(fileItem.path)
   if (flattenedItem) {
     setTimeout(() => {
@@ -555,13 +553,13 @@ const handleContextMenuRename = (fileItem: { path: string, name: string, isDir?:
   }
 }
 
-const handleContextMenuCreateFile = (fileItem: { path: string, name: string, isDir?: boolean }): void => {
+function handleContextMenuCreateFile(fileItem: { path: string, name: string, isDir?: boolean }): void {
   setTimeout(() => {
     startCreating(fileItem.path, 'file')
   }, MENU_CLOSE_DELAY)
 }
 
-const handleContextMenuCreateFolder = (fileItem: { path: string, name: string, isDir?: boolean }): void => {
+function handleContextMenuCreateFolder(fileItem: { path: string, name: string, isDir?: boolean }): void {
   setTimeout(() => {
     startCreating(fileItem.path, 'folder')
   }, MENU_CLOSE_DELAY)
@@ -569,17 +567,17 @@ const handleContextMenuCreateFolder = (fileItem: { path: string, name: string, i
 
 // ==================== 键盘事件处理 ====================
 
-const handleF2Key = (item: FlattenedItem<T>) => {
+function handleF2Key(item: FlattenedItem<T>) {
   startRenaming(item)
 }
 
-const handleEnterKey = (item: FlattenedItem<T>) => {
+function handleEnterKey(item: FlattenedItem<T>) {
   if (isRenaming(item) && !isRenameDuplicate(item)) {
     handleRename(item)
   }
 }
 
-const handleEscapeKey = (item: FlattenedItem<T>) => {
+function handleEscapeKey(item: FlattenedItem<T>) {
   if (isRenaming(item)) {
     handleCancelRename()
   }

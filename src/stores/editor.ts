@@ -19,10 +19,22 @@ export interface TextModeState extends TextualEditorBase {
   textContent: string
 }
 
-export interface VisualModeState extends TextualEditorBase {
+export interface VisualModeSceneState extends TextualEditorBase {
   mode: 'visual'
-  visualData: string
+  visualType: 'scene'
+  statements: StatementEntry[]
+  savedSnapshot: string
+  lastEditedStatementId?: number
 }
+
+export interface VisualModeAnimationState extends TextualEditorBase {
+  mode: 'visual'
+  visualType: 'animation'
+  rawContent: string
+  savedSnapshot: string
+}
+
+export type VisualModeState = VisualModeSceneState | VisualModeAnimationState
 
 type TextualEditorState = TextModeState | VisualModeState
 
@@ -38,7 +50,76 @@ function isTextualEditor(state: EditorState): state is TextualEditorState {
   return state.mode === 'text' || state.mode === 'visual'
 }
 
-async function checkFileType(path: string, subPath: string, mimeType: string, expectedMimeType: string) {
+function isVisualScene(state: EditorState): state is VisualModeSceneState {
+  return state.mode === 'visual' && state.visualType === 'scene'
+}
+
+function isVisualAnimation(state: EditorState): state is VisualModeAnimationState {
+  return state.mode === 'visual' && state.visualType === 'animation'
+}
+
+/**
+ * 从可视模式状态提取全文本内容
+ */
+function getVisualContent(state: VisualModeState): string {
+  if (state.visualType === 'scene') {
+    return joinStatements(state.statements)
+  }
+  return state.rawContent
+}
+
+/**
+ * 根据语句 ID 计算其在全文中的起始行号（1-based）
+ */
+export function computeLineNumberFromStatementId(
+  statements: StatementEntry[],
+  statementId: number,
+): number | undefined {
+  let currentLine = 1
+  for (const entry of statements) {
+    if (entry.id === statementId) {
+      return currentLine
+    }
+    // 用字符计数替代 split('\n').length，避免为每个 entry 创建临时数组
+    const text = entry.rawText
+    let newlines = 1
+    let pos = 0
+    while ((pos = text.indexOf('\n', pos)) !== -1) {
+      newlines++
+      pos++
+    }
+    currentLine += newlines
+  }
+  return undefined
+}
+
+/**
+ * 构建可视模式状态
+ */
+function createVisualState(
+  base: Omit<TextualEditorBase, 'visualType'>,
+  visualType: VisualType,
+  content: string,
+): VisualModeState {
+  if (visualType === 'scene') {
+    return {
+      ...base,
+      mode: 'visual',
+      visualType: 'scene',
+      statements: buildStatements(content),
+      savedSnapshot: content,
+    }
+  }
+  return {
+    ...base,
+    mode: 'visual',
+    visualType: 'animation',
+    rawContent: content,
+    savedSnapshot: content,
+  }
+}
+
+async function checkFileType(path: string, subPath: string, mimeType: string, expectedMimeType: string): Promise<boolean> {
   if (mimeType !== expectedMimeType) {
     return false
   }
@@ -60,30 +141,74 @@ async function checkFileType(path: string, subPath: string, mimeType: string, ex
   return path.startsWith(`${targetPath}\\`) || path.startsWith(`${targetPath}/`)
 }
 
-async function isSceneFile(path: string, mimeType: string) {
-  return await checkFileType(path, 'scene', mimeType, 'text/plain')
+function isSceneFile(path: string, mimeType: string): Promise<boolean> {
+  return checkFileType(path, 'scene', mimeType, 'text/plain')
 }
 
-async function isAnimationFile(path: string, mimeType: string) {
-  return await checkFileType(path, 'animation', mimeType, 'application/json')
+function isAnimationFile(path: string, mimeType: string): Promise<boolean> {
+  return checkFileType(path, 'animation', mimeType, 'application/json')
 }
 
 const editableFileTypes = new Set(['text/plain', 'application/json'])
+const PREVIEW_SYNC_DEDUPE_WINDOW_MS = 160
+
+interface PreviewSyncRecord {
+  key: string
+  timestamp: number
+}
+
+interface SceneCursorSnapshot {
+  lineNumber: number
+  lineText: string
+}
+
+function buildPreviewSyncKey(
+  path: string,
+  lineNumber: number,
+  lineText: string,
+  force: boolean,
+): string {
+  return `${path}|${lineNumber}|${lineText}|${force ? 1 : 0}`
+}
+
+function resolveSceneCursor(content: string, preferredLineNumber?: number): SceneCursorSnapshot {
+  const lines = content.split('\n')
+  const lineCount = Math.max(lines.length, 1)
+  const lineNumber = Math.min(Math.max(preferredLineNumber ?? 1, 1), lineCount)
+  return {
+    lineNumber,
+    lineText: lines[lineNumber - 1] ?? '',
+  }
+}
 
 export const useEditorStore = defineStore('editor', () => {
   const states = $ref(new Map<string, EditorState>())
+  let lastPreviewSyncRecord = $ref<PreviewSyncRecord>()
 
   const tabsStore = useTabsStore()
   const fileSystemEvents = useFileSystemEvents()
 
-  const currentState = $computed(() => {
-    return states.get(tabsStore.activeTab?.path ?? '')
-  })
+  const currentState = $computed(() => states.get(tabsStore.activeTab?.path ?? ''))
 
-  const canToggleMode = $computed(() => {
-    const state = currentState
-    return state !== undefined && isTextualEditor(state) && !!state.visualType
-  })
+  const canToggleMode = $computed(() =>
+    currentState !== undefined && isTextualEditor(currentState) && !!currentState.visualType,
+  )
+
+  function syncScenePreview(path: string, lineNumber: number, lineText: string, force: boolean = false) {
+    const normalizedLineNumber = Math.max(1, Math.trunc(lineNumber))
+    const normalizedLineText = lineText ?? ''
+    const now = Date.now()
+    const key = buildPreviewSyncKey(path, normalizedLineNumber, normalizedLineText, force)
+
+    if (lastPreviewSyncRecord
+      && lastPreviewSyncRecord.key === key
+      && now - lastPreviewSyncRecord.timestamp < PREVIEW_SYNC_DEDUPE_WINDOW_MS) {
+      return
+    }
+
+    lastPreviewSyncRecord = { key, timestamp: now }
+    void debugCommander.syncScene(path, normalizedLineNumber, normalizedLineText, force)
+  }
 
   async function loadEditorState(tab: Tab) {
     if (states.has(tab.path)) {
@@ -98,20 +223,6 @@ export const useEditorStore = defineStore('editor', () => {
         const preferenceStore = usePreferenceStore()
         const content = await readTextFile(tab.path)
 
-        const baseState: TextModeState | VisualModeState = preferenceStore.editorMode === 'text'
-          ? {
-              path: tab.path,
-              isDirty: false,
-              mode: 'text',
-              textContent: content,
-            }
-          : {
-              path: tab.path,
-              isDirty: false,
-              mode: 'visual',
-              visualData: content,
-            }
-
         let visualType: VisualType | undefined
 
         if (await isSceneFile(tab.path, mimeType)) {
@@ -120,7 +231,21 @@ export const useEditorStore = defineStore('editor', () => {
           visualType = 'animation'
         }
 
-        states.set(tab.path, { ...baseState, visualType })
+        if (preferenceStore.editorMode === 'visual' && visualType) {
+          states.set(tab.path, createVisualState(
+            { path: tab.path, isDirty: false, lastLineNumber: undefined },
+            visualType,
+            content,
+          ))
+        } else {
+          states.set(tab.path, {
+            path: tab.path,
+            isDirty: false,
+            mode: 'text',
+            textContent: content,
+            visualType,
+          })
+        }
       } else {
         const workspaceStore = useWorkspaceStore()
         // 等待预览服务器启动
@@ -138,11 +263,18 @@ export const useEditorStore = defineStore('editor', () => {
       tab.error = error instanceof Error ? error.message : 'Unknown error'
     } finally {
       tab.isLoading = false
+      // 从磁盘加载的内容是干净的，重置持久化残留的修改标记
+      tab.isModified = false
     }
   }
 
-  function toggleTextualMode(mode: 'text' | 'visual') {
-    const state = currentState
+  function toggleTextualMode(mode: 'text' | 'visual', targetPath?: string) {
+    const path = targetPath ?? tabsStore.activeTab?.path
+    if (!path) {
+      return
+    }
+
+    const state = states.get(path)
     if (!state || !isTextualEditor(state) || !state.visualType) {
       return
     }
@@ -151,28 +283,47 @@ export const useEditorStore = defineStore('editor', () => {
       return
     }
 
+    const { isDirty, visualType, lastLineNumber } = state
+
     if (mode === 'text') {
-      const { visualData, ...rest } = state as VisualModeState
-      states.set(state.path, {
-        ...rest,
+      // visual → text：从可视状态提取全文本，并将 lastEditedStatementId 转换为行号
+      const content = getVisualContent(state as VisualModeState)
+      let syncedLineNumber = lastLineNumber
+      if (isVisualScene(state) && state.lastEditedStatementId !== undefined) {
+        syncedLineNumber = computeLineNumberFromStatementId(
+          state.statements,
+          state.lastEditedStatementId,
+        ) ?? lastLineNumber
+      }
+      states.set(path, {
+        path,
+        isDirty,
+        lastLineNumber: syncedLineNumber,
         mode: 'text',
-        textContent: visualData, // TODO: 将 visualData 转换为 textContent
+        textContent: content,
+        visualType,
       })
     } else {
-      const { textContent, ...rest } = state as TextModeState
-      states.set(state.path, {
-        ...rest,
-        mode: 'visual',
-        visualData: textContent, // TODO: 将 textContent 转换为 visualData
-      })
+      // text → visual：从文本构建可视状态，lastLineNumber 保持不变供可视编辑器定位
+      const content = (state as TextModeState).textContent
+      const base = { path, isDirty, lastLineNumber }
+      states.set(path, createVisualState(base, visualType, content))
     }
   }
 
   watch(() => tabsStore.activeTab, async (activeTab) => {
-    if (!activeTab || states.has(activeTab.path)) {
+    if (!activeTab) {
       return
     }
-    await loadEditorState(activeTab)
+
+    if (!states.has(activeTab.path)) {
+      await loadEditorState(activeTab)
+      return
+    }
+
+    // 已加载的文件：同步编辑模式与全局偏好
+    const preferenceStore = usePreferenceStore()
+    toggleTextualMode(preferenceStore.editorMode, activeTab.path)
   }, { immediate: true })
 
   // 监听标签页关闭，清理编辑器状态
@@ -217,20 +368,38 @@ export const useEditorStore = defineStore('editor', () => {
       }
 
       // 内容相同则跳过（通常是编辑器自身写入触发的 watcher 事件）
-      const currentContent = freshState.mode === 'text' ? freshState.textContent : freshState.visualData
+      const currentContent = freshState.mode === 'text' ? freshState.textContent : getVisualContent(freshState)
       if (content === currentContent) {
         return
       }
 
+      const isActiveSceneFile = tabsStore.activeTab?.path === event.path
       if (freshState.mode === 'text') {
         states.set(event.path, {
           ...freshState,
           textContent: content,
         })
-      } else {
+        if (isActiveSceneFile && freshState.visualType === 'scene') {
+          const { lineNumber, lineText } = resolveSceneCursor(content, freshState.lastLineNumber)
+          syncScenePreview(event.path, lineNumber, lineText)
+        }
+      } else if (isVisualScene(freshState)) {
+        const nextStatements = buildStatements(content)
         states.set(event.path, {
           ...freshState,
-          visualData: content,
+          statements: nextStatements,
+          savedSnapshot: content,
+        })
+        if (isActiveSceneFile) {
+          const firstEntry = nextStatements[0]
+          const lineText = firstEntry?.rawText ?? ''
+          syncScenePreview(event.path, 1, lineText)
+        }
+      } else if (isVisualAnimation(freshState)) {
+        states.set(event.path, {
+          ...freshState,
+          rawContent: content,
+          savedSnapshot: content,
         })
       }
     } catch (error) {
@@ -254,13 +423,29 @@ export const useEditorStore = defineStore('editor', () => {
       throw new Error(`文件不可编辑: ${path}`)
     }
 
-    const content = state.mode === 'text' ? state.textContent : state.visualData
+    const content = state.mode === 'text'
+      ? state.textContent
+      : getVisualContent(state)
+
     await gameFs.writeFile(path, content)
     state.isDirty = false
+
+    // 更新保存快照（可视模式下需要同步快照）
+    if (state.mode === 'visual') {
+      state.savedSnapshot = content
+    }
 
     const tabIndex = tabsStore.findTabIndex(path)
     if (tabIndex !== -1) {
       tabsStore.updateTabModified(tabIndex, false)
+    }
+
+    // 保存后同步游戏预览（文本编辑器有自己的 syncScene，此处仅处理可视化编辑器）
+    if (isVisualScene(state)) {
+      const lineNumber = state.lastLineNumber ?? 1
+      const entry = state.statements.find(e => e.id === (state.lastEditedStatementId ?? state.statements[0]?.id))
+      const lineText = entry?.rawText ?? ''
+      syncScenePreview(path, lineNumber, lineText)
     }
   }
 
@@ -269,6 +454,7 @@ export const useEditorStore = defineStore('editor', () => {
     currentState,
     canToggleMode,
     toggleTextualMode,
+    syncScenePreview,
     saveFile,
   })
 })

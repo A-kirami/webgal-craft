@@ -3,12 +3,15 @@ import { defineStore } from 'pinia'
 export const useEditSettingsStore = defineStore(
   'edit-settings',
   () => {
-    const fontFamily = $ref<string>('FiraCode, SourceHanSans, Consolas, "Courier New", monospace')
-    const fontSize = $ref<number>(14)
-    const wordWrap = $ref<boolean>(true)
-    const minimap = $ref<boolean>(false)
-    const autoSave = $ref<boolean>(true)
-    const enablePreviewTab = $ref<boolean>(true)
+    const fontFamily = $ref('FiraCode, SourceHanSans, Consolas, "Courier New", monospace')
+    const fontSize = $ref(14)
+    const wordWrap = $ref(true)
+    const minimap = $ref(false)
+    const autoSave = $ref(true)
+    const enablePreviewTab = $ref(true)
+    const autoApplyEffectEditorChanges = $ref(false)
+    const collapseStatementsOnSidebarOpen = $ref(true)
+    const showSidebarAssetPreview = $ref(true)
 
     return $$({
       fontFamily,
@@ -17,6 +20,9 @@ export const useEditSettingsStore = defineStore(
       minimap,
       autoSave,
       enablePreviewTab,
+      autoApplyEffectEditorChanges,
+      collapseStatementsOnSidebarOpen,
+      showSidebarAssetPreview,
     })
   },
   {

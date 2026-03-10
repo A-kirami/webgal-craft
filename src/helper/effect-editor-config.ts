@@ -417,8 +417,8 @@ export function isTransformEqual(left: Transform, right: Transform): boolean {
   for (const rule of EFFECT_PATH_RULES) {
     const leftRaw = getValueByPath(leftObj, rule.path)
     const rightRaw = getValueByPath(rightObj, rule.path)
-    const leftNum = (leftRaw != null) ? coerceRuleValue(rule, leftRaw) : undefined
-    const rightNum = (rightRaw != null) ? coerceRuleValue(rule, rightRaw) : undefined
+    const leftNum = leftRaw === undefined ? undefined : coerceRuleValue(rule, leftRaw)
+    const rightNum = rightRaw === undefined ? undefined : coerceRuleValue(rule, rightRaw)
     if (leftNum !== rightNum) {
       return false
     }

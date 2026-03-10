@@ -12,7 +12,7 @@ import { ResizablePanel } from '~/components/ui/resizable'
         <ScenePanel />
       </ResizablePanel>
       <ResizableHandle />
-      <ResizablePanel :default-size="45" :min-size="20">
+      <ResizablePanel :default-size="35" :min-size="20">
         <ResizablePanelGroup direction="vertical">
           <ResizablePanel :default-size="65" :min-size="20" :collapsible="true">
             <template #default="{ isCollapsed }">
@@ -26,7 +26,7 @@ import { ResizablePanel } from '~/components/ui/resizable'
         </ResizablePanelGroup>
       </ResizablePanel>
       <ResizableHandle />
-      <ResizablePanel :default-size="40" :min-size="20">
+      <ResizablePanel :default-size="50" :min-size="20">
         <EditorPanel />
       </ResizablePanel>
     </ResizablePanelGroup>

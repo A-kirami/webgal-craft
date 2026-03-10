@@ -22,7 +22,7 @@ async function updateAspectRatio() {
     const stageWidth = Number(gameConfig.stageWidth) || 2560
     const stageHeight = Number(gameConfig.stageHeight) || 1440
     aspectRatio = `${stageWidth}/${stageHeight}`
-    logger.debug(`预览面板分辨率: ${stageWidth}x${stageHeight} (${aspectRatio})`)
+    logger.debug(`预览面板分辨率: ${stageWidth}x${stageHeight}`)
   } catch (error) {
     logger.warn(`无法读取游戏配置，使用默认宽高比: ${error}`)
     aspectRatio = '16/9'
@@ -60,9 +60,7 @@ async function openPreviewInBrowser() {
 
 watch(
   () => workspaceStore.currentGame,
-  () => {
-    updateAspectRatio()
-  },
+  updateAspectRatio,
   { immediate: true },
 )
 </script>

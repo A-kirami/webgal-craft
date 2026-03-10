@@ -30,3 +30,23 @@ body {
     cursor: pointer;
   }
 }
+
+.bg-checkerboard {
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(45deg, #e0e0e0 25%, transparent 25%, transparent 75%, #e0e0e0 75%),
+    linear-gradient(45deg, #e0e0e0 25%, transparent 25%, transparent 75%, #e0e0e0 75%);
+  background-position: 0 0, 8px 8px;
+  background-size: 16px 16px;
+}
+
+html.dark .bg-checkerboard {
+  background-color: #2a2a2a;
+  background-image:
+    linear-gradient(45deg, #3a3a3a 25%, transparent 25%, transparent 75%, #3a3a3a 75%),
+    linear-gradient(45deg, #3a3a3a 25%, transparent 25%, transparent 75%, #3a3a3a 75%);
+}
+
+.btn-effect-editor {
+  @apply text-xs text-violet-500 border-violet-500/30 gap-1 shadow-none hover:text-violet-600 hover:bg-violet-500/10;
+}

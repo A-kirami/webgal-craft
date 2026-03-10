@@ -8,8 +8,8 @@ import DeleteEngineModal from '~/components/modals/DeleteEngineModal.vue'
 import DeleteFileModal from '~/components/modals/DeleteFileModal.vue'
 import DeleteGameConfirmModal from '~/components/modals/DeleteGameConfirmModal.vue'
 import DeleteGameModal from '~/components/modals/DeleteGameModal.vue'
+import DiscardEffectChangesModal from '~/components/modals/DiscardEffectChangesModal.vue'
 import DiscoveredResourcesModal from '~/components/modals/DiscoveredResourcesModal.vue'
-import EffectEditorModal from '~/components/modals/EffectEditorModal.vue'
 import GameConfigModal from '~/components/modals/GameConfigModal.vue'
 import SaveChangesModal from '~/components/modals/SaveChangesModal.vue'
 import SettingsModal from '~/components/modals/SettingsModal.vue'
@@ -20,12 +20,12 @@ const ModalDialog = {
   AlertModal,
   CreateFileModal,
   CreateGameModal,
+  DiscardEffectChangesModal,
   DeleteEngineModal,
   DeleteFileModal,
   DeleteGameModal,
   DeleteGameConfirmModal,
   DiscoveredResourcesModal,
-  EffectEditorModal,
   GameConfigModal,
   SaveChangesModal,
   SettingsModal,
@@ -61,21 +61,20 @@ export const useModalStore = defineStore('modal', () => {
     modalStack.set(modalKey, modalState)
   }
 
+  // 等待模态框退出动画结束后清理已关闭的非 keepAlive 模态框
   watchDebounced($$(modalStack), () => {
-    const hasModalToClean = [...modalStack.entries()].some(
-      ([_, modal]) => !modal.keepAlive && !modal.isOpen,
-    )
-
-    if (hasModalToClean) {
-      const newModalStack = new Map(
-        [...modalStack.entries()].filter(
-          ([_, modal]) => modal.keepAlive || modal.isOpen,
-        ),
-      )
-      modalStack = newModalStack
+    let cleaned = false
+    for (const [key, modal] of modalStack) {
+      if (!modal.keepAlive && !modal.isOpen) {
+        modalStack.delete(key)
+        cleaned = true
+      }
+    }
+    if (cleaned) {
+      modalStack = new Map(modalStack)
     }
   }, {
-    debounce: 150, // 等待模态框退出动画结束
+    debounce: 150,
     deep: true,
   })
 
