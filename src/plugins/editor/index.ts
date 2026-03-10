@@ -534,8 +534,7 @@ function getArgumentSuggestion(model: monaco.editor.ITextModel, position: monaco
     const parsedScene = webgalParser.parse(currentLine, TEMP_SCENE_NAME, TEMP_SCENE_URL)
     command = parsedScene.sentenceList[0]?.command || commandType.say
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error(`解析命令失败: ${errorMessage}`)
+    handleError(error, { silent: true })
   }
 
   if (!currentWord) {
@@ -625,9 +624,7 @@ function getParsedSceneFromLine(model: monaco.editor.ITextModel, position: monac
   try {
     return webgalParser.parse(lineBeforeCursor, TEMP_SCENE_NAME, TEMP_SCENE_URL)
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error(`解析场景失败: ${errorMessage}`)
-    // 解析失败时返回空场景
+    handleError(error, { silent: true })
     return webgalParser.parse('', TEMP_SCENE_NAME, TEMP_SCENE_URL)
   }
 }
@@ -728,8 +725,7 @@ async function getFileSuggestion(
       range: calculateCompletionRange(currentLine, position, currentWord, entry.isDirectory),
     }))
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error(`读取目录失败: ${path} - ${errorMessage}`)
+    handleError(error, { silent: true })
     return []
   }
 }

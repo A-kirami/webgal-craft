@@ -51,16 +51,6 @@ export interface DirItem extends FileSystemItemBase {
 export type FileSystemItem = FileItem | DirItem
 
 /**
- * 文件系统错误
- */
-class FileSystemError extends Error {
-  constructor(message: string, public path: string) {
-    super(message)
-    this.name = 'FileSystemError'
-  }
-}
-
-/**
  * 文件系统状态管理
  */
 export const useFileStore = defineStore('file', () => {
@@ -279,12 +269,9 @@ export const useFileStore = defineStore('file', () => {
       parent.childIds = newItems.map(item => item.id)
     } catch (error) {
       parent.isLoaded = false
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      void logger.error(`[FileStore] 加载目录 ${path} 失败: ${errorMessage}`)
-      throw new FileSystemError(
-        `加载目录失败: ${errorMessage}`,
-        path,
-      )
+      const msg = error instanceof Error ? error.message : String(error)
+      void logger.error(`[FileStore] 加载目录 ${path} 失败: ${msg}`)
+      throw new AppError('FS_ERROR', `加载目录失败: ${msg}`)
     }
   }
 
@@ -293,7 +280,7 @@ export const useFileStore = defineStore('file', () => {
    */
   async function getFolderContents(path: string): Promise<FileSystemItem[]> {
     if (!(await exists(path))) {
-      throw new FileSystemError('目录不存在', path)
+      throw new AppError('DIR_NOT_FOUND', '目录不存在')
     }
 
     let parentId = pathToId.get(path)
@@ -314,7 +301,7 @@ export const useFileStore = defineStore('file', () => {
 
     const parent = items.get(parentId)
     if (!parent?.isDir) {
-      throw new FileSystemError('路径不是目录', path)
+      throw new AppError('FS_ERROR', '路径不是目录')
     }
 
     if (!parent.isLoaded) {
@@ -335,7 +322,7 @@ export const useFileStore = defineStore('file', () => {
   async function updateItemPath(id: string, newPath: string) {
     const item = items.get(id)
     if (!item) {
-      throw new FileSystemError('项目不存在', newPath)
+      throw new AppError('FS_ERROR', '项目不存在')
     }
 
     if (item.isDir) {
@@ -423,8 +410,8 @@ export const useFileStore = defineStore('file', () => {
     try {
       await invalidateDirectoryItemsCache(path, { includeChildren })
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      void logger.warn(`[FileStore] 失效目录缓存失败 (${path}): ${errorMessage}`)
+      const msg = error instanceof Error ? error.message : String(error)
+      void logger.warn(`[FileStore] 失效目录缓存失败 (${path}): ${msg}`)
     }
   }
 
@@ -447,12 +434,7 @@ export const useFileStore = defineStore('file', () => {
         await invalidateDirectoryCacheSafe(path, true)
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      void logger.error(`[FileStore] 处理 ${path} 创建事件失败: ${errorMessage}`)
-      throw new FileSystemError(
-        `处理 ${path} 创建事件失败: ${errorMessage}`,
-        path,
-      )
+      handleError(error, { silent: true })
     }
   }
 
@@ -523,12 +505,7 @@ export const useFileStore = defineStore('file', () => {
         invalidateDirectoryCacheSafe(newPath, true),
       ])
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      void logger.error(`[FileStore] 处理 ${oldPath} -> ${newPath} 重命名事件失败: ${errorMessage}`)
-      throw new FileSystemError(
-        `处理 ${oldPath} -> ${newPath} 重命名事件失败: ${errorMessage}`,
-        oldPath,
-      )
+      handleError(error, { silent: true })
     }
   }
 
@@ -562,8 +539,8 @@ export const useFileStore = defineStore('file', () => {
         await invalidateDirectoryCacheSafe(path, true)
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      void logger.error(`[FileStore] 处理 ${path} 修改事件失败: ${errorMessage}`)
+      const msg = error instanceof Error ? error.message : String(error)
+      void logger.error(`[FileStore] 处理 ${path} 修改事件失败: ${msg}`)
     }
   }
 
@@ -598,12 +575,7 @@ export const useFileStore = defineStore('file', () => {
         }
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      void logger.error(`[FileStore] 处理 ${path} 文件系统事件失败: ${errorMessage}`)
-      throw new FileSystemError(
-        `处理 ${path} 文件系统事件失败: ${errorMessage}`,
-        path,
-      )
+      handleError(error, { silent: true })
     }
   }
 
@@ -635,12 +607,9 @@ export const useFileStore = defineStore('file', () => {
       await getFolderContents(rootPath)
       unwatch = await watchFs(rootPath, handleWatchEvent, { recursive: true, delayMs: WATCH_DELAY_MS })
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      void logger.error(`[FileStore] 初始化工作目录 ${workspaceStore.CWD} 文件系统失败: ${errorMessage}`)
-      throw new FileSystemError(
-        `初始化工作目录 ${workspaceStore.CWD} 文件系统失败: ${errorMessage}`,
-        workspaceStore.CWD,
-      )
+      const msg = error instanceof Error ? error.message : String(error)
+      void logger.error(`[FileStore] 初始化工作目录 ${workspaceStore.CWD} 文件系统失败: ${msg}`)
+      throw new AppError('FS_ERROR', `初始化工作目录 ${workspaceStore.CWD} 文件系统失败: ${msg}`)
     }
   }
 

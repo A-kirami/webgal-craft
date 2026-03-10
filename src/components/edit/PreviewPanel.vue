@@ -53,8 +53,7 @@ async function openPreviewInBrowser() {
   try {
     await openUrl(previewUrl)
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    notify.error(t('edit.previewPanel.openFailed', { error: errorMessage }))
+    handleError(error, { context: t('edit.previewPanel.openFailed') })
   }
 }
 

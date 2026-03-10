@@ -39,7 +39,7 @@ async function importGameWithNotify(path: string) {
     await gameManager.importGame(path)
     notify.success(t('home.games.importSuccess'))
   } catch (error: unknown) {
-    if (error instanceof GameError) {
+    if (error instanceof AppError && error.code === 'INVALID_STRUCTURE') {
       notify.error(t('home.games.importInvalidFolder'))
     } else {
       notify.error(t('home.games.importUnknownError'))

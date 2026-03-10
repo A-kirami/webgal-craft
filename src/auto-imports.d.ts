@@ -6,6 +6,7 @@
 // biome-ignore lint: disable
 export {}
 declare global {
+  const AppError: typeof import('./types/errors').AppError
   const CUSTOM_CONTENT: typeof import('./helper/command-registry/schema').CUSTOM_CONTENT
   const DEFAULT_EASE_OPTION_VALUE: typeof import('./helper/effect-editor-config').DEFAULT_EASE_OPTION_VALUE
   const DebugCommand: typeof import('./types/debugProtocol').DebugCommand
@@ -112,6 +113,7 @@ declare global {
   const getValueByPath: typeof import('./helper/effect-editor-config').getValueByPath
   const getVersion: typeof import('./utils/metadata').getVersion
   const h: typeof import('vue').h
+  const handleError: typeof import('./utils/error-handler').handleError
   const hasCommandNodeParam: typeof import('./helper/webgal-script/params').hasCommandNodeParam
   const hasParamExplicitValue: typeof import('./helper/statement-editor/param-value').hasParamExplicitValue
   const hasSentenceTruthyFlag: typeof import('./helper/webgal-script/sentence').hasSentenceTruthyFlag
@@ -119,6 +121,7 @@ declare global {
   const inject: typeof import('vue').inject
   const injectLocal: typeof import('@vueuse/core').injectLocal
   const invalidateDirectoryItemsCache: typeof import('./services/directory-cache').invalidateDirectoryItemsCache
+  const isBackendError: typeof import('./types/errors').isBackendError
   const isCommandSupported: typeof import('./helper/command-registry/index').isCommandSupported
   const isDefined: typeof import('@vueuse/core').isDefined
   const isFlagChoiceField: typeof import('./helper/command-registry/schema').isFlagChoiceField
@@ -226,6 +229,7 @@ declare global {
   const resolveSurfaceVariant: typeof import('./helper/command-registry/schema').resolveSurfaceVariant
   const roundByStep: typeof import('./helper/math').roundByStep
   const roundToPrecision: typeof import('./helper/math').roundToPrecision
+  const safeInvoke: typeof import('./utils/invoke').safeInvoke
   const sceneEntries: typeof import('./helper/command-registry/scene').sceneEntries
   const serializeCommandNode: typeof import('./helper/webgal-script/codec').serializeCommandNode
   const serializeEffectJson: typeof import('./helper/effect-editor-config').serializeEffectJson
@@ -234,6 +238,7 @@ declare global {
   const serverCmds: typeof import('./commands/server').serverCmds
   const setOrRemoveArg: typeof import('./helper/webgal-script/arg-utils').setOrRemoveArg
   const setValueByPath: typeof import('./helper/effect-editor-config').setValueByPath
+  const settleBatch: typeof import('./utils/batch').settleBatch
   const shallowReactive: typeof import('vue').shallowReactive
   const shallowReadonly: typeof import('vue').shallowReadonly
   const shallowRef: typeof import('vue').shallowRef
@@ -596,7 +601,7 @@ declare global {
   export type { CommandNodeBase, SayCommandNode, CommentCommandNode, SetVarCommandNode, ChooseCommandNode, ApplyStyleCommandNode, TypedCommandNode, TypedCommandType, GenericCommandType, GenericCommandNode, CommandNode } from './helper/webgal-script/types'
   import('./helper/webgal-script/types')
   // @ts-ignore
-  export type { GameError, GameMetadata, EngineMetadata } from './services/types'
+  export type { GameMetadata, EngineMetadata } from './services/types'
   import('./services/types')
   // @ts-ignore
   export type { TextModeState, VisualModeSceneState, VisualModeAnimationState, VisualModeState, AssetPreviewState, UnsupportedState } from './stores/editor'
@@ -614,6 +619,9 @@ declare global {
   export type { DebugCommand, DebugMessage, ComponentsVisibility, ComponentVisibilityCommand } from './types/debugProtocol'
   import('./types/debugProtocol')
   // @ts-ignore
+  export type { AppError, ErrorCode, BackendError } from './types/errors'
+  import('./types/errors')
+  // @ts-ignore
   export type { FileViewerSortBy, FileViewerSortOrder, FileViewerItem } from './types/file-viewer'
   import('./types/file-viewer')
   // @ts-ignore
@@ -626,6 +634,9 @@ declare global {
   export type { Point2D, FilterFlag, Transform } from './types/stage'
   import('./types/stage')
   // @ts-ignore
+  export type { BatchResult } from './utils/batch'
+  import('./utils/batch')
+  // @ts-ignore
   export type { SortableItemAccessor } from './utils/sort'
   import('./utils/sort')
 }
@@ -635,6 +646,7 @@ import { UnwrapRef } from 'vue'
 declare module 'vue' {
   interface GlobalComponents {}
   interface ComponentCustomProperties {
+    readonly AppError: UnwrapRef<typeof import('./types/errors')['AppError']>
     readonly CUSTOM_CONTENT: UnwrapRef<typeof import('./helper/command-registry/schema')['CUSTOM_CONTENT']>
     readonly DEFAULT_EASE_OPTION_VALUE: UnwrapRef<typeof import('./helper/effect-editor-config')['DEFAULT_EASE_OPTION_VALUE']>
     readonly DebugCommand: UnwrapRef<typeof import('./types/debugProtocol')['DebugCommand']>
@@ -643,7 +655,6 @@ declare module 'vue' {
     readonly EFFECT_EASE_OPTIONS: UnwrapRef<typeof import('./helper/effect-editor-config')['EFFECT_EASE_OPTIONS']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly FIGURE_POSITION_FLAGS: UnwrapRef<typeof import('./helper/webgal-script/types')['FIGURE_POSITION_FLAGS']>
-    readonly GameError: UnwrapRef<typeof import('./services/types')['GameError']>
     readonly UNSPECIFIED: UnwrapRef<typeof import('./helper/command-registry/schema')['UNSPECIFIED']>
     readonly applyEffectEditorResultToSentence: UnwrapRef<typeof import('./composables/useStatementEffectEditorBridge')['applyEffectEditorResultToSentence']>
     readonly applyScrubStepModifier: UnwrapRef<typeof import('./helper/math')['applyScrubStepModifier']>
@@ -741,6 +752,7 @@ declare module 'vue' {
     readonly getValueByPath: UnwrapRef<typeof import('./helper/effect-editor-config')['getValueByPath']>
     readonly getVersion: UnwrapRef<typeof import('./utils/metadata')['getVersion']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
+    readonly handleError: UnwrapRef<typeof import('./utils/error-handler')['handleError']>
     readonly hasCommandNodeParam: UnwrapRef<typeof import('./helper/webgal-script/params')['hasCommandNodeParam']>
     readonly hasParamExplicitValue: UnwrapRef<typeof import('./helper/statement-editor/param-value')['hasParamExplicitValue']>
     readonly hasSentenceTruthyFlag: UnwrapRef<typeof import('./helper/webgal-script/sentence')['hasSentenceTruthyFlag']>
@@ -748,6 +760,7 @@ declare module 'vue' {
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly injectLocal: UnwrapRef<typeof import('@vueuse/core')['injectLocal']>
     readonly invalidateDirectoryItemsCache: UnwrapRef<typeof import('./services/directory-cache')['invalidateDirectoryItemsCache']>
+    readonly isBackendError: UnwrapRef<typeof import('./types/errors')['isBackendError']>
     readonly isCommandSupported: UnwrapRef<typeof import('./helper/command-registry/index')['isCommandSupported']>
     readonly isDefined: UnwrapRef<typeof import('@vueuse/core')['isDefined']>
     readonly isFlagChoiceField: UnwrapRef<typeof import('./helper/command-registry/schema')['isFlagChoiceField']>
@@ -855,6 +868,7 @@ declare module 'vue' {
     readonly resolveSurfaceVariant: UnwrapRef<typeof import('./helper/command-registry/schema')['resolveSurfaceVariant']>
     readonly roundByStep: UnwrapRef<typeof import('./helper/math')['roundByStep']>
     readonly roundToPrecision: UnwrapRef<typeof import('./helper/math')['roundToPrecision']>
+    readonly safeInvoke: UnwrapRef<typeof import('./utils/invoke')['safeInvoke']>
     readonly sceneEntries: UnwrapRef<typeof import('./helper/command-registry/scene')['sceneEntries']>
     readonly serializeCommandNode: UnwrapRef<typeof import('./helper/webgal-script/codec')['serializeCommandNode']>
     readonly serializeEffectJson: UnwrapRef<typeof import('./helper/effect-editor-config')['serializeEffectJson']>
@@ -863,6 +877,7 @@ declare module 'vue' {
     readonly serverCmds: UnwrapRef<typeof import('./commands/server')['serverCmds']>
     readonly setOrRemoveArg: UnwrapRef<typeof import('./helper/webgal-script/arg-utils')['setOrRemoveArg']>
     readonly setValueByPath: UnwrapRef<typeof import('./helper/effect-editor-config')['setValueByPath']>
+    readonly settleBatch: UnwrapRef<typeof import('./utils/batch')['settleBatch']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>

@@ -241,7 +241,7 @@ edit:
     testGame: Test Game
     export: Export
     missingPreviewUrl: Preview URL is not available. Please start preview first.
-    openFailed: "Failed to open test window: {error}"
+    openFailed: Failed to open test window
   empty:
     title: No Open Files
     description: Select a file from the left file list to start editing, or create a new scene file
@@ -363,7 +363,7 @@ edit:
     refreshPreview: Refresh Preview
     openInBrowser: Open in Browser
     copyUrlSuccess: URL copied successfully
-    openFailed: "Failed to open preview: {error}"
+    openFailed: Failed to open preview
     previewTitle: "Game Preview - {name}"
   assetPanel:
     tabs:

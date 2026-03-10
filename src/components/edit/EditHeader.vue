@@ -72,9 +72,7 @@ async function handleTestGame() {
       }
     }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error(`无法打开测试窗口: ${errorMessage}`)
-    toast.error(t('edit.header.openFailed', { error: errorMessage }))
+    handleError(error, { context: t('edit.header.openFailed') })
   } finally {
     isTestOpening = false
   }

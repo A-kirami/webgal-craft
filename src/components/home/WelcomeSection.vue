@@ -49,7 +49,7 @@ async function selectGameFolder() {
       router.push(`/edit/${gameId}`)
     } catch (error: unknown) {
       logger.error(`导入游戏时发生错误: ${error}`)
-      if (error instanceof GameError) {
+      if (error instanceof AppError) {
         notify.error(error.message)
       } else {
         notify.error(t('home.games.importUnknownError'))

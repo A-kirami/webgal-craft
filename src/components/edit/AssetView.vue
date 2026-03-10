@@ -75,13 +75,12 @@ const items = computedAsync(async () => {
     const result = await fileStore.getFolderContents(path)
     return result.map(item => toFileViewerItem(item))
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
     // 根目录不存在时视为空目录，避免报错
-    if (!relativePath && errorMessage.includes('目录不存在')) {
+    if (!relativePath && error instanceof AppError && error.code === 'DIR_NOT_FOUND') {
       void logger.debug(`资源目录 ${assetBasePath.value} 不存在，返回空列表`)
       return []
     }
-    errorMsg = errorMessage
+    errorMsg = error instanceof Error ? error.message : String(error)
     return []
   } finally {
     if (loadToken === latestLoadToken) {

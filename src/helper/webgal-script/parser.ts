@@ -20,8 +20,7 @@ export function parseSentence(rawText: string): ISentence | undefined {
     const scene = webgalParser.parse(rawText, '', '')
     return scene.sentenceList[0]
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    void logger.error(`解析语句失败: ${errorMessage}`)
+    handleError(error, { silent: true })
     return undefined
   }
 }

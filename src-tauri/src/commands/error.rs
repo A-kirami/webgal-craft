@@ -23,12 +23,30 @@ pub enum AppError {
     Tauri(#[from] tauri::Error),
 }
 
+impl AppError {
+    /// 稳定的错误分类码，前端据此做程序化判断
+    fn code(&self) -> &'static str {
+        match self {
+            Self::Io(_) => "IO_ERROR",
+            Self::Image(_) => "IMAGE_ERROR",
+            Self::Server(_) => "SERVER_ERROR",
+            Self::Config(_) => "CONFIG_ERROR",
+            Self::Window(_) => "WINDOW_ERROR",
+            Self::Tauri(_) => "TAURI_ERROR",
+        }
+    }
+}
+
 impl serde::Serialize for AppError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::ser::Serializer,
     {
-        serializer.serialize_str(self.to_string().as_ref())
+        use serde::ser::SerializeStruct;
+        let mut s = serializer.serialize_struct("AppError", 2)?;
+        s.serialize_field("code", self.code())?;
+        s.serialize_field("message", &self.to_string())?;
+        s.end()
     }
 }
 
