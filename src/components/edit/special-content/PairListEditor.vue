@@ -28,8 +28,8 @@ let itemKeys: number[] = []
 watch(() => props.items, (items, oldItems) => {
   const prev = oldItems ?? []
   const newKeys: number[] = []
-  for (let i = 0; i < items.length; i++) {
-    if (i < prev.length && prev[i] === items[i]) {
+  for (const [i, item] of items.entries()) {
+    if (i < prev.length && prev[i] === item) {
       newKeys.push(itemKeys[i])
     } else {
       newKeys.push(nextKey++)

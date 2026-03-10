@@ -484,7 +484,6 @@ function processFlattenItems(flattenItems: FlattenedItem<T>[]): FlattenedItem<T>
     const rootLevel = result.length > 0 ? result[0].level : 0
     const targetLevel = rootLevel
 
-    // eslint-disable-next-line no-useless-assignment
     let insertIndex = 0
     if (createState.type === 'folder') {
       insertIndex = 0
