@@ -325,8 +325,9 @@ edit:
       title: 入力欄タイトル
       buttonText: 確認ボタンテキスト
       defaultValue: 入力欄デフォルト値
-  assetPreview:
-    unsupportedType: サポートされていないファイルタイプ
+  unsupported:
+    binaryFile: このファイルはバイナリファイルまたはサポートされていないテキストエンコーディングを使用しているため、エディターに表示できません。
+    loadFailed: "ファイルタイプの検出に失敗しました：{error}"
   textEditor:
     languages:
       unknown: 不明

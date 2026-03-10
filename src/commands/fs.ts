@@ -251,6 +251,15 @@ async function moveFile(sourcePath: string, targetPath: string): Promise<string>
 }
 
 /**
+ * 检测文件是否为二进制文件
+ * @param path 文件路径
+ * @returns Promise<boolean> 如果是二进制文件返回 true
+ */
+async function isBinaryFile(path: string): Promise<boolean> {
+  return invoke<boolean>('is_binary_file', { path })
+}
+
+/**
  * 文件系统命令对象，提供文件系统操作功能
  */
 export const fsCmds = {
@@ -264,4 +273,5 @@ export const fsCmds = {
   renameFile,
   copyFile,
   moveFile,
+  isBinaryFile,
 }

@@ -44,7 +44,12 @@ export interface AssetPreviewState extends CoreEditorState {
   mimeType: string
 }
 
-type EditorState = TextualEditorState | AssetPreviewState
+export interface UnsupportedState extends CoreEditorState {
+  mode: 'unsupported'
+  reason: string
+}
+
+type EditorState = TextualEditorState | AssetPreviewState | UnsupportedState
 
 function isTextualEditor(state: EditorState): state is TextualEditorState {
   return state.mode === 'text' || state.mode === 'visual'
@@ -149,7 +154,7 @@ function isAnimationFile(path: string, mimeType: string): Promise<boolean> {
   return checkFileType(path, 'animation', mimeType, 'application/json')
 }
 
-const editableFileTypes = new Set(['text/plain', 'application/json'])
+const PREVIEW_MIME_PREFIXES = ['image/', 'video/', 'audio/']
 const PREVIEW_SYNC_DEDUPE_WINDOW_MS = 160
 
 interface PreviewSyncRecord {
@@ -185,6 +190,7 @@ export const useEditorStore = defineStore('editor', () => {
   const states = $ref(new Map<string, EditorState>())
   let lastPreviewSyncRecord = $ref<PreviewSyncRecord>()
 
+  const { t } = useI18n()
   const tabsStore = useTabsStore()
   const fileSystemEvents = useFileSystemEvents()
 
@@ -217,10 +223,45 @@ export const useEditorStore = defineStore('editor', () => {
 
     try {
       tab.isLoading = true
-      const mimeType = mime.getType(tab.path) ?? ''
 
-      if (editableFileTypes.has(mimeType)) {
+      // 检测文件是否为二进制
+      let isBinary: boolean
+      try {
+        isBinary = await fsCmds.isBinaryFile(tab.path)
+      } catch (error) {
+        // 检测失败，展示错误提示
+        const message = error instanceof Error ? error.message : String(error)
+        states.set(tab.path, {
+          path: tab.path,
+          mode: 'unsupported',
+          reason: t('edit.unsupported.loadFailed', { error: message }),
+        })
+        return
+      }
+
+      if (isBinary) {
+        // 二进制文件：可预览媒体走 preview，其余走 unsupported
+        const mimeType = mime.getType(tab.path) ?? ''
+        if (PREVIEW_MIME_PREFIXES.some(prefix => mimeType.startsWith(prefix))) {
+          const workspaceStore = useWorkspaceStore()
+          await until(() => !!workspaceStore.currentGameServeUrl).toBe(true)
+          states.set(tab.path, {
+            path: tab.path,
+            mode: 'preview',
+            assetUrl: getAssetUrl(tab.path),
+            mimeType,
+          })
+        } else {
+          states.set(tab.path, {
+            path: tab.path,
+            mode: 'unsupported',
+            reason: t('edit.unsupported.binaryFile'),
+          })
+        }
+      } else {
+        // 文本文件：沿用现有文本/可视编辑逻辑
         const preferenceStore = usePreferenceStore()
+        const mimeType = mime.getType(tab.path) ?? ''
         const content = await readTextFile(tab.path)
 
         let visualType: VisualType | undefined
@@ -246,17 +287,6 @@ export const useEditorStore = defineStore('editor', () => {
             visualType,
           })
         }
-      } else {
-        const workspaceStore = useWorkspaceStore()
-        // 等待预览服务器启动
-        await until(() => !!workspaceStore.currentGameServeUrl).toBe(true)
-
-        states.set(tab.path, {
-          path: tab.path,
-          mode: 'preview',
-          assetUrl: getAssetUrl(tab.path),
-          mimeType,
-        })
       }
     } catch (error) {
       logger.error(`无法加载编辑器状态 ${tab.path}: ${error}`)

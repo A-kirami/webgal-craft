@@ -1,5 +1,9 @@
 use std::{fs, io, path::Path};
 
+/// 检测文件是否为二进制文件
+/// 读取前 8192 字节，若包含 null byte 则判定为二进制
+const BINARY_CHECK_BUFFER_SIZE: usize = 8192;
+
 use tauri::ipc::Channel;
 
 use super::{AppError, AppResult};
@@ -183,6 +187,17 @@ pub fn validate_directory_structure(
 
     // 所有检查都通过
     Ok(true)
+}
+
+/// 检测文件是否为二进制文件
+/// 读取前 8192 字节，包含 null byte 则判定为二进制；空文件视为文本
+#[tauri::command]
+pub async fn is_binary_file(path: String) -> AppResult<bool> {
+    use std::io::Read;
+    let mut file = fs::File::open(&path)?;
+    let mut buffer = vec![0u8; BINARY_CHECK_BUFFER_SIZE];
+    let bytes_read = file.read(&mut buffer)?;
+    Ok(buffer[..bytes_read].contains(&0))
 }
 
 /// 删除文件或文件夹

@@ -325,8 +325,9 @@ edit:
       title: Input box title
       buttonText: Confirm button text
       defaultValue: Input box default value
-  assetPreview:
-    unsupportedType: Unsupported file type
+  unsupported:
+    binaryFile: The file is not displayed in the editor because it is either binary or uses an unsupported text encoding.
+    loadFailed: "Failed to detect file type: {error}"
   textEditor:
     languages:
       unknown: Unknown
