@@ -133,6 +133,7 @@ declare global {
   const isRgbaPayload: typeof import('./helper/color').isRgbaPayload
   const isShallow: typeof import('vue').isShallow
   const isStatementInteractiveTarget: typeof import('./composables/useStatementEditor').isStatementInteractiveTarget
+  const isTransformEqual: typeof import('./helper/effect-editor-config').isTransformEqual
   const isTypedCommandNode: typeof import('./helper/webgal-script/codec').isTypedCommandNode
   const isValidPositiveNumber: typeof import('./utils/sort').isValidPositiveNumber
   const joinStatements: typeof import('./helper/webgal-script/sentence').joinStatements
@@ -607,7 +608,7 @@ declare global {
   export type { Tab } from './stores/tabs'
   import('./stores/tabs')
   // @ts-ignore
-  export type { ColorPickerAlpha, ColorPickerPrgb, ColorPickerPrgba, ColorPickerRgb, ColorPickerRgba, ColorPickerHsl, ColorPickerHsla, ColorPickerHsv, ColorPickerHsva, ColorPickerValue } from './types/color-picker'
+  export type { ColorPickerAlpha, ColorPickerPrgb, ColorPickerPrgba, ColorPickerRgb, ColorPickerRgba, ColorPickerHsl, ColorPickerHsla, ColorPickerValue } from './types/color-picker'
   import('./types/color-picker')
   // @ts-ignore
   export type { DebugCommand, DebugMessage, ComponentsVisibility, ComponentVisibilityCommand } from './types/debugProtocol'
@@ -761,6 +762,7 @@ declare module 'vue' {
     readonly isRgbaPayload: UnwrapRef<typeof import('./helper/color')['isRgbaPayload']>
     readonly isShallow: UnwrapRef<typeof import('vue')['isShallow']>
     readonly isStatementInteractiveTarget: UnwrapRef<typeof import('./composables/useStatementEditor')['isStatementInteractiveTarget']>
+    readonly isTransformEqual: UnwrapRef<typeof import('./helper/effect-editor-config')['isTransformEqual']>
     readonly isTypedCommandNode: UnwrapRef<typeof import('./helper/webgal-script/codec')['isTypedCommandNode']>
     readonly isValidPositiveNumber: UnwrapRef<typeof import('./utils/sort')['isValidPositiveNumber']>
     readonly joinStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['joinStatements']>
