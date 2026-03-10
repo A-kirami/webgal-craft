@@ -91,7 +91,7 @@ export interface TextField extends FieldBase {
   type: 'text'
   placeholder?: I18nLike
   defaultValue?: string
-  variant?: SurfaceAware<'input' | 'textarea-auto' | 'textarea-fixed'>
+  variant?: SurfaceAware<'input' | 'textarea-auto' | 'textarea-grow'>
   /** 仅在 variant 解析为 input 时生效：输入框宽度随内容增长 */
   inputAutoWidth?: boolean
 }

@@ -56,7 +56,7 @@ export function useStatementEditorContent(options: UseStatementEditorContentOpti
     const variants = typeof field.variant === 'string'
       ? [field.variant]
       : [field.variant.inline, field.variant.panel]
-    return variants.some(v => v === 'textarea-auto' || v === 'textarea-fixed')
+    return variants.some(v => v === 'textarea-auto' || v === 'textarea-grow')
   }
 
   function handleContentChange(value: string | number) {
