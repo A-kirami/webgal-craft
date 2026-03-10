@@ -396,6 +396,7 @@ edit:
     visualMode: Switch to Visual
     toggleSidebar: Toggle Auxiliary Panel
   visualEditor:
+    playToLine: Play to this line
     commandPanel: Command Panel
     narrationMode: Narration
     types:

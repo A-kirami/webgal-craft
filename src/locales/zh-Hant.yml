@@ -396,6 +396,7 @@ edit:
     visualMode: 切換視覺化
     toggleSidebar: 切換輔助面板
   visualEditor:
+    playToLine: 執行到此句
     commandPanel: 命令面板
     narrationMode: 旁白模式
     types:
