@@ -28,12 +28,15 @@ watch(
   { immediate: true },
 )
 
-// 折叠动画结束后（200ms），重置空行内注释状态
+/** Collapsible 折叠动画时长（ms），需与 CollapsibleContent CSS 动画保持同步 */
+const COLLAPSE_ANIMATION_MS = 200
+
+// 折叠动画结束后，重置空行内注释状态
 watch(() => collapsed, (isCollapsed) => {
   if (isCollapsed && !ensureParsed(props.entry)?.inlineComment) {
     setTimeout(() => {
       showInlineComment = false
-    }, 200)
+    }, COLLAPSE_ANIMATION_MS)
   }
 })
 

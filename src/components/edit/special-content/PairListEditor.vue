@@ -21,6 +21,27 @@ const emit = defineEmits<{
 const isInline = $computed(() => props.surface === 'inline')
 const { buildControlId } = useControlId('pair-list')
 
+// 为每个 item 生成稳定的 key，避免用 index 导致增删时 DOM 复用错位
+let nextKey = 0
+let itemKeys: number[] = []
+
+watch(() => props.items, (items, oldItems) => {
+  const prev = oldItems ?? []
+  const newKeys: number[] = []
+  for (let i = 0; i < items.length; i++) {
+    if (i < prev.length && prev[i] === items[i]) {
+      newKeys.push(itemKeys[i])
+    } else {
+      newKeys.push(nextKey++)
+    }
+  }
+  itemKeys = newKeys
+}, { immediate: true })
+
+function itemKey(index: number): number {
+  return itemKeys[index] ?? index
+}
+
 function firstInputId(index: number): string {
   return buildControlId(`first-${index}`)
 }
@@ -37,7 +58,7 @@ function secondInputId(index: number): string {
   >
     <div
       v-for="(item, i) in items"
-      :key="i"
+      :key="itemKey(i)"
       class="flex gap-1.5 items-center group-data-[surface=panel]:p-3 group-data-[surface=panel]:border group-data-[surface=panel]:rounded-md group-data-[surface=panel]:flex-col group-data-[surface=panel]:gap-2 group-data-[surface=panel]:items-stretch"
     >
       <template v-if="isInline">

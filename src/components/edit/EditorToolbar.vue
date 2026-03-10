@@ -8,6 +8,7 @@ const editorStore = useEditorStore()
 
 const isVisualMode = $computed(() => preferenceStore.editorMode === 'visual')
 const canToggleMode = $computed(() => editorStore.canToggleMode)
+const canToggleSidebar = $computed(() => canToggleMode)
 
 function handleModeToggle() {
   if (!canToggleMode || !editorStore.currentState) {
@@ -51,7 +52,7 @@ function handleSidebarToggle() {
           <button
             :class="toggleVariants({ size: 'sm' })"
             :data-state="preferenceStore.showSidebar ? 'on' : 'off'"
-            :disabled="!canToggleMode"
+            :disabled="!canToggleSidebar"
             class="disabled:opacity-40 disabled:pointer-events-none"
             @click="handleSidebarToggle"
           >

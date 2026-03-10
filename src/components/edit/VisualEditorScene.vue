@@ -86,7 +86,7 @@ function performRedo() {
 
 // ─── 剪贴板 ───
 
-let clipboard = $ref<string>()
+let statementClipboard = $ref<string>()
 
 function isEditingText() {
   const el = document.activeElement
@@ -100,7 +100,7 @@ function isEditingText() {
 function copyStatement() {
   const entry = state.value.statements.find(e => e.id === selectedStatementId)
   if (entry) {
-    clipboard = entry.rawText
+    statementClipboard = entry.rawText
   }
 }
 
@@ -113,10 +113,10 @@ function cutStatement() {
 }
 
 function pasteStatement() {
-  if (!clipboard) {
+  if (!statementClipboard) {
     return
   }
-  const newEntry = buildStatements(clipboard)[0]
+  const newEntry = buildStatements(statementClipboard)[0]
   const idx = state.value.statements.findIndex(e => e.id === selectedStatementId)
   const insertAt = idx === -1 ? state.value.statements.length : idx + 1
   state.value.statements.splice(insertAt, 0, newEntry)
@@ -406,11 +406,6 @@ function autoSelectFromLineNumber() {
     const entry = state.value.statements[index] ?? state.value.statements.at(-1)
     if (entry) {
       selectedStatementId = entry.id
-      return
-    }
-    const last = state.value.statements.at(-1)
-    if (last) {
-      selectedStatementId = last.id
     }
     return
   }
@@ -439,9 +434,10 @@ function scrollToSelectedStatement() {
 
   let lastOffset = -1
   let stableFrames = 0
-  const maxFrames = 10
+  let remainingFrames = 10
 
   function settle() {
+    remainingFrames--
     rowVirtualizer.value.scrollToIndex(index, { align: 'center' })
     const offset = rowVirtualizer.value.scrollOffset ?? 0
     if (Math.abs(offset - lastOffset) <= 1) {
@@ -450,7 +446,7 @@ function scrollToSelectedStatement() {
       stableFrames = 0
     }
     lastOffset = offset
-    if (stableFrames >= 2 || maxFrames <= 0) {
+    if (stableFrames >= 2 || remainingFrames <= 0) {
       isPositioning = false
       return
     }
