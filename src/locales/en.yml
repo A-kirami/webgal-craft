@@ -331,9 +331,7 @@ edit:
   textEditor:
     languages:
       unknown: Unknown
-      plaintext: Plain Text
       webgalscript: WebGAL Script
-      json: JSON
       webgalanimation: WebGAL Animation
     stats:
       lines: "{count} lines,"
@@ -373,6 +371,7 @@ edit:
       vocal: Voice
       video: Video
       animation: Animation
+      template: Template
     searchPlaceholder: Search files or folders
     sort:
       by: Sort by

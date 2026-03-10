@@ -5,10 +5,8 @@ import * as monaco from 'monaco-editor'
 import { BASE_EDITOR_OPTIONS, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
 
 interface LanguageConfig {
-  name: string
   displayName: string
-  extension: string
-  editorLanguage?: string
+  editorLanguage: string
 }
 
 const state = $(defineModel<TextModeState>('state', { required: true }))
@@ -18,14 +16,6 @@ const preferenceStore = usePreferenceStore()
 const tabsStore = useTabsStore()
 const viewStateStore = useEditorViewStateStore()
 const { t } = useI18n()
-
-const LANGUAGE_CONFIGS = $computed<LanguageConfig[]>(() => [
-  { name: 'unknown', displayName: t('edit.textEditor.languages.unknown'), extension: '', editorLanguage: 'plaintext' },
-  { name: 'plaintext', displayName: t('edit.textEditor.languages.plaintext'), extension: 'txt' },
-  { name: 'scene', displayName: t('edit.textEditor.languages.webgalscript'), extension: 'txt', editorLanguage: 'webgalscript' },
-  { name: 'json', displayName: t('edit.textEditor.languages.json'), extension: 'json' },
-  { name: 'animation', displayName: t('edit.textEditor.languages.webgalanimation'), extension: 'json', editorLanguage: 'json' },
-])
 
 const editorOptions = $computed<monaco.editor.IEditorConstructionOptions>(() => ({
   ...BASE_EDITOR_OPTIONS,
@@ -80,12 +70,35 @@ const currentTheme = $computed(() => colorMode.value === 'dark' ? THEME_DARK : T
 
 const currentLanguageConfig = $computed((): LanguageConfig => {
   // 根据可视化类型判断
-  if (state.visualType) {
-    return LANGUAGE_CONFIGS.find(config => config.name === state.visualType)!
+  switch (state.visualType) {
+    case 'scene': {
+      return {
+        displayName: t('edit.textEditor.languages.webgalscript'),
+        editorLanguage: 'webgalscript',
+      }
+    }
+    case 'animation': {
+      return {
+        displayName: t('edit.textEditor.languages.webgalanimation'),
+        editorLanguage: 'json',
+      }
+    }
+    default: {
+      // 根据文件扩展名返回对应语言配置，默认为纯文本
+      let languageId = ''
+      const extension = state.path.split('.').pop()?.toLowerCase()
+      if (extension) {
+        const monacoLanguage = monaco.languages.getLanguages().find(
+          lang => lang.extensions?.includes(`.${extension}`),
+        )
+        languageId = monacoLanguage ? monacoLanguage.id : extension ?? 'plaintext'
+      }
+      return {
+        displayName: extension?.toUpperCase() ?? t('edit.textEditor.languages.unknown'),
+        editorLanguage: languageId,
+      }
+    }
   }
-  // 根据文件扩展名判断
-  const extension = state.path.split('.').pop()?.toLowerCase() ?? ''
-  return LANGUAGE_CONFIGS.find(config => config.extension === extension) ?? LANGUAGE_CONFIGS[0]
 })
 
 function getOrCreateFileState(path: string): FileState {
@@ -441,7 +454,7 @@ function switchModel(newPath: string, oldPath: string) {
     oldFileState.hasUserInteracted = false
   }
 
-  const language = currentLanguageConfig.editorLanguage ?? currentLanguageConfig.name
+  const language = currentLanguageConfig.editorLanguage
   const newModel = getOrCreateModel(state.textContent, language, newPath)
 
   editor.setModel(newModel)
@@ -466,7 +479,7 @@ function createEditor() {
     return
   }
 
-  const language = currentLanguageConfig.editorLanguage ?? currentLanguageConfig.name
+  const language = currentLanguageConfig.editorLanguage
   const initialModel = getOrCreateModel(state.textContent, language, state.path)
 
   editor = monaco.editor.create(editorContainer, {
@@ -554,7 +567,7 @@ watch(() => currentLanguageConfig, (newConfig) => {
 
   const model = editor.getModel()
   if (model) {
-    const language = newConfig.editorLanguage ?? newConfig.name
+    const language = newConfig.editorLanguage
     if (model.getLanguageId() !== language) {
       monaco.editor.setModelLanguage(model, language)
     }

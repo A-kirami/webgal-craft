@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Check, Image, LayoutGrid, LayoutList, MicVocal, Minus, Music, Plus, Search, UserRound, Video } from 'lucide-vue-next'
+import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Check, Image, LayoutGrid, LayoutList, LayoutTemplate, MicVocal, Minus, Music, Plus, Search, UserRound, Video } from 'lucide-vue-next'
 
 const preferenceStore = usePreferenceStore()
 
@@ -31,6 +31,10 @@ const assetTabs = $computed(() => ({
   animation: {
     icon: Blend,
     label: t('edit.assetPanel.tabs.animation'),
+  },
+  template: {
+    icon: LayoutTemplate,
+    label: t('edit.assetPanel.tabs.template'),
   },
 }))
 
@@ -116,7 +120,7 @@ const isMaxZoom = $computed(() => preferenceStore.assetZoom[0] >= 150)
 <template>
   <div class="rounded flex flex-col h-full overflow-hidden">
     <Tabs v-model="activeTab" class="w-full">
-      <TabsList class="py-1 border-b rounded-none bg-transparent @container grid grid-cols-6 h-auto w-full">
+      <TabsList class="py-1 border-b rounded-none bg-transparent @container grid grid-cols-7 h-auto w-full">
         <TabsTrigger
           v-for="(tab, key) in assetTabs"
           :key="key"

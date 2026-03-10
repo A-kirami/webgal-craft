@@ -1,6 +1,7 @@
 import { readTextFile } from '@tauri-apps/plugin-fs'
-import mime from 'mime/lite'
 import { defineStore } from 'pinia'
+
+import { mime } from '~/plugins/mime'
 
 interface CoreEditorState {
   path: string
@@ -224,68 +225,68 @@ export const useEditorStore = defineStore('editor', () => {
     try {
       tab.isLoading = true
 
-      // 检测文件是否为二进制
-      let isBinary: boolean
-      try {
-        isBinary = await fsCmds.isBinaryFile(tab.path)
-      } catch (error) {
-        // 检测失败，展示错误提示
-        const msg = error instanceof Error ? error.message : String(error)
+      // 有 mime 类型且符合预览条件的文件，直接进入文件预览模式
+      const mimeType = mime.getType(tab.path) ?? ''
+      if (PREVIEW_MIME_PREFIXES.some(prefix => mimeType.startsWith(prefix))) {
+        const workspaceStore = useWorkspaceStore()
+        await until(() => !!workspaceStore.currentGameServeUrl).toBe(true)
         states.set(tab.path, {
           path: tab.path,
-          mode: 'unsupported',
-          reason: t('edit.unsupported.loadFailed', { error: msg }),
+          mode: 'preview',
+          assetUrl: getAssetUrl(tab.path),
+          mimeType,
         })
-        return
-      }
-
-      if (isBinary) {
-        // 二进制文件：可预览媒体走 preview，其余走 unsupported
-        const mimeType = mime.getType(tab.path) ?? ''
-        if (PREVIEW_MIME_PREFIXES.some(prefix => mimeType.startsWith(prefix))) {
-          const workspaceStore = useWorkspaceStore()
-          await until(() => !!workspaceStore.currentGameServeUrl).toBe(true)
+      } else {
+        // 检测文件是否为二进制
+        let isBinary: boolean
+        try {
+          isBinary = await fsCmds.isBinaryFile(tab.path)
+        } catch (error) {
+          // 检测失败，展示错误提示
+          const msg = error instanceof Error ? error.message : String(error)
           states.set(tab.path, {
             path: tab.path,
-            mode: 'preview',
-            assetUrl: getAssetUrl(tab.path),
-            mimeType,
+            mode: 'unsupported',
+            reason: t('edit.unsupported.loadFailed', { error: msg }),
           })
-        } else {
+          return
+        }
+
+        if (isBinary) {
           states.set(tab.path, {
             path: tab.path,
             mode: 'unsupported',
             reason: t('edit.unsupported.binaryFile'),
           })
-        }
-      } else {
-        // 文本文件：沿用现有文本/可视编辑逻辑
-        const preferenceStore = usePreferenceStore()
-        const mimeType = mime.getType(tab.path) ?? ''
-        const content = await readTextFile(tab.path)
-
-        let visualType: VisualType | undefined
-
-        if (await isSceneFile(tab.path, mimeType)) {
-          visualType = 'scene'
-        } else if (await isAnimationFile(tab.path, mimeType)) {
-          visualType = 'animation'
-        }
-
-        if (preferenceStore.editorMode === 'visual' && visualType) {
-          states.set(tab.path, createVisualState(
-            { path: tab.path, isDirty: false, lastLineNumber: undefined },
-            visualType,
-            content,
-          ))
         } else {
-          states.set(tab.path, {
-            path: tab.path,
-            isDirty: false,
-            mode: 'text',
-            textContent: content,
-            visualType,
-          })
+          // 文本文件：沿用现有文本/可视编辑逻辑
+          const preferenceStore = usePreferenceStore()
+          const mimeType = mime.getType(tab.path) ?? ''
+          const content = await readTextFile(tab.path)
+
+          let visualType: VisualType | undefined
+
+          if (await isSceneFile(tab.path, mimeType)) {
+            visualType = 'scene'
+          } else if (await isAnimationFile(tab.path, mimeType)) {
+            visualType = 'animation'
+          }
+
+          if (preferenceStore.editorMode === 'visual' && visualType) {
+            states.set(tab.path, createVisualState(
+              { path: tab.path, isDirty: false, lastLineNumber: undefined },
+              visualType,
+              content,
+            ))
+          } else {
+            states.set(tab.path, {
+              path: tab.path,
+              isDirty: false,
+              mode: 'text',
+              textContent: content,
+              visualType,
+            })
+          }
         }
       }
     } catch (error) {

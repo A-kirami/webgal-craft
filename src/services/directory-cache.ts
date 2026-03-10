@@ -1,7 +1,8 @@
 import { join, normalize } from '@tauri-apps/api/path'
 import { exists, readDir, stat } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
-import mime from 'mime/lite'
+
+import { mime } from '~/plugins/mime'
 
 const MAX_DIRECTORY_CACHE_ITEMS = 256
 const DEFAULT_DIRECTORY_CACHE_TTL_MS = 5000
