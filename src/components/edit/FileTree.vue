@@ -180,8 +180,6 @@ function getFileNameSelectionEnd(fileName: string, isFolder: boolean): number {
 }
 
 // ==================== 重命名相关 ====================
-const MENU_CLOSE_DELAY = 100
-const RENAME_DELAY = 150
 
 let renameState = $ref({
   itemKey: undefined as string | undefined,
@@ -216,9 +214,9 @@ function startRenaming(item: FlattenedItem<T>) {
     selectionEnd,
   )
 
-  setTimeout(() => {
+  nextTick(() => {
     renameState.isStarting = false
-  }, MENU_CLOSE_DELAY)
+  })
 }
 
 async function handleRename(item: FlattenedItem<T>) {
@@ -274,11 +272,9 @@ function handleRenameBlur(item: FlattenedItem<T>) {
     return
   }
 
-  setTimeout(() => {
-    if (!renameState.isStarting) {
-      handleRename(item)
-    }
-  }, RENAME_DELAY)
+  if (!renameState.isStarting) {
+    handleRename(item)
+  }
 }
 
 function handleCancelRename() {
@@ -545,22 +541,16 @@ const itemMap = new Map<string, FlattenedItem<T>>()
 function handleContextMenuRename(fileItem: { path: string, name: string, isDir?: boolean }): void {
   const flattenedItem = itemMap.get(fileItem.path)
   if (flattenedItem) {
-    setTimeout(() => {
-      startRenaming(flattenedItem)
-    }, MENU_CLOSE_DELAY)
+    startRenaming(flattenedItem)
   }
 }
 
 function handleContextMenuCreateFile(fileItem: { path: string, name: string, isDir?: boolean }): void {
-  setTimeout(() => {
-    startCreating(fileItem.path, 'file')
-  }, MENU_CLOSE_DELAY)
+  startCreating(fileItem.path, 'file')
 }
 
 function handleContextMenuCreateFolder(fileItem: { path: string, name: string, isDir?: boolean }): void {
-  setTimeout(() => {
-    startCreating(fileItem.path, 'folder')
-  }, MENU_CLOSE_DELAY)
+  startCreating(fileItem.path, 'folder')
 }
 
 // ==================== 键盘事件处理 ====================

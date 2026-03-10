@@ -186,7 +186,7 @@ const menuItems = $computed(() => {
     <ContextMenuTrigger as-child :disabled="disabled">
       <slot />
     </ContextMenuTrigger>
-    <ContextMenuContent class="w-52">
+    <ContextMenuContent class="w-52" @close-auto-focus.prevent>
       <template v-for="(menuItem, index) in menuItems" :key="index">
         <ContextMenuSeparator v-if="menuItem === 'separator'" />
         <ContextMenuItem
