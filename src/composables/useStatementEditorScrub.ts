@@ -149,8 +149,9 @@ export function useStatementEditorScrub(options: UseStatementEditorScrubOptions)
     if (!isNumericArgField(argField)) {
       return
     }
-    const value = Number((event.target as HTMLInputElement).value) || 0
-    const clamped = clamp(value, argField.field.min ?? 0, argField.field.max ?? 100)
+    const raw = Number((event.target as HTMLInputElement).value)
+    const value = Number.isFinite(raw) ? raw : 0
+    const clamped = clamp(value, argField.field.min, argField.field.max)
     options.updateArgValue(argField, String(clamped))
   }
 
