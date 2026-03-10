@@ -14,7 +14,7 @@ export const dialogueEntries: CommandEntry[] = [
         key: 'text',
         label: t => t('edit.visualEditor.params.dialogue'),
         type: 'text',
-        variant: { inline: 'textarea-auto', panel: 'textarea-fixed' },
+        variant: { inline: 'textarea-auto', panel: 'textarea-grow' },
         inlineLayout: 'standalone',
       }),
       arg({

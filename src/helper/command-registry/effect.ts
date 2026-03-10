@@ -131,7 +131,7 @@ export const effectEntries: CommandEntry[] = [
       content({
         key: 'text',
         type: 'text',
-        variant: { inline: 'textarea-auto', panel: 'textarea-fixed' },
+        variant: { inline: 'textarea-auto', panel: 'textarea-grow' },
         inlineLayout: 'standalone',
         label: t => t('edit.visualEditor.params.introText'),
         placeholder: t => t('edit.visualEditor.params.introTextPlaceholder'),

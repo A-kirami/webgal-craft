@@ -177,7 +177,7 @@ const panelSpeakerInputId = buildControlId('speaker')
               :id="panelCommentContentInputId"
               :model-value="parsed?.content ?? ''"
               :placeholder="$t('edit.visualEditor.placeholder.comment')"
-              class="text-xs py-1 flex-1 min-h-14.5 resize-none shadow-none"
+              class="text-xs py-1 flex-1 min-h-14.5 resize-none shadow-none field-sizing-content"
               @keydown.enter="handleSingleLineTextareaEnter"
               @update:model-value="handleSingleLineCommentChange(String($event ?? ''))"
             />
@@ -193,7 +193,7 @@ const panelSpeakerInputId = buildControlId('speaker')
             <Textarea
               :id="panelRawTextInputId"
               :model-value="entry.rawText"
-              class="text-xs font-mono py-1 flex-1 min-h-14.5 resize-none shadow-none"
+              class="text-xs font-mono py-1 flex-1 min-h-14.5 resize-none shadow-none field-sizing-content"
               @keydown.enter="handleSingleLineTextareaEnter"
               @update:model-value="handleSingleLineRawTextChange(String($event ?? ''))"
             />
@@ -312,7 +312,7 @@ const panelSpeakerInputId = buildControlId('speaker')
           <Textarea
             :model-value="parsed?.inlineComment ?? ''"
             :placeholder="$t('edit.visualEditor.placeholder.comment')"
-            class="text-xs text-muted-foreground py-1 border-transparent max-h-14.5 resize-none shadow-none field-sizing-content focus:text-foreground focus-visible:border-input"
+            class="text-xs text-muted-foreground py-1 border-transparent min-h-14.5 resize-none shadow-none field-sizing-content focus:text-foreground focus-visible:border-input"
             @keydown.enter="handleSingleLineTextareaEnter"
             @update:model-value="handleSingleLineInlineCommentChange(String($event ?? ''))"
           />
@@ -326,7 +326,7 @@ const panelSpeakerInputId = buildControlId('speaker')
         <Textarea
           :model-value="parsed?.inlineComment ?? ''"
           :placeholder="$t('edit.visualEditor.placeholder.comment')"
-          class="text-xs text-muted-foreground py-1 border-transparent max-h-14.5 resize-none shadow-none field-sizing-content focus:text-foreground focus-visible:border-input"
+          class="text-xs text-muted-foreground py-1 border-transparent min-h-14.5 resize-none shadow-none field-sizing-content focus:text-foreground focus-visible:border-input"
           @keydown.enter="handleSingleLineTextareaEnter"
           @update:model-value="handleSingleLineInlineCommentChange(String($event ?? ''))"
         />

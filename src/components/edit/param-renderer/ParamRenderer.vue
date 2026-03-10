@@ -18,7 +18,7 @@ type StatementParamFieldMode =
   | 'combobox'
   | 'color'
   | 'textareaAuto'
-  | 'textareaFixed'
+  | 'textareaGrow'
   | 'file'
   | 'text'
 
@@ -123,8 +123,8 @@ function resolveFieldMode(field: Exclude<EditorField['field'], JsonObjectField>)
     if (variant === 'textarea-auto') {
       return 'textareaAuto'
     }
-    if (variant === 'textarea-fixed') {
-      return 'textareaFixed'
+    if (variant === 'textarea-grow') {
+      return 'textareaGrow'
     }
     return 'text'
   }
@@ -167,7 +167,7 @@ function isNumberMode(field: EditorField): boolean {
 
 function isTextareaMode(field: EditorField): boolean {
   const mode = fieldMode(field)
-  return mode === 'textareaAuto' || mode === 'textareaFixed'
+  return mode === 'textareaAuto' || mode === 'textareaGrow'
 }
 
 function isInlineStandalone(field: EditorField): boolean {
@@ -467,7 +467,7 @@ function fieldInputId(field: EditorField): string {
           :model-value="String(getFieldValue(field) || '')"
           :class="cn(
             'text-xs py-1 shadow-none resize-none overflow-y-auto px-2.5 w-32 group-data-[surface=panel]:flex-1 group-data-[surface=panel]:px-3 group-data-[surface=panel]:w-full',
-            fieldMode(field) === 'textareaFixed' ? 'h-14.5' : 'min-h-6 max-h-14.5 field-sizing-content group-data-[surface=panel]:min-h-7',
+            fieldMode(field) === 'textareaGrow' ? 'min-h-14.5 max-h-[50vh] field-sizing-content' : 'min-h-6 max-h-14.5 field-sizing-content group-data-[surface=panel]:min-h-7',
             isInlineStandalone(field) && 'w-full min-w-0',
             controlClass(field)
           )"
