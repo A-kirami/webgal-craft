@@ -79,30 +79,26 @@ async function handlePaste() {
     const targetPath = item.isDir ? item.path : await dirname(item.path)
     const isCut = operationType === 'cut'
 
-    const results = await Promise.allSettled(
-      clipboard.map(clipboardItem =>
+    const { succeeded, failed } = await settleBatch(
+      clipboard.map(clipboardItem => () =>
         isCut ? gameFs.moveFile(clipboardItem.path, targetPath) : gameFs.copyFile(clipboardItem.path, targetPath),
       ),
     )
 
-    const failures = results.filter(r => r.status === 'rejected') as PromiseRejectedResult[]
-    const successCount = results.length - failures.length
-
-    if (failures.length > 0) {
-      const errorMsg = failures.map(f => f.reason?.message || String(f.reason)).join('; ')
+    if (failed.length > 0) {
+      const errorMsg = failed.map(f => f.error.message).join('; ')
       logger.error(`粘贴失败: ${errorMsg}`)
-      toast.error(successCount > 0 ? t('edit.fileTree.pastePartialFailed', { failed: failures.length, total: results.length }) : t('edit.fileTree.pasteFailed'))
+      toast.error(succeeded.length > 0 ? t('edit.fileTree.pastePartialFailed', { failed: failed.length, total: clipboard.length }) : t('edit.fileTree.pasteFailed'))
     }
 
-    if (successCount > 0) {
+    if (succeeded.length > 0) {
       if (isCut) {
         clearClipboard()
       }
-      toast.success(clipboard.length === 1 ? t('edit.fileTree.pasteSuccess') : t('edit.fileTree.pasteMultipleSuccess', { count: successCount }))
+      toast.success(clipboard.length === 1 ? t('edit.fileTree.pasteSuccess') : t('edit.fileTree.pasteMultipleSuccess', { count: succeeded.length }))
     }
   } catch (error) {
-    logger.error(error instanceof Error ? error.message : String(error))
-    toast.error('粘贴失败')
+    handleError(error)
   }
 }
 

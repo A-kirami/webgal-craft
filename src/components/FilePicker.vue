@@ -426,11 +426,10 @@ async function refreshRecentHistoryInvalidState() {
           remove: false,
         } as const
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
         return {
           path,
           invalid: true,
-          remove: errorMessage.includes('路径越界'),
+          remove: error instanceof AppError && error.code === 'PATH_TRAVERSAL',
         } as const
       }
     }),
@@ -470,11 +469,10 @@ async function loadDirectory(relativeDir: string, keyword: string) {
     if (requestId !== latestReadId) {
       return
     }
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    if (errorMessage.includes('目录不存在')) {
+    if (error instanceof AppError && error.code === 'DIR_NOT_FOUND') {
       return
     }
-    errorMsg = errorMessage
+    errorMsg = error instanceof Error ? error.message : String(error)
   } finally {
     if (requestId === latestReadId) {
       isLoading = false
@@ -682,8 +680,7 @@ async function handleHistorySelect(path: string) {
     }
     commitSelection(path, true)
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    if (errorMessage.includes('路径越界')) {
+    if (error instanceof AppError && error.code === 'PATH_TRAVERSAL') {
       removeRecentHistoryPaths([path])
     }
     return

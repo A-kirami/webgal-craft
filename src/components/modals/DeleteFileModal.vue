@@ -19,12 +19,12 @@ let skipConfirm = $ref(preferenceStore.skipDeleteFileConfirm)
 async function handleConfirm() {
   try {
     await gameFs.deleteFile(file.path)
-    toast.success(t('edit.fileTree.deleteSuccess'))
+    notify.success(t('edit.fileTree.deleteSuccess'))
     preferenceStore.skipDeleteFileConfirm = skipConfirm
     await onConfirm?.()
     open = false
   } catch (error) {
-    toast.error(error instanceof Error ? error.message : t('edit.fileTree.deleteFailed'))
+    handleError(error, { context: t('edit.fileTree.deleteFailed') })
   }
 }
 </script>

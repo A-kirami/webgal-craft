@@ -24,4 +24,14 @@ app.use(router)
   .use(i18n)
   .use(notivue)
   .use(autoAnimatePlugin)
-  .mount('#app')
+
+// 全局错误兜底
+app.config.errorHandler = (err) => {
+  handleError(err)
+}
+
+globalThis.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+  handleError(event.reason, { silent: true })
+})
+
+app.mount('#app')

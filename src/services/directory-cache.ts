@@ -106,17 +106,17 @@ function setCachedDirectoryItems(cacheKey: DirectoryCacheKey, items: FileViewerI
 
 async function loadDirectoryItems(absolutePath: string, includeStats: boolean): Promise<FileViewerItem[]> {
   if (!(await exists(absolutePath))) {
-    throw new Error('目录不存在')
+    throw new AppError('DIR_NOT_FOUND', '目录不存在')
   }
 
   const targetStat = await stat(absolutePath)
   if (!targetStat.isDirectory) {
-    throw new Error('目标路径不是目录')
+    throw new AppError('IO_ERROR', '目标路径不是目录')
   }
 
   const entries = await readDir(absolutePath)
-  const itemResults = await Promise.allSettled(
-    entries.map(async (entry) => {
+  const { succeeded: items, failed } = await settleBatch(
+    entries.map(entry => async () => {
       const entryPath = await join(absolutePath, entry.name)
       const entryIsDir = entry.isDirectory === true
       const entryStat = includeStats ? await stat(entryPath) : undefined
@@ -133,24 +133,12 @@ async function loadDirectoryItems(absolutePath: string, includeStats: boolean): 
     }),
   )
 
-  const items: FileViewerItem[] = []
-  let failedCount = 0
-  for (const result of itemResults) {
-    if (result.status === 'fulfilled') {
-      items.push(result.value)
-      continue
-    }
-    failedCount++
-    const errorMessage = result.reason instanceof Error ? result.reason.message : String(result.reason)
-    void logger.warn(`[DirectoryCache] 读取目录项失败 (${absolutePath}): ${errorMessage}`)
-  }
-
   if (entries.length > 0 && items.length === 0) {
-    throw new Error('目录读取失败：目录项全部读取失败')
+    throw new AppError('IO_ERROR', '目录读取失败：目录项全部读取失败')
   }
 
-  if (failedCount > 0) {
-    void logger.warn(`[DirectoryCache] 目录 ${absolutePath} 有 ${failedCount} 个项目读取失败，已跳过`)
+  if (failed.length > 0) {
+    void logger.warn(`[DirectoryCache] 目录 ${absolutePath} 有 ${failed.length} 个项目读取失败，已跳过`)
   }
 
   return items

@@ -36,7 +36,7 @@ async function importEngineWithNotify(path: string) {
     await engineManager.importEngine(path)
     notify.success(t('home.engines.importSuccess'))
   } catch (error: unknown) {
-    if (error instanceof GameError) {
+    if (error instanceof AppError && error.code === 'INVALID_STRUCTURE') {
       notify.error(t('home.engines.importInvalidFolder'))
     } else {
       notify.error(t('home.engines.importUnknownError'))

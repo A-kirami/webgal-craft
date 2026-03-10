@@ -230,11 +230,11 @@ export const useEditorStore = defineStore('editor', () => {
         isBinary = await fsCmds.isBinaryFile(tab.path)
       } catch (error) {
         // 检测失败，展示错误提示
-        const message = error instanceof Error ? error.message : String(error)
+        const msg = error instanceof Error ? error.message : String(error)
         states.set(tab.path, {
           path: tab.path,
           mode: 'unsupported',
-          reason: t('edit.unsupported.loadFailed', { error: message }),
+          reason: t('edit.unsupported.loadFailed', { error: msg }),
         })
         return
       }
@@ -446,11 +446,11 @@ export const useEditorStore = defineStore('editor', () => {
     const state = states.get(path)
 
     if (!state) {
-      throw new Error(`文件状态不存在: ${path}`)
+      throw new AppError('EDITOR_ERROR', `文件状态不存在: ${path}`)
     }
 
     if (!isTextualEditor(state)) {
-      throw new Error(`文件不可编辑: ${path}`)
+      throw new AppError('EDITOR_ERROR', `文件不可编辑: ${path}`)
     }
 
     const content = state.mode === 'text'

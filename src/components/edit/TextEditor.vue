@@ -170,8 +170,7 @@ async function saveTextFile(snapshot: SaveSnapshot) {
 
     syncScene()
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error(`保存文件失败: ${errorMessage}`)
+    handleError(error, { silent: true })
   }
 }
 

@@ -1,54 +1,34 @@
 import { join } from '@tauri-apps/api/path'
 import { readTextFile, remove } from '@tauri-apps/plugin-fs'
 
-import { EngineMetadata, GameError } from './types'
-
 /**
  * 验证引擎
  * @param enginePath 引擎路径
  * @returns 是否为有效的引擎
- * @throws {GameError} 当验证失败时抛出
  */
 async function validateEngine(enginePath: string): Promise<boolean> {
-  try {
-    return await fsCmds.validateDirectoryStructure(
-      enginePath,
-      ['assets', 'game', 'icons'],
-      ['index.html', 'manifest.json', 'webgal-serviceworker.js'],
-    )
-  } catch (error) {
-    throw new GameError(
-      '验证引擎失败',
-      'ENGINE_VALIDATE_ERROR',
-      { enginePath, originalError: error },
-    )
-  }
+  return await fsCmds.validateDirectoryStructure(
+    enginePath,
+    ['assets', 'game', 'icons'],
+    ['index.html', 'manifest.json', 'webgal-serviceworker.js'],
+  )
 }
 
 /**
  * 获取引擎元数据
  * @param enginePath 引擎路径
  * @returns 引擎元数据，包含名称、图标和描述
- * @throws {GameError} 当获取失败时抛出
  */
 async function getEngineMetadata(enginePath: string): Promise<EngineMetadata> {
-  try {
-    const iconPath = await engineIconPath(enginePath)
-    const manifestPath = await engineManifestPath(enginePath)
-    const metaContent = await readTextFile(manifestPath)
-    const { name, description } = JSON.parse(metaContent)
+  const iconPath = await engineIconPath(enginePath)
+  const manifestPath = await engineManifestPath(enginePath)
+  const metaContent = await readTextFile(manifestPath)
+  const { name, description } = JSON.parse(metaContent)
 
-    return {
-      name,
-      icon: iconPath,
-      description,
-    }
-  } catch (error) {
-    throw new GameError(
-      '获取引擎元数据失败',
-      'ENGINE_METADATA_ERROR',
-      { enginePath, originalError: error },
-    )
+  return {
+    name,
+    icon: iconPath,
+    description,
   }
 }
 
@@ -58,71 +38,53 @@ async function getEngineMetadata(enginePath: string): Promise<EngineMetadata> {
  * @param metadata 引擎元数据（可选，未提供时自动获取）
  * @param creating 是否正在创建
  * @returns 引擎ID
- * @throws {GameError} 当注册失败时抛出
  */
 async function registerEngine(enginePath: string, metadata?: EngineMetadata, creating?: boolean): Promise<string> {
-  try {
-    metadata ??= await getEngineMetadata(enginePath)
-    return await db.engines.add({
-      id: crypto.randomUUID(),
-      path: enginePath,
-      createdAt: Date.now(),
-      status: creating ? 'creating' : 'created',
-      metadata,
-    })
-  } catch (error) {
-    throw new GameError(
-      '注册引擎失败',
-      'ENGINE_REGISTER_ERROR',
-      { enginePath, originalError: error },
-    )
-  }
+  metadata ??= await getEngineMetadata(enginePath)
+  return await db.engines.add({
+    id: crypto.randomUUID(),
+    path: enginePath,
+    createdAt: Date.now(),
+    status: creating ? 'creating' : 'created',
+    metadata,
+  })
 }
 
 /**
  * 安装引擎
  * @param enginePath 引擎路径
- * @throws {GameError} 当安装失败时抛出
  */
 async function installEngine(enginePath: string): Promise<void> {
   const resourceStore = useResourceStore()
   const storageSettingsStore = useStorageSettingsStore()
-  try {
-    const metadata = await getEngineMetadata(enginePath)
-    const engineName = metadata.name
-    const targetPath = await join(storageSettingsStore.engineSavePath, engineName)
 
-    logger.info(`[引擎 ${engineName}] 开始安装`)
+  const metadata = await getEngineMetadata(enginePath)
+  const engineName = metadata.name
+  const targetPath = await join(storageSettingsStore.engineSavePath, engineName)
 
-    // 1. 先注册到数据库
-    const id = await registerEngine(targetPath, metadata, true)
-    logger.info(`[引擎 ${engineName}] 注册到数据库`)
+  logger.info(`[引擎 ${engineName}] 开始安装`)
 
-    // 2. 再复制文件
-    logger.info(`[引擎 ${engineName}] 复制引擎文件: ${enginePath} 到 ${targetPath}`)
-    await fsCmds.copyDirectoryWithProgress(enginePath, targetPath, (progress) => {
-      resourceStore.updateProgress(id, progress)
-    })
-    logger.info(`[引擎 ${engineName}] 复制引擎文件完成`)
+  // 1. 先注册到数据库
+  const id = await registerEngine(targetPath, metadata, true)
+  logger.info(`[引擎 ${engineName}] 注册到数据库`)
 
-    resourceStore.finishProgress(id)
+  // 2. 再复制文件
+  logger.info(`[引擎 ${engineName}] 复制引擎文件: ${enginePath} 到 ${targetPath}`)
+  await fsCmds.copyDirectoryWithProgress(enginePath, targetPath, (progress) => {
+    resourceStore.updateProgress(id, progress)
+  })
+  logger.info(`[引擎 ${engineName}] 复制引擎文件完成`)
 
-    await db.engines.update(id, { status: 'created' })
+  resourceStore.finishProgress(id)
 
-    logger.info(`[引擎 ${engineName}] 安装引擎完成`)
-  } catch (error) {
-    throw new GameError(
-      '安装引擎失败',
-      'ENGINE_INSTALL_ERROR',
-      { enginePath, originalError: error },
-    )
-  }
+  await db.engines.update(id, { status: 'created' })
+
+  logger.info(`[引擎 ${engineName}] 安装引擎完成`)
 }
 
 /**
  * 卸载引擎
  * @param engine 引擎
- * @throws {GameError} 当卸载失败时抛出
  */
 async function uninstallEngine(engine: Engine): Promise<void> {
   await db.engines.delete(engine.id)
@@ -132,7 +94,6 @@ async function uninstallEngine(engine: Engine): Promise<void> {
 /**
  * 导入引擎
  * @param enginePath 引擎路径
- * @throws {GameError} 当导入失败时抛出
  */
 async function importEngine(enginePath: string): Promise<void> {
   const storageSettingsStore = useStorageSettingsStore()
@@ -140,11 +101,7 @@ async function importEngine(enginePath: string): Promise<void> {
 
   if (!isValid) {
     logger.error(`[引擎导入] 无效的引擎文件夹: ${enginePath}`)
-    throw new GameError(
-      '无效的引擎文件夹',
-      'ENGINE_IMPORT_ERROR',
-      { path: enginePath },
-    )
+    throw new AppError('INVALID_STRUCTURE', '无效的引擎文件夹')
   }
 
   const metadata = await getEngineMetadata(enginePath)

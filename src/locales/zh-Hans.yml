@@ -241,7 +241,7 @@ edit:
     testGame: 测试游戏
     export: 导出
     missingPreviewUrl: 预览地址不存在，请先启动预览
-    openFailed: "打开测试窗口失败：{error}"
+    openFailed: 打开测试窗口失败
   empty:
     title: 没有打开的文件
     description: 从左侧文件列表中选择一个文件开始编辑，或创建一个新的场景文件
@@ -363,7 +363,7 @@ edit:
     refreshPreview: 刷新预览
     openInBrowser: 在浏览器中打开
     copyUrlSuccess: 复制地址成功
-    openFailed: "打开预览失败：{error}"
+    openFailed: 打开预览失败
     previewTitle: "游戏预览 - {name}"
   assetPanel:
     tabs:

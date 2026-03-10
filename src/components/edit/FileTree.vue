@@ -245,8 +245,7 @@ async function handleRename(item: FlattenedItem<T>) {
     await gameFs.renameFile(oldPath, newName)
     renameState.itemKey = undefined
   } catch (error) {
-    void logger.error(error instanceof Error ? error.message : '重命名失败')
-    toast.error(error instanceof Error ? error.message : '重命名失败')
+    handleError(error)
     renameState.value = oldName
   } finally {
     renameState.isInProgress = false
@@ -396,8 +395,7 @@ async function handleCreate() {
     }
     cancelCreating()
   } catch (error) {
-    void logger.error(error instanceof Error ? error.message : '创建失败')
-    toast.error(error instanceof Error ? error.message : '创建失败')
+    handleError(error)
   } finally {
     createState.isInProgress = false
   }

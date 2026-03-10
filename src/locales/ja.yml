@@ -241,7 +241,7 @@ edit:
     testGame: ゲームをテスト
     export: エクスポート
     missingPreviewUrl: プレビューURLがありません。先にプレビューを起動してください。
-    openFailed: "テストウィンドウを開けませんでした：{error}"
+    openFailed: テストウィンドウを開けませんでした
   empty:
     title: 開いているファイルがありません
     description: 左側のファイルリストからファイルを選択して編集を開始するか、新しいシーンファイルを作成してください
@@ -363,7 +363,7 @@ edit:
     refreshPreview: プレビューを更新
     openInBrowser: ブラウザで開く
     copyUrlSuccess: URLのコピーに成功しました
-    openFailed: プレビューの開始に失敗しました：{error}
+    openFailed: プレビューの開始に失敗しました
     previewTitle: ゲームプレビュー - {name}
   assetPanel:
     tabs:

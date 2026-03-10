@@ -33,7 +33,7 @@ export function useDirectoryReader() {
 
     const normalizedRootPath = await normalize(rootPath)
     if (!isPathInsideRoot(normalizedPath, normalizedRootPath)) {
-      throw new Error('路径越界：访问路径不在根目录范围内')
+      throw new AppError('PATH_TRAVERSAL', '路径越界：访问路径不在根目录范围内')
     }
     return normalizedPath
   }
