@@ -12,7 +12,9 @@ interface LanguageConfig {
 }
 
 const state = $(defineModel<TextModeState>('state', { required: true }))
+const editorStore = useEditorStore()
 const editSettings = useEditSettingsStore()
+const preferenceStore = usePreferenceStore()
 const tabsStore = useTabsStore()
 const viewStateStore = useEditorViewStateStore()
 const { t } = useI18n()
@@ -47,6 +49,18 @@ let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
 let editorContainer = $ref<HTMLElement>()
 const fileStates = $ref(new Map<string, FileState>())
 let hasCreatedEditorBefore = false
+/** 外部同步内容时（模式切换/文件重载），跳过 handleContentChange 的 isDirty 和自动保存逻辑 */
+let isSyncingContent = false
+
+const showFormPanel = $computed(() => state.visualType === 'scene' && preferenceStore.showSidebar)
+
+const formPanel = useTextEditorPanel({
+  editorRef: $$(editor),
+  stateRef: $$(state),
+  isScene: () => state.visualType === 'scene',
+})
+const formEntry = $computed(() => formPanel.currentEntry.value)
+const formPreviousSpeaker = $computed(() => formPanel.previousSpeaker.value)
 
 const MAX_CACHED_MODELS = 50
 
@@ -62,9 +76,7 @@ const modelAccessCache = $ref(new LRUCache<string, boolean>({
   },
 }))
 
-const currentTheme = $computed(() => {
-  return colorMode.value === 'dark' ? THEME_DARK : THEME_LIGHT
-})
+const currentTheme = $computed(() => colorMode.value === 'dark' ? THEME_DARK : THEME_LIGHT)
 
 const currentLanguageConfig = $computed((): LanguageConfig => {
   // 根据可视化类型判断
@@ -128,7 +140,7 @@ function syncScene() {
   }
 
   const currentLineText = model.getLineContent(position.lineNumber)
-  void debugCommander.syncScene(state.path, position.lineNumber, currentLineText)
+  editorStore.syncScenePreview(state.path, position.lineNumber, currentLineText)
 }
 
 interface SaveSnapshot {
@@ -169,7 +181,8 @@ function initializeVersionId() {
   const versionId = editor?.getModel()?.getAlternativeVersionId()
   if (versionId) {
     const fileState = getOrCreateFileState(state.path)
-    if (fileState.lastSavedVersionId === undefined) {
+    // 仅在内容未修改时初始化，避免将未保存的内容标记为已保存
+    if (fileState.lastSavedVersionId === undefined && !state.isDirty) {
       fileState.lastSavedVersionId = versionId
     }
   }
@@ -214,6 +227,7 @@ function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedE
 
   state.lastLineNumber = position.lineNumber
   syncScene()
+  formPanel.notifyCursorLineChanged()
 }
 
 function handleScrollChange() {
@@ -234,6 +248,39 @@ function focusEditor() {
     setTimeout(() => {
       editor?.focus()
     }, 50)
+  })
+}
+
+/**
+ * 模式切换后，根据 state.lastLineNumber 重新定位 Monaco 光标并滚动到对应行
+ * restoreViewState 触发的光标变更 reason 为 NotSet，已被 handleCursorPositionChange 过滤，
+ * 因此 state.lastLineNumber 不会被覆盖，可安全用于判断是否需要重新定位
+ */
+function applyLastLineNumber() {
+  if (!editor || !state.lastLineNumber) {
+    return
+  }
+  const model = editor.getModel()
+  if (!model) {
+    return
+  }
+  editor.layout()
+  const targetLineNumber = Math.min(Math.max(state.lastLineNumber, 1), model.getLineCount())
+  const currentPosition = editor.getPosition()
+  const targetPosition = { lineNumber: targetLineNumber, column: 1 }
+  if (!currentPosition || currentPosition.lineNumber !== targetLineNumber) {
+    editor.setPosition(targetPosition)
+  }
+  // 即使当前光标已在目标行，也要强制滚动到可见区域，确保模式切换后定位稳定
+  editor.revealPositionInCenter(targetPosition, monaco.editor.ScrollType.Immediate)
+}
+
+function scheduleApplyLastLineNumber(afterApply?: () => void) {
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      applyLastLineNumber()
+      afterApply?.()
+    })
   })
 }
 
@@ -273,6 +320,13 @@ function restoreEditorViewState(path: string, context: RestoreViewStateContext =
 
   if (viewStateToRestore) {
     editor.restoreViewState(viewStateToRestore)
+  }
+
+  // restoreViewState 触发的光标变更 reason 为 NotSet，被 handleCursorPositionChange 过滤，
+  // 需要主动同步一次光标行号，否则首次切换到可视化模式时 lastLineNumber 为 undefined
+  const cursorLine = editor.getPosition()?.lineNumber
+  if (cursorLine && !state.lastLineNumber) {
+    state.lastLineNumber = cursorLine
   }
 
   const shouldFocus = shouldFocusEditor({
@@ -340,6 +394,11 @@ async function manualSave() {
 }
 
 function handleContentChange() {
+  // 外部同步（模式切换/文件重载）触发的 setValue 不应更新 isDirty 和自动保存
+  if (isSyncingContent) {
+    return
+  }
+
   const currentVersionId = editor?.getModel()?.getAlternativeVersionId()
   if (currentVersionId) {
     const fileState = getOrCreateFileState(state.path)
@@ -354,6 +413,8 @@ function handleContentChange() {
       debouncedSaveTextFile({ path: state.path, content: value, versionId: currentVersionId })
     }
   }
+
+  formPanel.notifyContentChanged()
 }
 
 /**
@@ -397,6 +458,7 @@ function switchModel(newPath: string, oldPath: string) {
   nextTick(() => {
     initializeVersionId()
     syncScene()
+    formPanel.updateFormEntry()
   })
 }
 
@@ -434,11 +496,11 @@ function createEditor() {
   }
 
   hasCreatedEditorBefore = true
+
+  formPanel.updateFormEntry()
 }
 
-const lastSavedTime = $computed(() => {
-  return fileStates.get(state.path)?.lastSavedTime
-})
+const lastSavedTime = $computed(() => fileStates.get(state.path)?.lastSavedTime)
 
 watch(() => state.path, (newPath, oldPath) => {
   if (oldPath && newPath !== oldPath) {
@@ -465,12 +527,24 @@ watch(() => state.textContent, (newContent) => {
   const currentUri = monaco.Uri.parse(state.path).toString()
 
   if (modelUri === currentUri) {
+    const preservedDirty = state.isDirty
+    isSyncingContent = true
     model.setValue(newContent)
+    isSyncingContent = false
 
     const currentVersionId = model.getAlternativeVersionId()
     const fileState = getOrCreateFileState(state.path)
-    fileState.lastSavedVersionId = currentVersionId
-    state.isDirty = false
+    // 仅在内容未修改时才标记为已保存，避免跳过后续的实际保存
+    if (!preservedDirty) {
+      fileState.lastSavedVersionId = currentVersionId
+    }
+    state.isDirty = preservedDirty
+
+    // 外部同步后更新表单面板
+    nextTick(() => {
+      formPanel.updateFormEntry()
+      scheduleApplyLastLineNumber()
+    })
   }
 })
 
@@ -541,12 +615,6 @@ useTabsWatcher((closedPath) => {
   fileStates.delete(closedPath)
 })
 
-fileSystemEvents.on('file:modified', (event) => {
-  if (event.path === state.path) {
-    nextTick(syncScene)
-  }
-})
-
 watch(() => tabsStore.shouldFocusEditor, (shouldFocus) => {
   if (shouldFocus && editor) {
     restoreEditorViewState(state.path)
@@ -561,6 +629,11 @@ onActivated(() => {
   if (editor) {
     restoreEditorViewState(state.path, { isActivating: true })
   }
+  // 模式切换回文本编辑器时，重置缓存并在光标定位完成后刷新表单面板
+  formPanel.reset()
+  scheduleApplyLastLineNumber(() => {
+    formPanel.updateFormEntry()
+  })
 })
 
 onUnmounted(() => {
@@ -575,7 +648,23 @@ onUnmounted(() => {
 
 <template>
   <div class="flex flex-col h-full overflow-hidden divide-y">
-    <div ref="editorContainer" class="flex flex-1 overflow-hidden" />
+    <EditorSidebarLayout :show="showFormPanel" :main-min-size="30" :sidebar-min-size="15" class="flex-1 overflow-hidden">
+      <div ref="editorContainer" class="h-full overflow-hidden" />
+      <template #sidebar>
+        <ScrollArea v-if="formEntry" class="h-full">
+          <StatementEditorPanel
+            :key="formEntry.id"
+            :entry="formEntry"
+            :previous-speaker="formPreviousSpeaker"
+            :enable-focus-statement="false"
+            @update="formPanel.handleFormUpdate"
+          />
+        </ScrollArea>
+        <div v-else class="text-sm text-muted-foreground px-4 flex h-full items-center justify-center">
+          {{ $t('edit.textEditor.formPanel.noStatement') }}
+        </div>
+      </template>
+    </EditorSidebarLayout>
     <TextEditorStatusBar
       class="text-nowrap"
       :is-saved="!state.isDirty"

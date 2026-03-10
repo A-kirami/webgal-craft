@@ -466,8 +466,7 @@ export const useFileStore = defineStore('file', () => {
       return undefined
     }
 
-    const item = items.get(id)
-    return item
+    return items.get(id)
   }
 
   /**
@@ -539,7 +538,18 @@ export const useFileStore = defineStore('file', () => {
    */
   async function handleModifyEvent(path: string): Promise<void> {
     const item = getItemByPath(path)
+
+    // 未被资源浏览器加载的文件/目录：仅发送事件通知，跳过元数据更新
     if (!item) {
+      try {
+        const info = await stat(path)
+        fileSystemEvents.emit({
+          type: info.isDirectory ? 'directory:modified' : 'file:modified',
+          path,
+        })
+      } catch {
+        // 文件可能已被删除或不可访问，忽略
+      }
       return
     }
 

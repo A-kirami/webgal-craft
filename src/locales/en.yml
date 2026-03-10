@@ -26,9 +26,7 @@ common:
     size: File size
     modifiedAt: Modified time
     createdAt: Created time
-    unavailable: "--"
     unavailableA11y: Unavailable
-    directorySize: "--"
 
 filePicker:
   placeholder: Select a file path
@@ -168,6 +166,49 @@ modals:
     title: Game Configuration
   effectEditor:
     title: Effect Editor
+    description: Edit visual transform, filter and effect parameters
+    apply: Apply
+    reset: Reset
+    categories:
+      transform: Transform
+      effects: Effects
+      colorAdjustment: Color Adjustment
+      bloom: Bloom
+      bevel: Bevel
+      filters: Filters
+    params:
+      positionX: Position X
+      positionY: Position Y
+      scaleX: Scale X
+      scaleY: Scale Y
+      scale: Scale
+      rotation: Rotation
+      alpha: Opacity
+      blur: Blur
+      brightness: Brightness
+      contrast: Contrast
+      saturation: Saturation
+      gamma: Gamma
+      color: Tint
+      bloom: Intensity
+      bloomBrightness: Brightness
+      bloomBlur: Blur
+      bloomThreshold: Threshold
+      bevel: Opacity
+      bevelThickness: Thickness
+      bevelRotation: Rotation
+      bevelSoftness: Softness
+      bevelColor: Color
+      oldFilm: Old Film
+      dotFilm: Dot Film
+      reflectionFilm: Reflection
+      glitchFilm: Glitch
+      rgbFilm: RGB Split
+      godrayFilm: God Ray
+    filterOptions:
+      default: Default
+      "on": "On"
+      "off": "Off"
   upgrade:
     title: Update
   createFile:
@@ -189,6 +230,11 @@ modals:
     description: Your changes will be lost if you don't save them.
     save: Save
     dontSave: Don't Save
+  discardEffectChanges:
+    title: Apply changes from the effect editor?
+    description: Your changes will be discarded if you don't apply them.
+    apply: Apply
+    discard: Discard
 
 edit:
   header:
@@ -207,13 +253,13 @@ edit:
       bgm: Background music
       playVideo: Play video
       pixiPerform: Apply effect
-      pixiInit: Initialize/Clear effects
+      pixiInit: Initialize/Reset effects
       intro: Fullscreen text
       miniAvatar: Corner mini avatar
       changeScene: Change scene
       choose: Branch option
       end: End game and return to title screen
-      setComplexAnimation: Set complex animation
+      setComplexAnimation: Set built-in animation
       label: Set label
       jumpLabel: Jump to label
       setVar: Set variable
@@ -223,21 +269,21 @@ edit:
       unlockBgm: Unlock BGM gallery
       filmMode: Film mode
       setTextbox: Set textbox
-      setAnimation: Set animation
+      setAnimation: Call animation
       playEffect: Play sound effect
-      setTempAnimation: Set temporary animation
-      setTransform: Set transform effect
+      setTempAnimation: Set advanced animation
+      setTransform: Set simple animation
       setTransition: Set enter/exit animation
-      getUserInput: Get user input
+      getUserInput: Get input
       applyStyle: Apply style
       wait: Wait for a period of time
     arguments:
       when: Conditional execution
-      continue: Auto execute next line
-      next: Execute next line simultaneously
+      continue: Auto-advance to next line
+      next: Execute next line in parallel
       notend: Continue to next line
       concat: Concatenate with previous line
-      vocal: Voice file
+      vocal: Voice
       fontSize: Font size
       fontColor: Font color
       backgroundColor: Background color
@@ -274,8 +320,8 @@ edit:
       unlockName: "Unlock {type} name"
       unlockSeries: "{type} series"
       skipOff: Disable skipping
-      hold: Wait for click to continue
-      userForward: Click to show next line
+      hold: Stay after finish
+      userForward: Click to show next sentence
       title: Input box title
       buttonText: Confirm button text
       defaultValue: Input box default value
@@ -291,6 +337,8 @@ edit:
     stats:
       lines: "{count} lines,"
       words: "{count} words"
+    formPanel:
+      noStatement: Move cursor to a statement line to edit
   scenePanel:
     scene: Scene
   fileTree:
@@ -343,8 +391,216 @@ edit:
       zoomIn: Zoom in
       zoomReset: Reset zoom
   editorMode:
-    textMode: Text Mode
-    visualMode: Visual Mode
+    textMode: Switch to Text
+    visualMode: Switch to Visual
+    toggleSidebar: Toggle Auxiliary Panel
+  visualEditor:
+    commandPanel: Command Panel
+    narrationMode: Narration
+    types:
+      comment: Comment
+      narration: Narration
+    placeholder:
+      comment: Enter comment...
+      speaker: Character
+      optionName: Option text
+      sceneFile: Scene file name
+      oldStyleName: Original style name
+      newStyleName: New style name
+      searchMotion: Search motion
+      searchAnimation: Search animation
+      searchExpression: Search expression
+    addOption: Add option
+    addStyleRule: Add style rule
+    advancedParams: Advanced
+    commands:
+      say: Dialogue
+      comment: Comment
+      changeBg: Background
+      changeFigure: Figure
+      miniAvatar: Mini Avatar
+      bgm: Background Music
+      playEffect: Sound Effect
+      video: Video
+      changeScene: Change Scene
+      callScene: Call Scene
+      choose: Choice
+      label: Label
+      jumpLabel: Jump to Label
+      end: End Game
+      setVar: Set Variable
+      showVars: Show Variables
+      getUserInput: Get Input
+      wait: Wait
+      setTextbox: Textbox
+      filmMode: Film Mode
+      callSteam: Call Steam
+      setAnimation: Call Animation
+      setComplexAnimation: Built-in Animation
+      setTransform: Simple Animation
+      setTransition: Transition
+      pixi: Use Effect
+      pixiInit: Reset Effect
+      setTempAnimation: Advanced Animation
+      applyStyle: Apply Style
+      intro: Fullscreen Text
+      unlockCg: Unlock CG Gallery
+      unlockBgm: Unlock BGM Gallery
+      unknown: Unrecognized
+    params:
+      continue: Auto-advance
+      next: Parallel
+      concat: Concatenate
+      notend: Not End
+      vocal: Voice
+      volume: Volume
+      associatedFigure: Associated Figure
+      fontSize: Text Size
+      dialogue: Dialogue
+      speaker: Speaker
+      commentContent: Comment
+      rawText: Raw Text
+      fileName: File
+      figureId: ID
+      associatedFigureId: Figure ID
+      position: Position
+      motion: Motion
+      spineMotion: Animation
+      expression: Expression
+      transform: Transform
+      duration: Transition
+      ease: Easing Type
+      mouthOpen: Mouth Open
+      mouthHalfOpen: Mouth Half Open
+      mouthClose: Mouth Close
+      eyesOpen: Eyes Open
+      eyesHalfOpen: Eyes Half Open
+      eyesClose: Eyes Close
+      enter: Fade In
+      unlockname: Unlock Name
+      series: Series
+      id: ID
+      achievementId: Achievement ID
+      skipOff: Disable Skip
+      choiceText: Choice Text
+      labelName: Label Name
+      varName: Variable Name
+      varValue: Value
+      global: Global Variable
+      inputTitle: Dialog Title
+      buttonText: Confirm Button Text
+      defaultValue: Default Value
+      waitTime: Time
+      unitMs: ms
+      textboxState: Show
+      textboxStateOff: Hide
+      filmModeState: Enable
+      filmModeStateOff: Disable
+      animationName: Animation
+      target: Target
+      transformJson: Transform JSON
+      enterAnimation: Enter Animation
+      exitAnimation: Exit Animation
+      defaultEnterDuration: Default Enter Duration
+      defaultExitDuration: Default Exit Duration
+      effectName: Effect
+      effectCustomName: Effect Name
+      introText: Text Content
+      introTextPlaceholder: "Separate lines with {'|'}"
+      backgroundColor: Background Color
+      backgroundImage: Background Image
+      fontColor: Font Color
+      hold: Stay after finish
+      unlockDisplayName: Display Name
+      animation: Animation
+      delayTime: Delay Time
+      userForward: Click to show next sentence
+      animationFlag: Lip Sync & Blink
+      blendMode: Blend Mode
+      bounds: Draw Bounds
+      blink: Blink Parameters
+      blinkInterval: Blink Interval
+      blinkIntervalRandom: Blink Interval Random Offset
+      openingDuration: Opening Duration
+      closingDuration: Closing Duration
+      closedDuration: Closed
+      focus: Focus Parameters
+      focusX: Focus X
+      focusY: Focus Y
+      focusInstant: Instant
+      zIndex: Z-Index
+      writeDefault: Write Default
+      keep: Keep Playing
+      customTargetId: Target ID
+    filePicker:
+      vocal: Select voice file
+      background: Select background file
+      figure: Select figure file
+      miniAvatar: Select mini avatar file
+      bgm: Select music file
+      playEffect: Select sound effect file
+      video: Select video file
+      scene: Select scene file
+      unlockCg: Select gallery image file
+      unlockBgm: Select gallery music file
+    assetPreview:
+      loadFailed: Failed to load
+    options:
+      unspecified: Unspecified
+      notSelected: Not selected
+      default: Default
+      left: Left
+      center: Center
+      right: Right
+      figureLeft: Left Figure
+      figureCenter: Center Figure
+      figureRight: Right Figure
+      useFigureId: Use Figure ID
+      blendNormal: Normal
+      blendAdd: Linear Dodge (Add)
+      blendMultiply: Multiply
+      blendScreen: Screen
+      small: Small
+      medium: Medium
+      large: Large
+      easeLinear: Linear
+      easeIn: Ease In
+      easeOut: Ease Out
+      easeInOut: Ease In Out
+      easeCircIn: Circ In
+      easeCircOut: Circ Out
+      easeCircInOut: Circ In Out
+      easeBackIn: Back In
+      easeBackOut: Back Out
+      easeBackInOut: Back In Out
+      easeBounceIn: Bounce In
+      easeBounceOut: Bounce Out
+      easeBounceInOut: Bounce In Out
+      easeAnticipate: Anticipate
+      targetFigLeft: Left Figure
+      targetFigCenter: Center Figure
+      targetFigRight: Right Figure
+      targetBgMain: Background
+      targetStageMain: Stage
+      custom: Custom
+      delaySeconds: "{seconds} sec"
+      animFadeIn: Fade In
+      animSlideIn: Slide In
+      animTyping: Typing Effect
+      animPixelate: Pixelate
+      animReveal: Reveal
+      animFlagOn: "On"
+      animFlagOff: "Off"
+      effectRain: Rain
+      effectSnow: Snow
+      effectHeavySnow: Heavy Snow
+      effectCherryBlossoms: Cherry Blossoms
+      universalSoftIn: Fade In
+      universalSoftOff: Fade Out
+    effectEditor: Effect Editor
+    statementList: Statement list
+    noSelection: Select a statement to edit
+    noResults: No results found
   welcome:
     startEditing: Start Editing
     selectOrCreate: Select a file to start editing, or create a new file
@@ -374,9 +630,15 @@ settings:
       label: Live Preview
       description: Preview changes in real-time while editing the game
     enableFastPreview:
-      label: Fast Preview
+      label: Fast Statement Preview
       description: Enabling fast preview will significantly improve real-time preview efficiency
+    enableRealtimeEffectPreview:
+      label: Realtime Effect Preview
+      description: Render effect updates in real-time while adjusting parameters in the effect editor
   edit:
+    general: General
+    textEditor: Text Editor
+    visualEditor: Visual Editor
     fontFamily:
       label: Font Family
       placeholder: Font Name
@@ -394,6 +656,15 @@ settings:
     enablePreviewTab:
       label: Enable Preview Tabs
       description: Open files in preview mode on single click, pin to regular tab on double click or edit
+    autoApplyEffectEditorChanges:
+      label: Auto Apply Effect Editor Changes
+      description: Automatically write effect editor parameter changes back to the statement
+    collapseStatementsOnSidebarOpen:
+      label: Collapse All Statements When Auxiliary Panel Opens
+      description: Lock all statement cards in collapsed state when the auxiliary panel is opened
+    showSidebarAssetPreview:
+      label: Auxiliary Panel Statement Asset Preview
+      description: Preview images and other assets referenced by statements in the editor auxiliary panel
   storage:
     gamePath:
       label: Game Save Location

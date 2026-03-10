@@ -26,9 +26,7 @@ common:
     size: 檔案大小
     modifiedAt: 修改時間
     createdAt: 建立時間
-    unavailable: "--"
     unavailableA11y: 不可用
-    directorySize: "--"
 
 filePicker:
   placeholder: 請選擇檔案路徑
@@ -168,6 +166,49 @@ modals:
     title: 遊戲設定
   effectEditor:
     title: 效果編輯器
+    description: 編輯視覺變換、濾鏡和效果參數
+    apply: 套用
+    reset: 還原
+    categories:
+      transform: 變換
+      effects: 效果
+      colorAdjustment: 顏色調整
+      bloom: 泛光
+      bevel: 斜面
+      filters: 濾鏡
+    params:
+      positionX: X 位移
+      positionY: Y 位移
+      scaleX: X 縮放
+      scaleY: Y 縮放
+      scale: 縮放
+      rotation: 旋轉
+      alpha: 不透明度
+      blur: 模糊
+      brightness: 亮度
+      contrast: 對比度
+      saturation: 飽和度
+      gamma: 伽瑪
+      color: 著色
+      bloom: 強度
+      bloomBrightness: 亮度
+      bloomBlur: 模糊
+      bloomThreshold: 閾值
+      bevel: 不透明度
+      bevelThickness: 厚度
+      bevelRotation: 旋轉
+      bevelSoftness: 柔和度
+      bevelColor: 顏色
+      oldFilm: 老電影
+      dotFilm: 點陣
+      reflectionFilm: 反射
+      glitchFilm: 故障
+      rgbFilm: RGB 分離
+      godrayFilm: 光束
+    filterOptions:
+      default: 預設
+      "on": 開啟
+      "off": 關閉
   upgrade:
     title: 更新
   createFile:
@@ -189,6 +230,11 @@ modals:
     description: 如果不儲存，你的變更將遺失。
     save: 儲存
     dontSave: 不儲存
+  discardEffectChanges:
+    title: 是否要套用效果編輯器的變更？
+    description: 如果不套用，你的變更將被捨棄。
+    apply: 套用
+    discard: 捨棄
 
 edit:
   header:
@@ -207,13 +253,13 @@ edit:
       bgm: 背景音樂
       playVideo: 播放影片
       pixiPerform: 套用特效
-      pixiInit: 初始化/清除特效
+      pixiInit: 初始化/重置特效
       intro: 全螢幕文字
       miniAvatar: 角落小頭像
       changeScene: 切換場景
       choose: 分支選項
       end: 結束遊戲並返回標題介面
-      setComplexAnimation: 設定複雜動畫
+      setComplexAnimation: 設定內建動畫
       label: 設定標籤
       jumpLabel: 跳轉至標籤
       setVar: 設定變數
@@ -223,21 +269,21 @@ edit:
       unlockBgm: 解鎖 BGM 鑑賞
       filmMode: 電影模式
       setTextbox: 設定對話框
-      setAnimation: 設定動畫
+      setAnimation: 調用動畫
       playEffect: 播放音效
-      setTempAnimation: 設定暫時動畫
-      setTransform: 設定變換效果
-      setTransition: 設定進出場動畫
-      getUserInput: 取得使用者輸入
+      setTempAnimation: 設定進階動畫
+      setTransform: 設定簡單動畫
+      setTransition: 設定過渡動畫
+      getUserInput: 取得輸入
       applyStyle: 套用樣式
       wait: 等待一段時間
     arguments:
       when: 執行條件
-      continue: 自動執行下一句
-      next: 同時執行下一句
+      continue: 自動續行
+      next: 並行執行
       notend: 繼續播放下一段
       concat: 接續上一段對話
-      vocal: 語音檔案
+      vocal: 語音
       fontSize: 字體大小
       fontColor: 字體顏色
       backgroundColor: 背景顏色
@@ -248,9 +294,9 @@ edit:
       center: 中間位置
       zIndex: 顯示層級
       animationFlag: 動畫標誌
-      mouthOpen: 立繪張嘴差分
-      mouthHalfOpen: 立繪半張嘴差分
-      mouthClose: 立繪閉嘴差分
+      mouthOpen: 立繪張口差分
+      mouthHalfOpen: 立繪半張口差分
+      mouthClose: 立繪閉口差分
       eyesOpen: 立繪睜眼差分
       eyesClose: 立繪閉眼差分
       motion: Live2D/Spine 動作
@@ -274,8 +320,8 @@ edit:
       unlockName: "解鎖 {type} 名稱"
       unlockSeries: "{type} 所屬系列"
       skipOff: 禁止跳過
-      hold: 等待點擊後繼續
-      userForward: 點擊顯示下一行
+      hold: 結束後停留
+      userForward: 點擊顯示下一句
       title: 輸入框標題
       buttonText: 確認按鈕文字
       defaultValue: 輸入框預設值
@@ -291,6 +337,8 @@ edit:
     stats:
       lines: "{count} 行,"
       words: "{count} 字"
+    formPanel:
+      noStatement: 移動游標到語句行以編輯
   scenePanel:
     scene: 場景
   fileTree:
@@ -343,8 +391,216 @@ edit:
       zoomIn: 放大
       zoomReset: 重設縮放
   editorMode:
-    textMode: 文字模式
-    visualMode: 視覺化模式
+    textMode: 切換文字
+    visualMode: 切換視覺化
+    toggleSidebar: 切換輔助面板
+  visualEditor:
+    commandPanel: 命令面板
+    narrationMode: 旁白模式
+    types:
+      comment: 註解
+      narration: 旁白
+    placeholder:
+      comment: 輸入註解…
+      speaker: 角色名
+      optionName: 選項文字
+      sceneFile: 場景檔案名
+      oldStyleName: 原樣式名
+      newStyleName: 新樣式名
+      searchMotion: 搜尋動作
+      searchAnimation: 搜尋動畫
+      searchExpression: 搜尋表情
+    addOption: 新增選項
+    addStyleRule: 新增樣式替換
+    advancedParams: 進階參數
+    commands:
+      say: 對話
+      comment: 註解
+      changeBg: 背景
+      changeFigure: 立繪
+      miniAvatar: 小頭像
+      bgm: 背景音樂
+      playEffect: 音效
+      video: 影片
+      changeScene: 切換場景
+      callScene: 呼叫場景
+      choose: 分支選擇
+      label: 標籤
+      jumpLabel: 跳轉標籤
+      end: 結束遊戲
+      setVar: 設定變數
+      showVars: 顯示變數
+      getUserInput: 取得輸入
+      wait: 等待
+      setTextbox: 文字框
+      filmMode: 電影模式
+      callSteam: 呼叫 Steam
+      setAnimation: 調用動畫
+      setComplexAnimation: 內建動畫
+      setTransform: 簡單動畫
+      setTransition: 過渡動畫
+      pixi: 使用特效
+      pixiInit: 重置特效
+      setTempAnimation: 進階動畫
+      applyStyle: 套用樣式
+      intro: 全螢幕文字
+      unlockCg: 解鎖鑑賞圖片
+      unlockBgm: 解鎖鑑賞音樂
+      unknown: 未識別
+    params:
+      continue: 自動續行
+      next: 並行執行
+      concat: 接續上段
+      notend: 繼續播放
+      vocal: 語音
+      volume: 音量
+      associatedFigure: 關聯立繪
+      fontSize: 文字大小
+      dialogue: 對話內容
+      speaker: 說話人
+      commentContent: 註解內容
+      rawText: 原始文字
+      fileName: 檔案
+      figureId: ID
+      associatedFigureId: 立繪 ID
+      position: 位置
+      motion: 動作
+      spineMotion: 動畫
+      expression: 表情
+      transform: 變換
+      duration: 過渡時間
+      ease: 緩動類型
+      mouthOpen: 張口差分
+      mouthHalfOpen: 半張口差分
+      mouthClose: 閉口差分
+      eyesOpen: 睜眼差分
+      eyesHalfOpen: 半睜眼差分
+      eyesClose: 閉眼差分
+      enter: 淡入時間
+      unlockname: 解鎖名稱
+      series: 所屬系列
+      id: ID
+      achievementId: 解鎖成就 ID
+      skipOff: 禁止跳過
+      choiceText: 選項文字
+      labelName: 標籤名
+      varName: 變數名
+      varValue: 變數值
+      global: 全域變數
+      inputTitle: 對話框標題
+      buttonText: 確認按鈕文字
+      defaultValue: 預設值
+      waitTime: 時間
+      unitMs: 毫秒
+      textboxState: 顯示
+      textboxStateOff: 隱藏
+      filmModeState: 開啟
+      filmModeStateOff: 關閉
+      animationName: 動畫
+      target: 目標
+      transformJson: 變換 JSON
+      enterAnimation: 入場動畫
+      exitAnimation: 退場動畫
+      defaultEnterDuration: 預設入場動畫時間
+      defaultExitDuration: 預設退場動畫時間
+      effectName: 特效
+      effectCustomName: 特效名稱
+      introText: 文字內容
+      introTextPlaceholder: "用 {'|'} 分隔多行"
+      backgroundColor: 背景顏色
+      backgroundImage: 背景圖片
+      fontColor: 字體顏色
+      hold: 結束後停留
+      unlockDisplayName: 顯示名稱
+      animation: 動畫效果
+      delayTime: 延遲時間
+      userForward: 點擊顯示下一句
+      animationFlag: 口型同步與眨眼
+      blendMode: 混合模式
+      bounds: 繪製邊界
+      blink: 眨眼參數
+      blinkInterval: 眨眼間隔
+      blinkIntervalRandom: 眨眼間隔隨機偏移
+      openingDuration: 睜眼時長
+      closingDuration: 閉眼時長
+      closedDuration: 保持閉眼
+      focus: 注視參數
+      focusX: 注視點X
+      focusY: 注視點Y
+      focusInstant: 立即注視
+      zIndex: 顯示層級
+      writeDefault: 繼承預設
+      keep: 跨語句播放
+      customTargetId: 目標 ID
+    filePicker:
+      vocal: 選擇語音檔案
+      background: 選擇背景檔案
+      figure: 選擇立繪檔案
+      miniAvatar: 選擇小頭像檔案
+      bgm: 選擇音樂檔案
+      playEffect: 選擇音效檔案
+      video: 選擇影片檔案
+      scene: 選擇場景檔案
+      unlockCg: 選擇鑑賞圖片檔案
+      unlockBgm: 選擇鑑賞音樂檔案
+    assetPreview:
+      loadFailed: 載入失敗
+    options:
+      unspecified: 未指定
+      notSelected: 未選擇
+      default: 預設
+      left: 左側
+      center: 中間
+      right: 右側
+      figureLeft: 左側立繪
+      figureCenter: 中間立繪
+      figureRight: 右側立繪
+      useFigureId: 使用立繪 ID
+      blendNormal: 正常
+      blendAdd: 線性減淡
+      blendMultiply: 正片疊底
+      blendScreen: 濾色
+      small: 小
+      medium: 中
+      large: 大
+      easeLinear: 線性
+      easeIn: 緩入
+      easeOut: 緩出
+      easeInOut: 緩入緩出
+      easeCircIn: 圓形緩入
+      easeCircOut: 圓形緩出
+      easeCircInOut: 圓形緩入緩出
+      easeBackIn: 起點回彈
+      easeBackOut: 終點回彈
+      easeBackInOut: 起止回彈
+      easeBounceIn: 起點彈跳
+      easeBounceOut: 終點彈跳
+      easeBounceInOut: 起止彈跳
+      easeAnticipate: 預先反向
+      targetFigLeft: 左側立繪
+      targetFigCenter: 中間立繪
+      targetFigRight: 右側立繪
+      targetBgMain: 背景圖片
+      targetStageMain: 舞台畫面
+      custom: 自訂
+      delaySeconds: "{seconds} 秒"
+      animFadeIn: 淡入
+      animSlideIn: 滑入
+      animTyping: 打字效果
+      animPixelate: 像素化
+      animReveal: 揭示
+      animFlagOn: 開啟
+      animFlagOff: 關閉
+      effectRain: 雨
+      effectSnow: 雪
+      effectHeavySnow: 大雪
+      effectCherryBlossoms: 櫻花
+      universalSoftIn: 通用透明度淡入
+      universalSoftOff: 通用透明度淡出
+    effectEditor: 效果編輯器
+    statementList: 語句列表
+    noSelection: 請選擇一條語句進行編輯
+    noResults: 未找到結果
   welcome:
     startEditing: 開始編輯
     selectOrCreate: 選擇一個檔案開始編輯，或建立新檔案
@@ -374,9 +630,15 @@ settings:
       label: 即時預覽
       description: 編輯遊戲時即時預覽變更
     enableFastPreview:
-      label: 快速預覽
+      label: 快速語句預覽
       description: 啟用快速預覽將顯著提高即時預覽效率
+    enableRealtimeEffectPreview:
+      label: 即時效果預覽
+      description: 在效果編輯器中調整參數時即時渲染預覽效果
   edit:
+    general: 通用
+    textEditor: 文字編輯器
+    visualEditor: 視覺化編輯器
     fontFamily:
       label: 字體
       placeholder: 字體名稱
@@ -394,6 +656,15 @@ settings:
     enablePreviewTab:
       label: 啟用預覽標籤頁
       description: 單擊檔案時以預覽模式開啟，雙擊或編輯後固定為普通標籤頁
+    autoApplyEffectEditorChanges:
+      label: 自動套用效果編輯器變更
+      description: 啟用後，效果編輯器中的參數變更會自動寫回語句
+    collapseStatementsOnSidebarOpen:
+      label: 展開輔助面板時強制摺疊全部語句
+      description: 開啟輔助面板時，鎖定所有語句卡片為摺疊狀態
+    showSidebarAssetPreview:
+      label: 輔助面板語句資源預覽
+      description: 在編輯器輔助面板中預覽語句引用的圖片等資源
   storage:
     gamePath:
       label: 遊戲儲存位置

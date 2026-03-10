@@ -3,12 +3,14 @@ import { defineStore } from 'pinia'
 export const usePreviewSettingsStore = defineStore(
   'preview-settings',
   () => {
-    const enableLivePreview = $ref<boolean>(true)
-    const enableFastPreview = $ref<boolean>(false)
+    const enableLivePreview = $ref(true)
+    const enableFastPreview = $ref(false)
+    const enableRealtimeEffectPreview = $ref(true)
 
     return $$({
       enableLivePreview,
       enableFastPreview,
+      enableRealtimeEffectPreview,
     })
   },
   {
