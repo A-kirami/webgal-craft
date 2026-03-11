@@ -84,19 +84,29 @@ const currentLanguageConfig = $computed((): LanguageConfig => {
       }
     }
     default: {
-      // 根据文件扩展名返回对应语言配置，默认为纯文本
-      let languageId = ''
-      const extension = state.path.split('.').pop()?.toLowerCase()
+      const fileName = state.path.split(/[/\\]/).pop() ?? ''
+      const lastDot = fileName.lastIndexOf('.')
+      const extension = lastDot > 0 ? fileName.slice(lastDot + 1).toLowerCase() : undefined
+
+      let languageId = 'plaintext'
+      let displayName = extension?.toUpperCase() ?? t('edit.textEditor.languages.unknown')
+
       if (extension) {
         const monacoLanguage = monaco.languages.getLanguages().find(
           lang => lang.extensions?.includes(`.${extension}`),
         )
-        languageId = monacoLanguage ? monacoLanguage.id : extension ?? 'plaintext'
+        if (monacoLanguage) {
+          languageId = monacoLanguage.id
+          const alias = monacoLanguage.aliases?.find(
+            a => a.toLowerCase() === monacoLanguage.id,
+          ) ?? monacoLanguage.aliases?.[0]
+          displayName = alias
+            ? alias[0].toUpperCase() + alias.slice(1)
+            : extension.toUpperCase()
+        }
       }
-      return {
-        displayName: extension?.toUpperCase() ?? t('edit.textEditor.languages.unknown'),
-        editorLanguage: languageId,
-      }
+
+      return { displayName, editorLanguage: languageId }
     }
   }
 })
