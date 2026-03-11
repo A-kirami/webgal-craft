@@ -261,7 +261,6 @@ export const useEditorStore = defineStore('editor', () => {
         } else {
           // 文本文件：沿用现有文本/可视编辑逻辑
           const preferenceStore = usePreferenceStore()
-          const mimeType = mime.getType(tab.path) ?? ''
           const content = await readTextFile(tab.path)
 
           let visualType: VisualType | undefined
