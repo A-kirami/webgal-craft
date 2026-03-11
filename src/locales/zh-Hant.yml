@@ -331,9 +331,7 @@ edit:
   textEditor:
     languages:
       unknown: 未知
-      plaintext: 純文字
       webgalscript: WebGAL 腳本
-      json: JSON
       webgalanimation: WebGAL 動畫
     stats:
       lines: "{count} 行,"
@@ -373,6 +371,7 @@ edit:
       vocal: 語音
       video: 影片
       animation: 動畫
+      template: 模板
     searchPlaceholder: 搜尋檔案或資料夾
     sort:
       by: 排序

@@ -1,8 +1,9 @@
 import { basename, join } from '@tauri-apps/api/path'
 import { exists, stat, watch as watchFs } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
-import mime from 'mime/lite'
 import { defineStore } from 'pinia'
+
+import { mime } from '~/plugins/mime'
 
 import type { WatchEvent } from '@tauri-apps/plugin-fs'
 

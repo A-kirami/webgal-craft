@@ -331,9 +331,7 @@ edit:
   textEditor:
     languages:
       unknown: 不明
-      plaintext: プレーンテキスト
       webgalscript: WebGAL スクリプト
-      json: JSON
       webgalanimation: WebGAL アニメーション
     stats:
       lines: "{count} 行,"
@@ -373,6 +371,7 @@ edit:
       vocal: 音声
       video: 動画
       animation: アニメーション
+      template: テンプレート
     searchPlaceholder: ファイルまたはフォルダを検索
     sort:
       by: 並び替え
