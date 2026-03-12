@@ -41,7 +41,6 @@ interface FileViewerExpose {
 
 const META_BREAKPOINT_FULL = 750
 const META_BREAKPOINT_COMPACT = 560
-const FILE_SIZE_UNITS = ['B', 'KiB', 'MiB', 'GiB'] as const
 
 const {
   items,
@@ -51,7 +50,7 @@ const {
   sortableHeaders = true,
   isLoading = false,
   errorMsg = '',
-  gridItemMinWidth = 100,
+  gridItemMinWidth = 80,
   zoom,
 } = defineProps<FileViewerProps>()
 
@@ -219,23 +218,6 @@ function handleItemClick(item: FileViewerItem) {
     return
   }
   emit('select', item)
-}
-
-function formatFileSize(bytes: number): string {
-  let size = bytes
-  let unitIndex = 0
-
-  while (size >= 1024 && unitIndex < FILE_SIZE_UNITS.length - 1) {
-    size /= 1024
-    unitIndex++
-  }
-
-  if (unitIndex === 0) {
-    return `${Math.round(size)} ${FILE_SIZE_UNITS[unitIndex]}`
-  }
-
-  const value = size < 10 ? size.toFixed(1) : String(Math.round(size))
-  return `${value} ${FILE_SIZE_UNITS[unitIndex]}`
 }
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {

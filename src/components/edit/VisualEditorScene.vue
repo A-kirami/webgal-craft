@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { useVirtualizer } from '@tanstack/vue-virtual'
 
-import { ResizablePanel } from '~/components/ui/resizable'
-
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { ScrollArea } from '~/components/ui/scroll-area'
 
@@ -174,7 +172,6 @@ useEventListener('keydown', (e: KeyboardEvent) => {
 // ─── 虚拟列表 ───
 
 const scrollAreaRef = useTemplateRef<InstanceType<typeof ScrollArea>>('scrollAreaRef')
-const commandPanelRef = useTemplateRef<InstanceType<typeof ResizablePanel>>('commandPanelRef')
 
 const rowVirtualizer = useVirtualizer(
   computed(() => ({
@@ -249,6 +246,16 @@ const selectedPreviousSpeaker = $computed(() => {
     return ''
   }
   return previousSpeakers[selectedIndex] ?? ''
+})
+
+// 注册辅助面板数据源（EditorPanel 统一渲染单实例 StatementEditorPanel）
+useSidebarPanelBinding({
+  entry: computed(() => selectedEntry),
+  index: computed(() => selectedIndex === -1 ? undefined : selectedIndex),
+  previousSpeaker: computed(() => selectedPreviousSpeaker),
+  enableFocusStatement: true,
+  onUpdate: payload => handleStatementUpdate(payload),
+  onFocusStatement: () => scrollToSelectedStatement(),
 })
 
 /* 自动保存的 debounce 函数 */
@@ -393,7 +400,7 @@ watch(() => preferenceStore.showSidebar, (show) => {
       }
     }
   }
-}, { immediate: true })
+})
 
 /**
  * 自动选中语句：根据 lastLineNumber 定位，最后回退到第一条
@@ -463,80 +470,37 @@ function scrollToSelectedStatement() {
 </script>
 
 <template>
-  <EditorSidebarLayout :show="preferenceStore.showSidebar" class="h-full">
-    <ResizablePanelGroup direction="vertical" class="h-full">
-      <ResizablePanel :default-size="75" :min-size="20">
-        <div class="flex flex-col h-full">
-          <ScrollArea ref="scrollAreaRef" class="flex-1" :style="{ opacity: isPositioning ? 0 : 1 }">
-            <div role="listbox" :aria-label="$t('edit.visualEditor.statementList')" :style="{ height: `${totalSize}px`, width: '100%', position: 'relative' }">
-              <div
-                v-for="row in virtualRows"
-                :key="(row.key as number)"
-                :ref="el => rowVirtualizer.measureElement(el as Element)"
-                :data-index="row.index"
-                class="px-2"
-                :class="editSettings.collapseStatementsOnSidebarOpen ? 'pb-1' : 'pb-1.5'"
-                :style="{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  transform: `translateY(${row.start}px)`,
-                }"
-              >
-                <VisualEditorStatementCard
-                  :collapsed="state.statements[row.index].collapsed"
-                  :entry="state.statements[row.index]"
-                  :index="row.index"
-                  :selected="state.statements[row.index].id === selectedStatementId"
-                  :readonly="preferenceStore.showSidebar && editSettings.collapseStatementsOnSidebarOpen"
-                  :previous-speaker="previousSpeakers[row.index]"
-                  @update="handleStatementUpdate"
-                  @update:collapsed="val => handleCollapsedUpdate(row.index, val)"
-                  @select="handleSelect"
-                  @delete="handleStatementDelete"
-                  @play-to="handlePlayTo"
-                />
-              </div>
-            </div>
-          </ScrollArea>
-          <button
-            v-if="commandPanelRef?.isCollapsed"
-            class="text-xs text-muted-foreground py-1 border-t flex gap-1 w-full transition-colors items-center justify-center hover:text-foreground hover:bg-muted/50"
-            @click="commandPanelRef?.expand()"
-          >
-            <div class="i-lucide-panel-bottom-open size-3.5" />
-            {{ $t('edit.visualEditor.commandPanel') }}
-          </button>
-        </div>
-      </ResizablePanel>
-      <ResizableHandle />
-      <ResizablePanel
-        ref="commandPanelRef"
-        collapsible
-        :default-size="25"
-        :min-size="10"
-        :collapsed-size="0"
+  <ScrollArea ref="scrollAreaRef" class="h-full" :style="{ opacity: isPositioning ? 0 : 1 }">
+    <div role="listbox" :aria-label="$t('edit.visualEditor.statementList')" :style="{ height: `${totalSize}px`, width: '100%', position: 'relative' }">
+      <div
+        v-for="row in virtualRows"
+        :key="(row.key as number)"
+        :ref="el => rowVirtualizer.measureElement(el as Element)"
+        :data-index="row.index"
+        class="px-2"
+        :class="editSettings.collapseStatementsOnSidebarOpen ? 'pb-1' : 'pb-1.5'"
+        :style="{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          transform: `translateY(${row.start}px)`,
+        }"
       >
-        <div class="h-full">
-          {{ $t('edit.visualEditor.commandPanel') }}
-        </div>
-      </ResizablePanel>
-    </ResizablePanelGroup>
-    <template #sidebar>
-      <StatementEditorPanel
-        v-if="selectedEntry"
-        :key="selectedEntry.id"
-        :entry="selectedEntry"
-        :index="selectedIndex"
-        :previous-speaker="selectedPreviousSpeaker"
-        enable-focus-statement
-        @focus-statement="scrollToSelectedStatement"
-        @update="handleStatementUpdate"
-      />
-      <div v-else class="text-sm text-muted-foreground px-4 flex h-full items-center justify-center">
-        {{ $t('edit.visualEditor.noSelection') }}
+        <VisualEditorStatementCard
+          :collapsed="state.statements[row.index].collapsed"
+          :entry="state.statements[row.index]"
+          :index="row.index"
+          :selected="state.statements[row.index].id === selectedStatementId"
+          :readonly="preferenceStore.showSidebar && editSettings.collapseStatementsOnSidebarOpen"
+          :previous-speaker="previousSpeakers[row.index]"
+          @update="handleStatementUpdate"
+          @update:collapsed="val => handleCollapsedUpdate(row.index, val)"
+          @select="handleSelect"
+          @delete="handleStatementDelete"
+          @play-to="handlePlayTo"
+        />
       </div>
-    </template>
-  </EditorSidebarLayout>
+    </div>
+  </ScrollArea>
 </template>

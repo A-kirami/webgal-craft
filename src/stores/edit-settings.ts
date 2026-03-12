@@ -10,6 +10,7 @@ export const useEditSettingsStore = defineStore(
     const autoSave = $ref(true)
     const enablePreviewTab = $ref(true)
     const autoApplyEffectEditorChanges = $ref(false)
+    const effectEditorSide = $ref<'left' | 'right'>('right')
     const collapseStatementsOnSidebarOpen = $ref(true)
     const showSidebarAssetPreview = $ref(true)
 
@@ -21,6 +22,7 @@ export const useEditSettingsStore = defineStore(
       autoSave,
       enablePreviewTab,
       autoApplyEffectEditorChanges,
+      effectEditorSide,
       collapseStatementsOnSidebarOpen,
       showSidebarAssetPreview,
     })

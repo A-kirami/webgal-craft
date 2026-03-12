@@ -4,7 +4,6 @@ use blake3::Hasher;
 use image::{self, GenericImageView};
 use serde::{Deserialize, Serialize};
 use tauri::{command, ipc::Response, AppHandle, Manager};
-use webp;
 
 use super::{AppError, AppResult};
 
@@ -181,6 +180,13 @@ pub async fn get_thumbnail(
     }
 
     Ok(Response::new(buffer))
+}
+
+/// 仅读取图片文件头部元数据获取分辨率，不解码完整图片
+#[command]
+pub async fn get_image_dimensions(path: String) -> AppResult<(u32, u32)> {
+    image::image_dimensions(&path)
+        .map_err(|e| AppError::Image(format!("无法读取图片尺寸: {}", e)))
 }
 
 // 清理缓存命令

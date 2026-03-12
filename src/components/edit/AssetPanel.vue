@@ -3,58 +3,34 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Check, Image, LayoutGrid, Layou
 
 const preferenceStore = usePreferenceStore()
 
-let isSearchExpanded = $ref(false)
-
 const { t } = useI18n()
 
-const assetTabs = $computed(() => ({
-  figure: {
-    icon: UserRound,
-    label: t('edit.assetPanel.tabs.figure'),
-  },
-  background: {
-    icon: Image,
-    label: t('edit.assetPanel.tabs.background'),
-  },
-  bgm: {
-    icon: Music,
-    label: t('edit.assetPanel.tabs.bgm'),
-  },
-  vocal: {
-    icon: MicVocal,
-    label: t('edit.assetPanel.tabs.vocal'),
-  },
-  video: {
-    icon: Video,
-    label: t('edit.assetPanel.tabs.video'),
-  },
-  animation: {
-    icon: Blend,
-    label: t('edit.assetPanel.tabs.animation'),
-  },
-  template: {
-    icon: LayoutTemplate,
-    label: t('edit.assetPanel.tabs.template'),
-  },
-}))
+const assetTabItems = $computed(() => [
+  { tab: 'figure', icon: UserRound, label: t('edit.assetPanel.tabs.figure') },
+  { tab: 'background', icon: Image, label: t('edit.assetPanel.tabs.background') },
+  { tab: 'bgm', icon: Music, label: t('edit.assetPanel.tabs.bgm') },
+  { tab: 'vocal', icon: MicVocal, label: t('edit.assetPanel.tabs.vocal') },
+  { tab: 'video', icon: Video, label: t('edit.assetPanel.tabs.video') },
+  { tab: 'animation', icon: Blend, label: t('edit.assetPanel.tabs.animation') },
+  { tab: 'template', icon: LayoutTemplate, label: t('edit.assetPanel.tabs.template') },
+])
 
-type AssetTabs = keyof typeof assetTabs
-let activeTab = $ref<AssetTabs>('figure')
+let isSearchExpanded = $ref(false)
 
 const assetPaths = $ref<Record<string, string>>({})
 const assetSearchQueries = $ref<Record<string, string>>({})
 
 const currentPath = $computed({
-  get: () => assetPaths[activeTab] || '',
+  get: () => assetPaths[preferenceStore.assetTab] || '',
   set: (val: string) => {
-    assetPaths[activeTab] = val
+    assetPaths[preferenceStore.assetTab] = val
   },
 })
 
 let currentSearchQuery = $computed({
-  get: () => assetSearchQueries[activeTab] || '',
+  get: () => assetSearchQueries[preferenceStore.assetTab] || '',
   set: (val: string) => {
-    assetSearchQueries[activeTab] = val
+    assetSearchQueries[preferenceStore.assetTab] = val
   },
 })
 
@@ -118,171 +94,181 @@ const isMaxZoom = $computed(() => preferenceStore.assetZoom[0] >= 150)
 </script>
 
 <template>
-  <div class="rounded flex flex-col h-full overflow-hidden">
-    <Tabs v-model="activeTab" class="w-full">
-      <TabsList class="py-1 border-b rounded-none bg-transparent @container grid grid-cols-7 h-auto w-full">
-        <TabsTrigger
-          v-for="(tab, key) in assetTabs"
-          :key="key"
-          :value="key"
-          class="rounded relative hover:text-foreground data-[state=active]:bg-transparent hover:bg-accent after:h-0.5 after:content-empty data-[state=active]:shadow-none after:inset-x-0 after:bottom-0 after:absolute after:-mb-1 data-[state=active]:after:bg-primary data-[state=active]:hover:bg-accent"
-        >
-          <div class="flex gap-1 items-center justify-center">
-            <component :is="tab.icon" class="shrink-0 size-4" />
-            <span class="text-xs hidden @[500px]:block">{{ tab.label }}</span>
-          </div>
-        </TabsTrigger>
-      </TabsList>
-    </Tabs>
-    <div class="px-3 py-1 border-b @container flex gap-2 min-w-0 items-center justify-between">
-      <AssetBreadcrumb class="flex-1 min-w-0" :asset-type="activeTab" ::current-path="currentPath" />
-      <div class="flex gap-1.5 items-center">
-        <Input
-          ::="currentSearchQuery"
-          type="search"
-          :placeholder="$t('edit.assetPanel.searchPlaceholder')"
-          :aria-label="$t('edit.assetPanel.searchPlaceholder')"
-          class="text-xs h-7 shadow-none transition-all duration-200 ease-out"
-          :class="[
-            isSearchExpanded ? 'w-44 opacity-100 px-2' : 'w-0 opacity-0 px-0 border-transparent pointer-events-none'
-          ]"
-        />
-        <Button
-          :variant="isSearchExpanded ? 'default' : 'outline'"
-          size="icon"
-          class="shrink-0 size-7 shadow-none"
-          :title="$t('edit.assetPanel.actions.toggleSearch')"
-          :aria-label="$t('edit.assetPanel.actions.toggleSearch')"
-          @click="toggleSearch"
-        >
-          <Search class="size-3.5" />
-        </Button>
-      </div>
-    </div>
-    <KeepAlive>
-      <AssetView
-        :key="activeTab"
-        class="flex-1 min-h-0"
-        :asset-type="activeTab"
-        :search-query="currentSearchQuery"
-        :sort-by="preferenceStore.assetSortBy"
-        :sort-order="preferenceStore.assetSortOrder"
-        ::current-path="currentPath"
-        @update:sort-by="handleSortFieldSelect"
-        @update:sort-order="handleSortOrderUpdate"
-      />
-    </KeepAlive>
-    <div class="px-2 py-0.75 border-t bg-muted/35 @container flex gap-2 items-center justify-between">
-      <div class="flex gap-1.5 min-w-0 items-center">
-        <ToggleGroup
-          v-model="assetViewModeModel"
-          type="single"
-          class="border rounded gap-0"
-        >
-          <ToggleGroupItem
-            value="grid"
-            size="sm"
-            class="p-0 rounded-sm size-6 min-w-auto data-[state=on]:bg-gray-200 dark:data-[state=on]:bg-gray-800"
-            :title="$t('edit.assetPanel.actions.viewGrid')"
-            :aria-label="$t('edit.assetPanel.actions.viewGrid')"
-          >
-            <LayoutGrid class="size-3.5!" />
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="list"
-            size="sm"
-            class="p-0 rounded-sm size-6 min-w-auto data-[state=on]:bg-gray-200 dark:data-[state=on]:bg-gray-800"
-            :title="$t('edit.assetPanel.actions.viewList')"
-            :aria-label="$t('edit.assetPanel.actions.viewList')"
-          >
-            <LayoutList class="size-3.5!" />
-          </ToggleGroupItem>
-        </ToggleGroup>
-        <div class="border rounded inline-flex min-w-0 items-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger as-child>
-              <Button
-                variant="ghost"
-                size="sm"
-                class="text-xs px-2 gap-1.5 h-6 max-w-36 min-w-0 shadow-none"
-                :title="$t('edit.assetPanel.actions.sortField')"
-              >
-                <ArrowUpDown class="text-muted-foreground shrink-0 size-3.5" />
-                <span class="hidden truncate @[500px]:inline">{{ currentSortLabel }}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" class="min-w-34">
-              <DropdownMenuLabel class="text-xs">
-                {{ $t('edit.assetPanel.sort.by') }}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                v-for="option in sortOptions"
-                :key="option.value"
-                class="text-xs gap-2"
-                @select="() => handleSortFieldSelect(option.value)"
-              >
-                <span class="flex-1">{{ option.label }}</span>
-                <Check v-if="preferenceStore.assetSortBy === option.value" class="size-3.5" />
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+  <div class="flex h-full">
+    <ScrollArea>
+      <Tabs ::="preferenceStore.assetTab" orientation="vertical" class="flex h-full">
+        <TabsList class="p-0.5 border-r rounded-none bg-transparent flex-col gap-0.5 h-full justify-start">
+          <TooltipProvider :delay-duration="0">
+            <Tooltip v-for="item in assetTabItems" :key="item.tab">
+              <TooltipTrigger as-child>
+                <span>
+                  <TabsTrigger
+                    :value="item.tab"
+                    class="p-1.75 data-[state=active]:bg-accent data-[state=active]:shadow-none"
+                  >
+                    <component :is="item.icon" class="size-4.5" />
+                  </TabsTrigger>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="right" class="text-xs px-2 py-1">
+                {{ item.label }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </TabsList>
+      </Tabs>
+    </ScrollArea>
+    <div class="flex flex-1 flex-col">
+      <div class="px-3 py-1 border-b @container flex gap-2 min-w-0 items-center justify-between">
+        <AssetBreadcrumb class="flex-1 min-w-0" :asset-type="preferenceStore.assetTab" ::current-path="currentPath" />
+        <div class="flex gap-1.5 items-center">
+          <Input
+            ::="currentSearchQuery"
+            type="search"
+            :placeholder="$t('edit.assetPanel.searchPlaceholder')"
+            :aria-label="$t('edit.assetPanel.searchPlaceholder')"
+            class="text-xs h-7 shadow-none transition-all duration-200 ease-out"
+            :class="[
+              isSearchExpanded ? 'w-44 opacity-100 px-2' : 'w-0 opacity-0 px-0 border-transparent pointer-events-none'
+            ]"
+          />
           <Button
-            variant="ghost"
+            :variant="isSearchExpanded ? 'default' : 'outline'"
             size="icon"
-            class="size-6 shadow-none"
-            :title="$t('edit.assetPanel.actions.sortOrder')"
-            :aria-label="$t('edit.assetPanel.actions.sortOrder')"
-            @click="toggleSortOrder"
+            class="shrink-0 size-7 shadow-none"
+            :title="$t('edit.assetPanel.actions.toggleSearch')"
+            :aria-label="$t('edit.assetPanel.actions.toggleSearch')"
+            @click="toggleSearch"
           >
-            <ArrowUp v-if="isSortAsc" class="size-3.5" />
-            <ArrowDown v-else class="size-3.5" />
-            <span class="sr-only">
-              {{ isSortAsc ? $t('edit.assetPanel.sort.directionAsc') : $t('edit.assetPanel.sort.directionDesc') }}
-            </span>
+            <Search class="size-3.5" />
           </Button>
         </div>
       </div>
-      <div class="rounded inline-flex gap-0.5 items-center">
-        <Button
-          variant="ghost"
-          size="icon"
-          class="size-6"
-          :disabled="isMinZoom"
-          :title="$t('edit.assetPanel.actions.zoomOut')"
-          :aria-label="$t('edit.assetPanel.actions.zoomOut')"
-          @click="handleZoomChange(-5)"
-        >
-          <Minus class="size-3.5" />
-        </Button>
-        <Slider
-          ::="preferenceStore.assetZoom"
-          :min="50"
-          :max="150"
-          :step="5"
-          class="w-18 hidden @[320px]:flex @[520px]:w-28 @[760px]:w-36"
+      <KeepAlive>
+        <AssetView
+          :key="preferenceStore.assetTab"
+          class="flex-1 min-h-0"
+          :asset-type="preferenceStore.assetTab"
+          :search-query="currentSearchQuery"
+          :sort-by="preferenceStore.assetSortBy"
+          :sort-order="preferenceStore.assetSortOrder"
+          ::current-path="currentPath"
+          @update:sort-by="handleSortFieldSelect"
+          @update:sort-order="handleSortOrderUpdate"
         />
-        <Button
-          variant="ghost"
-          size="sm"
-          class="text-xs px-1.5 h-6 min-w-10 tabular-nums"
-          :title="$t('edit.assetPanel.actions.zoomReset')"
-          :aria-label="$t('edit.assetPanel.actions.zoomReset')"
-          @click="resetZoom"
-        >
-          {{ preferenceStore.assetZoom[0] }}%
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          class="size-6"
-          :disabled="isMaxZoom"
-          :title="$t('edit.assetPanel.actions.zoomIn')"
-          :aria-label="$t('edit.assetPanel.actions.zoomIn')"
-          @click="handleZoomChange(5)"
-        >
-          <Plus class="size-3.5" />
-        </Button>
+      </KeepAlive>
+      <div class="px-2 py-0.75 border-t bg-muted/35 @container flex gap-2 items-center justify-between">
+        <div class="flex gap-1.5 min-w-0 items-center">
+          <ToggleGroup
+            v-model="assetViewModeModel"
+            type="single"
+            class="border rounded gap-0"
+          >
+            <ToggleGroupItem
+              value="grid"
+              size="sm"
+              class="p-0 rounded-sm size-6 min-w-auto data-[state=on]:bg-gray-200 dark:data-[state=on]:bg-gray-800"
+              :title="$t('edit.assetPanel.actions.viewGrid')"
+              :aria-label="$t('edit.assetPanel.actions.viewGrid')"
+            >
+              <LayoutGrid class="size-3.5!" />
+            </ToggleGroupItem>
+            <ToggleGroupItem
+              value="list"
+              size="sm"
+              class="p-0 rounded-sm size-6 min-w-auto data-[state=on]:bg-gray-200 dark:data-[state=on]:bg-gray-800"
+              :title="$t('edit.assetPanel.actions.viewList')"
+              :aria-label="$t('edit.assetPanel.actions.viewList')"
+            >
+              <LayoutList class="size-3.5!" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <div class="border rounded inline-flex min-w-0 items-center">
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="text-xs px-2 gap-1.5 h-6 max-w-36 min-w-0 shadow-none"
+                  :title="$t('edit.assetPanel.actions.sortField')"
+                >
+                  <ArrowUpDown class="text-muted-foreground shrink-0 size-3.5" />
+                  <span class="hidden truncate @[500px]:inline">{{ currentSortLabel }}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" class="min-w-34">
+                <DropdownMenuLabel class="text-xs">
+                  {{ $t('edit.assetPanel.sort.by') }}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  v-for="option in sortOptions"
+                  :key="option.value"
+                  class="text-xs gap-2"
+                  @select="() => handleSortFieldSelect(option.value)"
+                >
+                  <span class="flex-1">{{ option.label }}</span>
+                  <Check v-if="preferenceStore.assetSortBy === option.value" class="size-3.5" />
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="ghost"
+              size="icon"
+              class="size-6 shadow-none"
+              :title="$t('edit.assetPanel.actions.sortOrder')"
+              :aria-label="$t('edit.assetPanel.actions.sortOrder')"
+              @click="toggleSortOrder"
+            >
+              <ArrowUp v-if="isSortAsc" class="size-3.5" />
+              <ArrowDown v-else class="size-3.5" />
+              <span class="sr-only">
+                {{ isSortAsc ? $t('edit.assetPanel.sort.directionAsc') : $t('edit.assetPanel.sort.directionDesc') }}
+              </span>
+            </Button>
+          </div>
+        </div>
+        <div class="inline-flex gap-0.5 items-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-6"
+            :disabled="isMinZoom"
+            :title="$t('edit.assetPanel.actions.zoomOut')"
+            :aria-label="$t('edit.assetPanel.actions.zoomOut')"
+            @click="handleZoomChange(-5)"
+          >
+            <Minus class="size-3.5" />
+          </Button>
+          <Slider
+            ::="preferenceStore.assetZoom"
+            :min="50"
+            :max="150"
+            :step="5"
+            class="w-18 hidden @[320px]:flex @[520px]:w-28 @[760px]:w-36"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            class="text-xs px-1.5 h-6 min-w-10 tabular-nums"
+            :title="$t('edit.assetPanel.actions.zoomReset')"
+            :aria-label="$t('edit.assetPanel.actions.zoomReset')"
+            @click="resetZoom"
+          >
+            {{ preferenceStore.assetZoom[0] }}%
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="size-6"
+            :disabled="isMaxZoom"
+            :title="$t('edit.assetPanel.actions.zoomIn')"
+            :aria-label="$t('edit.assetPanel.actions.zoomIn')"
+            @click="handleZoomChange(5)"
+          >
+            <Plus class="size-3.5" />
+          </Button>
+        </div>
       </div>
     </div>
   </div>

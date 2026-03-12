@@ -229,7 +229,7 @@ fileSystemEvents.on('directory:renamed', debouncedRefresh)
 <template>
   <div class="group/scene rounded flex flex-col h-full divide-y">
     <div class="px-2 py-1 flex items-center justify-between">
-      <h3 class="text-sm font-medium flex items-center">
+      <h3 class="text-sm font-medium flex text-nowrap items-center">
         <Layers class="mr-2 shrink-0 h-4 w-4" />
         {{ $t('edit.scenePanel.scene') }}
       </h3>

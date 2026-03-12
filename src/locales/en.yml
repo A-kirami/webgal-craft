@@ -1,679 +1,706 @@
+app:
+  description: WebGAL Visual Novel Studio
+  name: WebGAL Craft
 common:
-  loading: Loading...
-  cancel: Cancel
-  confirm: Confirm
-  moveToTrash: Move to Trash
-  delete: Delete
-  settings: Settings
-  close: Close
-  saved: Saved
-  unsaved: Unsaved
   back: Back
-  or: or
-  openFolder: Open Folder
+  breadcrumb:
+    showHiddenSegmentsCount: Show {count} hidden path segments
+  cancel: Cancel
+  close: Close
+  confirm: Confirm
+  delete: Delete
   dialogs:
-    selectGameFolder: Select Game Folder
     selectEngineFolder: Select Engine Folder
+    selectGameFolder: Select Game Folder
+  fileMeta:
+    createdAt: Created time
+    modifiedAt: Modified time
+    size: File size
+    unavailableA11y: Unavailable
+  fileViewer:
+    loadFailed: 'Load failed: {error}'
+    noContent: No content
+  loading: Loading...
+  moveToTrash: Move to Trash
+  openFolder: Open Folder
+  or: or
+  saved: Saved
+  settings: Settings
+  unsaved: Unsaved
   view:
     grid: Grid View
     list: List View
-  breadcrumb:
-    showHiddenSegmentsCount: Show {count} hidden path segments
-  fileViewer:
-    loadFailed: "Load failed: {error}"
-    noContent: No content
-  fileMeta:
-    size: File size
-    modifiedAt: Modified time
-    createdAt: Created time
-    unavailableA11y: Unavailable
-
-filePicker:
-  placeholder: Select a file path
-  clearInput: Clear input
-  sort:
-    name: Name
-    modifiedTime: Modified time
-    createdTime: Created time
-    size: File size
-    directionAsc: Ascending
-    directionDesc: Descending
-  zoom:
-    small: Small
-    medium: Medium
-    large: Large
-    extraLarge: Extra Large
-  more:
-    title: More
-    sortTitle: Sort mode
-    sortFieldTitle: Sort field
-    sortOrderTitle: Sort direction
-    filtersTitle: Filters
-    showSupportedOnly: Hide unsupported formats
-    zoomTitle: Icon size
-    recentTitle: Recent history
-    showRecentHistory: Show recent selection bar
-    clearRecentHistory: Clear recent history
-  recent:
-    title: Recent
-
-app:
-  name: WebGAL Craft
-  description: WebGAL Visual Novel Studio
-
-home:
-  header:
-    about: About
-  tabs:
-    recent: Recent Creations
-    engines: Game Engines
-  search:
-    placeholder:
-      recent: Search recent creations...
-      engines: Search game engines...
-  welcome:
-    title: Welcome to WebGAL Craft
-    subtitle: Start your game creation journey and write your story
-    welcomeBack: Welcome Back
-    welcomeBackSubtitle: Continue editing your game or start a new creation
-    createGame: Create Game
-    openGame: Open Game
-  games:
-    creating: Creating game...
-    modifiedAt: Modified {time}
-    noGames: No Recent Creations Found
-    noGamesDesc: You haven't created or opened any games yet
-    importGame: Import Game
-    importGameHint: Click to browse or drag and drop game folder here
-    createNewGame: Create New Game
-    deleteGame: Delete Game
-    dropGameFolder: Drag and drop game folder here to import
-    gameCover: "{name} game cover"
-    gameIcon: "{name} game icon"
-    importSuccess: Game imported successfully
-    importInvalidFolder: This is not a valid game folder
-    importUnknownError: An unknown error occurred while importing the game
-    importMultipleFolders: Only one game folder can be imported at a time
-    importCreating: Game is being created, please wait for the creation to complete
-  engines:
-    noEngines: No Available Game Engines
-    noEnginesDesc: You need to install a game engine to create games
-    installEngine: Install Engine
-    installEngineHint: Click to browse or drag and drop engine folder here
-    installGameEngine: Install Game Engine
-    uninstallEngine: Uninstall Engine
-    dropEngineFolder: Drag and drop game engine folder here
-    engineIcon: "{name} engine icon"
-    importSuccess: Engine imported successfully
-    importInvalidFolder: This is not a valid engine folder
-    importUnknownError: An unknown error occurred while importing the engine
-    importMultipleFolders: Only one engine folder can be imported at a time
-    noEngineTitle: No Available Game Engines
-    noEngineContent: You need to install a game engine first to create games
-    goToInstall: Go to Install
-    later: Later
-
-modals:
-  about:
-    homepage: Official Website
-    sourceCode: Source Code Repository
-    issues: Issue Feedback
-    copyright: "© 2025 Akirami"
-    license: License MPL-2.0
-  createGame:
-    title: Create New Game
-    description: Start your new creation from here
-    gameName: Game Name
-    saveLocation: Save Location
-    gameEngine: Game Engine
-    selectEngine: Select game engine
-    create: Create
-    pathNotEmpty: The game save directory must not exist or be empty
-    selectSaveLocation: Game Save Location
-  deleteGame:
-    title: Delete Game
-    description: Are you sure you want to delete the game {name}?
-    deleteFiles: Delete game files as well
-    deleteSuccess: Game deleted successfully
-  deleteFile:
-    title: Are you sure you want to delete the file {name}?
-    folderTitle: Are you sure you want to delete the folder {name} and its contents?
-    description: You can restore this file from the recycle bin.
-    folderDescription: You can restore this folder and its contents from the recycle bin.
-    skipConfirm: Don't show this prompt again
-  deleteGameConfirm:
-    title: Final Confirmation
-    description: "This operation cannot be undone. Please enter the game name {name} to confirm deletion."
-    gameName: Game Name
-    placeholder: "Please enter {name} to confirm"
-    confirmDelete: Confirm Delete
-  deleteEngine:
-    title: Uninstall Engine
-    description: Are you sure you want to uninstall the engine {name}?
-    warning: This operation will delete engine files and cannot be recovered.
-    uninstallSuccess: Engine uninstalled successfully
-  discoveredResources:
-    gamesTitle: Discovered Games
-    enginesTitle: Discovered Engines
-    gamesDescription: Found {count} game(s) in the default game directory. Would you like to import them?
-    enginesDescription: Found {count} engine(s) in the default engine directory. Would you like to import them?
-    selectAll: Select All
-    deselectAll: Deselect All
-    selected: Selected {count}/{total}
-    skip: Skip
-    import: Import ({count})
-  gameConfig:
-    title: Game Configuration
-  effectEditor:
-    title: Effect Editor
-    description: Edit visual transform, filter and effect parameters
-    apply: Apply
-    reset: Reset
-    categories:
-      transform: Transform
-      effects: Effects
-      colorAdjustment: Color Adjustment
-      bloom: Bloom
-      bevel: Bevel
-      filters: Filters
-    params:
-      positionX: Position X
-      positionY: Position Y
-      scaleX: Scale X
-      scaleY: Scale Y
-      scale: Scale
-      rotation: Rotation
-      alpha: Opacity
-      blur: Blur
-      brightness: Brightness
-      contrast: Contrast
-      saturation: Saturation
-      gamma: Gamma
-      color: Tint
-      bloom: Intensity
-      bloomBrightness: Brightness
-      bloomBlur: Blur
-      bloomThreshold: Threshold
-      bevel: Opacity
-      bevelThickness: Thickness
-      bevelRotation: Rotation
-      bevelSoftness: Softness
-      bevelColor: Color
-      oldFilm: Old Film
-      dotFilm: Dot Film
-      reflectionFilm: Reflection
-      glitchFilm: Glitch
-      rgbFilm: RGB Split
-      godrayFilm: God Ray
-    filterOptions:
-      default: Default
-      "on": "On"
-      "off": "Off"
-  upgrade:
-    title: Update
-  createFile:
-    title: Create Scene File
-    description: Start a new scene
-    fileNamePlaceholder: Enter file name
-    fileNameRequired: File name is required
-    fileExists: File already exists
-    create: Create
-  settings:
-    description: Manage your settings here and personalize your experience as needed
-    tabs:
-      general: General
-      edit: Edit
-      preview: Preview
-      storage: Storage
-  saveChanges:
-    title: Do you want to save changes to {name}?
-    description: Your changes will be lost if you don't save them.
-    save: Save
-    dontSave: Don't Save
-  discardEffectChanges:
-    title: Apply changes from the effect editor?
-    description: Your changes will be discarded if you don't apply them.
-    apply: Apply
-    discard: Discard
-
 edit:
-  header:
-    testGame: Test Game
-    export: Export
-    missingPreviewUrl: Preview URL is not available. Please start preview first.
-    openFailed: Failed to open test window
-  empty:
-    title: No Open Files
-    description: Select a file from the left file list to start editing, or create a new scene file
-    createScene: Create Scene File
-  completion:
-    commands:
-      changeBg: Change background image
-      changeFigure: Change character figure
-      bgm: Background music
-      playVideo: Play video
-      pixiPerform: Apply effect
-      pixiInit: Initialize/Reset effects
-      intro: Fullscreen text
-      miniAvatar: Corner mini avatar
-      changeScene: Change scene
-      choose: Branch option
-      end: End game and return to title screen
-      setComplexAnimation: Set built-in animation
-      label: Set label
-      jumpLabel: Jump to label
-      setVar: Set variable
-      callScene: Call scene
-      showVars: Show variables
-      unlockCg: Unlock CG gallery
-      unlockBgm: Unlock BGM gallery
-      filmMode: Film mode
-      setTextbox: Set textbox
-      setAnimation: Call animation
-      playEffect: Play sound effect
-      setTempAnimation: Set advanced animation
-      setTransform: Set simple animation
-      setTransition: Set enter/exit animation
-      getUserInput: Get input
-      applyStyle: Apply style
-      wait: Wait for a period of time
-    arguments:
-      when: Conditional execution
-      continue: Auto-advance to next line
-      next: Execute next line in parallel
-      notend: Continue to next line
-      concat: Concatenate with previous line
-      vocal: Voice
-      fontSize: Font size
-      fontColor: Font color
-      backgroundColor: Background color
-      backgroundImage: Background image
-      figureId: Figure ID
-      left: Left position
-      right: Right position
-      center: Center position
-      zIndex: Display layer
-      animationFlag: Animation flag
-      mouthOpen: Mouth open variant
-      mouthHalfOpen: Mouth half-open variant
-      mouthClose: Mouth closed variant
-      eyesOpen: Eyes open variant
-      eyesClose: Eyes closed variant
-      motion: Live2D/Spine motion
-      expression: Live2D expression
-      bounds: Live2D bounds expansion
-      blink: Live2D blink parameters
-      focus: Live2D focus parameters
-      transform: Transform effect
-      enter: Enter animation
-      exit: Exit animation
-      duration: Animation duration (ms)
-      ease: Animation easing type
-      animationTarget: Animation target object
-      transitionTarget: Transition target object
-      animation: Line enter animation
-      delayTime: Line enter delay time
-      writeDefault: Fill default values
-      keep: Cross-statement animation playback
-      volume: Volume (0-100)
-      soundEffectId: Sound effect ID
-      unlockName: "Unlock {type} name"
-      unlockSeries: "{type} series"
-      skipOff: Disable skipping
-      hold: Stay after finish
-      userForward: Click to show next sentence
-      title: Input box title
-      buttonText: Confirm button text
-      defaultValue: Input box default value
-  unsupported:
-    binaryFile: The file is not displayed in the editor because it is either binary or uses an unsupported text encoding.
-    loadFailed: "Failed to detect file type: {error}"
-  textEditor:
-    languages:
-      unknown: Unknown
-      webgalscript: WebGAL Script
-      webgalanimation: WebGAL Animation
-    stats:
-      lines: "{count} lines,"
-      words: "{count} words"
-    formPanel:
-      noStatement: Move cursor to a statement line to edit
-  scenePanel:
-    scene: Scene
-  fileTree:
-    newFile: New File
-    newFolder: New Folder
-    defaultFileName: New File.txt
-    defaultFolderName: New Folder
-    rename: Rename
-    deleteSuccess: Deleted successfully
-    deleteFailed: Delete failed
-    copy: Copy
-    cut: Cut
-    paste: Paste
-    revealInExplorer: Reveal in File Explorer
-    pasteSuccess: Pasted successfully
-    pasteFailed: Paste failed
-    pastePartialFailed: Partial paste failed ({failed}/{total})
-    pasteMultipleSuccess: Successfully pasted {count} items
-  previewPanel:
-    copyUrl: Copy URL
-    refreshPreview: Refresh Preview
-    openInBrowser: Open in Browser
-    copyUrlSuccess: URL copied successfully
-    openFailed: Failed to open preview
-    previewTitle: "Game Preview - {name}"
   assetPanel:
-    tabs:
-      figure: Figure
-      background: Background
-      bgm: Music
-      vocal: Voice
-      video: Video
-      animation: Animation
-      template: Template
+    actions:
+      sortField: Sort field
+      sortOrder: Sort direction
+      toggleSearch: Toggle search
+      viewGrid: Grid view
+      viewList: List view
+      zoomIn: Zoom in
+      zoomOut: Zoom out
+      zoomReset: Reset zoom
     searchPlaceholder: Search files or folders
     sort:
       by: Sort by
-      name: Name
-      modifiedTime: Modified time
       createdTime: Created time
-      size: File size
       directionAsc: Ascending
       directionDesc: Descending
-    actions:
-      toggleSearch: Toggle search
-      sortField: Sort field
-      sortOrder: Sort direction
-      viewGrid: Grid view
-      viewList: List view
-      zoomOut: Zoom out
-      zoomIn: Zoom in
-      zoomReset: Reset zoom
+      modifiedTime: Modified time
+      name: Name
+      size: File size
+    tabs:
+      animation: Animation
+      background: Background
+      bgm: Music
+      figure: Figure
+      template: Template
+      video: Video
+      vocal: Voice
+  completion:
+    arguments:
+      animation: Line enter animation
+      animationFlag: Animation flag
+      animationTarget: Animation target object
+      backgroundColor: Background color
+      backgroundImage: Background image
+      blink: Live2D blink parameters
+      bounds: Live2D bounds expansion
+      buttonText: Confirm button text
+      center: Center position
+      concat: Concatenate with previous line
+      continue: Auto-advance to next line
+      defaultValue: Input box default value
+      delayTime: Line enter delay time
+      duration: Animation duration (ms)
+      ease: Animation easing type
+      enter: Enter animation
+      exit: Exit animation
+      expression: Live2D expression
+      eyesClose: Eyes closed variant
+      eyesOpen: Eyes open variant
+      figureId: Figure ID
+      focus: Live2D focus parameters
+      fontColor: Font color
+      fontSize: Font size
+      hold: Stay after finish
+      keep: Cross-statement animation playback
+      left: Left position
+      motion: Live2D/Spine motion
+      mouthClose: Mouth closed variant
+      mouthHalfOpen: Mouth half-open variant
+      mouthOpen: Mouth open variant
+      next: Execute next line in parallel
+      notend: Continue to next line
+      right: Right position
+      skipOff: Disable skipping
+      soundEffectId: Sound effect ID
+      title: Input box title
+      transform: Transform effect
+      transitionTarget: Transition target object
+      unlockName: Unlock {type} name
+      unlockSeries: '{type} series'
+      userForward: Click to show next sentence
+      vocal: Voice
+      volume: Volume (0-100)
+      when: Conditional execution
+      writeDefault: Fill default values
+      zIndex: Display layer
+    commands:
+      applyStyle: Apply style
+      bgm: Background music
+      callScene: Call scene
+      changeBg: Change background image
+      changeFigure: Change character figure
+      changeScene: Change scene
+      choose: Branch option
+      end: End game and return to title screen
+      filmMode: Film mode
+      getUserInput: Get input
+      intro: Fullscreen text
+      jumpLabel: Jump to label
+      label: Set label
+      miniAvatar: Corner mini avatar
+      pixiInit: Initialize/Reset effects
+      pixiPerform: Apply effect
+      playEffect: Play sound effect
+      playVideo: Play video
+      setAnimation: Call animation
+      setComplexAnimation: Set built-in animation
+      setTempAnimation: Set advanced animation
+      setTextbox: Set textbox
+      setTransform: Set simple animation
+      setTransition: Set enter/exit animation
+      setVar: Set variable
+      showVars: Show variables
+      unlockBgm: Unlock BGM gallery
+      unlockCg: Unlock CG gallery
+      wait: Wait for a period of time
   editorMode:
     textMode: Switch to Text
-    visualMode: Switch to Visual
     toggleSidebar: Toggle Auxiliary Panel
+    visualMode: Switch to Visual
+  empty:
+    createScene: Create Scene File
+    description: >-
+      Select a file from the left file list to start editing, or create a new
+      scene file
+    title: No Open Files
+  fileTree:
+    copy: Copy
+    cut: Cut
+    defaultFileName: New File.txt
+    defaultFolderName: New Folder
+    deleteFailed: Delete failed
+    deleteSuccess: Deleted successfully
+    newFile: New File
+    newFolder: New Folder
+    paste: Paste
+    pasteFailed: Paste failed
+    pasteMultipleSuccess: Successfully pasted {count} items
+    pastePartialFailed: Partial paste failed ({failed}/{total})
+    pasteSuccess: Pasted successfully
+    rename: Rename
+    revealInExplorer: Reveal in File Explorer
+  header:
+    export: Export
+    gameSettings: Game Settings
+    missingPreviewUrl: Preview URL is not available. Please start preview first.
+    openFailed: Failed to open test window
+    testGame: Test Game
+  previewPanel:
+    copyUrl: Copy URL
+    copyUrlSuccess: URL copied successfully
+    openFailed: Failed to open preview
+    openInBrowser: Open in Browser
+    previewTitle: Game Preview - {name}
+    refreshPreview: Refresh Preview
+  scenePanel:
+    resource: Resource
+    scene: Scene
+  statusBar:
+    statements: '{count} statements'
+  textEditor:
+    formPanel:
+      noStatement: Move cursor to a statement line to edit
+    languages:
+      webgalanimation: WebGAL Animation
+      webgalscript: WebGAL Script
+    stats:
+      lines: '{count} lines,'
+      words: '{count} words'
+  unsupported:
+    binaryFile: >-
+      The file is not displayed in the editor because it is either binary or
+      uses an unsupported text encoding.
+    loadFailed: 'Failed to detect file type: {error}'
   visualEditor:
-    playToLine: Play to this line
-    commandPanel: Command Panel
-    narrationMode: Narration
-    types:
-      comment: Comment
-      narration: Narration
-    placeholder:
-      comment: Enter comment...
-      speaker: Character
-      optionName: Option text
-      sceneFile: Scene file name
-      oldStyleName: Original style name
-      newStyleName: New style name
-      searchMotion: Search motion
-      searchAnimation: Search animation
-      searchExpression: Search expression
     addOption: Add option
     addStyleRule: Add style rule
     advancedParams: Advanced
+    assetPreview:
+      loadFailed: Failed to load
+    commandPanel: Command Panel
     commands:
-      say: Dialogue
-      comment: Comment
+      applyStyle: Apply Style
+      bgm: Background Music
+      callScene: Call Scene
+      callSteam: Call Steam
       changeBg: Background
       changeFigure: Figure
-      miniAvatar: Mini Avatar
-      bgm: Background Music
-      playEffect: Sound Effect
-      video: Video
       changeScene: Change Scene
-      callScene: Call Scene
       choose: Choice
-      label: Label
-      jumpLabel: Jump to Label
+      comment: Comment
       end: End Game
-      setVar: Set Variable
-      showVars: Show Variables
-      getUserInput: Get Input
-      wait: Wait
-      setTextbox: Textbox
       filmMode: Film Mode
-      callSteam: Call Steam
-      setAnimation: Call Animation
-      setComplexAnimation: Built-in Animation
-      setTransform: Simple Animation
-      setTransition: Transition
+      getUserInput: Get Input
+      intro: Fullscreen Text
+      jumpLabel: Jump to Label
+      label: Label
+      miniAvatar: Mini Avatar
       pixi: Use Effect
       pixiInit: Reset Effect
+      playEffect: Sound Effect
+      say: Dialogue
+      setAnimation: Call Animation
+      setComplexAnimation: Built-in Animation
       setTempAnimation: Advanced Animation
-      applyStyle: Apply Style
-      intro: Fullscreen Text
-      unlockCg: Unlock CG Gallery
-      unlockBgm: Unlock BGM Gallery
+      setTextbox: Textbox
+      setTransform: Simple Animation
+      setTransition: Transition
+      setVar: Set Variable
+      showVars: Show Variables
       unknown: Unrecognized
+      unlockBgm: Unlock BGM Gallery
+      unlockCg: Unlock CG Gallery
+      video: Video
+      wait: Wait
+    effectEditor: Effect Editor
+    filePicker:
+      background: Select background file
+      bgm: Select music file
+      figure: Select figure file
+      miniAvatar: Select mini avatar file
+      playEffect: Select sound effect file
+      scene: Select scene file
+      unlockBgm: Select gallery music file
+      unlockCg: Select gallery image file
+      video: Select video file
+      vocal: Select voice file
+    narrationMode: Narration
+    noResults: No results found
+    noSelection: Select a statement to edit
+    options:
+      animFadeIn: Fade In
+      animFlagOff: 'Off'
+      animFlagOn: 'On'
+      animPixelate: Pixelate
+      animReveal: Reveal
+      animSlideIn: Slide In
+      animTyping: Typing Effect
+      blendAdd: Linear Dodge (Add)
+      blendMultiply: Multiply
+      blendNormal: Normal
+      blendScreen: Screen
+      center: Center
+      custom: Custom
+      default: Default
+      delaySeconds: '{seconds} sec'
+      easeAnticipate: Anticipate
+      easeBackIn: Back In
+      easeBackInOut: Back In Out
+      easeBackOut: Back Out
+      easeBounceIn: Bounce In
+      easeBounceInOut: Bounce In Out
+      easeBounceOut: Bounce Out
+      easeCircIn: Circ In
+      easeCircInOut: Circ In Out
+      easeCircOut: Circ Out
+      easeIn: Ease In
+      easeInOut: Ease In Out
+      easeLinear: Linear
+      easeOut: Ease Out
+      effectCherryBlossoms: Cherry Blossoms
+      effectHeavySnow: Heavy Snow
+      effectRain: Rain
+      effectSnow: Snow
+      figureCenter: Center Figure
+      figureLeft: Left Figure
+      figureRight: Right Figure
+      large: Large
+      left: Left
+      medium: Medium
+      notSelected: Not selected
+      right: Right
+      small: Small
+      targetBgMain: Background
+      targetFigCenter: Center Figure
+      targetFigLeft: Left Figure
+      targetFigRight: Right Figure
+      targetStageMain: Stage
+      universalSoftIn: Fade In
+      universalSoftOff: Fade Out
+      unspecified: Unspecified
+      useFigureId: Use Figure ID
     params:
-      continue: Auto-advance
-      next: Parallel
-      concat: Concatenate
-      notend: Not End
-      vocal: Voice
-      volume: Volume
-      associatedFigure: Associated Figure
-      fontSize: Text Size
-      dialogue: Dialogue
-      speaker: Speaker
-      commentContent: Comment
-      rawText: Raw Text
-      fileName: File
-      figureId: ID
-      associatedFigureId: Figure ID
-      position: Position
-      motion: Motion
-      spineMotion: Animation
-      expression: Expression
-      transform: Transform
-      duration: Transition
-      ease: Easing Type
-      mouthOpen: Mouth Open
-      mouthHalfOpen: Mouth Half Open
-      mouthClose: Mouth Close
-      eyesOpen: Eyes Open
-      eyesHalfOpen: Eyes Half Open
-      eyesClose: Eyes Close
-      enter: Fade In
-      unlockname: Unlock Name
-      series: Series
-      id: ID
       achievementId: Achievement ID
-      skipOff: Disable Skip
-      choiceText: Choice Text
-      labelName: Label Name
-      varName: Variable Name
-      varValue: Value
-      global: Global Variable
-      inputTitle: Dialog Title
-      buttonText: Confirm Button Text
-      defaultValue: Default Value
-      waitTime: Time
-      unitMs: ms
-      textboxState: Show
-      textboxStateOff: Hide
-      filmModeState: Enable
-      filmModeStateOff: Disable
+      animation: Animation
+      animationFlag: Lip Sync & Blink
       animationName: Animation
-      target: Target
-      transformJson: Transform JSON
-      enterAnimation: Enter Animation
-      exitAnimation: Exit Animation
-      defaultEnterDuration: Default Enter Duration
-      defaultExitDuration: Default Exit Duration
-      effectName: Effect
-      effectCustomName: Effect Name
-      introText: Text Content
-      introTextPlaceholder: "Separate lines with {'|'}"
+      associatedFigure: Associated Figure
+      associatedFigureId: Figure ID
       backgroundColor: Background Color
       backgroundImage: Background Image
-      fontColor: Font Color
-      hold: Stay after finish
-      unlockDisplayName: Display Name
-      animation: Animation
-      delayTime: Delay Time
-      userForward: Click to show next sentence
-      animationFlag: Lip Sync & Blink
       blendMode: Blend Mode
-      bounds: Draw Bounds
       blink: Blink Parameters
       blinkInterval: Blink Interval
       blinkIntervalRandom: Blink Interval Random Offset
-      openingDuration: Opening Duration
-      closingDuration: Closing Duration
+      bounds: Draw Bounds
+      buttonText: Confirm Button Text
+      choiceText: Choice Text
       closedDuration: Closed
+      closingDuration: Closing Duration
+      commentContent: Comment
+      concat: Concatenate
+      continue: Auto-advance
+      customTargetId: Target ID
+      defaultEnterDuration: Default Enter Duration
+      defaultExitDuration: Default Exit Duration
+      defaultValue: Default Value
+      delayTime: Delay Time
+      dialogue: Dialogue
+      duration: Transition
+      ease: Easing Type
+      effectCustomName: Effect Name
+      effectName: Effect
+      enter: Fade In
+      enterAnimation: Enter Animation
+      exitAnimation: Exit Animation
+      expression: Expression
+      eyesClose: Eyes Close
+      eyesHalfOpen: Eyes Half Open
+      eyesOpen: Eyes Open
+      figureId: ID
+      fileName: File
+      filmModeState: Enable
+      filmModeStateOff: Disable
       focus: Focus Parameters
+      focusInstant: Instant
       focusX: Focus X
       focusY: Focus Y
-      focusInstant: Instant
-      zIndex: Z-Index
-      writeDefault: Write Default
+      fontColor: Font Color
+      fontSize: Text Size
+      global: Global Variable
+      hold: Stay after finish
+      id: ID
+      inputTitle: Dialog Title
+      introText: Text Content
+      introTextPlaceholder: Separate lines with {'|'}
       keep: Keep Playing
-      customTargetId: Target ID
-    filePicker:
-      vocal: Select voice file
-      background: Select background file
-      figure: Select figure file
-      miniAvatar: Select mini avatar file
-      bgm: Select music file
-      playEffect: Select sound effect file
-      video: Select video file
-      scene: Select scene file
-      unlockCg: Select gallery image file
-      unlockBgm: Select gallery music file
-    assetPreview:
-      loadFailed: Failed to load
-    options:
-      unspecified: Unspecified
-      notSelected: Not selected
-      default: Default
-      left: Left
-      center: Center
-      right: Right
-      figureLeft: Left Figure
-      figureCenter: Center Figure
-      figureRight: Right Figure
-      useFigureId: Use Figure ID
-      blendNormal: Normal
-      blendAdd: Linear Dodge (Add)
-      blendMultiply: Multiply
-      blendScreen: Screen
-      small: Small
-      medium: Medium
-      large: Large
-      easeLinear: Linear
-      easeIn: Ease In
-      easeOut: Ease Out
-      easeInOut: Ease In Out
-      easeCircIn: Circ In
-      easeCircOut: Circ Out
-      easeCircInOut: Circ In Out
-      easeBackIn: Back In
-      easeBackOut: Back Out
-      easeBackInOut: Back In Out
-      easeBounceIn: Bounce In
-      easeBounceOut: Bounce Out
-      easeBounceInOut: Bounce In Out
-      easeAnticipate: Anticipate
-      targetFigLeft: Left Figure
-      targetFigCenter: Center Figure
-      targetFigRight: Right Figure
-      targetBgMain: Background
-      targetStageMain: Stage
-      custom: Custom
-      delaySeconds: "{seconds} sec"
-      animFadeIn: Fade In
-      animSlideIn: Slide In
-      animTyping: Typing Effect
-      animPixelate: Pixelate
-      animReveal: Reveal
-      animFlagOn: "On"
-      animFlagOff: "Off"
-      effectRain: Rain
-      effectSnow: Snow
-      effectHeavySnow: Heavy Snow
-      effectCherryBlossoms: Cherry Blossoms
-      universalSoftIn: Fade In
-      universalSoftOff: Fade Out
-    effectEditor: Effect Editor
+      labelName: Label Name
+      motion: Motion
+      mouthClose: Mouth Close
+      mouthHalfOpen: Mouth Half Open
+      mouthOpen: Mouth Open
+      next: Parallel
+      notend: Not End
+      openingDuration: Opening Duration
+      position: Position
+      rawText: Raw Text
+      series: Series
+      skipOff: Disable Skip
+      speaker: Speaker
+      spineMotion: Animation
+      target: Target
+      textboxState: Show
+      textboxStateOff: Hide
+      transform: Transform
+      transformJson: Transform JSON
+      unitMs: ms
+      unlockDisplayName: Display Name
+      unlockname: Unlock Name
+      userForward: Click to show next sentence
+      varName: Variable Name
+      varValue: Value
+      vocal: Voice
+      volume: Volume
+      waitTime: Time
+      writeDefault: Write Default
+      zIndex: Z-Index
+    placeholder:
+      comment: Enter comment...
+      newStyleName: New style name
+      oldStyleName: Original style name
+      optionName: Option text
+      sceneFile: Scene file name
+      searchAnimation: Search animation
+      searchExpression: Search expression
+      searchMotion: Search motion
+      speaker: Character
+    playToLine: Play to this line
     statementList: Statement list
-    noSelection: Select a statement to edit
-    noResults: No results found
+    types:
+      comment: Comment
+      narration: Narration
   welcome:
-    startEditing: Start Editing
-    selectOrCreate: Select a file to start editing, or create a new file
     newFile: New File
-
+    selectOrCreate: Select a file to start editing, or create a new file
+    startEditing: Start Editing
+filePicker:
+  clearInput: Clear input
+  more:
+    clearRecentHistory: Clear recent history
+    filtersTitle: Filters
+    recentTitle: Recent history
+    showRecentHistory: Show recent selection bar
+    showSupportedOnly: Hide unsupported formats
+    sortFieldTitle: Sort field
+    sortOrderTitle: Sort direction
+    sortTitle: Sort mode
+    title: More
+    zoomTitle: Icon size
+  placeholder: Select a file path
+  recent:
+    title: Recent
+  sort:
+    createdTime: Created time
+    directionAsc: Ascending
+    directionDesc: Descending
+    modifiedTime: Modified time
+    name: Name
+    size: File size
+  zoom:
+    extraLarge: Extra Large
+    large: Large
+    medium: Medium
+    small: Small
+home:
+  engines:
+    dropEngineFolder: Drag and drop game engine folder here
+    engineIcon: '{name} engine icon'
+    goToInstall: Go to Install
+    importInvalidFolder: This is not a valid engine folder
+    importMultipleFolders: Only one engine folder can be imported at a time
+    importSuccess: Engine imported successfully
+    importUnknownError: An unknown error occurred while importing the engine
+    installEngine: Install Engine
+    installEngineHint: Click to browse or drag and drop engine folder here
+    installGameEngine: Install Game Engine
+    later: Later
+    noEngineContent: You need to install a game engine first to create games
+    noEngineTitle: No Available Game Engines
+    noEngines: No Available Game Engines
+    noEnginesDesc: You need to install a game engine to create games
+    uninstallEngine: Uninstall Engine
+  games:
+    createNewGame: Create New Game
+    creating: Creating game...
+    deleteGame: Delete Game
+    dropGameFolder: Drag and drop game folder here to import
+    gameCover: '{name} game cover'
+    gameIcon: '{name} game icon'
+    importCreating: Game is being created, please wait for the creation to complete
+    importGame: Import Game
+    importGameHint: Click to browse or drag and drop game folder here
+    importInvalidFolder: This is not a valid game folder
+    importMultipleFolders: Only one game folder can be imported at a time
+    importSuccess: Game imported successfully
+    importUnknownError: An unknown error occurred while importing the game
+    modifiedAt: Modified {time}
+    noGames: No Recent Creations Found
+    noGamesDesc: You haven't created or opened any games yet
+  header:
+    about: About
+  search:
+    placeholder:
+      engines: Search game engines...
+      recent: Search recent creations...
+  tabs:
+    engines: Game Engines
+    recent: Recent Creations
+  welcome:
+    createGame: Create Game
+    openGame: Open Game
+    subtitle: Start your game creation journey and write your story
+    title: Welcome to WebGAL Craft
+    welcomeBack: Welcome Back
+    welcomeBackSubtitle: Continue editing your game or start a new creation
+modals:
+  about:
+    copyright: © 2025 Akirami
+    homepage: Official Website
+    issues: Issue Feedback
+    license: License MPL-2.0
+    sourceCode: Source Code Repository
+  createFile:
+    create: Create
+    description: Start a new scene
+    fileExists: File already exists
+    fileNamePlaceholder: Enter file name
+    fileNameRequired: File name is required
+    title: Create Scene File
+  createGame:
+    create: Create
+    description: Start your new creation from here
+    gameEngine: Game Engine
+    gameName: Game Name
+    pathNotEmpty: The game save directory must not exist or be empty
+    saveLocation: Save Location
+    selectEngine: Select game engine
+    selectSaveLocation: Game Save Location
+    title: Create New Game
+  deleteEngine:
+    description: Are you sure you want to uninstall the engine {name}?
+    title: Uninstall Engine
+    uninstallSuccess: Engine uninstalled successfully
+    warning: This operation will delete engine files and cannot be recovered.
+  deleteFile:
+    description: You can restore this file from the recycle bin.
+    folderDescription: You can restore this folder and its contents from the recycle bin.
+    folderTitle: Are you sure you want to delete the folder {name} and its contents?
+    skipConfirm: Don't show this prompt again
+    title: Are you sure you want to delete the file {name}?
+  deleteGame:
+    deleteFiles: Delete game files as well
+    deleteSuccess: Game deleted successfully
+    description: Are you sure you want to delete the game {name}?
+    title: Delete Game
+  deleteGameConfirm:
+    confirmDelete: Confirm Delete
+    description: >-
+      This operation cannot be undone. Please enter the game name {name} to
+      confirm deletion.
+    gameName: Game Name
+    placeholder: Please enter {name} to confirm
+    title: Final Confirmation
+  discardEffectChanges:
+    apply: Apply
+    description: Your changes will be discarded if you don't apply them.
+    discard: Discard
+    title: Apply changes from the effect editor?
+  discoveredResources:
+    deselectAll: Deselect All
+    enginesDescription: >-
+      Found {count} engine(s) in the default engine directory. Would you like to
+      import them?
+    enginesTitle: Discovered Engines
+    gamesDescription: >-
+      Found {count} game(s) in the default game directory. Would you like to
+      import them?
+    gamesTitle: Discovered Games
+    import: Import ({count})
+    selectAll: Select All
+    selected: Selected {count}/{total}
+    skip: Skip
+  effectEditor:
+    apply: Apply
+    categories:
+      bevel: Bevel
+      bloom: Bloom
+      colorAdjustment: Color Adjustment
+      effects: Effects
+      filters: Filters
+      transform: Transform
+    description: Edit visual transform, filter and effect parameters
+    filterOptions:
+      default: Default
+      'off': 'Off'
+      'on': 'On'
+    params:
+      alpha: Opacity
+      bevel: Opacity
+      bevelColor: Color
+      bevelRotation: Rotation
+      bevelSoftness: Softness
+      bevelThickness: Thickness
+      bloom: Intensity
+      bloomBlur: Blur
+      bloomBrightness: Brightness
+      bloomThreshold: Threshold
+      blur: Blur
+      brightness: Brightness
+      color: Tint
+      contrast: Contrast
+      dotFilm: Dot Film
+      gamma: Gamma
+      glitchFilm: Glitch
+      godrayFilm: God Ray
+      oldFilm: Old Film
+      positionX: Position X
+      positionY: Position Y
+      reflectionFilm: Reflection
+      rgbFilm: RGB Split
+      rotation: Rotation
+      saturation: Saturation
+      scale: Scale
+      scaleX: Scale X
+      scaleY: Scale Y
+    reset: Reset
+    title: Effect Editor
+  gameConfig:
+    title: Game Configuration
+  saveChanges:
+    description: Your changes will be lost if you don't save them.
+    dontSave: Don't Save
+    save: Save
+    title: Do you want to save changes to {name}?
+  settings:
+    description: Manage your settings here and personalize your experience as needed
+    tabs:
+      edit: Edit
+      general: General
+      preview: Preview
+      storage: Storage
+  upgrade:
+    title: Update
+notFound:
+  message: Page not found
 settings:
-  experimental:
-    tooltip: This is an experimental feature and may encounter issues during use
-  general:
-    followSystem: Follow System
-    theme:
-      label: Theme
-      options:
-        light: Light
-        dark: Dark
-    language:
-      label: Language
-      placeholder: Please select a language
-    openLastProject:
-      label: Open Last Edited Game on Startup
-      description: Automatically load the last edited game project when the application starts
-    autoInstallUpdates:
-      label: Auto Install Updates
-      description: Automatically download and install the latest version of the application
-  preview:
-    enableLivePreview:
-      label: Live Preview
-      description: Preview changes in real-time while editing the game
-    enableFastPreview:
-      label: Fast Statement Preview
-      description: Enabling fast preview will significantly improve real-time preview efficiency
-    enableRealtimeEffectPreview:
-      label: Realtime Effect Preview
-      description: Render effect updates in real-time while adjusting parameters in the effect editor
   edit:
-    general: General
-    textEditor: Text Editor
-    visualEditor: Visual Editor
+    autoApplyEffectEditorChanges:
+      description: >-
+        Automatically write effect editor parameter changes back to the
+        statement
+      label: Auto Apply Effect Editor Changes
+    autoSave:
+      description: When enabled, the editor will automatically save your changes
+      label: Auto Save
+    collapseStatementsOnSidebarOpen:
+      description: >-
+        Lock all statement cards in collapsed state when the auxiliary panel is
+        opened
+      label: Collapse All Statements When Auxiliary Panel Opens
+    effectEditorSide:
+      description: Choose which side the effect editor drawer slides in from
+      label: Effect Editor Slide Direction
+      left: Left
+      right: Right
+    enablePreviewTab:
+      description: >-
+        Open files in preview mode on single click, pin to regular tab on double
+        click or edit
+      label: Enable Preview Tabs
     fontFamily:
       label: Font Family
       placeholder: Font Name
     fontSize:
       label: Font Size
-    wordWrap:
-      label: Word Wrap
-      description: Automatically wrap lines that exceed the editor width
+    general: General
     minimap:
+      description: >-
+        Display code minimap on the right side of the editor for quick
+        navigation
       label: Minimap
-      description: Display code minimap on the right side of the editor for quick navigation
-    autoSave:
-      label: Auto Save
-      description: When enabled, the editor will automatically save your changes
-    enablePreviewTab:
-      label: Enable Preview Tabs
-      description: Open files in preview mode on single click, pin to regular tab on double click or edit
-    autoApplyEffectEditorChanges:
-      label: Auto Apply Effect Editor Changes
-      description: Automatically write effect editor parameter changes back to the statement
-    collapseStatementsOnSidebarOpen:
-      label: Collapse All Statements When Auxiliary Panel Opens
-      description: Lock all statement cards in collapsed state when the auxiliary panel is opened
     showSidebarAssetPreview:
+      description: >-
+        Preview images and other assets referenced by statements in the editor
+        auxiliary panel
       label: Auxiliary Panel Statement Asset Preview
-      description: Preview images and other assets referenced by statements in the editor auxiliary panel
+    textEditor: Text Editor
+    visualEditor: Visual Editor
+    wordWrap:
+      description: Automatically wrap lines that exceed the editor width
+      label: Word Wrap
+  experimental:
+    tooltip: This is an experimental feature and may encounter issues during use
+  general:
+    autoInstallUpdates:
+      description: Automatically download and install the latest version of the application
+      label: Auto Install Updates
+    followSystem: Follow System
+    language:
+      label: Language
+      placeholder: Please select a language
+    openLastProject:
+      description: >-
+        Automatically load the last edited game project when the application
+        starts
+      label: Open Last Edited Game on Startup
+    theme:
+      label: Theme
+      options:
+        dark: Dark
+        light: Light
+  preview:
+    enableFastPreview:
+      description: >-
+        Enabling fast preview will significantly improve real-time preview
+        efficiency
+      label: Fast Statement Preview
+    enableLivePreview:
+      description: Preview changes in real-time while editing the game
+      label: Live Preview
+    enableRealtimeEffectPreview:
+      description: >-
+        Render effect updates in real-time while adjusting parameters in the
+        effect editor
+      label: Realtime Effect Preview
   storage:
-    gamePath:
-      label: Game Save Location
-      title: Select Game Save Location
+    browse: Browse
     enginePath:
       label: Engine Save Location
       title: Select Engine Save Location
-    browse: Browse
-
-notFound:
-  message: Page not found
+    gamePath:
+      label: Game Save Location
+      title: Select Game Save Location

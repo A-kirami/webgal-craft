@@ -15,7 +15,6 @@ declare global {
   const EFFECT_EASE_OPTIONS: typeof import('./helper/effect-editor-config').EFFECT_EASE_OPTIONS
   const EffectScope: typeof import('vue').EffectScope
   const FIGURE_POSITION_FLAGS: typeof import('./helper/webgal-script/types').FIGURE_POSITION_FLAGS
-  const GameError: typeof import('./services/types').GameError
   const UNSPECIFIED: typeof import('./helper/command-registry/schema').UNSPECIFIED
   const applyEffectEditorResultToSentence: typeof import('./composables/useStatementEffectEditorBridge').applyEffectEditorResultToSentence
   const applyScrubStepModifier: typeof import('./helper/math').applyScrubStepModifier
@@ -89,6 +88,7 @@ declare global {
   const extractSpeakerChange: typeof import('./utils/speaker').extractSpeakerChange
   const fieldsToTransform: typeof import('./helper/effect-editor-config').fieldsToTransform
   const filterExtraArgs: typeof import('./helper/statement-editor/visibility').filterExtraArgs
+  const formatFileSize: typeof import('./utils/format').formatFileSize
   const fsCmds: typeof import('./commands/fs').fsCmds
   const galleryEntries: typeof import('./helper/command-registry/gallery').galleryEntries
   const gameAssetDir: typeof import('./helper/app-paths').gameAssetDir
@@ -137,9 +137,12 @@ declare global {
   const isRgbaPayload: typeof import('./helper/color').isRgbaPayload
   const isShallow: typeof import('vue').isShallow
   const isStatementInteractiveTarget: typeof import('./composables/useStatementEditor').isStatementInteractiveTarget
+  const isTextualEditor: typeof import('./stores/editor').isTextualEditor
   const isTransformEqual: typeof import('./helper/effect-editor-config').isTransformEqual
   const isTypedCommandNode: typeof import('./helper/webgal-script/codec').isTypedCommandNode
   const isValidPositiveNumber: typeof import('./utils/sort').isValidPositiveNumber
+  const isVisualAnimation: typeof import('./stores/editor').isVisualAnimation
+  const isVisualScene: typeof import('./stores/editor').isVisualScene
   const joinStatements: typeof import('./helper/webgal-script/sentence').joinStatements
   const logger: typeof import('@tauri-apps/plugin-log')
   const makeDestructurable: typeof import('@vueuse/core').makeDestructurable
@@ -243,6 +246,7 @@ declare global {
   const shallowReactive: typeof import('vue').shallowReactive
   const shallowReadonly: typeof import('vue').shallowReadonly
   const shallowRef: typeof import('vue').shallowRef
+  const sidebarPanelKey: typeof import('./composables/useSidebarPanel').sidebarPanelKey
   const splitStatements: typeof import('./helper/webgal-script/sentence').splitStatements
   const statementEditorSurfaceKey: typeof import('./helper/statement-editor/surface-context').statementEditorSurfaceKey
   const statementMetaKey: typeof import('./composables/useStatementMeta').statementMetaKey
@@ -433,6 +437,8 @@ declare global {
   const useSessionStorage: typeof import('@vueuse/core').useSessionStorage
   const useSettingsForm: typeof import('./composables/useSettingsForm').useSettingsForm
   const useShare: typeof import('@vueuse/core').useShare
+  const useSidebarPanelBinding: typeof import('./composables/useSidebarPanel').useSidebarPanelBinding
+  const useSidebarPanelProvider: typeof import('./composables/useSidebarPanel').useSidebarPanelProvider
   const useSlots: typeof import('vue').useSlots
   const useSorted: typeof import('@vueuse/core').useSorted
   const useSpeechRecognition: typeof import('@vueuse/core').useSpeechRecognition
@@ -539,6 +545,9 @@ declare global {
   export type { FileSystemEvent } from './composables/useFileSystemEvents'
   import('./composables/useFileSystemEvents')
   // @ts-ignore
+  export type { SidebarPanelBinding, SidebarPanelContext } from './composables/useSidebarPanel'
+  import('./composables/useSidebarPanel')
+  // @ts-ignore
   export type { StatementUpdatePayload } from './composables/useStatementEditor'
   import('./composables/useStatementEditor')
   // @ts-ignore
@@ -605,7 +614,7 @@ declare global {
   export type { GameMetadata, EngineMetadata } from './services/types'
   import('./services/types')
   // @ts-ignore
-  export type { TextModeState, VisualModeSceneState, VisualModeAnimationState, VisualModeState, AssetPreviewState, UnsupportedState } from './stores/editor'
+  export type { TextModeState, VisualModeSceneState, VisualModeAnimationState, VisualModeState, TextualEditorState, AssetPreviewState, UnsupportedState } from './stores/editor'
   import('./stores/editor')
   // @ts-ignore
   export type { FileItem, DirItem, FileSystemItem } from './stores/file'
@@ -729,6 +738,7 @@ declare module 'vue' {
     readonly extractSpeakerChange: UnwrapRef<typeof import('./utils/speaker')['extractSpeakerChange']>
     readonly fieldsToTransform: UnwrapRef<typeof import('./helper/effect-editor-config')['fieldsToTransform']>
     readonly filterExtraArgs: UnwrapRef<typeof import('./helper/statement-editor/visibility')['filterExtraArgs']>
+    readonly formatFileSize: UnwrapRef<typeof import('./utils/format')['formatFileSize']>
     readonly fsCmds: UnwrapRef<typeof import('./commands/fs')['fsCmds']>
     readonly galleryEntries: UnwrapRef<typeof import('./helper/command-registry/gallery')['galleryEntries']>
     readonly gameAssetDir: UnwrapRef<typeof import('./helper/app-paths')['gameAssetDir']>
@@ -777,9 +787,12 @@ declare module 'vue' {
     readonly isRgbaPayload: UnwrapRef<typeof import('./helper/color')['isRgbaPayload']>
     readonly isShallow: UnwrapRef<typeof import('vue')['isShallow']>
     readonly isStatementInteractiveTarget: UnwrapRef<typeof import('./composables/useStatementEditor')['isStatementInteractiveTarget']>
+    readonly isTextualEditor: UnwrapRef<typeof import('./stores/editor')['isTextualEditor']>
     readonly isTransformEqual: UnwrapRef<typeof import('./helper/effect-editor-config')['isTransformEqual']>
     readonly isTypedCommandNode: UnwrapRef<typeof import('./helper/webgal-script/codec')['isTypedCommandNode']>
     readonly isValidPositiveNumber: UnwrapRef<typeof import('./utils/sort')['isValidPositiveNumber']>
+    readonly isVisualAnimation: UnwrapRef<typeof import('./stores/editor')['isVisualAnimation']>
+    readonly isVisualScene: UnwrapRef<typeof import('./stores/editor')['isVisualScene']>
     readonly joinStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['joinStatements']>
     readonly logger: UnwrapRef<typeof import('@tauri-apps/plugin-log')>
     readonly makeDestructurable: UnwrapRef<typeof import('@vueuse/core')['makeDestructurable']>
@@ -883,6 +896,7 @@ declare module 'vue' {
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
+    readonly sidebarPanelKey: UnwrapRef<typeof import('./composables/useSidebarPanel')['sidebarPanelKey']>
     readonly splitStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['splitStatements']>
     readonly statementEditorSurfaceKey: UnwrapRef<typeof import('./helper/statement-editor/surface-context')['statementEditorSurfaceKey']>
     readonly statementMetaKey: UnwrapRef<typeof import('./composables/useStatementMeta')['statementMetaKey']>
@@ -1073,6 +1087,8 @@ declare module 'vue' {
     readonly useSessionStorage: UnwrapRef<typeof import('@vueuse/core')['useSessionStorage']>
     readonly useSettingsForm: UnwrapRef<typeof import('./composables/useSettingsForm')['useSettingsForm']>
     readonly useShare: UnwrapRef<typeof import('@vueuse/core')['useShare']>
+    readonly useSidebarPanelBinding: UnwrapRef<typeof import('./composables/useSidebarPanel')['useSidebarPanelBinding']>
+    readonly useSidebarPanelProvider: UnwrapRef<typeof import('./composables/useSidebarPanel')['useSidebarPanelProvider']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useSorted: UnwrapRef<typeof import('@vueuse/core')['useSorted']>
     readonly useSpeechRecognition: UnwrapRef<typeof import('@vueuse/core')['useSpeechRecognition']>
