@@ -1,680 +1,687 @@
-app:
-  description: WebGAL 視覺小說工作室
-  name: WebGAL Craft
 common:
-  back: 返回
-  breadcrumb:
-    showHiddenSegmentsCount: 展開 {count} 個隱藏路徑段
-  cancel: 取消
-  close: 關閉
-  confirm: 確認
-  delete: 刪除
-  dialogs:
-    selectEngineFolder: 選擇引擎資料夾
-    selectGameFolder: 選擇遊戲資料夾
-  fileMeta:
-    createdAt: 建立時間
-    modifiedAt: 修改時間
-    size: 檔案大小
-    unavailableA11y: 不可用
-  fileViewer:
-    loadFailed: 載入失敗：{error}
-    noContent: 暫無內容
   loading: 載入中...
+  cancel: 取消
+  confirm: 確認
   moveToTrash: 移動到資源回收桶
-  openFolder: 開啟資料夾
-  or: 或者
-  saved: 已儲存
+  delete: 刪除
   settings: 設定
+  close: 關閉
+  saved: 已儲存
   unsaved: 未儲存
+  back: 返回
+  or: 或者
+  openFolder: 開啟資料夾
+  dialogs:
+    selectGameFolder: 選擇遊戲資料夾
+    selectEngineFolder: 選擇引擎資料夾
   view:
     grid: 網格檢視
     list: 列表檢視
-edit:
-  assetPanel:
-    actions:
-      sortField: 排序欄位
-      sortOrder: 排序方向
-      toggleSearch: 切換搜尋
-      viewGrid: 網格檢視
-      viewList: 清單檢視
-      zoomIn: 放大
-      zoomOut: 縮小
-      zoomReset: 重設縮放
-    searchPlaceholder: 搜尋檔案或資料夾
-    sort:
-      by: 排序
-      createdTime: 建立時間
-      directionAsc: 升序
-      directionDesc: 降序
-      modifiedTime: 修改時間
-      name: 名稱
-      size: 檔案大小
-    tabs:
-      animation: 動畫
-      background: 背景
-      bgm: 音樂
-      figure: 立繪
-      template: 模板
-      video: 影片
-      vocal: 語音
-  completion:
-    arguments:
-      animation: 每行文字入場動畫
-      animationFlag: 動畫標誌
-      animationTarget: 動畫目標物件
-      backgroundColor: 背景顏色
-      backgroundImage: 背景圖片
-      blink: Live2D 眨眼參數
-      bounds: Live2D 邊界擴展
-      buttonText: 確認按鈕文字
-      center: 中間位置
-      concat: 接續上一段對話
-      continue: 自動續行
-      defaultValue: 輸入框預設值
-      delayTime: 每行文字入場延遲時間
-      duration: 動畫持續時間（毫秒）
-      ease: 動畫緩動類型
-      enter: 入場動畫
-      exit: 退場動畫
-      expression: Live2D 表情
-      eyesClose: 立繪閉眼差分
-      eyesOpen: 立繪睜眼差分
-      figureId: 立繪 ID
-      focus: Live2D 注視參數
-      fontColor: 字體顏色
-      fontSize: 字體大小
-      hold: 結束後停留
-      keep: 跨語句播放動畫
-      left: 左側位置
-      motion: Live2D/Spine 動作
-      mouthClose: 立繪閉口差分
-      mouthHalfOpen: 立繪半張口差分
-      mouthOpen: 立繪張口差分
-      next: 並行執行
-      notend: 繼續播放下一段
-      right: 右側位置
-      skipOff: 禁止跳過
-      soundEffectId: 音效 ID
-      title: 輸入框標題
-      transform: 變換效果
-      transitionTarget: 過渡目標物件
-      unlockName: 解鎖 {type} 名稱
-      unlockSeries: '{type} 所屬系列'
-      userForward: 點擊顯示下一句
-      vocal: 語音
-      volume: 音量大小（0-100）
-      when: 執行條件
-      writeDefault: 填充預設值
-      zIndex: 顯示層級
-    commands:
-      applyStyle: 套用樣式
-      bgm: 背景音樂
-      callScene: 呼叫場景
-      changeBg: 切換背景圖片
-      changeFigure: 切換角色立繪
-      changeScene: 切換場景
-      choose: 分支選項
-      end: 結束遊戲並返回標題介面
-      filmMode: 電影模式
-      getUserInput: 取得輸入
-      intro: 全螢幕文字
-      jumpLabel: 跳轉至標籤
-      label: 設定標籤
-      miniAvatar: 角落小頭像
-      pixiInit: 初始化/重置特效
-      pixiPerform: 套用特效
-      playEffect: 播放音效
-      playVideo: 播放影片
-      setAnimation: 調用動畫
-      setComplexAnimation: 設定內建動畫
-      setTempAnimation: 設定進階動畫
-      setTextbox: 設定對話框
-      setTransform: 設定簡單動畫
-      setTransition: 設定過渡動畫
-      setVar: 設定變數
-      showVars: 顯示變數
-      unlockBgm: 解鎖 BGM 鑑賞
-      unlockCg: 解鎖 CG 鑑賞
-      wait: 等待一段時間
-  editorMode:
-    textMode: 切換文字
-    toggleSidebar: 切換輔助面板
-    visualMode: 切換視覺化
-  empty:
-    createScene: 建立場景檔案
-    description: 從左側檔案列表中選擇一個檔案開始編輯，或建立一個新的場景檔案
-    title: 沒有開啟的檔案
-  fileTree:
-    copy: 複製
-    cut: 剪下
-    defaultFileName: 新檔案.txt
-    defaultFolderName: 新資料夾
-    deleteFailed: 刪除失敗
-    deleteSuccess: 刪除成功
-    newFile: 新建檔案
-    newFolder: 新建資料夾
-    paste: 貼上
-    pasteFailed: 貼上失敗
-    pasteMultipleSuccess: 成功貼上 {count} 個項目
-    pastePartialFailed: 部分貼上失敗 ({failed}/{total})
-    pasteSuccess: 貼上成功
-    rename: 重新命名
-    revealInExplorer: 在檔案總管中顯示
+  breadcrumb:
+    showHiddenSegmentsCount: 展開 {count} 個隱藏路徑段
+  fileViewer:
+    loadFailed: 載入失敗：{error}
+    noContent: 暫無內容
+  fileMeta:
+    size: 檔案大小
+    modifiedAt: 修改時間
+    createdAt: 建立時間
+    unavailableA11y: 不可用
+
+filePicker:
+  placeholder: 請選擇檔案路徑
+  clearInput: 清空輸入
+  sort:
+    name: 名稱
+    modifiedTime: 修改時間
+    createdTime: 建立時間
+    size: 檔案大小
+    directionAsc: 升序
+    directionDesc: 降序
+  zoom:
+    small: 小
+    medium: 中
+    large: 大
+    extraLarge: 超大
+  more:
+    title: 更多
+    sortTitle: 排序方式
+    sortFieldTitle: 排序欄位
+    sortOrderTitle: 排序方向
+    filtersTitle: 篩選
+    showSupportedOnly: 隱藏不支援格式檔案
+    zoomTitle: 圖標尺寸
+    recentTitle: 最近歷史
+    showRecentHistory: 顯示最近選擇欄
+    clearRecentHistory: 清空最近歷史
+  recent:
+    title: 最近選擇
+
+app:
+  name: WebGAL Craft
+  description: WebGAL 視覺小說工作室
+
+home:
   header:
+    about: 關於
+  tabs:
+    recent: 最近創作
+    engines: 遊戲引擎
+  search:
+    placeholder:
+      recent: 搜尋最近創作...
+      engines: 搜尋遊戲引擎...
+  welcome:
+    title: 歡迎使用 WebGAL Craft
+    subtitle: 開始你的遊戲創作之旅，編寫屬於你的故事
+    welcomeBack: 歡迎回來
+    welcomeBackSubtitle: 繼續你的遊戲編輯或開始新的創作
+    createGame: 建立遊戲
+    openGame: 開啟遊戲
+  games:
+    creating: 遊戲建立中……
+    modifiedAt: 修改於 {time}
+    noGames: 沒有找到最近的創作
+    noGamesDesc: 你還沒有建立或開啟過任何遊戲
+    importGame: 匯入遊戲
+    importGameHint: 點擊瀏覽或拖放遊戲資料夾到此處
+    createNewGame: 建立新遊戲
+    deleteGame: 刪除遊戲
+    dropGameFolder: 將遊戲資料夾拖放到此處匯入
+    gameCover: "{name} 遊戲封面"
+    gameIcon: "{name} 遊戲圖示"
+    importSuccess: 遊戲匯入成功
+    importInvalidFolder: 這不是一個有效的遊戲資料夾
+    importUnknownError: 匯入遊戲時發生未知錯誤
+    importMultipleFolders: 一次只能匯入一個遊戲資料夾
+    importCreating: 遊戲正在建立中，請等待建立完成
+  engines:
+    noEngines: 沒有可用的遊戲引擎
+    noEnginesDesc: 你需要安裝遊戲引擎才能建立遊戲
+    installEngine: 安裝引擎
+    installEngineHint: 點擊瀏覽或拖放引擎資料夾到此處
+    installGameEngine: 安裝遊戲引擎
+    uninstallEngine: 卸載引擎
+    dropEngineFolder: 將遊戲引擎資料夾拖放到此處
+    engineIcon: "{name} 引擎圖示"
+    importSuccess: 引擎匯入成功
+    importInvalidFolder: 這不是一個有效的引擎資料夾
+    importUnknownError: 匯入引擎時發生未知錯誤
+    importMultipleFolders: 一次只能匯入一個引擎資料夾
+    noEngineTitle: 沒有找到可用的遊戲引擎
+    noEngineContent: 需要先安裝遊戲引擎，才能建立遊戲
+    goToInstall: 前往安裝
+    later: 之後再說
+
+modals:
+  about:
+    homepage: 官方網站
+    sourceCode: 原始碼倉庫
+    issues: 問題回報
+    copyright: "© 2025 Akirami"
+    license: License MPL-2.0
+  createGame:
+    title: 建立新遊戲
+    description: 從這裡開始你的新創作
+    gameName: 遊戲名稱
+    saveLocation: 儲存位置
+    gameEngine: 遊戲引擎
+    selectEngine: 選擇遊戲引擎
+    create: 建立
+    pathNotEmpty: 遊戲儲存目錄必須不存在或為空
+    selectSaveLocation: 遊戲儲存位置
+  deleteGame:
+    title: 刪除遊戲
+    description: 確定要刪除遊戲 {name} 嗎？
+    deleteFiles: 同時刪除遊戲檔案
+    deleteSuccess: 遊戲刪除成功
+  deleteFile:
+    title: 確定要刪除檔案 {name} 嗎？
+    folderTitle: 確定要刪除資料夾 {name} 及其內容？
+    description: 你可以從資源回收桶還原此檔案。
+    folderDescription: 刪除後你可以從資源回收桶還原此資料夾及內容。
+    skipConfirm: 不再顯示此提示
+  deleteGameConfirm:
+    title: 最終確認
+    description: 此操作無法復原。請輸入遊戲名稱 {name} 以確認刪除。
+    gameName: 遊戲名稱
+    placeholder: "請輸入 {name} 以確認"
+    confirmDelete: 確認刪除
+  deleteEngine:
+    title: 卸載引擎
+    description: 確定要卸載引擎 {name} 嗎？
+    warning: 此操作將刪除引擎檔案，且無法恢復。
+    uninstallSuccess: 引擎卸載成功
+  discoveredResources:
+    gamesTitle: 發現遊戲
+    enginesTitle: 發現引擎
+    gamesDescription: 在預設遊戲目錄中發現了 {count} 個遊戲，是否匯入？
+    enginesDescription: 在預設引擎目錄中發現了 {count} 個引擎，是否匯入？
+    selectAll: 全選
+    deselectAll: 取消全選
+    selected: 已選擇 {count}/{total}
+    skip: 跳過
+    import: 匯入 ({count})
+  gameConfig:
+    title: 遊戲設定
+  effectEditor:
+    title: 效果編輯器
+    description: 編輯視覺變換、濾鏡和效果參數
+    apply: 套用
+    reset: 還原
+    categories:
+      transform: 變換
+      effects: 效果
+      colorAdjustment: 顏色調整
+      bloom: 泛光
+      bevel: 斜面
+      filters: 濾鏡
+    params:
+      positionX: X 位移
+      positionY: Y 位移
+      scaleX: X 縮放
+      scaleY: Y 縮放
+      scale: 縮放
+      rotation: 旋轉
+      alpha: 不透明度
+      blur: 模糊
+      brightness: 亮度
+      contrast: 對比度
+      saturation: 飽和度
+      gamma: 伽瑪
+      color: 著色
+      bloom: 強度
+      bloomBrightness: 亮度
+      bloomBlur: 模糊
+      bloomThreshold: 閾值
+      bevel: 不透明度
+      bevelThickness: 厚度
+      bevelRotation: 旋轉
+      bevelSoftness: 柔和度
+      bevelColor: 顏色
+      oldFilm: 老電影
+      dotFilm: 點陣
+      reflectionFilm: 反射
+      glitchFilm: 故障
+      rgbFilm: RGB 分離
+      godrayFilm: 光束
+    filterOptions:
+      default: 預設
+      "on": 開啟
+      "off": 關閉
+  upgrade:
+    title: 更新
+  createFile:
+    title: 建立場景檔案
+    description: 開始一個新的場景
+    fileNamePlaceholder: 請輸入檔案名稱
+    fileNameRequired: 檔案名稱不能為空
+    fileExists: 檔案已存在
+    create: 建立
+  settings:
+    description: 在這裡管理您的設定，根據需要個人化您的體驗
+    tabs:
+      general: 一般
+      edit: 編輯
+      preview: 預覽
+      storage: 儲存
+  saveChanges:
+    title: 是否要儲存對 {name} 的變更?
+    description: 如果不儲存，你的變更將遺失。
+    save: 儲存
+    dontSave: 不儲存
+  discardEffectChanges:
+    title: 是否要套用效果編輯器的變更？
+    description: 如果不套用，你的變更將被捨棄。
+    apply: 套用
+    discard: 捨棄
+
+edit:
+  header:
+    testGame: 測試遊戲
     export: 匯出
     gameSettings: 遊戲設定
     missingPreviewUrl: 預覽地址不存在，請先啟動預覽
     openFailed: 開啟測試視窗失敗
-    testGame: 測試遊戲
-  previewPanel:
-    copyUrl: 複製網址
-    copyUrlSuccess: 複製網址成功
-    openFailed: 開啟預覽失敗
-    openInBrowser: 在瀏覽器中開啟
-    previewTitle: 遊戲預覽 - {name}
-    refreshPreview: 重新整理預覽
-  scenePanel:
-    resource: 資源
-    scene: 場景
-  statusBar:
-    statements: '{count} 條語句'
-  textEditor:
-    formPanel:
-      noStatement: 移動游標到語句行以編輯
-    languages:
-      webgalanimation: WebGAL 動畫
-      webgalscript: WebGAL 腳本
-    stats:
-      lines: '{count} 行,'
-      words: '{count} 字'
-  unsupported:
-    binaryFile: 該檔案是二進位檔案或使用了不受支援的文字編碼，無法在編輯器中顯示。
-    loadFailed: 無法偵測檔案類型：{error}
-  visualEditor:
-    addOption: 新增選項
-    addStyleRule: 新增樣式替換
-    advancedParams: 進階參數
-    assetPreview:
-      loadFailed: 載入失敗
-    commandPanel: 命令面板
+  empty:
+    title: 沒有開啟的檔案
+    description: 從左側檔案列表中選擇一個檔案開始編輯，或建立一個新的場景檔案
+    createScene: 建立場景檔案
+  completion:
     commands:
-      applyStyle: 套用樣式
+      changeBg: 切換背景圖片
+      changeFigure: 切換角色立繪
       bgm: 背景音樂
-      callScene: 呼叫場景
-      callSteam: 呼叫 Steam
-      changeBg: 背景
-      changeFigure: 立繪
-      changeScene: 切換場景
-      choose: 分支選擇
-      comment: 註解
-      end: 結束遊戲
-      filmMode: 電影模式
-      getUserInput: 取得輸入
+      playVideo: 播放影片
+      pixiPerform: 套用特效
+      pixiInit: 初始化/重置特效
       intro: 全螢幕文字
-      jumpLabel: 跳轉標籤
-      label: 標籤
-      miniAvatar: 小頭像
-      pixi: 使用特效
-      pixiInit: 重置特效
-      playEffect: 音效
-      say: 對話
-      setAnimation: 調用動畫
-      setComplexAnimation: 內建動畫
-      setTempAnimation: 進階動畫
-      setTextbox: 文字框
-      setTransform: 簡單動畫
-      setTransition: 過渡動畫
+      miniAvatar: 角落小頭像
+      changeScene: 切換場景
+      choose: 分支選項
+      end: 結束遊戲並返回標題介面
+      setComplexAnimation: 設定內建動畫
+      label: 設定標籤
+      jumpLabel: 跳轉至標籤
       setVar: 設定變數
+      callScene: 呼叫場景
       showVars: 顯示變數
-      unknown: 未識別
-      unlockBgm: 解鎖鑑賞音樂
-      unlockCg: 解鎖鑑賞圖片
-      video: 影片
-      wait: 等待
-    effectEditor: 效果編輯器
-    filePicker:
-      background: 選擇背景檔案
-      bgm: 選擇音樂檔案
-      figure: 選擇立繪檔案
-      miniAvatar: 選擇小頭像檔案
-      playEffect: 選擇音效檔案
-      scene: 選擇場景檔案
-      unlockBgm: 選擇鑑賞音樂檔案
-      unlockCg: 選擇鑑賞圖片檔案
-      video: 選擇影片檔案
-      vocal: 選擇語音檔案
-    narrationMode: 旁白模式
-    noResults: 未找到結果
-    noSelection: 請選擇一條語句進行編輯
-    options:
-      animFadeIn: 淡入
-      animFlagOff: 關閉
-      animFlagOn: 開啟
-      animPixelate: 像素化
-      animReveal: 揭示
-      animSlideIn: 滑入
-      animTyping: 打字效果
-      blendAdd: 線性減淡
-      blendMultiply: 正片疊底
-      blendNormal: 正常
-      blendScreen: 濾色
-      center: 中間
-      custom: 自訂
-      default: 預設
-      delaySeconds: '{seconds} 秒'
-      easeAnticipate: 預先反向
-      easeBackIn: 起點回彈
-      easeBackInOut: 起止回彈
-      easeBackOut: 終點回彈
-      easeBounceIn: 起點彈跳
-      easeBounceInOut: 起止彈跳
-      easeBounceOut: 終點彈跳
-      easeCircIn: 圓形緩入
-      easeCircInOut: 圓形緩入緩出
-      easeCircOut: 圓形緩出
-      easeIn: 緩入
-      easeInOut: 緩入緩出
-      easeLinear: 線性
-      easeOut: 緩出
-      effectCherryBlossoms: 櫻花
-      effectHeavySnow: 大雪
-      effectRain: 雨
-      effectSnow: 雪
-      figureCenter: 中間立繪
-      figureLeft: 左側立繪
-      figureRight: 右側立繪
-      large: 大
-      left: 左側
-      medium: 中
-      notSelected: 未選擇
-      right: 右側
-      small: 小
-      targetBgMain: 背景圖片
-      targetFigCenter: 中間立繪
-      targetFigLeft: 左側立繪
-      targetFigRight: 右側立繪
-      targetStageMain: 舞台畫面
-      universalSoftIn: 通用透明度淡入
-      universalSoftOff: 通用透明度淡出
-      unspecified: 未指定
-      useFigureId: 使用立繪 ID
-    params:
-      achievementId: 解鎖成就 ID
-      animation: 動畫效果
-      animationFlag: 口型同步與眨眼
-      animationName: 動畫
-      associatedFigure: 關聯立繪
-      associatedFigureId: 立繪 ID
+      unlockCg: 解鎖 CG 鑑賞
+      unlockBgm: 解鎖 BGM 鑑賞
+      filmMode: 電影模式
+      setTextbox: 設定對話框
+      setAnimation: 調用動畫
+      playEffect: 播放音效
+      setTempAnimation: 設定進階動畫
+      setTransform: 設定簡單動畫
+      setTransition: 設定過渡動畫
+      getUserInput: 取得輸入
+      applyStyle: 套用樣式
+      wait: 等待一段時間
+    arguments:
+      when: 執行條件
+      continue: 自動續行
+      next: 並行執行
+      notend: 繼續播放下一段
+      concat: 接續上一段對話
+      vocal: 語音
+      fontSize: 字體大小
+      fontColor: 字體顏色
       backgroundColor: 背景顏色
       backgroundImage: 背景圖片
-      blendMode: 混合模式
-      blink: 眨眼參數
-      blinkInterval: 眨眼間隔
-      blinkIntervalRandom: 眨眼間隔隨機偏移
-      bounds: 繪製邊界
-      buttonText: 確認按鈕文字
-      choiceText: 選項文字
-      closedDuration: 保持閉眼
-      closingDuration: 閉眼時長
-      commentContent: 註解內容
-      concat: 接續上段
-      continue: 自動續行
-      customTargetId: 目標 ID
-      defaultEnterDuration: 預設入場動畫時間
-      defaultExitDuration: 預設退場動畫時間
-      defaultValue: 預設值
-      delayTime: 延遲時間
-      dialogue: 對話內容
-      duration: 過渡時間
-      ease: 緩動類型
-      effectCustomName: 特效名稱
-      effectName: 特效
-      enter: 淡入時間
-      enterAnimation: 入場動畫
-      exitAnimation: 退場動畫
-      expression: 表情
-      eyesClose: 閉眼差分
-      eyesHalfOpen: 半睜眼差分
-      eyesOpen: 睜眼差分
-      figureId: ID
-      fileName: 檔案
-      filmModeState: 開啟
-      filmModeStateOff: 關閉
-      focus: 注視參數
-      focusInstant: 立即注視
-      focusX: 注視點X
-      focusY: 注視點Y
-      fontColor: 字體顏色
-      fontSize: 文字大小
-      global: 全域變數
-      hold: 結束後停留
-      id: ID
-      inputTitle: 對話框標題
-      introText: 文字內容
-      introTextPlaceholder: 用 {'|'} 分隔多行
-      keep: 跨語句播放
-      labelName: 標籤名
-      motion: 動作
-      mouthClose: 閉口差分
-      mouthHalfOpen: 半張口差分
-      mouthOpen: 張口差分
-      next: 並行執行
-      notend: 繼續播放
-      openingDuration: 睜眼時長
-      position: 位置
-      rawText: 原始文字
-      series: 所屬系列
-      skipOff: 禁止跳過
-      speaker: 說話人
-      spineMotion: 動畫
-      target: 目標
-      textboxState: 顯示
-      textboxStateOff: 隱藏
-      transform: 變換
-      transformJson: 變換 JSON
-      unitMs: 毫秒
-      unlockDisplayName: 顯示名稱
-      unlockname: 解鎖名稱
-      userForward: 點擊顯示下一句
-      varName: 變數名
-      varValue: 變數值
-      vocal: 語音
-      volume: 音量
-      waitTime: 時間
-      writeDefault: 繼承預設
+      figureId: 立繪 ID
+      left: 左側位置
+      right: 右側位置
+      center: 中間位置
       zIndex: 顯示層級
-    placeholder:
-      comment: 輸入註解…
-      newStyleName: 新樣式名
-      oldStyleName: 原樣式名
-      optionName: 選項文字
-      sceneFile: 場景檔案名
-      searchAnimation: 搜尋動畫
-      searchExpression: 搜尋表情
-      searchMotion: 搜尋動作
-      speaker: 角色名
+      animationFlag: 動畫標誌
+      mouthOpen: 立繪張口差分
+      mouthHalfOpen: 立繪半張口差分
+      mouthClose: 立繪閉口差分
+      eyesOpen: 立繪睜眼差分
+      eyesClose: 立繪閉眼差分
+      motion: Live2D/Spine 動作
+      expression: Live2D 表情
+      bounds: Live2D 邊界擴展
+      blink: Live2D 眨眼參數
+      focus: Live2D 注視參數
+      transform: 變換效果
+      enter: 入場動畫
+      exit: 退場動畫
+      duration: 動畫持續時間（毫秒）
+      ease: 動畫緩動類型
+      animationTarget: 動畫目標物件
+      transitionTarget: 過渡目標物件
+      animation: 每行文字入場動畫
+      delayTime: 每行文字入場延遲時間
+      writeDefault: 填充預設值
+      keep: 跨語句播放動畫
+      volume: 音量大小（0-100）
+      soundEffectId: 音效 ID
+      unlockName: "解鎖 {type} 名稱"
+      unlockSeries: "{type} 所屬系列"
+      skipOff: 禁止跳過
+      hold: 結束後停留
+      userForward: 點擊顯示下一句
+      title: 輸入框標題
+      buttonText: 確認按鈕文字
+      defaultValue: 輸入框預設值
+  unsupported:
+    binaryFile: 該檔案是二進位檔案或使用了不受支援的文字編碼，無法在編輯器中顯示。
+    loadFailed: "無法偵測檔案類型：{error}"
+  textEditor:
+    languages:
+      webgalscript: WebGAL 腳本
+      webgalanimation: WebGAL 動畫
+    stats:
+      lines: "{count} 行,"
+      words: "{count} 字"
+    formPanel:
+      noStatement: 移動游標到語句行以編輯
+  scenePanel:
+    scene: 場景
+    resource: 資源
+  statusBar:
+    statements: "{count} 條語句"
+  fileTree:
+    newFile: 新建檔案
+    newFolder: 新建資料夾
+    defaultFileName: 新檔案.txt
+    defaultFolderName: 新資料夾
+    rename: 重新命名
+    deleteSuccess: 刪除成功
+    deleteFailed: 刪除失敗
+    copy: 複製
+    cut: 剪下
+    paste: 貼上
+    revealInExplorer: 在檔案總管中顯示
+    pasteSuccess: 貼上成功
+    pasteFailed: 貼上失敗
+    pastePartialFailed: 部分貼上失敗 ({failed}/{total})
+    pasteMultipleSuccess: 成功貼上 {count} 個項目
+  previewPanel:
+    copyUrl: 複製網址
+    refreshPreview: 重新整理預覽
+    openInBrowser: 在瀏覽器中開啟
+    copyUrlSuccess: 複製網址成功
+    openFailed: 開啟預覽失敗
+    previewTitle: "遊戲預覽 - {name}"
+  assetPanel:
+    tabs:
+      figure: 立繪
+      background: 背景
+      bgm: 音樂
+      vocal: 語音
+      video: 影片
+      animation: 動畫
+      template: 模板
+    searchPlaceholder: 搜尋檔案或資料夾
+    sort:
+      by: 排序
+      name: 名稱
+      modifiedTime: 修改時間
+      createdTime: 建立時間
+      size: 檔案大小
+      directionAsc: 升序
+      directionDesc: 降序
+    actions:
+      toggleSearch: 切換搜尋
+      sortField: 排序欄位
+      sortOrder: 排序方向
+      viewGrid: 網格檢視
+      viewList: 清單檢視
+      zoomOut: 縮小
+      zoomIn: 放大
+      zoomReset: 重設縮放
+  editorMode:
+    textMode: 切換文字
+    visualMode: 切換視覺化
+    toggleSidebar: 切換輔助面板
+  visualEditor:
     playToLine: 執行到此句
-    statementList: 語句列表
+    commandPanel: 命令面板
+    narrationMode: 旁白模式
     types:
       comment: 註解
       narration: 旁白
-  welcome:
-    newFile: 新建檔案
-    selectOrCreate: 選擇一個檔案開始編輯，或建立新檔案
-    startEditing: 開始編輯
-filePicker:
-  clearInput: 清空輸入
-  more:
-    clearRecentHistory: 清空最近歷史
-    filtersTitle: 篩選
-    recentTitle: 最近歷史
-    showRecentHistory: 顯示最近選擇欄
-    showSupportedOnly: 隱藏不支援格式檔案
-    sortFieldTitle: 排序欄位
-    sortOrderTitle: 排序方向
-    sortTitle: 排序方式
-    title: 更多
-    zoomTitle: 圖標尺寸
-  placeholder: 請選擇檔案路徑
-  recent:
-    title: 最近選擇
-  sort:
-    createdTime: 建立時間
-    directionAsc: 升序
-    directionDesc: 降序
-    modifiedTime: 修改時間
-    name: 名稱
-    size: 檔案大小
-  zoom:
-    extraLarge: 超大
-    large: 大
-    medium: 中
-    small: 小
-home:
-  engines:
-    dropEngineFolder: 將遊戲引擎資料夾拖放到此處
-    engineIcon: '{name} 引擎圖示'
-    goToInstall: 前往安裝
-    importInvalidFolder: 這不是一個有效的引擎資料夾
-    importMultipleFolders: 一次只能匯入一個引擎資料夾
-    importSuccess: 引擎匯入成功
-    importUnknownError: 匯入引擎時發生未知錯誤
-    installEngine: 安裝引擎
-    installEngineHint: 點擊瀏覽或拖放引擎資料夾到此處
-    installGameEngine: 安裝遊戲引擎
-    later: 之後再說
-    noEngineContent: 需要先安裝遊戲引擎，才能建立遊戲
-    noEngineTitle: 沒有找到可用的遊戲引擎
-    noEngines: 沒有可用的遊戲引擎
-    noEnginesDesc: 你需要安裝遊戲引擎才能建立遊戲
-    uninstallEngine: 卸載引擎
-  games:
-    createNewGame: 建立新遊戲
-    creating: 遊戲建立中……
-    deleteGame: 刪除遊戲
-    dropGameFolder: 將遊戲資料夾拖放到此處匯入
-    gameCover: '{name} 遊戲封面'
-    gameIcon: '{name} 遊戲圖示'
-    importCreating: 遊戲正在建立中，請等待建立完成
-    importGame: 匯入遊戲
-    importGameHint: 點擊瀏覽或拖放遊戲資料夾到此處
-    importInvalidFolder: 這不是一個有效的遊戲資料夾
-    importMultipleFolders: 一次只能匯入一個遊戲資料夾
-    importSuccess: 遊戲匯入成功
-    importUnknownError: 匯入遊戲時發生未知錯誤
-    modifiedAt: 修改於 {time}
-    noGames: 沒有找到最近的創作
-    noGamesDesc: 你還沒有建立或開啟過任何遊戲
-  header:
-    about: 關於
-  search:
     placeholder:
-      engines: 搜尋遊戲引擎...
-      recent: 搜尋最近創作...
-  tabs:
-    engines: 遊戲引擎
-    recent: 最近創作
-  welcome:
-    createGame: 建立遊戲
-    openGame: 開啟遊戲
-    subtitle: 開始你的遊戲創作之旅，編寫屬於你的故事
-    title: 歡迎使用 WebGAL Craft
-    welcomeBack: 歡迎回來
-    welcomeBackSubtitle: 繼續你的遊戲編輯或開始新的創作
-modals:
-  about:
-    copyright: © 2025 Akirami
-    homepage: 官方網站
-    issues: 問題回報
-    license: License MPL-2.0
-    sourceCode: 原始碼倉庫
-  createFile:
-    create: 建立
-    description: 開始一個新的場景
-    fileExists: 檔案已存在
-    fileNamePlaceholder: 請輸入檔案名稱
-    fileNameRequired: 檔案名稱不能為空
-    title: 建立場景檔案
-  createGame:
-    create: 建立
-    description: 從這裡開始你的新創作
-    gameEngine: 遊戲引擎
-    gameName: 遊戲名稱
-    pathNotEmpty: 遊戲儲存目錄必須不存在或為空
-    saveLocation: 儲存位置
-    selectEngine: 選擇遊戲引擎
-    selectSaveLocation: 遊戲儲存位置
-    title: 建立新遊戲
-  deleteEngine:
-    description: 確定要卸載引擎 {name} 嗎？
-    title: 卸載引擎
-    uninstallSuccess: 引擎卸載成功
-    warning: 此操作將刪除引擎檔案，且無法恢復。
-  deleteFile:
-    description: 你可以從資源回收桶還原此檔案。
-    folderDescription: 刪除後你可以從資源回收桶還原此資料夾及內容。
-    folderTitle: 確定要刪除資料夾 {name} 及其內容？
-    skipConfirm: 不再顯示此提示
-    title: 確定要刪除檔案 {name} 嗎？
-  deleteGame:
-    deleteFiles: 同時刪除遊戲檔案
-    deleteSuccess: 遊戲刪除成功
-    description: 確定要刪除遊戲 {name} 嗎？
-    title: 刪除遊戲
-  deleteGameConfirm:
-    confirmDelete: 確認刪除
-    description: 此操作無法復原。請輸入遊戲名稱 {name} 以確認刪除。
-    gameName: 遊戲名稱
-    placeholder: 請輸入 {name} 以確認
-    title: 最終確認
-  discardEffectChanges:
-    apply: 套用
-    description: 如果不套用，你的變更將被捨棄。
-    discard: 捨棄
-    title: 是否要套用效果編輯器的變更？
-  discoveredResources:
-    deselectAll: 取消全選
-    enginesDescription: 在預設引擎目錄中發現了 {count} 個引擎，是否匯入？
-    enginesTitle: 發現引擎
-    gamesDescription: 在預設遊戲目錄中發現了 {count} 個遊戲，是否匯入？
-    gamesTitle: 發現遊戲
-    import: 匯入 ({count})
-    selectAll: 全選
-    selected: 已選擇 {count}/{total}
-    skip: 跳過
-  effectEditor:
-    apply: 套用
-    categories:
-      bevel: 斜面
-      bloom: 泛光
-      colorAdjustment: 顏色調整
-      effects: 效果
-      filters: 濾鏡
-      transform: 變換
-    description: 編輯視覺變換、濾鏡和效果參數
-    filterOptions:
-      default: 預設
-      'off': 關閉
-      'on': 開啟
+      comment: 輸入註解…
+      speaker: 角色名
+      optionName: 選項文字
+      sceneFile: 場景檔案名
+      oldStyleName: 原樣式名
+      newStyleName: 新樣式名
+      searchMotion: 搜尋動作
+      searchAnimation: 搜尋動畫
+      searchExpression: 搜尋表情
+    addOption: 新增選項
+    addStyleRule: 新增樣式替換
+    advancedParams: 進階參數
+    commands:
+      say: 對話
+      comment: 註解
+      changeBg: 背景
+      changeFigure: 立繪
+      miniAvatar: 小頭像
+      bgm: 背景音樂
+      playEffect: 音效
+      video: 影片
+      changeScene: 切換場景
+      callScene: 呼叫場景
+      choose: 分支選擇
+      label: 標籤
+      jumpLabel: 跳轉標籤
+      end: 結束遊戲
+      setVar: 設定變數
+      showVars: 顯示變數
+      getUserInput: 取得輸入
+      wait: 等待
+      setTextbox: 文字框
+      filmMode: 電影模式
+      callSteam: 呼叫 Steam
+      setAnimation: 調用動畫
+      setComplexAnimation: 內建動畫
+      setTransform: 簡單動畫
+      setTransition: 過渡動畫
+      pixi: 使用特效
+      pixiInit: 重置特效
+      setTempAnimation: 進階動畫
+      applyStyle: 套用樣式
+      intro: 全螢幕文字
+      unlockCg: 解鎖鑑賞圖片
+      unlockBgm: 解鎖鑑賞音樂
+      unknown: 未識別
     params:
-      alpha: 不透明度
-      bevel: 不透明度
-      bevelColor: 顏色
-      bevelRotation: 旋轉
-      bevelSoftness: 柔和度
-      bevelThickness: 厚度
-      bloom: 強度
-      bloomBlur: 模糊
-      bloomBrightness: 亮度
-      bloomThreshold: 閾值
-      blur: 模糊
-      brightness: 亮度
-      color: 著色
-      contrast: 對比度
-      dotFilm: 點陣
-      gamma: 伽瑪
-      glitchFilm: 故障
-      godrayFilm: 光束
-      oldFilm: 老電影
-      positionX: X 位移
-      positionY: Y 位移
-      reflectionFilm: 反射
-      rgbFilm: RGB 分離
-      rotation: 旋轉
-      saturation: 飽和度
-      scale: 縮放
-      scaleX: X 縮放
-      scaleY: Y 縮放
-    reset: 還原
-    title: 效果編輯器
-  gameConfig:
-    title: 遊戲設定
-  saveChanges:
-    description: 如果不儲存，你的變更將遺失。
-    dontSave: 不儲存
-    save: 儲存
-    title: 是否要儲存對 {name} 的變更?
-  settings:
-    description: 在這裡管理您的設定，根據需要個人化您的體驗
-    tabs:
-      edit: 編輯
-      general: 一般
-      preview: 預覽
-      storage: 儲存
-  upgrade:
-    title: 更新
-notFound:
-  message: 頁面不存在
-settings:
-  edit:
-    autoApplyEffectEditorChanges:
-      description: 啟用後，效果編輯器中的參數變更會自動寫回語句
-      label: 自動套用效果編輯器變更
-    autoSave:
-      description: 啟用後，編輯器將自動儲存您的變更
-      label: 自動儲存
-    collapseStatementsOnSidebarOpen:
-      description: 開啟輔助面板時，鎖定所有語句卡片為摺疊狀態
-      label: 展開輔助面板時強制摺疊全部語句
-    effectEditorSide:
-      description: 選擇效果編輯器抽屜從哪一側滑出
-      label: 效果編輯器滑出方向
+      continue: 自動續行
+      next: 並行執行
+      concat: 接續上段
+      notend: 繼續播放
+      vocal: 語音
+      volume: 音量
+      associatedFigure: 關聯立繪
+      fontSize: 文字大小
+      dialogue: 對話內容
+      speaker: 說話人
+      commentContent: 註解內容
+      rawText: 原始文字
+      fileName: 檔案
+      figureId: ID
+      associatedFigureId: 立繪 ID
+      position: 位置
+      motion: 動作
+      spineMotion: 動畫
+      expression: 表情
+      transform: 變換
+      duration: 過渡時間
+      ease: 緩動類型
+      mouthOpen: 張口差分
+      mouthHalfOpen: 半張口差分
+      mouthClose: 閉口差分
+      eyesOpen: 睜眼差分
+      eyesHalfOpen: 半睜眼差分
+      eyesClose: 閉眼差分
+      enter: 淡入時間
+      unlockname: 解鎖名稱
+      series: 所屬系列
+      id: ID
+      achievementId: 解鎖成就 ID
+      skipOff: 禁止跳過
+      choiceText: 選項文字
+      labelName: 標籤名
+      varName: 變數名
+      varValue: 變數值
+      global: 全域變數
+      inputTitle: 對話框標題
+      buttonText: 確認按鈕文字
+      defaultValue: 預設值
+      waitTime: 時間
+      unitMs: 毫秒
+      textboxState: 顯示
+      textboxStateOff: 隱藏
+      filmModeState: 開啟
+      filmModeStateOff: 關閉
+      animationName: 動畫
+      target: 目標
+      transformJson: 變換 JSON
+      enterAnimation: 入場動畫
+      exitAnimation: 退場動畫
+      defaultEnterDuration: 預設入場動畫時間
+      defaultExitDuration: 預設退場動畫時間
+      effectName: 特效
+      effectCustomName: 特效名稱
+      introText: 文字內容
+      introTextPlaceholder: "用 {'|'} 分隔多行"
+      backgroundColor: 背景顏色
+      backgroundImage: 背景圖片
+      fontColor: 字體顏色
+      hold: 結束後停留
+      unlockDisplayName: 顯示名稱
+      animation: 動畫效果
+      delayTime: 延遲時間
+      userForward: 點擊顯示下一句
+      animationFlag: 口型同步與眨眼
+      blendMode: 混合模式
+      bounds: 繪製邊界
+      blink: 眨眼參數
+      blinkInterval: 眨眼間隔
+      blinkIntervalRandom: 眨眼間隔隨機偏移
+      openingDuration: 睜眼時長
+      closingDuration: 閉眼時長
+      closedDuration: 保持閉眼
+      focus: 注視參數
+      focusX: 注視點X
+      focusY: 注視點Y
+      focusInstant: 立即注視
+      zIndex: 顯示層級
+      writeDefault: 繼承預設
+      keep: 跨語句播放
+      customTargetId: 目標 ID
+    filePicker:
+      vocal: 選擇語音檔案
+      background: 選擇背景檔案
+      figure: 選擇立繪檔案
+      miniAvatar: 選擇小頭像檔案
+      bgm: 選擇音樂檔案
+      playEffect: 選擇音效檔案
+      video: 選擇影片檔案
+      scene: 選擇場景檔案
+      unlockCg: 選擇鑑賞圖片檔案
+      unlockBgm: 選擇鑑賞音樂檔案
+    assetPreview:
+      loadFailed: 載入失敗
+    options:
+      unspecified: 未指定
+      notSelected: 未選擇
+      default: 預設
       left: 左側
+      center: 中間
       right: 右側
-    enablePreviewTab:
-      description: 單擊檔案時以預覽模式開啟，雙擊或編輯後固定為普通標籤頁
-      label: 啟用預覽標籤頁
+      figureLeft: 左側立繪
+      figureCenter: 中間立繪
+      figureRight: 右側立繪
+      useFigureId: 使用立繪 ID
+      blendNormal: 正常
+      blendAdd: 線性減淡
+      blendMultiply: 正片疊底
+      blendScreen: 濾色
+      small: 小
+      medium: 中
+      large: 大
+      easeLinear: 線性
+      easeIn: 緩入
+      easeOut: 緩出
+      easeInOut: 緩入緩出
+      easeCircIn: 圓形緩入
+      easeCircOut: 圓形緩出
+      easeCircInOut: 圓形緩入緩出
+      easeBackIn: 起點回彈
+      easeBackOut: 終點回彈
+      easeBackInOut: 起止回彈
+      easeBounceIn: 起點彈跳
+      easeBounceOut: 終點彈跳
+      easeBounceInOut: 起止彈跳
+      easeAnticipate: 預先反向
+      targetFigLeft: 左側立繪
+      targetFigCenter: 中間立繪
+      targetFigRight: 右側立繪
+      targetBgMain: 背景圖片
+      targetStageMain: 舞台畫面
+      custom: 自訂
+      delaySeconds: "{seconds} 秒"
+      animFadeIn: 淡入
+      animSlideIn: 滑入
+      animTyping: 打字效果
+      animPixelate: 像素化
+      animReveal: 揭示
+      animFlagOn: 開啟
+      animFlagOff: 關閉
+      effectRain: 雨
+      effectSnow: 雪
+      effectHeavySnow: 大雪
+      effectCherryBlossoms: 櫻花
+      universalSoftIn: 通用透明度淡入
+      universalSoftOff: 通用透明度淡出
+    effectEditor: 效果編輯器
+    statementList: 語句列表
+    noSelection: 請選擇一條語句進行編輯
+    noResults: 未找到結果
+  welcome:
+    startEditing: 開始編輯
+    selectOrCreate: 選擇一個檔案開始編輯，或建立新檔案
+    newFile: 新建檔案
+
+settings:
+  experimental:
+    tooltip: 這是一個實驗性功能，使用過程中可能會遇到問題
+  general:
+    followSystem: 跟隨系統
+    theme:
+      label: 主題
+      options:
+        light: 淺色
+        dark: 深色
+    language:
+      label: 語言
+      placeholder: 請選擇語言
+    openLastProject:
+      label: 啟動時開啟最後編輯的遊戲
+      description: 應用啟動時自動載入最後編輯的遊戲專案
+    autoInstallUpdates:
+      label: 自動安裝更新
+      description: 自動下載並安裝最新版本的應用程式
+  preview:
+    enableLivePreview:
+      label: 即時預覽
+      description: 編輯遊戲時即時預覽變更
+    enableFastPreview:
+      label: 快速語句預覽
+      description: 啟用快速預覽將顯著提高即時預覽效率
+    enableRealtimeEffectPreview:
+      label: 即時效果預覽
+      description: 在效果編輯器中調整參數時即時渲染預覽效果
+  edit:
+    general: 通用
+    textEditor: 文字編輯器
+    visualEditor: 視覺化編輯器
     fontFamily:
       label: 字體
       placeholder: 字體名稱
     fontSize:
       label: 字體大小
-    general: 通用
-    minimap:
-      description: 在編輯器右側顯示程式碼縮圖，方便快速定位
-      label: 程式碼縮圖
-    showSidebarAssetPreview:
-      description: 在編輯器輔助面板中預覽語句引用的圖片等資源
-      label: 輔助面板語句資源預覽
-    textEditor: 文字編輯器
-    visualEditor: 視覺化編輯器
     wordWrap:
-      description: 超出編輯器寬度的行自動換行顯示
       label: 自動換行
-  experimental:
-    tooltip: 這是一個實驗性功能，使用過程中可能會遇到問題
-  general:
-    autoInstallUpdates:
-      description: 自動下載並安裝最新版本的應用程式
-      label: 自動安裝更新
-    followSystem: 跟隨系統
-    language:
-      label: 語言
-      placeholder: 請選擇語言
-    openLastProject:
-      description: 應用啟動時自動載入最後編輯的遊戲專案
-      label: 啟動時開啟最後編輯的遊戲
-    theme:
-      label: 主題
-      options:
-        dark: 深色
-        light: 淺色
-  preview:
-    enableFastPreview:
-      description: 啟用快速預覽將顯著提高即時預覽效率
-      label: 快速語句預覽
-    enableLivePreview:
-      description: 編輯遊戲時即時預覽變更
-      label: 即時預覽
-    enableRealtimeEffectPreview:
-      description: 在效果編輯器中調整參數時即時渲染預覽效果
-      label: 即時效果預覽
+      description: 超出編輯器寬度的行自動換行顯示
+    minimap:
+      label: 程式碼縮圖
+      description: 在編輯器右側顯示程式碼縮圖，方便快速定位
+    autoSave:
+      label: 自動儲存
+      description: 啟用後，編輯器將自動儲存您的變更
+    enablePreviewTab:
+      label: 啟用預覽標籤頁
+      description: 單擊檔案時以預覽模式開啟，雙擊或編輯後固定為普通標籤頁
+    autoApplyEffectEditorChanges:
+      label: 自動套用效果編輯器變更
+      description: 啟用後，效果編輯器中的參數變更會自動寫回語句
+    collapseStatementsOnSidebarOpen:
+      label: 展開輔助面板時強制摺疊全部語句
+      description: 開啟輔助面板時，鎖定所有語句卡片為摺疊狀態
+    effectEditorSide:
+      description: 選擇效果編輯器抽屜從哪一側滑出
+      label: 效果編輯器滑出方向
+      left: 左側
+      right: 右側
+    showSidebarAssetPreview:
+      label: 輔助面板語句資源預覽
+      description: 在編輯器輔助面板中預覽語句引用的圖片等資源
   storage:
-    browse: 瀏覽
-    enginePath:
-      label: 引擎儲存位置
-      title: 選擇引擎儲存位置
     gamePath:
       label: 遊戲儲存位置
       title: 選擇遊戲儲存位置
+    enginePath:
+      label: 引擎儲存位置
+      title: 選擇引擎儲存位置
+    browse: 瀏覽
+
+notFound:
+  message: 頁面不存在

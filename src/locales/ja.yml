@@ -1,680 +1,687 @@
-app:
-  description: WebGAL ビジュアルノベルスタジオ
-  name: WebGAL Craft
 common:
-  back: 戻る
-  breadcrumb:
-    showHiddenSegmentsCount: 非表示のパス区間 {count} 件を表示
-  cancel: キャンセル
-  close: 閉じる
-  confirm: 確認
-  delete: 削除
-  dialogs:
-    selectEngineFolder: エンジンフォルダを選択
-    selectGameFolder: ゲームフォルダを選択
-  fileMeta:
-    createdAt: 作成日時
-    modifiedAt: 更新日時
-    size: ファイルサイズ
-    unavailableA11y: 利用不可
-  fileViewer:
-    loadFailed: 読み込みに失敗しました：{error}
-    noContent: コンテンツがありません
   loading: 読み込み中...
+  cancel: キャンセル
+  confirm: 確認
   moveToTrash: ゴミ箱に移動
-  openFolder: フォルダを開く
-  or: または
-  saved: 保存済み
+  delete: 削除
   settings: 設定
+  close: 閉じる
+  saved: 保存済み
   unsaved: 未保存
+  back: 戻る
+  or: または
+  openFolder: フォルダを開く
+  dialogs:
+    selectGameFolder: ゲームフォルダを選択
+    selectEngineFolder: エンジンフォルダを選択
   view:
     grid: グリッド表示
     list: リスト表示
-edit:
-  assetPanel:
-    actions:
-      sortField: 並び替え項目
-      sortOrder: 並び順
-      toggleSearch: 検索の切り替え
-      viewGrid: グリッド表示
-      viewList: リスト表示
-      zoomIn: 拡大
-      zoomOut: 縮小
-      zoomReset: ズームをリセット
-    searchPlaceholder: ファイルまたはフォルダを検索
-    sort:
-      by: 並び替え
-      createdTime: 作成日時
-      directionAsc: 昇順
-      directionDesc: 降順
-      modifiedTime: 更新日時
-      name: 名前
-      size: ファイルサイズ
-    tabs:
-      animation: アニメーション
-      background: 背景
-      bgm: 音楽
-      figure: 立ち絵
-      template: テンプレート
-      video: 動画
-      vocal: 音声
-  completion:
-    arguments:
-      animation: 各行の入場アニメーション
-      animationFlag: アニメーションフラグ
-      animationTarget: アニメーション対象オブジェクト
-      backgroundColor: 背景色
-      backgroundImage: 背景画像
-      blink: Live2D まばたきパラメータ
-      bounds: Live2D 境界拡張
-      buttonText: 確認ボタンテキスト
-      center: 中央位置
-      concat: 前のセリフに連結
-      continue: 自動続行
-      defaultValue: 入力欄デフォルト値
-      delayTime: 各行の入場遅延時間
-      duration: アニメーション時間（ms）
-      ease: イージングタイプ
-      enter: 入場アニメーション
-      exit: 退場アニメーション
-      expression: Live2D 表情
-      eyesClose: 目閉じ差分
-      eyesOpen: 目開き差分
-      figureId: 立ち絵 ID
-      focus: Live2D 注視パラメータ
-      fontColor: フォントカラー
-      fontSize: フォントサイズ
-      hold: 終了後に停止
-      keep: 行をまたぐアニメーション再生
-      left: 左側位置
-      motion: Live2D/Spine モーション
-      mouthClose: 口閉じ差分
-      mouthHalfOpen: 半開き差分
-      mouthOpen: 口開き差分
-      next: 並行実行
-      notend: 次の行に続ける
-      right: 右側位置
-      skipOff: スキップ禁止
-      soundEffectId: 効果音 ID
-      title: 入力欄タイトル
-      transform: 変換エフェクト
-      transitionTarget: トランジション対象オブジェクト
-      unlockName: 解放する {type} 名
-      unlockSeries: '{type} シリーズ'
-      userForward: クリックで次の文を表示
-      vocal: ボイス
-      volume: 音量（0-100）
-      when: 条件付き実行
-      writeDefault: デフォルト値を埋める
-      zIndex: 表示レイヤー
-    commands:
-      applyStyle: スタイルを適用
-      bgm: 背景音楽
-      callScene: シーンを呼び出し
-      changeBg: 背景画像を切り替え
-      changeFigure: キャラクター立ち絵を切り替え
-      changeScene: シーンを切り替え
-      choose: 分岐オプション
-      end: ゲームを終了してタイトル画面に戻る
-      filmMode: フィルムモード
-      getUserInput: 入力を取得
-      intro: 全画面テキスト
-      jumpLabel: ラベルへジャンプ
-      label: ラベルを設定
-      miniAvatar: コーナー小アバター
-      pixiInit: エフェクトを初期化/リセット
-      pixiPerform: エフェクトを適用
-      playEffect: 効果音を再生
-      playVideo: 動画を再生
-      setAnimation: アニメーションを呼び出し
-      setComplexAnimation: 内蔵アニメーションを設定
-      setTempAnimation: 高度アニメーションを設定
-      setTextbox: テキストボックスを設定
-      setTransform: シンプルアニメーションを設定
-      setTransition: 入退場アニメーションを設定
-      setVar: 変数を設定
-      showVars: 変数を表示
-      unlockBgm: BGM 鑑賞を解放
-      unlockCg: CG 鑑賞を解放
-      wait: 一定時間待機
-  editorMode:
-    textMode: テキストに切替
-    toggleSidebar: 補助パネル切替
-    visualMode: ビジュアルに切替
-  empty:
-    createScene: シーンファイルを作成
-    description: 左側のファイルリストからファイルを選択して編集を開始するか、新しいシーンファイルを作成してください
-    title: 開いているファイルがありません
-  fileTree:
-    copy: コピー
-    cut: 切り取り
-    defaultFileName: 新しいファイル.txt
-    defaultFolderName: 新しいフォルダー
-    deleteFailed: 削除に失敗しました
-    deleteSuccess: 削除に成功しました
-    newFile: 新しいファイル
-    newFolder: 新しいフォルダー
-    paste: 貼り付け
-    pasteFailed: 貼り付けに失敗しました
-    pasteMultipleSuccess: '{count} 個のアイテムを貼り付けました'
-    pastePartialFailed: 一部の貼り付けに失敗しました ({failed}/{total})
-    pasteSuccess: 貼り付けに成功しました
-    rename: 名前を変更
-    revealInExplorer: エクスプローラーで表示
+  breadcrumb:
+    showHiddenSegmentsCount: 非表示のパス区間 {count} 件を表示
+  fileViewer:
+    loadFailed: 読み込みに失敗しました：{error}
+    noContent: コンテンツがありません
+  fileMeta:
+    size: ファイルサイズ
+    modifiedAt: 更新日時
+    createdAt: 作成日時
+    unavailableA11y: 利用不可
+
+filePicker:
+  placeholder: ファイルパスを選択
+  clearInput: 入力をクリア
+  sort:
+    name: 名前
+    modifiedTime: 更新日時
+    createdTime: 作成日時
+    size: ファイルサイズ
+    directionAsc: 昇順
+    directionDesc: 降順
+  zoom:
+    small: 小
+    medium: 中
+    large: 大
+    extraLarge: 特大
+  more:
+    title: その他
+    sortTitle: 並び替え方法
+    sortFieldTitle: 並び替え項目
+    sortOrderTitle: 並び順
+    filtersTitle: フィルター
+    showSupportedOnly: 非対応形式を非表示
+    zoomTitle: アイコンサイズ
+    recentTitle: 最近の履歴
+    showRecentHistory: 最近選択バーを表示
+    clearRecentHistory: 最近の履歴をクリア
+  recent:
+    title: 最近選択
+
+app:
+  name: WebGAL Craft
+  description: WebGAL ビジュアルノベルスタジオ
+
+home:
   header:
+    about: について
+  tabs:
+    recent: 最近の作品
+    engines: ゲームエンジン
+  search:
+    placeholder:
+      recent: 最近の作品を検索...
+      engines: ゲームエンジンを検索...
+  welcome:
+    title: WebGAL Craft へようこそ
+    subtitle: ゲーム制作の旅を始めて、あなたの物語を書いてください
+    welcomeBack: おかえりなさい
+    welcomeBackSubtitle: ゲームの編集を続けるか、新しい作品を始めてください
+    createGame: ゲームを作成
+    openGame: ゲームを開く
+  games:
+    creating: ゲーム作成中……
+    modifiedAt: 更新日時 {time}
+    noGames: 最近の作品が見つかりません
+    noGamesDesc: まだゲームを作成または開いていません
+    importGame: ゲームをインポート
+    importGameHint: クリックして参照するか、ゲームフォルダをここにドラッグ＆ドロップ
+    createNewGame: 新しいゲームを作成
+    deleteGame: ゲームを削除
+    dropGameFolder: ゲームフォルダをここにドラッグ＆ドロップしてインポート
+    gameCover: "{name} ゲームカバー"
+    gameIcon: "{name} ゲームアイコン"
+    importSuccess: ゲームのインポートに成功しました
+    importInvalidFolder: これは有効なゲームフォルダではありません
+    importUnknownError: ゲームのインポート中に不明なエラーが発生しました
+    importMultipleFolders: 一度にインポートできるゲームフォルダは1つだけです
+    importCreating: ゲームを作成中です。作成の完了をお待ちください
+  engines:
+    noEngines: 利用可能なゲームエンジンがありません
+    noEnginesDesc: ゲームを作成するにはゲームエンジンをインストールする必要があります
+    installEngine: エンジンをインストール
+    installEngineHint: クリックして参照するか、エンジンフォルダをここにドラッグ＆ドロップ
+    installGameEngine: ゲームエンジンをインストール
+    uninstallEngine: エンジンをアンインストール
+    dropEngineFolder: ゲームエンジンフォルダをここにドラッグ＆ドロップ
+    engineIcon: "{name} エンジンアイコン"
+    importSuccess: エンジンのインポートに成功しました
+    importInvalidFolder: これは有効なエンジンフォルダではありません
+    importUnknownError: エンジンのインポート中に不明なエラーが発生しました
+    importMultipleFolders: 一度にインポートできるエンジンフォルダは1つだけです
+    noEngineTitle: 利用可能なゲームエンジンがありません
+    noEngineContent: ゲームを作成するには、まずゲームエンジンをインストールする必要があります
+    goToInstall: インストールに移動
+    later: 後で
+
+modals:
+  about:
+    homepage: 公式サイト
+    sourceCode: ソースコード
+    issues: 問題レポート
+    copyright: "© 2025 Akirami"
+    license: License MPL-2.0
+  createGame:
+    title: 新しいゲームを作成
+    description: ここから新しい作品を始めましょう
+    gameName: ゲーム名
+    saveLocation: 保存場所
+    gameEngine: ゲームエンジン
+    selectEngine: ゲームエンジンを選択
+    create: 作成
+    pathNotEmpty: ゲーム保存ディレクトリは存在しないか、空である必要があります
+    selectSaveLocation: ゲーム保存場所
+  deleteGame:
+    title: ゲームを削除
+    description: ゲーム {name} を削除してもよろしいですか？
+    deleteFiles: ゲームファイルも削除
+    deleteSuccess: ゲームの削除に成功しました
+  deleteFile:
+    title: ファイル {name} を削除しますか？
+    folderTitle: フォルダー {name} とその内容を削除しますか？
+    description: このファイルはゴミ箱から復元できます。
+    folderDescription: このフォルダーとその内容はゴミ箱から復元できます。
+    skipConfirm: 今後この確認を表示しない
+  deleteGameConfirm:
+    title: 最終確認
+    description: この操作は元に戻せません。ゲーム名 {name} を入力して削除を確認してください。
+    gameName: ゲーム名
+    placeholder: "{name} を入力して確認"
+    confirmDelete: 削除を確認
+  deleteEngine:
+    title: エンジンをアンインストール
+    description: エンジン {name} をアンインストールしてもよろしいですか？
+    warning: この操作はエンジンファイルを削除し、復元できません。
+    uninstallSuccess: エンジンのアンインストールに成功しました
+  discoveredResources:
+    gamesTitle: ゲームを発見
+    enginesTitle: エンジンを発見
+    gamesDescription: デフォルトのゲームディレクトリで {count} 個のゲームが見つかりました。インポートしますか？
+    enginesDescription: デフォルトのエンジンディレクトリで {count} 個のエンジンが見つかりました。インポートしますか？
+    selectAll: すべて選択
+    deselectAll: すべて選択解除
+    selected: 選択済み {count}/{total}
+    skip: スキップ
+    import: インポート ({count})
+  gameConfig:
+    title: ゲーム設定
+  effectEditor:
+    title: エフェクトエディター
+    description: ビジュアル変換、フィルター、エフェクトパラメータを編集
+    apply: 適用
+    reset: リセット
+    categories:
+      transform: 変換
+      effects: エフェクト
+      colorAdjustment: 色調整
+      bloom: ブルーム
+      bevel: ベベル
+      filters: フィルター
+    params:
+      positionX: X 位置
+      positionY: Y 位置
+      scaleX: X スケール
+      scaleY: Y スケール
+      scale: スケール
+      rotation: 回転
+      alpha: 不透明度
+      blur: ぼかし
+      brightness: 明るさ
+      contrast: コントラスト
+      saturation: 彩度
+      gamma: ガンマ
+      color: ティント
+      bloom: 強度
+      bloomBrightness: 明るさ
+      bloomBlur: ぼかし
+      bloomThreshold: しきい値
+      bevel: 不透明度
+      bevelThickness: 厚み
+      bevelRotation: 回転
+      bevelSoftness: 柔らかさ
+      bevelColor: 色
+      oldFilm: オールドフィルム
+      dotFilm: ドットフィルム
+      reflectionFilm: 反射
+      glitchFilm: グリッチ
+      rgbFilm: RGB 分離
+      godrayFilm: ゴッドレイ
+    filterOptions:
+      default: デフォルト
+      "on": オン
+      "off": オフ
+  upgrade:
+    title: 更新
+  createFile:
+    title: シーンファイルを作成
+    description: 新しいシーンを始める
+    fileNamePlaceholder: ファイル名を入力
+    fileNameRequired: ファイル名は必須です
+    fileExists: ファイルは既に存在します
+    create: 作成
+  settings:
+    description: ここで設定を管理し、必要に応じてエクスペリエンスをカスタマイズできます
+    tabs:
+      general: 一般
+      edit: 編集
+      preview: プレビュー
+      storage: ストレージ
+  saveChanges:
+    title: "{name} への変更を保存しますか?"
+    description: 保存しない場合、変更は失われます。
+    save: 保存
+    dontSave: 保存しない
+  discardEffectChanges:
+    title: エフェクトエディターの変更を適用しますか？
+    description: 適用しない場合、変更は破棄されます。
+    apply: 適用
+    discard: 破棄
+
+edit:
+  header:
+    testGame: ゲームをテスト
     export: エクスポート
     gameSettings: ゲーム設定
     missingPreviewUrl: プレビューURLがありません。先にプレビューを起動してください。
     openFailed: テストウィンドウを開けませんでした
-    testGame: ゲームをテスト
-  previewPanel:
-    copyUrl: URLをコピー
-    copyUrlSuccess: URLのコピーに成功しました
-    openFailed: プレビューの開始に失敗しました
-    openInBrowser: ブラウザで開く
-    previewTitle: ゲームプレビュー - {name}
-    refreshPreview: プレビューを更新
-  scenePanel:
-    resource: リソース
-    scene: シーン
-  statusBar:
-    statements: '{count} ステートメント'
-  textEditor:
-    formPanel:
-      noStatement: カーソルをステートメント行に移動して編集
-    languages:
-      webgalanimation: WebGAL アニメーション
-      webgalscript: WebGAL スクリプト
-    stats:
-      lines: '{count} 行,'
-      words: '{count} 字'
-  unsupported:
-    binaryFile: このファイルはバイナリファイルまたはサポートされていないテキストエンコーディングを使用しているため、エディターに表示できません。
-    loadFailed: ファイルタイプの検出に失敗しました：{error}
-  visualEditor:
-    addOption: 選択肢を追加
-    addStyleRule: スタイルルールを追加
-    advancedParams: 詳細設定
-    assetPreview:
-      loadFailed: 読み込み失敗
-    commandPanel: コマンドパネル
+  empty:
+    title: 開いているファイルがありません
+    description: 左側のファイルリストからファイルを選択して編集を開始するか、新しいシーンファイルを作成してください
+    createScene: シーンファイルを作成
+  completion:
     commands:
-      applyStyle: スタイル適用
-      bgm: BGM
-      callScene: シーン呼出
-      callSteam: Steam呼出
-      changeBg: 背景
-      changeFigure: 立ち絵
-      changeScene: シーン切替
-      choose: 選択肢
-      comment: コメント
-      end: ゲーム終了
-      filmMode: フィルムモード
-      getUserInput: 入力取得
+      changeBg: 背景画像を切り替え
+      changeFigure: キャラクター立ち絵を切り替え
+      bgm: 背景音楽
+      playVideo: 動画を再生
+      pixiPerform: エフェクトを適用
+      pixiInit: エフェクトを初期化/リセット
       intro: 全画面テキスト
-      jumpLabel: ラベルジャンプ
-      label: ラベル
-      miniAvatar: ミニアバター
-      pixi: エフェクト使用
-      pixiInit: エフェクトリセット
-      playEffect: 効果音
-      say: セリフ
-      setAnimation: 呼出アニメーション
-      setComplexAnimation: 内蔵アニメーション
-      setTempAnimation: 高度アニメーション
-      setTextbox: テキストボックス
-      setTransform: シンプルアニメーション
-      setTransition: トランジション
-      setVar: 変数設定
-      showVars: 変数表示
-      unknown: 未認識
-      unlockBgm: BGM鑑賞解放
-      unlockCg: CG鑑賞解放
-      video: 動画
-      wait: 待機
-    effectEditor: エフェクトエディター
-    filePicker:
-      background: 背景ファイルを選択
-      bgm: 音楽ファイルを選択
-      figure: 立ち絵ファイルを選択
-      miniAvatar: ミニアバターファイルを選択
-      playEffect: 効果音ファイルを選択
-      scene: シーンファイルを選択
-      unlockBgm: ギャラリー音楽ファイルを選択
-      unlockCg: ギャラリー画像ファイルを選択
-      video: 動画ファイルを選択
-      vocal: 音声ファイルを選択
-    narrationMode: ナレーション
-    noResults: 検索結果がありません
-    noSelection: 編集するステートメントを選択してください
-    options:
-      animFadeIn: フェードイン
-      animFlagOff: オフ
-      animFlagOn: オン
-      animPixelate: ピクセル化
-      animReveal: リビール
-      animSlideIn: スライドイン
-      animTyping: タイピング効果
-      blendAdd: 覆い焼きリニア（加算）
-      blendMultiply: 乗算
-      blendNormal: 通常
-      blendScreen: スクリーン
-      center: 中央
-      custom: カスタム
-      default: デフォルト
-      delaySeconds: '{seconds} 秒'
-      easeAnticipate: アンティシペイト
-      easeBackIn: バックイン
-      easeBackInOut: バックインアウト
-      easeBackOut: バックアウト
-      easeBounceIn: バウンスイン
-      easeBounceInOut: バウンスインアウト
-      easeBounceOut: バウンスアウト
-      easeCircIn: サークルイン
-      easeCircInOut: サークルインアウト
-      easeCircOut: サークルアウト
-      easeIn: イーズイン
-      easeInOut: イーズインアウト
-      easeLinear: リニア
-      easeOut: イーズアウト
-      effectCherryBlossoms: 桜
-      effectHeavySnow: 大雪
-      effectRain: 雨
-      effectSnow: 雪
-      figureCenter: 中央立ち絵
-      figureLeft: 左側立ち絵
-      figureRight: 右側立ち絵
-      large: 大
-      left: 左
-      medium: 中
-      notSelected: 未選択
-      right: 右
-      small: 小
-      targetBgMain: 背景画像
-      targetFigCenter: 中央立ち絵
-      targetFigLeft: 左側立ち絵
-      targetFigRight: 右側立ち絵
-      targetStageMain: ステージ
-      universalSoftIn: フェードイン
-      universalSoftOff: フェードアウト
-      unspecified: 未指定
-      useFigureId: 立ち絵IDを使用
-    params:
-      achievementId: 実績解除 ID
-      animation: アニメーション
-      animationFlag: リップシンクとまばたき
-      animationName: アニメーション
-      associatedFigure: 関連立ち絵
-      associatedFigureId: 立ち絵 ID
+      miniAvatar: コーナー小アバター
+      changeScene: シーンを切り替え
+      choose: 分岐オプション
+      end: ゲームを終了してタイトル画面に戻る
+      setComplexAnimation: 内蔵アニメーションを設定
+      label: ラベルを設定
+      jumpLabel: ラベルへジャンプ
+      setVar: 変数を設定
+      callScene: シーンを呼び出し
+      showVars: 変数を表示
+      unlockCg: CG 鑑賞を解放
+      unlockBgm: BGM 鑑賞を解放
+      filmMode: フィルムモード
+      setTextbox: テキストボックスを設定
+      setAnimation: アニメーションを呼び出し
+      playEffect: 効果音を再生
+      setTempAnimation: 高度アニメーションを設定
+      setTransform: シンプルアニメーションを設定
+      setTransition: 入退場アニメーションを設定
+      getUserInput: 入力を取得
+      applyStyle: スタイルを適用
+      wait: 一定時間待機
+    arguments:
+      when: 条件付き実行
+      continue: 自動続行
+      next: 並行実行
+      notend: 次の行に続ける
+      concat: 前のセリフに連結
+      vocal: ボイス
+      fontSize: フォントサイズ
+      fontColor: フォントカラー
       backgroundColor: 背景色
       backgroundImage: 背景画像
-      blendMode: ブレンドモード
-      blink: まばたきパラメータ
-      blinkInterval: まばたき間隔
-      blinkIntervalRandom: まばたき間隔ランダムオフセット
-      bounds: 描画境界
-      buttonText: 確認ボタンテキスト
-      choiceText: 選択肢テキスト
-      closedDuration: 閉眼保持
-      closingDuration: 閉眼時間
-      commentContent: コメント内容
-      concat: 前段に接続
-      continue: 自動続行
-      customTargetId: ターゲットID
-      defaultEnterDuration: デフォルト入場アニメーション時間
-      defaultExitDuration: デフォルト退場アニメーション時間
-      defaultValue: デフォルト値
-      delayTime: 遅延時間
-      dialogue: セリフ内容
-      duration: トランジション時間
-      ease: イージングタイプ
-      effectCustomName: エフェクト名
-      effectName: エフェクト
-      enter: フェードイン
-      enterAnimation: 入場アニメーション
-      exitAnimation: 退場アニメーション
-      expression: 表情
-      eyesClose: 目閉じ差分
-      eyesHalfOpen: 目半開き差分
-      eyesOpen: 目開き差分
-      figureId: ID
-      fileName: ファイル
-      filmModeState: 有効
-      filmModeStateOff: 無効
-      focus: 注視パラメータ
-      focusInstant: 即時注視
-      focusX: 注視点X
-      focusY: 注視点Y
-      fontColor: フォント色
-      fontSize: 文字サイズ
-      global: グローバル変数
-      hold: 終了後に停止
-      id: ID
-      inputTitle: ダイアログタイトル
-      introText: テキスト内容
-      introTextPlaceholder: '{''|''} で行を区切る'
-      keep: 跨文再生
-      labelName: ラベル名
-      motion: モーション
-      mouthClose: 口閉じ差分
-      mouthHalfOpen: 口半開き差分
-      mouthOpen: 口開き差分
-      next: 並行実行
-      notend: 再生継続
-      openingDuration: 開眼時間
-      position: 位置
-      rawText: 生テキスト
-      series: シリーズ
-      skipOff: スキップ禁止
-      speaker: 話者
-      spineMotion: アニメーション
-      target: ターゲット
-      textboxState: 表示
-      textboxStateOff: 非表示
-      transform: 変換
-      transformJson: 変換JSON
-      unitMs: ミリ秒
-      unlockDisplayName: 表示名
-      unlockname: 解放名
-      userForward: クリックで次の文を表示
-      varName: 変数名
-      varValue: 値
-      vocal: ボイス
-      volume: 音量
-      waitTime: 時間
-      writeDefault: デフォルト継承
+      figureId: 立ち絵 ID
+      left: 左側位置
+      right: 右側位置
+      center: 中央位置
       zIndex: 表示レイヤー
-    placeholder:
-      comment: コメントを入力…
-      newStyleName: 新しいスタイル名
-      oldStyleName: 元のスタイル名
-      optionName: 選択肢テキスト
-      sceneFile: シーンファイル名
-      searchAnimation: アニメーションを検索
-      searchExpression: 表情を検索
-      searchMotion: モーションを検索
-      speaker: キャラクター名
+      animationFlag: アニメーションフラグ
+      mouthOpen: 口開き差分
+      mouthHalfOpen: 半開き差分
+      mouthClose: 口閉じ差分
+      eyesOpen: 目開き差分
+      eyesClose: 目閉じ差分
+      motion: Live2D/Spine モーション
+      expression: Live2D 表情
+      bounds: Live2D 境界拡張
+      blink: Live2D まばたきパラメータ
+      focus: Live2D 注視パラメータ
+      transform: 変換エフェクト
+      enter: 入場アニメーション
+      exit: 退場アニメーション
+      duration: アニメーション時間（ms）
+      ease: イージングタイプ
+      animationTarget: アニメーション対象オブジェクト
+      transitionTarget: トランジション対象オブジェクト
+      animation: 各行の入場アニメーション
+      delayTime: 各行の入場遅延時間
+      writeDefault: デフォルト値を埋める
+      keep: 行をまたぐアニメーション再生
+      volume: 音量（0-100）
+      soundEffectId: 効果音 ID
+      unlockName: "解放する {type} 名"
+      unlockSeries: "{type} シリーズ"
+      skipOff: スキップ禁止
+      hold: 終了後に停止
+      userForward: クリックで次の文を表示
+      title: 入力欄タイトル
+      buttonText: 確認ボタンテキスト
+      defaultValue: 入力欄デフォルト値
+  unsupported:
+    binaryFile: このファイルはバイナリファイルまたはサポートされていないテキストエンコーディングを使用しているため、エディターに表示できません。
+    loadFailed: "ファイルタイプの検出に失敗しました：{error}"
+  textEditor:
+    languages:
+      webgalscript: WebGAL スクリプト
+      webgalanimation: WebGAL アニメーション
+    stats:
+      lines: "{count} 行,"
+      words: "{count} 字"
+    formPanel:
+      noStatement: カーソルをステートメント行に移動して編集
+  scenePanel:
+    scene: シーン
+    resource: リソース
+  statusBar:
+    statements: "{count} ステートメント"
+  fileTree:
+    newFile: 新しいファイル
+    newFolder: 新しいフォルダー
+    defaultFileName: 新しいファイル.txt
+    defaultFolderName: 新しいフォルダー
+    rename: 名前を変更
+    deleteSuccess: 削除に成功しました
+    deleteFailed: 削除に失敗しました
+    copy: コピー
+    cut: 切り取り
+    paste: 貼り付け
+    revealInExplorer: エクスプローラーで表示
+    pasteSuccess: 貼り付けに成功しました
+    pasteFailed: 貼り付けに失敗しました
+    pastePartialFailed: 一部の貼り付けに失敗しました ({failed}/{total})
+    pasteMultipleSuccess: "{count} 個のアイテムを貼り付けました"
+  previewPanel:
+    copyUrl: URLをコピー
+    refreshPreview: プレビューを更新
+    openInBrowser: ブラウザで開く
+    copyUrlSuccess: URLのコピーに成功しました
+    openFailed: プレビューの開始に失敗しました
+    previewTitle: ゲームプレビュー - {name}
+  assetPanel:
+    tabs:
+      figure: 立ち絵
+      background: 背景
+      bgm: 音楽
+      vocal: 音声
+      video: 動画
+      animation: アニメーション
+      template: テンプレート
+    searchPlaceholder: ファイルまたはフォルダを検索
+    sort:
+      by: 並び替え
+      name: 名前
+      modifiedTime: 更新日時
+      createdTime: 作成日時
+      size: ファイルサイズ
+      directionAsc: 昇順
+      directionDesc: 降順
+    actions:
+      toggleSearch: 検索の切り替え
+      sortField: 並び替え項目
+      sortOrder: 並び順
+      viewGrid: グリッド表示
+      viewList: リスト表示
+      zoomOut: 縮小
+      zoomIn: 拡大
+      zoomReset: ズームをリセット
+  editorMode:
+    textMode: テキストに切替
+    visualMode: ビジュアルに切替
+    toggleSidebar: 補助パネル切替
+  visualEditor:
     playToLine: この行まで実行
-    statementList: ステートメントリスト
+    commandPanel: コマンドパネル
+    narrationMode: ナレーション
     types:
       comment: コメント
       narration: ナレーション
-  welcome:
-    newFile: 新しいファイル
-    selectOrCreate: ファイルを選択して編集を開始するか、新しいファイルを作成
-    startEditing: 編集を開始
-filePicker:
-  clearInput: 入力をクリア
-  more:
-    clearRecentHistory: 最近の履歴をクリア
-    filtersTitle: フィルター
-    recentTitle: 最近の履歴
-    showRecentHistory: 最近選択バーを表示
-    showSupportedOnly: 非対応形式を非表示
-    sortFieldTitle: 並び替え項目
-    sortOrderTitle: 並び順
-    sortTitle: 並び替え方法
-    title: その他
-    zoomTitle: アイコンサイズ
-  placeholder: ファイルパスを選択
-  recent:
-    title: 最近選択
-  sort:
-    createdTime: 作成日時
-    directionAsc: 昇順
-    directionDesc: 降順
-    modifiedTime: 更新日時
-    name: 名前
-    size: ファイルサイズ
-  zoom:
-    extraLarge: 特大
-    large: 大
-    medium: 中
-    small: 小
-home:
-  engines:
-    dropEngineFolder: ゲームエンジンフォルダをここにドラッグ＆ドロップ
-    engineIcon: '{name} エンジンアイコン'
-    goToInstall: インストールに移動
-    importInvalidFolder: これは有効なエンジンフォルダではありません
-    importMultipleFolders: 一度にインポートできるエンジンフォルダは1つだけです
-    importSuccess: エンジンのインポートに成功しました
-    importUnknownError: エンジンのインポート中に不明なエラーが発生しました
-    installEngine: エンジンをインストール
-    installEngineHint: クリックして参照するか、エンジンフォルダをここにドラッグ＆ドロップ
-    installGameEngine: ゲームエンジンをインストール
-    later: 後で
-    noEngineContent: ゲームを作成するには、まずゲームエンジンをインストールする必要があります
-    noEngineTitle: 利用可能なゲームエンジンがありません
-    noEngines: 利用可能なゲームエンジンがありません
-    noEnginesDesc: ゲームを作成するにはゲームエンジンをインストールする必要があります
-    uninstallEngine: エンジンをアンインストール
-  games:
-    createNewGame: 新しいゲームを作成
-    creating: ゲーム作成中……
-    deleteGame: ゲームを削除
-    dropGameFolder: ゲームフォルダをここにドラッグ＆ドロップしてインポート
-    gameCover: '{name} ゲームカバー'
-    gameIcon: '{name} ゲームアイコン'
-    importCreating: ゲームを作成中です。作成の完了をお待ちください
-    importGame: ゲームをインポート
-    importGameHint: クリックして参照するか、ゲームフォルダをここにドラッグ＆ドロップ
-    importInvalidFolder: これは有効なゲームフォルダではありません
-    importMultipleFolders: 一度にインポートできるゲームフォルダは1つだけです
-    importSuccess: ゲームのインポートに成功しました
-    importUnknownError: ゲームのインポート中に不明なエラーが発生しました
-    modifiedAt: 更新日時 {time}
-    noGames: 最近の作品が見つかりません
-    noGamesDesc: まだゲームを作成または開いていません
-  header:
-    about: について
-  search:
     placeholder:
-      engines: ゲームエンジンを検索...
-      recent: 最近の作品を検索...
-  tabs:
-    engines: ゲームエンジン
-    recent: 最近の作品
-  welcome:
-    createGame: ゲームを作成
-    openGame: ゲームを開く
-    subtitle: ゲーム制作の旅を始めて、あなたの物語を書いてください
-    title: WebGAL Craft へようこそ
-    welcomeBack: おかえりなさい
-    welcomeBackSubtitle: ゲームの編集を続けるか、新しい作品を始めてください
-modals:
-  about:
-    copyright: © 2025 Akirami
-    homepage: 公式サイト
-    issues: 問題レポート
-    license: License MPL-2.0
-    sourceCode: ソースコード
-  createFile:
-    create: 作成
-    description: 新しいシーンを始める
-    fileExists: ファイルは既に存在します
-    fileNamePlaceholder: ファイル名を入力
-    fileNameRequired: ファイル名は必須です
-    title: シーンファイルを作成
-  createGame:
-    create: 作成
-    description: ここから新しい作品を始めましょう
-    gameEngine: ゲームエンジン
-    gameName: ゲーム名
-    pathNotEmpty: ゲーム保存ディレクトリは存在しないか、空である必要があります
-    saveLocation: 保存場所
-    selectEngine: ゲームエンジンを選択
-    selectSaveLocation: ゲーム保存場所
-    title: 新しいゲームを作成
-  deleteEngine:
-    description: エンジン {name} をアンインストールしてもよろしいですか？
-    title: エンジンをアンインストール
-    uninstallSuccess: エンジンのアンインストールに成功しました
-    warning: この操作はエンジンファイルを削除し、復元できません。
-  deleteFile:
-    description: このファイルはゴミ箱から復元できます。
-    folderDescription: このフォルダーとその内容はゴミ箱から復元できます。
-    folderTitle: フォルダー {name} とその内容を削除しますか？
-    skipConfirm: 今後この確認を表示しない
-    title: ファイル {name} を削除しますか？
-  deleteGame:
-    deleteFiles: ゲームファイルも削除
-    deleteSuccess: ゲームの削除に成功しました
-    description: ゲーム {name} を削除してもよろしいですか？
-    title: ゲームを削除
-  deleteGameConfirm:
-    confirmDelete: 削除を確認
-    description: この操作は元に戻せません。ゲーム名 {name} を入力して削除を確認してください。
-    gameName: ゲーム名
-    placeholder: '{name} を入力して確認'
-    title: 最終確認
-  discardEffectChanges:
-    apply: 適用
-    description: 適用しない場合、変更は破棄されます。
-    discard: 破棄
-    title: エフェクトエディターの変更を適用しますか？
-  discoveredResources:
-    deselectAll: すべて選択解除
-    enginesDescription: デフォルトのエンジンディレクトリで {count} 個のエンジンが見つかりました。インポートしますか？
-    enginesTitle: エンジンを発見
-    gamesDescription: デフォルトのゲームディレクトリで {count} 個のゲームが見つかりました。インポートしますか？
-    gamesTitle: ゲームを発見
-    import: インポート ({count})
-    selectAll: すべて選択
-    selected: 選択済み {count}/{total}
-    skip: スキップ
-  effectEditor:
-    apply: 適用
-    categories:
-      bevel: ベベル
-      bloom: ブルーム
-      colorAdjustment: 色調整
-      effects: エフェクト
-      filters: フィルター
-      transform: 変換
-    description: ビジュアル変換、フィルター、エフェクトパラメータを編集
-    filterOptions:
-      default: デフォルト
-      'off': オフ
-      'on': オン
+      comment: コメントを入力…
+      speaker: キャラクター名
+      optionName: 選択肢テキスト
+      sceneFile: シーンファイル名
+      oldStyleName: 元のスタイル名
+      newStyleName: 新しいスタイル名
+      searchMotion: モーションを検索
+      searchAnimation: アニメーションを検索
+      searchExpression: 表情を検索
+    addOption: 選択肢を追加
+    addStyleRule: スタイルルールを追加
+    advancedParams: 詳細設定
+    commands:
+      say: セリフ
+      comment: コメント
+      changeBg: 背景
+      changeFigure: 立ち絵
+      miniAvatar: ミニアバター
+      bgm: BGM
+      playEffect: 効果音
+      video: 動画
+      changeScene: シーン切替
+      callScene: シーン呼出
+      choose: 選択肢
+      label: ラベル
+      jumpLabel: ラベルジャンプ
+      end: ゲーム終了
+      setVar: 変数設定
+      showVars: 変数表示
+      getUserInput: 入力取得
+      wait: 待機
+      setTextbox: テキストボックス
+      filmMode: フィルムモード
+      callSteam: Steam呼出
+      setAnimation: 呼出アニメーション
+      setComplexAnimation: 内蔵アニメーション
+      setTransform: シンプルアニメーション
+      setTransition: トランジション
+      pixi: エフェクト使用
+      pixiInit: エフェクトリセット
+      setTempAnimation: 高度アニメーション
+      applyStyle: スタイル適用
+      intro: 全画面テキスト
+      unlockCg: CG鑑賞解放
+      unlockBgm: BGM鑑賞解放
+      unknown: 未認識
     params:
-      alpha: 不透明度
-      bevel: 不透明度
-      bevelColor: 色
-      bevelRotation: 回転
-      bevelSoftness: 柔らかさ
-      bevelThickness: 厚み
-      bloom: 強度
-      bloomBlur: ぼかし
-      bloomBrightness: 明るさ
-      bloomThreshold: しきい値
-      blur: ぼかし
-      brightness: 明るさ
-      color: ティント
-      contrast: コントラスト
-      dotFilm: ドットフィルム
-      gamma: ガンマ
-      glitchFilm: グリッチ
-      godrayFilm: ゴッドレイ
-      oldFilm: オールドフィルム
-      positionX: X 位置
-      positionY: Y 位置
-      reflectionFilm: 反射
-      rgbFilm: RGB 分離
-      rotation: 回転
-      saturation: 彩度
-      scale: スケール
-      scaleX: X スケール
-      scaleY: Y スケール
-    reset: リセット
-    title: エフェクトエディター
-  gameConfig:
-    title: ゲーム設定
-  saveChanges:
-    description: 保存しない場合、変更は失われます。
-    dontSave: 保存しない
-    save: 保存
-    title: '{name} への変更を保存しますか?'
-  settings:
-    description: ここで設定を管理し、必要に応じてエクスペリエンスをカスタマイズできます
-    tabs:
-      edit: 編集
-      general: 一般
-      preview: プレビュー
-      storage: ストレージ
-  upgrade:
-    title: 更新
-notFound:
-  message: ページが見つかりません
-settings:
-  edit:
-    autoApplyEffectEditorChanges:
-      description: 有効にすると、エフェクトエディターのパラメータ変更をステートメントへ自動反映します
-      label: エフェクトエディターの変更を自動適用
-    autoSave:
-      description: 有効にすると、エディターが自動的に変更を保存します
-      label: 自動保存
-    collapseStatementsOnSidebarOpen:
-      description: 補助パネルを開いた際、すべてのステートメントカードを折りたたみ状態にロックします
-      label: 補助パネル展開時にすべてのステートメントを折りたたむ
-    effectEditorSide:
-      description: エフェクトエディターのドロワーがスライドする方向を選択します
-      label: エフェクトエディターのスライド方向
+      continue: 自動続行
+      next: 並行実行
+      concat: 前段に接続
+      notend: 再生継続
+      vocal: ボイス
+      volume: 音量
+      associatedFigure: 関連立ち絵
+      fontSize: 文字サイズ
+      dialogue: セリフ内容
+      speaker: 話者
+      commentContent: コメント内容
+      rawText: 生テキスト
+      fileName: ファイル
+      figureId: ID
+      associatedFigureId: 立ち絵 ID
+      position: 位置
+      motion: モーション
+      spineMotion: アニメーション
+      expression: 表情
+      transform: 変換
+      duration: トランジション時間
+      ease: イージングタイプ
+      mouthOpen: 口開き差分
+      mouthHalfOpen: 口半開き差分
+      mouthClose: 口閉じ差分
+      eyesOpen: 目開き差分
+      eyesHalfOpen: 目半開き差分
+      eyesClose: 目閉じ差分
+      enter: フェードイン
+      unlockname: 解放名
+      series: シリーズ
+      id: ID
+      achievementId: 実績解除 ID
+      skipOff: スキップ禁止
+      choiceText: 選択肢テキスト
+      labelName: ラベル名
+      varName: 変数名
+      varValue: 値
+      global: グローバル変数
+      inputTitle: ダイアログタイトル
+      buttonText: 確認ボタンテキスト
+      defaultValue: デフォルト値
+      waitTime: 時間
+      unitMs: ミリ秒
+      textboxState: 表示
+      textboxStateOff: 非表示
+      filmModeState: 有効
+      filmModeStateOff: 無効
+      animationName: アニメーション
+      target: ターゲット
+      transformJson: 変換JSON
+      enterAnimation: 入場アニメーション
+      exitAnimation: 退場アニメーション
+      defaultEnterDuration: デフォルト入場アニメーション時間
+      defaultExitDuration: デフォルト退場アニメーション時間
+      effectName: エフェクト
+      effectCustomName: エフェクト名
+      introText: テキスト内容
+      introTextPlaceholder: "{'|'} で行を区切る"
+      backgroundColor: 背景色
+      backgroundImage: 背景画像
+      fontColor: フォント色
+      hold: 終了後に停止
+      unlockDisplayName: 表示名
+      animation: アニメーション
+      delayTime: 遅延時間
+      userForward: クリックで次の文を表示
+      animationFlag: リップシンクとまばたき
+      blendMode: ブレンドモード
+      bounds: 描画境界
+      blink: まばたきパラメータ
+      blinkInterval: まばたき間隔
+      blinkIntervalRandom: まばたき間隔ランダムオフセット
+      openingDuration: 開眼時間
+      closingDuration: 閉眼時間
+      closedDuration: 閉眼保持
+      focus: 注視パラメータ
+      focusX: 注視点X
+      focusY: 注視点Y
+      focusInstant: 即時注視
+      zIndex: 表示レイヤー
+      writeDefault: デフォルト継承
+      keep: 跨文再生
+      customTargetId: ターゲットID
+    filePicker:
+      vocal: 音声ファイルを選択
+      background: 背景ファイルを選択
+      figure: 立ち絵ファイルを選択
+      miniAvatar: ミニアバターファイルを選択
+      bgm: 音楽ファイルを選択
+      playEffect: 効果音ファイルを選択
+      video: 動画ファイルを選択
+      scene: シーンファイルを選択
+      unlockCg: ギャラリー画像ファイルを選択
+      unlockBgm: ギャラリー音楽ファイルを選択
+    assetPreview:
+      loadFailed: 読み込み失敗
+    options:
+      unspecified: 未指定
+      notSelected: 未選択
+      default: デフォルト
       left: 左
+      center: 中央
       right: 右
-    enablePreviewTab:
-      description: シングルクリックでプレビューモードでファイルを開き、ダブルクリックまたは編集で通常のタブに固定
-      label: プレビュータブを有効にする
+      figureLeft: 左側立ち絵
+      figureCenter: 中央立ち絵
+      figureRight: 右側立ち絵
+      useFigureId: 立ち絵IDを使用
+      blendNormal: 通常
+      blendAdd: 覆い焼きリニア（加算）
+      blendMultiply: 乗算
+      blendScreen: スクリーン
+      small: 小
+      medium: 中
+      large: 大
+      easeLinear: リニア
+      easeIn: イーズイン
+      easeOut: イーズアウト
+      easeInOut: イーズインアウト
+      easeCircIn: サークルイン
+      easeCircOut: サークルアウト
+      easeCircInOut: サークルインアウト
+      easeBackIn: バックイン
+      easeBackOut: バックアウト
+      easeBackInOut: バックインアウト
+      easeBounceIn: バウンスイン
+      easeBounceOut: バウンスアウト
+      easeBounceInOut: バウンスインアウト
+      easeAnticipate: アンティシペイト
+      targetFigLeft: 左側立ち絵
+      targetFigCenter: 中央立ち絵
+      targetFigRight: 右側立ち絵
+      targetBgMain: 背景画像
+      targetStageMain: ステージ
+      custom: カスタム
+      delaySeconds: "{seconds} 秒"
+      animFadeIn: フェードイン
+      animSlideIn: スライドイン
+      animTyping: タイピング効果
+      animPixelate: ピクセル化
+      animReveal: リビール
+      animFlagOn: オン
+      animFlagOff: オフ
+      effectRain: 雨
+      effectSnow: 雪
+      effectHeavySnow: 大雪
+      effectCherryBlossoms: 桜
+      universalSoftIn: フェードイン
+      universalSoftOff: フェードアウト
+    effectEditor: エフェクトエディター
+    statementList: ステートメントリスト
+    noSelection: 編集するステートメントを選択してください
+    noResults: 検索結果がありません
+  welcome:
+    startEditing: 編集を開始
+    selectOrCreate: ファイルを選択して編集を開始するか、新しいファイルを作成
+    newFile: 新しいファイル
+
+settings:
+  experimental:
+    tooltip: これは実験的な機能であり、使用中に問題が発生する可能性があります
+  general:
+    followSystem: システムに従う
+    theme:
+      label: テーマ
+      options:
+        light: ライト
+        dark: ダーク
+    language:
+      label: 言語
+      placeholder: 言語を選択してください
+    openLastProject:
+      label: 起動時に最後に編集したゲームを開く
+      description: アプリケーション起動時に最後に編集したゲームプロジェクトを自動的に読み込む
+    autoInstallUpdates:
+      label: 更新を自動インストール
+      description: 最新バージョンのアプリケーションを自動的にダウンロードしてインストールする
+  preview:
+    enableLivePreview:
+      label: ライブプレビュー
+      description: ゲームを編集する際に変更をリアルタイムでプレビュー
+    enableFastPreview:
+      label: 高速ステートメントプレビュー
+      description: 高速プレビュー機能を有効にすると、リアルタイムプレビューの効率が大幅に向上します
+    enableRealtimeEffectPreview:
+      label: リアルタイムエフェクトプレビュー
+      description: エフェクトエディターでパラメータを調整中に効果をリアルタイムで描画します
+  edit:
+    general: 一般
+    textEditor: テキストエディター
+    visualEditor: ビジュアルエディター
     fontFamily:
       label: フォント
       placeholder: フォント名
     fontSize:
       label: フォントサイズ
-    general: 一般
-    minimap:
-      description: エディターの右側にコードミニマップを表示して、すばやくナビゲーション
-      label: コードミニマップ
-    showSidebarAssetPreview:
-      description: エディターの補助パネルでステートメントが参照する画像などのアセットをプレビュー
-      label: 補助パネルのステートメント資源プレビュー
-    textEditor: テキストエディター
-    visualEditor: ビジュアルエディター
     wordWrap:
-      description: エディターの幅を超える行を自動的に折り返して表示
       label: 自動折り返し
-  experimental:
-    tooltip: これは実験的な機能であり、使用中に問題が発生する可能性があります
-  general:
-    autoInstallUpdates:
-      description: 最新バージョンのアプリケーションを自動的にダウンロードしてインストールする
-      label: 更新を自動インストール
-    followSystem: システムに従う
-    language:
-      label: 言語
-      placeholder: 言語を選択してください
-    openLastProject:
-      description: アプリケーション起動時に最後に編集したゲームプロジェクトを自動的に読み込む
-      label: 起動時に最後に編集したゲームを開く
-    theme:
-      label: テーマ
-      options:
-        dark: ダーク
-        light: ライト
-  preview:
-    enableFastPreview:
-      description: 高速プレビュー機能を有効にすると、リアルタイムプレビューの効率が大幅に向上します
-      label: 高速ステートメントプレビュー
-    enableLivePreview:
-      description: ゲームを編集する際に変更をリアルタイムでプレビュー
-      label: ライブプレビュー
-    enableRealtimeEffectPreview:
-      description: エフェクトエディターでパラメータを調整中に効果をリアルタイムで描画します
-      label: リアルタイムエフェクトプレビュー
+      description: エディターの幅を超える行を自動的に折り返して表示
+    minimap:
+      label: コードミニマップ
+      description: エディターの右側にコードミニマップを表示して、すばやくナビゲーション
+    autoSave:
+      label: 自動保存
+      description: 有効にすると、エディターが自動的に変更を保存します
+    enablePreviewTab:
+      label: プレビュータブを有効にする
+      description: シングルクリックでプレビューモードでファイルを開き、ダブルクリックまたは編集で通常のタブに固定
+    autoApplyEffectEditorChanges:
+      label: エフェクトエディターの変更を自動適用
+      description: 有効にすると、エフェクトエディターのパラメータ変更をステートメントへ自動反映します
+    collapseStatementsOnSidebarOpen:
+      label: 補助パネル展開時にすべてのステートメントを折りたたむ
+      description: 補助パネルを開いた際、すべてのステートメントカードを折りたたみ状態にロックします
+    effectEditorSide:
+      description: エフェクトエディターのドロワーがスライドする方向を選択します
+      label: エフェクトエディターのスライド方向
+      left: 左
+      right: 右
+    showSidebarAssetPreview:
+      label: 補助パネルのステートメント資源プレビュー
+      description: エディターの補助パネルでステートメントが参照する画像などのアセットをプレビュー
   storage:
-    browse: 参照
-    enginePath:
-      label: エンジン保存場所
-      title: エンジン保存場所を選択
     gamePath:
       label: ゲーム保存場所
       title: ゲーム保存場所を選択
+    enginePath:
+      label: エンジン保存場所
+      title: エンジン保存場所を選択
+    browse: 参照
+
+notFound:
+  message: ページが見つかりません
