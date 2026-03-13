@@ -1,33 +1,60 @@
 <script setup lang="ts">
 import { ResizablePanel } from '~/components/ui/resizable'
 
-interface Props {
-  show?: boolean
-  mainMinSize?: number
-  sidebarDefaultSize?: number
-  sidebarMinSize?: number
-}
-
-withDefaults(defineProps<Props>(), {
-  show: false,
-  mainMinSize: 25,
-  sidebarDefaultSize: 30,
-  sidebarMinSize: 15,
-})
+const show = defineModel<boolean>('show', { default: false })
 
 defineOptions({ inheritAttrs: false })
+
+const sidebarRef = $(useTemplateRef<InstanceType<typeof ResizablePanel>>('sidebar'))
+
+// store → 面板：外部切换时同步面板状态
+watch(show, (val) => {
+  if (!sidebarRef) {
+    return
+  }
+  if (val && sidebarRef.isCollapsed) {
+    sidebarRef.expand()
+  } else if (!val && !sidebarRef.isCollapsed) {
+    sidebarRef.collapse()
+  }
+})
+
+// 初始挂载时同步：default-size 为展开态，若 show 初始为 false 需立即折叠
+onMounted(() => {
+  if (!show.value) {
+    nextTick(() => sidebarRef?.collapse())
+  }
+})
+
+// 面板 → store：拖拽折叠/展开时同步回外部状态
+function handleCollapse() {
+  if (show.value) {
+    show.value = false
+  }
+}
+
+function handleExpand() {
+  if (!show.value) {
+    show.value = true
+  }
+}
 </script>
 
 <template>
-  <ResizablePanelGroup direction="horizontal" v-bind="$attrs">
-    <ResizablePanel :default-size="show ? (100 - sidebarDefaultSize) : 100" :min-size="mainMinSize">
+  <ResizablePanelGroup auto-save-id="editor-sidebar" direction="horizontal" class="overflow-hidden">
+    <ResizablePanel :min-size="30">
       <slot />
     </ResizablePanel>
-    <template v-if="show">
-      <ResizableHandle />
-      <ResizablePanel :default-size="sidebarDefaultSize" :min-size="sidebarMinSize">
-        <slot name="sidebar" />
-      </ResizablePanel>
-    </template>
+    <ResizableHandle />
+    <ResizablePanel
+      ref="sidebar"
+      collapsible
+      :default-size="22"
+      :min-size="16"
+      @collapse="handleCollapse"
+      @expand="handleExpand"
+    >
+      <slot name="sidebar" />
+    </ResizablePanel>
   </ResizablePanelGroup>
 </template>

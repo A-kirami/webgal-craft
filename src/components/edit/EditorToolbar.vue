@@ -8,7 +8,9 @@ const editorStore = useEditorStore()
 
 const isVisualMode = $computed(() => preferenceStore.editorMode === 'visual')
 const canToggleMode = $computed(() => editorStore.canToggleMode)
-const canToggleSidebar = $computed(() => canToggleMode)
+
+// 辅助面板按钮：当前文件为场景文件时可切换
+const canToggleSidebar = $computed(() => editorStore.isCurrentSceneFile)
 
 function handleModeToggle() {
   if (!canToggleMode || !editorStore.currentState) {
@@ -46,7 +48,7 @@ function handleSidebarToggle() {
         </TooltipContent>
       </Tooltip>
 
-      <!-- 边栏开关 -->
+      <!-- 辅助面板开关 -->
       <Tooltip>
         <TooltipTrigger as-child>
           <button

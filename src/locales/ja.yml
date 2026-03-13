@@ -240,6 +240,7 @@ edit:
   header:
     testGame: ゲームをテスト
     export: エクスポート
+    gameSettings: ゲーム設定
     missingPreviewUrl: プレビューURLがありません。先にプレビューを起動してください。
     openFailed: テストウィンドウを開けませんでした
   empty:
@@ -330,7 +331,6 @@ edit:
     loadFailed: "ファイルタイプの検出に失敗しました：{error}"
   textEditor:
     languages:
-      unknown: 不明
       webgalscript: WebGAL スクリプト
       webgalanimation: WebGAL アニメーション
     stats:
@@ -340,6 +340,9 @@ edit:
       noStatement: カーソルをステートメント行に移動して編集
   scenePanel:
     scene: シーン
+    resource: リソース
+  statusBar:
+    statements: "{count} ステートメント"
   fileTree:
     newFile: 新しいファイル
     newFolder: 新しいフォルダー
@@ -663,6 +666,11 @@ settings:
     collapseStatementsOnSidebarOpen:
       label: 補助パネル展開時にすべてのステートメントを折りたたむ
       description: 補助パネルを開いた際、すべてのステートメントカードを折りたたみ状態にロックします
+    effectEditorSide:
+      description: エフェクトエディターのドロワーがスライドする方向を選択します
+      label: エフェクトエディターのスライド方向
+      left: 左
+      right: 右
     showSidebarAssetPreview:
       label: 補助パネルのステートメント資源プレビュー
       description: エディターの補助パネルでステートメントが参照する画像などのアセットをプレビュー

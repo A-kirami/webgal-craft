@@ -77,6 +77,7 @@ pub fn run() {
             commands::server::get_connected_clients,
             // thumbnail
             commands::thumbnail::get_thumbnail,
+            commands::thumbnail::get_image_dimensions,
             commands::thumbnail::clear_thumbnail_cache,
             // fs
             commands::fs::copy_directory,

@@ -6,29 +6,24 @@ import { ResizablePanel } from '~/components/ui/resizable'
   <div class="flex flex-col overflow-hidden">
     <EditHeader />
     <ResizablePanelGroup
+      auto-save-id="editor-main"
       direction="horizontal"
     >
-      <ResizablePanel :default-size="15" :min-size="5" :collapsible="true">
-        <ScenePanel />
+      <!-- 左栏（预览 + 场景/资源） -->
+      <ResizablePanel
+        size-unit="px"
+        :default-size="380"
+        :min-size="280"
+        collapsible
+      >
+        <LeftPanel />
       </ResizablePanel>
       <ResizableHandle />
-      <ResizablePanel :default-size="35" :min-size="20">
-        <ResizablePanelGroup direction="vertical">
-          <ResizablePanel :default-size="65" :min-size="20" :collapsible="true">
-            <template #default="{ isCollapsed }">
-              <PreviewPanel v-if="!isCollapsed" />
-            </template>
-          </ResizablePanel>
-          <ResizableHandle />
-          <ResizablePanel :default-size="35" :min-size="20">
-            <AssetPanel />
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </ResizablePanel>
-      <ResizableHandle />
-      <ResizablePanel :default-size="50" :min-size="20">
+      <!-- 编辑器区域（标签页+编辑器+命令面板+辅助面板） -->
+      <ResizablePanel size-unit="px" :min-size="600">
         <EditorPanel />
       </ResizablePanel>
     </ResizablePanelGroup>
+    <EditorStatusBar />
   </div>
 </template>

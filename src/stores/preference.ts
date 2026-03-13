@@ -9,6 +9,8 @@ export const usePreferenceStore = defineStore(
     const assetSortOrder = $ref<FileViewerSortOrder>('asc')
     const editorMode = $ref<'text' | 'visual'>('text')
     const showSidebar = $ref(true)
+    const leftPanelView = $ref<'scene' | 'resource'>('scene')
+    const assetTab = $ref<'figure' | 'background' | 'bgm' | 'vocal' | 'video' | 'animation' | 'template'>('figure')
     const assetZoom = $ref<[number]>([100])
     const filePickerViewMode = $ref<'grid' | 'list' | undefined>()
     const filePickerZoomLevel = $ref<'small' | 'medium' | 'large' | 'extraLarge' | undefined>()
@@ -23,6 +25,8 @@ export const usePreferenceStore = defineStore(
       assetSortOrder,
       editorMode,
       showSidebar,
+      leftPanelView,
+      assetTab,
       assetZoom,
       filePickerViewMode,
       filePickerZoomLevel,

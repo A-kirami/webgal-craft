@@ -22,7 +22,13 @@ async function clearThumbnailCache() {
   return safeInvoke<void>('clear_thumbnail_cache')
 }
 
+/** 仅读取文件头部元数据获取图片分辨率，不解码完整图片 */
+async function getImageDimensions(path: string): Promise<[number, number]> {
+  return safeInvoke<[number, number]>('get_image_dimensions', { path })
+}
+
 export const thumbnailCmds = {
   getThumbnail,
+  getImageDimensions,
   clearThumbnailCache,
 }

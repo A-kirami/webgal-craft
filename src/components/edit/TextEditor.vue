@@ -4,18 +4,11 @@ import * as monaco from 'monaco-editor'
 
 import { BASE_EDITOR_OPTIONS, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
 
-interface LanguageConfig {
-  displayName: string
-  editorLanguage: string
-}
-
 const state = $(defineModel<TextModeState>('state', { required: true }))
 const editorStore = useEditorStore()
 const editSettings = useEditSettingsStore()
-const preferenceStore = usePreferenceStore()
 const tabsStore = useTabsStore()
 const viewStateStore = useEditorViewStateStore()
-const { t } = useI18n()
 
 const editorOptions = $computed<monaco.editor.IEditorConstructionOptions>(() => ({
   ...BASE_EDITOR_OPTIONS,
@@ -42,8 +35,6 @@ let hasCreatedEditorBefore = false
 /** 外部同步内容时（模式切换/文件重载），跳过 handleContentChange 的 isDirty 和自动保存逻辑 */
 let isSyncingContent = false
 
-const showFormPanel = $computed(() => state.visualType === 'scene' && preferenceStore.showSidebar)
-
 const formPanel = useTextEditorPanel({
   editorRef: $$(editor),
   stateRef: $$(state),
@@ -51,6 +42,15 @@ const formPanel = useTextEditorPanel({
 })
 const formEntry = $computed(() => formPanel.currentEntry.value)
 const formPreviousSpeaker = $computed(() => formPanel.previousSpeaker.value)
+
+// 注册辅助面板数据源（EditorPanel 统一渲染单实例 StatementEditorPanel）
+useSidebarPanelBinding({
+  entry: computed(() => formEntry),
+  index: computed(() => undefined),
+  previousSpeaker: computed(() => formPreviousSpeaker ?? ''),
+  enableFocusStatement: false,
+  onUpdate: payload => formPanel.handleFormUpdate(payload),
+})
 
 const MAX_CACHED_MODELS = 50
 
@@ -68,45 +68,29 @@ const modelAccessCache = $ref(new LRUCache<string, boolean>({
 
 const currentTheme = $computed(() => colorMode.value === 'dark' ? THEME_DARK : THEME_LIGHT)
 
-const currentLanguageConfig = $computed((): LanguageConfig => {
-  // 根据可视化类型判断
+const currentEditorLanguage = $computed((): string => {
   switch (state.visualType) {
     case 'scene': {
-      return {
-        displayName: t('edit.textEditor.languages.webgalscript'),
-        editorLanguage: 'webgalscript',
-      }
+      return 'webgalscript'
     }
     case 'animation': {
-      return {
-        displayName: t('edit.textEditor.languages.webgalanimation'),
-        editorLanguage: 'json',
-      }
+      return 'json'
     }
     default: {
       const fileName = state.path.split(/[/\\]/).pop() ?? ''
       const lastDot = fileName.lastIndexOf('.')
       const extension = lastDot > 0 ? fileName.slice(lastDot + 1).toLowerCase() : undefined
 
-      let languageId = 'plaintext'
-      let displayName = extension?.toUpperCase() ?? t('edit.textEditor.languages.unknown')
-
       if (extension) {
         const monacoLanguage = monaco.languages.getLanguages().find(
           lang => lang.extensions?.includes(`.${extension}`),
         )
         if (monacoLanguage) {
-          languageId = monacoLanguage.id
-          const alias = monacoLanguage.aliases?.find(
-            a => a.toLowerCase() === monacoLanguage.id,
-          ) ?? monacoLanguage.aliases?.[0]
-          displayName = alias
-            ? alias[0].toUpperCase() + alias.slice(1)
-            : extension.toUpperCase()
+          return monacoLanguage.id
         }
       }
 
-      return { displayName, editorLanguage: languageId }
+      return 'plaintext'
     }
   }
 })
@@ -184,6 +168,7 @@ async function saveTextFile(snapshot: SaveSnapshot) {
 
     fileState.lastSavedVersionId = snapshot.versionId
     fileState.lastSavedTime = new Date()
+    state.lastSavedTime = fileState.lastSavedTime
 
     // 仅在保存期间内容未被修改时才清除 isDirty，防止覆盖用户新输入的脏标记
     const latestVersionId = editor?.getModel()?.getAlternativeVersionId()
@@ -464,8 +449,7 @@ function switchModel(newPath: string, oldPath: string) {
     oldFileState.hasUserInteracted = false
   }
 
-  const language = currentLanguageConfig.editorLanguage
-  const newModel = getOrCreateModel(state.textContent, language, newPath)
+  const newModel = getOrCreateModel(state.textContent, currentEditorLanguage, newPath)
 
   editor.setModel(newModel)
 
@@ -489,8 +473,7 @@ function createEditor() {
     return
   }
 
-  const language = currentLanguageConfig.editorLanguage
-  const initialModel = getOrCreateModel(state.textContent, language, state.path)
+  const initialModel = getOrCreateModel(state.textContent, currentEditorLanguage, state.path)
 
   editor = monaco.editor.create(editorContainer, {
     model: initialModel,
@@ -521,8 +504,6 @@ function createEditor() {
 
   formPanel.updateFormEntry()
 }
-
-const lastSavedTime = $computed(() => fileStates.get(state.path)?.lastSavedTime)
 
 watch(() => state.path, (newPath, oldPath) => {
   if (oldPath && newPath !== oldPath) {
@@ -570,17 +551,14 @@ watch(() => state.textContent, (newContent) => {
   }
 })
 
-watch(() => currentLanguageConfig, (newConfig) => {
+watch(() => currentEditorLanguage, (language) => {
   if (!editor) {
     return
   }
 
   const model = editor.getModel()
-  if (model) {
-    const language = newConfig.editorLanguage
-    if (model.getLanguageId() !== language) {
-      monaco.editor.setModelLanguage(model, language)
-    }
+  if (model && model.getLanguageId() !== language) {
+    monaco.editor.setModelLanguage(model, language)
   }
 })
 
@@ -669,30 +647,5 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full overflow-hidden divide-y">
-    <EditorSidebarLayout :show="showFormPanel" :main-min-size="30" :sidebar-min-size="15" class="flex-1 overflow-hidden">
-      <div ref="editorContainer" class="h-full overflow-hidden" />
-      <template #sidebar>
-        <ScrollArea v-if="formEntry" class="h-full">
-          <StatementEditorPanel
-            :key="formEntry.id"
-            :entry="formEntry"
-            :previous-speaker="formPreviousSpeaker"
-            :enable-focus-statement="false"
-            @update="formPanel.handleFormUpdate"
-          />
-        </ScrollArea>
-        <div v-else class="text-sm text-muted-foreground px-4 flex h-full items-center justify-center">
-          {{ $t('edit.textEditor.formPanel.noStatement') }}
-        </div>
-      </template>
-    </EditorSidebarLayout>
-    <TextEditorStatusBar
-      class="text-nowrap"
-      :is-saved="!state.isDirty"
-      :content="state.textContent"
-      :file-language="currentLanguageConfig.displayName"
-      :last-saved-time="lastSavedTime"
-    />
-  </div>
+  <div ref="editorContainer" class="h-full overflow-hidden" />
 </template>

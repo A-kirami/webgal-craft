@@ -757,3 +757,32 @@ async function getPathFromFileType(
   }
   return basePath
 }
+
+/**
+ * 根据文件扩展名从 Monaco 语言注册表获取语言显示名称
+ * 无法识别时回退到扩展名大写
+ */
+export function getLanguageDisplayName(filePath: string): string {
+  const fileName = filePath.split(/[/\\]/).pop() ?? ''
+  const lastDot = fileName.lastIndexOf('.')
+  if (lastDot <= 0) {
+    return ''
+  }
+
+  const extension = fileName.slice(lastDot + 1).toLowerCase()
+  const monacoLanguage = monaco.languages.getLanguages().find(
+    lang => lang.extensions?.includes(`.${extension}`),
+  )
+
+  if (!monacoLanguage) {
+    return extension.toUpperCase()
+  }
+
+  const alias = monacoLanguage.aliases?.find(
+    a => a.toLowerCase() === monacoLanguage.id,
+  ) ?? monacoLanguage.aliases?.[0]
+
+  return alias
+    ? alias[0].toUpperCase() + alias.slice(1)
+    : extension.toUpperCase()
+}

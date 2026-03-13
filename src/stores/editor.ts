@@ -1,4 +1,4 @@
-import { readTextFile } from '@tauri-apps/plugin-fs'
+import { readTextFile, stat } from '@tauri-apps/plugin-fs'
 import { defineStore } from 'pinia'
 
 import { mime } from '~/plugins/mime'
@@ -11,6 +11,7 @@ type VisualType = 'scene' | 'animation'
 
 interface TextualEditorBase extends CoreEditorState {
   isDirty: boolean
+  lastSavedTime?: Date
   visualType?: VisualType
   lastLineNumber?: number
 }
@@ -37,12 +38,13 @@ export interface VisualModeAnimationState extends TextualEditorBase {
 
 export type VisualModeState = VisualModeSceneState | VisualModeAnimationState
 
-type TextualEditorState = TextModeState | VisualModeState
+export type TextualEditorState = TextModeState | VisualModeState
 
 export interface AssetPreviewState extends CoreEditorState {
   mode: 'preview'
   assetUrl: string
   mimeType: string
+  fileSize?: number
 }
 
 export interface UnsupportedState extends CoreEditorState {
@@ -52,15 +54,15 @@ export interface UnsupportedState extends CoreEditorState {
 
 type EditorState = TextualEditorState | AssetPreviewState | UnsupportedState
 
-function isTextualEditor(state: EditorState): state is TextualEditorState {
+export function isTextualEditor(state: EditorState): state is TextualEditorState {
   return state.mode === 'text' || state.mode === 'visual'
 }
 
-function isVisualScene(state: EditorState): state is VisualModeSceneState {
+export function isVisualScene(state: EditorState): state is VisualModeSceneState {
   return state.mode === 'visual' && state.visualType === 'scene'
 }
 
-function isVisualAnimation(state: EditorState): state is VisualModeAnimationState {
+export function isVisualAnimation(state: EditorState): state is VisualModeAnimationState {
   return state.mode === 'visual' && state.visualType === 'animation'
 }
 
@@ -230,11 +232,21 @@ export const useEditorStore = defineStore('editor', () => {
       if (PREVIEW_MIME_PREFIXES.some(prefix => mimeType.startsWith(prefix))) {
         const workspaceStore = useWorkspaceStore()
         await until(() => !!workspaceStore.currentGameServeUrl).toBe(true)
+
+        let fileSize: number | undefined
+        try {
+          const fileStat = await stat(tab.path)
+          fileSize = fileStat.size
+        } catch {
+          // 获取文件大小失败时忽略，不影响预览
+        }
+
         states.set(tab.path, {
           path: tab.path,
           mode: 'preview',
           assetUrl: getAssetUrl(tab.path),
           mimeType,
+          fileSize,
         })
       } else {
         // 检测文件是否为二进制
@@ -459,6 +471,7 @@ export const useEditorStore = defineStore('editor', () => {
 
     await gameFs.writeFile(path, content)
     state.isDirty = false
+    state.lastSavedTime = new Date()
 
     // 更新保存快照（可视模式下需要同步快照）
     if (state.mode === 'visual') {
@@ -479,10 +492,16 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
 
+  // 当前活跃文件是否为场景文件
+  const isCurrentSceneFile = $computed(() =>
+    currentState !== undefined && isTextualEditor(currentState) && currentState.visualType === 'scene',
+  )
+
   return $$({
     states,
     currentState,
     canToggleMode,
+    isCurrentSceneFile,
     toggleTextualMode,
     syncScenePreview,
     saveFile,

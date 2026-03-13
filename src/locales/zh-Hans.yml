@@ -240,6 +240,7 @@ edit:
   header:
     testGame: 测试游戏
     export: 导出
+    gameSettings: 游戏设置
     missingPreviewUrl: 预览地址不存在，请先启动预览
     openFailed: 打开测试窗口失败
   empty:
@@ -330,7 +331,6 @@ edit:
     loadFailed: "无法检测文件类型：{error}"
   textEditor:
     languages:
-      unknown: 未知
       webgalscript: WebGAL 脚本
       webgalanimation: WebGAL 动画
     stats:
@@ -340,6 +340,9 @@ edit:
       noStatement: 移动光标到语句行以编辑
   scenePanel:
     scene: 场景
+    resource: 资源
+  statusBar:
+    statements: "{count} 条语句"
   fileTree:
     newFile: 新建文件
     newFolder: 新建文件夹
@@ -663,6 +666,11 @@ settings:
     collapseStatementsOnSidebarOpen:
       label: 展开辅助面板时强制折叠全部语句
       description: 打开辅助面板时，锁定所有语句卡片为折叠状态
+    effectEditorSide:
+      description: 选择效果编辑器抽屉从哪一侧滑出
+      label: 效果编辑器滑出方向
+      left: 左侧
+      right: 右侧
     showSidebarAssetPreview:
       label: 辅助面板语句资源预览
       description: 在编辑器辅助面板中预览语句引用的图片等资源

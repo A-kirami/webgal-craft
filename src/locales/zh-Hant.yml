@@ -240,6 +240,7 @@ edit:
   header:
     testGame: 測試遊戲
     export: 匯出
+    gameSettings: 遊戲設定
     missingPreviewUrl: 預覽地址不存在，請先啟動預覽
     openFailed: 開啟測試視窗失敗
   empty:
@@ -330,7 +331,6 @@ edit:
     loadFailed: "無法偵測檔案類型：{error}"
   textEditor:
     languages:
-      unknown: 未知
       webgalscript: WebGAL 腳本
       webgalanimation: WebGAL 動畫
     stats:
@@ -340,6 +340,9 @@ edit:
       noStatement: 移動游標到語句行以編輯
   scenePanel:
     scene: 場景
+    resource: 資源
+  statusBar:
+    statements: "{count} 條語句"
   fileTree:
     newFile: 新建檔案
     newFolder: 新建資料夾
@@ -663,6 +666,11 @@ settings:
     collapseStatementsOnSidebarOpen:
       label: 展開輔助面板時強制摺疊全部語句
       description: 開啟輔助面板時，鎖定所有語句卡片為摺疊狀態
+    effectEditorSide:
+      description: 選擇效果編輯器抽屜從哪一側滑出
+      label: 效果編輯器滑出方向
+      left: 左側
+      right: 右側
     showSidebarAssetPreview:
       label: 輔助面板語句資源預覽
       description: 在編輯器輔助面板中預覽語句引用的圖片等資源

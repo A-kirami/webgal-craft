@@ -240,6 +240,7 @@ edit:
   header:
     testGame: Test Game
     export: Export
+    gameSettings: Game Settings
     missingPreviewUrl: Preview URL is not available. Please start preview first.
     openFailed: Failed to open test window
   empty:
@@ -330,7 +331,6 @@ edit:
     loadFailed: "Failed to detect file type: {error}"
   textEditor:
     languages:
-      unknown: Unknown
       webgalscript: WebGAL Script
       webgalanimation: WebGAL Animation
     stats:
@@ -340,6 +340,9 @@ edit:
       noStatement: Move cursor to a statement line to edit
   scenePanel:
     scene: Scene
+    resource: Resource
+  statusBar:
+    statements: "{count} statements"
   fileTree:
     newFile: New File
     newFolder: New Folder
@@ -663,6 +666,11 @@ settings:
     collapseStatementsOnSidebarOpen:
       label: Collapse All Statements When Auxiliary Panel Opens
       description: Lock all statement cards in collapsed state when the auxiliary panel is opened
+    effectEditorSide:
+      description: Choose which side the effect editor drawer slides in from
+      label: Effect Editor Slide Direction
+      left: Left
+      right: Right
     showSidebarAssetPreview:
       label: Auxiliary Panel Statement Asset Preview
       description: Preview images and other assets referenced by statements in the editor auxiliary panel

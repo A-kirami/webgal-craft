@@ -96,7 +96,10 @@ impl WindowConfig {
         builder
     }
 
-    pub fn build<R: Runtime>(self, handle: &AppHandle<R>) -> tauri::Result<tauri::WebviewWindow<R>> {
+    pub fn build<R: Runtime>(
+        self,
+        handle: &AppHandle<R>,
+    ) -> tauri::Result<tauri::WebviewWindow<R>> {
         let WindowConfig {
             label,
             url,

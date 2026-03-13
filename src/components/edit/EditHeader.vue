@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
-import { ArrowLeft, Download, Loader2, MonitorPlay, Play, Settings } from 'lucide-vue-next'
+import { ArrowLeft, Download, Loader2, MonitorPlay, Pencil, Play, Settings } from 'lucide-vue-next'
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
 
@@ -122,10 +122,14 @@ onBeforeUnmount(() => {
         <ArrowLeft class="size-5!" />
         <span class="sr-only">{{ $t('common.back') }}</span>
       </Button>
-      <div class="flex gap-2 cursor-pointer items-center" @click="modalStore.open('GameConfigModal')">
+      <div class="flex gap-2 items-center">
         <Thumbnail :path="workspaceStore.currentGame?.metadata.icon" :alt="`${workspaceStore.currentGame?.metadata.name} 游戏图标`" fallback-image="/placeholder.svg" class="rounded-md size-6" />
         <span class="font-medium">{{ workspaceStore.currentGame?.metadata.name }}</span>
       </div>
+      <Button variant="ghost" size="icon" class="size-8" :title="$t('edit.header.gameSettings')" @click="modalStore.open('GameConfigModal')">
+        <Pencil class="size-4" />
+        <span class="sr-only">{{ $t('edit.header.gameSettings') }}</span>
+      </Button>
     </div>
     <div class="flex gap-2 items-center">
       <Button

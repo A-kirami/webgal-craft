@@ -13,6 +13,7 @@ const validationSchema = z.object({
   autoSave: z.boolean(),
   enablePreviewTab: z.boolean(),
   autoApplyEffectEditorChanges: z.boolean(),
+  effectEditorSide: z.enum(['left', 'right']),
   collapseStatementsOnSidebarOpen: z.boolean(),
   showSidebarAssetPreview: z.boolean(),
 })
@@ -94,6 +95,34 @@ function handleFontSizeChange(handleChange: (val: number) => void) {
             :model-value="value"
             @update:model-value="handleChange"
           />
+        </FormControl>
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ value, handleChange }" name="effectEditorSide">
+      <FormItem class="flex flex-row gap-2 max-w-120 items-center justify-between space-y-0">
+        <div class="flex flex-col gap-1">
+          <FormLabel>
+            {{ $t('settings.edit.effectEditorSide.label') }}
+          </FormLabel>
+          <FormDescription class="text-xs">
+            {{ $t('settings.edit.effectEditorSide.description') }}
+          </FormDescription>
+        </div>
+        <FormControl>
+          <Select :model-value="value" @update:model-value="handleChange">
+            <SelectTrigger class="h-8 w-28 shadow-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="left">
+                {{ $t('settings.edit.effectEditorSide.left') }}
+              </SelectItem>
+              <SelectItem value="right">
+                {{ $t('settings.edit.effectEditorSide.right') }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </FormControl>
       </FormItem>
     </FormField>

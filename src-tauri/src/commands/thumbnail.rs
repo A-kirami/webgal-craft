@@ -4,7 +4,6 @@ use blake3::Hasher;
 use image::{self, GenericImageView};
 use serde::{Deserialize, Serialize};
 use tauri::{command, ipc::Response, AppHandle, Manager};
-use webp;
 
 use super::{AppError, AppResult};
 
@@ -41,10 +40,7 @@ fn get_cache_path(app_handle: &AppHandle, original_path: &str, size: &ThumbnailS
     // 获取尺寸信息
     let (width, height) = match size {
         ThumbnailSize::Single(s) => (*s, *s),
-        ThumbnailSize::Custom {
-            width,
-            height,
-        } => (*width, *height),
+        ThumbnailSize::Custom { width, height } => (*width, *height),
     };
 
     // 使用 blake3 计算文件哈希
@@ -92,13 +88,7 @@ pub async fn get_thumbnail(
             width: s,
             height: s,
         },
-        ThumbnailSize::Custom {
-            width,
-            height,
-        } => ThumbnailSize::Custom {
-            width,
-            height,
-        },
+        ThumbnailSize::Custom { width, height } => ThumbnailSize::Custom { width, height },
     };
 
     let cache_path = get_cache_path(&app_handle, &path, &size);
@@ -134,10 +124,7 @@ pub async fn get_thumbnail(
     let aspect_ratio = width as f32 / height as f32;
 
     let (new_width, new_height) = match size {
-        ThumbnailSize::Custom {
-            width,
-            height,
-        } => {
+        ThumbnailSize::Custom { width, height } => {
             if aspect_ratio > 1.0 {
                 // 宽图
                 let new_width = width;
@@ -181,6 +168,12 @@ pub async fn get_thumbnail(
     }
 
     Ok(Response::new(buffer))
+}
+
+/// 获取图像尺寸
+#[command]
+pub async fn get_image_dimensions(path: String) -> AppResult<(u32, u32)> {
+    image::image_dimensions(&path).map_err(|e| AppError::Image(format!("无法读取图片尺寸: {}", e)))
 }
 
 // 清理缓存命令
