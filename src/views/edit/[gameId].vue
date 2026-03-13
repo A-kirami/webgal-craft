@@ -11,7 +11,6 @@ import { ResizablePanel } from '~/components/ui/resizable'
     >
       <!-- 左栏（预览 + 场景/资源） -->
       <ResizablePanel
-        ref="leftPanel"
         size-unit="px"
         :default-size="380"
         :min-size="280"

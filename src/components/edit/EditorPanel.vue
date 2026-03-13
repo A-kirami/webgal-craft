@@ -104,7 +104,7 @@ defineExpose({ toggleCommandPanel })
         <div class="flex flex-col h-full relative overflow-hidden">
           <!-- 场景文件：编辑器 + 命令面板纵向分割 -->
           <ResizablePanelGroup v-if="editorStore.isCurrentSceneFile" auto-save-id="editor-vertical" direction="vertical" class="flex-1 min-h-0">
-            <ResizablePanel size-unit="px" :min-size="400">
+            <ResizablePanel size-unit="px" :min-size="200">
               <FileEditor />
             </ResizablePanel>
             <ResizableHandle />

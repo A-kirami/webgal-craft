@@ -21,10 +21,7 @@ pub struct CreateWindowOptions {
 }
 
 #[tauri::command]
-pub async fn create_window(
-    app_handle: AppHandle,
-    options: CreateWindowOptions,
-) -> AppResult<bool> {
+pub async fn create_window(app_handle: AppHandle, options: CreateWindowOptions) -> AppResult<bool> {
     let CreateWindowOptions {
         label,
         target,
@@ -52,14 +49,12 @@ pub async fn create_window(
     }
 
     let webview_url = if target.contains("://") {
-        let url =
-            Url::parse(&target).map_err(|error| AppError::Window(format!("无效的 URL: {error}")))?;
+        let url = Url::parse(&target)
+            .map_err(|error| AppError::Window(format!("无效的 URL: {error}")))?;
         match url.scheme() {
             "http" | "https" => WebviewUrl::External(url),
             scheme => {
-                return Err(AppError::Window(format!(
-                    "不支持的 URL 协议: {scheme}"
-                )));
+                return Err(AppError::Window(format!("不支持的 URL 协议: {scheme}")));
             }
         }
     } else {

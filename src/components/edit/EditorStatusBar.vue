@@ -1,39 +1,9 @@
 <script setup lang="ts">
 import { countLines, countWords } from 'alfaaz'
 import { ChartSpline, FileText, Image as ImageIcon } from 'lucide-vue-next'
-import * as monaco from 'monaco-editor'
 
 import dayjs from '~/plugins/dayjs'
-import { isTextualEditor, isVisualScene as checkVisualScene } from '~/stores/editor'
-
-/**
- * 根据文件扩展名从 Monaco 语言注册表获取语言显示名称
- * 无法识别时回退到扩展名大写
- */
-function getLanguageDisplayName(filePath: string): string {
-  const fileName = filePath.split(/[/\\]/).pop() ?? ''
-  const lastDot = fileName.lastIndexOf('.')
-  if (lastDot <= 0) {
-    return ''
-  }
-
-  const extension = fileName.slice(lastDot + 1).toLowerCase()
-  const monacoLanguage = monaco.languages.getLanguages().find(
-    lang => lang.extensions?.includes(`.${extension}`),
-  )
-
-  if (!monacoLanguage) {
-    return extension.toUpperCase()
-  }
-
-  const alias = monacoLanguage.aliases?.find(
-    a => a.toLowerCase() === monacoLanguage.id,
-  ) ?? monacoLanguage.aliases?.[0]
-
-  return alias
-    ? alias[0].toUpperCase() + alias.slice(1)
-    : extension.toUpperCase()
-}
+import { getLanguageDisplayName } from '~/plugins/editor'
 
 const { t, locale } = useI18n()
 
@@ -128,11 +98,11 @@ const fileLanguage = $computed(() => {
 const textContent = $computed(() => editableState?.mode === 'text' ? editableState.textContent : '')
 
 // 是否为可视化场景模式
-const isSceneMode = $computed(() => editableState !== undefined && checkVisualScene(editableState))
+const isSceneMode = $computed(() => editableState !== undefined && isVisualScene(editableState))
 
 // 语句数（可视化场景模式）
 const statementCount = $computed(() =>
-  editableState && checkVisualScene(editableState)
+  editableState && isVisualScene(editableState)
     ? editableState.statements.length
     : 0,
 )
@@ -140,13 +110,8 @@ const statementCount = $computed(() =>
 // 行数和字数
 let wordCount = $ref(0)
 let lineCount = $ref(0)
-let lastCountedContent = ''
 
 function updateStats() {
-  if (textContent === lastCountedContent) {
-    return
-  }
-  lastCountedContent = textContent
   wordCount = countWords(textContent)
   lineCount = countLines(textContent)
 }
