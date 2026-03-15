@@ -1,5 +1,0 @@
-{
-    "*.{js,jsx,ts,tsx,cjs,mjs,vue}": "eslint --fix",
-    "*.{css,vue}": "stylelint --fix",
-    "src/locales/*.{json,json5,yaml,yml}": "eslint --fix"
-}

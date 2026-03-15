@@ -1,0 +1,55 @@
+name: Rust Lint
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src-tauri/**"
+      - ".github/workflows/rust-lint.yml"
+  pull_request:
+    paths:
+      - "src-tauri/**"
+      - ".github/workflows/rust-lint.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  rust-lint:
+    permissions:
+      contents: read
+    name: rust:${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: clippy
+            command: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
+            needs-deps: true
+          - name: format
+            command: cargo fmt --manifest-path src-tauri/Cargo.toml --all --check
+            needs-deps: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        if: ${{ matrix.needs-deps }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Run lint checks
+        run: ${{ matrix.command }}

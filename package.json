@@ -21,8 +21,7 @@
     "lint:i18n:fix": "eslint 'src/locales/*.{json,json5,yaml,yml}' --fix",
     "lint:rs": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings",
     "lint:rs:fix": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features --fix --allow-dirty --allow-staged",
-    "format:rs": "cargo fmt --manifest-path src-tauri/Cargo.toml --all",
-    "prepare": "node .husky/install.js"
+    "format:rs": "cargo fmt --manifest-path src-tauri/Cargo.toml --all"
   },
   "dependencies": {
     "@andypf/json-viewer": "^2.2.4",
@@ -87,8 +86,6 @@
     "eslint-plugin-vue": "^10.8.0",
     "eslint-plugin-yml": "^3.3.1",
     "globals": "^17.4.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.3.2",
     "postcss-nesting": "^14.0.0",
     "stylelint": "^17.4.0",
     "stylelint-config-css-modules": "^4.6.0",

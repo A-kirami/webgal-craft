@@ -1,0 +1,98 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "src-tauri/**"
+      - "package.json"
+      - "bun.lock"
+      - "vite.config.ts"
+      - "unocss.config.ts"
+      - "tsconfig.json"
+      - ".github/workflows/build.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "src-tauri/**"
+      - "package.json"
+      - "bun.lock"
+      - "vite.config.ts"
+      - "unocss.config.ts"
+      - "tsconfig.json"
+      - ".github/workflows/build.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-amd64
+            target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            label: macos-amd64
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            label: macos-arm64
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            label: windows-amd64
+            target: x86_64-pc-windows-msvc
+
+    env:
+      GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+      GITHUB_BUILD_SHA: ${{ github.event.pull_request && github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install system dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build app
+        id: tauri-build
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          includeDebug: ${{ github.event_name == 'pull_request' }}
+          includeRelease: ${{ github.event_name != 'pull_request' }}
+          args: -t ${{ matrix.target }} -c '{"bundle":{"createUpdaterArtifacts":false}}'
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: "webgal-craft_${{steps.tauri-build.outputs.appVersion}}_${{ matrix.label }}"
+          path: "${{ join(fromJSON(steps.tauri-build.outputs.artifactPaths), '\n') }}"
