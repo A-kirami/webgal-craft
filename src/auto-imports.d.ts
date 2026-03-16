@@ -16,6 +16,7 @@ declare global {
   const EFFECT_EDITOR_OPEN_OVERRIDE_KEY: typeof import('./composables/useStatementEffectEditorBridge').EFFECT_EDITOR_OPEN_OVERRIDE_KEY
   const EffectScope: typeof import('vue').EffectScope
   const FIGURE_POSITION_FLAGS: typeof import('./helper/webgal-script/types').FIGURE_POSITION_FLAGS
+  const SAY_CONTINUATION_RAW: typeof import('./helper/webgal-script/codec').SAY_CONTINUATION_RAW
   const UNSPECIFIED: typeof import('./helper/command-registry/schema').UNSPECIFIED
   const applyEffectEditorResultToSentence: typeof import('./composables/useStatementEffectEditorBridge').applyEffectEditorResultToSentence
   const applyScrubStepModifier: typeof import('./helper/math').applyScrubStepModifier
@@ -687,6 +688,7 @@ declare module 'vue' {
     readonly EFFECT_EDITOR_OPEN_OVERRIDE_KEY: UnwrapRef<typeof import('./composables/useStatementEffectEditorBridge')['EFFECT_EDITOR_OPEN_OVERRIDE_KEY']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly FIGURE_POSITION_FLAGS: UnwrapRef<typeof import('./helper/webgal-script/types')['FIGURE_POSITION_FLAGS']>
+    readonly SAY_CONTINUATION_RAW: UnwrapRef<typeof import('./helper/webgal-script/codec')['SAY_CONTINUATION_RAW']>
     readonly UNSPECIFIED: UnwrapRef<typeof import('./helper/command-registry/schema')['UNSPECIFIED']>
     readonly applyEffectEditorResultToSentence: UnwrapRef<typeof import('./composables/useStatementEffectEditorBridge')['applyEffectEditorResultToSentence']>
     readonly applyScrubStepModifier: UnwrapRef<typeof import('./helper/math')['applyScrubStepModifier']>

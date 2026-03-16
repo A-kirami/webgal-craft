@@ -200,7 +200,7 @@ function requestClose() {
             <span v-else>{{ $t('edit.visualEditor.commandPanel.createGroup') }}</span>
             <span class="text-muted-foreground">—</span>
             <Input
-              v-model="draftName"
+              ::="draftName"
               :placeholder="$t('edit.visualEditor.commandPanel.groupNamePlaceholder')"
               class="text-base font-normal h-7 max-w-60 shadow-none"
             />

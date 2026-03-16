@@ -174,7 +174,8 @@ function parseSayNode(sentence: ISentence): SayCommandNode {
   // - commandRaw 为 SAY_CONTINUATION_RAW（来自 serializeSayNode）
   // - 或 commandRaw 以 content 开头且 args 中无 speaker（来自 webgal-parser）
   const isContinuation = sentence.commandRaw === SAY_CONTINUATION_RAW
-    || (sentence.commandRaw !== 'say'
+    || (sentence.content !== ''
+      && sentence.commandRaw !== 'say'
       && sentence.commandRaw !== ''
       && speakerFromArgs === undefined
       && sentence.commandRaw.startsWith(sentence.content))
@@ -221,6 +222,8 @@ function serializeSayNode(node: SayCommandNode): ISentence {
   const isStandardForm = reservedCommandStrings.has(node.speaker)
   // 续写形式：无说话人、非 clear、非标准形式
   const isContinuation = !node.speaker && !node.clear && !isStandardForm
+  // clear 仅在旁白简写形式（:内容;）中隐含，其他形式需显式写入 args
+  const needsExplicitClear = node.clear && (!!node.speaker || isStandardForm)
   return {
     ...toSentenceBase(node),
     commandRaw: isStandardForm ? 'say' : (isContinuation ? SAY_CONTINUATION_RAW : node.speaker),
@@ -229,6 +232,7 @@ function serializeSayNode(node: SayCommandNode): ISentence {
       .reserve('speaker')
       .reserve('clear')
       .string('speaker', isStandardForm ? node.speaker : undefined)
+      .flag('clear', needsExplicitClear)
       .string('fontSize', node.fontSize)
       .string('vocal', node.vocal)
       .number('volume', node.volume)
