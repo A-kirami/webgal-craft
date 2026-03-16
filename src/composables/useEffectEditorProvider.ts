@@ -475,5 +475,5 @@ export function useEffectEditorProvider(): EffectEditorProvider {
 }
 
 export function useInjectedEffectEditorProvider(): EffectEditorProvider | undefined {
-  return inject(EFFECT_EDITOR_PROVIDER_KEY)
+  return inject(EFFECT_EDITOR_PROVIDER_KEY, undefined)
 }

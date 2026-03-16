@@ -27,6 +27,7 @@
   "dependencies": {
     "@andypf/json-viewer": "^2.2.4",
     "@formkit/auto-animate": "^0.9.0",
+    "@monaco-editor/loader": "^1.7.0",
     "@tanstack/vue-virtual": "^3.13.21",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-dialog": "^2.6.0",
@@ -51,7 +52,7 @@
     "notivue": "^2.4.5",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
-    "reka-ui": "^2.9.0",
+    "reka-ui": "^2.9.2",
     "sanitize-filename": "^1.6.3",
     "tailwind-merge": "^3.5.0",
     "vee-validate": "^5.0.0-beta.1",

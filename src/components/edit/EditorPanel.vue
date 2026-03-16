@@ -24,6 +24,10 @@ const effectiveShowSidebar = computed({
 const sidebarPanel = useSidebarPanelProvider()
 const binding = $computed(() => sidebarPanel.activeBinding.value)
 
+// 命令面板桥接：子编辑器注册插入处理器，CommandPanel 通过 bridge 调用
+const commandPanelBridge = useCommandPanelBridgeProvider()
+const commandHandler = $computed(() => commandPanelBridge.activeHandler.value)
+
 const isTextMode = $computed(() => editorStore.currentState?.mode === 'text')
 
 const isCommandPanelCollapsed = $computed(() => commandPanelRef.value?.isCollapsed ?? true)
@@ -112,13 +116,13 @@ defineExpose({ toggleCommandPanel })
               ref="commandPanel"
               collapsible
               size-unit="px"
-              :default-size="180"
+              :default-size="135"
               :min-size="80"
             >
-              <!-- 命令面板占位，后续实现实际内容 -->
-              <div class="text-sm text-muted-foreground flex h-full items-center justify-center">
-                {{ $t('edit.visualEditor.commandPanel') }}
-              </div>
+              <CommandPanel
+                @insert-command="type => commandHandler?.insertCommand(type)"
+                @insert-group="group => commandHandler?.insertGroup(group)"
+              />
             </ResizablePanel>
           </ResizablePanelGroup>
           <!-- 非场景文件：编辑器占满 -->
@@ -130,7 +134,7 @@ defineExpose({ toggleCommandPanel })
             @click="toggleCommandPanel"
           >
             <div class="i-lucide-panel-bottom-open size-3.5" />
-            {{ $t('edit.visualEditor.commandPanel') }}
+            {{ $t('edit.visualEditor.commandPanel.title') }}
           </button>
         </div>
         <template #sidebar>

@@ -258,6 +258,51 @@ useSidebarPanelBinding({
   onFocusStatement: () => scrollToSelectedStatement(),
 })
 
+// ─── 命令面板桥接 ───
+
+const commandPanelStore = useCommandPanelStore()
+
+function insertRawTexts(rawTexts: string[]) {
+  if (rawTexts.length === 0) {
+    return
+  }
+  flushCommit()
+  const newEntries = rawTexts.flatMap(text => buildStatements(text))
+  const insertAt = editSettings.commandInsertPosition === 'end'
+    ? state.value.statements.length
+    : (() => {
+        const idx = state.value.statements.findIndex(e => e.id === selectedStatementId)
+        return idx === -1 ? state.value.statements.length : idx + 1
+      })()
+  state.value.statements.splice(insertAt, 0, ...newEntries)
+  commit()
+  state.value.isDirty = true
+
+  // 选中最后一条插入的语句
+  const lastInserted = newEntries.at(-1)
+  if (lastInserted) {
+    selectedStatementId = lastInserted.id
+    nextTick(() => scrollToSelectedStatement('auto'))
+  }
+
+  if (tabIndex !== -1) {
+    tabsStore.updateTabModified(tabIndex, true)
+  }
+  if (editSettings.autoSave) {
+    debouncedSave()
+  }
+}
+
+useCommandPanelBridgeBinding({
+  insertCommand: (type) => {
+    const rawText = commandPanelStore.getInsertText(type)
+    insertRawTexts([rawText])
+  },
+  insertGroup: (group) => {
+    insertRawTexts(group.rawTexts)
+  },
+})
+
 /* 自动保存的 debounce 函数 */
 const debouncedSave = useDebounceFn(() => {
   editorStore.saveFile(state.value.path)
@@ -381,24 +426,8 @@ watch(() => state.value.isDirty, (isDirty) => {
  * 打开辅助面板时，根据 lastLineNumber 自动选中对应语句
  */
 watch(() => preferenceStore.showSidebar, (show) => {
-  if (show) {
-    if (selectedStatementId === undefined) {
-      autoSelectFromLineNumber()
-    }
-    // 展开辅助面板时强制折叠所有语句卡片（仅在设置启用时）
-    if (editSettings.collapseStatementsOnSidebarOpen) {
-      let changed = false
-      const statements = state.value.statements
-      for (let i = 0; i < statements.length; i++) {
-        if (!statements[i].collapsed) {
-          statements[i] = markRaw({ ...statements[i], collapsed: true })
-          changed = true
-        }
-      }
-      if (changed) {
-        state.value.statements = [...statements]
-      }
-    }
+  if (show && selectedStatementId === undefined) {
+    autoSelectFromLineNumber()
   }
 })
 
@@ -432,7 +461,7 @@ function autoSelectFromLineNumber() {
  * 每帧调用 scrollToIndex 触发新项渲染和 ResizeObserver 测量，
  * 等连续两帧偏移量不再变化后才揭示列表，确保用户只看到最终位置。
  */
-function scrollToSelectedStatement() {
+function scrollToSelectedStatement(align: 'center' | 'auto' = 'center') {
   if (selectedStatementId === undefined) {
     isPositioning = false
     return
@@ -449,7 +478,7 @@ function scrollToSelectedStatement() {
 
   function settle() {
     remainingFrames--
-    rowVirtualizer.value.scrollToIndex(index, { align: 'center' })
+    rowVirtualizer.value.scrollToIndex(index, { align })
     const offset = rowVirtualizer.value.scrollOffset ?? 0
     if (Math.abs(offset - lastOffset) <= 1) {
       stableFrames++

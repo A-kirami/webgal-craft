@@ -25,7 +25,12 @@ export function serializeSentence(sentence: ISentence): string {
   const argsText = serializeArgs(sentence)
   const commentText = sentence.inlineComment ? `;${sentence.inlineComment}` : ''
   // WebGAL 脚本中分号是行内注释分隔符，content 中的字面分号需要转义
-  const escapedContent = sentence.content.replaceAll(';', String.raw`\;`)
+  const escapedContent = sentence.content.replaceAll(';', String.raw`\\;`)
+
+  // 续写形式：commandRaw 为 null 时省略冒号前缀，直接输出 内容;
+  if (sentence.commandRaw === undefined) {
+    return `${escapedContent}${argsText}${commentText};`
+  }
 
   return `${sentence.commandRaw}:${escapedContent}${argsText}${commentText};`
 }

@@ -623,7 +623,7 @@ defineExpose({
 </script>
 
 <template>
-  <ScrollArea ref="scrollAreaRef" :class="[$style.fileTreeScrollArea, 'h-full']">
+  <ScrollArea ref="scrollAreaRef" class="flex-scroll-area h-full">
     <!-- 加载状态提示 -->
     <div v-if="isLoading" class="flex h-full items-center justify-center">
       <div class="text-muted-foreground flex flex-col gap-3 items-center">
@@ -774,15 +774,3 @@ defineExpose({
     </Tree>
   </ScrollArea>
 </template>
-
-<style module>
-.file-tree-scroll-area {
-  & [data-reka-scroll-area-viewport] {
-    @apply flex flex-col;
-
-    & > div {
-      @apply flex-1;
-    }
-  }
-}
-</style>

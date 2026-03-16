@@ -1,7 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { AUDIO_EXTENSIONS, BACKGROUND_EXTENSIONS, DEFAULT_ENTER_DURATION, DEFAULT_EXIT_DURATION, EFFECT_DURATION, EFFECT_EASE, EFFECT_TRANSFORM, ENTER_ANIMATION, EXIT_ANIMATION, FIGURE_EXTENSIONS, ID, IMAGE_EXTENSIONS, NEXT, SERIES, UNLOCK_NAME, VIDEO_EXTENSIONS, VOLUME } from './common-params'
-import { arg, content, UNSPECIFIED } from './schema'
+import { AUDIO_EXTENSIONS, BACKGROUND_EXTENSIONS, DEFAULT_ENTER_DURATION, DEFAULT_EXIT_DURATION, EFFECT_DURATION, EFFECT_EASE, EFFECT_TRANSFORM, ENTER_ANIMATION, EXIT_ANIMATION, FIGURE_EXTENSIONS, ID, IMAGE_EXTENSIONS, NEXT, SERIES, UNLOCK_NAME, VOLUME } from './common-params'
+import { arg, commandRaw, content, UNSPECIFIED } from './schema'
 
 import type { CommandEntry } from './schema'
 
@@ -24,12 +24,60 @@ function isImageContent(content: string): boolean {
   return !!content && !isAnimatedContent(content)
 }
 
-export const mediaEntries: CommandEntry[] = [
+export const performEntries: CommandEntry[] = [
+  {
+    type: commandType.say,
+    label: t => t('edit.visualEditor.commands.say'),
+    description: t => t('edit.visualEditor.commandDescriptions.say'),
+    icon: 'i-lucide-message-circle',
+    category: 'perform',
+    fields: [
+      commandRaw({ key: 'speaker', label: t => t('edit.visualEditor.params.speaker'), inlineLayout: 'standalone' }),
+      content({
+        key: 'text',
+        label: t => t('edit.visualEditor.params.dialogue'),
+        type: 'text',
+        variant: { inline: 'textarea-auto', panel: 'textarea-grow' },
+        inlineLayout: 'standalone',
+      }),
+      arg({
+        key: 'fontSize',
+        label: t => t('edit.visualEditor.params.fontSize'),
+        type: 'choice',
+        defaultValue: 'default',
+        options: [
+          { label: t => t('edit.visualEditor.options.default'), value: 'default' },
+          { label: t => t('edit.visualEditor.options.small'), value: 'small' },
+          { label: t => t('edit.visualEditor.options.medium'), value: 'medium' },
+          { label: t => t('edit.visualEditor.options.large'), value: 'large' },
+        ],
+      }),
+      arg({ key: 'vocal', label: t => t('edit.visualEditor.params.vocal'), type: 'file', fileConfig: { assetType: 'vocal', extensions: AUDIO_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.vocal') } }),
+      arg({ ...VOLUME, visibleWhen: { key: 'vocal', notEmpty: true } }),
+      arg({
+        key: 'figurePosition',
+        label: t => t('edit.visualEditor.params.associatedFigure'),
+        type: 'choice',
+        mode: 'flag',
+        options: [
+          { label: t => t('edit.visualEditor.options.unspecified'), value: UNSPECIFIED },
+          { label: t => t('edit.visualEditor.options.figureLeft'), value: 'left' },
+          { label: t => t('edit.visualEditor.options.figureCenter'), value: 'center' },
+          { label: t => t('edit.visualEditor.options.figureRight'), value: 'right' },
+          { label: t => t('edit.visualEditor.options.useFigureId'), value: 'id' },
+        ],
+      }),
+      arg({ key: 'figureId', label: t => t('edit.visualEditor.params.associatedFigureId'), type: 'text', visibleWhen: { key: 'figurePosition', value: 'id' } }),
+      arg({ key: 'concat', label: t => t('edit.visualEditor.params.concat'), type: 'switch', defaultValue: false }),
+      arg({ key: 'notend', label: t => t('edit.visualEditor.params.notend'), type: 'switch', defaultValue: false }),
+    ],
+  },
   {
     type: commandType.changeBg,
     label: t => t('edit.visualEditor.commands.changeBg'),
+    description: t => t('edit.visualEditor.commandDescriptions.changeBg'),
     icon: 'i-lucide-image',
-    category: 'media',
+    category: 'perform',
     hasEffectEditor: true,
     fields: [
       content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'background', extensions: BACKGROUND_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.background') } }),
@@ -48,8 +96,9 @@ export const mediaEntries: CommandEntry[] = [
   {
     type: commandType.changeFigure,
     label: t => t('edit.visualEditor.commands.changeFigure'),
+    description: t => t('edit.visualEditor.commandDescriptions.changeFigure'),
     icon: 'i-lucide-user',
-    category: 'media',
+    category: 'perform',
     hasEffectEditor: true,
     fields: [
       content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'figure', extensions: FIGURE_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.figure') } }),
@@ -148,8 +197,9 @@ export const mediaEntries: CommandEntry[] = [
   {
     type: commandType.miniAvatar,
     label: t => t('edit.visualEditor.commands.miniAvatar'),
+    description: t => t('edit.visualEditor.commandDescriptions.miniAvatar'),
     icon: 'i-lucide-circle-user-round',
-    category: 'media',
+    category: 'perform',
     fields: [
       content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'figure', extensions: IMAGE_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.miniAvatar') } }),
     ],
@@ -157,8 +207,9 @@ export const mediaEntries: CommandEntry[] = [
   {
     type: commandType.bgm,
     label: t => t('edit.visualEditor.commands.bgm'),
+    description: t => t('edit.visualEditor.commandDescriptions.bgm'),
     icon: 'i-lucide-music',
-    category: 'media',
+    category: 'perform',
     fields: [
       content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'bgm', extensions: AUDIO_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.bgm') } }),
       arg(VOLUME),
@@ -170,22 +221,13 @@ export const mediaEntries: CommandEntry[] = [
   {
     type: commandType.playEffect,
     label: t => t('edit.visualEditor.commands.playEffect'),
+    description: t => t('edit.visualEditor.commandDescriptions.playEffect'),
     icon: 'i-lucide-volume-2',
-    category: 'media',
+    category: 'perform',
     fields: [
       content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'vocal', extensions: AUDIO_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.playEffect') } }),
       arg(VOLUME),
       arg(ID),
-    ],
-  },
-  {
-    type: commandType.video,
-    label: t => t('edit.visualEditor.commands.video'),
-    icon: 'i-lucide-film',
-    category: 'media',
-    fields: [
-      content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'video', extensions: VIDEO_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.video') } }),
-      arg({ key: 'skipOff', label: t => t('edit.visualEditor.params.skipOff'), type: 'switch', defaultValue: false }),
     ],
   },
 ]

@@ -16,6 +16,7 @@ const validationSchema = z.object({
   effectEditorSide: z.enum(['left', 'right']),
   collapseStatementsOnSidebarOpen: z.boolean(),
   showSidebarAssetPreview: z.boolean(),
+  commandInsertPosition: z.enum(['afterCursor', 'end']),
 })
 
 useSettingsForm({
@@ -95,6 +96,34 @@ function handleFontSizeChange(handleChange: (val: number) => void) {
             :model-value="value"
             @update:model-value="handleChange"
           />
+        </FormControl>
+      </FormItem>
+    </FormField>
+
+    <FormField v-slot="{ value, handleChange }" name="commandInsertPosition">
+      <FormItem class="flex flex-row gap-2 max-w-120 items-center justify-between space-y-0">
+        <div class="flex flex-col gap-1">
+          <FormLabel>
+            {{ $t('settings.edit.commandInsertPosition.label') }}
+          </FormLabel>
+          <FormDescription class="text-xs">
+            {{ $t('settings.edit.commandInsertPosition.description') }}
+          </FormDescription>
+        </div>
+        <FormControl>
+          <Select :model-value="value" @update:model-value="handleChange">
+            <SelectTrigger class="h-8 w-28 shadow-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="afterCursor">
+                {{ $t('settings.edit.commandInsertPosition.afterCursor') }}
+              </SelectItem>
+              <SelectItem value="end">
+                {{ $t('settings.edit.commandInsertPosition.end') }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </FormControl>
       </FormItem>
     </FormField>

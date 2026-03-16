@@ -3,8 +3,11 @@ import { TriangleAlert } from 'lucide-vue-next'
 
 let open = $(defineModel<boolean>('open'))
 
-const { fileName, onSave, onDontSave } = defineProps<{
-  fileName: string
+const { onSave, onDontSave } = defineProps<{
+  title: string
+  description?: string
+  saveLabel?: string
+  dontSaveLabel?: string
   onSave?: () => void | Promise<void>
   onDontSave?: () => void | Promise<void>
 }>()
@@ -32,10 +35,10 @@ async function handleDontSave() {
         </div>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {{ $t('modals.saveChanges.title', { name: fileName }) }}
+            {{ title }}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {{ $t('modals.saveChanges.description') }}
+            {{ description ?? $t('modals.saveChanges.description') }}
           </AlertDialogDescription>
         </AlertDialogHeader>
       </div>
@@ -44,10 +47,10 @@ async function handleDontSave() {
           {{ $t('common.cancel') }}
         </AlertDialogCancel>
         <Button variant="outline" @click="handleDontSave">
-          {{ $t('modals.saveChanges.dontSave') }}
+          {{ dontSaveLabel ?? $t('modals.saveChanges.dontSave') }}
         </Button>
         <AlertDialogAction @click="handleSave">
-          {{ $t('modals.saveChanges.save') }}
+          {{ saveLabel ?? $t('modals.saveChanges.save') }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
