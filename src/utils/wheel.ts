@@ -8,6 +8,10 @@ export function handleWheelToHorizontalScroll(event: WheelEvent) {
     return
   }
 
+  const previousLeft = el.scrollLeft
   el.scrollLeft += event.deltaY
-  event.preventDefault()
+  // 仅在实际发生水平滚动时阻止默认行为，避免吞掉边界处的垂直滚动
+  if (el.scrollLeft !== previousLeft) {
+    event.preventDefault()
+  }
 }

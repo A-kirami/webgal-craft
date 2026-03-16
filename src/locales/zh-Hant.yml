@@ -2,7 +2,7 @@ common:
   loading: 載入中...
   cancel: 取消
   confirm: 確認
-  save: 保存
+  save: 儲存
   edit: 編輯
   moveToTrash: 移動到資源回收桶
   delete: 刪除

@@ -168,12 +168,12 @@ function parseSayNode(sentence: ISentence): SayCommandNode {
   // 标准形式（say:内容 -speaker=角色）中，speaker 存储在 args 中；
   // 简写形式（角色:内容）中，speaker 存储在 commandRaw 中，且 args 含 speaker 条目。
   // 续写形式（内容;）中，commandRaw 包含完整文本（含参数），args 中无 speaker 条目。
-  // 序列化后的 ISentence 中，续写形式 commandRaw 为 null。
+  // 序列化后的 ISentence 中，续写形式 commandRaw 为 SAY_CONTINUATION_RAW 哨兵值。
   const speakerFromArgs = consumeStringArg(args, 'speaker')
   // 续写形式判断：
-  // - commandRaw 为 null（来自 serializeSayNode）
+  // - commandRaw 为 SAY_CONTINUATION_RAW（来自 serializeSayNode）
   // - 或 commandRaw 以 content 开头且 args 中无 speaker（来自 webgal-parser）
-  const isContinuation = sentence.commandRaw === undefined
+  const isContinuation = sentence.commandRaw === SAY_CONTINUATION_RAW
     || (sentence.commandRaw !== 'say'
       && sentence.commandRaw !== ''
       && speakerFromArgs === undefined
@@ -207,6 +207,11 @@ function parseSayNode(sentence: ISentence): SayCommandNode {
 // 简写形式说话人与命令头冲突时需回退到标准形式，避免解析歧义
 const reservedCommandStrings = new Set(SCRIPT_CONFIG.map(c => c.scriptString))
 
+// 续写形式的 commandRaw 哨兵值：ISentence.commandRaw 类型为 string（来自 webgal-parser），
+// 但续写形式在解析器中没有独立的 commandRaw 表示。此哨兵值用于内部序列化往返，
+// parseSayNode 和 serializeSentence 均通过此常量识别续写。
+export const SAY_CONTINUATION_RAW = '\u0000__continuation__'
+
 function serializeSayNode(node: SayCommandNode): ISentence {
   // 序列化规则：
   // 1. 说话人与命令头冲突 → 标准形式 say:内容 -speaker=角色;
@@ -218,7 +223,7 @@ function serializeSayNode(node: SayCommandNode): ISentence {
   const isContinuation = !node.speaker && !node.clear && !isStandardForm
   return {
     ...toSentenceBase(node),
-    commandRaw: isStandardForm ? 'say' : (isContinuation ? undefined as unknown as string : node.speaker),
+    commandRaw: isStandardForm ? 'say' : (isContinuation ? SAY_CONTINUATION_RAW : node.speaker),
     content: node.text,
     args: argBuilder()
       .reserve('speaker')

@@ -78,8 +78,10 @@ function insertLinesAfterCursor(rawTexts: string[]) {
     : Math.min(position.lineNumber, lineCount)
   const lineLength = model.getLineMaxColumn(targetLine)
 
-  // 在当前行末尾插入换行 + 新内容
-  const textToInsert = `\n${rawTexts.join('\n')}`
+  // 在当前行末尾插入新内容，空文件时不前置换行
+  const currentLineContent = model.getLineContent(targetLine)
+  const needsNewline = currentLineContent.length > 0
+  const textToInsert = needsNewline ? `\n${rawTexts.join('\n')}` : rawTexts.join('\n')
   const range = new monaco.Range(targetLine, lineLength, targetLine, lineLength)
 
   editor.executeEdits('command-panel', [{
@@ -89,7 +91,7 @@ function insertLinesAfterCursor(rawTexts: string[]) {
   }])
 
   // 将光标移到最后一行插入内容
-  const newLineNumber = targetLine + rawTexts.length
+  const newLineNumber = targetLine + rawTexts.length - (needsNewline ? 0 : 1)
   editor.setPosition({ lineNumber: newLineNumber, column: 1 })
   editor.revealPositionInCenterIfOutsideViewport({ lineNumber: newLineNumber, column: 1 })
   editor.focus()
