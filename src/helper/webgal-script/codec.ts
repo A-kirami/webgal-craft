@@ -158,7 +158,7 @@ function consumeSayFigurePositionFlag(args: arg[]): typeof FIGURE_POSITION_FLAGS
  * 判断逻辑：
  * - commandRaw === "say"                          → 标准形式，speaker 从 args 取
  * - commandRaw === ""                             → 旁白简写（:内容;），隐含 clear
- * - commandRaw == null                            → 续写（来自 serializeSayNode 序列化结果）
+ * - commandRaw === SAY_CONTINUATION_RAW            → 续写（来自 serializeSayNode 序列化结果）
  * - args 中有 speaker                             → 简写有说话人（角色:内容;）
  * - args 中无 speaker 且 commandRaw.startsWith(content) → 续写（内容; 或 内容 -args;）
  */
