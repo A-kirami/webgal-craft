@@ -41,7 +41,7 @@
         "vue-draggable-plus": "^0.6.1",
         "vue-i18n": "^11.3.0",
         "vue-inline-svg": "^4.0.1",
-        "vue-router": "^5.0.3",
+        "vue-router": "^5.0.4",
         "vue-sonner": "^2.0.9",
         "webgal-parser": "^4.5.18",
         "zod": "^4.3.6",
@@ -1564,7 +1564,7 @@
 
     "vue-macros": ["vue-macros@3.1.2", "", { "dependencies": { "@vue-macros/better-define": "3.1.2", "@vue-macros/boolean-prop": "3.1.2", "@vue-macros/chain-call": "3.1.2", "@vue-macros/common": "3.1.2", "@vue-macros/config": "3.1.2", "@vue-macros/define-emit": "3.1.2", "@vue-macros/define-models": "3.1.2", "@vue-macros/define-prop": "3.1.2", "@vue-macros/define-props": "3.1.2", "@vue-macros/define-props-refs": "3.1.2", "@vue-macros/define-render": "3.1.2", "@vue-macros/define-slots": "3.1.2", "@vue-macros/define-stylex": "3.1.2", "@vue-macros/devtools": "3.1.2", "@vue-macros/export-expose": "3.1.2", "@vue-macros/export-props": "3.1.2", "@vue-macros/export-render": "3.1.2", "@vue-macros/hoist-static": "3.1.2", "@vue-macros/jsx-directive": "3.1.2", "@vue-macros/named-template": "3.1.2", "@vue-macros/reactivity-transform": "3.1.2", "@vue-macros/script-lang": "3.1.2", "@vue-macros/setup-block": "3.1.2", "@vue-macros/setup-component": "3.1.2", "@vue-macros/setup-sfc": "3.1.2", "@vue-macros/short-bind": "3.1.2", "@vue-macros/short-emits": "3.1.2", "@vue-macros/short-vmodel": "3.1.2", "@vue-macros/volar": "3.1.2", "unplugin": "^2.3.10", "unplugin-combine": "^2.1.2", "unplugin-vue-define-options": "3.1.2" }, "peerDependencies": { "vue": "^2.7.0 || ^3.2.25" } }, "sha512-nhwMY9LveoKow3Prefxq2wLJw/GHkTaLj4T7RzX9Ab5rED83ffXxPBiwViVf67536/IWqRhBJSXuwnS2jsmndQ=="],
 
-    "vue-router": ["vue-router@5.0.3", "", { "dependencies": { "@babel/generator": "^7.28.6", "@vue-macros/common": "^3.1.1", "@vue/devtools-api": "^8.0.6", "ast-walker-scope": "^0.8.3", "chokidar": "^5.0.0", "json5": "^2.2.3", "local-pkg": "^1.1.2", "magic-string": "^0.30.21", "mlly": "^1.8.0", "muggle-string": "^0.4.1", "pathe": "^2.0.3", "picomatch": "^4.0.3", "scule": "^1.3.0", "tinyglobby": "^0.2.15", "unplugin": "^3.0.0", "unplugin-utils": "^0.3.1", "yaml": "^2.8.2" }, "peerDependencies": { "@pinia/colada": ">=0.21.2", "@vue/compiler-sfc": "^3.5.17", "pinia": "^3.0.4", "vue": "^3.5.0" }, "optionalPeers": ["@pinia/colada", "@vue/compiler-sfc", "pinia"] }, "sha512-nG1c7aAFac7NYj8Hluo68WyWfc41xkEjaR0ViLHCa3oDvTQ/nIuLJlXJX1NUPw/DXzx/8+OKMng045HHQKQKWw=="],
+    "vue-router": ["vue-router@5.0.4", "", { "dependencies": { "@babel/generator": "^7.28.6", "@vue-macros/common": "^3.1.1", "@vue/devtools-api": "^8.0.6", "ast-walker-scope": "^0.8.3", "chokidar": "^5.0.0", "json5": "^2.2.3", "local-pkg": "^1.1.2", "magic-string": "^0.30.21", "mlly": "^1.8.0", "muggle-string": "^0.4.1", "pathe": "^2.0.3", "picomatch": "^4.0.3", "scule": "^1.3.0", "tinyglobby": "^0.2.15", "unplugin": "^3.0.0", "unplugin-utils": "^0.3.1", "yaml": "^2.8.2" }, "peerDependencies": { "@pinia/colada": ">=0.21.2", "@vue/compiler-sfc": "^3.5.17", "pinia": "^3.0.4", "vue": "^3.5.0" }, "optionalPeers": ["@pinia/colada", "@vue/compiler-sfc", "pinia"] }, "sha512-lCqDLCI2+fKVRl2OzXuzdSWmxXFLQRxQbmHugnRpTMyYiT+hNaycV0faqG5FBHDXoYrZ6MQcX87BvbY8mQ20Bg=="],
 
     "vue-sonner": ["vue-sonner@2.0.9", "", { "peerDependencies": { "@nuxt/kit": "^4.0.3", "@nuxt/schema": "^4.0.3", "nuxt": "^4.0.3" }, "optionalPeers": ["@nuxt/kit", "@nuxt/schema", "nuxt"] }, "sha512-i6BokNlNDL93fpzNxN/LZSn6D6MzlO+i3qXt6iVZne3x1k7R46d5HlFB4P8tYydhgqOrRbIZEsnRd3kG7qGXyw=="],
 

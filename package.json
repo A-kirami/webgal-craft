@@ -60,7 +60,7 @@
     "vue-draggable-plus": "^0.6.1",
     "vue-i18n": "^11.3.0",
     "vue-inline-svg": "^4.0.1",
-    "vue-router": "^5.0.3",
+    "vue-router": "^5.0.4",
     "vue-sonner": "^2.0.9",
     "webgal-parser": "^4.5.18",
     "zod": "^4.3.6"
