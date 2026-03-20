@@ -160,39 +160,39 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
 
         <!-- 操作按钮组 -->
         <div class="gap-1 inline-grid grid-flow-col items-center">
-          <!-- 删除按钮 -->
-          <Button
-            variant="ghost"
-            size="sm"
-            class="p-0 opacity-60 h-7 w-0 transition-all overflow-hidden hover:text-green-600 group-hover:p-1 hover:opacity-100 group-hover:w-7"
-            :title="$t('edit.visualEditor.playToLine')"
-            @click.stop="emit('playTo', entry.id)"
-          >
-            <div class="i-lucide-play size-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            class="p-0 opacity-60 h-7 w-0 transition-all overflow-hidden hover:text-destructive group-hover:p-1 hover:opacity-100 group-hover:w-7"
-            :title="$t('common.delete')"
-            @click.stop="emit('delete', entry.id)"
-          >
-            <div class="i-lucide-trash-2 size-3" />
-          </Button>
+          <slot name="actions" :collapsed="collapsed" :entry="entry">
+            <Button
+              variant="ghost"
+              size="sm"
+              class="p-0 opacity-60 h-7 w-0 transition-all overflow-hidden hover:text-green-600 group-hover:p-1 hover:opacity-100 group-hover:w-7"
+              :title="$t('edit.visualEditor.playToLine')"
+              @click.stop="emit('playTo', entry.id)"
+            >
+              <div class="i-lucide-play size-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="p-0 opacity-60 h-7 w-0 transition-all overflow-hidden hover:text-destructive group-hover:p-1 hover:opacity-100 group-hover:w-7"
+              :title="$t('common.delete')"
+              @click.stop="emit('delete', entry.id)"
+            >
+              <div class="i-lucide-trash-2 size-3" />
+            </Button>
 
-          <!-- 折叠按钮 -->
-          <Button
-            v-if="!readonly && !config.locked"
-            variant="ghost"
-            size="sm"
-            class="p-1 opacity-60 size-7 transition-all hover:opacity-100"
-            @click.stop="collapsed = !collapsed"
-          >
-            <div
-              class="i-lucide-chevron-right size-3 transition-transform"
-              :class="!collapsed && 'rotate-90'"
-            />
-          </Button>
+            <Button
+              v-if="!readonly && !config.locked"
+              variant="ghost"
+              size="sm"
+              class="p-1 opacity-60 size-7 transition-all hover:opacity-100"
+              @click.stop="collapsed = !collapsed"
+            >
+              <div
+                class="i-lucide-chevron-right size-3 transition-transform"
+                :class="!collapsed && 'rotate-90'"
+              />
+            </Button>
+          </slot>
         </div>
       </div>
 

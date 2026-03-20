@@ -80,7 +80,11 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
 
   // ─── emitUpdate（依赖 say 的 isNoColonStatement / narrationMode）───
   function emitUpdate(patch: Partial<ISentence>) {
-    const base = parsed.value ?? createEmptySentence()
+    // 当有类型化节点时，用 serializeCommandNode 重建 base，
+    // 确保 commandRaw 已转换为简写形式（如 say → 角色名/空/null）
+    const base = commandNode.value
+      ? serializeCommandNode(commandNode.value)
+      : (parsed.value ?? createEmptySentence())
     const newSentence: ISentence = { ...base, ...patch }
 
     // pendingArgsSnapshot：解决连续快速编辑时 Vue 响应式批量更新导致的 args 状态滞后。
@@ -93,18 +97,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       pendingArgsSnapshot.value = cloneArgs(patch.args)
     }
 
-    // 无冒号语句（续接对话 "对话内容"）编辑参数时，
-    // 不应意外引入 commandRaw（否则序列化后变成 ":对话内容"）
-    if (say.isNoColonStatement.value && !('commandRaw' in patch)) {
-      newSentence.commandRaw = ''
-    }
-
-    let newRawText = serializeSentence(newSentence)
-    // 非旁白模式下，无说话人的 say 命令序列化后产生前导冒号 ":内容"，
-    // 需要移除以保持无冒号语句格式
-    if (!say.narrationMode.value && newSentence.command === commandType.say && !newSentence.commandRaw) {
-      newRawText = newRawText.replace(/^:/, '')
-    }
+    const newRawText = serializeSentence(newSentence)
 
     options.emitUpdate({
       id: entry.value.id,

@@ -1,3 +1,4 @@
+import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
@@ -138,21 +139,59 @@ function consumeSayFigurePositionFlag(args: arg[]): typeof FIGURE_POSITION_FLAGS
   return undefined
 }
 
+/**
+ * webgal-parser 对 say 命令各种书写形式的解析结果：
+ *
+ * ┌─────────────────────────────────────┬──────────────────────────────┬─────────────┬──────────────────────────────┐
+ * │ 原始文本                             │ commandRaw                   │ content     │ args 中的 speaker            │
+ * ├─────────────────────────────────────┼──────────────────────────────┼─────────────┼──────────────────────────────┤
+ * │ say:内容 -speaker=角色;              │ "say"                        │ "内容"      │ "角色"                       │
+ * │ say:内容 -clear;                     │ "say"                        │ "内容"      │ 无                           │
+ * │ say:内容;                            │ "say"                        │ "内容"      │ 无                           │
+ * │ 角色:内容;                           │ "角色"                       │ "内容"      │ "角色"                       │
+ * │ 角色:内容 -next;                     │ "角色"                       │ "内容"      │ "角色"                       │
+ * │ :内容;                               │ ""                           │ "内容"      │ 无                           │
+ * │ 内容;                                │ "内容"                       │ "内容"      │ 无                           │
+ * │ 内容 -concat -notend;               │ "内容 -concat -notend"       │ "内容"      │ 无                           │
+ * └─────────────────────────────────────┴──────────────────────────────┴─────────────┴──────────────────────────────┘
+ *
+ * 判断逻辑：
+ * - commandRaw === "say"                          → 标准形式，speaker 从 args 取
+ * - commandRaw === ""                             → 旁白简写（:内容;），隐含 clear
+ * - commandRaw === SAY_CONTINUATION_RAW            → 续写（来自 serializeSayNode 序列化结果）
+ * - args 中有 speaker                             → 简写有说话人（角色:内容;）
+ * - args 中无 speaker 且 commandRaw.startsWith(content) → 续写（内容; 或 内容 -args;）
+ */
+
 function parseSayNode(sentence: ISentence): SayCommandNode {
   const args = cloneArgs(sentence.args)
   // 标准形式（say:内容 -speaker=角色）中，speaker 存储在 args 中；
-  // 简写形式（角色:内容）中，speaker 存储在 commandRaw 中。
-  // 两种形式下 webgal-parser 都会在 args 中生成 speaker 条目，需要消费掉
+  // 简写形式（角色:内容）中，speaker 存储在 commandRaw 中，且 args 含 speaker 条目。
+  // 续写形式（内容;）中，commandRaw 包含完整文本（含参数），args 中无 speaker 条目。
+  // 序列化后的 ISentence 中，续写形式 commandRaw 为 SAY_CONTINUATION_RAW 哨兵值。
   const speakerFromArgs = consumeStringArg(args, 'speaker')
+  // 续写形式判断：
+  // - commandRaw 为 SAY_CONTINUATION_RAW（来自 serializeSayNode）
+  // - 或 commandRaw 以 content 开头且 args 中无 speaker（来自 webgal-parser）
+  const isContinuation = sentence.commandRaw === SAY_CONTINUATION_RAW
+    || (sentence.content !== ''
+      && sentence.commandRaw !== 'say'
+      && sentence.commandRaw !== ''
+      && speakerFromArgs === undefined
+      && sentence.commandRaw.startsWith(sentence.content))
   const speaker = sentence.commandRaw === 'say'
     ? (speakerFromArgs ?? '')
-    : sentence.commandRaw
+    : (isContinuation ? '' : sentence.commandRaw)
+  const clearFromArgs = consumeFlagArg(args, 'clear')
+  // 简写旁白形式（:内容;）中 commandRaw 为空字符串，隐含 clear
+  const clear = clearFromArgs || (sentence.commandRaw === '' && !speaker)
   return {
     type: commandType.say,
     commandRaw: sentence.commandRaw,
     inlineComment: sentence.inlineComment,
     text: sentence.content,
     speaker,
+    clear,
     fontSize: consumeStringArg(args, 'fontSize'),
     vocal: consumeStringArg(args, 'vocal'),
     volume: consumeNumberArg(args, 'volume'),
@@ -166,16 +205,34 @@ function parseSayNode(sentence: ISentence): SayCommandNode {
   }
 }
 
+// 简写形式说话人与命令头冲突时需回退到标准形式，避免解析歧义
+const reservedCommandStrings = new Set(SCRIPT_CONFIG.map(c => c.scriptString))
+
+// 续写形式的 commandRaw 哨兵值：ISentence.commandRaw 类型为 string（来自 webgal-parser），
+// 但续写形式在解析器中没有独立的 commandRaw 表示。此哨兵值用于内部序列化往返，
+// parseSayNode 和 serializeSentence 均通过此常量识别续写。
+export const SAY_CONTINUATION_RAW = '\u0000__continuation__'
+
 function serializeSayNode(node: SayCommandNode): ISentence {
-  // 保留原始格式：标准形式 say:内容 -speaker=角色; vs 简写形式 角色:内容;
-  const isStandardForm = node.commandRaw === 'say'
+  // 序列化规则：
+  // 1. 说话人与命令头冲突 → 标准形式 say:内容 -speaker=角色;
+  // 2. 有说话人 → 简写 角色:内容;
+  // 3. 无说话人 + clear（旁白）→ 简写 :内容;（clear 隐含在冒号前缀中）
+  // 4. 无说话人 + 非 clear（续写）→ 简写 内容;（无冒号）
+  const isStandardForm = reservedCommandStrings.has(node.speaker)
+  // 续写形式：无说话人、非 clear、非标准形式
+  const isContinuation = !node.speaker && !node.clear && !isStandardForm
+  // clear 仅在旁白简写形式（:内容;）中隐含，其他形式需显式写入 args
+  const needsExplicitClear = node.clear && (!!node.speaker || isStandardForm)
   return {
     ...toSentenceBase(node),
-    commandRaw: isStandardForm ? 'say' : node.speaker,
+    commandRaw: isStandardForm ? 'say' : (isContinuation ? SAY_CONTINUATION_RAW : node.speaker),
     content: node.text,
     args: argBuilder()
       .reserve('speaker')
+      .reserve('clear')
       .string('speaker', isStandardForm ? node.speaker : undefined)
+      .flag('clear', needsExplicitClear)
       .string('fontSize', node.fontSize)
       .string('vocal', node.vocal)
       .number('volume', node.volume)

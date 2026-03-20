@@ -44,3 +44,5 @@ export interface Transform {
   shockwaveFilter?: number
   radiusAlphaFilter?: number
 }
+
+export type AnimationFrame = Transform & { duration: number, ease?: string }

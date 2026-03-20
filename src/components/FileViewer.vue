@@ -354,7 +354,7 @@ defineExpose(fileViewerExpose)
       </div>
     </div>
     <div class="flex-1 min-h-0">
-      <ScrollArea ref="scrollAreaRef" class="h-full min-h-0" :class="$style.fileViewerScrollArea">
+      <ScrollArea ref="scrollAreaRef" class="flex-scroll-area h-full min-h-0">
         <!-- 加载中状态 -->
         <div v-if="isLoading" class="flex h-full items-center justify-center">
           <div class="text-muted-foreground flex items-center justify-center">
@@ -501,15 +501,3 @@ defineExpose(fileViewerExpose)
     </div>
   </div>
 </template>
-
-<style module>
-.file-viewer-scroll-area {
-  & [data-reka-scroll-area-viewport] {
-    @apply flex flex-col;
-
-    & > div {
-      @apply flex-1;
-    }
-  }
-}
-</style>

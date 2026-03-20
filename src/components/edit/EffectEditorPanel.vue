@@ -5,9 +5,13 @@ interface EffectEditorPanelProps {
   ease: string
   canApply: boolean
   canReset: boolean
+  showFooter?: boolean
+  inline?: boolean
 }
 
-const props = defineProps<EffectEditorPanelProps>()
+const props = withDefaults(defineProps<EffectEditorPanelProps>(), {
+  showFooter: true,
+})
 
 const emit = defineEmits<{
   'update:transform': [payload: EffectEditorTransformUpdatePayload]
@@ -455,7 +459,7 @@ onUnmounted(() => {
       </div>
     </ScrollArea>
 
-    <div class="mt-4 flex gap-2 justify-end">
+    <div v-if="props.showFooter" class="mt-4 flex gap-2 justify-end">
       <Button variant="outline" class="text-xs px-3 h-7" :disabled="!props.canReset" @click="tryEmitReset">
         {{ $t('modals.effectEditor.reset') }}
       </Button>

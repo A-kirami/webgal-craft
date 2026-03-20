@@ -11,6 +11,7 @@ export interface CommandNodeBase<T extends commandType> {
 export interface SayCommandNode extends CommandNodeBase<commandType.say> {
   text: string
   speaker: string
+  clear: boolean
   fontSize?: string
   vocal?: string
   volume?: number

@@ -2,6 +2,8 @@ common:
   loading: 読み込み中...
   cancel: キャンセル
   confirm: 確認
+  save: 保存
+  edit: 編集
   moveToTrash: ゴミ箱に移動
   delete: 削除
   settings: 設定
@@ -230,6 +232,12 @@ modals:
     description: 保存しない場合、変更は失われます。
     save: 保存
     dontSave: 保存しない
+  saveCommandDefaults:
+    title: "{name} のデフォルト値への変更を保存しますか？"
+  confirmEffectChanges:
+    title: エフェクトエディターの変更を確認しますか？
+    description: 確認しない場合、変更は破棄されます。
+    discard: 破棄
   discardEffectChanges:
     title: エフェクトエディターの変更を適用しますか？
     description: 適用しない場合、変更は破棄されます。
@@ -399,7 +407,31 @@ edit:
     toggleSidebar: 補助パネル切替
   visualEditor:
     playToLine: この行まで実行
-    commandPanel: コマンドパネル
+    commandPanel:
+      title: コマンドパネル
+      editDefaults: デフォルト値を編集
+      editDefaultsTitle: デフォルト値を編集 — {command}
+      resetDefaults: リセット
+      resetSuccess: デフォルトにリセットしました
+      createGroup: ステートメントグループを作成
+      createGroupDescription: 再利用できるステートメントの組み合わせを作成します
+      confirmDeleteGroup: このグループを削除してもよろしいですか？
+      editGroup: ステートメントグループを編集
+      groupDescription: 左側でコマンドを追加し、右側で順序と内容を編集します。
+      groupNamePlaceholder: グループ名を入力
+      saveGroup: ステートメントグループを保存
+      emptyGroup: 左側からコマンドを追加してグループを作成してください。
+      moveUp: 上へ移動
+      moveDown: 下へ移動
+      groupCount: "{count} 件のステートメント"
+      categories:
+        all: すべて
+        perform: 演出
+        effect: エフェクト
+        display: 表示
+        scene: シーン
+        system: システム
+        groups: ステートメントグループ
     narrationMode: ナレーション
     types:
       comment: コメント
@@ -451,6 +483,40 @@ edit:
       unlockCg: CG鑑賞解放
       unlockBgm: BGM鑑賞解放
       unknown: 未認識
+    commandDescriptions:
+      say: 会話またはナレーションを追加します
+      comment: 編集時のみ表示されるコメントを追加します
+      changeBg: 背景画像を追加または切り替えます
+      changeFigure: キャラクターの立ち絵を追加または切り替えます
+      miniAvatar: ダイアログ横のミニアバターを追加または切り替えます
+      bgm: BGM を再生または切り替えます
+      playEffect: 効果音を再生します
+      video: 動画をフルスクリーンで再生します
+      changeScene: 現在のシーンを終了し、別のシーンに切り替えます
+      callScene: サブシーンを呼び出し、終了後に現在のシーンへ戻ります
+      choose: プレイヤー向けの分岐選択肢を表示します
+      label: ジャンプ可能なラベル位置を定義します
+      jumpLabel: 現在のシーン内のラベルへジャンプします
+      end: ゲームを終了してタイトル画面に戻ります
+      setVar: 変数の値を設定または変更します
+      showVars: ダイアログボックスに現在のすべての変数を表示します
+      getUserInput: 入力ダイアログを表示し、プレイヤーの入力を変数に保存します
+      wait: 一定時間待機してから続行します
+      setTextbox: ダイアログテキストボックスを表示・非表示にします
+      filmMode: シネマモードに切り替え、レターボックスと没入型ダイアログを表示します
+      callSteam: 実績解除などの Steam 機能を呼び出します
+      setTransform: 対象の位置・拡大縮小・回転などの変形を設定します
+      setTempAnimation: 一回限りの一時アニメーションを設定します
+      setAnimation: ファイルからアニメーションを読み込み、対象に適用します
+      setComplexAnimation: 対象に組み込みアニメーションプリセットを適用します
+      setTransition: 対象の入場・退場時のトランジションを設定します
+      pixi: 桜吹雪、雨、雪などのステージエフェクトを追加します
+      pixiInit: 現在のすべてのステージエフェクトをクリアします
+      applyStyle: ゲーム UI のスタイルを置換します
+      intro: 全画面テキスト演出を表示します
+      unlockCg: 画像を CG ギャラリーに収録します
+      unlockBgm: 音楽を BGM ギャラリーに収録します
+      unknown: 未認識のコマンド種別です。
     params:
       continue: 自動続行
       next: 並行実行
@@ -674,6 +740,11 @@ settings:
     showSidebarAssetPreview:
       label: 補助パネルのステートメント資源プレビュー
       description: エディターの補助パネルでステートメントが参照する画像などのアセットをプレビュー
+    commandInsertPosition:
+      label: コマンド挿入位置
+      description: コマンドパネルからステートメントを挿入する位置
+      afterCursor: カーソルの後
+      end: 末尾
   storage:
     gamePath:
       label: ゲーム保存場所

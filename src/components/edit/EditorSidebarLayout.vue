@@ -42,15 +42,16 @@ function handleExpand() {
 
 <template>
   <ResizablePanelGroup auto-save-id="editor-sidebar" direction="horizontal" class="overflow-hidden">
-    <ResizablePanel :min-size="30">
+    <ResizablePanel size-unit="px" :min-size="300">
       <slot />
     </ResizablePanel>
     <ResizableHandle />
     <ResizablePanel
       ref="sidebar"
       collapsible
-      :default-size="22"
-      :min-size="16"
+      size-unit="px"
+      :default-size="200"
+      :min-size="160"
       @collapse="handleCollapse"
       @expand="handleExpand"
     >

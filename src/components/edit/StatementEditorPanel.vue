@@ -3,7 +3,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   entry: StatementEntry
   /** 语句在列表中的序号（0-based） */
   index?: number
@@ -11,7 +11,13 @@ const props = defineProps<{
   previousSpeaker?: string
   /** 是否启用标题点击定位当前语句 */
   enableFocusStatement?: boolean
-}>()
+  /** 是否显示标题栏 */
+  showHeader?: boolean
+  /** 内联模式 */
+  inline?: boolean
+}>(), {
+  showHeader: true,
+})
 
 provide(statementEditorSurfaceKey, 'panel')
 
@@ -144,6 +150,7 @@ const panelSpeakerInputId = buildControlId('speaker')
   <div class="flex flex-col h-full">
     <!-- 固定头部 -->
     <div
+      v-if="props.showHeader !== false"
       class="px-4 py-2.5 border-b flex shrink-0 gap-2 items-center"
       :class="props.enableFocusStatement ? 'cursor-pointer' : ''"
       @click="handleTitleClick"
@@ -163,7 +170,7 @@ const panelSpeakerInputId = buildControlId('speaker')
 
     <!-- 可滚动参数区域 -->
     <ScrollArea v-if="!config.locked" class="flex-1" @dblclick="handleBlankDblClick">
-      <div class="p-4 flex flex-col gap-3">
+      <div class="flex flex-col gap-3" :class="inline ? 'px-1 py-0' : 'p-4'">
         <!-- 资源图片预览 -->
         <StatementAssetPreview v-if="previewImageUrl" :src="previewImageUrl" />
 

@@ -1,8 +1,9 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import type { InjectionKey } from 'vue'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
-interface EffectEditorResult {
+export interface EffectEditorResult {
   transform: Transform
   duration: string
   ease: string
@@ -79,11 +80,25 @@ function resolveBaseLineNumber(
   return index === -1 ? 1 : index + 1
 }
 
+/**
+ * 效果编辑器打开方式的 override 函数类型。
+ * 模态框通过 provide 此函数，让 bridge 在模态框上下文中
+ * 使用二级 Dialog 而非 Sheet 打开效果编辑器。
+ */
+export type EffectEditorOpenOverride = (
+  parsed: ISentence,
+  applyResult: (result: EffectEditorResult) => void,
+) => void
+
+export const EFFECT_EDITOR_OPEN_OVERRIDE_KEY: InjectionKey<EffectEditorOpenOverride> =
+  Symbol('effectEditorOpenOverride')
+
 export function useStatementEffectEditorBridge(options: UseStatementEffectEditorBridgeOptions) {
   const entryId = computed(() => toValue(options.entryId))
   const rawText = computed(() => toValue(options.rawText))
   const parsed = computed(() => toValue(options.parsed))
   const effectEditorProvider = useInjectedEffectEditorProvider()
+  const overriddenOpen = inject(EFFECT_EDITOR_OPEN_OVERRIDE_KEY, undefined)
 
   function applyEffectEditorResult(result: EffectEditorResult) {
     if (!parsed.value) {
@@ -102,6 +117,12 @@ export function useStatementEffectEditorBridge(options: UseStatementEffectEditor
 
   function openEffectEditor() {
     if (!parsed.value) {
+      return
+    }
+
+    // 模态框上下文：委托给 override 函数，使用二级 Dialog
+    if (overriddenOpen) {
+      overriddenOpen(parsed.value, applyEffectEditorResult)
       return
     }
 

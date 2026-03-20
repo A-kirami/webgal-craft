@@ -47,18 +47,23 @@ export function joinStatements(entries: StatementEntry[]): string {
 }
 
 /**
- * 从全文本构建 StatementEntry 列表，为每条语句分配唯一 id。
+ * 从单行原始文本构建一个 StatementEntry。
  */
-export function buildStatements(text: string): StatementEntry[] {
-  // markRaw 标记 entry 为非响应式对象，使 ensureParsed() 可以安全地在 computed 内
-  // 对 entry 进行写入缓存而不触发 Vue 依赖追踪。详见 ensureParsed 的注释
-  return splitStatements(text).map(raw => markRaw({
+export function buildSingleStatement(rawText: string): StatementEntry {
+  return markRaw({
     id: nextId++,
-    rawText: raw,
+    rawText,
     parsed: undefined,
     parseError: false,
     collapsed: false,
-  }))
+  })
+}
+
+/**
+ * 从全文本构建 StatementEntry 列表，为每条语句分配唯一 id。
+ */
+export function buildStatements(text: string): StatementEntry[] {
+  return splitStatements(text).map(raw => buildSingleStatement(raw))
 }
 
 /**

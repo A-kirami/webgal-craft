@@ -2,6 +2,8 @@ common:
   loading: 載入中...
   cancel: 取消
   confirm: 確認
+  save: 儲存
+  edit: 編輯
   moveToTrash: 移動到資源回收桶
   delete: 刪除
   settings: 設定
@@ -230,6 +232,12 @@ modals:
     description: 如果不儲存，你的變更將遺失。
     save: 儲存
     dontSave: 不儲存
+  saveCommandDefaults:
+    title: 是否要儲存對 {name} 預設值的變更？
+  confirmEffectChanges:
+    title: 是否確認效果編輯器的變更？
+    description: 如果不確認，你的變更將被捨棄。
+    discard: 捨棄
   discardEffectChanges:
     title: 是否要套用效果編輯器的變更？
     description: 如果不套用，你的變更將被捨棄。
@@ -399,7 +407,31 @@ edit:
     toggleSidebar: 切換輔助面板
   visualEditor:
     playToLine: 執行到此句
-    commandPanel: 命令面板
+    commandPanel:
+      title: 命令面板
+      editDefaults: 編輯預設值
+      editDefaultsTitle: 編輯預設值 — {command}
+      resetDefaults: 重設
+      resetSuccess: 已重設為預設值
+      createGroup: 新建語句組
+      createGroupDescription: 建立可重複插入的語句組合
+      confirmDeleteGroup: 確定要刪除此語句組嗎？
+      editGroup: 編輯語句組
+      groupDescription: 在左側加入命令，並在右側調整順序與參數。
+      groupNamePlaceholder: 輸入語句組名稱
+      saveGroup: 儲存語句組
+      emptyGroup: 先從左側加入命令，開始建立語句組。
+      moveUp: 上移
+      moveDown: 下移
+      groupCount: 共 {count} 條語句
+      categories:
+        all: 全部
+        perform: 演出
+        effect: 效果
+        display: 顯示
+        scene: 場景
+        system: 系統
+        groups: 語句組
     narrationMode: 旁白模式
     types:
       comment: 註解
@@ -451,6 +483,40 @@ edit:
       unlockCg: 解鎖鑑賞圖片
       unlockBgm: 解鎖鑑賞音樂
       unknown: 未識別
+    commandDescriptions:
+      say: 新增一句對話或旁白
+      comment: 新增一條僅供編輯時查看的註解
+      changeBg: 新增或切換背景圖片
+      changeFigure: 新增或切換角色立繪
+      miniAvatar: 新增或切換對話框旁的角色小頭像
+      bgm: 播放或切換背景音樂
+      playEffect: 播放一段音效
+      video: 全螢幕播放一段影片
+      changeScene: 結束目前場景並切換到另一個場景
+      callScene: 呼叫子場景，結束後返回目前場景
+      choose: 顯示分支選項供玩家選擇
+      label: 定義一個可跳轉到的標籤位置
+      jumpLabel: 跳轉到目前場景中的指定標籤
+      end: 結束遊戲並返回標題畫面
+      setVar: 設定或修改變數的值
+      showVars: 在對話框中顯示目前所有變數
+      getUserInput: 彈出輸入框，將玩家輸入儲存到變數
+      wait: 等待一段時間後繼續執行
+      setTextbox: 顯示或隱藏對話文字框
+      filmMode: 切換為電影敘事模式，呈現寬銀幕黑邊和沉浸式對話框
+      callSteam: 呼叫 Steam 相關功能，如解鎖成就
+      setTransform: 設定目標的位置、縮放、旋轉等變換
+      setTempAnimation: 設定一次性的臨時動畫
+      setAnimation: 從動畫檔案載入動畫並套用到目標
+      setComplexAnimation: 對目標使用內建動畫預設
+      setTransition: 設定目標的入場或退場時的過渡動畫
+      pixi: 新增舞台特效，如櫻花、雨、雪等
+      pixiInit: 清除目前所有舞台特效
+      applyStyle: 替換遊戲介面的樣式
+      intro: 全螢幕顯示一段文字演出
+      unlockCg: 將圖片收錄進 CG 鑑賞
+      unlockBgm: 將音樂收錄進 BGM 鑑賞
+      unknown: 未識別的命令類型。
     params:
       continue: 自動續行
       next: 並行執行
@@ -674,6 +740,11 @@ settings:
     showSidebarAssetPreview:
       label: 輔助面板語句資源預覽
       description: 在編輯器輔助面板中預覽語句引用的圖片等資源
+    commandInsertPosition:
+      label: 命令插入位置
+      description: 從命令面板插入語句時的插入位置
+      afterCursor: 游標之後
+      end: 末尾
   storage:
     gamePath:
       label: 遊戲儲存位置

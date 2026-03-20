@@ -25,7 +25,7 @@ export interface DynamicOptionsResult {
 
 export type I18nT = ComposerTranslation
 
-export type CommandCategory = 'dialogue' | 'media' | 'scene' | 'logic' | 'effect' | 'display' | 'gallery' | 'comment'
+export type CommandCategory = 'perform' | 'effect' | 'display' | 'scene' | 'system' | 'comment'
 
 export interface FileFieldConfig {
   assetType: string
@@ -401,6 +401,7 @@ export function resolveSurfaceVariant<V extends string>(
 export interface CommandEntry {
   type: commandType
   label: I18nLike
+  description: I18nLike
   icon: string
   category: CommandCategory
   fields: CommandFieldDef[]

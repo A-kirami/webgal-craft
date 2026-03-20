@@ -48,14 +48,12 @@ export function useStatementEditorSay(options: UseStatementEditorSayOptions) {
       narrationMode.value = false
       return
     }
-    narrationMode.value = isStandardForm.value
-      // 标准形式旁白：say:内容 -clear;（无 speaker，有 clear）
-      ? effectiveSpeaker.value === ''
-      && (options.commandNode.value
-        ? hasCommandNodeParam(options.commandNode.value, 'clear')
-        : options.parsed.value?.args.some((a: arg) => a.key === 'clear' && a.value === true)) === true
-      // 简写形式旁白：`:内容;`（commandRaw 为空）
+    const node = options.commandNode.value
+    narrationMode.value = node && node.type === commandType.say
+      ? node.clear
       : effectiveSpeaker.value === ''
+        && (options.parsed.value?.args.some((a: arg) => a.key === 'clear' && a.value === true) === true
+          || options.parsed.value?.commandRaw === '')
   })
 
   const speakerPlaceholder = computed(() => {
@@ -106,28 +104,16 @@ export function useStatementEditorSay(options: UseStatementEditorSayOptions) {
       return
     }
 
-    if (isStandardForm.value) {
-      // 标准形式：通过 -clear 参数切换旁白
-      const updatedNode: SayCommandNode = narrationMode.value
-        ? {
-            ...node,
-            speaker: '',
-            extraArgs: [...node.extraArgs, { key: 'clear', value: true }],
-          }
-        : {
-            ...node,
-            extraArgs: node.extraArgs.filter(a => a.key !== 'clear'),
-          }
-      const updatedSentence = serializeCommandNode(updatedNode)
-      options.emitUpdate({
-        commandRaw: updatedSentence.commandRaw,
-        content: updatedSentence.content,
-        args: updatedSentence.args,
-      })
-    } else {
-      // 简写形式：清空 speaker（commandRaw 变为空）
-      emitSpeakerUpdate('')
-    }
+    // 通过 clear 字段和 speaker 切换旁白模式
+    const updatedNode: SayCommandNode = narrationMode.value
+      ? { ...node, speaker: '', clear: true }
+      : { ...node, clear: false }
+    const updatedSentence = serializeCommandNode(updatedNode)
+    options.emitUpdate({
+      commandRaw: updatedSentence.commandRaw,
+      content: updatedSentence.content,
+      args: updatedSentence.args,
+    })
   }
 
   return {

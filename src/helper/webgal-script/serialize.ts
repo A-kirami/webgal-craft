@@ -1,5 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { SAY_CONTINUATION_RAW } from './codec'
+
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 /**
@@ -26,6 +28,11 @@ export function serializeSentence(sentence: ISentence): string {
   const commentText = sentence.inlineComment ? `;${sentence.inlineComment}` : ''
   // WebGAL 脚本中分号是行内注释分隔符，content 中的字面分号需要转义
   const escapedContent = sentence.content.replaceAll(';', String.raw`\;`)
+
+  // say 续写形式：commandRaw 为哨兵值时省略冒号前缀，直接输出 内容;
+  if (sentence.commandRaw === SAY_CONTINUATION_RAW) {
+    return `${escapedContent}${argsText}${commentText};`
+  }
 
   return `${sentence.commandRaw}:${escapedContent}${argsText}${commentText};`
 }

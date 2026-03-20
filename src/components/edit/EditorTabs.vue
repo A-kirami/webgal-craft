@@ -3,6 +3,8 @@ import { FileText, X } from 'lucide-vue-next'
 
 import type { ScrollArea } from '~/components/ui/scroll-area'
 
+const { t } = useI18n()
+
 const tabsStore = useTabsStore()
 const editorStore = useEditorStore()
 const modalStore = useModalStore()
@@ -14,7 +16,7 @@ function handleCloseTab(index: number) {
 
   if (isModified) {
     modalStore.open('SaveChangesModal', {
-      fileName: name,
+      title: t('modals.saveChanges.title', { name }),
       onSave: async () => {
         try {
           await editorStore.saveFile(path)
@@ -50,17 +52,6 @@ function handleTabDblClick(index: number) {
   }
 }
 
-function handleWheel(event: WheelEvent) {
-  const el = event.currentTarget as HTMLElement
-  // 只处理垂直滚动，忽略已经是水平滚动的情况
-  if (!el || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) {
-    return
-  }
-
-  el.scrollLeft += event.deltaY
-  event.preventDefault()
-}
-
 function scrollToActiveTab() {
   const viewport = scrollAreaRef?.viewport?.viewportElement
   if (!viewport) {
@@ -93,7 +84,7 @@ watch(() => tabsStore.activeTabIndex, () => {
 </script>
 
 <template>
-  <ScrollArea ref="scrollAreaRef" @wheel="handleWheel">
+  <ScrollArea ref="scrollAreaRef" @wheel="handleWheelToHorizontalScroll">
     <div class="bg-background flex h-8">
       <Button
         v-for="(tab, index) in tabsStore.tabs"

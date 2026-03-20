@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 
 import AboutModal from '~/components/modals/AboutModal.vue'
 import AlertModal from '~/components/modals/AlertModal.vue'
+import CommandDefaultsModal from '~/components/modals/CommandDefaultsModal.vue'
 import CreateFileModal from '~/components/modals/CreateFileModal.vue'
 import CreateGameModal from '~/components/modals/CreateGameModal.vue'
 import DeleteEngineModal from '~/components/modals/DeleteEngineModal.vue'
@@ -13,11 +14,13 @@ import DiscoveredResourcesModal from '~/components/modals/DiscoveredResourcesMod
 import GameConfigModal from '~/components/modals/GameConfigModal.vue'
 import SaveChangesModal from '~/components/modals/SaveChangesModal.vue'
 import SettingsModal from '~/components/modals/SettingsModal.vue'
+import StatementGroupModal from '~/components/modals/StatementGroupModal.vue'
 import UpgradeModal from '~/components/modals/UpgradeModal.vue'
 
 const ModalDialog = {
   AboutModal,
   AlertModal,
+  CommandDefaultsModal,
   CreateFileModal,
   CreateGameModal,
   DiscardEffectChangesModal,
@@ -29,6 +32,7 @@ const ModalDialog = {
   GameConfigModal,
   SaveChangesModal,
   SettingsModal,
+  StatementGroupModal,
   UpgradeModal,
 } as const satisfies Record<string, Component>
 

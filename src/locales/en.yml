@@ -2,6 +2,8 @@ common:
   loading: Loading...
   cancel: Cancel
   confirm: Confirm
+  save: Save
+  edit: Edit
   moveToTrash: Move to Trash
   delete: Delete
   settings: Settings
@@ -230,6 +232,12 @@ modals:
     description: Your changes will be lost if you don't save them.
     save: Save
     dontSave: Don't Save
+  saveCommandDefaults:
+    title: Do you want to save changes to {name} defaults?
+  confirmEffectChanges:
+    title: Confirm changes from the effect editor?
+    description: Your changes will be discarded if you don't confirm them.
+    discard: Discard
   discardEffectChanges:
     title: Apply changes from the effect editor?
     description: Your changes will be discarded if you don't apply them.
@@ -399,7 +407,31 @@ edit:
     toggleSidebar: Toggle Auxiliary Panel
   visualEditor:
     playToLine: Play to this line
-    commandPanel: Command Panel
+    commandPanel:
+      title: Command Panel
+      editDefaults: Edit defaults
+      editDefaultsTitle: Edit defaults — {command}
+      resetDefaults: Reset
+      resetSuccess: Reset to defaults
+      createGroup: New Statement Group
+      createGroupDescription: Create a reusable bundle of statements
+      confirmDeleteGroup: Are you sure you want to delete this group?
+      editGroup: Edit Statement Group
+      groupDescription: Add commands on the left, then reorder and edit them on the right.
+      groupNamePlaceholder: Enter group name
+      saveGroup: Save Statement Group
+      emptyGroup: Add commands from the left to start building this group.
+      moveUp: Move up
+      moveDown: Move down
+      groupCount: "{count} statements"
+      categories:
+        all: All
+        perform: Perform
+        effect: Effects
+        display: Display
+        scene: Scene
+        system: System
+        groups: Statement Groups
     narrationMode: Narration
     types:
       comment: Comment
@@ -451,6 +483,40 @@ edit:
       unlockCg: Unlock CG Gallery
       unlockBgm: Unlock BGM Gallery
       unknown: Unrecognized
+    commandDescriptions:
+      say: Add a line of dialogue or narration
+      comment: Add a comment, visible only while editing
+      changeBg: Add or switch the background image
+      changeFigure: Add or switch a character figure
+      miniAvatar: Add or switch the mini avatar beside the dialogue box
+      bgm: Play or switch background music
+      playEffect: Play a sound effect
+      video: Play a video in fullscreen
+      changeScene: End the current scene and switch to another
+      callScene: Call a sub-scene and return when it ends
+      choose: Display branch choices for the player
+      label: Define a label position that can be jumped to
+      jumpLabel: Jump to a label in the current scene
+      end: End the game and return to the title screen
+      setVar: Set or modify a variable value
+      showVars: Display all current variables in the dialogue box
+      getUserInput: Open an input dialog and save the player's input to a variable
+      wait: Wait for a period of time before continuing
+      setTextbox: Show or hide the dialogue textbox
+      filmMode: Switch to cinematic mode with letterbox bars and immersive dialogue
+      callSteam: Call Steam features such as unlocking achievements
+      setTransform: Set a target's position, scale, rotation and other transforms
+      setTempAnimation: Set a one-time temporary animation
+      setAnimation: Load an animation from file and apply it to a target
+      setComplexAnimation: Apply a built-in animation preset to a target
+      setTransition: Set the enter or exit transition for a target
+      pixi: Add stage effects such as cherry blossoms, rain or snow
+      pixiInit: Clear all current stage effects
+      applyStyle: Replace game UI styles
+      intro: Display a fullscreen text presentation
+      unlockCg: Add an image to the CG gallery
+      unlockBgm: Add a music track to the BGM gallery
+      unknown: Unrecognized command type.
     params:
       continue: Auto-advance
       next: Parallel
@@ -674,6 +740,11 @@ settings:
     showSidebarAssetPreview:
       label: Auxiliary Panel Statement Asset Preview
       description: Preview images and other assets referenced by statements in the editor auxiliary panel
+    commandInsertPosition:
+      label: Command Insert Position
+      description: Where to insert statements from the command panel
+      afterCursor: After Cursor
+      end: End
   storage:
     gamePath:
       label: Game Save Location

@@ -13,6 +13,7 @@ export const useEditSettingsStore = defineStore(
     const effectEditorSide = $ref<'left' | 'right'>('right')
     const collapseStatementsOnSidebarOpen = $ref(true)
     const showSidebarAssetPreview = $ref(true)
+    const commandInsertPosition = $ref<'afterCursor' | 'end'>('afterCursor')
 
     return $$({
       fontFamily,
@@ -25,6 +26,7 @@ export const useEditSettingsStore = defineStore(
       effectEditorSide,
       collapseStatementsOnSidebarOpen,
       showSidebarAssetPreview,
+      commandInsertPosition,
     })
   },
   {
