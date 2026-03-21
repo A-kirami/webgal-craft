@@ -531,7 +531,7 @@ function getArgumentSuggestion(model: monaco.editor.ITextModel, position: monaco
   // 从行内容中提取命令类型
   let command: commandType = commandType.say
   try {
-    const parsedScene = webgalParser.parse(currentLine, TEMP_SCENE_NAME, TEMP_SCENE_URL)
+    const parsedScene = parseSceneOrEmpty(currentLine, TEMP_SCENE_NAME, TEMP_SCENE_URL)
     command = parsedScene.sentenceList[0]?.command || commandType.say
   } catch (error) {
     handleError(error, { silent: true })
@@ -621,12 +621,7 @@ function getParsedSceneFromLine(model: monaco.editor.ITextModel, position: monac
   const line = model.getLineContent(position.lineNumber)
   const lineBeforeCursor = line.slice(0, position.column - 1)
 
-  try {
-    return webgalParser.parse(lineBeforeCursor, TEMP_SCENE_NAME, TEMP_SCENE_URL)
-  } catch (error) {
-    handleError(error, { silent: true })
-    return webgalParser.parse('', TEMP_SCENE_NAME, TEMP_SCENE_URL)
-  }
+  return parseSceneOrEmpty(lineBeforeCursor, TEMP_SCENE_NAME, TEMP_SCENE_URL)
 }
 
 /**

@@ -17,8 +17,7 @@ function handleModeToggle() {
     return
   }
   const mode = isVisualMode ? 'text' : 'visual'
-  editorStore.toggleTextualMode(mode)
-  preferenceStore.editorMode = mode
+  editorStore.switchEditorMode(mode)
 }
 
 function handleSidebarToggle() {

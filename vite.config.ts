@@ -64,9 +64,12 @@ export default defineConfig({
           types: true,
         },
         '!src/helper/command-registry/common-params.ts',
+        '!src/helper/text-editor-history-adapter.ts',
         'src/lib',
         'src/services',
         'src/stores',
+        '!src/stores/editor-auto-save.ts',
+        '!src/stores/editor-preview-sync.ts',
         'src/utils',
         {
           glob: 'src/types',

@@ -340,9 +340,11 @@ edit:
       title: Input box title
       buttonText: Confirm button text
       defaultValue: Input box default value
+  errors:
+    previewUnavailable: Preview URL is not available. Please start preview first.
+    workspaceUnavailable: Workspace is not initialized yet. Please try again shortly.
   unsupported:
-    binaryFile: The file is not displayed in the editor because it is either binary or uses an unsupported text encoding.
-    loadFailed: "Failed to detect file type: {error}"
+    unsupportedFile: The file is binary or uses an unsupported text encoding, so it cannot be displayed in the editor
   textEditor:
     languages:
       webgalscript: WebGAL Script
@@ -674,7 +676,6 @@ edit:
       universalSoftIn: Fade In
       universalSoftOff: Fade Out
     effectEditor: Effect Editor
-    statementList: Statement list
     noSelection: Select a statement to edit
     noResults: No results found
   welcome:

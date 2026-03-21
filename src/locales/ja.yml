@@ -340,9 +340,11 @@ edit:
       title: 入力欄タイトル
       buttonText: 確認ボタンテキスト
       defaultValue: 入力欄デフォルト値
+  errors:
+    previewUnavailable: プレビューURLがありません。先にプレビューを起動してください。
+    workspaceUnavailable: ワークスペースがまだ初期化されていません。少し待ってから再試行してください。
   unsupported:
-    binaryFile: このファイルはバイナリファイルまたはサポートされていないテキストエンコーディングを使用しているため、エディターに表示できません。
-    loadFailed: "ファイルタイプの検出に失敗しました：{error}"
+    unsupportedFile: このファイルはバイナリファイル、またはサポートされていないテキストエンコーディングを使用しているため、エディターに表示できません
   textEditor:
     languages:
       webgalscript: WebGAL スクリプト
@@ -674,7 +676,6 @@ edit:
       universalSoftIn: フェードイン
       universalSoftOff: フェードアウト
     effectEditor: エフェクトエディター
-    statementList: ステートメントリスト
     noSelection: 編集するステートメントを選択してください
     noResults: 検索結果がありません
   welcome:

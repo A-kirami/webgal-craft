@@ -203,7 +203,6 @@ function computeSequentialBatchInverses<TOperation extends Transaction>(
 
   return inverses.toReversed()
 }
-
 function createFallbackInverse(docEntry: DocumentState): Transaction {
   return {
     type: 'replace-all',

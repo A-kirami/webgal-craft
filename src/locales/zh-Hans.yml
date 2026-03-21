@@ -340,9 +340,11 @@ edit:
       title: 输入框标题
       buttonText: 确认按钮文本
       defaultValue: 输入框默认值
+  errors:
+    previewUnavailable: 预览地址不存在，请先启动预览
+    workspaceUnavailable: 工作区尚未初始化，请稍后重试
   unsupported:
-    binaryFile: 该文件是二进制文件或使用了不受支持的文本编码，无法在编辑器中显示。
-    loadFailed: "无法检测文件类型：{error}"
+    unsupportedFile: 该文件是二进制文件或使用了不受支持的文本编码，无法在编辑器中显示
   textEditor:
     languages:
       webgalscript: WebGAL 脚本
@@ -674,7 +676,6 @@ edit:
       universalSoftIn: 通用透明度淡入
       universalSoftOff: 通用透明度淡出
     effectEditor: 效果编辑器
-    statementList: 语句列表
     noSelection: 请选择一条语句进行编辑
     noResults: 未找到结果
   welcome:

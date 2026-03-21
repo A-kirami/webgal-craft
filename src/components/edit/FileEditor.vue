@@ -18,20 +18,30 @@ async function handleCreateScene() {
 // 防止在标签页从持久化存储还原期间显示空状态造成闪烁
 const ANTI_FLICKER_DELAY = 100
 const hasDelayPassed = $(useTimeout(ANTI_FLICKER_DELAY))
+const currentState = $computed(() => editorStore.currentState)
 
 const shouldShowEmpty = $computed(() => {
-  return hasDelayPassed && tabsStore.tabs.length === 0 && !editorStore.currentState
+  return hasDelayPassed && tabsStore.tabs.length === 0 && !currentState
 })
 </script>
 
 <template>
   <div class="h-full overflow-hidden">
     <KeepAlive>
-      <TextEditor v-if="editorStore.currentState?.mode === 'text'" ::state="editorStore.currentState" />
-      <VisualEditor v-else-if="editorStore.currentState?.mode === 'visual'" ::state="editorStore.currentState" />
-      <AssetPreview v-else-if="editorStore.currentState?.mode === 'preview'" ::state="editorStore.currentState" />
+      <TextEditor
+        v-if="currentState && isEditableEditor(currentState) && currentState.projection === 'text'"
+        :state="currentState"
+      />
+      <VisualEditor
+        v-else-if="currentState && isEditableEditor(currentState) && currentState.projection === 'visual'"
+        :state="currentState"
+      />
+      <AssetPreview
+        v-else-if="currentState && !isEditableEditor(currentState) && currentState.view === 'preview'"
+        :state="currentState"
+      />
       <Empty
-        v-else-if="editorStore.currentState?.mode === 'unsupported'"
+        v-else-if="currentState && !isEditableEditor(currentState) && currentState.view === 'unsupported'"
         class="border-0 h-full"
       >
         <EmptyContent>
@@ -40,7 +50,7 @@ const shouldShowEmpty = $computed(() => {
               <FileWarning />
             </EmptyMedia>
             <EmptyDescription>
-              {{ editorStore.currentState.reason }}
+              {{ $t('edit.unsupported.unsupportedFile') }}
             </EmptyDescription>
           </EmptyHeader>
         </EmptyContent>

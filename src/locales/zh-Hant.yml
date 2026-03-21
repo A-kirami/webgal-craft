@@ -340,9 +340,11 @@ edit:
       title: 輸入框標題
       buttonText: 確認按鈕文字
       defaultValue: 輸入框預設值
+  errors:
+    previewUnavailable: 預覽地址不存在，請先啟動預覽
+    workspaceUnavailable: 工作區尚未初始化，請稍後重試
   unsupported:
-    binaryFile: 該檔案是二進位檔案或使用了不受支援的文字編碼，無法在編輯器中顯示。
-    loadFailed: "無法偵測檔案類型：{error}"
+    unsupportedFile: 該檔案是二進位檔案或使用了不受支援的文字編碼，無法在編輯器中顯示
   textEditor:
     languages:
       webgalscript: WebGAL 腳本
@@ -674,7 +676,6 @@ edit:
       universalSoftIn: 通用透明度淡入
       universalSoftOff: 通用透明度淡出
     effectEditor: 效果編輯器
-    statementList: 語句列表
     noSelection: 請選擇一條語句進行編輯
     noResults: 未找到結果
   welcome:

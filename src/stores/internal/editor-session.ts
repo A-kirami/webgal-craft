@@ -15,14 +15,13 @@ import type {
   LoadedDocumentState,
   LoadedTextProjectionSnapshot,
 } from './editor-document-state'
+import type { PreviewMediaSession } from '~/helper/preview-media-session'
 import type { ScenePresentationState } from '~/helper/scene-presentation'
 import type {
   DocumentKind,
   DocumentModel,
 } from '~/models/document-model'
 import type { SceneSelectionState } from '~/models/scene-selection'
-
-type PreviewMediaSession = Record<string, never>
 
 export interface CoreEditorState {
   path: string

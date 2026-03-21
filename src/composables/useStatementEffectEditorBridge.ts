@@ -2,6 +2,10 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import type { InjectionKey } from 'vue'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type {
+  SceneVisualProjectionState,
+  TextProjectionState,
+} from '~/stores/editor'
 
 export interface EffectEditorResult {
   transform: Transform
@@ -69,10 +73,10 @@ function resolveEffectPreviewTarget(sentence: ISentence): string {
  * - visual-scene 模式：当前 splitStatements 按行拆分，id 对应 statements 数组索引 + 1。
  */
 function resolveBaseLineNumber(
-  state: TextModeState | VisualModeSceneState,
+  state: TextProjectionState | SceneVisualProjectionState,
   targetEntryId: number,
 ): number {
-  if (state.mode === 'text') {
+  if (state.projection === 'text') {
     return targetEntryId
   }
 
@@ -110,8 +114,10 @@ export function useStatementEffectEditorBridge(options: UseStatementEffectEditor
 
     options.emitUpdate({
       id: entryId.value,
+      target: createStatementIdTarget(entryId.value),
       rawText: newRawText,
       parsed: newSentence,
+      source: 'effect-editor',
     })
   }
 
@@ -133,8 +139,7 @@ export function useStatementEffectEditorBridge(options: UseStatementEffectEditor
 
     const editorStore = useEditorStore()
     const { currentState } = editorStore
-    const isSupported = currentState?.mode === 'text'
-      || (currentState?.mode === 'visual' && currentState.visualType === 'scene')
+    const isSupported = currentState && isEditableEditor(currentState) && currentState.kind === 'scene'
     if (!isSupported) {
       logger.warn('当前编辑器状态不支持效果编辑器')
       return

@@ -23,12 +23,20 @@ const effectiveShowSidebar = computed({
 // 辅助面板单实例：各编辑器通过 inject 注册数据源，EditorPanel 统一渲染
 const sidebarPanel = useSidebarPanelProvider()
 const binding = $computed(() => sidebarPanel.activeBinding.value)
+const selectedEntry = $computed(() => binding?.getEntry?.() ?? binding?.entry?.value)
+const selectedIndex = $computed(() => binding?.getIndex?.() ?? binding?.index?.value)
+const selectedPreviousSpeaker = $computed(() => binding?.getPreviousSpeaker?.() ?? binding?.previousSpeaker?.value ?? '')
+const enableFocusStatement = $computed(() => binding?.enableFocusStatement ?? false)
 
 // 命令面板桥接：子编辑器注册插入处理器，CommandPanel 通过 bridge 调用
 const commandPanelBridge = useCommandPanelBridgeProvider()
 const commandHandler = $computed(() => commandPanelBridge.activeHandler.value)
 
-const isTextMode = $computed(() => editorStore.currentState?.mode === 'text')
+const currentProjection = $computed(() => {
+  const currentState = editorStore.currentState
+  return currentState && isEditableEditor(currentState) ? currentState.projection : undefined
+})
+const isTextMode = $computed(() => currentProjection === 'text')
 
 const isCommandPanelCollapsed = $computed(() => commandPanelRef.value?.isCollapsed ?? true)
 
@@ -48,7 +56,7 @@ const editorPanelRef = $(useTemplateRef('editorPanel'))
 const effectEditorSession = $computed(() => effectEditorProvider.session)
 
 function focusTextEditorAfterEffectEditorClose() {
-  if (editorStore.currentState?.mode === 'text') {
+  if (currentProjection === 'text') {
     tabsStore.shouldFocusEditor = true
   }
 }
@@ -92,6 +100,14 @@ function handleEffectReset() {
   }
 
   effectEditorProvider.resetToInitialDraft()
+}
+
+function handleStatementPanelUpdate(payload: StatementUpdatePayload) {
+  binding?.onUpdate(payload)
+}
+
+function handleStatementFocus() {
+  binding?.onFocusStatement?.()
 }
 
 defineExpose({ toggleCommandPanel })
@@ -139,14 +155,14 @@ defineExpose({ toggleCommandPanel })
         </div>
         <template #sidebar>
           <StatementEditorPanel
-            v-if="binding?.entry.value"
-            :key="binding.entry.value.id"
-            :entry="binding.entry.value"
-            :index="binding.index.value"
-            :previous-speaker="binding.previousSpeaker.value ?? ''"
-            :enable-focus-statement="binding.enableFocusStatement ?? false"
-            @update="binding.onUpdate"
-            @focus-statement="binding.onFocusStatement?.()"
+            v-if="selectedEntry"
+            :key="selectedEntry.id"
+            :entry="selectedEntry"
+            :index="selectedIndex"
+            :previous-speaker="selectedPreviousSpeaker"
+            :enable-focus-statement="enableFocusStatement"
+            @update="handleStatementPanelUpdate"
+            @focus-statement="handleStatementFocus"
           />
           <div v-else-if="binding" class="text-sm text-muted-foreground px-4 flex h-full items-center justify-center">
             {{ isTextMode ? $t('edit.textEditor.formPanel.noStatement') : $t('edit.visualEditor.noSelection') }}

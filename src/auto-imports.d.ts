@@ -23,17 +23,22 @@ declare global {
   const arg: typeof import('./helper/command-registry/schema').arg
   const asyncComputed: typeof import('@vueuse/core').asyncComputed
   const autoResetRef: typeof import('@vueuse/core').autoResetRef
+  const buildBeforeHistorySnapshotFromChangeEvent: typeof import('./helper/text-editor-history-snapshot').buildBeforeHistorySnapshotFromChangeEvent
   const buildCategoryRenderItems: typeof import('./helper/effect-editor-config').buildCategoryRenderItems
   const buildSceneStatements: typeof import('./helper/webgal-script/sentence').buildSceneStatements
   const buildSchemaKeySet: typeof import('./helper/statement-editor/visibility').buildSchemaKeySet
   const buildSingleStatement: typeof import('./helper/webgal-script/sentence').buildSingleStatement
   const buildStatementPreviewParams: typeof import('./helper/statement-editor/preview').buildStatementPreviewParams
   const buildStatements: typeof import('./helper/webgal-script/sentence').buildStatements
+  const buildTextEditorOptions: typeof import('./helper/text-editor-options').buildTextEditorOptions
   const canExecuteEditorAutoSave: typeof import('./stores/editor-auto-save').canExecuteEditorAutoSave
+  const captureCursorSnapshotFromEditor: typeof import('./helper/text-editor-history-snapshot').captureCursorSnapshotFromEditor
+  const captureEditorHistorySnapshot: typeof import('./helper/text-editor-history-snapshot').captureEditorHistorySnapshot
   const categoryTheme: typeof import('./helper/command-registry/index').categoryTheme
   const clamp: typeof import('./helper/math').clamp
   const clearDirectoryItemsCache: typeof import('./services/directory-cache').clearDirectoryItemsCache
   const cloneArgs: typeof import('./helper/webgal-script/codec').cloneArgs
+  const cloneEditorSelection: typeof import('./helper/text-editor-history-snapshot').cloneEditorSelection
   const cn: typeof import('./lib/utils').cn
   const collectStatementFileChecks: typeof import('./helper/statement-editor/file-missing').collectStatementFileChecks
   const colorMode: typeof import('./composables/color-mode').colorMode
@@ -42,7 +47,9 @@ declare global {
   const commandPanelCategories: typeof import('./helper/command-registry/index').commandPanelCategories
   const commandRaw: typeof import('./helper/command-registry/schema').commandRaw
   const compareOptionalNumber: typeof import('./utils/sort').compareOptionalNumber
+  const computeHistoryCursorOffset: typeof import('./helper/text-editor-history-snapshot').computeHistoryCursorOffset
   const computeLineNumberFromStatementId: typeof import('./stores/editor').computeLineNumberFromStatementId
+  const computeStatementIdFromLineNumber: typeof import('./stores/editor').computeStatementIdFromLineNumber
   const computed: typeof import('vue').computed
   const computedAsync: typeof import('@vueuse/core').computedAsync
   const computedEager: typeof import('@vueuse/core').computedEager
@@ -57,22 +64,30 @@ declare global {
   const createAsyncQueue: typeof import('./helper/async-queue').createAsyncQueue
   const createEditorAutoSaveController: typeof import('./stores/editor-auto-save').createEditorAutoSaveController
   const createEditorPreviewSync: typeof import('./stores/editor-preview-sync').createEditorPreviewSync
+  const createEditorSaveShortcutHandler: typeof import('./helper/editor-save-shortcut').createEditorSaveShortcutHandler
+  const createEditorSelection: typeof import('./helper/text-editor-history-snapshot').createEditorSelection
   const createEffectEditorProvider: typeof import('./composables/useEffectEditorProvider').createEffectEditorProvider
   const createEffectPreviewEmitter: typeof import('./composables/useEffectEditorProvider').createEffectPreviewEmitter
+  const createEmptySceneTextPanelSnapshot: typeof import('./helper/scene-text-panel').createEmptySceneTextPanelSnapshot
   const createEmptySentence: typeof import('./helper/webgal-script/sentence').createEmptySentence
   const createEventHook: typeof import('@vueuse/core').createEventHook
   const createGlobalState: typeof import('@vueuse/core').createGlobalState
   const createInjectionState: typeof import('@vueuse/core').createInjectionState
   const createItemComparator: typeof import('./utils/sort').createItemComparator
   const createParamDrag: typeof import('./composables/effect-editor/createParamDrag').createParamDrag
+  const createPreviewMediaSession: typeof import('./helper/preview-media-session').createPreviewMediaSession
   const createReactiveFn: typeof import('@vueuse/core').createReactiveFn
   const createRef: typeof import('@vueuse/core').createRef
   const createReusableTemplate: typeof import('@vueuse/core').createReusableTemplate
   const createScenePresentationState: typeof import('./helper/scene-presentation').createScenePresentationState
+  const createSceneTextPanelTextModel: typeof import('./helper/scene-text-panel').createSceneTextPanelTextModel
   const createSharedComposable: typeof import('@vueuse/core').createSharedComposable
   const createStatementEntryFromSceneStatement: typeof import('./helper/webgal-script/sentence').createStatementEntryFromSceneStatement
+  const createStatementIdTarget: typeof import('./composables/useStatementEditor').createStatementIdTarget
   const createStatementMissingFileLoader: typeof import('./helper/statement-editor/file-missing').createStatementMissingFileLoader
   const createTemplatePromise: typeof import('@vueuse/core').createTemplatePromise
+  const createTextEditorSaveShortcutHandler: typeof import('./composables/useTextEditorSaveShortcut').createTextEditorSaveShortcutHandler
+  const createTextLineTarget: typeof import('./composables/useStatementEditor').createTextLineTarget
   const createTransientStatementEntry: typeof import('./helper/webgal-script/sentence').createTransientStatementEntry
   const createUnrefFn: typeof import('@vueuse/core').createUnrefFn
   const customRef: typeof import('vue').customRef
@@ -126,6 +141,7 @@ declare global {
   const getParamValueFromArgs: typeof import('./helper/statement-editor/param-value').getParamValueFromArgs
   const getPointerAngleDegrees: typeof import('./helper/math').getPointerAngleDegrees
   const getPreviousSpeakerAtIndex: typeof import('./utils/speaker').getPreviousSpeakerAtIndex
+  const getPreviousSpeakerAtLine: typeof import('./utils/speaker').getPreviousSpeakerAtLine
   const getRegistryKnownKeys: typeof import('./helper/webgal-script/params').getRegistryKnownKeys
   const getValueByPath: typeof import('./helper/effect-editor-config').getValueByPath
   const getVersion: typeof import('./utils/metadata').getVersion
@@ -139,9 +155,11 @@ declare global {
   const inject: typeof import('vue').inject
   const injectLocal: typeof import('@vueuse/core').injectLocal
   const invalidateDirectoryItemsCache: typeof import('./services/directory-cache').invalidateDirectoryItemsCache
+  const isAnimationVisualProjection: typeof import('./stores/editor').isAnimationVisualProjection
   const isBackendError: typeof import('./types/errors').isBackendError
   const isCommandSupported: typeof import('./helper/command-registry/index').isCommandSupported
   const isDefined: typeof import('@vueuse/core').isDefined
+  const isEditableEditor: typeof import('./stores/editor').isEditableEditor
   const isFlagChoiceField: typeof import('./helper/command-registry/schema').isFlagChoiceField
   const isGenericNode: typeof import('./helper/webgal-script/types').isGenericNode
   const isParamVisibleByArgs: typeof import('./helper/statement-editor/visibility').isParamVisibleByArgs
@@ -153,6 +171,7 @@ declare global {
   const isRgbColor: typeof import('./helper/color').isRgbColor
   const isRgbaPayload: typeof import('./helper/color').isRgbaPayload
   const isSceneStatementCollapsed: typeof import('./helper/scene-presentation').isSceneStatementCollapsed
+  const isSceneVisualProjection: typeof import('./stores/editor').isSceneVisualProjection
   const isShallow: typeof import('vue').isShallow
   const isStatementInteractiveTarget: typeof import('./composables/useStatementEditor').isStatementInteractiveTarget
   const isTextualEditor: typeof import('./stores/editor').isTextualEditor
@@ -169,9 +188,11 @@ declare global {
   const normalizeAngleDelta: typeof import('./helper/math').normalizeAngleDelta
   const normalizeColorChannel: typeof import('./helper/color').normalizeColorChannel
   const normalizeDegree: typeof import('./helper/math').normalizeDegree
+  const normalizeEditorViewState: typeof import('./helper/text-editor-view-state').normalizeEditorViewState
   const normalizeFieldStringValue: typeof import('./helper/statement-editor/field-utils').normalizeFieldStringValue
   const normalizeGamePath: typeof import('./helper/command-registry/dynamic-options').normalizeGamePath
   const normalizeNumber: typeof import('./utils/sort').normalizeNumber
+  const normalizePreviewMediaSessionPatch: typeof import('./helper/preview-media-session').normalizePreviewMediaSessionPatch
   const normalizeRelativePath: typeof import('./utils/path').normalizeRelativePath
   const normalizeStepPrecision: typeof import('./helper/math').normalizeStepPrecision
   const notify: typeof import('notivue').push
@@ -246,14 +267,23 @@ declare global {
   const resolveComponent: typeof import('vue').resolveComponent
   const resolveDynamicOptions: typeof import('./helper/dynamic-options').resolveDynamicOptions
   const resolveFieldModelStringValue: typeof import('./helper/statement-editor/field-utils').resolveFieldModelStringValue
+  const resolveHistoryShortcutAction: typeof import('./helper/history-shortcut').resolveHistoryShortcutAction
   const resolveI18n: typeof import('./helper/command-registry/schema').resolveI18n
   const resolveMissingFileKeys: typeof import('./helper/statement-editor/file-missing').resolveMissingFileKeys
   const resolvePanelSliderEmitValue: typeof import('./helper/statement-editor/field-utils').resolvePanelSliderEmitValue
   const resolveParamSelectValue: typeof import('./helper/statement-editor/param-value').resolveParamSelectValue
   const resolveRef: typeof import('@vueuse/core').resolveRef
   const resolveRegistryFieldMeta: typeof import('./helper/webgal-script/params').resolveRegistryFieldMeta
+  const resolveSceneCursorTarget: typeof import('./helper/text-editor-scene-sync').resolveSceneCursorTarget
+  const resolveScenePreviewLine: typeof import('./helper/text-editor-scene-sync').resolveScenePreviewLine
+  const resolveSceneTextPanelSnapshot: typeof import('./helper/scene-text-panel').resolveSceneTextPanelSnapshot
+  const resolveSceneTextPanelSnapshotFromContent: typeof import('./helper/scene-text-panel').resolveSceneTextPanelSnapshotFromContent
   const resolveStatementSpecialContentMode: typeof import('./helper/command-registry/schema').resolveStatementSpecialContentMode
   const resolveSurfaceVariant: typeof import('./helper/command-registry/schema').resolveSurfaceVariant
+  const resolveTextEditorLanguage: typeof import('./helper/text-editor-language').resolveTextEditorLanguage
+  const restoreEditorCursorOffset: typeof import('./helper/text-editor-history-snapshot').restoreEditorCursorOffset
+  const restoreEditorCursorSnapshot: typeof import('./helper/text-editor-history-snapshot').restoreEditorCursorSnapshot
+  const restoreEditorHistorySnapshot: typeof import('./helper/text-editor-history-snapshot').restoreEditorHistorySnapshot
   const roundByStep: typeof import('./helper/math').roundByStep
   const roundToPrecision: typeof import('./helper/math').roundToPrecision
   const safeInvoke: typeof import('./utils/invoke').safeInvoke
@@ -270,6 +300,7 @@ declare global {
   const shallowReactive: typeof import('vue').shallowReactive
   const shallowReadonly: typeof import('vue').shallowReadonly
   const shallowRef: typeof import('vue').shallowRef
+  const shouldRestoreTextEditorFocus: typeof import('./helper/text-editor-workspace-focus').shouldRestoreTextEditorFocus
   const sidebarPanelKey: typeof import('./composables/useSidebarPanel').sidebarPanelKey
   const splitStatements: typeof import('./helper/webgal-script/sentence').splitStatements
   const statementEditorSurfaceKey: typeof import('./helper/statement-editor/surface-context').statementEditorSurfaceKey
@@ -368,6 +399,7 @@ declare global {
   const useDropZone: typeof import('@vueuse/core').useDropZone
   const useEditSettingsStore: typeof import('./stores/edit-settings').useEditSettingsStore
   const useEditorDynamicOptionsBootstrap: typeof import('./composables/useEditorDynamicOptionsBootstrap').useEditorDynamicOptionsBootstrap
+  const useEditorSaveShortcut: typeof import('./composables/useEditorSaveShortcut').useEditorSaveShortcut
   const useEditorStore: typeof import('./stores/editor').useEditorStore
   const useEditorUIStateStore: typeof import('./stores/editor-ui-state').useEditorUIStateStore
   const useEditorViewStateStore: typeof import('./stores/editor-view-state').useEditorViewStateStore
@@ -495,7 +527,13 @@ declare global {
   const useTemplateRef: typeof import('vue').useTemplateRef
   const useTemplateRefsList: typeof import('@vueuse/core').useTemplateRefsList
   const useTextDirection: typeof import('@vueuse/core').useTextDirection
+  const useTextEditorBindings: typeof import('./composables/useTextEditorBindings').useTextEditorBindings
+  const useTextEditorContentSync: typeof import('./composables/useTextEditorContentSync').useTextEditorContentSync
+  const useTextEditorHistory: typeof import('./composables/useTextEditorHistory').useTextEditorHistory
   const useTextEditorPanel: typeof import('./composables/useTextEditorPanel').useTextEditorPanel
+  const useTextEditorRuntime: typeof import('./composables/useTextEditorRuntime').useTextEditorRuntime
+  const useTextEditorSaveShortcut: typeof import('./composables/useTextEditorSaveShortcut').useTextEditorSaveShortcut
+  const useTextEditorWorkspace: typeof import('./composables/useTextEditorWorkspace').useTextEditorWorkspace
   const useTextSelection: typeof import('@vueuse/core').useTextSelection
   const useTextareaAutosize: typeof import('@vueuse/core').useTextareaAutosize
   const useThrottle: typeof import('@vueuse/core').useThrottle
@@ -580,7 +618,7 @@ declare global {
   export type { SidebarPanelBinding, SidebarPanelContext } from './composables/useSidebarPanel'
   import('./composables/useSidebarPanel')
   // @ts-ignore
-  export type { StatementUpdatePayload } from './composables/useStatementEditor'
+  export type { StatementIdTarget, TextLineTarget, StatementUpdateTarget, StatementUpdatePayload } from './composables/useStatementEditor'
   import('./composables/useStatementEditor')
   // @ts-ignore
   export type { UseStatementEditorContentOptions } from './composables/useStatementEditorContent'
@@ -610,6 +648,9 @@ declare global {
   export type { UseTauriDropZoneOptions, UseTauriDropZoneReturn } from './composables/useTauriDropZone'
   import('./composables/useTauriDropZone')
   // @ts-ignore
+  export type { TextEditorContentChangeContext } from './composables/useTextEditorHistory'
+  import('./composables/useTextEditorHistory')
+  // @ts-ignore
   export type { Game, Engine, Status } from './database/model'
   import('./database/model')
   // @ts-ignore
@@ -622,11 +663,23 @@ declare global {
   export type { EditorDynamicOptionsKey, DynamicOptionsContext, DynamicOptionsResult, I18nT, CommandCategory, FileFieldConfig, I18nLike, SurfaceAware, InlineLayout, TextField, SwitchField, NumberField, ValueChoiceField, FlagChoiceField, ChoiceField, FileField, ColorField, DialField, JsonObjectField, FieldDef, CommandFieldStorage, CommandFieldDef, ArgFieldJsonMeta, ArgField, ContentEditorField, CommandRawEditorField, ArgEditorField, EditorField, CommandEntry, StatementSpecialContentMode, DynamicOptionSourceDef } from './helper/command-registry/schema'
   import('./helper/command-registry/schema')
   // @ts-ignore
+  export type { EditorSaveShortcutKeyboardEvent, EditorSaveShortcutHandlerOptions } from './helper/editor-save-shortcut'
+  import('./helper/editor-save-shortcut')
+  // @ts-ignore
   export type { EffectParamDef, EffectCategory, EffectRenderItem } from './helper/effect-editor-config'
   import('./helper/effect-editor-config')
   // @ts-ignore
+  export type { HistoryShortcutAction } from './helper/history-shortcut'
+  import('./helper/history-shortcut')
+  // @ts-ignore
+  export type { PreviewMediaSession } from './helper/preview-media-session'
+  import('./helper/preview-media-session')
+  // @ts-ignore
   export type { ScenePresentationState } from './helper/scene-presentation'
   import('./helper/scene-presentation')
+  // @ts-ignore
+  export type { SceneTextPanelSnapshot, SceneTextPanelTextModel } from './helper/scene-text-panel'
+  import('./helper/scene-text-panel')
   // @ts-ignore
   export type { StatementFileCheckItem, StatementFileCheckContext, StatementFileCheckDeps } from './helper/statement-editor/file-missing'
   import('./helper/statement-editor/file-missing')
@@ -636,6 +689,21 @@ declare global {
   // @ts-ignore
   export type { StatementEditorSurface } from './helper/statement-editor/surface-context'
   import('./helper/statement-editor/surface-context')
+  // @ts-ignore
+  export type { OffsetSelectionSnapshot, TextEditorCursorSnapshot } from './helper/text-editor-history-snapshot'
+  import('./helper/text-editor-history-snapshot')
+  // @ts-ignore
+  export type { TextEditorLanguageState, RegisteredTextEditorLanguage } from './helper/text-editor-language'
+  import('./helper/text-editor-language')
+  // @ts-ignore
+  export type { TextEditorSettingsSnapshot, TextEditorOptions } from './helper/text-editor-options'
+  import('./helper/text-editor-options')
+  // @ts-ignore
+  export type { TextEditorLineReader, TextEditorCursorLineReader, TextEditorCursorPosition } from './helper/text-editor-scene-sync'
+  import('./helper/text-editor-scene-sync')
+  // @ts-ignore
+  export type { TextEditorWorkspaceFileState, TextEditorWorkspaceFocusContext } from './helper/text-editor-workspace-focus'
+  import('./helper/text-editor-workspace-focus')
   // @ts-ignore
   export type { SetVarContent, ChooseContentItem, StyleRuleContentItem } from './helper/webgal-script/content'
   import('./helper/webgal-script/content')
@@ -655,13 +723,10 @@ declare global {
   export type { StatementGroup, CommandPanelCategory } from './stores/command-panel'
   import('./stores/command-panel')
   // @ts-ignore
-  export type { EditorAutoSaveState } from './stores/editor-auto-save'
-  import('./stores/editor-auto-save')
-  // @ts-ignore
   export type { SerializableViewState } from './stores/editor-view-state'
   import('./stores/editor-view-state')
   // @ts-ignore
-  export type { TextModeState, VisualModeSceneState, VisualModeAnimationState, VisualModeState, TextualEditorState, AssetPreviewState, UnsupportedState } from './stores/editor'
+  export type { HistoryApplyResult, AnimationVisualProjectionState, AssetPreviewState, EditableEditorState, SceneVisualProjectionState, TextProjectionState, UnsupportedState, VisualProjectionState } from './stores/editor'
   import('./stores/editor')
   // @ts-ignore
   export type { FileItem, DirItem, FileSystemItem } from './stores/file'
@@ -720,17 +785,21 @@ declare module 'vue' {
     readonly arg: UnwrapRef<typeof import('./helper/command-registry/schema')['arg']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
+    readonly buildBeforeHistorySnapshotFromChangeEvent: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['buildBeforeHistorySnapshotFromChangeEvent']>
     readonly buildCategoryRenderItems: UnwrapRef<typeof import('./helper/effect-editor-config')['buildCategoryRenderItems']>
     readonly buildSceneStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['buildSceneStatements']>
     readonly buildSchemaKeySet: UnwrapRef<typeof import('./helper/statement-editor/visibility')['buildSchemaKeySet']>
     readonly buildSingleStatement: UnwrapRef<typeof import('./helper/webgal-script/sentence')['buildSingleStatement']>
     readonly buildStatementPreviewParams: UnwrapRef<typeof import('./helper/statement-editor/preview')['buildStatementPreviewParams']>
     readonly buildStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['buildStatements']>
-    readonly canExecuteEditorAutoSave: UnwrapRef<typeof import('./stores/editor-auto-save')['canExecuteEditorAutoSave']>
+    readonly buildTextEditorOptions: UnwrapRef<typeof import('./helper/text-editor-options')['buildTextEditorOptions']>
+    readonly captureCursorSnapshotFromEditor: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['captureCursorSnapshotFromEditor']>
+    readonly captureEditorHistorySnapshot: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['captureEditorHistorySnapshot']>
     readonly categoryTheme: UnwrapRef<typeof import('./helper/command-registry/index')['categoryTheme']>
     readonly clamp: UnwrapRef<typeof import('./helper/math')['clamp']>
     readonly clearDirectoryItemsCache: UnwrapRef<typeof import('./services/directory-cache')['clearDirectoryItemsCache']>
     readonly cloneArgs: UnwrapRef<typeof import('./helper/webgal-script/codec')['cloneArgs']>
+    readonly cloneEditorSelection: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['cloneEditorSelection']>
     readonly cn: UnwrapRef<typeof import('./lib/utils')['cn']>
     readonly collectStatementFileChecks: UnwrapRef<typeof import('./helper/statement-editor/file-missing')['collectStatementFileChecks']>
     readonly colorMode: UnwrapRef<typeof import('./composables/color-mode')['colorMode']>
@@ -739,7 +808,9 @@ declare module 'vue' {
     readonly commandPanelCategories: UnwrapRef<typeof import('./helper/command-registry/index')['commandPanelCategories']>
     readonly commandRaw: UnwrapRef<typeof import('./helper/command-registry/schema')['commandRaw']>
     readonly compareOptionalNumber: UnwrapRef<typeof import('./utils/sort')['compareOptionalNumber']>
+    readonly computeHistoryCursorOffset: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['computeHistoryCursorOffset']>
     readonly computeLineNumberFromStatementId: UnwrapRef<typeof import('./stores/editor')['computeLineNumberFromStatementId']>
+    readonly computeStatementIdFromLineNumber: UnwrapRef<typeof import('./stores/editor')['computeStatementIdFromLineNumber']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
@@ -752,24 +823,30 @@ declare module 'vue' {
     readonly controlledRef: UnwrapRef<typeof import('@vueuse/core')['controlledRef']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
     readonly createAsyncQueue: UnwrapRef<typeof import('./helper/async-queue')['createAsyncQueue']>
-    readonly createEditorAutoSaveController: UnwrapRef<typeof import('./stores/editor-auto-save')['createEditorAutoSaveController']>
-    readonly createEditorPreviewSync: UnwrapRef<typeof import('./stores/editor-preview-sync')['createEditorPreviewSync']>
+    readonly createEditorSaveShortcutHandler: UnwrapRef<typeof import('./helper/editor-save-shortcut')['createEditorSaveShortcutHandler']>
+    readonly createEditorSelection: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['createEditorSelection']>
     readonly createEffectEditorProvider: UnwrapRef<typeof import('./composables/useEffectEditorProvider')['createEffectEditorProvider']>
     readonly createEffectPreviewEmitter: UnwrapRef<typeof import('./composables/useEffectEditorProvider')['createEffectPreviewEmitter']>
+    readonly createEmptySceneTextPanelSnapshot: UnwrapRef<typeof import('./helper/scene-text-panel')['createEmptySceneTextPanelSnapshot']>
     readonly createEmptySentence: UnwrapRef<typeof import('./helper/webgal-script/sentence')['createEmptySentence']>
     readonly createEventHook: UnwrapRef<typeof import('@vueuse/core')['createEventHook']>
     readonly createGlobalState: UnwrapRef<typeof import('@vueuse/core')['createGlobalState']>
     readonly createInjectionState: UnwrapRef<typeof import('@vueuse/core')['createInjectionState']>
     readonly createItemComparator: UnwrapRef<typeof import('./utils/sort')['createItemComparator']>
     readonly createParamDrag: UnwrapRef<typeof import('./composables/effect-editor/createParamDrag')['createParamDrag']>
+    readonly createPreviewMediaSession: UnwrapRef<typeof import('./helper/preview-media-session')['createPreviewMediaSession']>
     readonly createReactiveFn: UnwrapRef<typeof import('@vueuse/core')['createReactiveFn']>
     readonly createRef: UnwrapRef<typeof import('@vueuse/core')['createRef']>
     readonly createReusableTemplate: UnwrapRef<typeof import('@vueuse/core')['createReusableTemplate']>
     readonly createScenePresentationState: UnwrapRef<typeof import('./helper/scene-presentation')['createScenePresentationState']>
+    readonly createSceneTextPanelTextModel: UnwrapRef<typeof import('./helper/scene-text-panel')['createSceneTextPanelTextModel']>
     readonly createSharedComposable: UnwrapRef<typeof import('@vueuse/core')['createSharedComposable']>
     readonly createStatementEntryFromSceneStatement: UnwrapRef<typeof import('./helper/webgal-script/sentence')['createStatementEntryFromSceneStatement']>
+    readonly createStatementIdTarget: UnwrapRef<typeof import('./composables/useStatementEditor')['createStatementIdTarget']>
     readonly createStatementMissingFileLoader: UnwrapRef<typeof import('./helper/statement-editor/file-missing')['createStatementMissingFileLoader']>
     readonly createTemplatePromise: UnwrapRef<typeof import('@vueuse/core')['createTemplatePromise']>
+    readonly createTextEditorSaveShortcutHandler: UnwrapRef<typeof import('./composables/useTextEditorSaveShortcut')['createTextEditorSaveShortcutHandler']>
+    readonly createTextLineTarget: UnwrapRef<typeof import('./composables/useStatementEditor')['createTextLineTarget']>
     readonly createTransientStatementEntry: UnwrapRef<typeof import('./helper/webgal-script/sentence')['createTransientStatementEntry']>
     readonly createUnrefFn: UnwrapRef<typeof import('@vueuse/core')['createUnrefFn']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
@@ -823,6 +900,7 @@ declare module 'vue' {
     readonly getParamValueFromArgs: UnwrapRef<typeof import('./helper/statement-editor/param-value')['getParamValueFromArgs']>
     readonly getPointerAngleDegrees: UnwrapRef<typeof import('./helper/math')['getPointerAngleDegrees']>
     readonly getPreviousSpeakerAtIndex: UnwrapRef<typeof import('./utils/speaker')['getPreviousSpeakerAtIndex']>
+    readonly getPreviousSpeakerAtLine: UnwrapRef<typeof import('./utils/speaker')['getPreviousSpeakerAtLine']>
     readonly getRegistryKnownKeys: UnwrapRef<typeof import('./helper/webgal-script/params')['getRegistryKnownKeys']>
     readonly getValueByPath: UnwrapRef<typeof import('./helper/effect-editor-config')['getValueByPath']>
     readonly getVersion: UnwrapRef<typeof import('./utils/metadata')['getVersion']>
@@ -836,9 +914,11 @@ declare module 'vue' {
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly injectLocal: UnwrapRef<typeof import('@vueuse/core')['injectLocal']>
     readonly invalidateDirectoryItemsCache: UnwrapRef<typeof import('./services/directory-cache')['invalidateDirectoryItemsCache']>
+    readonly isAnimationVisualProjection: UnwrapRef<typeof import('./stores/editor')['isAnimationVisualProjection']>
     readonly isBackendError: UnwrapRef<typeof import('./types/errors')['isBackendError']>
     readonly isCommandSupported: UnwrapRef<typeof import('./helper/command-registry/index')['isCommandSupported']>
     readonly isDefined: UnwrapRef<typeof import('@vueuse/core')['isDefined']>
+    readonly isEditableEditor: UnwrapRef<typeof import('./stores/editor')['isEditableEditor']>
     readonly isFlagChoiceField: UnwrapRef<typeof import('./helper/command-registry/schema')['isFlagChoiceField']>
     readonly isGenericNode: UnwrapRef<typeof import('./helper/webgal-script/types')['isGenericNode']>
     readonly isParamVisibleByArgs: UnwrapRef<typeof import('./helper/statement-editor/visibility')['isParamVisibleByArgs']>
@@ -850,14 +930,12 @@ declare module 'vue' {
     readonly isRgbColor: UnwrapRef<typeof import('./helper/color')['isRgbColor']>
     readonly isRgbaPayload: UnwrapRef<typeof import('./helper/color')['isRgbaPayload']>
     readonly isSceneStatementCollapsed: UnwrapRef<typeof import('./helper/scene-presentation')['isSceneStatementCollapsed']>
+    readonly isSceneVisualProjection: UnwrapRef<typeof import('./stores/editor')['isSceneVisualProjection']>
     readonly isShallow: UnwrapRef<typeof import('vue')['isShallow']>
     readonly isStatementInteractiveTarget: UnwrapRef<typeof import('./composables/useStatementEditor')['isStatementInteractiveTarget']>
-    readonly isTextualEditor: UnwrapRef<typeof import('./stores/editor')['isTextualEditor']>
     readonly isTransformEqual: UnwrapRef<typeof import('./helper/effect-editor-config')['isTransformEqual']>
     readonly isTypedCommandNode: UnwrapRef<typeof import('./helper/webgal-script/codec')['isTypedCommandNode']>
     readonly isValidPositiveNumber: UnwrapRef<typeof import('./utils/sort')['isValidPositiveNumber']>
-    readonly isVisualAnimation: UnwrapRef<typeof import('./stores/editor')['isVisualAnimation']>
-    readonly isVisualScene: UnwrapRef<typeof import('./stores/editor')['isVisualScene']>
     readonly joinStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['joinStatements']>
     readonly logger: UnwrapRef<typeof import('@tauri-apps/plugin-log')>
     readonly makeDestructurable: UnwrapRef<typeof import('@vueuse/core')['makeDestructurable']>
@@ -866,9 +944,11 @@ declare module 'vue' {
     readonly normalizeAngleDelta: UnwrapRef<typeof import('./helper/math')['normalizeAngleDelta']>
     readonly normalizeColorChannel: UnwrapRef<typeof import('./helper/color')['normalizeColorChannel']>
     readonly normalizeDegree: UnwrapRef<typeof import('./helper/math')['normalizeDegree']>
+    readonly normalizeEditorViewState: UnwrapRef<typeof import('./helper/text-editor-view-state')['normalizeEditorViewState']>
     readonly normalizeFieldStringValue: UnwrapRef<typeof import('./helper/statement-editor/field-utils')['normalizeFieldStringValue']>
     readonly normalizeGamePath: UnwrapRef<typeof import('./helper/command-registry/dynamic-options')['normalizeGamePath']>
     readonly normalizeNumber: UnwrapRef<typeof import('./utils/sort')['normalizeNumber']>
+    readonly normalizePreviewMediaSessionPatch: UnwrapRef<typeof import('./helper/preview-media-session')['normalizePreviewMediaSessionPatch']>
     readonly normalizeRelativePath: UnwrapRef<typeof import('./utils/path')['normalizeRelativePath']>
     readonly normalizeStepPrecision: UnwrapRef<typeof import('./helper/math')['normalizeStepPrecision']>
     readonly notify: UnwrapRef<typeof import('notivue')['push']>
@@ -943,14 +1023,23 @@ declare module 'vue' {
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly resolveDynamicOptions: UnwrapRef<typeof import('./helper/dynamic-options')['resolveDynamicOptions']>
     readonly resolveFieldModelStringValue: UnwrapRef<typeof import('./helper/statement-editor/field-utils')['resolveFieldModelStringValue']>
+    readonly resolveHistoryShortcutAction: UnwrapRef<typeof import('./helper/history-shortcut')['resolveHistoryShortcutAction']>
     readonly resolveI18n: UnwrapRef<typeof import('./helper/command-registry/schema')['resolveI18n']>
     readonly resolveMissingFileKeys: UnwrapRef<typeof import('./helper/statement-editor/file-missing')['resolveMissingFileKeys']>
     readonly resolvePanelSliderEmitValue: UnwrapRef<typeof import('./helper/statement-editor/field-utils')['resolvePanelSliderEmitValue']>
     readonly resolveParamSelectValue: UnwrapRef<typeof import('./helper/statement-editor/param-value')['resolveParamSelectValue']>
     readonly resolveRef: UnwrapRef<typeof import('@vueuse/core')['resolveRef']>
     readonly resolveRegistryFieldMeta: UnwrapRef<typeof import('./helper/webgal-script/params')['resolveRegistryFieldMeta']>
+    readonly resolveSceneCursorTarget: UnwrapRef<typeof import('./helper/text-editor-scene-sync')['resolveSceneCursorTarget']>
+    readonly resolveScenePreviewLine: UnwrapRef<typeof import('./helper/text-editor-scene-sync')['resolveScenePreviewLine']>
+    readonly resolveSceneTextPanelSnapshot: UnwrapRef<typeof import('./helper/scene-text-panel')['resolveSceneTextPanelSnapshot']>
+    readonly resolveSceneTextPanelSnapshotFromContent: UnwrapRef<typeof import('./helper/scene-text-panel')['resolveSceneTextPanelSnapshotFromContent']>
     readonly resolveStatementSpecialContentMode: UnwrapRef<typeof import('./helper/command-registry/schema')['resolveStatementSpecialContentMode']>
     readonly resolveSurfaceVariant: UnwrapRef<typeof import('./helper/command-registry/schema')['resolveSurfaceVariant']>
+    readonly resolveTextEditorLanguage: UnwrapRef<typeof import('./helper/text-editor-language')['resolveTextEditorLanguage']>
+    readonly restoreEditorCursorOffset: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['restoreEditorCursorOffset']>
+    readonly restoreEditorCursorSnapshot: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['restoreEditorCursorSnapshot']>
+    readonly restoreEditorHistorySnapshot: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['restoreEditorHistorySnapshot']>
     readonly roundByStep: UnwrapRef<typeof import('./helper/math')['roundByStep']>
     readonly roundToPrecision: UnwrapRef<typeof import('./helper/math')['roundToPrecision']>
     readonly safeInvoke: UnwrapRef<typeof import('./utils/invoke')['safeInvoke']>
@@ -967,6 +1056,7 @@ declare module 'vue' {
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
+    readonly shouldRestoreTextEditorFocus: UnwrapRef<typeof import('./helper/text-editor-workspace-focus')['shouldRestoreTextEditorFocus']>
     readonly sidebarPanelKey: UnwrapRef<typeof import('./composables/useSidebarPanel')['sidebarPanelKey']>
     readonly splitStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['splitStatements']>
     readonly statementEditorSurfaceKey: UnwrapRef<typeof import('./helper/statement-editor/surface-context')['statementEditorSurfaceKey']>
@@ -1064,6 +1154,7 @@ declare module 'vue' {
     readonly useDropZone: UnwrapRef<typeof import('@vueuse/core')['useDropZone']>
     readonly useEditSettingsStore: UnwrapRef<typeof import('./stores/edit-settings')['useEditSettingsStore']>
     readonly useEditorDynamicOptionsBootstrap: UnwrapRef<typeof import('./composables/useEditorDynamicOptionsBootstrap')['useEditorDynamicOptionsBootstrap']>
+    readonly useEditorSaveShortcut: UnwrapRef<typeof import('./composables/useEditorSaveShortcut')['useEditorSaveShortcut']>
     readonly useEditorStore: UnwrapRef<typeof import('./stores/editor')['useEditorStore']>
     readonly useEditorUIStateStore: UnwrapRef<typeof import('./stores/editor-ui-state')['useEditorUIStateStore']>
     readonly useEditorViewStateStore: UnwrapRef<typeof import('./stores/editor-view-state')['useEditorViewStateStore']>
@@ -1191,7 +1282,13 @@ declare module 'vue' {
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly useTemplateRefsList: UnwrapRef<typeof import('@vueuse/core')['useTemplateRefsList']>
     readonly useTextDirection: UnwrapRef<typeof import('@vueuse/core')['useTextDirection']>
+    readonly useTextEditorBindings: UnwrapRef<typeof import('./composables/useTextEditorBindings')['useTextEditorBindings']>
+    readonly useTextEditorContentSync: UnwrapRef<typeof import('./composables/useTextEditorContentSync')['useTextEditorContentSync']>
+    readonly useTextEditorHistory: UnwrapRef<typeof import('./composables/useTextEditorHistory')['useTextEditorHistory']>
     readonly useTextEditorPanel: UnwrapRef<typeof import('./composables/useTextEditorPanel')['useTextEditorPanel']>
+    readonly useTextEditorRuntime: UnwrapRef<typeof import('./composables/useTextEditorRuntime')['useTextEditorRuntime']>
+    readonly useTextEditorSaveShortcut: UnwrapRef<typeof import('./composables/useTextEditorSaveShortcut')['useTextEditorSaveShortcut']>
+    readonly useTextEditorWorkspace: UnwrapRef<typeof import('./composables/useTextEditorWorkspace')['useTextEditorWorkspace']>
     readonly useTextSelection: UnwrapRef<typeof import('@vueuse/core')['useTextSelection']>
     readonly useTextareaAutosize: UnwrapRef<typeof import('@vueuse/core')['useTextareaAutosize']>
     readonly useThrottle: UnwrapRef<typeof import('@vueuse/core')['useThrottle']>

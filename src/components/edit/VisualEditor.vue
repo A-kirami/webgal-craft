@@ -1,17 +1,21 @@
 <script setup lang="ts">
-const state = defineModel<VisualModeState>('state', { required: true })
+interface Props {
+  state: VisualProjectionState
+}
+
+const props = defineProps<Props>()
 
 const editorStore = useEditorStore()
 
-useEventListener('keydown', (e: KeyboardEvent) => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-    e.preventDefault()
-    editorStore.saveFile(state.value.path)
+useEventListener('keydown', (event: KeyboardEvent) => {
+  if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+    event.preventDefault()
+    editorStore.saveFile(props.state.path)
   }
 })
 </script>
 
 <template>
-  <VisualEditorScene v-if="state.visualType === 'scene'" ::state="state" />
-  <VisualEditorAnimation v-else ::state="state" />
+  <VisualEditorScene v-if="props.state.kind === 'scene'" :state="props.state" />
+  <VisualEditorAnimation v-else :state="props.state" />
 </template>

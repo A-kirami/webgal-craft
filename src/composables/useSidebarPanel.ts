@@ -1,13 +1,19 @@
 import type { InjectionKey } from 'vue'
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 export interface SidebarPanelBinding {
-  entry: Ref<StatementEntry | undefined>
-  index: Ref<number | undefined>
-  previousSpeaker: Ref<string>
+  entry?: Ref<StatementEntry | undefined>
+  index?: Ref<number | undefined>
+  previousSpeaker?: Ref<string>
   enableFocusStatement: boolean
-  onUpdate: (payload: { id: number, rawText: string, parsed: ISentence }) => void
+  onUpdate: (payload: StatementUpdatePayload) => void
   onFocusStatement?: () => void
+  isActive?: MaybeRefOrGetter<boolean>
+  handleRedo?: () => void
+  handleUndo?: () => void
+  getEntry?: () => StatementEntry | undefined
+  getUpdateTarget?: () => StatementUpdateTarget | undefined
+  getIndex?: () => number | undefined
+  getPreviousSpeaker?: () => string
 }
 
 export interface SidebarPanelContext {
@@ -40,7 +46,14 @@ export function useSidebarPanelBinding(binding: SidebarPanelBinding) {
     return
   }
 
+  function readIsActive(): boolean {
+    return binding.isActive === undefined ? true : toValue(binding.isActive)
+  }
+
   function register() {
+    if (!readIsActive()) {
+      return
+    }
     context!.activeBinding.value = binding
   }
 
@@ -57,4 +70,14 @@ export function useSidebarPanelBinding(binding: SidebarPanelBinding) {
   // 首次 mount 时也注册（mount 不触发 activated）
   onMounted(register)
   onUnmounted(unregister)
+
+  if (binding.isActive !== undefined) {
+    watch(() => toValue(binding.isActive), (isActive) => {
+      if (isActive) {
+        register()
+      } else {
+        unregister()
+      }
+    }, { immediate: true })
+  }
 }

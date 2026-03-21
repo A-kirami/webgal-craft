@@ -2,11 +2,40 @@ import { hasInjectionContext } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { TransactionSource } from '~/models/transaction'
+
+export interface StatementIdTarget {
+  kind: 'statement'
+  statementId: number
+}
+
+export interface TextLineTarget {
+  kind: 'line'
+  lineNumber: number
+}
+
+export type StatementUpdateTarget = StatementIdTarget | TextLineTarget
 
 export interface StatementUpdatePayload {
   id: number
+  target?: StatementUpdateTarget
   rawText: string
   parsed: ISentence
+  source?: Extract<TransactionSource, 'visual' | 'effect-editor'>
+}
+
+export function createStatementIdTarget(statementId: number): StatementIdTarget {
+  return {
+    kind: 'statement',
+    statementId,
+  }
+}
+
+export function createTextLineTarget(lineNumber: number): TextLineTarget {
+  return {
+    kind: 'line',
+    lineNumber,
+  }
 }
 
 interface UseStatementEditorOptions {
@@ -101,6 +130,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
 
     options.emitUpdate({
       id: entry.value.id,
+      target: createStatementIdTarget(entry.value.id),
       rawText: newRawText,
       parsed: newSentence,
     })
@@ -295,6 +325,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     if (newParsed) {
       options.emitUpdate({
         id: entry.value.id,
+        target: createStatementIdTarget(entry.value.id),
         rawText: value,
         parsed: newParsed,
       })

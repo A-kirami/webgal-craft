@@ -1,533 +1,580 @@
-import { readTextFile, stat } from '@tauri-apps/plugin-fs'
+import { readFile } from '@tauri-apps/plugin-fs'
 import { defineStore } from 'pinia'
 
-import { mime } from '~/plugins/mime'
+import {
+  createPreviewMediaSession,
+  normalizePreviewMediaSessionPatch,
+} from '~/helper/preview-media-session'
+import { decodeTextFile } from '~/models/file-codec'
+import {
+  computeLineNumberFromStatementId,
+} from '~/models/scene-selection'
+import { canExecuteEditorAutoSave, createEditorAutoSaveController } from '~/stores/editor-auto-save'
+import { createEditorPreviewSync } from '~/stores/editor-preview-sync'
 
-interface CoreEditorState {
-  path: string
-}
+import {
+  createEditorDocumentActions,
+} from './internal/editor-document-actions'
+import { createEditorDocumentSaveSnapshot, saveEditorDocument } from './internal/editor-document-save'
+import {
+  DocumentState,
+} from './internal/editor-document-state'
+import {
+  handleFileModifiedEvent as handleFileModifiedEventAction,
+  handleFileRenamedEvent as handleFileRenamedEventAction,
+  loadEditorState as loadEditorStateAction,
+} from './internal/editor-file-lifecycle'
+import {
+  createSceneSelectionActions,
+} from './internal/editor-scene-selection'
+import {
+  isEditableEditor,
+  isSceneVisualProjection,
+  isTextProjectionDirty,
+  normalizeAnimationTextProjection,
+  syncProjectionStateFromDocument,
+} from './internal/editor-session'
 
-type VisualType = 'scene' | 'animation'
+import type {
+  EditorDocumentActionContext,
+} from './internal/editor-document-actions'
+import type { EditorDocumentSaveContext } from './internal/editor-document-save'
+import type {
+  EditorFileLifecycleContext,
+  ReadTextDocumentResult,
+} from './internal/editor-file-lifecycle'
+import type {
+  EditableEditorSession,
+  EditableEditorState,
+  EditorSession,
+  EditorState,
+  TextProjectionState,
+  VisualProjectionState,
+} from './internal/editor-session'
+import type { PreviewMediaSession } from '~/helper/preview-media-session'
 
-interface TextualEditorBase extends CoreEditorState {
-  isDirty: boolean
-  lastSavedTime?: Date
-  visualType?: VisualType
-  lastLineNumber?: number
-}
+export {
+  computeLineNumberFromStatementId,
+  computeStatementIdFromLineNumber,
+} from '~/models/scene-selection'
+export {
+  isAnimationVisualProjection,
+  isEditableEditor,
+  isSceneVisualProjection,
+} from './internal/editor-session'
+export type { HistoryApplyResult } from './internal/editor-document-actions'
+export type {
+  AnimationVisualProjectionState,
+  AssetPreviewState,
+  EditableEditorState,
+  SceneVisualProjectionState,
+  TextProjectionState,
+  UnsupportedState,
+  VisualProjectionState,
+} from './internal/editor-session'
 
-export interface TextModeState extends TextualEditorBase {
-  mode: 'text'
-  textContent: string
-}
-
-export interface VisualModeSceneState extends TextualEditorBase {
-  mode: 'visual'
-  visualType: 'scene'
-  statements: StatementEntry[]
-  savedSnapshot: string
-  lastEditedStatementId?: number
-}
-
-export interface VisualModeAnimationState extends TextualEditorBase {
-  mode: 'visual'
-  visualType: 'animation'
-  rawContent: string
-  savedSnapshot: string
-}
-
-export type VisualModeState = VisualModeSceneState | VisualModeAnimationState
-
-export type TextualEditorState = TextModeState | VisualModeState
-
-export interface AssetPreviewState extends CoreEditorState {
-  mode: 'preview'
-  assetUrl: string
-  mimeType: string
-  fileSize?: number
-}
-
-export interface UnsupportedState extends CoreEditorState {
-  mode: 'unsupported'
-  reason: string
-}
-
-type EditorState = TextualEditorState | AssetPreviewState | UnsupportedState
-
-export function isTextualEditor(state: EditorState): state is TextualEditorState {
-  return state.mode === 'text' || state.mode === 'visual'
-}
-
-export function isVisualScene(state: EditorState): state is VisualModeSceneState {
-  return state.mode === 'visual' && state.visualType === 'scene'
-}
-
-export function isVisualAnimation(state: EditorState): state is VisualModeAnimationState {
-  return state.mode === 'visual' && state.visualType === 'animation'
-}
-
-/**
- * 从可视模式状态提取全文本内容
- */
-function getVisualContent(state: VisualModeState): string {
-  if (state.visualType === 'scene') {
-    return joinStatements(state.statements)
-  }
-  return state.rawContent
-}
-
-/**
- * 根据语句 ID 计算其在全文中的起始行号（1-based）
- */
-export function computeLineNumberFromStatementId(
-  statements: StatementEntry[],
-  statementId: number,
-): number | undefined {
-  let currentLine = 1
-  for (const entry of statements) {
-    if (entry.id === statementId) {
-      return currentLine
-    }
-    // 用字符计数替代 split('\n').length，避免为每个 entry 创建临时数组
-    const text = entry.rawText
-    let newlines = 1
-    let pos = 0
-    while ((pos = text.indexOf('\n', pos)) !== -1) {
-      newlines++
-      pos++
-    }
-    currentLine += newlines
-  }
-  return undefined
-}
-
-/**
- * 构建可视模式状态
- */
-function createVisualState(
-  base: Omit<TextualEditorBase, 'visualType'>,
-  visualType: VisualType,
-  content: string,
-): VisualModeState {
-  if (visualType === 'scene') {
-    return {
-      ...base,
-      mode: 'visual',
-      visualType: 'scene',
-      statements: buildStatements(content),
-      savedSnapshot: content,
-    }
-  }
-  return {
-    ...base,
-    mode: 'visual',
-    visualType: 'animation',
-    rawContent: content,
-    savedSnapshot: content,
-  }
-}
-
-async function checkFileType(path: string, subPath: string, mimeType: string, expectedMimeType: string): Promise<boolean> {
-  if (mimeType !== expectedMimeType) {
-    return false
-  }
-  const workspaceStore = useWorkspaceStore()
-
-  // 等待 CWD 加载完成，最多等待 100 ms
-  try {
-    await until(() => !!workspaceStore.CWD).toBe(true, { timeout: 100, throwOnTimeout: true })
-  } catch {
-    logger.error('Workspace 未初始化，无法检查文件类型')
-  }
-
-  if (!workspaceStore.CWD) {
-    return false
-  }
-
-  const targetPath = await gameAssetDir(workspaceStore.CWD, subPath)
-  // 使用分隔符边界匹配，避免目录名存在前缀关系时误判
-  return path.startsWith(`${targetPath}\\`) || path.startsWith(`${targetPath}/`)
-}
-
-function isSceneFile(path: string, mimeType: string): Promise<boolean> {
-  return checkFileType(path, 'scene', mimeType, 'text/plain')
-}
-
-function isAnimationFile(path: string, mimeType: string): Promise<boolean> {
-  return checkFileType(path, 'animation', mimeType, 'application/json')
-}
-
-const PREVIEW_MIME_PREFIXES = ['image/', 'video/', 'audio/']
 const PREVIEW_SYNC_DEDUPE_WINDOW_MS = 160
+const AUTO_SAVE_DEBOUNCE_MS = 500
 
-interface PreviewSyncRecord {
-  key: string
-  timestamp: number
-}
-
-interface SceneCursorSnapshot {
-  lineNumber: number
-  lineText: string
-}
-
-function buildPreviewSyncKey(
-  path: string,
-  lineNumber: number,
-  lineText: string,
-  force: boolean,
-): string {
-  return `${path}|${lineNumber}|${lineText}|${force ? 1 : 0}`
-}
-
-function resolveSceneCursor(content: string, preferredLineNumber?: number): SceneCursorSnapshot {
-  const lines = content.split('\n')
-  const lineCount = Math.max(lines.length, 1)
-  const lineNumber = Math.min(Math.max(preferredLineNumber ?? 1, 1), lineCount)
-  return {
-    lineNumber,
-    lineText: lines[lineNumber - 1] ?? '',
-  }
+async function readTextDocumentFile(path: string): Promise<ReadTextDocumentResult> {
+  const bytes = await readFile(path)
+  return decodeTextFile(bytes)
 }
 
 export const useEditorStore = defineStore('editor', () => {
-  const states = $ref(new Map<string, EditorState>())
-  let lastPreviewSyncRecord = $ref<PreviewSyncRecord>()
+  const sessions = shallowReactive(new Map<string, EditorSession>())
+  const saveHooks = new Map<string, (path: string) => Promise<void> | void>()
+
+  function getSession(path: string): EditorSession | undefined {
+    return sessions.get(path)
+  }
+
+  function getEditableSession(path: string): EditableEditorSession | undefined {
+    const session = sessions.get(path)
+    return session?.type === 'editable' ? session : undefined
+  }
+
+  function getTextProjectionState(path: string): TextProjectionState | undefined {
+    return getEditableSession(path)?.textState
+  }
+
+  function getVisualProjectionState(path: string): VisualProjectionState | undefined {
+    return getEditableSession(path)?.visualState
+  }
+
+  function getEditableState(path: string): EditableEditorState | undefined {
+    const session = getEditableSession(path)
+    if (!session) {
+      return undefined
+    }
+
+    if (session.activeProjection === 'visual' && session.visualState) {
+      return session.visualState
+    }
+
+    return session.textState
+  }
+
+  function getDocumentState(path: string): DocumentState | undefined {
+    return getEditableSession(path)?.document
+  }
+
+  function canUndoDocument(path: string): boolean {
+    return getDocumentState(path)?.canUndo ?? false
+  }
+
+  function canRedoDocument(path: string): boolean {
+    return getDocumentState(path)?.canRedo ?? false
+  }
+
+  function hasState(path: string): boolean {
+    return sessions.has(path)
+  }
+
+  function getPreviewMediaSession(path: string): PreviewMediaSession | undefined {
+    const session = getSession(path)
+    return session?.type === 'preview' ? session.previewMediaSession : undefined
+  }
+
+  function updatePreviewMediaSession(path: string, patch: Partial<PreviewMediaSession>) {
+    const session = getSession(path)
+    if (!session || session.type !== 'preview') {
+      return
+    }
+
+    const normalizedPatch = normalizePreviewMediaSessionPatch(patch)
+    if (Object.keys(normalizedPatch).length === 0) {
+      return
+    }
+
+    if (session.previewMediaSession) {
+      Object.assign(session.previewMediaSession, normalizedPatch)
+      return
+    }
+
+    session.previewMediaSession = reactive(createPreviewMediaSession(normalizedPatch)) as PreviewMediaSession
+  }
+
+  function getState(path: string): EditorState | undefined {
+    const session = getSession(path)
+    if (!session) {
+      return
+    }
+
+    if (session.type === 'preview' || session.type === 'unsupported') {
+      return session.state
+    }
+
+    if (session.activeProjection === 'visual' && session.visualState) {
+      return session.visualState
+    }
+
+    return session.textState
+  }
+
+  // ── 场景选择与展示状态（委托到 editor-scene-selection.ts）──
+
+  const {
+    getScenePresentationState,
+    getSceneSelection,
+    getSceneSelectionIndex,
+    getSelectedSceneStatement,
+    getSelectedSceneStatementPreviousSpeaker,
+    isSceneStatementCollapsed,
+    patchSceneSelection,
+    reconcileScenePresentation,
+    reconcileSceneSelection,
+    setSceneStatementCollapsed,
+    syncSceneSelectionFromStatement,
+    syncSceneSelectionFromTextLine,
+  } = createSceneSelectionActions(getEditableSession)
+
+  function syncStateFromDocument(path: string) {
+    reconcileSceneSelection(path)
+    reconcileScenePresentation(path)
+
+    const session = getEditableSession(path)
+    if (session) {
+      syncProjectionStateFromDocument(
+        session.document,
+        session.textState,
+        session.visualState,
+      )
+    }
+
+    syncTabModified(path)
+  }
+
+  function setTextProjectionDraft(path: string, textContent: string, syncError?: TextProjectionState['syncError']) {
+    const session = getEditableSession(path)
+    const state = session?.textState
+    if (!state || !session) {
+      return
+    }
+
+    state.textContent = textContent
+    state.textSource = 'draft'
+    state.syncError = syncError
+    state.isDirty = isTextProjectionDirty(session.document, state)
+    syncTabModified(path)
+  }
 
   const { t } = useI18n()
+  const editSettingsStore = useEditSettingsStore()
   const tabsStore = useTabsStore()
   const fileSystemEvents = useFileSystemEvents()
 
-  const currentState = $computed(() => states.get(tabsStore.activeTab?.path ?? ''))
-
-  const canToggleMode = $computed(() =>
-    currentState !== undefined && isTextualEditor(currentState) && !!currentState.visualType,
+  const currentState = $computed(() => getState(tabsStore.activeTab?.path ?? ''))
+  const currentTextProjection = $computed(() => getTextProjectionState(tabsStore.activeTab?.path ?? ''))
+  const currentVisualProjection = $computed(() => getVisualProjectionState(tabsStore.activeTab?.path ?? ''))
+  const currentSceneSelection = $computed(() => getSceneSelection(tabsStore.activeTab?.path ?? ''))
+  const currentSelectedSceneStatement = $computed(() => getSelectedSceneStatement(tabsStore.activeTab?.path ?? ''))
+  const currentSelectedSceneStatementIndex = $computed(() => getSceneSelectionIndex(tabsStore.activeTab?.path ?? ''))
+  const currentSelectedSceneStatementPreviousSpeaker = $computed(() =>
+    getSelectedSceneStatementPreviousSpeaker(tabsStore.activeTab?.path ?? ''),
   )
 
-  function setTabLoading(path: string, isLoading: boolean) {
-    const index = tabsStore.findTabIndex(path)
-    if (index !== -1) {
-      tabsStore.updateTabLoading(index, isLoading)
+  const canToggleMode = $computed(() =>
+    currentVisualProjection !== undefined,
+  )
+
+  function updateTabModified(path: string, isModified: boolean) {
+    const tabIndex = tabsStore.findTabIndex(path)
+    if (tabIndex === -1) {
+      return
     }
+
+    tabsStore.updateTabModified(tabIndex, isModified)
   }
 
-  function setTabError(path: string, error?: string) {
-    const index = tabsStore.findTabIndex(path)
-    if (index !== -1) {
-      tabsStore.updateTabError(index, error)
-    }
+  function syncTabModified(path: string) {
+    updateTabModified(path, !!getEditableState(path)?.isDirty)
   }
 
-  function setTabModified(path: string, isModified: boolean) {
-    const index = tabsStore.findTabIndex(path)
-    if (index !== -1) {
-      tabsStore.updateTabModified(index, isModified)
+  function updateTabLoading(path: string, isLoading: boolean) {
+    const tabIndex = tabsStore.findTabIndex(path)
+    if (tabIndex === -1) {
+      return
     }
+
+    tabsStore.updateTabLoading(tabIndex, isLoading)
   }
 
+  function updateTabError(path: string, error?: string) {
+    const tabIndex = tabsStore.findTabIndex(path)
+    if (tabIndex === -1) {
+      return
+    }
+
+    tabsStore.updateTabError(tabIndex, error)
+  }
+
+  const previewSyncController = createEditorPreviewSync({
+    dedupeWindowMs: PREVIEW_SYNC_DEDUPE_WINDOW_MS,
+    dispatch(path, lineNumber, lineText, force) {
+      void debugCommander.syncScene(path, lineNumber, lineText, force)
+    },
+  })
   function syncScenePreview(path: string, lineNumber: number, lineText: string, force: boolean = false) {
-    const normalizedLineNumber = Math.max(1, Math.trunc(lineNumber))
-    const normalizedLineText = lineText ?? ''
-    const now = Date.now()
-    const key = buildPreviewSyncKey(path, normalizedLineNumber, normalizedLineText, force)
-
-    if (lastPreviewSyncRecord
-      && lastPreviewSyncRecord.key === key
-      && now - lastPreviewSyncRecord.timestamp < PREVIEW_SYNC_DEDUPE_WINDOW_MS) {
-      return
-    }
-
-    lastPreviewSyncRecord = { key, timestamp: now }
-    void debugCommander.syncScene(path, normalizedLineNumber, normalizedLineText, force)
+    previewSyncController.syncScenePreview(path, lineNumber, lineText, force)
   }
 
-  async function loadEditorState(tab: Tab) {
-    if (states.has(tab.path)) {
+  function createEditorError(message: string) {
+    return new AppError('EDITOR_ERROR', message)
+  }
+
+  const editorMessages = {
+    previewUnavailable: t('edit.errors.previewUnavailable'),
+    workspaceUnavailable: t('edit.errors.workspaceUnavailable'),
+    unsupportedFile: t('edit.unsupported.unsupportedFile'),
+  }
+
+  const documentActionContext = {
+    getDocumentState,
+    getSceneSelection,
+    getTextProjectionState,
+    patchSceneSelection,
+    syncStateFromDocument,
+  } satisfies EditorDocumentActionContext
+
+  const {
+    applyAnimationFrameDelete,
+    applyAnimationFrameInsert,
+    applyAnimationFrameReorder,
+    applyAnimationFrameUpdate,
+    applySceneStatementDelete,
+    applySceneStatementInsert,
+    applySceneStatementUpdate,
+    applyTextDocumentContent,
+    redoDocument,
+    replaceTextDocumentContent,
+    undoDocument,
+  } = createEditorDocumentActions(documentActionContext)
+
+  const documentSaveContext = {
+    ...documentActionContext,
+    createEditorError,
+    getEditableState,
+    getSceneSelection,
+    getVisualProjectionState,
+    syncScenePreview,
+  } satisfies EditorDocumentSaveContext
+
+  async function saveDocumentFile(path: string, saveSnapshot?: Parameters<typeof saveEditorDocument>[2]): Promise<void> {
+    await saveEditorDocument(documentSaveContext, path, saveSnapshot)
+  }
+
+  async function runSaveHook(path: string): Promise<void> {
+    await saveHooks.get(path)?.(path)
+  }
+
+  const autoSaveController = createEditorAutoSaveController({
+    debounceMs: AUTO_SAVE_DEBOUNCE_MS,
+    getState(path) {
+      return getEditableState(path)
+    },
+    handleSaveError(error) {
+      handleError(error, { silent: true })
+    },
+    saveDocument: saveFile,
+  })
+
+  function canReschedulePendingAutoSave(state: EditableEditorState): boolean {
+    return canExecuteEditorAutoSave(state)
+  }
+
+  function cancelAutoSave(path: string) {
+    autoSaveController.cancel(path)
+  }
+
+  function cancelAllAutoSave() {
+    autoSaveController.cancelAll()
+  }
+
+  function scheduleAutoSave(path: string) {
+    autoSaveController.schedule(path)
+  }
+
+  function scheduleAutoSaveIfEnabled(path: string) {
+    if (!editSettingsStore.autoSave) {
       return
     }
 
-    const path = tab.path
+    scheduleAutoSave(path)
+  }
 
-    try {
-      setTabError(path, undefined)
-      setTabLoading(path, true)
-
-      // 有 mime 类型且符合预览条件的文件，直接进入文件预览模式
-      const mimeType = mime.getType(path) ?? ''
-      if (PREVIEW_MIME_PREFIXES.some(prefix => mimeType.startsWith(prefix))) {
-        const workspaceStore = useWorkspaceStore()
-        await until(() => !!workspaceStore.currentGameServeUrl).toBe(true)
-
-        let fileSize: number | undefined
-        try {
-          const fileStat = await stat(path)
-          fileSize = fileStat.size
-        } catch {
-          // 获取文件大小失败时忽略，不影响预览
-        }
-
-        states.set(path, {
-          path,
-          mode: 'preview',
-          assetUrl: getAssetUrl(path),
-          mimeType,
-          fileSize,
-        })
-      } else {
-        // 检测文件是否为二进制
-        let isBinary: boolean
-        try {
-          isBinary = await fsCmds.isBinaryFile(path)
-        } catch (error) {
-          // 检测失败，展示错误提示
-          const msg = error instanceof Error ? error.message : String(error)
-          states.set(path, {
-            path,
-            mode: 'unsupported',
-            reason: t('edit.unsupported.loadFailed', { error: msg }),
-          })
-          return
-        }
-
-        if (isBinary) {
-          states.set(path, {
-            path,
-            mode: 'unsupported',
-            reason: t('edit.unsupported.binaryFile'),
-          })
-        } else {
-          // 文本文件：沿用现有文本/可视编辑逻辑
-          const preferenceStore = usePreferenceStore()
-          const content = await readTextFile(path)
-
-          let visualType: VisualType | undefined
-
-          if (await isSceneFile(path, mimeType)) {
-            visualType = 'scene'
-          } else if (await isAnimationFile(path, mimeType)) {
-            visualType = 'animation'
-          }
-
-          if (preferenceStore.editorMode === 'visual' && visualType) {
-            states.set(path, createVisualState(
-              { path, isDirty: false, lastLineNumber: undefined },
-              visualType,
-              content,
-            ))
-          } else {
-            states.set(path, {
-              path,
-              isDirty: false,
-              mode: 'text',
-              textContent: content,
-              visualType,
-            })
-          }
-        }
+  // 关闭自动保存时立即清空 debounce 队列，避免已排队的保存越过开关执行。
+  watch(
+    () => editSettingsStore.autoSave,
+    (isEnabled) => {
+      if (!isEnabled) {
+        cancelAllAutoSave()
       }
-    } catch (error) {
-      logger.error(`无法加载编辑器状态 ${path}: ${error}`)
-      setTabError(path, error instanceof Error ? error.message : 'Unknown error')
-    } finally {
-      setTabLoading(path, false)
-      // 从磁盘加载的内容是干净的，重置持久化残留的修改标记
-      setTabModified(path, false)
-    }
+    },
+    { flush: 'sync' },
+  )
+
+  function registerSaveHook(path: string, hook: (path: string) => Promise<void> | void) {
+    saveHooks.set(path, hook)
   }
 
-  function toggleTextualMode(mode: 'text' | 'visual', targetPath?: string) {
+  function unregisterSaveHook(path: string, hook?: (path: string) => Promise<void> | void) {
+    const registeredHook = saveHooks.get(path)
+    if (!registeredHook) {
+      return
+    }
+
+    if (hook && registeredHook !== hook) {
+      return
+    }
+
+    saveHooks.delete(path)
+  }
+
+  async function saveFile(path: string) {
+    cancelAutoSave(path)
+    // 在 await 前冻结当前保存快照，避免保存期间的新编辑被误并入本次保存并清除脏标记。
+    const saveSnapshot = createEditorDocumentSaveSnapshot(documentSaveContext, path)
+    await runSaveHook(path)
+    await saveDocumentFile(path, saveSnapshot)
+    await runSaveHook(path)
+  }
+
+  const fileLifecycleContext = {
+    ...documentActionContext,
+    autoSaveHasPending: path => autoSaveController.hasPending(path),
+    cancelAutoSave,
+    canReschedulePendingAutoSave,
+    createEditorError,
+    getActiveTabPath: () => tabsStore.activeTab?.path,
+    getAssetUrl,
+    getEditableSession,
+    getEditableState,
+    getPreferredProjection: () => usePreferenceStore().editorMode,
+    getPreviewBaseUrl: () => useWorkspaceStore().currentGameServeUrl,
+    getSceneSelection,
+    getSession: (path: string) => sessions.get(path),
+    getWorkspaceRootPath: () => useWorkspaceStore().CWD,
+    hasSession: (path: string) => sessions.has(path),
+    messages: {
+      previewUnavailable: editorMessages.previewUnavailable,
+      unsupportedFile: editorMessages.unsupportedFile,
+      workspaceUnavailable: editorMessages.workspaceUnavailable,
+    },
+    patchSceneSelection,
+    readTextDocumentFile,
+    scheduleAutoSave,
+    setTabError: updateTabError,
+    setTabLoading: updateTabLoading,
+    setTabModified: updateTabModified,
+    setSession: (path: string, session: EditorSession) => sessions.set(path, session),
+    deleteSession: (path: string) => sessions.delete(path),
+    syncScenePreview,
+  } satisfies EditorFileLifecycleContext
+
+  function setActiveProjection(projection: 'text' | 'visual', targetPath?: string): boolean {
     const path = targetPath ?? tabsStore.activeTab?.path
     if (!path) {
-      return
+      return false
     }
 
-    const state = states.get(path)
-    if (!state || !isTextualEditor(state) || !state.visualType) {
-      return
+    const session = getEditableSession(path)
+    const state = getState(path)
+    if (!session || !state || !isEditableEditor(state) || !session.visualState) {
+      return false
     }
 
-    if (state.mode === mode) {
-      return
+    if (state.projection === projection) {
+      return true
     }
 
-    const { isDirty, visualType, lastLineNumber } = state
+    const textState = getTextProjectionState(path)
 
-    if (mode === 'text') {
-      // visual → text：从可视状态提取全文本，并将 lastEditedStatementId 转换为行号
-      const content = getVisualContent(state as VisualModeState)
-      let syncedLineNumber = lastLineNumber
-      if (isVisualScene(state) && state.lastEditedStatementId !== undefined) {
-        syncedLineNumber = computeLineNumberFromStatementId(
-          state.statements,
-          state.lastEditedStatementId,
-        ) ?? lastLineNumber
+    if (projection === 'text') {
+      if (isSceneVisualProjection(state)) {
+        const selection = getSceneSelection(path)
+        const anchorStatementId = selection?.lastEditedStatementId ?? selection?.selectedStatementId
+        let syncedLineNumber = selection?.lastLineNumber
+        if (anchorStatementId !== undefined) {
+          syncedLineNumber = computeLineNumberFromStatementId(
+            state.statements,
+            anchorStatementId,
+          ) ?? selection?.lastLineNumber
+        }
+        patchSceneSelection(path, {
+          lastLineNumber: syncedLineNumber,
+        })
       }
-      states.set(path, {
-        path,
-        isDirty,
-        lastLineNumber: syncedLineNumber,
-        mode: 'text',
-        textContent: content,
-        visualType,
-      })
+      session.activeProjection = 'text'
     } else {
-      // text → visual：从文本构建可视状态，lastLineNumber 保持不变供可视编辑器定位
-      const content = (state as TextModeState).textContent
-      const base = { path, isDirty, lastLineNumber }
-      states.set(path, createVisualState(base, visualType, content))
+      const docEntry = session.document
+      if (docEntry.model.kind === 'animation' && textState?.syncError === undefined) {
+        normalizeAnimationTextProjection(session.textState, docEntry)
+      }
+      reconcileSceneSelection(path)
+      session.activeProjection = 'visual'
     }
+
+    return true
   }
 
-  watch(() => tabsStore.activeTab, async (activeTab) => {
-    if (!activeTab) {
+  function switchEditorMode(mode: 'text' | 'visual', targetPath?: string) {
+    if (!setActiveProjection(mode, targetPath)) {
+      return
+    }
+    usePreferenceStore().editorMode = mode
+    tabsStore.shouldFocusEditor = mode === 'text'
+  }
+
+  watch(() => tabsStore.activeTab?.path, async (activePath) => {
+    if (!activePath) {
       return
     }
 
-    if (!states.has(activeTab.path)) {
-      await loadEditorState(activeTab)
+    if (!hasState(activePath)) {
+      await loadEditorStateAction(fileLifecycleContext, activePath)
       return
     }
 
     // 已加载的文件：同步编辑模式与全局偏好
     const preferenceStore = usePreferenceStore()
-    toggleTextualMode(preferenceStore.editorMode, activeTab.path)
+    setActiveProjection(preferenceStore.editorMode, activePath)
   }, { immediate: true })
 
   // 监听标签页关闭，清理编辑器状态
   useTabsWatcher((closedPath) => {
-    states.delete(closedPath)
+    cancelAutoSave(closedPath)
+    saveHooks.delete(closedPath)
+    sessions.delete(closedPath)
   })
 
   // 监听文件重命名事件，更新编辑器状态
   fileSystemEvents.on('file:renamed', (event) => {
-    const oldState = states.get(event.oldPath)
-    if (oldState) {
-      oldState.path = event.newPath
-      states.delete(event.oldPath)
-      states.set(event.newPath, oldState)
-    }
+    handleFileRenamedEventAction(fileLifecycleContext, event)
   })
 
   // 监听文件修改事件，如果文件未编辑，同步新文件内容
   fileSystemEvents.on('file:modified', async (event) => {
-    const state = states.get(event.path)
-    if (!state || !isTextualEditor(state)) {
-      return
-    }
-
-    // 如果文件已编辑，则不处理（避免覆盖用户的编辑）
-    if (state.isDirty) {
-      return
-    }
-
     try {
-      const content = await readTextFile(event.path)
-
-      // await 后重新获取最新 state，防止异步期间被 toggleTextualMode 等替换导致陈旧引用
-      const freshState = states.get(event.path)
-      if (!freshState || !isTextualEditor(freshState)) {
-        return
-      }
-
-      // readTextFile 是异步的，期间 isDirty 可能已变化，再次检查
-      if (freshState.isDirty) {
-        return
-      }
-
-      // 内容相同则跳过（通常是编辑器自身写入触发的 watcher 事件）
-      const currentContent = freshState.mode === 'text' ? freshState.textContent : getVisualContent(freshState)
-      if (content === currentContent) {
-        return
-      }
-
-      const isActiveSceneFile = tabsStore.activeTab?.path === event.path
-      if (freshState.mode === 'text') {
-        states.set(event.path, {
-          ...freshState,
-          textContent: content,
-        })
-        if (isActiveSceneFile && freshState.visualType === 'scene') {
-          const { lineNumber, lineText } = resolveSceneCursor(content, freshState.lastLineNumber)
-          syncScenePreview(event.path, lineNumber, lineText)
-        }
-      } else if (isVisualScene(freshState)) {
-        const nextStatements = buildStatements(content)
-        states.set(event.path, {
-          ...freshState,
-          statements: nextStatements,
-          savedSnapshot: content,
-        })
-        if (isActiveSceneFile) {
-          const firstEntry = nextStatements[0]
-          const lineText = firstEntry?.rawText ?? ''
-          syncScenePreview(event.path, 1, lineText)
-        }
-      } else if (isVisualAnimation(freshState)) {
-        states.set(event.path, {
-          ...freshState,
-          rawContent: content,
-          savedSnapshot: content,
-        })
-      }
+      await handleFileModifiedEventAction(fileLifecycleContext, event)
     } catch (error) {
       logger.error(`同步文件内容失败 ${event.path}: ${error}`)
     }
   })
 
-  /**
-   * 保存文件
-   * @param path 文件路径
-   * @throws 如果文件不存在或不可编辑
-   */
-  async function saveFile(path: string) {
-    const state = states.get(path)
-
-    if (!state) {
-      throw new AppError('EDITOR_ERROR', `文件状态不存在: ${path}`)
-    }
-
-    if (!isTextualEditor(state)) {
-      throw new AppError('EDITOR_ERROR', `文件不可编辑: ${path}`)
-    }
-
-    const content = state.mode === 'text'
-      ? state.textContent
-      : getVisualContent(state)
-
-    await gameFs.writeFile(path, content)
-    state.isDirty = false
-    state.lastSavedTime = new Date()
-
-    // 更新保存快照（可视模式下需要同步快照）
-    if (state.mode === 'visual') {
-      state.savedSnapshot = content
-    }
-
-    const tabIndex = tabsStore.findTabIndex(path)
-    if (tabIndex !== -1) {
-      tabsStore.updateTabModified(tabIndex, false)
-    }
-
-    // 保存后同步游戏预览（文本编辑器有自己的 syncScene，此处仅处理可视化编辑器）
-    if (isVisualScene(state)) {
-      const lineNumber = state.lastLineNumber ?? 1
-      const entry = state.statements.find(e => e.id === (state.lastEditedStatementId ?? state.statements[0]?.id))
-      const lineText = entry?.rawText ?? ''
-      syncScenePreview(path, lineNumber, lineText)
-    }
-  }
-
   // 当前活跃文件是否为场景文件
   const isCurrentSceneFile = $computed(() =>
-    currentState !== undefined && isTextualEditor(currentState) && currentState.visualType === 'scene',
+    currentState !== undefined && isEditableEditor(currentState) && currentState.kind === 'scene',
+  )
+  const isCurrentAnimationFile = $computed(() =>
+    currentState !== undefined && isEditableEditor(currentState) && currentState.kind === 'animation',
   )
 
   return $$({
-    states,
+    hasState,
+    getState,
+    getPreviewMediaSession,
+    canUndoDocument,
+    canRedoDocument,
     currentState,
+    currentTextProjection,
+    currentVisualProjection,
+    currentSceneSelection,
+    currentSelectedSceneStatement,
+    currentSelectedSceneStatementIndex,
+    currentSelectedSceneStatementPreviousSpeaker,
+    getSceneSelection,
+    getScenePresentationState,
+    getSelectedSceneStatement,
+    getSceneSelectionIndex,
+    getSelectedSceneStatementPreviousSpeaker,
+    isSceneStatementCollapsed,
     canToggleMode,
     isCurrentSceneFile,
-    toggleTextualMode,
+    isCurrentAnimationFile,
+    syncSceneSelectionFromTextLine,
+    syncSceneSelectionFromStatement,
+    setSceneStatementCollapsed,
+    setActiveProjection,
+    switchEditorMode,
     syncScenePreview,
+    updatePreviewMediaSession,
+    registerSaveHook,
+    unregisterSaveHook,
+    scheduleAutoSave,
+    scheduleAutoSaveIfEnabled,
     saveFile,
+    undoDocument,
+    redoDocument,
+    replaceTextDocumentContent,
+    setTextProjectionDraft,
+    applyAnimationFrameDelete,
+    applyAnimationFrameInsert,
+    applyAnimationFrameReorder,
+    applyAnimationFrameUpdate,
+    applySceneStatementDelete,
+    applySceneStatementInsert,
+    applySceneStatementUpdate,
+    applyTextDocumentContent,
   })
 })

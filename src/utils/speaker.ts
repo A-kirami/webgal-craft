@@ -58,8 +58,22 @@ export function getPreviousSpeakerAtIndex(
   let lastSpeaker = ''
   const endIndex = Math.min(index, entries.length)
   for (let currentIndex = 0; currentIndex < endIndex; currentIndex++) {
-    const nextSpeaker = extractSpeakerChange(entries[currentIndex]!.rawText)
-    lastSpeaker = nextSpeaker === undefined ? lastSpeaker : nextSpeaker
+    lastSpeaker = applySpeakerChange(lastSpeaker, entries[currentIndex]!.rawText)
+  }
+  return lastSpeaker
+}
+
+export function getPreviousSpeakerAtLine(
+  lineNumber: number,
+  readLineContent: (lineNumber: number) => string,
+): string {
+  if (lineNumber <= 1) {
+    return ''
+  }
+
+  let lastSpeaker = ''
+  for (let currentLine = 1; currentLine < lineNumber; currentLine++) {
+    lastSpeaker = applySpeakerChange(lastSpeaker, readLineContent(currentLine))
   }
   return lastSpeaker
 }
@@ -96,4 +110,9 @@ function extractSpeakerFromSayArgs(text: string): string | undefined {
 
   // 没有 speaker 相关参数，继承
   return undefined
+}
+
+function applySpeakerChange(currentSpeaker: string, rawText: string): string {
+  const nextSpeaker = extractSpeakerChange(rawText)
+  return nextSpeaker === undefined ? currentSpeaker : nextSpeaker
 }

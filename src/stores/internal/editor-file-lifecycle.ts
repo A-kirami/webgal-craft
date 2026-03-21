@@ -297,7 +297,6 @@ function updateSavedDocumentMetadataBaseline(
     metadata: { ...metadata },
   }
 }
-
 function syncScenePreviewForExternalContent(
   context: EditorFileLifecycleContext,
   path: string,
@@ -451,7 +450,6 @@ export async function handleFileModifiedEvent(
       updateSavedDocumentMetadataBaseline(docEntry, content, metadata)
       return
     }
-
     replaceDocumentModelFromExternal(context, event.path, content, metadata)
     syncScenePreviewForExternalContent(context, event.path, content, freshState.kind)
     return

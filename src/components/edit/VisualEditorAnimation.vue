@@ -1,7 +1,11 @@
 <script setup lang="ts">
-const state = defineModel<VisualModeAnimationState>('state', { required: true })
+interface Props {
+  state: AnimationVisualProjectionState
+}
+
+defineProps<Props>()
 </script>
 
 <template>
-  <div>{{ state.rawContent }}</div>
+  <div class="h-full" />
 </template>

@@ -12,10 +12,12 @@ const editorStore = useEditorStore()
 const currentState = $computed(() => editorStore.currentState)
 
 const editableState = $computed(() =>
-  currentState && isTextualEditor(currentState) ? currentState : undefined,
+  currentState && isEditableEditor(currentState) ? currentState : undefined,
 )
 const previewState = $computed(() =>
-  currentState?.mode === 'preview' ? currentState : undefined,
+  currentState && !isEditableEditor(currentState) && currentState.view === 'preview'
+    ? currentState
+    : undefined,
 )
 
 const isImagePreview = $computed(() =>
@@ -81,7 +83,7 @@ const fileLanguage = $computed(() => {
   if (!editableState) {
     return ''
   }
-  switch (editableState.visualType) {
+  switch (editableState.kind) {
     case 'scene': {
       return t('edit.textEditor.languages.webgalscript')
     }
@@ -95,14 +97,14 @@ const fileLanguage = $computed(() => {
 })
 
 // 文本内容（用于统计）
-const textContent = $computed(() => editableState?.mode === 'text' ? editableState.textContent : '')
+const textContent = $computed(() => editableState?.projection === 'text' ? editableState.textContent : '')
 
 // 是否为可视化场景模式
-const isSceneMode = $computed(() => editableState !== undefined && isVisualScene(editableState))
+const isSceneMode = $computed(() => editableState !== undefined && isSceneVisualProjection(editableState))
 
 // 语句数（可视化场景模式）
 const statementCount = $computed(() =>
-  editableState && isVisualScene(editableState)
+  editableState && isSceneVisualProjection(editableState)
     ? editableState.statements.length
     : 0,
 )
@@ -117,7 +119,7 @@ function updateStats() {
 }
 
 // 切换文件或编辑模式时立即计算
-watch(() => [currentState?.path, editableState?.mode], updateStats, { immediate: true })
+watch(() => [currentState?.path, editableState?.projection], updateStats, { immediate: true })
 
 // 同一文件内编辑时防抖计算
 watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })

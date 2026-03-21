@@ -71,13 +71,11 @@ function finalizeSavedDocument(
   const {
     state,
     docEntry,
-    content,
     savedSequenceNumber,
     savedRevisionNumber,
   } = saveContext
 
   state.lastSavedTime = savedAt
-  docEntry.savedSequenceNumber = savedSequenceNumber
   if (docEntry.engine.revisionNumber === savedRevisionNumber) {
     markDocumentClean(docEntry, savedSequenceNumber)
   }
@@ -100,7 +98,7 @@ function finalizeSavedDocument(
 
   if (docEntry.model.kind === 'scene') {
     const selection = context.getSceneSelection(path)
-    const sceneCursor = resolveSceneCursor(content, selection?.lastLineNumber)
+    const sceneCursor = resolveSceneCursor(savedContent, selection?.lastLineNumber)
     context.syncScenePreview(path, sceneCursor.lineNumber, sceneCursor.lineText)
   }
 }
