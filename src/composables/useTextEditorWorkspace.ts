@@ -61,11 +61,6 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
     }
 
     viewStateStore.renameViewState(oldPath, newPath)
-
-    if (modelAccessCache.has(oldPath)) {
-      modelAccessCache.delete(oldPath)
-      modelAccessCache.set(newPath, true)
-    }
   })
 
   const stopFileRemovedListener = fileSystemEvents.on('file:removed', (event) => {
@@ -148,16 +143,27 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
       persistSessionRecovery?: boolean
     } = {},
   ) {
-    const editor = readEditor()
     const shouldPersist = options.shouldPersistPersistentViewState(path)
+    const persistViewState = (viewState: monaco.editor.ICodeEditorViewState | null | undefined) => {
+      if (!viewState) {
+        return
+      }
+      if (shouldPersist) {
+        viewStateStore.savePersistentViewState(path, viewState)
+      }
+      if (options_.persistSessionRecovery) {
+        viewStateStore.saveSessionRecoveryViewState(path, viewState)
+      }
+    }
+
+    const editor = readEditor()
     if (!editor) {
-      const fileState = fileStates.get(path)
-      if (shouldPersist && fileState?.viewState) {
-        viewStateStore.savePersistentViewState(path, fileState.viewState)
-      }
-      if (options_.persistSessionRecovery && fileState?.viewState) {
-        viewStateStore.saveSessionRecoveryViewState(path, fileState.viewState)
-      }
+      persistViewState(fileStates.get(path)?.viewState)
+      return
+    }
+
+    if (editor.getModel()?.uri.toString() !== path) {
+      persistViewState(fileStates.get(path)?.viewState)
       return
     }
 
@@ -170,12 +176,7 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
     }
 
     getOrCreateFileState(path).viewState = currentViewState
-    if (shouldPersist) {
-      viewStateStore.savePersistentViewState(path, currentViewState)
-    }
-    if (options_.persistSessionRecovery) {
-      viewStateStore.saveSessionRecoveryViewState(path, currentViewState)
-    }
+    persistViewState(currentViewState)
   }
 
   function restoreViewState(path: string, context: RestoreViewStateContext = {}) {
@@ -260,6 +261,10 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
 
     markFileOpened(options_.newPath)
     restoreViewState(options_.newPath, { isSwitching: true })
+
+    if (options_.oldPath !== options_.newPath && modelAccessCache.has(options_.oldPath)) {
+      modelAccessCache.delete(options_.oldPath)
+    }
   }
 
   function syncCurrentModelLanguage(language: string) {

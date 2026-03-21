@@ -47,16 +47,22 @@ export function createEditorSelection(
   selectionStartColumn: number,
   positionLineNumber: number,
   positionColumn: number,
+  range: monaco.IRange = normalizeSelectionRange(
+    selectionStartLineNumber,
+    selectionStartColumn,
+    positionLineNumber,
+    positionColumn,
+  ),
 ): monaco.Selection {
   return {
     selectionStartLineNumber,
     selectionStartColumn,
     positionLineNumber,
     positionColumn,
-    startLineNumber: selectionStartLineNumber,
-    startColumn: selectionStartColumn,
-    endLineNumber: positionLineNumber,
-    endColumn: positionColumn,
+    startLineNumber: range.startLineNumber,
+    startColumn: range.startColumn,
+    endLineNumber: range.endLineNumber,
+    endColumn: range.endColumn,
     getPosition() {
       return {
         lineNumber: positionLineNumber,
@@ -64,6 +70,32 @@ export function createEditorSelection(
       }
     },
   } as monaco.Selection
+}
+
+function normalizeSelectionRange(
+  selectionStartLineNumber: number,
+  selectionStartColumn: number,
+  positionLineNumber: number,
+  positionColumn: number,
+): monaco.IRange {
+  const isSelectionStartBeforePosition = selectionStartLineNumber < positionLineNumber
+    || (selectionStartLineNumber === positionLineNumber && selectionStartColumn <= positionColumn)
+
+  if (isSelectionStartBeforePosition) {
+    return {
+      startLineNumber: selectionStartLineNumber,
+      startColumn: selectionStartColumn,
+      endLineNumber: positionLineNumber,
+      endColumn: positionColumn,
+    }
+  }
+
+  return {
+    startLineNumber: positionLineNumber,
+    startColumn: positionColumn,
+    endLineNumber: selectionStartLineNumber,
+    endColumn: selectionStartColumn,
+  }
 }
 
 export function cloneEditorSelection(selection: monaco.Selection): monaco.Selection {
@@ -170,11 +202,21 @@ export function restoreEditorCursorSnapshot(
 
   const selections = snapshot.selections.map((selection) => {
     const validatedRange = model.validateRange(selection)
+    const validatedSelectionStart = model.validatePosition({
+      lineNumber: selection.selectionStartLineNumber,
+      column: selection.selectionStartColumn,
+    })
+    const validatedPosition = model.validatePosition({
+      lineNumber: selection.positionLineNumber,
+      column: selection.positionColumn,
+    })
+
     return createEditorSelection(
-      validatedRange.startLineNumber,
-      validatedRange.startColumn,
-      validatedRange.endLineNumber,
-      validatedRange.endColumn,
+      validatedSelectionStart.lineNumber,
+      validatedSelectionStart.column,
+      validatedPosition.lineNumber,
+      validatedPosition.column,
+      validatedRange,
     )
   })
 

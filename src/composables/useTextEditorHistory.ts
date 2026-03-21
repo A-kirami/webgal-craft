@@ -75,9 +75,12 @@ export function useTextEditorHistory(options: UseTextEditorHistoryOptions) {
     actionId: 'editor.action.redo' | 'editor.action.undo',
     onNoop?: () => void,
   ) {
+    const state = readState()
     const editor = readEditor()
-    const model = editor?.getModel()
-    const beforeContent = model?.getValue()
+    const savedModel = editor?.getModel()
+    const beforeContent = savedModel?.getValue()
+    const savedPath = state.path
+    const savedKind = state.kind
 
     const runNativeAction = actionId === 'editor.action.undo'
       ? historyAdapterHandle?.runNativeUndo
@@ -90,14 +93,13 @@ export function useTextEditorHistory(options: UseTextEditorHistoryOptions) {
       }
 
       void pendingNativeAction.then(() => {
-        const afterContent = model?.getValue()
-        if (beforeContent === undefined || afterContent === undefined) {
+        if (!savedModel || savedModel.isDisposed() || beforeContent === undefined) {
           return
         }
 
-        const currentState = readState()
-        if (currentState.kind === 'animation' && currentState.textContent !== afterContent) {
-          options.syncAnimationTextContentFromEditor(currentState.path, afterContent)
+        const afterContent = savedModel.getValue()
+        if (savedKind === 'animation' && afterContent !== beforeContent) {
+          options.syncAnimationTextContentFromEditor(savedPath, afterContent)
         }
 
         if (afterContent === beforeContent) {

@@ -530,12 +530,8 @@ function getArgumentSuggestion(model: monaco.editor.ITextModel, position: monaco
 
   // 从行内容中提取命令类型
   let command: commandType = commandType.say
-  try {
-    const parsedScene = parseSceneOrEmpty(currentLine, TEMP_SCENE_NAME, TEMP_SCENE_URL)
-    command = parsedScene.sentenceList[0]?.command || commandType.say
-  } catch (error) {
-    handleError(error, { silent: true })
-  }
+  const parsedScene = parseSceneOrEmpty(currentLine, TEMP_SCENE_NAME, TEMP_SCENE_URL)
+  command = parsedScene.sentenceList[0]?.command || commandType.say
 
   if (!currentWord) {
     return getArgKeyCompletions(

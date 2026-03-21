@@ -38,6 +38,7 @@ export function useCommandPanelBridgeBinding(handler: CommandPanelHandler) {
   if (!context) {
     return
   }
+  const isComponentActive = ref(false)
 
   function readIsActive(): boolean {
     return handler.isActive === undefined ? true : toValue(handler.isActive)
@@ -56,14 +57,26 @@ export function useCommandPanelBridgeBinding(handler: CommandPanelHandler) {
     }
   }
 
-  onActivated(register)
-  onDeactivated(unregister)
-  onMounted(register)
-  onUnmounted(unregister)
+  onActivated(() => {
+    isComponentActive.value = true
+    register()
+  })
+  onDeactivated(() => {
+    isComponentActive.value = false
+    unregister()
+  })
+  onMounted(() => {
+    isComponentActive.value = true
+    register()
+  })
+  onUnmounted(() => {
+    isComponentActive.value = false
+    unregister()
+  })
 
   if (handler.isActive !== undefined) {
     watch(() => toValue(handler.isActive), (isActive) => {
-      if (isActive) {
+      if (isActive && isComponentActive.value) {
         register()
       } else {
         unregister()

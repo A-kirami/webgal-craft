@@ -35,7 +35,11 @@ export function useTextEditorPanel(options: TextEditorPanelOptions) {
     model: monaco.editor.ITextModel,
   ): number | undefined {
     if (payload.target?.kind === 'line') {
-      return payload.target.lineNumber
+      const { lineNumber } = payload.target
+      if (!Number.isInteger(lineNumber) || lineNumber < 1 || lineNumber > model.getLineCount()) {
+        return undefined
+      }
+      return lineNumber
     }
 
     const fallbackLineNumber = editor.getPosition()?.lineNumber
