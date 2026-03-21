@@ -75,8 +75,8 @@ function handleMediaSessionChange() {
   persistCurrentMediaSession(props.state.path, props.state.mimeType)
 }
 
-watch(() => [props.state.path, props.state.mimeType] as const, ([newPath], [oldPath, oldMimeType]) => {
-  if (oldPath && oldPath !== newPath) {
+watch(() => [props.state.path, props.state.mimeType] as const, ([newPath, newMimeType], [oldPath, oldMimeType]) => {
+  if (oldPath && (oldPath !== newPath || oldMimeType !== newMimeType)) {
     suspendCurrentMediaSession(oldPath, oldMimeType)
   }
 }, { flush: 'pre' })
