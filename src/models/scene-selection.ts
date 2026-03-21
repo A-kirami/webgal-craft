@@ -1,3 +1,5 @@
+import { getPreviousSpeakerAtIndex } from '~/utils/speaker'
+
 interface SceneSelectableStatement {
   id: number
   rawText: string

@@ -3,6 +3,10 @@ import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 /** 所有已知命令关键字集合，用于区分简写说话人和命令 */
 const commandKeywords = new Set(SCRIPT_CONFIG.map(c => c.scriptString))
 
+interface SpeakerSource {
+  rawText: string
+}
+
 /**
  * 从单行 rawText 中提取说话人变更。
  *
@@ -38,6 +42,26 @@ export function extractSpeakerChange(text: string): string | undefined {
 
   // 无冒号或其他命令：继承上一个说话人
   return undefined
+}
+
+/**
+ * 读取指定索引之前应继承到的说话人。
+ */
+export function getPreviousSpeakerAtIndex(
+  entries: readonly SpeakerSource[],
+  index: number,
+): string {
+  if (index <= 0) {
+    return ''
+  }
+
+  let lastSpeaker = ''
+  const endIndex = Math.min(index, entries.length)
+  for (let currentIndex = 0; currentIndex < endIndex; currentIndex++) {
+    const nextSpeaker = extractSpeakerChange(entries[currentIndex]!.rawText)
+    lastSpeaker = nextSpeaker === undefined ? lastSpeaker : nextSpeaker
+  }
+  return lastSpeaker
 }
 
 /** 从 say 命令的参数中提取说话人 */

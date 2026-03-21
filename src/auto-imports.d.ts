@@ -24,6 +24,7 @@ declare global {
   const asyncComputed: typeof import('@vueuse/core').asyncComputed
   const autoResetRef: typeof import('@vueuse/core').autoResetRef
   const buildCategoryRenderItems: typeof import('./helper/effect-editor-config').buildCategoryRenderItems
+  const buildSceneStatements: typeof import('./helper/webgal-script/sentence').buildSceneStatements
   const buildSchemaKeySet: typeof import('./helper/statement-editor/visibility').buildSchemaKeySet
   const buildSingleStatement: typeof import('./helper/webgal-script/sentence').buildSingleStatement
   const buildStatementPreviewParams: typeof import('./helper/statement-editor/preview').buildStatementPreviewParams
@@ -64,8 +65,10 @@ declare global {
   const createRef: typeof import('@vueuse/core').createRef
   const createReusableTemplate: typeof import('@vueuse/core').createReusableTemplate
   const createSharedComposable: typeof import('@vueuse/core').createSharedComposable
+  const createStatementEntryFromSceneStatement: typeof import('./helper/webgal-script/sentence').createStatementEntryFromSceneStatement
   const createStatementMissingFileLoader: typeof import('./helper/statement-editor/file-missing').createStatementMissingFileLoader
   const createTemplatePromise: typeof import('@vueuse/core').createTemplatePromise
+  const createTransientStatementEntry: typeof import('./helper/webgal-script/sentence').createTransientStatementEntry
   const createUnrefFn: typeof import('@vueuse/core').createUnrefFn
   const customRef: typeof import('vue').customRef
   const db: typeof import('./database/db').db
@@ -190,6 +193,8 @@ declare global {
   const parseCommandNode: typeof import('./helper/webgal-script/codec').parseCommandNode
   const parseEffectJson: typeof import('./helper/effect-editor-config').parseEffectJson
   const parseHexColor: typeof import('./helper/color').parseHexColor
+  const parseScene: typeof import('./helper/webgal-script/parser').parseScene
+  const parseSceneOrEmpty: typeof import('./helper/webgal-script/parser').parseSceneOrEmpty
   const parseSentence: typeof import('./helper/webgal-script/parser').parseSentence
   const parseSetVarContent: typeof import('./helper/webgal-script/content').parseSetVarContent
   const parseStyleRuleContent: typeof import('./helper/webgal-script/content').parseStyleRuleContent
@@ -219,6 +224,7 @@ declare global {
   const readSentenceArgString: typeof import('./helper/webgal-script/sentence').readSentenceArgString
   const readTypedCommandNodeExtraArgs: typeof import('./helper/webgal-script/update').readTypedCommandNodeExtraArgs
   const readonly: typeof import('vue').readonly
+  const rebuildStatementsWithStableIds: typeof import('./helper/webgal-script/sentence').rebuildStatementsWithStableIds
   const ref: typeof import('vue').ref
   const refAutoReset: typeof import('@vueuse/core').refAutoReset
   const refDebounced: typeof import('@vueuse/core').refDebounced
@@ -696,6 +702,7 @@ declare module 'vue' {
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly buildCategoryRenderItems: UnwrapRef<typeof import('./helper/effect-editor-config')['buildCategoryRenderItems']>
+    readonly buildSceneStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['buildSceneStatements']>
     readonly buildSchemaKeySet: UnwrapRef<typeof import('./helper/statement-editor/visibility')['buildSchemaKeySet']>
     readonly buildSingleStatement: UnwrapRef<typeof import('./helper/webgal-script/sentence')['buildSingleStatement']>
     readonly buildStatementPreviewParams: UnwrapRef<typeof import('./helper/statement-editor/preview')['buildStatementPreviewParams']>
@@ -736,8 +743,10 @@ declare module 'vue' {
     readonly createRef: UnwrapRef<typeof import('@vueuse/core')['createRef']>
     readonly createReusableTemplate: UnwrapRef<typeof import('@vueuse/core')['createReusableTemplate']>
     readonly createSharedComposable: UnwrapRef<typeof import('@vueuse/core')['createSharedComposable']>
+    readonly createStatementEntryFromSceneStatement: UnwrapRef<typeof import('./helper/webgal-script/sentence')['createStatementEntryFromSceneStatement']>
     readonly createStatementMissingFileLoader: UnwrapRef<typeof import('./helper/statement-editor/file-missing')['createStatementMissingFileLoader']>
     readonly createTemplatePromise: UnwrapRef<typeof import('@vueuse/core')['createTemplatePromise']>
+    readonly createTransientStatementEntry: UnwrapRef<typeof import('./helper/webgal-script/sentence')['createTransientStatementEntry']>
     readonly createUnrefFn: UnwrapRef<typeof import('@vueuse/core')['createUnrefFn']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly db: UnwrapRef<typeof import('./database/db')['db']>
@@ -862,6 +871,8 @@ declare module 'vue' {
     readonly parseCommandNode: UnwrapRef<typeof import('./helper/webgal-script/codec')['parseCommandNode']>
     readonly parseEffectJson: UnwrapRef<typeof import('./helper/effect-editor-config')['parseEffectJson']>
     readonly parseHexColor: UnwrapRef<typeof import('./helper/color')['parseHexColor']>
+    readonly parseScene: UnwrapRef<typeof import('./helper/webgal-script/parser')['parseScene']>
+    readonly parseSceneOrEmpty: UnwrapRef<typeof import('./helper/webgal-script/parser')['parseSceneOrEmpty']>
     readonly parseSentence: UnwrapRef<typeof import('./helper/webgal-script/parser')['parseSentence']>
     readonly parseSetVarContent: UnwrapRef<typeof import('./helper/webgal-script/content')['parseSetVarContent']>
     readonly parseStyleRuleContent: UnwrapRef<typeof import('./helper/webgal-script/content')['parseStyleRuleContent']>
@@ -891,6 +902,7 @@ declare module 'vue' {
     readonly readSentenceArgString: UnwrapRef<typeof import('./helper/webgal-script/sentence')['readSentenceArgString']>
     readonly readTypedCommandNodeExtraArgs: UnwrapRef<typeof import('./helper/webgal-script/update')['readTypedCommandNodeExtraArgs']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
+    readonly rebuildStatementsWithStableIds: UnwrapRef<typeof import('./helper/webgal-script/sentence')['rebuildStatementsWithStableIds']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
     readonly refAutoReset: UnwrapRef<typeof import('@vueuse/core')['refAutoReset']>
     readonly refDebounced: UnwrapRef<typeof import('@vueuse/core')['refDebounced']>
@@ -962,7 +974,6 @@ declare module 'vue' {
     readonly updateCommandNodeInlineComment: UnwrapRef<typeof import('./helper/webgal-script/update')['updateCommandNodeInlineComment']>
     readonly updateCommandNodeParam: UnwrapRef<typeof import('./helper/webgal-script/update')['updateCommandNodeParam']>
     readonly updateCommandNodeSpeaker: UnwrapRef<typeof import('./helper/webgal-script/update')['updateCommandNodeSpeaker']>
-    readonly updateStatement: UnwrapRef<typeof import('./helper/webgal-script/sentence')['updateStatement']>
     readonly updateTypedCommandNodeExtraArgs: UnwrapRef<typeof import('./helper/webgal-script/update')['updateTypedCommandNodeExtraArgs']>
     readonly upsertArg: UnwrapRef<typeof import('./helper/webgal-script/arg-utils')['upsertArg']>
     readonly useActiveElement: UnwrapRef<typeof import('@vueuse/core')['useActiveElement']>
