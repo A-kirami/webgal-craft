@@ -53,28 +53,55 @@ export const useWorkspaceStore = defineStore(
       return Array.isArray(gameId) ? gameId[0] : gameId
     }
 
-    watch(() => resolveRouteGameId(), async (gameId, oldGameId) => {
-      if (oldGameId && currentGame) {
+    watch(() => resolveRouteGameId(), async (gameId, _oldGameId, onCleanup) => {
+      let isStale = false
+      onCleanup(() => {
+        isStale = true
+      })
+
+      if (currentGame) {
+        const previousGamePath = currentGame.path
+
         try {
-          await gameManager.stopGamePreview(currentGame.path)
+          await gameManager.stopGamePreview(previousGamePath)
         } catch (error) {
-          logger.error(`停止预览失败: ${error}`)
+          if (!isStale) {
+            logger.error(`停止预览失败: ${error}`)
+          }
         }
+
+        if (isStale) {
+          return
+        }
+
         currentGame = undefined
         currentGameServeUrl = undefined
       }
 
-      if (gameId) {
-        const game = await db.games.get(gameId)
-        if (game) {
-          currentGame = game
-          try {
-            currentGameServeUrl = await gameManager.runGamePreview(game.path)
-          } catch (error) {
-            currentGameServeUrl = undefined
-            logger.error(`获取预览链接失败: ${error}`)
-          }
+      if (!gameId) {
+        return
+      }
+
+      const game = await db.games.get(gameId)
+      if (isStale || !game) {
+        return
+      }
+
+      currentGame = game
+      try {
+        const previewUrl = await gameManager.runGamePreview(game.path)
+        if (isStale) {
+          return
         }
+
+        currentGameServeUrl = previewUrl
+      } catch (error) {
+        if (isStale) {
+          return
+        }
+
+        currentGameServeUrl = undefined
+        logger.error(`获取预览链接失败: ${error}`)
       }
     })
 

@@ -88,7 +88,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="p-1 flex h-full items-center justify-center overflow-hidden md:p-4 sm:p-2">
-    <img v-if="props.state.mimeType.startsWith('image')" :src="props.state.assetUrl" class="bg-checkerboard max-h-full max-w-full object-contain">
+    <img v-if="props.state.mimeType.startsWith('image/')" :src="props.state.assetUrl" class="bg-checkerboard max-h-full max-w-full object-contain">
     <component
       :is="mediaTag"
       v-else-if="mediaTag"
