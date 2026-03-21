@@ -3,6 +3,7 @@ import * as monaco from 'monaco-editor'
 import { isAnimationDocumentTextValid } from '~/models/animation-document-codec'
 
 import type {
+  RestoreAfterModelSyncContext,
   TextEditorContentChangeContext,
   TextEditorCursorSnapshot,
 } from './useTextEditorHistory'
@@ -18,10 +19,7 @@ interface TextEditorHistorySyncActions {
   captureEditorCursorSnapshot: () => TextEditorCursorSnapshot | undefined
   restoreAfterModelSync: (
     snapshot?: TextEditorCursorSnapshot,
-    context?: {
-      capturedModel?: monaco.editor.ITextModel
-      capturedPath?: string
-    },
+    context?: RestoreAfterModelSyncContext,
     afterRestore?: () => void,
   ) => void
 }

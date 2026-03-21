@@ -22,6 +22,11 @@ export interface TextEditorContentChangeContext {
   editorMetadata?: EditorHistoryMetadata
 }
 
+export interface RestoreAfterModelSyncContext {
+  capturedModel?: monaco.editor.ITextModel
+  capturedPath?: string
+}
+
 interface UseTextEditorHistoryOptions {
   editorRef: ShallowRef<monaco.editor.IStandaloneCodeEditor | undefined>
   getState: () => Pick<TextProjectionState, 'isDirty' | 'kind' | 'path' | 'syncError' | 'textContent'>
@@ -73,7 +78,6 @@ export function useTextEditorHistory(options: UseTextEditorHistoryOptions) {
 
   function runNativeHistoryAction(
     actionId: 'editor.action.redo' | 'editor.action.undo',
-    onNoop?: () => void,
   ) {
     const state = readState()
     const editor = readEditor()
@@ -108,10 +112,6 @@ export function useTextEditorHistory(options: UseTextEditorHistoryOptions) {
         const afterContent = savedModel.getValue()
         if (savedKind === 'animation' && afterContent !== beforeContent) {
           options.syncAnimationTextContentFromEditor(savedPath, afterContent)
-        }
-
-        if (afterContent === beforeContent) {
-          onNoop?.()
         }
       })
     }, 0)
