@@ -38,6 +38,10 @@ function allocateKey(): number {
 }
 
 function resolveItemKeys(items: PairListItem[], oldItems: PairListItem[] | undefined): number[] {
+  if (itemKeys.length === items.length) {
+    return [...itemKeys]
+  }
+
   if (!oldItems || itemKeys.length === 0) {
     return items.map(() => allocateKey())
   }
@@ -85,6 +89,18 @@ function itemKey(index: number): number {
   return itemKeys[index] ?? index
 }
 
+function handleAdd(): void {
+  itemKeys = [...itemKeys, allocateKey()]
+  emit('add')
+}
+
+function handleRemove(index: number): void {
+  const nextKeys = [...itemKeys]
+  nextKeys.splice(index, 1)
+  itemKeys = nextKeys
+  emit('remove', index)
+}
+
 function firstInputId(index: number): string {
   return buildControlId(`first-${index}`)
 }
@@ -124,7 +140,7 @@ function secondInputId(index: number): string {
           variant="ghost"
           size="sm"
           class="text-xs text-muted-foreground px-1.5 shrink-0 h-6 hover:text-destructive"
-          @click="emit('remove', i)"
+          @click="handleRemove(i)"
         >
           <div class="i-lucide-x size-3.5" />
         </Button>
@@ -142,7 +158,7 @@ function secondInputId(index: number): string {
               variant="ghost"
               size="sm"
               class="text-muted-foreground ml-auto p-1 size-6 hover:text-destructive"
-              @click="emit('remove', i)"
+              @click="handleRemove(i)"
             >
               <div class="i-lucide-x size-3.5" />
             </Button>
@@ -181,7 +197,7 @@ function secondInputId(index: number): string {
       variant="outline"
       size="sm"
       class="text-xs h-6 w-full shadow-none group-data-[surface=panel]:h-7"
-      @click="emit('add')"
+      @click="handleAdd"
     >
       <div class="i-lucide-plus mr-1 size-3.5" />
       {{ addLabel }}

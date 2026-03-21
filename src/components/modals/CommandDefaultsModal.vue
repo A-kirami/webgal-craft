@@ -69,8 +69,10 @@ function handleResetToFactory(): void {
     return
   }
 
+  const rawText = factoryRawText
   commandPanelStore.resetDefault(type)
-  draftEntry = buildSingleStatement(factoryRawText)
+  draftEntry = buildSingleStatement(rawText)
+  initialRawText = rawText
   notify.success(t('edit.visualEditor.commandPanel.resetSuccess'))
 }
 
