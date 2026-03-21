@@ -171,14 +171,16 @@ function parseSayNode(sentence: ISentence): SayCommandNode {
   // 序列化后的 ISentence 中，续写形式 commandRaw 为 SAY_CONTINUATION_RAW 哨兵值。
   const speakerFromArgs = consumeStringArg(args, 'speaker')
   // 续写形式判断：
-  // - commandRaw 为 SAY_CONTINUATION_RAW（来自 serializeSayNode）
-  // - 或 commandRaw 以 content 开头且 args 中无 speaker（来自 webgal-parser）
+  // - commandRaw 为 SAY_CONTINUATION_RAW（来自 serializeSayNode 的往返）
+  // - 或来自 webgal-parser 的首次解析：非标准形式、非旁白、args 中无 speaker，
+  //   且 content 非空时 commandRaw 以 content 开头（区分续写与有说话人的简写），
+  //   content 为空时排除保留命令字（区分续写与其他命令）。
+  const isParserContinuation = sentence.commandRaw !== 'say'
+    && sentence.commandRaw !== ''
+    && speakerFromArgs === undefined
   const isContinuation = sentence.commandRaw === SAY_CONTINUATION_RAW
-    || (sentence.content !== ''
-      && sentence.commandRaw !== 'say'
-      && sentence.commandRaw !== ''
-      && speakerFromArgs === undefined
-      && sentence.commandRaw.startsWith(sentence.content))
+    || (isParserContinuation && sentence.content !== '' && sentence.commandRaw.startsWith(sentence.content))
+    || (isParserContinuation && sentence.content === '' && !reservedCommandStrings.has(sentence.commandRaw))
   const speaker = sentence.commandRaw === 'say'
     ? (speakerFromArgs ?? '')
     : (isContinuation ? '' : sentence.commandRaw)
