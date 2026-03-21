@@ -248,6 +248,7 @@ export const useEditorStore = defineStore('editor', () => {
     const path = tab.path
 
     try {
+      setTabError(path, undefined)
       setTabLoading(path, true)
 
       // 有 mime 类型且符合预览条件的文件，直接进入文件预览模式

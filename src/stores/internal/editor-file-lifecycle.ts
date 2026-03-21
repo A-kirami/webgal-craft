@@ -421,6 +421,7 @@ export async function handleFileModifiedEvent(
   }
 
   const { content, metadata } = loadedDocument
+  context.setTabError(event.path, undefined)
   if (consumePendingDocumentWrite(event.path, content, metadata)) {
     return
   }
