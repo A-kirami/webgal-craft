@@ -87,6 +87,14 @@ export function useTextEditorHistory(options: UseTextEditorHistoryOptions) {
       : historyAdapterHandle?.runNativeRedo
 
     setTimeout(() => {
+      if (!savedModel || savedModel.isDisposed()) {
+        return
+      }
+
+      if (readState().path !== savedPath || readEditor()?.getModel() !== savedModel) {
+        return
+      }
+
       const pendingNativeAction = runNativeAction?.()
       if (!pendingNativeAction) {
         return
@@ -176,10 +184,29 @@ export function useTextEditorHistory(options: UseTextEditorHistoryOptions) {
    */
   function restoreAfterModelSync(
     snapshot?: TextEditorCursorSnapshot,
+    context: RestoreAfterModelSyncContext = {},
     afterRestore?: () => void,
   ) {
     const editor = readEditor()
     if (!editor) {
+      return
+    }
+    const currentPath = readState().path
+    const currentModel = editor.getModel()
+    const { capturedModel, capturedPath } = context
+    const hasOriginMismatch = (
+      (capturedModel !== undefined && currentModel !== capturedModel)
+      || (capturedPath !== undefined && currentPath !== capturedPath)
+    )
+
+    if (hasOriginMismatch) {
+      pendingHistorySnapshot.value = undefined
+      pendingHistoryCursorOffset.value = undefined
+
+      if (shouldScheduleAutoSaveAfterHistoryApply.value && capturedPath) {
+        shouldScheduleAutoSaveAfterHistoryApply.value = false
+        options.scheduleAutoSaveIfEnabled(capturedPath)
+      }
       return
     }
 
@@ -199,7 +226,7 @@ export function useTextEditorHistory(options: UseTextEditorHistoryOptions) {
 
     if (shouldScheduleAutoSaveAfterHistoryApply.value) {
       shouldScheduleAutoSaveAfterHistoryApply.value = false
-      options.scheduleAutoSaveIfEnabled(readState().path)
+      options.scheduleAutoSaveIfEnabled(capturedPath ?? currentPath)
     }
 
     afterRestore?.()

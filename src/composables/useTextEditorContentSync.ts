@@ -18,6 +18,10 @@ interface TextEditorHistorySyncActions {
   captureEditorCursorSnapshot: () => TextEditorCursorSnapshot | undefined
   restoreAfterModelSync: (
     snapshot?: TextEditorCursorSnapshot,
+    context?: {
+      capturedModel?: monaco.editor.ITextModel
+      capturedPath?: string
+    },
     afterRestore?: () => void,
   ) => void
 }
@@ -125,10 +129,14 @@ export function useTextEditorContentSync(options: UseTextEditorContentSyncOption
     }
 
     const cursorSnapshot = options.textEditorHistory.captureEditorCursorSnapshot()
+    const capturedPath = state.value.path
     model.setValue(newContent)
 
     nextTick(() => {
-      options.textEditorHistory.restoreAfterModelSync(cursorSnapshot)
+      options.textEditorHistory.restoreAfterModelSync(cursorSnapshot, {
+        capturedModel: model,
+        capturedPath,
+      })
     })
   })
 
