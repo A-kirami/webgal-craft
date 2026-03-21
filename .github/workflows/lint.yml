@@ -27,7 +27,7 @@ jobs:
   lint:
     permissions:
       contents: read
-    name: lint:${{ matrix.name }}
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -53,54 +53,3 @@ jobs:
 
       - name: Run lint checks
         run: ${{ matrix.command }}
-
-  code-suggestions:
-    if: github.event_name == 'pull_request'
-    permissions:
-      contents: read
-      checks: write
-      pull-requests: write
-    name: suggest:${{ matrix.name }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: js
-          - name: style
-          - name: i18n
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Run ESLint with reviewdog
-        if: ${{ matrix.name == 'js' }}
-        uses: reviewdog/action-eslint@v1
-        with:
-          reporter: github-pr-review
-          tool_name: eslint
-          eslint_flags: "**/*.{js,jsx,ts,tsx,cjs,mjs,vue}"
-
-      - name: Run ESLint i18n with reviewdog
-        if: ${{ matrix.name == 'i18n' }}
-        uses: reviewdog/action-eslint@v1
-        with:
-          reporter: github-pr-review
-          tool_name: i18n
-          eslint_flags: "src/locales/*.{json,json5,yaml,yml}"
-
-      - name: Run Stylelint with reviewdog
-        if: ${{ matrix.name == 'style' }}
-        uses: reviewdog/action-stylelint@v1
-        with:
-          reporter: github-pr-review
-          stylelint_input: "src/**/*.{css,vue}"

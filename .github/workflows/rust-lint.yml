@@ -19,7 +19,7 @@ jobs:
   rust-lint:
     permissions:
       contents: read
-    name: rust:${{ matrix.name }}
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
