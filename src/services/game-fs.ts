@@ -1,4 +1,4 @@
-import { writeTextFile } from '@tauri-apps/plugin-fs'
+import { writeFile as writeBinaryFile, writeTextFile } from '@tauri-apps/plugin-fs'
 
 /**
  * 游戏项目文件操作服务
@@ -12,6 +12,11 @@ import { writeTextFile } from '@tauri-apps/plugin-fs'
 
 async function writeFile(path: string, content: string): Promise<void> {
   await writeTextFile(path, content)
+  gameManager.updateCurrentGameLastModified()
+}
+
+async function writeDocumentFile(path: string, content: Uint8Array): Promise<void> {
+  await writeBinaryFile(path, content)
   gameManager.updateCurrentGameLastModified()
 }
 
@@ -52,6 +57,7 @@ async function moveFile(sourcePath: string, targetPath: string): Promise<string>
 
 export const gameFs = {
   writeFile,
+  writeDocumentFile,
   renameFile,
   deleteFile,
   createFile,

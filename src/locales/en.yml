@@ -243,6 +243,12 @@ modals:
     description: Your changes will be discarded if you don't apply them.
     apply: Apply
     discard: Discard
+  externalDocumentChange:
+    title: External file change detected
+    description: File {path} changed outside the editor. Keep local changes, load the external version, or merge both sides in text mode.
+    keepLocal: Keep local
+    loadExternal: Load external
+    merge: Merge
 
 edit:
   header:

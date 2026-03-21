@@ -243,6 +243,12 @@ modals:
     description: 適用しない場合、変更は破棄されます。
     apply: 適用
     discard: 破棄
+  externalDocumentChange:
+    title: 外部ファイルの変更を検出しました
+    description: ファイル {path} がエディター外で変更されました。ローカル変更を保持するか、外部版を読み込むか、テキストモードで両方をマージしてください。
+    keepLocal: ローカルを保持
+    loadExternal: 外部版を読み込む
+    merge: マージ
 
 edit:
   header:

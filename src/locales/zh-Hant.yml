@@ -243,6 +243,12 @@ modals:
     description: 如果不套用，你的變更將被捨棄。
     apply: 套用
     discard: 捨棄
+  externalDocumentChange:
+    title: 偵測到外部檔案變更
+    description: 檔案 {path} 已在編輯器外部被修改。請選擇保留本機修改、載入外部修改，或在文字模式下合併兩側內容。
+    keepLocal: 保留本機修改
+    loadExternal: 載入外部修改
+    merge: 合併內容
 
 edit:
   header:

@@ -243,6 +243,12 @@ modals:
     description: 如果不应用，你的更改将被丢弃。
     apply: 应用
     discard: 丢弃
+  externalDocumentChange:
+    title: 检测到外部文件变更
+    description: 文件 {path} 已在外部发生变化。请选择保留本地修改、加载外部修改，或在文本模式下合并两侧内容。
+    keepLocal: 保留本地修改
+    loadExternal: 加载外部修改
+    merge: 合并内容
 
 edit:
   header:

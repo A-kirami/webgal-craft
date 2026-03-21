@@ -11,6 +11,7 @@ import DeleteGameConfirmModal from '~/components/modals/DeleteGameConfirmModal.v
 import DeleteGameModal from '~/components/modals/DeleteGameModal.vue'
 import DiscardEffectChangesModal from '~/components/modals/DiscardEffectChangesModal.vue'
 import DiscoveredResourcesModal from '~/components/modals/DiscoveredResourcesModal.vue'
+import ExternalDocumentChangeModal from '~/components/modals/ExternalDocumentChangeModal.vue'
 import GameConfigModal from '~/components/modals/GameConfigModal.vue'
 import SaveChangesModal from '~/components/modals/SaveChangesModal.vue'
 import SettingsModal from '~/components/modals/SettingsModal.vue'
@@ -29,6 +30,7 @@ const ModalDialog = {
   DeleteGameModal,
   DeleteGameConfirmModal,
   DiscoveredResourcesModal,
+  ExternalDocumentChangeModal,
   GameConfigModal,
   SaveChangesModal,
   SettingsModal,

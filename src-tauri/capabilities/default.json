@@ -37,6 +37,7 @@
       "allow": ["**/*"]
     },
     "fs:allow-rename",
-    "fs:allow-copy-file"
+    "fs:allow-copy-file",
+    "fs:allow-write-file"
   ]
 }

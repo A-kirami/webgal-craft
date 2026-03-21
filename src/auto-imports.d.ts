@@ -29,6 +29,7 @@ declare global {
   const buildSingleStatement: typeof import('./helper/webgal-script/sentence').buildSingleStatement
   const buildStatementPreviewParams: typeof import('./helper/statement-editor/preview').buildStatementPreviewParams
   const buildStatements: typeof import('./helper/webgal-script/sentence').buildStatements
+  const canExecuteEditorAutoSave: typeof import('./stores/editor-auto-save').canExecuteEditorAutoSave
   const categoryTheme: typeof import('./helper/command-registry/index').categoryTheme
   const clamp: typeof import('./helper/math').clamp
   const clearDirectoryItemsCache: typeof import('./services/directory-cache').clearDirectoryItemsCache
@@ -48,11 +49,14 @@ declare global {
   const computedInject: typeof import('@vueuse/core').computedInject
   const computedWithControl: typeof import('@vueuse/core').computedWithControl
   const configManager: typeof import('./services/config-manager').configManager
+  const consumePendingDocumentWrite: typeof import('./services/document-write-intents').consumePendingDocumentWrite
   const content: typeof import('./helper/command-registry/schema').content
   const controlledComputed: typeof import('@vueuse/core').controlledComputed
   const controlledRef: typeof import('@vueuse/core').controlledRef
   const createApp: typeof import('vue').createApp
   const createAsyncQueue: typeof import('./helper/async-queue').createAsyncQueue
+  const createEditorAutoSaveController: typeof import('./stores/editor-auto-save').createEditorAutoSaveController
+  const createEditorPreviewSync: typeof import('./stores/editor-preview-sync').createEditorPreviewSync
   const createEffectEditorProvider: typeof import('./composables/useEffectEditorProvider').createEffectEditorProvider
   const createEffectPreviewEmitter: typeof import('./composables/useEffectEditorProvider').createEffectPreviewEmitter
   const createEmptySentence: typeof import('./helper/webgal-script/sentence').createEmptySentence
@@ -64,6 +68,7 @@ declare global {
   const createReactiveFn: typeof import('@vueuse/core').createReactiveFn
   const createRef: typeof import('@vueuse/core').createRef
   const createReusableTemplate: typeof import('@vueuse/core').createReusableTemplate
+  const createScenePresentationState: typeof import('./helper/scene-presentation').createScenePresentationState
   const createSharedComposable: typeof import('@vueuse/core').createSharedComposable
   const createStatementEntryFromSceneStatement: typeof import('./helper/webgal-script/sentence').createStatementEntryFromSceneStatement
   const createStatementMissingFileLoader: typeof import('./helper/statement-editor/file-missing').createStatementMissingFileLoader
@@ -120,6 +125,7 @@ declare global {
   const getFactoryDefaultCommandText: typeof import('./helper/command-registry/index').getFactoryDefaultCommandText
   const getParamValueFromArgs: typeof import('./helper/statement-editor/param-value').getParamValueFromArgs
   const getPointerAngleDegrees: typeof import('./helper/math').getPointerAngleDegrees
+  const getPreviousSpeakerAtIndex: typeof import('./utils/speaker').getPreviousSpeakerAtIndex
   const getRegistryKnownKeys: typeof import('./helper/webgal-script/params').getRegistryKnownKeys
   const getValueByPath: typeof import('./helper/effect-editor-config').getValueByPath
   const getVersion: typeof import('./utils/metadata').getVersion
@@ -146,6 +152,7 @@ declare global {
   const isRef: typeof import('vue').isRef
   const isRgbColor: typeof import('./helper/color').isRgbColor
   const isRgbaPayload: typeof import('./helper/color').isRgbaPayload
+  const isSceneStatementCollapsed: typeof import('./helper/scene-presentation').isSceneStatementCollapsed
   const isShallow: typeof import('vue').isShallow
   const isStatementInteractiveTarget: typeof import('./composables/useStatementEditor').isStatementInteractiveTarget
   const isTextualEditor: typeof import('./stores/editor').isTextualEditor
@@ -225,6 +232,7 @@ declare global {
   const readTypedCommandNodeExtraArgs: typeof import('./helper/webgal-script/update').readTypedCommandNodeExtraArgs
   const readonly: typeof import('vue').readonly
   const rebuildStatementsWithStableIds: typeof import('./helper/webgal-script/sentence').rebuildStatementsWithStableIds
+  const reconcileScenePresentationState: typeof import('./helper/scene-presentation').reconcileScenePresentationState
   const ref: typeof import('vue').ref
   const refAutoReset: typeof import('@vueuse/core').refAutoReset
   const refDebounced: typeof import('@vueuse/core').refDebounced
@@ -233,6 +241,7 @@ declare global {
   const refThrottled: typeof import('@vueuse/core').refThrottled
   const refWithControl: typeof import('@vueuse/core').refWithControl
   const registerDynamicOptions: typeof import('./helper/dynamic-options').registerDynamicOptions
+  const registerPendingDocumentWrite: typeof import('./services/document-write-intents').registerPendingDocumentWrite
   const removeArg: typeof import('./helper/webgal-script/arg-utils').removeArg
   const resolveComponent: typeof import('vue').resolveComponent
   const resolveDynamicOptions: typeof import('./helper/dynamic-options').resolveDynamicOptions
@@ -255,6 +264,7 @@ declare global {
   const serializeTransform: typeof import('./helper/effect-editor-config').serializeTransform
   const serverCmds: typeof import('./commands/server').serverCmds
   const setOrRemoveArg: typeof import('./helper/webgal-script/arg-utils').setOrRemoveArg
+  const setSceneStatementCollapsed: typeof import('./helper/scene-presentation').setSceneStatementCollapsed
   const setValueByPath: typeof import('./helper/effect-editor-config').setValueByPath
   const settleBatch: typeof import('./utils/batch').settleBatch
   const shallowReactive: typeof import('vue').shallowReactive
@@ -615,6 +625,9 @@ declare global {
   export type { EffectParamDef, EffectCategory, EffectRenderItem } from './helper/effect-editor-config'
   import('./helper/effect-editor-config')
   // @ts-ignore
+  export type { ScenePresentationState } from './helper/scene-presentation'
+  import('./helper/scene-presentation')
+  // @ts-ignore
   export type { StatementFileCheckItem, StatementFileCheckContext, StatementFileCheckDeps } from './helper/statement-editor/file-missing'
   import('./helper/statement-editor/file-missing')
   // @ts-ignore
@@ -642,13 +655,19 @@ declare global {
   export type { StatementGroup, CommandPanelCategory } from './stores/command-panel'
   import('./stores/command-panel')
   // @ts-ignore
+  export type { EditorAutoSaveState } from './stores/editor-auto-save'
+  import('./stores/editor-auto-save')
+  // @ts-ignore
+  export type { SerializableViewState } from './stores/editor-view-state'
+  import('./stores/editor-view-state')
+  // @ts-ignore
   export type { TextModeState, VisualModeSceneState, VisualModeAnimationState, VisualModeState, TextualEditorState, AssetPreviewState, UnsupportedState } from './stores/editor'
   import('./stores/editor')
   // @ts-ignore
   export type { FileItem, DirItem, FileSystemItem } from './stores/file'
   import('./stores/file')
   // @ts-ignore
-  export type { Tab } from './stores/tabs'
+  export type { PersistedTab, Tab } from './stores/tabs'
   import('./stores/tabs')
   // @ts-ignore
   export type { ColorPickerAlpha, ColorPickerPrgb, ColorPickerPrgba, ColorPickerRgb, ColorPickerRgba, ColorPickerHsl, ColorPickerHsla, ColorPickerValue } from './types/color-picker'
@@ -707,6 +726,7 @@ declare module 'vue' {
     readonly buildSingleStatement: UnwrapRef<typeof import('./helper/webgal-script/sentence')['buildSingleStatement']>
     readonly buildStatementPreviewParams: UnwrapRef<typeof import('./helper/statement-editor/preview')['buildStatementPreviewParams']>
     readonly buildStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['buildStatements']>
+    readonly canExecuteEditorAutoSave: UnwrapRef<typeof import('./stores/editor-auto-save')['canExecuteEditorAutoSave']>
     readonly categoryTheme: UnwrapRef<typeof import('./helper/command-registry/index')['categoryTheme']>
     readonly clamp: UnwrapRef<typeof import('./helper/math')['clamp']>
     readonly clearDirectoryItemsCache: UnwrapRef<typeof import('./services/directory-cache')['clearDirectoryItemsCache']>
@@ -726,11 +746,14 @@ declare module 'vue' {
     readonly computedInject: UnwrapRef<typeof import('@vueuse/core')['computedInject']>
     readonly computedWithControl: UnwrapRef<typeof import('@vueuse/core')['computedWithControl']>
     readonly configManager: UnwrapRef<typeof import('./services/config-manager')['configManager']>
+    readonly consumePendingDocumentWrite: UnwrapRef<typeof import('./services/document-write-intents')['consumePendingDocumentWrite']>
     readonly content: UnwrapRef<typeof import('./helper/command-registry/schema')['content']>
     readonly controlledComputed: UnwrapRef<typeof import('@vueuse/core')['controlledComputed']>
     readonly controlledRef: UnwrapRef<typeof import('@vueuse/core')['controlledRef']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
     readonly createAsyncQueue: UnwrapRef<typeof import('./helper/async-queue')['createAsyncQueue']>
+    readonly createEditorAutoSaveController: UnwrapRef<typeof import('./stores/editor-auto-save')['createEditorAutoSaveController']>
+    readonly createEditorPreviewSync: UnwrapRef<typeof import('./stores/editor-preview-sync')['createEditorPreviewSync']>
     readonly createEffectEditorProvider: UnwrapRef<typeof import('./composables/useEffectEditorProvider')['createEffectEditorProvider']>
     readonly createEffectPreviewEmitter: UnwrapRef<typeof import('./composables/useEffectEditorProvider')['createEffectPreviewEmitter']>
     readonly createEmptySentence: UnwrapRef<typeof import('./helper/webgal-script/sentence')['createEmptySentence']>
@@ -742,6 +765,7 @@ declare module 'vue' {
     readonly createReactiveFn: UnwrapRef<typeof import('@vueuse/core')['createReactiveFn']>
     readonly createRef: UnwrapRef<typeof import('@vueuse/core')['createRef']>
     readonly createReusableTemplate: UnwrapRef<typeof import('@vueuse/core')['createReusableTemplate']>
+    readonly createScenePresentationState: UnwrapRef<typeof import('./helper/scene-presentation')['createScenePresentationState']>
     readonly createSharedComposable: UnwrapRef<typeof import('@vueuse/core')['createSharedComposable']>
     readonly createStatementEntryFromSceneStatement: UnwrapRef<typeof import('./helper/webgal-script/sentence')['createStatementEntryFromSceneStatement']>
     readonly createStatementMissingFileLoader: UnwrapRef<typeof import('./helper/statement-editor/file-missing')['createStatementMissingFileLoader']>
@@ -798,6 +822,7 @@ declare module 'vue' {
     readonly getFactoryDefaultCommandText: UnwrapRef<typeof import('./helper/command-registry/index')['getFactoryDefaultCommandText']>
     readonly getParamValueFromArgs: UnwrapRef<typeof import('./helper/statement-editor/param-value')['getParamValueFromArgs']>
     readonly getPointerAngleDegrees: UnwrapRef<typeof import('./helper/math')['getPointerAngleDegrees']>
+    readonly getPreviousSpeakerAtIndex: UnwrapRef<typeof import('./utils/speaker')['getPreviousSpeakerAtIndex']>
     readonly getRegistryKnownKeys: UnwrapRef<typeof import('./helper/webgal-script/params')['getRegistryKnownKeys']>
     readonly getValueByPath: UnwrapRef<typeof import('./helper/effect-editor-config')['getValueByPath']>
     readonly getVersion: UnwrapRef<typeof import('./utils/metadata')['getVersion']>
@@ -824,6 +849,7 @@ declare module 'vue' {
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
     readonly isRgbColor: UnwrapRef<typeof import('./helper/color')['isRgbColor']>
     readonly isRgbaPayload: UnwrapRef<typeof import('./helper/color')['isRgbaPayload']>
+    readonly isSceneStatementCollapsed: UnwrapRef<typeof import('./helper/scene-presentation')['isSceneStatementCollapsed']>
     readonly isShallow: UnwrapRef<typeof import('vue')['isShallow']>
     readonly isStatementInteractiveTarget: UnwrapRef<typeof import('./composables/useStatementEditor')['isStatementInteractiveTarget']>
     readonly isTextualEditor: UnwrapRef<typeof import('./stores/editor')['isTextualEditor']>
@@ -903,6 +929,7 @@ declare module 'vue' {
     readonly readTypedCommandNodeExtraArgs: UnwrapRef<typeof import('./helper/webgal-script/update')['readTypedCommandNodeExtraArgs']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
     readonly rebuildStatementsWithStableIds: UnwrapRef<typeof import('./helper/webgal-script/sentence')['rebuildStatementsWithStableIds']>
+    readonly reconcileScenePresentationState: UnwrapRef<typeof import('./helper/scene-presentation')['reconcileScenePresentationState']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
     readonly refAutoReset: UnwrapRef<typeof import('@vueuse/core')['refAutoReset']>
     readonly refDebounced: UnwrapRef<typeof import('@vueuse/core')['refDebounced']>
@@ -911,6 +938,7 @@ declare module 'vue' {
     readonly refThrottled: UnwrapRef<typeof import('@vueuse/core')['refThrottled']>
     readonly refWithControl: UnwrapRef<typeof import('@vueuse/core')['refWithControl']>
     readonly registerDynamicOptions: UnwrapRef<typeof import('./helper/dynamic-options')['registerDynamicOptions']>
+    readonly registerPendingDocumentWrite: UnwrapRef<typeof import('./services/document-write-intents')['registerPendingDocumentWrite']>
     readonly removeArg: UnwrapRef<typeof import('./helper/webgal-script/arg-utils')['removeArg']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly resolveDynamicOptions: UnwrapRef<typeof import('./helper/dynamic-options')['resolveDynamicOptions']>
@@ -933,6 +961,7 @@ declare module 'vue' {
     readonly serializeTransform: UnwrapRef<typeof import('./helper/effect-editor-config')['serializeTransform']>
     readonly serverCmds: UnwrapRef<typeof import('./commands/server')['serverCmds']>
     readonly setOrRemoveArg: UnwrapRef<typeof import('./helper/webgal-script/arg-utils')['setOrRemoveArg']>
+    readonly setSceneStatementCollapsed: UnwrapRef<typeof import('./helper/scene-presentation')['setSceneStatementCollapsed']>
     readonly setValueByPath: UnwrapRef<typeof import('./helper/effect-editor-config')['setValueByPath']>
     readonly settleBatch: UnwrapRef<typeof import('./utils/batch')['settleBatch']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
