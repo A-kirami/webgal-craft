@@ -96,6 +96,7 @@ const fileLanguage = $computed(() => {
 
 // 文本内容（用于统计）
 const textContent = $computed(() => editableState?.projection === 'text' ? editableState.textContent : '')
+// 是否为可视化场景模式
 const isSceneMode = $computed(() => editableState !== undefined && isSceneVisualProjection(editableState))
 
 // 语句数（可视化场景模式）

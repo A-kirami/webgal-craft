@@ -120,14 +120,14 @@ export function useTauriDropZone(
     }
   }
 
-  onMounted(async () => {
+  tryOnMounted(async () => {
     const webview = getCurrentWebview()
     unlisten = await webview.onDragDropEvent((event) => {
       handleDragDropEvent(event.payload)
     })
   })
 
-  onUnmounted(() => unlisten?.())
+  tryOnUnmounted(() => unlisten?.())
 
   return {
     files,

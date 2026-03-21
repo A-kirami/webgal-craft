@@ -63,7 +63,7 @@ export function usePointerDrag<S>(callbacks: PointerDragCallbacks<S>): UsePointe
     return true
   }
 
-  onUnmounted(stop)
+  tryOnUnmounted(stop)
 
   return {
     get active() {

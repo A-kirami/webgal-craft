@@ -15,8 +15,6 @@ import type { TextEditorCursorSnapshot } from '~/helper/text-editor-history-snap
 import type { EditorHistoryMetadata, EditorHistorySnapshot } from '~/models/transaction'
 import type { HistoryApplyResult, TextProjectionState } from '~/stores/editor'
 
-export type { TextEditorCursorSnapshot } from '~/helper/text-editor-history-snapshot'
-
 export interface TextEditorContentChangeContext {
   cursorSnapshot?: TextEditorCursorSnapshot
   editorMetadata?: EditorHistoryMetadata

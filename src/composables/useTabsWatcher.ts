@@ -7,7 +7,7 @@ export function useTabsWatcher(onTabClosed: (path: string) => void) {
   const tabsStore = useTabsStore()
   let previousTabPaths = new Set<string>()
 
-  return watch(() => tabsStore.tabs.map(t => t.path), (currentPaths) => {
+  const stopWatchingTabs = watch(() => tabsStore.tabs.map(t => t.path), (currentPaths) => {
     const currentPathsSet = new Set(currentPaths)
 
     // 找出被关闭的标签页（在之前存在，现在不存在）
@@ -19,4 +19,8 @@ export function useTabsWatcher(onTabClosed: (path: string) => void) {
 
     previousTabPaths = currentPathsSet
   }, { immediate: true })
+
+  tryOnScopeDispose(stopWatchingTabs)
+
+  return stopWatchingTabs
 }

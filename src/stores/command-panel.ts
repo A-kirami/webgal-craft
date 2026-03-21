@@ -4,8 +4,6 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import { getFactoryDefaultCommandText } from '~/helper/command-registry'
 import { parseSentence } from '~/helper/webgal-script/parser'
 
-export type { CommandPanelCategory } from '~/helper/command-registry'
-
 export interface StatementGroup {
   id: string
   name: string

@@ -197,21 +197,6 @@ export const useEditorViewStateStore = defineStore(
       return deserializeViewState(serialized)
     }
 
-    /**
-     * 兼容旧调用点。
-     * 02 分支仍有 TextEditor 直接依赖原始接口名，这里保留稳定别名以避免额外 UI 改动混入。
-     */
-    function saveViewState(filePath: string, viewState: monaco.editor.ICodeEditorViewState | null) {
-      savePersistentViewState(filePath, viewState)
-    }
-
-    /**
-     * 优先消费会话恢复态，回退到持久态。
-     */
-    function getViewState(filePath: string): monaco.editor.ICodeEditorViewState | undefined {
-      return consumeSessionRecoveryViewState(filePath) ?? getPersistentViewState(filePath)
-    }
-
     function updatePrimaryCursorLine(filePath: string, lineNumber: number) {
       if (!currentProjectId || !Number.isFinite(lineNumber) || lineNumber < 1) {
         return
@@ -301,8 +286,6 @@ export const useEditorViewStateStore = defineStore(
     return $$({
       projectViewStatesMap,
       sessionRecoveryViewStatesMap,
-      saveViewState,
-      getViewState,
       savePersistentViewState,
       getPersistentViewState,
       saveSessionRecoveryViewState,

@@ -262,6 +262,7 @@ declare global {
   const registerDynamicOptions: typeof import('./helper/dynamic-options').registerDynamicOptions
   const registerPendingDocumentWrite: typeof import('./services/document-write-intents').registerPendingDocumentWrite
   const removeArg: typeof import('./helper/webgal-script/arg-utils').removeArg
+  const resolveAssetUrl: typeof import('./helper/asset-url').resolveAssetUrl
   const resolveComponent: typeof import('vue').resolveComponent
   const resolveDynamicOptions: typeof import('./helper/dynamic-options').resolveDynamicOptions
   const resolveFieldModelStringValue: typeof import('./helper/statement-editor/field-utils').resolveFieldModelStringValue
@@ -648,6 +649,9 @@ declare global {
   export type { Game, Engine, Status } from './database/model'
   import('./database/model')
   // @ts-ignore
+  export type { AssetUrlOptions } from './helper/asset-url'
+  import('./helper/asset-url')
+  // @ts-ignore
   export type { AsyncQueue } from './helper/async-queue'
   import('./helper/async-queue')
   // @ts-ignore
@@ -1021,6 +1025,7 @@ declare module 'vue' {
     readonly registerDynamicOptions: UnwrapRef<typeof import('./helper/dynamic-options')['registerDynamicOptions']>
     readonly registerPendingDocumentWrite: UnwrapRef<typeof import('./services/document-write-intents')['registerPendingDocumentWrite']>
     readonly removeArg: UnwrapRef<typeof import('./helper/webgal-script/arg-utils')['removeArg']>
+    readonly resolveAssetUrl: UnwrapRef<typeof import('./helper/asset-url')['resolveAssetUrl']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly resolveDynamicOptions: UnwrapRef<typeof import('./helper/dynamic-options')['resolveDynamicOptions']>
     readonly resolveFieldModelStringValue: UnwrapRef<typeof import('./helper/statement-editor/field-utils')['resolveFieldModelStringValue']>

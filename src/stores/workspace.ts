@@ -35,13 +35,26 @@ export const useWorkspaceStore = defineStore(
       const metadata = await gameManager.getGameMetadata(currentGame.path)
       currentGame = {
         ...currentGame,
-        ...metadata,
+        metadata: {
+          ...currentGame.metadata,
+          ...metadata,
+        },
       }
     }
 
-    const route = useRoute('/edit/[gameId]')
-    watch(() => route.params, async (params, oldParams) => {
-      if (oldParams?.gameId && currentGame) {
+    const route = useRoute()
+
+    function resolveRouteGameId(): string | undefined {
+      if (!('gameId' in route.params)) {
+        return undefined
+      }
+
+      const gameId = route.params.gameId
+      return Array.isArray(gameId) ? gameId[0] : gameId
+    }
+
+    watch(() => resolveRouteGameId(), async (gameId, oldGameId) => {
+      if (oldGameId && currentGame) {
         try {
           await gameManager.stopGamePreview(currentGame.path)
         } catch (error) {
@@ -51,8 +64,8 @@ export const useWorkspaceStore = defineStore(
         currentGameServeUrl = undefined
       }
 
-      if (params.gameId) {
-        const game = await db.games.get(params.gameId)
+      if (gameId) {
+        const game = await db.games.get(gameId)
         if (game) {
           currentGame = game
           try {

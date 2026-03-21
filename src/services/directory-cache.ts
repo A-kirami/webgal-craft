@@ -177,7 +177,7 @@ export async function readDirectoryItemsCached(
     if (useCache && cacheKey && inFlightReadMap.get(cacheKey) === loadTask) {
       setCachedDirectoryItems(cacheKey, items, cacheTtlMs)
     }
-    return items
+    return cloneDirectoryItems(items)
   } finally {
     if (cacheKey && inFlightReadMap.get(cacheKey) === loadTask) {
       inFlightReadMap.delete(cacheKey)

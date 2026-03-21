@@ -10,11 +10,6 @@ export interface StatementEntry {
   rawText: string
   parsed: ISentence | undefined
   parseError: boolean
-  /**
-   * 视觉编辑器仍会读取这类瞬时 UI 状态。
-   * 文档模型不持久化它，但 01 分支需要保留类型兼容层以独立通过检查。
-   */
-  collapsed: boolean
 }
 
 let nextId = 0
@@ -68,7 +63,6 @@ function createStatementEntry(
     rawText,
     parsed: undefined,
     parseError: false,
-    collapsed: false,
   })
 }
 

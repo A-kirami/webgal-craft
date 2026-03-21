@@ -9,7 +9,6 @@ const editorStore = useEditorStore()
 const isVisualMode = $computed(() => preferenceStore.editorMode === 'visual')
 const canToggleMode = $computed(() => editorStore.canToggleMode)
 
-// 辅助面板按钮：当前文件为场景文件时可切换
 const canToggleSidebar = $computed(() => editorStore.isCurrentSceneFile)
 
 function handleModeToggle() {
@@ -28,14 +27,13 @@ function handleSidebarToggle() {
 <template>
   <TooltipProvider>
     <div class="flex gap-0.5 items-center">
-      <!-- 编辑器模式切换 -->
       <Tooltip>
         <TooltipTrigger as-child>
           <button
             :class="toggleVariants({ size: 'sm' })"
             :data-state="isVisualMode ? 'on' : 'off'"
             :disabled="!canToggleMode"
-            class="disabled:opacity-40 disabled:pointer-events-none"
+            class="data-[state=on]:bg-transparent disabled:opacity-40 disabled:pointer-events-none"
             @click="handleModeToggle"
           >
             <Paintbrush v-if="isVisualMode" class="size-4" />
@@ -47,7 +45,6 @@ function handleSidebarToggle() {
         </TooltipContent>
       </Tooltip>
 
-      <!-- 辅助面板开关 -->
       <Tooltip>
         <TooltipTrigger as-child>
           <button

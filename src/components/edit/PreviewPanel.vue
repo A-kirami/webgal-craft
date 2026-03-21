@@ -2,50 +2,60 @@
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { Copy, ExternalLink, Link, RotateCw } from 'lucide-vue-next'
 
+const DEFAULT_ASPECT_RATIO = '16/9'
+
 const workspaceStore = useWorkspaceStore()
 
-const previewUrl = $computed(() => workspaceStore.currentGameServeUrl || '')
+const previewUrl = $computed(() => workspaceStore.currentGameServeUrl ?? '')
 const hasPreviewUrl = $computed(() => !!workspaceStore.currentGameServeUrl)
 
 const { t } = useI18n()
 const { copy, copied } = useClipboard({ source: previewUrl })
+const previewTitle = $computed(() => t('edit.previewPanel.previewTitle', { name: workspaceStore.currentGame?.metadata.name }))
 
-let aspectRatio = $ref('16/9')
+let aspectRatio = $ref(DEFAULT_ASPECT_RATIO)
 
-async function updateAspectRatio() {
-  if (!workspaceStore.currentGame) {
+function applyAspectRatio(stageWidth: number, stageHeight: number): void {
+  aspectRatio = `${stageWidth}/${stageHeight}`
+  logger.debug(`预览面板分辨率: ${stageWidth}x${stageHeight}`)
+}
+
+async function updateAspectRatio(): Promise<void> {
+  const currentGame = workspaceStore.currentGame
+  if (!currentGame) {
     return
   }
 
   try {
-    const gameConfig = await gameCmds.getGameConfig(workspaceStore.currentGame.path)
+    const gameConfig = await gameCmds.getGameConfig(currentGame.path)
     const stageWidth = Number(gameConfig.stageWidth) || 2560
     const stageHeight = Number(gameConfig.stageHeight) || 1440
-    aspectRatio = `${stageWidth}/${stageHeight}`
-    logger.debug(`预览面板分辨率: ${stageWidth}x${stageHeight}`)
+    applyAspectRatio(stageWidth, stageHeight)
   } catch (error) {
     logger.warn(`无法读取游戏配置，使用默认宽高比: ${error}`)
-    aspectRatio = '16/9'
+    aspectRatio = DEFAULT_ASPECT_RATIO
   }
 }
 
-function copyUrl() {
-  if (hasPreviewUrl) {
-    copy()
-    if (copied) {
-      notify.success(t('edit.previewPanel.copyUrlSuccess'))
-    }
+function copyUrl(): void {
+  if (!hasPreviewUrl) {
+    return
+  }
+
+  copy()
+  if (copied) {
+    notify.success(t('edit.previewPanel.copyUrlSuccess'))
   }
 }
 
 let refreshKey = $ref(0)
 
-function refreshIframe() {
+function refreshIframe(): void {
   refreshKey++
-  updateAspectRatio()
+  void updateAspectRatio()
 }
 
-async function openPreviewInBrowser() {
+async function openPreviewInBrowser(): Promise<void> {
   if (!hasPreviewUrl) {
     return
   }
@@ -59,7 +69,9 @@ async function openPreviewInBrowser() {
 
 watch(
   () => workspaceStore.currentGame,
-  updateAspectRatio,
+  () => {
+    void updateAspectRatio()
+  },
   { immediate: true },
 )
 </script>
@@ -114,7 +126,7 @@ watch(
         <iframe
           :key="refreshKey"
           :src="previewUrl"
-          :title="$t('edit.previewPanel.previewTitle', { name: workspaceStore.currentGame?.metadata.name })"
+          :title="previewTitle"
           class="size-full"
         />
       </div>
