@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-
 const props = defineProps<{
   entry: StatementEntry
   /** 上一条 say 语句的说话人（用于 concat 占位符） */
   previousSpeaker?: string
+  /** 更新目标定位，默认使用 entry.id 作为语句 id */
+  updateTarget?: StatementUpdateTarget
 }>()
 
 provide(statementEditorSurfaceKey, 'inline')
 
 const emit = defineEmits<{
-  update: [payload: { id: number, rawText: string, parsed: ISentence }]
+  update: [payload: StatementUpdatePayload]
   openEffectEditor: []
 }>()
 
@@ -26,8 +26,9 @@ const {
   say,
   view,
   paramRenderer,
-} = useStatementEditorView({
+} = useStatementEditor({
   entry: () => props.entry,
+  updateTarget: () => props.updateTarget,
   previousSpeaker: () => props.previousSpeaker,
   emitUpdate: payload => emit('update', payload),
   surface: 'inline',

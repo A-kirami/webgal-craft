@@ -676,6 +676,7 @@ edit:
       universalSoftIn: フェードイン
       universalSoftOff: フェードアウト
     effectEditor: エフェクトエディター
+    statementList: ステートメントリスト
     noSelection: 編集するステートメントを選択してください
     noResults: 検索結果がありません
   welcome:

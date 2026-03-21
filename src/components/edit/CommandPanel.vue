@@ -13,7 +13,6 @@ import { useCommandPanelStore } from '~/stores/command-panel'
 
 import type { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import type { ScrollArea } from '~/components/ui/scroll-area'
-import type { CommandPanelCategory, StatementGroup } from '~/stores/command-panel'
 
 const emit = defineEmits<{
   insertCommand: [type: commandType]
@@ -22,40 +21,53 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const commandPanelStore = useCommandPanelStore()
+const activeCategory = $computed(() => commandPanelStore.activeCategory)
 
-const isGroupsView = $computed(() => commandPanelStore.activeCategory === 'groups')
+const isGroupsView = $computed(() => activeCategory === 'groups')
 const visibleCommands = $computed(() => {
-  if (commandPanelStore.activeCategory === 'all' || commandPanelStore.activeCategory === 'groups') {
+  if (activeCategory === 'all' || activeCategory === 'groups') {
     return commandEntries
   }
-  return commandEntries.filter(entry => entry.category === commandPanelStore.activeCategory)
+  return commandEntries.filter(entry => entry.category === activeCategory)
 })
 const modalStore = useModalStore()
 
-function openDefaultsModal(type: commandType) {
+function openDefaultsModal(type: commandType): void {
   modalStore.open('CommandDefaultsModal', { type })
 }
 
-function openGroupModal(group?: StatementGroup) {
+function openGroupModal(group?: StatementGroup): void {
   modalStore.open('StatementGroupModal', { group })
 }
 
-function deleteGroup(groupId: string) {
+function deleteGroup(groupId: string): void {
   commandPanelStore.deleteGroup(groupId)
-  pendingDeleteGroupId = undefined
+  clearPendingDeleteGroup()
 }
 
 let pendingDeleteGroupId = $ref<string | undefined>()
 
-function handleCategoryClick(category: CommandPanelCategory) {
+function clearPendingDeleteGroup(): void {
+  pendingDeleteGroupId = undefined
+}
+
+function handleCategoryClick(category: CommandPanelCategory): void {
   commandPanelStore.setActiveCategory(category)
 }
 
-const CommandAreaRef = $(useTemplateRef('CommandAreaRef'))
+function handleDeletePopoverOpenChange(groupId: string, open: boolean): void {
+  pendingDeleteGroupId = open ? groupId : undefined
+}
 
-function resetScrollTop() {
+function requestDeleteGroup(groupId: string): void {
+  pendingDeleteGroupId = groupId
+}
+
+const commandAreaRef = $(useTemplateRef('commandAreaRef'))
+
+function resetScrollTop(): void {
   nextTick(() => {
-    const el = CommandAreaRef?.viewport?.viewportElement as HTMLElement | undefined
+    const el = commandAreaRef?.viewport?.viewportElement as HTMLElement | undefined
     if (el) {
       el.scrollTop = 0
     }
@@ -72,7 +84,7 @@ interface GroupTagEntry {
   count: number
 }
 
-function getGroupTagEntries(group: StatementGroup): GroupTagEntry[] {
+function buildGroupTagEntries(group: StatementGroup): GroupTagEntry[] {
   const countMap = new Map<string, { label: string, count: number }>()
   for (const rawText of group.rawTexts) {
     const sentence = parseSentence(rawText)
@@ -94,25 +106,26 @@ function getGroupTagEntries(group: StatementGroup): GroupTagEntry[] {
 const groupTagEntriesMap = $computed(() => {
   const map = new Map<string, GroupTagEntry[]>()
   for (const group of commandPanelStore.groups) {
-    map.set(group.id, getGroupTagEntries(group))
+    map.set(group.id, buildGroupTagEntries(group))
   }
   return map
 })
 
-const CommandTabsRef = $(useTemplateRef('CommandTabsRef'))
-
+function getGroupTagEntries(groupId: string): GroupTagEntry[] {
+  return groupTagEntriesMap.get(groupId) ?? []
+}
 </script>
 
 <template>
   <div class="flex flex-col h-full min-h-0">
     <div class="px-2 py-1 border-b flex gap-3 items-center">
-      <ScrollArea ref="CommandTabsRef" @wheel="handleWheelToHorizontalScroll">
+      <ScrollArea @wheel="handleWheelToHorizontalScroll">
         <div class="flex flex-1 gap-1">
           <Button
             variant="ghost"
             size="sm"
             class="px-3 rounded-sm shrink-0 h-6"
-            :class="commandPanelStore.activeCategory === 'all' && 'bg-accent text-accent-foreground'"
+            :class="activeCategory === 'all' && 'bg-accent text-accent-foreground'"
             @click="handleCategoryClick('all')"
           >
             {{ getCategoryLabel('all', t) }}
@@ -123,7 +136,7 @@ const CommandTabsRef = $(useTemplateRef('CommandTabsRef'))
             variant="ghost"
             size="sm"
             class="px-3 rounded-sm shrink-0 h-6"
-            :class="commandPanelStore.activeCategory === category && `${categoryTheme[category].bg} ${categoryTheme[category].text} ${categoryTheme[category].hoverBg} ${categoryTheme[category].hoverText}`"
+            :class="activeCategory === category && `${categoryTheme[category].bg} ${categoryTheme[category].text} ${categoryTheme[category].hoverBg} ${categoryTheme[category].hoverText}`"
             @click="handleCategoryClick(category)"
           >
             {{ getCategoryLabel(category, t) }}
@@ -138,7 +151,7 @@ const CommandTabsRef = $(useTemplateRef('CommandTabsRef'))
         variant="ghost"
         size="sm"
         class="px-3 py-1 rounded-sm shrink-0 h-6"
-        :class="commandPanelStore.activeCategory === 'groups' && 'bg-violet-50 dark:bg-violet-950 text-violet-500 hover:bg-violet-100 dark:hover:bg-violet-900 hover:text-violet-600 dark:hover:text-violet-400'"
+        :class="activeCategory === 'groups' && 'bg-violet-50 dark:bg-violet-950 text-violet-500 hover:bg-violet-100 dark:hover:bg-violet-900 hover:text-violet-600 dark:hover:text-violet-400'"
         @click="handleCategoryClick('groups')"
       >
         {{ getCategoryLabel('groups', t) }}
@@ -146,7 +159,7 @@ const CommandTabsRef = $(useTemplateRef('CommandTabsRef'))
     </div>
 
     <TooltipProvider :skip-delay-duration="0">
-      <ScrollArea ref="CommandAreaRef" class="flex-1 min-h-0">
+      <ScrollArea ref="commandAreaRef" class="flex-1 min-h-0">
         <div
           class="p-2 gap-1.5 grid"
           style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));"
@@ -193,10 +206,10 @@ const CommandTabsRef = $(useTemplateRef('CommandTabsRef'))
                   <div>
                     {{ $t('edit.visualEditor.commandPanel.groupCount', { count: group.rawTexts.length }) }}
                   </div>
-                  <template v-if="(groupTagEntriesMap.get(group.id) ?? []).length > 0">
+                  <template v-if="getGroupTagEntries(group.id).length > 0">
                     <Separator />
                     <div
-                      v-for="entry in groupTagEntriesMap.get(group.id)"
+                      v-for="entry in getGroupTagEntries(group.id)"
                       :key="entry.label"
                       class="flex gap-4 items-center justify-between"
                     >
@@ -216,14 +229,14 @@ const CommandTabsRef = $(useTemplateRef('CommandTabsRef'))
                 >
                   <div class="i-lucide-pencil size-3" />
                 </Button>
-                <Popover :open="pendingDeleteGroupId === group.id" @update:open="(v: boolean) => { if (!v) pendingDeleteGroupId = undefined }">
+                <Popover :open="pendingDeleteGroupId === group.id" @update:open="value => handleDeletePopoverOpenChange(group.id, value)">
                   <PopoverTrigger as-child>
                     <Button
                       variant="ghost"
                       size="sm"
                       class="p-0 opacity-60 size-6 hover:text-destructive hover:opacity-100"
                       :title="$t('common.delete')"
-                      @click.stop="pendingDeleteGroupId = group.id"
+                      @click.stop="requestDeleteGroup(group.id)"
                     >
                       <div class="i-lucide-trash-2 size-3" />
                     </Button>
@@ -233,7 +246,7 @@ const CommandTabsRef = $(useTemplateRef('CommandTabsRef'))
                       {{ $t('edit.visualEditor.commandPanel.confirmDeleteGroup') }}
                     </p>
                     <div class="flex gap-2 justify-end">
-                      <Button variant="outline" size="sm" class="h-6" @click="pendingDeleteGroupId = undefined">
+                      <Button variant="outline" size="sm" class="h-6" @click="clearPendingDeleteGroup">
                         {{ $t('common.cancel') }}
                       </Button>
                       <Button variant="destructive" size="sm" class="h-6" @click="deleteGroup(group.id)">

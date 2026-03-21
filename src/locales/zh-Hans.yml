@@ -676,6 +676,7 @@ edit:
       universalSoftIn: 通用透明度淡入
       universalSoftOff: 通用透明度淡出
     effectEditor: 效果编辑器
+    statementList: 语句列表
     noSelection: 请选择一条语句进行编辑
     noResults: 未找到结果
   welcome:

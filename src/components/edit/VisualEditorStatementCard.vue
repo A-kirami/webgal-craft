@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-
 const props = defineProps<{
   entry: StatementEntry
   index: number
@@ -11,7 +9,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  update: [payload: { id: number, rawText: string, parsed: ISentence }]
+  update: [payload: StatementUpdatePayload]
   select: [id: number]
   delete: [id: number]
   playTo: [id: number]
@@ -73,7 +71,7 @@ function handleCardDblClick() {
 }
 
 const { openEffectEditor } = useStatementEffectEditorBridge({
-  entryId: () => props.entry.id,
+  updateTarget: () => createStatementIdTarget(props.entry.id),
   rawText: () => props.entry.rawText,
   parsed: () => parsed.value,
   emitUpdate: payload => emit('update', payload),
@@ -95,6 +93,7 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
     <div
       role="option"
       :aria-selected="selected"
+      tabindex="-1"
       class="group px-3 py-1 border border-border rounded-lg bg-card transition-[border-color,background-color,box-shadow] duration-150 relative hover:border-primary/25 hover:shadow-sm"
       :class="{
         'border-primary/45 ring-1 ring-primary/20 shadow-sm': selected,
@@ -203,6 +202,7 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
           <StatementEditorInline
             :entry="entry"
             :previous-speaker="previousSpeaker"
+            :update-target="createStatementIdTarget(entry.id)"
             ::show-inline-comment="showInlineComment"
             @update="emit('update', $event)"
             @open-effect-editor="openEffectEditor"

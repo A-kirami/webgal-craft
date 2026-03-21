@@ -10,15 +10,13 @@ const { t, locale } = useI18n()
 const editorStore = useEditorStore()
 
 const currentState = $computed(() => editorStore.currentState)
-
 const editableState = $computed(() =>
   currentState && isEditableEditor(currentState) ? currentState : undefined,
 )
-const previewState = $computed(() =>
-  currentState && !isEditableEditor(currentState) && currentState.view === 'preview'
-    ? currentState
-    : undefined,
-)
+const previewState = $computed(() => {
+  const state = currentState
+  return state && !isEditableEditor(state) && state.view === 'preview' ? state : undefined
+})
 
 const isImagePreview = $computed(() =>
   previewState?.mimeType.startsWith('image/') ?? false,
@@ -98,8 +96,6 @@ const fileLanguage = $computed(() => {
 
 // 文本内容（用于统计）
 const textContent = $computed(() => editableState?.projection === 'text' ? editableState.textContent : '')
-
-// 是否为可视化场景模式
 const isSceneMode = $computed(() => editableState !== undefined && isSceneVisualProjection(editableState))
 
 // 语句数（可视化场景模式）

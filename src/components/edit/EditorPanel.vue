@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { ResizablePanel } from '~/components/ui/resizable'
 
+import type { commandType } from 'webgal-parser/src/interface/sceneInterface'
+
 const editorStore = useEditorStore()
 const preferenceStore = usePreferenceStore()
 const editSettingsStore = useEditSettingsStore()
+const { t } = useI18n()
 
 const effectEditorProvider = useEffectEditorProvider()
 const tabsStore = useTabsStore()
 
 const commandPanelRef = useTemplateRef<InstanceType<typeof ResizablePanel>>('commandPanel')
+const sidebarHistoryScopeRef = $(useTemplateRef<HTMLDivElement>('sidebarHistoryScope'))
 
 // 综合 showSidebar 偏好和当前文件是否支持辅助面板
 // get/set 故意不对称：setter 只写偏好，getter 额外受 isCurrentSceneFile 约束，
@@ -23,24 +27,31 @@ const effectiveShowSidebar = computed({
 // 辅助面板单实例：各编辑器通过 inject 注册数据源，EditorPanel 统一渲染
 const sidebarPanel = useSidebarPanelProvider()
 const binding = $computed(() => sidebarPanel.activeBinding.value)
-const selectedEntry = $computed(() => binding?.getEntry?.() ?? binding?.entry?.value)
-const selectedIndex = $computed(() => binding?.getIndex?.() ?? binding?.index?.value)
-const selectedPreviousSpeaker = $computed(() => binding?.getPreviousSpeaker?.() ?? binding?.previousSpeaker?.value ?? '')
+const selectedStatement = $computed(() => binding?.getEntry())
+const selectedStatementUpdateTarget = $computed(() => binding?.getUpdateTarget?.())
+const selectedStatementIndex = $computed(() => binding?.getIndex?.())
+const selectedStatementPreviousSpeaker = $computed(() => binding?.getPreviousSpeaker?.() ?? '')
 const enableFocusStatement = $computed(() => binding?.enableFocusStatement ?? false)
 
 // 命令面板桥接：子编辑器注册插入处理器，CommandPanel 通过 bridge 调用
 const commandPanelBridge = useCommandPanelBridgeProvider()
-const commandHandler = $computed(() => commandPanelBridge.activeHandler.value)
+const commandPanelBinding = $computed(() => commandPanelBridge.activeBinding.value)
+const isCurrentSceneFile = $computed(() => editorStore.isCurrentSceneFile)
 
 const currentProjection = $computed(() => {
-  const currentState = editorStore.currentState
-  return currentState && isEditableEditor(currentState) ? currentState.projection : undefined
+  const state = editorStore.currentState
+  return state && isEditableEditor(state) ? state.projection : undefined
 })
 const isTextMode = $computed(() => currentProjection === 'text')
+const sidebarEmptyText = $computed(() => (
+  isTextMode
+    ? t('edit.textEditor.formPanel.noStatement')
+    : t('edit.visualEditor.noSelection')
+))
 
 const isCommandPanelCollapsed = $computed(() => commandPanelRef.value?.isCollapsed ?? true)
 
-function toggleCommandPanel() {
+function toggleCommandPanel(): void {
   const panel = commandPanelRef.value
   if (!panel) {
     return
@@ -52,23 +63,48 @@ function toggleCommandPanel() {
   }
 }
 
+function isSidebarHistoryShortcutTarget(event: KeyboardEvent): boolean {
+  const scope = sidebarHistoryScopeRef
+  if (!scope) {
+    return false
+  }
+
+  const target = event.target instanceof Node ? event.target : document.activeElement
+  return target instanceof Node && scope.contains(target)
+}
+
+useEventListener('keydown', (event: KeyboardEvent) => {
+  const action = resolveHistoryShortcutAction(event)
+  if (!action || !isSidebarHistoryShortcutTarget(event)) {
+    return
+  }
+
+  const handleHistory = action === 'redo' ? binding?.handleRedo : binding?.handleUndo
+  if (!handleHistory) {
+    return
+  }
+
+  event.preventDefault()
+  handleHistory()
+})
+
 const editorPanelRef = $(useTemplateRef('editorPanel'))
 const effectEditorSession = $computed(() => effectEditorProvider.session)
 
-function focusTextEditorAfterEffectEditorClose() {
+function focusTextEditorAfterEffectEditorClose(): void {
   if (currentProjection === 'text') {
     tabsStore.shouldFocusEditor = true
   }
 }
 
-async function closeEffectEditor() {
+async function closeEffectEditor(): Promise<void> {
   const closed = await effectEditorProvider.close()
   if (closed) {
     focusTextEditorAfterEffectEditorClose()
   }
 }
 
-async function handleEffectEditorSheetOpenChange(nextOpen: boolean) {
+async function handleEffectEditorSheetOpenChange(nextOpen: boolean): Promise<void> {
   if (nextOpen) {
     return
   }
@@ -76,14 +112,22 @@ async function handleEffectEditorSheetOpenChange(nextOpen: boolean) {
   await closeEffectEditor()
 }
 
-function handleEffectTransformUpdate(payload: { value: Transform, deferAutoApply?: boolean }) {
+function handleEffectTransformUpdate(payload: { value: Transform, deferAutoApply?: boolean }): void {
   effectEditorProvider.updateDraft(
     { transform: payload.value },
     { deferAutoApply: payload.deferAutoApply },
   )
 }
 
-async function handleEffectApply() {
+function handleInsertCommand(type: commandType): void {
+  commandPanelBinding?.insertCommand(type)
+}
+
+function handleInsertGroup(group: StatementGroup): void {
+  commandPanelBinding?.insertGroup(group)
+}
+
+async function handleEffectApply(): Promise<void> {
   if (!effectEditorProvider.canApply) {
     return
   }
@@ -94,20 +138,12 @@ async function handleEffectApply() {
   }
 }
 
-function handleEffectReset() {
+function handleEffectReset(): void {
   if (!effectEditorProvider.canReset) {
     return
   }
 
   effectEditorProvider.resetToInitialDraft()
-}
-
-function handleStatementPanelUpdate(payload: StatementUpdatePayload) {
-  binding?.onUpdate(payload)
-}
-
-function handleStatementFocus() {
-  binding?.onFocusStatement?.()
 }
 
 defineExpose({ toggleCommandPanel })
@@ -123,7 +159,7 @@ defineExpose({ toggleCommandPanel })
       <EditorSidebarLayout ::show="effectiveShowSidebar" class="h-full">
         <div class="flex flex-col h-full relative overflow-hidden">
           <!-- 场景文件：编辑器 + 命令面板纵向分割 -->
-          <ResizablePanelGroup v-if="editorStore.isCurrentSceneFile" auto-save-id="editor-vertical" direction="vertical" class="flex-1 min-h-0">
+          <ResizablePanelGroup v-if="isCurrentSceneFile" auto-save-id="editor-vertical" direction="vertical" class="flex-1 min-h-0">
             <ResizablePanel size-unit="px" :min-size="200">
               <FileEditor />
             </ResizablePanel>
@@ -136,8 +172,8 @@ defineExpose({ toggleCommandPanel })
               :min-size="80"
             >
               <CommandPanel
-                @insert-command="type => commandHandler?.insertCommand(type)"
-                @insert-group="group => commandHandler?.insertGroup(group)"
+                @insert-command="handleInsertCommand"
+                @insert-group="handleInsertGroup"
               />
             </ResizablePanel>
           </ResizablePanelGroup>
@@ -145,7 +181,7 @@ defineExpose({ toggleCommandPanel })
           <FileEditor v-else class="flex-1 min-h-0" />
           <!-- 命令面板折叠态：底部居中小标签 -->
           <button
-            v-if="editorStore.isCurrentSceneFile && isCommandPanelCollapsed"
+            v-if="isCurrentSceneFile && isCommandPanelCollapsed"
             class="text-xs text-muted-foreground px-3 py-0.5 border border-b-0 rounded-t bg-muted flex gap-1 transition-colors items-center bottom-0 left-1/2 justify-center absolute hover:text-foreground hover:bg-accent -translate-x-1/2"
             @click="toggleCommandPanel"
           >
@@ -154,18 +190,20 @@ defineExpose({ toggleCommandPanel })
           </button>
         </div>
         <template #sidebar>
-          <StatementEditorPanel
-            v-if="selectedEntry"
-            :key="selectedEntry.id"
-            :entry="selectedEntry"
-            :index="selectedIndex"
-            :previous-speaker="selectedPreviousSpeaker"
-            :enable-focus-statement="enableFocusStatement"
-            @update="handleStatementPanelUpdate"
-            @focus-statement="handleStatementFocus"
-          />
-          <div v-else-if="binding" class="text-sm text-muted-foreground px-4 flex h-full items-center justify-center">
-            {{ isTextMode ? $t('edit.textEditor.formPanel.noStatement') : $t('edit.visualEditor.noSelection') }}
+          <div ref="sidebarHistoryScope" class="h-full">
+            <StatementEditorPanel
+              v-if="binding && selectedStatement"
+              :entry="selectedStatement"
+              :index="selectedStatementIndex"
+              :previous-speaker="selectedStatementPreviousSpeaker"
+              :update-target="selectedStatementUpdateTarget"
+              :enable-focus-statement="enableFocusStatement"
+              @update="binding.onUpdate"
+              @focus-statement="binding.onFocusStatement?.()"
+            />
+            <div v-else-if="binding" class="text-sm text-muted-foreground px-4 flex h-full items-center justify-center">
+              {{ sidebarEmptyText }}
+            </div>
           </div>
         </template>
       </EditorSidebarLayout>

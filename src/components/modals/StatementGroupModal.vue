@@ -1,13 +1,6 @@
 <script setup lang="ts">
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { commandEntries, commandPanelCategories, getCategoryLabel, getFactoryDefaultCommandText } from '~/helper/command-registry'
-import { resolveI18n } from '~/helper/command-registry/schema'
-import { useCommandPanelStore } from '~/stores/command-panel'
-
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-import type { StatementGroup } from '~/stores/command-panel'
-
 interface Props {
   group?: StatementGroup
 }
@@ -22,16 +15,18 @@ const effectDialog = useEffectEditorDialog()
 
 let draftName = $ref('')
 let draftEntries = $ref<StatementEntry[]>([])
+let collapsedEntryIds = $ref<Partial<Record<number, true>>>({})
 let initialName = $ref('')
 let initialRawTexts = $ref<string[]>([])
 
 const isEditing = $computed(() => !!props.group)
 const modalStore = useModalStore()
+const currentRawTexts = $computed(() => draftEntries.map(entry => entry.rawText))
+const trimmedDraftName = $computed(() => draftName.trim())
 const isDirty = $computed(() => {
   if (draftName !== initialName) {
     return true
   }
-  const currentRawTexts = draftEntries.map(e => e.rawText)
   if (currentRawTexts.length !== initialRawTexts.length) {
     return true
   }
@@ -42,26 +37,60 @@ const groupedCommandEntries = commandPanelCategories.map(category => ({
   entries: commandEntries.filter(entry => entry.category === category),
 }))
 
-const previousSpeakers = $computed(() => {
-  const result: string[] = []
-  let lastSpeaker = ''
-  for (const entry of draftEntries) {
-    result.push(lastSpeaker)
-    const change = extractSpeakerChange(entry.rawText)
-    if (change !== undefined) {
-      lastSpeaker = change
+const previousSpeakers = $computed(() => buildPreviousSpeakers(draftEntries))
+
+const canSave = $computed(() => trimmedDraftName.length > 0 && draftEntries.length > 0)
+
+function reconcileCollapsedEntries(): void {
+  const validIds = new Set(draftEntries.map(entry => entry.id))
+  const nextCollapsedEntryIds: Partial<Record<number, true>> = {}
+  let changed = false
+
+  for (const rawEntryId of Object.keys(collapsedEntryIds)) {
+    const entryId = Number(rawEntryId)
+    if (validIds.has(entryId)) {
+      nextCollapsedEntryIds[entryId] = true
+      continue
     }
+
+    changed = true
   }
-  return result
-})
 
-const canSave = $computed(() => draftName.trim().length > 0 && draftEntries.length > 0)
+  if (changed) {
+    collapsedEntryIds = nextCollapsedEntryIds
+  }
+}
 
-function resetDraft() {
+function closeDialog(): void {
+  open.value = false
+}
+
+function findDraftEntryIndex(id: number): number {
+  return draftEntries.findIndex(entry => entry.id === id)
+}
+
+function replaceDraftEntry(index: number, entry: StatementEntry): void {
+  const nextEntries = [...draftEntries]
+  nextEntries.splice(index, 1, markRaw(entry))
+  draftEntries = nextEntries
+}
+
+function removeDraftEntry(index: number): void {
+  const nextEntries = [...draftEntries]
+  nextEntries.splice(index, 1)
+  draftEntries = nextEntries
+}
+
+function isEntryCollapsed(entryId: number): boolean {
+  return collapsedEntryIds[entryId] === true
+}
+
+function resetDraft(): void {
   draftName = props.group?.name ?? ''
   draftEntries = (props.group?.rawTexts ?? [])
     .map(rawText => buildSingleStatement(rawText))
     .filter((entry): entry is StatementEntry => entry !== undefined)
+  collapsedEntryIds = {}
   initialName = draftName
   initialRawTexts = draftEntries.map(e => e.rawText)
 }
@@ -77,7 +106,24 @@ watch(
   { immediate: true },
 )
 
-function handleAppendCommand(type: commandType) {
+watch(
+  () => draftEntries.map(entry => entry.id),
+  reconcileCollapsedEntries,
+)
+
+function handleDialogOpenChange(nextOpen: boolean): void {
+  if (!nextOpen) {
+    requestClose()
+  }
+}
+
+function handleDialogOpenAutoFocus(event: Event): void {
+  if (isEditing) {
+    event.preventDefault()
+  }
+}
+
+function handleAppendCommand(type: commandType): void {
   const nextEntry = buildSingleStatement(commandPanelStore.getInsertText(type))
   if (!nextEntry) {
     return
@@ -85,33 +131,49 @@ function handleAppendCommand(type: commandType) {
   draftEntries = [...draftEntries, nextEntry]
 }
 
-function handleEntryUpdate(payload: { id: number, rawText: string, parsed: ISentence }) {
-  const index = draftEntries.findIndex(entry => entry.id === payload.id)
+function handleEntryUpdate(payload: StatementUpdatePayload): void {
+  const target = payload.target
+  if (target.kind !== 'statement') {
+    return
+  }
+
+  const index = findDraftEntryIndex(target.statementId)
   if (index === -1) {
     return
   }
 
-  const nextEntries = [...draftEntries]
-  nextEntries.splice(index, 1, markRaw({
-    ...nextEntries[index],
+  replaceDraftEntry(index, {
+    ...draftEntries[index]!,
     rawText: payload.rawText,
     parsed: payload.parsed,
     parseError: false,
-  }))
-  draftEntries = nextEntries
+  })
 }
 
-function handleCollapsedUpdate(index: number, collapsed: boolean) {
+function handleCollapsedUpdate(index: number, collapsed: boolean): void {
   const entry = draftEntries[index]
-  if (!entry || entry.collapsed === collapsed) {
+  if (!entry) {
     return
   }
-  const nextEntries = [...draftEntries]
-  nextEntries.splice(index, 1, markRaw({ ...entry, collapsed }))
-  draftEntries = nextEntries
+
+  if (collapsed) {
+    collapsedEntryIds = {
+      ...collapsedEntryIds,
+      [entry.id]: true,
+    }
+    return
+  }
+
+  if (!isEntryCollapsed(entry.id)) {
+    return
+  }
+
+  const nextCollapsedEntryIds = { ...collapsedEntryIds }
+  delete nextCollapsedEntryIds[entry.id]
+  collapsedEntryIds = nextCollapsedEntryIds
 }
 
-function moveEntry(index: number, direction: -1 | 1) {
+function moveEntry(index: number, direction: -1 | 1): void {
   const targetIndex = index + direction
   if (!draftEntries[index] || !draftEntries[targetIndex]) {
     return
@@ -122,14 +184,13 @@ function moveEntry(index: number, direction: -1 | 1) {
   draftEntries = nextEntries
 }
 
-function deleteEntry(id: number) {
-  const index = draftEntries.findIndex(entry => entry.id === id)
+function deleteEntry(id: number): void {
+  const index = findDraftEntryIndex(id)
   if (index === -1) {
     return
   }
-  const nextEntries = [...draftEntries]
-  nextEntries.splice(index, 1)
-  draftEntries = nextEntries
+
+  removeDraftEntry(index)
 }
 
 function isEntryAtFactory(entry: StatementEntry): boolean {
@@ -139,8 +200,8 @@ function isEntryAtFactory(entry: StatementEntry): boolean {
   return entry.rawText === getFactoryDefaultCommandText(entry.parsed.command)
 }
 
-function resetEntry(id: number) {
-  const index = draftEntries.findIndex(entry => entry.id === id)
+function resetEntry(id: number): void {
+  const index = findDraftEntryIndex(id)
   if (index === -1) {
     return
   }
@@ -153,46 +214,42 @@ function resetEntry(id: number) {
   if (!rebuilt) {
     return
   }
-  const nextEntries = [...draftEntries]
-  nextEntries.splice(index, 1, markRaw({ ...rebuilt, id: entry.id }))
-  draftEntries = nextEntries
+
+  replaceDraftEntry(index, { ...rebuilt, id: entry.id })
   notify.success(t('edit.visualEditor.commandPanel.resetSuccess'))
 }
 
-function handleSaveGroup() {
+function handleSaveGroup(): void {
   if (!canSave) {
     return
   }
 
-  const finalName = draftName.trim()
-
   commandPanelStore.saveGroup({
     id: props.group?.id,
     createdAt: props.group?.createdAt,
-    name: finalName,
-    rawTexts: draftEntries.map(entry => entry.rawText),
+    name: trimmedDraftName,
+    rawTexts: currentRawTexts,
   })
-  open.value = false
+  closeDialog()
 }
 
-function requestClose() {
+function requestClose(): void {
   if (!isDirty) {
-    open.value = false
+    closeDialog()
     return
   }
+
   modalStore.open('SaveChangesModal', {
     title: t('modals.saveChanges.title', { name: draftName || t('edit.visualEditor.commandPanel.createGroup') }),
     onSave: handleSaveGroup,
-    onDontSave: () => {
-      open.value = false
-    },
+    onDontSave: closeDialog,
   })
 }
 </script>
 
 <template>
-  <Dialog :open="open" @update:open="val => { if (!val) requestClose() }">
-    <DialogScrollContent class="max-w-4xl" @open-auto-focus="e => { if (isEditing) e.preventDefault() }">
+  <Dialog :open="open" @update:open="handleDialogOpenChange">
+    <DialogScrollContent class="max-w-4xl" @open-auto-focus="handleDialogOpenAutoFocus">
       <div class="flex flex-col gap-4 h-[70vh] min-h-120">
         <DialogHeader>
           <DialogTitle class="flex gap-2 items-center">
@@ -236,7 +293,7 @@ function requestClose() {
               <VisualEditorStatementCard
                 v-for="(entry, index) in draftEntries"
                 :key="entry.id"
-                :collapsed="entry.collapsed"
+                :collapsed="isEntryCollapsed(entry.id)"
                 :entry="entry"
                 :index="index"
                 :previous-speaker="previousSpeakers[index]"

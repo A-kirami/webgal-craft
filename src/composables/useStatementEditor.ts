@@ -17,11 +17,18 @@ export interface TextLineTarget {
 export type StatementUpdateTarget = StatementIdTarget | TextLineTarget
 
 export interface StatementUpdatePayload {
-  id: number
-  target?: StatementUpdateTarget
+  target: StatementUpdateTarget
   rawText: string
   parsed: ISentence
   source?: Extract<TransactionSource, 'visual' | 'effect-editor'>
+}
+
+interface UseStatementEditorOptions {
+  entry: MaybeRefOrGetter<StatementEntry>
+  updateTarget?: MaybeRefOrGetter<StatementUpdateTarget | undefined>
+  previousSpeaker?: MaybeRefOrGetter<string | undefined>
+  emitUpdate: (payload: StatementUpdatePayload) => void
+  surface?: StatementEditorSurface
 }
 
 export function createStatementIdTarget(statementId: number): StatementIdTarget {
@@ -38,12 +45,6 @@ export function createTextLineTarget(lineNumber: number): TextLineTarget {
   }
 }
 
-interface UseStatementEditorOptions {
-  entry: MaybeRefOrGetter<StatementEntry>
-  previousSpeaker?: MaybeRefOrGetter<string | undefined>
-  emitUpdate: (payload: StatementUpdatePayload) => void
-}
-
 export function isStatementInteractiveTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
     return false
@@ -55,6 +56,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   useEditorDynamicOptionsBootstrap()
 
   const entry = computed(() => toValue(options.entry))
+  const updateTarget = computed(() => toValue(options.updateTarget) ?? createStatementIdTarget(entry.value.id))
   const previousSpeaker = computed(() => toValue(options.previousSpeaker) ?? '')
 
   // ─── 元信息（派生链） ───
@@ -62,9 +64,10 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   // 侧边栏 StatementEditorPanel 不在卡片组件树内，inject 返回 undefined，自动 fallback；
   const injected = hasInjectionContext() ? inject(statementMetaKey, undefined) : undefined
   const meta = injected ?? useStatementMeta(entry)
-  const { parsed, config, editorFields, argFields, contentField, theme, statementType, commandLabel } = meta
+  const { parsed: sourceParsed, config, editorFields, argFields, contentField, theme, statementType, commandLabel } = meta
 
-  const pendingArgsSnapshot = ref<arg[]>()
+  const localDraft = ref<{ rawText: string, parsed: ISentence }>()
+  const parsed = computed(() => localDraft.value?.parsed ?? sourceParsed.value)
   const commandNode = computed(() => parsed.value ? parseCommandNode(parsed.value) : undefined)
 
   // ─── 资源路径解析 ───
@@ -81,20 +84,40 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   // ─── 基础设施 ───
   watch(
     () => entry.value.rawText,
-    () => {
-      pendingArgsSnapshot.value = undefined
+    (rawText) => {
+      if (localDraft.value?.rawText !== rawText) {
+        localDraft.value = undefined
+      }
     },
   )
+
+  function cloneSentence(sentence: ISentence): ISentence {
+    return structuredClone(sentence)
+  }
 
   function cloneArgs(args: arg[]): arg[] {
     return args.map(item => ({ ...item }))
   }
 
   function readEditableArgs(): arg[] {
-    if (pendingArgsSnapshot.value) {
-      return cloneArgs(pendingArgsSnapshot.value)
-    }
     return parsed.value ? cloneArgs(parsed.value.args) : []
+  }
+
+  function dispatchUpdate(rawText: string, nextSentence: ISentence) {
+    localDraft.value = {
+      rawText,
+      parsed: cloneSentence(nextSentence),
+    }
+
+    options.emitUpdate({
+      target: updateTarget.value,
+      rawText,
+      parsed: nextSentence,
+    })
+  }
+
+  function emitSentenceUpdate(nextSentence: ISentence) {
+    dispatchUpdate(serializeSentence(nextSentence), nextSentence)
   }
 
   // ─── 说话人 / 旁白 ───
@@ -116,24 +139,11 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       : (parsed.value ?? createEmptySentence())
     const newSentence: ISentence = { ...base, ...patch }
 
-    // pendingArgsSnapshot：解决连续快速编辑时 Vue 响应式批量更新导致的 args 状态滞后。
-    // 当用户拖拽滑块时，emitUpdate 触发 rawText 变更 → parsed 重新解析，
-    // 但在下一次 handleArgFieldChange 时 parsed.value.args 可能还是旧值。
-    // 快照保存最新 args，readEditableArgs() 优先使用它。
-    // rawText 变更时（watch entry.rawText）快照被清除。
     if (patch.args) {
       newSentence.args = cloneArgs(patch.args)
-      pendingArgsSnapshot.value = cloneArgs(patch.args)
     }
 
-    const newRawText = serializeSentence(newSentence)
-
-    options.emitUpdate({
-      id: entry.value.id,
-      target: createStatementIdTarget(entry.value.id),
-      rawText: newRawText,
-      parsed: newSentence,
-    })
+    emitSentenceUpdate(newSentence)
   }
 
   // ─── 内容处理 ───
@@ -156,134 +166,34 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     emitUpdate,
   })
 
-  // ─── 统一字段分发（orchestrator 层） ───
+  // ─── ParamRenderer 视图适配 ───
+  const {
+    canScrubArgField,
+    handleArgLabelPointerDown,
+    handleContentLabelPointerDown,
+    commitSliderInput,
+  } = useStatementEditorScrub({
+    surface: options.surface ?? 'panel',
+    contentField,
+    readArgValue: params.getArgValue,
+    readContentValue: () => parsed.value?.content ?? '',
+    updateArgValue: (argField, value) => params.handleArgFieldChange(argField, value),
+    updateContentValue: value => contentComposable.handleContentChange(value),
+  })
 
-  function getFieldValue(field: EditorField): string | boolean | number {
-    if (field.storage === 'arg') {
-      return params.getArgValue(field.argField)
-    }
-    if (field.storage === 'commandRaw') {
-      if (parsed.value?.command === commandType.say && say.isNoColonStatement.value) {
-        return ''
-      }
-      // 标准形式 say 命令的 commandRaw 为 "say"，实际角色名在 effectiveSpeaker 中
-      if (parsed.value?.command === commandType.say) {
-        return say.effectiveSpeaker.value
-      }
-      return parsed.value?.commandRaw ?? ''
-    }
-    if (contentComposable.isMultilineTextField(field.field)) {
-      return contentComposable.pipeToNewline(parsed.value?.content ?? '')
-    }
-    return parsed.value?.content ?? ''
-  }
-
-  function getFieldSelectValue(field: EditorField): string {
-    if (field.storage === 'arg') {
-      return params.getArgSelectValue(field.argField)
-    }
-    if (field.storage !== 'content' || field.field.type !== 'choice') {
-      return ''
-    }
-    return contentComposable.contentSelectValue.value
-  }
-
-  function getFieldDynamicOptions(field: EditorField): { label: string, value: string }[] {
-    if (field.storage === 'arg') {
-      return params.getArgDynamicOptions(field.argField)
-    }
-    if (field.storage === 'content' && field.field.type === 'choice') {
-      const key = field.field.dynamicOptionsKey
-      if (!key) {
-        return []
-      }
-      const result = resolveDynamicOptions(key, params.createDynamicOptionsContext())
-      return result?.options ?? []
-    }
-    return []
-  }
-
-  function getFieldSelectOptions(field: EditorField): { label: string, value: string }[] {
-    if (field.storage === 'arg') {
-      return params.getArgSelectOptions(field.argField)
-    }
-    if (field.storage === 'content' && field.field.type === 'choice') {
-      return contentComposable.getContentFieldSelectOptions(field.field)
-    }
-    return []
-  }
-
-  function isFieldCustom(field: EditorField): boolean {
-    if (field.storage === 'arg') {
-      return params.isArgCustom(field.argField)
-    }
-    if (field.storage === 'content' && field.field.type === 'choice') {
-      return field.field.customizable === true
-        && contentComposable.isCustomContent.value
-    }
-    return false
-  }
-
-  function isFieldVisible(field: EditorField): boolean {
-    if (field.field.managedByEffectEditor) {
-      return false
-    }
-    if (field.storage === 'arg') {
-      return params.isArgVisible(field.argField)
-    }
-    if (field.field.visibleWhenContent && !field.field.visibleWhenContent(parsed.value?.content ?? '')) {
-      return false
-    }
-    return true
-  }
-
-  function isFieldFileMissing(field: EditorField): boolean {
-    if (field.field.type !== 'file') {
-      return false
-    }
-    if (field.storage === 'content') {
-      return fileMissingKeys.value.has('__content__')
-    }
-    if (field.storage === 'arg') {
-      return fileMissingKeys.value.has(readArgFieldStorageKey(field.argField))
-    }
-    return false
-  }
-
-  function handleFieldValueChange(field: EditorField, value: string | number | boolean) {
-    if (field.storage === 'arg') {
-      params.handleArgFieldChange(field.argField, value)
-      return
-    }
-    if (field.storage === 'commandRaw') {
-      say.handleSpeakerChange(String(value))
-      return
-    }
-    if (field.field.type === 'switch') {
-      const mapped = value === true
-        ? (field.field.onValue ?? '')
-        : (field.field.offValue ?? '')
-      contentComposable.handleContentChange(mapped)
-      return
-    }
-    if (contentComposable.isMultilineTextField(field.field)) {
-      contentComposable.handleContentChange(contentComposable.newlineToPipe(String(value)))
-      return
-    }
-    contentComposable.handleContentChange(typeof value === 'boolean' ? String(value) : value)
-  }
-
-  function handleFieldSelectChange(field: EditorField, value: string) {
-    if (field.storage === 'arg') {
-      params.handleArgSelectChange(field.argField, value)
-      return
-    }
-    if (field.storage === 'content') {
-      contentComposable.handleContentSelectChange(value)
-      return
-    }
-    say.handleSpeakerChange(value)
-  }
+  const fieldBindings = useStatementEditorFieldBindings({
+    parsed,
+    say,
+    content: contentComposable,
+    params,
+    fileMissingKeys,
+    scrub: {
+      canScrubArgField,
+      commitSliderInput,
+      handleArgLabelPointerDown,
+      handleContentLabelPointerDown,
+    },
+  })
 
   const hasVisibleAdvancedParams = computed(() => {
     return !!parsed.value
@@ -314,6 +224,10 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
 
   const showEffectEditorButton = computed(() => statementType.value === 'command' && hasEffectEditor.value)
   const effectEditorAtTop = computed(() => showEffectEditorButton.value && parsed.value?.command === commandType.setTransform)
+  const paramRendererSharedProps = computed(() => ({
+    ...fieldBindings.paramRenderer.sharedProps.value,
+    fileRootPaths: fileRootPaths.value,
+  }))
 
   // ─── 杂项操作 ───
   function handleCommentChange(value: string) {
@@ -323,12 +237,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   function handleRawTextChange(value: string) {
     const newParsed = ensureParsed({ ...entry.value, rawText: value })
     if (newParsed) {
-      options.emitUpdate({
-        id: entry.value.id,
-        target: createStatementIdTarget(entry.value.id),
-        rawText: value,
-        parsed: newParsed,
-      })
+      dispatchUpdate(value, newParsed)
     }
   }
 
@@ -337,12 +246,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       return
     }
     const updatedNode = updateCommandNodeInlineComment(commandNode.value, value)
-    const updatedSentence = serializeCommandNode(updatedNode)
-    emitUpdate({
-      content: updatedSentence.content,
-      commandRaw: updatedSentence.commandRaw,
-      args: updatedSentence.args,
-    })
+    emitSentenceUpdate(serializeCommandNode(updatedNode))
   }
 
   return {
@@ -390,15 +294,15 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       isArgVisible: params.isArgVisible,
       handleArgFieldChange: params.handleArgFieldChange,
       isArgFileMissing: params.isArgFileMissing,
-      getFieldValue,
-      getFieldSelectValue,
-      getFieldSelectOptions,
-      getFieldDynamicOptions,
-      isFieldCustom,
-      isFieldVisible,
-      isFieldFileMissing,
-      handleFieldValueChange,
-      handleFieldSelectChange,
+      getFieldValue: fieldBindings.getFieldValue,
+      getFieldSelectValue: fieldBindings.getFieldSelectValue,
+      getFieldSelectOptions: fieldBindings.getFieldSelectOptions,
+      getFieldDynamicOptions: fieldBindings.getFieldDynamicOptions,
+      isFieldCustom: fieldBindings.isFieldCustom,
+      isFieldVisible: fieldBindings.isFieldVisible,
+      isFieldFileMissing: fieldBindings.isFieldFileMissing,
+      handleFieldValueChange: fieldBindings.handleFieldValueChange,
+      handleFieldSelectChange: fieldBindings.handleFieldSelectChange,
       readArgRuntimeValue: params.readArgRuntimeValue,
     },
 
@@ -406,6 +310,14 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       handleCommentChange,
       handleRawTextChange,
       handleInlineCommentChange,
+    },
+
+    paramRenderer: {
+      sharedProps: paramRendererSharedProps,
+      handleUpdateValue: fieldBindings.paramRenderer.handleUpdateValue,
+      handleUpdateSelect: fieldBindings.paramRenderer.handleUpdateSelect,
+      handleLabelPointerDown: fieldBindings.paramRenderer.handleLabelPointerDown,
+      handleCommitSlider: fieldBindings.paramRenderer.handleCommitSlider,
     },
 
     resource: {

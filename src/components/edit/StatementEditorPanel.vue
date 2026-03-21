@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-
 const props = withDefaults(defineProps<{
   entry: StatementEntry
   /** 语句在列表中的序号（0-based） */
@@ -11,6 +9,8 @@ const props = withDefaults(defineProps<{
   previousSpeaker?: string
   /** 是否启用标题点击定位当前语句 */
   enableFocusStatement?: boolean
+  /** 更新与效果编辑器使用的目标定位 */
+  updateTarget?: StatementUpdateTarget
   /** 是否显示标题栏 */
   showHeader?: boolean
   /** 内联模式 */
@@ -23,10 +23,12 @@ provide(statementEditorSurfaceKey, 'panel')
 
 const emit = defineEmits<{
   focusStatement: []
-  update: [payload: { id: number, rawText: string, parsed: ISentence }]
+  update: [payload: StatementUpdatePayload]
 }>()
 
-const emitUpdate = (payload: { id: number, rawText: string, parsed: ISentence }) => emit('update', payload)
+function emitUpdate(payload: StatementUpdatePayload) {
+  emit('update', payload)
+}
 
 const {
   parsed,
@@ -42,8 +44,9 @@ const {
   say,
   view,
   paramRenderer,
-} = useStatementEditorView({
+} = useStatementEditor({
   entry: () => props.entry,
+  updateTarget: () => props.updateTarget,
   previousSpeaker: () => props.previousSpeaker,
   emitUpdate,
   surface: 'panel',
@@ -58,7 +61,7 @@ const {
 } = say
 
 const { openEffectEditor } = useStatementEffectEditorBridge({
-  entryId: () => props.entry.id,
+  updateTarget: () => props.updateTarget,
   rawText: () => props.entry.rawText,
   parsed: () => parsed.value,
   emitUpdate,
@@ -75,6 +78,7 @@ watch(
 )
 
 const editSettings = useEditSettingsStore()
+const workspaceStore = useWorkspaceStore()
 
 // ─── 资源预览 ───
 const IMAGE_PREVIEW_COMMANDS = new Set([
@@ -104,7 +108,10 @@ const previewImageUrl = $computed(() => {
   const field = contentField.value
   const assetType = field?.field.type === 'file' ? field.field.fileConfig.assetType : undefined
   const rootPath = assetType ? resource.fileRootPaths.value[assetType] : undefined
-  return rootPath ? getAssetUrl(`${rootPath}/${content}`) : ''
+  if (!rootPath || !workspaceStore.CWD || !workspaceStore.currentGameServeUrl) {
+    return ''
+  }
+  return getAssetUrl(`${rootPath}/${content}`)
 })
 
 function handleBlankDblClick(e: MouseEvent) {

@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { getCommandConfig, getCommandDescription, getFactoryDefaultCommandText } from '~/helper/command-registry'
-import { resolveI18n } from '~/helper/command-registry/schema'
-import { useCommandPanelStore } from '~/stores/command-panel'
-
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-
 interface Props {
   type?: commandType
 }
@@ -18,29 +12,28 @@ const open = defineModel<boolean>('open', { default: false })
 const { t } = useI18n()
 const commandPanelStore = useCommandPanelStore()
 const effectDialog = useEffectEditorDialog()
+const modalStore = useModalStore()
 
 let draftEntry = $ref<StatementEntry>()
 let initialRawText = $ref('')
 
 const currentType = $computed(() => props.type)
-const commandConfig = $computed(() => currentType === undefined ? undefined : getCommandConfig(currentType))
+const currentCommandConfig = $computed(() => currentType === undefined ? undefined : getCommandConfig(currentType))
 const factoryRawText = $computed(() => currentType === undefined ? '' : getFactoryDefaultCommandText(currentType))
 const isDirty = $computed(() => draftEntry !== undefined && draftEntry.rawText !== initialRawText)
 const isFactory = $computed(() => draftEntry !== undefined && draftEntry.rawText === factoryRawText)
-
-const modalStore = useModalStore()
-
-const commandName = $computed(() => currentType === undefined ? '' : resolveI18n(getCommandConfig(currentType).label, t))
-
+const commandName = $computed(() => currentCommandConfig ? resolveI18n(currentCommandConfig.label, t) : '')
 const dialogTitle = $computed(() => currentType === undefined ? '' : t('edit.visualEditor.commandPanel.editDefaultsTitle', { command: commandName }))
 
-function resetDraft() {
-  if (currentType === undefined) {
+function resetDraft(): void {
+  const type = currentType
+  if (type === undefined) {
     draftEntry = undefined
     initialRawText = ''
     return
   }
-  const rawText = commandPanelStore.getInsertText(currentType)
+
+  const rawText = commandPanelStore.getInsertText(type)
   draftEntry = buildSingleStatement(rawText)
   initialRawText = draftEntry?.rawText ?? ''
 }
@@ -56,40 +49,53 @@ watch(
   { immediate: true },
 )
 
-function handleDraftUpdate(payload: { id: number, rawText: string, parsed: ISentence }) {
-  if (!draftEntry) {
+function handleDraftUpdate(payload: StatementUpdatePayload): void {
+  const currentEntry = draftEntry
+  if (!currentEntry) {
     return
   }
+
   draftEntry = markRaw({
-    ...draftEntry,
+    ...currentEntry,
     rawText: payload.rawText,
     parsed: payload.parsed,
     parseError: false,
   })
 }
 
-function handleResetToFactory() {
-  if (currentType === undefined) {
+function handleResetToFactory(): void {
+  const type = currentType
+  if (type === undefined) {
     return
   }
-  commandPanelStore.resetDefault(currentType)
+
+  commandPanelStore.resetDefault(type)
   draftEntry = buildSingleStatement(factoryRawText)
   notify.success(t('edit.visualEditor.commandPanel.resetSuccess'))
 }
 
-function handleSave() {
-  if (currentType === undefined || !draftEntry) {
+function handleSave(): void {
+  const type = currentType
+  if (type === undefined || !draftEntry) {
     return
   }
-  commandPanelStore.saveDefault(currentType, draftEntry.rawText)
+
+  commandPanelStore.saveDefault(type, draftEntry.rawText)
   open.value = false
 }
 
-function requestClose() {
+function handleDialogOpenChange(nextOpen: boolean): void {
+  if (!nextOpen) {
+    requestClose()
+  }
+}
+
+function requestClose(): void {
   if (!isDirty) {
     open.value = false
     return
   }
+
   modalStore.open('SaveChangesModal', {
     title: t('modals.saveCommandDefaults.title', { name: commandName }),
     onSave: handleSave,
@@ -101,13 +107,13 @@ function requestClose() {
 </script>
 
 <template>
-  <Dialog :open="open" @update:open="val => { if (!val) requestClose() }">
+  <Dialog :open="open" @update:open="handleDialogOpenChange">
     <DialogScrollContent class="max-w-md">
       <DialogHeader>
         <DialogTitle>
           {{ dialogTitle }}
         </DialogTitle>
-        <DialogDescription v-if="commandConfig && currentType !== undefined">
+        <DialogDescription v-if="currentCommandConfig && currentType !== undefined">
           {{ getCommandDescription(currentType, t) }}
         </DialogDescription>
       </DialogHeader>

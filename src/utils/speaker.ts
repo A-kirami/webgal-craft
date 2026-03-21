@@ -45,6 +45,21 @@ export function extractSpeakerChange(text: string): string | undefined {
 }
 
 /**
+ * 批量预计算每条语句继承到的上一位说话人。
+ */
+export function buildPreviousSpeakers(entries: readonly SpeakerSource[]): string[] {
+  const result: string[] = []
+  let lastSpeaker = ''
+
+  for (const entry of entries) {
+    result.push(lastSpeaker)
+    lastSpeaker = applySpeakerChange(lastSpeaker, entry.rawText)
+  }
+
+  return result
+}
+
+/**
  * 读取指定索引之前应继承到的说话人。
  */
 export function getPreviousSpeakerAtIndex(
@@ -63,6 +78,10 @@ export function getPreviousSpeakerAtIndex(
   return lastSpeaker
 }
 
+/**
+ * 读取指定行号之前应继承到的说话人。
+ * `lineNumber` 使用 1-based 语义，与 Monaco 文本模型一致。
+ */
 export function getPreviousSpeakerAtLine(
   lineNumber: number,
   readLineContent: (lineNumber: number) => string,

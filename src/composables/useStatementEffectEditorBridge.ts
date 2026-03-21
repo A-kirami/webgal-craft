@@ -1,6 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import type { InjectionKey } from 'vue'
+import { computeLineNumberFromStatementId } from '~/models/scene-selection'
+
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type {
   SceneVisualProjectionState,
@@ -14,7 +15,7 @@ export interface EffectEditorResult {
 }
 
 interface UseStatementEffectEditorBridgeOptions {
-  entryId: MaybeRefOrGetter<number>
+  updateTarget?: MaybeRefOrGetter<StatementUpdateTarget | undefined>
   rawText: MaybeRefOrGetter<string>
   parsed: MaybeRefOrGetter<ISentence | undefined>
   emitUpdate: (payload: StatementUpdatePayload) => void
@@ -68,20 +69,25 @@ function resolveEffectPreviewTarget(sentence: ISentence): string {
 }
 
 /**
- * 将语句 entry id 转换为文件中的起始行号（1-based）。
- * - text 模式：id 即行号。
- * - visual-scene 模式：当前 splitStatements 按行拆分，id 对应 statements 数组索引 + 1。
+ * 将更新目标转换为文件中的起始行号（1-based）。
  */
 function resolveBaseLineNumber(
   state: TextProjectionState | SceneVisualProjectionState,
-  targetEntryId: number,
+  target: StatementUpdateTarget | undefined,
 ): number {
-  if (state.projection === 'text') {
-    return targetEntryId
+  if (!target) {
+    return 1
   }
 
-  const index = state.statements.findIndex(e => e.id === targetEntryId)
-  return index === -1 ? 1 : index + 1
+  if (target.kind === 'line') {
+    return target.lineNumber
+  }
+
+  if (state.projection === 'visual') {
+    return computeLineNumberFromStatementId(state.statements, target.statementId) ?? 1
+  }
+
+  return 1
 }
 
 /**
@@ -98,7 +104,7 @@ export const EFFECT_EDITOR_OPEN_OVERRIDE_KEY: InjectionKey<EffectEditorOpenOverr
   Symbol('effectEditorOpenOverride')
 
 export function useStatementEffectEditorBridge(options: UseStatementEffectEditorBridgeOptions) {
-  const entryId = computed(() => toValue(options.entryId))
+  const updateTarget = computed(() => toValue(options.updateTarget))
   const rawText = computed(() => toValue(options.rawText))
   const parsed = computed(() => toValue(options.parsed))
   const effectEditorProvider = useInjectedEffectEditorProvider()
@@ -111,10 +117,10 @@ export function useStatementEffectEditorBridge(options: UseStatementEffectEditor
 
     const newSentence = applyEffectEditorResultToSentence(parsed.value, result)
     const newRawText = serializeSentence(newSentence)
+    const target = updateTarget.value ?? createStatementIdTarget(0)
 
     options.emitUpdate({
-      id: entryId.value,
-      target: createStatementIdTarget(entryId.value),
+      target,
       rawText: newRawText,
       parsed: newSentence,
       source: 'effect-editor',
@@ -138,18 +144,18 @@ export function useStatementEffectEditorBridge(options: UseStatementEffectEditor
     }
 
     const editorStore = useEditorStore()
-    const { currentState } = editorStore
-    const isSupported = currentState && isEditableEditor(currentState) && currentState.kind === 'scene'
-    if (!isSupported) {
+    const state = editorStore.currentState
+    if (!state || !isEditableEditor(state) || state.kind !== 'scene') {
       logger.warn('当前编辑器状态不支持效果编辑器')
       return
     }
 
-    const baseLineNumber = resolveBaseLineNumber(currentState, entryId.value)
+    const baseLineNumber = resolveBaseLineNumber(state, updateTarget.value)
+    const entryId = resolveEffectEditorEntryId(updateTarget.value)
 
     void effectEditorProvider.open({
-      entryId: entryId.value,
-      scenePath: currentState.path,
+      entryId,
+      scenePath: state.path,
       baseSentence: parsed.value,
       baseLineNumber,
       baseLineText: rawText.value,
@@ -162,4 +168,16 @@ export function useStatementEffectEditorBridge(options: UseStatementEffectEditor
     openEffectEditor,
     applyEffectEditorResult,
   }
+}
+
+function resolveEffectEditorEntryId(target: StatementUpdateTarget | undefined): number {
+  if (!target) {
+    return 0
+  }
+
+  if (target.kind === 'line') {
+    return target.lineNumber
+  }
+
+  return target.statementId
 }

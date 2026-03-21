@@ -676,6 +676,7 @@ edit:
       universalSoftIn: Fade In
       universalSoftOff: Fade Out
     effectEditor: Effect Editor
+    statementList: Statement list
     noSelection: Select a statement to edit
     noResults: No results found
   welcome:

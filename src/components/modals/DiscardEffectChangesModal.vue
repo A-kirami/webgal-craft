@@ -11,22 +11,28 @@ const { onApply, onDiscard, onCancel } = defineProps<{
 
 let actionHandled = $ref(false)
 
-async function handleApply() {
+type ModalAction = (() => void | Promise<void>) | undefined
+
+async function runAction(action: ModalAction): Promise<void> {
   actionHandled = true
-  await onApply?.()
+  await action?.()
+}
+
+async function runActionAndClose(action: ModalAction): Promise<void> {
+  await runAction(action)
   open = false
 }
 
-async function handleDiscard() {
-  actionHandled = true
-  await onDiscard?.()
-  open = false
+async function handleApply(): Promise<void> {
+  await runActionAndClose(onApply)
 }
 
-async function handleCancel() {
-  actionHandled = true
-  await onCancel?.()
-  open = false
+async function handleDiscard(): Promise<void> {
+  await runActionAndClose(onDiscard)
+}
+
+async function handleCancel(): Promise<void> {
+  await runActionAndClose(onCancel)
 }
 
 watch(() => open, async (nextOpen, previousOpen) => {
@@ -36,8 +42,7 @@ watch(() => open, async (nextOpen, previousOpen) => {
   }
 
   if (previousOpen && !actionHandled) {
-    actionHandled = true
-    await onCancel?.()
+    await runAction(onCancel)
   }
 })
 </script>

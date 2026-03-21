@@ -12,6 +12,7 @@ export interface EffectEditorPreviewPayload {
 export interface EffectEditorTransformUpdatePayload {
   value: Transform
   deferAutoApply?: boolean
+  flush?: boolean
 }
 
 export interface EffectEditorDraft {
@@ -79,6 +80,7 @@ export function createEffectPreviewEmitter(options: EffectPreviewEmitterOptions)
     options.emitTransform({
       value: fieldsToTransform(fields),
       deferAutoApply: emitOptions.deferAutoApply,
+      flush: emitOptions.flush,
     })
     emitPreview(emitOptions.schedule, emitOptions.flush)
   }

@@ -25,13 +25,14 @@ declare global {
   const autoResetRef: typeof import('@vueuse/core').autoResetRef
   const buildBeforeHistorySnapshotFromChangeEvent: typeof import('./helper/text-editor-history-snapshot').buildBeforeHistorySnapshotFromChangeEvent
   const buildCategoryRenderItems: typeof import('./helper/effect-editor-config').buildCategoryRenderItems
+  const buildPreviousSpeakers: typeof import('./utils/speaker').buildPreviousSpeakers
   const buildSceneStatements: typeof import('./helper/webgal-script/sentence').buildSceneStatements
   const buildSchemaKeySet: typeof import('./helper/statement-editor/visibility').buildSchemaKeySet
   const buildSingleStatement: typeof import('./helper/webgal-script/sentence').buildSingleStatement
   const buildStatementPreviewParams: typeof import('./helper/statement-editor/preview').buildStatementPreviewParams
   const buildStatements: typeof import('./helper/webgal-script/sentence').buildStatements
   const buildTextEditorOptions: typeof import('./helper/text-editor-options').buildTextEditorOptions
-  const canExecuteEditorAutoSave: typeof import('./stores/editor-auto-save').canExecuteEditorAutoSave
+  const canRestoreVisualEditorCardFocus: typeof import('./helper/visual-editor-focus').canRestoreVisualEditorCardFocus
   const captureCursorSnapshotFromEditor: typeof import('./helper/text-editor-history-snapshot').captureCursorSnapshotFromEditor
   const captureEditorHistorySnapshot: typeof import('./helper/text-editor-history-snapshot').captureEditorHistorySnapshot
   const categoryTheme: typeof import('./helper/command-registry/index').categoryTheme
@@ -43,7 +44,7 @@ declare global {
   const collectStatementFileChecks: typeof import('./helper/statement-editor/file-missing').collectStatementFileChecks
   const colorMode: typeof import('./composables/color-mode').colorMode
   const commandEntries: typeof import('./helper/command-registry/index').commandEntries
-  const commandPanelBridgeKey: typeof import('./composables/useCommandPanelBridge').commandPanelBridgeKey
+  const commandPanelBridgeKey: typeof import('./composables/useEditorPanelBindings').commandPanelBridgeKey
   const commandPanelCategories: typeof import('./helper/command-registry/index').commandPanelCategories
   const commandRaw: typeof import('./helper/command-registry/schema').commandRaw
   const compareOptionalNumber: typeof import('./utils/sort').compareOptionalNumber
@@ -62,8 +63,6 @@ declare global {
   const controlledRef: typeof import('@vueuse/core').controlledRef
   const createApp: typeof import('vue').createApp
   const createAsyncQueue: typeof import('./helper/async-queue').createAsyncQueue
-  const createEditorAutoSaveController: typeof import('./stores/editor-auto-save').createEditorAutoSaveController
-  const createEditorPreviewSync: typeof import('./stores/editor-preview-sync').createEditorPreviewSync
   const createEditorSaveShortcutHandler: typeof import('./helper/editor-save-shortcut').createEditorSaveShortcutHandler
   const createEditorSelection: typeof import('./helper/text-editor-history-snapshot').createEditorSelection
   const createEffectEditorProvider: typeof import('./composables/useEffectEditorProvider').createEffectEditorProvider
@@ -90,6 +89,7 @@ declare global {
   const createTextLineTarget: typeof import('./composables/useStatementEditor').createTextLineTarget
   const createTransientStatementEntry: typeof import('./helper/webgal-script/sentence').createTransientStatementEntry
   const createUnrefFn: typeof import('@vueuse/core').createUnrefFn
+  const createVisualEditorSaveShortcutHandler: typeof import('./composables/useVisualEditorSaveShortcut').createVisualEditorSaveShortcutHandler
   const customRef: typeof import('vue').customRef
   const db: typeof import('./database/db').db
   const debouncedRef: typeof import('@vueuse/core').debouncedRef
@@ -116,6 +116,7 @@ declare global {
   const extractSpeakerChange: typeof import('./utils/speaker').extractSpeakerChange
   const fieldsToTransform: typeof import('./helper/effect-editor-config').fieldsToTransform
   const filterExtraArgs: typeof import('./helper/statement-editor/visibility').filterExtraArgs
+  const findSelectedVisualEditorStatementCard: typeof import('./helper/visual-editor-focus').findSelectedVisualEditorStatementCard
   const formatFileSize: typeof import('./utils/format').formatFileSize
   const fsCmds: typeof import('./commands/fs').fsCmds
   const gameAssetDir: typeof import('./helper/app-paths').gameAssetDir
@@ -174,12 +175,9 @@ declare global {
   const isSceneVisualProjection: typeof import('./stores/editor').isSceneVisualProjection
   const isShallow: typeof import('vue').isShallow
   const isStatementInteractiveTarget: typeof import('./composables/useStatementEditor').isStatementInteractiveTarget
-  const isTextualEditor: typeof import('./stores/editor').isTextualEditor
   const isTransformEqual: typeof import('./helper/effect-editor-config').isTransformEqual
   const isTypedCommandNode: typeof import('./helper/webgal-script/codec').isTypedCommandNode
   const isValidPositiveNumber: typeof import('./utils/sort').isValidPositiveNumber
-  const isVisualAnimation: typeof import('./stores/editor').isVisualAnimation
-  const isVisualScene: typeof import('./stores/editor').isVisualScene
   const joinStatements: typeof import('./helper/webgal-script/sentence').joinStatements
   const logger: typeof import('@tauri-apps/plugin-log')
   const makeDestructurable: typeof import('@vueuse/core').makeDestructurable
@@ -301,7 +299,7 @@ declare global {
   const shallowReadonly: typeof import('vue').shallowReadonly
   const shallowRef: typeof import('vue').shallowRef
   const shouldRestoreTextEditorFocus: typeof import('./helper/text-editor-workspace-focus').shouldRestoreTextEditorFocus
-  const sidebarPanelKey: typeof import('./composables/useSidebarPanel').sidebarPanelKey
+  const sidebarPanelKey: typeof import('./composables/useEditorPanelBindings').sidebarPanelKey
   const splitStatements: typeof import('./helper/webgal-script/sentence').splitStatements
   const statementEditorSurfaceKey: typeof import('./helper/statement-editor/surface-context').statementEditorSurfaceKey
   const statementMetaKey: typeof import('./composables/useStatementMeta').statementMetaKey
@@ -337,7 +335,6 @@ declare global {
   const updateCommandNodeInlineComment: typeof import('./helper/webgal-script/update').updateCommandNodeInlineComment
   const updateCommandNodeParam: typeof import('./helper/webgal-script/update').updateCommandNodeParam
   const updateCommandNodeSpeaker: typeof import('./helper/webgal-script/update').updateCommandNodeSpeaker
-  const updateStatement: typeof import('./helper/webgal-script/sentence').updateStatement
   const updateTypedCommandNodeExtraArgs: typeof import('./helper/webgal-script/update').updateTypedCommandNodeExtraArgs
   const upsertArg: typeof import('./helper/webgal-script/arg-utils').upsertArg
   const useActiveElement: typeof import('@vueuse/core').useActiveElement
@@ -369,8 +366,8 @@ declare global {
   const useClipboardItems: typeof import('@vueuse/core').useClipboardItems
   const useCloned: typeof import('@vueuse/core').useCloned
   const useColorMode: typeof import('@vueuse/core').useColorMode
-  const useCommandPanelBridgeBinding: typeof import('./composables/useCommandPanelBridge').useCommandPanelBridgeBinding
-  const useCommandPanelBridgeProvider: typeof import('./composables/useCommandPanelBridge').useCommandPanelBridgeProvider
+  const useCommandPanelBridgeBinding: typeof import('./composables/useEditorPanelBindings').useCommandPanelBridgeBinding
+  const useCommandPanelBridgeProvider: typeof import('./composables/useEditorPanelBindings').useCommandPanelBridgeProvider
   const useCommandPanelStore: typeof import('./stores/command-panel').useCommandPanelStore
   const useConfirmDialog: typeof import('@vueuse/core').useConfirmDialog
   const useControlId: typeof import('./composables/useControlId').useControlId
@@ -498,18 +495,18 @@ declare global {
   const useSessionStorage: typeof import('@vueuse/core').useSessionStorage
   const useSettingsForm: typeof import('./composables/useSettingsForm').useSettingsForm
   const useShare: typeof import('@vueuse/core').useShare
-  const useSidebarPanelBinding: typeof import('./composables/useSidebarPanel').useSidebarPanelBinding
-  const useSidebarPanelProvider: typeof import('./composables/useSidebarPanel').useSidebarPanelProvider
+  const useSidebarPanelBinding: typeof import('./composables/useEditorPanelBindings').useSidebarPanelBinding
+  const useSidebarPanelProvider: typeof import('./composables/useEditorPanelBindings').useSidebarPanelProvider
   const useSlots: typeof import('vue').useSlots
   const useSorted: typeof import('@vueuse/core').useSorted
   const useSpeechRecognition: typeof import('@vueuse/core').useSpeechRecognition
   const useSpeechSynthesis: typeof import('@vueuse/core').useSpeechSynthesis
   const useStatementEditor: typeof import('./composables/useStatementEditor').useStatementEditor
   const useStatementEditorContent: typeof import('./composables/useStatementEditorContent').useStatementEditorContent
+  const useStatementEditorFieldBindings: typeof import('./composables/useStatementEditorFieldBindings').useStatementEditorFieldBindings
   const useStatementEditorParams: typeof import('./composables/useStatementEditorParams').useStatementEditorParams
   const useStatementEditorSay: typeof import('./composables/useStatementEditorSay').useStatementEditorSay
   const useStatementEditorScrub: typeof import('./composables/useStatementEditorScrub').useStatementEditorScrub
-  const useStatementEditorView: typeof import('./composables/useStatementEditorView').useStatementEditorView
   const useStatementEffectEditorBridge: typeof import('./composables/useStatementEffectEditorBridge').useStatementEffectEditorBridge
   const useStatementFileMissing: typeof import('./composables/useStatementFileMissing').useStatementFileMissing
   const useStatementFileRoots: typeof import('./composables/useStatementFileRoots').useStatementFileRoots
@@ -556,6 +553,9 @@ declare global {
   const useVModels: typeof import('@vueuse/core').useVModels
   const useVibrate: typeof import('@vueuse/core').useVibrate
   const useVirtualList: typeof import('@vueuse/core').useVirtualList
+  const useVisualEditorSaveShortcut: typeof import('./composables/useVisualEditorSaveShortcut').useVisualEditorSaveShortcut
+  const useVisualEditorSceneRuntime: typeof import('./composables/useVisualEditorSceneRuntime').useVisualEditorSceneRuntime
+  const useVisualEditorSceneViewport: typeof import('./composables/useVisualEditorSceneViewport').useVisualEditorSceneViewport
   const useWakeLock: typeof import('@vueuse/core').useWakeLock
   const useWebNotification: typeof import('@vueuse/core').useWebNotification
   const useWebSocket: typeof import('@vueuse/core').useWebSocket
@@ -603,8 +603,8 @@ declare global {
   export type { UseBreadcrumbCollapseOptions, UseBreadcrumbCollapseReturn } from './composables/useBreadcrumbCollapse'
   import('./composables/useBreadcrumbCollapse')
   // @ts-ignore
-  export type { CommandPanelHandler, CommandPanelBridgeContext } from './composables/useCommandPanelBridge'
-  import('./composables/useCommandPanelBridge')
+  export type { SidebarPanelBinding, SidebarPanelContext, CommandPanelHandler, CommandPanelBridgeContext } from './composables/useEditorPanelBindings'
+  import('./composables/useEditorPanelBindings')
   // @ts-ignore
   export type { EffectEditorPreviewSchedule, EffectEditorPreviewPayload, EffectEditorTransformUpdatePayload, EffectEditorDraft, EffectEditorOpenTarget, EffectEditorSession, EffectEditorProvider } from './composables/useEffectEditorProvider'
   import('./composables/useEffectEditorProvider')
@@ -614,9 +614,6 @@ declare global {
   // @ts-ignore
   export type { FileSystemEvent } from './composables/useFileSystemEvents'
   import('./composables/useFileSystemEvents')
-  // @ts-ignore
-  export type { SidebarPanelBinding, SidebarPanelContext } from './composables/useSidebarPanel'
-  import('./composables/useSidebarPanel')
   // @ts-ignore
   export type { StatementIdTarget, TextLineTarget, StatementUpdateTarget, StatementUpdatePayload } from './composables/useStatementEditor'
   import('./composables/useStatementEditor')
@@ -629,9 +626,6 @@ declare global {
   // @ts-ignore
   export type { UseStatementEditorSayOptions } from './composables/useStatementEditorSay'
   import('./composables/useStatementEditorSay')
-  // @ts-ignore
-  export type { UseStatementEditorViewOptions } from './composables/useStatementEditorView'
-  import('./composables/useStatementEditorView')
   // @ts-ignore
   export type { EffectEditorResult, EffectEditorOpenOverride } from './composables/useStatementEffectEditorBridge'
   import('./composables/useStatementEffectEditorBridge')
@@ -648,7 +642,7 @@ declare global {
   export type { UseTauriDropZoneOptions, UseTauriDropZoneReturn } from './composables/useTauriDropZone'
   import('./composables/useTauriDropZone')
   // @ts-ignore
-  export type { TextEditorContentChangeContext } from './composables/useTextEditorHistory'
+  export type { TextEditorContentChangeContext, RestoreAfterModelSyncContext } from './composables/useTextEditorHistory'
   import('./composables/useTextEditorHistory')
   // @ts-ignore
   export type { Game, Engine, Status } from './database/model'
@@ -659,6 +653,9 @@ declare global {
   // @ts-ignore
   export type { RgbColor, RgbaPayload } from './helper/color'
   import('./helper/color')
+  // @ts-ignore
+  export type { CommandPanelCategory } from './helper/command-registry/index'
+  import('./helper/command-registry/index')
   // @ts-ignore
   export type { EditorDynamicOptionsKey, DynamicOptionsContext, DynamicOptionsResult, I18nT, CommandCategory, FileFieldConfig, I18nLike, SurfaceAware, InlineLayout, TextField, SwitchField, NumberField, ValueChoiceField, FlagChoiceField, ChoiceField, FileField, ColorField, DialField, JsonObjectField, FieldDef, CommandFieldStorage, CommandFieldDef, ArgFieldJsonMeta, ArgField, ContentEditorField, CommandRawEditorField, ArgEditorField, EditorField, CommandEntry, StatementSpecialContentMode, DynamicOptionSourceDef } from './helper/command-registry/schema'
   import('./helper/command-registry/schema')
@@ -720,7 +717,7 @@ declare global {
   export type { GameMetadata, EngineMetadata } from './services/types'
   import('./services/types')
   // @ts-ignore
-  export type { StatementGroup, CommandPanelCategory } from './stores/command-panel'
+  export type { StatementGroup } from './stores/command-panel'
   import('./stores/command-panel')
   // @ts-ignore
   export type { SerializableViewState } from './stores/editor-view-state'
@@ -787,12 +784,14 @@ declare module 'vue' {
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly buildBeforeHistorySnapshotFromChangeEvent: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['buildBeforeHistorySnapshotFromChangeEvent']>
     readonly buildCategoryRenderItems: UnwrapRef<typeof import('./helper/effect-editor-config')['buildCategoryRenderItems']>
+    readonly buildPreviousSpeakers: UnwrapRef<typeof import('./utils/speaker')['buildPreviousSpeakers']>
     readonly buildSceneStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['buildSceneStatements']>
     readonly buildSchemaKeySet: UnwrapRef<typeof import('./helper/statement-editor/visibility')['buildSchemaKeySet']>
     readonly buildSingleStatement: UnwrapRef<typeof import('./helper/webgal-script/sentence')['buildSingleStatement']>
     readonly buildStatementPreviewParams: UnwrapRef<typeof import('./helper/statement-editor/preview')['buildStatementPreviewParams']>
     readonly buildStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['buildStatements']>
     readonly buildTextEditorOptions: UnwrapRef<typeof import('./helper/text-editor-options')['buildTextEditorOptions']>
+    readonly canRestoreVisualEditorCardFocus: UnwrapRef<typeof import('./helper/visual-editor-focus')['canRestoreVisualEditorCardFocus']>
     readonly captureCursorSnapshotFromEditor: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['captureCursorSnapshotFromEditor']>
     readonly captureEditorHistorySnapshot: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['captureEditorHistorySnapshot']>
     readonly categoryTheme: UnwrapRef<typeof import('./helper/command-registry/index')['categoryTheme']>
@@ -804,7 +803,7 @@ declare module 'vue' {
     readonly collectStatementFileChecks: UnwrapRef<typeof import('./helper/statement-editor/file-missing')['collectStatementFileChecks']>
     readonly colorMode: UnwrapRef<typeof import('./composables/color-mode')['colorMode']>
     readonly commandEntries: UnwrapRef<typeof import('./helper/command-registry/index')['commandEntries']>
-    readonly commandPanelBridgeKey: UnwrapRef<typeof import('./composables/useCommandPanelBridge')['commandPanelBridgeKey']>
+    readonly commandPanelBridgeKey: UnwrapRef<typeof import('./composables/useEditorPanelBindings')['commandPanelBridgeKey']>
     readonly commandPanelCategories: UnwrapRef<typeof import('./helper/command-registry/index')['commandPanelCategories']>
     readonly commandRaw: UnwrapRef<typeof import('./helper/command-registry/schema')['commandRaw']>
     readonly compareOptionalNumber: UnwrapRef<typeof import('./utils/sort')['compareOptionalNumber']>
@@ -849,6 +848,7 @@ declare module 'vue' {
     readonly createTextLineTarget: UnwrapRef<typeof import('./composables/useStatementEditor')['createTextLineTarget']>
     readonly createTransientStatementEntry: UnwrapRef<typeof import('./helper/webgal-script/sentence')['createTransientStatementEntry']>
     readonly createUnrefFn: UnwrapRef<typeof import('@vueuse/core')['createUnrefFn']>
+    readonly createVisualEditorSaveShortcutHandler: UnwrapRef<typeof import('./composables/useVisualEditorSaveShortcut')['createVisualEditorSaveShortcutHandler']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly db: UnwrapRef<typeof import('./database/db')['db']>
     readonly debouncedRef: UnwrapRef<typeof import('@vueuse/core')['debouncedRef']>
@@ -875,6 +875,7 @@ declare module 'vue' {
     readonly extractSpeakerChange: UnwrapRef<typeof import('./utils/speaker')['extractSpeakerChange']>
     readonly fieldsToTransform: UnwrapRef<typeof import('./helper/effect-editor-config')['fieldsToTransform']>
     readonly filterExtraArgs: UnwrapRef<typeof import('./helper/statement-editor/visibility')['filterExtraArgs']>
+    readonly findSelectedVisualEditorStatementCard: UnwrapRef<typeof import('./helper/visual-editor-focus')['findSelectedVisualEditorStatementCard']>
     readonly formatFileSize: UnwrapRef<typeof import('./utils/format')['formatFileSize']>
     readonly fsCmds: UnwrapRef<typeof import('./commands/fs')['fsCmds']>
     readonly gameAssetDir: UnwrapRef<typeof import('./helper/app-paths')['gameAssetDir']>
@@ -1057,7 +1058,7 @@ declare module 'vue' {
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
     readonly shouldRestoreTextEditorFocus: UnwrapRef<typeof import('./helper/text-editor-workspace-focus')['shouldRestoreTextEditorFocus']>
-    readonly sidebarPanelKey: UnwrapRef<typeof import('./composables/useSidebarPanel')['sidebarPanelKey']>
+    readonly sidebarPanelKey: UnwrapRef<typeof import('./composables/useEditorPanelBindings')['sidebarPanelKey']>
     readonly splitStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['splitStatements']>
     readonly statementEditorSurfaceKey: UnwrapRef<typeof import('./helper/statement-editor/surface-context')['statementEditorSurfaceKey']>
     readonly statementMetaKey: UnwrapRef<typeof import('./composables/useStatementMeta')['statementMetaKey']>
@@ -1124,8 +1125,8 @@ declare module 'vue' {
     readonly useClipboardItems: UnwrapRef<typeof import('@vueuse/core')['useClipboardItems']>
     readonly useCloned: UnwrapRef<typeof import('@vueuse/core')['useCloned']>
     readonly useColorMode: UnwrapRef<typeof import('@vueuse/core')['useColorMode']>
-    readonly useCommandPanelBridgeBinding: UnwrapRef<typeof import('./composables/useCommandPanelBridge')['useCommandPanelBridgeBinding']>
-    readonly useCommandPanelBridgeProvider: UnwrapRef<typeof import('./composables/useCommandPanelBridge')['useCommandPanelBridgeProvider']>
+    readonly useCommandPanelBridgeBinding: UnwrapRef<typeof import('./composables/useEditorPanelBindings')['useCommandPanelBridgeBinding']>
+    readonly useCommandPanelBridgeProvider: UnwrapRef<typeof import('./composables/useEditorPanelBindings')['useCommandPanelBridgeProvider']>
     readonly useCommandPanelStore: UnwrapRef<typeof import('./stores/command-panel')['useCommandPanelStore']>
     readonly useConfirmDialog: UnwrapRef<typeof import('@vueuse/core')['useConfirmDialog']>
     readonly useControlId: UnwrapRef<typeof import('./composables/useControlId')['useControlId']>
@@ -1253,18 +1254,18 @@ declare module 'vue' {
     readonly useSessionStorage: UnwrapRef<typeof import('@vueuse/core')['useSessionStorage']>
     readonly useSettingsForm: UnwrapRef<typeof import('./composables/useSettingsForm')['useSettingsForm']>
     readonly useShare: UnwrapRef<typeof import('@vueuse/core')['useShare']>
-    readonly useSidebarPanelBinding: UnwrapRef<typeof import('./composables/useSidebarPanel')['useSidebarPanelBinding']>
-    readonly useSidebarPanelProvider: UnwrapRef<typeof import('./composables/useSidebarPanel')['useSidebarPanelProvider']>
+    readonly useSidebarPanelBinding: UnwrapRef<typeof import('./composables/useEditorPanelBindings')['useSidebarPanelBinding']>
+    readonly useSidebarPanelProvider: UnwrapRef<typeof import('./composables/useEditorPanelBindings')['useSidebarPanelProvider']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useSorted: UnwrapRef<typeof import('@vueuse/core')['useSorted']>
     readonly useSpeechRecognition: UnwrapRef<typeof import('@vueuse/core')['useSpeechRecognition']>
     readonly useSpeechSynthesis: UnwrapRef<typeof import('@vueuse/core')['useSpeechSynthesis']>
     readonly useStatementEditor: UnwrapRef<typeof import('./composables/useStatementEditor')['useStatementEditor']>
     readonly useStatementEditorContent: UnwrapRef<typeof import('./composables/useStatementEditorContent')['useStatementEditorContent']>
+    readonly useStatementEditorFieldBindings: UnwrapRef<typeof import('./composables/useStatementEditorFieldBindings')['useStatementEditorFieldBindings']>
     readonly useStatementEditorParams: UnwrapRef<typeof import('./composables/useStatementEditorParams')['useStatementEditorParams']>
     readonly useStatementEditorSay: UnwrapRef<typeof import('./composables/useStatementEditorSay')['useStatementEditorSay']>
     readonly useStatementEditorScrub: UnwrapRef<typeof import('./composables/useStatementEditorScrub')['useStatementEditorScrub']>
-    readonly useStatementEditorView: UnwrapRef<typeof import('./composables/useStatementEditorView')['useStatementEditorView']>
     readonly useStatementEffectEditorBridge: UnwrapRef<typeof import('./composables/useStatementEffectEditorBridge')['useStatementEffectEditorBridge']>
     readonly useStatementFileMissing: UnwrapRef<typeof import('./composables/useStatementFileMissing')['useStatementFileMissing']>
     readonly useStatementFileRoots: UnwrapRef<typeof import('./composables/useStatementFileRoots')['useStatementFileRoots']>
@@ -1311,6 +1312,9 @@ declare module 'vue' {
     readonly useVModels: UnwrapRef<typeof import('@vueuse/core')['useVModels']>
     readonly useVibrate: UnwrapRef<typeof import('@vueuse/core')['useVibrate']>
     readonly useVirtualList: UnwrapRef<typeof import('@vueuse/core')['useVirtualList']>
+    readonly useVisualEditorSaveShortcut: UnwrapRef<typeof import('./composables/useVisualEditorSaveShortcut')['useVisualEditorSaveShortcut']>
+    readonly useVisualEditorSceneRuntime: UnwrapRef<typeof import('./composables/useVisualEditorSceneRuntime')['useVisualEditorSceneRuntime']>
+    readonly useVisualEditorSceneViewport: UnwrapRef<typeof import('./composables/useVisualEditorSceneViewport')['useVisualEditorSceneViewport']>
     readonly useWakeLock: UnwrapRef<typeof import('@vueuse/core')['useWakeLock']>
     readonly useWebNotification: UnwrapRef<typeof import('@vueuse/core')['useWebNotification']>
     readonly useWebSocket: UnwrapRef<typeof import('@vueuse/core')['useWebSocket']>
