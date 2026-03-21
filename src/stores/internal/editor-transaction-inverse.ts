@@ -1,7 +1,13 @@
+import { applyTransactionToModel } from '~/models/transaction-apply'
+
 import { getDocumentTextContent } from './editor-document-state'
 
 import type { DocumentState, DocumentStateOfKind } from './editor-document-state'
-import type { Transaction } from '~/models/transaction'
+import type {
+  AnimationTransactionOperation,
+  SceneTransactionOperation,
+  Transaction,
+} from '~/models/transaction'
 
 /**
  * 从当前文档状态计算事务的逆操作。
@@ -42,12 +48,7 @@ export function computeTransactionInverse(
       return { type: 'statement:reorder', fromIndex: tx.toIndex, toIndex: tx.fromIndex }
     }
     case 'statement:batch': {
-      return {
-        type: 'statement:batch',
-        operations: tx.operations.toReversed().map(operation =>
-          computeTransactionInverse(docEntry, operation) as typeof operation,
-        ),
-      }
+      return computeSceneBatchInverse(docEntry, tx.operations)
     }
     case 'animation:update-frame': {
       return computeAnimationUpdateInverse(docEntry, tx.index)
@@ -65,12 +66,7 @@ export function computeTransactionInverse(
       return { type: 'animation:reorder-frame', fromIndex: tx.toIndex, toIndex: tx.fromIndex }
     }
     case 'animation:batch': {
-      return {
-        type: 'animation:batch',
-        operations: tx.operations.toReversed().map(operation =>
-          computeTransactionInverse(docEntry, operation) as typeof operation,
-        ),
-      }
+      return computeAnimationBatchInverse(docEntry, tx.operations)
     }
     default: {
       logger.warn(`无法计算逆操作，回退到全量快照: ${(tx as Transaction).type}`)
@@ -119,10 +115,15 @@ function computeAnimationUpdateInverse(docEntry: DocumentState, index: number): 
     return createFallbackInverse(docEntry)
   }
 
+  const frame = docEntry.model.frames[index]
+  if (!frame) {
+    return createFallbackInverse(docEntry)
+  }
+
   return {
     type: 'animation:update-frame',
     index,
-    frame: structuredClone(docEntry.model.frames[index] ?? {}),
+    frame: structuredClone(frame),
   }
 }
 
@@ -145,6 +146,62 @@ function computeAnimationDeleteInverse(docEntry: DocumentState, index: number): 
 
 function getAnimationFrameCount(docEntry: DocumentState): number {
   return docEntry.model.kind === 'animation' ? docEntry.model.frames.length : 0
+}
+
+function computeSceneBatchInverse(
+  docEntry: DocumentState,
+  operations: readonly SceneTransactionOperation[],
+): Transaction {
+  const operationsInverse = computeSequentialBatchInverses(docEntry, operations)
+  if (!operationsInverse) {
+    return createFallbackInverse(docEntry)
+  }
+
+  return {
+    type: 'statement:batch',
+    operations: operationsInverse,
+  }
+}
+
+function computeAnimationBatchInverse(
+  docEntry: DocumentState,
+  operations: readonly AnimationTransactionOperation[],
+): Transaction {
+  const operationsInverse = computeSequentialBatchInverses(docEntry, operations)
+  if (!operationsInverse) {
+    return createFallbackInverse(docEntry)
+  }
+
+  return {
+    type: 'animation:batch',
+    operations: operationsInverse,
+  }
+}
+
+function computeSequentialBatchInverses<TOperation extends Transaction>(
+  docEntry: DocumentState,
+  operations: readonly TOperation[],
+): TOperation[] | undefined {
+  const tempDocEntry: DocumentState = {
+    ...docEntry,
+    model: structuredClone(docEntry.model),
+    cachedTextContent: undefined,
+  }
+  const inverses: TOperation[] = []
+
+  for (const operation of operations) {
+    inverses.push(computeTransactionInverse(tempDocEntry, operation) as TOperation)
+
+    const nextModel = applyTransactionToModel(tempDocEntry.model, operation)
+    if (!nextModel) {
+      return undefined
+    }
+
+    tempDocEntry.model = nextModel
+    tempDocEntry.cachedTextContent = undefined
+  }
+
+  return inverses.toReversed()
 }
 
 function createFallbackInverse(docEntry: DocumentState): Transaction {

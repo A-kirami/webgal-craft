@@ -1,5 +1,9 @@
+import { normalizeTextLineEnding } from '~/models/document-model'
 import { encodeTextFile } from '~/models/file-codec'
-import { registerPendingDocumentWrite } from '~/services/document-write-intents'
+import {
+  consumePendingDocumentWrite,
+  registerPendingDocumentWrite,
+} from '~/services/document-write-intents'
 
 import { markDocumentClean, resolveSceneCursor } from './editor-document-state'
 import { getTextProjectionPersistedContent, normalizeAnimationTextProjection } from './editor-session'
@@ -61,6 +65,7 @@ function finalizeSavedDocument(
   context: EditorDocumentSaveContext,
   path: string,
   saveContext: EditorDocumentSaveSnapshot,
+  savedContent: string,
   savedAt: Date,
 ): void {
   const {
@@ -72,10 +77,11 @@ function finalizeSavedDocument(
   } = saveContext
 
   state.lastSavedTime = savedAt
+  docEntry.savedSequenceNumber = savedSequenceNumber
   if (docEntry.engine.revisionNumber === savedRevisionNumber) {
     markDocumentClean(docEntry, savedSequenceNumber)
   }
-  docEntry.savedTextContent = content
+  docEntry.savedTextContent = savedContent
   docEntry.engine.markBoundary()
   context.syncStateFromDocument(path)
 
@@ -104,10 +110,18 @@ export async function saveEditorDocument(
   path: string,
   saveSnapshot: EditorDocumentSaveSnapshot = createEditorDocumentSaveSnapshot(context, path),
 ): Promise<void> {
-  await gameFs.writeDocumentFile(
-    path,
-    encodeTextFile(saveSnapshot.content, saveSnapshot.docEntry.model.metadata),
-  )
-  registerPendingDocumentWrite(path, saveSnapshot.content, saveSnapshot.docEntry.model.metadata)
-  finalizeSavedDocument(context, path, saveSnapshot, new Date())
+  const metadata = saveSnapshot.docEntry.model.metadata
+  const finalContent = normalizeTextLineEnding(saveSnapshot.content, metadata.lineEnding)
+  const finalBytes = encodeTextFile(finalContent, metadata)
+
+  registerPendingDocumentWrite(path, finalContent, metadata)
+
+  try {
+    await gameFs.writeDocumentFile(path, finalBytes)
+  } catch (error) {
+    consumePendingDocumentWrite(path, finalContent, metadata)
+    throw error
+  }
+
+  finalizeSavedDocument(context, path, saveSnapshot, finalContent, new Date())
 }

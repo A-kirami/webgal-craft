@@ -16,6 +16,7 @@ import {
 } from './editor-session'
 
 import type { DocumentStateAccessor, DocumentStateSyncActions } from './editor-document-actions'
+import type { DocumentState } from './editor-document-state'
 import type {
   AssetPreviewState,
   EditableEditorSession,
@@ -281,6 +282,22 @@ function mergeExternalDocumentContent(localContent: string, externalContent: str
   ].join('\n')
 }
 
+function isSameTextMetadata(left: TextMetadata, right: TextMetadata): boolean {
+  return left.encoding === right.encoding && left.lineEnding === right.lineEnding
+}
+
+function updateSavedDocumentMetadataBaseline(
+  docEntry: DocumentState,
+  content: string,
+  metadata: TextMetadata,
+): void {
+  docEntry.savedTextContent = content
+  docEntry.model = {
+    ...docEntry.model,
+    metadata: { ...metadata },
+  }
+}
+
 function syncScenePreviewForExternalContent(
   context: EditorFileLifecycleContext,
   path: string,
@@ -422,11 +439,18 @@ export async function handleFileModifiedEvent(
   const currentContent = freshState.isDirty
     ? getTextProjectionPersistedContent(docEntry, session.textState)
     : docEntry.savedTextContent
-  if (content === currentContent) {
+  const hasSameContent = content === currentContent
+  const hasSameMetadata = isSameTextMetadata(docEntry.model.metadata, metadata)
+  if (hasSameContent && hasSameMetadata) {
     return
   }
 
   if (!freshState.isDirty) {
+    if (hasSameContent) {
+      updateSavedDocumentMetadataBaseline(docEntry, content, metadata)
+      return
+    }
+
     replaceDocumentModelFromExternal(context, event.path, content, metadata)
     syncScenePreviewForExternalContent(context, event.path, content, freshState.kind)
     return

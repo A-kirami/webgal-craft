@@ -203,6 +203,27 @@ export const useEditorStore = defineStore('editor', () => {
     currentState !== undefined && isTextualEditor(currentState) && !!currentState.visualType,
   )
 
+  function setTabLoading(path: string, isLoading: boolean) {
+    const index = tabsStore.findTabIndex(path)
+    if (index !== -1) {
+      tabsStore.updateTabLoading(index, isLoading)
+    }
+  }
+
+  function setTabError(path: string, error?: string) {
+    const index = tabsStore.findTabIndex(path)
+    if (index !== -1) {
+      tabsStore.updateTabError(index, error)
+    }
+  }
+
+  function setTabModified(path: string, isModified: boolean) {
+    const index = tabsStore.findTabIndex(path)
+    if (index !== -1) {
+      tabsStore.updateTabModified(index, isModified)
+    }
+  }
+
   function syncScenePreview(path: string, lineNumber: number, lineText: string, force: boolean = false) {
     const normalizedLineNumber = Math.max(1, Math.trunc(lineNumber))
     const normalizedLineText = lineText ?? ''
@@ -224,27 +245,29 @@ export const useEditorStore = defineStore('editor', () => {
       return
     }
 
+    const path = tab.path
+
     try {
-      tab.isLoading = true
+      setTabLoading(path, true)
 
       // 有 mime 类型且符合预览条件的文件，直接进入文件预览模式
-      const mimeType = mime.getType(tab.path) ?? ''
+      const mimeType = mime.getType(path) ?? ''
       if (PREVIEW_MIME_PREFIXES.some(prefix => mimeType.startsWith(prefix))) {
         const workspaceStore = useWorkspaceStore()
         await until(() => !!workspaceStore.currentGameServeUrl).toBe(true)
 
         let fileSize: number | undefined
         try {
-          const fileStat = await stat(tab.path)
+          const fileStat = await stat(path)
           fileSize = fileStat.size
         } catch {
           // 获取文件大小失败时忽略，不影响预览
         }
 
-        states.set(tab.path, {
-          path: tab.path,
+        states.set(path, {
+          path,
           mode: 'preview',
-          assetUrl: getAssetUrl(tab.path),
+          assetUrl: getAssetUrl(path),
           mimeType,
           fileSize,
         })
@@ -252,12 +275,12 @@ export const useEditorStore = defineStore('editor', () => {
         // 检测文件是否为二进制
         let isBinary: boolean
         try {
-          isBinary = await fsCmds.isBinaryFile(tab.path)
+          isBinary = await fsCmds.isBinaryFile(path)
         } catch (error) {
           // 检测失败，展示错误提示
           const msg = error instanceof Error ? error.message : String(error)
-          states.set(tab.path, {
-            path: tab.path,
+          states.set(path, {
+            path,
             mode: 'unsupported',
             reason: t('edit.unsupported.loadFailed', { error: msg }),
           })
@@ -265,33 +288,33 @@ export const useEditorStore = defineStore('editor', () => {
         }
 
         if (isBinary) {
-          states.set(tab.path, {
-            path: tab.path,
+          states.set(path, {
+            path,
             mode: 'unsupported',
             reason: t('edit.unsupported.binaryFile'),
           })
         } else {
           // 文本文件：沿用现有文本/可视编辑逻辑
           const preferenceStore = usePreferenceStore()
-          const content = await readTextFile(tab.path)
+          const content = await readTextFile(path)
 
           let visualType: VisualType | undefined
 
-          if (await isSceneFile(tab.path, mimeType)) {
+          if (await isSceneFile(path, mimeType)) {
             visualType = 'scene'
-          } else if (await isAnimationFile(tab.path, mimeType)) {
+          } else if (await isAnimationFile(path, mimeType)) {
             visualType = 'animation'
           }
 
           if (preferenceStore.editorMode === 'visual' && visualType) {
-            states.set(tab.path, createVisualState(
-              { path: tab.path, isDirty: false, lastLineNumber: undefined },
+            states.set(path, createVisualState(
+              { path, isDirty: false, lastLineNumber: undefined },
               visualType,
               content,
             ))
           } else {
-            states.set(tab.path, {
-              path: tab.path,
+            states.set(path, {
+              path,
               isDirty: false,
               mode: 'text',
               textContent: content,
@@ -301,12 +324,12 @@ export const useEditorStore = defineStore('editor', () => {
         }
       }
     } catch (error) {
-      logger.error(`无法加载编辑器状态 ${tab.path}: ${error}`)
-      tab.error = error instanceof Error ? error.message : 'Unknown error'
+      logger.error(`无法加载编辑器状态 ${path}: ${error}`)
+      setTabError(path, error instanceof Error ? error.message : 'Unknown error')
     } finally {
-      tab.isLoading = false
+      setTabLoading(path, false)
       // 从磁盘加载的内容是干净的，重置持久化残留的修改标记
-      tab.isModified = false
+      setTabModified(path, false)
     }
   }
 

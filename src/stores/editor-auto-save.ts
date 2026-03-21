@@ -17,48 +17,71 @@ export function canExecuteEditorAutoSave(state: EditorAutoSaveState): boolean {
 
 export function createEditorAutoSaveController(options: CreateEditorAutoSaveControllerOptions) {
   const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  const inFlightPaths = new Set<string>()
+  const queuedRuns = new Set<string>()
 
   function hasPending(path: string): boolean {
-    return pendingTimers.has(path)
+    return pendingTimers.has(path) || inFlightPaths.has(path)
   }
 
   function cancel(path: string) {
     const timer = pendingTimers.get(path)
-    if (timer === undefined) {
-      return
+    if (timer !== undefined) {
+      clearTimeout(timer)
+      pendingTimers.delete(path)
     }
-
-    clearTimeout(timer)
-    pendingTimers.delete(path)
+    queuedRuns.delete(path)
   }
 
   function cancelAll() {
-    for (const path of pendingTimers.keys()) {
+    const trackedPaths = new Set([
+      ...pendingTimers.keys(),
+      ...inFlightPaths,
+      ...queuedRuns,
+    ])
+    for (const path of trackedPaths) {
       cancel(path)
     }
   }
 
   async function run(path: string) {
-    const state = options.getState(path)
-    if (!state || !canExecuteEditorAutoSave(state)) {
+    if (inFlightPaths.has(path)) {
+      queuedRuns.add(path)
       return
     }
 
+    const state = options.getState(path)
+    if (!state || !canExecuteEditorAutoSave(state)) {
+      queuedRuns.delete(path)
+      return
+    }
+
+    inFlightPaths.add(path)
     try {
       await options.saveDocument(path)
     } catch (error) {
       options.handleSaveError(error)
+    } finally {
+      inFlightPaths.delete(path)
+
+      if (queuedRuns.delete(path)) {
+        void run(path)
+      }
     }
   }
 
   function schedule(path: string) {
     const state = options.getState(path)
     if (!state || !canExecuteEditorAutoSave(state)) {
+      cancel(path)
       return
     }
 
     cancel(path)
     const timer = setTimeout(() => {
+      if (pendingTimers.get(path) !== timer) {
+        return
+      }
       pendingTimers.delete(path)
       void run(path)
     }, options.debounceMs)
