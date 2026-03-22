@@ -1,3 +1,6 @@
+import { gameCmds } from '~/commands/game'
+import { gameManager } from '~/services/game-manager'
+
 /**
  * 获取游戏配置
  * @param gamePath 游戏路径

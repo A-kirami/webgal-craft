@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { AssetPreviewState, useEditorStore } from '~/stores/editor'
+
 interface Props {
   state: AssetPreviewState
 }

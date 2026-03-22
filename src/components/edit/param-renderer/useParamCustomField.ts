@@ -1,3 +1,5 @@
+import { CUSTOM_CONTENT, EditorField } from '~/helper/command-registry/schema'
+
 interface UseParamCustomFieldOptions {
   visibleFields: () => EditorField[]
   getFieldSelectValue: (field: EditorField) => string

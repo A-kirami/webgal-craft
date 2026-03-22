@@ -1,6 +1,22 @@
 import { hasInjectionContext } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { useEditorDynamicOptionsBootstrap } from '~/composables/useEditorDynamicOptionsBootstrap'
+import { useStatementEditorContent } from '~/composables/useStatementEditorContent'
+import { useStatementEditorFieldBindings } from '~/composables/useStatementEditorFieldBindings'
+import { useStatementEditorParams } from '~/composables/useStatementEditorParams'
+import { useStatementEditorSay } from '~/composables/useStatementEditorSay'
+import { useStatementEditorScrub } from '~/composables/useStatementEditorScrub'
+import { useStatementFileMissing } from '~/composables/useStatementFileMissing'
+import { useStatementFileRoots } from '~/composables/useStatementFileRoots'
+import { statementMetaKey, useStatementMeta } from '~/composables/useStatementMeta'
+import { resolveStatementSpecialContentMode } from '~/helper/command-registry/schema'
+import { StatementEditorSurface } from '~/helper/statement-editor/surface-context'
+import { parseCommandNode, serializeCommandNode } from '~/helper/webgal-script/codec'
+import { createEmptySentence, ensureParsed, StatementEntry } from '~/helper/webgal-script/sentence'
+import { serializeSentence } from '~/helper/webgal-script/serialize'
+import { updateCommandNodeInlineComment } from '~/helper/webgal-script/update'
+
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { TransactionSource } from '~/models/transaction'
 

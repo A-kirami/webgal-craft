@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import { useControlId } from '~/composables/useControlId'
+import { ChoiceField, CUSTOM_CONTENT, EditorField, FileFieldConfig, I18nLike, JsonObjectField, resolveI18n, resolveSurfaceVariant } from '~/helper/command-registry/schema'
+import { normalizeFieldStringValue } from '~/helper/statement-editor/field-utils'
+import { statementEditorSurfaceKey } from '~/helper/statement-editor/surface-context'
+import { cn } from '~/lib/utils'
+
 import FocusXYControl from './controls/FocusXYControl.vue'
 import NumberControl from './controls/NumberControl.vue'
 import SegmentedControl from './controls/SegmentedControl.vue'
@@ -7,6 +13,7 @@ import { useParamXyPad } from './useParamXyPad'
 
 import type { ParamSelectOptionItem } from './controls/types'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { NumberField } from '~/helper/command-registry/schema'
 
 type StatementSchemaParamMode = 'all' | 'basic' | 'advanced'
 type StatementParamFieldMode =

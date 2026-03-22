@@ -2,6 +2,8 @@
 import { Code, Paintbrush, PanelRight } from 'lucide-vue-next'
 
 import { toggleVariants } from '~/components/ui/toggle'
+import { useEditorStore } from '~/stores/editor'
+import { usePreferenceStore } from '~/stores/preference'
 
 const preferenceStore = usePreferenceStore()
 const editorStore = useEditorStore()

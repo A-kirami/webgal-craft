@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 
+import { serverCmds } from '~/commands/server'
 import { db } from '~/database/db'
+import { Game } from '~/database/model'
+import { gameManager } from '~/services/game-manager'
 
 export const useWorkspaceStore = defineStore(
   'workspace',

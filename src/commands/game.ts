@@ -1,3 +1,5 @@
+import { safeInvoke } from '~/utils/invoke'
+
 /**
  * 游戏配置接口，定义了游戏的基本配置信息
  *

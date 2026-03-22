@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { Grid, List, Search } from 'lucide-vue-next'
 
+import { usePreferenceStore } from '~/stores/preference'
+import { useWorkspaceStore } from '~/stores/workspace'
+
 const { t } = useI18n()
 const preferenceStore = usePreferenceStore()
 const workspaceStore = useWorkspaceStore()

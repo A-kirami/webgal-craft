@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { FileText, X } from 'lucide-vue-next'
 
+import { useEditorStore } from '~/stores/editor'
+import { useModalStore } from '~/stores/modal'
+import { useTabsStore } from '~/stores/tabs'
+import { handleWheelToHorizontalScroll } from '~/utils/wheel'
+
 import type { ScrollArea } from '~/components/ui/scroll-area'
 
 const { t } = useI18n()

@@ -2,6 +2,10 @@
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { AlertTriangle, ArrowDown, ArrowUp, File, FileImage, FileJson2, FileMusic, FileVideo, Folder, FolderOpen } from 'lucide-vue-next'
 
+import { FileViewerItem, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
+import { formatFileSize } from '~/utils/format'
+import { createItemComparator, isValidPositiveNumber, SortableItemAccessor } from '~/utils/sort'
+
 interface FileViewerProps {
   /** 要展示的文件/文件夹列表 */
   items: FileViewerItem[]

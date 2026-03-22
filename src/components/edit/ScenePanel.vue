@@ -2,6 +2,12 @@
 import { dirname } from '@tauri-apps/api/path'
 import { CopyMinus, FilePlus, FolderPlus, Layers, RotateCw } from 'lucide-vue-next'
 
+import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { gameSceneDir } from '~/helper/app-paths'
+import { useFileStore } from '~/stores/file'
+import { useTabsStore } from '~/stores/tabs'
+import { useWorkspaceStore } from '~/stores/workspace'
+
 import type { FlattenedItem } from 'reka-ui'
 
 const fileStore = useFileStore()

@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import { createStatementIdTarget, StatementUpdatePayload } from '~/composables/useStatementEditor'
+import { useStatementEffectEditorBridge } from '~/composables/useStatementEffectEditorBridge'
+import { useStatementFileMissing } from '~/composables/useStatementFileMissing'
+import { provideStatementMeta } from '~/composables/useStatementMeta'
+import { buildStatementPreviewParams, StatementCardPreviewParam } from '~/helper/statement-editor/preview'
+import { ensureParsed, StatementEntry } from '~/helper/webgal-script/sentence'
+
 const props = defineProps<{
   entry: StatementEntry
   index: number

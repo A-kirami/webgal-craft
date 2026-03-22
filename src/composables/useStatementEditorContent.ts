@@ -1,5 +1,11 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { ArgField, CUSTOM_CONTENT, EditorField, FieldDef, readArgFieldStorageKey, resolveI18n } from '~/helper/command-registry/schema'
+import { serializeCommandNode } from '~/helper/webgal-script/codec'
+import { ChooseContentItem, parseChooseContent, parseSetVarContent, parseStyleRuleContent, stringifyChooseContent, stringifySetVarContent, stringifyStyleRuleContent, StyleRuleContentItem } from '~/helper/webgal-script/content'
+import { CommandNode } from '~/helper/webgal-script/types'
+import { updateCommandNodeContent } from '~/helper/webgal-script/update'
+
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 export interface UseStatementEditorContentOptions {

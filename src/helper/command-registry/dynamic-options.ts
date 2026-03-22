@@ -1,6 +1,9 @@
 import { join } from '@tauri-apps/api/path'
 import { readTextFile } from '@tauri-apps/plugin-fs'
 
+import { gameAssetDir } from '~/helper/app-paths'
+import { DynamicOptionsContext, DynamicOptionSourceDef } from '~/helper/command-registry/schema'
+
 interface FigureMetadata {
   motions: string[]
   expressions: string[]

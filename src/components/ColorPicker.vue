@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { ChromePicker } from 'vue-color'
 
+import { cn } from '~/lib/utils'
+import { ColorPickerHsl, ColorPickerHsla, ColorPickerValue } from '~/types/color-picker'
+
 import type { HTMLAttributes } from 'vue'
+
 import 'vue-color/style.css'
 
 interface Props {

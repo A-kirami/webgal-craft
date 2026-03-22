@@ -8,6 +8,9 @@ import { useForm } from 'vee-validate'
 import * as z from 'zod'
 
 import { FormField } from '~/components/ui/form'
+import { gameManager } from '~/services/game-manager'
+import { useResourceStore } from '~/stores/resource'
+import { useStorageSettingsStore } from '~/stores/storage-settings'
 
 const open = defineModel<boolean>('open')
 

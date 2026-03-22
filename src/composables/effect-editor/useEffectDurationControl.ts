@@ -1,3 +1,6 @@
+import { usePointerDrag } from '~/composables/usePointerDrag'
+import { applyScrubStepModifier } from '~/helper/math'
+
 interface UseEffectDurationControlOptions {
   getDuration: () => string
   emitDuration: (value: string) => void

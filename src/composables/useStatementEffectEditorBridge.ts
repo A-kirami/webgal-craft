@@ -1,12 +1,17 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { useInjectedEffectEditorProvider } from '~/composables/useEffectEditorProvider'
+import { createStatementIdTarget, StatementUpdatePayload, StatementUpdateTarget } from '~/composables/useStatementEditor'
+import { serializeTransform } from '~/helper/effect-editor-config'
+import { setOrRemoveArg } from '~/helper/webgal-script/arg-utils'
+import { hasSentenceTruthyFlag, readSentenceArgString } from '~/helper/webgal-script/sentence'
+import { serializeSentence } from '~/helper/webgal-script/serialize'
 import { computeLineNumberFromStatementId } from '~/models/scene-selection'
+import { isEditableEditor, useEditorStore } from '~/stores/editor'
+import { Transform } from '~/types/stage'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-import type {
-  SceneVisualProjectionState,
-  TextProjectionState,
-} from '~/stores/editor'
+import type { SceneVisualProjectionState, TextProjectionState } from '~/stores/editor'
 
 export interface EffectEditorResult {
   transform: Transform

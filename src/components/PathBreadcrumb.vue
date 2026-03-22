@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { FolderOpen, MoreHorizontal } from 'lucide-vue-next'
 
+import { useBreadcrumbCollapse } from '~/composables/useBreadcrumbCollapse'
+
 interface PathBreadcrumbProps {
   /** 根目录绝对路径（用于推导根节点文案） */
   rootPath: string

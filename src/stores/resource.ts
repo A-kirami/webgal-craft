@@ -1,5 +1,9 @@
 import { defineStore } from 'pinia'
 
+import { useEngines, useGames } from '~/composables/useDatabase'
+import { Engine, Game } from '~/database/model'
+import { useWorkspaceStore } from '~/stores/workspace'
+
 export const useResourceStore = defineStore('resource', () => {
   const games = $(useGames())
   const engines = $(useEngines())

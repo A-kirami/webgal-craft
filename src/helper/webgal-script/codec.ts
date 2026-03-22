@@ -1,6 +1,9 @@
 import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { parseChooseContent, parseSetVarContent, parseStyleRuleContent, stringifyChooseContent, stringifySetVarContent, stringifyStyleRuleContent } from '~/helper/webgal-script/content'
+import { ApplyStyleCommandNode, ChooseCommandNode, CommandNode, CommentCommandNode, FIGURE_POSITION_FLAGS, GenericCommandNode, GenericCommandType, SayCommandNode, SetVarCommandNode, TypedCommandNode } from '~/helper/webgal-script/types'
+
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 interface CommandCodec {

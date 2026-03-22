@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { useEffectEditorDialog } from '~/composables/useEffectEditorDialog'
+import { StatementUpdatePayload } from '~/composables/useStatementEditor'
+import { commandEntries, commandPanelCategories, getCategoryLabel, getFactoryDefaultCommandText } from '~/helper/command-registry/index'
+import { resolveI18n } from '~/helper/command-registry/schema'
+import { buildSingleStatement, StatementEntry } from '~/helper/webgal-script/sentence'
+import { StatementGroup, useCommandPanelStore } from '~/stores/command-panel'
+import { useModalStore } from '~/stores/modal'
+import { buildPreviousSpeakers } from '~/utils/speaker'
+
 interface Props {
   group?: StatementGroup
 }

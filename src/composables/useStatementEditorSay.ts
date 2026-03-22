@@ -1,5 +1,12 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { StatementType } from '~/composables/useStatementMeta'
+import { serializeCommandNode } from '~/helper/webgal-script/codec'
+import { hasCommandNodeParam } from '~/helper/webgal-script/params'
+import { readSentenceArgString, StatementEntry } from '~/helper/webgal-script/sentence'
+import { CommandNode, SayCommandNode } from '~/helper/webgal-script/types'
+import { updateCommandNodeSpeaker } from '~/helper/webgal-script/update'
+
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 export interface UseStatementEditorSayOptions {

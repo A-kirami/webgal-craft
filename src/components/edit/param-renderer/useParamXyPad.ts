@@ -1,3 +1,8 @@
+import { EditorField } from '~/helper/command-registry/schema'
+import { cn } from '~/lib/utils'
+
+import type { NumberField } from '~/helper/command-registry/schema'
+
 type PanelXyPadEditorField = EditorField & {
   field: NumberField & {
     panelPairKey: string

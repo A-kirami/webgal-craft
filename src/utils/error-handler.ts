@@ -1,3 +1,5 @@
+import { AppError } from '~/types/errors'
+
 interface HandleErrorOptions {
   /** 静默模式：只记录日志，不弹通知 */
   silent?: boolean

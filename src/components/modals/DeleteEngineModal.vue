@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { TriangleAlert } from 'lucide-vue-next'
 
+import { Engine } from '~/database/model'
+import { engineManager } from '~/services/engine-manager'
+
 const { t } = useI18n()
 const open = defineModel<boolean>('open')
 

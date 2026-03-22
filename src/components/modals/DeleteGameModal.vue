@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { TriangleAlert } from 'lucide-vue-next'
 
+import { Game } from '~/database/model'
+import { gameManager } from '~/services/game-manager'
+import { useModalStore } from '~/stores/modal'
+
 const { t } = useI18n()
 let open = $(defineModel<boolean>('open'))
 

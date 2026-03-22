@@ -1,5 +1,10 @@
 import { normalize } from '@tauri-apps/api/path'
 
+import { readDirectoryItemsCached } from '~/services/directory-cache'
+import { AppError } from '~/types/errors'
+import { FileViewerItem } from '~/types/file-viewer'
+import { toComparablePath } from '~/utils/path'
+
 interface ReadDirectoryOptions {
   /** 根目录绝对路径（可选），用于做路径边界校验 */
   rootPath?: string

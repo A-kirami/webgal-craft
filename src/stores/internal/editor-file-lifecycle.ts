@@ -1,19 +1,14 @@
 import { stat } from '@tauri-apps/plugin-fs'
 
+import { fsCmds } from '~/commands/fs'
+import { gameAssetDir } from '~/helper/app-paths'
 import { mime } from '~/plugins/mime'
 import { consumePendingDocumentWrite } from '~/services/document-write-intents'
+import { useModalStore } from '~/stores/modal'
 
 import { applyDocumentTransaction } from './editor-document-actions'
-import {
-  createLoadedDocumentState,
-  markDocumentClean,
-  resolveSceneCursor,
-} from './editor-document-state'
-import {
-  applyLoadedDocumentState,
-  createEditableSession,
-  getTextProjectionPersistedContent,
-} from './editor-session'
+import { createLoadedDocumentState, markDocumentClean, resolveSceneCursor } from './editor-document-state'
+import { applyLoadedDocumentState, createEditableSession, getTextProjectionPersistedContent } from './editor-session'
 
 import type { DocumentStateAccessor, DocumentStateSyncActions } from './editor-document-actions'
 import type { DocumentState } from './editor-document-state'

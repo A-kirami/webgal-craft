@@ -1,3 +1,5 @@
+import { AnimationFrame } from '~/types/stage'
+
 import type { TextMetadata } from './document-model'
 import type { SceneSelectionSnapshot } from './scene-selection'
 

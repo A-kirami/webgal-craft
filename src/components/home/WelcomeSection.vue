@@ -2,6 +2,12 @@
 import { open } from '@tauri-apps/plugin-dialog'
 import { FolderOpen, Plus } from 'lucide-vue-next'
 
+import { gameManager } from '~/services/game-manager'
+import { useModalStore } from '~/stores/modal'
+import { useResourceStore } from '~/stores/resource'
+import { useWorkspaceStore } from '~/stores/workspace'
+import { AppError } from '~/types/errors'
+
 const workspaceStore = useWorkspaceStore()
 const resourceStore = useResourceStore()
 const router = useRouter()

@@ -1,5 +1,8 @@
 import { invoke } from '@tauri-apps/api/core'
 
+import { AppError } from '~/types/errors'
+import { safeInvoke } from '~/utils/invoke'
+
 export type ThumbnailSize = number | {
   width: number
   height: number

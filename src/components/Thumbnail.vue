@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Ban } from 'lucide-vue-next'
 
+import { thumbnailCmds, ThumbnailSize } from '~/commands/thumbnaila'
 import { cn } from '~/lib/utils'
 
 const props = defineProps<{

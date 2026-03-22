@@ -1,5 +1,8 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { ArgField, EditorField, I18nT, isFlagChoiceField, readArgFieldStorageKey, resolveI18n } from '~/helper/command-registry/schema'
+import { getActiveEffectCategories } from '~/helper/effect-editor-config'
+
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 export type StatementCardType = 'empty' | 'comment' | 'say' | 'command' | 'unsupported'

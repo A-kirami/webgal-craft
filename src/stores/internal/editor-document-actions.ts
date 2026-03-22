@@ -1,16 +1,9 @@
 import { isAnimationDocumentTextValid } from '~/models/animation-document-codec'
-import {
-  captureSceneSelectionSnapshot,
-  computeLineNumberFromStatementId,
-  createSceneSelectionSnapshot,
-} from '~/models/scene-selection'
+import { captureSceneSelectionSnapshot, computeLineNumberFromStatementId, createSceneSelectionSnapshot } from '~/models/scene-selection'
 import { applyTransactionToModel } from '~/models/transaction-apply'
+import { AnimationFrame } from '~/types/stage'
 
-import {
-  getDocumentTextContent,
-  invalidateDocumentTextCache,
-  isDocumentDirty,
-} from './editor-document-state'
+import { getDocumentTextContent, invalidateDocumentTextCache, isDocumentDirty } from './editor-document-state'
 import { getTextProjectionPersistedContent, isTextProjectionDirty } from './editor-session'
 import { computeTransactionInverse } from './editor-transaction-inverse'
 

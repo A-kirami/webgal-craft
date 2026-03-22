@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ResizablePanel } from '~/components/ui/resizable'
+import { usePreferenceStore } from '~/stores/preference'
 
 const preferenceStore = usePreferenceStore()
 </script>

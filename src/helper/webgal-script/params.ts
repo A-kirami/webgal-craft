@@ -1,5 +1,9 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { getCommandConfig } from '~/helper/command-registry/index'
+import { isFlagChoiceField, readArgFields } from '~/helper/command-registry/schema'
+import { CommandNode, FIGURE_POSITION_FLAGS, GenericCommandNode, isGenericNode, SayCommandNode } from '~/helper/webgal-script/types'
+
 export interface CommandParamDescriptor {
   key: string
   type: string

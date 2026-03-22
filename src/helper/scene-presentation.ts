@@ -1,3 +1,5 @@
+import { StatementEntry } from '~/helper/webgal-script/sentence'
+
 export interface ScenePresentationState {
   collapsedStatementIds: Partial<Record<number, true>>
 }

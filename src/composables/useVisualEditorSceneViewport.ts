@@ -1,5 +1,7 @@
 import { useVirtualizer } from '@tanstack/vue-virtual'
 
+import { SceneVisualProjectionState } from '~/stores/editor'
+
 interface UseVisualEditorSceneViewportOptions {
   getActiveProjection: () => 'text' | 'visual' | undefined
   getActiveTabPath: () => string | undefined

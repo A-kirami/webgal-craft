@@ -1,5 +1,10 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { cloneArgs } from '~/helper/webgal-script/codec'
+import { parseChooseContent, parseSetVarContent, parseStyleRuleContent } from '~/helper/webgal-script/content'
+import { CommandParamDescriptor, getRegistryKnownKeys, resolveRegistryFieldMeta } from '~/helper/webgal-script/params'
+import { CommandNode, FIGURE_POSITION_FLAGS, GenericCommandNode, isGenericNode, TypedCommandNode } from '~/helper/webgal-script/types'
+
 import type { arg } from 'webgal-parser/src/interface/sceneInterface'
 
 const NOT_HANDLED = Symbol('command-param-not-handled')

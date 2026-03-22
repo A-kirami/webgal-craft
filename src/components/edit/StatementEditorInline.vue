@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { isStatementInteractiveTarget, StatementUpdatePayload, StatementUpdateTarget, useStatementEditor } from '~/composables/useStatementEditor'
+import { statementEditorSurfaceKey } from '~/helper/statement-editor/surface-context'
+import { StatementEntry } from '~/helper/webgal-script/sentence'
+
 const props = defineProps<{
   entry: StatementEntry
   /** 上一条 say 语句的说话人（用于 concat 占位符） */

@@ -1,3 +1,5 @@
+import { useEditorStore } from '~/stores/editor'
+
 import type { StatementUpdatePayload } from './useStatementEditor'
 import type * as monaco from 'monaco-editor'
 

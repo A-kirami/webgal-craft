@@ -1,11 +1,9 @@
+import { AnimationFrame, Point2D } from '~/types/stage'
+
 import { applyTextContentToDocument, replaceDocumentText } from './text-projection'
 
 import type { AnimationDocumentModel, DocumentModel, SceneDocumentModel } from './document-model'
-import type {
-  AnimationTransaction,
-  SceneTransaction,
-  Transaction,
-} from './transaction'
+import type { AnimationTransaction, SceneTransaction, Transaction } from './transaction'
 
 // ============================================================
 // 事务应用：将 Transaction 应用到 DocumentModel，返回新模型

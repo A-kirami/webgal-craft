@@ -1,5 +1,7 @@
 import Dexie, { Table } from 'dexie'
 
+import { Engine, Game } from '~/database/model'
+
 class WebGALCraftDatabase extends Dexie {
   games!: Table<Game, string>
   engines!: Table<Engine, string>

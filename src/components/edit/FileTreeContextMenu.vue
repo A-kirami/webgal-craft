@@ -12,6 +12,12 @@ import {
   Trash2,
 } from 'lucide-vue-next'
 
+import { useFileClipboard } from '~/composables/useFileClipboard'
+import { gameFs } from '~/services/game-fs'
+import { useModalStore } from '~/stores/modal'
+import { settleBatch } from '~/utils/batch'
+import { handleError } from '~/utils/error-handler'
+
 import type { Component } from 'vue'
 
 interface FileItem {

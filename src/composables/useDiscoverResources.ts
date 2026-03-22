@@ -1,6 +1,13 @@
 import { join } from '@tauri-apps/api/path'
 import { exists, readDir } from '@tauri-apps/plugin-fs'
 
+import { engineManager } from '~/services/engine-manager'
+import { gameManager } from '~/services/game-manager'
+import { useModalStore } from '~/stores/modal'
+import { useResourceStore } from '~/stores/resource'
+import { useStorageSettingsStore } from '~/stores/storage-settings'
+import { useWorkspaceStore } from '~/stores/workspace'
+
 interface DiscoveredResource {
   path: string
   name: string

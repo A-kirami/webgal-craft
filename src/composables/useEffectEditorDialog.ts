@@ -1,6 +1,10 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { EFFECT_EDITOR_OPEN_OVERRIDE_KEY } from '~/composables/useStatementEffectEditorBridge'
+import { parseTransformJson, serializeTransform } from '~/helper/effect-editor-config'
+import { readSentenceArgString } from '~/helper/webgal-script/sentence'
+import { useModalStore } from '~/stores/modal'
+import { Transform } from '~/types/stage'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { EffectEditorTransformUpdatePayload } from '~/composables/useEffectEditorProvider'

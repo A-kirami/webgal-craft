@@ -1,6 +1,8 @@
 import SceneParser from 'webgal-parser'
 import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 
+import { handleError } from '~/utils/error-handler'
+
 import type { IScene, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 export const webgalParser = new SceneParser(

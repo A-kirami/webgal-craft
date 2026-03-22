@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { TriangleAlert } from 'lucide-vue-next'
 
+import { Game } from '~/database/model'
+
 let open = $(defineModel<boolean>('open'))
 let confirmInput = $ref('')
 

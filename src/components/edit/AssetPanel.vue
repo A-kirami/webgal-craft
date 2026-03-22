@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Check, Image, LayoutGrid, LayoutList, LayoutTemplate, MicVocal, Minus, Music, Plus, Search, UserRound, Video } from 'lucide-vue-next'
 
+import { usePreferenceStore } from '~/stores/preference'
+import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
+
 const preferenceStore = usePreferenceStore()
 
 const { t } = useI18n()

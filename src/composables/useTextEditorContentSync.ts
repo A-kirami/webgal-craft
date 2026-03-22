@@ -1,6 +1,7 @@
 import * as monaco from 'monaco-editor'
 
 import { isAnimationDocumentTextValid } from '~/models/animation-document-codec'
+import { useEditorStore } from '~/stores/editor'
 
 import type { RestoreAfterModelSyncContext, TextEditorContentChangeContext } from './useTextEditorHistory'
 import type { TextEditorCursorSnapshot } from '~/helper/text-editor-history-snapshot'

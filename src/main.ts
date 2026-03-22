@@ -5,13 +5,11 @@ import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import { i18n } from '~/plugins/i18n'
 import { notivue } from '~/plugins/notivue'
 import { router } from '~/router'
+import { handleError } from '~/utils/error-handler'
 
 import App from './App.vue'
-
 import '~/plugins/editor'
-
 import 'virtual:uno.css'
-
 import '~/styles/main.css'
 
 const pinia = createPinia()

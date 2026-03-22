@@ -3,7 +3,15 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { openPath } from '@tauri-apps/plugin-opener'
 import { Download, Folder, Plus, Scroll, Trash2 } from 'lucide-vue-next'
 
+import { useTauriDropZone } from '~/composables/useTauriDropZone'
+import { Game } from '~/database/model'
 import dayjs from '~/plugins/dayjs'
+import { gameManager } from '~/services/game-manager'
+import { useModalStore } from '~/stores/modal'
+import { usePreferenceStore } from '~/stores/preference'
+import { useResourceStore } from '~/stores/resource'
+import { useWorkspaceStore } from '~/stores/workspace'
+import { AppError } from '~/types/errors'
 
 const preferenceStore = usePreferenceStore()
 const resourceStore = useResourceStore()

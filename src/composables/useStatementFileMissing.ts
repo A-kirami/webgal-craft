@@ -1,5 +1,10 @@
 import { join } from '@tauri-apps/api/path'
 
+import { gameAssetDir, gameSceneDir } from '~/helper/app-paths'
+import { ArgField, EditorField } from '~/helper/command-registry/schema'
+import { createStatementMissingFileLoader } from '~/helper/statement-editor/file-missing'
+import { useWorkspaceStore } from '~/stores/workspace'
+
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 export interface UseStatementFileMissingOptions {

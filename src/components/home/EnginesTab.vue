@@ -3,6 +3,14 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { openPath } from '@tauri-apps/plugin-opener'
 import { Box, Download, Folder, Plus, Trash2 } from 'lucide-vue-next'
 
+import { useTauriDropZone } from '~/composables/useTauriDropZone'
+import { Engine } from '~/database/model'
+import { engineManager } from '~/services/engine-manager'
+import { useModalStore } from '~/stores/modal'
+import { usePreferenceStore } from '~/stores/preference'
+import { useResourceStore } from '~/stores/resource'
+import { AppError } from '~/types/errors'
+
 const preferenceStore = usePreferenceStore()
 const resourceStore = useResourceStore()
 const modalStore = useModalStore()

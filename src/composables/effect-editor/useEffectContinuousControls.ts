@@ -1,3 +1,11 @@
+import { createParamDrag } from '~/composables/effect-editor/createParamDrag'
+import { EffectControlDeps } from '~/composables/effect-editor/types'
+import { DialField } from '~/helper/command-registry/schema'
+import { applyScrubStepModifier, clamp, degreeToRadian, getPointerAngleDegrees, normalizeAngleDelta, normalizeDegree, radianToDegree, roundByStep, roundToPrecision } from '~/helper/math'
+import { usePreferenceStore } from '~/stores/preference'
+
+import type { NumberField } from '~/helper/command-registry/schema'
+
 /** NumberField 且必定有 linkedPairKey 的子类型（用于 linked-slider 控件） */
 type LinkedNumberField = NumberField & { linkedPairKey: string }
 

@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 
+import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
+
 export const usePreferenceStore = defineStore(
   'preference',
   () => {

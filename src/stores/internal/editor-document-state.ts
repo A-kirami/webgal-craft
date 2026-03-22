@@ -3,11 +3,7 @@ import { createDocumentModel, normalizeTextLineEnding } from '~/models/document-
 import { serializeDocument } from '~/models/serializer'
 import { EditHistory } from '~/models/transaction'
 
-import type {
-  DocumentKind,
-  DocumentModel,
-  TextMetadata,
-} from '~/models/document-model'
+import type { DocumentKind, DocumentModel, TextMetadata } from '~/models/document-model'
 
 export interface DocumentState {
   model: DocumentModel

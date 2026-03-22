@@ -3,7 +3,14 @@ import { exists, stat, watch as watchFs } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
 import { defineStore } from 'pinia'
 
+import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { gameRootDir } from '~/helper/app-paths'
 import { mime } from '~/plugins/mime'
+import { clearDirectoryItemsCache, invalidateDirectoryItemsCache, readDirectoryItemsCached } from '~/services/directory-cache'
+import { useWorkspaceStore } from '~/stores/workspace'
+import { AppError } from '~/types/errors'
+import { FileViewerItem } from '~/types/file-viewer'
+import { handleError } from '~/utils/error-handler'
 
 import type { WatchEvent } from '@tauri-apps/plugin-fs'
 

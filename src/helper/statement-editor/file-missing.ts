@@ -1,5 +1,7 @@
 import { exists } from '@tauri-apps/plugin-fs'
 
+import { ArgField, EditorField, readArgFieldStorageKey } from '~/helper/command-registry/schema'
+
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 export interface StatementFileCheckItem {

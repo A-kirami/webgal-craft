@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { usePointerDrag } from '~/composables/usePointerDrag'
+import { clamp, roundByStep } from '~/helper/math'
+import { normalizeFieldStringValue } from '~/helper/statement-editor/field-utils'
+import { cn } from '~/lib/utils'
+
 import type { HTMLAttributes } from 'vue'
 
 interface Props {

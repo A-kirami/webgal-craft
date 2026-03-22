@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import { ResizablePanel } from '~/components/ui/resizable'
+import { useCommandPanelBridgeProvider, useSidebarPanelProvider } from '~/composables/useEditorPanelBindings'
+import { useEffectEditorProvider } from '~/composables/useEffectEditorProvider'
+import { resolveHistoryShortcutAction } from '~/helper/history-shortcut'
+import { StatementGroup } from '~/stores/command-panel'
+import { useEditSettingsStore } from '~/stores/edit-settings'
+import { isEditableEditor, useEditorStore } from '~/stores/editor'
+import { usePreferenceStore } from '~/stores/preference'
+import { useTabsStore } from '~/stores/tabs'
+import { Transform } from '~/types/stage'
 
 import type { commandType } from 'webgal-parser/src/interface/sceneInterface'
 

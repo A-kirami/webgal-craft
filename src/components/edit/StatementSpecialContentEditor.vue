@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useControlId } from '~/composables/useControlId'
+import { StatementEditorSurface } from '~/helper/statement-editor/surface-context'
+import { ChooseContentItem, SetVarContent, StyleRuleContentItem } from '~/helper/webgal-script/content'
+
 interface Props {
   surface: StatementEditorSurface
   mode: 'setVar' | 'choose' | 'applyStyle'

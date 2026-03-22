@@ -2,6 +2,10 @@
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { Copy, ExternalLink, Link, RotateCw } from 'lucide-vue-next'
 
+import { gameCmds } from '~/commands/game'
+import { useWorkspaceStore } from '~/stores/workspace'
+import { handleError } from '~/utils/error-handler'
+
 const DEFAULT_ASPECT_RATIO = '16/9'
 
 const workspaceStore = useWorkspaceStore()

@@ -1,3 +1,5 @@
+import { EngineMetadata, GameMetadata } from '~/services/types'
+
 export interface Game {
   id: string
   path: string

@@ -6,193 +6,52 @@
 // biome-ignore lint: disable
 export {}
 declare global {
-  const AppError: typeof import('./types/errors').AppError
-  const CUSTOM_CONTENT: typeof import('./helper/command-registry/schema').CUSTOM_CONTENT
-  const DEFAULT_EASE_OPTION_VALUE: typeof import('./helper/effect-editor-config').DEFAULT_EASE_OPTION_VALUE
-  const DebugCommand: typeof import('./types/debugProtocol').DebugCommand
-  const EDITOR_DYNAMIC_OPTIONS_KEYS: typeof import('./helper/command-registry/schema').EDITOR_DYNAMIC_OPTIONS_KEYS
-  const EFFECT_CATEGORIES: typeof import('./helper/effect-editor-config').EFFECT_CATEGORIES
-  const EFFECT_EASE_OPTIONS: typeof import('./helper/effect-editor-config').EFFECT_EASE_OPTIONS
-  const EFFECT_EDITOR_OPEN_OVERRIDE_KEY: typeof import('./composables/useStatementEffectEditorBridge').EFFECT_EDITOR_OPEN_OVERRIDE_KEY
   const EffectScope: typeof import('vue').EffectScope
-  const FIGURE_POSITION_FLAGS: typeof import('./helper/webgal-script/types').FIGURE_POSITION_FLAGS
-  const SAY_CONTINUATION_RAW: typeof import('./helper/webgal-script/codec').SAY_CONTINUATION_RAW
-  const UNSPECIFIED: typeof import('./helper/command-registry/schema').UNSPECIFIED
-  const applyEffectEditorResultToSentence: typeof import('./composables/useStatementEffectEditorBridge').applyEffectEditorResultToSentence
-  const applyScrubStepModifier: typeof import('./helper/math').applyScrubStepModifier
-  const arg: typeof import('./helper/command-registry/schema').arg
   const asyncComputed: typeof import('@vueuse/core').asyncComputed
   const autoResetRef: typeof import('@vueuse/core').autoResetRef
-  const buildBeforeHistorySnapshotFromChangeEvent: typeof import('./helper/text-editor-history-snapshot').buildBeforeHistorySnapshotFromChangeEvent
-  const buildCategoryRenderItems: typeof import('./helper/effect-editor-config').buildCategoryRenderItems
-  const buildPreviousSpeakers: typeof import('./utils/speaker').buildPreviousSpeakers
-  const buildSceneStatements: typeof import('./helper/webgal-script/sentence').buildSceneStatements
-  const buildSchemaKeySet: typeof import('./helper/statement-editor/visibility').buildSchemaKeySet
-  const buildSingleStatement: typeof import('./helper/webgal-script/sentence').buildSingleStatement
-  const buildStatementPreviewParams: typeof import('./helper/statement-editor/preview').buildStatementPreviewParams
-  const buildStatements: typeof import('./helper/webgal-script/sentence').buildStatements
-  const buildTextEditorOptions: typeof import('./helper/text-editor-options').buildTextEditorOptions
-  const canRestoreVisualEditorCardFocus: typeof import('./helper/visual-editor-focus').canRestoreVisualEditorCardFocus
-  const captureCursorSnapshotFromEditor: typeof import('./helper/text-editor-history-snapshot').captureCursorSnapshotFromEditor
-  const captureEditorHistorySnapshot: typeof import('./helper/text-editor-history-snapshot').captureEditorHistorySnapshot
-  const categoryTheme: typeof import('./helper/command-registry/index').categoryTheme
-  const clamp: typeof import('./helper/math').clamp
-  const clearDirectoryItemsCache: typeof import('./services/directory-cache').clearDirectoryItemsCache
-  const cloneArgs: typeof import('./helper/webgal-script/codec').cloneArgs
-  const cloneEditorSelection: typeof import('./helper/text-editor-history-snapshot').cloneEditorSelection
-  const cn: typeof import('./lib/utils').cn
-  const collectStatementFileChecks: typeof import('./helper/statement-editor/file-missing').collectStatementFileChecks
-  const colorMode: typeof import('./composables/color-mode').colorMode
-  const commandEntries: typeof import('./helper/command-registry/index').commandEntries
-  const commandPanelBridgeKey: typeof import('./composables/useEditorPanelBindings').commandPanelBridgeKey
-  const commandPanelCategories: typeof import('./helper/command-registry/index').commandPanelCategories
-  const commandRaw: typeof import('./helper/command-registry/schema').commandRaw
-  const compareOptionalNumber: typeof import('./utils/sort').compareOptionalNumber
-  const computeHistoryCursorOffset: typeof import('./helper/text-editor-history-snapshot').computeHistoryCursorOffset
-  const computeLineNumberFromStatementId: typeof import('./stores/editor').computeLineNumberFromStatementId
-  const computeStatementIdFromLineNumber: typeof import('./stores/editor').computeStatementIdFromLineNumber
   const computed: typeof import('vue').computed
   const computedAsync: typeof import('@vueuse/core').computedAsync
   const computedEager: typeof import('@vueuse/core').computedEager
   const computedInject: typeof import('@vueuse/core').computedInject
   const computedWithControl: typeof import('@vueuse/core').computedWithControl
-  const configManager: typeof import('./services/config-manager').configManager
-  const consumePendingDocumentWrite: typeof import('./services/document-write-intents').consumePendingDocumentWrite
-  const content: typeof import('./helper/command-registry/schema').content
   const controlledComputed: typeof import('@vueuse/core').controlledComputed
   const controlledRef: typeof import('@vueuse/core').controlledRef
   const createApp: typeof import('vue').createApp
-  const createAsyncQueue: typeof import('./helper/async-queue').createAsyncQueue
-  const createEditorSaveShortcutHandler: typeof import('./helper/editor-save-shortcut').createEditorSaveShortcutHandler
-  const createEditorSelection: typeof import('./helper/text-editor-history-snapshot').createEditorSelection
-  const createEffectEditorProvider: typeof import('./composables/useEffectEditorProvider').createEffectEditorProvider
-  const createEffectPreviewEmitter: typeof import('./composables/useEffectEditorProvider').createEffectPreviewEmitter
-  const createEmptySceneTextPanelSnapshot: typeof import('./helper/scene-text-panel').createEmptySceneTextPanelSnapshot
-  const createEmptySentence: typeof import('./helper/webgal-script/sentence').createEmptySentence
   const createEventHook: typeof import('@vueuse/core').createEventHook
   const createGlobalState: typeof import('@vueuse/core').createGlobalState
   const createInjectionState: typeof import('@vueuse/core').createInjectionState
-  const createItemComparator: typeof import('./utils/sort').createItemComparator
-  const createParamDrag: typeof import('./composables/effect-editor/createParamDrag').createParamDrag
-  const createPreviewMediaSession: typeof import('./helper/preview-media-session').createPreviewMediaSession
   const createReactiveFn: typeof import('@vueuse/core').createReactiveFn
   const createRef: typeof import('@vueuse/core').createRef
   const createReusableTemplate: typeof import('@vueuse/core').createReusableTemplate
-  const createScenePresentationState: typeof import('./helper/scene-presentation').createScenePresentationState
-  const createSceneTextPanelTextModel: typeof import('./helper/scene-text-panel').createSceneTextPanelTextModel
   const createSharedComposable: typeof import('@vueuse/core').createSharedComposable
-  const createStatementEntryFromSceneStatement: typeof import('./helper/webgal-script/sentence').createStatementEntryFromSceneStatement
-  const createStatementIdTarget: typeof import('./composables/useStatementEditor').createStatementIdTarget
-  const createStatementMissingFileLoader: typeof import('./helper/statement-editor/file-missing').createStatementMissingFileLoader
   const createTemplatePromise: typeof import('@vueuse/core').createTemplatePromise
-  const createTextEditorSaveShortcutHandler: typeof import('./composables/useTextEditorSaveShortcut').createTextEditorSaveShortcutHandler
-  const createTextLineTarget: typeof import('./composables/useStatementEditor').createTextLineTarget
-  const createTransientStatementEntry: typeof import('./helper/webgal-script/sentence').createTransientStatementEntry
   const createUnrefFn: typeof import('@vueuse/core').createUnrefFn
-  const createVisualEditorSaveShortcutHandler: typeof import('./composables/useVisualEditorSaveShortcut').createVisualEditorSaveShortcutHandler
   const customRef: typeof import('vue').customRef
-  const db: typeof import('./database/db').db
   const debouncedRef: typeof import('@vueuse/core').debouncedRef
   const debouncedWatch: typeof import('@vueuse/core').debouncedWatch
-  const debugCommander: typeof import('./services/debug-commander').debugCommander
-  const defaultEngineSavePath: typeof import('./helper/app-paths').defaultEngineSavePath
-  const defaultGameSavePath: typeof import('./helper/app-paths').defaultGameSavePath
   const defineAsyncComponent: typeof import('vue').defineAsyncComponent
   const defineComponent: typeof import('vue').defineComponent
   const definePage: typeof import('vue-router/experimental').definePage
-  const degreeToRadian: typeof import('./helper/math').degreeToRadian
-  const deriveArgFieldsFromEditorFields: typeof import('./helper/command-registry/schema').deriveArgFieldsFromEditorFields
-  const displayEntries: typeof import('./helper/command-registry/display').displayEntries
   const eagerComputed: typeof import('@vueuse/core').eagerComputed
-  const editorDynamicOptionSources: typeof import('./helper/command-registry/dynamic-options').editorDynamicOptionSources
-  const effectEntries: typeof import('./helper/command-registry/effect').effectEntries
   const effectScope: typeof import('vue').effectScope
-  const engineIconPath: typeof import('./helper/app-paths').engineIconPath
-  const engineManager: typeof import('./services/engine-manager').engineManager
-  const engineManifestPath: typeof import('./helper/app-paths').engineManifestPath
-  const ensureParsed: typeof import('./helper/webgal-script/sentence').ensureParsed
   const extendRef: typeof import('@vueuse/core').extendRef
-  const extractRgbColor: typeof import('./helper/color').extractRgbColor
-  const extractSpeakerChange: typeof import('./utils/speaker').extractSpeakerChange
-  const fieldsToTransform: typeof import('./helper/effect-editor-config').fieldsToTransform
-  const filterExtraArgs: typeof import('./helper/statement-editor/visibility').filterExtraArgs
-  const findSelectedVisualEditorStatementCard: typeof import('./helper/visual-editor-focus').findSelectedVisualEditorStatementCard
-  const formatFileSize: typeof import('./utils/format').formatFileSize
-  const fsCmds: typeof import('./commands/fs').fsCmds
-  const gameAssetDir: typeof import('./helper/app-paths').gameAssetDir
-  const gameCmds: typeof import('./commands/game').gameCmds
-  const gameCoverPath: typeof import('./helper/app-paths').gameCoverPath
-  const gameFs: typeof import('./services/game-fs').gameFs
-  const gameIconPath: typeof import('./helper/app-paths').gameIconPath
-  const gameManager: typeof import('./services/game-manager').gameManager
-  const gameRootDir: typeof import('./helper/app-paths').gameRootDir
-  const gameSceneDir: typeof import('./helper/app-paths').gameSceneDir
-  const getActiveEffectCategories: typeof import('./helper/effect-editor-config').getActiveEffectCategories
-  const getAssetUrl: typeof import('./helper/asset-url').getAssetUrl
-  const getCategoryLabel: typeof import('./helper/command-registry/index').getCategoryLabel
-  const getCommandConfig: typeof import('./helper/command-registry/index').getCommandConfig
-  const getCommandDescription: typeof import('./helper/command-registry/index').getCommandDescription
-  const getCommandLabel: typeof import('./helper/command-registry/index').getCommandLabel
-  const getCommandTheme: typeof import('./helper/command-registry/index').getCommandTheme
   const getCurrentInstance: typeof import('vue').getCurrentInstance
   const getCurrentScope: typeof import('vue').getCurrentScope
   const getCurrentWatcher: typeof import('vue').getCurrentWatcher
-  const getEffectParamKey: typeof import('./helper/effect-editor-config').getEffectParamKey
-  const getFactoryDefaultCommandText: typeof import('./helper/command-registry/index').getFactoryDefaultCommandText
-  const getParamValueFromArgs: typeof import('./helper/statement-editor/param-value').getParamValueFromArgs
-  const getPointerAngleDegrees: typeof import('./helper/math').getPointerAngleDegrees
-  const getPreviousSpeakerAtIndex: typeof import('./utils/speaker').getPreviousSpeakerAtIndex
-  const getPreviousSpeakerAtLine: typeof import('./utils/speaker').getPreviousSpeakerAtLine
-  const getRegistryKnownKeys: typeof import('./helper/webgal-script/params').getRegistryKnownKeys
-  const getValueByPath: typeof import('./helper/effect-editor-config').getValueByPath
-  const getVersion: typeof import('./utils/metadata').getVersion
   const h: typeof import('vue').h
-  const handleError: typeof import('./utils/error-handler').handleError
-  const handleWheelToHorizontalScroll: typeof import('./utils/wheel').handleWheelToHorizontalScroll
-  const hasCommandNodeParam: typeof import('./helper/webgal-script/params').hasCommandNodeParam
-  const hasParamExplicitValue: typeof import('./helper/statement-editor/param-value').hasParamExplicitValue
-  const hasSentenceTruthyFlag: typeof import('./helper/webgal-script/sentence').hasSentenceTruthyFlag
   const ignorableWatch: typeof import('@vueuse/core').ignorableWatch
   const inject: typeof import('vue').inject
   const injectLocal: typeof import('@vueuse/core').injectLocal
-  const invalidateDirectoryItemsCache: typeof import('./services/directory-cache').invalidateDirectoryItemsCache
-  const isAnimationVisualProjection: typeof import('./stores/editor').isAnimationVisualProjection
-  const isBackendError: typeof import('./types/errors').isBackendError
-  const isCommandSupported: typeof import('./helper/command-registry/index').isCommandSupported
   const isDefined: typeof import('@vueuse/core').isDefined
-  const isEditableEditor: typeof import('./stores/editor').isEditableEditor
-  const isFlagChoiceField: typeof import('./helper/command-registry/schema').isFlagChoiceField
-  const isGenericNode: typeof import('./helper/webgal-script/types').isGenericNode
-  const isParamVisibleByArgs: typeof import('./helper/statement-editor/visibility').isParamVisibleByArgs
-  const isParamVisibleByReader: typeof import('./helper/statement-editor/visibility').isParamVisibleByReader
   const isProxy: typeof import('vue').isProxy
   const isReactive: typeof import('vue').isReactive
   const isReadonly: typeof import('vue').isReadonly
   const isRef: typeof import('vue').isRef
-  const isRgbColor: typeof import('./helper/color').isRgbColor
-  const isRgbaPayload: typeof import('./helper/color').isRgbaPayload
-  const isSceneStatementCollapsed: typeof import('./helper/scene-presentation').isSceneStatementCollapsed
-  const isSceneVisualProjection: typeof import('./stores/editor').isSceneVisualProjection
   const isShallow: typeof import('vue').isShallow
-  const isStatementInteractiveTarget: typeof import('./composables/useStatementEditor').isStatementInteractiveTarget
-  const isTransformEqual: typeof import('./helper/effect-editor-config').isTransformEqual
-  const isTypedCommandNode: typeof import('./helper/webgal-script/codec').isTypedCommandNode
-  const isValidPositiveNumber: typeof import('./utils/sort').isValidPositiveNumber
-  const joinStatements: typeof import('./helper/webgal-script/sentence').joinStatements
   const logger: typeof import('@tauri-apps/plugin-log')
   const makeDestructurable: typeof import('@vueuse/core').makeDestructurable
   const markRaw: typeof import('vue').markRaw
   const nextTick: typeof import('vue').nextTick
-  const normalizeAngleDelta: typeof import('./helper/math').normalizeAngleDelta
-  const normalizeColorChannel: typeof import('./helper/color').normalizeColorChannel
-  const normalizeDegree: typeof import('./helper/math').normalizeDegree
-  const normalizeEditorViewState: typeof import('./helper/text-editor-view-state').normalizeEditorViewState
-  const normalizeFieldStringValue: typeof import('./helper/statement-editor/field-utils').normalizeFieldStringValue
-  const normalizeGamePath: typeof import('./helper/command-registry/dynamic-options').normalizeGamePath
-  const normalizeNumber: typeof import('./utils/sort').normalizeNumber
-  const normalizePreviewMediaSessionPatch: typeof import('./helper/preview-media-session').normalizePreviewMediaSessionPatch
-  const normalizeRelativePath: typeof import('./utils/path').normalizeRelativePath
-  const normalizeStepPrecision: typeof import('./helper/math').normalizeStepPrecision
   const notify: typeof import('notivue').push
   const onActivated: typeof import('vue').onActivated
   const onBeforeMount: typeof import('vue').onBeforeMount
@@ -215,43 +74,16 @@ declare global {
   const onUnmounted: typeof import('vue').onUnmounted
   const onUpdated: typeof import('vue').onUpdated
   const onWatcherCleanup: typeof import('vue').onWatcherCleanup
-  const parseChooseContent: typeof import('./helper/webgal-script/content').parseChooseContent
-  const parseCommandNode: typeof import('./helper/webgal-script/codec').parseCommandNode
-  const parseEffectJson: typeof import('./helper/effect-editor-config').parseEffectJson
-  const parseHexColor: typeof import('./helper/color').parseHexColor
-  const parseScene: typeof import('./helper/webgal-script/parser').parseScene
-  const parseSceneOrEmpty: typeof import('./helper/webgal-script/parser').parseSceneOrEmpty
-  const parseSentence: typeof import('./helper/webgal-script/parser').parseSentence
-  const parseSetVarContent: typeof import('./helper/webgal-script/content').parseSetVarContent
-  const parseStyleRuleContent: typeof import('./helper/webgal-script/content').parseStyleRuleContent
-  const parseTransformJson: typeof import('./helper/effect-editor-config').parseTransformJson
   const pausableWatch: typeof import('@vueuse/core').pausableWatch
-  const performEntries: typeof import('./helper/command-registry/perform').performEntries
   const provide: typeof import('vue').provide
   const provideLocal: typeof import('@vueuse/core').provideLocal
-  const provideStatementMeta: typeof import('./composables/useStatementMeta').provideStatementMeta
-  const pruneHiddenDependentArgs: typeof import('./helper/statement-editor/visibility').pruneHiddenDependentArgs
-  const pruneHiddenDependentArgsByReader: typeof import('./helper/statement-editor/visibility').pruneHiddenDependentArgsByReader
-  const radianToDegree: typeof import('./helper/math').radianToDegree
   const reactify: typeof import('@vueuse/core').reactify
   const reactifyObject: typeof import('@vueuse/core').reactifyObject
   const reactive: typeof import('vue').reactive
   const reactiveComputed: typeof import('@vueuse/core').reactiveComputed
   const reactiveOmit: typeof import('@vueuse/core').reactiveOmit
   const reactivePick: typeof import('@vueuse/core').reactivePick
-  const readArgFieldStorageKey: typeof import('./helper/command-registry/schema').readArgFieldStorageKey
-  const readArgFields: typeof import('./helper/command-registry/schema').readArgFields
-  const readCommandConfig: typeof import('./helper/command-registry/index').readCommandConfig
-  const readCommandNodeParamValue: typeof import('./helper/webgal-script/params').readCommandNodeParamValue
-  const readContentField: typeof import('./helper/command-registry/schema').readContentField
-  const readDirectoryItemsCached: typeof import('./services/directory-cache').readDirectoryItemsCached
-  const readEditorFields: typeof import('./helper/command-registry/schema').readEditorFields
-  const readJsonFieldValue: typeof import('./helper/statement-editor/json-fields').readJsonFieldValue
-  const readSentenceArgString: typeof import('./helper/webgal-script/sentence').readSentenceArgString
-  const readTypedCommandNodeExtraArgs: typeof import('./helper/webgal-script/update').readTypedCommandNodeExtraArgs
   const readonly: typeof import('vue').readonly
-  const rebuildStatementsWithStableIds: typeof import('./helper/webgal-script/sentence').rebuildStatementsWithStableIds
-  const reconcileScenePresentationState: typeof import('./helper/scene-presentation').reconcileScenePresentationState
   const ref: typeof import('vue').ref
   const refAutoReset: typeof import('@vueuse/core').refAutoReset
   const refDebounced: typeof import('@vueuse/core').refDebounced
@@ -259,69 +91,22 @@ declare global {
   const refManualReset: typeof import('@vueuse/core').refManualReset
   const refThrottled: typeof import('@vueuse/core').refThrottled
   const refWithControl: typeof import('@vueuse/core').refWithControl
-  const registerDynamicOptions: typeof import('./helper/dynamic-options').registerDynamicOptions
-  const registerPendingDocumentWrite: typeof import('./services/document-write-intents').registerPendingDocumentWrite
-  const removeArg: typeof import('./helper/webgal-script/arg-utils').removeArg
-  const resolveAssetUrl: typeof import('./helper/asset-url').resolveAssetUrl
   const resolveComponent: typeof import('vue').resolveComponent
-  const resolveDynamicOptions: typeof import('./helper/dynamic-options').resolveDynamicOptions
-  const resolveFieldModelStringValue: typeof import('./helper/statement-editor/field-utils').resolveFieldModelStringValue
-  const resolveHistoryShortcutAction: typeof import('./helper/history-shortcut').resolveHistoryShortcutAction
-  const resolveI18n: typeof import('./helper/command-registry/schema').resolveI18n
-  const resolveMissingFileKeys: typeof import('./helper/statement-editor/file-missing').resolveMissingFileKeys
-  const resolvePanelSliderEmitValue: typeof import('./helper/statement-editor/field-utils').resolvePanelSliderEmitValue
-  const resolveParamSelectValue: typeof import('./helper/statement-editor/param-value').resolveParamSelectValue
   const resolveRef: typeof import('@vueuse/core').resolveRef
-  const resolveRegistryFieldMeta: typeof import('./helper/webgal-script/params').resolveRegistryFieldMeta
-  const resolveSceneCursorTarget: typeof import('./helper/text-editor-scene-sync').resolveSceneCursorTarget
-  const resolveScenePreviewLine: typeof import('./helper/text-editor-scene-sync').resolveScenePreviewLine
-  const resolveSceneTextPanelSnapshot: typeof import('./helper/scene-text-panel').resolveSceneTextPanelSnapshot
-  const resolveSceneTextPanelSnapshotFromContent: typeof import('./helper/scene-text-panel').resolveSceneTextPanelSnapshotFromContent
-  const resolveStatementSpecialContentMode: typeof import('./helper/command-registry/schema').resolveStatementSpecialContentMode
-  const resolveSurfaceVariant: typeof import('./helper/command-registry/schema').resolveSurfaceVariant
-  const resolveTextEditorLanguage: typeof import('./helper/text-editor-language').resolveTextEditorLanguage
-  const restoreEditorCursorOffset: typeof import('./helper/text-editor-history-snapshot').restoreEditorCursorOffset
-  const restoreEditorCursorSnapshot: typeof import('./helper/text-editor-history-snapshot').restoreEditorCursorSnapshot
-  const restoreEditorHistorySnapshot: typeof import('./helper/text-editor-history-snapshot').restoreEditorHistorySnapshot
-  const roundByStep: typeof import('./helper/math').roundByStep
-  const roundToPrecision: typeof import('./helper/math').roundToPrecision
-  const safeInvoke: typeof import('./utils/invoke').safeInvoke
-  const sceneEntries: typeof import('./helper/command-registry/scene').sceneEntries
-  const serializeCommandNode: typeof import('./helper/webgal-script/codec').serializeCommandNode
-  const serializeEffectJson: typeof import('./helper/effect-editor-config').serializeEffectJson
-  const serializeSentence: typeof import('./helper/webgal-script/serialize').serializeSentence
-  const serializeTransform: typeof import('./helper/effect-editor-config').serializeTransform
-  const serverCmds: typeof import('./commands/server').serverCmds
-  const setOrRemoveArg: typeof import('./helper/webgal-script/arg-utils').setOrRemoveArg
-  const setSceneStatementCollapsed: typeof import('./helper/scene-presentation').setSceneStatementCollapsed
-  const setValueByPath: typeof import('./helper/effect-editor-config').setValueByPath
-  const settleBatch: typeof import('./utils/batch').settleBatch
   const shallowReactive: typeof import('vue').shallowReactive
   const shallowReadonly: typeof import('vue').shallowReadonly
   const shallowRef: typeof import('vue').shallowRef
-  const shouldRestoreTextEditorFocus: typeof import('./helper/text-editor-workspace-focus').shouldRestoreTextEditorFocus
-  const sidebarPanelKey: typeof import('./composables/useEditorPanelBindings').sidebarPanelKey
-  const splitStatements: typeof import('./helper/webgal-script/sentence').splitStatements
-  const statementEditorSurfaceKey: typeof import('./helper/statement-editor/surface-context').statementEditorSurfaceKey
-  const statementMetaKey: typeof import('./composables/useStatementMeta').statementMetaKey
-  const stringifyChooseContent: typeof import('./helper/webgal-script/content').stringifyChooseContent
-  const stringifySetVarContent: typeof import('./helper/webgal-script/content').stringifySetVarContent
-  const stringifyStyleRuleContent: typeof import('./helper/webgal-script/content').stringifyStyleRuleContent
   const syncRef: typeof import('@vueuse/core').syncRef
   const syncRefs: typeof import('@vueuse/core').syncRefs
-  const systemEntries: typeof import('./helper/command-registry/system').systemEntries
   const templateRef: typeof import('@vueuse/core').templateRef
   const throttledRef: typeof import('@vueuse/core').throttledRef
   const throttledWatch: typeof import('@vueuse/core').throttledWatch
-  const thumbnailCmds: typeof import('./commands/thumbnaila').thumbnailCmds
-  const toComparablePath: typeof import('./utils/path').toComparablePath
   const toRaw: typeof import('vue').toRaw
   const toReactive: typeof import('@vueuse/core').toReactive
   const toRef: typeof import('vue').toRef
   const toRefs: typeof import('vue').toRefs
   const toValue: typeof import('vue').toValue
   const toast: typeof import('vue-sonner').toast
-  const transformToFields: typeof import('./helper/effect-editor-config').transformToFields
   const triggerRef: typeof import('vue').triggerRef
   const tryOnBeforeMount: typeof import('@vueuse/core').tryOnBeforeMount
   const tryOnBeforeUnmount: typeof import('@vueuse/core').tryOnBeforeUnmount
@@ -330,14 +115,7 @@ declare global {
   const tryOnUnmounted: typeof import('@vueuse/core').tryOnUnmounted
   const unref: typeof import('vue').unref
   const unrefElement: typeof import('@vueuse/core').unrefElement
-  const unsetValueByPath: typeof import('./helper/effect-editor-config').unsetValueByPath
   const until: typeof import('@vueuse/core').until
-  const updateCommandNodeContent: typeof import('./helper/webgal-script/update').updateCommandNodeContent
-  const updateCommandNodeInlineComment: typeof import('./helper/webgal-script/update').updateCommandNodeInlineComment
-  const updateCommandNodeParam: typeof import('./helper/webgal-script/update').updateCommandNodeParam
-  const updateCommandNodeSpeaker: typeof import('./helper/webgal-script/update').updateCommandNodeSpeaker
-  const updateTypedCommandNodeExtraArgs: typeof import('./helper/webgal-script/update').updateTypedCommandNodeExtraArgs
-  const upsertArg: typeof import('./helper/webgal-script/arg-utils').upsertArg
   const useActiveElement: typeof import('@vueuse/core').useActiveElement
   const useAnimate: typeof import('@vueuse/core').useAnimate
   const useArrayDifference: typeof import('@vueuse/core').useArrayDifference
@@ -358,7 +136,6 @@ declare global {
   const useBase64: typeof import('@vueuse/core').useBase64
   const useBattery: typeof import('@vueuse/core').useBattery
   const useBluetooth: typeof import('@vueuse/core').useBluetooth
-  const useBreadcrumbCollapse: typeof import('./composables/useBreadcrumbCollapse').useBreadcrumbCollapse
   const useBreakpoints: typeof import('@vueuse/core').useBreakpoints
   const useBroadcastChannel: typeof import('@vueuse/core').useBroadcastChannel
   const useBrowserLocation: typeof import('@vueuse/core').useBrowserLocation
@@ -367,11 +144,7 @@ declare global {
   const useClipboardItems: typeof import('@vueuse/core').useClipboardItems
   const useCloned: typeof import('@vueuse/core').useCloned
   const useColorMode: typeof import('@vueuse/core').useColorMode
-  const useCommandPanelBridgeBinding: typeof import('./composables/useEditorPanelBindings').useCommandPanelBridgeBinding
-  const useCommandPanelBridgeProvider: typeof import('./composables/useEditorPanelBindings').useCommandPanelBridgeProvider
-  const useCommandPanelStore: typeof import('./stores/command-panel').useCommandPanelStore
   const useConfirmDialog: typeof import('@vueuse/core').useConfirmDialog
-  const useControlId: typeof import('./composables/useControlId').useControlId
   const useCountdown: typeof import('@vueuse/core').useCountdown
   const useCounter: typeof import('@vueuse/core').useCounter
   const useCssModule: typeof import('vue').useCssModule
@@ -389,55 +162,34 @@ declare global {
   const useDeviceOrientation: typeof import('@vueuse/core').useDeviceOrientation
   const useDevicePixelRatio: typeof import('@vueuse/core').useDevicePixelRatio
   const useDevicesList: typeof import('@vueuse/core').useDevicesList
-  const useDirectoryReader: typeof import('./composables/useDirectoryReader').useDirectoryReader
-  const useDiscoverResources: typeof import('./composables/useDiscoverResources').useDiscoverResources
   const useDisplayMedia: typeof import('@vueuse/core').useDisplayMedia
   const useDocumentVisibility: typeof import('@vueuse/core').useDocumentVisibility
   const useDraggable: typeof import('@vueuse/core').useDraggable
   const useDropZone: typeof import('@vueuse/core').useDropZone
-  const useEditSettingsStore: typeof import('./stores/edit-settings').useEditSettingsStore
-  const useEditorDynamicOptionsBootstrap: typeof import('./composables/useEditorDynamicOptionsBootstrap').useEditorDynamicOptionsBootstrap
-  const useEditorSaveShortcut: typeof import('./composables/useEditorSaveShortcut').useEditorSaveShortcut
-  const useEditorStore: typeof import('./stores/editor').useEditorStore
-  const useEditorUIStateStore: typeof import('./stores/editor-ui-state').useEditorUIStateStore
-  const useEditorViewStateStore: typeof import('./stores/editor-view-state').useEditorViewStateStore
-  const useEffectColorControl: typeof import('./composables/effect-editor/useEffectColorControl').useEffectColorControl
-  const useEffectContinuousControls: typeof import('./composables/effect-editor/useEffectContinuousControls').useEffectContinuousControls
-  const useEffectDurationControl: typeof import('./composables/effect-editor/useEffectDurationControl').useEffectDurationControl
-  const useEffectEditorDialog: typeof import('./composables/useEffectEditorDialog').useEffectEditorDialog
-  const useEffectEditorProvider: typeof import('./composables/useEffectEditorProvider').useEffectEditorProvider
-  const useEffectSegmentedControl: typeof import('./composables/effect-editor/useEffectSegmentedControl').useEffectSegmentedControl
   const useElementBounding: typeof import('@vueuse/core').useElementBounding
   const useElementByPoint: typeof import('@vueuse/core').useElementByPoint
   const useElementHover: typeof import('@vueuse/core').useElementHover
   const useElementSize: typeof import('@vueuse/core').useElementSize
   const useElementVisibility: typeof import('@vueuse/core').useElementVisibility
-  const useEngines: typeof import('./composables/useDatabase').useEngines
   const useEventBus: typeof import('@vueuse/core').useEventBus
   const useEventListener: typeof import('@vueuse/core').useEventListener
   const useEventSource: typeof import('@vueuse/core').useEventSource
   const useEyeDropper: typeof import('@vueuse/core').useEyeDropper
   const useFavicon: typeof import('@vueuse/core').useFavicon
   const useFetch: typeof import('@vueuse/core').useFetch
-  const useFileClipboard: typeof import('./composables/useFileClipboard').useFileClipboard
   const useFileDialog: typeof import('@vueuse/core').useFileDialog
-  const useFileStore: typeof import('./stores/file').useFileStore
   const useFileSystemAccess: typeof import('@vueuse/core').useFileSystemAccess
-  const useFileSystemEvents: typeof import('./composables/useFileSystemEvents').useFileSystemEvents
   const useFocus: typeof import('@vueuse/core').useFocus
   const useFocusWithin: typeof import('@vueuse/core').useFocusWithin
   const useFps: typeof import('@vueuse/core').useFps
   const useFullscreen: typeof import('@vueuse/core').useFullscreen
   const useGamepad: typeof import('@vueuse/core').useGamepad
-  const useGames: typeof import('./composables/useDatabase').useGames
-  const useGeneralSettingsStore: typeof import('./stores/general-settings').useGeneralSettingsStore
   const useGeolocation: typeof import('@vueuse/core').useGeolocation
   const useI18n: typeof import('vue-i18n').useI18n
   const useId: typeof import('vue').useId
   const useIdle: typeof import('@vueuse/core').useIdle
   const useImage: typeof import('@vueuse/core').useImage
   const useInfiniteScroll: typeof import('@vueuse/core').useInfiniteScroll
-  const useInjectedEffectEditorProvider: typeof import('./composables/useEffectEditorProvider').useInjectedEffectEditorProvider
   const useIntersectionObserver: typeof import('@vueuse/core').useIntersectionObserver
   const useInterval: typeof import('@vueuse/core').useInterval
   const useIntervalFn: typeof import('@vueuse/core').useIntervalFn
@@ -450,7 +202,6 @@ declare global {
   const useMediaQuery: typeof import('@vueuse/core').useMediaQuery
   const useMemoize: typeof import('@vueuse/core').useMemoize
   const useMemory: typeof import('@vueuse/core').useMemory
-  const useModalStore: typeof import('./stores/modal').useModalStore
   const useModel: typeof import('vue').useModel
   const useMounted: typeof import('@vueuse/core').useMounted
   const useMouse: typeof import('@vueuse/core').useMouse
@@ -469,22 +220,18 @@ declare global {
   const usePerformanceObserver: typeof import('@vueuse/core').usePerformanceObserver
   const usePermission: typeof import('@vueuse/core').usePermission
   const usePointer: typeof import('@vueuse/core').usePointer
-  const usePointerDrag: typeof import('./composables/usePointerDrag').usePointerDrag
   const usePointerLock: typeof import('@vueuse/core').usePointerLock
   const usePointerSwipe: typeof import('@vueuse/core').usePointerSwipe
-  const usePreferenceStore: typeof import('./stores/preference').usePreferenceStore
   const usePreferredColorScheme: typeof import('@vueuse/core').usePreferredColorScheme
   const usePreferredContrast: typeof import('@vueuse/core').usePreferredContrast
   const usePreferredDark: typeof import('@vueuse/core').usePreferredDark
   const usePreferredLanguages: typeof import('@vueuse/core').usePreferredLanguages
   const usePreferredReducedMotion: typeof import('@vueuse/core').usePreferredReducedMotion
   const usePreferredReducedTransparency: typeof import('@vueuse/core').usePreferredReducedTransparency
-  const usePreviewSettingsStore: typeof import('./stores/preview-settings').usePreviewSettingsStore
   const usePrevious: typeof import('@vueuse/core').usePrevious
   const useRafFn: typeof import('@vueuse/core').useRafFn
   const useRefHistory: typeof import('@vueuse/core').useRefHistory
   const useResizeObserver: typeof import('@vueuse/core').useResizeObserver
-  const useResourceStore: typeof import('./stores/resource').useResourceStore
   const useRoute: typeof import('vue-router').useRoute
   const useRouter: typeof import('vue-router').useRouter
   const useSSRWidth: typeof import('@vueuse/core').useSSRWidth
@@ -494,44 +241,20 @@ declare global {
   const useScroll: typeof import('@vueuse/core').useScroll
   const useScrollLock: typeof import('@vueuse/core').useScrollLock
   const useSessionStorage: typeof import('@vueuse/core').useSessionStorage
-  const useSettingsForm: typeof import('./composables/useSettingsForm').useSettingsForm
   const useShare: typeof import('@vueuse/core').useShare
-  const useSidebarPanelBinding: typeof import('./composables/useEditorPanelBindings').useSidebarPanelBinding
-  const useSidebarPanelProvider: typeof import('./composables/useEditorPanelBindings').useSidebarPanelProvider
   const useSlots: typeof import('vue').useSlots
   const useSorted: typeof import('@vueuse/core').useSorted
   const useSpeechRecognition: typeof import('@vueuse/core').useSpeechRecognition
   const useSpeechSynthesis: typeof import('@vueuse/core').useSpeechSynthesis
-  const useStatementEditor: typeof import('./composables/useStatementEditor').useStatementEditor
-  const useStatementEditorContent: typeof import('./composables/useStatementEditorContent').useStatementEditorContent
-  const useStatementEditorFieldBindings: typeof import('./composables/useStatementEditorFieldBindings').useStatementEditorFieldBindings
-  const useStatementEditorParams: typeof import('./composables/useStatementEditorParams').useStatementEditorParams
-  const useStatementEditorSay: typeof import('./composables/useStatementEditorSay').useStatementEditorSay
-  const useStatementEditorScrub: typeof import('./composables/useStatementEditorScrub').useStatementEditorScrub
-  const useStatementEffectEditorBridge: typeof import('./composables/useStatementEffectEditorBridge').useStatementEffectEditorBridge
-  const useStatementFileMissing: typeof import('./composables/useStatementFileMissing').useStatementFileMissing
-  const useStatementFileRoots: typeof import('./composables/useStatementFileRoots').useStatementFileRoots
-  const useStatementMeta: typeof import('./composables/useStatementMeta').useStatementMeta
   const useStepper: typeof import('@vueuse/core').useStepper
   const useStorage: typeof import('@vueuse/core').useStorage
   const useStorageAsync: typeof import('@vueuse/core').useStorageAsync
-  const useStorageSettingsStore: typeof import('./stores/storage-settings').useStorageSettingsStore
   const useStyleTag: typeof import('@vueuse/core').useStyleTag
   const useSupported: typeof import('@vueuse/core').useSupported
   const useSwipe: typeof import('@vueuse/core').useSwipe
-  const useTabsStore: typeof import('./stores/tabs').useTabsStore
-  const useTabsWatcher: typeof import('./composables/useTabsWatcher').useTabsWatcher
-  const useTauriDropZone: typeof import('./composables/useTauriDropZone').useTauriDropZone
   const useTemplateRef: typeof import('vue').useTemplateRef
   const useTemplateRefsList: typeof import('@vueuse/core').useTemplateRefsList
   const useTextDirection: typeof import('@vueuse/core').useTextDirection
-  const useTextEditorBindings: typeof import('./composables/useTextEditorBindings').useTextEditorBindings
-  const useTextEditorContentSync: typeof import('./composables/useTextEditorContentSync').useTextEditorContentSync
-  const useTextEditorHistory: typeof import('./composables/useTextEditorHistory').useTextEditorHistory
-  const useTextEditorPanel: typeof import('./composables/useTextEditorPanel').useTextEditorPanel
-  const useTextEditorRuntime: typeof import('./composables/useTextEditorRuntime').useTextEditorRuntime
-  const useTextEditorSaveShortcut: typeof import('./composables/useTextEditorSaveShortcut').useTextEditorSaveShortcut
-  const useTextEditorWorkspace: typeof import('./composables/useTextEditorWorkspace').useTextEditorWorkspace
   const useTextSelection: typeof import('@vueuse/core').useTextSelection
   const useTextareaAutosize: typeof import('@vueuse/core').useTextareaAutosize
   const useThrottle: typeof import('@vueuse/core').useThrottle
@@ -554,9 +277,6 @@ declare global {
   const useVModels: typeof import('@vueuse/core').useVModels
   const useVibrate: typeof import('@vueuse/core').useVibrate
   const useVirtualList: typeof import('@vueuse/core').useVirtualList
-  const useVisualEditorSaveShortcut: typeof import('./composables/useVisualEditorSaveShortcut').useVisualEditorSaveShortcut
-  const useVisualEditorSceneRuntime: typeof import('./composables/useVisualEditorSceneRuntime').useVisualEditorSceneRuntime
-  const useVisualEditorSceneViewport: typeof import('./composables/useVisualEditorSceneViewport').useVisualEditorSceneViewport
   const useWakeLock: typeof import('@vueuse/core').useWakeLock
   const useWebNotification: typeof import('@vueuse/core').useWebNotification
   const useWebSocket: typeof import('@vueuse/core').useWebSocket
@@ -565,7 +285,6 @@ declare global {
   const useWindowFocus: typeof import('@vueuse/core').useWindowFocus
   const useWindowScroll: typeof import('@vueuse/core').useWindowScroll
   const useWindowSize: typeof import('@vueuse/core').useWindowSize
-  const useWorkspaceStore: typeof import('./stores/workspace').useWorkspaceStore
   const watch: typeof import('vue').watch
   const watchArray: typeof import('@vueuse/core').watchArray
   const watchAtMost: typeof import('@vueuse/core').watchAtMost
@@ -581,187 +300,13 @@ declare global {
   const watchThrottled: typeof import('@vueuse/core').watchThrottled
   const watchTriggerable: typeof import('@vueuse/core').watchTriggerable
   const watchWithFilter: typeof import('@vueuse/core').watchWithFilter
-  const webgalParser: typeof import('./helper/webgal-script/parser').webgalParser
   const whenever: typeof import('@vueuse/core').whenever
-  const windowCmds: typeof import('./commands/window').windowCmds
-  const writeJsonFieldValue: typeof import('./helper/statement-editor/json-fields').writeJsonFieldValue
 }
 // for type re-export
 declare global {
   // @ts-ignore
   export type { Component, Slot, Slots, ComponentPublicInstance, ComputedRef, DirectiveBinding, ExtractDefaultPropTypes, ExtractPropTypes, ExtractPublicPropTypes, InjectionKey, PropType, Ref, ShallowRef, MaybeRef, MaybeRefOrGetter, VNode, WritableComputedRef } from 'vue'
   import('vue')
-  // @ts-ignore
-  export type { ThumbnailSize } from './commands/thumbnaila'
-  import('./commands/thumbnaila')
-  // @ts-ignore
-  export type { EmitTransformOptions, EffectControlDeps } from './composables/effect-editor/types'
-  import('./composables/effect-editor/types')
-  // @ts-ignore
-  export type { EffectSegmentedOption } from './composables/effect-editor/useEffectSegmentedControl'
-  import('./composables/effect-editor/useEffectSegmentedControl')
-  // @ts-ignore
-  export type { UseBreadcrumbCollapseOptions, UseBreadcrumbCollapseReturn } from './composables/useBreadcrumbCollapse'
-  import('./composables/useBreadcrumbCollapse')
-  // @ts-ignore
-  export type { SidebarPanelBinding, SidebarPanelContext, CommandPanelHandler, CommandPanelBridgeContext } from './composables/useEditorPanelBindings'
-  import('./composables/useEditorPanelBindings')
-  // @ts-ignore
-  export type { EffectEditorPreviewSchedule, EffectEditorPreviewPayload, EffectEditorTransformUpdatePayload, EffectEditorDraft, EffectEditorOpenTarget, EffectEditorSession, EffectEditorProvider } from './composables/useEffectEditorProvider'
-  import('./composables/useEffectEditorProvider')
-  // @ts-ignore
-  export type { ClipboardItem } from './composables/useFileClipboard'
-  import('./composables/useFileClipboard')
-  // @ts-ignore
-  export type { FileSystemEvent } from './composables/useFileSystemEvents'
-  import('./composables/useFileSystemEvents')
-  // @ts-ignore
-  export type { StatementIdTarget, TextLineTarget, StatementUpdateTarget, StatementUpdatePayload } from './composables/useStatementEditor'
-  import('./composables/useStatementEditor')
-  // @ts-ignore
-  export type { UseStatementEditorContentOptions } from './composables/useStatementEditorContent'
-  import('./composables/useStatementEditorContent')
-  // @ts-ignore
-  export type { UseStatementEditorParamsOptions } from './composables/useStatementEditorParams'
-  import('./composables/useStatementEditorParams')
-  // @ts-ignore
-  export type { UseStatementEditorSayOptions } from './composables/useStatementEditorSay'
-  import('./composables/useStatementEditorSay')
-  // @ts-ignore
-  export type { EffectEditorResult, EffectEditorOpenOverride } from './composables/useStatementEffectEditorBridge'
-  import('./composables/useStatementEffectEditorBridge')
-  // @ts-ignore
-  export type { UseStatementFileMissingOptions } from './composables/useStatementFileMissing'
-  import('./composables/useStatementFileMissing')
-  // @ts-ignore
-  export type { UseStatementFileRootsOptions } from './composables/useStatementFileRoots'
-  import('./composables/useStatementFileRoots')
-  // @ts-ignore
-  export type { StatementType, StatementMetaReturn } from './composables/useStatementMeta'
-  import('./composables/useStatementMeta')
-  // @ts-ignore
-  export type { UseTauriDropZoneOptions, UseTauriDropZoneReturn } from './composables/useTauriDropZone'
-  import('./composables/useTauriDropZone')
-  // @ts-ignore
-  export type { TextEditorContentChangeContext, RestoreAfterModelSyncContext } from './composables/useTextEditorHistory'
-  import('./composables/useTextEditorHistory')
-  // @ts-ignore
-  export type { Game, Engine, Status } from './database/model'
-  import('./database/model')
-  // @ts-ignore
-  export type { AssetUrlOptions } from './helper/asset-url'
-  import('./helper/asset-url')
-  // @ts-ignore
-  export type { AsyncQueue } from './helper/async-queue'
-  import('./helper/async-queue')
-  // @ts-ignore
-  export type { RgbColor, RgbaPayload } from './helper/color'
-  import('./helper/color')
-  // @ts-ignore
-  export type { CommandPanelCategory } from './helper/command-registry/index'
-  import('./helper/command-registry/index')
-  // @ts-ignore
-  export type { EditorDynamicOptionsKey, DynamicOptionsContext, DynamicOptionsResult, I18nT, CommandCategory, FileFieldConfig, I18nLike, SurfaceAware, InlineLayout, TextField, SwitchField, NumberField, ValueChoiceField, FlagChoiceField, ChoiceField, FileField, ColorField, DialField, JsonObjectField, FieldDef, CommandFieldStorage, CommandFieldDef, ArgFieldJsonMeta, ArgField, ContentEditorField, CommandRawEditorField, ArgEditorField, EditorField, CommandEntry, StatementSpecialContentMode, DynamicOptionSourceDef } from './helper/command-registry/schema'
-  import('./helper/command-registry/schema')
-  // @ts-ignore
-  export type { EditorSaveShortcutKeyboardEvent, EditorSaveShortcutHandlerOptions } from './helper/editor-save-shortcut'
-  import('./helper/editor-save-shortcut')
-  // @ts-ignore
-  export type { EffectParamDef, EffectCategory, EffectRenderItem } from './helper/effect-editor-config'
-  import('./helper/effect-editor-config')
-  // @ts-ignore
-  export type { HistoryShortcutAction } from './helper/history-shortcut'
-  import('./helper/history-shortcut')
-  // @ts-ignore
-  export type { PreviewMediaSession } from './helper/preview-media-session'
-  import('./helper/preview-media-session')
-  // @ts-ignore
-  export type { ScenePresentationState } from './helper/scene-presentation'
-  import('./helper/scene-presentation')
-  // @ts-ignore
-  export type { SceneTextPanelSnapshot, SceneTextPanelTextModel } from './helper/scene-text-panel'
-  import('./helper/scene-text-panel')
-  // @ts-ignore
-  export type { StatementFileCheckItem, StatementFileCheckContext, StatementFileCheckDeps } from './helper/statement-editor/file-missing'
-  import('./helper/statement-editor/file-missing')
-  // @ts-ignore
-  export type { StatementCardType, StatementCardPreviewParam } from './helper/statement-editor/preview'
-  import('./helper/statement-editor/preview')
-  // @ts-ignore
-  export type { StatementEditorSurface } from './helper/statement-editor/surface-context'
-  import('./helper/statement-editor/surface-context')
-  // @ts-ignore
-  export type { OffsetSelectionSnapshot, TextEditorCursorSnapshot } from './helper/text-editor-history-snapshot'
-  import('./helper/text-editor-history-snapshot')
-  // @ts-ignore
-  export type { TextEditorLanguageState, RegisteredTextEditorLanguage } from './helper/text-editor-language'
-  import('./helper/text-editor-language')
-  // @ts-ignore
-  export type { TextEditorSettingsSnapshot, TextEditorOptions } from './helper/text-editor-options'
-  import('./helper/text-editor-options')
-  // @ts-ignore
-  export type { TextEditorLineReader, TextEditorCursorLineReader, TextEditorCursorPosition } from './helper/text-editor-scene-sync'
-  import('./helper/text-editor-scene-sync')
-  // @ts-ignore
-  export type { TextEditorWorkspaceFileState, TextEditorWorkspaceFocusContext } from './helper/text-editor-workspace-focus'
-  import('./helper/text-editor-workspace-focus')
-  // @ts-ignore
-  export type { SetVarContent, ChooseContentItem, StyleRuleContentItem } from './helper/webgal-script/content'
-  import('./helper/webgal-script/content')
-  // @ts-ignore
-  export type { CommandParamDescriptor } from './helper/webgal-script/params'
-  import('./helper/webgal-script/params')
-  // @ts-ignore
-  export type { StatementEntry } from './helper/webgal-script/sentence'
-  import('./helper/webgal-script/sentence')
-  // @ts-ignore
-  export type { CommandNodeBase, SayCommandNode, CommentCommandNode, SetVarCommandNode, ChooseCommandNode, ApplyStyleCommandNode, TypedCommandNode, TypedCommandType, GenericCommandType, GenericCommandNode, CommandNode } from './helper/webgal-script/types'
-  import('./helper/webgal-script/types')
-  // @ts-ignore
-  export type { GameMetadata, EngineMetadata } from './services/types'
-  import('./services/types')
-  // @ts-ignore
-  export type { StatementGroup } from './stores/command-panel'
-  import('./stores/command-panel')
-  // @ts-ignore
-  export type { SerializableViewState } from './stores/editor-view-state'
-  import('./stores/editor-view-state')
-  // @ts-ignore
-  export type { HistoryApplyResult, AnimationVisualProjectionState, AssetPreviewState, EditableEditorState, SceneVisualProjectionState, TextProjectionState, UnsupportedState, VisualProjectionState } from './stores/editor'
-  import('./stores/editor')
-  // @ts-ignore
-  export type { FileItem, DirItem, FileSystemItem } from './stores/file'
-  import('./stores/file')
-  // @ts-ignore
-  export type { PersistedTab, Tab } from './stores/tabs'
-  import('./stores/tabs')
-  // @ts-ignore
-  export type { ColorPickerAlpha, ColorPickerPrgb, ColorPickerPrgba, ColorPickerRgb, ColorPickerRgba, ColorPickerHsl, ColorPickerHsla, ColorPickerValue } from './types/color-picker'
-  import('./types/color-picker')
-  // @ts-ignore
-  export type { DebugCommand, DebugMessage, ComponentsVisibility, ComponentVisibilityCommand } from './types/debugProtocol'
-  import('./types/debugProtocol')
-  // @ts-ignore
-  export type { AppError, ErrorCode, BackendError } from './types/errors'
-  import('./types/errors')
-  // @ts-ignore
-  export type { FileViewerSortBy, FileViewerSortOrder, FileViewerItem } from './types/file-viewer'
-  import('./types/file-viewer')
-  // @ts-ignore
-  export type { ComponentProps } from './types/index'
-  import('./types/index')
-  // @ts-ignore
-  export type { isDebug, isBuild, isRelease, prNum, buildSha } from './types/info-build-meta.d'
-  import('./types/info-build-meta.d')
-  // @ts-ignore
-  export type { Point2D, FilterFlag, Transform, AnimationFrame } from './types/stage'
-  import('./types/stage')
-  // @ts-ignore
-  export type { BatchResult } from './utils/batch'
-  import('./utils/batch')
-  // @ts-ignore
-  export type { SortableItemAccessor } from './utils/sort'
-  import('./utils/sort')
 }
 
 // for vue template auto import
@@ -769,193 +314,52 @@ import { UnwrapRef } from 'vue'
 declare module 'vue' {
   interface GlobalComponents {}
   interface ComponentCustomProperties {
-    readonly AppError: UnwrapRef<typeof import('./types/errors')['AppError']>
-    readonly CUSTOM_CONTENT: UnwrapRef<typeof import('./helper/command-registry/schema')['CUSTOM_CONTENT']>
-    readonly DEFAULT_EASE_OPTION_VALUE: UnwrapRef<typeof import('./helper/effect-editor-config')['DEFAULT_EASE_OPTION_VALUE']>
-    readonly DebugCommand: UnwrapRef<typeof import('./types/debugProtocol')['DebugCommand']>
-    readonly EDITOR_DYNAMIC_OPTIONS_KEYS: UnwrapRef<typeof import('./helper/command-registry/schema')['EDITOR_DYNAMIC_OPTIONS_KEYS']>
-    readonly EFFECT_CATEGORIES: UnwrapRef<typeof import('./helper/effect-editor-config')['EFFECT_CATEGORIES']>
-    readonly EFFECT_EASE_OPTIONS: UnwrapRef<typeof import('./helper/effect-editor-config')['EFFECT_EASE_OPTIONS']>
-    readonly EFFECT_EDITOR_OPEN_OVERRIDE_KEY: UnwrapRef<typeof import('./composables/useStatementEffectEditorBridge')['EFFECT_EDITOR_OPEN_OVERRIDE_KEY']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
-    readonly FIGURE_POSITION_FLAGS: UnwrapRef<typeof import('./helper/webgal-script/types')['FIGURE_POSITION_FLAGS']>
-    readonly SAY_CONTINUATION_RAW: UnwrapRef<typeof import('./helper/webgal-script/codec')['SAY_CONTINUATION_RAW']>
-    readonly UNSPECIFIED: UnwrapRef<typeof import('./helper/command-registry/schema')['UNSPECIFIED']>
-    readonly applyEffectEditorResultToSentence: UnwrapRef<typeof import('./composables/useStatementEffectEditorBridge')['applyEffectEditorResultToSentence']>
-    readonly applyScrubStepModifier: UnwrapRef<typeof import('./helper/math')['applyScrubStepModifier']>
-    readonly arg: UnwrapRef<typeof import('./helper/command-registry/schema')['arg']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
-    readonly buildBeforeHistorySnapshotFromChangeEvent: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['buildBeforeHistorySnapshotFromChangeEvent']>
-    readonly buildCategoryRenderItems: UnwrapRef<typeof import('./helper/effect-editor-config')['buildCategoryRenderItems']>
-    readonly buildPreviousSpeakers: UnwrapRef<typeof import('./utils/speaker')['buildPreviousSpeakers']>
-    readonly buildSceneStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['buildSceneStatements']>
-    readonly buildSchemaKeySet: UnwrapRef<typeof import('./helper/statement-editor/visibility')['buildSchemaKeySet']>
-    readonly buildSingleStatement: UnwrapRef<typeof import('./helper/webgal-script/sentence')['buildSingleStatement']>
-    readonly buildStatementPreviewParams: UnwrapRef<typeof import('./helper/statement-editor/preview')['buildStatementPreviewParams']>
-    readonly buildStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['buildStatements']>
-    readonly buildTextEditorOptions: UnwrapRef<typeof import('./helper/text-editor-options')['buildTextEditorOptions']>
-    readonly canRestoreVisualEditorCardFocus: UnwrapRef<typeof import('./helper/visual-editor-focus')['canRestoreVisualEditorCardFocus']>
-    readonly captureCursorSnapshotFromEditor: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['captureCursorSnapshotFromEditor']>
-    readonly captureEditorHistorySnapshot: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['captureEditorHistorySnapshot']>
-    readonly categoryTheme: UnwrapRef<typeof import('./helper/command-registry/index')['categoryTheme']>
-    readonly clamp: UnwrapRef<typeof import('./helper/math')['clamp']>
-    readonly clearDirectoryItemsCache: UnwrapRef<typeof import('./services/directory-cache')['clearDirectoryItemsCache']>
-    readonly cloneArgs: UnwrapRef<typeof import('./helper/webgal-script/codec')['cloneArgs']>
-    readonly cloneEditorSelection: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['cloneEditorSelection']>
-    readonly cn: UnwrapRef<typeof import('./lib/utils')['cn']>
-    readonly collectStatementFileChecks: UnwrapRef<typeof import('./helper/statement-editor/file-missing')['collectStatementFileChecks']>
-    readonly colorMode: UnwrapRef<typeof import('./composables/color-mode')['colorMode']>
-    readonly commandEntries: UnwrapRef<typeof import('./helper/command-registry/index')['commandEntries']>
-    readonly commandPanelBridgeKey: UnwrapRef<typeof import('./composables/useEditorPanelBindings')['commandPanelBridgeKey']>
-    readonly commandPanelCategories: UnwrapRef<typeof import('./helper/command-registry/index')['commandPanelCategories']>
-    readonly commandRaw: UnwrapRef<typeof import('./helper/command-registry/schema')['commandRaw']>
-    readonly compareOptionalNumber: UnwrapRef<typeof import('./utils/sort')['compareOptionalNumber']>
-    readonly computeHistoryCursorOffset: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['computeHistoryCursorOffset']>
-    readonly computeLineNumberFromStatementId: UnwrapRef<typeof import('./stores/editor')['computeLineNumberFromStatementId']>
-    readonly computeStatementIdFromLineNumber: UnwrapRef<typeof import('./stores/editor')['computeStatementIdFromLineNumber']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
     readonly computedInject: UnwrapRef<typeof import('@vueuse/core')['computedInject']>
     readonly computedWithControl: UnwrapRef<typeof import('@vueuse/core')['computedWithControl']>
-    readonly configManager: UnwrapRef<typeof import('./services/config-manager')['configManager']>
-    readonly consumePendingDocumentWrite: UnwrapRef<typeof import('./services/document-write-intents')['consumePendingDocumentWrite']>
-    readonly content: UnwrapRef<typeof import('./helper/command-registry/schema')['content']>
     readonly controlledComputed: UnwrapRef<typeof import('@vueuse/core')['controlledComputed']>
     readonly controlledRef: UnwrapRef<typeof import('@vueuse/core')['controlledRef']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
-    readonly createAsyncQueue: UnwrapRef<typeof import('./helper/async-queue')['createAsyncQueue']>
-    readonly createEditorSaveShortcutHandler: UnwrapRef<typeof import('./helper/editor-save-shortcut')['createEditorSaveShortcutHandler']>
-    readonly createEditorSelection: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['createEditorSelection']>
-    readonly createEffectEditorProvider: UnwrapRef<typeof import('./composables/useEffectEditorProvider')['createEffectEditorProvider']>
-    readonly createEffectPreviewEmitter: UnwrapRef<typeof import('./composables/useEffectEditorProvider')['createEffectPreviewEmitter']>
-    readonly createEmptySceneTextPanelSnapshot: UnwrapRef<typeof import('./helper/scene-text-panel')['createEmptySceneTextPanelSnapshot']>
-    readonly createEmptySentence: UnwrapRef<typeof import('./helper/webgal-script/sentence')['createEmptySentence']>
     readonly createEventHook: UnwrapRef<typeof import('@vueuse/core')['createEventHook']>
     readonly createGlobalState: UnwrapRef<typeof import('@vueuse/core')['createGlobalState']>
     readonly createInjectionState: UnwrapRef<typeof import('@vueuse/core')['createInjectionState']>
-    readonly createItemComparator: UnwrapRef<typeof import('./utils/sort')['createItemComparator']>
-    readonly createParamDrag: UnwrapRef<typeof import('./composables/effect-editor/createParamDrag')['createParamDrag']>
-    readonly createPreviewMediaSession: UnwrapRef<typeof import('./helper/preview-media-session')['createPreviewMediaSession']>
     readonly createReactiveFn: UnwrapRef<typeof import('@vueuse/core')['createReactiveFn']>
     readonly createRef: UnwrapRef<typeof import('@vueuse/core')['createRef']>
     readonly createReusableTemplate: UnwrapRef<typeof import('@vueuse/core')['createReusableTemplate']>
-    readonly createScenePresentationState: UnwrapRef<typeof import('./helper/scene-presentation')['createScenePresentationState']>
-    readonly createSceneTextPanelTextModel: UnwrapRef<typeof import('./helper/scene-text-panel')['createSceneTextPanelTextModel']>
     readonly createSharedComposable: UnwrapRef<typeof import('@vueuse/core')['createSharedComposable']>
-    readonly createStatementEntryFromSceneStatement: UnwrapRef<typeof import('./helper/webgal-script/sentence')['createStatementEntryFromSceneStatement']>
-    readonly createStatementIdTarget: UnwrapRef<typeof import('./composables/useStatementEditor')['createStatementIdTarget']>
-    readonly createStatementMissingFileLoader: UnwrapRef<typeof import('./helper/statement-editor/file-missing')['createStatementMissingFileLoader']>
     readonly createTemplatePromise: UnwrapRef<typeof import('@vueuse/core')['createTemplatePromise']>
-    readonly createTextEditorSaveShortcutHandler: UnwrapRef<typeof import('./composables/useTextEditorSaveShortcut')['createTextEditorSaveShortcutHandler']>
-    readonly createTextLineTarget: UnwrapRef<typeof import('./composables/useStatementEditor')['createTextLineTarget']>
-    readonly createTransientStatementEntry: UnwrapRef<typeof import('./helper/webgal-script/sentence')['createTransientStatementEntry']>
     readonly createUnrefFn: UnwrapRef<typeof import('@vueuse/core')['createUnrefFn']>
-    readonly createVisualEditorSaveShortcutHandler: UnwrapRef<typeof import('./composables/useVisualEditorSaveShortcut')['createVisualEditorSaveShortcutHandler']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
-    readonly db: UnwrapRef<typeof import('./database/db')['db']>
     readonly debouncedRef: UnwrapRef<typeof import('@vueuse/core')['debouncedRef']>
     readonly debouncedWatch: UnwrapRef<typeof import('@vueuse/core')['debouncedWatch']>
-    readonly debugCommander: UnwrapRef<typeof import('./services/debug-commander')['debugCommander']>
-    readonly defaultEngineSavePath: UnwrapRef<typeof import('./helper/app-paths')['defaultEngineSavePath']>
-    readonly defaultGameSavePath: UnwrapRef<typeof import('./helper/app-paths')['defaultGameSavePath']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly definePage: UnwrapRef<typeof import('vue-router/experimental')['definePage']>
-    readonly degreeToRadian: UnwrapRef<typeof import('./helper/math')['degreeToRadian']>
-    readonly deriveArgFieldsFromEditorFields: UnwrapRef<typeof import('./helper/command-registry/schema')['deriveArgFieldsFromEditorFields']>
-    readonly displayEntries: UnwrapRef<typeof import('./helper/command-registry/display')['displayEntries']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
-    readonly editorDynamicOptionSources: UnwrapRef<typeof import('./helper/command-registry/dynamic-options')['editorDynamicOptionSources']>
-    readonly effectEntries: UnwrapRef<typeof import('./helper/command-registry/effect')['effectEntries']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
-    readonly engineIconPath: UnwrapRef<typeof import('./helper/app-paths')['engineIconPath']>
-    readonly engineManager: UnwrapRef<typeof import('./services/engine-manager')['engineManager']>
-    readonly engineManifestPath: UnwrapRef<typeof import('./helper/app-paths')['engineManifestPath']>
-    readonly ensureParsed: UnwrapRef<typeof import('./helper/webgal-script/sentence')['ensureParsed']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
-    readonly extractRgbColor: UnwrapRef<typeof import('./helper/color')['extractRgbColor']>
-    readonly extractSpeakerChange: UnwrapRef<typeof import('./utils/speaker')['extractSpeakerChange']>
-    readonly fieldsToTransform: UnwrapRef<typeof import('./helper/effect-editor-config')['fieldsToTransform']>
-    readonly filterExtraArgs: UnwrapRef<typeof import('./helper/statement-editor/visibility')['filterExtraArgs']>
-    readonly findSelectedVisualEditorStatementCard: UnwrapRef<typeof import('./helper/visual-editor-focus')['findSelectedVisualEditorStatementCard']>
-    readonly formatFileSize: UnwrapRef<typeof import('./utils/format')['formatFileSize']>
-    readonly fsCmds: UnwrapRef<typeof import('./commands/fs')['fsCmds']>
-    readonly gameAssetDir: UnwrapRef<typeof import('./helper/app-paths')['gameAssetDir']>
-    readonly gameCmds: UnwrapRef<typeof import('./commands/game')['gameCmds']>
-    readonly gameCoverPath: UnwrapRef<typeof import('./helper/app-paths')['gameCoverPath']>
-    readonly gameFs: UnwrapRef<typeof import('./services/game-fs')['gameFs']>
-    readonly gameIconPath: UnwrapRef<typeof import('./helper/app-paths')['gameIconPath']>
-    readonly gameManager: UnwrapRef<typeof import('./services/game-manager')['gameManager']>
-    readonly gameRootDir: UnwrapRef<typeof import('./helper/app-paths')['gameRootDir']>
-    readonly gameSceneDir: UnwrapRef<typeof import('./helper/app-paths')['gameSceneDir']>
-    readonly getActiveEffectCategories: UnwrapRef<typeof import('./helper/effect-editor-config')['getActiveEffectCategories']>
-    readonly getAssetUrl: UnwrapRef<typeof import('./helper/asset-url')['getAssetUrl']>
-    readonly getCategoryLabel: UnwrapRef<typeof import('./helper/command-registry/index')['getCategoryLabel']>
-    readonly getCommandConfig: UnwrapRef<typeof import('./helper/command-registry/index')['getCommandConfig']>
-    readonly getCommandDescription: UnwrapRef<typeof import('./helper/command-registry/index')['getCommandDescription']>
-    readonly getCommandLabel: UnwrapRef<typeof import('./helper/command-registry/index')['getCommandLabel']>
-    readonly getCommandTheme: UnwrapRef<typeof import('./helper/command-registry/index')['getCommandTheme']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getCurrentWatcher: UnwrapRef<typeof import('vue')['getCurrentWatcher']>
-    readonly getEffectParamKey: UnwrapRef<typeof import('./helper/effect-editor-config')['getEffectParamKey']>
-    readonly getFactoryDefaultCommandText: UnwrapRef<typeof import('./helper/command-registry/index')['getFactoryDefaultCommandText']>
-    readonly getParamValueFromArgs: UnwrapRef<typeof import('./helper/statement-editor/param-value')['getParamValueFromArgs']>
-    readonly getPointerAngleDegrees: UnwrapRef<typeof import('./helper/math')['getPointerAngleDegrees']>
-    readonly getPreviousSpeakerAtIndex: UnwrapRef<typeof import('./utils/speaker')['getPreviousSpeakerAtIndex']>
-    readonly getPreviousSpeakerAtLine: UnwrapRef<typeof import('./utils/speaker')['getPreviousSpeakerAtLine']>
-    readonly getRegistryKnownKeys: UnwrapRef<typeof import('./helper/webgal-script/params')['getRegistryKnownKeys']>
-    readonly getValueByPath: UnwrapRef<typeof import('./helper/effect-editor-config')['getValueByPath']>
-    readonly getVersion: UnwrapRef<typeof import('./utils/metadata')['getVersion']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
-    readonly handleError: UnwrapRef<typeof import('./utils/error-handler')['handleError']>
-    readonly handleWheelToHorizontalScroll: UnwrapRef<typeof import('./utils/wheel')['handleWheelToHorizontalScroll']>
-    readonly hasCommandNodeParam: UnwrapRef<typeof import('./helper/webgal-script/params')['hasCommandNodeParam']>
-    readonly hasParamExplicitValue: UnwrapRef<typeof import('./helper/statement-editor/param-value')['hasParamExplicitValue']>
-    readonly hasSentenceTruthyFlag: UnwrapRef<typeof import('./helper/webgal-script/sentence')['hasSentenceTruthyFlag']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly injectLocal: UnwrapRef<typeof import('@vueuse/core')['injectLocal']>
-    readonly invalidateDirectoryItemsCache: UnwrapRef<typeof import('./services/directory-cache')['invalidateDirectoryItemsCache']>
-    readonly isAnimationVisualProjection: UnwrapRef<typeof import('./stores/editor')['isAnimationVisualProjection']>
-    readonly isBackendError: UnwrapRef<typeof import('./types/errors')['isBackendError']>
-    readonly isCommandSupported: UnwrapRef<typeof import('./helper/command-registry/index')['isCommandSupported']>
     readonly isDefined: UnwrapRef<typeof import('@vueuse/core')['isDefined']>
-    readonly isEditableEditor: UnwrapRef<typeof import('./stores/editor')['isEditableEditor']>
-    readonly isFlagChoiceField: UnwrapRef<typeof import('./helper/command-registry/schema')['isFlagChoiceField']>
-    readonly isGenericNode: UnwrapRef<typeof import('./helper/webgal-script/types')['isGenericNode']>
-    readonly isParamVisibleByArgs: UnwrapRef<typeof import('./helper/statement-editor/visibility')['isParamVisibleByArgs']>
-    readonly isParamVisibleByReader: UnwrapRef<typeof import('./helper/statement-editor/visibility')['isParamVisibleByReader']>
     readonly isProxy: UnwrapRef<typeof import('vue')['isProxy']>
     readonly isReactive: UnwrapRef<typeof import('vue')['isReactive']>
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
-    readonly isRgbColor: UnwrapRef<typeof import('./helper/color')['isRgbColor']>
-    readonly isRgbaPayload: UnwrapRef<typeof import('./helper/color')['isRgbaPayload']>
-    readonly isSceneStatementCollapsed: UnwrapRef<typeof import('./helper/scene-presentation')['isSceneStatementCollapsed']>
-    readonly isSceneVisualProjection: UnwrapRef<typeof import('./stores/editor')['isSceneVisualProjection']>
     readonly isShallow: UnwrapRef<typeof import('vue')['isShallow']>
-    readonly isStatementInteractiveTarget: UnwrapRef<typeof import('./composables/useStatementEditor')['isStatementInteractiveTarget']>
-    readonly isTransformEqual: UnwrapRef<typeof import('./helper/effect-editor-config')['isTransformEqual']>
-    readonly isTypedCommandNode: UnwrapRef<typeof import('./helper/webgal-script/codec')['isTypedCommandNode']>
-    readonly isValidPositiveNumber: UnwrapRef<typeof import('./utils/sort')['isValidPositiveNumber']>
-    readonly joinStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['joinStatements']>
     readonly logger: UnwrapRef<typeof import('@tauri-apps/plugin-log')>
     readonly makeDestructurable: UnwrapRef<typeof import('@vueuse/core')['makeDestructurable']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
-    readonly normalizeAngleDelta: UnwrapRef<typeof import('./helper/math')['normalizeAngleDelta']>
-    readonly normalizeColorChannel: UnwrapRef<typeof import('./helper/color')['normalizeColorChannel']>
-    readonly normalizeDegree: UnwrapRef<typeof import('./helper/math')['normalizeDegree']>
-    readonly normalizeEditorViewState: UnwrapRef<typeof import('./helper/text-editor-view-state')['normalizeEditorViewState']>
-    readonly normalizeFieldStringValue: UnwrapRef<typeof import('./helper/statement-editor/field-utils')['normalizeFieldStringValue']>
-    readonly normalizeGamePath: UnwrapRef<typeof import('./helper/command-registry/dynamic-options')['normalizeGamePath']>
-    readonly normalizeNumber: UnwrapRef<typeof import('./utils/sort')['normalizeNumber']>
-    readonly normalizePreviewMediaSessionPatch: UnwrapRef<typeof import('./helper/preview-media-session')['normalizePreviewMediaSessionPatch']>
-    readonly normalizeRelativePath: UnwrapRef<typeof import('./utils/path')['normalizeRelativePath']>
-    readonly normalizeStepPrecision: UnwrapRef<typeof import('./helper/math')['normalizeStepPrecision']>
     readonly notify: UnwrapRef<typeof import('notivue')['push']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
@@ -978,43 +382,16 @@ declare module 'vue' {
     readonly onUnmounted: UnwrapRef<typeof import('vue')['onUnmounted']>
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
-    readonly parseChooseContent: UnwrapRef<typeof import('./helper/webgal-script/content')['parseChooseContent']>
-    readonly parseCommandNode: UnwrapRef<typeof import('./helper/webgal-script/codec')['parseCommandNode']>
-    readonly parseEffectJson: UnwrapRef<typeof import('./helper/effect-editor-config')['parseEffectJson']>
-    readonly parseHexColor: UnwrapRef<typeof import('./helper/color')['parseHexColor']>
-    readonly parseScene: UnwrapRef<typeof import('./helper/webgal-script/parser')['parseScene']>
-    readonly parseSceneOrEmpty: UnwrapRef<typeof import('./helper/webgal-script/parser')['parseSceneOrEmpty']>
-    readonly parseSentence: UnwrapRef<typeof import('./helper/webgal-script/parser')['parseSentence']>
-    readonly parseSetVarContent: UnwrapRef<typeof import('./helper/webgal-script/content')['parseSetVarContent']>
-    readonly parseStyleRuleContent: UnwrapRef<typeof import('./helper/webgal-script/content')['parseStyleRuleContent']>
-    readonly parseTransformJson: UnwrapRef<typeof import('./helper/effect-editor-config')['parseTransformJson']>
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
-    readonly performEntries: UnwrapRef<typeof import('./helper/command-registry/perform')['performEntries']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly provideLocal: UnwrapRef<typeof import('@vueuse/core')['provideLocal']>
-    readonly provideStatementMeta: UnwrapRef<typeof import('./composables/useStatementMeta')['provideStatementMeta']>
-    readonly pruneHiddenDependentArgs: UnwrapRef<typeof import('./helper/statement-editor/visibility')['pruneHiddenDependentArgs']>
-    readonly pruneHiddenDependentArgsByReader: UnwrapRef<typeof import('./helper/statement-editor/visibility')['pruneHiddenDependentArgsByReader']>
-    readonly radianToDegree: UnwrapRef<typeof import('./helper/math')['radianToDegree']>
     readonly reactify: UnwrapRef<typeof import('@vueuse/core')['reactify']>
     readonly reactifyObject: UnwrapRef<typeof import('@vueuse/core')['reactifyObject']>
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
     readonly reactiveComputed: UnwrapRef<typeof import('@vueuse/core')['reactiveComputed']>
     readonly reactiveOmit: UnwrapRef<typeof import('@vueuse/core')['reactiveOmit']>
     readonly reactivePick: UnwrapRef<typeof import('@vueuse/core')['reactivePick']>
-    readonly readArgFieldStorageKey: UnwrapRef<typeof import('./helper/command-registry/schema')['readArgFieldStorageKey']>
-    readonly readArgFields: UnwrapRef<typeof import('./helper/command-registry/schema')['readArgFields']>
-    readonly readCommandConfig: UnwrapRef<typeof import('./helper/command-registry/index')['readCommandConfig']>
-    readonly readCommandNodeParamValue: UnwrapRef<typeof import('./helper/webgal-script/params')['readCommandNodeParamValue']>
-    readonly readContentField: UnwrapRef<typeof import('./helper/command-registry/schema')['readContentField']>
-    readonly readDirectoryItemsCached: UnwrapRef<typeof import('./services/directory-cache')['readDirectoryItemsCached']>
-    readonly readEditorFields: UnwrapRef<typeof import('./helper/command-registry/schema')['readEditorFields']>
-    readonly readJsonFieldValue: UnwrapRef<typeof import('./helper/statement-editor/json-fields')['readJsonFieldValue']>
-    readonly readSentenceArgString: UnwrapRef<typeof import('./helper/webgal-script/sentence')['readSentenceArgString']>
-    readonly readTypedCommandNodeExtraArgs: UnwrapRef<typeof import('./helper/webgal-script/update')['readTypedCommandNodeExtraArgs']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
-    readonly rebuildStatementsWithStableIds: UnwrapRef<typeof import('./helper/webgal-script/sentence')['rebuildStatementsWithStableIds']>
-    readonly reconcileScenePresentationState: UnwrapRef<typeof import('./helper/scene-presentation')['reconcileScenePresentationState']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
     readonly refAutoReset: UnwrapRef<typeof import('@vueuse/core')['refAutoReset']>
     readonly refDebounced: UnwrapRef<typeof import('@vueuse/core')['refDebounced']>
@@ -1022,69 +399,22 @@ declare module 'vue' {
     readonly refManualReset: UnwrapRef<typeof import('@vueuse/core')['refManualReset']>
     readonly refThrottled: UnwrapRef<typeof import('@vueuse/core')['refThrottled']>
     readonly refWithControl: UnwrapRef<typeof import('@vueuse/core')['refWithControl']>
-    readonly registerDynamicOptions: UnwrapRef<typeof import('./helper/dynamic-options')['registerDynamicOptions']>
-    readonly registerPendingDocumentWrite: UnwrapRef<typeof import('./services/document-write-intents')['registerPendingDocumentWrite']>
-    readonly removeArg: UnwrapRef<typeof import('./helper/webgal-script/arg-utils')['removeArg']>
-    readonly resolveAssetUrl: UnwrapRef<typeof import('./helper/asset-url')['resolveAssetUrl']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
-    readonly resolveDynamicOptions: UnwrapRef<typeof import('./helper/dynamic-options')['resolveDynamicOptions']>
-    readonly resolveFieldModelStringValue: UnwrapRef<typeof import('./helper/statement-editor/field-utils')['resolveFieldModelStringValue']>
-    readonly resolveHistoryShortcutAction: UnwrapRef<typeof import('./helper/history-shortcut')['resolveHistoryShortcutAction']>
-    readonly resolveI18n: UnwrapRef<typeof import('./helper/command-registry/schema')['resolveI18n']>
-    readonly resolveMissingFileKeys: UnwrapRef<typeof import('./helper/statement-editor/file-missing')['resolveMissingFileKeys']>
-    readonly resolvePanelSliderEmitValue: UnwrapRef<typeof import('./helper/statement-editor/field-utils')['resolvePanelSliderEmitValue']>
-    readonly resolveParamSelectValue: UnwrapRef<typeof import('./helper/statement-editor/param-value')['resolveParamSelectValue']>
     readonly resolveRef: UnwrapRef<typeof import('@vueuse/core')['resolveRef']>
-    readonly resolveRegistryFieldMeta: UnwrapRef<typeof import('./helper/webgal-script/params')['resolveRegistryFieldMeta']>
-    readonly resolveSceneCursorTarget: UnwrapRef<typeof import('./helper/text-editor-scene-sync')['resolveSceneCursorTarget']>
-    readonly resolveScenePreviewLine: UnwrapRef<typeof import('./helper/text-editor-scene-sync')['resolveScenePreviewLine']>
-    readonly resolveSceneTextPanelSnapshot: UnwrapRef<typeof import('./helper/scene-text-panel')['resolveSceneTextPanelSnapshot']>
-    readonly resolveSceneTextPanelSnapshotFromContent: UnwrapRef<typeof import('./helper/scene-text-panel')['resolveSceneTextPanelSnapshotFromContent']>
-    readonly resolveStatementSpecialContentMode: UnwrapRef<typeof import('./helper/command-registry/schema')['resolveStatementSpecialContentMode']>
-    readonly resolveSurfaceVariant: UnwrapRef<typeof import('./helper/command-registry/schema')['resolveSurfaceVariant']>
-    readonly resolveTextEditorLanguage: UnwrapRef<typeof import('./helper/text-editor-language')['resolveTextEditorLanguage']>
-    readonly restoreEditorCursorOffset: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['restoreEditorCursorOffset']>
-    readonly restoreEditorCursorSnapshot: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['restoreEditorCursorSnapshot']>
-    readonly restoreEditorHistorySnapshot: UnwrapRef<typeof import('./helper/text-editor-history-snapshot')['restoreEditorHistorySnapshot']>
-    readonly roundByStep: UnwrapRef<typeof import('./helper/math')['roundByStep']>
-    readonly roundToPrecision: UnwrapRef<typeof import('./helper/math')['roundToPrecision']>
-    readonly safeInvoke: UnwrapRef<typeof import('./utils/invoke')['safeInvoke']>
-    readonly sceneEntries: UnwrapRef<typeof import('./helper/command-registry/scene')['sceneEntries']>
-    readonly serializeCommandNode: UnwrapRef<typeof import('./helper/webgal-script/codec')['serializeCommandNode']>
-    readonly serializeEffectJson: UnwrapRef<typeof import('./helper/effect-editor-config')['serializeEffectJson']>
-    readonly serializeSentence: UnwrapRef<typeof import('./helper/webgal-script/serialize')['serializeSentence']>
-    readonly serializeTransform: UnwrapRef<typeof import('./helper/effect-editor-config')['serializeTransform']>
-    readonly serverCmds: UnwrapRef<typeof import('./commands/server')['serverCmds']>
-    readonly setOrRemoveArg: UnwrapRef<typeof import('./helper/webgal-script/arg-utils')['setOrRemoveArg']>
-    readonly setSceneStatementCollapsed: UnwrapRef<typeof import('./helper/scene-presentation')['setSceneStatementCollapsed']>
-    readonly setValueByPath: UnwrapRef<typeof import('./helper/effect-editor-config')['setValueByPath']>
-    readonly settleBatch: UnwrapRef<typeof import('./utils/batch')['settleBatch']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
-    readonly shouldRestoreTextEditorFocus: UnwrapRef<typeof import('./helper/text-editor-workspace-focus')['shouldRestoreTextEditorFocus']>
-    readonly sidebarPanelKey: UnwrapRef<typeof import('./composables/useEditorPanelBindings')['sidebarPanelKey']>
-    readonly splitStatements: UnwrapRef<typeof import('./helper/webgal-script/sentence')['splitStatements']>
-    readonly statementEditorSurfaceKey: UnwrapRef<typeof import('./helper/statement-editor/surface-context')['statementEditorSurfaceKey']>
-    readonly statementMetaKey: UnwrapRef<typeof import('./composables/useStatementMeta')['statementMetaKey']>
-    readonly stringifyChooseContent: UnwrapRef<typeof import('./helper/webgal-script/content')['stringifyChooseContent']>
-    readonly stringifySetVarContent: UnwrapRef<typeof import('./helper/webgal-script/content')['stringifySetVarContent']>
-    readonly stringifyStyleRuleContent: UnwrapRef<typeof import('./helper/webgal-script/content')['stringifyStyleRuleContent']>
     readonly syncRef: UnwrapRef<typeof import('@vueuse/core')['syncRef']>
     readonly syncRefs: UnwrapRef<typeof import('@vueuse/core')['syncRefs']>
-    readonly systemEntries: UnwrapRef<typeof import('./helper/command-registry/system')['systemEntries']>
     readonly templateRef: UnwrapRef<typeof import('@vueuse/core')['templateRef']>
     readonly throttledRef: UnwrapRef<typeof import('@vueuse/core')['throttledRef']>
     readonly throttledWatch: UnwrapRef<typeof import('@vueuse/core')['throttledWatch']>
-    readonly thumbnailCmds: UnwrapRef<typeof import('./commands/thumbnaila')['thumbnailCmds']>
-    readonly toComparablePath: UnwrapRef<typeof import('./utils/path')['toComparablePath']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
     readonly toReactive: UnwrapRef<typeof import('@vueuse/core')['toReactive']>
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>
     readonly toRefs: UnwrapRef<typeof import('vue')['toRefs']>
     readonly toValue: UnwrapRef<typeof import('vue')['toValue']>
     readonly toast: UnwrapRef<typeof import('vue-sonner')['toast']>
-    readonly transformToFields: UnwrapRef<typeof import('./helper/effect-editor-config')['transformToFields']>
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly tryOnBeforeMount: UnwrapRef<typeof import('@vueuse/core')['tryOnBeforeMount']>
     readonly tryOnBeforeUnmount: UnwrapRef<typeof import('@vueuse/core')['tryOnBeforeUnmount']>
@@ -1093,14 +423,7 @@ declare module 'vue' {
     readonly tryOnUnmounted: UnwrapRef<typeof import('@vueuse/core')['tryOnUnmounted']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly unrefElement: UnwrapRef<typeof import('@vueuse/core')['unrefElement']>
-    readonly unsetValueByPath: UnwrapRef<typeof import('./helper/effect-editor-config')['unsetValueByPath']>
     readonly until: UnwrapRef<typeof import('@vueuse/core')['until']>
-    readonly updateCommandNodeContent: UnwrapRef<typeof import('./helper/webgal-script/update')['updateCommandNodeContent']>
-    readonly updateCommandNodeInlineComment: UnwrapRef<typeof import('./helper/webgal-script/update')['updateCommandNodeInlineComment']>
-    readonly updateCommandNodeParam: UnwrapRef<typeof import('./helper/webgal-script/update')['updateCommandNodeParam']>
-    readonly updateCommandNodeSpeaker: UnwrapRef<typeof import('./helper/webgal-script/update')['updateCommandNodeSpeaker']>
-    readonly updateTypedCommandNodeExtraArgs: UnwrapRef<typeof import('./helper/webgal-script/update')['updateTypedCommandNodeExtraArgs']>
-    readonly upsertArg: UnwrapRef<typeof import('./helper/webgal-script/arg-utils')['upsertArg']>
     readonly useActiveElement: UnwrapRef<typeof import('@vueuse/core')['useActiveElement']>
     readonly useAnimate: UnwrapRef<typeof import('@vueuse/core')['useAnimate']>
     readonly useArrayDifference: UnwrapRef<typeof import('@vueuse/core')['useArrayDifference']>
@@ -1121,7 +444,6 @@ declare module 'vue' {
     readonly useBase64: UnwrapRef<typeof import('@vueuse/core')['useBase64']>
     readonly useBattery: UnwrapRef<typeof import('@vueuse/core')['useBattery']>
     readonly useBluetooth: UnwrapRef<typeof import('@vueuse/core')['useBluetooth']>
-    readonly useBreadcrumbCollapse: UnwrapRef<typeof import('./composables/useBreadcrumbCollapse')['useBreadcrumbCollapse']>
     readonly useBreakpoints: UnwrapRef<typeof import('@vueuse/core')['useBreakpoints']>
     readonly useBroadcastChannel: UnwrapRef<typeof import('@vueuse/core')['useBroadcastChannel']>
     readonly useBrowserLocation: UnwrapRef<typeof import('@vueuse/core')['useBrowserLocation']>
@@ -1130,11 +452,7 @@ declare module 'vue' {
     readonly useClipboardItems: UnwrapRef<typeof import('@vueuse/core')['useClipboardItems']>
     readonly useCloned: UnwrapRef<typeof import('@vueuse/core')['useCloned']>
     readonly useColorMode: UnwrapRef<typeof import('@vueuse/core')['useColorMode']>
-    readonly useCommandPanelBridgeBinding: UnwrapRef<typeof import('./composables/useEditorPanelBindings')['useCommandPanelBridgeBinding']>
-    readonly useCommandPanelBridgeProvider: UnwrapRef<typeof import('./composables/useEditorPanelBindings')['useCommandPanelBridgeProvider']>
-    readonly useCommandPanelStore: UnwrapRef<typeof import('./stores/command-panel')['useCommandPanelStore']>
     readonly useConfirmDialog: UnwrapRef<typeof import('@vueuse/core')['useConfirmDialog']>
-    readonly useControlId: UnwrapRef<typeof import('./composables/useControlId')['useControlId']>
     readonly useCountdown: UnwrapRef<typeof import('@vueuse/core')['useCountdown']>
     readonly useCounter: UnwrapRef<typeof import('@vueuse/core')['useCounter']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
@@ -1152,55 +470,34 @@ declare module 'vue' {
     readonly useDeviceOrientation: UnwrapRef<typeof import('@vueuse/core')['useDeviceOrientation']>
     readonly useDevicePixelRatio: UnwrapRef<typeof import('@vueuse/core')['useDevicePixelRatio']>
     readonly useDevicesList: UnwrapRef<typeof import('@vueuse/core')['useDevicesList']>
-    readonly useDirectoryReader: UnwrapRef<typeof import('./composables/useDirectoryReader')['useDirectoryReader']>
-    readonly useDiscoverResources: UnwrapRef<typeof import('./composables/useDiscoverResources')['useDiscoverResources']>
     readonly useDisplayMedia: UnwrapRef<typeof import('@vueuse/core')['useDisplayMedia']>
     readonly useDocumentVisibility: UnwrapRef<typeof import('@vueuse/core')['useDocumentVisibility']>
     readonly useDraggable: UnwrapRef<typeof import('@vueuse/core')['useDraggable']>
     readonly useDropZone: UnwrapRef<typeof import('@vueuse/core')['useDropZone']>
-    readonly useEditSettingsStore: UnwrapRef<typeof import('./stores/edit-settings')['useEditSettingsStore']>
-    readonly useEditorDynamicOptionsBootstrap: UnwrapRef<typeof import('./composables/useEditorDynamicOptionsBootstrap')['useEditorDynamicOptionsBootstrap']>
-    readonly useEditorSaveShortcut: UnwrapRef<typeof import('./composables/useEditorSaveShortcut')['useEditorSaveShortcut']>
-    readonly useEditorStore: UnwrapRef<typeof import('./stores/editor')['useEditorStore']>
-    readonly useEditorUIStateStore: UnwrapRef<typeof import('./stores/editor-ui-state')['useEditorUIStateStore']>
-    readonly useEditorViewStateStore: UnwrapRef<typeof import('./stores/editor-view-state')['useEditorViewStateStore']>
-    readonly useEffectColorControl: UnwrapRef<typeof import('./composables/effect-editor/useEffectColorControl')['useEffectColorControl']>
-    readonly useEffectContinuousControls: UnwrapRef<typeof import('./composables/effect-editor/useEffectContinuousControls')['useEffectContinuousControls']>
-    readonly useEffectDurationControl: UnwrapRef<typeof import('./composables/effect-editor/useEffectDurationControl')['useEffectDurationControl']>
-    readonly useEffectEditorDialog: UnwrapRef<typeof import('./composables/useEffectEditorDialog')['useEffectEditorDialog']>
-    readonly useEffectEditorProvider: UnwrapRef<typeof import('./composables/useEffectEditorProvider')['useEffectEditorProvider']>
-    readonly useEffectSegmentedControl: UnwrapRef<typeof import('./composables/effect-editor/useEffectSegmentedControl')['useEffectSegmentedControl']>
     readonly useElementBounding: UnwrapRef<typeof import('@vueuse/core')['useElementBounding']>
     readonly useElementByPoint: UnwrapRef<typeof import('@vueuse/core')['useElementByPoint']>
     readonly useElementHover: UnwrapRef<typeof import('@vueuse/core')['useElementHover']>
     readonly useElementSize: UnwrapRef<typeof import('@vueuse/core')['useElementSize']>
     readonly useElementVisibility: UnwrapRef<typeof import('@vueuse/core')['useElementVisibility']>
-    readonly useEngines: UnwrapRef<typeof import('./composables/useDatabase')['useEngines']>
     readonly useEventBus: UnwrapRef<typeof import('@vueuse/core')['useEventBus']>
     readonly useEventListener: UnwrapRef<typeof import('@vueuse/core')['useEventListener']>
     readonly useEventSource: UnwrapRef<typeof import('@vueuse/core')['useEventSource']>
     readonly useEyeDropper: UnwrapRef<typeof import('@vueuse/core')['useEyeDropper']>
     readonly useFavicon: UnwrapRef<typeof import('@vueuse/core')['useFavicon']>
     readonly useFetch: UnwrapRef<typeof import('@vueuse/core')['useFetch']>
-    readonly useFileClipboard: UnwrapRef<typeof import('./composables/useFileClipboard')['useFileClipboard']>
     readonly useFileDialog: UnwrapRef<typeof import('@vueuse/core')['useFileDialog']>
-    readonly useFileStore: UnwrapRef<typeof import('./stores/file')['useFileStore']>
     readonly useFileSystemAccess: UnwrapRef<typeof import('@vueuse/core')['useFileSystemAccess']>
-    readonly useFileSystemEvents: UnwrapRef<typeof import('./composables/useFileSystemEvents')['useFileSystemEvents']>
     readonly useFocus: UnwrapRef<typeof import('@vueuse/core')['useFocus']>
     readonly useFocusWithin: UnwrapRef<typeof import('@vueuse/core')['useFocusWithin']>
     readonly useFps: UnwrapRef<typeof import('@vueuse/core')['useFps']>
     readonly useFullscreen: UnwrapRef<typeof import('@vueuse/core')['useFullscreen']>
     readonly useGamepad: UnwrapRef<typeof import('@vueuse/core')['useGamepad']>
-    readonly useGames: UnwrapRef<typeof import('./composables/useDatabase')['useGames']>
-    readonly useGeneralSettingsStore: UnwrapRef<typeof import('./stores/general-settings')['useGeneralSettingsStore']>
     readonly useGeolocation: UnwrapRef<typeof import('@vueuse/core')['useGeolocation']>
     readonly useI18n: UnwrapRef<typeof import('vue-i18n')['useI18n']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
     readonly useIdle: UnwrapRef<typeof import('@vueuse/core')['useIdle']>
     readonly useImage: UnwrapRef<typeof import('@vueuse/core')['useImage']>
     readonly useInfiniteScroll: UnwrapRef<typeof import('@vueuse/core')['useInfiniteScroll']>
-    readonly useInjectedEffectEditorProvider: UnwrapRef<typeof import('./composables/useEffectEditorProvider')['useInjectedEffectEditorProvider']>
     readonly useIntersectionObserver: UnwrapRef<typeof import('@vueuse/core')['useIntersectionObserver']>
     readonly useInterval: UnwrapRef<typeof import('@vueuse/core')['useInterval']>
     readonly useIntervalFn: UnwrapRef<typeof import('@vueuse/core')['useIntervalFn']>
@@ -1213,7 +510,6 @@ declare module 'vue' {
     readonly useMediaQuery: UnwrapRef<typeof import('@vueuse/core')['useMediaQuery']>
     readonly useMemoize: UnwrapRef<typeof import('@vueuse/core')['useMemoize']>
     readonly useMemory: UnwrapRef<typeof import('@vueuse/core')['useMemory']>
-    readonly useModalStore: UnwrapRef<typeof import('./stores/modal')['useModalStore']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useMounted: UnwrapRef<typeof import('@vueuse/core')['useMounted']>
     readonly useMouse: UnwrapRef<typeof import('@vueuse/core')['useMouse']>
@@ -1232,22 +528,18 @@ declare module 'vue' {
     readonly usePerformanceObserver: UnwrapRef<typeof import('@vueuse/core')['usePerformanceObserver']>
     readonly usePermission: UnwrapRef<typeof import('@vueuse/core')['usePermission']>
     readonly usePointer: UnwrapRef<typeof import('@vueuse/core')['usePointer']>
-    readonly usePointerDrag: UnwrapRef<typeof import('./composables/usePointerDrag')['usePointerDrag']>
     readonly usePointerLock: UnwrapRef<typeof import('@vueuse/core')['usePointerLock']>
     readonly usePointerSwipe: UnwrapRef<typeof import('@vueuse/core')['usePointerSwipe']>
-    readonly usePreferenceStore: UnwrapRef<typeof import('./stores/preference')['usePreferenceStore']>
     readonly usePreferredColorScheme: UnwrapRef<typeof import('@vueuse/core')['usePreferredColorScheme']>
     readonly usePreferredContrast: UnwrapRef<typeof import('@vueuse/core')['usePreferredContrast']>
     readonly usePreferredDark: UnwrapRef<typeof import('@vueuse/core')['usePreferredDark']>
     readonly usePreferredLanguages: UnwrapRef<typeof import('@vueuse/core')['usePreferredLanguages']>
     readonly usePreferredReducedMotion: UnwrapRef<typeof import('@vueuse/core')['usePreferredReducedMotion']>
     readonly usePreferredReducedTransparency: UnwrapRef<typeof import('@vueuse/core')['usePreferredReducedTransparency']>
-    readonly usePreviewSettingsStore: UnwrapRef<typeof import('./stores/preview-settings')['usePreviewSettingsStore']>
     readonly usePrevious: UnwrapRef<typeof import('@vueuse/core')['usePrevious']>
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>
     readonly useResizeObserver: UnwrapRef<typeof import('@vueuse/core')['useResizeObserver']>
-    readonly useResourceStore: UnwrapRef<typeof import('./stores/resource')['useResourceStore']>
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>
     readonly useRouter: UnwrapRef<typeof import('vue-router')['useRouter']>
     readonly useSSRWidth: UnwrapRef<typeof import('@vueuse/core')['useSSRWidth']>
@@ -1257,44 +549,20 @@ declare module 'vue' {
     readonly useScroll: UnwrapRef<typeof import('@vueuse/core')['useScroll']>
     readonly useScrollLock: UnwrapRef<typeof import('@vueuse/core')['useScrollLock']>
     readonly useSessionStorage: UnwrapRef<typeof import('@vueuse/core')['useSessionStorage']>
-    readonly useSettingsForm: UnwrapRef<typeof import('./composables/useSettingsForm')['useSettingsForm']>
     readonly useShare: UnwrapRef<typeof import('@vueuse/core')['useShare']>
-    readonly useSidebarPanelBinding: UnwrapRef<typeof import('./composables/useEditorPanelBindings')['useSidebarPanelBinding']>
-    readonly useSidebarPanelProvider: UnwrapRef<typeof import('./composables/useEditorPanelBindings')['useSidebarPanelProvider']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useSorted: UnwrapRef<typeof import('@vueuse/core')['useSorted']>
     readonly useSpeechRecognition: UnwrapRef<typeof import('@vueuse/core')['useSpeechRecognition']>
     readonly useSpeechSynthesis: UnwrapRef<typeof import('@vueuse/core')['useSpeechSynthesis']>
-    readonly useStatementEditor: UnwrapRef<typeof import('./composables/useStatementEditor')['useStatementEditor']>
-    readonly useStatementEditorContent: UnwrapRef<typeof import('./composables/useStatementEditorContent')['useStatementEditorContent']>
-    readonly useStatementEditorFieldBindings: UnwrapRef<typeof import('./composables/useStatementEditorFieldBindings')['useStatementEditorFieldBindings']>
-    readonly useStatementEditorParams: UnwrapRef<typeof import('./composables/useStatementEditorParams')['useStatementEditorParams']>
-    readonly useStatementEditorSay: UnwrapRef<typeof import('./composables/useStatementEditorSay')['useStatementEditorSay']>
-    readonly useStatementEditorScrub: UnwrapRef<typeof import('./composables/useStatementEditorScrub')['useStatementEditorScrub']>
-    readonly useStatementEffectEditorBridge: UnwrapRef<typeof import('./composables/useStatementEffectEditorBridge')['useStatementEffectEditorBridge']>
-    readonly useStatementFileMissing: UnwrapRef<typeof import('./composables/useStatementFileMissing')['useStatementFileMissing']>
-    readonly useStatementFileRoots: UnwrapRef<typeof import('./composables/useStatementFileRoots')['useStatementFileRoots']>
-    readonly useStatementMeta: UnwrapRef<typeof import('./composables/useStatementMeta')['useStatementMeta']>
     readonly useStepper: UnwrapRef<typeof import('@vueuse/core')['useStepper']>
     readonly useStorage: UnwrapRef<typeof import('@vueuse/core')['useStorage']>
     readonly useStorageAsync: UnwrapRef<typeof import('@vueuse/core')['useStorageAsync']>
-    readonly useStorageSettingsStore: UnwrapRef<typeof import('./stores/storage-settings')['useStorageSettingsStore']>
     readonly useStyleTag: UnwrapRef<typeof import('@vueuse/core')['useStyleTag']>
     readonly useSupported: UnwrapRef<typeof import('@vueuse/core')['useSupported']>
     readonly useSwipe: UnwrapRef<typeof import('@vueuse/core')['useSwipe']>
-    readonly useTabsStore: UnwrapRef<typeof import('./stores/tabs')['useTabsStore']>
-    readonly useTabsWatcher: UnwrapRef<typeof import('./composables/useTabsWatcher')['useTabsWatcher']>
-    readonly useTauriDropZone: UnwrapRef<typeof import('./composables/useTauriDropZone')['useTauriDropZone']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly useTemplateRefsList: UnwrapRef<typeof import('@vueuse/core')['useTemplateRefsList']>
     readonly useTextDirection: UnwrapRef<typeof import('@vueuse/core')['useTextDirection']>
-    readonly useTextEditorBindings: UnwrapRef<typeof import('./composables/useTextEditorBindings')['useTextEditorBindings']>
-    readonly useTextEditorContentSync: UnwrapRef<typeof import('./composables/useTextEditorContentSync')['useTextEditorContentSync']>
-    readonly useTextEditorHistory: UnwrapRef<typeof import('./composables/useTextEditorHistory')['useTextEditorHistory']>
-    readonly useTextEditorPanel: UnwrapRef<typeof import('./composables/useTextEditorPanel')['useTextEditorPanel']>
-    readonly useTextEditorRuntime: UnwrapRef<typeof import('./composables/useTextEditorRuntime')['useTextEditorRuntime']>
-    readonly useTextEditorSaveShortcut: UnwrapRef<typeof import('./composables/useTextEditorSaveShortcut')['useTextEditorSaveShortcut']>
-    readonly useTextEditorWorkspace: UnwrapRef<typeof import('./composables/useTextEditorWorkspace')['useTextEditorWorkspace']>
     readonly useTextSelection: UnwrapRef<typeof import('@vueuse/core')['useTextSelection']>
     readonly useTextareaAutosize: UnwrapRef<typeof import('@vueuse/core')['useTextareaAutosize']>
     readonly useThrottle: UnwrapRef<typeof import('@vueuse/core')['useThrottle']>
@@ -1317,9 +585,6 @@ declare module 'vue' {
     readonly useVModels: UnwrapRef<typeof import('@vueuse/core')['useVModels']>
     readonly useVibrate: UnwrapRef<typeof import('@vueuse/core')['useVibrate']>
     readonly useVirtualList: UnwrapRef<typeof import('@vueuse/core')['useVirtualList']>
-    readonly useVisualEditorSaveShortcut: UnwrapRef<typeof import('./composables/useVisualEditorSaveShortcut')['useVisualEditorSaveShortcut']>
-    readonly useVisualEditorSceneRuntime: UnwrapRef<typeof import('./composables/useVisualEditorSceneRuntime')['useVisualEditorSceneRuntime']>
-    readonly useVisualEditorSceneViewport: UnwrapRef<typeof import('./composables/useVisualEditorSceneViewport')['useVisualEditorSceneViewport']>
     readonly useWakeLock: UnwrapRef<typeof import('@vueuse/core')['useWakeLock']>
     readonly useWebNotification: UnwrapRef<typeof import('@vueuse/core')['useWebNotification']>
     readonly useWebSocket: UnwrapRef<typeof import('@vueuse/core')['useWebSocket']>
@@ -1328,7 +593,6 @@ declare module 'vue' {
     readonly useWindowFocus: UnwrapRef<typeof import('@vueuse/core')['useWindowFocus']>
     readonly useWindowScroll: UnwrapRef<typeof import('@vueuse/core')['useWindowScroll']>
     readonly useWindowSize: UnwrapRef<typeof import('@vueuse/core')['useWindowSize']>
-    readonly useWorkspaceStore: UnwrapRef<typeof import('./stores/workspace')['useWorkspaceStore']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>
     readonly watchArray: UnwrapRef<typeof import('@vueuse/core')['watchArray']>
     readonly watchAtMost: UnwrapRef<typeof import('@vueuse/core')['watchAtMost']>
@@ -1344,9 +608,6 @@ declare module 'vue' {
     readonly watchThrottled: UnwrapRef<typeof import('@vueuse/core')['watchThrottled']>
     readonly watchTriggerable: UnwrapRef<typeof import('@vueuse/core')['watchTriggerable']>
     readonly watchWithFilter: UnwrapRef<typeof import('@vueuse/core')['watchWithFilter']>
-    readonly webgalParser: UnwrapRef<typeof import('./helper/webgal-script/parser')['webgalParser']>
     readonly whenever: UnwrapRef<typeof import('@vueuse/core')['whenever']>
-    readonly windowCmds: UnwrapRef<typeof import('./commands/window')['windowCmds']>
-    readonly writeJsonFieldValue: UnwrapRef<typeof import('./helper/statement-editor/json-fields')['writeJsonFieldValue']>
   }
 }

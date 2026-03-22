@@ -1,3 +1,7 @@
+import { StatementUpdatePayload, StatementUpdateTarget } from '~/composables/useStatementEditor'
+import { StatementEntry } from '~/helper/webgal-script/sentence'
+import { StatementGroup } from '~/stores/command-panel'
+
 import type { InjectionKey, ShallowRef } from 'vue'
 import type { commandType } from 'webgal-parser/src/interface/sceneInterface'
 

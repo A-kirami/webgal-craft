@@ -1,3 +1,6 @@
+import { createStatementEntryFromSceneStatement, StatementEntry } from '~/helper/webgal-script/sentence'
+import { AnimationFrame } from '~/types/stage'
+
 import { isAnimationFrameEqual } from './transaction-apply'
 
 import type { AnimationDocumentModel, SceneDocumentModel } from './document-model'

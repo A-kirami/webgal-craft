@@ -1,5 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { ChooseContentItem, StyleRuleContentItem } from '~/helper/webgal-script/content'
+
 import type { arg } from 'webgal-parser/src/interface/sceneInterface'
 
 export interface CommandNodeBase<T extends commandType> {

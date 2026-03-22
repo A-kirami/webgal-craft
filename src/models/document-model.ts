@@ -1,3 +1,6 @@
+import { buildSceneStatements } from '~/helper/webgal-script/sentence'
+import { AnimationFrame } from '~/types/stage'
+
 import { parseAnimationDocument } from './animation-document-codec'
 
 // ============================================================

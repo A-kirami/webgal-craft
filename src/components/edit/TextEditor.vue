@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import * as monaco from 'monaco-editor'
 
+import { colorMode } from '~/composables/color-mode'
 import { useTextEditorRuntime } from '~/composables/useTextEditorRuntime'
 import { buildTextEditorOptions } from '~/helper/text-editor-options'
 import { BASE_EDITOR_OPTIONS, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
+import { useEditSettingsStore } from '~/stores/edit-settings'
+import { isEditableEditor, useEditorStore } from '~/stores/editor'
+import { useTabsStore } from '~/stores/tabs'
 
 import type { TextProjectionState } from '~/stores/editor'
 

@@ -1,3 +1,9 @@
+import { createParamDrag } from '~/composables/effect-editor/createParamDrag'
+import { usePointerDrag } from '~/composables/usePointerDrag'
+import { ArgField, EditorField, resolveSurfaceVariant } from '~/helper/command-registry/schema'
+import { clamp, roundByStep } from '~/helper/math'
+import { StatementEditorSurface } from '~/helper/statement-editor/surface-context'
+
 interface UseStatementEditorScrubOptions {
   surface: StatementEditorSurface
   contentField: Readonly<Ref<EditorField | undefined>>

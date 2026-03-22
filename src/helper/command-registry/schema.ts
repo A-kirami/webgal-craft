@@ -1,5 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { StatementEditorSurface } from '~/helper/statement-editor/surface-context'
+
 import type { ComposerTranslation } from 'vue-i18n'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 

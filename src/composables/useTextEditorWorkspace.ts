@@ -1,8 +1,12 @@
 import { LRUCache } from 'lru-cache'
 import * as monaco from 'monaco-editor'
 
+import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { useTabsWatcher } from '~/composables/useTabsWatcher'
 import { normalizeEditorViewState } from '~/helper/text-editor-view-state'
 import { shouldRestoreTextEditorFocus } from '~/helper/text-editor-workspace-focus'
+import { useEditorViewStateStore } from '~/stores/editor-view-state'
+import { useTabsStore } from '~/stores/tabs'
 
 import type { TextEditorWorkspaceFileState } from '~/helper/text-editor-workspace-focus'
 

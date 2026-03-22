@@ -1,5 +1,7 @@
 import { createEditorSaveShortcutHandler } from '~/helper/editor-save-shortcut'
-import { isEditableEditor } from '~/stores/editor'
+import { isEditableEditor, useEditorStore } from '~/stores/editor'
+import { useTabsStore } from '~/stores/tabs'
+import { handleError } from '~/utils/error-handler'
 
 interface UseEditorSaveShortcutOptions {
   projection: 'text' | 'visual'

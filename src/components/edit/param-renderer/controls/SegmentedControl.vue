@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { CUSTOM_CONTENT } from '~/helper/command-registry/schema'
+import { normalizeFieldStringValue } from '~/helper/statement-editor/field-utils'
+import { cn } from '~/lib/utils'
+
 import type { ParamSelectOptionItem } from './types'
 import type { HTMLAttributes } from 'vue'
 

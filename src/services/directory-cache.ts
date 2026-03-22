@@ -3,6 +3,10 @@ import { exists, readDir, stat } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
 
 import { mime } from '~/plugins/mime'
+import { AppError } from '~/types/errors'
+import { FileViewerItem } from '~/types/file-viewer'
+import { settleBatch } from '~/utils/batch'
+import { toComparablePath } from '~/utils/path'
 
 const MAX_DIRECTORY_CACHE_ITEMS = 256
 const DEFAULT_DIRECTORY_CACHE_TTL_MS = 5000

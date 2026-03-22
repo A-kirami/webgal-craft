@@ -1,3 +1,5 @@
+import { useWorkspaceStore } from '~/stores/workspace'
+
 export interface AssetUrlOptions {
   cwd: string
   previewBaseUrl: string

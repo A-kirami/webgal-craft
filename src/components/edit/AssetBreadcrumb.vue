@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { sep } from '@tauri-apps/api/path'
 
+import { gameAssetDir } from '~/helper/app-paths'
+import { useWorkspaceStore } from '~/stores/workspace'
+
 const { assetType } = defineProps<{ assetType: string }>()
 
 let currentPath = $(defineModel<string>('current-path', { required: true }))

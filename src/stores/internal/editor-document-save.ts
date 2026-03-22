@@ -1,20 +1,15 @@
 import { normalizeTextLineEnding } from '~/models/document-model'
 import { encodeTextFile } from '~/models/file-codec'
-import {
-  consumePendingDocumentWrite,
-  registerPendingDocumentWrite,
-} from '~/services/document-write-intents'
+import { consumePendingDocumentWrite, registerPendingDocumentWrite } from '~/services/document-write-intents'
+import { gameFs } from '~/services/game-fs'
+import { AppError } from '~/types/errors'
 
 import { markDocumentClean, resolveSceneCursor } from './editor-document-state'
 import { getTextProjectionPersistedContent, normalizeAnimationTextProjection } from './editor-session'
 
 import type { EditorDocumentActionContext } from './editor-document-actions'
 import type { DocumentState } from './editor-document-state'
-import type {
-  EditableEditorState,
-  TextProjectionState,
-  VisualProjectionState,
-} from './editor-session'
+import type { EditableEditorState, TextProjectionState, VisualProjectionState } from './editor-session'
 import type { SceneSelectionState } from '~/models/scene-selection'
 
 export interface EditorDocumentSaveContext extends EditorDocumentActionContext {

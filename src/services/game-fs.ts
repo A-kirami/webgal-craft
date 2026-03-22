@@ -1,5 +1,8 @@
 import { writeFile as writeBinaryFile, writeTextFile } from '@tauri-apps/plugin-fs'
 
+import { fsCmds } from '~/commands/fs'
+import { gameManager } from '~/services/game-manager'
+
 /**
  * 游戏项目文件操作服务
  *

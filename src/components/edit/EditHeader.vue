@@ -2,6 +2,11 @@
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { ArrowLeft, Download, Loader2, MonitorPlay, Pencil, Play, Settings } from 'lucide-vue-next'
 
+import { windowCmds } from '~/commands/window'
+import { useModalStore } from '~/stores/modal'
+import { useWorkspaceStore } from '~/stores/workspace'
+import { handleError } from '~/utils/error-handler'
+
 import type { UnlistenFn } from '@tauri-apps/api/event'
 
 const router = useRouter()

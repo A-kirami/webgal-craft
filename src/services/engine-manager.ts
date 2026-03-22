@@ -1,6 +1,15 @@
 import { join } from '@tauri-apps/api/path'
 import { readTextFile, remove } from '@tauri-apps/plugin-fs'
 
+import { fsCmds } from '~/commands/fs'
+import { db } from '~/database/db'
+import { Engine } from '~/database/model'
+import { engineIconPath, engineManifestPath } from '~/helper/app-paths'
+import { EngineMetadata } from '~/services/types'
+import { useResourceStore } from '~/stores/resource'
+import { useStorageSettingsStore } from '~/stores/storage-settings'
+import { AppError } from '~/types/errors'
+
 /**
  * 验证引擎
  * @param enginePath 引擎路径

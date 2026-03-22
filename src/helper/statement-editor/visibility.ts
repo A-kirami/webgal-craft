@@ -1,5 +1,8 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { ArgField, isFlagChoiceField, readArgFieldStorageKey } from '~/helper/command-registry/schema'
+import { getParamValueFromArgs } from '~/helper/statement-editor/param-value'
+
 import type { arg } from 'webgal-parser/src/interface/sceneInterface'
 
 type ParamRuntimeValue = string | boolean | number | undefined

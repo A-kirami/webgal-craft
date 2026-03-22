@@ -1,5 +1,9 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { categoryTheme, isCommandSupported, readCommandConfig } from '~/helper/command-registry/index'
+import { deriveArgFieldsFromEditorFields, readEditorFields, resolveI18n } from '~/helper/command-registry/schema'
+import { ensureParsed, StatementEntry } from '~/helper/webgal-script/sentence'
+
 export type StatementType = 'empty' | 'comment' | 'say' | 'command' | 'unsupported'
 
 export type StatementMetaReturn = ReturnType<typeof useStatementMeta>

@@ -1,7 +1,4 @@
-import {
-  createTextMetadata,
-  normalizeTextLineEnding,
-} from './document-model'
+import { createTextMetadata, normalizeTextLineEnding } from './document-model'
 
 import type { TextMetadata } from './document-model'
 

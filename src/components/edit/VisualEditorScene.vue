@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { useVisualEditorSceneRuntime } from '~/composables/useVisualEditorSceneRuntime'
+import { useEditSettingsStore } from '~/stores/edit-settings'
+import { SceneVisualProjectionState } from '~/stores/editor'
+import { usePreferenceStore } from '~/stores/preference'
+
 import type { ScrollArea } from '~/components/ui/scroll-area'
 
 interface Props {

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useControlId } from '~/composables/useControlId'
+import { StatementEditorSurface } from '~/helper/statement-editor/surface-context'
+
 interface Props {
   surface: StatementEditorSurface
   items: { first: string, second: string }[]

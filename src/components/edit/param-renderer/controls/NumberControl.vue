@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { normalizeFieldStringValue, resolveFieldModelStringValue, resolvePanelSliderEmitValue } from '~/helper/statement-editor/field-utils'
+import { cn } from '~/lib/utils'
+
 interface Props {
   autoWidthByContent?: boolean
   id?: string

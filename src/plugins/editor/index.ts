@@ -5,6 +5,11 @@ import * as monaco from 'monaco-editor'
 import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { gameAssetDir } from '~/helper/app-paths'
+import { parseSceneOrEmpty } from '~/helper/webgal-script/parser'
+import { useWorkspaceStore } from '~/stores/workspace'
+import { handleError } from '~/utils/error-handler'
+
 import { getArgKeyCompletions } from './completion/webgal-argument-keys'
 import { getCommandCompletions } from './completion/webgal-commands'
 import darkTheme from './themes/webgal-dark.json'

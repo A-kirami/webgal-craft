@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useDiscoverResources } from '~/composables/useDiscoverResources'
+import { useResourceStore } from '~/stores/resource'
+import { useWorkspaceStore } from '~/stores/workspace'
+
 const workspaceStore = useWorkspaceStore()
 const resourceStore = useResourceStore()
 const { checkResourcesForActiveTab } = useDiscoverResources()

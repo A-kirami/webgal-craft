@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useEffectEditorDialog } from '~/composables/useEffectEditorDialog'
+
 interface Props {
   effectDialog: ReturnType<typeof useEffectEditorDialog>
 }

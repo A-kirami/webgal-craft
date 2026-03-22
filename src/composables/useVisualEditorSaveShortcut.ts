@@ -1,3 +1,6 @@
+import { useEditorSaveShortcut } from '~/composables/useEditorSaveShortcut'
+import { createEditorSaveShortcutHandler, EditorSaveShortcutHandlerOptions } from '~/helper/editor-save-shortcut'
+
 type VisualEditorSaveShortcutHandlerOptions = Omit<
   EditorSaveShortcutHandlerOptions,
   'canHandle' | 'targetProjection'

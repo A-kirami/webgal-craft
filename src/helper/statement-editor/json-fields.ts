@@ -1,3 +1,5 @@
+import { FieldDef, UNSPECIFIED } from '~/helper/command-registry/schema'
+
 export function readJsonFieldValue(
   rawValue: string,
   fieldKey: string,

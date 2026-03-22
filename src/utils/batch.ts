@@ -1,3 +1,5 @@
+import { AppError } from '~/types/errors'
+
 export interface BatchResult<T> {
   succeeded: T[]
   failed: { error: AppError, index: number }[]

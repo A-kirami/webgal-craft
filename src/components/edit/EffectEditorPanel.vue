@@ -1,4 +1,20 @@
 <script setup lang="ts">
+import { EffectControlDeps } from '~/composables/effect-editor/types'
+import { useEffectColorControl } from '~/composables/effect-editor/useEffectColorControl'
+import { useEffectContinuousControls } from '~/composables/effect-editor/useEffectContinuousControls'
+import { useEffectDurationControl } from '~/composables/effect-editor/useEffectDurationControl'
+import { useEffectSegmentedControl } from '~/composables/effect-editor/useEffectSegmentedControl'
+import { useControlId } from '~/composables/useControlId'
+import { createEffectPreviewEmitter, EffectEditorPreviewPayload, EffectEditorTransformUpdatePayload } from '~/composables/useEffectEditorProvider'
+import { ColorField, I18nLike, resolveI18n, UNSPECIFIED } from '~/helper/command-registry/schema'
+import { resolveDynamicOptions } from '~/helper/dynamic-options'
+import { buildCategoryRenderItems, DEFAULT_EASE_OPTION_VALUE, EFFECT_CATEGORIES, EFFECT_EASE_OPTIONS, getValueByPath, transformToFields } from '~/helper/effect-editor-config'
+import { clamp } from '~/helper/math'
+import { useWorkspaceStore } from '~/stores/workspace'
+import { Transform } from '~/types/stage'
+
+import type { NumberField } from '~/helper/command-registry/schema'
+
 interface EffectEditorPanelProps {
   transform: Transform
   duration: string

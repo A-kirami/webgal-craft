@@ -1,3 +1,5 @@
+import { joinStatements } from '~/helper/webgal-script/sentence'
+
 import { serializeAnimationFrames } from './animation-document-codec'
 import { normalizeTextLineEnding } from './document-model'
 

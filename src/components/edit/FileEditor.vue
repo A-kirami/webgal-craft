@@ -2,6 +2,11 @@
 import { basename } from '@tauri-apps/api/path'
 import { File, FilePlus2, FileWarning } from 'lucide-vue-next'
 
+import { useVisualEditorSaveShortcut } from '~/composables/useVisualEditorSaveShortcut'
+import { isEditableEditor, useEditorStore } from '~/stores/editor'
+import { useModalStore } from '~/stores/modal'
+import { useTabsStore } from '~/stores/tabs'
+
 const editorStore = useEditorStore()
 const tabsStore = useTabsStore()
 const modalStore = useModalStore()

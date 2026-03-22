@@ -1,12 +1,11 @@
 import * as monaco from 'monaco-editor'
 
 import { resolveTextEditorLanguage } from '~/helper/text-editor-language'
-import {
-  resolveSceneCursorTarget,
-  resolveScenePreviewLine,
-} from '~/helper/text-editor-scene-sync'
+import { resolveSceneCursorTarget, resolveScenePreviewLine } from '~/helper/text-editor-scene-sync'
 import { isAnimationDocumentTextValid } from '~/models/animation-document-codec'
-import { isEditableEditor } from '~/stores/editor'
+import { isEditableEditor, useEditorStore } from '~/stores/editor'
+import { useTabsStore } from '~/stores/tabs'
+import { handleError } from '~/utils/error-handler'
 
 import { useTextEditorBindings } from './useTextEditorBindings'
 import { useTextEditorContentSync } from './useTextEditorContentSync'

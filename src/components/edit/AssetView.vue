@@ -2,6 +2,14 @@
 import { join } from '@tauri-apps/api/path'
 import { File, FileImage, FileJson2, FileMusic, FileVideo, FileVolume, Folder } from 'lucide-vue-next'
 
+import { gameAssetDir } from '~/helper/app-paths'
+import { FileSystemItem, useFileStore } from '~/stores/file'
+import { usePreferenceStore } from '~/stores/preference'
+import { useTabsStore } from '~/stores/tabs'
+import { useWorkspaceStore } from '~/stores/workspace'
+import { AppError } from '~/types/errors'
+import { FileViewerItem, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
+
 interface AssetViewProps {
   assetType: string
   searchQuery?: string

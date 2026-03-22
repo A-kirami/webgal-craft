@@ -2,8 +2,12 @@
 import { countLines, countWords } from 'alfaaz'
 import { ChartSpline, FileText, Image as ImageIcon } from 'lucide-vue-next'
 
+import { thumbnailCmds } from '~/commands/thumbnaila'
 import dayjs from '~/plugins/dayjs'
 import { getLanguageDisplayName } from '~/plugins/editor'
+import { isEditableEditor, isSceneVisualProjection, useEditorStore } from '~/stores/editor'
+import { handleError } from '~/utils/error-handler'
+import { formatFileSize } from '~/utils/format'
 
 const { t, locale } = useI18n()
 

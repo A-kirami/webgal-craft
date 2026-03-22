@@ -1,3 +1,5 @@
+import { StatementEditorSurface } from '~/helper/statement-editor/surface-context'
+
 export interface ParamSelectOptionItem {
   iconClass?: string
   label: string

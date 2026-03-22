@@ -2,8 +2,9 @@
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { Info, Settings } from 'lucide-vue-next'
 
-import { github } from '~build/git'
+import { useModalStore } from '~/stores/modal'
 
+import { github } from '~build/git'
 import webgalCraftTextSvg from '/webgal-craft-text.svg?raw'
 
 const modalStore = useModalStore()

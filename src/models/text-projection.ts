@@ -1,3 +1,5 @@
+import { rebuildStatementsWithStableIds } from '~/helper/webgal-script/sentence'
+
 import { createDocumentModel } from './document-model'
 
 import type { DocumentModel, TextMetadata } from './document-model'

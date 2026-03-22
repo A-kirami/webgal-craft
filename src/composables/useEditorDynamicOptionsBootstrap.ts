@@ -1,3 +1,9 @@
+import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { editorDynamicOptionSources, normalizeGamePath } from '~/helper/command-registry/dynamic-options'
+import { DynamicOptionsContext, DynamicOptionSourceDef, DynamicOptionsResult, EditorDynamicOptionsKey } from '~/helper/command-registry/schema'
+import { registerDynamicOptions } from '~/helper/dynamic-options'
+import { useWorkspaceStore } from '~/stores/workspace'
+
 interface DynamicOptionItem {
   label: string
   value: string

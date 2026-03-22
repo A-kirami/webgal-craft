@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { useControlId } from '~/composables/useControlId'
+import { isStatementInteractiveTarget, StatementUpdatePayload, StatementUpdateTarget, useStatementEditor } from '~/composables/useStatementEditor'
+import { useStatementEffectEditorBridge } from '~/composables/useStatementEffectEditorBridge'
+import { getAssetUrl } from '~/helper/asset-url'
+import { statementEditorSurfaceKey } from '~/helper/statement-editor/surface-context'
+import { StatementEntry } from '~/helper/webgal-script/sentence'
+import { useEditSettingsStore } from '~/stores/edit-settings'
+import { useWorkspaceStore } from '~/stores/workspace'
+
 const props = withDefaults(defineProps<{
   entry: StatementEntry
   /** 语句在列表中的序号（0-based） */

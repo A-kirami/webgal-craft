@@ -1,3 +1,7 @@
+import { ChoiceField, SwitchField, TextField } from '~/helper/command-registry/schema'
+
+import type { NumberField } from '~/helper/command-registry/schema'
+
 // ─── WebGAL 支持的文件扩展名 ───
 
 export const AUDIO_EXTENSIONS = ['.mp3', '.ogg', '.wav']

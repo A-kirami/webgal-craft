@@ -3,6 +3,13 @@ import { join, normalize } from '@tauri-apps/api/path'
 import { exists, stat } from '@tauri-apps/plugin-fs'
 import { ArrowDown, ArrowUp, EllipsisVertical, LayoutGrid, LayoutList, Trash2, X } from 'lucide-vue-next'
 
+import { useDirectoryReader } from '~/composables/useDirectoryReader'
+import { cn } from '~/lib/utils'
+import { usePreferenceStore } from '~/stores/preference'
+import { AppError } from '~/types/errors'
+import { FileViewerItem, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
+import { normalizeRelativePath, toComparablePath } from '~/utils/path'
+
 import type { HTMLAttributes } from 'vue'
 
 interface FilePickerProps {

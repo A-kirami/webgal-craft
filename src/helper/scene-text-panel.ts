@@ -1,3 +1,6 @@
+import { createTransientStatementEntry, ensureParsed, StatementEntry } from '~/helper/webgal-script/sentence'
+import { getPreviousSpeakerAtLine } from '~/utils/speaker'
+
 import type * as monaco from 'monaco-editor'
 
 export interface SceneTextPanelSnapshot {

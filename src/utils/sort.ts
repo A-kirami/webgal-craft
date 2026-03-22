@@ -1,4 +1,4 @@
-import type { FileViewerSortOrder } from '~/types/file-viewer'
+import type { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
 /**
  * 将可能无效的数值标准化为 number | undefined

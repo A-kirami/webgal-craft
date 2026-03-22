@@ -1,5 +1,16 @@
 import { remove } from '@tauri-apps/plugin-fs'
 
+import { fsCmds } from '~/commands/fs'
+import { gameCmds } from '~/commands/game'
+import { serverCmds } from '~/commands/server'
+import { db } from '~/database/db'
+import { Game } from '~/database/model'
+import { gameCoverPath, gameIconPath } from '~/helper/app-paths'
+import { GameMetadata } from '~/services/types'
+import { useResourceStore } from '~/stores/resource'
+import { useWorkspaceStore } from '~/stores/workspace'
+import { AppError } from '~/types/errors'
+
 /**
  * 验证游戏目录
  * @param gamePath 游戏路径

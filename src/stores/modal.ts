@@ -17,6 +17,7 @@ import SaveChangesModal from '~/components/modals/SaveChangesModal.vue'
 import SettingsModal from '~/components/modals/SettingsModal.vue'
 import StatementGroupModal from '~/components/modals/StatementGroupModal.vue'
 import UpgradeModal from '~/components/modals/UpgradeModal.vue'
+import { ComponentProps } from '~/types/index'
 
 const ModalDialog = {
   AboutModal,

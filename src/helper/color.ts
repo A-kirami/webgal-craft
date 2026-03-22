@@ -1,3 +1,5 @@
+import { clamp } from '~/helper/math'
+
 export interface RgbColor {
   r: number
   g: number

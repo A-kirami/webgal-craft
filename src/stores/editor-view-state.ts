@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 
+import { useWorkspaceStore } from '~/stores/workspace'
+
 import type * as monaco from 'monaco-editor'
 import type { StorageLike } from 'pinia-plugin-persistedstate'
 

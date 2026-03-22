@@ -1,3 +1,7 @@
+import { gameAssetDir } from '~/helper/app-paths'
+import { EditorField } from '~/helper/command-registry/schema'
+import { useWorkspaceStore } from '~/stores/workspace'
+
 export interface UseStatementFileRootsOptions {
   editorFields: MaybeRefOrGetter<EditorField[]>
 }

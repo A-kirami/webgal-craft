@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { AnimationVisualProjectionState } from '~/stores/editor'
+
 interface Props {
   state: AnimationVisualProjectionState
 }

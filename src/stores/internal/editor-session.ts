@@ -1,6 +1,8 @@
 import { createScenePresentationState } from '~/helper/scene-presentation'
+import { StatementEntry } from '~/helper/webgal-script/sentence'
 import { serializeDocument } from '~/models/serializer'
 import { projectAnimationFrames, projectSceneStatements } from '~/models/visual-projection'
+import { AnimationFrame } from '~/types/stage'
 
 import {
   createDocumentState,
@@ -10,17 +12,10 @@ import {
   syncDocumentHistoryState,
 } from './editor-document-state'
 
-import type {
-  DocumentState,
-  LoadedDocumentState,
-  LoadedTextProjectionSnapshot,
-} from './editor-document-state'
+import type { DocumentState, LoadedDocumentState, LoadedTextProjectionSnapshot } from './editor-document-state'
 import type { PreviewMediaSession } from '~/helper/preview-media-session'
 import type { ScenePresentationState } from '~/helper/scene-presentation'
-import type {
-  DocumentKind,
-  DocumentModel,
-} from '~/models/document-model'
+import type { DocumentKind, DocumentModel } from '~/models/document-model'
 import type { SceneSelectionState } from '~/models/scene-selection'
 
 export interface CoreEditorState {

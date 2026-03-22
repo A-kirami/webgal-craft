@@ -1,5 +1,12 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { useStatementEditorContent } from '~/composables/useStatementEditorContent'
+import { useStatementEditorParams } from '~/composables/useStatementEditorParams'
+import { useStatementEditorSay } from '~/composables/useStatementEditorSay'
+import { useStatementEditorScrub } from '~/composables/useStatementEditorScrub'
+import { EditorField, readArgFieldStorageKey } from '~/helper/command-registry/schema'
+import { resolveDynamicOptions } from '~/helper/dynamic-options'
+
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 interface UseStatementEditorFieldBindingsOptions {

@@ -1,10 +1,14 @@
 <script setup lang="ts" generic="T extends Record<string, any>">
 import { basename } from '@tauri-apps/api/path'
-import {
-  LucideFile,
-  LucideFolder,
-  LucideFolderOpen,
-} from 'lucide-vue-next'
+import { LucideFile, LucideFolder, LucideFolderOpen } from 'lucide-vue-next'
+
+import { gameFs } from '~/services/game-fs'
+import { useEditorUIStateStore } from '~/stores/editor-ui-state'
+import { useTabsStore } from '~/stores/tabs'
+import { useWorkspaceStore } from '~/stores/workspace'
+import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
+import { handleError } from '~/utils/error-handler'
+import { createItemComparator, SortableItemAccessor } from '~/utils/sort'
 
 import type { FlattenedItem } from 'reka-ui'
 

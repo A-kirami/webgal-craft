@@ -2,14 +2,16 @@
 import {
   categoryTheme,
   commandEntries,
-  commandPanelCategories,
+  commandPanelCategories, CommandPanelCategory,
   getCategoryLabel,
   getCommandConfig,
   getCommandDescription,
 } from '~/helper/command-registry'
 import { resolveI18n } from '~/helper/command-registry/schema'
 import { parseSentence } from '~/helper/webgal-script/parser'
-import { useCommandPanelStore } from '~/stores/command-panel'
+import { StatementGroup, useCommandPanelStore } from '~/stores/command-panel'
+import { useModalStore } from '~/stores/modal'
+import { handleWheelToHorizontalScroll } from '~/utils/wheel'
 
 import type { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import type { ScrollArea } from '~/components/ui/scroll-area'

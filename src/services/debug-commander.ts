@@ -1,5 +1,10 @@
 import { normalize, sep } from '@tauri-apps/api/path'
 
+import { serverCmds } from '~/commands/server'
+import { usePreviewSettingsStore } from '~/stores/preview-settings'
+import { ComponentVisibilityCommand, DebugCommand, DebugMessage } from '~/types/debugProtocol'
+import { Transform } from '~/types/stage'
+
 /**
  * 发送调试命令到游戏
  * @param data - 要发送的命令数据

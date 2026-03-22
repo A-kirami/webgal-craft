@@ -1,3 +1,5 @@
+import { AnimationFrame } from '~/types/stage'
+
 export function parseAnimationDocument(content: string): AnimationFrame[] {
   const normalizedContent = content.trim() === '' ? '[]' : content
   const parsed = JSON.parse(normalizedContent)

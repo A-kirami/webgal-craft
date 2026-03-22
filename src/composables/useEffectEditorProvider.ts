@@ -1,5 +1,15 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { EmitTransformOptions } from '~/composables/effect-editor/types'
+import { createAsyncQueue } from '~/helper/async-queue'
+import { fieldsToTransform, isTransformEqual, parseTransformJson } from '~/helper/effect-editor-config'
+import { readSentenceArgString } from '~/helper/webgal-script/sentence'
+import { debugCommander } from '~/services/debug-commander'
+import { useEditSettingsStore } from '~/stores/edit-settings'
+import { useModalStore } from '~/stores/modal'
+import { usePreviewSettingsStore } from '~/stores/preview-settings'
+import { Transform } from '~/types/stage'
+
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 export type EffectEditorPreviewSchedule = 'continuous' | 'color' | 'immediate'

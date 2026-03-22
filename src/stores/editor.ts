@@ -1,32 +1,31 @@
 import { readFile } from '@tauri-apps/plugin-fs'
 import { defineStore } from 'pinia'
 
-import {
-  createPreviewMediaSession,
-  normalizePreviewMediaSessionPatch,
-} from '~/helper/preview-media-session'
+import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { useTabsWatcher } from '~/composables/useTabsWatcher'
+import { getAssetUrl } from '~/helper/asset-url'
+import { createPreviewMediaSession, normalizePreviewMediaSessionPatch } from '~/helper/preview-media-session'
 import { decodeTextFile } from '~/models/file-codec'
-import {
-  computeLineNumberFromStatementId,
-} from '~/models/scene-selection'
+import { computeLineNumberFromStatementId } from '~/models/scene-selection'
+import { debugCommander } from '~/services/debug-commander'
+import { useEditSettingsStore } from '~/stores/edit-settings'
 import { canExecuteEditorAutoSave, createEditorAutoSaveController } from '~/stores/editor-auto-save'
 import { createEditorPreviewSync } from '~/stores/editor-preview-sync'
+import { usePreferenceStore } from '~/stores/preference'
+import { useTabsStore } from '~/stores/tabs'
+import { useWorkspaceStore } from '~/stores/workspace'
+import { AppError } from '~/types/errors'
+import { handleError } from '~/utils/error-handler'
 
-import {
-  createEditorDocumentActions,
-} from './internal/editor-document-actions'
+import { createEditorDocumentActions } from './internal/editor-document-actions'
 import { createEditorDocumentSaveSnapshot, saveEditorDocument } from './internal/editor-document-save'
-import {
-  DocumentState,
-} from './internal/editor-document-state'
+import { DocumentState } from './internal/editor-document-state'
 import {
   handleFileModifiedEvent as handleFileModifiedEventAction,
   handleFileRenamedEvent as handleFileRenamedEventAction,
   loadEditorState as loadEditorStateAction,
 } from './internal/editor-file-lifecycle'
-import {
-  createSceneSelectionActions,
-} from './internal/editor-scene-selection'
+import { createSceneSelectionActions } from './internal/editor-scene-selection'
 import {
   isEditableEditor,
   isSceneVisualProjection,
@@ -35,14 +34,9 @@ import {
   syncProjectionStateFromDocument,
 } from './internal/editor-session'
 
-import type {
-  EditorDocumentActionContext,
-} from './internal/editor-document-actions'
+import type { EditorDocumentActionContext } from './internal/editor-document-actions'
 import type { EditorDocumentSaveContext } from './internal/editor-document-save'
-import type {
-  EditorFileLifecycleContext,
-  ReadTextDocumentResult,
-} from './internal/editor-file-lifecycle'
+import type { EditorFileLifecycleContext, ReadTextDocumentResult } from './internal/editor-file-lifecycle'
 import type {
   EditableEditorSession,
   EditableEditorState,

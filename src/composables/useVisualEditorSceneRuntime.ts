@@ -1,4 +1,17 @@
+import { useCommandPanelBridgeBinding, useSidebarPanelBinding } from '~/composables/useEditorPanelBindings'
+import { createStatementIdTarget, StatementUpdatePayload } from '~/composables/useStatementEditor'
+import { useVisualEditorSceneViewport } from '~/composables/useVisualEditorSceneViewport'
+import { resolveHistoryShortcutAction } from '~/helper/history-shortcut'
+import { canRestoreVisualEditorCardFocus, findSelectedVisualEditorStatementCard } from '~/helper/visual-editor-focus'
+import { buildStatements, StatementEntry } from '~/helper/webgal-script/sentence'
 import { computeLineNumberFromStatementId, computeStatementIdFromLineNumber } from '~/models/scene-selection'
+import { useCommandPanelStore } from '~/stores/command-panel'
+import { useEditSettingsStore } from '~/stores/edit-settings'
+import { isEditableEditor, SceneVisualProjectionState, useEditorStore } from '~/stores/editor'
+import { useEditorViewStateStore } from '~/stores/editor-view-state'
+import { usePreferenceStore } from '~/stores/preference'
+import { useTabsStore } from '~/stores/tabs'
+import { buildPreviousSpeakers } from '~/utils/speaker'
 
 interface UseVisualEditorSceneRuntimeOptions {
   getScrollArea: () => InstanceType<typeof ScrollArea> | null | undefined

@@ -1,4 +1,8 @@
 import { EASE } from '~/helper/command-registry/common-params'
+import { ChoiceField, ColorField, DialField, I18nLike, UNSPECIFIED } from '~/helper/command-registry/schema'
+import { Transform } from '~/types/stage'
+
+import type { NumberField } from '~/helper/command-registry/schema'
 
 // ─── 效果编辑器参数类型（基于 FieldDef 子集） ───
 

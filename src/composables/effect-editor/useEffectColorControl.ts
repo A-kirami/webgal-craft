@@ -1,3 +1,8 @@
+import { createParamDrag } from '~/composables/effect-editor/createParamDrag'
+import { EffectControlDeps } from '~/composables/effect-editor/types'
+import { extractRgbColor, normalizeColorChannel } from '~/helper/color'
+import { ColorField } from '~/helper/command-registry/schema'
+
 /** ColorField 且必定有 colorPaths/colorDefaults 的子类型（用于效果编辑器 color 控件） */
 type EffectColorField = ColorField & { colorPaths: [string, string, string], colorDefaults: [number, number, number] }
 

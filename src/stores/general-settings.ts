@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 
+import { colorMode } from '~/composables/color-mode'
 import { setDayjsLocale } from '~/plugins/dayjs'
 
 export const useGeneralSettingsStore = defineStore(

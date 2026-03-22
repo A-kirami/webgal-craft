@@ -1,6 +1,10 @@
 import { basename } from '@tauri-apps/api/path'
 import { defineStore } from 'pinia'
 
+import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { useEditSettingsStore } from '~/stores/edit-settings'
+import { useWorkspaceStore } from '~/stores/workspace'
+
 /**
  * 持久化标签页元数据。
  */

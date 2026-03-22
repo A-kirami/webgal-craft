@@ -1,3 +1,5 @@
+import { usePointerDrag } from '~/composables/usePointerDrag'
+
 /**
  * 工厂函数：封装 pendingParam + usePointerDrag 的"延迟参数传递"模式。
  * 消除 number、dial、color 三个控件中的重复代码。

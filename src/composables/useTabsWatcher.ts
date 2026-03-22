@@ -1,3 +1,5 @@
+import { useTabsStore } from '~/stores/tabs'
+
 /**
  * 监听标签页关闭事件的 composable
  *

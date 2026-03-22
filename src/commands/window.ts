@@ -1,3 +1,5 @@
+import { safeInvoke } from '~/utils/invoke'
+
 interface CreateWindowOptions extends Record<string, unknown> {
   label: string
   target: string

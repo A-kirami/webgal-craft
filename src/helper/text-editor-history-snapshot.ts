@@ -1,7 +1,4 @@
-import {
-  getTextOffsetFromPosition,
-  getTextPositionFromOffset,
-} from '~/models/text-projection'
+import { getTextOffsetFromPosition, getTextPositionFromOffset } from '~/models/text-projection'
 
 import type * as monaco from 'monaco-editor'
 import type { EditorHistorySnapshot } from '~/models/transaction'

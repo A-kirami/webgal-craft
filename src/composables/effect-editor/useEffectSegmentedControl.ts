@@ -1,3 +1,6 @@
+import { EmitTransformOptions } from '~/composables/effect-editor/types'
+import { ChoiceField, EditorDynamicOptionsKey, UNSPECIFIED } from '~/helper/command-registry/schema'
+
 export interface EffectSegmentedOption {
   iconClass: string
   label: string

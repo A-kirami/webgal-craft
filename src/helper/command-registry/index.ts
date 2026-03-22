@@ -9,12 +9,7 @@ import { resolveI18n } from './schema'
 import { systemEntries } from './system'
 import { serializeSentence } from '../webgal-script/serialize'
 
-import type {
-  CommandCategory,
-  CommandEntry,
-  FieldDef,
-  I18nT,
-} from './schema'
+import type { CommandCategory, CommandEntry, FieldDef, I18nT } from './schema'
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 export const categoryTheme: Record<CommandCategory, {

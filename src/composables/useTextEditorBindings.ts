@@ -1,7 +1,9 @@
-import {
-  createEmptySceneTextPanelSnapshot,
-  resolveSceneTextPanelSnapshotFromContent,
-} from '~/helper/scene-text-panel'
+import { useCommandPanelBridgeBinding, useSidebarPanelBinding } from '~/composables/useEditorPanelBindings'
+import { useTextEditorHistory } from '~/composables/useTextEditorHistory'
+import { createEmptySceneTextPanelSnapshot, resolveSceneTextPanelSnapshotFromContent } from '~/helper/scene-text-panel'
+import { useCommandPanelStore } from '~/stores/command-panel'
+import { useEditSettingsStore } from '~/stores/edit-settings'
+import { useEditorStore } from '~/stores/editor'
 
 import { createTextLineTarget } from './useStatementEditor'
 
