@@ -210,7 +210,7 @@ function isFocusInsideOverlay(): boolean {
     return false
   }
 
-  return !!element.closest('[role="dialog"], [role="menu"], [role="listbox"], [data-side][data-state="open"]')
+  return !!element.closest('[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-side][data-state="open"]')
 }
 
 function handleUndo(): void {

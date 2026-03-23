@@ -416,6 +416,22 @@ function restorePendingAutoSaveIfNeeded(
   }
 }
 
+function migratePendingFileModifiedTask(oldPath: string, newPath: string): void {
+  const pendingTask = pendingFileModifiedTasks.get(oldPath)
+  if (!pendingTask) {
+    return
+  }
+
+  pendingFileModifiedTasks.delete(oldPath)
+
+  const migratedTask = pendingTask.finally(() => {
+    if (pendingFileModifiedTasks.get(newPath) === migratedTask) {
+      pendingFileModifiedTasks.delete(newPath)
+    }
+  })
+  pendingFileModifiedTasks.set(newPath, migratedTask)
+}
+
 async function handleFileModifiedEventInternal(
   context: EditorFileLifecycleContext,
   event: FileModifiedEvent,
@@ -437,46 +453,51 @@ async function handleFileModifiedEventInternal(
 
   const hadPendingAutoSave = context.autoSaveHasPending(event.path)
   context.cancelAutoSave(event.path)
+  let shouldRestoreAutoSave = true
 
-  const action = await confirmExternalDocumentChange(event.path, snapshot.allowMerge)
-  if (action === 'cancel' || action === 'keep-local') {
-    restorePendingAutoSaveIfNeeded(context, event.path, hadPendingAutoSave)
-    return
-  }
+  try {
+    const action = await confirmExternalDocumentChange(event.path, snapshot.allowMerge)
+    if (action === 'cancel' || action === 'keep-local') {
+      return
+    }
 
-  if (action === 'load-external' || !snapshot.state.isDirty) {
-    applyExternalDocumentSnapshot(context, event.path, snapshot)
-    return
-  }
+    if (action === 'load-external' || !snapshot.state.isDirty) {
+      applyExternalDocumentSnapshot(context, event.path, snapshot)
+      shouldRestoreAutoSave = false
+      return
+    }
 
-  if (action === 'merge' && snapshot.allowMerge) {
-    const docEntry = snapshot.session.document
-    const mergedContent = mergeExternalDocumentContent(snapshot.currentContent, snapshot.content)
-    snapshot.session.activeProjection = 'text'
-    applyDocumentTransaction(context, event.path, {
-      transaction: {
-        type: 'replace-all',
-        content: mergedContent,
-        metadata: {
-          encoding: snapshot.metadata.encoding,
-          lineEnding: snapshot.metadata.lineEnding,
+    if (action === 'merge' && snapshot.allowMerge) {
+      const docEntry = snapshot.session.document
+      const mergedContent = mergeExternalDocumentContent(snapshot.currentContent, snapshot.content)
+      snapshot.session.activeProjection = 'text'
+      applyDocumentTransaction(context, event.path, {
+        transaction: {
+          type: 'replace-all',
+          content: mergedContent,
+          metadata: {
+            encoding: snapshot.metadata.encoding,
+            lineEnding: snapshot.metadata.lineEnding,
+          },
         },
-      },
-      inverse: {
-        type: 'replace-all',
-        content: snapshot.currentContent,
-        metadata: {
-          encoding: docEntry.model.metadata.encoding,
-          lineEnding: docEntry.model.metadata.lineEnding,
+        inverse: {
+          type: 'replace-all',
+          content: snapshot.currentContent,
+          metadata: {
+            encoding: docEntry.model.metadata.encoding,
+            lineEnding: docEntry.model.metadata.lineEnding,
+          },
         },
-      },
-      source: 'external',
-    })
-    restorePendingAutoSaveIfNeeded(context, event.path, hadPendingAutoSave)
-    return
+        source: 'external',
+      })
+      shouldRestoreAutoSave = false
+      return
+    }
+  } finally {
+    if (shouldRestoreAutoSave) {
+      restorePendingAutoSaveIfNeeded(context, event.path, hadPendingAutoSave)
+    }
   }
-
-  restorePendingAutoSaveIfNeeded(context, event.path, hadPendingAutoSave)
 }
 
 export async function loadEditorState(
@@ -549,6 +570,8 @@ export function handleFileRenamedEvent(
   if (hadPendingAutoSave && renamedState && context.canReschedulePendingAutoSave(renamedState)) {
     context.scheduleAutoSave(event.newPath)
   }
+
+  migratePendingFileModifiedTask(event.oldPath, event.newPath)
 }
 
 export async function handleFileModifiedEvent(

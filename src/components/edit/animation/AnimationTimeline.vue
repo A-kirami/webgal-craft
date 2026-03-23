@@ -7,7 +7,9 @@ import { clamp } from '~/helper/math'
 import {
   MIN_SPAN_PX,
   MIN_START_SPAN_PX,
+  resolveAnimationTimelineAnchoredScrollLeft,
   resolveAnimationTimelineContainerWidth,
+  resolveZeroDurationSpanLayoutPercents,
 } from './animation-timeline-layout'
 
 import type { AnimationTimelineResizeDurationPayload } from './animation-editor-contract'
@@ -115,16 +117,12 @@ const layout = $computed((): SpanLayout[] => {
   }
 
   if (props.totalDuration <= 0) {
-    const equalWidth = 100 / spans.length
-    let left = 0
-
-    return spans.map((span) => {
+    return resolveZeroDurationSpanLayoutPercents(width, spans).map((item, index) => {
       const result = {
-        left,
-        span,
-        width: equalWidth,
+        left: item.left,
+        span: spans[index]!,
+        width: item.width,
       } satisfies SpanLayout
-      left += equalWidth
       return result
     })
   }
@@ -357,11 +355,18 @@ function handleWheel(event: WheelEvent) {
     const viewportRect = viewport.getBoundingClientRect()
     const cursorX = clamp(event.clientX - viewportRect.left, 0, viewport.clientWidth)
     const contentPosition = viewport.scrollLeft + cursorX
-    const zoomRatio = nextZoom / previousZoom
+    const nextScrollLeft = resolveAnimationTimelineAnchoredScrollLeft({
+      contentPosition,
+      cursorX,
+      nextZoom,
+      previousZoom,
+      spans,
+      viewportWidth: viewport.clientWidth,
+    })
 
     zoomLevel = nextZoom
     nextTick(() => {
-      viewport.scrollLeft = (contentPosition * zoomRatio) - cursorX
+      viewport.scrollLeft = nextScrollLeft
     })
     return
   }

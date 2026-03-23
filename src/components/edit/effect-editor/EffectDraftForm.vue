@@ -91,6 +91,14 @@ function getLinkedSliderLabel(param: NumberField & { linkedPairKey: string }): s
   return resolveI18n(param.label, t)
 }
 
+function getLinkedSliderInputAriaLabel(
+  param: NumberField & { linkedPairKey: string },
+  index: 0 | 1,
+): string {
+  const axisKey = index === 0 ? param.key : param.linkedPairKey
+  return `${getLinkedSliderLabel(param)} ${getAxisCompactLabel(axisKey)}`
+}
+
 function getFieldValue(path: string): string {
   const source = props.transform as unknown as Record<string, unknown>
   const value = getValueByPath(source, path)
@@ -373,6 +381,7 @@ onUnmounted(() => {
                     <Input
                       type="number"
                       :model-value="getLinkedSliderInputValue(item.param, 0)"
+                      :aria-label="getLinkedSliderInputAriaLabel(item.param, 0)"
                       class="text-xs h-7 w-12.5"
                       @update:model-value="updateLinkedSliderField(item.param, 0, String($event ?? ''))"
                       @blur="flushLinkedSliderField(item.param, 0)"
@@ -395,6 +404,7 @@ onUnmounted(() => {
                     <Input
                       type="number"
                       :model-value="getLinkedSliderInputValue(item.param, 1)"
+                      :aria-label="getLinkedSliderInputAriaLabel(item.param, 1)"
                       class="text-xs h-7 w-12.5"
                       @update:model-value="updateLinkedSliderField(item.param, 1, String($event ?? ''))"
                       @blur="flushLinkedSliderField(item.param, 1)"
