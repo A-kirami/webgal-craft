@@ -238,6 +238,10 @@ modals:
     title: エフェクトエディターの変更を確認しますか？
     description: 確認しない場合、変更は破棄されます。
     discard: 破棄
+  confirmAnimationChanges:
+    title: アニメーションエディターの変更を確認しますか？
+    description: 確認しない場合、変更は破棄されます。
+    discard: 破棄
   discardEffectChanges:
     title: エフェクトエディターの変更を適用しますか？
     description: 適用しない場合、変更は破棄されます。
@@ -341,6 +345,7 @@ edit:
       buttonText: 確認ボタンテキスト
       defaultValue: 入力欄デフォルト値
   errors:
+    fileSyncFailed: ファイルの同期に失敗しました。しばらくしてからもう一度お試しください。
     previewUnavailable: プレビューURLがありません。先にプレビューを起動してください。
     workspaceUnavailable: ワークスペースがまだ初期化されていません。少し待ってから再試行してください。
   unsupported:
@@ -354,10 +359,12 @@ edit:
       words: "{count} 字"
     formPanel:
       noStatement: カーソルをステートメント行に移動して編集
+    invalidAnimationVisualMessage: 現在のアニメーションファイルにはエラーがあるため、ビジュアルモードでは編集できません。テキストモードに切り替えて修正してください
   scenePanel:
     scene: シーン
     resource: リソース
   statusBar:
+    frames: "{count} フレーム"
     statements: "{count} ステートメント"
   fileTree:
     newFile: 新しいファイル
@@ -411,10 +418,31 @@ edit:
       zoomReset: ズームをリセット
   editorMode:
     textMode: テキストに切替
+    switchToText: テキストに切り替え
     visualMode: ビジュアルに切替
     toggleSidebar: 補助パネル切替
   visualEditor:
     playToLine: この行まで実行
+    animation:
+      title: アニメーションエディタ
+      description: 現在のアニメーションの各キーフレームの時間、イージング、変形を調整します
+      invalidJson: 現在の高度なアニメーション内容にエラーがあるため、アニメーションエディタを開けません。テキストモードで修正してください
+      timelineTitle: タイムライン
+      inspectorTitle: フレーム属性
+      startFrame: 開始フレーム
+      firstFrameHint: 開始フレームは初期状態を定義するためのもので、イージング効果には対応していません
+      emptyTitle: まだフレームがありません
+      emptyDescription: キーフレームを追加してアニメーション編集を始めてください
+      unitMs: ms
+      toolbar:
+        addFrame: フレームを追加
+        delete: 削除
+        undo: 元に戻す
+        redo: やり直し
+        zoom: ズーム
+        totalDuration: 合計時間
+      summary:
+        currentFrameWithId: "{id} フレーム目"
     commandPanel:
       title: コマンドパネル
       editDefaults: デフォルト値を編集

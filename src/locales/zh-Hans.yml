@@ -238,6 +238,10 @@ modals:
     title: 是否确认效果编辑器的更改？
     description: 如果不确认，你的更改将被丢弃。
     discard: 丢弃
+  confirmAnimationChanges:
+    title: 是否确认动画编辑器的更改？
+    description: 如果不确认，你的更改将被丢弃。
+    discard: 丢弃
   discardEffectChanges:
     title: 是否要应用效果编辑器的更改？
     description: 如果不应用，你的更改将被丢弃。
@@ -341,6 +345,7 @@ edit:
       buttonText: 确认按钮文本
       defaultValue: 输入框默认值
   errors:
+    fileSyncFailed: 文件同步失败，请稍后重试
     previewUnavailable: 预览地址不存在，请先启动预览
     workspaceUnavailable: 工作区尚未初始化，请稍后重试
   unsupported:
@@ -354,10 +359,12 @@ edit:
       words: "{count} 字"
     formPanel:
       noStatement: 移动光标到语句行以编辑
+    invalidAnimationVisualMessage: 当前动画文件存在错误，无法在可视化模式下编辑，请切换到文本模式修复
   scenePanel:
     scene: 场景
     resource: 资源
   statusBar:
+    frames: "{count} 帧"
     statements: "{count} 条语句"
   fileTree:
     newFile: 新建文件
@@ -411,10 +418,31 @@ edit:
       zoomReset: 重置缩放
   editorMode:
     textMode: 切换文本
+    switchToText: 切换到文本
     visualMode: 切换可视化
     toggleSidebar: 切换辅助面板
   visualEditor:
     playToLine: 执行到此句
+    animation:
+      title: 动画编辑器
+      description: 调整当前动画各关键帧的时长、缓动和变换
+      invalidJson: 当前高级动画内容存在错误，无法打开动画编辑器，请在文本模式中修复
+      timelineTitle: 时间轴
+      inspectorTitle: 帧属性
+      startFrame: 起始帧
+      firstFrameHint: 起始帧用于定义初始状态，不支持缓动效果
+      emptyTitle: 还没有帧
+      emptyDescription: 先添加一个关键帧来开始编辑动画
+      unitMs: ms
+      toolbar:
+        addFrame: 添加帧
+        delete: 删除
+        undo: 撤销
+        redo: 重做
+        zoom: 缩放
+        totalDuration: 总时长
+      summary:
+        currentFrameWithId: 第 {id} 帧
     commandPanel:
       title: 命令面板
       editDefaults: 编辑默认值

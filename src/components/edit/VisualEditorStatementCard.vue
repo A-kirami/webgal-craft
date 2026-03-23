@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useStatementAnimationEditorBridge } from '~/composables/useStatementAnimationEditorBridge'
 import { createStatementIdTarget, StatementUpdatePayload } from '~/composables/useStatementEditor'
 import { useStatementEffectEditorBridge } from '~/composables/useStatementEffectEditorBridge'
 import { useStatementFileMissing } from '~/composables/useStatementFileMissing'
@@ -80,6 +81,12 @@ function handleCardDblClick() {
 const { openEffectEditor } = useStatementEffectEditorBridge({
   updateTarget: () => createStatementIdTarget(props.entry.id),
   rawText: () => props.entry.rawText,
+  parsed: () => parsed.value,
+  emitUpdate: payload => emit('update', payload),
+})
+
+const { openAnimationEditor } = useStatementAnimationEditorBridge({
+  updateTarget: () => createStatementIdTarget(props.entry.id),
   parsed: () => parsed.value,
   emitUpdate: payload => emit('update', payload),
 })
@@ -212,6 +219,7 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
             :update-target="createStatementIdTarget(entry.id)"
             ::show-inline-comment="showInlineComment"
             @update="emit('update', $event)"
+            @open-animation-editor="openAnimationEditor"
             @open-effect-editor="openEffectEditor"
           />
         </CollapsibleContent>

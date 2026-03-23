@@ -29,6 +29,7 @@ export const effectEntries: CommandEntry[] = [
     description: t => t('edit.visualEditor.commandDescriptions.setTempAnimation'),
     icon: 'i-lucide-layers',
     category: 'effect',
+    hasAnimationEditor: true,
     fields: [
       content({ key: 'animation', label: t => t('edit.visualEditor.params.animationName'), type: 'text' }),
       arg(TARGET),

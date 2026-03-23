@@ -33,7 +33,6 @@ export function useEffectEditorDialog() {
 
   const currentSnapshot = $computed(() => snapshotDraft(draftTransform, draftDuration, draftEase))
   const defaultSnapshot = snapshotDraft(parseTransformJson(''), '', '')
-
   const isDirty = $computed(() => currentSnapshot !== initialSnapshot)
   const isDefault = $computed(() => currentSnapshot === defaultSnapshot)
 

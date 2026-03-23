@@ -2,6 +2,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { useEffectEditorDialog } from '~/composables/useEffectEditorDialog'
+import { useStatementAnimationDialog } from '~/composables/useStatementAnimationDialog'
 import { StatementUpdatePayload } from '~/composables/useStatementEditor'
 import { commandEntries, commandPanelCategories, getCategoryLabel, getFactoryDefaultCommandText } from '~/helper/command-registry/index'
 import { resolveI18n } from '~/helper/command-registry/schema'
@@ -21,6 +22,7 @@ const open = defineModel<boolean>('open', { default: false })
 const { t } = useI18n()
 const commandPanelStore = useCommandPanelStore()
 const effectDialog = useEffectEditorDialog()
+const animationDialog = useStatementAnimationDialog()
 
 let draftName = $ref('')
 let draftEntries = $ref<StatementEntry[]>([])
@@ -371,5 +373,8 @@ function requestClose(): void {
 
     <!-- 效果编辑器二级 Dialog -->
     <EffectEditorSubDialog :effect-dialog="effectDialog" />
+
+    <!-- 动画编辑器二级 Dialog -->
+    <StatementAnimationSubDialog :animation-dialog="animationDialog" />
   </Dialog>
 </template>

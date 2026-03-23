@@ -1,3 +1,4 @@
+import { cloneAnimationFrame } from '~/helper/animation-frame'
 import { applyTransactionToModel } from '~/models/transaction-apply'
 
 import { getDocumentTextContent } from './editor-document-state'
@@ -119,7 +120,7 @@ function computeAnimationUpdateInverse(docEntry: DocumentState, index: number): 
   return {
     type: 'animation:update-frame',
     index,
-    frame: structuredClone(frame),
+    frame: cloneAnimationFrame(frame),
   }
 }
 
@@ -136,7 +137,7 @@ function computeAnimationDeleteInverse(docEntry: DocumentState, index: number): 
   return {
     type: 'animation:insert-frame',
     afterIndex: index - 1 >= 0 ? index - 1 : undefined,
-    frame: structuredClone(deletedFrame),
+    frame: cloneAnimationFrame(deletedFrame),
   }
 }
 

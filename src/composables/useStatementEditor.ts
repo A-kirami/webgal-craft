@@ -220,12 +220,26 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     return !!parsed.value && !!config.value.hasEffectEditor
   })
 
+  const hasAnimationEditor = computed(() => {
+    return !!parsed.value && !!config.value.hasAnimationEditor
+  })
+
   // ─── 视图层派生计算 ───
 
   const specialContentMode = computed(() => resolveStatementSpecialContentMode(parsed.value))
 
   const commandRenderFields = computed(() => {
-    return editorFields.value.filter(field => !(specialContentMode.value && field.storage === 'content'))
+    return editorFields.value.filter((field) => {
+      if (specialContentMode.value && field.storage === 'content') {
+        return false
+      }
+
+      if (hasAnimationEditor.value && field.storage === 'content') {
+        return false
+      }
+
+      return true
+    })
   })
 
   const basicRenderFields = computed(() => {
@@ -239,6 +253,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   })
 
   const showEffectEditorButton = computed(() => statementType.value === 'command' && hasEffectEditor.value)
+  const showAnimationEditorButton = computed(() => statementType.value === 'command' && hasAnimationEditor.value)
   const effectEditorAtTop = computed(() => showEffectEditorButton.value && parsed.value?.command === commandType.setTransform)
   const paramRendererSharedProps = computed(() => ({
     ...fieldBindings.paramRenderer.sharedProps.value,
@@ -346,6 +361,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       commandRenderFields,
       basicRenderFields,
       showEffectEditorButton,
+      showAnimationEditorButton,
       effectEditorAtTop,
     },
   }

@@ -1,3 +1,4 @@
+import { cloneAnimationFrame } from '~/helper/animation-frame'
 import { createStatementEntryFromSceneStatement, StatementEntry } from '~/helper/webgal-script/sentence'
 import { AnimationFrame } from '~/types/stage'
 
@@ -31,6 +32,6 @@ export function projectAnimationFrames(
       return previousFrame
     }
 
-    return markRaw(structuredClone(frame))
+    return markRaw(cloneAnimationFrame(frame))
   })
 }

@@ -2,6 +2,7 @@
 import { ResizablePanel } from '~/components/ui/resizable'
 import { useCommandPanelBridgeProvider, useSidebarPanelProvider } from '~/composables/useEditorPanelBindings'
 import { useEffectEditorProvider } from '~/composables/useEffectEditorProvider'
+import { useStatementAnimationDialog } from '~/composables/useStatementAnimationDialog'
 import { resolveHistoryShortcutAction } from '~/helper/history-shortcut'
 import { StatementGroup } from '~/stores/command-panel'
 import { useEditSettingsStore } from '~/stores/edit-settings'
@@ -18,6 +19,7 @@ const editSettingsStore = useEditSettingsStore()
 const { t } = useI18n()
 
 const effectEditorProvider = useEffectEditorProvider()
+const statementAnimationDialog = useStatementAnimationDialog()
 const tabsStore = useTabsStore()
 
 const commandPanelRef = useTemplateRef<InstanceType<typeof ResizablePanel>>('commandPanel')
@@ -262,6 +264,8 @@ defineExpose({ toggleCommandPanel })
           </div>
         </SheetContent>
       </Sheet>
+
+      <StatementAnimationSubDialog :animation-dialog="statementAnimationDialog" />
     </div>
   </div>
 </template>

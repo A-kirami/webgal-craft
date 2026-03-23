@@ -1,3 +1,4 @@
+import { cloneAnimationFrame } from '~/helper/animation-frame'
 import { AnimationFrame, Point2D } from '~/types/stage'
 
 import { applyTextContentToDocument, replaceDocumentText } from './text-projection'
@@ -195,7 +196,7 @@ export function applyAnimationTransaction(
         ? 0
         : Math.min(transaction.afterIndex + 1, model.frames.length)
       const nextFrames = [...model.frames]
-      nextFrames.splice(insertIndex, 0, markRaw(structuredClone(transaction.frame)))
+      nextFrames.splice(insertIndex, 0, markRaw(cloneAnimationFrame(transaction.frame)))
       return {
         ...model,
         frames: nextFrames,

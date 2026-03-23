@@ -5,7 +5,12 @@ import { ChartSpline, FileText, Image as ImageIcon } from 'lucide-vue-next'
 import { thumbnailCmds } from '~/commands/thumbnaila'
 import dayjs from '~/plugins/dayjs'
 import { getLanguageDisplayName } from '~/plugins/editor'
-import { isEditableEditor, isSceneVisualProjection, useEditorStore } from '~/stores/editor'
+import {
+  isAnimationVisualProjection,
+  isEditableEditor,
+  isSceneVisualProjection,
+  useEditorStore,
+} from '~/stores/editor'
 import { handleError } from '~/utils/error-handler'
 import { formatFileSize } from '~/utils/format'
 
@@ -102,11 +107,19 @@ const fileLanguage = $computed(() => {
 const textContent = $computed(() => editableState?.projection === 'text' ? editableState.textContent : '')
 // 是否为可视化场景模式
 const isSceneMode = $computed(() => editableState !== undefined && isSceneVisualProjection(editableState))
+// 是否为可视化动画模式
+const isAnimationMode = $computed(() => editableState !== undefined && isAnimationVisualProjection(editableState))
 
 // 语句数（可视化场景模式）
 const statementCount = $computed(() =>
   editableState && isSceneVisualProjection(editableState)
     ? editableState.statements.length
+    : 0,
+)
+// 帧数（可视化动画模式）
+const frameCount = $computed(() =>
+  editableState && isAnimationVisualProjection(editableState)
+    ? editableState.frames.length
     : 0,
 )
 
@@ -159,6 +172,9 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
         <ChartSpline class="text-muted-foreground h-3 w-3" />
         <span v-if="isSceneMode" class="font-medium">
           {{ $t('edit.statusBar.statements', { count: statementCount }) }}
+        </span>
+        <span v-else-if="isAnimationMode" class="font-medium">
+          {{ $t('edit.statusBar.frames', { count: frameCount }) }}
         </span>
         <template v-else>
           <span class="font-medium">

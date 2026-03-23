@@ -52,6 +52,7 @@ export interface AutoSaveAccessor {
 }
 
 export interface EditorFileLifecycleMessages {
+  fileSyncFailed: string
   previewUnavailable: string
   unsupportedFile: string
   workspaceUnavailable: string
@@ -77,6 +78,19 @@ export interface EditorFileLifecycleContext extends
   messages: EditorFileLifecycleMessages
   syncScenePreview: (path: string, lineNumber: number, lineText: string, force?: boolean) => void
 }
+
+interface ExternalDocumentSnapshot {
+  allowMerge: boolean
+  content: string
+  currentContent: string
+  hasSameContent: boolean
+  hasSameMetadata: boolean
+  metadata: TextMetadata
+  session: EditableEditorSession
+  state: EditableEditorState
+}
+
+const pendingFileModifiedTasks = new Map<string, Promise<void>>()
 
 function isPathInsideDirectory(path: string, directoryPath: string): boolean {
   return path.startsWith(`${directoryPath}\\`) || path.startsWith(`${directoryPath}/`)
@@ -326,6 +340,147 @@ async function confirmExternalDocumentChange(
   })
 }
 
+async function loadExternalDocumentSnapshot(
+  context: EditorFileLifecycleContext,
+  path: string,
+): Promise<ExternalDocumentSnapshot | undefined> {
+  const loadedDocument = await context.readTextDocumentFile(path)
+  if (!loadedDocument.ok) {
+    logger.warn(`外部文件已切换为不支持的文本编码，保留当前编辑态: ${path}`)
+    context.setTabError(path, context.messages.unsupportedFile)
+    return
+  }
+
+  const { content, metadata } = loadedDocument
+  context.setTabError(path, undefined)
+  if (consumePendingDocumentWrite(path, content, metadata)) {
+    return
+  }
+
+  const state = context.getEditableState(path)
+  if (!state) {
+    return
+  }
+
+  const session = context.getEditableSession(path)
+  if (!session) {
+    return
+  }
+
+  const docEntry = session.document
+  const currentContent = state.isDirty
+    ? getTextProjectionPersistedContent(docEntry, session.textState)
+    : docEntry.savedTextContent
+
+  return {
+    allowMerge: session.activeProjection === 'text' && state.kind !== 'animation',
+    content,
+    currentContent,
+    hasSameContent: content === currentContent,
+    hasSameMetadata: isSameTextMetadata(docEntry.model.metadata, metadata),
+    metadata,
+    session,
+    state,
+  }
+}
+
+function applyExternalDocumentSnapshot(
+  context: EditorFileLifecycleContext,
+  path: string,
+  snapshot: ExternalDocumentSnapshot,
+): void {
+  if (snapshot.hasSameContent && snapshot.hasSameMetadata) {
+    return
+  }
+
+  const docEntry = snapshot.session.document
+  if (!snapshot.state.isDirty && snapshot.hasSameContent) {
+    updateSavedDocumentMetadataBaseline(docEntry, snapshot.content, snapshot.metadata)
+    return
+  }
+
+  replaceDocumentModelFromExternal(context, path, snapshot.content, snapshot.metadata)
+  syncScenePreviewForExternalContent(context, path, snapshot.content, snapshot.state.kind)
+}
+
+function restorePendingAutoSaveIfNeeded(
+  context: EditorFileLifecycleContext,
+  path: string,
+  hadPendingAutoSave: boolean,
+): void {
+  if (!hadPendingAutoSave) {
+    return
+  }
+
+  const state = context.getEditableState(path)
+  if (state && context.canReschedulePendingAutoSave(state)) {
+    context.scheduleAutoSave(path)
+  }
+}
+
+async function handleFileModifiedEventInternal(
+  context: EditorFileLifecycleContext,
+  event: FileModifiedEvent,
+): Promise<void> {
+  const state = context.getEditableState(event.path)
+  if (!state) {
+    return
+  }
+
+  const snapshot = await loadExternalDocumentSnapshot(context, event.path)
+  if (!snapshot) {
+    return
+  }
+
+  if (!snapshot.state.isDirty) {
+    applyExternalDocumentSnapshot(context, event.path, snapshot)
+    return
+  }
+
+  const hadPendingAutoSave = context.autoSaveHasPending(event.path)
+  context.cancelAutoSave(event.path)
+
+  const action = await confirmExternalDocumentChange(event.path, snapshot.allowMerge)
+  if (action === 'cancel' || action === 'keep-local') {
+    restorePendingAutoSaveIfNeeded(context, event.path, hadPendingAutoSave)
+    return
+  }
+
+  if (action === 'load-external' || !snapshot.state.isDirty) {
+    applyExternalDocumentSnapshot(context, event.path, snapshot)
+    return
+  }
+
+  if (action === 'merge' && snapshot.allowMerge) {
+    const docEntry = snapshot.session.document
+    const mergedContent = mergeExternalDocumentContent(snapshot.currentContent, snapshot.content)
+    snapshot.session.activeProjection = 'text'
+    applyDocumentTransaction(context, event.path, {
+      transaction: {
+        type: 'replace-all',
+        content: mergedContent,
+        metadata: {
+          encoding: snapshot.metadata.encoding,
+          lineEnding: snapshot.metadata.lineEnding,
+        },
+      },
+      inverse: {
+        type: 'replace-all',
+        content: snapshot.currentContent,
+        metadata: {
+          encoding: docEntry.model.metadata.encoding,
+          lineEnding: docEntry.model.metadata.lineEnding,
+        },
+      },
+      source: 'external',
+    })
+    restorePendingAutoSaveIfNeeded(context, event.path, hadPendingAutoSave)
+    return
+  }
+
+  restorePendingAutoSaveIfNeeded(context, event.path, hadPendingAutoSave)
+}
+
 export async function loadEditorState(
   context: EditorFileLifecycleContext,
   path: string,
@@ -402,87 +557,26 @@ export async function handleFileModifiedEvent(
   context: EditorFileLifecycleContext,
   event: FileModifiedEvent,
 ): Promise<void> {
-  const state = context.getEditableState(event.path)
-  if (!state) {
-    return
-  }
-
-  const loadedDocument = await context.readTextDocumentFile(event.path)
-  if (!loadedDocument.ok) {
-    logger.warn(`外部文件已切换为不支持的文本编码，保留当前编辑态: ${event.path}`)
-    context.setTabError(event.path, context.messages.unsupportedFile)
-    return
-  }
-
-  const { content, metadata } = loadedDocument
-  context.setTabError(event.path, undefined)
-  if (consumePendingDocumentWrite(event.path, content, metadata)) {
-    return
-  }
-
-  const freshState = context.getEditableState(event.path)
-  if (!freshState) {
-    return
-  }
-
-  const session = context.getEditableSession(event.path)
-  if (!session) {
-    return
-  }
-
-  const docEntry = session.document
-  const currentContent = freshState.isDirty
-    ? getTextProjectionPersistedContent(docEntry, session.textState)
-    : docEntry.savedTextContent
-  const hasSameContent = content === currentContent
-  const hasSameMetadata = isSameTextMetadata(docEntry.model.metadata, metadata)
-  if (hasSameContent && hasSameMetadata) {
-    return
-  }
-
-  if (!freshState.isDirty) {
-    if (hasSameContent) {
-      updateSavedDocumentMetadataBaseline(docEntry, content, metadata)
-      return
-    }
-    replaceDocumentModelFromExternal(context, event.path, content, metadata)
-    syncScenePreviewForExternalContent(context, event.path, content, freshState.kind)
-    return
-  }
-
-  const allowMerge = session.activeProjection === 'text' && freshState.kind !== 'animation'
-  const action = await confirmExternalDocumentChange(event.path, allowMerge)
-  if (action === 'cancel' || action === 'keep-local') {
-    return
-  }
-
-  if (action === 'load-external') {
-    replaceDocumentModelFromExternal(context, event.path, content, metadata)
-    syncScenePreviewForExternalContent(context, event.path, content, freshState.kind)
-    return
-  }
-
-  if (action === 'merge' && allowMerge) {
-    const mergedContent = mergeExternalDocumentContent(currentContent, content)
-    session.activeProjection = 'text'
-    applyDocumentTransaction(context, event.path, {
-      transaction: {
-        type: 'replace-all',
-        content: mergedContent,
-        metadata: {
-          encoding: metadata.encoding,
-          lineEnding: metadata.lineEnding,
-        },
-      },
-      inverse: {
-        type: 'replace-all',
-        content: currentContent,
-        metadata: {
-          encoding: docEntry.model.metadata.encoding,
-          lineEnding: docEntry.model.metadata.lineEnding,
-        },
-      },
-      source: 'external',
+  const previousTask = pendingFileModifiedTasks.get(event.path) ?? Promise.resolve()
+  const task = previousTask
+    .catch(() => undefined)
+    .then(async () => {
+      try {
+        await handleFileModifiedEventInternal(context, event)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        logger.error(`同步文件内容失败 (${event.path}): ${message}`)
+        context.setTabError(event.path, context.messages.fileSyncFailed)
+      }
     })
+
+  pendingFileModifiedTasks.set(event.path, task)
+
+  try {
+    await task
+  } finally {
+    if (pendingFileModifiedTasks.get(event.path) === task) {
+      pendingFileModifiedTasks.delete(event.path)
+    }
   }
 }

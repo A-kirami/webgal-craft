@@ -51,6 +51,10 @@ html.dark .bg-checkerboard {
   @apply text-xs text-violet-500 border-violet-500/30 gap-1 shadow-none hover:text-violet-600 hover:bg-violet-500/10;
 }
 
+.btn-animation-editor {
+  @apply text-xs text-pink-500 border-pink-500/30 gap-1 shadow-none hover:text-pink-600 hover:bg-pink-500/10;
+}
+
 .flex-scroll-area {
   & [data-reka-scroll-area-viewport] {
     @apply flex flex-col;

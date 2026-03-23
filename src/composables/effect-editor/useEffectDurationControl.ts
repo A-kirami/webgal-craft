@@ -9,8 +9,48 @@ interface UseEffectDurationControlOptions {
 }
 
 export function useEffectDurationControl(options: UseEffectDurationControlOptions) {
+  let pendingDurationValue: string | undefined
+  let pendingDurationFrameId: number | undefined
+
   function updateDuration(value: string | number) {
     options.emitDuration(String(value ?? ''))
+  }
+
+  function cancelScheduledDurationEmit() {
+    if (pendingDurationFrameId === undefined) {
+      return
+    }
+
+    cancelAnimationFrame(pendingDurationFrameId)
+    pendingDurationFrameId = undefined
+  }
+
+  function flushPendingDurationEmit() {
+    if (pendingDurationValue === undefined) {
+      cancelScheduledDurationEmit()
+      return
+    }
+
+    cancelScheduledDurationEmit()
+    updateDuration(pendingDurationValue)
+    pendingDurationValue = undefined
+  }
+
+  function scheduleDurationEmit(value: string | number) {
+    pendingDurationValue = String(value ?? '')
+    if (pendingDurationFrameId !== undefined) {
+      return
+    }
+
+    pendingDurationFrameId = requestAnimationFrame(() => {
+      pendingDurationFrameId = undefined
+      if (pendingDurationValue === undefined) {
+        return
+      }
+
+      updateDuration(pendingDurationValue)
+      pendingDurationValue = undefined
+    })
   }
 
   function getDurationNumberValue(): number {
@@ -48,9 +88,10 @@ export function useEffectDurationControl(options: UseEffectDurationControlOption
       }
 
       state.lastValue = nextValue
-      updateDuration(nextValue)
+      scheduleDurationEmit(nextValue)
     },
     onEnd(_event, state) {
+      flushPendingDurationEmit()
       const finalValue = Math.max(0, Math.round(state.lastValue))
       updateDuration(finalValue)
     },
@@ -70,6 +111,10 @@ export function useEffectDurationControl(options: UseEffectDurationControlOption
     updateDuration,
     handleDurationLabelPointerDown,
     updateEase,
-    stopDurationScrub: () => durationScrub.stop(),
+    stopDurationScrub: () => {
+      durationScrub.stop()
+      cancelScheduledDurationEmit()
+      pendingDurationValue = undefined
+    },
   }
 }

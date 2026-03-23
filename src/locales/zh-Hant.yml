@@ -238,6 +238,10 @@ modals:
     title: 是否確認效果編輯器的變更？
     description: 如果不確認，你的變更將被捨棄。
     discard: 捨棄
+  confirmAnimationChanges:
+    title: 是否確認動畫編輯器的變更？
+    description: 如果不確認，你的變更將被捨棄。
+    discard: 捨棄
   discardEffectChanges:
     title: 是否要套用效果編輯器的變更？
     description: 如果不套用，你的變更將被捨棄。
@@ -341,6 +345,7 @@ edit:
       buttonText: 確認按鈕文字
       defaultValue: 輸入框預設值
   errors:
+    fileSyncFailed: 檔案同步失敗，請稍後重試
     previewUnavailable: 預覽地址不存在，請先啟動預覽
     workspaceUnavailable: 工作區尚未初始化，請稍後重試
   unsupported:
@@ -354,10 +359,12 @@ edit:
       words: "{count} 字"
     formPanel:
       noStatement: 移動游標到語句行以編輯
+    invalidAnimationVisualMessage: 目前動畫檔案存在錯誤，無法在視覺化模式下編輯，請切換到文字模式修復
   scenePanel:
     scene: 場景
     resource: 資源
   statusBar:
+    frames: "{count} 幀"
     statements: "{count} 條語句"
   fileTree:
     newFile: 新建檔案
@@ -411,10 +418,31 @@ edit:
       zoomReset: 重設縮放
   editorMode:
     textMode: 切換文字
+    switchToText: 切換到文字
     visualMode: 切換視覺化
     toggleSidebar: 切換輔助面板
   visualEditor:
     playToLine: 執行到此句
+    animation:
+      title: 動畫編輯器
+      description: 調整目前動畫各關鍵影格的時長、緩動與變換
+      invalidJson: 目前高級動畫內容存在錯誤，無法開啟動畫編輯器，請在文字模式中修復
+      timelineTitle: 時間軸
+      inspectorTitle: 影格屬性
+      startFrame: 起始影格
+      firstFrameHint: 起始影格用於定義初始狀態，不支援緩動效果
+      emptyTitle: 還沒有影格
+      emptyDescription: 先新增一個關鍵影格來開始編輯動畫
+      unitMs: ms
+      toolbar:
+        addFrame: 新增影格
+        delete: 刪除
+        undo: 復原
+        redo: 重做
+        zoom: 縮放
+        totalDuration: 總時長
+      summary:
+        currentFrameWithId: 第 {id} 影格
     commandPanel:
       title: 命令面板
       editDefaults: 編輯預設值

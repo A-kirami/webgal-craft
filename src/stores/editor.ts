@@ -278,6 +278,7 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   const editorMessages = {
+    fileSyncFailed: t('edit.errors.fileSyncFailed'),
     previewUnavailable: t('edit.errors.previewUnavailable'),
     workspaceUnavailable: t('edit.errors.workspaceUnavailable'),
     unsupportedFile: t('edit.unsupported.unsupportedFile'),
@@ -411,6 +412,7 @@ export const useEditorStore = defineStore('editor', () => {
     getWorkspaceRootPath: () => useWorkspaceStore().CWD,
     hasSession: (path: string) => sessions.has(path),
     messages: {
+      fileSyncFailed: editorMessages.fileSyncFailed,
       previewUnavailable: editorMessages.previewUnavailable,
       unsupportedFile: editorMessages.unsupportedFile,
       workspaceUnavailable: editorMessages.workspaceUnavailable,
@@ -509,11 +511,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   // 监听文件修改事件，如果文件未编辑，同步新文件内容
   fileSystemEvents.on('file:modified', async (event) => {
-    try {
-      await handleFileModifiedEventAction(fileLifecycleContext, event)
-    } catch (error) {
-      logger.error(`同步文件内容失败 ${event.path}: ${error}`)
-    }
+    await handleFileModifiedEventAction(fileLifecycleContext, event)
   })
 
   // 当前活跃文件是否为场景文件

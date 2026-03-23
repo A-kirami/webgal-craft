@@ -15,6 +15,7 @@ provide(statementEditorSurfaceKey, 'inline')
 
 const emit = defineEmits<{
   update: [payload: StatementUpdatePayload]
+  openAnimationEditor: []
   openEffectEditor: []
 }>()
 
@@ -97,6 +98,16 @@ function handleBlankDblClick(e: MouseEvent) {
           </InputGroupAddon>
         </InputGroup>
       </div>
+      <Button
+        v-if="statementType === 'command' && view.showAnimationEditorButton.value"
+        variant="outline"
+        size="sm"
+        class="btn-animation-editor px-2 h-6"
+        @click="emit('openAnimationEditor')"
+      >
+        <div class="i-lucide-clapperboard size-3" />
+        {{ $t('edit.visualEditor.animation.title') }}
+      </Button>
       <Button
         v-if="statementType === 'command' && view.effectEditorAtTop.value"
         variant="outline"

@@ -408,6 +408,7 @@ export interface CommandEntry {
   category: CommandCategory
   fields: CommandFieldDef[]
   hasEffectEditor?: boolean
+  hasAnimationEditor?: boolean
   locked?: boolean
 }
 

@@ -2,6 +2,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { useControlId } from '~/composables/useControlId'
+import { useStatementAnimationEditorBridge } from '~/composables/useStatementAnimationEditorBridge'
 import { isStatementInteractiveTarget, StatementUpdatePayload, StatementUpdateTarget, useStatementEditor } from '~/composables/useStatementEditor'
 import { useStatementEffectEditorBridge } from '~/composables/useStatementEffectEditorBridge'
 import { getAssetUrl } from '~/helper/asset-url'
@@ -72,6 +73,12 @@ const {
 const { openEffectEditor } = useStatementEffectEditorBridge({
   updateTarget: () => props.updateTarget,
   rawText: () => props.entry.rawText,
+  parsed: () => parsed.value,
+  emitUpdate,
+})
+
+const { openAnimationEditor } = useStatementAnimationEditorBridge({
+  updateTarget: () => props.updateTarget,
   parsed: () => parsed.value,
   emitUpdate,
 })
@@ -273,8 +280,18 @@ const panelSpeakerInputId = buildControlId('speaker')
         </template>
 
         <!-- Schema 定义的参数（非高级） -->
-        <template v-if="(view.basicRenderFields.value.length > 0 && statementType !== 'empty' && statementType !== 'comment') || view.showEffectEditorButton.value">
+        <template v-if="(view.basicRenderFields.value.length > 0 && statementType !== 'empty' && statementType !== 'comment') || view.showEffectEditorButton.value || view.showAnimationEditorButton.value">
           <div class="flex flex-wrap gap-x-4 gap-y-2.5">
+            <Button
+              v-if="view.showAnimationEditorButton.value"
+              variant="outline"
+              size="sm"
+              class="btn-animation-editor px-3 h-7 w-full justify-center"
+              @click="openAnimationEditor"
+            >
+              <div class="i-lucide-clapperboard size-3" />
+              {{ $t('edit.visualEditor.animation.title') }}
+            </Button>
             <Button
               v-if="view.effectEditorAtTop.value"
               variant="outline"

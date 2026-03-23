@@ -238,6 +238,10 @@ modals:
     title: Confirm changes from the effect editor?
     description: Your changes will be discarded if you don't confirm them.
     discard: Discard
+  confirmAnimationChanges:
+    title: Confirm changes from the animation editor?
+    description: Your changes will be discarded if you don't confirm them.
+    discard: Discard
   discardEffectChanges:
     title: Apply changes from the effect editor?
     description: Your changes will be discarded if you don't apply them.
@@ -341,6 +345,7 @@ edit:
       buttonText: Confirm button text
       defaultValue: Input box default value
   errors:
+    fileSyncFailed: Failed to sync the file. Please try again shortly.
     previewUnavailable: Preview URL is not available. Please start preview first.
     workspaceUnavailable: Workspace is not initialized yet. Please try again shortly.
   unsupported:
@@ -354,10 +359,12 @@ edit:
       words: "{count} words"
     formPanel:
       noStatement: Move cursor to a statement line to edit
+    invalidAnimationVisualMessage: The current animation file contains errors and cannot be edited in visual mode. Switch to text mode to fix it
   scenePanel:
     scene: Scene
     resource: Resource
   statusBar:
+    frames: "{count} frames"
     statements: "{count} statements"
   fileTree:
     newFile: New File
@@ -411,10 +418,31 @@ edit:
       zoomReset: Reset zoom
   editorMode:
     textMode: Switch to Text
+    switchToText: Switch to Text
     visualMode: Switch to Visual
     toggleSidebar: Toggle Auxiliary Panel
   visualEditor:
     playToLine: Play to this line
+    animation:
+      title: Animation Editor
+      description: Adjust the duration, easing, and transforms of each keyframe in the current animation
+      invalidJson: The current advanced animation content contains errors and the animation editor cannot be opened. Please fix it in text mode
+      timelineTitle: Timeline
+      inspectorTitle: Frame Properties
+      startFrame: Start Frame
+      firstFrameHint: The start frame defines the initial state and does not support easing
+      emptyTitle: No Frames Yet
+      emptyDescription: Add a keyframe to start editing this animation
+      unitMs: ms
+      toolbar:
+        addFrame: Add Frame
+        delete: Delete
+        undo: Undo
+        redo: Redo
+        zoom: Zoom
+        totalDuration: Total
+      summary:
+        currentFrameWithId: "Frame {id}"
     commandPanel:
       title: Command Panel
       editDefaults: Edit defaults

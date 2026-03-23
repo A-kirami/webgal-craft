@@ -88,8 +88,12 @@ export function useTextEditorHistory(options: UseTextEditorHistoryOptions) {
       ? historyAdapterHandle?.runNativeUndo
       : historyAdapterHandle?.runNativeRedo
 
+    function isModelDisposed() {
+      return typeof savedModel?.isDisposed === 'function' && savedModel.isDisposed()
+    }
+
     setTimeout(() => {
-      if (!savedModel || savedModel.isDisposed()) {
+      if (!savedModel || isModelDisposed()) {
         return
       }
 
@@ -103,7 +107,7 @@ export function useTextEditorHistory(options: UseTextEditorHistoryOptions) {
       }
 
       void pendingNativeAction.then(() => {
-        if (!savedModel || savedModel.isDisposed() || beforeContent === undefined) {
+        if (!savedModel || isModelDisposed() || beforeContent === undefined) {
           return
         }
 

@@ -1,3 +1,4 @@
+import { cloneAnimationFrame } from '~/helper/animation-frame'
 import { isAnimationDocumentTextValid } from '~/models/animation-document-codec'
 import { captureSceneSelectionSnapshot, computeLineNumberFromStatementId, createSceneSelectionSnapshot } from '~/models/scene-selection'
 import { applyTransactionToModel } from '~/models/transaction-apply'
@@ -273,7 +274,7 @@ export function applyAnimationFrameUpdate(
 ): void {
   applyDocumentTransaction(context, path, {
     source: 'visual',
-    transaction: { type: 'animation:update-frame', index, frame },
+    transaction: { type: 'animation:update-frame', index, frame: cloneAnimationFrame(frame) },
   })
 }
 
@@ -285,7 +286,7 @@ export function applyAnimationFrameInsert(
 ): void {
   applyDocumentTransaction(context, path, {
     source: 'visual',
-    transaction: { type: 'animation:insert-frame', afterIndex, frame },
+    transaction: { type: 'animation:insert-frame', afterIndex, frame: cloneAnimationFrame(frame) },
   })
 }
 
