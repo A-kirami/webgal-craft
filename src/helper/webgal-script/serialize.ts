@@ -17,6 +17,7 @@ import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
  * Args 序列化：
  * - boolean true  → " -key"
  * - 其他值        → " -key={value}"
+ * - say.vocal     → " -{value}"
  * - 简写形式 say 命令自动过滤 speaker arg（已编码在 commandRaw 中）
  */
 export function serializeSentence(sentence: ISentence): string {
@@ -46,6 +47,11 @@ function serializeArgs(sentence: ISentence): string {
   )
 
   return filteredArgs
-    .map(arg => arg.value === true ? ` -${arg.key}` : ` -${arg.key}=${arg.value}`)
+    .map((arg) => {
+      if (sentence.command === commandType.say && arg.key === 'vocal' && arg.value !== true) {
+        return ` -${arg.value}`
+      }
+      return arg.value === true ? ` -${arg.key}` : ` -${arg.key}=${arg.value}`
+    })
     .join('')
 }
