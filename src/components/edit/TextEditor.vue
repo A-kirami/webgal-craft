@@ -4,6 +4,7 @@ import * as monaco from 'monaco-editor'
 import { colorMode } from '~/composables/color-mode'
 import { useTextEditorRuntime } from '~/composables/useTextEditorRuntime'
 import { buildTextEditorOptions } from '~/helper/text-editor-options'
+import { createTextEditorPlayToLineController } from '~/helper/text-editor-play-to-line'
 import { BASE_EDITOR_OPTIONS, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
@@ -19,17 +20,24 @@ const props = defineProps<Props>()
 const editorStore = useEditorStore()
 const tabsStore = useTabsStore()
 const editSettings = useEditSettingsStore()
+const { locale, t } = useI18n()
+const showPlayToLineGlyph = $computed(() => props.state.kind === 'scene')
 
 const editorOptions = $computed<monaco.editor.IEditorConstructionOptions>(() =>
-  buildTextEditorOptions(BASE_EDITOR_OPTIONS, {
-    fontFamily: editSettings.fontFamily,
-    fontSize: editSettings.fontSize,
-    minimap: editSettings.minimap,
-    wordWrap: editSettings.wordWrap,
+  ({
+    ...buildTextEditorOptions(BASE_EDITOR_OPTIONS, {
+      fontFamily: editSettings.fontFamily,
+      fontSize: editSettings.fontSize,
+      minimap: editSettings.minimap,
+      wordWrap: editSettings.wordWrap,
+    }),
+    glyphMargin: showPlayToLineGlyph,
+    lineNumbersMinChars: 3,
   }) as monaco.editor.IEditorConstructionOptions,
 )
 
 let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
+let playToLineController = $shallowRef<ReturnType<typeof createTextEditorPlayToLineController>>()
 let editorContainer = $ref<HTMLElement>()
 const runtime = useTextEditorRuntime({
   editorRef: $$(editor),
@@ -44,6 +52,20 @@ const isCurrentTextProjectionActive = $computed(() => {
     && currentState.projection === 'text'
     && tabsStore.activeTab?.path === props.state.path
 })
+
+function syncPlayToLineGlyph() {
+  playToLineController?.syncFromEditorPosition()
+}
+
+function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedEvent) {
+  runtime.handleCursorPositionChange(event)
+  playToLineController?.syncDecorationsForLine(event.position.lineNumber)
+}
+
+function handleEditorMouseDown(event: monaco.editor.IEditorMouseEvent) {
+  runtime.handleEditorClick()
+  playToLineController?.handleMouseDown(event)
+}
 
 function createEditor() {
   if (!editorContainer || editor) {
@@ -62,14 +84,26 @@ function createEditor() {
     ...editorOptions,
   })
 
-  editor.onDidChangeCursorPosition(runtime.handleCursorPositionChange)
+  playToLineController = createTextEditorPlayToLineController({
+    editor,
+    getHoverMessage: () => t('edit.visualEditor.playToLine'),
+    getPath: () => props.state.path,
+    glyphMarginTargetType: monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN,
+    isEnabled: () => showPlayToLineGlyph,
+    syncScenePreview: (path, lineNumber, lineText, force) => {
+      editorStore.syncScenePreview(path, lineNumber, lineText, force)
+    },
+  })
+
+  editor.onDidChangeCursorPosition(handleCursorPositionChange)
   editor.onDidChangeCursorSelection(runtime.handleCursorSelectionChange)
   editor.onDidChangeModelContent(runtime.handleContentChange)
   editor.onDidScrollChange(runtime.handleScrollChange)
-  editor.onMouseDown(runtime.handleEditorClick)
+  editor.onMouseDown(handleEditorMouseDown)
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, runtime.manualSave)
 
   runtime.handleEditorCreated()
+  syncPlayToLineGlyph()
 }
 
 watch(() => currentTheme, (newTheme) => {
@@ -83,6 +117,17 @@ watch(() => editorOptions, (newOptions) => {
     editor.updateOptions(newOptions)
   }
 }, { deep: true })
+
+watch(
+  [
+    () => props.state.kind,
+    () => props.state.path,
+    () => locale.value,
+  ],
+  () => {
+    syncPlayToLineGlyph()
+  },
+)
 
 onMounted(() => {
   if (isCurrentTextProjectionActive) {
@@ -98,6 +143,8 @@ watch(() => isCurrentTextProjectionActive, (isActive) => {
 
 onUnmounted(() => {
   if (editor) {
+    playToLineController?.dispose()
+    playToLineController = undefined
     runtime.handleBeforeUnmount()
 
     editor.dispose()
@@ -109,3 +156,15 @@ onUnmounted(() => {
 <template>
   <div ref="editorContainer" class="h-full overflow-hidden" />
 </template>
+
+<style>
+.monaco-editor .glyph-margin-widgets .cgmr.play-to-line-glyph {
+  @apply cursor-pointer text-green-600 dark:text-green-400;
+}
+
+.monaco-editor .glyph-margin-widgets .cgmr.play-to-line-glyph::before {
+  content: "";
+
+  @apply block size-4 flex-none i-lucide-play;
+}
+</style>

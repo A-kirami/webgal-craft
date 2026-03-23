@@ -13,6 +13,11 @@ export interface TextEditorCursorPosition {
   lineNumber: number
 }
 
+export function isPlayableSceneLine(text: string): boolean {
+  const trimmed = text.trim()
+  return trimmed.length > 0 && !trimmed.startsWith(';')
+}
+
 export function resolveScenePreviewLine(
   lineNumber: number | undefined,
   reader: TextEditorLineReader,
@@ -30,6 +35,18 @@ export function resolveScenePreviewLine(
     lineNumber,
     lineText: reader.getLineContent(lineNumber),
   }
+}
+
+export function resolvePlayableScenePreviewLine(
+  lineNumber: number | undefined,
+  reader: TextEditorLineReader,
+): { lineNumber: number, lineText: string } | undefined {
+  const previewLine = resolveScenePreviewLine(lineNumber, reader)
+  if (!previewLine || !isPlayableSceneLine(previewLine.lineText)) {
+    return undefined
+  }
+
+  return previewLine
 }
 
 export function resolveSceneCursorTarget(
