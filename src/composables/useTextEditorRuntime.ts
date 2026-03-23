@@ -1,6 +1,7 @@
 import * as monaco from 'monaco-editor'
 
 import { resolveTextEditorLanguage } from '~/helper/text-editor-language'
+import { applySceneCursorTarget, prepareSceneCursorTarget } from '~/helper/text-editor-scene-restore'
 import { resolveSceneCursorTarget, resolveScenePreviewLine } from '~/helper/text-editor-scene-sync'
 import { isAnimationDocumentTextValid } from '~/models/animation-document-codec'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
@@ -263,11 +264,11 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
       return
     }
 
-    editor.layout()
-    if (cursorTarget.shouldUpdatePosition) {
-      editor.setPosition(cursorTarget.targetPosition)
-    }
-    editor.revealPositionInCenter(cursorTarget.targetPosition, monaco.editor.ScrollType.Immediate)
+    applySceneCursorTarget(
+      editor,
+      cursorTarget,
+      monaco.editor.ScrollType.Immediate,
+    )
   }
 
   function scheduleApplyLastLineNumber(afterApply?: () => void) {
@@ -285,6 +286,16 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
   } = {}) {
     if (state.value.kind !== 'scene') {
       return
+    }
+
+    const editor = readEditor()
+    const model = editor?.getModel()
+    const lineNumber = readSceneLineNumber()
+    if (editor && model && lineNumber) {
+      const cursorTarget = resolveSceneCursorTarget(lineNumber, model, editor.getPosition() ?? undefined)
+      if (cursorTarget) {
+        prepareSceneCursorTarget(editor, cursorTarget)
+      }
     }
 
     scheduleApplyLastLineNumber(() => {
