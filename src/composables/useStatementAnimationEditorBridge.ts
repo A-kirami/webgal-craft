@@ -41,14 +41,12 @@ export function useStatementAnimationEditorBridge(options: UseStatementAnimation
   const parsed = computed(() => toValue(options.parsed))
   const overriddenOpen = inject(STATEMENT_ANIMATION_EDITOR_OPEN_OVERRIDE_KEY, undefined)
 
-  function applyAnimationEditorResult(frames: AnimationFrame[]) {
-    if (!parsed.value) {
-      return
-    }
-
-    const newSentence = applyAnimationEditorResultToSentence(parsed.value, frames)
-    const target = updateTarget.value ?? createStatementIdTarget(0)
-
+  function emitAnimationEditorResult(
+    sentence: ISentence,
+    target: StatementUpdateTarget,
+    frames: AnimationFrame[],
+  ) {
+    const newSentence = applyAnimationEditorResultToSentence(sentence, frames)
     options.emitUpdate({
       target,
       rawText: serializeSentence(newSentence),
@@ -57,13 +55,23 @@ export function useStatementAnimationEditorBridge(options: UseStatementAnimation
     })
   }
 
-  function openAnimationEditor() {
+  function applyAnimationEditorResult(frames: AnimationFrame[]) {
     if (!parsed.value) {
       return
     }
 
+    emitAnimationEditorResult(parsed.value, updateTarget.value ?? createStatementIdTarget(0), frames)
+  }
+
+  function openAnimationEditor() {
+    const currentParsed = parsed.value
+    if (!currentParsed) {
+      return
+    }
+
     if (overriddenOpen) {
-      overriddenOpen(parsed.value, applyAnimationEditorResult)
+      const currentTarget = updateTarget.value ?? createStatementIdTarget(0)
+      overriddenOpen(currentParsed, frames => emitAnimationEditorResult(currentParsed, currentTarget, frames))
       return
     }
 

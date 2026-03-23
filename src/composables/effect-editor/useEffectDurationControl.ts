@@ -11,6 +11,7 @@ interface UseEffectDurationControlOptions {
 export function useEffectDurationControl(options: UseEffectDurationControlOptions) {
   let pendingDurationValue: string | undefined
   let pendingDurationFrameId: number | undefined
+  let suppressDurationCommitOnEnd = false
 
   function updateDuration(value: string | number) {
     options.emitDuration(String(value ?? ''))
@@ -25,15 +26,17 @@ export function useEffectDurationControl(options: UseEffectDurationControlOption
     pendingDurationFrameId = undefined
   }
 
-  function flushPendingDurationEmit() {
+  function flushPendingDurationEmit(): string | undefined {
     if (pendingDurationValue === undefined) {
       cancelScheduledDurationEmit()
       return
     }
 
+    const nextValue = pendingDurationValue
     cancelScheduledDurationEmit()
-    updateDuration(pendingDurationValue)
+    updateDuration(nextValue)
     pendingDurationValue = undefined
+    return nextValue
   }
 
   function scheduleDurationEmit(value: string | number) {
@@ -91,9 +94,19 @@ export function useEffectDurationControl(options: UseEffectDurationControlOption
       scheduleDurationEmit(nextValue)
     },
     onEnd(_event, state) {
-      flushPendingDurationEmit()
+      const flushedValue = flushPendingDurationEmit()
       const finalValue = Math.max(0, Math.round(state.lastValue))
-      updateDuration(finalValue)
+      if (suppressDurationCommitOnEnd) {
+        suppressDurationCommitOnEnd = false
+        return
+      }
+
+      const normalizedFinalValue = String(finalValue)
+      if (flushedValue === normalizedFinalValue || options.getDuration() === normalizedFinalValue) {
+        return
+      }
+
+      updateDuration(normalizedFinalValue)
     },
   })
 
@@ -112,6 +125,7 @@ export function useEffectDurationControl(options: UseEffectDurationControlOption
     handleDurationLabelPointerDown,
     updateEase,
     stopDurationScrub: () => {
+      suppressDurationCommitOnEnd = true
       durationScrub.stop()
       cancelScheduledDurationEmit()
       pendingDurationValue = undefined

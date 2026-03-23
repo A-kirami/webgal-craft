@@ -4,6 +4,12 @@ import { resolveI18n } from '~/helper/command-registry/schema'
 import { DEFAULT_EASE_OPTION_VALUE, EFFECT_EASE_OPTIONS } from '~/helper/effect-editor-config'
 import { clamp } from '~/helper/math'
 
+import {
+  MIN_SPAN_PX,
+  MIN_START_SPAN_PX,
+  resolveAnimationTimelineContainerWidth,
+} from './animation-timeline-layout'
+
 import type { AnimationTimelineResizeDurationPayload } from './animation-editor-contract'
 import type { AnimationEditorKeyframe } from './animation-inspector'
 import type { ScrollArea } from '~/components/ui/scroll-area'
@@ -39,8 +45,6 @@ const emit = defineEmits<{
 }>()
 
 const MIN_EASE_LABEL_PX = 80
-const MIN_SPAN_PX = 32
-const MIN_START_SPAN_PX = 64
 const MAX_ZOOM = 5
 const MIN_ZOOM = 1
 const ZOOM_SENSITIVITY = 0.002
@@ -161,11 +165,7 @@ const layout = $computed((): SpanLayout[] => {
 })
 
 const containerWidth = $computed(() => {
-  if (viewportWidth <= 0) {
-    return 0
-  }
-
-  return Math.max(viewportWidth, viewportWidth * zoomLevel)
+  return resolveAnimationTimelineContainerWidth(viewportWidth, zoomLevel, spans)
 })
 
 const rulerStep = $computed(() => {

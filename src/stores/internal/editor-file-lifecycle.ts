@@ -389,13 +389,11 @@ function applyExternalDocumentSnapshot(
   path: string,
   snapshot: ExternalDocumentSnapshot,
 ): void {
-  if (snapshot.hasSameContent && snapshot.hasSameMetadata) {
-    return
-  }
-
   const docEntry = snapshot.session.document
-  if (!snapshot.state.isDirty && snapshot.hasSameContent) {
+  if (snapshot.hasSameContent) {
     updateSavedDocumentMetadataBaseline(docEntry, snapshot.content, snapshot.metadata)
+    markDocumentClean(docEntry)
+    context.syncStateFromDocument(path)
     return
   }
 
@@ -432,7 +430,7 @@ async function handleFileModifiedEventInternal(
     return
   }
 
-  if (!snapshot.state.isDirty) {
+  if (!snapshot.state.isDirty || snapshot.hasSameContent) {
     applyExternalDocumentSnapshot(context, event.path, snapshot)
     return
   }

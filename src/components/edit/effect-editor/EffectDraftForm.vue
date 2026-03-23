@@ -205,12 +205,13 @@ onUnmounted(() => {
   <div class="flex flex-col h-full min-h-0 [&_button]:shadow-none [&_input]:shadow-none">
     <div class="mb-3 px-1 flex flex-wrap gap-3 items-center" :class="isPanelLayout ? 'w-full max-w-[44rem]' : ''">
       <div class="flex flex-auto gap-2 items-center" :class="isPanelLayout ? 'grow-0 basis-auto' : ''">
-        <span
+        <Label
+          :for="durationInputId"
           class="text-xs text-muted-foreground shrink-0 cursor-ew-resize select-none touch-none"
           @pointerdown="handleDurationLabelPointerDown"
         >
           {{ $t('edit.visualEditor.params.duration') }}
-        </span>
+        </Label>
         <InputGroup :class="isPanelLayout ? 'w-42' : 'w-28'" class="grow h-7 shadow-none">
           <InputGroupInput
             :id="durationInputId"
@@ -225,9 +226,9 @@ onUnmounted(() => {
         </InputGroup>
       </div>
       <div class="flex flex-auto gap-2 items-center" :class="isPanelLayout ? 'grow-0 basis-auto' : ''">
-        <span class="text-xs text-muted-foreground shrink-0">
+        <Label :for="easeTriggerId" class="text-xs text-muted-foreground shrink-0">
           {{ $t('edit.visualEditor.params.ease') }}
-        </span>
+        </Label>
         <Select :model-value="easeModelValue" :disabled="props.easeDisabled" @update:model-value="updateEase">
           <SelectTrigger :id="easeTriggerId" :class="isPanelLayout ? 'w-42' : 'w-28'" class="text-xs grow h-7">
             <SelectValue />
@@ -347,6 +348,8 @@ onUnmounted(() => {
                   <Button
                     size="icon"
                     variant="ghost"
+                    :aria-label="getLinkedSliderLabel(item.param)"
+                    :aria-pressed="isLinkedSliderLocked(item.param)"
                     :class="['h-7 w-7', isLinkedSliderLocked(item.param) && 'bg-accent text-accent-foreground hover:bg-accent/80']"
                     @click="toggleLinkedSliderLock(item.param)"
                   >
@@ -412,6 +415,7 @@ onUnmounted(() => {
                   <div class="flex gap-2 items-center">
                     <button
                       type="button"
+                      :aria-label="resolveI18n(item.param.label, t)"
                       class="border border-border rounded-full bg-muted/30 h-7 w-7 relative"
                       @pointerdown="handleDialPointerDown($event, item.param)"
                     >

@@ -12,7 +12,6 @@ const props = defineProps<Props>()
   <Dialog :open="props.animationDialog.isOpen" @update:open="val => { if (!val) props.animationDialog.requestClose() }">
     <DialogScrollContent
       class="grid-rows-[auto_minmax(0,1fr)_auto] max-h-90vh 2xl:(h-180 max-w-240) md:(h-140 max-w-180) xl:(h-150 max-w-200)"
-      @open-auto-focus.prevent
     >
       <DialogHeader>
         <DialogTitle>{{ $t('edit.visualEditor.animation.title') }}</DialogTitle>

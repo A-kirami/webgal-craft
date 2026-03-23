@@ -150,7 +150,17 @@ function handleDurationUpdate(value: string) {
 }
 
 function handleTimelineResizeDuration(payload: AnimationTimelineResizeDurationPayload): void {
+  const frameIndex = payload.id - 1
+  const currentFrame = props.state.frames[frameIndex]
+  if (!currentFrame) {
+    return
+  }
+
   const nextDuration = Math.max(0, Math.round(payload.duration))
+  if (currentFrame.duration === nextDuration) {
+    return
+  }
+
   session.selectedFrameId = payload.id
 
   if (!payload.flush) {
@@ -158,13 +168,7 @@ function handleTimelineResizeDuration(payload: AnimationTimelineResizeDurationPa
     return
   }
 
-  const frameIndex = payload.id - 1
-  const currentDuration = props.state.frames[frameIndex]?.duration
   resetSelectedFrameDurationDraft()
-  if (frameIndex < 0 || currentDuration === nextDuration) {
-    return
-  }
-
   editorStore.applyAnimationFrameUpdate(props.state.path, frameIndex, { duration: nextDuration })
   editorStore.scheduleAutoSaveIfEnabled(props.state.path)
 }
@@ -200,6 +204,15 @@ function isCurrentVisualProjectionActive(): boolean {
     && currentState.path === props.state.path
 }
 
+function isFocusInsideOverlay(): boolean {
+  const element = document.activeElement as HTMLElement | null
+  if (!element) {
+    return false
+  }
+
+  return !!element.closest('[role="dialog"], [role="menu"], [role="listbox"], [data-side][data-state="open"]')
+}
+
 function handleUndo(): void {
   resetSelectedFrameTransformDraft()
   resetSelectedFrameDurationDraft()
@@ -221,7 +234,12 @@ function handleRedo(): void {
 }
 
 useEventListener('keydown', (event: KeyboardEvent) => {
-  if (event.defaultPrevented || !isCurrentVisualProjectionActive() || isEditingText()) {
+  if (
+    event.defaultPrevented
+    || !isCurrentVisualProjectionActive()
+    || isEditingText()
+    || isFocusInsideOverlay()
+  ) {
     return
   }
 

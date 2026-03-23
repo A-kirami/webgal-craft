@@ -64,6 +64,7 @@ function handleDeleteFrame(): void {
     return
   }
 
+  session.resetSelectedFrameDrafts()
   const nextFrames = props.frames
     .filter((_, index) => index !== frameIndex)
     .map(frame => cloneAnimationFrame(frame))
@@ -100,6 +101,12 @@ function handleDurationUpdate(value: string): void {
 }
 
 function handleTimelineResizeDuration(payload: AnimationTimelineResizeDurationPayload): void {
+  const frameIndex = payload.id - 1
+  const currentFrame = props.frames[frameIndex]
+  if (!currentFrame) {
+    return
+  }
+
   const nextDuration = Math.max(0, Math.round(payload.duration))
   session.selectedFrameId = payload.id
 
@@ -109,7 +116,7 @@ function handleTimelineResizeDuration(payload: AnimationTimelineResizeDurationPa
   }
 
   session.resetSelectedFrameDurationDraft()
-  updateFrame(payload.id - 1, { duration: nextDuration })
+  updateFrame(frameIndex, { duration: nextDuration })
 }
 
 function handleEaseUpdate(value: string): void {
