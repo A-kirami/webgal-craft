@@ -1,5 +1,6 @@
 import * as monaco from 'monaco-editor'
 
+import { isTextEditorModelPath } from '~/helper/text-editor-model-uri'
 import { isAnimationDocumentTextValid } from '~/models/animation-document-codec'
 import { useEditorStore } from '~/stores/editor'
 
@@ -118,9 +119,7 @@ export function useTextEditorContentSync(options: UseTextEditorContentSyncOption
       return
     }
 
-    const modelUri = model.uri.toString()
-    const currentUri = monaco.Uri.parse(state.value.path).toString()
-    if (modelUri !== currentUri) {
+    if (!isTextEditorModelPath(model.uri.toString(), state.value.path)) {
       return
     }
 

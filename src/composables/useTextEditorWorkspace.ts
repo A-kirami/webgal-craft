@@ -3,6 +3,7 @@ import * as monaco from 'monaco-editor'
 
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { useTabsWatcher } from '~/composables/useTabsWatcher'
+import { isTextEditorModelPath, resolveTextEditorWorkspacePath } from '~/helper/text-editor-model-uri'
 import { normalizeEditorViewState } from '~/helper/text-editor-view-state'
 import { shouldRestoreTextEditorFocus } from '~/helper/text-editor-workspace-focus'
 import { useEditorViewStateStore } from '~/stores/editor-view-state'
@@ -35,25 +36,6 @@ interface UseTextEditorWorkspaceOptions {
 }
 
 const MAX_CACHED_MODELS = 50
-
-function toTextEditorModelUri(path: string): string {
-  return monaco.Uri.parse(path).toString()
-}
-
-function findTextEditorWorkspacePath(
-  modelUri: string | undefined,
-  candidatePaths: Iterable<string>,
-): string | undefined {
-  if (!modelUri) {
-    return
-  }
-
-  for (const path of candidatePaths) {
-    if (toTextEditorModelUri(path) === modelUri) {
-      return path
-    }
-  }
-}
 
 export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
   const tabsStore = useTabsStore()
@@ -119,22 +101,12 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
   }
 
   function readCurrentEditorPath(): string | undefined {
-    const modelUri = readEditor()?.getModel()?.uri.toString()
-    if (!modelUri) {
-      return
-    }
-
-    const activeTabPath = tabsStore.activeTab?.path
-    if (activeTabPath && toTextEditorModelUri(activeTabPath) === modelUri) {
-      return activeTabPath
-    }
-
-    const trackedPath = findTextEditorWorkspacePath(modelUri, fileStates.keys())
-    if (trackedPath) {
-      return trackedPath
-    }
-
-    return findTextEditorWorkspacePath(modelUri, tabsStore.tabs.map(tab => tab.path))
+    return resolveTextEditorWorkspacePath({
+      activeTabPath: tabsStore.activeTab?.path,
+      modelUri: readEditor()?.getModel()?.uri.toString(),
+      openTabPaths: tabsStore.tabs.map(tab => tab.path),
+      trackedPaths: fileStates.keys(),
+    })
   }
 
   function flushCurrentViewState() {
@@ -200,7 +172,7 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
       return
     }
 
-    if (editor.getModel()?.uri.toString() !== toTextEditorModelUri(path)) {
+    if (!isTextEditorModelPath(editor.getModel()?.uri.toString(), path)) {
       persistViewState(fileStates.get(path)?.viewState)
       return
     }
