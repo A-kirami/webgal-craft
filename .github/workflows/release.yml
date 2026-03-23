@@ -29,7 +29,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
   release:
-    name: ${{ matrix.label }}
+    name: ${{ matrix.platform }}
     needs: changelog
     environment: release
     runs-on: ${{ matrix.os }}
@@ -38,16 +38,20 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            label: linux-amd64
+            platform: linux-x64
+            releaseLabel: linux-64-bit
             target: x86_64-unknown-linux-gnu
           - os: macos-latest
-            label: macos-amd64
+            platform: macos-x64
+            releaseLabel: macos-intel
             target: x86_64-apple-darwin
           - os: macos-latest
-            label: macos-arm64
+            platform: macos-arm64
+            releaseLabel: macos-apple-silicon
             target: aarch64-apple-darwin
           - os: windows-latest
-            label: windows-amd64
+            platform: windows-x64
+            releaseLabel: windows-64-bit
             target: x86_64-pc-windows-msvc
 
     steps:
@@ -79,7 +83,7 @@ jobs:
         run: bun install
 
       - name: Build and create release
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v0.6.2
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -88,4 +92,5 @@ jobs:
           releaseName: WebGAL Craft v__VERSION__
           releaseBody: ${{ needs.changelog.outputs.changelog }}
           releaseDraft: true
+          assetNamePattern: "[name]-v[version]-${{ matrix.releaseLabel }}[setup][ext]"
           args: -t ${{ matrix.target }}

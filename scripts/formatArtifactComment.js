@@ -10,6 +10,24 @@ const platformIcon = {
 }
 
 /**
+ * @param {string} name
+ */
+function getArtifactPlatform(name) {
+  const match = /(?<platform>(?<os>windows|macos|linux)-(?<arch>[a-z0-9]+))(?:-|$)/.exec(name)
+  if (!match?.groups) {
+    return {
+      icon: platformIcon.unknown,
+      label: 'unknown',
+    }
+  }
+
+  return {
+    icon: platformIcon[match.groups.os] || platformIcon.unknown,
+    label: match.groups.platform,
+  }
+}
+
+/**
  * @param {Object} param0
  * @param {number} param0.id
  * @param {string} param0.name
@@ -17,11 +35,10 @@ const platformIcon = {
  * @param {{id:number}} param0.workflow_run
  */
 function createMarkdownTableRow({ id, name, size_in_bytes, workflow_run }) {
-  const platform = name.split('_')[2]
-  const icon = platformIcon[platform.split('-')[0]] || platformIcon.unknown
+  const platform = getArtifactPlatform(name)
   const url = `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${workflow_run.id}/artifacts/${id}`
   const fileSize = Number.parseFloat((size_in_bytes / 1024 ** 2).toFixed(2))
-  return `| ${icon} ${platform} | [${name}](${url}) | ${fileSize} MB |`
+  return `| ${platform.icon} ${platform.label} | [${name}](${url}) | ${fileSize} MB |`
 }
 
 function createMarkdownTableHeader() {

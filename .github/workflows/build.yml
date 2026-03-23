@@ -30,23 +30,23 @@ concurrency:
 
 jobs:
   build:
-    name: ${{ matrix.label }}
+    name: ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
-            label: linux-amd64
+            platform: linux-x64
             target: x86_64-unknown-linux-gnu
           - os: macos-latest
-            label: macos-amd64
+            platform: macos-x64
             target: x86_64-apple-darwin
           - os: macos-latest
-            label: macos-arm64
+            platform: macos-arm64
             target: aarch64-apple-darwin
           - os: windows-latest
-            label: windows-amd64
+            platform: windows-x64
             target: x86_64-pc-windows-msvc
 
     env:
@@ -83,7 +83,7 @@ jobs:
 
       - name: Build app
         id: tauri-build
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v0.6.2
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
@@ -91,8 +91,23 @@ jobs:
           includeRelease: ${{ github.event_name != 'pull_request' }}
           args: -t ${{ matrix.target }} -c '{"bundle":{"createUpdaterArtifacts":false}}'
 
+      - name: Compute artifact name
+        id: artifact-name
+        shell: bash
+        run: |
+          short_sha="${GITHUB_BUILD_SHA:0:7}"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            build_mode="debug"
+            build_suffix="pr-${GITHUB_PR_NUMBER}-${short_sha}"
+          else
+            build_mode="release"
+            build_suffix="commit-${short_sha}"
+          fi
+
+          echo "name=webgal-craft-v${{ steps.tauri-build.outputs.appVersion }}-${{ matrix.platform }}-${build_mode}-${build_suffix}" >> "${GITHUB_OUTPUT}"
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: "webgal-craft_${{steps.tauri-build.outputs.appVersion}}_${{ matrix.label }}"
+          name: ${{ steps.artifact-name.outputs.name }}
           path: "${{ join(fromJSON(steps.tauri-build.outputs.artifactPaths), '\n') }}"
