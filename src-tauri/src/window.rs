@@ -75,7 +75,9 @@ impl WindowConfig {
         builder: WebviewWindowBuilder<'a, R, M>,
     ) -> WebviewWindowBuilder<'a, R, M> {
         #[cfg(target_os = "windows")]
-        let builder = builder.additional_browser_args("--force_high_performance_gpu");
+        let builder = builder.additional_browser_args(
+            "--force_high_performance_gpu --autoplay-policy=no-user-gesture-required",
+        );
 
         #[cfg(not(target_os = "macos"))]
         let builder = if use_custom_title_bar {
