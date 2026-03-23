@@ -184,15 +184,7 @@ watch(() => historyStorageKey, syncRecentHistory, { immediate: true })
 watch(
   () => modelValue,
   (value) => {
-    const normalized = normalizeRelativePath(value)
-    if (value !== normalized) {
-      modelValue = normalized
-      return
-    }
-    const displayValue = isOpen && normalized && normalized === currentDir
-      ? `${normalized}/`
-      : normalized
-    setInputSilently(displayValue)
+    setInputSilently(formatModelValueForInput(value))
   },
   { immediate: true },
 )
@@ -248,6 +240,21 @@ function resolveZoomLevelFromAssetZoom(value: number | undefined): ZoomLevel | u
 
 function normalizeInputPath(path: string): string {
   return path.trim().replaceAll('\\', '/')
+}
+
+function formatModelValueForInput(path: string): string {
+  const normalizedPath = normalizeRelativePath(path)
+  const normalizedInput = normalizeInputPath(path).replace(/^\/+/, '')
+
+  if (isOpen && normalizedPath && normalizedPath === currentDir) {
+    return `${normalizedPath}/`
+  }
+
+  if (normalizedInput.endsWith('/') && normalizedPath) {
+    return `${normalizedPath}/`
+  }
+
+  return normalizedPath
 }
 
 function isAbsoluteInput(path: string): boolean {
