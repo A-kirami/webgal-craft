@@ -36,6 +36,25 @@ interface UseTextEditorWorkspaceOptions {
 
 const MAX_CACHED_MODELS = 50
 
+function toTextEditorModelUri(path: string): string {
+  return monaco.Uri.parse(path).toString()
+}
+
+function findTextEditorWorkspacePath(
+  modelUri: string | undefined,
+  candidatePaths: Iterable<string>,
+): string | undefined {
+  if (!modelUri) {
+    return
+  }
+
+  for (const path of candidatePaths) {
+    if (toTextEditorModelUri(path) === modelUri) {
+      return path
+    }
+  }
+}
+
 export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
   const tabsStore = useTabsStore()
   const viewStateStore = useEditorViewStateStore()
@@ -100,7 +119,22 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
   }
 
   function readCurrentEditorPath(): string | undefined {
-    return readEditor()?.getModel()?.uri.toString()
+    const modelUri = readEditor()?.getModel()?.uri.toString()
+    if (!modelUri) {
+      return
+    }
+
+    const activeTabPath = tabsStore.activeTab?.path
+    if (activeTabPath && toTextEditorModelUri(activeTabPath) === modelUri) {
+      return activeTabPath
+    }
+
+    const trackedPath = findTextEditorWorkspacePath(modelUri, fileStates.keys())
+    if (trackedPath) {
+      return trackedPath
+    }
+
+    return findTextEditorWorkspacePath(modelUri, tabsStore.tabs.map(tab => tab.path))
   }
 
   function flushCurrentViewState() {
@@ -166,7 +200,7 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
       return
     }
 
-    if (editor.getModel()?.uri.toString() !== path) {
+    if (editor.getModel()?.uri.toString() !== toTextEditorModelUri(path)) {
       persistViewState(fileStates.get(path)?.viewState)
       return
     }
