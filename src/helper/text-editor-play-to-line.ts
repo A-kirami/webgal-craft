@@ -71,8 +71,11 @@ function createPlayToLineDecoration(
 
 export function createTextEditorPlayToLineController(options: CreateTextEditorPlayToLineControllerOptions) {
   let decorationIds: string[] = []
+  let decoratedLineNumber: number | undefined
 
   function clearDecorations() {
+    decoratedLineNumber = undefined
+
     if (decorationIds.length === 0) {
       return
     }
@@ -101,6 +104,7 @@ export function createTextEditorPlayToLineController(options: CreateTextEditorPl
     decorationIds = options.editor.deltaDecorations(decorationIds, [
       createPlayToLineDecoration(previewLine.lineNumber, options.getHoverMessage()),
     ])
+    decoratedLineNumber = previewLine.lineNumber
   }
 
   function syncFromEditorPosition() {
@@ -117,6 +121,10 @@ export function createTextEditorPlayToLineController(options: CreateTextEditorPl
     }
 
     if (event.target.type !== options.glyphMarginTargetType || !event.target.position) {
+      return
+    }
+
+    if (event.target.position.lineNumber !== decoratedLineNumber) {
       return
     }
 

@@ -57,6 +57,11 @@ function syncPlayToLineGlyph() {
   playToLineController?.syncFromEditorPosition()
 }
 
+function handleModelContentChange(event: monaco.editor.IModelContentChangedEvent) {
+  runtime.handleContentChange(event)
+  syncPlayToLineGlyph()
+}
+
 function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedEvent) {
   runtime.handleCursorPositionChange(event)
   playToLineController?.syncDecorationsForLine(event.position.lineNumber)
@@ -97,7 +102,7 @@ function createEditor() {
 
   editor.onDidChangeCursorPosition(handleCursorPositionChange)
   editor.onDidChangeCursorSelection(runtime.handleCursorSelectionChange)
-  editor.onDidChangeModelContent(runtime.handleContentChange)
+  editor.onDidChangeModelContent(handleModelContentChange)
   editor.onDidScrollChange(runtime.handleScrollChange)
   editor.onMouseDown(handleEditorMouseDown)
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, runtime.manualSave)
@@ -163,8 +168,6 @@ onUnmounted(() => {
 }
 
 .monaco-editor .glyph-margin-widgets .cgmr.play-to-line-glyph::before {
-  content: "";
-
-  @apply block size-4 flex-none i-lucide-play;
+  @apply content-empty block size-4 flex-none i-lucide-play;
 }
 </style>
