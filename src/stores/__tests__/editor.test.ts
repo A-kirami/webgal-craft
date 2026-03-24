@@ -4,9 +4,11 @@ import { nextTick, reactive, toRaw } from 'vue'
 import { encodeTextFile } from '../../models/file-codec'
 import { useTabsStore } from '../tabs'
 
+type WriteDocumentFile = typeof import('~/services/game-fs').gameFs.writeDocumentFile
+
 const readFileMock = vi.fn(async () => new TextEncoder().encode('hello'))
 const statMock = vi.fn(async () => ({ size: 5 }))
-const writeDocumentFileMock = vi.fn(async () => undefined)
+const writeDocumentFileMock = vi.fn<WriteDocumentFile>(async () => undefined)
 const isBinaryFileMock = vi.fn(async () => false)
 const syncSceneMock = vi.fn(async () => undefined)
 const loggerWarnMock = vi.fn()

@@ -162,7 +162,7 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
     setTabLoading: vi.fn(),
     setTabModified: vi.fn(),
     syncScenePreview: vi.fn(),
-  } satisfies EditorFileLifecycleContext
+  } satisfies Omit<EditorFileLifecycleContext, 'readTextDocumentFile' | 'syncStateFromDocument'>
 
   const context = {
     ...baseContext,
