@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { extractRgbColor, isRgbaPayload, isRgbColor, normalizeColorChannel, parseHexColor } from '~/helper/color'
 
 function createNullValue(): unknown {
-  return JSON.parse('null') as unknown
+  // eslint-disable-next-line unicorn/no-null -- 测试需要显式传入 null
+  return null
 }
 
 describe('normalizeColorChannel', () => {

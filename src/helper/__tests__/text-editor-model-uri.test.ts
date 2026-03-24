@@ -29,12 +29,21 @@ describe('text editor model uri helpers', () => {
     })).toBe(windowsScenePath)
   })
 
-  it('活动标签不匹配时，会先回退到已跟踪文件，再回退到打开标签', () => {
+  it('活动标签不匹配时，会回退到已跟踪文件', () => {
+    expect(resolveTextEditorWorkspacePath({
+      activeTabPath: String.raw`X:\Project\WebGALCraft\game\active.txt`,
+      modelUri: windowsSceneUri,
+      openTabPaths: [String.raw`X:\Project\WebGALCraft\game\other.txt`],
+      trackedPaths: [windowsScenePath],
+    })).toBe(windowsScenePath)
+  })
+
+  it('活动标签和已跟踪文件都不匹配时，会回退到打开标签', () => {
     expect(resolveTextEditorWorkspacePath({
       activeTabPath: String.raw`X:\Project\WebGALCraft\game\active.txt`,
       modelUri: windowsSceneUri,
       openTabPaths: [windowsScenePath],
-      trackedPaths: [windowsScenePath],
+      trackedPaths: [String.raw`X:\Project\WebGALCraft\game\stale.txt`],
     })).toBe(windowsScenePath)
   })
 

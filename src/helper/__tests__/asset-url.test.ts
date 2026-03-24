@@ -15,10 +15,6 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
-vi.mock('../stores/workspace', () => ({
-  useWorkspaceStore: useWorkspaceStoreMock,
-}))
-
 describe('getAssetUrl', () => {
   beforeEach(() => {
     workspaceStoreState.CWD = '/games/demo'

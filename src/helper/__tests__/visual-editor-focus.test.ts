@@ -28,4 +28,15 @@ describe('可视化编辑器焦点', () => {
 
     expect(findSelectedVisualEditorStatementCard(root)).toBe(selectedCard)
   })
+
+  it('没有选中语句卡片时返回 undefined', () => {
+    const root = {
+      querySelector() {
+        // eslint-disable-next-line unicorn/no-null -- querySelector 未命中时按 DOM API 约定返回 null
+        return null
+      },
+    }
+
+    expect(findSelectedVisualEditorStatementCard(root)).toBeUndefined()
+  })
 })

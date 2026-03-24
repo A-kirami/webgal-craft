@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import { createAsyncQueue } from '~/helper/async-queue'
 
+// createAsyncQueue 在 consumer 内部串接的延迟 Promise 需要更多 flushMicrotasks tick 才能推进到下一次消费。
+const EXTRA_FLUSH_ITERATIONS = 8
+
 function flushMicrotasks(times: number = 4): Promise<void> {
   if (times <= 0) {
     return Promise.resolve()
@@ -43,7 +46,7 @@ describe('createAsyncQueue', () => {
     queue.enqueue()
 
     resolver!()
-    await flushMicrotasks(8)
+    await flushMicrotasks(EXTRA_FLUSH_ITERATIONS)
 
     expect(called).toBe(2)
   })
@@ -88,7 +91,7 @@ describe('createAsyncQueue', () => {
     queue.cancel()
 
     resolver!()
-    await flushMicrotasks(8)
+    await flushMicrotasks(EXTRA_FLUSH_ITERATIONS)
 
     // cancel 应阻止后续消费
     expect(called).toBe(1)
@@ -134,7 +137,7 @@ describe('createAsyncQueue', () => {
     queue.enqueue()
 
     resolvers[0]!()
-    await flushMicrotasks(8)
+    await flushMicrotasks(EXTRA_FLUSH_ITERATIONS)
     expect(called).toBe(2)
 
     resolvers[1]!()
@@ -191,7 +194,7 @@ describe('createAsyncQueue', () => {
 
     // 完成第一次消费
     resolvers[0]!()
-    await flushMicrotasks(8)
+    await flushMicrotasks(EXTRA_FLUSH_ITERATIONS)
 
     // flush 应检测到 queued 并继续排空，触发第二次消费
     expect(called).toBe(2)

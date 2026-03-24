@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildSingleStatement } from '~/helper/webgal-script/sentence'
 import {
   computeLineNumberFromStatementId,
   computeStatementIdFromLineNumber,
@@ -11,7 +10,12 @@ import {
 import type { StatementEntry } from '~/helper/webgal-script/sentence'
 
 function createStatement(id: number, rawText: string): StatementEntry {
-  return buildSingleStatement(rawText, id)
+  return {
+    id,
+    rawText,
+    parsed: undefined,
+    parseError: false,
+  }
 }
 
 describe('场景选区', () => {
