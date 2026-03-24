@@ -169,5 +169,6 @@ describe('useStatementAnimationEditorBridge', () => {
       rawText: expect.stringContaining('[{"duration":0,"alpha":0},{"duration":180,"alpha":1}]'),
       source: 'visual',
     }))
+    expect(emitUpdate).toHaveBeenCalledTimes(1)
   })
 })

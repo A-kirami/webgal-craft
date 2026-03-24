@@ -10,7 +10,6 @@ const { createParamDragModule, dragController } = vi.hoisted(() => {
   const dragController = {
     active: false,
     param: undefined as unknown,
-    stop: undefined as undefined | (() => void),
   }
 
   function createParamDragModule() {
@@ -121,7 +120,6 @@ describe('useEffectColorControl', () => {
   beforeEach(() => {
     dragController.active = false
     dragController.param = undefined
-    dragController.stop = undefined
   })
 
   afterEach(() => {
