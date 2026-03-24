@@ -11,7 +11,7 @@
     "preview:web": "vite preview",
     "tauri": "tauri",
     "typecheck": "vue-tsc --noEmit",
-    "test": "vitest run --project unit",
+    "test": "vitest run",
     "test:coverage": "vitest run --project unit --coverage",
     "test:unit": "vitest run --project unit",
     "test:watch": "vitest --project unit",
