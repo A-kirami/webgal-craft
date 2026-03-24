@@ -7,6 +7,11 @@ describe('createArtifactComment', () => {
   const originalRepository = process.env.GITHUB_REPOSITORY
 
   afterEach(() => {
+    if (originalRepository === undefined) {
+      delete process.env.GITHUB_REPOSITORY
+      return
+    }
+
     process.env.GITHUB_REPOSITORY = originalRepository
   })
 
