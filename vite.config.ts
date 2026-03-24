@@ -17,10 +17,10 @@ import MetaLayouts from 'vite-plugin-vue-meta-layouts'
 import VueMacros from 'vue-macros/vite'
 import { VueRouterAutoImports } from 'vue-router/unplugin'
 import VueRouter from 'vue-router/vite'
-
-import type { UserConfig } from 'vite'
+import 'vitest/config'
 
 const host = process.env.TAURI_DEV_HOST
+const isVitest = Boolean(process.env.VITEST)
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -75,8 +75,8 @@ export default defineConfig({
         buildSha: process.env.GITHUB_BUILD_SHA,
       },
     }),
-    TurboConsole(),
-    VueDevTools(),
+    !isVitest && TurboConsole(),
+    !isVitest && VueDevTools(),
   ],
 
   resolve: {
@@ -115,4 +115,33 @@ export default defineConfig({
       ignored: ['**/src-tauri/**'],
     },
   },
-} satisfies UserConfig)
+
+  test: {
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      reportsDirectory: './coverage',
+      exclude: [
+        'src/**/*.d.ts',
+        'src/**/__tests__/**',
+        'src/**/*.spec.ts',
+        'src/auto-imports.d.ts',
+        'src/components.d.ts',
+        'src/route-map.d.ts',
+        'src/locales/**',
+      ],
+    },
+    projects: [
+      {
+        test: {
+          name: 'unit',
+          environment: 'node',
+          include: ['src/**/__tests__/**/*.test.ts'],
+          exclude: ['node_modules', 'dist', 'src-tauri'],
+          setupFiles: ['src/__tests__/setup.ts'],
+        },
+        extends: true,
+      },
+    ],
+  },
+})
