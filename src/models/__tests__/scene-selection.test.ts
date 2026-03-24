@@ -52,7 +52,9 @@ describe('场景选区', () => {
 
     expect(computeLineNumberFromStatementId(statements, 301)).toBe(1)
     expect(computeLineNumberFromStatementId(statements, 302)).toBe(3)
+    expect(computeLineNumberFromStatementId(statements, 999)).toBeUndefined()
     expect(computeStatementIdFromLineNumber(statements, 2)).toBe(301)
     expect(computeStatementIdFromLineNumber(statements, 3)).toBe(302)
+    expect(computeStatementIdFromLineNumber(statements, 999)).toBe(302)
   })
 })

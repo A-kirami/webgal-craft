@@ -8,16 +8,24 @@ import {
 
 const windowsScenePath = String.raw`X:\Project\WebGALCraft\game\scene.txt`
 const windowsSceneUri = 'X:%5CProject%5CWebGALCraft%5Cgame%5Cscene.txt'
+const unixScenePath = '/project/WebGALCraft/game/scene.txt'
+const unixSceneUri = '/project/WebGALCraft/game/scene.txt'
 
 describe('text editor model uri helpers', () => {
-  it('会把 Monaco model uri 还原为工作区文件路径', () => {
+  it('会把 Windows/Unix Monaco model uri 还原为工作区文件路径，并处理边界输入', () => {
     expect(toTextEditorWorkspacePath(windowsSceneUri)).toBe(windowsScenePath)
+    expect(toTextEditorWorkspacePath(unixSceneUri)).toBe(unixScenePath)
     expect(toTextEditorWorkspacePath('/project/a%23b.txt')).toBe('/project/a#b.txt')
+    expect(toTextEditorWorkspacePath(undefined)).toBeUndefined()
+    expect(toTextEditorWorkspacePath('')).toBeUndefined()
+    expect(toTextEditorWorkspacePath('%')).toBe('%')
   })
 
-  it('会按工作区文件路径判断当前 model 是否匹配', () => {
+  it('会按 Windows/Unix 工作区文件路径判断当前 model 是否匹配', () => {
     expect(isTextEditorModelPath(windowsSceneUri, windowsScenePath)).toBe(true)
     expect(isTextEditorModelPath(windowsSceneUri, String.raw`X:\Project\WebGALCraft\game\other.txt`)).toBe(false)
+    expect(isTextEditorModelPath(unixSceneUri, unixScenePath)).toBe(true)
+    expect(isTextEditorModelPath(unixSceneUri, '/project/WebGALCraft/game/other.txt')).toBe(false)
   })
 
   it('优先返回与当前 model uri 对应的活动标签路径', () => {

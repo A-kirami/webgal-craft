@@ -42,4 +42,11 @@ describe('getAssetUrl', () => {
       previewBaseUrl: 'http://127.0.0.1:8899/game/demo/',
     })).toThrow('资源路径不在当前工作区内')
   })
+
+  it('会拒绝仅共享目录前缀但不在工作区内的路径', () => {
+    expect(() => resolveAssetUrl('/games/demo2/assets/bg/intro.png', {
+      cwd: '/games/demo',
+      previewBaseUrl: 'http://127.0.0.1:8899/game/demo/',
+    })).toThrow('资源路径不在当前工作区内')
+  })
 })
