@@ -87,7 +87,7 @@ async function handleDelete(engine: Engine) {
     <!-- 网格视图 -->
     <div v-if="preferenceStore.viewMode === 'grid'" class="gap-4 grid grid-cols-1 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2">
       <ContextMenu v-for="engine in filteredEngines" :key="engine.id">
-        <ContextMenuTrigger>
+        <ContextMenuTrigger as-child>
           <Card
             class="group rounded-lg shadow-sm transition-all duration-300 relative overflow-hidden hover:shadow"
             :class="{ 'cursor-wait': hasEngineProgress(engine) }"

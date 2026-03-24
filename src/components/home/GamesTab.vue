@@ -121,7 +121,7 @@ function createGame() {
   <template v-if="filteredGames.length > 0">
     <div v-if="preferenceStore.viewMode === 'grid'" class="gap-4 grid grid-cols-1 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2">
       <ContextMenu v-for="game in filteredGames" :key="game.id">
-        <ContextMenuTrigger>
+        <ContextMenuTrigger as-child>
           <Card
             class="group rounded-lg cursor-pointer shadow-sm transition-all duration-300 relative overflow-hidden hover:shadow"
             :class="{ 'cursor-wait': hasGameProgress(game) }"
