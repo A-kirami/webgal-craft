@@ -2,7 +2,30 @@ import { vi } from 'vitest'
 
 import type { Mock } from 'vitest'
 
-type AnyMonacoMock = Mock<(...args: unknown[]) => unknown>
+type MonacoEditorCreateOptions = Record<string, unknown>
+
+interface MonacoModelContentChangedEventMock {
+  isFlush: boolean
+}
+
+interface MonacoMouseEventMock {
+  event: {
+    leftButton: boolean
+  }
+  target: {
+    position?: {
+      lineNumber: number
+    } | null
+    type: number
+  }
+}
+
+type MonacoListener<TEvent = unknown> = (event: TEvent) => unknown
+type MonacoListenerMock<TEvent = unknown> = Mock<(listener: MonacoListener<TEvent>) => MonacoDisposableMock>
+type MonacoCommandHandler = () => unknown
+type MonacoCommandMock = Mock<(keybinding: number, handler: MonacoCommandHandler) => unknown>
+type MonacoCreateMock = Mock<(container: HTMLElement, options: MonacoEditorCreateOptions) => MonacoEditorInstanceMock>
+type MonacoUpdateOptionsMock = Mock<(options: MonacoEditorCreateOptions) => void>
 
 interface MonacoDisposableMock {
   dispose: Mock<() => void>
@@ -20,7 +43,7 @@ interface MonacoDomNodeMock {
 }
 
 export interface MonacoEditorInstanceMock {
-  addCommand: AnyMonacoMock
+  addCommand: MonacoCommandMock
   deltaDecorations: Mock<(oldDecorations: string[], newDecorations: unknown[]) => string[]>
   dispose: Mock<() => void>
   getAction: Mock<(actionId: string) => MonacoActionMock | undefined>
@@ -29,18 +52,18 @@ export interface MonacoEditorInstanceMock {
   getPosition: Mock<() => unknown>
   onDidCompositionEnd: Mock<(listener: () => void) => MonacoDisposableMock>
   onDidCompositionStart: Mock<(listener: () => void) => MonacoDisposableMock>
-  onDidChangeCursorPosition: AnyMonacoMock
-  onDidChangeCursorSelection: AnyMonacoMock
-  onDidChangeModelContent: AnyMonacoMock
-  onDidScrollChange: AnyMonacoMock
+  onDidChangeCursorPosition: MonacoListenerMock
+  onDidChangeCursorSelection: MonacoListenerMock
+  onDidChangeModelContent: MonacoListenerMock<MonacoModelContentChangedEventMock>
+  onDidScrollChange: MonacoListenerMock
   onKeyDown: Mock<(listener: () => void) => MonacoDisposableMock>
-  onMouseDown: AnyMonacoMock
+  onMouseDown: MonacoListenerMock<MonacoMouseEventMock>
   trigger: Mock<(source: string, handlerId: string, payload: unknown) => void>
-  updateOptions: AnyMonacoMock
+  updateOptions: MonacoUpdateOptionsMock
 }
 
 export interface MonacoMockState {
-  create: Mock<() => MonacoEditorInstanceMock>
+  create: MonacoCreateMock
   editorInstance: MonacoEditorInstanceMock
   setTheme: Mock<(themeName: string) => void>
 }
@@ -61,8 +84,8 @@ function createDisposable(): MonacoDisposableMock {
   }
 }
 
-function createDisposableListenerMock() {
-  return vi.fn<(listener: () => void) => MonacoDisposableMock>(() => createDisposable())
+function createDisposableListenerMock<TEvent = unknown>() {
+  return vi.fn<(listener: MonacoListener<TEvent>) => MonacoDisposableMock>(() => createDisposable())
 }
 
 function createDomNodeMock(): MonacoDomNodeMock {
@@ -94,7 +117,7 @@ function applyEditorInstanceMockDefaults(editorInstance: MonacoEditorInstanceMoc
 
 function createEditorInstanceMock(): MonacoEditorInstanceMock {
   const editorInstance: MonacoEditorInstanceMock = {
-    addCommand: vi.fn<(...args: unknown[]) => unknown>(),
+    addCommand: vi.fn<(keybinding: number, handler: MonacoCommandHandler) => unknown>(),
     deltaDecorations: vi.fn<(oldDecorations: string[], newDecorations: unknown[]) => string[]>(),
     dispose: vi.fn<() => void>(),
     getAction: vi.fn<(actionId: string) => MonacoActionMock | undefined>(),
@@ -103,14 +126,14 @@ function createEditorInstanceMock(): MonacoEditorInstanceMock {
     getPosition: vi.fn<() => unknown>(),
     onDidCompositionEnd: createDisposableListenerMock(),
     onDidCompositionStart: createDisposableListenerMock(),
-    onDidChangeCursorPosition: vi.fn<(...args: unknown[]) => unknown>(),
-    onDidChangeCursorSelection: vi.fn<(...args: unknown[]) => unknown>(),
-    onDidChangeModelContent: vi.fn<(...args: unknown[]) => unknown>(),
-    onDidScrollChange: vi.fn<(...args: unknown[]) => unknown>(),
+    onDidChangeCursorPosition: createDisposableListenerMock(),
+    onDidChangeCursorSelection: createDisposableListenerMock(),
+    onDidChangeModelContent: createDisposableListenerMock<MonacoModelContentChangedEventMock>(),
+    onDidScrollChange: createDisposableListenerMock(),
     onKeyDown: createDisposableListenerMock(),
-    onMouseDown: vi.fn<(...args: unknown[]) => unknown>(),
+    onMouseDown: createDisposableListenerMock<MonacoMouseEventMock>(),
     trigger: vi.fn<(source: string, handlerId: string, payload: unknown) => void>(),
-    updateOptions: vi.fn<(...args: unknown[]) => unknown>(),
+    updateOptions: vi.fn<(options: MonacoEditorCreateOptions) => void>(),
   }
 
   applyEditorInstanceMockDefaults(editorInstance)
@@ -122,7 +145,9 @@ function createMonacoMockState(): MonacoMockState {
   const editorInstance = createEditorInstanceMock()
 
   return {
-    create: vi.fn<() => MonacoEditorInstanceMock>(() => editorInstance),
+    create: vi.fn<(container: HTMLElement, options: MonacoEditorCreateOptions) => MonacoEditorInstanceMock>(
+      () => editorInstance,
+    ),
     editorInstance,
     setTheme: vi.fn<(themeName: string) => void>(),
   }

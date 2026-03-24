@@ -8,7 +8,7 @@ describe('Monaco mock', () => {
   })
 
   it('提供与历史适配器兼容的 editor 实例契约', async () => {
-    const editor = createMonacoMockModule().editor.create()
+    const editor = createMonacoMockModule().editor.create({} as HTMLElement, {})
     const keydownDisposable = editor.onKeyDown(() => undefined)
     const compositionStartDisposable = editor.onDidCompositionStart(() => undefined)
     const compositionEndDisposable = editor.onDidCompositionEnd(() => undefined)
