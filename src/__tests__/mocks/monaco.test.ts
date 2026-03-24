@@ -7,12 +7,13 @@ describe('Monaco mock', () => {
     resetMonacoMockState()
   })
 
-  it('提供与历史适配器兼容的 editor 实例契约', () => {
+  it('提供与历史适配器兼容的 editor 实例契约', async () => {
     const editor = createMonacoMockModule().editor.create()
     const keydownDisposable = editor.onKeyDown(() => undefined)
     const compositionStartDisposable = editor.onDidCompositionStart(() => undefined)
     const compositionEndDisposable = editor.onDidCompositionEnd(() => undefined)
-    const action = editor.getAction('editor.action.undo')
+    const undoAction = editor.getAction('editor.action.undo')
+    const redoAction = editor.getAction('editor.action.redo')
     const domNode = editor.getDomNode()
 
     expect(keydownDisposable).toEqual(expect.objectContaining({
@@ -24,10 +25,16 @@ describe('Monaco mock', () => {
     expect(compositionEndDisposable).toEqual(expect.objectContaining({
       dispose: expect.any(Function),
     }))
-    expect(action).toBeDefined()
-    expect(action).toEqual(expect.objectContaining({
+    expect(undoAction).toBeDefined()
+    expect(undoAction).toEqual(expect.objectContaining({
       id: 'editor.action.undo',
       label: 'editor.action.undo',
+      run: expect.any(Function),
+    }))
+    expect(redoAction).toBeDefined()
+    expect(redoAction).toEqual(expect.objectContaining({
+      id: 'editor.action.redo',
+      label: 'editor.action.redo',
       run: expect.any(Function),
     }))
     expect(domNode).not.toBeNull()
@@ -39,13 +46,17 @@ describe('Monaco mock', () => {
     expect(() => keydownDisposable.dispose()).not.toThrow()
     expect(() => compositionStartDisposable.dispose()).not.toThrow()
     expect(() => compositionEndDisposable.dispose()).not.toThrow()
+    await expect(undoAction?.run()).resolves.toBeUndefined()
+    await expect(redoAction?.run()).resolves.toBeUndefined()
     if (!domNode) {
       throw new Error('Expected Monaco mock to provide a DOM node')
     }
     expect(() => domNode.addEventListener('beforeinput', vi.fn(), true)).not.toThrow()
     expect(() => domNode.removeEventListener('beforeinput', vi.fn(), true)).not.toThrow()
     expect(() => editor.trigger('keyboard', 'undo', {})).not.toThrow()
+    expect(() => editor.trigger('keyboard', 'redo', {})).not.toThrow()
     expect(editor.trigger).toHaveBeenCalledWith('keyboard', 'undo', {})
+    expect(editor.trigger).toHaveBeenCalledWith('keyboard', 'redo', {})
   })
 
   it('deltaDecorations 会在多次调用之间生成全局递增的 decoration id', () => {
