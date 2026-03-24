@@ -3,6 +3,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseCommandNode, serializeCommandNode } from '~/helper/webgal-script/codec'
 import { updateCommandNodeParam } from '~/helper/webgal-script/update'
+
 import { makeParamDef, mustParse } from './utils'
 
 describe('命令节点参数更新器', () => {

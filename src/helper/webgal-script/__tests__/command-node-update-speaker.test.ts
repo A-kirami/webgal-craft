@@ -3,6 +3,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseCommandNode, SAY_CONTINUATION_RAW, serializeCommandNode } from '~/helper/webgal-script/codec'
 import { updateCommandNodeSpeaker } from '~/helper/webgal-script/update'
+
 import { mustParse } from './utils'
 
 describe('命令节点说话人更新', () => {

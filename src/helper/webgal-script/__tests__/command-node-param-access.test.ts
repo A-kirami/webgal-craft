@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { parseCommandNode } from '~/helper/webgal-script/codec'
 import { hasCommandNodeParam, readCommandNodeParamValue } from '~/helper/webgal-script/params'
+
 import { makeParamDef, mustParse } from './utils'
 
 describe('命令节点参数访问', () => {

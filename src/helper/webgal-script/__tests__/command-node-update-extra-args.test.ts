@@ -5,6 +5,7 @@ import {
   readTypedCommandNodeExtraArgs,
   updateTypedCommandNodeExtraArgs,
 } from '~/helper/webgal-script/update'
+
 import { mustParse } from './utils'
 
 describe('类型化命令节点额外参数更新', () => {

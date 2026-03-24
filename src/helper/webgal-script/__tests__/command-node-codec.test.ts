@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseCommandNode, SAY_CONTINUATION_RAW, serializeCommandNode } from '~/helper/webgal-script/codec'
+
 import { mustParse } from './utils'
 
 import type { CommandNode } from '~/helper/webgal-script/types'
