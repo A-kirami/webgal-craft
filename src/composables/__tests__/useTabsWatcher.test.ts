@@ -18,10 +18,6 @@ vi.mock('~/stores/tabs', () => ({
   useTabsStore: useTabsStoreMock,
 }))
 
-vi.mock('../stores/tabs', () => ({
-  useTabsStore: useTabsStoreMock,
-}))
-
 import { useTabsWatcher } from '~/composables/useTabsWatcher'
 
 describe('useTabsWatcher', () => {

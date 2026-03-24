@@ -15,9 +15,12 @@ const { createParamDragModule, dragController } = vi.hoisted(() => {
 
   function createParamDragModule() {
     return {
-      createParamDrag<P>(callbacks: {
+      createParamDrag<P, S>(callbacks: {
         onStart: (event: PointerEvent, param: P) => unknown
-        onEnd: (event: PointerEvent | undefined, state: { param: P }) => void
+        // useEffectColorControl tests only exercise start/end semantics, so onMove is part of
+        // the mock signature for API parity but is intentionally not simulated here.
+        onMove: (event: PointerEvent, state: S & { param: P }) => unknown
+        onEnd: (event: PointerEvent | undefined, state: S & { param: P }) => void
       }) {
         return {
           drag: {
@@ -25,13 +28,13 @@ const { createParamDragModule, dragController } = vi.hoisted(() => {
               return dragController.active
             },
             get state() {
-              return dragController.active ? { param: dragController.param as P } : undefined
+              return dragController.active ? { param: dragController.param as P } as S & { param: P } : undefined
             },
             stop(event?: PointerEvent) {
               if (!dragController.active) {
                 return
               }
-              callbacks.onEnd(event, { param: dragController.param as P })
+              callbacks.onEnd(event, { param: dragController.param as P } as S & { param: P })
               dragController.active = false
               dragController.param = undefined
             },

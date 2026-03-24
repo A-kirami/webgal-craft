@@ -138,6 +138,7 @@ describe('useStatementAnimationEditorBridge', () => {
     const onApply = capturedOnApply()
     expect(capturedParsed()).toEqual(parsed.value)
     expect(onApply, 'onApply not captured').toBeDefined()
+    const onApplyNonNull = onApply as NonNullable<typeof onApply>
 
     parsed.value = createSentence({
       command: commandType.setTempAnimation,
@@ -148,11 +149,7 @@ describe('useStatementAnimationEditorBridge', () => {
       statementId: 99,
     }
 
-    if (!onApply) {
-      throw new TypeError('onApply not captured')
-    }
-
-    onApply([
+    onApplyNonNull([
       { duration: 0, alpha: 0 },
       { duration: 180, alpha: 1 },
     ])

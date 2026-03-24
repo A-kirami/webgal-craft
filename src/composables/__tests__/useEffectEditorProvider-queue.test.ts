@@ -54,6 +54,13 @@ function flushMicrotasks(times: number = 4): Promise<void> {
   return Promise.resolve().then(() => flushMicrotasks(times - 1))
 }
 
+// Releasing the first auto-apply promise triggers async-queue bookkeeping, the queued rerun,
+// and the second commit path. Six rounds keeps this test aligned with that microtask chain.
+const AUTO_APPLY_REQUEUE_MICROTASKS = 6
+// When auto-apply and preview queues are both resumed, their dequeue + rerun chains interleave,
+// so this test needs two additional microtask turns beyond the auto-apply-only case.
+const AUTO_APPLY_AND_PREVIEW_REQUEUE_MICROTASKS = 8
+
 type RuntimeGlobals = typeof globalThis & {
   $ref?: <T>(value: T) => T
   fieldsToTransform?: typeof fieldsToTransform
@@ -213,7 +220,7 @@ describe('useEffectEditorProvider 队列并发', () => {
     expect(applyCalls.length).toBe(1)
 
     resolvers[0]?.()
-    await flushMicrotasks(6)
+    await flushMicrotasks(AUTO_APPLY_REQUEUE_MICROTASKS)
     expect(applyCalls.map(call => call.duration)).toEqual(['100', '200'])
 
     resolvers[1]?.()
@@ -269,7 +276,7 @@ describe('useEffectEditorProvider 队列并发', () => {
 
     applyResolvers[0]?.()
     previewResolvers[0]?.()
-    await flushMicrotasks(8)
+    await flushMicrotasks(AUTO_APPLY_AND_PREVIEW_REQUEUE_MICROTASKS)
 
     expect(applyCalls.length).toBe(2)
     expect(previewCalls.length).toBe(2)

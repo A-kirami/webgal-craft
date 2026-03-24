@@ -1,29 +1,12 @@
 import '~/__tests__/mocks/modal-store'
 
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { applyEffectEditorResultToSentence } from '~/composables/useStatementEffectEditorBridge'
 import { serializeTransform } from '~/helper/effect-editor-config'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-
-const runtimeGlobals = globalThis as typeof globalThis & {
-  serializeTransform?: typeof serializeTransform
-}
-const originalSerializeTransform = runtimeGlobals.serializeTransform
-
-beforeAll(() => {
-  runtimeGlobals.serializeTransform = serializeTransform
-})
-
-afterAll(() => {
-  if (originalSerializeTransform === undefined) {
-    delete runtimeGlobals.serializeTransform
-    return
-  }
-  runtimeGlobals.serializeTransform = originalSerializeTransform
-})
 
 function createSentence(overrides: Partial<ISentence>): ISentence {
   return {
