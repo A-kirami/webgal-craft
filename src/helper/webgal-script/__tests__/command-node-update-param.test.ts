@@ -2,25 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseCommandNode, serializeCommandNode } from '~/helper/webgal-script/codec'
-import { parseSentence } from '~/helper/webgal-script/parser'
 import { updateCommandNodeParam } from '~/helper/webgal-script/update'
-
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-import type { CommandParamDescriptor } from '~/helper/webgal-script/params'
-
-function mustParse(raw: string): ISentence {
-  const parsed = parseSentence(raw)
-  expect(parsed).toBeDefined()
-  return parsed!
-}
-
-function makeParamDef(key: string, type: string, defaultValue?: string | number | boolean): CommandParamDescriptor {
-  return {
-    key,
-    type,
-    defaultValue,
-  }
-}
+import { makeParamDef, mustParse } from './utils'
 
 describe('命令节点参数更新器', () => {
   it('输入为空时可清除 setTransform duration', () => {
@@ -172,7 +155,7 @@ describe('命令节点参数更新器', () => {
   it('可更新 bgm volume 并保留额外参数', () => {
     const sentence = mustParse('bgm: bgm.ogg -volume=80 -x=1;')
     const node = parseCommandNode(sentence)
-    const updated = updateCommandNodeParam(node, makeParamDef('volume', 'slider', 100), 60)
+    const updated = updateCommandNodeParam(node, makeParamDef('volume', 'number', 100), 60)
     expect(updated).toBeDefined()
 
     const serialized = serializeCommandNode(updated!)

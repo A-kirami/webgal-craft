@@ -2,16 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseCommandNode, SAY_CONTINUATION_RAW, serializeCommandNode } from '~/helper/webgal-script/codec'
-import { parseSentence } from '~/helper/webgal-script/parser'
+import { mustParse } from './utils'
 
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { CommandNode } from '~/helper/webgal-script/types'
-
-function mustParse(raw: string): ISentence {
-  const parsed = parseSentence(raw)
-  expect(parsed).toBeDefined()
-  return parsed!
-}
 
 function roundtripToNode(raw: string): { first: CommandNode, second: CommandNode } {
   const sentence = mustParse(raw)

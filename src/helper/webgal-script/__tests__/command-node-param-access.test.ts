@@ -2,24 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { parseCommandNode } from '~/helper/webgal-script/codec'
 import { hasCommandNodeParam, readCommandNodeParamValue } from '~/helper/webgal-script/params'
-import { parseSentence } from '~/helper/webgal-script/parser'
-
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-import type { CommandParamDescriptor } from '~/helper/webgal-script/params'
-
-function mustParse(raw: string): ISentence {
-  const parsed = parseSentence(raw)
-  expect(parsed).toBeDefined()
-  return parsed!
-}
-
-function makeParamDef(key: string, type: string, defaultValue?: string | boolean | number): CommandParamDescriptor {
-  return {
-    key,
-    type,
-    defaultValue,
-  }
-}
+import { makeParamDef, mustParse } from './utils'
 
 describe('命令节点参数访问', () => {
   it('读取类型化 setTransform 参数', () => {

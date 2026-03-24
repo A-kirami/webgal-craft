@@ -2,16 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseCommandNode, serializeCommandNode } from '~/helper/webgal-script/codec'
-import { parseSentence } from '~/helper/webgal-script/parser'
 import { updateCommandNodeContent } from '~/helper/webgal-script/update'
-
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-
-function mustParse(raw: string): ISentence {
-  const parsed = parseSentence(raw)
-  expect(parsed).toBeDefined()
-  return parsed!
-}
+import { mustParse } from './utils'
 
 describe('命令节点内容更新', () => {
   it('通过解析内容对更新 setVar 节点', () => {

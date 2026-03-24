@@ -2,16 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseCommandNode, serializeCommandNode } from '~/helper/webgal-script/codec'
-import { parseSentence } from '~/helper/webgal-script/parser'
 import { updateCommandNodeInlineComment } from '~/helper/webgal-script/update'
-
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-
-function mustParse(raw: string): ISentence {
-  const parsed = parseSentence(raw)
-  expect(parsed).toBeDefined()
-  return parsed!
-}
+import { mustParse } from './utils'
 
 describe('命令节点行内注释更新', () => {
   it('更新类型化命令的行内注释', () => {

@@ -1,19 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import { parseCommandNode, serializeCommandNode } from '~/helper/webgal-script/codec'
-import { parseSentence } from '~/helper/webgal-script/parser'
 import {
   readTypedCommandNodeExtraArgs,
   updateTypedCommandNodeExtraArgs,
 } from '~/helper/webgal-script/update'
-
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-
-function mustParse(raw: string): ISentence {
-  const parsed = parseSentence(raw)
-  expect(parsed).toBeDefined()
-  return parsed!
-}
+import { mustParse } from './utils'
 
 describe('类型化命令节点额外参数更新', () => {
   it('读取并更新类型化命令的额外参数', () => {
