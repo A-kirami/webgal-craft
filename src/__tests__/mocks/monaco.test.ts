@@ -2,13 +2,48 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createMonacoMockModule, monacoMockState, resetMonacoMockState } from './monaco'
 
+interface MonacoActionStub {
+  id: string
+  label: string
+  run: () => Promise<void>
+}
+
+interface MonacoDomNodeStub {
+  addEventListener: (type: string, listener: unknown, options?: boolean) => void
+  removeEventListener: (type: string, listener: unknown, options?: boolean) => void
+}
+
+interface MonacoEditorStub {
+  getAction: (actionId: string) => MonacoActionStub
+  getDomNode: () => MonacoDomNodeStub
+  onDidCompositionEnd: (listener: () => void) => { dispose: () => void }
+  onDidCompositionStart: (listener: () => void) => { dispose: () => void }
+  onKeyDown: (listener: () => void) => { dispose: () => void }
+  trigger: (source: string, command: string, payload: object) => void
+}
+
+function createMockEditor(): MonacoEditorStub {
+  return (
+    createMonacoMockModule().editor.create as unknown as () => MonacoEditorStub
+  )()
+}
+
+function callDeltaDecorations(previousDecorations: string[], nextDecorations: unknown[]) {
+  return (
+    monacoMockState.editorInstance.deltaDecorations as unknown as ((
+      previousDecorations_: string[],
+      nextDecorations_: unknown[],
+    ) => string[])
+  )(previousDecorations, nextDecorations)
+}
+
 describe('Monaco mock', () => {
   beforeEach(() => {
     resetMonacoMockState()
   })
 
   it('提供与历史适配器兼容的 editor 实例契约', () => {
-    const editor = createMonacoMockModule().editor.create()
+    const editor = createMockEditor()
     const keydownDisposable = editor.onKeyDown(() => undefined)
     const compositionStartDisposable = editor.onDidCompositionStart(() => undefined)
     const compositionEndDisposable = editor.onDidCompositionEnd(() => undefined)
@@ -44,17 +79,17 @@ describe('Monaco mock', () => {
   })
 
   it('deltaDecorations 会在多次调用之间生成全局递增的 decoration id', () => {
-    expect(monacoMockState.editorInstance.deltaDecorations([], [{}, {}])).toEqual([
+    expect(callDeltaDecorations([], [{}, {}])).toEqual([
       'decoration-1',
       'decoration-2',
     ])
-    expect(monacoMockState.editorInstance.deltaDecorations(['decoration-1'], [{}])).toEqual([
+    expect(callDeltaDecorations(['decoration-1'], [{}])).toEqual([
       'decoration-3',
     ])
 
     resetMonacoMockState()
 
-    expect(monacoMockState.editorInstance.deltaDecorations([], [{}])).toEqual([
+    expect(callDeltaDecorations([], [{}])).toEqual([
       'decoration-1',
     ])
   })
