@@ -7,10 +7,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { stringifySetVarContent } from '~/helper/webgal-script/content'
 
-import {
-  createHarness,
-  resetStatementEditorRuntime,
-} from './statement-editor-test-utils'
+import { createHarness, resetStatementEditorRuntime } from './statement-editor-test-utils'
 
 describe('useStatementEditor 内容行为', () => {
   beforeEach(() => {

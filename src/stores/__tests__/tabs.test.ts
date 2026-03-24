@@ -29,14 +29,8 @@ vi.mock('@tauri-apps/api/path', () => ({
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
-vi.mock('../workspace', () => ({
-  useWorkspaceStore: useWorkspaceStoreMock,
-}))
 
 vi.mock('~/stores/edit-settings', () => ({
-  useEditSettingsStore: useEditSettingsStoreMock,
-}))
-vi.mock('../edit-settings', () => ({
   useEditSettingsStore: useEditSettingsStoreMock,
 }))
 
@@ -50,20 +44,12 @@ vi.mock('~/composables/useFileSystemEvents', () => ({
     }),
   }),
 }))
-vi.mock('../../composables/useFileSystemEvents', () => ({
-  useFileSystemEvents: () => ({
-    on: vi.fn((type: string, handler: (event: unknown) => unknown) => {
-      eventHandlers.set(type, handler)
-      return () => {
-        eventHandlers.delete(type)
-      }
-    }),
-  }),
-}))
 
 describe('标签状态仓库', () => {
   beforeEach(() => {
     vi.useRealTimers()
+    useWorkspaceStoreMock.mockReset()
+    useEditSettingsStoreMock.mockReset()
     basenameMock.mockClear()
     eventHandlers.clear()
     workspaceStoreState.currentGame = { id: 'game-1' }

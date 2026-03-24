@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  buildSchemaKeySet,
-  isParamVisibleByArgs,
-  pruneHiddenDependentArgs,
-} from '~/helper/statement-editor/visibility'
+import { buildSchemaKeySet, isParamVisibleByArgs, pruneHiddenDependentArgs } from '~/helper/statement-editor/visibility'
 
 import type { ArgField } from '~/helper/command-registry/schema'
 

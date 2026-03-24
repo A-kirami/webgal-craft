@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('../serializer', () => ({
+vi.mock('~/models/serializer', () => ({
   serializeDocument(model: { kind: string, content?: string, metadata: { lineEnding: '\n' | '\r\n' } }) {
     const content = model.kind === 'plaintext' || model.kind === 'template'
       ? (model.content ?? '')
@@ -11,12 +11,9 @@ vi.mock('../serializer', () => ({
   },
 }))
 
-import { createDocumentModel } from '../document-model'
-import { serializeDocument } from '../serializer'
-import {
-  applyTextContentToDocument,
-  replaceDocumentText,
-} from '../text-projection'
+import { createDocumentModel } from '~/models/document-model'
+import { serializeDocument } from '~/models/serializer'
+import { applyTextContentToDocument, replaceDocumentText } from '~/models/text-projection'
 
 describe('文本投影', () => {
   it('对纯文本文档应用文本补丁后保留原始行尾符', () => {

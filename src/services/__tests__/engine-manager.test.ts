@@ -66,24 +66,7 @@ vi.mock('~/commands/fs', () => ({
   },
 }))
 
-vi.mock('../commands/fs', () => ({
-  fsCmds: {
-    validateDirectoryStructure: validateDirectoryStructureMock,
-    copyDirectoryWithProgress: copyDirectoryWithProgressMock,
-  },
-}))
-
 vi.mock('~/database/db', () => ({
-  db: {
-    engines: {
-      add: dbEnginesAddMock,
-      update: dbEnginesUpdateMock,
-      delete: dbEnginesDeleteMock,
-    },
-  },
-}))
-
-vi.mock('../database/db', () => ({
   db: {
     engines: {
       add: dbEnginesAddMock,
@@ -98,24 +81,11 @@ vi.mock('~/helper/app-paths', () => ({
   engineManifestPath: engineManifestPathMock,
 }))
 
-vi.mock('../helper/app-paths', () => ({
-  engineIconPath: engineIconPathMock,
-  engineManifestPath: engineManifestPathMock,
-}))
-
 vi.mock('~/stores/resource', () => ({
   useResourceStore: useResourceStoreMock,
 }))
 
-vi.mock('../stores/resource', () => ({
-  useResourceStore: useResourceStoreMock,
-}))
-
 vi.mock('~/stores/storage-settings', () => ({
-  useStorageSettingsStore: useStorageSettingsStoreMock,
-}))
-
-vi.mock('../stores/storage-settings', () => ({
   useStorageSettingsStore: useStorageSettingsStoreMock,
 }))
 
@@ -134,6 +104,8 @@ describe('engineManager', () => {
     resourceStoreMock.updateProgress.mockReset()
     resourceStoreMock.finishProgress.mockReset()
     validateDirectoryStructureMock.mockReset()
+    useResourceStoreMock.mockReset()
+    useStorageSettingsStoreMock.mockReset()
     useResourceStoreMock.mockReturnValue(resourceStoreMock)
     useStorageSettingsStoreMock.mockReturnValue(storageSettingsStoreState)
   })

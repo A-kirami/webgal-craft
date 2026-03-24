@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 
 import { useEffectColorControl } from '~/composables/effect-editor/useEffectColorControl'
@@ -55,7 +55,6 @@ const { createParamDragModule, dragController } = vi.hoisted(() => {
 })
 
 vi.mock('~/composables/effect-editor/createParamDrag', createParamDragModule)
-vi.mock('../../effect-editor/createParamDrag', createParamDragModule)
 
 function createDeps(initialFields: Record<string, string> = {}) {
   const fields = reactive({ ...initialFields }) as Record<string, string>
@@ -118,11 +117,6 @@ function createColorField(
 
 describe('useEffectColorControl', () => {
   beforeEach(() => {
-    dragController.active = false
-    dragController.param = undefined
-  })
-
-  afterEach(() => {
     dragController.active = false
     dragController.param = undefined
   })

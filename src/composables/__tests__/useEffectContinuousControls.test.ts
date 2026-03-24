@@ -26,7 +26,6 @@ const preferenceStoreState = reactive({
 })
 
 vi.mock('~/stores/preference', setupPreferenceStoreMock)
-vi.mock('../../stores/preference', setupPreferenceStoreMock)
 
 function createDeps(initialFields: Record<string, string> = {}) {
   const fields = reactive({ ...initialFields }) as Record<string, string>
@@ -81,6 +80,7 @@ function createDialField(overrides: Partial<DialField> = {}): DialField {
 
 describe('useEffectContinuousControls', () => {
   beforeEach(() => {
+    usePreferenceStoreMock.mockReset()
     preferenceStoreState.effectEditorLinkedSliderLocks = {}
     usePreferenceStoreMock.mockReturnValue(preferenceStoreState)
   })

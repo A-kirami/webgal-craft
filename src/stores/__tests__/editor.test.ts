@@ -1,7 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive, toRaw } from 'vue'
 
-import { encodeTextFile } from '../../models/file-codec'
+import { encodeTextFile } from '~/models/file-codec'
+
 import { useTabsStore } from '../tabs'
 
 type WriteDocumentFile = typeof import('~/services/game-fs').gameFs.writeDocumentFile
@@ -63,15 +64,7 @@ vi.mock('~/stores/preference', () => ({
   usePreferenceStore: () => preferenceStoreMock,
 }))
 
-vi.mock('../preference', () => ({
-  usePreferenceStore: () => preferenceStoreMock,
-}))
-
 vi.mock('~/stores/workspace', () => ({
-  useWorkspaceStore: () => workspaceStoreMock,
-}))
-
-vi.mock('../workspace', () => ({
   useWorkspaceStore: () => workspaceStoreMock,
 }))
 
@@ -86,32 +79,11 @@ vi.mock('~/composables/useFileSystemEvents', () => ({
   }),
 }))
 
-vi.mock('../../composables/useFileSystemEvents', () => ({
-  useFileSystemEvents: () => ({
-    on: vi.fn((event: string, handler: (payload: unknown) => unknown) => {
-      fileSystemEventHandlers.set(event, handler)
-      return () => {
-        fileSystemEventHandlers.delete(event)
-      }
-    }),
-  }),
-}))
-
 vi.mock('~/composables/useTabsWatcher', () => ({
   useTabsWatcher: vi.fn((_onTabClosed: (path: string) => void) => undefined),
 }))
 
-vi.mock('../../composables/useTabsWatcher', () => ({
-  useTabsWatcher: vi.fn((_onTabClosed: (path: string) => void) => undefined),
-}))
-
 vi.mock('~/services/game-fs', () => ({
-  gameFs: {
-    writeDocumentFile: writeDocumentFileMock,
-  },
-}))
-
-vi.mock('../../services/game-fs', () => ({
   gameFs: {
     writeDocumentFile: writeDocumentFileMock,
   },
@@ -123,19 +95,7 @@ vi.mock('~/stores/modal', () => ({
   }),
 }))
 
-vi.mock('../modal', () => ({
-  useModalStore: () => ({
-    open: modalOpenMock,
-  }),
-}))
-
 vi.mock('~/services/debug-commander', () => ({
-  debugCommander: {
-    syncScene: syncSceneMock,
-  },
-}))
-
-vi.mock('../../services/debug-commander', () => ({
   debugCommander: {
     syncScene: syncSceneMock,
   },
@@ -145,17 +105,7 @@ vi.mock('~/helper/app-paths', () => ({
   gameAssetDir: async (cwd: string, assetType: string) => `${cwd}/${assetType}`,
 }))
 
-vi.mock('../../helper/app-paths', () => ({
-  gameAssetDir: async (cwd: string, assetType: string) => `${cwd}/${assetType}`,
-}))
-
 vi.mock('~/commands/fs', () => ({
-  fsCmds: {
-    isBinaryFile: isBinaryFileMock,
-  },
-}))
-
-vi.mock('../../commands/fs', () => ({
   fsCmds: {
     isBinaryFile: isBinaryFileMock,
   },
@@ -167,17 +117,7 @@ vi.mock('~/plugins/mime', () => ({
   },
 }))
 
-vi.mock('../../plugins/mime', () => ({
-  mime: {
-    getType: mimeGetTypeMock,
-  },
-}))
-
 vi.mock('~/utils/error-handler', () => ({
-  handleError: vi.fn(),
-}))
-
-vi.mock('../../utils/error-handler', () => ({
   handleError: vi.fn(),
 }))
 

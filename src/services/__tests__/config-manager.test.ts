@@ -19,20 +19,7 @@ vi.mock('~/commands/game', () => ({
   },
 }))
 
-vi.mock('../commands/game', () => ({
-  gameCmds: {
-    getGameConfig: getGameConfigMock,
-    setGameConfig: setGameConfigMock,
-  },
-}))
-
 vi.mock('~/services/game-manager', () => ({
-  gameManager: {
-    updateCurrentGameLastModified: updateCurrentGameLastModifiedMock,
-  },
-}))
-
-vi.mock('./game-manager', () => ({
   gameManager: {
     updateCurrentGameLastModified: updateCurrentGameLastModifiedMock,
   },
