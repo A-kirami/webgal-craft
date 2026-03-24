@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  removeArg,
-  setOrRemoveArg,
-  upsertArg,
-} from '~/helper/webgal-script/arg-utils'
+import { removeArg, setOrRemoveArg, upsertArg } from '~/helper/webgal-script/arg-utils'
 
 import type { arg } from 'webgal-parser/src/interface/sceneInterface'
 

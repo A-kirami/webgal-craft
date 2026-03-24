@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import {
@@ -46,13 +46,25 @@ function pickComparableSentenceFields(sentence: NonNullable<ReturnType<typeof pa
   }
 }
 
+const roundtripLoggerTarget = globalThis as { logger?: { error: (message: string) => void } }
+const originalLogger = roundtripLoggerTarget.logger
+
 beforeAll(() => {
-  ;(globalThis as { logger?: { error: (message: string) => void } }).logger = {
+  roundtripLoggerTarget.logger = {
     // 测试环境只需要吞掉日志，避免未注入 logger 时抛错
     error: () => {
       void 0
     },
   }
+})
+
+afterAll(() => {
+  if (originalLogger === undefined) {
+    delete roundtripLoggerTarget.logger
+    return
+  }
+
+  roundtripLoggerTarget.logger = originalLogger
 })
 
 describe('WebGAL 脚本语句往返测试', () => {

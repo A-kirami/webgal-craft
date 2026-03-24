@@ -35,24 +35,7 @@ vi.mock('~/services/game-manager', () => ({
   },
 }))
 
-vi.mock('./game-manager', () => ({
-  gameManager: {
-    updateCurrentGameLastModified: updateCurrentGameLastModifiedMock,
-  },
-}))
-
 vi.mock('~/commands/fs', () => ({
-  fsCmds: {
-    renameFile: renameFileMock,
-    deleteFile: deleteFileMock,
-    createFile: createFileMock,
-    createFolder: createFolderMock,
-    copyFile: copyFileMock,
-    moveFile: moveFileMock,
-  },
-}))
-
-vi.mock('../commands/fs', () => ({
   fsCmds: {
     renameFile: renameFileMock,
     deleteFile: deleteFileMock,

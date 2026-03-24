@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  decodeTextFile,
-  encodeTextFile,
-} from '../file-codec'
+import { decodeTextFile, encodeTextFile } from '../file-codec'
 
 describe('文件编解码', () => {
   it('解码与编码时保留 UTF-8 BOM 元数据', () => {

@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  registerDynamicOptions,
-  resolveDynamicOptions,
-} from '~/helper/dynamic-options'
+import { registerDynamicOptions, resolveDynamicOptions } from '~/helper/dynamic-options'
 
 describe('动态选项注册表', () => {
   it('注册后可通过类型化键解析', () => {

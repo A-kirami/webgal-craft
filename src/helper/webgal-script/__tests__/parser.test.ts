@@ -1,18 +1,26 @@
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import {
-  parseScene,
-  parseSceneOrEmpty,
-  parseSentence,
-} from '~/helper/webgal-script/parser'
+import { parseScene, parseSceneOrEmpty, parseSentence } from '~/helper/webgal-script/parser'
+
+const parserLoggerTarget = globalThis as { logger?: { error: (message: string) => void } }
+const originalLogger = parserLoggerTarget.logger
 
 beforeAll(() => {
-  ;(globalThis as { logger?: { error: (message: string) => void } }).logger = {
+  parserLoggerTarget.logger = {
     error: () => {
       void 0
     },
   }
+})
+
+afterAll(() => {
+  if (originalLogger === undefined) {
+    delete parserLoggerTarget.logger
+    return
+  }
+
+  parserLoggerTarget.logger = originalLogger
 })
 
 describe('WebGAL 解析辅助函数', () => {

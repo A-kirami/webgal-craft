@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  normalizeRelativePath,
-  toComparablePath,
-} from '~/utils/path'
+import { normalizeRelativePath, toComparablePath } from '~/utils/path'
 
 describe('路径工具', () => {
   it('toComparablePath 会统一分隔符、去掉末尾斜杠并转成小写', () => {

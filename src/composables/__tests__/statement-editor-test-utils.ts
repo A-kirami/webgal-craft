@@ -45,27 +45,12 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
-vi.mock('../../stores/workspace', () => ({
-  useWorkspaceStore: useWorkspaceStoreMock,
-}))
-
 vi.mock('~/helper/app-paths', () => ({
   gameAssetDir: gameAssetDirMock,
   gameSceneDir: gameSceneDirMock,
 }))
 
-vi.mock('../../helper/app-paths', () => ({
-  gameAssetDir: gameAssetDirMock,
-  gameSceneDir: gameSceneDirMock,
-}))
-
 vi.mock('~/composables/useFileSystemEvents', () => ({
-  useFileSystemEvents: () => ({
-    on: fileSystemEventsOnMock,
-  }),
-}))
-
-vi.mock('../useFileSystemEvents', () => ({
   useFileSystemEvents: () => ({
     on: fileSystemEventsOnMock,
   }),

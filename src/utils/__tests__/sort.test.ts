@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  compareOptionalNumber,
-  createItemComparator,
-  isValidPositiveNumber,
-  normalizeNumber,
-} from '~/utils/sort'
+import { compareOptionalNumber, createItemComparator, isValidPositiveNumber, normalizeNumber } from '~/utils/sort'
 
 import type { SortableItemAccessor } from '~/utils/sort'
 

@@ -3,11 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { createDocumentModel } from '~/models/document-model'
 import { serializeDocument } from '~/models/serializer'
 
-import {
-  createDocumentState,
-  getDocumentTextContent,
-  invalidateDocumentTextCache,
-} from '../editor-document-state'
+import { createDocumentState, getDocumentTextContent, invalidateDocumentTextCache } from '../editor-document-state'
 
 describe('getDocumentTextContent', () => {
   it('首次调用时序列化并写入缓存', () => {

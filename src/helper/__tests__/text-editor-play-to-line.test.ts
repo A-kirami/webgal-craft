@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import {
-  createTextEditorPlayToLineController,
-} from '~/helper/text-editor-play-to-line'
+import { createTextEditorPlayToLineController } from '~/helper/text-editor-play-to-line'
 
 interface EditorModelMock {
   getLineContent: (lineNumber: number) => string

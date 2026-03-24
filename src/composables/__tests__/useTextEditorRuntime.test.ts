@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import {
-  applySceneCursorTarget,
-  prepareSceneCursorTarget,
-} from '~/helper/text-editor-scene-restore'
+import { applySceneCursorTarget, prepareSceneCursorTarget } from '~/helper/text-editor-scene-restore'
 
 describe('applySceneCursorTarget', () => {
   it('会用仅在视口外才滚动的策略恢复文本光标目标，而不是强制居中', () => {

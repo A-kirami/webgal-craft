@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
   installTextEditorHistoryAdapter,
@@ -142,10 +142,6 @@ function createFakeEditor() {
 }
 
 describe('文本编辑器历史适配器', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks()
-  })
-
   it('识别历史快捷键与普通输入捕获条件', () => {
     expect(shouldCaptureBeforeContentChangeKeydown(
       createMonacoKeydownEvent(0, { key: 'a' }),

@@ -30,16 +30,7 @@ vi.mock('~/composables/useDatabase', () => ({
   useEngines: useEnginesMock,
 }))
 
-vi.mock('../../composables/useDatabase', () => ({
-  useGames: useGamesMock,
-  useEngines: useEnginesMock,
-}))
-
 vi.mock('~/stores/workspace', () => ({
-  useWorkspaceStore: useWorkspaceStoreMock,
-}))
-
-vi.mock('../workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
@@ -74,6 +65,9 @@ function createEngine(id: string, name: string, createdAt: number): Engine {
 
 describe('资源状态仓库', () => {
   beforeEach(() => {
+    useWorkspaceStoreMock.mockReset()
+    useGamesMock.mockReset()
+    useEnginesMock.mockReset()
     workspaceStoreState.searchQuery = ''
     gamesRef.value = undefined
     enginesRef.value = undefined

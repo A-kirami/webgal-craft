@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  createPreviewMediaSession,
-  normalizePreviewMediaSessionPatch,
-} from '../preview-media-session'
+import { createPreviewMediaSession, normalizePreviewMediaSessionPatch } from '../preview-media-session'
 
 describe('预览媒体会话', () => {
   it('创建默认的媒体预览会话状态', () => {

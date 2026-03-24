@@ -69,13 +69,6 @@ vi.mock('~/commands/fs', () => ({
   },
 }))
 
-vi.mock('../commands/fs', () => ({
-  fsCmds: {
-    validateDirectoryStructure: validateDirectoryStructureMock,
-    copyDirectoryWithProgress: copyDirectoryWithProgressMock,
-  },
-}))
-
 vi.mock('~/commands/game', () => ({
   gameCmds: {
     getGameConfig: gameCmdsGetGameConfigMock,
@@ -83,21 +76,7 @@ vi.mock('~/commands/game', () => ({
   },
 }))
 
-vi.mock('../commands/game', () => ({
-  gameCmds: {
-    getGameConfig: gameCmdsGetGameConfigMock,
-    setGameConfig: gameCmdsSetGameConfigMock,
-  },
-}))
-
 vi.mock('~/commands/server', () => ({
-  serverCmds: {
-    addStaticSite: serverAddStaticSiteMock,
-    removeStaticSite: serverRemoveStaticSiteMock,
-  },
-}))
-
-vi.mock('../commands/server', () => ({
   serverCmds: {
     addStaticSite: serverAddStaticSiteMock,
     removeStaticSite: serverRemoveStaticSiteMock,
@@ -115,23 +94,7 @@ vi.mock('~/database/db', () => ({
   },
 }))
 
-vi.mock('../database/db', () => ({
-  db: {
-    games: {
-      add: dbGamesAddMock,
-      update: dbGamesUpdateMock,
-      delete: dbGamesDeleteMock,
-      get: dbGamesGetMock,
-    },
-  },
-}))
-
 vi.mock('~/helper/app-paths', () => ({
-  gameIconPath: gameIconPathMock,
-  gameCoverPath: gameCoverPathMock,
-}))
-
-vi.mock('../helper/app-paths', () => ({
   gameIconPath: gameIconPathMock,
   gameCoverPath: gameCoverPathMock,
 }))
@@ -140,15 +103,7 @@ vi.mock('~/stores/resource', () => ({
   useResourceStore: useResourceStoreMock,
 }))
 
-vi.mock('../stores/resource', () => ({
-  useResourceStore: useResourceStoreMock,
-}))
-
 vi.mock('~/stores/workspace', () => ({
-  useWorkspaceStore: useWorkspaceStoreMock,
-}))
-
-vi.mock('../stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
@@ -171,6 +126,8 @@ describe('gameManager', () => {
     resourceStoreMock.finishProgress.mockReset()
     serverAddStaticSiteMock.mockReset()
     serverRemoveStaticSiteMock.mockReset()
+    useResourceStoreMock.mockReset()
+    useWorkspaceStoreMock.mockReset()
     validateDirectoryStructureMock.mockReset()
     useResourceStoreMock.mockReturnValue(resourceStoreMock)
     useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)

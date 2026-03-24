@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { parseCommandNode, serializeCommandNode } from '~/helper/webgal-script/codec'
-import {
-  readTypedCommandNodeExtraArgs,
-  updateTypedCommandNodeExtraArgs,
-} from '~/helper/webgal-script/update'
+import { readTypedCommandNodeExtraArgs, updateTypedCommandNodeExtraArgs } from '~/helper/webgal-script/update'
 
 import { mustParse } from './utils'
 

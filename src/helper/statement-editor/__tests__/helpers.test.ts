@@ -2,10 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { CUSTOM_CONTENT, UNSPECIFIED } from '~/helper/command-registry/schema'
-import {
-  readJsonFieldValue,
-  writeJsonFieldValue,
-} from '~/helper/statement-editor/json-fields'
+import { readJsonFieldValue, writeJsonFieldValue } from '~/helper/statement-editor/json-fields'
 import {
   getParamValueFromArgs,
   hasParamExplicitValue,
