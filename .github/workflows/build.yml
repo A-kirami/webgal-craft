@@ -5,22 +5,28 @@ on:
     branches: [main]
     paths:
       - "src/**"
+      - "!src/**/__tests__/**"
+      - "!src/**/*.test.ts"
+      - "!src/**/*.spec.ts"
       - "src-tauri/**"
       - "package.json"
       - "bun.lock"
       - "vite.config.ts"
       - "unocss.config.ts"
-      - "tsconfig.json"
+      - "tsconfig*.json"
       - ".github/workflows/build.yml"
   pull_request:
     paths:
       - "src/**"
+      - "!src/**/__tests__/**"
+      - "!src/**/*.test.ts"
+      - "!src/**/*.spec.ts"
       - "src-tauri/**"
       - "package.json"
       - "bun.lock"
       - "vite.config.ts"
       - "unocss.config.ts"
-      - "tsconfig.json"
+      - "tsconfig*.json"
       - ".github/workflows/build.yml"
   workflow_dispatch:
 
@@ -32,6 +38,8 @@ jobs:
   build:
     name: ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:

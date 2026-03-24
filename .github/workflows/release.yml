@@ -33,6 +33,8 @@ jobs:
     needs: changelog
     environment: release
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:

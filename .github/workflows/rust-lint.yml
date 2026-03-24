@@ -17,10 +17,10 @@ concurrency:
 
 jobs:
   rust-lint:
-    permissions:
-      contents: read
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:

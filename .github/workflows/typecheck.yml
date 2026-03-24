@@ -1,4 +1,4 @@
-name: Lint
+name: Typecheck
 
 on:
   push:
@@ -7,38 +7,33 @@ on:
       - "src/**"
       - "package.json"
       - "bun.lock"
+      - "vite.config.ts"
+      - "unocss.config.ts"
       - "eslint.config.js"
       - "stylelint.config.js"
-      - ".github/workflows/lint.yml"
+      - "tsconfig*.json"
+      - ".github/workflows/typecheck.yml"
   pull_request:
     paths:
       - "src/**"
       - "package.json"
       - "bun.lock"
+      - "vite.config.ts"
+      - "unocss.config.ts"
       - "eslint.config.js"
       - "stylelint.config.js"
-      - ".github/workflows/lint.yml"
+      - "tsconfig*.json"
+      - ".github/workflows/typecheck.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: ${{ matrix.name }}
+  typecheck:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: js
-            command: bun lint:js
-          - name: style
-            command: bun lint:style
-          - name: i18n
-            command: bun lint:i18n
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -51,5 +46,5 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Run lint checks
-        run: ${{ matrix.command }}
+      - name: Run frontend typecheck
+        run: bun typecheck

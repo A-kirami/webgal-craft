@@ -17,12 +17,12 @@ concurrency:
 
 jobs:
   code-suggestions:
+    name: suggest
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       checks: write
       pull-requests: write
-    name: suggest
-    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
