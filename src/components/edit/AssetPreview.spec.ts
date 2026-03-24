@@ -99,6 +99,7 @@ describe('AssetPreview', () => {
       volume: 0.4,
       muted: true,
     })
+    expect(updatePreviewMediaSessionMock).toHaveBeenCalledTimes(1)
 
     await result.unmount()
   })

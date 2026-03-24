@@ -260,6 +260,6 @@ describe('CreateGameModal', () => {
 
     expect(createGameMock).toHaveBeenCalledWith('Demo', '/games/Demo', '/engines/default')
     expect(updateOpen).toHaveBeenCalledWith(false)
-    expect(onSuccess).toHaveBeenCalledWith('game-1')
+    await expect.poll(() => onSuccess.mock.calls[0]?.[0]).toBe('game-1')
   })
 })

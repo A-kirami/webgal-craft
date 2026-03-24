@@ -28,7 +28,7 @@ describe('SaveChangesModal', () => {
     await page.getByRole('button', { name: 'Save now' }).click()
 
     expect(onSave).toHaveBeenCalledTimes(1)
-    expect(updateOpen).toHaveBeenCalledWith(false)
+    await expect.poll(() => updateOpen.mock.calls.some(([open]) => open === false)).toBe(true)
   })
 
   it('点击不保存会执行 onDontSave 并关闭模态框', async () => {
@@ -52,6 +52,6 @@ describe('SaveChangesModal', () => {
     await page.getByRole('button', { name: 'Skip save' }).click()
 
     expect(onDontSave).toHaveBeenCalledTimes(1)
-    expect(updateOpen).toHaveBeenCalledWith(false)
+    await expect.poll(() => updateOpen.mock.calls.some(([open]) => open === false)).toBe(true)
   })
 })

@@ -27,7 +27,7 @@ describe('ExternalDocumentChangeModal', () => {
     await page.getByRole('button', { name: 'modals.externalDocumentChange.merge' }).click()
 
     expect(onMerge).toHaveBeenCalledTimes(1)
-    expect(updateOpen).toHaveBeenCalledWith(false)
+    await expect.poll(() => updateOpen.mock.calls.some(([open]) => open === false)).toBe(true)
   })
 
   it('点击 keep local 会执行 onKeepLocal 并关闭模态框', async () => {
@@ -50,6 +50,6 @@ describe('ExternalDocumentChangeModal', () => {
     await page.getByRole('button', { name: 'modals.externalDocumentChange.keepLocal' }).click()
 
     expect(onKeepLocal).toHaveBeenCalledTimes(1)
-    expect(updateOpen).toHaveBeenCalledWith(false)
+    await expect.poll(() => updateOpen.mock.calls.some(([open]) => open === false)).toBe(true)
   })
 })

@@ -161,9 +161,8 @@ describe('PreviewPanel', () => {
       },
     })
 
-    const buttons = page.getByRole('button')
-    await buttons.nth(0).click()
-    await buttons.nth(2).click()
+    await page.getByRole('button', { name: 'edit.previewPanel.copyUrl' }).click()
+    await page.getByRole('button', { name: 'edit.previewPanel.openInBrowser' }).click()
 
     expect(copyMock).toHaveBeenCalledTimes(1)
     expect(notifySuccessMock).toHaveBeenCalledWith('edit.previewPanel.copyUrlSuccess')
@@ -178,7 +177,7 @@ describe('PreviewPanel', () => {
       },
     })
 
-    await page.getByRole('button').nth(1).click()
+    await page.getByRole('button', { name: 'edit.previewPanel.refreshPreview' }).click()
 
     expect(getGameConfigMock).toHaveBeenCalledTimes(2)
   })

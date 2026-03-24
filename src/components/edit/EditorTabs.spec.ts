@@ -84,7 +84,7 @@ describe('EditorTabs', () => {
   })
 
   it('中键关闭已修改标签时会先打开保存确认模态框', async () => {
-    useTabsStoreMock.mockReturnValue(createTabsStore([
+    const tabsStore = createTabsStore([
       {
         activeAt: 1,
         isModified: true,
@@ -92,7 +92,8 @@ describe('EditorTabs', () => {
         name: 'demo.txt',
         path: '/project/demo.txt',
       },
-    ]))
+    ])
+    useTabsStoreMock.mockReturnValue(tabsStore)
 
     render(EditorTabs, {
       global: {
@@ -102,6 +103,7 @@ describe('EditorTabs', () => {
 
     await page.getByText('demo.txt').click({ button: 'middle' })
 
+    expect(tabsStore.closeTab).not.toHaveBeenCalled()
     expect(modalOpenMock).toHaveBeenCalledWith('SaveChangesModal', expect.objectContaining({
       onDontSave: expect.any(Function),
       onSave: expect.any(Function),

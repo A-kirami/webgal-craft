@@ -57,7 +57,7 @@ describe('EditorToolbar', () => {
       },
     })
 
-    await page.getByRole('button').nth(0).click()
+    await page.getByRole('button', { name: 'edit.editorMode.textMode' }).click()
 
     expect(editorStore.switchEditorMode).toHaveBeenCalledWith('text')
   })
@@ -86,7 +86,7 @@ describe('EditorToolbar', () => {
       },
     })
 
-    await page.getByRole('button').nth(1).click()
+    await page.getByRole('button', { name: 'edit.editorMode.toggleSidebar' }).click()
 
     expect(preferenceStore.showSidebar).toBe(true)
   })
@@ -115,7 +115,7 @@ describe('EditorToolbar', () => {
       },
     })
 
-    await page.getByRole('button').nth(0).click()
+    await page.getByRole('button', { name: 'edit.editorMode.visualMode' }).click()
 
     expect(editorStore.switchEditorMode).toHaveBeenCalledWith('visual')
   })

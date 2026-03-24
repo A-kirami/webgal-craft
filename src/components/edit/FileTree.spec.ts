@@ -336,14 +336,20 @@ describe('FileTree', () => {
     })
 
     const treeItem = document.querySelector('[role="treeitem"]') as HTMLElement | null
-    treeItem?.dispatchEvent(new KeyboardEvent('keydown', {
+    if (!treeItem) {
+      throw new Error('Expected a tree item to start renaming')
+    }
+    treeItem.dispatchEvent(new KeyboardEvent('keydown', {
       bubbles: true,
       key: 'F2',
     }))
 
     await page.getByRole('textbox').fill('renamed.txt')
-    const textbox = document.querySelector('input') as HTMLInputElement | null
-    textbox?.dispatchEvent(new KeyboardEvent('keydown', {
+    const textbox = treeItem.querySelector('[data-renaming-input]') as HTMLInputElement | null
+    if (!textbox) {
+      throw new Error('Expected a rename input after pressing F2')
+    }
+    textbox.dispatchEvent(new KeyboardEvent('keydown', {
       bubbles: true,
       key: 'Enter',
     }))

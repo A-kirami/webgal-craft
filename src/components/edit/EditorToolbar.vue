@@ -7,11 +7,14 @@ import { usePreferenceStore } from '~/stores/preference'
 
 const preferenceStore = usePreferenceStore()
 const editorStore = useEditorStore()
+const { t } = useI18n()
 
 const isVisualMode = $computed(() => preferenceStore.editorMode === 'visual')
 const canToggleMode = $computed(() => editorStore.canToggleMode)
 
 const canToggleSidebar = $computed(() => editorStore.isCurrentSceneFile)
+const modeToggleLabel = $computed(() => isVisualMode ? t('edit.editorMode.textMode') : t('edit.editorMode.visualMode'))
+const sidebarToggleLabel = $computed(() => t('edit.editorMode.toggleSidebar'))
 
 function handleModeToggle() {
   if (!canToggleMode || !editorStore.currentState) {
@@ -33,6 +36,7 @@ function handleSidebarToggle() {
         <TooltipTrigger as-child>
           <button
             :class="toggleVariants({ size: 'sm' })"
+            :aria-label="modeToggleLabel"
             :data-state="isVisualMode ? 'on' : 'off'"
             :disabled="!canToggleMode"
             class="data-[state=on]:bg-transparent disabled:opacity-40 disabled:pointer-events-none"
@@ -43,7 +47,7 @@ function handleSidebarToggle() {
           </button>
         </TooltipTrigger>
         <TooltipContent>
-          {{ isVisualMode ? $t('edit.editorMode.textMode') : $t('edit.editorMode.visualMode') }}
+          {{ modeToggleLabel }}
         </TooltipContent>
       </Tooltip>
 
@@ -51,6 +55,7 @@ function handleSidebarToggle() {
         <TooltipTrigger as-child>
           <button
             :class="toggleVariants({ size: 'sm' })"
+            :aria-label="sidebarToggleLabel"
             :data-state="preferenceStore.showSidebar ? 'on' : 'off'"
             :disabled="!canToggleSidebar"
             class="disabled:opacity-40 disabled:pointer-events-none"
@@ -60,7 +65,7 @@ function handleSidebarToggle() {
           </button>
         </TooltipTrigger>
         <TooltipContent>
-          {{ $t('edit.editorMode.toggleSidebar') }}
+          {{ sidebarToggleLabel }}
         </TooltipContent>
       </Tooltip>
     </div>

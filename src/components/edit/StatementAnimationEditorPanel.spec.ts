@@ -158,10 +158,8 @@ describe('StatementAnimationEditorPanel', () => {
     })
 
     await expect.element(page.getByRole('button', { name: 'edit.visualEditor.animation.toolbar.addFrame' })).toBeInTheDocument()
-    const textContent = document.body.textContent ?? ''
-
-    expect(textContent).not.toContain('edit.visualEditor.animation.toolbar.undo')
-    expect(textContent).not.toContain('edit.visualEditor.animation.toolbar.redo')
+    await expect.element(page.getByRole('button', { name: 'edit.visualEditor.animation.toolbar.undo' })).not.toBeInTheDocument()
+    await expect.element(page.getByRole('button', { name: 'edit.visualEditor.animation.toolbar.redo' })).not.toBeInTheDocument()
   })
 
   it('删除当前帧前会先清空草稿，避免旧草稿挂到重排后的帧上', async () => {
