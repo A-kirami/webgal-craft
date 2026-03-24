@@ -2,7 +2,7 @@ import '~/__tests__/mocks/modal-store'
 
 /* eslint-disable vue/one-component-per-file */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createRenderer, defineComponent, h, provide, ref } from 'vue'
+import { defineComponent, h, provide, ref } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import {
@@ -11,6 +11,9 @@ import {
   useStatementAnimationEditorBridge,
 } from '~/composables/useStatementAnimationEditorBridge'
 
+import { createTestRenderer } from './utils/createTestRenderer'
+
+import type { TestNode } from './utils/createTestRenderer'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { StatementUpdatePayload } from '~/composables/useStatementEditor'
 import type { AnimationFrame } from '~/types/stage'
@@ -28,44 +31,8 @@ function createSentence(overrides: Partial<ISentence>): ISentence {
   }
 }
 
-interface TestNode {
-  children?: TestNode[]
-  text?: string
-  type: string
-}
-
 const mountedApps: { unmount: () => void }[] = []
-
-function getMissingNode(): TestNode | null {
-  // eslint-disable-next-line unicorn/no-null -- Vue 自定义 renderer 的宿主接口要求缺失节点返回 null。
-  return null
-}
-
-const renderer = createRenderer<TestNode, TestNode>({
-  patchProp() { /* noop */ },
-  insert(child, parent) {
-    parent.children ??= []
-    parent.children.push(child)
-  },
-  remove() { /* noop */ },
-  createElement(type) {
-    return { type, children: [] }
-  },
-  createText(text) {
-    return { type: 'text', text }
-  },
-  createComment(text) {
-    return { type: 'comment', text }
-  },
-  setText(node, text) {
-    node.text = text
-  },
-  setElementText(node, text) {
-    node.text = text
-  },
-  parentNode: getMissingNode,
-  nextSibling: getMissingNode,
-})
+const renderer = createTestRenderer()
 
 function mountBridgeHarness() {
   const emitUpdate = vi.fn<(payload: StatementUpdatePayload) => void>()
@@ -170,6 +137,7 @@ describe('useStatementAnimationEditorBridge', () => {
 
     const onApply = capturedOnApply()
     expect(capturedParsed()).toEqual(parsed.value)
+    expect(onApply, 'onApply not captured').toBeDefined()
 
     parsed.value = createSentence({
       command: commandType.setTempAnimation,
@@ -180,7 +148,11 @@ describe('useStatementAnimationEditorBridge', () => {
       statementId: 99,
     }
 
-    onApply?.([
+    if (!onApply) {
+      throw new TypeError('onApply not captured')
+    }
+
+    onApply([
       { duration: 0, alpha: 0 },
       { duration: 180, alpha: 1 },
     ])

@@ -1,6 +1,6 @@
 import '~/__tests__/mocks/modal-store'
 
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { createEffectPreviewEmitter } from '~/composables/useEffectEditorProvider'
 
@@ -9,10 +9,12 @@ import type {
   EffectEditorTransformUpdatePayload,
 } from '~/composables/useEffectEditorProvider'
 
+const runtimeGlobals = globalThis as typeof globalThis & {
+  fieldsToTransform?: (fields: Record<string, string>) => Record<string, number>
+}
+const originalFieldsToTransform = runtimeGlobals.fieldsToTransform
+
 beforeAll(() => {
-  const runtimeGlobals = globalThis as typeof globalThis & {
-    fieldsToTransform?: (fields: Record<string, string>) => Record<string, number>
-  }
   runtimeGlobals.fieldsToTransform = (fields) => {
     const alpha = Number(fields.alpha ?? 0)
     const blur = Number(fields.blur ?? 0)
@@ -21,6 +23,14 @@ beforeAll(() => {
       blur: Number.isFinite(blur) ? blur : 0,
     }
   }
+})
+
+afterAll(() => {
+  if (originalFieldsToTransform === undefined) {
+    delete runtimeGlobals.fieldsToTransform
+    return
+  }
+  runtimeGlobals.fieldsToTransform = originalFieldsToTransform
 })
 
 describe('效果预览事件发射器', () => {

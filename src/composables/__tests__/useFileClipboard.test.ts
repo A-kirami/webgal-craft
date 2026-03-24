@@ -33,5 +33,11 @@ describe('useFileClipboard', () => {
     cutClipboard.clearClipboard()
     expect(cutClipboard.clipboard.value).toEqual([])
     expect(cutClipboard.hasClipboard.value).toBe(false)
+    expect(copyClipboard.clipboard.value).toEqual([
+      { path: '/game/a.txt', isDir: false, isCut: false },
+      { path: '/game/b.txt', isDir: true, isCut: false },
+    ])
+    expect(copyClipboard.hasClipboard.value).toBe(true)
+    expect(copyClipboard.operationType.value).toBe('copy')
   })
 })

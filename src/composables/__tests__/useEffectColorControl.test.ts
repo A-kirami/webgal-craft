@@ -6,75 +6,54 @@ import { useEffectColorControl } from '~/composables/effect-editor/useEffectColo
 import type { EffectControlDeps } from '~/composables/effect-editor/types'
 import type { ColorField } from '~/helper/command-registry/schema'
 
-const { dragController } = vi.hoisted(() => ({
-  dragController: {
+const { createParamDragModule, dragController } = vi.hoisted(() => {
+  const dragController = {
     active: false,
     param: undefined as unknown,
     stop: undefined as undefined | (() => void),
-  },
-}))
+  }
 
-vi.mock('~/composables/effect-editor/createParamDrag', () => ({
-  createParamDrag<P>(callbacks: {
-    onStart: (event: PointerEvent, param: P) => unknown
-    onEnd: (event: PointerEvent | undefined, state: { param: P }) => void
-  }) {
+  function createParamDragModule() {
     return {
-      drag: {
-        get active() {
-          return dragController.active
-        },
-        get state() {
-          return dragController.active ? { param: dragController.param as P } : undefined
-        },
-        stop(event?: PointerEvent) {
-          if (!dragController.active) {
-            return
-          }
-          callbacks.onEnd(event, { param: dragController.param as P })
-          dragController.active = false
-          dragController.param = undefined
-        },
-      },
-      start(event: PointerEvent, param: P) {
-        callbacks.onStart(event, param)
-        dragController.active = true
-        dragController.param = param
+      createParamDrag<P>(callbacks: {
+        onStart: (event: PointerEvent, param: P) => unknown
+        onEnd: (event: PointerEvent | undefined, state: { param: P }) => void
+      }) {
+        return {
+          drag: {
+            get active() {
+              return dragController.active
+            },
+            get state() {
+              return dragController.active ? { param: dragController.param as P } : undefined
+            },
+            stop(event?: PointerEvent) {
+              if (!dragController.active) {
+                return
+              }
+              callbacks.onEnd(event, { param: dragController.param as P })
+              dragController.active = false
+              dragController.param = undefined
+            },
+          },
+          start(event: PointerEvent, param: P) {
+            callbacks.onStart(event, param)
+            dragController.active = true
+            dragController.param = param
+          },
+        }
       },
     }
-  },
-}))
+  }
 
-vi.mock('../../effect-editor/createParamDrag', () => ({
-  createParamDrag<P>(callbacks: {
-    onStart: (event: PointerEvent, param: P) => unknown
-    onEnd: (event: PointerEvent | undefined, state: { param: P }) => void
-  }) {
-    return {
-      drag: {
-        get active() {
-          return dragController.active
-        },
-        get state() {
-          return dragController.active ? { param: dragController.param as P } : undefined
-        },
-        stop(event?: PointerEvent) {
-          if (!dragController.active) {
-            return
-          }
-          callbacks.onEnd(event, { param: dragController.param as P })
-          dragController.active = false
-          dragController.param = undefined
-        },
-      },
-      start(event: PointerEvent, param: P) {
-        callbacks.onStart(event, param)
-        dragController.active = true
-        dragController.param = param
-      },
-    }
-  },
-}))
+  return {
+    createParamDragModule,
+    dragController,
+  }
+})
+
+vi.mock('~/composables/effect-editor/createParamDrag', createParamDragModule)
+vi.mock('../../effect-editor/createParamDrag', createParamDragModule)
 
 function createDeps(initialFields: Record<string, string> = {}) {
   const fields = reactive({ ...initialFields }) as Record<string, string>

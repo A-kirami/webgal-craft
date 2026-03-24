@@ -34,7 +34,9 @@ describe('applySceneCursorTarget', () => {
       1,
     )
   })
+})
 
+describe('prepareSceneCursorTarget', () => {
   it('可以先同步文本光标位置，而不立刻触发 reveal', () => {
     const editor = {
       layout: vi.fn(),

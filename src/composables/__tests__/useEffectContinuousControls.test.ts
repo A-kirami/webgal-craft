@@ -6,20 +6,27 @@ import { useEffectContinuousControls } from '~/composables/effect-editor/useEffe
 import type { EffectControlDeps } from '~/composables/effect-editor/types'
 import type { DialField, NumberField } from '~/helper/command-registry/schema'
 
-const { usePreferenceStoreMock } = vi.hoisted(() => ({
-  usePreferenceStoreMock: vi.fn(),
-}))
+const { setupPreferenceStoreMock, usePreferenceStoreMock } = vi.hoisted(() => {
+  const usePreferenceStoreMock = vi.fn()
+
+  function setupPreferenceStoreMock() {
+    return {
+      usePreferenceStore: usePreferenceStoreMock,
+    }
+  }
+
+  return {
+    setupPreferenceStoreMock,
+    usePreferenceStoreMock,
+  }
+})
 
 const preferenceStoreState = reactive({
   effectEditorLinkedSliderLocks: {} as Record<string, boolean>,
 })
 
-vi.mock('~/stores/preference', () => ({
-  usePreferenceStore: usePreferenceStoreMock,
-}))
-vi.mock('../../stores/preference', () => ({
-  usePreferenceStore: usePreferenceStoreMock,
-}))
+vi.mock('~/stores/preference', setupPreferenceStoreMock)
+vi.mock('../../stores/preference', setupPreferenceStoreMock)
 
 function createDeps(initialFields: Record<string, string> = {}) {
   const fields = reactive({ ...initialFields }) as Record<string, string>

@@ -23,13 +23,14 @@ const originalAddEventListener = globalThis.addEventListener
 const originalRemoveEventListener = globalThis.removeEventListener
 const listenerMap: ListenerMap = {}
 const noop = () => 0
+const runtimeGlobals = globalThis as typeof globalThis & {
+  ref?: typeof ref
+  usePointerDrag?: typeof usePointerDrag
+}
+const originalRef = runtimeGlobals.ref
+const originalUsePointerDrag = runtimeGlobals.usePointerDrag
 
 function registerRuntimeGlobals() {
-  const runtimeGlobals = globalThis as typeof globalThis & {
-    ref?: typeof ref
-    usePointerDrag?: typeof usePointerDrag
-  }
-
   runtimeGlobals.ref = ref
   runtimeGlobals.usePointerDrag = usePointerDrag
 }
@@ -110,6 +111,16 @@ afterEach(() => {
   }
   globalThis.addEventListener = originalAddEventListener
   globalThis.removeEventListener = originalRemoveEventListener
+  if (originalRef === undefined) {
+    delete runtimeGlobals.ref
+  } else {
+    runtimeGlobals.ref = originalRef
+  }
+  if (originalUsePointerDrag === undefined) {
+    delete runtimeGlobals.usePointerDrag
+  } else {
+    runtimeGlobals.usePointerDrag = originalUsePointerDrag
+  }
 })
 
 describe('useStatementEditorScrub', () => {

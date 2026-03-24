@@ -35,12 +35,16 @@ describe('useTabsWatcher', () => {
 
   it('会在标签关闭时回调被移除的路径', async () => {
     const onTabClosed = vi.fn()
+    const stop = useTabsWatcher(onTabClosed)
 
-    useTabsWatcher(onTabClosed)
-    tabsStoreState.tabs = [{ path: '/game/b.txt' }]
-    await nextTick()
+    try {
+      tabsStoreState.tabs = [{ path: '/game/b.txt' }]
+      await nextTick()
 
-    expect(onTabClosed).toHaveBeenCalledWith('/game/a.txt')
+      expect(onTabClosed).toHaveBeenCalledWith('/game/a.txt')
+    } finally {
+      stop()
+    }
   })
 
   it('返回的 stop 函数会停止后续监听', async () => {

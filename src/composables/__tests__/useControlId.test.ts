@@ -26,4 +26,26 @@ describe('useControlId', () => {
 
     expect(buildControlId('###')).toBe('field-v-42-field')
   })
+
+  it.each([
+    {
+      namespace: '',
+      key: '',
+      expected: 'field-v-42-field',
+    },
+    {
+      namespace: 'Name#1',
+      key: '!!!abc',
+      expected: 'Name-1-v-42-abc',
+    },
+    {
+      namespace: '  spaced   namespace  ',
+      key: 'key   name%%%',
+      expected: 'spaced-namespace-v-42-key-name',
+    },
+  ])('buildControlId($namespace, $key) => $expected', ({ namespace, key, expected }) => {
+    const { buildControlId } = useControlId(namespace)
+
+    expect(buildControlId(key)).toBe(expected)
+  })
 })

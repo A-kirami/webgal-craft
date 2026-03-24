@@ -1,7 +1,7 @@
 import '~/__tests__/mocks/i18n'
 import '~/__tests__/mocks/modal-store'
 
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { createEffectEditorProvider } from '~/composables/useEffectEditorProvider'
@@ -54,34 +54,59 @@ function flushMicrotasks(times: number = 4): Promise<void> {
   return Promise.resolve().then(() => flushMicrotasks(times - 1))
 }
 
-beforeAll(() => {
-  const runtimeGlobals = globalThis as typeof globalThis & {
-    $ref?: <T>(value: T) => T
-    fieldsToTransform?: typeof fieldsToTransform
-    logger?: {
-      error: (message: string) => void
-      info: (message: string) => void
-      warn: (message: string) => void
-    }
-    parseTransformJson?: typeof parseTransformJson
-    serializeTransform?: typeof serializeTransform
-    toRaw?: <T>(value: T) => T
-    transformToFields?: typeof transformToFields
-    useI18n?: () => { t: (key: string) => string }
-    useModalStore?: () => {
-      open: (
-        name: string,
-        payload: {
-          onSave: () => void
-          onDontSave: () => void
-          onCancel: () => void
-        },
-        id?: string,
-      ) => void
-    }
-    useThrottleFn?: <T extends (...args: unknown[]) => unknown>(fn: T) => T
+type RuntimeGlobals = typeof globalThis & {
+  $ref?: <T>(value: T) => T
+  fieldsToTransform?: typeof fieldsToTransform
+  logger?: {
+    error: (message: string) => void
+    info: (message: string) => void
+    warn: (message: string) => void
   }
+  parseTransformJson?: typeof parseTransformJson
+  serializeTransform?: typeof serializeTransform
+  toRaw?: <T>(value: T) => T
+  transformToFields?: typeof transformToFields
+  useI18n?: () => { t: (key: string) => string }
+  useModalStore?: () => {
+    open: (
+      name: string,
+      payload: {
+        onSave: () => void
+        onDontSave: () => void
+        onCancel: () => void
+      },
+      id?: string,
+    ) => void
+  }
+  useThrottleFn?: <T extends (...args: unknown[]) => unknown>(fn: T) => T
+}
 
+const runtimeGlobals = globalThis as RuntimeGlobals
+const originalRuntimeGlobals = {
+  $ref: runtimeGlobals.$ref,
+  toRaw: runtimeGlobals.toRaw,
+  useI18n: runtimeGlobals.useI18n,
+  useThrottleFn: runtimeGlobals.useThrottleFn,
+  parseTransformJson: runtimeGlobals.parseTransformJson,
+  serializeTransform: runtimeGlobals.serializeTransform,
+  fieldsToTransform: runtimeGlobals.fieldsToTransform,
+  transformToFields: runtimeGlobals.transformToFields,
+  logger: runtimeGlobals.logger,
+  useModalStore: runtimeGlobals.useModalStore,
+}
+
+function restoreRuntimeGlobal<K extends keyof typeof originalRuntimeGlobals>(
+  key: K,
+  value: (typeof originalRuntimeGlobals)[K],
+) {
+  if (value === undefined) {
+    delete runtimeGlobals[key]
+    return
+  }
+  runtimeGlobals[key] = value as RuntimeGlobals[K]
+}
+
+beforeAll(() => {
   runtimeGlobals.$ref = value => value
   runtimeGlobals.toRaw = value => value
   runtimeGlobals.useI18n = () => ({ t: key => key })
@@ -100,6 +125,19 @@ beforeAll(() => {
       payload.onCancel()
     },
   })
+})
+
+afterAll(() => {
+  restoreRuntimeGlobal('$ref', originalRuntimeGlobals.$ref)
+  restoreRuntimeGlobal('toRaw', originalRuntimeGlobals.toRaw)
+  restoreRuntimeGlobal('useI18n', originalRuntimeGlobals.useI18n)
+  restoreRuntimeGlobal('useThrottleFn', originalRuntimeGlobals.useThrottleFn)
+  restoreRuntimeGlobal('parseTransformJson', originalRuntimeGlobals.parseTransformJson)
+  restoreRuntimeGlobal('serializeTransform', originalRuntimeGlobals.serializeTransform)
+  restoreRuntimeGlobal('fieldsToTransform', originalRuntimeGlobals.fieldsToTransform)
+  restoreRuntimeGlobal('transformToFields', originalRuntimeGlobals.transformToFields)
+  restoreRuntimeGlobal('logger', originalRuntimeGlobals.logger)
+  restoreRuntimeGlobal('useModalStore', originalRuntimeGlobals.useModalStore)
 })
 
 beforeEach(() => {

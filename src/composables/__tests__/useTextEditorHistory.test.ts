@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 
 import { useTextEditorHistory } from '~/composables/useTextEditorHistory'
@@ -57,13 +57,6 @@ function createAdapterHandle(overrides: Partial<{
 
 function createEditorRef(editor: ReturnType<typeof createEditor>): UseTextEditorHistoryOptions['editorRef'] {
   return ref(editor) as unknown as UseTextEditorHistoryOptions['editorRef']
-}
-
-async function flushNativeHistorySync() {
-  await Promise.resolve()
-  await new Promise(resolve => setTimeout(resolve, 0))
-  await Promise.resolve()
-  await new Promise(resolve => setTimeout(resolve, 0))
 }
 
 function createModel(content: string) {
@@ -129,6 +122,10 @@ describe('useTextEditorHistory', () => {
   beforeEach(() => {
     installTextEditorHistoryAdapterMock.mockReset()
     installTextEditorHistoryAdapterMock.mockReturnValue(createAdapterHandle())
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('captureContentChangeContext 会生成 before/after 编辑器元数据快照', () => {
@@ -403,8 +400,9 @@ describe('useTextEditorHistory', () => {
     })
 
     history.installHistoryHandling()
+    vi.useFakeTimers()
     history.handleUndo()
-    await flushNativeHistorySync()
+    await vi.runAllTimersAsync()
 
     expect(adapterHandle.runNativeUndo).toHaveBeenCalledTimes(1)
     expect(editor.action.run).toHaveBeenCalledTimes(1)
@@ -440,8 +438,9 @@ describe('useTextEditorHistory', () => {
     })
 
     history.installHistoryHandling()
+    vi.useFakeTimers()
     history.handleUndo()
-    await flushNativeHistorySync()
+    await vi.runAllTimersAsync()
 
     expect(editor.action.run).not.toHaveBeenCalled()
     expect(syncAnimationTextContentFromEditor).not.toHaveBeenCalled()
@@ -483,8 +482,9 @@ describe('useTextEditorHistory', () => {
     })
 
     history.installHistoryHandling()
+    vi.useFakeTimers()
     history.handleUndo()
-    await flushNativeHistorySync()
+    await vi.runAllTimersAsync()
 
     expect(syncAnimationTextContentFromEditor).toHaveBeenCalledWith(
       '/game/animation.json',

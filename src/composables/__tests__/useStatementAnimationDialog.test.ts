@@ -3,12 +3,14 @@ import '~/__tests__/mocks/modal-store'
 /* eslint-disable vue/one-component-per-file */
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createRenderer, defineComponent, h, inject, reactive } from 'vue'
+import { defineComponent, h, inject, reactive } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { useStatementAnimationDialog } from '../useStatementAnimationDialog'
 import { STATEMENT_ANIMATION_EDITOR_OPEN_OVERRIDE_KEY } from '../useStatementAnimationEditorBridge'
+import { createTestRenderer } from './utils/createTestRenderer'
 
+import type { TestNode } from './utils/createTestRenderer'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { AnimationFrame } from '~/types/stage'
 
@@ -27,44 +29,8 @@ vi.mock('vue-sonner', () => ({
   },
 }))
 
-interface TestNode {
-  children?: TestNode[]
-  text?: string
-  type: string
-}
-
 const mountedApps: { unmount: () => void }[] = []
-
-function getMissingNode(): TestNode | null {
-  // eslint-disable-next-line unicorn/no-null -- Vue 自定义 renderer 的宿主接口要求缺失节点返回 null。
-  return null
-}
-
-const renderer = createRenderer<TestNode, TestNode>({
-  patchProp() { /* noop */ },
-  insert(child, parent) {
-    parent.children ??= []
-    parent.children.push(child)
-  },
-  remove() { /* noop */ },
-  createElement(type) {
-    return { type, children: [] }
-  },
-  createText(text) {
-    return { type: 'text', text }
-  },
-  createComment(text) {
-    return { type: 'comment', text }
-  },
-  setText(node, text) {
-    node.text = text
-  },
-  setElementText(node, text) {
-    node.text = text
-  },
-  parentNode: getMissingNode,
-  nextSibling: getMissingNode,
-})
+const renderer = createTestRenderer()
 
 function createSentence(content: string): ISentence {
   return {
