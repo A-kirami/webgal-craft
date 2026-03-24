@@ -181,6 +181,26 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
   }
 }
 
+async function waitUntil(
+  description: string,
+  predicate: () => boolean,
+  stableCycles: number = 1,
+  remainingCycles: number = 20,
+  matchedCycles: number = 0,
+) {
+  if (remainingCycles <= 0) {
+    throw new TypeError(`timed out waiting for ${description}`)
+  }
+
+  const nextMatchedCycles = predicate() ? matchedCycles + 1 : 0
+  if (nextMatchedCycles >= stableCycles) {
+    return
+  }
+
+  await Promise.resolve()
+  return waitUntil(description, predicate, stableCycles, remainingCycles - 1, nextMatchedCycles)
+}
+
 describe('handleFileModifiedEvent', () => {
   beforeEach(() => {
     modalOpenMock.mockReset()
@@ -266,8 +286,10 @@ describe('handleFileModifiedEvent', () => {
     })
 
     const oldTask = handleFileModifiedEvent(context, { path: oldPath })
-    await Promise.resolve()
-    await Promise.resolve()
+    await waitUntil(
+      'old file read to reach suspended state',
+      () => readTextDocumentFile.mock.calls.length === 1 && resolveOldRead !== undefined,
+    )
 
     expect(readTextDocumentFile).toHaveBeenCalledTimes(1)
     expect(readTextDocumentFile).toHaveBeenNthCalledWith(1, oldPath)
@@ -278,8 +300,11 @@ describe('handleFileModifiedEvent', () => {
     })
 
     const newTask = handleFileModifiedEvent(context, { path: newPath })
-    await Promise.resolve()
-    await Promise.resolve()
+    await waitUntil(
+      'renamed file read to remain queued behind the previous task',
+      () => readTextDocumentFile.mock.calls.length === 1,
+      3,
+    )
 
     expect(readTextDocumentFile).toHaveBeenCalledTimes(1)
 

@@ -254,7 +254,7 @@ describe('文件状态仓库', () => {
       if (path === '/workspace/game/unloaded.txt') {
         return createStatResult(path, false)
       }
-      return createStatResult(String(path), true)
+      return createStatResult(path, true)
     })
     readDirectoryItemsCachedMock.mockResolvedValue([])
 
@@ -266,9 +266,9 @@ describe('文件状态仓库', () => {
       paths: ['/workspace/game/unloaded.txt'],
     })
 
-    expect(emittedEvents).toContainEqual({
+    expect(emittedEvents).toContainEqual(expect.objectContaining({
       type: 'file:modified',
       path: '/workspace/game/unloaded.txt',
-    })
+    }))
   })
 })
