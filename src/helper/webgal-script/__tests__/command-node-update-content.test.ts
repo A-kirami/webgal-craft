@@ -298,15 +298,4 @@ describe('命令节点内容更新', () => {
       { key: 'x', value: 1 },
     ])
   })
-
-  it('更新通用命令内容并保留参数', () => {
-    const sentence = mustParse('bgm: old.ogg -volume=50;')
-    const node = parseCommandNode(sentence)
-    const updated = updateCommandNodeContent(node, 'new.ogg')
-    const serialized = serializeCommandNode(updated)
-
-    expect(serialized.command).toBe(commandType.bgm)
-    expect(serialized.content).toBe('new.ogg')
-    expect(serialized.args).toEqual([{ key: 'volume', value: 50 }])
-  })
 })

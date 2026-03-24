@@ -151,6 +151,7 @@ describe('命令节点参数访问', () => {
     const node = parseCommandNode(sentence)
 
     expect(readCommandNodeParamValue(node, makeParamDef('achievementId', 'text'))).toBe('achv-1')
+    // readCommandNodeParamValue 对未注册的额外参数返回原始存储值，故即使 makeParamDef 声明为 text，这里仍保留数字 1。
     expect(readCommandNodeParamValue(node, makeParamDef('x', 'text'))).toBe(1)
   })
 
@@ -165,6 +166,7 @@ describe('命令节点参数访问', () => {
     expect(readCommandNodeParamValue(node, makeParamDef('delayTime', 'number'))).toBe(2000)
     expect(readCommandNodeParamValue(node, makeParamDef('hold', 'switch'))).toBe(true)
     expect(readCommandNodeParamValue(node, makeParamDef('userForward', 'switch'))).toBe(true)
+    // 这里验证的是回退到 extraArgs 时不做类型强制转换，而不是 makeParamDef 的 text 声明。
     expect(readCommandNodeParamValue(node, makeParamDef('x', 'text'))).toBe(1)
   })
 
@@ -181,6 +183,7 @@ describe('命令节点参数访问', () => {
 
     expect(readCommandNodeParamValue(unlockBgmNode, makeParamDef('name', 'text'))).toBe('BGM1')
     expect(readCommandNodeParamValue(unlockBgmNode, makeParamDef('series', 'text'))).toBe('s1')
+    // 与上面的 x 一样，这里确认 readCommandNodeParamValue 会透传原始存储值，而不是按 makeParamDef 进行 coercion。
     expect(readCommandNodeParamValue(unlockBgmNode, makeParamDef('x', 'text'))).toBe(1)
   })
 

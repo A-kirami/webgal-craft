@@ -5,6 +5,8 @@ import {
   BACKGROUND_EXTENSIONS,
   DEFAULT_ENTER_DURATION,
   DEFAULT_EXIT_DURATION,
+  DURATION,
+  EASE,
   EFFECT_DURATION,
   EFFECT_EASE,
   EFFECT_TRANSFORM,
@@ -48,11 +50,11 @@ describe('命令注册表通用参数', () => {
       managedByEffectEditor: true,
     })
     expect(EFFECT_DURATION).toMatchObject({
-      key: 'duration',
+      key: DURATION.key,
       managedByEffectEditor: true,
     })
     expect(EFFECT_EASE).toMatchObject({
-      key: 'ease',
+      key: EASE.key,
       managedByEffectEditor: true,
     })
   })
@@ -75,12 +77,12 @@ describe('命令注册表通用参数', () => {
     expect(DEFAULT_ENTER_DURATION).toMatchObject({
       key: 'enterDuration',
       advanced: true,
-      visibleWhen: { key: 'enter', empty: true },
+      visibleWhen: { key: ENTER_ANIMATION.key, empty: true },
     })
     expect(DEFAULT_EXIT_DURATION).toMatchObject({
       key: 'exitDuration',
       advanced: true,
-      visibleWhen: { key: 'exit', empty: true },
+      visibleWhen: { key: EXIT_ANIMATION.key, empty: true },
     })
   })
 })
