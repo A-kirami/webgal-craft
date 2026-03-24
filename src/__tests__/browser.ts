@@ -2,8 +2,6 @@ import { createPinia } from 'pinia'
 import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { createI18n } from 'vue-i18n'
 
-import enMessages from '~/locales/en.yml'
-
 import type { Pinia } from 'pinia'
 import type { MockInstance } from 'vitest'
 import type { Plugin } from 'vue'
@@ -18,42 +16,14 @@ interface BrowserTestPluginsOptions extends BrowserTestI18nOptions {
 }
 
 interface BrowserConsoleMonitor {
-  expectNoConsoleMessage(pattern: string): void
-}
-
-type BrowserTestMessages = Record<string, unknown>
-
-function isMessageRecord(value: unknown): value is BrowserTestMessages {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function mergeMessageRecords(base: BrowserTestMessages, override: BrowserTestMessages): BrowserTestMessages {
-  const merged: BrowserTestMessages = { ...base }
-
-  for (const [key, value] of Object.entries(override)) {
-    const current = merged[key]
-
-    merged[key] = isMessageRecord(current) && isMessageRecord(value)
-      ? mergeMessageRecords(current, value)
-      : value
-  }
-
-  return merged
-}
-
-function resolveBrowserTestMessages(messages?: BrowserTestMessages): BrowserTestMessages {
-  const defaults = { en: enMessages as BrowserTestMessages }
-
-  return messages
-    ? mergeMessageRecords(defaults, messages)
-    : defaults
+  expectNoConsoleMessage(pattern: string | RegExp): void
 }
 
 export function createBrowserTestI18n(options: BrowserTestI18nOptions = {}) {
   return createI18n({
     legacy: false,
     locale: options.locale ?? 'en',
-    messages: resolveBrowserTestMessages(options.messages) as never,
+    messages: options.messages as never,
     missingWarn: false,
     fallbackWarn: false,
     missing: (_locale, key) => key,
@@ -94,12 +64,17 @@ export function createBrowserConsoleMonitor(): BrowserConsoleMonitor {
     consoleErrorSpy?.mockRestore()
   })
 
-  function expectNoConsoleMessage(pattern: string) {
+  function expectNoConsoleMessage(pattern: string | RegExp) {
     const output = [consoleWarnSpy, consoleErrorSpy]
       .flatMap(spy => spy?.mock.calls ?? [])
       .flat()
       .map(String)
       .join('\n')
+
+    if (pattern instanceof RegExp) {
+      expect(pattern.test(output)).toBe(false)
+      return
+    }
 
     expect(output).not.toContain(pattern)
   }

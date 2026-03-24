@@ -216,6 +216,9 @@ describe('useTextEditorWorkspace', () => {
     await nextTick()
 
     globalThis.dispatchEvent(new Event('pagehide'))
+
+    expect(firstEditor.saveViewState).toHaveBeenCalledOnce()
+
     await firstHarness.unmount()
 
     const secondEditor = createEditor(path, createViewState(0))
