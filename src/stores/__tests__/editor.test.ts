@@ -1,7 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive, toRaw } from 'vue'
 
-import { encodeTextFile } from '../../models/file-codec'
+import { encodeTextFile } from '~/models/file-codec'
+
 import { useTabsStore } from '../tabs'
 
 type WriteDocumentFile = typeof import('~/services/game-fs').gameFs.writeDocumentFile
