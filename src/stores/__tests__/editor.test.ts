@@ -203,6 +203,17 @@ async function emitFileRenamedEvent(oldPath: string, newPath: string) {
   await handler({ oldPath, newPath })
 }
 
+function assertWriteCall(call: unknown): asserts call is [string, Uint8Array] {
+  if (
+    !Array.isArray(call)
+    || call.length !== 2
+    || typeof call[0] !== 'string'
+    || !(call[1] instanceof Uint8Array)
+  ) {
+    throw new TypeError(`unexpected write call: ${JSON.stringify(call)}`)
+  }
+}
+
 function createDeferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void
   let reject!: (reason?: unknown) => void
@@ -339,7 +350,9 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     await editorStore.saveFile(path)
 
     expect(writeDocumentFileMock).toHaveBeenCalledTimes(1)
-    const [savedPath, savedBytes] = writeDocumentFileMock.mock.calls.at(0) as unknown as [string, Uint8Array]
+    const savedCall = writeDocumentFileMock.mock.calls.at(0)
+    assertWriteCall(savedCall)
+    const [savedPath, savedBytes] = savedCall
     expect(savedPath).toBe(path)
     expect(new TextDecoder().decode(savedBytes)).toBe('hello!')
     expect(loadedState.isDirty).toBe(false)

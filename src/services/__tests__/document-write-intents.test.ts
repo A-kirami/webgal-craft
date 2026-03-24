@@ -49,7 +49,7 @@ describe('文档写入意图', () => {
     const metadata = { encoding: UTF8_ENCODING, lineEnding: '\n' as const }
 
     registerPendingDocumentWrite(path, 'hello', metadata)
-    vi.advanceTimersByTime(3_0001)
+    vi.advanceTimersByTime(30 * 1000 + 1)
 
     expect(consumePendingDocumentWrite(path, 'hello', metadata)).toBe(false)
   })

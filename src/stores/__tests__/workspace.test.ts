@@ -47,21 +47,7 @@ vi.mock('~/commands/server', () => ({
   },
 }))
 
-vi.mock('../commands/server', () => ({
-  serverCmds: {
-    startServer: startServerMock,
-  },
-}))
-
 vi.mock('~/services/game-manager', () => ({
-  gameManager: {
-    getGameMetadata: getGameMetadataMock,
-    runGamePreview: runGamePreviewMock,
-    stopGamePreview: stopGamePreviewMock,
-  },
-}))
-
-vi.mock('../services/game-manager', () => ({
   gameManager: {
     getGameMetadata: getGameMetadataMock,
     runGamePreview: runGamePreviewMock,
@@ -154,11 +140,15 @@ describe('工作区状态仓库', () => {
   it('路由进入编辑页时会加载游戏并启动预览，离开时停止预览并清空状态', async () => {
     const store = useWorkspaceStore()
 
-    dbGetMock.mockResolvedValue({
+    dbGetMock.mockResolvedValue(createGame({
       id: 'game-1',
       path: '/games/game-1',
-      name: 'Game One',
-    })
+      metadata: {
+        name: 'Game One',
+        icon: 'icons/favicon.ico',
+        cover: 'cover.png',
+      },
+    }))
     runGamePreviewMock.mockResolvedValue('http://preview/game-1')
 
     routeState.params = { gameId: 'game-1' }
@@ -174,7 +164,7 @@ describe('工作区状态仓库', () => {
     routeState.params = {}
     await flushWorkspaceWatchers()
 
-    expect(stopGamePreviewMock).toHaveBeenCalledWith('/games/game-1')
+    expect(stopGamePreviewMock).toHaveBeenCalledWith('game-1')
     expect(store.currentGame).toBeUndefined()
     expect(store.currentGameServeUrl).toBeUndefined()
   })
@@ -182,11 +172,15 @@ describe('工作区状态仓库', () => {
   it('预览地址获取失败时保留当前游戏并记录错误', async () => {
     const store = useWorkspaceStore()
 
-    dbGetMock.mockResolvedValue({
+    dbGetMock.mockResolvedValue(createGame({
       id: 'game-2',
       path: '/games/game-2',
-      name: 'Game Two',
-    })
+      metadata: {
+        name: 'Game Two',
+        icon: 'icons/favicon.ico',
+        cover: 'cover.png',
+      },
+    }))
     runGamePreviewMock.mockRejectedValue(new Error('preview unavailable'))
 
     routeState.params = { gameId: 'game-2' }

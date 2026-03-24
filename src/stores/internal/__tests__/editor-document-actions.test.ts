@@ -163,34 +163,7 @@ describe('编辑器文档动作的历史回滚', () => {
   })
 
   it('拒绝对动画文档执行 text:set-content 以保持仅草稿流程', () => {
-    const animationPath = '/game/animation/document.json'
-    const document: DocumentState = createDocumentState(createDocumentModel({
-      kind: 'animation',
-      content: '[{"duration":100}]',
-    }), '[{"duration":100}]')
-    const textState: TextProjectionState = {
-      path: animationPath,
-      isDirty: false,
-      projection: 'text',
-      kind: 'animation',
-      textContent: '[{"duration":100}]',
-      textSource: 'draft',
-      syncError: undefined,
-    }
-    const syncStateFromDocument = vi.fn()
-    const context = {
-      getDocumentState(path: string) {
-        return path === animationPath ? document : undefined
-      },
-      getSceneSelection(_path: string): SceneSelectionState | undefined {
-        return
-      },
-      getTextProjectionState(path: string) {
-        return path === animationPath ? textState : undefined
-      },
-      patchSceneSelection() { /* no-op */ },
-      syncStateFromDocument,
-    } satisfies EditorDocumentActionContext
+    const { animationPath, context, document, syncStateFromDocument, textState } = createAnimationActionHarness()
 
     applyTextDocumentContent(context, animationPath, '[{"duration":200}]')
 
@@ -202,6 +175,7 @@ describe('编辑器文档动作的历史回滚', () => {
     expect(document.cachedTextContent).toBe('[\n  {\n    "duration": 100\n  }\n]')
     expect(document.engine.sequenceNumber).toBe(0)
     expect(syncStateFromDocument).not.toHaveBeenCalled()
+    expect(textState.textContent).toBe('[{"duration":100}]')
     expect(loggerWarnMock).toHaveBeenCalledWith(`事务应用失败 (${animationPath}): text:set-content`)
   })
 

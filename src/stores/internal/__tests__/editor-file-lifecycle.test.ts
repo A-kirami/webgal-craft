@@ -52,11 +52,10 @@ vi.mock('~/stores/modal', () => ({
   }),
 }))
 
-interface ContextHarnessOptions {
+interface ContextHarnessOptions extends Partial<EditorFileLifecycleContext> {
   autoSavePending?: boolean
   externalContent?: string
   path?: string
-  syncStateFromDocument?: (path: string) => void
 }
 
 function createTextMetadata() {
@@ -68,7 +67,15 @@ function createTextMetadata() {
 }
 
 function createContextHarness(options: ContextHarnessOptions = {}) {
-  const path = options.path ?? DOC_PATH
+  const {
+    autoSavePending,
+    externalContent,
+    path: providedPath,
+    readTextDocumentFile: providedReadTextDocumentFile,
+    syncStateFromDocument: providedSyncStateFromDocument,
+    ...contextOverrides
+  } = options
+  const path = providedPath ?? DOC_PATH
   const session = createEditableSession(
     path,
     createLoadedDocumentState('animation', CLEAN_CONTENT),
@@ -89,7 +96,7 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
       currentSession.visualState,
     )
   })
-  const syncStateFromDocument = options.syncStateFromDocument ?? defaultSyncStateFromDocument
+  const syncStateFromDocument = providedSyncStateFromDocument ?? defaultSyncStateFromDocument
 
   session.textState.textContent = DIRTY_CONTENT
   session.textState.textSource = 'draft'
@@ -97,8 +104,14 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
   session.document.model = createLoadedDocumentState('animation', DIRTY_CONTENT).model
   session.document.cachedTextContent = DIRTY_CONTENT
 
-  const context = {
-    autoSaveHasPending: (currentPath: string) => options.autoSavePending === true && currentPath === path,
+  const defaultReadTextDocumentFile = vi.fn(async () => ({
+    ok: true as const,
+    content: externalContent ?? DIRTY_CONTENT,
+    metadata: createTextMetadata(),
+  }))
+
+  const baseContext = {
+    autoSaveHasPending: (currentPath: string) => autoSavePending === true && currentPath === path,
     cancelAutoSave,
     canReschedulePendingAutoSave: () => true,
     createEditorError: (message: string) => new AppError('EDITOR_ERROR', message),
@@ -141,11 +154,6 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
       workspaceUnavailable: 'workspace unavailable',
     },
     patchSceneSelection() { /* noop */ },
-    readTextDocumentFile: vi.fn(async () => ({
-      ok: true as const,
-      content: options.externalContent ?? DIRTY_CONTENT,
-      metadata: createTextMetadata(),
-    })),
     scheduleAutoSave,
     setSession(path: string, nextSession: EditorSession) {
       sessions.set(path, nextSession)
@@ -154,6 +162,12 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
     setTabLoading: vi.fn(),
     setTabModified: vi.fn(),
     syncScenePreview: vi.fn(),
+  } satisfies EditorFileLifecycleContext
+
+  const context = {
+    ...baseContext,
+    ...contextOverrides,
+    readTextDocumentFile: providedReadTextDocumentFile ?? defaultReadTextDocumentFile,
     syncStateFromDocument,
   } satisfies EditorFileLifecycleContext
 
@@ -222,21 +236,15 @@ describe('handleFileModifiedEvent', () => {
   it('重命名后沿用原文件修改队列，避免同一会话并发处理', async () => {
     const oldPath = '/game/animation/rename-old.json'
     const newPath = '/game/animation/rename-new.json'
-    const session = createEditableSession(
-      oldPath,
-      createLoadedDocumentState('animation', CLEAN_CONTENT),
-      'text',
-    )
-    const sessions = new Map<string, EditorSession>([[oldPath, session]])
     let resolveOldRead:
       | ((value: { ok: true, content: string, metadata: ReturnType<typeof createTextMetadata> }) => void)
       | undefined
 
-    session.textState.textContent = DIRTY_CONTENT
-    session.textState.textSource = 'draft'
-    session.textState.isDirty = true
-    session.document.model = createLoadedDocumentState('animation', DIRTY_CONTENT).model
-    session.document.cachedTextContent = DIRTY_CONTENT
+    const oldReadResult = {
+      ok: true as const,
+      content: DIRTY_CONTENT,
+      metadata: createTextMetadata(),
+    }
 
     const readTextDocumentFile = vi.fn((path: string) => {
       if (path === oldPath) {
@@ -252,78 +260,10 @@ describe('handleFileModifiedEvent', () => {
       })
     })
 
-    const oldReadResult = {
-      ok: true as const,
-      content: DIRTY_CONTENT,
-      metadata: createTextMetadata(),
-    }
-
-    const context = {
-      autoSaveHasPending: () => false,
-      cancelAutoSave: vi.fn(),
-      canReschedulePendingAutoSave: () => true,
-      createEditorError: (message: string) => new AppError('EDITOR_ERROR', message),
-      deleteSession(path: string) {
-        sessions.delete(path)
-      },
-      getActiveTabPath: () => undefined,
-      getAssetUrl: () => '',
-      getDocumentState(path: string) {
-        const currentSession = sessions.get(path)
-        return currentSession?.type === 'editable' ? currentSession.document : undefined
-      },
-      getEditableSession(path: string): EditableEditorSession | undefined {
-        const currentSession = sessions.get(path)
-        return currentSession?.type === 'editable' ? currentSession : undefined
-      },
-      getEditableState(path: string) {
-        const currentSession = sessions.get(path)
-        if (currentSession?.type !== 'editable') {
-          return
-        }
-        return currentSession.activeProjection === 'text'
-          ? currentSession.textState
-          : currentSession.visualState
-      },
-      getPreferredProjection: () => 'text' as const,
-      getPreviewBaseUrl: () => undefined,
-      getSceneSelection: () => undefined,
-      getSession(path: string) {
-        return sessions.get(path)
-      },
-      getWorkspaceRootPath: () => undefined,
-      hasSession(path: string) {
-        return sessions.has(path)
-      },
-      messages: {
-        fileSyncFailed: 'file sync failed',
-        previewUnavailable: 'preview unavailable',
-        unsupportedFile: 'unsupported file',
-        workspaceUnavailable: 'workspace unavailable',
-      },
-      patchSceneSelection() { /* noop */ },
+    const { context } = createContextHarness({
+      path: oldPath,
       readTextDocumentFile,
-      scheduleAutoSave: vi.fn(),
-      setSession(path: string, nextSession: EditorSession) {
-        sessions.set(path, nextSession)
-      },
-      setTabError: vi.fn(),
-      setTabLoading: vi.fn(),
-      setTabModified: vi.fn(),
-      syncScenePreview: vi.fn(),
-      syncStateFromDocument: vi.fn((path: string) => {
-        const currentSession = sessions.get(path)
-        if (currentSession?.type !== 'editable') {
-          return
-        }
-
-        syncProjectionStateFromDocument(
-          currentSession.document,
-          currentSession.textState,
-          currentSession.visualState,
-        )
-      }),
-    } satisfies EditorFileLifecycleContext
+    })
 
     const oldTask = handleFileModifiedEvent(context, { path: oldPath })
     await Promise.resolve()

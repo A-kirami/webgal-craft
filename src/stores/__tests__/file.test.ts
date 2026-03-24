@@ -77,17 +77,7 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
-vi.mock('../workspace', () => ({
-  useWorkspaceStore: useWorkspaceStoreMock,
-}))
-
 vi.mock('~/composables/useFileSystemEvents', () => ({
-  useFileSystemEvents: () => ({
-    emit: fileSystemEventsEmitMock,
-  }),
-}))
-
-vi.mock('../../composables/useFileSystemEvents', () => ({
   useFileSystemEvents: () => ({
     emit: fileSystemEventsEmitMock,
   }),
@@ -99,25 +89,11 @@ vi.mock('~/services/directory-cache', () => ({
   clearDirectoryItemsCache: clearDirectoryItemsCacheMock,
 }))
 
-vi.mock('../../services/directory-cache', () => ({
-  readDirectoryItemsCached: readDirectoryItemsCachedMock,
-  invalidateDirectoryItemsCache: invalidateDirectoryItemsCacheMock,
-  clearDirectoryItemsCache: clearDirectoryItemsCacheMock,
-}))
-
 vi.mock('~/helper/app-paths', () => ({
   gameRootDir: async (path: string) => normalizePath(`${path}/game`),
 }))
 
-vi.mock('../../helper/app-paths', () => ({
-  gameRootDir: async (path: string) => normalizePath(`${path}/game`),
-}))
-
 vi.mock('~/utils/error-handler', () => ({
-  handleError: handleErrorMock,
-}))
-
-vi.mock('../../utils/error-handler', () => ({
   handleError: handleErrorMock,
 }))
 

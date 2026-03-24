@@ -16,6 +16,10 @@ describe('预览设置状态仓库', () => {
   it('允许单独切换各预览开关', () => {
     const store = usePreviewSettingsStore()
 
+    expect(store.enableLivePreview).toBe(true)
+    expect(store.enableFastPreview).toBe(false)
+    expect(store.enableRealtimeEffectPreview).toBe(true)
+
     store.enableLivePreview = false
     store.enableFastPreview = true
     store.enableRealtimeEffectPreview = false

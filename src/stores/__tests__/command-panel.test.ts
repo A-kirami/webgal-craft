@@ -113,7 +113,7 @@ describe('useCommandPanelStore', () => {
     expect(updated.rawTexts).toEqual(['factory:0', 'factory:1'])
   })
 
-  it('resetGroup 当 parseSentence 返回 null 时保留原文本', () => {
+  it('resetGroup 当 parseSentence 返回 undefined 时保留原文本', () => {
     const g = store.saveGroup({ name: 'grp', rawTexts: ['unparseable', 'custom bg'] })
 
     vi.mocked(parseSentence)

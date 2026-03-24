@@ -32,12 +32,6 @@ vi.mock('~/composables/color-mode', () => ({
   },
 }))
 
-vi.mock('../composables/color-mode', () => ({
-  get colorMode() {
-    return colorMode
-  },
-}))
-
 describe('通用设置状态仓库', () => {
   beforeEach(() => {
     locale.value = 'en'

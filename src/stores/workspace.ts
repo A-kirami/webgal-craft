@@ -63,10 +63,10 @@ export const useWorkspaceStore = defineStore(
       })
 
       if (currentGame) {
-        const previousGamePath = currentGame.path
+        const previousGameId = currentGame.id
 
         try {
-          await gameManager.stopGamePreview(previousGamePath)
+          await gameManager.stopGamePreview(previousGameId)
         } catch (error) {
           if (!isStale) {
             logger.error(`停止预览失败: ${error}`)
