@@ -4,6 +4,7 @@ import path from 'node:path'
 import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 import Vue from '@vitejs/plugin-vue'
 import VueJsx from '@vitejs/plugin-vue-jsx'
+import { playwright } from '@vitest/browser-playwright'
 import PostcssNesting from 'postcss-nesting'
 import UnoCSS from 'unocss/vite'
 import AutoImport from 'unplugin-auto-import/vite'
@@ -111,8 +112,12 @@ export default defineConfig({
         }
       : undefined,
     watch: {
-      // 3. tell vite to ignore watching `src-tauri`
-      ignored: ['**/src-tauri/**'],
+      // 3. tell vite to ignore watching backend and test files
+      ignored: [
+        '**/src-tauri/**',
+        '**/{__tests__,e2e}/**',
+        '**/*.{spec,test}.{js,jsx,ts,tsx,mjs,mts,cjs,cts}',
+      ],
     },
   },
 
@@ -134,8 +139,33 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           include: ['src/**/__tests__/**/*.test.ts'],
-          exclude: ['node_modules', 'dist', 'src-tauri'],
+          exclude: [
+            'node_modules',
+            'dist',
+            'src-tauri',
+            'src/**/__tests__/**/*.browser.test.ts',
+          ],
           setupFiles: ['src/__tests__/setup.ts'],
+        },
+        extends: true,
+      },
+      {
+        test: {
+          name: 'browser',
+          fileParallelism: false,
+          maxWorkers: 1,
+          browser: {
+            enabled: true,
+            provider: playwright(),
+            headless: true,
+            screenshotFailures: false,
+            instances: [{ browser: 'chromium' }],
+          },
+          // 组件浏览器测试使用 .spec.ts，非组件但依赖浏览器环境的测试使用 __tests__/*.browser.test.ts。
+          include: [
+            'src/**/*.spec.ts',
+            'src/**/__tests__/**/*.browser.test.ts',
+          ],
         },
         extends: true,
       },
