@@ -180,11 +180,16 @@ describe('useFilePickerController', () => {
   // 下面的断言用于确认它会被视为非根目录内的相对路径，并在 modelValue.value
   // 和 controller.inputText.value 中都保留为 'assets/file-1.txt'。
   it('大小写不一致的绝对路径不会被当作根目录内相对路径', async () => {
+    statMock.mockImplementation(async (path: string) => ({
+      isDirectory: path === '/assets' || path === '/Assets',
+    }))
+
     const { controller, modelValue, scope } = createFixture({
       rootPath: '/Assets',
     })
 
     await flushControllerTasks()
+    expect(controller.canonicalRootPath.value).toBe('/Assets')
 
     controller.handleSelectItem({
       isDir: false,
