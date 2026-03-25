@@ -2,9 +2,12 @@ import { createPinia } from 'pinia'
 import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { createI18n } from 'vue-i18n'
 
+import zhHansMessages from '~/locales/zh-Hans.yml'
+
 import type { Pinia } from 'pinia'
 import type { MockInstance } from 'vitest'
 import type { Plugin } from 'vue'
+import type { I18n } from 'vue-i18n'
 
 interface BrowserTestI18nOptions {
   locale?: string
@@ -12,6 +15,7 @@ interface BrowserTestI18nOptions {
 }
 
 interface BrowserTestPluginsOptions extends BrowserTestI18nOptions {
+  i18nMode: BrowserTestI18nMode
   pinia?: boolean | Pinia
 }
 
@@ -19,18 +23,95 @@ interface BrowserConsoleMonitor {
   expectNoConsoleMessage(pattern: string | RegExp): void
 }
 
-export function createBrowserTestI18n(options: BrowserTestI18nOptions = {}) {
-  return createI18n({
+type BrowserTestMessages = Record<string, unknown>
+type BrowserTestI18nMode = 'lite' | 'localized' | 'strict'
+
+interface BrowserTestI18nConfig extends BrowserTestI18nOptions {
+  includeDefaultMessages: boolean
+  strict: boolean
+}
+
+function isMessageRecord(value: unknown): value is BrowserTestMessages {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function mergeMessageRecords(base: BrowserTestMessages, override: BrowserTestMessages): BrowserTestMessages {
+  const merged: BrowserTestMessages = { ...base }
+
+  for (const [key, value] of Object.entries(override)) {
+    const current = merged[key]
+
+    merged[key] = isMessageRecord(current) && isMessageRecord(value)
+      ? mergeMessageRecords(current, value)
+      : value
+  }
+
+  return merged
+}
+
+function getBrowserTestDefaultMessages(): BrowserTestMessages {
+  return { 'zh-Hans': zhHansMessages as BrowserTestMessages }
+}
+
+function resolveBrowserTestMessages(messages: BrowserTestMessages | undefined, includeDefaultMessages: boolean): BrowserTestMessages {
+  if (!includeDefaultMessages) {
+    return messages ?? {}
+  }
+
+  const defaults = getBrowserTestDefaultMessages()
+
+  return messages
+    ? mergeMessageRecords(defaults, messages)
+    : defaults
+}
+
+function createBrowserTestI18nInstance(config: BrowserTestI18nConfig): I18n {
+  const locale = config.locale ?? 'zh-Hans'
+  const messages = resolveBrowserTestMessages(config.messages, config.includeDefaultMessages)
+
+  const i18n = createI18n({
     legacy: false,
-    locale: options.locale ?? 'en',
-    messages: options.messages as never,
+    locale,
+    messages: messages as never,
     missingWarn: false,
     fallbackWarn: false,
-    missing: (_locale, key) => key,
+    missing: (missingLocale, key) => {
+      if (config.strict) {
+        throw new Error(`[browser-test-i18n] Missing translation: ${String(missingLocale ?? locale)}.${key}`)
+      }
+
+      return key
+    },
+  })
+
+  return i18n
+}
+
+export function createBrowserLiteI18n(options: BrowserTestI18nOptions = {}) {
+  return createBrowserTestI18nInstance({
+    ...options,
+    includeDefaultMessages: false,
+    strict: false,
   })
 }
 
-export function createBrowserTestPlugins(options: BrowserTestPluginsOptions = {}) {
+export function createBrowserLocalizedI18n(options: BrowserTestI18nOptions = {}) {
+  return createBrowserTestI18nInstance({
+    ...options,
+    includeDefaultMessages: true,
+    strict: false,
+  })
+}
+
+export function createBrowserStrictI18n(options: BrowserTestI18nOptions = {}) {
+  return createBrowserTestI18nInstance({
+    ...options,
+    includeDefaultMessages: true,
+    strict: true,
+  })
+}
+
+export function createBrowserTestPlugins(options: BrowserTestPluginsOptions) {
   const plugins: Plugin[] = []
   let pinia: Pinia | undefined
 
@@ -39,7 +120,13 @@ export function createBrowserTestPlugins(options: BrowserTestPluginsOptions = {}
     plugins.push(pinia)
   }
 
-  plugins.push(createBrowserTestI18n({
+  const createI18nPlugin = {
+    lite: createBrowserLiteI18n,
+    localized: createBrowserLocalizedI18n,
+    strict: createBrowserStrictI18n,
+  }[options.i18nMode]
+
+  plugins.push(createI18nPlugin({
     locale: options.locale,
     messages: options.messages,
   }))
@@ -75,7 +162,6 @@ export function createBrowserConsoleMonitor(): BrowserConsoleMonitor {
       expect(pattern.test(output)).toBe(false)
       return
     }
-
     expect(output).not.toContain(pattern)
   }
 
