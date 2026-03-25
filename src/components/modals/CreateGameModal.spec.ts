@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { computed, defineComponent, h, reactive } from 'vue'
-import { createI18n } from 'vue-i18n'
+
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 
 import CreateGameModal from './CreateGameModal.vue'
 
@@ -162,16 +163,6 @@ vi.mock('~/components/ui/form/FormMessage.vue', () => ({
   }),
 }))
 
-function createTestI18n() {
-  return createI18n({
-    legacy: false,
-    locale: 'en',
-    missingWarn: false,
-    fallbackWarn: false,
-    missing: (_locale, key) => key,
-  })
-}
-
 const globalStubs = {
   'i18n-t': defineComponent({
     name: 'MockI18nT',
@@ -221,22 +212,25 @@ describe('CreateGameModal', () => {
     })
   })
 
-  it('输入游戏名后会自动生成保存路径', async () => {
+  it('点击选择目录按钮时会打开保存位置对话框', async () => {
     render(CreateGameModal, {
       props: {
         open: true,
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
 
-    const textboxes = page.getByRole('textbox')
-    await textboxes.nth(0).fill('My:Game')
+    await page.getByRole('button', { name: 'modals.createGame.selectSaveLocation' }).click()
 
-    await expect.element(textboxes.nth(1)).toHaveValue('/games/My_Game')
-    expect(joinMock).toHaveBeenCalledWith('/games', 'My_Game')
+    expect(openDialogMock).toHaveBeenCalledWith(expect.objectContaining({
+      defaultPath: '/games',
+      directory: true,
+      multiple: false,
+      title: 'modals.createGame.selectSaveLocation',
+    }))
   })
 
   it('提交表单时会创建游戏并回传 game id', async () => {
@@ -250,16 +244,16 @@ describe('CreateGameModal', () => {
         'onUpdate:open': updateOpen,
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
 
-    await page.getByRole('textbox').nth(0).fill('Demo')
+    await page.getByRole('textbox', { name: 'modals.createGame.gameName' }).fill('Demo')
     await page.getByRole('button', { name: 'modals.createGame.create' }).click()
 
     expect(createGameMock).toHaveBeenCalledWith('Demo', '/games/Demo', '/engines/default')
     expect(updateOpen).toHaveBeenCalledWith(false)
-    await expect.poll(() => onSuccess.mock.calls[0]?.[0]).toBe('game-1')
+    expect(onSuccess).toHaveBeenCalledWith('game-1')
   })
 })

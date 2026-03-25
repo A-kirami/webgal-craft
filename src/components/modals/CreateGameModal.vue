@@ -1,16 +1,9 @@
 <script setup lang="ts">
-import { join } from '@tauri-apps/api/path'
-import { open as openDialog } from '@tauri-apps/plugin-dialog'
-import { exists, readDir } from '@tauri-apps/plugin-fs'
 import { FolderOpen } from 'lucide-vue-next'
-import sanitize from 'sanitize-filename'
-import { useForm } from 'vee-validate'
-import * as z from 'zod'
 
 import { FormField } from '~/components/ui/form'
-import { gameManager } from '~/services/game-manager'
-import { useResourceStore } from '~/stores/resource'
-import { useStorageSettingsStore } from '~/stores/storage-settings'
+
+import { useCreateGameForm } from './useCreateGameForm'
 
 const open = defineModel<boolean>('open')
 
@@ -18,101 +11,20 @@ const props = defineProps<{
   onSuccess?: (gameId: string) => void
 }>()
 
-const storageSettingsStore = useStorageSettingsStore()
+const gameNameFieldId = 'create-game-name'
+const gamePathFieldId = 'create-game-path'
 
-const checkPath = async (path: string) => {
-  try {
-    const pathExists = await exists(path)
-    if (!pathExists) {
-      return true
-    }
-
-    const entries = await readDir(path)
-    return entries.length === 0
-  } catch (error) {
-    void logger.error(`检查路径 ${path} 失败: ${error}`)
-    return false
-  }
-}
-
-const { t } = useI18n()
-
-const schema = z.object({
-  gameName: z.string(),
-  gamePath: z.string().refine(
-    async path => await checkPath(path),
-    t('modals.createGame.pathNotEmpty'),
-  ),
-  gameEngine: z.string(),
-})
-
-const { handleSubmit, isFieldDirty, setFieldValue } = useForm({
-  validationSchema: schema,
-  initialValues: { gamePath: storageSettingsStore.gameSavePath },
-})
-
-let isComposing = $ref(false)
-let isPathManuallyChanged = $ref(false)
-
-const handleGameNameChange = async (event: Event) => {
-  if (isComposing) {
-    return
-  }
-
-  const value = (event.target as HTMLInputElement).value
-  const sanitizeGameName = sanitize(value ?? '', { replacement: '_' })
-  const gamePath = await join(storageSettingsStore.gameSavePath, sanitizeGameName)
-  if (!isPathManuallyChanged) {
-    setFieldValue('gamePath', gamePath, false)
-  }
-}
-
-const handleCompositionStart = () => {
-  isComposing = true
-}
-
-const handleCompositionEnd = async (event: Event) => {
-  isComposing = false
-  handleGameNameChange(event)
-}
-
-const handleSelectFolder = async () => {
-  const selected = await openDialog({
-    title: t('modals.createGame.selectSaveLocation'),
-    directory: true,
-    multiple: false,
-    defaultPath: storageSettingsStore.gameSavePath,
-  })
-
-  if (selected) {
-    isPathManuallyChanged = true
-    setFieldValue('gamePath', selected, false)
-  }
-}
-
-const resourceStore = useResourceStore()
-
-const engineOptions = computed(() => {
-  return resourceStore.engines?.map(engine => ({
-    id: engine.id,
-    name: engine.metadata.name,
-  }))
-})
-
-const onSubmit = handleSubmit(async (values) => {
-  const engine = resourceStore.engines?.find(engine => engine.id === values.gameEngine)
-  if (!engine) {
-    return
-  }
-  open.value = false
-  const gameId = await gameManager.createGame(values.gameName, values.gamePath, engine.path)
-  props.onSuccess?.(gameId)
-})
-
-onMounted(() => {
-  if (engineOptions.value) {
-    setFieldValue('gameEngine', engineOptions.value[0].id)
-  }
+const {
+  engineOptions,
+  handleCompositionEnd,
+  handleCompositionStart,
+  handleGameNameChange,
+  handleSelectFolder,
+  isFieldDirty,
+  onSubmit,
+} = useCreateGameForm({
+  open,
+  onSuccess: props.onSuccess,
 })
 </script>
 
@@ -129,11 +41,18 @@ onMounted(() => {
         <div class="gap-4 grid">
           <FormField v-slot="{ componentField }" name="gameName" :validate-on-blur="!isFieldDirty">
             <FormItem class="px-2 gap-x-4 gap-y-2 grid grid-cols-[auto_1fr] items-center space-y-0">
-              <FormLabel class="text-right whitespace-nowrap">
+              <FormLabel :for="gameNameFieldId" class="text-right whitespace-nowrap">
                 {{ $t('modals.createGame.gameName') }}
               </FormLabel>
               <FormControl>
-                <Input v-bind="componentField" class="w-full" @input="handleGameNameChange" @compositionstart="handleCompositionStart" @compositionend="handleCompositionEnd" />
+                <Input
+                  :id="gameNameFieldId"
+                  v-bind="componentField"
+                  class="w-full"
+                  @input="handleGameNameChange"
+                  @compositionstart="handleCompositionStart"
+                  @compositionend="handleCompositionEnd"
+                />
               </FormControl>
               <FormMessage class="col-start-2" />
             </FormItem>
@@ -141,7 +60,7 @@ onMounted(() => {
 
           <FormField v-slot="{ componentField }" name="gamePath" :validate-on-blur="false" :validate-on-change="false">
             <FormItem class="px-2 gap-x-4 gap-y-2 grid grid-cols-[auto_1fr] items-center space-y-0">
-              <FormLabel class="text-right whitespace-nowrap">
+              <FormLabel :for="gamePathFieldId" class="text-right whitespace-nowrap">
                 {{ $t('modals.createGame.saveLocation') }}
               </FormLabel>
               <div class="flex gap-2">
@@ -149,7 +68,7 @@ onMounted(() => {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger as-child>
-                        <Input v-bind="componentField" class="bg-accent flex-1 cursor-default!" disabled />
+                        <Input :id="gamePathFieldId" v-bind="componentField" class="bg-accent flex-1 cursor-default!" disabled />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>{{ componentField.modelValue }}</p>
@@ -157,7 +76,7 @@ onMounted(() => {
                     </Tooltip>
                   </TooltipProvider>
                 </FormControl>
-                <Button variant="outline" size="icon" type="button" @click="handleSelectFolder">
+                <Button :aria-label="$t('modals.createGame.selectSaveLocation')" variant="outline" size="icon" type="button" @click="handleSelectFolder">
                   <FolderOpen class="h-4 w-4" />
                 </Button>
               </div>

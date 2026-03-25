@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 
-import { createBrowserTestI18n } from '~/__tests__/browser'
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 
 import GameConfigModal from './GameConfigModal.vue'
 
@@ -16,7 +16,7 @@ describe('GameConfigModal', () => {
         'onUpdate:open': updateOpen,
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
       },
     })
 

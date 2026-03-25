@@ -1,0 +1,171 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { computed, reactive, ref } from 'vue'
+
+const {
+  createGameMock,
+  existsMock,
+  joinMock,
+  openDialogMock,
+  readDirMock,
+  setFieldValueMock,
+  useFormMock,
+  useResourceStoreMock,
+  useStorageSettingsStoreMock,
+} = vi.hoisted(() => ({
+  createGameMock: vi.fn(),
+  existsMock: vi.fn(),
+  joinMock: vi.fn(async (...parts: string[]) => parts.join('/')),
+  openDialogMock: vi.fn(),
+  readDirMock: vi.fn(),
+  setFieldValueMock: vi.fn(),
+  useFormMock: vi.fn(),
+  useResourceStoreMock: vi.fn(),
+  useStorageSettingsStoreMock: vi.fn(),
+}))
+
+vi.mock('@tauri-apps/api/path', () => ({
+  join: joinMock,
+}))
+
+vi.mock('@tauri-apps/plugin-dialog', () => ({
+  open: openDialogMock,
+}))
+
+vi.mock('@tauri-apps/plugin-fs', () => ({
+  exists: existsMock,
+  readDir: readDirMock,
+}))
+
+vi.mock('vue-i18n', () => ({
+  useI18n() {
+    return {
+      t(key: string) {
+        return key
+      },
+    }
+  },
+}))
+
+vi.mock('vee-validate', () => ({
+  useForm: useFormMock,
+}))
+
+vi.mock('~/services/game-manager', () => ({
+  gameManager: {
+    createGame: createGameMock,
+  },
+}))
+
+vi.mock('~/stores/resource', () => ({
+  useResourceStore: useResourceStoreMock,
+}))
+
+vi.mock('~/stores/storage-settings', () => ({
+  useStorageSettingsStore: useStorageSettingsStoreMock,
+}))
+
+import { useCreateGameForm } from '../useCreateGameForm'
+
+let formValues = reactive<Record<string, unknown>>({})
+
+describe('useCreateGameForm', () => {
+  beforeEach(() => {
+    formValues = reactive({})
+
+    createGameMock.mockReset()
+    existsMock.mockReset()
+    joinMock.mockReset()
+    openDialogMock.mockReset()
+    readDirMock.mockReset()
+    setFieldValueMock.mockReset()
+    useFormMock.mockReset()
+    useResourceStoreMock.mockReset()
+    useStorageSettingsStoreMock.mockReset()
+
+    createGameMock.mockResolvedValue('game-1')
+    existsMock.mockResolvedValue(false)
+    joinMock.mockImplementation(async (...parts: string[]) => parts.join('/'))
+    openDialogMock.mockResolvedValue(undefined)
+    readDirMock.mockResolvedValue([])
+
+    useStorageSettingsStoreMock.mockReturnValue({
+      gameSavePath: '/games',
+    })
+
+    useResourceStoreMock.mockReturnValue({
+      engines: [
+        {
+          id: 'engine-1',
+          path: '/engines/default',
+          metadata: {
+            name: 'Default Engine',
+          },
+        },
+      ],
+    })
+
+    useFormMock.mockImplementation((options?: { initialValues?: Record<string, unknown> }) => {
+      formValues = reactive({
+        ...options?.initialValues,
+      })
+
+      setFieldValueMock.mockImplementation((name: string, value: unknown) => {
+        formValues[name] = value
+      })
+
+      return {
+        handleSubmit(handler: (values: Record<string, unknown>) => Promise<unknown> | unknown) {
+          return async (event?: Event) => {
+            event?.preventDefault?.()
+            await handler({ ...formValues })
+          }
+        },
+        isFieldDirty: computed(() => false),
+        setFieldValue: setFieldValueMock,
+      }
+    })
+  })
+
+  it('会根据游戏名自动生成建议路径并设置默认引擎', async () => {
+    const open = ref(true)
+    const form = useCreateGameForm({ open })
+
+    await form.handleGameNameChange({
+      target: { value: 'My:Game' },
+    } as never)
+
+    expect(setFieldValueMock).toHaveBeenCalledWith('gameEngine', 'engine-1')
+    expect(joinMock).toHaveBeenCalledWith('/games', 'My_Game')
+    expect(setFieldValueMock).toHaveBeenCalledWith('gamePath', '/games/My_Game', false)
+  })
+
+  it('手动选择目录后不会再被自动建议路径覆盖', async () => {
+    const open = ref(true)
+    const form = useCreateGameForm({ open })
+    openDialogMock.mockResolvedValue('/manual/path')
+
+    await form.handleSelectFolder()
+    await form.handleGameNameChange({
+      target: { value: 'Demo' },
+    } as never)
+
+    expect(setFieldValueMock).toHaveBeenCalledWith('gamePath', '/manual/path', false)
+    expect(joinMock).not.toHaveBeenCalled()
+  })
+
+  it('提交时会关闭弹窗并创建游戏且回调 game id', async () => {
+    const open = ref(true)
+    const onSuccess = vi.fn()
+    const form = useCreateGameForm({ open, onSuccess })
+
+    formValues.gameName = 'Demo'
+    formValues.gamePath = '/games/Demo'
+    formValues.gameEngine = 'engine-1'
+
+    await form.onSubmit()
+
+    expect(createGameMock).toHaveBeenCalledWith('Demo', '/games/Demo', '/engines/default')
+    expect(open.value).toBe(false)
+    expect(onSuccess).toHaveBeenCalledWith('game-1')
+  })
+})
