@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test'
 
-import { installMockTauri } from './mock-tauri'
+import { installMockTauri, waitForMockTauriReady } from './mock-tauri'
 
 import type { InstallMockTauriOptions } from './mock-tauri'
 import type { Page } from '@playwright/test'
@@ -25,6 +25,7 @@ export async function launchCraftApp(page: Page, options: LaunchCraftAppOptions 
 
   await installMockTauri(page, options.mockTauri)
   await page.goto('/')
+  await waitForMockTauriReady(page)
 }
 
 export async function createGameFromHome(page: Page, gameName: string = 'Demo Game') {
@@ -68,6 +69,8 @@ export async function replaceSceneText(page: Page, content: string) {
 }
 
 async function getOpenWindowLabels(page: Page): Promise<string[]> {
+  await waitForMockTauriReady(page)
+
   return await page.evaluate(async () => {
     const tauriInternals = (globalThis as typeof globalThis & {
       __TAURI_INTERNALS__?: TauriInternals

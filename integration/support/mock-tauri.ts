@@ -24,6 +24,16 @@ interface VirtualEntry {
   birthtime?: number
 }
 
+interface TauriMockGlobal {
+  __TAURI_EVENT_PLUGIN_INTERNALS__?: {
+    unregisterListener(): void
+  }
+  __TAURI_INTERNALS__?: unknown
+  __TAURI_MOCK_PENDING__?: boolean
+  __TAURI_MOCK_READY__?: boolean
+  __TAURI_MOCK_ERROR__?: string
+}
+
 const defaultSeedEngine: SeedEngine = {
   id: 'engine-default',
   path: 'C:/Engines/Default',
@@ -52,6 +62,7 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
       const openWindows = new Set<string>(['main'])
       let nextCallbackId = 1
       let nextEventId = 1
+      const tauriMockGlobal = globalThis as typeof globalThis & TauriMockGlobal
 
       function normalizePath(path: string) {
         return path.replaceAll('\\', '/').replaceAll(/\/+/g, '/')
@@ -272,18 +283,33 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
         })
       }
 
-      await seedDatabase(seedEngines)
-      ensureDirectory(documentDir)
+      tauriMockGlobal.__TAURI_MOCK_PENDING__ = true
+      tauriMockGlobal.__TAURI_MOCK_READY__ = false
+      tauriMockGlobal.__TAURI_MOCK_ERROR__ = undefined
 
-      for (const engine of seedEngines) {
-        seedEngineFileSystem(engine)
-      }
-
-      globalThis.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
+      tauriMockGlobal.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
         unregisterListener: () => { /* no-op */ },
       }
 
-      globalThis.__TAURI_INTERNALS__ = {
+      const mockReadyPromise = (async () => {
+        await seedDatabase(seedEngines)
+        ensureDirectory(documentDir)
+
+        for (const engine of seedEngines) {
+          seedEngineFileSystem(engine)
+        }
+      })()
+
+      void mockReadyPromise.then(() => {
+        tauriMockGlobal.__TAURI_MOCK_PENDING__ = false
+        tauriMockGlobal.__TAURI_MOCK_READY__ = true
+      }, (error: unknown) => {
+        tauriMockGlobal.__TAURI_MOCK_PENDING__ = false
+        tauriMockGlobal.__TAURI_MOCK_READY__ = false
+        tauriMockGlobal.__TAURI_MOCK_ERROR__ = error instanceof Error ? error.message : String(error)
+      })
+
+      tauriMockGlobal.__TAURI_INTERNALS__ = {
         callbacks: callbackRegistry,
         convertFileSrc: (filePath: string) => filePath,
         metadata: {
@@ -307,6 +333,7 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
           args: Record<string, unknown> | Uint8Array = {},
           options?: { headers?: Record<string, string> },
         ) {
+          await mockReadyPromise
           const invokeArgs = asCommandArgs(args)
 
           switch (command) {
@@ -475,4 +502,17 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
       seedEngines: options.seedEngines ?? [defaultSeedEngine],
     },
   )
+}
+
+export async function waitForMockTauriReady(page: Page) {
+  await page.waitForFunction(() => {
+    const tauriMockGlobal = globalThis as typeof globalThis & TauriMockGlobal
+
+    if (tauriMockGlobal.__TAURI_MOCK_ERROR__) {
+      throw new Error(tauriMockGlobal.__TAURI_MOCK_ERROR__)
+    }
+
+    return tauriMockGlobal.__TAURI_MOCK_PENDING__ === false
+      && tauriMockGlobal.__TAURI_MOCK_READY__ === true
+  })
 }

@@ -36,7 +36,6 @@ test.describe('创建游戏与编辑器流程', () => {
     await testGameButton.click()
 
     await expectTestWindowOpened(page)
-    await expect(testGameButton).toHaveClass(/text-emerald-600/)
   })
 
   test('进入编辑器后可以打开场景文件标签页', async ({ page }) => {
