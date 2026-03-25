@@ -115,7 +115,7 @@ export default defineConfig({
       // 3. tell vite to ignore watching backend and test files
       ignored: [
         '**/src-tauri/**',
-        '**/{__tests__,e2e}/**',
+        '**/{__tests__,integration}/**',
         '**/*.{spec,test}.{js,jsx,ts,tsx,mjs,mts,cjs,cts}',
       ],
     },
