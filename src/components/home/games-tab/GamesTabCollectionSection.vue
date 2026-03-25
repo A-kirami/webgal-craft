@@ -10,7 +10,7 @@ interface Props {
   games: Game[]
   getGameProgress: (game: Game) => number
   hasGameProgress: (game: Game) => boolean
-  viewMode: string
+  viewMode: 'grid' | 'list'
 }
 
 defineProps<Props>()
@@ -165,8 +165,7 @@ const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef,
       ref="dropZoneListRef"
       class="p-3 border-t bg-gray-50/50 flex cursor-pointer transition-colors items-center justify-between dark:bg-gray-800/10 hover:bg-gray-100 dark:hover:bg-gray-800/20"
       :class="{
-        'bg-purple-50': isOverDropZoneList,
-        'bg-gray-50/50 dark:bg-gray-800/10 hover:bg-gray-100 dark:hover:bg-gray-800/20': !isOverDropZoneList
+        'bg-purple-50': isOverDropZoneList
       }"
       @click="emit('importClick')"
     >

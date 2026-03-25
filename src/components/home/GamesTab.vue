@@ -20,7 +20,7 @@ const { t } = useI18n()
 const filteredGames = computed(() => resourceStore.filteredGames)
 const controller = useGamesTabController({
   activeProgress: resourceStore.activeProgress,
-  engines: resourceStore.engines,
+  engines: () => resourceStore.engines,
   openCreateGameModal: () => modalStore.open('CreateGameModal'),
   openDeleteGameModal: game => modalStore.open('DeleteGameModal', { game }),
   openNoEngineAlertModal: (onConfirm) => {

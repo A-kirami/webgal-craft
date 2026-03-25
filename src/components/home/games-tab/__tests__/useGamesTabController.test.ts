@@ -101,6 +101,31 @@ describe('useGamesTabController', () => {
     expect(switchToEnginesTabMock).toHaveBeenCalledTimes(1)
   })
 
+  it('创建游戏时会读取最新的引擎列表', () => {
+    let engines: { id: string }[] | undefined = []
+    const openCreateGameModalMock = vi.fn()
+    const openDeleteGameModalMock = vi.fn()
+    const openNoEngineAlertModalMock = vi.fn()
+    const switchToEnginesTabMock = vi.fn()
+
+    const controller = useGamesTabController({
+      activeProgress: new Map<string, number>(),
+      engines: () => engines,
+      openCreateGameModal: openCreateGameModalMock,
+      openDeleteGameModal: openDeleteGameModalMock,
+      openNoEngineAlertModal: openNoEngineAlertModalMock,
+      pushRoute: routerPushMock,
+      switchToEnginesTab: switchToEnginesTabMock,
+      t: (key: string) => key,
+    })
+
+    engines = [{ id: 'engine-1' }]
+    controller.createGame()
+
+    expect(openCreateGameModalMock).toHaveBeenCalledTimes(1)
+    expect(openNoEngineAlertModalMock).not.toHaveBeenCalled()
+  })
+
   it('游戏处理中点击游戏只提示等待，不会跳转', () => {
     const openCreateGameModalMock = vi.fn()
     const openDeleteGameModalMock = vi.fn()

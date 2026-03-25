@@ -52,7 +52,7 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
     gameEngine: z.string(),
   })
 
-  const { handleSubmit, isFieldDirty, setFieldValue } = useForm({
+  const { handleSubmit, isFieldDirty: checkIsFieldDirty, setFieldValue } = useForm({
     validationSchema: schema,
     initialValues: { gamePath: storageSettingsStore.gameSavePath },
   })
@@ -105,10 +105,22 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
     }))
   })
 
-  const defaultEngineId = resolveCreateGameDefaultEngineId(engineOptions.value)
-  if (defaultEngineId) {
+  const isFieldDirty = computed(() => {
+    return checkIsFieldDirty('gameName')
+      || checkIsFieldDirty('gamePath')
+      || checkIsFieldDirty('gameEngine')
+  })
+
+  watch(engineOptions, (options_) => {
+    const defaultEngineId = resolveCreateGameDefaultEngineId(options_)
+    if (!defaultEngineId || checkIsFieldDirty('gameEngine')) {
+      return
+    }
+
     setFieldValue('gameEngine', defaultEngineId)
-  }
+  }, {
+    immediate: true,
+  })
 
   const onSubmit = handleSubmit(async (values: CreateGameFormValues) => {
     const engine = resourceStore.engines?.find(engine => engine.id === values.gameEngine)

@@ -16,7 +16,7 @@ import type { Game } from '~/database/model'
 
 interface UseGamesTabControllerOptions {
   activeProgress: ReadonlyMap<string, number>
-  engines?: readonly { id: string }[]
+  engines?: readonly { id: string }[] | (() => readonly { id: string }[] | undefined)
   openCreateGameModal: () => void
   openDeleteGameModal: (game: Game) => void
   openNoEngineAlertModal: (onConfirm: () => void) => void
@@ -111,7 +111,10 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
   }
 
   function createGame() {
-    const decision = resolveGamesTabCreateGameDecision(options.engines)
+    const engines = typeof options.engines === 'function'
+      ? options.engines()
+      : options.engines
+    const decision = resolveGamesTabCreateGameDecision(engines)
     if (decision.kind === 'none') {
       return
     }

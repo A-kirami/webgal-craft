@@ -160,15 +160,7 @@ function createResourceStore(options: {
 
 describe('EnginesTab', () => {
   beforeEach(() => {
-    importEngineMock.mockReset()
-    modalOpenMock.mockReset()
-    notifyErrorMock.mockReset()
-    notifySuccessMock.mockReset()
-    openDialogMock.mockReset()
-    openPathMock.mockReset()
-    useModalStoreMock.mockReset()
-    usePreferenceStoreMock.mockReset()
-    useResourceStoreMock.mockReset()
+    vi.resetAllMocks()
 
     importEngineMock.mockResolvedValue(undefined)
     openDialogMock.mockResolvedValue(undefined)

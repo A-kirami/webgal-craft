@@ -9,7 +9,7 @@ interface Props {
   engines: Engine[]
   getEngineProgress: (engine: Engine) => number
   hasEngineProgress: (engine: Engine) => boolean
-  viewMode: string
+  viewMode: 'grid' | 'list'
 }
 
 defineProps<Props>()

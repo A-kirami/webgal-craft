@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { computed, reactive, ref } from 'vue'
 
 const {
   createGameMock,
@@ -7,6 +6,7 @@ const {
   joinMock,
   openDialogMock,
   readDirMock,
+  isFieldDirtyMock,
   setFieldValueMock,
   useFormMock,
   useResourceStoreMock,
@@ -17,6 +17,7 @@ const {
   joinMock: vi.fn(async (...parts: string[]) => parts.join('/')),
   openDialogMock: vi.fn(),
   readDirMock: vi.fn(),
+  isFieldDirtyMock: vi.fn(),
   setFieldValueMock: vi.fn(),
   useFormMock: vi.fn(),
   useResourceStoreMock: vi.fn(),
@@ -67,6 +68,13 @@ vi.mock('~/stores/storage-settings', () => ({
 import { useCreateGameForm } from '../useCreateGameForm'
 
 let formValues = reactive<Record<string, unknown>>({})
+interface ResourceStoreEngine {
+  id: string
+  path: string
+  metadata: {
+    name: string
+  }
+}
 
 describe('useCreateGameForm', () => {
   beforeEach(() => {
@@ -77,6 +85,7 @@ describe('useCreateGameForm', () => {
     joinMock.mockReset()
     openDialogMock.mockReset()
     readDirMock.mockReset()
+    isFieldDirtyMock.mockReset()
     setFieldValueMock.mockReset()
     useFormMock.mockReset()
     useResourceStoreMock.mockReset()
@@ -87,6 +96,7 @@ describe('useCreateGameForm', () => {
     joinMock.mockImplementation(async (...parts: string[]) => parts.join('/'))
     openDialogMock.mockResolvedValue(undefined)
     readDirMock.mockResolvedValue([])
+    isFieldDirtyMock.mockReturnValue(false)
 
     useStorageSettingsStoreMock.mockReturnValue({
       gameSavePath: '/games',
@@ -120,7 +130,7 @@ describe('useCreateGameForm', () => {
             await handler({ ...formValues })
           }
         },
-        isFieldDirty: computed(() => false),
+        isFieldDirty: isFieldDirtyMock,
         setFieldValue: setFieldValueMock,
       }
     })
@@ -137,6 +147,57 @@ describe('useCreateGameForm', () => {
     expect(setFieldValueMock).toHaveBeenCalledWith('gameEngine', 'engine-1')
     expect(joinMock).toHaveBeenCalledWith('/games', 'My_Game')
     expect(setFieldValueMock).toHaveBeenCalledWith('gamePath', '/games/My_Game', false)
+  })
+
+  it('引擎异步加载后会补上默认引擎', async () => {
+    const open = ref(true)
+    const resourceStore = reactive({
+      engines: undefined as ResourceStoreEngine[] | undefined,
+    })
+
+    useResourceStoreMock.mockReturnValue(resourceStore)
+
+    useCreateGameForm({ open })
+
+    resourceStore.engines = [
+      {
+        id: 'engine-1',
+        path: '/engines/default',
+        metadata: {
+          name: 'Default Engine',
+        },
+      },
+    ]
+
+    await nextTick()
+
+    expect(setFieldValueMock).toHaveBeenCalledWith('gameEngine', 'engine-1')
+  })
+
+  it('用户已手动修改引擎字段时不会被默认值覆盖', async () => {
+    const open = ref(true)
+    const resourceStore = reactive({
+      engines: undefined as ResourceStoreEngine[] | undefined,
+    })
+
+    isFieldDirtyMock.mockImplementation((field: string) => field === 'gameEngine')
+    useResourceStoreMock.mockReturnValue(resourceStore)
+
+    useCreateGameForm({ open })
+
+    resourceStore.engines = [
+      {
+        id: 'engine-1',
+        path: '/engines/default',
+        metadata: {
+          name: 'Default Engine',
+        },
+      },
+    ]
+
+    await nextTick()
+
+    expect(setFieldValueMock).not.toHaveBeenCalledWith('gameEngine', 'engine-1')
   })
 
   it('手动选择目录后不会再被自动建议路径覆盖', async () => {
