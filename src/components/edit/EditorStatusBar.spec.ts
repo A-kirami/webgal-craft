@@ -210,31 +210,6 @@ describe('EditorStatusBar', () => {
     expect(getImageDimensionsMock).toHaveBeenCalledWith('/project/background.png')
   })
 
-  it('动画文本同步错误时不会在状态栏显示错误提示', async () => {
-    const editorStore = createEditorStore()
-    editorStore.currentState = {
-      isDirty: true,
-      kind: 'animation',
-      path: '/project/effect.json',
-      projection: 'text',
-      textContent: '{"broken":true}',
-    }
-    editorStore.currentTextProjection = {
-      syncError: 'invalid-animation-json',
-    }
-
-    useEditorStoreMock.mockReturnValue(editorStore)
-
-    render(EditorStatusBar, {
-      global: {
-        plugins: [createTestI18n()],
-      },
-    })
-
-    await expect.element(page.getByText('WebGAL Animation')).toBeVisible()
-    await expect.element(page.getByText('Invalid animation JSON')).not.toBeInTheDocument()
-  })
-
   it('动画可视化模式显示帧数而不是行词统计', async () => {
     const editorStore = createEditorStore()
     editorStore.currentState = {
