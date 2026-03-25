@@ -3,10 +3,12 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 import { Copy, ExternalLink, Link, RotateCw } from 'lucide-vue-next'
 
 import { gameCmds } from '~/commands/game'
+import {
+  DEFAULT_PREVIEW_PANEL_ASPECT_RATIO,
+  resolvePreviewPanelStageSize,
+} from '~/helper/preview-panel'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
-
-const DEFAULT_ASPECT_RATIO = '16/9'
 
 const workspaceStore = useWorkspaceStore()
 
@@ -17,36 +19,39 @@ const { t } = useI18n()
 const { copy, copied } = useClipboard({ source: $$(previewUrl) })
 const previewTitle = $computed(() => t('edit.previewPanel.previewTitle', { name: workspaceStore.currentGame?.metadata.name }))
 
-let aspectRatio = $ref(DEFAULT_ASPECT_RATIO)
-
-function applyAspectRatio(stageWidth: number, stageHeight: number): void {
-  aspectRatio = `${stageWidth}/${stageHeight}`
-  logger.debug(`预览面板分辨率: ${stageWidth}x${stageHeight}`)
-}
+let aspectRatio = $ref(DEFAULT_PREVIEW_PANEL_ASPECT_RATIO)
 
 async function updateAspectRatio(): Promise<void> {
   const requestedPath = workspaceStore.currentGame?.path
   if (!requestedPath) {
-    aspectRatio = DEFAULT_ASPECT_RATIO
+    aspectRatio = DEFAULT_PREVIEW_PANEL_ASPECT_RATIO
     return
   }
 
   try {
     const gameConfig = await gameCmds.getGameConfig(requestedPath)
-    if (workspaceStore.currentGame?.path !== requestedPath) {
+    const nextStageSize = resolvePreviewPanelStageSize({
+      currentGamePath: workspaceStore.currentGame?.path,
+      gameConfig,
+      requestedPath,
+    })
+    if (!nextStageSize) {
       return
     }
 
-    const stageWidth = Number(gameConfig.stageWidth) || 2560
-    const stageHeight = Number(gameConfig.stageHeight) || 1440
-    applyAspectRatio(stageWidth, stageHeight)
+    aspectRatio = nextStageSize.aspectRatio
+    logger.debug(`预览面板分辨率: ${nextStageSize.stageWidth}x${nextStageSize.stageHeight}`)
   } catch (error) {
-    if (workspaceStore.currentGame?.path !== requestedPath) {
+    const fallbackStageSize = resolvePreviewPanelStageSize({
+      currentGamePath: workspaceStore.currentGame?.path,
+      requestedPath,
+    })
+    if (!fallbackStageSize) {
       return
     }
 
     logger.warn(`无法读取游戏配置，使用默认宽高比: ${error}`)
-    aspectRatio = DEFAULT_ASPECT_RATIO
+    aspectRatio = fallbackStageSize.aspectRatio
   }
 }
 

@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { defineComponent, h, reactive } from 'vue'
-import { createI18n } from 'vue-i18n'
+
+import { createBrowserLocalizedI18n } from '~/__tests__/browser'
 
 const {
   commandBridgeMock,
@@ -123,9 +124,9 @@ vi.mock('~/components/ui/resizable', () => {
       },
     },
     emits: ['collapse', 'expand'],
-    setup(_, { emit, slots, expose }) {
+    setup(props, { emit, slots, expose }) {
       const state = reactive({
-        isCollapsed: false,
+        isCollapsed: Boolean(props.collapsible),
       })
 
       function expand() {
@@ -161,16 +162,6 @@ vi.mock('~/components/ui/resizable', () => {
 })
 
 import EditorPanel from './EditorPanel.vue'
-
-function createTestI18n() {
-  return createI18n({
-    legacy: false,
-    locale: 'en',
-    missingWarn: false,
-    fallbackWarn: false,
-    missing: (_locale, key) => key,
-  })
-}
 
 const globalStubs = {
   CommandPanel: defineComponent({
@@ -299,6 +290,10 @@ const globalStubs = {
   }),
 }
 
+function createEditorPanelI18n() {
+  return createBrowserLocalizedI18n()
+}
+
 describe('EditorPanel', () => {
   afterEach(() => {
     vi.clearAllMocks()
@@ -354,7 +349,7 @@ describe('EditorPanel', () => {
 
     render(EditorPanel, {
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createEditorPanelI18n()],
         stubs: globalStubs,
       },
     })
@@ -378,7 +373,7 @@ describe('EditorPanel', () => {
 
     render(EditorPanel, {
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createEditorPanelI18n()],
         stubs: globalStubs,
       },
     })
@@ -406,12 +401,12 @@ describe('EditorPanel', () => {
 
     render(EditorPanel, {
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createEditorPanelI18n()],
         stubs: globalStubs,
       },
     })
 
-    await expect.element(page.getByText('edit.textEditor.formPanel.noStatement')).toBeVisible()
+    await expect.element(page.getByText('移动光标到语句行以编辑')).toBeVisible()
     await expect.element(page.getByText('Statement Editor Panel')).not.toBeInTheDocument()
   })
 })

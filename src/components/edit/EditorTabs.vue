@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { FileText, X } from 'lucide-vue-next'
 
+import { getCloseTabDecision, shouldFixPreviewTab } from '~/helper/editor-tabs'
 import { useEditorStore } from '~/stores/editor'
 import { useModalStore } from '~/stores/modal'
 import { useTabsStore } from '~/stores/tabs'
@@ -17,33 +18,27 @@ const modalStore = useModalStore()
 const scrollAreaRef = $(useTemplateRef('scrollAreaRef'))
 
 function handleCloseTab(index: number) {
-  const { path, name, isModified } = tabsStore.tabs[index]
-
-  if (isModified) {
-    modalStore.open('SaveChangesModal', {
-      title: t('modals.saveChanges.title', { name }),
-      onSave: async () => {
-        try {
-          await editorStore.saveFile(path)
-          const currentIndex = tabsStore.findTabIndex(path)
-          if (currentIndex !== -1) {
-            tabsStore.closeTab(currentIndex)
-          }
-        } catch (error) {
-          logger.error(`保存文件失败: ${error}`)
-        }
-      },
-      onDontSave: () => {
-        const currentIndex = tabsStore.findTabIndex(path)
-        if (currentIndex !== -1) {
-          tabsStore.closeTab(currentIndex)
-        }
-      },
-    })
+  const tab = tabsStore.tabs[index]
+  if (!tab) {
     return
   }
 
-  tabsStore.closeTab(index)
+  const decision = getCloseTabDecision({
+    tab,
+    tabIndex: index,
+    modalTitle: t('modals.saveChanges.title', { name: tab.name }),
+    logger,
+    saveFile: editorStore.saveFile,
+    findTabIndex: tabsStore.findTabIndex,
+    closeTab: tabsStore.closeTab,
+  })
+
+  if (decision.type === 'close') {
+    tabsStore.closeTab(decision.index)
+    return
+  }
+
+  modalStore.open('SaveChangesModal', decision.modal)
 }
 
 function handleTabClick(index: number) {
@@ -52,7 +47,7 @@ function handleTabClick(index: number) {
 
 function handleTabDblClick(index: number) {
   const tab = tabsStore.tabs[index]
-  if (tab.isPreview) {
+  if (shouldFixPreviewTab(tab)) {
     tabsStore.fixPreviewTab(index)
   }
 }

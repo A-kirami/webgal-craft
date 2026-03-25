@@ -1,9 +1,10 @@
 /* eslint-disable vue/one-component-per-file, vue/require-default-prop */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { page } from 'vitest/browser'
+import { page, userEvent } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { defineComponent, h } from 'vue'
-import { createI18n } from 'vue-i18n'
+
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 
 const {
   handleErrorMock,
@@ -80,16 +81,6 @@ interface FlattenedTreeItem {
   index: number
   level: number
   value: FileTreeTestItem
-}
-
-function createTestI18n() {
-  return createI18n({
-    legacy: false,
-    locale: 'en',
-    missingWarn: false,
-    fallbackWarn: false,
-    missing: (_locale, key) => key,
-  })
 }
 
 function flattenItems(
@@ -281,12 +272,12 @@ describe('FileTree', () => {
         items: [],
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
 
-    expect(document.querySelector('.animate-spin')).toBeTruthy()
+    await expect.element(page.getByRole('status', { name: 'common.loading' })).toBeInTheDocument()
   })
 
   it('点击文件项会发出 click 事件', async () => {
@@ -304,7 +295,7 @@ describe('FileTree', () => {
         onClick,
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -319,8 +310,6 @@ describe('FileTree', () => {
   })
 
   it('按 F2 重命名后回车会调用 gameFs.renameFile', async () => {
-    renameFileMock.mockResolvedValue(undefined)
-
     render(FileTree, {
       props: {
         getKey: (item: Record<string, unknown>) => String(item.path),
@@ -332,33 +321,20 @@ describe('FileTree', () => {
         ],
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
 
-    const treeItem = document.querySelector('[role="treeitem"]') as HTMLElement | null
-    if (!treeItem) {
-      throw new Error('Expected a tree item to start renaming')
-    }
-    treeItem.dispatchEvent(new KeyboardEvent('keydown', {
-      bubbles: true,
-      key: 'F2',
-    }))
+    const treeItem = page.getByRole('treeitem').first()
+    await treeItem.click()
+    await userEvent.keyboard('{F2}')
 
-    await page.getByRole('textbox').fill('renamed.txt')
-    const textbox = treeItem.querySelector('[data-renaming-input]') as HTMLInputElement | null
-    if (!textbox) {
-      throw new Error('Expected a rename input after pressing F2')
-    }
-    textbox.dispatchEvent(new KeyboardEvent('keydown', {
-      bubbles: true,
-      key: 'Enter',
-    }))
+    const textbox = page.getByRole('textbox')
+    await textbox.fill('renamed.txt')
+    await textbox.click()
+    await userEvent.keyboard('{Enter}')
 
-    await expect.poll(() => renameFileMock.mock.calls[0]).toEqual([
-      '/project/scene.txt',
-      'renamed.txt',
-    ])
+    expect(renameFileMock).toHaveBeenCalledWith('/project/scene.txt', 'renamed.txt')
   })
 })

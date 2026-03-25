@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 
-import { createBrowserTestI18n } from '~/__tests__/browser'
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 
 import ExternalDocumentChangeModal from './ExternalDocumentChangeModal.vue'
 
@@ -20,14 +20,14 @@ describe('ExternalDocumentChangeModal', () => {
         'onUpdate:open': updateOpen,
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
       },
     })
 
     await page.getByRole('button', { name: 'modals.externalDocumentChange.merge' }).click()
 
     expect(onMerge).toHaveBeenCalledTimes(1)
-    await expect.poll(() => updateOpen.mock.calls.some(([open]) => open === false)).toBe(true)
+    expect(updateOpen).toHaveBeenCalledWith(false)
   })
 
   it('点击 keep local 会执行 onKeepLocal 并关闭模态框', async () => {
@@ -43,13 +43,13 @@ describe('ExternalDocumentChangeModal', () => {
         'onUpdate:open': updateOpen,
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
       },
     })
 
     await page.getByRole('button', { name: 'modals.externalDocumentChange.keepLocal' }).click()
 
     expect(onKeepLocal).toHaveBeenCalledTimes(1)
-    await expect.poll(() => updateOpen.mock.calls.some(([open]) => open === false)).toBe(true)
+    expect(updateOpen).toHaveBeenCalledWith(false)
   })
 })

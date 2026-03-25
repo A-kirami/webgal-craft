@@ -3,7 +3,7 @@ import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { reactive } from 'vue'
 
-import { createBrowserTestI18n } from '~/__tests__/browser'
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 
 const {
   useEditorStoreMock,
@@ -53,7 +53,7 @@ describe('EditorToolbar', () => {
 
     render(EditorToolbar, {
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
       },
     })
 
@@ -82,7 +82,7 @@ describe('EditorToolbar', () => {
 
     render(EditorToolbar, {
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
       },
     })
 
@@ -111,7 +111,7 @@ describe('EditorToolbar', () => {
 
     render(EditorToolbar, {
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
       },
     })
 

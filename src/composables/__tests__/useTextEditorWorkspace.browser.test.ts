@@ -155,7 +155,10 @@ function renderWorkspaceHarness(options: WorkspaceHarnessOptions): WorkspaceHarn
     },
   })
 
-  const { plugins } = createBrowserTestPlugins({ pinia: currentPinia })
+  const { plugins } = createBrowserTestPlugins({
+    i18nMode: 'lite',
+    pinia: currentPinia,
+  })
   const result = render(Harness, {
     global: {
       plugins,

@@ -6,6 +6,22 @@ export interface PreviewMediaSession {
   muted: boolean
 }
 
+export interface PreviewMediaSessionSnapshotSource {
+  currentTime: number
+  paused: boolean
+  playbackRate: number
+  volume: number
+  muted: boolean
+}
+
+export interface PreviewMediaSessionRestoreTarget {
+  currentTime: number
+  playbackRate: number
+  volume: number
+  muted: boolean
+  duration: number
+}
+
 export function createPreviewMediaSession(
   patch: Partial<PreviewMediaSession> = {},
 ): PreviewMediaSession {
@@ -45,4 +61,36 @@ export function normalizePreviewMediaSessionPatch(
   }
 
   return normalizedPatch
+}
+
+export function snapshotPreviewMediaSession(
+  source: PreviewMediaSessionSnapshotSource,
+  patch: Partial<PreviewMediaSession> = {},
+): PreviewMediaSession {
+  return createPreviewMediaSession({
+    currentTime: source.currentTime,
+    paused: source.paused,
+    playbackRate: source.playbackRate,
+    volume: source.volume,
+    muted: source.muted,
+    ...patch,
+  })
+}
+
+export function restorePreviewMediaSession(
+  target: PreviewMediaSessionRestoreTarget,
+  session: Partial<PreviewMediaSession>,
+): { shouldResumePlayback: boolean } {
+  const normalizedSession = createPreviewMediaSession(session)
+
+  target.playbackRate = normalizedSession.playbackRate
+  target.volume = normalizedSession.volume
+  target.muted = normalizedSession.muted
+
+  const maxTime = Number.isFinite(target.duration) ? target.duration : normalizedSession.currentTime
+  target.currentTime = Math.min(normalizedSession.currentTime, maxTime)
+
+  return {
+    shouldResumePlayback: !normalizedSession.paused,
+  }
 }

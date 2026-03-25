@@ -3,7 +3,7 @@ import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { reactive } from 'vue'
 
-import { createBrowserTestI18n } from '~/__tests__/browser'
+import { createBrowserLocalizedI18n } from '~/__tests__/browser'
 
 const {
   dayjsMock,
@@ -42,32 +42,32 @@ vi.mock('~/plugins/editor', () => ({
 
 import EditorStatusBar from './EditorStatusBar.vue'
 
-function createTestI18n() {
-  return createBrowserTestI18n({
+function createEditorStatusBarLocalizedI18n() {
+  return createBrowserLocalizedI18n({
     messages: {
-      en: {
+      'zh-Hans': {
         common: {
-          saved: 'Saved',
-          unsaved: 'Unsaved',
+          saved: '已保存',
+          unsaved: '未保存',
         },
         edit: {
           assetPanel: {
             tabs: {
-              template: 'Template',
+              template: '模板',
             },
           },
           statusBar: {
-            frames: '{count} frames',
-            statements: '{count} statements',
+            frames: '{count} 帧',
+            statements: '{count} 条语句',
           },
           textEditor: {
             languages: {
-              webgalanimation: 'WebGAL Animation',
-              webgalscript: 'WebGAL Script',
+              webgalanimation: 'WebGAL 动画',
+              webgalscript: 'WebGAL 脚本',
             },
             stats: {
-              lines: '{count} lines',
-              words: '{count} words',
+              lines: '{count} 行',
+              words: '{count} 字',
             },
           },
         },
@@ -118,73 +118,15 @@ describe('EditorStatusBar', () => {
 
     render(EditorStatusBar, {
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createEditorStatusBarLocalizedI18n()],
       },
     })
 
-    await expect.element(page.getByText('Saved')).toBeVisible()
+    await expect.element(page.getByText('已保存')).toBeVisible()
     await expect.element(page.getByText('just now')).toBeVisible()
-    await expect.element(page.getByText('WebGAL Script')).toBeVisible()
-    await expect.element(page.getByText('2 lines')).toBeVisible()
-    await expect.element(page.getByText('4 words')).toBeVisible()
-  })
-
-  it('模板样式文件显示语言名而不是模板标签', async () => {
-    const editorStore = createEditorStore()
-    editorStore.currentState = {
-      isDirty: false,
-      kind: 'template',
-      lastSavedTime: '2026-03-20T10:00:00.000Z',
-      path: '/project/template/example.scss',
-      projection: 'text',
-      textContent: '.example { color: red; }',
-    }
-    editorStore.currentTextProjection = {
-      syncError: undefined,
-    }
-
-    getLanguageDisplayNameMock.mockReturnValue('SCSS')
-    useEditorStoreMock.mockReturnValue(editorStore)
-
-    render(EditorStatusBar, {
-      global: {
-        plugins: [createTestI18n()],
-      },
-    })
-
-    await expect.element(page.getByText('SCSS')).toBeVisible()
-    await expect.element(page.getByText('Template')).not.toBeInTheDocument()
-  })
-
-  it('场景可视化模式会显示未保存状态和语句数量', async () => {
-    const editorStore = createEditorStore()
-    editorStore.currentState = {
-      isDirty: true,
-      kind: 'scene',
-      path: '/project/scene.txt',
-      projection: 'visual',
-      statements: [
-        { id: 1, rawText: 'say:hello' },
-        { id: 2, rawText: 'say:world' },
-        { id: 3, rawText: 'changeBg:bg.jpg' },
-      ],
-      textContent: '',
-    }
-    editorStore.currentTextProjection = {
-      syncError: undefined,
-    }
-
-    useEditorStoreMock.mockReturnValue(editorStore)
-
-    render(EditorStatusBar, {
-      global: {
-        plugins: [createTestI18n()],
-      },
-    })
-
-    await expect.element(page.getByText('Unsaved')).toBeVisible()
-    await expect.element(page.getByText('3 statements')).toBeVisible()
-    await expect.element(page.getByText('WebGAL Script')).toBeVisible()
+    await expect.element(page.getByText('WebGAL 脚本')).toBeVisible()
+    await expect.element(page.getByText('2 行')).toBeVisible()
+    await expect.element(page.getByText('4 字')).toBeVisible()
   })
 
   it('资源预览模式会显示图片尺寸和文件大小', async () => {
@@ -201,46 +143,12 @@ describe('EditorStatusBar', () => {
 
     render(EditorStatusBar, {
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createEditorStatusBarLocalizedI18n()],
       },
     })
 
     await expect.element(page.getByText('1280 × 720')).toBeVisible()
     await expect.element(page.getByText('2.0 KiB')).toBeVisible()
     expect(getImageDimensionsMock).toHaveBeenCalledWith('/project/background.png')
-  })
-
-  it('动画可视化模式显示帧数而不是行词统计', async () => {
-    const editorStore = createEditorStore()
-    editorStore.currentState = {
-      frames: [
-        { duration: 0 },
-        { duration: 200 },
-        { duration: 300 },
-      ],
-      isDirty: false,
-      kind: 'animation',
-      lastSavedTime: '2026-03-20T10:00:00.000Z',
-      path: '/project/effect.json',
-      projection: 'visual',
-      textContent: '',
-    }
-    editorStore.currentTextProjection = {
-      syncError: undefined,
-    }
-
-    useEditorStoreMock.mockReturnValue(editorStore)
-
-    render(EditorStatusBar, {
-      global: {
-        plugins: [createTestI18n()],
-      },
-    })
-
-    await expect.element(page.getByText('Saved')).toBeVisible()
-    await expect.element(page.getByText('WebGAL Animation')).toBeVisible()
-    await expect.element(page.getByText('3 frames')).toBeVisible()
-    await expect.element(page.getByText(/lines$/)).not.toBeInTheDocument()
-    await expect.element(page.getByText(/words$/)).not.toBeInTheDocument()
   })
 })

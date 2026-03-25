@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { defineComponent, h, reactive } from 'vue'
-import { createI18n } from 'vue-i18n'
+
+import { createBrowserConsoleMonitor, createBrowserLocalizedI18n } from '~/__tests__/browser'
 
 const {
   useEditorStoreMock,
@@ -49,8 +50,6 @@ vi.mock('~/composables/useVisualEditorSaveShortcut', () => ({
   useVisualEditorSaveShortcut: useVisualEditorSaveShortcutMock,
 }))
 
-import { createBrowserConsoleMonitor } from '~/__tests__/browser'
-
 import FileEditor from './FileEditor.vue'
 
 function createStubComponent(name: string, options: { tag?: string, text?: string }) {
@@ -82,27 +81,25 @@ const globalStubs = {
 
 const { expectNoConsoleMessage } = createBrowserConsoleMonitor()
 
-function createTestI18n() {
-  return createI18n({
-    legacy: false,
-    locale: 'en',
+function createFileEditorLocalizedI18n() {
+  return createBrowserLocalizedI18n({
     messages: {
-      en: {
+      'zh-Hans': {
         edit: {
           empty: {
-            createScene: 'Create scene',
-            description: 'No file selected',
-            title: 'Nothing open',
+            createScene: '创建场景',
+            description: '未选择文件',
+            title: '暂无打开文件',
           },
           textEditor: {
-            invalidAnimationVisualMessage: 'Current animation file has errors and cannot be shown in visual mode. Switch to text mode to fix it.',
+            invalidAnimationVisualMessage: '当前动画文件存在错误，无法在可视化模式下编辑，请切换到文本模式修复',
           },
           editorMode: {
-            textMode: 'Switch to Text',
-            switchToText: 'Switch to Text',
+            textMode: '切换到文本',
+            switchToText: '切换到文本',
           },
           unsupported: {
-            unsupportedFile: 'Unsupported file',
+            unsupportedFile: '不支持的文件',
           },
         },
       },
@@ -159,16 +156,16 @@ describe('FileEditor', () => {
 
     render(FileEditor, {
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createFileEditorLocalizedI18n()],
         stubs: globalStubs,
       },
     })
 
-    await expect.element(page.getByText('Current animation file has errors and cannot be shown in visual mode. Switch to text mode to fix it.')).toBeVisible()
-    await expect.element(page.getByRole('button', { name: 'Switch to Text' })).toBeVisible()
+    await expect.element(page.getByText('当前动画文件存在错误，无法在可视化模式下编辑，请切换到文本模式修复')).toBeVisible()
+    await expect.element(page.getByRole('button', { name: '切换到文本' })).toBeVisible()
     await expect.element(page.getByText('Visual Editor Animation')).not.toBeInTheDocument()
 
-    await page.getByRole('button', { name: 'Switch to Text' }).click()
+    await page.getByRole('button', { name: '切换到文本' }).click()
 
     expect(switchEditorMode).toHaveBeenCalledWith('text')
     expectNoConsoleMessage('decodeEntities option is passed but will be ignored in non-browser builds')

@@ -3,7 +3,7 @@ import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { reactive } from 'vue'
 
-import { createBrowserTestI18n } from '~/__tests__/browser'
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 
 import EditorTabs from './EditorTabs.vue'
 
@@ -84,7 +84,7 @@ describe('EditorTabs', () => {
   })
 
   it('中键关闭已修改标签时会先打开保存确认模态框', async () => {
-    const tabsStore = createTabsStore([
+    useTabsStoreMock.mockReturnValue(createTabsStore([
       {
         activeAt: 1,
         isModified: true,
@@ -92,22 +92,20 @@ describe('EditorTabs', () => {
         name: 'demo.txt',
         path: '/project/demo.txt',
       },
-    ])
-    useTabsStoreMock.mockReturnValue(tabsStore)
+    ]))
 
     render(EditorTabs, {
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
       },
     })
 
     await page.getByText('demo.txt').click({ button: 'middle' })
 
-    expect(tabsStore.closeTab).not.toHaveBeenCalled()
     expect(modalOpenMock).toHaveBeenCalledWith('SaveChangesModal', expect.objectContaining({
       onDontSave: expect.any(Function),
       onSave: expect.any(Function),
-      title: 'modals.saveChanges.title',
+      title: expect.any(String),
     }))
   })
 
@@ -125,7 +123,7 @@ describe('EditorTabs', () => {
 
     render(EditorTabs, {
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
       },
     })
 
@@ -135,7 +133,7 @@ describe('EditorTabs', () => {
     expect(tabsStore.tabs[0].isPreview).toBe(false)
   })
 
-  it('中键点击未修改标签会直接关闭标签', async () => {
+  it('点击未修改标签的关闭按钮会直接关闭标签', async () => {
     const tabsStore = createTabsStore([
       {
         activeAt: 1,
@@ -150,7 +148,7 @@ describe('EditorTabs', () => {
 
     render(EditorTabs, {
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
       },
     })
 

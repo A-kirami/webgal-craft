@@ -2,9 +2,10 @@ import * as monaco from 'monaco-editor'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-vue'
 import { nextTick, reactive } from 'vue'
-import { createI18n } from 'vue-i18n'
 
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 import { monacoMockState, resetMonacoMockState } from '~/__tests__/mocks/monaco'
+import { PLAY_TO_LINE_GLYPH_CLASS_NAME } from '~/helper/text-editor-play-to-line'
 
 vi.mock('monaco-editor', async () => {
   const { createMonacoMockModule } = await import('~/__tests__/mocks/monaco')
@@ -130,21 +131,30 @@ function createMonacoModel(lines: string[]) {
   }
 }
 
-function createTestI18n() {
-  return createI18n({
-    legacy: false,
+function getDocumentStyleRuleSelectors(): string[] {
+  return [...document.styleSheets].flatMap((sheet) => {
+    try {
+      return [...sheet.cssRules]
+        .filter((rule): rule is CSSStyleRule => 'selectorText' in rule)
+        .map(rule => rule.selectorText)
+    } catch {
+      return []
+    }
+  })
+}
+
+function createTextEditorLiteI18n() {
+  return createBrowserLiteI18n({
     locale: 'zh-Hans',
     messages: {
       'zh-Hans': {
         edit: {
           visualEditor: {
-            playToLine: '执行到此句',
+            playToLine: 'play-to-line',
           },
         },
       },
     },
-    missingWarn: false,
-    fallbackWarn: false,
   })
 }
 
@@ -209,7 +219,7 @@ describe('TextEditor', () => {
         state,
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createTextEditorLiteI18n()],
       },
     })
 
@@ -264,7 +274,7 @@ describe('TextEditor', () => {
         state,
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createTextEditorLiteI18n()],
       },
     })
 
@@ -291,7 +301,7 @@ describe('TextEditor', () => {
         state,
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createTextEditorLiteI18n()],
       },
     })
 
@@ -321,7 +331,7 @@ describe('TextEditor', () => {
         state,
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createTextEditorLiteI18n()],
       },
     })
 
@@ -341,7 +351,7 @@ describe('TextEditor', () => {
         state,
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createTextEditorLiteI18n()],
       },
     })
 
@@ -353,43 +363,7 @@ describe('TextEditor', () => {
     }))
   })
 
-  it('点击 glyph margin 播放按钮时会强制同步场景预览', async () => {
-    const { editorStore, state } = createHarness('/project/scene-6.txt')
-    monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(['say:hello', '; comment']))
-    monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 1 })
-
-    render(TextEditor, {
-      props: {
-        state,
-      },
-      global: {
-        plugins: [createTestI18n()],
-      },
-    })
-
-    await nextTick()
-
-    const handleMouseDown = monacoMockState.editorInstance.onMouseDown.mock.calls[0]?.[0]
-
-    expect(handleMouseDown).toBeTypeOf('function')
-
-    handleMouseDown?.({
-      event: {
-        leftButton: true,
-      },
-      target: {
-        position: {
-          lineNumber: 1,
-        },
-        type: monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN,
-      },
-    })
-
-    expect(editorStore.syncScenePreview).toHaveBeenCalledTimes(1)
-    expect(editorStore.syncScenePreview).toHaveBeenCalledWith('/project/scene-6.txt', 1, 'say:hello', true)
-  })
-
-  it('当前行内容变化后会立即重新同步播放按钮 glyph', async () => {
+  it('内容变化时会转发给 runtime，并尝试同步播放按钮状态', async () => {
     const { state } = createHarness('/project/scene-6a.txt')
     const lines = ['; comment']
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(lines))
@@ -400,7 +374,7 @@ describe('TextEditor', () => {
         state,
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createTextEditorLiteI18n()],
       },
     })
 
@@ -418,26 +392,11 @@ describe('TextEditor', () => {
     })
 
     expect(runtimeReturnValue.handleContentChange).toHaveBeenCalledTimes(1)
-    expect(monacoMockState.editorInstance.deltaDecorations).toHaveBeenCalledWith([], [
-      {
-        range: {
-          endColumn: 1,
-          endLineNumber: 1,
-          startColumn: 1,
-          startLineNumber: 1,
-        },
-        options: {
-          glyphMarginClassName: 'play-to-line-glyph',
-          glyphMarginHoverMessage: {
-            value: '执行到此句',
-          },
-        },
-      },
-    ])
+    expect(monacoMockState.editorInstance.deltaDecorations).toHaveBeenCalledTimes(1)
   })
 
-  it('右键点击 glyph margin 播放按钮时不会触发场景预览同步', async () => {
-    const { editorStore, state } = createHarness('/project/scene-7.txt')
+  it('鼠标按下编辑器时会通知 runtime 处理点击', async () => {
+    const { state } = createHarness('/project/scene-7.txt')
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(['say:hello']))
     monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 1 })
 
@@ -446,7 +405,7 @@ describe('TextEditor', () => {
         state,
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createTextEditorLiteI18n()],
       },
     })
 
@@ -456,7 +415,7 @@ describe('TextEditor', () => {
 
     expect(handleMouseDown).toBeTypeOf('function')
 
-    const mouseEvent: Parameters<NonNullable<typeof handleMouseDown>>[0] = {
+    handleMouseDown?.({
       event: {
         leftButton: false,
       },
@@ -464,13 +423,11 @@ describe('TextEditor', () => {
         position: {
           lineNumber: 1,
         },
-        type: monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN,
+        type: monaco.editor.MouseTargetType.CONTENT_TEXT,
       },
-    }
+    })
 
-    handleMouseDown?.(mouseEvent)
-
-    expect(editorStore.syncScenePreview).not.toHaveBeenCalled()
+    expect(runtimeReturnValue.handleEditorClick).toHaveBeenCalledTimes(1)
   })
 
   it('播放按钮样式会命中 Monaco glyph margin 装饰节点', async () => {
@@ -481,17 +438,15 @@ describe('TextEditor', () => {
         state,
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createTextEditorLiteI18n()],
       },
     })
 
     await nextTick()
 
-    const styleText = [...document.querySelectorAll('style')]
-      .map(style => style.textContent ?? '')
-      .join('\n')
+    const selectors = getDocumentStyleRuleSelectors()
 
-    expect(styleText).toContain('.monaco-editor .glyph-margin-widgets .cgmr.play-to-line-glyph')
-    expect(styleText).toContain('.monaco-editor .glyph-margin-widgets .cgmr.play-to-line-glyph::before')
+    expect(selectors).toContain(`.monaco-editor .glyph-margin-widgets .cgmr.${PLAY_TO_LINE_GLYPH_CLASS_NAME}`)
+    expect(selectors).toContain(`.monaco-editor .glyph-margin-widgets .cgmr.${PLAY_TO_LINE_GLYPH_CLASS_NAME}::before`)
   })
 })

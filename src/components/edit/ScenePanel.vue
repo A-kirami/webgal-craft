@@ -4,23 +4,22 @@ import { CopyMinus, FilePlus, FolderPlus, Layers, RotateCw } from 'lucide-vue-ne
 
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { gameSceneDir } from '~/helper/app-paths'
+import {
+  findScenePanelNodeByPath,
+  loadScenePanelTreeNodes,
+  resolveScenePanelTargetPath,
+} from '~/helper/scene-panel'
 import { useFileStore } from '~/stores/file'
 import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import type { FlattenedItem } from 'reka-ui'
+import type { ScenePanelTreeNode } from '~/helper/scene-panel'
 
 const fileStore = useFileStore()
 const workspaceStore = useWorkspaceStore()
 const tabsStore = useTabsStore()
 const fileSystemEvents = useFileSystemEvents()
-
-interface TreeNode {
-  id: string
-  name: string
-  path: string
-  children?: TreeNode[]
-}
 
 const scenePath = computedAsync(async () => {
   if (!workspaceStore.currentGame?.path) {
@@ -28,27 +27,6 @@ const scenePath = computedAsync(async () => {
   }
   return await gameSceneDir(workspaceStore.currentGame.path)
 })
-
-async function getAllFolderContents(path: string): Promise<TreeNode[]> {
-  try {
-    const contents = await fileStore.getFolderContents(path)
-
-    const nodes = await Promise.all(
-      contents.map(async item => ({
-        id: item.id,
-        name: item.name,
-        path: item.path,
-        children: item.isDir ? await getAllFolderContents(item.path) : undefined,
-      })),
-    )
-
-    return nodes
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '获取场景文件夹内容失败'
-    void logger.error(`[ScenePanel] 获取场景文件夹内容失败: ${errorMessage}`)
-    throw error
-  }
-}
 
 let itemsKey = $ref(0)
 let isLoading = $ref(false)
@@ -70,7 +48,11 @@ const items = computedAsync(async () => {
     }
     // 使用 itemsKey 作为无意义依赖，强制触发 computedAsync 重新计算
     void itemsKey
-    return await getAllFolderContents(path)
+    return await loadScenePanelTreeNodes(path, async currentPath => await fileStore.getFolderContents(currentPath))
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : '获取场景文件夹内容失败'
+    void logger.error(`[ScenePanel] 获取场景文件夹内容失败: ${errorMessage}`)
+    throw error
   } finally {
     if (!isSilent) {
       isLoading = false
@@ -78,7 +60,7 @@ const items = computedAsync(async () => {
   }
 })
 
-function handleClick(item: FlattenedItem<TreeNode>) {
+function handleClick(item: FlattenedItem<ScenePanelTreeNode>) {
   if (item.hasChildren) {
     return
   }
@@ -86,7 +68,7 @@ function handleClick(item: FlattenedItem<TreeNode>) {
   tabsStore.openTab(name, path)
 }
 
-function handleDoubleClick(item: FlattenedItem<TreeNode>) {
+function handleDoubleClick(item: FlattenedItem<ScenePanelTreeNode>) {
   if (item.hasChildren) {
     return
   }
@@ -98,7 +80,7 @@ function handleDoubleClick(item: FlattenedItem<TreeNode>) {
   }
 }
 
-function handleAuxClick(item: FlattenedItem<TreeNode>) {
+function handleAuxClick(item: FlattenedItem<ScenePanelTreeNode>) {
   if (item.hasChildren) {
     return
   }
@@ -106,22 +88,7 @@ function handleAuxClick(item: FlattenedItem<TreeNode>) {
   tabsStore.openTab(name, path, { forceNormal: true })
 }
 
-let selectedItem = $ref<TreeNode>()
-
-function findNodeByPath(nodes: TreeNode[], targetPath: string): TreeNode | undefined {
-  for (const node of nodes) {
-    if (node.path === targetPath) {
-      return node
-    }
-    if (node.children) {
-      const found = findNodeByPath(node.children, targetPath)
-      if (found) {
-        return found
-      }
-    }
-  }
-  return undefined
-}
+let selectedItem = $ref<ScenePanelTreeNode>()
 
 function updateSelectedItemFromActiveTab() {
   const activeTab = tabsStore.activeTab
@@ -130,7 +97,7 @@ function updateSelectedItemFromActiveTab() {
     return
   }
 
-  const foundNode = findNodeByPath(items.value || [], activeTab.path)
+  const foundNode = findScenePanelNodeByPath(items.value || [], activeTab.path)
   if (foundNode) {
     selectedItem = foundNode
   }
@@ -178,32 +145,15 @@ watch(items, () => {
   }
 })
 
-async function getTargetPath(): Promise<string | undefined> {
-  const rootPath = scenePath.value
-  if (!rootPath) {
-    return undefined
-  }
-
-  const selected = selectedItem
-  if (!selected) {
-    return rootPath
-  }
-
-  // 当用户选中文件时，默认在其父目录下创建新条目，以匹配主流编辑器的交互预期
-  return ('children' in selected && selected.children !== undefined)
-    ? selected.path
-    : await dirname(selected.path)
-}
-
 async function handleCreateFile() {
-  const targetPath = await getTargetPath()
+  const targetPath = await resolveScenePanelTargetPath(scenePath.value, selectedItem, dirname)
   if (targetPath) {
     fileTreeRef?.startCreating(targetPath, 'file')
   }
 }
 
 async function handleCreateFolder() {
-  const targetPath = await getTargetPath()
+  const targetPath = await resolveScenePanelTargetPath(scenePath.value, selectedItem, dirname)
   if (targetPath) {
     fileTreeRef?.startCreating(targetPath, 'folder')
   }

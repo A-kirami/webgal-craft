@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import { countLines, countWords } from 'alfaaz'
 import { ChartSpline, FileText, Image as ImageIcon } from 'lucide-vue-next'
 
 import { thumbnailCmds } from '~/commands/thumbnaila'
+import {
+  calculateEditorStatusBarTextStats,
+  isEditorStatusBarImagePreview,
+  isEditorStatusBarSaved,
+  resolveEditorStatusBarFileLanguage,
+  resolveEditorStatusBarMetrics,
+  shouldShowEditorStatusBarRelativeTime,
+} from '~/helper/editor-status-bar'
 import dayjs from '~/plugins/dayjs'
 import { getLanguageDisplayName } from '~/plugins/editor'
 import {
-  isAnimationVisualProjection,
   isEditableEditor,
-  isSceneVisualProjection,
   useEditorStore,
 } from '~/stores/editor'
 import { handleError } from '~/utils/error-handler'
@@ -27,9 +32,7 @@ const previewState = $computed(() => {
   return state && !isEditableEditor(state) && state.view === 'preview' ? state : undefined
 })
 
-const isImagePreview = $computed(() =>
-  previewState?.mimeType.startsWith('image/') ?? false,
-)
+const isImagePreview = $computed(() => isEditorStatusBarImagePreview(previewState))
 
 let imageWidth = $ref<number>()
 let imageHeight = $ref<number>()
@@ -56,13 +59,13 @@ watch(() => previewState?.path, async (path) => {
 }, { immediate: true })
 
 // 是否已保存
-const isSaved = $computed(() => !(editableState?.isDirty ?? false))
+const isSaved = $computed(() => isEditorStatusBarSaved(editableState))
 
 // 上次保存时间
 const lastSavedTime = $computed(() => editableState?.lastSavedTime)
 
 // 相对时间显示
-const shouldShowTime = $computed(() => isSaved && !!lastSavedTime)
+const shouldShowTime = $computed(() => shouldShowEditorStatusBarRelativeTime(isSaved, lastSavedTime))
 const { now, pause, resume } = useNow({
   interval: 30 * 1000,
   controls: true,
@@ -87,49 +90,30 @@ const relativeTime = $computed(() => {
 
 // 文件语言显示
 const fileLanguage = $computed(() => {
-  if (!editableState) {
-    return ''
-  }
-  switch (editableState.kind) {
-    case 'scene': {
-      return t('edit.textEditor.languages.webgalscript')
-    }
-    case 'animation': {
-      return t('edit.textEditor.languages.webgalanimation')
-    }
-    default: {
-      return getLanguageDisplayName(editableState.path)
-    }
-  }
+  return resolveEditorStatusBarFileLanguage(editableState, {
+    getLanguageDisplayName,
+    t,
+  })
 })
 
 // 文本内容（用于统计）
 const textContent = $computed(() => editableState?.projection === 'text' ? editableState.textContent : '')
-// 是否为可视化场景模式
-const isSceneMode = $computed(() => editableState !== undefined && isSceneVisualProjection(editableState))
-// 是否为可视化动画模式
-const isAnimationMode = $computed(() => editableState !== undefined && isAnimationVisualProjection(editableState))
 
-// 语句数（可视化场景模式）
-const statementCount = $computed(() =>
-  editableState && isSceneVisualProjection(editableState)
-    ? editableState.statements.length
-    : 0,
-)
-// 帧数（可视化动画模式）
-const frameCount = $computed(() =>
-  editableState && isAnimationVisualProjection(editableState)
-    ? editableState.frames.length
-    : 0,
-)
-
-// 行数和字数
 let wordCount = $ref(0)
 let lineCount = $ref(0)
+const metrics = $computed(() => resolveEditorStatusBarMetrics(editableState, {
+  lineCount,
+  wordCount,
+}))
+const isSceneMode = $computed(() => metrics?.kind === 'scene')
+const isAnimationMode = $computed(() => metrics?.kind === 'animation')
+const statementCount = $computed(() => metrics?.kind === 'scene' ? metrics.count : 0)
+const frameCount = $computed(() => metrics?.kind === 'animation' ? metrics.count : 0)
 
 function updateStats() {
-  wordCount = countWords(textContent)
-  lineCount = countLines(textContent)
+  const nextStats = calculateEditorStatusBarTextStats(textContent)
+  wordCount = nextStats.wordCount
+  lineCount = nextStats.lineCount
 }
 
 // 切换文件或编辑模式时立即计算

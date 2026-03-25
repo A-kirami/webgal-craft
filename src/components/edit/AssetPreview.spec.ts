@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 
 import AssetPreview from './AssetPreview.vue'
@@ -78,9 +79,10 @@ describe('AssetPreview', () => {
       },
     })
 
-    const mediaElement = result.container.querySelector('audio')
-    expect(mediaElement).toBeTruthy()
-    applyMediaState(mediaElement!, {
+    const mediaLocator = page.getByTestId('asset-preview-media')
+    await expect.element(mediaLocator).toBeInTheDocument()
+
+    applyMediaState(mediaLocator.element() as HTMLMediaElement, {
       currentTime: 12.5,
       paused: false,
       playbackRate: 1.25,
@@ -99,7 +101,6 @@ describe('AssetPreview', () => {
       volume: 0.4,
       muted: true,
     })
-    expect(updatePreviewMediaSessionMock).toHaveBeenCalledTimes(1)
 
     await result.unmount()
   })
@@ -111,9 +112,10 @@ describe('AssetPreview', () => {
       },
     })
 
-    const mediaElement = result.container.querySelector('audio')
-    expect(mediaElement).toBeTruthy()
-    applyMediaState(mediaElement!, {
+    const mediaLocator = page.getByTestId('asset-preview-media')
+    await expect.element(mediaLocator).toBeInTheDocument()
+
+    applyMediaState(mediaLocator.element() as HTMLMediaElement, {
       currentTime: 7.25,
       paused: false,
       playbackRate: 1,

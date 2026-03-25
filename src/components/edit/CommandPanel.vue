@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import {
+  buildCommandPanelGroupTagEntries,
+  resolveCommandPanelVisibleCommands,
+} from '~/helper/command-panel'
+import {
   categoryTheme,
-  commandEntries,
   commandPanelCategories, CommandPanelCategory,
   getCategoryLabel,
-  getCommandConfig,
   getCommandDescription,
 } from '~/helper/command-registry'
 import { resolveI18n } from '~/helper/command-registry/schema'
-import { parseSentence } from '~/helper/webgal-script/parser'
 import { StatementGroup, useCommandPanelStore } from '~/stores/command-panel'
 import { useModalStore } from '~/stores/modal'
 import { handleWheelToHorizontalScroll } from '~/utils/wheel'
@@ -26,12 +27,7 @@ const commandPanelStore = useCommandPanelStore()
 const activeCategory = $computed(() => commandPanelStore.activeCategory)
 
 const isGroupsView = $computed(() => activeCategory === 'groups')
-const visibleCommands = $computed(() => {
-  if (activeCategory === 'all' || activeCategory === 'groups') {
-    return commandEntries
-  }
-  return commandEntries.filter(entry => entry.category === activeCategory)
-})
+const visibleCommands = $computed(() => resolveCommandPanelVisibleCommands(activeCategory))
 const modalStore = useModalStore()
 
 function openDefaultsModal(type: commandType): void {
@@ -81,39 +77,15 @@ watch(() => commandPanelStore.activeCategory, () => {
   resetScrollTop()
 })
 
-interface GroupTagEntry {
-  label: string
-  count: number
-}
-
-function buildGroupTagEntries(group: StatementGroup): GroupTagEntry[] {
-  const countMap = new Map<string, { label: string, count: number }>()
-  for (const rawText of group.rawTexts) {
-    const sentence = parseSentence(rawText)
-    if (!sentence) {
-      continue
-    }
-    const config = getCommandConfig(sentence.command)
-    const label = resolveI18n(config.label, t)
-    const existing = countMap.get(label)
-    if (existing) {
-      existing.count++
-    } else {
-      countMap.set(label, { label, count: 1 })
-    }
-  }
-  return [...countMap.values()]
-}
-
 const groupTagEntriesMap = $computed(() => {
-  const map = new Map<string, GroupTagEntry[]>()
+  const map = new Map<string, ReturnType<typeof buildCommandPanelGroupTagEntries>>()
   for (const group of commandPanelStore.groups) {
-    map.set(group.id, buildGroupTagEntries(group))
+    map.set(group.id, buildCommandPanelGroupTagEntries(group, t))
   }
   return map
 })
 
-function getGroupTagEntries(groupId: string): GroupTagEntry[] {
+function getGroupTagEntries(groupId: string) {
   return groupTagEntriesMap.get(groupId) ?? []
 }
 </script>

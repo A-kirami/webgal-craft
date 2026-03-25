@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { defineComponent, h, reactive, ref } from 'vue'
-import { createI18n } from 'vue-i18n'
+
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 
 const {
   copyMock,
@@ -60,16 +61,6 @@ vi.mock('notivue', () => ({
 
 import PreviewPanel from './PreviewPanel.vue'
 
-function createTestI18n() {
-  return createI18n({
-    legacy: false,
-    locale: 'en',
-    missingWarn: false,
-    fallbackWarn: false,
-    missing: (_locale, key) => key,
-  })
-}
-
 const globalStubs = {
   Button: defineComponent({
     name: 'StubButton',
@@ -108,6 +99,20 @@ const globalStubs = {
   }),
 }
 
+function createPreviewPanelLiteI18n() {
+  return createBrowserLiteI18n({
+    messages: {
+      'zh-Hans': {
+        edit: {
+          previewPanel: {
+            previewTitle: 'preview-title::{name}',
+          },
+        },
+      },
+    },
+  })
+}
+
 describe('PreviewPanel', () => {
   afterEach(() => {
     vi.clearAllMocks()
@@ -130,7 +135,6 @@ describe('PreviewPanel', () => {
       },
       currentGameServeUrl: 'http://127.0.0.1:8899',
     }))
-    copyMock.mockResolvedValue(true)
     useClipboardMock.mockReturnValue({
       copied: ref(true),
       copy: copyMock,
@@ -144,20 +148,20 @@ describe('PreviewPanel', () => {
   it('挂载时会读取预览宽高比并渲染 iframe', async () => {
     render(PreviewPanel, {
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
       },
     })
 
     await expect.element(page.getByText('http://127.0.0.1:8899')).toBeVisible()
-    await expect.element(page.getByTitle('edit.previewPanel.previewTitle')).toHaveAttribute('src', 'http://127.0.0.1:8899')
+    await expect.element(page.getByTitle('preview-title::Demo Game')).toHaveAttribute('src', 'http://127.0.0.1:8899')
     expect(getGameConfigMock).toHaveBeenCalledWith('/games/demo')
   })
 
   it('点击复制和浏览器打开按钮会调用对应动作', async () => {
     render(PreviewPanel, {
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -173,7 +177,7 @@ describe('PreviewPanel', () => {
   it('点击刷新按钮会重新读取游戏配置', async () => {
     render(PreviewPanel, {
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
       },
     })

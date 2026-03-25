@@ -2,6 +2,15 @@
 import { basename } from '@tauri-apps/api/path'
 import { LucideFile, LucideFolder, LucideFolderOpen } from 'lucide-vue-next'
 
+import {
+  getFileTreeNameSelectionEnd,
+  getFileTreeParentPath,
+  hasFileTreeDuplicateName,
+  insertCreatingFileTreeItem,
+  resolveFileTreeCreateBlurAction,
+  resolveFileTreeCreateStart,
+  resolveFileTreeRenameBlurAction,
+} from '~/helper/file-tree'
 import { gameFs } from '~/services/game-fs'
 import { useEditorUIStateStore } from '~/stores/editor-ui-state'
 import { useTabsStore } from '~/stores/tabs'
@@ -93,59 +102,19 @@ const sortedItems = $computed(() =>
   sortItemsRecursively(items, createItemComparator(sortBy, sortOrder, treeAccessor)),
 )
 
-function getParentPath(path: string): string {
-  return path.replace(/[\\/][^\\/]+$/, '')
-}
-
 function getRootPath(): string {
   if (sortedItems.length === 0) {
     return ''
   }
-  return getParentPath(getItemPath(sortedItems[0]))
-}
-
-function findChildrenInParent(items: T[], targetParentPath: string): T[] {
-  for (const item of items) {
-    if (getItemPath(item) === targetParentPath) {
-      return getItemChildren(item) ?? []
-    }
-    const children = getItemChildren(item)
-    if (children) {
-      const found = findChildrenInParent(children, targetParentPath)
-      if (found.length > 0) {
-        return found
-      }
-    }
-  }
-  return []
-}
-
-function getSiblings(parentPath: string): T[] {
-  if (items.length === 0) {
-    return []
-  }
-
-  const firstItemParentPath = getParentPath(getItemPath(items[0]))
-  return firstItemParentPath === parentPath
-    ? items
-    : findChildrenInParent(items, parentPath)
+  return getFileTreeParentPath(getItemPath(sortedItems[0]))
 }
 
 function checkDuplicateName(parentPath: string, name: string, excludePath?: string): boolean {
-  if (!name.trim()) {
-    return false
-  }
-
-  const siblings = getSiblings(parentPath)
-  const trimmedName = name.trim().toLowerCase()
-
-  return siblings.some((sibling) => {
-    const siblingPath = getItemPath(sibling)
-    if (excludePath && siblingPath === excludePath) {
-      return false
-    }
-    return getItemName(sibling).toLowerCase() === trimmedName
-  })
+  return hasFileTreeDuplicateName(items, {
+    getChildren: getItemChildren,
+    getName: getItemName,
+    getPath: getItemPath,
+  }, parentPath, name, excludePath)
 }
 
 function focusInput(
@@ -175,14 +144,6 @@ function focusInput(
   })
 }
 
-function getFileNameSelectionEnd(fileName: string, isFolder: boolean): number {
-  if (isFolder) {
-    return fileName.length
-  }
-  const lastDotIndex = fileName.lastIndexOf('.')
-  return lastDotIndex > 0 ? lastDotIndex : fileName.length
-}
-
 // ==================== 重命名相关 ====================
 
 let renameState = $ref({
@@ -194,10 +155,11 @@ let renameState = $ref({
 
 const inputRef = $(useTemplateRef('inputRef'))
 const fileTreeContainerRef = $(useTemplateRef('fileTreeContainerRef'))
+const BLUR_CANCEL_DELAY = 50
 
 function isRenameDuplicate(item: FlattenedItem<T>): boolean {
   const itemPath = getItemPath(item.value)
-  const parentPath = getParentPath(itemPath)
+  const parentPath = getFileTreeParentPath(itemPath)
   return checkDuplicateName(parentPath, renameState.value, itemPath)
 }
 
@@ -208,7 +170,7 @@ function startRenaming(item: FlattenedItem<T>) {
   renameState.isStarting = true
 
   const fileName = renameState.value
-  const selectionEnd = getFileNameSelectionEnd(fileName, item.hasChildren)
+  const selectionEnd = getFileTreeNameSelectionEnd(fileName, item.hasChildren)
 
   focusInput(
     inputRef as InstanceType<typeof Input> | null,
@@ -255,30 +217,29 @@ async function handleRename(item: FlattenedItem<T>) {
 }
 
 function handleRenameBlur(item: FlattenedItem<T>) {
-  if (renameState.isStarting) {
-    return
-  }
-
   const key = getKey(item.value)
-  if (renameState.itemKey !== key) {
+  const action = resolveFileTreeRenameBlurAction({
+    currentItemKey: key,
+    currentValue: renameState.value,
+    isStarting: renameState.isStarting,
+    originalName: getItemName(item.value),
+    renamingItemKey: renameState.itemKey,
+  })
+
+  if (action === 'noop') {
     return
   }
 
-  const currentValue = renameState.value.trim()
-  const oldName = getItemName(item.value)
-
-  if (!currentValue || currentValue === oldName) {
+  if (action === 'cancel') {
     setTimeout(() => {
       if (!renameState.isStarting) {
         renameState.itemKey = undefined
       }
-    }, 50)
+    }, BLUR_CANCEL_DELAY)
     return
   }
 
-  if (!renameState.isStarting) {
-    handleRename(item)
-  }
+  handleRename(item)
 }
 
 function handleCancelRename() {
@@ -319,50 +280,39 @@ function getDefaultFileName(): string {
     : defaultFileName
 }
 
-function findParentItem(items: T[], targetPath: string): T | undefined {
-  for (const item of items) {
-    const itemPath = getItemPath(item)
-    if (itemPath === targetPath) {
-      return item
-    }
-    const children = getItemChildren(item)
-    if (children) {
-      const found = findParentItem(children, targetPath)
-      if (found) {
-        return found
-      }
-    }
-  }
-  return undefined
-}
-
 function startCreating(parentPath: string, type: 'file' | 'folder') {
   createState.isStarting = true
   createState.parentPath = parentPath
   createState.type = type
-  createState.value = type === 'file'
-    ? getDefaultFileName()
-    : t('edit.fileTree.defaultFolderName')
+  const defaultFolderName = t('edit.fileTree.defaultFolderName')
+  const createStart = resolveFileTreeCreateStart({
+    accessor: {
+      getChildren: getItemChildren,
+      getPath: getItemPath,
+    },
+    defaultFileName: getDefaultFileName(),
+    defaultFolderName,
+    getKey,
+    hasCustomFileName: !!defaultFileName,
+    items,
+    parentPath,
+    type,
+  })
+  createState.value = createStart.value
 
   // 创建子项前强制展开父文件夹，避免输入框出现在折叠状态下用户看不见
-  const parentItem = findParentItem(items, parentPath)
-  if (parentItem) {
-    const parentKey = getKey(parentItem)
-    if (!expanded.includes(parentKey)) {
-      expanded = [...expanded, parentKey]
-    }
+  if (createStart.expandParentKey && !expanded.includes(createStart.expandParentKey)) {
+    expanded = [...expanded, createStart.expandParentKey]
   }
 
   nextTick(() => {
     createState.isStarting = false
-    const hasDefaultFileName = type === 'file' && !!defaultFileName
-    const selectionEnd = hasDefaultFileName ? 0 : createState.value.length
     focusInput(
       creatingInputRef as InstanceType<typeof Input> | null,
       fileTreeContainerRef,
       'data-creating-input',
       0,
-      selectionEnd,
+      createStart.selectionEnd,
     )
   })
 }
@@ -402,21 +352,25 @@ async function handleCreate() {
 }
 
 function handleCreateBlur() {
-  if (createState.isStarting || !createState.parentPath || !createState.type) {
+  const action = resolveFileTreeCreateBlurAction({
+    defaultFileName: getDefaultFileName(),
+    defaultFolderName: t('edit.fileTree.defaultFolderName'),
+    isStarting: createState.isStarting,
+    parentPath: createState.parentPath,
+    type: createState.type,
+    value: createState.value,
+  })
+
+  if (action === 'noop') {
     return
   }
 
-  const defaultName = createState.type === 'file'
-    ? getDefaultFileName()
-    : t('edit.fileTree.defaultFolderName')
-  const isEmpty = createState.value.trim() === defaultName || createState.value.trim() === ''
-
-  if (isEmpty) {
+  if (action === 'cancel') {
     setTimeout(() => {
       if (!createState.isStarting) {
         cancelCreating()
       }
-    }, 50)
+    }, BLUR_CANCEL_DELAY)
     return
   }
 
@@ -468,67 +422,11 @@ function createCreatingItem(
 }
 
 function processFlattenItems(flattenItems: FlattenedItem<T>[]): FlattenedItem<T>[] {
-  if (!createState.parentPath || !createState.type) {
-    return flattenItems
-  }
-
-  const result = [...flattenItems]
-  const parentIndex = result.findIndex(item =>
-    getItemPath(item.value) === createState.parentPath,
-  )
-
-  if (parentIndex === -1) {
-    // parentPath 不在 flatten 列表中时，视为在根目录下创建（用于支持空树或逻辑根）
-    const rootLevel = result.length > 0 ? result[0].level : 0
-    const targetLevel = rootLevel
-
-    let insertIndex = 0
-    if (createState.type === 'folder') {
-      insertIndex = 0
-    } else {
-      insertIndex = result.findIndex(item =>
-        item.level === targetLevel && !item.hasChildren,
-      )
-      if (insertIndex === -1) {
-        insertIndex = result.length
-      }
-    }
-
-    result.splice(insertIndex, 0, createCreatingItem(createState.parentPath, createState.type, rootLevel - 1))
-    return result
-  }
-
-  const parent = result[parentIndex]
-  const childLevel = parent.level + 1
-  let childrenStartIndex = parentIndex + 1
-  let childrenEndIndex = childrenStartIndex
-
-  for (let i = childrenStartIndex; i < result.length; i++) {
-    if (result[i].level <= parent.level) {
-      break
-    }
-    childrenEndIndex = i + 1
-  }
-
-  let insertIndex: number
-  if (createState.type === 'folder') {
-    insertIndex = childrenStartIndex
-  } else {
-    insertIndex = childrenEndIndex
-    for (let i = childrenStartIndex; i < childrenEndIndex; i++) {
-      if (result[i].level === childLevel && !result[i].hasChildren) {
-        insertIndex = i
-        break
-      }
-    }
-  }
-
-  result.splice(insertIndex, 0, createCreatingItem(
-    createState.parentPath,
-    createState.type,
-    parent.level,
-  ))
-  return result
+  return insertCreatingFileTreeItem(flattenItems, {
+    creation: createState,
+    createItem: (parentPath, type, parentLevel) => createCreatingItem(parentPath, type, parentLevel),
+    getItemPath,
+  })
 }
 
 // ==================== 上下文菜单相关 ====================
@@ -629,7 +527,7 @@ defineExpose({
 <template>
   <ScrollArea ref="scrollAreaRef" class="flex-scroll-area h-full">
     <!-- 加载状态提示 -->
-    <div v-if="isLoading" class="flex h-full items-center justify-center">
+    <div v-if="isLoading" role="status" :aria-label="$t('common.loading')" class="flex h-full items-center justify-center">
       <div class="text-muted-foreground flex flex-col gap-3 items-center">
         <div class="border-2 border-current border-t-transparent rounded-full size-5 animate-spin" />
       </div>

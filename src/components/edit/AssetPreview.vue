@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import {
+  canAssetPreviewTrackMediaSession,
+  resolveAssetPreviewMediaTag,
+  shouldSuspendPreviousAssetPreviewMediaSession,
+} from '~/helper/asset-preview'
+import { restorePreviewMediaSession, snapshotPreviewMediaSession } from '~/helper/preview-media-session'
 import { AssetPreviewState, useEditorStore } from '~/stores/editor'
 
 interface Props {
@@ -9,18 +15,6 @@ const props = defineProps<Props>()
 const editorStore = useEditorStore()
 const mediaElement = useTemplateRef<HTMLMediaElement>('mediaElement')
 
-function resolveMediaTag(mimeType: string): 'audio' | 'video' | undefined {
-  if (mimeType.startsWith('video/')) {
-    return 'video'
-  }
-
-  if (mimeType.startsWith('audio/')) {
-    return 'audio'
-  }
-
-  return undefined
-}
-
 function persistCurrentMediaSession(
   path: string,
   mimeType: string,
@@ -28,7 +22,7 @@ function persistCurrentMediaSession(
     paused?: boolean
   },
 ) {
-  if (!resolveMediaTag(mimeType)) {
+  if (!canAssetPreviewTrackMediaSession(mimeType)) {
     return
   }
 
@@ -37,20 +31,14 @@ function persistCurrentMediaSession(
     return
   }
 
-  editorStore.updatePreviewMediaSession(path, {
-    currentTime: element.currentTime,
-    paused: options?.paused ?? element.paused,
-    playbackRate: element.playbackRate,
-    volume: element.volume,
-    muted: element.muted,
-  })
+  editorStore.updatePreviewMediaSession(path, snapshotPreviewMediaSession(element, options))
 }
 
 function suspendCurrentMediaSession(path: string, mimeType: string) {
   persistCurrentMediaSession(path, mimeType, { paused: true })
 }
 
-const mediaTag = $computed(() => resolveMediaTag(props.state.mimeType))
+const mediaTag = $computed(() => resolveAssetPreviewMediaTag(props.state.mimeType))
 
 function handleMediaLoadedMetadata() {
   const session = editorStore.getPreviewMediaSession(props.state.path)
@@ -59,14 +47,9 @@ function handleMediaLoadedMetadata() {
     return
   }
 
-  element.playbackRate = session.playbackRate
-  element.volume = session.volume
-  element.muted = session.muted
+  const { shouldResumePlayback } = restorePreviewMediaSession(element, session)
 
-  const maxTime = Number.isFinite(element.duration) ? element.duration : session.currentTime
-  element.currentTime = Math.min(session.currentTime, maxTime)
-
-  if (!session.paused) {
+  if (shouldResumePlayback) {
     void element.play().catch((error) => {
       logger.warn(`资源预览恢复播放失败 (${props.state.path}): ${error}`)
     })
@@ -78,7 +61,12 @@ function handleMediaSessionChange() {
 }
 
 watch(() => [props.state.path, props.state.mimeType] as const, ([newPath, newMimeType], [oldPath, oldMimeType]) => {
-  if (oldPath && (oldPath !== newPath || oldMimeType !== newMimeType)) {
+  if (shouldSuspendPreviousAssetPreviewMediaSession({
+    nextMimeType: newMimeType,
+    nextPath: newPath,
+    previousMimeType: oldMimeType,
+    previousPath: oldPath,
+  })) {
     suspendCurrentMediaSession(oldPath, oldMimeType)
   }
 }, { flush: 'pre' })
@@ -95,6 +83,7 @@ onBeforeUnmount(() => {
       :is="mediaTag"
       v-else-if="mediaTag"
       ref="mediaElement"
+      data-testid="asset-preview-media"
       :src="props.state.assetUrl"
       controls
       :class="mediaTag === 'video' && 'max-h-full'"
