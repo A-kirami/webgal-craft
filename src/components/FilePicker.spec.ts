@@ -1,11 +1,11 @@
 /* eslint-disable vue/one-component-per-file, vue/require-default-prop */
 import { createPinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { page, userEvent } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { defineComponent, h, nextTick, ref } from 'vue'
-import { createI18n } from 'vue-i18n'
 
-import { createBrowserConsoleMonitor } from '~/__tests__/browser'
+import { createBrowserConsoleMonitor, createBrowserLiteI18n } from '~/__tests__/browser'
 
 const {
   existsMock,
@@ -37,16 +37,6 @@ vi.mock('~/composables/useDirectoryReader', () => ({
 }))
 
 import FilePicker from './FilePicker.vue'
-
-function createTestI18n() {
-  return createI18n({
-    legacy: false,
-    locale: 'en',
-    missingWarn: false,
-    fallbackWarn: false,
-    missing: (_locale, key) => key,
-  })
-}
 
 const globalStubs = {
   Button: defineComponent({
@@ -211,9 +201,11 @@ const FilePickerHarness = defineComponent({
     return () => h('div', [
       h(FilePicker, {
         'modelValue': model.value,
+        'inputId': 'file-picker-input',
         'rootPath': '/assets',
         'onUpdate:modelValue': handleUpdate,
       }),
+      h('label', { for: 'file-picker-input' }, 'File Path'),
       h('output', { 'data-testid': 'model' }, model.value),
       h('output', { 'data-testid': 'updates' }, updates.value.join('|')),
     ])
@@ -250,19 +242,17 @@ describe('FilePicker', () => {
         initialValue: 'bg/',
       },
       global: {
-        plugins: [createPinia(), createTestI18n()],
+        plugins: [createPinia(), createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
 
     await nextTick()
 
-    const modelOutput = result.container.querySelector('[data-testid="model"]')
-    const updatesOutput = result.container.querySelector('[data-testid="updates"]')
-
-    expect(modelOutput?.textContent).toBe('bg/')
-    expect(updatesOutput?.textContent).toBe('')
+    await expect.element(page.getByTestId('model')).toHaveTextContent('bg/')
+    await expect.element(page.getByTestId('updates')).toHaveTextContent('')
     expectNoConsoleMessage('decodeEntities option is passed but will be ignored in non-browser builds')
+    await result.unmount()
   })
 
   it('用户显式提交输入时仍会发出归一化后的路径', async () => {
@@ -271,25 +261,21 @@ describe('FilePicker', () => {
         initialValue: '',
       },
       global: {
-        plugins: [createPinia(), createTestI18n()],
+        plugins: [createPinia(), createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
 
-    const input = result.container.querySelector('input')
-    expect(input).toBeTruthy()
-
-    input!.value = 'bg/dir/'
-    input!.dispatchEvent(new Event('input', { bubbles: true }))
-    input!.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }))
+    const input = page.getByRole('textbox', { name: 'File Path' })
+    await input.click()
+    await input.fill('bg/dir/')
+    await userEvent.keyboard('{Enter}')
 
     await nextTick()
 
-    const modelOutput = result.container.querySelector('[data-testid="model"]')
-    const updatesOutput = result.container.querySelector('[data-testid="updates"]')
-
-    expect(modelOutput?.textContent).toBe('bg/dir')
-    expect(updatesOutput?.textContent).toBe('bg/dir')
+    await expect.element(page.getByTestId('model')).toHaveTextContent('bg/dir')
+    await expect.element(page.getByTestId('updates')).toHaveTextContent('bg/dir')
     expectNoConsoleMessage('decodeEntities option is passed but will be ignored in non-browser builds')
+    await result.unmount()
   })
 })

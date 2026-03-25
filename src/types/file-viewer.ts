@@ -11,3 +11,10 @@ export interface FileViewerItem {
   modifiedAt?: number
   createdAt?: number
 }
+
+export interface FileViewerVirtualRow {
+  key: string | number | bigint
+  index: number
+  size: number
+  start: number
+}
