@@ -191,13 +191,15 @@ describe('EnginesTab', () => {
 
     await page.getByRole('button', { name: 'home.engines.installGameEngine' }).click()
 
-    expect(openDialogMock).toHaveBeenCalledWith(expect.objectContaining({
-      directory: true,
-      multiple: false,
-      title: 'common.dialogs.selectEngineFolder',
-    }))
-    expect(importEngineMock).toHaveBeenCalledWith('/engines/import-target')
-    expect(notifySuccessMock).toHaveBeenCalledWith('home.engines.importSuccess')
+    await vi.waitFor(() => {
+      expect(openDialogMock).toHaveBeenCalledWith(expect.objectContaining({
+        directory: true,
+        multiple: false,
+        title: 'common.dialogs.selectEngineFolder',
+      }))
+      expect(importEngineMock).toHaveBeenCalledWith('/engines/import-target')
+      expect(notifySuccessMock).toHaveBeenCalledWith('home.engines.importSuccess')
+    })
   })
 
   it('导入非法引擎目录时会显示结构错误通知', async () => {
@@ -216,7 +218,9 @@ describe('EnginesTab', () => {
 
     await page.getByRole('button', { name: 'home.engines.installGameEngine' }).click()
 
-    expect(notifyErrorMock).toHaveBeenCalledWith('home.engines.importInvalidFolder')
+    await vi.waitFor(() => {
+      expect(notifyErrorMock).toHaveBeenCalledWith('home.engines.importInvalidFolder')
+    })
   })
 
   it('列表视图操作按钮会打开引擎目录并触发卸载模态框', async () => {
@@ -236,7 +240,9 @@ describe('EnginesTab', () => {
     await page.getByRole('button', { name: 'common.openFolder' }).click()
     await page.getByRole('button', { name: 'home.engines.uninstallEngine' }).click()
 
-    expect(openPathMock).toHaveBeenCalledWith('/engines/default')
-    expect(modalOpenMock).toHaveBeenCalledWith('DeleteEngineModal', { engine })
+    await vi.waitFor(() => {
+      expect(openPathMock).toHaveBeenCalledWith('/engines/default')
+      expect(modalOpenMock).toHaveBeenCalledWith('DeleteEngineModal', { engine })
+    })
   })
 })

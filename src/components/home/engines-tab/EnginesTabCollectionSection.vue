@@ -26,6 +26,15 @@ const { isOverDropZone: isOverDropZoneGrid } = useTauriDropZone(dropZoneGridRef,
 
 const dropZoneListRef = useTemplateRef<HTMLElement>('dropZoneListRef')
 const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef, paths => emit('drop', paths))
+
+function handleImportKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Enter' && event.key !== ' ') {
+    return
+  }
+
+  event.preventDefault()
+  emit('importClick')
+}
 </script>
 
 <template>
@@ -63,11 +72,15 @@ const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef,
         </Card>
       </ContextMenuTrigger>
       <ContextMenuContent class="w-42">
-        <ContextMenuItem @click="emit('openFolder', engine)">
+        <ContextMenuItem v-if="!hasEngineProgress(engine)" @click="emit('openFolder', engine)">
           <Folder class="mr-2 size-3.5" />
           {{ $t('common.openFolder') }}
         </ContextMenuItem>
-        <ContextMenuItem class="text-destructive text-13px! focus:text-destructive-foreground focus:bg-destructive" @click="emit('deleteEngine', engine)">
+        <ContextMenuItem
+          v-if="!hasEngineProgress(engine)"
+          class="text-destructive text-13px! focus:text-destructive-foreground focus:bg-destructive"
+          @click="emit('deleteEngine', engine)"
+        >
           <Trash2 class="mr-2 size-3.5" />
           {{ $t('home.engines.uninstallEngine') }}
         </ContextMenuItem>
@@ -75,12 +88,16 @@ const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef,
     </ContextMenu>
     <div
       ref="dropZoneGridRef"
+      :aria-label="$t('home.engines.installEngine')"
+      role="button"
+      tabindex="0"
       class="p-4 border-1 rounded-lg border-dashed bg-gray-50 flex flex-row gap-4 cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden overflow-hidden dark:bg-gray-900"
       :class="{
         'border-purple-300 bg-purple-50': isOverDropZoneGrid,
         'border-gray-300 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700': !isOverDropZoneGrid
       }"
       @click="emit('importClick')"
+      @keydown="handleImportKeydown"
     >
       <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900/20">
         <Box class="text-purple-600 h-6 w-6 dark:text-purple-400" />
@@ -162,12 +179,16 @@ const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef,
     </div>
     <div
       ref="dropZoneListRef"
+      :aria-label="$t('home.engines.installEngine')"
+      role="button"
+      tabindex="0"
       class="p-3 border-t flex cursor-pointer transition-colors items-center justify-between"
       :class="{
         'bg-purple-50': isOverDropZoneList,
         'bg-gray-50/50 dark:bg-gray-800/10 hover:bg-gray-100 dark:hover:bg-gray-800/20': !isOverDropZoneList
       }"
       @click="emit('importClick')"
+      @keydown="handleImportKeydown"
     >
       <div class="flex gap-3 items-center">
         <div class="rounded-md bg-purple-100 flex h-10 w-10 items-center justify-center dark:bg-purple-900/20">

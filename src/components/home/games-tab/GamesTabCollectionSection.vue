@@ -70,7 +70,11 @@ const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef,
           <Folder class="mr-2 size-3.5" />
           {{ $t('common.openFolder') }}
         </ContextMenuItem>
-        <ContextMenuItem class="text-destructive text-13px! focus:text-destructive-foreground focus:bg-destructive" @click="emit('deleteGame', game)">
+        <ContextMenuItem
+          v-if="!hasGameProgress(game)"
+          class="text-destructive text-13px! focus:text-destructive-foreground focus:bg-destructive"
+          @click="emit('deleteGame', game)"
+        >
           <Trash2 class="mr-2 size-3.5" />
           {{ $t('home.games.deleteGame') }}
         </ContextMenuItem>
@@ -119,7 +123,7 @@ const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef,
             {{ game.metadata.name }}
           </h3>
           <p class="text-xs text-muted-foreground">
-            {{ $t('home.games.modifiedAt', { time: dayjs(game.lastModified).fromNow() }) }}
+            {{ hasGameProgress(game) ? $t('home.games.creating') : $t('home.games.modifiedAt', { time: dayjs(game.lastModified).fromNow() }) }}
           </p>
         </div>
       </div>

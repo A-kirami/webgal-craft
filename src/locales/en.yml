@@ -130,6 +130,7 @@ modals:
     gameEngine: Game Engine
     selectEngine: Select game engine
     create: Create
+    createFailed: Failed to create game
     pathNotEmpty: The game save directory must not exist or be empty
     selectSaveLocation: Game Save Location
   deleteGame:

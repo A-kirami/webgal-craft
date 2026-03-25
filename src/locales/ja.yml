@@ -130,6 +130,7 @@ modals:
     gameEngine: ゲームエンジン
     selectEngine: ゲームエンジンを選択
     create: 作成
+    createFailed: ゲームの作成に失敗しました
     pathNotEmpty: ゲーム保存ディレクトリは存在しないか、空である必要があります
     selectSaveLocation: ゲーム保存場所
   deleteGame:

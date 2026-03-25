@@ -105,6 +105,14 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
     }))
   })
 
+  function resolveCreateGameErrorMessage(error: unknown): string {
+    if (error instanceof Error && error.message) {
+      return error.message
+    }
+
+    return t('modals.createGame.createFailed')
+  }
+
   const isFieldDirty = computed(() => {
     return checkIsFieldDirty('gameName')
       || checkIsFieldDirty('gamePath')
@@ -125,12 +133,17 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
   const onSubmit = handleSubmit(async (values: CreateGameFormValues) => {
     const engine = resourceStore.engines?.find(engine => engine.id === values.gameEngine)
     if (!engine) {
+      notify.error(t('home.engines.noEngineContent'))
       return
     }
 
-    options.open.value = false
-    const gameId = await gameManager.createGame(values.gameName, values.gamePath, engine.path)
-    options.onSuccess?.(gameId)
+    try {
+      const gameId = await gameManager.createGame(values.gameName, values.gamePath, engine.path)
+      options.open.value = false
+      options.onSuccess?.(gameId)
+    } catch (error) {
+      notify.error(resolveCreateGameErrorMessage(error))
+    }
   })
 
   return {

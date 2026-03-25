@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, reactive, ref } from 'vue'
 
 const {
   createGameMock,
   existsMock,
   joinMock,
+  notifyErrorMock,
   openDialogMock,
   readDirMock,
   isFieldDirtyMock,
@@ -15,6 +17,7 @@ const {
   createGameMock: vi.fn(),
   existsMock: vi.fn(),
   joinMock: vi.fn(async (...parts: string[]) => parts.join('/')),
+  notifyErrorMock: vi.fn(),
   openDialogMock: vi.fn(),
   readDirMock: vi.fn(),
   isFieldDirtyMock: vi.fn(),
@@ -44,6 +47,12 @@ vi.mock('vue-i18n', () => ({
         return key
       },
     }
+  },
+}))
+
+vi.mock('notivue', () => ({
+  push: {
+    error: notifyErrorMock,
   },
 }))
 
@@ -83,6 +92,7 @@ describe('useCreateGameForm', () => {
     createGameMock.mockReset()
     existsMock.mockReset()
     joinMock.mockReset()
+    notifyErrorMock.mockReset()
     openDialogMock.mockReset()
     readDirMock.mockReset()
     isFieldDirtyMock.mockReset()
@@ -228,5 +238,37 @@ describe('useCreateGameForm', () => {
     expect(createGameMock).toHaveBeenCalledWith('Demo', '/games/Demo', '/engines/default')
     expect(open.value).toBe(false)
     expect(onSuccess).toHaveBeenCalledWith('game-1')
+  })
+
+  it('提交时找不到引擎会提示错误且保持弹窗打开', async () => {
+    const open = ref(true)
+    const form = useCreateGameForm({ open })
+
+    formValues.gameName = 'Demo'
+    formValues.gamePath = '/games/Demo'
+    formValues.gameEngine = 'missing-engine'
+
+    await form.onSubmit()
+
+    expect(createGameMock).not.toHaveBeenCalled()
+    expect(notifyErrorMock).toHaveBeenCalledWith('home.engines.noEngineContent')
+    expect(open.value).toBe(true)
+  })
+
+  it('创建游戏失败时会提示错误且不会关闭弹窗', async () => {
+    const open = ref(true)
+    const onSuccess = vi.fn()
+    const form = useCreateGameForm({ open, onSuccess })
+
+    createGameMock.mockRejectedValue(new Error('create failed'))
+    formValues.gameName = 'Demo'
+    formValues.gamePath = '/games/Demo'
+    formValues.gameEngine = 'engine-1'
+
+    await form.onSubmit()
+
+    expect(notifyErrorMock).toHaveBeenCalledWith('create failed')
+    expect(open.value).toBe(true)
+    expect(onSuccess).not.toHaveBeenCalled()
   })
 })

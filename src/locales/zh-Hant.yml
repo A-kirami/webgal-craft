@@ -130,6 +130,7 @@ modals:
     gameEngine: 遊戲引擎
     selectEngine: 選擇遊戲引擎
     create: 建立
+    createFailed: 建立遊戲失敗
     pathNotEmpty: 遊戲儲存目錄必須不存在或為空
     selectSaveLocation: 遊戲儲存位置
   deleteGame:

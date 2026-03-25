@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
-import { computed, defineComponent, h, reactive } from 'vue'
+import { defineComponent, h, reactive } from 'vue'
 
 import { createBrowserLiteI18n } from '~/__tests__/browser'
 
@@ -75,7 +75,7 @@ vi.mock('vee-validate', () => {
           await callback({ ...formContext.values })
         }
       },
-      isFieldDirty: computed(() => false),
+      isFieldDirty: () => false,
       setFieldValue(name: string, value: unknown) {
         formContext.values[name] = value
       },
