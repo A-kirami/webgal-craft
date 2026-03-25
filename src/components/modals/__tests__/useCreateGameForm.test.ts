@@ -271,4 +271,22 @@ describe('useCreateGameForm', () => {
     expect(open.value).toBe(true)
     expect(onSuccess).not.toHaveBeenCalled()
   })
+
+  it('游戏名称不能为空', async () => {
+    const open = ref(true)
+
+    useCreateGameForm({ open })
+
+    const schema = useFormMock.mock.calls[0]?.[0]?.validationSchema
+    const result = await schema?.safeParseAsync({
+      gameName: '',
+      gamePath: '/games/Demo',
+      gameEngine: 'engine-1',
+    })
+
+    expect(result?.success).toBe(false)
+    if (result?.success === false) {
+      expect(result.error.issues[0]?.message).toBe('modals.createGame.gameNameRequired')
+    }
+  })
 })

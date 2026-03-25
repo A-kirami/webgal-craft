@@ -126,6 +126,7 @@ modals:
     title: 建立新遊戲
     description: 從這裡開始你的新創作
     gameName: 遊戲名稱
+    gameNameRequired: 遊戲名稱不能為空
     saveLocation: 儲存位置
     gameEngine: 遊戲引擎
     selectEngine: 選擇遊戲引擎

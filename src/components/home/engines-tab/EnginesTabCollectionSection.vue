@@ -91,7 +91,7 @@ function handleImportKeydown(event: KeyboardEvent) {
       :aria-label="$t('home.engines.installEngine')"
       role="button"
       tabindex="0"
-      class="p-4 border-1 rounded-lg border-dashed bg-gray-50 flex flex-row gap-4 cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden overflow-hidden dark:bg-gray-900"
+      class="p-4 border-1 rounded-lg border-dashed bg-gray-50 flex flex-row gap-4 cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden dark:bg-gray-900"
       :class="{
         'border-purple-300 bg-purple-50': isOverDropZoneGrid,
         'border-gray-300 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700': !isOverDropZoneGrid

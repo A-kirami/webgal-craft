@@ -126,6 +126,7 @@ modals:
     title: Create New Game
     description: Start your new creation from here
     gameName: Game Name
+    gameNameRequired: Game name is required
     saveLocation: Save Location
     gameEngine: Game Engine
     selectEngine: Select game engine

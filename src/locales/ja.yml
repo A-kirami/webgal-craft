@@ -126,6 +126,7 @@ modals:
     title: 新しいゲームを作成
     description: ここから新しい作品を始めましょう
     gameName: ゲーム名
+    gameNameRequired: ゲーム名は必須です
     saveLocation: 保存場所
     gameEngine: ゲームエンジン
     selectEngine: ゲームエンジンを選択

@@ -141,7 +141,8 @@ describe('EnginesTabCollectionSection', () => {
     await expect.element(page.getByRole('button', { name: 'home.engines.installEngine' })).toBeInTheDocument()
 
     const importButton = document.querySelector('[aria-label="home.engines.installEngine"]') as HTMLElement | null
-    importButton?.focus()
+    expect(importButton).not.toBeNull()
+    importButton!.focus()
     await userEvent.keyboard('{Enter}')
 
     await expect.element(page.getByTestId('import-count')).toHaveTextContent('1')
@@ -158,7 +159,8 @@ describe('EnginesTabCollectionSection', () => {
     await expect.element(page.getByRole('button', { name: 'home.engines.installEngine' })).toBeInTheDocument()
 
     const importButton = document.querySelector('[aria-label="home.engines.installEngine"]') as HTMLElement | null
-    importButton?.focus()
+    expect(importButton).not.toBeNull()
+    importButton!.focus()
     await userEvent.keyboard('{Enter}')
 
     await expect.element(page.getByTestId('import-count')).toHaveTextContent('1')

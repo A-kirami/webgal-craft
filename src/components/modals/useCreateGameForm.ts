@@ -44,7 +44,7 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
   }
 
   const schema = z.object({
-    gameName: z.string(),
+    gameName: z.string().min(1, t('modals.createGame.gameNameRequired')),
     gamePath: z.string().refine(
       async path => await checkPath(path),
       t('modals.createGame.pathNotEmpty'),
