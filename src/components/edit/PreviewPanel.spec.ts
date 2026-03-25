@@ -130,6 +130,7 @@ describe('PreviewPanel', () => {
       },
       currentGameServeUrl: 'http://127.0.0.1:8899',
     }))
+    copyMock.mockResolvedValue(true)
     useClipboardMock.mockReturnValue({
       copied: ref(true),
       copy: copyMock,

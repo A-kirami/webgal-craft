@@ -135,7 +135,7 @@ describe('EditorTabs', () => {
     expect(tabsStore.tabs[0].isPreview).toBe(false)
   })
 
-  it('点击未修改标签的关闭按钮会直接关闭标签', async () => {
+  it('中键点击未修改标签会直接关闭标签', async () => {
     const tabsStore = createTabsStore([
       {
         activeAt: 1,

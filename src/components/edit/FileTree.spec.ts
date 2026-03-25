@@ -319,6 +319,8 @@ describe('FileTree', () => {
   })
 
   it('按 F2 重命名后回车会调用 gameFs.renameFile', async () => {
+    renameFileMock.mockResolvedValue(undefined)
+
     render(FileTree, {
       props: {
         getKey: (item: Record<string, unknown>) => String(item.path),
@@ -354,6 +356,9 @@ describe('FileTree', () => {
       key: 'Enter',
     }))
 
-    expect(renameFileMock).toHaveBeenCalledWith('/project/scene.txt', 'renamed.txt')
+    await expect.poll(() => renameFileMock.mock.calls[0]).toEqual([
+      '/project/scene.txt',
+      'renamed.txt',
+    ])
   })
 })
