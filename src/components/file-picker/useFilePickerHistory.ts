@@ -80,8 +80,9 @@ export function useFilePickerHistory(options: UseFilePickerHistoryOptions) {
       return
     }
 
+    const snapshot = [...recentHistory]
     const results = await Promise.all(
-      recentHistory.map(async (path) => {
+      snapshot.map(async (path) => {
         try {
           const safePath = await options.ensurePathWithinRoot(
             await join(canonicalRootPath, path),
@@ -103,14 +104,17 @@ export function useFilePickerHistory(options: UseFilePickerHistoryOptions) {
       }),
     )
 
-    const removedPaths = results.filter(result => result.remove).map(result => result.path)
+    const currentPaths = new Set(recentHistory)
+    const removedPaths = results
+      .filter(result => result.remove && currentPaths.has(result.path))
+      .map(result => result.path)
     if (removedPaths.length > 0) {
       removeRecentHistoryPaths(removedPaths)
     }
 
     recentHistoryInvalidMap = Object.fromEntries(
       results
-        .filter(result => !result.remove)
+        .filter(result => !result.remove && currentPaths.has(result.path))
         .map(result => [result.path, result.invalid] as const),
     )
   }

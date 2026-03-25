@@ -16,6 +16,7 @@ interface FileViewerBodyProps {
   listPreviewSize: number
   listItemHeight: number
   showListSize: boolean
+  showListModifiedAt: boolean
   showListCreatedAt: boolean
   getGridRowItems: (rowIndex: number) => FileViewerItem[]
   getListItem: (index: number) => FileViewerItem
@@ -31,6 +32,7 @@ const {
   listPreviewSize,
   listItemHeight,
   showListSize,
+  showListModifiedAt,
   showListCreatedAt,
   getGridRowItems,
   getListItem,
@@ -182,7 +184,7 @@ function handleItemClick(item: FileViewerItem) {
               <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
             </template>
           </div>
-          <div class="text-left w-32" :aria-label="$t('common.fileMeta.modifiedAt')">
+          <div v-if="showListModifiedAt" class="text-left w-32" :aria-label="$t('common.fileMeta.modifiedAt')">
             <template v-if="isValidPositiveNumber(item.modifiedAt)">
               {{ formatDateTime(item.modifiedAt) }}
             </template>

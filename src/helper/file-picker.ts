@@ -23,7 +23,6 @@ function isAbsoluteFilePickerInput(path: string): boolean {
   const trimmed = path.trim()
   return trimmed.startsWith('/')
     || trimmed.startsWith('\\')
-    || trimmed.startsWith('\\\\')
     || /^[a-zA-Z]:[\\/]/.test(trimmed)
 }
 
@@ -82,8 +81,8 @@ export function parseFilePickerInput(input: string, fallbackDir: string): FilePi
 
   const splitIndex = normalized.lastIndexOf('/')
   return {
-    directoryPath: normalizeRelativePath(splitIndex === -1 ? '' : normalized.slice(0, splitIndex)),
-    keyword: splitIndex === -1 ? normalized : normalized.slice(splitIndex + 1),
+    directoryPath: normalizeRelativePath(normalized.slice(0, splitIndex)),
+    keyword: normalized.slice(splitIndex + 1),
     shouldNavigate: true,
     rejectAbsolutePath: false,
   }

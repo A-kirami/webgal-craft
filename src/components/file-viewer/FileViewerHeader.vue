@@ -6,6 +6,7 @@ import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 interface FileViewerHeaderProps {
   listPreviewSize: number
   showListSize: boolean
+  showListModifiedAt: boolean
   showListCreatedAt: boolean
   sortBy: FileViewerSortBy
   sortOrder: FileViewerSortOrder
@@ -15,6 +16,7 @@ interface FileViewerHeaderProps {
 const {
   listPreviewSize,
   showListSize,
+  showListModifiedAt,
   showListCreatedAt,
   sortBy,
   sortOrder,
@@ -94,7 +96,7 @@ function getHeaderInteractionClass(): string {
           <ArrowDown v-else-if="isSortColumn('size') && sortOrder === 'desc'" class="size-3" />
         </button>
       </div>
-      <div class="contents" role="columnheader" :aria-sort="getHeaderAriaSort('modifiedTime')">
+      <div v-if="showListModifiedAt" class="contents" role="columnheader" :aria-sort="getHeaderAriaSort('modifiedTime')">
         <button
           type="button"
           :tabindex="sortableHeaders ? 0 : -1"

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, ref } from 'vue'
 
+import { AppError } from '~/types/errors'
+
 import { useFilePickerController } from '../useFilePickerController'
 
 const {
@@ -28,6 +30,7 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 interface ControllerFixtureOptions {
   modelValue?: string
   reopenInSelectedParent?: boolean
+  rootPath?: string
 }
 
 function flushControllerTasks() {
@@ -36,7 +39,7 @@ function flushControllerTasks() {
 
 function createFixture(options: ControllerFixtureOptions = {}) {
   const modelValue = ref(options.modelValue ?? '')
-  const rootPath = ref('/assets')
+  const rootPath = ref(options.rootPath ?? '/assets')
   const disabled = ref(false)
   const reopenInSelectedParent = ref(options.reopenInSelectedParent ?? false)
   const scope = effectScope()
@@ -136,6 +139,57 @@ describe('useFilePickerController', () => {
 
     expect(modelValue.value).toBe('images/bg/original.png')
     expect(controller.inputText.value).toBe('images/bg/original.png')
+
+    scope.stop()
+  })
+
+  it('目录读取返回 DIR_NOT_FOUND 时会保留当前目录并显示错误信息', async () => {
+    const { controller, readDirectory, scope } = createFixture({
+      modelValue: 'images/bg/opening.png',
+      reopenInSelectedParent: true,
+    })
+
+    readDirectory
+      .mockResolvedValueOnce({
+        absolutePath: '/assets/images/bg',
+        items: [],
+        requestId: 1,
+      })
+      .mockRejectedValueOnce(new AppError('DIR_NOT_FOUND', '目录不存在'))
+
+    await flushControllerTasks()
+    await controller.openPopover()
+
+    expect(controller.currentDir.value).toBe('images/bg')
+
+    await controller.handleNavigateItem({
+      isDir: true,
+      name: 'missing',
+      path: '/assets/missing',
+    })
+
+    expect(controller.currentDir.value).toBe('images/bg')
+    expect(controller.errorMsg.value).toBe('目录不存在')
+    expect(controller.isLoading.value).toBe(false)
+
+    scope.stop()
+  })
+
+  it('大小写不一致的绝对路径不会被当作根目录内相对路径', async () => {
+    const { controller, modelValue, scope } = createFixture({
+      rootPath: '/Assets',
+    })
+
+    await flushControllerTasks()
+
+    controller.handleSelectItem({
+      isDir: false,
+      name: 'file-1.txt',
+      path: '/assets/file-1.txt',
+    })
+
+    expect(modelValue.value).toBe('assets/file-1.txt')
+    expect(controller.inputText.value).toBe('assets/file-1.txt')
 
     scope.stop()
   })

@@ -81,6 +81,7 @@ export function useFileViewerLayout(options: UseFileViewerLayoutOptions) {
   )
 
   const showListSize = computed(() => listMetaDensity.value >= 2)
+  const showListModifiedAt = computed(() => listMetaDensity.value >= 2)
   const showListCreatedAt = computed(() => listMetaDensity.value >= 3)
   const gridCols = computed(() => {
     const width = contentWidth.value || gridItemWidth.value
@@ -97,6 +98,7 @@ export function useFileViewerLayout(options: UseFileViewerLayoutOptions) {
     listPreviewSize,
     listMetaDensity,
     showListSize,
+    showListModifiedAt,
     showListCreatedAt,
     gridCols,
   }

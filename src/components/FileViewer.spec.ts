@@ -15,9 +15,11 @@ import type { FileViewerItem } from '~/types/file-viewer'
 const {
   measureMock,
   scrollToIndexMock,
+  viewportWidthMock,
 } = vi.hoisted(() => ({
   measureMock: vi.fn(),
   scrollToIndexMock: vi.fn(),
+  viewportWidthMock: { value: 780 },
 }))
 
 vi.mock('@tanstack/vue-virtual', () => ({
@@ -41,6 +43,16 @@ vi.mock('@tanstack/vue-virtual', () => ({
     },
   }),
 }))
+
+vi.mock('@vueuse/core', async () => {
+  const actual = await vi.importActual<typeof import('@vueuse/core')>('@vueuse/core')
+  return {
+    ...actual,
+    useElementSize: () => ({
+      width: viewportWidthMock,
+    }),
+  }
+})
 
 const BASE_TIMESTAMP = Date.parse('2023-11-14T00:00:00Z')
 
@@ -91,16 +103,19 @@ describe('FileViewer composables', () => {
     expect(layout.normalizedZoom.value).toBe(100)
     expect(layout.gridCols.value).toBe(9)
     expect(layout.showListSize.value).toBe(true)
+    expect(layout.showListModifiedAt.value).toBe(true)
     expect(layout.showListCreatedAt.value).toBe(true)
 
     contentWidth.value = 700
     await nextTick()
     expect(layout.showListSize.value).toBe(true)
+    expect(layout.showListModifiedAt.value).toBe(true)
     expect(layout.showListCreatedAt.value).toBe(false)
 
     contentWidth.value = 520
     await nextTick()
     expect(layout.showListSize.value).toBe(false)
+    expect(layout.showListModifiedAt.value).toBe(false)
 
     zoom.value = 200
     await nextTick()
@@ -147,8 +162,27 @@ describe('FileViewer composables', () => {
 })
 
 describe('FileViewer facade contract', () => {
+  it('窄列表视图下会同时隐藏 modifiedAt 列头和内容', () => {
+    viewportWidthMock.value = 520
+
+    render(FileViewer, {
+      props: {
+        items: [createItem(1)],
+        viewMode: 'list',
+      },
+      global: {
+        plugins: [createBrowserLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    expect(document.body.textContent ?? '').not.toContain('common.fileMeta.modifiedAt')
+    expect(document.querySelector('[aria-label="common.fileMeta.modifiedAt"]')).toBeNull()
+  })
+
   it('保持 viewport expose 与 #icon slot 契约', async () => {
     scrollToIndexMock.mockClear()
+    viewportWidthMock.value = 780
 
     const FileViewerHarness = defineComponent({
       name: 'FileViewerHarness',
@@ -192,7 +226,7 @@ describe('FileViewer facade contract', () => {
     })
 
     await expect.element(page.getByTestId('viewport-ready')).toHaveTextContent('yes')
-    await expect.element(page.getByTestId('icon-slot-probe')).toHaveTextContent('file-1.txt:')
+    await expect.element(page.getByTestId('icon-slot-probe')).toHaveTextContent(/^file-1\.txt:\d+$/)
 
     await page.getByTestId('scroll-trigger').click()
     expect(scrollToIndexMock).toHaveBeenCalled()

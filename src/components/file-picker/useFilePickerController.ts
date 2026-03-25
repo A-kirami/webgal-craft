@@ -147,10 +147,17 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   }
 
   function toRelativeFromAbsolute(path: string): string {
+    // `checkRoot()` stores a Tauri-normalized absolute root path, and callers pass
+    // paths produced from the same Tauri path APIs. Keep the comparison exact so we
+    // do not fold case on case-sensitive file systems.
     const root = canonicalRootPath.value.replaceAll('\\', '/')
     const target = path.replaceAll('\\', '/')
-    if (target.toLocaleLowerCase().startsWith(root.toLocaleLowerCase())) {
-      return normalizeRelativePath(target.slice(root.length))
+    const rootPrefix = root.endsWith('/') ? root : `${root}/`
+    if (target === root) {
+      return ''
+    }
+    if (target.startsWith(rootPrefix)) {
+      return normalizeRelativePath(target.slice(rootPrefix.length))
     }
     return normalizeRelativePath(path)
   }
@@ -211,6 +218,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
         return
       }
       if (error instanceof AppError && error.code === 'DIR_NOT_FOUND') {
+        errorMsg.value = error.message || '目录不存在'
         return
       }
       errorMsg.value = error instanceof Error ? error.message : String(error)
