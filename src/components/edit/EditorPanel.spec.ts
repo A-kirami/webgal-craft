@@ -124,9 +124,9 @@ vi.mock('~/components/ui/resizable', () => {
       },
     },
     emits: ['collapse', 'expand'],
-    setup(props, { emit, slots, expose }) {
+    setup(_, { emit, slots, expose }) {
       const state = reactive({
-        isCollapsed: Boolean(props.collapsible),
+        isCollapsed: false,
       })
 
       function expand() {

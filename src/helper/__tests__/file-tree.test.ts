@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
-import * as fileTreeHelper from '../file-tree'
-
-const {
+import {
   getFileTreeNameSelectionEnd,
   hasFileTreeDuplicateName,
   insertCreatingFileTreeItem,
-} = fileTreeHelper
+  resolveFileTreeCreateBlurAction,
+  resolveFileTreeCreateStart,
+  resolveFileTreeRenameBlurAction,
+} from '../file-tree'
+
+import type { FileTreeBlurAction } from '../file-tree'
 
 interface TestTreeItem {
   children?: TestTreeItem[]
@@ -19,12 +22,6 @@ interface TestFlattenedItem {
   hasChildren: boolean
   level: number
   value: TestTreeItem
-}
-
-function getHelper<T>(name: string): T {
-  const helper = Reflect.get(fileTreeHelper, name)
-  expect(helper).toBeTypeOf('function')
-  return helper as T
 }
 
 function createFlattenedItem(
@@ -59,7 +56,7 @@ describe('file tree helper', () => {
         path: '/project/chapter',
         children: [
           {
-            name: 'Scene.txt',
+            name: ' Scene.txt ',
             path: '/project/chapter/Scene.txt',
           },
           {
@@ -142,16 +139,6 @@ describe('file tree helper', () => {
   })
 
   it('重命名 blur 时在启动阶段或目标项已变化时不做处理', () => {
-    const resolveFileTreeRenameBlurAction = getHelper<
-      (options: {
-        currentItemKey: string
-        currentValue: string
-        isStarting: boolean
-        originalName: string
-        renamingItemKey?: string
-      }) => 'cancel' | 'noop' | 'submit'
-    >('resolveFileTreeRenameBlurAction')
-
     expect(resolveFileTreeRenameBlurAction({
       currentItemKey: '/project/scene.txt',
       currentValue: 'renamed.txt',
@@ -170,16 +157,6 @@ describe('file tree helper', () => {
   })
 
   it('重命名 blur 时空值会取消重命名', () => {
-    const resolveFileTreeRenameBlurAction = getHelper<
-      (options: {
-        currentItemKey: string
-        currentValue: string
-        isStarting: boolean
-        originalName: string
-        renamingItemKey?: string
-      }) => 'cancel' | 'noop' | 'submit'
-    >('resolveFileTreeRenameBlurAction')
-
     expect(resolveFileTreeRenameBlurAction({
       currentItemKey: '/project/scene.txt',
       currentValue: '   ',
@@ -190,16 +167,6 @@ describe('file tree helper', () => {
   })
 
   it('重命名 blur 时未改名会取消重命名', () => {
-    const resolveFileTreeRenameBlurAction = getHelper<
-      (options: {
-        currentItemKey: string
-        currentValue: string
-        isStarting: boolean
-        originalName: string
-        renamingItemKey?: string
-      }) => 'cancel' | 'noop' | 'submit'
-    >('resolveFileTreeRenameBlurAction')
-
     expect(resolveFileTreeRenameBlurAction({
       currentItemKey: '/project/scene.txt',
       currentValue: ' scene.txt ',
@@ -210,16 +177,6 @@ describe('file tree helper', () => {
   })
 
   it('重命名 blur 时有效新名称会提交重命名', () => {
-    const resolveFileTreeRenameBlurAction = getHelper<
-      (options: {
-        currentItemKey: string
-        currentValue: string
-        isStarting: boolean
-        originalName: string
-        renamingItemKey?: string
-      }) => 'cancel' | 'noop' | 'submit'
-    >('resolveFileTreeRenameBlurAction')
-
     expect(resolveFileTreeRenameBlurAction({
       currentItemKey: '/project/scene.txt',
       currentValue: 'renamed.txt',
@@ -230,26 +187,6 @@ describe('file tree helper', () => {
   })
 
   it('开始创建文件时会返回默认名、光标位置和待展开父节点', () => {
-    const resolveFileTreeCreateStart = getHelper<
-      <T>(options: {
-        accessor: {
-          getChildren: (item: T) => T[] | undefined
-          getPath: (item: T) => string
-        }
-        defaultFileName: string
-        defaultFolderName: string
-        getKey: (item: T) => string
-        hasCustomFileName: boolean
-        items: T[]
-        parentPath: string
-        type: 'file' | 'folder'
-      }) => {
-        expandParentKey?: string
-        selectionEnd: number
-        value: string
-      }
-    >('resolveFileTreeCreateStart')
-
     const items: TestTreeItem[] = [
       {
         children: [
@@ -283,26 +220,6 @@ describe('file tree helper', () => {
   })
 
   it('开始创建文件夹时会全选默认文件夹名', () => {
-    const resolveFileTreeCreateStart = getHelper<
-      <T>(options: {
-        accessor: {
-          getChildren: (item: T) => T[] | undefined
-          getPath: (item: T) => string
-        }
-        defaultFileName: string
-        defaultFolderName: string
-        getKey: (item: T) => string
-        hasCustomFileName: boolean
-        items: T[]
-        parentPath: string
-        type: 'file' | 'folder'
-      }) => {
-        expandParentKey?: string
-        selectionEnd: number
-        value: string
-      }
-    >('resolveFileTreeCreateStart')
-
     const items: TestTreeItem[] = [
       {
         name: 'scene.txt',
@@ -329,17 +246,6 @@ describe('file tree helper', () => {
   })
 
   it('创建 blur 时默认名或空值会取消创建', () => {
-    const resolveFileTreeCreateBlurAction = getHelper<
-      (options: {
-        defaultFileName: string
-        defaultFolderName: string
-        parentPath?: string
-        type?: 'file' | 'folder'
-        value: string
-        isStarting: boolean
-      }) => 'cancel' | 'noop' | 'submit'
-    >('resolveFileTreeCreateBlurAction')
-
     expect(resolveFileTreeCreateBlurAction({
       defaultFileName: 'new-scene.txt',
       defaultFolderName: '新建文件夹',
@@ -360,17 +266,6 @@ describe('file tree helper', () => {
   })
 
   it('创建 blur 时有效名称会提交创建', () => {
-    const resolveFileTreeCreateBlurAction = getHelper<
-      (options: {
-        defaultFileName: string
-        defaultFolderName: string
-        parentPath?: string
-        type?: 'file' | 'folder'
-        value: string
-        isStarting: boolean
-      }) => 'cancel' | 'noop' | 'submit'
-    >('resolveFileTreeCreateBlurAction')
-
     expect(resolveFileTreeCreateBlurAction({
       defaultFileName: 'new-scene.txt',
       defaultFolderName: '新建文件夹',
@@ -378,6 +273,6 @@ describe('file tree helper', () => {
       parentPath: '/project',
       type: 'file',
       value: 'branch.txt',
-    })).toBe('submit')
+    })).toBe<FileTreeBlurAction>('submit')
   })
 })

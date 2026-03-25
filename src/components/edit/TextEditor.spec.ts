@@ -430,6 +430,42 @@ describe('TextEditor', () => {
     expect(runtimeReturnValue.handleEditorClick).toHaveBeenCalledTimes(1)
   })
 
+  it('左键点击 glyph margin 时会同步播放到当前行', async () => {
+    const { editorStore, state } = createHarness('/project/scene-8.txt')
+    monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(['say:hello']))
+    monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 1 })
+
+    render(TextEditor, {
+      props: {
+        state,
+      },
+      global: {
+        plugins: [createTextEditorLiteI18n()],
+      },
+    })
+
+    await nextTick()
+
+    const handleMouseDown = monacoMockState.editorInstance.onMouseDown.mock.calls[0]?.[0]
+
+    expect(handleMouseDown).toBeTypeOf('function')
+
+    handleMouseDown?.({
+      event: {
+        leftButton: true,
+      },
+      target: {
+        position: {
+          lineNumber: 1,
+        },
+        type: monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN,
+      },
+    })
+
+    expect(editorStore.syncScenePreview).toHaveBeenCalledTimes(1)
+    expect(editorStore.syncScenePreview).toHaveBeenCalledWith('/project/scene-8.txt', 1, 'say:hello', true)
+  })
+
   it('播放按钮样式会命中 Monaco glyph margin 装饰节点', async () => {
     const { state } = createHarness('/project/scene-5.txt')
 

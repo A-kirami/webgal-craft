@@ -198,7 +198,7 @@ export function hasFileTreeDuplicateName<T>(
       return false
     }
 
-    return accessor.getName(sibling).toLowerCase() === trimmedName
+    return accessor.getName(sibling).trim().toLowerCase() === trimmedName
   })
 }
 

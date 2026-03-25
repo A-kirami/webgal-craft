@@ -13,8 +13,8 @@ const createTab = (overrides: Partial<Tab> = {}): Tab => ({
   ...overrides,
 })
 
-describe('editor tabs helper', () => {
-  it('decides to close clean tabs directly without touching the modal', () => {
+describe('编辑器标签辅助函数', () => {
+  it('未修改的标签会直接关闭且不会触发模态框', () => {
     const closeTab = vi.fn()
     const decision = getCloseTabDecision({
       tab: createTab(),
@@ -35,7 +35,7 @@ describe('editor tabs helper', () => {
     expect(closeTab).not.toHaveBeenCalled()
   })
 
-  it('prompts and closes the tab after a successful save', async () => {
+  it('保存成功后会关闭标签', async () => {
     const closeTab = vi.fn()
     const saveFile = vi.fn(() => Promise.resolve())
     const findTabIndex = vi.fn(() => 2)
@@ -59,11 +59,33 @@ describe('editor tabs helper', () => {
 
     expect(saveFile).toHaveBeenCalledWith('/project/demo.txt')
     expect(closeTab).toHaveBeenCalledWith(2)
+  })
+
+  it('选择不保存时会关闭标签', () => {
+    const closeTab = vi.fn()
+    const findTabIndex = vi.fn(() => 2)
+    const decision = getCloseTabDecision({
+      tab: createTab({ isModified: true }),
+      tabIndex: 1,
+      modalTitle: 'save it',
+      logger: { error: vi.fn() },
+      saveFile: vi.fn(() => Promise.resolve()),
+      findTabIndex,
+      closeTab,
+    })
+
+    expect(decision.type).toBe('prompt')
+    if (decision.type !== 'prompt') {
+      throw new TypeError('expected prompt decision')
+    }
+
     decision.modal.onDontSave()
+
+    expect(findTabIndex).toHaveBeenCalledWith('/project/demo.txt')
     expect(closeTab).toHaveBeenCalledWith(2)
   })
 
-  it('logs errors and never closes the tab when save fails', async () => {
+  it('保存失败时会记录错误且不会关闭标签', async () => {
     const closeTab = vi.fn()
     const error = new Error('boom')
     const saveFile = vi.fn(() => Promise.reject(error))
@@ -89,7 +111,7 @@ describe('editor tabs helper', () => {
     expect(closeTab).not.toHaveBeenCalled()
   })
 
-  it('only fixes preview tabs when double-clicked', () => {
+  it('只有预览标签会被标记为需要固定', () => {
     expect(shouldFixPreviewTab(createTab({ isPreview: true }))).toBe(true)
     expect(shouldFixPreviewTab(createTab({ isPreview: false }))).toBe(false)
     expect(shouldFixPreviewTab(undefined)).toBe(false)
