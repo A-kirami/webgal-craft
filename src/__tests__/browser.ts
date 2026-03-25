@@ -15,7 +15,7 @@ interface BrowserTestI18nOptions {
 }
 
 interface BrowserTestPluginsOptions extends BrowserTestI18nOptions {
-  i18nMode: BrowserTestI18nMode
+  i18nMode?: BrowserTestI18nMode
   pinia?: boolean | Pinia
 }
 
@@ -95,6 +95,13 @@ export function createBrowserLiteI18n(options: BrowserTestI18nOptions = {}) {
   })
 }
 
+export function createBrowserTestI18n(options: BrowserTestI18nOptions = {}) {
+  return createBrowserLiteI18n({
+    ...options,
+    locale: options.locale ?? 'en',
+  })
+}
+
 export function createBrowserLocalizedI18n(options: BrowserTestI18nOptions = {}) {
   return createBrowserTestI18nInstance({
     ...options,
@@ -111,7 +118,7 @@ export function createBrowserStrictI18n(options: BrowserTestI18nOptions = {}) {
   })
 }
 
-export function createBrowserTestPlugins(options: BrowserTestPluginsOptions) {
+export function createBrowserTestPlugins(options: BrowserTestPluginsOptions = {}) {
   const plugins: Plugin[] = []
   let pinia: Pinia | undefined
 
@@ -120,11 +127,13 @@ export function createBrowserTestPlugins(options: BrowserTestPluginsOptions) {
     plugins.push(pinia)
   }
 
-  const createI18nPlugin = {
-    lite: createBrowserLiteI18n,
-    localized: createBrowserLocalizedI18n,
-    strict: createBrowserStrictI18n,
-  }[options.i18nMode]
+  const createI18nPlugin = options.i18nMode
+    ? {
+        lite: createBrowserLiteI18n,
+        localized: createBrowserLocalizedI18n,
+        strict: createBrowserStrictI18n,
+      }[options.i18nMode]
+    : createBrowserTestI18n
 
   plugins.push(createI18nPlugin({
     locale: options.locale,

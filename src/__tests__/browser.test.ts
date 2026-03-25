@@ -5,6 +5,7 @@ import {
   createBrowserLiteI18n,
   createBrowserLocalizedI18n,
   createBrowserStrictI18n,
+  createBrowserTestI18n,
   createBrowserTestPlugins,
 } from './browser'
 
@@ -57,6 +58,13 @@ describe('browser test i18n helpers', () => {
     expect(i18n.global.t('common.confirm')).toBe('common.confirm')
   })
 
+  it('兼容 helper 保持旧的 en + key fallback 语义', () => {
+    const i18n = createBrowserTestI18n() as BrowserTestI18nHandle
+
+    expect(i18n.global.locale.value).toBe('en')
+    expect(i18n.global.t('common.confirm')).toBe('common.confirm')
+  })
+
   it('strict helper 会在缺失 key 时直接抛错', () => {
     const i18n = createBrowserStrictI18n({
       locale: 'en',
@@ -81,6 +89,14 @@ describe('browser test i18n helpers', () => {
     const i18n = plugins.at(-1) as unknown as BrowserTestI18nHandle
 
     expect(pinia).toBeDefined()
+    expect(i18n.global.t('common.confirm')).toBe('common.confirm')
+  })
+
+  it('plugins helper 未显式指定 i18nMode 时默认使用 lite 模式', () => {
+    const { plugins } = createBrowserTestPlugins()
+    const i18n = plugins.at(-1) as unknown as BrowserTestI18nHandle
+
+    expect(i18n.global.locale.value).toBe('en')
     expect(i18n.global.t('common.confirm')).toBe('common.confirm')
   })
 })
