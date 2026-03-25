@@ -82,6 +82,10 @@ function formatDateTime(timestamp: number): string {
 function handleItemClick(item: FileViewerItem) {
   emit('itemClick', item)
 }
+
+function getListRowItem(rowIndex: number): FileViewerItem {
+  return getListItem(rowIndex)
+}
 </script>
 
 <template>
@@ -118,6 +122,7 @@ function handleItemClick(item: FileViewerItem) {
             <Thumbnail
               v-if="isImageFile(item)"
               :path="item.path"
+              :size="gridPreviewSize"
               :alt="item.name"
               fit="contain"
             />
@@ -137,14 +142,13 @@ function handleItemClick(item: FileViewerItem) {
       </div>
 
       <button
-        v-for="item in [getListItem(row.index)]"
         v-else
-        :key="item.path"
+        :key="getListRowItem(row.index).path"
         type="button"
         data-file-viewer-item="true"
         class="p-2 rounded-md flex gap-2 w-full items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
         :style="{ height: `${listItemHeight}px` }"
-        @click="handleItemClick(item)"
+        @click="handleItemClick(getListRowItem(row.index))"
       >
         <div class="flex flex-1 gap-2 min-w-0 items-center">
           <div
@@ -152,32 +156,33 @@ function handleItemClick(item: FileViewerItem) {
             :style="{ width: `${listPreviewSize}px`, height: `${listPreviewSize}px` }"
           >
             <Thumbnail
-              v-if="isImageFile(item)"
-              :path="item.path"
-              :alt="item.name"
+              v-if="isImageFile(getListRowItem(row.index))"
+              :path="getListRowItem(row.index).path"
+              :size="listPreviewSize"
+              :alt="getListRowItem(row.index).name"
               fit="contain"
             />
-            <slot v-else name="icon" :item="item" :icon-size="listPreviewSize">
+            <slot v-else name="icon" :item="getListRowItem(row.index)" :icon-size="listPreviewSize">
               <component
-                :is="getDefaultIconComponent(item)"
+                :is="getDefaultIconComponent(getListRowItem(row.index))"
                 class="shrink-0"
                 :style="{ width: `${listPreviewSize}px`, height: `${listPreviewSize}px` }"
                 :stroke-width="1.25"
               />
             </slot>
           </div>
-          <div class="text-xs text-left min-w-0 truncate" :class="{ 'text-muted-foreground': item.isSupported === false }">
-            {{ item.name }}
+          <div class="text-xs text-left min-w-0 truncate" :class="{ 'text-muted-foreground': getListRowItem(row.index).isSupported === false }">
+            {{ getListRowItem(row.index).name }}
           </div>
         </div>
         <div class="text-[11px] text-muted-foreground ml-2 flex shrink-0 gap-3 [font-variant-numeric:tabular-nums] items-center" role="note">
           <div v-if="showListSize" class="text-right w-20" :aria-label="$t('common.fileMeta.size')">
-            <template v-if="item.isDir">
+            <template v-if="getListRowItem(row.index).isDir">
               <span aria-hidden="true">--</span>
               <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
             </template>
-            <template v-else-if="isValidPositiveNumber(item.size)">
-              {{ formatFileSize(item.size) }}
+            <template v-else-if="isValidPositiveNumber(getListRowItem(row.index).size)">
+              {{ formatFileSize(getListRowItem(row.index).size!) }}
             </template>
             <template v-else>
               <span aria-hidden="true">--</span>
@@ -185,8 +190,8 @@ function handleItemClick(item: FileViewerItem) {
             </template>
           </div>
           <div v-if="showListModifiedAt" class="text-left w-32" :aria-label="$t('common.fileMeta.modifiedAt')">
-            <template v-if="isValidPositiveNumber(item.modifiedAt)">
-              {{ formatDateTime(item.modifiedAt) }}
+            <template v-if="isValidPositiveNumber(getListRowItem(row.index).modifiedAt)">
+              {{ formatDateTime(getListRowItem(row.index).modifiedAt!) }}
             </template>
             <template v-else>
               <span aria-hidden="true">--</span>
@@ -194,8 +199,8 @@ function handleItemClick(item: FileViewerItem) {
             </template>
           </div>
           <div v-if="showListCreatedAt" class="text-left w-32" :aria-label="$t('common.fileMeta.createdAt')">
-            <template v-if="isValidPositiveNumber(item.createdAt)">
-              {{ formatDateTime(item.createdAt) }}
+            <template v-if="isValidPositiveNumber(getListRowItem(row.index).createdAt)">
+              {{ formatDateTime(getListRowItem(row.index).createdAt!) }}
             </template>
             <template v-else>
               <span aria-hidden="true">--</span>

@@ -67,6 +67,24 @@ function createItem(index: number): FileViewerItem {
   }
 }
 
+function createImageItem(index: number): FileViewerItem {
+  return {
+    ...createItem(index),
+    mimeType: 'image/png',
+  }
+}
+
+function stringifyThumbnailSize(size: unknown): string {
+  if (typeof size === 'number') {
+    return size > 0 ? String(size) : ''
+  }
+  if (typeof size === 'string') {
+    const parsed = Number(size)
+    return parsed > 0 ? String(parsed) : ''
+  }
+  return ''
+}
+
 const globalStubs = {
   ScrollArea: defineComponent({
     name: 'StubScrollArea',
@@ -84,7 +102,10 @@ const globalStubs = {
   Thumbnail: defineComponent({
     name: 'StubThumbnail',
     setup(_, { attrs }) {
-      return () => h('img', attrs)
+      return () => h('img', {
+        ...attrs,
+        'data-thumbnail-size': stringifyThumbnailSize(attrs.size),
+      })
     },
   }),
 }
@@ -157,11 +178,46 @@ describe('FileViewer composables', () => {
 
     virtualizer.scrollToIndex(4)
     expect(scrollToIndexMock).toHaveBeenLastCalledWith(4)
+    // List access clamps to the last item when callers ask for an out-of-bounds index.
     expect(virtualizer.getListItem(99).path).toBe('/assets/file-5.txt')
   })
 })
 
 describe('FileViewer facade contract', () => {
+  it('把布局派生的预览尺寸传给 Thumbnail', () => {
+    viewportWidthMock.value = 780
+
+    render(FileViewer, {
+      props: {
+        items: [createImageItem(1)],
+        viewMode: 'grid',
+      },
+      global: {
+        plugins: [createBrowserLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    expect(document.querySelector('img[data-thumbnail-size="64"]')).not.toBeNull()
+  })
+
+  it('列表模式下也把 listPreviewSize 传给 Thumbnail', () => {
+    viewportWidthMock.value = 780
+
+    render(FileViewer, {
+      props: {
+        items: [createImageItem(1)],
+        viewMode: 'list',
+      },
+      global: {
+        plugins: [createBrowserLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    expect(document.querySelector('img[data-thumbnail-size="20"]')).not.toBeNull()
+  })
+
   it('窄列表视图下会同时隐藏 modifiedAt 列头和内容', () => {
     viewportWidthMock.value = 520
 

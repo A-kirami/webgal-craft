@@ -175,6 +175,10 @@ describe('useFilePickerController', () => {
     scope.stop()
   })
 
+  // 这里验证 controller 会保持路径比较的大小写敏感性：
+  // rootPath 会从 '/Assets' 规范化而来，但 handleSelectItem 收到的是 '/assets/file-1.txt'。
+  // 下面的断言用于确认它会被视为非根目录内的相对路径，并在 modelValue.value
+  // 和 controller.inputText.value 中都保留为 'assets/file-1.txt'。
   it('大小写不一致的绝对路径不会被当作根目录内相对路径', async () => {
     const { controller, modelValue, scope } = createFixture({
       rootPath: '/Assets',

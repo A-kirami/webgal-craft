@@ -147,9 +147,9 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   }
 
   function toRelativeFromAbsolute(path: string): string {
-    // `checkRoot()` stores a Tauri-normalized absolute root path, and callers pass
-    // paths produced from the same Tauri path APIs. Keep the comparison exact so we
-    // do not fold case on case-sensitive file systems.
+    // `checkRoot()` 保存的是经过 Tauri 规范化的绝对根路径，调用方传入的路径
+    // 也来自同一套 Tauri 路径 API。这里保持精确比较，避免在大小写敏感文件系统上
+    // 误把大小写不同的路径视为同一个根目录下的相对路径。
     const root = canonicalRootPath.value.replaceAll('\\', '/')
     const target = path.replaceAll('\\', '/')
     const rootPrefix = root.endsWith('/') ? root : `${root}/`
