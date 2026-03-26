@@ -4,7 +4,7 @@ import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { defineComponent, h, onMounted } from 'vue'
 
-import { createBrowserTestI18n } from '~/__tests__/browser'
+import { createBrowserLocalizedI18n } from '~/__tests__/browser'
 
 import StatementAnimationSubDialog from './StatementAnimationSubDialog.vue'
 
@@ -105,14 +105,14 @@ describe('StatementAnimationSubDialog', () => {
         },
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLocalizedI18n()],
         stubs: globalStubs,
       },
     })
 
-    await expect.element(page.getByText('edit.visualEditor.animation.title')).toBeInTheDocument()
-    await expect.element(page.getByText('edit.visualEditor.animation.description')).toBeInTheDocument()
-    await expect.element(page.getByText('edit.visualEditor.commandDescriptions.setTempAnimation')).not.toBeInTheDocument()
+    await expect.element(page.getByRole('heading', { name: '动画编辑器' })).toBeInTheDocument()
+    await expect.element(page.getByText('调整当前动画各关键帧的时长、缓动和变换')).toBeInTheDocument()
+    await expect.element(page.getByText('高级动画')).not.toBeInTheDocument()
   })
 
   it('打开时不会阻止对话框内容接管键盘焦点', async () => {
@@ -132,7 +132,7 @@ describe('StatementAnimationSubDialog', () => {
         },
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLocalizedI18n()],
         stubs: {
           ...globalStubs,
           DialogScrollContent: stub,

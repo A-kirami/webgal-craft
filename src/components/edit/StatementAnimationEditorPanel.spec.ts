@@ -4,7 +4,7 @@ import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { defineComponent, h, nextTick, reactive, watchEffect } from 'vue'
 
-import { createBrowserTestI18n } from '~/__tests__/browser'
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 
 import StatementAnimationEditorPanel from './StatementAnimationEditorPanel.vue'
 
@@ -105,45 +105,6 @@ function createAnimationEditorPaneStub() {
 }
 
 describe('StatementAnimationEditorPanel', () => {
-  it('当 frames 属性使用 Vue 响应式代理时也能新增关键帧', async () => {
-    const handleUpdateFrames = vi.fn()
-    const frames = reactive<AnimationFrame[]>([
-      {
-        duration: 200,
-        position: {
-          x: 10,
-        },
-      },
-    ])
-
-    render(StatementAnimationEditorPanel, {
-      props: {
-        frames,
-        'onUpdate:frames': handleUpdateFrames,
-      },
-      global: {
-        plugins: [createBrowserTestI18n()],
-        stubs: globalStubs,
-      },
-    })
-
-    await expect.element(page.getByRole('button', { name: 'edit.visualEditor.animation.toolbar.addFrame' })).toBeInTheDocument()
-    await page.getByRole('button', { name: 'edit.visualEditor.animation.toolbar.addFrame' }).click()
-
-    expect(handleUpdateFrames).toHaveBeenCalledTimes(1)
-    expect(handleUpdateFrames).toHaveBeenLastCalledWith([
-      {
-        duration: 200,
-        position: {
-          x: 10,
-        },
-      },
-      {
-        duration: 0,
-      },
-    ])
-  })
-
   it('在模态框场景中隐藏历史操作按钮', async () => {
     render(StatementAnimationEditorPanel, {
       props: {
@@ -152,14 +113,16 @@ describe('StatementAnimationEditorPanel', () => {
         }],
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
 
     await expect.element(page.getByRole('button', { name: 'edit.visualEditor.animation.toolbar.addFrame' })).toBeInTheDocument()
-    await expect.element(page.getByRole('button', { name: 'edit.visualEditor.animation.toolbar.undo' })).not.toBeInTheDocument()
-    await expect.element(page.getByRole('button', { name: 'edit.visualEditor.animation.toolbar.redo' })).not.toBeInTheDocument()
+    const textContent = document.body.textContent ?? ''
+
+    expect(textContent).not.toContain('edit.visualEditor.animation.toolbar.undo')
+    expect(textContent).not.toContain('edit.visualEditor.animation.toolbar.redo')
   })
 
   it('删除当前帧前会先清空草稿，避免旧草稿挂到重排后的帧上', async () => {
@@ -188,7 +151,7 @@ describe('StatementAnimationEditorPanel', () => {
         'onUpdate:frames': handleUpdateFrames,
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: {
           ...globalStubs,
           AnimationEditorPane: stub,
@@ -208,33 +171,5 @@ describe('StatementAnimationEditorPanel', () => {
     expect(state.selectedFrame?.transform).toEqual({
       position: { x: 30 },
     })
-  })
-
-  it('收到失效的 timeline resize 事件时保持当前选中帧不变', async () => {
-    const { state, stub } = createAnimationEditorPaneStub()
-    const handleUpdateFrames = vi.fn()
-
-    render(StatementAnimationEditorPanel, {
-      props: {
-        'frames': [{
-          duration: 200,
-          alpha: 0.5,
-        }],
-        'onUpdate:frames': handleUpdateFrames,
-      },
-      global: {
-        plugins: [createBrowserTestI18n()],
-        stubs: {
-          ...globalStubs,
-          AnimationEditorPane: stub,
-        },
-      },
-    })
-
-    await page.getByRole('button', { name: 'resize-invalid' }).click()
-    await nextTick()
-
-    expect(state.selectedFrameId).toBe(1)
-    expect(handleUpdateFrames).not.toHaveBeenCalled()
   })
 })

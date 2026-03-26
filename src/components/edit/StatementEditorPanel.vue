@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { commandType } from 'webgal-parser/src/interface/sceneInterface'
-
 import { useControlId } from '~/composables/useControlId'
 import { useStatementAnimationEditorBridge } from '~/composables/useStatementAnimationEditorBridge'
 import { isStatementInteractiveTarget, StatementUpdatePayload, StatementUpdateTarget, useStatementEditor } from '~/composables/useStatementEditor'
 import { useStatementEffectEditorBridge } from '~/composables/useStatementEffectEditorBridge'
-import { getAssetUrl } from '~/helper/asset-url'
+import {
+  normalizeStatementPanelSingleLineValue,
+  resolveStatementPanelPreviewImageUrl,
+} from '~/helper/statement-editor/panel'
 import { statementEditorSurfaceKey } from '~/helper/statement-editor/surface-context'
 import { StatementEntry } from '~/helper/webgal-script/sentence'
 import { useEditSettingsStore } from '~/stores/edit-settings'
@@ -70,6 +71,20 @@ const {
   toggleNarrationMode,
 } = say
 
+const showCommandFieldsSection = $computed(() => {
+  const currentType = toValue(statementType)
+  if (currentType === 'say') {
+    return view.basicRenderFields.value.length > 0
+  }
+  if (currentType === 'command') {
+    return view.basicRenderFields.value.length > 0
+      || view.showEffectEditorButton.value
+      || view.showAnimationEditorButton.value
+      || !!view.specialContentMode.value
+  }
+  return false
+})
+
 const { openEffectEditor } = useStatementEffectEditorBridge({
   updateTarget: () => props.updateTarget,
   rawText: () => props.entry.rawText,
@@ -96,49 +111,21 @@ watch(
 const editSettings = useEditSettingsStore()
 const workspaceStore = useWorkspaceStore()
 
-// ─── 资源预览 ───
-const IMAGE_PREVIEW_COMMANDS = new Set([
-  commandType.changeBg,
-  commandType.changeFigure,
-  commandType.miniAvatar,
-  commandType.unlockCg,
-])
-const NON_IMAGE_EXTENSIONS = new Set(['.json', '.skel'])
-
-const previewImageUrl = $computed(() => {
-  if (!editSettings.showSidebarAssetPreview) {
-    return ''
-  }
-  const cmd = parsed.value?.command
-  if (!cmd || !IMAGE_PREVIEW_COMMANDS.has(cmd)) {
-    return ''
-  }
-  const content = parsed.value?.content
-  if (!content) {
-    return ''
-  }
-  const ext = content.slice(content.lastIndexOf('.')).toLowerCase()
-  if (NON_IMAGE_EXTENSIONS.has(ext)) {
-    return ''
-  }
-  const field = contentField.value
-  const assetType = field?.field.type === 'file' ? field.field.fileConfig.assetType : undefined
-  const rootPath = assetType ? resource.fileRootPaths.value[assetType] : undefined
-  if (!rootPath || !workspaceStore.CWD || !workspaceStore.currentGameServeUrl) {
-    return ''
-  }
-  return getAssetUrl(`${rootPath}/${content}`)
-})
+const previewImageUrl = $computed(() => resolveStatementPanelPreviewImageUrl({
+  command: parsed.value?.command,
+  content: parsed.value?.content,
+  contentField: contentField.value,
+  cwd: workspaceStore.CWD,
+  fileRootPaths: resource.fileRootPaths.value,
+  previewBaseUrl: workspaceStore.currentGameServeUrl,
+  showSidebarAssetPreview: editSettings.showSidebarAssetPreview,
+}))
 
 function handleBlankDblClick(e: MouseEvent) {
   if (isStatementInteractiveTarget(e.target)) {
     return
   }
   showInlineComment = true
-}
-
-function normalizeSingleLineValue(value: string): string {
-  return value.replaceAll(/\r?\n/g, ' ')
 }
 
 function handleSingleLineTextareaEnter(event: KeyboardEvent) {
@@ -149,7 +136,7 @@ function handleSingleLineTextareaEnter(event: KeyboardEvent) {
 }
 
 function singleLine(handler: (value: string) => void) {
-  return (value: string) => handler(normalizeSingleLineValue(value))
+  return (value: string) => handler(normalizeStatementPanelSingleLineValue(value))
 }
 
 const handleSingleLineCommentChange = singleLine(misc.handleCommentChange)
@@ -257,74 +244,26 @@ const panelSpeakerInputId = buildControlId('speaker')
           </div>
         </template>
 
-        <!-- 特殊 content 编辑器（仅 command） -->
-        <template v-if="statementType === 'command' && view.specialContentMode.value">
-          <StatementSpecialContentEditor
-            :mode="view.specialContentMode.value"
-            surface="panel"
-            :set-var-content="content.specialContent.setVar.value"
-            :choose-items="content.specialContent.choose.value"
-            :style-rule-items="content.specialContent.styleRules.value"
-            :scene-root-path="resource.fileRootPaths.value.scene ?? ''"
-            @set-var-name="content.specialContent.handleSetVarNameChange"
-            @set-var-value="content.specialContent.handleSetVarValueChange"
-            @choose-name="content.specialContent.handleChooseNameChange($event.index, $event.value)"
-            @choose-file="content.specialContent.handleChooseFileChange($event.index, $event.file)"
-            @remove-choose="content.specialContent.handleRemoveChooseItem"
-            @add-choose="content.specialContent.handleAddChooseItem"
-            @style-old-name="content.specialContent.handleStyleOldNameChange($event.index, $event.value)"
-            @style-new-name="content.specialContent.handleStyleNewNameChange($event.index, $event.value)"
-            @remove-style-rule="content.specialContent.handleRemoveStyleRule"
-            @add-style-rule="content.specialContent.handleAddStyleRule"
-          />
-        </template>
-
-        <!-- Schema 定义的参数（非高级） -->
-        <template v-if="(view.basicRenderFields.value.length > 0 && statementType !== 'empty' && statementType !== 'comment') || view.showEffectEditorButton.value || view.showAnimationEditorButton.value">
-          <div class="flex flex-wrap gap-x-4 gap-y-2.5">
-            <Button
-              v-if="view.showAnimationEditorButton.value"
-              variant="outline"
-              size="sm"
-              class="btn-animation-editor px-3 h-7 w-full justify-center"
-              @click="openAnimationEditor"
-            >
-              <div class="i-lucide-clapperboard size-3" />
-              {{ $t('edit.visualEditor.animation.title') }}
-            </Button>
-            <Button
-              v-if="view.effectEditorAtTop.value"
-              variant="outline"
-              size="sm"
-              class="btn-effect-editor px-3 h-7 w-full justify-center"
-              @click="openEffectEditor"
-            >
-              <div class="i-lucide-sparkles size-3" />
-              {{ $t('edit.visualEditor.effectEditor') }}
-            </Button>
-            <ParamRenderer
-              v-if="view.basicRenderFields.value.length > 0 && statementType !== 'empty' && statementType !== 'comment'"
-              v-bind="paramRenderer.sharedProps.value"
-              mode="basic"
-              :fields="view.basicRenderFields.value"
-              :custom-option-label="$t('edit.visualEditor.options.custom')"
-              @update-value="paramRenderer.handleUpdateValue"
-              @update-select="paramRenderer.handleUpdateSelect"
-              @label-pointer-down="paramRenderer.handleLabelPointerDown"
-              @commit-slider="paramRenderer.handleCommitSlider"
-            />
-            <Button
-              v-if="view.showEffectEditorButton.value && !view.effectEditorAtTop.value"
-              variant="outline"
-              size="sm"
-              class="btn-effect-editor px-3 h-7 w-full justify-center"
-              @click="openEffectEditor"
-            >
-              <div class="i-lucide-sparkles size-3" />
-              {{ $t('edit.visualEditor.effectEditor') }}
-            </Button>
-          </div>
-        </template>
+        <StatementCommandFieldsSection
+          v-if="showCommandFieldsSection"
+          surface="panel"
+          :statement-type="statementType"
+          :basic-render-fields="view.basicRenderFields.value"
+          :special-content-mode="view.specialContentMode.value"
+          :show-animation-editor-button="view.showAnimationEditorButton.value"
+          :show-effect-editor-button="view.showEffectEditorButton.value"
+          :effect-editor-at-top="view.effectEditorAtTop.value"
+          :special-content="content.specialContent"
+          :scene-root-path="resource.fileRootPaths.value.scene ?? ''"
+          :param-renderer-shared-props="paramRenderer.sharedProps.value"
+          :custom-option-label="$t('edit.visualEditor.options.custom')"
+          :on-update-value="paramRenderer.handleUpdateValue"
+          :on-update-select="paramRenderer.handleUpdateSelect"
+          :on-label-pointer-down="paramRenderer.handleLabelPointerDown"
+          :on-commit-slider="paramRenderer.handleCommitSlider"
+          @open-animation-editor="openAnimationEditor"
+          @open-effect-editor="openEffectEditor"
+        />
 
         <!-- 高级参数折叠区域 -->
         <Collapsible v-if="statementType === 'command' && hasVisibleAdvancedParams">

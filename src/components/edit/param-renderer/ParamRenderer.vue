@@ -1,33 +1,21 @@
 <script setup lang="ts">
 import { useControlId } from '~/composables/useControlId'
-import { ChoiceField, CUSTOM_CONTENT, EditorField, FileFieldConfig, I18nLike, JsonObjectField, resolveI18n, resolveSurfaceVariant } from '~/helper/command-registry/schema'
+import { EditorField, FileFieldConfig, I18nLike, resolveI18n, resolveSurfaceVariant } from '~/helper/command-registry/schema'
 import { normalizeFieldStringValue } from '~/helper/statement-editor/field-utils'
 import { statementEditorSurfaceKey } from '~/helper/statement-editor/surface-context'
 import { cn } from '~/lib/utils'
 
 import FocusXYControl from './controls/FocusXYControl.vue'
 import NumberControl from './controls/NumberControl.vue'
-import SegmentedControl from './controls/SegmentedControl.vue'
+import ParamChoiceField from './ParamChoiceField.vue'
 import { useParamCustomField } from './useParamCustomField'
+import { useParamFieldMeta } from './useParamFieldMeta'
 import { useParamXyPad } from './useParamXyPad'
 
 import type { ParamSelectOptionItem } from './controls/types'
+import type { StatementSchemaParamMode } from './useParamFieldMeta'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { NumberField } from '~/helper/command-registry/schema'
-
-type StatementSchemaParamMode = 'all' | 'basic' | 'advanced'
-type StatementParamFieldMode =
-  | 'switch'
-  | 'sliderInput'
-  | 'numberWithUnit'
-  | 'number'
-  | 'select'
-  | 'combobox'
-  | 'color'
-  | 'textareaAuto'
-  | 'textareaGrow'
-  | 'file'
-  | 'text'
 
 interface Props {
   canScrub: (field: EditorField) => boolean
@@ -60,20 +48,15 @@ const { t } = useI18n()
 const surface = inject(statementEditorSurfaceKey, 'panel')
 
 const i18nContent = $computed(() => props.parsed?.content ?? '')
+const fieldMeta = useParamFieldMeta({
+  i18nContent: () => i18nContent,
+  mode: () => props.mode,
+  surface: () => surface,
+  t,
+})
 
 const visibleFields = $computed(() => {
-  return props.fields.filter((field) => {
-    if (!props.isFieldVisible(field)) {
-      return false
-    }
-    if (props.mode === 'advanced') {
-      return !!field.field.advanced
-    }
-    if (props.mode === 'basic') {
-      return !field.field.advanced
-    }
-    return true
-  })
+  return fieldMeta.filterVisibleFields(props.fields, props.isFieldVisible)
 })
 
 const visibleFieldIndexMap = $computed(() => {
@@ -121,60 +104,24 @@ function handlePanelXyUpdate(field: EditorField, value: { x: string, y: string }
   emit('updateValue', { field: yField, value: value.y })
 }
 
-function resolveFieldMode(field: Exclude<EditorField['field'], JsonObjectField>): StatementParamFieldMode {
-  if (field.type === 'switch') {
-    return 'switch'
-  }
-  if (field.type === 'text') {
-    const variant = resolveSurfaceVariant(field.variant, surface, 'input')
-    if (variant === 'textarea-auto') {
-      return 'textareaAuto'
-    }
-    if (variant === 'textarea-grow') {
-      return 'textareaGrow'
-    }
-    return 'text'
-  }
-  if (field.type === 'number') {
-    const fallback = field.unit ? 'input-with-unit' : 'input'
-    const variant = resolveSurfaceVariant(field.variant, surface, fallback)
-    if (variant === 'slider-input') {
-      return 'sliderInput'
-    }
-    if (variant === 'input-with-unit') {
-      return 'numberWithUnit'
-    }
-    return 'number'
-  }
-  if (field.type === 'choice') {
-    const variant = resolveSurfaceVariant(field.variant, surface, 'select')
-    if (variant === 'combobox') {
-      return 'combobox'
-    }
-    return 'select'
-  }
-  if (field.type === 'color') {
-    return 'color'
-  }
-  if (field.type === 'file') {
-    return 'file'
-  }
-  return 'text'
+function fieldMode(field: EditorField) {
+  return fieldMeta.fieldMode(field)
 }
 
-function fieldMode(field: EditorField): StatementParamFieldMode {
-  return resolveFieldMode(field.field)
+function choiceFieldMode(field: EditorField): 'select' | 'combobox' | undefined {
+  const mode = fieldMode(field)
+  if (mode === 'select' || mode === 'combobox') {
+    return mode
+  }
+  return undefined
 }
-
-const NUMBER_MODES = new Set<StatementParamFieldMode>(['sliderInput', 'numberWithUnit', 'number'])
 
 function isNumberMode(field: EditorField): boolean {
-  return NUMBER_MODES.has(fieldMode(field))
+  return fieldMeta.isNumberMode(field)
 }
 
 function isTextareaMode(field: EditorField): boolean {
-  const mode = fieldMode(field)
-  return mode === 'textareaAuto' || mode === 'textareaGrow'
+  return fieldMeta.isTextareaMode(field)
 }
 
 function isInlineStandalone(field: EditorField): boolean {
@@ -182,74 +129,39 @@ function isInlineStandalone(field: EditorField): boolean {
 }
 
 function fieldLayout(field: EditorField): 'row' | 'column' {
-  if (isInline) {
-    return 'row'
-  }
-  const mode = fieldMode(field)
-  if (mode === 'switch' || mode === 'color') {
-    return 'row'
-  }
-  return 'column'
+  return fieldMeta.fieldLayout(field, isInline)
 }
 
 function placeholder(field: EditorField): string {
-  if ('placeholder' in field.field) {
-    return resolveI18n(field.field.placeholder, t, i18nContent) || resolveI18n(field.field.label, t, i18nContent)
-  }
-  return resolveI18n(field.field.label, t, i18nContent)
+  return fieldMeta.placeholder(field)
 }
 
 function customLabel(field: EditorField): string {
-  if ('customLabel' in field.field) {
-    return resolveI18n(field.field.customLabel, t, i18nContent)
-  }
-  return ''
+  return fieldMeta.customLabel(field)
 }
 
 function unitLabel(field: EditorField): string {
-  if ('unit' in field.field) {
-    return resolveI18n(field.field.unit, t, i18nContent)
-  }
-  return ''
+  return fieldMeta.unitLabel(field)
 }
 
 function fileTitle(field: EditorField): string {
-  if ('fileConfig' in field.field) {
-    return resolveI18n(field.field.fileConfig?.title, t, i18nContent)
-  }
-  return ''
+  return fieldMeta.fileTitle(field)
 }
 
 function switchModelValue(field: EditorField): boolean {
-  const value = props.getFieldValue(field)
-  if (field.storage === 'content' && field.field.type === 'switch') {
-    return String(value) === (field.field.onValue ?? '')
-  }
-  return value === true
+  return fieldMeta.switchModelValue(field, props.getFieldValue(field))
 }
 
 function resolveNumberControlVariant(field: EditorField): 'input' | 'input-with-unit' | 'slider-input' {
-  if (field.field.type === 'number') {
-    const fallback = field.field.unit ? 'input-with-unit' : 'input'
-    return resolveSurfaceVariant(field.field.variant, surface, fallback)
-  }
-  return 'input'
+  return fieldMeta.resolveNumberControlVariant(field)
 }
 
 function shouldUseInputAutoWidth(field: EditorField): boolean {
-  if (field.field.type === 'text') {
-    return field.field.inputAutoWidth === true && fieldMode(field) === 'text'
-  }
-
-  if (field.field.type === 'number') {
-    return field.field.inputAutoWidth === true && resolveNumberControlVariant(field) === 'input'
-  }
-
-  return false
+  return fieldMeta.shouldUseInputAutoWidth(field)
 }
 
 function isFileField(field: EditorField): boolean {
-  return field.field.type === 'file'
+  return fieldMeta.isFileField(field)
 }
 
 function isFileFieldInvalid(field: EditorField): boolean {
@@ -303,13 +215,6 @@ function handleLabelPointerDown(event: PointerEvent, field: EditorField) {
 
 function getNumericField(field: EditorField): NumberField | undefined {
   if (field.field.type === 'number') {
-    return field.field
-  }
-  return undefined
-}
-
-function getSelectField(field: EditorField): ChoiceField | undefined {
-  if (field.field.type === 'choice') {
     return field.field
   }
   return undefined
@@ -411,53 +316,25 @@ function fieldInputId(field: EditorField): string {
           @commit-slider="emit('commitSlider', { field, event: $event })"
         />
 
-        <SegmentedControl
-          v-else-if="fieldMode(field) === 'select' && shouldRenderSegmented(field)"
-          :id="fieldInputId(field)"
-          :class="controlClass(field)"
-          :customizable="getSelectField(field)?.customizable === true"
+        <ParamChoiceField
+          v-else-if="choiceFieldMode(field)"
+          :field="field"
+          :mode="choiceFieldMode(field) ?? 'select'"
+          :input-id="fieldInputId(field)"
+          :custom-input-id="customFieldInputId(field)"
+          :surface="surface"
+          :control-class="controlClass(field)"
           :options="getMergedOptions(field)"
           :select-value="customField.selectModelValue(field)"
+          :value="getFieldValue(field)"
+          :custom-label="customLabel(field)"
           :custom-option-label="customOptionLabel"
+          :not-selected-label="notSelectedLabel"
+          :placeholder="placeholder(field)"
+          :is-custom-field="customField.isCustomField(field)"
+          :render-segmented="shouldRenderSegmented(field)"
           @update-select="handleSelectUpdate(field, $event)"
-        />
-
-        <Select
-          v-else-if="fieldMode(field) === 'select'"
-          :model-value="customField.selectModelValue(field)"
-          @update:model-value="handleSelectUpdate(field, $event)"
-        >
-          <SelectTrigger :id="fieldInputId(field)" :class="cn('text-xs h-6 px-2.5 shadow-none group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-3', controlClass(field))">
-            <SelectValue :placeholder="notSelectedLabel" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem
-              v-for="opt in getMergedOptions(field)"
-              :key="opt.value"
-              class="py-1.25 text-xs! group-data-[surface=panel]:py-1.5"
-              :value="opt.value"
-            >
-              {{ opt.label }}
-            </SelectItem>
-            <SelectItem
-              v-if="getSelectField(field)?.customizable"
-              class="py-1.25 text-xs! group-data-[surface=panel]:py-1.5"
-              :value="CUSTOM_CONTENT"
-            >
-              {{ customOptionLabel }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Combobox
-          v-else-if="fieldMode(field) === 'combobox'"
-          :id="fieldInputId(field)"
-          :model-value="String(getFieldValue(field) || '')"
-          :options="getMergedOptions(field)"
-          :placeholder="notSelectedLabel"
-          :search-placeholder="placeholder(field) || notSelectedLabel"
-          :class="cn('px-2.5 h-6 min-w-24 group-data-[surface=panel]:px-3 group-data-[surface=panel]:h-7', controlClass(field))"
-          @update:model-value="handleSelectUpdate(field, $event)"
+          @update-value="emit('updateValue', { field, value: $event })"
         />
 
         <ColorPicker
@@ -513,7 +390,7 @@ function fieldInputId(field: EditorField): string {
       </div>
 
       <div
-        v-if="customField.isCustomField(field)"
+        v-if="customField.isCustomField(field) && field.field.type !== 'choice'"
         :class="cn('group flex gap-1.5 w-auto max-w-full min-w-0 flex-row items-center data-[surface=panel]:w-full data-[surface=panel]:flex-col data-[surface=panel]:gap-1 data-[surface=panel]:items-stretch')"
         :data-surface="surface"
       >

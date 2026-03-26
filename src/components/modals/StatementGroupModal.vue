@@ -1,15 +1,11 @@
 <script setup lang="ts">
-import { commandType } from 'webgal-parser/src/interface/sceneInterface'
-
+import { useStatementGroupDraft } from '~/components/modals/useStatementGroupDraft'
 import { useEffectEditorDialog } from '~/composables/useEffectEditorDialog'
 import { useStatementAnimationDialog } from '~/composables/useStatementAnimationDialog'
-import { StatementUpdatePayload } from '~/composables/useStatementEditor'
-import { commandEntries, commandPanelCategories, getCategoryLabel, getFactoryDefaultCommandText } from '~/helper/command-registry/index'
+import { getCategoryLabel } from '~/helper/command-registry/index'
 import { resolveI18n } from '~/helper/command-registry/schema'
-import { buildSingleStatement, StatementEntry } from '~/helper/webgal-script/sentence'
 import { StatementGroup, useCommandPanelStore } from '~/stores/command-panel'
 import { useModalStore } from '~/stores/modal'
-import { buildPreviousSpeakers } from '~/utils/speaker'
 
 interface Props {
   group?: StatementGroup
@@ -21,241 +17,35 @@ const open = defineModel<boolean>('open', { default: false })
 
 const { t } = useI18n()
 const commandPanelStore = useCommandPanelStore()
+const modalStore = useModalStore()
 const effectDialog = useEffectEditorDialog()
 const animationDialog = useStatementAnimationDialog()
-
-let draftName = $ref('')
-let draftEntries = $ref<StatementEntry[]>([])
-let collapsedEntryIds = $ref<Partial<Record<number, true>>>({})
-let initialName = $ref('')
-let initialRawTexts = $ref<string[]>([])
-
-const isEditing = $computed(() => !!props.group)
-const modalStore = useModalStore()
-const currentRawTexts = $computed(() => draftEntries.map(entry => entry.rawText))
-const trimmedDraftName = $computed(() => draftName.trim())
-const isDirty = $computed(() => {
-  if (draftName !== initialName) {
-    return true
-  }
-  if (currentRawTexts.length !== initialRawTexts.length) {
-    return true
-  }
-  return currentRawTexts.some((text, i) => text !== initialRawTexts[i])
+const {
+  canSave,
+  draftEntries,
+  draftName,
+  groupedCommandEntries,
+  handleAppendCommand,
+  handleCollapsedUpdate,
+  handleDialogOpenAutoFocus,
+  handleDialogOpenChange,
+  handleEntryUpdate,
+  handleSaveGroup,
+  isEditing,
+  isEntryAtFactory,
+  isEntryCollapsed,
+  moveEntry,
+  previousSpeakers,
+  requestClose,
+  resetEntry,
+  deleteEntry,
+} = useStatementGroupDraft({
+  commandPanelStore,
+  group: computed(() => props.group),
+  modalStore,
+  open,
+  t,
 })
-const groupedCommandEntries = commandPanelCategories.map(category => ({
-  category,
-  entries: commandEntries.filter(entry => entry.category === category),
-}))
-
-const previousSpeakers = $computed(() => buildPreviousSpeakers(draftEntries))
-
-const canSave = $computed(() => trimmedDraftName.length > 0 && draftEntries.length > 0)
-
-function reconcileCollapsedEntries(): void {
-  const validIds = new Set(draftEntries.map(entry => entry.id))
-  const nextCollapsedEntryIds: Partial<Record<number, true>> = {}
-  let changed = false
-
-  for (const rawEntryId of Object.keys(collapsedEntryIds)) {
-    const entryId = Number(rawEntryId)
-    if (validIds.has(entryId)) {
-      nextCollapsedEntryIds[entryId] = true
-      continue
-    }
-
-    changed = true
-  }
-
-  if (changed) {
-    collapsedEntryIds = nextCollapsedEntryIds
-  }
-}
-
-function closeDialog(): void {
-  open.value = false
-}
-
-function findDraftEntryIndex(id: number): number {
-  return draftEntries.findIndex(entry => entry.id === id)
-}
-
-function replaceDraftEntry(index: number, entry: StatementEntry): void {
-  const nextEntries = [...draftEntries]
-  nextEntries.splice(index, 1, markRaw(entry))
-  draftEntries = nextEntries
-}
-
-function removeDraftEntry(index: number): void {
-  const nextEntries = [...draftEntries]
-  nextEntries.splice(index, 1)
-  draftEntries = nextEntries
-}
-
-function isEntryCollapsed(entryId: number): boolean {
-  return collapsedEntryIds[entryId] === true
-}
-
-function resetDraft(): void {
-  draftName = props.group?.name ?? ''
-  draftEntries = (props.group?.rawTexts ?? [])
-    .map(rawText => buildSingleStatement(rawText))
-    .filter((entry): entry is StatementEntry => entry !== undefined)
-  collapsedEntryIds = {}
-  initialName = draftName
-  initialRawTexts = draftEntries.map(e => e.rawText)
-}
-
-watch(
-  () => [open.value, props.group?.id] as const,
-  ([isOpen]) => {
-    if (!isOpen) {
-      return
-    }
-    resetDraft()
-  },
-  { immediate: true },
-)
-
-watch(
-  () => draftEntries.map(entry => entry.id),
-  reconcileCollapsedEntries,
-)
-
-function handleDialogOpenChange(nextOpen: boolean): void {
-  if (!nextOpen) {
-    requestClose()
-  }
-}
-
-function handleDialogOpenAutoFocus(event: Event): void {
-  if (isEditing) {
-    event.preventDefault()
-  }
-}
-
-function handleAppendCommand(type: commandType): void {
-  const nextEntry = buildSingleStatement(commandPanelStore.getInsertText(type))
-  if (!nextEntry) {
-    return
-  }
-  draftEntries = [...draftEntries, nextEntry]
-}
-
-function handleEntryUpdate(payload: StatementUpdatePayload): void {
-  const target = payload.target
-  if (target.kind !== 'statement') {
-    return
-  }
-
-  const index = findDraftEntryIndex(target.statementId)
-  if (index === -1) {
-    return
-  }
-
-  replaceDraftEntry(index, {
-    ...draftEntries[index]!,
-    rawText: payload.rawText,
-    parsed: payload.parsed,
-    parseError: false,
-  })
-}
-
-function handleCollapsedUpdate(index: number, collapsed: boolean): void {
-  const entry = draftEntries[index]
-  if (!entry) {
-    return
-  }
-
-  if (collapsed) {
-    collapsedEntryIds = {
-      ...collapsedEntryIds,
-      [entry.id]: true,
-    }
-    return
-  }
-
-  if (!isEntryCollapsed(entry.id)) {
-    return
-  }
-
-  const nextCollapsedEntryIds = { ...collapsedEntryIds }
-  delete nextCollapsedEntryIds[entry.id]
-  collapsedEntryIds = nextCollapsedEntryIds
-}
-
-function moveEntry(index: number, direction: -1 | 1): void {
-  const targetIndex = index + direction
-  if (!draftEntries[index] || !draftEntries[targetIndex]) {
-    return
-  }
-  const nextEntries = [...draftEntries]
-  const [item] = nextEntries.splice(index, 1)
-  nextEntries.splice(targetIndex, 0, item)
-  draftEntries = nextEntries
-}
-
-function deleteEntry(id: number): void {
-  const index = findDraftEntryIndex(id)
-  if (index === -1) {
-    return
-  }
-
-  removeDraftEntry(index)
-}
-
-function isEntryAtFactory(entry: StatementEntry): boolean {
-  if (!entry.parsed) {
-    return true
-  }
-  return entry.rawText === getFactoryDefaultCommandText(entry.parsed.command)
-}
-
-function resetEntry(id: number): void {
-  const index = findDraftEntryIndex(id)
-  if (index === -1) {
-    return
-  }
-  const entry = draftEntries[index]
-  if (!entry.parsed) {
-    return
-  }
-  const factoryRawText = getFactoryDefaultCommandText(entry.parsed.command)
-  const rebuilt = buildSingleStatement(factoryRawText)
-  if (!rebuilt) {
-    return
-  }
-
-  replaceDraftEntry(index, { ...rebuilt, id: entry.id })
-  notify.success(t('edit.visualEditor.commandPanel.resetSuccess'))
-}
-
-function handleSaveGroup(): void {
-  if (!canSave) {
-    return
-  }
-
-  commandPanelStore.saveGroup({
-    id: props.group?.id,
-    createdAt: props.group?.createdAt,
-    name: trimmedDraftName,
-    rawTexts: currentRawTexts,
-  })
-  closeDialog()
-}
-
-function requestClose(): void {
-  if (!isDirty) {
-    closeDialog()
-    return
-  }
-
-  modalStore.open('SaveChangesModal', {
-    title: t('modals.saveChanges.title', { name: draftName || t('edit.visualEditor.commandPanel.createGroup') }),
-    onSave: handleSaveGroup,
-    onDontSave: closeDialog,
-  })
-}
 </script>
 
 <template>
@@ -268,7 +58,7 @@ function requestClose(): void {
             <span v-else>{{ $t('edit.visualEditor.commandPanel.createGroup') }}</span>
             <span class="text-muted-foreground">—</span>
             <Input
-              ::="draftName"
+              v-model="draftName"
               :placeholder="$t('edit.visualEditor.commandPanel.groupNamePlaceholder')"
               class="text-base font-normal h-7 max-w-60 shadow-none"
             />

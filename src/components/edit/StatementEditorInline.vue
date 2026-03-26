@@ -47,6 +47,20 @@ const {
   toggleNarrationMode,
 } = say
 
+const showCommandFieldsSection = $computed(() => {
+  const currentType = toValue(statementType)
+  if (currentType === 'say') {
+    return view.basicRenderFields.value.length > 0
+  }
+  if (currentType === 'command') {
+    return view.basicRenderFields.value.length > 0
+      || view.showAnimationEditorButton.value
+      || view.showEffectEditorButton.value
+      || !!view.specialContentMode.value
+  }
+  return false
+})
+
 function handleBlankDblClick(e: MouseEvent) {
   if (isStatementInteractiveTarget(e.target)) {
     return
@@ -98,67 +112,25 @@ function handleBlankDblClick(e: MouseEvent) {
           </InputGroupAddon>
         </InputGroup>
       </div>
-      <Button
-        v-if="statementType === 'command' && view.showAnimationEditorButton.value"
-        variant="outline"
-        size="sm"
-        class="btn-animation-editor px-2 h-6"
-        @click="emit('openAnimationEditor')"
-      >
-        <div class="i-lucide-clapperboard size-3" />
-        {{ $t('edit.visualEditor.animation.title') }}
-      </Button>
-      <Button
-        v-if="statementType === 'command' && view.effectEditorAtTop.value"
-        variant="outline"
-        size="sm"
-        class="btn-effect-editor px-2 h-6"
-        @click="emit('openEffectEditor')"
-      >
-        <div class="i-lucide-sparkles size-3" />
-        {{ $t('edit.visualEditor.effectEditor') }}
-      </Button>
-      <StatementSpecialContentEditor
-        v-if="statementType === 'command' && view.specialContentMode.value"
-        :mode="view.specialContentMode.value"
+      <StatementCommandFieldsSection
+        v-if="showCommandFieldsSection"
         surface="inline"
-        :set-var-content="content.specialContent.setVar.value"
-        :choose-items="content.specialContent.choose.value"
-        :style-rule-items="content.specialContent.styleRules.value"
+        :statement-type="statementType"
+        :basic-render-fields="view.basicRenderFields.value"
+        :special-content-mode="view.specialContentMode.value"
+        :show-animation-editor-button="view.showAnimationEditorButton.value"
+        :show-effect-editor-button="view.showEffectEditorButton.value"
+        :effect-editor-at-top="view.effectEditorAtTop.value"
+        :special-content="content.specialContent"
         :scene-root-path="resource.fileRootPaths.value.scene ?? ''"
-        @set-var-name="content.specialContent.handleSetVarNameChange"
-        @set-var-value="content.specialContent.handleSetVarValueChange"
-        @choose-name="content.specialContent.handleChooseNameChange($event.index, $event.value)"
-        @choose-file="content.specialContent.handleChooseFileChange($event.index, $event.file)"
-        @remove-choose="content.specialContent.handleRemoveChooseItem"
-        @add-choose="content.specialContent.handleAddChooseItem"
-        @style-old-name="content.specialContent.handleStyleOldNameChange($event.index, $event.value)"
-        @style-new-name="content.specialContent.handleStyleNewNameChange($event.index, $event.value)"
-        @remove-style-rule="content.specialContent.handleRemoveStyleRule"
-        @add-style-rule="content.specialContent.handleAddStyleRule"
+        :param-renderer-shared-props="paramRenderer.sharedProps.value"
+        :custom-option-label="$t('edit.visualEditor.options.custom')"
+        :on-update-value="paramRenderer.handleUpdateValue"
+        :on-update-select="paramRenderer.handleUpdateSelect"
+        :on-label-pointer-down="paramRenderer.handleLabelPointerDown"
+        @open-animation-editor="emit('openAnimationEditor')"
+        @open-effect-editor="emit('openEffectEditor')"
       />
-      <!-- Schema 参数（命令类型内联，排除高级参数） -->
-      <template v-if="view.basicRenderFields.value.length > 0">
-        <ParamRenderer
-          v-bind="paramRenderer.sharedProps.value"
-          :mode="statementType === 'say' ? 'all' : 'basic'"
-          :fields="view.basicRenderFields.value"
-          :custom-option-label="$t('edit.visualEditor.options.custom')"
-          @update-value="paramRenderer.handleUpdateValue"
-          @update-select="paramRenderer.handleUpdateSelect"
-          @label-pointer-down="paramRenderer.handleLabelPointerDown"
-        />
-      </template>
-      <Button
-        v-if="statementType === 'command' && view.showEffectEditorButton.value && !view.effectEditorAtTop.value"
-        variant="outline"
-        size="sm"
-        class="btn-effect-editor px-2 h-6"
-        @click="emit('openEffectEditor')"
-      >
-        <div class="i-lucide-sparkles size-3" />
-        {{ $t('edit.visualEditor.effectEditor') }}
-      </Button>
     </div>
 
     <!-- 高级参数折叠区域 -->

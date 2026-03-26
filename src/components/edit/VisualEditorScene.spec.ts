@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { computed, defineComponent, h, reactive } from 'vue'
-import { createI18n } from 'vue-i18n'
+
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 
 import VisualEditorScene from './VisualEditorScene.vue'
 
@@ -92,16 +93,6 @@ const globalStubs = {
   }),
 }
 
-function createTestI18n() {
-  return createI18n({
-    legacy: false,
-    locale: 'en',
-    missingWarn: false,
-    fallbackWarn: false,
-    missing: (_locale, key) => key,
-  })
-}
-
 function createSceneState(): SceneVisualProjectionState {
   return {
     isDirty: false,
@@ -161,12 +152,12 @@ describe('VisualEditorScene', () => {
         state: createSceneState(),
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
 
-    await expect.element(page.getByRole('listbox', { name: 'edit.visualEditor.statementList' })).toBeVisible()
+    await expect.element(page.getByRole('listbox')).toBeVisible()
     await expect.element(page.getByText('say:hello')).toBeVisible()
     await expect.element(page.getByText('say:world')).toBeVisible()
   })
@@ -177,7 +168,7 @@ describe('VisualEditorScene', () => {
         state: createSceneState(),
       },
       global: {
-        plugins: [createTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

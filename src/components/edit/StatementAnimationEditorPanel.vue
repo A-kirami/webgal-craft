@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { cloneAnimationFrame, cloneAnimationFrames } from '~/helper/animation-frame'
+import {
+  deleteAnimationFrameAtSelection,
+  insertAnimationFrameAfterSelection,
+  normalizeAnimationFrameDurationInput,
+  normalizeAnimationFrameEaseInput,
+  resolveAnimationTimelineDurationChange,
+  updateAnimationFrameAt,
+} from '~/helper/animation-frame-editor'
 
 import { createAnimationTransformPatch } from './animation/animation-inspector'
 import AnimationEditorPane from './animation/AnimationEditorPane.vue'
@@ -31,47 +38,34 @@ function emitFrames(nextFrames: AnimationFrame[]): void {
 }
 
 function updateFrame(frameIndex: number, patch: Partial<AnimationFrame>): void {
-  const currentFrame = props.frames[frameIndex]
-  if (!currentFrame || Object.keys(patch).length === 0) {
+  const nextFrames = updateAnimationFrameAt(props.frames, frameIndex, patch)
+  if (!nextFrames) {
     return
   }
-
-  const nextFrames = props.frames.map((frame, index) => {
-    if (index !== frameIndex) {
-      return cloneAnimationFrame(frame)
-    }
-    return {
-      ...cloneAnimationFrame(frame),
-      ...patch,
-    }
-  })
 
   emitFrames(nextFrames)
 }
 
 function handleAddFrame(): void {
-  const insertAfterIndex = session.selectedFrameIndex >= 0 ? session.selectedFrameIndex : undefined
-  const nextFrames = cloneAnimationFrames(props.frames)
-  const insertIndex = insertAfterIndex === undefined ? nextFrames.length : insertAfterIndex + 1
-  nextFrames.splice(insertIndex, 0, createDefaultAnimationFrame())
-  emitFrames(nextFrames)
-  session.selectedFrameId = insertIndex + 1
+  const result = insertAnimationFrameAfterSelection(
+    props.frames,
+    session.selectedFrameIndex,
+    createDefaultAnimationFrame(),
+  )
+
+  emitFrames(result.nextFrames)
+  session.selectedFrameId = result.selectedFrameId
 }
 
 function handleDeleteFrame(): void {
-  const frameIndex = session.selectedFrameIndex
-  if (frameIndex < 0) {
+  const result = deleteAnimationFrameAtSelection(props.frames, session.selectedFrameIndex)
+  if (!result) {
     return
   }
 
   session.resetSelectedFrameDrafts()
-  const nextFrames = props.frames
-    .filter((_, index) => index !== frameIndex)
-    .map(frame => cloneAnimationFrame(frame))
-  emitFrames(nextFrames)
-
-  const nextSelectedIndex = Math.min(frameIndex, nextFrames.length - 1)
-  session.selectedFrameId = nextSelectedIndex >= 0 ? nextSelectedIndex + 1 : 1
+  emitFrames(result.nextFrames)
+  session.selectedFrameId = result.selectedFrameId
 }
 
 function handleTransformUpdate(payload: EffectEditorTransformUpdatePayload): void {
@@ -90,9 +84,8 @@ function handleTransformUpdate(payload: EffectEditorTransformUpdatePayload): voi
 }
 
 function handleDurationUpdate(value: string): void {
-  const normalizedValue = value.trim()
-  const nextDuration = normalizedValue === '' ? 0 : Number(normalizedValue)
-  if (!Number.isFinite(nextDuration) || nextDuration < 0 || session.selectedFrameIndex < 0) {
+  const nextDuration = normalizeAnimationFrameDurationInput(value)
+  if (nextDuration === undefined || session.selectedFrameIndex < 0) {
     return
   }
 
@@ -101,22 +94,20 @@ function handleDurationUpdate(value: string): void {
 }
 
 function handleTimelineResizeDuration(payload: AnimationTimelineResizeDurationPayload): void {
-  const frameIndex = payload.id - 1
-  const currentFrame = props.frames[frameIndex]
-  if (!currentFrame) {
+  const change = resolveAnimationTimelineDurationChange(props.frames, payload)
+  if (!change) {
     return
   }
 
-  const nextDuration = Math.max(0, Math.round(payload.duration))
-  session.selectedFrameId = payload.id
+  session.selectedFrameId = change.frameId
 
   if (!payload.flush) {
-    session.setSelectedFrameDurationDraft(payload.id, nextDuration)
+    session.setSelectedFrameDurationDraft(change.frameId, change.duration)
     return
   }
 
   session.resetSelectedFrameDurationDraft()
-  updateFrame(frameIndex, { duration: nextDuration })
+  updateFrame(change.frameIndex, { duration: change.duration })
 }
 
 function handleEaseUpdate(value: string): void {
@@ -124,7 +115,7 @@ function handleEaseUpdate(value: string): void {
     return
   }
 
-  updateFrame(session.selectedFrameIndex, { ease: value.trim() || undefined })
+  updateFrame(session.selectedFrameIndex, { ease: normalizeAnimationFrameEaseInput(value) })
 }
 </script>
 

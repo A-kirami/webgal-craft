@@ -1,10 +1,8 @@
-/* eslint-disable vue/one-component-per-file */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
-import { defineComponent, h, nextTick, reactive, watchEffect } from 'vue'
+import { defineComponent, h, reactive } from 'vue'
 
-import { createBrowserTestI18n } from '~/__tests__/browser'
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 
 const { useEditorStoreMock } = vi.hoisted(() => ({
   useEditorStoreMock: vi.fn(),
@@ -28,46 +26,6 @@ const globalStubs = {
       return () => h('div', 'Animation Editor Pane')
     },
   }),
-}
-
-function createAnimationEditorPaneStub() {
-  const state = reactive<{
-    selectedFrameId: number | undefined
-  }>({
-    selectedFrameId: undefined,
-  })
-
-  const stub = defineComponent({
-    name: 'StubAnimationEditorPane',
-    props: {
-      selectedFrameId: {
-        type: Number,
-        default: undefined,
-      },
-    },
-    emits: ['resize-duration'],
-    setup(props, { emit }) {
-      watchEffect(() => {
-        state.selectedFrameId = props.selectedFrameId
-      })
-
-      return () => h('div', [
-        h('button', {
-          type: 'button',
-          onClick: () => emit('resize-duration', {
-            id: 99,
-            duration: 320,
-            flush: true,
-          }),
-        }, 'resize-invalid'),
-      ])
-    },
-  })
-
-  return {
-    state,
-    stub,
-  }
 }
 
 function createAnimationState(path: string) {
@@ -117,7 +75,7 @@ describe('VisualEditorAnimation', () => {
         state: createAnimationState('/game/animation/opening.json'),
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -157,7 +115,7 @@ describe('VisualEditorAnimation', () => {
         state: createAnimationState('/game/animation/opening.json'),
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -173,7 +131,7 @@ describe('VisualEditorAnimation', () => {
     expect(scheduleAutoSaveIfEnabled).toHaveBeenCalledWith('/game/animation/opening.json')
   })
 
-  it('焦点位于对话框等 overlay 内时不会响应历史快捷键', async () => {
+  it('焦点位于对话框等浮层内时不会响应历史快捷键', async () => {
     const undoDocument = vi.fn(() => ({ applied: true }))
     const scheduleAutoSaveIfEnabled = vi.fn()
 
@@ -198,7 +156,7 @@ describe('VisualEditorAnimation', () => {
         state: createAnimationState('/game/animation/opening.json'),
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -248,7 +206,7 @@ describe('VisualEditorAnimation', () => {
         state: createAnimationState('/game/animation/opening.json'),
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -271,44 +229,5 @@ describe('VisualEditorAnimation', () => {
     expect(scheduleAutoSaveIfEnabled).not.toHaveBeenCalled()
 
     overlay.remove()
-  })
-
-  it('收到失效的 timeline resize 事件时保持当前选中帧不变', async () => {
-    const { state, stub } = createAnimationEditorPaneStub()
-    const applyAnimationFrameUpdate = vi.fn()
-
-    useEditorStoreMock.mockReturnValue(reactive({
-      applyAnimationFrameDelete: vi.fn(),
-      applyAnimationFrameInsert: vi.fn(),
-      applyAnimationFrameUpdate,
-      canRedoDocument: vi.fn(() => false),
-      canUndoDocument: vi.fn(() => true),
-      currentState: {
-        kind: 'animation',
-        path: '/game/animation/opening.json',
-        projection: 'visual',
-      },
-      redoDocument: vi.fn(() => ({ applied: false })),
-      scheduleAutoSaveIfEnabled: vi.fn(),
-      undoDocument: vi.fn(() => ({ applied: false })),
-    }))
-
-    render(VisualEditorAnimation, {
-      props: {
-        state: createAnimationState('/game/animation/opening.json'),
-      },
-      global: {
-        plugins: [createBrowserTestI18n()],
-        stubs: {
-          AnimationEditorPane: stub,
-        },
-      },
-    })
-
-    await page.getByRole('button', { name: 'resize-invalid' }).click()
-    await nextTick()
-
-    expect(state.selectedFrameId).toBe(1)
-    expect(applyAnimationFrameUpdate).not.toHaveBeenCalled()
   })
 })

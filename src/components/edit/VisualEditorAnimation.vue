@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import {
+  normalizeAnimationFrameDurationInput,
+  normalizeAnimationFrameEaseInput,
+  resolveAnimationTimelineDurationChange,
+} from '~/helper/animation-frame-editor'
 import { resolveHistoryShortcutAction } from '~/helper/history-shortcut'
 import { isAnimationVisualProjection, useEditorStore } from '~/stores/editor'
 
@@ -135,9 +140,8 @@ function handleTransformUpdate(payload: EffectEditorTransformUpdatePayload) {
 }
 
 function handleDurationUpdate(value: string) {
-  const normalizedValue = value.trim()
-  const nextDuration = normalizedValue === '' ? 0 : Number(normalizedValue)
-  if (!Number.isFinite(nextDuration) || nextDuration < 0) {
+  const nextDuration = normalizeAnimationFrameDurationInput(value)
+  if (nextDuration === undefined) {
     return
   }
 
@@ -150,26 +154,25 @@ function handleDurationUpdate(value: string) {
 }
 
 function handleTimelineResizeDuration(payload: AnimationTimelineResizeDurationPayload): void {
-  const frameIndex = payload.id - 1
-  const currentFrame = props.state.frames[frameIndex]
-  if (!currentFrame) {
+  const change = resolveAnimationTimelineDurationChange(props.state.frames, payload)
+  if (!change) {
     return
   }
 
-  const nextDuration = Math.max(0, Math.round(payload.duration))
-  if (currentFrame.duration === nextDuration) {
+  const currentFrame = props.state.frames[change.frameIndex]
+  if (currentFrame?.duration === change.duration) {
     return
   }
 
-  session.selectedFrameId = payload.id
+  session.selectedFrameId = change.frameId
 
   if (!payload.flush) {
-    scheduleSelectedFrameDurationDraft(payload.id, nextDuration)
+    scheduleSelectedFrameDurationDraft(change.frameId, change.duration)
     return
   }
 
   resetSelectedFrameDurationDraft()
-  editorStore.applyAnimationFrameUpdate(props.state.path, frameIndex, { duration: nextDuration })
+  editorStore.applyAnimationFrameUpdate(props.state.path, change.frameIndex, { duration: change.duration })
   editorStore.scheduleAutoSaveIfEnabled(props.state.path)
 }
 
@@ -178,7 +181,7 @@ function handleEaseUpdate(value: string) {
     return
   }
 
-  const nextEase = value.trim() || undefined
+  const nextEase = normalizeAnimationFrameEaseInput(value)
   const currentEase = session.selectedFrame?.ease?.trim() || undefined
   if (currentEase === nextEase) {
     return

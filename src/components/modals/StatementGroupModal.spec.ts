@@ -4,7 +4,7 @@ import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { defineComponent, h } from 'vue'
 
-import { createBrowserTestI18n } from '~/__tests__/browser'
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 
 const {
   useCommandPanelStoreMock,
@@ -203,7 +203,7 @@ describe('StatementGroupModal', () => {
     useStatementAnimationDialogMock.mockReturnValue(animationDialogState)
   })
 
-  it('在语句组弹窗中接入动画编辑器子对话框 provider', async () => {
+  it('在语句组弹窗中接入动画编辑器子对话框提供器', async () => {
     render(StatementGroupModal, {
       props: {
         group: {
@@ -215,7 +215,7 @@ describe('StatementGroupModal', () => {
         open: true,
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

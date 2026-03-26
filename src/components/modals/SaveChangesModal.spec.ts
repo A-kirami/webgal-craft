@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 
-import { createBrowserTestI18n } from '~/__tests__/browser'
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 
 import SaveChangesModal from './SaveChangesModal.vue'
 
@@ -21,14 +21,14 @@ describe('SaveChangesModal', () => {
         'onUpdate:open': updateOpen,
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
       },
     })
 
     await page.getByRole('button', { name: 'Save now' }).click()
 
     expect(onSave).toHaveBeenCalledTimes(1)
-    await expect.poll(() => updateOpen.mock.calls.some(([open]) => open === false)).toBe(true)
+    expect(updateOpen).toHaveBeenCalledWith(false)
   })
 
   it('点击不保存会执行 onDontSave 并关闭模态框', async () => {
@@ -45,13 +45,13 @@ describe('SaveChangesModal', () => {
         'onUpdate:open': updateOpen,
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
       },
     })
 
     await page.getByRole('button', { name: 'Skip save' }).click()
 
     expect(onDontSave).toHaveBeenCalledTimes(1)
-    await expect.poll(() => updateOpen.mock.calls.some(([open]) => open === false)).toBe(true)
+    expect(updateOpen).toHaveBeenCalledWith(false)
   })
 })

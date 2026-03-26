@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { computed, defineComponent, h, reactive } from 'vue'
-import { createI18n } from 'vue-i18n'
 
 const {
   handleCommentChangeMock,
@@ -32,6 +31,20 @@ const {
   useStatementEffectEditorBridgeMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
 }))
+
+function translate(key: string): string {
+  switch (key) {
+    case 'edit.visualEditor.narrationMode': {
+      return '旁白'
+    }
+    case 'edit.visualEditor.placeholder.comment': {
+      return '输入注释…'
+    }
+    default: {
+      return key
+    }
+  }
+}
 
 vi.mock('~/composables/useStatementEditor', async importOriginal => ({
   ...(await importOriginal<typeof import('~/composables/useStatementEditor')>()),
@@ -64,16 +77,7 @@ vi.mock('~/stores/workspace', () => ({
 import StatementEditorPanel from './StatementEditorPanel.vue'
 
 import type { StatementEntry } from '~/helper/webgal-script/sentence'
-
-function createTestI18n() {
-  return createI18n({
-    legacy: false,
-    locale: 'en',
-    missingWarn: false,
-    fallbackWarn: false,
-    missing: (_locale, key) => key,
-  })
-}
+import type { ComponentProps } from '~/types/index'
 
 function createEditorReturn(overrides: Record<string, unknown> = {}) {
   return {
@@ -294,6 +298,23 @@ const globalStubs = {
       })
     },
   }),
+  StatementCommandFieldsSection: defineComponent({
+    name: 'StubStatementCommandFieldsSection',
+    emits: ['openAnimationEditor', 'openEffectEditor'],
+    setup(_, { emit }) {
+      return () => h('div', [
+        h('div', { 'data-testid': 'command-fields-section' }, 'CommandFieldsSection'),
+        h('button', {
+          type: 'button',
+          onClick: () => emit('openEffectEditor'),
+        }, 'Effect Editor'),
+        h('button', {
+          type: 'button',
+          onClick: () => emit('openAnimationEditor'),
+        }, 'Animation Editor'),
+      ])
+    },
+  }),
   StatementSpecialContentEditor: defineComponent({
     name: 'StubStatementSpecialContentEditor',
     setup() {
@@ -326,6 +347,18 @@ const globalStubs = {
       })
     },
   }),
+}
+
+function renderStatementEditorPanel(props: ComponentProps<typeof StatementEditorPanel>) {
+  render(StatementEditorPanel, {
+    props,
+    global: {
+      mocks: {
+        $t: translate,
+      },
+      stubs: globalStubs,
+    },
+  })
 }
 
 describe('StatementEditorPanel', () => {
@@ -364,22 +397,26 @@ describe('StatementEditorPanel', () => {
 
   it('点击标题会触发 focusStatement，点击效果编辑器会打开桥接弹窗', async () => {
     const onFocusStatement = vi.fn()
-    useStatementEditorMock.mockReturnValue(createEditorReturn())
+    useStatementEditorMock.mockReturnValue(createEditorReturn({
+      statementType: 'command',
+      view: {
+        basicRenderFields: computed(() => []),
+        commandRenderFields: computed(() => []),
+        effectEditorAtTop: computed(() => false),
+        showAnimationEditorButton: computed(() => false),
+        showEffectEditorButton: computed(() => true),
+        specialContentMode: computed(() => undefined),
+      },
+    }))
 
-    render(StatementEditorPanel, {
-      props: {
-        enableFocusStatement: true,
-        entry: createStatementEntry(7, 'say:hello'),
-        onFocusStatement,
-      },
-      global: {
-        plugins: [createTestI18n()],
-        stubs: globalStubs,
-      },
+    renderStatementEditorPanel({
+      enableFocusStatement: true,
+      entry: createStatementEntry(7, 'say:hello'),
+      onFocusStatement,
     })
 
     await page.getByText('Dialogue').click()
-    await page.getByRole('button', { name: 'edit.visualEditor.effectEditor' }).click()
+    await page.getByRole('button', { name: 'Effect Editor' }).click()
 
     expect(onFocusStatement).toHaveBeenCalledTimes(1)
     expect(openEffectEditorMock).toHaveBeenCalledTimes(1)
@@ -399,14 +436,8 @@ describe('StatementEditorPanel', () => {
       },
     }))
 
-    render(StatementEditorPanel, {
-      props: {
-        entry: createStatementEntry(8, 'old raw text'),
-      },
-      global: {
-        plugins: [createTestI18n()],
-        stubs: globalStubs,
-      },
+    renderStatementEditorPanel({
+      entry: createStatementEntry(8, 'old raw text'),
     })
 
     await page.getByRole('textbox').fill('line1\nline2')
@@ -427,19 +458,13 @@ describe('StatementEditorPanel', () => {
       },
     }))
 
-    render(StatementEditorPanel, {
-      props: {
-        entry: createStatementEntry(9, 'changeBg:bg.jpg'),
-      },
-      global: {
-        plugins: [createTestI18n()],
-        stubs: globalStubs,
-      },
+    renderStatementEditorPanel({
+      entry: createStatementEntry(9, 'changeBg:bg.jpg'),
     })
 
     await page.getByTestId('scroll-area').click({ clickCount: 2, force: true })
 
-    await expect.element(page.getByPlaceholder('edit.visualEditor.placeholder.comment')).toBeVisible()
+    await expect.element(page.getByPlaceholder('输入注释…')).toBeVisible()
   })
 
   it('高级动画语句显示动画编辑器按钮并触发桥接打开', async () => {
@@ -456,18 +481,53 @@ describe('StatementEditorPanel', () => {
       },
     }))
 
-    render(StatementEditorPanel, {
-      props: {
-        entry: createStatementEntry(10, 'setTempAnimation: [{"duration":0}];'),
-      },
-      global: {
-        plugins: [createTestI18n()],
-        stubs: globalStubs,
-      },
+    renderStatementEditorPanel({
+      entry: createStatementEntry(10, 'setTempAnimation: [{"duration":0}];'),
     })
 
-    await page.getByRole('button', { name: 'edit.visualEditor.animation.title' }).click()
+    await page.getByRole('button', { name: 'Animation Editor' }).click()
 
+    expect(openAnimationEditorMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('say 语句直接处理说话人与旁白切换', async () => {
+    useStatementEditorMock.mockReturnValue(createEditorReturn({
+      statementType: 'say',
+    }))
+
+    renderStatementEditorPanel({
+      entry: createStatementEntry(11, 'Alice:hello'),
+    })
+
+    await page.getByPlaceholder('Previous Speaker').fill('Bob')
+    await page.getByRole('button', { name: '旁白' }).click()
+
+    expect(handleSpeakerChangeMock).toHaveBeenCalledWith('Bob')
+    expect(toggleNarrationModeMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('command 语句通过命令字段区组件转发效果与动画编辑事件', async () => {
+    useStatementEditorMock.mockReturnValue(createEditorReturn({
+      statementType: 'command',
+      view: {
+        basicRenderFields: computed(() => []),
+        commandRenderFields: computed(() => []),
+        effectEditorAtTop: computed(() => false),
+        showAnimationEditorButton: computed(() => true),
+        showEffectEditorButton: computed(() => true),
+        specialContentMode: computed(() => undefined),
+      },
+    }))
+
+    renderStatementEditorPanel({
+      entry: createStatementEntry(12, 'changeBg:bg.jpg'),
+    })
+
+    await expect.element(page.getByTestId('command-fields-section')).toBeVisible()
+    await page.getByRole('button', { name: 'Effect Editor' }).click()
+    await page.getByRole('button', { name: 'Animation Editor' }).click()
+
+    expect(openEffectEditorMock).toHaveBeenCalledTimes(1)
     expect(openAnimationEditorMock).toHaveBeenCalledTimes(1)
   })
 })

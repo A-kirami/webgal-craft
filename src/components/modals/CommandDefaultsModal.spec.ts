@@ -5,7 +5,7 @@ import { render } from 'vitest-browser-vue'
 import { defineComponent, h } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { createBrowserTestI18n } from '~/__tests__/browser'
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 
 const {
   buildSingleStatementMock,
@@ -199,14 +199,14 @@ describe('CommandDefaultsModal', () => {
     useStatementAnimationDialogMock.mockReturnValue(animationDialogState)
   })
 
-  it('在命令默认值弹窗中接入动画编辑器子对话框 provider', async () => {
+  it('在命令默认值弹窗中接入动画编辑器子对话框提供器', async () => {
     render(CommandDefaultsModal, {
       props: {
         open: true,
         type: commandType.setTempAnimation,
       },
       global: {
-        plugins: [createBrowserTestI18n()],
+        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

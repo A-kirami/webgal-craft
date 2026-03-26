@@ -4,7 +4,8 @@ import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
 import { defineComponent, h } from 'vue'
 
-import { createBrowserConsoleMonitor, createBrowserTestI18n } from '~/__tests__/browser'
+import { createBrowserConsoleMonitor, createBrowserLocalizedI18n } from '~/__tests__/browser'
+import { EFFECT_CATEGORIES } from '~/helper/effect-editor-config'
 
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: () => ({
@@ -71,13 +72,35 @@ describe('EffectDraftForm', () => {
         },
       },
       global: {
-        plugins: [createPinia(), createBrowserTestI18n()],
+        plugins: [createPinia(), createBrowserLocalizedI18n()],
         stubs: globalStubs,
       },
     })
 
-    await expect.element(page.getByRole('spinbutton', { name: 'modals.effectEditor.params.scale X' })).toBeInTheDocument()
-    await expect.element(page.getByRole('spinbutton', { name: 'modals.effectEditor.params.scale Y' })).toBeInTheDocument()
+    await expect.element(page.getByRole('spinbutton', { name: '缩放 X' })).toBeInTheDocument()
+    await expect.element(page.getByRole('spinbutton', { name: '缩放 Y' })).toBeInTheDocument()
     expectNoConsoleMessage('Invalid prop: type check failed for prop "modelValue"')
+  })
+
+  it('渲染顶部控件并按分类输出特效参数区域', async () => {
+    render(EffectDraftForm, {
+      props: {
+        duration: '300',
+        ease: '',
+        transform: {
+          scale: {
+            x: 1,
+            y: 1,
+          },
+        },
+      },
+      global: {
+        plugins: [createPinia(), createBrowserLocalizedI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('过渡时间')).toBeInTheDocument()
+    expect(page.getByRole('group').elements()).toHaveLength(EFFECT_CATEGORIES.length)
   })
 })
