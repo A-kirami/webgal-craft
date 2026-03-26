@@ -236,7 +236,8 @@ function serializeSayNode(node: SayCommandNode): ISentence {
     args: argBuilder()
       .reserve('speaker')
       .reserve('clear')
-      .string('speaker', isStandardForm ? node.speaker : undefined)
+      // 在内部 ISentence 往返中始终保留 speaker 标记，避免空内容简写被误判为续写。
+      .string('speaker', node.speaker || undefined)
       .flag('clear', needsExplicitClear)
       .string('fontSize', node.fontSize)
       .string('vocal', node.vocal)

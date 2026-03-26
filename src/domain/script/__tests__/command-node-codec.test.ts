@@ -69,9 +69,22 @@ describe('命令节点编解码', () => {
     const node = parseCommandNode(sentence)
     expect(node.type).toBe(commandType.say)
     const serialized = serializeCommandNode(node)
-    // 有说话人时强制简写：commandRaw 为说话人，speaker 不在 args 中
+    // 有说话人时强制简写：commandRaw 为说话人，内部 roundtrip 仍保留 speaker 标记
     expect(serialized.commandRaw).toBe('角色A')
-    expect(serialized.args.find(a => a.key === 'speaker')).toBeUndefined()
+    expect(serialized.args.find(a => a.key === 'speaker')?.value).toBe('角色A')
+  })
+
+  it('空内容的 say 简写往返后仍保留 speaker', () => {
+    const { first, second } = roundtripToNode('角色A:;')
+    expect(first.type).toBe(commandType.say)
+    expect(second.type).toBe(commandType.say)
+    if (first.type !== commandType.say || second.type !== commandType.say) {
+      return
+    }
+
+    expect(first.speaker).toBe('角色A')
+    expect(second.speaker).toBe('角色A')
+    expect(second.text).toBe('')
   })
 
   it('无说话人无 clear 的标准形式序列化为续写简写', () => {

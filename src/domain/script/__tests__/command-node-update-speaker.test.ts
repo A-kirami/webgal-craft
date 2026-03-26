@@ -17,7 +17,10 @@ describe('命令节点说话人更新', () => {
     expect(serialized.command).toBe(commandType.say)
     expect(serialized.commandRaw).toBe('Bob')
     expect(serialized.content).toBe('hello')
-    expect(serialized.args).toEqual([{ key: 'next', value: true }])
+    expect(serialized.args).toEqual([
+      { key: 'speaker', value: 'Bob' },
+      { key: 'next', value: true },
+    ])
   })
 
   it('清空说话人后序列化为续写形式', () => {

@@ -44,7 +44,10 @@ describe('useStatementEditor 行为', () => {
     const latest = updates.at(-1)
     expect(latest).toBeDefined()
     expect(latest!.parsed.command).toBe(commandType.say)
-    expect(latest!.parsed.args).toEqual([{ key: 'left', value: true }])
+    expect(latest!.parsed.args).toEqual([
+      { key: 'speaker', value: 'Alice' },
+      { key: 'left', value: true },
+    ])
   })
 
   it('visibleWhen 变更后会裁剪已隐藏参数（typed 写回场景）', () => {
@@ -278,6 +281,18 @@ describe('useStatementEditor 行为', () => {
   // ─── say 命令：标准形式与简写形式 ───
 
   describe('say 标准形式（say:内容 -speaker=角色）', () => {
+    it('命令面板默认 say 语句连续编辑 speaker 和内容时应保留 speaker', () => {
+      const { editor, updates } = createHarness('say:;')
+
+      editor.say.handleSpeakerChange('角色A')
+      editor.content.handleChange('你好')
+
+      const latest = updates.at(-1)!
+      expect(latest.parsed.command).toBe(commandType.say)
+      expect(latest.parsed.commandRaw).toBe('角色A')
+      expect(latest.rawText).toBe('角色A:你好;')
+    })
+
     it('有 speaker：编辑内容后强制转换为简写形式', () => {
       const { editor, updates } = createHarness('say:你好，世界！ -speaker=角色A;')
 

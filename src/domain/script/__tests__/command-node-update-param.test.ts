@@ -200,7 +200,10 @@ describe('命令节点参数更新器', () => {
 
     const serialized = serializeCommandNode(updated!)
     expect(serialized.command).toBe(commandType.say)
-    expect(serialized.args).toEqual([{ key: 'x', value: 1 }])
+    expect(serialized.args).toEqual([
+      { key: 'speaker', value: 'Alice' },
+      { key: 'x', value: 1 },
+    ])
   })
 
   it('可更新 say figurePosition 为 id', () => {
@@ -212,6 +215,7 @@ describe('命令节点参数更新器', () => {
     const serialized = serializeCommandNode(updated!)
     expect(serialized.command).toBe(commandType.say)
     expect(serialized.args).toEqual([
+      { key: 'speaker', value: 'Alice' },
       { key: 'id', value: true },
       { key: 'figureId', value: 'hero' },
       { key: 'x', value: 1 },
