@@ -248,4 +248,31 @@ describe('ParamChoiceField', () => {
     await page.getByTestId('target-custom-input-input').fill('  custom-target  ')
     expect(onUpdateValue).toHaveBeenLastCalledWith('  custom-target  ')
   })
+
+  it('custom 模式会保留 0 这类有效假值', () => {
+    render(ParamChoiceField, {
+      props: {
+        customLabel: 'Custom target',
+        customInputId: 'target-custom-input',
+        customOptionLabel: 'Custom',
+        field: createChoiceField(),
+        inputId: 'target-input',
+        isCustomField: true,
+        mode: 'select',
+        notSelectedLabel: 'Not selected',
+        options: baseOptions,
+        placeholder: 'Select target',
+        renderSegmented: false,
+        selectValue: '__custom__',
+        surface: 'panel',
+        value: 0,
+        onUpdateValue: vi.fn(),
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    expect((document.querySelector('#target-custom-input') as HTMLInputElement | null)?.value).toBe('0')
+  })
 })

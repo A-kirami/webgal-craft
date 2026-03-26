@@ -115,7 +115,7 @@ function emitValue(value: unknown) {
     </Label>
     <Input
       :id="customInputId"
-      :model-value="String(value || '')"
+      :model-value="String(value ?? '')"
       :class="cn(
         controlClass,
         'text-xs h-6 px-2.5 w-24 shadow-none',

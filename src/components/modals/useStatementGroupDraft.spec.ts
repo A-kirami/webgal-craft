@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, nextTick, ref } from 'vue'
 
+import { useStatementGroupDraft } from './useStatementGroupDraft'
+
 const {
   buildPreviousSpeakersMock,
   buildSingleStatementMock,
@@ -25,16 +27,15 @@ vi.mock('~/utils/speaker', () => ({
   buildPreviousSpeakers: buildPreviousSpeakersMock,
 }))
 
-import { useStatementGroupDraft } from './useStatementGroupDraft'
-
 describe('useStatementGroupDraft', () => {
   beforeEach(() => {
     buildSingleStatementMock.mockReset()
     buildPreviousSpeakersMock.mockReset()
     getFactoryDefaultCommandTextMock.mockReset()
+    let nextEntryId = 1
 
     buildSingleStatementMock.mockImplementation((rawText: string) => ({
-      id: rawText.length,
+      id: nextEntryId++,
       parsed: undefined,
       parseError: false,
       rawText,

@@ -84,7 +84,7 @@ function handleOpenEffectEditor() {
       {{ $t('edit.visualEditor.animation.title') }}
     </Button>
     <Button
-      v-if="isCommand && props.effectEditorAtTop"
+      v-if="isCommand && props.effectEditorAtTop && props.showEffectEditorButton"
       variant="outline"
       size="sm"
       class="btn-effect-editor"
