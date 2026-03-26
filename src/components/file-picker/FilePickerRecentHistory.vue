@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Trash2 } from 'lucide-vue-next'
 
-import { getFilePickerName } from '~/helper/file-picker'
+import { getFilePickerName } from '~/features/file-picker/file-picker'
 
 interface Props {
   clearLabel: string

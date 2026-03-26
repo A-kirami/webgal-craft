@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import '~/__tests__/setup'
 
-import { getFactoryDefaultCommandText } from '~/helper/command-registry'
-import { parseSentence } from '~/helper/webgal-script/parser'
+import { parseSentence } from '~/domain/script/parser'
+import { getFactoryDefaultCommandText } from '~/features/editor/command-registry'
 import { useCommandPanelStore } from '~/stores/command-panel'
 
-vi.mock('~/helper/command-registry', () => ({
+vi.mock('~/features/editor/command-registry', () => ({
   getFactoryDefaultCommandText: vi.fn((type: number) => `factory:${type}`),
 }))
-vi.mock('~/helper/webgal-script/parser', () => ({
+vi.mock('~/domain/script/parser', () => ({
   parseSentence: vi.fn(),
 }))
 vi.mock('webgal-parser/src/interface/sceneInterface', () => ({

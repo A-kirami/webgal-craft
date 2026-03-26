@@ -38,22 +38,22 @@ function createModuleTextStub(
   })
 }
 
-vi.mock('~/composables/useEffectEditorDialog', () => ({
+vi.mock('~/features/editor/effect-editor/useEffectEditorDialog', () => ({
   useEffectEditorDialog: useEffectEditorDialogMock,
 }))
 
-vi.mock('~/composables/useStatementAnimationDialog', () => ({
+vi.mock('~/features/editor/animation/useStatementAnimationDialog', () => ({
   useStatementAnimationDialog: useStatementAnimationDialogMock,
 }))
 
-vi.mock('~/helper/command-registry/index', () => ({
+vi.mock('~/features/editor/command-registry/index', () => ({
   commandEntries: [],
   commandPanelCategories: [],
   getCategoryLabel: () => 'Effect',
   getFactoryDefaultCommandText: () => 'setTempAnimation:[{"duration":0}];',
 }))
 
-vi.mock('~/helper/webgal-script/sentence', () => ({
+vi.mock('~/domain/script/sentence', () => ({
   buildSingleStatement: (rawText: string) => ({
     id: rawText.length,
     parsed: undefined,
@@ -74,7 +74,7 @@ vi.mock('~/utils/speaker', () => ({
   buildPreviousSpeakers: () => [''],
 }))
 
-vi.mock('/src/components/edit/VisualEditorStatementCard.vue', () => ({
+vi.mock('/src/components/editor/VisualEditorStatementCard.vue', () => ({
   default: createModuleTextStub('VisualEditorStatementCard', 'Visual Editor Statement Card', [
     'collapsed',
     'entry',

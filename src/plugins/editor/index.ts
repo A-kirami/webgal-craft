@@ -5,8 +5,8 @@ import * as monaco from 'monaco-editor'
 import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { gameAssetDir } from '~/helper/app-paths'
-import { parseSceneOrEmpty } from '~/helper/webgal-script/parser'
+import { parseSceneOrEmpty } from '~/domain/script/parser'
+import { gameAssetDir } from '~/services/platform/app-paths'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
 

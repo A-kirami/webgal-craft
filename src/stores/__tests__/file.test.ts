@@ -89,7 +89,7 @@ vi.mock('~/services/directory-cache', () => ({
   clearDirectoryItemsCache: clearDirectoryItemsCacheMock,
 }))
 
-vi.mock('~/helper/app-paths', () => ({
+vi.mock('~/services/platform/app-paths', () => ({
   gameRootDir: async (path: string) => normalizePath(`${path}/game`),
 }))
 

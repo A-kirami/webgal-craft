@@ -2,12 +2,12 @@ import { readFile } from '@tauri-apps/plugin-fs'
 import { defineStore } from 'pinia'
 
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
-import { useTabsWatcher } from '~/composables/useTabsWatcher'
-import { getAssetUrl } from '~/helper/asset-url'
-import { createPreviewMediaSession, normalizePreviewMediaSessionPatch } from '~/helper/preview-media-session'
-import { decodeTextFile } from '~/models/file-codec'
-import { computeLineNumberFromStatementId } from '~/models/scene-selection'
+import { decodeTextFile } from '~/domain/document/file-codec'
+import { computeLineNumberFromStatementId } from '~/domain/document/scene-selection'
+import { createPreviewMediaSession, normalizePreviewMediaSessionPatch } from '~/features/editor/preview/preview-media-session'
+import { useTabsWatcher } from '~/features/editor/shared/useTabsWatcher'
 import { debugCommander } from '~/services/debug-commander'
+import { getAssetUrl } from '~/services/platform/asset-url'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import { canExecuteEditorAutoSave, createEditorAutoSaveController } from '~/stores/editor-auto-save'
 import { createEditorPreviewSync } from '~/stores/editor-preview-sync'
@@ -45,12 +45,12 @@ import type {
   TextProjectionState,
   VisualProjectionState,
 } from './internal/editor-session'
-import type { PreviewMediaSession } from '~/helper/preview-media-session'
+import type { PreviewMediaSession } from '~/features/editor/preview/preview-media-session'
 
 export {
   computeLineNumberFromStatementId,
   computeStatementIdFromLineNumber,
-} from '~/models/scene-selection'
+} from '~/domain/document/scene-selection'
 export {
   isAnimationVisualProjection,
   isEditableEditor,

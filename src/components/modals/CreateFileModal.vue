@@ -6,8 +6,8 @@ import { useForm } from 'vee-validate'
 import * as z from 'zod'
 
 import { FormField } from '~/components/ui/form'
-import { gameSceneDir } from '~/helper/app-paths'
 import { gameFs } from '~/services/game-fs'
+import { gameSceneDir } from '~/services/platform/app-paths'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 let open = $(defineModel<boolean>('open'))

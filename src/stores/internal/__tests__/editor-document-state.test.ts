@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { createDocumentModel } from '~/models/document-model'
-import { serializeDocument } from '~/models/serializer'
+import { createDocumentModel } from '~/domain/document/document-model'
+import { serializeDocument } from '~/domain/document/serializer'
 
 import { createDocumentState, getDocumentTextContent, invalidateDocumentTextCache } from '../editor-document-state'
 

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { useStatementGroupDraft } from '~/components/modals/useStatementGroupDraft'
-import { useEffectEditorDialog } from '~/composables/useEffectEditorDialog'
-import { useStatementAnimationDialog } from '~/composables/useStatementAnimationDialog'
-import { getCategoryLabel } from '~/helper/command-registry/index'
-import { resolveI18n } from '~/helper/command-registry/schema'
+import { useStatementAnimationDialog } from '~/features/editor/animation/useStatementAnimationDialog'
+import { getCategoryLabel } from '~/features/editor/command-registry/index'
+import { resolveI18n } from '~/features/editor/command-registry/schema'
+import { useEffectEditorDialog } from '~/features/editor/effect-editor/useEffectEditorDialog'
+import { useStatementGroupDraft } from '~/features/modals/statement-group/useStatementGroupDraft'
 import { StatementGroup, useCommandPanelStore } from '~/stores/command-panel'
 import { useModalStore } from '~/stores/modal'
 

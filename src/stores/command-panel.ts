@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { CommandPanelCategory, getFactoryDefaultCommandText } from '~/helper/command-registry'
-import { parseSentence } from '~/helper/webgal-script/parser'
+import { parseSentence } from '~/domain/script/parser'
+import { CommandPanelCategory, getFactoryDefaultCommandText } from '~/features/editor/command-registry'
 
 export interface StatementGroup {
   id: string

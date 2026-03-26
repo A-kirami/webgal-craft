@@ -1,4 +1,4 @@
-import type { TextMetadata } from '~/models/document-model'
+import type { TextMetadata } from '~/domain/document/document-model'
 
 interface PendingDocumentWrite {
   content: string

@@ -1,10 +1,10 @@
-import { cloneAnimationFrame } from '~/helper/animation-frame'
-import { applyTransactionToModel } from '~/models/transaction-apply'
+import { applyTransactionToModel } from '~/domain/document/transaction-apply'
+import { cloneAnimationFrame } from '~/domain/stage/animation-frame'
 
 import { getDocumentTextContent } from './editor-document-state'
 
 import type { DocumentState, DocumentStateOfKind } from './editor-document-state'
-import type { AnimationTransactionOperation, SceneTransactionOperation, Transaction } from '~/models/transaction'
+import type { AnimationTransactionOperation, SceneTransactionOperation, Transaction } from '~/domain/document/transaction'
 
 /**
  * 从当前文档状态计算事务的逆操作。

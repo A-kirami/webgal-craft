@@ -1,8 +1,8 @@
-import { createScenePresentationState } from '~/helper/scene-presentation'
-import { StatementEntry } from '~/helper/webgal-script/sentence'
-import { serializeDocument } from '~/models/serializer'
-import { projectAnimationFrames, projectSceneStatements } from '~/models/visual-projection'
-import { AnimationFrame } from '~/types/stage'
+import { serializeDocument } from '~/domain/document/serializer'
+import { projectAnimationFrames, projectSceneStatements } from '~/domain/document/visual-projection'
+import { StatementEntry } from '~/domain/script/sentence'
+import { AnimationFrame } from '~/domain/stage/types'
+import { createScenePresentationState } from '~/features/editor/shared/scene-presentation'
 
 import {
   createDocumentState,
@@ -13,10 +13,10 @@ import {
 } from './editor-document-state'
 
 import type { DocumentState, LoadedDocumentState, LoadedTextProjectionSnapshot } from './editor-document-state'
-import type { PreviewMediaSession } from '~/helper/preview-media-session'
-import type { ScenePresentationState } from '~/helper/scene-presentation'
-import type { DocumentKind, DocumentModel } from '~/models/document-model'
-import type { SceneSelectionState } from '~/models/scene-selection'
+import type { DocumentKind, DocumentModel } from '~/domain/document/document-model'
+import type { SceneSelectionState } from '~/domain/document/scene-selection'
+import type { PreviewMediaSession } from '~/features/editor/preview/preview-media-session'
+import type { ScenePresentationState } from '~/features/editor/shared/scene-presentation'
 
 export interface CoreEditorState {
   path: string

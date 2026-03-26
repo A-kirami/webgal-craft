@@ -41,14 +41,14 @@ function createModuleTextStub(
   })
 }
 
-vi.mock('~/composables/useEffectEditorDialog', () => ({
+vi.mock('~/features/editor/effect-editor/useEffectEditorDialog', () => ({
   useEffectEditorDialog: useEffectEditorDialogMock,
 }))
 
-vi.mock('~/composables/useStatementAnimationDialog', () => ({
+vi.mock('~/features/editor/animation/useStatementAnimationDialog', () => ({
   useStatementAnimationDialog: useStatementAnimationDialogMock,
 }))
-vi.mock('~/helper/command-registry/index', () => ({
+vi.mock('~/features/editor/command-registry/index', () => ({
   getCommandConfig: () => ({
     label: 'setTempAnimation',
   }),
@@ -56,11 +56,11 @@ vi.mock('~/helper/command-registry/index', () => ({
   getFactoryDefaultCommandText: () => 'setTempAnimation:[{"duration":0}];',
 }))
 
-vi.mock('~/helper/webgal-script/sentence', () => ({
+vi.mock('~/domain/script/sentence', () => ({
   buildSingleStatement: buildSingleStatementMock,
 }))
 
-vi.mock('/src/components/edit/StatementEditorPanel.vue', () => ({
+vi.mock('/src/components/editor/StatementEditorPanel.vue', () => ({
   default: createModuleTextStub('StatementEditorPanel', 'Statement Editor Panel', [
     'enableFocusStatement',
     'entry',

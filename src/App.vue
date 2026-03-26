@@ -3,7 +3,7 @@ import { documentDir } from '@tauri-apps/api/path'
 import { exists } from '@tauri-apps/plugin-fs'
 
 import { db } from '~/database/db'
-import { defaultEngineSavePath, defaultGameSavePath } from '~/helper/app-paths'
+import { defaultEngineSavePath, defaultGameSavePath } from '~/services/platform/app-paths'
 import { useGeneralSettingsStore } from '~/stores/general-settings'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 import { useWorkspaceStore } from '~/stores/workspace'

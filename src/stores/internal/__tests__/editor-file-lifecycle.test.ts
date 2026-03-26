@@ -32,7 +32,7 @@ vi.mock('~/commands/fs', () => ({
   },
 }))
 
-vi.mock('~/helper/app-paths', () => ({
+vi.mock('~/services/platform/app-paths', () => ({
   gameAssetDir: vi.fn(),
 }))
 

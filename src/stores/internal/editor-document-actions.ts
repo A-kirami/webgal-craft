@@ -1,8 +1,8 @@
-import { cloneAnimationFrame } from '~/helper/animation-frame'
-import { isAnimationDocumentTextValid } from '~/models/animation-document-codec'
-import { captureSceneSelectionSnapshot, computeLineNumberFromStatementId, createSceneSelectionSnapshot } from '~/models/scene-selection'
-import { applyTransactionToModel } from '~/models/transaction-apply'
-import { AnimationFrame } from '~/types/stage'
+import { isAnimationDocumentTextValid } from '~/domain/document/animation-document-codec'
+import { captureSceneSelectionSnapshot, computeLineNumberFromStatementId, createSceneSelectionSnapshot } from '~/domain/document/scene-selection'
+import { applyTransactionToModel } from '~/domain/document/transaction-apply'
+import { cloneAnimationFrame } from '~/domain/stage/animation-frame'
+import { AnimationFrame } from '~/domain/stage/types'
 
 import { getDocumentTextContent, invalidateDocumentTextCache, isDocumentDirty } from './editor-document-state'
 import { getTextProjectionPersistedContent, isTextProjectionDirty } from './editor-session'
@@ -10,15 +10,15 @@ import { computeTransactionInverse } from './editor-transaction-inverse'
 
 import type { DocumentState } from './editor-document-state'
 import type { TextProjectionState } from './editor-session'
-import type { SceneStatement } from '~/models/document-model'
-import type { SceneSelectionSnapshot, SceneSelectionState } from '~/models/scene-selection'
+import type { SceneStatement } from '~/domain/document/document-model'
+import type { SceneSelectionSnapshot, SceneSelectionState } from '~/domain/document/scene-selection'
 import type {
   EditorHistoryMetadata,
   HistoryEntry,
   SceneTransactionOperation,
   Transaction,
   TransactionSource,
-} from '~/models/transaction'
+} from '~/domain/document/transaction'
 
 export interface ApplyDocumentTransactionOptions {
   transaction?: Transaction

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 
-import { createDocumentModel } from '~/models/document-model'
+import { createDocumentModel } from '~/domain/document/document-model'
 
 import {
   applyAnimationFrameInsert,
@@ -15,8 +15,8 @@ import { createDocumentState } from '../editor-document-state'
 import type { EditorDocumentActionContext } from '../editor-document-actions'
 import type { DocumentState } from '../editor-document-state'
 import type { TextProjectionState } from '../editor-session'
-import type { SceneSelectionState } from '~/models/scene-selection'
-import type { AnimationFrame } from '~/types/stage'
+import type { SceneSelectionState } from '~/domain/document/scene-selection'
+import type { AnimationFrame } from '~/domain/stage/types'
 
 const DOC_PATH = '/game/docs/document.txt'
 

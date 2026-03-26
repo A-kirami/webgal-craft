@@ -1,9 +1,9 @@
 import { stat } from '@tauri-apps/plugin-fs'
 
 import { fsCmds } from '~/commands/fs'
-import { gameAssetDir } from '~/helper/app-paths'
 import { mime } from '~/plugins/mime'
 import { consumePendingDocumentWrite } from '~/services/document-write-intents'
+import { gameAssetDir } from '~/services/platform/app-paths'
 import { useModalStore } from '~/stores/modal'
 
 import { applyDocumentTransaction } from './editor-document-actions'
@@ -19,9 +19,9 @@ import type {
   EditorSession,
   UnsupportedState,
 } from './editor-session'
-import type { DocumentKind, TextMetadata } from '~/models/document-model'
-import type { DecodeTextFileResult } from '~/models/file-codec'
-import type { SceneSelectionState } from '~/models/scene-selection'
+import type { DocumentKind, TextMetadata } from '~/domain/document/document-model'
+import type { DecodeTextFileResult } from '~/domain/document/file-codec'
+import type { SceneSelectionState } from '~/domain/document/scene-selection'
 import type { AppError } from '~/types/errors'
 
 export type ReadTextDocumentResult = DecodeTextFileResult

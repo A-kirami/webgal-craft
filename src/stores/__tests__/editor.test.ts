@@ -1,7 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive, toRaw } from 'vue'
 
-import { encodeTextFile } from '~/models/file-codec'
+import { encodeTextFile } from '~/domain/document/file-codec'
 
 import { useTabsStore } from '../tabs'
 
@@ -79,7 +79,7 @@ vi.mock('~/composables/useFileSystemEvents', () => ({
   }),
 }))
 
-vi.mock('~/composables/useTabsWatcher', () => ({
+vi.mock('~/features/editor/shared/useTabsWatcher', () => ({
   useTabsWatcher: vi.fn((_onTabClosed: (path: string) => void) => undefined),
 }))
 
@@ -101,7 +101,7 @@ vi.mock('~/services/debug-commander', () => ({
   },
 }))
 
-vi.mock('~/helper/app-paths', () => ({
+vi.mock('~/services/platform/app-paths', () => ({
   gameAssetDir: async (cwd: string, assetType: string) => `${cwd}/${assetType}`,
 }))
 

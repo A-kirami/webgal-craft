@@ -82,7 +82,7 @@ vi.mock('~/database/db', () => ({
   },
 }))
 
-vi.mock('~/helper/app-paths', () => ({
+vi.mock('~/services/platform/app-paths', () => ({
   engineIconPath: engineIconPathMock,
   engineManifestPath: engineManifestPathMock,
 }))

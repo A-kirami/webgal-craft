@@ -1,9 +1,9 @@
 import { normalize, sep } from '@tauri-apps/api/path'
 
 import { serverCmds } from '~/commands/server'
+import { Transform } from '~/domain/stage/types'
 import { usePreviewSettingsStore } from '~/stores/preview-settings'
 import { ComponentVisibilityCommand, DebugCommand, DebugMessage } from '~/types/debugProtocol'
-import { Transform } from '~/types/stage'
 
 /**
  * 发送调试命令到游戏

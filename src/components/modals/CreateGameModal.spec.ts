@@ -38,7 +38,7 @@ const {
   useCreateGameFormMock: vi.fn(),
 }))
 
-vi.mock('./useCreateGameForm', () => ({
+vi.mock('~/features/modals/create-game/useCreateGameForm', () => ({
   useCreateGameForm: useCreateGameFormMock,
 }))
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useDiscoverResources } from '~/composables/useDiscoverResources'
+import { useDiscoverResources } from '~/features/home/useDiscoverResources'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 

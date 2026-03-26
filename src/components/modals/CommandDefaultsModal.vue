@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { useEffectEditorDialog } from '~/composables/useEffectEditorDialog'
-import { useStatementAnimationDialog } from '~/composables/useStatementAnimationDialog'
-import { getCommandConfig, getCommandDescription, getFactoryDefaultCommandText } from '~/helper/command-registry/index'
-import { resolveI18n } from '~/helper/command-registry/schema'
-import { buildSingleStatement } from '~/helper/webgal-script/sentence'
+import { buildSingleStatement } from '~/domain/script/sentence'
+import { useStatementAnimationDialog } from '~/features/editor/animation/useStatementAnimationDialog'
+import { getCommandConfig, getCommandDescription, getFactoryDefaultCommandText } from '~/features/editor/command-registry/index'
+import { resolveI18n } from '~/features/editor/command-registry/schema'
+import { useEffectEditorDialog } from '~/features/editor/effect-editor/useEffectEditorDialog'
 import { useCommandPanelStore } from '~/stores/command-panel'
 import { useModalStore } from '~/stores/modal'
 
-import type { StatementUpdatePayload } from '~/composables/useStatementEditor'
-import type { StatementEntry } from '~/helper/webgal-script/sentence'
+import type { StatementEntry } from '~/domain/script/sentence'
+import type { StatementUpdatePayload } from '~/features/editor/statement-editor/useStatementEditor'
 
 interface Props {
   type?: commandType

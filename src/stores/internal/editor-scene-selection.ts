@@ -1,22 +1,22 @@
 import {
-  isSceneStatementCollapsed as isSceneStatementCollapsedForPresentation,
-  reconcileScenePresentationState,
-  setSceneStatementCollapsed as setSceneStatementCollapsedForPresentation,
-} from '~/helper/scene-presentation'
-import {
   computeLineNumberFromStatementId,
   computeStatementIdFromLineNumber,
   getSelectedSceneStatement as getSelectedSceneStatementForSelection,
   getSelectedSceneStatementPreviousSpeaker as getSelectedSceneStatementPreviousSpeakerForSelection,
   reconcileSceneSelectionState,
   resolveSceneSelectionState,
-} from '~/models/scene-selection'
+} from '~/domain/document/scene-selection'
+import {
+  isSceneStatementCollapsed as isSceneStatementCollapsedForPresentation,
+  reconcileScenePresentationState,
+  setSceneStatementCollapsed as setSceneStatementCollapsedForPresentation,
+} from '~/features/editor/shared/scene-presentation'
 
 import type { DocumentStateOfKind } from './editor-document-state'
 import type { EditableEditorSession } from './editor-session'
-import type { ScenePresentationState } from '~/helper/scene-presentation'
-import type { SceneStatement } from '~/models/document-model'
-import type { SceneSelectionState } from '~/models/scene-selection'
+import type { SceneStatement } from '~/domain/document/document-model'
+import type { SceneSelectionState } from '~/domain/document/scene-selection'
+import type { ScenePresentationState } from '~/features/editor/shared/scene-presentation'
 
 // ============================================================
 // 场景选择与展示状态管理

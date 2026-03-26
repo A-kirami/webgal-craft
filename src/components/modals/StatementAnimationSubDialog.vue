@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useStatementAnimationDialog } from '~/composables/useStatementAnimationDialog'
+import { useStatementAnimationDialog } from '~/features/editor/animation/useStatementAnimationDialog'
 
 interface Props {
   animationDialog: ReturnType<typeof useStatementAnimationDialog>

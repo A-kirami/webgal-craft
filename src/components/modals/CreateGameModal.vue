@@ -2,8 +2,7 @@
 import { FolderOpen } from 'lucide-vue-next'
 
 import { FormField } from '~/components/ui/form'
-
-import { useCreateGameForm } from './useCreateGameForm'
+import { useCreateGameForm } from '~/features/modals/create-game/useCreateGameForm'
 
 const open = defineModel<boolean>('open')
 

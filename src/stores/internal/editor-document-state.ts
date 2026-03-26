@@ -1,9 +1,9 @@
-import { isAnimationDocumentTextValid } from '~/models/animation-document-codec'
-import { createDocumentModel, normalizeTextLineEnding } from '~/models/document-model'
-import { serializeDocument } from '~/models/serializer'
-import { EditHistory } from '~/models/transaction'
+import { isAnimationDocumentTextValid } from '~/domain/document/animation-document-codec'
+import { createDocumentModel, normalizeTextLineEnding } from '~/domain/document/document-model'
+import { serializeDocument } from '~/domain/document/serializer'
+import { EditHistory } from '~/domain/document/transaction'
 
-import type { DocumentKind, DocumentModel, TextMetadata } from '~/models/document-model'
+import type { DocumentKind, DocumentModel, TextMetadata } from '~/domain/document/document-model'
 
 export interface DocumentState {
   model: DocumentModel
