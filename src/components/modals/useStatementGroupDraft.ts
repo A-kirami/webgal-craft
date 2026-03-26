@@ -15,7 +15,14 @@ interface CommandPanelStoreAdapter {
 }
 
 interface ModalStoreAdapter {
-  open: (name: 'SaveChangesModal', payload: { title: string, onSave: () => void, onDontSave: () => void }) => void
+  open: (
+    name: 'SaveChangesModal',
+    payload: {
+      title: string
+      onSave: () => void | Promise<void>
+      onDontSave: () => void | Promise<void>
+    },
+  ) => void
 }
 
 interface UseStatementGroupDraftOptions {
@@ -38,7 +45,7 @@ export function useStatementGroupDraft(options: UseStatementGroupDraftOptions) {
   const currentRawTexts = computed(() => draftEntries.value.map(entry => entry.rawText))
   const trimmedDraftName = computed(() => draftName.value.trim())
   const isDirty = computed(() => {
-    if (draftName.value !== initialName.value) {
+    if (trimmedDraftName.value !== initialName.value) {
       return true
     }
     if (currentRawTexts.value.length !== initialRawTexts.value.length) {
@@ -99,7 +106,7 @@ export function useStatementGroupDraft(options: UseStatementGroupDraftOptions) {
       .map(rawText => buildSingleStatement(rawText))
       .filter((entry): entry is StatementEntry => entry !== undefined)
     collapsedEntryIds.value = {}
-    initialName.value = draftName.value
+    initialName.value = trimmedDraftName.value
     initialRawTexts.value = draftEntries.value.map(entry => entry.rawText)
   }
 

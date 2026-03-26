@@ -7,20 +7,26 @@ import { defineComponent, h } from 'vue'
 import ParamChoiceField from './ParamChoiceField.vue'
 
 import type { ParamSelectOptionItem } from './controls/types'
-import type { EditorField } from '~/helper/command-registry/schema'
+import type { ArgEditorField, ValueChoiceField } from '~/helper/command-registry/schema'
 
-function createChoiceField(): EditorField {
+function createChoiceField(): ArgEditorField {
+  const field: ValueChoiceField = {
+    customizable: true,
+    key: 'target',
+    label: 'Target',
+    options: [],
+    type: 'choice',
+  }
+
   return {
     key: 'target',
     storage: 'arg',
-    field: {
-      customizable: true,
-      key: 'target',
-      label: 'Target',
-      options: [],
-      type: 'choice',
+    field,
+    argField: {
+      field,
+      storageKey: 'target',
     },
-  } as unknown as EditorField
+  }
 }
 
 function createSelectStub() {
@@ -164,9 +170,8 @@ describe('ParamChoiceField', () => {
     expect(onUpdateSelect).toHaveBeenCalledWith('99')
   })
 
-  it('select/combobox 分支会透传并归一化 updateSelect', async () => {
-    const onSelectFromSelect = vi.fn()
-    const onSelectFromCombobox = vi.fn()
+  it('select 分支会透传并归一化 updateSelect', async () => {
+    const onUpdateSelect = vi.fn()
 
     render(ParamChoiceField, {
       props: {
@@ -183,7 +188,7 @@ describe('ParamChoiceField', () => {
         selectValue: '',
         surface: 'panel',
         value: '',
-        onUpdateSelect: onSelectFromSelect,
+        onUpdateSelect,
       },
       global: {
         stubs: globalStubs,
@@ -191,7 +196,11 @@ describe('ParamChoiceField', () => {
     })
 
     await page.getByTestId('select-update').click()
-    expect(onSelectFromSelect).toHaveBeenCalledWith('42')
+    expect(onUpdateSelect).toHaveBeenCalledWith('42')
+  })
+
+  it('combobox 分支会透传并归一化 updateSelect', async () => {
+    const onUpdateSelect = vi.fn()
 
     render(ParamChoiceField, {
       props: {
@@ -208,7 +217,7 @@ describe('ParamChoiceField', () => {
         selectValue: '',
         surface: 'panel',
         value: '',
-        onUpdateSelect: onSelectFromCombobox,
+        onUpdateSelect,
       },
       global: {
         stubs: globalStubs,
@@ -216,7 +225,7 @@ describe('ParamChoiceField', () => {
     })
 
     await page.getByTestId('combobox-update').click()
-    expect(onSelectFromCombobox).toHaveBeenCalledWith('77')
+    expect(onUpdateSelect).toHaveBeenCalledWith('77')
   })
 
   it('custom 模式显示自定义输入并触发 updateValue', async () => {
@@ -249,7 +258,7 @@ describe('ParamChoiceField', () => {
     expect(onUpdateValue).toHaveBeenLastCalledWith('  custom-target  ')
   })
 
-  it('custom 模式会保留 0 这类有效假值', () => {
+  it('custom 模式会保留 0 这类有效假值', async () => {
     render(ParamChoiceField, {
       props: {
         customLabel: 'Custom target',
@@ -273,6 +282,6 @@ describe('ParamChoiceField', () => {
       },
     })
 
-    expect((document.querySelector('#target-custom-input') as HTMLInputElement | null)?.value).toBe('0')
+    await expect.element(page.getByTestId('target-custom-input-input')).toHaveAttribute('value', '0')
   })
 })

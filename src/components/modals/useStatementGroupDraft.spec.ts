@@ -76,6 +76,39 @@ describe('useStatementGroupDraft', () => {
     expect(draft.isDirty.value).toBe(true)
   })
 
+  it('名称只有首尾空白变化时不算已修改', async () => {
+    const open = ref(true)
+    const modalOpen = vi.fn()
+
+    const draft = useStatementGroupDraft({
+      commandPanelStore: {
+        getInsertText: vi.fn(),
+        saveGroup: vi.fn(),
+      },
+      group: computed(() => ({
+        createdAt: Date.parse('2026-03-25T00:00:00Z'),
+        id: 'group-trimmed',
+        name: 'Stable',
+        rawTexts: ['say:Stable;'],
+      })),
+      modalStore: {
+        open: modalOpen,
+      },
+      open,
+      t: key => key,
+    })
+
+    await nextTick()
+    draft.draftName.value = ' Stable '
+
+    expect(draft.isDirty.value).toBe(false)
+
+    draft.requestClose()
+
+    expect(modalOpen).not.toHaveBeenCalled()
+    expect(open.value).toBe(false)
+  })
+
   it('存在未保存修改时关闭会弹出保存确认并可执行保存', async () => {
     const open = ref(true)
     const saveGroup = vi.fn()
@@ -106,7 +139,7 @@ describe('useStatementGroupDraft', () => {
 
     expect(modalOpen).toHaveBeenCalledTimes(1)
     const [, payload] = modalOpen.mock.calls[0]!
-    payload.onSave()
+    await payload.onSave()
 
     expect(saveGroup).toHaveBeenCalledWith({
       createdAt: Date.parse('2026-03-25T00:00:00Z'),

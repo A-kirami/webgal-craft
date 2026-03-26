@@ -1,3 +1,4 @@
+/* eslint-disable vue/one-component-per-file */
 import { describe, expect, it } from 'vitest'
 import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-vue'
@@ -94,5 +95,31 @@ describe('StatementCommandFieldsSection', () => {
     })
 
     await expect.element(page.getByRole('button', { name: 'edit.visualEditor.effectEditor' })).not.toBeInTheDocument()
+  })
+
+  it('顶部效果按钮在 showEffectEditorButton 为 true 时显示', async () => {
+    render(StatementCommandFieldsSection, {
+      props: {
+        surface: 'inline',
+        statementType: 'command',
+        basicRenderFields: [],
+        showAnimationEditorButton: false,
+        showEffectEditorButton: true,
+        effectEditorAtTop: true,
+        specialContent: createSpecialContentBindings(),
+        sceneRootPath: '',
+        paramRendererSharedProps: createParamRendererSharedProps(),
+        customOptionLabel: 'Custom',
+        onUpdateValue: () => { /* no-op */ },
+        onUpdateSelect: () => { /* no-op */ },
+        onLabelPointerDown: () => { /* no-op */ },
+      },
+      global: {
+        plugins: [createBrowserLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('button', { name: 'edit.visualEditor.effectEditor' })).toBeInTheDocument()
   })
 })
