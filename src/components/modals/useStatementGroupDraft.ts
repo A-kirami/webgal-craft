@@ -1,13 +1,14 @@
 import { computed, markRaw, ref, toValue, watch } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { StatementUpdatePayload } from '~/composables/useStatementEditor'
 import { commandEntries, commandPanelCategories, getFactoryDefaultCommandText } from '~/helper/command-registry/index'
-import { buildSingleStatement, StatementEntry } from '~/helper/webgal-script/sentence'
-import { StatementGroup } from '~/stores/command-panel'
+import { buildSingleStatement } from '~/helper/webgal-script/sentence'
 import { buildPreviousSpeakers } from '~/utils/speaker'
 
 import type { MaybeRefOrGetter, Ref } from 'vue'
+import type { StatementUpdatePayload } from '~/composables/useStatementEditor'
+import type { StatementEntry } from '~/helper/webgal-script/sentence'
+import type { StatementGroup } from '~/stores/command-panel'
 
 interface CommandPanelStoreAdapter {
   getInsertText: (type: commandType) => string

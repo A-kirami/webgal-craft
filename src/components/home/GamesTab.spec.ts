@@ -97,14 +97,9 @@ vi.mock('notivue', () => ({
   },
 }))
 
-vi.mock('vue-router', async () => {
-  const actual = await vi.importActual<typeof import('vue-router')>('vue-router')
-
-  return {
-    ...actual,
-    useRouter: useRouterMock,
-  }
-})
+vi.mock('vue-router', () => ({
+  useRouter: useRouterMock,
+}))
 
 vi.mock('vue-i18n', async importOriginal => ({
   ...(await importOriginal<typeof import('vue-i18n')>()),
@@ -336,7 +331,9 @@ describe('GamesTab', () => {
 
     await page.getByRole('heading', { name: '导入游戏' }).click()
 
-    expect(importGameMock).toHaveBeenCalledWith('/games/import-target')
-    expect(notifyErrorMock).toHaveBeenCalledWith('这不是一个有效的游戏文件夹')
+    await vi.waitFor(() => {
+      expect(importGameMock).toHaveBeenCalledWith('/games/import-target')
+      expect(notifyErrorMock).toHaveBeenCalledWith('这不是一个有效的游戏文件夹')
+    })
   })
 })

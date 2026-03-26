@@ -8,7 +8,9 @@ export interface BatchResult<T> {
 export async function settleBatch<T>(
   tasks: (() => Promise<T>)[],
 ): Promise<BatchResult<T>> {
-  const results = await Promise.allSettled(tasks.map(fn => fn()))
+  const results = await Promise.allSettled(tasks.map(async function executeTask(fn) {
+    return await fn()
+  }))
   const succeeded: T[] = []
   const failed: BatchResult<T>['failed'] = []
 

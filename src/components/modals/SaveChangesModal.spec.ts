@@ -26,8 +26,10 @@ describe('SaveChangesModal', () => {
 
     await page.getByRole('button', { name: 'Save now' }).click()
 
-    expect(onSave).toHaveBeenCalledTimes(1)
-    expect(updateOpen).toHaveBeenCalledWith(false)
+    await vi.waitFor(() => {
+      expect(onSave).toHaveBeenCalledTimes(1)
+      expect(updateOpen).toHaveBeenCalledWith(false)
+    })
   })
 
   it('点击不保存会执行跳过保存回调并关闭模态框', async () => {
@@ -50,7 +52,9 @@ describe('SaveChangesModal', () => {
 
     await page.getByRole('button', { name: 'Skip save' }).click()
 
-    expect(onDontSave).toHaveBeenCalledTimes(1)
-    expect(updateOpen).toHaveBeenCalledWith(false)
+    await vi.waitFor(() => {
+      expect(onDontSave).toHaveBeenCalledTimes(1)
+      expect(updateOpen).toHaveBeenCalledWith(false)
+    })
   })
 })

@@ -719,6 +719,58 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     expect(editorStore.isSceneStatementCollapsed(renamedPath, firstStatementId)).toBe(false)
   })
 
+  it('删除当前选中语句后会把场景选择迁移到相邻语句，并可被 undo/redo 恢复', async () => {
+    const tabsStore = useTabsStore()
+    const path = '/game/scene/delete-selection.txt'
+
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode('alpha\nbeta'))
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'delete-selection.txt',
+      path,
+      () => editorStore.hasState(path) && editorStore.currentVisualProjection !== undefined,
+      'load scene delete selection projection',
+    )
+
+    const visualProjection = editorStore.currentVisualProjection
+    if (!visualProjection || visualProjection.projection !== 'visual' || visualProjection.kind !== 'scene') {
+      throw new TypeError('expected visual scene projection')
+    }
+
+    const firstStatementId = visualProjection.statements[0]?.id
+    const secondStatementId = visualProjection.statements[1]?.id
+    if (firstStatementId === undefined || secondStatementId === undefined) {
+      throw new TypeError('expected two scene statements')
+    }
+
+    editorStore.syncSceneSelectionFromStatement(path, secondStatementId, {
+      lastEditedStatementId: secondStatementId,
+      lineNumber: 2,
+    })
+
+    editorStore.applySceneStatementDelete(path, secondStatementId)
+
+    expect(editorStore.currentSceneSelection?.selectedStatementId).toBe(firstStatementId)
+    expect(editorStore.currentSceneSelection?.lastEditedStatementId).toBe(firstStatementId)
+    expect(editorStore.currentSceneSelection?.lastLineNumber).toBe(1)
+    expect(editorStore.currentSelectedSceneStatement?.rawText).toBe('alpha')
+
+    expect(editorStore.undoDocument(path).applied).toBe(true)
+    expect(editorStore.currentSceneSelection?.selectedStatementId).toBe(secondStatementId)
+    expect(editorStore.currentSceneSelection?.lastEditedStatementId).toBe(secondStatementId)
+    expect(editorStore.currentSceneSelection?.lastLineNumber).toBe(2)
+    expect(editorStore.currentSelectedSceneStatement?.rawText).toBe('beta')
+
+    expect(editorStore.redoDocument(path).applied).toBe(true)
+    expect(editorStore.currentSceneSelection?.selectedStatementId).toBe(firstStatementId)
+    expect(editorStore.currentSceneSelection?.lastEditedStatementId).toBe(firstStatementId)
+    expect(editorStore.currentSceneSelection?.lastLineNumber).toBe(1)
+    expect(editorStore.currentSelectedSceneStatement?.rawText).toBe('alpha')
+  })
+
   it('在可视模式加载非法动画文件时保留原始文本草稿', async () => {
     const tabsStore = useTabsStore()
     const path = '/game/animation/broken.json'

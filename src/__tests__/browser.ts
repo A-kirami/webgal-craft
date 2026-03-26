@@ -174,7 +174,8 @@ export function createBrowserConsoleMonitor(): BrowserConsoleMonitor {
       .join('\n')
 
     if (pattern instanceof RegExp) {
-      expect(pattern.test(output)).toBe(false)
+      const normalizedPattern = new RegExp(pattern.source, pattern.flags)
+      expect(normalizedPattern.test(output)).toBe(false)
       return
     }
     expect(output).not.toContain(pattern)

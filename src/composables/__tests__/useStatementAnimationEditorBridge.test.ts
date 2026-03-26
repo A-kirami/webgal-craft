@@ -152,7 +152,7 @@ describe('useStatementAnimationEditorBridge 行为', () => {
         }),
         content: '[{"duration":0,"alpha":0},{"duration":180,"alpha":1}]',
       },
-      rawText: expect.stringContaining('[{"duration":0,"alpha":0},{"duration":180,"alpha":1}]'),
+      rawText: 'setTempAnimation:[{"duration":0,"alpha":0},{"duration":180,"alpha":1}];',
       source: 'visual',
     }))
     expect(emitUpdate).toHaveBeenCalledTimes(1)

@@ -47,20 +47,6 @@ function cloneDraft(draft: EffectEditorDraft): EffectEditorDraft {
   }
 }
 
-function flushMicrotasks(times: number = 4): Promise<void> {
-  if (times <= 0) {
-    return Promise.resolve()
-  }
-  return Promise.resolve().then(() => flushMicrotasks(times - 1))
-}
-
-// Releasing the first auto-apply promise triggers async-queue bookkeeping, the queued rerun,
-// and the second commit path. Six rounds keeps this test aligned with that microtask chain.
-const AUTO_APPLY_REQUEUE_MICROTASKS = 6
-// When auto-apply and preview queues are both resumed, their dequeue + rerun chains interleave,
-// so this test needs two additional microtask turns beyond the auto-apply-only case.
-const AUTO_APPLY_AND_PREVIEW_REQUEUE_MICROTASKS = 8
-
 type RuntimeGlobals = typeof globalThis & {
   $ref?: <T>(value: T) => T
   fieldsToTransform?: typeof fieldsToTransform
@@ -212,19 +198,22 @@ describe('useEffectEditorProvider 队列并发', () => {
     })
 
     provider.updateDraft({ duration: '100' })
-    await flushMicrotasks()
-    expect(applyCalls.length).toBe(1)
+    await vi.waitFor(() => {
+      expect(applyCalls.length).toBe(1)
+    })
 
     provider.updateDraft({ duration: '200' })
-    await flushMicrotasks()
     expect(applyCalls.length).toBe(1)
 
     resolvers[0]?.()
-    await flushMicrotasks(AUTO_APPLY_REQUEUE_MICROTASKS)
-    expect(applyCalls.map(call => call.duration)).toEqual(['100', '200'])
+    await vi.waitFor(() => {
+      expect(applyCalls.map(call => call.duration)).toEqual(['100', '200'])
+    })
 
     resolvers[1]?.()
-    await flushMicrotasks()
+    await vi.waitFor(() => {
+      expect(provider.canApply).toBe(false)
+    })
   })
 
   it('autoApplyQueued 与 previewQueued 交错时保持最终一致性', async () => {
@@ -261,30 +250,32 @@ describe('useEffectEditorProvider 队列并发', () => {
       transform: { alpha: 0.2 },
     })
     provider.requestPreview({ schedule: 'immediate' })
-    await flushMicrotasks()
-    expect(applyCalls.length).toBe(1)
-    expect(previewCalls.length).toBe(1)
+    await vi.waitFor(() => {
+      expect(applyCalls.length).toBe(1)
+      expect(previewCalls.length).toBe(1)
+    })
 
     provider.updateDraft({
       duration: '200',
       transform: { alpha: 0.8 },
     })
     provider.requestPreview({ schedule: 'immediate' })
-    await flushMicrotasks()
     expect(applyCalls.length).toBe(1)
     expect(previewCalls.length).toBe(1)
 
     applyResolvers[0]?.()
     previewResolvers[0]?.()
-    await flushMicrotasks(AUTO_APPLY_AND_PREVIEW_REQUEUE_MICROTASKS)
-
-    expect(applyCalls.length).toBe(2)
-    expect(previewCalls.length).toBe(2)
-    expect(applyCalls.at(-1)?.duration).toBe('200')
-    expect(previewCalls.at(-1)?.alpha).toBe(0.8)
+    await vi.waitFor(() => {
+      expect(applyCalls.length).toBe(2)
+      expect(previewCalls.length).toBe(2)
+      expect(applyCalls.at(-1)?.duration).toBe('200')
+      expect(previewCalls.at(-1)?.alpha).toBe(0.8)
+    })
 
     applyResolvers[1]?.()
     previewResolvers[1]?.()
-    await flushMicrotasks()
+    await vi.waitFor(() => {
+      expect(provider.canApply).toBe(false)
+    })
   })
 })

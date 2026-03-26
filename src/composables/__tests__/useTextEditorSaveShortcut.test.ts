@@ -43,8 +43,7 @@ describe('createTextEditorSaveShortcutHandler 行为', () => {
     })
 
     const event = createKeyboardEvent({ ctrlKey: true, key: 's' })
-    handler(event)
-    await Promise.resolve()
+    await handler(event)
 
     expect(event.preventDefault).toHaveBeenCalledOnce()
     expect(saveFile).toHaveBeenCalledWith('/game/scene/example.txt')
@@ -64,8 +63,7 @@ describe('createTextEditorSaveShortcutHandler 行为', () => {
     })
 
     const event = createKeyboardEvent({ metaKey: true, key: 's' })
-    handler(event)
-    await Promise.resolve()
+    await handler(event)
 
     expect(event.preventDefault).not.toHaveBeenCalled()
     expect(saveFile).not.toHaveBeenCalled()

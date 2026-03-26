@@ -52,8 +52,7 @@ vi.mock('~/utils/error-handler', () => ({
   handleError: handleErrorMock,
 }))
 
-vi.mock('~/utils/sort', async importOriginal => ({
-  ...(await importOriginal<typeof import('~/utils/sort')>()),
+vi.mock('~/utils/sort', () => ({
   createItemComparator: <T>(_sortBy: string, sortOrder: string, accessor: {
     name: (item: T) => string
   }) => {
@@ -62,6 +61,7 @@ vi.mock('~/utils/sort', async importOriginal => ({
       return sortOrder === 'desc' ? -result : result
     }
   },
+  isValidPositiveNumber: (value: number | undefined) => typeof value === 'number' && Number.isFinite(value) && value >= 0,
 }))
 
 import FileTree from './FileTree.vue'

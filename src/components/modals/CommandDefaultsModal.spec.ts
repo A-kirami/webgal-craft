@@ -6,7 +6,6 @@ import {
   createBrowserClickStub,
   createBrowserContainerStub,
   createBrowserInputStub,
-  createBrowserTextStub,
   renderInBrowser,
 } from '~/__tests__/browser-render'
 
@@ -24,6 +23,24 @@ const {
   useStatementAnimationDialogMock: vi.fn(),
 }))
 
+function createModuleTextStub(
+  name: string,
+  text: string,
+  props: string[] = [],
+) {
+  return defineComponent({
+    name,
+    inheritAttrs: false,
+    props,
+    setup(_, { slots }) {
+      return () => h('div', [
+        text,
+        ...Object.values(slots).flatMap(slot => slot?.() ?? []),
+      ])
+    },
+  })
+}
+
 vi.mock('~/composables/useEffectEditorDialog', () => ({
   useEffectEditorDialog: useEffectEditorDialogMock,
 }))
@@ -31,8 +48,7 @@ vi.mock('~/composables/useEffectEditorDialog', () => ({
 vi.mock('~/composables/useStatementAnimationDialog', () => ({
   useStatementAnimationDialog: useStatementAnimationDialogMock,
 }))
-vi.mock('~/helper/command-registry/index', async importOriginal => ({
-  ...(await importOriginal<typeof import('~/helper/command-registry/index')>()),
+vi.mock('~/helper/command-registry/index', () => ({
   getCommandConfig: () => ({
     label: 'setTempAnimation',
   }),
@@ -40,9 +56,32 @@ vi.mock('~/helper/command-registry/index', async importOriginal => ({
   getFactoryDefaultCommandText: () => 'setTempAnimation:[{"duration":0}];',
 }))
 
-vi.mock('~/helper/webgal-script/sentence', async importOriginal => ({
-  ...(await importOriginal<typeof import('~/helper/webgal-script/sentence')>()),
+vi.mock('~/helper/webgal-script/sentence', () => ({
   buildSingleStatement: buildSingleStatementMock,
+}))
+
+vi.mock('/src/components/edit/StatementEditorPanel.vue', () => ({
+  default: createModuleTextStub('StatementEditorPanel', 'Statement Editor Panel', [
+    'enableFocusStatement',
+    'entry',
+    'index',
+    'inline',
+    'previousSpeaker',
+    'showHeader',
+    'updateTarget',
+  ]),
+}))
+
+vi.mock('/src/components/modals/EffectEditorSubDialog.vue', () => ({
+  default: createModuleTextStub('EffectEditorSubDialog', 'Effect Editor Sub Dialog', [
+    'effectDialog',
+  ]),
+}))
+
+vi.mock('/src/components/modals/StatementAnimationSubDialog.vue', () => ({
+  default: createModuleTextStub('StatementAnimationSubDialog', 'Statement Animation Sub Dialog', [
+    'animationDialog',
+  ]),
 }))
 
 vi.mock('~/stores/command-panel', () => ({
@@ -89,10 +128,7 @@ const globalStubs = {
   DialogHeader: createBrowserContainerStub('StubDialogHeader', 'header'),
   DialogScrollContent: createBrowserContainerStub('StubDialogScrollContent'),
   DialogTitle: createBrowserContainerStub('StubDialogTitle', 'h2'),
-  EffectEditorSubDialog: createBrowserTextStub('StubEffectEditorSubDialog', 'Effect Editor Sub Dialog'),
   Input: createBrowserInputStub('StubInput'),
-  StatementAnimationSubDialog: createBrowserTextStub('StubStatementAnimationSubDialog', 'Statement Animation Sub Dialog'),
-  StatementEditorPanel: createBrowserTextStub('StubStatementEditorPanel', 'Statement Editor Panel'),
 }
 
 describe('CommandDefaultsModal', () => {

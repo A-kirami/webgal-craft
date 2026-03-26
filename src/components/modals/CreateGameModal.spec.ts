@@ -1,206 +1,160 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h, reactive } from 'vue'
 
-import { renderInBrowser } from '~/__tests__/browser-render'
-import { createTestEngine } from '~/__tests__/factories'
+import { createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 
 import CreateGameModal from './CreateGameModal.vue'
 
-const {
-  createGameMock,
-  existsMock,
-  joinMock,
-  openDialogMock,
-  readDirMock,
-  useResourceStoreMock,
-  useStorageSettingsStoreMock,
-} = vi.hoisted(() => ({
-  createGameMock: vi.fn(),
-  existsMock: vi.fn(),
-  joinMock: vi.fn(async (...parts: string[]) => parts.join('/')),
-  openDialogMock: vi.fn(),
-  readDirMock: vi.fn(),
-  useResourceStoreMock: vi.fn(),
-  useStorageSettingsStoreMock: vi.fn(),
-}))
-
-vi.mock('@tauri-apps/api/path', () => ({
-  join: joinMock,
-}))
-
-vi.mock('@tauri-apps/plugin-dialog', () => ({
-  open: openDialogMock,
-}))
-
-vi.mock('@tauri-apps/plugin-fs', () => ({
-  exists: existsMock,
-  readDir: readDirMock,
-}))
-
-vi.mock('~/services/game-manager', () => ({
-  gameManager: {
-    createGame: createGameMock,
-  },
-}))
-
-vi.mock('~/stores/storage-settings', () => ({
-  useStorageSettingsStore: useStorageSettingsStoreMock,
-}))
-
-vi.mock('~/stores/resource', () => ({
-  useResourceStore: useResourceStoreMock,
-}))
-
-vi.mock('vee-validate', () => {
-  const fieldContextKey = Symbol('FieldContextKey')
-  const formContext = reactive<{
-    values: Record<string, unknown>
-  }>({
-    values: {},
-  })
-
-  function useForm(options?: { initialValues?: Record<string, unknown> }) {
-    formContext.values = reactive({
-      ...options?.initialValues,
-    })
-
-    return {
-      handleSubmit(callback: (values: Record<string, unknown>) => unknown | Promise<unknown>) {
-        return async (event?: Event) => {
-          event?.preventDefault?.()
-          await callback({ ...formContext.values })
-        }
-      },
-      isFieldDirty: () => false,
-      setFieldValue(name: string, value: unknown) {
-        formContext.values[name] = value
-      },
+function invokeAttrHandler<TEvent>(handler: unknown, event: TEvent) {
+  if (Array.isArray(handler)) {
+    for (const candidate of handler) {
+      if (typeof candidate === 'function') {
+        candidate(event)
+      }
     }
+    return
   }
 
-  const Field = defineComponent({
-    name: 'MockFormField',
-    inheritAttrs: false,
+  if (typeof handler === 'function') {
+    handler(event)
+  }
+}
+
+const {
+  handleCompositionEndMock,
+  handleCompositionStartMock,
+  handleGameNameChangeMock,
+  handleSelectFolderMock,
+  onSubmitMock,
+  useCreateGameFormMock,
+} = vi.hoisted(() => ({
+  handleCompositionEndMock: vi.fn(),
+  handleCompositionStartMock: vi.fn(),
+  handleGameNameChangeMock: vi.fn(),
+  handleSelectFolderMock: vi.fn(),
+  onSubmitMock: vi.fn((event?: Event) => {
+    event?.preventDefault?.()
+  }),
+  useCreateGameFormMock: vi.fn(),
+}))
+
+vi.mock('./useCreateGameForm', () => ({
+  useCreateGameForm: useCreateGameFormMock,
+}))
+
+const globalStubs = {
+  Button: defineComponent({
+    name: 'StubButton',
+    setup(_, { attrs, slots }) {
+      return () => h('button', attrs, slots.default?.())
+    },
+  }),
+  Dialog: createBrowserContainerStub('StubDialog'),
+  DialogContent: createBrowserContainerStub('StubDialogContent'),
+  DialogDescription: createBrowserContainerStub('StubDialogDescription', 'p'),
+  DialogFooter: createBrowserContainerStub('StubDialogFooter', 'footer'),
+  DialogHeader: createBrowserContainerStub('StubDialogHeader', 'header'),
+  DialogTitle: createBrowserContainerStub('StubDialogTitle', 'h2'),
+  FormControl: createBrowserContainerStub('StubFormControl'),
+  FormField: defineComponent({
+    name: 'StubFormField',
     props: {
       name: {
         type: String,
         required: true,
       },
-      validateOnBlur: {
-        type: Boolean,
-        required: false,
-      },
-      validateOnChange: {
-        type: Boolean,
-        required: false,
-      },
     },
-    setup(props, { slots }) {
-      return () => {
-        const componentField = {
-          'modelValue': formContext.values[props.name] ?? '',
-          'onUpdate:modelValue': (value: unknown) => {
-            formContext.values[props.name] = value
-          },
-        }
-
-        return slots.default?.({ componentField })
-      }
-    },
-  })
-
-  return {
-    Field,
-    FieldArray: defineComponent({
-      name: 'MockFormFieldArray',
-      setup(_, { slots }) {
-        return () => slots.default?.()
-      },
-    }),
-    FieldContextKey: fieldContextKey,
-    Form: defineComponent({
-      name: 'MockForm',
-      setup(_, { slots }) {
-        return () => slots.default?.()
-      },
-    }),
-    useFieldError: () => computed(() => undefined),
-    useForm,
-    useIsFieldDirty: () => computed(() => false),
-    useIsFieldTouched: () => computed(() => false),
-    useIsFieldValid: () => computed(() => true),
-  }
-})
-
-vi.mock('~/components/ui/form/FormControl.vue', () => ({
-  default: defineComponent({
-    name: 'MockFormControl',
-    setup(_, { slots, attrs }) {
-      return () => h('div', attrs, slots.default?.())
-    },
-  }),
-}))
-
-vi.mock('~/components/ui/form/FormLabel.vue', () => ({
-  default: defineComponent({
-    name: 'MockFormLabel',
-    setup(_, { slots, attrs }) {
-      return () => h('label', attrs, slots.default?.())
-    },
-  }),
-}))
-
-vi.mock('~/components/ui/form/FormMessage.vue', () => ({
-  default: defineComponent({
-    name: 'MockFormMessage',
-    setup(_, { attrs }) {
-      return () => h('div', attrs)
-    },
-  }),
-}))
-
-const globalStubs = {
-  'i18n-t': defineComponent({
-    name: 'MockI18nT',
     setup(_, { slots }) {
-      return () => h('span', slots.default?.())
+      return () => slots.default?.({
+        componentField: {
+          'modelValue': '',
+          'onUpdate:modelValue': vi.fn(),
+        },
+      })
     },
   }),
+  FormItem: createBrowserContainerStub('StubFormItem'),
+  FormLabel: createBrowserContainerStub('StubFormLabel', 'label'),
+  FormMessage: createBrowserContainerStub('StubFormMessage'),
+  Input: defineComponent({
+    name: 'StubInput',
+    props: {
+      disabled: {
+        type: Boolean,
+        default: undefined,
+      },
+      id: {
+        type: String,
+        default: undefined,
+      },
+      modelValue: {
+        type: [Object, Array, Number, String, Boolean],
+        default: undefined,
+      },
+    },
+    emits: ['update:modelValue'],
+    setup(props, { attrs, emit }) {
+      return () => h('input', {
+        ...attrs,
+        disabled: props.disabled,
+        id: props.id,
+        value: String(props.modelValue ?? ''),
+        onInput: (event: Event) => {
+          emit('update:modelValue', (event.target as HTMLInputElement).value)
+          invokeAttrHandler(attrs.onInput, event)
+        },
+        onCompositionstart: (event: CompositionEvent) => {
+          invokeAttrHandler(attrs.onCompositionstart, event)
+        },
+        onCompositionend: (event: CompositionEvent) => {
+          invokeAttrHandler(attrs.onCompositionend, event)
+        },
+      })
+    },
+  }),
+  Select: createBrowserContainerStub('StubSelect'),
+  SelectContent: createBrowserContainerStub('StubSelectContent'),
+  SelectItem: createBrowserContainerStub('StubSelectItem'),
+  SelectTrigger: createBrowserContainerStub('StubSelectTrigger', 'button'),
+  SelectValue: createBrowserContainerStub('StubSelectValue', 'span'),
+  Tooltip: createBrowserContainerStub('StubTooltip'),
+  TooltipContent: createBrowserContainerStub('StubTooltipContent'),
+  TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
+  TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
 }
 
 describe('CreateGameModal', () => {
+  beforeEach(() => {
+    handleCompositionEndMock.mockReset()
+    handleCompositionStartMock.mockReset()
+    handleGameNameChangeMock.mockReset()
+    handleSelectFolderMock.mockReset()
+    onSubmitMock.mockReset()
+    onSubmitMock.mockImplementation((event?: Event) => {
+      event?.preventDefault?.()
+    })
+    useCreateGameFormMock.mockReset()
+    useCreateGameFormMock.mockReturnValue({
+      engineOptions: ref([
+        {
+          id: 'engine-1',
+          name: 'Default Engine',
+        },
+      ]),
+      handleCompositionEnd: handleCompositionEndMock,
+      handleCompositionStart: handleCompositionStartMock,
+      handleGameNameChange: handleGameNameChangeMock,
+      handleSelectFolder: handleSelectFolderMock,
+      isFieldDirty: false,
+      onSubmit: onSubmitMock,
+    })
+  })
+
   afterEach(() => {
     vi.clearAllMocks()
   })
 
-  beforeEach(() => {
-    createGameMock.mockReset()
-    existsMock.mockReset()
-    joinMock.mockClear()
-    openDialogMock.mockReset()
-    readDirMock.mockReset()
-    useResourceStoreMock.mockReset()
-    useStorageSettingsStoreMock.mockReset()
-
-    existsMock.mockResolvedValue(false)
-    readDirMock.mockResolvedValue([])
-    openDialogMock.mockResolvedValue(undefined)
-    createGameMock.mockResolvedValue('game-1')
-    useStorageSettingsStoreMock.mockReturnValue({
-      gameSavePath: '/games',
-    })
-    useResourceStoreMock.mockReturnValue({
-      engines: [createTestEngine({
-        metadata: {
-          description: '',
-          icon: '',
-        },
-      })],
-    })
-  })
-
-  it('点击选择目录按钮时会打开保存位置对话框', async () => {
+  it('点击选择目录按钮时会调用 useCreateGameForm 提供的目录选择处理器', async () => {
     renderInBrowser(CreateGameModal, {
       browser: {
         i18nMode: 'lite',
@@ -215,26 +169,16 @@ describe('CreateGameModal', () => {
 
     await page.getByRole('button', { name: 'modals.createGame.selectSaveLocation' }).click()
 
-    expect(openDialogMock).toHaveBeenCalledWith(expect.objectContaining({
-      defaultPath: '/games',
-      directory: true,
-      multiple: false,
-      title: 'modals.createGame.selectSaveLocation',
-    }))
+    expect(handleSelectFolderMock).toHaveBeenCalledTimes(1)
   })
 
-  it('提交表单时会创建游戏并回传游戏标识', async () => {
-    const onSuccess = vi.fn()
-    const updateOpen = vi.fn()
-
+  it('输入游戏名时会调用 useCreateGameForm 提供的输入处理器', async () => {
     renderInBrowser(CreateGameModal, {
       browser: {
         i18nMode: 'lite',
       },
       props: {
-        'open': true,
-        onSuccess,
-        'onUpdate:open': updateOpen,
+        open: true,
       },
       global: {
         stubs: globalStubs,
@@ -242,10 +186,27 @@ describe('CreateGameModal', () => {
     })
 
     await page.getByRole('textbox', { name: 'modals.createGame.gameName' }).fill('Demo')
+
+    expect(handleGameNameChangeMock).toHaveBeenCalled()
+  })
+
+  it('点击创建按钮时会提交表单并调用 useCreateGameForm 提供的 onSubmit', async () => {
+    renderInBrowser(CreateGameModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        open: true,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
     await page.getByRole('button', { name: 'modals.createGame.create' }).click()
 
-    expect(createGameMock).toHaveBeenCalledWith('Demo', '/games/Demo', '/engines/default')
-    expect(updateOpen).toHaveBeenCalledWith(false)
-    expect(onSuccess).toHaveBeenCalledWith('game-1')
+    await vi.waitFor(() => {
+      expect(onSubmitMock).toHaveBeenCalledTimes(1)
+    })
   })
 })

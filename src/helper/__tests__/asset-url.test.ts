@@ -49,4 +49,18 @@ describe('getAssetUrl 资源地址解析', () => {
       previewBaseUrl: 'http://127.0.0.1:8899/game/demo/',
     })).toThrow('资源路径不在当前工作区内')
   })
+
+  it('会拒绝先逃出工作区再重新拼回工作区前缀的相对路径', () => {
+    expect(() => resolveAssetUrl('../../../games/demo/assets/bg/intro.png', {
+      cwd: '/games/demo',
+      previewBaseUrl: 'http://127.0.0.1:8899/game/demo/',
+    })).toThrow('资源路径不在当前工作区内')
+  })
+
+  it('会拒绝切换到不同磁盘根目录的路径', () => {
+    expect(() => resolveAssetUrl('D:/games/demo/assets/bg/intro.png', {
+      cwd: 'C:/games/demo',
+      previewBaseUrl: 'http://127.0.0.1:8899/game/demo/',
+    })).toThrow('资源路径不在当前工作区内')
+  })
 })

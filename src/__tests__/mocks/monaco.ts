@@ -194,6 +194,7 @@ export function createMonacoMockModule() {
     editor: {
       create: monacoMockState.create,
       MouseTargetType: {
+        CONTENT_TEXT: 6,
         GUTTER_GLYPH_MARGIN: 2,
       },
       setTheme: monacoMockState.setTheme,

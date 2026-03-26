@@ -1,5 +1,6 @@
 import { join } from '@tauri-apps/api/path'
-import { readTextFile, remove } from '@tauri-apps/plugin-fs'
+import { readTextFile } from '@tauri-apps/plugin-fs'
+import sanitize from 'sanitize-filename'
 
 import { fsCmds } from '~/commands/fs'
 import { db } from '~/database/db'
@@ -59,6 +60,20 @@ async function registerEngine(enginePath: string, metadata?: EngineMetadata, cre
   })
 }
 
+function sanitizeEngineDirectoryName(engineName: string): string {
+  const sanitizedName = sanitize(engineName ?? '', { replacement: '_' }).trim()
+
+  if (!sanitizedName) {
+    throw new AppError('IO_ERROR', '引擎名称无效')
+  }
+
+  return sanitizedName
+}
+
+async function resolveInstalledEnginePath(engineSavePath: string, engineName: string): Promise<string> {
+  return await join(engineSavePath, sanitizeEngineDirectoryName(engineName))
+}
+
 /**
  * 安装引擎
  * @param enginePath 引擎路径
@@ -66,29 +81,54 @@ async function registerEngine(enginePath: string, metadata?: EngineMetadata, cre
 async function installEngine(enginePath: string): Promise<void> {
   const resourceStore = useResourceStore()
   const storageSettingsStore = useStorageSettingsStore()
+  let hasStartedFilesystemMutation = false
 
   const metadata = await getEngineMetadata(enginePath)
   const engineName = metadata.name
-  const targetPath = await join(storageSettingsStore.engineSavePath, engineName)
+  const targetPath = await resolveInstalledEnginePath(storageSettingsStore.engineSavePath, engineName)
+  const targetMetadata = {
+    ...metadata,
+    icon: await engineIconPath(targetPath),
+  }
 
   logger.info(`[引擎 ${engineName}] 开始安装`)
 
   // 1. 先注册到数据库
-  const id = await registerEngine(targetPath, metadata, true)
+  const id = await registerEngine(targetPath, targetMetadata, true)
   logger.info(`[引擎 ${engineName}] 注册到数据库`)
 
   // 2. 再复制文件
   logger.info(`[引擎 ${engineName}] 复制引擎文件: ${enginePath} 到 ${targetPath}`)
-  await fsCmds.copyDirectoryWithProgress(enginePath, targetPath, (progress) => {
-    resourceStore.updateProgress(id, progress)
-  })
-  logger.info(`[引擎 ${engineName}] 复制引擎文件完成`)
+  try {
+    hasStartedFilesystemMutation = true
+    await fsCmds.copyDirectoryWithProgress(enginePath, targetPath, (progress) => {
+      resourceStore.updateProgress(id, progress)
+    })
+    logger.info(`[引擎 ${engineName}] 复制引擎文件完成`)
 
-  resourceStore.finishProgress(id)
+    await db.engines.update(id, { status: 'created' })
 
-  await db.engines.update(id, { status: 'created' })
+    resourceStore.finishProgress(id)
+    logger.info(`[引擎 ${engineName}] 安装引擎完成`)
+  } catch (error) {
+    resourceStore.finishProgress(id)
 
-  logger.info(`[引擎 ${engineName}] 安装引擎完成`)
+    try {
+      await db.engines.delete(id)
+    } catch (rollbackError) {
+      logger.error(`[引擎 ${engineName}] 回滚数据库记录失败: ${rollbackError}`)
+    }
+
+    if (hasStartedFilesystemMutation) {
+      try {
+        await fsCmds.deleteFile(targetPath, true)
+      } catch (cleanupError) {
+        logger.error(`[引擎 ${engineName}] 清理失败: ${cleanupError}`)
+      }
+    }
+
+    throw error
+  }
 }
 
 /**
@@ -96,8 +136,8 @@ async function installEngine(enginePath: string): Promise<void> {
  * @param engine 引擎
  */
 async function uninstallEngine(engine: Engine): Promise<void> {
+  await fsCmds.deleteFile(engine.path)
   await db.engines.delete(engine.id)
-  await remove(engine.path, { recursive: true })
 }
 
 /**
@@ -114,7 +154,7 @@ async function importEngine(enginePath: string): Promise<void> {
   }
 
   const metadata = await getEngineMetadata(enginePath)
-  const targetPath = await join(storageSettingsStore.engineSavePath, metadata.name)
+  const targetPath = await resolveInstalledEnginePath(storageSettingsStore.engineSavePath, metadata.name)
 
   if (enginePath === targetPath) {
     logger.info(`[引擎导入] 引擎已在目标位置，直接注册: ${enginePath}`)

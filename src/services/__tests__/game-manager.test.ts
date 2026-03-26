@@ -9,6 +9,7 @@ const {
   dbGamesDeleteMock,
   dbGamesGetMock,
   dbGamesUpdateMock,
+  deleteFileMock,
   gameCmdsGetGameConfigMock,
   gameCmdsSetGameConfigMock,
   gameCoverPathMock,
@@ -28,6 +29,7 @@ const {
   dbGamesDeleteMock: vi.fn(),
   dbGamesGetMock: vi.fn(),
   dbGamesUpdateMock: vi.fn(),
+  deleteFileMock: vi.fn(),
   gameCmdsGetGameConfigMock: vi.fn(),
   gameCmdsSetGameConfigMock: vi.fn(),
   gameCoverPathMock: vi.fn(),
@@ -66,6 +68,7 @@ vi.mock('~/commands/fs', () => ({
   fsCmds: {
     validateDirectoryStructure: validateDirectoryStructureMock,
     copyDirectoryWithProgress: copyDirectoryWithProgressMock,
+    deleteFile: deleteFileMock,
   },
 }))
 
@@ -115,6 +118,7 @@ describe('gameManager 游戏管理', () => {
     dbGamesDeleteMock.mockReset()
     dbGamesGetMock.mockReset()
     dbGamesUpdateMock.mockReset()
+    deleteFileMock.mockReset()
     gameCmdsGetGameConfigMock.mockReset()
     gameCmdsSetGameConfigMock.mockReset()
     gameCoverPathMock.mockReset()
@@ -173,6 +177,19 @@ describe('gameManager 游戏管理', () => {
     })
   })
 
+  it('createGame 在注册后失败时会回滚占位记录、进度和目标目录', async () => {
+    dbGamesAddMock.mockResolvedValue('game-1')
+    copyDirectoryWithProgressMock.mockResolvedValue(undefined)
+    gameCmdsSetGameConfigMock.mockRejectedValue(new Error('config failed'))
+
+    await expect(gameManager.createGame('Demo Game', '/games/demo', '/engines/base')).rejects.toThrow('config failed')
+
+    expect(resourceStoreMock.finishProgress).toHaveBeenCalledWith('game-1')
+    expect(dbGamesDeleteMock).toHaveBeenCalledWith('game-1')
+    expect(deleteFileMock).toHaveBeenCalledWith('/games/demo', true)
+    expect(dbGamesUpdateMock).not.toHaveBeenCalled()
+  })
+
   it('importGame 遇到非法目录结构时会抛出 INVALID_STRUCTURE', async () => {
     validateDirectoryStructureMock.mockResolvedValue(false)
 
@@ -181,7 +198,7 @@ describe('gameManager 游戏管理', () => {
     )
   })
 
-  it('deleteGame 在 removeFiles=true 时会同时删除磁盘目录', async () => {
+  it('deleteGame 在 removeFiles=true 时会通过 fs 命令将游戏目录移动到回收站', async () => {
     await gameManager.deleteGame({
       id: 'game-1',
       path: '/games/demo',
@@ -195,8 +212,9 @@ describe('gameManager 游戏管理', () => {
       },
     }, true)
 
+    expect(deleteFileMock).toHaveBeenCalledWith('/games/demo')
     expect(dbGamesDeleteMock).toHaveBeenCalledWith('game-1')
-    expect(removeMock).toHaveBeenCalledWith('/games/demo', { recursive: true })
+    expect(deleteFileMock.mock.invocationCallOrder[0]).toBeLessThan(dbGamesDeleteMock.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY)
   })
 
   it('updateCurrentGameLastModified 会按 500ms 防抖更新当前游戏', async () => {

@@ -26,8 +26,7 @@ const {
   useStatementEditorMock: vi.fn(),
 }))
 
-vi.mock('~/composables/useStatementEditor', async importOriginal => ({
-  ...(await importOriginal<typeof import('~/composables/useStatementEditor')>()),
+vi.mock('~/composables/useStatementEditor', () => ({
   isStatementInteractiveTarget: () => false,
   useStatementEditor: useStatementEditorMock,
 }))

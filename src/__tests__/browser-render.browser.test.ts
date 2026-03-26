@@ -103,9 +103,9 @@ describe('browser-render helper stubs', () => {
         title: 'Hello Action',
       },
       slots: {
-        actions: '<span>actions-slot</span>',
-        default: '<span>default-slot</span>',
-        tooltip: '<span>tooltip-slot</span>',
+        actions: () => h('span', 'actions-slot'),
+        default: () => h('span', 'default-slot'),
+        tooltip: () => h('span', 'tooltip-slot'),
       },
     })
 

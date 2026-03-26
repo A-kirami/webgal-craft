@@ -8,6 +8,7 @@ export interface AssetUrlOptions {
 interface ResolvedPath {
   root: string
   segments: string[]
+  escapedBase?: boolean
 }
 
 function normalizeFsPath(input: string): string {
@@ -47,8 +48,10 @@ function parsePath(input: string): ResolvedPath {
 
 function resolvePath(input: string, basePath?: ResolvedPath): ResolvedPath {
   const parsedPath = parsePath(input)
+  const minSegmentDepth = parsedPath.root ? 0 : (basePath?.segments.length ?? 0)
   const resolvedPath: ResolvedPath = {
     root: parsedPath.root || basePath?.root || '',
+    escapedBase: false,
     segments: parsedPath.root ? [] : [...(basePath?.segments ?? [])],
   }
 
@@ -58,8 +61,10 @@ function resolvePath(input: string, basePath?: ResolvedPath): ResolvedPath {
     }
 
     if (segment === '..') {
-      if (resolvedPath.segments.length > 0) {
+      if (resolvedPath.segments.length > minSegmentDepth) {
         resolvedPath.segments.pop()
+      } else {
+        resolvedPath.escapedBase = true
       }
       continue
     }
@@ -90,7 +95,7 @@ export function resolveAssetUrl(assetPath: string, options: AssetUrlOptions): st
 
   const resolvedPath = resolvePath(assetPath, resolvedCwd)
 
-  if (!isSubPath(resolvedCwd, resolvedPath)) {
+  if (resolvedPath.escapedBase || !isSubPath(resolvedCwd, resolvedPath)) {
     throw new Error(`资源路径不在当前工作区内: ${assetPath}`)
   }
 

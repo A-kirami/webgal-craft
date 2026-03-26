@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { isStatementInteractiveTarget, StatementUpdatePayload, StatementUpdateTarget, useStatementEditor } from '~/composables/useStatementEditor'
+import { isStatementInteractiveTarget, useStatementEditor } from '~/composables/useStatementEditor'
 import { statementEditorSurfaceKey } from '~/helper/statement-editor/surface-context'
 import { StatementEntry } from '~/helper/webgal-script/sentence'
+
+import type { StatementUpdatePayload, StatementUpdateTarget } from '~/composables/useStatementEditor'
 
 const props = defineProps<{
   entry: StatementEntry

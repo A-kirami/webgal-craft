@@ -1,5 +1,3 @@
-import { remove } from '@tauri-apps/plugin-fs'
-
 import { fsCmds } from '~/commands/fs'
 import { gameCmds } from '~/commands/game'
 import { serverCmds } from '~/commands/server'
@@ -69,6 +67,7 @@ async function registerGame(gamePath: string, metadata?: GameMetadata, creating?
  */
 async function createGame(gameName: string, gamePath: string, enginePath: string): Promise<string> {
   const resourceStore = useResourceStore()
+  let hasStartedFilesystemMutation = false
 
   logger.info(`[游戏 ${gameName}] 开始创建`)
 
@@ -82,25 +81,45 @@ async function createGame(gameName: string, gamePath: string, enginePath: string
 
   // 2. 复制引擎文件
   logger.info(`[游戏 ${gameName}] 复制引擎文件: ${enginePath} 到 ${gamePath}`)
-  await fsCmds.copyDirectoryWithProgress(enginePath, gamePath, (progress) => {
-    resourceStore.updateProgress(id, progress)
-  })
-  logger.info(`[游戏 ${gameName}] 复制引擎文件完成`)
+  try {
+    hasStartedFilesystemMutation = true
+    await fsCmds.copyDirectoryWithProgress(enginePath, gamePath, (progress) => {
+      resourceStore.updateProgress(id, progress)
+    })
+    logger.info(`[游戏 ${gameName}] 复制引擎文件完成`)
 
-  // 3. 设置游戏配置
-  await gameCmds.setGameConfig(gamePath, { gameName })
-  logger.info(`[游戏 ${gameName}] 设置游戏配置`)
+    // 3. 设置游戏配置
+    await gameCmds.setGameConfig(gamePath, { gameName })
+    logger.info(`[游戏 ${gameName}] 设置游戏配置`)
 
-  resourceStore.finishProgress(id)
+    const metadata = await getGameMetadata(gamePath)
+    await db.games.update(id, {
+      status: 'created',
+      metadata,
+    })
 
-  const metadata = await getGameMetadata(gamePath)
-  await db.games.update(id, {
-    status: 'created',
-    metadata,
-  })
+    resourceStore.finishProgress(id)
+    logger.info(`[游戏 ${gameName}] 创建游戏完成`)
+    return id
+  } catch (error) {
+    resourceStore.finishProgress(id)
 
-  logger.info(`[游戏 ${gameName}] 创建游戏完成`)
-  return id
+    try {
+      await db.games.delete(id)
+    } catch (rollbackError) {
+      logger.error(`[游戏 ${gameName}] 回滚数据库记录失败: ${rollbackError}`)
+    }
+
+    if (hasStartedFilesystemMutation) {
+      try {
+        await fsCmds.deleteFile(gamePath, true)
+      } catch (cleanupError) {
+        logger.error(`[游戏 ${gameName}] 清理失败: ${cleanupError}`)
+      }
+    }
+
+    throw error
+  }
 }
 
 /**
@@ -109,10 +128,10 @@ async function createGame(gameName: string, gamePath: string, enginePath: string
  * @param removeFiles 是否同时删除游戏文件
  */
 async function deleteGame(game: Game, removeFiles: boolean = false): Promise<void> {
-  await db.games.delete(game.id)
   if (removeFiles) {
-    await remove(game.path, { recursive: true })
+    await fsCmds.deleteFile(game.path)
   }
+  await db.games.delete(game.id)
 }
 
 /**

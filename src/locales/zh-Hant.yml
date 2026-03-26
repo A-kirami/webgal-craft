@@ -154,7 +154,7 @@ modals:
   deleteEngine:
     title: 卸載引擎
     description: 確定要卸載引擎 {name} 嗎？
-    warning: 此操作將刪除引擎檔案，且無法恢復。
+    warning: 此操作將把引擎檔案移到資源回收桶，你可以稍後從資源回收桶還原。
     uninstallSuccess: 引擎卸載成功
   discoveredResources:
     gamesTitle: 發現遊戲

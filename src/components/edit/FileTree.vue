@@ -17,9 +17,10 @@ import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 import { handleError } from '~/utils/error-handler'
-import { createItemComparator, SortableItemAccessor } from '~/utils/sort'
+import { createItemComparator } from '~/utils/sort'
 
 import type { FlattenedItem } from 'reka-ui'
+import type { SortableItemAccessor } from '~/utils/sort'
 
 interface Props {
   items: T[]

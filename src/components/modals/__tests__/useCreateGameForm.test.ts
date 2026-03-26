@@ -224,6 +224,22 @@ describe('useCreateGameForm 行为', () => {
     expect(joinMock).not.toHaveBeenCalled()
   })
 
+  it('选择目录时会以目录模式打开对话框并携带默认保存路径', async () => {
+    const open = ref(true)
+    const form = useCreateGameForm({ open })
+    openDialogMock.mockResolvedValue('/manual/path')
+
+    await form.handleSelectFolder()
+
+    expect(openDialogMock).toHaveBeenCalledWith({
+      title: 'modals.createGame.selectSaveLocation',
+      directory: true,
+      multiple: false,
+      defaultPath: '/games',
+    })
+    expect(setFieldValueMock).toHaveBeenCalledWith('gamePath', '/manual/path', false)
+  })
+
   it('提交时会关闭弹窗并创建游戏且回调 game id', async () => {
     const open = ref(true)
     const onSuccess = vi.fn()

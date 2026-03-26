@@ -80,9 +80,10 @@ const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef,
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
-    <div
+    <button
       ref="dropZoneGridRef"
-      class="p-4 border-1 rounded-lg border-dashed bg-gray-50 flex flex-col cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden dark:bg-gray-900"
+      type="button"
+      class="p-4 border-1 rounded-lg border-dashed bg-gray-50 flex flex-col w-full cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden dark:bg-gray-900"
       :class="{
         'border-purple-300 bg-purple-50': isOverDropZoneGrid,
         'border-gray-300 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700': !isOverDropZoneGrid
@@ -98,7 +99,7 @@ const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef,
       <p class="text-xs text-muted-foreground mt-1 text-center">
         {{ $t('home.games.importGameHint') }}
       </p>
-    </div>
+    </button>
   </div>
   <div v-else class="border rounded-lg overflow-hidden divide-y">
     <div
@@ -165,9 +166,10 @@ const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef,
       </div>
       <Progress v-if="hasGameProgress(game)" :model-value="getGameProgress(game)" class="rounded-none h-0.75 inset-x-0 bottom-0 absolute" />
     </div>
-    <div
+    <button
       ref="dropZoneListRef"
-      class="p-3 border-t bg-gray-50/50 flex cursor-pointer transition-colors items-center justify-between dark:bg-gray-800/10 hover:bg-gray-100 dark:hover:bg-gray-800/20"
+      type="button"
+      class="p-3 border-t bg-gray-50/50 flex w-full cursor-pointer transition-colors items-center justify-between dark:bg-gray-800/10 hover:bg-gray-100 dark:hover:bg-gray-800/20"
       :class="{
         'bg-purple-50': isOverDropZoneList
       }"
@@ -186,6 +188,6 @@ const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef,
           </p>
         </div>
       </div>
-    </div>
+    </button>
   </div>
 </template>

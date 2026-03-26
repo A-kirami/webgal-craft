@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useControlId } from '~/composables/useControlId'
 import { useStatementAnimationEditorBridge } from '~/composables/useStatementAnimationEditorBridge'
-import { isStatementInteractiveTarget, StatementUpdatePayload, StatementUpdateTarget, useStatementEditor } from '~/composables/useStatementEditor'
+import { isStatementInteractiveTarget, useStatementEditor } from '~/composables/useStatementEditor'
 import { useStatementEffectEditorBridge } from '~/composables/useStatementEffectEditorBridge'
 import {
   normalizeStatementPanelSingleLineValue,
@@ -11,6 +11,8 @@ import { statementEditorSurfaceKey } from '~/helper/statement-editor/surface-con
 import { StatementEntry } from '~/helper/webgal-script/sentence'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import { useWorkspaceStore } from '~/stores/workspace'
+
+import type { StatementUpdatePayload, StatementUpdateTarget } from '~/composables/useStatementEditor'
 
 const props = withDefaults(defineProps<{
   entry: StatementEntry

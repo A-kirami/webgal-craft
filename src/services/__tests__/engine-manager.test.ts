@@ -8,6 +8,7 @@ const {
   dbEnginesAddMock,
   dbEnginesDeleteMock,
   dbEnginesUpdateMock,
+  deleteFileMock,
   engineIconPathMock,
   engineManifestPathMock,
   joinMock,
@@ -23,6 +24,7 @@ const {
   dbEnginesAddMock: vi.fn(),
   dbEnginesDeleteMock: vi.fn(),
   dbEnginesUpdateMock: vi.fn(),
+  deleteFileMock: vi.fn(),
   engineIconPathMock: vi.fn(),
   engineManifestPathMock: vi.fn(),
   joinMock: vi.fn(async (...parts: string[]) => parts.join('/').replaceAll('//', '/')),
@@ -63,6 +65,7 @@ vi.mock('~/commands/fs', () => ({
   fsCmds: {
     validateDirectoryStructure: validateDirectoryStructureMock,
     copyDirectoryWithProgress: copyDirectoryWithProgressMock,
+    deleteFile: deleteFileMock,
   },
 }))
 
@@ -95,6 +98,7 @@ describe('engineManager 引擎管理', () => {
     dbEnginesAddMock.mockReset()
     dbEnginesDeleteMock.mockReset()
     dbEnginesUpdateMock.mockReset()
+    deleteFileMock.mockReset()
     engineIconPathMock.mockReset()
     engineManifestPathMock.mockReset()
     joinMock.mockClear()
@@ -126,7 +130,7 @@ describe('engineManager 引擎管理', () => {
   })
 
   it('installEngine 会复制到存储目录并在完成后更新数据库状态', async () => {
-    engineIconPathMock.mockResolvedValue('/source/icons/icon.png')
+    engineIconPathMock.mockImplementation(async (path: string) => `${path}/icons/favicon.ico`)
     engineManifestPathMock.mockResolvedValue('/source/manifest.json')
     readTextFileMock.mockResolvedValue(JSON.stringify({
       name: 'WebGAL',
@@ -145,7 +149,7 @@ describe('engineManager 引擎管理', () => {
       status: 'creating',
       metadata: {
         name: 'WebGAL',
-        icon: '/source/icons/icon.png',
+        icon: '/engines/WebGAL/icons/favicon.ico',
         description: 'Visual novel engine',
       },
     }))
@@ -153,6 +157,40 @@ describe('engineManager 引擎管理', () => {
     expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(2, 'engine-1', 100)
     expect(resourceStoreMock.finishProgress).toHaveBeenCalledWith('engine-1')
     expect(dbEnginesUpdateMock).toHaveBeenCalledWith('engine-1', { status: 'created' })
+  })
+
+  it('installEngine 在注册后失败时会回滚占位记录、进度和目标目录', async () => {
+    engineIconPathMock.mockImplementation(async (path: string) => `${path}/icons/favicon.ico`)
+    engineManifestPathMock.mockResolvedValue('/source/manifest.json')
+    readTextFileMock.mockResolvedValue(JSON.stringify({
+      name: 'WebGAL',
+      description: 'Visual novel engine',
+    }))
+    dbEnginesAddMock.mockResolvedValue('engine-1')
+    copyDirectoryWithProgressMock.mockResolvedValue(undefined)
+    dbEnginesUpdateMock.mockRejectedValue(new Error('update failed'))
+
+    await expect(engineManager.installEngine('/source')).rejects.toThrow('update failed')
+
+    expect(resourceStoreMock.finishProgress).toHaveBeenCalledWith('engine-1')
+    expect(dbEnginesDeleteMock).toHaveBeenCalledWith('engine-1')
+    expect(deleteFileMock).toHaveBeenCalledWith('/engines/WebGAL', true)
+  })
+
+  it('installEngine 遇到非法引擎名称时会拒绝安装', async () => {
+    engineIconPathMock.mockResolvedValue('/source/icons/favicon.ico')
+    engineManifestPathMock.mockResolvedValue('/source/manifest.json')
+    readTextFileMock.mockResolvedValue(JSON.stringify({
+      name: '',
+      description: 'Visual novel engine',
+    }))
+
+    await expect(engineManager.installEngine('/source')).rejects.toEqual(
+      new AppError('IO_ERROR', '引擎名称无效'),
+    )
+
+    expect(dbEnginesAddMock).not.toHaveBeenCalled()
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
   })
 
   it('importEngine 遇到非法目录结构时会抛出 INVALID_STRUCTURE', async () => {
@@ -165,7 +203,7 @@ describe('engineManager 引擎管理', () => {
 
   it('已位于目标目录的引擎会直接注册而不是重复复制', async () => {
     validateDirectoryStructureMock.mockResolvedValue(true)
-    engineIconPathMock.mockResolvedValue('/engines/WebGAL/icons/icon.png')
+    engineIconPathMock.mockImplementation(async (path: string) => `${path}/icons/favicon.ico`)
     engineManifestPathMock.mockResolvedValue('/engines/WebGAL/manifest.json')
     readTextFileMock.mockResolvedValue(JSON.stringify({
       name: 'WebGAL',
@@ -178,10 +216,13 @@ describe('engineManager 引擎管理', () => {
     expect(dbEnginesAddMock).toHaveBeenCalledWith(expect.objectContaining({
       path: '/engines/WebGAL',
       status: 'created',
+      metadata: expect.objectContaining({
+        icon: '/engines/WebGAL/icons/favicon.ico',
+      }),
     }))
   })
 
-  it('uninstallEngine 会删除数据库记录和磁盘目录', async () => {
+  it('uninstallEngine 会删除数据库记录并通过 fs 命令将引擎目录移动到回收站', async () => {
     await engineManager.uninstallEngine({
       id: 'engine-1',
       path: '/engines/WebGAL',
@@ -194,7 +235,8 @@ describe('engineManager 引擎管理', () => {
       },
     })
 
+    expect(deleteFileMock).toHaveBeenCalledWith('/engines/WebGAL')
     expect(dbEnginesDeleteMock).toHaveBeenCalledWith('engine-1')
-    expect(removeMock).toHaveBeenCalledWith('/engines/WebGAL', { recursive: true })
+    expect(deleteFileMock.mock.invocationCallOrder[0]).toBeLessThan(dbEnginesDeleteMock.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY)
   })
 })

@@ -165,4 +165,29 @@ describe('标签状态仓库', () => {
     await eventHandlers.get('file:removed')?.({ path: '/game/image.png' })
     expect(store.tabs.map(tab => tab.path)).toEqual(['/game/scene-renamed.txt'])
   })
+
+  it('文件重命名时会把运行时状态一并迁移到新路径', async () => {
+    const store = useTabsStore()
+
+    editSettingsStoreState.enablePreviewTab = false
+    store.openTab('scene.txt', '/game/scene.txt')
+    store.updateTabModified(0, true)
+    store.updateTabLoading(0, true)
+    store.updateTabError(0, 'rename pending')
+
+    await eventHandlers.get('file:renamed')?.({
+      oldPath: '/game/scene.txt',
+      newPath: '/game/scene-renamed.txt',
+    })
+
+    expect(store.findTabIndex('/game/scene.txt')).toBe(-1)
+    expect(store.findTabIndex('/game/scene-renamed.txt')).toBe(0)
+    expect(store.tabs[0]).toMatchObject({
+      path: '/game/scene-renamed.txt',
+      name: 'scene-renamed.txt',
+      isModified: true,
+      isLoading: true,
+      error: 'rename pending',
+    })
+  })
 })

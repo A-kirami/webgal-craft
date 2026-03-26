@@ -2,7 +2,9 @@
 import { useFileViewerLayout } from '~/composables/useFileViewerLayout'
 import { useFileViewerVirtualizer } from '~/composables/useFileViewerVirtualizer'
 import { FileViewerItem, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
-import { createItemComparator, SortableItemAccessor } from '~/utils/sort'
+import { createItemComparator } from '~/utils/sort'
+
+import type { SortableItemAccessor } from '~/utils/sort'
 
 interface FileViewerProps {
   /** 要展示的文件/文件夹列表 */

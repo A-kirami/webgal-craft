@@ -38,8 +38,7 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   warn: vi.fn(),
 }))
 
-vi.mock('~/helper/app-paths', async importOriginal => ({
-  ...(await importOriginal<typeof import('~/helper/app-paths')>()),
+vi.mock('~/helper/app-paths', () => ({
   defaultEngineSavePath: vi.fn(),
   defaultGameSavePath: vi.fn(),
   engineIconPath: vi.fn(),

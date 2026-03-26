@@ -35,6 +35,16 @@ describe('createBrowserConsoleMonitor 浏览器控制台监视器', () => {
 
     expect(() => monitor.expectNoConsoleMessage('plain error')).toThrow()
   })
+
+  it('重复使用带 g 标记的正则时仍能稳定检测控制台输出', () => {
+    const pattern = /plain error/g
+
+    // eslint-disable-next-line no-console
+    console.error('plain error message')
+
+    expect(() => monitor.expectNoConsoleMessage(pattern)).toThrow()
+    expect(() => monitor.expectNoConsoleMessage(pattern)).toThrow()
+  })
 })
 
 describe('browser 测试 i18n 辅助函数', () => {

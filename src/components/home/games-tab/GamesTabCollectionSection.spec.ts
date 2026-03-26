@@ -79,4 +79,52 @@ describe('GamesTabCollectionSection', () => {
 
     await expect.element(page.getByRole('button', { name: 'home.games.deleteGame' })).not.toBeInTheDocument()
   })
+
+  it('导入入口使用按钮语义并会触发 importClick', async () => {
+    const onImportClick = vi.fn()
+
+    renderInBrowser(GamesTabCollectionSection, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        games: [createTestGame()],
+        getGameProgress: () => 0,
+        hasGameProgress: () => false,
+        onImportClick,
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'home.games.importGame home.games.importGameHint' }).click()
+
+    expect(onImportClick).toHaveBeenCalledTimes(1)
+  })
+
+  it('列表视图中的导入入口也使用按钮语义并会触发 importClick', async () => {
+    const onImportClick = vi.fn()
+
+    renderInBrowser(GamesTabCollectionSection, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        games: [createTestGame()],
+        getGameProgress: () => 0,
+        hasGameProgress: () => false,
+        onImportClick,
+        viewMode: 'list',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'home.games.importGame home.games.importGameHint' }).click()
+
+    expect(onImportClick).toHaveBeenCalledTimes(1)
+  })
 })

@@ -93,4 +93,21 @@ describe('settleBatch 批处理收敛', () => {
     expect(result.failed[0].index).toBe(2)
     expect(result.failed[1].index).toBe(4)
   })
+
+  it('任务函数同步抛错时也会被收敛到 failed 中', async () => {
+    const result = await settleBatch([
+      () => Promise.resolve('ok'),
+      () => {
+        throw new TypeError('同步失败')
+      },
+      () => Promise.resolve('still ok'),
+    ])
+
+    expect(result.succeeded).toEqual(['ok', 'still ok'])
+    expect(result.failed).toHaveLength(1)
+    expect(result.failed[0]?.index).toBe(1)
+    expect(result.failed[0]?.error).toBeInstanceOf(AppError)
+    expect(result.failed[0]?.error.code).toBe('UNKNOWN')
+    expect(result.failed[0]?.error.message).toBe('TypeError: 同步失败')
+  })
 })

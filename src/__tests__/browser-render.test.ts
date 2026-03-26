@@ -10,7 +10,7 @@ vi.mock('vitest-browser-vue', () => ({
   render: renderMock,
 }))
 
-import { createBrowserLocalizedI18n } from './browser'
+import { createBrowserLocalizedI18n, isBrowserTestI18nPlugin } from './browser'
 import { renderInBrowser } from './browser-render'
 
 interface MockedRenderOptions {
@@ -63,12 +63,19 @@ describe('renderInBrowser', () => {
 
     const renderOptions = getRenderedOptions()
     expect(renderOptions?.global?.plugins).toHaveLength(1)
+    const injectedPlugin = renderOptions?.global?.plugins?.[0]
+    expect(isBrowserTestI18nPlugin(injectedPlugin)).toBe(true)
+    if (!isBrowserTestI18nPlugin(injectedPlugin)) {
+      throw new TypeError('未注入 browser test i18n 插件')
+    }
+    const translate = injectedPlugin.global.t as (key: string) => string
+    expect(translate('common.confirm')).toBe('common.confirm')
   })
 
   it('显式提供测试 i18n 时仍会保留其它 browser plugins', () => {
     const localizedI18n = createBrowserLocalizedI18n()
 
-    renderInBrowser({} as never, {
+    const rendered = renderInBrowser({} as never, {
       browser: {
         pinia: true,
       },
@@ -79,6 +86,7 @@ describe('renderInBrowser', () => {
 
     const renderOptions = getRenderedOptions()
     expect(renderOptions?.global?.plugins).toHaveLength(2)
+    expect(renderOptions?.global?.plugins?.[0]).toBe(rendered.pinia)
     expect(renderOptions?.global?.plugins?.at(-1)).toBe(localizedI18n)
   })
 })

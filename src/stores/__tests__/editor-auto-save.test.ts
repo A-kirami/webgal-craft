@@ -2,6 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { canExecuteEditorAutoSave, createEditorAutoSaveController } from '../editor-auto-save'
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  const promise = new Promise<T>((innerResolve) => {
+    resolve = innerResolve
+  })
+  return { promise, resolve }
+}
+
 describe('编辑器自动保存', () => {
   beforeEach(() => {
     vi.useRealTimers()
@@ -80,6 +88,47 @@ describe('编辑器自动保存', () => {
       controller.schedule('/game/scene.txt')
       await vi.advanceTimersByTimeAsync(500)
       expect(handleSaveError).toHaveBeenCalledWith(saveError)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('保存进行中再次调度时会在当前保存结束后补跑一次', async () => {
+    const firstSave = createDeferred<void>()
+    const secondSave = createDeferred<void>()
+    const saveDocument = vi.fn()
+      .mockImplementationOnce(async () => firstSave.promise)
+      .mockImplementationOnce(async () => secondSave.promise)
+    const controller = createEditorAutoSaveController({
+      debounceMs: 500,
+      getState: () => ({
+        isDirty: true,
+        projection: 'text',
+      }),
+      handleSaveError: vi.fn(),
+      saveDocument,
+    })
+
+    vi.useFakeTimers()
+    try {
+      controller.schedule('/game/scene.txt')
+      await vi.advanceTimersByTimeAsync(500)
+      expect(saveDocument).toHaveBeenCalledTimes(1)
+
+      controller.schedule('/game/scene.txt')
+      await vi.advanceTimersByTimeAsync(500)
+      expect(saveDocument).toHaveBeenCalledTimes(1)
+
+      firstSave.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(saveDocument).toHaveBeenCalledTimes(2)
+
+      secondSave.resolve()
+      await vi.waitFor(() => {
+        expect(controller.hasPending('/game/scene.txt')).toBe(false)
+      })
     } finally {
       vi.useRealTimers()
     }

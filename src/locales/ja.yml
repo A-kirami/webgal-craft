@@ -154,7 +154,7 @@ modals:
   deleteEngine:
     title: エンジンをアンインストール
     description: エンジン {name} をアンインストールしてもよろしいですか？
-    warning: この操作はエンジンファイルを削除し、復元できません。
+    warning: この操作はエンジンファイルをゴミ箱に移動します。ゴミ箱から復元できます。
     uninstallSuccess: エンジンのアンインストールに成功しました
   discoveredResources:
     gamesTitle: ゲームを発見

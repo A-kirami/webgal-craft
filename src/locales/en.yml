@@ -154,7 +154,7 @@ modals:
   deleteEngine:
     title: Uninstall Engine
     description: Are you sure you want to uninstall the engine {name}?
-    warning: This operation will delete engine files and cannot be recovered.
+    warning: This operation will move engine files to the recycle bin. You can restore them from there.
     uninstallSuccess: Engine uninstalled successfully
   discoveredResources:
     gamesTitle: Discovered Games
