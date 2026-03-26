@@ -39,6 +39,7 @@ const editorOptions = $computed<monaco.editor.IEditorConstructionOptions>(() =>
 let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
 let playToLineController = $shallowRef<ReturnType<typeof createTextEditorPlayToLineController>>()
 let editorContainer = $ref<HTMLElement>()
+let hasPendingPlayToLineGlyphSync = false
 const runtime = useTextEditorRuntime({
   editorRef: $$(editor),
   getState: () => props.state,
@@ -57,9 +58,21 @@ function syncPlayToLineGlyph() {
   playToLineController?.syncFromEditorPosition()
 }
 
+function schedulePlayToLineGlyphSync() {
+  if (hasPendingPlayToLineGlyphSync) {
+    return
+  }
+
+  hasPendingPlayToLineGlyphSync = true
+  queueMicrotask(() => {
+    hasPendingPlayToLineGlyphSync = false
+    syncPlayToLineGlyph()
+  })
+}
+
 function handleModelContentChange(event: monaco.editor.IModelContentChangedEvent) {
   runtime.handleContentChange(event)
-  syncPlayToLineGlyph()
+  schedulePlayToLineGlyphSync()
 }
 
 function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedEvent) {

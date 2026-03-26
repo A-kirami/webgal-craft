@@ -390,9 +390,55 @@ describe('TextEditor', () => {
     handleContentChange?.({
       isFlush: false,
     })
+    await Promise.resolve()
+    await nextTick()
 
     expect(runtimeReturnValue.handleContentChange).toHaveBeenCalledTimes(1)
     expect(monacoMockState.editorInstance.deltaDecorations).toHaveBeenCalledTimes(1)
+  })
+
+  it('换行导致光标行延后更新时，播放按钮会跟随最终光标行', async () => {
+    const { state } = createHarness('/project/scene-6b.txt')
+    const lines = ['say:hello', 'say:world']
+    let currentPosition = { lineNumber: 1 }
+    monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(lines))
+    monacoMockState.editorInstance.getPosition.mockImplementation(() => currentPosition)
+
+    renderInBrowser(TextEditor, {
+      props: {
+        state,
+      },
+      global: {
+        plugins: [createTextEditorLiteI18n()],
+      },
+    })
+
+    await nextTick()
+    monacoMockState.editorInstance.deltaDecorations.mockClear()
+
+    const handleContentChange = monacoMockState.editorInstance.onDidChangeModelContent.mock.calls[0]?.[0]
+
+    expect(handleContentChange).toBeTypeOf('function')
+
+    handleContentChange?.({
+      isFlush: false,
+    })
+
+    currentPosition = { lineNumber: 2 }
+    await Promise.resolve()
+    await nextTick()
+
+    expect(monacoMockState.editorInstance.deltaDecorations).toHaveBeenCalledTimes(1)
+    const [, nextDecorations] = monacoMockState.editorInstance.deltaDecorations.mock.calls[0] ?? []
+
+    expect(nextDecorations).toEqual([
+      expect.objectContaining({
+        range: expect.objectContaining({
+          endLineNumber: 2,
+          startLineNumber: 2,
+        }),
+      }),
+    ])
   })
 
   it('鼠标按下编辑器时会通知 runtime 处理点击', async () => {
