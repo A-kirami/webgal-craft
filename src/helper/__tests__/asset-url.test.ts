@@ -63,4 +63,16 @@ describe('getAssetUrl 资源地址解析', () => {
       previewBaseUrl: 'http://127.0.0.1:8899/game/demo/',
     })).toThrow('资源路径不在当前工作区内')
   })
+
+  it('会把 Windows 路径中的盘符大小写差异视为同一工作区', () => {
+    expect(() => resolveAssetUrl('C:/games/demo/assets/bg/intro.png', {
+      cwd: 'c:/games/demo',
+      previewBaseUrl: 'http://127.0.0.1:8899/game/demo/',
+    })).not.toThrow()
+
+    expect(resolveAssetUrl('C:/games/demo/assets/bg/intro.png', {
+      cwd: 'c:/games/demo',
+      previewBaseUrl: 'http://127.0.0.1:8899/game/demo/',
+    })).toBe('http://127.0.0.1:8899/game/demo/assets/bg/intro.png')
+  })
 })

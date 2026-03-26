@@ -1,3 +1,5 @@
+import { exists } from '@tauri-apps/plugin-fs'
+
 import { fsCmds } from '~/commands/fs'
 import { gameCmds } from '~/commands/game'
 import { serverCmds } from '~/commands/server'
@@ -67,7 +69,7 @@ async function registerGame(gamePath: string, metadata?: GameMetadata, creating?
  */
 async function createGame(gameName: string, gamePath: string, enginePath: string): Promise<string> {
   const resourceStore = useResourceStore()
-  let hasStartedFilesystemMutation = false
+  const targetExisted = await exists(gamePath)
 
   logger.info(`[游戏 ${gameName}] 开始创建`)
 
@@ -82,7 +84,6 @@ async function createGame(gameName: string, gamePath: string, enginePath: string
   // 2. 复制引擎文件
   logger.info(`[游戏 ${gameName}] 复制引擎文件: ${enginePath} 到 ${gamePath}`)
   try {
-    hasStartedFilesystemMutation = true
     await fsCmds.copyDirectoryWithProgress(enginePath, gamePath, (progress) => {
       resourceStore.updateProgress(id, progress)
     })
@@ -110,7 +111,8 @@ async function createGame(gameName: string, gamePath: string, enginePath: string
       logger.error(`[游戏 ${gameName}] 回滚数据库记录失败: ${rollbackError}`)
     }
 
-    if (hasStartedFilesystemMutation) {
+    // 仅清理本次创建生成出来的目录，避免误删用户原本选中的现有目录。
+    if (!targetExisted && await exists(gamePath)) {
       try {
         await fsCmds.deleteFile(gamePath, true)
       } catch (cleanupError) {

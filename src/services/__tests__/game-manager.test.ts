@@ -10,6 +10,7 @@ const {
   dbGamesGetMock,
   dbGamesUpdateMock,
   deleteFileMock,
+  existsMock,
   gameCmdsGetGameConfigMock,
   gameCmdsSetGameConfigMock,
   gameCoverPathMock,
@@ -30,6 +31,7 @@ const {
   dbGamesGetMock: vi.fn(),
   dbGamesUpdateMock: vi.fn(),
   deleteFileMock: vi.fn(),
+  existsMock: vi.fn(),
   gameCmdsGetGameConfigMock: vi.fn(),
   gameCmdsSetGameConfigMock: vi.fn(),
   gameCoverPathMock: vi.fn(),
@@ -53,6 +55,7 @@ const workspaceStoreState = {
 }
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
+  exists: existsMock,
   remove: removeMock,
 }))
 
@@ -119,6 +122,7 @@ describe('gameManager 游戏管理', () => {
     dbGamesGetMock.mockReset()
     dbGamesUpdateMock.mockReset()
     deleteFileMock.mockReset()
+    existsMock.mockReset()
     gameCmdsGetGameConfigMock.mockReset()
     gameCmdsSetGameConfigMock.mockReset()
     gameCoverPathMock.mockReset()
@@ -135,6 +139,7 @@ describe('gameManager 游戏管理', () => {
     validateDirectoryStructureMock.mockReset()
     useResourceStoreMock.mockReturnValue(resourceStoreMock)
     useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+    existsMock.mockResolvedValue(false)
   })
 
   afterEach(() => {
@@ -179,6 +184,7 @@ describe('gameManager 游戏管理', () => {
 
   it('createGame 在注册后失败时会回滚占位记录、进度和目标目录', async () => {
     dbGamesAddMock.mockResolvedValue('game-1')
+    existsMock.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
     copyDirectoryWithProgressMock.mockResolvedValue(undefined)
     gameCmdsSetGameConfigMock.mockRejectedValue(new Error('config failed'))
 
@@ -187,6 +193,18 @@ describe('gameManager 游戏管理', () => {
     expect(resourceStoreMock.finishProgress).toHaveBeenCalledWith('game-1')
     expect(dbGamesDeleteMock).toHaveBeenCalledWith('game-1')
     expect(deleteFileMock).toHaveBeenCalledWith('/games/demo', true)
+    expect(dbGamesUpdateMock).not.toHaveBeenCalled()
+  })
+
+  it('createGame 在目标目录已存在且复制失败时不会删除既有目录', async () => {
+    dbGamesAddMock.mockResolvedValue('game-1')
+    existsMock.mockResolvedValue(true)
+    copyDirectoryWithProgressMock.mockRejectedValue(new Error('copy failed'))
+
+    await expect(gameManager.createGame('Demo Game', '/games/demo', '/engines/base')).rejects.toThrow('copy failed')
+
+    expect(dbGamesDeleteMock).toHaveBeenCalledWith('game-1')
+    expect(deleteFileMock).not.toHaveBeenCalled()
     expect(dbGamesUpdateMock).not.toHaveBeenCalled()
   })
 

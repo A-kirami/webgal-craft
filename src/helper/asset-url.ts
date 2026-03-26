@@ -28,7 +28,7 @@ function parsePath(input: string): ResolvedPath {
   const windowsDriveMatch = normalizedPath.match(/^([A-Za-z]:)(?:\/(.*))?$/)
   if (windowsDriveMatch) {
     return {
-      root: `${windowsDriveMatch[1]}/`,
+      root: `${windowsDriveMatch[1].toUpperCase()}/`,
       segments: windowsDriveMatch[2]?.split('/').filter(Boolean) ?? [],
     }
   }

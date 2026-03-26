@@ -1,5 +1,5 @@
 import { join } from '@tauri-apps/api/path'
-import { readTextFile } from '@tauri-apps/plugin-fs'
+import { exists, readTextFile } from '@tauri-apps/plugin-fs'
 import sanitize from 'sanitize-filename'
 
 import { fsCmds } from '~/commands/fs'
@@ -81,11 +81,11 @@ async function resolveInstalledEnginePath(engineSavePath: string, engineName: st
 async function installEngine(enginePath: string): Promise<void> {
   const resourceStore = useResourceStore()
   const storageSettingsStore = useStorageSettingsStore()
-  let hasStartedFilesystemMutation = false
 
   const metadata = await getEngineMetadata(enginePath)
   const engineName = metadata.name
   const targetPath = await resolveInstalledEnginePath(storageSettingsStore.engineSavePath, engineName)
+  const targetExisted = await exists(targetPath)
   const targetMetadata = {
     ...metadata,
     icon: await engineIconPath(targetPath),
@@ -100,7 +100,6 @@ async function installEngine(enginePath: string): Promise<void> {
   // 2. 再复制文件
   logger.info(`[引擎 ${engineName}] 复制引擎文件: ${enginePath} 到 ${targetPath}`)
   try {
-    hasStartedFilesystemMutation = true
     await fsCmds.copyDirectoryWithProgress(enginePath, targetPath, (progress) => {
       resourceStore.updateProgress(id, progress)
     })
@@ -119,7 +118,8 @@ async function installEngine(enginePath: string): Promise<void> {
       logger.error(`[引擎 ${engineName}] 回滚数据库记录失败: ${rollbackError}`)
     }
 
-    if (hasStartedFilesystemMutation) {
+    // 仅清理本次安装创建出来的目标目录，避免误删原本已存在的内容。
+    if (!targetExisted && await exists(targetPath)) {
       try {
         await fsCmds.deleteFile(targetPath, true)
       } catch (cleanupError) {

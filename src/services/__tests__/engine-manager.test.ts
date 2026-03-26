@@ -11,6 +11,7 @@ const {
   deleteFileMock,
   engineIconPathMock,
   engineManifestPathMock,
+  existsMock,
   joinMock,
   loggerInfoMock,
   readTextFileMock,
@@ -27,6 +28,7 @@ const {
   deleteFileMock: vi.fn(),
   engineIconPathMock: vi.fn(),
   engineManifestPathMock: vi.fn(),
+  existsMock: vi.fn(),
   joinMock: vi.fn(async (...parts: string[]) => parts.join('/').replaceAll('//', '/')),
   loggerInfoMock: vi.fn(),
   readTextFileMock: vi.fn(),
@@ -49,6 +51,7 @@ vi.mock('@tauri-apps/api/path', () => ({
 }))
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
+  exists: existsMock,
   readTextFile: readTextFileMock,
   remove: removeMock,
 }))
@@ -101,6 +104,7 @@ describe('engineManager 引擎管理', () => {
     deleteFileMock.mockReset()
     engineIconPathMock.mockReset()
     engineManifestPathMock.mockReset()
+    existsMock.mockReset()
     joinMock.mockClear()
     loggerInfoMock.mockReset()
     readTextFileMock.mockReset()
@@ -112,6 +116,7 @@ describe('engineManager 引擎管理', () => {
     useStorageSettingsStoreMock.mockReset()
     useResourceStoreMock.mockReturnValue(resourceStoreMock)
     useStorageSettingsStoreMock.mockReturnValue(storageSettingsStoreState)
+    existsMock.mockResolvedValue(false)
   })
 
   it('getEngineMetadata 会读取 manifest 并组合图标路径', async () => {
@@ -167,6 +172,7 @@ describe('engineManager 引擎管理', () => {
       description: 'Visual novel engine',
     }))
     dbEnginesAddMock.mockResolvedValue('engine-1')
+    existsMock.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
     copyDirectoryWithProgressMock.mockResolvedValue(undefined)
     dbEnginesUpdateMock.mockRejectedValue(new Error('update failed'))
 
@@ -175,6 +181,23 @@ describe('engineManager 引擎管理', () => {
     expect(resourceStoreMock.finishProgress).toHaveBeenCalledWith('engine-1')
     expect(dbEnginesDeleteMock).toHaveBeenCalledWith('engine-1')
     expect(deleteFileMock).toHaveBeenCalledWith('/engines/WebGAL', true)
+  })
+
+  it('installEngine 在目标目录已存在且复制失败时不会删除既有目录', async () => {
+    engineIconPathMock.mockImplementation(async (path: string) => `${path}/icons/favicon.ico`)
+    engineManifestPathMock.mockResolvedValue('/source/manifest.json')
+    readTextFileMock.mockResolvedValue(JSON.stringify({
+      name: 'WebGAL',
+      description: 'Visual novel engine',
+    }))
+    dbEnginesAddMock.mockResolvedValue('engine-1')
+    existsMock.mockResolvedValue(true)
+    copyDirectoryWithProgressMock.mockRejectedValue(new Error('copy failed'))
+
+    await expect(engineManager.installEngine('/source')).rejects.toThrow('copy failed')
+
+    expect(dbEnginesDeleteMock).toHaveBeenCalledWith('engine-1')
+    expect(deleteFileMock).not.toHaveBeenCalled()
   })
 
   it('installEngine 遇到非法引擎名称时会拒绝安装', async () => {
