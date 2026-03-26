@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h, reactive, ref } from 'vue'
+import { reactive, ref } from 'vue'
 
 import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 import { createTestEngine } from '~/__tests__/factories'
@@ -81,21 +81,7 @@ const globalStubs = {
   ContextMenuItem: createBrowserClickStub('StubContextMenuItem'),
   ContextMenuTrigger: createBrowserContainerStub('StubContextMenuTrigger'),
   Progress: createBrowserContainerStub('StubProgress'),
-  Thumbnail: defineComponent({
-    name: 'StubThumbnail',
-    props: {
-      alt: {
-        type: String,
-        required: false,
-      },
-    },
-    setup(props, { attrs }) {
-      return () => h('img', {
-        ...attrs,
-        alt: props.alt,
-      })
-    },
-  }),
+  Thumbnail: createBrowserContainerStub('StubThumbnail', 'img'),
   Tooltip: createBrowserContainerStub('StubTooltip'),
   TooltipContent: createBrowserContainerStub('StubTooltipContent'),
   TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),

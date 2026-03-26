@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { computed, defineComponent, h, reactive } from 'vue'
 
-import { renderInBrowser } from '~/__tests__/browser-render'
+import { createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 
 import VisualEditorScene from './VisualEditorScene.vue'
 
@@ -43,21 +43,7 @@ vi.mock('~/composables/useVisualEditorSceneRuntime', () => ({
 }))
 
 const globalStubs = {
-  ScrollArea: defineComponent({
-    name: 'StubScrollArea',
-    props: {
-      style: {
-        type: Object,
-        required: false,
-      },
-    },
-    setup(props, { slots }) {
-      return () => h('div', {
-        'data-testid': 'scroll-area',
-        'style': props.style,
-      }, slots.default?.())
-    },
-  }),
+  ScrollArea: createBrowserContainerStub('StubScrollArea'),
   VisualEditorStatementCard: defineComponent({
     name: 'StubVisualEditorStatementCard',
     props: {

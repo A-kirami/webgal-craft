@@ -1,42 +1,22 @@
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
-import { renderInBrowser } from '~/__tests__/browser-render'
+import {
+  createBrowserClickStub,
+  createBrowserContainerStub,
+  createBrowserTextStub,
+  renderInBrowser,
+} from '~/__tests__/browser-render'
 
 import StatementAnimationEditorPanel from './StatementAnimationEditorPanel.vue'
 
 import type { AnimationFrame } from '~/types/stage'
 
 const globalStubs = {
-  EffectDraftForm: defineComponent({
-    name: 'StubEffectDraftForm',
-    setup() {
-      return () => h('div', 'Effect Draft Form')
-    },
-  }),
-  AnimationTimeline: defineComponent({
-    name: 'StubAnimationTimeline',
-    setup() {
-      return () => h('div', 'Animation Timeline')
-    },
-  }),
-  Badge: defineComponent({
-    name: 'StubBadge',
-    setup(_, { slots }) {
-      return () => h('span', slots.default?.())
-    },
-  }),
-  Button: defineComponent({
-    name: 'StubButton',
-    emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
-      return () => h('button', {
-        ...attrs,
-        type: 'button',
-        onClick: (event: MouseEvent) => emit('click', event),
-      }, slots.default?.())
-    },
-  }),
+  EffectDraftForm: createBrowserTextStub('StubEffectDraftForm', 'Effect Draft Form'),
+  AnimationTimeline: createBrowserTextStub('StubAnimationTimeline', 'Animation Timeline'),
+  Badge: createBrowserContainerStub('StubBadge', 'span'),
+  Button: createBrowserClickStub('StubButton'),
 }
 
 function createAnimationEditorPaneStub() {

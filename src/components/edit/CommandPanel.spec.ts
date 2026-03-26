@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h } from 'vue'
 
-import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
+import {
+  createBrowserActionStub,
+  createBrowserClickStub,
+  createBrowserContainerStub,
+  renderInBrowser,
+} from '~/__tests__/browser-render'
 import { useCommandPanelStore } from '~/stores/command-panel'
 
 const { modalOpenMock, useModalStoreMock } = vi.hoisted(() => ({
@@ -18,25 +22,16 @@ import CommandPanel from './CommandPanel.vue'
 
 const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
-  CommandPanelCard: defineComponent({
-    name: 'StubCommandPanelCard',
+  CommandPanelCard: createBrowserActionStub('StubCommandPanelCard', {
+    eventName: 'click',
+    namedSlots: ['actions', 'tooltip'],
     props: {
       title: {
         type: String,
         required: true,
       },
     },
-    emits: ['click'],
-    setup(props, { emit, slots }) {
-      return () => h('div', [
-        h('button', {
-          type: 'button',
-          onClick: () => emit('click'),
-        }, props.title),
-        h('div', slots.actions?.()),
-        h('div', slots.tooltip?.()),
-      ])
-    },
+    text: props => String(props.title),
   }),
   Popover: createBrowserContainerStub('StubPopover'),
   PopoverContent: createBrowserContainerStub('StubPopoverContent'),

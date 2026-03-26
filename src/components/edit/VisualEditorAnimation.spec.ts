@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, reactive } from 'vue'
+import { reactive } from 'vue'
 
-import { renderInBrowser } from '~/__tests__/browser-render'
+import { createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 
 const { useEditorStoreMock } = vi.hoisted(() => ({
   useEditorStoreMock: vi.fn(),
@@ -19,12 +19,7 @@ vi.mock('~/stores/editor', () => ({
 import VisualEditorAnimation from './VisualEditorAnimation.vue'
 
 const globalStubs = {
-  AnimationEditorPane: defineComponent({
-    name: 'StubAnimationEditorPane',
-    setup() {
-      return () => h('div', 'Animation Editor Pane')
-    },
-  }),
+  AnimationEditorPane: createBrowserContainerStub('StubAnimationEditorPane'),
 }
 
 function createAnimationState(path: string) {

@@ -23,21 +23,7 @@ const globalStubs = {
   ContextMenuItem: createBrowserClickStub('StubContextMenuItem'),
   ContextMenuTrigger: createBrowserContainerStub('StubContextMenuTrigger'),
   Progress: createBrowserContainerStub('StubProgress'),
-  Thumbnail: defineComponent({
-    name: 'StubThumbnail',
-    props: {
-      alt: {
-        type: String,
-        required: false,
-      },
-    },
-    setup(props, { attrs }) {
-      return () => h('img', {
-        ...attrs,
-        alt: props.alt,
-      })
-    },
-  }),
+  Thumbnail: createBrowserContainerStub('StubThumbnail', 'img'),
   Tooltip: createBrowserContainerStub('StubTooltip'),
   TooltipContent: createBrowserContainerStub('StubTooltipContent'),
   TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),

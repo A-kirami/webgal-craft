@@ -1,22 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
 
-import { renderInBrowser } from '~/__tests__/browser-render'
+import { createBrowserClickStub, renderInBrowser } from '~/__tests__/browser-render'
 
 import FilePickerRecentHistory from './FilePickerRecentHistory.vue'
 
 const globalStubs = {
-  Button: defineComponent({
-    name: 'StubButton',
-    emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
-      return () => h('button', {
-        ...attrs,
-        type: 'button',
-        onClick: (event: MouseEvent) => emit('click', event),
-      }, slots.default?.())
-    },
-  }),
+  Button: createBrowserClickStub('StubButton'),
 }
 
 describe('FilePickerRecentHistory', () => {

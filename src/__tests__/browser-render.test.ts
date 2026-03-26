@@ -43,6 +43,21 @@ describe('renderInBrowser', () => {
     expect(renderOptions?.global?.plugins).toEqual([localizedI18n])
   })
 
+  it('global.plugins 以 tuple 形式提供测试 i18n 时不会重复注入默认 i18n', () => {
+    const localizedI18n = createBrowserLocalizedI18n()
+    const localizedI18nTuple: [typeof localizedI18n] = [localizedI18n]
+
+    renderInBrowser({} as never, {
+      global: {
+        plugins: [localizedI18nTuple],
+      },
+    })
+
+    const renderOptions = getRenderedOptions()
+    expect(renderOptions?.global?.plugins).toHaveLength(1)
+    expect(renderOptions?.global?.plugins?.[0]).toBe(localizedI18nTuple)
+  })
+
   it('未显式提供测试 i18n 时会注入默认 browser i18n', () => {
     renderInBrowser({} as never)
 

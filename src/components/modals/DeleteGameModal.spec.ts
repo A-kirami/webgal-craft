@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h } from 'vue'
 
-import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
+import {
+  createBrowserCheckboxStub,
+  createBrowserClickStub,
+  createBrowserContainerStub,
+  renderInBrowser,
+} from '~/__tests__/browser-render'
 import { createTestGame } from '~/__tests__/factories'
 
 import DeleteGameModal from './DeleteGameModal.vue'
@@ -74,32 +78,8 @@ const globalStubs = {
   'AlertDialogFooter': createBrowserContainerStub('StubAlertDialogFooter'),
   'AlertDialogHeader': createBrowserContainerStub('StubAlertDialogHeader'),
   'AlertDialogTitle': createBrowserContainerStub('StubAlertDialogTitle', 'h2'),
-  'Checkbox': defineComponent({
-    name: 'StubCheckbox',
-    props: {
-      id: {
-        type: String,
-        required: false,
-      },
-      modelValue: Boolean,
-    },
-    emits: ['update:modelValue'],
-    setup(props, { attrs, emit }) {
-      return () => h('input', {
-        ...attrs,
-        checked: props.modelValue,
-        id: props.id,
-        type: 'checkbox',
-        onChange: (event: Event) => emit('update:modelValue', (event.target as HTMLInputElement).checked),
-      })
-    },
-  }),
-  'i18n-t': defineComponent({
-    name: 'MockI18nT',
-    setup(_, { slots }) {
-      return () => h('span', slots.default?.())
-    },
-  }),
+  'Checkbox': createBrowserCheckboxStub('StubCheckbox'),
+  'i18n-t': createBrowserContainerStub('MockI18nT', 'span'),
 }
 
 function renderDeleteGameModal(updateOpen = vi.fn()) {

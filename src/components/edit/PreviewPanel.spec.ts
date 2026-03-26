@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h, reactive, ref } from 'vue'
+import { reactive, ref } from 'vue'
 
 import { createBrowserLiteI18n } from '~/__tests__/browser'
-import { renderInBrowser } from '~/__tests__/browser-render'
+import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   copyMock,
@@ -61,41 +61,11 @@ vi.mock('notivue', () => ({
 import PreviewPanel from './PreviewPanel.vue'
 
 const globalStubs = {
-  Button: defineComponent({
-    name: 'StubButton',
-    emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
-      return () => h('button', {
-        ...attrs,
-        type: 'button',
-        onClick: (event: MouseEvent) => emit('click', event),
-      }, slots.default?.())
-    },
-  }),
-  Tooltip: defineComponent({
-    name: 'StubTooltip',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  TooltipContent: defineComponent({
-    name: 'StubTooltipContent',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  TooltipProvider: defineComponent({
-    name: 'StubTooltipProvider',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  TooltipTrigger: defineComponent({
-    name: 'StubTooltipTrigger',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
+  Button: createBrowserClickStub('StubButton'),
+  Tooltip: createBrowserContainerStub('StubTooltip'),
+  TooltipContent: createBrowserContainerStub('StubTooltipContent'),
+  TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
+  TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
 }
 
 function createPreviewPanelLiteI18n() {

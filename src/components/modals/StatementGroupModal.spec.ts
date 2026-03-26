@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h } from 'vue'
 
-import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
+import {
+  createBrowserClickStub,
+  createBrowserContainerStub,
+  createBrowserInputStub,
+  createBrowserTextStub,
+  renderInBrowser,
+} from '~/__tests__/browser-render'
 
 const {
   useCommandPanelStoreMock,
@@ -91,48 +96,11 @@ const globalStubs = {
   DialogHeader: createBrowserContainerStub('StubDialogHeader', 'header'),
   DialogScrollContent: createBrowserContainerStub('StubDialogScrollContent'),
   DialogTitle: createBrowserContainerStub('StubDialogTitle', 'h2'),
-  EffectEditorSubDialog: defineComponent({
-    name: 'StubEffectEditorSubDialog',
-    setup() {
-      return () => h('div', 'Effect Editor Sub Dialog')
-    },
-  }),
-  Input: defineComponent({
-    name: 'StubInput',
-    props: {
-      modelValue: {
-        default: '',
-        type: String,
-        required: false,
-      },
-      placeholder: {
-        default: '',
-        type: String,
-        required: false,
-      },
-    },
-    emits: ['update:modelValue'],
-    setup(props, { emit }) {
-      return () => h('input', {
-        placeholder: props.placeholder,
-        value: props.modelValue,
-        onInput: (event: Event) => emit('update:modelValue', (event.target as HTMLInputElement).value),
-      })
-    },
-  }),
+  EffectEditorSubDialog: createBrowserTextStub('StubEffectEditorSubDialog', 'Effect Editor Sub Dialog'),
+  Input: createBrowserInputStub('StubInput'),
   ScrollArea: createBrowserContainerStub('StubScrollArea'),
-  StatementAnimationSubDialog: defineComponent({
-    name: 'StubStatementAnimationSubDialog',
-    setup() {
-      return () => h('div', 'Statement Animation Sub Dialog')
-    },
-  }),
-  VisualEditorStatementCard: defineComponent({
-    name: 'StubVisualEditorStatementCard',
-    setup() {
-      return () => h('div', 'Visual Editor Statement Card')
-    },
-  }),
+  StatementAnimationSubDialog: createBrowserTextStub('StubStatementAnimationSubDialog', 'Statement Animation Sub Dialog'),
+  VisualEditorStatementCard: createBrowserTextStub('StubVisualEditorStatementCard', 'Visual Editor Statement Card'),
 }
 
 describe('StatementGroupModal', () => {

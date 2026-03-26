@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
-import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
+import {
+  createBrowserClickStub,
+  createBrowserContainerStub,
+  createBrowserTextStub,
+  renderInBrowser,
+} from '~/__tests__/browser-render'
 
 import StatementAnimationSubDialog from './StatementAnimationSubDialog.vue'
 
@@ -13,12 +18,7 @@ const globalStubs = {
   DialogHeader: createBrowserContainerStub('StubDialogHeader', 'header'),
   DialogScrollContent: createBrowserContainerStub('StubDialogScrollContent'),
   DialogTitle: createBrowserContainerStub('StubDialogTitle', 'h2'),
-  StatementAnimationEditorPanel: defineComponent({
-    name: 'StubStatementAnimationEditorPanel',
-    setup() {
-      return () => h('div', 'Statement Animation Editor Panel')
-    },
-  }),
+  StatementAnimationEditorPanel: createBrowserTextStub('StubStatementAnimationEditorPanel', 'Statement Animation Editor Panel'),
 }
 
 function createDialogScrollContentStub() {

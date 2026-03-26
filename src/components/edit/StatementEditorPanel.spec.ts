@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { computed, defineComponent, h, reactive } from 'vue'
 
-import { renderInBrowser } from '~/__tests__/browser-render'
+import {
+  createBrowserClickStub,
+  createBrowserContainerStub,
+  createBrowserInputStub,
+  createBrowserTextStub,
+  renderInBrowser,
+} from '~/__tests__/browser-render'
 
 const {
   handleCommentChangeMock,
@@ -160,35 +166,10 @@ function createStatementEntry(id: number, rawText: string): StatementEntry {
 }
 
 const globalStubs = {
-  Button: defineComponent({
-    name: 'StubButton',
-    emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
-      return () => h('button', {
-        ...attrs,
-        type: 'button',
-        onClick: (event: MouseEvent) => emit('click', event),
-      }, slots.default?.())
-    },
-  }),
-  Collapsible: defineComponent({
-    name: 'StubCollapsible',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  CollapsibleContent: defineComponent({
-    name: 'StubCollapsibleContent',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  CollapsibleTrigger: defineComponent({
-    name: 'StubCollapsibleTrigger',
-    setup(_, { attrs, slots }) {
-      return () => h('button', attrs, slots.default?.())
-    },
-  }),
+  Button: createBrowserClickStub('StubButton'),
+  Collapsible: createBrowserContainerStub('StubCollapsible'),
+  CollapsibleContent: createBrowserContainerStub('StubCollapsibleContent'),
+  CollapsibleTrigger: createBrowserContainerStub('StubCollapsibleTrigger', 'button'),
   FormItem: defineComponent({
     name: 'StubFormItem',
     props: {
@@ -204,75 +185,12 @@ const globalStubs = {
       ])
     },
   }),
-  InputGroup: defineComponent({
-    name: 'StubInputGroup',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  InputGroupAddon: defineComponent({
-    name: 'StubInputGroupAddon',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  InputGroupButton: defineComponent({
-    name: 'StubInputGroupButton',
-    emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
-      return () => h('button', {
-        ...attrs,
-        type: 'button',
-        onClick: (event: MouseEvent) => emit('click', event),
-      }, slots.default?.())
-    },
-  }),
-  InputGroupInput: defineComponent({
-    name: 'StubInputGroupInput',
-    props: {
-      disabled: Boolean,
-      id: {
-        type: String,
-        required: false,
-      },
-      modelValue: {
-        type: String,
-        required: false,
-      },
-      placeholder: {
-        type: String,
-        required: false,
-      },
-    },
-    emits: ['update:modelValue'],
-    setup(props, { emit }) {
-      return () => h('input', {
-        disabled: props.disabled,
-        id: props.id,
-        placeholder: props.placeholder,
-        value: props.modelValue,
-        onInput: (event: Event) => emit('update:modelValue', (event.target as HTMLInputElement).value),
-      })
-    },
-  }),
-  Label: defineComponent({
-    name: 'StubLabel',
-    props: {
-      for: {
-        type: String,
-        required: false,
-      },
-    },
-    setup(props, { slots }) {
-      return () => h('label', { for: props.for }, slots.default?.())
-    },
-  }),
-  ParamRenderer: defineComponent({
-    name: 'StubParamRenderer',
-    setup() {
-      return () => h('div', 'ParamRenderer')
-    },
-  }),
+  InputGroup: createBrowserContainerStub('StubInputGroup'),
+  InputGroupAddon: createBrowserContainerStub('StubInputGroupAddon'),
+  InputGroupButton: createBrowserClickStub('StubInputGroupButton'),
+  InputGroupInput: createBrowserInputStub('StubInputGroupInput'),
+  Label: createBrowserContainerStub('StubLabel', 'label'),
+  ParamRenderer: createBrowserTextStub('StubParamRenderer', 'ParamRenderer'),
   ScrollArea: defineComponent({
     name: 'StubScrollArea',
     setup(_, { attrs, slots }) {
@@ -283,21 +201,7 @@ const globalStubs = {
       }, slots.default?.())
     },
   }),
-  StatementAssetPreview: defineComponent({
-    name: 'StubStatementAssetPreview',
-    props: {
-      src: {
-        type: String,
-        required: true,
-      },
-    },
-    setup(props) {
-      return () => h('img', {
-        alt: 'asset-preview',
-        src: props.src,
-      })
-    },
-  }),
+  StatementAssetPreview: createBrowserContainerStub('StubStatementAssetPreview', 'img'),
   StatementCommandFieldsSection: defineComponent({
     name: 'StubStatementCommandFieldsSection',
     emits: ['openAnimationEditor', 'openEffectEditor'],
@@ -315,38 +219,8 @@ const globalStubs = {
       ])
     },
   }),
-  StatementSpecialContentEditor: defineComponent({
-    name: 'StubStatementSpecialContentEditor',
-    setup() {
-      return () => h('div', 'SpecialContentEditor')
-    },
-  }),
-  Textarea: defineComponent({
-    name: 'StubTextarea',
-    props: {
-      id: {
-        type: String,
-        required: false,
-      },
-      modelValue: {
-        type: String,
-        required: false,
-      },
-      placeholder: {
-        type: String,
-        required: false,
-      },
-    },
-    emits: ['keydown.enter', 'update:modelValue'],
-    setup(props, { emit }) {
-      return () => h('textarea', {
-        id: props.id,
-        placeholder: props.placeholder,
-        value: props.modelValue,
-        onInput: (event: Event) => emit('update:modelValue', (event.target as HTMLTextAreaElement).value),
-      })
-    },
-  }),
+  StatementSpecialContentEditor: createBrowserTextStub('StubStatementSpecialContentEditor', 'SpecialContentEditor'),
+  Textarea: createBrowserInputStub('StubTextarea', 'textarea'),
 }
 
 function renderStatementEditorPanel(props: ComponentProps<typeof StatementEditorPanel>) {

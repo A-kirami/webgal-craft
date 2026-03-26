@@ -1,10 +1,9 @@
 import { createPinia } from 'pinia'
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h } from 'vue'
 
 import { createBrowserConsoleMonitor, createBrowserLocalizedI18n } from '~/__tests__/browser'
-import { renderInBrowser } from '~/__tests__/browser-render'
+import { createBrowserValueStub, renderInBrowser } from '~/__tests__/browser-render'
 import { EFFECT_CATEGORIES } from '~/helper/effect-editor-config'
 
 vi.mock('~/stores/workspace', () => ({
@@ -15,45 +14,22 @@ vi.mock('~/stores/workspace', () => ({
 
 import EffectDraftForm from './EffectDraftForm.vue'
 
-function createPassthroughStub(tag: string) {
-  return defineComponent({
-    name: `Stub${tag}`,
-    props: {
-      id: {
-        type: String,
-        default: undefined,
-      },
-      modelValue: {
-        type: [Object, Array, Number, String],
-        default: undefined,
-      },
-    },
-    setup(props, { attrs, slots }) {
-      return () => h(tag, {
-        ...attrs,
-        id: props.id,
-        value: Array.isArray(props.modelValue) ? String(props.modelValue[0] ?? '') : props.modelValue,
-      }, slots.default?.())
-    },
-  })
-}
-
 const globalStubs = {
-  Button: createPassthroughStub('button'),
-  ColorPicker: createPassthroughStub('div'),
-  Input: createPassthroughStub('input'),
-  InputGroup: createPassthroughStub('div'),
-  InputGroupAddon: createPassthroughStub('span'),
-  InputGroupInput: createPassthroughStub('input'),
-  Label: createPassthroughStub('label'),
-  ScrollArea: createPassthroughStub('div'),
-  SegmentedControl: createPassthroughStub('div'),
-  Select: createPassthroughStub('div'),
-  SelectContent: createPassthroughStub('div'),
-  SelectItem: createPassthroughStub('div'),
-  SelectTrigger: createPassthroughStub('button'),
-  SelectValue: createPassthroughStub('span'),
-  Slider: createPassthroughStub('div'),
+  Button: createBrowserValueStub('StubButton', 'button'),
+  ColorPicker: createBrowserValueStub('StubColorPicker'),
+  Input: createBrowserValueStub('StubInput', 'input'),
+  InputGroup: createBrowserValueStub('StubInputGroup'),
+  InputGroupAddon: createBrowserValueStub('StubInputGroupAddon', 'span'),
+  InputGroupInput: createBrowserValueStub('StubInputGroupInput', 'input'),
+  Label: createBrowserValueStub('StubLabel', 'label'),
+  ScrollArea: createBrowserValueStub('StubScrollArea'),
+  SegmentedControl: createBrowserValueStub('StubSegmentedControl'),
+  Select: createBrowserValueStub('StubSelect'),
+  SelectContent: createBrowserValueStub('StubSelectContent'),
+  SelectItem: createBrowserValueStub('StubSelectItem'),
+  SelectTrigger: createBrowserValueStub('StubSelectTrigger', 'button'),
+  SelectValue: createBrowserValueStub('StubSelectValue', 'span'),
+  Slider: createBrowserValueStub('StubSlider'),
 }
 
 const { expectNoConsoleMessage } = createBrowserConsoleMonitor()

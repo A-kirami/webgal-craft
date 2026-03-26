@@ -1,9 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
+import {
+  createBrowserClickStub,
+  createBrowserContainerStub,
+  createBrowserInputStub,
+  createBrowserTextStub,
+  renderInBrowser,
+} from '~/__tests__/browser-render'
 
 const {
   buildSingleStatementMock,
@@ -84,47 +89,10 @@ const globalStubs = {
   DialogHeader: createBrowserContainerStub('StubDialogHeader', 'header'),
   DialogScrollContent: createBrowserContainerStub('StubDialogScrollContent'),
   DialogTitle: createBrowserContainerStub('StubDialogTitle', 'h2'),
-  EffectEditorSubDialog: defineComponent({
-    name: 'StubEffectEditorSubDialog',
-    setup() {
-      return () => h('div', 'Effect Editor Sub Dialog')
-    },
-  }),
-  Input: defineComponent({
-    name: 'StubInput',
-    props: {
-      modelValue: {
-        default: '',
-        type: String,
-        required: false,
-      },
-      placeholder: {
-        default: '',
-        type: String,
-        required: false,
-      },
-    },
-    emits: ['update:modelValue'],
-    setup(props, { emit }) {
-      return () => h('input', {
-        placeholder: props.placeholder,
-        value: props.modelValue,
-        onInput: (event: Event) => emit('update:modelValue', (event.target as HTMLInputElement).value),
-      })
-    },
-  }),
-  StatementAnimationSubDialog: defineComponent({
-    name: 'StubStatementAnimationSubDialog',
-    setup() {
-      return () => h('div', 'Statement Animation Sub Dialog')
-    },
-  }),
-  StatementEditorPanel: defineComponent({
-    name: 'StubStatementEditorPanel',
-    setup() {
-      return () => h('div', 'Statement Editor Panel')
-    },
-  }),
+  EffectEditorSubDialog: createBrowserTextStub('StubEffectEditorSubDialog', 'Effect Editor Sub Dialog'),
+  Input: createBrowserInputStub('StubInput'),
+  StatementAnimationSubDialog: createBrowserTextStub('StubStatementAnimationSubDialog', 'Statement Animation Sub Dialog'),
+  StatementEditorPanel: createBrowserTextStub('StubStatementEditorPanel', 'Statement Editor Panel'),
 }
 
 describe('CommandDefaultsModal', () => {
