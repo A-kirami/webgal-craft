@@ -1,0 +1,67 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "integration/**"
+      - "package.json"
+      - "bun.lock"
+      - "vite.config.ts"
+      - "tsconfig*.json"
+      - ".github/workflows/test.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "integration/**"
+      - "package.json"
+      - "bun.lock"
+      - "vite.config.ts"
+      - "tsconfig*.json"
+      - ".github/workflows/test.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: unit
+            command: bun test:unit
+            needs-playwright: false
+          - name: browser
+            command: bun test:browser
+            needs-playwright: true
+          - name: integration
+            command: bun test:integration
+            needs-playwright: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Install Playwright Chromium
+        if: ${{ matrix.needs-playwright }}
+        run: bunx playwright install --with-deps chromium
+
+      - name: Run test
+        run: ${{ matrix.command }}
