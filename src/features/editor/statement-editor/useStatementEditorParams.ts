@@ -176,6 +176,7 @@ export function useStatementEditorParams(opts: UseStatementEditorParamsOptions) 
     const nextArgs = [...updatedSentence.args]
     removeHiddenArgs(nextArgs, argField, normalizedValue)
     opts.emitUpdate({
+      commandRaw: updatedSentence.commandRaw,
       content: updatedSentence.content,
       args: nextArgs,
     })

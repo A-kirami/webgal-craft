@@ -146,10 +146,10 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     emitUpdate,
   })
 
-  // ─── emitUpdate（依赖 say 的 isNoColonStatement / narrationMode）───
+  // ─── emitUpdate：StatementEditor 的统一句子更新入口 ───
   function emitUpdate(patch: Partial<ISentence>) {
-    // 当有类型化节点时，用 serializeCommandNode 重建 base，
-    // 确保 commandRaw 已转换为简写形式（如 say → 角色名/空/null）
+    // 先从当前节点重建一份规范化句子，再叠加局部 patch，
+    // 让内容编辑、参数编辑和说话人编辑共享同一套领域序列化规则。
     const base = commandNode.value
       ? serializeCommandNode(commandNode.value)
       : (parsed.value ?? createEmptySentence())
@@ -168,7 +168,6 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     commandNode,
     contentField,
     argFields,
-    isNoColonSay: say.isNoColonStatement,
     emitUpdate,
   })
 

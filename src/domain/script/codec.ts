@@ -229,26 +229,32 @@ function serializeSayNode(node: SayCommandNode): ISentence {
   const isContinuation = !node.speaker && !node.clear && !isStandardForm
   // clear 仅在旁白简写形式（:内容;）中隐含，其他形式需显式写入 args
   const needsExplicitClear = node.clear && (!!node.speaker || isStandardForm)
+  const args = argBuilder()
+    .reserve('speaker')
+    .reserve('clear')
+    // 在内部 ISentence 往返中始终保留 speaker 标记，避免空内容简写被误判为续写。
+    .string('speaker', node.speaker || undefined)
+    .flag('clear', needsExplicitClear)
+    .string('fontSize', node.fontSize)
+    .string('vocal', node.vocal)
+    .number('volume', node.volume)
+    .positionFlag(node.figurePosition, FIGURE_POSITION_FLAGS)
+    .string('figureId', node.figureId)
+    .flag('next', node.next)
+    .flag('continue', node.continue)
+    .flag('concat', node.concat)
+    .flag('notend', node.notend)
+    .build(node.extraArgs)
+  const shouldFallbackToExplicitSay = isContinuation && node.text === '' && args.length === 0
+
   return {
     ...toSentenceBase(node),
-    commandRaw: isStandardForm ? 'say' : (isContinuation ? SAY_CONTINUATION_RAW : node.speaker),
+    // 空续写文本若写成裸 ';'，webgal-parser 会把它识别成 comment。
+    commandRaw: isStandardForm || shouldFallbackToExplicitSay
+      ? 'say'
+      : (isContinuation ? SAY_CONTINUATION_RAW : node.speaker),
     content: node.text,
-    args: argBuilder()
-      .reserve('speaker')
-      .reserve('clear')
-      // 在内部 ISentence 往返中始终保留 speaker 标记，避免空内容简写被误判为续写。
-      .string('speaker', node.speaker || undefined)
-      .flag('clear', needsExplicitClear)
-      .string('fontSize', node.fontSize)
-      .string('vocal', node.vocal)
-      .number('volume', node.volume)
-      .positionFlag(node.figurePosition, FIGURE_POSITION_FLAGS)
-      .string('figureId', node.figureId)
-      .flag('next', node.next)
-      .flag('continue', node.continue)
-      .flag('concat', node.concat)
-      .flag('notend', node.notend)
-      .build(node.extraArgs),
+    args,
   }
 }
 

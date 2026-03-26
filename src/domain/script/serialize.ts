@@ -33,6 +33,9 @@ export function serializeSentence(sentence: ISentence): string {
 
   // say 续写形式：commandRaw 为哨兵值时省略冒号前缀，直接输出内容文本。
   if (sentence.commandRaw === SAY_CONTINUATION_RAW) {
+    if (escapedContent === '' && argsText === '') {
+      return `say:${commentText}${statementSuffix}`
+    }
     return `${escapedContent}${argsText}${commentText}${statementSuffix}`
   }
 

@@ -13,7 +13,6 @@ export interface UseStatementEditorContentOptions {
   commandNode: ComputedRef<CommandNode | undefined>
   contentField: ComputedRef<EditorField | undefined>
   argFields: ComputedRef<ArgField[]>
-  isNoColonSay: ComputedRef<boolean>
   emitUpdate: (patch: Partial<ISentence>) => void
 }
 
@@ -79,14 +78,10 @@ export function useStatementEditorContent(options: UseStatementEditorContentOpti
           }
         }
       }
-      // 无冒号 say（续接对话）的 commandRaw 被 webgal-parser 误解为 speaker，
-      // 不能回写 commandRaw，由 emitUpdate 内部保护逻辑清空
       const patch: Partial<ISentence> = {
+        commandRaw: updatedSentence.commandRaw,
         content: updatedSentence.content,
         args: nextArgs,
-      }
-      if (!options.isNoColonSay.value) {
-        patch.commandRaw = updatedSentence.commandRaw
       }
       options.emitUpdate(patch)
       return

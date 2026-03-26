@@ -379,6 +379,17 @@ describe('useStatementEditor 行为', () => {
       expect(latest.rawText).toBe('再见;')
     })
 
+    it('接续对话（无冒号）：清空内容后不应退化为注释', () => {
+      const { editor, updates } = createHarness('世界，你好！;')
+
+      editor.content.handleChange('')
+
+      const latest = updates.at(-1)!
+      expect(latest.parsed.command).toBe(commandType.say)
+      expect(latest.parsed.commandRaw).toBe('say')
+      expect(latest.rawText).toBe('say:;')
+    })
+
     it('接续对话（无冒号，带参数）：编辑内容后不应回写 speaker 前缀', () => {
       const { editor, updates } = createHarness('xxxxxxxxx -concat -notend;')
 

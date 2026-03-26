@@ -73,4 +73,11 @@ describe('serializeSentence 序列化', () => {
       inlineComment: 'note',
     }))).toBe('continued text;note')
   })
+
+  it('空内容的 say 续写语句会回退到显式 say 形式', () => {
+    expect(serializeSentence(createSentence({
+      commandRaw: SAY_CONTINUATION_RAW,
+      content: '',
+    }))).toBe('say:;')
+  })
 })

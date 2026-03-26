@@ -96,6 +96,15 @@ describe('命令节点编解码', () => {
     expect(serialized.commandRaw).toBe(SAY_CONTINUATION_RAW)
   })
 
+  it('空内容且无参数的 say 不应序列化为续写哨兵值', () => {
+    const sentence = mustParse('say:;')
+    const node = parseCommandNode(sentence)
+    expect(node.type).toBe(commandType.say)
+    const serialized = serializeCommandNode(node)
+    expect(serialized.commandRaw).toBe('say')
+    expect(serialized.args).toEqual([])
+  })
+
   it('say -clear 序列化为旁白简写（移除 -clear）', () => {
     const sentence = mustParse('say:你好世界 -clear;')
     const node = parseCommandNode(sentence)

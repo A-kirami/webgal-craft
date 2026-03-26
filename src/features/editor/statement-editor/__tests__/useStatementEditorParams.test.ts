@@ -4,7 +4,10 @@ import '~/__tests__/mocks/tauri-fs'
 import '~/__tests__/mocks/modal-store'
 
 import { beforeEach, describe, expect, it } from 'vitest'
+import { computed, ref } from 'vue'
 
+import { mustParse } from '~/domain/script/__tests__/utils'
+import { parseCommandNode } from '~/domain/script/codec'
 import {
   createHarness,
   requireArgField,
@@ -13,7 +16,9 @@ import {
 } from '~/features/editor/__tests__/statement-editor-test-utils'
 import { CUSTOM_CONTENT } from '~/features/editor/command-registry/schema'
 import { registerDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
+import { useStatementEditorParams } from '~/features/editor/statement-editor/useStatementEditorParams'
 
+import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { ArgField } from '~/features/editor/command-registry/schema'
 
 describe('useStatementEditor 参数行为', () => {
@@ -84,5 +89,34 @@ describe('useStatementEditor 参数行为', () => {
     expect(updates.at(-1)?.parsed.args).toEqual([
       { key: 'enter', value: 'zoomIn' },
     ])
+  })
+
+  it('无冒号 say 清空最后一个参数时会直接回写规范化后的 commandRaw', () => {
+    const emittedPatches: Partial<ISentence>[] = []
+    const sentence = mustParse(' -concat;')
+    const concatField: ArgField = {
+      storageKey: 'concat',
+      field: {
+        key: 'concat',
+        type: 'switch',
+        label: 'concat',
+      },
+    }
+    const params = useStatementEditorParams({
+      parsed: computed(() => sentence),
+      commandNode: computed(() => parseCommandNode(sentence)),
+      argFields: computed(() => [concatField]),
+      fileMissingKeys: ref(new Set<string>()),
+      readEditableArgs: () => structuredClone(sentence.args),
+      emitUpdate: patch => emittedPatches.push(patch),
+    })
+
+    params.handleArgFieldChange(concatField, false)
+
+    expect(emittedPatches).toEqual([{
+      commandRaw: 'say',
+      content: '',
+      args: [],
+    }])
   })
 })
