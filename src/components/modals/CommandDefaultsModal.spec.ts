@@ -1,11 +1,9 @@
-/* eslint-disable vue/one-component-per-file */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   buildSingleStatementMock,
@@ -79,53 +77,13 @@ const animationDialogState = {
 }
 
 const globalStubs = {
-  Button: defineComponent({
-    name: 'StubButton',
-    emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
-      return () => h('button', {
-        ...attrs,
-        type: 'button',
-        onClick: (event: MouseEvent) => emit('click', event),
-      }, slots.default?.())
-    },
-  }),
-  Dialog: defineComponent({
-    name: 'StubDialog',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  DialogDescription: defineComponent({
-    name: 'StubDialogDescription',
-    setup(_, { slots }) {
-      return () => h('p', slots.default?.())
-    },
-  }),
-  DialogFooter: defineComponent({
-    name: 'StubDialogFooter',
-    setup(_, { slots }) {
-      return () => h('footer', slots.default?.())
-    },
-  }),
-  DialogHeader: defineComponent({
-    name: 'StubDialogHeader',
-    setup(_, { slots }) {
-      return () => h('header', slots.default?.())
-    },
-  }),
-  DialogScrollContent: defineComponent({
-    name: 'StubDialogScrollContent',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  DialogTitle: defineComponent({
-    name: 'StubDialogTitle',
-    setup(_, { slots }) {
-      return () => h('h2', slots.default?.())
-    },
-  }),
+  Button: createBrowserClickStub('StubButton'),
+  Dialog: createBrowserContainerStub('StubDialog'),
+  DialogDescription: createBrowserContainerStub('StubDialogDescription', 'p'),
+  DialogFooter: createBrowserContainerStub('StubDialogFooter', 'footer'),
+  DialogHeader: createBrowserContainerStub('StubDialogHeader', 'header'),
+  DialogScrollContent: createBrowserContainerStub('StubDialogScrollContent'),
+  DialogTitle: createBrowserContainerStub('StubDialogTitle', 'h2'),
   EffectEditorSubDialog: defineComponent({
     name: 'StubEffectEditorSubDialog',
     setup() {
@@ -200,13 +158,15 @@ describe('CommandDefaultsModal', () => {
   })
 
   it('在命令默认值弹窗中接入动画编辑器子对话框提供器', async () => {
-    render(CommandDefaultsModal, {
+    renderInBrowser(CommandDefaultsModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
       props: {
         open: true,
         type: commandType.setTempAnimation,
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

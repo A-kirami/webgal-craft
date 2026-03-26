@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h, reactive } from 'vue'
 
 import { createBrowserConsoleMonitor, createBrowserLocalizedI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   useEditorStoreMock,
@@ -154,7 +154,7 @@ describe('FileEditor', () => {
       open: vi.fn(),
     })
 
-    render(FileEditor, {
+    renderInBrowser(FileEditor, {
       global: {
         plugins: [createFileEditorLocalizedI18n()],
         stubs: globalStubs,

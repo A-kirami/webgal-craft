@@ -25,7 +25,7 @@ vi.mock('~/services/game-manager', () => ({
   },
 }))
 
-describe('configManager', () => {
+describe('configManager 配置管理', () => {
   beforeEach(() => {
     getGameConfigMock.mockReset()
     setGameConfigMock.mockReset()

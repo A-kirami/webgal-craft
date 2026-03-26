@@ -37,7 +37,7 @@ function createSelection(
   } as monaco.Selection
 }
 
-describe('normalizeEditorViewState', () => {
+describe('normalizeEditorViewState 视图状态归一化', () => {
   it('使用当前编辑器选区作为持久化光标状态', () => {
     const viewState = createViewState()
     const normalized = normalizeEditorViewState(viewState, [

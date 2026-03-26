@@ -28,7 +28,7 @@ function sorted(items: TestItem[], sortBy: 'name' | 'modifiedTime' | 'createdTim
 
 // --- normalizeNumber ---
 
-describe('normalizeNumber', () => {
+describe('normalizeNumber 数值归一化', () => {
   it('保留有限数值', () => {
     expect(normalizeNumber(42)).toBe(42)
     expect(normalizeNumber(0)).toBe(0)
@@ -45,7 +45,7 @@ describe('normalizeNumber', () => {
 
 // --- compareOptionalNumber ---
 
-describe('compareOptionalNumber', () => {
+describe('compareOptionalNumber 可选数值比较', () => {
   it('两个 undefined 相等', () => {
     expect(compareOptionalNumber(undefined, undefined, 'asc')).toBe(0)
   })
@@ -71,7 +71,7 @@ describe('compareOptionalNumber', () => {
 
 // --- isValidPositiveNumber ---
 
-describe('isValidPositiveNumber', () => {
+describe('isValidPositiveNumber 正数校验', () => {
   it('有效非负有限数值返回 true', () => {
     expect(isValidPositiveNumber(0)).toBe(true)
     expect(isValidPositiveNumber(100)).toBe(true)
@@ -87,7 +87,7 @@ describe('isValidPositiveNumber', () => {
 
 // --- createItemComparator ---
 
-describe('createItemComparator', () => {
+describe('createItemComparator 条目比较器', () => {
   const dirA: TestItem = { name: 'alpha', isDir: true }
   const dirB: TestItem = { name: 'beta', isDir: true }
   const fileA: TestItem = { name: 'apple.txt', isDir: false, size: 200, modified: 1000, created: 500 }

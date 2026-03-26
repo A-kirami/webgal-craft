@@ -5,7 +5,7 @@ import {
   resolveCommandPanelVisibleCommands,
 } from '../command-panel'
 
-describe('command panel helper', () => {
+describe('命令面板辅助函数', () => {
   it('会在全部和语句组视图中返回全部命令，在分类视图中过滤命令', () => {
     const allCommands = resolveCommandPanelVisibleCommands('all')
     const groupCommands = resolveCommandPanelVisibleCommands('groups')

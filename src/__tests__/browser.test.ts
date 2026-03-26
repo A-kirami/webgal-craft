@@ -5,7 +5,6 @@ import {
   createBrowserLiteI18n,
   createBrowserLocalizedI18n,
   createBrowserStrictI18n,
-  createBrowserTestI18n,
   createBrowserTestPlugins,
 } from './browser'
 
@@ -18,7 +17,7 @@ interface BrowserTestI18nHandle {
   }
 }
 
-describe('createBrowserConsoleMonitor', () => {
+describe('createBrowserConsoleMonitor 浏览器控制台监视器', () => {
   const monitor = createBrowserConsoleMonitor() as {
     expectNoConsoleMessage(pattern: string | RegExp): void
   }
@@ -38,7 +37,7 @@ describe('createBrowserConsoleMonitor', () => {
   })
 })
 
-describe('browser test i18n helpers', () => {
+describe('browser 测试 i18n 辅助函数', () => {
   it('localized helper 默认使用 zh-Hans 作为测试 locale', () => {
     const i18n = createBrowserLocalizedI18n() as BrowserTestI18nHandle
 
@@ -55,13 +54,6 @@ describe('browser test i18n helpers', () => {
   it('lite helper 不加载完整 locale 文案而是回退到 key', () => {
     const i18n = createBrowserLiteI18n() as BrowserTestI18nHandle
 
-    expect(i18n.global.t('common.confirm')).toBe('common.confirm')
-  })
-
-  it('兼容 helper 保持旧的 en + key fallback 语义', () => {
-    const i18n = createBrowserTestI18n() as BrowserTestI18nHandle
-
-    expect(i18n.global.locale.value).toBe('en')
     expect(i18n.global.t('common.confirm')).toBe('common.confirm')
   })
 
@@ -89,14 +81,6 @@ describe('browser test i18n helpers', () => {
     const i18n = plugins.at(-1) as unknown as BrowserTestI18nHandle
 
     expect(pinia).toBeDefined()
-    expect(i18n.global.t('common.confirm')).toBe('common.confirm')
-  })
-
-  it('plugins helper 未显式指定 i18nMode 时默认使用 lite 模式', () => {
-    const { plugins } = createBrowserTestPlugins()
-    const i18n = plugins.at(-1) as unknown as BrowserTestI18nHandle
-
-    expect(i18n.global.locale.value).toBe('en')
     expect(i18n.global.t('common.confirm')).toBe('common.confirm')
   })
 })

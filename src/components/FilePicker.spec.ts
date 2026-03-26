@@ -1,11 +1,9 @@
-/* eslint-disable vue/one-component-per-file, vue/require-default-prop */
-import { createPinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h, nextTick, ref } from 'vue'
 
-import { createBrowserConsoleMonitor, createBrowserLiteI18n } from '~/__tests__/browser'
+import { createBrowserConsoleMonitor } from '~/__tests__/browser'
+import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   existsMock,
@@ -39,83 +37,18 @@ vi.mock('~/composables/useDirectoryReader', () => ({
 import FilePicker from './FilePicker.vue'
 
 const globalStubs = {
-  Button: defineComponent({
-    name: 'StubButton',
-    emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
-      return () => h('button', {
-        ...attrs,
-        type: 'button',
-        onClick: (event: MouseEvent) => emit('click', event),
-      }, slots.default?.())
-    },
-  }),
-  DropdownMenu: defineComponent({
-    name: 'StubDropdownMenu',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  DropdownMenuCheckboxItem: defineComponent({
-    name: 'StubDropdownMenuCheckboxItem',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  DropdownMenuContent: defineComponent({
-    name: 'StubDropdownMenuContent',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  DropdownMenuLabel: defineComponent({
-    name: 'StubDropdownMenuLabel',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  DropdownMenuRadioGroup: defineComponent({
-    name: 'StubDropdownMenuRadioGroup',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  DropdownMenuRadioItem: defineComponent({
-    name: 'StubDropdownMenuRadioItem',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  DropdownMenuSeparator: defineComponent({
-    name: 'StubDropdownMenuSeparator',
-    setup() {
-      return () => h('hr')
-    },
-  }),
-  DropdownMenuSub: defineComponent({
-    name: 'StubDropdownMenuSub',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  DropdownMenuSubContent: defineComponent({
-    name: 'StubDropdownMenuSubContent',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  DropdownMenuSubTrigger: defineComponent({
-    name: 'StubDropdownMenuSubTrigger',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  DropdownMenuTrigger: defineComponent({
-    name: 'StubDropdownMenuTrigger',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
+  Button: createBrowserClickStub('StubButton'),
+  DropdownMenu: createBrowserContainerStub('StubDropdownMenu'),
+  DropdownMenuCheckboxItem: createBrowserContainerStub('StubDropdownMenuCheckboxItem'),
+  DropdownMenuContent: createBrowserContainerStub('StubDropdownMenuContent'),
+  DropdownMenuLabel: createBrowserContainerStub('StubDropdownMenuLabel'),
+  DropdownMenuRadioGroup: createBrowserContainerStub('StubDropdownMenuRadioGroup'),
+  DropdownMenuRadioItem: createBrowserContainerStub('StubDropdownMenuRadioItem'),
+  DropdownMenuSeparator: createBrowserContainerStub('StubDropdownMenuSeparator', 'hr'),
+  DropdownMenuSub: createBrowserContainerStub('StubDropdownMenuSub'),
+  DropdownMenuSubContent: createBrowserContainerStub('StubDropdownMenuSubContent'),
+  DropdownMenuSubTrigger: createBrowserContainerStub('StubDropdownMenuSubTrigger'),
+  DropdownMenuTrigger: createBrowserContainerStub('StubDropdownMenuTrigger'),
   FileViewer: defineComponent({
     name: 'StubFileViewer',
     setup() {
@@ -161,24 +94,9 @@ const globalStubs = {
       return () => h('div')
     },
   }),
-  Popover: defineComponent({
-    name: 'StubPopover',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  PopoverContent: defineComponent({
-    name: 'StubPopoverContent',
-    setup(_, { attrs, slots }) {
-      return () => h('div', attrs, slots.default?.())
-    },
-  }),
-  PopoverTrigger: defineComponent({
-    name: 'StubPopoverTrigger',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
+  Popover: createBrowserContainerStub('StubPopover'),
+  PopoverContent: createBrowserContainerStub('StubPopoverContent'),
+  PopoverTrigger: createBrowserContainerStub('StubPopoverTrigger'),
 }
 
 const FilePickerHarness = defineComponent({
@@ -237,12 +155,14 @@ describe('FilePicker', () => {
   })
 
   it('同步外部文件路径中间态时不会立即归一化并回写父层', async () => {
-    const result = await render(FilePickerHarness, {
+    const result = await renderInBrowser(FilePickerHarness, {
       props: {
         initialValue: 'bg/',
       },
+      browser: {
+        pinia: true,
+      },
       global: {
-        plugins: [createPinia(), createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -256,12 +176,14 @@ describe('FilePicker', () => {
   })
 
   it('用户显式提交输入时仍会发出归一化后的路径', async () => {
-    const result = await render(FilePickerHarness, {
+    const result = await renderInBrowser(FilePickerHarness, {
       props: {
         initialValue: '',
       },
+      browser: {
+        pinia: true,
+      },
       global: {
-        plugins: [createPinia(), createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

@@ -1,10 +1,8 @@
-/* eslint-disable vue/one-component-per-file */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h, reactive } from 'vue'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   usePreferenceStoreMock,
@@ -115,9 +113,8 @@ describe('LeftPanel', () => {
       leftPanelView: 'scene',
     }))
 
-    render(LeftPanel, {
+    renderInBrowser(LeftPanel, {
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -132,9 +129,8 @@ describe('LeftPanel', () => {
       leftPanelView: 'resource',
     }))
 
-    render(LeftPanel, {
+    renderInBrowser(LeftPanel, {
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

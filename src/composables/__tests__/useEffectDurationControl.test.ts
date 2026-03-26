@@ -60,7 +60,7 @@ function createPointerEvent(overrides: Partial<PointerEvent> = {}): PointerEvent
   } as PointerEvent
 }
 
-describe('useEffectDurationControl', () => {
+describe('useEffectDurationControl 行为', () => {
   beforeEach(() => {
     dragRuntime.callbacks = undefined
     dragRuntime.state = undefined

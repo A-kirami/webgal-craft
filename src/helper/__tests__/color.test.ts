@@ -7,7 +7,7 @@ function createNullValue(): unknown {
   return null
 }
 
-describe('normalizeColorChannel', () => {
+describe('normalizeColorChannel 颜色通道归一化', () => {
   it('对正常范围内的值进行四舍五入', () => {
     expect(normalizeColorChannel(127.6, 0)).toBe(128)
   })
@@ -29,7 +29,7 @@ describe('normalizeColorChannel', () => {
   })
 })
 
-describe('parseHexColor', () => {
+describe('parseHexColor 十六进制颜色解析', () => {
   it('解析 3 位简写 #fff', () => {
     expect(parseHexColor('#fff')).toEqual([255, 255, 255])
   })
@@ -63,7 +63,7 @@ describe('parseHexColor', () => {
   })
 })
 
-describe('isRgbColor', () => {
+describe('isRgbColor RGB 颜色校验', () => {
   it('合法 RgbColor 返回 true', () => {
     expect(isRgbColor({ r: 0, g: 128, b: 255 })).toBe(true)
   })
@@ -77,7 +77,7 @@ describe('isRgbColor', () => {
   })
 })
 
-describe('isRgbaPayload', () => {
+describe('isRgbaPayload RGBA 载荷校验', () => {
   it('合法 RgbaPayload 返回 true', () => {
     expect(isRgbaPayload({ rgba: { r: 0, g: 0, b: 0 } })).toBe(true)
   })
@@ -87,7 +87,7 @@ describe('isRgbaPayload', () => {
   })
 })
 
-describe('extractRgbColor', () => {
+describe('extractRgbColor 颜色提取', () => {
   it('字符串走 parseHexColor 路径', () => {
     expect(extractRgbColor('#ff8000')).toEqual([255, 128, 0])
   })

@@ -3,9 +3,8 @@ import '~/__tests__/setup'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive } from 'vue'
 
+import { createTestGame } from '~/__tests__/factories'
 import { useWorkspaceStore } from '~/stores/workspace'
-
-import type { Game } from '~/database/model'
 
 const {
   dbGetMock,
@@ -59,22 +58,6 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   error: loggerErrorMock,
 }))
 
-function createGame(overrides: Partial<Game> = {}): Game {
-  return {
-    id: 'game-1',
-    path: '/games/game-1',
-    createdAt: 0,
-    lastModified: 0,
-    status: 'created',
-    metadata: {
-      name: 'Game One',
-      icon: 'icons/favicon.ico',
-      cover: 'cover.png',
-    },
-    ...overrides,
-  }
-}
-
 async function flushWorkspaceWatchers() {
   await Promise.resolve()
   await nextTick()
@@ -108,7 +91,8 @@ describe('工作区状态仓库', () => {
   it('refreshGameMetadata 会把最新元数据合并回 currentGame', async () => {
     const store = useWorkspaceStore()
 
-    store.currentGame = createGame({
+    store.currentGame = createTestGame({
+      path: '/games/game-1',
       metadata: {
         name: 'old',
         icon: 'icons/favicon.ico',
@@ -140,7 +124,7 @@ describe('工作区状态仓库', () => {
   it('路由进入编辑页时会加载游戏并启动预览，离开时停止预览并清空状态', async () => {
     const store = useWorkspaceStore()
 
-    dbGetMock.mockResolvedValue(createGame({
+    dbGetMock.mockResolvedValue(createTestGame({
       id: 'game-1',
       path: '/games/game-1',
       metadata: {
@@ -172,7 +156,7 @@ describe('工作区状态仓库', () => {
   it('预览地址获取失败时保留当前游戏并记录错误', async () => {
     const store = useWorkspaceStore()
 
-    dbGetMock.mockResolvedValue(createGame({
+    dbGetMock.mockResolvedValue(createTestGame({
       id: 'game-2',
       path: '/games/game-2',
       metadata: {

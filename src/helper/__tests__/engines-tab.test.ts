@@ -9,8 +9,8 @@ import {
 } from '~/helper/engines-tab'
 import { AppError } from '~/types/errors'
 
-describe('engines tab helper', () => {
-  it('rejects import when dropping multiple locations', () => {
+describe('引擎标签页辅助函数', () => {
+  it('拖入多个路径时拒绝导入并返回提示', () => {
     const decision = evaluateDropImportPaths(['one', 'two'])
 
     expect(decision.shouldImport).toBe(false)
@@ -21,7 +21,7 @@ describe('engines tab helper', () => {
     expect(decision.path).toBeUndefined()
   })
 
-  it('accepts a single location and exposes the path', () => {
+  it('仅有单个路径时允许导入并暴露路径', () => {
     const decision = evaluateDropImportPaths(['/single-path'])
 
     expect(decision.shouldImport).toBe(true)
@@ -29,7 +29,7 @@ describe('engines tab helper', () => {
     expect(decision.notification).toBeUndefined()
   })
 
-  it('returns a success notification when no error occurs', () => {
+  it('无错误时返回成功通知', () => {
     const notification = getImportNotificationForResult()
 
     expect(notification).toEqual({
@@ -38,7 +38,7 @@ describe('engines tab helper', () => {
     })
   })
 
-  it('maps INVALID_STRUCTURE to the invalid folder notification', () => {
+  it('INVALID_STRUCTURE 映射为无效文件夹通知', () => {
     const notification = getImportNotificationForResult(new AppError('INVALID_STRUCTURE', 'invalid'))
 
     expect(notification).toEqual({
@@ -47,7 +47,7 @@ describe('engines tab helper', () => {
     })
   })
 
-  it('maps unknown errors to the generic error notification', () => {
+  it('未知错误映射为通用失败通知', () => {
     const notification = getImportNotificationForResult(new Error('boom'))
 
     expect(notification).toEqual({
@@ -56,23 +56,23 @@ describe('engines tab helper', () => {
     })
   })
 
-  it('resolves a selected path string', () => {
+  it('选择路径字符串时返回该路径', () => {
     expect(resolveSelectedPath('/selected')).toBe('/selected')
   })
 
-  it('ignores empty selections', () => {
+  it('空选择时忽略导入', () => {
     expect(resolveSelectedPath(undefined)).toBeUndefined()
     expect(resolveSelectedPath([])).toBeUndefined()
   })
 
-  it('treats maps with the engine id as processing', () => {
+  it('进度映射包含引擎 id 时判定为处理中', () => {
     const activeProgress = new Map<string, number>([['engine-1', 40]])
 
     expect(isEngineProcessing(activeProgress, 'engine-1')).toBe(true)
     expect(isEngineProcessing(activeProgress, 'engine-2')).toBe(false)
   })
 
-  it('reads the progress value when available', () => {
+  it('进度存在时返回对应值', () => {
     const activeProgress = new Map<string, number>([['engine-1', 60]])
 
     expect(getEngineProgressValue(activeProgress, 'engine-1')).toBe(60)

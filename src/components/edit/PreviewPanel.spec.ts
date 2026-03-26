@@ -1,10 +1,9 @@
-/* eslint-disable vue/one-component-per-file */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h, reactive, ref } from 'vue'
 
 import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   copyMock,
@@ -146,7 +145,7 @@ describe('PreviewPanel', () => {
   })
 
   it('挂载时会读取预览宽高比并渲染 iframe', async () => {
-    render(PreviewPanel, {
+    renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -159,7 +158,7 @@ describe('PreviewPanel', () => {
   })
 
   it('点击复制和浏览器打开按钮会调用对应动作', async () => {
-    render(PreviewPanel, {
+    renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -175,7 +174,7 @@ describe('PreviewPanel', () => {
   })
 
   it('点击刷新按钮会重新读取游戏配置', async () => {
-    render(PreviewPanel, {
+    renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,

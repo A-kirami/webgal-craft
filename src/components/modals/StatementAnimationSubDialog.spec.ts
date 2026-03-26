@@ -1,61 +1,18 @@
-/* eslint-disable vue/one-component-per-file */
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
-import { defineComponent, h, onMounted } from 'vue'
 
-import { createBrowserLocalizedI18n } from '~/__tests__/browser'
+import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 
 import StatementAnimationSubDialog from './StatementAnimationSubDialog.vue'
 
 const globalStubs = {
-  Button: defineComponent({
-    name: 'StubButton',
-    emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
-      return () => h('button', {
-        ...attrs,
-        type: 'button',
-        onClick: (event: MouseEvent) => emit('click', event),
-      }, slots.default?.())
-    },
-  }),
-  Dialog: defineComponent({
-    name: 'StubDialog',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  DialogDescription: defineComponent({
-    name: 'StubDialogDescription',
-    setup(_, { slots }) {
-      return () => h('p', slots.default?.())
-    },
-  }),
-  DialogFooter: defineComponent({
-    name: 'StubDialogFooter',
-    setup(_, { slots }) {
-      return () => h('footer', slots.default?.())
-    },
-  }),
-  DialogHeader: defineComponent({
-    name: 'StubDialogHeader',
-    setup(_, { slots }) {
-      return () => h('header', slots.default?.())
-    },
-  }),
-  DialogScrollContent: defineComponent({
-    name: 'StubDialogScrollContent',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
-    },
-  }),
-  DialogTitle: defineComponent({
-    name: 'StubDialogTitle',
-    setup(_, { slots }) {
-      return () => h('h2', slots.default?.())
-    },
-  }),
+  Button: createBrowserClickStub('StubButton'),
+  Dialog: createBrowserContainerStub('StubDialog'),
+  DialogDescription: createBrowserContainerStub('StubDialogDescription', 'p'),
+  DialogFooter: createBrowserContainerStub('StubDialogFooter', 'footer'),
+  DialogHeader: createBrowserContainerStub('StubDialogHeader', 'header'),
+  DialogScrollContent: createBrowserContainerStub('StubDialogScrollContent'),
+  DialogTitle: createBrowserContainerStub('StubDialogTitle', 'h2'),
   StatementAnimationEditorPanel: defineComponent({
     name: 'StubStatementAnimationEditorPanel',
     setup() {
@@ -91,7 +48,10 @@ function createDialogScrollContentStub() {
 
 describe('StatementAnimationSubDialog', () => {
   it('在弹窗头部复用共享的动画说明文案', async () => {
-    render(StatementAnimationSubDialog, {
+    renderInBrowser(StatementAnimationSubDialog, {
+      browser: {
+        i18nMode: 'localized',
+      },
       props: {
         animationDialog: {
           draftFrames: [],
@@ -105,7 +65,6 @@ describe('StatementAnimationSubDialog', () => {
         },
       },
       global: {
-        plugins: [createBrowserLocalizedI18n()],
         stubs: globalStubs,
       },
     })
@@ -118,7 +77,10 @@ describe('StatementAnimationSubDialog', () => {
   it('打开时不会阻止对话框内容接管键盘焦点', async () => {
     const { state, stub } = createDialogScrollContentStub()
 
-    render(StatementAnimationSubDialog, {
+    renderInBrowser(StatementAnimationSubDialog, {
+      browser: {
+        i18nMode: 'localized',
+      },
       props: {
         animationDialog: {
           draftFrames: [],
@@ -132,7 +94,6 @@ describe('StatementAnimationSubDialog', () => {
         },
       },
       global: {
-        plugins: [createBrowserLocalizedI18n()],
         stubs: {
           ...globalStubs,
           DialogScrollContent: stub,

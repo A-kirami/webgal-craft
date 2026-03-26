@@ -1,10 +1,9 @@
-/* eslint-disable vue/one-component-per-file */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h, reactive } from 'vue'
 
 import { createBrowserLocalizedI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   commandBridgeMock,
@@ -347,7 +346,7 @@ describe('EditorPanel', () => {
       insertGroup,
     }
 
-    render(EditorPanel, {
+    renderInBrowser(EditorPanel, {
       global: {
         plugins: [createEditorPanelI18n()],
         stubs: globalStubs,
@@ -371,7 +370,7 @@ describe('EditorPanel', () => {
       isCurrentSceneFile: false,
     }))
 
-    render(EditorPanel, {
+    renderInBrowser(EditorPanel, {
       global: {
         plugins: [createEditorPanelI18n()],
         stubs: globalStubs,
@@ -399,7 +398,7 @@ describe('EditorPanel', () => {
       onUpdate: vi.fn(),
     }
 
-    render(EditorPanel, {
+    renderInBrowser(EditorPanel, {
       global: {
         plugins: [createEditorPanelI18n()],
         stubs: globalStubs,

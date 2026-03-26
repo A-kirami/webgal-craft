@@ -64,7 +64,7 @@ function createPreviewState(overrides: Partial<AssetPreviewState> = {}): AssetPr
   }
 }
 
-describe('editor status bar helper', () => {
+describe('编辑器状态栏辅助函数', () => {
   it('文本模式会计算保存态、相对时间显示和行词统计', () => {
     const editableState = createTextState({
       lastSavedTime: new Date('2026-03-20T10:00:00.000Z'),

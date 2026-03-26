@@ -1,8 +1,10 @@
 import { vi } from 'vitest'
 import { ref, shallowReactive } from 'vue'
+import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { useStatementEditor } from '~/composables/useStatementEditor'
 
+import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { StatementUpdatePayload } from '~/composables/useStatementEditor'
 import type { ArgField } from '~/helper/command-registry/schema'
 import type { StatementEntry } from '~/helper/webgal-script/sentence'
@@ -83,6 +85,19 @@ export function createEntry(rawText: string): StatementEntry {
     rawText,
     parsed: undefined,
     parseError: false,
+  }
+}
+
+export function createSentence(overrides: Partial<ISentence> = {}): ISentence {
+  return {
+    command: commandType.say,
+    commandRaw: 'say',
+    content: '',
+    args: [],
+    sentenceAssets: [],
+    subScene: [],
+    inlineComment: '',
+    ...overrides,
   }
 }
 

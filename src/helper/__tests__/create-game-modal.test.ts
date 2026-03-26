@@ -6,7 +6,7 @@ import {
   sanitizeCreateGameName,
 } from '../create-game-modal'
 
-describe('create game modal helper', () => {
+describe('创建游戏弹窗辅助函数', () => {
   it('会把非法游戏名字符清洗为下划线', () => {
     expect(sanitizeCreateGameName('My:Game/2025')).toBe('My_Game_2025')
     expect(sanitizeCreateGameName('')).toBe('')

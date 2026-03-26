@@ -11,7 +11,7 @@ const windowsSceneUri = 'X:%5CProject%5CWebGALCraft%5Cgame%5Cscene.txt'
 const unixScenePath = '/project/WebGALCraft/game/scene.txt'
 const unixSceneUri = '/project/WebGALCraft/game/scene.txt'
 
-describe('text editor model uri helpers', () => {
+describe('文本编辑器 model URI 辅助函数', () => {
   it('会把 Windows/Unix Monaco model uri 还原为工作区文件路径，并处理边界输入', () => {
     expect(toTextEditorWorkspacePath(windowsSceneUri)).toBe(windowsScenePath)
     expect(toTextEditorWorkspacePath(unixSceneUri)).toBe(unixScenePath)

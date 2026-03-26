@@ -17,7 +17,7 @@ function createWheelEvent(overrides: Partial<WheelEvent> = {}): WheelEvent {
   return event as WheelEvent
 }
 
-describe('handleWheelToHorizontalScroll', () => {
+describe('handleWheelToHorizontalScroll 横向滚动转换', () => {
   it('会把垂直滚动转换成水平滚动并阻止默认事件', () => {
     const event = createWheelEvent()
 

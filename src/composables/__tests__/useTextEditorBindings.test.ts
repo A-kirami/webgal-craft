@@ -1,5 +1,3 @@
-/* eslint-disable vue/one-component-per-file */
-
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createSSRApp, defineComponent, h, nextTick, ref, shallowRef } from 'vue'
 import { renderToString } from 'vue/server-renderer'
@@ -101,7 +99,7 @@ async function flushBindingUpdates() {
   await Promise.resolve()
 }
 
-describe('useTextEditorBindings', () => {
+describe('useTextEditorBindings 行为', () => {
   afterEach(() => {
     getSceneSelectionMock.mockReset()
     useEditSettingsStoreMock.mockReset()

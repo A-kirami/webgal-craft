@@ -153,7 +153,7 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
       unsupportedFile: 'unsupported file',
       workspaceUnavailable: 'workspace unavailable',
     },
-    patchSceneSelection() { /* noop */ },
+    patchSceneSelection: vi.fn(),
     scheduleAutoSave,
     setSession(path: string, nextSession: EditorSession) {
       sessions.set(path, nextSession)
@@ -201,7 +201,7 @@ async function waitUntil(
   return waitUntil(description, predicate, stableCycles, remainingCycles - 1, nextMatchedCycles)
 }
 
-describe('handleFileModifiedEvent', () => {
+describe('handleFileModifiedEvent 行为', () => {
   beforeEach(() => {
     modalOpenMock.mockReset()
   })

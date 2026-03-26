@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { AppError } from '~/types/errors'
 import { settleBatch } from '~/utils/batch'
 
-describe('settleBatch', () => {
+describe('settleBatch 批处理收敛', () => {
   it('所有任务成功时，succeeded 包含全部结果，failed 为空', async () => {
     const tasks = [
       () => Promise.resolve('a'),

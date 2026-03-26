@@ -150,6 +150,16 @@ export default defineConfig(
     },
   },
   {
+    files: [
+      '**/*.{spec,test}.{js,jsx,ts,tsx,vue}',
+      '**/{__tests__,tests}/**/*.{js,jsx,ts,tsx,vue}',
+    ],
+    rules: {
+      'vue/one-component-per-file': 'off',
+      'vue/require-default-prop': 'off',
+    },
+  },
+  {
     ignores: ['**/layouts'],
     rules: {
       'unicorn/filename-case': 'off',

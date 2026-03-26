@@ -118,7 +118,7 @@ function createEditor(content: string) {
   }
 }
 
-describe('useTextEditorHistory', () => {
+describe('useTextEditorHistory 行为', () => {
   beforeEach(() => {
     installTextEditorHistoryAdapterMock.mockReset()
     installTextEditorHistoryAdapterMock.mockReturnValue(createAdapterHandle())

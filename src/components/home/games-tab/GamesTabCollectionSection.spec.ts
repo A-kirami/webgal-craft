@@ -1,14 +1,11 @@
-/* eslint-disable vue/one-component-per-file, vue/require-default-prop */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h, ref } from 'vue'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
+import { createTestGame } from '~/__tests__/factories'
 
 import GamesTabCollectionSection from './GamesTabCollectionSection.vue'
-
-import type { Game } from '~/database/model'
 
 vi.mock('~/composables/useTauriDropZone', () => ({
   useTauriDropZone: () => ({
@@ -23,38 +20,15 @@ vi.mock('~/plugins/dayjs', () => ({
   }),
 }))
 
-function createStubButton(name: string) {
-  return defineComponent({
-    name,
-    emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
-      return () => h('button', {
-        ...attrs,
-        type: 'button',
-        onClick: (event: MouseEvent) => emit('click', event),
-      }, slots.default?.())
-    },
-  })
-}
-
-function createStubContainer(name: string, tag: string = 'div') {
-  return defineComponent({
-    name,
-    setup(_, { attrs, slots }) {
-      return () => h(tag, attrs, slots.default?.())
-    },
-  })
-}
-
 const globalStubs = {
-  Button: createStubButton('StubButton'),
-  Card: createStubContainer('StubCard'),
-  CardContent: createStubContainer('StubCardContent'),
-  ContextMenu: createStubContainer('StubContextMenu'),
-  ContextMenuContent: createStubContainer('StubContextMenuContent'),
-  ContextMenuItem: createStubButton('StubContextMenuItem'),
-  ContextMenuTrigger: createStubContainer('StubContextMenuTrigger'),
-  Progress: createStubContainer('StubProgress'),
+  Button: createBrowserClickStub('StubButton'),
+  Card: createBrowserContainerStub('StubCard'),
+  CardContent: createBrowserContainerStub('StubCardContent'),
+  ContextMenu: createBrowserContainerStub('StubContextMenu'),
+  ContextMenuContent: createBrowserContainerStub('StubContextMenuContent'),
+  ContextMenuItem: createBrowserClickStub('StubContextMenuItem'),
+  ContextMenuTrigger: createBrowserContainerStub('StubContextMenuTrigger'),
+  Progress: createBrowserContainerStub('StubProgress'),
   Thumbnail: defineComponent({
     name: 'StubThumbnail',
     props: {
@@ -70,26 +44,10 @@ const globalStubs = {
       })
     },
   }),
-  Tooltip: createStubContainer('StubTooltip'),
-  TooltipContent: createStubContainer('StubTooltipContent'),
-  TooltipProvider: createStubContainer('StubTooltipProvider'),
-  TooltipTrigger: createStubContainer('StubTooltipTrigger'),
-}
-
-function createGame(overrides: Partial<Game> = {}): Game {
-  return {
-    id: 'game-1',
-    path: '/games/demo',
-    createdAt: 0,
-    lastModified: 0,
-    status: 'created',
-    metadata: {
-      cover: '/games/demo/cover.png',
-      icon: '/games/demo/icon.png',
-      name: 'Demo Game',
-    },
-    ...overrides,
-  }
+  Tooltip: createBrowserContainerStub('StubTooltip'),
+  TooltipContent: createBrowserContainerStub('StubTooltipContent'),
+  TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
+  TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
 }
 
 describe('GamesTabCollectionSection', () => {
@@ -98,15 +56,17 @@ describe('GamesTabCollectionSection', () => {
   })
 
   it('列表视图中处理中的游戏会显示创建中状态', async () => {
-    render(GamesTabCollectionSection, {
+    renderInBrowser(GamesTabCollectionSection, {
+      browser: {
+        i18nMode: 'lite',
+      },
       props: {
-        games: [createGame()],
+        games: [createTestGame()],
         getGameProgress: () => 50,
         hasGameProgress: () => true,
         viewMode: 'list',
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -116,15 +76,17 @@ describe('GamesTabCollectionSection', () => {
   })
 
   it('网格视图中处理中的游戏不会显示删除操作', async () => {
-    render(GamesTabCollectionSection, {
+    renderInBrowser(GamesTabCollectionSection, {
+      browser: {
+        i18nMode: 'lite',
+      },
       props: {
-        games: [createGame()],
+        games: [createTestGame()],
         getGameProgress: () => 50,
         hasGameProgress: () => true,
         viewMode: 'grid',
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

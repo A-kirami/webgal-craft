@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h, reactive } from 'vue'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 const { useEditorStoreMock } = vi.hoisted(() => ({
   useEditorStoreMock: vi.fn(),
@@ -70,12 +69,11 @@ describe('VisualEditorAnimation', () => {
       undoDocument,
     }))
 
-    render(VisualEditorAnimation, {
+    renderInBrowser(VisualEditorAnimation, {
       props: {
         state: createAnimationState('/game/animation/opening.json'),
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -110,12 +108,11 @@ describe('VisualEditorAnimation', () => {
       undoDocument,
     }))
 
-    render(VisualEditorAnimation, {
+    renderInBrowser(VisualEditorAnimation, {
       props: {
         state: createAnimationState('/game/animation/opening.json'),
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -151,12 +148,11 @@ describe('VisualEditorAnimation', () => {
       undoDocument,
     }))
 
-    render(VisualEditorAnimation, {
+    renderInBrowser(VisualEditorAnimation, {
       props: {
         state: createAnimationState('/game/animation/opening.json'),
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -201,12 +197,11 @@ describe('VisualEditorAnimation', () => {
       undoDocument,
     }))
 
-    render(VisualEditorAnimation, {
+    renderInBrowser(VisualEditorAnimation, {
       props: {
         state: createAnimationState('/game/animation/opening.json'),
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

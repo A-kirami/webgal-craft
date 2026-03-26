@@ -13,7 +13,7 @@ interface TestFolderItem {
   path: string
 }
 
-describe('scene panel helper', () => {
+describe('场景面板辅助函数', () => {
   it('递归读取目录内容并保留目录层级', async () => {
     const entries = new Map<string, TestFolderItem[]>([
       ['/games/demo/game/scene', [

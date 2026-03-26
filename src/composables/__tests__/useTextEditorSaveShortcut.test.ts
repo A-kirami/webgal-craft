@@ -29,7 +29,7 @@ function createKeyboardEvent(overrides: Partial<{
   }
 }
 
-describe('createTextEditorSaveShortcutHandler', () => {
+describe('createTextEditorSaveShortcutHandler 行为', () => {
   it('仅在当前激活的 text 投影且编辑器未聚焦时响应保存快捷键', async () => {
     const saveFile = vi.fn(async () => undefined)
     const onError = vi.fn()

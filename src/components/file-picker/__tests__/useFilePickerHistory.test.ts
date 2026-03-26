@@ -3,8 +3,6 @@ import { effectScope, ref } from 'vue'
 
 import { useFilePickerHistory } from '../useFilePickerHistory'
 
-import type { Ref } from 'vue'
-
 const {
   existsMock,
   joinMock,
@@ -72,7 +70,7 @@ function createFixture() {
   }
 }
 
-describe('useFilePickerHistory', () => {
+describe('useFilePickerHistory 行为', () => {
   beforeEach(() => {
     existsMock.mockClear()
     joinMock.mockClear()

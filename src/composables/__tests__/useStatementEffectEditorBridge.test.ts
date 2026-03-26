@@ -6,22 +6,9 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import { applyEffectEditorResultToSentence } from '~/composables/useStatementEffectEditorBridge'
 import { serializeTransform } from '~/helper/effect-editor-config'
 
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import { createSentence } from './statement-editor-test-utils'
 
-function createSentence(overrides: Partial<ISentence>): ISentence {
-  return {
-    command: commandType.say,
-    commandRaw: 'say',
-    content: '',
-    args: [],
-    sentenceAssets: [],
-    subScene: [],
-    inlineComment: '',
-    ...overrides,
-  }
-}
-
-describe('applyEffectEditorResultToSentence', () => {
+describe('applyEffectEditorResultToSentence 行为', () => {
   it('setTransform 命令写入 content 并同步 duration/ease', () => {
     const sentence = createSentence({
       command: commandType.setTransform,

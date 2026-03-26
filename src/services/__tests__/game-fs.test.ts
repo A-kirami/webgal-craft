@@ -46,7 +46,7 @@ vi.mock('~/commands/fs', () => ({
   },
 }))
 
-describe('gameFs', () => {
+describe('gameFs 游戏文件系统', () => {
   beforeEach(() => {
     createFileMock.mockReset()
     createFolderMock.mockReset()

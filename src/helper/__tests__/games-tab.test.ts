@@ -12,9 +12,9 @@ import { AppError } from '~/types/errors'
 
 import type { Engine } from '~/database/model'
 
-describe('games-tab helper', () => {
-  describe('resolveGamesTabImportDecision', () => {
-    it('flags multiple paths and surfaces a notification', () => {
+describe('游戏标签页辅助函数', () => {
+  describe('resolveGamesTabImportDecision 导入决策', () => {
+    it('多路径时标记错误并返回通知', () => {
       const decision = resolveGamesTabImportDecision(['/games/a', '/games/b'])
 
       expect(decision).toEqual({
@@ -24,7 +24,7 @@ describe('games-tab helper', () => {
       })
     })
 
-    it('allows import when exactly one path is provided', () => {
+    it('单一路径时允许导入', () => {
       const decision = resolveGamesTabImportDecision(['/games/demo'])
 
       expect(decision).toEqual({
@@ -34,8 +34,8 @@ describe('games-tab helper', () => {
     })
   })
 
-  describe('resolveGamesTabImportResult', () => {
-    it('returns success metadata when no error is thrown', () => {
+  describe('resolveGamesTabImportResult 导入结果', () => {
+    it('无异常时返回成功元数据', () => {
       const decision = resolveGamesTabImportResult()
 
       expect(decision).toEqual({
@@ -45,7 +45,7 @@ describe('games-tab helper', () => {
       })
     })
 
-    it('maps INVALID_STRUCTURE AppError to the invalid folder notification', () => {
+    it('INVALID_STRUCTURE AppError 映射为无效文件夹通知', () => {
       const decision = resolveGamesTabImportResult(new AppError('INVALID_STRUCTURE', 'invalid folder'))
 
       expect(decision).toEqual({
@@ -55,7 +55,7 @@ describe('games-tab helper', () => {
       })
     })
 
-    it('treats other errors as unknown import failures', () => {
+    it('其他错误映射为未知导入失败', () => {
       const decision = resolveGamesTabImportResult(new Error('boom'))
 
       expect(decision).toEqual({
@@ -66,10 +66,10 @@ describe('games-tab helper', () => {
     })
   })
 
-  describe('resolveGamesTabGameClickDecision', () => {
+  describe('resolveGamesTabGameClickDecision 游戏点击决策', () => {
     const activeProgress = new Map<string, number>([['game-1', 70]])
 
-    it('warns and prevents navigation while a game is being created', () => {
+    it('游戏创建中时告警并阻止跳转', () => {
       const decision = resolveGamesTabGameClickDecision('game-1', activeProgress)
 
       expect(decision).toEqual({
@@ -79,7 +79,7 @@ describe('games-tab helper', () => {
       })
     })
 
-    it('opens the editor when there is no active progress', () => {
+    it('无进行中任务时打开编辑器', () => {
       const decision = resolveGamesTabGameClickDecision('game-2', activeProgress)
 
       expect(decision).toEqual({
@@ -89,8 +89,8 @@ describe('games-tab helper', () => {
     })
   })
 
-  describe('resolveGamesTabCreateGameDecision', () => {
-    it('returns none when engine availability is unknown', () => {
+  describe('resolveGamesTabCreateGameDecision 新建游戏决策', () => {
+    it('引擎可用性未知时返回 none', () => {
       const decision = resolveGamesTabCreateGameDecision(undefined)
 
       expect(decision).toEqual({
@@ -98,7 +98,7 @@ describe('games-tab helper', () => {
       })
     })
 
-    it('prompts the no-engine alert when the list is empty', () => {
+    it('引擎列表为空时提示无引擎告警', () => {
       const decision = resolveGamesTabCreateGameDecision([])
 
       expect(decision).toEqual({
@@ -110,7 +110,7 @@ describe('games-tab helper', () => {
       })
     })
 
-    it('opens the create game modal when engines exist', () => {
+    it('存在引擎时打开新建游戏弹窗', () => {
       const engine = { id: 'engine-1', path: '/engines/1', createdAt: 0, status: 'created', metadata: { description: '', icon: '/icon.png', name: 'Engine One' } } as Engine
       const decision = resolveGamesTabCreateGameDecision([engine])
 
@@ -120,15 +120,15 @@ describe('games-tab helper', () => {
     })
   })
 
-  describe('progress helpers', () => {
+  describe('进度辅助函数', () => {
     const activeProgress = new Map<string, number>([['game-1', 45]])
 
-    it('correctly reports whether progress exists', () => {
+    it('正确判断进度是否存在', () => {
       expect(hasGamesTabProgress('game-1', activeProgress)).toBe(true)
       expect(hasGamesTabProgress('game-2', activeProgress)).toBe(false)
     })
 
-    it('returns zero for missing progress entries', () => {
+    it('缺失进度项时返回 0', () => {
       expect(getGamesTabProgress('game-2', activeProgress)).toBe(0)
     })
   })

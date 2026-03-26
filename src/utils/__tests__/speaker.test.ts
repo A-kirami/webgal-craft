@@ -7,7 +7,7 @@ import {
   getPreviousSpeakerAtLine,
 } from '~/utils/speaker'
 
-describe('extractSpeakerChange', () => {
+describe('extractSpeakerChange 说话人变更提取', () => {
   describe('注释行', () => {
     it('跳过纯注释行', () => {
       expect(extractSpeakerChange(';这是注释')).toBeUndefined()

@@ -1,14 +1,11 @@
-/* eslint-disable vue/one-component-per-file */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h, reactive } from 'vue'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
+import { createTestEngine } from '~/__tests__/factories'
 
 import CreateGameModal from './CreateGameModal.vue'
-
-import type { Engine } from '~/database/model'
 
 const {
   createGameMock,
@@ -172,20 +169,6 @@ const globalStubs = {
   }),
 }
 
-function createEngine() {
-  return {
-    id: 'engine-1',
-    path: '/engines/default',
-    createdAt: 0,
-    status: 'created',
-    metadata: {
-      name: 'Default Engine',
-      icon: '',
-      description: '',
-    },
-  } satisfies Engine
-}
-
 describe('CreateGameModal', () => {
   afterEach(() => {
     vi.clearAllMocks()
@@ -208,17 +191,24 @@ describe('CreateGameModal', () => {
       gameSavePath: '/games',
     })
     useResourceStoreMock.mockReturnValue({
-      engines: [createEngine()],
+      engines: [createTestEngine({
+        metadata: {
+          description: '',
+          icon: '',
+        },
+      })],
     })
   })
 
   it('点击选择目录按钮时会打开保存位置对话框', async () => {
-    render(CreateGameModal, {
+    renderInBrowser(CreateGameModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
       props: {
         open: true,
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -233,18 +223,20 @@ describe('CreateGameModal', () => {
     }))
   })
 
-  it('提交表单时会创建游戏并回传 game id', async () => {
+  it('提交表单时会创建游戏并回传游戏标识', async () => {
     const onSuccess = vi.fn()
     const updateOpen = vi.fn()
 
-    render(CreateGameModal, {
+    renderInBrowser(CreateGameModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
       props: {
         'open': true,
         onSuccess,
         'onUpdate:open': updateOpen,
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

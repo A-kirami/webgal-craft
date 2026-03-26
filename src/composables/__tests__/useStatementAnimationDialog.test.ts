@@ -1,6 +1,5 @@
 import '~/__tests__/mocks/i18n'
 import '~/__tests__/mocks/modal-store'
-/* eslint-disable vue/one-component-per-file */
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, inject, reactive } from 'vue'
@@ -8,6 +7,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { useStatementAnimationDialog } from '../useStatementAnimationDialog'
 import { STATEMENT_ANIMATION_EDITOR_OPEN_OVERRIDE_KEY } from '../useStatementAnimationEditorBridge'
+import { createSentence } from './statement-editor-test-utils'
 import { createTestRenderer } from './utils/createTestRenderer'
 
 import type { TestNode } from './utils/createTestRenderer'
@@ -31,18 +31,6 @@ vi.mock('vue-sonner', () => ({
 
 const mountedApps: { unmount: () => void }[] = []
 const renderer = createTestRenderer()
-
-function createSentence(content: string): ISentence {
-  return {
-    command: commandType.setTempAnimation,
-    commandRaw: 'setTempAnimation',
-    content,
-    args: [],
-    sentenceAssets: [],
-    subScene: [],
-    inlineComment: '',
-  }
-}
 
 function mountDialogHarness() {
   let dialog: ReturnType<typeof useStatementAnimationDialog> | undefined
@@ -85,12 +73,16 @@ afterEach(() => {
   }
 })
 
-describe('useStatementAnimationDialog', () => {
+describe('useStatementAnimationDialog 行为', () => {
   it('非法动画 JSON 会阻止打开并弹出错误 toast', () => {
     const { dialog, openDialog } = mountDialogHarness()
     const handleApply = vi.fn()
 
-    openDialog(createSentence('{invalid json'), handleApply)
+    openDialog(createSentence({
+      command: commandType.setTempAnimation,
+      commandRaw: 'setTempAnimation',
+      content: '{invalid json',
+    }), handleApply)
 
     expect(dialog.isOpen).toBe(false)
     expect(dialog.draftFrames).toEqual([])
@@ -102,7 +94,11 @@ describe('useStatementAnimationDialog', () => {
     const { dialog, openDialog } = mountDialogHarness()
     const handleApply = vi.fn()
 
-    openDialog(createSentence('[{"duration":120}]'), handleApply)
+    openDialog(createSentence({
+      command: commandType.setTempAnimation,
+      commandRaw: 'setTempAnimation',
+      content: '[{"duration":120}]',
+    }), handleApply)
 
     const nextFrames = reactive<AnimationFrame[]>([
       {

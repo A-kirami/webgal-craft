@@ -1,10 +1,7 @@
-/* eslint-disable vue/one-component-per-file */
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
-import { defineComponent, h, nextTick, reactive, watchEffect } from 'vue'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 import StatementAnimationEditorPanel from './StatementAnimationEditorPanel.vue'
 
@@ -106,14 +103,13 @@ function createAnimationEditorPaneStub() {
 
 describe('StatementAnimationEditorPanel', () => {
   it('在模态框场景中隐藏历史操作按钮', async () => {
-    render(StatementAnimationEditorPanel, {
+    renderInBrowser(StatementAnimationEditorPanel, {
       props: {
         frames: [{
           duration: 200,
         }],
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -145,13 +141,12 @@ describe('StatementAnimationEditorPanel', () => {
       frames.splice(0, frames.length, ...nextFrames)
     })
 
-    render(StatementAnimationEditorPanel, {
+    renderInBrowser(StatementAnimationEditorPanel, {
       props: {
         frames,
         'onUpdate:frames': handleUpdateFrames,
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: {
           ...globalStubs,
           AnimationEditorPane: stub,

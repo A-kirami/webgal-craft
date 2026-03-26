@@ -1,9 +1,9 @@
-/* eslint-disable vue/one-component-per-file, vue/require-default-prop */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render } from 'vitest-browser-vue'
+import { page } from 'vitest/browser'
 import { defineComponent, h, nextTick, onMounted, ref } from 'vue'
 
 import { createBrowserConsoleMonitor } from '~/__tests__/browser'
+import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   inputMountSpy,
@@ -20,17 +20,7 @@ vi.mock('~/composables/useControlId', () => ({
 import PairListEditor from './PairListEditor.vue'
 
 const globalStubs = {
-  Button: defineComponent({
-    name: 'StubButton',
-    emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
-      return () => h('button', {
-        ...attrs,
-        type: 'button',
-        onClick: (event: MouseEvent) => emit('click', event),
-      }, slots.default?.())
-    },
-  }),
+  Button: createBrowserClickStub('StubButton'),
   Input: defineComponent({
     name: 'StubInput',
     props: {
@@ -62,18 +52,7 @@ const globalStubs = {
       })
     },
   }),
-  Label: defineComponent({
-    name: 'StubLabel',
-    props: {
-      for: {
-        type: String,
-        required: false,
-      },
-    },
-    setup(props, { slots }) {
-      return () => h('label', { for: props.for }, slots.default?.())
-    },
-  }),
+  Label: createBrowserContainerStub('StubLabel', 'label'),
 }
 
 const PairListHarness = defineComponent({
@@ -130,22 +109,20 @@ describe('PairListEditor', () => {
   })
 
   it('编辑现有行时会保持当前输入框实例，避免焦点丢失', async () => {
-    const result = await render(PairListHarness, {
+    await renderInBrowser(PairListHarness, {
       global: {
         stubs: globalStubs,
       },
     })
 
-    const firstInput = result.container.querySelector<HTMLInputElement>('#pair-list-first-0')
-    expect(firstInput).toBeTruthy()
-
-    firstInput!.focus()
-    firstInput!.value = 'alpha-updated'
-    firstInput!.dispatchEvent(new Event('input', { bubbles: true }))
+    const firstInput = page.getByRole('textbox').first()
+    const firstInputElement = firstInput.element() as HTMLInputElement
+    await firstInput.click()
+    await firstInput.fill('alpha-updated')
 
     await nextTick()
 
-    expect(result.container.ownerDocument.activeElement).toBe(firstInput)
+    expect(document.activeElement).toBe(firstInputElement)
     expect(inputMountSpy).toHaveBeenCalledTimes(4)
     expect(inputMountSpy).toHaveBeenNthCalledWith(1, 'pair-list-first-0')
     expect(inputMountSpy).toHaveBeenNthCalledWith(3, 'pair-list-first-1')

@@ -1,8 +1,7 @@
-/* eslint-disable vue/one-component-per-file */
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
-import { defineComponent, h } from 'vue'
+
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 import ParamChoiceField from './ParamChoiceField.vue'
 
@@ -144,7 +143,7 @@ describe('ParamChoiceField', () => {
   it('segmented 选择会归一化后触发 updateSelect', async () => {
     const onUpdateSelect = vi.fn()
 
-    render(ParamChoiceField, {
+    renderInBrowser(ParamChoiceField, {
       props: {
         customInputId: 'target-custom-input',
         customOptionLabel: 'Custom',
@@ -173,7 +172,7 @@ describe('ParamChoiceField', () => {
   it('select 分支会透传并归一化 updateSelect', async () => {
     const onUpdateSelect = vi.fn()
 
-    render(ParamChoiceField, {
+    renderInBrowser(ParamChoiceField, {
       props: {
         customInputId: 'target-custom-input',
         customOptionLabel: 'Custom',
@@ -202,7 +201,7 @@ describe('ParamChoiceField', () => {
   it('combobox 分支会透传并归一化 updateSelect', async () => {
     const onUpdateSelect = vi.fn()
 
-    render(ParamChoiceField, {
+    renderInBrowser(ParamChoiceField, {
       props: {
         customInputId: 'target-custom-input',
         customOptionLabel: 'Custom',
@@ -231,7 +230,7 @@ describe('ParamChoiceField', () => {
   it('custom 模式显示自定义输入并触发 updateValue', async () => {
     const onUpdateValue = vi.fn()
 
-    render(ParamChoiceField, {
+    renderInBrowser(ParamChoiceField, {
       props: {
         customLabel: 'Custom target',
         customInputId: 'target-custom-input',
@@ -259,7 +258,7 @@ describe('ParamChoiceField', () => {
   })
 
   it('custom 模式会保留 0 这类有效假值', async () => {
-    render(ParamChoiceField, {
+    renderInBrowser(ParamChoiceField, {
       props: {
         customLabel: 'Custom target',
         customInputId: 'target-custom-input',

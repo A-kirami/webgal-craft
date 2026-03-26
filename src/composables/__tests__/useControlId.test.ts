@@ -14,7 +14,7 @@ vi.mock('vue', async () => {
 
 import { useControlId } from '~/composables/useControlId'
 
-describe('useControlId', () => {
+describe('useControlId 行为', () => {
   it('会对 namespace 和 key 做可访问 id 规范化', () => {
     const { buildControlId } = useControlId('Statement Panel')
 

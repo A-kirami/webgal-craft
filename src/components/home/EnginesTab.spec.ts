@@ -1,10 +1,9 @@
-/* eslint-disable vue/one-component-per-file, vue/require-default-prop */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h, reactive, ref } from 'vue'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
+import { createTestEngine } from '~/__tests__/factories'
 import { AppError } from '~/types/errors'
 
 import EnginesTab from './EnginesTab.vue'
@@ -73,38 +72,15 @@ vi.mock('~/stores/resource', () => ({
   useResourceStore: useResourceStoreMock,
 }))
 
-function createStubButton(name: string) {
-  return defineComponent({
-    name,
-    emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
-      return () => h('button', {
-        ...attrs,
-        type: 'button',
-        onClick: (event: MouseEvent) => emit('click', event),
-      }, slots.default?.())
-    },
-  })
-}
-
-function createStubContainer(name: string, tag: string = 'div') {
-  return defineComponent({
-    name,
-    setup(_, { attrs, slots }) {
-      return () => h(tag, attrs, slots.default?.())
-    },
-  })
-}
-
 const globalStubs = {
-  Button: createStubButton('StubButton'),
-  Card: createStubContainer('StubCard'),
-  CardContent: createStubContainer('StubCardContent'),
-  ContextMenu: createStubContainer('StubContextMenu'),
-  ContextMenuContent: createStubContainer('StubContextMenuContent'),
-  ContextMenuItem: createStubButton('StubContextMenuItem'),
-  ContextMenuTrigger: createStubContainer('StubContextMenuTrigger'),
-  Progress: createStubContainer('StubProgress'),
+  Button: createBrowserClickStub('StubButton'),
+  Card: createBrowserContainerStub('StubCard'),
+  CardContent: createBrowserContainerStub('StubCardContent'),
+  ContextMenu: createBrowserContainerStub('StubContextMenu'),
+  ContextMenuContent: createBrowserContainerStub('StubContextMenuContent'),
+  ContextMenuItem: createBrowserClickStub('StubContextMenuItem'),
+  ContextMenuTrigger: createBrowserContainerStub('StubContextMenuTrigger'),
+  Progress: createBrowserContainerStub('StubProgress'),
   Thumbnail: defineComponent({
     name: 'StubThumbnail',
     props: {
@@ -120,25 +96,10 @@ const globalStubs = {
       })
     },
   }),
-  Tooltip: createStubContainer('StubTooltip'),
-  TooltipContent: createStubContainer('StubTooltipContent'),
-  TooltipProvider: createStubContainer('StubTooltipProvider'),
-  TooltipTrigger: createStubContainer('StubTooltipTrigger'),
-}
-
-function createEngine(overrides: Partial<Engine> = {}): Engine {
-  return {
-    id: 'engine-1',
-    path: '/engines/default',
-    createdAt: 0,
-    status: 'created',
-    metadata: {
-      description: 'Default engine',
-      icon: '/engines/default/icon.png',
-      name: 'Default Engine',
-    },
-    ...overrides,
-  }
+  Tooltip: createBrowserContainerStub('StubTooltip'),
+  TooltipContent: createBrowserContainerStub('StubTooltipContent'),
+  TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
+  TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
 }
 
 function createResourceStore(options: {
@@ -182,9 +143,11 @@ describe('EnginesTab', () => {
     }))
     openDialogMock.mockResolvedValue('/engines/import-target')
 
-    render(EnginesTab, {
+    renderInBrowser(EnginesTab, {
+      browser: {
+        i18nMode: 'lite',
+      },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -209,9 +172,11 @@ describe('EnginesTab', () => {
     openDialogMock.mockResolvedValue('/engines/import-target')
     importEngineMock.mockRejectedValue(new AppError('INVALID_STRUCTURE', 'invalid'))
 
-    render(EnginesTab, {
+    renderInBrowser(EnginesTab, {
+      browser: {
+        i18nMode: 'lite',
+      },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -224,15 +189,17 @@ describe('EnginesTab', () => {
   })
 
   it('列表视图操作按钮会打开引擎目录并触发卸载模态框', async () => {
-    const engine = createEngine()
+    const engine = createTestEngine()
 
     useResourceStoreMock.mockReturnValue(createResourceStore({
       engines: [engine],
     }))
 
-    render(EnginesTab, {
+    renderInBrowser(EnginesTab, {
+      browser: {
+        i18nMode: 'lite',
+      },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

@@ -1,10 +1,7 @@
-/* eslint-disable vue/one-component-per-file */
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
-import { defineComponent, h } from 'vue'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 import FilePickerToolbar from './FilePickerToolbar.vue'
 
@@ -102,7 +99,7 @@ describe('FilePickerToolbar', () => {
   it('点击视图切换按钮时会更新 viewMode', async () => {
     const onUpdateViewMode = vi.fn()
 
-    render(FilePickerToolbar, {
+    renderInBrowser(FilePickerToolbar, {
       props: {
         currentDir: 'images',
         onUpdateViewMode,
@@ -115,7 +112,6 @@ describe('FilePickerToolbar', () => {
         zoomLevel: 'medium',
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -128,7 +124,7 @@ describe('FilePickerToolbar', () => {
   it('面包屑导航时会发出 navigate 事件', async () => {
     const onNavigate = vi.fn()
 
-    render(FilePickerToolbar, {
+    renderInBrowser(FilePickerToolbar, {
       props: {
         currentDir: 'images',
         onNavigate,
@@ -141,7 +137,6 @@ describe('FilePickerToolbar', () => {
         zoomLevel: 'medium',
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

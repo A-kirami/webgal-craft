@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { applySceneCursorTarget, prepareSceneCursorTarget } from '~/helper/text-editor-scene-restore'
 
-describe('applySceneCursorTarget', () => {
+describe('applySceneCursorTarget 行为', () => {
   it('会用仅在视口外才滚动的策略恢复文本光标目标，而不是强制居中', () => {
     const editor = {
       layout: vi.fn(),
@@ -33,7 +33,7 @@ describe('applySceneCursorTarget', () => {
   })
 })
 
-describe('prepareSceneCursorTarget', () => {
+describe('prepareSceneCursorTarget 行为', () => {
   it('可以先同步文本光标位置，而不立刻触发 reveal', () => {
     const editor = {
       layout: vi.fn(),

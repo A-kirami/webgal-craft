@@ -1,10 +1,8 @@
-/* eslint-disable vue/one-component-per-file */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h } from 'vue'
 
-import { createBrowserTestPlugins } from '~/__tests__/browser'
+import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 import { useCommandPanelStore } from '~/stores/command-panel'
 
 const { modalOpenMock, useModalStoreMock } = vi.hoisted(() => ({
@@ -18,31 +16,8 @@ vi.mock('~/stores/modal', () => ({
 
 import CommandPanel from './CommandPanel.vue'
 
-function createStubButton(name: string) {
-  return defineComponent({
-    name,
-    emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
-      return () => h('button', {
-        ...attrs,
-        type: 'button',
-        onClick: (event: MouseEvent) => emit('click', event),
-      }, slots.default?.())
-    },
-  })
-}
-
-function createStubContainer(name: string, tag: string = 'div') {
-  return defineComponent({
-    name,
-    setup(_, { attrs, slots }) {
-      return () => h(tag, attrs, slots.default?.())
-    },
-  })
-}
-
 const globalStubs = {
-  Button: createStubButton('StubButton'),
+  Button: createBrowserClickStub('StubButton'),
   CommandPanelCard: defineComponent({
     name: 'StubCommandPanelCard',
     props: {
@@ -63,20 +38,20 @@ const globalStubs = {
       ])
     },
   }),
-  Popover: createStubContainer('StubPopover'),
-  PopoverContent: createStubContainer('StubPopoverContent'),
-  PopoverTrigger: createStubContainer('StubPopoverTrigger'),
-  ScrollArea: createStubContainer('StubScrollArea'),
-  ScrollBar: createStubContainer('StubScrollBar'),
-  Separator: createStubContainer('StubSeparator'),
-  Tooltip: createStubContainer('StubTooltip'),
-  TooltipContent: createStubContainer('StubTooltipContent'),
-  TooltipProvider: createStubContainer('StubTooltipProvider'),
-  TooltipTrigger: createStubContainer('StubTooltipTrigger'),
+  Popover: createBrowserContainerStub('StubPopover'),
+  PopoverContent: createBrowserContainerStub('StubPopoverContent'),
+  PopoverTrigger: createBrowserContainerStub('StubPopoverTrigger'),
+  ScrollArea: createBrowserContainerStub('StubScrollArea'),
+  ScrollBar: createBrowserContainerStub('StubScrollBar'),
+  Separator: createBrowserContainerStub('StubSeparator'),
+  Tooltip: createBrowserContainerStub('StubTooltip'),
+  TooltipContent: createBrowserContainerStub('StubTooltipContent'),
+  TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
+  TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
 }
 
-function createCommandPanelPlugins() {
-  return createBrowserTestPlugins({
+function createCommandPanelBrowserOptions() {
+  return {
     i18nMode: 'lite',
     messages: {
       'zh-Hans': {
@@ -103,7 +78,7 @@ function createCommandPanelPlugins() {
       },
     },
     pinia: true,
-  })
+  } as const
 }
 
 describe('CommandPanel', () => {
@@ -119,11 +94,9 @@ describe('CommandPanel', () => {
   })
 
   function renderCommandPanel() {
-    const { pinia, plugins } = createCommandPanelPlugins()
-
-    render(CommandPanel, {
+    const { pinia } = renderInBrowser(CommandPanel, {
+      browser: createCommandPanelBrowserOptions(),
       global: {
-        plugins,
         stubs: globalStubs,
       },
     })
@@ -170,12 +143,12 @@ describe('CommandPanel', () => {
   it('点击命令卡片会发出 insertCommand 事件', async () => {
     const onInsertCommand = vi.fn()
 
-    render(CommandPanel, {
+    renderInBrowser(CommandPanel, {
+      browser: createCommandPanelBrowserOptions(),
       props: {
         onInsertCommand,
       },
       global: {
-        plugins: createCommandPanelPlugins().plugins,
         stubs: globalStubs,
       },
     })

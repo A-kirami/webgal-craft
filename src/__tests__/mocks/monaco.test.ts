@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createMonacoMockModule, monacoMockState, resetMonacoMockState } from './monaco'
 
-describe('Monaco mock', () => {
+describe('Monaco mock 模拟器', () => {
   beforeEach(() => {
     resetMonacoMockState()
   })

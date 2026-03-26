@@ -1,9 +1,9 @@
 import * as monaco from 'monaco-editor'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render } from 'vitest-browser-vue'
 import { nextTick, reactive } from 'vue'
 
 import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 import { monacoMockState, resetMonacoMockState } from '~/__tests__/mocks/monaco'
 import { PLAY_TO_LINE_GLYPH_CLASS_NAME } from '~/helper/text-editor-play-to-line'
 
@@ -214,7 +214,7 @@ describe('TextEditor', () => {
 
   it('激活的文本投影挂载时会创建 Monaco 编辑器并注册保存命令', async () => {
     const { state } = createHarness()
-    const result = render(TextEditor, {
+    const result = renderInBrowser(TextEditor, {
       props: {
         state,
       },
@@ -269,7 +269,7 @@ describe('TextEditor', () => {
       path: '/project/other.txt',
     }
 
-    render(TextEditor, {
+    renderInBrowser(TextEditor, {
       props: {
         state,
       },
@@ -296,7 +296,7 @@ describe('TextEditor', () => {
   it('编辑器设置变化后会把最新选项同步给现有 Monaco 实例', async () => {
     const { editSettingsStore, state } = createHarness('/project/scene-3.txt')
 
-    render(TextEditor, {
+    renderInBrowser(TextEditor, {
       props: {
         state,
       },
@@ -326,7 +326,7 @@ describe('TextEditor', () => {
   it('卸载时会先通知 runtime，再释放 Monaco 实例', async () => {
     const { state } = createHarness('/project/scene-4.txt')
 
-    const result = render(TextEditor, {
+    const result = renderInBrowser(TextEditor, {
       props: {
         state,
       },
@@ -346,7 +346,7 @@ describe('TextEditor', () => {
     const { state } = createHarness('/project/effect.anim')
     state.kind = 'animation'
 
-    render(TextEditor, {
+    renderInBrowser(TextEditor, {
       props: {
         state,
       },
@@ -369,7 +369,7 @@ describe('TextEditor', () => {
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(lines))
     monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 1 })
 
-    render(TextEditor, {
+    renderInBrowser(TextEditor, {
       props: {
         state,
       },
@@ -400,7 +400,7 @@ describe('TextEditor', () => {
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(['say:hello']))
     monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 1 })
 
-    render(TextEditor, {
+    renderInBrowser(TextEditor, {
       props: {
         state,
       },
@@ -435,7 +435,7 @@ describe('TextEditor', () => {
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(['say:hello']))
     monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 1 })
 
-    render(TextEditor, {
+    renderInBrowser(TextEditor, {
       props: {
         state,
       },
@@ -469,7 +469,7 @@ describe('TextEditor', () => {
   it('播放按钮样式会命中 Monaco glyph margin 装饰节点', async () => {
     const { state } = createHarness('/project/scene-5.txt')
 
-    render(TextEditor, {
+    renderInBrowser(TextEditor, {
       props: {
         state,
       },

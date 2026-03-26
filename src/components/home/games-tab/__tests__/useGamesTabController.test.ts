@@ -42,7 +42,7 @@ vi.mock('~/services/game-manager', () => ({
   },
 }))
 
-describe('useGamesTabController', () => {
+describe('useGamesTabController 行为', () => {
   beforeEach(() => {
     importGameMock.mockReset()
     notifyErrorMock.mockReset()

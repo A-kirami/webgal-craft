@@ -3,9 +3,9 @@ import '~/__tests__/setup'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive, ref } from 'vue'
 
+import { createTestEngine, createTestGame } from '~/__tests__/factories'
 import { useResourceStore } from '~/stores/resource'
 
-import type { Ref } from 'vue'
 import type { Engine, Game } from '~/database/model'
 
 const {
@@ -35,32 +35,29 @@ vi.mock('~/stores/workspace', () => ({
 }))
 
 function createGame(id: string, name: string, lastModified: number): Game {
-  return {
+  return createTestGame({
     id,
     path: `/games/${id}`,
-    createdAt: 0,
     lastModified,
-    status: 'created',
     metadata: {
       name,
       icon: '',
       cover: '',
     },
-  }
+  })
 }
 
 function createEngine(id: string, name: string, createdAt: number): Engine {
-  return {
+  return createTestEngine({
     id,
     path: `/engines/${id}`,
     createdAt,
-    status: 'created',
     metadata: {
       name,
       icon: '',
       description: '',
     },
-  }
+  })
 }
 
 describe('资源状态仓库', () => {

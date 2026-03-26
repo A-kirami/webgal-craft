@@ -1,9 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { reactive } from 'vue'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 import EditorTabs from './EditorTabs.vue'
 
@@ -94,10 +93,8 @@ describe('EditorTabs', () => {
       },
     ]))
 
-    render(EditorTabs, {
-      global: {
-        plugins: [createBrowserLiteI18n()],
-      },
+    renderInBrowser(EditorTabs, {
+      global: {},
     })
 
     await page.getByText('demo.txt').click({ button: 'middle' })
@@ -121,10 +118,8 @@ describe('EditorTabs', () => {
 
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    render(EditorTabs, {
-      global: {
-        plugins: [createBrowserLiteI18n()],
-      },
+    renderInBrowser(EditorTabs, {
+      global: {},
     })
 
     await page.getByText('preview.txt').click({ clickCount: 2 })
@@ -146,10 +141,8 @@ describe('EditorTabs', () => {
 
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    render(EditorTabs, {
-      global: {
-        plugins: [createBrowserLiteI18n()],
-      },
+    renderInBrowser(EditorTabs, {
+      global: {},
     })
 
     await page.getByText('plain.txt').click({ button: 'middle' })

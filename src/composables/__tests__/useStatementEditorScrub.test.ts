@@ -1,5 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { ref } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useStatementEditorScrub } from '~/composables/useStatementEditorScrub'
 
@@ -21,7 +20,7 @@ interface PointerLikeEvent {
 const originalAddEventListener = globalThis.addEventListener
 const originalRemoveEventListener = globalThis.removeEventListener
 const listenerMap: ListenerMap = {}
-const noop = () => 0
+const noop = vi.fn(() => 0)
 
 function createArgField(
   key: string,
@@ -95,11 +94,12 @@ afterEach(() => {
     listenerMap[key].clear()
     delete listenerMap[key]
   }
+  noop.mockReset()
   globalThis.addEventListener = originalAddEventListener
   globalThis.removeEventListener = originalRemoveEventListener
 })
 
-describe('useStatementEditorScrub', () => {
+describe('useStatementEditorScrub 行为', () => {
   it('canScrubParam 根据 surface 与 param 类型生效', () => {
     const contentField = ref()
 

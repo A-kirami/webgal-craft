@@ -1,10 +1,8 @@
-/* eslint-disable vue/one-component-per-file */
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h, nextTick, onMounted, ref } from 'vue'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 import { useFileViewerLayout } from '~/composables/useFileViewerLayout'
 import { useFileViewerVirtualizer } from '~/composables/useFileViewerVirtualizer'
 
@@ -104,13 +102,14 @@ const globalStubs = {
     setup(_, { attrs }) {
       return () => h('img', {
         ...attrs,
+        'data-testid': 'thumbnail-probe',
         'data-thumbnail-size': stringifyThumbnailSize(attrs.size),
       })
     },
   }),
 }
 
-describe('FileViewer composables', () => {
+describe('FileViewer 组合式逻辑', () => {
   it('useFileViewerLayout 会根据宽度和缩放返回布局派生状态', async () => {
     const contentWidth = ref(780)
     const zoom = ref(100)
@@ -183,57 +182,54 @@ describe('FileViewer composables', () => {
   })
 })
 
-describe('FileViewer facade contract', () => {
-  it('把布局派生的预览尺寸传给 Thumbnail', () => {
+describe('FileViewer 外观契约', () => {
+  it('把布局派生的预览尺寸传给 Thumbnail', async () => {
     viewportWidthMock.value = 780
 
-    render(FileViewer, {
+    renderInBrowser(FileViewer, {
       props: {
         items: [createImageItem(1)],
         viewMode: 'grid',
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
 
-    expect(document.querySelector('img[data-thumbnail-size="64"]')).not.toBeNull()
+    await expect.element(page.getByTestId('thumbnail-probe')).toHaveAttribute('data-thumbnail-size', '64')
   })
 
-  it('列表模式下也把 listPreviewSize 传给 Thumbnail', () => {
+  it('列表模式下也把 listPreviewSize 传给 Thumbnail', async () => {
     viewportWidthMock.value = 780
 
-    render(FileViewer, {
+    renderInBrowser(FileViewer, {
       props: {
         items: [createImageItem(1)],
         viewMode: 'list',
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
 
-    expect(document.querySelector('img[data-thumbnail-size="20"]')).not.toBeNull()
+    await expect.element(page.getByTestId('thumbnail-probe')).toHaveAttribute('data-thumbnail-size', '20')
   })
 
-  it('窄列表视图下会同时隐藏 modifiedAt 列头和内容', () => {
+  it('窄列表视图下会同时隐藏 modifiedAt 列头和内容', async () => {
     viewportWidthMock.value = 520
 
-    render(FileViewer, {
+    renderInBrowser(FileViewer, {
       props: {
         items: [createItem(1)],
         viewMode: 'list',
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
 
     expect(document.body.textContent ?? '').not.toContain('common.fileMeta.modifiedAt')
-    expect(document.querySelector('[aria-label="common.fileMeta.modifiedAt"]')).toBeNull()
+    await expect.element(page.getByLabelText('common.fileMeta.modifiedAt')).not.toBeInTheDocument()
   })
 
   it('保持 viewport expose 与 #icon slot 契约', async () => {
@@ -274,9 +270,8 @@ describe('FileViewer facade contract', () => {
       },
     })
 
-    render(FileViewerHarness, {
+    renderInBrowser(FileViewerHarness, {
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

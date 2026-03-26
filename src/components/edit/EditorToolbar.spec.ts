@@ -1,9 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { reactive } from 'vue'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   useEditorStoreMock,
@@ -51,10 +50,8 @@ describe('EditorToolbar', () => {
     usePreferenceStoreMock.mockReturnValue(preferenceStore)
     useEditorStoreMock.mockReturnValue(editorStore)
 
-    render(EditorToolbar, {
-      global: {
-        plugins: [createBrowserLiteI18n()],
-      },
+    renderInBrowser(EditorToolbar, {
+      global: {},
     })
 
     await page.getByRole('button', { name: 'edit.editorMode.textMode' }).click()
@@ -80,10 +77,8 @@ describe('EditorToolbar', () => {
     usePreferenceStoreMock.mockReturnValue(preferenceStore)
     useEditorStoreMock.mockReturnValue(editorStore)
 
-    render(EditorToolbar, {
-      global: {
-        plugins: [createBrowserLiteI18n()],
-      },
+    renderInBrowser(EditorToolbar, {
+      global: {},
     })
 
     await page.getByRole('button', { name: 'edit.editorMode.toggleSidebar' }).click()
@@ -109,10 +104,8 @@ describe('EditorToolbar', () => {
     usePreferenceStoreMock.mockReturnValue(preferenceStore)
     useEditorStoreMock.mockReturnValue(editorStore)
 
-    render(EditorToolbar, {
-      global: {
-        plugins: [createBrowserLiteI18n()],
-      },
+    renderInBrowser(EditorToolbar, {
+      global: {},
     })
 
     await page.getByRole('button', { name: 'edit.editorMode.visualMode' }).click()

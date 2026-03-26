@@ -40,7 +40,7 @@ function createEditor(model: ReturnType<typeof createModel>) {
   } as unknown as monaco.editor.IStandaloneCodeEditor
 }
 
-describe('useTextEditorPanel', () => {
+describe('useTextEditorPanel 行为', () => {
   beforeEach(() => {
     getSceneSelectionMock.mockReset()
     getSceneSelectionMock.mockReturnValue(undefined)

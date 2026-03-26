@@ -173,7 +173,7 @@ function renderWorkspaceHarness(options: WorkspaceHarnessOptions): WorkspaceHarn
   }
 }
 
-describe('useTextEditorWorkspace', () => {
+describe('useTextEditorWorkspace 行为', () => {
   beforeEach(() => {
     currentPinia = createPinia()
     setActivePinia(currentPinia)

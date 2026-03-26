@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { formatFileSize } from '~/utils/format'
 
-describe('formatFileSize', () => {
+describe('formatFileSize 文件大小格式化', () => {
   it('字节级大小会直接输出整数 B', () => {
     expect(formatFileSize(0)).toBe('0 B')
     expect(formatFileSize(999)).toBe('999 B')

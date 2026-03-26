@@ -12,7 +12,7 @@ function makeInverse(id = 0): Transaction {
   return { type: 'statement:update', id, rawText: `old-${id}` } as Transaction
 }
 
-describe('EditHistory', () => {
+describe('EditHistory 编辑历史', () => {
   it('初始状态：sequenceNumber 为 0，不可 undo/redo', () => {
     const engine = new EditHistory()
     expect(engine.sequenceNumber).toBe(0)

@@ -9,13 +9,16 @@ import type { MockInstance } from 'vitest'
 import type { Plugin } from 'vue'
 import type { I18n } from 'vue-i18n'
 
+const browserTestI18nMarker = Symbol('browserTestI18n')
+
 interface BrowserTestI18nOptions {
   locale?: string
   messages?: Record<string, unknown>
 }
 
 interface BrowserTestPluginsOptions extends BrowserTestI18nOptions {
-  i18nMode?: BrowserTestI18nMode
+  includeI18n?: boolean
+  i18nMode: BrowserTestI18nMode
   pinia?: boolean | Pinia
 }
 
@@ -84,7 +87,17 @@ function createBrowserTestI18nInstance(config: BrowserTestI18nConfig): I18n {
     },
   })
 
+  Object.defineProperty(i18n, browserTestI18nMarker, {
+    value: true,
+  })
+
   return i18n
+}
+
+export function isBrowserTestI18nPlugin(plugin: unknown): plugin is I18n {
+  return typeof plugin === 'object'
+    && plugin !== null
+    && browserTestI18nMarker in plugin
 }
 
 export function createBrowserLiteI18n(options: BrowserTestI18nOptions = {}) {
@@ -92,13 +105,6 @@ export function createBrowserLiteI18n(options: BrowserTestI18nOptions = {}) {
     ...options,
     includeDefaultMessages: false,
     strict: false,
-  })
-}
-
-export function createBrowserTestI18n(options: BrowserTestI18nOptions = {}) {
-  return createBrowserLiteI18n({
-    ...options,
-    locale: options.locale ?? 'en',
   })
 }
 
@@ -118,7 +124,7 @@ export function createBrowserStrictI18n(options: BrowserTestI18nOptions = {}) {
   })
 }
 
-export function createBrowserTestPlugins(options: BrowserTestPluginsOptions = {}) {
+export function createBrowserTestPlugins(options: BrowserTestPluginsOptions) {
   const plugins: Plugin[] = []
   let pinia: Pinia | undefined
 
@@ -127,18 +133,18 @@ export function createBrowserTestPlugins(options: BrowserTestPluginsOptions = {}
     plugins.push(pinia)
   }
 
-  const createI18nPlugin = options.i18nMode
-    ? {
-        lite: createBrowserLiteI18n,
-        localized: createBrowserLocalizedI18n,
-        strict: createBrowserStrictI18n,
-      }[options.i18nMode]
-    : createBrowserTestI18n
+  const createI18nPlugin = {
+    lite: createBrowserLiteI18n,
+    localized: createBrowserLocalizedI18n,
+    strict: createBrowserStrictI18n,
+  }[options.i18nMode]
 
-  plugins.push(createI18nPlugin({
-    locale: options.locale,
-    messages: options.messages,
-  }))
+  if (options.includeI18n !== false) {
+    plugins.push(createI18nPlugin({
+      locale: options.locale,
+      messages: options.messages,
+    }))
+  }
 
   return {
     plugins,

@@ -1,8 +1,6 @@
 import '~/__tests__/mocks/modal-store'
 
-/* eslint-disable vue/one-component-per-file */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, provide, ref } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import {
@@ -11,25 +9,13 @@ import {
   useStatementAnimationEditorBridge,
 } from '~/composables/useStatementAnimationEditorBridge'
 
+import { createSentence } from './statement-editor-test-utils'
 import { createTestRenderer } from './utils/createTestRenderer'
 
 import type { TestNode } from './utils/createTestRenderer'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { StatementUpdatePayload } from '~/composables/useStatementEditor'
 import type { AnimationFrame } from '~/types/stage'
-
-function createSentence(overrides: Partial<ISentence>): ISentence {
-  return {
-    command: commandType.say,
-    commandRaw: 'say',
-    content: '',
-    args: [],
-    sentenceAssets: [],
-    subScene: [],
-    inlineComment: '',
-    ...overrides,
-  }
-}
 
 const mountedApps: { unmount: () => void }[] = []
 const renderer = createTestRenderer()
@@ -97,7 +83,7 @@ afterEach(() => {
   }
 })
 
-describe('applyAnimationEditorResultToSentence', () => {
+describe('applyAnimationEditorResultToSentence 行为', () => {
   it('setTempAnimation 语句使用单行 JSON 回写动画内容并保留其他参数', () => {
     const sentence = createSentence({
       command: commandType.setTempAnimation,
@@ -122,7 +108,7 @@ describe('applyAnimationEditorResultToSentence', () => {
   })
 })
 
-describe('useStatementAnimationEditorBridge', () => {
+describe('useStatementAnimationEditorBridge 行为', () => {
   it('打开编辑器后使用打开当时的语句与目标快照回写结果', () => {
     const {
       bridge,

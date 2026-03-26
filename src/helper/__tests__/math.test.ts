@@ -17,7 +17,7 @@ function createPointerEvent(clientX: number, clientY: number): PointerEvent {
   return { clientX, clientY } as PointerEvent
 }
 
-describe('clamp', () => {
+describe('clamp 区间钳制', () => {
   it.each([
     ['命中区间内的值', 5, 0, 10, 5],
     ['小于最小值时钳制到下限', -3, 0, 10, 0],
@@ -31,7 +31,7 @@ describe('clamp', () => {
   })
 })
 
-describe('normalizeStepPrecision', () => {
+describe('normalizeStepPrecision 步长精度归一化', () => {
   it.each([
     ['整数步长返回 0', 1, 0],
     ['多位整数步长仍返回 0', 10, 0],
@@ -45,7 +45,7 @@ describe('normalizeStepPrecision', () => {
   })
 })
 
-describe('roundByStep', () => {
+describe('roundByStep 按步长取整', () => {
   it.each([
     ['按两位小数步长舍入', 3.456, 0.01, 3.46],
     ['按一位小数步长舍入', 3.456, 0.1, 3.5],
@@ -74,14 +74,14 @@ describe('角度与弧度转换', () => {
   })
 })
 
-describe('roundToPrecision', () => {
+describe('roundToPrecision 精度取整', () => {
   it('按指定位数舍入', () => {
     expect(roundToPrecision(3.1415_9, 2)).toBe(3.14)
     expect(roundToPrecision(3.1415_9, 0)).toBe(3)
   })
 })
 
-describe('normalizeAngleDelta', () => {
+describe('normalizeAngleDelta 角度差归一化', () => {
   it.each([
     ['区间内的值保持不变', 0, 0],
     ['上边界 180 保持不变', 180, 180],
@@ -95,7 +95,7 @@ describe('normalizeAngleDelta', () => {
   })
 })
 
-describe('normalizeDegree', () => {
+describe('normalizeDegree 角度归一化', () => {
   it.each([
     ['0 度保持不变', 0, 0],
     ['359 度保持不变', 359, 359],
@@ -113,7 +113,7 @@ describe('normalizeDegree', () => {
   })
 })
 
-describe('getPointerAngleDegrees', () => {
+describe('getPointerAngleDegrees 指针角度计算', () => {
   it.each([
     ['指针位于中心右侧时返回 0°', createPointerEvent(200, 100), 0],
     ['指针位于中心下方时返回 90°', createPointerEvent(100, 200), 90],
@@ -123,7 +123,7 @@ describe('getPointerAngleDegrees', () => {
   })
 })
 
-describe('applyScrubStepModifier', () => {
+describe('applyScrubStepModifier 步长修饰符应用', () => {
   it.each([
     ['未按修饰键时保留基础步长', { altKey: false, shiftKey: false }, 1],
     ['按下 Alt 时使用 0.1 倍步长', { altKey: true, shiftKey: false }, 0.1],

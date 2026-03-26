@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { reactive } from 'vue'
 
 import { createBrowserLocalizedI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   dayjsMock,
@@ -116,7 +116,7 @@ describe('EditorStatusBar', () => {
 
     useEditorStoreMock.mockReturnValue(editorStore)
 
-    render(EditorStatusBar, {
+    renderInBrowser(EditorStatusBar, {
       global: {
         plugins: [createEditorStatusBarLocalizedI18n()],
       },
@@ -141,7 +141,7 @@ describe('EditorStatusBar', () => {
     getImageDimensionsMock.mockResolvedValue([1280, 720])
     useEditorStoreMock.mockReturnValue(editorStore)
 
-    render(EditorStatusBar, {
+    renderInBrowser(EditorStatusBar, {
       global: {
         plugins: [createEditorStatusBarLocalizedI18n()],
       },

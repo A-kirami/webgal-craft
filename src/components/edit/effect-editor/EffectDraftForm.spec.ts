@@ -1,10 +1,10 @@
 import { createPinia } from 'pinia'
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h } from 'vue'
 
 import { createBrowserConsoleMonitor, createBrowserLocalizedI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 import { EFFECT_CATEGORIES } from '~/helper/effect-editor-config'
 
 vi.mock('~/stores/workspace', () => ({
@@ -60,7 +60,7 @@ const { expectNoConsoleMessage } = createBrowserConsoleMonitor()
 
 describe('EffectDraftForm', () => {
   it('为 linked-slider 的 X/Y 数字输入提供唯一的可访问名称', async () => {
-    render(EffectDraftForm, {
+    renderInBrowser(EffectDraftForm, {
       props: {
         duration: '200',
         ease: '',
@@ -83,7 +83,7 @@ describe('EffectDraftForm', () => {
   })
 
   it('渲染顶部控件并按分类输出特效参数区域', async () => {
-    render(EffectDraftForm, {
+    renderInBrowser(EffectDraftForm, {
       props: {
         duration: '300',
         ease: '',

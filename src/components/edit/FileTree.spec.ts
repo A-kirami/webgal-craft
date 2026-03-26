@@ -1,10 +1,8 @@
-/* eslint-disable vue/one-component-per-file, vue/require-default-prop */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h } from 'vue'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   handleErrorMock,
@@ -265,14 +263,13 @@ describe('FileTree', () => {
   })
 
   it('加载中时会显示加载指示', async () => {
-    render(FileTree, {
+    renderInBrowser(FileTree, {
       props: {
         getKey: (item: Record<string, unknown>) => String(item.path),
         isLoading: true,
         items: [],
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -283,7 +280,7 @@ describe('FileTree', () => {
   it('点击文件项会发出 click 事件', async () => {
     const onClick = vi.fn()
 
-    render(FileTree, {
+    renderInBrowser(FileTree, {
       props: {
         getKey: (item: Record<string, unknown>) => String(item.path),
         items: [
@@ -295,7 +292,6 @@ describe('FileTree', () => {
         onClick,
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -310,7 +306,7 @@ describe('FileTree', () => {
   })
 
   it('按 F2 重命名后回车会调用 gameFs.renameFile', async () => {
-    render(FileTree, {
+    renderInBrowser(FileTree, {
       props: {
         getKey: (item: Record<string, unknown>) => String(item.path),
         items: [
@@ -321,7 +317,6 @@ describe('FileTree', () => {
         ],
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

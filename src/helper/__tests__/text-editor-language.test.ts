@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { resolveTextEditorLanguage } from '~/helper/text-editor-language'
 
-describe('resolveTextEditorLanguage', () => {
+describe('resolveTextEditorLanguage 语言解析', () => {
   const registeredLanguages = [
     {
       extensions: ['.md'],

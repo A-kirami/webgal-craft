@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { useFileClipboard } from '~/composables/useFileClipboard'
 
-describe('useFileClipboard', () => {
+describe('useFileClipboard 行为', () => {
   it('同一个 key 会共享剪贴板状态', () => {
     const source = useFileClipboard('shared')
     const mirror = useFileClipboard('shared')

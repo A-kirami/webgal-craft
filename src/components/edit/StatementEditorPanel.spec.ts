@@ -1,8 +1,8 @@
-/* eslint-disable vue/one-component-per-file, vue/require-default-prop */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { computed, defineComponent, h, reactive } from 'vue'
+
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   handleCommentChangeMock,
@@ -350,7 +350,7 @@ const globalStubs = {
 }
 
 function renderStatementEditorPanel(props: ComponentProps<typeof StatementEditorPanel>) {
-  render(StatementEditorPanel, {
+  renderInBrowser(StatementEditorPanel, {
     props,
     global: {
       mocks: {

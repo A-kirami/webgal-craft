@@ -1,10 +1,8 @@
-/* eslint-disable vue/one-component-per-file, vue/require-default-prop */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { computed, defineComponent, h } from 'vue'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   handleCommentChangeMock,
@@ -247,12 +245,11 @@ describe('StatementEditorInline', () => {
       statementType: 'say',
     }))
 
-    render(StatementEditorInline, {
+    renderInBrowser(StatementEditorInline, {
       props: {
         entry: createStatementEntry(21, 'Alice:hello'),
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -280,14 +277,13 @@ describe('StatementEditorInline', () => {
       },
     }))
 
-    render(StatementEditorInline, {
+    renderInBrowser(StatementEditorInline, {
       props: {
         entry: createStatementEntry(22, 'changeBg:bg.jpg'),
         onOpenAnimationEditor,
         onOpenEffectEditor,
       },
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

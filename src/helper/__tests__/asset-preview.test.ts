@@ -6,7 +6,7 @@ import {
   shouldSuspendPreviousAssetPreviewMediaSession,
 } from '../asset-preview'
 
-describe('asset preview helper', () => {
+describe('资源预览辅助函数', () => {
   it('会为音频和视频资源解析对应的媒体标签', () => {
     expect(resolveAssetPreviewMediaTag('audio/mpeg')).toBe('audio')
     expect(resolveAssetPreviewMediaTag('video/mp4')).toBe('video')

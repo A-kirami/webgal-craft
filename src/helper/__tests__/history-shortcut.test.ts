@@ -17,7 +17,7 @@ function createKeyboardEvent(overrides: Partial<{
   }
 }
 
-describe('resolveHistoryShortcutAction', () => {
+describe('resolveHistoryShortcutAction 快捷键解析', () => {
   it('识别 mod+z 和 mod+shift+z', () => {
     expect(resolveHistoryShortcutAction(createKeyboardEvent({
       ctrlKey: true,

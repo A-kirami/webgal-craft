@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
+
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 import AssetPreview from './AssetPreview.vue'
 
@@ -73,7 +74,7 @@ describe('AssetPreview', () => {
   })
 
   it('切换预览文件时会将旧媒体会话保存为暂停态', async () => {
-    const result = await render(AssetPreview, {
+    const result = await renderInBrowser(AssetPreview, {
       props: {
         state: createPreviewState('/game/alpha.mp3'),
       },
@@ -106,7 +107,7 @@ describe('AssetPreview', () => {
   })
 
   it('卸载时会将当前媒体会话保存为暂停态', async () => {
-    const result = await render(AssetPreview, {
+    const result = await renderInBrowser(AssetPreview, {
       props: {
         state: createPreviewState('/game/finale.mp3'),
       },

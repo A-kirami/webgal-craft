@@ -89,7 +89,7 @@ vi.mock('~/stores/storage-settings', () => ({
   useStorageSettingsStore: useStorageSettingsStoreMock,
 }))
 
-describe('engineManager', () => {
+describe('engineManager 引擎管理', () => {
   beforeEach(() => {
     copyDirectoryWithProgressMock.mockReset()
     dbEnginesAddMock.mockReset()

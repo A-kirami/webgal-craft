@@ -39,7 +39,7 @@ vi.mock('~/services/engine-manager', () => ({
   },
 }))
 
-describe('useEnginesTabController', () => {
+describe('useEnginesTabController 行为', () => {
   beforeEach(() => {
     importEngineMock.mockReset()
     notifyErrorMock.mockReset()

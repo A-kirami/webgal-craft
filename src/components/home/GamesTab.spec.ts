@@ -1,9 +1,9 @@
-/* eslint-disable vue/one-component-per-file */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h, reactive, ref } from 'vue'
 
+import { createBrowserClickStub, renderInBrowser } from '~/__tests__/browser-render'
+import { createTestEngine, createTestGame } from '~/__tests__/factories'
 import { AppError } from '~/types/errors'
 
 import GamesTab from './GamesTab.vue'
@@ -148,22 +148,8 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
-function createStubButton(name: string) {
-  return defineComponent({
-    name,
-    emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
-      return () => h('button', {
-        ...attrs,
-        type: 'button',
-        onClick: (event: MouseEvent) => emit('click', event),
-      }, slots.default?.())
-    },
-  })
-}
-
 const globalStubs = {
-  Button: createStubButton('StubButton'),
+  Button: createBrowserClickStub('StubButton'),
   GamesTabCollectionSection: defineComponent({
     name: 'StubGamesTabCollectionSection',
     props: {
@@ -194,37 +180,6 @@ const globalStubs = {
       ])
     },
   }),
-}
-
-function createGame(overrides: Partial<Game> = {}): Game {
-  return {
-    id: 'game-1',
-    path: '/games/demo',
-    createdAt: 0,
-    lastModified: 0,
-    status: 'created',
-    metadata: {
-      cover: '/games/demo/cover.png',
-      icon: '/games/demo/icon.png',
-      name: 'Demo Game',
-    },
-    ...overrides,
-  }
-}
-
-function createEngine(overrides: Partial<Engine> = {}): Engine {
-  return {
-    id: 'engine-1',
-    path: '/engines/default',
-    createdAt: 0,
-    status: 'created',
-    metadata: {
-      description: 'Default engine',
-      icon: '/engines/default/icon.png',
-      name: 'Default Engine',
-    },
-    ...overrides,
-  }
 }
 
 function createResourceStore(options: {
@@ -284,7 +239,7 @@ describe('GamesTab', () => {
   })
 
   function renderGamesTab() {
-    render(GamesTab, {
+    renderInBrowser(GamesTab, {
       global: {
         mocks: {
           $t: translate,
@@ -296,7 +251,7 @@ describe('GamesTab', () => {
 
   it('空状态下点击创建按钮会打开创建游戏模态框', async () => {
     useResourceStoreMock.mockReturnValue(createResourceStore({
-      engines: [createEngine()],
+      engines: [createTestEngine()],
       games: [],
     }))
 
@@ -335,10 +290,10 @@ describe('GamesTab', () => {
   })
 
   it('列表视图操作按钮会打开文件夹并触发删除模态框', async () => {
-    const game = createGame()
+    const game = createTestGame()
 
     useResourceStoreMock.mockReturnValue(createResourceStore({
-      engines: [createEngine()],
+      engines: [createTestEngine()],
       games: [game],
     }))
 
@@ -352,12 +307,12 @@ describe('GamesTab', () => {
   })
 
   it('游戏创建中时点击卡片会提示等待而不是跳转编辑器', async () => {
-    const game = createGame()
+    const game = createTestGame()
     const activeProgress = new Map<string, number>([['game-1', 50]])
 
     useResourceStoreMock.mockReturnValue(createResourceStore({
       activeProgress,
-      engines: [createEngine()],
+      engines: [createTestEngine()],
       games: [game],
     }))
 
@@ -371,8 +326,8 @@ describe('GamesTab', () => {
 
   it('导入游戏失败时会根据错误类型显示对应通知', async () => {
     useResourceStoreMock.mockReturnValue(createResourceStore({
-      engines: [createEngine()],
-      games: [createGame()],
+      engines: [createTestEngine()],
+      games: [createTestGame()],
     }))
     openDialogMock.mockResolvedValue('/games/import-target')
     importGameMock.mockRejectedValue(new AppError('INVALID_STRUCTURE', 'invalid'))

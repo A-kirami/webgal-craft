@@ -107,7 +107,7 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
-describe('gameManager', () => {
+describe('gameManager 游戏管理', () => {
   beforeEach(() => {
     vi.useRealTimers()
     copyDirectoryWithProgressMock.mockReset()

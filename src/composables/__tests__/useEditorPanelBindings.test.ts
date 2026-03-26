@@ -1,6 +1,5 @@
-/* eslint-disable vue/one-component-per-file, unicorn/no-null */
 import { afterEach, describe, expect, it } from 'vitest'
-import { createRenderer, defineComponent, h, nextTick, ref } from 'vue'
+import { createRenderer } from 'vue'
 
 import {
   useCommandPanelBridgeBinding,
@@ -10,7 +9,6 @@ import {
 } from '../useEditorPanelBindings'
 
 import type { CommandPanelHandler, SidebarPanelBinding } from '../useEditorPanelBindings'
-import type { ShallowRef } from 'vue'
 import type { StatementEntry } from '~/helper/webgal-script/sentence'
 
 interface ActivatableBinding {
@@ -67,12 +65,15 @@ const renderer = createRenderer<TestNode, TestNode>({
     node.text = text
   },
   parentNode() {
+    // eslint-disable-next-line unicorn/no-null
     return null
   },
   nextSibling() {
+    // eslint-disable-next-line unicorn/no-null
     return null
   },
   querySelector() {
+    // eslint-disable-next-line unicorn/no-null
     return null
   },
   setScopeId() { /* no-op */ },

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { createDocumentModel } from '../document-model'
 import { serializeDocument } from '../serializer'
 
-describe('serializer', () => {
+describe('serializer 序列化', () => {
   it('场景文档序列化时保持原始 CRLF', () => {
     const model = createDocumentModel({
       kind: 'scene',

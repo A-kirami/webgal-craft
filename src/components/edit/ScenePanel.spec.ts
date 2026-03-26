@@ -1,10 +1,8 @@
-/* eslint-disable vue/one-component-per-file */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 import { defineComponent, h, reactive } from 'vue'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   fileSystemEventsOnMock,
@@ -193,9 +191,8 @@ describe('ScenePanel', () => {
   })
 
   it('会读取场景目录并渲染文件树', async () => {
-    render(ScenePanel, {
+    renderInBrowser(ScenePanel, {
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })
@@ -219,9 +216,8 @@ describe('ScenePanel', () => {
 
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    render(ScenePanel, {
+    renderInBrowser(ScenePanel, {
       global: {
-        plugins: [createBrowserLiteI18n()],
         stubs: globalStubs,
       },
     })

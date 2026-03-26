@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { render } from 'vitest-browser-vue'
 
-import { createBrowserLiteI18n } from '~/__tests__/browser'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 import GameConfigModal from './GameConfigModal.vue'
 
@@ -10,13 +9,13 @@ describe('GameConfigModal', () => {
   it('打开时会渲染标题和占位内容', async () => {
     const updateOpen = vi.fn()
 
-    render(GameConfigModal, {
+    renderInBrowser(GameConfigModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
       props: {
         'open': true,
         'onUpdate:open': updateOpen,
-      },
-      global: {
-        plugins: [createBrowserLiteI18n()],
       },
     })
 
