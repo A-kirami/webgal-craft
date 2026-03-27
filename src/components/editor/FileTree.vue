@@ -150,6 +150,10 @@ function toShortcutTargetFileItem() {
 }
 
 function handleShortcutRename() {
+  if (!enableContextMenu) {
+    return
+  }
+
   const fileItem = toShortcutTargetFileItem()
   if (!fileItem) {
     return
@@ -159,6 +163,10 @@ function handleShortcutRename() {
 }
 
 function handleShortcutDelete() {
+  if (!enableContextMenu) {
+    return
+  }
+
   const fileItem = toShortcutTargetFileItem()
   if (!fileItem) {
     return
@@ -176,21 +184,23 @@ useShortcutContext({
   trackFocus: true,
 })
 
-useShortcut({
-  execute: handleShortcutRename,
-  i18nKey: 'shortcut.fileTree.rename',
-  id: 'fileTree.rename',
-  keys: 'F2',
-  when: { panelFocus: 'fileTree' },
-})
+if (enableContextMenu) {
+  useShortcut({
+    execute: handleShortcutRename,
+    i18nKey: 'shortcut.fileTree.rename',
+    id: 'fileTree.rename',
+    keys: 'F2',
+    when: { panelFocus: 'fileTree' },
+  })
 
-useShortcut({
-  execute: handleShortcutDelete,
-  i18nKey: 'shortcut.fileTree.delete',
-  id: 'fileTree.delete',
-  keys: 'Delete',
-  when: { panelFocus: 'fileTree' },
-})
+  useShortcut({
+    execute: handleShortcutDelete,
+    i18nKey: 'shortcut.fileTree.delete',
+    id: 'fileTree.delete',
+    keys: 'Delete',
+    when: { panelFocus: 'fileTree' },
+  })
+}
 </script>
 
 <template>

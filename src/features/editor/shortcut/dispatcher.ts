@@ -1,3 +1,5 @@
+import { handleError } from '~/utils/error-handler'
+
 import { normalizeShortcutBindingKeys, normalizeShortcutEventKeys } from './keys'
 
 import type { ShortcutKeyboardEventLike } from './keys'
@@ -116,6 +118,17 @@ export function dispatchShortcut<TExecuteContext>(
   }
 
   options.event.preventDefault()
-  void matched.binding.execute(options.executeContext)
+
+  try {
+    const result = matched.binding.execute(options.executeContext)
+    if (result && typeof result === 'object' && 'then' in result) {
+      void Promise.resolve(result).catch((error) => {
+        handleError(error, { silent: true })
+      })
+    }
+  } catch (error) {
+    handleError(error, { silent: true })
+  }
+
   return true
 }

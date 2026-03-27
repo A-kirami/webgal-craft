@@ -370,6 +370,26 @@ describe('FileTree', () => {
     expect(renameFileMock).toHaveBeenCalledWith('/project/scene.txt', 'renamed.txt')
   })
 
+  it('禁用上下文菜单后，按 F2 不会触发重命名', async () => {
+    renderFileTree({
+      enableContextMenu: false,
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [
+        {
+          name: 'scene.txt',
+          path: '/project/scene.txt',
+        },
+      ],
+    })
+
+    const treeItem = page.getByRole('treeitem').first()
+    await treeItem.click()
+    await userEvent.keyboard('{F2}')
+
+    await expect.element(page.getByRole('textbox')).not.toBeInTheDocument()
+    expect(renameFileMock).not.toHaveBeenCalled()
+  })
+
   it('键盘焦点移动到其他条目后，F2 会重命名当前焦点条目', async () => {
     renderFileTree({
       getKey: (item: Record<string, unknown>) => String(item.path),
@@ -429,6 +449,30 @@ describe('FileTree', () => {
         path: '/project/scene.txt',
       },
     })
+  })
+
+  it('禁用上下文菜单后，按 Delete 不会打开删除文件确认弹窗', async () => {
+    const modalStore = {
+      open: vi.fn(),
+    }
+    useModalStoreMock.mockReturnValue(modalStore)
+
+    renderFileTree({
+      enableContextMenu: false,
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [
+        {
+          name: 'scene.txt',
+          path: '/project/scene.txt',
+        },
+      ],
+    })
+
+    const treeItem = page.getByRole('treeitem').first()
+    await treeItem.click()
+    await userEvent.keyboard('{Delete}')
+
+    expect(modalStore.open).not.toHaveBeenCalled()
   })
 
   it('键盘焦点移动到其他条目后，Delete 会作用到当前焦点条目', async () => {

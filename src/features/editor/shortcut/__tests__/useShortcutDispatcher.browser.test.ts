@@ -2,6 +2,7 @@ import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
 import { defineComponent, h, ref } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
 import CommandPanelCard from '~/components/editor/CommandPanelCard.vue'
@@ -280,6 +281,68 @@ function createStatementEditorSelectHarnessComponent() {
   })
 }
 
+function createComponentTargetHarnessComponent() {
+  const ValueExposedButton = defineComponent({
+    name: 'ValueExposedButton',
+    setup(_, { expose }) {
+      expose({
+        value: 'component-value',
+      })
+
+      return () => h('button', {
+        type: 'button',
+      }, 'value-target')
+    },
+  })
+
+  const ComponentTargetShortcut = defineComponent({
+    name: 'ComponentTargetShortcut',
+    setup() {
+      const targetRef = ref<ComponentPublicInstance | null>(null)
+
+      useShortcutContext({
+        panelFocus: 'fileTree',
+      }, {
+        target: targetRef,
+        trackFocus: true,
+      })
+
+      useShortcut({
+        execute: () => {
+          shortcutActions.rename()
+        },
+        i18nKey: 'shortcut.fileTree.rename',
+        id: 'fileTree.rename',
+        keys: 'F2',
+        when: {
+          panelFocus: 'fileTree',
+        },
+      })
+
+      return () => h(ValueExposedButton, {
+        ref: targetRef,
+      })
+    },
+  })
+
+  return defineComponent({
+    name: 'ComponentTargetHarness',
+    setup() {
+      useShortcutDispatcher({
+        bindings: [],
+        executeContext: {},
+        platform: 'windows',
+      })
+
+      useShortcutContext({
+        panelFocus: 'none',
+      })
+
+      return () => h(ComponentTargetShortcut)
+    },
+  })
+}
+
 describe('useShortcutDispatcher 的浏览器分发行为', () => {
   beforeEach(() => {
     for (const action of Object.values(shortcutActions)) {
@@ -334,6 +397,21 @@ describe('useShortcutDispatcher 的浏览器分发行为', () => {
     })
 
     const button = page.getByRole('button', { name: 'file-tree' })
+    const buttonElement = await button.element()
+    buttonElement.focus()
+    await userEvent.keyboard('{F2}')
+
+    expect(shortcutActions.rename).toHaveBeenCalledOnce()
+  })
+
+  it('组件实例公开 value 字段时，仍会解析到真实焦点元素', async () => {
+    renderInBrowser(createComponentTargetHarnessComponent(), {
+      global: {
+        plugins: [createPinia()],
+      },
+    })
+
+    const button = page.getByRole('button', { name: 'value-target' })
     const buttonElement = await button.element()
     buttonElement.focus()
     await userEvent.keyboard('{F2}')

@@ -1,10 +1,19 @@
 import { describe, expect, it, vi } from 'vitest'
 
+const { handleErrorMock } = vi.hoisted(() => ({
+  handleErrorMock: vi.fn(),
+}))
+
+vi.mock('~/utils/error-handler', () => ({
+  handleError: handleErrorMock,
+}))
+
 import {
   dispatchShortcut,
   matchesShortcutWhen,
 } from '../dispatcher'
 import {
+  normalizeShortcutBindingKey,
   normalizeShortcutBindingKeys,
   normalizeShortcutEventKeys,
 } from '../keys'
@@ -85,6 +94,17 @@ describe('dispatchShortcut 与快捷键匹配工具函数', () => {
       key: 'ArrowDown',
       metaKey: true,
     }))).toBe('Meta+ArrowDown')
+  })
+
+  it('按下修饰键本身时不会生成伪快捷键', () => {
+    expect(normalizeShortcutEventKeys(createKeyboardEvent({
+      ctrlKey: true,
+      key: 'Control',
+    }))).toBe('')
+  })
+
+  it('绑定包含多个非修饰键时会被视为无效', () => {
+    expect(normalizeShortcutBindingKey('Ctrl+K+P', 'windows')).toBe('')
   })
 
   it('when 条件支持等值匹配和 !value 否定语法', () => {
@@ -246,5 +266,32 @@ describe('dispatchShortcut 与快捷键匹配工具函数', () => {
 
     expect(handled).toBe(true)
     expect(call).toHaveBeenCalledWith('editor.commandPanel')
+  })
+
+  it('快捷键执行返回 rejected Promise 时会静默记录错误', async () => {
+    const error = new Error('save failed')
+
+    const handled = dispatchShortcut({
+      bindings: [
+        createBinding({
+          execute: () => Promise.reject(error),
+          id: 'editor.save',
+        }),
+      ],
+      context: {
+        editorMode: 'visual',
+      },
+      event: createKeyboardEvent({
+        ctrlKey: true,
+        key: 's',
+      }),
+      executeContext: { call: vi.fn() },
+      platform: 'windows',
+    })
+
+    await Promise.resolve()
+
+    expect(handled).toBe(true)
+    expect(handleErrorMock).toHaveBeenCalledWith(error, { silent: true })
   })
 })

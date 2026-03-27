@@ -29,6 +29,8 @@ const EVENT_KEY_NORMALIZERS: Record<string, string> = {
   'arrowleft': 'ArrowLeft',
   'arrowright': 'ArrowRight',
   'arrowup': 'ArrowUp',
+  'control': 'Ctrl',
+  'ctrl': 'Ctrl',
   'delete': 'Delete',
   'del': 'Delete',
   'enter': 'Enter',
@@ -156,6 +158,10 @@ export function normalizeShortcutBindingKey(
         break
       }
       default: {
+        if (resolvedKey) {
+          return ''
+        }
+
         resolvedKey = normalizedToken
       }
     }

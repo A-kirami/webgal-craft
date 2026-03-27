@@ -28,13 +28,13 @@ function resolveElement(source: FocusableTarget | null | undefined): HTMLElement
     return source
   }
 
-  if (typeof source === 'object' && 'value' in source) {
-    return resolveElement(source.value)
-  }
-
   if (typeof source === 'object' && '$el' in source) {
     const element = source.$el
     return element instanceof HTMLElement ? element : undefined
+  }
+
+  if (typeof source === 'object' && 'value' in source) {
+    return resolveElement(source.value)
   }
 
   return undefined
