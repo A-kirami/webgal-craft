@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { computed, defineComponent, h, reactive } from 'vue'
+import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import {
   createBrowserClickStub,
@@ -200,7 +201,26 @@ const globalStubs = {
       }, slots.default?.())
     },
   }),
-  StatementAssetPreview: createBrowserContainerStub('StubStatementAssetPreview', 'img'),
+  StatementAssetPreview: defineComponent({
+    name: 'StubStatementAssetPreview',
+    props: {
+      mimeType: {
+        type: String,
+        required: false,
+      },
+      src: {
+        type: String,
+        required: true,
+      },
+    },
+    setup(props) {
+      return () => h('div', {
+        'data-mime-type': props.mimeType,
+        'data-testid': 'statement-asset-preview',
+        'data-url': props.src,
+      })
+    },
+  }),
   StatementCommandFieldsSection: defineComponent({
     name: 'StubStatementCommandFieldsSection',
     emits: ['openAnimationEditor', 'openEffectEditor'],
@@ -402,5 +422,53 @@ describe('StatementEditorPanel', () => {
 
     expect(openEffectEditorMock).toHaveBeenCalledTimes(1)
     expect(openAnimationEditorMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('会把侧边栏媒体预览的 URL 和 MIME 类型传给预览组件', async () => {
+    useEditSettingsStoreMock.mockReturnValue({
+      showSidebarAssetPreview: true,
+    })
+    useStatementEditorMock.mockReturnValue(createEditorReturn({
+      parsed: computed(() => ({
+        command: commandType.video,
+        content: 'opening.webm',
+        inlineComment: '',
+      })),
+      statementType: 'command',
+      contentField: computed(() => ({
+        key: 'content',
+        storage: 'content',
+        field: {
+          key: 'content',
+          label: 'video',
+          type: 'file',
+          fileConfig: {
+            assetType: 'video',
+            extensions: ['.webm'],
+            title: 'video',
+          },
+        },
+      })),
+      resource: {
+        fileRootPaths: computed(() => ({
+          video: '/games/demo/assets/video',
+        })),
+      },
+      view: {
+        basicRenderFields: computed(() => []),
+        commandRenderFields: computed(() => []),
+        effectEditorAtTop: computed(() => false),
+        showAnimationEditorButton: computed(() => false),
+        showEffectEditorButton: computed(() => false),
+        specialContentMode: computed(() => undefined),
+      },
+    }))
+
+    renderStatementEditorPanel({
+      entry: createStatementEntry(13, 'video:opening.webm'),
+    })
+
+    await expect.element(page.getByTestId('statement-asset-preview')).toHaveAttribute('data-url', 'http://127.0.0.1:8899/assets/video/opening.webm')
+    await expect.element(page.getByTestId('statement-asset-preview')).toHaveAttribute('data-mime-type', 'video/webm')
   })
 })

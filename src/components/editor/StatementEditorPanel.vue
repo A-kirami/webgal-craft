@@ -4,10 +4,7 @@ import { StatementEntry } from '~/domain/script/sentence'
 import { useStatementAnimationEditorBridge } from '~/features/editor/animation/useStatementAnimationEditorBridge'
 import { useStatementEffectEditorBridge } from '~/features/editor/effect-editor/useStatementEffectEditorBridge'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
-import {
-  normalizeStatementPanelSingleLineValue,
-  resolveStatementPanelPreviewImageUrl,
-} from '~/features/editor/statement-editor/panel'
+import { normalizeStatementPanelSingleLineValue, resolveStatementPanelPreviewMedia } from '~/features/editor/statement-editor/panel'
 import { statementEditorSurfaceKey } from '~/features/editor/statement-editor/surface-context'
 import { isStatementInteractiveTarget, useStatementEditor } from '~/features/editor/statement-editor/useStatementEditor'
 import { useEditSettingsStore } from '~/stores/edit-settings'
@@ -114,8 +111,7 @@ watch(
 const editSettings = useEditSettingsStore()
 const workspaceStore = useWorkspaceStore()
 
-const previewImageUrl = $computed(() => resolveStatementPanelPreviewImageUrl({
-  command: parsed.value?.command,
+const previewMedia = $computed(() => resolveStatementPanelPreviewMedia({
   content: parsed.value?.content,
   contentField: contentField.value,
   cwd: workspaceStore.CWD,
@@ -190,8 +186,12 @@ useShortcutContext({
     <!-- 可滚动参数区域 -->
     <ScrollArea v-if="!config.locked" class="flex-1" @dblclick="handleBlankDblClick">
       <div class="flex flex-col gap-3" :class="inline ? 'px-1 py-0' : 'p-4'">
-        <!-- 资源图片预览 -->
-        <StatementAssetPreview v-if="previewImageUrl" :src="previewImageUrl" />
+        <!-- 资源媒体预览 -->
+        <StatementAssetPreview
+          v-if="previewMedia"
+          :src="previewMedia.url"
+          :mime-type="previewMedia.mimeType"
+        />
 
         <!-- 空行 / 注释 -->
         <template v-if="statementType === 'empty' || statementType === 'comment'">

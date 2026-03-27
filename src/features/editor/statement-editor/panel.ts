@@ -1,20 +1,16 @@
-import { commandType } from 'webgal-parser/src/interface/sceneInterface'
-
+import { mime } from '~/plugins/mime'
 import { resolveAssetUrl } from '~/services/platform/asset-url'
 
 import type { EditorField } from '~/features/editor/command-registry/schema'
 
-const STATEMENT_PANEL_IMAGE_PREVIEW_COMMANDS = new Set([
-  commandType.changeBg,
-  commandType.changeFigure,
-  commandType.miniAvatar,
-  commandType.unlockCg,
-])
+const STATEMENT_PANEL_PREVIEW_MIME_PREFIXES = ['image/', 'video/', 'audio/'] as const
 
-const STATEMENT_PANEL_NON_IMAGE_EXTENSIONS = new Set(['.json', '.skel'])
+export interface StatementPanelPreviewMedia {
+  mimeType: string
+  url: string
+}
 
-export interface ResolveStatementPanelPreviewImageUrlOptions {
-  command?: commandType
+export interface ResolveStatementPanelPreviewMediaOptions {
   content?: string
   contentField?: EditorField
   cwd?: string
@@ -27,11 +23,10 @@ export function normalizeStatementPanelSingleLineValue(value: string): string {
   return value.replaceAll(/\r?\n/g, ' ')
 }
 
-export function resolveStatementPanelPreviewImageUrl(
-  options: ResolveStatementPanelPreviewImageUrlOptions,
-): string {
+export function resolveStatementPanelPreviewMedia(
+  options: ResolveStatementPanelPreviewMediaOptions,
+): StatementPanelPreviewMedia | undefined {
   const {
-    command,
     content,
     contentField,
     cwd,
@@ -40,16 +35,13 @@ export function resolveStatementPanelPreviewImageUrl(
     showSidebarAssetPreview,
   } = options
 
-  if (!showSidebarAssetPreview || !command || !STATEMENT_PANEL_IMAGE_PREVIEW_COMMANDS.has(command) || !content) {
-    return ''
+  if (!showSidebarAssetPreview || !content) {
+    return undefined
   }
 
-  const extensionStartIndex = content.lastIndexOf('.')
-  const extension = extensionStartIndex === -1
-    ? ''
-    : content.slice(extensionStartIndex).toLowerCase()
-  if (STATEMENT_PANEL_NON_IMAGE_EXTENSIONS.has(extension)) {
-    return ''
+  const mimeType = mime.getType(content)
+  if (!mimeType || !STATEMENT_PANEL_PREVIEW_MIME_PREFIXES.some(prefix => mimeType.startsWith(prefix))) {
+    return undefined
   }
 
   const assetType = contentField?.field.type === 'file'
@@ -57,11 +49,14 @@ export function resolveStatementPanelPreviewImageUrl(
     : undefined
   const rootPath = assetType ? fileRootPaths[assetType] : undefined
   if (!rootPath || !cwd || !previewBaseUrl) {
-    return ''
+    return undefined
   }
 
-  return resolveAssetUrl(`${rootPath}/${content}`, {
-    cwd,
-    previewBaseUrl,
-  })
+  return {
+    mimeType,
+    url: resolveAssetUrl(`${rootPath}/${content}`, {
+      cwd,
+      previewBaseUrl,
+    }),
+  }
 }

@@ -17,8 +17,11 @@ use axum::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         ConnectInfo, Path as AxumPath, State as AxumState,
     },
-    http::{header::CACHE_CONTROL, HeaderValue, Request, StatusCode, Uri},
-    response::{IntoResponse, Redirect},
+    http::{
+        header::{ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, ORIGIN, VARY},
+        HeaderMap, HeaderValue, Request, StatusCode, Uri,
+    },
+    response::{IntoResponse, Redirect, Response},
     routing::get,
     Router,
 };
@@ -34,6 +37,12 @@ use tower::util::ServiceExt;
 use tower_http::{services::ServeDir, set_header::SetResponseHeaderLayer};
 
 use super::{AppError, AppResult};
+
+const STATIC_FILE_ALLOWED_CORS_ORIGINS: [&str; 3] = [
+    "http://localhost:1420",
+    "http://127.0.0.1:1420",
+    "http://tauri.localhost",
+];
 
 /// 应用程序状态
 /// 包含：
@@ -193,14 +202,41 @@ async fn handle_ws_socket(
 /// 返回：
 /// - 成功：静态文件响应
 /// - 失败：HTTP状态码
+fn resolve_static_file_cors_origin(origin: Option<&str>) -> Option<&'static str> {
+    let origin = origin?;
+    STATIC_FILE_ALLOWED_CORS_ORIGINS
+        .iter()
+        .copied()
+        .find(|allowed_origin| *allowed_origin == origin)
+}
+
+fn resolve_static_file_cors_origin_from_headers(headers: &HeaderMap) -> Option<&'static str> {
+    resolve_static_file_cors_origin(headers.get(ORIGIN).and_then(|origin| origin.to_str().ok()))
+}
+
+fn append_static_file_cors_headers(response: &mut Response, origin: Option<&'static str>) {
+    let Some(allowed_origin) = origin else {
+        return;
+    };
+
+    response.headers_mut().insert(
+        ACCESS_CONTROL_ALLOW_ORIGIN,
+        HeaderValue::from_static(allowed_origin),
+    );
+    response
+        .headers_mut()
+        .insert(VARY, HeaderValue::from_static("Origin"));
+}
+
 async fn handle_static_request(
     AxumState(state): AxumState<Arc<AppState>>,
     AxumPath(hash): AxumPath<String>,
     path: Option<String>,
-) -> Result<impl IntoResponse, StatusCode> {
+    origin: Option<&'static str>,
+) -> Response {
     let sites = state.sites.read().await;
 
-    if let Some((_, serve_dir)) = sites.get(&hash) {
+    let mut response = if let Some((_, serve_dir)) = sites.get(&hash) {
         let uri = match path {
             Some(p) => {
                 // 对路径进行 URL 编码
@@ -219,12 +255,16 @@ async fn handle_static_request(
             .oneshot(Request::builder().uri(uri).body(()).unwrap())
             .await
         {
-            Ok(response) => Ok(response.into_response()),
-            Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+            Ok(response) => response.into_response(),
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     } else {
-        Err(StatusCode::NOT_FOUND)
-    }
+        StatusCode::NOT_FOUND.into_response()
+    };
+
+    append_static_file_cors_headers(&mut response, origin);
+
+    response
 }
 
 /// 启动HTTP服务器
@@ -272,35 +312,52 @@ pub async fn start_server(
     let addr = listener.local_addr()?;
 
     // 构建路由
-    let app = Router::new()
-        .route(
-            "/api/webgalsync",
-            get(move |ws, state, addr| handle_ws(ws, state, addr, on_message)),
-        )
-        .route("/game/{hash}", get(handle_redirect))
-        .route(
-            "/game/{hash}/",
-            get(
-                |state: AxumState<Arc<AppState>>, hash: AxumPath<String>| async move {
-                    handle_static_request(state, hash, None).await
-                },
-            ),
-        )
-        .route(
-            "/game/{hash}/{*path}",
-            get(
-                |state: AxumState<Arc<AppState>>, path: AxumPath<(String, String)>| async move {
-                    let (hash, path) = path.0;
-                    handle_static_request(state, AxumPath(hash), Some(path)).await
-                },
-            ),
-        )
-        .with_state(state_guard.app_state.clone())
-        // 统一添加禁止缓存的响应头
-        .layer(SetResponseHeaderLayer::overriding(
-            CACHE_CONTROL,
-            HeaderValue::from_static("no-store, no-cache, must-revalidate, max-age=0"),
-        ));
+    let app =
+        Router::new()
+            .route(
+                "/api/webgalsync",
+                get(move |ws, state, addr| handle_ws(ws, state, addr, on_message)),
+            )
+            .route("/game/{hash}", get(handle_redirect))
+            .route(
+                "/game/{hash}/",
+                get(
+                    |state: AxumState<Arc<AppState>>,
+                     hash: AxumPath<String>,
+                     headers: HeaderMap| async move {
+                        handle_static_request(
+                            state,
+                            hash,
+                            None,
+                            resolve_static_file_cors_origin_from_headers(&headers),
+                        )
+                        .await
+                    },
+                ),
+            )
+            .route(
+                "/game/{hash}/{*path}",
+                get(
+                    |state: AxumState<Arc<AppState>>,
+                     path: AxumPath<(String, String)>,
+                     headers: HeaderMap| async move {
+                        let (hash, path) = path.0;
+                        handle_static_request(
+                            state,
+                            AxumPath(hash),
+                            Some(path),
+                            resolve_static_file_cors_origin_from_headers(&headers),
+                        )
+                        .await
+                    },
+                ),
+            )
+            .with_state(state_guard.app_state.clone())
+            // 统一添加禁止缓存的响应头
+            .layer(SetResponseHeaderLayer::overriding(
+                CACHE_CONTROL,
+                HeaderValue::from_static("no-store, no-cache, must-revalidate, max-age=0"),
+            ));
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
@@ -503,4 +560,39 @@ pub async fn get_connected_clients(
     let clients = state_guard.app_state.unicast_clients.lock().await;
 
     Ok(clients.keys().map(|addr| addr.to_string()).collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_static_file_cors_origin;
+
+    #[test]
+    fn resolve_static_file_cors_origin_allows_known_app_origins() {
+        assert_eq!(
+            resolve_static_file_cors_origin(Some("http://localhost:1420")),
+            Some("http://localhost:1420")
+        );
+        assert_eq!(
+            resolve_static_file_cors_origin(Some("http://127.0.0.1:1420")),
+            Some("http://127.0.0.1:1420")
+        );
+        assert_eq!(
+            resolve_static_file_cors_origin(Some("http://tauri.localhost")),
+            Some("http://tauri.localhost")
+        );
+    }
+
+    #[test]
+    fn resolve_static_file_cors_origin_rejects_unknown_origins() {
+        assert_eq!(resolve_static_file_cors_origin(None), None);
+        assert_eq!(
+            resolve_static_file_cors_origin(Some("http://localhost:3000")),
+            None
+        );
+        assert_eq!(
+            resolve_static_file_cors_origin(Some("https://example.com")),
+            None
+        );
+        assert_eq!(resolve_static_file_cors_origin(Some("null")), None);
+    }
 }

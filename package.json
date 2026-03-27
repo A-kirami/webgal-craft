@@ -68,6 +68,7 @@
     "vue-inline-svg": "^4.0.1",
     "vue-router": "^5.0.4",
     "vue-sonner": "^2.0.9",
+    "wavesurfer.js": "^7.12.5",
     "webgal-parser": "^4.5.18",
     "zod": "^4.3.6"
   },

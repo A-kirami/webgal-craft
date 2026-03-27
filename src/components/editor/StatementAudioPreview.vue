@@ -1,0 +1,246 @@
+<script setup lang="ts">
+import { Pause, Play } from 'lucide-vue-next'
+import WaveSurfer from 'wavesurfer.js'
+
+import type { WaveSurferOptions } from 'wavesurfer.js'
+
+interface Props {
+  src: string
+}
+
+const props = defineProps<Props>()
+
+const waveformRef = useTemplateRef<HTMLDivElement>('waveformRef')
+
+let waveSurfer = $shallowRef<ReturnType<typeof WaveSurfer.create>>()
+let durationSeconds = $ref(0)
+let currentTimeSeconds = $ref(0)
+let isPlaying = $ref(false)
+let isReady = $ref(false)
+
+const displayTime = $computed(() => {
+  return formatAudioTime(Math.max(durationSeconds - currentTimeSeconds, 0))
+})
+
+function renderContinuousWaveform(
+  channels: Parameters<NonNullable<WaveSurferOptions['renderFunction']>>[0],
+  context: Parameters<NonNullable<WaveSurferOptions['renderFunction']>>[1],
+) {
+  const channel = channels[0]
+  const { width, height } = context.canvas
+  if (!channel?.length || width <= 0 || height <= 0) {
+    return
+  }
+
+  const scale = channel.length / width
+  const step = 4
+
+  context.save()
+  context.lineWidth = 1.5
+  context.translate(0, height / 2)
+  context.strokeStyle = context.fillStyle
+  context.beginPath()
+
+  for (let index = 0; index < width; index += step * 2) {
+    const sampleIndex = Math.floor(index * scale)
+    const amplitude = Math.abs(channel[sampleIndex] ?? 0)
+    let x = index
+    let y = (height / 2) * amplitude
+
+    context.moveTo(x, 0)
+    context.lineTo(x, y)
+    context.arc(x + step / 2, y, step / 2, Math.PI, 0, true)
+    context.lineTo(x + step, 0)
+
+    x += step
+    y = -y
+    context.moveTo(x, 0)
+    context.lineTo(x, y)
+    context.arc(x + step / 2, y, step / 2, Math.PI, 0, false)
+    context.lineTo(x + step, 0)
+  }
+
+  context.stroke()
+  context.closePath()
+  context.restore()
+}
+
+function resolveThemeColor(variableName: string, fallbackColor: string): string {
+  const rootElement = document.documentElement
+  const variableValue = globalThis.getComputedStyle(rootElement).getPropertyValue(variableName).trim()
+  if (!variableValue) {
+    return fallbackColor
+  }
+
+  if (variableValue.includes('(') || variableValue.startsWith('#')) {
+    return variableValue
+  }
+
+  return `oklch(${variableValue})`
+}
+
+function formatAudioTime(totalSeconds: number): string {
+  if (!Number.isFinite(totalSeconds) || totalSeconds < 0) {
+    return '0:00'
+  }
+
+  const roundedSeconds = Math.floor(totalSeconds)
+  const minutes = Math.floor(roundedSeconds / 60)
+  const seconds = roundedSeconds % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
+function syncWaveSurferTime(currentTime?: number) {
+  const instance = waveSurfer
+  if (!instance) {
+    return
+  }
+
+  durationSeconds = instance.getDuration()
+  currentTimeSeconds = currentTime ?? instance.getCurrentTime()
+}
+
+function syncWaveSurferPlaybackState() {
+  isPlaying = waveSurfer?.isPlaying() ?? false
+}
+
+function resetPlaybackState() {
+  durationSeconds = 0
+  currentTimeSeconds = 0
+  isPlaying = false
+  isReady = false
+}
+
+async function loadAudioSource(src: string) {
+  const instance = waveSurfer
+  if (!instance || !src) {
+    return
+  }
+
+  resetPlaybackState()
+
+  try {
+    await instance.load(src)
+  } catch (error) {
+    logger.warn(`辅助面板音频预览加载失败 (${src}): ${String(error)}`)
+  }
+}
+
+async function handleTogglePlayback() {
+  const instance = waveSurfer
+  if (!instance) {
+    return
+  }
+
+  if (instance.isPlaying()) {
+    instance.pause()
+    return
+  }
+
+  try {
+    await instance.play()
+  } catch (error) {
+    logger.warn(`辅助面板音频预览播放失败 (${props.src}): ${String(error)}`)
+  }
+}
+
+watch(() => props.src, (newSrc, oldSrc) => {
+  if (!waveSurfer || !newSrc || newSrc === oldSrc) {
+    return
+  }
+
+  void loadAudioSource(newSrc)
+})
+
+onMounted(() => {
+  if (!waveformRef.value) {
+    return
+  }
+
+  waveSurfer = WaveSurfer.create({
+    backend: 'MediaElement',
+    container: waveformRef.value,
+    cursorWidth: 0,
+    height: 30,
+    hideScrollbar: true,
+    interact: true,
+    normalize: true,
+    progressColor: resolveThemeColor('--primary', 'hsl(221.2 83.2% 53.3%)'),
+    renderFunction: renderContinuousWaveform,
+    waveColor: resolveThemeColor('--muted-foreground', 'hsl(215.4 16.3% 46.9%)'),
+  })
+
+  waveSurfer.on('ready', () => {
+    isReady = true
+    syncWaveSurferPlaybackState()
+    syncWaveSurferTime()
+  })
+  waveSurfer.on('play', () => {
+    syncWaveSurferPlaybackState()
+    syncWaveSurferTime()
+  })
+  waveSurfer.on('pause', () => {
+    syncWaveSurferPlaybackState()
+    syncWaveSurferTime()
+  })
+  waveSurfer.on('finish', () => {
+    syncWaveSurferPlaybackState()
+    const duration = waveSurfer?.getDuration() ?? durationSeconds
+    durationSeconds = duration
+    currentTimeSeconds = duration
+  })
+  waveSurfer.on('timeupdate', (currentTime) => {
+    syncWaveSurferTime(currentTime)
+  })
+  waveSurfer.on('interaction', (currentTime) => {
+    syncWaveSurferTime(currentTime)
+  })
+
+  void loadAudioSource(props.src)
+})
+
+onBeforeUnmount(() => {
+  waveSurfer?.destroy()
+  waveSurfer = undefined
+})
+</script>
+
+<template>
+  <div class="rounded-md bg-muted/20 flex gap-1.5 h-10 max-w-full w-full items-center">
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      data-testid="statement-audio-preview-toggle"
+      class="rounded-md shrink-0 size-7"
+      :disabled="!isReady"
+      @click="handleTogglePlayback"
+    >
+      <Pause v-if="isPlaying" class="size-3.5" />
+      <Play v-else class="size-3.5 translate-x-0.25" />
+    </Button>
+    <div class="flex-1 h-full min-w-0 relative overflow-hidden">
+      <div
+        data-testid="statement-audio-preview-placeholder"
+        aria-hidden="true"
+        class="flex pointer-events-none origin-center transition-all duration-200 ease-out items-center inset-0 absolute"
+        :data-state="isReady ? 'hidden' : 'visible'"
+        :class="isReady ? 'opacity-0 scale-y-75' : 'opacity-100 scale-y-100'"
+      >
+        <div data-testid="statement-audio-preview-placeholder-line" class="rounded-full bg-muted-foreground/20 h-[1.5px] w-full" />
+      </div>
+      <div
+        ref="waveformRef"
+        data-testid="statement-audio-preview-waveform"
+        class="h-full w-full origin-center transition-all duration-200 ease-out relative"
+        :data-state="isReady ? 'ready' : 'loading'"
+        :class="isReady ? 'opacity-100 scale-y-100' : 'pointer-events-none opacity-0 scale-y-75'"
+      />
+    </div>
+    <span
+      data-testid="statement-audio-preview-time"
+      class="text-xs text-muted-foreground shrink-0 tabular-nums"
+    >
+      {{ displayTime }}
+    </span>
+  </div>
+</template>
