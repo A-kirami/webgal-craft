@@ -1,18 +1,23 @@
+import { createPinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
 import { defineComponent, h } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
+import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
+import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
 
 const {
   handleErrorMock,
   renameFileMock,
+  useModalStoreMock,
   useEditorUIStateStoreMock,
   useTabsStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
   handleErrorMock: vi.fn(),
   renameFileMock: vi.fn(),
+  useModalStoreMock: vi.fn(),
   useEditorUIStateStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
@@ -38,6 +43,10 @@ vi.mock('~/services/game-fs', () => ({
 
 vi.mock('~/stores/editor-ui-state', () => ({
   useEditorUIStateStore: useEditorUIStateStoreMock,
+}))
+
+vi.mock('~/stores/modal', () => ({
+  useModalStore: useModalStoreMock,
 }))
 
 vi.mock('~/stores/tabs', () => ({
@@ -74,7 +83,7 @@ interface FileTreeTestItem extends Record<string, unknown> {
 
 interface FlattenedTreeItem {
   _id: string
-  bind: Record<string, never>
+  bind: Record<string, unknown>
   hasChildren: boolean
   index: number
   level: number
@@ -193,12 +202,19 @@ const globalStubs = {
         required: false,
       },
     },
-    setup(props, { slots }) {
+    emits: ['update:expanded', 'update:modelValue'],
+    setup(props, { emit, slots }) {
       return () => h('div', slots.default?.({
         flattenItems: flattenItems(
           props.items as FileTreeTestItem[],
           props.getKey as (item: Record<string, unknown>) => string,
-        ),
+        ).map(item => ({
+          ...item,
+          bind: {
+            ...item.bind,
+            onClick: () => emit('update:modelValue', item.value),
+          },
+        })),
       }))
     },
   }),
@@ -235,6 +251,38 @@ const globalStubs = {
   }),
 }
 
+function renderFileTree(props: Record<string, unknown>) {
+  const ShortcutHarness = defineComponent({
+    name: 'FileTreeShortcutHarness',
+    setup() {
+      useShortcutDispatcher({
+        bindings: [],
+        executeContext: {},
+        platform: 'windows',
+      })
+
+      useShortcutContext({
+        commandPanelOpen: false,
+        editorMode: 'visual',
+        hasSelection: false,
+        isDirty: false,
+        isModalOpen: false,
+        panelFocus: 'none',
+        visualType: 'scene',
+      })
+
+      return () => h(FileTree as never, props as never)
+    },
+  })
+
+  return renderInBrowser(ShortcutHarness, {
+    global: {
+      plugins: [createPinia()],
+      stubs: globalStubs,
+    },
+  })
+}
+
 describe('FileTree', () => {
   afterEach(() => {
     vi.clearAllMocks()
@@ -243,11 +291,15 @@ describe('FileTree', () => {
   beforeEach(() => {
     handleErrorMock.mockReset()
     renameFileMock.mockReset()
+    useModalStoreMock.mockReset()
     useEditorUIStateStoreMock.mockReset()
     useTabsStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
 
     renameFileMock.mockResolvedValue('/project/renamed.txt')
+    useModalStoreMock.mockReturnValue({
+      open: vi.fn(),
+    })
     useEditorUIStateStoreMock.mockReturnValue({
       getFileTreeExpanded: vi.fn(() => []),
       setFileTreeExpanded: vi.fn(),
@@ -263,15 +315,10 @@ describe('FileTree', () => {
   })
 
   it('加载中时会显示加载指示', async () => {
-    renderInBrowser(FileTree, {
-      props: {
-        getKey: (item: Record<string, unknown>) => String(item.path),
-        isLoading: true,
-        items: [],
-      },
-      global: {
-        stubs: globalStubs,
-      },
+    renderFileTree({
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      isLoading: true,
+      items: [],
     })
 
     await expect.element(page.getByRole('status', { name: 'common.loading' })).toBeInTheDocument()
@@ -280,20 +327,15 @@ describe('FileTree', () => {
   it('点击文件项会发出 click 事件', async () => {
     const onClick = vi.fn()
 
-    renderInBrowser(FileTree, {
-      props: {
-        getKey: (item: Record<string, unknown>) => String(item.path),
-        items: [
-          {
-            name: 'scene.txt',
-            path: '/project/scene.txt',
-          },
-        ],
-        onClick,
-      },
-      global: {
-        stubs: globalStubs,
-      },
+    renderFileTree({
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [
+        {
+          name: 'scene.txt',
+          path: '/project/scene.txt',
+        },
+      ],
+      onClick,
     })
 
     await page.getByText('scene.txt').click()
@@ -306,19 +348,14 @@ describe('FileTree', () => {
   })
 
   it('按 F2 重命名后回车会调用 gameFs.renameFile', async () => {
-    renderInBrowser(FileTree, {
-      props: {
-        getKey: (item: Record<string, unknown>) => String(item.path),
-        items: [
-          {
-            name: 'scene.txt',
-            path: '/project/scene.txt',
-          },
-        ],
-      },
-      global: {
-        stubs: globalStubs,
-      },
+    renderFileTree({
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [
+        {
+          name: 'scene.txt',
+          path: '/project/scene.txt',
+        },
+      ],
     })
 
     const treeItem = page.getByRole('treeitem').first()
@@ -331,5 +368,34 @@ describe('FileTree', () => {
     await userEvent.keyboard('{Enter}')
 
     expect(renameFileMock).toHaveBeenCalledWith('/project/scene.txt', 'renamed.txt')
+  })
+
+  it('按 Delete 会打开删除文件确认弹窗', async () => {
+    const modalStore = {
+      open: vi.fn(),
+    }
+    useModalStoreMock.mockReturnValue(modalStore)
+
+    renderFileTree({
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [
+        {
+          name: 'scene.txt',
+          path: '/project/scene.txt',
+        },
+      ],
+    })
+
+    const treeItem = page.getByRole('treeitem').first()
+    await treeItem.click()
+    await userEvent.keyboard('{Delete}')
+
+    expect(modalStore.open).toHaveBeenCalledWith('DeleteFileModal', {
+      file: {
+        isDir: false,
+        name: 'scene.txt',
+        path: '/project/scene.txt',
+      },
+    })
   })
 })

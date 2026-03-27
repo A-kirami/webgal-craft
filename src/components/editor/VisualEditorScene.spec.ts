@@ -1,3 +1,4 @@
+import { createPinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { computed, defineComponent, h, reactive } from 'vue'
@@ -17,6 +18,8 @@ const {
   measureRowElementMock,
   useEditSettingsStoreMock,
   usePreferenceStoreMock,
+  useEditorStoreMock,
+  useTabsStoreMock,
   useVisualEditorSceneRuntimeMock,
 } = vi.hoisted(() => ({
   handleCollapsedUpdateMock: vi.fn(),
@@ -26,7 +29,9 @@ const {
   handleStatementUpdateMock: vi.fn(),
   measureRowElementMock: vi.fn(),
   useEditSettingsStoreMock: vi.fn(),
+  useEditorStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
+  useTabsStoreMock: vi.fn(),
   useVisualEditorSceneRuntimeMock: vi.fn(),
 }))
 
@@ -36,6 +41,15 @@ vi.mock('~/stores/edit-settings', () => ({
 
 vi.mock('~/stores/preference', () => ({
   usePreferenceStore: usePreferenceStoreMock,
+}))
+
+vi.mock('~/stores/editor', () => ({
+  isEditableEditor: (state: { projection?: string }) => 'projection' in state,
+  useEditorStore: useEditorStoreMock,
+}))
+
+vi.mock('~/stores/tabs', () => ({
+  useTabsStore: useTabsStoreMock,
 }))
 
 vi.mock('~/features/editor/visual-editor/useVisualEditorSceneRuntime', () => ({
@@ -60,6 +74,12 @@ const globalStubs = {
     emits: ['delete', 'play-to', 'select', 'update', 'update:collapsed'],
     setup(props, { emit }) {
       return () => h('div', [
+        h('div', {
+          'aria-label': String(props.entry.rawText),
+          'aria-selected': props.selected,
+          'role': 'option',
+          'tabindex': props.selected ? 0 : -1,
+        }),
         h('button', {
           type: 'button',
           onClick: () => emit('select', props.entry.id),
@@ -92,6 +112,7 @@ function createSceneState(): SceneVisualProjectionState {
 describe('VisualEditorScene', () => {
   afterEach(() => {
     vi.clearAllMocks()
+    document.body.innerHTML = ''
   })
 
   beforeEach(() => {
@@ -102,14 +123,29 @@ describe('VisualEditorScene', () => {
     handleStatementUpdateMock.mockReset()
     measureRowElementMock.mockReset()
     useEditSettingsStoreMock.mockReset()
+    useEditorStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()
+    useTabsStoreMock.mockReset()
     useVisualEditorSceneRuntimeMock.mockReset()
 
     useEditSettingsStoreMock.mockReturnValue(reactive({
       collapseStatementsOnSidebarOpen: true,
     }))
+    useEditorStoreMock.mockReturnValue(reactive({
+      currentState: {
+        kind: 'scene',
+        path: '/project/scene.txt',
+        projection: 'visual',
+      },
+    }))
     usePreferenceStoreMock.mockReturnValue(reactive({
       showSidebar: true,
+    }))
+    useTabsStoreMock.mockReturnValue(reactive({
+      activeTab: {
+        path: '/project/scene.txt',
+      },
+      shouldFocusEditor: false,
     }))
     useVisualEditorSceneRuntimeMock.mockReturnValue({
       handleCollapsedUpdate: handleCollapsedUpdateMock,
@@ -136,6 +172,7 @@ describe('VisualEditorScene', () => {
         state: createSceneState(),
       },
       global: {
+        plugins: [createPinia()],
         stubs: globalStubs,
       },
     })
@@ -151,6 +188,7 @@ describe('VisualEditorScene', () => {
         state: createSceneState(),
       },
       global: {
+        plugins: [createPinia()],
         stubs: globalStubs,
       },
     })
@@ -162,5 +200,29 @@ describe('VisualEditorScene', () => {
     expect(handleSelectMock).toHaveBeenCalledWith(1)
     expect(handlePlayToMock).toHaveBeenCalledWith(2)
     expect(handleStatementDeleteMock).toHaveBeenCalledWith(2)
+  })
+
+  it('视觉模式请求焦点时会把焦点恢复到选中语句卡片', async () => {
+    const tabsStore = reactive({
+      activeTab: {
+        path: '/project/scene.txt',
+      },
+      shouldFocusEditor: true,
+    })
+
+    useTabsStoreMock.mockReturnValue(tabsStore)
+
+    renderInBrowser(VisualEditorScene, {
+      props: {
+        state: createSceneState(),
+      },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('option', { name: 'say:world' })).toHaveFocus()
+    expect(tabsStore.shouldFocusEditor).toBe(false)
   })
 })

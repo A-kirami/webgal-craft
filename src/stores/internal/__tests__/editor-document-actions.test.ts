@@ -6,6 +6,7 @@ import { createDocumentModel } from '~/domain/document/document-model'
 import {
   applyAnimationFrameInsert,
   applyAnimationFrameUpdate,
+  applySceneStatementReorder,
   applyTextDocumentContent,
   redoDocument,
   undoDocument,
@@ -117,6 +118,49 @@ function createAnimationActionHarness() {
     document,
     syncStateFromDocument,
     textState,
+  }
+}
+
+function createSceneActionHarness() {
+  const scenePath = '/game/scene/document.txt'
+  const document: DocumentState = createDocumentState(createDocumentModel({
+    kind: 'scene',
+    content: 'alpha\nbeta\ngamma',
+  }))
+  let sceneSelection: SceneSelectionState | undefined = {
+    lastEditedStatementId: document.model.kind === 'scene' ? document.model.statements[1]?.id : undefined,
+    lastLineNumber: 2,
+    selectedStatementId: document.model.kind === 'scene' ? document.model.statements[1]?.id : undefined,
+  }
+  const syncStateFromDocument = vi.fn()
+
+  const context = {
+    getDocumentState(path: string) {
+      return path === scenePath ? document : undefined
+    },
+    getSceneSelection(path: string) {
+      return path === scenePath ? sceneSelection : undefined
+    },
+    getTextProjectionState(_path: string): TextProjectionState | undefined {
+      return
+    },
+    patchSceneSelection(path: string, patch: Partial<SceneSelectionState>) {
+      if (path !== scenePath) {
+        return
+      }
+
+      sceneSelection ??= {}
+      Object.assign(sceneSelection, patch)
+    },
+    syncStateFromDocument,
+  } satisfies EditorDocumentActionContext
+
+  return {
+    context,
+    document,
+    readSceneSelection: () => sceneSelection,
+    scenePath,
+    syncStateFromDocument,
   }
 }
 
@@ -269,6 +313,34 @@ describe('编辑器文档动作的历史回滚', () => {
       duration: 200,
       ease: 'easeInOut',
       position: { x: 16 },
+    })
+  })
+
+  it('场景语句重排后保持选中语句并刷新行号', () => {
+    const { context, document, readSceneSelection, scenePath, syncStateFromDocument } = createSceneActionHarness()
+    if (document.model.kind !== 'scene') {
+      throw new TypeError('expected scene document model')
+    }
+
+    const movedStatementId = document.model.statements[1]?.id
+
+    applySceneStatementReorder(context, scenePath, 1, 0)
+
+    expect(syncStateFromDocument).toHaveBeenCalledTimes(1)
+    expect(document.model.kind).toBe('scene')
+    if (document.model.kind !== 'scene') {
+      throw new TypeError('expected scene document model after reorder')
+    }
+
+    expect(document.model.statements.map(statement => statement.rawText)).toEqual([
+      'beta',
+      'alpha',
+      'gamma',
+    ])
+    expect(readSceneSelection()).toMatchObject({
+      lastEditedStatementId: movedStatementId,
+      lastLineNumber: 1,
+      selectedStatementId: movedStatementId,
     })
   })
 })

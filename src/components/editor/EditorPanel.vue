@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ResizablePanel } from '~/components/ui/resizable'
 import { useEditorPanelShell } from '~/features/editor/shell/useEditorPanelShell'
+import { useShortcut } from '~/features/editor/shortcut/useShortcut'
+import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 
 const commandPanelRef = useTemplateRef<InstanceType<typeof ResizablePanel>>('commandPanel')
-const sidebarHistoryScopeRef = useTemplateRef<HTMLDivElement>('sidebarHistoryScope')
 const editorPanelRef = $(useTemplateRef('editorPanel'))
 const editSettingsStore = useEditSettingsStore()
 const { t } = useI18n()
@@ -33,7 +34,6 @@ const {
   toggleCommandPanel,
 } = useEditorPanelShell({
   commandPanelRef,
-  sidebarHistoryScopeRef,
 })
 
 const sidebarEmptyText = $computed(() => (
@@ -41,6 +41,33 @@ const sidebarEmptyText = $computed(() => (
     ? t('edit.textEditor.formPanel.noStatement')
     : t('edit.visualEditor.noSelection')
 ))
+
+useShortcutContext({
+  commandPanelOpen: computed(() => !isCommandPanelCollapsed.value),
+  isModalOpen: computed(() => statementAnimationDialog.isOpen),
+})
+
+useShortcut({
+  allowInInput: true,
+  execute: () => {
+    void handleEffectApply()
+  },
+  i18nKey: 'shortcut.effect.apply',
+  id: 'effect.apply',
+  keys: 'Mod+Enter',
+  when: { panelFocus: 'effectEditor' },
+})
+
+useShortcut({
+  allowInInput: true,
+  execute: () => {
+    void closeEffectEditor()
+  },
+  i18nKey: 'shortcut.effect.close',
+  id: 'effect.close',
+  keys: 'Escape',
+  when: { panelFocus: 'effectEditor' },
+})
 
 defineExpose({ toggleCommandPanel })
 </script>
@@ -86,7 +113,7 @@ defineExpose({ toggleCommandPanel })
           </button>
         </div>
         <template #sidebar>
-          <div ref="sidebarHistoryScope" class="h-full">
+          <div class="h-full">
             <StatementEditorPanel
               v-if="binding && selectedStatement"
               :entry="selectedStatement"

@@ -15,7 +15,6 @@ vi.mock('monaco-editor', async () => {
 const {
   ensureModelMock,
   handleBeforeUnmountMock,
-  manualSaveMock,
   runtimeReturnValue,
   useEditSettingsStoreMock,
   useEditorStoreMock,
@@ -24,7 +23,6 @@ const {
 } = vi.hoisted(() => {
   const ensureModelMock = vi.fn()
   const handleBeforeUnmountMock = vi.fn()
-  const manualSaveMock = vi.fn()
   const runtimeReturnValue = {
     currentEditorLanguage: { value: 'webgalscript' },
     ensureModel: ensureModelMock,
@@ -35,13 +33,11 @@ const {
     handleEditorClick: vi.fn(),
     handleEditorCreated: vi.fn(),
     handleScrollChange: vi.fn(),
-    manualSave: manualSaveMock,
   }
 
   return {
     ensureModelMock,
     handleBeforeUnmountMock,
-    manualSaveMock,
     runtimeReturnValue,
     useEditSettingsStoreMock: vi.fn(),
     useEditorStoreMock: vi.fn(),
@@ -195,7 +191,6 @@ describe('TextEditor', () => {
     resetMonacoMockState()
     ensureModelMock.mockReset()
     handleBeforeUnmountMock.mockReset()
-    manualSaveMock.mockReset()
     runtimeReturnValue.handleContentChange.mockReset()
     runtimeReturnValue.handleCursorPositionChange.mockReset()
     runtimeReturnValue.handleCursorSelectionChange.mockReset()
@@ -212,7 +207,7 @@ describe('TextEditor', () => {
     })
   })
 
-  it('激活的文本投影挂载时会创建 Monaco 编辑器并注册保存命令', async () => {
+  it('激活的文本投影挂载时会创建 Monaco 编辑器', async () => {
     const { state } = createHarness()
     const result = renderInBrowser(TextEditor, {
       props: {
@@ -246,15 +241,6 @@ describe('TextEditor', () => {
       theme: 'webgal-light',
       wordWrap: 'off',
     }))
-
-    expect(monacoMockState.editorInstance.addCommand).toHaveBeenCalledWith(
-      2048 | 49,
-      manualSaveMock,
-    )
-
-    const saveHandler = monacoMockState.editorInstance.addCommand.mock.calls[0]?.[1]
-    await saveHandler?.()
-    expect(manualSaveMock).toHaveBeenCalledTimes(1)
 
     await result.unmount()
   })

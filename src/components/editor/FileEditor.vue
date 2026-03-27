@@ -2,7 +2,6 @@
 import { basename } from '@tauri-apps/api/path'
 import { Code, File, FilePlus2, FileWarning } from 'lucide-vue-next'
 
-import { useVisualEditorSaveShortcut } from '~/features/editor/visual-editor/useVisualEditorSaveShortcut'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { useModalStore } from '~/stores/modal'
 import { useTabsStore } from '~/stores/tabs'
@@ -35,7 +34,6 @@ const activeProjection = $computed(() =>
     ? currentState.projection
     : undefined,
 )
-useVisualEditorSaveShortcut(() => currentVisualProjection?.path ?? '')
 const currentPreviewState = $computed(() => {
   const state = currentState
   return state && !isEditableEditor(state) && state.view === 'preview' ? state : undefined

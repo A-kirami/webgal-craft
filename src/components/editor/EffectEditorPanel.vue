@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Transform } from '~/domain/stage/types'
 import { EffectEditorPreviewPayload, EffectEditorTransformUpdatePayload } from '~/features/editor/effect-editor/useEffectEditorProvider'
+import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 
 import EffectDraftForm from './effect-editor/EffectDraftForm.vue'
 
@@ -40,14 +41,16 @@ function tryEmitReset() {
   }
   emit('reset')
 }
+
+useShortcutContext({
+  panelFocus: 'effectEditor',
+}, {
+  trackFocus: true,
+})
 </script>
 
 <template>
-  <div
-    class="flex flex-col h-full min-h-0"
-    @keydown.ctrl.enter.prevent="tryEmitApply"
-    @keydown.meta.enter.prevent="tryEmitApply"
-  >
+  <div class="flex flex-col h-full min-h-0">
     <EffectDraftForm
       class="flex-1 min-h-0"
       :transform="props.transform"

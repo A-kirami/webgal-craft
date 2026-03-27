@@ -433,6 +433,7 @@ onUnmounted(() => {
         >
           <button
             type="button"
+            :data-animation-frame-selected="item.span.id === props.selectedId ? 'true' : undefined"
             class="px-2 text-left border rounded-md h-10 transition-colors top-9 absolute overflow-hidden"
             :class="item.span.id === props.selectedId
               ? 'bg-primary/12 border-primary/70 hover:bg-primary/20'

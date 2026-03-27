@@ -23,3 +23,7 @@ export function canRestoreVisualEditorCardFocus(activeElement: FocusStateElement
 export function findSelectedVisualEditorStatementCard<TElement>(root: QueryableRoot<TElement>): TElement | undefined {
   return root.querySelector('[role="option"][aria-selected="true"]') ?? undefined
 }
+
+export function findSelectedVisualEditorAnimationFrame<TElement>(root: QueryableRoot<TElement>): TElement | undefined {
+  return root.querySelector('[data-animation-frame-selected="true"]') ?? undefined
+}

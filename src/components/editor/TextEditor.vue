@@ -2,6 +2,7 @@
 import * as monaco from 'monaco-editor'
 
 import { colorMode } from '~/composables/color-mode'
+import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { buildTextEditorOptions } from '~/features/editor/text-editor/text-editor-options'
 import { createTextEditorPlayToLineController } from '~/features/editor/text-editor/text-editor-play-to-line'
 import { useTextEditorRuntime } from '~/features/editor/text-editor/useTextEditorRuntime'
@@ -57,6 +58,13 @@ const isCurrentTextProjectionActive = $computed(() => {
 function syncPlayToLineGlyph() {
   playToLineController?.syncFromEditorPosition()
 }
+
+useShortcutContext({
+  panelFocus: 'editor',
+}, {
+  target: () => editorContainer,
+  trackFocus: true,
+})
 
 function schedulePlayToLineGlyphSync() {
   if (hasPendingPlayToLineGlyphSync) {
@@ -118,7 +126,6 @@ function createEditor() {
   editor.onDidChangeModelContent(handleModelContentChange)
   editor.onDidScrollChange(runtime.handleScrollChange)
   editor.onMouseDown(handleEditorMouseDown)
-  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, runtime.manualSave)
 
   runtime.handleEditorCreated()
   syncPlayToLineGlyph()

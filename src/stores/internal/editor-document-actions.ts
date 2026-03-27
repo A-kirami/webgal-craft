@@ -81,6 +81,9 @@ export function createEditorDocumentActions(context: EditorDocumentActionContext
     ): void {
       applySceneStatementInsert(context, path, insertedStatements, insertAt)
     },
+    applySceneStatementReorder(path: string, fromIndex: number, toIndex: number): void {
+      applySceneStatementReorder(context, path, fromIndex, toIndex)
+    },
     applySceneStatementUpdate(
       path: string,
       statementId: number,
@@ -263,6 +266,35 @@ export function applySceneStatementDelete(
     ),
     source: 'visual',
     transaction: { type: 'statement:delete', id: statementId },
+  })
+}
+
+export function applySceneStatementReorder(
+  context: DocumentStateAccessor & SceneSelectionStateAccessor & DocumentStateSyncActions,
+  path: string,
+  fromIndex: number,
+  toIndex: number,
+): void {
+  if (fromIndex === toIndex) {
+    return
+  }
+
+  const docEntry = context.getDocumentState(path)
+  if (!docEntry || docEntry.model.kind !== 'scene') {
+    return
+  }
+
+  const movedStatement = docEntry.model.statements[fromIndex]
+  if (!movedStatement) {
+    return
+  }
+
+  applyDocumentTransaction(context, path, {
+    sceneSelectionAfter: createSceneSelectionSnapshot(movedStatement.id, {
+      lastEditedStatementId: movedStatement.id,
+    }),
+    source: 'visual',
+    transaction: { type: 'statement:reorder', fromIndex, toIndex },
   })
 }
 

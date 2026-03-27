@@ -568,6 +568,28 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     expect(editorStore.currentSelectedSceneStatement?.id).toBe(visualProjection.statements[0]?.id)
   })
 
+  it('切换到可视模式时也会请求重新聚焦编辑器表面', async () => {
+    const tabsStore = useTabsStore()
+    const path = '/game/scene/switch-mode-focus.txt'
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'switch-mode-focus.txt',
+      path,
+      () => editorStore.currentTextProjection !== undefined && editorStore.currentVisualProjection !== undefined,
+      'load projections for visual mode focus request',
+    )
+
+    tabsStore.shouldFocusEditor = false
+
+    editorStore.switchEditorMode('visual', path)
+
+    expect(preferenceStoreMock.editorMode).toBe('visual')
+    expect(tabsStore.shouldFocusEditor).toBe(true)
+  })
+
   it('文本补丁重建语句后仍按语句 ID 保持场景侧栏选中项', async () => {
     const tabsStore = useTabsStore()
     const path = '/game/scene/selection-sync.txt'

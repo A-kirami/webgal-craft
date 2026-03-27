@@ -11,6 +11,7 @@ export const usePreferenceStore = defineStore(
     const assetSortOrder = $ref<FileViewerSortOrder>('asc')
     const editorMode = $ref<'text' | 'visual'>('text')
     const showSidebar = $ref(true)
+    const showPreviewPanel = $ref(true)
     const leftPanelView = $ref<'scene' | 'resource'>('scene')
     const assetTab = $ref<'figure' | 'background' | 'bgm' | 'vocal' | 'video' | 'animation' | 'template'>('figure')
     const assetZoom = $ref<[number]>([100])
@@ -27,6 +28,7 @@ export const usePreferenceStore = defineStore(
       assetSortOrder,
       editorMode,
       showSidebar,
+      showPreviewPanel,
       leftPanelView,
       assetTab,
       assetZoom,

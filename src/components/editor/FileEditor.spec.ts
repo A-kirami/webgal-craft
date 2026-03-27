@@ -9,12 +9,10 @@ const {
   useEditorStoreMock,
   useModalStoreMock,
   useTabsStoreMock,
-  useVisualEditorSaveShortcutMock,
 } = vi.hoisted(() => ({
   useEditorStoreMock: vi.fn(),
   useModalStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
-  useVisualEditorSaveShortcutMock: vi.fn(),
 }))
 
 vi.mock('@tauri-apps/api/path', () => ({
@@ -44,10 +42,6 @@ vi.mock('~/stores/tabs', () => ({
 
 vi.mock('~/stores/modal', () => ({
   useModalStore: useModalStoreMock,
-}))
-
-vi.mock('~/features/editor/visual-editor/useVisualEditorSaveShortcut', () => ({
-  useVisualEditorSaveShortcut: useVisualEditorSaveShortcutMock,
 }))
 
 import FileEditor from './FileEditor.vue'
@@ -103,7 +97,6 @@ describe('FileEditor', () => {
     useEditorStoreMock.mockReset()
     useModalStoreMock.mockReset()
     useTabsStoreMock.mockReset()
-    useVisualEditorSaveShortcutMock.mockReset()
   })
 
   it('动画文本无效时切到可视化会显示错误占位而不是状态栏之外的编辑器', async () => {

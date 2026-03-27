@@ -510,10 +510,6 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     startCreating(fileItem.path, 'folder')
   }
 
-  function handleF2Key(item: FlattenedItem<T>): void {
-    startRenaming(item)
-  }
-
   function handleEnterKey(item: FlattenedItem<T>): void {
     if (isRenaming(item) && !isRenameDuplicate(item)) {
       void handleRename(item)
@@ -564,7 +560,6 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     handleCreateBlur,
     handleEnterKey,
     handleEscapeKey,
-    handleF2Key,
     handleRename,
     handleRenameBlur,
     isCreateDuplicate,

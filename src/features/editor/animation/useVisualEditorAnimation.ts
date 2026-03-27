@@ -7,7 +7,6 @@ import {
 } from '~/features/editor/animation/animation-frame-editor'
 import { createAnimationTransformPatch } from '~/features/editor/animation/animation-inspector'
 import { createDefaultAnimationFrame, useAnimationEditorSession } from '~/features/editor/animation/useAnimationEditorSession'
-import { resolveHistoryShortcutAction } from '~/features/editor/shared/history-shortcut'
 
 import type { MaybeRefOrGetter } from 'vue'
 import type { AnimationFrame, Transform } from '~/domain/stage/types'
@@ -24,7 +23,6 @@ interface HistoryMutationResult {
 }
 
 interface UseVisualEditorAnimationOptions {
-  activeElement?: () => Element | null
   applyAnimationFrameDelete: (path: string, frameIndex: number) => void
   applyAnimationFrameInsert: (
     path: string,
@@ -38,7 +36,6 @@ interface UseVisualEditorAnimationOptions {
   ) => void
   canRedo: (path: string) => boolean
   canUndo: (path: string) => boolean
-  isCurrentProjectionActive: () => boolean
   redoDocument: (path: string) => HistoryMutationResult
   scheduleAutoSaveIfEnabled: (path: string) => void
   state: MaybeRefOrGetter<VisualAnimationStateLike>
@@ -207,29 +204,6 @@ export function useVisualEditorAnimation(options: UseVisualEditorAnimationOption
     applySelectedFramePatch({ ease: nextEase })
   }
 
-  function resolveActiveElement(): Element | undefined {
-    return options.activeElement?.() ?? globalThis.document?.activeElement ?? undefined
-  }
-
-  function isEditingText(): boolean {
-    const element = resolveActiveElement() as HTMLElement | null
-    if (!element) {
-      return false
-    }
-
-    const tagName = element.tagName
-    return tagName === 'INPUT' || tagName === 'TEXTAREA' || element.isContentEditable
-  }
-
-  function isFocusInsideOverlay(): boolean {
-    const element = resolveActiveElement() as HTMLElement | null
-    if (!element) {
-      return false
-    }
-
-    return !!element.closest('[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-side][data-state="open"]')
-  }
-
   function handleUndo(): void {
     resetSelectedFrameTransformDraft()
     resetSelectedFrameDurationDraft()
@@ -250,30 +224,6 @@ export function useVisualEditorAnimation(options: UseVisualEditorAnimationOption
     options.scheduleAutoSaveIfEnabled(state.value.path)
   }
 
-  function handleHistoryShortcutKeydown(event: KeyboardEvent): void {
-    if (
-      event.defaultPrevented
-      || !options.isCurrentProjectionActive()
-      || isEditingText()
-      || isFocusInsideOverlay()
-    ) {
-      return
-    }
-
-    const historyAction = resolveHistoryShortcutAction(event)
-    if (!historyAction) {
-      return
-    }
-
-    event.preventDefault()
-    if (historyAction === 'redo') {
-      handleRedo()
-      return
-    }
-
-    handleUndo()
-  }
-
   function dispose(): void {
     resetSelectedFrameTransformDraft()
     resetSelectedFrameDurationDraft()
@@ -287,7 +237,6 @@ export function useVisualEditorAnimation(options: UseVisualEditorAnimationOption
     handleDeleteFrame,
     handleDurationUpdate,
     handleEaseUpdate,
-    handleHistoryShortcutKeydown,
     handleRedo,
     handleTimelineResizeDuration,
     handleTransformUpdate,

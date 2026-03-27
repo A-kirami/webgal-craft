@@ -1,7 +1,7 @@
 import { computeLineNumberFromStatementId, computeStatementIdFromLineNumber } from '~/domain/document/scene-selection'
 import { buildStatements, StatementEntry } from '~/domain/script/sentence'
-import { resolveHistoryShortcutAction } from '~/features/editor/shared/history-shortcut'
 import { useCommandPanelBridgeBinding, useSidebarPanelBinding } from '~/features/editor/shared/useEditorPanelBindings'
+import { useShortcut } from '~/features/editor/shortcut/useShortcut'
 import { createStatementIdTarget, StatementUpdatePayload } from '~/features/editor/statement-editor/useStatementEditor'
 import { useVisualEditorSceneViewport } from '~/features/editor/visual-editor/useVisualEditorSceneViewport'
 import { canRestoreVisualEditorCardFocus, findSelectedVisualEditorStatementCard } from '~/features/editor/visual-editor/visual-editor-focus'
@@ -194,21 +194,54 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     requestAutoSave()
   }
 
-  function isEditingText() {
-    const element = document.activeElement
-    if (!element) {
-      return false
-    }
-
-    const tagName = element.tagName
-    return tagName === 'INPUT' || tagName === 'TEXTAREA' || (element as HTMLElement).isContentEditable
-  }
-
   function copyStatement() {
     const entry = readSelectedStatement()
     if (entry) {
       statementClipboard = entry.rawText
     }
+  }
+
+  function duplicateSelectedStatement() {
+    const entry = readSelectedStatement()
+    if (!entry) {
+      return
+    }
+
+    const duplicatedStatement = buildStatements(entry.rawText)[0]
+    if (!duplicatedStatement) {
+      return
+    }
+
+    editorStore.applySceneStatementInsert(
+      state.value.path,
+      [duplicatedStatement],
+      resolveInsertIndexAfterSelection(),
+    )
+
+    void restoreSelectedStatementPresentation({
+      align: 'auto',
+      focus: true,
+    })
+    requestAutoSave()
+  }
+
+  function moveSelectedStatement(offset: -1 | 1) {
+    const currentSelectedIndex = selectedIndex.value
+    if (currentSelectedIndex === -1) {
+      return
+    }
+
+    const nextIndex = currentSelectedIndex + offset
+    if (nextIndex < 0 || nextIndex >= state.value.statements.length) {
+      return
+    }
+
+    editorStore.applySceneStatementReorder(state.value.path, currentSelectedIndex, nextIndex)
+    void restoreSelectedStatementPresentation({
+      align: 'auto',
+      focus: true,
+    })
+    requestAutoSave()
   }
 
   function handleStatementDelete(id: number) {
@@ -218,6 +251,10 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
 
     editorStore.applySceneStatementDelete(state.value.path, id)
 
+    void restoreSelectedStatementPresentation({
+      align: 'auto',
+      focus: true,
+    })
     requestAutoSave()
   }
 
@@ -239,57 +276,12 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     const newEntry = buildStatements(statementClipboard)[0]
     const insertAt = resolveInsertIndexAfterSelection()
     editorStore.applySceneStatementInsert(state.value.path, [newEntry], insertAt)
+    void restoreSelectedStatementPresentation({
+      align: 'auto',
+      focus: true,
+    })
     requestAutoSave()
   }
-
-  useEventListener('keydown', (event: KeyboardEvent) => {
-    if (event.defaultPrevented) {
-      return
-    }
-
-    if (activeProjection.value === 'text') {
-      return
-    }
-
-    const historyAction = resolveHistoryShortcutAction(event)
-    if (historyAction) {
-      event.preventDefault()
-      if (historyAction === 'redo') {
-        performRedo()
-      } else {
-        performUndo()
-      }
-      return
-    }
-
-    if (!(event.ctrlKey || event.metaKey)) {
-      return
-    }
-
-    const key = event.key.toLowerCase()
-    if (isEditingText()) {
-      return
-    }
-
-    switch (key) {
-      case 'c': {
-        event.preventDefault()
-        copyStatement()
-        break
-      }
-      case 'x': {
-        event.preventDefault()
-        cutStatement()
-        break
-      }
-      case 'v': {
-        event.preventDefault()
-        pasteStatement()
-        break
-      }
-      // No default
-    }
-  })
 
   const previousSpeakers = computed(() => buildPreviousSpeakers(state.value.statements))
   const viewport = useVisualEditorSceneViewport({
@@ -429,6 +421,112 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
       ensureSelectedStatementPresent()
     },
   )
+
+  const sceneShortcutWhen = {
+    panelFocus: 'editor',
+    visualType: 'scene',
+  } as const
+
+  useShortcut({
+    allowInInput: true,
+    execute: performUndo,
+    i18nKey: 'shortcut.visual.undo',
+    id: 'visual.undo',
+    keys: 'Mod+Z',
+    when: sceneShortcutWhen,
+  })
+
+  useShortcut({
+    allowInInput: true,
+    execute: performRedo,
+    i18nKey: 'shortcut.visual.redo',
+    id: 'visual.redo',
+    keys: ['Mod+Shift+Z', 'Mod+Y'],
+    when: sceneShortcutWhen,
+  })
+
+  useShortcut({
+    execute: copyStatement,
+    i18nKey: 'shortcut.visual.copy',
+    id: 'visual.copy',
+    keys: 'Mod+C',
+    when: {
+      ...sceneShortcutWhen,
+      hasSelection: true,
+    },
+  })
+
+  useShortcut({
+    execute: cutStatement,
+    i18nKey: 'shortcut.visual.cut',
+    id: 'visual.cut',
+    keys: 'Mod+X',
+    when: {
+      ...sceneShortcutWhen,
+      hasSelection: true,
+    },
+  })
+
+  useShortcut({
+    execute: pasteStatement,
+    i18nKey: 'shortcut.visual.paste',
+    id: 'visual.paste',
+    keys: 'Mod+V',
+    when: sceneShortcutWhen,
+  })
+
+  useShortcut({
+    execute: duplicateSelectedStatement,
+    i18nKey: 'shortcut.visual.duplicate',
+    id: 'visual.duplicate',
+    keys: 'Mod+D',
+    when: {
+      ...sceneShortcutWhen,
+      hasSelection: true,
+    },
+  })
+
+  useShortcut({
+    execute: () => {
+      const currentSelectedStatementId = readSelectedStatementId()
+      if (currentSelectedStatementId !== undefined) {
+        handleStatementDelete(currentSelectedStatementId)
+      }
+    },
+    i18nKey: 'shortcut.visual.delete',
+    id: 'visual.delete',
+    keys: 'Delete',
+    when: {
+      ...sceneShortcutWhen,
+      hasSelection: true,
+    },
+  })
+
+  useShortcut({
+    execute: () => {
+      moveSelectedStatement(-1)
+    },
+    i18nKey: 'shortcut.visual.moveUp',
+    id: 'visual.moveUp',
+    keys: 'Mod+ArrowUp',
+    when: {
+      ...sceneShortcutWhen,
+      hasSelection: true,
+    },
+  })
+
+  useShortcut({
+    execute: () => {
+      moveSelectedStatement(1)
+    },
+    i18nKey: 'shortcut.visual.moveDown',
+    id: 'visual.moveDown',
+    keys: 'Mod+ArrowDown',
+    when: {
+      ...sceneShortcutWhen,
+      hasSelection: true,
+    },
+  })
 
   return {
     handleCollapsedUpdate,

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { effectScope, reactive, ref } from 'vue'
+import { computed, effectScope, reactive, shallowRef } from 'vue'
 
 import { useEditorPanelShell } from '../useEditorPanelShell'
 
@@ -18,15 +18,19 @@ interface BindingMock {
 interface CommandPanelLike {
   collapse: () => void
   expand: () => void
-  isCollapsed: boolean
+  isCollapsed: ReadonlyRefLike<boolean>
+}
+
+interface ReadonlyRefLike<T> {
+  readonly value: T
 }
 
 const {
   commandPanelBridgeMock,
   effectEditorProviderMock,
-  resolveHistoryShortcutActionMock,
   sidebarPanelMock,
   statementAnimationDialogMock,
+  useShortcutMock,
   useEditorStoreMock,
   usePreferenceStoreMock,
   useTabsStoreMock,
@@ -48,7 +52,6 @@ const {
     session: undefined,
     updateDraft: vi.fn(),
   },
-  resolveHistoryShortcutActionMock: vi.fn(),
   sidebarPanelMock: {
     activeBinding: { value: undefined as BindingMock | undefined },
   },
@@ -62,9 +65,14 @@ const {
     resetToDefault: vi.fn(),
     updateFrames: vi.fn(),
   },
+  useShortcutMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
+}))
+
+vi.mock('~/features/editor/shortcut/useShortcut', () => ({
+  useShortcut: useShortcutMock,
 }))
 
 vi.mock('~/features/editor/animation/useStatementAnimationDialog', () => ({
@@ -73,10 +81,6 @@ vi.mock('~/features/editor/animation/useStatementAnimationDialog', () => ({
 
 vi.mock('~/features/editor/effect-editor/useEffectEditorProvider', () => ({
   useEffectEditorProvider: () => effectEditorProviderMock,
-}))
-
-vi.mock('~/features/editor/shared/history-shortcut', () => ({
-  resolveHistoryShortcutAction: resolveHistoryShortcutActionMock,
 }))
 
 vi.mock('~/features/editor/shared/useEditorPanelBindings', () => ({
@@ -121,28 +125,19 @@ function createFixture(options: {
   const commandPanelState = reactive({
     isCollapsed: false,
   })
-  const commandPanelRef = ref<CommandPanelLike | undefined>({
+  const commandPanelRef = shallowRef<CommandPanelLike | undefined>({
     collapse() {
       commandPanelState.isCollapsed = true
-      this.isCollapsed = true
     },
     expand() {
       commandPanelState.isCollapsed = false
-      this.isCollapsed = false
     },
-    get isCollapsed() {
-      return commandPanelState.isCollapsed
-    },
-    set isCollapsed(value: boolean) {
-      commandPanelState.isCollapsed = value
-    },
+    isCollapsed: computed(() => commandPanelState.isCollapsed),
   })
-  const sidebarHistoryScopeRef = ref<HTMLDivElement>()
 
   const scope = effectScope()
   const shell = scope.run(() => useEditorPanelShell({
     commandPanelRef,
-    sidebarHistoryScopeRef,
   }))
 
   if (!shell) {
@@ -154,7 +149,6 @@ function createFixture(options: {
     preferenceStore,
     scope,
     shell,
-    sidebarHistoryScopeRef,
     tabsStore,
   }
 }
@@ -170,7 +164,7 @@ describe('useEditorPanelShell 行为', () => {
     effectEditorProviderMock.close.mockResolvedValue(true)
     effectEditorProviderMock.updateDraft.mockClear()
     effectEditorProviderMock.resetToInitialDraft.mockClear()
-    resolveHistoryShortcutActionMock.mockReset()
+    useShortcutMock.mockReset()
     useEditorStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()
     useTabsStoreMock.mockReset()
@@ -203,53 +197,23 @@ describe('useEditorPanelShell 行为', () => {
     scope.stop()
   })
 
-  it('仅在焦点位于侧栏范围内时转发历史快捷键', () => {
-    const handleUndo = vi.fn()
-    const handleRedo = vi.fn()
-    sidebarPanelMock.activeBinding.value = {
-      enableFocusStatement: false,
-      getEntry: () => ({ id: 1 }),
-      handleRedo,
-      handleUndo,
-      onUpdate: vi.fn(),
-    }
-    resolveHistoryShortcutActionMock.mockImplementation((event: KeyboardEvent) => {
-      if (event.key === 'z') {
-        return 'undo'
-      }
-      if (event.key === 'y') {
-        return 'redo'
-      }
-    })
+  it('会注册 statement editor 的撤销和重做快捷键', () => {
+    const { scope } = createFixture()
 
-    const { scope, shell, sidebarHistoryScopeRef } = createFixture()
-    const insideTarget = { id: 'inside' }
-    const outsideTarget = { id: 'outside' }
-    const insideNode = insideTarget as unknown as Node
-    sidebarHistoryScopeRef.value = {
-      contains(target: Node | null) {
-        return target === insideNode
-      },
-    } as unknown as HTMLDivElement
-
-    shell.handleSidebarHistoryShortcutKeydown({
-      key: 'z',
-      preventDefault: vi.fn(),
-      target: insideNode,
-    } as unknown as KeyboardEvent)
-    shell.handleSidebarHistoryShortcutKeydown({
-      key: 'y',
-      preventDefault: vi.fn(),
-      target: insideNode,
-    } as unknown as KeyboardEvent)
-    shell.handleSidebarHistoryShortcutKeydown({
-      key: 'z',
-      preventDefault: vi.fn(),
-      target: outsideTarget,
-    } as unknown as KeyboardEvent)
-
-    expect(handleUndo).toHaveBeenCalledTimes(1)
-    expect(handleRedo).toHaveBeenCalledTimes(1)
+    expect(useShortcutMock).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      allowInInput: true,
+      i18nKey: 'shortcut.statementEditor.undo',
+      id: 'statementEditor.undo',
+      keys: 'Mod+Z',
+      when: { panelFocus: 'statementEditor' },
+    }))
+    expect(useShortcutMock).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      allowInInput: true,
+      i18nKey: 'shortcut.statementEditor.redo',
+      id: 'statementEditor.redo',
+      keys: ['Mod+Shift+Z', 'Mod+Y'],
+      when: { panelFocus: 'statementEditor' },
+    }))
 
     scope.stop()
   })

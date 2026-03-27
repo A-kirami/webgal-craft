@@ -1,7 +1,8 @@
 import { useStatementAnimationDialog } from '~/features/editor/animation/useStatementAnimationDialog'
 import { useEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
-import { resolveHistoryShortcutAction } from '~/features/editor/shared/history-shortcut'
+import { readResizablePanelCollapsed } from '~/features/editor/shared/resizable-panel'
 import { useCommandPanelBridgeProvider, useSidebarPanelProvider } from '~/features/editor/shared/useEditorPanelBindings'
+import { useShortcut } from '~/features/editor/shortcut/useShortcut'
 import { StatementGroup } from '~/stores/command-panel'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { usePreferenceStore } from '~/stores/preference'
@@ -13,7 +14,7 @@ import type { Transform } from '~/domain/stage/types'
 interface ResizablePanelLike {
   collapse: () => void
   expand: () => void
-  isCollapsed: boolean
+  isCollapsed: boolean | ReadonlyRefLike<boolean>
 }
 
 interface ReadonlyRefLike<T = unknown> {
@@ -22,12 +23,6 @@ interface ReadonlyRefLike<T = unknown> {
 
 interface UseEditorPanelShellOptions {
   commandPanelRef: ReadonlyRefLike<ResizablePanelLike | null | undefined>
-  sidebarHistoryScopeRef: ReadonlyRefLike<HTMLElement | null | undefined>
-}
-
-interface SidebarHistoryShortcutEvent {
-  preventDefault: () => void
-  target?: EventTarget | null
 }
 
 export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
@@ -62,7 +57,7 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     },
   })
 
-  const isCommandPanelCollapsed = computed(() => options.commandPanelRef.value?.isCollapsed ?? true)
+  const isCommandPanelCollapsed = computed(() => readResizablePanelCollapsed(options.commandPanelRef.value))
   const effectEditorSession = computed(() => effectEditorProvider.session)
 
   function toggleCommandPanel(): void {
@@ -71,7 +66,7 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
       return
     }
 
-    if (panel.isCollapsed) {
+    if (readResizablePanelCollapsed(panel)) {
       panel.expand()
       return
     }
@@ -79,34 +74,27 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     panel.collapse()
   }
 
-  function isSidebarHistoryShortcutTarget(event: SidebarHistoryShortcutEvent): boolean {
-    const scopeElement = options.sidebarHistoryScopeRef.value
-    if (!scopeElement) {
-      return false
-    }
+  useShortcut({
+    allowInInput: true,
+    execute: () => {
+      binding.value?.handleUndo?.()
+    },
+    i18nKey: 'shortcut.statementEditor.undo',
+    id: 'statementEditor.undo',
+    keys: 'Mod+Z',
+    when: { panelFocus: 'statementEditor' },
+  })
 
-    const target = event.target
-    return !!target && scopeElement.contains(target as Node)
-  }
-
-  function handleSidebarHistoryShortcutKeydown(event: KeyboardEvent): void {
-    const action = resolveHistoryShortcutAction(event)
-    if (!action || !isSidebarHistoryShortcutTarget(event)) {
-      return
-    }
-
-    const historyHandler = action === 'redo'
-      ? binding.value?.handleRedo
-      : binding.value?.handleUndo
-    if (!historyHandler) {
-      return
-    }
-
-    event.preventDefault()
-    historyHandler()
-  }
-
-  useEventListener('keydown', handleSidebarHistoryShortcutKeydown)
+  useShortcut({
+    allowInInput: true,
+    execute: () => {
+      binding.value?.handleRedo?.()
+    },
+    i18nKey: 'shortcut.statementEditor.redo',
+    id: 'statementEditor.redo',
+    keys: ['Mod+Shift+Z', 'Mod+Y'],
+    when: { panelFocus: 'statementEditor' },
+  })
 
   function focusTextEditorAfterEffectEditorClose(): void {
     if (currentProjection.value === 'text') {
@@ -185,7 +173,6 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     handleEffectTransformUpdate,
     handleInsertCommand,
     handleInsertGroup,
-    handleSidebarHistoryShortcutKeydown,
     toggleCommandPanel,
   }
 }

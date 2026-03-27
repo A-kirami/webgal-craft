@@ -299,6 +299,7 @@ export const useEditorStore = defineStore('editor', () => {
     applyAnimationFrameUpdate,
     applySceneStatementDelete,
     applySceneStatementInsert,
+    applySceneStatementReorder,
     applySceneStatementUpdate,
     applyTextDocumentContent,
     redoDocument,
@@ -479,7 +480,7 @@ export const useEditorStore = defineStore('editor', () => {
       return
     }
     usePreferenceStore().editorMode = mode
-    tabsStore.shouldFocusEditor = mode === 'text'
+    tabsStore.shouldFocusEditor = true
   }
 
   watch(() => tabsStore.activeTab?.path, async (activePath) => {
@@ -566,6 +567,7 @@ export const useEditorStore = defineStore('editor', () => {
     applyAnimationFrameUpdate,
     applySceneStatementDelete,
     applySceneStatementInsert,
+    applySceneStatementReorder,
     applySceneStatementUpdate,
     applyTextDocumentContent,
   })

@@ -3,6 +3,7 @@ import { useControlId } from '~/composables/useControlId'
 import { StatementEntry } from '~/domain/script/sentence'
 import { useStatementAnimationEditorBridge } from '~/features/editor/animation/useStatementAnimationEditorBridge'
 import { useStatementEffectEditorBridge } from '~/features/editor/effect-editor/useStatementEffectEditorBridge'
+import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import {
   normalizeStatementPanelSingleLineValue,
   resolveStatementPanelPreviewImageUrl,
@@ -156,6 +157,12 @@ const { buildControlId } = useControlId('statement-panel')
 const panelCommentContentInputId = buildControlId('comment-content')
 const panelRawTextInputId = buildControlId('raw-text')
 const panelSpeakerInputId = buildControlId('speaker')
+
+useShortcutContext({
+  panelFocus: 'statementEditor',
+}, {
+  trackFocus: true,
+})
 </script>
 
 <template>

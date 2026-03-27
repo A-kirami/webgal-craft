@@ -6,13 +6,11 @@ import { applySceneCursorTarget, prepareSceneCursorTarget } from '~/features/edi
 import { resolveSceneCursorTarget, resolveScenePreviewLine } from '~/features/editor/text-editor/text-editor-scene-sync'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { useTabsStore } from '~/stores/tabs'
-import { handleError } from '~/utils/error-handler'
 
 import { useTextEditorBindings } from './useTextEditorBindings'
 import { useTextEditorContentSync } from './useTextEditorContentSync'
 import { useTextEditorHistory } from './useTextEditorHistory'
 import { useTextEditorPanel } from './useTextEditorPanel'
-import { useTextEditorSaveShortcut } from './useTextEditorSaveShortcut'
 import { useTextEditorWorkspace } from './useTextEditorWorkspace'
 
 import type { TextProjectionState } from '~/stores/editor'
@@ -62,10 +60,6 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
   function isCurrentTextProjectionActive(): boolean {
     return activeProjection.value === 'text' && tabsStore.activeTab?.path === state.value.path
   }
-
-  useTextEditorSaveShortcut(() => state.value.path, {
-    isEditorFocused: () => readEditor()?.hasTextFocus() ?? false,
-  })
 
   function readSceneSelection() {
     return editorStore.getSceneSelection(state.value.path)
@@ -194,14 +188,6 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
     editorStore.scheduleAutoSaveIfEnabled(state.value.path)
   }
 
-  async function saveTextFile(path: string): Promise<void> {
-    try {
-      await editorStore.saveFile(path)
-    } catch (error) {
-      handleError(error, { silent: true })
-    }
-  }
-
   const debouncedSaveViewState = useDebounceFn(() => {
     textEditorWorkspace.saveViewState(state.value.path)
   }, 300)
@@ -306,10 +292,6 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
         syncScene()
       }
     })
-  }
-
-  async function manualSave() {
-    await saveTextFile(state.value.path)
   }
 
   const contentSync = useTextEditorContentSync({
@@ -424,6 +406,5 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
     handleEditorClick,
     handleEditorCreated,
     handleScrollChange,
-    manualSave,
   }
 }

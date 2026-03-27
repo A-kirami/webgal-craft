@@ -3,14 +3,64 @@ import { ResizablePanel } from '~/components/ui/resizable'
 import { usePreferenceStore } from '~/stores/preference'
 
 const preferenceStore = usePreferenceStore()
+const previewPanelRef = $(useTemplateRef<InstanceType<typeof ResizablePanel>>('previewPanel'))
+
+watch(() => preferenceStore.showPreviewPanel, (showPreviewPanel) => {
+  if (!previewPanelRef) {
+    return
+  }
+
+  if (
+    showPreviewPanel
+    && previewPanelRef.isCollapsed
+    && typeof previewPanelRef.expand === 'function'
+  ) {
+    previewPanelRef.expand()
+    return
+  }
+
+  if (
+    !showPreviewPanel
+    && !previewPanelRef.isCollapsed
+    && typeof previewPanelRef.collapse === 'function'
+  ) {
+    previewPanelRef.collapse()
+  }
+})
+
+onMounted(() => {
+  if (!preferenceStore.showPreviewPanel && typeof previewPanelRef?.collapse === 'function') {
+    nextTick(() => previewPanelRef?.collapse())
+  }
+})
+
+function handlePreviewCollapse() {
+  if (preferenceStore.showPreviewPanel) {
+    preferenceStore.showPreviewPanel = false
+  }
+}
+
+function handlePreviewExpand() {
+  if (!preferenceStore.showPreviewPanel) {
+    preferenceStore.showPreviewPanel = true
+  }
+}
 </script>
 
 <template>
   <ResizablePanelGroup auto-save-id="left-panel" direction="vertical" class="h-full">
     <!-- 预览面板（可折叠） -->
-    <ResizablePanel size-unit="px" :default-size="245" :min-size="80" collapsible>
+    <ResizablePanel
+      ref="previewPanel"
+      size-unit="px"
+      :default-size="245"
+      :min-size="80"
+      collapsible
+      @collapse="handlePreviewCollapse"
+      @expand="handlePreviewExpand"
+    >
       <template #default="{ isCollapsed }">
-        <PreviewPanel v-if="!isCollapsed" />
+        <PreviewPanel v-if="preferenceStore.showPreviewPanel && !isCollapsed" />
       </template>
     </ResizablePanel>
     <ResizableHandle />

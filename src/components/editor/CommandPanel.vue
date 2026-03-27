@@ -10,6 +10,7 @@ import {
   getCommandDescription,
 } from '~/features/editor/command-registry'
 import { resolveI18n } from '~/features/editor/command-registry/schema'
+import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { StatementGroup, useCommandPanelStore } from '~/stores/command-panel'
 import { useModalStore } from '~/stores/modal'
 import { handleWheelToHorizontalScroll } from '~/utils/wheel'
@@ -88,6 +89,12 @@ const groupTagEntriesMap = $computed(() => {
 function getGroupTagEntries(groupId: string) {
   return groupTagEntriesMap.get(groupId) ?? []
 }
+
+useShortcutContext({
+  panelFocus: 'commandPanel',
+}, {
+  trackFocus: true,
+})
 </script>
 
 <template>
