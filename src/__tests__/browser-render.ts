@@ -244,10 +244,16 @@ export function createBrowserCheckboxStub(name: string) {
 export function renderInBrowser(component: BrowserRenderComponent, options: BrowserRenderOptions = {}) {
   const { browser, global, ...renderOptions } = options
   const globalPlugins = global?.plugins ?? []
-  const unwrappedGlobalPlugins = globalPlugins.map(plugin => unwrapBrowserPlugin(plugin))
-  const explicitPinia = unwrappedGlobalPlugins.find(plugin => isPiniaPlugin(plugin))
-  const normalizedGlobalPlugins = unwrappedGlobalPlugins.filter(plugin => !isPiniaPlugin(plugin))
-  const hasExplicitBrowserI18n = normalizedGlobalPlugins.some(plugin => isBrowserTestI18nPlugin(plugin))
+  let explicitPinia: import('pinia').Pinia | undefined
+  const normalizedGlobalPlugins = globalPlugins.filter((plugin) => {
+    const unwrappedPlugin = unwrapBrowserPlugin(plugin)
+    if (!isPiniaPlugin(unwrappedPlugin)) {
+      return true
+    }
+    explicitPinia ??= unwrappedPlugin
+    return false
+  })
+  const hasExplicitBrowserI18n = normalizedGlobalPlugins.some(plugin => isBrowserTestI18nPlugin(unwrapBrowserPlugin(plugin)))
   const resolvedPinia = browser?.pinia === undefined
     ? explicitPinia ?? true
     : browser.pinia

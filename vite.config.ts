@@ -168,6 +168,9 @@ export default defineConfig({
           ],
         },
         extends: true,
+        optimizeDeps: {
+          include: ['vue-color'],
+        },
       },
     ],
   },
