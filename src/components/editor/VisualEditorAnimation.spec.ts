@@ -355,8 +355,9 @@ describe('VisualEditorAnimation', () => {
     expect(tabsStore.shouldFocusEditor).toBe(false)
   })
 
-  it('动画编辑器输入框焦点下仍会响应撤销快捷键', async () => {
+  it('动画编辑器输入框焦点下不会劫持文本撤销和重做快捷键', async () => {
     const undoDocument = vi.fn(() => ({ applied: true }))
+    const redoDocument = vi.fn(() => ({ applied: true }))
     const scheduleAutoSaveIfEnabled = vi.fn()
     const tabsStore = reactive({
       activeTab: {
@@ -376,7 +377,7 @@ describe('VisualEditorAnimation', () => {
         path: '/game/animation/opening.json',
         projection: 'visual',
       },
-      redoDocument: vi.fn(() => ({ applied: false })),
+      redoDocument,
       scheduleAutoSaveIfEnabled,
       undoDocument,
     }))
@@ -406,7 +407,14 @@ describe('VisualEditorAnimation', () => {
       key: 'z',
     }))
 
-    expect(undoDocument).toHaveBeenCalledTimes(1)
-    expect(scheduleAutoSaveIfEnabled).toHaveBeenCalledWith('/game/animation/opening.json')
+    inputElement.dispatchEvent(new KeyboardEvent('keydown', {
+      bubbles: true,
+      ctrlKey: true,
+      key: 'y',
+    }))
+
+    expect(undoDocument).not.toHaveBeenCalled()
+    expect(redoDocument).not.toHaveBeenCalled()
+    expect(scheduleAutoSaveIfEnabled).not.toHaveBeenCalled()
   })
 })

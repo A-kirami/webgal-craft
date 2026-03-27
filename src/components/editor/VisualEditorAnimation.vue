@@ -49,7 +49,6 @@ useVisualEditorFocusRequest({
 })
 
 useShortcut({
-  allowInInput: true,
   execute: () => {
     controller.handleUndo()
   },
@@ -63,7 +62,6 @@ useShortcut({
 })
 
 useShortcut({
-  allowInInput: true,
   execute: () => {
     controller.handleRedo()
   },
