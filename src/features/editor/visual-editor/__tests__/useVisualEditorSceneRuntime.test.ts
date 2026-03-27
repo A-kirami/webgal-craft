@@ -112,7 +112,7 @@ function createState(
   }) as SceneVisualProjectionState
 }
 
-describe('useVisualEditorSceneRuntime 快捷键注册', () => {
+describe('useVisualEditorSceneRuntime 的快捷键注册与预览同步', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
   })

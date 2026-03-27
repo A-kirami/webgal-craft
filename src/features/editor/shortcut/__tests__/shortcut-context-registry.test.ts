@@ -4,7 +4,7 @@ import '~/__tests__/setup'
 
 import { useShortcutContextRegistry } from '../shortcut-context-registry'
 
-describe('useShortcutContextRegistry', () => {
+describe('useShortcutContextRegistry 的上下文注册表', () => {
   let store: ReturnType<typeof useShortcutContextRegistry>
 
   beforeEach(() => {

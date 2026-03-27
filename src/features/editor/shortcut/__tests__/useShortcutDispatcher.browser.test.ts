@@ -280,7 +280,7 @@ function createStatementEditorSelectHarnessComponent() {
   })
 }
 
-describe('useShortcutDispatcher', () => {
+describe('useShortcutDispatcher 的浏览器分发行为', () => {
   beforeEach(() => {
     for (const action of Object.values(shortcutActions)) {
       action.mockReset()

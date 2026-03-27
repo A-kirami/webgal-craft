@@ -68,7 +68,7 @@ function createBinding(
   }
 }
 
-describe('shortcut dispatcher', () => {
+describe('dispatchShortcut 与快捷键匹配工具函数', () => {
   it('标准化绑定与按键事件时会统一 Mod 和修饰键顺序', () => {
     expect(normalizeShortcutBindingKeys(['Shift+Mod+S', 'mod+y'], 'windows')).toEqual([
       'Ctrl+Shift+S',
