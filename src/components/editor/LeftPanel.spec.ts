@@ -7,10 +7,14 @@ import { createBrowserContainerStub, createBrowserTextStub, renderInBrowser } fr
 const {
   collapsePreviewPanelMock,
   expandPreviewPanelMock,
+  resizablePanelInitialState,
   usePreferenceStoreMock,
 } = vi.hoisted(() => ({
   collapsePreviewPanelMock: vi.fn(),
   expandPreviewPanelMock: vi.fn(),
+  resizablePanelInitialState: {
+    isCollapsed: false,
+  },
   usePreferenceStoreMock: vi.fn(),
 }))
 
@@ -30,7 +34,7 @@ vi.mock('~/components/ui/resizable', () => {
     emits: ['collapse', 'expand'],
     setup(props, { emit, expose, slots }) {
       const state = reactive({
-        isCollapsed: false,
+        isCollapsed: resizablePanelInitialState.isCollapsed,
       })
 
       function collapse() {
@@ -87,6 +91,7 @@ describe('LeftPanel', () => {
   beforeEach(() => {
     collapsePreviewPanelMock.mockReset()
     expandPreviewPanelMock.mockReset()
+    resizablePanelInitialState.isCollapsed = false
     usePreferenceStoreMock.mockReset()
   })
 
@@ -158,5 +163,24 @@ describe('LeftPanel', () => {
     await nextTick()
 
     expect(collapsePreviewPanelMock).toHaveBeenCalledOnce()
+  })
+
+  it('初始已折叠且偏好为显示时会展开预览面板实例', async () => {
+    resizablePanelInitialState.isCollapsed = true
+    usePreferenceStoreMock.mockReturnValue(reactive({
+      leftPanelView: 'scene',
+      showPreviewPanel: true,
+    }))
+
+    renderInBrowser(LeftPanel, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await nextTick()
+    await nextTick()
+
+    expect(expandPreviewPanelMock).toHaveBeenCalledOnce()
   })
 })

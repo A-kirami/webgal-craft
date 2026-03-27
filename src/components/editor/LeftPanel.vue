@@ -6,7 +6,7 @@ import { usePreferenceStore } from '~/stores/preference'
 const preferenceStore = usePreferenceStore()
 const previewPanelRef = $(useTemplateRef<InstanceType<typeof ResizablePanel>>('previewPanel'))
 
-watch(() => preferenceStore.showPreviewPanel, (showPreviewPanel) => {
+function syncPreviewPanel() {
   if (!previewPanelRef) {
     return
   }
@@ -14,7 +14,7 @@ watch(() => preferenceStore.showPreviewPanel, (showPreviewPanel) => {
   const isPreviewPanelCollapsed = readResizablePanelCollapsed(previewPanelRef)
 
   if (
-    showPreviewPanel
+    preferenceStore.showPreviewPanel
     && isPreviewPanelCollapsed
     && typeof previewPanelRef.expand === 'function'
   ) {
@@ -23,18 +23,22 @@ watch(() => preferenceStore.showPreviewPanel, (showPreviewPanel) => {
   }
 
   if (
-    !showPreviewPanel
+    !preferenceStore.showPreviewPanel
     && !isPreviewPanelCollapsed
     && typeof previewPanelRef.collapse === 'function'
   ) {
     previewPanelRef.collapse()
   }
+}
+
+watch(() => preferenceStore.showPreviewPanel, () => {
+  syncPreviewPanel()
 })
 
 onMounted(() => {
-  if (!preferenceStore.showPreviewPanel && typeof previewPanelRef?.collapse === 'function') {
-    nextTick(() => previewPanelRef?.collapse())
-  }
+  nextTick(() => {
+    syncPreviewPanel()
+  })
 })
 
 function handlePreviewCollapse() {
