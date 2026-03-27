@@ -125,8 +125,32 @@ function toSelectedFileItem() {
   }
 }
 
+function toFocusedFileItem() {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  const activeElement = document.activeElement
+  if (!(activeElement instanceof HTMLElement) || !fileTreeContainerRef.value?.contains(activeElement)) {
+    return
+  }
+
+  const treeItemElement = activeElement.closest<HTMLElement>('[data-file-tree-path]')
+  const itemPath = treeItemElement?.dataset.fileTreePath
+  if (!itemPath) {
+    return
+  }
+
+  const focusedItem = itemMap.get(itemPath)
+  return focusedItem ? toFileItem(focusedItem) : undefined
+}
+
+function toShortcutTargetFileItem() {
+  return toFocusedFileItem() ?? toSelectedFileItem()
+}
+
 function handleShortcutRename() {
-  const fileItem = toSelectedFileItem()
+  const fileItem = toShortcutTargetFileItem()
   if (!fileItem) {
     return
   }
@@ -135,7 +159,7 @@ function handleShortcutRename() {
 }
 
 function handleShortcutDelete() {
-  const fileItem = toSelectedFileItem()
+  const fileItem = toShortcutTargetFileItem()
   if (!fileItem) {
     return
   }
@@ -246,6 +270,7 @@ useShortcut({
                 v-bind="item.bind"
                 :level="item.level"
                 :has-children="item.hasChildren"
+                :data-file-tree-path="toFileItem(item as FlattenedItem<T>).path"
                 class="cursor-pointer"
                 @keydown.enter.prevent="handleEnterKey(item as FlattenedItem<T>)"
                 @keydown.escape.prevent="handleEscapeKey(item as FlattenedItem<T>)"

@@ -370,6 +370,38 @@ describe('FileTree', () => {
     expect(renameFileMock).toHaveBeenCalledWith('/project/scene.txt', 'renamed.txt')
   })
 
+  it('键盘焦点移动到其他条目后，F2 会重命名当前焦点条目', async () => {
+    renderFileTree({
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [
+        {
+          name: 'first.txt',
+          path: '/project/first.txt',
+        },
+        {
+          name: 'second.txt',
+          path: '/project/second.txt',
+        },
+      ],
+    })
+
+    const firstTreeItem = page.getByRole('treeitem').nth(0)
+    const secondTreeItem = page.getByRole('treeitem').nth(1)
+
+    await firstTreeItem.click()
+
+    const secondTreeItemElement = await secondTreeItem.element()
+    secondTreeItemElement.focus()
+    await userEvent.keyboard('{F2}')
+
+    const textbox = page.getByRole('textbox')
+    await textbox.fill('renamed-second.txt')
+    await textbox.click()
+    await userEvent.keyboard('{Enter}')
+
+    expect(renameFileMock).toHaveBeenCalledWith('/project/second.txt', 'renamed-second.txt')
+  })
+
   it('按 Delete 会打开删除文件确认弹窗', async () => {
     const modalStore = {
       open: vi.fn(),
@@ -395,6 +427,44 @@ describe('FileTree', () => {
         isDir: false,
         name: 'scene.txt',
         path: '/project/scene.txt',
+      },
+    })
+  })
+
+  it('键盘焦点移动到其他条目后，Delete 会作用到当前焦点条目', async () => {
+    const modalStore = {
+      open: vi.fn(),
+    }
+    useModalStoreMock.mockReturnValue(modalStore)
+
+    renderFileTree({
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [
+        {
+          name: 'first.txt',
+          path: '/project/first.txt',
+        },
+        {
+          name: 'second.txt',
+          path: '/project/second.txt',
+        },
+      ],
+    })
+
+    const firstTreeItem = page.getByRole('treeitem').nth(0)
+    const secondTreeItem = page.getByRole('treeitem').nth(1)
+
+    await firstTreeItem.click()
+
+    const secondTreeItemElement = await secondTreeItem.element()
+    secondTreeItemElement.focus()
+    await userEvent.keyboard('{Delete}')
+
+    expect(modalStore.open).toHaveBeenCalledWith('DeleteFileModal', {
+      file: {
+        isDir: false,
+        name: 'second.txt',
+        path: '/project/second.txt',
       },
     })
   })
