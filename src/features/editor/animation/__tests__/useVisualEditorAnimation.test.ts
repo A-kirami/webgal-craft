@@ -99,4 +99,18 @@ describe('useVisualEditorAnimation 行为', () => {
 
     scope.stop()
   })
+
+  it('重做未生效时不会请求自动保存', () => {
+    const { controller, redoDocument, scheduleAutoSaveIfEnabled, scope } = createFixture({
+      redoApplied: false,
+    })
+
+    controller.handleRedo()
+
+    expect(redoDocument).toHaveBeenCalledTimes(1)
+    expect(redoDocument).toHaveBeenCalledWith('/game/animation/opening.json')
+    expect(scheduleAutoSaveIfEnabled).not.toHaveBeenCalled()
+
+    scope.stop()
+  })
 })

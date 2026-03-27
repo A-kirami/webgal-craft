@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ResizablePanel } from '~/components/ui/resizable'
+import { readResizablePanelCollapsed } from '~/features/editor/shared/resizable-panel'
 import { usePreferenceStore } from '~/stores/preference'
 
 const preferenceStore = usePreferenceStore()
@@ -10,9 +11,11 @@ watch(() => preferenceStore.showPreviewPanel, (showPreviewPanel) => {
     return
   }
 
+  const isPreviewPanelCollapsed = readResizablePanelCollapsed(previewPanelRef)
+
   if (
     showPreviewPanel
-    && previewPanelRef.isCollapsed
+    && isPreviewPanelCollapsed
     && typeof previewPanelRef.expand === 'function'
   ) {
     previewPanelRef.expand()
@@ -21,7 +24,7 @@ watch(() => preferenceStore.showPreviewPanel, (showPreviewPanel) => {
 
   if (
     !showPreviewPanel
-    && !previewPanelRef.isCollapsed
+    && !isPreviewPanelCollapsed
     && typeof previewPanelRef.collapse === 'function'
   ) {
     previewPanelRef.collapse()

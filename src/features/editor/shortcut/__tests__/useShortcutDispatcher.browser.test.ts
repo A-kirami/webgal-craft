@@ -2,7 +2,6 @@ import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
 import { defineComponent, h, ref } from 'vue'
-import type { ComponentPublicInstance } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
 import CommandPanelCard from '~/components/editor/CommandPanelCard.vue'
@@ -15,6 +14,8 @@ import { useShortcutContextRegistry } from '../shortcut-context-registry'
 import { useShortcut } from '../useShortcut'
 import { useShortcutContext } from '../useShortcutContext'
 import { useShortcutDispatcher } from '../useShortcutDispatcher'
+
+import type { ComponentPublicInstance } from 'vue'
 
 const shortcutActions = vi.hoisted(() => ({
   rename: vi.fn(),
@@ -298,7 +299,7 @@ function createComponentTargetHarnessComponent() {
   const ComponentTargetShortcut = defineComponent({
     name: 'ComponentTargetShortcut',
     setup() {
-      const targetRef = ref<ComponentPublicInstance | null>(null)
+      const targetRef = ref<ComponentPublicInstance>()
 
       useShortcutContext({
         panelFocus: 'fileTree',
