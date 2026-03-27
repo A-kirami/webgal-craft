@@ -91,14 +91,14 @@ export function dispatchShortcut<TExecuteContext>(
         return false
       }
 
-      if (
+      if (isMonacoTarget(options.event.target)) {
+        if (!candidate.binding.overrideMonaco) {
+          return false
+        }
+      } else if (
         isEditableTarget(options.event.target)
         && !candidate.binding.allowInInput
       ) {
-        return false
-      }
-
-      if (isMonacoTarget(options.event.target) && !candidate.binding.overrideMonaco) {
         return false
       }
 

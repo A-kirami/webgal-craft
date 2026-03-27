@@ -184,23 +184,21 @@ useShortcutContext({
   trackFocus: true,
 })
 
-if (enableContextMenu) {
-  useShortcut({
-    execute: handleShortcutRename,
-    i18nKey: 'shortcut.fileTree.rename',
-    id: 'fileTree.rename',
-    keys: 'F2',
-    when: { panelFocus: 'fileTree' },
-  })
+useShortcut(() => ({
+  execute: handleShortcutRename,
+  i18nKey: 'shortcut.fileTree.rename',
+  id: 'fileTree.rename',
+  keys: enableContextMenu ? 'F2' : '',
+  when: { panelFocus: 'fileTree' },
+}))
 
-  useShortcut({
-    execute: handleShortcutDelete,
-    i18nKey: 'shortcut.fileTree.delete',
-    id: 'fileTree.delete',
-    keys: 'Delete',
-    when: { panelFocus: 'fileTree' },
-  })
-}
+useShortcut(() => ({
+  execute: handleShortcutDelete,
+  i18nKey: 'shortcut.fileTree.delete',
+  id: 'fileTree.delete',
+  keys: enableContextMenu ? 'Delete' : '',
+  when: { panelFocus: 'fileTree' },
+}))
 </script>
 
 <template>

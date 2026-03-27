@@ -1,7 +1,7 @@
 import { createPinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, nextTick, reactive } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
@@ -283,6 +283,44 @@ function renderFileTree(props: Record<string, unknown>) {
   })
 }
 
+function renderReactiveFileTree(initialProps: Record<string, unknown>) {
+  const reactiveProps = reactive({ ...initialProps })
+
+  const ShortcutHarness = defineComponent({
+    name: 'ReactiveFileTreeShortcutHarness',
+    setup() {
+      useShortcutDispatcher({
+        bindings: [],
+        executeContext: {},
+        platform: 'windows',
+      })
+
+      useShortcutContext({
+        commandPanelOpen: false,
+        editorMode: 'visual',
+        hasSelection: false,
+        isDirty: false,
+        isModalOpen: false,
+        panelFocus: 'none',
+        visualType: 'scene',
+      })
+
+      return () => h(FileTree as never, { ...reactiveProps } as never)
+    },
+  })
+
+  renderInBrowser(ShortcutHarness, {
+    global: {
+      plugins: [createPinia()],
+      stubs: globalStubs,
+    },
+  })
+
+  return {
+    reactiveProps,
+  }
+}
+
 describe('FileTree', () => {
   afterEach(() => {
     vi.clearAllMocks()
@@ -473,6 +511,30 @@ describe('FileTree', () => {
     await userEvent.keyboard('{Delete}')
 
     expect(modalStore.open).not.toHaveBeenCalled()
+  })
+
+  it('运行时启用上下文菜单后，F2 会开始触发重命名', async () => {
+    const { reactiveProps } = renderReactiveFileTree({
+      enableContextMenu: false,
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [
+        {
+          name: 'scene.txt',
+          path: '/project/scene.txt',
+        },
+      ],
+    })
+
+    const treeItem = page.getByRole('treeitem').first()
+    await treeItem.click()
+
+    reactiveProps.enableContextMenu = true
+    await nextTick()
+    await nextTick()
+
+    await userEvent.keyboard('{F2}')
+
+    await expect.element(page.getByRole('textbox')).toBeInTheDocument()
   })
 
   it('键盘焦点移动到其他条目后，Delete 会作用到当前焦点条目', async () => {

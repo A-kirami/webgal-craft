@@ -236,6 +236,36 @@ describe('dispatchShortcut 与快捷键匹配工具函数', () => {
     expect(call).toHaveBeenCalledWith('effect.apply')
   })
 
+  it('overrideMonaco 会放行 Monaco 文本输入目标，即使未声明 allowInInput', () => {
+    const call = vi.fn()
+
+    const handled = dispatchShortcut({
+      bindings: [
+        createBinding({
+          id: 'editor.commandPanel',
+          keys: 'Mod+P',
+          overrideMonaco: true,
+        }),
+      ],
+      context: {
+        editorMode: 'text',
+      },
+      event: createKeyboardEvent({
+        ctrlKey: true,
+        key: 'p',
+        target: createTarget({
+          closestSelectors: ['.monaco-editor'],
+          tagName: 'TEXTAREA',
+        }),
+      }),
+      executeContext: { call },
+      platform: 'windows',
+    })
+
+    expect(handled).toBe(true)
+    expect(call).toHaveBeenCalledWith('editor.commandPanel')
+  })
+
   it('事件已被 preventDefault 时仍会继续匹配显式允许穿透焦点环境的快捷键', () => {
     const call = vi.fn()
 
