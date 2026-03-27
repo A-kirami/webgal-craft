@@ -1,3 +1,5 @@
+import { handleError } from '~/utils/error-handler'
+
 import type { ShortcutDefinition } from './types'
 
 export interface EditorShortcutRuntime {
@@ -13,7 +15,13 @@ export function createEditorShortcutDefinitions(): ShortcutDefinition<EditorShor
     {
       allowInInput: true,
       execute: ({ saveCurrentFile }) => {
-        void saveCurrentFile()
+        void (async () => {
+          try {
+            await saveCurrentFile()
+          } catch (error) {
+            handleError(error, { silent: true })
+          }
+        })()
       },
       i18nKey: 'shortcut.save',
       id: 'editor.save',

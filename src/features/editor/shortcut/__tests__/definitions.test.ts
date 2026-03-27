@@ -1,8 +1,20 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const { handleErrorMock } = vi.hoisted(() => ({
+  handleErrorMock: vi.fn(),
+}))
+
+vi.mock('~/utils/error-handler', () => ({
+  handleError: handleErrorMock,
+}))
 
 import { createEditorShortcutDefinitions } from '../definitions'
 
 describe('editor shortcut definitions', () => {
+  beforeEach(() => {
+    handleErrorMock.mockReset()
+  })
+
   it('提供完整的全局编辑页快捷键定义', () => {
     const definitions = createEditorShortcutDefinitions()
 
@@ -50,5 +62,25 @@ describe('editor shortcut definitions', () => {
     expect(runtime.togglePreviewPanel).toHaveBeenCalledOnce()
     expect(runtime.setLeftPanelView).toHaveBeenNthCalledWith(1, 'scene')
     expect(runtime.setLeftPanelView).toHaveBeenNthCalledWith(2, 'resource')
+  })
+
+  it('保存快捷键失败时会静默交给统一错误处理', async () => {
+    const saveError = new Error('save failed')
+    const runtime = {
+      saveCurrentFile: vi.fn().mockRejectedValueOnce(saveError),
+      setLeftPanelView: vi.fn(),
+      toggleCommandPanel: vi.fn(),
+      togglePreviewPanel: vi.fn(),
+      toggleSidebar: vi.fn(),
+    }
+
+    const definitions = createEditorShortcutDefinitions()
+
+    definitions.find(item => item.id === 'editor.save')?.execute(runtime)
+    await Promise.resolve()
+
+    expect(runtime.saveCurrentFile).toHaveBeenCalledOnce()
+    expect(handleErrorMock).toHaveBeenCalledOnce()
+    expect(handleErrorMock).toHaveBeenCalledWith(saveError, { silent: true })
   })
 })
