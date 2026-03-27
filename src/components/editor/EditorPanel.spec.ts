@@ -293,6 +293,15 @@ function createEditorPanelI18n() {
   return createBrowserLocalizedI18n()
 }
 
+function renderEditorPanel() {
+  renderInBrowser(EditorPanel, {
+    global: {
+      plugins: [createEditorPanelI18n()],
+      stubs: globalStubs,
+    },
+  })
+}
+
 describe('EditorPanel', () => {
   afterEach(() => {
     vi.clearAllMocks()
@@ -346,12 +355,7 @@ describe('EditorPanel', () => {
       insertGroup,
     }
 
-    renderInBrowser(EditorPanel, {
-      global: {
-        plugins: [createEditorPanelI18n()],
-        stubs: globalStubs,
-      },
-    })
+    renderEditorPanel()
 
     await page.getByRole('button', { name: 'insert-command' }).click()
     await page.getByRole('button', { name: 'insert-group' }).click()
@@ -370,12 +374,7 @@ describe('EditorPanel', () => {
       isCurrentSceneFile: false,
     }))
 
-    renderInBrowser(EditorPanel, {
-      global: {
-        plugins: [createEditorPanelI18n()],
-        stubs: globalStubs,
-      },
-    })
+    renderEditorPanel()
 
     await expect.element(page.getByText('File Editor')).toBeVisible()
     await expect.element(page.getByText('Editor Toolbar')).toBeVisible()
@@ -398,12 +397,7 @@ describe('EditorPanel', () => {
       onUpdate: vi.fn(),
     }
 
-    renderInBrowser(EditorPanel, {
-      global: {
-        plugins: [createEditorPanelI18n()],
-        stubs: globalStubs,
-      },
-    })
+    renderEditorPanel()
 
     await expect.element(page.getByText('移动光标到语句行以编辑')).toBeVisible()
     await expect.element(page.getByText('Statement Editor Panel')).not.toBeInTheDocument()

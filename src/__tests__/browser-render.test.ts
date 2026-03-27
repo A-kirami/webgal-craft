@@ -1,3 +1,4 @@
+import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { renderMock } = vi.hoisted(() => ({
@@ -33,37 +34,49 @@ describe('renderInBrowser', () => {
   it('global.plugins 已显式提供测试 i18n 时不会重复注入默认 i18n', () => {
     const localizedI18n = createBrowserLocalizedI18n()
 
-    renderInBrowser({} as never, {
+    const rendered = renderInBrowser({} as never, {
       global: {
         plugins: [localizedI18n],
       },
     })
 
     const renderOptions = getRenderedOptions()
-    expect(renderOptions?.global?.plugins).toEqual([localizedI18n])
+    expect(renderOptions?.global?.plugins).toHaveLength(2)
+    expect(renderOptions?.global?.plugins?.[0]).toBe(rendered.pinia)
+    expect(renderOptions?.global?.plugins?.[1]).toBe(localizedI18n)
   })
 
   it('global.plugins 以 tuple 形式提供测试 i18n 时不会重复注入默认 i18n', () => {
     const localizedI18n = createBrowserLocalizedI18n()
     const localizedI18nTuple: [typeof localizedI18n] = [localizedI18n]
 
-    renderInBrowser({} as never, {
+    const rendered = renderInBrowser({} as never, {
       global: {
         plugins: [localizedI18nTuple],
       },
     })
 
     const renderOptions = getRenderedOptions()
-    expect(renderOptions?.global?.plugins).toHaveLength(1)
-    expect(renderOptions?.global?.plugins?.[0]).toBe(localizedI18nTuple)
+    expect(renderOptions?.global?.plugins).toHaveLength(2)
+    expect(renderOptions?.global?.plugins?.[0]).toBe(rendered.pinia)
+    expect(renderOptions?.global?.plugins?.[1]).toBe(localizedI18nTuple)
   })
 
-  it('未显式提供测试 i18n 时会注入默认 browser i18n', () => {
+  it('未显式提供 Pinia 时会默认注入 Pinia', () => {
+    const rendered = renderInBrowser({} as never)
+
+    const renderOptions = getRenderedOptions()
+    expect(rendered.pinia).toBeDefined()
+    expect(renderOptions?.global?.plugins).toHaveLength(2)
+    expect(renderOptions?.global?.plugins?.[0]).toBe(rendered.pinia)
+  })
+
+  it('未显式提供测试 i18n 时会默认注入 browser i18n', () => {
     renderInBrowser({} as never)
 
     const renderOptions = getRenderedOptions()
-    expect(renderOptions?.global?.plugins).toHaveLength(1)
-    const injectedPlugin = renderOptions?.global?.plugins?.[0]
+    expect(renderOptions?.global?.plugins).toHaveLength(2)
+    const injectedPlugin = renderOptions?.global?.plugins?.[1]
     expect(isBrowserTestI18nPlugin(injectedPlugin)).toBe(true)
     if (!isBrowserTestI18nPlugin(injectedPlugin)) {
       throw new TypeError('未注入 browser test i18n 插件')
@@ -76,9 +89,6 @@ describe('renderInBrowser', () => {
     const localizedI18n = createBrowserLocalizedI18n()
 
     const rendered = renderInBrowser({} as never, {
-      browser: {
-        pinia: true,
-      },
       global: {
         plugins: [localizedI18n],
       },
@@ -88,5 +98,34 @@ describe('renderInBrowser', () => {
     expect(renderOptions?.global?.plugins).toHaveLength(2)
     expect(renderOptions?.global?.plugins?.[0]).toBe(rendered.pinia)
     expect(renderOptions?.global?.plugins?.at(-1)).toBe(localizedI18n)
+  })
+
+  it('显式关闭 pinia 时不会注入默认 Pinia', () => {
+    const rendered = renderInBrowser({} as never, {
+      browser: {
+        pinia: false,
+      },
+    })
+
+    const renderOptions = getRenderedOptions()
+    expect(rendered.pinia).toBeUndefined()
+    expect(renderOptions?.global?.plugins).toHaveLength(1)
+    expect(isBrowserTestI18nPlugin(renderOptions?.global?.plugins?.[0])).toBe(true)
+  })
+
+  it('global.plugins 已显式提供 Pinia 时不会重复注入默认 Pinia', () => {
+    const pinia = createPinia()
+
+    const rendered = renderInBrowser({} as never, {
+      global: {
+        plugins: [pinia],
+      },
+    })
+
+    const renderOptions = getRenderedOptions()
+    expect(rendered.pinia).toBe(pinia)
+    expect(renderOptions?.global?.plugins).toHaveLength(2)
+    expect(renderOptions?.global?.plugins?.[0]).toBe(pinia)
+    expect(isBrowserTestI18nPlugin(renderOptions?.global?.plugins?.[1])).toBe(true)
   })
 })

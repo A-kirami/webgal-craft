@@ -154,6 +154,17 @@ function createTextEditorLiteI18n() {
   })
 }
 
+function renderTextEditor(state: TextProjectionState) {
+  return renderInBrowser(TextEditor, {
+    props: {
+      state,
+    },
+    global: {
+      plugins: [createTextEditorLiteI18n()],
+    },
+  })
+}
+
 function createHarness(path: string = '/project/scene-1.txt') {
   const editSettingsStore = reactive<EditSettingsStoreMock>({
     fontFamily: 'Fira Code',
@@ -209,14 +220,7 @@ describe('TextEditor', () => {
 
   it('激活的文本投影挂载时会创建 Monaco 编辑器', async () => {
     const { state } = createHarness()
-    const result = renderInBrowser(TextEditor, {
-      props: {
-        state,
-      },
-      global: {
-        plugins: [createTextEditorLiteI18n()],
-      },
-    })
+    const result = renderTextEditor(state)
 
     await nextTick()
 
@@ -255,14 +259,7 @@ describe('TextEditor', () => {
       path: '/project/other.txt',
     }
 
-    renderInBrowser(TextEditor, {
-      props: {
-        state,
-      },
-      global: {
-        plugins: [createTextEditorLiteI18n()],
-      },
-    })
+    renderTextEditor(state)
 
     await nextTick()
     expect(monacoMockState.create).not.toHaveBeenCalled()
@@ -282,14 +279,7 @@ describe('TextEditor', () => {
   it('编辑器设置变化后会把最新选项同步给现有 Monaco 实例', async () => {
     const { editSettingsStore, state } = createHarness('/project/scene-3.txt')
 
-    renderInBrowser(TextEditor, {
-      props: {
-        state,
-      },
-      global: {
-        plugins: [createTextEditorLiteI18n()],
-      },
-    })
+    renderTextEditor(state)
 
     await nextTick()
 
@@ -312,14 +302,7 @@ describe('TextEditor', () => {
   it('卸载时会先通知 runtime，再释放 Monaco 实例', async () => {
     const { state } = createHarness('/project/scene-4.txt')
 
-    const result = renderInBrowser(TextEditor, {
-      props: {
-        state,
-      },
-      global: {
-        plugins: [createTextEditorLiteI18n()],
-      },
-    })
+    const result = renderTextEditor(state)
 
     await nextTick()
     await result.unmount()
@@ -332,14 +315,7 @@ describe('TextEditor', () => {
     const { state } = createHarness('/project/effect.anim')
     state.kind = 'animation'
 
-    renderInBrowser(TextEditor, {
-      props: {
-        state,
-      },
-      global: {
-        plugins: [createTextEditorLiteI18n()],
-      },
-    })
+    renderTextEditor(state)
 
     await nextTick()
 
@@ -355,14 +331,7 @@ describe('TextEditor', () => {
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(lines))
     monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 1 })
 
-    renderInBrowser(TextEditor, {
-      props: {
-        state,
-      },
-      global: {
-        plugins: [createTextEditorLiteI18n()],
-      },
-    })
+    renderTextEditor(state)
 
     await nextTick()
 
@@ -390,14 +359,7 @@ describe('TextEditor', () => {
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(lines))
     monacoMockState.editorInstance.getPosition.mockImplementation(() => currentPosition)
 
-    renderInBrowser(TextEditor, {
-      props: {
-        state,
-      },
-      global: {
-        plugins: [createTextEditorLiteI18n()],
-      },
-    })
+    renderTextEditor(state)
 
     await nextTick()
     monacoMockState.editorInstance.deltaDecorations.mockClear()
@@ -432,14 +394,7 @@ describe('TextEditor', () => {
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(['say:hello']))
     monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 1 })
 
-    renderInBrowser(TextEditor, {
-      props: {
-        state,
-      },
-      global: {
-        plugins: [createTextEditorLiteI18n()],
-      },
-    })
+    renderTextEditor(state)
 
     await nextTick()
 
@@ -467,14 +422,7 @@ describe('TextEditor', () => {
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(['say:hello']))
     monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 1 })
 
-    renderInBrowser(TextEditor, {
-      props: {
-        state,
-      },
-      global: {
-        plugins: [createTextEditorLiteI18n()],
-      },
-    })
+    renderTextEditor(state)
 
     await nextTick()
 
@@ -501,14 +449,7 @@ describe('TextEditor', () => {
   it('播放按钮样式会命中 Monaco glyph margin 装饰节点', async () => {
     const { state } = createHarness('/project/scene-5.txt')
 
-    renderInBrowser(TextEditor, {
-      props: {
-        state,
-      },
-      global: {
-        plugins: [createTextEditorLiteI18n()],
-      },
-    })
+    renderTextEditor(state)
 
     await nextTick()
 

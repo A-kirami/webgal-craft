@@ -17,6 +17,21 @@ type BrowserRenderOptions = NonNullable<Parameters<BrowserRenderCall>[1]> & {
 }
 type BrowserStubProps = Record<string, unknown>
 type BrowserStubPropsOptions = string[] | ComponentObjectPropsOptions<BrowserStubProps>
+type BrowserPlugin = NonNullable<NonNullable<BrowserRenderOptions['global']>['plugins']>[number]
+
+function unwrapBrowserPlugin(plugin: BrowserPlugin) {
+  return Array.isArray(plugin) ? plugin[0] : plugin
+}
+
+function isPiniaPlugin(plugin: unknown): plugin is import('pinia').Pinia {
+  return typeof plugin === 'object'
+    && plugin !== null
+    && 'install' in plugin
+    && 'use' in plugin
+    && 'state' in plugin
+    && '_p' in plugin
+    && '_a' in plugin
+}
 
 function normalizeBrowserStubValue(value: unknown) {
   if (Array.isArray(value)) {
@@ -229,18 +244,21 @@ export function createBrowserCheckboxStub(name: string) {
 export function renderInBrowser(component: BrowserRenderComponent, options: BrowserRenderOptions = {}) {
   const { browser, global, ...renderOptions } = options
   const globalPlugins = global?.plugins ?? []
-  const hasExplicitBrowserI18n = globalPlugins.some((plugin) => {
-    const candidate = Array.isArray(plugin) ? plugin[0] : plugin
-    return isBrowserTestI18nPlugin(candidate)
-  })
-  const { plugins: browserPlugins, pinia } = createBrowserTestPlugins({
+  const unwrappedGlobalPlugins = globalPlugins.map(plugin => unwrapBrowserPlugin(plugin))
+  const explicitPinia = unwrappedGlobalPlugins.find(plugin => isPiniaPlugin(plugin))
+  const normalizedGlobalPlugins = unwrappedGlobalPlugins.filter(plugin => !isPiniaPlugin(plugin))
+  const hasExplicitBrowserI18n = normalizedGlobalPlugins.some(plugin => isBrowserTestI18nPlugin(plugin))
+  const resolvedPinia = browser?.pinia === undefined
+    ? explicitPinia ?? true
+    : browser.pinia
+  const { plugins: browserPlugins, pinia: injectedPinia } = createBrowserTestPlugins({
     includeI18n: !hasExplicitBrowserI18n,
     i18nMode: browser?.i18nMode ?? 'lite',
     locale: browser?.locale,
     messages: browser?.messages,
-    pinia: browser?.pinia,
+    pinia: resolvedPinia,
   })
-  const plugins = [...browserPlugins, ...globalPlugins]
+  const plugins = [...browserPlugins, ...normalizedGlobalPlugins]
 
   const result = render(component, {
     ...renderOptions,
@@ -252,6 +270,6 @@ export function renderInBrowser(component: BrowserRenderComponent, options: Brow
 
   return {
     ...result,
-    pinia,
+    pinia: injectedPinia ?? explicitPinia,
   }
 }
