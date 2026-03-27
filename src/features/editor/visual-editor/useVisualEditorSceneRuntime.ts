@@ -37,6 +37,29 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     editorStore.scheduleAutoSaveIfEnabled(state.value.path)
   }
 
+  function syncStatementPreview(statementId: number | undefined, force: boolean = false): void {
+    if (statementId === undefined) {
+      return
+    }
+
+    const entry = state.value.statements.find(statement => statement.id === statementId)
+    if (!entry) {
+      return
+    }
+
+    const lineNumber = resolveStatementLineNumber(statementId)
+    if (lineNumber === undefined) {
+      return
+    }
+
+    if (force) {
+      editorStore.syncScenePreview(state.value.path, lineNumber, entry.rawText, true)
+      return
+    }
+
+    editorStore.syncScenePreview(state.value.path, lineNumber, entry.rawText)
+  }
+
   function isCurrentVisualProjectionActive(): boolean {
     return activeProjection.value === 'visual' && tabsStore.activeTab?.path === state.value.path
   }
@@ -226,8 +249,9 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
   }
 
   function moveSelectedStatement(offset: -1 | 1) {
+    const currentSelectedStatementId = readSelectedStatementId()
     const currentSelectedIndex = selectedIndex.value
-    if (currentSelectedIndex === -1) {
+    if (currentSelectedStatementId === undefined || currentSelectedIndex === -1) {
       return
     }
 
@@ -237,6 +261,7 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     }
 
     editorStore.applySceneStatementReorder(state.value.path, currentSelectedIndex, nextIndex)
+    syncStatementPreview(currentSelectedStatementId)
     void restoreSelectedStatementPresentation({
       align: 'auto',
       focus: true,
@@ -390,23 +415,12 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     })
 
     if (!wasAlreadySelected) {
-      const entry = state.value.statements.find(statement => statement.id === id)
-      if (entry && lineNumber !== undefined) {
-        editorStore.syncScenePreview(state.value.path, lineNumber, entry.rawText)
-      }
+      syncStatementPreview(id)
     }
   }
 
   function handlePlayTo(id: number) {
-    const entry = state.value.statements.find(statement => statement.id === id)
-    if (!entry) {
-      return
-    }
-
-    const lineNumber = resolveStatementLineNumber(id)
-    if (lineNumber !== undefined) {
-      editorStore.syncScenePreview(state.value.path, lineNumber, entry.rawText, true)
-    }
+    syncStatementPreview(id, true)
   }
 
   watch(() => preferenceStore.showSidebar, (show) => {

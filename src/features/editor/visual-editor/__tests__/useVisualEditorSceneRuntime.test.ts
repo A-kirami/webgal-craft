@@ -1,5 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { computed, effectScope, reactive } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { computed, effectScope, nextTick, reactive } from 'vue'
+
+import { computeLineNumberFromStatementId } from '~/domain/document/scene-selection'
 
 import { useVisualEditorSceneRuntime } from '../useVisualEditorSceneRuntime'
 
@@ -88,24 +90,33 @@ vi.mock('~/stores/tabs', () => ({
   useTabsStore: useTabsStoreMock,
 }))
 
-function createState(): SceneVisualProjectionState {
+function createState(
+  statements: {
+    id: number
+    parseError: boolean
+    parsed: undefined
+    rawText: string
+  }[] = [{
+    id: 1,
+    parseError: false,
+    parsed: undefined,
+    rawText: 'say:hello',
+  }],
+): SceneVisualProjectionState {
   return reactive({
     isDirty: false,
     kind: 'scene' as const,
     path: '/project/scene.txt',
     projection: 'visual' as const,
-    statements: [
-      {
-        id: 1,
-        parseError: false,
-        parsed: undefined,
-        rawText: 'say:hello',
-      },
-    ],
+    statements,
   }) as SceneVisualProjectionState
 }
 
 describe('useVisualEditorSceneRuntime 快捷键注册', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   beforeEach(() => {
     useCommandPanelBridgeBindingMock.mockReset()
     useCommandPanelStoreMock.mockReset()
@@ -165,6 +176,10 @@ describe('useVisualEditorSceneRuntime 快捷键注册', () => {
       totalSize: computed(() => 0),
       virtualRows: computed(() => []),
     })
+    vi.mocked(computeLineNumberFromStatementId).mockImplementation((statements, statementId) => {
+      const index = statements.findIndex(statement => statement.id === statementId)
+      return index === -1 ? undefined : index + 1
+    })
   })
 
   it('可视化场景的撤销和重做快捷键允许在输入框焦点下触发', () => {
@@ -196,6 +211,82 @@ describe('useVisualEditorSceneRuntime 快捷键注册', () => {
         visualType: 'scene',
       },
     }))
+
+    scope.stop()
+  })
+
+  it('键盘重排语句后会同步实时预览到新的行号', async () => {
+    const scope = effectScope()
+    const state = createState([
+      {
+        id: 1,
+        parseError: false,
+        parsed: undefined,
+        rawText: 'say:first',
+      },
+      {
+        id: 2,
+        parseError: false,
+        parsed: undefined,
+        rawText: 'say:second',
+      },
+    ])
+    const selection = reactive({
+      lastEditedStatementId: 1,
+      lastLineNumber: 1,
+      selectedStatementId: 1,
+    })
+    const syncScenePreview = vi.fn()
+    const scheduleAutoSaveIfEnabled = vi.fn()
+    const applySceneStatementReorder = vi.fn((_path: string, fromIndex: number, toIndex: number) => {
+      const movedStatement = state.statements[fromIndex]
+      if (!movedStatement) {
+        return
+      }
+
+      state.statements.splice(fromIndex, 1)
+      state.statements.splice(toIndex, 0, movedStatement)
+      selection.lastEditedStatementId = movedStatement.id
+      selection.selectedStatementId = movedStatement.id
+      selection.lastLineNumber = toIndex + 1
+    })
+
+    useEditorStoreMock.mockReturnValue(reactive({
+      applySceneStatementDelete: vi.fn(),
+      applySceneStatementInsert: vi.fn(),
+      applySceneStatementReorder,
+      applySceneStatementUpdate: vi.fn(),
+      currentState: {
+        kind: 'scene',
+        path: '/project/scene.txt',
+        projection: 'visual',
+      },
+      getSceneSelection: vi.fn(() => selection),
+      isSceneStatementCollapsed: vi.fn(() => false),
+      scheduleAutoSaveIfEnabled,
+      setSceneStatementCollapsed: vi.fn(),
+      syncScenePreview,
+      syncSceneSelectionFromStatement: vi.fn(),
+    }))
+
+    vi.stubGlobal('document', {
+      activeElement: undefined,
+    })
+
+    scope.run(() => useVisualEditorSceneRuntime({
+      getScrollArea: () => undefined,
+      getState: () => state,
+    }))
+
+    const moveDownShortcut = useShortcutMock.mock.calls.find(([shortcut]) => shortcut.id === 'visual.moveDown')?.[0]
+    expect(moveDownShortcut).toBeDefined()
+
+    moveDownShortcut?.execute()
+    await nextTick()
+
+    expect(applySceneStatementReorder).toHaveBeenCalledWith('/project/scene.txt', 0, 1)
+    expect(syncScenePreview).toHaveBeenCalledWith('/project/scene.txt', 2, 'say:first')
+    expect(scheduleAutoSaveIfEnabled).toHaveBeenCalledWith('/project/scene.txt')
 
     scope.stop()
   })
