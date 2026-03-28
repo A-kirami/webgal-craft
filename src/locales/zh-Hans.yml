@@ -425,6 +425,10 @@ edit:
     toggleSidebar: 切换辅助面板
   visualEditor:
     playToLine: 执行到此句
+    audioPreview:
+      play: 播放音频
+      pause: 暂停音频
+      unavailable: 音频预览当前不可用
     animation:
       title: 动画编辑器
       description: 调整当前动画各关键帧的时长、缓动和变换

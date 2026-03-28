@@ -425,6 +425,10 @@ edit:
     toggleSidebar: 補助パネル切替
   visualEditor:
     playToLine: この行まで実行
+    audioPreview:
+      play: 音声を再生
+      pause: 音声を一時停止
+      unavailable: 音声プレビューは現在利用できません
     animation:
       title: アニメーションエディタ
       description: 現在のアニメーションの各キーフレームの時間、イージング、変形を調整します

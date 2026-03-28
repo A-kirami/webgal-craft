@@ -75,6 +75,23 @@ vi.mock('@tauri-apps/plugin-log', () => ({
 
 import StatementAudioPreview from './StatementAudioPreview.vue'
 
+function translate(key: string): string {
+  switch (key) {
+    case 'edit.visualEditor.audioPreview.pause': {
+      return '暂停音频'
+    }
+    case 'edit.visualEditor.audioPreview.play': {
+      return '播放音频'
+    }
+    case 'edit.visualEditor.audioPreview.unavailable': {
+      return '音频预览当前不可用'
+    }
+    default: {
+      return key
+    }
+  }
+}
+
 const audioPreviewStubs = {
   Button: createBrowserClickStub('StubButton'),
   Pause: createBrowserTextStub('StubPauseIcon', 'pause'),
@@ -85,6 +102,9 @@ function renderStatementAudioPreview(src: string = '/audio/theme.ogg') {
   return renderInBrowser(StatementAudioPreview, {
     props: { src },
     global: {
+      mocks: {
+        $t: translate,
+      },
       stubs: audioPreviewStubs,
     },
   })
@@ -236,6 +256,30 @@ describe('StatementAudioPreview', () => {
     await expect.element(page.getByTestId('statement-audio-preview-toggle')).not.toHaveAttribute('disabled')
     await expect.element(page.getByTestId('statement-audio-preview-placeholder')).toHaveAttribute('data-state', 'hidden')
     await expect.element(page.getByTestId('statement-audio-preview-waveform')).toHaveAttribute('data-state', 'ready')
+  })
+
+  it('会为播放按钮提供可访问名称，并在播放状态下切换为暂停说明', async () => {
+    await renderStatementAudioPreview()
+
+    await expect.element(page.getByTestId('statement-audio-preview-toggle')).toHaveAttribute('aria-label', '播放音频')
+
+    await page.getByTestId('statement-audio-preview-toggle').click()
+    emitWaveSurferEvent('ready')
+    await vi.waitFor(() => {
+      expect(waveSurferPlayMock).toHaveBeenCalledOnce()
+    })
+
+    waveSurferState.isPlaying = true
+    emitWaveSurferEvent('play')
+
+    await expect.element(page.getByTestId('statement-audio-preview-toggle')).toHaveAttribute('aria-label', '暂停音频')
+  })
+
+  it('按钮禁用时仍会提供不可用的可访问名称', async () => {
+    await renderStatementAudioPreview('')
+
+    await expect.element(page.getByTestId('statement-audio-preview-toggle')).toHaveAttribute('aria-label', '音频预览当前不可用')
+    await expect.element(page.getByTestId('statement-audio-preview-toggle')).toHaveAttribute('disabled')
   })
 
   it('src 变化时会重置为待加载状态，并在再次交互后加载新音频', async () => {

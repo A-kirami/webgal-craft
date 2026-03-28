@@ -425,6 +425,10 @@ edit:
     toggleSidebar: Toggle Auxiliary Panel
   visualEditor:
     playToLine: Play to this line
+    audioPreview:
+      play: Play audio
+      pause: Pause audio
+      unavailable: Audio preview is currently unavailable
     animation:
       title: Animation Editor
       description: Adjust the duration, easing, and transforms of each keyframe in the current animation

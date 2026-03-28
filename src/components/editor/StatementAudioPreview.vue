@@ -327,6 +327,11 @@ onBeforeUnmount(() => {
       size="icon-sm"
       data-testid="statement-audio-preview-toggle"
       class="rounded-md shrink-0 size-7"
+      :aria-label="!canTogglePlayback
+        ? $t('edit.visualEditor.audioPreview.unavailable')
+        : isPlaying
+          ? $t('edit.visualEditor.audioPreview.pause')
+          : $t('edit.visualEditor.audioPreview.play')"
       :disabled="!canTogglePlayback"
       @click="handleTogglePlayback"
     >
