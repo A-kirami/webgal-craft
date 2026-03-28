@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Box, CheckCircle2, Scroll } from 'lucide-vue-next'
 
+import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
+
 let open = $(defineModel<boolean>('open'))
 
 const props = defineProps<{
@@ -10,6 +12,7 @@ const props = defineProps<{
 }>()
 
 let selectedPaths = $ref(new Set(props.resources.map(r => r.path)))
+const previewRuntimeStore = usePreviewRuntimeStore()
 
 const toggleSelection = (path: string) => {
   if (selectedPaths.has(path)) {
@@ -38,6 +41,18 @@ const handleSkip = () => {
 
 const icon = $computed(() => props.type === 'games' ? Scroll : Box)
 const isAllSelected = $computed(() => selectedPaths.size === props.resources.length)
+
+watch(
+  () => props.resources.map(resource => resource.path),
+  (paths) => {
+    void previewRuntimeStore.ensureServeUrls(paths)
+  },
+  { immediate: true },
+)
+
+function resolveResourceServeUrl(resource: { path: string }): string | undefined {
+  return previewRuntimeStore.getServeUrl(resource.path)
+}
 </script>
 
 <template>
@@ -74,11 +89,12 @@ const isAllSelected = $computed(() => selectedPaths.size === props.resources.len
             @click="toggleSelection(resource.path)"
           >
             <div class="flex flex-1 gap-3 min-w-0 items-center">
-              <Thumbnail
+              <AssetImage
                 v-if="resource.icon"
                 :path="resource.icon"
+                :root-path="resource.path"
+                :serve-url="resolveResourceServeUrl(resource)"
                 :alt="resource.name"
-                :size="64"
                 class="rounded shrink-0 size-10"
               />
               <component :is="icon" v-else class="text-muted-foreground shrink-0 size-10" />

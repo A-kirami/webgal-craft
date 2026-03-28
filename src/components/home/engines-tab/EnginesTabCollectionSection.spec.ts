@@ -7,6 +7,9 @@ import { createTestEngine } from '~/__tests__/factories'
 
 import EnginesTabCollectionSection from './EnginesTabCollectionSection.vue'
 
+import type { PropType } from 'vue'
+import type { Engine } from '~/database/model'
+
 vi.mock('~/composables/useTauriDropZone', () => ({
   useTauriDropZone: () => ({
     files: ref<string[] | undefined>(undefined),
@@ -14,7 +17,47 @@ vi.mock('~/composables/useTauriDropZone', () => ({
   }),
 }))
 
+interface ThumbnailStubValue {
+  width: number
+  height: number
+  resizeMode?: 'contain' | 'cover'
+}
+
+function createAssetImageStub() {
+  return defineComponent({
+    name: 'StubAssetImage',
+    props: {
+      alt: {
+        type: String,
+        default: undefined,
+      },
+      path: {
+        type: String,
+        default: undefined,
+      },
+      cacheVersion: {
+        type: Number,
+        default: undefined,
+      },
+      thumbnail: {
+        type: Object as PropType<ThumbnailStubValue | undefined>,
+        default: undefined,
+      },
+    },
+    setup(props, { attrs }) {
+      return () => h('img', {
+        ...attrs,
+        'alt': props.alt,
+        'data-path': props.path,
+        'data-cache-version': props.cacheVersion === undefined ? undefined : String(props.cacheVersion),
+        'data-thumbnail': props.thumbnail === undefined ? undefined : JSON.stringify(props.thumbnail),
+      })
+    },
+  })
+}
+
 const globalStubs = {
+  AssetImage: createAssetImageStub(),
   Button: createBrowserClickStub('StubButton'),
   Card: createBrowserContainerStub('StubCard'),
   CardContent: createBrowserContainerStub('StubCardContent'),
@@ -23,7 +66,6 @@ const globalStubs = {
   ContextMenuItem: createBrowserClickStub('StubContextMenuItem'),
   ContextMenuTrigger: createBrowserContainerStub('StubContextMenuTrigger'),
   Progress: createBrowserContainerStub('StubProgress'),
-  Thumbnail: createBrowserContainerStub('StubThumbnail', 'img'),
   Tooltip: createBrowserContainerStub('StubTooltip'),
   TooltipContent: createBrowserContainerStub('StubTooltipContent'),
   TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
@@ -41,6 +83,7 @@ function createHarness(viewMode: 'grid' | 'list') {
           engines: [],
           getEngineProgress: () => 0,
           hasEngineProgress: () => false,
+          resolveEngineServeUrl: () => 'http://127.0.0.1:8899/game/engine/',
           viewMode,
           onImportClick: () => {
             importCount.value += 1
@@ -66,6 +109,7 @@ describe('EnginesTabCollectionSection', () => {
         engines: [createTestEngine()],
         getEngineProgress: () => 50,
         hasEngineProgress: () => true,
+        resolveEngineServeUrl: () => 'http://127.0.0.1:8899/game/engine/',
         viewMode: 'grid',
       },
       global: {
@@ -113,5 +157,82 @@ describe('EnginesTabCollectionSection', () => {
     await userEvent.keyboard('{Enter}')
 
     await expect.element(page.getByTestId('import-count')).toHaveTextContent('1')
+  })
+
+  it('会为网格视图中的引擎图标传入固定缩略图尺寸', async () => {
+    renderInBrowser(EnginesTabCollectionSection, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        engines: [createTestEngine()],
+        getEngineProgress: () => 0,
+        hasEngineProgress: () => false,
+        resolveEngineServeUrl: () => 'http://127.0.0.1:8899/game/engine/',
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const iconImage = await page.getByAltText('home.engines.engineIcon').element()
+    expect(iconImage.dataset.thumbnail).toBe(JSON.stringify({ width: 120, height: 120, resizeMode: 'cover' }))
+  })
+
+  it('会为列表视图中的引擎图标传入固定缩略图尺寸', async () => {
+    renderInBrowser(EnginesTabCollectionSection, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        engines: [createTestEngine()],
+        getEngineProgress: () => 0,
+        hasEngineProgress: () => false,
+        resolveEngineServeUrl: () => 'http://127.0.0.1:8899/game/engine/',
+        viewMode: 'list',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const iconImage = await page.getByAltText('home.engines.engineIcon').element()
+    expect(iconImage.dataset.thumbnail).toBe(JSON.stringify({ width: 80, height: 80, resizeMode: 'cover' }))
+  })
+
+  it('引擎图标会使用资源级 cacheVersion 作为缓存指纹', async () => {
+    const engine = createTestEngine() as Engine & {
+      previewAssets: {
+        icon: { path: string, cacheVersion: number }
+      }
+    }
+
+    engine.previewAssets = {
+      icon: {
+        path: '/engines/default/icon-from-preview.png',
+        cacheVersion: 333,
+      },
+    }
+
+    renderInBrowser(EnginesTabCollectionSection, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        engines: [engine],
+        getEngineProgress: () => 0,
+        hasEngineProgress: () => false,
+        resolveEngineServeUrl: () => 'http://127.0.0.1:8899/game/engine/',
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const iconImage = await page.getByAltText('home.engines.engineIcon').element()
+    expect(iconImage.dataset.path).toBe('/engines/default/icon-from-preview.png')
+    expect(iconImage.dataset.cacheVersion).toBe('333')
   })
 })

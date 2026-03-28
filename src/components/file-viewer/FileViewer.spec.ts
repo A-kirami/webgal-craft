@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { defineComponent, h, nextTick, onMounted, ref } from 'vue'
 
@@ -12,10 +12,12 @@ import type { FileViewerItem } from '~/types/file-viewer'
 
 const {
   measureMock,
+  resolvePreviewUrlMock,
   scrollToIndexMock,
   viewportWidthMock,
 } = vi.hoisted(() => ({
   measureMock: vi.fn(),
+  resolvePreviewUrlMock: vi.fn(),
   scrollToIndexMock: vi.fn(),
   viewportWidthMock: { value: 780 },
 }))
@@ -72,17 +74,6 @@ function createImageItem(index: number): FileViewerItem {
   }
 }
 
-function stringifyThumbnailSize(size: unknown): string {
-  if (typeof size === 'number') {
-    return size > 0 ? String(size) : ''
-  }
-  if (typeof size === 'string') {
-    const parsed = Number(size)
-    return parsed > 0 ? String(parsed) : ''
-  }
-  return ''
-}
-
 const globalStubs = {
   ScrollArea: defineComponent({
     name: 'StubScrollArea',
@@ -95,16 +86,6 @@ const globalStubs = {
       })
 
       return () => h('div', attrs, slots.default?.())
-    },
-  }),
-  Thumbnail: defineComponent({
-    name: 'StubThumbnail',
-    setup(_, { attrs }) {
-      return () => h('img', {
-        ...attrs,
-        'data-testid': 'thumbnail-probe',
-        'data-thumbnail-size': stringifyThumbnailSize(attrs.size),
-      })
     },
   }),
 }
@@ -183,7 +164,11 @@ describe('FileViewer 组合式逻辑', () => {
 })
 
 describe('FileViewer 外观契约', () => {
-  it('把布局派生的预览尺寸传给 Thumbnail', async () => {
+  beforeEach(() => {
+    resolvePreviewUrlMock.mockReset()
+  })
+
+  it('默认不会为图片项私自生成预览 URL', async () => {
     viewportWidthMock.value = 780
 
     renderInBrowser(FileViewer, {
@@ -196,15 +181,37 @@ describe('FileViewer 外观契约', () => {
       },
     })
 
-    await expect.element(page.getByTestId('thumbnail-probe')).toHaveAttribute('data-thumbnail-size', '64')
+    expect(resolvePreviewUrlMock).not.toHaveBeenCalled()
+    await expect.element(page.getByAltText('file-1.txt')).not.toBeInTheDocument()
   })
 
-  it('列表模式下也把 listPreviewSize 传给 Thumbnail', async () => {
+  it('网格模式图片项会使用带 modifiedAt 的 HTTP URL', async () => {
     viewportWidthMock.value = 780
+    resolvePreviewUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
 
     renderInBrowser(FileViewer, {
       props: {
         items: [createImageItem(1)],
+        resolvePreviewUrl: (item: FileViewerItem) => resolvePreviewUrlMock(item.path, item.modifiedAt),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    expect(resolvePreviewUrlMock).toHaveBeenCalledWith('/assets/file-1.txt', BASE_TIMESTAMP + 1)
+    await expect.element(page.getByAltText('file-1.txt')).toHaveAttribute('src', 'http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
+  })
+
+  it('列表模式图片项也会使用 HTTP URL', async () => {
+    viewportWidthMock.value = 780
+    resolvePreviewUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [createImageItem(1)],
+        resolvePreviewUrl: (item: FileViewerItem) => resolvePreviewUrlMock(item.path, item.modifiedAt),
         viewMode: 'list',
       },
       global: {
@@ -212,7 +219,8 @@ describe('FileViewer 外观契约', () => {
       },
     })
 
-    await expect.element(page.getByTestId('thumbnail-probe')).toHaveAttribute('data-thumbnail-size', '20')
+    expect(resolvePreviewUrlMock).toHaveBeenCalledWith('/assets/file-1.txt', BASE_TIMESTAMP + 1)
+    await expect.element(page.getByAltText('file-1.txt')).toHaveAttribute('src', 'http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
   })
 
   it('窄列表视图下会同时隐藏 modifiedAt 列头和内容', async () => {

@@ -41,8 +41,6 @@ function createGame(id: string, name: string, lastModified: number): Game {
     lastModified,
     metadata: {
       name,
-      icon: '',
-      cover: '',
     },
   })
 }
@@ -54,7 +52,6 @@ function createEngine(id: string, name: string, createdAt: number): Engine {
     createdAt,
     metadata: {
       name,
-      icon: '',
       description: '',
     },
   })

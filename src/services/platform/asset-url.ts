@@ -1,8 +1,16 @@
 import { useWorkspaceStore } from '~/stores/workspace'
 
+export interface AssetThumbnailOptions {
+  width: number
+  height: number
+  resizeMode?: 'contain' | 'cover'
+}
+
 export interface AssetUrlOptions {
   cwd: string
   previewBaseUrl: string
+  cacheVersion?: number
+  thumbnail?: AssetThumbnailOptions
 }
 
 interface ResolvedPath {
@@ -81,6 +89,19 @@ function isSubPath(parentPath: ResolvedPath, childPath: ResolvedPath): boolean {
     && parentPath.segments.every((segment, index) => childPath.segments[index] === segment)
 }
 
+function appendThumbnailQuery(url: URL, thumbnail: AssetThumbnailOptions | undefined) {
+  if (!thumbnail) {
+    return
+  }
+
+  url.searchParams.set('w', String(thumbnail.width))
+  url.searchParams.set('h', String(thumbnail.height))
+
+  if (thumbnail.resizeMode) {
+    url.searchParams.set('fit', thumbnail.resizeMode)
+  }
+}
+
 /** 将绝对资源路径转换为可访问的预览服务 URL */
 export function resolveAssetUrl(assetPath: string, options: AssetUrlOptions): string {
   const resolvedCwd = resolvePath(options.cwd)
@@ -100,13 +121,25 @@ export function resolveAssetUrl(assetPath: string, options: AssetUrlOptions): st
   }
 
   const relativePath = resolvedPath.segments.slice(resolvedCwd.segments.length).join('/')
-  return new URL(relativePath, options.previewBaseUrl).href
+  const url = new URL(relativePath, options.previewBaseUrl)
+  if (options.cacheVersion !== undefined) {
+    url.searchParams.set('t', String(options.cacheVersion))
+  }
+  appendThumbnailQuery(url, options.thumbnail)
+  return url.href
 }
 
-export function getAssetUrl(assetPath: string): string {
+export function getAssetUrl(
+  assetPath: string,
+  cacheVersion?: number,
+  serveUrl?: string,
+  thumbnail?: AssetThumbnailOptions,
+): string {
   const workspaceStore = useWorkspaceStore()
   return resolveAssetUrl(assetPath, {
     cwd: workspaceStore.CWD ?? '',
-    previewBaseUrl: workspaceStore.currentGameServeUrl ?? '',
+    cacheVersion,
+    previewBaseUrl: serveUrl ?? workspaceStore.currentGameServeUrl ?? '',
+    thumbnail,
   })
 }

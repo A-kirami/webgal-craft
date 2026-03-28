@@ -1,18 +1,27 @@
 <script setup lang="ts">
 import { Box, Folder, Trash2 } from 'lucide-vue-next'
 
+import AssetImage from '~/components/shared/AssetImage.vue'
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 
 import type { Engine } from '~/database/model'
+import type { AssetThumbnailOptions } from '~/services/platform/asset-url'
 
 interface Props {
   engines: Engine[]
   getEngineProgress: (engine: Engine) => number
   hasEngineProgress: (engine: Engine) => boolean
+  resolveEngineServeUrl: (engine: Engine) => string | undefined
   viewMode: 'grid' | 'list'
 }
 
-defineProps<Props>()
+const {
+  engines,
+  getEngineProgress,
+  hasEngineProgress,
+  resolveEngineServeUrl,
+  viewMode,
+} = defineProps<Props>()
 
 const emit = defineEmits<{
   deleteEngine: [engine: Engine]
@@ -26,6 +35,18 @@ const { isOverDropZone: isOverDropZoneGrid } = useTauriDropZone(dropZoneGridRef,
 
 const dropZoneListRef = useTemplateRef<HTMLElement>('dropZoneListRef')
 const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef, paths => emit('drop', paths))
+
+const GRID_ICON_THUMBNAIL: AssetThumbnailOptions = {
+  width: 120,
+  height: 120,
+  resizeMode: 'cover',
+}
+
+const LIST_ICON_THUMBNAIL: AssetThumbnailOptions = {
+  width: 80,
+  height: 80,
+  resizeMode: 'cover',
+}
 
 function handleImportKeydown(event: KeyboardEvent) {
   if (event.key !== 'Enter' && event.key !== ' ') {
@@ -48,12 +69,16 @@ function handleImportKeydown(event: KeyboardEvent) {
           <CardContent class="p-0">
             <div class="p-4 flex gap-4 items-start">
               <div class="rounded shrink-0 h-15 w-15 overflow-hidden">
-                <Thumbnail
-                  :path="engine.metadata.icon"
+                <AssetImage
+                  :path="engine.previewAssets.icon.path"
+                  :root-path="engine.path"
+                  :serve-url="resolveEngineServeUrl(engine)"
                   :alt="$t('home.engines.engineIcon', { name: engine.metadata.name })"
-                  :size="128"
-                  fit="cover"
+                  :cache-version="engine.previewAssets.icon.cacheVersion"
+                  object-fit="cover"
                   fallback-image="/placeholder.svg"
+                  :thumbnail="GRID_ICON_THUMBNAIL"
+                  class="h-full w-full"
                 />
               </div>
               <div class="flex-1">
@@ -122,12 +147,16 @@ function handleImportKeydown(event: KeyboardEvent) {
     >
       <div class="flex gap-3 items-center">
         <div class="rounded h-10 w-10 overflow-hidden">
-          <Thumbnail
-            :path="engine.metadata.icon"
+          <AssetImage
+            :path="engine.previewAssets.icon.path"
+            :root-path="engine.path"
+            :serve-url="resolveEngineServeUrl(engine)"
             :alt="$t('home.engines.engineIcon', { name: engine.metadata.name })"
-            :size="128"
-            fit="cover"
+            :cache-version="engine.previewAssets.icon.cacheVersion"
+            object-fit="cover"
             fallback-image="/placeholder.svg"
+            :thumbnail="LIST_ICON_THUMBNAIL"
+            class="h-full w-full"
           />
         </div>
         <div>

@@ -6,6 +6,11 @@ import { isValidPositiveNumber } from '~/utils/sort'
 
 import type { FileViewerItem, FileViewerVirtualRow } from '~/types/file-viewer'
 
+interface FileViewerDisplayItem {
+  item: FileViewerItem
+  previewUrl?: string
+}
+
 interface FileViewerBodyProps {
   viewMode: 'list' | 'grid'
   virtualRows: FileViewerVirtualRow[]
@@ -20,6 +25,7 @@ interface FileViewerBodyProps {
   showListCreatedAt: boolean
   getGridRowItems: (rowIndex: number) => FileViewerItem[]
   getListItem: (index: number) => FileViewerItem
+  resolvePreviewUrl?: (item: FileViewerItem) => string | undefined
 }
 
 const {
@@ -36,6 +42,7 @@ const {
   showListCreatedAt,
   getGridRowItems,
   getListItem,
+  resolvePreviewUrl,
 } = defineProps<FileViewerBodyProps>()
 
 const emit = defineEmits<{
@@ -83,8 +90,33 @@ function handleItemClick(item: FileViewerItem) {
   emit('itemClick', item)
 }
 
-function getListRowItem(rowIndex: number): FileViewerItem {
-  return getListItem(rowIndex)
+function resolveDisplayPreviewUrl(item: FileViewerItem): string | undefined {
+  if (!isImageFile(item) || !resolvePreviewUrl) {
+    return undefined
+  }
+
+  try {
+    return resolvePreviewUrl(item)
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    void logger.error(`[FileViewer] 资源地址生成失败: ${item.path} - ${errorMessage}`)
+    return undefined
+  }
+}
+
+function getGridRowDisplayItems(rowIndex: number): FileViewerDisplayItem[] {
+  return getGridRowItems(rowIndex).map(item => ({
+    item,
+    previewUrl: resolveDisplayPreviewUrl(item),
+  }))
+}
+
+function getListRowDisplayItem(rowIndex: number): FileViewerDisplayItem {
+  const item = getListItem(rowIndex)
+  return {
+    item,
+    previewUrl: resolveDisplayPreviewUrl(item),
+  }
 }
 </script>
 
@@ -108,107 +140,111 @@ function getListRowItem(rowIndex: number): FileViewerItem {
         :style="{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }"
       >
         <button
-          v-for="item in getGridRowItems(row.index)"
-          :key="item.path"
+          v-for="displayItem in getGridRowDisplayItems(row.index)"
+          :key="displayItem.item.path"
           type="button"
           data-file-viewer-item="true"
           class="p-1.5 rounded-md flex flex-col gap-1 items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
-          @click="handleItemClick(item)"
+          @click="handleItemClick(displayItem.item)"
         >
           <div
             class="flex shrink-0 items-center justify-center"
             :style="{ width: `${gridPreviewSize}px`, height: `${gridPreviewSize}px` }"
           >
-            <Thumbnail
-              v-if="isImageFile(item)"
-              :path="item.path"
-              :size="gridPreviewSize"
-              :alt="item.name"
-              fit="contain"
-            />
-            <slot v-else name="icon" :item="item" :icon-size="gridIconSize">
+            <img
+              v-if="displayItem.previewUrl"
+              :src="displayItem.previewUrl"
+              :alt="displayItem.item.name"
+              loading="lazy"
+              decoding="async"
+              class="h-full w-full object-contain"
+            >
+            <slot v-else name="icon" :item="displayItem.item" :icon-size="gridIconSize">
               <component
-                :is="getDefaultIconComponent(item)"
+                :is="getDefaultIconComponent(displayItem.item)"
                 class="shrink-0"
                 :style="{ width: `${gridIconSize}px`, height: `${gridIconSize}px` }"
                 :stroke-width="1.25"
               />
             </slot>
           </div>
-          <div class="text-xs text-center break-all line-clamp-2" :class="{ 'text-muted-foreground': item.isSupported === false }">
-            {{ item.name }}
+          <div class="text-xs text-center break-all line-clamp-2" :class="{ 'text-muted-foreground': displayItem.item.isSupported === false }">
+            {{ displayItem.item.name }}
           </div>
         </button>
       </div>
 
-      <button
-        v-else
-        :key="getListRowItem(row.index).path"
-        type="button"
-        data-file-viewer-item="true"
-        class="p-2 rounded-md flex gap-2 w-full items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
-        :style="{ height: `${listItemHeight}px` }"
-        @click="handleItemClick(getListRowItem(row.index))"
-      >
-        <div class="flex flex-1 gap-2 min-w-0 items-center">
-          <div
-            class="flex shrink-0 items-center justify-center"
-            :style="{ width: `${listPreviewSize}px`, height: `${listPreviewSize}px` }"
-          >
-            <Thumbnail
-              v-if="isImageFile(getListRowItem(row.index))"
-              :path="getListRowItem(row.index).path"
-              :size="listPreviewSize"
-              :alt="getListRowItem(row.index).name"
-              fit="contain"
-            />
-            <slot v-else name="icon" :item="getListRowItem(row.index)" :icon-size="listPreviewSize">
-              <component
-                :is="getDefaultIconComponent(getListRowItem(row.index))"
-                class="shrink-0"
-                :style="{ width: `${listPreviewSize}px`, height: `${listPreviewSize}px` }"
-                :stroke-width="1.25"
-              />
-            </slot>
+      <template v-else>
+        <button
+          v-for="displayItem in [getListRowDisplayItem(row.index)]"
+          :key="displayItem.item.path"
+          type="button"
+          data-file-viewer-item="true"
+          class="p-2 rounded-md flex gap-2 w-full items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
+          :style="{ height: `${listItemHeight}px` }"
+          @click="handleItemClick(displayItem.item)"
+        >
+          <div class="flex flex-1 gap-2 min-w-0 items-center">
+            <div
+              class="flex shrink-0 items-center justify-center"
+              :style="{ width: `${listPreviewSize}px`, height: `${listPreviewSize}px` }"
+            >
+              <img
+                v-if="displayItem.previewUrl"
+                :src="displayItem.previewUrl"
+                :alt="displayItem.item.name"
+                loading="lazy"
+                decoding="async"
+                class="h-full w-full object-contain"
+              >
+              <slot v-else name="icon" :item="displayItem.item" :icon-size="listPreviewSize">
+                <component
+                  :is="getDefaultIconComponent(displayItem.item)"
+                  class="shrink-0"
+                  :style="{ width: `${listPreviewSize}px`, height: `${listPreviewSize}px` }"
+                  :stroke-width="1.25"
+                />
+              </slot>
+            </div>
+            <div class="text-xs text-left min-w-0 truncate" :class="{ 'text-muted-foreground': displayItem.item.isSupported === false }">
+              {{ displayItem.item.name }}
+            </div>
           </div>
-          <div class="text-xs text-left min-w-0 truncate" :class="{ 'text-muted-foreground': getListRowItem(row.index).isSupported === false }">
-            {{ getListRowItem(row.index).name }}
+          <div class="text-[11px] text-muted-foreground ml-2 flex shrink-0 gap-3 [font-variant-numeric:tabular-nums] items-center" role="note">
+            <div v-if="showListSize" class="text-right w-20" :aria-label="$t('common.fileMeta.size')">
+              <template v-if="displayItem.item.isDir">
+                <span aria-hidden="true">--</span>
+                <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
+              </template>
+              <template v-else-if="isValidPositiveNumber(displayItem.item.size)">
+                {{ formatFileSize(displayItem.item.size!) }}
+              </template>
+              <template v-else>
+                <span aria-hidden="true">--</span>
+                <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
+              </template>
+            </div>
+            <div v-if="showListModifiedAt" class="text-left w-32" :aria-label="$t('common.fileMeta.modifiedAt')">
+              <template v-if="isValidPositiveNumber(displayItem.item.modifiedAt)">
+                {{ formatDateTime(displayItem.item.modifiedAt!) }}
+              </template>
+              <template v-else>
+                <span aria-hidden="true">--</span>
+                <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
+              </template>
+            </div>
+            <div v-if="showListCreatedAt" class="text-left w-32" :aria-label="$t('common.fileMeta.createdAt')">
+              <template v-if="isValidPositiveNumber(displayItem.item.createdAt)">
+                {{ formatDateTime(displayItem.item.createdAt!) }}
+              </template>
+              <template v-else>
+                <span aria-hidden="true">--</span>
+                <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
+              </template>
+            </div>
           </div>
-        </div>
-        <div class="text-[11px] text-muted-foreground ml-2 flex shrink-0 gap-3 [font-variant-numeric:tabular-nums] items-center" role="note">
-          <div v-if="showListSize" class="text-right w-20" :aria-label="$t('common.fileMeta.size')">
-            <template v-if="getListRowItem(row.index).isDir">
-              <span aria-hidden="true">--</span>
-              <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
-            </template>
-            <template v-else-if="isValidPositiveNumber(getListRowItem(row.index).size)">
-              {{ formatFileSize(getListRowItem(row.index).size!) }}
-            </template>
-            <template v-else>
-              <span aria-hidden="true">--</span>
-              <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
-            </template>
-          </div>
-          <div v-if="showListModifiedAt" class="text-left w-32" :aria-label="$t('common.fileMeta.modifiedAt')">
-            <template v-if="isValidPositiveNumber(getListRowItem(row.index).modifiedAt)">
-              {{ formatDateTime(getListRowItem(row.index).modifiedAt!) }}
-            </template>
-            <template v-else>
-              <span aria-hidden="true">--</span>
-              <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
-            </template>
-          </div>
-          <div v-if="showListCreatedAt" class="text-left w-32" :aria-label="$t('common.fileMeta.createdAt')">
-            <template v-if="isValidPositiveNumber(getListRowItem(row.index).createdAt)">
-              {{ formatDateTime(getListRowItem(row.index).createdAt!) }}
-            </template>
-            <template v-else>
-              <span aria-hidden="true">--</span>
-              <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
-            </template>
-          </div>
-        </div>
-      </button>
+        </button>
+      </template>
     </div>
   </div>
 </template>

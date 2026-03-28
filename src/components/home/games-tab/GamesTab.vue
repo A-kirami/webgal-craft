@@ -5,13 +5,17 @@ import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import { useGamesTabController } from '~/features/home/games-tab/useGamesTabController'
 import { useModalStore } from '~/stores/modal'
 import { usePreferenceStore } from '~/stores/preference'
+import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import GamesTabCollectionSection from './GamesTabCollectionSection.vue'
 
+import type { Game } from '~/database/model'
+
 const modalStore = useModalStore()
 const preferenceStore = usePreferenceStore()
+const previewRuntimeStore = usePreviewRuntimeStore()
 const resourceStore = useResourceStore()
 const workspaceStore = useWorkspaceStore()
 const router = useRouter()
@@ -40,6 +44,10 @@ const controller = useGamesTabController({
 })
 const dropZoneEmptyRef = useTemplateRef<HTMLElement>('dropZoneEmptyRef')
 const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRef, paths => controller.handleDrop(paths))
+
+function resolveGameServeUrl(game: Game): string | undefined {
+  return previewRuntimeStore.getServeUrl(game.path)
+}
 </script>
 
 <template>
@@ -49,6 +57,7 @@ const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRe
     :view-mode="preferenceStore.viewMode"
     :get-game-progress="controller.getGameProgress"
     :has-game-progress="controller.hasGameProgress"
+    :resolve-game-serve-url="resolveGameServeUrl"
     @delete-game="controller.handleDeleteGame"
     @drop="controller.handleDrop"
     @game-click="controller.handleGameClick"

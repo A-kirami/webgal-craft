@@ -28,15 +28,13 @@ log = "0.4"
 axum = { version = "0.8", features = ["ws"] }
 tokio = { version = "1.50", features = ["rt", "sync", "fs"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["fs", "set-header"] }
+tower-http = { version = "0.6", features = ["fs"] }
 portpicker = "0.1"
 regex = "1.12"
 thiserror = "2.0"
 anyhow = "1.0"
-image = "0.25"
-webp = "0.3"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "ico"] }
 trash = "5.2"
-blake3 = "1.8"
 futures = "0.3"
 urlencoding = "2.1"
 

@@ -9,7 +9,7 @@ import { safeInvoke } from '~/utils/invoke'
 async function startServer(host: string, port: number): Promise<string> {
   try {
     const channel = new Channel<string>()
-    channel.onmessage = async (_message) => { /* no-op */ }
+    channel.onmessage = () => undefined
 
     return await invoke<string>('start_server', {
       host,
@@ -23,10 +23,6 @@ async function startServer(host: string, port: number): Promise<string> {
 
 async function addStaticSite(path: string): Promise<string> {
   return safeInvoke<string>('add_static_site', { path })
-}
-
-async function removeStaticSite(path: string): Promise<void> {
-  return safeInvoke<void>('remove_static_site', { path })
 }
 
 async function broadcastMessage(message: string): Promise<void> {
@@ -44,7 +40,6 @@ async function getConnectedClients(): Promise<string[]> {
 export const serverCmds = {
   startServer,
   addStaticSite,
-  removeStaticSite,
   broadcastMessage,
   unicastMessage,
   getConnectedClients,

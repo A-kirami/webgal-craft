@@ -26,8 +26,8 @@ vi.mock('~/stores/editor', () => ({
   useEditorStore: useEditorStoreMock,
 }))
 
-vi.mock('~/commands/thumbnaila', () => ({
-  thumbnailCmds: {
+vi.mock('~/commands/fs', () => ({
+  fsCmds: {
     getImageDimensions: getImageDimensionsMock,
   },
 }))

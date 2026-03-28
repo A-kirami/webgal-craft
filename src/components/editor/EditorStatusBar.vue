@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ChartSpline, FileText, Image as ImageIcon } from 'lucide-vue-next'
 
-import { thumbnailCmds } from '~/commands/thumbnaila'
+import { fsCmds } from '~/commands/fs'
 import {
   calculateEditorStatusBarTextStats,
   isEditorStatusBarImagePreview,
@@ -46,7 +46,7 @@ watch(() => previewState?.path, async (path) => {
   }
 
   try {
-    const [w, h] = await thumbnailCmds.getImageDimensions(path)
+    const [w, h] = await fsCmds.getImageDimensions(path)
     // 异步完成后路径可能已变，丢弃过时结果
     if (previewState?.path !== path) {
       return

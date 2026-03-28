@@ -200,6 +200,17 @@ pub async fn is_binary_file(path: String) -> AppResult<bool> {
     Ok(buffer[..bytes_read].contains(&0))
 }
 
+fn read_image_dimensions(path: &str) -> AppResult<(u32, u32)> {
+    image::image_dimensions(path)
+        .map_err(|error| AppError::Image(format!("无法读取图片尺寸: {error}")))
+}
+
+/// 仅读取图片头部元数据获取分辨率，不解码完整像素数据
+#[tauri::command]
+pub async fn get_image_dimensions(path: String) -> AppResult<(u32, u32)> {
+    read_image_dimensions(&path)
+}
+
 /// 删除文件或文件夹
 /// 默认移动到回收站，如果 permanent 为 true 则直接删除
 #[tauri::command]
@@ -225,4 +236,42 @@ pub async fn delete_file(path: String, permanent: Option<bool>) -> AppResult<()>
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        fs,
+        path::PathBuf,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+
+    use super::read_image_dimensions;
+
+    const PNG_1X1_BYTES: &[u8] = &[
+        137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6,
+        0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 13, 73, 68, 65, 84, 120, 156, 99, 248, 15, 4, 0, 9,
+        251, 3, 253, 167, 137, 129, 153, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130,
+    ];
+
+    fn create_temp_image_path() -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time should be after unix epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("webgal-craft-image-size-{unique}.png"))
+    }
+
+    #[test]
+    fn read_image_dimensions_reads_png_header_without_full_decode() {
+        let image_path = create_temp_image_path();
+        fs::write(&image_path, PNG_1X1_BYTES).expect("should create temporary png");
+
+        let dimensions = read_image_dimensions(image_path.to_string_lossy().as_ref())
+            .expect("should read image size from file header");
+
+        let _ = fs::remove_file(&image_path);
+
+        assert_eq!(dimensions, (1, 1));
+    }
 }

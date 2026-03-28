@@ -5,12 +5,16 @@ import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import { useEnginesTabController } from '~/features/home/engines-tab/useEnginesTabController'
 import { useModalStore } from '~/stores/modal'
 import { usePreferenceStore } from '~/stores/preference'
+import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 import { useResourceStore } from '~/stores/resource'
 
 import EnginesTabCollectionSection from './EnginesTabCollectionSection.vue'
 
+import type { Engine } from '~/database/model'
+
 const modalStore = useModalStore()
 const preferenceStore = usePreferenceStore()
+const previewRuntimeStore = usePreviewRuntimeStore()
 const resourceStore = useResourceStore()
 const { t } = useI18n()
 
@@ -22,6 +26,10 @@ const controller = useEnginesTabController({
 })
 const dropZoneEmptyRef = useTemplateRef<HTMLElement>('dropZoneEmptyRef')
 const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRef, paths => controller.handleDrop(paths))
+
+function resolveEngineServeUrl(engine: Engine): string | undefined {
+  return previewRuntimeStore.getServeUrl(engine.path)
+}
 </script>
 
 <template>
@@ -31,6 +39,7 @@ const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRe
     :view-mode="preferenceStore.viewMode"
     :get-engine-progress="controller.getEngineProgress"
     :has-engine-progress="controller.hasEngineProgress"
+    :resolve-engine-serve-url="resolveEngineServeUrl"
     @delete-engine="controller.handleDelete"
     @drop="controller.handleDrop"
     @import-click="controller.selectEngineFolder"

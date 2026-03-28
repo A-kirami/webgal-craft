@@ -111,7 +111,21 @@ describe('游戏标签页辅助函数', () => {
     })
 
     it('存在引擎时打开新建游戏弹窗', () => {
-      const engine = { id: 'engine-1', path: '/engines/1', createdAt: 0, status: 'created', metadata: { description: '', icon: '/icon.png', name: 'Engine One' } } as Engine
+      const engine = {
+        id: 'engine-1',
+        path: '/engines/1',
+        createdAt: 0,
+        status: 'created',
+        metadata: {
+          description: '',
+          name: 'Engine One',
+        },
+        previewAssets: {
+          icon: {
+            path: '/icon.png',
+          },
+        },
+      } as Engine
       const decision = resolveGamesTabCreateGameDecision([engine])
 
       expect(decision).toEqual({

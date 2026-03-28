@@ -169,6 +169,11 @@ async function isBinaryFile(path: string): Promise<boolean> {
   return safeInvoke<boolean>('is_binary_file', { path })
 }
 
+/** 仅读取文件头部元数据获取图片分辨率，不解码完整图片 */
+async function getImageDimensions(path: string): Promise<[number, number]> {
+  return safeInvoke<[number, number]>('get_image_dimensions', { path })
+}
+
 export const fsCmds = {
   copyDirectory,
   copyDirectoryWithProgress,
@@ -181,4 +186,5 @@ export const fsCmds = {
   copyFile,
   moveFile,
   isBinaryFile,
+  getImageDimensions,
 }

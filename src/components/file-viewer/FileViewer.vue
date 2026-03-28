@@ -9,6 +9,8 @@ import type { SortableItemAccessor } from '~/utils/sort'
 interface FileViewerProps {
   /** 要展示的文件/文件夹列表 */
   items: FileViewerItem[]
+  /** 调用方可选提供图片预览地址解析器，通用文件视图本身不绑定具体预览实现 */
+  resolvePreviewUrl?: (item: FileViewerItem) => string | undefined
   /** 视图模式 */
   viewMode?: 'list' | 'grid'
   /** 排序字段 */
@@ -45,6 +47,7 @@ interface FileViewerExpose {
 
 const {
   items,
+  resolvePreviewUrl,
   viewMode = 'list',
   sortBy = 'name',
   sortOrder = 'asc',
@@ -168,6 +171,7 @@ defineExpose(fileViewerExpose)
           :show-list-created-at="layout.showListCreatedAt.value"
           :get-grid-row-items="virtualizer.getGridRowItems"
           :get-list-item="virtualizer.getListItem"
+          :resolve-preview-url="resolvePreviewUrl"
           @item-click="handleItemClick"
         >
           <template v-if="$slots.icon" #icon="{ item, iconSize }">

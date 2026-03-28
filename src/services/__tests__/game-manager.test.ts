@@ -1,3 +1,5 @@
+import '~/__tests__/setup'
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { gameManager } from '~/services/game-manager'
@@ -19,10 +21,9 @@ const {
   loggerInfoMock,
   removeMock,
   resourceStoreMock,
-  serverAddStaticSiteMock,
-  serverRemoveStaticSiteMock,
   useResourceStoreMock,
   useWorkspaceStoreMock,
+  workspaceStoreState,
   validateDirectoryStructureMock,
 } = vi.hoisted(() => ({
   copyDirectoryWithProgressMock: vi.fn(),
@@ -43,16 +44,29 @@ const {
     updateProgress: vi.fn(),
     finishProgress: vi.fn(),
   },
-  serverAddStaticSiteMock: vi.fn(),
-  serverRemoveStaticSiteMock: vi.fn(),
   useResourceStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
+  workspaceStoreState: {
+    currentGame: { id: 'game-1' } as {
+      id: string
+      lastModified?: number
+      metadata?: {
+        name: string
+      }
+      previewAssets?: {
+        icon: {
+          path: string
+          cacheVersion: number
+        }
+        cover: {
+          path: string
+          cacheVersion: number
+        }
+      }
+    } | undefined,
+  },
   validateDirectoryStructureMock: vi.fn(),
 }))
-
-const workspaceStoreState = {
-  currentGame: { id: 'game-1' },
-}
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
   exists: existsMock,
@@ -79,13 +93,6 @@ vi.mock('~/commands/game', () => ({
   gameCmds: {
     getGameConfig: gameCmdsGetGameConfigMock,
     setGameConfig: gameCmdsSetGameConfigMock,
-  },
-}))
-
-vi.mock('~/commands/server', () => ({
-  serverCmds: {
-    addStaticSite: serverAddStaticSiteMock,
-    removeStaticSite: serverRemoveStaticSiteMock,
   },
 }))
 
@@ -132,8 +139,6 @@ describe('gameManager 游戏管理', () => {
     removeMock.mockReset()
     resourceStoreMock.updateProgress.mockReset()
     resourceStoreMock.finishProgress.mockReset()
-    serverAddStaticSiteMock.mockReset()
-    serverRemoveStaticSiteMock.mockReset()
     useResourceStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
     validateDirectoryStructureMock.mockReset()
@@ -142,11 +147,69 @@ describe('gameManager 游戏管理', () => {
     existsMock.mockResolvedValue(false)
   })
 
+  it('getGameMetadata 只返回语义元数据', async () => {
+    gameCmdsGetGameConfigMock.mockResolvedValue({ gameName: 'Demo Game', titleImg: 'cover.png' })
+
+    await expect(gameManager.getGameMetadata('/games/demo')).resolves.toEqual({
+      name: 'Demo Game',
+    })
+  })
+
+  it('getGamePreviewAssets 只返回封面和图标路径', async () => {
+    gameCmdsGetGameConfigMock.mockResolvedValue({ gameName: 'Demo Game', titleImg: 'cover.png' })
+    gameIconPathMock.mockResolvedValue('/games/demo/icons/icon.png')
+    gameCoverPathMock.mockResolvedValue('/games/demo/assets/cover.png')
+
+    await expect((gameManager as typeof gameManager & {
+      getGamePreviewAssets: (gamePath: string) => Promise<unknown>
+    }).getGamePreviewAssets('/games/demo')).resolves.toEqual({
+      icon: {
+        path: '/games/demo/icons/icon.png',
+      },
+      cover: {
+        path: '/games/demo/assets/cover.png',
+      },
+    })
+  })
+
+  it('registerGame 会保留调用方提供的 metadata 并只补齐缺失的 previewAssets', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
+    dbGamesAddMock.mockResolvedValue('game-1')
+    gameCmdsGetGameConfigMock.mockResolvedValue({ gameName: 'Resolved Name', titleImg: 'cover.png' })
+    gameIconPathMock.mockResolvedValue('/games/demo/icons/icon.png')
+    gameCoverPathMock.mockResolvedValue('/games/demo/assets/cover.png')
+
+    await gameManager.registerGame('/games/demo', {
+      metadata: {
+        name: 'Provided Name',
+      },
+    })
+
+    expect(dbGamesAddMock).toHaveBeenCalledWith(expect.objectContaining({
+      metadata: {
+        name: 'Provided Name',
+      },
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/icon.png',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+        cover: {
+          path: '/games/demo/assets/cover.png',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+      },
+    }))
+  })
+
   afterEach(() => {
     vi.useRealTimers()
   })
 
   it('createGame 会注册占位游戏、复制引擎并在结束后回写元数据', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     dbGamesAddMock.mockResolvedValue('game-1')
     copyDirectoryWithProgressMock.mockImplementation(async (_from, _to, onProgress: (progress: number) => void) => {
       onProgress(25)
@@ -164,8 +227,14 @@ describe('gameManager 游戏管理', () => {
       status: 'creating',
       metadata: {
         name: 'Demo Game',
-        icon: '',
-        cover: '',
+      },
+      previewAssets: {
+        icon: {
+          path: '',
+        },
+        cover: {
+          path: '',
+        },
       },
     }))
     expect(gameCmdsSetGameConfigMock).toHaveBeenCalledWith('/games/demo', { gameName: 'Demo Game' })
@@ -176,8 +245,16 @@ describe('gameManager 游戏管理', () => {
       status: 'created',
       metadata: {
         name: 'Demo Game',
-        icon: '/games/demo/icons/icon.png',
-        cover: '/games/demo/assets/cover.png',
+      },
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/icon.png',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+        cover: {
+          path: '/games/demo/assets/cover.png',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
       },
     })
   })
@@ -216,6 +293,71 @@ describe('gameManager 游戏管理', () => {
     )
   })
 
+  it('renameGame 会直接写入名称和 lastModified，而不是顺手刷新预览快照', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
+    dbGamesGetMock.mockResolvedValue({
+      id: 'game-1',
+      path: '/games/demo',
+      metadata: {
+        name: 'Old Name',
+      },
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/favicon.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: '/games/demo/assets/cover.png',
+          cacheVersion: 222,
+        },
+      },
+    })
+    workspaceStoreState.currentGame = {
+      id: 'game-1',
+      metadata: {
+        name: 'Old Name',
+      },
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/favicon.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: '/games/demo/assets/cover.png',
+          cacheVersion: 222,
+        },
+      },
+    }
+
+    await gameManager.renameGame('game-1', 'New Name')
+
+    expect(gameCmdsSetGameConfigMock).toHaveBeenCalledWith('/games/demo', { gameName: 'New Name' })
+    expect(dbGamesUpdateMock).toHaveBeenCalledWith('game-1', {
+      lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
+      metadata: {
+        name: 'New Name',
+      },
+    })
+    expect(workspaceStoreState.currentGame).toEqual({
+      id: 'game-1',
+      metadata: {
+        name: 'New Name',
+      },
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/favicon.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: '/games/demo/assets/cover.png',
+          cacheVersion: 222,
+        },
+      },
+      lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
+    })
+  })
+
   it('deleteGame 在 removeFiles=true 时会通过 fs 命令将游戏目录移动到回收站', async () => {
     await gameManager.deleteGame({
       id: 'game-1',
@@ -225,14 +367,71 @@ describe('gameManager 游戏管理', () => {
       status: 'created',
       metadata: {
         name: 'Demo',
-        icon: '',
-        cover: '',
+      },
+      previewAssets: {
+        icon: {
+          path: '',
+        },
+        cover: {
+          path: '',
+        },
       },
     }, true)
 
     expect(deleteFileMock).toHaveBeenCalledWith('/games/demo')
     expect(dbGamesDeleteMock).toHaveBeenCalledWith('game-1')
     expect(deleteFileMock.mock.invocationCallOrder[0]).toBeLessThan(dbGamesDeleteMock.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY)
+  })
+
+  it('updateGameLastModified 只更新时间戳，不会重写当前游戏的预览快照', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
+    workspaceStoreState.currentGame = {
+      id: 'game-1',
+      metadata: {
+        name: 'Demo',
+      },
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/favicon.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: '/games/demo/assets/cover.png',
+          cacheVersion: 222,
+        },
+      },
+    }
+    dbGamesGetMock.mockResolvedValue({
+      id: 'game-1',
+      path: '/games/demo',
+    })
+    gameCmdsGetGameConfigMock.mockResolvedValue({ gameName: 'Changed Name', titleImg: 'cover-next.png' })
+    gameIconPathMock.mockResolvedValue('/games/demo/icons/next.ico')
+    gameCoverPathMock.mockResolvedValue('/games/demo/assets/cover-next.png')
+
+    await gameManager.updateGameLastModified('game-1')
+
+    expect(dbGamesUpdateMock).toHaveBeenCalledWith('game-1', {
+      lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
+    })
+    expect(workspaceStoreState.currentGame).toEqual({
+      id: 'game-1',
+      metadata: {
+        name: 'Demo',
+      },
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/favicon.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: '/games/demo/assets/cover.png',
+          cacheVersion: 222,
+        },
+      },
+      lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
+    })
   })
 
   it('updateCurrentGameLastModified 会按 500ms 防抖更新当前游戏', async () => {
@@ -246,8 +445,12 @@ describe('gameManager 游戏管理', () => {
     await vi.advanceTimersByTimeAsync(500)
 
     expect(dbGamesUpdateMock).toHaveBeenCalledTimes(1)
-    expect(dbGamesUpdateMock).toHaveBeenCalledWith('game-1', {
+    expect(dbGamesUpdateMock).toHaveBeenCalledWith('game-1', expect.objectContaining({
       lastModified: expect.any(Number),
-    })
+    }))
+  })
+
+  it('不再暴露 runGamePreview', () => {
+    expect('runGamePreview' in gameManager).toBe(false)
   })
 })

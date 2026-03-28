@@ -1,19 +1,28 @@
 <script setup lang="ts">
 import { Folder, Scroll, Trash2 } from 'lucide-vue-next'
 
+import AssetImage from '~/components/shared/AssetImage.vue'
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import dayjs from '~/plugins/dayjs'
 
 import type { Game } from '~/database/model'
+import type { AssetThumbnailOptions } from '~/services/platform/asset-url'
 
 interface Props {
   games: Game[]
   getGameProgress: (game: Game) => number
   hasGameProgress: (game: Game) => boolean
+  resolveGameServeUrl: (game: Game) => string | undefined
   viewMode: 'grid' | 'list'
 }
 
-defineProps<Props>()
+const {
+  games,
+  getGameProgress,
+  hasGameProgress,
+  resolveGameServeUrl,
+  viewMode,
+} = defineProps<Props>()
 
 const emit = defineEmits<{
   deleteGame: [game: Game]
@@ -28,6 +37,24 @@ const { isOverDropZone: isOverDropZoneGrid } = useTauriDropZone(dropZoneGridRef,
 
 const dropZoneListRef = useTemplateRef<HTMLElement>('dropZoneListRef')
 const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef, paths => emit('drop', paths))
+
+const GRID_COVER_THUMBNAIL: AssetThumbnailOptions = {
+  width: 640,
+  height: 360,
+  resizeMode: 'cover',
+}
+
+const GRID_ICON_THUMBNAIL: AssetThumbnailOptions = {
+  width: 64,
+  height: 64,
+  resizeMode: 'contain',
+}
+
+const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
+  width: 80,
+  height: 80,
+  resizeMode: 'cover',
+}
 </script>
 
 <template>
@@ -40,18 +67,29 @@ const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef,
           @click="emit('gameClick', game)"
         >
           <div class="bg-gray-100 w-full aspect-16/9 overflow-hidden">
-            <Thumbnail
-              :path="game.metadata.cover"
+            <AssetImage
+              :path="game.previewAssets.cover.path"
+              :root-path="game.path"
+              :serve-url="resolveGameServeUrl(game)"
               :alt="$t('home.games.gameCover', { name: game.metadata.name })"
-              :size="512"
-              fit="cover"
+              :cache-version="game.previewAssets.cover.cacheVersion"
+              object-fit="cover"
               fallback-image="/placeholder.svg"
-              class="transition-transform duration-300 group-hover:scale-105"
+              :thumbnail="GRID_COVER_THUMBNAIL"
+              class="h-full w-full transition-transform duration-300 group-hover:scale-105"
             />
           </div>
           <CardContent class="p-3">
             <div class="flex gap-4 items-center">
-              <Thumbnail :path="game.metadata.icon" :alt="$t('home.games.gameIcon', { name: game.metadata.name })" class="rounded-md size-8" />
+              <AssetImage
+                :path="game.previewAssets.icon.path"
+                :root-path="game.path"
+                :serve-url="resolveGameServeUrl(game)"
+                :alt="$t('home.games.gameIcon', { name: game.metadata.name })"
+                :cache-version="game.previewAssets.icon.cacheVersion"
+                :thumbnail="GRID_ICON_THUMBNAIL"
+                class="rounded-md size-8"
+              />
               <div>
                 <h3 class="font-medium">
                   {{ game.metadata.name }}
@@ -111,12 +149,16 @@ const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef,
     >
       <div class="flex gap-3 items-center">
         <div class="rounded-md h-10 w-10 overflow-hidden">
-          <Thumbnail
-            :path="game.metadata.cover"
+          <AssetImage
+            :path="game.previewAssets.cover.path"
+            :root-path="game.path"
+            :serve-url="resolveGameServeUrl(game)"
             :alt="$t('home.games.gameCover', { name: game.metadata.name })"
-            :size="128"
-            fit="cover"
+            :cache-version="game.previewAssets.cover.cacheVersion"
+            object-fit="cover"
             fallback-image="/placeholder.svg"
+            :thumbnail="LIST_COVER_THUMBNAIL"
+            class="h-full w-full"
           />
         </div>
         <div>
