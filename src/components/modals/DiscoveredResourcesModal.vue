@@ -3,6 +3,8 @@ import { Box, CheckCircle2, Scroll } from 'lucide-vue-next'
 
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 
+import type { AssetThumbnailOptions } from '~/services/platform/asset-url'
+
 let open = $(defineModel<boolean>('open'))
 
 const props = defineProps<{
@@ -13,6 +15,12 @@ const props = defineProps<{
 
 let selectedPaths = $ref(new Set(props.resources.map(r => r.path)))
 const previewRuntimeStore = usePreviewRuntimeStore()
+
+const DISCOVERED_RESOURCE_ICON_THUMBNAIL: AssetThumbnailOptions = {
+  width: 64,
+  height: 64,
+  resizeMode: 'contain',
+}
 
 const toggleSelection = (path: string) => {
   if (selectedPaths.has(path)) {
@@ -95,6 +103,7 @@ function resolveResourceServeUrl(resource: { path: string }): string | undefined
                 :root-path="resource.path"
                 :serve-url="resolveResourceServeUrl(resource)"
                 :alt="resource.name"
+                :thumbnail="DISCOVERED_RESOURCE_ICON_THUMBNAIL"
                 class="rounded shrink-0 size-10"
               />
               <component :is="icon" v-else class="text-muted-foreground shrink-0 size-10" />

@@ -123,7 +123,12 @@ const isMaxZoom = $computed(() => preferenceStore.assetZoom[0] >= 150)
     </ScrollArea>
     <div class="flex flex-1 flex-col">
       <div class="px-3 py-1 border-b @container flex gap-2 min-w-0 items-center justify-between">
-        <AssetBreadcrumb class="flex-1 min-w-0" :asset-type="preferenceStore.assetTab" ::current-path="currentPath" />
+        <AssetBreadcrumb
+          class="flex-1 min-w-0"
+          :asset-type="preferenceStore.assetTab"
+          :current-path="currentPath"
+          @update:current-path="currentPath = $event"
+        />
         <div class="flex gap-1.5 items-center">
           <Input
             ::="currentSearchQuery"
@@ -155,7 +160,8 @@ const isMaxZoom = $computed(() => preferenceStore.assetZoom[0] >= 150)
           :search-query="currentSearchQuery"
           :sort-by="preferenceStore.assetSortBy"
           :sort-order="preferenceStore.assetSortOrder"
-          ::current-path="currentPath"
+          :current-path="currentPath"
+          @update:current-path="currentPath = $event"
           @update:sort-by="handleSortFieldSelect"
           @update:sort-order="handleSortOrderUpdate"
         />
