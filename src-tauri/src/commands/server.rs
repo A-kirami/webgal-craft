@@ -615,10 +615,7 @@ mod tests {
     #[test]
     fn resolve_static_file_cors_origin_from_headers_returns_allowed_origin() {
         let mut headers = HeaderMap::new();
-        headers.insert(
-            ORIGIN,
-            HeaderValue::from_static("http://localhost:1420"),
-        );
+        headers.insert(ORIGIN, HeaderValue::from_static("http://localhost:1420"));
 
         assert_eq!(
             resolve_static_file_cors_origin_from_headers(&headers),
