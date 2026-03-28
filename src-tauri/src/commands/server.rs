@@ -253,7 +253,7 @@ async fn handle_static_request(
                 try_build_thumbnail_response(site_root.clone(), path.clone(), thumbnail_request)
                     .await
             {
-                let mut response = apply_cache_control(response);
+                let mut response = apply_cache_control(response, CacheControlPolicy::Thumbnail);
                 append_static_file_cors_headers(&mut response, origin);
                 return response;
             }
@@ -266,7 +266,8 @@ async fn handle_static_request(
             .await
         {
             Ok(response) => {
-                let mut response = apply_cache_control(response.into_response());
+                let mut response =
+                    apply_cache_control(response.into_response(), CacheControlPolicy::StaticAsset);
                 append_static_file_cors_headers(&mut response, origin);
                 response
             }
@@ -307,6 +308,12 @@ struct ThumbnailRequest {
 struct EncodedThumbnail {
     body: Vec<u8>,
     content_type: &'static str,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CacheControlPolicy {
+    StaticAsset,
+    Thumbnail,
 }
 
 fn build_static_asset_uri(path: Option<&str>) -> String {
@@ -460,38 +467,19 @@ fn build_thumbnail(path: &Path, request: ThumbnailRequest) -> Option<EncodedThum
     })
 }
 
-fn apply_cache_control(mut response: Response) -> Response {
-    let cache_control = resolve_cache_control_value(response.headers().get(CONTENT_TYPE));
+fn apply_cache_control(mut response: Response, cache_policy: CacheControlPolicy) -> Response {
+    let cache_control = resolve_cache_control_value(cache_policy);
     response
         .headers_mut()
         .insert(CACHE_CONTROL, HeaderValue::from_static(cache_control));
     response
 }
 
-fn resolve_cache_control_value(content_type: Option<&HeaderValue>) -> &'static str {
-    let Some(content_type) = content_type.and_then(|value| value.to_str().ok()) else {
-        return "no-store, no-cache, must-revalidate, max-age=0";
-    };
-
-    let mime_type = content_type
-        .split(';')
-        .next()
-        .map(str::trim)
-        .unwrap_or(content_type);
-
-    if mime_type.starts_with("image/")
-        || mime_type.starts_with("video/")
-        || mime_type.starts_with("audio/")
-        || mime_type.starts_with("font/")
-        || matches!(
-            mime_type,
-            "application/font-woff" | "application/font-woff2" | "application/vnd.ms-fontobject"
-        )
-    {
-        return "public, max-age=86400";
+fn resolve_cache_control_value(cache_policy: CacheControlPolicy) -> &'static str {
+    match cache_policy {
+        CacheControlPolicy::StaticAsset => "no-store, no-cache, must-revalidate, max-age=0",
+        CacheControlPolicy::Thumbnail => "public, max-age=86400",
     }
-
-    "no-store, no-cache, must-revalidate, max-age=0"
 }
 
 /// 启动HTTP服务器
@@ -778,8 +766,8 @@ mod tests {
     use super::{
         append_static_file_cors_headers, resolve_cache_control_value,
         resolve_static_file_cors_origin, resolve_static_file_cors_origin_from_headers,
-        resolve_thumbnail_request, supports_thumbnail, StaticAssetQuery, ThumbnailRequest,
-        ThumbnailResizeMode,
+        resolve_thumbnail_request, supports_thumbnail, CacheControlPolicy, StaticAssetQuery,
+        ThumbnailRequest, ThumbnailResizeMode,
     };
 
     #[test]
@@ -877,31 +865,17 @@ mod tests {
     }
 
     #[test]
-    fn media_content_type_uses_public_cache() {
+    fn generated_thumbnails_use_public_cache() {
         assert_eq!(
-            resolve_cache_control_value(Some(&HeaderValue::from_static("image/png"))),
-            "public, max-age=86400"
-        );
-        assert_eq!(
-            resolve_cache_control_value(Some(&HeaderValue::from_static("video/mp4"))),
-            "public, max-age=86400"
-        );
-        assert_eq!(
-            resolve_cache_control_value(Some(&HeaderValue::from_static("font/woff2"))),
+            resolve_cache_control_value(CacheControlPolicy::Thumbnail),
             "public, max-age=86400"
         );
     }
 
     #[test]
-    fn html_and_missing_content_type_disable_cache() {
+    fn static_assets_disable_cache_even_when_content_is_media() {
         assert_eq!(
-            resolve_cache_control_value(Some(&HeaderValue::from_static(
-                "text/html; charset=utf-8"
-            ))),
-            "no-store, no-cache, must-revalidate, max-age=0"
-        );
-        assert_eq!(
-            resolve_cache_control_value(None),
+            resolve_cache_control_value(CacheControlPolicy::StaticAsset),
             "no-store, no-cache, must-revalidate, max-age=0"
         );
     }
