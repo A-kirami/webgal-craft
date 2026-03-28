@@ -1,15 +1,15 @@
 import { defineStore } from 'pinia'
 
+import { storageSettingsDefinition } from '~/features/settings/storage-settings'
+
 export const useStorageSettingsStore = defineStore(
   'storage-settings',
   () => {
-    const gameSavePath = $ref<string>('')
-    const engineSavePath = $ref<string>('')
+    const state = reactive({ ...storageSettingsDefinition.defaults })
 
-    return $$({
-      gameSavePath,
-      engineSavePath,
-    })
+    return {
+      ...toRefs(state),
+    }
   },
   {
     persist: true,

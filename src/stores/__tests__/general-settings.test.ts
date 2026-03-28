@@ -3,6 +3,7 @@ import '~/__tests__/setup'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, ref } from 'vue'
 
+import { generalSettingsDefinition } from '~/features/settings/general-settings'
 import { useGeneralSettingsStore } from '~/stores/general-settings'
 
 const { dayjsLocaleMock } = vi.hoisted(() => ({
@@ -84,5 +85,22 @@ describe('通用设置状态仓库', () => {
     expect(locale.value).toBe('en')
     expect(dayjsLocaleMock).toHaveBeenLastCalledWith('en')
     expect(setAttributeMock).toHaveBeenLastCalledWith('lang', 'en')
+  })
+
+  it('语言选项仅保留 follow system 走 i18n，其余语言名称使用固定自称', () => {
+    const languageField = generalSettingsDefinition.schema.general.fields.language
+
+    expect(languageField.type).toBe('select')
+    if (languageField.type !== 'select') {
+      throw new Error('language field should be select')
+    }
+
+    expect(typeof languageField.options[0]?.label).toBe('function')
+    expect(languageField.options.slice(1)).toEqual([
+      { value: 'zh-Hans', label: '简体中文' },
+      { value: 'zh-Hant', label: '繁體中文' },
+      { value: 'en', label: 'English' },
+      { value: 'ja', label: '日本語' },
+    ])
   })
 })

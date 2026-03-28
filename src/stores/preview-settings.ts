@@ -1,17 +1,15 @@
 import { defineStore } from 'pinia'
 
+import { previewSettingsDefinition } from '~/features/settings/preview-settings'
+
 export const usePreviewSettingsStore = defineStore(
   'preview-settings',
   () => {
-    const enableLivePreview = $ref(true)
-    const enableFastPreview = $ref(false)
-    const enableRealtimeEffectPreview = $ref(true)
+    const state = reactive({ ...previewSettingsDefinition.defaults })
 
-    return $$({
-      enableLivePreview,
-      enableFastPreview,
-      enableRealtimeEffectPreview,
-    })
+    return {
+      ...toRefs(state),
+    }
   },
   {
     persist: true,

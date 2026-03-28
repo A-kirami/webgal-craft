@@ -1,9 +1,10 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
+import { resolveI18nLike } from '~/utils/i18n-like'
 
-import type { ComposerTranslation } from 'vue-i18n'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { I18nLike as SharedI18nLike, I18nT as SharedI18nT } from '~/utils/i18n-like'
 
 // ─── 共享基础设施（不变） ─────────────────────────
 
@@ -25,7 +26,7 @@ export interface DynamicOptionsResult {
   loading: boolean
 }
 
-export type I18nT = ComposerTranslation
+export type I18nT = SharedI18nT
 
 export type CommandCategory = 'perform' | 'effect' | 'display' | 'scene' | 'system' | 'comment'
 
@@ -41,16 +42,10 @@ export const CUSTOM_CONTENT = '__custom__'
 
 // ─── I18nLike：简化 i18n 声明 ─────────────────────
 
-export type I18nLike = string | ((t: I18nT, content?: string) => string)
+export type I18nLike = SharedI18nLike<[content?: string]>
 
 export function resolveI18n(value: I18nLike | undefined, t: I18nT, content?: string): string {
-  if (!value) {
-    return ''
-  }
-  if (typeof value === 'string') {
-    return value
-  }
-  return value(t, content)
+  return resolveI18nLike(value, t, content)
 }
 
 // ─── SurfaceAware：按 surface 选择控件变体 ────────
