@@ -15,8 +15,13 @@ const waveformRef = useTemplateRef<HTMLDivElement>('waveformRef')
 let waveSurfer = $shallowRef<ReturnType<typeof WaveSurfer.create>>()
 let durationSeconds = $ref(0)
 let currentTimeSeconds = $ref(0)
+let isLoading = $ref(false)
 let isPlaying = $ref(false)
 let isReady = $ref(false)
+let activeSrc = $ref<string>()
+let shouldAutoplayWhenReady = $ref(false)
+
+const canTogglePlayback = $computed(() => !!props.src && !isLoading)
 
 const displayTime = $computed(() => {
   return formatAudioTime(Math.max(durationSeconds - currentTimeSeconds, 0))
@@ -107,59 +112,17 @@ function syncWaveSurferPlaybackState() {
 function resetPlaybackState() {
   durationSeconds = 0
   currentTimeSeconds = 0
+  isLoading = false
   isPlaying = false
   isReady = false
+  activeSrc = undefined
+  shouldAutoplayWhenReady = false
 }
 
-async function loadAudioSource(src: string) {
-  const instance = waveSurfer
-  if (!instance || !src) {
-    return
-  }
-
-  resetPlaybackState()
-
-  try {
-    await instance.load(src)
-  } catch (error) {
-    logger.warn(`辅助面板音频预览加载失败 (${src}): ${String(error)}`)
-  }
-}
-
-async function handleTogglePlayback() {
-  const instance = waveSurfer
-  if (!instance) {
-    return
-  }
-
-  if (instance.isPlaying()) {
-    instance.pause()
-    return
-  }
-
-  try {
-    await instance.play()
-  } catch (error) {
-    logger.warn(`辅助面板音频预览播放失败 (${props.src}): ${String(error)}`)
-  }
-}
-
-watch(() => props.src, (newSrc, oldSrc) => {
-  if (!waveSurfer || !newSrc || newSrc === oldSrc) {
-    return
-  }
-
-  void loadAudioSource(newSrc)
-})
-
-onMounted(() => {
-  if (!waveformRef.value) {
-    return
-  }
-
-  waveSurfer = WaveSurfer.create({
+function createWaveSurferOptions(container: HTMLDivElement): WaveSurferOptions {
+  return {
     backend: 'MediaElement',
-    container: waveformRef.value,
+    container,
     cursorWidth: 0,
     height: 30,
     hideScrollbar: true,
@@ -168,40 +131,170 @@ onMounted(() => {
     progressColor: resolveThemeColor('--primary', 'hsl(221.2 83.2% 53.3%)'),
     renderFunction: renderContinuousWaveform,
     waveColor: resolveThemeColor('--muted-foreground', 'hsl(215.4 16.3% 46.9%)'),
-  })
+  }
+}
 
-  waveSurfer.on('ready', () => {
+function createWaveSurferInstance(container: HTMLDivElement) {
+  const instance = WaveSurfer.create(createWaveSurferOptions(container))
+
+  instance.on('ready', () => {
+    if (waveSurfer !== instance) {
+      return
+    }
+
+    isLoading = false
     isReady = true
     syncWaveSurferPlaybackState()
     syncWaveSurferTime()
+
+    if (shouldAutoplayWhenReady) {
+      shouldAutoplayWhenReady = false
+      void playCurrentSource()
+    }
   })
-  waveSurfer.on('play', () => {
+  instance.on('play', () => {
+    if (waveSurfer !== instance) {
+      return
+    }
+
     syncWaveSurferPlaybackState()
     syncWaveSurferTime()
   })
-  waveSurfer.on('pause', () => {
+  instance.on('pause', () => {
+    if (waveSurfer !== instance) {
+      return
+    }
+
     syncWaveSurferPlaybackState()
     syncWaveSurferTime()
   })
-  waveSurfer.on('finish', () => {
+  instance.on('finish', () => {
+    if (waveSurfer !== instance) {
+      return
+    }
+
     syncWaveSurferPlaybackState()
     const duration = waveSurfer?.getDuration() ?? durationSeconds
     durationSeconds = duration
     currentTimeSeconds = duration
   })
-  waveSurfer.on('timeupdate', (currentTime) => {
+  instance.on('timeupdate', (currentTime) => {
+    if (waveSurfer !== instance) {
+      return
+    }
+
     syncWaveSurferTime(currentTime)
   })
-  waveSurfer.on('interaction', (currentTime) => {
+  instance.on('interaction', (currentTime) => {
+    if (waveSurfer !== instance) {
+      return
+    }
+
     syncWaveSurferTime(currentTime)
   })
 
-  void loadAudioSource(props.src)
+  return instance
+}
+
+function destroyWaveSurferInstance() {
+  waveSurfer?.destroy()
+  waveSurfer = undefined
+}
+
+function recreateWaveSurferInstance() {
+  destroyWaveSurferInstance()
+  resetPlaybackState()
+
+  if (!waveformRef.value) {
+    return
+  }
+
+  waveSurfer = createWaveSurferInstance(waveformRef.value)
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError'
+}
+
+async function loadAudioSource(src: string) {
+  const instance = waveSurfer
+  if (!instance || !src) {
+    return
+  }
+
+  durationSeconds = 0
+  currentTimeSeconds = 0
+  isLoading = true
+  isPlaying = false
+  isReady = false
+  activeSrc = src
+
+  try {
+    await instance.load(src)
+  } catch (error) {
+    if (waveSurfer !== instance || isAbortError(error)) {
+      return
+    }
+
+    isLoading = false
+    activeSrc = undefined
+    shouldAutoplayWhenReady = false
+    logger.warn(`辅助面板音频预览加载失败 (${src}): ${String(error)}`)
+  }
+}
+
+async function playCurrentSource() {
+  const instance = waveSurfer
+  const src = activeSrc ?? props.src
+  if (!instance || !src) {
+    return
+  }
+
+  try {
+    await instance.play()
+  } catch (error) {
+    logger.warn(`辅助面板音频预览播放失败 (${src}): ${String(error)}`)
+  }
+}
+
+async function handleTogglePlayback() {
+  const instance = waveSurfer
+  if (!instance || !props.src || isLoading) {
+    return
+  }
+
+  if (!isReady || activeSrc !== props.src) {
+    shouldAutoplayWhenReady = true
+    await loadAudioSource(props.src)
+    return
+  }
+
+  if (instance.isPlaying()) {
+    instance.pause()
+    return
+  }
+
+  await playCurrentSource()
+}
+
+watch(() => props.src, (newSrc, oldSrc) => {
+  if (!waveSurfer || newSrc === oldSrc) {
+    return
+  }
+
+  recreateWaveSurferInstance()
+})
+
+onMounted(() => {
+  if (!waveformRef.value) {
+    return
+  }
+
+  waveSurfer = createWaveSurferInstance(waveformRef.value)
 })
 
 onBeforeUnmount(() => {
-  waveSurfer?.destroy()
-  waveSurfer = undefined
+  destroyWaveSurferInstance()
 })
 </script>
 
@@ -212,7 +305,7 @@ onBeforeUnmount(() => {
       size="icon-sm"
       data-testid="statement-audio-preview-toggle"
       class="rounded-md shrink-0 size-7"
-      :disabled="!isReady"
+      :disabled="!canTogglePlayback"
       @click="handleTogglePlayback"
     >
       <Pause v-if="isPlaying" class="size-3.5" />

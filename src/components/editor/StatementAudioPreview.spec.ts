@@ -119,7 +119,7 @@ describe('StatementAudioPreview', () => {
     }))
   })
 
-  it('会切换播放状态并在播放时显示剩余时间', async () => {
+  it('首次点击时才会加载音频，并在播放时显示剩余时间', async () => {
     waveSurferState.duration = 94
     document.documentElement.style.setProperty('--primary', 'oklch(0.62 0.19 259)')
     document.documentElement.style.setProperty('--muted-foreground', 'oklch(0.48 0.02 264)')
@@ -134,13 +134,16 @@ describe('StatementAudioPreview', () => {
     expect(waveSurferCreateMock).not.toHaveBeenCalledWith(expect.objectContaining({
       url: '/audio/theme.ogg',
     }))
+    expect(waveSurferLoadMock).not.toHaveBeenCalled()
+
+    await page.getByTestId('statement-audio-preview-toggle').click()
     expect(waveSurferLoadMock).toHaveBeenCalledWith('/audio/theme.ogg')
 
     emitWaveSurferEvent('ready')
+    await vi.waitFor(() => {
+      expect(waveSurferPlayMock).toHaveBeenCalledOnce()
+    })
     await expect.element(page.getByTestId('statement-audio-preview-time')).toHaveTextContent('1:34')
-
-    await page.getByTestId('statement-audio-preview-toggle').click()
-    expect(waveSurferPlayMock).toHaveBeenCalledOnce()
 
     waveSurferState.isPlaying = true
     waveSurferState.currentTime = 12
@@ -206,10 +209,10 @@ describe('StatementAudioPreview', () => {
     }))
   })
 
-  it('ready 前显示占位直线并禁用播放按钮，ready 后切换到真实波形', async () => {
+  it('未交互前保持占位直线且允许触发加载，ready 后切换到真实波形', async () => {
     await renderStatementAudioPreview()
 
-    await expect.element(page.getByTestId('statement-audio-preview-toggle')).toHaveAttribute('disabled')
+    await expect.element(page.getByTestId('statement-audio-preview-toggle')).not.toHaveAttribute('disabled')
     await expect.element(page.getByTestId('statement-audio-preview-placeholder')).toHaveAttribute('data-state', 'visible')
     await expect.element(page.getByTestId('statement-audio-preview-placeholder-line')).toHaveClass('h-[1.5px]')
     await expect.element(page.getByTestId('statement-audio-preview-waveform')).toHaveAttribute('data-state', 'loading')
@@ -221,13 +224,21 @@ describe('StatementAudioPreview', () => {
     await expect.element(page.getByTestId('statement-audio-preview-waveform')).toHaveAttribute('data-state', 'ready')
   })
 
-  it('src 变化时会重新加载音频，并在卸载时销毁实例', async () => {
+  it('src 变化时会重置为待加载状态，并在再次交互后加载新音频', async () => {
     const result = await renderStatementAudioPreview('/audio/alpha.mp3')
+
+    await page.getByTestId('statement-audio-preview-toggle').click()
+    expect(waveSurferLoadMock).toHaveBeenCalledWith('/audio/alpha.mp3')
+
+    emitWaveSurferEvent('ready')
 
     await result.rerender({
       src: '/audio/beta.mp3',
     })
 
+    expect(waveSurferLoadMock).not.toHaveBeenCalledWith('/audio/beta.mp3')
+
+    await page.getByTestId('statement-audio-preview-toggle').click()
     expect(waveSurferLoadMock).toHaveBeenCalledWith('/audio/beta.mp3')
 
     await result.unmount()
@@ -239,6 +250,7 @@ describe('StatementAudioPreview', () => {
     waveSurferLoadMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
 
     await renderStatementAudioPreview()
+    await page.getByTestId('statement-audio-preview-toggle').click()
 
     await vi.waitFor(() => {
       expect(loggerWarnMock).toHaveBeenCalledTimes(1)
