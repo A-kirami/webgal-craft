@@ -38,10 +38,11 @@ use tower_http::{services::ServeDir, set_header::SetResponseHeaderLayer};
 
 use super::{AppError, AppResult};
 
-const STATIC_FILE_ALLOWED_CORS_ORIGINS: [&str; 3] = [
+const STATIC_FILE_ALLOWED_CORS_ORIGINS: [&str; 4] = [
     "http://localhost:1420",
     "http://127.0.0.1:1420",
     "http://tauri.localhost",
+    "tauri://localhost",
 ];
 
 /// 应用程序状态
@@ -579,6 +580,10 @@ mod tests {
         assert_eq!(
             resolve_static_file_cors_origin(Some("http://tauri.localhost")),
             Some("http://tauri.localhost")
+        );
+        assert_eq!(
+            resolve_static_file_cors_origin(Some("tauri://localhost")),
+            Some("tauri://localhost")
         );
     }
 
