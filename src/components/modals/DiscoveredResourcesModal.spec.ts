@@ -118,4 +118,29 @@ describe('DiscoveredResourcesModal', () => {
       resizeMode: 'contain',
     }))
   })
+
+  it('发现资源图标会为预览失败场景提供可见回退图', async () => {
+    renderInBrowser(DiscoveredResourcesModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        open: true,
+        resources: [
+          {
+            path: '/games/demo',
+            name: 'Demo Game',
+            icon: '/games/demo/icons/favicon.ico',
+          },
+        ],
+        type: 'games',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const image = await page.getByAltText('Demo Game').element()
+    expect(image.dataset.fallbackImage).toBe('/placeholder.svg')
+  })
 })

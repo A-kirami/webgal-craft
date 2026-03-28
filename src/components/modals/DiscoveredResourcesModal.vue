@@ -103,6 +103,7 @@ function resolveResourceServeUrl(resource: { path: string }): string | undefined
                 :root-path="resource.path"
                 :serve-url="resolveResourceServeUrl(resource)"
                 :alt="resource.name"
+                fallback-image="/placeholder.svg"
                 :thumbnail="DISCOVERED_RESOURCE_ICON_THUMBNAIL"
                 class="rounded shrink-0 size-10"
               />
