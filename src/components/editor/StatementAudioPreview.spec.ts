@@ -129,7 +129,7 @@ describe('StatementAudioPreview', () => {
     expect(waveSurferCreateMock).toHaveBeenCalledWith(expect.objectContaining({
       backend: 'MediaElement',
       progressColor: 'oklch(0.62 0.19 259)',
-      waveColor: 'oklch(0.48 0.02 264)',
+      waveColor: 'oklch(0.662 0.011 264)',
     }))
     expect(waveSurferCreateMock).not.toHaveBeenCalledWith(expect.objectContaining({
       url: '/audio/theme.ogg',
@@ -205,7 +205,7 @@ describe('StatementAudioPreview', () => {
 
     expect(waveSurferCreateMock).toHaveBeenCalledWith(expect.objectContaining({
       progressColor: 'oklch(0.62 0.19 259)',
-      waveColor: 'oklch(0.48 0.02 264)',
+      waveColor: 'oklch(0.662 0.011 264)',
     }))
   })
 

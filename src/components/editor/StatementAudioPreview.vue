@@ -84,6 +84,23 @@ function resolveThemeColor(variableName: string, fallbackColor: string): string 
   return `oklch(${variableValue})`
 }
 
+function softenWaveColor(color: string): string {
+  const match = color.match(/^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*[\d.]+%?)?\s*\)$/)
+  if (!match) {
+    return color
+  }
+
+  const [, rawLightness, lightnessUnit, rawChroma, rawHue] = match
+  const parsedLightness = Number.parseFloat(rawLightness)
+  const normalizedLightness = lightnessUnit === '%' ? parsedLightness / 100 : parsedLightness
+  const chroma = Number.parseFloat(rawChroma)
+  const hue = Number.parseFloat(rawHue)
+  const softenedLightness = Math.min(0.76, normalizedLightness + (1 - normalizedLightness) * 0.35)
+  const softenedChroma = chroma * 0.55
+
+  return `oklch(${softenedLightness.toFixed(3)} ${softenedChroma.toFixed(3)} ${hue})`
+}
+
 function formatAudioTime(totalSeconds: number): string {
   if (!Number.isFinite(totalSeconds) || totalSeconds < 0) {
     return '0:00'
@@ -130,7 +147,8 @@ function createWaveSurferOptions(container: HTMLDivElement): WaveSurferOptions {
     normalize: true,
     progressColor: resolveThemeColor('--primary', 'hsl(221.2 83.2% 53.3%)'),
     renderFunction: renderContinuousWaveform,
-    waveColor: resolveThemeColor('--muted-foreground', 'hsl(215.4 16.3% 46.9%)'),
+    // 不用 alpha，避免 progress 层沿用背景波形的透明度一起变淡。
+    waveColor: softenWaveColor(resolveThemeColor('--muted-foreground', 'oklch(0.48 0.02 264)')),
   }
 }
 
