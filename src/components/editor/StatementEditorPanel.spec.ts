@@ -152,6 +152,10 @@ function createEditorReturn(overrides: Record<string, unknown> = {}) {
       handleUpdateValue: vi.fn(),
       sharedProps: computed(() => ({})),
     },
+    params: {
+      isFieldVisible: vi.fn(() => true),
+      readArgRuntimeValue: vi.fn(() => undefined),
+    },
     ...overrides,
   }
 }
@@ -470,5 +474,82 @@ describe('StatementEditorPanel', () => {
 
     await expect.element(page.getByTestId('statement-asset-preview')).toHaveAttribute('data-url', 'http://127.0.0.1:8899/assets/video/opening.webm')
     await expect.element(page.getByTestId('statement-asset-preview')).toHaveAttribute('data-mime-type', 'video/webm')
+  })
+
+  it('say 语句会把 vocal 参数解析为侧边栏音频预览', async () => {
+    const readArgRuntimeValue = vi.fn((argField) => {
+      return argField.storageKey === 'vocal' ? 'voice/theme.ogg' : undefined
+    })
+
+    useEditSettingsStoreMock.mockReturnValue({
+      showSidebarAssetPreview: true,
+    })
+    useStatementEditorMock.mockReturnValue(createEditorReturn({
+      parsed: computed(() => ({
+        args: [{ key: 'vocal', value: 'voice/theme.ogg' }],
+        command: commandType.say,
+        content: 'Hello',
+        inlineComment: '',
+      })),
+      contentField: computed(() => ({
+        key: 'content',
+        storage: 'content',
+        field: {
+          key: 'content',
+          label: 'text',
+          type: 'text',
+        },
+      })),
+      params: {
+        isFieldVisible: vi.fn(() => true),
+        readArgRuntimeValue,
+      },
+      resource: {
+        fileRootPaths: computed(() => ({
+          vocal: '/games/demo/assets/vocal',
+        })),
+      },
+      view: {
+        basicRenderFields: computed(() => [{
+          argField: {
+            field: {
+              key: 'vocal',
+              label: 'vocal',
+              type: 'file',
+              fileConfig: {
+                assetType: 'vocal',
+                extensions: ['.ogg'],
+                title: 'vocal',
+              },
+            },
+            storageKey: 'vocal',
+          },
+          field: {
+            key: 'vocal',
+            label: 'vocal',
+            type: 'file',
+            fileConfig: {
+              assetType: 'vocal',
+              extensions: ['.ogg'],
+              title: 'vocal',
+            },
+          },
+          key: 'vocal',
+          storage: 'arg',
+        }]),
+        commandRenderFields: computed(() => []),
+        effectEditorAtTop: computed(() => false),
+        showAnimationEditorButton: computed(() => false),
+        showEffectEditorButton: computed(() => false),
+        specialContentMode: computed(() => undefined),
+      },
+    }))
+
+    renderStatementEditorPanel({
+      entry: createStatementEntry(14, 'Alice:Hello -vocal=voice/theme.ogg'),
+    })
+
+    await expect.element(page.getByTestId('statement-asset-preview')).toHaveAttribute('data-url', 'http://127.0.0.1:8899/assets/vocal/voice/theme.ogg')
+    await expect.element(page.getByTestId('statement-asset-preview')).toHaveAttribute('data-mime-type', 'audio/ogg')
   })
 })

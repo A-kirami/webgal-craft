@@ -52,6 +52,7 @@ const {
   hasVisibleAdvancedParams,
   content,
   misc,
+  params,
   say,
   view,
   paramRenderer,
@@ -111,14 +112,45 @@ watch(
 const editSettings = useEditSettingsStore()
 const workspaceStore = useWorkspaceStore()
 
-const previewMedia = $computed(() => resolveStatementPanelPreviewMedia({
-  content: parsed.value?.content,
-  contentField: contentField.value,
-  cwd: workspaceStore.CWD,
-  fileRootPaths: resource.fileRootPaths.value,
-  previewBaseUrl: workspaceStore.currentGameServeUrl,
-  showSidebarAssetPreview: editSettings.showSidebarAssetPreview,
-}))
+const previewMedia = $computed(() => {
+  const previewContext = {
+    cwd: workspaceStore.CWD,
+    fileRootPaths: resource.fileRootPaths.value,
+    previewBaseUrl: workspaceStore.currentGameServeUrl,
+    showSidebarAssetPreview: editSettings.showSidebarAssetPreview,
+  }
+
+  const contentPreview = resolveStatementPanelPreviewMedia({
+    ...previewContext,
+    content: parsed.value?.content,
+    contentField: contentField.value,
+  })
+  if (contentPreview) {
+    return contentPreview
+  }
+
+  for (const field of view.basicRenderFields.value) {
+    if (field.storage !== 'arg' || field.field.type !== 'file' || !params.isFieldVisible(field)) {
+      continue
+    }
+
+    const argValue = params.readArgRuntimeValue(field.argField)
+    if (typeof argValue !== 'string' || argValue === '') {
+      continue
+    }
+
+    const argPreview = resolveStatementPanelPreviewMedia({
+      ...previewContext,
+      content: argValue,
+      contentField: field,
+    })
+    if (argPreview) {
+      return argPreview
+    }
+  }
+
+  return
+})
 
 function handleBlankDblClick(e: MouseEvent) {
   if (isStatementInteractiveTarget(e.target)) {
