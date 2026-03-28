@@ -288,8 +288,21 @@ async function importGame(gamePath: string): Promise<string> {
  * @param gameId 游戏ID
  */
 async function updateGameLastModified(gameId: string): Promise<void> {
-  const patch = {
-    lastModified: Date.now(),
+  const cacheVersion = Date.now()
+  const patch: Partial<Pick<Game, 'lastModified' | 'previewAssets'>> = {
+    lastModified: cacheVersion,
+  }
+
+  const game = await db.games.get(gameId)
+  if (game) {
+    try {
+      patch.previewAssets = withGamePreviewCacheVersion(
+        await getGamePreviewAssets(game.path),
+        cacheVersion,
+      )
+    } catch (error) {
+      logger.warn(`刷新游戏预览资源快照失败: ${error}`)
+    }
   }
 
   await db.games.update(gameId, patch)

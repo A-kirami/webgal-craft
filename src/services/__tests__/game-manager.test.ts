@@ -19,6 +19,7 @@ const {
   gameIconPathMock,
   loggerErrorMock,
   loggerInfoMock,
+  loggerWarnMock,
   removeMock,
   resourceStoreMock,
   useResourceStoreMock,
@@ -39,6 +40,7 @@ const {
   gameIconPathMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   loggerInfoMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
   removeMock: vi.fn(),
   resourceStoreMock: {
     updateProgress: vi.fn(),
@@ -76,7 +78,7 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 vi.mock('@tauri-apps/plugin-log', () => ({
   info: loggerInfoMock,
   error: loggerErrorMock,
-  warn: vi.fn(),
+  warn: loggerWarnMock,
   debug: vi.fn(),
   attachConsole: vi.fn(),
 }))
@@ -136,6 +138,7 @@ describe('gameManager 游戏管理', () => {
     gameIconPathMock.mockReset()
     loggerErrorMock.mockReset()
     loggerInfoMock.mockReset()
+    loggerWarnMock.mockReset()
     removeMock.mockReset()
     resourceStoreMock.updateProgress.mockReset()
     resourceStoreMock.finishProgress.mockReset()
@@ -383,7 +386,7 @@ describe('gameManager 游戏管理', () => {
     expect(deleteFileMock.mock.invocationCallOrder[0]).toBeLessThan(dbGamesDeleteMock.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY)
   })
 
-  it('updateGameLastModified 只更新时间戳，不会重写当前游戏的预览快照', async () => {
+  it('updateGameLastModified 会刷新预览资源快照与缓存版本', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     workspaceStoreState.currentGame = {
@@ -414,6 +417,16 @@ describe('gameManager 游戏管理', () => {
 
     expect(dbGamesUpdateMock).toHaveBeenCalledWith('game-1', {
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/next.ico',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+        cover: {
+          path: '/games/demo/assets/cover-next.png',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+      },
     })
     expect(workspaceStoreState.currentGame).toEqual({
       id: 'game-1',
@@ -422,16 +435,34 @@ describe('gameManager 游戏管理', () => {
       },
       previewAssets: {
         icon: {
-          path: '/games/demo/icons/favicon.ico',
-          cacheVersion: 111,
+          path: '/games/demo/icons/next.ico',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
         },
         cover: {
-          path: '/games/demo/assets/cover.png',
-          cacheVersion: 222,
+          path: '/games/demo/assets/cover-next.png',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
         },
       },
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
     })
+  })
+
+  it('updateGameLastModified 在预览资源解析失败时仍会更新时间戳', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
+    dbGamesGetMock.mockResolvedValue({
+      id: 'game-1',
+      path: '/games/demo',
+    })
+    gameCmdsGetGameConfigMock.mockResolvedValue({ gameName: 'Demo Game', titleImg: 'cover.png' })
+    gameIconPathMock.mockRejectedValue(new Error('icon missing'))
+
+    await gameManager.updateGameLastModified('game-1')
+
+    expect(dbGamesUpdateMock).toHaveBeenCalledWith('game-1', {
+      lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
+    })
+    expect(loggerWarnMock).toHaveBeenCalledWith('刷新游戏预览资源快照失败: Error: icon missing')
   })
 
   it('updateCurrentGameLastModified 会按 500ms 防抖更新当前游戏', async () => {
