@@ -1,3 +1,8 @@
+import '~/__tests__/mocks/i18n'
+import '~/__tests__/mocks/modal-store'
+import '~/__tests__/mocks/router'
+import '~/__tests__/mocks/tauri-fs'
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { computed, defineComponent, h, reactive } from 'vue'
@@ -15,10 +20,17 @@ const {
   handleCommentChangeMock,
   handleInlineCommentChangeMock,
   handleRawTextChangeMock,
+  gameAssetDirMock,
+  gameSceneDirMock,
+  loggerDebugMock,
+  loggerErrorMock,
+  loggerInfoMock,
+  loggerWarnMock,
   openAnimationEditorMock,
   handleSpeakerChangeMock,
   openEffectEditorMock,
   toggleNarrationModeMock,
+  useFileSystemEventsMock,
   useEditSettingsStoreMock,
   useStatementAnimationEditorBridgeMock,
   useStatementEditorMock,
@@ -28,10 +40,17 @@ const {
   handleCommentChangeMock: vi.fn(),
   handleInlineCommentChangeMock: vi.fn(),
   handleRawTextChangeMock: vi.fn(),
+  gameAssetDirMock: vi.fn(),
+  gameSceneDirMock: vi.fn(),
+  loggerDebugMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
+  loggerInfoMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
   openAnimationEditorMock: vi.fn(),
   handleSpeakerChangeMock: vi.fn(),
   openEffectEditorMock: vi.fn(),
   toggleNarrationModeMock: vi.fn(),
+  useFileSystemEventsMock: vi.fn(),
   useEditSettingsStoreMock: vi.fn(),
   useStatementAnimationEditorBridgeMock: vi.fn(),
   useStatementEditorMock: vi.fn(),
@@ -78,6 +97,23 @@ vi.mock('~/stores/edit-settings', () => ({
 
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
+}))
+
+vi.mock('~/services/platform/app-paths', () => ({
+  gameAssetDir: gameAssetDirMock,
+  gameSceneDir: gameSceneDirMock,
+}))
+
+vi.mock('~/composables/useFileSystemEvents', () => ({
+  useFileSystemEvents: useFileSystemEventsMock,
+}))
+
+vi.mock('@tauri-apps/plugin-log', () => ({
+  debug: loggerDebugMock,
+  error: loggerErrorMock,
+  info: loggerInfoMock,
+  trace: vi.fn(),
+  warn: loggerWarnMock,
 }))
 
 import StatementEditorPanel from './StatementEditorPanel.vue'
@@ -271,6 +307,13 @@ describe('StatementEditorPanel', () => {
     openAnimationEditorMock.mockReset()
     openEffectEditorMock.mockReset()
     toggleNarrationModeMock.mockReset()
+    gameAssetDirMock.mockReset()
+    gameSceneDirMock.mockReset()
+    loggerDebugMock.mockReset()
+    loggerErrorMock.mockReset()
+    loggerInfoMock.mockReset()
+    loggerWarnMock.mockReset()
+    useFileSystemEventsMock.mockReset()
     useEditSettingsStoreMock.mockReset()
     useStatementAnimationEditorBridgeMock.mockReset()
     useStatementEditorMock.mockReset()
@@ -286,10 +329,15 @@ describe('StatementEditorPanel', () => {
     useStatementAnimationEditorBridgeMock.mockReturnValue({
       openAnimationEditor: openAnimationEditorMock,
     })
+    useFileSystemEventsMock.mockReturnValue({
+      on: vi.fn(),
+    })
     useWorkspaceStoreMock.mockReturnValue(reactive({
       CWD: '/games/demo',
       currentGameServeUrl: 'http://127.0.0.1:8899',
     }))
+    gameAssetDirMock.mockImplementation(async (_cwd: string, assetType: string) => `/games/demo/assets/${assetType}`)
+    gameSceneDirMock.mockResolvedValue('/games/demo/scene')
   })
 
   it('点击标题会触发 focusStatement，点击效果编辑器会打开桥接弹窗', async () => {
@@ -477,73 +525,14 @@ describe('StatementEditorPanel', () => {
   })
 
   it('say 语句会把 vocal 参数解析为侧边栏音频预览', async () => {
-    const readArgRuntimeValue = vi.fn((argField) => {
-      return argField.storageKey === 'vocal' ? 'voice/theme.ogg' : undefined
-    })
+    const { useStatementEditor } = await vi.importActual<typeof import('~/features/editor/statement-editor/useStatementEditor')>(
+      '~/features/editor/statement-editor/useStatementEditor',
+    )
 
     useEditSettingsStoreMock.mockReturnValue({
       showSidebarAssetPreview: true,
     })
-    useStatementEditorMock.mockReturnValue(createEditorReturn({
-      parsed: computed(() => ({
-        args: [{ key: 'vocal', value: 'voice/theme.ogg' }],
-        command: commandType.say,
-        content: 'Hello',
-        inlineComment: '',
-      })),
-      contentField: computed(() => ({
-        key: 'content',
-        storage: 'content',
-        field: {
-          key: 'content',
-          label: 'text',
-          type: 'text',
-        },
-      })),
-      params: {
-        isFieldVisible: vi.fn(() => true),
-        readArgRuntimeValue,
-      },
-      resource: {
-        fileRootPaths: computed(() => ({
-          vocal: '/games/demo/assets/vocal',
-        })),
-      },
-      view: {
-        basicRenderFields: computed(() => [{
-          argField: {
-            field: {
-              key: 'vocal',
-              label: 'vocal',
-              type: 'file',
-              fileConfig: {
-                assetType: 'vocal',
-                extensions: ['.ogg'],
-                title: 'vocal',
-              },
-            },
-            storageKey: 'vocal',
-          },
-          field: {
-            key: 'vocal',
-            label: 'vocal',
-            type: 'file',
-            fileConfig: {
-              assetType: 'vocal',
-              extensions: ['.ogg'],
-              title: 'vocal',
-            },
-          },
-          key: 'vocal',
-          storage: 'arg',
-        }]),
-        commandRenderFields: computed(() => []),
-        effectEditorAtTop: computed(() => false),
-        showAnimationEditorButton: computed(() => false),
-        showEffectEditorButton: computed(() => false),
-        specialContentMode: computed(() => undefined),
-      },
-    }))
+    useStatementEditorMock.mockImplementation(options => useStatementEditor(options))
 
     renderStatementEditorPanel({
       entry: createStatementEntry(14, 'Alice:Hello -vocal=voice/theme.ogg'),

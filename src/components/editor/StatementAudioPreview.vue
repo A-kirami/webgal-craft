@@ -77,6 +77,10 @@ function resolveThemeColor(variableName: string, fallbackColor: string): string 
     return fallbackColor
   }
 
+  if (globalThis.CSS?.supports?.('color', variableValue)) {
+    return variableValue
+  }
+
   if (variableValue.includes('(') || variableValue.startsWith('#')) {
     return variableValue
   }

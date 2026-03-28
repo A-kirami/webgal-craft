@@ -216,14 +216,13 @@ fn resolve_static_file_cors_origin_from_headers(headers: &HeaderMap) -> Option<&
 }
 
 fn append_static_file_cors_headers(response: &mut Response, origin: Option<&'static str>) {
-    let Some(allowed_origin) = origin else {
-        return;
-    };
+    if let Some(allowed_origin) = origin {
+        response.headers_mut().insert(
+            ACCESS_CONTROL_ALLOW_ORIGIN,
+            HeaderValue::from_static(allowed_origin),
+        );
+    }
 
-    response.headers_mut().insert(
-        ACCESS_CONTROL_ALLOW_ORIGIN,
-        HeaderValue::from_static(allowed_origin),
-    );
     response
         .headers_mut()
         .insert(VARY, HeaderValue::from_static("Origin"));
@@ -565,7 +564,19 @@ pub async fn get_connected_clients(
 
 #[cfg(test)]
 mod tests {
-    use super::resolve_static_file_cors_origin;
+    use axum::{
+        body::Body,
+        http::{
+            header::{ACCESS_CONTROL_ALLOW_ORIGIN, ORIGIN, VARY},
+            HeaderMap, HeaderValue,
+        },
+        response::Response,
+    };
+
+    use super::{
+        append_static_file_cors_headers, resolve_static_file_cors_origin,
+        resolve_static_file_cors_origin_from_headers,
+    };
 
     #[test]
     fn resolve_static_file_cors_origin_allows_known_app_origins() {
@@ -599,5 +610,68 @@ mod tests {
             None
         );
         assert_eq!(resolve_static_file_cors_origin(Some("null")), None);
+    }
+
+    #[test]
+    fn resolve_static_file_cors_origin_from_headers_returns_allowed_origin() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            ORIGIN,
+            HeaderValue::from_static("http://localhost:1420"),
+        );
+
+        assert_eq!(
+            resolve_static_file_cors_origin_from_headers(&headers),
+            Some("http://localhost:1420")
+        );
+    }
+
+    #[test]
+    fn resolve_static_file_cors_origin_from_headers_rejects_missing_or_invalid_origin() {
+        let missing_headers = HeaderMap::new();
+        assert_eq!(
+            resolve_static_file_cors_origin_from_headers(&missing_headers),
+            None
+        );
+
+        let mut invalid_headers = HeaderMap::new();
+        invalid_headers.insert(
+            ORIGIN,
+            HeaderValue::from_bytes(b"http://localhost:1420\xff").unwrap(),
+        );
+
+        assert_eq!(
+            resolve_static_file_cors_origin_from_headers(&invalid_headers),
+            None
+        );
+    }
+
+    #[test]
+    fn append_static_file_cors_headers_sets_origin_and_vary_for_allowed_origin() {
+        let mut response = Response::new(Body::empty());
+
+        append_static_file_cors_headers(&mut response, Some("http://localhost:1420"));
+
+        assert_eq!(
+            response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN),
+            Some(&HeaderValue::from_static("http://localhost:1420"))
+        );
+        assert_eq!(
+            response.headers().get(VARY),
+            Some(&HeaderValue::from_static("Origin"))
+        );
+    }
+
+    #[test]
+    fn append_static_file_cors_headers_keeps_vary_without_allow_origin_when_origin_is_missing() {
+        let mut response = Response::new(Body::empty());
+
+        append_static_file_cors_headers(&mut response, None);
+
+        assert_eq!(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), None);
+        assert_eq!(
+            response.headers().get(VARY),
+            Some(&HeaderValue::from_static("Origin"))
+        );
     }
 }

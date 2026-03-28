@@ -178,6 +178,7 @@ describe('StatementAudioPreview', () => {
       closePath: vi.fn(),
       fill: vi.fn(),
       fillStyle: '#000000',
+      lineWidth: 0,
       lineTo: vi.fn(),
       moveTo: vi.fn(),
       restore: vi.fn(),
@@ -192,9 +193,22 @@ describe('StatementAudioPreview', () => {
     expect(context.save).toHaveBeenCalled()
     expect(context.translate).toHaveBeenCalledWith(0, 15)
     expect(context.arc).toHaveBeenCalled()
+    expect(context.lineWidth).toBe(1.5)
     expect(context.stroke).toHaveBeenCalled()
     expect(context.restore).toHaveBeenCalled()
     expect(context.fill).not.toHaveBeenCalled()
+  })
+
+  it('会保留合法的 CSS 颜色关键字，不错误包裹 oklch', async () => {
+    document.documentElement.style.setProperty('--primary', 'red')
+    document.documentElement.style.setProperty('--muted-foreground', 'blue')
+
+    await renderStatementAudioPreview()
+
+    expect(waveSurferCreateMock).toHaveBeenCalledWith(expect.objectContaining({
+      progressColor: 'red',
+      waveColor: 'blue',
+    }))
   })
 
   it('会将裸 OKLCH 主题通道值解析为合法颜色', async () => {
