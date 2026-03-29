@@ -294,18 +294,20 @@ async function updateGameLastModified(gameId: string): Promise<void> {
   }
 
   const game = await db.games.get(gameId)
-  if (game) {
-    try {
-      patch.previewAssets = withGamePreviewCacheVersion(
-        await getGamePreviewAssets(game.path),
-        cacheVersion,
-      )
-    } catch (error) {
-      if (game.previewAssets) {
-        patch.previewAssets = withGamePreviewCacheVersion(game.previewAssets, cacheVersion)
-      }
-      logger.warn(`刷新游戏预览资源快照失败: ${error}`)
+  if (!game) {
+    return
+  }
+
+  try {
+    patch.previewAssets = withGamePreviewCacheVersion(
+      await getGamePreviewAssets(game.path),
+      cacheVersion,
+    )
+  } catch (error) {
+    if (game.previewAssets) {
+      patch.previewAssets = withGamePreviewCacheVersion(game.previewAssets, cacheVersion)
     }
+    logger.warn(`刷新游戏预览资源快照失败: ${error}`)
   }
 
   await db.games.update(gameId, patch)

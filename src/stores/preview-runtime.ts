@@ -97,11 +97,7 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
   }
 
   async function ensureServeUrls(paths: string[]): Promise<void> {
-    const normalizedPaths = [...new Set(
-      paths
-        .map(path => path.trim())
-        .filter(Boolean),
-    )]
+    const normalizedPaths = [...new Set(paths.filter(Boolean))]
 
     if (normalizedPaths.length === 0) {
       return

@@ -57,6 +57,7 @@ const emit = defineEmits<{
 const FAILED_PREVIEW_RETRY_DELAY_MS = 5000
 
 const failedPreviewUrls = reactive(new Map<string, FailedPreviewEntry>())
+const pendingPreviewRetryTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   year: 'numeric',
@@ -99,6 +100,29 @@ function handleItemClick(item: FileViewerItem) {
   emit('itemClick', item)
 }
 
+function clearPendingPreviewRetry(itemPath: string) {
+  const pendingTimer = pendingPreviewRetryTimers.get(itemPath)
+  if (pendingTimer) {
+    clearTimeout(pendingTimer)
+    pendingPreviewRetryTimers.delete(itemPath)
+  }
+}
+
+function schedulePreviewRetry(itemPath: string, previewUrl: string) {
+  clearPendingPreviewRetry(itemPath)
+
+  const pendingTimer = setTimeout(() => {
+    pendingPreviewRetryTimers.delete(itemPath)
+
+    const failedPreview = failedPreviewUrls.get(itemPath)
+    if (failedPreview?.previewUrl === previewUrl) {
+      failedPreviewUrls.delete(itemPath)
+    }
+  }, FAILED_PREVIEW_RETRY_DELAY_MS)
+
+  pendingPreviewRetryTimers.set(itemPath, pendingTimer)
+}
+
 function resolveDisplayPreviewUrl(item: FileViewerItem, previewSize: FileViewerPreviewSize): string | undefined {
   if (!isImageFile(item) || !resolvePreviewUrl) {
     return undefined
@@ -123,6 +147,7 @@ function resolveDisplayPreviewUrl(item: FileViewerItem, previewSize: FileViewerP
       && failedPreview.previewUrl === previewUrl
       && Date.now() - failedPreview.failedAt >= FAILED_PREVIEW_RETRY_DELAY_MS
     ) {
+      clearPendingPreviewRetry(item.path)
       failedPreviewUrls.delete(item.path)
     }
 
@@ -143,7 +168,15 @@ function handleImageError(itemPath: string, previewUrl?: string) {
     previewUrl,
     failedAt: Date.now(),
   })
+  schedulePreviewRetry(itemPath, previewUrl)
 }
+
+onUnmounted(() => {
+  for (const pendingTimer of pendingPreviewRetryTimers.values()) {
+    clearTimeout(pendingTimer)
+  }
+  pendingPreviewRetryTimers.clear()
+})
 
 function getGridRowDisplayItems(rowIndex: number): FileViewerDisplayItem[] {
   const previewSize = {

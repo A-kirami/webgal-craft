@@ -22,8 +22,8 @@ export function createTestGame(options: TestGameFactoryOptions = {}): Game {
     cover: rawCover,
     icon: rawIcon,
   } = previewAssets ?? {}
-  const { path: _coverPath, ...cover } = rawCover ?? {}
-  const { path: _iconPath, ...icon } = rawIcon ?? {}
+  const { path: coverPath, ...cover } = rawCover ?? {}
+  const { path: iconPath, ...icon } = rawIcon ?? {}
 
   return {
     id: 'game-1',
@@ -38,11 +38,11 @@ export function createTestGame(options: TestGameFactoryOptions = {}): Game {
     },
     previewAssets: {
       cover: {
-        path: `${resolvedGamePath}/cover.png`,
+        path: coverPath ?? `${resolvedGamePath}/cover.png`,
         ...cover,
       },
       icon: {
-        path: `${resolvedGamePath}/icon.png`,
+        path: iconPath ?? `${resolvedGamePath}/icon.png`,
         ...icon,
       },
     },
@@ -53,7 +53,7 @@ export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine
   const { metadata, path, previewAssets, ...rest } = options
   const resolvedEnginePath = path ?? '/engines/default'
   const { icon: rawIcon } = previewAssets ?? {}
-  const { path: _iconPath, ...icon } = rawIcon ?? {}
+  const { path: iconPath, ...icon } = rawIcon ?? {}
 
   return {
     id: 'engine-1',
@@ -68,7 +68,7 @@ export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine
     },
     previewAssets: {
       icon: {
-        path: `${resolvedEnginePath}/icon.png`,
+        path: iconPath ?? `${resolvedEnginePath}/icon.png`,
         ...icon,
       },
     },

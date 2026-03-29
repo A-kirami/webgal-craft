@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { defineComponent, h, nextTick, onMounted, ref } from 'vue'
 
@@ -74,6 +74,11 @@ function createImageItem(index: number): FileViewerItem {
   }
 }
 
+function createPreviewUrl(item: FileViewerItem): string {
+  const previewPath = item.path.replace(/\.[^./\\]+$/, '.png')
+  return `http://127.0.0.1:8899/game/demo${previewPath}?t=${item.modifiedAt ?? 0}`
+}
+
 const globalStubs = {
   ScrollArea: defineComponent({
     name: 'StubScrollArea',
@@ -96,7 +101,7 @@ function createImageFallbackHarness(viewMode: 'grid' | 'list') {
     setup() {
       return () => h(FileViewer, {
         items: [createImageItem(1)],
-        resolvePreviewUrl: (item: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(item.path, preview),
+        resolvePreviewUrl: (item: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(item, preview),
         viewMode,
       }, {
         icon: ({ item }: { item: FileViewerItem, iconSize: number }) =>
@@ -184,6 +189,10 @@ describe('FileViewer 外观契约', () => {
     resolvePreviewUrlMock.mockReset()
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('默认不会为图片项私自生成预览 URL', async () => {
     viewportWidthMock.value = 780
 
@@ -202,13 +211,14 @@ describe('FileViewer 外观契约', () => {
   })
 
   it('网格模式图片项会使用带 modifiedAt 的 HTTP URL', async () => {
+    const item = createImageItem(1)
     viewportWidthMock.value = 780
-    resolvePreviewUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem) => createPreviewUrl(resolvedItem))
 
     renderInBrowser(FileViewer, {
       props: {
-        items: [createImageItem(1)],
-        resolvePreviewUrl: (item: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(item.path, preview),
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'grid',
       },
       global: {
@@ -216,21 +226,26 @@ describe('FileViewer 外观契约', () => {
       },
     })
 
-    expect(resolvePreviewUrlMock).toHaveBeenCalledWith('/assets/file-1.txt', {
+    expect(resolvePreviewUrlMock).toHaveBeenCalledWith(expect.objectContaining({
+      path: item.path,
+      modifiedAt: item.modifiedAt,
+      mimeType: item.mimeType,
+    }), {
       height: 64,
       width: 64,
     })
-    await expect.element(page.getByAltText('file-1.txt')).toHaveAttribute('src', 'http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
+    await expect.element(page.getByAltText(item.name)).toHaveAttribute('src', createPreviewUrl(item))
   })
 
   it('列表模式图片项也会使用 HTTP URL', async () => {
+    const item = createImageItem(1)
     viewportWidthMock.value = 780
-    resolvePreviewUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem) => createPreviewUrl(resolvedItem))
 
     renderInBrowser(FileViewer, {
       props: {
-        items: [createImageItem(1)],
-        resolvePreviewUrl: (item: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(item.path, preview),
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'list',
       },
       global: {
@@ -238,16 +253,20 @@ describe('FileViewer 外观契约', () => {
       },
     })
 
-    expect(resolvePreviewUrlMock).toHaveBeenCalledWith('/assets/file-1.txt', {
+    expect(resolvePreviewUrlMock).toHaveBeenCalledWith(expect.objectContaining({
+      path: item.path,
+      modifiedAt: item.modifiedAt,
+      mimeType: item.mimeType,
+    }), {
       height: 20,
       width: 20,
     })
-    await expect.element(page.getByAltText('file-1.txt')).toHaveAttribute('src', 'http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
+    await expect.element(page.getByAltText(item.name)).toHaveAttribute('src', createPreviewUrl(item))
   })
 
   it('网格模式图片加载失败后会回退到图标槽位', async () => {
     viewportWidthMock.value = 780
-    resolvePreviewUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
+    resolvePreviewUrlMock.mockImplementation((item: FileViewerItem) => createPreviewUrl(item))
 
     renderInBrowser(createImageFallbackHarness('grid'), {
       global: {
@@ -265,7 +284,7 @@ describe('FileViewer 外观契约', () => {
 
   it('列表模式图片加载失败后也会回退到图标槽位', async () => {
     viewportWidthMock.value = 780
-    resolvePreviewUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
+    resolvePreviewUrlMock.mockImplementation((item: FileViewerItem) => createPreviewUrl(item))
 
     renderInBrowser(createImageFallbackHarness('list'), {
       global: {
@@ -281,16 +300,18 @@ describe('FileViewer 外观契约', () => {
     await expect.element(page.getByTestId('list-icon-fallback')).toHaveTextContent('file-1.txt-fallback')
   })
 
-  it('图片预览失败一段时间后会再次尝试同一个 URL', async () => {
+  it('图片预览失败一段时间后会自动再次尝试同一个 URL', async () => {
+    const item = createImageItem(1)
+    const queryImage = () => document.querySelector<HTMLImageElement>(`img[alt="${item.name}"]`)
+
+    vi.useFakeTimers()
     viewportWidthMock.value = 780
-    resolvePreviewUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
-    let now = Date.parse('2026-03-29T10:00:00.000Z')
-    const dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now)
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem) => createPreviewUrl(resolvedItem))
 
     const result = await renderInBrowser(FileViewer, {
       props: {
-        items: [createImageItem(1)],
-        resolvePreviewUrl: (item: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(item.path, preview),
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'grid',
       },
       global: {
@@ -298,25 +319,17 @@ describe('FileViewer 外观契约', () => {
       },
     })
 
-    const image = await page.getByAltText('file-1.txt').element()
-    image.dispatchEvent(new Event('error'))
+    expect(queryImage()?.getAttribute('src')).toBe(createPreviewUrl(item))
+
+    queryImage()?.dispatchEvent(new Event('error'))
     await nextTick()
 
-    await expect.element(page.getByAltText('file-1.txt')).not.toBeInTheDocument()
+    expect(queryImage()).toBeNull()
 
-    now += 6_0000
-    await result.rerender({
-      items: [createImageItem(1)],
-      resolvePreviewUrl: (item: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(item.path, preview),
-      viewMode: 'grid',
-    })
+    await vi.advanceTimersByTimeAsync(5_000)
+    await nextTick()
 
-    await expect.element(page.getByAltText('file-1.txt')).toHaveAttribute(
-      'src',
-      'http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001',
-    )
-
-    dateNowSpy.mockRestore()
+    expect(queryImage()?.getAttribute('src')).toBe(createPreviewUrl(item))
     await result.unmount()
   })
 
@@ -359,10 +372,10 @@ describe('FileViewer 外观契约', () => {
           h('div', [
             h(FileViewer, {
               ref: fileViewerRef,
-              items: [createItem(1)],
-              viewMode: 'grid',
-            }, {
-              icon: ({ iconSize, item }: { iconSize: number, item: FileViewerItem }) =>
+        items: [createItem(1)],
+        viewMode: 'grid',
+      }, {
+        icon: ({ iconSize, item }: { iconSize: number, item: FileViewerItem }) =>
                 h('span', { 'data-testid': 'icon-slot-probe' }, `${item.name}:${iconSize}`),
             }),
             h('button', {

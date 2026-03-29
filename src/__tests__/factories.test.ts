@@ -43,6 +43,29 @@ describe('test factories', () => {
     })
   })
 
+  it('createTestGame 会保留调用方显式提供的预览资源路径', () => {
+    expect(createTestGame({
+      path: '/games/custom-demo',
+      previewAssets: {
+        cover: {
+          path: '/covers/custom-cover.png',
+        },
+        icon: {
+          path: '/icons/custom-icon.png',
+        },
+      },
+    })).toMatchObject({
+      previewAssets: {
+        cover: {
+          path: '/covers/custom-cover.png',
+        },
+        icon: {
+          path: '/icons/custom-icon.png',
+        },
+      },
+    })
+  })
+
   it('createTestEngine 会基于解析后的 engine path 生成默认图标路径', () => {
     expect(createTestEngine({
       path: '/engines/custom-engine',
@@ -69,6 +92,23 @@ describe('test factories', () => {
       previewAssets: {
         icon: {
           path: '/engines/default/icon.png',
+        },
+      },
+    })
+  })
+
+  it('createTestEngine 会保留调用方显式提供的图标路径', () => {
+    expect(createTestEngine({
+      path: '/engines/custom-engine',
+      previewAssets: {
+        icon: {
+          path: '/icons/custom-engine-icon.png',
+        },
+      },
+    })).toMatchObject({
+      previewAssets: {
+        icon: {
+          path: '/icons/custom-engine-icon.png',
         },
       },
     })

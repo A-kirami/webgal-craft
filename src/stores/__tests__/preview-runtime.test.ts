@@ -108,16 +108,17 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     )
   })
 
-  it('ensureServeUrls 会过滤空路径、裁剪空白并去重', async () => {
+  it('ensureServeUrls 会过滤空路径，并按原始路径字符串去重', async () => {
     startServerMock.mockResolvedValue('http://127.0.0.1:8899/')
     addStaticSiteMock.mockResolvedValue('game-alpha')
     const store = usePreviewRuntimeStore()
 
-    await store.ensureServeUrls(['', '  ', ' /games/alpha ', '/games/alpha'])
+    await store.ensureServeUrls(['', '/games/alpha ', '/games/alpha ', '/games/alpha'])
 
     expect(startServerMock).toHaveBeenCalledTimes(1)
-    expect(addStaticSiteMock).toHaveBeenCalledTimes(1)
-    expect(addStaticSiteMock).toHaveBeenCalledWith('/games/alpha')
+    expect(addStaticSiteMock).toHaveBeenCalledTimes(2)
+    expect(addStaticSiteMock).toHaveBeenNthCalledWith(1, '/games/alpha ')
+    expect(addStaticSiteMock).toHaveBeenNthCalledWith(2, '/games/alpha')
   })
 
   it('getServeUrl 会在站点预热完成后触发依赖它的响应式更新', async () => {

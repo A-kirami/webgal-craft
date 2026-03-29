@@ -145,6 +145,7 @@ describe('gameManager 游戏管理', () => {
     useResourceStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
     validateDirectoryStructureMock.mockReset()
+    workspaceStoreState.currentGame = { id: 'game-1' }
     useResourceStoreMock.mockReturnValue(resourceStoreMock)
     useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
     existsMock.mockResolvedValue(false)
@@ -445,6 +446,17 @@ describe('gameManager 游戏管理', () => {
     })
   })
 
+  it('updateGameLastModified 在游戏记录不存在时不会继续更新数据库或当前工作区状态', async () => {
+    dbGamesGetMock.mockResolvedValue(undefined)
+
+    await gameManager.updateGameLastModified('game-1')
+
+    expect(dbGamesUpdateMock).not.toHaveBeenCalled()
+    expect(workspaceStoreState.currentGame).toEqual({
+      id: 'game-1',
+    })
+  })
+
   it('updateGameLastModified 在预览资源解析失败时仍会推进预览缓存版本', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
@@ -518,6 +530,10 @@ describe('gameManager 游戏管理', () => {
 
   it('updateCurrentGameLastModified 会按 500ms 防抖更新当前游戏', async () => {
     vi.useFakeTimers()
+    dbGamesGetMock.mockResolvedValue({
+      id: 'game-1',
+      path: '/games/demo',
+    })
 
     gameManager.updateCurrentGameLastModified()
     gameManager.updateCurrentGameLastModified()
