@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { engineManager } from '~/services/engine-manager'
 import { AppError } from '~/types/errors'
@@ -119,7 +119,11 @@ describe('engineManager 引擎管理', () => {
     existsMock.mockResolvedValue(false)
   })
 
-  it('getEngineMetadata 会读取 manifest 并组合图标路径', async () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('getEngineMetadata 会读取 manifest 并返回语义元数据', async () => {
     engineIconPathMock.mockResolvedValue('/engines/WebGAL/icons/icon.png')
     engineManifestPathMock.mockResolvedValue('/engines/WebGAL/manifest.json')
     readTextFileMock.mockResolvedValue(JSON.stringify({
@@ -129,12 +133,50 @@ describe('engineManager 引擎管理', () => {
 
     await expect(engineManager.getEngineMetadata('/engines/WebGAL')).resolves.toEqual({
       name: 'WebGAL',
-      icon: '/engines/WebGAL/icons/icon.png',
       description: 'Visual novel engine',
     })
   })
 
+  it('getEnginePreviewAssets 只返回图标路径', async () => {
+    engineIconPathMock.mockResolvedValue('/engines/WebGAL/icons/icon.png')
+
+    await expect(engineManager.getEnginePreviewAssets('/engines/WebGAL')).resolves.toEqual({
+      icon: {
+        path: '/engines/WebGAL/icons/icon.png',
+      },
+    })
+  })
+
+  it('registerEngine 会保留调用方提供的 metadata 并只补齐缺失的 previewAssets', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
+    engineIconPathMock.mockResolvedValue('/engines/WebGAL/icons/icon.png')
+    dbEnginesAddMock.mockResolvedValue('engine-1')
+
+    await engineManager.registerEngine('/engines/WebGAL', {
+      metadata: {
+        name: 'Provided Engine',
+        description: 'Provided Description',
+      },
+    })
+
+    expect(dbEnginesAddMock).toHaveBeenCalledWith(expect.objectContaining({
+      metadata: {
+        name: 'Provided Engine',
+        description: 'Provided Description',
+      },
+      previewAssets: {
+        icon: {
+          path: '/engines/WebGAL/icons/icon.png',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+      },
+    }))
+  })
+
   it('installEngine 会复制到存储目录并在完成后更新数据库状态', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     engineIconPathMock.mockImplementation(async (path: string) => `${path}/icons/favicon.ico`)
     engineManifestPathMock.mockResolvedValue('/source/manifest.json')
     readTextFileMock.mockResolvedValue(JSON.stringify({
@@ -154,14 +196,30 @@ describe('engineManager 引擎管理', () => {
       status: 'creating',
       metadata: {
         name: 'WebGAL',
-        icon: '/engines/WebGAL/icons/favicon.ico',
         description: 'Visual novel engine',
+      },
+      previewAssets: {
+        icon: {
+          path: '/engines/WebGAL/icons/favicon.ico',
+        },
       },
     }))
     expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(1, 'engine-1', 10)
     expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(2, 'engine-1', 100)
     expect(resourceStoreMock.finishProgress).toHaveBeenCalledWith('engine-1')
-    expect(dbEnginesUpdateMock).toHaveBeenCalledWith('engine-1', { status: 'created' })
+    expect(dbEnginesUpdateMock).toHaveBeenCalledWith('engine-1', {
+      status: 'created',
+      metadata: {
+        name: 'WebGAL',
+        description: 'Visual novel engine',
+      },
+      previewAssets: {
+        icon: {
+          path: '/engines/WebGAL/icons/favicon.ico',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+      },
+    })
   })
 
   it('installEngine 在注册后失败时会回滚占位记录、进度和目标目录', async () => {
@@ -225,6 +283,8 @@ describe('engineManager 引擎管理', () => {
   })
 
   it('已位于目标目录的引擎会直接注册而不是重复复制', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     validateDirectoryStructureMock.mockResolvedValue(true)
     engineIconPathMock.mockImplementation(async (path: string) => `${path}/icons/favicon.ico`)
     engineManifestPathMock.mockResolvedValue('/engines/WebGAL/manifest.json')
@@ -240,8 +300,14 @@ describe('engineManager 引擎管理', () => {
       path: '/engines/WebGAL',
       status: 'created',
       metadata: expect.objectContaining({
-        icon: '/engines/WebGAL/icons/favicon.ico',
+        name: 'WebGAL',
       }),
+      previewAssets: {
+        icon: {
+          path: '/engines/WebGAL/icons/favicon.ico',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+      },
     }))
   })
 
@@ -253,8 +319,12 @@ describe('engineManager 引擎管理', () => {
       status: 'created',
       metadata: {
         name: 'WebGAL',
-        icon: '',
         description: '',
+      },
+      previewAssets: {
+        icon: {
+          path: '',
+        },
       },
     })
 

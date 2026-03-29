@@ -2,14 +2,19 @@ import { exists } from '@tauri-apps/plugin-fs'
 
 import { fsCmds } from '~/commands/fs'
 import { gameCmds } from '~/commands/game'
-import { serverCmds } from '~/commands/server'
 import { db } from '~/database/db'
 import { Game } from '~/database/model'
 import { gameCoverPath, gameIconPath } from '~/services/platform/app-paths'
-import { GameMetadata } from '~/services/types'
+import { GameMetadata, GamePreviewAssets } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
+
+interface RegisterGameOptions {
+  metadata?: GameMetadata
+  previewAssets?: GamePreviewAssets
+  status?: Game['status']
+}
 
 /**
  * 验证游戏目录
@@ -27,36 +32,130 @@ async function validateGame(gamePath: string) {
 /**
  * 获取游戏元数据
  * @param gamePath 游戏路径
- * @returns 游戏元数据，包含名称、图标和封面
+ * @returns 游戏元数据，仅包含语义字段
  */
 async function getGameMetadata(gamePath: string): Promise<GameMetadata> {
   const gameConfig = await gameCmds.getGameConfig(gamePath)
-  const iconPath = await gameIconPath(gamePath)
-  const coverPath = await gameCoverPath(gamePath, gameConfig.titleImg)
 
   return {
     name: gameConfig.gameName,
-    icon: iconPath,
-    cover: coverPath,
+  }
+}
+
+/**
+ * 获取游戏预览资源快照
+ * @param gamePath 游戏路径
+ * @returns 封面和图标的路径
+ */
+async function resolveGamePreviewAssets(gamePath: string, titleImage: string): Promise<GamePreviewAssets> {
+  const [iconPath, coverPath] = await Promise.all([
+    gameIconPath(gamePath),
+    gameCoverPath(gamePath, titleImage),
+  ])
+
+  return {
+    icon: {
+      path: iconPath,
+    },
+    cover: {
+      path: coverPath,
+    },
+  }
+}
+
+function withGamePreviewCacheVersion(
+  previewAssets: GamePreviewAssets,
+  cacheVersion: number = Date.now(),
+): GamePreviewAssets {
+  return {
+    icon: {
+      ...previewAssets.icon,
+      cacheVersion,
+    },
+    cover: {
+      ...previewAssets.cover,
+      cacheVersion,
+    },
+  }
+}
+
+async function getGamePreviewAssets(gamePath: string): Promise<GamePreviewAssets> {
+  const gameConfig = await gameCmds.getGameConfig(gamePath)
+  return await resolveGamePreviewAssets(gamePath, gameConfig.titleImg)
+}
+
+async function getGameSnapshot(gamePath: string): Promise<Pick<Game, 'metadata' | 'previewAssets'>> {
+  const gameConfig = await gameCmds.getGameConfig(gamePath)
+  const cacheVersion = Date.now()
+  const metadata = {
+    name: gameConfig.gameName,
+  }
+  const previewAssets = withGamePreviewCacheVersion(
+    await resolveGamePreviewAssets(gamePath, gameConfig.titleImg),
+    cacheVersion,
+  )
+
+  return {
+    metadata,
+    previewAssets,
+  }
+}
+
+function applyCurrentGamePatch(gameId: string, patch: Partial<Pick<Game, 'lastModified' | 'metadata' | 'previewAssets'>>) {
+  const workspaceStore = useWorkspaceStore()
+  if (!workspaceStore.currentGame || workspaceStore.currentGame.id !== gameId) {
+    return
+  }
+
+  const { currentGame } = workspaceStore
+  workspaceStore.currentGame = {
+    ...currentGame,
+    ...patch,
+    metadata: patch.metadata
+      ? {
+          ...currentGame.metadata,
+          ...patch.metadata,
+        }
+      : currentGame.metadata,
+    previewAssets: patch.previewAssets
+      ? {
+          ...currentGame.previewAssets,
+          ...patch.previewAssets,
+        }
+      : currentGame.previewAssets,
   }
 }
 
 /**
  * 注册游戏到数据库
  * @param gamePath 游戏路径
- * @param metadata 游戏元数据（可选，未提供时自动获取）
- * @param creating 是否正在创建
+ * @param options 注册选项；未提供的快照字段会自动补齐
  * @returns 游戏ID
  */
-async function registerGame(gamePath: string, metadata?: GameMetadata, creating?: boolean): Promise<string> {
-  metadata ??= await getGameMetadata(gamePath)
+async function registerGame(
+  gamePath: string,
+  options: RegisterGameOptions = {},
+): Promise<string> {
+  const { status = 'created' } = options
+  let { metadata, previewAssets } = options
+
+  if (!metadata && !previewAssets) {
+    const snapshot = await getGameSnapshot(gamePath)
+    metadata = snapshot.metadata
+    previewAssets = snapshot.previewAssets
+  } else {
+    metadata ??= await getGameMetadata(gamePath)
+    previewAssets ??= withGamePreviewCacheVersion(await getGamePreviewAssets(gamePath))
+  }
+
   return await db.games.add({
     id: crypto.randomUUID(),
     path: gamePath,
     createdAt: Date.now(),
     lastModified: Date.now(),
-    status: creating ? 'creating' : 'created',
+    status,
     metadata,
+    previewAssets,
   })
 }
 
@@ -75,10 +174,19 @@ async function createGame(gameName: string, gamePath: string, enginePath: string
 
   // 1. 先注册到数据库，包含初始元数据
   const id = await registerGame(gamePath, {
-    name: gameName,
-    icon: '',
-    cover: '',
-  }, true)
+    metadata: {
+      name: gameName,
+    },
+    previewAssets: {
+      icon: {
+        path: '',
+      },
+      cover: {
+        path: '',
+      },
+    },
+    status: 'creating',
+  })
   logger.info(`[游戏 ${gameName}] 注册到数据库`)
 
   // 2. 复制引擎文件
@@ -93,10 +201,10 @@ async function createGame(gameName: string, gamePath: string, enginePath: string
     await gameCmds.setGameConfig(gamePath, { gameName })
     logger.info(`[游戏 ${gameName}] 设置游戏配置`)
 
-    const metadata = await getGameMetadata(gamePath)
+    const snapshot = await getGameSnapshot(gamePath)
     await db.games.update(id, {
       status: 'created',
-      metadata,
+      ...snapshot,
     })
 
     resourceStore.finishProgress(id)
@@ -146,8 +254,17 @@ async function renameGame(id: string, newName: string): Promise<void> {
   if (!game) {
     throw new AppError('IO_ERROR', '游戏不存在')
   }
+
   await gameCmds.setGameConfig(game.path, { gameName: newName })
-  await updateGameLastModified(id)
+
+  const patch = {
+    lastModified: Date.now(),
+    metadata: {
+      name: newName,
+    },
+  }
+  await db.games.update(id, patch)
+  applyCurrentGamePatch(id, patch)
 }
 
 /**
@@ -167,30 +284,34 @@ async function importGame(gamePath: string): Promise<string> {
 }
 
 /**
- * 运行游戏预览
- * @param gamePath 游戏路径
- */
-async function runGamePreview(gamePath: string) {
-  const id = await serverCmds.addStaticSite(gamePath)
-  return `http://localhost:8899/game/${id}/`
-}
-
-/**
- * 停止游戏预览
- * @param gamePath 游戏路径
- */
-async function stopGamePreview(gameId: string) {
-  await serverCmds.removeStaticSite(gameId)
-}
-
-/**
  * 更新游戏的 lastModified 字段
  * @param gameId 游戏ID
  */
 async function updateGameLastModified(gameId: string): Promise<void> {
-  await db.games.update(gameId, {
-    lastModified: Date.now(),
-  })
+  const cacheVersion = Date.now()
+  const patch: Partial<Pick<Game, 'lastModified' | 'previewAssets'>> = {
+    lastModified: cacheVersion,
+  }
+
+  const game = await db.games.get(gameId)
+  if (!game) {
+    return
+  }
+
+  try {
+    patch.previewAssets = withGamePreviewCacheVersion(
+      await getGamePreviewAssets(game.path),
+      cacheVersion,
+    )
+  } catch (error) {
+    if (game.previewAssets) {
+      patch.previewAssets = withGamePreviewCacheVersion(game.previewAssets, cacheVersion)
+    }
+    logger.warn(`刷新游戏预览资源快照失败: ${error}`)
+  }
+
+  await db.games.update(gameId, patch)
+  applyCurrentGamePatch(gameId, patch)
 }
 
 /**
@@ -227,13 +348,13 @@ function updateCurrentGameLastModified(): void {
 export const gameManager = {
   validateGame,
   getGameMetadata,
+  getGamePreviewAssets,
+  getGameSnapshot,
   registerGame,
   createGame,
   deleteGame,
   renameGame,
   importGame,
-  runGamePreview,
-  stopGamePreview,
   updateGameLastModified,
   updateCurrentGameLastModified,
 }

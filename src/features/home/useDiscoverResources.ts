@@ -47,13 +47,13 @@ async function discoverResourcesInDirectory(
 
 async function enrichWithIcons<T extends DiscoveredResource>(
   resources: T[],
-  getMetadata: (path: string) => Promise<{ icon: string }>,
+  resolveIconPath: (path: string) => Promise<string>,
 ): Promise<T[]> {
   return Promise.all(
     resources.map(async (resource) => {
       try {
-        const metadata = await getMetadata(resource.path)
-        return { ...resource, icon: metadata.icon }
+        const icon = await resolveIconPath(resource.path)
+        return { ...resource, icon }
       } catch {
         return resource
       }
@@ -68,7 +68,10 @@ async function discoverGames(): Promise<DiscoveredResource[]> {
   }
 
   const games = await discoverResourcesInDirectory(gameSavePath, gameManager.validateGame)
-  return enrichWithIcons(games, gameManager.getGameMetadata)
+  return enrichWithIcons(games, async (path) => {
+    const previewAssets = await gameManager.getGamePreviewAssets(path)
+    return previewAssets.icon.path
+  })
 }
 
 async function discoverEngines(): Promise<DiscoveredResource[]> {
@@ -78,7 +81,10 @@ async function discoverEngines(): Promise<DiscoveredResource[]> {
   }
 
   const engines = await discoverResourcesInDirectory(engineSavePath, engineManager.validateEngine)
-  return enrichWithIcons(engines, engineManager.getEngineMetadata)
+  return enrichWithIcons(engines, async (path) => {
+    const previewAssets = await engineManager.getEnginePreviewAssets(path)
+    return previewAssets.icon.path
+  })
 }
 
 function filterAlreadyImported<T extends { path: string }>(

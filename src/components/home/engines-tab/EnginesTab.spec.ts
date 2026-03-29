@@ -11,6 +11,7 @@ import EnginesTab from './EnginesTab.vue'
 import type { Engine } from '~/database/model'
 
 const {
+  getServeUrlMock,
   importEngineMock,
   modalOpenMock,
   notifyErrorMock,
@@ -18,9 +19,11 @@ const {
   openDialogMock,
   openPathMock,
   useModalStoreMock,
+  usePreviewRuntimeStoreMock,
   usePreferenceStoreMock,
   useResourceStoreMock,
 } = vi.hoisted(() => ({
+  getServeUrlMock: vi.fn(),
   importEngineMock: vi.fn(),
   modalOpenMock: vi.fn(),
   notifyErrorMock: vi.fn(),
@@ -28,6 +31,7 @@ const {
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
   useModalStoreMock: vi.fn(),
+  usePreviewRuntimeStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
   useResourceStoreMock: vi.fn(),
 }))
@@ -68,11 +72,16 @@ vi.mock('~/stores/preference', () => ({
   usePreferenceStore: usePreferenceStoreMock,
 }))
 
+vi.mock('~/stores/preview-runtime', () => ({
+  usePreviewRuntimeStore: usePreviewRuntimeStoreMock,
+}))
+
 vi.mock('~/stores/resource', () => ({
   useResourceStore: useResourceStoreMock,
 }))
 
 const globalStubs = {
+  AssetImage: createBrowserContainerStub('StubAssetImage', 'img'),
   Button: createBrowserClickStub('StubButton'),
   Card: createBrowserContainerStub('StubCard'),
   CardContent: createBrowserContainerStub('StubCardContent'),
@@ -81,7 +90,6 @@ const globalStubs = {
   ContextMenuItem: createBrowserClickStub('StubContextMenuItem'),
   ContextMenuTrigger: createBrowserContainerStub('StubContextMenuTrigger'),
   Progress: createBrowserContainerStub('StubProgress'),
-  Thumbnail: createBrowserContainerStub('StubThumbnail', 'img'),
   Tooltip: createBrowserContainerStub('StubTooltip'),
   TooltipContent: createBrowserContainerStub('StubTooltipContent'),
   TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
@@ -109,10 +117,14 @@ describe('EnginesTab', () => {
   beforeEach(() => {
     vi.resetAllMocks()
 
+    getServeUrlMock.mockReturnValue('http://127.0.0.1:8899/game/engine/')
     importEngineMock.mockResolvedValue(undefined)
     openDialogMock.mockResolvedValue(undefined)
     useModalStoreMock.mockReturnValue({
       open: modalOpenMock,
+    })
+    usePreviewRuntimeStoreMock.mockReturnValue({
+      getServeUrl: getServeUrlMock,
     })
     usePreferenceStoreMock.mockReturnValue(reactive({
       viewMode: 'list' as const,

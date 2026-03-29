@@ -14,6 +14,9 @@ interface LaunchCraftAppOptions {
   persistedStores?: Record<string, unknown>
 }
 
+const HOME_CREATE_GAME_BUTTON_NAME = /Create Game|创建游戏|ゲームを作成/
+const EDITOR_TEST_GAME_BUTTON_NAME = /Test Game|测试游戏|測試遊戲|ゲームをテスト/
+
 export async function launchCraftApp(page: Page, options: LaunchCraftAppOptions = {}) {
   if (options.persistedStores) {
     await page.addInitScript((stores: Record<string, unknown>) => {
@@ -26,12 +29,14 @@ export async function launchCraftApp(page: Page, options: LaunchCraftAppOptions 
   await installMockTauri(page, options.mockTauri)
   await page.goto('/')
   await waitForMockTauriReady(page)
+  await page.waitForFunction(() => {
+    const appRoot = document.querySelector('#app')
+    return Boolean(appRoot && appRoot.childElementCount > 0)
+  })
 }
 
 export async function createGameFromHome(page: Page, gameName: string = 'Demo Game') {
-  await page.getByRole('button', {
-    name: /Create Game|创建游戏|ゲームを作成/,
-  }).click()
+  await page.getByRole('button', { name: HOME_CREATE_GAME_BUTTON_NAME }).click()
 
   const createGameDialog = page.getByRole('dialog')
   await expect(createGameDialog).toBeVisible()
@@ -48,6 +53,7 @@ export async function enterEditorFromCreatedGame(page: Page, gameName: string = 
   await createGameFromHome(page, gameName)
   await page.getByRole('heading', { name: gameName }).click()
   await expect(page).toHaveURL(/\/edit\//)
+  await expect(page.getByRole('button', { name: EDITOR_TEST_GAME_BUTTON_NAME })).toBeVisible()
 }
 
 export async function openStartSceneFile(page: Page) {

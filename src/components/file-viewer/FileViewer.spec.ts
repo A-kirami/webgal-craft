@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { defineComponent, h, nextTick, onMounted, ref } from 'vue'
 
@@ -8,14 +8,16 @@ import { useFileViewerVirtualizer } from '~/components/file-viewer/useFileViewer
 
 import FileViewer from './FileViewer.vue'
 
-import type { FileViewerItem } from '~/types/file-viewer'
+import type { FileViewerItem, FileViewerPreviewSize } from '~/types/file-viewer'
 
 const {
   measureMock,
+  resolvePreviewUrlMock,
   scrollToIndexMock,
   viewportWidthMock,
 } = vi.hoisted(() => ({
   measureMock: vi.fn(),
+  resolvePreviewUrlMock: vi.fn(),
   scrollToIndexMock: vi.fn(),
   viewportWidthMock: { value: 780 },
 }))
@@ -72,15 +74,9 @@ function createImageItem(index: number): FileViewerItem {
   }
 }
 
-function stringifyThumbnailSize(size: unknown): string {
-  if (typeof size === 'number') {
-    return size > 0 ? String(size) : ''
-  }
-  if (typeof size === 'string') {
-    const parsed = Number(size)
-    return parsed > 0 ? String(parsed) : ''
-  }
-  return ''
+function createPreviewUrl(item: FileViewerItem): string {
+  const previewPath = item.path.replace(/\.[^./\\]+$/, '.png')
+  return `http://127.0.0.1:8899/game/demo${previewPath}?t=${item.modifiedAt ?? 0}`
 }
 
 const globalStubs = {
@@ -97,16 +93,22 @@ const globalStubs = {
       return () => h('div', attrs, slots.default?.())
     },
   }),
-  Thumbnail: defineComponent({
-    name: 'StubThumbnail',
-    setup(_, { attrs }) {
-      return () => h('img', {
-        ...attrs,
-        'data-testid': 'thumbnail-probe',
-        'data-thumbnail-size': stringifyThumbnailSize(attrs.size),
+}
+
+function createImageFallbackHarness(viewMode: 'grid' | 'list') {
+  return defineComponent({
+    name: 'FileViewerImageFallbackHarness',
+    setup() {
+      return () => h(FileViewer, {
+        items: [createImageItem(1)],
+        resolvePreviewUrl: (item: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(item, preview),
+        viewMode,
+      }, {
+        icon: ({ item }: { item: FileViewerItem, iconSize: number }) =>
+          h('span', { 'data-testid': `${viewMode}-icon-fallback` }, `${item.name}-fallback`),
       })
     },
-  }),
+  })
 }
 
 describe('FileViewer 组合式逻辑', () => {
@@ -183,7 +185,15 @@ describe('FileViewer 组合式逻辑', () => {
 })
 
 describe('FileViewer 外观契约', () => {
-  it('把布局派生的预览尺寸传给 Thumbnail', async () => {
+  beforeEach(() => {
+    resolvePreviewUrlMock.mockReset()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('默认不会为图片项私自生成预览 URL', async () => {
     viewportWidthMock.value = 780
 
     renderInBrowser(FileViewer, {
@@ -196,15 +206,46 @@ describe('FileViewer 外观契约', () => {
       },
     })
 
-    await expect.element(page.getByTestId('thumbnail-probe')).toHaveAttribute('data-thumbnail-size', '64')
+    expect(resolvePreviewUrlMock).not.toHaveBeenCalled()
+    await expect.element(page.getByAltText('file-1.txt')).not.toBeInTheDocument()
   })
 
-  it('列表模式下也把 listPreviewSize 传给 Thumbnail', async () => {
+  it('网格模式图片项会使用带 modifiedAt 的 HTTP URL', async () => {
+    const item = createImageItem(1)
     viewportWidthMock.value = 780
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem) => createPreviewUrl(resolvedItem))
 
     renderInBrowser(FileViewer, {
       props: {
-        items: [createImageItem(1)],
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    expect(resolvePreviewUrlMock).toHaveBeenCalledWith(expect.objectContaining({
+      path: item.path,
+      modifiedAt: item.modifiedAt,
+      mimeType: item.mimeType,
+    }), {
+      height: 64,
+      width: 64,
+    })
+    await expect.element(page.getByAltText(item.name)).toHaveAttribute('src', createPreviewUrl(item))
+  })
+
+  it('列表模式图片项也会使用 HTTP URL', async () => {
+    const item = createImageItem(1)
+    viewportWidthMock.value = 780
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem) => createPreviewUrl(resolvedItem))
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'list',
       },
       global: {
@@ -212,7 +253,84 @@ describe('FileViewer 外观契约', () => {
       },
     })
 
-    await expect.element(page.getByTestId('thumbnail-probe')).toHaveAttribute('data-thumbnail-size', '20')
+    expect(resolvePreviewUrlMock).toHaveBeenCalledWith(expect.objectContaining({
+      path: item.path,
+      modifiedAt: item.modifiedAt,
+      mimeType: item.mimeType,
+    }), {
+      height: 20,
+      width: 20,
+    })
+    await expect.element(page.getByAltText(item.name)).toHaveAttribute('src', createPreviewUrl(item))
+  })
+
+  it('网格模式图片加载失败后会回退到图标槽位', async () => {
+    viewportWidthMock.value = 780
+    resolvePreviewUrlMock.mockImplementation((item: FileViewerItem) => createPreviewUrl(item))
+
+    renderInBrowser(createImageFallbackHarness('grid'), {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const image = await page.getByAltText('file-1.txt').element()
+    image.dispatchEvent(new Event('error'))
+    await nextTick()
+
+    await expect.element(page.getByAltText('file-1.txt')).not.toBeInTheDocument()
+    await expect.element(page.getByTestId('grid-icon-fallback')).toHaveTextContent('file-1.txt-fallback')
+  })
+
+  it('列表模式图片加载失败后也会回退到图标槽位', async () => {
+    viewportWidthMock.value = 780
+    resolvePreviewUrlMock.mockImplementation((item: FileViewerItem) => createPreviewUrl(item))
+
+    renderInBrowser(createImageFallbackHarness('list'), {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const image = await page.getByAltText('file-1.txt').element()
+    image.dispatchEvent(new Event('error'))
+    await nextTick()
+
+    await expect.element(page.getByAltText('file-1.txt')).not.toBeInTheDocument()
+    await expect.element(page.getByTestId('list-icon-fallback')).toHaveTextContent('file-1.txt-fallback')
+  })
+
+  it('图片预览失败一段时间后会自动再次尝试同一个 URL', async () => {
+    const item = createImageItem(1)
+    const queryImage = () => document.querySelector<HTMLImageElement>(`img[alt="${item.name}"]`)
+
+    vi.useFakeTimers()
+    viewportWidthMock.value = 780
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem) => createPreviewUrl(resolvedItem))
+
+    const result = await renderInBrowser(FileViewer, {
+      props: {
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    expect(queryImage()?.getAttribute('src')).toBe(createPreviewUrl(item))
+
+    queryImage()?.dispatchEvent(new Event('error'))
+    await nextTick()
+
+    expect(queryImage()).toBeNull()
+
+    await vi.advanceTimersByTimeAsync(5000)
+    await nextTick()
+
+    expect(queryImage()?.getAttribute('src')).toBe(createPreviewUrl(item))
+    await result.unmount()
   })
 
   it('窄列表视图下会同时隐藏 modifiedAt 列头和内容', async () => {

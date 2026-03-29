@@ -1,4 +1,4 @@
-import { EngineMetadata, GameMetadata } from '~/services/types'
+import { EngineMetadata, EnginePreviewAssets, GameMetadata, GamePreviewAssets } from '~/services/types'
 
 export interface Game {
   id: string
@@ -7,6 +7,7 @@ export interface Game {
   lastModified: number
   status: Status
   metadata: GameMetadata
+  previewAssets: GamePreviewAssets
 }
 
 export interface Engine {
@@ -15,6 +16,7 @@ export interface Engine {
   createdAt: number
   status: Status
   metadata: EngineMetadata
+  previewAssets: EnginePreviewAssets
 }
 
 export type Status = 'created' | 'creating' | 'error'

@@ -21,6 +21,12 @@ function handleBack() {
 const workspaceStore = useWorkspaceStore()
 const modalStore = useModalStore()
 
+const HEADER_ICON_THUMBNAIL = {
+  width: 64,
+  height: 64,
+  resizeMode: 'contain',
+} as const
+
 const canTestGame = $computed(() => !!workspaceStore.currentGameServeUrl && !!workspaceStore.currentGame)
 const testWindowLabel = $computed(() => (workspaceStore.currentGame ? `test-${workspaceStore.currentGame.id}` : ''))
 
@@ -128,7 +134,16 @@ onBeforeUnmount(() => {
         <span class="sr-only">{{ $t('common.back') }}</span>
       </Button>
       <div class="flex gap-2 items-center">
-        <Thumbnail :path="workspaceStore.currentGame?.metadata.icon" :alt="`${workspaceStore.currentGame?.metadata.name} 游戏图标`" fallback-image="/placeholder.svg" class="rounded-md size-6" />
+        <AssetImage
+          :path="workspaceStore.currentGame?.previewAssets.icon.path"
+          :root-path="workspaceStore.CWD"
+          :serve-url="workspaceStore.currentGameServeUrl"
+          :alt="`${workspaceStore.currentGame?.metadata.name} 游戏图标`"
+          :cache-version="workspaceStore.currentGame?.previewAssets.icon.cacheVersion"
+          :thumbnail="HEADER_ICON_THUMBNAIL"
+          fallback-image="/placeholder.svg"
+          class="rounded-md size-6"
+        />
         <span class="font-medium">{{ workspaceStore.currentGame?.metadata.name }}</span>
       </div>
       <Button variant="ghost" size="icon" class="size-8" :title="$t('edit.header.gameSettings')" @click="modalStore.open('GameConfigModal')">

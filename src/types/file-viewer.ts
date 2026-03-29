@@ -12,6 +12,11 @@ export interface FileViewerItem {
   createdAt?: number
 }
 
+export interface FileViewerPreviewSize {
+  width: number
+  height: number
+}
+
 export interface FileViewerVirtualRow {
   key: string | number | bigint
   index: number

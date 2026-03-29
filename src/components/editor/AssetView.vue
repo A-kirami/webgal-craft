@@ -3,12 +3,13 @@ import { join } from '@tauri-apps/api/path'
 import { File, FileImage, FileJson2, FileMusic, FileVideo, FileVolume, Folder } from 'lucide-vue-next'
 
 import { gameAssetDir } from '~/services/platform/app-paths'
+import { resolveAssetUrl } from '~/services/platform/asset-url'
 import { FileSystemItem, useFileStore } from '~/stores/file'
 import { usePreferenceStore } from '~/stores/preference'
 import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
-import { FileViewerItem, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
+import { FileViewerItem, FileViewerPreviewSize, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
 interface AssetViewProps {
   assetType: string
@@ -169,12 +170,42 @@ function handleSelect(item: FileViewerItem) {
   lastSelectedPath = item.path
   lastSelectedAt = now
 }
+
+function resolvePreviewUrl(item: FileViewerItem, previewSize: FileViewerPreviewSize): string | undefined {
+  if (item.isDir || !item.mimeType?.startsWith('image/')) {
+    return undefined
+  }
+
+  const gamePath = workspaceStore.currentGame?.path
+  const serveUrl = workspaceStore.currentGameServeUrl
+  if (!gamePath || !serveUrl) {
+    return undefined
+  }
+
+  try {
+    return resolveAssetUrl(item.path, {
+      cwd: gamePath,
+      cacheVersion: item.modifiedAt,
+      previewBaseUrl: serveUrl,
+      thumbnail: {
+        width: previewSize.width,
+        height: previewSize.height,
+        resizeMode: 'contain',
+      },
+    })
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    void logger.error(`[AssetView] 资源地址生成失败: ${item.path} - ${errorMessage}`)
+    return undefined
+  }
+}
 </script>
 
 <template>
   <FileViewer
     ref="fileViewerRef"
     :items="filteredItems"
+    :resolve-preview-url="resolvePreviewUrl"
     :view-mode="preferenceStore.assetViewMode"
     :is-loading="isLoading"
     :error-msg="errorMsg"

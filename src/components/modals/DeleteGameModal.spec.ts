@@ -83,12 +83,7 @@ const globalStubs = {
 }
 
 function renderDeleteGameModal(updateOpen = vi.fn()) {
-  const game = createTestGame({
-    metadata: {
-      cover: '',
-      icon: '',
-    },
-  })
+  const game = createTestGame()
 
   renderInBrowser(DeleteGameModal, {
     props: {

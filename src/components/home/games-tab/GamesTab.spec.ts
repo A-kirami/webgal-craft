@@ -19,8 +19,10 @@ const {
   openDialogMock,
   openPathMock,
   routerPushMock,
+  getServeUrlMock,
   useModalStoreMock,
   usePreferenceStoreMock,
+  usePreviewRuntimeStoreMock,
   useResourceStoreMock,
   useRouterMock,
   useWorkspaceStoreMock,
@@ -33,8 +35,10 @@ const {
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
   routerPushMock: vi.fn(),
+  getServeUrlMock: vi.fn(),
   useModalStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
+  usePreviewRuntimeStoreMock: vi.fn(),
   useResourceStoreMock: vi.fn(),
   useRouterMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
@@ -135,6 +139,10 @@ vi.mock('~/stores/preference', () => ({
   usePreferenceStore: usePreferenceStoreMock,
 }))
 
+vi.mock('~/stores/preview-runtime', () => ({
+  usePreviewRuntimeStore: usePreviewRuntimeStoreMock,
+}))
+
 vi.mock('~/stores/resource', () => ({
   useResourceStore: useResourceStoreMock,
 }))
@@ -214,6 +222,7 @@ describe('GamesTab', () => {
     useWorkspaceStoreMock.mockReset()
 
     openDialogMock.mockResolvedValue(undefined)
+    getServeUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/')
     importGameMock.mockResolvedValue(undefined)
     useModalStoreMock.mockReturnValue({
       open: modalOpenMock,
@@ -223,6 +232,9 @@ describe('GamesTab', () => {
     }))
     useRouterMock.mockReturnValue({
       push: routerPushMock,
+    })
+    usePreviewRuntimeStoreMock.mockReturnValue({
+      getServeUrl: getServeUrlMock,
     })
     useWorkspaceStoreMock.mockReturnValue(reactive({
       activeTab: 'recent' as const,

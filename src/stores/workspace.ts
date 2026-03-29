@@ -1,18 +1,15 @@
 import { defineStore } from 'pinia'
 
-import { serverCmds } from '~/commands/server'
 import { db } from '~/database/db'
 import { Game } from '~/database/model'
 import { gameManager } from '~/services/game-manager'
+import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 
 export const useWorkspaceStore = defineStore(
   'workspace',
   () => {
     // 工作区状态
     let currentGame = $ref<Game>()
-
-    // 服务器状态
-    let serverUrl = $ref<string>()
     let currentGameServeUrl = $ref<string>()
 
     // UI 状态
@@ -20,28 +17,18 @@ export const useWorkspaceStore = defineStore(
     const searchQuery = $ref<string>('')
     const activeAssetTab = $ref('')
 
+    const previewRuntimeStore = usePreviewRuntimeStore()
     const CWD = $computed(() => currentGame?.path)
 
-    async function runServer() {
-      try {
-        serverUrl = await serverCmds.startServer('127.0.0.1', 8899)
-      } catch (error) {
-        logger.error(`服务器启动失败: ${error}`)
-      }
-    }
-
-    async function refreshGameMetadata() {
+    async function refreshCurrentGameSnapshot() {
       if (!currentGame) {
         return
       }
 
-      const metadata = await gameManager.getGameMetadata(currentGame.path)
+      const snapshot = await gameManager.getGameSnapshot(currentGame.path)
       currentGame = {
         ...currentGame,
-        metadata: {
-          ...currentGame.metadata,
-          ...metadata,
-        },
+        ...snapshot,
       }
     }
 
@@ -63,20 +50,6 @@ export const useWorkspaceStore = defineStore(
       })
 
       if (currentGame) {
-        const previousGameId = currentGame.id
-
-        try {
-          await gameManager.stopGamePreview(previousGameId)
-        } catch (error) {
-          if (!isStale) {
-            logger.error(`停止预览失败: ${error}`)
-          }
-        }
-
-        if (isStale) {
-          return
-        }
-
         currentGame = undefined
         currentGameServeUrl = undefined
       }
@@ -92,8 +65,14 @@ export const useWorkspaceStore = defineStore(
 
       currentGame = game
       try {
-        const previewUrl = await gameManager.runGamePreview(game.path)
+        const previewUrl = await previewRuntimeStore.ensureServeUrl(game.path)
         if (isStale) {
+          return
+        }
+
+        if (!previewUrl) {
+          currentGameServeUrl = undefined
+          logger.error('获取预览链接失败: 预览链接不存在')
           return
         }
 
@@ -112,10 +91,8 @@ export const useWorkspaceStore = defineStore(
       // 工作区状态
       currentGame,
       currentGameServeUrl,
-      serverUrl,
       CWD,
-      refreshGameMetadata,
-      runServer,
+      refreshCurrentGameSnapshot,
 
       // UI 状态
       activeTab,

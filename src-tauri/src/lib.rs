@@ -71,20 +71,16 @@ pub fn run() {
             // server
             commands::server::start_server,
             commands::server::add_static_site,
-            commands::server::remove_static_site,
             commands::server::broadcast_message,
             commands::server::unicast_message,
             commands::server::get_connected_clients,
-            // thumbnail
-            commands::thumbnail::get_thumbnail,
-            commands::thumbnail::get_image_dimensions,
-            commands::thumbnail::clear_thumbnail_cache,
             // fs
             commands::fs::copy_directory,
             commands::fs::copy_directory_with_progress,
             commands::fs::validate_directory_structure,
             commands::fs::delete_file,
             commands::fs::is_binary_file,
+            commands::fs::get_image_dimensions,
             // window
             commands::window::create_window,
         ])

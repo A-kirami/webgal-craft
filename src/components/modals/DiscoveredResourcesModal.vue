@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { Box, CheckCircle2, Scroll } from 'lucide-vue-next'
 
+import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
+
+import type { AssetThumbnailOptions } from '~/services/platform/asset-url'
+
 let open = $(defineModel<boolean>('open'))
 
 const props = defineProps<{
@@ -10,6 +14,13 @@ const props = defineProps<{
 }>()
 
 let selectedPaths = $ref(new Set(props.resources.map(r => r.path)))
+const previewRuntimeStore = usePreviewRuntimeStore()
+
+const DISCOVERED_RESOURCE_ICON_THUMBNAIL: AssetThumbnailOptions = {
+  width: 64,
+  height: 64,
+  resizeMode: 'contain',
+}
 
 const toggleSelection = (path: string) => {
   if (selectedPaths.has(path)) {
@@ -38,6 +49,23 @@ const handleSkip = () => {
 
 const icon = $computed(() => props.type === 'games' ? Scroll : Box)
 const isAllSelected = $computed(() => selectedPaths.size === props.resources.length)
+
+watch(
+  () => props.resources.map(resource => resource.path),
+  (paths, previousPaths = []) => {
+    const previousPathSet = new Set(previousPaths)
+    const keptPaths = [...selectedPaths].filter(path => paths.includes(path))
+    const addedPaths = paths.filter(path => !previousPathSet.has(path))
+    selectedPaths = new Set([...keptPaths, ...addedPaths])
+
+    void previewRuntimeStore.ensureServeUrls(paths)
+  },
+  { immediate: true },
+)
+
+function resolveResourceServeUrl(resource: { path: string }): string | undefined {
+  return previewRuntimeStore.getServeUrl(resource.path)
+}
 </script>
 
 <template>
@@ -74,11 +102,14 @@ const isAllSelected = $computed(() => selectedPaths.size === props.resources.len
             @click="toggleSelection(resource.path)"
           >
             <div class="flex flex-1 gap-3 min-w-0 items-center">
-              <Thumbnail
+              <AssetImage
                 v-if="resource.icon"
                 :path="resource.icon"
+                :root-path="resource.path"
+                :serve-url="resolveResourceServeUrl(resource)"
                 :alt="resource.name"
-                :size="64"
+                fallback-image="/placeholder.svg"
+                :thumbnail="DISCOVERED_RESOURCE_ICON_THUMBNAIL"
                 class="rounded shrink-0 size-10"
               />
               <component :is="icon" v-else class="text-muted-foreground shrink-0 size-10" />

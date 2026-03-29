@@ -4,6 +4,7 @@ import { reactive } from 'vue'
 
 import { createBrowserConsoleMonitor, createBrowserLocalizedI18n } from '~/__tests__/browser'
 import { createBrowserContainerStub, createBrowserTextStub, renderInBrowser } from '~/__tests__/browser-render'
+import { createTauriPathModuleMock } from '~/__tests__/mocks/tauri-path'
 
 const {
   useEditorStoreMock,
@@ -15,17 +16,7 @@ const {
   useTabsStoreMock: vi.fn(),
 }))
 
-vi.mock('@tauri-apps/api/path', () => ({
-  basename: vi.fn(async (filePath: string) => filePath.split(/[/\\]/).at(-1) ?? ''),
-  dirname: vi.fn(async (filePath: string) => filePath.replace(/[\\/][^\\/]+$/, '')),
-  extname: vi.fn(async (filePath: string) => {
-    const match = /\.[^./\\]+$/.exec(filePath)
-    return match?.[0] ?? ''
-  }),
-  join: vi.fn(async (...parts: string[]) => parts.join('/')),
-  normalize: vi.fn((filePath: string) => filePath.replaceAll('\\', '/')),
-  sep: '/',
-}))
+vi.mock('@tauri-apps/api/path', () => createTauriPathModuleMock())
 
 vi.mock('~/stores/editor', () => ({
   isAnimationVisualProjection: (state: { kind?: string, projection?: string }) =>

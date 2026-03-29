@@ -7,8 +7,9 @@
 use std::{
     collections::HashMap,
     hash::{Hash, Hasher},
+    io::Cursor,
     net::SocketAddr,
-    path::PathBuf,
+    path::{Component, Path, PathBuf},
     sync::Arc,
 };
 
@@ -18,7 +19,7 @@ use axum::{
         ConnectInfo, Path as AxumPath, State as AxumState,
     },
     http::{
-        header::{ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, ORIGIN, VARY},
+        header::{ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, ORIGIN, VARY},
         HeaderMap, HeaderValue, Request, StatusCode, Uri,
     },
     response::{IntoResponse, Redirect, Response},
@@ -26,6 +27,7 @@ use axum::{
     Router,
 };
 use futures::{SinkExt, StreamExt};
+use image::{codecs::jpeg::JpegEncoder, imageops::FilterType, ImageFormat};
 use portpicker::pick_unused_port;
 use tauri::{ipc::Channel, State as TauriState};
 use tokio::{
@@ -34,7 +36,7 @@ use tokio::{
     task::JoinHandle,
 };
 use tower::util::ServiceExt;
-use tower_http::{services::ServeDir, set_header::SetResponseHeaderLayer};
+use tower_http::services::ServeDir;
 
 use super::{AppError, AppResult};
 
@@ -77,6 +79,9 @@ struct ServerHandle {
     join_handle: JoinHandle<()>,
     shutdown_tx: oneshot::Sender<()>,
 }
+
+const MAX_THUMBNAIL_DIMENSION: u32 = 2048;
+const JPEG_THUMBNAIL_QUALITY: u8 = 85;
 
 impl Default for ServerState {
     fn default() -> Self {
@@ -231,40 +236,250 @@ fn append_static_file_cors_headers(response: &mut Response, origin: Option<&'sta
 async fn handle_static_request(
     AxumState(state): AxumState<Arc<AppState>>,
     AxumPath(hash): AxumPath<String>,
+    uri: Uri,
     path: Option<String>,
     origin: Option<&'static str>,
 ) -> Response {
     let sites = state.sites.read().await;
+    let query = parse_static_asset_query(uri.query());
 
-    let mut response = if let Some((_, serve_dir)) = sites.get(&hash) {
-        let uri = match path {
-            Some(p) => {
-                // 对路径进行 URL 编码
-                let encoded_path = p
-                    .split('/')
-                    .map(|segment| urlencoding::encode(segment))
-                    .collect::<Vec<_>>()
-                    .join("/");
-                format!("/{encoded_path}")
+    if let Some((site_root, serve_dir)) = sites.get(&hash) {
+        let serve_dir = serve_dir.to_owned();
+        let site_root = site_root.clone();
+        drop(sites);
+
+        if let Some(thumbnail_request) = resolve_thumbnail_request(&query) {
+            if let Some(response) =
+                try_build_thumbnail_response(site_root.clone(), path.clone(), thumbnail_request)
+                    .await
+            {
+                let mut response = apply_cache_control(response, CacheControlPolicy::Thumbnail);
+                append_static_file_cors_headers(&mut response, origin);
+                return response;
             }
-            None => "/".to_string(),
-        };
+        }
+
+        let uri = build_static_asset_uri(path.as_deref());
 
         match serve_dir
-            .to_owned()
             .oneshot(Request::builder().uri(uri).body(()).unwrap())
             .await
         {
-            Ok(response) => response.into_response(),
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            Ok(response) => {
+                let mut response =
+                    apply_cache_control(response.into_response(), CacheControlPolicy::StaticAsset);
+                append_static_file_cors_headers(&mut response, origin);
+                response
+            }
+            Err(_) => {
+                let mut response = StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                append_static_file_cors_headers(&mut response, origin);
+                response
+            }
         }
     } else {
-        StatusCode::NOT_FOUND.into_response()
+        let mut response = StatusCode::NOT_FOUND.into_response();
+        append_static_file_cors_headers(&mut response, origin);
+        response
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct StaticAssetQuery {
+    width: Option<u32>,
+    height: Option<u32>,
+    resize_mode: Option<ThumbnailResizeMode>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+enum ThumbnailResizeMode {
+    #[default]
+    Contain,
+    Cover,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ThumbnailRequest {
+    width: u32,
+    height: u32,
+    resize_mode: ThumbnailResizeMode,
+}
+
+struct EncodedThumbnail {
+    body: Vec<u8>,
+    content_type: &'static str,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CacheControlPolicy {
+    StaticAsset,
+    Thumbnail,
+}
+
+fn build_static_asset_uri(path: Option<&str>) -> String {
+    match path {
+        Some(path) => {
+            let encoded_path = path
+                .split('/')
+                .map(|segment| urlencoding::encode(segment))
+                .collect::<Vec<_>>()
+                .join("/");
+            format!("/{encoded_path}")
+        }
+        None => "/".to_string(),
+    }
+}
+
+fn parse_static_asset_query(query: Option<&str>) -> StaticAssetQuery {
+    let mut parsed = StaticAssetQuery::default();
+    let Some(query) = query else {
+        return parsed;
     };
 
-    append_static_file_cors_headers(&mut response, origin);
+    for pair in query.split('&') {
+        let mut parts = pair.splitn(2, '=');
+        let Some(key) = parts.next() else {
+            continue;
+        };
+        let Some(value) = parts.next() else {
+            continue;
+        };
 
+        let decoded_value = urlencoding::decode(value).ok();
+        let decoded_value = decoded_value.as_deref().unwrap_or(value);
+
+        match key {
+            "w" => parsed.width = decoded_value.parse().ok(),
+            "h" => parsed.height = decoded_value.parse().ok(),
+            "fit" if decoded_value.eq_ignore_ascii_case("contain") => {
+                parsed.resize_mode = Some(ThumbnailResizeMode::Contain);
+            }
+            "fit" if decoded_value.eq_ignore_ascii_case("cover") => {
+                parsed.resize_mode = Some(ThumbnailResizeMode::Cover);
+            }
+            _ => {}
+        }
+    }
+
+    parsed
+}
+
+fn resolve_thumbnail_request(query: &StaticAssetQuery) -> Option<ThumbnailRequest> {
+    let width = query.width?;
+    let height = query.height?;
+
+    if width == 0 || height == 0 {
+        return None;
+    }
+
+    Some(ThumbnailRequest {
+        width: width.min(MAX_THUMBNAIL_DIMENSION),
+        height: height.min(MAX_THUMBNAIL_DIMENSION),
+        resize_mode: query.resize_mode.unwrap_or_default(),
+    })
+}
+
+async fn try_build_thumbnail_response(
+    site_root: PathBuf,
+    path: Option<String>,
+    thumbnail_request: ThumbnailRequest,
+) -> Option<Response> {
+    let file_path = resolve_static_asset_path(&site_root, path.as_deref())?;
+    if !supports_thumbnail(&file_path) {
+        return None;
+    }
+
+    let encoded_thumbnail =
+        tokio::task::spawn_blocking(move || build_thumbnail(&file_path, thumbnail_request))
+            .await
+            .ok()??;
+
+    let mut response = Response::new(encoded_thumbnail.body.into());
+    response.headers_mut().insert(
+        CONTENT_TYPE,
+        HeaderValue::from_static(encoded_thumbnail.content_type),
+    );
+    Some(response)
+}
+
+fn resolve_static_asset_path(site_root: &Path, path: Option<&str>) -> Option<PathBuf> {
+    let path = path?;
+    let relative_path = Path::new(path);
+
+    if relative_path.is_absolute() {
+        return None;
+    }
+
+    let mut resolved_path = site_root.to_path_buf();
+
+    for component in relative_path.components() {
+        match component {
+            Component::Normal(segment) => resolved_path.push(segment),
+            Component::CurDir => {}
+            _ => return None,
+        }
+    }
+
+    Some(resolved_path)
+}
+
+fn supports_thumbnail(path: &Path) -> bool {
+    let Some(extension) = path.extension().and_then(|extension| extension.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        extension.to_ascii_lowercase().as_str(),
+        "png" | "jpg" | "jpeg" | "gif" | "webp" | "ico"
+    )
+}
+
+fn build_thumbnail(path: &Path, request: ThumbnailRequest) -> Option<EncodedThumbnail> {
+    let source = std::fs::read(path).ok()?;
+    let image = image::load_from_memory(&source).ok()?;
+    let thumbnail = match request.resize_mode {
+        ThumbnailResizeMode::Contain => {
+            image.resize(request.width, request.height, FilterType::Lanczos3)
+        }
+        ThumbnailResizeMode::Cover => {
+            image.resize_to_fill(request.width, request.height, FilterType::Lanczos3)
+        }
+    };
+
+    if thumbnail.color().has_alpha() {
+        let mut cursor = Cursor::new(Vec::new());
+        thumbnail.write_to(&mut cursor, ImageFormat::Png).ok()?;
+
+        return Some(EncodedThumbnail {
+            body: cursor.into_inner(),
+            content_type: "image/png",
+        });
+    }
+
+    let mut body = Vec::new();
+    JpegEncoder::new_with_quality(&mut body, JPEG_THUMBNAIL_QUALITY)
+        .encode_image(&thumbnail)
+        .ok()?;
+
+    Some(EncodedThumbnail {
+        body,
+        content_type: "image/jpeg",
+    })
+}
+
+fn apply_cache_control(mut response: Response, cache_policy: CacheControlPolicy) -> Response {
+    let cache_control = resolve_cache_control_value(cache_policy);
     response
+        .headers_mut()
+        .insert(CACHE_CONTROL, HeaderValue::from_static(cache_control));
+    response
+}
+
+fn resolve_cache_control_value(cache_policy: CacheControlPolicy) -> &'static str {
+    match cache_policy {
+        CacheControlPolicy::StaticAsset => "no-store, no-cache, must-revalidate, max-age=0",
+        CacheControlPolicy::Thumbnail => "public, max-age=86400",
+    }
 }
 
 /// 启动HTTP服务器
@@ -312,52 +527,50 @@ pub async fn start_server(
     let addr = listener.local_addr()?;
 
     // 构建路由
-    let app =
-        Router::new()
-            .route(
-                "/api/webgalsync",
-                get(move |ws, state, addr| handle_ws(ws, state, addr, on_message)),
-            )
-            .route("/game/{hash}", get(handle_redirect))
-            .route(
-                "/game/{hash}/",
-                get(
-                    |state: AxumState<Arc<AppState>>,
-                     hash: AxumPath<String>,
-                     headers: HeaderMap| async move {
-                        handle_static_request(
-                            state,
-                            hash,
-                            None,
-                            resolve_static_file_cors_origin_from_headers(&headers),
-                        )
-                        .await
-                    },
-                ),
-            )
-            .route(
-                "/game/{hash}/{*path}",
-                get(
-                    |state: AxumState<Arc<AppState>>,
-                     path: AxumPath<(String, String)>,
-                     headers: HeaderMap| async move {
-                        let (hash, path) = path.0;
-                        handle_static_request(
-                            state,
-                            AxumPath(hash),
-                            Some(path),
-                            resolve_static_file_cors_origin_from_headers(&headers),
-                        )
-                        .await
-                    },
-                ),
-            )
-            .with_state(state_guard.app_state.clone())
-            // 统一添加禁止缓存的响应头
-            .layer(SetResponseHeaderLayer::overriding(
-                CACHE_CONTROL,
-                HeaderValue::from_static("no-store, no-cache, must-revalidate, max-age=0"),
-            ));
+    let app = Router::new()
+        .route(
+            "/api/webgalsync",
+            get(move |ws, state, addr| handle_ws(ws, state, addr, on_message)),
+        )
+        .route("/game/{hash}", get(handle_redirect))
+        .route(
+            "/game/{hash}/",
+            get(
+                |state: AxumState<Arc<AppState>>,
+                 hash: AxumPath<String>,
+                 uri: Uri,
+                 headers: HeaderMap| async move {
+                    handle_static_request(
+                        state,
+                        hash,
+                        uri,
+                        None,
+                        resolve_static_file_cors_origin_from_headers(&headers),
+                    )
+                    .await
+                },
+            ),
+        )
+        .route(
+            "/game/{hash}/{*path}",
+            get(
+                |state: AxumState<Arc<AppState>>,
+                 path: AxumPath<(String, String)>,
+                 uri: Uri,
+                 headers: HeaderMap| async move {
+                    let (hash, path) = path.0;
+                    handle_static_request(
+                        state,
+                        AxumPath(hash),
+                        uri,
+                        Some(path),
+                        resolve_static_file_cors_origin_from_headers(&headers),
+                    )
+                    .await
+                },
+            ),
+        )
+        .with_state(state_guard.app_state.clone());
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
 
@@ -460,30 +673,6 @@ pub async fn add_static_site(
     Ok(hash)
 }
 
-/// 移除静态站点
-/// 根据路径移除已注册的静态站点
-///
-/// 参数：
-/// - state: 服务器状态
-/// - path: 静态站点目录路径
-///
-/// 返回：
-/// - 成功：空值
-/// - 失败：错误信息
-#[tauri::command]
-pub async fn remove_static_site(
-    state: TauriState<'_, Mutex<ServerState>>,
-    path: String,
-) -> AppResult<()> {
-    let state_guard = state.lock().await;
-    let (hash, _) = normalize_and_hash_path(&path)?;
-
-    let mut sites = state_guard.app_state.sites.write().await;
-    sites.remove(&hash);
-
-    Ok(())
-}
-
 /// 广播消息
 /// 向所有连接的WebSocket客户端发送消息
 ///
@@ -572,10 +761,13 @@ mod tests {
         },
         response::Response,
     };
+    use std::path::Path;
 
     use super::{
-        append_static_file_cors_headers, resolve_static_file_cors_origin,
-        resolve_static_file_cors_origin_from_headers,
+        append_static_file_cors_headers, resolve_cache_control_value,
+        resolve_static_file_cors_origin, resolve_static_file_cors_origin_from_headers,
+        resolve_thumbnail_request, supports_thumbnail, CacheControlPolicy, StaticAssetQuery,
+        ThumbnailRequest, ThumbnailResizeMode,
     };
 
     #[test]
@@ -670,5 +862,71 @@ mod tests {
             response.headers().get(VARY),
             Some(&HeaderValue::from_static("Origin"))
         );
+    }
+
+    #[test]
+    fn generated_thumbnails_use_public_cache() {
+        assert_eq!(
+            resolve_cache_control_value(CacheControlPolicy::Thumbnail),
+            "public, max-age=86400"
+        );
+    }
+
+    #[test]
+    fn static_assets_disable_cache_even_when_content_is_media() {
+        assert_eq!(
+            resolve_cache_control_value(CacheControlPolicy::StaticAsset),
+            "no-store, no-cache, must-revalidate, max-age=0"
+        );
+    }
+
+    #[test]
+    fn thumbnail_request_requires_positive_width_and_height() {
+        assert_eq!(
+            resolve_thumbnail_request(&StaticAssetQuery {
+                width: None,
+                height: Some(360),
+                resize_mode: Some(ThumbnailResizeMode::Cover),
+            }),
+            None
+        );
+        assert_eq!(
+            resolve_thumbnail_request(&StaticAssetQuery {
+                width: Some(640),
+                height: Some(0),
+                resize_mode: Some(ThumbnailResizeMode::Cover),
+            }),
+            None
+        );
+    }
+
+    #[test]
+    fn thumbnail_request_clamps_dimensions_and_preserves_fit() {
+        assert_eq!(
+            resolve_thumbnail_request(&StaticAssetQuery {
+                width: Some(8192),
+                height: Some(4096),
+                resize_mode: Some(ThumbnailResizeMode::Cover),
+            }),
+            Some(ThumbnailRequest {
+                width: 2048,
+                height: 2048,
+                resize_mode: ThumbnailResizeMode::Cover,
+            })
+        );
+    }
+
+    #[test]
+    fn thumbnail_source_formats_match_product_boundary() {
+        assert!(supports_thumbnail(Path::new("icon.ico")));
+        assert!(supports_thumbnail(Path::new("cover.png")));
+        assert!(supports_thumbnail(Path::new("cover.jpg")));
+        assert!(supports_thumbnail(Path::new("cover.jpeg")));
+        assert!(supports_thumbnail(Path::new("cover.gif")));
+        assert!(supports_thumbnail(Path::new("cover.webp")));
+
+        assert!(!supports_thumbnail(Path::new("cover.bmp")));
+        assert!(!supports_thumbnail(Path::new("cover.tif")));
+        assert!(!supports_thumbnail(Path::new("cover.tiff")));
     }
 }

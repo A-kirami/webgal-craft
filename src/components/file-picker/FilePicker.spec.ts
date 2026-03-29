@@ -17,10 +17,15 @@ const {
   statMock: vi.fn(),
 }))
 
-vi.mock('@tauri-apps/api/path', () => ({
-  join: async (...parts: string[]) => parts.join('/'),
-  normalize: normalizeMock,
-}))
+vi.mock('@tauri-apps/api/path', async () => {
+  const actual = await vi.importActual<typeof import('@tauri-apps/api/path')>('@tauri-apps/api/path')
+
+  return {
+    ...actual,
+    join: async (...parts: string[]) => parts.join('/'),
+    normalize: normalizeMock,
+  }
+})
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
   exists: existsMock,

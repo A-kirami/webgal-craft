@@ -6,6 +6,8 @@ const { useWorkspaceStoreMock } = vi.hoisted(() => ({
   useWorkspaceStoreMock: vi.fn(),
 }))
 
+const CACHE_VERSION = Number.parseInt('1710000000000', 10)
+
 const workspaceStoreState = {
   CWD: '/games/demo',
   currentGameServeUrl: 'http://127.0.0.1:8899/game/demo/',
@@ -28,6 +30,51 @@ describe('getAssetUrl 资源地址解析', () => {
 
   it('会统一反斜杠并正确编码特殊字符', () => {
     expect(getAssetUrl(String.raw`/games/demo/assets\bg\cover image.png`)).toBe('http://127.0.0.1:8899/game/demo/assets/bg/cover%20image.png')
+  })
+
+  it('传入 cacheVersion 时会附带时间戳参数用于缓存破坏', () => {
+    const getAssetUrlWithCacheVersion = getAssetUrl as (
+      assetPath: string,
+      cacheVersion?: number,
+      serveUrl?: string,
+    ) => string
+
+    expect(getAssetUrlWithCacheVersion('/games/demo/assets/bg/intro.png', CACHE_VERSION)).toBe(
+      'http://127.0.0.1:8899/game/demo/assets/bg/intro.png?t=1710000000000',
+    )
+  })
+
+  it('支持覆盖默认预览地址以便复用到主页和发现资源场景', () => {
+    const getAssetUrlWithServeUrl = getAssetUrl as (
+      assetPath: string,
+      cacheVersion?: number,
+      serveUrl?: string,
+      thumbnail?: { width: number, height: number, resizeMode?: 'contain' | 'cover' },
+    ) => string
+
+    expect(
+      getAssetUrlWithServeUrl('/games/demo/assets/bg/intro.png', CACHE_VERSION, 'http://127.0.0.1:8899/game/home-demo/'),
+    ).toBe('http://127.0.0.1:8899/game/home-demo/assets/bg/intro.png?t=1710000000000')
+  })
+
+  it('传入缩略图参数时会附带缩放查询参数', () => {
+    const getAssetUrlWithThumbnail = getAssetUrl as (
+      assetPath: string,
+      cacheVersion?: number,
+      serveUrl?: string,
+      thumbnail?: { width: number, height: number, resizeMode?: 'contain' | 'cover' },
+    ) => string
+
+    expect(
+      getAssetUrlWithThumbnail(
+        '/games/demo/assets/bg/intro.png',
+        CACHE_VERSION,
+        'http://127.0.0.1:8899/game/home-demo/',
+        { width: 640, height: 360, resizeMode: 'cover' },
+      ),
+    ).toBe(
+      'http://127.0.0.1:8899/game/home-demo/assets/bg/intro.png?t=1710000000000&w=640&h=360&fit=cover',
+    )
   })
 
   it('缺少预览地址时会直接抛出错误', () => {

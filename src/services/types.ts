@@ -1,11 +1,22 @@
+export interface PreviewAsset {
+  path: string
+  cacheVersion?: number
+}
+
+export interface GamePreviewAssets {
+  icon: PreviewAsset
+  cover: PreviewAsset
+}
+
+export interface EnginePreviewAssets {
+  icon: PreviewAsset
+}
+
 export interface GameMetadata {
   name: string // 从配置文件获取
-  icon: string // 图标路径固定为 icons/favicon.ico
-  cover: string // 从配置文件获取，拼接得到封面路径
 }
 
 export interface EngineMetadata {
   name: string // 从配置文件获取
-  icon: string // 图标路径固定为 icons/favicon.ico
   description: string // 从配置文件获取
 }

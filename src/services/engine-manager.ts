@@ -6,10 +6,16 @@ import { fsCmds } from '~/commands/fs'
 import { db } from '~/database/db'
 import { Engine } from '~/database/model'
 import { engineIconPath, engineManifestPath } from '~/services/platform/app-paths'
-import { EngineMetadata } from '~/services/types'
+import { EngineMetadata, EnginePreviewAssets } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 import { AppError } from '~/types/errors'
+
+interface RegisterEngineOptions {
+  metadata?: EngineMetadata
+  previewAssets?: EnginePreviewAssets
+  status?: Engine['status']
+}
 
 /**
  * 验证引擎
@@ -27,36 +33,88 @@ async function validateEngine(enginePath: string): Promise<boolean> {
 /**
  * 获取引擎元数据
  * @param enginePath 引擎路径
- * @returns 引擎元数据，包含名称、图标和描述
+ * @returns 引擎元数据，仅包含语义字段
  */
 async function getEngineMetadata(enginePath: string): Promise<EngineMetadata> {
-  const iconPath = await engineIconPath(enginePath)
   const manifestPath = await engineManifestPath(enginePath)
   const metaContent = await readTextFile(manifestPath)
   const { name, description } = JSON.parse(metaContent)
 
   return {
     name,
-    icon: iconPath,
     description,
+  }
+}
+
+/**
+ * 获取引擎预览资源快照
+ * @param enginePath 引擎路径
+ * @returns 图标路径
+ */
+async function getEnginePreviewAssets(enginePath: string): Promise<EnginePreviewAssets> {
+  const iconPath = await engineIconPath(enginePath)
+
+  return {
+    icon: {
+      path: iconPath,
+    },
+  }
+}
+
+function withEnginePreviewCacheVersion(
+  previewAssets: EnginePreviewAssets,
+  cacheVersion: number = Date.now(),
+): EnginePreviewAssets {
+  return {
+    icon: {
+      ...previewAssets.icon,
+      cacheVersion,
+    },
+  }
+}
+
+async function getEngineSnapshot(enginePath: string): Promise<Pick<Engine, 'metadata' | 'previewAssets'>> {
+  const cacheVersion = Date.now()
+  const [metadata, previewAssets] = await Promise.all([
+    getEngineMetadata(enginePath),
+    getEnginePreviewAssets(enginePath),
+  ])
+
+  return {
+    metadata,
+    previewAssets: withEnginePreviewCacheVersion(previewAssets, cacheVersion),
   }
 }
 
 /**
  * 注册引擎到数据库
  * @param enginePath 引擎路径
- * @param metadata 引擎元数据（可选，未提供时自动获取）
- * @param creating 是否正在创建
+ * @param options 注册选项；未提供的快照字段会自动补齐
  * @returns 引擎ID
  */
-async function registerEngine(enginePath: string, metadata?: EngineMetadata, creating?: boolean): Promise<string> {
-  metadata ??= await getEngineMetadata(enginePath)
+async function registerEngine(
+  enginePath: string,
+  options: RegisterEngineOptions = {},
+): Promise<string> {
+  const { status = 'created' } = options
+  let { metadata, previewAssets } = options
+
+  if (!metadata && !previewAssets) {
+    const snapshot = await getEngineSnapshot(enginePath)
+    metadata = snapshot.metadata
+    previewAssets = snapshot.previewAssets
+  } else {
+    metadata ??= await getEngineMetadata(enginePath)
+    previewAssets ??= withEnginePreviewCacheVersion(await getEnginePreviewAssets(enginePath))
+  }
+
   return await db.engines.add({
     id: crypto.randomUUID(),
     path: enginePath,
     createdAt: Date.now(),
-    status: creating ? 'creating' : 'created',
+    status,
     metadata,
+    previewAssets,
   })
 }
 
@@ -86,15 +144,20 @@ async function installEngine(enginePath: string): Promise<void> {
   const engineName = metadata.name
   const targetPath = await resolveInstalledEnginePath(storageSettingsStore.engineSavePath, engineName)
   const targetExisted = await exists(targetPath)
-  const targetMetadata = {
-    ...metadata,
-    icon: await engineIconPath(targetPath),
+  const targetPreviewAssets = {
+    icon: {
+      path: await engineIconPath(targetPath),
+    },
   }
 
   logger.info(`[引擎 ${engineName}] 开始安装`)
 
   // 1. 先注册到数据库
-  const id = await registerEngine(targetPath, targetMetadata, true)
+  const id = await registerEngine(targetPath, {
+    metadata,
+    previewAssets: targetPreviewAssets,
+    status: 'creating',
+  })
   logger.info(`[引擎 ${engineName}] 注册到数据库`)
 
   // 2. 再复制文件
@@ -105,7 +168,11 @@ async function installEngine(enginePath: string): Promise<void> {
     })
     logger.info(`[引擎 ${engineName}] 复制引擎文件完成`)
 
-    await db.engines.update(id, { status: 'created' })
+    const installedSnapshot = await getEngineSnapshot(targetPath)
+    await db.engines.update(id, {
+      status: 'created',
+      ...installedSnapshot,
+    })
 
     resourceStore.finishProgress(id)
     logger.info(`[引擎 ${engineName}] 安装引擎完成`)
@@ -158,7 +225,11 @@ async function importEngine(enginePath: string): Promise<void> {
 
   if (enginePath === targetPath) {
     logger.info(`[引擎导入] 引擎已在目标位置，直接注册: ${enginePath}`)
-    await registerEngine(enginePath, metadata, false)
+    const previewAssets = withEnginePreviewCacheVersion(await getEnginePreviewAssets(enginePath))
+    await registerEngine(enginePath, {
+      metadata,
+      previewAssets,
+    })
   } else {
     await installEngine(enginePath)
   }
@@ -170,6 +241,8 @@ async function importEngine(enginePath: string): Promise<void> {
 export const engineManager = {
   validateEngine,
   getEngineMetadata,
+  getEnginePreviewAssets,
+  getEngineSnapshot,
   registerEngine,
   installEngine,
   uninstallEngine,
