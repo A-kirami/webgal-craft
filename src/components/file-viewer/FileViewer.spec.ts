@@ -326,7 +326,7 @@ describe('FileViewer 外观契约', () => {
 
     expect(queryImage()).toBeNull()
 
-    await vi.advanceTimersByTimeAsync(5_000)
+    await vi.advanceTimersByTimeAsync(5000)
     await nextTick()
 
     expect(queryImage()?.getAttribute('src')).toBe(createPreviewUrl(item))
@@ -372,10 +372,10 @@ describe('FileViewer 外观契约', () => {
           h('div', [
             h(FileViewer, {
               ref: fileViewerRef,
-        items: [createItem(1)],
-        viewMode: 'grid',
-      }, {
-        icon: ({ iconSize, item }: { iconSize: number, item: FileViewerItem }) =>
+              items: [createItem(1)],
+              viewMode: 'grid',
+            }, {
+              icon: ({ iconSize, item }: { iconSize: number, item: FileViewerItem }) =>
                 h('span', { 'data-testid': 'icon-slot-probe' }, `${item.name}:${iconSize}`),
             }),
             h('button', {

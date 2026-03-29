@@ -3,8 +3,8 @@ import { page } from 'vitest/browser'
 import { reactive } from 'vue'
 
 import { createBrowserConsoleMonitor, createBrowserLocalizedI18n } from '~/__tests__/browser'
-import { createTauriPathModuleMock } from '~/__tests__/mocks/tauri-path'
 import { createBrowserContainerStub, createBrowserTextStub, renderInBrowser } from '~/__tests__/browser-render'
+import { createTauriPathModuleMock } from '~/__tests__/mocks/tauri-path'
 
 const {
   useEditorStoreMock,
