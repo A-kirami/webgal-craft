@@ -115,6 +115,7 @@ jobs:
           echo "name=webgal-craft-v${{ steps.tauri-build.outputs.appVersion }}-${{ matrix.platform }}-${build_mode}-${build_suffix}" >> "${GITHUB_OUTPUT}"
 
       - name: Upload build artifacts
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.artifact-name.outputs.name }}
