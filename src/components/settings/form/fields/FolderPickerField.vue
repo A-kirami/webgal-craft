@@ -8,7 +8,7 @@ import type { FolderPickerFieldDef } from '~/features/settings/schema'
 interface Props {
   field: FolderPickerFieldDef
   value?: string
-  handleChange: (value: string) => void
+  handleChange: (event: Event | unknown, shouldValidate?: boolean) => void
   componentField?: object
 }
 
