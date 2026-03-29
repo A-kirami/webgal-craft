@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { defineComponent, h, nextTick, onMounted, ref } from 'vue'
 
-import { renderInBrowser } from '~/__tests__/browser-render'
+import { createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 import { useFileViewerLayout } from '~/components/file-viewer/useFileViewerLayout'
 import { useFileViewerVirtualizer } from '~/components/file-viewer/useFileViewerVirtualizer'
 
@@ -11,11 +11,17 @@ import FileViewer from './FileViewer.vue'
 import type { FileViewerItem, FileViewerPreviewSize } from '~/types/file-viewer'
 
 const {
+  getImageDimensionsMock,
+  loggerDebugMock,
+  loggerErrorMock,
   measureMock,
   resolvePreviewUrlMock,
   scrollToIndexMock,
   viewportWidthMock,
 } = vi.hoisted(() => ({
+  getImageDimensionsMock: vi.fn(),
+  loggerDebugMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
   measureMock: vi.fn(),
   resolvePreviewUrlMock: vi.fn(),
   scrollToIndexMock: vi.fn(),
@@ -54,7 +60,182 @@ vi.mock('@vueuse/core', async () => {
   }
 })
 
+vi.mock('~/commands/fs', () => ({
+  fsCmds: {
+    getImageDimensions: getImageDimensionsMock,
+  },
+}))
+
+vi.mock('@tauri-apps/plugin-log', () => ({
+  debug: loggerDebugMock,
+  error: loggerErrorMock,
+}))
+
+vi.mock('~/components/ui/hover-card', async () => {
+  const { defineComponent, h, inject, provide, ref, watch } = await vi.importActual<typeof import('vue')>('vue')
+
+  const hoverCardContextKey = Symbol('file-viewer-hover-card')
+
+  const HoverCard = defineComponent({
+    name: 'StubHoverCard',
+    props: {
+      open: {
+        type: Boolean,
+        default: undefined,
+      },
+      closeDelay: {
+        type: Number,
+        default: undefined,
+      },
+      openDelay: {
+        type: Number,
+        default: undefined,
+      },
+    },
+    emits: ['update:open'],
+    setup(_props, { emit, slots }) {
+      const isOpen = ref(false)
+      const isRendered = ref(false)
+      let openTimer: ReturnType<typeof setTimeout> | undefined
+      let closeTimer: ReturnType<typeof setTimeout> | undefined
+
+      function syncControlledOpen(nextOpen: boolean) {
+        if (openTimer) {
+          clearTimeout(openTimer)
+          openTimer = undefined
+        }
+
+        if (closeTimer) {
+          clearTimeout(closeTimer)
+          closeTimer = undefined
+        }
+
+        if (nextOpen) {
+          isOpen.value = true
+          isRendered.value = true
+          return
+        }
+
+        isOpen.value = false
+        if ((_props.closeDelay ?? 0) <= 0) {
+          isRendered.value = false
+          return
+        }
+
+        closeTimer = setTimeout(() => {
+          isRendered.value = false
+          closeTimer = undefined
+        }, _props.closeDelay ?? 0)
+      }
+
+      watch(() => _props.open, (nextOpen) => {
+        if (nextOpen === undefined) {
+          return
+        }
+
+        syncControlledOpen(nextOpen)
+      }, { immediate: true })
+
+      function setOpen(nextOpen: boolean) {
+        if (openTimer) {
+          clearTimeout(openTimer)
+          openTimer = undefined
+        }
+
+        if (closeTimer) {
+          clearTimeout(closeTimer)
+          closeTimer = undefined
+        }
+
+        if (nextOpen) {
+          openTimer = setTimeout(() => {
+            emit('update:open', true)
+            if (_props.open === undefined) {
+              isOpen.value = true
+              isRendered.value = true
+            }
+            openTimer = undefined
+          }, _props.openDelay ?? 0)
+          return
+        }
+
+        emit('update:open', false)
+        if (_props.open === undefined) {
+          isOpen.value = false
+        }
+
+        if ((_props.closeDelay ?? 0) <= 0) {
+          if (_props.open === undefined) {
+            isRendered.value = false
+          }
+          return
+        }
+
+        closeTimer = setTimeout(() => {
+          if (_props.open === undefined) {
+            isRendered.value = false
+          }
+          closeTimer = undefined
+        }, _props.closeDelay ?? 0)
+      }
+
+      provide(hoverCardContextKey, {
+        isOpen,
+        isRendered,
+        setOpen,
+      })
+
+      return () => h('div', { 'data-testid': 'hover-card-root' }, slots.default?.())
+    },
+  })
+
+  const HoverCardTrigger = defineComponent({
+    name: 'StubHoverCardTrigger',
+    setup(_, { slots }) {
+      const context = inject<{ isOpen: { value: boolean }, setOpen: (value: boolean) => void }>(hoverCardContextKey)
+
+      return () => h('div', {
+        'data-testid': 'hover-card-trigger',
+        'onBlur': () => context?.setOpen(false),
+        'onFocus': () => context?.setOpen(true),
+        'onPointerenter': () => context?.setOpen(true),
+        'onPointerleave': () => context?.setOpen(false),
+      }, slots.default?.())
+    },
+  })
+
+  const HoverCardContent = defineComponent({
+    name: 'StubHoverCardContent',
+    props: {
+      side: {
+        type: String,
+        default: undefined,
+      },
+    },
+    setup(props, { attrs, slots }) {
+      const context = inject<{ isOpen: { value: boolean }, isRendered: { value: boolean } }>(hoverCardContextKey)
+
+      return () => context?.isRendered.value
+        ? h('div', {
+            ...attrs,
+            'data-state': context.isOpen.value ? 'open' : 'closed',
+            'data-side': props.side,
+            'data-testid': 'hover-card-content',
+          }, slots.default?.())
+        : undefined
+    },
+  })
+
+  return {
+    HoverCard,
+    HoverCardContent,
+    HoverCardTrigger,
+  }
+})
+
 const BASE_TIMESTAMP = Date.parse('2023-11-14T00:00:00Z')
+const HOVER_PREVIEW_WARMUP_DELAY_MS = 120
+const HOVER_CARD_OPEN_DELAY_MS = 350
 
 function createItem(index: number): FileViewerItem {
   return {
@@ -79,7 +260,27 @@ function createPreviewUrl(item: FileViewerItem): string {
   return `http://127.0.0.1:8899/game/demo${previewPath}?t=${item.modifiedAt ?? 0}`
 }
 
+function createSizedPreviewUrl(item: FileViewerItem, previewSize: FileViewerPreviewSize): string {
+  const previewPath = item.path.replace(/\.[^./\\]+$/, '.png')
+  const url = new URL(`http://127.0.0.1:8899/game/demo${previewPath}`)
+  url.searchParams.set('t', String(item.modifiedAt ?? 0))
+  url.searchParams.set('w', String(previewSize.width))
+  url.searchParams.set('h', String(previewSize.height))
+  return url.href
+}
+
 const globalStubs = {
+  ContextMenu: defineComponent({
+    name: 'StubContextMenu',
+    setup(_, { attrs, slots }) {
+      return () => h('div', {
+        ...attrs,
+        'data-testid': 'context-menu-root',
+      }, slots.default?.())
+    },
+  }),
+  ContextMenuContent: createBrowserContainerStub('StubContextMenuContent'),
+  ContextMenuTrigger: createBrowserContainerStub('StubContextMenuTrigger'),
   ScrollArea: defineComponent({
     name: 'StubScrollArea',
     setup(_, { attrs, expose, slots }) {
@@ -109,6 +310,42 @@ function createImageFallbackHarness(viewMode: 'grid' | 'list') {
       })
     },
   })
+}
+
+function getHoverImageTriggerElements(index: number = 0): { trigger: HTMLElement | null, warmupTarget: HTMLElement | null } {
+  const trigger = document.querySelectorAll<HTMLElement>('[data-testid="hover-card-trigger"]')[index] ?? null
+  const warmupTarget = trigger?.firstElementChild instanceof HTMLElement
+    ? trigger.firstElementChild
+    : trigger
+
+  return {
+    trigger,
+    warmupTarget,
+  }
+}
+
+async function hoverImageTrigger(index: number = 0): Promise<HTMLElement | null> {
+  const { trigger, warmupTarget } = getHoverImageTriggerElements(index)
+  warmupTarget?.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }))
+  trigger?.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }))
+  await nextTick()
+  return trigger
+}
+
+async function openHoverImageTrigger(index: number = 0): Promise<HTMLElement | null> {
+  const trigger = await hoverImageTrigger(index)
+  await vi.advanceTimersByTimeAsync(HOVER_CARD_OPEN_DELAY_MS)
+  await nextTick()
+  await nextTick()
+  return trigger
+}
+
+async function leaveHoverImageTrigger(index: number = 0): Promise<void> {
+  const { trigger, warmupTarget } = getHoverImageTriggerElements(index)
+  warmupTarget?.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }))
+  trigger?.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }))
+  await nextTick()
+  await nextTick()
 }
 
 describe('FileViewer 组合式逻辑', () => {
@@ -186,11 +423,16 @@ describe('FileViewer 组合式逻辑', () => {
 
 describe('FileViewer 外观契约', () => {
   beforeEach(() => {
+    getImageDimensionsMock.mockReset()
+    loggerDebugMock.mockReset()
+    loggerErrorMock.mockReset()
     resolvePreviewUrlMock.mockReset()
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllGlobals()
+    document.body.innerHTML = ''
   })
 
   it('默认不会为图片项私自生成预览 URL', async () => {
@@ -301,7 +543,7 @@ describe('FileViewer 外观契约', () => {
   })
 
   it('图片预览失败一段时间后会自动再次尝试同一个 URL', async () => {
-    const item = createImageItem(1)
+    const item = createImageItem(18)
     const queryImage = () => document.querySelector<HTMLImageElement>(`img[alt="${item.name}"]`)
 
     vi.useFakeTimers()
@@ -331,6 +573,583 @@ describe('FileViewer 外观契约', () => {
 
     expect(queryImage()?.getAttribute('src')).toBe(createPreviewUrl(item))
     await result.unmount()
+  })
+
+  it('网格模式图片项 hover 后会请求大图预览并显示原图分辨率', async () => {
+    const item = createImageItem(11)
+    const hoverPreviewSize = {
+      width: 256,
+      height: 256,
+    }
+
+    vi.useFakeTimers()
+    viewportWidthMock.value = 780
+    getImageDimensionsMock.mockResolvedValue([1920, 1080])
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+      createSizedPreviewUrl(resolvedItem, preview),
+    )
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await openHoverImageTrigger()
+
+    expect(resolvePreviewUrlMock).toHaveBeenCalledWith(expect.objectContaining({
+      path: item.path,
+    }), hoverPreviewSize)
+    expect(getImageDimensionsMock).toHaveBeenCalledWith(item.path)
+    await expect.element(page.getByTestId('hover-card-content')).toHaveAttribute('data-side', 'top')
+    await expect.element(page.getByText('1920 × 1080')).toBeVisible()
+  })
+
+  it('hover 预览不会再使用固定尺寸外框', async () => {
+    const item = createImageItem(12)
+
+    vi.useFakeTimers()
+    viewportWidthMock.value = 780
+    getImageDimensionsMock.mockResolvedValue([320, 180])
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+      createSizedPreviewUrl(resolvedItem, preview),
+    )
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await openHoverImageTrigger()
+
+    const hoverContent = await page.getByTestId('hover-card-content').element()
+    const previewFrame = hoverContent.querySelector('div')
+    const previewImage = hoverContent.querySelector('img')
+
+    expect(hoverContent.className).not.toContain('w-72')
+    expect(previewFrame?.className ?? '').not.toContain('h-64')
+    expect(previewFrame?.className ?? '').not.toContain('w-64')
+    expect(previewImage?.className ?? '').not.toContain('h-full')
+    expect(previewImage?.className ?? '').not.toContain('w-full')
+  })
+
+  it('hover 图片尚未完成显示时会预留最终媒体区域，避免卡片尺寸跳变', async () => {
+    const item = createImageItem(13)
+
+    vi.useFakeTimers()
+    viewportWidthMock.value = 780
+    getImageDimensionsMock.mockResolvedValue([1600, 900])
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+      createSizedPreviewUrl(resolvedItem, preview),
+    )
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await openHoverImageTrigger()
+
+    const mediaFrame = document.querySelector<HTMLElement>('[data-testid="hover-card-media-frame"]')
+    expect(mediaFrame).not.toBeNull()
+    expect(mediaFrame?.style.width).toBe('256px')
+    expect(mediaFrame?.style.height).toBe('144px')
+  })
+
+  it('hover 图片预览会复用现有棋盘格背景', async () => {
+    const item = createImageItem(19)
+
+    vi.useFakeTimers()
+    viewportWidthMock.value = 780
+    getImageDimensionsMock.mockResolvedValue([1024, 1024])
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+      createSizedPreviewUrl(resolvedItem, preview),
+    )
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await openHoverImageTrigger()
+
+    const mediaFrame = await page.getByTestId('hover-card-media-frame').element()
+    mediaFrame.querySelector('img')?.dispatchEvent(new Event('load'))
+    await nextTick()
+
+    expect(mediaFrame.className).toContain('bg-checkerboard')
+    expect(mediaFrame.className).not.toContain('bg-muted/40')
+  })
+
+  it('hover 图片加载完成前不会提前显示棋盘格背景', async () => {
+    const item = createImageItem(20)
+
+    vi.useFakeTimers()
+    viewportWidthMock.value = 780
+    getImageDimensionsMock.mockResolvedValue([1024, 1024])
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+      createSizedPreviewUrl(resolvedItem, preview),
+    )
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await openHoverImageTrigger()
+    await expect.element(page.getByTestId('hover-card-content')).toBeInTheDocument()
+
+    const mediaFrame = await page.getByTestId('hover-card-media-frame').element()
+    const previewImage = mediaFrame.querySelector('img')
+
+    expect(mediaFrame.className).not.toContain('bg-checkerboard')
+
+    previewImage?.dispatchEvent(new Event('load'))
+    await nextTick()
+
+    expect(mediaFrame.className).toContain('bg-checkerboard')
+  })
+
+  it('列表模式图片项 hover 预览会显示在右侧', async () => {
+    const item = createImageItem(14)
+
+    vi.useFakeTimers()
+    viewportWidthMock.value = 780
+    getImageDimensionsMock.mockResolvedValue([1280, 720])
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+      createSizedPreviewUrl(resolvedItem, preview),
+    )
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'list',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await openHoverImageTrigger()
+
+    await expect.element(page.getByTestId('hover-card-content')).toHaveAttribute('data-side', 'right')
+    await expect.element(page.getByText('1280 × 720')).toBeVisible()
+  })
+
+  it('hover 预览会在图片下方显示文件名和分辨率', async () => {
+    const item = createImageItem(15)
+
+    vi.useFakeTimers()
+    viewportWidthMock.value = 780
+    getImageDimensionsMock.mockResolvedValue([1280, 720])
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+      createSizedPreviewUrl(resolvedItem, preview),
+    )
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'list',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await openHoverImageTrigger()
+    await expect.element(page.getByText('1280 × 720')).toBeVisible()
+
+    const hoverContent = await page.getByTestId('hover-card-content').element()
+    const textContent = hoverContent.textContent ?? ''
+
+    expect(textContent).toContain(item.name)
+    expect(textContent).toContain('1280 × 720')
+    expect(textContent.indexOf(item.name)).toBeLessThan(textContent.indexOf('1280 × 720'))
+  })
+
+  it('hovercard 进入关闭态时会保留当前图片，不会先切到 fallback', async () => {
+    const item = createImageItem(16)
+
+    vi.useFakeTimers()
+    viewportWidthMock.value = 780
+    getImageDimensionsMock.mockResolvedValue([1280, 720])
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+      createSizedPreviewUrl(resolvedItem, preview),
+    )
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await openHoverImageTrigger()
+
+    const openHoverContent = await page.getByTestId('hover-card-content').element()
+    const openMediaFrame = await page.getByTestId('hover-card-media-frame').element()
+    openMediaFrame.querySelector('img')?.dispatchEvent(new Event('load'))
+    await nextTick()
+
+    expect(openHoverContent.dataset.state).toBe('open')
+    expect(openHoverContent.querySelector('img')?.getAttribute('alt')).toBe(item.name)
+
+    await leaveHoverImageTrigger()
+
+    const closingHoverContent = await page.getByTestId('hover-card-content').element()
+    expect(closingHoverContent.dataset.state).toBe('closed')
+    expect(closingHoverContent.querySelector('img')?.getAttribute('alt')).toBe(item.name)
+  })
+
+  it('hover 预览加载失败后再次打开会重新尝试加载预览', async () => {
+    const item = createImageItem(21)
+
+    vi.useFakeTimers()
+    viewportWidthMock.value = 780
+    getImageDimensionsMock.mockResolvedValue([1280, 720])
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+      createSizedPreviewUrl(resolvedItem, preview),
+    )
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await openHoverImageTrigger()
+
+    const openHoverContent = await page.getByTestId('hover-card-content').element()
+    openHoverContent.querySelector('img')?.dispatchEvent(new Event('error'))
+    await nextTick()
+
+    const erroredHoverContent = await page.getByTestId('hover-card-content').element()
+    expect(erroredHoverContent.querySelector('[data-testid="hover-card-media-frame"]')).toBeNull()
+
+    await leaveHoverImageTrigger()
+    await vi.advanceTimersByTimeAsync(121)
+    await nextTick()
+
+    await openHoverImageTrigger()
+
+    const reopenedHoverContent = await page.getByTestId('hover-card-content').element()
+    expect(reopenedHoverContent.querySelector('[data-testid="hover-card-media-frame"]')).not.toBeNull()
+  })
+
+  it('多个缩略图依次触发 hover 时只会保留一个预览 card 打开', async () => {
+    vi.useFakeTimers()
+    viewportWidthMock.value = 780
+    getImageDimensionsMock.mockResolvedValue([1280, 720])
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+      createSizedPreviewUrl(resolvedItem, preview),
+    )
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [
+          createImageItem(22),
+          createImageItem(23),
+        ],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await openHoverImageTrigger(0)
+    await openHoverImageTrigger(1)
+
+    expect(document.querySelectorAll('[data-testid="hover-card-content"]')).toHaveLength(1)
+  })
+
+  it('悬停意图成立后会在打开前预热 hover 大图 URL', async () => {
+    const item = createImageItem(17)
+    const preloadedImageUrls: string[] = []
+
+    class FakeImage {
+      decoding = ''
+      #src = ''
+      #listeners = {
+        error: new Set<() => void>(),
+        load: new Set<() => void>(),
+      }
+
+      addEventListener(type: string, listener: () => void) {
+        if (type === 'load') {
+          this.#listeners.load.add(listener)
+        } else if (type === 'error') {
+          this.#listeners.error.add(listener)
+        }
+      }
+
+      get src() {
+        return this.#src
+      }
+
+      set src(value: string) {
+        this.#src = value
+        preloadedImageUrls.push(value)
+        setTimeout(() => {
+          for (const listener of this.#listeners.load) {
+            listener()
+          }
+        }, 0)
+      }
+    }
+
+    vi.useFakeTimers()
+    vi.stubGlobal('Image', FakeImage as unknown as typeof Image)
+
+    viewportWidthMock.value = 780
+    getImageDimensionsMock.mockResolvedValue([1280, 720])
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+      createSizedPreviewUrl(resolvedItem, preview),
+    )
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    expect(preloadedImageUrls).toHaveLength(0)
+    await hoverImageTrigger()
+
+    await vi.advanceTimersByTimeAsync(HOVER_PREVIEW_WARMUP_DELAY_MS - 1)
+    expect(preloadedImageUrls).toHaveLength(0)
+    await expect.element(page.getByTestId('hover-card-content')).not.toBeInTheDocument()
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(preloadedImageUrls).toEqual([createSizedPreviewUrl(item, { width: 256, height: 256 })])
+    expect(getImageDimensionsMock).toHaveBeenCalledWith(item.path)
+    await expect.element(page.getByTestId('hover-card-content')).not.toBeInTheDocument()
+  })
+
+  it('快速移开图片时不会预热 hover 大图 URL', async () => {
+    const item = createImageItem(1)
+    const preloadedImageUrls: string[] = []
+
+    class FakeImage {
+      decoding = ''
+      #src = ''
+      #listeners = {
+        error: new Set<() => void>(),
+        load: new Set<() => void>(),
+      }
+
+      addEventListener(type: string, listener: () => void) {
+        if (type === 'load') {
+          this.#listeners.load.add(listener)
+        } else if (type === 'error') {
+          this.#listeners.error.add(listener)
+        }
+      }
+
+      get src() {
+        return this.#src
+      }
+
+      set src(value: string) {
+        this.#src = value
+        preloadedImageUrls.push(value)
+        setTimeout(() => {
+          for (const listener of this.#listeners.load) {
+            listener()
+          }
+        }, 0)
+      }
+    }
+
+    vi.useFakeTimers()
+    vi.stubGlobal('Image', FakeImage as unknown as typeof Image)
+
+    viewportWidthMock.value = 780
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+      createSizedPreviewUrl(resolvedItem, preview),
+    )
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [item],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await hoverImageTrigger()
+    await leaveHoverImageTrigger()
+
+    await vi.advanceTimersByTimeAsync(HOVER_PREVIEW_WARMUP_DELAY_MS)
+    expect(preloadedImageUrls).toHaveLength(0)
+  })
+
+  it('非图片项不会渲染 hover 预览触发器', async () => {
+    viewportWidthMock.value = 780
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [createItem(1)],
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    expect(document.querySelectorAll('[data-testid="hover-card-trigger"]')).toHaveLength(0)
+    expect(getImageDimensionsMock).not.toHaveBeenCalled()
+  })
+
+  it('未提供 #context-menu slot 时不会渲染 ContextMenu 包裹', async () => {
+    viewportWidthMock.value = 780
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [createItem(1), createItem(2)],
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    expect(document.querySelectorAll('[data-testid="context-menu-root"]')).toHaveLength(0)
+  })
+
+  it('未提供 #background-context-menu slot 时不会渲染空白区右键触发层', async () => {
+    viewportWidthMock.value = 780
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [createItem(1), createItem(2)],
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    expect(document.querySelector('[data-file-viewer-background-surface="true"]')).toBeNull()
+  })
+
+  it('提供 #context-menu slot 时会向每个条目透传当前 item', async () => {
+    viewportWidthMock.value = 780
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [createItem(1), createItem(2)],
+        viewMode: 'grid',
+      },
+      slots: {
+        'context-menu': ({ item }: { item: FileViewerItem }) =>
+          h('div', { 'data-testid': `context-menu-item-${item.name}` }, item.path),
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    expect(document.querySelectorAll('[data-testid="context-menu-root"]')).toHaveLength(2)
+    await expect.element(page.getByTestId('context-menu-item-file-1.txt')).toHaveTextContent('/assets/file-1.txt')
+    await expect.element(page.getByTestId('context-menu-item-file-2.txt')).toHaveTextContent('/assets/file-2.txt')
+  })
+
+  it('提供 #background-context-menu slot 时会为文件视图空白区单独渲染菜单', async () => {
+    viewportWidthMock.value = 780
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [createItem(1), createItem(2)],
+        viewMode: 'grid',
+      },
+      slots: {
+        'background-context-menu': () =>
+          h('div', { 'data-testid': 'background-context-menu-content' }, 'background'),
+        'context-menu': ({ item }: { item: FileViewerItem }) =>
+          h('div', { 'data-testid': `context-menu-item-${item.name}` }, item.path),
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    expect(document.querySelector('[data-file-viewer-background-surface="true"]')).not.toBeNull()
+    expect(document.querySelectorAll('[data-testid="context-menu-root"]')).toHaveLength(3)
+    await expect.element(page.getByTestId('background-context-menu-content')).toHaveTextContent('background')
+    await expect.element(page.getByTestId('context-menu-item-file-1.txt')).toHaveTextContent('/assets/file-1.txt')
+    await expect.element(page.getByTestId('context-menu-item-file-2.txt')).toHaveTextContent('/assets/file-2.txt')
+  })
+
+  it('空目录时提供 #background-context-menu slot 仍会渲染背景菜单', async () => {
+    viewportWidthMock.value = 780
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [],
+        viewMode: 'grid',
+      },
+      slots: {
+        'background-context-menu': () =>
+          h('div', { 'data-testid': 'empty-background-context-menu-content' }, 'empty-background'),
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    expect(document.querySelectorAll('[data-testid="context-menu-root"]')).toHaveLength(1)
+    await expect.element(page.getByTestId('empty-background-context-menu-content')).toHaveTextContent('empty-background')
   })
 
   it('窄列表视图下会同时隐藏 modifiedAt 列头和内容', async () => {
@@ -399,5 +1218,50 @@ describe('FileViewer 外观契约', () => {
 
     await page.getByTestId('scroll-trigger').click()
     expect(scrollToIndexMock).toHaveBeenCalled()
+  })
+
+  it('expose 会按当前排序结果滚动到指定路径', async () => {
+    scrollToIndexMock.mockClear()
+    viewportWidthMock.value = 780
+
+    const FileViewerHarness = defineComponent({
+      name: 'FileViewerScrollToPathHarness',
+      setup() {
+        const fileViewerRef = ref<InstanceType<typeof FileViewer>>()
+
+        function handleScrollClick() {
+          fileViewerRef.value?.scrollToItemPath('/assets/file-2.txt')
+        }
+
+        return () =>
+          h('div', [
+            h(FileViewer, {
+              ref: fileViewerRef,
+              items: [
+                createItem(2),
+                createItem(1),
+              ],
+              viewMode: 'list',
+            }),
+            h('button', {
+              'type': 'button',
+              'data-testid': 'scroll-path-trigger',
+              'onClick': handleScrollClick,
+            }, 'scroll-path'),
+          ])
+      },
+    })
+
+    renderInBrowser(FileViewerHarness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    document.querySelector<HTMLElement>('[data-testid="scroll-path-trigger"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await nextTick()
+
+    expect(scrollToIndexMock).toHaveBeenCalledWith(1)
   })
 })

@@ -4,6 +4,8 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Check, Image, LayoutGrid, Layou
 import { usePreferenceStore } from '~/stores/preference'
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
+import AssetView from './AssetView.vue'
+
 const preferenceStore = usePreferenceStore()
 
 const { t } = useI18n()
@@ -37,6 +39,8 @@ let currentSearchQuery = $computed({
   },
 })
 
+const assetViewRef = useTemplateRef<InstanceType<typeof AssetView>>('assetViewRef')
+
 const sortOptions = $computed(() => [
   { value: 'name', label: t('edit.assetPanel.sort.name') },
   { value: 'modifiedTime', label: t('edit.assetPanel.sort.modifiedTime') },
@@ -63,6 +67,10 @@ function toggleSearch() {
     currentSearchQuery = ''
   }
   isSearchExpanded = !isSearchExpanded
+}
+
+function handleCreateFolder() {
+  void assetViewRef.value?.createFolderInCurrentDirectory()
 }
 
 function handleSortFieldSelect(sortBy: FileViewerSortBy) {
@@ -150,10 +158,29 @@ const isMaxZoom = $computed(() => preferenceStore.assetZoom[0] >= 150)
           >
             <Search class="size-3.5" />
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <Button
+                variant="outline"
+                size="icon"
+                class="shrink-0 size-7 shadow-none"
+                :title="$t('common.create')"
+                :aria-label="$t('common.create')"
+              >
+                <Plus class="size-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" class="min-w-34">
+              <DropdownMenuItem class="text-xs gap-2" @select="handleCreateFolder">
+                <span class="flex-1">{{ $t('edit.fileTree.newFolder') }}</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       <KeepAlive>
         <AssetView
+          ref="assetViewRef"
           :key="preferenceStore.assetTab"
           class="flex-1 min-h-0"
           :asset-type="preferenceStore.assetTab"

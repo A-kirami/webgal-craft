@@ -1,8 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { page } from 'vitest/browser'
-import { defineComponent, h, reactive, ref } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { page, userEvent } from 'vitest/browser'
+import { defineComponent, h, nextTick, reactive, ref } from 'vue'
 
-import { renderInBrowser } from '~/__tests__/browser-render'
+import {
+  createBrowserContainerStub,
+  createBrowserInputStub,
+  renderInBrowser,
+} from '~/__tests__/browser-render'
 
 import AssetView from './AssetView.vue'
 
@@ -26,18 +30,30 @@ const PREVIEW_SIZE: FileViewerPreviewSize = {
 }
 
 const {
+  createFolderMock,
+  fileSystemEventHandlers,
+  fileSystemEventsOnMock,
+  fileViewerScrollToIndexMock,
   gameAssetDirMock,
   getFolderContentsMock,
+  handleErrorMock,
   joinMock,
+  renameFileMock,
   resolveAssetUrlMock,
   useFileStoreMock,
   usePreferenceStoreMock,
   useTabsStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
+  createFolderMock: vi.fn(),
+  fileSystemEventHandlers: new Map<string, ((event: Record<string, unknown>) => void)[]>(),
+  fileSystemEventsOnMock: vi.fn(),
+  fileViewerScrollToIndexMock: vi.fn(),
   gameAssetDirMock: vi.fn(),
   getFolderContentsMock: vi.fn(),
+  handleErrorMock: vi.fn(),
   joinMock: vi.fn(),
+  renameFileMock: vi.fn(),
   resolveAssetUrlMock: vi.fn(),
   useFileStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
@@ -45,14 +61,109 @@ const {
   useWorkspaceStoreMock: vi.fn(),
 }))
 
+function emitFileSystemEvent(type: string, event: Record<string, unknown>): void {
+  for (const handler of fileSystemEventHandlers.get(type) ?? []) {
+    handler(event)
+  }
+}
+
 vi.mock('@tauri-apps/api/path', async () => {
   const actual = await vi.importActual<typeof import('@tauri-apps/api/path')>('@tauri-apps/api/path')
 
   return {
     ...actual,
+    basename: vi.fn(async (filePath: string) => filePath.split(/[/\\]/).at(-1) ?? ''),
+    dirname: vi.fn(async (filePath: string) => filePath.replace(/[\\/][^\\/]+$/, '')),
+    extname: vi.fn(async (filePath: string) => {
+      const match = /\.[^./\\]+$/.exec(filePath)
+      return match?.[0] ?? ''
+    }),
     join: joinMock,
+    normalize: vi.fn((filePath: string) => filePath.replaceAll('\\', '/')),
+    sep: '/',
   }
 })
+
+vi.mock('~/components/editor/FileTreeContextMenuContent.vue', async () => {
+  const { defineComponent, h } = await vi.importActual<typeof import('vue')>('vue')
+
+  return {
+    default: defineComponent({
+      name: 'StubFileTreeContextMenuContent',
+      props: {
+        item: {
+          type: Object,
+          required: true,
+        },
+        isRoot: {
+          type: Boolean,
+          default: false,
+        },
+        onRename: {
+          type: Function,
+          default: undefined,
+        },
+        onCreateFolder: {
+          type: Function,
+          default: undefined,
+        },
+      },
+      setup(props) {
+        return () => h('div', {
+          'data-testid': props.isRoot ? 'file-tree-context-menu-root' : `file-tree-context-menu-item-${(props.item as FileViewerItem).name}`,
+          'data-item-name': (props.item as FileViewerItem).name,
+          'data-item-path': (props.item as FileViewerItem).path,
+          'data-is-root': String(props.isRoot),
+        }, [
+          h('button', {
+            'type': 'button',
+            'data-testid': `rename-action-${(props.item as FileViewerItem).name}`,
+            'onClick': () => {
+              ;(props.onRename as ((item: FileViewerItem) => void) | undefined)?.(props.item as FileViewerItem)
+            },
+          }, 'rename'),
+          ...(props.onCreateFolder
+            ? [
+                h('button', {
+                  'type': 'button',
+                  'data-testid': `create-folder-action-${(props.item as FileViewerItem).name}`,
+                  'onClick': () => {
+                    ;(props.onCreateFolder as ((item: FileViewerItem) => void) | undefined)?.(props.item as FileViewerItem)
+                  },
+                }, 'create-folder'),
+              ]
+            : []),
+        ])
+      },
+    }),
+  }
+})
+
+vi.mock('~/components/ui/popover', async () => {
+  const { defineComponent, h } = await vi.importActual<typeof import('vue')>('vue')
+
+  return {
+    PopoverAnchor: defineComponent({
+      name: 'StubPopoverAnchor',
+      setup(_, { slots }) {
+        return () => h('div', { 'data-testid': 'popover-anchor' }, slots.default?.())
+      },
+    }),
+  }
+})
+
+vi.mock('~/composables/useFileSystemEvents', () => ({
+  useFileSystemEvents: () => ({
+    on: fileSystemEventsOnMock,
+  }),
+}))
+
+vi.mock('~/services/game-fs', () => ({
+  gameFs: {
+    createFolder: createFolderMock,
+    renameFile: renameFileMock,
+  },
+}))
 
 vi.mock('~/services/platform/app-paths', () => ({
   gameAssetDir: gameAssetDirMock,
@@ -78,9 +189,13 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
-function createFileViewerStub() {
+vi.mock('~/utils/error-handler', () => ({
+  handleError: handleErrorMock,
+}))
+
+function createPreviewFileViewerStub() {
   return defineComponent({
-    name: 'StubFileViewer',
+    name: 'StubPreviewFileViewer',
     props: {
       resolvePreviewUrl: {
         type: Function as PropType<((item: FileViewerItem, previewSize: FileViewerPreviewSize) => string | undefined) | undefined>,
@@ -89,7 +204,8 @@ function createFileViewerStub() {
     },
     setup(props, { expose }) {
       expose({
-        scrollToIndex: vi.fn(),
+        scrollToIndex: fileViewerScrollToIndexMock,
+        scrollToItemPath: vi.fn(),
         viewport: undefined,
       })
 
@@ -101,14 +217,127 @@ function createFileViewerStub() {
   })
 }
 
-function createHarness() {
+function createRenameFileViewerStub() {
+  return defineComponent({
+    name: 'StubRenameFileViewer',
+    props: {
+      items: {
+        type: Array as PropType<FileViewerItem[]>,
+        required: true,
+      },
+    },
+    setup(props, { expose, slots }) {
+      const viewportRef = ref<HTMLElement>()
+      const scrollToItemPath = vi.fn()
+
+      expose({
+        scrollToIndex: fileViewerScrollToIndexMock,
+        scrollToItemPath,
+        get viewport() {
+          return viewportRef.value
+        },
+      })
+
+      return () => h('div', { ref: viewportRef }, [
+        ...(props.items ?? []).map(item =>
+          h('div', {
+            'key': item.path,
+            'data-file-viewer-path': item.path,
+          }, [
+            h('div', { 'data-file-viewer-name': 'true' }, item.name),
+            ...(slots['context-menu']?.({ item }) ?? []),
+          ]),
+        ),
+        ...(slots['background-context-menu']?.() ?? []),
+      ])
+    },
+  })
+}
+
+function createVirtualizedRenameFileViewerStub() {
+  return defineComponent({
+    name: 'StubVirtualizedRenameFileViewer',
+    props: {
+      items: {
+        type: Array as PropType<FileViewerItem[]>,
+        required: true,
+      },
+    },
+    setup(props, { expose, slots }) {
+      const viewportRef = ref<HTMLElement>()
+      const visibleIndex = ref(3)
+
+      function scrollToIndex(index: number) {
+        fileViewerScrollToIndexMock(index)
+        visibleIndex.value = index
+      }
+
+      function scrollToItemPath(path: string) {
+        const targetIndex = props.items.findIndex(item => item.path === path)
+        if (targetIndex < 0) {
+          return
+        }
+
+        scrollToIndex(targetIndex)
+      }
+
+      expose({
+        scrollToIndex,
+        scrollToItemPath,
+        get viewport() {
+          return viewportRef.value
+        },
+      })
+
+      return () => h('div', { ref: viewportRef }, [
+        ...(props.items ?? [])
+          .filter((_, index) => index === visibleIndex.value)
+          .map(item =>
+            h('div', {
+              'key': item.path,
+              'data-file-viewer-path': item.path,
+            }, [
+              h('div', { 'data-file-viewer-name': 'true' }, item.name),
+              ...(slots['context-menu']?.({ item }) ?? []),
+            ]),
+          ),
+        ...(slots['background-context-menu']?.() ?? []),
+      ])
+    },
+  })
+}
+
+function createContextMenuFileViewerStub() {
+  return defineComponent({
+    name: 'StubContextMenuFileViewer',
+    props: {
+      items: {
+        type: Array as PropType<FileViewerItem[]>,
+        required: true,
+      },
+    },
+    setup(_props, { expose, slots }) {
+      expose({
+        scrollToIndex: fileViewerScrollToIndexMock,
+        scrollToItemPath: vi.fn(),
+        viewport: undefined,
+      })
+
+      return () => h('div', [
+        ...(slots['background-context-menu']?.() ?? []),
+      ])
+    },
+  })
+}
+
+function createHarness(assetType: string = 'bg') {
   return defineComponent({
     name: 'AssetViewHarness',
     setup() {
       const currentPath = ref('')
 
       return () => h(AssetView as Component, {
-        'assetType': 'bg',
+        assetType,
         'current-path': currentPath.value,
         'onUpdate:current-path': (value: string) => {
           currentPath.value = value
@@ -118,11 +347,23 @@ function createHarness() {
   })
 }
 
+const commonGlobalStubs = {
+  Input: createBrowserInputStub('StubInput'),
+  Popover: createBrowserContainerStub('StubPopover'),
+  PopoverContent: createBrowserContainerStub('StubPopoverContent'),
+}
+
 describe('AssetView', () => {
   beforeEach(() => {
+    fileSystemEventHandlers.clear()
+    fileSystemEventsOnMock.mockReset()
+    createFolderMock.mockReset()
+    fileViewerScrollToIndexMock.mockReset()
     gameAssetDirMock.mockReset()
     getFolderContentsMock.mockReset()
+    handleErrorMock.mockReset()
     joinMock.mockReset()
+    renameFileMock.mockReset()
     resolveAssetUrlMock.mockReset()
     useFileStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()
@@ -133,6 +374,8 @@ describe('AssetView', () => {
     getFolderContentsMock.mockResolvedValue([])
     joinMock.mockImplementation(async (...paths: string[]) => paths.filter(Boolean).join('/'))
     resolveAssetUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/assets/bg/cover.png?t=1700000000000')
+    createFolderMock.mockResolvedValue('/project/background/新建文件夹')
+    renameFileMock.mockResolvedValue('/project/background/hero-renamed.png')
 
     useFileStoreMock.mockReturnValue({
       getFolderContents: getFolderContentsMock,
@@ -142,10 +385,10 @@ describe('AssetView', () => {
       assetZoom: [100],
     }))
     useTabsStoreMock.mockReturnValue({
-      openTab: vi.fn(),
-      tabs: [],
       findTabIndex: vi.fn(() => -1),
       fixPreviewTab: vi.fn(),
+      openTab: vi.fn(),
+      tabs: [],
     })
     useWorkspaceStoreMock.mockReturnValue(reactive({
       currentGame: {
@@ -153,13 +396,31 @@ describe('AssetView', () => {
       },
       currentGameServeUrl: 'http://127.0.0.1:8899/game/demo/',
     }))
+    fileSystemEventsOnMock.mockImplementation((eventType: string, handler: (event: Record<string, unknown>) => void) => {
+      const handlers = fileSystemEventHandlers.get(eventType) ?? []
+      handlers.push(handler)
+      fileSystemEventHandlers.set(eventType, handlers)
+      return () => {
+        const currentHandlers = fileSystemEventHandlers.get(eventType) ?? []
+        fileSystemEventHandlers.set(
+          eventType,
+          currentHandlers.filter(currentHandler => currentHandler !== handler),
+        )
+      }
+    })
   })
 
-  it('文件视图图片预览会按实际展示尺寸生成缩略图 URL', async () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+    document.body.innerHTML = ''
+  })
+
+  it('文件视图图片预览会按实际展示尺寸生成 HTTP 预览地址', async () => {
     renderInBrowser(createHarness(), {
       global: {
         stubs: {
-          FileViewer: createFileViewerStub(),
+          ...commonGlobalStubs,
+          FileViewer: createPreviewFileViewerStub(),
         },
       },
     })
@@ -179,5 +440,377 @@ describe('AssetView', () => {
         resizeMode: 'contain',
       },
     })
+  })
+
+  it('右键重命名会以 Popover 形式打开并调用 gameFs.renameFile', async () => {
+    gameAssetDirMock.mockResolvedValue('/project/background')
+    getFolderContentsMock.mockResolvedValue([
+      {
+        createdAt: 1,
+        isDir: false,
+        mimeType: 'image/png',
+        modifiedAt: 2,
+        name: 'hero.png',
+        path: '/project/background/hero.png',
+        size: 1024,
+      },
+    ])
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: {
+        path: '/project',
+      },
+      currentGameServeUrl: undefined,
+    }))
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createRenameFileViewerStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('rename-action-hero.png')).toBeVisible()
+
+    await page.getByTestId('rename-action-hero.png').click()
+
+    const textbox = page.getByRole('textbox')
+    await expect.element(textbox).toHaveValue('hero.png')
+
+    await textbox.fill('hero-renamed.png')
+    await userEvent.keyboard('{Enter}')
+
+    expect(renameFileMock).toHaveBeenCalledWith('/project/background/hero.png', 'hero-renamed.png')
+    expect(handleErrorMock).not.toHaveBeenCalled()
+  })
+
+  it('网格模式下重命名 Popover 会居中对齐', async () => {
+    gameAssetDirMock.mockResolvedValue('/project/background')
+    getFolderContentsMock.mockResolvedValue([
+      {
+        createdAt: 1,
+        isDir: false,
+        mimeType: 'image/png',
+        modifiedAt: 2,
+        name: 'hero.png',
+        path: '/project/background/hero.png',
+        size: 1024,
+      },
+    ])
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: {
+        path: '/project',
+      },
+      currentGameServeUrl: undefined,
+    }))
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createRenameFileViewerStub(),
+        },
+      },
+    })
+
+    await page.getByTestId('rename-action-hero.png').click()
+
+    const popoverContent = document.querySelector('[side="bottom"]')
+    expect(popoverContent?.getAttribute('align')).toBe('center')
+  })
+
+  it('列表模式下重命名 Popover 仍保持左对齐', async () => {
+    gameAssetDirMock.mockResolvedValue('/project/background')
+    getFolderContentsMock.mockResolvedValue([
+      {
+        createdAt: 1,
+        isDir: false,
+        mimeType: 'image/png',
+        modifiedAt: 2,
+        name: 'hero.png',
+        path: '/project/background/hero.png',
+        size: 1024,
+      },
+    ])
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: {
+        path: '/project',
+      },
+      currentGameServeUrl: undefined,
+    }))
+    usePreferenceStoreMock.mockReturnValue(reactive({
+      assetViewMode: 'list',
+      assetZoom: [100],
+    }))
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createRenameFileViewerStub(),
+        },
+      },
+    })
+
+    await page.getByTestId('rename-action-hero.png').click()
+
+    const popoverContent = document.querySelector('[side="bottom"]')
+    expect(popoverContent?.getAttribute('align')).toBe('start')
+  })
+
+  it('当前目录收到文件创建事件后会重新读取并刷新列表', async () => {
+    vi.useFakeTimers()
+    getFolderContentsMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          createdAt: 1,
+          isDir: false,
+          mimeType: 'image/png',
+          modifiedAt: 2,
+          name: 'new-file.png',
+          path: '/games/demo/assets/bg/new-file.png',
+          size: 2048,
+        },
+      ])
+
+    renderInBrowser(createHarness(), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createRenameFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
+    })
+    await expect.element(page.getByText('new-file.png')).not.toBeInTheDocument()
+
+    emitFileSystemEvent('file:created', {
+      type: 'file:created',
+      path: '/games/demo/assets/bg/new-file.png',
+    })
+
+    await vi.advanceTimersByTimeAsync(100)
+    await nextTick()
+
+    expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
+    await expect.element(page.getByText('new-file.png')).toBeVisible()
+  })
+
+  it('会为文件视图空白区提供当前目录右键菜单', async () => {
+    gameAssetDirMock.mockResolvedValue('/project/background')
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createContextMenuFileViewerStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-item-path', '/project/background')
+    await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-item-name', 'background')
+    await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-is-root', 'true')
+  })
+
+  it('空白区右键菜单新建文件夹后会创建目录并打开重命名 Popover', async () => {
+    vi.useFakeTimers()
+    gameAssetDirMock.mockResolvedValue('/project/background')
+    getFolderContentsMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          createdAt: 1,
+          isDir: true,
+          modifiedAt: 2,
+          name: '新建文件夹',
+          path: '/project/background/新建文件夹',
+          size: 0,
+        },
+      ])
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: {
+        path: '/project',
+      },
+      currentGameServeUrl: undefined,
+    }))
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createRenameFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
+    })
+    await page.getByTestId('create-folder-action-background').click()
+
+    expect(createFolderMock).toHaveBeenCalledWith('/project/background', 'edit.fileTree.defaultFolderName')
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
+    })
+    await vi.advanceTimersByTimeAsync(1000)
+    await nextTick()
+
+    await expect.element(page.getByRole('textbox')).toHaveValue('新建文件夹')
+  })
+
+  it('大型虚拟列表中新建文件夹时会先滚动到目标项再打开重命名 Popover', async () => {
+    vi.useFakeTimers()
+    gameAssetDirMock.mockResolvedValue('/project/background')
+    getFolderContentsMock
+      .mockResolvedValueOnce([
+        {
+          createdAt: 1,
+          isDir: false,
+          mimeType: 'image/png',
+          modifiedAt: 2,
+          name: 'hero-1.png',
+          path: '/project/background/hero-1.png',
+          size: 1024,
+        },
+        {
+          createdAt: 1,
+          isDir: false,
+          mimeType: 'image/png',
+          modifiedAt: 3,
+          name: 'hero-2.png',
+          path: '/project/background/hero-2.png',
+          size: 1024,
+        },
+        {
+          createdAt: 1,
+          isDir: false,
+          mimeType: 'image/png',
+          modifiedAt: 4,
+          name: 'hero-3.png',
+          path: '/project/background/hero-3.png',
+          size: 1024,
+        },
+        {
+          createdAt: 1,
+          isDir: false,
+          mimeType: 'image/png',
+          modifiedAt: 5,
+          name: 'hero-4.png',
+          path: '/project/background/hero-4.png',
+          size: 1024,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          createdAt: 1,
+          isDir: true,
+          modifiedAt: 2,
+          name: '新建文件夹',
+          path: '/project/background/新建文件夹',
+          size: 0,
+        },
+        {
+          createdAt: 1,
+          isDir: false,
+          mimeType: 'image/png',
+          modifiedAt: 2,
+          name: 'hero-1.png',
+          path: '/project/background/hero-1.png',
+          size: 1024,
+        },
+        {
+          createdAt: 1,
+          isDir: false,
+          mimeType: 'image/png',
+          modifiedAt: 3,
+          name: 'hero-2.png',
+          path: '/project/background/hero-2.png',
+          size: 1024,
+        },
+        {
+          createdAt: 1,
+          isDir: false,
+          mimeType: 'image/png',
+          modifiedAt: 4,
+          name: 'hero-3.png',
+          path: '/project/background/hero-3.png',
+          size: 1024,
+        },
+        {
+          createdAt: 1,
+          isDir: false,
+          mimeType: 'image/png',
+          modifiedAt: 5,
+          name: 'hero-4.png',
+          path: '/project/background/hero-4.png',
+          size: 1024,
+        },
+      ])
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: {
+        path: '/project',
+      },
+      currentGameServeUrl: undefined,
+    }))
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createVirtualizedRenameFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
+    })
+    await page.getByTestId('create-folder-action-background').click()
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
+    })
+    await vi.advanceTimersByTimeAsync(1000)
+    await nextTick()
+
+    expect(fileViewerScrollToIndexMock).toHaveBeenCalledWith(0)
+    await expect.element(page.getByRole('textbox')).toHaveValue('新建文件夹')
+  })
+
+  it('当前目录已有默认文件夹名时会自动追加序号再创建', async () => {
+    gameAssetDirMock.mockResolvedValue('/project/background')
+    getFolderContentsMock.mockResolvedValue([
+      {
+        createdAt: 1,
+        isDir: true,
+        modifiedAt: 2,
+        name: 'edit.fileTree.defaultFolderName',
+        path: '/project/background/edit.fileTree.defaultFolderName',
+        size: 0,
+      },
+    ])
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createContextMenuFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
+    })
+    await page.getByTestId('create-folder-action-background').click()
+
+    expect(createFolderMock).toHaveBeenCalledWith('/project/background', 'edit.fileTree.defaultFolderName 2')
   })
 })

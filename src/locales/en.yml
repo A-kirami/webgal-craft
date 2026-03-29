@@ -2,6 +2,7 @@ common:
   loading: Loading...
   cancel: Cancel
   confirm: Confirm
+  create: Create
   save: Save
   edit: Edit
   moveToTrash: Move to Trash

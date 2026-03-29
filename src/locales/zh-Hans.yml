@@ -2,6 +2,7 @@ common:
   loading: 加载中...
   cancel: 取消
   confirm: 确认
+  create: 创建
   save: 保存
   edit: 编辑
   moveToTrash: 移动到回收站

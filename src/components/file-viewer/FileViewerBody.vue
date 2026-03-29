@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { File, FileImage, FileJson2, FileMusic, FileVideo, Folder } from 'lucide-vue-next'
 
+import { loadFileViewerImageDimensions } from '~/components/file-viewer/fileViewerImageDimensions'
+import FileViewerImageHoverCard from '~/components/file-viewer/FileViewerImageHoverCard.vue'
+import FileViewerItemContextMenu from '~/components/file-viewer/FileViewerItemContextMenu.vue'
 import { formatFileSize } from '~/utils/format'
 import { isValidPositiveNumber } from '~/utils/sort'
 
@@ -54,10 +57,22 @@ const emit = defineEmits<{
   itemClick: [item: FileViewerItem]
 }>()
 
-const FAILED_PREVIEW_RETRY_DELAY_MS = 5000
+const slots = useSlots()
 
+const FAILED_PREVIEW_RETRY_DELAY_MS = 5000
+const HOVER_PREVIEW_WARMUP_DELAY_MS = 120
+const HOVER_PREVIEW_SIZE = Object.freeze({
+  width: 256,
+  height: 256,
+})
+
+const hasContextMenu = computed(() => !!slots['context-menu'])
+const hasBackgroundContextMenu = computed(() => !!slots['background-context-menu'])
 const failedPreviewUrls = reactive(new Map<string, FailedPreviewEntry>())
+const pendingHoverPreviewPreloads = new Map<string, Promise<void>>()
+const pendingHoverPreviewWarmupTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const pendingPreviewRetryTimers = new Map<string, ReturnType<typeof setTimeout>>()
+let openHoverPreviewPath = $ref<string>()
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   year: 'numeric',
@@ -72,6 +87,7 @@ function getDefaultIconComponent(item: FileViewerItem) {
   if (item.isDir) {
     return Folder
   }
+
   const mimeType = item.mimeType ?? ''
   if (mimeType.startsWith('image/')) {
     return FileImage
@@ -85,6 +101,7 @@ function getDefaultIconComponent(item: FileViewerItem) {
   if (mimeType === 'application/json') {
     return FileJson2
   }
+
   return File
 }
 
@@ -96,11 +113,11 @@ function formatDateTime(timestamp: number): string {
   return dateFormatter.format(timestamp)
 }
 
-function handleItemClick(item: FileViewerItem) {
+function handleItemClick(item: FileViewerItem): void {
   emit('itemClick', item)
 }
 
-function clearPendingPreviewRetry(itemPath: string) {
+function clearPendingPreviewRetry(itemPath: string): void {
   const pendingTimer = pendingPreviewRetryTimers.get(itemPath)
   if (pendingTimer) {
     clearTimeout(pendingTimer)
@@ -108,7 +125,7 @@ function clearPendingPreviewRetry(itemPath: string) {
   }
 }
 
-function schedulePreviewRetry(itemPath: string, previewUrl: string) {
+function schedulePreviewRetry(itemPath: string, previewUrl: string): void {
   clearPendingPreviewRetry(itemPath)
 
   const pendingTimer = setTimeout(() => {
@@ -121,6 +138,38 @@ function schedulePreviewRetry(itemPath: string, previewUrl: string) {
   }, FAILED_PREVIEW_RETRY_DELAY_MS)
 
   pendingPreviewRetryTimers.set(itemPath, pendingTimer)
+}
+
+function clearPendingHoverPreviewWarmup(itemPath: string): void {
+  const pendingTimer = pendingHoverPreviewWarmupTimers.get(itemPath)
+  if (pendingTimer) {
+    clearTimeout(pendingTimer)
+    pendingHoverPreviewWarmupTimers.delete(itemPath)
+  }
+}
+
+function preloadPreviewUrl(previewUrl: string): Promise<void> {
+  if (typeof Image === 'undefined') {
+    return Promise.resolve()
+  }
+
+  const pendingRequest = pendingHoverPreviewPreloads.get(previewUrl)
+  if (pendingRequest) {
+    return pendingRequest
+  }
+
+  const request = new Promise<void>((resolve) => {
+    const image = new Image()
+    image.decoding = 'async'
+    image.addEventListener('load', () => resolve(), { once: true })
+    image.addEventListener('error', () => resolve(), { once: true })
+    image.src = previewUrl
+  }).finally(() => {
+    pendingHoverPreviewPreloads.delete(previewUrl)
+  })
+
+  pendingHoverPreviewPreloads.set(previewUrl, request)
+  return request
 }
 
 function resolveDisplayPreviewUrl(item: FileViewerItem, previewSize: FileViewerPreviewSize): string | undefined {
@@ -159,7 +208,7 @@ function resolveDisplayPreviewUrl(item: FileViewerItem, previewSize: FileViewerP
   }
 }
 
-function handleImageError(itemPath: string, previewUrl?: string) {
+function handleImageError(itemPath: string, previewUrl?: string): void {
   if (!previewUrl) {
     return
   }
@@ -171,11 +220,63 @@ function handleImageError(itemPath: string, previewUrl?: string) {
   schedulePreviewRetry(itemPath, previewUrl)
 }
 
-onUnmounted(() => {
-  for (const pendingTimer of pendingPreviewRetryTimers.values()) {
-    clearTimeout(pendingTimer)
+function scheduleHoverPreviewWarmup(item: FileViewerItem): void {
+  if (!isImageFile(item) || !resolvePreviewUrl) {
+    return
   }
-  pendingPreviewRetryTimers.clear()
+
+  clearPendingHoverPreviewWarmup(item.path)
+
+  const pendingTimer = setTimeout(() => {
+    pendingHoverPreviewWarmupTimers.delete(item.path)
+
+    const previewUrl = resolveDisplayPreviewUrl(item, HOVER_PREVIEW_SIZE)
+    if (!previewUrl) {
+      return
+    }
+
+    void preloadPreviewUrl(previewUrl)
+    void loadFileViewerImageDimensions(item)
+  }, HOVER_PREVIEW_WARMUP_DELAY_MS)
+
+  pendingHoverPreviewWarmupTimers.set(item.path, pendingTimer)
+}
+
+function handleHoverCardOpenChange(itemPath: string, nextOpen: boolean): void {
+  if (nextOpen) {
+    openHoverPreviewPath = itemPath
+    return
+  }
+
+  if (openHoverPreviewPath === itemPath) {
+    openHoverPreviewPath = undefined
+  }
+}
+
+function resolveHoverCardCloseDelay(itemPath: string): number {
+  if (openHoverPreviewPath && openHoverPreviewPath !== itemPath) {
+    return 0
+  }
+
+  return 120
+}
+
+const visibleItemPaths = computed(() => {
+  if (viewMode === 'grid') {
+    return virtualRows.flatMap(row =>
+      getGridRowItems(row.index).map(item => item.path),
+    )
+  }
+
+  return virtualRows
+    .map(row => getListItem(row.index).path)
+    .filter((path): path is string => !!path)
+})
+
+watch(() => visibleItemPaths.value, (paths) => {
+  if (openHoverPreviewPath && !paths.includes(openHoverPreviewPath)) {
+    openHoverPreviewPath = undefined
+  }
 })
 
 function getGridRowDisplayItems(rowIndex: number): FileViewerDisplayItem[] {
@@ -183,6 +284,7 @@ function getGridRowDisplayItems(rowIndex: number): FileViewerDisplayItem[] {
     width: gridPreviewSize,
     height: gridPreviewSize,
   }
+
   return getGridRowItems(rowIndex).map(item => ({
     item,
     previewUrl: resolveDisplayPreviewUrl(item, previewSize),
@@ -195,18 +297,46 @@ function getListRowDisplayItem(rowIndex: number): FileViewerDisplayItem {
     width: listPreviewSize,
     height: listPreviewSize,
   }
+
   return {
     item,
     previewUrl: resolveDisplayPreviewUrl(item, previewSize),
   }
 }
+
+onUnmounted(() => {
+  for (const pendingTimer of pendingHoverPreviewWarmupTimers.values()) {
+    clearTimeout(pendingTimer)
+  }
+
+  pendingHoverPreviewWarmupTimers.clear()
+
+  for (const pendingTimer of pendingPreviewRetryTimers.values()) {
+    clearTimeout(pendingTimer)
+  }
+
+  pendingPreviewRetryTimers.clear()
+})
 </script>
 
 <template>
-  <div :style="{ height: `${totalSize}px`, width: '100%', position: 'relative' }">
+  <div class="min-h-full w-full relative" :style="{ height: `${totalSize}px` }">
+    <ContextMenu v-if="hasBackgroundContextMenu">
+      <ContextMenuTrigger as-child>
+        <div
+          data-file-viewer-background-surface="true"
+          class="inset-0 absolute"
+        />
+      </ContextMenuTrigger>
+      <ContextMenuContent class="w-52" @close-auto-focus.prevent>
+        <slot name="background-context-menu" />
+      </ContextMenuContent>
+    </ContextMenu>
+
     <div
       v-for="row in virtualRows"
       :key="String(row.key)"
+      class="pointer-events-none"
       :style="{
         position: 'absolute',
         top: 0,
@@ -221,114 +351,164 @@ function getListRowDisplayItem(rowIndex: number): FileViewerDisplayItem {
         class="grid h-full"
         :style="{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }"
       >
-        <button
+        <FileViewerItemContextMenu
           v-for="displayItem in getGridRowDisplayItems(row.index)"
           :key="displayItem.item.path"
-          type="button"
-          data-file-viewer-item="true"
-          class="p-1.5 rounded-md flex flex-col gap-1 items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
-          @click="handleItemClick(displayItem.item)"
+          :enabled="hasContextMenu"
+          :item="displayItem.item"
         >
-          <div
-            class="flex shrink-0 items-center justify-center"
-            :style="{ width: `${gridPreviewSize}px`, height: `${gridPreviewSize}px` }"
+          <button
+            type="button"
+            data-file-viewer-item="true"
+            :data-file-viewer-path="displayItem.item.path"
+            class="p-1.5 rounded-md flex flex-col gap-1 pointer-events-auto items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
+            @click="handleItemClick(displayItem.item)"
           >
-            <img
-              v-if="displayItem.previewUrl"
-              :src="displayItem.previewUrl"
-              :alt="displayItem.item.name"
-              loading="lazy"
-              decoding="async"
-              class="h-full w-full object-contain"
-              @error="handleImageError(displayItem.item.path, displayItem.previewUrl)"
+            <FileViewerImageHoverCard
+              :close-delay="resolveHoverCardCloseDelay(displayItem.item.path)"
+              :item="displayItem.item"
+              :open="openHoverPreviewPath === displayItem.item.path"
+              :preview-size="HOVER_PREVIEW_SIZE"
+              :resolve-preview-url="resolvePreviewUrl"
+              side="top"
+              @update:open="handleHoverCardOpenChange(displayItem.item.path, $event)"
             >
-            <slot v-else name="icon" :item="displayItem.item" :icon-size="gridIconSize">
-              <component
-                :is="getDefaultIconComponent(displayItem.item)"
-                class="shrink-0"
-                :style="{ width: `${gridIconSize}px`, height: `${gridIconSize}px` }"
-                :stroke-width="1.25"
-              />
-            </slot>
-          </div>
-          <div class="text-xs text-center break-all line-clamp-2" :class="{ 'text-muted-foreground': displayItem.item.isSupported === false }">
-            {{ displayItem.item.name }}
-          </div>
-        </button>
+              <div
+                class="flex shrink-0 items-center justify-center"
+                :style="{ width: `${gridPreviewSize}px`, height: `${gridPreviewSize}px` }"
+                @pointerenter="scheduleHoverPreviewWarmup(displayItem.item)"
+                @pointerleave="clearPendingHoverPreviewWarmup(displayItem.item.path)"
+              >
+                <img
+                  v-if="displayItem.previewUrl"
+                  :alt="displayItem.item.name"
+                  :src="displayItem.previewUrl"
+                  class="h-full w-full object-contain"
+                  decoding="async"
+                  loading="lazy"
+                  @error="handleImageError(displayItem.item.path, displayItem.previewUrl)"
+                >
+                <slot v-else name="icon" :icon-size="gridIconSize" :item="displayItem.item">
+                  <component
+                    :is="getDefaultIconComponent(displayItem.item)"
+                    class="shrink-0"
+                    :stroke-width="1.25"
+                    :style="{ width: `${gridIconSize}px`, height: `${gridIconSize}px` }"
+                  />
+                </slot>
+              </div>
+            </FileViewerImageHoverCard>
+            <div
+              data-file-viewer-name="true"
+              class="text-xs text-center break-all line-clamp-2"
+              :class="{ 'text-muted-foreground': displayItem.item.isSupported === false }"
+            >
+              {{ displayItem.item.name }}
+            </div>
+          </button>
+          <template v-if="hasContextMenu" #context-menu="{ item: contextMenuItem }">
+            <slot name="context-menu" :item="contextMenuItem" />
+          </template>
+        </FileViewerItemContextMenu>
       </div>
 
       <template v-else>
-        <!-- Use a single-item v-for so list mode can reuse the same scoped displayItem shape as grid mode. -->
-        <button
+        <!-- 使用单项 v-for 复用与网格模式一致的 displayItem 结构。 -->
+        <FileViewerItemContextMenu
           v-for="displayItem in [getListRowDisplayItem(row.index)]"
           :key="displayItem.item.path"
-          type="button"
-          data-file-viewer-item="true"
-          class="p-2 rounded-md flex gap-2 w-full items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
-          :style="{ height: `${listItemHeight}px` }"
-          @click="handleItemClick(displayItem.item)"
+          :enabled="hasContextMenu"
+          :item="displayItem.item"
         >
-          <div class="flex flex-1 gap-2 min-w-0 items-center">
-            <div
-              class="flex shrink-0 items-center justify-center"
-              :style="{ width: `${listPreviewSize}px`, height: `${listPreviewSize}px` }"
-            >
-              <img
-                v-if="displayItem.previewUrl"
-                :src="displayItem.previewUrl"
-                :alt="displayItem.item.name"
-                loading="lazy"
-                decoding="async"
-                class="h-full w-full object-contain"
-                @error="handleImageError(displayItem.item.path, displayItem.previewUrl)"
+          <button
+            type="button"
+            data-file-viewer-item="true"
+            :data-file-viewer-path="displayItem.item.path"
+            class="p-2 rounded-md flex gap-2 w-full pointer-events-auto items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
+            :style="{ height: `${listItemHeight}px` }"
+            @click="handleItemClick(displayItem.item)"
+          >
+            <div class="flex flex-1 gap-2 min-w-0 items-center">
+              <FileViewerImageHoverCard
+                :close-delay="resolveHoverCardCloseDelay(displayItem.item.path)"
+                :item="displayItem.item"
+                :open="openHoverPreviewPath === displayItem.item.path"
+                :preview-size="HOVER_PREVIEW_SIZE"
+                :resolve-preview-url="resolvePreviewUrl"
+                side="right"
+                @update:open="handleHoverCardOpenChange(displayItem.item.path, $event)"
               >
-              <slot v-else name="icon" :item="displayItem.item" :icon-size="listPreviewSize">
-                <component
-                  :is="getDefaultIconComponent(displayItem.item)"
-                  class="shrink-0"
+                <div
+                  class="flex shrink-0 items-center justify-center"
                   :style="{ width: `${listPreviewSize}px`, height: `${listPreviewSize}px` }"
-                  :stroke-width="1.25"
-                />
-              </slot>
+                  @pointerenter="scheduleHoverPreviewWarmup(displayItem.item)"
+                  @pointerleave="clearPendingHoverPreviewWarmup(displayItem.item.path)"
+                >
+                  <img
+                    v-if="displayItem.previewUrl"
+                    :alt="displayItem.item.name"
+                    :src="displayItem.previewUrl"
+                    class="h-full w-full object-contain"
+                    decoding="async"
+                    loading="lazy"
+                    @error="handleImageError(displayItem.item.path, displayItem.previewUrl)"
+                  >
+                  <slot v-else name="icon" :icon-size="listPreviewSize" :item="displayItem.item">
+                    <component
+                      :is="getDefaultIconComponent(displayItem.item)"
+                      class="shrink-0"
+                      :stroke-width="1.25"
+                      :style="{ width: `${listPreviewSize}px`, height: `${listPreviewSize}px` }"
+                    />
+                  </slot>
+                </div>
+              </FileViewerImageHoverCard>
+              <div
+                data-file-viewer-name="true"
+                class="text-xs text-left min-w-0 truncate"
+                :class="{ 'text-muted-foreground': displayItem.item.isSupported === false }"
+              >
+                {{ displayItem.item.name }}
+              </div>
             </div>
-            <div class="text-xs text-left min-w-0 truncate" :class="{ 'text-muted-foreground': displayItem.item.isSupported === false }">
-              {{ displayItem.item.name }}
+            <div class="text-[11px] text-muted-foreground ml-2 flex shrink-0 gap-3 [font-variant-numeric:tabular-nums] items-center" role="note">
+              <div v-if="showListSize" class="text-right w-20" :aria-label="$t('common.fileMeta.size')">
+                <template v-if="displayItem.item.isDir">
+                  <span aria-hidden="true">--</span>
+                  <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
+                </template>
+                <template v-else-if="isValidPositiveNumber(displayItem.item.size)">
+                  {{ formatFileSize(displayItem.item.size!) }}
+                </template>
+                <template v-else>
+                  <span aria-hidden="true">--</span>
+                  <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
+                </template>
+              </div>
+              <div v-if="showListModifiedAt" class="text-left w-32" :aria-label="$t('common.fileMeta.modifiedAt')">
+                <template v-if="isValidPositiveNumber(displayItem.item.modifiedAt)">
+                  {{ formatDateTime(displayItem.item.modifiedAt!) }}
+                </template>
+                <template v-else>
+                  <span aria-hidden="true">--</span>
+                  <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
+                </template>
+              </div>
+              <div v-if="showListCreatedAt" class="text-left w-32" :aria-label="$t('common.fileMeta.createdAt')">
+                <template v-if="isValidPositiveNumber(displayItem.item.createdAt)">
+                  {{ formatDateTime(displayItem.item.createdAt!) }}
+                </template>
+                <template v-else>
+                  <span aria-hidden="true">--</span>
+                  <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
+                </template>
+              </div>
             </div>
-          </div>
-          <div class="text-[11px] text-muted-foreground ml-2 flex shrink-0 gap-3 [font-variant-numeric:tabular-nums] items-center" role="note">
-            <div v-if="showListSize" class="text-right w-20" :aria-label="$t('common.fileMeta.size')">
-              <template v-if="displayItem.item.isDir">
-                <span aria-hidden="true">--</span>
-                <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
-              </template>
-              <template v-else-if="isValidPositiveNumber(displayItem.item.size)">
-                {{ formatFileSize(displayItem.item.size!) }}
-              </template>
-              <template v-else>
-                <span aria-hidden="true">--</span>
-                <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
-              </template>
-            </div>
-            <div v-if="showListModifiedAt" class="text-left w-32" :aria-label="$t('common.fileMeta.modifiedAt')">
-              <template v-if="isValidPositiveNumber(displayItem.item.modifiedAt)">
-                {{ formatDateTime(displayItem.item.modifiedAt!) }}
-              </template>
-              <template v-else>
-                <span aria-hidden="true">--</span>
-                <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
-              </template>
-            </div>
-            <div v-if="showListCreatedAt" class="text-left w-32" :aria-label="$t('common.fileMeta.createdAt')">
-              <template v-if="isValidPositiveNumber(displayItem.item.createdAt)">
-                {{ formatDateTime(displayItem.item.createdAt!) }}
-              </template>
-              <template v-else>
-                <span aria-hidden="true">--</span>
-                <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
-              </template>
-            </div>
-          </div>
-        </button>
+          </button>
+          <template v-if="hasContextMenu" #context-menu="{ item: contextMenuItem }">
+            <slot name="context-menu" :item="contextMenuItem" />
+          </template>
+        </FileViewerItemContextMenu>
       </template>
     </div>
   </div>
