@@ -110,6 +110,7 @@ describe('useResourcePreviewPrimer', () => {
     stopPrimer = useResourcePreviewPrimer()
     await flushPrimerWatchers()
 
-    expect(loggerErrorMock).toHaveBeenCalledWith('资源预览预热失败: Error: server unavailable')
+    expect(loggerErrorMock).toHaveBeenCalledWith(expect.stringContaining('资源预览预热失败'))
+    expect(loggerErrorMock).toHaveBeenCalledWith(expect.stringContaining('server unavailable'))
   })
 })

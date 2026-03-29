@@ -281,6 +281,45 @@ describe('FileViewer 外观契约', () => {
     await expect.element(page.getByTestId('list-icon-fallback')).toHaveTextContent('file-1.txt-fallback')
   })
 
+  it('图片预览失败一段时间后会再次尝试同一个 URL', async () => {
+    viewportWidthMock.value = 780
+    resolvePreviewUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
+    let now = Date.parse('2026-03-29T10:00:00.000Z')
+    const dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now)
+
+    const result = await renderInBrowser(FileViewer, {
+      props: {
+        items: [createImageItem(1)],
+        resolvePreviewUrl: (item: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(item.path, preview),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const image = await page.getByAltText('file-1.txt').element()
+    image.dispatchEvent(new Event('error'))
+    await nextTick()
+
+    await expect.element(page.getByAltText('file-1.txt')).not.toBeInTheDocument()
+
+    now += 6_0000
+    await result.rerender({
+      items: [createImageItem(1)],
+      resolvePreviewUrl: (item: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(item.path, preview),
+      viewMode: 'grid',
+    })
+
+    await expect.element(page.getByAltText('file-1.txt')).toHaveAttribute(
+      'src',
+      'http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001',
+    )
+
+    dateNowSpy.mockRestore()
+    await result.unmount()
+  })
+
   it('窄列表视图下会同时隐藏 modifiedAt 列头和内容', async () => {
     viewportWidthMock.value = 520
 

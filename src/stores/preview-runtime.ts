@@ -97,7 +97,13 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
   }
 
   async function ensureServeUrls(paths: string[]): Promise<void> {
-    if (paths.length === 0) {
+    const normalizedPaths = [...new Set(
+      paths
+        .map(path => path.trim())
+        .filter(Boolean),
+    )]
+
+    if (normalizedPaths.length === 0) {
       return
     }
 
@@ -107,12 +113,12 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
     }
 
     const results = await Promise.allSettled(
-      paths.map(path => registerServeUrl(path, currentServerUrl)),
+      normalizedPaths.map(path => registerServeUrl(path, currentServerUrl)),
     )
 
     for (const [index, result] of results.entries()) {
       if (result.status === 'rejected') {
-        logger.error(`注册静态站点失败: ${paths[index]} - ${result.reason}`)
+        logger.error(`注册静态站点失败: ${normalizedPaths[index]} - ${result.reason}`)
       }
     }
   }

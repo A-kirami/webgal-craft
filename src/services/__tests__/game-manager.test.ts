@@ -445,13 +445,39 @@ describe('gameManager 游戏管理', () => {
     })
   })
 
-  it('updateGameLastModified 在预览资源解析失败时仍会更新时间戳', async () => {
+  it('updateGameLastModified 在预览资源解析失败时仍会推进预览缓存版本', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     dbGamesGetMock.mockResolvedValue({
       id: 'game-1',
       path: '/games/demo',
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/current.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: '/games/demo/assets/current-cover.png',
+          cacheVersion: 222,
+        },
+      },
     })
+    workspaceStoreState.currentGame = {
+      id: 'game-1',
+      metadata: {
+        name: 'Demo',
+      },
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/current.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: '/games/demo/assets/current-cover.png',
+          cacheVersion: 222,
+        },
+      },
+    }
     gameCmdsGetGameConfigMock.mockResolvedValue({ gameName: 'Demo Game', titleImg: 'cover.png' })
     gameIconPathMock.mockRejectedValue(new Error('icon missing'))
 
@@ -459,8 +485,35 @@ describe('gameManager 游戏管理', () => {
 
     expect(dbGamesUpdateMock).toHaveBeenCalledWith('game-1', {
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/current.ico',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+        cover: {
+          path: '/games/demo/assets/current-cover.png',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+      },
     })
     expect(loggerWarnMock).toHaveBeenCalledWith('刷新游戏预览资源快照失败: Error: icon missing')
+    expect(workspaceStoreState.currentGame).toEqual({
+      id: 'game-1',
+      metadata: {
+        name: 'Demo',
+      },
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/current.ico',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+        cover: {
+          path: '/games/demo/assets/current-cover.png',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+      },
+      lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
+    })
   })
 
   it('updateCurrentGameLastModified 会按 500ms 防抖更新当前游戏', async () => {

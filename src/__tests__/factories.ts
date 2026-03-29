@@ -16,8 +16,14 @@ interface TestEngineFactoryOptions extends Partial<Omit<Engine, 'metadata' | 'pr
 }
 
 export function createTestGame(options: TestGameFactoryOptions = {}): Game {
-  const { metadata, previewAssets, ...rest } = options
-  const resolvedGamePath = rest.path ?? '/games/demo'
+  const { metadata, path, previewAssets, ...rest } = options
+  const resolvedGamePath = path ?? '/games/demo'
+  const {
+    cover: rawCover,
+    icon: rawIcon,
+  } = previewAssets ?? {}
+  const { path: _coverPath, ...cover } = rawCover ?? {}
+  const { path: _iconPath, ...icon } = rawIcon ?? {}
 
   return {
     id: 'game-1',
@@ -33,19 +39,21 @@ export function createTestGame(options: TestGameFactoryOptions = {}): Game {
     previewAssets: {
       cover: {
         path: `${resolvedGamePath}/cover.png`,
-        ...previewAssets?.cover,
+        ...cover,
       },
       icon: {
         path: `${resolvedGamePath}/icon.png`,
-        ...previewAssets?.icon,
+        ...icon,
       },
     },
   }
 }
 
 export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine {
-  const { metadata, previewAssets, ...rest } = options
-  const resolvedEnginePath = rest.path ?? '/engines/default'
+  const { metadata, path, previewAssets, ...rest } = options
+  const resolvedEnginePath = path ?? '/engines/default'
+  const { icon: rawIcon } = previewAssets ?? {}
+  const { path: _iconPath, ...icon } = rawIcon ?? {}
 
   return {
     id: 'engine-1',
@@ -61,7 +69,7 @@ export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine
     previewAssets: {
       icon: {
         path: `${resolvedEnginePath}/icon.png`,
-        ...previewAssets?.icon,
+        ...icon,
       },
     },
   }

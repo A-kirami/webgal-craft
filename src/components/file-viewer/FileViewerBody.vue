@@ -11,6 +11,11 @@ interface FileViewerDisplayItem {
   previewUrl?: string
 }
 
+interface FailedPreviewEntry {
+  failedAt: number
+  previewUrl: string
+}
+
 interface FileViewerBodyProps {
   viewMode: 'list' | 'grid'
   virtualRows: FileViewerVirtualRow[]
@@ -49,7 +54,9 @@ const emit = defineEmits<{
   itemClick: [item: FileViewerItem]
 }>()
 
-const failedPreviewUrls = reactive(new Map<string, string>())
+const FAILED_PREVIEW_RETRY_DELAY_MS = 5000
+
+const failedPreviewUrls = reactive(new Map<string, FailedPreviewEntry>())
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   year: 'numeric',
@@ -99,8 +106,24 @@ function resolveDisplayPreviewUrl(item: FileViewerItem, previewSize: FileViewerP
 
   try {
     const previewUrl = resolvePreviewUrl(item, previewSize)
-    if (previewUrl && failedPreviewUrls.get(item.path) === previewUrl) {
+    const failedPreview = previewUrl
+      ? failedPreviewUrls.get(item.path)
+      : undefined
+
+    if (
+      failedPreview
+      && failedPreview.previewUrl === previewUrl
+      && Date.now() - failedPreview.failedAt < FAILED_PREVIEW_RETRY_DELAY_MS
+    ) {
       return undefined
+    }
+
+    if (
+      failedPreview
+      && failedPreview.previewUrl === previewUrl
+      && Date.now() - failedPreview.failedAt >= FAILED_PREVIEW_RETRY_DELAY_MS
+    ) {
+      failedPreviewUrls.delete(item.path)
     }
 
     return previewUrl
@@ -116,7 +139,10 @@ function handleImageError(itemPath: string, previewUrl?: string) {
     return
   }
 
-  failedPreviewUrls.set(itemPath, previewUrl)
+  failedPreviewUrls.set(itemPath, {
+    previewUrl,
+    failedAt: Date.now(),
+  })
 }
 
 function getGridRowDisplayItems(rowIndex: number): FileViewerDisplayItem[] {
@@ -199,6 +225,7 @@ function getListRowDisplayItem(rowIndex: number): FileViewerDisplayItem {
       </div>
 
       <template v-else>
+        <!-- Use a single-item v-for so list mode can reuse the same scoped displayItem shape as grid mode. -->
         <button
           v-for="displayItem in [getListRowDisplayItem(row.index)]"
           :key="displayItem.item.path"

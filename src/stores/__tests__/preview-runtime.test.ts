@@ -56,6 +56,23 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     expect(store.getServeUrl('/games/alpha')).toBe('http://127.0.0.1:8899/game/game-alpha/')
   })
 
+  it('ensureServeUrl 并发调用同一路径时只会启动一次服务器并注册一次站点', async () => {
+    startServerMock.mockResolvedValue('http://127.0.0.1:8899/')
+    addStaticSiteMock.mockResolvedValue('game-alpha')
+    const store = usePreviewRuntimeStore()
+
+    const [firstUrl, secondUrl] = await Promise.all([
+      store.ensureServeUrl('/games/alpha'),
+      store.ensureServeUrl('/games/alpha'),
+    ])
+
+    expect(firstUrl).toBe('http://127.0.0.1:8899/game/game-alpha/')
+    expect(secondUrl).toBe('http://127.0.0.1:8899/game/game-alpha/')
+    expect(startServerMock).toHaveBeenCalledTimes(1)
+    expect(addStaticSiteMock).toHaveBeenCalledTimes(1)
+    expect(store.getServeUrl('/games/alpha')).toBe('http://127.0.0.1:8899/game/game-alpha/')
+  })
+
   it('ensureServeUrl 在服务器启动失败时会记录日志并返回 undefined', async () => {
     startServerMock.mockRejectedValue(new Error('occupied'))
     const store = usePreviewRuntimeStore()
@@ -89,6 +106,18 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     expect(loggerErrorMock).toHaveBeenCalledWith(
       '注册静态站点失败: /engines/beta - Error: register failed',
     )
+  })
+
+  it('ensureServeUrls 会过滤空路径、裁剪空白并去重', async () => {
+    startServerMock.mockResolvedValue('http://127.0.0.1:8899/')
+    addStaticSiteMock.mockResolvedValue('game-alpha')
+    const store = usePreviewRuntimeStore()
+
+    await store.ensureServeUrls(['', '  ', ' /games/alpha ', '/games/alpha'])
+
+    expect(startServerMock).toHaveBeenCalledTimes(1)
+    expect(addStaticSiteMock).toHaveBeenCalledTimes(1)
+    expect(addStaticSiteMock).toHaveBeenCalledWith('/games/alpha')
   })
 
   it('getServeUrl 会在站点预热完成后触发依赖它的响应式更新', async () => {

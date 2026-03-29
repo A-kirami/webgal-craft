@@ -112,11 +112,11 @@ describe('DiscoveredResourcesModal', () => {
     })
 
     const image = await page.getByAltText('Demo Game').element()
-    expect(image.dataset.thumbnail).toBe(JSON.stringify({
+    expect(JSON.parse(image.dataset.thumbnail!)).toEqual({
       width: 64,
       height: 64,
       resizeMode: 'contain',
-    }))
+    })
   })
 
   it('发现资源图标会为预览失败场景提供可见回退图', async () => {
