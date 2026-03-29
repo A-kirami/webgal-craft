@@ -108,15 +108,9 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
       return
     }
 
-    const results = await Promise.allSettled(
+    await Promise.all(
       normalizedPaths.map(path => registerServeUrl(path, currentServerUrl)),
     )
-
-    for (const [index, result] of results.entries()) {
-      if (result.status === 'rejected') {
-        logger.error(`注册静态站点失败: ${normalizedPaths[index]} - ${result.reason}`)
-      }
-    }
   }
 
   return $$({

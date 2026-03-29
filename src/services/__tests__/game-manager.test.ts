@@ -2,8 +2,11 @@ import '~/__tests__/setup'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { createTestGame } from '~/__tests__/factories'
 import { gameManager } from '~/services/game-manager'
 import { AppError } from '~/types/errors'
+
+import type { Game } from '~/database/model'
 
 const {
   copyDirectoryWithProgressMock,
@@ -49,26 +52,35 @@ const {
   useResourceStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
   workspaceStoreState: {
-    currentGame: { id: 'game-1' } as {
-      id: string
-      lastModified?: number
-      metadata?: {
-        name: string
-      }
-      previewAssets?: {
+    currentGame: {
+      id: 'game-1',
+      path: '/games/demo',
+      createdAt: 0,
+      lastModified: 0,
+      status: 'created',
+      metadata: {
+        name: 'Demo Game',
+      },
+      previewAssets: {
         icon: {
-          path: string
-          cacheVersion: number
-        }
+          path: '/games/demo/icon.png',
+        },
         cover: {
-          path: string
-          cacheVersion: number
-        }
-      }
-    } | undefined,
+          path: '/games/demo/cover.png',
+        },
+      },
+    } as Game | undefined,
   },
   validateDirectoryStructureMock: vi.fn(),
 }))
+
+function createCurrentGame(overrides: Partial<Game> = {}): Game {
+  return createTestGame({
+    ...overrides,
+    metadata: overrides.metadata,
+    previewAssets: overrides.previewAssets,
+  })
+}
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
   exists: existsMock,
@@ -145,7 +157,7 @@ describe('gameManager 游戏管理', () => {
     useResourceStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
     validateDirectoryStructureMock.mockReset()
-    workspaceStoreState.currentGame = { id: 'game-1' }
+    workspaceStoreState.currentGame = createCurrentGame()
     useResourceStoreMock.mockReturnValue(resourceStoreMock)
     useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
     existsMock.mockResolvedValue(false)
@@ -315,8 +327,7 @@ describe('gameManager 游戏管理', () => {
         },
       },
     })
-    workspaceStoreState.currentGame = {
-      id: 'game-1',
+    workspaceStoreState.currentGame = createCurrentGame({
       metadata: {
         name: 'Old Name',
       },
@@ -330,7 +341,7 @@ describe('gameManager 游戏管理', () => {
           cacheVersion: 222,
         },
       },
-    }
+    })
 
     await gameManager.renameGame('game-1', 'New Name')
 
@@ -343,6 +354,9 @@ describe('gameManager 游戏管理', () => {
     })
     expect(workspaceStoreState.currentGame).toEqual({
       id: 'game-1',
+      path: '/games/demo',
+      createdAt: 0,
+      status: 'created',
       metadata: {
         name: 'New Name',
       },
@@ -389,20 +403,21 @@ describe('gameManager 游戏管理', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     workspaceStoreState.currentGame = {
-      id: 'game-1',
-      metadata: {
-        name: 'Demo',
-      },
-      previewAssets: {
-        icon: {
-          path: '/games/demo/icons/favicon.ico',
-          cacheVersion: 111,
+      ...createCurrentGame({
+        metadata: {
+          name: 'Demo',
         },
-        cover: {
-          path: '/games/demo/assets/cover.png',
-          cacheVersion: 222,
+        previewAssets: {
+          icon: {
+            path: '/games/demo/icons/favicon.ico',
+            cacheVersion: 111,
+          },
+          cover: {
+            path: '/games/demo/assets/cover.png',
+            cacheVersion: 222,
+          },
         },
-      },
+      }),
     }
     dbGamesGetMock.mockResolvedValue({
       id: 'game-1',
@@ -429,6 +444,9 @@ describe('gameManager 游戏管理', () => {
     })
     expect(workspaceStoreState.currentGame).toEqual({
       id: 'game-1',
+      path: '/games/demo',
+      createdAt: 0,
+      status: 'created',
       metadata: {
         name: 'Demo',
       },
@@ -452,9 +470,7 @@ describe('gameManager 游戏管理', () => {
     await gameManager.updateGameLastModified('game-1')
 
     expect(dbGamesUpdateMock).not.toHaveBeenCalled()
-    expect(workspaceStoreState.currentGame).toEqual({
-      id: 'game-1',
-    })
+    expect(workspaceStoreState.currentGame).toEqual(createCurrentGame())
   })
 
   it('updateGameLastModified 在预览资源解析失败时仍会推进预览缓存版本', async () => {
@@ -474,8 +490,7 @@ describe('gameManager 游戏管理', () => {
         },
       },
     })
-    workspaceStoreState.currentGame = {
-      id: 'game-1',
+    workspaceStoreState.currentGame = createCurrentGame({
       metadata: {
         name: 'Demo',
       },
@@ -489,7 +504,7 @@ describe('gameManager 游戏管理', () => {
           cacheVersion: 222,
         },
       },
-    }
+    })
     gameCmdsGetGameConfigMock.mockResolvedValue({ gameName: 'Demo Game', titleImg: 'cover.png' })
     gameIconPathMock.mockRejectedValue(new Error('icon missing'))
 
@@ -511,6 +526,9 @@ describe('gameManager 游戏管理', () => {
     expect(loggerWarnMock).toHaveBeenCalledWith('刷新游戏预览资源快照失败: Error: icon missing')
     expect(workspaceStoreState.currentGame).toEqual({
       id: 'game-1',
+      path: '/games/demo',
+      createdAt: 0,
+      status: 'created',
       metadata: {
         name: 'Demo',
       },
