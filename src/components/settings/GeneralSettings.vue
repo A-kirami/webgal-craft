@@ -30,7 +30,7 @@ const themeOptions = $computed(() => [
         <label
           v-for="themeOp in themeOptions"
           :key="themeOp.value"
-          class="outline-none rounded-md flex flex-col cursor-pointer items-stretch focus-within:ring-1 focus-within:ring-ring"
+          class="outline-none rounded-md flex flex-col cursor-pointer items-stretch"
         >
           <input
             v-model="generalSettingsStore.theme"
