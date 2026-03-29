@@ -6,6 +6,7 @@ import SettingsForm from './form/SettingsForm.vue'
 
 const { t } = useI18n()
 const generalSettingsStore = useGeneralSettingsStore()
+const themeFieldName = 'general-theme'
 
 const themeOptions = $computed(() => [
   { value: 'light', label: t('settings.general.theme.options.light') },
@@ -34,6 +35,7 @@ const themeOptions = $computed(() => [
           <input
             v-model="generalSettingsStore.theme"
             type="radio"
+            :name="themeFieldName"
             :value="themeOp.value"
             class="peer sr-only"
           >

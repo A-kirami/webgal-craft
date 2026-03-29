@@ -43,4 +43,22 @@ describe('GeneralSettings', () => {
     expectNoConsoleMessage('useFormField should be used within <FormField>')
     expectNoConsoleMessage('Symbol(vee-validate-field-instance)')
   })
+
+  it('主题 radio 共享同一个 name，保持原生单选组语义', async () => {
+    renderInBrowser(GeneralSettings, {
+      browser: {
+        i18nMode: 'localized',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const radios = page.getByRole('radio').elements()
+    const names = radios.map(radio => radio.getAttribute('name'))
+
+    expect(names).toHaveLength(3)
+    expect(new Set(names).size).toBe(1)
+    expect(names[0]).toBeTruthy()
+  })
 })
