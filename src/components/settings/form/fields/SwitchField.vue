@@ -25,11 +25,14 @@ const { t } = useI18n()
         {{ resolveI18nLike(field.description, t) }}
       </FormDescription>
     </div>
-    <FormControl>
-      <Switch
-        :model-value="Boolean(value)"
-        @update:model-value="handleChange"
-      />
-    </FormControl>
+    <div class="flex flex-col gap-1 items-end">
+      <FormControl>
+        <Switch
+          :model-value="Boolean(value)"
+          @update:model-value="handleChange"
+        />
+      </FormControl>
+      <FormMessage />
+    </div>
   </FormItem>
 </template>

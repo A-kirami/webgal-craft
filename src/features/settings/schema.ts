@@ -151,6 +151,10 @@ export function defineSettingsSchema<TSchema extends SettingsSchema>(schema: TSc
   const immediateFields: string[] = []
 
   for (const [fieldName, field] of flattenSettingsFields(schema)) {
+    if (Object.hasOwn(defaults, fieldName)) {
+      throw new Error(`Duplicate settings field name: ${fieldName}`)
+    }
+
     fieldNames.push(fieldName)
     defaults[fieldName] = field.default
     validationShape[fieldName] = fieldToZod(field)

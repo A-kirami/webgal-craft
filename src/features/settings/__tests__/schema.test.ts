@@ -45,6 +45,12 @@ describe('defineSettingsSchema', () => {
       fontSize: 14,
       projectPath: '',
     })
+    expect(result.fieldNames).toEqual([
+      'autoSave',
+      'effectEditorSide',
+      'fontSize',
+      'projectPath',
+    ])
     expect(result.immediateFields).toEqual(['autoSave'])
 
     expect(result.validationSchema.parse({
@@ -93,5 +99,28 @@ describe('defineSettingsSchema', () => {
     } as const)
 
     expectTypeOf(result.defaults.language).toEqualTypeOf<'system' | 'en' | 'ja'>()
+  })
+
+  it('遇到重复字段名时会抛出错误，避免静默覆盖', () => {
+    expect(() => defineSettingsSchema({
+      general: {
+        fields: {
+          sharedField: {
+            type: 'switch',
+            default: true,
+            label: '字段 A',
+          },
+        },
+      },
+      advanced: {
+        fields: {
+          sharedField: {
+            type: 'switch',
+            default: false,
+            label: '字段 B',
+          },
+        },
+      },
+    } as const)).toThrow('Duplicate settings field name: sharedField')
   })
 })

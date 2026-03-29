@@ -42,21 +42,22 @@ async function handleSelectFolder() {
       </FormDescription>
     </div>
     <div class="flex gap-2">
+      <Input
+        :model-value="value"
+        class="text-xs bg-accent flex-1 h-8 shadow-none cursor-default!"
+        disabled
+      />
       <FormControl>
-        <Input
+        <Button
           v-bind="componentField"
-          class="text-xs bg-accent flex-1 h-8 shadow-none cursor-default!"
-          disabled
-        />
+          variant="outline"
+          type="button"
+          class="text-xs font-normal h-8 w-auto shadow-none"
+          @click="handleSelectFolder"
+        >
+          {{ resolveI18nLike(field.buttonLabel ?? ((translator) => translator('common.openFolder')), t) }}
+        </Button>
       </FormControl>
-      <Button
-        variant="outline"
-        type="button"
-        class="text-xs font-normal h-8 w-auto shadow-none"
-        @click="handleSelectFolder"
-      >
-        {{ resolveI18nLike(field.buttonLabel ?? ((translator) => translator('common.openFolder')), t) }}
-      </Button>
     </div>
     <FormMessage />
   </FormItem>
