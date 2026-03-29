@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, nextTick, ref } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
 
@@ -100,6 +100,12 @@ function createHarness(mode: HarnessMode) {
 }
 
 describe('AssetImage', () => {
+  beforeEach(() => {
+    getAssetUrlMock.mockReset()
+    resolveAssetUrlMock.mockReset()
+    loggerErrorMock.mockReset()
+  })
+
   it('外部资源在 serveUrl 尚未就绪时不会回退到工作区解析器', async () => {
     getAssetUrlMock.mockImplementation(() => {
       throw new Error('预览地址不存在')
@@ -167,5 +173,51 @@ describe('AssetImage', () => {
         resizeMode: 'cover',
       },
     })
+  })
+
+  it('缩略图对象引用变化但字段未变时，不会在加载失败后重复重试', async () => {
+    getAssetUrlMock.mockReturnValue('/broken-image.png')
+
+    const InlineThumbnailHarness = defineComponent({
+      name: 'InlineThumbnailHarness',
+      setup() {
+        const thumbnail = ref({
+          width: 96,
+          height: 96,
+        })
+
+        return () => h('div', [
+          h(AssetImage, {
+            path: '/assets/icon.png',
+            alt: 'inline-thumbnail-asset-image',
+            fallbackImage: '/placeholder.svg',
+            thumbnail: thumbnail.value,
+          }),
+          h('button', {
+            'type': 'button',
+            'data-testid': 'rerender-inline-thumbnail',
+            'onClick': () => {
+              thumbnail.value = {
+                width: 96,
+                height: 96,
+              }
+            },
+          }, 'rerender'),
+        ])
+      },
+    })
+
+    renderInBrowser(InlineThumbnailHarness)
+
+    const image = await page.getByAltText('inline-thumbnail-asset-image').element()
+    expect(image.getAttribute('src')).toBe('/broken-image.png')
+
+    image.dispatchEvent(new Event('error'))
+    await nextTick()
+    await expect.element(page.getByAltText('inline-thumbnail-asset-image')).toHaveAttribute('src', '/placeholder.svg')
+
+    await page.getByTestId('rerender-inline-thumbnail').click()
+    await nextTick()
+    await expect.element(page.getByAltText('inline-thumbnail-asset-image')).toHaveAttribute('src', '/placeholder.svg')
   })
 })

@@ -17,10 +17,11 @@ interface TestEngineFactoryOptions extends Partial<Omit<Engine, 'metadata' | 'pr
 
 export function createTestGame(options: TestGameFactoryOptions = {}): Game {
   const { metadata, previewAssets, ...rest } = options
+  const resolvedGamePath = rest.path ?? '/games/demo'
 
   return {
     id: 'game-1',
-    path: '/games/demo',
+    path: resolvedGamePath,
     createdAt: 0,
     lastModified: 0,
     status: 'created',
@@ -31,11 +32,11 @@ export function createTestGame(options: TestGameFactoryOptions = {}): Game {
     },
     previewAssets: {
       cover: {
-        path: '/games/demo/cover.png',
+        path: `${resolvedGamePath}/cover.png`,
         ...previewAssets?.cover,
       },
       icon: {
-        path: '/games/demo/icon.png',
+        path: `${resolvedGamePath}/icon.png`,
         ...previewAssets?.icon,
       },
     },
@@ -44,10 +45,11 @@ export function createTestGame(options: TestGameFactoryOptions = {}): Game {
 
 export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine {
   const { metadata, previewAssets, ...rest } = options
+  const resolvedEnginePath = rest.path ?? '/engines/default'
 
   return {
     id: 'engine-1',
-    path: '/engines/default',
+    path: resolvedEnginePath,
     createdAt: 0,
     status: 'created',
     ...rest,
@@ -58,7 +60,7 @@ export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine
     },
     previewAssets: {
       icon: {
-        path: '/engines/default/icon.png',
+        path: `${resolvedEnginePath}/icon.png`,
         ...previewAssets?.icon,
       },
     },

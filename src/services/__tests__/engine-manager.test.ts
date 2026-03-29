@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { engineManager } from '~/services/engine-manager'
 import { AppError } from '~/types/errors'
@@ -119,6 +119,10 @@ describe('engineManager 引擎管理', () => {
     existsMock.mockResolvedValue(false)
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('getEngineMetadata 会读取 manifest 并返回语义元数据', async () => {
     engineIconPathMock.mockResolvedValue('/engines/WebGAL/icons/icon.png')
     engineManifestPathMock.mockResolvedValue('/engines/WebGAL/manifest.json')
@@ -136,9 +140,7 @@ describe('engineManager 引擎管理', () => {
   it('getEnginePreviewAssets 只返回图标路径', async () => {
     engineIconPathMock.mockResolvedValue('/engines/WebGAL/icons/icon.png')
 
-    await expect((engineManager as typeof engineManager & {
-      getEnginePreviewAssets: (enginePath: string) => Promise<unknown>
-    }).getEnginePreviewAssets('/engines/WebGAL')).resolves.toEqual({
+    await expect(engineManager.getEnginePreviewAssets('/engines/WebGAL')).resolves.toEqual({
       icon: {
         path: '/engines/WebGAL/icons/icon.png',
       },

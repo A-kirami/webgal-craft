@@ -163,9 +163,7 @@ describe('gameManager 游戏管理', () => {
     gameIconPathMock.mockResolvedValue('/games/demo/icons/icon.png')
     gameCoverPathMock.mockResolvedValue('/games/demo/assets/cover.png')
 
-    await expect((gameManager as typeof gameManager & {
-      getGamePreviewAssets: (gamePath: string) => Promise<unknown>
-    }).getGamePreviewAssets('/games/demo')).resolves.toEqual({
+    await expect(gameManager.getGamePreviewAssets('/games/demo')).resolves.toEqual({
       icon: {
         path: '/games/demo/icons/icon.png',
       },

@@ -49,6 +49,8 @@ const emit = defineEmits<{
   itemClick: [item: FileViewerItem]
 }>()
 
+const failedPreviewUrls = reactive(new Map<string, string>())
+
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   year: 'numeric',
   month: '2-digit',
@@ -96,12 +98,25 @@ function resolveDisplayPreviewUrl(item: FileViewerItem, previewSize: FileViewerP
   }
 
   try {
-    return resolvePreviewUrl(item, previewSize)
+    const previewUrl = resolvePreviewUrl(item, previewSize)
+    if (previewUrl && failedPreviewUrls.get(item.path) === previewUrl) {
+      return undefined
+    }
+
+    return previewUrl
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     void logger.error(`[FileViewer] 资源地址生成失败: ${item.path} - ${errorMessage}`)
     return undefined
   }
+}
+
+function handleImageError(itemPath: string, previewUrl?: string) {
+  if (!previewUrl) {
+    return
+  }
+
+  failedPreviewUrls.set(itemPath, previewUrl)
 }
 
 function getGridRowDisplayItems(rowIndex: number): FileViewerDisplayItem[] {
@@ -166,6 +181,7 @@ function getListRowDisplayItem(rowIndex: number): FileViewerDisplayItem {
               loading="lazy"
               decoding="async"
               class="h-full w-full object-contain"
+              @error="handleImageError(displayItem.item.path, displayItem.previewUrl)"
             >
             <slot v-else name="icon" :item="displayItem.item" :icon-size="gridIconSize">
               <component
@@ -204,6 +220,7 @@ function getListRowDisplayItem(rowIndex: number): FileViewerDisplayItem {
                 loading="lazy"
                 decoding="async"
                 class="h-full w-full object-contain"
+                @error="handleImageError(displayItem.item.path, displayItem.previewUrl)"
               >
               <slot v-else name="icon" :item="displayItem.item" :icon-size="listPreviewSize">
                 <component

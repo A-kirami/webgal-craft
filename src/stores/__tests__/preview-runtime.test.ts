@@ -65,6 +65,18 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     expect(loggerErrorMock).toHaveBeenCalledWith('服务器启动失败: Error: occupied')
   })
 
+  it('ensureServeUrl 在静态站点注册失败时会记录日志并返回 undefined', async () => {
+    startServerMock.mockResolvedValue('http://127.0.0.1:8899/')
+    addStaticSiteMock.mockRejectedValue(new Error('register failed'))
+    const store = usePreviewRuntimeStore()
+
+    await expect(store.ensureServeUrl('/games/alpha')).resolves.toBeUndefined()
+
+    expect(loggerErrorMock).toHaveBeenCalledWith(
+      '注册静态站点失败: /games/alpha - Error: register failed',
+    )
+  })
+
   it('ensureServeUrls 会记录失败的路径', async () => {
     startServerMock.mockResolvedValue('http://127.0.0.1:8899/')
     addStaticSiteMock

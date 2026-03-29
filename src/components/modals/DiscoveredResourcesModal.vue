@@ -52,7 +52,12 @@ const isAllSelected = $computed(() => selectedPaths.size === props.resources.len
 
 watch(
   () => props.resources.map(resource => resource.path),
-  (paths) => {
+  (paths, previousPaths = []) => {
+    const previousPathSet = new Set(previousPaths)
+    const keptPaths = [...selectedPaths].filter(path => paths.includes(path))
+    const addedPaths = paths.filter(path => !previousPathSet.has(path))
+    selectedPaths = new Set([...keptPaths, ...addedPaths])
+
     void previewRuntimeStore.ensureServeUrls(paths)
   },
   { immediate: true },

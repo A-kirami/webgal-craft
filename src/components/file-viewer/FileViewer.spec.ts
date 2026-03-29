@@ -90,6 +90,22 @@ const globalStubs = {
   }),
 }
 
+function createImageFallbackHarness(viewMode: 'grid' | 'list') {
+  return defineComponent({
+    name: 'FileViewerImageFallbackHarness',
+    setup() {
+      return () => h(FileViewer, {
+        items: [createImageItem(1)],
+        resolvePreviewUrl: (item: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(item.path, preview),
+        viewMode,
+      }, {
+        icon: ({ item }: { item: FileViewerItem, iconSize: number }) =>
+          h('span', { 'data-testid': `${viewMode}-icon-fallback` }, `${item.name}-fallback`),
+      })
+    },
+  })
+}
+
 describe('FileViewer 组合式逻辑', () => {
   it('useFileViewerLayout 会根据宽度和缩放返回布局派生状态', async () => {
     const contentWidth = ref(780)
@@ -227,6 +243,42 @@ describe('FileViewer 外观契约', () => {
       width: 20,
     })
     await expect.element(page.getByAltText('file-1.txt')).toHaveAttribute('src', 'http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
+  })
+
+  it('网格模式图片加载失败后会回退到图标槽位', async () => {
+    viewportWidthMock.value = 780
+    resolvePreviewUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
+
+    renderInBrowser(createImageFallbackHarness('grid'), {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const image = await page.getByAltText('file-1.txt').element()
+    image.dispatchEvent(new Event('error'))
+    await nextTick()
+
+    await expect.element(page.getByAltText('file-1.txt')).not.toBeInTheDocument()
+    await expect.element(page.getByTestId('grid-icon-fallback')).toHaveTextContent('file-1.txt-fallback')
+  })
+
+  it('列表模式图片加载失败后也会回退到图标槽位', async () => {
+    viewportWidthMock.value = 780
+    resolvePreviewUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
+
+    renderInBrowser(createImageFallbackHarness('list'), {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const image = await page.getByAltText('file-1.txt').element()
+    image.dispatchEvent(new Event('error'))
+    await nextTick()
+
+    await expect.element(page.getByAltText('file-1.txt')).not.toBeInTheDocument()
+    await expect.element(page.getByTestId('list-icon-fallback')).toHaveTextContent('file-1.txt-fallback')
   })
 
   it('窄列表视图下会同时隐藏 modifiedAt 列头和内容', async () => {

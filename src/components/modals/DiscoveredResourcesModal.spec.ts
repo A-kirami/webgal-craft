@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, nextTick, ref } from 'vue'
 
 import {
   createBrowserClickStub,
@@ -142,5 +142,76 @@ describe('DiscoveredResourcesModal', () => {
 
     const image = await page.getByAltText('Demo Game').element()
     expect(image.dataset.fallbackImage).toBe('/placeholder.svg')
+  })
+
+  it('资源列表更新时会丢弃已移除路径，并默认选中新加入的资源而不重置现有取消选择', async () => {
+    const ResourceSelectionHarness = defineComponent({
+      name: 'ResourceSelectionHarness',
+      setup() {
+        const resources = ref([
+          {
+            path: '/games/alpha',
+            name: 'Alpha Game',
+            icon: '/games/alpha/icons/favicon.ico',
+          },
+          {
+            path: '/games/beta',
+            name: 'Beta Game',
+            icon: '/games/beta/icons/favicon.ico',
+          },
+        ])
+
+        function replaceResources() {
+          resources.value = [
+            {
+              path: '/games/beta',
+              name: 'Beta Game',
+              icon: '/games/beta/icons/favicon.ico',
+            },
+            {
+              path: '/games/charlie',
+              name: 'Charlie Game',
+              icon: '/games/charlie/icons/favicon.ico',
+            },
+          ]
+        }
+
+        return () => h('div', [
+          h(DiscoveredResourcesModal, {
+            open: true,
+            resources: resources.value,
+            type: 'games',
+          }),
+          h('button', {
+            'type': 'button',
+            'data-testid': 'replace-resources',
+            'onClick': replaceResources,
+          }, 'replace'),
+        ])
+      },
+    })
+
+    renderInBrowser(ResourceSelectionHarness, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByText('Beta Game').click()
+    await page.getByTestId('replace-resources').click()
+    await nextTick()
+
+    await expect.element(page.getByText('Alpha Game')).not.toBeInTheDocument()
+
+    const betaLabel = await page.getByText('Beta Game').element()
+    const charlieLabel = await page.getByText('Charlie Game').element()
+    const betaRow = betaLabel.closest('[class*="cursor-pointer"]')
+    const charlieRow = charlieLabel.closest('[class*="cursor-pointer"]')
+
+    expect(betaRow?.classList.contains('bg-accent')).toBe(false)
+    expect(charlieRow?.classList.contains('bg-accent')).toBe(true)
   })
 })

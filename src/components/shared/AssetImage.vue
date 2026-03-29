@@ -67,7 +67,16 @@ const displaySrc = $computed(() => {
 })
 
 watch(
-  () => [props.path, props.rootPath, props.serveUrl, props.cacheVersion, props.fallbackImage, props.thumbnail],
+  () => [
+    props.path,
+    props.rootPath,
+    props.serveUrl,
+    props.cacheVersion,
+    props.fallbackImage,
+    props.thumbnail?.width,
+    props.thumbnail?.height,
+    props.thumbnail?.resizeMode,
+  ],
   () => {
     hasLoadError = false
   },

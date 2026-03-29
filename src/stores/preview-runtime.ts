@@ -63,10 +63,15 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
     }
 
     const registrationTask = (async () => {
-      const siteId = await serverCmds.addStaticSite(path)
-      const serveUrl = buildServeUrl(siteId, currentServerUrl)
-      serveUrls.set(path, serveUrl)
-      return serveUrl
+      try {
+        const siteId = await serverCmds.addStaticSite(path)
+        const serveUrl = buildServeUrl(siteId, currentServerUrl)
+        serveUrls.set(path, serveUrl)
+        return serveUrl
+      } catch (error) {
+        logger.error(`注册静态站点失败: ${path} - ${error}`)
+        return
+      }
     })()
 
     pendingRegistrations.set(path, registrationTask)
