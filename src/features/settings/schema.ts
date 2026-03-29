@@ -98,6 +98,7 @@ export interface DefinedSettingsSchema<TSchema extends SettingsSchema> {
   schema: TSchema
   defaults: SettingsValues<TSchema>
   validationSchema: z.ZodObject<SettingsZodShape<TSchema>>
+  fieldNames: SchemaFieldName<TSchema>[]
   immediateFields: SchemaFieldName<TSchema>[]
 }
 
@@ -146,9 +147,11 @@ function fieldToZod<TField extends SettingsFieldDef>(field: TField): z.ZodType<S
 export function defineSettingsSchema<TSchema extends SettingsSchema>(schema: TSchema): DefinedSettingsSchema<TSchema> {
   const defaults: Record<string, unknown> = {}
   const validationShape: Record<string, z.ZodType> = {}
+  const fieldNames: string[] = []
   const immediateFields: string[] = []
 
   for (const [fieldName, field] of flattenSettingsFields(schema)) {
+    fieldNames.push(fieldName)
     defaults[fieldName] = field.default
     validationShape[fieldName] = fieldToZod(field)
 
@@ -161,6 +164,7 @@ export function defineSettingsSchema<TSchema extends SettingsSchema>(schema: TSc
     schema,
     defaults: defaults as SettingsValues<TSchema>,
     validationSchema: z.object(validationShape) as z.ZodObject<SettingsZodShape<TSchema>>,
+    fieldNames: fieldNames as SchemaFieldName<TSchema>[],
     immediateFields: immediateFields as SchemaFieldName<TSchema>[],
   }
 }

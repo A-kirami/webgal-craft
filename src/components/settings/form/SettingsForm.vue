@@ -16,6 +16,7 @@ const { t } = useI18n()
 const form = useSettingsForm({
   store: props.store,
   validationSchema: props.definition.validationSchema,
+  fieldNames: props.definition.fieldNames,
   immediateFields: props.definition.immediateFields,
 })
 

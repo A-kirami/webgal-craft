@@ -32,6 +32,17 @@ function createMockStore() {
   }
 }
 
+function createScopedFieldsStore() {
+  return {
+    $state: {
+      theme: 'system',
+      language: 'system',
+      openLastProject: false,
+    },
+    $patch: vi.fn(),
+  }
+}
+
 describe('useSettingsForm 行为', () => {
   beforeEach(() => {
     latestValues = reactive({})
@@ -106,6 +117,35 @@ describe('useSettingsForm 行为', () => {
     expect(store.$patch).toHaveBeenLastCalledWith({
       theme: 'dark',
       fontSize: 18,
+    })
+  })
+
+  it('fieldNames 只同步表单托管字段，避免回写额外 store 状态', () => {
+    const store = createScopedFieldsStore()
+
+    useSettingsForm({
+      store: store as never,
+      validationSchema: z.object({
+        language: z.string(),
+        openLastProject: z.boolean(),
+      }),
+      fieldNames: ['language', 'openLastProject'],
+    } as never)
+
+    expect(useFormMock).toHaveBeenCalledWith(expect.objectContaining({
+      initialValues: {
+        language: 'system',
+        openLastProject: false,
+      },
+    }))
+
+    latestValues.language = 'en'
+    const callback = watchDebouncedMock.mock.calls[0]![1] as () => void
+    callback()
+
+    expect(store.$patch).toHaveBeenLastCalledWith({
+      language: 'en',
+      openLastProject: false,
     })
   })
 })

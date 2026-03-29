@@ -15,6 +15,10 @@ interface UseSettingsFormOptions<T extends z.ZodType> {
    */
   validationSchema: T | (() => T)
   /**
+   * 由表单管理并允许回写到 store 的字段列表
+   */
+  fieldNames?: string[]
+  /**
    * 需要立即同步的字段列表（不防抖）
    */
   immediateFields?: string[]
@@ -36,17 +40,31 @@ export function useSettingsForm<
   const {
     store,
     validationSchema,
+    fieldNames,
     immediateFields = [],
     debounceOptions = { debounce: 300, maxWait: 600 },
   } = options
 
+  const storeState = store.$state as Record<string, unknown>
+  const managedFieldNames = fieldNames?.length ? [...fieldNames] : Object.keys(store.$state)
+
+  function pickManagedValues(source: Record<string, unknown>) {
+    if (!fieldNames?.length) {
+      return source
+    }
+
+    return Object.fromEntries(
+      managedFieldNames.map(fieldName => [fieldName, source[fieldName]]),
+    )
+  }
+
   const form = useForm({
     validationSchema,
-    initialValues: store.$state,
+    initialValues: pickManagedValues(storeState),
   })
 
   const onSubmit = form.handleSubmit((values) => {
-    store.$patch(values)
+    store.$patch(pickManagedValues(values as Record<string, unknown>))
   })
 
   // 如果没有立即同步字段，全部防抖处理
@@ -59,9 +77,8 @@ export function useSettingsForm<
   const immediateSyncFields = new Set(immediateFields)
   const values = form.values as z.infer<T>
 
-  // 获取初始的所有字段列表（用于计算需要防抖的字段）
-  const initialKeys = Object.keys(values)
-  const debouncedFields = initialKeys.filter(key => !immediateSyncFields.has(key))
+  // 使用表单托管字段计算需要防抖的字段，避免误回写页面自行管理的状态
+  const debouncedFields = managedFieldNames.filter(key => !immediateSyncFields.has(key))
 
   // 计算立即同步字段的值数组（只访问 immediateFields 中的字段）
   const immediateValuesArray = $computed(() =>
