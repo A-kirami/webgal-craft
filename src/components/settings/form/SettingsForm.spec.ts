@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { defineComponent, h, nextTick, reactive } from 'vue'
 
-import { createBrowserCheckboxStub, createBrowserClickStub, createBrowserInputStub, renderInBrowser } from '~/__tests__/browser-render'
+import { createBrowserCheckboxStub, createBrowserClickStub, createBrowserContainerStub, createBrowserInputStub, renderInBrowser } from '~/__tests__/browser-render'
 import { defineSettingsSchema } from '~/features/settings/schema'
 
 const { openDialogMock } = vi.hoisted(() => ({
@@ -35,6 +35,20 @@ const globalStubs = {
     },
   }),
   Input: createBrowserInputStub('StubInput'),
+  Select: createBrowserContainerStub('StubSelect'),
+  SelectContent: createBrowserContainerStub('StubSelectContent'),
+  SelectItem: createBrowserContainerStub('StubSelectItem'),
+  SelectTrigger: defineComponent({
+    name: 'StubSelectTrigger',
+    setup(_, { attrs, slots }) {
+      return () => h('button', {
+        ...attrs,
+        role: 'combobox',
+        type: 'button',
+      }, slots.default?.())
+    },
+  }),
+  SelectValue: createBrowserContainerStub('StubSelectValue', 'span'),
   Switch: createBrowserCheckboxStub('StubSwitch'),
 }
 
@@ -65,6 +79,17 @@ const settingsDefinition = defineSettingsSchema({
         dialogTitle: '选择项目路径',
         label: '项目路径',
         immediate: true,
+      },
+      language: {
+        type: 'select',
+        default: 'system',
+        label: '语言',
+        description: '选择界面语言',
+        placeholder: '请选择语言',
+        options: [
+          { value: 'system', label: '跟随系统' },
+          { value: 'zh-Hans', label: '简体中文' },
+        ],
       },
     },
   },
@@ -153,6 +178,25 @@ describe('SettingsForm', () => {
       defaultPath: '/demo/project',
     })
     await expect.element(page.getByTestId('path-probe')).toHaveTextContent('/demo/project-next')
+
+    await result.unmount()
+  })
+
+  it('select 字段会把 label 与描述信息绑定到真正可聚焦的 trigger', async () => {
+    const result = renderSettingsFormHarness()
+
+    const trigger = await page.getByRole('combobox').element()
+    const label = [...document.querySelectorAll('label')]
+      .find(element => element.textContent?.trim() === '语言')
+
+    if (!label) {
+      throw new Error('language label should be rendered')
+    }
+
+    expect(label.getAttribute('for')).toBeTruthy()
+    expect(trigger.getAttribute('id')).toBe(label.getAttribute('for'))
+    expect(trigger.getAttribute('aria-describedby')).toContain('-form-item-description')
+    expect(trigger.getAttribute('aria-invalid')).toBe('false')
 
     await result.unmount()
   })

@@ -26,21 +26,21 @@ const { t } = useI18n()
         {{ resolveI18nLike(field.description, t) }}
       </FormDescription>
     </div>
-    <FormControl>
-      <Select :model-value="value" @update:model-value="handleChange">
+    <Select :model-value="value" @update:model-value="handleChange">
+      <FormControl>
         <SelectTrigger class="text-xs h-8 min-w-28 w-40 shadow-none">
           <SelectValue :placeholder="field.placeholder ? resolveI18nLike(field.placeholder, t) : undefined" />
         </SelectTrigger>
-        <SelectContent>
-          <SelectItem
-            v-for="option in field.options"
-            :key="option.value"
-            :value="option.value"
-          >
-            {{ resolveI18nLike(option.label, t) }}
-          </SelectItem>
-        </SelectContent>
-      </Select>
-    </FormControl>
+      </FormControl>
+      <SelectContent>
+        <SelectItem
+          v-for="option in field.options"
+          :key="option.value"
+          :value="option.value"
+        >
+          {{ resolveI18nLike(option.label, t) }}
+        </SelectItem>
+      </SelectContent>
+    </Select>
   </FormItem>
 </template>
