@@ -45,9 +45,14 @@ const {
   useWorkspaceStoreMock: vi.fn(),
 }))
 
-vi.mock('@tauri-apps/api/path', () => ({
-  join: joinMock,
-}))
+vi.mock('@tauri-apps/api/path', async () => {
+  const actual = await vi.importActual<typeof import('@tauri-apps/api/path')>('@tauri-apps/api/path')
+
+  return {
+    ...actual,
+    join: joinMock,
+  }
+})
 
 vi.mock('~/services/platform/app-paths', () => ({
   gameAssetDir: gameAssetDirMock,
