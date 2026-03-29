@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useFileViewerLayout } from '~/components/file-viewer/useFileViewerLayout'
 import { useFileViewerVirtualizer } from '~/components/file-viewer/useFileViewerVirtualizer'
-import { FileViewerItem, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
+import { FileViewerItem, FileViewerPreviewSize, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 import { createItemComparator } from '~/utils/sort'
 
 import type { SortableItemAccessor } from '~/utils/sort'
@@ -10,7 +10,7 @@ interface FileViewerProps {
   /** 要展示的文件/文件夹列表 */
   items: FileViewerItem[]
   /** 调用方可选提供图片预览地址解析器，通用文件视图本身不绑定具体预览实现 */
-  resolvePreviewUrl?: (item: FileViewerItem) => string | undefined
+  resolvePreviewUrl?: (item: FileViewerItem, previewSize: FileViewerPreviewSize) => string | undefined
   /** 视图模式 */
   viewMode?: 'list' | 'grid'
   /** 排序字段 */

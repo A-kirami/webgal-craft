@@ -9,7 +9,7 @@ import { usePreferenceStore } from '~/stores/preference'
 import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
-import { FileViewerItem, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
+import { FileViewerItem, FileViewerPreviewSize, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
 interface AssetViewProps {
   assetType: string
@@ -171,7 +171,7 @@ function handleSelect(item: FileViewerItem) {
   lastSelectedAt = now
 }
 
-function resolvePreviewUrl(item: FileViewerItem): string | undefined {
+function resolvePreviewUrl(item: FileViewerItem, previewSize: FileViewerPreviewSize): string | undefined {
   if (item.isDir || !item.mimeType?.startsWith('image/')) {
     return undefined
   }
@@ -187,6 +187,11 @@ function resolvePreviewUrl(item: FileViewerItem): string | undefined {
       cwd: gamePath,
       cacheVersion: item.modifiedAt,
       previewBaseUrl: serveUrl,
+      thumbnail: {
+        width: previewSize.width,
+        height: previewSize.height,
+        resizeMode: 'contain',
+      },
     })
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)

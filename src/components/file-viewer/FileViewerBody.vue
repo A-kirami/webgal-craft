@@ -4,7 +4,7 @@ import { File, FileImage, FileJson2, FileMusic, FileVideo, Folder } from 'lucide
 import { formatFileSize } from '~/utils/format'
 import { isValidPositiveNumber } from '~/utils/sort'
 
-import type { FileViewerItem, FileViewerVirtualRow } from '~/types/file-viewer'
+import type { FileViewerItem, FileViewerPreviewSize, FileViewerVirtualRow } from '~/types/file-viewer'
 
 interface FileViewerDisplayItem {
   item: FileViewerItem
@@ -25,7 +25,7 @@ interface FileViewerBodyProps {
   showListCreatedAt: boolean
   getGridRowItems: (rowIndex: number) => FileViewerItem[]
   getListItem: (index: number) => FileViewerItem
-  resolvePreviewUrl?: (item: FileViewerItem) => string | undefined
+  resolvePreviewUrl?: (item: FileViewerItem, previewSize: FileViewerPreviewSize) => string | undefined
 }
 
 const {
@@ -90,13 +90,13 @@ function handleItemClick(item: FileViewerItem) {
   emit('itemClick', item)
 }
 
-function resolveDisplayPreviewUrl(item: FileViewerItem): string | undefined {
+function resolveDisplayPreviewUrl(item: FileViewerItem, previewSize: FileViewerPreviewSize): string | undefined {
   if (!isImageFile(item) || !resolvePreviewUrl) {
     return undefined
   }
 
   try {
-    return resolvePreviewUrl(item)
+    return resolvePreviewUrl(item, previewSize)
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     void logger.error(`[FileViewer] 资源地址生成失败: ${item.path} - ${errorMessage}`)
@@ -105,17 +105,25 @@ function resolveDisplayPreviewUrl(item: FileViewerItem): string | undefined {
 }
 
 function getGridRowDisplayItems(rowIndex: number): FileViewerDisplayItem[] {
+  const previewSize = {
+    width: gridPreviewSize,
+    height: gridPreviewSize,
+  }
   return getGridRowItems(rowIndex).map(item => ({
     item,
-    previewUrl: resolveDisplayPreviewUrl(item),
+    previewUrl: resolveDisplayPreviewUrl(item, previewSize),
   }))
 }
 
 function getListRowDisplayItem(rowIndex: number): FileViewerDisplayItem {
   const item = getListItem(rowIndex)
+  const previewSize = {
+    width: listPreviewSize,
+    height: listPreviewSize,
+  }
   return {
     item,
-    previewUrl: resolveDisplayPreviewUrl(item),
+    previewUrl: resolveDisplayPreviewUrl(item, previewSize),
   }
 }
 </script>

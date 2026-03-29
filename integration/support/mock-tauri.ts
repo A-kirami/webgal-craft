@@ -28,6 +28,15 @@ interface TauriMockGlobal {
   __TAURI_EVENT_PLUGIN_INTERNALS__?: {
     unregisterListener(): void
   }
+  __TAURI_OS_PLUGIN_INTERNALS__?: {
+    arch: 'x86_64'
+    eol: '\r\n'
+    exe_extension: 'exe'
+    family: 'windows'
+    os_type: 'windows'
+    platform: 'windows'
+    version: string
+  }
   __TAURI_INTERNALS__?: unknown
   __TAURI_MOCK_PENDING__?: boolean
   __TAURI_MOCK_READY__?: boolean
@@ -289,6 +298,17 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
 
       tauriMockGlobal.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
         unregisterListener: () => { /* no-op */ },
+      }
+      tauriMockGlobal.__TAURI_OS_PLUGIN_INTERNALS__ = {
+        arch: 'x86_64',
+        eol: '\r\n',
+        // eslint-disable-next-line camelcase
+        exe_extension: 'exe',
+        family: 'windows',
+        // eslint-disable-next-line camelcase
+        os_type: 'windows',
+        platform: 'windows',
+        version: '10.0.0',
       }
 
       const mockReadyPromise = (async () => {

@@ -8,7 +8,7 @@ import { useFileViewerVirtualizer } from '~/components/file-viewer/useFileViewer
 
 import FileViewer from './FileViewer.vue'
 
-import type { FileViewerItem } from '~/types/file-viewer'
+import type { FileViewerItem, FileViewerPreviewSize } from '~/types/file-viewer'
 
 const {
   measureMock,
@@ -192,7 +192,7 @@ describe('FileViewer 外观契约', () => {
     renderInBrowser(FileViewer, {
       props: {
         items: [createImageItem(1)],
-        resolvePreviewUrl: (item: FileViewerItem) => resolvePreviewUrlMock(item.path, item.modifiedAt),
+        resolvePreviewUrl: (item: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(item.path, preview),
         viewMode: 'grid',
       },
       global: {
@@ -200,7 +200,10 @@ describe('FileViewer 外观契约', () => {
       },
     })
 
-    expect(resolvePreviewUrlMock).toHaveBeenCalledWith('/assets/file-1.txt', BASE_TIMESTAMP + 1)
+    expect(resolvePreviewUrlMock).toHaveBeenCalledWith('/assets/file-1.txt', {
+      height: 64,
+      width: 64,
+    })
     await expect.element(page.getByAltText('file-1.txt')).toHaveAttribute('src', 'http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
   })
 
@@ -211,7 +214,7 @@ describe('FileViewer 外观契约', () => {
     renderInBrowser(FileViewer, {
       props: {
         items: [createImageItem(1)],
-        resolvePreviewUrl: (item: FileViewerItem) => resolvePreviewUrlMock(item.path, item.modifiedAt),
+        resolvePreviewUrl: (item: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(item.path, preview),
         viewMode: 'list',
       },
       global: {
@@ -219,7 +222,10 @@ describe('FileViewer 外观契约', () => {
       },
     })
 
-    expect(resolvePreviewUrlMock).toHaveBeenCalledWith('/assets/file-1.txt', BASE_TIMESTAMP + 1)
+    expect(resolvePreviewUrlMock).toHaveBeenCalledWith('/assets/file-1.txt', {
+      height: 20,
+      width: 20,
+    })
     await expect.element(page.getByAltText('file-1.txt')).toHaveAttribute('src', 'http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001')
   })
 
