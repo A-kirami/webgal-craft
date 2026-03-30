@@ -373,6 +373,22 @@ function findRenameAnchor(path: string): HTMLElement | undefined {
   return itemElement?.querySelector<HTMLElement>('[data-file-viewer-name]') ?? undefined
 }
 
+function getRenameFallbackAnchor(): HTMLElement | undefined {
+  return fileViewerRef.value?.viewport
+}
+
+function isItemVisibleInCurrentFilter(path: string): boolean {
+  return filteredItems.some(item => item.path === path)
+}
+
+async function resolveRenameAnchor(path: string): Promise<HTMLElement | undefined> {
+  if (!isItemVisibleInCurrentFilter(path)) {
+    return getRenameFallbackAnchor()
+  }
+
+  return await waitForRenameAnchor(path) ?? getRenameFallbackAnchor()
+}
+
 function normalizeRenameTarget(item: { path: string, name: string, isDir?: boolean }): FileViewerItem {
   return items.value.find(entry => entry.path === item.path) ?? {
     isDir: item.isDir ?? false,
@@ -408,7 +424,7 @@ async function waitForCreatedItem(
   path: string,
   attempt: number = 0,
 ): Promise<FileViewerItem | undefined> {
-  const targetItem = filteredItems.find(item => item.path === path)
+  const targetItem = items.value.find(item => item.path === path)
   if (targetItem || attempt >= CREATE_FOLDER_RENAME_POLL_RETRY_COUNT - 1) {
     return targetItem
   }
@@ -439,7 +455,7 @@ async function scrollRenameTargetIntoView(path: string): Promise<void> {
 
 async function handleContextMenuRename(item: { path: string, name: string, isDir?: boolean }): Promise<void> {
   const targetItem = normalizeRenameTarget(item)
-  const anchorElement = await waitForRenameAnchor(targetItem.path)
+  const anchorElement = await resolveRenameAnchor(targetItem.path)
   if (!anchorElement) {
     return
   }

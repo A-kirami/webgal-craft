@@ -750,6 +750,70 @@ describe('AssetView', () => {
     await expect.element(page.getByRole('textbox')).toHaveValue('新建文件夹')
   })
 
+  it('搜索结果中隐藏新建目录时仍会打开重命名 Popover', async () => {
+    vi.useFakeTimers()
+    gameAssetDirMock.mockResolvedValue('/project/background')
+    getFolderContentsMock
+      .mockResolvedValueOnce([
+        {
+          createdAt: 1,
+          isDir: false,
+          mimeType: 'image/png',
+          modifiedAt: 2,
+          name: 'hero.png',
+          path: '/project/background/hero.png',
+          size: 1024,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          createdAt: 1,
+          isDir: true,
+          modifiedAt: 2,
+          name: '新建文件夹',
+          path: '/project/background/新建文件夹',
+          size: 0,
+        },
+        {
+          createdAt: 1,
+          isDir: false,
+          mimeType: 'image/png',
+          modifiedAt: 2,
+          name: 'hero.png',
+          path: '/project/background/hero.png',
+          size: 1024,
+        },
+      ])
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: {
+        path: '/project',
+      },
+      currentGameServeUrl: undefined,
+    }))
+
+    renderInBrowser(createHarness('background', { searchQuery: 'hero' }), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createRenameFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
+    })
+    await page.getByTestId('create-folder-action-background').click()
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
+    })
+    await vi.advanceTimersByTimeAsync(1000)
+    await nextTick()
+
+    await expect.element(page.getByRole('textbox')).toHaveValue('新建文件夹')
+  })
+
   it('大型虚拟列表中新建文件夹时会先滚动到目标项再打开重命名 Popover', async () => {
     vi.useFakeTimers()
     gameAssetDirMock.mockResolvedValue('/project/background')
