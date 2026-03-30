@@ -3,6 +3,7 @@ import { basename, join } from '@tauri-apps/api/path'
 import { File, FileImage, FileJson2, FileMusic, FileVideo, FileVolume, Folder } from 'lucide-vue-next'
 
 import FileTreeContextMenuContent from '~/components/editor/FileTreeContextMenuContent.vue'
+import { useAssetViewItemsLoader } from '~/components/editor/useAssetViewItemsLoader'
 import { PopoverAnchor } from '~/components/ui/popover'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { getFileTreeNameSelectionEnd } from '~/features/editor/file-tree/file-tree'
@@ -13,7 +14,6 @@ import { FileSystemItem, useFileStore } from '~/stores/file'
 import { usePreferenceStore } from '~/stores/preference'
 import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
-import { AppError } from '~/types/errors'
 import { FileViewerItem, FileViewerPreviewSize, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 import { handleError } from '~/utils/error-handler'
 
@@ -58,9 +58,6 @@ const renameInputRef = useTemplateRef('renameInputRef')
 let scrollTop = 0
 let lastSelectedPath = $ref('')
 let lastSelectedAt = $ref(0)
-let latestLoadToken = 0
-let itemsRefreshKey = $ref(0)
-let refreshModes = $ref<boolean[]>([])
 let renameAnchorElement = $ref<HTMLElement>()
 let renameTargetItem = $ref<FileViewerItem>()
 let renameValue = $ref('')
@@ -130,54 +127,30 @@ const currentDirectoryPath = computedAsync(async () => {
   return await join(basePath, currentPath)
 }, '')
 
-let isLoading = $ref(false)
-let errorMsg = $ref('')
+const {
+  errorMsg: errorMsgRef,
+  isLoading: isLoadingRef,
+  items: itemsRef,
+  scheduleItemsRefresh,
+} = useAssetViewItemsLoader({
+  assetBasePath,
+  currentDirectoryPath,
+  currentPath: () => currentPath,
+  loadDirectory: directoryPath => fileStore.getFolderContents(directoryPath),
+  mapItem: toFileViewerItem,
+})
 
-const items = computedAsync(async () => {
-  const directoryPath = currentDirectoryPath.value
-  const loadToken = ++latestLoadToken
-  const isSilentRefresh = refreshModes.shift() === true
-  void itemsRefreshKey
-
-  if (!isSilentRefresh) {
-    isLoading = true
-  }
-  errorMsg = ''
-
-  // 确保重任务开始前先把 loading 状态提交到视图。
-  if (!isSilentRefresh) {
-    await nextTick()
-  }
-
-  try {
-    if (!directoryPath) {
-      return []
-    }
-
-    const result = await fileStore.getFolderContents(directoryPath)
-    return result.map(item => toFileViewerItem(item))
-  } catch (error) {
-    if (!currentPath && error instanceof AppError && error.code === 'DIR_NOT_FOUND') {
-      void logger.debug(`资源目录 ${assetBasePath.value} 不存在，返回空列表`)
-      return []
-    }
-
-    errorMsg = error instanceof Error ? error.message : String(error)
-    return []
-  } finally {
-    if (loadToken === latestLoadToken) {
-      isLoading = false
-    }
-  }
-}, [])
+const items = $computed(() => itemsRef.value)
+const isLoading = $computed(() => isLoadingRef.value)
+const errorMsg = $computed(() => errorMsgRef.value)
 
 const filteredItems = $computed(() => {
   const keyword = searchQuery.trim().toLocaleLowerCase()
   if (!keyword) {
-    return items.value
+    return items
   }
 
-  return items.value.filter(item => item.name.toLocaleLowerCase().includes(keyword))
+  return items.filter(item => item.name.toLocaleLowerCase().includes(keyword))
 })
 
 const currentDirectoryContextMenuItem = $computed(() => {
@@ -209,7 +182,7 @@ const isRenameDuplicate = $computed(() => {
     return false
   }
 
-  return items.value.some(item =>
+  return items.some(item =>
     item.path !== currentItem.path
     && item.name.trim().toLocaleLowerCase() === nextName,
   )
@@ -269,11 +242,6 @@ function isFileSystemEventRelevant(event: FileSystemEvent): boolean {
 
   return isPathWithinDirectory(event.oldPath, directoryPath)
     || isPathWithinDirectory(event.newPath, directoryPath)
-}
-
-function scheduleItemsRefresh(isSilent: boolean): void {
-  refreshModes.push(isSilent)
-  itemsRefreshKey++
 }
 
 function getIconComponent(item: FileViewerItem) {
@@ -390,7 +358,7 @@ async function resolveRenameAnchor(path: string): Promise<HTMLElement | undefine
 }
 
 function normalizeRenameTarget(item: { path: string, name: string, isDir?: boolean }): FileViewerItem {
-  return items.value.find(entry => entry.path === item.path) ?? {
+  return items.find(entry => entry.path === item.path) ?? {
     isDir: item.isDir ?? false,
     name: item.name,
     path: item.path,
@@ -403,7 +371,7 @@ function hasItemWithName(name: string): boolean {
     return false
   }
 
-  return items.value.some(item => item.name.trim().toLocaleLowerCase() === normalizedName)
+  return items.some(item => item.name.trim().toLocaleLowerCase() === normalizedName)
 }
 
 function resolveNextCreatedFolderName(): string {
@@ -424,7 +392,7 @@ async function waitForCreatedItem(
   path: string,
   attempt: number = 0,
 ): Promise<FileViewerItem | undefined> {
-  const targetItem = items.value.find(item => item.path === path)
+  const targetItem = items.find(item => item.path === path)
   if (targetItem || attempt >= CREATE_FOLDER_RENAME_POLL_RETRY_COUNT - 1) {
     return targetItem
   }

@@ -394,6 +394,37 @@ function createHarness(
   })
 }
 
+function createCreateFolderAndChangePathHarness(assetType: string = 'bg') {
+  return defineComponent({
+    name: 'AssetViewCreateFolderAndChangePathHarness',
+    setup() {
+      const currentPath = ref('')
+      const assetViewRef = ref<{ createFolderInCurrentDirectory: () => Promise<void> }>()
+
+      function handleCreateFolderAndChangePath() {
+        void assetViewRef.value?.createFolderInCurrentDirectory()
+        currentPath.value = 'chapter-1'
+      }
+
+      return () => h('div', [
+        h('button', {
+          'data-testid': 'create-folder-and-change-path',
+          'onClick': handleCreateFolderAndChangePath,
+          'type': 'button',
+        }, 'create-folder-and-change-path'),
+        h(AssetView as Component, {
+          'ref': assetViewRef,
+          assetType,
+          'current-path': currentPath.value,
+          'onUpdate:current-path': (value: string) => {
+            currentPath.value = value
+          },
+        }),
+      ])
+    },
+  })
+}
+
 const commonGlobalStubs = {
   Input: createBrowserInputStub('StubInput'),
   Popover: createBrowserContainerStub('StubPopover'),
@@ -793,6 +824,54 @@ describe('AssetView', () => {
     await nextTick()
 
     await expect.element(page.getByTestId('file-viewer-loading')).toHaveTextContent('false')
+  })
+
+  it('静默刷新与路径切换同批触发时，显式导航仍会显示 loading', async () => {
+    vi.useFakeTimers()
+
+    let resolveSecondLoad: ((items: FileSystemItem[]) => void) | undefined
+    let resolveThirdLoad: ((items: FileSystemItem[]) => void) | undefined
+    const secondLoad = new Promise<FileSystemItem[]>((resolve) => {
+      resolveSecondLoad = resolve
+    })
+    const thirdLoad = new Promise<FileSystemItem[]>((resolve) => {
+      resolveThirdLoad = resolve
+    })
+
+    createFolderMock.mockResolvedValue('/games/demo/assets/bg/new-folder')
+    getFolderContentsMock
+      .mockResolvedValueOnce([])
+      .mockReturnValueOnce(secondLoad)
+      .mockReturnValueOnce(thirdLoad)
+
+    renderInBrowser(createCreateFolderAndChangePathHarness(), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createLoadingStateFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
+    })
+
+    await page.getByTestId('create-folder-and-change-path').click()
+
+    await vi.waitFor(() => {
+      expect(createFolderMock).toHaveBeenCalledWith('/games/demo/assets/bg', 'edit.fileTree.defaultFolderName')
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(3)
+    })
+
+    expect(getFolderContentsMock).toHaveBeenNthCalledWith(2, '/games/demo/assets/bg')
+    expect(getFolderContentsMock).toHaveBeenLastCalledWith('/games/demo/assets/bg/chapter-1')
+    await expect.element(page.getByTestId('file-viewer-loading')).toHaveTextContent('true')
+
+    resolveSecondLoad?.([])
+    resolveThirdLoad?.([])
+    await vi.advanceTimersByTimeAsync(1000)
+    await nextTick()
   })
 
   it('会为文件视图空白区提供当前目录右键菜单', async () => {
