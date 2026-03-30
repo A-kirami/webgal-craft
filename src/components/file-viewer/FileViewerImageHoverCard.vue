@@ -72,16 +72,29 @@ watch(
     displayPreviewUrl = undefined
     imageDimensions = undefined
     isPreviewLoaded = false
+
+    initializePreview()
   },
   { immediate: true },
 )
 
 watch(() => currentOpen, (nextOpen) => {
   if (nextOpen) {
-    updateDisplayPreviewUrl()
-    void ensureImageDimensions()
+    initializePreview()
   }
-})
+}, { immediate: true })
+
+function initializePreview(): void {
+  if (!currentOpen || !isEnabled) {
+    return
+  }
+
+  if (!displayPreviewUrl) {
+    updateDisplayPreviewUrl()
+  }
+
+  void ensureImageDimensions()
+}
 
 function updateDisplayPreviewUrl(): void {
   if (!isEnabled) {
@@ -115,11 +128,6 @@ async function ensureImageDimensions(): Promise<void> {
 function handleOpenChange(nextOpen: boolean): void {
   if (props.open === undefined) {
     uncontrolledOpen = nextOpen
-  }
-
-  if (nextOpen) {
-    updateDisplayPreviewUrl()
-    void ensureImageDimensions()
   }
 
   emit('update:open', nextOpen)

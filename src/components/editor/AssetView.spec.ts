@@ -374,13 +374,14 @@ function createLoadingStateFileViewerStub() {
 function createHarness(
   assetType: string = 'bg',
   options: {
+    currentPath?: string
     searchQuery?: string
   } = {},
 ) {
   return defineComponent({
     name: 'AssetViewHarness',
     setup() {
-      const currentPath = ref('')
+      const currentPath = ref(options.currentPath ?? '')
 
       return () => h(AssetView as Component, {
         assetType,
@@ -489,6 +490,7 @@ describe('AssetView', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.clearAllMocks()
     document.body.innerHTML = ''
   })
@@ -776,6 +778,108 @@ describe('AssetView', () => {
     await expect.element(page.getByText('new-file.png')).toBeVisible()
   })
 
+  it('相关文件系统事件后紧跟无关事件时仍会保留刷新请求', async () => {
+    vi.useFakeTimers()
+    getFolderContentsMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          createdAt: 1,
+          isDir: false,
+          mimeType: 'image/png',
+          modifiedAt: 2,
+          name: 'new-file.png',
+          path: '/games/demo/assets/bg/new-file.png',
+          size: 2048,
+        },
+      ])
+
+    renderInBrowser(createHarness(), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createRenameFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
+    })
+
+    emitFileSystemEvent('file:created', {
+      type: 'file:created',
+      path: '/games/demo/assets/bg/new-file.png',
+    })
+    emitFileSystemEvent('file:created', {
+      type: 'file:created',
+      path: '/games/demo/assets/bgm/ignore-me.png',
+    })
+
+    await vi.advanceTimersByTimeAsync(100)
+    await nextTick()
+
+    expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
+    await expect.element(page.getByText('new-file.png')).toBeVisible()
+  })
+
+  it('父目录删除事件也会触发当前子目录刷新', async () => {
+    vi.useFakeTimers()
+
+    renderInBrowser(createHarness('bg', { currentPath: 'chapter-1' }), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createContextMenuFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
+    })
+
+    emitFileSystemEvent('directory:removed', {
+      type: 'directory:removed',
+      path: '/games/demo/assets/bg',
+    })
+
+    await vi.advanceTimersByTimeAsync(100)
+    await nextTick()
+
+    expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
+    expect(getFolderContentsMock).toHaveBeenLastCalledWith('/games/demo/assets/bg/chapter-1')
+  })
+
+  it('父目录重命名事件也会触发当前子目录刷新', async () => {
+    vi.useFakeTimers()
+
+    renderInBrowser(createHarness('bg', { currentPath: 'chapter-1' }), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createContextMenuFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
+    })
+
+    emitFileSystemEvent('directory:renamed', {
+      type: 'directory:renamed',
+      oldPath: '/games/demo/assets/bg',
+      newPath: '/games/demo/assets/bg-renamed',
+    })
+
+    await vi.advanceTimersByTimeAsync(100)
+    await nextTick()
+
+    expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
+    expect(getFolderContentsMock).toHaveBeenLastCalledWith('/games/demo/assets/bg/chapter-1')
+  })
+
   it('静默刷新覆盖普通加载后仍会正确清除 loading 状态', async () => {
     vi.useFakeTimers()
 
@@ -936,6 +1040,47 @@ describe('AssetView', () => {
     await nextTick()
 
     await expect.element(page.getByRole('textbox')).toHaveValue('新建文件夹')
+  })
+
+  it('创建文件夹后如果已切换目录，则不会继续打开旧目录的重命名 Popover', async () => {
+    vi.useFakeTimers()
+    gameAssetDirMock.mockResolvedValue('/project/background')
+    createFolderMock.mockResolvedValue('/project/background/新建文件夹')
+    getFolderContentsMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: {
+        path: '/project',
+      },
+      currentGameServeUrl: undefined,
+    }))
+
+    renderInBrowser(createCreateFolderAndChangePathHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createRenameFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
+    })
+
+    await page.getByTestId('create-folder-and-change-path').click()
+
+    await vi.waitFor(() => {
+      expect(createFolderMock).toHaveBeenCalledWith('/project/background', 'edit.fileTree.defaultFolderName')
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(3)
+    })
+
+    await vi.advanceTimersByTimeAsync(1000)
+    await nextTick()
+
+    await expect.element(page.getByRole('textbox')).not.toBeInTheDocument()
   })
 
   it('搜索结果中隐藏新建目录时仍会打开重命名 Popover', async () => {

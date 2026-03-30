@@ -238,10 +238,15 @@ function isFileSystemEventRelevant(event: FileSystemEvent): boolean {
 
   if ('path' in event) {
     return isPathWithinDirectory(event.path, directoryPath)
+      || (event.type.startsWith('directory:') && isPathWithinDirectory(directoryPath, event.path))
   }
 
   return isPathWithinDirectory(event.oldPath, directoryPath)
     || isPathWithinDirectory(event.newPath, directoryPath)
+    || (event.type.startsWith('directory:') && (
+      isPathWithinDirectory(directoryPath, event.oldPath)
+      || isPathWithinDirectory(directoryPath, event.newPath)
+    ))
 }
 
 function getIconComponent(item: FileViewerItem) {
@@ -349,12 +354,23 @@ function isItemVisibleInCurrentFilter(path: string): boolean {
   return filteredItems.some(item => item.path === path)
 }
 
-async function resolveRenameAnchor(path: string): Promise<HTMLElement | undefined> {
+function isCurrentDirectorySnapshotActive(directoryPathSnapshot: string | undefined): boolean {
+  return !!directoryPathSnapshot && currentDirectoryPath.value === directoryPathSnapshot
+}
+
+async function resolveRenameAnchor(
+  path: string,
+  directoryPathSnapshot?: string,
+): Promise<HTMLElement | undefined> {
+  if (directoryPathSnapshot && !isCurrentDirectorySnapshotActive(directoryPathSnapshot)) {
+    return undefined
+  }
+
   if (!isItemVisibleInCurrentFilter(path)) {
     return getRenameFallbackAnchor()
   }
 
-  return await waitForRenameAnchor(path) ?? getRenameFallbackAnchor()
+  return await waitForRenameAnchor(path, directoryPathSnapshot) ?? getRenameFallbackAnchor()
 }
 
 function normalizeRenameTarget(item: { path: string, name: string, isDir?: boolean }): FileViewerItem {
@@ -390,8 +406,13 @@ function resolveNextCreatedFolderName(): string {
 
 async function waitForCreatedItem(
   path: string,
+  directoryPathSnapshot?: string,
   attempt: number = 0,
 ): Promise<FileViewerItem | undefined> {
+  if (directoryPathSnapshot && !isCurrentDirectorySnapshotActive(directoryPathSnapshot)) {
+    return undefined
+  }
+
   const targetItem = items.find(item => item.path === path)
   if (targetItem || attempt >= CREATE_FOLDER_RENAME_POLL_RETRY_COUNT - 1) {
     return targetItem
@@ -399,13 +420,18 @@ async function waitForCreatedItem(
 
   await nextTick()
   await new Promise<void>(resolve => setTimeout(resolve, CREATE_FOLDER_RENAME_POLL_DELAY_MS))
-  return waitForCreatedItem(path, attempt + 1)
+  return waitForCreatedItem(path, directoryPathSnapshot, attempt + 1)
 }
 
 async function waitForRenameAnchor(
   path: string,
+  directoryPathSnapshot?: string,
   attempt: number = 0,
 ): Promise<HTMLElement | undefined> {
+  if (directoryPathSnapshot && !isCurrentDirectorySnapshotActive(directoryPathSnapshot)) {
+    return undefined
+  }
+
   const anchorElement = findRenameAnchor(path)
   if (anchorElement || attempt >= CREATE_FOLDER_RENAME_POLL_RETRY_COUNT - 1) {
     return anchorElement
@@ -413,7 +439,7 @@ async function waitForRenameAnchor(
 
   await nextTick()
   await new Promise<void>(resolve => setTimeout(resolve, CREATE_FOLDER_RENAME_POLL_DELAY_MS))
-  return waitForRenameAnchor(path, attempt + 1)
+  return waitForRenameAnchor(path, directoryPathSnapshot, attempt + 1)
 }
 
 async function scrollRenameTargetIntoView(path: string): Promise<void> {
@@ -421,9 +447,19 @@ async function scrollRenameTargetIntoView(path: string): Promise<void> {
   await nextTick()
 }
 
-async function handleContextMenuRename(item: { path: string, name: string, isDir?: boolean }): Promise<void> {
+async function handleContextMenuRename(
+  item: { path: string, name: string, isDir?: boolean },
+  directoryPathSnapshot?: string,
+): Promise<void> {
+  if (directoryPathSnapshot && !isCurrentDirectorySnapshotActive(directoryPathSnapshot)) {
+    return
+  }
+
   const targetItem = normalizeRenameTarget(item)
-  const anchorElement = await resolveRenameAnchor(targetItem.path)
+  const anchorElement = await resolveRenameAnchor(targetItem.path, directoryPathSnapshot)
+  if (directoryPathSnapshot && !isCurrentDirectorySnapshotActive(directoryPathSnapshot)) {
+    return
+  }
   if (!anchorElement) {
     return
   }
@@ -450,6 +486,7 @@ async function handleContextMenuCreateFolder(item: { path: string, name: string,
   }
 
   const folderName = resolveNextCreatedFolderName()
+  const currentDirectorySnapshot = currentDirectoryPath.value || item.path
 
   try {
     const createdPath = await gameFs.createFolder(item.path, folderName)
@@ -457,10 +494,14 @@ async function handleContextMenuCreateFolder(item: { path: string, name: string,
 
     scheduleItemsRefresh(true)
 
-    const targetItem = await waitForCreatedItem(createdPath)
+    const targetItem = await waitForCreatedItem(createdPath, currentDirectorySnapshot)
+    if (!isCurrentDirectorySnapshotActive(currentDirectorySnapshot)) {
+      return
+    }
+
     if (targetItem) {
       await scrollRenameTargetIntoView(targetItem.path)
-      await handleContextMenuRename(targetItem)
+      await handleContextMenuRename(targetItem, currentDirectorySnapshot)
       return
     }
 
@@ -468,7 +509,7 @@ async function handleContextMenuCreateFolder(item: { path: string, name: string,
       isDir: true,
       name: createdName || folderName,
       path: createdPath,
-    })
+    }, currentDirectorySnapshot)
   } catch (error) {
     handleError(error)
   }
@@ -526,16 +567,18 @@ async function handleRenameSubmit(): Promise<void> {
   }
 }
 
-const debouncedRefreshItems = useDebounceFn((event: FileSystemEvent) => {
-  if (!isFileSystemEventRelevant(event)) {
-    return
-  }
-
+const debouncedRefreshItems = useDebounceFn(() => {
   scheduleItemsRefresh(true)
 }, 100)
 
 for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
-  fileSystemEvents.on(eventType, debouncedRefreshItems)
+  fileSystemEvents.on(eventType, (event) => {
+    if (!isFileSystemEventRelevant(event)) {
+      return
+    }
+
+    debouncedRefreshItems()
+  })
 }
 </script>
 

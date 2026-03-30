@@ -7,6 +7,7 @@ import { useFileViewerLayout } from '~/components/file-viewer/useFileViewerLayou
 import { useFileViewerVirtualizer } from '~/components/file-viewer/useFileViewerVirtualizer'
 
 import FileViewer from './FileViewer.vue'
+import FileViewerImageHoverCard from './FileViewerImageHoverCard.vue'
 
 import type { FileViewerItem, FileViewerPreviewSize } from '~/types/file-viewer'
 
@@ -450,6 +451,104 @@ describe('FileViewer 外观契约', () => {
 
     expect(resolvePreviewUrlMock).not.toHaveBeenCalled()
     await expect.element(page.getByAltText('file-1.txt')).not.toBeInTheDocument()
+  })
+
+  it('受控打开态在挂载时会立即初始化 hover 预览', async () => {
+    const item = createImageItem(24)
+    getImageDimensionsMock.mockResolvedValue([640, 360])
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+      createSizedPreviewUrl(resolvedItem, preview),
+    )
+
+    renderInBrowser(FileViewerImageHoverCard, {
+      props: {
+        item,
+        open: true,
+        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+          resolvePreviewUrlMock(resolvedItem, preview),
+      },
+      slots: {
+        default: () => h('span', 'trigger'),
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(resolvePreviewUrlMock).toHaveBeenCalledWith(expect.objectContaining({
+        path: item.path,
+      }), {
+        width: 256,
+        height: 256,
+      })
+      expect(getImageDimensionsMock).toHaveBeenCalledWith(item.path)
+    })
+
+    await expect.element(page.getByAltText(item.name)).toBeInTheDocument()
+  })
+
+  it('hover 预览打开时切换图片资源会立即重建预览状态', async () => {
+    const initialItem = createImageItem(25)
+    const nextModifiedAt = (initialItem.modifiedAt ?? 0) + 1000
+
+    getImageDimensionsMock.mockResolvedValue([800, 450])
+    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+      createSizedPreviewUrl(resolvedItem, preview),
+    )
+
+    const FileViewerImageHoverCardHarness = defineComponent({
+      name: 'FileViewerImageHoverCardHarness',
+      setup() {
+        const item = ref(initialItem)
+
+        function handleChangeItem() {
+          item.value = {
+            ...item.value,
+            modifiedAt: nextModifiedAt,
+          }
+        }
+
+        return () => h('div', [
+          h(FileViewerImageHoverCard, {
+            item: item.value,
+            open: true,
+            resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
+              resolvePreviewUrlMock(resolvedItem, preview),
+          }, {
+            default: () => h('span', 'trigger'),
+          }),
+          h('button', {
+            'type': 'button',
+            'data-testid': 'change-hover-preview-item',
+            'onClick': handleChangeItem,
+          }, 'change'),
+        ])
+      },
+    })
+
+    renderInBrowser(FileViewerImageHoverCardHarness)
+
+    await vi.waitFor(() => {
+      expect(resolvePreviewUrlMock).toHaveBeenCalled()
+      expect(getImageDimensionsMock).toHaveBeenCalledWith(initialItem.path)
+    })
+    await expect.element(page.getByAltText(initialItem.name)).toBeInTheDocument()
+
+    resolvePreviewUrlMock.mockClear()
+    getImageDimensionsMock.mockClear()
+
+    await page.getByTestId('change-hover-preview-item').click()
+
+    await vi.waitFor(() => {
+      expect(resolvePreviewUrlMock).toHaveBeenCalledWith(expect.objectContaining({
+        modifiedAt: nextModifiedAt,
+        path: initialItem.path,
+      }), {
+        width: 256,
+        height: 256,
+      })
+      expect(getImageDimensionsMock).toHaveBeenCalledWith(initialItem.path)
+    })
+
+    await expect.element(page.getByAltText(initialItem.name)).toBeInTheDocument()
   })
 
   it('网格模式图片项会使用带 modifiedAt 的 HTTP URL', async () => {
@@ -1241,6 +1340,8 @@ describe('FileViewer 外观契约', () => {
                 createItem(2),
                 createItem(1),
               ],
+              sortBy: 'name',
+              sortOrder: 'asc',
               viewMode: 'list',
             }),
             h('button', {
