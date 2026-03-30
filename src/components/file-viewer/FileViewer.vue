@@ -140,7 +140,7 @@ function scrollToIndex(index: number) {
 
 function scrollToItemPath(path: string) {
   const targetIndex = sortedItems.value.findIndex(item => item.path === path)
-  if (targetIndex < 0) {
+  if (targetIndex === -1) {
     return
   }
 

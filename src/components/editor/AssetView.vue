@@ -165,7 +165,7 @@ const items = computedAsync(async () => {
     errorMsg = error instanceof Error ? error.message : String(error)
     return []
   } finally {
-    if (loadToken === latestLoadToken && !isSilentRefresh) {
+    if (loadToken === latestLoadToken) {
       isLoading = false
     }
   }

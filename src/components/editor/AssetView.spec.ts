@@ -11,6 +11,7 @@ import {
 import AssetView from './AssetView.vue'
 
 import type { Component, PropType } from 'vue'
+import type { FileSystemItem } from '~/stores/file'
 import type { FileViewerItem, FileViewerPreviewSize } from '~/types/file-viewer'
 
 const PREVIEW_TIMESTAMP = Date.parse('2023-11-14T22:13:20.000Z')
@@ -274,7 +275,7 @@ function createVirtualizedRenameFileViewerStub() {
 
       function scrollToItemPath(path: string) {
         const targetIndex = props.items.findIndex(item => item.path === path)
-        if (targetIndex < 0) {
+        if (targetIndex === -1) {
           return
         }
 
@@ -330,7 +331,40 @@ function createContextMenuFileViewerStub() {
   })
 }
 
-function createHarness(assetType: string = 'bg') {
+function createLoadingStateFileViewerStub() {
+  return defineComponent({
+    name: 'StubLoadingStateFileViewer',
+    props: {
+      isLoading: {
+        type: Boolean,
+        default: false,
+      },
+      items: {
+        type: Array as PropType<FileViewerItem[]>,
+        required: true,
+      },
+    },
+    setup(props, { expose }) {
+      expose({
+        scrollToIndex: fileViewerScrollToIndexMock,
+        scrollToItemPath: vi.fn(),
+        viewport: undefined,
+      })
+
+      return () => h('div', [
+        h('output', { 'data-testid': 'file-viewer-loading' }, String(props.isLoading)),
+        h('output', { 'data-testid': 'file-viewer-item-count' }, String(props.items.length)),
+      ])
+    },
+  })
+}
+
+function createHarness(
+  assetType: string = 'bg',
+  options: {
+    searchQuery?: string
+  } = {},
+) {
   return defineComponent({
     name: 'AssetViewHarness',
     setup() {
@@ -338,6 +372,7 @@ function createHarness(assetType: string = 'bg') {
 
       return () => h(AssetView as Component, {
         assetType,
+        'searchQuery': options.searchQuery,
         'current-path': currentPath.value,
         'onUpdate:current-path': (value: string) => {
           currentPath.value = value
@@ -599,6 +634,56 @@ describe('AssetView', () => {
 
     expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
     await expect.element(page.getByText('new-file.png')).toBeVisible()
+  })
+
+  it('静默刷新覆盖普通加载后仍会正确清除 loading 状态', async () => {
+    vi.useFakeTimers()
+
+    let resolveFirstLoad: ((items: FileSystemItem[]) => void) | undefined
+    const firstLoad = new Promise<FileSystemItem[]>((resolve) => {
+      resolveFirstLoad = resolve
+    })
+
+    getFolderContentsMock
+      .mockReturnValueOnce(firstLoad)
+      .mockResolvedValueOnce([
+        {
+          createdAt: 1,
+          isDir: false,
+          mimeType: 'image/png',
+          modifiedAt: 2,
+          name: 'new-file.png',
+          path: '/games/demo/assets/bg/new-file.png',
+          size: 2048,
+        },
+      ])
+
+    renderInBrowser(createHarness(), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createLoadingStateFileViewerStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('file-viewer-loading')).toHaveTextContent('true')
+
+    emitFileSystemEvent('file:created', {
+      type: 'file:created',
+      path: '/games/demo/assets/bg/new-file.png',
+    })
+
+    await vi.advanceTimersByTimeAsync(100)
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
+    })
+    await expect.element(page.getByTestId('file-viewer-item-count')).toHaveTextContent('1')
+
+    resolveFirstLoad?.([])
+    await nextTick()
+
+    await expect.element(page.getByTestId('file-viewer-loading')).toHaveTextContent('false')
   })
 
   it('会为文件视图空白区提供当前目录右键菜单', async () => {

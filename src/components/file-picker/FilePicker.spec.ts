@@ -28,8 +28,17 @@ vi.mock('@tauri-apps/api/path', async () => {
 })
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
+  copyFile: vi.fn(),
   exists: existsMock,
+  mkdir: vi.fn(),
+  readDir: vi.fn(),
+  readTextFile: vi.fn(),
+  remove: vi.fn(),
+  rename: vi.fn(),
   stat: statMock,
+  watch: vi.fn(),
+  writeFile: vi.fn(),
+  writeTextFile: vi.fn(),
 }))
 
 vi.mock('~/composables/useDirectoryReader', () => ({

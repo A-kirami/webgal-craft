@@ -312,8 +312,8 @@ function createImageFallbackHarness(viewMode: 'grid' | 'list') {
   })
 }
 
-function getHoverImageTriggerElements(index: number = 0): { trigger: HTMLElement | null, warmupTarget: HTMLElement | null } {
-  const trigger = document.querySelectorAll<HTMLElement>('[data-testid="hover-card-trigger"]')[index] ?? null
+function getHoverImageTriggerElements(index: number = 0): { trigger: HTMLElement | undefined, warmupTarget: HTMLElement | undefined } {
+  const trigger = document.querySelectorAll<HTMLElement>('[data-testid="hover-card-trigger"]')[index]
   const warmupTarget = trigger?.firstElementChild instanceof HTMLElement
     ? trigger.firstElementChild
     : trigger
@@ -324,7 +324,7 @@ function getHoverImageTriggerElements(index: number = 0): { trigger: HTMLElement
   }
 }
 
-async function hoverImageTrigger(index: number = 0): Promise<HTMLElement | null> {
+async function hoverImageTrigger(index: number = 0): Promise<HTMLElement | undefined> {
   const { trigger, warmupTarget } = getHoverImageTriggerElements(index)
   warmupTarget?.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }))
   trigger?.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }))
@@ -332,7 +332,7 @@ async function hoverImageTrigger(index: number = 0): Promise<HTMLElement | null>
   return trigger
 }
 
-async function openHoverImageTrigger(index: number = 0): Promise<HTMLElement | null> {
+async function openHoverImageTrigger(index: number = 0): Promise<HTMLElement | undefined> {
   const trigger = await hoverImageTrigger(index)
   await vi.advanceTimersByTimeAsync(HOVER_CARD_OPEN_DELAY_MS)
   await nextTick()
