@@ -193,7 +193,7 @@ function getPreviewFrameSize(
           <img
             :alt="props.item.name"
             :src="displayPreviewUrl"
-            class="block transition-opacity duration-150 object-contain"
+            class="block object-contain"
             decoding="async"
             loading="lazy"
             :style="{
