@@ -80,7 +80,7 @@ vi.mock('@tauri-apps/api/path', async () => {
       return match?.[0] ?? ''
     }),
     join: joinMock,
-    normalize: vi.fn((filePath: string) => filePath.replaceAll('\\', '/')),
+    normalize: vi.fn(async (filePath: string) => filePath.replaceAll('\\', '/')),
     sep: '/',
   }
 })
