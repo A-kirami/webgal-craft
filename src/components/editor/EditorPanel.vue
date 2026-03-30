@@ -37,9 +37,11 @@ const {
 })
 
 const sidebarEmptyText = $computed(() => (
-  isTextMode.value
-    ? t('edit.textEditor.formPanel.noStatement')
-    : t('edit.visualEditor.noSelection')
+  binding.value?.getEmptyState?.() === 'multiple-edit-targets'
+    ? t('edit.textEditor.formPanel.multipleEditTargets')
+    : (isTextMode.value
+        ? t('edit.textEditor.formPanel.noStatement')
+        : t('edit.visualEditor.noSelection'))
 ))
 
 useShortcutContext({

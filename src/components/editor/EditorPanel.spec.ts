@@ -41,6 +41,7 @@ const {
     activeBinding: {
       value: undefined as {
         enableFocusStatement: boolean
+        getEmptyState?: () => 'multiple-edit-targets' | undefined
         getEntry: () => unknown
         getIndex?: () => number | undefined
         getPreviousSpeaker?: () => string
@@ -400,6 +401,29 @@ describe('EditorPanel', () => {
     renderEditorPanel()
 
     await expect.element(page.getByText('移动光标到语句行以编辑')).toBeVisible()
+    await expect.element(page.getByText('Statement Editor Panel')).not.toBeInTheDocument()
+  })
+
+  it('存在多个编辑目标时会显示暂停单语句编辑的占位文案', async () => {
+    useEditorStoreMock.mockReturnValue(reactive({
+      currentState: {
+        kind: 'scene',
+        path: '/game/start.txt',
+        projection: 'text',
+      },
+      isCurrentSceneFile: true,
+    }))
+
+    sidebarPanelMock.activeBinding.value = {
+      enableFocusStatement: false,
+      getEmptyState: () => 'multiple-edit-targets',
+      getEntry: () => undefined,
+      onUpdate: vi.fn(),
+    }
+
+    renderEditorPanel()
+
+    await expect.element(page.getByText('当前存在多个编辑目标，语句编辑已暂停')).toBeVisible()
     await expect.element(page.getByText('Statement Editor Panel')).not.toBeInTheDocument()
   })
 })

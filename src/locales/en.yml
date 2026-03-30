@@ -362,6 +362,7 @@ edit:
       words: "{count} words"
     formPanel:
       noStatement: Move cursor to a statement line to edit
+      multipleEditTargets: Single-statement editing is paused while multiple edit targets are active
     invalidAnimationVisualMessage: The current animation file contains errors and cannot be edited in visual mode. Switch to text mode to fix it
   scenePanel:
     scene: Scene

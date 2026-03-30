@@ -33,10 +33,9 @@ import type { SidebarPanelBinding } from '~/features/editor/shared/useEditorPane
 import type { TextProjectionState } from '~/stores/editor'
 
 interface Harness {
+  bindings: ReturnType<typeof useTextEditorBindings>
   readSidebarBinding: () => SidebarPanelBinding | undefined
 }
-
-const mountedHarnesses: Harness[] = []
 
 function createTextState(textContent: string): TextProjectionState {
   return {
@@ -53,10 +52,11 @@ function createTextState(textContent: string): TextProjectionState {
 async function mountHarness(textContent: string): Promise<Harness> {
   const state = ref(createTextState(textContent))
   let readSidebarBinding = () => undefined as SidebarPanelBinding | undefined
+  let bindings = undefined as ReturnType<typeof useTextEditorBindings> | undefined
 
   const BindingConsumer = defineComponent({
     setup() {
-      useTextEditorBindings({
+      bindings = useTextEditorBindings({
         editorRef: shallowRef(),
         getState: () => state.value,
         isCurrentTextProjectionActive: () => true,
@@ -87,10 +87,10 @@ async function mountHarness(textContent: string): Promise<Harness> {
   await renderToString(app)
 
   const harness: Harness = {
+    bindings: bindings!,
     readSidebarBinding,
   }
 
-  mountedHarnesses.push(harness)
   return harness
 }
 
@@ -104,7 +104,6 @@ describe('useTextEditorBindings 行为', () => {
     getSceneSelectionMock.mockReset()
     useEditSettingsStoreMock.mockReset()
     useCommandPanelStoreMock.mockReset()
-    mountedHarnesses.length = 0
   })
 
   it('文本模式辅助面板直接从文本投影构建当前语句快照', async () => {
@@ -132,5 +131,67 @@ describe('useTextEditorBindings 行为', () => {
       kind: 'line',
       lineNumber: 2,
     })
+  })
+
+  it('跨行选区时暂停单语句侧边栏绑定', async () => {
+    getSceneSelectionMock.mockReturnValue({
+      lastLineNumber: 2,
+      selectedStatementId: 2,
+    })
+    useEditSettingsStoreMock.mockReturnValue({
+      commandInsertPosition: 'cursor',
+    })
+    useCommandPanelStoreMock.mockReturnValue({
+      getInsertText: vi.fn(),
+    })
+
+    const harness = await mountHarness('Alice:第一句;\n接续第二句;\nBob:第三句;')
+    await flushBindingUpdates()
+
+    harness.bindings.handleCursorSelectionChange({
+      selection: {
+        startLineNumber: 2,
+        endLineNumber: 3,
+      },
+    } as never)
+    await flushBindingUpdates()
+
+    const binding = harness.readSidebarBinding()
+    expect(binding?.getEntry()).toBeUndefined()
+    expect(binding?.getUpdateTarget?.()).toBeUndefined()
+    expect(binding?.getEmptyState?.()).toBe('multiple-edit-targets')
+  })
+
+  it('存在多个光标时暂停单语句侧边栏绑定', async () => {
+    getSceneSelectionMock.mockReturnValue({
+      lastLineNumber: 2,
+      selectedStatementId: 2,
+    })
+    useEditSettingsStoreMock.mockReturnValue({
+      commandInsertPosition: 'cursor',
+    })
+    useCommandPanelStoreMock.mockReturnValue({
+      getInsertText: vi.fn(),
+    })
+
+    const harness = await mountHarness('Alice:第一句;\n接续第二句;\nBob:第三句;')
+    await flushBindingUpdates()
+
+    harness.bindings.handleCursorSelectionChange({
+      selection: {
+        startLineNumber: 2,
+        endLineNumber: 2,
+      },
+      secondarySelections: [{
+        startLineNumber: 3,
+        endLineNumber: 3,
+      }],
+    } as never)
+    await flushBindingUpdates()
+
+    const binding = harness.readSidebarBinding()
+    expect(binding?.getEntry()).toBeUndefined()
+    expect(binding?.getUpdateTarget?.()).toBeUndefined()
+    expect(binding?.getEmptyState?.()).toBe('multiple-edit-targets')
   })
 })

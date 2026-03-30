@@ -362,6 +362,7 @@ edit:
       words: "{count} 字"
     formPanel:
       noStatement: 移动光标到语句行以编辑
+      multipleEditTargets: 当前存在多个编辑目标，语句编辑已暂停
     invalidAnimationVisualMessage: 当前动画文件存在错误，无法在可视化模式下编辑，请切换到文本模式修复
   scenePanel:
     scene: 场景

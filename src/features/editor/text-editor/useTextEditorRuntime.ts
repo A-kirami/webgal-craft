@@ -4,6 +4,7 @@ import { isAnimationDocumentTextValid } from '~/domain/document/animation-docume
 import { resolveTextEditorLanguage } from '~/features/editor/text-editor/text-editor-language'
 import { applySceneCursorTarget, prepareSceneCursorTarget } from '~/features/editor/text-editor/text-editor-scene-restore'
 import { resolveSceneCursorTarget, resolveScenePreviewLine } from '~/features/editor/text-editor/text-editor-scene-sync'
+import { readEditorHasMultipleEditTargets } from '~/features/editor/text-editor/text-editor-selection'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { useTabsStore } from '~/stores/tabs'
 
@@ -205,6 +206,10 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
 
     debouncedSaveViewState()
 
+    if (readEditorHasMultipleEditTargets(readEditor())) {
+      return
+    }
+
     if (readSceneLineNumber() === position.lineNumber && readSelectedSceneStatementId() !== undefined) {
       return
     }
@@ -217,8 +222,9 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
     debouncedSaveViewState()
   }
 
-  function handleCursorSelectionChange() {
+  function handleCursorSelectionChange(event: monaco.editor.ICursorSelectionChangedEvent) {
     textEditorHistory.rememberCurrentCursorSnapshot()
+    textEditorBindings.handleCursorSelectionChange(event)
   }
 
   function handleContentChange(event: monaco.editor.IModelContentChangedEvent) {

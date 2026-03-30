@@ -88,11 +88,14 @@ export interface SidebarPanelBinding extends ActivatableBinding {
   handleRedo?: () => void
   handleUndo?: () => void
   getEntry: () => StatementEntry | undefined
+  getEmptyState?: () => SidebarPanelEmptyState | undefined
   getUpdateTarget?: () => StatementUpdateTarget | undefined
   getIndex?: () => number | undefined
   getPreviousSpeaker?: () => string
   onFocusStatement?: () => void
 }
+
+export type SidebarPanelEmptyState = 'multiple-edit-targets'
 
 export type SidebarPanelContext = ActiveBindingContext<SidebarPanelBinding>
 

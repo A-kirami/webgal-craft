@@ -362,6 +362,7 @@ edit:
       words: "{count} 字"
     formPanel:
       noStatement: カーソルをステートメント行に移動して編集
+      multipleEditTargets: 複数の編集対象が存在するため、単一ステートメント編集は一時停止中です
     invalidAnimationVisualMessage: 現在のアニメーションファイルにはエラーがあるため、ビジュアルモードでは編集できません。テキストモードに切り替えて修正してください
   scenePanel:
     scene: シーン

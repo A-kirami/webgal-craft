@@ -1,5 +1,6 @@
 import { useCommandPanelBridgeBinding, useSidebarPanelBinding } from '~/features/editor/shared/useEditorPanelBindings'
 import { createEmptySceneTextPanelSnapshot, resolveSceneTextPanelSnapshotFromContent } from '~/features/editor/text-editor/scene-text-panel'
+import { hasMultipleEditTargets } from '~/features/editor/text-editor/text-editor-selection'
 import { useTextEditorHistory } from '~/features/editor/text-editor/useTextEditorHistory'
 import { useCommandPanelStore } from '~/stores/command-panel'
 import { useEditSettingsStore } from '~/stores/edit-settings'
@@ -33,6 +34,7 @@ export function useTextEditorBindings(options: UseTextEditorBindingsOptions) {
   const state = computed(() => options.getState())
 
   let pendingTextTransactionSource: TransactionSource | undefined
+  let isSingleStatementEditingSuspended = $ref(false)
 
   function readEditor(): monaco.editor.IStandaloneCodeEditor | undefined {
     return options.editorRef.value
@@ -40,7 +42,7 @@ export function useTextEditorBindings(options: UseTextEditorBindingsOptions) {
 
   const sidebarSnapshot = computed(() => {
     const currentState = state.value
-    if (currentState.kind !== 'scene') {
+    if (currentState.kind !== 'scene' || isSingleStatementEditingSuspended) {
       return createEmptySceneTextPanelSnapshot()
     }
 
@@ -65,6 +67,7 @@ export function useTextEditorBindings(options: UseTextEditorBindingsOptions) {
     handleRedo: options.textEditorHistory.handleRedo,
     handleUndo: options.textEditorHistory.handleUndo,
     getEntry: () => sidebarSnapshot.value.entry,
+    getEmptyState: () => isSingleStatementEditingSuspended ? 'multiple-edit-targets' : undefined,
     getUpdateTarget: () => {
       const lineNumber = sidebarSnapshot.value.lineNumber
       if (lineNumber === undefined) {
@@ -134,7 +137,12 @@ export function useTextEditorBindings(options: UseTextEditorBindingsOptions) {
     return source
   }
 
+  function handleCursorSelectionChange(event: monaco.editor.ICursorSelectionChangedEvent): void {
+    isSingleStatementEditingSuspended = hasMultipleEditTargets(event)
+  }
+
   return {
     consumePendingTextTransactionSource,
+    handleCursorSelectionChange,
   }
 }
