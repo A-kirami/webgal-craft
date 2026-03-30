@@ -614,7 +614,7 @@ for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
       <PopoverContent
         v-if="renameTargetItem"
         :align="renamePopoverAlign"
-        class="p-2 w-56"
+        class="p-2 max-w-56 w-auto"
         side="bottom"
         @close-auto-focus.prevent
       >
@@ -622,7 +622,7 @@ for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
           ref="renameInputRef"
           ::="renameValue"
           :class="[
-            'h-7 text-xs shadow-none',
+            'h-7 text-xs shadow-none field-sizing-content w-auto max-w-full',
             isRenameDuplicate ? 'text-destructive focus-visible:ring-destructive' : ''
           ]"
           :disabled="isRenameSubmitting"

@@ -661,6 +661,48 @@ describe('AssetView', () => {
     expect(popoverContent?.getAttribute('align')).toBe('start')
   })
 
+  it('重命名输入框会按内容自动宽度并只保留最大宽度约束', async () => {
+    gameAssetDirMock.mockResolvedValue('/project/background')
+    getFolderContentsMock.mockResolvedValue([
+      {
+        createdAt: 1,
+        isDir: false,
+        mimeType: 'image/png',
+        modifiedAt: 2,
+        name: 'hero-with-a-very-long-name.png',
+        path: '/project/background/hero-with-a-very-long-name.png',
+        size: 1024,
+      },
+    ])
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: {
+        path: '/project',
+      },
+      currentGameServeUrl: undefined,
+    }))
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createRenameFileViewerStub(),
+        },
+      },
+    })
+
+    await page.getByTestId('rename-action-hero-with-a-very-long-name.png').click()
+
+    const popoverContent = document.querySelector('[side="bottom"]')
+    const textbox = await page.getByRole('textbox').element()
+
+    expect(popoverContent?.className).toContain('w-auto')
+    expect(popoverContent?.className).toContain('max-w-56')
+    expect(textbox.className).toContain('field-sizing-content')
+    expect(textbox.className).toContain('w-auto')
+    expect(textbox.classList.contains('w-full')).toBe(false)
+    expect(textbox.className).toContain('max-w-full')
+  })
+
   it('当前目录收到文件创建事件后会重新读取并刷新列表', async () => {
     vi.useFakeTimers()
     getFolderContentsMock
