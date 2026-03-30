@@ -10,12 +10,25 @@ interface MultipleTargetSelectionLike {
   selection?: LineRangeSelectionLike | null
 }
 
+interface SelectionChangeLike extends MultipleTargetSelectionLike {
+  oldSelections?: readonly LineRangeSelectionLike[] | null
+}
+
 function hasCrossLineSelection(selection?: LineRangeSelectionLike | null): boolean {
   if (!selection) {
     return false
   }
 
   return selection.startLineNumber !== selection.endLineNumber
+}
+
+function hasMultipleSelections(selections?: readonly LineRangeSelectionLike[] | null): boolean {
+  if (!selections || selections.length === 0) {
+    return false
+  }
+
+  return selections.length > 1
+    || hasCrossLineSelection(selections[0])
 }
 
 export function hasMultipleEditTargets(selectionLike?: MultipleTargetSelectionLike | null): boolean {
@@ -27,14 +40,17 @@ export function hasMultipleEditTargets(selectionLike?: MultipleTargetSelectionLi
     || (selectionLike.secondarySelections?.length ?? 0) > 0
 }
 
-export function readEditorHasMultipleEditTargets(
-  editor?: Pick<monaco.editor.IStandaloneCodeEditor, 'getSelections'>,
-): boolean {
-  const selections = editor?.getSelections()
-  if (!selections || selections.length === 0) {
+export function didResumeSingleEditTarget(selectionLike?: SelectionChangeLike | null): boolean {
+  if (!selectionLike) {
     return false
   }
 
-  return selections.length > 1
-    || hasCrossLineSelection(selections[0])
+  return hasMultipleSelections(selectionLike.oldSelections)
+    && !hasMultipleEditTargets(selectionLike)
+}
+
+export function readEditorHasMultipleEditTargets(
+  editor?: Pick<monaco.editor.IStandaloneCodeEditor, 'getSelections'>,
+): boolean {
+  return hasMultipleSelections(editor?.getSelections())
 }

@@ -194,4 +194,42 @@ describe('useTextEditorBindings 行为', () => {
     expect(binding?.getUpdateTarget?.()).toBeUndefined()
     expect(binding?.getEmptyState?.()).toBe('multiple-edit-targets')
   })
+
+  it('从多目标选区恢复为单行单光标后会恢复单语句侧边栏绑定', async () => {
+    getSceneSelectionMock.mockReturnValue({
+      lastLineNumber: 2,
+      selectedStatementId: 2,
+    })
+    useEditSettingsStoreMock.mockReturnValue({
+      commandInsertPosition: 'cursor',
+    })
+    useCommandPanelStoreMock.mockReturnValue({
+      getInsertText: vi.fn(),
+    })
+
+    const harness = await mountHarness('Alice:第一句;\n接续第二句;\nBob:第三句;')
+    await flushBindingUpdates()
+
+    harness.bindings.handleCursorSelectionChange({
+      selection: {
+        startLineNumber: 2,
+        endLineNumber: 3,
+      },
+    } as never)
+    await flushBindingUpdates()
+
+    harness.bindings.handleCursorSelectionChange({
+      selection: {
+        startLineNumber: 2,
+        endLineNumber: 2,
+      },
+      secondarySelections: [],
+    } as never)
+    await flushBindingUpdates()
+
+    const binding = harness.readSidebarBinding()
+    expect(binding?.getEntry()).toBeDefined()
+    expect(binding?.getUpdateTarget?.()).toBeDefined()
+    expect(binding?.getEmptyState?.()).not.toBe('multiple-edit-targets')
+  })
 })
