@@ -20,6 +20,7 @@ interface FailedPreviewEntry {
 }
 
 interface FileViewerBodyProps {
+  highlightedItemPath?: string
   viewMode: 'list' | 'grid'
   virtualRows: FileViewerVirtualRow[]
   totalSize: number
@@ -37,6 +38,7 @@ interface FileViewerBodyProps {
 }
 
 const {
+  highlightedItemPath,
   viewMode,
   virtualRows,
   totalSize,
@@ -261,6 +263,10 @@ function resolveHoverCardCloseDelay(itemPath: string): number {
   return 120
 }
 
+function isItemHighlighted(itemPath: string): boolean {
+  return highlightedItemPath === itemPath
+}
+
 const visibleItemPaths = computed(() => {
   if (viewMode === 'grid') {
     return virtualRows.flatMap(row =>
@@ -361,7 +367,10 @@ onUnmounted(() => {
             type="button"
             data-file-viewer-item="true"
             :data-file-viewer-path="displayItem.item.path"
-            class="p-1.5 rounded-md flex flex-col gap-1 pointer-events-auto items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
+            :class="[
+              'p-1.5 rounded-md flex flex-col gap-1 pointer-events-auto items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring',
+              isItemHighlighted(displayItem.item.path) ? 'bg-accent ring-1 ring-ring/50' : '',
+            ]"
             @click="handleItemClick(displayItem.item)"
           >
             <FileViewerImageHoverCard
@@ -424,7 +433,10 @@ onUnmounted(() => {
             type="button"
             data-file-viewer-item="true"
             :data-file-viewer-path="displayItem.item.path"
-            class="p-2 rounded-md flex gap-2 w-full pointer-events-auto items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
+            :class="[
+              'p-2 rounded-md flex gap-2 w-full pointer-events-auto items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring',
+              isItemHighlighted(displayItem.item.path) ? 'bg-accent ring-1 ring-ring/50' : '',
+            ]"
             :style="{ height: `${listItemHeight}px` }"
             @click="handleItemClick(displayItem.item)"
           >

@@ -9,6 +9,8 @@ import type { SortableItemAccessor } from '~/utils/sort'
 interface FileViewerProps {
   /** 要展示的文件/文件夹列表 */
   items: FileViewerItem[]
+  /** 当前需要额外高亮的条目路径 */
+  highlightedItemPath?: string
   /** 调用方可选提供图片预览地址解析器，通用文件视图本身不绑定具体预览实现 */
   resolvePreviewUrl?: (item: FileViewerItem, previewSize: FileViewerPreviewSize) => string | undefined
   /** 视图模式 */
@@ -54,6 +56,7 @@ defineSlots<{
 
 const {
   items,
+  highlightedItemPath,
   resolvePreviewUrl,
   viewMode = 'list',
   sortBy = 'name',
@@ -198,6 +201,7 @@ defineExpose(fileViewerExpose)
 
         <FileViewerBody
           v-else
+          :highlighted-item-path="highlightedItemPath"
           :view-mode="viewMode"
           :virtual-rows="virtualizer.virtualRows.value"
           :total-size="virtualizer.totalSize.value"

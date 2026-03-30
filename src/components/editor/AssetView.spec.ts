@@ -222,6 +222,10 @@ function createRenameFileViewerStub() {
   return defineComponent({
     name: 'StubRenameFileViewer',
     props: {
+      highlightedItemPath: {
+        type: String,
+        default: undefined,
+      },
       items: {
         type: Array as PropType<FileViewerItem[]>,
         required: true,
@@ -244,6 +248,8 @@ function createRenameFileViewerStub() {
           h('div', {
             'key': item.path,
             'data-file-viewer-path': item.path,
+            'data-highlighted': String(item.path === props.highlightedItemPath),
+            'data-testid': `file-viewer-item-${item.name}`,
           }, [
             h('div', { 'data-file-viewer-name': 'true' }, item.name),
             ...(slots['context-menu']?.({ item }) ?? []),
@@ -259,6 +265,10 @@ function createVirtualizedRenameFileViewerStub() {
   return defineComponent({
     name: 'StubVirtualizedRenameFileViewer',
     props: {
+      highlightedItemPath: {
+        type: String,
+        default: undefined,
+      },
       items: {
         type: Array as PropType<FileViewerItem[]>,
         required: true,
@@ -297,6 +307,8 @@ function createVirtualizedRenameFileViewerStub() {
             h('div', {
               'key': item.path,
               'data-file-viewer-path': item.path,
+              'data-highlighted': String(item.path === props.highlightedItemPath),
+              'data-testid': `file-viewer-item-${item.name}`,
             }, [
               h('div', { 'data-file-viewer-name': 'true' }, item.name),
               ...(slots['context-menu']?.({ item }) ?? []),
@@ -518,6 +530,61 @@ describe('AssetView', () => {
 
     expect(renameFileMock).toHaveBeenCalledWith('/project/background/hero.png', 'hero-renamed.png')
     expect(handleErrorMock).not.toHaveBeenCalled()
+  })
+
+  it('重命名时会高亮当前项并在关闭后取消高亮', async () => {
+    gameAssetDirMock.mockResolvedValue('/project/background')
+    getFolderContentsMock.mockResolvedValue([
+      {
+        createdAt: 1,
+        isDir: false,
+        mimeType: 'image/png',
+        modifiedAt: 2,
+        name: 'hero.png',
+        path: '/project/background/hero.png',
+        size: 1024,
+      },
+      {
+        createdAt: 1,
+        isDir: false,
+        mimeType: 'image/png',
+        modifiedAt: 3,
+        name: 'villain.png',
+        path: '/project/background/villain.png',
+        size: 2048,
+      },
+    ])
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: {
+        path: '/project',
+      },
+      currentGameServeUrl: undefined,
+    }))
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createRenameFileViewerStub(),
+        },
+      },
+    })
+
+    const heroItem = page.getByTestId('file-viewer-item-hero.png')
+    const villainItem = page.getByTestId('file-viewer-item-villain.png')
+
+    await expect.element(heroItem).toHaveAttribute('data-highlighted', 'false')
+    await expect.element(villainItem).toHaveAttribute('data-highlighted', 'false')
+
+    await page.getByTestId('rename-action-hero.png').click()
+
+    await expect.element(heroItem).toHaveAttribute('data-highlighted', 'true')
+    await expect.element(villainItem).toHaveAttribute('data-highlighted', 'false')
+
+    await userEvent.keyboard('{Escape}')
+
+    await expect.element(heroItem).toHaveAttribute('data-highlighted', 'false')
+    await expect.element(villainItem).toHaveAttribute('data-highlighted', 'false')
   })
 
   it('网格模式下重命名 Popover 会居中对齐', async () => {

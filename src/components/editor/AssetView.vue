@@ -576,6 +576,7 @@ for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
     <FileViewer
       ref="fileViewerRef"
       :error-msg="errorMsg"
+      :highlighted-item-path="renameTargetItem?.path"
       :is-loading="isLoading"
       :items="filteredItems"
       :resolve-preview-url="resolvePreviewUrl"
