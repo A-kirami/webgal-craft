@@ -9,12 +9,11 @@ import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { getFileTreeNameSelectionEnd } from '~/features/editor/file-tree/file-tree'
 import { gameFs } from '~/services/game-fs'
 import { gameAssetDir } from '~/services/platform/app-paths'
-import { resolveAssetUrl } from '~/services/platform/asset-url'
 import { FileSystemItem, useFileStore } from '~/stores/file'
 import { usePreferenceStore } from '~/stores/preference'
 import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
-import { FileViewerItem, FileViewerPreviewSize, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
+import { FileViewerItem, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 import { handleError } from '~/utils/error-handler'
 
 import type { FileSystemEvent } from '~/composables/useFileSystemEvents'
@@ -173,6 +172,8 @@ const currentDirectoryContextMenuItem = $computed(() => {
 const renamePopoverAlign = $computed(() =>
   preferenceStore.assetViewMode === 'grid' ? 'center' : 'start',
 )
+const previewCwd = $computed(() => workspaceStore.currentGame?.path)
+const previewBaseUrl = $computed(() => workspaceStore.currentGameServeUrl)
 
 const isRenameDuplicate = $computed(() => {
   const currentItem = renameTargetItem
@@ -295,35 +296,6 @@ function handleSelect(item: FileViewerItem): void {
 
   lastSelectedPath = item.path
   lastSelectedAt = now
-}
-
-function resolvePreviewUrl(item: FileViewerItem, previewSize: FileViewerPreviewSize): string | undefined {
-  if (item.isDir || !item.mimeType?.startsWith('image/')) {
-    return undefined
-  }
-
-  const gamePath = workspaceStore.currentGame?.path
-  const serveUrl = workspaceStore.currentGameServeUrl
-  if (!gamePath || !serveUrl) {
-    return undefined
-  }
-
-  try {
-    return resolveAssetUrl(item.path, {
-      cwd: gamePath,
-      cacheVersion: item.modifiedAt,
-      previewBaseUrl: serveUrl,
-      thumbnail: {
-        width: previewSize.width,
-        height: previewSize.height,
-        resizeMode: 'contain',
-      },
-    })
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    void logger.error(`[AssetView] 资源地址生成失败: ${item.path} - ${errorMessage}`)
-    return undefined
-  }
 }
 
 function closeRenamePopover(): void {
@@ -590,7 +562,8 @@ for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
       :highlighted-item-path="renameTargetItem?.path"
       :is-loading="isLoading"
       :items="filteredItems"
-      :resolve-preview-url="resolvePreviewUrl"
+      :preview-cwd="previewCwd"
+      :preview-base-url="previewBaseUrl"
       :sort-by="sortBy"
       :sort-order="sortOrder"
       :view-mode="preferenceStore.assetViewMode"

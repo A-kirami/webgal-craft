@@ -15,8 +15,12 @@ export function getFileViewerImageDimensionsCacheKey(item: Pick<FileViewerItem, 
 }
 
 export async function loadFileViewerImageDimensions(
-  item: Pick<FileViewerItem, 'path' | 'modifiedAt'>,
+  item: Pick<FileViewerItem, 'path' | 'modifiedAt' | 'mimeType'>,
 ): Promise<FileViewerImageDimensions | undefined> {
+  if (item.mimeType === 'image/svg+xml' || item.path.toLowerCase().endsWith('.svg')) {
+    return undefined
+  }
+
   const cacheKey = getFileViewerImageDimensionsCacheKey(item)
   const cachedDimensions = imageDimensionsCache.get(cacheKey)
   if (cachedDimensions) {

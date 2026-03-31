@@ -6,6 +6,7 @@ import { useFilePickerController } from '~/features/file-picker/useFilePickerCon
 import { useFilePickerHistory } from '~/features/file-picker/useFilePickerHistory'
 import { cn } from '~/lib/utils'
 import { usePreferenceStore } from '~/stores/preference'
+import { useWorkspaceStore } from '~/stores/workspace'
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
 import FilePickerRecentHistory from './FilePickerRecentHistory.vue'
@@ -70,6 +71,7 @@ let modelValue = $(defineModel<string>({ default: '' }))
 
 const slots = useSlots()
 const preferenceStore = usePreferenceStore()
+const workspaceStore = useWorkspaceStore()
 const { readDirectory, ensurePathWithinRoot } = useDirectoryReader()
 
 const fileViewerRef = useTemplateRef<InstanceType<typeof FileViewer>>('fileViewerRef')
@@ -299,6 +301,8 @@ function handleFileListKeydown(event: KeyboardEvent) {
         <FileViewer
           ref="fileViewerRef"
           :items="filteredItems"
+          :preview-cwd="workspaceStore.CWD"
+          :preview-base-url="workspaceStore.currentGameServeUrl"
           :view-mode="viewMode"
           :zoom="zoomPercent"
           :sortable-headers="false"

@@ -12,23 +12,7 @@ import AssetView from './AssetView.vue'
 
 import type { Component, PropType } from 'vue'
 import type { FileSystemItem } from '~/stores/file'
-import type { FileViewerItem, FileViewerPreviewSize } from '~/types/file-viewer'
-
-const PREVIEW_TIMESTAMP = Date.parse('2023-11-14T22:13:20.000Z')
-
-const PREVIEW_ITEM: FileViewerItem = {
-  name: 'cover.png',
-  path: '/games/demo/assets/bg/cover.png',
-  isDir: false,
-  mimeType: 'image/png',
-  modifiedAt: PREVIEW_TIMESTAMP,
-  createdAt: PREVIEW_TIMESTAMP,
-}
-
-const PREVIEW_SIZE: FileViewerPreviewSize = {
-  width: 72,
-  height: 72,
-}
+import type { FileViewerItem } from '~/types/file-viewer'
 
 const {
   createFolderMock,
@@ -40,7 +24,6 @@ const {
   handleErrorMock,
   joinMock,
   renameFileMock,
-  resolveAssetUrlMock,
   useFileStoreMock,
   usePreferenceStoreMock,
   useTabsStoreMock,
@@ -55,7 +38,6 @@ const {
   handleErrorMock: vi.fn(),
   joinMock: vi.fn(),
   renameFileMock: vi.fn(),
-  resolveAssetUrlMock: vi.fn(),
   useFileStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
@@ -170,10 +152,6 @@ vi.mock('~/services/platform/app-paths', () => ({
   gameAssetDir: gameAssetDirMock,
 }))
 
-vi.mock('~/services/platform/asset-url', () => ({
-  resolveAssetUrl: resolveAssetUrlMock,
-}))
-
 vi.mock('~/stores/file', () => ({
   useFileStore: useFileStoreMock,
 }))
@@ -198,9 +176,13 @@ function createPreviewFileViewerStub() {
   return defineComponent({
     name: 'StubPreviewFileViewer',
     props: {
-      resolvePreviewUrl: {
-        type: Function as PropType<((item: FileViewerItem, previewSize: FileViewerPreviewSize) => string | undefined) | undefined>,
-        default: undefined,
+      previewBaseUrl: {
+        type: String,
+        required: false,
+      },
+      previewCwd: {
+        type: String,
+        required: false,
       },
     },
     setup(props, { expose }) {
@@ -211,8 +193,9 @@ function createPreviewFileViewerStub() {
       })
 
       return () => h('output', {
-        'data-testid': 'preview-url',
-        'data-preview-url': props.resolvePreviewUrl?.(PREVIEW_ITEM, PREVIEW_SIZE) ?? '',
+        'data-testid': 'preview-context',
+        'data-preview-base-url': props.previewBaseUrl ?? '',
+        'data-preview-cwd': props.previewCwd ?? '',
       })
     },
   })
@@ -443,7 +426,6 @@ describe('AssetView', () => {
     handleErrorMock.mockReset()
     joinMock.mockReset()
     renameFileMock.mockReset()
-    resolveAssetUrlMock.mockReset()
     useFileStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()
     useTabsStoreMock.mockReset()
@@ -452,7 +434,6 @@ describe('AssetView', () => {
     gameAssetDirMock.mockResolvedValue('/games/demo/assets/bg')
     getFolderContentsMock.mockResolvedValue([])
     joinMock.mockImplementation(async (...paths: string[]) => paths.filter(Boolean).join('/'))
-    resolveAssetUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/assets/bg/cover.png?t=1700000000000')
     createFolderMock.mockResolvedValue('/project/background/新建文件夹')
     renameFileMock.mockResolvedValue('/project/background/hero-renamed.png')
 
@@ -495,7 +476,7 @@ describe('AssetView', () => {
     document.body.innerHTML = ''
   })
 
-  it('文件视图图片预览会按实际展示尺寸生成 HTTP 预览地址', async () => {
+  it('会向 FileViewer 传递图片预览上下文', async () => {
     renderInBrowser(createHarness(), {
       global: {
         stubs: {
@@ -505,21 +486,8 @@ describe('AssetView', () => {
       },
     })
 
-    await expect.element(page.getByTestId('preview-url')).toHaveAttribute(
-      'data-preview-url',
-      'http://127.0.0.1:8899/game/demo/assets/bg/cover.png?t=1700000000000',
-    )
-
-    expect(resolveAssetUrlMock).toHaveBeenCalledWith('/games/demo/assets/bg/cover.png', {
-      cwd: '/games/demo',
-      cacheVersion: PREVIEW_TIMESTAMP,
-      previewBaseUrl: 'http://127.0.0.1:8899/game/demo/',
-      thumbnail: {
-        width: 72,
-        height: 72,
-        resizeMode: 'contain',
-      },
-    })
+    await expect.element(page.getByTestId('preview-context')).toHaveAttribute('data-preview-cwd', '/games/demo')
+    await expect.element(page.getByTestId('preview-context')).toHaveAttribute('data-preview-base-url', 'http://127.0.0.1:8899/game/demo/')
   })
 
   it('右键重命名会以 Popover 形式打开并调用 gameFs.renameFile', async () => {

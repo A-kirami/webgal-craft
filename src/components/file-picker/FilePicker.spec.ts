@@ -10,11 +10,16 @@ const {
   normalizeMock,
   readDirectoryMock,
   statMock,
+  workspaceStoreState,
 } = vi.hoisted(() => ({
   existsMock: vi.fn(),
   normalizeMock: vi.fn(async (value: string) => value.replaceAll('\\', '/')),
   readDirectoryMock: vi.fn(),
   statMock: vi.fn(),
+  workspaceStoreState: {
+    CWD: '/games/demo',
+    currentGameServeUrl: 'http://127.0.0.1:8899/game/demo/',
+  },
 }))
 
 vi.mock('@tauri-apps/api/path', async () => {
@@ -48,6 +53,10 @@ vi.mock('~/composables/useDirectoryReader', () => ({
   }),
 }))
 
+vi.mock('~/stores/workspace', () => ({
+  useWorkspaceStore: () => workspaceStoreState,
+}))
+
 import FilePicker from './FilePicker.vue'
 
 const globalStubs = {
@@ -65,8 +74,22 @@ const globalStubs = {
   DropdownMenuTrigger: createBrowserContainerStub('StubDropdownMenuTrigger'),
   FileViewer: defineComponent({
     name: 'StubFileViewer',
-    setup() {
-      return () => h('div')
+    props: {
+      previewBaseUrl: {
+        type: String,
+        required: false,
+      },
+      previewCwd: {
+        type: String,
+        required: false,
+      },
+    },
+    setup(props) {
+      return () => h('div', {
+        'data-testid': 'file-viewer-preview-context',
+        'data-preview-base-url': props.previewBaseUrl ?? '',
+        'data-preview-cwd': props.previewCwd ?? '',
+      })
     },
   }),
   Input: defineComponent({
@@ -166,6 +189,8 @@ describe('FilePicker', () => {
     statMock.mockResolvedValue({
       isDirectory: true,
     })
+    workspaceStoreState.CWD = '/games/demo'
+    workspaceStoreState.currentGameServeUrl = 'http://127.0.0.1:8899/game/demo/'
   })
 
   it('同步外部文件路径中间态时不会立即归一化并回写父层', async () => {
@@ -211,6 +236,28 @@ describe('FilePicker', () => {
 
     await expect.element(page.getByTestId('model')).toHaveTextContent('bg/dir')
     await expect.element(page.getByTestId('updates')).toHaveTextContent('bg/dir')
+    expectNoConsoleMessage('decodeEntities option is passed but will be ignored in non-browser builds')
+    await result.unmount()
+  })
+
+  it('会向 FileViewer 传递图片预览上下文', async () => {
+    const result = await renderInBrowser(FilePickerHarness, {
+      props: {
+        initialValue: '',
+      },
+      browser: {
+        pinia: true,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('textbox', { name: 'File Path' }).click()
+    await nextTick()
+
+    await expect.element(page.getByTestId('file-viewer-preview-context')).toHaveAttribute('data-preview-cwd', '/games/demo')
+    await expect.element(page.getByTestId('file-viewer-preview-context')).toHaveAttribute('data-preview-base-url', 'http://127.0.0.1:8899/game/demo/')
     expectNoConsoleMessage('decodeEntities option is passed but will be ignored in non-browser builds')
     await result.unmount()
   })

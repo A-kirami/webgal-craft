@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useFileViewerLayout } from '~/components/file-viewer/useFileViewerLayout'
 import { useFileViewerVirtualizer } from '~/components/file-viewer/useFileViewerVirtualizer'
+import { resolveAssetUrl } from '~/services/platform/asset-url'
 import { FileViewerItem, FileViewerPreviewSize, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 import { createItemComparator } from '~/utils/sort'
 
@@ -11,8 +12,10 @@ interface FileViewerProps {
   items: FileViewerItem[]
   /** 当前需要额外高亮的条目路径 */
   highlightedItemPath?: string
-  /** 调用方可选提供图片预览地址解析器，通用文件视图本身不绑定具体预览实现 */
-  resolvePreviewUrl?: (item: FileViewerItem, previewSize: FileViewerPreviewSize) => string | undefined
+  /** 资源预览的工作区根目录 */
+  previewCwd?: string
+  /** 资源预览服务地址 */
+  previewBaseUrl?: string
   /** 视图模式 */
   viewMode?: 'list' | 'grid'
   /** 排序字段 */
@@ -57,7 +60,8 @@ defineSlots<{
 const {
   items,
   highlightedItemPath,
-  resolvePreviewUrl,
+  previewCwd,
+  previewBaseUrl,
   viewMode = 'list',
   sortBy = 'name',
   sortOrder = 'asc',
@@ -100,6 +104,39 @@ const isEmptyState = computed(() =>
 
 const shouldShowState = computed(() =>
   isLoading || !!errorMsg || isEmptyState.value,
+)
+
+function resolveBuiltInPreviewUrl(item: FileViewerItem, previewSize: FileViewerPreviewSize): string | undefined {
+  if (item.isDir || !item.mimeType?.startsWith('image/')) {
+    return undefined
+  }
+
+  if (!previewCwd || !previewBaseUrl) {
+    return undefined
+  }
+
+  try {
+    return resolveAssetUrl(item.path, {
+      cwd: previewCwd,
+      cacheVersion: item.modifiedAt,
+      previewBaseUrl,
+      thumbnail: {
+        width: previewSize.width,
+        height: previewSize.height,
+        resizeMode: 'contain',
+      },
+    })
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    void logger.error(`[FileViewer] 资源地址生成失败: ${item.path} - ${errorMessage}`)
+    return undefined
+  }
+}
+
+const previewUrlResolver = computed(() =>
+  previewCwd && previewBaseUrl
+    ? resolveBuiltInPreviewUrl
+    : undefined,
 )
 
 const virtualizer = useFileViewerVirtualizer({
@@ -215,7 +252,7 @@ defineExpose(fileViewerExpose)
           :show-list-created-at="layout.showListCreatedAt.value"
           :get-grid-row-items="virtualizer.getGridRowItems"
           :get-list-item="virtualizer.getListItem"
-          :resolve-preview-url="resolvePreviewUrl"
+          :resolve-preview-url="previewUrlResolver"
           @item-click="handleItemClick"
         >
           <template v-if="$slots.icon" #icon="{ item, iconSize }">

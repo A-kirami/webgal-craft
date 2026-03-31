@@ -15,6 +15,7 @@ const {
   getImageDimensionsMock,
   loggerDebugMock,
   loggerErrorMock,
+  resolveAssetUrlMock,
   measureMock,
   resolvePreviewUrlMock,
   scrollToIndexMock,
@@ -23,6 +24,7 @@ const {
   getImageDimensionsMock: vi.fn(),
   loggerDebugMock: vi.fn(),
   loggerErrorMock: vi.fn(),
+  resolveAssetUrlMock: vi.fn(),
   measureMock: vi.fn(),
   resolvePreviewUrlMock: vi.fn(),
   scrollToIndexMock: vi.fn(),
@@ -65,6 +67,10 @@ vi.mock('~/commands/fs', () => ({
   fsCmds: {
     getImageDimensions: getImageDimensionsMock,
   },
+}))
+
+vi.mock('~/services/platform/asset-url', () => ({
+  resolveAssetUrl: resolveAssetUrlMock,
 }))
 
 vi.mock('@tauri-apps/plugin-log', () => ({
@@ -237,6 +243,11 @@ vi.mock('~/components/ui/hover-card', async () => {
 const BASE_TIMESTAMP = Date.parse('2023-11-14T00:00:00Z')
 const HOVER_PREVIEW_WARMUP_DELAY_MS = 120
 const HOVER_CARD_OPEN_DELAY_MS = 350
+const IMAGE_DATA_URL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+const FILE_VIEWER_PREVIEW_PROPS = Object.freeze({
+  previewBaseUrl: 'http://127.0.0.1:8899/game/demo/',
+  previewCwd: '/games/demo',
+})
 
 function createItem(index: number): FileViewerItem {
   return {
@@ -256,9 +267,13 @@ function createImageItem(index: number): FileViewerItem {
   }
 }
 
-function createPreviewUrl(item: FileViewerItem): string {
-  const previewPath = item.path.replace(/\.[^./\\]+$/, '.png')
-  return `http://127.0.0.1:8899/game/demo${previewPath}?t=${item.modifiedAt ?? 0}`
+function createSvgItem(index: number): FileViewerItem {
+  return {
+    ...createItem(index),
+    name: `file-${index}.svg`,
+    path: `/assets/file-${index}.svg`,
+    mimeType: 'image/svg+xml',
+  }
 }
 
 function createSizedPreviewUrl(item: FileViewerItem, previewSize: FileViewerPreviewSize): string {
@@ -268,6 +283,53 @@ function createSizedPreviewUrl(item: FileViewerItem, previewSize: FileViewerPrev
   url.searchParams.set('w', String(previewSize.width))
   url.searchParams.set('h', String(previewSize.height))
   return url.href
+}
+
+function createBuiltInPreviewUrl(
+  assetPath: string,
+  options: {
+    cacheVersion?: number
+    thumbnail?: {
+      width?: number
+      height?: number
+    }
+  } = {},
+): string {
+  return createSizedPreviewUrl({
+    createdAt: options.cacheVersion,
+    isDir: false,
+    mimeType: assetPath.endsWith('.svg') ? 'image/svg+xml' : 'image/png',
+    modifiedAt: options.cacheVersion,
+    name: assetPath.split('/').at(-1) ?? assetPath,
+    path: assetPath,
+    size: 0,
+  }, {
+    width: options.thumbnail?.width ?? 0,
+    height: options.thumbnail?.height ?? 0,
+  })
+}
+
+function expectBuiltInPreviewRequest(item: FileViewerItem, previewSize: FileViewerPreviewSize): void {
+  expect(resolveAssetUrlMock).toHaveBeenCalledWith(item.path, {
+    cwd: FILE_VIEWER_PREVIEW_PROPS.previewCwd,
+    cacheVersion: item.modifiedAt,
+    previewBaseUrl: FILE_VIEWER_PREVIEW_PROPS.previewBaseUrl,
+    thumbnail: {
+      width: previewSize.width,
+      height: previewSize.height,
+      resizeMode: 'contain',
+    },
+  })
+}
+
+function mockBuiltInPreviewResolution(): void {
+  resolveAssetUrlMock.mockImplementation((assetPath: string, options: {
+    cacheVersion?: number
+    thumbnail?: {
+      width?: number
+      height?: number
+    }
+  }) => createBuiltInPreviewUrl(assetPath, options))
 }
 
 const globalStubs = {
@@ -302,8 +364,8 @@ function createImageFallbackHarness(viewMode: 'grid' | 'list') {
     name: 'FileViewerImageFallbackHarness',
     setup() {
       return () => h(FileViewer, {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [createImageItem(1)],
-        resolvePreviewUrl: (item: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(item, preview),
         viewMode,
       }, {
         icon: ({ item }: { item: FileViewerItem, iconSize: number }) =>
@@ -427,6 +489,7 @@ describe('FileViewer 外观契约', () => {
     getImageDimensionsMock.mockReset()
     loggerDebugMock.mockReset()
     loggerErrorMock.mockReset()
+    resolveAssetUrlMock.mockReset()
     resolvePreviewUrlMock.mockReset()
   })
 
@@ -449,8 +512,31 @@ describe('FileViewer 外观契约', () => {
       },
     })
 
-    expect(resolvePreviewUrlMock).not.toHaveBeenCalled()
+    expect(resolveAssetUrlMock).not.toHaveBeenCalled()
     await expect.element(page.getByAltText('file-1.txt')).not.toBeInTheDocument()
+  })
+
+  it('提供预览上下文后会在 FileViewer 内部生成缩略图地址', async () => {
+    const item = createImageItem(1)
+    viewportWidthMock.value = 780
+    resolveAssetUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001&w=64&h=64&fit=contain')
+
+    renderInBrowser(FileViewer, {
+      props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
+        items: [item],
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    expectBuiltInPreviewRequest(item, {
+      width: 64,
+      height: 64,
+    })
+    await expect.element(page.getByAltText(item.name)).toHaveAttribute('src', 'http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001&w=64&h=64&fit=contain')
   })
 
   it('受控打开态在挂载时会立即初始化 hover 预览', async () => {
@@ -551,15 +637,15 @@ describe('FileViewer 外观契约', () => {
     await expect.element(page.getByAltText(initialItem.name)).toBeInTheDocument()
   })
 
-  it('网格模式图片项会使用带 modifiedAt 的 HTTP URL', async () => {
+  it('网格模式图片项会使用内建缩略图地址', async () => {
     const item = createImageItem(1)
     viewportWidthMock.value = 780
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem) => createPreviewUrl(resolvedItem))
+    mockBuiltInPreviewResolution()
 
     renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'grid',
       },
       global: {
@@ -567,26 +653,25 @@ describe('FileViewer 外观契约', () => {
       },
     })
 
-    expect(resolvePreviewUrlMock).toHaveBeenCalledWith(expect.objectContaining({
-      path: item.path,
-      modifiedAt: item.modifiedAt,
-      mimeType: item.mimeType,
-    }), {
+    expectBuiltInPreviewRequest(item, {
       height: 64,
       width: 64,
     })
-    await expect.element(page.getByAltText(item.name)).toHaveAttribute('src', createPreviewUrl(item))
+    await expect.element(page.getByAltText(item.name)).toHaveAttribute('src', createSizedPreviewUrl(item, {
+      width: 64,
+      height: 64,
+    }))
   })
 
-  it('列表模式图片项也会使用 HTTP URL', async () => {
+  it('列表模式图片项也会使用内建缩略图地址', async () => {
     const item = createImageItem(1)
     viewportWidthMock.value = 780
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem) => createPreviewUrl(resolvedItem))
+    mockBuiltInPreviewResolution()
 
     renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'list',
       },
       global: {
@@ -594,20 +679,19 @@ describe('FileViewer 外观契约', () => {
       },
     })
 
-    expect(resolvePreviewUrlMock).toHaveBeenCalledWith(expect.objectContaining({
-      path: item.path,
-      modifiedAt: item.modifiedAt,
-      mimeType: item.mimeType,
-    }), {
+    expectBuiltInPreviewRequest(item, {
       height: 20,
       width: 20,
     })
-    await expect.element(page.getByAltText(item.name)).toHaveAttribute('src', createPreviewUrl(item))
+    await expect.element(page.getByAltText(item.name)).toHaveAttribute('src', createSizedPreviewUrl(item, {
+      width: 20,
+      height: 20,
+    }))
   })
 
   it('网格模式图片加载失败后会回退到图标槽位', async () => {
     viewportWidthMock.value = 780
-    resolvePreviewUrlMock.mockImplementation((item: FileViewerItem) => createPreviewUrl(item))
+    mockBuiltInPreviewResolution()
 
     renderInBrowser(createImageFallbackHarness('grid'), {
       global: {
@@ -625,7 +709,7 @@ describe('FileViewer 外观契约', () => {
 
   it('列表模式图片加载失败后也会回退到图标槽位', async () => {
     viewportWidthMock.value = 780
-    resolvePreviewUrlMock.mockImplementation((item: FileViewerItem) => createPreviewUrl(item))
+    mockBuiltInPreviewResolution()
 
     renderInBrowser(createImageFallbackHarness('list'), {
       global: {
@@ -647,12 +731,12 @@ describe('FileViewer 外观契约', () => {
 
     vi.useFakeTimers()
     viewportWidthMock.value = 780
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem) => createPreviewUrl(resolvedItem))
+    mockBuiltInPreviewResolution()
 
     const result = await renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'grid',
       },
       global: {
@@ -660,7 +744,10 @@ describe('FileViewer 外观契约', () => {
       },
     })
 
-    expect(queryImage()?.getAttribute('src')).toBe(createPreviewUrl(item))
+    expect(queryImage()?.getAttribute('src')).toBe(createSizedPreviewUrl(item, {
+      width: 64,
+      height: 64,
+    }))
 
     queryImage()?.dispatchEvent(new Event('error'))
     await nextTick()
@@ -670,7 +757,10 @@ describe('FileViewer 外观契约', () => {
     await vi.advanceTimersByTimeAsync(5000)
     await nextTick()
 
-    expect(queryImage()?.getAttribute('src')).toBe(createPreviewUrl(item))
+    expect(queryImage()?.getAttribute('src')).toBe(createSizedPreviewUrl(item, {
+      width: 64,
+      height: 64,
+    }))
     await result.unmount()
   })
 
@@ -684,14 +774,12 @@ describe('FileViewer 外观契约', () => {
     vi.useFakeTimers()
     viewportWidthMock.value = 780
     getImageDimensionsMock.mockResolvedValue([1920, 1080])
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
-      createSizedPreviewUrl(resolvedItem, preview),
-    )
+    mockBuiltInPreviewResolution()
 
     renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'grid',
       },
       global: {
@@ -701,9 +789,7 @@ describe('FileViewer 外观契约', () => {
 
     await openHoverImageTrigger()
 
-    expect(resolvePreviewUrlMock).toHaveBeenCalledWith(expect.objectContaining({
-      path: item.path,
-    }), hoverPreviewSize)
+    expectBuiltInPreviewRequest(item, hoverPreviewSize)
     expect(getImageDimensionsMock).toHaveBeenCalledWith(item.path)
     await expect.element(page.getByTestId('hover-card-content')).toHaveAttribute('data-side', 'top')
     await expect.element(page.getByText('1920 × 1080')).toBeVisible()
@@ -715,14 +801,12 @@ describe('FileViewer 外观契约', () => {
     vi.useFakeTimers()
     viewportWidthMock.value = 780
     getImageDimensionsMock.mockResolvedValue([320, 180])
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
-      createSizedPreviewUrl(resolvedItem, preview),
-    )
+    mockBuiltInPreviewResolution()
 
     renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'grid',
       },
       global: {
@@ -749,14 +833,12 @@ describe('FileViewer 外观契约', () => {
     vi.useFakeTimers()
     viewportWidthMock.value = 780
     getImageDimensionsMock.mockResolvedValue([1600, 900])
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
-      createSizedPreviewUrl(resolvedItem, preview),
-    )
+    resolveAssetUrlMock.mockReturnValue(IMAGE_DATA_URL)
 
     renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'grid',
       },
       global: {
@@ -778,14 +860,12 @@ describe('FileViewer 外观契约', () => {
     vi.useFakeTimers()
     viewportWidthMock.value = 780
     getImageDimensionsMock.mockResolvedValue([1024, 1024])
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
-      createSizedPreviewUrl(resolvedItem, preview),
-    )
+    resolveAssetUrlMock.mockReturnValue(IMAGE_DATA_URL)
 
     renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'grid',
       },
       global: {
@@ -795,6 +875,7 @@ describe('FileViewer 外观契约', () => {
 
     await openHoverImageTrigger()
 
+    await expect.element(page.getByTestId('hover-card-media-frame')).toBeInTheDocument()
     const mediaFrame = await page.getByTestId('hover-card-media-frame').element()
     mediaFrame.querySelector('img')?.dispatchEvent(new Event('load'))
     await nextTick()
@@ -805,37 +886,44 @@ describe('FileViewer 外观契约', () => {
 
   it('hover 图片加载完成前不会提前显示棋盘格背景', async () => {
     const item = createImageItem(20)
+    const srcSetterSpy = vi.spyOn(HTMLImageElement.prototype, 'src', 'set')
+      .mockImplementation(function mockSrcSetter(this: HTMLImageElement, value: string) {
+        this.dataset.mockSrc = value
+      })
 
-    vi.useFakeTimers()
-    viewportWidthMock.value = 780
-    getImageDimensionsMock.mockResolvedValue([1024, 1024])
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
-      createSizedPreviewUrl(resolvedItem, preview),
-    )
+    try {
+      vi.useFakeTimers()
+      viewportWidthMock.value = 780
+      getImageDimensionsMock.mockResolvedValue([1024, 1024])
+      resolveAssetUrlMock.mockReturnValue(IMAGE_DATA_URL)
 
-    renderInBrowser(FileViewer, {
-      props: {
-        items: [item],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
-        viewMode: 'grid',
-      },
-      global: {
-        stubs: globalStubs,
-      },
-    })
+      renderInBrowser(FileViewer, {
+        props: {
+          ...FILE_VIEWER_PREVIEW_PROPS,
+          items: [item],
+          viewMode: 'grid',
+        },
+        global: {
+          stubs: globalStubs,
+        },
+      })
 
-    await openHoverImageTrigger()
-    await expect.element(page.getByTestId('hover-card-content')).toBeInTheDocument()
+      await openHoverImageTrigger()
+      await expect.element(page.getByTestId('hover-card-content')).toBeInTheDocument()
 
-    const mediaFrame = await page.getByTestId('hover-card-media-frame').element()
-    const previewImage = mediaFrame.querySelector('img')
+      await expect.element(page.getByTestId('hover-card-media-frame')).toBeInTheDocument()
+      const mediaFrame = await page.getByTestId('hover-card-media-frame').element()
+      const previewImage = mediaFrame.querySelector('img')
 
-    expect(mediaFrame.className).not.toContain('bg-checkerboard')
+      expect(mediaFrame.className).not.toContain('bg-checkerboard')
 
-    previewImage?.dispatchEvent(new Event('load'))
-    await nextTick()
+      previewImage?.dispatchEvent(new Event('load'))
+      await nextTick()
 
-    expect(mediaFrame.className).toContain('bg-checkerboard')
+      expect(mediaFrame.className).toContain('bg-checkerboard')
+    } finally {
+      srcSetterSpy.mockRestore()
+    }
   })
 
   it('列表模式图片项 hover 预览会显示在右侧', async () => {
@@ -844,14 +932,12 @@ describe('FileViewer 外观契约', () => {
     vi.useFakeTimers()
     viewportWidthMock.value = 780
     getImageDimensionsMock.mockResolvedValue([1280, 720])
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
-      createSizedPreviewUrl(resolvedItem, preview),
-    )
+    mockBuiltInPreviewResolution()
 
     renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'list',
       },
       global: {
@@ -871,14 +957,12 @@ describe('FileViewer 外观契约', () => {
     vi.useFakeTimers()
     viewportWidthMock.value = 780
     getImageDimensionsMock.mockResolvedValue([1280, 720])
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
-      createSizedPreviewUrl(resolvedItem, preview),
-    )
+    mockBuiltInPreviewResolution()
 
     renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'list',
       },
       global: {
@@ -903,14 +987,12 @@ describe('FileViewer 外观契约', () => {
     vi.useFakeTimers()
     viewportWidthMock.value = 780
     getImageDimensionsMock.mockResolvedValue([1280, 720])
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
-      createSizedPreviewUrl(resolvedItem, preview),
-    )
+    resolveAssetUrlMock.mockReturnValue(IMAGE_DATA_URL)
 
     renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'grid',
       },
       global: {
@@ -941,14 +1023,12 @@ describe('FileViewer 外观契约', () => {
     vi.useFakeTimers()
     viewportWidthMock.value = 780
     getImageDimensionsMock.mockResolvedValue([1280, 720])
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
-      createSizedPreviewUrl(resolvedItem, preview),
-    )
+    resolveAssetUrlMock.mockReturnValue(IMAGE_DATA_URL)
 
     renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'grid',
       },
       global: {
@@ -979,17 +1059,15 @@ describe('FileViewer 外观契约', () => {
     vi.useFakeTimers()
     viewportWidthMock.value = 780
     getImageDimensionsMock.mockResolvedValue([1280, 720])
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
-      createSizedPreviewUrl(resolvedItem, preview),
-    )
+    mockBuiltInPreviewResolution()
 
     renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [
           createImageItem(22),
           createImageItem(23),
         ],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'grid',
       },
       global: {
@@ -1043,14 +1121,12 @@ describe('FileViewer 外观契约', () => {
 
     viewportWidthMock.value = 780
     getImageDimensionsMock.mockResolvedValue([1280, 720])
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
-      createSizedPreviewUrl(resolvedItem, preview),
-    )
+    mockBuiltInPreviewResolution()
 
     renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'grid',
       },
       global: {
@@ -1067,6 +1143,10 @@ describe('FileViewer 外观契约', () => {
 
     await vi.advanceTimersByTimeAsync(1)
     expect(preloadedImageUrls).toEqual([createSizedPreviewUrl(item, { width: 256, height: 256 })])
+    expectBuiltInPreviewRequest(item, {
+      width: 256,
+      height: 256,
+    })
     expect(getImageDimensionsMock).toHaveBeenCalledWith(item.path)
     await expect.element(page.getByTestId('hover-card-content')).not.toBeInTheDocument()
   })
@@ -1110,14 +1190,12 @@ describe('FileViewer 外观契约', () => {
     vi.stubGlobal('Image', FakeImage as unknown as typeof Image)
 
     viewportWidthMock.value = 780
-    resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
-      createSizedPreviewUrl(resolvedItem, preview),
-    )
+    mockBuiltInPreviewResolution()
 
     renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'grid',
       },
       global: {
@@ -1137,8 +1215,8 @@ describe('FileViewer 外观契约', () => {
 
     renderInBrowser(FileViewer, {
       props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
         items: [createItem(1)],
-        resolvePreviewUrl: (resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) => resolvePreviewUrlMock(resolvedItem, preview),
         viewMode: 'grid',
       },
       global: {
@@ -1147,6 +1225,30 @@ describe('FileViewer 外观契约', () => {
     })
 
     expect(document.querySelectorAll('[data-testid="hover-card-trigger"]')).toHaveLength(0)
+    expect(getImageDimensionsMock).not.toHaveBeenCalled()
+  })
+
+  it('SVG hover 预览不会调用位图尺寸读取命令', async () => {
+    const item = createSvgItem(31)
+
+    vi.useFakeTimers()
+    viewportWidthMock.value = 780
+    resolveAssetUrlMock.mockReturnValue(IMAGE_DATA_URL)
+
+    renderInBrowser(FileViewer, {
+      props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
+        items: [item],
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await openHoverImageTrigger()
+    await expect.element(page.getByTestId('hover-card-content')).toBeInTheDocument()
+    await expect.element(page.getByTestId('hover-card-media-frame')).toBeInTheDocument()
     expect(getImageDimensionsMock).not.toHaveBeenCalled()
   })
 

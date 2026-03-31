@@ -73,6 +73,10 @@ watch(
     imageDimensions = undefined
     isPreviewLoaded = false
 
+    if (isEnabled) {
+      updateDisplayPreviewUrl()
+    }
+
     initializePreview()
   },
   { immediate: true },
@@ -80,6 +84,9 @@ watch(
 
 watch(() => currentOpen, (nextOpen) => {
   if (nextOpen) {
+    if (!displayPreviewUrl && isEnabled) {
+      updateDisplayPreviewUrl()
+    }
     initializePreview()
   }
 }, { immediate: true })
@@ -87,10 +94,6 @@ watch(() => currentOpen, (nextOpen) => {
 function initializePreview(): void {
   if (!currentOpen || !isEnabled) {
     return
-  }
-
-  if (!displayPreviewUrl) {
-    updateDisplayPreviewUrl()
   }
 
   void ensureImageDimensions()
