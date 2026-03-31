@@ -169,6 +169,26 @@ modals:
     import: 匯入 ({count})
   gameConfig:
     title: 遊戲設定
+    description: 在這裡統一管理影響遊戲呈現與啟動體驗的設定項。
+    unavailable: 目前沒有可編輯的遊戲。
+    loadFailed: 讀取遊戲設定失敗
+    saveFailed: 儲存遊戲設定失敗
+    retry: 重新載入
+    coverImage:
+      label: 封面圖
+      description: 封面圖會作為遊戲標題畫面的背景圖片顯示。
+      empty: 點擊選擇封面圖
+      replace: 更換
+      pickerTitle: 選擇封面圖
+      previewAlt: 目前封面圖預覽
+    startupImages:
+      label: 啟動圖
+      description: 啟動圖會在遊戲進入時依序播放。
+      add: 新增啟動圖
+      remove: 移除啟動圖
+      pickerTitle: 選擇啟動圖
+      previewAlt: 啟動圖預覽
+      count: 共 {count} 張
   effectEditor:
     title: 效果編輯器
     description: 編輯視覺變換、濾鏡和效果參數

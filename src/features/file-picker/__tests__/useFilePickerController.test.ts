@@ -28,6 +28,7 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 }))
 
 interface ControllerFixtureOptions {
+  commitInputOnBlur?: boolean
   modelValue?: string
   reopenInSelectedParent?: boolean
   rootPath?: string
@@ -56,8 +57,9 @@ function createFixture(options: ControllerFixtureOptions = {}) {
   const removeRecentHistoryPaths = vi.fn()
   const ensurePathWithinRoot = vi.fn(async (path: string) => path)
 
-  const controller = scope.run(() => useFilePickerController({
+  const controllerOptions = {
     disabled: () => disabled.value,
+    commitInputOnBlur: () => options.commitInputOnBlur ?? true,
     ensurePathWithinRoot,
     exclude: () => [],
     extensions: () => [],
@@ -68,13 +70,15 @@ function createFixture(options: ControllerFixtureOptions = {}) {
     removeRecentHistoryPaths,
     reopenInSelectedParent: () => reopenInSelectedParent.value,
     rootPath: () => rootPath.value,
-    setModelValue: (value) => {
+    setModelValue: (value: string) => {
       modelValue.value = value
     },
     showSupportedOnly: () => true,
     syncRecentHistory,
     updateRecentHistory,
-  }))
+  }
+
+  const controller = scope.run(() => useFilePickerController(controllerOptions))
 
   if (!controller) {
     throw new TypeError('预期返回 FilePicker controller')
@@ -171,6 +175,29 @@ describe('useFilePickerController 行为', () => {
     expect(controller.currentDir.value).toBe('images/bg')
     expect(controller.errorMsg.value).toBe('目录不存在')
     expect(controller.isLoading.value).toBe(false)
+
+    scope.stop()
+  })
+
+  it('trigger 模式关闭 popover 时不会把目录导航草稿覆盖为最终值', async () => {
+    const { controller, modelValue, scope } = createFixture({
+      commitInputOnBlur: false,
+      modelValue: 'images/bg/original.png',
+    })
+
+    await flushControllerTasks()
+    await controller.openPopover()
+
+    await controller.handleNavigateItem({
+      isDir: true,
+      name: 'draft',
+      path: '/assets/images/bg/draft',
+    })
+    controller.handlePopoverOpenChange(false)
+    await vi.runAllTimersAsync()
+
+    expect(modelValue.value).toBe('images/bg/original.png')
+    expect(controller.inputText.value).toBe('images/bg/original.png')
 
     scope.stop()
   })

@@ -21,6 +21,7 @@ interface OpenPopoverOptions {
 
 interface UseFilePickerControllerOptions {
   canonicalRootPath?: Ref<string>
+  commitInputOnBlur?: () => boolean
   disabled: () => boolean
   ensurePathWithinRoot: (path: string, rootPath: string) => Promise<string>
   exclude: () => string[]
@@ -43,6 +44,7 @@ interface UseFilePickerControllerOptions {
 
 export function useFilePickerController(options: UseFilePickerControllerOptions) {
   const canonicalRootPath = options.canonicalRootPath ?? ref('')
+  const commitInputOnBlur = options.commitInputOnBlur ?? (() => true)
 
   const extensionSet = computed(() => new Set(
     options.extensions()
@@ -351,6 +353,10 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
       }
       if (suppressBlurCommit.value) {
         suppressBlurCommit.value = false
+        return
+      }
+      if (!commitInputOnBlur()) {
+        setInputSilently(options.modelValue())
         return
       }
       commitInputValue()

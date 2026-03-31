@@ -34,6 +34,7 @@ interface FilePickerProps {
 }
 
 interface FilePickerSlots {
+  'trigger'?: () => unknown
   'popover-header'?: () => unknown
 }
 
@@ -88,6 +89,7 @@ let showSupportedOnly = $ref(defaultShowSupportedOnly)
 let showRecentHistory = $ref(preferenceStore.filePickerShowRecentHistory ?? defaultShowRecentHistory)
 
 const hasHeader = $computed(() => !!slots['popover-header'] || !!popoverTitle)
+const hasTriggerSlot = $computed(() => !!slots.trigger)
 const zoomPercent = $computed(() => ZOOM_MAP[zoomLevel])
 const {
   clearRecentHistory,
@@ -127,6 +129,7 @@ const {
   isLoading,
   isOpen,
 } = $(useFilePickerController({
+  commitInputOnBlur: () => !hasTriggerSlot,
   canonicalRootPath,
   disabled: () => disabled,
   ensurePathWithinRoot,
@@ -228,7 +231,8 @@ function handleFileListKeydown(event: KeyboardEvent) {
 <template>
   <Popover :open="isOpen" @update:open="handlePopoverOpenChange">
     <PopoverTrigger as-child>
-      <div :class="cn('relative', rootClass)">
+      <slot v-if="hasTriggerSlot" name="trigger" />
+      <div v-else :class="cn('relative', rootClass)">
         <Input
           :id="inputId"
           ::="inputText"

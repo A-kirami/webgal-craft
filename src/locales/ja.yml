@@ -169,6 +169,26 @@ modals:
     import: インポート ({count})
   gameConfig:
     title: ゲーム設定
+    description: ゲームの表示や起動体験に関わる設定をここでまとめて管理します。
+    unavailable: 編集できるゲームがありません。
+    loadFailed: ゲーム設定の読み込みに失敗しました
+    saveFailed: ゲーム設定の保存に失敗しました
+    retry: 再読み込み
+    coverImage:
+      label: カバー画像
+      description: カバー画像はゲームのタイトル画面の背景画像として表示されます。
+      empty: クリックしてカバー画像を選択
+      replace: 変更
+      pickerTitle: カバー画像を選択
+      previewAlt: 現在のカバー画像プレビュー
+    startupImages:
+      label: 起動画像
+      description: 起動画像はゲーム開始時に順番に表示されます。
+      add: 起動画像を追加
+      remove: 起動画像を削除
+      pickerTitle: 起動画像を選択
+      previewAlt: 起動画像のプレビュー
+      count: "{count} 枚"
   effectEditor:
     title: エフェクトエディター
     description: ビジュアル変換、フィルター、エフェクトパラメータを編集

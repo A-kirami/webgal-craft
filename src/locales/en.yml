@@ -169,6 +169,26 @@ modals:
     import: Import ({count})
   gameConfig:
     title: Game Configuration
+    description: Configure the settings that shape the game's presentation and startup experience.
+    unavailable: There is no active game to edit right now.
+    loadFailed: Failed to load the game configuration
+    saveFailed: Failed to save the game configuration
+    retry: Reload
+    coverImage:
+      label: Cover Image
+      description: The cover image is used as the background image on the title screen.
+      empty: Click to choose a cover image
+      replace: Replace
+      pickerTitle: Choose Cover Image
+      previewAlt: Current cover image preview
+    startupImages:
+      label: Startup Images
+      description: Startup images are displayed in order when the game starts.
+      add: Add Startup Image
+      remove: Remove Startup Image
+      pickerTitle: Choose Startup Images
+      previewAlt: Startup image preview
+      count: "{count} image(s)"
   effectEditor:
     title: Effect Editor
     description: Edit visual transform, filter and effect parameters
