@@ -1,46 +1,22 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { computeLineNumberFromStatementId } from '~/domain/document/scene-selection'
-import { setOrRemoveArg } from '~/domain/script/arg-utils'
 import { hasSentenceTruthyFlag, readSentenceArgString } from '~/domain/script/sentence'
 import { serializeSentence } from '~/domain/script/serialize'
-import { Transform } from '~/domain/stage/types'
-import { serializeTransform } from '~/features/editor/effect-editor/effect-editor-config'
+import { applyEffectEditorResultToSentence, EffectEditorResult } from '~/features/editor/effect-editor/effect-editor-result'
 import { useInjectedEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { createStatementIdTarget, StatementUpdatePayload, StatementUpdateTarget } from '~/features/editor/statement-editor/useStatementEditor'
+import { resolveSceneReplayAnchorLine } from '~/features/editor/text-editor/text-editor-scene-sync'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { SceneVisualProjectionState, TextProjectionState } from '~/stores/editor'
-
-export interface EffectEditorResult {
-  transform: Transform
-  duration: string
-  ease: string
-}
 
 interface UseStatementEffectEditorBridgeOptions {
   updateTarget?: MaybeRefOrGetter<StatementUpdateTarget | undefined>
   rawText: MaybeRefOrGetter<string>
   parsed: MaybeRefOrGetter<ISentence | undefined>
   emitUpdate: (payload: StatementUpdatePayload) => void
-}
-
-export function applyEffectEditorResultToSentence(sentence: ISentence, result: EffectEditorResult): ISentence {
-  const newArgs = [...sentence.args]
-  let newContent = sentence.content
-  const transformJson = serializeTransform(result.transform, { preserveDefaults: true })
-
-  if (sentence.command === commandType.setTransform) {
-    newContent = transformJson
-  } else {
-    setOrRemoveArg(newArgs, 'transform', transformJson)
-  }
-
-  setOrRemoveArg(newArgs, 'duration', result.duration)
-  setOrRemoveArg(newArgs, 'ease', result.ease)
-
-  return { ...sentence, content: newContent, args: newArgs }
 }
 
 const EFFECT_TARGET_BG_MAIN = 'bg-main'
@@ -93,6 +69,40 @@ function resolveBaseLineNumber(
   }
 
   return 1
+}
+
+function resolvePreviewContext(
+  textContent: string | undefined,
+  baseLineNumber: number,
+): { previewContextLineNumber: number, previewContextLineText: string } {
+  if (!textContent) {
+    return {
+      previewContextLineNumber: 0,
+      previewContextLineText: '',
+    }
+  }
+
+  const lines = textContent.split(/\r?\n/u)
+  const replayAnchor = resolveSceneReplayAnchorLine(baseLineNumber, {
+    getLineContent(lineNumber: number) {
+      return lines[lineNumber - 1] ?? ''
+    },
+    getLineCount() {
+      return lines.length
+    },
+  })
+
+  if (!replayAnchor) {
+    return {
+      previewContextLineNumber: 0,
+      previewContextLineText: '',
+    }
+  }
+
+  return {
+    previewContextLineNumber: replayAnchor.lineNumber,
+    previewContextLineText: replayAnchor.lineText,
+  }
 }
 
 /**
@@ -156,6 +166,10 @@ export function useStatementEffectEditorBridge(options: UseStatementEffectEditor
     }
 
     const baseLineNumber = resolveBaseLineNumber(state, updateTarget.value)
+    const previewContext = resolvePreviewContext(
+      editorStore.currentTextProjection?.textContent,
+      baseLineNumber,
+    )
     const entryId = resolveEffectEditorEntryId(updateTarget.value)
 
     void effectEditorProvider.open({
@@ -164,6 +178,8 @@ export function useStatementEffectEditorBridge(options: UseStatementEffectEditor
       baseSentence: parsed.value,
       baseLineNumber,
       baseLineText: rawText.value,
+      previewContextLineNumber: previewContext.previewContextLineNumber,
+      previewContextLineText: previewContext.previewContextLineText,
       effectTarget: resolveEffectPreviewTarget(parsed.value),
       onApply: applyEffectEditorResult,
     })

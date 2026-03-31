@@ -1,14 +1,14 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { readSentenceArgString } from '~/domain/script/sentence'
-import { Transform } from '~/domain/stage/types'
 import { parseTransformJson, serializeTransform } from '~/features/editor/effect-editor/effect-editor-config'
 import { EFFECT_EDITOR_OPEN_OVERRIDE_KEY } from '~/features/editor/effect-editor/useStatementEffectEditorBridge'
 import { useModalStore } from '~/stores/modal'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { Transform } from '~/domain/stage/types'
+import type { EffectEditorResult } from '~/features/editor/effect-editor/effect-editor-result'
 import type { EffectEditorTransformUpdatePayload } from '~/features/editor/effect-editor/useEffectEditorProvider'
-import type { EffectEditorResult } from '~/features/editor/effect-editor/useStatementEffectEditorBridge'
 
 /**
  * 为模态框上下文提供效果编辑器的二级 Dialog 支持。

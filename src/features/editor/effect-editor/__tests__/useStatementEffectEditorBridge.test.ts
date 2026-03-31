@@ -5,7 +5,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { createSentence } from '~/features/editor/__tests__/statement-editor-test-utils'
 import { serializeTransform } from '~/features/editor/effect-editor/effect-editor-config'
-import { applyEffectEditorResultToSentence } from '~/features/editor/effect-editor/useStatementEffectEditorBridge'
+import { applyEffectEditorResultToSentence } from '~/features/editor/effect-editor/effect-editor-result'
 
 describe('applyEffectEditorResultToSentence 行为', () => {
   it('setTransform 命令写入 content 并同步 duration/ease', () => {
@@ -70,5 +70,42 @@ describe('applyEffectEditorResultToSentence 行为', () => {
       { key: 'target', value: 'fig-left' },
       { key: 'transform', value: serializeTransform({ blur: 0 }, { preserveDefaults: true }) },
     ])
+  })
+
+  it('非 setTransform 命令在最后一个显式字段被清除后移除 transform 参数', () => {
+    const sentence = createSentence({
+      command: commandType.changeFigure,
+      content: 'hero.png',
+      args: [
+        { key: 'target', value: 'fig-left' },
+        { key: 'transform', value: '{"blur":0}' },
+      ],
+    })
+
+    const result = applyEffectEditorResultToSentence(sentence, {
+      transform: {},
+      duration: '',
+      ease: '',
+    })
+
+    expect(result.args).toEqual([
+      { key: 'target', value: 'fig-left' },
+    ])
+  })
+
+  it('setTransform 命令在所有显式字段都被清除后写入空 content', () => {
+    const sentence = createSentence({
+      command: commandType.setTransform,
+      content: '{"alpha":1}',
+      args: [],
+    })
+
+    const result = applyEffectEditorResultToSentence(sentence, {
+      transform: {},
+      duration: '',
+      ease: '',
+    })
+
+    expect(result.content).toBe('')
   })
 })

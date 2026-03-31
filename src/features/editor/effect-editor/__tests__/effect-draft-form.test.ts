@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   EffectDraftFormLabelResolver,
   getAxisCompactLabel,
+  getClearPropertyLabel,
   getLinkedSliderInputAriaLabel,
   getLinkedSliderLabel,
 } from '~/features/editor/effect-editor/effect-draft-form'
@@ -54,5 +55,11 @@ describe('特效草稿表单辅助函数', () => {
     }
     expect(getLinkedSliderInputAriaLabel(param, 0, resolveLabel)).toBe('Scale X')
     expect(getLinkedSliderInputAriaLabel(param, 1, resolveLabel)).toBe('Scale Y')
+  })
+
+  it('为清除按钮生成独立于“重置默认值”的文案', () => {
+    const clearTranslator = ((key: string, params?: { name?: string }) => `${key}:${params?.name}`) as unknown as I18nT
+
+    expect(getClearPropertyLabel('Blur', resolveLabel, clearTranslator)).toBe('modals.effectEditor.clearProperty:Blur')
   })
 })

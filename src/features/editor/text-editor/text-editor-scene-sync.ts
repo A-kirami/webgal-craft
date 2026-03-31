@@ -49,6 +49,25 @@ export function resolvePlayableScenePreviewLine(
   return previewLine
 }
 
+export function resolveSceneReplayAnchorLine(
+  lineNumber: number | undefined,
+  reader: TextEditorLineReader,
+): { lineNumber: number, lineText: string } | undefined {
+  const previewLine = resolveScenePreviewLine(lineNumber, reader)
+  if (!previewLine) {
+    return undefined
+  }
+
+  for (let currentLineNumber = previewLine.lineNumber - 1; currentLineNumber >= 1; currentLineNumber--) {
+    const previousLine = resolvePlayableScenePreviewLine(currentLineNumber, reader)
+    if (previousLine) {
+      return previousLine
+    }
+  }
+
+  return isPlayableSceneLine(previewLine.lineText) ? previewLine : undefined
+}
+
 export function resolveSceneCursorTarget(
   lineNumber: number | undefined,
   reader: TextEditorCursorLineReader,

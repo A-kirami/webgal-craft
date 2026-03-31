@@ -5,6 +5,7 @@ import {
   resolvePlayableScenePreviewLine,
   resolveSceneCursorTarget,
   resolveScenePreviewLine,
+  resolveSceneReplayAnchorLine,
 } from '~/features/editor/text-editor/text-editor-scene-sync'
 
 describe('文本编辑器场景同步', () => {
@@ -46,6 +47,38 @@ describe('文本编辑器场景同步', () => {
     })
     expect(resolvePlayableScenePreviewLine(2, reader)).toBeUndefined()
     expect(resolvePlayableScenePreviewLine(3, reader)).toBeUndefined()
+  })
+
+  it('为命令重放选择最近的可执行前文行，并跳过空白和注释', () => {
+    const reader = {
+      getLineContent(lineNumber: number) {
+        return ['say:intro', '   ', ' ; comment', 'changeFigure: hero.png;'][lineNumber - 1] ?? ''
+      },
+      getLineCount() {
+        return 4
+      },
+    }
+
+    expect(resolveSceneReplayAnchorLine(4, reader)).toEqual({
+      lineNumber: 1,
+      lineText: 'say:intro',
+    })
+  })
+
+  it('当前句位于首行时回退到当前行作为重放锚点', () => {
+    const reader = {
+      getLineContent(lineNumber: number) {
+        return ['changeFigure: hero.png;'][lineNumber - 1] ?? ''
+      },
+      getLineCount() {
+        return 1
+      },
+    }
+
+    expect(resolveSceneReplayAnchorLine(1, reader)).toEqual({
+      lineNumber: 1,
+      lineText: 'changeFigure: hero.png;',
+    })
   })
 
   it('会把光标目标行钳制在模型范围内', () => {

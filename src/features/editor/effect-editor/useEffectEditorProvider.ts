@@ -1,8 +1,10 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { readSentenceArgString } from '~/domain/script/sentence'
+import { serializeSentence } from '~/domain/script/serialize'
 import { Transform } from '~/domain/stage/types'
-import { fieldsToTransform, isTransformEqual, parseTransformJson } from '~/features/editor/effect-editor/effect-editor-config'
+import { fieldsToTransform, isTransformEqual, parseTransformJson, transformToFields } from '~/features/editor/effect-editor/effect-editor-config'
+import { applyEffectEditorResultToSentence } from '~/features/editor/effect-editor/effect-editor-result'
 import { EmitTransformOptions } from '~/features/editor/effect-editor/types'
 import { debugCommander } from '~/services/debug-commander'
 import { useEditSettingsStore } from '~/stores/edit-settings'
@@ -37,6 +39,8 @@ export interface EffectEditorOpenTarget {
   baseSentence: ISentence
   baseLineNumber: number
   baseLineText: string
+  previewContextLineNumber: number
+  previewContextLineText: string
   effectTarget?: string
   onApply: (result: EffectEditorDraft) => void | Promise<void>
 }
@@ -48,6 +52,8 @@ export interface EffectEditorSession {
   baseSentence: ISentence
   baseLineNumber: number
   baseLineText: string
+  previewContextLineNumber: number
+  previewContextLineText: string
   effectTarget: string
   draft: EffectEditorDraft
   /** 打开编辑器时的初始草稿快照，用于"重置"操作的目标 */
@@ -58,6 +64,7 @@ export interface EffectEditorSession {
   hasApplied: boolean
   missingTargetWarned: boolean
   previewErrorWarned: boolean
+  previewedTransformFields: Record<string, string>
   onApply: (result: EffectEditorDraft) => void | Promise<void>
 }
 
@@ -128,6 +135,22 @@ function isDraftEqual(left: EffectEditorDraft, right: EffectEditorDraft): boolea
   return left.duration === right.duration
     && left.ease === right.ease
     && isTransformEqual(left.transform, right.transform)
+}
+
+function hasRemovedTransformPaths(
+  previousFields: Record<string, string>,
+  nextFields: Record<string, string>,
+): boolean {
+  for (const path of Object.keys(previousFields)) {
+    if (nextFields[path] === undefined) {
+      return true
+    }
+  }
+  return false
+}
+
+function buildPreviewCommandText(session: EffectEditorSession): string {
+  return serializeSentence(applyEffectEditorResultToSentence(session.baseSentence, session.draft))
 }
 
 export function createEffectEditorProvider() {
@@ -209,18 +232,35 @@ export function createEffectEditorProvider() {
       return
     }
 
-    if (!session.effectTarget) {
-      if (!session.missingTargetWarned) {
-        logger.warn('效果编辑器缺少 target，跳过实时预览')
-      }
-      session.missingTargetWarned = true
-      return
-    }
-
     try {
+      const nextPreviewFields = transformToFields(session.draft.transform)
+      const hasDeletion = hasRemovedTransformPaths(session.previewedTransformFields, nextPreviewFields)
+
+      if (hasDeletion) {
+        await debugCommander.syncScene(
+          session.scenePath,
+          session.previewContextLineNumber,
+          session.previewContextLineText,
+          true,
+        )
+        await debugCommander.executeCommand(buildPreviewCommandText(session))
+        session.previewedTransformFields = nextPreviewFields
+        session.previewErrorWarned = false
+        return
+      }
+
+      if (!session.effectTarget) {
+        if (!session.missingTargetWarned) {
+          logger.warn('效果编辑器缺少 target，跳过实时预览')
+        }
+        session.missingTargetWarned = true
+        return
+      }
+
       const target = session.effectTarget
       const transformSnapshot = cloneTransform(session.draft.transform)
       await debugCommander.setEffect(target, transformSnapshot)
+      session.previewedTransformFields = nextPreviewFields
       session.previewErrorWarned = false
     } catch (error) {
       if (!session.previewErrorWarned) {
@@ -313,6 +353,7 @@ export function createEffectEditorProvider() {
     cancelScheduledPreview()
 
     // 还原时直接回放场景，避免仅 setEffect 导致预览残留。
+    currentSession.previewedTransformFields = transformToFields(currentSession.initialDraft.transform)
     void rollbackPreview(currentSession)
 
     if (canAutoApply()) {
@@ -439,6 +480,8 @@ export function createEffectEditorProvider() {
       baseSentence,
       baseLineNumber: target.baseLineNumber,
       baseLineText: target.baseLineText,
+      previewContextLineNumber: target.previewContextLineNumber,
+      previewContextLineText: target.previewContextLineText,
       effectTarget,
       draft: cloneDraft(initialDraft),
       initialDraft: cloneDraft(initialDraft),
@@ -447,6 +490,7 @@ export function createEffectEditorProvider() {
       hasApplied: false,
       missingTargetWarned: false,
       previewErrorWarned: false,
+      previewedTransformFields: transformToFields(initialDraft.transform),
       onApply: target.onApply,
     }
 

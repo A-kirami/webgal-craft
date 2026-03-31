@@ -4,6 +4,7 @@ import { resolveI18n } from '~/features/editor/command-registry/schema'
 import { resolveDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
 import {
   getAxisCompactLabel as getEffectDraftFormAxisCompactLabel,
+  getClearPropertyLabel as getEffectDraftFormClearPropertyLabel,
   getLinkedSliderInputAriaLabel as getEffectDraftFormLinkedSliderInputAriaLabel,
   getLinkedSliderLabel as getEffectDraftFormLinkedSliderLabel,
 } from '~/features/editor/effect-editor/effect-draft-form'
@@ -15,6 +16,7 @@ import {
   getValueByPath,
   transformToFields,
 } from '~/features/editor/effect-editor/effect-editor-config'
+import { useEffectClearControls } from '~/features/editor/effect-editor/useEffectClearControls'
 import { useEffectColorControl } from '~/features/editor/effect-editor/useEffectColorControl'
 import { useEffectContinuousControls } from '~/features/editor/effect-editor/useEffectContinuousControls'
 import { useEffectDurationControl } from '~/features/editor/effect-editor/useEffectDurationControl'
@@ -173,6 +175,7 @@ const {
   }),
   buildControlId,
 })
+const clearControls = useEffectClearControls(controlDeps)
 const durationInputId = buildControlId('duration')
 const easeTriggerId = buildControlId('ease')
 
@@ -242,6 +245,8 @@ const categoryControls: EffectDraftCategoryControls = {
   getSegmentedValue,
   getSegmentedOptions,
   updateSegmentedField,
+  ...clearControls,
+  getClearPropertyLabel: label => getEffectDraftFormClearPropertyLabel(label, resolveEffectDraftLabel, t),
 }
 
 onUnmounted(() => {

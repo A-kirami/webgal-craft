@@ -15,7 +15,56 @@ interface Props {
   resolveLabel: EffectDraftLabelResolver
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+
+type EffectDraftRenderItem = EffectDraftCategoryRenderModel['items'][number]
+type EffectDraftClearableItem = Exclude<EffectDraftRenderItem, { kind: 'choice' | 'position' }>
+
+const CLEAR_IMMEDIATE_OPTIONS = {
+  schedule: 'immediate',
+  flush: true,
+} as const
+
+function getClearPathsForItem(item: EffectDraftClearableItem): readonly string[] {
+  switch (item.kind) {
+    case 'number':
+    case 'slider':
+    case 'dial': {
+      return [item.param.key]
+    }
+    case 'linked-slider': {
+      return [item.param.key, item.param.linkedPairKey]
+    }
+    case 'color': {
+      return item.param.colorPaths
+    }
+    default: {
+      const neverItem: never = item
+      return neverItem
+    }
+  }
+}
+
+function isClearButtonEnabled(paths: readonly string[]): boolean {
+  return props.controls.canClearPaths(paths)
+}
+
+function getClearButtonClass(paths: readonly string[]): string {
+  return [
+    'size-5 transition duration-150 ease-out motion-reduce:transition-none',
+    isClearButtonEnabled(paths)
+      ? 'opacity-35 group-focus-within/field:opacity-100 group-hover/field:opacity-100'
+      : 'opacity-0 pointer-events-none',
+  ].join(' ')
+}
+
+function clearPaths(paths: readonly string[]): void {
+  props.controls.clearPaths(paths, CLEAR_IMMEDIATE_OPTIONS)
+}
+
+function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): string {
+  return props.controls.getClearPropertyLabel(label)
+}
 </script>
 
 <template>
@@ -40,21 +89,37 @@ defineProps<Props>()
           <div
             v-for="param in item.params"
             :key="param.key"
-            class="px-2 py-1.5 border border-border/60 rounded-md flex gap-2 items-center"
+            class="group/field px-2 py-1.5 border border-border/60 rounded-md flex gap-2 min-w-0 items-center"
           >
-            <Label
-              :for="controls.numberInputId(param.key)"
-              class="text-xs text-muted-foreground flex shrink-0 gap-1 items-center"
-              :class="controls.canScrubNumber(param) ? 'cursor-ew-resize select-none touch-none' : ''"
-              @pointerdown="controls.handleNumberLabelPointerDown($event, param)"
-            >
-              <span>{{ resolveLabel(param.label) }}</span>
-            </Label>
+            <div class="flex shrink-0 gap-1 min-w-0 items-center">
+              <Label
+                :for="controls.numberInputId(param.key)"
+                class="text-xs text-muted-foreground shrink min-w-0"
+                :class="controls.canScrubNumber(param) ? 'cursor-ew-resize select-none touch-none' : ''"
+                @pointerdown="controls.handleNumberLabelPointerDown($event, param)"
+              >
+                <span class="block truncate">{{ resolveLabel(param.label) }}</span>
+              </Label>
+              <div class="flex shrink-0 size-5 items-center justify-center">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  :class="getClearButtonClass([param.key])"
+                  :aria-hidden="!isClearButtonEnabled([param.key]) ? 'true' : undefined"
+                  :tabindex="!isClearButtonEnabled([param.key]) ? -1 : undefined"
+                  :title="getClearPropertyLabel(param.label)"
+                  :aria-label="getClearPropertyLabel(param.label)"
+                  @click="clearPaths([param.key])"
+                >
+                  <div class="i-lucide-rotate-ccw size-3" />
+                </Button>
+              </div>
+            </div>
             <Input
               :id="controls.numberInputId(param.key)"
               type="number"
               :model-value="controls.getFieldValue(param.key)"
-              :class="isPanelLayout ? 'text-xs ml-auto h-7 w-24 flex-none' : 'text-xs ml-auto h-7 w-24'"
+              class="text-xs flex-1 h-7 min-w-0"
               :placeholder="String(param.defaultValue)"
               @update:model-value="controls.updateNumberField(param, String($event ?? ''))"
               @blur="controls.updateNumberField(param, controls.getFieldValue(param.key), { flush: true })"
@@ -63,15 +128,31 @@ defineProps<Props>()
           </div>
         </div>
 
-        <div v-else-if="item.kind === 'number'" class="flex gap-2 items-center">
-          <Label
-            :for="controls.numberInputId(item.param.key)"
-            class="text-xs text-muted-foreground shrink-0 w-24"
-            :class="controls.canScrubNumber(item.param) ? 'cursor-ew-resize select-none touch-none' : ''"
-            @pointerdown="controls.handleNumberLabelPointerDown($event, item.param)"
-          >
-            {{ resolveLabel(item.param.label) }}
-          </Label>
+        <div v-else-if="item.kind === 'number'" class="group/field flex gap-2 items-center">
+          <div class="flex shrink-0 gap-1 min-w-0 w-24 items-center">
+            <Label
+              :for="controls.numberInputId(item.param.key)"
+              class="text-xs text-muted-foreground shrink min-w-0"
+              :class="controls.canScrubNumber(item.param) ? 'cursor-ew-resize select-none touch-none' : ''"
+              @pointerdown="controls.handleNumberLabelPointerDown($event, item.param)"
+            >
+              <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
+            </Label>
+            <div class="flex shrink-0 size-5 items-center justify-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                :class="getClearButtonClass(getClearPathsForItem(item))"
+                :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
+                :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
+                :title="getClearPropertyLabel(item.param.label)"
+                :aria-label="getClearPropertyLabel(item.param.label)"
+                @click="clearPaths(getClearPathsForItem(item))"
+              >
+                <div class="i-lucide-rotate-ccw size-3" />
+              </Button>
+            </div>
+          </div>
           <Input
             :id="controls.numberInputId(item.param.key)"
             type="number"
@@ -84,10 +165,26 @@ defineProps<Props>()
           />
         </div>
 
-        <div v-else-if="item.kind === 'slider'" class="flex gap-2 items-center">
-          <Label :for="controls.sliderInputId(item.param.key)" class="text-xs text-muted-foreground shrink-0 w-24">
-            {{ resolveLabel(item.param.label) }}
-          </Label>
+        <div v-else-if="item.kind === 'slider'" class="group/field flex gap-2 items-center">
+          <div class="flex shrink-0 gap-1 min-w-0 w-24 items-center">
+            <Label :for="controls.sliderInputId(item.param.key)" class="text-xs text-muted-foreground shrink min-w-0">
+              <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
+            </Label>
+            <div class="flex shrink-0 size-5 items-center justify-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                :class="getClearButtonClass(getClearPathsForItem(item))"
+                :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
+                :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
+                :title="getClearPropertyLabel(item.param.label)"
+                :aria-label="getClearPropertyLabel(item.param.label)"
+                @click="clearPaths(getClearPathsForItem(item))"
+              >
+                <div class="i-lucide-rotate-ccw size-3" />
+              </Button>
+            </div>
+          </div>
           <div class="flex flex-1 gap-2 items-center" :class="isPanelLayout ? 'max-w-[28rem]' : 'max-w-76'">
             <Slider
               :min="item.param.min"
@@ -109,11 +206,27 @@ defineProps<Props>()
           </div>
         </div>
 
-        <div v-else-if="item.kind === 'linked-slider'" class="px-2.5 py-2 border border-border/60 rounded-md">
+        <div v-else-if="item.kind === 'linked-slider'" class="group/field px-2.5 py-2 border border-border/60 rounded-md">
           <div class="mb-2 flex items-center justify-between" :class="isPanelLayout ? 'max-w-[28rem]' : ''">
-            <span class="text-xs text-muted-foreground">
-              {{ controls.getLinkedSliderLabel(item.param) }}
-            </span>
+            <div class="flex gap-1 min-w-0 items-center">
+              <span class="text-xs text-muted-foreground truncate">
+                {{ controls.getLinkedSliderLabel(item.param) }}
+              </span>
+              <div class="flex shrink-0 size-5 items-center justify-center">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  :class="getClearButtonClass(getClearPathsForItem(item))"
+                  :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
+                  :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
+                  :title="getClearPropertyLabel(item.param.linkedGroupLabel ?? item.param.label)"
+                  :aria-label="getClearPropertyLabel(item.param.linkedGroupLabel ?? item.param.label)"
+                  @click="clearPaths(getClearPathsForItem(item))"
+                >
+                  <div class="i-lucide-rotate-ccw size-3" />
+                </Button>
+              </div>
+            </div>
             <Button
               size="icon"
               variant="ghost"
@@ -175,14 +288,46 @@ defineProps<Props>()
           </div>
         </div>
 
-        <div v-else-if="item.kind === 'dial'" class="flex gap-2 items-center">
-          <Label v-if="!item.param.compact" :for="controls.dialInputId(item.param.key)" class="text-xs text-muted-foreground shrink-0 w-24">
-            {{ resolveLabel(item.param.label) }}
-          </Label>
-          <div :class="item.param.compact ? 'px-2 py-1.5 border border-border/60 rounded-md inline-flex gap-2 items-center' : 'flex flex-1 gap-2 items-center'">
-            <Label v-if="item.param.compact" :for="controls.dialInputId(item.param.key)" class="text-xs text-muted-foreground shrink-0">
-              {{ resolveLabel(item.param.label) }}
+        <div v-else-if="item.kind === 'dial'" class="group/field flex gap-2 items-center">
+          <div v-if="!item.param.compact" class="flex shrink-0 gap-1 min-w-0 w-24 items-center">
+            <Label :for="controls.dialInputId(item.param.key)" class="text-xs text-muted-foreground shrink min-w-0">
+              <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
             </Label>
+            <div class="flex shrink-0 size-5 items-center justify-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                :class="getClearButtonClass(getClearPathsForItem(item))"
+                :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
+                :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
+                :title="getClearPropertyLabel(item.param.label)"
+                :aria-label="getClearPropertyLabel(item.param.label)"
+                @click="clearPaths(getClearPathsForItem(item))"
+              >
+                <div class="i-lucide-rotate-ccw size-3" />
+              </Button>
+            </div>
+          </div>
+          <div :class="item.param.compact ? 'px-2 py-1.5 border border-border/60 rounded-md inline-flex gap-2 items-center' : 'flex flex-1 gap-2 items-center'">
+            <div v-if="item.param.compact" class="flex gap-1 min-w-0 items-center">
+              <Label :for="controls.dialInputId(item.param.key)" class="text-xs text-muted-foreground shrink min-w-0">
+                <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
+              </Label>
+              <div class="flex shrink-0 size-5 items-center justify-center">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  :class="getClearButtonClass(getClearPathsForItem(item))"
+                  :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
+                  :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
+                  :title="getClearPropertyLabel(item.param.label)"
+                  :aria-label="getClearPropertyLabel(item.param.label)"
+                  @click="clearPaths(getClearPathsForItem(item))"
+                >
+                  <div class="i-lucide-rotate-ccw size-3" />
+                </Button>
+              </div>
+            </div>
             <div class="flex gap-2 items-center">
               <button
                 type="button"
@@ -208,10 +353,26 @@ defineProps<Props>()
           </div>
         </div>
 
-        <div v-else-if="item.kind === 'color'" class="flex gap-2 items-start">
-          <Label :for="controls.colorControlId(item.param)" class="text-xs text-muted-foreground pt-1 shrink-0 w-24">
-            {{ resolveLabel(item.param.label) }}
-          </Label>
+        <div v-else-if="item.kind === 'color'" class="group/field flex gap-2 items-start">
+          <div class="flex shrink-0 gap-1 min-w-0 w-24 items-start">
+            <Label :for="controls.colorControlId(item.param)" class="text-xs text-muted-foreground pt-1 shrink min-w-0">
+              <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
+            </Label>
+            <div class="pt-0.5 flex shrink-0 size-5 items-center justify-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                :class="getClearButtonClass(getClearPathsForItem(item))"
+                :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
+                :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
+                :title="getClearPropertyLabel(item.param.label)"
+                :aria-label="getClearPropertyLabel(item.param.label)"
+                @click="clearPaths(getClearPathsForItem(item))"
+              >
+                <div class="i-lucide-rotate-ccw size-3" />
+              </Button>
+            </div>
+          </div>
           <div class="flex flex-1 gap-2 items-center" @pointerdown="controls.handleColorPickerPointerDown($event, item.param)">
             <ColorPicker
               :id="controls.colorControlId(item.param)"
@@ -223,10 +384,12 @@ defineProps<Props>()
           </div>
         </div>
 
-        <div v-else-if="item.kind === 'choice'" class="flex gap-2 items-center">
-          <Label :for="controls.segmentedControlId(item.param.key)" class="text-xs text-muted-foreground shrink-0 w-24">
-            {{ resolveLabel(item.param.label) }}
-          </Label>
+        <div v-else-if="item.kind === 'choice'" class="group/field flex gap-2 items-center">
+          <div class="flex shrink-0 min-w-0 w-24 items-center">
+            <Label :for="controls.segmentedControlId(item.param.key)" class="text-xs text-muted-foreground shrink min-w-0">
+              <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
+            </Label>
+          </div>
           <div class="flex-1 min-w-0">
             <SegmentedControl
               :id="controls.segmentedControlId(item.param.key)"

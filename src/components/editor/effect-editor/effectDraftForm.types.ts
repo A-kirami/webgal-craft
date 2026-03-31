@@ -6,6 +6,7 @@ import type {
   NumberField,
 } from '~/features/editor/command-registry/schema'
 import type { EffectRenderItem } from '~/features/editor/effect-editor/effect-editor-config'
+import type { EmitTransformOptions } from '~/features/editor/effect-editor/types'
 import type { EffectSegmentedOption } from '~/features/editor/effect-editor/useEffectSegmentedControl'
 
 export type EffectDraftLinkedNumberField = NumberField & { linkedPairKey: string }
@@ -63,4 +64,7 @@ export interface EffectDraftCategoryControls {
   getSegmentedValue: (param: ChoiceField) => string
   getSegmentedOptions: (param: ChoiceField) => EffectSegmentedOption[]
   updateSegmentedField: (param: ChoiceField, rawValue: string) => void
+  canClearPaths: (paths: readonly string[]) => boolean
+  clearPaths: (paths: readonly string[], options: EmitTransformOptions) => void
+  getClearPropertyLabel: (label: I18nLike | undefined) => string
 }

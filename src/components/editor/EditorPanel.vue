@@ -144,7 +144,7 @@ defineExpose({ toggleCommandPanel })
           :to="editorPanelRef ?? undefined"
           :overlay="false"
           :side="editSettingsStore.effectEditorSide"
-          class="p-4 max-w-none w-100 absolute sm:max-w-none"
+          class="p-4 max-w-none w-108 absolute sm:max-w-none"
           @open-auto-focus.prevent
           @close-auto-focus.prevent
           @pointer-down-outside.prevent

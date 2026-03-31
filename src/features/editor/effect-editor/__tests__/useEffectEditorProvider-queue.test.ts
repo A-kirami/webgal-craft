@@ -4,12 +4,14 @@ import '~/__tests__/mocks/modal-store'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { serializeSentence } from '~/domain/script/serialize'
 import {
   fieldsToTransform,
   parseTransformJson,
   serializeTransform,
   transformToFields,
 } from '~/features/editor/effect-editor/effect-editor-config'
+import { applyEffectEditorResultToSentence } from '~/features/editor/effect-editor/effect-editor-result'
 import { createEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import { usePreviewSettingsStore } from '~/stores/preview-settings'
@@ -19,6 +21,7 @@ import type { Transform } from '~/domain/stage/types'
 import type { EffectEditorDraft } from '~/features/editor/effect-editor/useEffectEditorProvider'
 
 const debugCommanderMock = vi.hoisted(() => ({
+  executeCommand: vi.fn<(command: string) => Promise<void>>(async () => { /* no-op */ }),
   setEffect: vi.fn<(target: string, transform: Transform) => Promise<void>>(async () => { /* no-op */ }),
   syncScene: vi.fn<(scenePath: string, lineNumber: number, lineText: string, immediate?: boolean) => Promise<void>>(async () => { /* no-op */ }),
 }))
@@ -27,12 +30,16 @@ vi.mock('~/services/debug-commander', () => ({
   debugCommander: debugCommanderMock,
 }))
 
-function createBaseSentence(): ISentence {
+function createBaseSentence(transformJson: string = ''): ISentence {
+  const args = transformJson
+    ? [{ key: 'transform', value: transformJson }]
+    : []
+
   return {
     command: commandType.changeFigure,
     commandRaw: 'changeFigure',
     content: 'figure.png',
-    args: [],
+    args,
     sentenceAssets: [],
     subScene: [],
     inlineComment: '',
@@ -142,7 +149,9 @@ beforeEach(() => {
   editSettingsStore.autoApplyEffectEditorChanges = true
 
   debugCommanderMock.setEffect.mockReset()
+  debugCommanderMock.executeCommand.mockReset()
   debugCommanderMock.syncScene.mockReset()
+  debugCommanderMock.executeCommand.mockImplementation(async () => { /* no-op */ })
   debugCommanderMock.setEffect.mockImplementation(async () => { /* no-op */ })
   debugCommanderMock.syncScene.mockImplementation(async () => { /* no-op */ })
 })
@@ -160,6 +169,8 @@ describe('useEffectEditorProvider 队列并发', () => {
       baseSentence: createBaseSentence(),
       baseLineNumber: 1,
       baseLineText: 'changeFigure: figure.png;',
+      previewContextLineNumber: 0,
+      previewContextLineText: '',
       effectTarget: 'fig-center',
       onApply(result) {
         applyCalls.push(cloneDraft(result))
@@ -177,6 +188,118 @@ describe('useEffectEditorProvider 队列并发', () => {
     expect(applyCalls[0]?.transform.blur).toBe(0)
   })
 
+  it('实时预览在字段被清除后会回到当前句前文，并执行修改后的当前命令', async () => {
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+
+    const baseSentence = createBaseSentence('{"alpha":0.5,"blur":8}')
+    const provider = createEffectEditorProvider()
+
+    await provider.open({
+      entryId: 1,
+      scenePath: 'scene/001.txt',
+      baseSentence,
+      baseLineNumber: 3,
+      baseLineText: 'changeFigure: figure.png -transform={"alpha":0.5,"blur":8};',
+      previewContextLineNumber: 2,
+      previewContextLineText: 'say:previous;',
+      effectTarget: 'fig-center',
+      onApply() { /* no-op */ },
+    })
+
+    provider.updateDraft({ transform: { alpha: 0.5 } })
+    provider.requestPreview({ schedule: 'immediate' })
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.syncScene).toHaveBeenCalledTimes(1)
+      expect(debugCommanderMock.executeCommand).toHaveBeenCalledTimes(1)
+    })
+
+    expect(debugCommanderMock.syncScene).toHaveBeenCalledWith(
+      'scene/001.txt',
+      2,
+      'say:previous;',
+      true,
+    )
+    expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
+    expect(debugCommanderMock.executeCommand).toHaveBeenCalledWith(serializeSentence(
+      applyEffectEditorResultToSentence(baseSentence, {
+        transform: { alpha: 0.5 },
+        duration: '',
+        ease: '',
+      }),
+    ))
+  })
+
+  it('实时预览在最后一个显式字段被清除后会执行去掉 transform 的当前命令', async () => {
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+
+    const baseSentence = createBaseSentence('{"blur":8}')
+    const provider = createEffectEditorProvider()
+
+    await provider.open({
+      entryId: 1,
+      scenePath: 'scene/001.txt',
+      baseSentence,
+      baseLineNumber: 1,
+      baseLineText: 'changeFigure: figure.png -transform={"blur":8};',
+      previewContextLineNumber: 0,
+      previewContextLineText: '',
+      effectTarget: 'fig-center',
+      onApply() { /* no-op */ },
+    })
+
+    provider.updateDraft({ transform: {} })
+    provider.requestPreview({ schedule: 'immediate' })
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.syncScene).toHaveBeenCalledTimes(1)
+      expect(debugCommanderMock.executeCommand).toHaveBeenCalledTimes(1)
+    })
+
+    expect(debugCommanderMock.syncScene).toHaveBeenCalledWith(
+      'scene/001.txt',
+      0,
+      '',
+      true,
+    )
+    expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
+    expect(debugCommanderMock.executeCommand).toHaveBeenCalledWith(serializeSentence(
+      applyEffectEditorResultToSentence(baseSentence, {
+        transform: {},
+        duration: '',
+        ease: '',
+      }),
+    ))
+  })
+
+  it('非删除型实时预览仍直接发送 setEffect', async () => {
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+
+    const provider = createEffectEditorProvider()
+
+    await provider.open({
+      entryId: 1,
+      scenePath: 'scene/001.txt',
+      baseSentence: createBaseSentence('{"blur":8}'),
+      baseLineNumber: 1,
+      baseLineText: 'changeFigure: figure.png -transform={"blur":8};',
+      previewContextLineNumber: 0,
+      previewContextLineText: '',
+      effectTarget: 'fig-center',
+      onApply() { /* no-op */ },
+    })
+
+    provider.updateDraft({ transform: { blur: 12 } })
+    provider.requestPreview({ schedule: 'immediate' })
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
+    })
+
+    expect(debugCommanderMock.syncScene).not.toHaveBeenCalled()
+    expect(debugCommanderMock.executeCommand).not.toHaveBeenCalled()
+    expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {
+      blur: 12,
+    })
+  })
+
   it('autoApplyQueued 在提交未完成时可串行消费后续草稿', async () => {
     const applyCalls: EffectEditorDraft[] = []
     const resolvers: (() => void)[] = []
@@ -188,6 +311,8 @@ describe('useEffectEditorProvider 队列并发', () => {
       baseSentence: createBaseSentence(),
       baseLineNumber: 1,
       baseLineText: 'changeFigure: figure.png;',
+      previewContextLineNumber: 0,
+      previewContextLineText: '',
       effectTarget: 'fig-center',
       onApply(result) {
         applyCalls.push(cloneDraft(result))
@@ -236,6 +361,8 @@ describe('useEffectEditorProvider 队列并发', () => {
       baseSentence: createBaseSentence(),
       baseLineNumber: 1,
       baseLineText: 'changeFigure: figure.png;',
+      previewContextLineNumber: 0,
+      previewContextLineText: '',
       effectTarget: 'fig-center',
       onApply(result) {
         applyCalls.push(cloneDraft(result))
