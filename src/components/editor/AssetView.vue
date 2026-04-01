@@ -651,7 +651,6 @@ for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
       <template #context-menu="{ item }">
         <FileTreeContextMenuContent
           :item="item"
-          :on-create-file="canCreateFileInCurrentDirectory ? handleContextMenuCreateFile : undefined"
           :on-rename="handleContextMenuRename"
         />
       </template>
