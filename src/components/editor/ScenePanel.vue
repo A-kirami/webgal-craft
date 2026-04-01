@@ -215,7 +215,7 @@ fileSystemEvents.on('directory:renamed', debouncedRefresh)
       :tooltip-content="(item) => item.value.path"
       :is-loading="isLoading"
       tree-name="scene"
-      default-file-name=".txt"
+      :default-file-name-parts="{ stem: '', extension: '.txt' }"
       @click="handleClick"
       @dblclick="handleDoubleClick"
       @auxclick="handleAuxClick"

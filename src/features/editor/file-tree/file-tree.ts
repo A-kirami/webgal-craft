@@ -15,6 +15,17 @@ export interface FileTreeCreatingState {
   type?: 'file' | 'folder'
 }
 
+export interface FileTreeDefaultFileNameParts {
+  extension?: string
+  stem: string
+}
+
+export interface FileTreeDefaultFileDraft {
+  selectionEnd: number
+  selectionStart: number
+  value: string
+}
+
 export type FileTreeBlurAction = 'cancel' | 'noop' | 'submit'
 
 export interface ResolveFileTreeRenameBlurActionOptions {
@@ -27,10 +38,9 @@ export interface ResolveFileTreeRenameBlurActionOptions {
 
 export interface ResolveFileTreeCreateStartOptions<T> {
   accessor: Pick<FileTreeItemAccessor<T>, 'getChildren' | 'getPath'>
-  defaultFileName: string
+  defaultFileNameParts: FileTreeDefaultFileNameParts
   defaultFolderName: string
   getKey: (item: T) => string
-  hasCustomFileName: boolean
   items: T[]
   parentPath: string
   type: 'file' | 'folder'
@@ -43,7 +53,7 @@ export interface FileTreeCreateStartResult {
 }
 
 export interface ResolveFileTreeCreateBlurActionOptions {
-  defaultFileName: string
+  defaultFileNameParts: FileTreeDefaultFileNameParts
   defaultFolderName: string
   isStarting: boolean
   parentPath?: string
@@ -62,6 +72,17 @@ export function getFileTreeNameSelectionEnd(fileName: string, isFolder: boolean)
 
   const lastDotIndex = fileName.lastIndexOf('.')
   return lastDotIndex > 0 ? lastDotIndex : fileName.length
+}
+
+export function resolveFileTreeDefaultFileDraft(
+  defaultFileNameParts: FileTreeDefaultFileNameParts,
+): FileTreeDefaultFileDraft {
+  const extension = defaultFileNameParts.extension ?? ''
+  return {
+    selectionEnd: defaultFileNameParts.stem.length,
+    selectionStart: 0,
+    value: `${defaultFileNameParts.stem}${extension}`,
+  }
 }
 
 export function resolveFileTreeRenameBlurAction(
@@ -106,11 +127,12 @@ export function findFileTreeItemByPath<T>(
 export function resolveFileTreeCreateStart<T>(
   options: ResolveFileTreeCreateStartOptions<T>,
 ): FileTreeCreateStartResult {
+  const fileDraft = resolveFileTreeDefaultFileDraft(options.defaultFileNameParts)
   const value = options.type === 'file'
-    ? options.defaultFileName
+    ? fileDraft.value
     : options.defaultFolderName
-  const selectionEnd = options.type === 'file' && options.hasCustomFileName
-    ? 0
+  const selectionEnd = options.type === 'file'
+    ? fileDraft.selectionEnd
     : value.length
 
   const parentItem = findFileTreeItemByPath(options.items, options.parentPath, options.accessor)
@@ -131,7 +153,7 @@ export function resolveFileTreeCreateBlurAction(
 
   const trimmedValue = options.value.trim()
   const defaultName = options.type === 'file'
-    ? options.defaultFileName
+    ? resolveFileTreeDefaultFileDraft(options.defaultFileNameParts).value
     : options.defaultFolderName
 
   if (!trimmedValue || trimmedValue === defaultName) {

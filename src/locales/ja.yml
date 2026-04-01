@@ -394,7 +394,7 @@ edit:
   fileTree:
     newFile: 新しいファイル
     newFolder: 新しいフォルダー
-    defaultFileName: 新しいファイル.txt
+    defaultFileStem: 新しいファイル
     defaultFolderName: 新しいフォルダー
     rename: 名前を変更
     deleteSuccess: 削除に成功しました

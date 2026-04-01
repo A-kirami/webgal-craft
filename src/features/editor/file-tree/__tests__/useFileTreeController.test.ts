@@ -81,6 +81,10 @@ function createItems(): TestTreeItem[] {
 
 function createFixture(options: {
   defaultExpanded?: string[]
+  defaultFileNameParts?: {
+    extension?: string
+    stem: string
+  }
   openCreatedFileInTab?: boolean
   savedExpanded?: string[]
 } = {}) {
@@ -105,8 +109,11 @@ function createFixture(options: {
   const controller = scope.run(() => useFileTreeController<TestTreeItem>({
     creatingInputRef: ref(),
     defaultExpanded: () => options.defaultExpanded ?? [],
-    defaultFileName: undefined,
-    defaultFileNameFallback: () => 'untitled.txt',
+    defaultFileNameParts: options.defaultFileNameParts,
+    defaultFileNamePartsFallback: () => ({
+      extension: '.txt',
+      stem: 'untitled',
+    }),
     defaultFolderName: () => 'untitled-folder',
     fileTreeContainerRef: ref(),
     getKey: item => item.path,
@@ -170,6 +177,25 @@ describe('useFileTreeController 行为', () => {
       parentPath: '/project/scene',
       type: 'file',
       value: 'untitled.txt',
+    })
+
+    scope.stop()
+  })
+
+  it('创建固定后缀文件时会把 stem 和 extension 组装成完整文件名', () => {
+    const { controller, scope } = createFixture({
+      defaultFileNameParts: {
+        extension: '.txt',
+        stem: '',
+      },
+    })
+
+    controller.startCreating('/project/scene', 'file')
+
+    expect(controller.createState.value).toMatchObject({
+      parentPath: '/project/scene',
+      type: 'file',
+      value: '.txt',
     })
 
     scope.stop()

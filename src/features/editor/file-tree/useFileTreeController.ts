@@ -17,6 +17,7 @@ import { handleError } from '~/utils/error-handler'
 import { createItemComparator } from '~/utils/sort'
 
 import type { FlattenedItem } from 'reka-ui'
+import type { FileTreeDefaultFileNameParts } from '~/features/editor/file-tree/file-tree'
 import type { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 import type { SortableItemAccessor } from '~/utils/sort'
 
@@ -27,8 +28,8 @@ interface ReadonlyRefLike<T = unknown> {
 interface UseFileTreeControllerOptions<T extends object> {
   creatingInputRef: ReadonlyRefLike<unknown>
   defaultExpanded: () => string[]
-  defaultFileName?: string | (() => string)
-  defaultFileNameFallback: () => string
+  defaultFileNameParts?: FileTreeDefaultFileNameParts | (() => FileTreeDefaultFileNameParts)
+  defaultFileNamePartsFallback: () => FileTreeDefaultFileNameParts
   defaultFolderName: () => string
   fileTreeContainerRef: ReadonlyRefLike<HTMLElement | null | undefined>
   getKey: (item: T) => string
@@ -77,12 +78,12 @@ function resolveViewportElement(source: unknown): HTMLElement | undefined {
     return undefined
   }
 
-  const viewport = (source as { viewport?: unknown }).viewport
+  const { viewport } = source as { viewport?: unknown }
   if (typeof viewport !== 'object' || viewport === null || !('viewportElement' in viewport)) {
     return undefined
   }
 
-  const viewportElement = (viewport as { viewportElement?: unknown }).viewportElement
+  const { viewportElement } = viewport as { viewportElement?: unknown }
   return typeof HTMLElement !== 'undefined' && viewportElement instanceof HTMLElement
     ? viewportElement
     : undefined
@@ -108,7 +109,7 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   }
 
   function getItemChildren(item: T): T[] | undefined {
-    const children = asRecord(item).children
+    const { children } = asRecord(item)
     return Array.isArray(children) ? children as T[] : undefined
   }
 
@@ -311,13 +312,13 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     return checkDuplicateName(createState.value.parentPath, createState.value.value)
   }
 
-  function getDefaultFileName(): string {
-    if (!options.defaultFileName) {
-      return options.defaultFileNameFallback()
+  function getDefaultFileNameParts(): FileTreeDefaultFileNameParts {
+    if (!options.defaultFileNameParts) {
+      return options.defaultFileNamePartsFallback()
     }
-    return typeof options.defaultFileName === 'function'
-      ? options.defaultFileName()
-      : options.defaultFileName
+    return typeof options.defaultFileNameParts === 'function'
+      ? options.defaultFileNameParts()
+      : options.defaultFileNameParts
   }
 
   const workspaceStore = useWorkspaceStore()
@@ -347,10 +348,9 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
         getChildren: getItemChildren,
         getPath: getItemPath,
       },
-      defaultFileName: getDefaultFileName(),
+      defaultFileNameParts: getDefaultFileNameParts(),
       defaultFolderName: options.defaultFolderName(),
       getKey: options.getKey,
-      hasCustomFileName: !!options.defaultFileName,
       items: options.items(),
       parentPath,
       type,
@@ -409,7 +409,7 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
 
   function handleCreateBlur(): void {
     const action = resolveFileTreeCreateBlurAction({
-      defaultFileName: getDefaultFileName(),
+      defaultFileNameParts: getDefaultFileNameParts(),
       defaultFolderName: options.defaultFolderName(),
       isStarting: createState.value.isStarting,
       parentPath: createState.value.parentPath,

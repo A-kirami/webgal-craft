@@ -205,17 +205,40 @@ describe('文件树辅助函数', () => {
         getChildren: item => item.children,
         getPath: item => item.path,
       },
-      defaultFileName: 'new-scene.txt',
+      defaultFileNameParts: {
+        extension: '.txt',
+        stem: 'new-scene',
+      },
       defaultFolderName: 'new-folder',
       getKey: item => item.path,
-      hasCustomFileName: true,
       items,
       parentPath: '/project/chapter',
       type: 'file',
     })).toEqual({
       expandParentKey: '/project/chapter',
-      selectionEnd: 0,
+      selectionEnd: 9,
       value: 'new-scene.txt',
+    })
+  })
+
+  it('开始创建固定后缀文件时会只选中 stem 部分', () => {
+    expect(resolveFileTreeCreateStart({
+      accessor: {
+        getChildren: item => item.children,
+        getPath: item => item.path,
+      },
+      defaultFileNameParts: {
+        extension: '.txt',
+        stem: '',
+      },
+      defaultFolderName: '新建文件夹',
+      getKey: item => item.path,
+      items: [] as TestTreeItem[],
+      parentPath: '/project',
+      type: 'file',
+    })).toEqual({
+      selectionEnd: 0,
+      value: '.txt',
     })
   })
 
@@ -232,10 +255,12 @@ describe('文件树辅助函数', () => {
         getChildren: item => item.children,
         getPath: item => item.path,
       },
-      defaultFileName: 'new-scene.txt',
+      defaultFileNameParts: {
+        extension: '.txt',
+        stem: 'new-scene',
+      },
       defaultFolderName: '新建文件夹',
       getKey: item => item.path,
-      hasCustomFileName: false,
       items,
       parentPath: '/project',
       type: 'folder',
@@ -247,7 +272,10 @@ describe('文件树辅助函数', () => {
 
   it('创建 blur 时默认名或空值会取消创建', () => {
     expect(resolveFileTreeCreateBlurAction({
-      defaultFileName: 'new-scene.txt',
+      defaultFileNameParts: {
+        extension: '.txt',
+        stem: 'new-scene',
+      },
       defaultFolderName: '新建文件夹',
       isStarting: false,
       parentPath: '/project',
@@ -256,7 +284,10 @@ describe('文件树辅助函数', () => {
     })).toBe('cancel')
 
     expect(resolveFileTreeCreateBlurAction({
-      defaultFileName: 'new-scene.txt',
+      defaultFileNameParts: {
+        extension: '.txt',
+        stem: 'new-scene',
+      },
       defaultFolderName: '新建文件夹',
       isStarting: false,
       parentPath: '/project',
@@ -267,7 +298,10 @@ describe('文件树辅助函数', () => {
 
   it('创建 blur 时有效名称会提交创建', () => {
     expect(resolveFileTreeCreateBlurAction({
-      defaultFileName: 'new-scene.txt',
+      defaultFileNameParts: {
+        extension: '.txt',
+        stem: 'new-scene',
+      },
       defaultFolderName: '新建文件夹',
       isStarting: false,
       parentPath: '/project',

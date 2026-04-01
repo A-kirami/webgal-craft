@@ -10,6 +10,7 @@ import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
 import type { FlattenedItem } from 'reka-ui'
 import type { ShallowRef } from 'vue'
+import type { FileTreeDefaultFileNameParts } from '~/features/editor/file-tree/file-tree'
 
 interface Props {
   items: T[]
@@ -19,7 +20,7 @@ interface Props {
   enableTooltip?: boolean
   tooltipContent?: (item: FlattenedItem<T>) => string
   enableContextMenu?: boolean
-  defaultFileName?: string | (() => string)
+  defaultFileNameParts?: FileTreeDefaultFileNameParts | (() => FileTreeDefaultFileNameParts)
   isLoading?: boolean
   treeName?: string
   openCreatedFileInTab?: boolean
@@ -35,7 +36,7 @@ const {
   enableTooltip = false,
   tooltipContent,
   enableContextMenu = true,
-  defaultFileName,
+  defaultFileNameParts,
   isLoading = false,
   treeName,
   openCreatedFileInTab = false,
@@ -90,8 +91,11 @@ const {
 } = useFileTreeController<T>({
   creatingInputRef,
   defaultExpanded: () => defaultExpanded,
-  defaultFileName,
-  defaultFileNameFallback: () => t('edit.fileTree.defaultFileName'),
+  defaultFileNameParts,
+  defaultFileNamePartsFallback: () => ({
+    extension: '.txt',
+    stem: t('edit.fileTree.defaultFileStem'),
+  }),
   defaultFolderName: () => t('edit.fileTree.defaultFolderName'),
   fileTreeContainerRef,
   getKey,

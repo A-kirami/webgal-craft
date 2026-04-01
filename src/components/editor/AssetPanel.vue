@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Check, Image, LayoutGrid, LayoutList, LayoutTemplate, MicVocal, Minus, Music, Plus, Search, UserRound, Video } from 'lucide-vue-next'
 
+import { canCreateAssetFile } from '~/components/editor/asset-file-defaults'
 import { usePreferenceStore } from '~/stores/preference'
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
@@ -69,6 +70,10 @@ function toggleSearch() {
   isSearchExpanded = !isSearchExpanded
 }
 
+function handleCreateFile() {
+  void assetViewRef.value?.createFileInCurrentDirectory()
+}
+
 function handleCreateFolder() {
   void assetViewRef.value?.createFolderInCurrentDirectory()
 }
@@ -102,6 +107,7 @@ function resetZoom() {
 
 const isMinZoom = $computed(() => preferenceStore.assetZoom[0] <= 50)
 const isMaxZoom = $computed(() => preferenceStore.assetZoom[0] >= 150)
+const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(preferenceStore.assetTab))
 </script>
 
 <template>
@@ -171,6 +177,13 @@ const isMaxZoom = $computed(() => preferenceStore.assetZoom[0] >= 150)
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" class="min-w-34">
+              <DropdownMenuItem
+                v-if="canCreateFileInCurrentDirectory"
+                class="text-xs gap-2"
+                @select="handleCreateFile"
+              >
+                <span class="flex-1">{{ $t('edit.fileTree.newFile') }}</span>
+              </DropdownMenuItem>
               <DropdownMenuItem class="text-xs gap-2" @select="handleCreateFolder">
                 <span class="flex-1">{{ $t('edit.fileTree.newFolder') }}</span>
               </DropdownMenuItem>

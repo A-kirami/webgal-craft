@@ -2,11 +2,12 @@
 import { basename, join } from '@tauri-apps/api/path'
 import { File, FileImage, FileJson2, FileMusic, FileVideo, FileVolume, Folder } from 'lucide-vue-next'
 
+import { canCreateAssetFile, resolveAssetFileNameParts } from '~/components/editor/asset-file-defaults'
 import FileTreeContextMenuContent from '~/components/editor/FileTreeContextMenuContent.vue'
 import { useAssetViewItemsLoader } from '~/components/editor/useAssetViewItemsLoader'
 import { PopoverAnchor } from '~/components/ui/popover'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
-import { getFileTreeNameSelectionEnd } from '~/features/editor/file-tree/file-tree'
+import { getFileTreeNameSelectionEnd, resolveFileTreeDefaultFileDraft } from '~/features/editor/file-tree/file-tree'
 import { gameFs } from '~/services/game-fs'
 import { gameAssetDir } from '~/services/platform/app-paths'
 import { FileSystemItem, useFileStore } from '~/stores/file'
@@ -31,6 +32,7 @@ interface AssetViewEmits {
 }
 
 interface AssetViewExpose {
+  createFileInCurrentDirectory: () => Promise<void>
   createFolderInCurrentDirectory: () => Promise<void>
 }
 
@@ -64,8 +66,8 @@ let isRenamePopoverOpen = $ref(false)
 let isRenameSubmitting = $ref(false)
 
 const DOUBLE_CLICK_THRESHOLD_MS = 260
-const CREATE_FOLDER_RENAME_POLL_DELAY_MS = 50
-const CREATE_FOLDER_RENAME_POLL_RETRY_COUNT = 20
+const CREATE_ITEM_RENAME_POLL_DELAY_MS = 50
+const CREATE_ITEM_RENAME_POLL_RETRY_COUNT = 20
 const FILE_SYSTEM_REFRESH_EVENT_TYPES = [
   'file:created',
   'file:removed',
@@ -151,6 +153,7 @@ const filteredItems = $computed(() => {
 
   return items.filter(item => item.name.toLocaleLowerCase().includes(keyword))
 })
+const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(assetType))
 
 const currentDirectoryContextMenuItem = $computed(() => {
   const directoryPath = currentDirectoryPath.value
@@ -376,6 +379,33 @@ function resolveNextCreatedFolderName(): string {
   return `${defaultFolderName} ${suffix}`
 }
 
+function resolveNextCreatedFileName(): string | undefined {
+  const defaultFileStem = t('edit.fileTree.defaultFileStem')
+  const initialFileNameParts = resolveAssetFileNameParts(assetType, defaultFileStem)
+  if (!initialFileNameParts) {
+    return
+  }
+  const initialDraft = resolveFileTreeDefaultFileDraft(initialFileNameParts)
+
+  if (!hasItemWithName(initialDraft.value)) {
+    return initialDraft.value
+  }
+
+  let suffix = 2
+  while (true) {
+    const nextFileNameParts = resolveAssetFileNameParts(assetType, `${defaultFileStem} ${suffix}`)
+    if (!nextFileNameParts) {
+      return
+    }
+
+    const nextDraft = resolveFileTreeDefaultFileDraft(nextFileNameParts)
+    if (!hasItemWithName(nextDraft.value)) {
+      return nextDraft.value
+    }
+    suffix++
+  }
+}
+
 async function waitForCreatedItem(
   path: string,
   directoryPathSnapshot?: string,
@@ -386,12 +416,12 @@ async function waitForCreatedItem(
   }
 
   const targetItem = items.find(item => item.path === path)
-  if (targetItem || attempt >= CREATE_FOLDER_RENAME_POLL_RETRY_COUNT - 1) {
+  if (targetItem || attempt >= CREATE_ITEM_RENAME_POLL_RETRY_COUNT - 1) {
     return targetItem
   }
 
   await nextTick()
-  await new Promise<void>(resolve => setTimeout(resolve, CREATE_FOLDER_RENAME_POLL_DELAY_MS))
+  await new Promise<void>(resolve => setTimeout(resolve, CREATE_ITEM_RENAME_POLL_DELAY_MS))
   return waitForCreatedItem(path, directoryPathSnapshot, attempt + 1)
 }
 
@@ -405,12 +435,12 @@ async function waitForRenameAnchor(
   }
 
   const anchorElement = findRenameAnchor(path)
-  if (anchorElement || attempt >= CREATE_FOLDER_RENAME_POLL_RETRY_COUNT - 1) {
+  if (anchorElement || attempt >= CREATE_ITEM_RENAME_POLL_RETRY_COUNT - 1) {
     return anchorElement
   }
 
   await nextTick()
-  await new Promise<void>(resolve => setTimeout(resolve, CREATE_FOLDER_RENAME_POLL_DELAY_MS))
+  await new Promise<void>(resolve => setTimeout(resolve, CREATE_ITEM_RENAME_POLL_DELAY_MS))
   return waitForRenameAnchor(path, directoryPathSnapshot, attempt + 1)
 }
 
@@ -453,15 +483,43 @@ async function handleContextMenuRename(
 }
 
 async function handleContextMenuCreateFolder(item: { path: string, name: string, isDir?: boolean }): Promise<void> {
+  const folderName = resolveNextCreatedFolderName()
+  await handleContextMenuCreateItem(item, {
+    create: gameFs.createFolder,
+    isDir: true,
+    name: folderName,
+  })
+}
+
+async function handleContextMenuCreateFile(item: { path: string, name: string, isDir?: boolean }): Promise<void> {
+  const fileName = resolveNextCreatedFileName()
+  if (!fileName) {
+    return
+  }
+
+  await handleContextMenuCreateItem(item, {
+    create: gameFs.createFile,
+    isDir: false,
+    name: fileName,
+  })
+}
+
+async function handleContextMenuCreateItem(
+  item: { path: string, name: string, isDir?: boolean },
+  options: {
+    create: (targetPath: string, name: string) => Promise<string>
+    isDir: boolean
+    name: string
+  },
+): Promise<void> {
   if (!item.path) {
     return
   }
 
-  const folderName = resolveNextCreatedFolderName()
   const currentDirectorySnapshot = currentDirectoryPath.value || item.path
 
   try {
-    const createdPath = await gameFs.createFolder(item.path, folderName)
+    const createdPath = await options.create(item.path, options.name)
     const createdName = await basename(createdPath)
 
     scheduleItemsRefresh(true)
@@ -478,13 +536,21 @@ async function handleContextMenuCreateFolder(item: { path: string, name: string,
     }
 
     await handleContextMenuRename({
-      isDir: true,
-      name: createdName || folderName,
+      isDir: options.isDir,
+      name: createdName || options.name,
       path: createdPath,
     }, currentDirectorySnapshot)
   } catch (error) {
     handleError(error)
   }
+}
+
+async function createFileInCurrentDirectory(): Promise<void> {
+  if (!currentDirectoryContextMenuItem || !canCreateFileInCurrentDirectory) {
+    return
+  }
+
+  await handleContextMenuCreateFile(currentDirectoryContextMenuItem)
 }
 
 async function createFolderInCurrentDirectory(): Promise<void> {
@@ -496,6 +562,7 @@ async function createFolderInCurrentDirectory(): Promise<void> {
 }
 
 const assetViewExpose: AssetViewExpose = {
+  createFileInCurrentDirectory,
   createFolderInCurrentDirectory,
 }
 
@@ -582,12 +649,17 @@ for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
         />
       </template>
       <template #context-menu="{ item }">
-        <FileTreeContextMenuContent :item="item" :on-rename="handleContextMenuRename" />
+        <FileTreeContextMenuContent
+          :item="item"
+          :on-create-file="canCreateFileInCurrentDirectory ? handleContextMenuCreateFile : undefined"
+          :on-rename="handleContextMenuRename"
+        />
       </template>
       <template v-if="currentDirectoryContextMenuItem" #background-context-menu>
         <FileTreeContextMenuContent
           :item="currentDirectoryContextMenuItem"
           is-root
+          :on-create-file="canCreateFileInCurrentDirectory ? handleContextMenuCreateFile : undefined"
           :on-create-folder="handleContextMenuCreateFolder"
         />
       </template>

@@ -15,6 +15,7 @@ import type { FileSystemItem } from '~/stores/file'
 import type { FileViewerItem } from '~/types/file-viewer'
 
 const {
+  createFileMock,
   createFolderMock,
   fileSystemEventHandlers,
   fileSystemEventsOnMock,
@@ -29,6 +30,7 @@ const {
   useTabsStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
+  createFileMock: vi.fn(),
   createFolderMock: vi.fn(),
   fileSystemEventHandlers: new Map<string, ((event: Record<string, unknown>) => void)[]>(),
   fileSystemEventsOnMock: vi.fn(),
@@ -90,6 +92,10 @@ vi.mock('~/components/editor/FileTreeContextMenuContent.vue', async () => {
           type: Function,
           default: undefined,
         },
+        onCreateFile: {
+          type: Function,
+          default: undefined,
+        },
       },
       setup(props) {
         return () => h('div', {
@@ -114,6 +120,17 @@ vi.mock('~/components/editor/FileTreeContextMenuContent.vue', async () => {
                     ;(props.onCreateFolder as ((item: FileViewerItem) => void) | undefined)?.(props.item as FileViewerItem)
                   },
                 }, 'create-folder'),
+              ]
+            : []),
+          ...(props.onCreateFile
+            ? [
+                h('button', {
+                  'type': 'button',
+                  'data-testid': `create-file-action-${(props.item as FileViewerItem).name}`,
+                  'onClick': () => {
+                    ;(props.onCreateFile as ((item: FileViewerItem) => void) | undefined)?.(props.item as FileViewerItem)
+                  },
+                }, 'create-file'),
               ]
             : []),
         ])
@@ -143,6 +160,7 @@ vi.mock('~/composables/useFileSystemEvents', () => ({
 
 vi.mock('~/services/game-fs', () => ({
   gameFs: {
+    createFile: createFileMock,
     createFolder: createFolderMock,
     renameFile: renameFileMock,
   },
@@ -419,6 +437,7 @@ describe('AssetView', () => {
   beforeEach(() => {
     fileSystemEventHandlers.clear()
     fileSystemEventsOnMock.mockReset()
+    createFileMock.mockReset()
     createFolderMock.mockReset()
     fileViewerScrollToIndexMock.mockReset()
     gameAssetDirMock.mockReset()
@@ -434,6 +453,7 @@ describe('AssetView', () => {
     gameAssetDirMock.mockResolvedValue('/games/demo/assets/bg')
     getFolderContentsMock.mockResolvedValue([])
     joinMock.mockImplementation(async (...paths: string[]) => paths.filter(Boolean).join('/'))
+    createFileMock.mockResolvedValue('/project/background/新建文件.json')
     createFolderMock.mockResolvedValue('/project/background/新建文件夹')
     renameFileMock.mockResolvedValue('/project/background/hero-renamed.png')
 
@@ -961,6 +981,119 @@ describe('AssetView', () => {
     await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-item-path', '/project/background')
     await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-item-name', 'background')
     await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-is-root', 'true')
+  })
+
+  it('仅 animation 和 template 目录的右键菜单会显示创建文件入口', async () => {
+    gameAssetDirMock.mockResolvedValue('/project/assets/animation')
+
+    renderInBrowser(createHarness('animation'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createContextMenuFileViewerStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('create-file-action-animation')).toBeVisible()
+
+    document.body.innerHTML = ''
+    gameAssetDirMock.mockResolvedValue('/project/assets/template')
+
+    renderInBrowser(createHarness('template'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createContextMenuFileViewerStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('create-file-action-template')).toBeVisible()
+
+    document.body.innerHTML = ''
+    gameAssetDirMock.mockResolvedValue('/project/assets/background')
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createContextMenuFileViewerStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('file-tree-context-menu-root')).toBeVisible()
+    await expect.element(page.getByTestId('create-file-action-background')).not.toBeInTheDocument()
+  })
+
+  it('animation 空白区右键菜单新建文件后会创建 .json 文件并打开重命名 Popover', async () => {
+    vi.useFakeTimers()
+    gameAssetDirMock.mockResolvedValue('/project/assets/animation')
+    createFileMock.mockResolvedValue('/project/assets/animation/新建文件.json')
+    getFolderContentsMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          createdAt: 1,
+          isDir: false,
+          mimeType: 'application/json',
+          modifiedAt: 2,
+          name: '新建文件.json',
+          path: '/project/assets/animation/新建文件.json',
+          size: 0,
+        },
+      ])
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: {
+        path: '/project',
+      },
+      currentGameServeUrl: undefined,
+    }))
+
+    renderInBrowser(createHarness('animation'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createRenameFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
+    })
+    await page.getByTestId('create-file-action-animation').click()
+
+    expect(createFileMock).toHaveBeenCalledWith('/project/assets/animation', 'edit.fileTree.defaultFileStem.json')
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
+    })
+    await vi.advanceTimersByTimeAsync(1000)
+    await nextTick()
+
+    await expect.element(page.getByRole('textbox')).toHaveValue('新建文件.json')
+  })
+
+  it('template 空白区右键菜单新建文件时会使用 .scss 默认后缀', async () => {
+    gameAssetDirMock.mockResolvedValue('/project/assets/template')
+
+    renderInBrowser(createHarness('template'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createContextMenuFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
+    })
+    await page.getByTestId('create-file-action-template').click()
+
+    expect(createFileMock).toHaveBeenCalledWith('/project/assets/template', 'edit.fileTree.defaultFileStem.scss')
   })
 
   it('空白区右键菜单新建文件夹后会创建目录并打开重命名 Popover', async () => {
