@@ -6,21 +6,20 @@ import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import dayjs from '~/plugins/dayjs'
 
 import type { Game } from '~/database/model'
+import type { GameCollectionItem } from '~/features/home/home-collection-items'
 import type { AssetThumbnailOptions } from '~/services/platform/asset-url'
 
 interface Props {
-  games: Game[]
+  items: GameCollectionItem[]
   getGameProgress: (game: Game) => number
   hasGameProgress: (game: Game) => boolean
-  resolveGameServeUrl: (game: Game) => string | undefined
   viewMode: 'grid' | 'list'
 }
 
 const {
-  games,
+  items,
   getGameProgress,
   hasGameProgress,
-  resolveGameServeUrl,
   viewMode,
 } = defineProps<Props>()
 
@@ -59,20 +58,20 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
 
 <template>
   <div v-if="viewMode === 'grid'" class="gap-4 grid grid-cols-1 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2">
-    <ContextMenu v-for="game in games" :key="game.id">
+    <ContextMenu v-for="item in items" :key="item.game.id">
       <ContextMenuTrigger as-child>
         <Card
           class="group rounded-lg cursor-pointer shadow-sm transition-all duration-300 relative overflow-hidden hover:shadow"
-          :class="{ 'cursor-wait': hasGameProgress(game) }"
-          @click="emit('gameClick', game)"
+          :class="{ 'cursor-wait': hasGameProgress(item.game) }"
+          @click="emit('gameClick', item.game)"
         >
           <div class="bg-gray-100 w-full aspect-16/9 overflow-hidden">
             <AssetImage
-              :path="game.previewAssets.cover.path"
-              :root-path="game.path"
-              :serve-url="resolveGameServeUrl(game)"
-              :alt="$t('home.games.gameCover', { name: game.metadata.name })"
-              :cache-version="game.previewAssets.cover.cacheVersion"
+              :path="item.game.previewAssets.cover.path"
+              :root-path="item.game.path"
+              :serve-url="item.serveUrl"
+              :alt="$t('home.games.gameCover', { name: item.game.metadata.name })"
+              :cache-version="item.game.previewAssets.cover.cacheVersion"
               object-fit="cover"
               fallback-image="/placeholder.svg"
               :thumbnail="GRID_COVER_THUMBNAIL"
@@ -82,36 +81,36 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
           <CardContent class="p-3">
             <div class="flex gap-4 items-center">
               <AssetImage
-                :path="game.previewAssets.icon.path"
-                :root-path="game.path"
-                :serve-url="resolveGameServeUrl(game)"
-                :alt="$t('home.games.gameIcon', { name: game.metadata.name })"
-                :cache-version="game.previewAssets.icon.cacheVersion"
+                :path="item.game.previewAssets.icon.path"
+                :root-path="item.game.path"
+                :serve-url="item.serveUrl"
+                :alt="$t('home.games.gameIcon', { name: item.game.metadata.name })"
+                :cache-version="item.game.previewAssets.icon.cacheVersion"
                 :thumbnail="GRID_ICON_THUMBNAIL"
                 class="rounded-md size-8"
               />
               <div>
                 <h3 class="font-medium">
-                  {{ game.metadata.name }}
+                  {{ item.game.metadata.name }}
                 </h3>
                 <p class="text-xs text-muted-foreground/80">
-                  {{ hasGameProgress(game) ? $t('home.games.creating') : $t('home.games.modifiedAt', { time: dayjs(game.lastModified).fromNow() }) }}
+                  {{ hasGameProgress(item.game) ? $t('home.games.creating') : $t('home.games.modifiedAt', { time: dayjs(item.game.lastModified).fromNow() }) }}
                 </p>
               </div>
             </div>
           </CardContent>
-          <Progress v-if="hasGameProgress(game)" :model-value="getGameProgress(game)" class="rounded-none h-1 inset-x-0 bottom-0 absolute" />
+          <Progress v-if="hasGameProgress(item.game)" :model-value="getGameProgress(item.game)" class="rounded-none h-1 inset-x-0 bottom-0 absolute" />
         </Card>
       </ContextMenuTrigger>
       <ContextMenuContent class="w-42">
-        <ContextMenuItem @click="emit('openFolder', game)">
+        <ContextMenuItem @click="emit('openFolder', item.game)">
           <Folder class="mr-2 size-3.5" />
           {{ $t('common.openFolder') }}
         </ContextMenuItem>
         <ContextMenuItem
-          v-if="!hasGameProgress(game)"
+          v-if="!hasGameProgress(item.game)"
           class="text-destructive text-13px! focus:text-destructive-foreground focus:bg-destructive"
-          @click="emit('deleteGame', game)"
+          @click="emit('deleteGame', item.game)"
         >
           <Trash2 class="mr-2 size-3.5" />
           {{ $t('home.games.deleteGame') }}
@@ -121,40 +120,38 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
     <button
       ref="dropZoneGridRef"
       type="button"
-      class="p-4 border-1 rounded-lg border-dashed bg-gray-50 flex flex-col w-full cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden dark:bg-gray-900"
-      :class="{
-        'border-purple-300 bg-purple-50': isOverDropZoneGrid,
-        'border-gray-300 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700': !isOverDropZoneGrid
-      }"
+      :aria-label="$t('home.games.importGame')"
+      class="p-4 border-1 border-gray-300 rounded-lg border-dashed bg-gray-50 flex flex-col w-full cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden dark:border-gray-700 hover:border-purple-300 dark:bg-gray-900 dark:hover:border-purple-700"
+      :class="{'border-purple-300 bg-purple-50': isOverDropZoneGrid}"
       @click="emit('importClick')"
     >
       <div class="mb-3 p-3 rounded-full bg-purple-100 dark:bg-purple-900/20">
         <Scroll class="text-purple-600 h-6 w-6 dark:text-purple-400" />
       </div>
-      <p class="text-sm font-medium text-center">
+      <p class="text-sm font-medium">
         {{ $t('home.games.importGame') }}
       </p>
-      <p class="text-xs text-muted-foreground mt-1 text-center">
+      <p class="text-xs text-muted-foreground mt-1">
         {{ $t('home.games.importGameHint') }}
       </p>
     </button>
   </div>
   <div v-else class="border rounded-lg overflow-hidden divide-y">
     <div
-      v-for="game in games"
-      :key="game.id"
+      v-for="item in items"
+      :key="item.game.id"
       class="p-3 flex cursor-pointer transition-colors duration-200 items-center justify-between relative hover:bg-primary/5 dark:hover:bg-primary/10"
-      :class="{ 'cursor-wait': hasGameProgress(game) }"
-      @click="emit('gameClick', game)"
+      :class="{ 'cursor-wait': hasGameProgress(item.game) }"
+      @click="emit('gameClick', item.game)"
     >
       <div class="flex gap-3 items-center">
         <div class="rounded-md h-10 w-10 overflow-hidden">
           <AssetImage
-            :path="game.previewAssets.cover.path"
-            :root-path="game.path"
-            :serve-url="resolveGameServeUrl(game)"
-            :alt="$t('home.games.gameCover', { name: game.metadata.name })"
-            :cache-version="game.previewAssets.cover.cacheVersion"
+            :path="item.game.previewAssets.cover.path"
+            :root-path="item.game.path"
+            :serve-url="item.serveUrl"
+            :alt="$t('home.games.gameCover', { name: item.game.metadata.name })"
+            :cache-version="item.game.previewAssets.cover.cacheVersion"
             object-fit="cover"
             fallback-image="/placeholder.svg"
             :thumbnail="LIST_COVER_THUMBNAIL"
@@ -163,14 +160,14 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
         </div>
         <div>
           <h3 class="font-medium">
-            {{ game.metadata.name }}
+            {{ item.game.metadata.name }}
           </h3>
           <p class="text-xs text-muted-foreground">
-            {{ hasGameProgress(game) ? $t('home.games.creating') : $t('home.games.modifiedAt', { time: dayjs(game.lastModified).fromNow() }) }}
+            {{ hasGameProgress(item.game) ? $t('home.games.creating') : $t('home.games.modifiedAt', { time: dayjs(item.game.lastModified).fromNow() }) }}
           </p>
         </div>
       </div>
-      <div v-if="!hasGameProgress(game)" class="flex gap-2 items-center">
+      <div v-if="!hasGameProgress(item.game)" class="flex gap-2 items-center">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger as-child>
@@ -179,7 +176,7 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
                 variant="ghost"
                 size="icon"
                 class="h-8 w-8"
-                @click.stop="emit('openFolder', game)"
+                @click.stop="emit('openFolder', item.game)"
               >
                 <Folder class="h-4 w-4" />
               </Button>
@@ -195,7 +192,7 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
                 variant="ghost"
                 size="icon"
                 class="text-destructive h-8 w-8 hover:text-destructive-foreground hover:bg-destructive"
-                @click.stop="emit('deleteGame', game)"
+                @click.stop="emit('deleteGame', item.game)"
               >
                 <Trash2 class="h-4 w-4" />
               </Button>
@@ -206,22 +203,21 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
           </Tooltip>
         </TooltipProvider>
       </div>
-      <Progress v-if="hasGameProgress(game)" :model-value="getGameProgress(game)" class="rounded-none h-0.75 inset-x-0 bottom-0 absolute" />
+      <Progress v-if="hasGameProgress(item.game)" :model-value="getGameProgress(item.game)" class="rounded-none h-0.75 inset-x-0 bottom-0 absolute" />
     </div>
     <button
       ref="dropZoneListRef"
       type="button"
-      class="p-3 border-t bg-gray-50/50 flex w-full cursor-pointer transition-colors items-center justify-between dark:bg-gray-800/10 hover:bg-gray-100 dark:hover:bg-gray-800/20"
-      :class="{
-        'bg-purple-50': isOverDropZoneList
-      }"
+      :aria-label="$t('home.games.importGame')"
+      class="p-3 bg-gray-50/50 flex w-full cursor-pointer transition-colors items-center justify-between dark:bg-gray-800/10 hover:bg-gray-100 dark:hover:bg-gray-800/20"
+      :class="{'bg-purple-50': isOverDropZoneList}"
       @click="emit('importClick')"
     >
       <div class="flex gap-3 items-center">
         <div class="rounded-md bg-purple-100 flex h-10 w-10 items-center justify-center dark:bg-purple-900/20">
           <Scroll class="text-purple-600 h-5 w-5 dark:text-purple-400" />
         </div>
-        <div>
+        <div class="text-left">
           <h3 class="font-medium">
             {{ $t('home.games.importGame') }}
           </h3>

@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { HOME_TABS } from '~/features/home/home-tabs'
 import { useDiscoverResources } from '~/features/home/useDiscoverResources'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
+import { resolveI18nLike } from '~/utils/i18n-like'
 
+const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
 const resourceStore = useResourceStore()
 const { checkResourcesForActiveTab } = useDiscoverResources()
@@ -18,11 +21,13 @@ watch(() => workspaceStore.activeTab, checkResourcesForActiveTab, { immediate: t
       <div class="mb-6">
         <Tabs ::="workspaceStore.activeTab">
           <TabsList>
-            <TabsTrigger value="recent" class="py-1.5 rounded-sm">
-              {{ $t('home.tabs.recent') }}
-            </TabsTrigger>
-            <TabsTrigger value="engines" class="py-1.5 rounded-sm">
-              {{ $t('home.tabs.engines') }}
+            <TabsTrigger
+              v-for="tab in HOME_TABS"
+              :key="tab.id"
+              :value="tab.id"
+              class="py-1.5 rounded-sm"
+            >
+              {{ resolveI18nLike(tab.label, t) }}
             </TabsTrigger>
           </TabsList>
           <SearchView />

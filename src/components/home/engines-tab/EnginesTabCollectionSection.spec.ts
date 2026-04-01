@@ -9,6 +9,7 @@ import EnginesTabCollectionSection from './EnginesTabCollectionSection.vue'
 
 import type { PropType } from 'vue'
 import type { Engine } from '~/database/model'
+import type { EngineCollectionItem } from '~/features/home/home-collection-items'
 
 vi.mock('~/composables/useTauriDropZone', () => ({
   useTauriDropZone: () => ({
@@ -80,10 +81,9 @@ function createHarness(viewMode: 'grid' | 'list') {
 
       return () => h('div', [
         h(EnginesTabCollectionSection, {
-          engines: [],
+          items: [],
           getEngineProgress: () => 0,
           hasEngineProgress: () => false,
-          resolveEngineServeUrl: () => 'http://127.0.0.1:8899/game/engine/',
           viewMode,
           onImportClick: () => {
             importCount.value += 1
@@ -100,16 +100,22 @@ describe('EnginesTabCollectionSection', () => {
     vi.clearAllMocks()
   })
 
+  function createItems(engines: Engine[] = [createTestEngine()]): EngineCollectionItem[] {
+    return engines.map(engine => ({
+      engine,
+      serveUrl: 'http://127.0.0.1:8899/game/engine/',
+    }))
+  }
+
   it('网格视图中处理中的引擎不会显示打开和卸载操作', async () => {
     renderInBrowser(EnginesTabCollectionSection, {
       browser: {
         i18nMode: 'lite',
       },
       props: {
-        engines: [createTestEngine()],
+        items: createItems(),
         getEngineProgress: () => 50,
         hasEngineProgress: () => true,
-        resolveEngineServeUrl: () => 'http://127.0.0.1:8899/game/engine/',
         viewMode: 'grid',
       },
       global: {
@@ -165,10 +171,9 @@ describe('EnginesTabCollectionSection', () => {
         i18nMode: 'lite',
       },
       props: {
-        engines: [createTestEngine()],
+        items: createItems(),
         getEngineProgress: () => 0,
         hasEngineProgress: () => false,
-        resolveEngineServeUrl: () => 'http://127.0.0.1:8899/game/engine/',
         viewMode: 'grid',
       },
       global: {
@@ -186,10 +191,9 @@ describe('EnginesTabCollectionSection', () => {
         i18nMode: 'lite',
       },
       props: {
-        engines: [createTestEngine()],
+        items: createItems(),
         getEngineProgress: () => 0,
         hasEngineProgress: () => false,
-        resolveEngineServeUrl: () => 'http://127.0.0.1:8899/game/engine/',
         viewMode: 'list',
       },
       global: {
@@ -220,10 +224,12 @@ describe('EnginesTabCollectionSection', () => {
         i18nMode: 'lite',
       },
       props: {
-        engines: [engine],
+        items: [{
+          engine,
+          serveUrl: 'http://127.0.0.1:8899/game/engine/',
+        }],
         getEngineProgress: () => 0,
         hasEngineProgress: () => false,
-        resolveEngineServeUrl: () => 'http://127.0.0.1:8899/game/engine/',
         viewMode: 'grid',
       },
       global: {

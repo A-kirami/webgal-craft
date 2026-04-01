@@ -1,21 +1,20 @@
 <script setup lang="ts">
 import { Grid, List, Search } from 'lucide-vue-next'
 
+import { resolveHomeTabDefinition } from '~/features/home/home-tabs'
 import { usePreferenceStore } from '~/stores/preference'
 import { useWorkspaceStore } from '~/stores/workspace'
+import { resolveI18nLike } from '~/utils/i18n-like'
 
 const { t } = useI18n()
 const preferenceStore = usePreferenceStore()
 const workspaceStore = useWorkspaceStore()
 
-// 根据当前标签页返回搜索提示文本
-const searchPlaceholder = computed(() =>
-  workspaceStore.activeTab === 'recent'
-    ? t('home.search.placeholder.recent')
-    : t('home.search.placeholder.engines'),
-)
+const searchPlaceholder = computed(() => resolveI18nLike(
+  resolveHomeTabDefinition(workspaceStore.activeTab).searchPlaceholder,
+  t,
+))
 
-// 使用防抖更新搜索值
 const updateSearch = useDebounceFn((value: string | number) => {
   workspaceStore.searchQuery = String(value)
 }, 300)

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { reactive, ref } from 'vue'
+import { defineComponent, h, reactive, ref } from 'vue'
 
 import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 import { createTestEngine } from '~/__tests__/factories'
@@ -9,6 +9,7 @@ import { AppError } from '~/types/errors'
 import EnginesTab from './EnginesTab.vue'
 
 import type { Engine } from '~/database/model'
+import type { EngineCollectionItem } from '~/features/home/home-collection-items'
 
 const {
   getServeUrlMock,
@@ -94,6 +95,39 @@ const globalStubs = {
   TooltipContent: createBrowserContainerStub('StubTooltipContent'),
   TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
   TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
+  EnginesTabCollectionSection: defineComponent({
+    name: 'StubEnginesTabCollectionSection',
+    props: {
+      items: {
+        type: Array,
+        required: true,
+      },
+    },
+    emits: ['deleteEngine', 'drop', 'importClick', 'openFolder'],
+    setup(props, { emit }) {
+      return () => h('div', [
+        ...(props.items as EngineCollectionItem[]).map(item => h('article', {
+          'key': item.engine.id,
+          'data-serve-url': item.serveUrl,
+          'data-testid': `engine-item-${item.engine.id}`,
+        }, [
+          h('h3', item.engine.metadata.name),
+          h('button', {
+            type: 'button',
+            onClick: () => emit('openFolder', item.engine),
+          }, 'common.openFolder'),
+          h('button', {
+            type: 'button',
+            onClick: () => emit('deleteEngine', item.engine),
+          }, 'home.engines.uninstallEngine'),
+        ])),
+        h('button', {
+          type: 'button',
+          onClick: () => emit('importClick'),
+        }, 'home.engines.installEngine'),
+      ])
+    },
+  }),
 }
 
 function createResourceStore(options: {
@@ -161,6 +195,29 @@ describe('EnginesTab', () => {
       expect(importEngineMock).toHaveBeenCalledWith('/engines/import-target')
       expect(notifySuccessMock).toHaveBeenCalledWith('home.engines.importSuccess')
     })
+  })
+
+  it('会预先组装包含 serveUrl 的展示项并传给集合组件', async () => {
+    const engine = createTestEngine()
+
+    useResourceStoreMock.mockReturnValue(createResourceStore({
+      engines: [engine],
+    }))
+    getServeUrlMock.mockReturnValue('http://127.0.0.1:8899/game/engine/custom/')
+
+    renderInBrowser(EnginesTab, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const item = await page.getByTestId('engine-item-engine-1').element()
+
+    expect(getServeUrlMock).toHaveBeenCalledWith('/engines/default')
+    expect(item.dataset.serveUrl).toBe('http://127.0.0.1:8899/game/engine/custom/')
   })
 
   it('导入非法引擎目录时会显示结构错误通知', async () => {

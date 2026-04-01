@@ -48,18 +48,19 @@ async function selectGameFolder() {
     directory: true,
     multiple: false,
   })
-  if (path) {
-    try {
-      const gameId = await gameManager.importGame(path)
-      // notify.success('游戏导入成功')
-      router.push(`/edit/${gameId}`)
-    } catch (error: unknown) {
-      logger.error(`导入游戏时发生错误: ${error}`)
-      if (error instanceof AppError) {
-        notify.error(error.message)
-      } else {
-        notify.error(t('home.games.importUnknownError'))
-      }
+  if (!path) {
+    return
+  }
+
+  try {
+    const gameId = await gameManager.importGame(path)
+    router.push(`/edit/${gameId}`)
+  } catch (error: unknown) {
+    logger.error(`导入游戏时发生错误: ${error}`)
+    if (error instanceof AppError) {
+      notify.error(error.message)
+    } else {
+      notify.error(t('home.games.importUnknownError'))
     }
   }
 }

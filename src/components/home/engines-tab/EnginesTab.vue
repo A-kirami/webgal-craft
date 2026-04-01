@@ -10,7 +10,7 @@ import { useResourceStore } from '~/stores/resource'
 
 import EnginesTabCollectionSection from './EnginesTabCollectionSection.vue'
 
-import type { Engine } from '~/database/model'
+import type { EngineCollectionItem } from '~/features/home/home-collection-items'
 
 const modalStore = useModalStore()
 const preferenceStore = usePreferenceStore()
@@ -18,7 +18,12 @@ const previewRuntimeStore = usePreviewRuntimeStore()
 const resourceStore = useResourceStore()
 const { t } = useI18n()
 
-const filteredEngines = computed(() => resourceStore.filteredEngines)
+const engineCollectionItems = computed<EngineCollectionItem[]>(() =>
+  resourceStore.filteredEngines.map(engine => ({
+    engine,
+    serveUrl: previewRuntimeStore.getServeUrl(engine.path),
+  })),
+)
 const controller = useEnginesTabController({
   activeProgress: resourceStore.activeProgress,
   openDeleteEngineModal: engine => modalStore.open('DeleteEngineModal', { engine }),
@@ -26,20 +31,15 @@ const controller = useEnginesTabController({
 })
 const dropZoneEmptyRef = useTemplateRef<HTMLElement>('dropZoneEmptyRef')
 const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRef, paths => controller.handleDrop(paths))
-
-function resolveEngineServeUrl(engine: Engine): string | undefined {
-  return previewRuntimeStore.getServeUrl(engine.path)
-}
 </script>
 
 <template>
   <EnginesTabCollectionSection
-    v-if="filteredEngines.length > 0"
-    :engines="filteredEngines"
+    v-if="engineCollectionItems.length > 0"
+    :items="engineCollectionItems"
     :view-mode="preferenceStore.viewMode"
     :get-engine-progress="controller.getEngineProgress"
     :has-engine-progress="controller.hasEngineProgress"
-    :resolve-engine-serve-url="resolveEngineServeUrl"
     @delete-engine="controller.handleDelete"
     @drop="controller.handleDrop"
     @import-click="controller.selectEngineFolder"

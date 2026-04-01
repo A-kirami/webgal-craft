@@ -11,7 +11,7 @@ import { useWorkspaceStore } from '~/stores/workspace'
 
 import GamesTabCollectionSection from './GamesTabCollectionSection.vue'
 
-import type { Game } from '~/database/model'
+import type { GameCollectionItem } from '~/features/home/home-collection-items'
 
 const modalStore = useModalStore()
 const preferenceStore = usePreferenceStore()
@@ -21,7 +21,12 @@ const workspaceStore = useWorkspaceStore()
 const router = useRouter()
 const { t } = useI18n()
 
-const filteredGames = computed(() => resourceStore.filteredGames)
+const gameCollectionItems = computed<GameCollectionItem[]>(() =>
+  resourceStore.filteredGames.map(game => ({
+    game,
+    serveUrl: previewRuntimeStore.getServeUrl(game.path),
+  })),
+)
 const controller = useGamesTabController({
   activeProgress: resourceStore.activeProgress,
   engines: () => resourceStore.engines,
@@ -44,20 +49,15 @@ const controller = useGamesTabController({
 })
 const dropZoneEmptyRef = useTemplateRef<HTMLElement>('dropZoneEmptyRef')
 const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRef, paths => controller.handleDrop(paths))
-
-function resolveGameServeUrl(game: Game): string | undefined {
-  return previewRuntimeStore.getServeUrl(game.path)
-}
 </script>
 
 <template>
   <GamesTabCollectionSection
-    v-if="filteredGames.length > 0"
-    :games="filteredGames"
+    v-if="gameCollectionItems.length > 0"
+    :items="gameCollectionItems"
     :view-mode="preferenceStore.viewMode"
     :get-game-progress="controller.getGameProgress"
     :has-game-progress="controller.hasGameProgress"
-    :resolve-game-serve-url="resolveGameServeUrl"
     @delete-game="controller.handleDeleteGame"
     @drop="controller.handleDrop"
     @game-click="controller.handleGameClick"

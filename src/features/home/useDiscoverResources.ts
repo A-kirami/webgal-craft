@@ -1,6 +1,7 @@
 import { join } from '@tauri-apps/api/path'
 import { exists, readDir } from '@tauri-apps/plugin-fs'
 
+import { resolveHomeTabDefinition } from '~/features/home/home-tabs'
 import { engineManager } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 import { useModalStore } from '~/stores/modal'
@@ -45,10 +46,10 @@ async function discoverResourcesInDirectory(
   }
 }
 
-async function enrichWithIcons<T extends DiscoveredResource>(
-  resources: T[],
+async function enrichWithIcons(
+  resources: DiscoveredResource[],
   resolveIconPath: (path: string) => Promise<string>,
-): Promise<T[]> {
+): Promise<DiscoveredResource[]> {
   return Promise.all(
     resources.map(async (resource) => {
       try {
@@ -87,9 +88,9 @@ async function discoverEngines(): Promise<DiscoveredResource[]> {
   })
 }
 
-function filterAlreadyImported<T extends { path: string }>(
+function filterAlreadyImported(
   discovered: DiscoveredResource[],
-  existing: T[] | undefined,
+  existing: readonly { path: string }[] | undefined,
 ): DiscoveredResource[] {
   if (!existing?.length) {
     return discovered
@@ -172,7 +173,7 @@ export function useDiscoverResources() {
 
     const discovered = type === 'games' ? await discoverGames() : await discoverEngines()
     const existing = type === 'games' ? resourceStore.games : resourceStore.engines
-    const newResources = filterAlreadyImported(discovered, existing as { path: string }[] | undefined)
+    const newResources = filterAlreadyImported(discovered, existing)
 
     if (newResources.length === 0) {
       return
@@ -196,13 +197,11 @@ export function useDiscoverResources() {
   }
 
   async function checkResourcesForActiveTab() {
-    const type = workspaceStore.activeTab === 'recent' ? 'games' : 'engines'
-    await checkAndShowDiscovered(type)
+    const { discoveryType } = resolveHomeTabDefinition(workspaceStore.activeTab)
+    await checkAndShowDiscovered(discoveryType)
   }
 
   return {
-    checkAndShowDiscoveredGames: () => checkAndShowDiscovered('games'),
-    checkAndShowDiscoveredEngines: () => checkAndShowDiscovered('engines'),
     checkResourcesForActiveTab,
   }
 }

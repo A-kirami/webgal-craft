@@ -9,6 +9,7 @@ import GamesTabCollectionSection from './GamesTabCollectionSection.vue'
 
 import type { PropType } from 'vue'
 import type { Game } from '~/database/model'
+import type { GameCollectionItem } from '~/features/home/home-collection-items'
 
 vi.mock('~/composables/useTauriDropZone', () => ({
   useTauriDropZone: () => ({
@@ -83,16 +84,22 @@ describe('GamesTabCollectionSection', () => {
     vi.clearAllMocks()
   })
 
+  function createItems(games: Game[] = [createTestGame()]): GameCollectionItem[] {
+    return games.map(game => ({
+      game,
+      serveUrl: 'http://127.0.0.1:8899/game/demo/',
+    }))
+  }
+
   it('列表视图中处理中的游戏会显示创建中状态', async () => {
     renderInBrowser(GamesTabCollectionSection, {
       browser: {
         i18nMode: 'lite',
       },
       props: {
-        games: [createTestGame()],
+        items: createItems(),
         getGameProgress: () => 50,
         hasGameProgress: () => true,
-        resolveGameServeUrl: () => 'http://127.0.0.1:8899/game/demo/',
         viewMode: 'list',
       },
       global: {
@@ -110,10 +117,9 @@ describe('GamesTabCollectionSection', () => {
         i18nMode: 'lite',
       },
       props: {
-        games: [createTestGame()],
+        items: createItems(),
         getGameProgress: () => 50,
         hasGameProgress: () => true,
-        resolveGameServeUrl: () => 'http://127.0.0.1:8899/game/demo/',
         viewMode: 'grid',
       },
       global: {
@@ -132,11 +138,10 @@ describe('GamesTabCollectionSection', () => {
         i18nMode: 'lite',
       },
       props: {
-        games: [createTestGame()],
+        items: createItems(),
         getGameProgress: () => 0,
         hasGameProgress: () => false,
         onImportClick,
-        resolveGameServeUrl: () => 'http://127.0.0.1:8899/game/demo/',
         viewMode: 'grid',
       },
       global: {
@@ -144,7 +149,7 @@ describe('GamesTabCollectionSection', () => {
       },
     })
 
-    await page.getByRole('button', { name: 'home.games.importGame home.games.importGameHint' }).click()
+    await page.getByRole('button', { name: 'home.games.importGame' }).click()
 
     expect(onImportClick).toHaveBeenCalledTimes(1)
   })
@@ -157,11 +162,10 @@ describe('GamesTabCollectionSection', () => {
         i18nMode: 'lite',
       },
       props: {
-        games: [createTestGame()],
+        items: createItems(),
         getGameProgress: () => 0,
         hasGameProgress: () => false,
         onImportClick,
-        resolveGameServeUrl: () => 'http://127.0.0.1:8899/game/demo/',
         viewMode: 'list',
       },
       global: {
@@ -169,7 +173,7 @@ describe('GamesTabCollectionSection', () => {
       },
     })
 
-    await page.getByRole('button', { name: 'home.games.importGame home.games.importGameHint' }).click()
+    await page.getByRole('button', { name: 'home.games.importGame' }).click()
 
     expect(onImportClick).toHaveBeenCalledTimes(1)
   })
@@ -180,10 +184,9 @@ describe('GamesTabCollectionSection', () => {
         i18nMode: 'lite',
       },
       props: {
-        games: [createTestGame()],
+        items: createItems(),
         getGameProgress: () => 0,
         hasGameProgress: () => false,
-        resolveGameServeUrl: () => 'http://127.0.0.1:8899/game/demo/',
         viewMode: 'grid',
       },
       global: {
@@ -204,10 +207,9 @@ describe('GamesTabCollectionSection', () => {
         i18nMode: 'lite',
       },
       props: {
-        games: [createTestGame()],
+        items: createItems(),
         getGameProgress: () => 0,
         hasGameProgress: () => false,
-        resolveGameServeUrl: () => 'http://127.0.0.1:8899/game/demo/',
         viewMode: 'list',
       },
       global: {
@@ -245,10 +247,12 @@ describe('GamesTabCollectionSection', () => {
         i18nMode: 'lite',
       },
       props: {
-        games: [game],
+        items: [{
+          game,
+          serveUrl: 'http://127.0.0.1:8899/game/demo/',
+        }],
         getGameProgress: () => 0,
         hasGameProgress: () => false,
-        resolveGameServeUrl: () => 'http://127.0.0.1:8899/game/demo/',
         viewMode: 'grid',
       },
       global: {

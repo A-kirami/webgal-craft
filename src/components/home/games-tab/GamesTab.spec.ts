@@ -9,6 +9,7 @@ import { AppError } from '~/types/errors'
 import GamesTab from './GamesTab.vue'
 
 import type { Engine, Game } from '~/database/model'
+import type { GameCollectionItem } from '~/features/home/home-collection-items'
 
 const {
   importGameMock,
@@ -156,7 +157,7 @@ const globalStubs = {
   GamesTabCollectionSection: defineComponent({
     name: 'StubGamesTabCollectionSection',
     props: {
-      games: {
+      items: {
         type: Array,
         required: true,
       },
@@ -164,20 +165,25 @@ const globalStubs = {
     emits: ['deleteGame', 'drop', 'gameClick', 'importClick', 'openFolder'],
     setup(props, { emit }) {
       return () => h('div', [
-        ...(props.games as Game[]).map(game => h('article', { key: game.id }, [
+        ...(props.items as GameCollectionItem[]).map(item => h('article', {
+          'key': item.game.id,
+          'data-serve-url': item.serveUrl,
+          'data-testid': `game-item-${item.game.id}`,
+        }, [
           h('h3', {
-            onClick: () => emit('gameClick', game),
-          }, game.metadata.name),
+            onClick: () => emit('gameClick', item.game),
+          }, item.game.metadata.name),
           h('button', {
             type: 'button',
-            onClick: () => emit('openFolder', game),
+            onClick: () => emit('openFolder', item.game),
           }, '打开文件夹'),
           h('button', {
             type: 'button',
-            onClick: () => emit('deleteGame', game),
+            onClick: () => emit('deleteGame', item.game),
           }, '删除游戏'),
         ])),
-        h('h3', {
+        h('button', {
+          type: 'button',
           onClick: () => emit('importClick'),
         }, '导入游戏'),
       ])
@@ -313,6 +319,23 @@ describe('GamesTab', () => {
     expect(modalOpenMock).toHaveBeenCalledWith('DeleteGameModal', { game })
   })
 
+  it('会预先组装包含 serveUrl 的展示项并传给集合组件', async () => {
+    const game = createTestGame()
+
+    useResourceStoreMock.mockReturnValue(createResourceStore({
+      engines: [createTestEngine()],
+      games: [game],
+    }))
+    getServeUrlMock.mockReturnValue('http://127.0.0.1:8899/game/custom/')
+
+    renderGamesTab()
+
+    const item = await page.getByTestId('game-item-game-1').element()
+
+    expect(getServeUrlMock).toHaveBeenCalledWith('/games/demo')
+    expect(item.dataset.serveUrl).toBe('http://127.0.0.1:8899/game/custom/')
+  })
+
   it('游戏创建中时点击卡片会提示等待而不是跳转编辑器', async () => {
     const game = createTestGame()
     const activeProgress = new Map<string, number>([['game-1', 50]])
@@ -341,7 +364,7 @@ describe('GamesTab', () => {
 
     renderGamesTab()
 
-    await page.getByRole('heading', { name: '导入游戏' }).click()
+    await page.getByRole('button', { name: '导入游戏' }).click()
 
     await vi.waitFor(() => {
       expect(importGameMock).toHaveBeenCalledWith('/games/import-target')

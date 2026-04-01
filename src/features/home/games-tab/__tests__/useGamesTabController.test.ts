@@ -126,6 +126,30 @@ describe('useGamesTabController 行为', () => {
     expect(openNoEngineAlertModalMock).not.toHaveBeenCalled()
   })
 
+  it('引擎状态未知时创建游戏不会执行任何操作', () => {
+    const openCreateGameModalMock = vi.fn()
+    const openDeleteGameModalMock = vi.fn()
+    const openNoEngineAlertModalMock = vi.fn()
+    const switchToEnginesTabMock = vi.fn()
+
+    const controller = useGamesTabController({
+      activeProgress: new Map<string, number>(),
+      engines: undefined,
+      openCreateGameModal: openCreateGameModalMock,
+      openDeleteGameModal: openDeleteGameModalMock,
+      openNoEngineAlertModal: openNoEngineAlertModalMock,
+      pushRoute: routerPushMock,
+      switchToEnginesTab: switchToEnginesTabMock,
+      t: (key: string) => key,
+    })
+
+    controller.createGame()
+
+    expect(openCreateGameModalMock).not.toHaveBeenCalled()
+    expect(openNoEngineAlertModalMock).not.toHaveBeenCalled()
+    expect(switchToEnginesTabMock).not.toHaveBeenCalled()
+  })
+
   it('游戏处理中点击游戏只提示等待，不会跳转', () => {
     const openCreateGameModalMock = vi.fn()
     const openDeleteGameModalMock = vi.fn()
@@ -147,5 +171,28 @@ describe('useGamesTabController 行为', () => {
 
     expect(notifyWarningMock).toHaveBeenCalledWith('home.games.importCreating')
     expect(routerPushMock).not.toHaveBeenCalled()
+  })
+
+  it('游戏未处理中点击会跳转到编辑器', () => {
+    const openCreateGameModalMock = vi.fn()
+    const openDeleteGameModalMock = vi.fn()
+    const openNoEngineAlertModalMock = vi.fn()
+    const switchToEnginesTabMock = vi.fn()
+
+    const controller = useGamesTabController({
+      activeProgress: new Map<string, number>(),
+      engines: [{ id: 'engine-1' }],
+      openCreateGameModal: openCreateGameModalMock,
+      openDeleteGameModal: openDeleteGameModalMock,
+      openNoEngineAlertModal: openNoEngineAlertModalMock,
+      pushRoute: routerPushMock,
+      switchToEnginesTab: switchToEnginesTabMock,
+      t: (key: string) => key,
+    })
+
+    controller.handleGameClick({ id: 'game-2' })
+
+    expect(notifyWarningMock).not.toHaveBeenCalled()
+    expect(routerPushMock).toHaveBeenCalledWith('/edit/game-2')
   })
 })

@@ -5,6 +5,8 @@ import { Game } from '~/database/model'
 import { gameManager } from '~/services/game-manager'
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 
+import type { HomeTabId } from '~/features/home/home-tabs'
+
 export const useWorkspaceStore = defineStore(
   'workspace',
   () => {
@@ -13,7 +15,7 @@ export const useWorkspaceStore = defineStore(
     let currentGameServeUrl = $ref<string>()
 
     // UI 状态
-    const activeTab = $ref<'recent' | 'engines'>('recent')
+    const activeTab = $ref<HomeTabId>('recent')
     const searchQuery = $ref<string>('')
     const activeAssetTab = $ref('')
 

@@ -64,9 +64,9 @@ describe('useEnginesTabController 行为', () => {
     expect(notifyErrorMock).toHaveBeenCalledWith('home.engines.importMultipleFolders')
   })
 
-  it('从选择对话框返回数组时使用首个目录导入', async () => {
+  it('从选择对话框选中目录后导入引擎', async () => {
     const openDeleteEngineModalMock = vi.fn()
-    openDialogMock.mockResolvedValue(['/engines/first', '/engines/second'])
+    openDialogMock.mockResolvedValue('/engines/selected')
 
     const controller = useEnginesTabController({
       activeProgress: new Map<string, number>(),
@@ -76,7 +76,7 @@ describe('useEnginesTabController 行为', () => {
 
     await controller.selectEngineFolder()
 
-    expect(importEngineMock).toHaveBeenCalledWith('/engines/first')
+    expect(importEngineMock).toHaveBeenCalledWith('/engines/selected')
     expect(notifySuccessMock).toHaveBeenCalledWith('home.engines.importSuccess')
   })
 
