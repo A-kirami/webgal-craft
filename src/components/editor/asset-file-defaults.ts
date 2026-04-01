@@ -6,6 +6,10 @@ const assetFileExtensionByType = {
 } as const
 
 function resolveAssetFileExtension(assetType: string): string | undefined {
+  if (!Object.hasOwn(assetFileExtensionByType, assetType)) {
+    return
+  }
+
   return assetFileExtensionByType[assetType as keyof typeof assetFileExtensionByType]
 }
 
