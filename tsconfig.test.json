@@ -3,13 +3,12 @@
   "compilerOptions": {
     "allowJs": true,
     "types": [
+      "node",
       "vite/client",
       "vite-plugin-vue-meta-layouts/client",
       "vue-macros/macros-global",
       "unplugin-info/client",
       "./src/route-map.d.ts",
-      "node",
-      "vitest/globals"
     ]
   },
   "include": [
@@ -17,7 +16,9 @@
     "src/**/*.d.ts",
     "src/**/*.tsx",
     "src/**/*.vue",
-    "scripts/**/*.js"
+    "scripts/**/*.js",
+    "integration/**/*.ts",
+    "integration/**/*.d.ts"
   ],
   "exclude": []
 }
