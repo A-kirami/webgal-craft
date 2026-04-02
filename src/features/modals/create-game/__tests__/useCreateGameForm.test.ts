@@ -305,4 +305,21 @@ describe('useCreateGameForm 行为', () => {
       expect(result.error.issues[0]?.message).toBe('modals.createGame.gameNameRequired')
     }
   })
+
+  it('未输入游戏名称时也会返回必填错误', async () => {
+    const open = ref(true)
+
+    useCreateGameForm({ open })
+
+    const schema = useFormMock.mock.calls[0]?.[0]?.validationSchema
+    const result = await schema?.safeParseAsync({
+      gamePath: '/games/Demo',
+      gameEngine: 'engine-1',
+    })
+
+    expect(result?.success).toBe(false)
+    if (result?.success === false) {
+      expect(result.error.issues[0]?.message).toBe('modals.createGame.gameNameRequired')
+    }
+  })
 })
