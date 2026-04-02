@@ -214,6 +214,7 @@ modals:
       lineHeight:
         label: 文字框行高
     validation:
+      gameNameRequired: 遊戲名稱不能為空
       maxLineInvalid: 文字框最大顯示行數必須是正整數，或留空
       lineHeightInvalid: 文字框行高必須是正數，或留空
       packageNameInvalid: 包名必須使用像 org.example.demo 這樣的小寫點分識別，或留空

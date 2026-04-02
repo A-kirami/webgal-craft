@@ -92,6 +92,44 @@ describe('game-config form helpers', () => {
     }).success).toBe(false)
   })
 
+  it('createGameConfigSchema 会拒绝空白游戏名称', () => {
+    const schema = createGameConfigSchema(t)
+
+    expect(schema.safeParse({
+      titleImg: '',
+      defaultLanguage: '',
+      description: '',
+      enableAppreciation: false,
+      gameKey: '',
+      gameName: '',
+      legacyExpressionBlendMode: false,
+      lineHeight: '',
+      maxLine: '',
+      packageName: '',
+      showPanic: true,
+      gameLogo: [],
+      steamAppId: '',
+      titleBgm: '',
+    }).success).toBe(false)
+
+    expect(schema.safeParse({
+      titleImg: '',
+      defaultLanguage: '',
+      description: '',
+      enableAppreciation: false,
+      gameKey: '',
+      gameName: '   ',
+      legacyExpressionBlendMode: false,
+      lineHeight: '',
+      maxLine: '',
+      packageName: '',
+      showPanic: true,
+      gameLogo: [],
+      steamAppId: '',
+      titleBgm: '',
+    }).success).toBe(false)
+  })
+
   it('createGameConfigSchema 会拒绝明显无效的跨平台包名', () => {
     const schema = createGameConfigSchema(t)
 
@@ -139,7 +177,7 @@ describe('game-config form helpers', () => {
       description: '',
       enableAppreciation: false,
       gameKey: '',
-      gameName: '',
+      gameName: 'Demo',
       legacyExpressionBlendMode: false,
       lineHeight: '',
       maxLine: '',
@@ -217,7 +255,7 @@ describe('game-config form helpers', () => {
       description: '',
       enableAppreciation: false,
       gameKey: '',
-      gameName: '',
+      gameName: 'Demo',
       legacyExpressionBlendMode: false,
       lineHeight: '',
       maxLine: '',

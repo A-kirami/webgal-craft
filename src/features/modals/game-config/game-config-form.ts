@@ -43,6 +43,10 @@ function createOptionalPositiveIntegerSchema(t: I18nT) {
   ) as z.ZodType<'' | number>
 }
 
+function createRequiredGameNameSchema(t: I18nT) {
+  return z.string().trim().min(1, t('modals.gameConfig.validation.gameNameRequired'))
+}
+
 function createOptionalPositiveNumberSchema(t: I18nT) {
   return z.union([z.literal(''), z.number()]).refine(
     value => value === '' || value > 0,
@@ -142,7 +146,7 @@ export function createGameConfigSchema(t: I18nT) {
     description: z.string(),
     enableAppreciation: z.boolean(),
     gameKey: z.string(),
-    gameName: z.string(),
+    gameName: createRequiredGameNameSchema(t),
     gameLogo: z.array(z.string()),
     legacyExpressionBlendMode: z.boolean(),
     lineHeight: createOptionalPositiveNumberSchema(t),

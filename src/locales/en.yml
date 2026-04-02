@@ -214,6 +214,7 @@ modals:
       lineHeight:
         label: Text Line Height
     validation:
+      gameNameRequired: Game name cannot be empty
       maxLineInvalid: Max text lines must be a positive integer or left empty
       lineHeightInvalid: Text line height must be a positive number or left empty
       packageNameInvalid: Package name must use lowercase dot-separated identifiers like org.example.demo, or be left empty

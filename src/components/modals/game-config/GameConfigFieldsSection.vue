@@ -85,6 +85,7 @@ function applyGeneratedGameKey(handleChange: (value: string) => void) {
               class="text-xs h-8 shadow-none"
             />
           </FormControl>
+          <FormMessage class="text-xs" />
         </FormItem>
       </FormField>
 

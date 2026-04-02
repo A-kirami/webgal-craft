@@ -214,6 +214,7 @@ modals:
       lineHeight:
         label: テキストボックス行高
     validation:
+      gameNameRequired: ゲーム名は空にできません
       maxLineInvalid: テキストボックスの最大行数は正の整数にするか、空欄にしてください
       lineHeightInvalid: テキスト行の高さは正の数値にするか、空欄にしてください
       packageNameInvalid: パッケージ名は org.example.demo のような小文字のドット区切り識別子にするか、空欄にしてください
