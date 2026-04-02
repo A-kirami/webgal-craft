@@ -37,7 +37,9 @@ const previewPath = $computed(() => hasImage ? `game/background/${modelValue}` :
         <button
           type="button"
           class="group text-left w-full"
-          :aria-label="$t('modals.gameConfig.titleImg.replace')"
+          :aria-label="hasImage
+            ? $t('modals.gameConfig.titleImg.replace')
+            : $t('modals.gameConfig.titleImg.pickerTitle')"
         >
           <div
             data-testid="title-img-surface"

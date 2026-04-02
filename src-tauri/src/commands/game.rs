@@ -165,6 +165,7 @@ pub fn set_game_config(game_path: String, config: GameConfigPatch) -> AppResult<
     // 读取配置文件内容
     let content = fs::read_to_string(&config_path)?;
 
+    // 同键同时出现在 unset 和 set 时，非空 set 视为最终值；空字符串 set 仍视为显式 unset
     let mut pending_removals = HashSet::new();
     for key in config.unset {
         pending_removals.insert(require_raw_key(&key)?.to_string());
@@ -172,6 +173,7 @@ pub fn set_game_config(game_path: String, config: GameConfigPatch) -> AppResult<
     let mut pending_updates = HashMap::new();
 
     for (key, value) in config.set {
+        // config.txt 只接受已知原始键名，且每个值都必须保持单行
         ensure_single_line_value(&key, &value)?;
         let raw_key = require_raw_key(&key)?.to_string();
 

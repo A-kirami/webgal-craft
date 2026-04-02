@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import { FormField } from '~/components/ui/form'
 import { AUDIO_EXTENSIONS } from '~/features/editor/command-registry/common-params'
-import {
-  createGameConfigKey,
-  GAME_CONFIG_DEFAULT_LANGUAGES,
-} from '~/features/modals/game-config/game-config-form'
+import { createGameConfigKey } from '~/features/modals/game-config/game-config-form'
 
 interface Props {
   backgroundRootPath: string
@@ -20,27 +17,27 @@ const DEFAULT_LANGUAGE_EMPTY_VALUE = '__runtime_fallback__'
 const defaultLanguageOptions = [
   {
     label: '简体中文',
-    value: GAME_CONFIG_DEFAULT_LANGUAGES[0],
+    value: 'zh_CN',
   },
   {
     label: '繁體中文',
-    value: GAME_CONFIG_DEFAULT_LANGUAGES[1],
+    value: 'zh_TW',
   },
   {
     label: 'English',
-    value: GAME_CONFIG_DEFAULT_LANGUAGES[2],
+    value: 'en',
   },
   {
     label: '日本語',
-    value: GAME_CONFIG_DEFAULT_LANGUAGES[3],
+    value: 'ja',
   },
   {
     label: 'Français',
-    value: GAME_CONFIG_DEFAULT_LANGUAGES[4],
+    value: 'fr',
   },
   {
     label: 'Deutsch',
-    value: GAME_CONFIG_DEFAULT_LANGUAGES[5],
+    value: 'de',
   },
 ] as const
 
