@@ -99,6 +99,16 @@ fn require_raw_key(frontend_key: &str) -> AppResult<&'static str> {
         .ok_or_else(|| AppError::Config(format!("不支持的游戏配置字段: {frontend_key}")))
 }
 
+fn ensure_single_line_value(frontend_key: &str, value: &str) -> AppResult<()> {
+    if value.contains('\n') || value.contains('\r') {
+        return Err(AppError::Config(format!(
+            "游戏配置字段不能包含换行: {frontend_key}"
+        )));
+    }
+
+    Ok(())
+}
+
 /// 解析配置行中的键名
 fn parse_config_line_key(line: &str) -> Option<String> {
     let line = line.trim();
@@ -162,6 +172,7 @@ pub fn set_game_config(game_path: String, config: GameConfigPatch) -> AppResult<
     let mut pending_updates = HashMap::new();
 
     for (key, value) in config.set {
+        ensure_single_line_value(&key, &value)?;
         let raw_key = require_raw_key(&key)?.to_string();
 
         if value.is_empty() {
@@ -341,6 +352,28 @@ mod tests {
         assert!(matches!(
             error,
             AppError::Config(message) if message.contains("unsupportedKey")
+        ));
+
+        fs::remove_dir_all(game_dir).expect("temp game directory should be removed");
+    }
+
+    #[test]
+    fn set_game_config_rejects_multiline_values() {
+        let game_dir = create_temp_game_dir();
+        let config_path = game_dir.join("game").join("config.txt");
+        fs::write(&config_path, "Game_name: Demo;\nDescription: Story;\n")
+            .expect("config should be written");
+
+        let mut set = HashMap::new();
+        set.insert("description".to_string(), "Line 1\nLine 2".to_string());
+        let patch = GameConfigPatch { set, unset: vec![] };
+
+        let error = set_game_config(game_dir.to_string_lossy().into_owned(), patch)
+            .expect_err("multiline values should be rejected");
+
+        assert!(matches!(
+            error,
+            AppError::Config(message) if message.contains("description")
         ));
 
         fs::remove_dir_all(game_dir).expect("temp game directory should be removed");

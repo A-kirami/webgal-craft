@@ -285,6 +285,36 @@ describe('GameConfigModal', () => {
     await expect.element(page.getByText('modals.gameConfig.validation.packageNameInvalid')).toBeVisible()
   })
 
+  it('多行简介会在输入阶段被压成单行后再保存', async () => {
+    const updateOpen = vi.fn()
+
+    renderInBrowser(GameConfigModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        'open': true,
+        'onUpdate:open': updateOpen,
+        ...preparedModalProps,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByTestId('game-config-description').fill('Line 1\nLine 2')
+    await page.getByRole('button', { name: 'common.save' }).click()
+
+    await vi.waitFor(() => {
+      expect(setConfigMock).toHaveBeenCalledWith('/games/demo', expect.objectContaining({
+        set: expect.objectContaining({
+          description: 'Line 1 Line 2',
+        }),
+      }))
+    })
+    expect(updateOpen).toHaveBeenCalledWith(false)
+  })
+
   it('缺失 gameKey 的旧配置会在打开时补上 UUID，并允许直接保存', async () => {
     const randomUuidSpy = vi.spyOn(crypto, 'randomUUID').mockReturnValue('22222222-2222-2222-2222-222222222222')
 

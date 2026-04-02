@@ -64,6 +64,22 @@ function handleOptionalNumberChange(handleChange: (value: '' | number) => void, 
 function applyGeneratedGameKey(handleChange: (value: string) => void) {
   handleChange(createGameConfigKey())
 }
+
+function handleSingleLineTextareaEnter(event: KeyboardEvent) {
+  if (event.isComposing) {
+    return
+  }
+
+  event.preventDefault()
+}
+
+function normalizeSingleLineText(value: string): string {
+  return value.replaceAll(/\r\n?|\n/g, ' ')
+}
+
+function handleDescriptionChange(handleChange: (value: string) => void, nextValue: string | number) {
+  handleChange(normalizeSingleLineText(String(nextValue)))
+}
 </script>
 
 <template>
@@ -90,7 +106,7 @@ function applyGeneratedGameKey(handleChange: (value: string) => void) {
       </FormField>
 
       <FormField
-        v-slot="{ componentField }"
+        v-slot="{ handleChange, value }"
         name="description"
       >
         <FormItem class="flex flex-col gap-2">
@@ -101,8 +117,10 @@ function applyGeneratedGameKey(handleChange: (value: string) => void) {
             <Textarea
               id="game-config-description"
               data-testid="game-config-description"
-              v-bind="componentField"
+              :model-value="typeof value === 'string' ? value : ''"
               class="text-xs py-1.5 min-h-16 resize-none shadow-none"
+              @keydown.enter="handleSingleLineTextareaEnter"
+              @update:model-value="handleDescriptionChange(handleChange, $event)"
             />
           </FormControl>
         </FormItem>
