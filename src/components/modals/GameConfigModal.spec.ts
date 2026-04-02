@@ -1,43 +1,39 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h, reactive } from 'vue'
+import { defineComponent, h } from 'vue'
 
-import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
+import {
+  createBrowserCheckboxStub,
+  createBrowserClickStub,
+  createBrowserContainerStub,
+  createBrowserInputStub,
+  renderInBrowser,
+} from '~/__tests__/browser-render'
 
 import GameConfigModal from './GameConfigModal.vue'
 
 import type { PropType } from 'vue'
 
 const {
-  getConfigMock,
+  modalOpenMock,
   notifySuccessMock,
   setConfigMock,
-  useWorkspaceStoreMock,
+  useModalStoreMock,
 } = vi.hoisted(() => ({
-  getConfigMock: vi.fn(),
+  modalOpenMock: vi.fn(),
   notifySuccessMock: vi.fn(),
   setConfigMock: vi.fn(),
-  useWorkspaceStoreMock: vi.fn(),
+  useModalStoreMock: vi.fn(),
 }))
-
-vi.mock('@tauri-apps/api/path', async () => {
-  const actual = await vi.importActual<typeof import('@tauri-apps/api/path')>('@tauri-apps/api/path')
-
-  return {
-    ...actual,
-    join: async (...parts: string[]) => parts.join('/'),
-  }
-})
 
 vi.mock('~/services/config-manager', () => ({
   configManager: {
-    getConfig: getConfigMock,
     setConfig: setConfigMock,
   },
 }))
 
-vi.mock('~/stores/workspace', () => ({
-  useWorkspaceStore: useWorkspaceStoreMock,
+vi.mock('~/stores/modal', () => ({
+  useModalStore: useModalStoreMock,
 }))
 
 vi.mock('notivue', () => ({
@@ -46,19 +42,33 @@ vi.mock('notivue', () => ({
   },
 }))
 
-const workspaceStoreState = reactive({
-  currentGame: {
-    id: 'game-1',
-    path: '/games/demo',
+const preparedModalProps = {
+  backgroundRootPath: '/games/demo/game/background',
+  bgmRootPath: '/games/demo/game/bgm',
+  gamePath: '/games/demo',
+  initialValues: {
+    defaultLanguage: 'zh_CN',
+    description: 'An introductory story',
+    enableAppreciation: false,
+    gameKey: 'demo-key',
+    gameLogo: ['opening.webp', 'enter.webp'],
+    gameName: 'Demo Game',
+    legacyExpressionBlendMode: false,
+    lineHeight: 2.2,
+    maxLine: 3,
+    packageName: 'org.demo.game',
+    showPanic: true,
+    steamAppId: '480',
+    titleBgm: 'title.ogg',
+    titleImg: 'cover.webp',
   },
-  currentGameServeUrl: 'http://127.0.0.1:8899/game/demo/',
-  refreshCurrentGameSnapshot: vi.fn().mockResolvedValue(undefined),
-})
+  serveUrl: 'http://127.0.0.1:8899/game/demo/',
+} as const
 
 const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
-  CoverImagePicker: defineComponent({
-    name: 'StubCoverImagePicker',
+  TitleImgPicker: defineComponent({
+    name: 'StubTitleImgPicker',
     props: {
       modelValue: {
         type: String,
@@ -68,11 +78,11 @@ const globalStubs = {
     emits: ['update:modelValue'],
     setup(props, { emit }) {
       return () => h('div', [
-        h('output', { 'data-testid': 'cover-picker-value' }, props.modelValue),
+        h('output', { 'data-testid': 'title-img-picker-value' }, props.modelValue),
         h('button', {
           type: 'button',
           onClick: () => emit('update:modelValue', 'cover-next.webp'),
-        }, 'change-cover'),
+        }, 'change-title-img'),
       ])
     },
   }),
@@ -101,47 +111,79 @@ const globalStubs = {
   DialogFooter: createBrowserContainerStub('StubDialogFooter'),
   DialogHeader: createBrowserContainerStub('StubDialogHeader'),
   DialogTitle: createBrowserContainerStub('StubDialogTitle'),
-  Loader2: createBrowserContainerStub('StubLoader2'),
-  SaveChangesModal: defineComponent({
-    name: 'StubSaveChangesModal',
+  FilePicker: defineComponent({
+    name: 'StubFilePicker',
     props: {
-      open: {
-        type: Boolean,
-        default: false,
+      extensions: {
+        type: Array,
+        default: () => [],
       },
-      onDontSave: {
-        type: Function as PropType<(() => void | Promise<void>) | undefined>,
+      inputId: {
+        type: String,
         default: undefined,
       },
-      onSave: {
-        type: Function as PropType<(() => void | Promise<void>) | undefined>,
-        default: undefined,
+      modelValue: {
+        type: String,
+        default: '',
+      },
+      popoverTitle: {
+        type: String,
+        default: '',
+      },
+      rootPath: {
+        type: String,
+        required: true,
       },
     },
-    setup(props) {
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
+      return () => h('input', {
+        'data-extensions': props.extensions.join('|'),
+        'data-popover-title': props.popoverTitle,
+        'data-root-path': props.rootPath,
+        'id': props.inputId,
+        'value': props.modelValue,
+        'onInput': (event: Event) => emit('update:modelValue', (event.target as HTMLInputElement).value),
+      })
+    },
+  }),
+  Input: createBrowserInputStub('StubInput'),
+  InputGroup: createBrowserContainerStub('StubInputGroup'),
+  InputGroupAddon: createBrowserContainerStub('StubInputGroupAddon'),
+  InputGroupButton: createBrowserClickStub('StubInputGroupButton'),
+  InputGroupInput: createBrowserInputStub('StubInputGroupInput'),
+  Select: defineComponent({
+    name: 'StubSelect',
+    props: {
+      modelValue: {
+        type: String,
+        default: '',
+      },
+    },
+    emits: ['update:modelValue'],
+    setup(props, { attrs, emit, slots }) {
       return () => {
-        if (!props.open) {
-          return
-        }
+        const { ['data-testid']: _dataTestId, ...restAttrs } = attrs
 
-        return h('div', { 'data-testid': 'save-changes-modal' }, [
-          h('button', {
-            'type': 'button',
-            'data-testid': 'save-changes-confirm-save',
-            'onClick': () => props.onSave?.(),
-          }, 'confirm-save'),
-          h('button', {
-            'type': 'button',
-            'data-testid': 'save-changes-confirm-dont-save',
-            'onClick': () => props.onDontSave?.(),
-          }, 'confirm-dont-save'),
+        return h('div', restAttrs, [
+          h('input', {
+            'data-testid': attrs['data-testid'],
+            'type': 'text',
+            'value': props.modelValue,
+            'onInput': (event: Event) => emit('update:modelValue', (event.target as HTMLInputElement).value),
+          }),
+          ...(slots.default?.() ?? []),
         ])
       }
     },
   }),
+  SelectContent: createBrowserContainerStub('StubSelectContent'),
+  SelectItem: createBrowserContainerStub('StubSelectItem'),
+  SelectTrigger: createBrowserContainerStub('StubSelectTrigger', 'button'),
+  SelectValue: createBrowserContainerStub('StubSelectValue'),
   ScrollArea: createBrowserContainerStub('StubScrollArea'),
-  StartupImagesPicker: defineComponent({
-    name: 'StubStartupImagesPicker',
+  GameLogoPicker: defineComponent({
+    name: 'StubGameLogoPicker',
     props: {
       modelValue: {
         type: Array as PropType<string[]>,
@@ -151,27 +193,31 @@ const globalStubs = {
     emits: ['update:modelValue'],
     setup(props, { emit }) {
       return () => h('div', [
-        h('output', { 'data-testid': 'startup-picker-value' }, props.modelValue.join('|')),
+        h('output', { 'data-testid': 'game-logo-picker-value' }, props.modelValue.join('|')),
         h('button', {
           type: 'button',
           onClick: () => emit('update:modelValue', ['enter-next.webp', 'logo-next.webp']),
-        }, 'change-startup'),
+        }, 'change-game-logo'),
       ])
     },
   }),
+  Switch: createBrowserCheckboxStub('StubSwitch'),
+  Textarea: createBrowserInputStub('StubTextarea', 'textarea'),
+  Tooltip: createBrowserContainerStub('StubTooltip'),
+  TooltipContent: createBrowserContainerStub('StubTooltipContent'),
+  TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
+  TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
 }
 
 describe('GameConfigModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    getConfigMock.mockResolvedValue({
-      titleImg: 'cover.webp',
-      gameLogo: 'opening.webp|enter.webp|',
+    useModalStoreMock.mockReturnValue({
+      open: modalOpenMock,
     })
-    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
   })
 
-  it('打开时会读取配置并把封面图与启动图分发给对应控件', async () => {
+  it('使用传入的预取配置渲染表单时，不再主动读取配置文件', async () => {
     renderInBrowser(GameConfigModal, {
       browser: {
         i18nMode: 'lite',
@@ -179,6 +225,25 @@ describe('GameConfigModal', () => {
       props: {
         'open': true,
         'onUpdate:open': vi.fn(),
+        ...preparedModalProps,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByTestId('game-config-game-name')).toHaveValue('Demo Game')
+  })
+
+  it('打开时会渲染预取配置中的关键字段', async () => {
+    renderInBrowser(GameConfigModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        'open': true,
+        'onUpdate:open': vi.fn(),
+        ...preparedModalProps,
       },
       global: {
         stubs: globalStubs,
@@ -187,12 +252,16 @@ describe('GameConfigModal', () => {
 
     await expect.element(page.getByTestId('game-config-modal-content')).toBeVisible()
     await expect.element(page.getByTestId('game-config-modal-scroll-area')).toBeVisible()
-    await expect.element(page.getByTestId('cover-picker-value')).toHaveTextContent('cover.webp')
-    await expect.element(page.getByTestId('startup-picker-value')).toHaveTextContent('opening.webp|enter.webp')
-    expect(getConfigMock).toHaveBeenCalledWith('/games/demo')
+    await expect.element(page.getByTestId('game-config-game-name')).toHaveValue('Demo Game')
+    await expect.element(page.getByTestId('game-config-description')).toHaveValue('An introductory story')
+    await expect.element(page.getByLabelText('modals.gameConfig.fields.titleBgm.label')).toHaveValue('title.ogg')
+    await expect.element(page.getByTestId('title-img-picker-value')).toHaveTextContent('cover.webp')
+    await expect.element(page.getByTestId('game-logo-picker-value')).toHaveTextContent('opening.webp|enter.webp')
+    await expect.element(page.getByTestId('game-config-game-key')).toHaveValue('demo-key')
+    await expect.element(page.getByTestId('game-config-package-name')).toHaveValue('org.demo.game')
   })
 
-  it('底部只保留保存按钮，不再渲染取消按钮', async () => {
+  it('非法包名会在失焦后才显示校验信息', async () => {
     renderInBrowser(GameConfigModal, {
       browser: {
         i18nMode: 'lite',
@@ -200,15 +269,81 @@ describe('GameConfigModal', () => {
       props: {
         'open': true,
         'onUpdate:open': vi.fn(),
+        ...preparedModalProps,
       },
       global: {
         stubs: globalStubs,
       },
     })
 
-    await expect.element(page.getByTestId('cover-picker-value')).toHaveTextContent('cover.webp')
-    await expect.element(page.getByRole('button', { name: 'common.save' })).toBeVisible()
-    await expect.element(page.getByRole('button', { name: 'common.cancel' })).not.toBeInTheDocument()
+    await page.getByTestId('game-config-package-name').fill('Demo.App')
+
+    await expect.element(page.getByText('modals.gameConfig.validation.packageNameInvalid')).not.toBeInTheDocument()
+
+    await page.getByTestId('game-config-steam-app-id').click()
+
+    await expect.element(page.getByText('modals.gameConfig.validation.packageNameInvalid')).toBeVisible()
+  })
+
+  it('缺失 gameKey 的旧配置会在打开时补上 UUID，并允许直接保存', async () => {
+    const randomUuidSpy = vi.spyOn(crypto, 'randomUUID').mockReturnValue('22222222-2222-2222-2222-222222222222')
+
+    renderInBrowser(GameConfigModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        'open': true,
+        'onUpdate:open': vi.fn(),
+        ...preparedModalProps,
+        'initialValues': {
+          ...preparedModalProps.initialValues,
+          gameKey: '',
+        },
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByTestId('game-config-game-key')).toHaveValue('22222222-2222-2222-2222-222222222222')
+
+    await page.getByRole('button', { name: 'common.save' }).click()
+
+    await vi.waitFor(() => {
+      expect(setConfigMock).toHaveBeenCalledWith('/games/demo', expect.objectContaining({
+        set: expect.objectContaining({
+          gameKey: '22222222-2222-2222-2222-222222222222',
+        }),
+      }))
+    })
+
+    randomUuidSpy.mockRestore()
+  })
+
+  it('已有 gameKey 时点击重新生成会立即替换', async () => {
+    const randomUuidSpy = vi.spyOn(crypto, 'randomUUID').mockReturnValue('33333333-3333-3333-3333-333333333333')
+
+    renderInBrowser(GameConfigModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        'open': true,
+        'onUpdate:open': vi.fn(),
+        ...preparedModalProps,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByTestId('game-config-game-key-regenerate').click()
+
+    await expect.element(page.getByTestId('game-config-game-key')).toHaveValue('33333333-3333-3333-3333-333333333333')
+    expect(randomUuidSpy).toHaveBeenCalledTimes(1)
+
+    randomUuidSpy.mockRestore()
   })
 
   it('有修改时请求关闭并选择不保存后，才真正关闭弹窗', async () => {
@@ -221,28 +356,35 @@ describe('GameConfigModal', () => {
       props: {
         'open': true,
         'onUpdate:open': updateOpen,
+        ...preparedModalProps,
       },
       global: {
         stubs: globalStubs,
       },
     })
 
-    await expect.element(page.getByTestId('cover-picker-value')).toHaveTextContent('cover.webp')
-
-    await page.getByRole('button', { name: 'change-cover' }).click()
+    await page.getByRole('button', { name: 'change-title-img' }).click()
     await page.getByTestId('dialog-close-request').click()
 
-    await expect.element(page.getByTestId('save-changes-modal')).toBeVisible()
+    await vi.waitFor(() => {
+      expect(modalOpenMock).toHaveBeenCalledWith('SaveChangesModal', expect.objectContaining({
+        title: 'modals.saveChanges.title',
+        onDontSave: expect.any(Function),
+        onSave: expect.any(Function),
+      }))
+    })
     expect(updateOpen).not.toHaveBeenCalled()
 
-    await page.getByTestId('save-changes-confirm-dont-save').click()
+    const [, modalProps] = modalOpenMock.mock.calls[0]
+
+    await modalProps.onDontSave()
 
     await vi.waitFor(() => {
       expect(updateOpen).toHaveBeenCalledWith(false)
     })
   })
 
-  it('保存时会序列化启动图并刷新当前游戏快照', async () => {
+  it('保存时会提交序列化后的配置补丁并关闭弹窗', async () => {
     const updateOpen = vi.fn()
 
     renderInBrowser(GameConfigModal, {
@@ -252,24 +394,45 @@ describe('GameConfigModal', () => {
       props: {
         'open': true,
         'onUpdate:open': updateOpen,
+        ...preparedModalProps,
       },
       global: {
         stubs: globalStubs,
       },
     })
 
-    await expect.element(page.getByTestId('cover-picker-value')).toHaveTextContent('cover.webp')
-
-    await page.getByRole('button', { name: 'change-cover' }).click()
-    await page.getByRole('button', { name: 'change-startup' }).click()
+    await page.getByTestId('game-config-game-name').fill('Renamed Game')
+    await page.getByTestId('game-config-description').fill('Updated description')
+    await page.getByLabelText('modals.gameConfig.fields.titleBgm.label').fill('title-next.ogg')
+    await page.getByRole('button', { name: 'change-title-img' }).click()
+    await page.getByRole('button', { name: 'change-game-logo' }).click()
     await page.getByRole('button', { name: 'common.save' }).click()
 
-    expect(setConfigMock).toHaveBeenCalledWith('/games/demo', {
-      titleImg: 'cover-next.webp',
-      gameLogo: 'enter-next.webp|logo-next.webp|',
+    await vi.waitFor(() => {
+      expect(setConfigMock).toHaveBeenCalledWith('/games/demo', {
+        set: {
+          defaultLanguage: 'zh_CN',
+          description: 'Updated description',
+          enableAppreciation: 'false',
+          gameKey: 'demo-key',
+          gameName: 'Renamed Game',
+          titleImg: 'cover-next.webp',
+          legacyExpressionBlendMode: 'false',
+          lineHeight: '2.2',
+          maxLine: '3',
+          packageName: 'org.demo.game',
+          gameLogo: 'enter-next.webp|logo-next.webp|',
+          showPanic: 'true',
+          steamAppId: '480',
+          titleBgm: 'title-next.ogg',
+        },
+        unset: [],
+      })
     })
-    expect(workspaceStoreState.refreshCurrentGameSnapshot).toHaveBeenCalled()
-    expect(notifySuccessMock).toHaveBeenCalledWith('common.saved')
-    expect(updateOpen).toHaveBeenCalledWith(false)
+
+    await vi.waitFor(() => {
+      expect(notifySuccessMock).toHaveBeenCalledWith('common.saved')
+      expect(updateOpen).toHaveBeenCalledWith(false)
+    })
   })
 })

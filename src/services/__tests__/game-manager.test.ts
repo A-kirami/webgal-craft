@@ -14,6 +14,9 @@ const {
   dbGamesDeleteMock,
   dbGamesGetMock,
   dbGamesUpdateMock,
+  dbGamesWhereEqualsMock,
+  dbGamesWhereFirstMock,
+  dbGamesWhereMock,
   deleteFileMock,
   existsMock,
   gameCmdsGetGameConfigMock,
@@ -35,6 +38,9 @@ const {
   dbGamesDeleteMock: vi.fn(),
   dbGamesGetMock: vi.fn(),
   dbGamesUpdateMock: vi.fn(),
+  dbGamesWhereEqualsMock: vi.fn(),
+  dbGamesWhereFirstMock: vi.fn(),
+  dbGamesWhereMock: vi.fn(),
   deleteFileMock: vi.fn(),
   existsMock: vi.fn(),
   gameCmdsGetGameConfigMock: vi.fn(),
@@ -117,6 +123,7 @@ vi.mock('~/database/db', () => ({
       update: dbGamesUpdateMock,
       delete: dbGamesDeleteMock,
       get: dbGamesGetMock,
+      where: dbGamesWhereMock,
     },
   },
 }))
@@ -142,6 +149,9 @@ describe('gameManager 游戏管理', () => {
     dbGamesDeleteMock.mockReset()
     dbGamesGetMock.mockReset()
     dbGamesUpdateMock.mockReset()
+    dbGamesWhereEqualsMock.mockReset()
+    dbGamesWhereFirstMock.mockReset()
+    dbGamesWhereMock.mockReset()
     deleteFileMock.mockReset()
     existsMock.mockReset()
     gameCmdsGetGameConfigMock.mockReset()
@@ -157,6 +167,12 @@ describe('gameManager 游戏管理', () => {
     useResourceStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
     validateDirectoryStructureMock.mockReset()
+    dbGamesWhereMock.mockReturnValue({
+      equals: dbGamesWhereEqualsMock,
+    })
+    dbGamesWhereEqualsMock.mockReturnValue({
+      first: dbGamesWhereFirstMock,
+    })
     workspaceStoreState.currentGame = createCurrentGame()
     useResourceStoreMock.mockReturnValue(resourceStoreMock)
     useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
@@ -224,6 +240,9 @@ describe('gameManager 游戏管理', () => {
   it('createGame 会注册占位游戏、复制引擎并在结束后回写元数据', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
+    const randomUuidSpy = vi.spyOn(crypto, 'randomUUID')
+      .mockReturnValueOnce('11111111-1111-1111-1111-111111111111')
+      .mockReturnValueOnce('22222222-2222-2222-2222-222222222222')
     dbGamesAddMock.mockResolvedValue('game-1')
     copyDirectoryWithProgressMock.mockImplementation(async (_from, _to, onProgress: (progress: number) => void) => {
       onProgress(25)
@@ -251,7 +270,13 @@ describe('gameManager 游戏管理', () => {
         },
       },
     }))
-    expect(gameCmdsSetGameConfigMock).toHaveBeenCalledWith('/games/demo', { gameName: 'Demo Game' })
+    expect(gameCmdsSetGameConfigMock).toHaveBeenCalledWith('/games/demo', {
+      set: {
+        gameKey: '22222222-2222-2222-2222-222222222222',
+        gameName: 'Demo Game',
+      },
+      unset: [],
+    })
     expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(1, 'game-1', 25)
     expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(2, 'game-1', 100)
     expect(resourceStoreMock.finishProgress).toHaveBeenCalledWith('game-1')
@@ -271,6 +296,8 @@ describe('gameManager 游戏管理', () => {
         },
       },
     })
+
+    randomUuidSpy.mockRestore()
   })
 
   it('createGame 在注册后失败时会回滚占位记录、进度和目标目录', async () => {
@@ -345,18 +372,21 @@ describe('gameManager 游戏管理', () => {
 
     await gameManager.renameGame('game-1', 'New Name')
 
-    expect(gameCmdsSetGameConfigMock).toHaveBeenCalledWith('/games/demo', { gameName: 'New Name' })
+    expect(gameCmdsSetGameConfigMock).toHaveBeenCalledWith('/games/demo', {
+      set: {
+        gameName: 'New Name',
+      },
+      unset: [],
+    })
     expect(dbGamesUpdateMock).toHaveBeenCalledWith('game-1', {
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
       metadata: {
         name: 'New Name',
       },
     })
-    expect(workspaceStoreState.currentGame).toEqual({
+    expect(workspaceStoreState.currentGame).toMatchObject({
       id: 'game-1',
       path: '/games/demo',
-      createdAt: 0,
-      status: 'created',
       metadata: {
         name: 'New Name',
       },
@@ -368,6 +398,84 @@ describe('gameManager 游戏管理', () => {
         cover: {
           path: '/games/demo/assets/cover.png',
           cacheVersion: 222,
+        },
+      },
+      lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
+    })
+  })
+
+  it('refreshRegisteredGameSnapshot 会按路径刷新数据库快照，并同步当前工作区游戏', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
+    dbGamesWhereFirstMock.mockResolvedValue(createCurrentGame({
+      metadata: {
+        name: 'Old Name',
+      },
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/favicon.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: '/games/demo/assets/cover-old.png',
+          cacheVersion: 222,
+        },
+      },
+    }))
+    gameCmdsGetGameConfigMock.mockResolvedValue({
+      gameName: 'Renamed Game',
+      titleImg: 'cover-next.png',
+    })
+    gameIconPathMock.mockResolvedValue('/games/demo/icons/favicon.ico')
+    gameCoverPathMock.mockResolvedValue('/games/demo/assets/cover-next.png')
+    workspaceStoreState.currentGame = createCurrentGame({
+      metadata: {
+        name: 'Old Name',
+      },
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/favicon.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: '/games/demo/assets/cover-old.png',
+          cacheVersion: 222,
+        },
+      },
+    })
+
+    await gameManager.refreshRegisteredGameSnapshot('/games/demo')
+
+    expect(dbGamesUpdateMock).toHaveBeenCalledWith('game-1', {
+      lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
+      metadata: {
+        name: 'Renamed Game',
+      },
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/favicon.ico',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+        cover: {
+          path: '/games/demo/assets/cover-next.png',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+      },
+    })
+    expect(workspaceStoreState.currentGame).toMatchObject({
+      id: 'game-1',
+      path: '/games/demo',
+      metadata: {
+        name: 'Renamed Game',
+      },
+      previewAssets: {
+        icon: {
+          path: '/games/demo/icons/favicon.ico',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+        cover: {
+          path: '/games/demo/assets/cover-next.png',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
         },
       },
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),

@@ -169,21 +169,61 @@ modals:
     import: インポート ({count})
   gameConfig:
     title: ゲーム設定
-    description: ゲームの表示や起動体験に関わる設定をここでまとめて管理します。
-    unavailable: 編集できるゲームがありません。
+    description: 現在のゲームの基本情報、リソース、関連設定を編集します
     loadFailed: ゲーム設定の読み込みに失敗しました
     saveFailed: ゲーム設定の保存に失敗しました
-    retry: 再読み込み
-    coverImage:
-      label: カバー画像
-      description: カバー画像はゲームのタイトル画面の背景画像として表示されます。
-      empty: クリックしてカバー画像を選択
+    fields:
+      gameName:
+        label: 名称
+      description:
+        label: 概要
+      gameKey:
+        label: ゲーム識別コード
+        description: このゲームを識別するための一意な ID で、他のゲームとデータを分離するために使います
+        regenerate: 再生成
+      packageName:
+        label: アプリのパッケージ名
+        description: パッケージ化とエクスポート時に使うアプリ識別子です
+        placeholder: org.example.demo
+      defaultLanguage:
+        label: デフォルト言語
+        placeholder: 言語を選択
+        empty: 自動検出
+      titleBgm:
+        label: タイトル背景音楽
+        pickerTitle: タイトル背景音楽を選択
+      titleImg:
+        label: タイトル背景画像
+      gameLogo:
+        label: 起動画像
+        description: 起動画像はゲーム開始時に順番に表示されます
+      enableAppreciation:
+        label: 鑑賞モード
+        description: タイトル画面のメニューに鑑賞モードを表示します
+      showPanic:
+        label: 緊急回避
+        description: 有効にすると、Esc キーで緊急回避画面を表示します
+      steamAppId:
+        label: Steam AppID
+        description: Steam がこのゲームを識別するために必要な AppID で、Steam 機能の呼び出しに使います
+      legacyExpressionBlendMode:
+        label: Live2D 旧式表情ブレンドモード
+        description: 旧来の Live2D 表情ブレンド向けの互換フォールバックで、表示が崩れる場合にお試しください
+      maxLine:
+        label: テキストボックス最大行数
+      lineHeight:
+        label: テキストボックス行高
+    validation:
+      maxLineInvalid: テキストボックスの最大行数は正の整数にするか、空欄にしてください
+      lineHeightInvalid: テキスト行の高さは正の数値にするか、空欄にしてください
+      packageNameInvalid: パッケージ名は org.example.demo のような小文字のドット区切り識別子にするか、空欄にしてください
+      steamAppIdInvalid: Steam AppID は有効な整数にするか、空欄にしてください
+    titleImg:
+      empty: クリックしてタイトル背景画像を選択
       replace: 変更
-      pickerTitle: カバー画像を選択
-      previewAlt: 現在のカバー画像プレビュー
-    startupImages:
-      label: 起動画像
-      description: 起動画像はゲーム開始時に順番に表示されます。
+      pickerTitle: タイトル背景画像を選択
+      previewAlt: 現在のタイトル背景画像プレビュー
+    gameLogo:
       add: 起動画像を追加
       remove: 起動画像を削除
       pickerTitle: 起動画像を選択

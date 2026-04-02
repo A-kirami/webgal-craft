@@ -4,7 +4,6 @@ const DEFAULT_PREVIEW_PANEL_STAGE_WIDTH = 2560
 const DEFAULT_PREVIEW_PANEL_STAGE_HEIGHT = 1440
 
 export interface PreviewPanelGameConfigLike {
-  [key: string]: unknown
   stageHeight?: unknown
   stageWidth?: unknown
 }

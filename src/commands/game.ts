@@ -1,30 +1,50 @@
 import { safeInvoke } from '~/utils/invoke'
 
-/**
- * 游戏配置接口，定义了游戏的基本配置信息
- *
- * @interface GameConfig
- * @property gameName - 游戏名称
- * @property description - 游戏描述
- * @property gameKey - 游戏唯一标识键
- * @property packageName - 游戏包名
- * @property titleImg - 游戏标题图片路径
- * @property [key: string] - 其他可能的配置项
- */
-interface GameConfig {
-  gameName: string
-  description: string
-  gameKey: string
-  packageName: string
-  titleImg: string
-  [key: string]: string
+export interface GameConfig {
+  defaultLanguage?: string
+  description?: string
+  enableAppreciation?: string
+  gameKey?: string
+  gameName?: string
+  gameLogo?: string
+  legacyExpressionBlendMode?: string
+  lineHeight?: string
+  maxLine?: string
+  packageName?: string
+  showPanic?: string
+  stageHeight?: string
+  stageWidth?: string
+  steamAppId?: string
+  titleBgm?: string
+  titleImg?: string
+}
+
+export type GameConfigPatchKey =
+  | 'defaultLanguage'
+  | 'description'
+  | 'enableAppreciation'
+  | 'gameKey'
+  | 'gameName'
+  | 'gameLogo'
+  | 'legacyExpressionBlendMode'
+  | 'lineHeight'
+  | 'maxLine'
+  | 'packageName'
+  | 'showPanic'
+  | 'steamAppId'
+  | 'titleBgm'
+  | 'titleImg'
+
+export interface GameConfigPatch {
+  set: Partial<Record<GameConfigPatchKey, string>>
+  unset: GameConfigPatchKey[]
 }
 
 async function getGameConfig(gamePath: string) {
   return safeInvoke<GameConfig>('get_game_config', { gamePath })
 }
 
-async function setGameConfig(gamePath: string, config: Record<string, string>) {
+async function setGameConfig(gamePath: string, config: GameConfigPatch) {
   return safeInvoke<void>('set_game_config', { gamePath, config })
 }
 

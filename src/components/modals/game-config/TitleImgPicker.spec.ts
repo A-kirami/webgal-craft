@@ -4,7 +4,7 @@ import { defineComponent, h, ref } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
 
-import CoverImagePicker from './CoverImagePicker.vue'
+import TitleImgPicker from './TitleImgPicker.vue'
 
 import type { PropType } from 'vue'
 
@@ -89,16 +89,16 @@ const globalStubs = {
         slots.trigger?.(),
         h('button', {
           'type': 'button',
-          'data-testid': 'select-cover-image',
+          'data-testid': 'select-title-img',
           'onClick': () => emit('update:modelValue', 'next-cover.webp'),
-        }, 'select-cover-image'),
+        }, 'select-title-img'),
       ])
     },
   }),
 }
 
-const CoverImagePickerHarness = defineComponent({
-  name: 'CoverImagePickerHarness',
+const TitleImgPickerHarness = defineComponent({
+  name: 'TitleImgPickerHarness',
   props: {
     initialValue: {
       type: String,
@@ -109,7 +109,7 @@ const CoverImagePickerHarness = defineComponent({
     const value = ref(props.initialValue)
 
     return () => h('div', [
-      h(CoverImagePicker, {
+      h(TitleImgPicker, {
         'modelValue': value.value,
         'gamePath': '/games/demo',
         'backgroundRootPath': '/games/demo/game/background',
@@ -118,16 +118,16 @@ const CoverImagePickerHarness = defineComponent({
           value.value = nextValue
         },
       }),
-      h('output', { 'data-testid': 'cover-value' }, value.value),
+      h('output', { 'data-testid': 'title-img-value' }, value.value),
     ])
   },
 })
 
-describe('CoverImagePicker', () => {
+describe('TitleImgPicker', () => {
   it('会把当前封面图渲染为预览卡片，并把文件夹约束传给 FilePicker', async () => {
     filePickerRenderSpy.mockReset()
 
-    renderInBrowser(CoverImagePickerHarness, {
+    renderInBrowser(TitleImgPickerHarness, {
       props: {
         initialValue: 'cover.webp',
       },
@@ -139,7 +139,7 @@ describe('CoverImagePicker', () => {
       },
     })
 
-    const previewImage = await page.getByRole('img', { name: 'modals.gameConfig.coverImage.previewAlt' }).element()
+    const previewImage = await page.getByRole('img', { name: 'modals.gameConfig.titleImg.previewAlt' }).element()
 
     expect(previewImage.dataset.path).toBe('game/background/cover.webp')
     expect(previewImage.dataset.rootPath).toBe('/games/demo')
@@ -150,25 +150,8 @@ describe('CoverImagePicker', () => {
     }))
   })
 
-  it('封面图只显示图片，不显示文件名文案', async () => {
-    renderInBrowser(CoverImagePickerHarness, {
-      props: {
-        initialValue: 'cg/cover.webp',
-      },
-      browser: {
-        i18nMode: 'lite',
-      },
-      global: {
-        stubs: globalStubs,
-      },
-    })
-
-    await expect.element(page.getByTestId('cover-value')).toHaveTextContent('cg/cover.webp')
-    await expect.element(page.getByTestId('cover-image-surface').getByText('cover.webp')).not.toBeInTheDocument()
-  })
-
   it('空值时会显示空态文案', async () => {
-    renderInBrowser(CoverImagePickerHarness, {
+    renderInBrowser(TitleImgPickerHarness, {
       browser: {
         i18nMode: 'lite',
       },
@@ -177,12 +160,12 @@ describe('CoverImagePicker', () => {
       },
     })
 
-    await expect.element(page.getByText('modals.gameConfig.coverImage.empty')).toBeVisible()
-    await expect.element(page.getByText('modals.gameConfig.coverImage.replace')).not.toBeInTheDocument()
+    await expect.element(page.getByText('modals.gameConfig.titleImg.empty')).toBeVisible()
+    await expect.element(page.getByText('modals.gameConfig.titleImg.replace')).not.toBeInTheDocument()
   })
 
   it('选中新图片后会更新 v-model', async () => {
-    renderInBrowser(CoverImagePickerHarness, {
+    renderInBrowser(TitleImgPickerHarness, {
       props: {
         initialValue: 'cover.webp',
       },
@@ -194,8 +177,8 @@ describe('CoverImagePicker', () => {
       },
     })
 
-    await page.getByTestId('select-cover-image').click()
+    await page.getByTestId('select-title-img').click()
 
-    await expect.element(page.getByTestId('cover-value')).toHaveTextContent('next-cover.webp')
+    await expect.element(page.getByTestId('title-img-value')).toHaveTextContent('next-cover.webp')
   })
 })

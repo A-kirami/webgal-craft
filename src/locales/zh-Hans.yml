@@ -169,25 +169,65 @@ modals:
     import: 导入 ({count})
   gameConfig:
     title: 游戏配置
-    description: 在这里统一管理影响游戏呈现与启动体验的配置项。
-    unavailable: 当前没有可编辑的游戏。
+    description: 编辑当前游戏的基础信息、资源与相关配置
     loadFailed: 读取游戏配置失败
     saveFailed: 保存游戏配置失败
-    retry: 重新加载
-    coverImage:
-      label: 封面图
-      description: 封面图会作为游戏标题界面的背景图片显示。
-      empty: 点击选择封面图
+    fields:
+      gameName:
+        label: 名称
+      description:
+        label: 简介
+      gameKey:
+        label: 游戏识别码
+        description: 当前游戏的唯一标识，用于与其他游戏隔离数据
+        regenerate: 重新生成
+      packageName:
+        label: 应用包名
+        description: 打包与导出时使用的应用标识
+        placeholder: org.example.demo
+      defaultLanguage:
+        label: 默认语言
+        placeholder: 选择语言
+        empty: 自动检测
+      titleBgm:
+        label: 标题背景音乐
+        pickerTitle: 选择标题背景音乐
+      titleImg:
+        label: 标题背景图片
+      gameLogo:
+        label: 启动图片
+        description: 启动图片会在游戏进入时按顺序播放
+      enableAppreciation:
+        label: 鉴赏模式
+        description: 在标题界面菜单中显示鉴赏模式
+      showPanic:
+        label: 紧急回避
+        description: 启用后，按下 Esc 键可显示紧急回避画面
+      steamAppId:
+        label: Steam AppID
+        description: Steam 平台识别当前游戏所需的 AppID，调用 Steam 功能依赖此项
+      legacyExpressionBlendMode:
+        label: Live2D 旧版表情混合模式
+        description: 为旧版 Live2D 表情混合提供兼容回退，显示异常时可尝试开启
+      maxLine:
+        label: 文本框最大行数
+      lineHeight:
+        label: 文本框行高
+    validation:
+      maxLineInvalid: 文本框最大显示行数必须是正整数，或留空
+      lineHeightInvalid: 文本框行高必须是正数，或留空
+      packageNameInvalid: 包名必须使用小写点分标识，例如 org.example.demo，或留空
+      steamAppIdInvalid: Steam AppID 必须是有效的整数，或留空
+    titleImg:
+      empty: 点击选择标题背景图片
       replace: 更换
-      pickerTitle: 选择封面图
-      previewAlt: 当前封面图预览
-    startupImages:
-      label: 启动图
-      description: 启动图会在游戏进入时按顺序播放。
-      add: 添加启动图
-      remove: 移除启动图
-      pickerTitle: 选择启动图
-      previewAlt: 启动图预览
+      pickerTitle: 选择标题背景图片
+      previewAlt: 当前标题背景图片预览
+    gameLogo:
+      add: 添加启动图片
+      remove: 移除启动图片
+      pickerTitle: 选择启动图片
+      previewAlt: 启动图片预览
       count: 共 {count} 张
   effectEditor:
     title: 效果编辑器

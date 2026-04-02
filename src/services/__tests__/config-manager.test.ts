@@ -3,46 +3,41 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { configManager } from '~/services/config-manager'
 
 const {
-  getGameConfigMock,
+  refreshRegisteredGameSnapshotMock,
   setGameConfigMock,
-  updateCurrentGameLastModifiedMock,
 } = vi.hoisted(() => ({
-  getGameConfigMock: vi.fn(),
+  refreshRegisteredGameSnapshotMock: vi.fn(),
   setGameConfigMock: vi.fn(),
-  updateCurrentGameLastModifiedMock: vi.fn(),
 }))
 
 vi.mock('~/commands/game', () => ({
   gameCmds: {
-    getGameConfig: getGameConfigMock,
     setGameConfig: setGameConfigMock,
   },
 }))
 
 vi.mock('~/services/game-manager', () => ({
   gameManager: {
-    updateCurrentGameLastModified: updateCurrentGameLastModifiedMock,
+    refreshRegisteredGameSnapshot: refreshRegisteredGameSnapshotMock,
   },
 }))
 
 describe('configManager 配置管理', () => {
   beforeEach(() => {
-    getGameConfigMock.mockReset()
+    refreshRegisteredGameSnapshotMock.mockReset()
     setGameConfigMock.mockReset()
-    updateCurrentGameLastModifiedMock.mockReset()
   })
 
-  it('getConfig 会代理到 gameCmds.getGameConfig', async () => {
-    getGameConfigMock.mockResolvedValue({ gameName: 'Demo' })
+  it('setConfig 会写入配置并刷新已注册游戏快照', async () => {
+    await configManager.setConfig('/game', {
+      set: { gameName: 'Renamed' },
+      unset: [],
+    })
 
-    await expect(configManager.getConfig('/game')).resolves.toEqual({ gameName: 'Demo' })
-    expect(getGameConfigMock).toHaveBeenCalledWith('/game')
-  })
-
-  it('setConfig 会写入配置并更新当前游戏时间戳', async () => {
-    await configManager.setConfig('/game', { gameName: 'Renamed' })
-
-    expect(setGameConfigMock).toHaveBeenCalledWith('/game', { gameName: 'Renamed' })
-    expect(updateCurrentGameLastModifiedMock).toHaveBeenCalledTimes(1)
+    expect(setGameConfigMock).toHaveBeenCalledWith('/game', {
+      set: { gameName: 'Renamed' },
+      unset: [],
+    })
+    expect(refreshRegisteredGameSnapshotMock).toHaveBeenCalledWith('/game')
   })
 })

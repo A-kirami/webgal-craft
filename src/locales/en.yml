@@ -169,21 +169,61 @@ modals:
     import: Import ({count})
   gameConfig:
     title: Game Configuration
-    description: Configure the settings that shape the game's presentation and startup experience.
-    unavailable: There is no active game to edit right now.
+    description: Edit the current game's basic information, assets, and related settings
     loadFailed: Failed to load the game configuration
     saveFailed: Failed to save the game configuration
-    retry: Reload
-    coverImage:
-      label: Cover Image
-      description: The cover image is used as the background image on the title screen.
-      empty: Click to choose a cover image
+    fields:
+      gameName:
+        label: Name
+      description:
+        label: Summary
+      gameKey:
+        label: Game ID
+        description: Unique identifier for this game, used to isolate data from other games
+        regenerate: Regenerate
+      packageName:
+        label: App Package Name
+        description: Application identifier used during packaging and export
+        placeholder: org.example.demo
+      defaultLanguage:
+        label: Default Language
+        placeholder: Select a language
+        empty: Auto Detect
+      titleBgm:
+        label: Title Background Music
+        pickerTitle: Choose Title Background Music
+      titleImg:
+        label: Title Background Image
+      gameLogo:
+        label: Startup Images
+        description: Startup images are displayed in order when the game starts
+      enableAppreciation:
+        label: Appreciation Mode
+        description: Show Appreciation Mode in the title screen menu
+      showPanic:
+        label: Panic Overlay
+        description: When enabled, pressing Esc shows the panic screen
+      steamAppId:
+        label: Steam AppID
+        description: AppID required for Steam to identify this game, Steam features depend on this value
+      legacyExpressionBlendMode:
+        label: Legacy Live2D Expression Blend Mode
+        description: Compatibility fallback for legacy Live2D expression blending, try enabling this if expressions render incorrectly
+      maxLine:
+        label: Text Box Max Lines
+      lineHeight:
+        label: Text Line Height
+    validation:
+      maxLineInvalid: Max text lines must be a positive integer or left empty
+      lineHeightInvalid: Text line height must be a positive number or left empty
+      packageNameInvalid: Package name must use lowercase dot-separated identifiers like org.example.demo, or be left empty
+      steamAppIdInvalid: Steam AppID must be a valid integer, or be left empty
+    titleImg:
+      empty: Click to choose a title background image
       replace: Replace
-      pickerTitle: Choose Cover Image
-      previewAlt: Current cover image preview
-    startupImages:
-      label: Startup Images
-      description: Startup images are displayed in order when the game starts.
+      pickerTitle: Choose Title Background Image
+      previewAlt: Current title background image preview
+    gameLogo:
       add: Add Startup Image
       remove: Remove Startup Image
       pickerTitle: Choose Startup Images

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { GAME_CONFIG_IMAGE_EXTENSIONS } from '~/features/modals/game-config/game-config-images'
 
-interface CoverImagePickerProps {
+interface TitleImgPickerProps {
   backgroundRootPath: string
   gamePath: string
   serveUrl?: string
@@ -11,7 +11,7 @@ const {
   backgroundRootPath,
   gamePath,
   serveUrl,
-} = defineProps<CoverImagePickerProps>()
+} = defineProps<TitleImgPickerProps>()
 
 let modelValue = $(defineModel<string>({ default: '' }))
 
@@ -26,30 +26,21 @@ const previewPath = $computed(() => hasImage ? `game/background/${modelValue}` :
 </script>
 
 <template>
-  <section class="gap-3 grid max-w-xs w-full">
-    <div class="space-y-1">
-      <div class="font-medium">
-        {{ $t('modals.gameConfig.coverImage.label') }}
-      </div>
-      <p class="text-sm text-muted-foreground">
-        {{ $t('modals.gameConfig.coverImage.description') }}
-      </p>
-    </div>
-
+  <div class="max-w-xs w-full">
     <FilePicker
       ::="modelValue"
       :root-path="backgroundRootPath"
       :extensions="GAME_CONFIG_IMAGE_EXTENSIONS"
-      :popover-title="$t('modals.gameConfig.coverImage.pickerTitle')"
+      :popover-title="$t('modals.gameConfig.titleImg.pickerTitle')"
     >
       <template #trigger>
         <button
           type="button"
           class="group text-left w-full"
-          :aria-label="$t('modals.gameConfig.coverImage.replace')"
+          :aria-label="$t('modals.gameConfig.titleImg.replace')"
         >
           <div
-            data-testid="cover-image-surface"
+            data-testid="title-img-surface"
             :class="[
               'border rounded-md bg-muted/30 aspect-video relative overflow-hidden',
               !hasImage && 'border-dashed transition-colors duration-200 group-focus-visible:border-primary/40 group-focus-visible:bg-muted/50 group-hover:border-primary/40 group-hover:bg-muted/50',
@@ -61,7 +52,7 @@ const previewPath = $computed(() => hasImage ? `game/background/${modelValue}` :
               :root-path="gamePath"
               :serve-url="serveUrl"
               :thumbnail="COVER_THUMBNAIL"
-              :alt="$t('modals.gameConfig.coverImage.previewAlt')"
+              :alt="$t('modals.gameConfig.titleImg.previewAlt')"
               fallback-image="/placeholder.svg"
               object-fit="cover"
               class="h-full w-full"
@@ -71,7 +62,7 @@ const previewPath = $computed(() => hasImage ? `game/background/${modelValue}` :
               v-if="!hasImage"
               class="text-sm text-muted-foreground px-6 text-center border-dashed flex h-full items-center justify-center"
             >
-              {{ $t('modals.gameConfig.coverImage.empty') }}
+              {{ $t('modals.gameConfig.titleImg.empty') }}
             </div>
 
             <div
@@ -79,12 +70,12 @@ const previewPath = $computed(() => hasImage ? `game/background/${modelValue}` :
               class="bg-black/0 flex transition-colors duration-200 items-center inset-0 justify-center absolute group-focus-visible:bg-black/45 group-hover:bg-black/45"
             >
               <span class="text-sm font-medium px-4 py-2 rounded-full bg-background/95 opacity-0 shadow-sm transition-opacity duration-200 group-focus-visible:opacity-100 group-hover:opacity-100">
-                {{ $t('modals.gameConfig.coverImage.replace') }}
+                {{ $t('modals.gameConfig.titleImg.replace') }}
               </span>
             </div>
           </div>
         </button>
       </template>
     </FilePicker>
-  </section>
+  </div>
 </template>

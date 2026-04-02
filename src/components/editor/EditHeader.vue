@@ -3,6 +3,9 @@ import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { ArrowLeft, Download, Loader2, MonitorPlay, Pencil, Play, Settings } from 'lucide-vue-next'
 
 import { windowCmds } from '~/commands/window'
+import { parseGameConfigFormValues } from '~/features/modals/game-config/game-config-form'
+import { configManager } from '~/services/config-manager'
+import { gameAssetDir } from '~/services/platform/app-paths'
 import { useModalStore } from '~/stores/modal'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
@@ -28,12 +31,51 @@ const HEADER_ICON_THUMBNAIL = {
 } as const
 
 const canTestGame = $computed(() => !!workspaceStore.currentGameServeUrl && !!workspaceStore.currentGame)
+const canOpenGameConfig = $computed(() => !!workspaceStore.currentGame?.path)
 const testWindowLabel = $computed(() => (workspaceStore.currentGame ? `test-${workspaceStore.currentGame.id}` : ''))
 
 let isTestOpening = $ref(false)
 let isTestWindowActive = $ref(false)
 let unlistenWindowClosed: UnlistenFn | undefined
 let lastTestWindowLabel = $ref('')
+let isGameConfigOpening = false
+
+async function handleOpenGameConfig() {
+  const currentGame = workspaceStore.currentGame
+  const currentGameServeUrl = workspaceStore.currentGameServeUrl
+
+  if (!currentGame?.path || isGameConfigOpening) {
+    return
+  }
+
+  const gamePath = currentGame.path
+
+  isGameConfigOpening = true
+  try {
+    const [config, backgroundRootPath, bgmRootPath] = await Promise.all([
+      configManager.getConfig(gamePath),
+      gameAssetDir(gamePath, 'background'),
+      gameAssetDir(gamePath, 'bgm'),
+    ])
+
+    if (workspaceStore.currentGame?.path !== gamePath) {
+      return
+    }
+
+    modalStore.open('GameConfigModal', {
+      backgroundRootPath,
+      bgmRootPath,
+      gamePath,
+      initialValues: parseGameConfigFormValues(config),
+      serveUrl: currentGameServeUrl,
+    })
+  } catch (error) {
+    logger.error(`加载游戏配置失败: ${error}`)
+    toast.error(t('modals.gameConfig.loadFailed'))
+  } finally {
+    isGameConfigOpening = false
+  }
+}
 
 async function handleTestGame() {
   const gameUrl = workspaceStore.currentGameServeUrl
@@ -146,7 +188,14 @@ onBeforeUnmount(() => {
         />
         <span class="font-medium">{{ workspaceStore.currentGame?.metadata.name }}</span>
       </div>
-      <Button variant="ghost" size="icon" class="size-8" :title="$t('edit.header.gameSettings')" @click="modalStore.open('GameConfigModal')">
+      <Button
+        v-if="canOpenGameConfig"
+        variant="ghost"
+        size="icon"
+        class="size-8"
+        :title="$t('edit.header.gameSettings')"
+        @click="handleOpenGameConfig"
+      >
         <Pencil class="size-4" />
         <span class="sr-only">{{ $t('edit.header.gameSettings') }}</span>
       </Button>

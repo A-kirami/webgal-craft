@@ -4,7 +4,7 @@ import { defineComponent, h, ref } from 'vue'
 
 import { createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 
-import StartupImagesPicker from './StartupImagesPicker.vue'
+import GameLogoPicker from './GameLogoPicker.vue'
 
 import type { PropType } from 'vue'
 
@@ -90,21 +90,21 @@ const globalStubs = {
         slots.trigger?.(),
         h('button', {
           'type': 'button',
-          'data-testid': 'add-startup-image',
+          'data-testid': 'add-game-logo',
           'onClick': () => emit('update:modelValue', 'added-image.webp'),
-        }, 'add-startup-image'),
+        }, 'add-game-logo'),
         h('button', {
           'type': 'button',
-          'data-testid': 'add-duplicate-startup-image',
+          'data-testid': 'add-duplicate-game-logo',
           'onClick': () => emit('update:modelValue', 'opening.webp'),
-        }, 'add-duplicate-startup-image'),
+        }, 'add-duplicate-game-logo'),
       ])
     },
   }),
 }
 
-const StartupImagesPickerHarness = defineComponent({
-  name: 'StartupImagesPickerHarness',
+const GameLogoPickerHarness = defineComponent({
+  name: 'GameLogoPickerHarness',
   props: {
     initialValue: {
       type: Array as PropType<string[]>,
@@ -115,7 +115,7 @@ const StartupImagesPickerHarness = defineComponent({
     const value = ref([...props.initialValue])
 
     return () => h('div', [
-      h(StartupImagesPicker, {
+      h(GameLogoPicker, {
         'modelValue': value.value,
         'gamePath': '/games/demo',
         'backgroundRootPath': '/games/demo/game/background',
@@ -124,16 +124,16 @@ const StartupImagesPickerHarness = defineComponent({
           value.value = nextValue
         },
       }),
-      h('output', { 'data-testid': 'startup-value' }, value.value.join('|')),
+      h('output', { 'data-testid': 'game-logo-value' }, value.value.join('|')),
     ])
   },
 })
 
-describe('StartupImagesPicker', () => {
+describe('GameLogoPicker', () => {
   it('会渲染启动图列表和添加入口', async () => {
     filePickerRenderSpy.mockReset()
 
-    renderInBrowser(StartupImagesPickerHarness, {
+    renderInBrowser(GameLogoPickerHarness, {
       props: {
         initialValue: ['opening.webp', 'enter.webp'],
       },
@@ -145,37 +145,19 @@ describe('StartupImagesPicker', () => {
       },
     })
 
-    const openingPreview = await page.getByRole('img', { name: 'modals.gameConfig.startupImages.previewAlt' }).first().element()
+    const openingPreview = await page.getByRole('img', { name: 'modals.gameConfig.gameLogo.previewAlt' }).first().element()
 
     expect(openingPreview.dataset.path).toBe('game/background/opening.webp')
     expect(filePickerRenderSpy).toHaveBeenLastCalledWith(expect.objectContaining({
       extensions: ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
       rootPath: '/games/demo/game/background',
     }))
-    await expect.element(page.getByRole('button', { name: 'modals.gameConfig.startupImages.remove' }).first()).toBeVisible()
-    await expect.element(page.getByText('modals.gameConfig.startupImages.add')).toBeVisible()
-  })
-
-  it('启动图卡片只显示图片，不显示文件名文案', async () => {
-    renderInBrowser(StartupImagesPickerHarness, {
-      props: {
-        initialValue: ['cg/opening.webp', 'logos/enter.webp'],
-      },
-      browser: {
-        i18nMode: 'lite',
-      },
-      global: {
-        stubs: globalStubs,
-      },
-    })
-
-    await expect.element(page.getByTestId('startup-value')).toHaveTextContent('cg/opening.webp|logos/enter.webp')
-    await expect.element(page.getByTestId('startup-images-scroll-area').getByText('opening.webp')).not.toBeInTheDocument()
-    await expect.element(page.getByTestId('startup-images-scroll-area').getByText('enter.webp')).not.toBeInTheDocument()
+    await expect.element(page.getByRole('button', { name: 'modals.gameConfig.gameLogo.remove' }).first()).toBeVisible()
+    await expect.element(page.getByText('modals.gameConfig.gameLogo.add')).toBeVisible()
   })
 
   it('点击删除按钮后会更新启动图数组', async () => {
-    renderInBrowser(StartupImagesPickerHarness, {
+    renderInBrowser(GameLogoPickerHarness, {
       props: {
         initialValue: ['opening.webp', 'enter.webp'],
       },
@@ -187,13 +169,13 @@ describe('StartupImagesPicker', () => {
       },
     })
 
-    await page.getByRole('button', { name: 'modals.gameConfig.startupImages.remove' }).first().click()
+    await page.getByRole('button', { name: 'modals.gameConfig.gameLogo.remove' }).first().click()
 
-    await expect.element(page.getByTestId('startup-value')).toHaveTextContent('enter.webp')
+    await expect.element(page.getByTestId('game-logo-value')).toHaveTextContent('enter.webp')
   })
 
   it('点击添加入口后会追加图片', async () => {
-    renderInBrowser(StartupImagesPickerHarness, {
+    renderInBrowser(GameLogoPickerHarness, {
       props: {
         initialValue: ['opening.webp'],
       },
@@ -205,13 +187,13 @@ describe('StartupImagesPicker', () => {
       },
     })
 
-    await page.getByTestId('add-startup-image').click()
+    await page.getByTestId('add-game-logo').click()
 
-    await expect.element(page.getByTestId('startup-value')).toHaveTextContent('opening.webp|added-image.webp')
+    await expect.element(page.getByTestId('game-logo-value')).toHaveTextContent('opening.webp|added-image.webp')
   })
 
   it('重复选择已有图片时不会重复追加', async () => {
-    renderInBrowser(StartupImagesPickerHarness, {
+    renderInBrowser(GameLogoPickerHarness, {
       props: {
         initialValue: ['opening.webp'],
       },
@@ -223,8 +205,8 @@ describe('StartupImagesPicker', () => {
       },
     })
 
-    await page.getByTestId('add-duplicate-startup-image').click()
+    await page.getByTestId('add-duplicate-game-logo').click()
 
-    await expect.element(page.getByTestId('startup-value')).toHaveTextContent(/^opening\.webp$/)
+    await expect.element(page.getByTestId('game-logo-value')).toHaveTextContent(/^opening\.webp$/)
   })
 })

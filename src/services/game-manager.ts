@@ -38,7 +38,7 @@ async function getGameMetadata(gamePath: string): Promise<GameMetadata> {
   const gameConfig = await gameCmds.getGameConfig(gamePath)
 
   return {
-    name: gameConfig.gameName,
+    name: gameConfig.gameName ?? '',
   }
 }
 
@@ -81,17 +81,17 @@ function withGamePreviewCacheVersion(
 
 async function getGamePreviewAssets(gamePath: string): Promise<GamePreviewAssets> {
   const gameConfig = await gameCmds.getGameConfig(gamePath)
-  return await resolveGamePreviewAssets(gamePath, gameConfig.titleImg)
+  return await resolveGamePreviewAssets(gamePath, gameConfig.titleImg ?? '')
 }
 
 async function getGameSnapshot(gamePath: string): Promise<Pick<Game, 'metadata' | 'previewAssets'>> {
   const gameConfig = await gameCmds.getGameConfig(gamePath)
   const cacheVersion = Date.now()
   const metadata = {
-    name: gameConfig.gameName,
+    name: gameConfig.gameName ?? '',
   }
   const previewAssets = withGamePreviewCacheVersion(
-    await resolveGamePreviewAssets(gamePath, gameConfig.titleImg),
+    await resolveGamePreviewAssets(gamePath, gameConfig.titleImg ?? ''),
     cacheVersion,
   )
 
@@ -99,6 +99,25 @@ async function getGameSnapshot(gamePath: string): Promise<Pick<Game, 'metadata' 
     metadata,
     previewAssets,
   }
+}
+
+async function refreshRegisteredGameSnapshot(gamePath: string): Promise<void> {
+  const game = await db.games.where('path').equals(gamePath).first()
+  if (!game) {
+    return
+  }
+
+  const snapshot = await getGameSnapshot(gamePath)
+  const snapshotVersion = snapshot.previewAssets.icon.cacheVersion
+    ?? snapshot.previewAssets.cover.cacheVersion
+    ?? Date.now()
+  const patch: Partial<Pick<Game, 'lastModified' | 'metadata' | 'previewAssets'>> = {
+    lastModified: snapshotVersion,
+    ...snapshot,
+  }
+
+  await db.games.update(game.id, patch)
+  applyCurrentGamePatch(game.id, patch)
 }
 
 function applyCurrentGamePatch(gameId: string, patch: Partial<Pick<Game, 'lastModified' | 'metadata' | 'previewAssets'>>) {
@@ -198,7 +217,14 @@ async function createGame(gameName: string, gamePath: string, enginePath: string
     logger.info(`[游戏 ${gameName}] 复制引擎文件完成`)
 
     // 3. 设置游戏配置
-    await gameCmds.setGameConfig(gamePath, { gameName })
+    const gameKey = crypto.randomUUID()
+    await gameCmds.setGameConfig(gamePath, {
+      set: {
+        gameKey,
+        gameName,
+      },
+      unset: [],
+    })
     logger.info(`[游戏 ${gameName}] 设置游戏配置`)
 
     const snapshot = await getGameSnapshot(gamePath)
@@ -255,7 +281,10 @@ async function renameGame(id: string, newName: string): Promise<void> {
     throw new AppError('IO_ERROR', '游戏不存在')
   }
 
-  await gameCmds.setGameConfig(game.path, { gameName: newName })
+  await gameCmds.setGameConfig(game.path, {
+    set: { gameName: newName },
+    unset: [],
+  })
 
   const patch = {
     lastModified: Date.now(),
@@ -350,6 +379,7 @@ export const gameManager = {
   getGameMetadata,
   getGamePreviewAssets,
   getGameSnapshot,
+  refreshRegisteredGameSnapshot,
   registerGame,
   createGame,
   deleteGame,

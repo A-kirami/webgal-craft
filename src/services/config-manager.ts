@@ -1,12 +1,14 @@
 import { gameCmds } from '~/commands/game'
 import { gameManager } from '~/services/game-manager'
 
+import type { GameConfig, GameConfigPatch } from '~/commands/game'
+
 /**
  * 获取游戏配置
  * @param gamePath 游戏路径
  * @returns 游戏配置对象
  */
-async function getConfig(gamePath: string) {
+async function getConfig(gamePath: string): Promise<GameConfig> {
   return await gameCmds.getGameConfig(gamePath)
 }
 
@@ -15,9 +17,9 @@ async function getConfig(gamePath: string) {
  * @param gamePath 游戏路径
  * @param config 配置对象
  */
-async function setConfig(gamePath: string, config: Record<string, string>) {
+async function setConfig(gamePath: string, config: GameConfigPatch) {
   await gameCmds.setGameConfig(gamePath, config)
-  gameManager.updateCurrentGameLastModified()
+  await gameManager.refreshRegisteredGameSnapshot(gamePath)
 }
 
 /**
