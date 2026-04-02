@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { CopyMinus, FilePlus, FolderPlus, Layers, RotateCw } from '@lucide/vue'
 import { dirname } from '@tauri-apps/api/path'
-import { CopyMinus, FilePlus, FolderPlus, Layers, RotateCw } from 'lucide-vue-next'
 
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import {

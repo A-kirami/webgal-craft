@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Code, Paintbrush, PanelRight } from 'lucide-vue-next'
+import { Code, Paintbrush, PanelRight } from '@lucide/vue'
 
 import { toggleVariants } from '~/components/ui/toggle'
 import { useEditorStore } from '~/stores/editor'

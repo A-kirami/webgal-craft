@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChartSpline, FileText, Image as ImageIcon } from 'lucide-vue-next'
+import { ChartSpline, FileText, Image as ImageIcon } from '@lucide/vue'
 
 import { fsCmds } from '~/commands/fs'
 import {

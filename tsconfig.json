@@ -1,74 +1,9 @@
 {
-  "compilerOptions": {
-    /* Language and Environment */
-    "target": "ES2022",
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "jsx": "preserve",
-    "jsxImportSource": "vue",
-    "useDefineForClassFields": true,
-
-    /* Modules */
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": {
-      "~/*": ["src/*"]
-    },
-    "types": [
-      "vite/client",
-      "vite-plugin-vue-meta-layouts/client",
-      "vue-macros/macros-global",
-      "unplugin-info/client",
-      "./src/route-map.d.ts"
-    ],
-    "rootDir": ".",
-
-    /* Type Checking */
-    "strict": true,
-    "noFallthroughCasesInSwitch": true,
-
-    /* JavaScript Support */
-    "allowJs": true,
-
-    /* Interop Constraints */
-    "isolatedModules": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-
-    /* Emit */
-    "noEmit": true,
-    "removeComments": true,
-
-    /* Completeness */
-    "skipLibCheck": true
-  },
-  "vueCompilerOptions": {
-    "plugins": [
-      "vue-macros/volar",
-      "unplugin-vue-reactivity-function/volar",
-      "vue-router/volar/sfc-typed-router",
-      "vue-router/volar/sfc-route-blocks"
-    ],
-    "vueMacros": {
-      "shortVmodel": {
-        "prefix": "::",
-      },
-      "exportExpose": true
-    },
-    "reactivityFunction": {
-      "ignore": ["$fetch"],
-    },
-  },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.d.ts",
-    "src/**/*.tsx",
-    "src/**/*.vue",
-    "vite.config.ts",
-    "unocss.config.ts",
-    "eslint.config.js",
-    "stylelint.config.js"
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" },
+    { "path": "./tsconfig.tooling.json" },
+    { "path": "./tsconfig.vitest.json" }
   ]
 }

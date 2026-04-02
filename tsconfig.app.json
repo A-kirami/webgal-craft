@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"],
+    "jsx": "preserve",
+    "jsxImportSource": "vue",
+    "useDefineForClassFields": true,
+    "types": [
+      "vite/client",
+      "vite-plugin-vue-meta-layouts/client",
+      "vue-macros/macros-global",
+      "unplugin-info/client",
+      "./src/route-map.d.ts"
+    ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue"
+  ],
+  "exclude": [
+    "src/**/__tests__/**",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts"
+  ]
+}

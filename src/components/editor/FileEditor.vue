@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { Code, File, FilePlus2, FileWarning } from '@lucide/vue'
 import { basename } from '@tauri-apps/api/path'
-import { Code, File, FilePlus2, FileWarning } from 'lucide-vue-next'
 
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { useModalStore } from '~/stores/modal'

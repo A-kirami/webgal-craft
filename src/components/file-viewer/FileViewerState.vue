@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AlertTriangle, FolderOpen } from 'lucide-vue-next'
+import { AlertTriangle, FolderOpen } from '@lucide/vue'
 
 interface FileViewerStateProps {
   isLoading: boolean

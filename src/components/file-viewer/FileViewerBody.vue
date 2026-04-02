@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { File, FileImage, FileJson2, FileMusic, FileVideo, Folder } from 'lucide-vue-next'
+import { File, FileImage, FileJson2, FileMusic, FileVideo, Folder } from '@lucide/vue'
 
 import { loadFileViewerImageDimensions } from '~/components/file-viewer/fileViewerImageDimensions'
 import FileViewerImageHoverCard from '~/components/file-viewer/FileViewerImageHoverCard.vue'

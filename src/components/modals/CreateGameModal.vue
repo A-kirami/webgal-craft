@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FolderOpen } from 'lucide-vue-next'
+import { FolderOpen } from '@lucide/vue'
 
 import { FormField } from '~/components/ui/form'
 import { useCreateGameForm } from '~/features/modals/create-game/useCreateGameForm'

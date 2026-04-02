@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowUp, EllipsisVertical, LayoutGrid, LayoutList } from 'lucide-vue-next'
+import { ArrowDown, ArrowUp, EllipsisVertical, LayoutGrid, LayoutList } from '@lucide/vue'
 
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 

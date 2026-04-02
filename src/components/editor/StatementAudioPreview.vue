@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Pause, Play } from 'lucide-vue-next'
+import { Pause, Play } from '@lucide/vue'
 import WaveSurfer from 'wavesurfer.js'
 
 import type { WaveSurferOptions } from 'wavesurfer.js'

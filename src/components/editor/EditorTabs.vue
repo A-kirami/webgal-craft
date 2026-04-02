@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FileText, X } from 'lucide-vue-next'
+import { FileText, X } from '@lucide/vue'
 
 import { getCloseTabDecision, shouldFixPreviewTab } from '~/features/editor/editor-tabs/editor-tabs'
 import { useEditorStore } from '~/stores/editor'

@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { FolderOpen, Plus } from '@lucide/vue'
 import { open } from '@tauri-apps/plugin-dialog'
-import { FolderOpen, Plus } from 'lucide-vue-next'
 
 import { gameManager } from '~/services/game-manager'
 import { useModalStore } from '~/stores/modal'

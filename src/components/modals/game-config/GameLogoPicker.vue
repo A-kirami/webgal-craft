@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Plus, X } from 'lucide-vue-next'
+import { Plus, X } from '@lucide/vue'
 
 import { GAME_CONFIG_IMAGE_EXTENSIONS } from '~/features/modals/game-config/game-config-images'
 

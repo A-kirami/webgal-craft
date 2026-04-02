@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { Copy, ExternalLink, Link, RotateCw } from '@lucide/vue'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { Copy, ExternalLink, Link, RotateCw } from 'lucide-vue-next'
 
 import { gameCmds } from '~/commands/game'
 import {

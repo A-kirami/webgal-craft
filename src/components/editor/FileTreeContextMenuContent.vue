@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { dirname } from '@tauri-apps/api/path'
-import { openPath } from '@tauri-apps/plugin-opener'
 import {
   ClipboardPaste,
   Copy,
@@ -10,7 +8,9 @@ import {
   Pencil,
   Scissors,
   Trash2,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
+import { dirname } from '@tauri-apps/api/path'
+import { openPath } from '@tauri-apps/plugin-opener'
 
 import { useFileClipboard } from '~/features/editor/file-tree/useFileClipboard'
 import { gameFs } from '~/services/game-fs'

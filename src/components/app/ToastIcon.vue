@@ -1,5 +1,5 @@
 <script setup lang="tsx">
-import { CircleCheckBig, Info, OctagonX, TriangleAlert } from 'lucide-vue-next'
+import { CircleCheckBig, Info, OctagonX, TriangleAlert } from '@lucide/vue'
 
 const { type } = $defineProps<{
   type: IconType

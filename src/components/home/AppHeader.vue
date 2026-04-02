@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { Info, Settings } from '@lucide/vue'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { Info, Settings } from 'lucide-vue-next'
 
 import { useModalStore } from '~/stores/modal'
 

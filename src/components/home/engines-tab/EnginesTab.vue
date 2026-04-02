@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Box, Download, Plus } from 'lucide-vue-next'
+import { Box, Download, Plus } from '@lucide/vue'
 
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import { useEnginesTabController } from '~/features/home/engines-tab/useEnginesTabController'

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Download, Plus, Scroll } from 'lucide-vue-next'
+import { Download, Plus, Scroll } from '@lucide/vue'
 
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import { useGamesTabController } from '~/features/home/games-tab/useGamesTabController'

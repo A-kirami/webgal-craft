@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Check, Image, LayoutGrid, LayoutList, LayoutTemplate, MicVocal, Minus, Music, Plus, Search, UserRound, Video } from 'lucide-vue-next'
+import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Check, Image, LayoutGrid, LayoutList, LayoutTemplate, MicVocal, Minus, Music, Plus, Search, UserRound, Video } from '@lucide/vue'
 
 import { canCreateAssetFile } from '~/components/editor/asset-file-defaults'
 import { usePreferenceStore } from '~/stores/preference'

@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { ArrowLeft, Download, Loader2, MonitorPlay, Pencil, Play, Settings } from '@lucide/vue'
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
-import { ArrowLeft, Download, Loader2, MonitorPlay, Pencil, Play, Settings } from 'lucide-vue-next'
 
 import { windowCmds } from '~/commands/window'
 import { parseGameConfigFormValues } from '~/features/modals/game-config/game-config-form'

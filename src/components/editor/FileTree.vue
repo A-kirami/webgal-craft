@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends object">
-import { LucideFile, LucideFolder, LucideFolderOpen } from 'lucide-vue-next'
+import { LucideFile, LucideFolder, LucideFolderOpen } from '@lucide/vue'
 
 import FileTreeContextMenu from '~/components/editor/FileTreeContextMenu.vue'
 import { useFileTreeController } from '~/features/editor/file-tree/useFileTreeController'

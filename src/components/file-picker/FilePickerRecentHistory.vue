@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Trash2 } from 'lucide-vue-next'
+import { Trash2 } from '@lucide/vue'
 
 import { getFilePickerName } from '~/features/file-picker/file-picker'
 

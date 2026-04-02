@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { File, FileImage, FileJson2, FileMusic, FileVideo, FileVolume, Folder } from '@lucide/vue'
 import { basename, join } from '@tauri-apps/api/path'
-import { File, FileImage, FileJson2, FileMusic, FileVideo, FileVolume, Folder } from 'lucide-vue-next'
 
 import { canCreateAssetFile, resolveAssetFileNameParts } from '~/components/editor/asset-file-defaults'
 import FileTreeContextMenuContent from '~/components/editor/FileTreeContextMenuContent.vue'

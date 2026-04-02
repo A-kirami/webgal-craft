@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FolderOpen, MoreHorizontal } from 'lucide-vue-next'
+import { FolderOpen, MoreHorizontal } from '@lucide/vue'
 
 import { useBreadcrumbCollapse } from '~/composables/useBreadcrumbCollapse'
 

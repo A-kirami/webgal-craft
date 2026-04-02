@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Box, CheckCircle2, Scroll } from 'lucide-vue-next'
+import { Box, CheckCircle2, Scroll } from '@lucide/vue'
 
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 

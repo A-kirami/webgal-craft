@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { cn } from "~/lib/utils";
-import { LucideChevronDown } from "lucide-vue-next";
+import { LucideChevronDown } from "@lucide/vue";
 import type { HTMLAttributes } from "vue";
 
 const props = defineProps<{

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FileText, Plus } from 'lucide-vue-next'
+import { FileText, Plus } from '@lucide/vue'
 </script>
 
 <template>

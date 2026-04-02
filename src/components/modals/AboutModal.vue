@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { Bug, Code, Dot, House, Tag } from '@lucide/vue'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import { Bug, Code, Dot, House, Tag } from 'lucide-vue-next'
 
 import { getVersion } from '~/utils/metadata'
 

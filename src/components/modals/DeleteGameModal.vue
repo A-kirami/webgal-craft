@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { TriangleAlert } from 'lucide-vue-next'
+import { TriangleAlert } from '@lucide/vue'
 
 import { Game } from '~/database/model'
 import { gameManager } from '~/services/game-manager'

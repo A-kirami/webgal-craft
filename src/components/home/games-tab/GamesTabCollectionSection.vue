@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Folder, Scroll, Trash2 } from 'lucide-vue-next'
+import { Folder, Scroll, Trash2 } from '@lucide/vue'
 
 import AssetImage from '~/components/shared/AssetImage.vue'
 import { useTauriDropZone } from '~/composables/useTauriDropZone'

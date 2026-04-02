@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { TriangleAlert } from 'lucide-vue-next'
+import { TriangleAlert } from '@lucide/vue'
 
 import { gameFs } from '~/services/game-fs'
 import { usePreferenceStore } from '~/stores/preference'

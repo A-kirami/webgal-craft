@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "~/*": ["./src/*"]
+    },
+    "rootDir": ".",
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "vueCompilerOptions": {
+    "plugins": [
+      "vue-macros/volar",
+      "unplugin-vue-reactivity-function/volar",
+      "vue-router/volar/sfc-typed-router",
+      "vue-router/volar/sfc-route-blocks"
+    ],
+    "vueMacros": {
+      "shortVmodel": {
+        "prefix": "::"
+      },
+      "exportExpose": true
+    },
+    "reactivityFunction": {
+      "ignore": ["$fetch"]
+    }
+  }
+}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { X } from 'lucide-vue-next'
+import { X } from '@lucide/vue'
 
 import { useDirectoryReader } from '~/composables/useDirectoryReader'
 import { useFilePickerController } from '~/features/file-picker/useFilePickerController'

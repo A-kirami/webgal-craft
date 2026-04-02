@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Grid, List, Search } from 'lucide-vue-next'
+import { Grid, List, Search } from '@lucide/vue'
 
 import { resolveHomeTabDefinition } from '~/features/home/home-tabs'
 import { usePreferenceStore } from '~/stores/preference'
