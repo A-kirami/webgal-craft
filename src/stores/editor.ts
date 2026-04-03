@@ -318,13 +318,12 @@ export const useEditorStore = defineStore('editor', () => {
     await saveHooks.get(path)?.(path)
   }
 
-  function runPostSaveEffects(path: string, savedContent: string): void {
-    const documentState = getDocumentState(path)
-    if (!documentState) {
-      return
-    }
-
-    switch (documentState.model.kind) {
+  function runPostSaveEffects(
+    path: string,
+    savedContent: string,
+    savedKind: DocumentState['model']['kind'],
+  ): void {
+    switch (savedKind) {
       case 'scene': {
         const selection = getSceneSelection(path)
         const sceneCursor = resolveSceneCursor(savedContent, selection?.lastLineNumber)
@@ -332,7 +331,9 @@ export const useEditorStore = defineStore('editor', () => {
         return
       }
       case 'template': {
-        void debugCommander.refetchTemplates()
+        void debugCommander.refetchTemplates().catch((error) => {
+          handleError(new AppError('EDITOR_ERROR', '刷新模板失败', { cause: error }), { silent: true })
+        })
         return
       }
       default: {
@@ -410,7 +411,7 @@ export const useEditorStore = defineStore('editor', () => {
     const saveSnapshot = createEditorDocumentSaveSnapshot(documentSaveContext, path)
     await runSaveHook(path)
     const savedContent = await saveEditorDocument(documentSaveContext, path, saveSnapshot)
-    runPostSaveEffects(path, savedContent)
+    runPostSaveEffects(path, savedContent, saveSnapshot.docEntry.model.kind)
     await runSaveHook(path)
   }
 
