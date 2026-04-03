@@ -15,7 +15,7 @@
     "typecheck:node": "vue-tsc -p tsconfig.node.json",
     "typecheck:test": "vue-tsc -p tsconfig.test.json",
     "test": "bun test:unit && bun test:browser && bun test:integration",
-    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
+    "test:rust": "cargo test --locked --manifest-path src-tauri/Cargo.toml",
     "test:coverage": "vitest run --project unit --coverage",
     "test:unit": "vitest run --project unit",
     "test:browser": "vitest run --project browser",
