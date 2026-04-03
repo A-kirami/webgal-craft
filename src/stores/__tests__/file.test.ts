@@ -37,8 +37,8 @@ const {
 }))
 
 const emittedEvents: Record<string, unknown>[] = []
-const workspaceStoreState = reactive<{ CWD?: string }>({
-  CWD: '/workspace',
+let workspaceStoreState = reactive<{ CWD?: string }>({
+  CWD: undefined,
 })
 
 let watchHandler: ((event: Record<string, unknown>) => Promise<void>) | undefined
@@ -155,7 +155,9 @@ describe('文件状态仓库', () => {
     })
     emittedEvents.length = 0
     watchHandler = undefined
-    workspaceStoreState.CWD = '/workspace'
+    workspaceStoreState = reactive({
+      CWD: undefined,
+    })
     useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
 
     watchFsMock.mockImplementation(async (_path: string, handler: typeof watchHandler) => {
@@ -192,8 +194,10 @@ describe('文件状态仓库', () => {
     })
 
     const store = useFileStore()
-
-    await store.initialize()
+    workspaceStoreState.CWD = '/workspace'
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
     await watchHandler?.({
       type: { create: {} },
       paths: ['/workspace/game/new.txt'],
@@ -227,8 +231,10 @@ describe('文件状态仓库', () => {
     ])
 
     const store = useFileStore()
-
-    await store.initialize()
+    workspaceStoreState.CWD = '/workspace'
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
     await watchHandler?.({
       type: { modify: { kind: 'rename' } },
       paths: ['/workspace/game/old.txt', '/workspace/game/new.txt'],
@@ -258,9 +264,11 @@ describe('文件状态仓库', () => {
     })
     readDirectoryItemsCachedMock.mockResolvedValue([])
 
-    const store = useFileStore()
-
-    await store.initialize()
+    useFileStore()
+    workspaceStoreState.CWD = '/workspace'
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
     await watchHandler?.({
       type: { modify: { kind: 'data' } },
       paths: ['/workspace/game/unloaded.txt'],
@@ -269,6 +277,53 @@ describe('文件状态仓库', () => {
     expect(emittedEvents).toContainEqual(expect.objectContaining({
       type: 'file:modified',
       path: '/workspace/game/unloaded.txt',
+    }))
+  })
+
+  it('未加载到缓存的路径收到 remove 事件时仍会发布删除通知', async () => {
+    existsMock.mockResolvedValue(true)
+    readDirectoryItemsCachedMock.mockResolvedValue([])
+
+    useFileStore()
+    workspaceStoreState.CWD = '/workspace'
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+    await watchHandler?.({
+      type: { remove: { kind: 'file' } },
+      paths: ['/workspace/game/unloaded.txt'],
+    })
+
+    expect(emittedEvents).toContainEqual(expect.objectContaining({
+      type: 'file:removed',
+      path: '/workspace/game/unloaded.txt',
+    }))
+  })
+
+  it('未加载到缓存的路径收到 rename 事件时仍会发布重命名通知', async () => {
+    existsMock.mockResolvedValue(true)
+    statMock.mockImplementation(async (path: string) => {
+      if (path === '/workspace/game/renamed.txt') {
+        return createStatResult(path, false)
+      }
+      return createStatResult(path, true)
+    })
+    readDirectoryItemsCachedMock.mockResolvedValue([])
+
+    useFileStore()
+    workspaceStoreState.CWD = '/workspace'
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+    await watchHandler?.({
+      type: { modify: { kind: 'rename' } },
+      paths: ['/workspace/game/original.txt', '/workspace/game/renamed.txt'],
+    })
+
+    expect(emittedEvents).toContainEqual(expect.objectContaining({
+      type: 'file:renamed',
+      oldPath: '/workspace/game/original.txt',
+      newPath: '/workspace/game/renamed.txt',
     }))
   })
 })

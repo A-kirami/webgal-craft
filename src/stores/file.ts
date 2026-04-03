@@ -58,6 +58,8 @@ export interface DirItem extends FileSystemItemBase {
 
 export type FileSystemItem = FileItem | DirItem
 
+type RemovedEntryKind = 'file' | 'folder' | undefined
+
 /**
  * 文件系统状态管理
  */
@@ -462,9 +464,15 @@ export const useFileStore = defineStore('file', () => {
   /**
    * 处理文件删除事件
    */
-  async function handleRemoveEvent(path: string): Promise<void> {
+  async function handleRemoveEvent(path: string, removedKind?: RemovedEntryKind): Promise<void> {
     const item = getItemByPath(path)
     if (!item) {
+      if (removedKind === 'file' || removedKind === 'folder') {
+        fileSystemEvents.emit({
+          type: removedKind === 'folder' ? 'directory:removed' : 'file:removed',
+          path,
+        })
+      }
       await invalidateParentDirectoryCache(path)
       await invalidateDirectoryCacheSafe(path, true)
       return
@@ -486,6 +494,20 @@ export const useFileStore = defineStore('file', () => {
   async function handleRenameEvent(newPath: string, oldPath: string): Promise<void> {
     const item = getItemByPath(oldPath)
     if (!item) {
+      const renamedFileInfo = await stat(newPath)
+      fileSystemEvents.emit({
+        type: renamedFileInfo.isDirectory ? 'directory:renamed' : 'file:renamed',
+        oldPath,
+        newPath,
+      })
+      const oldParentPath = await join(oldPath, '..')
+      const newParentPath = await join(newPath, '..')
+      await Promise.all([
+        invalidateDirectoryCacheSafe(oldParentPath),
+        invalidateDirectoryCacheSafe(newParentPath),
+        invalidateDirectoryCacheSafe(oldPath, true),
+        invalidateDirectoryCacheSafe(newPath, true),
+      ])
       return
     }
 
@@ -570,7 +592,12 @@ export const useFileStore = defineStore('file', () => {
         const parentId = pathToId.get(parentPath)
         await handleCreateEvent(path, parentId)
       } else if (isEventType(type, 'remove')) {
-        await handleRemoveEvent(path)
+        const removeType = type as { remove?: { kind?: RemovedEntryKind | 'any' | 'other' } }
+        const removedKind = removeType.remove?.kind
+        await handleRemoveEvent(
+          path,
+          removedKind === 'file' || removedKind === 'folder' ? removedKind : undefined,
+        )
       } else if (isEventType(type, 'modify')) {
         const modifyType = type as { modify: { kind?: string } }
         if (modifyType.modify.kind === 'rename') {
@@ -609,6 +636,9 @@ export const useFileStore = defineStore('file', () => {
     if (!workspaceStore.CWD) {
       return
     }
+    if (unwatch) {
+      return
+    }
 
     try {
       const rootPath = await gameRootDir(workspaceStore.CWD)
@@ -625,9 +655,9 @@ export const useFileStore = defineStore('file', () => {
   watch(() => workspaceStore.CWD, async (newPath) => {
     clear()
     if (newPath) {
-      await initialize()
+      await initialize().catch(() => undefined)
     }
-  })
+  }, { immediate: true })
 
   return $$({
     getFolderContents,

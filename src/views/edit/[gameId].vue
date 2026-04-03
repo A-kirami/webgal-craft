@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ResizablePanel } from '~/components/ui/resizable'
+import { useAnimationTableSyncBootstrap } from '~/features/editor/animation/useAnimationTableSyncBootstrap'
 import { createEditorShortcutDefinitions } from '~/features/editor/shortcut/definitions'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
+import { useFileStore } from '~/stores/file'
 import { useModalStore } from '~/stores/modal'
 import { usePreferenceStore } from '~/stores/preference'
 
@@ -12,9 +14,12 @@ interface EditorPanelHandle {
 }
 
 const editorStore = useEditorStore()
+useFileStore()
 const modalStore = useModalStore()
 const preferenceStore = usePreferenceStore()
 const editorPanelRef = useTemplateRef<EditorPanelHandle>('editorPanel')
+
+useAnimationTableSyncBootstrap()
 
 const currentEditorMode = computed(() => {
   const currentState = editorStore.currentState
