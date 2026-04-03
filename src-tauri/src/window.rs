@@ -149,3 +149,40 @@ pub fn create_main<R: Runtime>(
 ) -> tauri::Result<tauri::WebviewWindow<R>> {
     WindowConfig::main(title).build(handle)
 }
+
+#[cfg(test)]
+mod tests {
+    use tauri::WebviewUrl;
+
+    use super::WindowConfig;
+
+    #[test]
+    fn new_window_config_uses_expected_defaults() {
+        let config = WindowConfig::new("preview", WebviewUrl::default());
+
+        assert_eq!(config.label, "preview");
+        assert!(config.title.is_none());
+        assert!(config.min_width.is_none());
+        assert!(config.min_height.is_none());
+        assert!(config.width.is_none());
+        assert!(config.height.is_none());
+        assert!(config.resizable);
+        assert!(!config.center);
+        assert!(!config.use_custom_title_bar);
+    }
+
+    #[test]
+    fn main_window_config_applies_product_defaults() {
+        let config = WindowConfig::main("WebGAL Craft");
+
+        assert_eq!(config.label, "main");
+        assert_eq!(config.title.as_deref(), Some("WebGAL Craft"));
+        assert_eq!(config.min_width, Some(620.0));
+        assert_eq!(config.min_height, Some(540.0));
+        assert_eq!(config.width, Some(1280.0));
+        assert_eq!(config.height, Some(800.0));
+        assert!(config.resizable);
+        assert!(config.center);
+        assert!(config.use_custom_title_bar);
+    }
+}

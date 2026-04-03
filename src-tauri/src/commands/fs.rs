@@ -246,7 +246,7 @@ mod tests {
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use super::read_image_dimensions;
+    use super::{count_files, is_binary_file, read_image_dimensions, validate_directory_structure};
 
     const PNG_1X1_BYTES: &[u8] = &[
         137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6,
@@ -262,6 +262,16 @@ mod tests {
         std::env::temp_dir().join(format!("webgal-craft-image-size-{unique}.png"))
     }
 
+    fn create_temp_dir(prefix: &str) -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time should be after unix epoch")
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("{prefix}-{unique}"));
+        fs::create_dir_all(&dir).expect("temp directory should be created");
+        dir
+    }
+
     #[test]
     fn read_image_dimensions_reads_png_header_without_full_decode() {
         let image_path = create_temp_image_path();
@@ -273,5 +283,74 @@ mod tests {
         let _ = fs::remove_file(&image_path);
 
         assert_eq!(dimensions, (1, 1));
+    }
+
+    #[test]
+    fn count_files_counts_nested_files_recursively() {
+        let root = create_temp_dir("webgal-craft-count-files");
+        let nested = root.join("nested").join("scene");
+        fs::create_dir_all(&nested).expect("nested directory should be created");
+        fs::write(root.join("game.txt"), "demo").expect("root file should be created");
+        fs::write(root.join("nested").join("bgm.ogg"), "bgm")
+            .expect("nested file should be created");
+        fs::write(nested.join("script.txt"), "script").expect("deep file should be created");
+
+        let file_count = count_files(root.to_string_lossy().into_owned())
+            .expect("file count should include nested files");
+
+        fs::remove_dir_all(&root).expect("temp directory should be removed");
+
+        assert_eq!(file_count, 3);
+    }
+
+    #[test]
+    fn validate_directory_structure_checks_required_files_and_directories() {
+        let root = create_temp_dir("webgal-craft-validate-structure");
+        fs::create_dir_all(root.join("game")).expect("game directory should be created");
+        fs::create_dir_all(root.join("assets")).expect("assets directory should be created");
+        fs::write(root.join("game").join("config.txt"), "Game_name: Demo;\n")
+            .expect("config file should be created");
+
+        let valid = validate_directory_structure(
+            root.to_string_lossy().into_owned(),
+            vec!["game".into(), "assets".into()],
+            vec!["game/config.txt".into()],
+        )
+        .expect("structure validation should succeed");
+        let invalid = validate_directory_structure(
+            root.to_string_lossy().into_owned(),
+            vec!["game".into(), "missing".into()],
+            vec!["game/config.txt".into()],
+        )
+        .expect("structure validation should succeed");
+
+        fs::remove_dir_all(&root).expect("temp directory should be removed");
+
+        assert!(valid);
+        assert!(!invalid);
+    }
+
+    #[test]
+    fn is_binary_file_detects_null_bytes_but_allows_plain_text() {
+        let root = create_temp_dir("webgal-craft-binary-file");
+        let text_path = root.join("script.txt");
+        let binary_path = root.join("archive.bin");
+        fs::write(&text_path, "show bg forest").expect("text file should be created");
+        fs::write(&binary_path, [0x57, 0x47, 0x00, 0x43]).expect("binary file should be created");
+
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .expect("runtime should be created");
+        let text_is_binary = runtime
+            .block_on(is_binary_file(text_path.to_string_lossy().into_owned()))
+            .expect("text detection should succeed");
+        let binary_is_binary = runtime
+            .block_on(is_binary_file(binary_path.to_string_lossy().into_owned()))
+            .expect("binary detection should succeed");
+
+        fs::remove_dir_all(&root).expect("temp directory should be removed");
+
+        assert!(!text_is_binary);
+        assert!(binary_is_binary);
     }
 }
