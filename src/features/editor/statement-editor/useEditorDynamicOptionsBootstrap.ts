@@ -18,6 +18,8 @@ const sourceVersionMap = shallowReactive(new Map<string, number>())
 
 let hasBootstrapped = false
 let hasBoundFileSystemInvalidation = false
+let fileSystemInvalidationConsumerCount = 0
+let fileSystemInvalidationScope: ReturnType<typeof effectScope> | undefined
 
 function createSourceToken(key: EditorDynamicOptionsKey, cacheKey: string): string {
   return `${key}::${cacheKey}`
@@ -134,61 +136,79 @@ function createSourceResolver(source: DynamicOptionSourceDef): (ctx: DynamicOpti
 }
 
 function bindFileSystemInvalidation() {
+  fileSystemInvalidationConsumerCount += 1
+
   if (hasBoundFileSystemInvalidation) {
     return
   }
   hasBoundFileSystemInvalidation = true
 
-  const fileSystemEvents = useFileSystemEvents()
-
-  function handlePathChange(path: string) {
+  fileSystemInvalidationScope = effectScope()
+  fileSystemInvalidationScope.run(() => {
+    const fileSystemEvents = useFileSystemEvents()
     const workspaceStore = useWorkspaceStore()
-    const gamePath = workspaceStore.CWD
-    if (!gamePath) {
-      return
-    }
-    const cacheKey = normalizeGamePath(gamePath)
-    for (const source of editorDynamicOptionSources) {
-      if (!source.invalidateByFileModified?.(path)) {
-        continue
+
+    function handlePathChange(path: string) {
+      const gamePath = workspaceStore.CWD
+      if (!gamePath) {
+        return
       }
-      invalidateSourceCache(source, cacheKey)
+      const cacheKey = normalizeGamePath(gamePath)
+      for (const source of editorDynamicOptionSources) {
+        if (!source.invalidateByFileModified?.(path)) {
+          continue
+        }
+        invalidateSourceCache(source, cacheKey)
+      }
     }
+
+    const singlePathEvents = [
+      'file:created', 'file:modified', 'file:removed',
+      'directory:created', 'directory:removed',
+    ] as const
+
+    for (const event of singlePathEvents) {
+      fileSystemEvents.on(event, e => handlePathChange(e.path))
+    }
+
+    const renamedEvents = ['file:renamed', 'directory:renamed'] as const
+
+    for (const event of renamedEvents) {
+      fileSystemEvents.on(event, (e) => {
+        handlePathChange(e.oldPath)
+        handlePathChange(e.newPath)
+      })
+    }
+  })
+}
+
+function releaseFileSystemInvalidation() {
+  fileSystemInvalidationConsumerCount = Math.max(0, fileSystemInvalidationConsumerCount - 1)
+  if (fileSystemInvalidationConsumerCount > 0) {
+    return
   }
 
-  const singlePathEvents = [
-    'file:created', 'file:modified', 'file:removed',
-    'directory:created', 'directory:removed',
-  ] as const
-
-  for (const event of singlePathEvents) {
-    fileSystemEvents.on(event, e => handlePathChange(e.path))
-  }
-
-  const renamedEvents = ['file:renamed', 'directory:renamed'] as const
-
-  for (const event of renamedEvents) {
-    fileSystemEvents.on(event, (e) => {
-      handlePathChange(e.oldPath)
-      handlePathChange(e.newPath)
-    })
-  }
+  fileSystemInvalidationScope?.stop()
+  fileSystemInvalidationScope = undefined
+  hasBoundFileSystemInvalidation = false
 }
 
 /**
- * 全局单例 bootstrap：注册动态选项解析器并绑定文件系统失效监听。
- * 仅需在编辑器入口（如 useStatementEditor）调用一次，
- * 内部通过 hasBootstrapped 标志保证幂等，子组件无需重复调用。
+ * 动态选项解析器为全局注册，文件系统失效监听则跟随当前活跃编辑器作用域数量绑定。
+ * 仅需在编辑器入口（如 useStatementEditor）调用，重复调用会复用同一套解析器与监听。
  */
 export function useEditorDynamicOptionsBootstrap() {
-  if (hasBootstrapped) {
-    return
-  }
-  hasBootstrapped = true
+  if (!hasBootstrapped) {
+    hasBootstrapped = true
 
-  for (const source of editorDynamicOptionSources) {
-    registerDynamicOptions(source.key, createSourceResolver(source))
+    for (const source of editorDynamicOptionSources) {
+      registerDynamicOptions(source.key, createSourceResolver(source))
+    }
   }
 
   bindFileSystemInvalidation()
+
+  onScopeDispose(() => {
+    releaseFileSystemInvalidation()
+  })
 }

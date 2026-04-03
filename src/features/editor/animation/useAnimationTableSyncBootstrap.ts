@@ -7,10 +7,17 @@ const ANIMATION_TABLE_SYNC_DELAY_MS = 80
 let hasBootstrapped = false
 let syncTimer: ReturnType<typeof setTimeout> | undefined
 
-function scheduleSync(gamePath: string): void {
-  if (syncTimer) {
-    clearTimeout(syncTimer)
+function clearScheduledSync(): void {
+  if (!syncTimer) {
+    return
   }
+
+  clearTimeout(syncTimer)
+  syncTimer = undefined
+}
+
+function scheduleSync(gamePath: string): void {
+  clearScheduledSync()
 
   syncTimer = setTimeout(() => {
     syncTimer = undefined
@@ -64,4 +71,9 @@ export function useAnimationTableSyncBootstrap() {
 
     scheduleSync(gamePath)
   }, { immediate: true })
+
+  onScopeDispose(() => {
+    clearScheduledSync()
+    hasBootstrapped = false
+  })
 }

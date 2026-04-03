@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { reactive } from 'vue'
+import { effectScope, reactive } from 'vue'
 
 const {
   isAnimationTableRelatedPathMock,
@@ -58,7 +58,10 @@ describe('useAnimationTableSyncBootstrap', () => {
     isAnimationTableRelatedPathMock.mockReturnValue(true)
 
     const { useAnimationTableSyncBootstrap } = await import('../useAnimationTableSyncBootstrap')
-    useAnimationTableSyncBootstrap()
+    const scope = effectScope()
+    scope.run(() => {
+      useAnimationTableSyncBootstrap()
+    })
 
     handlers.get('file:created')?.({ path: '/project/game/animation/aaa.json' })
     handlers.get('file:created')?.({ path: '/project/game/animation/bbb.json' })
@@ -71,25 +74,35 @@ describe('useAnimationTableSyncBootstrap', () => {
 
     expect(syncAnimationTableMock).toHaveBeenCalledTimes(1)
     expect(syncAnimationTableMock).toHaveBeenCalledWith('/project')
+
+    scope.stop()
   })
 
   it('首次进入且工作区已就绪时会主动调度一次同步', async () => {
     onMock.mockImplementation(() => vi.fn())
 
     const { useAnimationTableSyncBootstrap } = await import('../useAnimationTableSyncBootstrap')
-    useAnimationTableSyncBootstrap()
+    const scope = effectScope()
+    scope.run(() => {
+      useAnimationTableSyncBootstrap()
+    })
 
     await vi.runAllTimersAsync()
 
     expect(syncAnimationTableMock).toHaveBeenCalledTimes(1)
     expect(syncAnimationTableMock).toHaveBeenCalledWith('/project')
+
+    scope.stop()
   })
 
   it('工作区切换时会取消旧的待执行同步，只保留当前工作区', async () => {
     onMock.mockImplementation(() => vi.fn())
 
     const { useAnimationTableSyncBootstrap } = await import('../useAnimationTableSyncBootstrap')
-    useAnimationTableSyncBootstrap()
+    const scope = effectScope()
+    scope.run(() => {
+      useAnimationTableSyncBootstrap()
+    })
 
     workspaceStoreState.CWD = '/next-project'
     await nextTick()
@@ -97,6 +110,8 @@ describe('useAnimationTableSyncBootstrap', () => {
 
     expect(syncAnimationTableMock).toHaveBeenCalledTimes(1)
     expect(syncAnimationTableMock).toHaveBeenCalledWith('/next-project')
+
+    scope.stop()
   })
 
   it('会忽略索引无关路径和缺失工作区的情况', async () => {
@@ -109,7 +124,10 @@ describe('useAnimationTableSyncBootstrap', () => {
     workspaceStoreState.CWD = undefined
 
     const { useAnimationTableSyncBootstrap } = await import('../useAnimationTableSyncBootstrap')
-    useAnimationTableSyncBootstrap()
+    const scope = effectScope()
+    scope.run(() => {
+      useAnimationTableSyncBootstrap()
+    })
 
     handlers.get('file:created')?.({ path: '/project/game/animation/aaa.json' })
     handlers.get('directory:renamed')?.({
@@ -120,5 +138,37 @@ describe('useAnimationTableSyncBootstrap', () => {
     await vi.runAllTimersAsync()
 
     expect(syncAnimationTableMock).not.toHaveBeenCalled()
+
+    scope.stop()
+  })
+
+  it('作用域销毁后会取消待执行同步，并允许重新挂载重新绑定', async () => {
+    onMock.mockImplementation(() => vi.fn())
+
+    const { useAnimationTableSyncBootstrap } = await import('../useAnimationTableSyncBootstrap')
+
+    const firstScope = effectScope()
+    firstScope.run(() => {
+      useAnimationTableSyncBootstrap()
+    })
+
+    expect(onMock).toHaveBeenCalledTimes(6)
+
+    firstScope.stop()
+    await vi.runAllTimersAsync()
+
+    expect(syncAnimationTableMock).not.toHaveBeenCalled()
+
+    const secondScope = effectScope()
+    secondScope.run(() => {
+      useAnimationTableSyncBootstrap()
+    })
+    await vi.runAllTimersAsync()
+
+    expect(onMock).toHaveBeenCalledTimes(12)
+    expect(syncAnimationTableMock).toHaveBeenCalledTimes(1)
+    expect(syncAnimationTableMock).toHaveBeenCalledWith('/project')
+
+    secondScope.stop()
   })
 })
