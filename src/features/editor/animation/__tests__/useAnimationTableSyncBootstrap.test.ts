@@ -41,6 +41,7 @@ describe('useAnimationTableSyncBootstrap', () => {
     onMock.mockReset()
     syncAnimationTableMock.mockReset()
     useWorkspaceStoreMock.mockReset()
+    syncAnimationTableMock.mockResolvedValue(undefined)
 
     workspaceStoreState = reactive({
       CWD: '/project',

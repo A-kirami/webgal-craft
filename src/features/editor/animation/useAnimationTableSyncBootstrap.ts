@@ -14,7 +14,7 @@ function scheduleSync(gamePath: string): void {
 
   syncTimer = setTimeout(() => {
     syncTimer = undefined
-    void Promise.resolve(syncAnimationTable(gamePath)).catch((error) => {
+    void syncAnimationTable(gamePath).catch((error) => {
       logger.error(`同步 animationTable.json 失败: ${error}`)
     })
   }, ANIMATION_TABLE_SYNC_DELAY_MS)

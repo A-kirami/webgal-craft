@@ -655,7 +655,10 @@ export const useFileStore = defineStore('file', () => {
   watch(() => workspaceStore.CWD, async (newPath) => {
     clear()
     if (newPath) {
-      await initialize().catch(() => undefined)
+      await initialize().catch(() => {
+        // initialize 已记录详细错误；这里避免 immediate watcher 产生未处理 Promise，
+        // 保持 store 可继续创建，后续工作区切换仍可重新触发初始化。
+      })
     }
   }, { immediate: true })
 
