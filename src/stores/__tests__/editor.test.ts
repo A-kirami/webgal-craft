@@ -419,7 +419,12 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
     const savePromise = editorStore.saveFile(path)
 
-    tabsWatcherCloseHandlerRef.current?.(path)
+    expect(tabsWatcherCloseHandlerRef.current).toBeDefined()
+    if (!tabsWatcherCloseHandlerRef.current) {
+      throw new TypeError('missing tabs watcher close handler')
+    }
+    tabsWatcherCloseHandlerRef.current(path)
+    expect(refetchTemplatesMock).not.toHaveBeenCalled()
     writeDeferred.resolve()
 
     await savePromise
