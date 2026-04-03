@@ -4,21 +4,18 @@ import { consumePendingDocumentWrite, registerPendingDocumentWrite } from '~/ser
 import { gameFs } from '~/services/game-fs'
 import { AppError } from '~/types/errors'
 
-import { markDocumentClean, resolveSceneCursor } from './editor-document-state'
+import { markDocumentClean } from './editor-document-state'
 import { getTextProjectionPersistedContent, normalizeAnimationTextProjection } from './editor-session'
 
 import type { EditorDocumentActionContext } from './editor-document-actions'
 import type { DocumentState } from './editor-document-state'
 import type { EditableEditorState, TextProjectionState, VisualProjectionState } from './editor-session'
-import type { SceneSelectionState } from '~/domain/document/scene-selection'
 
 export interface EditorDocumentSaveContext extends EditorDocumentActionContext {
   createEditorError: (message: string) => AppError
   getEditableState: (path: string) => EditableEditorState | undefined
-  getSceneSelection: (path: string) => SceneSelectionState | undefined
   getTextProjectionState: (path: string) => TextProjectionState | undefined
   getVisualProjectionState: (path: string) => VisualProjectionState | undefined
-  syncScenePreview: (path: string, lineNumber: number, lineText: string, force?: boolean) => void
 }
 
 export interface EditorDocumentSaveSnapshot {
@@ -90,19 +87,13 @@ function finalizeSavedDocument(
   if (visualState) {
     visualState.lastSavedTime = savedAt
   }
-
-  if (docEntry.model.kind === 'scene') {
-    const selection = context.getSceneSelection(path)
-    const sceneCursor = resolveSceneCursor(savedContent, selection?.lastLineNumber)
-    context.syncScenePreview(path, sceneCursor.lineNumber, sceneCursor.lineText)
-  }
 }
 
 export async function saveEditorDocument(
   context: EditorDocumentSaveContext,
   path: string,
   saveSnapshot: EditorDocumentSaveSnapshot = createEditorDocumentSaveSnapshot(context, path),
-): Promise<void> {
+): Promise<string> {
   const metadata = saveSnapshot.docEntry.model.metadata
   const finalContent = normalizeTextLineEnding(saveSnapshot.content, metadata.lineEnding)
   const finalBytes = encodeTextFile(finalContent, metadata)
@@ -117,4 +108,5 @@ export async function saveEditorDocument(
   }
 
   finalizeSavedDocument(context, path, saveSnapshot, finalContent, new Date())
+  return finalContent
 }

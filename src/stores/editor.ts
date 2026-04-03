@@ -19,7 +19,7 @@ import { handleError } from '~/utils/error-handler'
 
 import { createEditorDocumentActions } from './internal/editor-document-actions'
 import { createEditorDocumentSaveSnapshot, saveEditorDocument } from './internal/editor-document-save'
-import { DocumentState } from './internal/editor-document-state'
+import { DocumentState, resolveSceneCursor } from './internal/editor-document-state'
 import {
   handleFileModifiedEvent as handleFileModifiedEventAction,
   handleFileRenamedEvent as handleFileRenamedEventAction,
@@ -311,17 +311,34 @@ export const useEditorStore = defineStore('editor', () => {
     ...documentActionContext,
     createEditorError,
     getEditableState,
-    getSceneSelection,
     getVisualProjectionState,
-    syncScenePreview,
   } satisfies EditorDocumentSaveContext
-
-  async function saveDocumentFile(path: string, saveSnapshot?: Parameters<typeof saveEditorDocument>[2]): Promise<void> {
-    await saveEditorDocument(documentSaveContext, path, saveSnapshot)
-  }
 
   async function runSaveHook(path: string): Promise<void> {
     await saveHooks.get(path)?.(path)
+  }
+
+  function runPostSaveEffects(path: string, savedContent: string): void {
+    const documentState = getDocumentState(path)
+    if (!documentState) {
+      return
+    }
+
+    switch (documentState.model.kind) {
+      case 'scene': {
+        const selection = getSceneSelection(path)
+        const sceneCursor = resolveSceneCursor(savedContent, selection?.lastLineNumber)
+        syncScenePreview(path, sceneCursor.lineNumber, sceneCursor.lineText)
+        return
+      }
+      case 'template': {
+        void debugCommander.refetchTemplates()
+        return
+      }
+      default: {
+        return
+      }
+    }
   }
 
   const autoSaveController = createEditorAutoSaveController({
@@ -392,7 +409,8 @@ export const useEditorStore = defineStore('editor', () => {
     // 在 await 前冻结当前保存快照，避免保存期间的新编辑被误并入本次保存并清除脏标记。
     const saveSnapshot = createEditorDocumentSaveSnapshot(documentSaveContext, path)
     await runSaveHook(path)
-    await saveDocumentFile(path, saveSnapshot)
+    const savedContent = await saveEditorDocument(documentSaveContext, path, saveSnapshot)
+    runPostSaveEffects(path, savedContent)
     await runSaveHook(path)
   }
 

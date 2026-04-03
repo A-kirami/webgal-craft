@@ -12,6 +12,7 @@ const statMock = vi.fn(async () => ({ size: 5 }))
 const writeDocumentFileMock = vi.fn<WriteDocumentFile>(async () => undefined)
 const isBinaryFileMock = vi.fn(async () => false)
 const syncSceneMock = vi.fn(async () => undefined)
+const refetchTemplatesMock = vi.fn(async () => undefined)
 const loggerWarnMock = vi.fn()
 const loggerErrorMock = vi.fn()
 const loggerDebugMock = vi.fn()
@@ -98,6 +99,7 @@ vi.mock('~/stores/modal', () => ({
 vi.mock('~/services/debug-commander', () => ({
   debugCommander: {
     syncScene: syncSceneMock,
+    refetchTemplates: refetchTemplatesMock,
   },
 }))
 
@@ -220,6 +222,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     writeDocumentFileMock.mockReset()
     isBinaryFileMock.mockReset()
     syncSceneMock.mockReset()
+    refetchTemplatesMock.mockReset()
     loggerWarnMock.mockClear()
     loggerErrorMock.mockClear()
     loggerDebugMock.mockClear()
@@ -368,6 +371,21 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     expect(editorStore.currentVisualProjection).toBeUndefined()
     expect(editorStore.canToggleMode).toBe(false)
   }, asyncFixtureTimeoutMs * 2)
+
+  it('保存模板样式文件后刷新模板列表', async () => {
+    const tabsStore = useTabsStore()
+    const path = '/game/template/example.css'
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(tabsStore, 'example.css', path, () => editorStore.hasState(path), 'load template document for save refresh')
+
+    editorStore.applyTextDocumentContent(path, 'body { color: red; }')
+
+    await editorStore.saveFile(path)
+
+    expect(refetchTemplatesMock).toHaveBeenCalledTimes(1)
+  })
 
   it('为预览资源保存媒体会话并在重命名时迁移', async () => {
     const tabsStore = useTabsStore()
@@ -1145,6 +1163,39 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
     await editorStore.saveFile(path)
 
+    expect(syncSceneMock).toHaveBeenCalledWith(path, 1, 'hello!', false)
+  })
+
+  it('第二个保存钩子失败时仍保留已完成的场景预览同步', async () => {
+    const tabsStore = useTabsStore()
+    const path = '/game/scene/text-save-preview-hook-failure.txt'
+    const saveHookError = new Error('save hook failed')
+    let hookCalls = 0
+
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode('hello'))
+    mimeGetTypeMock.mockReturnValue('text/plain')
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'text-save-preview-hook-failure.txt',
+      path,
+      () => editorStore.currentTextProjection !== undefined && editorStore.currentVisualProjection !== undefined,
+      'load text save preview projections with failing save hook',
+    )
+
+    editorStore.registerSaveHook(path, () => {
+      hookCalls++
+      if (hookCalls === 2) {
+        throw saveHookError
+      }
+    })
+
+    editorStore.applyTextDocumentContent(path, 'hello!')
+    editorStore.syncSceneSelectionFromTextLine(path, 1)
+
+    await expect(editorStore.saveFile(path)).rejects.toThrow(saveHookError)
     expect(syncSceneMock).toHaveBeenCalledWith(path, 1, 'hello!', false)
   })
 
