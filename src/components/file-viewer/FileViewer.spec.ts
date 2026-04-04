@@ -285,6 +285,16 @@ function createSizedPreviewUrl(item: FileViewerItem, previewSize: FileViewerPrev
   return url.href
 }
 
+function createInMemoryPreviewUrl(item: FileViewerItem, previewSize: FileViewerPreviewSize): string {
+  const svg = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${previewSize.width}" height="${previewSize.height}" viewBox="0 0 ${previewSize.width} ${previewSize.height}">`,
+    '<rect width="100%" height="100%" fill="#18181b" />',
+    `<text x="50%" y="50%" fill="#fafafa" font-size="12" text-anchor="middle" dominant-baseline="middle">${item.modifiedAt ?? 0}</text>`,
+    '</svg>',
+  ].join('')
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
 function createBuiltInPreviewUrl(
   assetPath: string,
   options: {
@@ -543,7 +553,7 @@ describe('FileViewer 外观契约', () => {
     const item = createImageItem(24)
     getImageDimensionsMock.mockResolvedValue([640, 360])
     resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
-      createSizedPreviewUrl(resolvedItem, preview),
+      createInMemoryPreviewUrl(resolvedItem, preview),
     )
 
     renderInBrowser(FileViewerImageHoverCard, {
@@ -577,7 +587,7 @@ describe('FileViewer 外观契约', () => {
 
     getImageDimensionsMock.mockResolvedValue([800, 450])
     resolvePreviewUrlMock.mockImplementation((resolvedItem: FileViewerItem, preview: FileViewerPreviewSize) =>
-      createSizedPreviewUrl(resolvedItem, preview),
+      createInMemoryPreviewUrl(resolvedItem, preview),
     )
 
     const FileViewerImageHoverCardHarness = defineComponent({
