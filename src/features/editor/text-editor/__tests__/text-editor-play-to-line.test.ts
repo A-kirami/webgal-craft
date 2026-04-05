@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   createTextEditorPlayToLineController,
   PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME,
+  PLAY_TO_LINE_GLYPH_CLASS_NAME,
 } from '~/features/editor/text-editor/text-editor-play-to-line'
 
 interface EditorModelMock {
@@ -52,7 +53,7 @@ describe('文本编辑器播放到此句控制器', () => {
           startLineNumber: 1,
         },
         options: {
-          glyphMarginClassName: 'play-to-line-glyph',
+          glyphMarginClassName: PLAY_TO_LINE_GLYPH_CLASS_NAME,
           glyphMarginHoverMessage: {
             value: '执行到此句',
           },
@@ -243,7 +244,7 @@ describe('文本编辑器播放到此句控制器', () => {
     expect(deltaDecorations).toHaveBeenCalledWith([], [
       expect.objectContaining({
         options: expect.objectContaining({
-          glyphMarginClassName: `play-to-line-glyph ${PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME}`,
+          glyphMarginClassName: `${PLAY_TO_LINE_GLYPH_CLASS_NAME} ${PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME}`,
         }),
       }),
     ])
