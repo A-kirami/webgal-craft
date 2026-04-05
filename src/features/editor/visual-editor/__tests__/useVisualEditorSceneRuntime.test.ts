@@ -8,6 +8,7 @@ import { useVisualEditorSceneRuntime } from '../useVisualEditorSceneRuntime'
 import type { SceneVisualProjectionState } from '~/stores/editor'
 
 const {
+  restoreSelectionAndScrollMock,
   useCommandPanelBridgeBindingMock,
   useCommandPanelStoreMock,
   useEditSettingsStoreMock,
@@ -19,6 +20,7 @@ const {
   useTabsStoreMock,
   useVisualEditorSceneViewportMock,
 } = vi.hoisted(() => ({
+  restoreSelectionAndScrollMock: vi.fn(async () => undefined),
   useCommandPanelBridgeBindingMock: vi.fn(),
   useCommandPanelStoreMock: vi.fn(),
   useEditSettingsStoreMock: vi.fn(),
@@ -112,12 +114,13 @@ function createState(
   }) as SceneVisualProjectionState
 }
 
-describe('useVisualEditorSceneRuntime 的快捷键注册与预览同步', () => {
+describe('useVisualEditorSceneRuntime 的快捷键、投影同步与预览行为', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
   })
 
   beforeEach(() => {
+    restoreSelectionAndScrollMock.mockReset()
     useCommandPanelBridgeBindingMock.mockReset()
     useCommandPanelStoreMock.mockReset()
     useEditSettingsStoreMock.mockReset()
@@ -140,6 +143,7 @@ describe('useVisualEditorSceneRuntime 的快捷键注册与预览同步', () => 
       applySceneStatementInsert: vi.fn(),
       applySceneStatementReorder: vi.fn(),
       applySceneStatementUpdate: vi.fn(),
+      consumePendingSceneProjectionActivation: vi.fn(() => false),
       currentState: {
         kind: 'scene',
         path: '/project/scene.txt',
@@ -172,6 +176,7 @@ describe('useVisualEditorSceneRuntime 的快捷键注册与预览同步', () => 
     useVisualEditorSceneViewportMock.mockReturnValue({
       isPositioning: computed(() => false),
       measureRowElement: vi.fn(),
+      restoreSelectionAndScroll: restoreSelectionAndScrollMock,
       scrollToSelectedStatement: vi.fn(async () => undefined),
       totalSize: computed(() => 0),
       virtualRows: computed(() => []),
@@ -215,7 +220,107 @@ describe('useVisualEditorSceneRuntime 的快捷键注册与预览同步', () => 
     scope.stop()
   })
 
-  it('键盘重排语句后会同步实时预览到新的行号', async () => {
+  it('消费可视化投影激活标记时会恢复选中项与滚动位置', async () => {
+    const scope = effectScope()
+    const state = createState()
+    const consumePendingSceneProjectionActivation = vi.fn(() => true)
+
+    useEditorStoreMock.mockReturnValue(reactive({
+      applySceneStatementDelete: vi.fn(),
+      applySceneStatementInsert: vi.fn(),
+      applySceneStatementReorder: vi.fn(),
+      applySceneStatementUpdate: vi.fn(),
+      consumePendingSceneProjectionActivation,
+      currentState: {
+        kind: 'scene',
+        path: '/project/scene.txt',
+        projection: 'visual',
+      },
+      getSceneSelection: vi.fn(() => ({
+        lastEditedStatementId: 1,
+        lastLineNumber: 1,
+        selectedStatementId: 1,
+      })),
+      isSceneStatementCollapsed: vi.fn(() => false),
+      scheduleAutoSaveIfEnabled: vi.fn(),
+      setSceneStatementCollapsed: vi.fn(),
+      syncScenePreview: vi.fn(),
+      syncSceneSelectionFromStatement: vi.fn(),
+    }))
+
+    scope.run(() => useVisualEditorSceneRuntime({
+      getScrollArea: () => undefined,
+      getState: () => state,
+    }))
+
+    await nextTick()
+
+    expect(consumePendingSceneProjectionActivation).toHaveBeenCalledWith('/project/scene.txt', 'visual')
+    expect(restoreSelectionAndScrollMock).toHaveBeenCalledTimes(1)
+
+    scope.stop()
+  })
+
+  it('脏场景切换选中语句时不会同步实时预览', () => {
+    const scope = effectScope()
+    const state = createState([
+      {
+        id: 1,
+        parseError: false,
+        parsed: undefined,
+        rawText: 'say:first',
+      },
+      {
+        id: 2,
+        parseError: false,
+        parsed: undefined,
+        rawText: 'say:second',
+      },
+    ])
+    state.isDirty = true
+    const syncScenePreview = vi.fn()
+    const syncSceneSelectionFromStatement = vi.fn()
+
+    useEditorStoreMock.mockReturnValue(reactive({
+      applySceneStatementDelete: vi.fn(),
+      applySceneStatementInsert: vi.fn(),
+      applySceneStatementReorder: vi.fn(),
+      applySceneStatementUpdate: vi.fn(),
+      consumePendingSceneProjectionActivation: vi.fn(() => false),
+      currentState: {
+        kind: 'scene',
+        path: '/project/scene.txt',
+        projection: 'visual',
+      },
+      getSceneSelection: vi.fn(() => ({
+        lastEditedStatementId: 1,
+        lastLineNumber: 1,
+        selectedStatementId: 1,
+      })),
+      isSceneStatementCollapsed: vi.fn(() => false),
+      scheduleAutoSaveIfEnabled: vi.fn(),
+      setSceneStatementCollapsed: vi.fn(),
+      syncScenePreview,
+      syncSceneSelectionFromStatement,
+    }))
+
+    const runtime = scope.run(() => useVisualEditorSceneRuntime({
+      getScrollArea: () => undefined,
+      getState: () => state,
+    }))
+
+    runtime?.handleSelect(2)
+
+    expect(syncSceneSelectionFromStatement).toHaveBeenCalledWith('/project/scene.txt', 2, {
+      lastEditedStatementId: 2,
+      lineNumber: 2,
+    })
+    expect(syncScenePreview).not.toHaveBeenCalled()
+
+    scope.stop()
+  })
+
+  it('键盘重排语句后不会自动同步实时预览', async () => {
     const scope = effectScope()
     const state = createState([
       {
@@ -256,6 +361,7 @@ describe('useVisualEditorSceneRuntime 的快捷键注册与预览同步', () => 
       applySceneStatementInsert: vi.fn(),
       applySceneStatementReorder,
       applySceneStatementUpdate: vi.fn(),
+      consumePendingSceneProjectionActivation: vi.fn(() => false),
       currentState: {
         kind: 'scene',
         path: '/project/scene.txt',
@@ -285,7 +391,7 @@ describe('useVisualEditorSceneRuntime 的快捷键注册与预览同步', () => 
     await nextTick()
 
     expect(applySceneStatementReorder).toHaveBeenCalledWith('/project/scene.txt', 0, 1)
-    expect(syncScenePreview).toHaveBeenCalledWith('/project/scene.txt', 2, 'say:first')
+    expect(syncScenePreview).not.toHaveBeenCalled()
     expect(scheduleAutoSaveIfEnabled).toHaveBeenCalledWith('/project/scene.txt')
 
     scope.stop()

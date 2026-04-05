@@ -80,6 +80,7 @@ useVisualEditorFocusRequest({
             :collapsed="isStatementCollapsed(props.state.statements[row.index].id)"
             :entry="props.state.statements[row.index]"
             :index="row.index"
+            :play-to-disabled="props.state.isDirty"
             :selected="props.state.statements[row.index].id === selectedStatementId"
             :readonly="preferenceStore.showSidebar && editSettings.collapseStatementsOnSidebarOpen"
             :previous-speaker="previousSpeakers[row.index]"

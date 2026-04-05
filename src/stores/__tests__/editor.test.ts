@@ -34,6 +34,23 @@ let externalDocumentModalAction: 'keep-local' | 'load-external' | 'merge' | 'can
 const asyncFixtureTimeoutMs = 10 * 1000
 let useEditorStore: typeof import('../editor').useEditorStore
 
+function isSceneVisualState(
+  state: unknown,
+): state is {
+  kind: 'scene'
+  projection: 'visual'
+  statements: { id: number }[]
+} {
+  return typeof state === 'object'
+    && state !== null
+    && 'projection' in state
+    && 'kind' in state
+    && 'statements' in state
+    && (state as { projection?: unknown }).projection === 'visual'
+    && (state as { kind?: unknown }).kind === 'scene'
+    && Array.isArray((state as { statements?: unknown }).statements)
+}
+
 const preferenceStoreMock = reactive({
   editorMode: 'text' as 'text' | 'visual',
 })
@@ -656,7 +673,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     expect(editorStore.currentSelectedSceneStatement?.id).toBe(visualProjection.statements[0]?.id)
   })
 
-  it('切换到可视模式时也会请求重新聚焦编辑器表面', async () => {
+  it('切换到可视模式时会记录待激活投影并请求重新聚焦编辑器表面', async () => {
     const tabsStore = useTabsStore()
     const path = '/game/scene/switch-mode-focus.txt'
 
@@ -676,6 +693,63 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
     expect(preferenceStoreMock.editorMode).toBe('visual')
     expect(tabsStore.shouldFocusEditor).toBe(true)
+    expect(editorStore.consumePendingSceneProjectionActivation(path, 'text')).toBe(false)
+    expect(editorStore.consumePendingSceneProjectionActivation(path, 'visual')).toBe(true)
+    expect(editorStore.consumePendingSceneProjectionActivation(path, 'visual')).toBe(false)
+  })
+
+  it('切回文本模式时由 store 记录并消费文本投影激活标记', async () => {
+    const tabsStore = useTabsStore()
+    const path = '/game/scene/switch-mode-text-sync.txt'
+
+    preferenceStoreMock.editorMode = 'visual'
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'switch-mode-text-sync.txt',
+      path,
+      () => editorStore.currentTextProjection !== undefined && editorStore.currentVisualProjection !== undefined,
+      'load projections for text mode activation',
+    )
+
+    if (!editorStore.currentState || !('projection' in editorStore.currentState)) {
+      throw new TypeError('expected editable editor state')
+    }
+
+    expect(editorStore.currentState.projection).toBe('visual')
+
+    tabsStore.shouldFocusEditor = false
+
+    editorStore.switchEditorMode('text', path)
+
+    expect(preferenceStoreMock.editorMode).toBe('text')
+    expect(tabsStore.shouldFocusEditor).toBe(true)
+    expect(editorStore.consumePendingSceneProjectionActivation(path, 'visual')).toBe(false)
+    expect(editorStore.consumePendingSceneProjectionActivation(path, 'text')).toBe(true)
+    expect(editorStore.consumePendingSceneProjectionActivation(path, 'text')).toBe(false)
+  })
+
+  it('重复切换到相同模式时不会清空既有投影激活标记', async () => {
+    const tabsStore = useTabsStore()
+    const path = '/game/scene/switch-mode-repeat-visual.txt'
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'switch-mode-repeat-visual.txt',
+      path,
+      () => editorStore.currentTextProjection !== undefined && editorStore.currentVisualProjection !== undefined,
+      'load projections for repeated visual activation',
+    )
+
+    editorStore.switchEditorMode('visual', path)
+    editorStore.switchEditorMode('visual', path)
+
+    expect(editorStore.consumePendingSceneProjectionActivation(path, 'visual')).toBe(true)
+    expect(editorStore.consumePendingSceneProjectionActivation(path, 'visual')).toBe(false)
   })
 
   it('文本补丁重建语句后仍按语句 ID 保持场景侧栏选中项', async () => {
@@ -1234,6 +1308,143 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     await editorStore.saveFile(path)
 
     expect(syncSceneMock).toHaveBeenCalledWith(path, 1, 'hello!', false)
+  })
+
+  it('切换场景标签页时重新同步当前预览行', async () => {
+    const tabsStore = useTabsStore()
+    const firstPath = '/game/scene/first.txt'
+    const secondPath = '/game/scene/second.txt'
+
+    readFileMock
+      .mockResolvedValueOnce(new TextEncoder().encode('alpha\nbeta'))
+      .mockResolvedValueOnce(new TextEncoder().encode('gamma\ndelta'))
+    mimeGetTypeMock.mockReturnValue('text/plain')
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'first.txt',
+      firstPath,
+      () => editorStore.hasState(firstPath),
+      'load first scene document',
+    )
+    await openTabAndWaitFor(
+      tabsStore,
+      'second.txt',
+      secondPath,
+      () => editorStore.hasState(secondPath),
+      'load second scene document',
+    )
+
+    editorStore.syncSceneSelectionFromTextLine(firstPath, 2)
+    editorStore.syncSceneSelectionFromTextLine(secondPath, 2)
+    syncSceneMock.mockReset()
+
+    tabsStore.activateTab(0)
+    await flushEditorWatchers()
+
+    expect(syncSceneMock).toHaveBeenNthCalledWith(1, firstPath, 2, 'beta', false)
+
+    tabsStore.activateTab(1)
+    await flushEditorWatchers()
+
+    expect(syncSceneMock).toHaveBeenNthCalledWith(2, secondPath, 2, 'delta', false)
+  })
+
+  it('可视化场景切换标签页时重新同步当前预览语句', async () => {
+    const tabsStore = useTabsStore()
+    const firstPath = '/game/scene/visual-first.txt'
+    const secondPath = '/game/scene/visual-second.txt'
+
+    preferenceStoreMock.editorMode = 'visual'
+    readFileMock
+      .mockResolvedValueOnce(new TextEncoder().encode('alpha\nbeta'))
+      .mockResolvedValueOnce(new TextEncoder().encode('gamma\ndelta'))
+    mimeGetTypeMock.mockReturnValue('text/plain')
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'visual-first.txt',
+      firstPath,
+      () => {
+        const state = editorStore.getState(firstPath)
+        return Boolean(state && 'projection' in state && state.projection === 'visual')
+      },
+      'load first visual scene document',
+    )
+    const firstProjection = editorStore.getState(firstPath)
+    if (!isSceneVisualState(firstProjection)) {
+      throw new TypeError('expected first visual scene projection')
+    }
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'visual-second.txt',
+      secondPath,
+      () => {
+        const state = editorStore.getState(secondPath)
+        return Boolean(state && 'projection' in state && state.projection === 'visual')
+      },
+      'load second visual scene document',
+    )
+    const secondProjection = editorStore.getState(secondPath)
+    if (!isSceneVisualState(secondProjection)) {
+      throw new TypeError('expected second visual scene projection')
+    }
+
+    editorStore.syncSceneSelectionFromStatement(firstPath, firstProjection.statements[1]?.id, { lineNumber: 2 })
+    editorStore.syncSceneSelectionFromStatement(secondPath, secondProjection.statements[1]?.id, { lineNumber: 2 })
+    syncSceneMock.mockReset()
+
+    tabsStore.activateTab(0)
+    await flushEditorWatchers()
+
+    expect(syncSceneMock).toHaveBeenNthCalledWith(1, firstPath, 2, 'beta', false)
+
+    tabsStore.activateTab(1)
+    await flushEditorWatchers()
+
+    expect(syncSceneMock).toHaveBeenNthCalledWith(2, secondPath, 2, 'delta', false)
+  })
+
+  it('切换到脏场景标签页时不会补发预览同步', async () => {
+    const tabsStore = useTabsStore()
+    const firstPath = '/game/scene/dirty-first.txt'
+    const secondPath = '/game/scene/clean-second.txt'
+
+    readFileMock
+      .mockResolvedValueOnce(new TextEncoder().encode('alpha\nbeta'))
+      .mockResolvedValueOnce(new TextEncoder().encode('gamma\ndelta'))
+    mimeGetTypeMock.mockReturnValue('text/plain')
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'dirty-first.txt',
+      firstPath,
+      () => editorStore.hasState(firstPath),
+      'load dirty first scene document',
+    )
+    await openTabAndWaitFor(
+      tabsStore,
+      'clean-second.txt',
+      secondPath,
+      () => editorStore.hasState(secondPath),
+      'load clean second scene document',
+    )
+
+    editorStore.applyTextDocumentContent(firstPath, 'alpha!\nbeta')
+    editorStore.syncSceneSelectionFromTextLine(firstPath, 2)
+    syncSceneMock.mockReset()
+
+    tabsStore.activateTab(0)
+    await flushEditorWatchers()
+
+    expect(syncSceneMock).not.toHaveBeenCalled()
   })
 
   it('第二个保存钩子失败时仍保留已完成的场景预览同步', async () => {

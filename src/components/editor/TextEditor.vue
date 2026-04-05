@@ -23,6 +23,7 @@ const tabsStore = useTabsStore()
 const editSettings = useEditSettingsStore()
 const { locale, t } = useI18n()
 const showPlayToLineGlyph = $computed(() => props.state.kind === 'scene')
+const disablePlayToLineGlyph = $computed(() => props.state.kind === 'scene' && props.state.isDirty)
 
 const editorOptions = $computed<monaco.editor.IEditorConstructionOptions>(() =>
   ({
@@ -116,6 +117,7 @@ function createEditor() {
     getPath: () => props.state.path,
     glyphMarginTargetType: monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN,
     isEnabled: () => showPlayToLineGlyph,
+    isDisabled: () => disablePlayToLineGlyph,
     syncScenePreview: (path, lineNumber, lineText, force) => {
       editorStore.syncScenePreview(path, lineNumber, lineText, force)
     },
@@ -146,6 +148,7 @@ watch(() => editorOptions, (newOptions) => {
 watch(
   [
     () => props.state.kind,
+    () => props.state.isDirty,
     () => props.state.path,
     () => locale.value,
   ],
@@ -189,5 +192,9 @@ onUnmounted(() => {
 
 .monaco-editor .glyph-margin-widgets .cgmr.play-to-line-glyph::before {
   @apply content-empty block size-4 flex-none i-lucide-play;
+}
+
+.monaco-editor .glyph-margin-widgets .cgmr.play-to-line-glyph.play-to-line-glyph-disabled {
+  @apply cursor-not-allowed text-muted-foreground/50;
 }
 </style>

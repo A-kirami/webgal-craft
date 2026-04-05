@@ -67,6 +67,7 @@ const globalStubs = {
         required: true,
       },
       index: Number,
+      playToDisabled: Boolean,
       previousSpeaker: String,
       readonly: Boolean,
       selected: Boolean,
@@ -85,6 +86,7 @@ const globalStubs = {
           onClick: () => emit('select', props.entry.id),
         }, `${props.entry.rawText}`),
         h('button', {
+          disabled: props.playToDisabled,
           type: 'button',
           onClick: () => emit('play-to', props.entry.id),
         }, `play-${props.entry.id}`),
@@ -200,6 +202,24 @@ describe('VisualEditorScene', () => {
     expect(handleSelectMock).toHaveBeenCalledWith(1)
     expect(handlePlayToMock).toHaveBeenCalledWith(2)
     expect(handleStatementDeleteMock).toHaveBeenCalledWith(2)
+  })
+
+  it('dirty 场景会禁用播放入口', async () => {
+    const state = createSceneState()
+    state.isDirty = true
+
+    renderInBrowser(VisualEditorScene, {
+      props: {
+        state,
+      },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('button', { name: 'play-2' })).toHaveAttribute('disabled')
+    expect(handlePlayToMock).not.toHaveBeenCalled()
   })
 
   it('视觉模式请求焦点时会把焦点恢复到选中语句卡片', async () => {

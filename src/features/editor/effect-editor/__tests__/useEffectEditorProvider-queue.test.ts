@@ -300,6 +300,51 @@ describe('useEffectEditorProvider 队列并发', () => {
     })
   })
 
+  it('重置草稿时会回滚场景预览到初始基线', async () => {
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+
+    const provider = createEffectEditorProvider()
+
+    await provider.open({
+      entryId: 1,
+      scenePath: 'scene/001.txt',
+      baseSentence: createBaseSentence('{"blur":8}'),
+      baseLineNumber: 3,
+      baseLineText: 'changeFigure: figure.png -transform={"blur":8};',
+      previewContextLineNumber: 2,
+      previewContextLineText: 'say:previous;',
+      effectTarget: 'fig-center',
+      onApply() { /* no-op */ },
+    })
+
+    provider.updateDraft({
+      duration: '300',
+      transform: { blur: 12 },
+    })
+
+    provider.resetToInitialDraft()
+
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.syncScene).toHaveBeenCalledTimes(1)
+    })
+
+    expect(debugCommanderMock.syncScene).toHaveBeenCalledWith(
+      'scene/001.txt',
+      3,
+      'changeFigure: figure.png -transform={"blur":8};',
+      true,
+    )
+    expect(debugCommanderMock.executeCommand).not.toHaveBeenCalled()
+    expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
+    expect(provider.session?.draft).toEqual({
+      duration: '',
+      ease: '',
+      transform: { blur: 8 },
+    })
+    expect(provider.canApply).toBe(false)
+    expect(provider.canReset).toBe(false)
+  })
+
   it('autoApplyQueued 在提交未完成时可串行消费后续草稿', async () => {
     const applyCalls: EffectEditorDraft[] = []
     const resolvers: (() => void)[] = []

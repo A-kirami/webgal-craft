@@ -283,7 +283,6 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
 
   function syncTextCursorFromSceneSelection(options: {
     persistViewState?: boolean
-    syncPreview?: boolean
   } = {}) {
     if (state.value.kind !== 'scene') {
       return
@@ -302,9 +301,6 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
     scheduleApplyLastLineNumber(() => {
       if (options.persistViewState) {
         textEditorWorkspace.saveViewState(state.value.path)
-      }
-      if (options.syncPreview) {
-        syncScene()
       }
     })
   }
@@ -327,10 +323,6 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
       value: state.value.textContent,
     })
     syncedModelPath = newPath
-
-    nextTick(() => {
-      syncScene()
-    })
   }
 
   function syncEditorModelToState() {
@@ -391,22 +383,30 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
       () => tabsStore.shouldFocusEditor,
       () => tabsStore.activeTab?.path,
     ],
-    ([projection, shouldFocus, activePath], [previousProjection]) => {
-      if (projection === 'text' && shouldFocus && activePath === state.value.path && readEditor()) {
+    ([projection, shouldFocus, activePath]) => {
+      let hasSyncedModel = false
+      function ensureSyncedModel() {
+        if (hasSyncedModel) {
+          return
+        }
+
+        hasSyncedModel = true
         syncEditorModelToState()
+      }
+
+      if (projection === 'text' && shouldFocus && activePath === state.value.path && readEditor()) {
+        ensureSyncedModel()
         textEditorWorkspace.restoreViewState(state.value.path)
       }
 
-      if (
-        projection === 'text'
-        && previousProjection === 'visual'
+      const shouldActivateTextProjection = projection === 'text'
         && activePath === state.value.path
         && state.value.kind === 'scene'
-      ) {
-        syncEditorModelToState()
-        syncTextCursorFromSceneSelection({
-          syncPreview: true,
-        })
+        && editorStore.consumePendingSceneProjectionActivation(state.value.path, 'text')
+
+      if (shouldActivateTextProjection) {
+        ensureSyncedModel()
+        syncTextCursorFromSceneSelection()
       }
     },
   )

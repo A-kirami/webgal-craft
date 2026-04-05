@@ -3,8 +3,6 @@ import { useVirtualizer } from '@tanstack/vue-virtual'
 import { SceneVisualProjectionState } from '~/stores/editor'
 
 interface UseVisualEditorSceneViewportOptions {
-  getActiveProjection: () => 'text' | 'visual' | undefined
-  getActiveTabPath: () => string | undefined
   getScrollArea: () => InstanceType<typeof ScrollArea> | null | undefined
   getSelectedIndex: () => number
   getState: () => SceneVisualProjectionState
@@ -13,7 +11,6 @@ interface UseVisualEditorSceneViewportOptions {
 
 export function useVisualEditorSceneViewport(options: UseVisualEditorSceneViewportOptions) {
   const state = computed(() => options.getState())
-  const activeProjection = computed(() => options.getActiveProjection())
 
   const rowVirtualizer = useVirtualizer(
     computed(() => ({
@@ -113,22 +110,11 @@ export function useVisualEditorSceneViewport(options: UseVisualEditorSceneViewpo
   watch(() => state.value.path, () => {
     void restoreSelectionAndScroll()
   })
-  watch(
-    [activeProjection, () => options.getActiveTabPath()],
-    ([projection, activePath], [previousProjection]) => {
-      if (
-        projection === 'visual'
-        && previousProjection === 'text'
-        && activePath === state.value.path
-      ) {
-        void restoreSelectionAndScroll()
-      }
-    },
-  )
 
   return {
     isPositioning,
     measureRowElement,
+    restoreSelectionAndScroll,
     scrollToSelectedStatement,
     totalSize,
     virtualRows,

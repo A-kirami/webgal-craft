@@ -42,6 +42,7 @@ import type {
   EditableEditorState,
   EditorSession,
   EditorState,
+  SceneProjectionActivation,
   TextProjectionState,
   VisualProjectionState,
 } from './internal/editor-session'
@@ -495,11 +496,55 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function switchEditorMode(mode: 'text' | 'visual', targetPath?: string) {
-    if (!setActiveProjection(mode, targetPath)) {
+    const path = targetPath ?? tabsStore.activeTab?.path
+    if (!path) {
       return
     }
+
+    const currentState = getState(path)
+    const previousProjection = currentState && isEditableEditor(currentState)
+      ? currentState.projection
+      : undefined
+
+    if (!setActiveProjection(mode, path)) {
+      return
+    }
+
+    const session = getEditableSession(path)
+    if (session?.document.model.kind === 'scene' && previousProjection !== mode) {
+      session.pendingSceneProjectionActivation = mode
+    }
+
     usePreferenceStore().editorMode = mode
     tabsStore.shouldFocusEditor = true
+  }
+
+  function consumePendingSceneProjectionActivation(
+    path: string,
+    targetProjection: SceneProjectionActivation,
+  ): boolean {
+    const session = getEditableSession(path)
+    const pendingActivation = session?.pendingSceneProjectionActivation
+    if (!pendingActivation || pendingActivation !== targetProjection) {
+      return false
+    }
+
+    session.pendingSceneProjectionActivation = undefined
+    return true
+  }
+
+  function syncActiveScenePreview(path: string) {
+    const session = getEditableSession(path)
+    if (!session || session.document.model.kind !== 'scene') {
+      return
+    }
+
+    if (getEditableState(path)?.isDirty) {
+      return
+    }
+
+    const sceneCursor = resolveSceneCursor(session.document.savedTextContent, session.sceneSelection?.lastLineNumber)
+    syncScenePreview(path, sceneCursor.lineNumber, sceneCursor.lineText)
   }
 
   watch(() => tabsStore.activeTab?.path, async (activePath) => {
@@ -507,14 +552,15 @@ export const useEditorStore = defineStore('editor', () => {
       return
     }
 
-    if (!hasState(activePath)) {
+    if (hasState(activePath)) {
+      // 已加载的文件：同步编辑模式与全局偏好
+      const preferenceStore = usePreferenceStore()
+      setActiveProjection(preferenceStore.editorMode, activePath)
+    } else {
       await loadEditorStateAction(fileLifecycleContext, activePath)
-      return
     }
 
-    // 已加载的文件：同步编辑模式与全局偏好
-    const preferenceStore = usePreferenceStore()
-    setActiveProjection(preferenceStore.editorMode, activePath)
+    syncActiveScenePreview(activePath)
   }, { immediate: true })
 
   // 监听标签页关闭，清理编辑器状态
@@ -569,6 +615,7 @@ export const useEditorStore = defineStore('editor', () => {
     setSceneStatementCollapsed,
     setActiveProjection,
     switchEditorMode,
+    consumePendingSceneProjectionActivation,
     syncScenePreview,
     updatePreviewMediaSession,
     registerSaveHook,

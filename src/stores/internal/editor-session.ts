@@ -72,6 +72,7 @@ export interface EditableEditorSession {
   visualState?: VisualProjectionState
   scenePresentation?: ScenePresentationState
   sceneSelection?: SceneSelectionState
+  pendingSceneProjectionActivation?: SceneProjectionActivation
 }
 
 export interface AssetPreviewSession {
@@ -89,6 +90,8 @@ export type EditorSession =
   | EditableEditorSession
   | AssetPreviewSession
   | UnsupportedEditorSession
+
+export type SceneProjectionActivation = 'text' | 'visual'
 
 type InitialVisualProjectionState =
   Pick<SceneVisualProjectionState, 'kind' | 'statements'>

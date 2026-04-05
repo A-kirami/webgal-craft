@@ -5,7 +5,10 @@ import { nextTick, reactive } from 'vue'
 import { createBrowserLiteI18n } from '~/__tests__/browser'
 import { renderInBrowser } from '~/__tests__/browser-render'
 import { monacoMockState, resetMonacoMockState } from '~/__tests__/mocks/monaco'
-import { PLAY_TO_LINE_GLYPH_CLASS_NAME } from '~/features/editor/text-editor/text-editor-play-to-line'
+import {
+  PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME,
+  PLAY_TO_LINE_GLYPH_CLASS_NAME,
+} from '~/features/editor/text-editor/text-editor-play-to-line'
 
 vi.mock('monaco-editor', async () => {
   const { createMonacoMockModule } = await import('~/__tests__/mocks/monaco')
@@ -125,18 +128,6 @@ function createMonacoModel(lines: string[]) {
       return lines.length
     },
   }
-}
-
-function getDocumentStyleRuleSelectors(): string[] {
-  return [...document.styleSheets].flatMap((sheet) => {
-    try {
-      return [...sheet.cssRules]
-        .filter((rule): rule is CSSStyleRule => 'selectorText' in rule)
-        .map(rule => rule.selectorText)
-    } catch {
-      return []
-    }
-  })
 }
 
 function createTextEditorLiteI18n() {
@@ -446,16 +437,41 @@ describe('TextEditor', () => {
     expect(editorStore.syncScenePreview).toHaveBeenCalledWith('/project/scene-8.txt', 1, 'say:hello', true)
   })
 
-  it('播放按钮样式会命中 Monaco glyph margin 装饰节点', async () => {
-    const { state } = createHarness('/project/scene-5.txt')
+  it('dirty 场景下 glyph margin 会展示禁用样式且不会触发播放', async () => {
+    const { editorStore, state } = createHarness('/project/scene-8b.txt')
+    state.isDirty = true
+    monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(['say:hello']))
+    monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 1 })
 
     renderTextEditor(state)
 
     await nextTick()
 
-    const selectors = getDocumentStyleRuleSelectors()
+    const [, decorations] = monacoMockState.editorInstance.deltaDecorations.mock.calls.at(-1) ?? []
+    expect(decorations).toEqual([
+      expect.objectContaining({
+        options: expect.objectContaining({
+          glyphMarginClassName: `${PLAY_TO_LINE_GLYPH_CLASS_NAME} ${PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME}`,
+        }),
+      }),
+    ])
 
-    expect(selectors).toContain(`.monaco-editor .glyph-margin-widgets .cgmr.${PLAY_TO_LINE_GLYPH_CLASS_NAME}`)
-    expect(selectors).toContain(`.monaco-editor .glyph-margin-widgets .cgmr.${PLAY_TO_LINE_GLYPH_CLASS_NAME}::before`)
+    const handleMouseDown = monacoMockState.editorInstance.onMouseDown.mock.calls[0]?.[0]
+
+    expect(handleMouseDown).toBeTypeOf('function')
+
+    handleMouseDown?.({
+      event: {
+        leftButton: true,
+      },
+      target: {
+        position: {
+          lineNumber: 1,
+        },
+        type: monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN,
+      },
+    })
+
+    expect(editorStore.syncScenePreview).not.toHaveBeenCalled()
   })
 })

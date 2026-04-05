@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createTextEditorPlayToLineController } from '~/features/editor/text-editor/text-editor-play-to-line'
+import {
+  createTextEditorPlayToLineController,
+  PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME,
+} from '~/features/editor/text-editor/text-editor-play-to-line'
 
 interface EditorModelMock {
   getLineContent: (lineNumber: number) => string
@@ -33,6 +36,7 @@ describe('文本编辑器播放到此句控制器', () => {
       getPath: () => '/project/scene.txt',
       glyphMarginTargetType: 2,
       isEnabled: () => true,
+      isDisabled: () => false,
       syncScenePreview: vi.fn(),
     })
 
@@ -70,6 +74,7 @@ describe('文本编辑器播放到此句控制器', () => {
       getPath: () => '/project/scene.txt',
       glyphMarginTargetType: 2,
       isEnabled: () => true,
+      isDisabled: () => false,
       syncScenePreview,
     })
 
@@ -113,6 +118,7 @@ describe('文本编辑器播放到此句控制器', () => {
       getPath: () => '/project/scene.txt',
       glyphMarginTargetType: 2,
       isEnabled: () => true,
+      isDisabled: () => false,
       syncScenePreview,
     })
 
@@ -144,6 +150,7 @@ describe('文本编辑器播放到此句控制器', () => {
       getPath: () => '/project/scene.txt',
       glyphMarginTargetType: 2,
       isEnabled: () => true,
+      isDisabled: () => false,
       syncScenePreview,
     })
 
@@ -180,6 +187,7 @@ describe('文本编辑器播放到此句控制器', () => {
       getPath: () => '/project/scene.txt',
       glyphMarginTargetType: 2,
       isEnabled: () => enabled,
+      isDisabled: () => false,
       syncScenePreview,
     })
 
@@ -199,6 +207,46 @@ describe('文本编辑器播放到此句控制器', () => {
     })
 
     expect(deltaDecorations).toHaveBeenNthCalledWith(2, ['glyph-1'], [])
+    expect(syncScenePreview).not.toHaveBeenCalled()
+  })
+
+  it('dirty 状态会使用禁用样式并忽略点击', () => {
+    const deltaDecorations = vi.fn().mockReturnValue(['glyph-1'])
+    const syncScenePreview = vi.fn()
+    const controller = createTextEditorPlayToLineController({
+      editor: {
+        deltaDecorations,
+        getModel: () => createModel(['say:hello']),
+        getPosition: () => ({ lineNumber: 1 }),
+      },
+      getHoverMessage: () => '执行到此句',
+      getPath: () => '/project/scene.txt',
+      glyphMarginTargetType: 2,
+      isEnabled: () => true,
+      isDisabled: () => true,
+      syncScenePreview,
+    })
+
+    controller.syncFromEditorPosition()
+    controller.handleMouseDown({
+      event: {
+        leftButton: true,
+      },
+      target: {
+        position: {
+          lineNumber: 1,
+        },
+        type: 2,
+      },
+    })
+
+    expect(deltaDecorations).toHaveBeenCalledWith([], [
+      expect.objectContaining({
+        options: expect.objectContaining({
+          glyphMarginClassName: `play-to-line-glyph ${PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME}`,
+        }),
+      }),
+    ])
     expect(syncScenePreview).not.toHaveBeenCalled()
   })
 })

@@ -10,6 +10,7 @@ import { provideStatementMeta } from '~/features/editor/statement-editor/useStat
 const props = defineProps<{
   entry: StatementEntry
   index: number
+  playToDisabled?: boolean
   selected?: boolean
   readonly?: boolean
   /** 上一条 say 语句的说话人（用于 concat 占位符） */
@@ -177,7 +178,8 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
             <Button
               variant="ghost"
               size="sm"
-              class="p-0 opacity-60 h-7 w-0 transition-all overflow-hidden hover:text-green-600 group-hover:p-1 hover:opacity-100 group-hover:w-7"
+              class="p-0 opacity-60 h-7 w-0 transition-all overflow-hidden disabled:text-muted-foreground/50 hover:text-green-600 group-hover:p-1 disabled:opacity-100 hover:opacity-100 group-hover:w-7 disabled:cursor-not-allowed disabled:pointer-events-none"
+              :disabled="playToDisabled"
               :title="$t('edit.visualEditor.playToLine')"
               @click.stop="emit('playTo', entry.id)"
             >

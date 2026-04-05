@@ -3,6 +3,7 @@ import { resolvePlayableScenePreviewLine } from '~/features/editor/text-editor/t
 import type { TextEditorLineReader } from '~/features/editor/text-editor/text-editor-scene-sync'
 
 export const PLAY_TO_LINE_GLYPH_CLASS_NAME = 'play-to-line-glyph'
+export const PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME = 'play-to-line-glyph-disabled'
 
 export interface TextEditorPlayToLineEditor {
   deltaDecorations: (
@@ -46,12 +47,14 @@ interface CreateTextEditorPlayToLineControllerOptions {
   getPath: () => string
   glyphMarginTargetType: number
   isEnabled: () => boolean
+  isDisabled: () => boolean
   syncScenePreview: (path: string, lineNumber: number, lineText: string, force: boolean) => void
 }
 
 function createPlayToLineDecoration(
   lineNumber: number,
   hoverMessage: string,
+  disabled: boolean,
 ): TextEditorPlayToLineDecoration {
   return {
     range: {
@@ -61,7 +64,9 @@ function createPlayToLineDecoration(
       startLineNumber: lineNumber,
     },
     options: {
-      glyphMarginClassName: PLAY_TO_LINE_GLYPH_CLASS_NAME,
+      glyphMarginClassName: disabled
+        ? `${PLAY_TO_LINE_GLYPH_CLASS_NAME} ${PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME}`
+        : PLAY_TO_LINE_GLYPH_CLASS_NAME,
       glyphMarginHoverMessage: {
         value: hoverMessage,
       },
@@ -102,7 +107,7 @@ export function createTextEditorPlayToLineController(options: CreateTextEditorPl
     }
 
     decorationIds = options.editor.deltaDecorations(decorationIds, [
-      createPlayToLineDecoration(previewLine.lineNumber, options.getHoverMessage()),
+      createPlayToLineDecoration(previewLine.lineNumber, options.getHoverMessage(), options.isDisabled()),
     ])
     decoratedLineNumber = previewLine.lineNumber
   }
@@ -113,6 +118,10 @@ export function createTextEditorPlayToLineController(options: CreateTextEditorPl
 
   function handleMouseDown(event: TextEditorPlayToLineMouseEvent) {
     if (!options.isEnabled()) {
+      return
+    }
+
+    if (options.isDisabled()) {
       return
     }
 

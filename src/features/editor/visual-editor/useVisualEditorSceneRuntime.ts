@@ -38,7 +38,7 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
   }
 
   function syncStatementPreview(statementId: number | undefined, force: boolean = false): void {
-    if (statementId === undefined) {
+    if (statementId === undefined || state.value.isDirty) {
       return
     }
 
@@ -261,7 +261,6 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     }
 
     editorStore.applySceneStatementReorder(state.value.path, currentSelectedIndex, nextIndex)
-    syncStatementPreview(currentSelectedStatementId)
     void restoreSelectedStatementPresentation({
       align: 'auto',
       focus: true,
@@ -310,8 +309,6 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
 
   const previousSpeakers = computed(() => buildPreviousSpeakers(state.value.statements))
   const viewport = useVisualEditorSceneViewport({
-    getActiveProjection: () => activeProjection.value,
-    getActiveTabPath: () => tabsStore.activeTab?.path,
     getScrollArea: options.getScrollArea,
     getSelectedIndex: () => selectedIndex.value,
     getState: () => state.value,
@@ -434,6 +431,24 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     () => {
       ensureSelectedStatementPresent()
     },
+  )
+
+  watch(
+    [
+      () => activeProjection.value,
+      () => tabsStore.activeTab?.path,
+    ],
+    ([projection, activePath]) => {
+      const shouldActivateVisualProjection = projection === 'visual'
+        && activePath === state.value.path
+        && editorStore.consumePendingSceneProjectionActivation(state.value.path, 'visual')
+      if (!shouldActivateVisualProjection) {
+        return
+      }
+
+      void viewport.restoreSelectionAndScroll()
+    },
+    { immediate: true },
   )
 
   const sceneShortcutWhen = {
