@@ -447,12 +447,22 @@ describe('TextEditor', () => {
 
     await nextTick()
 
-    const [, decorations] = monacoMockState.editorInstance.deltaDecorations.mock.calls.at(-1) ?? []
+    const [, decorations = []] = monacoMockState.editorInstance.deltaDecorations.mock.calls.at(-1) ?? []
     expect(decorations).toHaveLength(1)
-    expect(decorations[0]?.options.glyphMarginClassName.split(/\s+/)).toEqual(expect.arrayContaining([
-      PLAY_TO_LINE_GLYPH_CLASS_NAME,
-      PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME,
-    ]))
+    expect(decorations).toEqual([
+      expect.objectContaining({
+        options: expect.objectContaining({
+          glyphMarginClassName: expect.stringContaining(PLAY_TO_LINE_GLYPH_CLASS_NAME),
+        }),
+      }),
+    ])
+    expect(decorations).toEqual([
+      expect.objectContaining({
+        options: expect.objectContaining({
+          glyphMarginClassName: expect.stringContaining(PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME),
+        }),
+      }),
+    ])
 
     const handleMouseDown = monacoMockState.editorInstance.onMouseDown.mock.calls[0]?.[0]
 
