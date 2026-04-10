@@ -15,6 +15,8 @@ import {
 
 type ResourceCatalogStatus = 'idle' | 'building' | 'ready' | 'degraded'
 
+const DIRECTORY_REBUILD_DEBOUNCE_MS = 200
+
 interface ResourceCatalogState {
   status: ResourceCatalogStatus
   gamePath?: string
@@ -30,13 +32,33 @@ const resourceCatalogState = shallowRef<ResourceCatalogState>({
 let buildVersion = 0
 let bootstrapConsumerCount = 0
 let bootstrapScope: ReturnType<typeof effectScope> | undefined
+let pendingDirectoryRebuildTimer: ReturnType<typeof setTimeout> | undefined
 
 function setCatalogState(nextState: Omit<ResourceCatalogState, 'version'>): void {
   resourceCatalogState.value = nextState
 }
 
+function clearPendingDirectoryRebuild(): void {
+  if (pendingDirectoryRebuildTimer) {
+    clearTimeout(pendingDirectoryRebuildTimer)
+    pendingDirectoryRebuildTimer = undefined
+  }
+}
+
+function scheduleDirectoryRebuild(gamePath: string): void {
+  clearPendingDirectoryRebuild()
+  pendingDirectoryRebuildTimer = setTimeout(() => {
+    pendingDirectoryRebuildTimer = undefined
+    if (resourceCatalogState.value.gamePath !== gamePath) {
+      return
+    }
+    void rebuildCatalog(gamePath)
+  }, DIRECTORY_REBUILD_DEBOUNCE_MS)
+}
+
 function clearCatalogState(): void {
   buildVersion += 1
+  clearPendingDirectoryRebuild()
   setCatalogState({
     status: 'idle',
     gamePath: undefined,
@@ -155,7 +177,7 @@ function bindResourceCatalogBootstrap(): void {
       if (!gamePath || !isPathWithinGameRoot(gamePath, path)) {
         return
       }
-      void rebuildCatalog(gamePath)
+      scheduleDirectoryRebuild(gamePath)
     }
 
     fileSystemEvents.on('directory:created', event => rebuildOnDirectoryChange(event.path))
@@ -168,7 +190,7 @@ function bindResourceCatalogBootstrap(): void {
       if (!isPathWithinGameRoot(gamePath, event.oldPath) && !isPathWithinGameRoot(gamePath, event.newPath)) {
         return
       }
-      void rebuildCatalog(gamePath)
+      scheduleDirectoryRebuild(gamePath)
     })
   })
 }
@@ -179,6 +201,7 @@ function releaseResourceCatalogBootstrap(): void {
     return
   }
 
+  clearPendingDirectoryRebuild()
   bootstrapScope?.stop()
   bootstrapScope = undefined
 }
