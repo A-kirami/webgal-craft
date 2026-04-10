@@ -1,9 +1,6 @@
-import { join } from '@tauri-apps/api/path'
-
 import { ArgField, EditorField } from '~/features/editor/command-registry/schema'
-import { createStatementMissingFileLoader } from '~/features/editor/statement-editor/file-missing'
-import { gameAssetDir, gameSceneDir } from '~/services/platform/app-paths'
-import { useWorkspaceStore } from '~/stores/workspace'
+import { collectStatementFileChecks, resolveMissingFileKeysFromCatalog } from '~/features/editor/statement-editor/file-missing'
+import { useResourceCatalog } from '~/services/resource-index/service'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
@@ -14,36 +11,28 @@ export interface UseStatementFileMissingOptions {
 }
 
 export function useStatementFileMissing(options: UseStatementFileMissingOptions) {
-  const workspaceStore = useWorkspaceStore()
+  const resourceCatalog = useResourceCatalog()
 
-  const fileMissingKeys = ref(new Set<string>())
-  const loadMissingFileKeys = createStatementMissingFileLoader({
-    gameAssetDir,
-    gameSceneDir,
-    joinPath: join,
+  const fileMissingKeys = computed(() => {
+    const currentParsed = toValue(options.parsed)
+    const currentContentField = toValue(options.contentField)
+    const currentArgFields = toValue(options.argFields)
+
+    if (!currentParsed || resourceCatalog.status.value !== 'ready') {
+      return new Set<string>()
+    }
+
+    const checks = collectStatementFileChecks(
+      currentParsed,
+      currentContentField,
+      currentArgFields,
+    )
+
+    return resolveMissingFileKeysFromCatalog(
+      checks,
+      (assetType, relativePath) => resourceCatalog.hasAsset(assetType, relativePath),
+    )
   })
-
-  watchDebounced(
-    () => [toValue(options.parsed), toValue(options.contentField), toValue(options.argFields), workspaceStore.CWD] as const,
-    async ([currentParsed, currentContentField, currentArgFields, cwd], _, onCleanup) => {
-      let cancelled = false
-      onCleanup(() => {
-        cancelled = true
-      })
-
-      const nextMissingKeys = await loadMissingFileKeys({
-        parsed: currentParsed,
-        contentField: currentContentField,
-        argFields: currentArgFields,
-        cwd,
-      })
-      if (cancelled || !nextMissingKeys) {
-        return
-      }
-      fileMissingKeys.value = nextMissingKeys
-    },
-    { immediate: true, debounce: 150 },
-  )
 
   return {
     fileMissingKeys,

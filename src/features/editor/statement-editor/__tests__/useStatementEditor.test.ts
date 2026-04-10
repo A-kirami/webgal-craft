@@ -3,7 +3,8 @@ import '~/__tests__/mocks/router'
 import '~/__tests__/mocks/tauri-fs'
 import '~/__tests__/mocks/modal-store'
 
-import { beforeEach, describe, expect, it } from 'vitest'
+import { exists, readDir } from '@tauri-apps/plugin-fs'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { SAY_CONTINUATION_RAW } from '~/domain/script/codec'
@@ -22,9 +23,23 @@ import { registerDynamicOptions } from '~/features/editor/dynamic-options/dynami
 
 import type { ArgField } from '~/features/editor/command-registry/schema'
 
+const mockExists = vi.mocked(exists)
+const readDirMock = vi.mocked(readDir)
+
 beforeEach(() => {
   resetStatementEditorRuntime()
+  readDirMock.mockReset()
+  mockExists.mockReset()
 })
+
+function createDirEntry(name: string, isDirectory: boolean) {
+  return {
+    name,
+    isDirectory,
+    isFile: !isDirectory,
+    isSymlink: false,
+  }
+}
 
 describe('useStatementEditor 行为', () => {
   it('setTempAnimation 语句显示动画编辑器按钮并隐藏原始 content 字段', () => {
@@ -478,5 +493,39 @@ describe('useStatementEditor 行为', () => {
     await flushMicrotasks(3)
 
     expect(editor.resource.fileRootPaths.value).toEqual({})
+  })
+
+  it('file missing 应复用资源索引，而不是在编辑器热路径中直接调用 exists', async () => {
+    vi.useFakeTimers()
+
+    workspaceStoreState.CWD = '/project'
+    readDirMock.mockImplementation(async (path: string | URL) => {
+      switch (String(path)) {
+        case '/project/game': {
+          return [
+            createDirEntry('background', true),
+          ]
+        }
+        case '/project/game/background': {
+          return [
+            createDirEntry('bg.jpg', false),
+          ]
+        }
+        default: {
+          throw new TypeError(`unexpected readDir path: ${String(path)}`)
+        }
+      }
+    })
+    mockExists.mockResolvedValue(false)
+
+    const { editor } = createReactiveHarness('changeBg: bg.jpg;')
+
+    await vi.runAllTimersAsync()
+    await flushMicrotasks(6)
+
+    expect(editor.resource.fileMissingKeys.value).toEqual(new Set())
+    expect(mockExists).not.toHaveBeenCalled()
+
+    vi.useRealTimers()
   })
 })

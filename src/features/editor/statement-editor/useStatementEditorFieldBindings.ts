@@ -39,7 +39,7 @@ interface UseStatementEditorFieldBindingsOptions {
     | 'isArgVisible'
     | 'resolveFieldArgField'
   >
-  fileMissingKeys: Ref<Set<string>>
+  fileMissingKeys: Readonly<Ref<Set<string>>>
   scrub: Pick<
     ReturnType<typeof useStatementEditorScrub>,
     | 'canScrubArgField'

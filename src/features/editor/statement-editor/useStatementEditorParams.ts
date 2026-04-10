@@ -16,7 +16,7 @@ export interface UseStatementEditorParamsOptions {
   parsed: ComputedRef<ISentence | undefined>
   commandNode: ComputedRef<CommandNode | undefined>
   argFields: ComputedRef<ArgField[]>
-  fileMissingKeys: Ref<Set<string>>
+  fileMissingKeys: Readonly<Ref<Set<string>>>
   readEditableArgs: () => arg[]
   emitUpdate: (patch: Partial<ISentence>) => void
 }
