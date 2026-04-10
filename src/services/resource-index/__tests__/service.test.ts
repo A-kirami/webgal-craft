@@ -219,4 +219,132 @@ describe('ResourceIndexService', () => {
 
     scope.stop()
   })
+
+  it('构建期间收到文件事件后会在完成后补一次重建', async () => {
+    const slowFigureRead = createDeferred<ReturnType<typeof createDirEntry>[]>()
+    let backgroundReadCount = 0
+
+    readDirMock.mockImplementation(async (path: string | URL) => {
+      switch (String(path)) {
+        case '/project/game': {
+          return [
+            createDirEntry('background', true),
+            createDirEntry('figure', true),
+          ]
+        }
+        case '/project/game/background': {
+          backgroundReadCount += 1
+          if (backgroundReadCount === 1) {
+            return [
+              createDirEntry('bg.jpg', false),
+            ]
+          }
+          return [
+            createDirEntry('bg.jpg', false),
+            createDirEntry('new-bg.jpg', false),
+          ]
+        }
+        case '/project/game/figure': {
+          if (backgroundReadCount === 1) {
+            return slowFigureRead.promise
+          }
+          return []
+        }
+        default: {
+          throw new TypeError(`unexpected readDir path: ${String(path)}`)
+        }
+      }
+    })
+
+    const { useResourceCatalog, useResourceCatalogBootstrap } = await import('../service')
+
+    const scope = effectScope()
+    let catalog!: ReturnType<typeof useResourceCatalog>
+    scope.run(() => {
+      useResourceCatalogBootstrap()
+      catalog = useResourceCatalog()
+    })
+
+    await waitFor(() => backgroundReadCount === 1)
+
+    emitFileSystemEvent('file:created', {
+      type: 'file:created',
+      path: '/project/game/background/new-bg.jpg',
+    })
+    await flushMicrotasks()
+
+    expect(catalog.status.value).toBe('building')
+
+    slowFigureRead.resolve([])
+
+    await waitFor(() => catalog.status.value === 'ready' && catalog.hasAsset('background', 'new-bg.jpg'))
+    expect(backgroundReadCount).toBe(2)
+
+    scope.stop()
+  })
+
+  it('连续目录事件会合并为一次重建', async () => {
+    vi.useFakeTimers()
+
+    try {
+      readDirMock.mockImplementation(async (path: string | URL) => {
+        switch (String(path)) {
+          case '/project/game': {
+            return [
+              createDirEntry('background', true),
+            ]
+          }
+          case '/project/game/background': {
+            return [
+              createDirEntry('bg.jpg', false),
+            ]
+          }
+          default: {
+            throw new TypeError(`unexpected readDir path: ${String(path)}`)
+          }
+        }
+      })
+
+      const { useResourceCatalog, useResourceCatalogBootstrap } = await import('../service')
+
+      const scope = effectScope()
+      let catalog!: ReturnType<typeof useResourceCatalog>
+      scope.run(() => {
+        useResourceCatalogBootstrap()
+        catalog = useResourceCatalog()
+      })
+
+      await waitFor(() => catalog.status.value === 'ready')
+      readDirMock.mockClear()
+
+      emitFileSystemEvent('directory:created', {
+        type: 'directory:created',
+        path: '/project/game/background/chapter1',
+      })
+      emitFileSystemEvent('directory:removed', {
+        type: 'directory:removed',
+        path: '/project/game/background/chapter2',
+      })
+      emitFileSystemEvent('directory:renamed', {
+        type: 'directory:renamed',
+        oldPath: '/project/game/background/old-folder',
+        newPath: '/project/game/background/new-folder',
+      })
+
+      expect(readDirMock).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(199)
+      expect(readDirMock).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(1)
+      await waitFor(() => readDirMock.mock.calls.length === 2)
+      await waitFor(() => catalog.status.value === 'ready')
+
+      expect(readDirMock).toHaveBeenCalledTimes(2)
+
+      scope.stop()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

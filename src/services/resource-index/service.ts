@@ -21,12 +21,14 @@ interface ResourceCatalogState {
   status: ResourceCatalogStatus
   gamePath?: string
   snapshot: ReturnType<typeof createEmptyAssetCatalogSnapshot>
+  dirty: boolean
 }
 
 const resourceCatalogState = shallowRef<ResourceCatalogState>({
   status: 'idle',
   gamePath: undefined,
   snapshot: createEmptyAssetCatalogSnapshot(),
+  dirty: false,
 })
 
 let buildVersion = 0
@@ -34,7 +36,7 @@ let bootstrapConsumerCount = 0
 let bootstrapScope: ReturnType<typeof effectScope> | undefined
 let pendingDirectoryRebuildTimer: ReturnType<typeof setTimeout> | undefined
 
-function setCatalogState(nextState: Omit<ResourceCatalogState, 'version'>): void {
+function setCatalogState(nextState: ResourceCatalogState): void {
   resourceCatalogState.value = nextState
 }
 
@@ -63,6 +65,7 @@ function clearCatalogState(): void {
     status: 'idle',
     gamePath: undefined,
     snapshot: createEmptyAssetCatalogSnapshot(),
+    dirty: false,
   })
 }
 
@@ -73,6 +76,7 @@ async function rebuildCatalog(gamePath: string): Promise<void> {
     status: 'building',
     gamePath,
     snapshot: createEmptyAssetCatalogSnapshot(),
+    dirty: false,
   })
 
   try {
@@ -81,11 +85,18 @@ async function rebuildCatalog(gamePath: string): Promise<void> {
       return
     }
 
+    const needsFollowUpRebuild = resourceCatalogState.value.gamePath === gamePath && resourceCatalogState.value.dirty
+
     setCatalogState({
       status: 'ready',
       gamePath,
       snapshot,
+      dirty: false,
     })
+
+    if (needsFollowUpRebuild) {
+      void rebuildCatalog(gamePath)
+    }
   } catch {
     if (currentBuildVersion !== buildVersion) {
       return
@@ -95,6 +106,7 @@ async function rebuildCatalog(gamePath: string): Promise<void> {
       status: 'degraded',
       gamePath,
       snapshot: createEmptyAssetCatalogSnapshot(),
+      dirty: false,
     })
   }
 }
@@ -103,7 +115,13 @@ function applyCatalogSnapshot(
   updater: (state: ResourceCatalogState) => ReturnType<typeof createEmptyAssetCatalogSnapshot>,
 ): void {
   const currentState = resourceCatalogState.value
-  if (!currentState.gamePath || currentState.status !== 'ready') {
+  if (!currentState.gamePath) {
+    return
+  }
+  if (currentState.status !== 'ready') {
+    if (currentState.status === 'building') {
+      currentState.dirty = true
+    }
     return
   }
 
@@ -111,6 +129,7 @@ function applyCatalogSnapshot(
     status: currentState.status,
     gamePath: currentState.gamePath,
     snapshot: updater(currentState),
+    dirty: currentState.dirty,
   })
 }
 
