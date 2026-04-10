@@ -60,7 +60,7 @@ async function waitFor(predicate: () => boolean, maxTries = 20): Promise<void> {
     return
   }
   if (maxTries <= 0) {
-    throw new TypeError('waitFor timeout')
+    throw new Error('waitFor timeout')
   }
   await flushMicrotasks()
   await waitFor(predicate, maxTries - 1)
@@ -150,16 +150,18 @@ describe('ResourceIndexService', () => {
       catalog = useResourceCatalog()
     })
 
-    await waitFor(() => catalog.status.value === 'ready')
+    try {
+      await waitFor(() => catalog.status.value === 'ready')
 
-    expect(catalog.status.value).toBe('ready')
-    expect(catalog.hasAsset('background', 'bg.jpg')).toBe(true)
-    expect(catalog.hasAsset('background', 'chapter1/night.png')).toBe(true)
-    expect(catalog.hasAsset('figure', 'hero.png')).toBe(true)
-    expect(catalog.hasAsset('scene', 'intro.txt')).toBe(true)
-    expect(catalog.hasAsset('background', 'missing.png')).toBe(false)
-
-    scope.stop()
+      expect(catalog.status.value).toBe('ready')
+      expect(catalog.hasAsset('background', 'bg.jpg')).toBe(true)
+      expect(catalog.hasAsset('background', 'chapter1/night.png')).toBe(true)
+      expect(catalog.hasAsset('figure', 'hero.png')).toBe(true)
+      expect(catalog.hasAsset('scene', 'intro.txt')).toBe(true)
+      expect(catalog.hasAsset('background', 'missing.png')).toBe(false)
+    } finally {
+      scope.stop()
+    }
   })
 
   it('文件事件会增量更新资源清单，而不是强制全量重建', async () => {
@@ -190,34 +192,36 @@ describe('ResourceIndexService', () => {
       catalog = useResourceCatalog()
     })
 
-    slowRootRead.resolve([
-      createDirEntry('background', true),
-    ])
-    await waitFor(() => catalog.status.value === 'ready')
+    try {
+      slowRootRead.resolve([
+        createDirEntry('background', true),
+      ])
+      await waitFor(() => catalog.status.value === 'ready')
 
-    expect(catalog.status.value).toBe('ready')
-    expect(catalog.hasAsset('background', 'bg.jpg')).toBe(true)
-    expect(readDirMock).toHaveBeenCalledTimes(2)
+      expect(catalog.status.value).toBe('ready')
+      expect(catalog.hasAsset('background', 'bg.jpg')).toBe(true)
+      expect(readDirMock).toHaveBeenCalledTimes(2)
 
-    emitFileSystemEvent('file:removed', {
-      type: 'file:removed',
-      path: '/project/game/background/bg.jpg',
-    })
-    await flushMicrotasks()
+      emitFileSystemEvent('file:removed', {
+        type: 'file:removed',
+        path: '/project/game/background/bg.jpg',
+      })
+      await flushMicrotasks()
 
-    expect(catalog.hasAsset('background', 'bg.jpg')).toBe(false)
-    expect(readDirMock).toHaveBeenCalledTimes(2)
+      expect(catalog.hasAsset('background', 'bg.jpg')).toBe(false)
+      expect(readDirMock).toHaveBeenCalledTimes(2)
 
-    emitFileSystemEvent('file:created', {
-      type: 'file:created',
-      path: '/project/game/background/new-bg.jpg',
-    })
-    await flushMicrotasks()
+      emitFileSystemEvent('file:created', {
+        type: 'file:created',
+        path: '/project/game/background/new-bg.jpg',
+      })
+      await flushMicrotasks()
 
-    expect(catalog.hasAsset('background', 'new-bg.jpg')).toBe(true)
-    expect(readDirMock).toHaveBeenCalledTimes(2)
-
-    scope.stop()
+      expect(catalog.hasAsset('background', 'new-bg.jpg')).toBe(true)
+      expect(readDirMock).toHaveBeenCalledTimes(2)
+    } finally {
+      scope.stop()
+    }
   })
 
   it('构建期间收到文件事件后会在完成后补一次重建', async () => {
@@ -265,22 +269,24 @@ describe('ResourceIndexService', () => {
       catalog = useResourceCatalog()
     })
 
-    await waitFor(() => backgroundReadCount === 1)
+    try {
+      await waitFor(() => backgroundReadCount === 1)
 
-    emitFileSystemEvent('file:created', {
-      type: 'file:created',
-      path: '/project/game/background/new-bg.jpg',
-    })
-    await flushMicrotasks()
+      emitFileSystemEvent('file:created', {
+        type: 'file:created',
+        path: '/project/game/background/new-bg.jpg',
+      })
+      await flushMicrotasks()
 
-    expect(catalog.status.value).toBe('building')
+      expect(catalog.status.value).toBe('building')
 
-    slowFigureRead.resolve([])
+      slowFigureRead.resolve([])
 
-    await waitFor(() => catalog.status.value === 'ready' && catalog.hasAsset('background', 'new-bg.jpg'))
-    expect(backgroundReadCount).toBe(2)
-
-    scope.stop()
+      await waitFor(() => catalog.status.value === 'ready' && catalog.hasAsset('background', 'new-bg.jpg'))
+      expect(backgroundReadCount).toBe(2)
+    } finally {
+      scope.stop()
+    }
   })
 
   it('连续目录事件会合并为一次重建', async () => {
@@ -314,35 +320,37 @@ describe('ResourceIndexService', () => {
         catalog = useResourceCatalog()
       })
 
-      await waitFor(() => catalog.status.value === 'ready')
-      readDirMock.mockClear()
+      try {
+        await waitFor(() => catalog.status.value === 'ready')
+        readDirMock.mockClear()
 
-      emitFileSystemEvent('directory:created', {
-        type: 'directory:created',
-        path: '/project/game/background/chapter1',
-      })
-      emitFileSystemEvent('directory:removed', {
-        type: 'directory:removed',
-        path: '/project/game/background/chapter2',
-      })
-      emitFileSystemEvent('directory:renamed', {
-        type: 'directory:renamed',
-        oldPath: '/project/game/background/old-folder',
-        newPath: '/project/game/background/new-folder',
-      })
+        emitFileSystemEvent('directory:created', {
+          type: 'directory:created',
+          path: '/project/game/background/chapter1',
+        })
+        emitFileSystemEvent('directory:removed', {
+          type: 'directory:removed',
+          path: '/project/game/background/chapter2',
+        })
+        emitFileSystemEvent('directory:renamed', {
+          type: 'directory:renamed',
+          oldPath: '/project/game/background/old-folder',
+          newPath: '/project/game/background/new-folder',
+        })
 
-      expect(readDirMock).not.toHaveBeenCalled()
+        expect(readDirMock).not.toHaveBeenCalled()
 
-      await vi.advanceTimersByTimeAsync(199)
-      expect(readDirMock).not.toHaveBeenCalled()
+        await vi.advanceTimersByTimeAsync(199)
+        expect(readDirMock).not.toHaveBeenCalled()
 
-      await vi.advanceTimersByTimeAsync(1)
-      await waitFor(() => readDirMock.mock.calls.length === 2)
-      await waitFor(() => catalog.status.value === 'ready')
+        await vi.advanceTimersByTimeAsync(1)
+        await waitFor(() => readDirMock.mock.calls.length === 2)
+        await waitFor(() => catalog.status.value === 'ready')
 
-      expect(readDirMock).toHaveBeenCalledTimes(2)
-
-      scope.stop()
+        expect(readDirMock).toHaveBeenCalledTimes(2)
+      } finally {
+        scope.stop()
+      }
     } finally {
       vi.useRealTimers()
     }
