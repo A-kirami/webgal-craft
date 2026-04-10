@@ -81,7 +81,7 @@ function applyCatalogSnapshot(
   updater: (state: ResourceCatalogState) => ReturnType<typeof createEmptyAssetCatalogSnapshot>,
 ): void {
   const currentState = resourceCatalogState.value
-  if (!currentState.gamePath || currentState.status === 'building') {
+  if (!currentState.gamePath || currentState.status !== 'ready') {
     return
   }
 
@@ -161,8 +161,14 @@ function bindResourceCatalogBootstrap(): void {
     fileSystemEvents.on('directory:created', event => rebuildOnDirectoryChange(event.path))
     fileSystemEvents.on('directory:removed', event => rebuildOnDirectoryChange(event.path))
     fileSystemEvents.on('directory:renamed', (event) => {
-      rebuildOnDirectoryChange(event.oldPath)
-      rebuildOnDirectoryChange(event.newPath)
+      const { gamePath } = resourceCatalogState.value
+      if (!gamePath) {
+        return
+      }
+      if (!isPathWithinGameRoot(gamePath, event.oldPath) && !isPathWithinGameRoot(gamePath, event.newPath)) {
+        return
+      }
+      void rebuildCatalog(gamePath)
     })
   })
 }

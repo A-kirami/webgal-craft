@@ -498,34 +498,36 @@ describe('useStatementEditor 行为', () => {
   it('file missing 应复用资源索引，而不是在编辑器热路径中直接调用 exists', async () => {
     vi.useFakeTimers()
 
-    workspaceStoreState.CWD = '/project'
-    readDirMock.mockImplementation(async (path: string | URL) => {
-      switch (String(path)) {
-        case '/project/game': {
-          return [
-            createDirEntry('background', true),
-          ]
+    try {
+      workspaceStoreState.CWD = '/project'
+      readDirMock.mockImplementation(async (path: string | URL) => {
+        switch (String(path)) {
+          case '/project/game': {
+            return [
+              createDirEntry('background', true),
+            ]
+          }
+          case '/project/game/background': {
+            return [
+              createDirEntry('bg.jpg', false),
+            ]
+          }
+          default: {
+            throw new TypeError(`unexpected readDir path: ${String(path)}`)
+          }
         }
-        case '/project/game/background': {
-          return [
-            createDirEntry('bg.jpg', false),
-          ]
-        }
-        default: {
-          throw new TypeError(`unexpected readDir path: ${String(path)}`)
-        }
-      }
-    })
-    mockExists.mockResolvedValue(false)
+      })
+      mockExists.mockResolvedValue(false)
 
-    const { editor } = createReactiveHarness('changeBg: bg.jpg;')
+      const { editor } = createReactiveHarness('changeBg: bg.jpg;')
 
-    await vi.runAllTimersAsync()
-    await flushMicrotasks(6)
+      await vi.runAllTimersAsync()
+      await flushMicrotasks(6)
 
-    expect(editor.resource.fileMissingKeys.value).toEqual(new Set())
-    expect(mockExists).not.toHaveBeenCalled()
-
-    vi.useRealTimers()
+      expect(editor.resource.fileMissingKeys.value).toEqual(new Set())
+      expect(mockExists).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
