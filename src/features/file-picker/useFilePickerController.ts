@@ -63,6 +63,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   const currentDir = ref('')
   const inputText = ref('')
   const filterKeyword = ref('')
+  const searchQuery = ref('')
   const items = ref<FileViewerItem[]>([])
   const isLoading = ref(false)
   const errorMsg = ref('')
@@ -76,20 +77,25 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
 
   const canOpen = computed(() => !options.disabled() && isRootReady.value && !!canonicalRootPath.value)
   const filteredItems = computed(() => {
-    const keyword = filterKeyword.value.trim().toLocaleLowerCase()
+    const filterKeywordText = filterKeyword.value.trim().toLocaleLowerCase()
+    const searchKeywordText = searchQuery.value.trim().toLocaleLowerCase()
     return items.value
       .map(item => ({ ...item, isSupported: item.isDir || isExtensionSupported(item.name) }))
       .filter((item) => {
+        const itemName = item.name.toLocaleLowerCase()
         if (!item.isDir && excludeSet.value.size > 0 && excludeSet.value.has(item.name.toLowerCase())) {
           return false
         }
         if (options.showSupportedOnly() && item.isSupported === false) {
           return false
         }
-        if (!keyword) {
-          return true
+        if (filterKeywordText && !itemName.startsWith(filterKeywordText)) {
+          return false
         }
-        return item.name.toLocaleLowerCase().includes(keyword)
+        if (searchKeywordText && !itemName.includes(searchKeywordText)) {
+          return false
+        }
+        return true
       })
   })
 
@@ -283,6 +289,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
     }
     const syncInputWithModel = openOptions.syncInputWithModel ?? true
     isOpen.value = true
+    searchQuery.value = ''
     if (syncInputWithModel) {
       setInputSilently(options.modelValue())
     }
@@ -375,7 +382,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   }
 
   function handleSearchQueryChange(value: string) {
-    filterKeyword.value = value.trim()
+    searchQuery.value = value.trim()
   }
 
   function handleEnter() {
@@ -475,5 +482,6 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
     isLoading,
     isOpen,
     openPopover,
+    searchQuery,
   }
 }

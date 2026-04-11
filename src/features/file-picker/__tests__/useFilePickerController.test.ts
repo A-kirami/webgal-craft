@@ -207,29 +207,7 @@ describe('useFilePickerController 行为', () => {
     scope.stop()
   })
 
-  it('搜索框更新时只会同步筛选关键字，不会覆盖路径输入草稿', async () => {
-    const { controller, scope } = createFixture({
-      modelValue: 'images/bg/opening.png',
-      reopenInSelectedParent: true,
-    })
-
-    await flushControllerTasks()
-    await controller.openPopover()
-
-    controller.handleSearchQueryChange('title')
-
-    expect(controller.filterKeyword.value).toBe('title')
-    expect(controller.inputText.value).toBe('images/bg/opening.png')
-
-    controller.handleSearchQueryChange('')
-
-    expect(controller.filterKeyword.value).toBe('')
-    expect(controller.inputText.value).toBe('images/bg/opening.png')
-
-    scope.stop()
-  })
-
-  it('文件选择器筛选支持包含匹配，不限制为前缀匹配', async () => {
+  it('路径输入前缀过滤会先于搜索框包含过滤叠加生效', async () => {
     const { controller, readDirectory, scope } = createFixture()
 
     readDirectory.mockImplementation(async (_path: string, request: { requestId: number }) => ({
@@ -239,6 +217,16 @@ describe('useFilePickerController 行为', () => {
           isDir: false,
           name: 'opening.png',
           path: '/assets/opening.png',
+        },
+        {
+          isDir: false,
+          name: 'option.png',
+          path: '/assets/option.png',
+        },
+        {
+          isDir: false,
+          name: 'top-opening.png',
+          path: '/assets/top-opening.png',
         },
         {
           isDir: false,
@@ -252,9 +240,22 @@ describe('useFilePickerController 行为', () => {
     await flushControllerTasks()
     await controller.openPopover()
 
-    controller.handleSearchQueryChange('ening')
+    controller.inputText.value = 'op'
+    await vi.advanceTimersByTimeAsync(300)
+    await flushControllerTasks()
 
+    expect(controller.filterKeyword.value).toBe('op')
+    expect(controller.filteredItems.value.map(item => item.name)).toEqual(['opening.png', 'option.png'])
+
+    controller.handleSearchQueryChange('ning')
+
+    expect(controller.searchQuery.value).toBe('ning')
+    expect(controller.inputText.value).toBe('op')
     expect(controller.filteredItems.value.map(item => item.name)).toEqual(['opening.png'])
+
+    controller.handleSearchQueryChange('')
+
+    expect(controller.filteredItems.value.map(item => item.name)).toEqual(['opening.png', 'option.png'])
 
     scope.stop()
   })

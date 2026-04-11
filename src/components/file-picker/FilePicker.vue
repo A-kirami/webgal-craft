@@ -131,6 +131,7 @@ const {
   inputText,
   isLoading,
   isOpen,
+  searchQuery,
 } = $(useFilePickerController({
   commitInputOnBlur: () => !hasTriggerSlot,
   canonicalRootPath,
@@ -154,7 +155,7 @@ const {
 }))
 
 watch(() => historyStorageKey, syncRecentHistory, { immediate: true })
-watch(() => [currentDir, filterKeyword] as const, () => {
+watch(() => [currentDir, filterKeyword, searchQuery] as const, () => {
   fileViewerRef.value?.scrollToIndex(0)
 })
 watch(
@@ -283,7 +284,7 @@ function handleFileListKeydown(event: KeyboardEvent) {
       <FilePickerToolbar
         :root-path="rootPath"
         :current-dir="currentDir"
-        :search-query="filterKeyword"
+        :search-query="searchQuery"
         :view-mode="viewMode"
         :sort-by="sortBy"
         :sort-order="sortOrder"
