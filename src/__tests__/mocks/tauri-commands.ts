@@ -17,9 +17,7 @@ export interface TauriCommandMockBundle {
   }
   gameCmds: {
     getGameConfig: ReturnType<typeof vi.fn>
-    runGameServer: ReturnType<typeof vi.fn>
     setGameConfig: ReturnType<typeof vi.fn>
-    stopGameServer: ReturnType<typeof vi.fn>
   }
   serverCmds: {
     addStaticSite: ReturnType<typeof vi.fn>
@@ -51,9 +49,7 @@ export function createTauriCommandMockBundle(): TauriCommandMockBundle {
     },
     gameCmds: {
       getGameConfig: vi.fn(),
-      runGameServer: vi.fn(),
       setGameConfig: vi.fn(),
-      stopGameServer: vi.fn(),
     },
     serverCmds: {
       addStaticSite: vi.fn(),

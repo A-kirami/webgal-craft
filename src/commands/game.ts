@@ -48,17 +48,7 @@ async function setGameConfig(gamePath: string, config: GameConfigPatch) {
   return safeInvoke<void>('set_game_config', { gamePath, config })
 }
 
-async function runGameServer(gamePath: string) {
-  return safeInvoke<string>('run_game_server', { gamePath })
-}
-
-async function stopGameServer(gamePath: string) {
-  return safeInvoke<void>('stop_game_server', { gamePath })
-}
-
 export const gameCmds = {
   getGameConfig,
   setGameConfig,
-  runGameServer,
-  stopGameServer,
 }
