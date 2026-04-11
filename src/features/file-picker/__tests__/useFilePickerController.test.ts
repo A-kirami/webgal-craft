@@ -278,6 +278,81 @@ describe('useFilePickerController 行为', () => {
     scope.stop()
   })
 
+  it('手动清空输入会立即回到根目录并取消挂起的防抖同步', async () => {
+    const { controller, readDirectory, scope } = createFixture({
+      modelValue: 'images/bg/opening.png',
+      reopenInSelectedParent: true,
+    })
+
+    await flushControllerTasks()
+    await controller.openPopover()
+
+    expect(readDirectory).toHaveBeenCalledTimes(1)
+    expect(readDirectory).toHaveBeenLastCalledWith('/assets/images/bg', {
+      rootPath: '/assets',
+      requestId: 1,
+    })
+    expect(controller.currentDir.value).toBe('images/bg')
+
+    controller.inputText.value = 'images/bg/op'
+    controller.inputText.value = ''
+    await flushControllerTasks()
+
+    expect(controller.currentDir.value).toBe('')
+    expect(controller.filterKeyword.value).toBe('')
+    expect(readDirectory).toHaveBeenCalledTimes(2)
+    expect(readDirectory.mock.lastCall).toEqual([
+      expect.stringMatching(/^\/assets\/?$/),
+      {
+        rootPath: '/assets',
+        requestId: 2,
+      },
+    ])
+
+    await vi.advanceTimersByTimeAsync(300)
+    await flushControllerTasks()
+
+    expect(controller.currentDir.value).toBe('')
+    expect(controller.filterKeyword.value).toBe('')
+    expect(readDirectory).toHaveBeenCalledTimes(2)
+
+    scope.stop()
+  })
+
+  it('删除到当前目录时会立即清除过滤且不重新读取目录', async () => {
+    const { controller, readDirectory, scope } = createFixture({
+      modelValue: 'images/bg/opening.png',
+      reopenInSelectedParent: true,
+    })
+
+    await flushControllerTasks()
+    await controller.openPopover()
+
+    controller.inputText.value = 'images/bg/op'
+    await vi.advanceTimersByTimeAsync(300)
+    await flushControllerTasks()
+
+    expect(controller.currentDir.value).toBe('images/bg')
+    expect(controller.filterKeyword.value).toBe('op')
+    expect(readDirectory).toHaveBeenCalledTimes(2)
+
+    controller.inputText.value = 'images/bg/'
+    await flushControllerTasks()
+
+    expect(controller.currentDir.value).toBe('images/bg')
+    expect(controller.filterKeyword.value).toBe('')
+    expect(readDirectory).toHaveBeenCalledTimes(2)
+
+    await vi.advanceTimersByTimeAsync(300)
+    await flushControllerTasks()
+
+    expect(controller.currentDir.value).toBe('images/bg')
+    expect(controller.filterKeyword.value).toBe('')
+    expect(readDirectory).toHaveBeenCalledTimes(2)
+
+    scope.stop()
+  })
+
   // 这里验证 controller 会保持路径比较的大小写敏感性：
   // rootPath 会从 '/Assets' 规范化而来，但 handleSelectItem 收到的是 '/assets/file-1.txt'。
   // 下面的断言用于确认它会被视为非根目录内的相对路径，并在 modelValue.value
