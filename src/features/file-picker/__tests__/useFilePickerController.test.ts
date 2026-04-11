@@ -49,8 +49,7 @@ function createFixture(options: ControllerFixtureOptions = {}) {
   const readDirectory = vi.fn(async (
     _path: string,
     request: { requestId: number },
-  ): Promise<{ absolutePath: string, items: FileViewerItem[], requestId: number }> => ({
-    absolutePath: '/assets',
+  ): Promise<{ items: FileViewerItem[], requestId: number }> => ({
     items: [],
     requestId: request.requestId,
   }))
@@ -160,7 +159,6 @@ describe('useFilePickerController 行为', () => {
 
     readDirectory
       .mockResolvedValueOnce({
-        absolutePath: '/assets/images/bg',
         items: [],
         requestId: 1,
       })
@@ -211,7 +209,6 @@ describe('useFilePickerController 行为', () => {
     const { controller, readDirectory, scope } = createFixture()
 
     readDirectory.mockImplementation(async (_path: string, request: { requestId: number }) => ({
-      absolutePath: '/assets',
       items: [
         {
           isDir: false,
