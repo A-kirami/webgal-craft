@@ -194,7 +194,7 @@ const LIST_ICON_THUMBNAIL: AssetThumbnailOptions = {
       ref="dropZoneListRef"
       type="button"
       :aria-label="$t('home.engines.installEngine')"
-      class="p-3 bg-gray-50/50 flex cursor-pointer transition-colors items-center justify-between dark:bg-gray-800/10 hover:bg-gray-100 dark:hover:bg-gray-800/20"
+      class="p-3 bg-gray-50/50 flex w-full cursor-pointer transition-colors items-center justify-between dark:bg-gray-800/10 hover:bg-gray-100 dark:hover:bg-gray-800/20"
       :class="{'bg-purple-50': isOverDropZoneList}"
       @click="emit('importClick')"
     >
