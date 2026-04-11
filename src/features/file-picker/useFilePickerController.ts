@@ -64,6 +64,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   const inputText = ref('')
   const filterKeyword = ref('')
   const searchQuery = ref('')
+  const appliedSearchQuery = ref('')
   const items = ref<FileViewerItem[]>([])
   const isLoading = ref(false)
   const errorMsg = ref('')
@@ -78,7 +79,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   const canOpen = computed(() => !options.disabled() && isRootReady.value && !!canonicalRootPath.value)
   const filteredItems = computed(() => {
     const filterKeywordText = filterKeyword.value.trim().toLocaleLowerCase()
-    const searchKeywordText = searchQuery.value.trim().toLocaleLowerCase()
+    const searchKeywordText = appliedSearchQuery.value.trim().toLocaleLowerCase()
     return items.value
       .map(item => ({ ...item, isSupported: item.isDir || isExtensionSupported(item.name) }))
       .filter((item) => {
@@ -113,6 +114,10 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
     }
 
     await syncByInput(input, previousInput)
+  }, 300)
+
+  const debouncedApplySearchQuery = useDebounceFn((value: string) => {
+    appliedSearchQuery.value = value.trim()
   }, 300)
 
   watch(
@@ -290,6 +295,8 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
     const syncInputWithModel = openOptions.syncInputWithModel ?? true
     isOpen.value = true
     searchQuery.value = ''
+    appliedSearchQuery.value = ''
+    debouncedApplySearchQuery('')
     if (syncInputWithModel) {
       setInputSilently(options.modelValue())
     }
@@ -382,7 +389,13 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   }
 
   function handleSearchQueryChange(value: string) {
-    searchQuery.value = value.trim()
+    searchQuery.value = value
+    if (!value.trim()) {
+      appliedSearchQuery.value = ''
+      debouncedApplySearchQuery('')
+      return
+    }
+    debouncedApplySearchQuery(value)
   }
 
   function handleEnter() {

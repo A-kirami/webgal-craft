@@ -251,9 +251,27 @@ describe('useFilePickerController 行为', () => {
 
     expect(controller.searchQuery.value).toBe('ning')
     expect(controller.inputText.value).toBe('op')
+    expect(controller.filteredItems.value.map(item => item.name)).toEqual(['opening.png', 'option.png'])
+
+    await vi.advanceTimersByTimeAsync(299)
+    await flushControllerTasks()
+
+    expect(controller.searchQuery.value).toBe('ning')
+    expect(controller.filteredItems.value.map(item => item.name)).toEqual(['opening.png', 'option.png'])
+
+    await vi.advanceTimersByTimeAsync(1)
+    await flushControllerTasks()
+
+    expect(controller.searchQuery.value).toBe('ning')
     expect(controller.filteredItems.value.map(item => item.name)).toEqual(['opening.png'])
 
     controller.handleSearchQueryChange('')
+
+    expect(controller.searchQuery.value).toBe('')
+    expect(controller.filteredItems.value.map(item => item.name)).toEqual(['opening.png', 'option.png'])
+
+    await vi.advanceTimersByTimeAsync(300)
+    await flushControllerTasks()
 
     expect(controller.filteredItems.value.map(item => item.name)).toEqual(['opening.png', 'option.png'])
 
