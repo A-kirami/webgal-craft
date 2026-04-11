@@ -14,6 +14,10 @@ common:
   back: 戻る
   or: または
   openFolder: フォルダを開く
+  search:
+    placeholder: ファイルまたはフォルダを検索
+    toggle: 検索を切り替え
+    clear: 入力をクリア
   dialogs:
     selectGameFolder: ゲームフォルダを選択
     selectEngineFolder: エンジンフォルダを選択
@@ -59,7 +63,6 @@ filePicker:
     clearRecentHistory: 最近の履歴をクリア
   recent:
     title: 最近選択
-
 app:
   name: WebGAL Craft
   description: WebGAL ビジュアルノベルスタジオ
@@ -464,7 +467,6 @@ edit:
       video: 動画
       animation: アニメーション
       template: テンプレート
-    searchPlaceholder: ファイルまたはフォルダを検索
     sort:
       by: 並び替え
       name: 名前
@@ -474,7 +476,6 @@ edit:
       directionAsc: 昇順
       directionDesc: 降順
     actions:
-      toggleSearch: 検索の切り替え
       sortField: 並び替え項目
       sortOrder: 並び順
       viewGrid: グリッド表示

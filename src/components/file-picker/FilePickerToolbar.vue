@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ArrowDown, ArrowUp, EllipsisVertical, LayoutGrid, LayoutList } from '@lucide/vue'
 
+import ExpandableSearchInput from '~/components/shared/ExpandableSearchInput.vue'
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
 import type { AcceptableValue } from 'reka-ui'
@@ -11,6 +12,7 @@ type ZoomLevel = 'small' | 'medium' | 'large' | 'extraLarge'
 interface Props {
   currentDir: string
   rootPath: string
+  searchQuery: string
   showRecentHistory: boolean
   showSupportedOnly: boolean
   sortBy: FileViewerSortBy
@@ -22,6 +24,7 @@ interface Props {
 const {
   currentDir,
   rootPath,
+  searchQuery,
   showRecentHistory,
   showSupportedOnly,
   sortBy,
@@ -32,6 +35,7 @@ const {
 
 const emit = defineEmits<{
   navigate: [path: string]
+  updateSearchQuery: [value: string]
   updateShowRecentHistory: [value: boolean]
   updateShowSupportedOnly: [value: boolean]
   updateSortBy: [value: FileViewerSortBy]
@@ -70,6 +74,11 @@ function updateZoomLevelValue(value: AcceptableValue) {
       :root-path="rootPath"
       :current-path="currentDir"
       @navigate="emit('navigate', $event)"
+    />
+    <ExpandableSearchInput
+      :model-value="searchQuery"
+      expanded-width-class="w-40"
+      @update:model-value="emit('updateSearchQuery', $event)"
     />
     <Button
       variant="outline"

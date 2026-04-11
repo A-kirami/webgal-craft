@@ -84,7 +84,11 @@ const globalStubs = {
         required: false,
       },
     },
-    setup(props) {
+    setup(props, { expose }) {
+      expose({
+        scrollToIndex: vi.fn(),
+      })
+
       return () => h('div', {
         'data-testid': 'file-viewer-preview-context',
         'data-preview-base-url': props.previewBaseUrl ?? '',

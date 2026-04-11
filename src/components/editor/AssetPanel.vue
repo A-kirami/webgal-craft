@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Check, Image, LayoutGrid, LayoutList, LayoutTemplate, MicVocal, Minus, Music, Plus, Search, UserRound, Video } from '@lucide/vue'
+import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Check, Image, LayoutGrid, LayoutList, LayoutTemplate, MicVocal, Minus, Music, Plus, UserRound, Video } from '@lucide/vue'
 
 import { canCreateAssetFile } from '~/components/editor/asset-file-defaults'
+import ExpandableSearchInput from '~/components/shared/ExpandableSearchInput.vue'
 import { usePreferenceStore } from '~/stores/preference'
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
@@ -20,8 +21,6 @@ const assetTabItems = $computed(() => [
   { tab: 'animation', icon: Blend, label: t('edit.assetPanel.tabs.animation') },
   { tab: 'template', icon: LayoutTemplate, label: t('edit.assetPanel.tabs.template') },
 ])
-
-let isSearchExpanded = $ref(false)
 
 const assetPaths = $ref<Record<string, string>>({})
 const assetSearchQueries = $ref<Record<string, string>>({})
@@ -62,13 +61,6 @@ let assetViewModeModel = $computed({
     }
   },
 })
-
-function toggleSearch() {
-  if (isSearchExpanded) {
-    currentSearchQuery = ''
-  }
-  isSearchExpanded = !isSearchExpanded
-}
 
 function handleCreateFile() {
   void assetViewRef.value?.createFileInCurrentDirectory()
@@ -144,26 +136,7 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
           @update:current-path="currentPath = $event"
         />
         <div class="flex gap-1.5 items-center">
-          <Input
-            ::="currentSearchQuery"
-            type="search"
-            :placeholder="$t('edit.assetPanel.searchPlaceholder')"
-            :aria-label="$t('edit.assetPanel.searchPlaceholder')"
-            class="text-xs h-7 shadow-none transition-all duration-200 ease-out"
-            :class="[
-              isSearchExpanded ? 'w-44 opacity-100 px-2' : 'w-0 opacity-0 px-0 border-transparent pointer-events-none'
-            ]"
-          />
-          <Button
-            :variant="isSearchExpanded ? 'default' : 'outline'"
-            size="icon"
-            class="shrink-0 size-7 shadow-none"
-            :title="$t('edit.assetPanel.actions.toggleSearch')"
-            :aria-label="$t('edit.assetPanel.actions.toggleSearch')"
-            @click="toggleSearch"
-          >
-            <Search class="size-3.5" />
-          </Button>
+          <ExpandableSearchInput ::="currentSearchQuery" />
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
               <Button

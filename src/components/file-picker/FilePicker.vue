@@ -127,6 +127,7 @@ const {
   handlePopoverOpenAutoFocus,
   handlePopoverOpenChange,
   handleSelectItem,
+  handleSearchQueryChange,
   inputText,
   isLoading,
   isOpen,
@@ -282,6 +283,7 @@ function handleFileListKeydown(event: KeyboardEvent) {
       <FilePickerToolbar
         :root-path="rootPath"
         :current-dir="currentDir"
+        :search-query="filterKeyword"
         :view-mode="viewMode"
         :sort-by="sortBy"
         :sort-order="sortOrder"
@@ -289,6 +291,7 @@ function handleFileListKeydown(event: KeyboardEvent) {
         :show-supported-only="showSupportedOnly"
         :show-recent-history="showRecentHistory"
         @navigate="handleBreadcrumbNavigate"
+        @update-search-query="handleSearchQueryChange"
         @update-view-mode="viewMode = $event"
         @update-sort-by="sortBy = $event"
         @update-sort-order="sortOrder = $event"

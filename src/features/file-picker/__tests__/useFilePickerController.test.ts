@@ -5,6 +5,8 @@ import { AppError } from '~/types/errors'
 
 import { useFilePickerController } from '../useFilePickerController'
 
+import type { FileViewerItem } from '~/types/file-viewer'
+
 const {
   existsMock,
   joinMock,
@@ -44,7 +46,10 @@ function createFixture(options: ControllerFixtureOptions = {}) {
   const disabled = ref(false)
   const reopenInSelectedParent = ref(options.reopenInSelectedParent ?? false)
   const scope = effectScope()
-  const readDirectory = vi.fn(async (_path: string, request: { requestId: number }) => ({
+  const readDirectory = vi.fn(async (
+    _path: string,
+    request: { requestId: number },
+  ): Promise<{ absolutePath: string, items: FileViewerItem[], requestId: number }> => ({
     absolutePath: '/assets',
     items: [],
     requestId: request.requestId,
@@ -198,6 +203,58 @@ describe('useFilePickerController 行为', () => {
 
     expect(modelValue.value).toBe('images/bg/original.png')
     expect(controller.inputText.value).toBe('images/bg/original.png')
+
+    scope.stop()
+  })
+
+  it('搜索框更新时只会同步筛选关键字，不会覆盖路径输入草稿', async () => {
+    const { controller, scope } = createFixture({
+      modelValue: 'images/bg/opening.png',
+      reopenInSelectedParent: true,
+    })
+
+    await flushControllerTasks()
+    await controller.openPopover()
+
+    controller.handleSearchQueryChange('title')
+
+    expect(controller.filterKeyword.value).toBe('title')
+    expect(controller.inputText.value).toBe('images/bg/opening.png')
+
+    controller.handleSearchQueryChange('')
+
+    expect(controller.filterKeyword.value).toBe('')
+    expect(controller.inputText.value).toBe('images/bg/opening.png')
+
+    scope.stop()
+  })
+
+  it('文件选择器筛选支持包含匹配，不限制为前缀匹配', async () => {
+    const { controller, readDirectory, scope } = createFixture()
+
+    readDirectory.mockImplementation(async (_path: string, request: { requestId: number }) => ({
+      absolutePath: '/assets',
+      items: [
+        {
+          isDir: false,
+          name: 'opening.png',
+          path: '/assets/opening.png',
+        },
+        {
+          isDir: false,
+          name: 'ending.png',
+          path: '/assets/ending.png',
+        },
+      ],
+      requestId: request.requestId,
+    }))
+
+    await flushControllerTasks()
+    await controller.openPopover()
+
+    controller.handleSearchQueryChange('ening')
+
+    expect(controller.filteredItems.value.map(item => item.name)).toEqual(['opening.png'])
 
     scope.stop()
   })

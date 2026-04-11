@@ -14,6 +14,10 @@ common:
   back: 返回
   or: 或者
   openFolder: 開啟資料夾
+  search:
+    placeholder: 搜尋檔案或資料夾
+    toggle: 切換搜尋
+    clear: 清空輸入
   dialogs:
     selectGameFolder: 選擇遊戲資料夾
     selectEngineFolder: 選擇引擎資料夾
@@ -59,7 +63,6 @@ filePicker:
     clearRecentHistory: 清空最近歷史
   recent:
     title: 最近選擇
-
 app:
   name: WebGAL Craft
   description: WebGAL 視覺小說工作室
@@ -464,7 +467,6 @@ edit:
       video: 影片
       animation: 動畫
       template: 模板
-    searchPlaceholder: 搜尋檔案或資料夾
     sort:
       by: 排序
       name: 名稱
@@ -474,7 +476,6 @@ edit:
       directionAsc: 升序
       directionDesc: 降序
     actions:
-      toggleSearch: 切換搜尋
       sortField: 排序欄位
       sortOrder: 排序方向
       viewGrid: 網格檢視

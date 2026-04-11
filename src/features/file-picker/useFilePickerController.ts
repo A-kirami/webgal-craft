@@ -89,7 +89,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
         if (!keyword) {
           return true
         }
-        return item.name.toLocaleLowerCase().startsWith(keyword)
+        return item.name.toLocaleLowerCase().includes(keyword)
       })
   })
 
@@ -374,6 +374,10 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
     }
   }
 
+  function handleSearchQueryChange(value: string) {
+    filterKeyword.value = value.trim()
+  }
+
   function handleEnter() {
     commitInputValue()
     isOpen.value = false
@@ -461,6 +465,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
     handleInputFocus,
     handleInputKeydown,
     handleNavigateItem,
+    handleSearchQueryChange,
     handlePopoverFocusIn,
     handlePopoverFocusOut,
     handlePopoverOpenAutoFocus,

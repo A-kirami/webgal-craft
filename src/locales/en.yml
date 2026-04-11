@@ -14,6 +14,10 @@ common:
   back: Back
   or: or
   openFolder: Open Folder
+  search:
+    placeholder: Search files or folders
+    toggle: Toggle search
+    clear: Clear input
   dialogs:
     selectGameFolder: Select Game Folder
     selectEngineFolder: Select Engine Folder
@@ -59,7 +63,6 @@ filePicker:
     clearRecentHistory: Clear recent history
   recent:
     title: Recent
-
 app:
   name: WebGAL Craft
   description: WebGAL Visual Novel Studio
@@ -464,7 +467,6 @@ edit:
       video: Video
       animation: Animation
       template: Template
-    searchPlaceholder: Search files or folders
     sort:
       by: Sort by
       name: Name
@@ -474,7 +476,6 @@ edit:
       directionAsc: Ascending
       directionDesc: Descending
     actions:
-      toggleSearch: Toggle search
       sortField: Sort field
       sortOrder: Sort direction
       viewGrid: Grid view
