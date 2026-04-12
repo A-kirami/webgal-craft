@@ -9,9 +9,6 @@ import { usePreferenceStore } from '~/stores/preference'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
-import FilePickerRecentHistory from './FilePickerRecentHistory.vue'
-import FilePickerToolbar from './FilePickerToolbar.vue'
-
 import type { HTMLAttributes } from 'vue'
 
 interface FilePickerProps {

@@ -2,11 +2,8 @@
 import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Check, Image, LayoutGrid, LayoutList, LayoutTemplate, MicVocal, Minus, Music, Plus, UserRound, Video } from '@lucide/vue'
 
 import { canCreateAssetFile } from '~/components/editor/asset-file-defaults'
-import ExpandableSearchInput from '~/components/shared/ExpandableSearchInput.vue'
 import { usePreferenceStore } from '~/stores/preference'
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
-
-import AssetView from './AssetView.vue'
 
 const preferenceStore = usePreferenceStore()
 

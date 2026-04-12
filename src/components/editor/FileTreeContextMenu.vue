@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import FileTreeContextMenuContent from '~/components/editor/FileTreeContextMenuContent.vue'
-
 interface FileItem {
   path: string
   name: string

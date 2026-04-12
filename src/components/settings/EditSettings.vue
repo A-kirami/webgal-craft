@@ -2,8 +2,6 @@
 import { editSettingsDefinition } from '~/features/settings/edit-settings'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 
-import SettingsForm from './form/SettingsForm.vue'
-
 const editSettingsStore = useEditSettingsStore()
 </script>
 

@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { useStatementAnimationEditorPanel } from '~/features/editor/animation/useStatementAnimationEditorPanel'
 
-import AnimationEditorPane from './animation/AnimationEditorPane.vue'
-
 import type { AnimationFrame } from '~/domain/stage/types'
 
 interface Props {

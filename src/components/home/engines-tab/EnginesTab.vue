@@ -8,8 +8,6 @@ import { usePreferenceStore } from '~/stores/preference'
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 import { useResourceStore } from '~/stores/resource'
 
-import EnginesTabCollectionSection from './EnginesTabCollectionSection.vue'
-
 import type { EngineCollectionItem } from '~/features/home/home-collection-items'
 
 const modalStore = useModalStore()

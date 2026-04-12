@@ -3,8 +3,6 @@ import { CUSTOM_CONTENT, EditorField } from '~/features/editor/command-registry/
 import { normalizeFieldStringValue } from '~/features/editor/statement-editor/field-utils'
 import { cn } from '~/lib/utils'
 
-import SegmentedControl from './controls/SegmentedControl.vue'
-
 import type { ParamSelectOptionItem } from './controls/types'
 import type { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
 

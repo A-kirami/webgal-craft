@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import EffectDraftForm from '../effect-editor/EffectDraftForm.vue'
-
 import type { AnimationEditorSelectedFrameState, AnimationTimelineResizeDurationPayload } from '~/features/editor/animation/animation-editor-contract'
 import type { AnimationEditorKeyframe } from '~/features/editor/animation/animation-inspector'
 import type { EffectEditorTransformUpdatePayload } from '~/features/editor/effect-editor/useEffectEditorProvider'

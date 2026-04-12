@@ -3,7 +3,6 @@ import { File, FileImage, FileJson2, FileMusic, FileVideo, FileVolume, Folder } 
 import { basename, join } from '@tauri-apps/api/path'
 
 import { canCreateAssetFile, resolveAssetFileNameParts } from '~/components/editor/asset-file-defaults'
-import FileTreeContextMenuContent from '~/components/editor/FileTreeContextMenuContent.vue'
 import { useAssetViewItemsLoader } from '~/components/editor/useAssetViewItemsLoader'
 import { PopoverAnchor } from '~/components/ui/popover'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'

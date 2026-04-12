@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useForm } from 'vee-validate'
 
-import GameConfigFieldsSection from '~/components/modals/game-config/GameConfigFieldsSection.vue'
 import {
   cloneGameConfigFormValues,
   createEmptyGameConfigFormValues,

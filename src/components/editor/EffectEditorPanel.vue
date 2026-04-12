@@ -3,8 +3,6 @@ import { Transform } from '~/domain/stage/types'
 import { EffectEditorPreviewPayload, EffectEditorTransformUpdatePayload } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 
-import EffectDraftForm from './effect-editor/EffectDraftForm.vue'
-
 interface EffectEditorPanelProps {
   transform: Transform
   duration: string

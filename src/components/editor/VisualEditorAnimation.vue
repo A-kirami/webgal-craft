@@ -6,8 +6,6 @@ import { useVisualEditorFocusRequest } from '~/features/editor/visual-editor/use
 import { findSelectedVisualEditorAnimationFrame } from '~/features/editor/visual-editor/visual-editor-focus'
 import { useEditorStore } from '~/stores/editor'
 
-import AnimationEditorPane from './animation/AnimationEditorPane.vue'
-
 import type { AnimationVisualProjectionState } from '~/stores/editor'
 
 interface Props {

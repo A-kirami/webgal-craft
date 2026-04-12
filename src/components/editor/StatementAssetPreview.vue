@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import StatementAudioPreview from './StatementAudioPreview.vue'
-
 interface Props {
   /** 资源的完整 URL */
   src: string

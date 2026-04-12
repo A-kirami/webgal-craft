@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ArrowDown, ArrowUp, EllipsisVertical, LayoutGrid, LayoutList } from '@lucide/vue'
 
-import ExpandableSearchInput from '~/components/shared/ExpandableSearchInput.vue'
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
 import type { AcceptableValue } from 'reka-ui'

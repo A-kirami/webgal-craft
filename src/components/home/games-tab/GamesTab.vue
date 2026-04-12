@@ -9,8 +9,6 @@ import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 
-import GamesTabCollectionSection from './GamesTabCollectionSection.vue'
-
 import type { GameCollectionItem } from '~/features/home/home-collection-items'
 
 const modalStore = useModalStore()

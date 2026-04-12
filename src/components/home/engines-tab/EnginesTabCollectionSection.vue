@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Box, Folder, Trash2 } from '@lucide/vue'
 
-import AssetImage from '~/components/shared/AssetImage.vue'
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 
 import type { Engine } from '~/database/model'

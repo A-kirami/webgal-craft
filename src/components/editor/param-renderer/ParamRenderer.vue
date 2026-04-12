@@ -5,9 +5,6 @@ import { normalizeFieldStringValue } from '~/features/editor/statement-editor/fi
 import { statementEditorSurfaceKey } from '~/features/editor/statement-editor/surface-context'
 import { cn } from '~/lib/utils'
 
-import FocusXYControl from './controls/FocusXYControl.vue'
-import NumberControl from './controls/NumberControl.vue'
-import ParamChoiceField from './ParamChoiceField.vue'
 import { useParamCustomField } from './useParamCustomField'
 import { useParamFieldMeta } from './useParamFieldMeta'
 import { useParamXyPad } from './useParamXyPad'

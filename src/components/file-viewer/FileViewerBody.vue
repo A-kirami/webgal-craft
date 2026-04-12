@@ -2,8 +2,6 @@
 import { File, FileImage, FileJson2, FileMusic, FileVideo, Folder } from '@lucide/vue'
 
 import { loadFileViewerImageDimensions } from '~/components/file-viewer/fileViewerImageDimensions'
-import FileViewerImageHoverCard from '~/components/file-viewer/FileViewerImageHoverCard.vue'
-import FileViewerItemContextMenu from '~/components/file-viewer/FileViewerItemContextMenu.vue'
 import { formatFileSize } from '~/utils/format'
 import { isValidPositiveNumber } from '~/utils/sort'
 

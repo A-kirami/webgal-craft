@@ -2,8 +2,6 @@
 import { generalSettingsDefinition } from '~/features/settings/general-settings'
 import { useGeneralSettingsStore } from '~/stores/general-settings'
 
-import SettingsForm from './form/SettingsForm.vue'
-
 const { t } = useI18n()
 const generalSettingsStore = useGeneralSettingsStore()
 const themeFieldName = 'general-theme'
