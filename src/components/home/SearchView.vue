@@ -21,7 +21,7 @@ const updateSearch = useDebounceFn((value: string | number) => {
 </script>
 
 <template>
-  <div class="mt-4 flex items-center justify-between">
+  <div class="flex items-center justify-between">
     <div class="max-w-sm w-full relative">
       <Search class="text-muted-foreground h-4 w-4 left-2.5 top-2.5 absolute" />
       <Input

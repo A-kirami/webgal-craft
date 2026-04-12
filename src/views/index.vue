@@ -14,12 +14,12 @@ watch(() => workspaceStore.activeTab, checkResourcesForActiveTab, { immediate: t
 </script>
 
 <template>
-  <div class="bg-gray-50 dark:bg-gray-900">
+  <div class="bg-gray-50 flex flex-col h-full min-h-0 overflow-hidden dark:bg-gray-900">
     <AppHeader />
-    <main class="mx-auto px-4 py-8 container lg:px-8 sm:px-6">
+    <main class="mx-auto px-4 py-8 container flex flex-1 flex-col min-h-0 overflow-hidden lg:px-8 sm:px-6">
       <WelcomeSection />
-      <div class="mb-6">
-        <Tabs ::="workspaceStore.activeTab">
+      <Tabs ::="workspaceStore.activeTab" class="mb-6 gap-4 grid grid-rows-[auto_minmax(0,1fr)] min-h-0">
+        <div data-testid="home-tabs-header" class="space-y-4">
           <TabsList>
             <TabsTrigger
               v-for="tab in HOME_TABS"
@@ -31,14 +31,16 @@ watch(() => workspaceStore.activeTab, checkResourcesForActiveTab, { immediate: t
             </TabsTrigger>
           </TabsList>
           <SearchView />
-          <TabsContent value="recent" class="mt-4">
+        </div>
+        <div data-testid="home-tabs-body" class="min-h-0 overflow-hidden">
+          <TabsContent value="recent" class="mt-0 h-full min-h-0 overflow-hidden">
             <GamesTab v-if="resourceStore.games" />
           </TabsContent>
-          <TabsContent value="engines" class="mt-4">
+          <TabsContent value="engines" class="mt-0 h-full min-h-0 overflow-hidden">
             <EnginesTab v-if="resourceStore.engines" />
           </TabsContent>
-        </Tabs>
-      </div>
+        </div>
+      </Tabs>
     </main>
   </div>
 </template>
