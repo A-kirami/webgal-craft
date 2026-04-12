@@ -271,32 +271,6 @@ async function deleteGame(game: Game, removeFiles: boolean = false): Promise<voi
 }
 
 /**
- * 重命名游戏
- * @param id 游戏ID
- * @param newName 新名称
- */
-async function renameGame(id: string, newName: string): Promise<void> {
-  const game = await db.games.get(id)
-  if (!game) {
-    throw new AppError('IO_ERROR', '游戏不存在')
-  }
-
-  await gameCmds.setGameConfig(game.path, {
-    set: { gameName: newName },
-    unset: [],
-  })
-
-  const patch = {
-    lastModified: Date.now(),
-    metadata: {
-      name: newName,
-    },
-  }
-  await db.games.update(id, patch)
-  applyCurrentGamePatch(id, patch)
-}
-
-/**
  * 导入游戏
  * @param gamePath 游戏路径
  * @returns 游戏ID
@@ -383,7 +357,6 @@ export const gameManager = {
   registerGame,
   createGame,
   deleteGame,
-  renameGame,
   importGame,
   updateGameLastModified,
   updateCurrentGameLastModified,
