@@ -166,20 +166,28 @@ describe('EditHeader', () => {
       currentGameServeUrl: 'http://127.0.0.1:8899/game/test/',
     }))
     getConfigMock.mockResolvedValue({
-      defaultLanguage: 'zh_CN',
-      description: 'Intro',
-      enableAppreciation: 'false',
-      gameKey: 'demo-key',
-      gameName: '测试游戏',
-      titleImg: 'cover.webp',
-      legacyExpressionBlendMode: 'false',
-      lineHeight: '2.2',
-      maxLine: '3',
-      packageName: 'org.demo.game',
-      gameLogo: 'opening.webp|enter.webp|',
-      showPanic: 'true',
-      steamAppId: '480',
-      titleBgm: 'title.ogg',
+      entries: [
+        { key: 'Default_Language', value: 'zh_CN' },
+        { key: 'Description', value: 'Intro' },
+        { key: 'Enable_Appreciation', value: 'false' },
+        { key: 'Game_key', value: 'demo-key' },
+        { key: 'Game_name', value: '测试游戏' },
+        { key: 'Title_img', value: 'cover.webp' },
+        { key: 'Legacy_Expression_Blend_Mode', value: 'false' },
+        { key: 'Line_height', value: '2.2' },
+        { key: 'Max_line', value: '3' },
+        { key: 'Package_name', value: 'org.demo.game' },
+        { key: 'Game_Logo', value: 'opening.webp|enter.webp|' },
+        { key: 'Show_panic', value: 'true' },
+        { key: 'Steam_AppID', value: '480' },
+        { key: 'Title_bgm', value: 'title.ogg' },
+        { key: 'Stage_Width', value: '1920' },
+        {
+          key: 'Custom_flag',
+          value: 'enabled',
+        },
+      ],
+      unmanagedLineCount: 1,
     })
   })
 
@@ -245,6 +253,16 @@ describe('EditHeader', () => {
         initialValues: {
           defaultLanguage: 'zh_CN',
           description: 'Intro',
+          customConfig: [
+            {
+              key: 'Stage_Width',
+              value: '1920',
+            },
+            {
+              key: 'Custom_flag',
+              value: 'enabled',
+            },
+          ],
           enableAppreciation: false,
           gameKey: 'demo-key',
           gameLogo: ['opening.webp', 'enter.webp'],
@@ -258,6 +276,7 @@ describe('EditHeader', () => {
           titleBgm: 'title.ogg',
           titleImg: 'cover.webp',
         },
+        unmanagedLineCount: 1,
         serveUrl: 'http://127.0.0.1:8899/game/test/',
       })
     })

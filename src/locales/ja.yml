@@ -222,6 +222,23 @@ modals:
       lineHeightInvalid: テキスト行の高さは正の数値にするか、空欄にしてください
       packageNameInvalid: パッケージ名は org.example.demo のような小文字のドット区切り識別子にするか、空欄にしてください
       steamAppIdInvalid: Steam AppID は有効な整数にするか、空欄にしてください
+      configValueNoSemicolon: "設定値に ; は使えません"
+      customConfigKeyRequired: カスタム設定キーは空にできません
+      customConfigKeySingleLine: カスタム設定キーは1行で入力してください
+      customConfigKeyNoColon: "カスタム設定キーに : は使えません"
+      customConfigKeyNoSemicolon: "カスタム設定キーに ; は使えません"
+      customConfigKeyReserved: このキーは組み込み設定と重複しています
+      customConfigKeyDuplicate: カスタム設定キーは重複できません
+      customConfigValueSingleLine: カスタム設定値は1行で入力してください
+    custom:
+      title: カスタム設定項目
+      keyLabel: キー
+      valueLabel: 値
+      keyPlaceholder: "例: customFlag"
+      valuePlaceholder: "例: enabled、1920"
+      add: 設定項目を追加
+      remove: 削除
+      unmanagedNotice: 設定ファイル内の一部の内容はここでは認識・編集できませんが、保存時には元の内容が保持されます
     titleImg:
       empty: クリックしてタイトル背景画像を選択
       replace: 変更

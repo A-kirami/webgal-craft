@@ -2,7 +2,7 @@
 import { Copy, ExternalLink, Link, RotateCw } from '@lucide/vue'
 import { openUrl } from '@tauri-apps/plugin-opener'
 
-import { gameCmds } from '~/commands/game'
+import { findGameConfigEntryValue, gameCmds } from '~/commands/game'
 import {
   DEFAULT_PREVIEW_PANEL_ASPECT_RATIO,
   resolvePreviewPanelStageSize,
@@ -32,7 +32,10 @@ async function updateAspectRatio(): Promise<void> {
     const gameConfig = await gameCmds.getGameConfig(requestedPath)
     const nextStageSize = resolvePreviewPanelStageSize({
       currentGamePath: workspaceStore.currentGame?.path,
-      gameConfig,
+      gameConfig: {
+        stageHeight: findGameConfigEntryValue(gameConfig.entries, 'Stage_Height'),
+        stageWidth: findGameConfigEntryValue(gameConfig.entries, 'Stage_Width'),
+      },
       requestedPath,
     })
     if (!nextStageSize) {
@@ -86,11 +89,22 @@ async function openPreviewInBrowser(): Promise<void> {
 }
 
 watch(
-  () => workspaceStore.currentGame,
+  () => workspaceStore.currentGame?.path,
   () => {
     void updateAspectRatio()
   },
   { immediate: true },
+)
+
+watch(
+  () => workspaceStore.currentGame?.lastModified,
+  (lastModified, previousLastModified) => {
+    if (lastModified === undefined || previousLastModified === undefined) {
+      return
+    }
+
+    refreshIframe()
+  },
 )
 </script>
 

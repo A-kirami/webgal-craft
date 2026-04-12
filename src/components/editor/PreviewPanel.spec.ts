@@ -47,6 +47,14 @@ vi.mock('~/stores/workspace', () => ({
 }))
 
 vi.mock('~/commands/game', () => ({
+  findGameConfigEntryValue(entries: { key: string, value: string }[], rawKey: string) {
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
+      const entry = entries[index]
+      if (entry?.key === rawKey) {
+        return entry.value
+      }
+    }
+  },
   gameCmds: {
     getGameConfig: getGameConfigMock,
   },
@@ -66,6 +74,17 @@ const globalStubs = {
   TooltipContent: createBrowserContainerStub('StubTooltipContent'),
   TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
   TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
+}
+
+let workspaceStoreState: {
+  currentGame: {
+    lastModified: number
+    metadata: {
+      name: string
+    }
+    path: string
+  }
+  currentGameServeUrl: string
 }
 
 function createPreviewPanelLiteI18n() {
@@ -95,22 +114,27 @@ describe('PreviewPanel', () => {
     useClipboardMock.mockReset()
     useWorkspaceStoreMock.mockReset()
 
-    useWorkspaceStoreMock.mockReturnValue(reactive({
+    workspaceStoreState = reactive({
       currentGame: {
+        lastModified: 100,
         metadata: {
           name: 'Demo Game',
         },
         path: '/games/demo',
       },
       currentGameServeUrl: 'http://127.0.0.1:8899',
-    }))
+    })
+    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
     useClipboardMock.mockReturnValue({
       copied: ref(true),
       copy: copyMock,
     })
     getGameConfigMock.mockResolvedValue({
-      stageHeight: 720,
-      stageWidth: 1280,
+      entries: [
+        { key: 'Stage_Height', value: '720' },
+        { key: 'Stage_Width', value: '1280' },
+      ],
+      unmanagedLineCount: 0,
     })
   })
 
@@ -154,5 +178,24 @@ describe('PreviewPanel', () => {
     await page.getByRole('button', { name: 'edit.previewPanel.refreshPreview' }).click()
 
     expect(getGameConfigMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('当前游戏快照更新时间变化时会自动重新读取游戏配置', async () => {
+    renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getGameConfigMock).toHaveBeenCalledTimes(1)
+    })
+
+    workspaceStoreState.currentGame.lastModified += 1
+
+    await vi.waitFor(() => {
+      expect(getGameConfigMock).toHaveBeenCalledTimes(2)
+    })
   })
 })

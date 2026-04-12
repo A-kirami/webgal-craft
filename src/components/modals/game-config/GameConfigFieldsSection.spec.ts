@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, ref } from 'vue'
 
 import {
   createBrowserCheckboxStub,
@@ -9,6 +9,19 @@ import {
   createBrowserInputStub,
   renderInBrowser,
 } from '~/__tests__/browser-render'
+
+const { useFieldArrayMock } = vi.hoisted(() => ({
+  useFieldArrayMock: vi.fn(),
+}))
+
+vi.mock('vee-validate', async () => {
+  const actual = await vi.importActual<typeof import('vee-validate')>('vee-validate')
+
+  return {
+    ...actual,
+    useFieldArray: useFieldArrayMock,
+  }
+})
 
 vi.mock('~/components/ui/form', async () => {
   const actual = await vi.importActual<typeof import('~/components/ui/form')>('~/components/ui/form')
@@ -21,6 +34,10 @@ vi.mock('~/components/ui/form', async () => {
         name: {
           type: String,
           required: true,
+        },
+        validateOnModelUpdate: {
+          type: Boolean,
+          default: undefined,
         },
       },
       setup(_props, { slots }) {
@@ -40,6 +57,7 @@ vi.mock('~/components/ui/form', async () => {
 import GameConfigFieldsSection from './GameConfigFieldsSection.vue'
 
 const globalStubs = {
+  Button: createBrowserClickStub('StubButton'),
   TitleImgPicker: createBrowserContainerStub('StubTitleImgPicker'),
   FilePicker: defineComponent({
     name: 'StubFilePicker',
@@ -101,6 +119,17 @@ const globalStubs = {
   TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
 }
 
+function setCustomConfigFields(entries: { key: string, value: string }[]) {
+  useFieldArrayMock.mockReturnValue({
+    fields: ref(entries.map((entry, index) => ({
+      key: `custom-row-${index}`,
+      value: entry,
+    }))),
+    push: vi.fn(),
+    remove: vi.fn(),
+  })
+}
+
 function renderSection(i18nMode: 'lite' | 'localized' = 'lite', messages?: Record<string, unknown>) {
   return renderInBrowser(GameConfigFieldsSection, {
     browser: {
@@ -130,6 +159,7 @@ const localizedDefaultLanguageOptions = Object.fromEntries([
 
 describe('GameConfigFieldsSection', () => {
   it('titleBgm 使用限定在 bgm 目录的文件选择器', async () => {
+    setCustomConfigFields([])
     const result = renderSection()
 
     await expect.element(page.getByLabelText('modals.gameConfig.fields.titleBgm.label')).toHaveAttribute('data-root-path', '/games/demo/game/bgm')
@@ -140,6 +170,7 @@ describe('GameConfigFieldsSection', () => {
   })
 
   it('默认游戏语言选项使用固定语言名，不跟随界面 i18n 文案改变', async () => {
+    setCustomConfigFields([])
     const result = renderSection('localized', {
       'zh-Hans': {
         modals: {
@@ -167,6 +198,44 @@ describe('GameConfigFieldsSection', () => {
     await expect.element(page.getByText(/^Test Japanese$/)).not.toBeInTheDocument()
     await expect.element(page.getByText(/^Test French$/)).not.toBeInTheDocument()
     await expect.element(page.getByText(/^Test German$/)).not.toBeInTheDocument()
+
+    await result.unmount()
+  })
+
+  it('空列表时仍会渲染底部添加自定义配置项按钮', async () => {
+    setCustomConfigFields([])
+    const result = renderSection()
+
+    await expect.element(page.getByTestId('game-config-custom-add')).toBeVisible()
+
+    await result.unmount()
+  })
+
+  it('自定义行删除按钮保留可访问名称', async () => {
+    setCustomConfigFields([
+      {
+        key: 'Custom_flag',
+        value: 'enabled',
+      },
+    ])
+    const result = renderInBrowser(GameConfigFieldsSection, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        backgroundRootPath: '/games/demo/game/background',
+        bgmRootPath: '/games/demo/game/bgm',
+        gamePath: '/games/demo',
+        serveUrl: 'http://127.0.0.1:8899/game/demo/',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const removeButton = page.getByRole('button', { name: 'modals.gameConfig.custom.remove' })
+
+    await expect.element(removeButton).toBeVisible()
 
     await result.unmount()
   })

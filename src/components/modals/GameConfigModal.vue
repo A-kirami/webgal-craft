@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Info } from '@lucide/vue'
 import { useForm } from 'vee-validate'
 
 import {
@@ -6,7 +7,7 @@ import {
   createEmptyGameConfigFormValues,
   createGameConfigKey,
   createGameConfigSchema,
-  serializeGameConfigPatch,
+  serializeGameConfigEntries,
 } from '~/features/modals/game-config/game-config-form'
 import { configManager } from '~/services/config-manager'
 import { useModalStore } from '~/stores/modal'
@@ -20,6 +21,7 @@ interface Props {
   gamePath: string
   initialValues: GameConfigFormValues
   serveUrl?: string
+  unmanagedLineCount: number
 }
 
 const props = defineProps<Props>()
@@ -106,7 +108,7 @@ const submitConfig = handleSubmit(async (formValues) => {
 
   isSaving = true
   try {
-    await configManager.setConfig(props.gamePath, serializeGameConfigPatch(formValues))
+    await configManager.setConfig(props.gamePath, serializeGameConfigEntries(formValues))
     notify.success(t('common.saved'))
     resetForm({
       values: cloneGameConfigFormValues(formValues),
@@ -139,6 +141,14 @@ async function handleSave() {
         <DialogDescription>
           {{ $t('modals.gameConfig.description') }}
         </DialogDescription>
+        <div
+          v-if="props.unmanagedLineCount > 0"
+          data-testid="game-config-unmanaged-notice"
+          class="text-xs text-muted-foreground px-3 py-2 rounded-md bg-muted/60 flex gap-2 items-start"
+        >
+          <Info class="mt-0.5 shrink-0 size-3.5" aria-hidden="true" />
+          <span>{{ $t('modals.gameConfig.custom.unmanagedNotice') }}</span>
+        </div>
       </DialogHeader>
 
       <ScrollArea data-testid="game-config-modal-scroll-area" class="min-h-0">

@@ -1,7 +1,7 @@
 import { exists } from '@tauri-apps/plugin-fs'
 
 import { fsCmds } from '~/commands/fs'
-import { gameCmds } from '~/commands/game'
+import { findGameConfigEntryValue, gameCmds } from '~/commands/game'
 import { db } from '~/database/db'
 import { Game } from '~/database/model'
 import { gameCoverPath, gameIconPath } from '~/services/platform/app-paths'
@@ -10,10 +10,46 @@ import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
 
+import type { GameConfigEntry } from '~/commands/game'
+
 interface RegisterGameOptions {
   metadata?: GameMetadata
   previewAssets?: GamePreviewAssets
   status?: Game['status']
+}
+
+const GAME_NAME_RAW_KEY = 'Game_name'
+const GAME_KEY_RAW_KEY = 'Game_key'
+const TITLE_IMAGE_RAW_KEY = 'Title_img'
+
+function mergeGameConfigEntries(
+  entries: readonly GameConfigEntry[],
+  nextEntries: readonly GameConfigEntry[],
+): GameConfigEntry[] {
+  const nextEntryValueMap = new Map(nextEntries.map(entry => [entry.key, entry.value]))
+  const writtenKeys = new Set<string>()
+  const mergedEntries = entries.map((entry) => {
+    const nextValue = nextEntryValueMap.get(entry.key)
+    if (nextValue === undefined) {
+      return { ...entry }
+    }
+
+    writtenKeys.add(entry.key)
+    return {
+      key: entry.key,
+      value: nextValue,
+    }
+  })
+
+  for (const entry of nextEntries) {
+    if (writtenKeys.has(entry.key)) {
+      continue
+    }
+
+    mergedEntries.push({ ...entry })
+  }
+
+  return mergedEntries
 }
 
 /**
@@ -38,7 +74,7 @@ async function getGameMetadata(gamePath: string): Promise<GameMetadata> {
   const gameConfig = await gameCmds.getGameConfig(gamePath)
 
   return {
-    name: gameConfig.gameName ?? '',
+    name: findGameConfigEntryValue(gameConfig.entries, GAME_NAME_RAW_KEY) ?? '',
   }
 }
 
@@ -81,17 +117,17 @@ function withGamePreviewCacheVersion(
 
 async function getGamePreviewAssets(gamePath: string): Promise<GamePreviewAssets> {
   const gameConfig = await gameCmds.getGameConfig(gamePath)
-  return await resolveGamePreviewAssets(gamePath, gameConfig.titleImg ?? '')
+  return await resolveGamePreviewAssets(gamePath, findGameConfigEntryValue(gameConfig.entries, TITLE_IMAGE_RAW_KEY) ?? '')
 }
 
 async function getGameSnapshot(gamePath: string): Promise<Pick<Game, 'metadata' | 'previewAssets'>> {
   const gameConfig = await gameCmds.getGameConfig(gamePath)
   const cacheVersion = Date.now()
   const metadata = {
-    name: gameConfig.gameName ?? '',
+    name: findGameConfigEntryValue(gameConfig.entries, GAME_NAME_RAW_KEY) ?? '',
   }
   const previewAssets = withGamePreviewCacheVersion(
-    await resolveGamePreviewAssets(gamePath, gameConfig.titleImg ?? ''),
+    await resolveGamePreviewAssets(gamePath, findGameConfigEntryValue(gameConfig.entries, TITLE_IMAGE_RAW_KEY) ?? ''),
     cacheVersion,
   )
 
@@ -218,12 +254,18 @@ async function createGame(gameName: string, gamePath: string, enginePath: string
 
     // 3. 设置游戏配置
     const gameKey = crypto.randomUUID()
+    const gameConfig = await gameCmds.getGameConfig(gamePath)
     await gameCmds.setGameConfig(gamePath, {
-      set: {
-        gameKey,
-        gameName,
-      },
-      unset: [],
+      entries: mergeGameConfigEntries(gameConfig.entries, [
+        {
+          key: GAME_NAME_RAW_KEY,
+          value: gameName,
+        },
+        {
+          key: GAME_KEY_RAW_KEY,
+          value: gameKey,
+        },
+      ]),
     })
     logger.info(`[游戏 ${gameName}] 设置游戏配置`)
 

@@ -110,6 +110,14 @@ vi.mock('~/commands/fs', () => ({
 }))
 
 vi.mock('~/commands/game', () => ({
+  findGameConfigEntryValue(entries: { key: string, value: string }[], rawKey: string) {
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
+      const entry = entries[index]
+      if (entry?.key === rawKey) {
+        return entry.value
+      }
+    }
+  },
   gameCmds: {
     getGameConfig: gameCmdsGetGameConfigMock,
     setGameConfig: gameCmdsSetGameConfigMock,
@@ -180,7 +188,13 @@ describe('gameManager 游戏管理', () => {
   })
 
   it('getGameMetadata 只返回语义元数据', async () => {
-    gameCmdsGetGameConfigMock.mockResolvedValue({ gameName: 'Demo Game', titleImg: 'cover.png' })
+    gameCmdsGetGameConfigMock.mockResolvedValue({
+      entries: [
+        { key: 'Game_name', value: 'Demo Game' },
+        { key: 'Title_img', value: 'cover.png' },
+      ],
+      unmanagedLineCount: 0,
+    })
 
     await expect(gameManager.getGameMetadata('/games/demo')).resolves.toEqual({
       name: 'Demo Game',
@@ -188,7 +202,13 @@ describe('gameManager 游戏管理', () => {
   })
 
   it('getGamePreviewAssets 只返回封面和图标路径', async () => {
-    gameCmdsGetGameConfigMock.mockResolvedValue({ gameName: 'Demo Game', titleImg: 'cover.png' })
+    gameCmdsGetGameConfigMock.mockResolvedValue({
+      entries: [
+        { key: 'Game_name', value: 'Demo Game' },
+        { key: 'Title_img', value: 'cover.png' },
+      ],
+      unmanagedLineCount: 0,
+    })
     gameIconPathMock.mockResolvedValue('/games/demo/icons/icon.png')
     gameCoverPathMock.mockResolvedValue('/games/demo/assets/cover.png')
 
@@ -206,7 +226,13 @@ describe('gameManager 游戏管理', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     dbGamesAddMock.mockResolvedValue('game-1')
-    gameCmdsGetGameConfigMock.mockResolvedValue({ gameName: 'Resolved Name', titleImg: 'cover.png' })
+    gameCmdsGetGameConfigMock.mockResolvedValue({
+      entries: [
+        { key: 'Game_name', value: 'Resolved Name' },
+        { key: 'Title_img', value: 'cover.png' },
+      ],
+      unmanagedLineCount: 0,
+    })
     gameIconPathMock.mockResolvedValue('/games/demo/icons/icon.png')
     gameCoverPathMock.mockResolvedValue('/games/demo/assets/cover.png')
 
@@ -248,7 +274,13 @@ describe('gameManager 游戏管理', () => {
       onProgress(25)
       onProgress(100)
     })
-    gameCmdsGetGameConfigMock.mockResolvedValue({ gameName: 'Demo Game', titleImg: 'cover.png' })
+    gameCmdsGetGameConfigMock.mockResolvedValue({
+      entries: [
+        { key: 'Game_name', value: 'Demo Game' },
+        { key: 'Title_img', value: 'cover.png' },
+      ],
+      unmanagedLineCount: 0,
+    })
     gameIconPathMock.mockResolvedValue('/games/demo/icons/icon.png')
     gameCoverPathMock.mockResolvedValue('/games/demo/assets/cover.png')
 
@@ -271,11 +303,20 @@ describe('gameManager 游戏管理', () => {
       },
     }))
     expect(gameCmdsSetGameConfigMock).toHaveBeenCalledWith('/games/demo', {
-      set: {
-        gameKey: '22222222-2222-2222-2222-222222222222',
-        gameName: 'Demo Game',
-      },
-      unset: [],
+      entries: [
+        {
+          key: 'Game_name',
+          value: 'Demo Game',
+        },
+        {
+          key: 'Title_img',
+          value: 'cover.png',
+        },
+        {
+          key: 'Game_key',
+          value: '22222222-2222-2222-2222-222222222222',
+        },
+      ],
     })
     expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(1, 'game-1', 25)
     expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(2, 'game-1', 100)
@@ -304,6 +345,12 @@ describe('gameManager 游戏管理', () => {
     dbGamesAddMock.mockResolvedValue('game-1')
     existsMock.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
     copyDirectoryWithProgressMock.mockResolvedValue(undefined)
+    gameCmdsGetGameConfigMock.mockResolvedValue({
+      entries: [
+        { key: 'Game_name', value: 'Demo Game' },
+      ],
+      unmanagedLineCount: 0,
+    })
     gameCmdsSetGameConfigMock.mockRejectedValue(new Error('config failed'))
 
     await expect(gameManager.createGame('Demo Game', '/games/demo', '/engines/base')).rejects.toThrow('config failed')
@@ -353,8 +400,11 @@ describe('gameManager 游戏管理', () => {
       },
     }))
     gameCmdsGetGameConfigMock.mockResolvedValue({
-      gameName: 'Renamed Game',
-      titleImg: 'cover-next.png',
+      entries: [
+        { key: 'Game_name', value: 'Renamed Game' },
+        { key: 'Title_img', value: 'cover-next.png' },
+      ],
+      unmanagedLineCount: 0,
     })
     gameIconPathMock.mockResolvedValue('/games/demo/icons/favicon.ico')
     gameCoverPathMock.mockResolvedValue('/games/demo/assets/cover-next.png')
@@ -461,7 +511,13 @@ describe('gameManager 游戏管理', () => {
       id: 'game-1',
       path: '/games/demo',
     })
-    gameCmdsGetGameConfigMock.mockResolvedValue({ gameName: 'Changed Name', titleImg: 'cover-next.png' })
+    gameCmdsGetGameConfigMock.mockResolvedValue({
+      entries: [
+        { key: 'Game_name', value: 'Changed Name' },
+        { key: 'Title_img', value: 'cover-next.png' },
+      ],
+      unmanagedLineCount: 0,
+    })
     gameIconPathMock.mockResolvedValue('/games/demo/icons/next.ico')
     gameCoverPathMock.mockResolvedValue('/games/demo/assets/cover-next.png')
 
@@ -543,7 +599,13 @@ describe('gameManager 游戏管理', () => {
         },
       },
     })
-    gameCmdsGetGameConfigMock.mockResolvedValue({ gameName: 'Demo Game', titleImg: 'cover.png' })
+    gameCmdsGetGameConfigMock.mockResolvedValue({
+      entries: [
+        { key: 'Game_name', value: 'Demo Game' },
+        { key: 'Title_img', value: 'cover.png' },
+      ],
+      unmanagedLineCount: 0,
+    })
     gameIconPathMock.mockRejectedValue(new Error('icon missing'))
 
     await gameManager.updateGameLastModified('game-1')

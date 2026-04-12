@@ -5,212 +5,271 @@ use std::{
 };
 
 use super::{AppError, AppResult};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy)]
-struct GameConfigKeyMapping {
-    raw_key: &'static str,
-    frontend_key: &'static str,
-}
-
-const GAME_CONFIG_KEY_MAPPINGS: [GameConfigKeyMapping; 16] = [
-    GameConfigKeyMapping {
-        raw_key: "Game_name",
-        frontend_key: "gameName",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Game_key",
-        frontend_key: "gameKey",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Title_img",
-        frontend_key: "titleImg",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Title_bgm",
-        frontend_key: "titleBgm",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Game_Logo",
-        frontend_key: "gameLogo",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Enable_Appreciation",
-        frontend_key: "enableAppreciation",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Legacy_Expression_Blend_Mode",
-        frontend_key: "legacyExpressionBlendMode",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Steam_AppID",
-        frontend_key: "steamAppId",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Default_Language",
-        frontend_key: "defaultLanguage",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Show_panic",
-        frontend_key: "showPanic",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Max_line",
-        frontend_key: "maxLine",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Line_height",
-        frontend_key: "lineHeight",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Stage_Width",
-        frontend_key: "stageWidth",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Stage_Height",
-        frontend_key: "stageHeight",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Description",
-        frontend_key: "description",
-    },
-    GameConfigKeyMapping {
-        raw_key: "Package_name",
-        frontend_key: "packageName",
-    },
-];
-
-fn map_raw_key_to_frontend_key(raw_key: &str) -> Option<&'static str> {
-    GAME_CONFIG_KEY_MAPPINGS
-        .iter()
-        .find(|mapping| mapping.raw_key == raw_key)
-        .map(|mapping| mapping.frontend_key)
-}
-
-fn map_frontend_key_to_raw_key(frontend_key: &str) -> Option<&'static str> {
-    GAME_CONFIG_KEY_MAPPINGS
-        .iter()
-        .find(|mapping| mapping.frontend_key == frontend_key)
-        .map(|mapping| mapping.raw_key)
-}
-
-fn require_raw_key(frontend_key: &str) -> AppResult<&'static str> {
-    map_frontend_key_to_raw_key(frontend_key)
-        .ok_or_else(|| AppError::Config(format!("不支持的游戏配置字段: {frontend_key}")))
-}
-
-fn ensure_single_line_value(frontend_key: &str, value: &str) -> AppResult<()> {
+fn ensure_field_has_no_line_breaks(field_name: &str, value: &str) -> AppResult<()> {
     if value.contains('\n') || value.contains('\r') {
         return Err(AppError::Config(format!(
-            "游戏配置字段不能包含换行: {frontend_key}"
+            "游戏配置字段不能包含换行: {field_name}"
         )));
     }
 
     Ok(())
 }
 
-/// 解析配置行中的键名
-fn parse_config_line_key(line: &str) -> Option<String> {
+fn ensure_field_has_no_semicolons(field_name: &str, value: &str) -> AppResult<()> {
+    if value.contains(';') {
+        return Err(AppError::Config(format!(
+            "游戏配置字段不能包含分号: {field_name}"
+        )));
+    }
+
+    Ok(())
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ParsedConfigLine {
+    key: String,
+    value: String,
+    trailing_suffix: String,
+}
+
+fn parse_config_line(line: &str) -> Option<ParsedConfigLine> {
     let line = line.trim();
-    let line = line.strip_suffix(";")?;
-    let (key, _) = line.split_once(":")?;
-    Some(key.trim().to_string())
+    if is_comment_line(line) {
+        return None;
+    }
+
+    let (content_prefix, trailing_suffix) = split_content_prefix_and_trailing_suffix(line);
+    let (key, value) = content_prefix.split_once(":")?;
+    let key = key.trim();
+    if key.is_empty() {
+        return None;
+    }
+
+    Some(ParsedConfigLine {
+        key: key.to_string(),
+        value: value.trim().to_string(),
+        trailing_suffix: trailing_suffix.to_string(),
+    })
+}
+
+fn is_comment_line(line: &str) -> bool {
+    let line = line.trim();
+    line.starts_with(';')
+}
+
+fn split_content_prefix_and_trailing_suffix(line: &str) -> (&str, &str) {
+    match line.find(';') {
+        Some(index) => (&line[..index], &line[index..]),
+        None => (line, ""),
+    }
+}
+
+fn looks_like_config_line(line: &str) -> bool {
+    let line = line.trim();
+    !line.is_empty() && !is_comment_line(line) && (line.contains(':') || line.ends_with(';'))
+}
+
+fn format_config_line(key: &str, value: &str, trailing_suffix: &str) -> String {
+    if trailing_suffix.is_empty() {
+        return format!("{key}: {value};");
+    }
+
+    format!("{key}: {value}{trailing_suffix}")
+}
+
+fn collect_last_line_indices_by(content: &str) -> HashMap<String, usize> {
+    let mut last_indices = HashMap::new();
+
+    for (line_index, line) in content.lines().enumerate() {
+        let Some(parsed_line) = parse_config_line(line) else {
+            continue;
+        };
+
+        last_indices.insert(parsed_line.key, line_index);
+    }
+
+    last_indices
+}
+
+fn normalize_entry_key(key: &str) -> AppResult<String> {
+    ensure_field_has_no_line_breaks("configKey", key)?;
+
+    let normalized_key = key.trim();
+    if normalized_key.is_empty() {
+        return Err(AppError::Config("配置键不能为空".to_string()));
+    }
+
+    if normalized_key.contains(':') {
+        return Err(AppError::Config(format!(
+            "配置键不能包含冒号: {normalized_key}"
+        )));
+    }
+
+    if normalized_key.contains(';') {
+        return Err(AppError::Config(format!(
+            "配置键不能包含分号: {normalized_key}"
+        )));
+    }
+
+    Ok(normalized_key.to_string())
+}
+
+fn normalize_entries(entries: Vec<GameConfigEntry>) -> AppResult<Vec<GameConfigEntry>> {
+    let mut normalized_entries = Vec::with_capacity(entries.len());
+    let mut seen_keys = HashSet::new();
+
+    for entry in entries {
+        let key = normalize_entry_key(&entry.key)?;
+        ensure_field_has_no_line_breaks(&key, &entry.value)?;
+        ensure_field_has_no_semicolons(&key, &entry.value)?;
+
+        if !seen_keys.insert(key.clone()) {
+            return Err(AppError::Config(format!("配置键重复: {key}")));
+        }
+
+        normalized_entries.push(GameConfigEntry {
+            key,
+            value: entry.value,
+        });
+    }
+
+    Ok(normalized_entries)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameConfigEntry {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameConfigReadResult {
+    #[serde(default)]
+    pub entries: Vec<GameConfigEntry>,
+    pub unmanaged_line_count: usize,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct GameConfigPatch {
+#[serde(rename_all = "camelCase")]
+pub struct GameConfigWritePayload {
     #[serde(default)]
-    pub set: HashMap<String, String>,
-    #[serde(default)]
-    pub unset: Vec<String>,
+    pub entries: Vec<GameConfigEntry>,
 }
 
 #[tauri::command]
-pub fn get_game_config(game_path: String) -> AppResult<HashMap<String, String>> {
+pub fn get_game_config(game_path: String) -> AppResult<GameConfigReadResult> {
     // 构建配置文件路径
     let config_path = Path::new(&game_path).join("game").join("config.txt");
 
     // 读取配置文件内容
     let content = fs::read_to_string(&config_path)?;
 
-    // 解析配置项
-    let mut config_map = HashMap::new();
-    for line in content.lines() {
-        let line = line.trim();
-        if line.is_empty() || !line.ends_with(";") {
+    let mut entry_values = HashMap::new();
+    let mut entry_positions = HashMap::new();
+    let mut unmanaged_line_count = 0;
+
+    for (line_index, line) in content.lines().enumerate() {
+        let trimmed_line = line.trim();
+        if trimmed_line.is_empty() || is_comment_line(trimmed_line) {
             continue;
         }
 
-        if let Some(line) = line.strip_suffix(";") {
-            if let Some((key, value)) = line.split_once(":") {
-                let key = key.trim();
-                let value = value.trim().to_string();
-                let Some(frontend_key) = map_raw_key_to_frontend_key(key) else {
-                    continue;
-                };
-
-                config_map.insert(frontend_key.to_string(), value);
+        let Some(parsed_line) = parse_config_line(line) else {
+            if looks_like_config_line(trimmed_line) {
+                unmanaged_line_count += 1;
             }
-        }
+            continue;
+        };
+
+        entry_positions.insert(parsed_line.key.clone(), line_index);
+        entry_values.insert(parsed_line.key, parsed_line.value);
     }
 
-    Ok(config_map)
+    let mut entries = entry_positions
+        .into_iter()
+        .map(|(key, line_index)| {
+            (
+                line_index,
+                GameConfigEntry {
+                    value: entry_values
+                        .remove(&key)
+                        .expect("config value should exist for collected key"),
+                    key,
+                },
+            )
+        })
+        .collect::<Vec<_>>();
+    entries.sort_by_key(|(line_index, _)| *line_index);
+
+    Ok(GameConfigReadResult {
+        entries: entries.into_iter().map(|(_, entry)| entry).collect(),
+        unmanaged_line_count,
+    })
 }
 
 #[tauri::command]
-pub fn set_game_config(game_path: String, config: GameConfigPatch) -> AppResult<()> {
+pub fn set_game_config(game_path: String, config: GameConfigWritePayload) -> AppResult<()> {
     // 构建配置文件路径
     let config_path = Path::new(&game_path).join("game").join("config.txt");
 
     // 读取配置文件内容
     let content = fs::read_to_string(&config_path)?;
 
-    // 同键同时出现在 unset 和 set 时，非空 set 视为最终值；空字符串 set 仍视为显式 unset
-    let mut pending_removals = HashSet::new();
-    for key in config.unset {
-        pending_removals.insert(require_raw_key(&key)?.to_string());
-    }
-    let mut pending_updates = HashMap::new();
-
-    for (key, value) in config.set {
-        // config.txt 只接受已知原始键名，且每个值都必须保持单行
-        ensure_single_line_value(&key, &value)?;
-        let raw_key = require_raw_key(&key)?.to_string();
-
-        if value.is_empty() {
-            pending_removals.insert(raw_key);
-            continue;
-        }
-
-        pending_updates.insert(raw_key, value);
-    }
+    let normalized_entries = normalize_entries(config.entries)?;
+    let existing_line_indices = collect_last_line_indices_by(&content);
+    let next_entry_value_map = normalized_entries
+        .iter()
+        .map(|entry| (entry.key.clone(), entry.value.clone()))
+        .collect::<HashMap<_, _>>();
+    let entry_order = normalized_entries
+        .iter()
+        .map(|entry| entry.key.clone())
+        .collect::<Vec<_>>();
+    let mut written_keys = HashSet::new();
 
     let mut updated_lines = Vec::new();
 
-    for line in content.lines() {
-        let Some(existing_key) = parse_config_line_key(line) else {
+    for (line_index, line) in content.lines().enumerate() {
+        let Some(parsed_line) = parse_config_line(line) else {
             updated_lines.push(line.to_string());
             continue;
         };
 
-        if let Some(next_value) = pending_updates.remove(&existing_key) {
-            updated_lines.push(format!("{}: {};", existing_key, next_value));
+        let Some(last_line_index) = existing_line_indices.get(&parsed_line.key) else {
+            updated_lines.push(line.to_string());
+            continue;
+        };
+
+        let Some(next_value) = next_entry_value_map.get(&parsed_line.key) else {
+            continue;
+        };
+
+        if *last_line_index != line_index {
             continue;
         }
 
-        if pending_removals.contains(&existing_key) {
-            continue;
-        }
-
-        updated_lines.push(line.to_string());
+        updated_lines.push(format_config_line(
+            &parsed_line.key,
+            next_value,
+            &parsed_line.trailing_suffix,
+        ));
+        written_keys.insert(parsed_line.key);
     }
 
-    let mut appended_lines = pending_updates
-        .into_iter()
-        .map(|(key, value)| format!("{}: {};", key, value))
-        .collect::<Vec<_>>();
-    appended_lines.sort_unstable();
-    updated_lines.extend(appended_lines);
+    for key in entry_order {
+        if written_keys.contains(&key) {
+            continue;
+        }
+
+        let value = next_entry_value_map
+            .get(&key)
+            .expect("config value should exist for ordered key");
+        updated_lines.push(format!("{}: {};", key, value));
+    }
 
     let mut updated_content = updated_lines.join("\n");
     if content.ends_with('\n') && !updated_content.is_empty() {
@@ -225,135 +284,300 @@ pub fn set_game_config(game_path: String, config: GameConfigPatch) -> AppResult<
 
 #[cfg(test)]
 mod tests {
-    use super::{get_game_config, set_game_config, AppError, GameConfigPatch};
+    use super::{
+        get_game_config, set_game_config, AppError, GameConfigEntry, GameConfigWritePayload,
+    };
     use std::{
-        collections::HashMap,
         fs,
         path::PathBuf,
+        sync::atomic::{AtomicU64, Ordering},
         time::{SystemTime, UNIX_EPOCH},
     };
+
+    static TEMP_GAME_DIR_COUNTER: AtomicU64 = AtomicU64::new(0);
 
     fn create_temp_game_dir() -> PathBuf {
         let unique_suffix = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("system clock should be after unix epoch")
             .as_nanos();
-        let game_dir =
-            std::env::temp_dir().join(format!("webgal-craft-game-config-{unique_suffix}"));
+        let counter = TEMP_GAME_DIR_COUNTER.fetch_add(1, Ordering::Relaxed);
+        let game_dir = std::env::temp_dir().join(format!(
+            "webgal-craft-game-config-{unique_suffix}-{counter}"
+        ));
         fs::create_dir_all(game_dir.join("game")).expect("temp game directory should be created");
         game_dir
     }
 
+    fn entry(key: &str, value: &str) -> GameConfigEntry {
+        GameConfigEntry {
+            key: key.to_string(),
+            value: value.to_string(),
+        }
+    }
+
     #[test]
-    fn get_game_config_maps_known_raw_keys_to_frontend_keys() {
+    fn get_game_config_returns_raw_entries_and_counts_unmanaged_lines() {
         let game_dir = create_temp_game_dir();
         let config_path = game_dir.join("game").join("config.txt");
         fs::write(
             &config_path,
-            "Game_name: Demo;\nDefault_Language: zh_CN;\nSteam_AppID: 123456;\nGame_Logo: logo1|logo2;\nStage_Width: 1280;\nStage_Height: 720;\nUnexpected_key: keep-hidden;\n",
+            "Game_name: Demo;\nCustom_flag: old;\nBroken_line missing;semicolon;\nCustom_flag: new;\n; comment\nStage_Width: 1280;\n",
         )
         .expect("config should be written");
 
         let config =
             get_game_config(game_dir.to_string_lossy().into_owned()).expect("config should parse");
 
-        assert_eq!(config.get("gameName"), Some(&"Demo".to_string()));
-        assert_eq!(config.get("defaultLanguage"), Some(&"zh_CN".to_string()));
-        assert_eq!(config.get("steamAppId"), Some(&"123456".to_string()));
-        assert_eq!(config.get("gameLogo"), Some(&"logo1|logo2".to_string()));
-        assert_eq!(config.get("stageWidth"), Some(&"1280".to_string()));
-        assert_eq!(config.get("stageHeight"), Some(&"720".to_string()));
-        assert!(!config.contains_key("Unexpected_key"));
+        assert_eq!(
+            config.entries,
+            vec![
+                GameConfigEntry {
+                    key: "Game_name".to_string(),
+                    value: "Demo".to_string(),
+                },
+                GameConfigEntry {
+                    key: "Custom_flag".to_string(),
+                    value: "new".to_string(),
+                },
+                GameConfigEntry {
+                    key: "Stage_Width".to_string(),
+                    value: "1280".to_string(),
+                }
+            ]
+        );
+        assert_eq!(config.unmanaged_line_count, 1);
 
         fs::remove_dir_all(game_dir).expect("temp game directory should be removed");
     }
 
     #[test]
-    fn set_game_config_updates_existing_values_with_explicit_raw_keys() {
+    fn get_game_config_parses_lines_without_trailing_semicolons_and_discards_inline_tail() {
         let game_dir = create_temp_game_dir();
         let config_path = game_dir.join("game").join("config.txt");
         fs::write(
             &config_path,
-            "Game_name: Demo;\nMax_line: 3;\nLine_height: 2.2;\nShow_panic: true;\n",
+            "Game_name: Demo\nDescription: Intro story; official sample\nCustom_flag: enabled;tail;comment\n",
         )
         .expect("config should be written");
 
-        let mut set = HashMap::new();
-        set.insert("gameName".to_string(), "Renamed Demo".to_string());
-        set.insert("defaultLanguage".to_string(), "ja".to_string());
-        set.insert("steamAppId".to_string(), "999".to_string());
-        let patch = GameConfigPatch {
-            set,
-            unset: vec!["maxLine".to_string()],
+        let config =
+            get_game_config(game_dir.to_string_lossy().into_owned()).expect("config should parse");
+
+        assert_eq!(
+            config.entries,
+            vec![
+                GameConfigEntry {
+                    key: "Game_name".to_string(),
+                    value: "Demo".to_string(),
+                },
+                GameConfigEntry {
+                    key: "Description".to_string(),
+                    value: "Intro story".to_string(),
+                },
+                GameConfigEntry {
+                    key: "Custom_flag".to_string(),
+                    value: "enabled".to_string(),
+                }
+            ]
+        );
+        assert_eq!(config.unmanaged_line_count, 0);
+
+        fs::remove_dir_all(game_dir).expect("temp game directory should be removed");
+    }
+
+    #[test]
+    fn get_game_config_ignores_semicolon_comments_even_if_they_look_like_entries() {
+        let game_dir = create_temp_game_dir();
+        let config_path = game_dir.join("game").join("config.txt");
+        fs::write(
+            &config_path,
+            "; note: keep this;\nGame_name: Demo;\nCustom_flag: enabled;\n",
+        )
+        .expect("config should be written");
+
+        let config =
+            get_game_config(game_dir.to_string_lossy().into_owned()).expect("config should parse");
+
+        assert_eq!(
+            config.entries,
+            vec![
+                GameConfigEntry {
+                    key: "Game_name".to_string(),
+                    value: "Demo".to_string(),
+                },
+                GameConfigEntry {
+                    key: "Custom_flag".to_string(),
+                    value: "enabled".to_string(),
+                }
+            ]
+        );
+        assert_eq!(config.unmanaged_line_count, 0);
+
+        fs::remove_dir_all(game_dir).expect("temp game directory should be removed");
+    }
+
+    #[test]
+    fn set_game_config_rewrites_entries_in_raw_key_space_and_preserves_unmanaged_lines() {
+        let game_dir = create_temp_game_dir();
+        let config_path = game_dir.join("game").join("config.txt");
+        fs::write(
+            &config_path,
+            "; heading\nGame_name: Demo;\nCustom_keep: old;\nCustom_remove: stale;\nCustom_remove: stale-2;\nBroken_line missing;semicolon;\n",
+        )
+        .expect("config should be written");
+
+        let payload = GameConfigWritePayload {
+            entries: vec![
+                entry("Game_name", "Renamed"),
+                entry("Custom_keep", "updated"),
+                entry("Stage_Width", "1280"),
+                entry("New_key", "fresh"),
+            ],
         };
 
-        set_game_config(game_dir.to_string_lossy().into_owned(), patch)
+        set_game_config(game_dir.to_string_lossy().into_owned(), payload)
             .expect("config should update");
 
         let content = fs::read_to_string(&config_path).expect("updated config should be readable");
-        assert!(content.contains("Game_name: Renamed Demo;"));
-        assert!(content.contains("Default_Language: ja;"));
-        assert!(content.contains("Line_height: 2.2;"));
-        assert!(content.contains("Show_panic: true;"));
-        assert!(content.contains("Steam_AppID: 999;"));
-        assert!(!content.contains("Max_line:"));
+        assert_eq!(
+            content,
+            "; heading\nGame_name: Renamed;\nCustom_keep: updated;\nBroken_line missing;semicolon;\nStage_Width: 1280;\nNew_key: fresh;\n"
+        );
 
         fs::remove_dir_all(game_dir).expect("temp game directory should be removed");
     }
 
     #[test]
-    fn set_game_config_removes_empty_non_toggle_values_and_keeps_toggle_values() {
+    fn set_game_config_preserves_inline_tail_and_normalizes_missing_trailing_semicolons() {
         let game_dir = create_temp_game_dir();
         let config_path = game_dir.join("game").join("config.txt");
         fs::write(
             &config_path,
-            "Game_name: Demo;\nDescription: Story;\nGame_Logo: opening.webp|enter.webp|;\nDefault_Language: zh_CN;\nSteam_AppID: 123456;\nEnable_Appreciation: true;\nLegacy_Expression_Blend_Mode: false;\nShow_panic: true;\n",
+            "Game_name: Demo\nDescription: Intro story; official sample\nCustom_flag: enabled\n",
         )
         .expect("config should be written");
 
-        let mut set = HashMap::new();
-        set.insert("gameName".to_string(), "".to_string());
-        set.insert("description".to_string(), "".to_string());
-        set.insert("gameLogo".to_string(), "".to_string());
-        set.insert("defaultLanguage".to_string(), "".to_string());
-        set.insert("steamAppId".to_string(), "".to_string());
-        set.insert("enableAppreciation".to_string(), "false".to_string());
-        set.insert("legacyExpressionBlendMode".to_string(), "true".to_string());
-        set.insert("showPanic".to_string(), "false".to_string());
-        let patch = GameConfigPatch { set, unset: vec![] };
+        let payload = GameConfigWritePayload {
+            entries: vec![
+                entry("Game_name", "Renamed"),
+                entry("Description", "Updated story"),
+                entry("Custom_flag", "disabled"),
+            ],
+        };
 
-        set_game_config(game_dir.to_string_lossy().into_owned(), patch)
+        set_game_config(game_dir.to_string_lossy().into_owned(), payload)
             .expect("config should update");
 
         let content = fs::read_to_string(&config_path).expect("updated config should be readable");
-        assert!(!content.contains("Game_name:"));
-        assert!(!content.contains("Description:"));
-        assert!(!content.contains("Game_Logo:"));
-        assert!(!content.contains("Default_Language:"));
-        assert!(!content.contains("Steam_AppID:"));
-        assert!(content.contains("Enable_Appreciation: false;"));
-        assert!(content.contains("Legacy_Expression_Blend_Mode: true;"));
-        assert!(content.contains("Show_panic: false;"));
+        assert_eq!(
+            content,
+            "Game_name: Renamed;\nDescription: Updated story; official sample\nCustom_flag: disabled;\n"
+        );
 
         fs::remove_dir_all(game_dir).expect("temp game directory should be removed");
     }
 
     #[test]
-    fn set_game_config_rejects_unknown_frontend_keys() {
+    fn set_game_config_preserves_semicolon_comments_that_contain_colons() {
+        let game_dir = create_temp_game_dir();
+        let config_path = game_dir.join("game").join("config.txt");
+        fs::write(
+            &config_path,
+            "; note: keep this;\nGame_name: Demo;\nCustom_keep: old;\n",
+        )
+        .expect("config should be written");
+
+        let payload = GameConfigWritePayload {
+            entries: vec![
+                entry("Game_name", "Renamed"),
+                entry("Custom_keep", "updated"),
+            ],
+        };
+
+        set_game_config(game_dir.to_string_lossy().into_owned(), payload)
+            .expect("config should update");
+
+        let content = fs::read_to_string(&config_path).expect("updated config should be readable");
+        assert_eq!(
+            content,
+            "; note: keep this;\nGame_name: Renamed;\nCustom_keep: updated;\n"
+        );
+
+        fs::remove_dir_all(game_dir).expect("temp game directory should be removed");
+    }
+
+    #[test]
+    fn set_game_config_rejects_keys_and_values_with_semicolons() {
         let game_dir = create_temp_game_dir();
         let config_path = game_dir.join("game").join("config.txt");
         fs::write(&config_path, "Game_name: Demo;\n").expect("config should be written");
 
-        let mut set = HashMap::new();
-        set.insert("unsupportedKey".to_string(), "value".to_string());
-        let patch = GameConfigPatch { set, unset: vec![] };
+        let key_error = set_game_config(
+            game_dir.to_string_lossy().into_owned(),
+            GameConfigWritePayload {
+                entries: vec![entry("Bad;Key", "value")],
+            },
+        )
+        .expect_err("semicolon keys should be rejected");
 
-        let error = set_game_config(game_dir.to_string_lossy().into_owned(), patch)
-            .expect_err("unknown frontend key should be rejected");
+        assert!(matches!(
+            key_error,
+            AppError::Config(message) if message.contains("Bad;Key")
+        ));
+
+        let value_error = set_game_config(
+            game_dir.to_string_lossy().into_owned(),
+            GameConfigWritePayload {
+                entries: vec![entry("Game_name", "Demo;Broken")],
+            },
+        )
+        .expect_err("semicolon values should be rejected");
+
+        assert!(matches!(
+            value_error,
+            AppError::Config(message) if message.contains("Game_name")
+        ));
+
+        fs::remove_dir_all(game_dir).expect("temp game directory should be removed");
+    }
+
+    #[test]
+    fn set_game_config_rejects_duplicate_keys() {
+        let game_dir = create_temp_game_dir();
+        let config_path = game_dir.join("game").join("config.txt");
+        fs::write(&config_path, "Game_name: Demo;\n").expect("config should be written");
+        let payload = GameConfigWritePayload {
+            entries: vec![entry("Game_name", "Demo"), entry("Game_name", "Renamed")],
+        };
+
+        let error = set_game_config(game_dir.to_string_lossy().into_owned(), payload)
+            .expect_err("duplicate keys should be rejected");
 
         assert!(matches!(
             error,
-            AppError::Config(message) if message.contains("unsupportedKey")
+            AppError::Config(message) if message.contains("Game_name")
+        ));
+
+        fs::remove_dir_all(game_dir).expect("temp game directory should be removed");
+    }
+
+    #[test]
+    fn set_game_config_rejects_blank_and_invalid_keys() {
+        let game_dir = create_temp_game_dir();
+        let config_path = game_dir.join("game").join("config.txt");
+        fs::write(&config_path, "Game_name: Demo;\n").expect("config should be written");
+
+        let payload = GameConfigWritePayload {
+            entries: vec![entry("Invalid:key", "value")],
+        };
+
+        let error = set_game_config(game_dir.to_string_lossy().into_owned(), payload)
+            .expect_err("invalid keys should be rejected");
+
+        assert!(matches!(
+            error,
+            AppError::Config(message) if message.contains("Invalid:key")
         ));
 
         fs::remove_dir_all(game_dir).expect("temp game directory should be removed");
@@ -366,16 +590,16 @@ mod tests {
         fs::write(&config_path, "Game_name: Demo;\nDescription: Story;\n")
             .expect("config should be written");
 
-        let mut set = HashMap::new();
-        set.insert("description".to_string(), "Line 1\nLine 2".to_string());
-        let patch = GameConfigPatch { set, unset: vec![] };
+        let payload = GameConfigWritePayload {
+            entries: vec![entry("Description", "Line 1\nLine 2")],
+        };
 
-        let error = set_game_config(game_dir.to_string_lossy().into_owned(), patch)
+        let error = set_game_config(game_dir.to_string_lossy().into_owned(), payload)
             .expect_err("multiline values should be rejected");
 
         assert!(matches!(
             error,
-            AppError::Config(message) if message.contains("description")
+            AppError::Config(message) if message.contains("Description")
         ));
 
         fs::remove_dir_all(game_dir).expect("temp game directory should be removed");
