@@ -18,7 +18,7 @@ watch(() => workspaceStore.activeTab, checkResourcesForActiveTab, { immediate: t
     <AppHeader />
     <main class="mx-auto px-4 py-8 container flex flex-1 flex-col min-h-0 overflow-hidden lg:px-8 sm:px-6">
       <WelcomeSection />
-      <Tabs ::="workspaceStore.activeTab" class="mb-6 gap-4 grid grid-rows-[auto_minmax(0,1fr)] min-h-0">
+      <Tabs ::="workspaceStore.activeTab" class="mb-6 flex-1 gap-4 grid grid-rows-[auto_minmax(0,1fr)] min-h-0">
         <div data-testid="home-tabs-header" class="space-y-4">
           <TabsList>
             <TabsTrigger
