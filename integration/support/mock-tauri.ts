@@ -210,6 +210,14 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
         return entries
       }
 
+      function requireGamePath(gamePath: unknown): string {
+        if (typeof gamePath !== 'string' || gamePath === '') {
+          throw new Error('缺少 gamePath')
+        }
+
+        return gamePath
+      }
+
       function createDefaultGameConfig(gameName: string): GameConfigReadResult {
         const resolvedGameName = gameName.trim() || 'Demo Game'
         const slug = resolvedGameName.toLowerCase().replaceAll(/\s+/g, '-')
@@ -603,7 +611,7 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
               return
             }
             case 'set_game_config': {
-              const gamePath = String(invokeArgs.gamePath ?? '')
+              const gamePath = requireGamePath(invokeArgs.gamePath)
               const current = getGameConfig(gamePath)
               const nextEntries = requireGameConfigEntries(invokeArgs.config)
               writeGameConfig(gamePath, {
@@ -613,7 +621,7 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
               return
             }
             case 'get_game_config': {
-              const gamePath = String(invokeArgs.gamePath ?? '')
+              const gamePath = requireGamePath(invokeArgs.gamePath)
               return getGameConfig(gamePath)
             }
             case 'get_thumbnail': {
