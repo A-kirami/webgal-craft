@@ -270,6 +270,26 @@ describe('game-config form helpers', () => {
     })).success).toBe(false)
   })
 
+  it('createGameConfigSchema 会拒绝带首尾空格的自定义键，并按去空格后的结果识别内置键', () => {
+    const schema = createGameConfigSchema(t)
+    const result = schema.safeParse(createFormValues({
+      customConfig: [
+        {
+          key: ' Game_name ',
+          value: 'Demo',
+        },
+      ],
+    }))
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.map(issue => issue.message)).toEqual(expect.arrayContaining([
+        'modals.gameConfig.validation.customConfigKeyNoSurroundingWhitespace',
+        'modals.gameConfig.validation.customConfigKeyReserved',
+      ]))
+    }
+  })
+
   it('createGameConfigSchema 允许 Stage_Width 和 Stage_Height 作为自定义项', () => {
     const schema = createGameConfigSchema(t)
 
@@ -302,6 +322,30 @@ describe('game-config form helpers', () => {
         },
       ],
     })).success).toBe(false)
+  })
+
+  it('createGameConfigSchema 会按去空格后的结果拒绝重复的自定义键', () => {
+    const schema = createGameConfigSchema(t)
+    const result = schema.safeParse(createFormValues({
+      customConfig: [
+        {
+          key: 'Custom_flag',
+          value: 'a',
+        },
+        {
+          key: ' Custom_flag ',
+          value: 'b',
+        },
+      ],
+    }))
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues.map(issue => issue.message)).toEqual(expect.arrayContaining([
+        'modals.gameConfig.validation.customConfigKeyNoSurroundingWhitespace',
+        'modals.gameConfig.validation.customConfigKeyDuplicate',
+      ]))
+    }
   })
 
   it('createGameConfigSchema 会拒绝包含分号的内置字符串字段', () => {
@@ -459,6 +503,10 @@ describe('game-config form helpers', () => {
       customConfig: [
         {
           key: '',
+          value: '',
+        },
+        {
+          key: '   ',
           value: '',
         },
         {

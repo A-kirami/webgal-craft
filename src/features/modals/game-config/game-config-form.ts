@@ -117,6 +117,10 @@ function hasSemicolon(value: string): boolean {
   return value.includes(';')
 }
 
+function normalizeCustomConfigKey(key: string): string {
+  return key.trim()
+}
+
 function createConfigValueSchema(t: I18nT) {
   return z.string().refine(
     value => !hasSemicolon(value),
@@ -125,29 +129,39 @@ function createConfigValueSchema(t: I18nT) {
 }
 
 function isBlankCustomConfigEntry(entry: Pick<GameConfigEntry, 'key' | 'value'>): boolean {
-  return entry.key.trim() === '' && entry.value === ''
+  return normalizeCustomConfigKey(entry.key) === '' && entry.value === ''
 }
 
 function createCustomConfigEntrySchema(t: I18nT) {
   return z.object({
-    key: z.string().trim(),
+    key: z.string(),
     value: createConfigValueSchema(t)
       .refine(
         value => !hasLineBreak(value),
         { error: t('modals.gameConfig.validation.customConfigValueSingleLine') },
       ),
   }).superRefine((entry, ctx) => {
+    const normalizedKey = normalizeCustomConfigKey(entry.key)
+
     if (isBlankCustomConfigEntry(entry)) {
       return
     }
 
-    if (entry.key.length === 0) {
+    if (normalizedKey.length === 0) {
       ctx.addIssue({
         code: 'custom',
         message: t('modals.gameConfig.validation.customConfigKeyRequired'),
         path: ['key'],
       })
       return
+    }
+
+    if (entry.key !== normalizedKey) {
+      ctx.addIssue({
+        code: 'custom',
+        message: t('modals.gameConfig.validation.customConfigKeyNoSurroundingWhitespace'),
+        path: ['key'],
+      })
     }
 
     if (hasLineBreak(entry.key)) {
@@ -174,7 +188,7 @@ function createCustomConfigEntrySchema(t: I18nT) {
       })
     }
 
-    if (BUILT_IN_GAME_CONFIG_RAW_KEY_SET.has(entry.key)) {
+    if (BUILT_IN_GAME_CONFIG_RAW_KEY_SET.has(normalizedKey)) {
       ctx.addIssue({
         code: 'custom',
         message: t('modals.gameConfig.validation.customConfigKeyReserved'),
@@ -193,9 +207,10 @@ function createCustomConfigSchema(t: I18nT) {
         continue
       }
 
-      const previousIndex = seenKeys.get(entry.key)
+      const normalizedKey = normalizeCustomConfigKey(entry.key)
+      const previousIndex = seenKeys.get(normalizedKey)
       if (previousIndex === undefined) {
-        seenKeys.set(entry.key, index)
+        seenKeys.set(normalizedKey, index)
         continue
       }
 
@@ -366,7 +381,7 @@ export function serializeGameConfigEntries(values: GameConfigFormValues): GameCo
     ...values.customConfig
       .filter(entry => !isBlankCustomConfigEntry(entry))
       .map(entry => ({
-        key: entry.key.trim(),
+        key: entry.key,
         value: entry.value,
       })),
   )

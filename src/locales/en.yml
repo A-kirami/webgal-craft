@@ -224,6 +224,7 @@ modals:
       steamAppIdInvalid: Steam AppID must be a valid integer, or be left empty
       configValueNoSemicolon: "Configuration values cannot contain ;"
       customConfigKeyRequired: Custom key cannot be empty
+      customConfigKeyNoSurroundingWhitespace: Custom key cannot have leading or trailing whitespace
       customConfigKeySingleLine: Custom key must be a single line
       customConfigKeyNoColon: "Custom key cannot contain :"
       customConfigKeyNoSemicolon: "Custom key cannot contain ;"

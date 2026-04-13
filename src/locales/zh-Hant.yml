@@ -224,6 +224,7 @@ modals:
       steamAppIdInvalid: Steam AppID 必須是有效的整數，或留空
       configValueNoSemicolon: "設定值不能包含 ;"
       customConfigKeyRequired: 自訂設定鍵不能為空
+      customConfigKeyNoSurroundingWhitespace: 自訂設定鍵不能包含首尾空白
       customConfigKeySingleLine: 自訂設定鍵必須是單行文字
       customConfigKeyNoColon: "自訂設定鍵不能包含 :"
       customConfigKeyNoSemicolon: "自訂設定鍵不能包含 ;"

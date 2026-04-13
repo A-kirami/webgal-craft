@@ -224,6 +224,7 @@ modals:
       steamAppIdInvalid: Steam AppID は有効な整数にするか、空欄にしてください
       configValueNoSemicolon: "設定値に ; は使えません"
       customConfigKeyRequired: カスタム設定キーは空にできません
+      customConfigKeyNoSurroundingWhitespace: カスタム設定キーの先頭と末尾に空白は使えません
       customConfigKeySingleLine: カスタム設定キーは1行で入力してください
       customConfigKeyNoColon: "カスタム設定キーに : は使えません"
       customConfigKeyNoSemicolon: "カスタム設定キーに ; は使えません"
