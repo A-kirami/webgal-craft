@@ -188,6 +188,28 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
         return entries.map(entry => ({ ...entry }))
       }
 
+      function isGameConfigEntry(value: unknown): value is GameConfigEntry {
+        if (!value || typeof value !== 'object') {
+          return false
+        }
+
+        const entry = value as Partial<GameConfigEntry>
+        return typeof entry.key === 'string' && typeof entry.value === 'string'
+      }
+
+      function requireGameConfigEntries(config: unknown): GameConfigEntry[] {
+        if (!config || typeof config !== 'object') {
+          throw new TypeError('set_game_config mock 要求 config.entries 为 GameConfigEntry[]')
+        }
+
+        const { entries } = config as { entries?: unknown }
+        if (!Array.isArray(entries) || entries.some(entry => !isGameConfigEntry(entry))) {
+          throw new TypeError('set_game_config mock 要求 config.entries 为 GameConfigEntry[]')
+        }
+
+        return entries
+      }
+
       function createDefaultGameConfig(gameName: string): GameConfigReadResult {
         const resolvedGameName = gameName.trim() || 'Demo Game'
         const slug = resolvedGameName.toLowerCase().replaceAll(/\s+/g, '-')
@@ -583,9 +605,9 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
             case 'set_game_config': {
               const gamePath = String(invokeArgs.gamePath ?? '')
               const current = getGameConfig(gamePath)
-              const nextConfig = invokeArgs.config as Partial<GameConfigReadResult> | undefined
+              const nextEntries = requireGameConfigEntries(invokeArgs.config)
               writeGameConfig(gamePath, {
-                entries: cloneGameConfigEntries(nextConfig?.entries ?? current.entries),
+                entries: nextEntries,
                 unmanagedLineCount: current.unmanagedLineCount,
               })
               return
