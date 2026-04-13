@@ -64,9 +64,17 @@ function cloneGameConfigEntries(entries: readonly GameConfigEntry[]): GameConfig
   return entries.map(entry => ({ ...entry }))
 }
 
+function isPositiveFiniteNumber(value: number): boolean {
+  return Number.isFinite(value) && value > 0
+}
+
+function isPositiveInteger(value: number): boolean {
+  return Number.isInteger(value) && value > 0
+}
+
 function createOptionalPositiveIntegerSchema(t: I18nT) {
   return z.literal('').or(z.number()).refine(
-    value => value === '' || (Number.isInteger(value) && value > 0),
+    value => value === '' || isPositiveInteger(value),
     { error: t('modals.gameConfig.validation.maxLineInvalid') },
   ) satisfies z.ZodType<'' | number>
 }
@@ -79,7 +87,7 @@ function createRequiredGameNameSchema(t: I18nT) {
 
 function createOptionalPositiveNumberSchema(t: I18nT) {
   return z.literal('').or(z.number()).refine(
-    value => value === '' || value > 0,
+    value => value === '' || isPositiveFiniteNumber(value),
     { error: t('modals.gameConfig.validation.lineHeightInvalid') },
   ) satisfies z.ZodType<'' | number>
 }
@@ -239,13 +247,16 @@ function parseBooleanValue(value: string | undefined, fallback: boolean): boolea
   }
 }
 
-function parseOptionalNumberValue(value: string | undefined): '' | number {
+function parseOptionalNumberValue(
+  value: string | undefined,
+  isValid: (value: number) => boolean,
+): '' | number {
   if (!value?.trim()) {
     return ''
   }
 
   const parsedValue = Number(value)
-  return Number.isFinite(parsedValue) ? parsedValue : ''
+  return isValid(parsedValue) ? parsedValue : ''
 }
 
 function parseDefaultLanguage(value: string | undefined): '' | GameConfigDefaultLanguage {
@@ -317,8 +328,8 @@ export function parseGameConfigFormValues(config: GameConfigReadResult): GameCon
     gameName: readEntryValue(entryValueMap, 'Game_name') ?? '',
     gameLogo: parseGameLogoImages(readEntryValue(entryValueMap, 'Game_Logo') ?? ''),
     legacyExpressionBlendMode: parseBooleanValue(readEntryValue(entryValueMap, 'Legacy_Expression_Blend_Mode'), false),
-    lineHeight: parseOptionalNumberValue(readEntryValue(entryValueMap, 'Line_height')),
-    maxLine: parseOptionalNumberValue(readEntryValue(entryValueMap, 'Max_line')),
+    lineHeight: parseOptionalNumberValue(readEntryValue(entryValueMap, 'Line_height'), isPositiveFiniteNumber),
+    maxLine: parseOptionalNumberValue(readEntryValue(entryValueMap, 'Max_line'), isPositiveInteger),
     packageName: readEntryValue(entryValueMap, 'Package_name') ?? '',
     showPanic: parseBooleanValue(readEntryValue(entryValueMap, 'Show_panic'), true),
     steamAppId: readEntryValue(entryValueMap, 'Steam_AppID') ?? '',

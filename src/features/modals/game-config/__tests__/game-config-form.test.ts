@@ -160,11 +160,19 @@ describe('game-config form helpers', () => {
         },
         {
           key: 'Line_height',
-          value: '',
+          value: '0',
         },
         {
           key: 'Max_line',
+          value: '2.5',
+        },
+        {
+          key: 'Line_height',
           value: 'not-a-number',
+        },
+        {
+          key: 'Max_line',
+          value: '-1',
         },
       ],
       unmanagedLineCount: 2,
