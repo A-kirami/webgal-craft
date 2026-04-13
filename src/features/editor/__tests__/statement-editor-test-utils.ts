@@ -1,5 +1,5 @@
-import { vi } from 'vitest'
-import { ref, shallowReactive } from 'vue'
+import { onTestFinished, vi } from 'vitest'
+import { effectScope, ref, shallowReactive } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { useStatementEditor } from '~/features/editor/statement-editor/useStatementEditor'
@@ -103,21 +103,37 @@ export function createSentence(overrides: Partial<ISentence> = {}): ISentence {
   }
 }
 
+function createScopedEditor(factory: () => ReturnType<typeof useStatementEditor>) {
+  const scope = effectScope()
+  const editor = scope.run(factory)
+
+  if (!editor) {
+    scope.stop()
+    throw new TypeError('failed to create statement editor within effect scope')
+  }
+
+  onTestFinished(() => {
+    scope.stop()
+  })
+
+  return editor
+}
+
 export function createHarness(rawText: string) {
   const updates: StatementUpdatePayload[] = []
-  const editor = useStatementEditor({
+  const editor = createScopedEditor(() => useStatementEditor({
     entry: createEntry(rawText),
     emitUpdate(payload) {
       updates.push(payload)
     },
-  })
+  }))
   return { editor, updates }
 }
 
 export function createReactiveHarness(rawText: string) {
   const updates: StatementUpdatePayload[] = []
   const entry = ref(createEntry(rawText))
-  const editor = useStatementEditor({
+  const editor = createScopedEditor(() => useStatementEditor({
     entry,
     emitUpdate(payload) {
       updates.push(payload)
@@ -128,7 +144,7 @@ export function createReactiveHarness(rawText: string) {
         rawText: payload.rawText,
       }
     },
-  })
+  }))
   return { editor, entry, updates }
 }
 
