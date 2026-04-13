@@ -171,14 +171,21 @@ describe('useParamFieldMeta', () => {
     expect(meta.switchModelValue(argSwitch, true)).toBe(true)
   })
 
-  it('未显式配置 placeholder 时返回空字符串，由渲染层决定是否回退 label', () => {
+  it('placeholder 未配置时返回 undefined，显式空字符串保持为空字符串', () => {
     const meta = createMeta()
     const textField = createField({
       key: 'dialogue',
       label: 'Dialogue',
       type: 'text',
     })
+    const emptyPlaceholderField = createField({
+      key: 'dialogue',
+      label: 'Dialogue',
+      placeholder: '',
+      type: 'text',
+    })
 
-    expect(meta.placeholder(textField)).toBe('')
+    expect(meta.placeholder(textField)).toBeUndefined()
+    expect(meta.placeholder(emptyPlaceholderField)).toBe('')
   })
 })

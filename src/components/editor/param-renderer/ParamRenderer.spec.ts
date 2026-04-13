@@ -14,13 +14,14 @@ import ParamRenderer from './ParamRenderer.vue'
 import type { EditorField, TextField } from '~/features/editor/command-registry/schema'
 import type { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
 
-function createStandaloneTextField(): EditorField {
+function createStandaloneTextField(overrides: Partial<TextField> = {}): EditorField {
   const field: TextField = {
     inlineLayout: 'standalone',
     key: 'text',
     label: 'Dialogue',
     type: 'text',
     variant: { inline: 'textarea-auto', panel: 'textarea-grow' },
+    ...overrides,
   }
 
   return {
@@ -72,8 +73,8 @@ const globalStubs = {
   Textarea: createTextareaStub(),
 }
 
-function renderRenderer(surface: StatementEditorSurface) {
-  const field = createStandaloneTextField()
+function renderRenderer(surface: StatementEditorSurface, fieldOverrides: Partial<TextField> = {}) {
+  const field = createStandaloneTextField(fieldOverrides)
 
   return renderInBrowser(ParamRenderer, {
     props: {
@@ -109,5 +110,12 @@ describe('ParamRenderer', () => {
 
     await expect.element(page.getByText('Dialogue')).not.toBeInTheDocument()
     await expect.element(page.getByRole('textbox')).toHaveAttribute('placeholder', 'Dialogue')
+  })
+
+  it('inline 下 standalone 文本字段保留显式空字符串 placeholder', async () => {
+    renderRenderer('inline', { placeholder: '' })
+
+    await expect.element(page.getByText('Dialogue')).not.toBeInTheDocument()
+    await expect.element(page.getByRole('textbox')).toHaveAttribute('placeholder', '')
   })
 })

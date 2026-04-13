@@ -131,7 +131,7 @@ function fieldLayout(field: EditorField): 'row' | 'column' {
 
 function resolvedPlaceholder(field: EditorField): string {
   const explicitPlaceholder = fieldMeta.placeholder(field)
-  if (explicitPlaceholder) {
+  if (explicitPlaceholder !== undefined) {
     return explicitPlaceholder
   }
   if (isInlineStandalone(field)) {
