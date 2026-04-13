@@ -1,14 +1,12 @@
 import { expect, test } from '@playwright/test'
 
-import { launchCraftApp } from '../support/editor-flow'
+import { HOME_CREATE_GAME_BUTTON_NAME, launchCraftApp } from '../support/editor-flow'
 
 test.describe('应用冒烟测试', () => {
   test('首页可正常加载', async ({ page }) => {
     await launchCraftApp(page)
 
-    await expect(page.getByRole('button', {
-      name: /Create Game|创建游戏|ゲームを作成/,
-    })).toBeVisible()
+    await expect(page.getByRole('button', { name: HOME_CREATE_GAME_BUTTON_NAME })).toBeVisible()
 
     // 页面标题应包含应用名称
     await expect(page).toHaveTitle(/WebGAL/)

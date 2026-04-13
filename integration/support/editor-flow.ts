@@ -14,7 +14,7 @@ interface LaunchCraftAppOptions {
   persistedStores?: Record<string, unknown>
 }
 
-const HOME_CREATE_GAME_BUTTON_NAME = /Create Game|创建游戏|ゲームを作成/
+export const HOME_CREATE_GAME_BUTTON_NAME = /Create Game|创建游戏|建立遊戲|ゲームを作成/
 const EDITOR_TEST_GAME_BUTTON_NAME = /Test Game|测试游戏|測試遊戲|ゲームをテスト/
 
 export async function launchCraftApp(page: Page, options: LaunchCraftAppOptions = {}) {

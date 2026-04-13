@@ -65,11 +65,6 @@ const defaultSeedEngine: SeedEngine = {
   },
 }
 
-function normalizeDefaultPackageNameSegment(gameName: string): string {
-  const normalized = gameName.toLowerCase().replaceAll(/[^a-z0-9]+/g, '')
-  return normalized || 'demo'
-}
-
 export async function installMockTauri(page: Page, options: InstallMockTauriOptions = {}) {
   await page.addInitScript(
     async ({ documentDir, seedEngines }) => {
@@ -98,6 +93,11 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
 
       function now() {
         return Date.now()
+      }
+
+      function normalizeDefaultPackageNameSegment(gameName: string): string {
+        const normalized = gameName.toLowerCase().replaceAll(/[^a-z0-9]+/g, '')
+        return normalized || 'demo'
       }
 
       function ensureDirectory(path: string) {
@@ -318,7 +318,7 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
 
       async function seedDatabase(engines: SeedEngine[]) {
         await new Promise<void>((resolve, reject) => {
-          const request = globalThis.indexedDB.open('WebGALCraft', 1)
+          const request = globalThis.indexedDB.open('WebGALCraft')
 
           request.onupgradeneeded = () => {
             const db = request.result
@@ -345,6 +345,13 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
 
           request.onsuccess = () => {
             const db = request.result
+
+            if (!db.objectStoreNames.contains('games') || !db.objectStoreNames.contains('engines')) {
+              db.close()
+              reject(new Error('IndexedDB 缺少 games 或 engines store'))
+              return
+            }
+
             const tx = db.transaction(['games', 'engines'], 'readwrite')
             const gamesStore = tx.objectStore('games')
             const enginesStore = tx.objectStore('engines')
