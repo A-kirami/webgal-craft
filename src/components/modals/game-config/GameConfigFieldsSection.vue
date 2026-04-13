@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import { X } from '@lucide/vue'
+import { useFieldArray } from 'vee-validate'
+
 import { FormField } from '~/components/ui/form'
 import { AUDIO_EXTENSIONS } from '~/features/editor/command-registry/common-params'
 import { createGameConfigKey } from '~/features/modals/game-config/game-config-form'
+
+import type { GameConfigFormValues } from '~/features/modals/game-config/game-config-form'
 
 interface Props {
   backgroundRootPath: string
@@ -13,6 +18,11 @@ interface Props {
 defineProps<Props>()
 
 const DEFAULT_LANGUAGE_EMPTY_VALUE = '__runtime_fallback__'
+const {
+  fields: customConfigFields,
+  push: pushCustomConfig,
+  remove: removeCustomConfig,
+} = useFieldArray<GameConfigFormValues['customConfig'][number]>('customConfig')
 
 const defaultLanguageOptions = [
   {
@@ -76,6 +86,47 @@ function normalizeSingleLineText(value: string): string {
 
 function handleDescriptionChange(handleChange: (value: string) => void, nextValue: string | number) {
   handleChange(normalizeSingleLineText(String(nextValue)))
+}
+
+function handleTextInputChange(handleChange: (value: string) => void, nextValue: string | number) {
+  handleChange(String(nextValue))
+}
+
+const customAddButtonContainerRef = $(useTemplateRef<HTMLDivElement>('customAddButtonContainerRef'))
+
+async function handleAddCustomConfig() {
+  pushCustomConfig({
+    key: '',
+    value: '',
+  })
+
+  await nextTick()
+  focusCustomConfigKey(customConfigFields.value.length - 1)
+  scrollCustomAddButtonIntoView()
+}
+
+function handleRemoveCustomConfig(index: number) {
+  removeCustomConfig(index)
+}
+
+function focusCustomConfigKey(index: number) {
+  const customKeyInput = document.querySelector<HTMLInputElement>(`#game-config-custom-key-${index}`)
+
+  if (!customKeyInput) {
+    return
+  }
+
+  customKeyInput.focus()
+}
+
+function scrollCustomAddButtonIntoView() {
+  const addButton = customAddButtonContainerRef?.querySelector('[data-testid="game-config-custom-add"]')
+
+  if (!(addButton instanceof HTMLElement)) {
+    return
+  }
+
+  addButton.scrollIntoView({ block: 'nearest' })
 }
 </script>
 
@@ -497,5 +548,98 @@ function handleDescriptionChange(handleChange: (value: string) => void, nextValu
         </FormItem>
       </FormField>
     </div>
+
+    <section class="flex flex-col gap-3" data-testid="game-config-custom-section">
+      <div>
+        <h3 class="text-sm font-medium">
+          {{ $t('modals.gameConfig.custom.title') }}
+        </h3>
+      </div>
+
+      <div class="flex flex-col gap-3" data-testid="game-config-custom-list">
+        <div
+          v-for="(field, index) in customConfigFields"
+          :key="field.key"
+          class="gap-2 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-start"
+        >
+          <FormField
+            v-slot="{ handleChange, value }"
+            :name="`customConfig[${index}].key`"
+          >
+            <FormItem class="flex flex-col gap-2">
+              <FormLabel class="sr-only" :for="`game-config-custom-key-${index}`">
+                {{ $t('modals.gameConfig.custom.keyLabel') }}
+              </FormLabel>
+              <FormControl>
+                <Input
+                  :id="`game-config-custom-key-${index}`"
+                  :data-testid="`game-config-custom-key-${index}`"
+                  :model-value="typeof value === 'string' ? value : field.value.key"
+                  class="text-xs h-8 shadow-none"
+                  :placeholder="$t('modals.gameConfig.custom.keyPlaceholder')"
+                  @update:model-value="handleTextInputChange(handleChange, $event)"
+                />
+              </FormControl>
+              <FormMessage class="text-xs" />
+            </FormItem>
+          </FormField>
+
+          <FormField
+            v-slot="{ handleChange, value }"
+            :name="`customConfig[${index}].value`"
+          >
+            <FormItem class="flex flex-col gap-2">
+              <FormLabel class="sr-only" :for="`game-config-custom-value-${index}`">
+                {{ $t('modals.gameConfig.custom.valueLabel') }}
+              </FormLabel>
+              <FormControl>
+                <Input
+                  :id="`game-config-custom-value-${index}`"
+                  :data-testid="`game-config-custom-value-${index}`"
+                  :model-value="typeof value === 'string' ? value : field.value.value"
+                  class="text-xs h-8 shadow-none"
+                  :placeholder="$t('modals.gameConfig.custom.valuePlaceholder')"
+                  @update:model-value="handleTextInputChange(handleChange, $event)"
+                />
+              </FormControl>
+              <FormMessage class="text-xs" />
+            </FormItem>
+          </FormField>
+
+          <TooltipProvider :delay-duration="0">
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  class="text-muted-foreground size-8 shadow-none self-start hover:text-destructive"
+                  :aria-label="$t('modals.gameConfig.custom.remove')"
+                  :data-testid="`game-config-custom-remove-${index}`"
+                  @click="handleRemoveCustomConfig(index)"
+                >
+                  <X class="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" class="px-2 py-1">
+                {{ $t('modals.gameConfig.custom.remove') }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        <div ref="customAddButtonContainerRef">
+          <Button
+            type="button"
+            variant="outline"
+            class="text-xs h-8 w-full"
+            data-testid="game-config-custom-add"
+            @click="handleAddCustomConfig"
+          >
+            {{ $t('modals.gameConfig.custom.add') }}
+          </Button>
+        </div>
+      </div>
+    </section>
   </div>
 </template>

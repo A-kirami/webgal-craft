@@ -49,6 +49,7 @@ const preparedModalProps = {
   initialValues: {
     defaultLanguage: 'zh_CN',
     description: 'An introductory story',
+    customConfig: [],
     enableAppreciation: false,
     gameKey: 'demo-key',
     gameLogo: ['opening.webp', 'enter.webp'],
@@ -62,6 +63,7 @@ const preparedModalProps = {
     titleBgm: 'title.ogg',
     titleImg: 'cover.webp',
   },
+  unmanagedLineCount: 0,
   serveUrl: 'http://127.0.0.1:8899/game/demo/',
 } as const
 
@@ -296,6 +298,15 @@ describe('GameConfigModal', () => {
         'open': true,
         'onUpdate:open': updateOpen,
         ...preparedModalProps,
+        'initialValues': {
+          ...preparedModalProps.initialValues,
+          customConfig: [
+            {
+              key: 'Stage_Width',
+              value: '1920',
+            },
+          ],
+        },
       },
       global: {
         stubs: globalStubs,
@@ -307,9 +318,12 @@ describe('GameConfigModal', () => {
 
     await vi.waitFor(() => {
       expect(setConfigMock).toHaveBeenCalledWith('/games/demo', expect.objectContaining({
-        set: expect.objectContaining({
-          description: 'Line 1 Line 2',
-        }),
+        entries: expect.arrayContaining([
+          expect.objectContaining({
+            key: 'Description',
+            value: 'Line 1 Line 2',
+          }),
+        ]),
       }))
     })
     expect(updateOpen).toHaveBeenCalledWith(false)
@@ -342,9 +356,12 @@ describe('GameConfigModal', () => {
 
     await vi.waitFor(() => {
       expect(setConfigMock).toHaveBeenCalledWith('/games/demo', expect.objectContaining({
-        set: expect.objectContaining({
-          gameKey: '22222222-2222-2222-2222-222222222222',
-        }),
+        entries: expect.arrayContaining([
+          expect.objectContaining({
+            key: 'Game_key',
+            value: '22222222-2222-2222-2222-222222222222',
+          }),
+        ]),
       }))
     })
 
@@ -387,6 +404,15 @@ describe('GameConfigModal', () => {
         'open': true,
         'onUpdate:open': updateOpen,
         ...preparedModalProps,
+        'initialValues': {
+          ...preparedModalProps.initialValues,
+          customConfig: [
+            {
+              key: 'Stage_Width',
+              value: '1920',
+            },
+          ],
+        },
       },
       global: {
         stubs: globalStubs,
@@ -414,8 +440,118 @@ describe('GameConfigModal', () => {
     })
   })
 
-  it('保存时会提交序列化后的配置补丁并关闭弹窗', async () => {
+  it('打开时会渲染自定义配置项并显示未托管配置提示', async () => {
+    renderInBrowser(GameConfigModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        'open': true,
+        'onUpdate:open': vi.fn(),
+        ...preparedModalProps,
+        'initialValues': {
+          ...preparedModalProps.initialValues,
+          customConfig: [
+            {
+              key: 'Custom_flag',
+              value: 'enabled',
+            },
+          ],
+        },
+        'unmanagedLineCount': 2,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByTestId('game-config-custom-key-0')).toHaveValue('Custom_flag')
+    await expect.element(page.getByTestId('game-config-custom-value-0')).toHaveValue('enabled')
+    await expect.element(page.getByTestId('game-config-unmanaged-notice')).toBeVisible()
+    await expect.element(page.getByTestId('game-config-custom-section')).toBeVisible()
+  })
+
+  it('底部添加的自定义配置项会随保存一起提交', async () => {
+    renderInBrowser(GameConfigModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        'open': true,
+        'onUpdate:open': vi.fn(),
+        ...preparedModalProps,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByTestId('game-config-custom-add').click()
+    await page.getByTestId('game-config-custom-key-0').fill('Custom_flag')
+    await page.getByTestId('game-config-custom-value-0').fill('enabled')
+    await page.getByRole('button', { name: 'common.save' }).click()
+
+    await vi.waitFor(() => {
+      expect(setConfigMock).toHaveBeenCalledWith('/games/demo', expect.objectContaining({
+        entries: expect.arrayContaining([
+          {
+            key: 'Custom_flag',
+            value: 'enabled',
+          },
+        ]),
+      }))
+    })
+  })
+
+  it('清空自定义配置列表后仍可直接保存', async () => {
+    renderInBrowser(GameConfigModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        'open': true,
+        'onUpdate:open': vi.fn(),
+        ...preparedModalProps,
+        'initialValues': {
+          ...preparedModalProps.initialValues,
+          customConfig: [
+            {
+              key: 'Custom_flag',
+              value: 'enabled',
+            },
+          ],
+        },
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByTestId('game-config-custom-remove-0').click()
+    await page.getByRole('button', { name: 'common.save' }).click()
+
+    await vi.waitFor(() => {
+      expect(setConfigMock).toHaveBeenCalledWith('/games/demo', expect.objectContaining({
+        entries: expect.not.arrayContaining([
+          expect.objectContaining({
+            key: 'Custom_flag',
+          }),
+        ]),
+      }))
+    })
+  })
+
+  it('保存时会提交编辑结果并关闭弹窗', async () => {
     const updateOpen = vi.fn()
+    const initialValues = {
+      ...preparedModalProps.initialValues,
+      customConfig: [
+        {
+          key: 'Stage_Width',
+          value: '1920',
+        },
+      ],
+    } as const
 
     renderInBrowser(GameConfigModal, {
       browser: {
@@ -425,6 +561,7 @@ describe('GameConfigModal', () => {
         'open': true,
         'onUpdate:open': updateOpen,
         ...preparedModalProps,
+        initialValues,
       },
       global: {
         stubs: globalStubs,
@@ -439,25 +576,35 @@ describe('GameConfigModal', () => {
     await page.getByRole('button', { name: 'common.save' }).click()
 
     await vi.waitFor(() => {
-      expect(setConfigMock).toHaveBeenCalledWith('/games/demo', {
-        set: {
-          defaultLanguage: 'zh_CN',
-          description: 'Updated description',
-          enableAppreciation: 'false',
-          gameKey: 'demo-key',
-          gameName: 'Renamed Game',
-          titleImg: 'cover-next.webp',
-          legacyExpressionBlendMode: 'false',
-          lineHeight: '2.2',
-          maxLine: '3',
-          packageName: 'org.demo.game',
-          gameLogo: 'enter-next.webp|logo-next.webp|',
-          showPanic: 'true',
-          steamAppId: '480',
-          titleBgm: 'title-next.ogg',
-        },
-        unset: [],
-      })
+      expect(setConfigMock).toHaveBeenCalledTimes(1)
+      expect(setConfigMock).toHaveBeenCalledWith('/games/demo', expect.objectContaining({
+        entries: expect.arrayContaining([
+          expect.objectContaining({
+            key: 'Game_name',
+            value: 'Renamed Game',
+          }),
+          expect.objectContaining({
+            key: 'Description',
+            value: 'Updated description',
+          }),
+          expect.objectContaining({
+            key: 'Title_img',
+            value: 'cover-next.webp',
+          }),
+          expect.objectContaining({
+            key: 'Title_bgm',
+            value: 'title-next.ogg',
+          }),
+          expect.objectContaining({
+            key: 'Game_Logo',
+            value: 'enter-next.webp|logo-next.webp|',
+          }),
+          expect.objectContaining({
+            key: 'Stage_Width',
+            value: '1920',
+          }),
+        ]),
+      }))
     })
 
     await vi.waitFor(() => {

@@ -222,6 +222,24 @@ modals:
       lineHeightInvalid: 文字框行高必須是正數，或留空
       packageNameInvalid: 包名必須使用像 org.example.demo 這樣的小寫點分識別，或留空
       steamAppIdInvalid: Steam AppID 必須是有效的整數，或留空
+      configValueNoSemicolon: "設定值不能包含 ;"
+      customConfigKeyRequired: 自訂設定鍵不能為空
+      customConfigKeyNoSurroundingWhitespace: 自訂設定鍵不能包含首尾空白
+      customConfigKeySingleLine: 自訂設定鍵必須是單行文字
+      customConfigKeyNoColon: "自訂設定鍵不能包含 :"
+      customConfigKeyNoSemicolon: "自訂設定鍵不能包含 ;"
+      customConfigKeyReserved: 自訂設定鍵不能與內建設定重名
+      customConfigKeyDuplicate: 自訂設定鍵不能重複
+      customConfigValueSingleLine: 自訂設定值必須是單行文字
+    custom:
+      title: 自訂設定項
+      keyLabel: 鍵
+      valueLabel: 值
+      keyPlaceholder: 例如 customFlag
+      valuePlaceholder: 例如 enabled、1920
+      add: 新增設定項
+      remove: 移除
+      unmanagedNotice: 設定檔中有部分內容無法在此識別和編輯，儲存時會保留原內容
     titleImg:
       empty: 點擊選擇標題背景圖片
       replace: 更換

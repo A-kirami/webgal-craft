@@ -68,6 +68,7 @@ async function handleOpenGameConfig() {
       gamePath,
       initialValues: parseGameConfigFormValues(config),
       serveUrl: currentGameServeUrl,
+      unmanagedLineCount: config.unmanagedLineCount,
     })
   } catch (error) {
     logger.error(`加载游戏配置失败: ${error}`)

@@ -17,6 +17,16 @@ export interface InstallMockTauriOptions {
   seedEngines?: SeedEngine[]
 }
 
+interface GameConfigEntry {
+  key: string
+  value: string
+}
+
+interface GameConfigReadResult {
+  entries: GameConfigEntry[]
+  unmanagedLineCount: number
+}
+
 interface VirtualEntry {
   isDirectory: boolean
   size?: number
@@ -65,7 +75,7 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
         targetLabel?: string
         targetKind?: string
       }>()
-      const gameConfigStore = new Map<string, Record<string, string>>()
+      const gameConfigStore = new Map<string, GameConfigReadResult>()
       const fileSystem = new Map<string, VirtualEntry>()
       const fileContents = new Map<string, Uint8Array>()
       const openWindows = new Set<string>(['main'])
@@ -83,6 +93,11 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
 
       function now() {
         return Date.now()
+      }
+
+      function normalizeDefaultPackageNameSegment(gameName: string): string {
+        const normalized = gameName.toLowerCase().replaceAll(/[^a-z0-9]+/g, '')
+        return normalized || 'demo'
       }
 
       function ensureDirectory(path: string) {
@@ -169,6 +184,105 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
         return [...children.values()]
       }
 
+      function cloneGameConfigEntries(entries: readonly GameConfigEntry[]) {
+        return entries.map(entry => ({ ...entry }))
+      }
+
+      function isGameConfigEntry(value: unknown): value is GameConfigEntry {
+        if (!value || typeof value !== 'object') {
+          return false
+        }
+
+        const entry = value as Partial<GameConfigEntry>
+        return typeof entry.key === 'string' && typeof entry.value === 'string'
+      }
+
+      function requireGameConfigEntries(config: unknown): GameConfigEntry[] {
+        if (!config || typeof config !== 'object') {
+          throw new TypeError('set_game_config mock 要求 config.entries 为 GameConfigEntry[]')
+        }
+
+        const { entries } = config as { entries?: unknown }
+        if (!Array.isArray(entries)) {
+          throw new TypeError('set_game_config mock 要求 config.entries 为 GameConfigEntry[]')
+        }
+
+        for (let index = 0; index < entries.length; index++) {
+          if (!Object.prototype.hasOwnProperty.call(entries, index) || !isGameConfigEntry(entries[index])) {
+            throw new TypeError('set_game_config mock 要求 config.entries 为 GameConfigEntry[]')
+          }
+        }
+
+        return entries
+      }
+
+      function requireGamePath(gamePath: unknown): string {
+        if (typeof gamePath !== 'string') {
+          throw new TypeError('缺少 gamePath')
+        }
+
+        const trimmedGamePath = gamePath.trim()
+        if (trimmedGamePath === '') {
+          throw new Error('缺少 gamePath')
+        }
+
+        return trimmedGamePath
+      }
+
+      function createDefaultGameConfig(gameName: string): GameConfigReadResult {
+        const resolvedGameName = gameName.trim() || 'Demo Game'
+        const slug = resolvedGameName.toLowerCase().replaceAll(/\s+/g, '-')
+        const packageNameSegment = normalizeDefaultPackageNameSegment(resolvedGameName)
+
+        return {
+          entries: [
+            {
+              key: 'Game_name',
+              value: resolvedGameName,
+            },
+            {
+              key: 'Game_key',
+              value: slug,
+            },
+            {
+              key: 'Title_img',
+              value: 'cover.png',
+            },
+            {
+              key: 'Description',
+              value: `${resolvedGameName} description`,
+            },
+            {
+              key: 'Package_name',
+              value: `craft.${packageNameSegment}`,
+            },
+          ],
+          unmanagedLineCount: 0,
+        }
+      }
+
+      function writeGameConfig(gamePath: string, config: GameConfigReadResult) {
+        gameConfigStore.set(normalizePath(gamePath), {
+          entries: cloneGameConfigEntries(config.entries),
+          unmanagedLineCount: config.unmanagedLineCount,
+        })
+      }
+
+      function getGameConfig(gamePath: string): GameConfigReadResult {
+        const normalized = normalizePath(gamePath)
+        const current = gameConfigStore.get(normalized)
+        if (current) {
+          return {
+            entries: cloneGameConfigEntries(current.entries),
+            unmanagedLineCount: current.unmanagedLineCount,
+          }
+        }
+
+        const fallback = createDefaultGameConfig(basename(normalized))
+        writeGameConfig(normalized, fallback)
+        return fallback
+      }
+
       function createGameSkeleton(gamePath: string) {
         ensureDirectory(gamePath)
         ensureDirectory(joinPaths([gamePath, 'assets']))
@@ -182,6 +296,7 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
         ensureFile(joinPaths([gamePath, 'icons', 'favicon.ico']))
         ensureFile(joinPaths([gamePath, 'game', 'background', 'cover.png']))
         ensureFile(joinPaths([gamePath, 'game', 'scene', 'start.txt']), '; WebGAL scene\nintro:欢迎来到集成测试。')
+        writeGameConfig(gamePath, createDefaultGameConfig(basename(gamePath)))
       }
 
       function emitWindowEvent(label: string, event: string) {
@@ -216,6 +331,7 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
         ensureFile(joinPaths([engine.path, 'icons', 'favicon.ico']))
         ensureFile(joinPaths([engine.path, 'game', 'background', 'cover.png']))
         ensureFile(joinPaths([engine.path, 'game', 'scene', 'start.txt']), '; Engine default scene')
+        writeGameConfig(engine.path, createDefaultGameConfig(engine.metadata.name))
       }
 
       function dirname(path: string) {
@@ -243,7 +359,7 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
 
       async function seedDatabase(engines: SeedEngine[]) {
         await new Promise<void>((resolve, reject) => {
-          const request = globalThis.indexedDB.open('WebGALCraft', 1)
+          const request = globalThis.indexedDB.open('WebGALCraft')
 
           request.onupgradeneeded = () => {
             const db = request.result
@@ -270,6 +386,13 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
 
           request.onsuccess = () => {
             const db = request.result
+
+            if (!db.objectStoreNames.contains('games') || !db.objectStoreNames.contains('engines')) {
+              db.close()
+              reject(new Error('IndexedDB 缺少 games 或 engines store'))
+              return
+            }
+
             const tx = db.transaction(['games', 'engines'], 'readwrite')
             const gamesStore = tx.objectStore('games')
             const enginesStore = tx.objectStore('engines')
@@ -338,6 +461,12 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
           },
           currentWindow: {
             label: 'main',
+          },
+        },
+        plugins: {
+          path: {
+            delimiter: ';',
+            sep: '/',
           },
         },
         transformCallback(callback?: (payload: unknown) => void, once = false) {
@@ -457,8 +586,15 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
             case 'add_static_site': {
               return basename(String(invokeArgs.path ?? '')) || 'game'
             }
+            case 'broadcast_message':
             case 'remove_static_site': {
               return
+            }
+            case 'unicast_message': {
+              return
+            }
+            case 'get_connected_clients': {
+              return []
             }
             case 'copy_directory_with_progress': {
               createGameSkeleton(String(invokeArgs.destination ?? ''))
@@ -486,26 +622,18 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
               return
             }
             case 'set_game_config': {
-              const gamePath = String(invokeArgs.gamePath ?? '')
-              const current = gameConfigStore.get(gamePath) ?? {}
-              gameConfigStore.set(gamePath, {
-                ...current,
-                ...(invokeArgs.config as Record<string, string> | undefined),
+              const gamePath = requireGamePath(invokeArgs.gamePath)
+              const current = getGameConfig(gamePath)
+              const nextEntries = requireGameConfigEntries(invokeArgs.config)
+              writeGameConfig(gamePath, {
+                entries: nextEntries,
+                unmanagedLineCount: current.unmanagedLineCount,
               })
               return
             }
             case 'get_game_config': {
-              const gamePath = String(invokeArgs.gamePath ?? '')
-              const config = gameConfigStore.get(gamePath) ?? {}
-              const gameName = config.gameName ?? 'Demo Game'
-
-              return {
-                gameName,
-                description: `${gameName} description`,
-                gameKey: gameName.toLowerCase().replaceAll(/\s+/g, '-'),
-                packageName: `craft.${gameName.toLowerCase().replaceAll(/\s+/g, '-')}`,
-                titleImg: 'cover.png',
-              }
+              const gamePath = requireGamePath(invokeArgs.gamePath)
+              return getGameConfig(gamePath)
             }
             case 'get_thumbnail': {
               return new Uint8Array([])

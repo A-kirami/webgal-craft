@@ -30,13 +30,21 @@ describe('configManager 配置管理', () => {
 
   it('setConfig 会写入配置并刷新已注册游戏快照', async () => {
     await configManager.setConfig('/game', {
-      set: { gameName: 'Renamed' },
-      unset: [],
+      entries: [
+        {
+          key: 'Game_name',
+          value: 'Renamed',
+        },
+      ],
     })
 
     expect(setGameConfigMock).toHaveBeenCalledWith('/game', {
-      set: { gameName: 'Renamed' },
-      unset: [],
+      entries: [
+        {
+          key: 'Game_name',
+          value: 'Renamed',
+        },
+      ],
     })
     expect(refreshRegisteredGameSnapshotMock).toHaveBeenCalledWith('/game')
   })

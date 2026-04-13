@@ -222,6 +222,24 @@ modals:
       lineHeightInvalid: 文本框行高必须是正数，或留空
       packageNameInvalid: 包名必须使用小写点分标识，例如 org.example.demo，或留空
       steamAppIdInvalid: Steam AppID 必须是有效的整数，或留空
+      configValueNoSemicolon: "配置值不能包含 ;"
+      customConfigKeyRequired: 自定义配置键不能为空
+      customConfigKeyNoSurroundingWhitespace: 自定义配置键不能包含首尾空格
+      customConfigKeySingleLine: 自定义配置键必须是单行文本
+      customConfigKeyNoColon: "自定义配置键不能包含 :"
+      customConfigKeyNoSemicolon: "自定义配置键不能包含 ;"
+      customConfigKeyReserved: 自定义配置键不能与内置配置重名
+      customConfigKeyDuplicate: 自定义配置键不能重复
+      customConfigValueSingleLine: 自定义配置值必须是单行文本
+    custom:
+      title: 自定义配置项
+      keyLabel: 键
+      valueLabel: 值
+      keyPlaceholder: 例如 customFlag
+      valuePlaceholder: 例如 enabled、1920
+      add: 添加配置项
+      remove: 移除
+      unmanagedNotice: 配置文件中有部分内容无法在此识别和编辑，保存时会保留原内容
     titleImg:
       empty: 点击选择标题背景图片
       replace: 更换

@@ -222,6 +222,24 @@ modals:
       lineHeightInvalid: Text line height must be a positive number or left empty
       packageNameInvalid: Package name must use lowercase dot-separated identifiers like org.example.demo, or be left empty
       steamAppIdInvalid: Steam AppID must be a valid integer, or be left empty
+      configValueNoSemicolon: "Configuration values cannot contain ;"
+      customConfigKeyRequired: Custom key cannot be empty
+      customConfigKeyNoSurroundingWhitespace: Custom key cannot have leading or trailing whitespace
+      customConfigKeySingleLine: Custom key must be a single line
+      customConfigKeyNoColon: "Custom key cannot contain :"
+      customConfigKeyNoSemicolon: "Custom key cannot contain ;"
+      customConfigKeyReserved: This key conflicts with a built-in configuration item
+      customConfigKeyDuplicate: Custom keys cannot repeat
+      customConfigValueSingleLine: Custom value must be a single line
+    custom:
+      title: Custom Configuration Items
+      keyLabel: Key
+      valueLabel: Value
+      keyPlaceholder: e.g. customFlag
+      valuePlaceholder: e.g. enabled, 1920
+      add: Add Configuration Item
+      remove: Remove
+      unmanagedNotice: Some content in the configuration file cannot be recognized or edited here and will be preserved on save
     titleImg:
       empty: Click to choose a title background image
       replace: Replace
