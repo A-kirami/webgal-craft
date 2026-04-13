@@ -203,19 +203,30 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
         }
 
         const { entries } = config as { entries?: unknown }
-        if (!Array.isArray(entries) || entries.some(entry => !isGameConfigEntry(entry))) {
+        if (!Array.isArray(entries)) {
           throw new TypeError('set_game_config mock 要求 config.entries 为 GameConfigEntry[]')
+        }
+
+        for (let index = 0; index < entries.length; index++) {
+          if (!Object.prototype.hasOwnProperty.call(entries, index) || !isGameConfigEntry(entries[index])) {
+            throw new TypeError('set_game_config mock 要求 config.entries 为 GameConfigEntry[]')
+          }
         }
 
         return entries
       }
 
       function requireGamePath(gamePath: unknown): string {
-        if (typeof gamePath !== 'string' || gamePath === '') {
+        if (typeof gamePath !== 'string') {
+          throw new TypeError('缺少 gamePath')
+        }
+
+        const trimmedGamePath = gamePath.trim()
+        if (trimmedGamePath === '') {
           throw new Error('缺少 gamePath')
         }
 
-        return gamePath
+        return trimmedGamePath
       }
 
       function createDefaultGameConfig(gameName: string): GameConfigReadResult {
