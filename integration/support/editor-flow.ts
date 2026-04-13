@@ -51,8 +51,13 @@ export async function createGameFromHome(page: Page, gameName: string = 'Demo Ga
 
 export async function enterEditorFromCreatedGame(page: Page, gameName: string = 'Demo Game') {
   await createGameFromHome(page, gameName)
-  await page.getByRole('heading', { name: gameName }).click()
-  await expect(page).toHaveURL(/\/edit\//)
+  const gameCard = page.getByRole('heading', { name: gameName }).locator('xpath=..')
+
+  await Promise.all([
+    page.waitForURL(/\/edit\//),
+    gameCard.click(),
+  ])
+
   await expect(page.getByRole('button', { name: EDITOR_TEST_GAME_BUTTON_NAME })).toBeVisible()
 }
 
