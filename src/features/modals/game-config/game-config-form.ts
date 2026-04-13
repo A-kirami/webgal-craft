@@ -110,7 +110,7 @@ function createOptionalSteamAppIdSchema(t: I18nT) {
 }
 
 function hasLineBreak(value: string): boolean {
-  return /\r\n?|\n/g.test(value)
+  return /\r\n?|\n/.test(value)
 }
 
 function hasSemicolon(value: string): boolean {

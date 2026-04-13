@@ -46,19 +46,17 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
-vi.mock('~/commands/game', () => ({
-  findGameConfigEntryValue(entries: { key: string, value: string }[], rawKey: string) {
-    for (let index = entries.length - 1; index >= 0; index -= 1) {
-      const entry = entries[index]
-      if (entry?.key === rawKey) {
-        return entry.value
-      }
-    }
-  },
-  gameCmds: {
-    getGameConfig: getGameConfigMock,
-  },
-}))
+vi.mock('~/commands/game', async () => {
+  const actual = await vi.importActual<typeof import('~/commands/game')>('~/commands/game')
+
+  return {
+    ...actual,
+    gameCmds: {
+      ...actual.gameCmds,
+      getGameConfig: getGameConfigMock,
+    },
+  }
+})
 
 vi.mock('notivue', () => ({
   push: {
