@@ -65,6 +65,11 @@ const defaultSeedEngine: SeedEngine = {
   },
 }
 
+function normalizeDefaultPackageNameSegment(gameName: string): string {
+  const normalized = gameName.toLowerCase().replaceAll(/[^a-z0-9]+/g, '')
+  return normalized || 'demo'
+}
+
 export async function installMockTauri(page: Page, options: InstallMockTauriOptions = {}) {
   await page.addInitScript(
     async ({ documentDir, seedEngines }) => {
@@ -186,6 +191,7 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
       function createDefaultGameConfig(gameName: string): GameConfigReadResult {
         const resolvedGameName = gameName.trim() || 'Demo Game'
         const slug = resolvedGameName.toLowerCase().replaceAll(/\s+/g, '-')
+        const packageNameSegment = normalizeDefaultPackageNameSegment(resolvedGameName)
 
         return {
           entries: [
@@ -207,7 +213,7 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
             },
             {
               key: 'Package_name',
-              value: `craft.${slug}`,
+              value: `craft.${packageNameSegment}`,
             },
           ],
           unmanagedLineCount: 0,
