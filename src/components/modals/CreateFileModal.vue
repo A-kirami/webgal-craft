@@ -44,14 +44,14 @@ async function isFileAvailable(fileName: string): Promise<boolean> {
 const schema = z.object({
   fileName: z.preprocess(
     val => val || '',
-    z.string().min(1, t('modals.createFile.fileNameRequired')),
+    z.string().min(1, { error: t('modals.createFile.fileNameRequired') }),
   ),
 }).refine(
   async (data) => {
     return await isFileAvailable(data.fileName)
   },
   {
-    message: t('modals.createFile.fileExists'),
+    error: t('modals.createFile.fileExists'),
     path: ['fileName'],
   },
 )

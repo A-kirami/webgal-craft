@@ -140,7 +140,7 @@ function renderSwitchFieldValidationHarness() {
         },
         validationSchema: z.object({
           advancedMode: z.boolean().refine(value => value, {
-            message: '必须开启',
+            error: '必须开启',
           }),
         }),
       })
