@@ -701,7 +701,6 @@ edit:
       effectName: エフェクト
       effectCustomName: エフェクト名
       introText: テキスト内容
-      introTextPlaceholder: "{'|'} で行を区切る"
       backgroundColor: 背景色
       backgroundImage: 背景画像
       fontColor: フォント色

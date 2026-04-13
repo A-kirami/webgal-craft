@@ -170,4 +170,15 @@ describe('useParamFieldMeta', () => {
     expect(meta.switchModelValue(contentSwitch, 'stop')).toBe(false)
     expect(meta.switchModelValue(argSwitch, true)).toBe(true)
   })
+
+  it('未显式配置 placeholder 时返回空字符串，由渲染层决定是否回退 label', () => {
+    const meta = createMeta()
+    const textField = createField({
+      key: 'dialogue',
+      label: 'Dialogue',
+      type: 'text',
+    })
+
+    expect(meta.placeholder(textField)).toBe('')
+  })
 })

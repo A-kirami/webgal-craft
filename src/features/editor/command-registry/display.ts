@@ -25,7 +25,6 @@ export const displayEntries: CommandEntry[] = [
         variant: { inline: 'textarea-auto', panel: 'textarea-grow' },
         inlineLayout: 'standalone',
         label: t => t('edit.visualEditor.params.introText'),
-        placeholder: t => t('edit.visualEditor.params.introTextPlaceholder'),
       }),
       arg({
         key: 'fontSize',

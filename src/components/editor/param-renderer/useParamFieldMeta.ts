@@ -113,9 +113,9 @@ export function useParamFieldMeta(options: UseParamFieldMetaOptions) {
 
   function placeholder(field: EditorField): string {
     if ('placeholder' in field.field) {
-      return resolveI18n(field.field.placeholder, options.t, options.i18nContent()) || resolveI18n(field.field.label, options.t, options.i18nContent())
+      return resolveI18n(field.field.placeholder, options.t, options.i18nContent())
     }
-    return resolveI18n(field.field.label, options.t, options.i18nContent())
+    return ''
   }
 
   function customLabel(field: EditorField): string {
