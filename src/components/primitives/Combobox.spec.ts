@@ -84,8 +84,8 @@ const globalStubs = {
 
       return () => h('div', {
         ...attrs,
-        'style': 'max-height: 64px; overflow: auto;',
-        'ref': viewportElement,
+        style: 'max-height: 64px; overflow: auto;',
+        ref: viewportElement,
       }, slots.default?.())
     },
   }),
