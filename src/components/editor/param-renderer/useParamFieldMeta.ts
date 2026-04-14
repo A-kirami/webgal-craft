@@ -111,11 +111,11 @@ export function useParamFieldMeta(options: UseParamFieldMetaOptions) {
       : 'column'
   }
 
-  function placeholder(field: EditorField): string {
+  function placeholder(field: EditorField): string | undefined {
     if ('placeholder' in field.field) {
-      return resolveI18n(field.field.placeholder, options.t, options.i18nContent()) || resolveI18n(field.field.label, options.t, options.i18nContent())
+      return resolveI18n(field.field.placeholder, options.t, options.i18nContent())
     }
-    return resolveI18n(field.field.label, options.t, options.i18nContent())
+    return undefined
   }
 
   function customLabel(field: EditorField): string {

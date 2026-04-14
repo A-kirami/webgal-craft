@@ -38,18 +38,6 @@ const emit = defineEmits<{
   openEffectEditor: []
 }>()
 
-const containerClass = $computed(() => {
-  return props.surface === 'panel'
-    ? 'flex flex-wrap gap-x-4 gap-y-2.5'
-    : 'flex flex-wrap gap-x-3 gap-y-1.5 items-center'
-})
-
-const buttonClass = $computed(() => {
-  return props.surface === 'panel'
-    ? 'px-3 h-7 w-full justify-center'
-    : 'px-2 h-6'
-})
-
 const paramRendererMode = $computed(() => {
   if (props.statementType === 'say') {
     return props.surface === 'inline' ? 'all' : 'basic'
@@ -71,13 +59,15 @@ function handleOpenEffectEditor() {
 </script>
 
 <template>
-  <div :class="containerClass">
+  <div
+    class="group flex flex-wrap gap-x-3 gap-y-1.5 w-full items-center data-[surface=panel]:gap-x-4 data-[surface=panel]:gap-y-2.5 data-[surface=panel]:items-stretch"
+    :data-surface="props.surface"
+  >
     <Button
       v-if="isCommand && props.showAnimationEditorButton"
       variant="outline"
       size="sm"
-      class="btn-animation-editor"
-      :class="buttonClass"
+      class="btn-animation-editor px-2 h-6 group-data-[surface=panel]:px-3 group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-full group-data-[surface=panel]:justify-center"
       @click="handleOpenAnimationEditor"
     >
       <div class="i-lucide-clapperboard size-3" />
@@ -87,8 +77,7 @@ function handleOpenEffectEditor() {
       v-if="isCommand && props.effectEditorAtTop && props.showEffectEditorButton"
       variant="outline"
       size="sm"
-      class="btn-effect-editor"
-      :class="buttonClass"
+      class="btn-effect-editor px-2 h-6 group-data-[surface=panel]:px-3 group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-full group-data-[surface=panel]:justify-center"
       @click="handleOpenEffectEditor"
     >
       <div class="i-lucide-sparkles size-3" />
@@ -128,8 +117,7 @@ function handleOpenEffectEditor() {
       v-if="isCommand && props.showEffectEditorButton && !props.effectEditorAtTop"
       variant="outline"
       size="sm"
-      class="btn-effect-editor"
-      :class="buttonClass"
+      class="btn-effect-editor px-2 h-6 group-data-[surface=panel]:px-3 group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-full group-data-[surface=panel]:justify-center"
       @click="handleOpenEffectEditor"
     >
       <div class="i-lucide-sparkles size-3" />

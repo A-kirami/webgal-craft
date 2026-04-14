@@ -701,7 +701,6 @@ edit:
       effectName: Effect
       effectCustomName: Effect Name
       introText: Text Content
-      introTextPlaceholder: "Separate lines with {'|'}"
       backgroundColor: Background Color
       backgroundImage: Background Image
       fontColor: Font Color

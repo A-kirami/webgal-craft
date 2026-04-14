@@ -129,8 +129,15 @@ function fieldLayout(field: EditorField): 'row' | 'column' {
   return fieldMeta.fieldLayout(field, isInline)
 }
 
-function placeholder(field: EditorField): string {
-  return fieldMeta.placeholder(field)
+function resolvedPlaceholder(field: EditorField): string {
+  const explicitPlaceholder = fieldMeta.placeholder(field)
+  if (explicitPlaceholder !== undefined) {
+    return explicitPlaceholder
+  }
+  if (isInlineStandalone(field)) {
+    return label(field)
+  }
+  return ''
 }
 
 function customLabel(field: EditorField): string {
@@ -327,7 +334,7 @@ function fieldInputId(field: EditorField): string {
           :custom-label="customLabel(field)"
           :custom-option-label="customOptionLabel"
           :not-selected-label="notSelectedLabel"
-          :placeholder="placeholder(field)"
+          :placeholder="resolvedPlaceholder(field)"
           :is-custom-field="customField.isCustomField(field)"
           :render-segmented="shouldRenderSegmented(field)"
           @update-select="handleSelectUpdate(field, $event)"
@@ -346,6 +353,7 @@ function fieldInputId(field: EditorField): string {
           v-else-if="isTextareaMode(field)"
           :id="fieldInputId(field)"
           :model-value="String(getFieldValue(field) || '')"
+          :placeholder="resolvedPlaceholder(field)"
           :class="cn(
             'text-xs py-1 shadow-none resize-none overflow-y-auto px-2.5 w-32 group-data-[surface=panel]:flex-1 group-data-[surface=panel]:px-3 group-data-[surface=panel]:w-full',
             fieldMode(field) === 'textareaGrow' ? 'min-h-14.5 max-h-[50vh] field-sizing-content' : 'min-h-6 max-h-14.5 field-sizing-content group-data-[surface=panel]:min-h-7',

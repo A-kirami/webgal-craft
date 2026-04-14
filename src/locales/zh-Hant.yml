@@ -701,7 +701,6 @@ edit:
       effectName: 特效
       effectCustomName: 特效名稱
       introText: 文字內容
-      introTextPlaceholder: "用 {'|'} 分隔多行"
       backgroundColor: 背景顏色
       backgroundImage: 背景圖片
       fontColor: 字體顏色
