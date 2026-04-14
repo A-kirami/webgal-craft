@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { useControlId } from '~/composables/useControlId'
-import { EditorField, FileFieldConfig, I18nLike, resolveI18n, resolveSurfaceVariant } from '~/features/editor/command-registry/schema'
+import { EditorField, FileFieldConfig, resolveI18n, resolveSurfaceVariant } from '~/features/editor/command-registry/schema'
 import { normalizeFieldStringValue } from '~/features/editor/statement-editor/field-utils'
 import { statementEditorSurfaceKey } from '~/features/editor/statement-editor/surface-context'
 import { cn } from '~/lib/utils'
 
+import FocusXYControl from './controls/FocusXYControl.vue'
+import NumberControl from './controls/NumberControl.vue'
+import ParamChoiceField from './ParamChoiceField.vue'
+import { useParamChoiceFieldViewModel } from './useParamChoiceFieldViewModel'
 import { useParamCustomField } from './useParamCustomField'
 import { useParamFieldMeta } from './useParamFieldMeta'
 import { useParamXyPad } from './useParamXyPad'
 
-import type { ParamSelectOptionItem } from './controls/types'
 import type { StatementSchemaParamMode } from './useParamFieldMeta'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { NumberField } from '~/features/editor/command-registry/schema'
@@ -172,30 +175,6 @@ function isFileFieldInvalid(field: EditorField): boolean {
   return isFileField(field) && props.isFieldFileMissing(field)
 }
 
-function getStaticOptions(field: EditorField): ParamSelectOptionItem[] {
-  if (field.field.type !== 'choice') {
-    return []
-  }
-  const options = field.field.options as { value: string, label: I18nLike }[]
-  return options.map(option => ({
-    value: option.value,
-    label: resolveI18n(option.label, t, i18nContent),
-  }))
-}
-
-function getMergedOptions(field: EditorField): ParamSelectOptionItem[] {
-  const merged: ParamSelectOptionItem[] = []
-  const seen = new Set<string>()
-  for (const option of [...(props.getDynamicOptions(field) ?? []), ...getStaticOptions(field)]) {
-    if (seen.has(option.value)) {
-      continue
-    }
-    seen.add(option.value)
-    merged.push(option)
-  }
-  return merged
-}
-
 function shouldRenderSegmented(field: EditorField): boolean {
   return field.field.type === 'choice'
     && resolveSurfaceVariant(field.field.variant, surface, 'select') === 'segmented'
@@ -256,6 +235,19 @@ function customFieldInputId(field: EditorField): string {
 function fieldInputId(field: EditorField): string {
   return buildControlId(`field-${field.key}`)
 }
+
+const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
+  visibleFields: () => visibleFields,
+  getChoiceFieldMode: choiceFieldMode,
+  getCustomLabel: customLabel,
+  getDynamicOptions: field => props.getDynamicOptions(field),
+  getPlaceholder: resolvedPlaceholder,
+  getSelectValue: field => customField.selectModelValue(field),
+  isCustomField: field => customField.isCustomField(field),
+  i18nContent: () => i18nContent,
+  shouldRenderSegmented,
+  t,
+}).viewModels)
 </script>
 
 <template>
@@ -321,22 +313,22 @@ function fieldInputId(field: EditorField): string {
         />
 
         <ParamChoiceField
-          v-else-if="choiceFieldMode(field)"
+          v-else-if="choiceFieldViewModels.get(field.key)"
           :field="field"
-          :mode="choiceFieldMode(field) ?? 'select'"
+          :mode="choiceFieldViewModels.get(field.key)?.mode ?? 'select'"
           :input-id="fieldInputId(field)"
           :custom-input-id="customFieldInputId(field)"
           :surface="surface"
           :control-class="controlClass(field)"
-          :options="getMergedOptions(field)"
-          :select-value="customField.selectModelValue(field)"
+          :options="choiceFieldViewModels.get(field.key)?.options ?? []"
+          :select-value="choiceFieldViewModels.get(field.key)?.selectValue ?? ''"
           :value="getFieldValue(field)"
-          :custom-label="customLabel(field)"
+          :custom-label="choiceFieldViewModels.get(field.key)?.customLabel"
           :custom-option-label="customOptionLabel"
           :not-selected-label="notSelectedLabel"
-          :placeholder="resolvedPlaceholder(field)"
-          :is-custom-field="customField.isCustomField(field)"
-          :render-segmented="shouldRenderSegmented(field)"
+          :placeholder="choiceFieldViewModels.get(field.key)?.placeholder ?? ''"
+          :is-custom-field="choiceFieldViewModels.get(field.key)?.isCustomField ?? false"
+          :render-segmented="choiceFieldViewModels.get(field.key)?.renderSegmented ?? false"
           @update-select="handleSelectUpdate(field, $event)"
           @update-value="emit('updateValue', { field, value: $event })"
         />
