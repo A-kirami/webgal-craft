@@ -125,7 +125,7 @@ describe('AnimationTimeline', () => {
     document.body.innerHTML = ''
   })
 
-  it('顶部刻度和底部结束标记在关键时间点共享同一横向锚点', () => {
+  it('结束标记与顶部刻度共享锚点，并在时间轴边界保持正确对齐', () => {
     renderTimeline({
       keyframes: zeroStartThreeKeyframes,
       totalDuration: 450,
@@ -140,10 +140,20 @@ describe('AnimationTimeline', () => {
       expect(endMarker?.style.left).toBe(rulerMark?.style.left)
     }
 
-    const zeroRulerMark = document.querySelector<HTMLElement>('[data-animation-ruler-mark="0"]')
     const zeroEndMarker = document.querySelector<HTMLElement>('[data-animation-end-marker="0"]')
-    expect(zeroRulerMark?.style.left).toBe('0%')
     expect(zeroEndMarker?.style.left).toBe('0%')
+
+    const zeroEndMarkerLabel = zeroEndMarker?.querySelector<HTMLElement>('span')
+    const middleEndMarkerLabel = document
+      .querySelector<HTMLElement>('[data-animation-end-marker="200"]')
+      ?.querySelector<HTMLElement>('span')
+    const lastEndMarkerLabel = document
+      .querySelector<HTMLElement>('[data-animation-end-marker="450"]')
+      ?.querySelector<HTMLElement>('span')
+
+    expect(zeroEndMarkerLabel?.className).toContain('translate-x-0')
+    expect(middleEndMarkerLabel?.className).toContain('-translate-x-1/2')
+    expect(lastEndMarkerLabel?.className).toContain('-translate-x-full')
   })
 
   it('最后一个时间块可以贴到时间轨道末端，不为显式末端缓冲区预留空白', () => {
@@ -160,6 +170,25 @@ describe('AnimationTimeline', () => {
     const width = Number.parseFloat(lastSpan!.style.width)
 
     expect(left + width).toBeCloseTo(100)
+  })
+
+  it('单个结束标记仍然使用末端对齐，避免贴在右边界时向外溢出', () => {
+    renderTimeline({
+      keyframes: [
+        {
+          cumulativeTime: 320,
+          duration: 320,
+          id: 1,
+        },
+      ],
+      totalDuration: 320,
+    })
+
+    const endMarker = document.querySelector<HTMLElement>('[data-animation-end-marker="320"]')
+    const endMarkerLabel = endMarker?.querySelector<HTMLElement>('span')
+
+    expect(endMarkerLabel).not.toBeNull()
+    expect(endMarkerLabel?.className).toContain('-translate-x-full')
   })
 
   it('被最小宽度撑开的 9ms 起始帧可以继续拖拽回 0ms', () => {

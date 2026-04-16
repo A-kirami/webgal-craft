@@ -328,7 +328,21 @@ function getDistortedPosition(time: number): number {
   return 100
 }
 
-function resolveEdgeAlignedClass(index: number, total: number): string {
+function resolveEdgeAlignedClass(
+  index: number,
+  total: number,
+  alignment?: 'center' | 'end' | 'start',
+): string {
+  if (alignment === 'start') {
+    return 'translate-x-0'
+  }
+  if (alignment === 'end') {
+    return '-translate-x-full'
+  }
+  if (alignment === 'center') {
+    return '-translate-x-1/2'
+  }
+
   if (index === 0) {
     return 'translate-x-0'
   }
@@ -337,6 +351,17 @@ function resolveEdgeAlignedClass(index: number, total: number): string {
   }
 
   return '-translate-x-1/2'
+}
+
+function resolveEndMarkerAlignment(time: number): 'center' | 'end' | 'start' {
+  if (props.totalDuration <= 0 || time <= 0) {
+    return 'start'
+  }
+  if (time >= props.totalDuration) {
+    return 'end'
+  }
+
+  return 'center'
 }
 
 function getTimeAnchorStyle(left: string): Record<string, string> {
@@ -504,11 +529,11 @@ onUnmounted(() => {
         >
           <div
             class="border-x-4 border-b-6 border-x-transparent border-b-muted-foreground/70 h-0 w-0 left-0 top-20 absolute"
-            :class="resolveEdgeAlignedClass(index, dedupedEndMarkers.length)"
+            :class="resolveEdgeAlignedClass(index, dedupedEndMarkers.length, resolveEndMarkerAlignment(item.span.end))"
           />
           <span
             class="text-10px text-muted-foreground font-mono whitespace-nowrap left-0 top-22 absolute tabular-nums"
-            :class="resolveEdgeAlignedClass(index, dedupedEndMarkers.length)"
+            :class="resolveEdgeAlignedClass(index, dedupedEndMarkers.length, resolveEndMarkerAlignment(item.span.end))"
           >
             {{ item.span.end }}{{ $t('edit.visualEditor.animation.unitMs') }}
           </span>
