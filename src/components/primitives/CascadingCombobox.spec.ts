@@ -373,6 +373,15 @@ function getActiveSearchOptionElement(): HTMLElement | undefined {
   return document.querySelector<HTMLElement>('[role="option"][data-active-search="true"]') ?? undefined
 }
 
+function getSearchListboxElement(): HTMLElement | undefined {
+  return document.querySelector<HTMLElement>('[role="listbox"]') ?? undefined
+}
+
+function findSearchOptionElement(label: string): HTMLElement | undefined {
+  return [...document.querySelectorAll<HTMLElement>('[role="option"]')]
+    .find(element => element.textContent?.includes(label))
+}
+
 describe('CascadingCombobox', () => {
   it('首次打开已选嵌套值时，根层与级联子层作为独立浮层渲染，并保持向右级联展开', async () => {
     renderInBrowser(GroupedHarness, {
@@ -464,6 +473,31 @@ describe('CascadingCombobox', () => {
     expect(searchInput).toBeDefined()
     expect(activeOption).toBeDefined()
     expect(searchInput!.getAttribute('aria-activedescendant')).toBe(activeOption!.id)
+  })
+
+  it('鼠标离开搜索结果列表时，不会回退到已有的键盘高亮项', async () => {
+    renderInBrowser(GroupedHarness, {
+      props: {
+        initialValue: 'sakiko/default',
+      },
+    })
+
+    await page.getByTestId('grouped-trigger').click()
+    await page.getByPlaceholder('Search motion').fill('sakiko')
+    await userEvent.keyboard('{ArrowDown}')
+
+    const hoveredOption = findSearchOptionElement('sakiko/default')
+    const listbox = getSearchListboxElement()
+    expect(hoveredOption).toBeDefined()
+    expect(listbox).toBeDefined()
+    expect(getActiveSearchOptionElement()?.textContent).toContain('sakiko/maskon/kime01')
+
+    hoveredOption!.dispatchEvent(new MouseEvent('mouseenter'))
+    await expect.poll(() => getActiveSearchOptionElement()?.textContent?.includes('sakiko/default') ?? false).toBe(true)
+
+    listbox!.dispatchEvent(new MouseEvent('mouseleave'))
+
+    await expect.poll(() => getActiveSearchOptionElement()).toBeUndefined()
   })
 
   it('搜索结果在收缩后，Enter 会忽略过期高亮而不是抛错', async () => {
@@ -633,7 +667,9 @@ describe('CascadingCombobox', () => {
     expect(selectedRootGroupRow).toBeDefined()
 
     selectedRootGroupRow!.dispatchEvent(new MouseEvent('mouseenter'))
-    await new Promise(resolve => globalThis.setTimeout(resolve, 20))
+    await expect.poll(() => getSubpanelRects().length).toBe(2)
+    await expect.poll(() => getLayerActiveBrowseText(1)?.includes('maskon') ?? false).toBe(true)
+    await expect.poll(() => getLayerActiveBrowseText(2)?.includes('kime01') ?? false).toBe(true)
 
     expect(getSubpanelRects()).toHaveLength(2)
     expect(getLayerActiveBrowseText(1)).toContain('maskon')
@@ -651,7 +687,7 @@ describe('CascadingCombobox', () => {
     expect(overflowGroupRow).toBeDefined()
 
     overflowGroupRow!.dispatchEvent(new MouseEvent('mouseenter'))
-    await new Promise(resolve => globalThis.setTimeout(resolve, 120))
+    await expect.poll(() => getLayerActiveBrowseText(0)?.includes('root-01') ?? false).toBe(true)
 
     expect(getLayerActiveBrowseText(0)).toContain('root-01')
     expect(getLayerActiveBrowseText(1)).toBeUndefined()
@@ -669,9 +705,11 @@ describe('CascadingCombobox', () => {
     expect(targetGroupRow).toBeDefined()
 
     overflowGroupRow!.dispatchEvent(new MouseEvent('mouseenter'))
-    await new Promise(resolve => globalThis.setTimeout(resolve, 120))
+    await expect.poll(() => getLayerActiveBrowseText(0)?.includes('root-01') ?? false).toBe(true)
     targetGroupRow!.dispatchEvent(new MouseEvent('mouseenter'))
-    await new Promise(resolve => globalThis.setTimeout(resolve, 120))
+    await expect.poll(() => getLayerActiveBrowseText(0)?.includes('target') ?? false).toBe(true)
+    await expect.poll(() => getLayerActiveBrowseText(1)?.includes('item-24') ?? false).toBe(true)
+    await expect.poll(() => (getLayerViewportScrollTop(1) ?? 0) > 0).toBe(true)
 
     expect(getLayerActiveBrowseText(0)).toContain('target')
     expect(getLayerActiveBrowseText(1)).toContain('item-24')
@@ -684,7 +722,13 @@ describe('CascadingCombobox', () => {
 
     await page.getByTestId('nested-trigger').click()
     await expect.element(page.getByText('group-48', { exact: true })).toBeInTheDocument()
-    await new Promise(resolve => globalThis.setTimeout(resolve, 100))
+    await expect.poll(() => ({
+      activeReady: getLayerActiveBrowseText(1)?.includes('group-48') ?? false,
+      scrollReady: (getLayerViewportScrollTop(1) ?? 0) > 0,
+    })).toEqual({
+      activeReady: true,
+      scrollReady: true,
+    })
 
     const hoveredGroupRow = findLayerGroupRow(1, 'group-02')
     expect(hoveredGroupRow).toBeDefined()
@@ -694,7 +738,7 @@ describe('CascadingCombobox', () => {
     expect(initialScrollTop).toBeGreaterThan(0)
 
     hoveredGroupRow!.dispatchEvent(new MouseEvent('mouseenter'))
-    await new Promise(resolve => globalThis.setTimeout(resolve, 120))
+    await expect.poll(() => getLayerActiveBrowseText(1)?.includes('group-02') ?? false).toBe(true)
 
     const nextScrollTop = getLayerViewportScrollTop(1)
     expect(getLayerActiveBrowseText(1)).toContain('group-02')

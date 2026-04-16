@@ -139,7 +139,7 @@ async function scrollActiveSearchResultAfterNextTick() {
 }
 
 function clearSearchHover() {
-  hoveredSearchIndex = undefined
+  hoveredSearchIndex = -1
 }
 
 function handleRootInteractOutside(event: Event) {
