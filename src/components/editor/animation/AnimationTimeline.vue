@@ -367,7 +367,7 @@ function resolveEndMarkerAlignment(time: number): 'center' | 'end' | 'start' {
 function getTimeAnchorStyle(left: string): Record<string, string> {
   return {
     left,
-    width: '0',
+    width: '0px',
   }
 }
 
