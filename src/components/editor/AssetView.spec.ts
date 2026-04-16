@@ -443,6 +443,10 @@ let previewSessionStoreState: {
   currentGameServeUrl: string | undefined
 }
 
+function setPreviewUnavailable() {
+  previewSessionStoreState.currentGameServeUrl = undefined
+}
+
 describe('AssetView', () => {
   beforeEach(() => {
     fileSystemEventHandlers.clear()
@@ -542,7 +546,7 @@ describe('AssetView', () => {
         path: '/project',
       },
     }))
-    previewSessionStoreState.currentGameServeUrl = undefined
+    setPreviewUnavailable()
 
     renderInBrowser(createHarness('background'), {
       global: {
@@ -594,7 +598,7 @@ describe('AssetView', () => {
         path: '/project',
       },
     }))
-    previewSessionStoreState.currentGameServeUrl = undefined
+    setPreviewUnavailable()
 
     renderInBrowser(createHarness('background'), {
       global: {
@@ -640,7 +644,7 @@ describe('AssetView', () => {
         path: '/project',
       },
     }))
-    previewSessionStoreState.currentGameServeUrl = undefined
+    setPreviewUnavailable()
 
     renderInBrowser(createHarness('background'), {
       global: {
@@ -675,7 +679,7 @@ describe('AssetView', () => {
         path: '/project',
       },
     }))
-    previewSessionStoreState.currentGameServeUrl = undefined
+    setPreviewUnavailable()
     usePreferenceStoreMock.mockReturnValue(reactive({
       assetViewMode: 'list',
       assetZoom: [100],
@@ -714,7 +718,7 @@ describe('AssetView', () => {
         path: '/project',
       },
     }))
-    previewSessionStoreState.currentGameServeUrl = undefined
+    setPreviewUnavailable()
 
     renderInBrowser(createHarness('background'), {
       global: {
@@ -1063,7 +1067,7 @@ describe('AssetView', () => {
         path: '/project',
       },
     }))
-    previewSessionStoreState.currentGameServeUrl = undefined
+    setPreviewUnavailable()
 
     renderInBrowser(createHarness('animation'), {
       global: {
@@ -1130,7 +1134,7 @@ describe('AssetView', () => {
         path: '/project',
       },
     }))
-    previewSessionStoreState.currentGameServeUrl = undefined
+    setPreviewUnavailable()
 
     renderInBrowser(createHarness('background'), {
       global: {
@@ -1170,7 +1174,7 @@ describe('AssetView', () => {
         path: '/project',
       },
     }))
-    previewSessionStoreState.currentGameServeUrl = undefined
+    setPreviewUnavailable()
 
     renderInBrowser(createCreateFolderAndChangePathHarness('background'), {
       global: {
@@ -1237,7 +1241,7 @@ describe('AssetView', () => {
         path: '/project',
       },
     }))
-    previewSessionStoreState.currentGameServeUrl = undefined
+    setPreviewUnavailable()
 
     renderInBrowser(createHarness('background', { searchQuery: 'hero' }), {
       global: {
@@ -1355,7 +1359,7 @@ describe('AssetView', () => {
         path: '/project',
       },
     }))
-    previewSessionStoreState.currentGameServeUrl = undefined
+    setPreviewUnavailable()
 
     renderInBrowser(createHarness('background'), {
       global: {

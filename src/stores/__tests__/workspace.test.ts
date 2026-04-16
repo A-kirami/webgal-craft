@@ -162,7 +162,7 @@ describe('工作区状态仓库', () => {
     expect(previewSessionStoreState.currentGameServeUrl).toBeUndefined()
   })
 
-  it('预览会话同步未提供地址时仍保留当前游戏并允许预览会话保持空地址', async () => {
+  it('预览会话同步未写入地址时仍保留当前游戏并允许预览会话保持空地址', async () => {
     const store = useWorkspaceStore()
 
     dbGetMock.mockResolvedValue(createTestGame({
@@ -177,31 +177,13 @@ describe('工作区状态仓库', () => {
     routeState.params = { gameId: 'game-2' }
     await flushWorkspaceWatchers()
 
+    expect(syncCurrentGameMock).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'game-2',
+      path: '/games/game-2',
+    }))
     expect(store.currentGame).toMatchObject({
       id: 'game-2',
       path: '/games/game-2',
-    })
-    expect(previewSessionStoreState.currentGameServeUrl).toBeUndefined()
-  })
-
-  it('预览会话返回空地址时保留当前游戏并允许预览会话保持空地址', async () => {
-    const store = useWorkspaceStore()
-
-    dbGetMock.mockResolvedValue(createTestGame({
-      id: 'game-3',
-      path: '/games/game-3',
-      metadata: {
-        name: 'Game Three',
-      },
-    }))
-    syncCurrentGameMock.mockResolvedValue(undefined)
-
-    routeState.params = { gameId: 'game-3' }
-    await flushWorkspaceWatchers()
-
-    expect(store.currentGame).toMatchObject({
-      id: 'game-3',
-      path: '/games/game-3',
     })
     expect(previewSessionStoreState.currentGameServeUrl).toBeUndefined()
   })
