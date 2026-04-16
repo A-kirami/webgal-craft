@@ -417,8 +417,8 @@ watch(() => searchQuery, (nextQuery, previousQuery) => {
             >
               <li
                 v-for="(result, index) in searchResults"
-                :key="result.value"
                 :id="getSearchOptionId(index)"
+                :key="result.value"
                 role="option"
                 :aria-selected="props.modelValue === result.value"
                 :data-active-search="index === activeSearchIndex ? 'true' : undefined"
