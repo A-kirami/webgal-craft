@@ -175,4 +175,54 @@ describe('useParamChoiceFieldViewModel', () => {
       options: [{ label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' }],
     })
   })
+
+  it('path grouping 字段会先 trim 分隔符，再决定是否构建级联节点', () => {
+    const field = createPathChoiceField()
+
+    const trimmedViewModel = useParamChoiceFieldViewModel({
+      getChoiceFieldMode: () => 'combobox',
+      getComboboxPathDelimiter: () => ' / ',
+      getCustomLabel: () => '',
+      getDynamicOptions: () => [
+        { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+        { label: 'sakiko/default', value: 'sakiko/default' },
+      ],
+      getPlaceholder: () => 'Search expression',
+      getSelectValue: () => '',
+      isCustomField: () => false,
+      i18nContent: () => '',
+      shouldRenderSegmented: () => false,
+      t: key => key,
+      visibleFields: () => [field],
+    })
+
+    expect(trimmedViewModel.viewModels.value.get(field.key)?.comboboxData?.browseNodes).toMatchObject([
+      {
+        kind: 'group',
+        label: 'sakiko',
+      },
+    ])
+
+    const whitespaceOnlyViewModel = useParamChoiceFieldViewModel({
+      getChoiceFieldMode: () => 'combobox',
+      getComboboxPathDelimiter: () => '   ',
+      getCustomLabel: () => '',
+      getDynamicOptions: () => [
+        { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+      ],
+      getPlaceholder: () => 'Search expression',
+      getSelectValue: () => '',
+      isCustomField: () => false,
+      i18nContent: () => '',
+      shouldRenderSegmented: () => false,
+      t: key => key,
+      visibleFields: () => [field],
+    })
+
+    expect(whitespaceOnlyViewModel.viewModels.value.get(field.key)).toMatchObject({
+      comboboxData: undefined,
+      mode: 'combobox',
+      options: [{ label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' }],
+    })
+  })
 })

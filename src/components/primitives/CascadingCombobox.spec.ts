@@ -196,6 +196,47 @@ const NestedGroupedHarness = defineComponent({
   `,
 })
 
+interface CascadingComboboxTestHooks {
+  __shrinkCascadingSearchDocuments?: () => void
+}
+
+const DynamicSearchDocumentsHarness = defineComponent({
+  components: { CascadingCombobox },
+  setup() {
+    const modelValue = ref('sakiko/default')
+    const searchDocuments = ref([...groupedData.searchDocuments])
+    const testHooks = globalThis as typeof globalThis & CascadingComboboxTestHooks
+
+    function shrinkSearchDocuments() {
+      searchDocuments.value = groupedData.searchDocuments.filter(document => document.value === 'anon/cry01')
+    }
+
+    onMounted(() => {
+      testHooks.__shrinkCascadingSearchDocuments = shrinkSearchDocuments
+    })
+
+    onBeforeUnmount(() => {
+      delete testHooks.__shrinkCascadingSearchDocuments
+    })
+
+    return {
+      groupedData,
+      modelValue,
+      searchDocuments,
+    }
+  },
+  template: `
+    <CascadingCombobox
+      v-model="modelValue"
+      data-testid="dynamic-trigger"
+      :browse-nodes="groupedData.browseNodes"
+      :search-documents="searchDocuments"
+      placeholder="Select motion"
+      search-placeholder="Search motion"
+    />
+  `,
+})
+
 function getFloatingRects(): FloatingRect[] {
   return [...document.querySelectorAll<HTMLElement>('[data-reka-popper-content-wrapper]')].map((element) => {
     const rect = element.getBoundingClientRect()
@@ -324,6 +365,14 @@ function getActiveAlignmentMetrics(
   }
 }
 
+function getSearchInputElement(): HTMLInputElement | undefined {
+  return document.querySelector<HTMLInputElement>('input[role="searchbox"]') ?? undefined
+}
+
+function getActiveSearchOptionElement(): HTMLElement | undefined {
+  return document.querySelector<HTMLElement>('[role="option"][data-active-search="true"]') ?? undefined
+}
+
 describe('CascadingCombobox', () => {
   it('首次打开已选嵌套值时，根层与级联子层作为独立浮层渲染，并保持向右级联展开', async () => {
     renderInBrowser(GroupedHarness, {
@@ -392,6 +441,49 @@ describe('CascadingCombobox', () => {
     await expect.element(page.getByTestId('grouped-trigger')).toHaveTextContent('anon/cry01')
   })
 
+  it('搜索结果列表暴露 listbox/option 语义，并把当前高亮项关联到搜索框', async () => {
+    renderInBrowser(GroupedHarness, {
+      props: {
+        initialValue: 'sakiko/default',
+      },
+    })
+
+    await page.getByTestId('grouped-trigger').click()
+    await page.getByPlaceholder('Search motion').fill('sakiko')
+
+    const listbox = page.getByRole('listbox')
+    const selectedOption = page.getByRole('option', { name: 'sakiko/default' })
+
+    await expect.element(listbox).toBeInTheDocument()
+    await expect.element(selectedOption).toHaveAttribute('aria-selected', 'true')
+
+    await userEvent.keyboard('{ArrowDown}')
+
+    const searchInput = getSearchInputElement()
+    const activeOption = getActiveSearchOptionElement()
+    expect(searchInput).toBeDefined()
+    expect(activeOption).toBeDefined()
+    expect(searchInput!.getAttribute('aria-activedescendant')).toBe(activeOption!.id)
+  })
+
+  it('搜索结果在收缩后，Enter 会忽略过期高亮而不是抛错', async () => {
+    renderInBrowser(DynamicSearchDocumentsHarness)
+
+    await page.getByTestId('dynamic-trigger').click()
+    await page.getByPlaceholder('Search motion').fill('cry')
+    await expect.element(page.getByRole('option', { name: 'anon/cry02' })).toBeInTheDocument()
+
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}')
+
+    const testHooks = globalThis as typeof globalThis & CascadingComboboxTestHooks
+    testHooks.__shrinkCascadingSearchDocuments?.()
+
+    await expect.element(page.getByRole('option', { name: 'anon/cry02' })).not.toBeInTheDocument()
+    await userEvent.keyboard('{Enter}')
+
+    await expect.element(page.getByTestId('dynamic-trigger')).toHaveTextContent('sakiko/default')
+  })
+
   it('点击子菜单叶子项时，会更新选中值并关闭浮层', async () => {
     renderInBrowser(GroupedHarness, {
       props: {
@@ -456,7 +548,25 @@ describe('CascadingCombobox', () => {
 
     await page.getByTestId('tall-trigger').click()
     await expect.element(page.getByText('item-24', { exact: true })).toBeInTheDocument()
-    await new Promise(resolve => globalThis.setTimeout(resolve, 100))
+
+    await expect.poll(() => {
+      const rootMetrics = getActiveAlignmentMetrics(
+        '[data-cascading-root-panel]',
+        '[data-cascading-root-scroll-viewport]',
+      )
+      const subpanelMetrics = getActiveAlignmentMetrics(
+        '[data-layer-depth="1"]',
+        '[data-cascading-subpanel-scroll-viewport]',
+      )
+
+      return {
+        rootReady: Boolean(rootMetrics && rootMetrics.scrollTop > 0),
+        subpanelReady: Boolean(subpanelMetrics && subpanelMetrics.scrollTop > 0),
+      }
+    }).toEqual({
+      rootReady: true,
+      subpanelReady: true,
+    })
 
     const rootMetrics = getActiveAlignmentMetrics(
       '[data-cascading-root-panel]',

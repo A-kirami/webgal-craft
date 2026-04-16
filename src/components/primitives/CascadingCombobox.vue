@@ -36,6 +36,7 @@ let searchQuery = $ref('')
 const attrs = useAttrs()
 const inputRef = $(useTemplateRef<HTMLInputElement>('inputRef'))
 const panelRef = $(useTemplateRef<HTMLElement>('panelRef'))
+const searchListboxId = useId()
 
 const browseState = useCascadingComboboxState({
   browseNodes: () => props.browseNodes,
@@ -46,6 +47,16 @@ const highlightedPath = browseState.highlightedPath
 
 const isSearchMode = $computed(() => Boolean(searchQuery.trim()))
 const activeSearchIndex = $computed(() => hoveredSearchIndex ?? searchHighlightedIndex)
+const activeSearchResult = $computed(() => (
+  activeSearchIndex >= 0 && activeSearchIndex < searchResults.length
+    ? searchResults[activeSearchIndex]
+    : undefined
+))
+const activeSearchOptionId = $computed(() => (
+  activeSearchResult
+    ? getSearchOptionId(activeSearchIndex)
+    : undefined
+))
 
 const searchResults = $computed(() => {
   const keyword = searchQuery.trim().toLowerCase()
@@ -68,6 +79,10 @@ const selectedLabel = $computed(() => {
 function matchesSearchDocument(document: CascadingComboboxSearchDocument, keyword: string): boolean {
   return document.pathText.toLowerCase().includes(keyword)
     || document.value.toLowerCase().includes(keyword)
+}
+
+function getSearchOptionId(index: number): string {
+  return `${searchListboxId}-option-${index}`
 }
 
 function focusSearchInput() {
@@ -206,9 +221,14 @@ async function handleInputKeydown(event: KeyboardEvent) {
       return
     }
 
-    if (event.key === 'Enter' && activeSearchIndex >= 0) {
+    if (event.key === 'Enter') {
+      const result = activeSearchResult
+      if (!result) {
+        return
+      }
+
       event.preventDefault()
-      selectOption(searchResults[activeSearchIndex]!.value)
+      selectOption(result.value)
     }
     return
   }
@@ -338,6 +358,8 @@ watch(() => searchQuery, (nextQuery, previousQuery) => {
           <input
             ref="inputRef"
             v-model="searchQuery"
+            :aria-activedescendant="isSearchMode ? activeSearchOptionId : undefined"
+            :aria-controls="isSearchMode ? searchListboxId : undefined"
             type="text"
             role="searchbox"
             :placeholder="searchPlaceholder"
@@ -387,10 +409,18 @@ watch(() => searchQuery, (nextQuery, previousQuery) => {
             class="rounded-[inherit] w-full"
             :style="{ maxHeight: '40vh' }"
           >
-            <ul class="text-xs m-0 p-1 list-none" @mouseleave="clearSearchHover">
+            <ul
+              :id="searchListboxId"
+              role="listbox"
+              class="text-xs m-0 p-1 list-none"
+              @mouseleave="clearSearchHover"
+            >
               <li
                 v-for="(result, index) in searchResults"
                 :key="result.value"
+                :id="getSearchOptionId(index)"
+                role="option"
+                :aria-selected="props.modelValue === result.value"
                 :data-active-search="index === activeSearchIndex ? 'true' : undefined"
                 :class="cn(
                   'flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5',

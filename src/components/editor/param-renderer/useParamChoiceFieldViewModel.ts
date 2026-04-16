@@ -81,7 +81,7 @@ function resolveComboboxData(
     return
   }
 
-  const delimiter = options.getComboboxPathDelimiter()
+  const delimiter = options.getComboboxPathDelimiter()?.trim() ?? ''
   if (delimiter === '') {
     return
   }
