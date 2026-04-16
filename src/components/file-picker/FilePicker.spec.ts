@@ -8,17 +8,20 @@ import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } f
 const {
   existsMock,
   normalizeMock,
+  previewSessionStoreState,
   readDirectoryMock,
   statMock,
   workspaceStoreState,
 } = vi.hoisted(() => ({
   existsMock: vi.fn(),
   normalizeMock: vi.fn(async (value: string) => value.replaceAll('\\', '/')),
+  previewSessionStoreState: {
+    currentGameServeUrl: 'http://127.0.0.1:8899/game/demo/',
+  },
   readDirectoryMock: vi.fn(),
   statMock: vi.fn(),
   workspaceStoreState: {
     CWD: '/games/demo',
-    currentGameServeUrl: 'http://127.0.0.1:8899/game/demo/',
   },
 }))
 
@@ -55,6 +58,10 @@ vi.mock('~/composables/useDirectoryReader', () => ({
 
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: () => workspaceStoreState,
+}))
+
+vi.mock('~/stores/preview-session', () => ({
+  usePreviewSessionStore: () => previewSessionStoreState,
 }))
 
 import FilePicker from './FilePicker.vue'
@@ -194,7 +201,7 @@ describe('FilePicker', () => {
       isDirectory: true,
     })
     workspaceStoreState.CWD = '/games/demo'
-    workspaceStoreState.currentGameServeUrl = 'http://127.0.0.1:8899/game/demo/'
+    previewSessionStoreState.currentGameServeUrl = 'http://127.0.0.1:8899/game/demo/'
   })
 
   it('同步外部文件路径中间态时不会立即归一化并回写父层', async () => {

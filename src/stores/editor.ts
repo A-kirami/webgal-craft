@@ -12,6 +12,7 @@ import { useEditSettingsStore } from '~/stores/edit-settings'
 import { canExecuteEditorAutoSave, createEditorAutoSaveController } from '~/stores/editor-auto-save'
 import { createEditorPreviewSync } from '~/stores/editor-preview-sync'
 import { usePreferenceStore } from '~/stores/preference'
+import { usePreviewSessionStore } from '~/stores/preview-session'
 import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
@@ -216,6 +217,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   const { t } = useI18n()
   const editSettingsStore = useEditSettingsStore()
+  const previewSessionStore = usePreviewSessionStore()
   const tabsStore = useTabsStore()
   const fileSystemEvents = useFileSystemEvents()
 
@@ -427,7 +429,7 @@ export const useEditorStore = defineStore('editor', () => {
     getEditableSession,
     getEditableState,
     getPreferredProjection: () => usePreferenceStore().editorMode,
-    getPreviewBaseUrl: () => useWorkspaceStore().currentGameServeUrl,
+    getPreviewBaseUrl: () => previewSessionStore.currentGameServeUrl,
     getSceneSelection,
     getSession: (path: string) => sessions.get(path),
     getWorkspaceRootPath: () => useWorkspaceStore().CWD,

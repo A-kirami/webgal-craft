@@ -22,6 +22,7 @@ const {
   routerPushMock,
   toastErrorMock,
   useModalStoreMock,
+  usePreviewSessionStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
   getConfigMock: vi.fn(),
@@ -31,6 +32,7 @@ const {
   routerPushMock: vi.fn(),
   toastErrorMock: vi.fn(),
   useModalStoreMock: vi.fn(),
+  usePreviewSessionStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
 }))
 
@@ -69,6 +71,10 @@ vi.mock('~/services/platform/app-paths', () => ({
 
 vi.mock('~/stores/modal', () => ({
   useModalStore: useModalStoreMock,
+}))
+
+vi.mock('~/stores/preview-session', () => ({
+  usePreviewSessionStore: usePreviewSessionStoreMock,
 }))
 
 vi.mock('~/stores/workspace', () => ({
@@ -142,6 +148,7 @@ describe('EditHeader', () => {
     routerPushMock.mockReset()
     toastErrorMock.mockReset()
     useModalStoreMock.mockReset()
+    usePreviewSessionStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
 
     useModalStoreMock.mockReturnValue({
@@ -163,6 +170,8 @@ describe('EditHeader', () => {
           },
         },
       },
+    }))
+    usePreviewSessionStoreMock.mockReturnValue(reactive({
       currentGameServeUrl: 'http://127.0.0.1:8899/game/test/',
     }))
     getConfigMock.mockResolvedValue({
@@ -217,6 +226,8 @@ describe('EditHeader', () => {
     useWorkspaceStoreMock.mockReturnValue(reactive({
       CWD: String.raw`C:\Users\Akirami\Documents\WebGALCraft\games\test`,
       currentGame: undefined,
+    }))
+    usePreviewSessionStoreMock.mockReturnValue(reactive({
       currentGameServeUrl: undefined,
     }))
 

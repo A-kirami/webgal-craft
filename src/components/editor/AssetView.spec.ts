@@ -27,6 +27,7 @@ const {
   renameFileMock,
   useFileStoreMock,
   usePreferenceStoreMock,
+  usePreviewSessionStoreMock,
   useTabsStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
@@ -42,6 +43,7 @@ const {
   renameFileMock: vi.fn(),
   useFileStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
+  usePreviewSessionStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
 }))
@@ -176,6 +178,10 @@ vi.mock('~/stores/file', () => ({
 
 vi.mock('~/stores/preference', () => ({
   usePreferenceStore: usePreferenceStoreMock,
+}))
+
+vi.mock('~/stores/preview-session', () => ({
+  usePreviewSessionStore: usePreviewSessionStoreMock,
 }))
 
 vi.mock('~/stores/tabs', () => ({
@@ -433,6 +439,10 @@ const commonGlobalStubs = {
   PopoverContent: createBrowserContainerStub('StubPopoverContent'),
 }
 
+let previewSessionStoreState: {
+  currentGameServeUrl: string | undefined
+}
+
 describe('AssetView', () => {
   beforeEach(() => {
     fileSystemEventHandlers.clear()
@@ -447,6 +457,7 @@ describe('AssetView', () => {
     renameFileMock.mockReset()
     useFileStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()
+    usePreviewSessionStoreMock.mockReset()
     useTabsStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
 
@@ -470,11 +481,14 @@ describe('AssetView', () => {
       openTab: vi.fn(),
       tabs: [],
     })
+    previewSessionStoreState = reactive({
+      currentGameServeUrl: 'http://127.0.0.1:8899/game/demo/',
+    })
+    usePreviewSessionStoreMock.mockReturnValue(previewSessionStoreState)
     useWorkspaceStoreMock.mockReturnValue(reactive({
       currentGame: {
         path: '/games/demo',
       },
-      currentGameServeUrl: 'http://127.0.0.1:8899/game/demo/',
     }))
     fileSystemEventsOnMock.mockImplementation((eventType: string, handler: (event: Record<string, unknown>) => void) => {
       const handlers = fileSystemEventHandlers.get(eventType) ?? []
@@ -527,8 +541,8 @@ describe('AssetView', () => {
       currentGame: {
         path: '/project',
       },
-      currentGameServeUrl: undefined,
     }))
+    previewSessionStoreState.currentGameServeUrl = undefined
 
     renderInBrowser(createHarness('background'), {
       global: {
@@ -579,8 +593,8 @@ describe('AssetView', () => {
       currentGame: {
         path: '/project',
       },
-      currentGameServeUrl: undefined,
     }))
+    previewSessionStoreState.currentGameServeUrl = undefined
 
     renderInBrowser(createHarness('background'), {
       global: {
@@ -625,8 +639,8 @@ describe('AssetView', () => {
       currentGame: {
         path: '/project',
       },
-      currentGameServeUrl: undefined,
     }))
+    previewSessionStoreState.currentGameServeUrl = undefined
 
     renderInBrowser(createHarness('background'), {
       global: {
@@ -660,8 +674,8 @@ describe('AssetView', () => {
       currentGame: {
         path: '/project',
       },
-      currentGameServeUrl: undefined,
     }))
+    previewSessionStoreState.currentGameServeUrl = undefined
     usePreferenceStoreMock.mockReturnValue(reactive({
       assetViewMode: 'list',
       assetZoom: [100],
@@ -699,8 +713,8 @@ describe('AssetView', () => {
       currentGame: {
         path: '/project',
       },
-      currentGameServeUrl: undefined,
     }))
+    previewSessionStoreState.currentGameServeUrl = undefined
 
     renderInBrowser(createHarness('background'), {
       global: {
@@ -1048,8 +1062,8 @@ describe('AssetView', () => {
       currentGame: {
         path: '/project',
       },
-      currentGameServeUrl: undefined,
     }))
+    previewSessionStoreState.currentGameServeUrl = undefined
 
     renderInBrowser(createHarness('animation'), {
       global: {
@@ -1115,8 +1129,8 @@ describe('AssetView', () => {
       currentGame: {
         path: '/project',
       },
-      currentGameServeUrl: undefined,
     }))
+    previewSessionStoreState.currentGameServeUrl = undefined
 
     renderInBrowser(createHarness('background'), {
       global: {
@@ -1155,8 +1169,8 @@ describe('AssetView', () => {
       currentGame: {
         path: '/project',
       },
-      currentGameServeUrl: undefined,
     }))
+    previewSessionStoreState.currentGameServeUrl = undefined
 
     renderInBrowser(createCreateFolderAndChangePathHarness('background'), {
       global: {
@@ -1222,8 +1236,8 @@ describe('AssetView', () => {
       currentGame: {
         path: '/project',
       },
-      currentGameServeUrl: undefined,
     }))
+    previewSessionStoreState.currentGameServeUrl = undefined
 
     renderInBrowser(createHarness('background', { searchQuery: 'hero' }), {
       global: {
@@ -1340,8 +1354,8 @@ describe('AssetView', () => {
       currentGame: {
         path: '/project',
       },
-      currentGameServeUrl: undefined,
     }))
+    previewSessionStoreState.currentGameServeUrl = undefined
 
     renderInBrowser(createHarness('background'), {
       global: {

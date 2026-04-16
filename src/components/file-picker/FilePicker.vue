@@ -6,6 +6,7 @@ import { useFilePickerController } from '~/features/file-picker/useFilePickerCon
 import { useFilePickerHistory } from '~/features/file-picker/useFilePickerHistory'
 import { cn } from '~/lib/utils'
 import { usePreferenceStore } from '~/stores/preference'
+import { usePreviewSessionStore } from '~/stores/preview-session'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
@@ -68,6 +69,7 @@ let modelValue = $(defineModel<string>({ default: '' }))
 
 const slots = useSlots()
 const preferenceStore = usePreferenceStore()
+const previewSessionStore = usePreviewSessionStore()
 const workspaceStore = useWorkspaceStore()
 const { readDirectory, ensurePathWithinRoot } = useDirectoryReader()
 
@@ -303,7 +305,7 @@ function handleFileListKeydown(event: KeyboardEvent) {
           ref="fileViewerRef"
           :items="filteredItems"
           :preview-cwd="workspaceStore.CWD"
-          :preview-base-url="workspaceStore.currentGameServeUrl"
+          :preview-base-url="previewSessionStore.currentGameServeUrl"
           :view-mode="viewMode"
           :zoom="zoomPercent"
           :sortable-headers="false"
