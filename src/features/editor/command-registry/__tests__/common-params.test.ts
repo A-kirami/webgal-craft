@@ -66,6 +66,7 @@ describe('命令注册表通用参数', () => {
       dynamicOptionsKey: 'animationTableEntries',
       advanced: true,
       variant: 'combobox',
+      grouping: { mode: 'path' },
     })
     expect(EXIT_ANIMATION).toMatchObject({
       key: 'exit',
@@ -73,6 +74,7 @@ describe('命令注册表通用参数', () => {
       dynamicOptionsKey: 'animationTableEntries',
       advanced: true,
       variant: 'combobox',
+      grouping: { mode: 'path' },
     })
     expect(DEFAULT_ENTER_DURATION).toMatchObject({
       key: 'enterDuration',

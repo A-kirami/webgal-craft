@@ -1,13 +1,16 @@
-import { resolveI18n } from '~/features/editor/command-registry/schema'
+import { isFlagChoiceField, resolveI18n } from '~/features/editor/command-registry/schema'
+import { buildCascadingComboboxData } from '~/lib/cascading-combobox'
 
 import type { ParamSelectOptionItem } from './controls/types'
 import type { EditorField } from '~/features/editor/command-registry/schema'
+import type { CascadingComboboxData } from '~/lib/cascading-combobox'
 
 type ChoiceFieldMode = 'select' | 'combobox'
 type TranslateFn = (key: string, ...args: unknown[]) => string
 
 interface UseParamChoiceFieldViewModelOptions {
   getChoiceFieldMode: (field: EditorField) => ChoiceFieldMode | undefined
+  getComboboxPathDelimiter: () => string
   getCustomLabel: (field: EditorField) => string
   getDynamicOptions: (field: EditorField) => ParamSelectOptionItem[]
   getPlaceholder: (field: EditorField) => string
@@ -20,6 +23,7 @@ interface UseParamChoiceFieldViewModelOptions {
 }
 
 export interface ParamChoiceFieldViewModel {
+  comboboxData?: CascadingComboboxData
   customLabel: string
   isCustomField: boolean
   mode: ChoiceFieldMode
@@ -63,6 +67,31 @@ function mergeOptions(
   return merged
 }
 
+function resolveComboboxData(
+  field: EditorField,
+  mode: ChoiceFieldMode,
+  mergedOptions: ParamSelectOptionItem[],
+  options: UseParamChoiceFieldViewModelOptions,
+): CascadingComboboxData | undefined {
+  if (field.field.type !== 'choice' || isFlagChoiceField(field.field) || mode !== 'combobox') {
+    return
+  }
+
+  if (field.field.grouping?.mode !== 'path') {
+    return
+  }
+
+  const delimiter = options.getComboboxPathDelimiter()
+  if (delimiter === '') {
+    return
+  }
+
+  return buildCascadingComboboxData(mergedOptions, {
+    grouping: field.field.grouping,
+    resolvedDelimiter: delimiter,
+  })
+}
+
 function createViewModel(
   field: EditorField,
   options: UseParamChoiceFieldViewModelOptions,
@@ -72,14 +101,17 @@ function createViewModel(
     return
   }
 
+  const mergedOptions = mergeOptions(
+    options.getDynamicOptions(field),
+    resolveStaticOptions(field, options.t, options.i18nContent()),
+  )
+
   return {
+    comboboxData: resolveComboboxData(field, mode, mergedOptions, options),
     customLabel: options.getCustomLabel(field),
     isCustomField: options.isCustomField(field),
     mode,
-    options: mergeOptions(
-      options.getDynamicOptions(field),
-      resolveStaticOptions(field, options.t, options.i18nContent()),
-    ),
+    options: mergedOptions,
     placeholder: options.getPlaceholder(field),
     renderSegmented: options.shouldRenderSegmented(field),
     selectValue: options.getSelectValue(field),

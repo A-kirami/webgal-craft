@@ -35,6 +35,7 @@ export interface SelectFieldDef<
 export interface InputFieldDef extends BaseSettingsFieldDef {
   type: 'input'
   default: string
+  className?: string
   placeholder?: SettingsI18nLike
 }
 

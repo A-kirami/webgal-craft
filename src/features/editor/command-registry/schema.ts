@@ -131,6 +131,7 @@ export interface ValueChoiceField extends FieldBase, OptionsMixin {
   defaultValue?: string
   placeholder?: I18nLike
   dynamicOptionsKey?: EditorDynamicOptionsKey
+  grouping?: ChoiceFieldGrouping
   customizable?: boolean
   customLabel?: I18nLike
   variant?: SurfaceAware<'select' | 'segmented' | 'combobox'>
@@ -146,6 +147,12 @@ export interface FlagChoiceField extends FieldBase, OptionsMixin {
   customizable?: never
   customLabel?: never
 }
+
+export interface ChoiceFieldPathGrouping {
+  mode: 'path'
+}
+
+export type ChoiceFieldGrouping = ChoiceFieldPathGrouping
 
 export type ChoiceField = ValueChoiceField | FlagChoiceField
 

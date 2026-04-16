@@ -14,6 +14,8 @@ describe('编辑设置状态仓库', () => {
     expect(store.minimap).toBe(false)
     expect(store.effectEditorSide).toBe('right')
     expect(store.commandInsertPosition).toBe('afterCursor')
+    expect(store.enableComboboxPathDelimiter).toBe(true)
+    expect(store.comboboxPathDelimiter).toBe('/')
   })
 
   it('支持更新预览和效果编辑相关偏好', () => {
@@ -23,10 +25,14 @@ describe('编辑设置状态仓库', () => {
     store.autoApplyEffectEditorChanges = true
     store.effectEditorSide = 'left'
     store.commandInsertPosition = 'end'
+    store.enableComboboxPathDelimiter = false
+    store.comboboxPathDelimiter = '>'
 
     expect(store.enablePreviewTab).toBe(false)
     expect(store.autoApplyEffectEditorChanges).toBe(true)
     expect(store.effectEditorSide).toBe('left')
     expect(store.commandInsertPosition).toBe('end')
+    expect(store.enableComboboxPathDelimiter).toBe(false)
+    expect(store.comboboxPathDelimiter).toBe('>')
   })
 })

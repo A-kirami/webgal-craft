@@ -27,6 +27,24 @@ function createChoiceField(key: string = 'motion'): EditorField {
   } as EditorField
 }
 
+function createPathChoiceField(key: string = 'expression'): EditorField {
+  const field: ValueChoiceField = {
+    key,
+    label: 'Expression',
+    options: [],
+    placeholder: 'Search expression',
+    type: 'choice',
+    variant: 'combobox',
+    grouping: { mode: 'path' },
+  }
+
+  return {
+    key,
+    field,
+    storage: 'arg',
+  } as EditorField
+}
+
 describe('useParamChoiceFieldViewModel', () => {
   it('会合并动态和静态选项，并在依赖变化后保持动态选项优先级', async () => {
     const field = createChoiceField()
@@ -41,6 +59,7 @@ describe('useParamChoiceFieldViewModel', () => {
 
     const viewModel = useParamChoiceFieldViewModel({
       getChoiceFieldMode: () => 'combobox',
+      getComboboxPathDelimiter: () => '/',
       getCustomLabel: () => customLabel.value,
       getDynamicOptions: () => dynamicOptions.value,
       getPlaceholder: () => placeholder.value,
@@ -52,7 +71,8 @@ describe('useParamChoiceFieldViewModel', () => {
       visibleFields: () => visibleFields.value,
     })
 
-    expect(viewModel.viewModels.value.get(field.key)).toEqual({
+    expect(viewModel.viewModels.value.get(field.key)).toMatchObject({
+      comboboxData: undefined,
       customLabel: 'Custom motion',
       isCustomField: false,
       mode: 'combobox',
@@ -84,5 +104,75 @@ describe('useParamChoiceFieldViewModel', () => {
       { label: 'Joy', value: 'joy' },
       { label: 'Static Sad', value: 'sad' },
     ])
+  })
+
+  it('仅在字段显式声明 path grouping 时构建级联浏览节点', () => {
+    const field = createPathChoiceField()
+
+    const viewModel = useParamChoiceFieldViewModel({
+      getChoiceFieldMode: () => 'combobox',
+      getComboboxPathDelimiter: () => '/',
+      getCustomLabel: () => '',
+      getDynamicOptions: () => [
+        { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+        { label: 'sakiko/default', value: 'sakiko/default' },
+      ],
+      getPlaceholder: () => 'Search expression',
+      getSelectValue: () => '',
+      isCustomField: () => false,
+      i18nContent: () => '',
+      shouldRenderSegmented: () => false,
+      t: key => key,
+      visibleFields: () => [field],
+    })
+
+    expect(viewModel.viewModels.value.get(field.key)?.comboboxData).toMatchObject({
+      browseNodes: [
+        {
+          kind: 'group',
+          label: 'sakiko',
+          children: [
+            {
+              kind: 'group',
+              label: 'maskon',
+              children: [
+                { kind: 'item', label: 'kime01', rawLabel: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+              ],
+            },
+            { kind: 'item', label: 'default', rawLabel: 'sakiko/default', value: 'sakiko/default' },
+          ],
+        },
+      ],
+      searchDocuments: [
+        { rawLabel: 'sakiko/maskon/kime01', pathText: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+        { rawLabel: 'sakiko/default', pathText: 'sakiko/default', value: 'sakiko/default' },
+      ],
+    })
+  })
+
+  it('path grouping 字段在分隔符为空时回退为基础 combobox', () => {
+    const field = createPathChoiceField()
+
+    const viewModel = useParamChoiceFieldViewModel({
+      getChoiceFieldMode: () => 'combobox',
+      getComboboxPathDelimiter: () => '',
+      getCustomLabel: () => '',
+      getDynamicOptions: () => [
+        { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+      ],
+      getPlaceholder: () => 'Search expression',
+      getSelectValue: () => '',
+      isCustomField: () => false,
+      i18nContent: () => '',
+      shouldRenderSegmented: () => false,
+      t: key => key,
+      visibleFields: () => [field],
+    })
+
+    expect(viewModel.viewModels.value.get(field.key)).toMatchObject({
+      comboboxData: undefined,
+      mode: 'combobox',
+      options: [{ label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' }],
+    })
   })
 })

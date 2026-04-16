@@ -89,6 +89,20 @@ export const editSettingsDefinition = defineSettingsSchema({
         label: t => t('settings.edit.showSidebarAssetPreview.label'),
         description: t => t('settings.edit.showSidebarAssetPreview.description'),
       },
+      enableComboboxPathDelimiter: {
+        type: 'switch',
+        default: true,
+        label: t => t('settings.edit.enableComboboxPathDelimiter.label'),
+        description: t => t('settings.edit.enableComboboxPathDelimiter.description'),
+      },
+      comboboxPathDelimiter: {
+        type: 'input',
+        default: '/',
+        className: 'w-25',
+        label: t => t('settings.edit.comboboxPathDelimiter.label'),
+        description: t => t('settings.edit.comboboxPathDelimiter.description'),
+        visibleWhen: 'enableComboboxPathDelimiter',
+      },
     },
   },
 } as const)
