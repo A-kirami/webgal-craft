@@ -174,18 +174,28 @@ export function useVisualEditorAnimation(options: UseVisualEditorAnimationOption
     }
 
     const currentFrame = state.value.frames[change.frameIndex]
-    if (currentFrame?.duration === change.duration) {
-      return
-    }
+    const persistedDuration = Math.max(currentFrame?.duration ?? 0, 0)
+    const draftDuration = session.selectedFrameDurationDraft?.frameId === change.frameId
+      ? session.selectedFrameDurationDraft.duration
+      : undefined
+    const resolvedDuration = draftDuration ?? persistedDuration
 
     session.selectedFrameId = change.frameId
 
     if (!payload.flush) {
+      if (resolvedDuration === change.duration) {
+        return
+      }
+
       scheduleSelectedFrameDurationDraft(change.frameId, change.duration)
       return
     }
 
     resetSelectedFrameDurationDraft()
+    if (persistedDuration === change.duration) {
+      return
+    }
+
     options.applyAnimationFrameUpdate(state.value.path, change.frameIndex, { duration: change.duration })
     options.scheduleAutoSaveIfEnabled(state.value.path)
   }

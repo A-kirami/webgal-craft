@@ -82,3 +82,13 @@ export function resolveAnimationTimelineAnchoredScrollLeft(options: {
 
   return (options.contentPosition * widthRatio) - options.cursorX
 }
+
+export function resolveAnimationTimelineResizeMsPerPixel(duration: number, frameWidthPx: number): number {
+  const safeFrameWidthPx = Math.max(frameWidthPx, 1)
+  const minimumReferenceDuration = Math.max(Math.ceil(safeFrameWidthPx), 1)
+  const referenceDuration = duration > 0
+    ? Math.max(duration, minimumReferenceDuration)
+    : minimumReferenceDuration
+
+  return referenceDuration / safeFrameWidthPx
+}

@@ -5,6 +5,7 @@ import {
   MIN_START_SPAN_PX,
   resolveAnimationTimelineAnchoredScrollLeft,
   resolveAnimationTimelineContainerWidth,
+  resolveAnimationTimelineResizeMsPerPixel,
   resolveZeroDurationSpanLayoutPercents,
 } from '../animation-timeline-layout'
 
@@ -65,5 +66,37 @@ describe('resolveAnimationTimelineAnchoredScrollLeft 计算逻辑', () => {
     })
 
     expect(nextScrollLeft).toBe(60)
+  })
+
+  it('默认不引入末端缓冲区，缩放锚点按时间轨道宽度计算', () => {
+    const nextScrollLeft = resolveAnimationTimelineAnchoredScrollLeft({
+      contentPosition: 80,
+      cursorX: 20,
+      nextZoom: 2,
+      previousZoom: 1,
+      spans: [
+        { isHold: true },
+        { isHold: false },
+      ],
+      viewportWidth: 200,
+    })
+
+    expect(nextScrollLeft).toBe(140)
+  })
+})
+
+describe('resolveAnimationTimelineResizeMsPerPixel 计算逻辑', () => {
+  it('零时长帧使用至少 1ms/px 的拖拽比例，确保可以从 0ms 拉出', () => {
+    expect(resolveAnimationTimelineResizeMsPerPixel(0, 64)).toBe(1)
+  })
+
+  it('当时间块因最小宽度被撑开时，拖拽比例仍保持至少 1ms/px，避免重新拖拽后卡在任意小正数', () => {
+    expect(resolveAnimationTimelineResizeMsPerPixel(9, 32)).toBe(1)
+    expect(resolveAnimationTimelineResizeMsPerPixel(32, 32)).toBe(1)
+    expect(resolveAnimationTimelineResizeMsPerPixel(9, 32.25)).toBeGreaterThanOrEqual(1)
+  })
+
+  it('当时间块未被最小宽度撑开时，仍按真实时长与宽度比例计算', () => {
+    expect(resolveAnimationTimelineResizeMsPerPixel(120, 32)).toBe(3.75)
   })
 })
