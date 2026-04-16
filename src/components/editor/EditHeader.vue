@@ -7,6 +7,7 @@ import { parseGameConfigFormValues } from '~/features/modals/game-config/game-co
 import { configManager } from '~/services/config-manager'
 import { gameAssetDir } from '~/services/platform/app-paths'
 import { useModalStore } from '~/stores/modal'
+import { usePreviewSessionStore } from '~/stores/preview-session'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
 
@@ -22,6 +23,7 @@ function handleBack() {
 }
 
 const workspaceStore = useWorkspaceStore()
+const previewSessionStore = usePreviewSessionStore()
 const modalStore = useModalStore()
 
 const HEADER_ICON_THUMBNAIL = {
@@ -30,7 +32,8 @@ const HEADER_ICON_THUMBNAIL = {
   resizeMode: 'contain',
 } as const
 
-const canTestGame = $computed(() => !!workspaceStore.currentGameServeUrl && !!workspaceStore.currentGame)
+const currentGameServeUrl = $computed(() => previewSessionStore.currentGameServeUrl)
+const canTestGame = $computed(() => !!currentGameServeUrl && !!workspaceStore.currentGame)
 const canOpenGameConfig = $computed(() => !!workspaceStore.currentGame?.path)
 const testWindowLabel = $computed(() => (workspaceStore.currentGame ? `test-${workspaceStore.currentGame.id}` : ''))
 
@@ -42,7 +45,6 @@ let isGameConfigOpening = false
 
 async function handleOpenGameConfig() {
   const currentGame = workspaceStore.currentGame
-  const currentGameServeUrl = workspaceStore.currentGameServeUrl
 
   if (!currentGame?.path || isGameConfigOpening) {
     return
@@ -79,7 +81,7 @@ async function handleOpenGameConfig() {
 }
 
 async function handleTestGame() {
-  const gameUrl = workspaceStore.currentGameServeUrl
+  const gameUrl = currentGameServeUrl
   const currentGame = workspaceStore.currentGame
 
   if (!canTestGame) {
@@ -133,7 +135,7 @@ async function handleTestGame() {
 }
 
 watch(
-  [() => workspaceStore.currentGame?.id, () => workspaceStore.currentGameServeUrl],
+  [() => workspaceStore.currentGame?.id, () => currentGameServeUrl],
   ([gameId]) => {
     if (gameId) {
       lastTestWindowLabel = `test-${gameId}`
@@ -180,7 +182,7 @@ onBeforeUnmount(() => {
         <AssetImage
           :path="workspaceStore.currentGame?.previewAssets.icon.path"
           :root-path="workspaceStore.CWD"
-          :serve-url="workspaceStore.currentGameServeUrl"
+          :serve-url="currentGameServeUrl"
           :alt="`${workspaceStore.currentGame?.metadata.name} 游戏图标`"
           :cache-version="workspaceStore.currentGame?.previewAssets.icon.cacheVersion"
           :thumbnail="HEADER_ICON_THUMBNAIL"

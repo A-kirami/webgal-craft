@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { reactive, ref } from 'vue'
+import { nextTick, reactive, ref } from 'vue'
 
 import { createBrowserLiteI18n } from '~/__tests__/browser'
 import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
@@ -10,6 +10,7 @@ const {
   getGameConfigMock,
   notifySuccessMock,
   openUrlMock,
+  usePreviewSessionStoreMock,
   useClipboardMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ const {
   getGameConfigMock: vi.fn(),
   notifySuccessMock: vi.fn(),
   openUrlMock: vi.fn(),
+  usePreviewSessionStoreMock: vi.fn(),
   useClipboardMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
 }))
@@ -44,6 +46,10 @@ vi.mock('@vueuse/core', async () => {
 
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
+}))
+
+vi.mock('~/stores/preview-session', () => ({
+  usePreviewSessionStore: usePreviewSessionStoreMock,
 }))
 
 vi.mock('~/commands/game', async () => {
@@ -82,7 +88,18 @@ let workspaceStoreState: {
     }
     path: string
   }
+}
+
+let previewSessionStoreState: {
   currentGameServeUrl: string
+  reloadVersion: number
+  refresh: () => void
+}
+
+async function flushPreviewWatchers() {
+  await Promise.resolve()
+  await nextTick()
+  await Promise.resolve()
 }
 
 function createPreviewPanelLiteI18n() {
@@ -109,6 +126,7 @@ describe('PreviewPanel', () => {
     getGameConfigMock.mockReset()
     notifySuccessMock.mockReset()
     openUrlMock.mockReset()
+    usePreviewSessionStoreMock.mockReset()
     useClipboardMock.mockReset()
     useWorkspaceStoreMock.mockReset()
 
@@ -120,9 +138,16 @@ describe('PreviewPanel', () => {
         },
         path: '/games/demo',
       },
-      currentGameServeUrl: 'http://127.0.0.1:8899',
     })
     useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+    previewSessionStoreState = reactive({
+      currentGameServeUrl: 'http://127.0.0.1:8899',
+      reloadVersion: 0,
+      refresh() {
+        this.reloadVersion++
+      },
+    })
+    usePreviewSessionStoreMock.mockReturnValue(previewSessionStoreState)
     useClipboardMock.mockReturnValue({
       copied: ref(true),
       copy: copyMock,
@@ -178,7 +203,7 @@ describe('PreviewPanel', () => {
     expect(getGameConfigMock).toHaveBeenCalledTimes(2)
   })
 
-  it('当前游戏快照更新时间变化时会自动重新读取游戏配置', async () => {
+  it('当前游戏快照更新时间变化时不会自动重新读取游戏配置', async () => {
     renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
@@ -191,6 +216,24 @@ describe('PreviewPanel', () => {
     })
 
     workspaceStoreState.currentGame.lastModified += 1
+    await flushPreviewWatchers()
+
+    expect(getGameConfigMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('预览 reloadVersion 变化时会自动重新读取游戏配置', async () => {
+    renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getGameConfigMock).toHaveBeenCalledTimes(1)
+    })
+
+    previewSessionStoreState.refresh()
 
     await vi.waitFor(() => {
       expect(getGameConfigMock).toHaveBeenCalledTimes(2)

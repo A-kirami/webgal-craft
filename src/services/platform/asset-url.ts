@@ -1,3 +1,4 @@
+import { usePreviewSessionStore } from '~/stores/preview-session'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 export interface AssetThumbnailOptions {
@@ -135,11 +136,12 @@ export function getAssetUrl(
   serveUrl?: string,
   thumbnail?: AssetThumbnailOptions,
 ): string {
+  const previewSessionStore = usePreviewSessionStore()
   const workspaceStore = useWorkspaceStore()
   return resolveAssetUrl(assetPath, {
     cwd: workspaceStore.CWD ?? '',
     cacheVersion,
-    previewBaseUrl: serveUrl ?? workspaceStore.currentGameServeUrl ?? '',
+    previewBaseUrl: serveUrl ?? previewSessionStore.currentGameServeUrl ?? '',
     thumbnail,
   })
 }

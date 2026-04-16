@@ -35,6 +35,7 @@ const {
   useStatementAnimationEditorBridgeMock,
   useStatementEditorMock,
   useStatementEffectEditorBridgeMock,
+  usePreviewSessionStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
   handleCommentChangeMock: vi.fn(),
@@ -55,6 +56,7 @@ const {
   useStatementAnimationEditorBridgeMock: vi.fn(),
   useStatementEditorMock: vi.fn(),
   useStatementEffectEditorBridgeMock: vi.fn(),
+  usePreviewSessionStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
 }))
 
@@ -93,6 +95,10 @@ vi.mock('~/composables/useControlId', () => ({
 
 vi.mock('~/stores/edit-settings', () => ({
   useEditSettingsStore: useEditSettingsStoreMock,
+}))
+
+vi.mock('~/stores/preview-session', () => ({
+  usePreviewSessionStore: usePreviewSessionStoreMock,
 }))
 
 vi.mock('~/stores/workspace', () => ({
@@ -318,6 +324,7 @@ describe('StatementEditorPanel', () => {
     useStatementAnimationEditorBridgeMock.mockReset()
     useStatementEditorMock.mockReset()
     useStatementEffectEditorBridgeMock.mockReset()
+    usePreviewSessionStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
 
     useEditSettingsStoreMock.mockReturnValue({
@@ -334,6 +341,8 @@ describe('StatementEditorPanel', () => {
     })
     useWorkspaceStoreMock.mockReturnValue(reactive({
       CWD: '/games/demo',
+    }))
+    usePreviewSessionStoreMock.mockReturnValue(reactive({
       currentGameServeUrl: 'http://127.0.0.1:8899',
     }))
     gameAssetDirMock.mockImplementation(async (_cwd: string, assetType: string) => `/games/demo/assets/${assetType}`)

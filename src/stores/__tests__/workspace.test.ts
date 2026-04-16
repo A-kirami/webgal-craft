@@ -9,22 +9,25 @@ import { useWorkspaceStore } from '~/stores/workspace'
 const {
   dbGetMock,
   getGameSnapshotMock,
-  loggerErrorMock,
-  previewRuntimeStoreMock,
+  previewSessionStoreMock,
+  syncCurrentGameMock,
   useRouteMock,
 } = vi.hoisted(() => ({
   dbGetMock: vi.fn(),
   getGameSnapshotMock: vi.fn(),
-  loggerErrorMock: vi.fn(),
-  previewRuntimeStoreMock: {
-    ensureServeUrl: vi.fn(),
+  previewSessionStoreMock: {
+    currentGameServeUrl: undefined as string | undefined,
+    syncCurrentGame: vi.fn(),
   },
+  syncCurrentGameMock: vi.fn(),
   useRouteMock: vi.fn(),
 }))
 
 const routeState = reactive<{ params: Record<string, string | undefined> }>({
   params: {},
 })
+
+const previewSessionStoreState = reactive(previewSessionStoreMock)
 
 vi.mock('vue-router', () => ({
   useRoute: useRouteMock,
@@ -44,12 +47,8 @@ vi.mock('~/services/game-manager', () => ({
   },
 }))
 
-vi.mock('~/stores/preview-runtime', () => ({
-  usePreviewRuntimeStore: () => previewRuntimeStoreMock,
-}))
-
-vi.mock('@tauri-apps/plugin-log', () => ({
-  error: loggerErrorMock,
+vi.mock('~/stores/preview-session', () => ({
+  usePreviewSessionStore: () => previewSessionStoreState,
 }))
 
 async function flushWorkspaceWatchers() {
@@ -64,8 +63,9 @@ describe('工作区状态仓库', () => {
     useRouteMock.mockReturnValue(routeState)
     dbGetMock.mockReset()
     getGameSnapshotMock.mockReset()
-    loggerErrorMock.mockReset()
-    previewRuntimeStoreMock.ensureServeUrl.mockReset()
+    syncCurrentGameMock.mockReset()
+    previewSessionStoreState.currentGameServeUrl = undefined
+    previewSessionStoreState.syncCurrentGame = syncCurrentGameMock
   })
 
   it('不再暴露预览服务器状态与启动方法', async () => {
@@ -73,6 +73,7 @@ describe('工作区状态仓库', () => {
 
     expect('serverUrl' in store).toBe(false)
     expect('runServer' in store).toBe(false)
+    expect('currentGameServeUrl' in store).toBe(false)
   })
 
   it('refreshCurrentGameSnapshot 会把最新快照合并回 currentGame', async () => {
@@ -125,7 +126,7 @@ describe('工作区状态仓库', () => {
     })
   })
 
-  it('路由进入编辑页时会加载游戏并启动预览，离开时只清空当前状态', async () => {
+  it('路由进入编辑页时会加载游戏并同步预览会话，离开时只清空当前状态', async () => {
     const store = useWorkspaceStore()
 
     dbGetMock.mockResolvedValue(createTestGame({
@@ -135,27 +136,33 @@ describe('工作区状态仓库', () => {
         name: 'Game One',
       },
     }))
-    previewRuntimeStoreMock.ensureServeUrl.mockResolvedValue('http://preview/game-1')
+    syncCurrentGameMock.mockImplementation(async (game?: { path: string }) => {
+      previewSessionStoreState.currentGameServeUrl = game ? 'http://preview/game-1' : undefined
+    })
 
     routeState.params = { gameId: 'game-1' }
     await flushWorkspaceWatchers()
 
-    expect(previewRuntimeStoreMock.ensureServeUrl).toHaveBeenCalledWith('/games/game-1')
+    expect(syncCurrentGameMock).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'game-1',
+      path: '/games/game-1',
+    }))
     expect(store.currentGame).toMatchObject({
       id: 'game-1',
       path: '/games/game-1',
     })
-    expect(store.currentGameServeUrl).toBe('http://preview/game-1')
+    expect(previewSessionStoreState.currentGameServeUrl).toBe('http://preview/game-1')
     expect(store.CWD).toBe('/games/game-1')
 
     routeState.params = {}
     await flushWorkspaceWatchers()
 
+    expect(syncCurrentGameMock).toHaveBeenLastCalledWith(undefined)
     expect(store.currentGame).toBeUndefined()
-    expect(store.currentGameServeUrl).toBeUndefined()
+    expect(previewSessionStoreState.currentGameServeUrl).toBeUndefined()
   })
 
-  it('预览地址获取失败时保留当前游戏并记录错误', async () => {
+  it('预览会话同步未写入地址时仍保留当前游戏并允许预览会话保持空地址', async () => {
     const store = useWorkspaceStore()
 
     dbGetMock.mockResolvedValue(createTestGame({
@@ -165,39 +172,19 @@ describe('工作区状态仓库', () => {
         name: 'Game Two',
       },
     }))
-    previewRuntimeStoreMock.ensureServeUrl.mockRejectedValue(new Error('preview unavailable'))
+    syncCurrentGameMock.mockResolvedValue(undefined)
 
     routeState.params = { gameId: 'game-2' }
     await flushWorkspaceWatchers()
 
+    expect(syncCurrentGameMock).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'game-2',
+      path: '/games/game-2',
+    }))
     expect(store.currentGame).toMatchObject({
       id: 'game-2',
       path: '/games/game-2',
     })
-    expect(store.currentGameServeUrl).toBeUndefined()
-    expect(loggerErrorMock).toHaveBeenCalledWith('获取预览链接失败: Error: preview unavailable')
-  })
-
-  it('预览地址缺失时保留当前游戏并记录直接错误', async () => {
-    const store = useWorkspaceStore()
-
-    dbGetMock.mockResolvedValue(createTestGame({
-      id: 'game-3',
-      path: '/games/game-3',
-      metadata: {
-        name: 'Game Three',
-      },
-    }))
-    previewRuntimeStoreMock.ensureServeUrl.mockResolvedValue(undefined)
-
-    routeState.params = { gameId: 'game-3' }
-    await flushWorkspaceWatchers()
-
-    expect(store.currentGame).toMatchObject({
-      id: 'game-3',
-      path: '/games/game-3',
-    })
-    expect(store.currentGameServeUrl).toBeUndefined()
-    expect(loggerErrorMock).toHaveBeenCalledWith('获取预览链接失败: 预览链接不存在')
+    expect(previewSessionStoreState.currentGameServeUrl).toBeUndefined()
   })
 })

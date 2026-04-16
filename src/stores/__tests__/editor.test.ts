@@ -55,9 +55,12 @@ const preferenceStoreMock = reactive({
   editorMode: 'text' as 'text' | 'visual',
 })
 
+const previewSessionStoreMock = reactive({
+  currentGameServeUrl: 'http://127.0.0.1:8899' as string | undefined,
+})
+
 const workspaceStoreMock = reactive({
   currentGame: { id: 'game-1', path: '/game' } as { id: string, path: string } | undefined,
-  currentGameServeUrl: 'http://127.0.0.1:8899' as string | undefined,
   cwd: '/game' as string | undefined,
   get CWD() {
     return this.cwd
@@ -94,6 +97,10 @@ vi.mock('~/stores/preference', () => ({
 
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: () => workspaceStoreMock,
+}))
+
+vi.mock('~/stores/preview-session', () => ({
+  usePreviewSessionStore: () => previewSessionStoreMock,
 }))
 
 vi.mock('~/composables/useFileSystemEvents', () => ({
@@ -293,8 +300,8 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     tabsStore.shouldFocusEditor = false
     preferenceStoreMock.editorMode = 'text'
     workspaceStoreMock.currentGame = { id: 'game-1', path: '/game' }
-    workspaceStoreMock.currentGameServeUrl = 'http://127.0.0.1:8899'
     workspaceStoreMock.cwd = '/game'
+    previewSessionStoreMock.currentGameServeUrl = 'http://127.0.0.1:8899'
   })
 
   it('加载纯文本文件后可应用补丁、保存并支持撤销重做', async () => {
@@ -528,7 +535,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     const tabsStore = useTabsStore()
     const path = '/game/video/preview-unavailable.mp4'
 
-    workspaceStoreMock.currentGameServeUrl = undefined
+    previewSessionStoreMock.currentGameServeUrl = undefined
     mimeGetTypeMock.mockReturnValue('video/mp4')
 
     const editorStore = useEditorStore()

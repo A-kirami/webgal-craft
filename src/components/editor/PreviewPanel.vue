@@ -7,13 +7,15 @@ import {
   DEFAULT_PREVIEW_PANEL_ASPECT_RATIO,
   resolvePreviewPanelStageSize,
 } from '~/features/editor/preview/preview-panel'
+import { usePreviewSessionStore } from '~/stores/preview-session'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
 
 const workspaceStore = useWorkspaceStore()
+const previewSessionStore = usePreviewSessionStore()
 
-const previewUrl = $computed(() => workspaceStore.currentGameServeUrl ?? '')
-const hasPreviewUrl = $computed(() => !!workspaceStore.currentGameServeUrl)
+const previewUrl = $computed(() => previewSessionStore.currentGameServeUrl ?? '')
+const hasPreviewUrl = $computed(() => !!previewSessionStore.currentGameServeUrl)
 
 const { t } = useI18n()
 const { copy, copied } = useClipboard({ source: $$(previewUrl) })
@@ -97,12 +99,8 @@ watch(
 )
 
 watch(
-  () => workspaceStore.currentGame?.lastModified,
-  (lastModified, previousLastModified) => {
-    if (lastModified === undefined || previousLastModified === undefined) {
-      return
-    }
-
+  () => previewSessionStore.reloadVersion,
+  () => {
     refreshIframe()
   },
 )
@@ -130,7 +128,7 @@ watch(
           </Tooltip>
           <Tooltip>
             <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon" class="size-6" @click="refreshIframe">
+              <Button variant="ghost" size="icon" class="size-6" @click="previewSessionStore.refresh()">
                 <RotateCw class="size-4" />
                 <span class="sr-only">{{ $t('edit.previewPanel.refreshPreview') }}</span>
               </Button>

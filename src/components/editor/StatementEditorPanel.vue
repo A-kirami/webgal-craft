@@ -8,6 +8,7 @@ import { normalizeStatementPanelSingleLineValue, resolveStatementPanelPreviewMed
 import { statementEditorSurfaceKey } from '~/features/editor/statement-editor/surface-context'
 import { isStatementInteractiveTarget, useStatementEditor } from '~/features/editor/statement-editor/useStatementEditor'
 import { useEditSettingsStore } from '~/stores/edit-settings'
+import { usePreviewSessionStore } from '~/stores/preview-session'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import type { StatementUpdatePayload, StatementUpdateTarget } from '~/features/editor/statement-editor/useStatementEditor'
@@ -110,13 +111,14 @@ watch(
 )
 
 const editSettings = useEditSettingsStore()
+const previewSessionStore = usePreviewSessionStore()
 const workspaceStore = useWorkspaceStore()
 
 const previewMedia = $computed(() => {
   const previewContext = {
     cwd: workspaceStore.CWD,
     fileRootPaths: resource.fileRootPaths.value,
-    previewBaseUrl: workspaceStore.currentGameServeUrl,
+    previewBaseUrl: previewSessionStore.currentGameServeUrl,
     showSidebarAssetPreview: editSettings.showSidebarAssetPreview,
   }
 

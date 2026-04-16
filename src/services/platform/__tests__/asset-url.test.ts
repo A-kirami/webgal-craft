@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getAssetUrl, resolveAssetUrl } from '~/services/platform/asset-url'
 
-const { useWorkspaceStoreMock } = vi.hoisted(() => ({
+const { usePreviewSessionStoreMock, useWorkspaceStoreMock } = vi.hoisted(() => ({
+  usePreviewSessionStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
 }))
 
@@ -10,8 +11,15 @@ const CACHE_VERSION = Number.parseInt('1710000000000', 10)
 
 const workspaceStoreState = {
   CWD: '/games/demo',
+}
+
+const previewSessionStoreState = {
   currentGameServeUrl: 'http://127.0.0.1:8899/game/demo/',
 }
+
+vi.mock('~/stores/preview-session', () => ({
+  usePreviewSessionStore: usePreviewSessionStoreMock,
+}))
 
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
@@ -20,7 +28,8 @@ vi.mock('~/stores/workspace', () => ({
 describe('getAssetUrl 资源地址解析', () => {
   beforeEach(() => {
     workspaceStoreState.CWD = '/games/demo'
-    workspaceStoreState.currentGameServeUrl = 'http://127.0.0.1:8899/game/demo/'
+    previewSessionStoreState.currentGameServeUrl = 'http://127.0.0.1:8899/game/demo/'
+    usePreviewSessionStoreMock.mockReturnValue(previewSessionStoreState)
     useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
   })
 
@@ -78,7 +87,7 @@ describe('getAssetUrl 资源地址解析', () => {
   })
 
   it('缺少预览地址时会直接抛出错误', () => {
-    workspaceStoreState.currentGameServeUrl = ''
+    previewSessionStoreState.currentGameServeUrl = ''
 
     expect(() => getAssetUrl('/games/demo/assets/bg/intro.png')).toThrow('预览地址不存在')
   })

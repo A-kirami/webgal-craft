@@ -11,6 +11,7 @@ import { gameFs } from '~/services/game-fs'
 import { gameAssetDir } from '~/services/platform/app-paths'
 import { FileSystemItem, useFileStore } from '~/stores/file'
 import { usePreferenceStore } from '~/stores/preference'
+import { usePreviewSessionStore } from '~/stores/preview-session'
 import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { FileViewerItem, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
@@ -49,6 +50,7 @@ const preferenceStore = usePreferenceStore()
 const tabsStore = useTabsStore()
 const fileStore = useFileStore()
 const fileSystemEvents = useFileSystemEvents()
+const previewSessionStore = usePreviewSessionStore()
 const workspaceStore = useWorkspaceStore()
 const { t } = useI18n()
 
@@ -175,7 +177,7 @@ const renamePopoverAlign = $computed(() =>
   preferenceStore.assetViewMode === 'grid' ? 'center' : 'start',
 )
 const previewCwd = $computed(() => workspaceStore.currentGame?.path)
-const previewBaseUrl = $computed(() => workspaceStore.currentGameServeUrl)
+const previewBaseUrl = $computed(() => previewSessionStore.currentGameServeUrl)
 
 const isRenameDuplicate = $computed(() => {
   const currentItem = renameTargetItem

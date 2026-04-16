@@ -1,5 +1,6 @@
 import { gameCmds } from '~/commands/game'
 import { gameManager } from '~/services/game-manager'
+import { usePreviewSessionStore } from '~/stores/preview-session'
 
 import type { GameConfigReadResult, GameConfigWritePayload } from '~/commands/game'
 
@@ -20,6 +21,7 @@ async function getConfig(gamePath: string): Promise<GameConfigReadResult> {
 async function setConfig(gamePath: string, config: GameConfigWritePayload) {
   await gameCmds.setGameConfig(gamePath, config)
   await gameManager.refreshRegisteredGameSnapshot(gamePath)
+  usePreviewSessionStore().refreshIfCurrentGame(gamePath)
 }
 
 /**

@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { db } from '~/database/db'
 import { Game } from '~/database/model'
 import { gameManager } from '~/services/game-manager'
-import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
+import { usePreviewSessionStore } from '~/stores/preview-session'
 
 import type { HomeTabId } from '~/features/home/home-tabs'
 
@@ -12,14 +12,13 @@ export const useWorkspaceStore = defineStore(
   () => {
     // 工作区状态
     let currentGame = $ref<Game>()
-    let currentGameServeUrl = $ref<string>()
 
     // UI 状态
     const activeTab = $ref<HomeTabId>('recent')
     const searchQuery = $ref<string>('')
     const activeAssetTab = $ref('')
 
-    const previewRuntimeStore = usePreviewRuntimeStore()
+    const previewSessionStore = usePreviewSessionStore()
     const CWD = $computed(() => currentGame?.path)
 
     async function refreshCurrentGameSnapshot() {
@@ -51,10 +50,8 @@ export const useWorkspaceStore = defineStore(
         isStale = true
       })
 
-      if (currentGame) {
-        currentGame = undefined
-        currentGameServeUrl = undefined
-      }
+      currentGame = undefined
+      await previewSessionStore.syncCurrentGame(undefined)
 
       if (!gameId) {
         return
@@ -66,33 +63,16 @@ export const useWorkspaceStore = defineStore(
       }
 
       currentGame = game
-      try {
-        const previewUrl = await previewRuntimeStore.ensureServeUrl(game.path)
-        if (isStale) {
-          return
-        }
-
-        if (!previewUrl) {
-          currentGameServeUrl = undefined
-          logger.error('获取预览链接失败: 预览链接不存在')
-          return
-        }
-
-        currentGameServeUrl = previewUrl
-      } catch (error) {
-        if (isStale) {
-          return
-        }
-
-        currentGameServeUrl = undefined
-        logger.error(`获取预览链接失败: ${error}`)
+      await previewSessionStore.syncCurrentGame(game)
+      if (isStale) {
+        currentGame = undefined
+        await previewSessionStore.syncCurrentGame(undefined)
       }
     })
 
     return $$({
       // 工作区状态
       currentGame,
-      currentGameServeUrl,
       CWD,
       refreshCurrentGameSnapshot,
 
