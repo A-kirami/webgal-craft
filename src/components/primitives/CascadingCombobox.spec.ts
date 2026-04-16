@@ -3,9 +3,9 @@ import { page, userEvent } from 'vitest/browser'
 import { defineComponent } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
-import { buildCascadingComboboxData } from '~/lib/cascading-combobox'
 
 import CascadingCombobox from './CascadingCombobox.vue'
+import { buildCascadingComboboxData } from './combobox/cascading-combobox-data'
 
 interface FloatingRect {
   height: number
@@ -473,6 +473,21 @@ describe('CascadingCombobox', () => {
     expect(searchInput).toBeDefined()
     expect(activeOption).toBeDefined()
     expect(searchInput!.getAttribute('aria-activedescendant')).toBe(activeOption!.id)
+  })
+
+  it('会把搜索词按空格拆分并要求所有关键词都命中完整路径文本', async () => {
+    renderInBrowser(GroupedHarness, {
+      props: {
+        initialValue: 'sakiko/default',
+      },
+    })
+
+    await page.getByTestId('grouped-trigger').click()
+    await page.getByPlaceholder('Search motion').fill('sakiko kime01')
+
+    await expect.element(page.getByRole('option', { name: 'sakiko/maskon/kime01' })).toBeInTheDocument()
+    await expect.element(page.getByRole('option', { name: 'sakiko/default' })).not.toBeInTheDocument()
+    await expect.element(page.getByRole('option', { name: 'anon/cry01' })).not.toBeInTheDocument()
   })
 
   it('鼠标离开搜索结果列表时，不会回退到已有的键盘高亮项', async () => {

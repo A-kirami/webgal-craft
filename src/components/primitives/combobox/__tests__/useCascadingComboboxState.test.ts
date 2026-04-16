@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildCascadingComboboxData } from '~/lib/cascading-combobox'
-
+import { buildCascadingComboboxData } from '../cascading-combobox-data'
 import { useCascadingComboboxState } from '../useCascadingComboboxState'
 
-import type { CascadingComboboxNode } from '~/lib/cascading-combobox'
+import type { CascadingComboboxNode } from '../cascading-combobox-data'
 
 const groupedData = buildCascadingComboboxData([
   { label: 'anon/cry01', value: 'anon/cry01' },

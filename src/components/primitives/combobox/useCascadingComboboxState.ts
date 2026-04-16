@@ -1,5 +1,5 @@
+import type { CascadingComboboxNode } from './cascading-combobox-data'
 import type { ShallowRef } from 'vue'
-import type { CascadingComboboxNode } from '~/lib/cascading-combobox'
 
 interface IndexedNodeRecord {
   ancestorGroupIds: string[]

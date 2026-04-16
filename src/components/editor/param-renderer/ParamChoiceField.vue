@@ -4,8 +4,8 @@ import { normalizeFieldStringValue } from '~/features/editor/statement-editor/fi
 import { cn } from '~/lib/utils'
 
 import type { ParamSelectOptionItem } from './controls/types'
+import type { CascadingComboboxData } from '~/components/primitives/combobox/cascading-combobox-data'
 import type { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
-import type { CascadingComboboxData } from '~/lib/cascading-combobox'
 
 interface Props {
   comboboxData?: CascadingComboboxData

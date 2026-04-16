@@ -200,7 +200,7 @@ describe('ParamChoiceField', () => {
             { id: 'group:sakiko', kind: 'group', label: 'sakiko', pathSegments: ['sakiko'], children: [] },
           ],
           searchDocuments: [
-            { rawLabel: 'sakiko/default', pathText: 'sakiko/default', value: 'sakiko/default' },
+            { label: 'sakiko/default', originalIndex: 0, pathText: 'sakiko/default', value: 'sakiko/default' },
           ],
         },
         customInputId: 'target-custom-input',

@@ -1,9 +1,9 @@
+import { buildCascadingComboboxData } from '~/components/primitives/combobox/cascading-combobox-data'
 import { isFlagChoiceField, resolveI18n } from '~/features/editor/command-registry/schema'
-import { buildCascadingComboboxData } from '~/lib/cascading-combobox'
 
 import type { ParamSelectOptionItem } from './controls/types'
+import type { CascadingComboboxData } from '~/components/primitives/combobox/cascading-combobox-data'
 import type { EditorField } from '~/features/editor/command-registry/schema'
-import type { CascadingComboboxData } from '~/lib/cascading-combobox'
 
 type ChoiceFieldMode = 'select' | 'combobox'
 type TranslateFn = (key: string, ...args: unknown[]) => string

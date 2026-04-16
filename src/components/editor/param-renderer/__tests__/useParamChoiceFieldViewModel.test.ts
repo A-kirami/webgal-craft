@@ -144,8 +144,8 @@ describe('useParamChoiceFieldViewModel', () => {
         },
       ],
       searchDocuments: [
-        { rawLabel: 'sakiko/maskon/kime01', pathText: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
-        { rawLabel: 'sakiko/default', pathText: 'sakiko/default', value: 'sakiko/default' },
+        { label: 'sakiko/maskon/kime01', originalIndex: 0, pathText: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+        { label: 'sakiko/default', originalIndex: 1, pathText: 'sakiko/default', value: 'sakiko/default' },
       ],
     })
   })

@@ -1,13 +1,6 @@
-interface ComboboxOptionItem {
-  label: string
-  value: string
-}
+import { createSearchOptionDocuments } from './search'
 
-export interface CascadingComboboxSearchDocument {
-  rawLabel: string
-  pathText: string
-  value: string
-}
+import type { SearchOptionDocument, SearchOptionItem } from './search'
 
 interface CascadingComboboxBaseNode {
   id: string
@@ -37,7 +30,7 @@ export interface BuildCascadingComboboxDataOptions {
 
 export interface CascadingComboboxData {
   browseNodes: CascadingComboboxNode[]
-  searchDocuments: CascadingComboboxSearchDocument[]
+  searchDocuments: SearchOptionDocument[]
 }
 
 function createGroupId(pathSegments: string[]): string {
@@ -48,8 +41,12 @@ function createItemId(value: string): string {
   return `item:${value}`
 }
 
+function normalizeOptionLabel(option: SearchOptionItem): string {
+  return option.label || option.value
+}
+
 function createLeafNode(
-  option: ComboboxOptionItem,
+  option: SearchOptionItem,
   label: string,
   pathSegments: string[],
 ): CascadingComboboxLeafNode {
@@ -65,16 +62,12 @@ function createLeafNode(
   }
 }
 
-function normalizeOptionLabel(option: ComboboxOptionItem): string {
-  return option.label || option.value
-}
-
 function shouldUsePathGrouping(options: BuildCascadingComboboxDataOptions): boolean {
   return options.grouping?.mode === 'path'
     && Boolean(options.resolvedDelimiter)
 }
 
-function buildFlatNodes(options: ComboboxOptionItem[]): CascadingComboboxLeafNode[] {
+function buildFlatNodes(options: SearchOptionItem[]): CascadingComboboxLeafNode[] {
   return options.map((option) => {
     const rawLabel = normalizeOptionLabel(option)
     return createLeafNode(option, rawLabel, [rawLabel])
@@ -89,7 +82,7 @@ function splitPathSegments(label: string, delimiter: string): string[] {
 }
 
 function buildGroupedNodes(
-  options: ComboboxOptionItem[],
+  options: SearchOptionItem[],
   delimiter: string,
 ): CascadingComboboxNode[] {
   const rootNodes: CascadingComboboxNode[] = []
@@ -134,16 +127,8 @@ function buildGroupedNodes(
   return rootNodes
 }
 
-function buildSearchDocuments(options: ComboboxOptionItem[]): CascadingComboboxSearchDocument[] {
-  return options.map(option => ({
-    rawLabel: normalizeOptionLabel(option),
-    pathText: normalizeOptionLabel(option),
-    value: option.value,
-  }))
-}
-
 export function buildCascadingComboboxData(
-  options: ComboboxOptionItem[],
+  options: SearchOptionItem[],
   config: BuildCascadingComboboxDataOptions = {},
 ): CascadingComboboxData {
   const browseNodes = shouldUsePathGrouping(config)
@@ -152,6 +137,6 @@ export function buildCascadingComboboxData(
 
   return {
     browseNodes,
-    searchDocuments: buildSearchDocuments(options),
+    searchDocuments: createSearchOptionDocuments(options),
   }
 }

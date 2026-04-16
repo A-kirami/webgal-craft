@@ -3,6 +3,8 @@ import { Search } from '@lucide/vue'
 
 import { cn } from '~/lib/utils'
 
+import { createSearchOptionDocuments, filterSearchOptionDocuments } from './combobox/search'
+
 import type { HTMLAttributes } from 'vue'
 
 defineOptions({
@@ -36,14 +38,10 @@ const attrs = useAttrs()
 const inputRef = $(useTemplateRef<HTMLInputElement>('inputRef'))
 const listRef = $(useTemplateRef<HTMLElement>('listRef'))
 const scrollAreaRef = $(useTemplateRef<ScrollAreaViewportHandle>('scrollAreaRef'))
+const searchDocuments = $computed(() => createSearchOptionDocuments(props.options))
 
-const filteredOptions = $computed(() => {
-  const keyword = searchQuery.trim().toLowerCase()
-  if (!keyword) {
-    return props.options
-  }
-
-  return props.options.filter(option => option.label.toLowerCase().includes(keyword))
+const filteredDocuments = $computed(() => {
+  return filterSearchOptionDocuments(searchDocuments, searchQuery)
 })
 
 const selectedLabel = $computed(() => {
@@ -51,7 +49,7 @@ const selectedLabel = $computed(() => {
     return ''
   }
 
-  const selected = props.options.find(option => option.value === props.modelValue)
+  const selected = searchDocuments.find(option => option.value === props.modelValue)
   return selected?.label ?? props.modelValue
 })
 
@@ -63,7 +61,7 @@ function focusSearchInput() {
 }
 
 function syncHighlightFromSelectedValue() {
-  highlightedIndex = filteredOptions.findIndex(option => option.value === props.modelValue)
+  highlightedIndex = filteredDocuments.findIndex(option => option.value === props.modelValue)
 }
 
 function clearHoveredHighlight() {
@@ -106,25 +104,25 @@ async function handleInputKeydown(event: KeyboardEvent) {
 
   if (event.key === 'ArrowDown') {
     event.preventDefault()
-    if (filteredOptions.length === 0) {
+    if (filteredDocuments.length === 0) {
       return
     }
     hoveredIndex = undefined
     highlightedIndex = currentIndex < 0
       ? 0
-      : Math.min(currentIndex + 1, filteredOptions.length - 1)
+      : Math.min(currentIndex + 1, filteredDocuments.length - 1)
     await scrollHighlightedOptionAfterNextTick('nearest')
     return
   }
 
   if (event.key === 'ArrowUp') {
     event.preventDefault()
-    if (filteredOptions.length === 0) {
+    if (filteredDocuments.length === 0) {
       return
     }
     hoveredIndex = undefined
     highlightedIndex = currentIndex < 0
-      ? filteredOptions.length - 1
+      ? filteredDocuments.length - 1
       : Math.max(currentIndex - 1, 0)
     await scrollHighlightedOptionAfterNextTick('nearest')
     return
@@ -132,7 +130,7 @@ async function handleInputKeydown(event: KeyboardEvent) {
 
   if (event.key === 'Enter' && currentIndex >= 0) {
     event.preventDefault()
-    selectOption(filteredOptions[currentIndex]!.value)
+    selectOption(filteredDocuments[currentIndex]!.value)
     return
   }
 
@@ -142,7 +140,7 @@ async function handleInputKeydown(event: KeyboardEvent) {
   }
 }
 
-watch(() => filteredOptions, (nextOptions) => {
+watch(() => filteredDocuments, (nextOptions) => {
   if (!open) {
     return
   }
@@ -233,7 +231,7 @@ watch(() => searchQuery, async (nextQuery) => {
             @mouseleave="clearHoveredHighlight"
           >
             <li
-              v-for="(option, index) in filteredOptions"
+              v-for="(option, index) in filteredDocuments"
               :key="option.value"
               role="option"
               :aria-selected="props.modelValue === option.value"
@@ -250,7 +248,7 @@ watch(() => searchQuery, async (nextQuery) => {
               <span class="truncate">{{ option.label }}</span>
             </li>
             <li
-              v-if="filteredOptions.length === 0"
+              v-if="filteredDocuments.length === 0"
               class="text-sm text-muted-foreground px-2 py-6 text-center"
             >
               {{ $t('edit.visualEditor.noResults') }}

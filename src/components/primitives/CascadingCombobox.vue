@@ -4,10 +4,12 @@ import { ScrollAreaCorner, ScrollAreaRoot, ScrollAreaViewport } from 'reka-ui'
 
 import { cn } from '~/lib/utils'
 
+import { filterSearchOptionDocuments } from './combobox/search'
 import { useCascadingComboboxState } from './combobox/useCascadingComboboxState'
 
+import type { CascadingComboboxNode } from './combobox/cascading-combobox-data'
+import type { SearchOptionDocument } from './combobox/search'
 import type { HTMLAttributes } from 'vue'
-import type { CascadingComboboxNode, CascadingComboboxSearchDocument } from '~/lib/cascading-combobox'
 
 defineOptions({
   inheritAttrs: false,
@@ -18,7 +20,7 @@ const props = defineProps<{
   class?: HTMLAttributes['class']
   modelValue?: string
   placeholder?: string
-  searchDocuments: CascadingComboboxSearchDocument[]
+  searchDocuments: SearchOptionDocument[]
   searchPlaceholder?: string
 }>()
 
@@ -59,12 +61,7 @@ const activeSearchOptionId = $computed(() => (
 ))
 
 const searchResults = $computed(() => {
-  const keyword = searchQuery.trim().toLowerCase()
-  if (!keyword) {
-    return props.searchDocuments
-  }
-
-  return props.searchDocuments.filter(document => matchesSearchDocument(document, keyword))
+  return filterSearchOptionDocuments(props.searchDocuments, searchQuery)
 })
 
 const selectedLabel = $computed(() => {
@@ -73,13 +70,8 @@ const selectedLabel = $computed(() => {
   }
 
   const selectedDocument = props.searchDocuments.find(document => document.value === props.modelValue)
-  return selectedDocument?.rawLabel ?? props.modelValue
+  return selectedDocument?.label ?? props.modelValue
 })
-
-function matchesSearchDocument(document: CascadingComboboxSearchDocument, keyword: string): boolean {
-  return document.pathText.toLowerCase().includes(keyword)
-    || document.value.toLowerCase().includes(keyword)
-}
 
 function getSearchOptionId(index: number): string {
   return `${searchListboxId}-option-${index}`
@@ -431,7 +423,7 @@ watch(() => searchQuery, (nextQuery, previousQuery) => {
                 @click="selectOption(result.value)"
               >
                 <div class="i-lucide-check shrink-0 size-3.5" :class="props.modelValue === result.value ? 'opacity-100' : 'opacity-0'" />
-                <span class="truncate">{{ result.rawLabel }}</span>
+                <span class="truncate">{{ result.label }}</span>
               </li>
               <li
                 v-if="searchResults.length === 0"
