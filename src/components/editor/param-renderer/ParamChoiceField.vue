@@ -5,8 +5,10 @@ import { cn } from '~/lib/utils'
 
 import type { ParamSelectOptionItem } from './controls/types'
 import type { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
+import type { CascadingComboboxData } from '~/lib/cascading-combobox'
 
 interface Props {
+  comboboxData?: CascadingComboboxData
   controlClass?: string
   customInputId: string
   customLabel?: string
@@ -84,6 +86,18 @@ function emitValue(value: unknown) {
       </SelectItem>
     </SelectContent>
   </Select>
+
+  <CascadingCombobox
+    v-else-if="comboboxData"
+    :id="inputId"
+    :model-value="selectValue"
+    :browse-nodes="comboboxData.browseNodes"
+    :search-documents="comboboxData.searchDocuments"
+    :placeholder="notSelectedLabel"
+    :search-placeholder="placeholder || notSelectedLabel"
+    :class="cn('px-2.5 h-6 min-w-24 group-data-[surface=panel]:px-3 group-data-[surface=panel]:h-7', controlClass)"
+    @update:model-value="emitSelect"
+  />
 
   <Combobox
     v-else

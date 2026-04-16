@@ -109,4 +109,33 @@ describe('命令注册表 schema 完整性', () => {
     expect(resolveI18n(unknown.label, (key: string) => key)).toBe('edit.visualEditor.commands.unknown')
     expect(unknown.fields).toEqual([])
   })
+
+  it('路径型动态 combobox 字段显式声明 path grouping', () => {
+    const setAnimation = commandEntries.find(entry => entry.type === commandType.setAnimation)
+    const changeFigure = commandEntries.find(entry => entry.type === commandType.changeFigure)
+
+    expect(setAnimation).toBeDefined()
+    expect(changeFigure).toBeDefined()
+
+    const setAnimationContent = setAnimation?.fields.find(field => field.storage === 'content')?.field
+    const changeFigureFields = readEditorFields(changeFigure!)
+    const motionField = changeFigureFields.find(field => field.key === 'motion')?.field
+    const expressionField = changeFigureFields.find(field => field.key === 'expression')?.field
+
+    expect(setAnimationContent).toMatchObject({
+      type: 'choice',
+      variant: 'combobox',
+      grouping: { mode: 'path' },
+    })
+    expect(motionField).toMatchObject({
+      type: 'choice',
+      variant: 'combobox',
+      grouping: { mode: 'path' },
+    })
+    expect(expressionField).toMatchObject({
+      type: 'choice',
+      variant: 'combobox',
+      grouping: { mode: 'path' },
+    })
+  })
 })

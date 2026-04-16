@@ -864,6 +864,12 @@ settings:
     showSidebarAssetPreview:
       label: 辅助面板语句资源预览
       description: 在编辑器辅助面板中预览语句引用的图片等资源
+    enableComboboxPathDelimiter:
+      label: 启用级联选择
+      description: 将可分组选项按多级分类方式展示，便于在选项较多时定位和选择
+    comboboxPathDelimiter:
+      label: 级联选择分隔符
+      description: 指定用于划分选项层级的分隔符，例如 /
     commandInsertPosition:
       label: 命令插入位置
       description: 从命令面板插入语句时的插入位置

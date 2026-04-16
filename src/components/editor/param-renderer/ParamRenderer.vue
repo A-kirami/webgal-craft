@@ -4,10 +4,8 @@ import { EditorField, FileFieldConfig, resolveI18n, resolveSurfaceVariant } from
 import { normalizeFieldStringValue } from '~/features/editor/statement-editor/field-utils'
 import { statementEditorSurfaceKey } from '~/features/editor/statement-editor/surface-context'
 import { cn } from '~/lib/utils'
+import { useEditSettingsStore } from '~/stores/edit-settings'
 
-import FocusXYControl from './controls/FocusXYControl.vue'
-import NumberControl from './controls/NumberControl.vue'
-import ParamChoiceField from './ParamChoiceField.vue'
 import { useParamChoiceFieldViewModel } from './useParamChoiceFieldViewModel'
 import { useParamCustomField } from './useParamCustomField'
 import { useParamFieldMeta } from './useParamFieldMeta'
@@ -46,6 +44,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const surface = inject(statementEditorSurfaceKey, 'panel')
+const editSettingsStore = useEditSettingsStore()
 
 const i18nContent = $computed(() => props.parsed?.content ?? '')
 const fieldMeta = useParamFieldMeta({
@@ -239,6 +238,13 @@ function fieldInputId(field: EditorField): string {
 const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
   visibleFields: () => visibleFields,
   getChoiceFieldMode: choiceFieldMode,
+  getComboboxPathDelimiter: () => {
+    if (!editSettingsStore.enableComboboxPathDelimiter) {
+      return ''
+    }
+
+    return editSettingsStore.comboboxPathDelimiter
+  },
   getCustomLabel: customLabel,
   getDynamicOptions: field => props.getDynamicOptions(field),
   getPlaceholder: resolvedPlaceholder,
@@ -319,6 +325,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
           :input-id="fieldInputId(field)"
           :custom-input-id="customFieldInputId(field)"
           :surface="surface"
+          :combobox-data="choiceFieldViewModels.get(field.key)?.comboboxData"
           :control-class="controlClass(field)"
           :options="choiceFieldViewModels.get(field.key)?.options ?? []"
           :select-value="choiceFieldViewModels.get(field.key)?.selectValue ?? ''"

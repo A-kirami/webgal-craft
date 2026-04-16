@@ -123,10 +123,11 @@ export const performEntries: CommandEntry[] = [
         variant: 'combobox',
         placeholder: (t, content) => isSpineContent(content ?? '') ? t('edit.visualEditor.placeholder.searchAnimation') : t('edit.visualEditor.placeholder.searchMotion'),
         dynamicOptionsKey: 'figureMotions',
+        grouping: { mode: 'path' },
         visibleWhenContent: isAnimatedContent,
         options: [],
       }),
-      arg({ key: 'expression', label: t => t('edit.visualEditor.params.expression'), type: 'choice', variant: 'combobox', placeholder: t => t('edit.visualEditor.placeholder.searchExpression'), dynamicOptionsKey: 'figureExpressions', visibleWhenContent: isLive2dContent, options: [] }),
+      arg({ key: 'expression', label: t => t('edit.visualEditor.params.expression'), type: 'choice', variant: 'combobox', placeholder: t => t('edit.visualEditor.placeholder.searchExpression'), dynamicOptionsKey: 'figureExpressions', grouping: { mode: 'path' }, visibleWhenContent: isLive2dContent, options: [] }),
       arg({
         key: 'blendMode',
         label: t => t('edit.visualEditor.params.blendMode'),

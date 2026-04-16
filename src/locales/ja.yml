@@ -864,6 +864,12 @@ settings:
     showSidebarAssetPreview:
       label: 補助パネルのステートメント資源プレビュー
       description: エディターの補助パネルでステートメントが参照する画像などのアセットをプレビュー
+    enableComboboxPathDelimiter:
+      label: カスケード選択を有効にする
+      description: グループ化できる候補を多段階の分類で表示し、候補数が多い場合でも見つけやすく選びやすくします
+    comboboxPathDelimiter:
+      label: カスケード選択の区切り文字
+      description: 候補の階層を区切るための区切り文字を指定します。例：/
     commandInsertPosition:
       label: コマンド挿入位置
       description: コマンドパネルからステートメントを挿入する位置

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { cn } from '~/lib/utils'
 import { resolveI18nLike } from '~/utils/i18n-like'
 
 import type { InputFieldDef } from '~/features/settings/schema'
@@ -30,7 +31,7 @@ const { t } = useI18n()
         <Input
           v-bind="componentField"
           type="text"
-          class="text-xs h-8 w-64 shadow-none"
+          :class="cn('text-xs h-8 w-64 shadow-none', field.className)"
           :placeholder="field.placeholder ? resolveI18nLike(field.placeholder, t) : undefined"
         />
       </FormControl>

@@ -52,6 +52,32 @@ function createComboboxStub() {
   })
 }
 
+function createCascadingComboboxStub() {
+  return defineComponent({
+    name: 'CascadingComboboxStub',
+    props: {
+      browseNodes: {
+        type: Array,
+        default: () => [],
+      },
+      searchDocuments: {
+        type: Array,
+        default: () => [],
+      },
+    },
+    emits: ['update:model-value'],
+    setup(props, { emit }) {
+      return () => h('button', {
+        'data-testid': 'cascading-combobox-update',
+        'data-browse-count': String(props.browseNodes.length),
+        'data-search-count': String(props.searchDocuments.length),
+        'type': 'button',
+        'onClick': () => emit('update:model-value', 77),
+      }, 'emit cascading combobox')
+    },
+  })
+}
+
 function createSegmentedStub() {
   return createBrowserActionStub('SegmentedControlStub', {
     eventName: 'update-select',
@@ -89,6 +115,7 @@ function createInputStub() {
 }
 
 const globalStubs = {
+  CascadingCombobox: createCascadingComboboxStub(),
   Combobox: createComboboxStub(),
   Input: createInputStub(),
   Label: createBrowserContainerStub('LabelStub', 'label'),
@@ -108,6 +135,7 @@ describe('ParamChoiceField', () => {
 
     renderInBrowser(ParamChoiceField, {
       props: {
+        comboboxData: undefined,
         customInputId: 'target-custom-input',
         customOptionLabel: 'Custom',
         field: createChoiceField(),
@@ -137,6 +165,7 @@ describe('ParamChoiceField', () => {
 
     renderInBrowser(ParamChoiceField, {
       props: {
+        comboboxData: undefined,
         customInputId: 'target-custom-input',
         customOptionLabel: 'Custom',
         field: createChoiceField(),
@@ -161,11 +190,51 @@ describe('ParamChoiceField', () => {
     expect(onUpdateSelect).toHaveBeenCalledWith('42')
   })
 
-  it('combobox 分支会透传并归一化 updateSelect', async () => {
+  it('combobox 分支会透传结构化数据并归一化 updateSelect', async () => {
     const onUpdateSelect = vi.fn()
 
     renderInBrowser(ParamChoiceField, {
       props: {
+        comboboxData: {
+          browseNodes: [
+            { id: 'group:sakiko', kind: 'group', label: 'sakiko', pathSegments: ['sakiko'], children: [] },
+          ],
+          searchDocuments: [
+            { rawLabel: 'sakiko/default', pathText: 'sakiko/default', value: 'sakiko/default' },
+          ],
+        },
+        customInputId: 'target-custom-input',
+        customOptionLabel: 'Custom',
+        field: createChoiceField(),
+        inputId: 'target-input',
+        isCustomField: false,
+        mode: 'combobox',
+        notSelectedLabel: 'Not selected',
+        options: baseOptions,
+        placeholder: 'Search target',
+        renderSegmented: false,
+        selectValue: '',
+        surface: 'panel',
+        value: '',
+        onUpdateSelect,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByTestId('cascading-combobox-update')).toHaveAttribute('data-browse-count', '1')
+    await expect.element(page.getByTestId('cascading-combobox-update')).toHaveAttribute('data-search-count', '1')
+    await page.getByTestId('cascading-combobox-update').click()
+    expect(onUpdateSelect).toHaveBeenCalledWith('77')
+  })
+
+  it('combobox 分支在没有级联数据时回退到基础 Combobox', async () => {
+    const onUpdateSelect = vi.fn()
+
+    renderInBrowser(ParamChoiceField, {
+      props: {
+        comboboxData: undefined,
         customInputId: 'target-custom-input',
         customOptionLabel: 'Custom',
         field: createChoiceField(),
@@ -195,6 +264,7 @@ describe('ParamChoiceField', () => {
 
     renderInBrowser(ParamChoiceField, {
       props: {
+        comboboxData: undefined,
         customLabel: 'Custom target',
         customInputId: 'target-custom-input',
         customOptionLabel: 'Custom',
@@ -223,6 +293,7 @@ describe('ParamChoiceField', () => {
   it('custom 模式会保留 0 这类有效假值', async () => {
     renderInBrowser(ParamChoiceField, {
       props: {
+        comboboxData: undefined,
         customLabel: 'Custom target',
         customInputId: 'target-custom-input',
         customOptionLabel: 'Custom',

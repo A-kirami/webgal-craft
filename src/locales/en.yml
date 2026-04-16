@@ -864,6 +864,12 @@ settings:
     showSidebarAssetPreview:
       label: Auxiliary Panel Statement Asset Preview
       description: Preview images and other assets referenced by statements in the editor auxiliary panel
+    enableComboboxPathDelimiter:
+      label: Enable Cascading Selection
+      description: Display groupable options in multiple levels to make them easier to find and select when there are many options
+    comboboxPathDelimiter:
+      label: Cascading Selection Delimiter
+      description: Specify the delimiter used to separate option hierarchy levels, for example /
     commandInsertPosition:
       label: Command Insert Position
       description: Where to insert statements from the command panel

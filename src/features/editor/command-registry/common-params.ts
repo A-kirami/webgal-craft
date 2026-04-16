@@ -74,7 +74,7 @@ export const EFFECT_EASE: ChoiceField = { ...EASE, managedByEffectEditor: true }
 
 // ─── 入场/退场动画（高级参数） ───
 
-export const ENTER_ANIMATION: ChoiceField = { key: 'enter', label: t => t('edit.visualEditor.params.enterAnimation'), type: 'choice', placeholder: t => t('edit.visualEditor.placeholder.searchAnimation'), dynamicOptionsKey: 'animationTableEntries', advanced: true, variant: 'combobox', options: [] }
-export const EXIT_ANIMATION: ChoiceField = { key: 'exit', label: t => t('edit.visualEditor.params.exitAnimation'), type: 'choice', placeholder: t => t('edit.visualEditor.placeholder.searchAnimation'), dynamicOptionsKey: 'animationTableEntries', advanced: true, variant: 'combobox', options: [] }
+export const ENTER_ANIMATION: ChoiceField = { key: 'enter', label: t => t('edit.visualEditor.params.enterAnimation'), type: 'choice', placeholder: t => t('edit.visualEditor.placeholder.searchAnimation'), dynamicOptionsKey: 'animationTableEntries', grouping: { mode: 'path' }, advanced: true, variant: 'combobox', options: [] }
+export const EXIT_ANIMATION: ChoiceField = { key: 'exit', label: t => t('edit.visualEditor.params.exitAnimation'), type: 'choice', placeholder: t => t('edit.visualEditor.placeholder.searchAnimation'), dynamicOptionsKey: 'animationTableEntries', grouping: { mode: 'path' }, advanced: true, variant: 'combobox', options: [] }
 export const DEFAULT_ENTER_DURATION: NumberField = { key: 'enterDuration', label: t => t('edit.visualEditor.params.defaultEnterDuration'), type: 'number', min: 0, unit: t => t('edit.visualEditor.params.unitMs'), advanced: true, visibleWhen: { key: 'enter', empty: true } }
 export const DEFAULT_EXIT_DURATION: NumberField = { key: 'exitDuration', label: t => t('edit.visualEditor.params.defaultExitDuration'), type: 'number', min: 0, unit: t => t('edit.visualEditor.params.unitMs'), advanced: true, visibleWhen: { key: 'exit', empty: true } }
