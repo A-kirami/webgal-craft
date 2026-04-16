@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildCascadingComboboxData } from '../cascading-combobox'
+import { buildCascadingComboboxData } from '../cascading-combobox-data'
 
 describe('buildCascadingComboboxData', () => {
   it('会把同一路径前缀的候选项聚合成级联树，并保留搜索文档', () => {
@@ -31,9 +31,9 @@ describe('buildCascadingComboboxData', () => {
       },
     ])
     expect(result.searchDocuments).toEqual([
-      { rawLabel: 'anon/cry01', pathText: 'anon/cry01', value: 'anon/cry01' },
-      { rawLabel: 'anon/cry02', pathText: 'anon/cry02', value: 'anon/cry02' },
-      { rawLabel: 'saki/cry01', pathText: 'saki/cry01', value: 'saki/cry01' },
+      { label: 'anon/cry01', originalIndex: 0, pathText: 'anon/cry01', value: 'anon/cry01' },
+      { label: 'anon/cry02', originalIndex: 1, pathText: 'anon/cry02', value: 'anon/cry02' },
+      { label: 'saki/cry01', originalIndex: 2, pathText: 'saki/cry01', value: 'saki/cry01' },
     ])
   })
 
@@ -119,8 +119,8 @@ describe('buildCascadingComboboxData', () => {
       { kind: 'item', label: 'plain', rawLabel: 'plain', value: 'plain' },
     ])
     expect(result.searchDocuments).toEqual([
-      { rawLabel: 'sakiko/maskon/kime01', pathText: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
-      { rawLabel: 'plain', pathText: 'plain', value: 'plain' },
+      { label: 'sakiko/maskon/kime01', originalIndex: 0, pathText: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+      { label: 'plain', originalIndex: 1, pathText: 'plain', value: 'plain' },
     ])
   })
 })

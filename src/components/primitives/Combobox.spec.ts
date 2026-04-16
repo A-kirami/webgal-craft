@@ -19,6 +19,12 @@ const baseOptions = [
   { label: 'Sad', value: 'sad' },
 ]
 
+const multiKeywordOptions = [
+  { label: 'Dark Joy', value: 'dark-joy' },
+  { label: 'Dark Sad', value: 'dark-sad' },
+  { label: 'Bright Joy', value: 'bright-joy' },
+]
+
 const scrollOptions = Array.from({ length: 20 }, (_, index) => ({
   label: `Option ${index + 1}`,
   value: `option-${index + 1}`,
@@ -134,6 +140,27 @@ const CenteredComboboxHarness = defineComponent({
   `,
 })
 
+const MultiKeywordComboboxHarness = defineComponent({
+  components: { Combobox },
+  setup() {
+    const modelValue = ref('')
+
+    return {
+      modelValue,
+      multiKeywordOptions,
+    }
+  },
+  template: `
+    <Combobox
+      v-model="modelValue"
+      data-testid="multi-keyword-trigger"
+      :options="multiKeywordOptions"
+      placeholder="Select option"
+      search-placeholder="Search option"
+    />
+  `,
+})
+
 describe('Combobox', () => {
   it('打开后会把焦点交给搜索框', async () => {
     renderInBrowser(ComboboxHarness, {
@@ -214,5 +241,20 @@ describe('Combobox', () => {
     await page.getByPlaceholder('Search motion').fill('zzz')
 
     await expect.element(page.getByText('edit.visualEditor.noResults')).toBeInTheDocument()
+  })
+
+  it('会把搜索词按空格拆分并要求所有关键词都命中', async () => {
+    renderInBrowser(MultiKeywordComboboxHarness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByTestId('multi-keyword-trigger').click()
+    await page.getByPlaceholder('Search option').fill('joy dark')
+
+    await expect.element(page.getByRole('option', { name: 'Dark Joy' })).toBeInTheDocument()
+    await expect.element(page.getByRole('option', { name: 'Dark Sad' })).not.toBeInTheDocument()
+    await expect.element(page.getByRole('option', { name: 'Bright Joy' })).not.toBeInTheDocument()
   })
 })

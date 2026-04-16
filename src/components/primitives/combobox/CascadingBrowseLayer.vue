@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { cn } from '~/lib/utils'
 
+import type { CascadingComboboxNode } from './cascading-combobox-data'
 import type { ComponentPublicInstance } from 'vue'
-import type { CascadingComboboxNode } from '~/lib/cascading-combobox'
 
 defineOptions({
   name: 'CascadingBrowseLayer',
