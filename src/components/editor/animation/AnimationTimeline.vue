@@ -9,6 +9,7 @@ import {
   MIN_START_SPAN_PX,
   resolveAnimationTimelineAnchoredScrollLeft,
   resolveAnimationTimelineContainerWidth,
+  resolveAnimationTimelineResizeMsPerPixel,
   resolveZeroDurationSpanLayoutPercents,
 } from './animation-timeline-layout'
 
@@ -162,9 +163,7 @@ const layout = $computed((): SpanLayout[] => {
   })
 })
 
-const containerWidth = $computed(() => {
-  return resolveAnimationTimelineContainerWidth(viewportWidth, zoomLevel, spans)
-})
+const containerWidth = $computed(() => resolveAnimationTimelineContainerWidth(viewportWidth, zoomLevel, spans))
 
 const rulerStep = $computed(() => {
   if (props.totalDuration <= 1000) {
@@ -232,15 +231,11 @@ const resizeDrag = usePointerDrag<ResizeDragState>({
     }
 
     const frameWidthPx = Math.max((spanLayout.width / 100) * containerWidth, 1)
-    const referenceDuration = spanLayout.span.duration > 0
-      ? spanLayout.span.duration
-      : Math.max(Math.round(frameWidthPx), 1)
-
     emit('select', spanId)
     return {
       id: spanId,
       lastDuration: spanLayout.span.duration,
-      msPerPixel: referenceDuration / frameWidthPx,
+      msPerPixel: resolveAnimationTimelineResizeMsPerPixel(spanLayout.span.duration, frameWidthPx),
       startClientX: event.clientX,
       startDuration: spanLayout.span.duration,
     }
@@ -314,6 +309,9 @@ function getDistortedPosition(time: number): number {
   if (props.totalDuration <= 0 || layout.length === 0) {
     return 0
   }
+  if (time <= 0) {
+    return 0
+  }
 
   for (const item of layout) {
     const { span, left, width } = item
@@ -330,11 +328,55 @@ function getDistortedPosition(time: number): number {
   return 100
 }
 
-function getEndMarkerClass(index: number, total: number): string {
-  if (index === total - 1) {
-    return '-translate-x-full items-end text-right'
+function resolveEdgeAlignedClass(
+  index: number,
+  total: number,
+  alignment?: 'center' | 'end' | 'start',
+): string {
+  if (alignment === 'start') {
+    return 'translate-x-0'
   }
-  return '-translate-x-1/2 items-center'
+  if (alignment === 'end') {
+    return '-translate-x-full'
+  }
+  if (alignment === 'center') {
+    return '-translate-x-1/2'
+  }
+
+  if (index === 0) {
+    return 'translate-x-0'
+  }
+  if (index === total - 1) {
+    return '-translate-x-full'
+  }
+
+  return '-translate-x-1/2'
+}
+
+function resolveEndMarkerAlignment(time: number): 'center' | 'end' | 'start' {
+  if (props.totalDuration <= 0 || time <= 0) {
+    return 'start'
+  }
+  if (time >= props.totalDuration) {
+    return 'end'
+  }
+
+  return 'center'
+}
+
+function getTimeAnchorStyle(left: string): Record<string, string> {
+  return {
+    left,
+    width: '0px',
+  }
+}
+
+function getResizeHandleClass(index: number, total: number): string {
+  if (index === total - 1) {
+    return 'w-1.5 -translate-x-full'
+  }
+
+  return 'w-3 -translate-x-1/2'
 }
 
 function handleWheel(event: WheelEvent) {
@@ -396,7 +438,7 @@ onUnmounted(() => {
   <div class="h-full min-h-0 relative">
     <ScrollArea
       ref="scrollAreaRef"
-      class="border rounded-lg bg-muted/20 h-27 relative"
+      class="border rounded-lg bg-muted/20 h-28 relative"
       @wheel="handleWheel"
     >
       <div
@@ -406,7 +448,7 @@ onUnmounted(() => {
         <span class="text-xs font-medium">
           {{ $t('edit.visualEditor.animation.emptyTitle') }}
         </span>
-        <span class="text-[11px]">
+        <span class="text-11px">
           {{ $t('edit.visualEditor.animation.emptyDescription') }}
         </span>
       </div>
@@ -416,19 +458,25 @@ onUnmounted(() => {
         :style="{ width: `${containerWidth}px` }"
       >
         <div
-          v-for="mark in rulerMarks"
+          v-for="(mark, index) in rulerMarks"
           :key="`ruler-${mark}`"
-          class="inset-y-0 absolute"
-          :style="{ left: getDistortedPercent(mark) }"
+          :data-animation-ruler-mark="String(mark)"
+          class="pointer-events-none inset-y-0 absolute"
+          :style="getTimeAnchorStyle(getDistortedPercent(mark))"
         >
-          <div class="bg-border/80 h-full w-px" />
-          <span class="text-[10px] text-muted-foreground font-mono left-1 top-0.5 absolute">
+          <div
+            class="bg-border/80 h-full w-px left-0 absolute -translate-x-1/2"
+          />
+          <span
+            class="text-10px text-muted-foreground font-mono whitespace-nowrap left-0 top-0.5 absolute tabular-nums"
+            :class="resolveEdgeAlignedClass(index, rulerMarks.length)"
+          >
             {{ mark }}{{ $t('edit.visualEditor.animation.unitMs') }}
           </span>
         </div>
 
         <template
-          v-for="item in layout"
+          v-for="(item, index) in layout"
           :key="`span-${item.span.id}`"
         >
           <button
@@ -448,24 +496,25 @@ onUnmounted(() => {
             </span>
             <span
               v-if="item.span.isHold"
-              class="text-[10px] text-muted-foreground leading-3 left-6 top-0.5 absolute"
+              class="text-10px text-muted-foreground leading-3 left-6 top-0.5 absolute"
             >
               {{ $t('edit.visualEditor.animation.startFrame') }}
             </span>
             <span
               v-if="!item.span.isHold && item.span.ease && isSpanWideEnough(item.width)"
-              class="text-[11px] text-muted-foreground leading-3 max-w-[58%] truncate right-1 top-0.5 absolute"
+              class="text-11px text-muted-foreground leading-3 max-w-[58%] truncate right-1 top-0.5 absolute"
             >
               {{ getEaseLabel(item.span.ease) }}
             </span>
-            <span class="text-[11px] text-muted-foreground leading-3 bottom-0.5 left-1 absolute">
+            <span class="text-11px text-muted-foreground leading-3 bottom-0.5 left-1 absolute">
               {{ item.span.duration }}{{ $t('edit.visualEditor.animation.unitMs') }}
             </span>
           </button>
 
           <div
             :data-span-id="item.span.id"
-            class="h-10 w-3 cursor-ew-resize top-9 absolute z-10 -translate-x-1/2"
+            class="h-10 cursor-ew-resize top-9 absolute z-10"
+            :class="getResizeHandleClass(index, layout.length)"
             :style="{ left: `${item.left + item.width}%` }"
             @pointerdown="handleResizePointerDown"
           />
@@ -474,12 +523,18 @@ onUnmounted(() => {
         <div
           v-for="(item, index) in dedupedEndMarkers"
           :key="`time-end-${item.span.id}`"
-          class="flex flex-col pointer-events-none bottom-0.5 absolute"
-          :class="getEndMarkerClass(index, dedupedEndMarkers.length)"
-          :style="{ left: `${item.left + item.width}%` }"
+          :data-animation-end-marker="String(item.span.end)"
+          class="pointer-events-none inset-y-0 absolute"
+          :style="getTimeAnchorStyle(getDistortedPercent(item.span.end))"
         >
-          <div class="border-x-[4px] border-b-[6px] border-x-transparent border-b-muted-foreground/70 h-0 w-0" />
-          <span class="text-[10px] text-muted-foreground font-mono mt-0.5 tabular-nums">
+          <div
+            class="border-x-4 border-b-6 border-x-transparent border-b-muted-foreground/70 h-0 w-0 left-0 top-20 absolute"
+            :class="resolveEdgeAlignedClass(index, dedupedEndMarkers.length, resolveEndMarkerAlignment(item.span.end))"
+          />
+          <span
+            class="text-10px text-muted-foreground font-mono whitespace-nowrap left-0 top-22 absolute tabular-nums"
+            :class="resolveEdgeAlignedClass(index, dedupedEndMarkers.length, resolveEndMarkerAlignment(item.span.end))"
+          >
             {{ item.span.end }}{{ $t('edit.visualEditor.animation.unitMs') }}
           </span>
         </div>

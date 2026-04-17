@@ -10,21 +10,20 @@ interface VisualAnimationState {
   path: string
 }
 
-function createState(path: string): VisualAnimationState {
+function createState(path: string, frames: AnimationFrame[] = [{ duration: 200 }]): VisualAnimationState {
   return reactive({
-    frames: [{
-      duration: 200,
-    }],
+    frames,
     path,
   })
 }
 
 function createFixture(options: {
+  frames?: AnimationFrame[]
   path?: string
   redoApplied?: boolean
   undoApplied?: boolean
 } = {}) {
-  const state = createState(options.path ?? '/game/animation/opening.json')
+  const state = createState(options.path ?? '/game/animation/opening.json', options.frames)
   const scope = effectScope()
   const applyAnimationFrameDelete = vi.fn()
   const applyAnimationFrameInsert = vi.fn()
@@ -52,6 +51,7 @@ function createFixture(options: {
   }
 
   return {
+    applyAnimationFrameUpdate,
     controller,
     redoDocument,
     scheduleAutoSaveIfEnabled,
@@ -111,6 +111,46 @@ describe('useVisualEditorAnimation 行为', () => {
     expect(redoDocument).toHaveBeenCalledWith('/game/animation/opening.json')
     expect(scheduleAutoSaveIfEnabled).not.toHaveBeenCalled()
 
+    scope.stop()
+  })
+
+  it('原始时长为 0 的帧在拖拽草稿后回到 0ms 时会清掉草稿而不产生无效写回', () => {
+    const { applyAnimationFrameUpdate, controller, scheduleAutoSaveIfEnabled, scope } = createFixture({
+      frames: [{ duration: 0 }],
+    })
+
+    controller.handleTimelineResizeDuration({
+      duration: 32,
+      flush: false,
+      id: 1,
+    })
+
+    expect(controller.session.selectedFrameDurationDraft).toEqual({
+      duration: 32,
+      frameId: 1,
+    })
+
+    controller.handleTimelineResizeDuration({
+      duration: 0,
+      flush: false,
+      id: 1,
+    })
+
+    expect(controller.session.selectedFrameDurationDraft).toEqual({
+      duration: 0,
+      frameId: 1,
+    })
+
+    controller.handleTimelineResizeDuration({
+      duration: 0,
+      flush: true,
+      id: 1,
+    })
+
+    expect(controller.session.selectedFrameDurationDraft).toBeUndefined()
+    expect(applyAnimationFrameUpdate).not.toHaveBeenCalled()
+    expect(scheduleAutoSaveIfEnabled).not.toHaveBeenCalled()
+    expect(controller.session.selectedFrameId).toBe(1)
     scope.stop()
   })
 })

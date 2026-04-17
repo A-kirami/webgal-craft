@@ -25,6 +25,12 @@ export function usePointerDrag<S>(callbacks: PointerDragCallbacks<S>): UsePointe
     if (!state || event.pointerId !== pointerId) {
       return
     }
+
+    if (event.buttons === 0) {
+      stop(event)
+      return
+    }
+
     callbacks.onMove(event, state)
   }
 
