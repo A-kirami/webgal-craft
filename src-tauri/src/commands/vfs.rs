@@ -181,7 +181,11 @@ pub fn rename_vfs_path(
     let target_path = sanitize_rename_target(parent, &new_name)?;
     let overlay = build_overlay(&project_path, &engine_path, template_path, &factory_cache)?;
     overlay.rename_logical_path(&logical_path, &target_path)?;
-    log::debug!("VFS 重命名: {} -> {}", logical_path.display(), target_path.display());
+    log::debug!(
+        "VFS 重命名: {} -> {}",
+        logical_path.display(),
+        target_path.display()
+    );
     Ok(to_logical_path_string(&target_path))
 }
 
@@ -198,7 +202,11 @@ pub fn move_vfs_path(
     let target_path = sanitize_move_target(&target_rel_path)?;
     let overlay = build_overlay(&project_path, &engine_path, template_path, &factory_cache)?;
     overlay.rename_logical_path(&logical_path, &target_path)?;
-    log::debug!("VFS 移动: {} -> {}", logical_path.display(), target_path.display());
+    log::debug!(
+        "VFS 移动: {} -> {}",
+        logical_path.display(),
+        target_path.display()
+    );
     Ok(to_logical_path_string(&target_path))
 }
 
@@ -215,7 +223,11 @@ pub fn copy_vfs_path(
     let target_path = sanitize_logical_path(&target_rel_path)?;
     let overlay = build_overlay(&project_path, &engine_path, template_path, &factory_cache)?;
     overlay.copy_logical_path(&logical_path, &target_path)?;
-    log::debug!("VFS 复制: {} -> {}", logical_path.display(), target_path.display());
+    log::debug!(
+        "VFS 复制: {} -> {}",
+        logical_path.display(),
+        target_path.display()
+    );
     Ok(to_logical_path_string(&target_path))
 }
 

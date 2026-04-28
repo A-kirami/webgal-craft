@@ -205,7 +205,8 @@ async fn handle_static_request(
         };
 
     if let Some(thumbnail_request) = resolve_thumbnail_request(&query) {
-        if let Some(response) = try_build_thumbnail_response(&physical_path, thumbnail_request).await
+        if let Some(response) =
+            try_build_thumbnail_response(&physical_path, thumbnail_request).await
         {
             return finalize_cors(
                 apply_cache_control(response, CacheControlPolicy::Thumbnail),
@@ -617,11 +618,8 @@ pub async fn update_site_template(
         return Err(AppError::SiteNotRegistered);
     };
 
-    *site = CachedCanonicals::compute(
-        site.upper.clone(),
-        site.engine_lower.clone(),
-        template_path,
-    )?;
+    *site =
+        CachedCanonicals::compute(site.upper.clone(), site.engine_lower.clone(), template_path)?;
 
     Ok(())
 }
