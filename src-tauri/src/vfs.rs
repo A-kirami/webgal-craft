@@ -758,7 +758,11 @@ pub fn read_project_config(project_path: &Path) -> AppResult<ProjectConfig> {
 pub async fn write_project_config(project_path: &Path, config: &ProjectConfig) -> AppResult<()> {
     validate_project_config(config)?;
 
-    let content = serde_json::to_string_pretty(config)
+    // 强制 version 为当前 schema 版本，避免上层调用方意外写入未来版本号导致项目无法被本程序读回
+    let mut config = config.clone();
+    config.version = CURRENT_SCHEMA_VERSION;
+
+    let content = serde_json::to_string_pretty(&config)
         .map_err(|error| AppError::Config(format!("project.wgcp 序列化失败: {error}")))?;
     atomic_write(&project_path.join(PROJECT_CONFIG_FILE), content.as_bytes()).await?;
     Ok(())
@@ -1025,8 +1029,8 @@ fn is_same_or_descendant_path(path: &Path, base: &Path) -> Result<bool, VfsError
 mod tests {
     use super::{
         classify_path, read_project_config, sanitize_logical_path, validate_project_config,
-        AppError, EngineRef, OverlayFs, PathCategory, ProjectConfig, TemplateBinding, VfsDirEntry,
-        VfsError, VfsSource,
+        write_project_config, AppError, EngineRef, OverlayFs, PathCategory, ProjectConfig,
+        TemplateBinding, VfsDirEntry, VfsError, VfsSource, CURRENT_SCHEMA_VERSION,
     };
     #[cfg(windows)]
     use std::process::Command;
@@ -1194,6 +1198,28 @@ mod tests {
 
         let error = read_project_config(&dir).expect_err("invalid config should fail");
         assert!(matches!(error, AppError::InvalidProjectConfig { .. }));
+    }
+
+    #[test]
+    fn write_project_config_pins_version_to_current_schema() {
+        let dir_dir = create_temp_dir();
+        let dir = dir_dir.path().to_path_buf();
+        let config = ProjectConfig {
+            version: CURRENT_SCHEMA_VERSION + 5,
+            engine: None,
+            template: None,
+        };
+
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("tokio runtime should build");
+        runtime
+            .block_on(write_project_config(&dir, &config))
+            .expect("write should succeed");
+
+        let written = read_project_config(&dir).expect("written config should be readable");
+        assert_eq!(written.version, CURRENT_SCHEMA_VERSION);
     }
 
     #[test]
