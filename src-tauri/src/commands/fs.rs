@@ -1,4 +1,8 @@
-use std::{fs, io, path::Path};
+use std::{
+    fs::{self, OpenOptions},
+    io::{self, ErrorKind},
+    path::Path,
+};
 
 /// 检测文件是否为二进制文件
 /// 读取前 8192 字节，若包含 null byte 则判定为二进制
@@ -22,14 +26,26 @@ pub enum CopyEvent {
     },
 }
 
+#[cfg(test)]
 pub fn count_files(path: String) -> AppResult<usize> {
-    let path = Path::new(&path);
+    count_files_with_excludes(Path::new(&path), &[], Path::new(""))
+}
+
+fn count_files_with_excludes(
+    path: &Path,
+    excludes: &[std::path::PathBuf],
+    rel: &Path,
+) -> AppResult<usize> {
     let mut count = 0;
     for entry in fs::read_dir(path)? {
         let entry = entry?;
         let ty = entry.file_type()?;
+        let entry_rel = rel.join(entry.file_name());
+        if excludes.iter().any(|excluded| excluded == &entry_rel) {
+            continue;
+        }
         if ty.is_dir() {
-            count += count_files(entry.path().to_string_lossy().to_string())?;
+            count += count_files_with_excludes(&entry.path(), excludes, &entry_rel)?;
         } else {
             count += 1;
         }
@@ -50,6 +66,8 @@ fn copy_dir_all(
     src: &Path,
     dst: &Path,
     progress_tracker: &mut Option<&mut ProgressTracker>,
+    excludes: &[std::path::PathBuf],
+    rel: &Path,
 ) -> io::Result<()> {
     if !dst.exists() {
         fs::create_dir_all(dst)?;
@@ -60,13 +78,33 @@ fn copy_dir_all(
         let ty = entry.file_type()?;
         let src_path = entry.path();
         let dst_path = dst.join(entry.file_name());
+        let entry_rel = rel.join(entry.file_name());
+
+        // 命中排除列表（按源相对路径）时跳过
+        if excludes.iter().any(|excluded| excluded == &entry_rel) {
+            continue;
+        }
 
         if ty.is_dir() {
-            copy_dir_all(&src_path, &dst_path, progress_tracker)?;
+            copy_dir_all(&src_path, &dst_path, progress_tracker, excludes, &entry_rel)?;
         } else {
-            fs::copy(&src_path, &dst_path)?;
+            // create_new 语义：仅在目标不存在时复制；保护已有用户修改
+            match OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&dst_path)
+            {
+                Ok(mut dst_file) => {
+                    let mut src_file = fs::File::open(&src_path)?;
+                    io::copy(&mut src_file, &mut dst_file)?;
+                }
+                Err(error) if error.kind() == ErrorKind::AlreadyExists => {
+                    // 目标已存在：跳过，不覆盖
+                }
+                Err(error) => return Err(error),
+            }
 
-            // 更新进度
+            // 更新进度（无论是否实际复制都计入分子，避免进度卡顿）
             if let Some(tracker) = progress_tracker {
                 tracker.copied_files += 1;
                 let progress =
@@ -93,6 +131,7 @@ pub async fn copy_directory_with_progress(
     source: String,
     destination: String,
     on_event: Channel<CopyEvent>,
+    excludes: Option<Vec<String>>,
 ) -> AppResult<()> {
     let source_path = Path::new(&source);
     let destination_path = Path::new(&destination);
@@ -105,8 +144,14 @@ pub async fn copy_directory_with_progress(
         return Err(AppError::Server(format!("源路径不是目录: {}", source)));
     }
 
+    let exclude_paths: Vec<std::path::PathBuf> = excludes
+        .unwrap_or_default()
+        .into_iter()
+        .map(std::path::PathBuf::from)
+        .collect();
+
     // 计算总文件数
-    let total_files = count_files(source.clone())?;
+    let total_files = count_files_with_excludes(source_path, &exclude_paths, Path::new(""))?;
 
     // 创建进度跟踪器
     let mut progress_tracker = ProgressTracker {
@@ -121,6 +166,8 @@ pub async fn copy_directory_with_progress(
         source_path,
         destination_path,
         &mut Some(&mut progress_tracker),
+        &exclude_paths,
+        Path::new(""),
     ) {
         progress_tracker
             .sender
@@ -153,7 +200,7 @@ pub async fn copy_directory(source: String, destination: String) -> AppResult<()
     }
 
     // 递归复制目录
-    copy_dir_all(source_path, destination_path, &mut None)?;
+    copy_dir_all(source_path, destination_path, &mut None, &[], Path::new(""))?;
 
     Ok(())
 }
@@ -246,7 +293,10 @@ mod tests {
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use super::{count_files, is_binary_file, read_image_dimensions, validate_directory_structure};
+    use super::{
+        copy_dir_all, count_files, is_binary_file, read_image_dimensions,
+        validate_directory_structure,
+    };
 
     const PNG_1X1_BYTES: &[u8] = &[
         137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6,
@@ -352,5 +402,73 @@ mod tests {
 
         assert!(!text_is_binary);
         assert!(binary_is_binary);
+    }
+
+    #[test]
+    fn copy_dir_all_skips_existing_files_and_copies_missing_ones() {
+        use std::path::Path;
+
+        let src = create_temp_dir("webgal-craft-copy-src");
+        let dst = create_temp_dir("webgal-craft-copy-dst");
+
+        fs::create_dir_all(src.join("game")).expect("src game dir should be created");
+        fs::create_dir_all(src.join("game").join("scene"))
+            .expect("nested src dir should be created");
+        fs::write(src.join("game").join("config.txt"), "engine-default")
+            .expect("src config should be written");
+        fs::write(
+            src.join("game").join("scene").join("start.txt"),
+            "engine-scene",
+        )
+        .expect("src scene should be written");
+
+        // 目标已经存在的用户修改文件——必须保留
+        fs::create_dir_all(dst.join("game")).expect("dst game dir should be created");
+        fs::write(dst.join("game").join("config.txt"), "user-modified")
+            .expect("dst config should be written");
+
+        copy_dir_all(&src, &dst, &mut None, &[], Path::new(""))
+            .expect("copy_dir_all should succeed with create_new semantics");
+
+        let preserved = fs::read_to_string(dst.join("game").join("config.txt"))
+            .expect("preserved file should remain readable");
+        assert_eq!(
+            preserved, "user-modified",
+            "create_new must not overwrite existing user files"
+        );
+
+        let copied = fs::read_to_string(dst.join("game").join("scene").join("start.txt"))
+            .expect("missing file should have been copied from source");
+        assert_eq!(copied, "engine-scene");
+
+        fs::remove_dir_all(&src).expect("src temp dir should be removed");
+        fs::remove_dir_all(&dst).expect("dst temp dir should be removed");
+    }
+
+    #[test]
+    fn copy_dir_all_respects_excludes() {
+        use std::path::{Path, PathBuf};
+
+        let src = create_temp_dir("webgal-craft-copy-excludes-src");
+        let dst = create_temp_dir("webgal-craft-copy-excludes-dst");
+
+        fs::create_dir_all(src.join("template")).expect("template dir should be created");
+        fs::write(src.join("config.txt"), "config").expect("root file should be written");
+        fs::write(src.join("template").join("start.txt"), "tpl").expect("tpl file should be written");
+
+        copy_dir_all(
+            &src,
+            &dst,
+            &mut None,
+            &[PathBuf::from("template")],
+            Path::new(""),
+        )
+        .expect("copy_dir_all should succeed with excludes");
+
+        assert!(dst.join("config.txt").exists());
+        assert!(!dst.join("template").exists());
+
+        fs::remove_dir_all(&src).expect("src temp dir should be removed");
+        fs::remove_dir_all(&dst).expect("dst temp dir should be removed");
     }
 }

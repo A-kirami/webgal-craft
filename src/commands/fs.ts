@@ -37,6 +37,7 @@ async function copyDirectoryWithProgress(
   source: string,
   destination: string,
   onProgress: (progress: number) => void,
+  excludes?: string[],
 ): Promise<void> {
   const channel = new Channel<CopyEvent>()
   let channelError: AppError | undefined
@@ -62,6 +63,7 @@ async function copyDirectoryWithProgress(
       source,
       destination,
       onEvent: channel,
+      excludes,
     })
   } catch (error) {
     throw AppError.fromInvoke('copy_directory_with_progress', error)
