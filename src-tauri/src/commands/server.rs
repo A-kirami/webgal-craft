@@ -163,7 +163,6 @@ fn append_cors_headers(response: &mut Response, origin: Option<&'static str>) {
         .insert(VARY, HeaderValue::from_static("Origin"));
 }
 
-/// 为响应追加 CORS 头并返回，用于 `handle_static_request` 中统一的出口路径
 fn finalize_cors(mut response: Response, origin: Option<&'static str>) -> Response {
     append_cors_headers(&mut response, origin);
     response
@@ -215,15 +214,15 @@ async fn handle_static_request(
         }
     }
 
-    let mut request = Request::builder()
-        .uri("/")
-        .body(Body::empty())
-        .expect("空请求构造不会失败");
+    let mut request_builder = Request::builder().uri("/");
     for header_name in [RANGE, ORIGIN] {
         if let Some(value) = headers.get(&header_name) {
-            request.headers_mut().insert(header_name, value.clone());
+            request_builder = request_builder.header(header_name, value);
         }
     }
+    let request = request_builder
+        .body(Body::empty())
+        .expect("空请求构造不会失败");
     let response = ServeFile::new(&physical_path)
         .oneshot(request)
         .await
@@ -526,16 +525,14 @@ fn normalize_project_path(path: &str) -> AppResult<(String, PathBuf)> {
 }
 
 fn validate_dir_path(path: Option<String>) -> AppResult<Option<PathBuf>> {
-    match path {
-        Some(path) => {
-            let path_buf = PathBuf::from(path);
-            if !path_buf.is_dir() {
-                return Err(AppError::Server("路径必须是目录".into()));
-            }
-            Ok(Some(path_buf))
-        }
-        None => Ok(None),
+    let Some(path) = path else {
+        return Ok(None);
+    };
+    let path_buf = PathBuf::from(path);
+    if !path_buf.is_dir() {
+        return Err(AppError::Server("路径必须是目录".into()));
     }
+    Ok(Some(path_buf))
 }
 
 #[tauri::command]
@@ -548,10 +545,9 @@ pub async fn add_static_site(
     let state_guard = state.lock().await;
     let (hash, project_path) = normalize_project_path(&project_path)?;
     let engine_path = validate_dir_path(engine_path)?;
-    let template_path = match validate_dir_path(template_path)? {
-        Some(path) => Some(path),
-        None => resolve_default_template_path(engine_path.as_deref()).filter(|path| path.is_dir()),
-    };
+    let template_path = validate_dir_path(template_path)?
+        .or_else(|| resolve_default_template_path(engine_path.as_deref()))
+        .filter(|path| path.is_dir());
 
     let cached_canonicals =
         CachedCanonicals::compute(project_path.clone(), engine_path, template_path)?;

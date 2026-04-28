@@ -39,14 +39,13 @@ impl OverlayFactoryCache {
             template_path: template_path.clone(),
         };
 
+        if let Some(cached) = self
+            .entries
+            .read()
+            .unwrap_or_else(recover_poisoned)
+            .get(&key)
         {
-            let entries = self.entries.read().unwrap_or_else(|e| {
-                log::warn!("OverlayFactoryCache 读锁中毒，恢复访问");
-                e.into_inner()
-            });
-            if let Some(cached) = entries.get(&key) {
-                return Ok(cached.clone());
-            }
+            return Ok(cached.clone());
         }
 
         let cached = CachedCanonicals::compute(
@@ -55,16 +54,18 @@ impl OverlayFactoryCache {
             template_path,
         )?;
 
-        {
-            let mut entries = self.entries.write().unwrap_or_else(|e| {
-                log::warn!("OverlayFactoryCache 写锁中毒，恢复访问");
-                e.into_inner()
-            });
-            entries.insert(key, cached.clone());
-        }
+        self.entries
+            .write()
+            .unwrap_or_else(recover_poisoned)
+            .insert(key, cached.clone());
 
         Ok(cached)
     }
+}
+
+fn recover_poisoned<T>(error: std::sync::PoisonError<T>) -> T {
+    log::warn!("OverlayFactoryCache 锁中毒，恢复访问");
+    error.into_inner()
 }
 
 fn build_overlay(

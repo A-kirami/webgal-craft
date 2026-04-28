@@ -4,6 +4,11 @@ import { serverCmds } from '~/commands/server'
 
 import type { StaticSiteConfig } from '~/types/server'
 
+interface RegisteredSite {
+  signature: string
+  serveUrl: string
+}
+
 function buildServeUrl(siteId: string, serverUrl: string): string {
   return new URL(`game/${siteId}/`, serverUrl).href
 }
@@ -17,12 +22,11 @@ function buildSiteSignature(config: StaticSiteConfig): string {
 }
 
 export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
-  // 非响应式内部状态：服务器 URL 和启动任务无需触发 UI 更新
+  // 服务器 URL 与启动任务保持非响应式：UI 仅消费 serveUrls，避免无谓的依赖追踪
   let serverUrl: string | undefined
   let pendingServerStart: Promise<string | undefined> | undefined
 
-  const serveUrls = reactive(new Map<string, string>())
-  const siteSignatures = reactive(new Map<string, string>())
+  const registeredSites = reactive(new Map<string, RegisteredSite>())
   const pendingRegistrations = new Map<string, Promise<string | undefined>>()
 
   async function ensureServer(): Promise<string | undefined> {
@@ -60,7 +64,7 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
       return undefined
     }
 
-    return serveUrls.get(path)
+    return registeredSites.get(path)?.serveUrl
   }
 
   async function registerServeUrl(
@@ -68,9 +72,9 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
     currentServerUrl: string,
   ): Promise<string | undefined> {
     const signature = buildSiteSignature(site)
-    const cachedServeUrl = serveUrls.get(site.projectPath)
-    if (cachedServeUrl && siteSignatures.get(site.projectPath) === signature) {
-      return cachedServeUrl
+    const cached = registeredSites.get(site.projectPath)
+    if (cached?.signature === signature) {
+      return cached.serveUrl
     }
 
     const pendingRegistration = pendingRegistrations.get(signature)
@@ -82,8 +86,7 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
       try {
         const siteId = await serverCmds.addStaticSite(site)
         const serveUrl = buildServeUrl(siteId, currentServerUrl)
-        serveUrls.set(site.projectPath, serveUrl)
-        siteSignatures.set(site.projectPath, signature)
+        registeredSites.set(site.projectPath, { signature, serveUrl })
         return serveUrl
       } catch (error) {
         logger.error(`注册静态站点失败: ${site.projectPath} - ${error}`)
