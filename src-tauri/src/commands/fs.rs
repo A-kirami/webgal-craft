@@ -1,7 +1,7 @@
 use std::{
     fs::{self, OpenOptions},
     io::{self, ErrorKind},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 /// 检测文件是否为二进制文件
@@ -26,25 +26,19 @@ pub enum CopyEvent {
     },
 }
 
-#[cfg(test)]
-pub fn count_files(path: String) -> AppResult<usize> {
-    count_files_with_excludes(Path::new(&path), &[], Path::new(""))
-}
-
 fn count_files_with_excludes(
     path: &Path,
-    excludes: &[std::path::PathBuf],
+    excludes: &[PathBuf],
     rel: &Path,
 ) -> AppResult<usize> {
     let mut count = 0;
     for entry in fs::read_dir(path)? {
         let entry = entry?;
-        let ty = entry.file_type()?;
         let entry_rel = rel.join(entry.file_name());
         if excludes.iter().any(|excluded| excluded == &entry_rel) {
             continue;
         }
-        if ty.is_dir() {
+        if entry.file_type()?.is_dir() {
             count += count_files_with_excludes(&entry.path(), excludes, &entry_rel)?;
         } else {
             count += 1;
@@ -69,7 +63,7 @@ fn copy_dir_all(
     src: &Path,
     dst: &Path,
     progress_tracker: &mut Option<&mut ProgressTracker>,
-    excludes: &[std::path::PathBuf],
+    excludes: &[PathBuf],
     rel: &Path,
     overwrite: bool,
 ) -> io::Result<()> {
@@ -84,7 +78,6 @@ fn copy_dir_all(
         let dst_path = dst.join(entry.file_name());
         let entry_rel = rel.join(entry.file_name());
 
-        // 命中排除列表（按源相对路径）时跳过
         if excludes.iter().any(|excluded| excluded == &entry_rel) {
             continue;
         }
@@ -99,36 +92,29 @@ fn copy_dir_all(
                 overwrite,
             )?;
         } else {
-            let open_result = if overwrite {
-                OpenOptions::new()
-                    .write(true)
-                    .create(true)
-                    .truncate(true)
-                    .open(&dst_path)
+            let mut options = OpenOptions::new();
+            options.write(true);
+            if overwrite {
+                options.create(true).truncate(true);
             } else {
-                OpenOptions::new()
-                    .write(true)
-                    .create_new(true)
-                    .open(&dst_path)
-            };
+                options.create_new(true);
+            }
 
-            match open_result {
+            match options.open(&dst_path) {
                 Ok(mut dst_file) => {
                     let mut src_file = fs::File::open(&src_path)?;
                     io::copy(&mut src_file, &mut dst_file)?;
                 }
-                Err(error) if !overwrite && error.kind() == ErrorKind::AlreadyExists => {
-                    // 目标已存在且未启用覆盖：保留用户已有修改
-                }
+                // 目标已存在且未启用覆盖：保留用户已有修改
+                Err(error) if !overwrite && error.kind() == ErrorKind::AlreadyExists => {}
                 Err(error) => return Err(error),
             }
 
-            // 更新进度（无论是否实际复制都计入分子，避免进度卡顿）
+            // 跳过的文件也计入分子，避免进度卡顿
             if let Some(tracker) = progress_tracker {
                 tracker.copied_files += 1;
                 let progress =
                     (tracker.copied_files as f64 / tracker.total_files as f64 * 100.0) as u32;
-                // 只有当进度变化超过1%时才发送
                 if progress - tracker.last_progress >= 1 {
                     let _ = tracker.sender.send(CopyEvent::Progress {
                         progress,
@@ -164,17 +150,15 @@ pub async fn copy_directory_with_progress(
         return Err(AppError::Server(format!("源路径不是目录: {}", source)));
     }
 
-    let exclude_paths: Vec<std::path::PathBuf> = excludes
+    let exclude_paths: Vec<PathBuf> = excludes
         .unwrap_or_default()
         .into_iter()
-        .map(std::path::PathBuf::from)
+        .map(PathBuf::from)
         .collect();
     let overwrite = overwrite.unwrap_or(false);
 
-    // 计算总文件数
     let total_files = count_files_with_excludes(source_path, &exclude_paths, Path::new(""))?;
 
-    // 创建进度跟踪器
     let mut progress_tracker = ProgressTracker {
         sender: on_event,
         total_files,
@@ -182,7 +166,6 @@ pub async fn copy_directory_with_progress(
         last_progress: 0,
     };
 
-    // 复制目录
     if let Err(e) = copy_dir_all(
         source_path,
         destination_path,
@@ -318,12 +301,12 @@ pub async fn delete_file(path: String, permanent: Option<bool>) -> AppResult<()>
 mod tests {
     use std::{
         fs,
-        path::PathBuf,
+        path::{Path, PathBuf},
         time::{SystemTime, UNIX_EPOCH},
     };
 
     use super::{
-        copy_dir_all, count_files, is_binary_file, read_image_dimensions,
+        copy_dir_all, count_files_with_excludes, is_binary_file, read_image_dimensions,
         validate_directory_structure,
     };
 
@@ -374,7 +357,7 @@ mod tests {
             .expect("nested file should be created");
         fs::write(nested.join("script.txt"), "script").expect("deep file should be created");
 
-        let file_count = count_files(root.to_string_lossy().into_owned())
+        let file_count = count_files_with_excludes(&root, &[], Path::new(""))
             .expect("file count should include nested files");
 
         fs::remove_dir_all(&root).expect("temp directory should be removed");
@@ -435,8 +418,6 @@ mod tests {
 
     #[test]
     fn copy_dir_all_skips_existing_files_and_copies_missing_ones() {
-        use std::path::Path;
-
         let src = create_temp_dir("webgal-craft-copy-src");
         let dst = create_temp_dir("webgal-craft-copy-dst");
 
@@ -476,8 +457,6 @@ mod tests {
 
     #[test]
     fn copy_dir_all_respects_excludes() {
-        use std::path::{Path, PathBuf};
-
         let src = create_temp_dir("webgal-craft-copy-excludes-src");
         let dst = create_temp_dir("webgal-craft-copy-excludes-dst");
 
@@ -505,8 +484,6 @@ mod tests {
 
     #[test]
     fn copy_dir_all_overwrites_existing_files_when_requested() {
-        use std::path::Path;
-
         let src = create_temp_dir("webgal-craft-copy-overwrite-src");
         let dst = create_temp_dir("webgal-craft-copy-overwrite-dst");
 

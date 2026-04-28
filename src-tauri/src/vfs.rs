@@ -171,15 +171,9 @@ impl OverlayFs {
     ) -> Result<ResolvedPhysicalPath, VfsError> {
         let category = classify_path(logical_path);
 
-        // upper 优先时，先检查 upper 层
         if category.prefers_upper_layer() || self.engine_lower.is_none() {
-            let upper_path = self.upper.join(logical_path);
-            if upper_path.exists() {
-                validate_physical_path(&upper_path, &self.upper_canonical)?;
-                return Ok(ResolvedPhysicalPath {
-                    physical_path: upper_path,
-                    canonical_root: self.upper_canonical.clone(),
-                });
+            if let Some(resolved) = self.try_resolve_upper(logical_path)? {
+                return Ok(resolved);
             }
 
             if category.uses_whiteout() && self.is_whiteouted(logical_path)? {
@@ -187,7 +181,6 @@ impl OverlayFs {
             }
         }
 
-        // 尝试 lower 层
         if let Some((lower_path, lower_canonical)) = self.resolve_lower_path(logical_path) {
             if lower_path.exists() {
                 validate_physical_path(&lower_path, lower_canonical)?;
@@ -199,16 +192,27 @@ impl OverlayFs {
         }
 
         // 无 lower 层时回退到 upper（引擎运行时文件可能只存在于 upper）
-        let upper_path = self.upper.join(logical_path);
-        if upper_path.exists() {
-            validate_physical_path(&upper_path, &self.upper_canonical)?;
-            return Ok(ResolvedPhysicalPath {
-                physical_path: upper_path,
-                canonical_root: self.upper_canonical.clone(),
-            });
+        if let Some(resolved) = self.try_resolve_upper(logical_path)? {
+            return Ok(resolved);
         }
 
         Err(VfsError::NotFound)
+    }
+
+    fn try_resolve_upper(
+        &self,
+        logical_path: &Path,
+    ) -> Result<Option<ResolvedPhysicalPath>, VfsError> {
+        let upper_path = self.upper.join(logical_path);
+        if !upper_path.exists() {
+            return Ok(None);
+        }
+
+        validate_physical_path(&upper_path, &self.upper_canonical)?;
+        Ok(Some(ResolvedPhysicalPath {
+            physical_path: upper_path,
+            canonical_root: self.upper_canonical.clone(),
+        }))
     }
 
     pub fn ensure_writable(&self, logical_path: &Path) -> Result<PathBuf, VfsError> {
@@ -896,15 +900,11 @@ fn validate_path_segment(segment: &str) -> Result<(), VfsError> {
 }
 
 fn is_internal_metadata_path(path: &Path) -> bool {
-    let mut components = path.components();
-    let Some(Component::Normal(first)) = components.next() else {
-        return false;
-    };
-    let Some(first) = first.to_str() else {
-        return false;
-    };
-
-    matches!(first, VFS_METADATA_DIR | PROJECT_CONFIG_FILE)
+    matches!(
+        path.components().next(),
+        Some(Component::Normal(first))
+            if matches!(first.to_str(), Some(VFS_METADATA_DIR | PROJECT_CONFIG_FILE))
+    )
 }
 
 fn validate_physical_path(physical_path: &Path, root_canonical: &Path) -> Result<(), VfsError> {
