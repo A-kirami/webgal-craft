@@ -1744,10 +1744,7 @@ mod tests {
         .expect("overlay should be created");
 
         let error = overlay
-            .rename_logical_path(
-                Path::new("game/scene/a.txt"),
-                Path::new("game/scene/b.txt"),
-            )
+            .rename_logical_path(Path::new("game/scene/a.txt"), Path::new("game/scene/b.txt"))
             .expect_err("rename to existing target should fail");
 
         assert_eq!(error.code(), "ALREADY_EXISTS");
