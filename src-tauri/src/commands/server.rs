@@ -585,11 +585,15 @@ pub async fn update_site_engine(
         return Err(AppError::SiteNotRegistered);
     };
 
-    *site = CachedCanonicals::compute(
-        site.upper.clone(),
-        engine_path,
-        site.template_lower.clone(),
-    )?;
+    // 若旧模板沿用的是旧引擎的内置默认值，则随引擎切换重新派生；用户显式指定的模板保持不变
+    let prev_default_template = resolve_default_template_path(site.engine_lower.as_deref());
+    let template_path = if site.template_lower == prev_default_template {
+        resolve_default_template_path(engine_path.as_deref()).filter(|path| path.is_dir())
+    } else {
+        site.template_lower.clone()
+    };
+
+    *site = CachedCanonicals::compute(site.upper.clone(), engine_path, template_path)?;
 
     Ok(())
 }
