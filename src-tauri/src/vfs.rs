@@ -204,7 +204,7 @@ impl OverlayFs {
         if category.prefers_upper_layer() || self.engine_lower.is_none() {
             let upper_path = self.upper.join(logical_path);
             if upper_path.exists() {
-                validate_read_path_fast(&upper_path, &self.upper_canonical)?;
+                validate_physical_path(&upper_path, &self.upper_canonical)?;
                 return Ok(ResolvedPhysicalPath {
                     physical_path: upper_path,
                     canonical_root: self.upper_canonical.clone(),
@@ -219,7 +219,7 @@ impl OverlayFs {
         // 尝试 lower 层
         if let Some((lower_path, lower_canonical)) = self.resolve_lower_path(logical_path) {
             if lower_path.exists() {
-                validate_read_path_fast(&lower_path, lower_canonical)?;
+                validate_physical_path(&lower_path, lower_canonical)?;
                 return Ok(ResolvedPhysicalPath {
                     physical_path: lower_path,
                     canonical_root: lower_canonical.to_path_buf(),
@@ -230,7 +230,7 @@ impl OverlayFs {
         // 无 lower 层时回退到 upper（引擎运行时文件可能只存在于 upper）
         let upper_path = self.upper.join(logical_path);
         if upper_path.exists() {
-            validate_read_path_fast(&upper_path, &self.upper_canonical)?;
+            validate_physical_path(&upper_path, &self.upper_canonical)?;
             return Ok(ResolvedPhysicalPath {
                 physical_path: upper_path,
                 canonical_root: self.upper_canonical.clone(),
@@ -958,17 +958,6 @@ fn validate_physical_path(physical_path: &Path, root_canonical: &Path) -> Result
     }
 
     Ok(())
-}
-
-/// 读取请求的快速路径校验：使用字符串前缀检查代替 canonicalize
-///
-/// 前提：root_canonical 在站点注册时已缓存，且根目录内不含指向外部的符号链接。
-/// 仅适用于读取请求，写入请求仍需完整的 canonicalize 校验。
-fn validate_read_path_fast(physical_path: &Path, root_canonical: &Path) -> Result<(), VfsError> {
-    if physical_path.starts_with(root_canonical) {
-        return Ok(());
-    }
-    validate_physical_path(physical_path, root_canonical)
 }
 
 fn copy_path(source: &Path, destination: &Path) -> Result<(), VfsError> {
