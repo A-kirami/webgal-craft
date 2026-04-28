@@ -1,4 +1,8 @@
-use std::{fs, io, path::Path};
+use std::{
+    fs::{self, OpenOptions},
+    io::{self, ErrorKind},
+    path::{Path, PathBuf},
+};
 
 /// 检测文件是否为二进制文件
 /// 读取前 8192 字节，若包含 null byte 则判定为二进制
@@ -22,14 +26,16 @@ pub enum CopyEvent {
     },
 }
 
-pub fn count_files(path: String) -> AppResult<usize> {
-    let path = Path::new(&path);
+fn count_files_with_excludes(path: &Path, excludes: &[PathBuf], rel: &Path) -> AppResult<usize> {
     let mut count = 0;
     for entry in fs::read_dir(path)? {
         let entry = entry?;
-        let ty = entry.file_type()?;
-        if ty.is_dir() {
-            count += count_files(entry.path().to_string_lossy().to_string())?;
+        let entry_rel = rel.join(entry.file_name());
+        if excludes.iter().any(|excluded| excluded == &entry_rel) {
+            continue;
+        }
+        if entry.file_type()?.is_dir() {
+            count += count_files_with_excludes(&entry.path(), excludes, &entry_rel)?;
         } else {
             count += 1;
         }
@@ -46,10 +52,16 @@ struct ProgressTracker {
 }
 
 /// 递归复制文件夹
+///
+/// `overwrite` 为 false 时使用 create_new 语义，仅在目标不存在时复制，保护已有用户修改；
+/// 为 true 时覆盖目标文件，用于安装/创建等需要刷新内容的流程。
 fn copy_dir_all(
     src: &Path,
     dst: &Path,
     progress_tracker: &mut Option<&mut ProgressTracker>,
+    excludes: &[PathBuf],
+    rel: &Path,
+    overwrite: bool,
 ) -> io::Result<()> {
     if !dst.exists() {
         fs::create_dir_all(dst)?;
@@ -60,18 +72,45 @@ fn copy_dir_all(
         let ty = entry.file_type()?;
         let src_path = entry.path();
         let dst_path = dst.join(entry.file_name());
+        let entry_rel = rel.join(entry.file_name());
+
+        if excludes.iter().any(|excluded| excluded == &entry_rel) {
+            continue;
+        }
 
         if ty.is_dir() {
-            copy_dir_all(&src_path, &dst_path, progress_tracker)?;
+            copy_dir_all(
+                &src_path,
+                &dst_path,
+                progress_tracker,
+                excludes,
+                &entry_rel,
+                overwrite,
+            )?;
         } else {
-            fs::copy(&src_path, &dst_path)?;
+            let mut options = OpenOptions::new();
+            options.write(true);
+            if overwrite {
+                options.create(true).truncate(true);
+            } else {
+                options.create_new(true);
+            }
 
-            // 更新进度
+            match options.open(&dst_path) {
+                Ok(mut dst_file) => {
+                    let mut src_file = fs::File::open(&src_path)?;
+                    io::copy(&mut src_file, &mut dst_file)?;
+                }
+                // 目标已存在且未启用覆盖：保留用户已有修改
+                Err(error) if !overwrite && error.kind() == ErrorKind::AlreadyExists => {}
+                Err(error) => return Err(error),
+            }
+
+            // 跳过的文件也计入分子，避免进度卡顿
             if let Some(tracker) = progress_tracker {
                 tracker.copied_files += 1;
                 let progress =
                     (tracker.copied_files as f64 / tracker.total_files as f64 * 100.0) as u32;
-                // 只有当进度变化超过1%时才发送
                 if progress - tracker.last_progress >= 1 {
                     let _ = tracker.sender.send(CopyEvent::Progress {
                         progress,
@@ -93,6 +132,8 @@ pub async fn copy_directory_with_progress(
     source: String,
     destination: String,
     on_event: Channel<CopyEvent>,
+    excludes: Option<Vec<String>>,
+    overwrite: Option<bool>,
 ) -> AppResult<()> {
     let source_path = Path::new(&source);
     let destination_path = Path::new(&destination);
@@ -105,10 +146,15 @@ pub async fn copy_directory_with_progress(
         return Err(AppError::Server(format!("源路径不是目录: {}", source)));
     }
 
-    // 计算总文件数
-    let total_files = count_files(source.clone())?;
+    let exclude_paths: Vec<PathBuf> = excludes
+        .unwrap_or_default()
+        .into_iter()
+        .map(PathBuf::from)
+        .collect();
+    let overwrite = overwrite.unwrap_or(false);
 
-    // 创建进度跟踪器
+    let total_files = count_files_with_excludes(source_path, &exclude_paths, Path::new(""))?;
+
     let mut progress_tracker = ProgressTracker {
         sender: on_event,
         total_files,
@@ -116,11 +162,13 @@ pub async fn copy_directory_with_progress(
         last_progress: 0,
     };
 
-    // 复制目录
     if let Err(e) = copy_dir_all(
         source_path,
         destination_path,
         &mut Some(&mut progress_tracker),
+        &exclude_paths,
+        Path::new(""),
+        overwrite,
     ) {
         progress_tracker
             .sender
@@ -153,7 +201,14 @@ pub async fn copy_directory(source: String, destination: String) -> AppResult<()
     }
 
     // 递归复制目录
-    copy_dir_all(source_path, destination_path, &mut None)?;
+    copy_dir_all(
+        source_path,
+        destination_path,
+        &mut None,
+        &[],
+        Path::new(""),
+        false,
+    )?;
 
     Ok(())
 }
@@ -242,11 +297,14 @@ pub async fn delete_file(path: String, permanent: Option<bool>) -> AppResult<()>
 mod tests {
     use std::{
         fs,
-        path::PathBuf,
+        path::{Path, PathBuf},
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use super::{count_files, is_binary_file, read_image_dimensions, validate_directory_structure};
+    use super::{
+        copy_dir_all, count_files_with_excludes, is_binary_file, read_image_dimensions,
+        validate_directory_structure,
+    };
 
     const PNG_1X1_BYTES: &[u8] = &[
         137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6,
@@ -295,7 +353,7 @@ mod tests {
             .expect("nested file should be created");
         fs::write(nested.join("script.txt"), "script").expect("deep file should be created");
 
-        let file_count = count_files(root.to_string_lossy().into_owned())
+        let file_count = count_files_with_excludes(&root, &[], Path::new(""))
             .expect("file count should include nested files");
 
         fs::remove_dir_all(&root).expect("temp directory should be removed");
@@ -352,5 +410,99 @@ mod tests {
 
         assert!(!text_is_binary);
         assert!(binary_is_binary);
+    }
+
+    #[test]
+    fn copy_dir_all_skips_existing_files_and_copies_missing_ones() {
+        let src = create_temp_dir("webgal-craft-copy-src");
+        let dst = create_temp_dir("webgal-craft-copy-dst");
+
+        fs::create_dir_all(src.join("game")).expect("src game dir should be created");
+        fs::create_dir_all(src.join("game").join("scene"))
+            .expect("nested src dir should be created");
+        fs::write(src.join("game").join("config.txt"), "engine-default")
+            .expect("src config should be written");
+        fs::write(
+            src.join("game").join("scene").join("start.txt"),
+            "engine-scene",
+        )
+        .expect("src scene should be written");
+
+        // 目标已经存在的用户修改文件——必须保留
+        fs::create_dir_all(dst.join("game")).expect("dst game dir should be created");
+        fs::write(dst.join("game").join("config.txt"), "user-modified")
+            .expect("dst config should be written");
+
+        copy_dir_all(&src, &dst, &mut None, &[], Path::new(""), false)
+            .expect("copy_dir_all should succeed with create_new semantics");
+
+        let preserved = fs::read_to_string(dst.join("game").join("config.txt"))
+            .expect("preserved file should remain readable");
+        assert_eq!(
+            preserved, "user-modified",
+            "create_new must not overwrite existing user files"
+        );
+
+        let copied = fs::read_to_string(dst.join("game").join("scene").join("start.txt"))
+            .expect("missing file should have been copied from source");
+        assert_eq!(copied, "engine-scene");
+
+        fs::remove_dir_all(&src).expect("src temp dir should be removed");
+        fs::remove_dir_all(&dst).expect("dst temp dir should be removed");
+    }
+
+    #[test]
+    fn copy_dir_all_respects_excludes() {
+        let src = create_temp_dir("webgal-craft-copy-excludes-src");
+        let dst = create_temp_dir("webgal-craft-copy-excludes-dst");
+
+        fs::create_dir_all(src.join("template")).expect("template dir should be created");
+        fs::write(src.join("config.txt"), "config").expect("root file should be written");
+        fs::write(src.join("template").join("start.txt"), "tpl")
+            .expect("tpl file should be written");
+
+        copy_dir_all(
+            &src,
+            &dst,
+            &mut None,
+            &[PathBuf::from("template")],
+            Path::new(""),
+            false,
+        )
+        .expect("copy_dir_all should succeed with excludes");
+
+        assert!(dst.join("config.txt").exists());
+        assert!(!dst.join("template").exists());
+
+        fs::remove_dir_all(&src).expect("src temp dir should be removed");
+        fs::remove_dir_all(&dst).expect("dst temp dir should be removed");
+    }
+
+    #[test]
+    fn copy_dir_all_overwrites_existing_files_when_requested() {
+        let src = create_temp_dir("webgal-craft-copy-overwrite-src");
+        let dst = create_temp_dir("webgal-craft-copy-overwrite-dst");
+
+        fs::create_dir_all(src.join("game")).expect("src game dir should be created");
+        fs::write(src.join("game").join("config.txt"), "engine-new")
+            .expect("src config should be written");
+
+        // 模拟上一次安装失败留下的旧版本残留
+        fs::create_dir_all(dst.join("game")).expect("dst game dir should be created");
+        fs::write(dst.join("game").join("config.txt"), "stale-leftover")
+            .expect("stale file should be written");
+
+        copy_dir_all(&src, &dst, &mut None, &[], Path::new(""), true)
+            .expect("copy_dir_all should succeed in overwrite mode");
+
+        let refreshed = fs::read_to_string(dst.join("game").join("config.txt"))
+            .expect("overwritten file should remain readable");
+        assert_eq!(
+            refreshed, "engine-new",
+            "overwrite mode must replace stale destination contents"
+        );
+
+        fs::remove_dir_all(&src).expect("src temp dir should be removed");
+        fs::remove_dir_all(&dst).expect("dst temp dir should be removed");
     }
 }

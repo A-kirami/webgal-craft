@@ -5678,13 +5678,11 @@ dependencies = [
 name = "webgal-craft"
 version = "0.0.0"
 dependencies = [
- "anyhow",
  "axum",
  "futures",
  "image",
  "log",
  "portpicker",
- "regex",
  "serde",
  "serde_json",
  "tauri",
@@ -5700,6 +5698,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
  "tauri-plugin-window-state",
+ "tempfile",
  "thiserror 2.0.18",
  "tokio",
  "tower",

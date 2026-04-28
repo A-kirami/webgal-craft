@@ -1,5 +1,6 @@
 use tauri::Manager;
 mod commands;
+mod vfs;
 mod window;
 use commands::server::ServerState;
 #[cfg(target_os = "windows")]
@@ -68,6 +69,19 @@ pub fn run() {
             // game
             commands::game::get_game_config,
             commands::game::set_game_config,
+            // project config
+            commands::project_config::read_project_config_cmd,
+            commands::project_config::write_project_config_cmd,
+            // vfs
+            commands::vfs::resolve_vfs_path,
+            commands::vfs::list_vfs_dir,
+            commands::vfs::ensure_vfs_writable,
+            commands::vfs::delete_vfs_path,
+            commands::vfs::rename_vfs_path,
+            commands::vfs::move_vfs_path,
+            commands::vfs::copy_vfs_path,
+            commands::vfs::is_template_dirty,
+            commands::vfs::clean_template_upper,
             // server
             commands::server::start_server,
             commands::server::add_static_site,

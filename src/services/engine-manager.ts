@@ -165,7 +165,7 @@ async function installEngine(enginePath: string): Promise<void> {
   try {
     await fsCmds.copyDirectoryWithProgress(enginePath, targetPath, (progress) => {
       resourceStore.updateProgress(id, progress)
-    })
+    }, { overwrite: true })
     logger.info(`[引擎 ${engineName}] 复制引擎文件完成`)
 
     const installedSnapshot = await getEngineSnapshot(targetPath)

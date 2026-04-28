@@ -30,13 +30,12 @@ tokio = { version = "1.50", features = ["rt", "sync", "fs"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["fs"] }
 portpicker = "0.1"
-regex = "1.12"
 thiserror = "2.0"
-anyhow = "1.0"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "ico"] }
 trash = "5.2"
 futures = "0.3"
 urlencoding = "2.1"
+tempfile = "3.15"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2.4"

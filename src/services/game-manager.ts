@@ -249,7 +249,7 @@ async function createGame(gameName: string, gamePath: string, enginePath: string
   try {
     await fsCmds.copyDirectoryWithProgress(enginePath, gamePath, (progress) => {
       resourceStore.updateProgress(id, progress)
-    })
+    }, { overwrite: true })
     logger.info(`[游戏 ${gameName}] 复制引擎文件完成`)
 
     // 3. 设置游戏配置
