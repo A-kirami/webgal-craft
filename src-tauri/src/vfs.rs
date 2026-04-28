@@ -6,7 +6,6 @@ use std::{
     path::{Component, Path, PathBuf},
 };
 
-use percent_encoding::percent_decode_str;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use thiserror::Error;
@@ -48,13 +47,6 @@ pub enum TemplateBinding {
     EngineBuiltin {
         engine: EngineRef,
     },
-}
-
-#[derive(Debug, Clone)]
-#[allow(dead_code)] // PR3 server 重构启用
-pub struct ResolvedFile {
-    pub physical_path: PathBuf,
-    pub content_type: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -174,23 +166,6 @@ impl OverlayFs {
             template_lower,
             template_lower_canonical,
             whiteout_root,
-        })
-    }
-
-    #[allow(dead_code)] // PR3 server 重构启用
-    pub fn resolve_file(&self, logical_path: &Path) -> Result<ResolvedFile, VfsError> {
-        let resolved = self.resolve_physical_path(logical_path)?;
-        let metadata = fs::metadata(&resolved.physical_path)?;
-
-        if !metadata.is_file() {
-            return Err(VfsError::NotFound);
-        }
-
-        Ok(ResolvedFile {
-            content_type: mime_guess::from_path(&resolved.physical_path)
-                .first_or_octet_stream()
-                .to_string(),
-            physical_path: resolved.physical_path,
         })
     }
 
@@ -696,17 +671,36 @@ impl OverlayFs {
     }
 }
 
-#[allow(dead_code)] // PR3 server 重构启用
-pub fn sanitize_request_path(raw_path: &str) -> Result<PathBuf, VfsError> {
-    let decoded = percent_decode_str(raw_path)
-        .decode_utf8()
-        .map_err(|_| VfsError::PathDenied)?;
-
-    sanitize_path_like(decoded.as_ref(), true)
-}
-
 pub fn sanitize_logical_path(raw_path: &str) -> Result<PathBuf, VfsError> {
-    sanitize_path_like(raw_path, false)
+    if raw_path.contains('\0') || raw_path.contains('\\') || raw_path.contains("//") {
+        log::warn!("路径被拒绝（非法字符）: {raw_path:?}");
+        return Err(VfsError::PathDenied);
+    }
+
+    let trimmed = raw_path.trim_start_matches('/');
+    if trimmed.is_empty() {
+        return Ok(PathBuf::new());
+    }
+
+    let path = Path::new(trimmed);
+    let mut normalized = PathBuf::new();
+
+    for component in path.components() {
+        match component {
+            Component::Normal(segment) => {
+                let segment = segment.to_str().ok_or(VfsError::PathDenied)?;
+                validate_path_segment(segment)?;
+                normalized.push(segment);
+            }
+            _ => return Err(VfsError::PathDenied),
+        }
+    }
+
+    if is_internal_metadata_path(&normalized) {
+        return Err(VfsError::PathDenied);
+    }
+
+    Ok(normalized)
 }
 
 #[inline]
@@ -876,42 +870,6 @@ pub(crate) async fn atomic_write(target: &Path, content: &[u8]) -> std::io::Resu
     .map_err(std::io::Error::other)?
 }
 
-fn sanitize_path_like(raw_path: &str, empty_maps_to_index: bool) -> Result<PathBuf, VfsError> {
-    if raw_path.contains('\0') || raw_path.contains('\\') || raw_path.contains("//") {
-        log::warn!("路径被拒绝（非法字符）: {raw_path:?}");
-        return Err(VfsError::PathDenied);
-    }
-
-    let trimmed = raw_path.trim_start_matches('/');
-    if trimmed.is_empty() {
-        return if empty_maps_to_index {
-            Ok(PathBuf::from("index.html"))
-        } else {
-            Ok(PathBuf::new())
-        };
-    }
-
-    let path = Path::new(trimmed);
-    let mut normalized = PathBuf::new();
-
-    for component in path.components() {
-        match component {
-            Component::Normal(segment) => {
-                let segment = segment.to_str().ok_or(VfsError::PathDenied)?;
-                validate_path_segment(segment)?;
-                normalized.push(segment);
-            }
-            _ => return Err(VfsError::PathDenied),
-        }
-    }
-
-    if is_internal_metadata_path(&normalized) {
-        return Err(VfsError::PathDenied);
-    }
-
-    Ok(normalized)
-}
-
 fn validate_path_segment(segment: &str) -> Result<(), VfsError> {
     if segment.is_empty()
         || segment.contains(':')
@@ -1065,9 +1023,9 @@ fn is_same_or_descendant_path(path: &Path, base: &Path) -> Result<bool, VfsError
 #[cfg(test)]
 mod tests {
     use super::{
-        classify_path, read_project_config, sanitize_logical_path, sanitize_request_path,
-        validate_project_config, AppError, EngineRef, OverlayFs, PathCategory, ProjectConfig,
-        TemplateBinding, VfsDirEntry, VfsError, VfsSource,
+        classify_path, read_project_config, sanitize_logical_path, validate_project_config,
+        AppError, EngineRef, OverlayFs, PathCategory, ProjectConfig, TemplateBinding, VfsDirEntry,
+        VfsError, VfsSource,
     };
     #[cfg(windows)]
     use std::process::Command;
@@ -1108,31 +1066,19 @@ mod tests {
     }
 
     #[test]
-    fn sanitize_request_path_maps_root_to_index_html() {
-        assert_eq!(
-            sanitize_request_path("").expect("empty path should map to index.html"),
-            PathBuf::from("index.html")
-        );
-        assert_eq!(
-            sanitize_request_path("/").expect("root path should map to index.html"),
-            PathBuf::from("index.html")
-        );
-    }
-
-    #[test]
-    fn sanitize_request_path_rejects_path_traversal_and_reserved_names() {
-        assert!(sanitize_request_path("../secret.txt").is_err());
-        assert!(sanitize_request_path("icons\\favicon.ico").is_err());
-        assert!(sanitize_request_path("CON").is_err());
-        assert!(sanitize_request_path("assets:evil").is_err());
-    }
-
-    #[test]
     fn sanitize_logical_path_keeps_empty_path_for_directory_listing() {
         assert_eq!(
             sanitize_logical_path("").expect("empty logical path should stay empty"),
             PathBuf::new()
         );
+    }
+
+    #[test]
+    fn sanitize_logical_path_rejects_path_traversal_and_reserved_names() {
+        assert!(sanitize_logical_path("../secret.txt").is_err());
+        assert!(sanitize_logical_path("icons\\favicon.ico").is_err());
+        assert!(sanitize_logical_path("CON").is_err());
+        assert!(sanitize_logical_path("assets:evil").is_err());
     }
 
     #[test]

@@ -35,8 +35,6 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg",
 trash = "5.2"
 futures = "0.3"
 urlencoding = "2.1"
-mime_guess = "2.0"
-percent-encoding = "2.3"
 tempfile = "3.15"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

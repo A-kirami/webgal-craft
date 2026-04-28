@@ -5682,8 +5682,6 @@ dependencies = [
  "futures",
  "image",
  "log",
- "mime_guess",
- "percent-encoding",
  "portpicker",
  "serde",
  "serde_json",
