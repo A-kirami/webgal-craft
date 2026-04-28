@@ -77,7 +77,10 @@ describe('useResourcePreviewPrimer', () => {
     stopPrimer = useResourcePreviewPrimer()
     await flushPrimerWatchers()
 
-    expect(ensureServeUrlsMock).toHaveBeenCalledWith(['/games/alpha', '/engines/fresh'])
+    expect(ensureServeUrlsMock).toHaveBeenCalledWith([
+      { projectPath: '/games/alpha' },
+      { projectPath: '/engines/fresh' },
+    ])
   })
 
   it('没有资源时不会触发预热', async () => {
@@ -98,7 +101,7 @@ describe('useResourcePreviewPrimer', () => {
     ]
     await flushPrimerWatchers()
 
-    expect(ensureServeUrlsMock).toHaveBeenCalledWith(['/games/alpha'])
+    expect(ensureServeUrlsMock).toHaveBeenCalledWith([{ projectPath: '/games/alpha' }])
   })
 
   it('预热失败时会记录错误而不是吞掉拒绝', async () => {

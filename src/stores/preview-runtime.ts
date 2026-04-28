@@ -2,15 +2,31 @@ import { defineStore } from 'pinia'
 
 import { serverCmds } from '~/commands/server'
 
+import type { StaticSiteConfig } from '~/types/server'
+
+interface RegisteredSite {
+  signature: string
+  serveUrl: string
+}
+
 function buildServeUrl(siteId: string, serverUrl: string): string {
   return new URL(`game/${siteId}/`, serverUrl).href
 }
 
+function buildSiteSignature(config: StaticSiteConfig): string {
+  return JSON.stringify([
+    config.projectPath,
+    config.enginePath ?? '',
+    config.templatePath ?? '',
+  ])
+}
+
 export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
+  // 服务器 URL 与启动任务保持非响应式：UI 仅消费 serveUrls，避免无谓的依赖追踪
   let serverUrl: string | undefined
   let pendingServerStart: Promise<string | undefined> | undefined
 
-  const serveUrls = reactive(new Map<string, string>())
+  const registeredSites = reactive(new Map<string, RegisteredSite>())
   const pendingRegistrations = new Map<string, Promise<string | undefined>>()
 
   async function ensureServer(): Promise<string | undefined> {
@@ -48,43 +64,47 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
       return undefined
     }
 
-    return serveUrls.get(path)
+    return registeredSites.get(path)?.serveUrl
   }
 
-  async function registerServeUrl(path: string, currentServerUrl: string): Promise<string | undefined> {
-    const cachedServeUrl = serveUrls.get(path)
-    if (cachedServeUrl) {
-      return cachedServeUrl
+  async function registerServeUrl(
+    site: StaticSiteConfig,
+    currentServerUrl: string,
+  ): Promise<string | undefined> {
+    const signature = buildSiteSignature(site)
+    const cached = registeredSites.get(site.projectPath)
+    if (cached?.signature === signature) {
+      return cached.serveUrl
     }
 
-    const pendingRegistration = pendingRegistrations.get(path)
+    const pendingRegistration = pendingRegistrations.get(signature)
     if (pendingRegistration) {
       return await pendingRegistration
     }
 
     const registrationTask = (async () => {
       try {
-        const siteId = await serverCmds.addStaticSite(path)
+        const siteId = await serverCmds.addStaticSite(site)
         const serveUrl = buildServeUrl(siteId, currentServerUrl)
-        serveUrls.set(path, serveUrl)
+        registeredSites.set(site.projectPath, { signature, serveUrl })
         return serveUrl
       } catch (error) {
-        logger.error(`注册静态站点失败: ${path} - ${error}`)
+        logger.error(`注册静态站点失败: ${site.projectPath} - ${error}`)
         return
       }
     })()
 
-    pendingRegistrations.set(path, registrationTask)
+    pendingRegistrations.set(signature, registrationTask)
 
     try {
       return await registrationTask
     } finally {
-      pendingRegistrations.delete(path)
+      pendingRegistrations.delete(signature)
     }
   }
 
-  async function ensureServeUrl(path: string): Promise<string | undefined> {
-    if (!path) {
+  async function ensureServeUrl(site: StaticSiteConfig): Promise<string | undefined> {
+    if (!site.projectPath) {
       return undefined
     }
 
@@ -93,13 +113,17 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
       return undefined
     }
 
-    return await registerServeUrl(path, currentServerUrl)
+    return await registerServeUrl(site, currentServerUrl)
   }
 
-  async function ensureServeUrls(paths: string[]): Promise<void> {
-    const normalizedPaths = [...new Set(paths.filter(Boolean))]
+  async function ensureServeUrls(sites: StaticSiteConfig[]): Promise<void> {
+    const uniqueSites = [...new Map(
+      sites
+        .filter(site => !!site.projectPath)
+        .map(site => [buildSiteSignature(site), site]),
+    ).values()]
 
-    if (normalizedPaths.length === 0) {
+    if (uniqueSites.length === 0) {
       return
     }
 
@@ -109,7 +133,7 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
     }
 
     await Promise.all(
-      normalizedPaths.map(path => registerServeUrl(path, currentServerUrl)),
+      uniqueSites.map(site => registerServeUrl(site, currentServerUrl)),
     )
   }
 

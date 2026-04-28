@@ -1,27 +1,23 @@
-// 服务器模块：提供静态文件服务和WebSocket通信功能
-// 主要功能：
-// 1. 静态文件服务：支持多个静态站点托管
-// 2. WebSocket通信：支持广播和单播消息
-// 3. 服务器管理：启动、停止和状态管理
-
 use std::{
     collections::HashMap,
     hash::{Hash, Hasher},
     io::Cursor,
     net::SocketAddr,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
     sync::Arc,
 };
 
 use axum::{
+    body::Body,
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         ConnectInfo, Path as AxumPath, State as AxumState,
     },
     http::{
-        header::{ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, ORIGIN, VARY},
+        header::{ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, ORIGIN, RANGE, VARY},
         HeaderMap, HeaderValue, Request, StatusCode, Uri,
     },
+    middleware::Next,
     response::{IntoResponse, Redirect, Response},
     routing::get,
     Router,
@@ -36,7 +32,11 @@ use tokio::{
     task::JoinHandle,
 };
 use tower::util::ServiceExt;
-use tower_http::services::ServeDir;
+use tower_http::services::ServeFile;
+
+use crate::vfs::{
+    resolve_default_template_path, sanitize_request_path, CachedCanonicals, OverlayFs, VfsError,
+};
 
 use super::{AppError, AppResult};
 
@@ -47,34 +47,17 @@ const STATIC_FILE_ALLOWED_CORS_ORIGINS: [&str; 4] = [
     "tauri://localhost",
 ];
 
-/// 应用程序状态
-/// 包含：
-/// - sites: 静态站点映射表，键为站点哈希，值为(路径, 服务实例)元组
-/// - broadcast_tx: 广播消息发送器，用于向所有客户端发送消息
-/// - unicast_clients: WebSocket客户端映射表，用于单播消息发送
 struct AppState {
-    sites: RwLock<HashMap<String, (PathBuf, ServeDir)>>,
-    // 广播通道用于高效广播
+    sites: RwLock<HashMap<String, CachedCanonicals>>,
     broadcast_tx: broadcast::Sender<Message>,
-    // 独立通道映射用于单播
     unicast_clients: Mutex<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>,
 }
 
-/// 服务器状态管理
-/// 包含：
-/// - app_state: 应用程序状态，包含站点信息和消息通道
-/// - server_handle: 服务器运行句柄，用于控制服务器生命周期
-/// - server_address: 服务器监听地址，用于客户端连接
 pub struct ServerState {
     app_state: Arc<AppState>,
     server_handle: Option<ServerHandle>,
-    server_address: Option<SocketAddr>,
 }
 
-/// 服务器控制句柄
-/// 用于管理服务器的生命周期，包含：
-/// - join_handle: 异步任务句柄，用于等待服务器关闭
-/// - shutdown_tx: 关闭信号发送器，用于触发服务器优雅关闭
 struct ServerHandle {
     join_handle: JoinHandle<()>,
     shutdown_tx: oneshot::Sender<()>,
@@ -83,9 +66,8 @@ struct ServerHandle {
 const MAX_THUMBNAIL_DIMENSION: u32 = 2048;
 const JPEG_THUMBNAIL_QUALITY: u8 = 85;
 
-impl Default for ServerState {
-    fn default() -> Self {
-        // 创建广播通道（容量100条消息）
+impl ServerState {
+    pub fn new() -> Self {
         let (broadcast_tx, _) = broadcast::channel(100);
 
         Self {
@@ -95,18 +77,10 @@ impl Default for ServerState {
                 unicast_clients: Mutex::new(HashMap::new()),
             }),
             server_handle: None,
-            server_address: None,
         }
     }
 }
 
-/// WebSocket连接处理函数
-/// 处理新的WebSocket连接请求，并升级HTTP连接为WebSocket连接
-/// 参数：
-/// - ws: WebSocket升级请求
-/// - state: 应用程序状态
-/// - addr: 客户端地址
-/// - on_message: 消息处理通道
 async fn handle_ws(
     ws: WebSocketUpgrade,
     AxumState(state): AxumState<Arc<AppState>>,
@@ -116,17 +90,6 @@ async fn handle_ws(
     ws.on_upgrade(move |socket| handle_ws_socket(socket, state, addr, on_message))
 }
 
-/// WebSocket连接建立后的处理函数
-/// 实现功能：
-/// 1. 消息接收和广播：处理客户端消息并转发给其他客户端
-/// 2. 客户端注册和注销：管理客户端连接状态
-/// 3. 错误处理和连接关闭：确保资源正确释放
-///
-/// 参数：
-/// - socket: WebSocket连接实例
-/// - state: 应用程序状态
-/// - addr: 客户端地址
-/// - on_message: 消息处理通道
 async fn handle_ws_socket(
     socket: WebSocket,
     state: Arc<AppState>,
@@ -134,93 +97,60 @@ async fn handle_ws_socket(
     on_message: Channel<String>,
 ) {
     let (mut ws_tx, mut ws_rx) = socket.split();
-
-    // 创建单播通道
     let (unicast_tx, mut unicast_rx) = mpsc::unbounded_channel();
-
-    // 注册客户端
     state.unicast_clients.lock().await.insert(addr, unicast_tx);
-
-    // 订阅广播
     let mut broadcast_rx = state.broadcast_tx.subscribe();
 
-    // 消息处理任务
     let recv_task = tokio::spawn({
         let on_message = on_message.clone();
         async move {
-            while let Some(Ok(msg)) = ws_rx.next().await {
-                match msg {
+            while let Some(Ok(message)) = ws_rx.next().await {
+                match message {
                     Message::Text(text) => {
                         let _ = on_message.send(text.to_string());
                     }
-                    Message::Close(_) => {
-                        break;
-                    }
-                    _ => {
-                        continue;
-                    }
+                    Message::Close(_) => break,
+                    _ => continue,
                 }
             }
         }
     });
 
-    // 发送任务（综合广播和单播）
     let send_task = tokio::spawn(async move {
         loop {
             tokio::select! {
-                // 处理广播消息
-                Ok(msg) = broadcast_rx.recv() => {
-                    if ws_tx.send(msg).await.is_err() {
+                Ok(message) = broadcast_rx.recv() => {
+                    if ws_tx.send(message).await.is_err() {
                         break;
                     }
                 }
-                // 处理单播消息
-                Some(msg) = unicast_rx.recv() => {
-                    if ws_tx.send(msg).await.is_err() {
+                Some(message) = unicast_rx.recv() => {
+                    if ws_tx.send(message).await.is_err() {
                         break;
                     }
                 }
-                // 退出条件
                 else => break,
             }
         }
     });
 
-    // 等待任务完成
     tokio::select! {
         _ = recv_task => (),
         _ = send_task => (),
     }
 
-    // 注销客户端
     state.unicast_clients.lock().await.remove(&addr);
-    println!("Client disconnected: {}", addr);
 }
 
-/// 处理静态文件请求
-/// 根据站点哈希和请求路径返回对应的静态文件
-///
-/// 参数：
-/// - state: 应用程序状态
-/// - hash: 站点哈希值
-/// - path: 请求的文件路径
-///
-/// 返回：
-/// - 成功：静态文件响应
-/// - 失败：HTTP状态码
-fn resolve_static_file_cors_origin(origin: Option<&str>) -> Option<&'static str> {
-    let origin = origin?;
+fn resolve_cors_origin(headers: &HeaderMap) -> Option<&'static str> {
+    let origin = headers.get(ORIGIN)?.to_str().ok()?;
     STATIC_FILE_ALLOWED_CORS_ORIGINS
         .iter()
         .copied()
-        .find(|allowed_origin| *allowed_origin == origin)
+        .find(|allowed| *allowed == origin)
 }
 
-fn resolve_static_file_cors_origin_from_headers(headers: &HeaderMap) -> Option<&'static str> {
-    resolve_static_file_cors_origin(headers.get(ORIGIN).and_then(|origin| origin.to_str().ok()))
-}
-
-fn append_static_file_cors_headers(response: &mut Response, origin: Option<&'static str>) {
+fn append_cors_headers(response: &mut Response, origin: Option<&'static str>) {
     if let Some(allowed_origin) = origin {
         response.headers_mut().insert(
             ACCESS_CONTROL_ALLOW_ORIGIN,
@@ -233,55 +163,76 @@ fn append_static_file_cors_headers(response: &mut Response, origin: Option<&'sta
         .insert(VARY, HeaderValue::from_static("Origin"));
 }
 
+fn finalize_cors(mut response: Response, origin: Option<&'static str>) -> Response {
+    append_cors_headers(&mut response, origin);
+    response
+}
+
 async fn handle_static_request(
     AxumState(state): AxumState<Arc<AppState>>,
     AxumPath(hash): AxumPath<String>,
     uri: Uri,
-    path: Option<String>,
-    origin: Option<&'static str>,
+    request_path: Option<String>,
+    headers: HeaderMap,
 ) -> Response {
-    let sites = state.sites.read().await;
+    let origin = resolve_cors_origin(&headers);
     let query = parse_static_asset_query(uri.query());
 
-    if let Some((site_root, serve_dir)) = sites.get(&hash) {
-        let serve_dir = serve_dir.to_owned();
-        let site_root = site_root.clone();
-        drop(sites);
+    let site = {
+        let sites = state.sites.read().await;
+        sites.get(&hash).cloned()
+    };
 
-        if let Some(thumbnail_request) = resolve_thumbnail_request(&query) {
-            if let Some(response) =
-                try_build_thumbnail_response(site_root.clone(), path.clone(), thumbnail_request)
-                    .await
-            {
-                let mut response = apply_cache_control(response, CacheControlPolicy::Thumbnail);
-                append_static_file_cors_headers(&mut response, origin);
-                return response;
-            }
-        }
+    let Some(site) = site else {
+        return finalize_cors(StatusCode::NOT_FOUND.into_response(), origin);
+    };
 
-        let uri = build_static_asset_uri(path.as_deref());
+    let logical_path = match sanitize_request_path(request_path.as_deref().unwrap_or("")) {
+        Ok(path) => path,
+        Err(error) => return finalize_cors(map_vfs_error(&error).into_response(), origin),
+    };
 
-        match serve_dir
-            .oneshot(Request::builder().uri(uri).body(()).unwrap())
-            .await
-        {
-            Ok(response) => {
-                let mut response =
-                    apply_cache_control(response.into_response(), CacheControlPolicy::StaticAsset);
-                append_static_file_cors_headers(&mut response, origin);
-                response
-            }
+    let overlay = OverlayFs::from_cached(&site);
+
+    let physical_path =
+        match tokio::task::spawn_blocking(move || overlay.resolve_file(&logical_path)).await {
+            Ok(Ok(path)) => path,
+            Ok(Err(error)) => return finalize_cors(map_vfs_error(&error).into_response(), origin),
             Err(_) => {
-                let mut response = StatusCode::INTERNAL_SERVER_ERROR.into_response();
-                append_static_file_cors_headers(&mut response, origin);
-                response
+                return finalize_cors(StatusCode::INTERNAL_SERVER_ERROR.into_response(), origin)
             }
+        };
+
+    if let Some(thumbnail_request) = resolve_thumbnail_request(&query) {
+        if let Some(response) =
+            try_build_thumbnail_response(&physical_path, thumbnail_request).await
+        {
+            return finalize_cors(
+                apply_cache_control(response, CacheControlPolicy::Thumbnail),
+                origin,
+            );
         }
-    } else {
-        let mut response = StatusCode::NOT_FOUND.into_response();
-        append_static_file_cors_headers(&mut response, origin);
-        response
     }
+
+    let mut request_builder = Request::builder().uri("/");
+    for header_name in [RANGE, ORIGIN] {
+        if let Some(value) = headers.get(&header_name) {
+            request_builder = request_builder.header(header_name, value);
+        }
+    }
+    let request = request_builder
+        .body(Body::empty())
+        .expect("空请求构造不会失败");
+    let response = ServeFile::new(&physical_path)
+        .oneshot(request)
+        .await
+        .map(IntoResponse::into_response)
+        .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response());
+
+    finalize_cors(
+        apply_cache_control(response, CacheControlPolicy::StaticAsset),
+        origin,
+    )
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -314,20 +265,6 @@ struct EncodedThumbnail {
 enum CacheControlPolicy {
     StaticAsset,
     Thumbnail,
-}
-
-fn build_static_asset_uri(path: Option<&str>) -> String {
-    match path {
-        Some(path) => {
-            let encoded_path = path
-                .split('/')
-                .map(|segment| urlencoding::encode(segment))
-                .collect::<Vec<_>>()
-                .join("/");
-            format!("/{encoded_path}")
-        }
-        None => "/".to_string(),
-    }
 }
 
 fn parse_static_asset_query(query: Option<&str>) -> StaticAssetQuery {
@@ -380,19 +317,19 @@ fn resolve_thumbnail_request(query: &StaticAssetQuery) -> Option<ThumbnailReques
 }
 
 async fn try_build_thumbnail_response(
-    site_root: PathBuf,
-    path: Option<String>,
+    physical_path: &Path,
     thumbnail_request: ThumbnailRequest,
 ) -> Option<Response> {
-    let file_path = resolve_static_asset_path(&site_root, path.as_deref())?;
-    if !supports_thumbnail(&file_path) {
+    if !supports_thumbnail(physical_path) {
         return None;
     }
 
-    let encoded_thumbnail =
-        tokio::task::spawn_blocking(move || build_thumbnail(&file_path, thumbnail_request))
-            .await
-            .ok()??;
+    let encoded_thumbnail = tokio::task::spawn_blocking({
+        let path = physical_path.to_path_buf();
+        move || build_thumbnail(&path, thumbnail_request)
+    })
+    .await
+    .ok()??;
 
     let mut response = Response::new(encoded_thumbnail.body.into());
     response.headers_mut().insert(
@@ -402,36 +339,15 @@ async fn try_build_thumbnail_response(
     Some(response)
 }
 
-fn resolve_static_asset_path(site_root: &Path, path: Option<&str>) -> Option<PathBuf> {
-    let path = path?;
-    let relative_path = Path::new(path);
-
-    if relative_path.is_absolute() {
-        return None;
-    }
-
-    let mut resolved_path = site_root.to_path_buf();
-
-    for component in relative_path.components() {
-        match component {
-            Component::Normal(segment) => resolved_path.push(segment),
-            Component::CurDir => {}
-            _ => return None,
-        }
-    }
-
-    Some(resolved_path)
-}
-
 fn supports_thumbnail(path: &Path) -> bool {
-    let Some(extension) = path.extension().and_then(|extension| extension.to_str()) else {
-        return false;
-    };
-
-    matches!(
-        extension.to_ascii_lowercase().as_str(),
-        "png" | "jpg" | "jpeg" | "gif" | "webp" | "ico"
-    )
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| {
+            matches!(
+                ext.to_ascii_lowercase().as_str(),
+                "png" | "jpg" | "jpeg" | "gif" | "webp" | "ico"
+            )
+        })
 }
 
 fn build_thumbnail(path: &Path, request: ThumbnailRequest) -> Option<EncodedThumbnail> {
@@ -467,37 +383,37 @@ fn build_thumbnail(path: &Path, request: ThumbnailRequest) -> Option<EncodedThum
     })
 }
 
-fn apply_cache_control(mut response: Response, cache_policy: CacheControlPolicy) -> Response {
-    let cache_control = resolve_cache_control_value(cache_policy);
+fn apply_cache_control(mut response: Response, policy: CacheControlPolicy) -> Response {
+    let value = match policy {
+        CacheControlPolicy::StaticAsset => "no-store, no-cache, must-revalidate, max-age=0",
+        CacheControlPolicy::Thumbnail => "public, max-age=86400",
+    };
     response
         .headers_mut()
-        .insert(CACHE_CONTROL, HeaderValue::from_static(cache_control));
+        .insert(CACHE_CONTROL, HeaderValue::from_static(value));
     response
 }
 
-fn resolve_cache_control_value(cache_policy: CacheControlPolicy) -> &'static str {
-    match cache_policy {
-        CacheControlPolicy::StaticAsset => "no-store, no-cache, must-revalidate, max-age=0",
-        CacheControlPolicy::Thumbnail => "public, max-age=86400",
+fn map_vfs_error(error: &VfsError) -> StatusCode {
+    match error {
+        VfsError::PathDenied | VfsError::WriteToEngineRuntime => StatusCode::FORBIDDEN,
+        VfsError::NotFound => StatusCode::NOT_FOUND,
+        VfsError::Io(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
 
-/// 启动HTTP服务器
-/// 功能：
-/// 1. 停止已存在的服务器实例
-/// 2. 绑定指定端口（如果端口被占用则自动选择新端口）
-/// 3. 设置路由和中间件
-/// 4. 启动服务器并返回访问地址
-///
-/// 参数：
-/// - state: 服务器状态
-/// - host: 服务器主机地址
-/// - port: 服务器端口号
-/// - on_message: 消息处理通道
-///
-/// 返回：
-/// - 成功：服务器访问地址
-/// - 失败：错误信息
+#[cfg(debug_assertions)]
+async fn timing_middleware(request: Request<Body>, next: Next) -> Response {
+    let path = request.uri().path().to_owned();
+    let start = std::time::Instant::now();
+    let response = next.run(request).await;
+    let elapsed = start.elapsed();
+    if elapsed > std::time::Duration::from_millis(10) {
+        log::debug!("慢请求: {} - {:?}", path, elapsed);
+    }
+    response
+}
+
 #[tauri::command]
 pub async fn start_server(
     state: TauriState<'_, Mutex<ServerState>>,
@@ -507,13 +423,11 @@ pub async fn start_server(
 ) -> AppResult<String> {
     let mut state_guard = state.lock().await;
 
-    // 停止已存在的服务器
     if let Some(handle) = state_guard.server_handle.take() {
         let _ = handle.shutdown_tx.send(());
         handle.join_handle.await.ok();
     }
 
-    // 获取可用端口
     let address = format!("{host}:{port}");
     let listener = match TcpListener::bind(&address).await {
         Ok(listener) => listener,
@@ -525,8 +439,8 @@ pub async fn start_server(
     };
 
     let addr = listener.local_addr()?;
+    log::info!("HTTP 服务器监听: {addr}");
 
-    // 构建路由
     let app = Router::new()
         .route(
             "/api/webgalsync",
@@ -540,14 +454,7 @@ pub async fn start_server(
                  hash: AxumPath<String>,
                  uri: Uri,
                  headers: HeaderMap| async move {
-                    handle_static_request(
-                        state,
-                        hash,
-                        uri,
-                        None,
-                        resolve_static_file_cors_origin_from_headers(&headers),
-                    )
-                    .await
+                    handle_static_request(state, hash, uri, None, headers).await
                 },
             ),
         )
@@ -559,23 +466,18 @@ pub async fn start_server(
                  uri: Uri,
                  headers: HeaderMap| async move {
                     let (hash, path) = path.0;
-                    handle_static_request(
-                        state,
-                        AxumPath(hash),
-                        uri,
-                        Some(path),
-                        resolve_static_file_cors_origin_from_headers(&headers),
-                    )
-                    .await
+                    handle_static_request(state, AxumPath(hash), uri, Some(path), headers).await
                 },
             ),
         )
         .with_state(state_guard.app_state.clone());
 
-    let (shutdown_tx, shutdown_rx) = oneshot::channel();
+    #[cfg(debug_assertions)]
+    let app = app.layer(axum::middleware::from_fn(timing_middleware));
 
+    let (shutdown_tx, shutdown_rx) = oneshot::channel();
     let join_handle = tokio::spawn(async move {
-        axum::serve(
+        if let Err(e) = axum::serve(
             listener,
             app.into_make_service_with_connect_info::<SocketAddr>(),
         )
@@ -583,7 +485,9 @@ pub async fn start_server(
             shutdown_rx.await.ok();
         })
         .await
-        .unwrap();
+        {
+            log::error!("HTTP 服务器异常: {e}");
+        }
     });
 
     state_guard.server_handle = Some(ServerHandle {
@@ -591,34 +495,14 @@ pub async fn start_server(
         shutdown_tx,
     });
 
-    state_guard.server_address = Some(addr);
-
-    println!("Server started at: {}", addr);
     Ok(format!("http://{addr}"))
 }
 
-/// 将不带斜杠的URL重定向到带斜杠的URL
-/// 例如：/game/abc -> /game/abc/
-///
-/// 参数：
-/// - uri: 原始请求URI
-///
-/// 返回：
-/// - 重定向响应
 async fn handle_redirect(uri: Uri) -> Result<Redirect, StatusCode> {
     Ok(Redirect::permanent(&format!("{}/", uri.path())))
 }
 
-/// 标准化路径并生成唯一哈希值
-/// 用于标识和管理静态站点
-///
-/// 参数：
-/// - path: 待处理的路径字符串
-///
-/// 返回：
-/// - 成功：(站点哈希值, 标准化后的路径)
-/// - 失败：错误信息
-fn normalize_and_hash_path(path: &str) -> AppResult<(String, PathBuf)> {
+fn normalize_project_path(path: &str) -> AppResult<(String, PathBuf)> {
     let path_buf = PathBuf::from(path);
 
     if !path_buf.exists() {
@@ -631,65 +515,117 @@ fn normalize_and_hash_path(path: &str) -> AppResult<(String, PathBuf)> {
 
     let canonical_path = path_buf
         .canonicalize()
-        .map_err(|e| AppError::Server(format!("无法标准化路径: {e}")))?;
+        .map_err(|error| AppError::Server(format!("无法标准化路径: {error}")))?;
 
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     canonical_path.hash(&mut hasher);
     let hash = format!("{:x}", hasher.finish());
 
-    Ok((hash, canonical_path))
+    Ok((hash, path_buf))
 }
 
-/// 添加静态站点
-/// 将指定目录注册为静态站点，并返回站点哈希值
-///
-/// 参数：
-/// - state: 服务器状态
-/// - path: 静态站点目录路径
-///
-/// 返回：
-/// - 成功：站点哈希值
-/// - 失败：错误信息
+fn validate_dir_path(path: Option<String>) -> AppResult<Option<PathBuf>> {
+    let Some(path) = path else {
+        return Ok(None);
+    };
+    let path_buf = PathBuf::from(path);
+    if !path_buf.is_dir() {
+        return Err(AppError::Server("路径必须是目录".into()));
+    }
+    Ok(Some(path_buf))
+}
+
 #[tauri::command]
 pub async fn add_static_site(
     state: TauriState<'_, Mutex<ServerState>>,
-    path: String,
+    project_path: String,
+    engine_path: Option<String>,
+    template_path: Option<String>,
 ) -> AppResult<String> {
     let state_guard = state.lock().await;
-    let (hash, path_buf) = normalize_and_hash_path(&path)?;
+    let (hash, project_path) = normalize_project_path(&project_path)?;
+    let engine_path = validate_dir_path(engine_path)?;
+    let template_path = validate_dir_path(template_path)?
+        .or_else(|| resolve_default_template_path(engine_path.as_deref()))
+        .filter(|path| path.is_dir());
 
-    let mut sites = state_guard.app_state.sites.write().await;
+    let cached_canonicals =
+        CachedCanonicals::compute(project_path.clone(), engine_path, template_path)?;
 
-    // 如果站点已存在，直接返回其哈希值
-    if sites.contains_key(&hash) {
-        return Ok(hash);
-    }
+    state_guard
+        .app_state
+        .sites
+        .write()
+        .await
+        .insert(hash.clone(), cached_canonicals);
 
-    // 创建服务目录实例
-    let serve_dir = ServeDir::new(&path_buf).append_index_html_on_directories(true);
-
-    sites.insert(hash.clone(), (path_buf, serve_dir));
-
+    log::debug!("注册站点: {hash} -> {}", project_path.display());
     Ok(hash)
 }
 
-/// 广播消息
-/// 向所有连接的WebSocket客户端发送消息
-///
-/// 参数：
-/// - state: 服务器状态
-/// - message: 要广播的消息内容
-///
-/// 返回：
-/// - 成功：空值
-/// - 失败：错误信息
+#[tauri::command]
+pub async fn update_site_engine(
+    state: TauriState<'_, Mutex<ServerState>>,
+    project_path: String,
+    new_engine_path: Option<String>,
+) -> AppResult<()> {
+    let state_guard = state.lock().await;
+    let (hash, _) = normalize_project_path(&project_path)?;
+    let engine_path = validate_dir_path(new_engine_path)?;
+
+    let mut sites = state_guard.app_state.sites.write().await;
+    let Some(site) = sites.get_mut(&hash) else {
+        log::warn!(
+            "update_site_engine: 站点未注册 hash={hash} project={}",
+            project_path
+        );
+        return Err(AppError::SiteNotRegistered);
+    };
+
+    // 若旧模板沿用的是旧引擎的内置默认值，则随引擎切换重新派生；用户显式指定的模板保持不变
+    let prev_default_template = resolve_default_template_path(site.engine_lower.as_deref());
+    let template_path = if site.template_lower == prev_default_template {
+        resolve_default_template_path(engine_path.as_deref()).filter(|path| path.is_dir())
+    } else {
+        site.template_lower.clone()
+    };
+
+    *site = CachedCanonicals::compute(site.upper.clone(), engine_path, template_path)?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn update_site_template(
+    state: TauriState<'_, Mutex<ServerState>>,
+    project_path: String,
+    new_template_path: Option<String>,
+) -> AppResult<()> {
+    let state_guard = state.lock().await;
+    let (hash, _) = normalize_project_path(&project_path)?;
+    let template_path = validate_dir_path(new_template_path)?;
+
+    let mut sites = state_guard.app_state.sites.write().await;
+    let Some(site) = sites.get_mut(&hash) else {
+        log::warn!(
+            "update_site_template: 站点未注册 hash={hash} project={}",
+            project_path
+        );
+        return Err(AppError::SiteNotRegistered);
+    };
+
+    *site =
+        CachedCanonicals::compute(site.upper.clone(), site.engine_lower.clone(), template_path)?;
+
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn broadcast_message(
     state: TauriState<'_, Mutex<ServerState>>,
     message: String,
 ) -> AppResult<()> {
     let state_guard = state.lock().await;
-    // 使用广播通道高效发送
     state_guard
         .app_state
         .broadcast_tx
@@ -698,17 +634,6 @@ pub async fn broadcast_message(
     Ok(())
 }
 
-/// 单播消息
-/// 向指定的WebSocket客户端发送消息
-///
-/// 参数：
-/// - state: 服务器状态
-/// - client_addr: 目标客户端地址（格式：IP:端口）
-/// - message: 要发送的消息内容
-///
-/// 返回：
-/// - 成功：空值
-/// - 失败：错误信息
 #[tauri::command]
 pub async fn unicast_message(
     state: TauriState<'_, Mutex<ServerState>>,
@@ -717,37 +642,24 @@ pub async fn unicast_message(
 ) -> AppResult<()> {
     let state_guard = state.lock().await;
     let clients = state_guard.app_state.unicast_clients.lock().await;
-
-    // 解析地址
     let addr: SocketAddr = client_addr
         .parse()
         .map_err(|_| AppError::Server("Invalid client address".into()))?;
 
-    if let Some(tx) = clients.get(&addr) {
-        tx.send(Message::Text(message.into()))
-            .map_err(|_| AppError::Server("Failed to send unicast message".into()))?;
-        Ok(())
-    } else {
-        Err(AppError::Server("Client not found".into()))
-    }
+    let tx = clients
+        .get(&addr)
+        .ok_or_else(|| AppError::Server("Client not found".into()))?;
+
+    tx.send(Message::Text(message.into()))
+        .map_err(|_| AppError::Server("Failed to send unicast message".into()))
 }
 
-/// 获取已连接的客户端列表
-/// 返回所有连接的WebSocket客户端的地址列表
-///
-/// 参数：
-/// - state: 服务器状态
-///
-/// 返回：
-/// - 成功：客户端地址列表
-/// - 失败：错误信息
 #[tauri::command]
 pub async fn get_connected_clients(
     state: TauriState<'_, Mutex<ServerState>>,
 ) -> AppResult<Vec<String>> {
     let state_guard = state.lock().await;
     let clients = state_guard.app_state.unicast_clients.lock().await;
-
     Ok(clients.keys().map(|addr| addr.to_string()).collect())
 }
 
@@ -756,7 +668,7 @@ mod tests {
     use axum::{
         body::Body,
         http::{
-            header::{ACCESS_CONTROL_ALLOW_ORIGIN, ORIGIN, VARY},
+            header::{ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, ORIGIN, VARY},
             HeaderMap, HeaderValue,
         },
         response::Response,
@@ -764,82 +676,61 @@ mod tests {
     use std::path::Path;
 
     use super::{
-        append_static_file_cors_headers, resolve_cache_control_value,
-        resolve_static_file_cors_origin, resolve_static_file_cors_origin_from_headers,
-        resolve_thumbnail_request, supports_thumbnail, CacheControlPolicy, StaticAssetQuery,
-        ThumbnailRequest, ThumbnailResizeMode,
+        append_cors_headers, apply_cache_control, resolve_cors_origin, resolve_thumbnail_request,
+        supports_thumbnail, CacheControlPolicy, StaticAssetQuery, ThumbnailRequest,
+        ThumbnailResizeMode,
     };
 
-    #[test]
-    fn resolve_static_file_cors_origin_allows_known_app_origins() {
-        assert_eq!(
-            resolve_static_file_cors_origin(Some("http://localhost:1420")),
-            Some("http://localhost:1420")
-        );
-        assert_eq!(
-            resolve_static_file_cors_origin(Some("http://127.0.0.1:1420")),
-            Some("http://127.0.0.1:1420")
-        );
-        assert_eq!(
-            resolve_static_file_cors_origin(Some("http://tauri.localhost")),
-            Some("http://tauri.localhost")
-        );
-        assert_eq!(
-            resolve_static_file_cors_origin(Some("tauri://localhost")),
-            Some("tauri://localhost")
-        );
-    }
-
-    #[test]
-    fn resolve_static_file_cors_origin_rejects_unknown_origins() {
-        assert_eq!(resolve_static_file_cors_origin(None), None);
-        assert_eq!(
-            resolve_static_file_cors_origin(Some("http://localhost:3000")),
-            None
-        );
-        assert_eq!(
-            resolve_static_file_cors_origin(Some("https://example.com")),
-            None
-        );
-        assert_eq!(resolve_static_file_cors_origin(Some("null")), None);
-    }
-
-    #[test]
-    fn resolve_static_file_cors_origin_from_headers_returns_allowed_origin() {
+    fn headers_with_origin(origin: &'static str) -> HeaderMap {
         let mut headers = HeaderMap::new();
-        headers.insert(ORIGIN, HeaderValue::from_static("http://localhost:1420"));
+        headers.insert(ORIGIN, HeaderValue::from_static(origin));
+        headers
+    }
 
+    #[test]
+    fn resolve_cors_origin_allows_known_app_origins() {
+        for origin in [
+            "http://localhost:1420",
+            "http://127.0.0.1:1420",
+            "http://tauri.localhost",
+            "tauri://localhost",
+        ] {
+            assert_eq!(
+                resolve_cors_origin(&headers_with_origin(origin)),
+                Some(origin),
+                "origin {origin} should be allowed"
+            );
+        }
+    }
+
+    #[test]
+    fn resolve_cors_origin_rejects_unknown_origins() {
+        assert_eq!(resolve_cors_origin(&HeaderMap::new()), None);
         assert_eq!(
-            resolve_static_file_cors_origin_from_headers(&headers),
-            Some("http://localhost:1420")
+            resolve_cors_origin(&headers_with_origin("http://localhost:3000")),
+            None
+        );
+        assert_eq!(
+            resolve_cors_origin(&headers_with_origin("https://example.com")),
+            None
         );
     }
 
     #[test]
-    fn resolve_static_file_cors_origin_from_headers_rejects_missing_or_invalid_origin() {
-        let missing_headers = HeaderMap::new();
-        assert_eq!(
-            resolve_static_file_cors_origin_from_headers(&missing_headers),
-            None
-        );
-
-        let mut invalid_headers = HeaderMap::new();
-        invalid_headers.insert(
+    fn resolve_cors_origin_rejects_non_utf8_origin() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
             ORIGIN,
             HeaderValue::from_bytes(b"http://localhost:1420\xff").unwrap(),
         );
 
-        assert_eq!(
-            resolve_static_file_cors_origin_from_headers(&invalid_headers),
-            None
-        );
+        assert_eq!(resolve_cors_origin(&headers), None);
     }
 
     #[test]
-    fn append_static_file_cors_headers_sets_origin_and_vary_for_allowed_origin() {
+    fn append_cors_headers_sets_origin_and_vary_for_allowed_origin() {
         let mut response = Response::new(Body::empty());
-
-        append_static_file_cors_headers(&mut response, Some("http://localhost:1420"));
+        append_cors_headers(&mut response, Some("http://localhost:1420"));
 
         assert_eq!(
             response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN),
@@ -852,10 +743,9 @@ mod tests {
     }
 
     #[test]
-    fn append_static_file_cors_headers_keeps_vary_without_allow_origin_when_origin_is_missing() {
+    fn append_cors_headers_keeps_vary_without_allow_origin_when_origin_is_missing() {
         let mut response = Response::new(Body::empty());
-
-        append_static_file_cors_headers(&mut response, None);
+        append_cors_headers(&mut response, None);
 
         assert_eq!(response.headers().get(ACCESS_CONTROL_ALLOW_ORIGIN), None);
         assert_eq!(
@@ -865,18 +755,23 @@ mod tests {
     }
 
     #[test]
-    fn generated_thumbnails_use_public_cache() {
+    fn cache_control_values_match_product_contract() {
+        let thumbnail_response =
+            apply_cache_control(Response::new(Body::empty()), CacheControlPolicy::Thumbnail);
         assert_eq!(
-            resolve_cache_control_value(CacheControlPolicy::Thumbnail),
-            "public, max-age=86400"
+            thumbnail_response.headers().get(CACHE_CONTROL),
+            Some(&HeaderValue::from_static("public, max-age=86400"))
         );
-    }
 
-    #[test]
-    fn static_assets_disable_cache_even_when_content_is_media() {
+        let static_response = apply_cache_control(
+            Response::new(Body::empty()),
+            CacheControlPolicy::StaticAsset,
+        );
         assert_eq!(
-            resolve_cache_control_value(CacheControlPolicy::StaticAsset),
-            "no-store, no-cache, must-revalidate, max-age=0"
+            static_response.headers().get(CACHE_CONTROL),
+            Some(&HeaderValue::from_static(
+                "no-store, no-cache, must-revalidate, max-age=0"
+            ))
         );
     }
 

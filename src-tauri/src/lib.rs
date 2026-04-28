@@ -3,6 +3,7 @@ mod commands;
 mod vfs;
 mod window;
 use commands::server::ServerState;
+use commands::vfs::OverlayFactoryCache;
 #[cfg(target_os = "windows")]
 use tauri_plugin_prevent_default::PlatformOptions;
 use tokio::sync::Mutex;
@@ -16,7 +17,8 @@ pub fn run() {
         #[cfg(debug_assertions)]
         _window.open_devtools();
 
-        app.manage(Mutex::new(ServerState::default()));
+        app.manage(OverlayFactoryCache::default());
+        app.manage(Mutex::new(ServerState::new()));
 
         Ok(())
     });
@@ -85,6 +87,8 @@ pub fn run() {
             // server
             commands::server::start_server,
             commands::server::add_static_site,
+            commands::server::update_site_engine,
+            commands::server::update_site_template,
             commands::server::broadcast_message,
             commands::server::unicast_message,
             commands::server::get_connected_clients,

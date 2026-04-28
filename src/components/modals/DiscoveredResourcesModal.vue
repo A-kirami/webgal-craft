@@ -58,7 +58,7 @@ watch(
     const addedPaths = paths.filter(path => !previousPathSet.has(path))
     selectedPaths = new Set([...keptPaths, ...addedPaths])
 
-    void previewRuntimeStore.ensureServeUrls(paths)
+    void previewRuntimeStore.ensureServeUrls(paths.map(projectPath => ({ projectPath })))
   },
   { immediate: true },
 )
