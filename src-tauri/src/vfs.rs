@@ -139,19 +139,18 @@ impl VfsError {
     }
 }
 
-/// 缓存 canonicalize 结果，避免热路径上重复系统调用
-#[derive(Debug, Clone)]
-pub struct CachedCanonicals {
-    pub upper: PathBuf,
-    pub upper_canonical: PathBuf,
-    pub engine_lower: Option<PathBuf>,
-    pub engine_lower_canonical: Option<PathBuf>,
-    pub template_lower: Option<PathBuf>,
-    pub template_lower_canonical: Option<PathBuf>,
+pub struct OverlayFs {
+    upper: PathBuf,
+    upper_canonical: PathBuf,
+    engine_lower: Option<PathBuf>,
+    engine_lower_canonical: Option<PathBuf>,
+    template_lower: Option<PathBuf>,
+    template_lower_canonical: Option<PathBuf>,
+    whiteout_root: PathBuf,
 }
 
-impl CachedCanonicals {
-    pub fn compute(
+impl OverlayFs {
+    pub fn new(
         upper: PathBuf,
         engine_lower: Option<PathBuf>,
         template_lower: Option<PathBuf>,
@@ -165,6 +164,7 @@ impl CachedCanonicals {
             .as_ref()
             .map(|path| path.canonicalize())
             .transpose()?;
+        let whiteout_root = upper.join(VFS_METADATA_DIR).join(WHITEOUTS_DIR);
 
         Ok(Self {
             upper,
@@ -173,43 +173,8 @@ impl CachedCanonicals {
             engine_lower_canonical,
             template_lower,
             template_lower_canonical,
-        })
-    }
-}
-
-pub struct OverlayFs {
-    upper: PathBuf,
-    upper_canonical: PathBuf,
-    engine_lower: Option<PathBuf>,
-    engine_lower_canonical: Option<PathBuf>,
-    template_lower: Option<PathBuf>,
-    template_lower_canonical: Option<PathBuf>,
-    whiteout_root: PathBuf,
-}
-
-impl OverlayFs {
-    #[cfg(test)]
-    pub fn new(
-        upper: PathBuf,
-        engine_lower: Option<PathBuf>,
-        template_lower: Option<PathBuf>,
-    ) -> Result<Self, VfsError> {
-        let cached = CachedCanonicals::compute(upper, engine_lower, template_lower)?;
-        Ok(Self::from_cached(&cached))
-    }
-
-    /// 使用已缓存的 canonical 路径构造 OverlayFs，跳过 canonicalize 系统调用
-    pub fn from_cached(cached: &CachedCanonicals) -> Self {
-        let whiteout_root = cached.upper.join(VFS_METADATA_DIR).join(WHITEOUTS_DIR);
-        Self {
-            upper: cached.upper.clone(),
-            upper_canonical: cached.upper_canonical.clone(),
-            engine_lower: cached.engine_lower.clone(),
-            engine_lower_canonical: cached.engine_lower_canonical.clone(),
-            template_lower: cached.template_lower.clone(),
-            template_lower_canonical: cached.template_lower_canonical.clone(),
             whiteout_root,
-        }
+        })
     }
 
     #[allow(dead_code)] // PR3 server 重构启用

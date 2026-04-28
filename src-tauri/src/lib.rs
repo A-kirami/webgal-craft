@@ -3,7 +3,6 @@ mod commands;
 mod vfs;
 mod window;
 use commands::server::ServerState;
-use commands::vfs::OverlayFactoryCache;
 #[cfg(target_os = "windows")]
 use tauri_plugin_prevent_default::PlatformOptions;
 use tokio::sync::Mutex;
@@ -18,7 +17,6 @@ pub fn run() {
         _window.open_devtools();
 
         app.manage(Mutex::new(ServerState::default()));
-        app.manage(OverlayFactoryCache::default());
 
         Ok(())
     });
