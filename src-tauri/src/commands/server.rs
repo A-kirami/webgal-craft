@@ -195,9 +195,8 @@ async fn handle_static_request(
 
     let overlay = OverlayFs::from_cached(&site);
 
-    let resolve_logical = logical_path.clone();
     let resolved_file =
-        match tokio::task::spawn_blocking(move || overlay.resolve_file(&resolve_logical)).await {
+        match tokio::task::spawn_blocking(move || overlay.resolve_file(&logical_path)).await {
             Ok(Ok(file)) => file,
             Ok(Err(error)) => return finalize_cors(map_vfs_error(&error).into_response(), origin),
             Err(_) => {
@@ -216,12 +215,15 @@ async fn handle_static_request(
         }
     }
 
-    let Some(request) = build_file_request(
-        build_static_asset_uri(&logical_path.to_string_lossy().replace('\\', "/")),
-        &headers,
-    ) else {
-        return finalize_cors(StatusCode::INTERNAL_SERVER_ERROR.into_response(), origin);
-    };
+    let mut request = Request::builder()
+        .uri("/")
+        .body(Body::empty())
+        .expect("空请求构造不会失败");
+    for header_name in [RANGE, ORIGIN] {
+        if let Some(value) = headers.get(&header_name) {
+            request.headers_mut().insert(header_name, value.clone());
+        }
+    }
     let response = ServeFile::new(&resolved_file.physical_path)
         .oneshot(request)
         .await
@@ -235,18 +237,6 @@ async fn handle_static_request(
         }
     }
     finalize_cors(response, origin)
-}
-
-fn build_file_request(uri: String, headers: &HeaderMap) -> Option<Request<Body>> {
-    let mut request = Request::builder().uri(uri).body(Body::empty()).ok()?;
-
-    for header_name in [RANGE, ORIGIN] {
-        if let Some(value) = headers.get(&header_name) {
-            request.headers_mut().insert(header_name, value.clone());
-        }
-    }
-
-    Some(request)
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -279,15 +269,6 @@ struct EncodedThumbnail {
 enum CacheControlPolicy {
     StaticAsset,
     Thumbnail,
-}
-
-fn build_static_asset_uri(path: &str) -> String {
-    let encoded_path = path
-        .split('/')
-        .map(|segment| urlencoding::encode(segment))
-        .collect::<Vec<_>>()
-        .join("/");
-    format!("/{encoded_path}")
 }
 
 fn parse_static_asset_query(query: Option<&str>) -> StaticAssetQuery {
