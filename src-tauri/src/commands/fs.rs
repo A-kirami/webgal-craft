@@ -26,11 +26,7 @@ pub enum CopyEvent {
     },
 }
 
-fn count_files_with_excludes(
-    path: &Path,
-    excludes: &[PathBuf],
-    rel: &Path,
-) -> AppResult<usize> {
+fn count_files_with_excludes(path: &Path, excludes: &[PathBuf], rel: &Path) -> AppResult<usize> {
     let mut count = 0;
     for entry in fs::read_dir(path)? {
         let entry = entry?;
