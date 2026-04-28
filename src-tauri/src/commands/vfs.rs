@@ -247,6 +247,7 @@ mod tests {
     use std::{
         fs,
         path::{Path, PathBuf},
+        sync::atomic::{AtomicU64, Ordering},
         time::{SystemTime, UNIX_EPOCH},
     };
 
@@ -254,11 +255,13 @@ mod tests {
     use crate::vfs::VfsError;
 
     fn create_temp_dir(prefix: &str) -> PathBuf {
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
         let unique = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("system clock should be after unix epoch")
             .as_nanos();
-        let dir = std::env::temp_dir().join(format!("{prefix}-{unique}"));
+        let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!("{prefix}-{unique}-{seq}"));
         fs::create_dir_all(&dir).expect("temp directory should be created");
         dir
     }
