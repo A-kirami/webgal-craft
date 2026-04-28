@@ -195,9 +195,9 @@ async fn handle_static_request(
 
     let overlay = OverlayFs::from_cached(&site);
 
-    let resolved_file =
+    let physical_path =
         match tokio::task::spawn_blocking(move || overlay.resolve_file(&logical_path)).await {
-            Ok(Ok(file)) => file,
+            Ok(Ok(path)) => path,
             Ok(Err(error)) => return finalize_cors(map_vfs_error(&error).into_response(), origin),
             Err(_) => {
                 return finalize_cors(StatusCode::INTERNAL_SERVER_ERROR.into_response(), origin)
@@ -205,8 +205,7 @@ async fn handle_static_request(
         };
 
     if let Some(thumbnail_request) = resolve_thumbnail_request(&query) {
-        if let Some(response) =
-            try_build_thumbnail_response(&resolved_file.physical_path, thumbnail_request).await
+        if let Some(response) = try_build_thumbnail_response(&physical_path, thumbnail_request).await
         {
             return finalize_cors(
                 apply_cache_control(response, CacheControlPolicy::Thumbnail),
@@ -224,19 +223,16 @@ async fn handle_static_request(
             request.headers_mut().insert(header_name, value.clone());
         }
     }
-    let response = ServeFile::new(&resolved_file.physical_path)
+    let response = ServeFile::new(&physical_path)
         .oneshot(request)
         .await
         .map(IntoResponse::into_response)
         .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response());
 
-    let mut response = apply_cache_control(response, CacheControlPolicy::StaticAsset);
-    if !response.headers().contains_key(CONTENT_TYPE) {
-        if let Ok(value) = HeaderValue::from_str(&resolved_file.content_type) {
-            response.headers_mut().insert(CONTENT_TYPE, value);
-        }
-    }
-    finalize_cors(response, origin)
+    finalize_cors(
+        apply_cache_control(response, CacheControlPolicy::StaticAsset),
+        origin,
+    )
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

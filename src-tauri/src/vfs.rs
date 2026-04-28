@@ -46,12 +46,6 @@ pub enum TemplateBinding {
     EngineBuiltin { engine: EngineRef },
 }
 
-#[derive(Debug, Clone)]
-pub struct ResolvedFile {
-    pub physical_path: PathBuf,
-    pub content_type: String,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResolvedPhysicalPath {
     pub physical_path: PathBuf,
@@ -210,7 +204,7 @@ impl OverlayFs {
         }
     }
 
-    pub fn resolve_file(&self, logical_path: &Path) -> Result<ResolvedFile, VfsError> {
+    pub fn resolve_file(&self, logical_path: &Path) -> Result<PathBuf, VfsError> {
         let resolved = self.resolve_physical_path(logical_path)?;
         let metadata = fs::metadata(&resolved.physical_path)?;
 
@@ -218,12 +212,7 @@ impl OverlayFs {
             return Err(VfsError::NotFound);
         }
 
-        Ok(ResolvedFile {
-            content_type: mime_guess::from_path(&resolved.physical_path)
-                .first_or_octet_stream()
-                .to_string(),
-            physical_path: resolved.physical_path,
-        })
+        Ok(resolved.physical_path)
     }
 
     pub fn resolve_physical_path(
