@@ -165,24 +165,12 @@ pub fn clean_template_upper(project_path: String) -> AppResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        fs,
-        path::{Path, PathBuf},
-        time::{SystemTime, UNIX_EPOCH},
-    };
+    use std::path::{Path, PathBuf};
+
+    use tempfile::tempdir;
 
     use super::{build_overlay, sanitize_rename_target};
     use crate::vfs::VfsError;
-
-    fn create_temp_dir(prefix: &str) -> PathBuf {
-        let unique = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system clock should be after unix epoch")
-            .as_nanos();
-        let dir = std::env::temp_dir().join(format!("{prefix}-{unique}"));
-        fs::create_dir_all(&dir).expect("temp directory should be created");
-        dir
-    }
 
     #[test]
     fn sanitize_rename_target_rejects_nested_or_traversal_names() {
@@ -207,10 +195,10 @@ mod tests {
 
     #[test]
     fn build_overlay_allows_engines_without_template_directory() {
-        let upper = create_temp_dir("webgal-craft-vfs-command-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-command-engine");
-        let upper_str = upper.to_str().expect("temp path should be valid UTF-8");
-        let engine_str = engine.to_str().expect("temp path should be valid UTF-8");
+        let upper = tempdir().expect("upper temp dir should be created");
+        let engine = tempdir().expect("engine temp dir should be created");
+        let upper_str = upper.path().to_str().expect("temp path should be valid UTF-8");
+        let engine_str = engine.path().to_str().expect("temp path should be valid UTF-8");
 
         assert!(
             build_overlay(upper_str, engine_str, None).is_ok(),

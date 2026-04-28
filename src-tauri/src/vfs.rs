@@ -1032,17 +1032,12 @@ mod tests {
     use std::{
         fs,
         path::{Path, PathBuf},
-        time::{SystemTime, UNIX_EPOCH},
     };
 
-    fn create_temp_dir(prefix: &str) -> PathBuf {
-        let unique = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system clock should be after unix epoch")
-            .as_nanos();
-        let dir = std::env::temp_dir().join(format!("{prefix}-{unique}"));
-        fs::create_dir_all(&dir).expect("temp directory should be created");
-        dir
+    use tempfile::TempDir;
+
+    fn create_temp_dir() -> TempDir {
+        tempfile::tempdir().expect("temp directory should be created")
     }
 
     #[cfg(unix)]
@@ -1127,7 +1122,8 @@ mod tests {
 
     #[test]
     fn read_project_config_rejects_future_schema_version() {
-        let dir = create_temp_dir("webgal-craft-project-config");
+        let dir_dir = create_temp_dir();
+        let dir = dir_dir.path().to_path_buf();
         fs::write(
             dir.join("project.wgcp"),
             r#"{"version":99,"engine":{"name":"WebGAL","version":"4.5.0"}}"#,
@@ -1140,7 +1136,8 @@ mod tests {
 
     #[test]
     fn read_project_config_reports_future_schema_before_shape_validation() {
-        let dir = create_temp_dir("webgal-craft-project-config-future-shape");
+        let dir_dir = create_temp_dir();
+        let dir = dir_dir.path().to_path_buf();
         fs::write(
             dir.join("project.wgcp"),
             r#"{
@@ -1157,7 +1154,8 @@ mod tests {
 
     #[test]
     fn read_project_config_parses_full_structure() {
-        let dir = create_temp_dir("webgal-craft-project-config-full");
+        let dir_dir = create_temp_dir();
+        let dir = dir_dir.path().to_path_buf();
         fs::write(
             dir.join("project.wgcp"),
             r#"{
@@ -1188,7 +1186,8 @@ mod tests {
 
     #[test]
     fn read_project_config_reports_invalid_project_config_for_parse_errors() {
-        let dir = create_temp_dir("webgal-craft-project-config-invalid");
+        let dir_dir = create_temp_dir();
+        let dir = dir_dir.path().to_path_buf();
         fs::write(dir.join("project.wgcp"), r#"{"version":"broken"}"#)
             .expect("project config should be written");
 
@@ -1198,8 +1197,10 @@ mod tests {
 
     #[test]
     fn list_entries_includes_template_children() {
-        let upper = create_temp_dir("webgal-craft-vfs-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-engine");
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
 
         fs::create_dir_all(engine.join("game").join("template"))
             .expect("template directory should be created");
@@ -1226,8 +1227,10 @@ mod tests {
 
     #[test]
     fn resolve_physical_path_prefers_engine_runtime_lower_over_upper() {
-        let upper = create_temp_dir("webgal-craft-vfs-runtime-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-runtime-engine");
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
 
         fs::create_dir_all(engine.join("game").join("template"))
             .expect("template directory should be created");
@@ -1256,8 +1259,10 @@ mod tests {
 
     #[test]
     fn list_entries_ignores_upper_engine_runtime_and_unclassified_entries() {
-        let upper = create_temp_dir("webgal-craft-vfs-root-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-root-engine");
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
 
         fs::create_dir_all(engine.join("game").join("template"))
             .expect("template directory should be created");
@@ -1288,8 +1293,10 @@ mod tests {
 
     #[test]
     fn ensure_writable_does_not_materialize_engine_override_files() {
-        let upper = create_temp_dir("webgal-craft-vfs-icons-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-icons-engine");
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
 
         fs::create_dir_all(engine.join("game").join("template"))
             .expect("template directory should be created");
@@ -1314,9 +1321,12 @@ mod tests {
 
     #[test]
     fn ensure_writable_rejects_linked_upper_parent_chain() {
-        let upper = create_temp_dir("webgal-craft-vfs-linked-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-linked-engine");
-        let escape = create_temp_dir("webgal-craft-vfs-linked-escape");
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
+        let escape_dir = create_temp_dir();
+        let escape = escape_dir.path().to_path_buf();
 
         fs::create_dir_all(upper.join("game")).expect("upper game dir should exist");
         fs::create_dir_all(engine.join("game").join("template"))
@@ -1343,8 +1353,10 @@ mod tests {
 
     #[test]
     fn remove_logical_path_on_engine_override_reveals_engine_lower_again() {
-        let upper = create_temp_dir("webgal-craft-vfs-icons-remove-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-icons-remove-engine");
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
 
         fs::create_dir_all(engine.join("game").join("template"))
             .expect("template directory should be created");
@@ -1382,8 +1394,10 @@ mod tests {
 
     #[test]
     fn ensure_writable_for_game_content_ignores_engine_lower() {
-        let upper = create_temp_dir("webgal-craft-vfs-whiteout-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-whiteout-engine");
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
 
         fs::create_dir_all(engine.join("game").join("scene"))
             .expect("scene directory should be created");
@@ -1429,9 +1443,12 @@ mod tests {
 
     #[test]
     fn remove_logical_path_rejects_linked_whiteout_parent_chain() {
-        let upper = create_temp_dir("webgal-craft-vfs-whiteout-link-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-whiteout-link-engine");
-        let escape = create_temp_dir("webgal-craft-vfs-whiteout-link-escape");
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
+        let escape_dir = create_temp_dir();
+        let escape = escape_dir.path().to_path_buf();
 
         fs::create_dir_all(engine.join("game").join("scene"))
             .expect("scene directory should be created");
@@ -1469,8 +1486,10 @@ mod tests {
 
     #[test]
     fn copy_logical_path_uses_overlay_view_for_template_directories() {
-        let upper = create_temp_dir("webgal-craft-vfs-copy-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-copy-engine");
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
 
         fs::create_dir_all(engine.join("game").join("template").join("scene"))
             .expect("template directory should be created");
@@ -1526,8 +1545,10 @@ mod tests {
 
     #[test]
     fn copy_logical_path_rejects_moving_directory_into_its_own_descendant() {
-        let upper = create_temp_dir("webgal-craft-vfs-copy-descendant-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-copy-descendant-engine");
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
 
         fs::create_dir_all(upper.join("game").join("scene"))
             .expect("scene directory should be created");
@@ -1553,8 +1574,10 @@ mod tests {
     #[test]
     fn rename_logical_path_preserves_template_lower_children_for_partially_materialized_directories(
     ) {
-        let upper = create_temp_dir("webgal-craft-vfs-rename-mixed-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-rename-mixed-engine");
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
 
         fs::create_dir_all(upper.join("game").join("template").join("scene"))
             .expect("upper scene directory should be created");
@@ -1615,8 +1638,10 @@ mod tests {
 
     #[test]
     fn rename_logical_path_rejects_moving_directory_into_its_own_descendant() {
-        let upper = create_temp_dir("webgal-craft-vfs-rename-descendant-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-rename-descendant-engine");
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
 
         fs::create_dir_all(upper.join("game").join("scene"))
             .expect("scene directory should be created");
@@ -1641,8 +1666,10 @@ mod tests {
 
     #[test]
     fn rename_logical_path_rejects_engine_runtime_source() {
-        let upper = create_temp_dir("webgal-craft-vfs-rename-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-rename-engine");
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
 
         fs::create_dir_all(engine.join("game").join("template"))
             .expect("template directory should be created");
@@ -1665,8 +1692,10 @@ mod tests {
 
     #[test]
     fn remove_logical_path_rejects_lower_only_engine_override() {
-        let upper = create_temp_dir("webgal-craft-vfs-lower-only-icons-upper");
-        let engine = create_temp_dir("webgal-craft-vfs-lower-only-icons-engine");
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
 
         fs::create_dir_all(engine.join("game").join("template"))
             .expect("template directory should be created");
