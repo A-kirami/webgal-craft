@@ -139,6 +139,8 @@ pub struct OverlayFs {
 }
 
 impl OverlayFs {
+    /// 构造 overlay 实例。`upper`、以及传入的 `engine_lower` / `template_lower` 必须指向已存在的目录，
+    /// 否则 canonicalize 会立即返回 IO 错误。调用方应在创建项目目录之后再构造。
     pub fn new(
         upper: PathBuf,
         engine_lower: Option<PathBuf>,
