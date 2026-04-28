@@ -11,11 +11,10 @@ fn build_overlay(
     engine_path: &str,
     template_path: Option<String>,
 ) -> Result<OverlayFs, VfsError> {
-    let template = template_path
-        .map(PathBuf::from)
-        .filter(|p| p.is_dir())
-        .or_else(|| resolve_default_template_path(Some(Path::new(engine_path))))
-        .filter(|p| p.is_dir());
+    let template = match template_path {
+        Some(explicit) => Some(PathBuf::from(explicit)),
+        None => resolve_default_template_path(Some(Path::new(engine_path))).filter(|p| p.is_dir()),
+    };
     OverlayFs::new(
         PathBuf::from(project_path),
         Some(PathBuf::from(engine_path)),
