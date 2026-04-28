@@ -122,6 +122,7 @@ impl VfsError {
             Self::PathDenied => "PATH_DENIED",
             Self::NotFound => "NOT_FOUND",
             Self::WriteToEngineRuntime => "WRITE_TO_ENGINE_RUNTIME",
+            Self::Io(error) if error.kind() == ErrorKind::AlreadyExists => "ALREADY_EXISTS",
             Self::Io(_) => "VFS_ERROR",
         }
     }
@@ -1715,6 +1716,39 @@ mod tests {
             .expect_err("engine runtime source should be rejected");
 
         assert!(matches!(error, VfsError::WriteToEngineRuntime));
+    }
+
+    #[test]
+    fn rename_logical_path_reports_already_exists_with_dedicated_code() {
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
+
+        fs::create_dir_all(engine.join("game").join("template"))
+            .expect("template directory should be created");
+        fs::create_dir_all(upper.join("game").join("scene"))
+            .expect("scene directory should be created");
+        fs::write(upper.join("game").join("scene").join("a.txt"), "a")
+            .expect("source file should be written");
+        fs::write(upper.join("game").join("scene").join("b.txt"), "b")
+            .expect("conflict target should already exist");
+
+        let overlay = OverlayFs::new(
+            upper,
+            Some(engine.clone()),
+            Some(engine.join("game").join("template")),
+        )
+        .expect("overlay should be created");
+
+        let error = overlay
+            .rename_logical_path(
+                Path::new("game/scene/a.txt"),
+                Path::new("game/scene/b.txt"),
+            )
+            .expect_err("rename to existing target should fail");
+
+        assert_eq!(error.code(), "ALREADY_EXISTS");
     }
 
     #[test]
