@@ -6,6 +6,7 @@ use std::{
     path::{Component, Path, PathBuf},
 };
 
+use percent_encoding::percent_decode_str;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use thiserror::Error;
@@ -43,6 +44,12 @@ pub struct EngineRef {
 pub enum TemplateBinding {
     Standalone { name: String },
     EngineBuiltin { engine: EngineRef },
+}
+
+#[derive(Debug, Clone)]
+pub struct ResolvedFile {
+    pub physical_path: PathBuf,
+    pub content_type: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -128,20 +135,19 @@ impl VfsError {
     }
 }
 
-pub struct OverlayFs {
-    upper: PathBuf,
-    upper_canonical: PathBuf,
-    engine_lower: Option<PathBuf>,
-    engine_lower_canonical: Option<PathBuf>,
-    template_lower: Option<PathBuf>,
-    template_lower_canonical: Option<PathBuf>,
-    whiteout_root: PathBuf,
+/// 缓存 canonicalize 结果，避免热路径上重复系统调用
+#[derive(Debug, Clone)]
+pub struct CachedCanonicals {
+    pub upper: PathBuf,
+    pub upper_canonical: PathBuf,
+    pub engine_lower: Option<PathBuf>,
+    pub engine_lower_canonical: Option<PathBuf>,
+    pub template_lower: Option<PathBuf>,
+    pub template_lower_canonical: Option<PathBuf>,
 }
 
-impl OverlayFs {
-    /// 构造 overlay 实例。`upper`、以及传入的 `engine_lower` / `template_lower` 必须指向已存在的目录，
-    /// 否则 canonicalize 会立即返回 IO 错误。调用方应在创建项目目录之后再构造。
-    pub fn new(
+impl CachedCanonicals {
+    pub fn compute(
         upper: PathBuf,
         engine_lower: Option<PathBuf>,
         template_lower: Option<PathBuf>,
@@ -155,7 +161,6 @@ impl OverlayFs {
             .as_ref()
             .map(|path| path.canonicalize())
             .transpose()?;
-        let whiteout_root = upper.join(VFS_METADATA_DIR).join(WHITEOUTS_DIR);
 
         Ok(Self {
             upper,
@@ -164,7 +169,60 @@ impl OverlayFs {
             engine_lower_canonical,
             template_lower,
             template_lower_canonical,
+        })
+    }
+}
+
+pub struct OverlayFs {
+    upper: PathBuf,
+    upper_canonical: PathBuf,
+    engine_lower: Option<PathBuf>,
+    engine_lower_canonical: Option<PathBuf>,
+    template_lower: Option<PathBuf>,
+    template_lower_canonical: Option<PathBuf>,
+    whiteout_root: PathBuf,
+}
+
+impl OverlayFs {
+    /// 构造 overlay 实例。`upper`、以及传入的 `engine_lower` / `template_lower` 必须指向已存在的目录，
+    /// 否则 canonicalize 会立即返回 IO 错误。调用方应在创建项目目录之后再构造。
+    #[cfg(test)]
+    pub fn new(
+        upper: PathBuf,
+        engine_lower: Option<PathBuf>,
+        template_lower: Option<PathBuf>,
+    ) -> Result<Self, VfsError> {
+        let cached = CachedCanonicals::compute(upper, engine_lower, template_lower)?;
+        Ok(Self::from_cached(&cached))
+    }
+
+    /// 使用已缓存的 canonical 路径构造 OverlayFs，跳过 canonicalize 系统调用
+    pub fn from_cached(cached: &CachedCanonicals) -> Self {
+        let whiteout_root = cached.upper.join(VFS_METADATA_DIR).join(WHITEOUTS_DIR);
+        Self {
+            upper: cached.upper.clone(),
+            upper_canonical: cached.upper_canonical.clone(),
+            engine_lower: cached.engine_lower.clone(),
+            engine_lower_canonical: cached.engine_lower_canonical.clone(),
+            template_lower: cached.template_lower.clone(),
+            template_lower_canonical: cached.template_lower_canonical.clone(),
             whiteout_root,
+        }
+    }
+
+    pub fn resolve_file(&self, logical_path: &Path) -> Result<ResolvedFile, VfsError> {
+        let resolved = self.resolve_physical_path(logical_path)?;
+        let metadata = fs::metadata(&resolved.physical_path)?;
+
+        if !metadata.is_file() {
+            return Err(VfsError::NotFound);
+        }
+
+        Ok(ResolvedFile {
+            content_type: mime_guess::from_path(&resolved.physical_path)
+                .first_or_octet_stream()
+                .to_string(),
+            physical_path: resolved.physical_path,
         })
     }
 
@@ -677,6 +735,18 @@ impl OverlayFs {
 
         validate_physical_path(path, &self.upper_canonical)
     }
+}
+
+pub fn sanitize_request_path(raw_path: &str) -> Result<PathBuf, VfsError> {
+    let decoded = percent_decode_str(raw_path)
+        .decode_utf8()
+        .map_err(|_| VfsError::PathDenied)?;
+
+    let trimmed = decoded.trim_start_matches('/');
+    if trimmed.is_empty() {
+        return Ok(PathBuf::from("index.html"));
+    }
+    sanitize_logical_path(trimmed)
 }
 
 pub fn sanitize_logical_path(raw_path: &str) -> Result<PathBuf, VfsError> {

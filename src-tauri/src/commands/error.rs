@@ -30,6 +30,9 @@ pub enum AppError {
     #[error("项目配置无效：{reason}")]
     InvalidProjectConfig { reason: String },
 
+    #[error("站点未注册")]
+    SiteNotRegistered,
+
     #[error(transparent)]
     Tauri(#[from] tauri::Error),
 }
@@ -46,6 +49,7 @@ impl AppError {
             Self::Vfs(error) => error.code(),
             Self::SchemaVersionTooNew { .. } => "SCHEMA_VERSION_TOO_NEW",
             Self::InvalidProjectConfig { .. } => "INVALID_PROJECT_CONFIG",
+            Self::SiteNotRegistered => "SITE_NOT_REGISTERED",
             Self::Tauri(_) => "TAURI_ERROR",
         }
     }

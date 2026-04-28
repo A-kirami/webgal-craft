@@ -3,9 +3,8 @@ import { Channel, invoke } from '@tauri-apps/api/core'
 import { AppError } from '~/types/errors'
 import { safeInvoke } from '~/utils/invoke'
 
-/**
- * 启动静态文件服务器
- */
+import type { StaticSiteConfig } from '~/types/server'
+
 async function startServer(host: string, port: number): Promise<string> {
   try {
     const channel = new Channel<string>()
@@ -21,25 +20,35 @@ async function startServer(host: string, port: number): Promise<string> {
   }
 }
 
-async function addStaticSite(path: string): Promise<string> {
-  return safeInvoke<string>('add_static_site', { path })
+function addStaticSite(config: StaticSiteConfig): Promise<string> {
+  return safeInvoke('add_static_site', { ...config })
 }
 
-async function broadcastMessage(message: string): Promise<void> {
-  return safeInvoke<void>('broadcast_message', { message })
+function updateSiteEngine(projectPath: string, newEnginePath?: string): Promise<void> {
+  return safeInvoke('update_site_engine', { projectPath, newEnginePath })
 }
 
-async function unicastMessage(clientAddr: string, message: string): Promise<void> {
-  return safeInvoke<void>('unicast_message', { clientAddr, message })
+function updateSiteTemplate(projectPath: string, newTemplatePath?: string): Promise<void> {
+  return safeInvoke('update_site_template', { projectPath, newTemplatePath })
 }
 
-async function getConnectedClients(): Promise<string[]> {
-  return safeInvoke<string[]>('get_connected_clients')
+function broadcastMessage(message: string): Promise<void> {
+  return safeInvoke('broadcast_message', { message })
+}
+
+function unicastMessage(clientAddr: string, message: string): Promise<void> {
+  return safeInvoke('unicast_message', { clientAddr, message })
+}
+
+function getConnectedClients(): Promise<string[]> {
+  return safeInvoke('get_connected_clients')
 }
 
 export const serverCmds = {
   startServer,
   addStaticSite,
+  updateSiteEngine,
+  updateSiteTemplate,
   broadcastMessage,
   unicastMessage,
   getConnectedClients,

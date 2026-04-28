@@ -1,7 +1,6 @@
 import '~/__tests__/setup'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { computed } from 'vue'
 
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 
@@ -28,9 +27,7 @@ vi.mock('@tauri-apps/plugin-log', () => ({
 
 describe('previewRuntimeStore 预览运行时状态仓库', () => {
   beforeEach(() => {
-    addStaticSiteMock.mockReset()
-    loggerErrorMock.mockReset()
-    startServerMock.mockReset()
+    vi.resetAllMocks()
   })
 
   it('ensureServeUrl 会按需启动预览服务器并缓存 serve url', async () => {
@@ -52,7 +49,7 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     expect(startServerMock).toHaveBeenCalledTimes(1)
     expect(startServerMock).toHaveBeenCalledWith('127.0.0.1', 8899)
     expect(addStaticSiteMock).toHaveBeenCalledTimes(1)
-    expect(addStaticSiteMock).toHaveBeenCalledWith('/games/alpha')
+    expect(addStaticSiteMock).toHaveBeenCalledWith({ projectPath: '/games/alpha' })
     expect(store.getServeUrl('/games/alpha')).toBe('http://127.0.0.1:8899/game/game-alpha/')
   })
 
@@ -117,8 +114,8 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
 
     expect(startServerMock).toHaveBeenCalledTimes(1)
     expect(addStaticSiteMock).toHaveBeenCalledTimes(2)
-    expect(addStaticSiteMock).toHaveBeenNthCalledWith(1, '/games/alpha ')
-    expect(addStaticSiteMock).toHaveBeenNthCalledWith(2, '/games/alpha')
+    expect(addStaticSiteMock).toHaveBeenNthCalledWith(1, { projectPath: '/games/alpha ' })
+    expect(addStaticSiteMock).toHaveBeenNthCalledWith(2, { projectPath: '/games/alpha' })
   })
 
   it('getServeUrl 会在站点预热完成后触发依赖它的响应式更新', async () => {

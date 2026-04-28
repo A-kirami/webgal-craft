@@ -2,15 +2,37 @@ import { defineStore } from 'pinia'
 
 import { serverCmds } from '~/commands/server'
 
+import type { StaticSiteConfig } from '~/types/server'
+
 function buildServeUrl(siteId: string, serverUrl: string): string {
   return new URL(`game/${siteId}/`, serverUrl).href
 }
 
+type StaticSiteInput = StaticSiteConfig | string
+
+function normalizeSiteConfig(input: StaticSiteInput): StaticSiteConfig {
+  if (typeof input === 'string') {
+    return { projectPath: input }
+  }
+
+  return input
+}
+
+function buildSiteSignature(config: StaticSiteConfig): string {
+  return JSON.stringify([
+    config.projectPath,
+    config.enginePath ?? '',
+    config.templatePath ?? '',
+  ])
+}
+
 export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
+  // 非响应式内部状态：服务器 URL 和启动任务无需触发 UI 更新
   let serverUrl: string | undefined
   let pendingServerStart: Promise<string | undefined> | undefined
 
   const serveUrls = reactive(new Map<string, string>())
+  const siteSignatures = reactive(new Map<string, string>())
   const pendingRegistrations = new Map<string, Promise<string | undefined>>()
 
   async function ensureServer(): Promise<string | undefined> {
@@ -51,40 +73,47 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
     return serveUrls.get(path)
   }
 
-  async function registerServeUrl(path: string, currentServerUrl: string): Promise<string | undefined> {
-    const cachedServeUrl = serveUrls.get(path)
-    if (cachedServeUrl) {
+  async function registerServeUrl(
+    input: StaticSiteInput,
+    currentServerUrl: string,
+  ): Promise<string | undefined> {
+    const site = normalizeSiteConfig(input)
+    const signature = buildSiteSignature(site)
+    const cachedServeUrl = serveUrls.get(site.projectPath)
+    if (cachedServeUrl && siteSignatures.get(site.projectPath) === signature) {
       return cachedServeUrl
     }
 
-    const pendingRegistration = pendingRegistrations.get(path)
+    const pendingRegistration = pendingRegistrations.get(signature)
     if (pendingRegistration) {
       return await pendingRegistration
     }
 
     const registrationTask = (async () => {
       try {
-        const siteId = await serverCmds.addStaticSite(path)
+        const siteId = await serverCmds.addStaticSite(site)
         const serveUrl = buildServeUrl(siteId, currentServerUrl)
-        serveUrls.set(path, serveUrl)
+        serveUrls.set(site.projectPath, serveUrl)
+        siteSignatures.set(site.projectPath, signature)
         return serveUrl
       } catch (error) {
-        logger.error(`注册静态站点失败: ${path} - ${error}`)
+        logger.error(`注册静态站点失败: ${site.projectPath} - ${error}`)
         return
       }
     })()
 
-    pendingRegistrations.set(path, registrationTask)
+    pendingRegistrations.set(signature, registrationTask)
 
     try {
       return await registrationTask
     } finally {
-      pendingRegistrations.delete(path)
+      pendingRegistrations.delete(signature)
     }
   }
 
-  async function ensureServeUrl(path: string): Promise<string | undefined> {
-    if (!path) {
+  async function ensureServeUrl(input: StaticSiteInput): Promise<string | undefined> {
+    const site = normalizeSiteConfig(input)
+    if (!site.projectPath) {
       return undefined
     }
 
@@ -93,13 +122,18 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
       return undefined
     }
 
-    return await registerServeUrl(path, currentServerUrl)
+    return await registerServeUrl(site, currentServerUrl)
   }
 
-  async function ensureServeUrls(paths: string[]): Promise<void> {
-    const normalizedPaths = [...new Set(paths.filter(Boolean))]
+  async function ensureServeUrls(inputs: StaticSiteInput[]): Promise<void> {
+    const normalizedSites = [...new Map(
+      inputs
+        .map(input => normalizeSiteConfig(input))
+        .filter(site => !!site.projectPath)
+        .map(site => [buildSiteSignature(site), site]),
+    ).values()]
 
-    if (normalizedPaths.length === 0) {
+    if (normalizedSites.length === 0) {
       return
     }
 
@@ -109,7 +143,7 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
     }
 
     await Promise.all(
-      normalizedPaths.map(path => registerServeUrl(path, currentServerUrl)),
+      normalizedSites.map(site => registerServeUrl(site, currentServerUrl)),
     )
   }
 
