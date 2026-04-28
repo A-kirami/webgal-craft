@@ -32,12 +32,15 @@ async function copyDirectory(source: string, destination: string): Promise<void>
 
 /**
  * 带进度条的递归复制目录
+ *
+ * `overwrite` 默认 false：使用 create_new 语义，保留目标已有文件；
+ * 安装/创建等需要刷新内容的流程应显式传 true，避免上次失败残留与新内容混杂。
  */
 async function copyDirectoryWithProgress(
   source: string,
   destination: string,
   onProgress: (progress: number) => void,
-  excludes?: string[],
+  options?: { excludes?: string[], overwrite?: boolean },
 ): Promise<void> {
   const channel = new Channel<CopyEvent>()
   let channelError: AppError | undefined
@@ -63,7 +66,8 @@ async function copyDirectoryWithProgress(
       source,
       destination,
       onEvent: channel,
-      excludes,
+      excludes: options?.excludes,
+      overwrite: options?.overwrite,
     })
   } catch (error) {
     throw AppError.fromInvoke('copy_directory_with_progress', error)
