@@ -1,5 +1,6 @@
 import { usePreviewSessionStore } from '~/stores/preview-session'
 import { useWorkspaceStore } from '~/stores/workspace'
+import { normalizeFsPath } from '~/utils/path'
 
 export interface AssetThumbnailOptions {
   width: number
@@ -18,10 +19,6 @@ interface ResolvedPath {
   root: string
   segments: string[]
   escapedBase?: boolean
-}
-
-function normalizeFsPath(input: string): string {
-  return input.replaceAll('\\', '/')
 }
 
 function parsePath(input: string): ResolvedPath {
