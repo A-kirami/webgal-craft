@@ -10,24 +10,24 @@ interface VfsLayerArgs {
   templatePath?: string
 }
 
-function resolvePath(projectPath: string, enginePath: string, relPath: string, templatePath?: string): Promise<string> {
-  return safeInvoke('resolve_vfs_path', { projectPath, enginePath, templatePath, relPath })
+function resolvePath(args: VfsLayerArgs): Promise<string> {
+  return safeInvoke('resolve_vfs_path', { ...args })
 }
 
-function listDir(projectPath: string, enginePath: string, relPath: string, templatePath?: string): Promise<VfsDirEntry[]> {
-  return safeInvoke('list_vfs_dir', { projectPath, enginePath, templatePath, relPath })
+function listDir(args: VfsLayerArgs): Promise<VfsDirEntry[]> {
+  return safeInvoke('list_vfs_dir', { ...args })
 }
 
-function ensureWritable(projectPath: string, enginePath: string, relPath: string, templatePath?: string): Promise<string> {
-  return safeInvoke('ensure_vfs_writable', { projectPath, enginePath, templatePath, relPath })
+function ensureWritable(args: VfsLayerArgs): Promise<string> {
+  return safeInvoke('ensure_vfs_writable', { ...args })
 }
 
-function deletePath(projectPath: string, enginePath: string, relPath: string, templatePath?: string): Promise<void> {
-  return safeInvoke('delete_vfs_path', { projectPath, enginePath, templatePath, relPath })
+function deletePath(args: VfsLayerArgs): Promise<void> {
+  return safeInvoke('delete_vfs_path', { ...args })
 }
 
-function renamePath(projectPath: string, enginePath: string, relPath: string, newName: string, templatePath?: string): Promise<string> {
-  return safeInvoke('rename_vfs_path', { projectPath, enginePath, templatePath, relPath, newName })
+function renamePath(args: VfsLayerArgs & { newName: string }): Promise<string> {
+  return safeInvoke('rename_vfs_path', { ...args })
 }
 
 function movePath(args: VfsLayerArgs & { targetRelPath: string }): Promise<string> {
