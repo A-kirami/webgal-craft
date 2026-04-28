@@ -574,17 +574,20 @@ impl OverlayFs {
             return Ok(false);
         }
 
-        let mut prefix = PathBuf::new();
+        // 单次遍历：逐级 push 新组件，校验该新组件未被替换为符号链接，再检查其下的 .wh 标记。
+        // 由于父级路径在前一次迭代中已校验过，无需每次从 upper 根重复扫描整条祖先链。
+        let mut current = self.whiteout_root.clone();
+        self.validate_owned_segment(&current)?;
+
         for component in &components {
-            let marker = self
-                .whiteout_root
-                .join(&prefix)
-                .join(format!(".wh.{component}"));
-            self.validate_project_owned_path(&marker)?;
+            let marker = current.join(format!(".wh.{component}"));
+            self.validate_owned_segment(&marker)?;
             if marker.exists() {
                 return Ok(true);
             }
-            prefix.push(component);
+
+            current.push(component);
+            self.validate_owned_segment(&current)?;
         }
 
         Ok(false)
@@ -670,20 +673,26 @@ impl OverlayFs {
 
         for component in components {
             current.push(component);
-            if !current.exists() {
-                continue;
-            }
-
-            let metadata = fs::symlink_metadata(&current)?;
-            if metadata.file_type().is_symlink() {
-                log::warn!("路径被拒绝（符号链接）: {}", current.display());
-                return Err(VfsError::PathDenied);
-            }
-
-            validate_physical_path(&current, &self.upper_canonical)?;
+            self.validate_owned_segment(&current)?;
         }
 
         Ok(())
+    }
+
+    /// 校验单层路径片段未被替换为符号链接且未指向 upper 之外。
+    /// 调用方负责按层级递增地传入路径，避免 `validate_project_owned_path` 在每次调用时重复扫描祖先。
+    fn validate_owned_segment(&self, path: &Path) -> Result<(), VfsError> {
+        if !path.exists() {
+            return Ok(());
+        }
+
+        let metadata = fs::symlink_metadata(path)?;
+        if metadata.file_type().is_symlink() {
+            log::warn!("路径被拒绝（符号链接）: {}", path.display());
+            return Err(VfsError::PathDenied);
+        }
+
+        validate_physical_path(path, &self.upper_canonical)
     }
 }
 
