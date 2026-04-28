@@ -44,8 +44,6 @@ pub struct EngineRef {
 pub enum TemplateBinding {
     Standalone {
         name: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        version: Option<String>,
     },
     EngineBuiltin {
         engine: EngineRef,
@@ -1208,7 +1206,6 @@ mod tests {
             engine: None,
             template: Some(TemplateBinding::Standalone {
                 name: "Modern".into(),
-                version: None,
             }),
             version: 1,
         };
