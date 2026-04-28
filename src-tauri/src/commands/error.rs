@@ -109,6 +109,7 @@ mod tests {
             .code(),
             "SCHEMA_VERSION_TOO_NEW"
         );
+        assert_eq!(AppError::SiteNotRegistered.code(), "SITE_NOT_REGISTERED");
     }
 
     #[test]
