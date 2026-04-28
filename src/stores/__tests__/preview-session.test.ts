@@ -48,7 +48,7 @@ describe('previewSessionStore 当前工作区预览会话仓库', () => {
       path: '/games/game-1',
     }))
 
-    expect(ensureServeUrlMock).toHaveBeenCalledWith('/games/game-1')
+    expect(ensureServeUrlMock).toHaveBeenCalledWith({ projectPath: '/games/game-1' })
     expect(store.currentGameServeUrl).toBe('http://preview/game-1/')
     expect(store.reloadVersion).toBe(0)
 

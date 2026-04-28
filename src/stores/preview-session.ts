@@ -32,7 +32,7 @@ export const usePreviewSessionStore = defineStore('previewSession', () => {
     reloadVersion = 0
 
     try {
-      const previewUrl = await previewRuntimeStore.ensureServeUrl(game.path)
+      const previewUrl = await previewRuntimeStore.ensureServeUrl({ projectPath: game.path })
       if (currentToken !== syncToken) {
         return
       }

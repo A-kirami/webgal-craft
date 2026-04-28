@@ -5,19 +5,19 @@ export function useResourcePreviewPrimer(): () => void {
   const previewRuntimeStore = usePreviewRuntimeStore()
   const resourceStore = useResourceStore()
 
-  const previewPaths = computed(() => [
-    ...(resourceStore.games ?? []).map(game => game.path),
-    ...(resourceStore.engines ?? []).map(engine => engine.path),
+  const previewSites = computed(() => [
+    ...(resourceStore.games ?? []).map(game => ({ projectPath: game.path })),
+    ...(resourceStore.engines ?? []).map(engine => ({ projectPath: engine.path })),
   ])
 
   return watch(
-    previewPaths,
-    (paths) => {
-      if (paths.length === 0) {
+    previewSites,
+    (sites) => {
+      if (sites.length === 0) {
         return
       }
 
-      void previewRuntimeStore.ensureServeUrls(paths).catch((error) => {
+      void previewRuntimeStore.ensureServeUrls(sites).catch((error) => {
         void logger.error(`资源预览预热失败: ${error}`)
       })
     },

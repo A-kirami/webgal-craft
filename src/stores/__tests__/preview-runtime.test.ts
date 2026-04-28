@@ -39,10 +39,10 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     expect('serverUrl' in store).toBe(false)
     expect(store.getServeUrl('/games/alpha')).toBeUndefined()
 
-    await expect(store.ensureServeUrl('/games/alpha')).resolves.toBe(
+    await expect(store.ensureServeUrl({ projectPath: '/games/alpha' })).resolves.toBe(
       'http://127.0.0.1:8899/game/game-alpha/',
     )
-    await expect(store.ensureServeUrl('/games/alpha')).resolves.toBe(
+    await expect(store.ensureServeUrl({ projectPath: '/games/alpha' })).resolves.toBe(
       'http://127.0.0.1:8899/game/game-alpha/',
     )
 
@@ -59,8 +59,8 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     const store = usePreviewRuntimeStore()
 
     const [firstUrl, secondUrl] = await Promise.all([
-      store.ensureServeUrl('/games/alpha'),
-      store.ensureServeUrl('/games/alpha'),
+      store.ensureServeUrl({ projectPath: '/games/alpha' }),
+      store.ensureServeUrl({ projectPath: '/games/alpha' }),
     ])
 
     expect(firstUrl).toBe('http://127.0.0.1:8899/game/game-alpha/')
@@ -74,7 +74,7 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     startServerMock.mockRejectedValue(new Error('occupied'))
     const store = usePreviewRuntimeStore()
 
-    await expect(store.ensureServeUrl('/games/alpha')).resolves.toBeUndefined()
+    await expect(store.ensureServeUrl({ projectPath: '/games/alpha' })).resolves.toBeUndefined()
 
     expect(loggerErrorMock).toHaveBeenCalledWith('服务器启动失败: Error: occupied')
   })
@@ -84,7 +84,7 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     addStaticSiteMock.mockRejectedValue(new Error('register failed'))
     const store = usePreviewRuntimeStore()
 
-    await expect(store.ensureServeUrl('/games/alpha')).resolves.toBeUndefined()
+    await expect(store.ensureServeUrl({ projectPath: '/games/alpha' })).resolves.toBeUndefined()
 
     expect(loggerErrorMock).toHaveBeenCalledWith(
       '注册静态站点失败: /games/alpha - Error: register failed',
@@ -98,7 +98,10 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
       .mockRejectedValueOnce(new Error('register failed'))
     const store = usePreviewRuntimeStore()
 
-    await store.ensureServeUrls(['/games/alpha', '/engines/beta'])
+    await store.ensureServeUrls([
+      { projectPath: '/games/alpha' },
+      { projectPath: '/engines/beta' },
+    ])
 
     expect(loggerErrorMock).toHaveBeenCalledWith(
       '注册静态站点失败: /engines/beta - Error: register failed',
@@ -110,7 +113,12 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     addStaticSiteMock.mockResolvedValue('game-alpha')
     const store = usePreviewRuntimeStore()
 
-    await store.ensureServeUrls(['', '/games/alpha ', '/games/alpha ', '/games/alpha'])
+    await store.ensureServeUrls([
+      { projectPath: '' },
+      { projectPath: '/games/alpha ' },
+      { projectPath: '/games/alpha ' },
+      { projectPath: '/games/alpha' },
+    ])
 
     expect(startServerMock).toHaveBeenCalledTimes(1)
     expect(addStaticSiteMock).toHaveBeenCalledTimes(2)
@@ -126,7 +134,7 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
 
     expect(serveUrl.value).toBeUndefined()
 
-    await store.ensureServeUrls(['/games/alpha'])
+    await store.ensureServeUrls([{ projectPath: '/games/alpha' }])
 
     expect(serveUrl.value).toBe('http://127.0.0.1:8899/game/game-alpha/')
   })

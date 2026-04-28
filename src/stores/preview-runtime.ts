@@ -8,16 +8,6 @@ function buildServeUrl(siteId: string, serverUrl: string): string {
   return new URL(`game/${siteId}/`, serverUrl).href
 }
 
-type StaticSiteInput = StaticSiteConfig | string
-
-function normalizeSiteConfig(input: StaticSiteInput): StaticSiteConfig {
-  if (typeof input === 'string') {
-    return { projectPath: input }
-  }
-
-  return input
-}
-
 function buildSiteSignature(config: StaticSiteConfig): string {
   return JSON.stringify([
     config.projectPath,
@@ -74,10 +64,9 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
   }
 
   async function registerServeUrl(
-    input: StaticSiteInput,
+    site: StaticSiteConfig,
     currentServerUrl: string,
   ): Promise<string | undefined> {
-    const site = normalizeSiteConfig(input)
     const signature = buildSiteSignature(site)
     const cachedServeUrl = serveUrls.get(site.projectPath)
     if (cachedServeUrl && siteSignatures.get(site.projectPath) === signature) {
@@ -111,8 +100,7 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
     }
   }
 
-  async function ensureServeUrl(input: StaticSiteInput): Promise<string | undefined> {
-    const site = normalizeSiteConfig(input)
+  async function ensureServeUrl(site: StaticSiteConfig): Promise<string | undefined> {
     if (!site.projectPath) {
       return undefined
     }
@@ -125,15 +113,14 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
     return await registerServeUrl(site, currentServerUrl)
   }
 
-  async function ensureServeUrls(inputs: StaticSiteInput[]): Promise<void> {
-    const normalizedSites = [...new Map(
-      inputs
-        .map(input => normalizeSiteConfig(input))
+  async function ensureServeUrls(sites: StaticSiteConfig[]): Promise<void> {
+    const uniqueSites = [...new Map(
+      sites
         .filter(site => !!site.projectPath)
         .map(site => [buildSiteSignature(site), site]),
     ).values()]
 
-    if (normalizedSites.length === 0) {
+    if (uniqueSites.length === 0) {
       return
     }
 
@@ -143,7 +130,7 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
     }
 
     await Promise.all(
-      normalizedSites.map(site => registerServeUrl(site, currentServerUrl)),
+      uniqueSites.map(site => registerServeUrl(site, currentServerUrl)),
     )
   }
 
