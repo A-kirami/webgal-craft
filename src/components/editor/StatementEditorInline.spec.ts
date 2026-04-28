@@ -27,6 +27,7 @@ const {
 }))
 
 vi.mock('~/features/editor/statement-editor/useStatementEditor', () => ({
+  createStatementIdTarget: (statementId: number) => ({ kind: 'id', statementId }),
   isStatementInteractiveTarget: () => false,
   useStatementEditor: useStatementEditorMock,
 }))

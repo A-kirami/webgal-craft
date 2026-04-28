@@ -1,17 +1,18 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h, reactive } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
 import { createTauriPathModuleMock } from '~/__tests__/mocks/tauri-path'
 
 const {
+  fileSystemEventHandlers,
   fileSystemEventsOnMock,
   gameSceneDirMock,
   useFileStoreMock,
   useTabsStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
+  fileSystemEventHandlers: new Map<string, (event: unknown) => void>(),
   fileSystemEventsOnMock: vi.fn(),
   gameSceneDirMock: vi.fn(),
   useFileStoreMock: vi.fn(),
@@ -34,7 +35,6 @@ vi.mock('~/services/platform/app-paths', () => ({
   defaultGameSavePath: vi.fn(),
   defaultTemplateSavePath: vi.fn(),
   engineIconPath: vi.fn(),
-  engineManifestPath: vi.fn(),
   engineTemplateDir: vi.fn(),
   gameAssetDir: vi.fn(async (gamePath: string, assetType: string) => `${gamePath}/game/${assetType}`),
   gameConfigPath: vi.fn(async (gamePath: string) => `${gamePath}/game/config.txt`),
@@ -102,6 +102,14 @@ const globalStubs = {
   FileTree: defineComponent({
     name: 'StubFileTree',
     props: {
+      itemBadgeText: {
+        type: Function,
+        default: undefined,
+      },
+      itemDimmed: {
+        type: Function,
+        default: undefined,
+      },
       items: {
         type: Array,
         required: true,
@@ -110,14 +118,24 @@ const globalStubs = {
     emits: ['auxclick', 'click', 'dblclick', 'update:selectedItem'],
     setup(props, { emit }) {
       function renderItems(items: TreeNode[]) {
-        return flattenNodes(items).map(item => h('button', {
-          key: item.path,
-          type: 'button',
-          onClick: () => emit('click', {
-            hasChildren: Array.isArray(item.children),
-            value: item,
-          }),
-        }, item.name))
+        return flattenNodes(items).map((item) => {
+          const badgeText = (props.itemBadgeText as ((item: TreeNode) => string | undefined) | undefined)?.(item)
+          const isDimmed = (props.itemDimmed as ((item: TreeNode) => boolean) | undefined)?.(item) ?? false
+
+          return h('div', {
+            key: item.path,
+          }, [
+            h('button', {
+              'type': 'button',
+              'data-dimmed': isDimmed ? 'true' : 'false',
+              'onClick': () => emit('click', {
+                hasChildren: Array.isArray(item.children),
+                value: item,
+              }),
+            }, item.name),
+            badgeText ? h('span', badgeText) : undefined,
+          ])
+        })
       }
 
       return () => h('div', renderItems(props.items as TreeNode[]))
@@ -153,20 +171,21 @@ function createFileStore() {
 
   return {
     getFolderContents: vi.fn(async (path: string) => entries.get(path) ?? []),
+    initialized: Promise.resolve(),
   }
 }
 
 describe('ScenePanel', () => {
-  afterEach(() => {
-    vi.clearAllMocks()
-  })
-
   beforeEach(() => {
-    fileSystemEventsOnMock.mockReset()
-    gameSceneDirMock.mockReset()
-    useFileStoreMock.mockReset()
-    useTabsStoreMock.mockReset()
-    useWorkspaceStoreMock.mockReset()
+    vi.resetAllMocks()
+    fileSystemEventHandlers.clear()
+
+    fileSystemEventsOnMock.mockImplementation((eventType: string, handler: (event: unknown) => void) => {
+      fileSystemEventHandlers.set(eventType, handler)
+      return () => {
+        fileSystemEventHandlers.delete(eventType)
+      }
+    })
 
     gameSceneDirMock.mockResolvedValue('/games/demo/game/scene')
     useFileStoreMock.mockReturnValue(createFileStore())
@@ -187,6 +206,14 @@ describe('ScenePanel', () => {
 
   it('会读取场景目录并渲染文件树', async () => {
     renderInBrowser(ScenePanel, {
+      browser: {
+        i18nMode: 'localized',
+        messages: {
+          'zh-Hans': {
+            edit: {},
+          },
+        },
+      },
       global: {
         stubs: globalStubs,
       },
@@ -212,6 +239,14 @@ describe('ScenePanel', () => {
     useTabsStoreMock.mockReturnValue(tabsStore)
 
     renderInBrowser(ScenePanel, {
+      browser: {
+        i18nMode: 'localized',
+        messages: {
+          'zh-Hans': {
+            edit: {},
+          },
+        },
+      },
       global: {
         stubs: globalStubs,
       },
@@ -220,5 +255,24 @@ describe('ScenePanel', () => {
     await page.getByText('start.txt').click()
 
     expect(tabsStore.openTab).toHaveBeenCalledWith('start.txt', '/games/demo/game/scene/start.txt')
+  })
+
+  it('会监听目录修改事件以刷新 overlay 视图', async () => {
+    renderInBrowser(ScenePanel, {
+      browser: {
+        i18nMode: 'localized',
+        messages: {
+          'zh-Hans': {
+            edit: {},
+          },
+        },
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('start.txt')).toBeVisible()
+    expect(fileSystemEventHandlers.get('directory:modified')).toBeTypeOf('function')
   })
 })

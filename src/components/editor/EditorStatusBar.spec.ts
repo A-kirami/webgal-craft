@@ -1,20 +1,27 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { reactive } from 'vue'
 
 import { createBrowserLocalizedI18n } from '~/__tests__/browser'
-import { renderInBrowser } from '~/__tests__/browser-render'
+import { createBrowserClickStub, renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   dayjsMock,
+  dbEngineGetMock,
+  dbEngineWhereFirstMock,
   getImageDimensionsMock,
   getLanguageDisplayNameMock,
+  readProjectConfigMock,
   useEditorStoreMock,
+  useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
   dayjsMock: vi.fn(),
+  dbEngineGetMock: vi.fn(),
+  dbEngineWhereFirstMock: vi.fn(),
   getImageDimensionsMock: vi.fn(),
   getLanguageDisplayNameMock: vi.fn(),
+  readProjectConfigMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
+  useWorkspaceStoreMock: vi.fn(),
 }))
 
 vi.mock('~/stores/editor', () => ({
@@ -32,12 +39,48 @@ vi.mock('~/commands/fs', () => ({
   },
 }))
 
+vi.mock('~/database/db', () => ({
+  db: {
+    engines: {
+      get: dbEngineGetMock,
+      where: () => ({
+        equals: () => ({
+          first: dbEngineWhereFirstMock,
+        }),
+      }),
+    },
+  },
+}))
+
+vi.mock('~/commands/project-config', () => ({
+  projectConfigCmds: {
+    readProjectConfig: readProjectConfigMock,
+  },
+}))
+
+vi.mock('~/composables/useFileSystemEvents', () => ({
+  useFileSystemEvents: () => ({
+    emit: vi.fn(),
+    on: vi.fn(() => () => undefined),
+    reset: vi.fn(),
+  }),
+}))
+
 vi.mock('~/plugins/dayjs', () => ({
   default: dayjsMock,
+  setDayjsLocale: vi.fn(),
 }))
 
 vi.mock('~/plugins/editor', () => ({
   getLanguageDisplayName: getLanguageDisplayNameMock,
+}))
+
+vi.mock('~/stores/workspace', () => ({
+  useWorkspaceStore: useWorkspaceStoreMock,
+}))
+
+vi.mock('~/utils/error-handler', () => ({
+  handleError: vi.fn(),
 }))
 
 import EditorStatusBar from './EditorStatusBar.vue'
@@ -84,20 +127,25 @@ function createEditorStore() {
 }
 
 describe('EditorStatusBar', () => {
-  afterEach(() => {
-    vi.clearAllMocks()
-  })
-
   beforeEach(() => {
-    dayjsMock.mockReset()
-    getImageDimensionsMock.mockReset()
-    getLanguageDisplayNameMock.mockReset()
-    useEditorStoreMock.mockReset()
+    vi.resetAllMocks()
 
     dayjsMock.mockReturnValue({
       fromNow: () => 'just now',
     })
+    dbEngineGetMock.mockResolvedValue({
+      id: 'engine-1',
+      path: '/engines/webgal',
+    })
+    dbEngineWhereFirstMock.mockResolvedValue(undefined)
+    readProjectConfigMock.mockResolvedValue({ version: 1 })
     getLanguageDisplayNameMock.mockReturnValue('Markdown')
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: {
+        id: 'game-1',
+        path: '/games/demo',
+      },
+    }))
   })
 
   it('会显示文本编辑器的保存状态、语言与行词统计', async () => {

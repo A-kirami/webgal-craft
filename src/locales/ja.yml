@@ -540,6 +540,7 @@ edit:
     statements: "{count} ステートメント"
     engine: エンジン
     template: テンプレート
+    templateFollowing: 'テンプレート：現在のエンジンに従う'
   fileTree:
     newFile: 新しいファイル
     newFolder: 新しいフォルダー

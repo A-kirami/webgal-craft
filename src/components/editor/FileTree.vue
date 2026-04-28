@@ -16,6 +16,8 @@ interface Props {
   getKey: (item: T) => string
   defaultExpanded?: string[]
   nameField?: keyof T | ((item: T) => string)
+  itemBadgeText?: (item: T) => string | undefined
+  itemDimmed?: (item: T) => boolean
   enableTooltip?: boolean
   tooltipContent?: (item: FlattenedItem<T>) => string
   enableContextMenu?: boolean
@@ -32,6 +34,8 @@ const {
   getKey,
   defaultExpanded = [],
   nameField,
+  itemBadgeText,
+  itemDimmed,
   enableTooltip = false,
   tooltipContent,
   enableContextMenu = true,
@@ -114,6 +118,14 @@ defineExpose({
   collapseAll,
   getViewportElement,
 })
+
+function resolveItemBadgeText(item: T): string | undefined {
+  return itemBadgeText?.(item)
+}
+
+function isItemDimmed(item: T): boolean {
+  return itemDimmed?.(item) ?? false
+}
 
 function toSelectedFileItem() {
   const currentSelectedItem = selectedItem.value as Record<string, unknown> | undefined
@@ -324,8 +336,22 @@ useShortcut(() => ({
                             @keydown.escape="handleCancelRename"
                           />
                         </template>
-                        <div v-else class="whitespace-nowrap text-ellipsis overflow-hidden">
-                          {{ getItemName((item as FlattenedItem<T>).value) }}
+                        <div
+                          v-else
+                          :class="[
+                            'flex flex-1 min-w-0 items-center gap-2',
+                            isItemDimmed((item as FlattenedItem<T>).value) ? 'opacity-70' : '',
+                          ]"
+                        >
+                          <div class="whitespace-nowrap text-ellipsis overflow-hidden">
+                            {{ getItemName((item as FlattenedItem<T>).value) }}
+                          </div>
+                          <span
+                            v-if="resolveItemBadgeText((item as FlattenedItem<T>).value)"
+                            class="text-[10px] text-muted-foreground leading-none px-1.5 py-0.5 rounded bg-muted shrink-0"
+                          >
+                            {{ resolveItemBadgeText((item as FlattenedItem<T>).value) }}
+                          </span>
                         </div>
                       </span>
                     </TreeItemLabel>

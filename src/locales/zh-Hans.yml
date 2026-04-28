@@ -540,6 +540,7 @@ edit:
     statements: "{count} 条语句"
     engine: 引擎
     template: 模板
+    templateFollowing: 模板：跟随当前引擎
   fileTree:
     newFile: 新建文件
     newFolder: 新建文件夹

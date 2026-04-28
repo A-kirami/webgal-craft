@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { ChartSpline, FileText, Image as ImageIcon } from '@lucide/vue'
+import { ChartSpline, FileText, Image as ImageIcon, Layers, Link2, Palette } from '@lucide/vue'
 
 import { fsCmds } from '~/commands/fs'
+import { projectConfigCmds } from '~/commands/project-config'
+import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { db } from '~/database/db'
 import {
   calculateEditorStatusBarTextStats,
   isEditorStatusBarImagePreview,
@@ -10,20 +13,134 @@ import {
   resolveEditorStatusBarMetrics,
   shouldShowEditorStatusBarRelativeTime,
 } from '~/features/editor/status-bar/editor-status-bar'
+import { formatEngineLabel } from '~/lib/engine-label'
 import dayjs from '~/plugins/dayjs'
 import { getLanguageDisplayName } from '~/plugins/editor'
 import {
   isEditableEditor,
   useEditorStore,
 } from '~/stores/editor'
+import { useModalStore } from '~/stores/modal'
+import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
 import { formatFileSize } from '~/utils/format'
 
 const { t, locale } = useI18n()
 
 const editorStore = useEditorStore()
+const workspaceStore = useWorkspaceStore()
+const modalStore = useModalStore()
 
 const currentState = $computed(() => editorStore.currentState)
+
+const isEngineBound = $computed(() => !!workspaceStore.currentGame?.engineId)
+
+let engineLabel = $ref<string>()
+watch(() => workspaceStore.currentGame?.engineId, async (engineId) => {
+  if (!engineId) {
+    engineLabel = undefined
+    return
+  }
+  const engine = await db.engines.get(engineId)
+  engineLabel = engine ? formatEngineLabel(engine) : undefined
+}, { immediate: true })
+
+function openSwitchEngine() {
+  const game = workspaceStore.currentGame
+  if (game) {
+    modalStore.open('SwitchEngineModal', { game })
+  }
+}
+
+function openSwitchTemplate() {
+  const game = workspaceStore.currentGame
+  if (game) {
+    modalStore.open('SwitchTemplateModal', { game })
+  }
+}
+
+let templateLabel = $ref<string>()
+let isFollowingEngine = $ref(false)
+
+async function refreshTemplateLabel(gamePath: string | undefined) {
+  if (!gamePath) {
+    templateLabel = undefined
+    isFollowingEngine = false
+    return
+  }
+
+  try {
+    const config = await projectConfigCmds.readProjectConfig(gamePath)
+    if (workspaceStore.currentGame?.path !== gamePath) {
+      return
+    }
+
+    const binding = config.template
+
+    if (binding?.kind === 'standalone') {
+      templateLabel = binding.name
+      isFollowingEngine = false
+      return
+    }
+
+    if (binding?.kind === 'engineBuiltin') {
+      const engine = binding.engine.version === undefined
+        ? undefined
+        : await db.engines
+            .where('[engineId+version]')
+            .equals([binding.engine.id, binding.engine.version])
+            .first()
+      if (workspaceStore.currentGame?.path !== gamePath) {
+        return
+      }
+      templateLabel = engine
+        ? formatEngineLabel(engine)
+        : (binding.engine.version
+            ? `${binding.engine.id} ${binding.engine.version}`
+            : binding.engine.id)
+      isFollowingEngine = false
+      return
+    }
+
+    // 缺省 → 跟随当前引擎
+    const engineId = workspaceStore.currentGame?.engineId
+    const engine = engineId ? await db.engines.get(engineId) : undefined
+    if (workspaceStore.currentGame?.path !== gamePath) {
+      return
+    }
+    templateLabel = engine ? formatEngineLabel(engine) : undefined
+    isFollowingEngine = templateLabel !== undefined
+  } catch (error) {
+    handleError(error, { silent: true })
+    templateLabel = undefined
+    isFollowingEngine = false
+  }
+}
+
+watch(() => workspaceStore.currentGame?.path, (path) => {
+  refreshTemplateLabel(path)
+}, { immediate: true })
+
+watch(() => workspaceStore.currentGame?.engineId, () => {
+  // 引擎切换会改变 followEngine / engineBuiltin 的解析结果
+  refreshTemplateLabel(workspaceStore.currentGame?.path)
+})
+
+// 模板切换通过 directory:modified 事件广播
+const fileSystemEvents = useFileSystemEvents()
+const stopTemplateChangeListener = fileSystemEvents.on('directory:modified', (event) => {
+  const gamePath = workspaceStore.currentGame?.path
+  if (!gamePath) {
+    return
+  }
+  const normalizedEvent = event.path.replaceAll('\\', '/')
+  const normalizedRoot = `${gamePath.replaceAll('\\', '/')}/game/template`
+  if (normalizedEvent === normalizedRoot || normalizedEvent.startsWith(`${normalizedRoot}/`)) {
+    refreshTemplateLabel(gamePath)
+  }
+})
+onScopeDispose(stopTemplateChangeListener)
+
 const editableState = $computed(() =>
   currentState && isEditableEditor(currentState) ? currentState : undefined,
 )
@@ -60,11 +177,8 @@ watch(() => previewState?.path, async (path) => {
 
 // 是否已保存
 const isSaved = $computed(() => isEditorStatusBarSaved(editableState))
-
-// 上次保存时间
 const lastSavedTime = $computed(() => editableState?.lastSavedTime)
 
-// 相对时间显示
 const shouldShowTime = $computed(() => shouldShowEditorStatusBarRelativeTime(isSaved, lastSavedTime))
 const { now, pause, resume } = useNow({
   interval: 30 * 1000,
@@ -89,14 +203,13 @@ const relativeTime = $computed(() => {
 })
 
 // 文件语言显示
-const fileLanguage = $computed(() => {
-  return resolveEditorStatusBarFileLanguage(editableState, {
+const fileLanguage = $computed(() =>
+  resolveEditorStatusBarFileLanguage(editableState, {
     getLanguageDisplayName,
     t,
-  })
-})
+  }),
+)
 
-// 文本内容（用于统计）
 const textContent = $computed(() => editableState?.projection === 'text' ? editableState.textContent : '')
 
 let wordCount = $ref(0)
@@ -116,17 +229,36 @@ function updateStats() {
   lineCount = nextStats.lineCount
 }
 
-// 切换文件或编辑模式时立即计算
+// 切换文件或编辑模式时立即计算；同一文件内编辑时防抖计算
 watch(() => [currentState?.path, editableState?.projection], updateStats, { immediate: true })
-
-// 同一文件内编辑时防抖计算
 watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
 </script>
 
 <template>
   <div class="text-xs px-3 border-t bg-gray-50 flex h-6 items-center dark:bg-gray-900">
-    <!-- 左侧：应用级信息（引擎版本等，暂留空，后续扩展） -->
-    <div class="flex gap-3 items-center" />
+    <div class="flex gap-3 min-w-0 items-center">
+      <button
+        v-if="isEngineBound && engineLabel"
+        class="text-muted-foreground flex gap-1 cursor-pointer transition-colors items-center hover:text-foreground"
+        @click="openSwitchEngine"
+      >
+        <Layers class="h-3 w-3" :stroke-width="1.5" />
+        <span class="max-w-30 truncate">{{ engineLabel }}</span>
+      </button>
+
+      <button
+        v-if="isEngineBound && templateLabel"
+        class="text-muted-foreground flex gap-1 cursor-pointer transition-colors items-center hover:text-foreground"
+        :title="isFollowingEngine
+          ? $t('edit.statusBar.templateFollowing')
+          : $t('edit.statusBar.template')"
+        @click="openSwitchTemplate"
+      >
+        <Palette class="h-3 w-3" :stroke-width="1.5" />
+        <span class="max-w-30 truncate">{{ templateLabel }}</span>
+        <Link2 v-if="isFollowingEngine" class="h-3 w-3" :stroke-width="1.5" />
+      </button>
+    </div>
 
     <!-- 右侧：文本/可视化编辑器信息 -->
     <div v-if="editableState" class="ml-auto flex gap-3 items-center">

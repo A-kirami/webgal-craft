@@ -3,6 +3,7 @@ interface FileItem {
   path: string
   name: string
   isDir?: boolean
+  source?: string
 }
 
 interface Props {

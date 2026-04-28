@@ -540,6 +540,7 @@ edit:
     statements: "{count} statements"
     engine: Engine
     template: Template
+    templateFollowing: 'Template: Follow Current Engine'
   fileTree:
     newFile: New File
     newFolder: New Folder

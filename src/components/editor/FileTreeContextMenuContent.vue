@@ -18,12 +18,13 @@ import { useModalStore } from '~/stores/modal'
 import { settleBatch } from '~/utils/batch'
 import { handleError } from '~/utils/error-handler'
 
-import type { Component } from 'vue'
+import type { MenuItem } from '~/types/menu-item'
 
 interface FileItem {
   path: string
   name: string
   isDir?: boolean
+  source?: string
 }
 
 interface Props {
@@ -131,14 +132,6 @@ async function handleRevealInExplorer(): Promise<void> {
   }
 }
 
-interface MenuItem {
-  icon: Component
-  label: string
-  onClick: () => void
-  disabled?: boolean
-  class?: string
-}
-
 function pushSeparator(items: (MenuItem | 'separator')[]): void {
   if (items.length > 0 && items.at(-1) !== 'separator') {
     items.push('separator')
@@ -188,12 +181,14 @@ const menuItems = $computed(() => {
       icon: Trash2,
       label: t('common.delete'),
       onClick: handleDelete,
-      class: 'text-destructive text-13px! focus:text-destructive-foreground focus:bg-destructive',
+      class: 'text-destructive focus:text-destructive-foreground focus:bg-destructive',
     })
   }
 
-  pushSeparator(items)
-  items.push({ icon: FolderOpen, label: t('edit.fileTree.revealInExplorer'), onClick: handleRevealInExplorer })
+  if (item.source !== 'engineLower' && item.source !== 'templateLower') {
+    pushSeparator(items)
+    items.push({ icon: FolderOpen, label: t('edit.fileTree.revealInExplorer'), onClick: handleRevealInExplorer })
+  }
 
   return items
 })

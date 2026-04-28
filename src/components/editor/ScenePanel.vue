@@ -20,12 +20,11 @@ const fileStore = useFileStore()
 const workspaceStore = useWorkspaceStore()
 const tabsStore = useTabsStore()
 const fileSystemEvents = useFileSystemEvents()
+const { t } = useI18n()
 
 const scenePath = computedAsync(async () => {
-  if (!workspaceStore.currentGame?.path) {
-    return ''
-  }
-  return await gameSceneDir(workspaceStore.currentGame.path)
+  const gamePath = workspaceStore.currentGame?.path
+  return gamePath ? await gameSceneDir(gamePath) : ''
 })
 
 let itemsKey = $ref(0)
@@ -46,12 +45,13 @@ const items = computedAsync(async () => {
     if (!path) {
       return []
     }
+    // 等待 FileStore 初始化完成，避免在 enginePath 未就绪时加载
+    await fileStore.initialized
     // 使用 itemsKey 作为无意义依赖，强制触发 computedAsync 重新计算
     void itemsKey
-    return await loadScenePanelTreeNodes(path, async currentPath => await fileStore.getFolderContents(currentPath))
+    return await loadScenePanelTreeNodes(path, currentPath => fileStore.getFolderContents(currentPath))
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : '获取场景文件夹内容失败'
-    void logger.error(`[ScenePanel] 获取场景文件夹内容失败: ${errorMessage}`)
+    logger.error(`[ScenePanel] 获取场景文件夹内容失败: ${error instanceof Error ? error.message : error}`)
     throw error
   } finally {
     if (!isSilent) {
@@ -131,9 +131,7 @@ function scrollToSelectedItem() {
 
 watch($$(selectedItem), () => {
   if (selectedItem) {
-    nextTick(() => {
-      scrollToSelectedItem()
-    })
+    nextTick(scrollToSelectedItem)
   }
 })
 
@@ -174,12 +172,14 @@ const debouncedRefresh = useDebounceFn(() => {
   itemsKey++
 }, 100)
 
-fileSystemEvents.on('file:created', debouncedRefresh)
-fileSystemEvents.on('file:removed', debouncedRefresh)
-fileSystemEvents.on('file:renamed', debouncedRefresh)
-fileSystemEvents.on('directory:created', debouncedRefresh)
-fileSystemEvents.on('directory:removed', debouncedRefresh)
-fileSystemEvents.on('directory:renamed', debouncedRefresh)
+const fsRefreshEvents = [
+  'file:created', 'file:removed', 'file:renamed',
+  'directory:created', 'directory:modified', 'directory:removed', 'directory:renamed',
+] as const
+
+for (const event of fsRefreshEvents) {
+  fileSystemEvents.on(event, debouncedRefresh)
+}
 </script>
 
 <template>

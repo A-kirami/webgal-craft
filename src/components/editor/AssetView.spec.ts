@@ -20,7 +20,6 @@ const {
   fileSystemEventHandlers,
   fileSystemEventsOnMock,
   fileViewerScrollToIndexMock,
-  gameAssetDirMock,
   getFolderContentsMock,
   handleErrorMock,
   joinMock,
@@ -36,7 +35,6 @@ const {
   fileSystemEventHandlers: new Map<string, ((event: Record<string, unknown>) => void)[]>(),
   fileSystemEventsOnMock: vi.fn(),
   fileViewerScrollToIndexMock: vi.fn(),
-  gameAssetDirMock: vi.fn(),
   getFolderContentsMock: vi.fn(),
   handleErrorMock: vi.fn(),
   joinMock: vi.fn(),
@@ -166,10 +164,6 @@ vi.mock('~/services/game-fs', () => ({
     createFolder: createFolderMock,
     renameFile: renameFileMock,
   },
-}))
-
-vi.mock('~/services/platform/app-paths', () => ({
-  gameAssetDir: gameAssetDirMock,
 }))
 
 vi.mock('~/stores/file', () => ({
@@ -454,7 +448,6 @@ describe('AssetView', () => {
     createFileMock.mockReset()
     createFolderMock.mockReset()
     fileViewerScrollToIndexMock.mockReset()
-    gameAssetDirMock.mockReset()
     getFolderContentsMock.mockReset()
     handleErrorMock.mockReset()
     joinMock.mockReset()
@@ -465,15 +458,15 @@ describe('AssetView', () => {
     useTabsStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
 
-    gameAssetDirMock.mockResolvedValue('/games/demo/assets/bg')
     getFolderContentsMock.mockResolvedValue([])
     joinMock.mockImplementation(async (...paths: string[]) => paths.filter(Boolean).join('/'))
-    createFileMock.mockResolvedValue('/project/background/新建文件.json')
-    createFolderMock.mockResolvedValue('/project/background/新建文件夹')
-    renameFileMock.mockResolvedValue('/project/background/hero-renamed.png')
+    createFileMock.mockResolvedValue('/project/game/background/新建文件.json')
+    createFolderMock.mockResolvedValue('/project/game/background/新建文件夹')
+    renameFileMock.mockResolvedValue('/project/game/background/hero-renamed.png')
 
     useFileStoreMock.mockReturnValue({
       getFolderContents: getFolderContentsMock,
+      initialized: Promise.resolve(),
     })
     usePreferenceStoreMock.mockReturnValue(reactive({
       assetViewMode: 'grid',
@@ -529,7 +522,6 @@ describe('AssetView', () => {
   })
 
   it('右键重命名会以 Popover 形式打开并调用 gameFs.renameFile', async () => {
-    gameAssetDirMock.mockResolvedValue('/project/background')
     getFolderContentsMock.mockResolvedValue([
       {
         createdAt: 1,
@@ -537,7 +529,7 @@ describe('AssetView', () => {
         mimeType: 'image/png',
         modifiedAt: 2,
         name: 'hero.png',
-        path: '/project/background/hero.png',
+        path: '/project/game/background/hero.png',
         size: 1024,
       },
     ])
@@ -567,12 +559,11 @@ describe('AssetView', () => {
     await textbox.fill('hero-renamed.png')
     await userEvent.keyboard('{Enter}')
 
-    expect(renameFileMock).toHaveBeenCalledWith('/project/background/hero.png', 'hero-renamed.png')
+    expect(renameFileMock).toHaveBeenCalledWith('/project/game/background/hero.png', 'hero-renamed.png')
     expect(handleErrorMock).not.toHaveBeenCalled()
   })
 
   it('重命名时会高亮当前项并在关闭后取消高亮', async () => {
-    gameAssetDirMock.mockResolvedValue('/project/background')
     getFolderContentsMock.mockResolvedValue([
       {
         createdAt: 1,
@@ -580,7 +571,7 @@ describe('AssetView', () => {
         mimeType: 'image/png',
         modifiedAt: 2,
         name: 'hero.png',
-        path: '/project/background/hero.png',
+        path: '/project/game/background/hero.png',
         size: 1024,
       },
       {
@@ -589,7 +580,7 @@ describe('AssetView', () => {
         mimeType: 'image/png',
         modifiedAt: 3,
         name: 'villain.png',
-        path: '/project/background/villain.png',
+        path: '/project/game/background/villain.png',
         size: 2048,
       },
     ])
@@ -627,7 +618,6 @@ describe('AssetView', () => {
   })
 
   it('网格模式下重命名 Popover 会居中对齐', async () => {
-    gameAssetDirMock.mockResolvedValue('/project/background')
     getFolderContentsMock.mockResolvedValue([
       {
         createdAt: 1,
@@ -635,7 +625,7 @@ describe('AssetView', () => {
         mimeType: 'image/png',
         modifiedAt: 2,
         name: 'hero.png',
-        path: '/project/background/hero.png',
+        path: '/project/game/background/hero.png',
         size: 1024,
       },
     ])
@@ -662,7 +652,6 @@ describe('AssetView', () => {
   })
 
   it('列表模式下重命名 Popover 仍保持左对齐', async () => {
-    gameAssetDirMock.mockResolvedValue('/project/background')
     getFolderContentsMock.mockResolvedValue([
       {
         createdAt: 1,
@@ -670,7 +659,7 @@ describe('AssetView', () => {
         mimeType: 'image/png',
         modifiedAt: 2,
         name: 'hero.png',
-        path: '/project/background/hero.png',
+        path: '/project/game/background/hero.png',
         size: 1024,
       },
     ])
@@ -701,7 +690,6 @@ describe('AssetView', () => {
   })
 
   it('重命名输入框会按内容自动宽度并只保留最大宽度约束', async () => {
-    gameAssetDirMock.mockResolvedValue('/project/background')
     getFolderContentsMock.mockResolvedValue([
       {
         createdAt: 1,
@@ -709,7 +697,7 @@ describe('AssetView', () => {
         mimeType: 'image/png',
         modifiedAt: 2,
         name: 'hero-with-a-very-long-name.png',
-        path: '/project/background/hero-with-a-very-long-name.png',
+        path: '/project/game/background/hero-with-a-very-long-name.png',
         size: 1024,
       },
     ])
@@ -753,7 +741,7 @@ describe('AssetView', () => {
           mimeType: 'image/png',
           modifiedAt: 2,
           name: 'new-file.png',
-          path: '/games/demo/assets/bg/new-file.png',
+          path: '/games/demo/game/bg/new-file.png',
           size: 2048,
         },
       ])
@@ -774,7 +762,7 @@ describe('AssetView', () => {
 
     emitFileSystemEvent('file:created', {
       type: 'file:created',
-      path: '/games/demo/assets/bg/new-file.png',
+      path: '/games/demo/game/bg/new-file.png',
     })
 
     await vi.advanceTimersByTimeAsync(100)
@@ -795,7 +783,7 @@ describe('AssetView', () => {
           mimeType: 'image/png',
           modifiedAt: 2,
           name: 'new-file.png',
-          path: '/games/demo/assets/bg/new-file.png',
+          path: '/games/demo/game/bg/new-file.png',
           size: 2048,
         },
       ])
@@ -815,11 +803,11 @@ describe('AssetView', () => {
 
     emitFileSystemEvent('file:created', {
       type: 'file:created',
-      path: '/games/demo/assets/bg/new-file.png',
+      path: '/games/demo/game/bg/new-file.png',
     })
     emitFileSystemEvent('file:created', {
       type: 'file:created',
-      path: '/games/demo/assets/bgm/ignore-me.png',
+      path: '/games/demo/game/bgm/ignore-me.png',
     })
 
     await vi.advanceTimersByTimeAsync(100)
@@ -847,14 +835,14 @@ describe('AssetView', () => {
 
     emitFileSystemEvent('directory:removed', {
       type: 'directory:removed',
-      path: '/games/demo/assets/bg',
+      path: '/games/demo/game/bg',
     })
 
     await vi.advanceTimersByTimeAsync(100)
     await nextTick()
 
     expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
-    expect(getFolderContentsMock).toHaveBeenLastCalledWith('/games/demo/assets/bg/chapter-1')
+    expect(getFolderContentsMock).toHaveBeenLastCalledWith('/games/demo/game/bg/chapter-1')
   })
 
   it('父目录重命名事件也会触发当前子目录刷新', async () => {
@@ -875,15 +863,15 @@ describe('AssetView', () => {
 
     emitFileSystemEvent('directory:renamed', {
       type: 'directory:renamed',
-      oldPath: '/games/demo/assets/bg',
-      newPath: '/games/demo/assets/bg-renamed',
+      oldPath: '/games/demo/game/bg',
+      newPath: '/games/demo/game/bg-renamed',
     })
 
     await vi.advanceTimersByTimeAsync(100)
     await nextTick()
 
     expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
-    expect(getFolderContentsMock).toHaveBeenLastCalledWith('/games/demo/assets/bg/chapter-1')
+    expect(getFolderContentsMock).toHaveBeenLastCalledWith('/games/demo/game/bg/chapter-1')
   })
 
   it('静默刷新覆盖普通加载后仍会正确清除 loading 状态', async () => {
@@ -903,7 +891,7 @@ describe('AssetView', () => {
           mimeType: 'image/png',
           modifiedAt: 2,
           name: 'new-file.png',
-          path: '/games/demo/assets/bg/new-file.png',
+          path: '/games/demo/game/bg/new-file.png',
           size: 2048,
         },
       ])
@@ -921,7 +909,7 @@ describe('AssetView', () => {
 
     emitFileSystemEvent('file:created', {
       type: 'file:created',
-      path: '/games/demo/assets/bg/new-file.png',
+      path: '/games/demo/game/bg/new-file.png',
     })
 
     await vi.advanceTimersByTimeAsync(100)
@@ -948,7 +936,7 @@ describe('AssetView', () => {
       resolveThirdLoad = resolve
     })
 
-    createFolderMock.mockResolvedValue('/games/demo/assets/bg/new-folder')
+    createFolderMock.mockResolvedValue('/games/demo/game/bg/new-folder')
     getFolderContentsMock
       .mockResolvedValueOnce([])
       .mockReturnValueOnce(secondLoad)
@@ -970,12 +958,11 @@ describe('AssetView', () => {
     await page.getByTestId('create-folder-and-change-path').click()
 
     await vi.waitFor(() => {
-      expect(createFolderMock).toHaveBeenCalledWith('/games/demo/assets/bg', 'edit.fileTree.defaultFolderName')
-      expect(getFolderContentsMock).toHaveBeenCalledTimes(3)
+      expect(createFolderMock).toHaveBeenCalledWith('/games/demo/game/bg', 'edit.fileTree.defaultFolderName')
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
     })
 
-    expect(getFolderContentsMock).toHaveBeenNthCalledWith(2, '/games/demo/assets/bg')
-    expect(getFolderContentsMock).toHaveBeenLastCalledWith('/games/demo/assets/bg/chapter-1')
+    expect(getFolderContentsMock).toHaveBeenLastCalledWith('/games/demo/game/bg/chapter-1')
     await expect.element(page.getByTestId('file-viewer-loading')).toHaveTextContent('true')
 
     resolveSecondLoad?.([])
@@ -985,8 +972,6 @@ describe('AssetView', () => {
   })
 
   it('会为文件视图空白区提供当前目录右键菜单', async () => {
-    gameAssetDirMock.mockResolvedValue('/project/background')
-
     renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
@@ -996,14 +981,12 @@ describe('AssetView', () => {
       },
     })
 
-    await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-item-path', '/project/background')
+    await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-item-path', '/games/demo/game/background')
     await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-item-name', 'background')
     await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-is-root', 'true')
   })
 
   it('仅 animation 和 template 目录的右键菜单会显示创建文件入口', async () => {
-    gameAssetDirMock.mockResolvedValue('/project/assets/animation')
-
     renderInBrowser(createHarness('animation'), {
       global: {
         stubs: {
@@ -1016,7 +999,6 @@ describe('AssetView', () => {
     await expect.element(page.getByTestId('create-file-action-animation')).toBeVisible()
 
     document.body.innerHTML = ''
-    gameAssetDirMock.mockResolvedValue('/project/assets/template')
 
     renderInBrowser(createHarness('template'), {
       global: {
@@ -1030,7 +1012,6 @@ describe('AssetView', () => {
     await expect.element(page.getByTestId('create-file-action-template')).toBeVisible()
 
     document.body.innerHTML = ''
-    gameAssetDirMock.mockResolvedValue('/project/assets/background')
 
     renderInBrowser(createHarness('background'), {
       global: {
@@ -1047,8 +1028,7 @@ describe('AssetView', () => {
 
   it('animation 空白区右键菜单新建文件后会创建 .json 文件并打开重命名 Popover', async () => {
     vi.useFakeTimers()
-    gameAssetDirMock.mockResolvedValue('/project/assets/animation')
-    createFileMock.mockResolvedValue('/project/assets/animation/新建文件.json')
+    createFileMock.mockResolvedValue('/project/game/animation/新建文件.json')
     getFolderContentsMock
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
@@ -1058,7 +1038,7 @@ describe('AssetView', () => {
           mimeType: 'application/json',
           modifiedAt: 2,
           name: '新建文件.json',
-          path: '/project/assets/animation/新建文件.json',
+          path: '/project/game/animation/新建文件.json',
           size: 0,
         },
       ])
@@ -1083,7 +1063,7 @@ describe('AssetView', () => {
     })
     await page.getByTestId('create-file-action-animation').click()
 
-    expect(createFileMock).toHaveBeenCalledWith('/project/assets/animation', 'edit.fileTree.defaultFileStem.json')
+    expect(createFileMock).toHaveBeenCalledWith('/project/game/animation', 'edit.fileTree.defaultFileStem.json')
 
     await vi.waitFor(() => {
       expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
@@ -1095,8 +1075,6 @@ describe('AssetView', () => {
   })
 
   it('template 空白区右键菜单新建文件时会使用 .scss 默认后缀', async () => {
-    gameAssetDirMock.mockResolvedValue('/project/assets/template')
-
     renderInBrowser(createHarness('template'), {
       global: {
         stubs: {
@@ -1111,12 +1089,11 @@ describe('AssetView', () => {
     })
     await page.getByTestId('create-file-action-template').click()
 
-    expect(createFileMock).toHaveBeenCalledWith('/project/assets/template', 'edit.fileTree.defaultFileStem.scss')
+    expect(createFileMock).toHaveBeenCalledWith('/games/demo/game/template', 'edit.fileTree.defaultFileStem.scss')
   })
 
   it('空白区右键菜单新建文件夹后会创建目录并打开重命名 Popover', async () => {
     vi.useFakeTimers()
-    gameAssetDirMock.mockResolvedValue('/project/background')
     getFolderContentsMock
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
@@ -1125,7 +1102,7 @@ describe('AssetView', () => {
           isDir: true,
           modifiedAt: 2,
           name: '新建文件夹',
-          path: '/project/background/新建文件夹',
+          path: '/project/game/background/新建文件夹',
           size: 0,
         },
       ])
@@ -1150,7 +1127,7 @@ describe('AssetView', () => {
     })
     await page.getByTestId('create-folder-action-background').click()
 
-    expect(createFolderMock).toHaveBeenCalledWith('/project/background', 'edit.fileTree.defaultFolderName')
+    expect(createFolderMock).toHaveBeenCalledWith('/project/game/background', 'edit.fileTree.defaultFolderName')
 
     await vi.waitFor(() => {
       expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
@@ -1163,10 +1140,8 @@ describe('AssetView', () => {
 
   it('创建文件夹后如果已切换目录，则不会继续打开旧目录的重命名 Popover', async () => {
     vi.useFakeTimers()
-    gameAssetDirMock.mockResolvedValue('/project/background')
-    createFolderMock.mockResolvedValue('/project/background/新建文件夹')
+    createFolderMock.mockResolvedValue('/project/game/background/新建文件夹')
     getFolderContentsMock
-      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
     useWorkspaceStoreMock.mockReturnValue(reactive({
@@ -1192,8 +1167,8 @@ describe('AssetView', () => {
     await page.getByTestId('create-folder-and-change-path').click()
 
     await vi.waitFor(() => {
-      expect(createFolderMock).toHaveBeenCalledWith('/project/background', 'edit.fileTree.defaultFolderName')
-      expect(getFolderContentsMock).toHaveBeenCalledTimes(3)
+      expect(createFolderMock).toHaveBeenCalledWith('/project/game/background', 'edit.fileTree.defaultFolderName')
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
     })
 
     await vi.advanceTimersByTimeAsync(1000)
@@ -1204,7 +1179,6 @@ describe('AssetView', () => {
 
   it('搜索结果中隐藏新建目录时仍会打开重命名 Popover', async () => {
     vi.useFakeTimers()
-    gameAssetDirMock.mockResolvedValue('/project/background')
     getFolderContentsMock
       .mockResolvedValueOnce([
         {
@@ -1213,7 +1187,7 @@ describe('AssetView', () => {
           mimeType: 'image/png',
           modifiedAt: 2,
           name: 'hero.png',
-          path: '/project/background/hero.png',
+          path: '/project/game/background/hero.png',
           size: 1024,
         },
       ])
@@ -1223,7 +1197,7 @@ describe('AssetView', () => {
           isDir: true,
           modifiedAt: 2,
           name: '新建文件夹',
-          path: '/project/background/新建文件夹',
+          path: '/project/game/background/新建文件夹',
           size: 0,
         },
         {
@@ -1232,7 +1206,7 @@ describe('AssetView', () => {
           mimeType: 'image/png',
           modifiedAt: 2,
           name: 'hero.png',
-          path: '/project/background/hero.png',
+          path: '/project/game/background/hero.png',
           size: 1024,
         },
       ])
@@ -1268,7 +1242,6 @@ describe('AssetView', () => {
 
   it('大型虚拟列表中新建文件夹时会先滚动到目标项再打开重命名 Popover', async () => {
     vi.useFakeTimers()
-    gameAssetDirMock.mockResolvedValue('/project/background')
     getFolderContentsMock
       .mockResolvedValueOnce([
         {
@@ -1277,7 +1250,7 @@ describe('AssetView', () => {
           mimeType: 'image/png',
           modifiedAt: 2,
           name: 'hero-1.png',
-          path: '/project/background/hero-1.png',
+          path: '/project/game/background/hero-1.png',
           size: 1024,
         },
         {
@@ -1286,7 +1259,7 @@ describe('AssetView', () => {
           mimeType: 'image/png',
           modifiedAt: 3,
           name: 'hero-2.png',
-          path: '/project/background/hero-2.png',
+          path: '/project/game/background/hero-2.png',
           size: 1024,
         },
         {
@@ -1295,7 +1268,7 @@ describe('AssetView', () => {
           mimeType: 'image/png',
           modifiedAt: 4,
           name: 'hero-3.png',
-          path: '/project/background/hero-3.png',
+          path: '/project/game/background/hero-3.png',
           size: 1024,
         },
         {
@@ -1304,7 +1277,7 @@ describe('AssetView', () => {
           mimeType: 'image/png',
           modifiedAt: 5,
           name: 'hero-4.png',
-          path: '/project/background/hero-4.png',
+          path: '/project/game/background/hero-4.png',
           size: 1024,
         },
       ])
@@ -1314,7 +1287,7 @@ describe('AssetView', () => {
           isDir: true,
           modifiedAt: 2,
           name: '新建文件夹',
-          path: '/project/background/新建文件夹',
+          path: '/project/game/background/新建文件夹',
           size: 0,
         },
         {
@@ -1323,7 +1296,7 @@ describe('AssetView', () => {
           mimeType: 'image/png',
           modifiedAt: 2,
           name: 'hero-1.png',
-          path: '/project/background/hero-1.png',
+          path: '/project/game/background/hero-1.png',
           size: 1024,
         },
         {
@@ -1332,7 +1305,7 @@ describe('AssetView', () => {
           mimeType: 'image/png',
           modifiedAt: 3,
           name: 'hero-2.png',
-          path: '/project/background/hero-2.png',
+          path: '/project/game/background/hero-2.png',
           size: 1024,
         },
         {
@@ -1341,7 +1314,7 @@ describe('AssetView', () => {
           mimeType: 'image/png',
           modifiedAt: 4,
           name: 'hero-3.png',
-          path: '/project/background/hero-3.png',
+          path: '/project/game/background/hero-3.png',
           size: 1024,
         },
         {
@@ -1350,7 +1323,7 @@ describe('AssetView', () => {
           mimeType: 'image/png',
           modifiedAt: 5,
           name: 'hero-4.png',
-          path: '/project/background/hero-4.png',
+          path: '/project/game/background/hero-4.png',
           size: 1024,
         },
       ])
@@ -1386,14 +1359,13 @@ describe('AssetView', () => {
   })
 
   it('当前目录已有默认文件夹名时会自动追加序号再创建', async () => {
-    gameAssetDirMock.mockResolvedValue('/project/background')
     getFolderContentsMock.mockResolvedValue([
       {
         createdAt: 1,
         isDir: true,
         modifiedAt: 2,
         name: 'edit.fileTree.defaultFolderName',
-        path: '/project/background/edit.fileTree.defaultFolderName',
+        path: '/games/demo/game/background/edit.fileTree.defaultFolderName',
         size: 0,
       },
     ])
@@ -1412,6 +1384,6 @@ describe('AssetView', () => {
     })
     await page.getByTestId('create-folder-action-background').click()
 
-    expect(createFolderMock).toHaveBeenCalledWith('/project/background', 'edit.fileTree.defaultFolderName 2')
+    expect(createFolderMock).toHaveBeenCalledWith('/games/demo/game/background', 'edit.fileTree.defaultFolderName 2')
   })
 })
