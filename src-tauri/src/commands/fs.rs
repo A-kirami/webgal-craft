@@ -454,7 +454,8 @@ mod tests {
 
         fs::create_dir_all(src.join("template")).expect("template dir should be created");
         fs::write(src.join("config.txt"), "config").expect("root file should be written");
-        fs::write(src.join("template").join("start.txt"), "tpl").expect("tpl file should be written");
+        fs::write(src.join("template").join("start.txt"), "tpl")
+            .expect("tpl file should be written");
 
         copy_dir_all(
             &src,

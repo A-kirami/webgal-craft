@@ -116,7 +116,11 @@ pub fn rename_vfs_path(
     let target_path = sanitize_rename_target(parent, &new_name)?;
     let overlay = build_overlay(&project_path, &engine_path, template_path)?;
     overlay.rename_logical_path(&logical_path, &target_path)?;
-    log::debug!("VFS 重命名: {} -> {}", logical_path.display(), target_path.display());
+    log::debug!(
+        "VFS 重命名: {} -> {}",
+        logical_path.display(),
+        target_path.display()
+    );
     Ok(to_logical_path_string(&target_path))
 }
 
@@ -132,7 +136,11 @@ pub fn move_vfs_path(
     let target_path = sanitize_move_target(&target_rel_path)?;
     let overlay = build_overlay(&project_path, &engine_path, template_path)?;
     overlay.rename_logical_path(&logical_path, &target_path)?;
-    log::debug!("VFS 移动: {} -> {}", logical_path.display(), target_path.display());
+    log::debug!(
+        "VFS 移动: {} -> {}",
+        logical_path.display(),
+        target_path.display()
+    );
     Ok(to_logical_path_string(&target_path))
 }
 
@@ -148,7 +156,11 @@ pub fn copy_vfs_path(
     let target_path = sanitize_logical_path(&target_rel_path)?;
     let overlay = build_overlay(&project_path, &engine_path, template_path)?;
     overlay.copy_logical_path(&logical_path, &target_path)?;
-    log::debug!("VFS 复制: {} -> {}", logical_path.display(), target_path.display());
+    log::debug!(
+        "VFS 复制: {} -> {}",
+        logical_path.display(),
+        target_path.display()
+    );
     Ok(to_logical_path_string(&target_path))
 }
 
@@ -197,8 +209,14 @@ mod tests {
     fn build_overlay_allows_engines_without_template_directory() {
         let upper = tempdir().expect("upper temp dir should be created");
         let engine = tempdir().expect("engine temp dir should be created");
-        let upper_str = upper.path().to_str().expect("temp path should be valid UTF-8");
-        let engine_str = engine.path().to_str().expect("temp path should be valid UTF-8");
+        let upper_str = upper
+            .path()
+            .to_str()
+            .expect("temp path should be valid UTF-8");
+        let engine_str = engine
+            .path()
+            .to_str()
+            .expect("temp path should be valid UTF-8");
 
         assert!(
             build_overlay(upper_str, engine_str, None).is_ok(),

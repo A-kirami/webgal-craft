@@ -41,12 +41,8 @@ pub struct EngineRef {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum TemplateBinding {
-    Standalone {
-        name: String,
-    },
-    EngineBuiltin {
-        engine: EngineRef,
-    },
+    Standalone { name: String },
+    EngineBuiltin { engine: EngineRef },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -372,7 +368,12 @@ impl OverlayFs {
                 )?;
             }
         } else if let Some(engine_dir) = self.engine_dir_for_list(logical_dir) {
-            self.extend_from_lower(logical_dir, &engine_dir, VfsSource::EngineLower, &mut entries)?;
+            self.extend_from_lower(
+                logical_dir,
+                &engine_dir,
+                VfsSource::EngineLower,
+                &mut entries,
+            )?;
         }
 
         self.extend_template_root_entry(logical_dir, &mut entries)?;
