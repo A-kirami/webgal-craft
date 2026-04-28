@@ -32,10 +32,14 @@ export function useDeleteConfirmation(options: UseDeleteConfirmationOptions) {
     isCheckingDelete = true
     try {
       const result = await options.checkDelete()
-      if (requestId !== checkRequestId) return
+      if (requestId !== checkRequestId) {
+        return
+      }
       associatedGames = result.associatedGames ?? []
     } catch (error) {
-      if (requestId !== checkRequestId) return
+      if (requestId !== checkRequestId) {
+        return
+      }
       associatedGames = []
       logger.error(`${options.logPrefix}: ${error}`)
     } finally {
