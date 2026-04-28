@@ -21,25 +21,33 @@ interface UseDeleteConfirmationOptions {
 export function useDeleteConfirmation(options: UseDeleteConfirmationOptions) {
   let associatedGames = $ref<Game[]>([])
   let isCheckingDelete = $ref(false)
+  let isDeleting = $ref(false)
+  let checkRequestId = 0
 
   const isDeleteBlocked = $computed(() => associatedGames.length > 0)
-  const isConfirmDisabled = $computed(() => isCheckingDelete || isDeleteBlocked)
+  const isConfirmDisabled = $computed(() => isCheckingDelete || isDeleteBlocked || isDeleting)
 
   async function loadDeleteCheck(): Promise<void> {
+    const requestId = ++checkRequestId
     isCheckingDelete = true
     try {
       const result = await options.checkDelete()
+      if (requestId !== checkRequestId) return
       associatedGames = result.associatedGames ?? []
     } catch (error) {
+      if (requestId !== checkRequestId) return
       associatedGames = []
       logger.error(`${options.logPrefix}: ${error}`)
     } finally {
-      isCheckingDelete = false
+      if (requestId === checkRequestId) {
+        isCheckingDelete = false
+      }
     }
   }
 
   watch(() => [options.open.value, options.identifier()], ([isOpen]) => {
     if (!isOpen) {
+      checkRequestId++
       associatedGames = []
       isCheckingDelete = false
       return
@@ -53,7 +61,8 @@ export function useDeleteConfirmation(options: UseDeleteConfirmationOptions) {
       return
     }
 
-    void options.performDelete()
+    isDeleting = true
+    options.performDelete()
       .then(() => {
         options.open.value = false
         notify.success(options.successMessage())
@@ -62,6 +71,9 @@ export function useDeleteConfirmation(options: UseDeleteConfirmationOptions) {
         notify.error(error instanceof Error
           ? error.message
           : options.fallbackErrorMessage())
+      })
+      .finally(() => {
+        isDeleting = false
       })
   }
 
