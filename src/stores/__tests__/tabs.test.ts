@@ -190,4 +190,29 @@ describe('标签状态仓库', () => {
       error: 'rename pending',
     })
   })
+
+  it('不同分隔符形态的同一路径会被视为同一标签页，避免重复打开', () => {
+    const store = useTabsStore()
+
+    editSettingsStoreState.enablePreviewTab = false
+
+    store.openTab('start.txt', 'X:/games/demo/game/scene/start.txt')
+    store.openTab('start.txt', String.raw`X:\games\demo\game\scene\start.txt`)
+
+    expect(store.tabs.map(tab => tab.path)).toEqual(['X:/games/demo/game/scene/start.txt'])
+    expect(store.activeTab?.path).toBe('X:/games/demo/game/scene/start.txt')
+  })
+
+  it('预览模式下用反斜杠重新打开当前预览标签时不会再插入新标签', () => {
+    const store = useTabsStore()
+
+    store.openTab('start.txt', 'X:/games/demo/game/scene/start.txt')
+    store.openTab('start.txt', String.raw`X:\games\demo\game\scene\start.txt`)
+
+    expect(store.tabs).toHaveLength(1)
+    expect(store.tabs[0]).toMatchObject({
+      path: 'X:/games/demo/game/scene/start.txt',
+      isPreview: true,
+    })
+  })
 })

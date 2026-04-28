@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { TriangleAlert } from '@lucide/vue'
 
-import { Game } from '~/database/model'
+import type { Game } from '~/database/model'
 
 let open = $(defineModel<boolean>('open'))
 let confirmInput = $ref('')
 
 const { game, onConfirm } = defineProps<{
   game: Game
-  onConfirm: () => void
+  onConfirm: () => Promise<void>
 }>()
 
-function handleConfirm() {
-  onConfirm()
+async function handleConfirm() {
+  await onConfirm()
   open = false
 }
 </script>

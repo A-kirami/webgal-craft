@@ -1,90 +1,110 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { createTestEngine, createTestGame } from '~/__tests__/factories'
 import { engineManager } from '~/services/engine-manager'
 import { AppError } from '~/types/errors'
 
 const {
+  addMock,
+  basenameMock,
   copyDirectoryWithProgressMock,
-  dbEnginesAddMock,
-  dbEnginesDeleteMock,
-  dbEnginesUpdateMock,
   deleteFileMock,
-  engineIconPathMock,
-  engineManifestPathMock,
+  engineWhereFilterFirstMock,
+  engineWhereFilterMock,
+  engineWhereToArrayMock,
+  enginesToArrayMock,
+  enginesUpdateMock,
+  engineWhereEqualsMock,
+  engineWhereFirstMock,
+  engineWhereMock,
   existsMock,
+  findGamesToArrayMock,
+  gameWhereEqualsMock,
+  gameWhereMock,
+  iconPathMock,
   joinMock,
-  loggerInfoMock,
-  readTextFileMock,
-  removeMock,
+  readEngineManifestMock,
   resourceStoreMock,
   useResourceStoreMock,
   useStorageSettingsStoreMock,
   validateDirectoryStructureMock,
 } = vi.hoisted(() => ({
+  addMock: vi.fn(),
+  basenameMock: vi.fn(async (path: string) => path.split('/').at(-1) ?? path),
   copyDirectoryWithProgressMock: vi.fn(),
-  dbEnginesAddMock: vi.fn(),
-  dbEnginesDeleteMock: vi.fn(),
-  dbEnginesUpdateMock: vi.fn(),
   deleteFileMock: vi.fn(),
-  engineIconPathMock: vi.fn(),
-  engineManifestPathMock: vi.fn(),
+  engineWhereFilterFirstMock: vi.fn(),
+  engineWhereFilterMock: vi.fn(),
+  engineWhereToArrayMock: vi.fn(),
+  enginesToArrayMock: vi.fn(),
+  enginesUpdateMock: vi.fn(),
+  engineWhereEqualsMock: vi.fn(),
+  engineWhereFirstMock: vi.fn(),
+  engineWhereMock: vi.fn(),
   existsMock: vi.fn(),
+  findGamesToArrayMock: vi.fn(),
+  gameWhereEqualsMock: vi.fn(),
+  gameWhereMock: vi.fn(),
+  iconPathMock: vi.fn(),
   joinMock: vi.fn(async (...parts: string[]) => parts.join('/').replaceAll('//', '/')),
-  loggerInfoMock: vi.fn(),
-  readTextFileMock: vi.fn(),
-  removeMock: vi.fn(),
+  readEngineManifestMock: vi.fn(),
   resourceStoreMock: {
-    updateProgress: vi.fn(),
     finishProgress: vi.fn(),
+    updateProgress: vi.fn(),
   },
   useResourceStoreMock: vi.fn(),
   useStorageSettingsStoreMock: vi.fn(),
   validateDirectoryStructureMock: vi.fn(),
 }))
 
-const storageSettingsStoreState = {
-  engineSavePath: '/engines',
-}
-
 vi.mock('@tauri-apps/api/path', () => ({
+  basename: basenameMock,
   join: joinMock,
 }))
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
   exists: existsMock,
-  readTextFile: readTextFileMock,
-  remove: removeMock,
 }))
 
 vi.mock('@tauri-apps/plugin-log', () => ({
-  info: loggerInfoMock,
-  error: vi.fn(),
-  warn: vi.fn(),
   debug: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
   attachConsole: vi.fn(),
+}))
+
+vi.mock('~/commands/engine', () => ({
+  engineCmds: {
+    readEngineManifest: readEngineManifestMock,
+  },
 }))
 
 vi.mock('~/commands/fs', () => ({
   fsCmds: {
-    validateDirectoryStructure: validateDirectoryStructureMock,
     copyDirectoryWithProgress: copyDirectoryWithProgressMock,
     deleteFile: deleteFileMock,
+    validateDirectoryStructure: validateDirectoryStructureMock,
   },
 }))
 
 vi.mock('~/database/db', () => ({
   db: {
     engines: {
-      add: dbEnginesAddMock,
-      update: dbEnginesUpdateMock,
-      delete: dbEnginesDeleteMock,
+      add: addMock,
+      delete: vi.fn(),
+      toArray: enginesToArrayMock,
+      update: enginesUpdateMock,
+      where: engineWhereMock,
+    },
+    games: {
+      where: gameWhereMock,
     },
   },
 }))
 
 vi.mock('~/services/platform/app-paths', () => ({
-  engineIconPath: engineIconPathMock,
-  engineManifestPath: engineManifestPathMock,
+  engineIconPath: iconPathMock,
 }))
 
 vi.mock('~/stores/resource', () => ({
@@ -95,241 +115,429 @@ vi.mock('~/stores/storage-settings', () => ({
   useStorageSettingsStore: useStorageSettingsStoreMock,
 }))
 
-describe('engineManager 引擎管理', () => {
+describe('engineManager', () => {
   beforeEach(() => {
+    addMock.mockReset()
+    basenameMock.mockClear()
     copyDirectoryWithProgressMock.mockReset()
-    dbEnginesAddMock.mockReset()
-    dbEnginesDeleteMock.mockReset()
-    dbEnginesUpdateMock.mockReset()
     deleteFileMock.mockReset()
-    engineIconPathMock.mockReset()
-    engineManifestPathMock.mockReset()
+    engineWhereFilterFirstMock.mockReset()
+    engineWhereFilterMock.mockReset()
+    engineWhereToArrayMock.mockReset()
+    enginesToArrayMock.mockReset()
+    enginesUpdateMock.mockReset()
+    engineWhereEqualsMock.mockReset()
+    engineWhereFirstMock.mockReset()
+    engineWhereMock.mockReset()
     existsMock.mockReset()
+    findGamesToArrayMock.mockReset()
+    gameWhereEqualsMock.mockReset()
+    gameWhereMock.mockReset()
+    iconPathMock.mockReset()
     joinMock.mockClear()
-    loggerInfoMock.mockReset()
-    readTextFileMock.mockReset()
-    removeMock.mockReset()
-    resourceStoreMock.updateProgress.mockReset()
+    readEngineManifestMock.mockReset()
     resourceStoreMock.finishProgress.mockReset()
-    validateDirectoryStructureMock.mockReset()
+    resourceStoreMock.updateProgress.mockReset()
     useResourceStoreMock.mockReset()
     useStorageSettingsStoreMock.mockReset()
+    validateDirectoryStructureMock.mockReset()
+
+    iconPathMock.mockImplementation(async (enginePath: string) => `${enginePath}/icons/favicon.ico`)
     useResourceStoreMock.mockReturnValue(resourceStoreMock)
-    useStorageSettingsStoreMock.mockReturnValue(storageSettingsStoreState)
+    useStorageSettingsStoreMock.mockReturnValue({ engineSavePath: '/engines' })
+    engineWhereMock.mockReturnValue({
+      equals: engineWhereEqualsMock,
+    })
+    engineWhereEqualsMock.mockReturnValue({
+      first: engineWhereFirstMock,
+      filter: engineWhereFilterMock,
+      toArray: engineWhereToArrayMock,
+    })
+    engineWhereFilterMock.mockReturnValue({
+      first: engineWhereFilterFirstMock,
+    })
+    gameWhereMock.mockReturnValue({
+      equals: gameWhereEqualsMock,
+    })
+    gameWhereEqualsMock.mockReturnValue({
+      toArray: findGamesToArrayMock,
+    })
+    engineWhereFirstMock.mockResolvedValue(undefined)
+    engineWhereFilterFirstMock.mockResolvedValue(undefined)
+    engineWhereToArrayMock.mockResolvedValue([])
+    enginesToArrayMock.mockResolvedValue([])
+    findGamesToArrayMock.mockResolvedValue([])
     existsMock.mockResolvedValue(false)
   })
 
-  afterEach(() => {
-    vi.useRealTimers()
+  it('validateEngine 在目录结构有效时返回 true', async () => {
+    validateDirectoryStructureMock.mockResolvedValue(true)
+
+    await expect(engineManager.validateEngine('/engines/WebGAL')).resolves.toBe(true)
+
+    expect(validateDirectoryStructureMock).toHaveBeenCalledWith(
+      '/engines/WebGAL',
+      ['game/template'],
+      ['index.html', 'game/config.txt'],
+    )
+    expect(readEngineManifestMock).not.toHaveBeenCalled()
   })
 
-  it('getEngineMetadata 会读取 manifest 并返回语义元数据', async () => {
-    engineIconPathMock.mockResolvedValue('/engines/WebGAL/icons/icon.png')
-    engineManifestPathMock.mockResolvedValue('/engines/WebGAL/manifest.json')
-    readTextFileMock.mockResolvedValue(JSON.stringify({
+  it('validateEngine 在目录结构无效时返回 false', async () => {
+    validateDirectoryStructureMock.mockResolvedValue(false)
+
+    await expect(engineManager.validateEngine('/engines/WebGAL')).resolves.toBe(false)
+
+    expect(readEngineManifestMock).not.toHaveBeenCalled()
+  })
+
+  it('findEngineByRef 对新版引擎使用复合索引查询', async () => {
+    const matchedEngine = createTestEngine({
+      id: 'engine-4',
       name: 'WebGAL',
-      description: 'Visual novel engine',
-    }))
-
-    await expect(engineManager.getEngineMetadata('/engines/WebGAL')).resolves.toEqual({
-      name: 'WebGAL',
-      description: 'Visual novel engine',
+      version: '4.5.0',
     })
+    engineWhereFirstMock.mockResolvedValue(matchedEngine)
+
+    await expect(engineManager.findEngineByRef({
+      id: 'open-webgal.webgal',
+      version: '4.5.0',
+    })).resolves.toEqual(matchedEngine)
+
+    expect(engineWhereMock).toHaveBeenCalledWith('[engineId+version]')
+    expect(engineWhereEqualsMock).toHaveBeenCalledWith(['open-webgal.webgal', '4.5.0'])
+    expect(engineWhereFilterMock).not.toHaveBeenCalled()
   })
 
-  it('getEnginePreviewAssets 只返回图标路径', async () => {
-    engineIconPathMock.mockResolvedValue('/engines/WebGAL/icons/icon.png')
+  it('findEngineByRef 在缺少版本时直接返回 undefined', async () => {
+    await expect(engineManager.findEngineByRef({
+      id: 'open-webgal.webgal-legacy',
+    })).resolves.toBeUndefined()
 
-    await expect(engineManager.getEnginePreviewAssets('/engines/WebGAL')).resolves.toEqual({
-      icon: {
-        path: '/engines/WebGAL/icons/icon.png',
-      },
-    })
+    expect(engineWhereMock).not.toHaveBeenCalled()
+    expect(engineWhereEqualsMock).not.toHaveBeenCalled()
+    expect(engineWhereFilterMock).not.toHaveBeenCalled()
   })
 
-  it('registerEngine 会保留调用方提供的 metadata 并只补齐缺失的 previewAssets', async () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
-    engineIconPathMock.mockResolvedValue('/engines/WebGAL/icons/icon.png')
-    dbEnginesAddMock.mockResolvedValue('engine-1')
-
-    await engineManager.registerEngine('/engines/WebGAL', {
-      metadata: {
-        name: 'Provided Engine',
-        description: 'Provided Description',
+  it('importEngine 会把新版引擎复制到 name/version 托管目录并回写状态', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.5.0',
+        engineType: 'official',
+        webgalVersion: '4.5.0',
+        icon: 'branding/icon.png',
       },
     })
-
-    expect(dbEnginesAddMock).toHaveBeenCalledWith(expect.objectContaining({
-      metadata: {
-        name: 'Provided Engine',
-        description: 'Provided Description',
-      },
-      previewAssets: {
-        icon: {
-          path: '/engines/WebGAL/icons/icon.png',
-          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
-        },
-      },
-    }))
-  })
-
-  it('installEngine 会复制到存储目录并在完成后更新数据库状态', async () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
-    engineIconPathMock.mockImplementation(async (path: string) => `${path}/icons/favicon.ico`)
-    engineManifestPathMock.mockResolvedValue('/source/manifest.json')
-    readTextFileMock.mockResolvedValue(JSON.stringify({
-      name: 'WebGAL',
-      description: 'Visual novel engine',
-    }))
-    dbEnginesAddMock.mockResolvedValue('engine-1')
-    copyDirectoryWithProgressMock.mockImplementation(async (_from, _to, onProgress: (progress: number) => void) => {
-      onProgress(10)
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    addMock.mockResolvedValue('engine-1')
+    copyDirectoryWithProgressMock.mockImplementation(async (_from, _to, onProgress: (value: number) => void) => {
+      onProgress(25)
       onProgress(100)
     })
 
-    await engineManager.installEngine('/source')
+    await expect(engineManager.importEngine('/downloads/webgal')).resolves.toBe('engine-1')
 
-    expect(dbEnginesAddMock).toHaveBeenCalledWith(expect.objectContaining({
-      path: '/engines/WebGAL',
+    expect(addMock).toHaveBeenCalledWith(expect.objectContaining({
+      path: '/engines/WebGAL/4.5.0',
+      name: 'WebGAL',
+      version: '4.5.0',
       status: 'creating',
-      metadata: {
-        name: 'WebGAL',
-        description: 'Visual novel engine',
-      },
-      previewAssets: {
-        icon: {
-          path: '/engines/WebGAL/icons/favicon.ico',
-        },
-      },
+      metadata: expect.objectContaining({
+        type: 'official',
+      }),
     }))
-    expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(1, 'engine-1', 10)
+    expect(copyDirectoryWithProgressMock).toHaveBeenCalledWith(
+      '/downloads/webgal',
+      '/engines/WebGAL/4.5.0',
+      expect.any(Function),
+    )
+    expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(1, 'engine-1', 25)
     expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(2, 'engine-1', 100)
     expect(resourceStoreMock.finishProgress).toHaveBeenCalledWith('engine-1')
-    expect(dbEnginesUpdateMock).toHaveBeenCalledWith('engine-1', {
+    expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', expect.objectContaining({
       status: 'created',
-      metadata: {
-        name: 'WebGAL',
-        description: 'Visual novel engine',
-      },
+      name: 'WebGAL',
+      version: '4.5.0',
       previewAssets: {
-        icon: {
-          path: '/engines/WebGAL/icons/favicon.ico',
-          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
-        },
+        icon: expect.objectContaining({
+          path: '/engines/WebGAL/4.5.0/branding/icon.png',
+        }),
       },
-    })
+    }))
   })
 
-  it('installEngine 在注册后失败时会回滚占位记录、进度和目标目录', async () => {
-    engineIconPathMock.mockImplementation(async (path: string) => `${path}/icons/favicon.ico`)
-    engineManifestPathMock.mockResolvedValue('/source/manifest.json')
-    readTextFileMock.mockResolvedValue(JSON.stringify({
-      name: 'WebGAL',
-      description: 'Visual novel engine',
-    }))
-    dbEnginesAddMock.mockResolvedValue('engine-1')
-    existsMock.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
-    copyDirectoryWithProgressMock.mockResolvedValue(undefined)
-    dbEnginesUpdateMock.mockRejectedValue(new Error('update failed'))
+  it('importEngine 会拒绝导入旧版引擎目录', async () => {
+    readEngineManifestMock.mockResolvedValue({ status: 'missing' })
+    validateDirectoryStructureMock.mockResolvedValue(true)
 
-    await expect(engineManager.installEngine('/source')).rejects.toThrow('update failed')
-
-    expect(resourceStoreMock.finishProgress).toHaveBeenCalledWith('engine-1')
-    expect(dbEnginesDeleteMock).toHaveBeenCalledWith('engine-1')
-    expect(deleteFileMock).toHaveBeenCalledWith('/engines/WebGAL', true)
-  })
-
-  it('installEngine 在目标目录已存在且复制失败时不会删除既有目录', async () => {
-    engineIconPathMock.mockImplementation(async (path: string) => `${path}/icons/favicon.ico`)
-    engineManifestPathMock.mockResolvedValue('/source/manifest.json')
-    readTextFileMock.mockResolvedValue(JSON.stringify({
-      name: 'WebGAL',
-      description: 'Visual novel engine',
-    }))
-    dbEnginesAddMock.mockResolvedValue('engine-1')
-    existsMock.mockResolvedValue(true)
-    copyDirectoryWithProgressMock.mockRejectedValue(new Error('copy failed'))
-
-    await expect(engineManager.installEngine('/source')).rejects.toThrow('copy failed')
-
-    expect(dbEnginesDeleteMock).toHaveBeenCalledWith('engine-1')
-    expect(deleteFileMock).not.toHaveBeenCalled()
-  })
-
-  it('installEngine 遇到非法引擎名称时会拒绝安装', async () => {
-    engineIconPathMock.mockResolvedValue('/source/icons/favicon.ico')
-    engineManifestPathMock.mockResolvedValue('/source/manifest.json')
-    readTextFileMock.mockResolvedValue(JSON.stringify({
-      name: '',
-      description: 'Visual novel engine',
-    }))
-
-    await expect(engineManager.installEngine('/source')).rejects.toEqual(
-      new AppError('IO_ERROR', '引擎名称无效'),
+    await expect(engineManager.importEngine('/downloads/LegacyEngine')).rejects.toEqual(
+      new AppError('IO_ERROR', '不支持导入旧版引擎，请导入包含该引擎的项目或使用受支持的引擎版本', {
+        details: { reason: 'UNSUPPORTED_LEGACY_ENGINE' },
+      }),
     )
 
-    expect(dbEnginesAddMock).not.toHaveBeenCalled()
+    expect(addMock).not.toHaveBeenCalled()
     expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
   })
 
-  it('importEngine 遇到非法目录结构时会抛出 INVALID_STRUCTURE', async () => {
+  it('importEngine 会拒绝 schemaVersion 不受支持的引擎', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'unsupportedSchema',
+      schemaVersion: '2.0.0',
+      supportedMajor: 1,
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+
+    await expect(engineManager.importEngine('/downloads/futureEngine')).rejects.toMatchObject({
+      code: 'IO_ERROR',
+      details: {
+        reason: 'UNSUPPORTED_MANIFEST_SCHEMA',
+        schemaVersion: '2.0.0',
+        supportedMajor: 1,
+      },
+    })
+
+    expect(addMock).not.toHaveBeenCalled()
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
+  })
+
+  it('importEngine 会拒绝 manifest 解析失败的引擎', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'invalid',
+      reason: '缺少必填字段',
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+
+    await expect(engineManager.importEngine('/downloads/brokenEngine')).rejects.toEqual(
+      new AppError('IO_ERROR', '不支持导入旧版引擎，请导入包含该引擎的项目或使用受支持的引擎版本', {
+        details: { reason: 'UNSUPPORTED_LEGACY_ENGINE' },
+      }),
+    )
+  })
+
+  it('importEngine 会拒绝同名同版本重复引擎', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.5.0',
+        engineType: 'official',
+        webgalVersion: '4.5.0',
+      },
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    engineWhereFirstMock
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(createTestEngine({
+        name: 'WebGAL',
+        version: '4.5.0',
+      }))
+
+    await expect(engineManager.importEngine('/downloads/webgal')).rejects.toEqual(
+      new AppError('IO_ERROR', '同名同版本的引擎已存在', {
+        details: { reason: 'DUPLICATE_ENGINE' },
+      }),
+    )
+  })
+
+  it('validateAllEngines 会把失效目录标记为 unavailable', async () => {
+    enginesToArrayMock.mockResolvedValue([
+      createTestEngine({
+        id: 'engine-1',
+        path: '/engines/webgal',
+        status: 'created',
+      }),
+    ])
     validateDirectoryStructureMock.mockResolvedValue(false)
 
-    await expect(engineManager.importEngine('/broken-engine')).rejects.toEqual(
-      new AppError('INVALID_STRUCTURE', '无效的引擎文件夹'),
-    )
+    await engineManager.validateAllEngines()
+
+    expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', { status: 'unavailable' })
   })
 
-  it('已位于目标目录的引擎会直接注册而不是重复复制', async () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
-    validateDirectoryStructureMock.mockResolvedValue(true)
-    engineIconPathMock.mockImplementation(async (path: string) => `${path}/icons/favicon.ico`)
-    engineManifestPathMock.mockResolvedValue('/engines/WebGAL/manifest.json')
-    readTextFileMock.mockResolvedValue(JSON.stringify({
-      name: 'WebGAL',
-      description: 'Visual novel engine',
-    }))
-
-    await engineManager.importEngine('/engines/WebGAL')
-
-    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
-    expect(dbEnginesAddMock).toHaveBeenCalledWith(expect.objectContaining({
-      path: '/engines/WebGAL',
-      status: 'created',
-      metadata: expect.objectContaining({
-        name: 'WebGAL',
+  it('validateAllEngines 在 manifest 无效时标记为 unavailable', async () => {
+    enginesToArrayMock.mockResolvedValue([
+      createTestEngine({
+        id: 'engine-1',
+        path: '/engines/WebGAL/4.5.0',
+        status: 'created',
       }),
-      previewAssets: {
-        icon: {
-          path: '/engines/WebGAL/icons/favicon.ico',
-          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
-        },
-      },
-    }))
+    ])
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    readEngineManifestMock.mockResolvedValue({ status: 'missing' })
+
+    await engineManager.validateAllEngines()
+
+    expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', { status: 'unavailable' })
   })
 
-  it('uninstallEngine 会删除数据库记录并通过 fs 命令将引擎目录移动到回收站', async () => {
-    await engineManager.uninstallEngine({
-      id: 'engine-1',
-      path: '/engines/WebGAL',
-      createdAt: 0,
-      status: 'created',
-      metadata: {
+  it('validateAllEngines 在目录结构有效时保持 created 状态', async () => {
+    enginesToArrayMock.mockResolvedValue([
+      createTestEngine({
+        id: 'engine-1',
+        path: '/engines/WebGAL/4.5.0',
+        status: 'created',
+      }),
+    ])
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
         name: 'WebGAL',
-        description: '',
-      },
-      previewAssets: {
-        icon: {
-          path: '',
-        },
+        version: '4.5.0',
+        engineType: 'official',
+        webgalVersion: '4.5.0',
       },
     })
 
-    expect(deleteFileMock).toHaveBeenCalledWith('/engines/WebGAL')
-    expect(dbEnginesDeleteMock).toHaveBeenCalledWith('engine-1')
-    expect(deleteFileMock.mock.invocationCallOrder[0]).toBeLessThan(dbEnginesDeleteMock.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY)
+    await engineManager.validateAllEngines()
+
+    expect(enginesUpdateMock).not.toHaveBeenCalled()
+  })
+
+  it('validateAllEngines 在结构有效但 schemaVersion 不受支持时标记为 unavailable', async () => {
+    enginesToArrayMock.mockResolvedValue([
+      createTestEngine({
+        id: 'engine-1',
+        path: '/engines/WebGAL/4.5.0',
+        status: 'created',
+      }),
+    ])
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    readEngineManifestMock.mockResolvedValue({
+      status: 'unsupportedSchema',
+      schemaVersion: '2.0.0',
+      supportedMajor: 1,
+    })
+
+    await engineManager.validateAllEngines()
+
+    expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', { status: 'unavailable' })
+  })
+
+  it('uninstallEngine 会阻止删除仍有关联游戏的引擎', async () => {
+    findGamesToArrayMock.mockResolvedValue([
+      createTestGame({
+        metadata: { name: 'Demo Game' },
+      }),
+    ])
+
+    await expect(engineManager.uninstallEngine(createTestEngine())).rejects.toEqual(
+      new AppError('IO_ERROR', '无法删除引擎，以下游戏正在使用此引擎：Demo Game'),
+    )
+  })
+
+  it('canDeleteEngine 会返回关联游戏列表', async () => {
+    const associatedGame = createTestGame({
+      id: 'game-1',
+      metadata: { name: 'Demo Game' },
+    })
+    findGamesToArrayMock.mockResolvedValue([associatedGame])
+
+    await expect(engineManager.canDeleteEngine('engine-1')).resolves.toEqual({
+      canDelete: false,
+      associatedGames: [associatedGame],
+      reason: 'ENGINE_HAS_ASSOCIATED_GAMES',
+    })
+  })
+
+  it('canDeleteEngine 在没有关联游戏时允许删除', async () => {
+    findGamesToArrayMock.mockResolvedValue([])
+
+    await expect(engineManager.canDeleteEngine('engine-1')).resolves.toEqual({
+      canDelete: true,
+    })
+  })
+
+  it('canDeleteEngineGroup 会汇总整组关联游戏', async () => {
+    const stable = createTestEngine({
+      id: 'engine-1',
+      engineId: 'open-webgal.webgal',
+      name: 'WebGAL',
+      path: '/engines/WebGAL/4.5.0',
+      version: '4.5.0',
+    })
+    const legacy = createTestEngine({
+      id: 'engine-2',
+      engineId: 'open-webgal.webgal',
+      name: 'WebGAL',
+      path: '/engines/WebGAL/4.4.0',
+      version: '4.4.0',
+    })
+    const associatedGame = createTestGame({
+      id: 'game-1',
+      metadata: { name: 'Demo Game' },
+    })
+
+    engineWhereToArrayMock.mockResolvedValue([stable, legacy])
+    findGamesToArrayMock
+      .mockResolvedValueOnce([associatedGame])
+      .mockResolvedValueOnce([])
+
+    await expect(engineManager.canDeleteEngineGroup('open-webgal.webgal')).resolves.toEqual({
+      canDelete: false,
+      associatedGames: [associatedGame],
+      reason: 'ENGINE_HAS_ASSOCIATED_GAMES',
+    })
+
+    expect(engineWhereMock).toHaveBeenCalledWith('engineId')
+    expect(engineWhereEqualsMock).toHaveBeenCalledWith('open-webgal.webgal')
+  })
+
+  it('uninstallEngine 会删除托管目录和数据库记录', async () => {
+    const deleteMock = await import('~/database/db').then(module => vi.mocked(module.db.engines.delete))
+    deleteMock.mockResolvedValue(undefined)
+
+    await engineManager.uninstallEngine(createTestEngine())
+
+    expect(deleteFileMock).toHaveBeenCalledWith('/engines/default')
+    expect(deleteMock).toHaveBeenCalledWith('engine-1')
+  })
+
+  it('uninstallEngineGroup 会删除整组版本并清理记录', async () => {
+    const deleteMock = await import('~/database/db').then(module => vi.mocked(module.db.engines.delete))
+    deleteMock.mockReset()
+    deleteMock.mockResolvedValue(undefined)
+    engineWhereToArrayMock.mockResolvedValue([
+      createTestEngine({
+        id: 'engine-1',
+        name: 'WebGAL',
+        path: '/engines/WebGAL/4.5.0',
+        version: '4.5.0',
+      }),
+      createTestEngine({
+        id: 'engine-2',
+        name: 'WebGAL',
+        path: '/engines/WebGAL/4.4.0',
+        version: '4.4.0',
+      }),
+    ])
+
+    await engineManager.uninstallEngineGroup('WebGAL')
+
+    expect(deleteFileMock).toHaveBeenNthCalledWith(1, '/engines/WebGAL/4.5.0')
+    expect(deleteFileMock).toHaveBeenNthCalledWith(2, '/engines/WebGAL/4.4.0')
+    expect(deleteMock).toHaveBeenNthCalledWith(1, 'engine-1')
+    expect(deleteMock).toHaveBeenNthCalledWith(2, 'engine-2')
+  })
+
+  it('uninstallEngine 会在 unavailable 状态下仅移除数据库记录', async () => {
+    const deleteMock = await import('~/database/db').then(module => vi.mocked(module.db.engines.delete))
+    deleteMock.mockResolvedValue(undefined)
+
+    await engineManager.uninstallEngine(createTestEngine({
+      status: 'unavailable',
+    }))
+
+    expect(deleteFileMock).not.toHaveBeenCalled()
+    expect(deleteMock).toHaveBeenCalledWith('engine-1')
   })
 })

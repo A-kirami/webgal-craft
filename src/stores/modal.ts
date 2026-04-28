@@ -5,17 +5,22 @@ import AlertModal from '~/components/modals/AlertModal.vue'
 import CommandDefaultsModal from '~/components/modals/CommandDefaultsModal.vue'
 import CreateFileModal from '~/components/modals/CreateFileModal.vue'
 import CreateGameModal from '~/components/modals/CreateGameModal.vue'
+import DeleteEngineGroupModal from '~/components/modals/DeleteEngineGroupModal.vue'
 import DeleteEngineModal from '~/components/modals/DeleteEngineModal.vue'
 import DeleteFileModal from '~/components/modals/DeleteFileModal.vue'
 import DeleteGameConfirmModal from '~/components/modals/DeleteGameConfirmModal.vue'
 import DeleteGameModal from '~/components/modals/DeleteGameModal.vue'
+import DeleteTemplateModal from '~/components/modals/DeleteTemplateModal.vue'
 import DiscardEffectChangesModal from '~/components/modals/DiscardEffectChangesModal.vue'
 import DiscoveredResourcesModal from '~/components/modals/DiscoveredResourcesModal.vue'
+import EngineSelectionModal from '~/components/modals/EngineSelectionModal.vue'
 import ExternalDocumentChangeModal from '~/components/modals/ExternalDocumentChangeModal.vue'
 import GameConfigModal from '~/components/modals/GameConfigModal.vue'
 import SaveChangesModal from '~/components/modals/SaveChangesModal.vue'
 import SettingsModal from '~/components/modals/SettingsModal.vue'
 import StatementGroupModal from '~/components/modals/StatementGroupModal.vue'
+import SwitchEngineModal from '~/components/modals/SwitchEngineModal.vue'
+import SwitchTemplateModal from '~/components/modals/SwitchTemplateModal.vue'
 import UpgradeModal from '~/components/modals/UpgradeModal.vue'
 import { ComponentProps } from '~/types/index'
 
@@ -26,16 +31,21 @@ const ModalDialog = {
   CreateFileModal,
   CreateGameModal,
   DiscardEffectChangesModal,
+  DeleteEngineGroupModal,
   DeleteEngineModal,
   DeleteFileModal,
   DeleteGameModal,
   DeleteGameConfirmModal,
+  DeleteTemplateModal,
   DiscoveredResourcesModal,
+  EngineSelectionModal,
   ExternalDocumentChangeModal,
   GameConfigModal,
   SaveChangesModal,
   SettingsModal,
   StatementGroupModal,
+  SwitchEngineModal,
+  SwitchTemplateModal,
   UpgradeModal,
 } as const satisfies Record<string, Component>
 

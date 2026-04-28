@@ -53,6 +53,7 @@
     "@vueuse/rxjs": "^14.2.1",
     "alfaaz": "^1.1.0",
     "class-variance-authority": "^0.7.1",
+    "compare-versions": "^6.1.1",
     "dayjs": "^1.11.20",
     "dexie": "^4.4.2",
     "lru-cache": "^11.2.7",

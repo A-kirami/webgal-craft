@@ -11,6 +11,7 @@ const {
 }))
 
 let latestValues = reactive<Record<string, unknown>>({})
+const resetFormMock = vi.fn()
 
 vi.mock('vee-validate', () => ({
   useForm: useFormMock,
@@ -24,21 +25,21 @@ import { useSettingsForm } from '~/composables/useSettingsForm'
 
 function createMockStore() {
   return {
-    $state: {
+    $state: reactive({
       theme: 'system',
       fontSize: 14,
-    },
+    }),
     $patch: vi.fn(),
   }
 }
 
 function createScopedFieldsStore() {
   return {
-    $state: {
+    $state: reactive({
       theme: 'system',
       language: 'system',
       openLastProject: false,
-    },
+    }),
     $patch: vi.fn(),
   }
 }
@@ -48,11 +49,23 @@ describe('useSettingsForm 行为', () => {
     latestValues = reactive({})
     useFormMock.mockReset()
     watchDebouncedMock.mockReset()
+    resetFormMock.mockReset()
     useFormMock.mockImplementation(({ initialValues }: { initialValues: Record<string, unknown> }) => {
       latestValues = reactive({ ...initialValues })
       return {
         values: latestValues,
         handleSubmit: (handler: (values: Record<string, unknown>) => void) => () => handler({ ...latestValues }),
+        resetForm: resetFormMock.mockImplementation((state?: { values?: Record<string, unknown> }) => {
+          if (!state?.values) {
+            return
+          }
+
+          for (const key of Object.keys(latestValues)) {
+            delete latestValues[key]
+          }
+
+          Object.assign(latestValues, state.values)
+        }),
       }
     })
   })
@@ -146,6 +159,34 @@ describe('useSettingsForm 行为', () => {
     expect(store.$patch).toHaveBeenLastCalledWith({
       language: 'en',
       openLastProject: false,
+    })
+  })
+
+  it('store 外部更新时会把最新值回填到表单', async () => {
+    const store = createScopedFieldsStore()
+
+    useSettingsForm({
+      store: store as never,
+      validationSchema: z.object({
+        language: z.string(),
+        openLastProject: z.boolean(),
+      }),
+      fieldNames: ['language', 'openLastProject'],
+    } as never)
+
+    store.$state.language = 'ja'
+    store.$state.openLastProject = true
+    await nextTick()
+
+    expect(resetFormMock).toHaveBeenCalledWith({
+      values: {
+        language: 'ja',
+        openLastProject: true,
+      },
+    })
+    expect(latestValues).toMatchObject({
+      language: 'ja',
+      openLastProject: true,
     })
   })
 })

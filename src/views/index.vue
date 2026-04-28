@@ -39,6 +39,9 @@ watch(() => workspaceStore.activeTab, checkResourcesForActiveTab, { immediate: t
           <TabsContent value="engines" class="mt-0 h-full min-h-0 overflow-hidden">
             <EnginesTab v-if="resourceStore.engines" />
           </TabsContent>
+          <TabsContent value="templates" class="mt-0 h-full min-h-0 overflow-hidden">
+            <TemplatesTab v-if="resourceStore.templates && resourceStore.engines" />
+          </TabsContent>
         </div>
       </Tabs>
     </main>

@@ -1,7 +1,7 @@
 import type { I18nLike } from '~/utils/i18n-like'
 
-type HomeTabDiscoveryType = 'games' | 'engines'
-export type HomeTabId = 'recent' | 'engines'
+export type HomeTabDiscoveryType = 'games' | 'engines' | 'templates'
+export type HomeTabId = 'recent' | 'engines' | 'templates'
 
 interface HomeTabDefinition {
   id: HomeTabId
@@ -23,13 +23,18 @@ export const HOME_TABS = [
     label: t => t('home.tabs.engines'),
     searchPlaceholder: t => t('home.search.placeholder.engines'),
   },
+  {
+    id: 'templates',
+    discoveryType: 'templates',
+    label: t => t('home.tabs.templates'),
+    searchPlaceholder: t => t('home.search.placeholder.templates'),
+  },
 ] as const satisfies readonly HomeTabDefinition[]
 
 export function resolveHomeTabDefinition(tabId: HomeTabId): (typeof HOME_TABS)[number] {
   const tab = HOME_TABS.find(item => item.id === tabId)
-  if (tab) {
-    return tab
+  if (!tab) {
+    throw new Error(`Unsupported home tab: ${tabId}`)
   }
-
-  throw new Error(`Unsupported home tab: ${tabId}`)
+  return tab
 }

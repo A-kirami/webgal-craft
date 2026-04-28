@@ -8,12 +8,15 @@ describe('test factories', () => {
       path: '/games/custom-demo',
     })).toMatchObject({
       path: '/games/custom-demo',
+      metadata: {
+        titleImg: 'cover.png',
+      },
       previewAssets: {
         cover: {
-          path: '/games/custom-demo/cover.png',
+          path: 'game/background/cover.png',
         },
         icon: {
-          path: '/games/custom-demo/icon.png',
+          path: 'icons/favicon.ico',
         },
       },
     })
@@ -34,10 +37,10 @@ describe('test factories', () => {
       path: '/games/demo',
       previewAssets: {
         cover: {
-          path: '/games/demo/cover.png',
+          path: 'game/background/cover.png',
         },
         icon: {
-          path: '/games/demo/icon.png',
+          path: 'icons/favicon.ico',
         },
       },
     })

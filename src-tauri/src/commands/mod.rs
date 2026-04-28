@@ -1,3 +1,4 @@
+pub mod engine;
 pub mod error;
 pub mod fs;
 pub mod game;

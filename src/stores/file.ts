@@ -1,18 +1,21 @@
-import { basename, join } from '@tauri-apps/api/path'
 import { exists, stat, watch as watchFs } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
 import { defineStore } from 'pinia'
 
+import { vfsCmds } from '~/commands/vfs'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { mime } from '~/plugins/mime'
 import { clearDirectoryItemsCache, invalidateDirectoryItemsCache, readDirectoryItemsCached } from '~/services/directory-cache'
-import { gameRootDir } from '~/services/platform/app-paths'
+import { gameManager } from '~/services/game-manager'
+import { projectConfigPath } from '~/services/platform/app-paths'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
 import { FileViewerItem } from '~/types/file-viewer'
 import { handleError } from '~/utils/error-handler'
+import { buildUniqueEntryName, getBaseName, getParentPath, joinPath, normalizeFsPath } from '~/utils/path'
 
 import type { WatchEvent } from '@tauri-apps/plugin-fs'
+import type { VfsDirEntry, VfsSource } from '~/types/project-config'
 
 import { isDebug } from '~build/meta'
 
@@ -37,6 +40,7 @@ interface FileSystemItemBase {
   size?: number
   modifiedAt?: number
   createdAt?: number
+  source?: VfsSource
 }
 
 /**
@@ -54,6 +58,7 @@ export interface DirItem extends FileSystemItemBase {
   isDir: true
   childIds: string[]
   isLoaded: boolean
+  loadingPromise?: Promise<void>
 }
 
 export type FileSystemItem = FileItem | DirItem
@@ -81,67 +86,136 @@ export const useFileStore = defineStore('file', () => {
   const fileSystemEvents = useFileSystemEvents()
   const workspaceStore = useWorkspaceStore()
   let unwatch: (() => void) | undefined
+  let enginePath = $ref<string>()
+  let templatePath = $ref<string>()
+  let projectPath = $ref<string>()
 
-  // ==================== 路径管理辅助函数 ====================
+  // 外部可 await 此 Promise 以等待初始化完成
+  let resolveInitialized: () => void
+  let initialized = $ref<Promise<void>>(new Promise((r) => {
+    resolveInitialized = r
+  }))
+
+  function getCurrentEnginePath(): string | undefined {
+    return enginePath
+  }
+
+  function getCurrentProjectPath(): string | undefined {
+    return workspaceStore.currentGame?.path ?? projectPath
+  }
 
   /**
-   * 获取或创建项目ID
+   * 刷新模板子树的 overlay 视图。
+   *
+   * 引擎/模板切换不会触发磁盘 watcher（lower 路径变更而非文件变更），
+   * 必须主动失效 `game/template/**` 子树的 isLoaded 状态与目录缓存，
+   * 并刷新 enginePath / templatePath，否则后续 listDir 仍按旧 lower 配置返回。
+   *
+   * @param options.nextEnginePath 切换后的引擎路径。引擎切换路径上必须显式传入，
+   *   因为此时 `workspaceStore.currentGame.engineId` 仍是切换前的快照
+   *   （上层 modal 在 switchEngine 返回后才会调 refreshCurrentGameSnapshot），
+   *   仅靠当前 game 反查会拿到旧引擎路径。
+   * @param options.nextTemplatePath 切换后的模板路径。模板切换时必须显式传入；
+   *   `null` 表示回到"跟随当前引擎默认"，此时后端会从 enginePath 推导默认 template_lower。
    */
+  async function refreshTemplateOverlay(
+    projectPath: string,
+    options: { nextEnginePath?: string, nextTemplatePath?: string | null } = {},
+  ): Promise<void> {
+    const currentProjectPath = getCurrentProjectPath()
+    if (!currentProjectPath || normalizeFsPath(projectPath) !== normalizeFsPath(currentProjectPath)) {
+      return
+    }
+
+    if (options.nextEnginePath !== undefined) {
+      enginePath = options.nextEnginePath
+    } else if (workspaceStore.currentGame) {
+      try {
+        enginePath = await gameManager.getGameEnginePath(workspaceStore.currentGame)
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error)
+        void logger.warn(`[FileStore] 刷新 enginePath 失败: ${msg}`)
+      }
+    }
+
+    if (options.nextTemplatePath !== undefined) {
+      templatePath = options.nextTemplatePath ?? undefined
+    }
+
+    const templateRoot = joinPath(currentProjectPath, 'game', 'template')
+    const normalizedTemplateRoot = normalizeFsPath(templateRoot)
+
+    for (const item of items.values()) {
+      if (!item.isDir || !item.isLoaded) {
+        continue
+      }
+
+      const normalizedPath = normalizeFsPath(item.path)
+      if (normalizedPath === normalizedTemplateRoot || normalizedPath.startsWith(`${normalizedTemplateRoot}/`)) {
+        item.isLoaded = false
+      }
+    }
+
+    await invalidateDirectoryCacheSafe(templateRoot, true)
+
+    fileSystemEvents.emit({
+      type: 'directory:modified',
+      path: templateRoot,
+    })
+  }
+
+  // ==================== 路径管理 ====================
+
+  // pathToId 始终以正斜杠 key 索引：watcher 事件在 Windows 上返回反斜杠，
+  // 必须 normalize 后才能与前端构造的 `/`-flavor 路径互查。
   function getOrCreateItemId(path: string): string {
-    const existingId = pathToId.get(path)
+    const key = normalizeFsPath(path)
+    const existingId = pathToId.get(key)
     if (existingId) {
       return existingId
     }
     const newId = crypto.randomUUID()
-    pathToId.set(path, newId)
+    pathToId.set(key, newId)
     return newId
   }
 
-  /**
-   * 批量更新路径映射
-   */
   function updatePathMappings(oldPath: string, newPath: string, id: string) {
-    pathToId.delete(oldPath)
-    pathToId.set(newPath, id)
+    pathToId.delete(normalizeFsPath(oldPath))
+    pathToId.set(normalizeFsPath(newPath), id)
   }
 
   /**
-   * 递归更新目录及其所有子项的路径
-   * 当目录被重命名或移动时，需要更新整个子树的所有路径映射
+   * 递归更新目录及子项的路径（用于目录重命名/移动）
    */
-  async function updateSubtreePaths(item: DirItem, newBasePath: string): Promise<void> {
-    const newPath = await join(newBasePath, item.name)
+  function updateSubtreePaths(item: DirItem, newBasePath: string): void {
+    const newPath = joinPath(newBasePath, item.name)
 
-    const childUpdates = item.childIds
+    const children = item.childIds
       .map(id => items.get(id))
       .filter((child): child is FileSystemItem => !!child)
-      .map(async (child) => {
-        if (child.isDir) {
-          await updateSubtreePaths(child, newPath)
-        } else {
-          const oldPath = child.path
-          child.path = await join(newPath, child.name)
-          updatePathMappings(oldPath, child.path, child.id)
-        }
-      })
 
-    await Promise.all(childUpdates)
+    for (const child of children) {
+      if (child.isDir) {
+        updateSubtreePaths(child, newPath)
+      } else {
+        const oldPath = child.path
+        child.path = joinPath(newPath, child.name)
+        updatePathMappings(oldPath, child.path, child.id)
+      }
+    }
 
     const oldPath = item.path
     item.path = newPath
     updatePathMappings(oldPath, newPath, item.id)
   }
 
-  // ==================== 文件系统项操作辅助函数 ====================
+  // ==================== 文件系统项工厂 ====================
 
-  /**
-   * 创建文件系统项
-   */
   async function createFileSystemItem(
     path: string,
     parentId: string | undefined,
   ): Promise<FileSystemItem> {
-    const name = await basename(path)
+    const name = getBaseName(path)
     const id = getOrCreateItemId(path)
     const fileInfo = await stat(path)
     const metadata = {
@@ -209,6 +283,38 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
+  function createFileSystemItemFromVfsEntry(
+    entry: VfsDirEntry,
+    parentPath: string,
+    parentId: string | undefined,
+  ): FileSystemItem {
+    const path = normalizeFsPath(`${parentPath}/${entry.name}`)
+    const id = getOrCreateItemId(path)
+
+    if (entry.isDir) {
+      return {
+        id,
+        name: entry.name,
+        path,
+        parentId,
+        isDir: true,
+        childIds: [],
+        isLoaded: false,
+        source: entry.source,
+      }
+    }
+
+    return {
+      id,
+      name: entry.name,
+      path,
+      parentId,
+      isDir: false,
+      mimeType: mime.getType(path) || '',
+      source: entry.source,
+    }
+  }
+
   /**
    * 刷新文件系统项元信息
    * 元信息不可用时统一置为 undefined，避免渲染层出现不一致空值
@@ -220,12 +326,8 @@ export const useFileStore = defineStore('file', () => {
     item.createdAt = fileInfo.birthtime?.getTime()
   }
 
-  // ==================== 父子关系管理辅助函数 ====================
+  // ==================== 父子关系 ====================
 
-  /**
-   * 将子项添加到父目录
-   * 保持监听事件原始顺序，排序由展示层负责
-   */
   function addChildToParent(childId: string, parentId: string | undefined): void {
     if (!parentId) {
       return
@@ -236,12 +338,11 @@ export const useFileStore = defineStore('file', () => {
       return
     }
 
-    parent.childIds.push(childId)
+    if (!parent.childIds.includes(childId)) {
+      parent.childIds.push(childId)
+    }
   }
 
-  /**
-   * 从父目录移除子项
-   */
   function removeChildFromParent(childId: string, parentId: string | undefined): void {
     if (!parentId) {
       return
@@ -253,52 +354,76 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  // ==================== 核心业务函数 ====================
+  // ==================== 核心操作 ====================
 
-  /**
-   * 加载目录内容
-   * 读取目录下的所有文件和子目录，并创建对应的文件系统项
-   */
   async function loadDirectory(path: string, parentId?: string): Promise<void> {
     const parent = parentId ? items.get(parentId) : undefined
     if (!parent?.isDir || parent.isLoaded) {
       return
     }
 
-    try {
-      parent.isLoaded = true
-      const directoryItems = await readDirectoryItemsCached(path, { includeStats: true })
-      const newItems = directoryItems.map(entry =>
-        createFileSystemItemFromDirectoryEntry(entry, parentId),
-      )
-
-      for (const item of newItems) {
-        items.set(item.id, item)
-      }
-
-      parent.childIds = newItems.map(item => item.id)
-    } catch (error) {
-      parent.isLoaded = false
-      const msg = error instanceof Error ? error.message : String(error)
-      void logger.error(`[FileStore] 加载目录 ${path} 失败: ${msg}`)
-      throw new AppError('FS_ERROR', `加载目录失败: ${msg}`)
+    // 并发调用等待同一次加载完成
+    if (parent.loadingPromise) {
+      await parent.loadingPromise
+      return
     }
+
+    const loadPromise = (async () => {
+      try {
+        let resolvedItems: FileSystemItem[]
+
+        if (enginePath && projectPath) {
+          const entries = await vfsCmds.listDir({
+            projectPath,
+            enginePath,
+            relPath: toRelativeProjectPath(path),
+            templatePath,
+          })
+          resolvedItems = entries.map(entry => createFileSystemItemFromVfsEntry(entry, path, parentId))
+        } else {
+          const entries = await readDirectoryItemsCached(path, { includeStats: true })
+          resolvedItems = entries.map(entry => createFileSystemItemFromDirectoryEntry(entry, parentId))
+        }
+
+        for (const item of resolvedItems) {
+          items.set(item.id, item)
+        }
+
+        parent.childIds = resolvedItems.map(item => item.id)
+        parent.isLoaded = true
+      } catch (error) {
+        parent.isLoaded = false
+        const msg = error instanceof Error ? error.message : String(error)
+        void logger.error(`[FileStore] 加载目录 ${path} 失败: ${msg}`)
+        throw new AppError('FS_ERROR', `加载目录失败: ${msg}`)
+      } finally {
+        parent.loadingPromise = undefined
+      }
+    })()
+
+    parent.loadingPromise = loadPromise
+    await loadPromise
   }
 
-  /**
-   * 获取目录内容
-   */
   async function getFolderContents(path: string): Promise<FileSystemItem[]> {
-    if (!(await exists(path))) {
+    if (!enginePath && !(await exists(path))) {
       throw new AppError('DIR_NOT_FOUND', '目录不存在')
     }
 
-    let parentId = pathToId.get(path)
+    const key = normalizeFsPath(path)
+    let parentId = pathToId.get(key)
+
+    // LRU 脱同步：pathToId 仍持有映射但 items 已驱逐该条目
+    if (parentId && !items.has(parentId)) {
+      pathToId.delete(key)
+      parentId = undefined
+    }
+
     if (!parentId) {
       parentId = getOrCreateItemId(path)
       const parentDir: DirItem = {
         id: parentId,
-        name: await basename(path),
+        name: getBaseName(path),
         path,
         parentId: undefined,
         isDir: true,
@@ -306,7 +431,6 @@ export const useFileStore = defineStore('file', () => {
         isLoaded: false,
       }
       items.set(parentId, parentDir)
-      pathToId.set(path, parentId)
     }
 
     const parent = items.get(parentId)
@@ -319,16 +443,20 @@ export const useFileStore = defineStore('file', () => {
     }
 
     // 清理无效的子项引用
+    const previousChildCount = parent.childIds.length
     parent.childIds = parent.childIds.filter(id => items.has(id))
+
+    // 子项全部被 LRU 驱逐，重置加载状态触发重新加载
+    if (previousChildCount > 0 && parent.childIds.length === 0) {
+      parent.isLoaded = false
+      await loadDirectory(path, parentId)
+    }
 
     return parent.childIds
       .map(id => items.get(id))
       .filter((item): item is FileSystemItem => !!item)
   }
 
-  /**
-   * 更新项目路径
-   */
   async function updateItemPath(id: string, newPath: string) {
     const item = items.get(id)
     if (!item) {
@@ -344,13 +472,8 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  // ==================== 文件系统监听相关 ====================
+  // ==================== 文件系统监听 ====================
 
-  /**
-   * 检查事件类型是否为指定的类型
-   * @param type 事件类型
-   * @param key 要检查的事件类型（'create' | 'remove' | 'modify'）
-   */
   function isEventType(
     type: WatchEvent['type'],
     key: 'create' | 'remove' | 'modify',
@@ -360,7 +483,6 @@ export const useFileStore = defineStore('file', () => {
 
   /**
    * 发布文件系统事件
-   * 根据项目类型和事件类型构造并发送相应的事件
    */
   function emitFileSystemEvent(
     item: FileSystemItem,
@@ -373,46 +495,18 @@ export const useFileStore = defineStore('file', () => {
     const prefix = item.isDir ? 'directory' : 'file'
 
     if (isDebug) {
-      const logMessage = options.eventType === 'renamed'
-        ? `[FileSystemEvent] ${prefix}:${options.eventType} - ${options.oldPath} -> ${options.newPath}`
-        : `[FileSystemEvent] ${prefix}:${options.eventType} - ${options.path}`
-      logger.debug(logMessage)
+      const detail = options.eventType === 'renamed'
+        ? `${options.oldPath} -> ${options.newPath}`
+        : options.path
+      logger.debug(`[FileSystemEvent] ${prefix}:${options.eventType} - ${detail}`)
     }
 
-    switch (options.eventType) {
-      case 'created': {
-        fileSystemEvents.emit({
-          type: `${prefix}:created`,
-          path: options.path,
-          parentId: options.parentId,
-        })
-        break
-      }
-      case 'removed': {
-        fileSystemEvents.emit({
-          type: `${prefix}:removed`,
-          path: options.path,
-        })
-        break
-      }
-      case 'renamed': {
-        fileSystemEvents.emit({
-          type: `${prefix}:renamed`,
-          oldPath: options.oldPath,
-          newPath: options.newPath,
-        })
-        break
-      }
-      case 'modified': {
-        fileSystemEvents.emit({
-          type: `${prefix}:modified`,
-          path: options.path,
-        })
-        break
-      }
-      default: {
-        break
-      }
+    if (options.eventType === 'created') {
+      fileSystemEvents.emit({ type: `${prefix}:created`, path: options.path, parentId: options.parentId })
+    } else if (options.eventType === 'renamed') {
+      fileSystemEvents.emit({ type: `${prefix}:renamed`, oldPath: options.oldPath, newPath: options.newPath })
+    } else {
+      fileSystemEvents.emit({ type: `${prefix}:${options.eventType}`, path: options.path })
     }
   }
 
@@ -425,14 +519,73 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  async function invalidateParentDirectoryCache(path: string): Promise<void> {
-    const parentPath = await join(path, '..')
-    await invalidateDirectoryCacheSafe(parentPath)
+  function invalidateParentDirectoryCache(path: string): Promise<void> {
+    return invalidateDirectoryCacheSafe(getParentPath(path))
   }
 
-  /**
-   * 处理文件创建事件
-   */
+  function toRelativeProjectPath(path: string): string {
+    if (!projectPath) {
+      return ''
+    }
+
+    const normalizedProjectPath = normalizeFsPath(projectPath)
+    const normalizedPath = normalizeFsPath(path)
+    if (normalizedPath === normalizedProjectPath) {
+      return ''
+    }
+    if (!normalizedPath.startsWith(`${normalizedProjectPath}/`)) {
+      return ''
+    }
+
+    return normalizedPath.slice(normalizedProjectPath.length + 1)
+  }
+
+  async function prepareVfsPasteTarget(
+    sourcePath: string,
+    targetPath: string,
+  ): Promise<{
+    currentEnginePath: string
+    currentProjectPath: string
+    nextPath: string
+    nextRelPath: string
+    relSourcePath: string
+  } | undefined> {
+    const currentProjectPath = getCurrentProjectPath()
+    const currentEnginePath = getCurrentEnginePath()
+    if (!currentEnginePath || !currentProjectPath) {
+      return undefined
+    }
+
+    const relSourcePath = toRelativeProjectPath(sourcePath)
+    const relTargetDir = toRelativeProjectPath(targetPath)
+    if (!relSourcePath || (!relTargetDir && normalizeFsPath(targetPath) !== normalizeFsPath(currentProjectPath))) {
+      return undefined
+    }
+
+    const sourceName = getBaseName(sourcePath)
+    const resolvedSourcePath = await vfsCmds.resolvePath({
+      projectPath: currentProjectPath,
+      enginePath: currentEnginePath,
+      relPath: relSourcePath,
+    })
+    const sourceInfo = await stat(resolvedSourcePath)
+    const existingItems = await getFolderContents(targetPath)
+    const uniqueName = buildUniqueEntryName(
+      sourceName,
+      sourceInfo.isDirectory,
+      new Set(existingItems.map(item => item.name)),
+    )
+    const nextRelPath = normalizeFsPath(relTargetDir ? `${relTargetDir}/${uniqueName}` : uniqueName)
+
+    return {
+      currentEnginePath,
+      currentProjectPath,
+      nextPath: normalizeFsPath(`${currentProjectPath}/${nextRelPath}`),
+      nextRelPath,
+      relSourcePath,
+    }
+  }
+
   async function handleCreateEvent(path: string, parentId: string | undefined): Promise<void> {
     try {
       const item = await createFileSystemItem(path, parentId)
@@ -448,22 +601,11 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  /**
-   * 通过路径获取文件系统项
-   * 如果路径不存在或对应的项不存在，返回 undefined
-   */
   function getItemByPath(path: string): FileSystemItem | undefined {
-    const id = pathToId.get(path)
-    if (!id) {
-      return undefined
-    }
-
-    return items.get(id)
+    const id = pathToId.get(normalizeFsPath(path))
+    return id ? items.get(id) : undefined
   }
 
-  /**
-   * 处理文件删除事件
-   */
   async function handleRemoveEvent(path: string, removedKind?: RemovedEntryKind): Promise<void> {
     const item = getItemByPath(path)
     if (!item) {
@@ -480,7 +622,7 @@ export const useFileStore = defineStore('file', () => {
 
     removeChildFromParent(item.id, item.parentId)
     items.delete(item.id)
-    pathToId.delete(path)
+    pathToId.delete(normalizeFsPath(path))
 
     emitFileSystemEvent(item, { eventType: 'removed', path })
     await invalidateParentDirectoryCache(path)
@@ -488,8 +630,7 @@ export const useFileStore = defineStore('file', () => {
   }
 
   /**
-   * 处理文件重命名事件
-   * 对于目录，需要递归更新所有子项的路径
+   * 处理目录重命名：递归更新所有子项路径
    */
   async function handleRenameEvent(newPath: string, oldPath: string): Promise<void> {
     const item = getItemByPath(oldPath)
@@ -500,11 +641,9 @@ export const useFileStore = defineStore('file', () => {
         oldPath,
         newPath,
       })
-      const oldParentPath = await join(oldPath, '..')
-      const newParentPath = await join(newPath, '..')
       await Promise.all([
-        invalidateDirectoryCacheSafe(oldParentPath),
-        invalidateDirectoryCacheSafe(newParentPath),
+        invalidateDirectoryCacheSafe(getParentPath(oldPath)),
+        invalidateDirectoryCacheSafe(getParentPath(newPath)),
         invalidateDirectoryCacheSafe(oldPath, true),
         invalidateDirectoryCacheSafe(newPath, true),
       ])
@@ -513,11 +652,10 @@ export const useFileStore = defineStore('file', () => {
 
     try {
       const originalPath = item.path
-      item.name = await basename(newPath)
+      item.name = getBaseName(newPath)
 
       if (item.isDir) {
-        const parentPath = await join(newPath, '..')
-        await updateSubtreePaths(item, parentPath)
+        updateSubtreePaths(item, getParentPath(newPath))
       } else {
         item.path = newPath
         updatePathMappings(originalPath, newPath, item.id)
@@ -526,11 +664,9 @@ export const useFileStore = defineStore('file', () => {
       await refreshItemMetadata(item, newPath)
 
       emitFileSystemEvent(item, { eventType: 'renamed', oldPath, newPath })
-      const oldParentPath = await join(oldPath, '..')
-      const newParentPath = await join(newPath, '..')
       await Promise.all([
-        invalidateDirectoryCacheSafe(oldParentPath),
-        invalidateDirectoryCacheSafe(newParentPath),
+        invalidateDirectoryCacheSafe(getParentPath(oldPath)),
+        invalidateDirectoryCacheSafe(getParentPath(newPath)),
         invalidateDirectoryCacheSafe(oldPath, true),
         invalidateDirectoryCacheSafe(newPath, true),
       ])
@@ -539,10 +675,6 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  /**
-   * 处理文件修改事件
-   * 文件修改事件失败不影响系统运行，仅记录日志
-   */
   async function handleModifyEvent(path: string): Promise<void> {
     const item = getItemByPath(path)
 
@@ -561,7 +693,7 @@ export const useFileStore = defineStore('file', () => {
     }
 
     try {
-      item.name = await basename(path)
+      item.name = getBaseName(path)
       await refreshItemMetadata(item, path)
       emitFileSystemEvent(item, { eventType: 'modified', path })
       await invalidateParentDirectoryCache(path)
@@ -574,10 +706,6 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  /**
-   * 处理文件系统变更事件
-   * 统一处理所有文件系统监听事件，包括创建、删除、重命名和修改
-   */
   async function handleWatchEvent(event: WatchEvent): Promise<void> {
     const { type, paths } = event
     const path = paths[0]
@@ -588,7 +716,7 @@ export const useFileStore = defineStore('file', () => {
 
     try {
       if (isEventType(type, 'create')) {
-        const parentPath = await join(path, '..')
+        const parentPath = getParentPath(path)
         const parentId = pathToId.get(parentPath)
         await handleCreateEvent(path, parentId)
       } else if (isEventType(type, 'remove')) {
@@ -614,24 +742,24 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  // ==================== 生命周期管理 ====================
+  // ==================== 生命周期 ====================
 
-  /**
-   * 清除所有状态
-   */
   function clear(): void {
     items.clear()
     pathToId.clear()
     clearDirectoryItemsCache()
+    enginePath = undefined
+    templatePath = undefined
+    projectPath = undefined
+    initialized = new Promise((r) => {
+      resolveInitialized = r
+    })
     if (unwatch) {
       unwatch()
       unwatch = undefined
     }
   }
 
-  /**
-   * 初始化文件系统
-   */
   async function initialize(): Promise<void> {
     if (!workspaceStore.CWD) {
       return
@@ -641,10 +769,31 @@ export const useFileStore = defineStore('file', () => {
     }
 
     try {
-      const rootPath = await gameRootDir(workspaceStore.CWD)
+      projectPath = workspaceStore.currentGame?.path
+      const configPath = projectPath ? await projectConfigPath(projectPath) : undefined
+      const hasProjectConfig = configPath ? await exists(configPath) : false
+      if (hasProjectConfig && workspaceStore.currentGame) {
+        try {
+          const site = await gameManager.resolvePreviewSite(workspaceStore.currentGame)
+          enginePath = site.enginePath
+          templatePath = site.templatePath
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error)
+          void logger.warn(`[FileStore] 解析项目站点失败，回退仅引擎路径: ${msg}`)
+          enginePath = await gameManager.getGameEnginePath(workspaceStore.currentGame)
+          templatePath = undefined
+        }
+      } else {
+        enginePath = undefined
+        templatePath = undefined
+      }
+
+      const rootPath = joinPath(workspaceStore.CWD, 'game')
       await getFolderContents(rootPath)
       unwatch = await watchFs(rootPath, handleWatchEvent, { recursive: true, delayMs: WATCH_DELAY_MS })
+      resolveInitialized()
     } catch (error) {
+      resolveInitialized()
       const msg = error instanceof Error ? error.message : String(error)
       void logger.error(`[FileStore] 初始化工作目录 ${workspaceStore.CWD} 文件系统失败: ${msg}`)
       throw new AppError('FS_ERROR', `初始化工作目录 ${workspaceStore.CWD} 文件系统失败: ${msg}`)
@@ -662,10 +811,132 @@ export const useFileStore = defineStore('file', () => {
     }
   }, { immediate: true })
 
+  const isVfs = $computed(() => !!enginePath)
+
   return $$({
+    deleteEntry: async (path: string): Promise<boolean> => {
+      const currentProjectPath = getCurrentProjectPath()
+      const currentEnginePath = getCurrentEnginePath()
+      if (!currentEnginePath || !currentProjectPath) {
+        return false
+      }
+
+      const relPath = toRelativeProjectPath(path)
+      if (!relPath) {
+        return false
+      }
+
+      await vfsCmds.deletePath({
+        projectPath: currentProjectPath,
+        enginePath: currentEnginePath,
+        relPath,
+      })
+      await handleRemoveEvent(path)
+      return true
+    },
+    copyEntry: async (sourcePath: string, targetPath: string): Promise<string | undefined> => {
+      const moveTarget = await prepareVfsPasteTarget(sourcePath, targetPath)
+      if (!moveTarget) {
+        return undefined
+      }
+
+      const copiedRelPath = await vfsCmds.copyPath({
+        projectPath: moveTarget.currentProjectPath,
+        enginePath: moveTarget.currentEnginePath,
+        relPath: moveTarget.relSourcePath,
+        targetRelPath: moveTarget.nextRelPath,
+      })
+      const nextPath = normalizeFsPath(`${moveTarget.currentProjectPath}/${copiedRelPath}`)
+      await handleCreateEvent(nextPath, pathToId.get(normalizeFsPath(targetPath)))
+      return nextPath
+    },
+    ensureWritable: async (path: string): Promise<string> => {
+      const currentProjectPath = getCurrentProjectPath()
+      const currentEnginePath = getCurrentEnginePath()
+      if (!currentEnginePath || !currentProjectPath) {
+        return path
+      }
+
+      const relPath = toRelativeProjectPath(path)
+      if (!relPath) {
+        return path
+      }
+
+      return await vfsCmds.ensureWritable({
+        projectPath: currentProjectPath,
+        enginePath: currentEnginePath,
+        relPath,
+      })
+    },
     getFolderContents,
+    initialized,
     updateItemPath,
+    isVfs,
+    moveEntry: async (sourcePath: string, targetPath: string): Promise<string | undefined> => {
+      const moveTarget = await prepareVfsPasteTarget(sourcePath, targetPath)
+      if (!moveTarget) {
+        return undefined
+      }
+
+      const movedRelPath = await vfsCmds.movePath({
+        projectPath: moveTarget.currentProjectPath,
+        enginePath: moveTarget.currentEnginePath,
+        relPath: moveTarget.relSourcePath,
+        targetRelPath: moveTarget.nextRelPath,
+      })
+      const nextPath = normalizeFsPath(`${moveTarget.currentProjectPath}/${movedRelPath}`)
+      const targetParentId = getItemByPath(targetPath)?.id
+      const sourceParentPath = normalizeFsPath(getParentPath(sourcePath))
+      if (sourceParentPath === normalizeFsPath(targetPath)) {
+        await handleRenameEvent(nextPath, sourcePath)
+      } else {
+        await handleRemoveEvent(sourcePath)
+        await handleCreateEvent(nextPath, targetParentId)
+      }
+      return nextPath
+    },
+    renameEntry: async (path: string, newName: string): Promise<string | undefined> => {
+      const currentProjectPath = getCurrentProjectPath()
+      const currentEnginePath = getCurrentEnginePath()
+      if (!currentEnginePath || !currentProjectPath) {
+        return undefined
+      }
+
+      const relPath = toRelativeProjectPath(path)
+      if (!relPath) {
+        return undefined
+      }
+
+      const nextRelPath = await vfsCmds.renamePath({
+        projectPath: currentProjectPath,
+        enginePath: currentEnginePath,
+        relPath,
+        newName,
+      })
+      const nextPath = normalizeFsPath(`${currentProjectPath}/${nextRelPath}`)
+      await handleRenameEvent(nextPath, path)
+      return nextPath
+    },
+    resolveFilePath: async (path: string): Promise<string> => {
+      const currentProjectPath = getCurrentProjectPath()
+      const currentEnginePath = getCurrentEnginePath()
+      if (!currentEnginePath || !currentProjectPath) {
+        return path
+      }
+
+      const relPath = toRelativeProjectPath(path)
+      if (!relPath) {
+        return path
+      }
+
+      return await vfsCmds.resolvePath({
+        projectPath: currentProjectPath,
+        enginePath: currentEnginePath,
+        relPath,
+      })
+    },
     clear,
     initialize,
+    refreshTemplateOverlay,
   })
 })

@@ -13,10 +13,24 @@ export interface EnginePreviewAssets {
 }
 
 export interface GameMetadata {
-  name: string // 从配置文件获取
+  name: string
+  titleImg?: string
 }
 
 export interface EngineMetadata {
-  name: string // 从配置文件获取
-  description: string // 从配置文件获取
+  type?: 'official' | 'custom'
+  webgalVersion?: string
+  description: string
+  icon: string
+  descriptions?: Record<string, string>
+  maintainer?: string
+  license?: string
+  urls?: Record<string, string>
+  live2dSupport?: boolean
+  spineSupport?: boolean
+}
+
+export interface TemplateMetadata {
+  name: string
+  webgalVersion?: string
 }

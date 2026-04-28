@@ -8,15 +8,23 @@ import { usePreviewSessionStore } from '~/stores/preview-session'
 const {
   ensureServeUrlMock,
   loggerErrorMock,
+  resolvePreviewSiteMock,
 } = vi.hoisted(() => ({
   ensureServeUrlMock: vi.fn(),
   loggerErrorMock: vi.fn(),
+  resolvePreviewSiteMock: vi.fn(),
 }))
 
 vi.mock('~/stores/preview-runtime', () => ({
   usePreviewRuntimeStore: () => ({
     ensureServeUrl: ensureServeUrlMock,
   }),
+}))
+
+vi.mock('~/services/game-manager', () => ({
+  gameManager: {
+    resolvePreviewSite: resolvePreviewSiteMock,
+  },
 }))
 
 vi.mock('@tauri-apps/plugin-log', () => ({
@@ -36,19 +44,31 @@ function createDeferred<T>() {
 
 describe('previewSessionStore 当前工作区预览会话仓库', () => {
   beforeEach(() => {
-    ensureServeUrlMock.mockReset()
-    loggerErrorMock.mockReset()
+    vi.resetAllMocks()
+
+    resolvePreviewSiteMock.mockImplementation(async (game: { path: string, engineId?: string }) => ({
+      projectPath: game.path,
+      ...(game.engineId ? { enginePath: `/engines/${game.engineId}` } : {}),
+    }))
   })
 
-  it('syncCurrentGame 会解析当前游戏的 serve url，并在清空会话时重置 reloadVersion', async () => {
+  it('syncCurrentGame 会先解析预览站点配置再获取 serve url，并在清空会话时重置 reloadVersion', async () => {
     const store = usePreviewSessionStore()
 
     ensureServeUrlMock.mockResolvedValueOnce('http://preview/game-1/')
     await store.syncCurrentGame(createTestGame({
       path: '/games/game-1',
+      engineId: 'engine-1',
     }))
 
-    expect(ensureServeUrlMock).toHaveBeenCalledWith({ projectPath: '/games/game-1' })
+    expect(resolvePreviewSiteMock).toHaveBeenCalledWith(expect.objectContaining({
+      path: '/games/game-1',
+      engineId: 'engine-1',
+    }))
+    expect(ensureServeUrlMock).toHaveBeenCalledWith({
+      projectPath: '/games/game-1',
+      enginePath: '/engines/engine-1',
+    })
     expect(store.currentGameServeUrl).toBe('http://preview/game-1/')
     expect(store.reloadVersion).toBe(0)
 
@@ -115,5 +135,17 @@ describe('previewSessionStore 当前工作区预览会话仓库', () => {
     await firstSyncTask
 
     expect(store.currentGameServeUrl).toBe('http://preview/game-2/')
+  })
+
+  it('syncCurrentGame 在预览站点解析失败时会记录错误', async () => {
+    const store = usePreviewSessionStore()
+
+    resolvePreviewSiteMock.mockRejectedValue(new Error('engine unavailable'))
+    await store.syncCurrentGame(createTestGame({
+      path: '/games/game-1',
+    }))
+
+    expect(ensureServeUrlMock).not.toHaveBeenCalled()
+    expect(loggerErrorMock).toHaveBeenCalledWith('获取预览链接失败: Error: engine unavailable')
   })
 })

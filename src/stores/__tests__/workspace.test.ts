@@ -1,7 +1,6 @@
 import '~/__tests__/setup'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { nextTick, reactive } from 'vue'
 
 import { createTestGame } from '~/__tests__/factories'
 import { useWorkspaceStore } from '~/stores/workspace'
@@ -59,11 +58,10 @@ async function flushWorkspaceWatchers() {
 
 describe('工作区状态仓库', () => {
   beforeEach(() => {
+    vi.resetAllMocks()
+
     routeState.params = {}
     useRouteMock.mockReturnValue(routeState)
-    dbGetMock.mockReset()
-    getGameSnapshotMock.mockReset()
-    syncCurrentGameMock.mockReset()
     previewSessionStoreState.currentGameServeUrl = undefined
     previewSessionStoreState.syncCurrentGame = syncCurrentGameMock
   })
@@ -88,6 +86,7 @@ describe('工作区状态仓库', () => {
     getGameSnapshotMock.mockResolvedValue({
       metadata: {
         name: 'new',
+        titleImg: 'cover-next.png',
       },
       previewAssets: {
         icon: {
@@ -112,6 +111,7 @@ describe('工作区状态仓库', () => {
       status: 'created',
       metadata: {
         name: 'new',
+        titleImg: 'cover-next.png',
       },
       previewAssets: {
         icon: {

@@ -26,9 +26,12 @@ export const useWorkspaceStore = defineStore(
         return
       }
 
+      // 先从 DB 重新拉取游戏记录，捕获 engineId 等持久化字段的变更
+      const fresh = await db.games.get(currentGame.id)
       const snapshot = await gameManager.getGameSnapshot(currentGame.path)
       currentGame = {
         ...currentGame,
+        ...fresh,
         ...snapshot,
       }
     }

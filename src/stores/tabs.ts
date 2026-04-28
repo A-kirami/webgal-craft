@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import { useWorkspaceStore } from '~/stores/workspace'
+import { normalizeFsPath } from '~/utils/path'
 
 /**
  * 持久化标签页元数据。
@@ -105,11 +106,12 @@ export const useTabsStore = defineStore(
       if (!runtimeState) {
         return
       }
-      delete runtimeState[path]
+      delete runtimeState[normalizeFsPath(path)]
     }
 
     function findTabIndex(path: string): number {
-      return currentProjectTabs.tabs.findIndex(tab => tab.path === path)
+      const normalized = normalizeFsPath(path)
+      return currentProjectTabs.tabs.findIndex(tab => tab.path === normalized)
     }
 
     function isValidTabIndex(index: number): boolean {
@@ -127,21 +129,24 @@ export const useTabsStore = defineStore(
         return
       }
 
+      const normalized = normalizeFsPath(path)
       const nextState: RuntimeTabState = {
-        ...runtimeState[path],
+        ...runtimeState[normalized],
         ...patch,
       }
 
       if (!nextState.isModified && !nextState.isLoading && nextState.error === undefined) {
-        delete runtimeState[path]
+        delete runtimeState[normalized]
         return
       }
 
-      runtimeState[path] = nextState
+      runtimeState[normalized] = nextState
     }
 
     function moveRuntimeTabState(oldPath: string, newPath: string): void {
-      if (oldPath === newPath) {
+      const normalizedOld = normalizeFsPath(oldPath)
+      const normalizedNew = normalizeFsPath(newPath)
+      if (normalizedOld === normalizedNew) {
         return
       }
 
@@ -150,11 +155,11 @@ export const useTabsStore = defineStore(
         return
       }
 
-      const previousState = runtimeState[oldPath]
-      delete runtimeState[oldPath]
+      const previousState = runtimeState[normalizedOld]
+      delete runtimeState[normalizedOld]
 
       if (previousState) {
-        runtimeState[newPath] = previousState
+        runtimeState[normalizedNew] = previousState
       }
     }
 
@@ -164,11 +169,12 @@ export const useTabsStore = defineStore(
         return
       }
 
-      clearRuntimeTabState(path)
+      const normalized = normalizeFsPath(path)
+      clearRuntimeTabState(normalized)
 
       const newTab: PersistedTab = {
         name,
-        path,
+        path: normalized,
         activeAt: Date.now(),
         isPreview,
       }
@@ -224,7 +230,8 @@ export const useTabsStore = defineStore(
         return
       }
 
-      const existIndex = findTabIndex(path)
+      const normalized = normalizeFsPath(path)
+      const existIndex = findTabIndex(normalized)
 
       if (existIndex !== -1) {
         activateTab(existIndex)
@@ -233,10 +240,10 @@ export const useTabsStore = defineStore(
 
       if (activeTabIndex !== -1 && currentProjectTabs.tabs[activeTabIndex].isPreview) {
         clearRuntimeTabState(currentProjectTabs.tabs[activeTabIndex].path)
-        clearRuntimeTabState(path)
+        clearRuntimeTabState(normalized)
         state.tabs[activeTabIndex] = {
           name,
-          path,
+          path: normalized,
           activeAt: Date.now(),
           isPreview: true,
         }
@@ -252,7 +259,7 @@ export const useTabsStore = defineStore(
         }
       }
 
-      createAndInsertTab(name, path, true)
+      createAndInsertTab(name, normalized, true)
     }
 
     /**
@@ -337,8 +344,9 @@ export const useTabsStore = defineStore(
       }
       const index = findTabIndex(event.oldPath)
       if (index !== -1) {
-        moveRuntimeTabState(event.oldPath, event.newPath)
-        state.tabs[index].path = event.newPath
+        const newPath = normalizeFsPath(event.newPath)
+        moveRuntimeTabState(event.oldPath, newPath)
+        state.tabs[index].path = newPath
         state.tabs[index].name = await basename(event.newPath)
       }
     })

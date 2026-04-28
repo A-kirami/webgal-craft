@@ -106,14 +106,10 @@ function renderDeleteGameModal(updateOpen = vi.fn()) {
 }
 
 describe('DeleteGameModal', () => {
-  afterEach(() => {
-    vi.clearAllMocks()
-  })
-
   beforeEach(() => {
-    deleteGameMock.mockReset()
-    modalOpenMock.mockReset()
-    notifySuccessMock.mockReset()
+    vi.resetAllMocks()
+
+    deleteGameMock.mockResolvedValue(undefined)
     useModalStoreMock.mockReturnValue({
       open: modalOpenMock,
     })

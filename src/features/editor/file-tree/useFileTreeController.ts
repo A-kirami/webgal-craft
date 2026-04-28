@@ -486,10 +486,13 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   }
 
   function toFileItem(item: FlattenedItem<T>) {
+    const value = item.value as Record<string, unknown>
+    const source = typeof value.source === 'string' ? value.source : undefined
     return {
       path: getItemPath(item.value),
       name: getItemName(item.value),
       isDir: item.hasChildren,
+      source,
     }
   }
 

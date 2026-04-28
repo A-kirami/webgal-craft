@@ -1,29 +1,20 @@
 <script setup lang="ts">
-import { documentDir } from '@tauri-apps/api/path'
 import { exists } from '@tauri-apps/plugin-fs'
 
 import { useResourcePreviewPrimer } from '~/composables/useResourcePreviewPrimer'
 import { db } from '~/database/db'
-import { defaultEngineSavePath, defaultGameSavePath } from '~/services/platform/app-paths'
+import { engineManager } from '~/services/engine-manager'
+import { resolveMissingStorageSavePaths } from '~/services/platform/storage-defaults'
+import { templateManager } from '~/services/template-manager'
 import { useGeneralSettingsStore } from '~/stores/general-settings'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 
 async function initializeApp() {
-  const isInitialized = useStorage('app-initialized', false)
-  if (!isInitialized.value) {
-    const storageSettingsStore = useStorageSettingsStore()
-    const needsGamePath = storageSettingsStore.gameSavePath === ''
-    const needsEnginePath = storageSettingsStore.engineSavePath === ''
-    if (needsGamePath || needsEnginePath) {
-      const baseDir = await documentDir()
-      if (needsGamePath) {
-        storageSettingsStore.gameSavePath = await defaultGameSavePath(baseDir)
-      }
-      if (needsEnginePath) {
-        storageSettingsStore.engineSavePath = await defaultEngineSavePath(baseDir)
-      }
-    }
-    isInitialized.value = true
+  const storageSettingsStore = useStorageSettingsStore()
+  const missingStoragePaths = await resolveMissingStorageSavePaths(storageSettingsStore)
+
+  if (Object.keys(missingStoragePaths).length > 0) {
+    storageSettingsStore.$patch(missingStoragePaths)
   }
 }
 
@@ -57,6 +48,8 @@ async function openLastProjectIfNeeded() {
 onMounted(async () => {
   await logger.attachConsole()
   await initializeApp()
+  await engineManager.validateAllEngines()
+  await templateManager.validateAllTemplates()
   await openLastProjectIfNeeded()
 })
 

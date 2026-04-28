@@ -49,13 +49,16 @@ export function useSettingsForm<
   const managedFieldNames = fieldNames?.length ? [...fieldNames] : Object.keys(store.$state)
 
   function pickManagedValues(source: Record<string, unknown>) {
-    if (!fieldNames?.length) {
-      return source
-    }
-
     return Object.fromEntries(
       managedFieldNames.map(fieldName => [fieldName, source[fieldName]]),
     )
+  }
+
+  function hasSameManagedValues(
+    source: Record<string, unknown>,
+    target: Record<string, unknown>,
+  ) {
+    return managedFieldNames.every(fieldName => Object.is(source[fieldName], target[fieldName]))
   }
 
   const form = useForm({
@@ -67,43 +70,45 @@ export function useSettingsForm<
     store.$patch(pickManagedValues(values as Record<string, unknown>))
   })
 
+  watch(
+    () => managedFieldNames.map(fieldName => storeState[fieldName]),
+    () => {
+      const managedStoreValues = pickManagedValues(store.$state as Record<string, unknown>)
+
+      if (hasSameManagedValues(managedStoreValues, form.values as Record<string, unknown>)) {
+        return
+      }
+
+      form.resetForm({ values: managedStoreValues })
+    },
+  )
+
   // 如果没有立即同步字段，全部防抖处理
   if (immediateFields.length === 0) {
     watchDebounced(form.values, () => void onSubmit(), debounceOptions)
     return form as FormContext<z.infer<T>>
   }
 
-  // 如果有立即同步字段，分别处理立即同步和防抖
   const immediateSyncFields = new Set(immediateFields)
   const values = form.values as z.infer<T>
-
-  // 使用表单托管字段计算需要防抖的字段，避免误回写页面自行管理的状态
   const debouncedFields = managedFieldNames.filter(key => !immediateSyncFields.has(key))
 
-  // 计算立即同步字段的值数组（只访问 immediateFields 中的字段）
   const immediateValuesArray = $computed(() =>
     immediateFields.map(field => values[field]),
   )
 
-  // 计算需要防抖的字段值数组（只访问 debouncedFields 中的字段）
   const debouncedValuesArray = $computed(() =>
     debouncedFields.map(field => values[field]),
   )
 
-  // 监听立即同步字段的变化
   watch(
     () => immediateValuesArray,
-    () => {
-      void onSubmit()
-    },
+    () => void onSubmit(),
   )
 
-  // 监听需要防抖的字段变化
   watchDebounced(
     () => debouncedValuesArray,
-    () => {
-      void onSubmit()
-    },
+    () => void onSubmit(),
     debounceOptions,
   )
 

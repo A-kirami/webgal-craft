@@ -10,6 +10,7 @@ describe('偏好设置状态仓库', () => {
 
     expect(store.viewMode).toBe('grid')
     expect(store.assetViewMode).toBe('grid')
+    expect(store.defaultEngineId).toBeUndefined()
     expect(store.editorMode).toBe('text')
     expect(store.showSidebar).toBe(true)
     expect(store.assetZoom).toEqual([100])

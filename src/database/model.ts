@@ -1,11 +1,12 @@
-import { EngineMetadata, EnginePreviewAssets, GameMetadata, GamePreviewAssets } from '~/services/types'
+import type { EngineMetadata, EnginePreviewAssets, GameMetadata, GamePreviewAssets, TemplateMetadata } from '~/services/types'
 
 export interface Game {
   id: string
   path: string
+  engineId?: string
   createdAt: number
   lastModified: number
-  status: Status
+  status: GameStatus
   metadata: GameMetadata
   previewAssets: GamePreviewAssets
 }
@@ -13,10 +14,25 @@ export interface Game {
 export interface Engine {
   id: string
   path: string
+  engineId: string
+  name: string
+  version?: string
   createdAt: number
-  status: Status
+  status: EngineStatus
   metadata: EngineMetadata
   previewAssets: EnginePreviewAssets
 }
 
-export type Status = 'created' | 'creating' | 'error'
+export interface Template {
+  id: string
+  path: string
+  createdAt: number
+  status: TemplateStatus
+  metadata: TemplateMetadata
+}
+
+export type GameStatus = 'created' | 'creating' | 'error'
+
+export type EngineStatus = 'created' | 'creating' | 'error' | 'unavailable'
+
+export type TemplateStatus = 'created' | 'creating' | 'error'

@@ -13,14 +13,17 @@ common:
   unsaved: 未保存
   back: 戻る
   or: または
+  more: その他
   openFolder: フォルダを開く
   search:
     placeholder: ファイルまたはフォルダを検索
     toggle: 検索を切り替え
     clear: 入力をクリア
+  unknown: 不明
   dialogs:
     selectGameFolder: ゲームフォルダを選択
     selectEngineFolder: エンジンフォルダを選択
+    selectTemplateFolder: テンプレートフォルダを選択
   view:
     grid: グリッド表示
     list: リスト表示
@@ -63,6 +66,7 @@ filePicker:
     clearRecentHistory: 最近の履歴をクリア
   recent:
     title: 最近選択
+
 app:
   name: WebGAL Craft
   description: WebGAL ビジュアルノベルスタジオ
@@ -73,10 +77,12 @@ home:
   tabs:
     recent: 最近の作品
     engines: ゲームエンジン
+    templates: ゲームテンプレート
   search:
     placeholder:
       recent: 最近の作品を検索...
       engines: ゲームエンジンを検索...
+      templates: テンプレートを検索...
   welcome:
     title: WebGAL Craft へようこそ
     subtitle: ゲーム制作の旅を始めて、あなたの物語を書いてください
@@ -96,8 +102,14 @@ home:
     dropGameFolder: ゲームフォルダをここにドラッグ＆ドロップしてインポート
     gameCover: "{name} ゲームカバー"
     gameIcon: "{name} ゲームアイコン"
+    importAlreadyRegistered: このプロジェクトは既に登録されています
+    importCancelled: インポートがキャンセルされました
+    importConfigCorrupted: プロジェクト設定ファイルが破損しています
+    importEngineNotFound: エンジンが見つかりません
+    importEngineUnavailable: エンジンは利用できません
     importSuccess: ゲームのインポートに成功しました
     importInvalidFolder: これは有効なゲームフォルダではありません
+    importSchemaVersionTooNew: プロジェクト設定のバージョンが新しすぎます。アプリをアップグレードしてください。
     importUnknownError: ゲームのインポート中に不明なエラーが発生しました
     importMultipleFolders: 一度にインポートできるゲームフォルダは1つだけです
     importCreating: ゲームを作成中です。作成の完了をお待ちください
@@ -107,17 +119,38 @@ home:
     installEngine: エンジンをインストール
     installEngineHint: クリックして参照するか、エンジンフォルダをここにドラッグ＆ドロップ
     installGameEngine: ゲームエンジンをインストール
-    uninstallEngine: エンジンをアンインストール
     dropEngineFolder: ゲームエンジンフォルダをここにドラッグ＆ドロップ
     engineIcon: "{name} エンジンアイコン"
     importSuccess: エンジンのインポートに成功しました
     importInvalidFolder: これは有効なエンジンフォルダではありません
+    importUnsupportedLegacyEngine: レガシーエンジンは直接インポートできません。このエンジンを含むプロジェクトをインポートするか、サポートされたエンジン版を使用してください。
     importUnknownError: エンジンのインポート中に不明なエラーが発生しました
     importMultipleFolders: 一度にインポートできるエンジンフォルダは1つだけです
     noEngineTitle: 利用可能なゲームエンジンがありません
     noEngineContent: ゲームを作成するには、まずゲームエンジンをインストールする必要があります
     goToInstall: インストールに移動
     later: 後で
+  templates:
+    noTemplates: 利用可能なテンプレートがありません
+    noTemplatesDesc: 独立テンプレートをインポートするか、内蔵テンプレート付きのエンジンをインストールしてください
+    importTemplate: テンプレートをインポート
+    importTemplateHint: クリックして参照するか、テンプレートフォルダをここにドラッグ＆ドロップ
+    deleteTemplate: テンプレートを削除
+    dropTemplateFolder: テンプレートフォルダをここにドラッグ＆ドロップ
+    importSuccess: テンプレートのインポートに成功しました
+    importInvalidFolder: これは有効なテンプレートフォルダではありません
+    importDuplicate: 同じ名前のテンプレートが既に存在します
+    importUnknownError: テンプレートのインポート中に不明なエラーが発生しました
+    importMultipleFolders: 一度にインポートできるテンプレートフォルダは1つだけです
+    compatibilityVersion: WebGAL {version} に対応
+    sourceKind:
+      standalone: 独立テンプレート
+      engineBuiltin: エンジン内蔵
+    sourceSummary:
+      engineBuiltin: "{count} 個のエンジンバージョン由来"
+    actions:
+      more: その他のテンプレート操作
+      openTemplateFolder: テンプレートフォルダを開く
 
 modals:
   about:
@@ -133,7 +166,11 @@ modals:
     gameNameRequired: ゲーム名は必須です
     saveLocation: 保存場所
     gameEngine: ゲームエンジン
-    selectEngine: ゲームエンジンを選択
+    gameTemplate: ゲームテンプレート
+    templateFollowEngine: 現在のエンジンに従う
+    templateFollowEngineWithName: 現在のエンジンに従う（{name}）
+    templateGroupEngineBuiltin: エンジン組み込みテンプレート
+    templateGroupStandalone: スタンドアロンテンプレート
     create: 作成
     createFailed: ゲームの作成に失敗しました
     pathNotEmpty: ゲーム保存ディレクトリは存在しないか、空である必要があります
@@ -159,17 +196,64 @@ modals:
     title: エンジンをアンインストール
     description: エンジン {name} をアンインストールしてもよろしいですか？
     warning: この操作はエンジンファイルをゴミ箱に移動します。ゴミ箱から復元できます。
+    removeTitle: エンジン記録を削除
+    removeDescription: エンジン {name} の記録を削除してもよろしいですか？
+    removeWarning: エンジンディレクトリは利用できません。この操作はローカル記録だけを削除し、ファイルは削除しません。
+    removeSuccess: エンジン記録を削除しました
+    removeFailed: エンジン記録の削除に失敗しました
     uninstallSuccess: エンジンのアンインストールに成功しました
+    uninstallFailed: エンジンのアンインストールに失敗しました
+  deleteTemplate:
+    title: テンプレートを削除
+    description: テンプレート {name} を削除してもよろしいですか？
+    warning: この操作はテンプレートファイルをゴミ箱に移動します。ゴミ箱から復元できます。
+    deleteSuccess: テンプレートを削除しました
+  switchEngine:
+    title: エンジンを切り替え
+    description: 切り替えるゲームエンジンを選択
+    engineLabel: ゲームエンジン
+    switching: エンジンを切り替えています。お待ちください...
+    templateDirty:
+      title: テンプレートが変更されています
+      description: エンジンを切り替えると現在のテンプレートのローカル変更に影響します。処理方法を選択してください
+      keep: 変更を保持してテンプレートを固定
+      discard: テンプレートの変更を破棄
+    success: エンジンを {name} {version} に切り替えました
+    failed:
+      title: エンジンの切り替えに失敗しました
+      description: エンジンファイルのコピー中にエラーが発生しました。再試行またはキャンセルできます。
+      retry: 再試行
+      cancel: キャンセルしてロールバック
+  switchTemplate:
+    title: テンプレートを切り替え
+    selectTemplate: 切り替えるゲームテンプレートを選択
+    templateLabel: ゲームテンプレート
+    dirtyWarning: 現在のテンプレートが変更されています。切り替えるとすべての変更が消去されます。続行しますか？
+    dirtyConfirm:
+      title: 切り替えると変更が失われます
+      confirm: 切り替えを確認
+    success: テンプレートを切り替えました
+    error: テンプレートの切り替えに失敗しました
+  deleteEngineGroup:
+    title: すべてのバージョンをアンインストール
+    description: エンジン {name} のすべてのバージョンをアンインストールしてもよろしいですか？
+    warning: この操作は、このエンジンのインストール済みバージョンをすべてゴミ箱に移動します。後で復元できます。
+    success: エンジンの全バージョンをアンインストールしました
+    failed: エンジンの全バージョンのアンインストールに失敗しました
   discoveredResources:
     gamesTitle: ゲームを発見
     enginesTitle: エンジンを発見
+    templatesTitle: テンプレートを発見
     gamesDescription: デフォルトのゲームディレクトリで {count} 個のゲームが見つかりました。インポートしますか？
-    enginesDescription: デフォルトのエンジンディレクトリで {count} 個のエンジンが見つかりました。インポートしますか？
+    enginesDescription: デフォルトのエンジンディレクトリで {engineCount} 個のエンジン（合計 {versionCount} バージョン）が見つかりました。インポートしますか？
+    templatesDescription: デフォルトのテンプレートディレクトリで {count} 個のテンプレートが見つかりました。インポートしますか？
     selectAll: すべて選択
     deselectAll: すべて選択解除
     selected: 選択済み {count}/{total}
     skip: スキップ
     import: インポート ({count})
+    versionsCount: '{count} 個のバージョン'
+    toggleGroup: '{name} のすべてのバージョンを切り替え'
   gameConfig:
     title: ゲーム設定
     description: 現在のゲームの基本情報、リソース、関連設定を編集します
@@ -453,6 +537,8 @@ edit:
   statusBar:
     frames: "{count} フレーム"
     statements: "{count} ステートメント"
+    engine: エンジン
+    template: テンプレート
   fileTree:
     newFile: 新しいファイル
     newFolder: 新しいフォルダー
@@ -882,7 +968,30 @@ settings:
     enginePath:
       label: エンジン保存場所
       title: エンジン保存場所を選択
+    templatePath:
+      label: テンプレート保存場所
+      title: テンプレート保存場所を選択
     browse: 参照
 
 notFound:
   message: ページが見つかりません
+
+engine:
+  selectName: エンジンを選択
+  selectVersion: バージョンを選択
+  defaultEngine: デフォルト
+  setDefaultEngine: デフォルトエンジンに設定
+  unsetDefaultEngine: デフォルトエンジンを解除
+  versionSummary: '{version} ・全 {count} バージョン'
+  noAvailableVersionSummary: 利用可能なバージョンなし ・インストール済み {count} バージョン
+  latestBadge: 最新
+  deleteVersion: バージョンを削除
+  uninstallAllVersions: すべてのバージョンをアンインストール
+  duplicateEngine: 同名・同バージョンのエンジンは既に存在します
+  deleteBlocked: 削除できません
+  deleteBlockedByGames: 以下のゲームがこのエンジンを使用しています：
+  unavailable: 利用不可
+
+game:
+  selectEngine: エンジンを選択
+  selectEngineDescription: 現在のエンジンが利用できません。利用可能な任意のエンジンを選択して開いてください

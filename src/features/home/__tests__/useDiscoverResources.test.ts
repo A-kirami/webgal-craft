@@ -1,0 +1,247 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const {
+  classifyEngineMock,
+  existsMock,
+  getEnginePreviewAssetsMock,
+  getTemplateMetadataMock,
+  joinMock,
+  modalOpenMock,
+  readDirMock,
+  resolveHomeTabDefinitionMock,
+  templateImportMock,
+  useModalStoreMock,
+  useResourceStoreMock,
+  useStorageSettingsStoreMock,
+  useWorkspaceStoreMock,
+  validateEngineMock,
+  validateTemplateMock,
+} = vi.hoisted(() => ({
+  classifyEngineMock: vi.fn(),
+  existsMock: vi.fn(),
+  getEnginePreviewAssetsMock: vi.fn(),
+  getTemplateMetadataMock: vi.fn(),
+  joinMock: vi.fn(async (...parts: string[]) => parts.join('/').replaceAll('//', '/')),
+  modalOpenMock: vi.fn(),
+  readDirMock: vi.fn(),
+  resolveHomeTabDefinitionMock: vi.fn(),
+  templateImportMock: vi.fn(),
+  useModalStoreMock: vi.fn(),
+  useResourceStoreMock: vi.fn(),
+  useStorageSettingsStoreMock: vi.fn(),
+  useWorkspaceStoreMock: vi.fn(),
+  validateEngineMock: vi.fn(),
+  validateTemplateMock: vi.fn(),
+}))
+
+vi.mock('@tauri-apps/api/path', () => ({
+  join: joinMock,
+}))
+
+vi.mock('@tauri-apps/plugin-fs', () => ({
+  exists: existsMock,
+  readDir: readDirMock,
+}))
+
+vi.mock('@tauri-apps/plugin-log', () => ({
+  error: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn(),
+  attachConsole: vi.fn(),
+}))
+
+vi.mock('notivue', () => ({
+  push: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}))
+
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({
+    t: (key: string) => key,
+  }),
+}))
+
+vi.mock('~/features/home/home-tabs', () => ({
+  resolveHomeTabDefinition: resolveHomeTabDefinitionMock,
+}))
+
+vi.mock('~/features/modals/engine-selection/request-engine-selection', () => ({
+  requestEngineSelection: vi.fn(),
+}))
+
+vi.mock('~/services/engine-manager', () => ({
+  engineManager: {
+    classifyEngine: classifyEngineMock,
+    getEnginePreviewAssets: getEnginePreviewAssetsMock,
+    importEngine: vi.fn(),
+    validateEngine: validateEngineMock,
+  },
+}))
+
+vi.mock('~/services/game-manager', () => ({
+  gameManager: {
+    getGamePreviewAssets: vi.fn(),
+    importGame: vi.fn(),
+    resolvePreviewSite: vi.fn(),
+    validateGame: vi.fn(),
+  },
+}))
+
+vi.mock('~/services/template-manager', () => ({
+  templateManager: {
+    getTemplateMetadata: getTemplateMetadataMock,
+    importTemplate: templateImportMock,
+    validateTemplate: validateTemplateMock,
+  },
+}))
+
+vi.mock('~/stores/modal', () => ({
+  useModalStore: useModalStoreMock,
+}))
+
+vi.mock('~/stores/resource', () => ({
+  useResourceStore: useResourceStoreMock,
+}))
+
+vi.mock('~/stores/storage-settings', () => ({
+  useStorageSettingsStore: useStorageSettingsStoreMock,
+}))
+
+vi.mock('~/stores/workspace', () => ({
+  useWorkspaceStore: useWorkspaceStoreMock,
+}))
+
+describe('useDiscoverResources', () => {
+  beforeEach(() => {
+    vi.resetModules()
+
+    classifyEngineMock.mockReset()
+    existsMock.mockReset()
+    getEnginePreviewAssetsMock.mockReset()
+    getTemplateMetadataMock.mockReset()
+    joinMock.mockClear()
+    modalOpenMock.mockReset()
+    readDirMock.mockReset()
+    resolveHomeTabDefinitionMock.mockReset()
+    templateImportMock.mockReset()
+    useModalStoreMock.mockReset()
+    useResourceStoreMock.mockReset()
+    useStorageSettingsStoreMock.mockReset()
+    useWorkspaceStoreMock.mockReset()
+    validateEngineMock.mockReset()
+    validateTemplateMock.mockReset()
+
+    existsMock.mockResolvedValue(true)
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'engines' })
+    useModalStoreMock.mockReturnValue({ open: modalOpenMock })
+    useResourceStoreMock.mockReturnValue({
+      engines: [],
+      games: [],
+      templates: [],
+    })
+    useStorageSettingsStoreMock.mockReturnValue({
+      engineSavePath: '/engines',
+      templateSavePath: '/templates',
+    })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'engines' })
+    getEnginePreviewAssetsMock.mockResolvedValue({
+      icon: {
+        path: '/engines/WebGAL/4.5.0/icons/favicon.ico',
+      },
+    })
+  })
+
+  it('只会发现带有效 manifest 的受支持引擎目录', async () => {
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/engines': {
+          return [{ isDirectory: true, name: 'WebGAL' }]
+        }
+        case '/engines/WebGAL': {
+          return [
+            { isDirectory: true, name: '4.5.0' },
+            { isDirectory: true, name: 'legacy' },
+          ]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+    validateEngineMock.mockResolvedValue(true)
+    classifyEngineMock.mockImplementation(async (path: string) => path.endsWith('/4.5.0')
+      ? {
+          status: 'ok',
+          manifest: {
+            id: 'webgal',
+            name: 'WebGAL',
+            version: '4.5.0',
+          },
+        }
+      : { status: 'missing' })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    expect(modalOpenMock).toHaveBeenCalledWith('DiscoveredResourcesModal', expect.objectContaining({
+      type: 'engines',
+      resources: [
+        {
+          icon: '/engines/WebGAL/4.5.0/icons/favicon.ico',
+          name: 'WebGAL',
+          path: '/engines/WebGAL/4.5.0',
+          engineId: 'webgal',
+          version: '4.5.0',
+        },
+      ],
+    }))
+    expect(classifyEngineMock).toHaveBeenCalledWith('/engines/WebGAL/4.5.0')
+    expect(classifyEngineMock).toHaveBeenCalledWith('/engines/WebGAL/legacy')
+  })
+
+  it('会发现有效模板目录并使用模板元数据名称展示', async () => {
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'templates' })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'templates' })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/templates': {
+          return [
+            { isDirectory: true, name: 'modern' },
+            { isDirectory: true, name: 'invalid' },
+          ]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+    validateTemplateMock.mockImplementation(async (path: string) => path.endsWith('/modern'))
+    getTemplateMetadataMock.mockResolvedValue({
+      name: 'Modern Template',
+    })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    expect(modalOpenMock).toHaveBeenCalledWith('DiscoveredResourcesModal', expect.objectContaining({
+      type: 'templates',
+      resources: [
+        {
+          name: 'Modern Template',
+          path: '/templates/modern',
+        },
+      ],
+    }))
+    expect(validateTemplateMock).toHaveBeenCalledWith('/templates/modern')
+    expect(validateTemplateMock).toHaveBeenCalledWith('/templates/invalid')
+    expect(getTemplateMetadataMock).toHaveBeenCalledWith('/templates/modern')
+    expect(getEnginePreviewAssetsMock).not.toHaveBeenCalled()
+  })
+})

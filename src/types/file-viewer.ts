@@ -1,3 +1,5 @@
+import type { VfsSource } from './project-config'
+
 export type FileViewerSortBy = 'name' | 'modifiedTime' | 'createdTime' | 'size'
 export type FileViewerSortOrder = 'asc' | 'desc'
 
@@ -10,6 +12,7 @@ export interface FileViewerItem {
   size?: number
   modifiedAt?: number
   createdAt?: number
+  source?: VfsSource
 }
 
 export interface FileViewerPreviewSize {

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { TriangleAlert } from '@lucide/vue'
 
-import { Game } from '~/database/model'
 import { gameManager } from '~/services/game-manager'
 import { useModalStore } from '~/stores/modal'
+
+import type { Game } from '~/database/model'
 
 const { t } = useI18n()
 let open = $(defineModel<boolean>('open'))
@@ -15,19 +16,19 @@ const { game } = defineProps<{
 let removeFiles = $ref(false)
 const modalStore = useModalStore()
 
-function deleteGame() {
-  gameManager.deleteGame(game, removeFiles)
+async function deleteGame() {
+  await gameManager.deleteGame(game, removeFiles)
   notify.success(t('modals.deleteGame.deleteSuccess'))
 }
 
-function handleConfirm() {
+async function handleConfirm() {
   if (removeFiles) {
     modalStore.open('DeleteGameConfirmModal', {
       game,
       onConfirm: deleteGame,
     })
   } else {
-    deleteGame()
+    await deleteGame()
     open = false
   }
 }
