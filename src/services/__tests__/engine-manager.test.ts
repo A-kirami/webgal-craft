@@ -521,7 +521,7 @@ describe('engineManager', () => {
       }),
     ])
 
-    await engineManager.uninstallEngineGroup('WebGAL')
+    await engineManager.uninstallEngineGroup('open-webgal.webgal')
 
     expect(deleteFileMock).toHaveBeenNthCalledWith(1, '/engines/WebGAL/4.5.0')
     expect(deleteFileMock).toHaveBeenNthCalledWith(2, '/engines/WebGAL/4.4.0')
