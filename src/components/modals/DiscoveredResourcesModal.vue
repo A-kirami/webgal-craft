@@ -62,6 +62,10 @@ const engineGroups = $computed<EngineGroup[]>(() => {
 
   for (const group of groupsMap.values()) {
     group.versions.sort((a, b) => compareEngineVersions(a.version, b.version))
+    const representative = group.versions[0] ?? group.representative
+    group.representative = representative
+    group.name = representative.name
+    group.icon = representative.icon
   }
 
   return [...groupsMap.values()]
