@@ -69,6 +69,10 @@ async function switchEngine(
     throw new AppError('IO_ERROR', '自带引擎项目不支持引擎切换')
   }
 
+  if (newEngine.status !== 'created') {
+    throw new AppError('IO_ERROR', '目标引擎不可用，无法切换')
+  }
+
   const oldEngine = await db.engines.get(game.engineId)
   if (!oldEngine) {
     throw new AppError('IO_ERROR', '当前引擎记录缺失，无法安全切换')
@@ -145,11 +149,16 @@ async function switchEngine(
     // 显式传入 newEngine.path 与 newTemplatePath：此时 workspaceStore.currentGame
     // 仍是切换前快照，file store 单靠它反查会拿到旧引擎/模板路径，
     // 导致首次切换不刷新模板内容。
-    await templateSwitch.notifyTemplateChanged(game.path, {
-      nextEnginePath: newEngine.path,
-      // eslint-disable-next-line unicorn/no-null
-      nextTemplatePath: newTemplatePath ?? null,
-    })
+    // 该步骤仅做前端通知，且发生在 cleanTemplateUpper 之后，必须吞掉异常以免触发回滚。
+    try {
+      await templateSwitch.notifyTemplateChanged(game.path, {
+        nextEnginePath: newEngine.path,
+        // eslint-disable-next-line unicorn/no-null
+        nextTemplatePath: newTemplatePath ?? null,
+      })
+    } catch (error) {
+      logger.warn(`[引擎切换] 通知模板变更失败: ${error}`)
+    }
 
     // 引擎换的是 runtime 本身（webgal.js、index.html、内置资源等），
     // REFETCH_TEMPLATE_FILES 只会让旧 runtime 重新拉模板 CSS，无法替换 runtime 自身；
