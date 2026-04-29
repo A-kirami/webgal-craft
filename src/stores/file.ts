@@ -104,6 +104,10 @@ export const useFileStore = defineStore('file', () => {
     return workspaceStore.currentGame?.path ?? projectPath
   }
 
+  function getCurrentTemplatePath(): string | undefined {
+    return templatePath
+  }
+
   /**
    * 刷新模板子树的 overlay 视图。
    *
@@ -377,7 +381,7 @@ export const useFileStore = defineStore('file', () => {
             projectPath,
             enginePath,
             relPath: toRelativeProjectPath(path),
-            templatePath,
+            templatePath: getCurrentTemplatePath(),
           })
           resolvedItems = entries.map(entry => createFileSystemItemFromVfsEntry(entry, path, parentId))
         } else {
@@ -552,6 +556,7 @@ export const useFileStore = defineStore('file', () => {
   } | undefined> {
     const currentProjectPath = getCurrentProjectPath()
     const currentEnginePath = getCurrentEnginePath()
+    const currentTemplatePath = getCurrentTemplatePath()
     if (!currentEnginePath || !currentProjectPath) {
       return undefined
     }
@@ -566,6 +571,7 @@ export const useFileStore = defineStore('file', () => {
     const resolvedSourcePath = await vfsCmds.resolvePath({
       projectPath: currentProjectPath,
       enginePath: currentEnginePath,
+      templatePath: currentTemplatePath,
       relPath: relSourcePath,
     })
     const sourceInfo = await stat(resolvedSourcePath)
@@ -821,6 +827,7 @@ export const useFileStore = defineStore('file', () => {
     deleteEntry: async (path: string): Promise<boolean> => {
       const currentProjectPath = getCurrentProjectPath()
       const currentEnginePath = getCurrentEnginePath()
+      const currentTemplatePath = getCurrentTemplatePath()
       if (!currentEnginePath || !currentProjectPath) {
         return false
       }
@@ -833,6 +840,7 @@ export const useFileStore = defineStore('file', () => {
       await vfsCmds.deletePath({
         projectPath: currentProjectPath,
         enginePath: currentEnginePath,
+        templatePath: currentTemplatePath,
         relPath,
       })
       await handleRemoveEvent(path)
@@ -847,16 +855,18 @@ export const useFileStore = defineStore('file', () => {
       const copiedRelPath = await vfsCmds.copyPath({
         projectPath: moveTarget.currentProjectPath,
         enginePath: moveTarget.currentEnginePath,
+        templatePath: getCurrentTemplatePath(),
         relPath: moveTarget.relSourcePath,
         targetRelPath: moveTarget.nextRelPath,
       })
       const nextPath = normalizeFsPath(`${moveTarget.currentProjectPath}/${copiedRelPath}`)
-      await handleCreateEvent(nextPath, pathToId.get(normalizeFsPath(targetPath)))
+      await handleCreateEvent(nextPath, getItemByPath(targetPath)?.id)
       return nextPath
     },
     ensureWritable: async (path: string): Promise<string> => {
       const currentProjectPath = getCurrentProjectPath()
       const currentEnginePath = getCurrentEnginePath()
+      const currentTemplatePath = getCurrentTemplatePath()
       if (!currentEnginePath || !currentProjectPath) {
         return path
       }
@@ -869,6 +879,7 @@ export const useFileStore = defineStore('file', () => {
       return await vfsCmds.ensureWritable({
         projectPath: currentProjectPath,
         enginePath: currentEnginePath,
+        templatePath: currentTemplatePath,
         relPath,
       })
     },
@@ -885,6 +896,7 @@ export const useFileStore = defineStore('file', () => {
       const movedRelPath = await vfsCmds.movePath({
         projectPath: moveTarget.currentProjectPath,
         enginePath: moveTarget.currentEnginePath,
+        templatePath: getCurrentTemplatePath(),
         relPath: moveTarget.relSourcePath,
         targetRelPath: moveTarget.nextRelPath,
       })
@@ -902,6 +914,7 @@ export const useFileStore = defineStore('file', () => {
     renameEntry: async (path: string, newName: string): Promise<string | undefined> => {
       const currentProjectPath = getCurrentProjectPath()
       const currentEnginePath = getCurrentEnginePath()
+      const currentTemplatePath = getCurrentTemplatePath()
       if (!currentEnginePath || !currentProjectPath) {
         return undefined
       }
@@ -914,6 +927,7 @@ export const useFileStore = defineStore('file', () => {
       const nextRelPath = await vfsCmds.renamePath({
         projectPath: currentProjectPath,
         enginePath: currentEnginePath,
+        templatePath: currentTemplatePath,
         relPath,
         newName,
       })
@@ -924,6 +938,7 @@ export const useFileStore = defineStore('file', () => {
     resolveFilePath: async (path: string): Promise<string> => {
       const currentProjectPath = getCurrentProjectPath()
       const currentEnginePath = getCurrentEnginePath()
+      const currentTemplatePath = getCurrentTemplatePath()
       if (!currentEnginePath || !currentProjectPath) {
         return path
       }
@@ -936,6 +951,7 @@ export const useFileStore = defineStore('file', () => {
       return await vfsCmds.resolvePath({
         projectPath: currentProjectPath,
         enginePath: currentEnginePath,
+        templatePath: currentTemplatePath,
         relPath,
       })
     },
