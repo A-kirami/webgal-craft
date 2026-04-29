@@ -19,11 +19,15 @@ export function groupEngines(engines: readonly Engine[]): EngineGroup[] {
   }
 
   return [...grouped.entries()]
-    .map(([engineId, versions]) => ({
-      engineId,
-      name: versions[0]?.name ?? engineId,
-      engines: versions.toSorted((left, right) => compareEngineVersions(left.version, right.version)),
-    }))
+    .map(([engineId, versions]) => {
+      const sortedVersions = versions.toSorted((left, right) => compareEngineVersions(left.version, right.version))
+      // 取最新版本的 name 作为分组显示名
+      return {
+        engineId,
+        name: sortedVersions[0]?.name ?? engineId,
+        engines: sortedVersions,
+      }
+    })
     .toSorted((left, right) => left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }))
 }
 
