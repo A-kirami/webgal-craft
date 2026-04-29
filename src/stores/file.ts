@@ -707,7 +707,8 @@ export const useFileStore = defineStore('file', () => {
   }
 
   async function handleWatchEvent(event: WatchEvent): Promise<void> {
-    const { type, paths } = event
+    const { type, paths: rawPaths } = event
+    const paths = rawPaths.map(p => normalizeFsPath(p))
     const path = paths[0]
 
     if (!path) {
