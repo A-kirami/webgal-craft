@@ -93,6 +93,7 @@ function renderDeleteEngineGroupModal(updateOpen = vi.fn()) {
   renderInBrowser(DeleteEngineGroupModal, {
     props: {
       'engineId': 'WebGAL',
+      'groupName': 'WebGAL',
       'open': true,
       'onUpdate:open': updateOpen,
     },
