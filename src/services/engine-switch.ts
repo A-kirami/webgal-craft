@@ -69,8 +69,12 @@ async function switchEngine(
     throw new AppError('IO_ERROR', '自带引擎项目不支持引擎切换')
   }
 
+  const oldEngine = await db.engines.get(game.engineId)
+  if (!oldEngine) {
+    throw new AppError('IO_ERROR', '当前引擎记录缺失，无法安全切换')
+  }
+
   const oldConfig = await projectConfigCmds.readProjectConfig(game.path)
-  const oldEngine = game.engineId ? await db.engines.get(game.engineId) : undefined
   const strategy = await templateSwitch.evaluateTemplateStrategy(game.path, oldConfig)
 
   if (strategy === 'dirty' && !options.templateDecision) {
@@ -182,7 +186,7 @@ interface RollbackContext {
 async function rollback(
   game: Game,
   oldConfig: ProjectConfig,
-  oldEngine: Engine | undefined,
+  oldEngine: Engine,
   context: RollbackContext,
 ): Promise<void> {
   // templateCleaned 为 true 时，已删除的 game/template/** upper / whiteout 不可恢复
@@ -198,7 +202,7 @@ async function rollback(
     ).catch(logRollbackError)
   }
 
-  if (context.siteEngineUpdated && oldEngine) {
+  if (context.siteEngineUpdated) {
     await applySiteUpdate(
       () => serverCmds.updateSiteEngine(game.path, oldEngine.path),
       'rollback updateSiteEngine',
