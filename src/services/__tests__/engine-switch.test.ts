@@ -276,6 +276,21 @@ describe('engineSwitch.switchEngine', () => {
       expect(cleanTemplateUpperMock).not.toHaveBeenCalled()
     })
 
+    it('步骤 5（cleanTemplateUpper）失败时不会回滚此前已提交的切换步骤', async () => {
+      const { game, newEngine } = setupBaseSwitch()
+      evaluateTemplateStrategyMock.mockResolvedValue('dirty')
+      cleanTemplateUpperMock.mockRejectedValueOnce(new Error('clean failed'))
+
+      await expect(
+        engineSwitch.switchEngine(game, newEngine, { templateDecision: 'discard' }),
+      ).rejects.toThrow('clean failed')
+
+      expect(writeProjectConfigMock).toHaveBeenCalledTimes(1)
+      expect(dbGameUpdateMock).toHaveBeenCalledTimes(1)
+      expect(updateSiteEngineMock).toHaveBeenCalledTimes(1)
+      expect(updateSiteTemplateMock).toHaveBeenCalledTimes(1)
+    })
+
     it('SITE_NOT_REGISTERED 不会冒泡，正常完成切换', async () => {
       const { game, newEngine } = setupBaseSwitch()
       updateSiteEngineMock.mockRejectedValueOnce(new AppError('SITE_NOT_REGISTERED', 'no site'))

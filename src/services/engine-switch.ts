@@ -102,6 +102,7 @@ async function switchEngine(
   const newTemplatePath = await templateSwitch.resolveTemplatePath(newConfig.template, newEngine)
 
   let step = 0
+  let noRollbackAfterDiscard = false
 
   try {
     // 步骤 1：更新 project.wgcp（atomic_write，失败旧文件不受影响）
@@ -129,6 +130,7 @@ async function switchEngine(
     // 步骤 5：模板清理（仅 discard 分支）。
     // 该步骤不可逆，必须排在所有可回滚步骤之后；前面任何步骤失败都不应触及用户的模板上层。
     if (templateDecision === 'discard') {
+      noRollbackAfterDiscard = true
       await vfsCmds.cleanTemplateUpper(game.path)
     }
     step = 5
@@ -158,6 +160,10 @@ async function switchEngine(
 
     logger.info(`[引擎切换] ${game.path}: 切换完成`)
   } catch (error) {
+    if (noRollbackAfterDiscard) {
+      logger.warn(`[引擎切换] ${game.path}: 步骤 ${step} 失败，跳过回滚`)
+      throw error
+    }
     logger.warn(`[引擎切换] ${game.path}: 步骤 ${step} 失败，开始回滚`)
     await rollback(game, oldConfig, oldEngine, { step, oldTemplatePath })
     throw error
