@@ -809,6 +809,9 @@ export const useFileStore = defineStore('file', () => {
         // initialize 已记录详细错误；这里避免 immediate watcher 产生未处理 Promise，
         // 保持 store 可继续创建，后续工作区切换仍可重新触发初始化。
       })
+    } else {
+      // 无工作区时不会触发 initialize，立即兑现 initialized，避免外部 await 永久挂起
+      resolveInitialized()
     }
   }, { immediate: true })
 
