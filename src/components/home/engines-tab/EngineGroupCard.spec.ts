@@ -131,4 +131,25 @@ describe('EngineGroupCard', () => {
     expect(onDeleteGroup).toHaveBeenCalledWith('open-webgal.webgal')
     expect(onDeleteEngine).toHaveBeenCalledWith(expect.objectContaining({ id: 'unavailable' }))
   })
+
+  it('当前默认组即使没有可用版本也允许取消默认', async () => {
+    renderInBrowser(EngineGroupCard, {
+      props: {
+        group: {
+          ...createGroup(),
+          hasAvailableVersion: false,
+          latestVersionLabel: undefined,
+        },
+        viewMode: 'list',
+      },
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('button', { name: 'engine.unsetDefaultEngine' }).first()).not.toBeDisabled()
+  })
 })

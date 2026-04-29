@@ -40,7 +40,7 @@ const menuItems = $computed<MenuItem[]>(() => [
     icon: Star,
     label: group.isDefault ? t('engine.unsetDefaultEngine') : t('engine.setDefaultEngine'),
     onClick: () => emit('setDefaultEngine', group.isDefault ? undefined : group.engineId),
-    disabled: !group.hasAvailableVersion,
+    disabled: !group.hasAvailableVersion && !group.isDefault,
   },
   {
     icon: Folder,
