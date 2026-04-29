@@ -48,8 +48,16 @@ async function openLastProjectIfNeeded() {
 onMounted(async () => {
   await logger.attachConsole()
   await initializeApp()
-  await engineManager.validateAllEngines()
-  await templateManager.validateAllTemplates()
+  try {
+    await engineManager.validateAllEngines()
+  } catch (error) {
+    logger.error(`引擎校验失败: ${error}`)
+  }
+  try {
+    await templateManager.validateAllTemplates()
+  } catch (error) {
+    logger.error(`模板校验失败: ${error}`)
+  }
   await openLastProjectIfNeeded()
 })
 
