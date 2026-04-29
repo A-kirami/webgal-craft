@@ -32,13 +32,18 @@ vi.mock('@tauri-apps/plugin-log', () => ({
 vi.mock('~/services/platform/app-paths', () => ({
   defaultEngineSavePath: vi.fn(),
   defaultGameSavePath: vi.fn(),
+  defaultTemplateSavePath: vi.fn(),
   engineIconPath: vi.fn(),
   engineManifestPath: vi.fn(),
+  engineTemplateDir: vi.fn(),
   gameAssetDir: vi.fn(async (gamePath: string, assetType: string) => `${gamePath}/game/${assetType}`),
+  gameConfigPath: vi.fn(async (gamePath: string) => `${gamePath}/game/config.txt`),
   gameCoverPath: vi.fn(async (gamePath: string, fileName: string) => `${gamePath}/game/background/${fileName}`),
   gameIconPath: vi.fn(async (gamePath: string) => `${gamePath}/icons/favicon.ico`),
   gameRootDir: vi.fn(async (gamePath: string) => `${gamePath}/game`),
   gameSceneDir: gameSceneDirMock,
+  projectConfigPath: vi.fn(async (gamePath: string) => `${gamePath}/project.wgcp`),
+  templateManifestPath: vi.fn(),
 }))
 
 vi.mock('~/stores/file', () => ({
