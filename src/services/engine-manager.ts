@@ -337,7 +337,11 @@ async function uninstallEngine(engine: Engine): Promise<void> {
   assertDeletable(await canDeleteEngine(engine.id))
   logger.info(`[引擎卸载] ${engine.name}@${engine.version ?? 'unknown'}: ${engine.path}`)
   if (engine.status !== 'unavailable') {
-    await fsCmds.deleteFile(engine.path)
+    try {
+      await fsCmds.deleteFile(engine.path)
+    } catch (error) {
+      logger.warn(`[引擎卸载] 删除托管目录失败，继续清理数据库记录: ${engine.path} - ${error}`)
+    }
   }
   await db.engines.delete(engine.id)
 }

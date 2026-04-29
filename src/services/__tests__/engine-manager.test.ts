@@ -506,6 +506,17 @@ describe('engineManager', () => {
     expect(deleteMock).toHaveBeenCalledWith('engine-1')
   })
 
+  it('uninstallEngine 在删除托管目录失败时仍会移除数据库记录', async () => {
+    const deleteMock = await import('~/database/db').then(module => vi.mocked(module.db.engines.delete))
+    deleteMock.mockResolvedValue(undefined)
+    deleteFileMock.mockRejectedValueOnce(new Error('path missing'))
+
+    await expect(engineManager.uninstallEngine(createTestEngine())).resolves.toBeUndefined()
+
+    expect(deleteFileMock).toHaveBeenCalledWith('/engines/default')
+    expect(deleteMock).toHaveBeenCalledWith('engine-1')
+  })
+
   it('uninstallEngineGroup 会删除整组版本并清理记录', async () => {
     const deleteMock = await import('~/database/db').then(module => vi.mocked(module.db.engines.delete))
     deleteMock.mockReset()
