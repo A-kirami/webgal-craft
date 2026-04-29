@@ -192,6 +192,7 @@ function discoverByType(type: ResourceType): Promise<DiscoveredResource[]> {
     case 'games': { return discoverGames() }
     case 'engines': { return discoverEngines() }
     case 'templates': { return discoverTemplates() }
+    default: { throw new Error(`未知的资源类型: ${type satisfies never}`) }
   }
 }
 
@@ -201,9 +202,26 @@ interface ImportMessages {
 }
 
 function resolveImportMessages(type: ResourceType, t: (key: string) => string): ImportMessages {
-  return {
-    success: t(`home.${type}.importSuccess`),
-    error: t(`home.${type}.importUnknownError`),
+  switch (type) {
+    case 'games': {
+      return {
+        success: t('home.games.importSuccess'),
+        error: t('home.games.importUnknownError'),
+      }
+    }
+    case 'engines': {
+      return {
+        success: t('home.engines.importSuccess'),
+        error: t('home.engines.importUnknownError'),
+      }
+    }
+    case 'templates': {
+      return {
+        success: t('home.templates.importSuccess'),
+        error: t('home.templates.importUnknownError'),
+      }
+    }
+    default: { throw new Error(`未知的资源类型: ${type satisfies never}`) }
   }
 }
 
@@ -212,6 +230,7 @@ function resolveImportFn(type: ResourceType): (path: string) => Promise<unknown>
     case 'games': { return path => gameManager.importGame(path, { selectEngine: requestEngineSelection }) }
     case 'engines': { return engineManager.importEngine }
     case 'templates': { return templateManager.importTemplate }
+    default: { throw new Error(`未知的资源类型: ${type satisfies never}`) }
   }
 }
 
@@ -233,6 +252,7 @@ export function useDiscoverResources() {
       case 'games': { return resourceStore.games }
       case 'engines': { return resourceStore.engines }
       case 'templates': { return resourceStore.templates }
+      default: { throw new Error(`未知的资源类型: ${type satisfies never}`) }
     }
   }
 
