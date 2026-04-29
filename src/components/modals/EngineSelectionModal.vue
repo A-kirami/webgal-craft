@@ -44,6 +44,7 @@ function handleDialogOpenChange(nextOpen: boolean) {
 watch($$(open), (isOpen) => {
   if (isOpen) {
     settled = false
+    selectedEngineId = undefined
   }
 })
 </script>
