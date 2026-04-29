@@ -82,11 +82,7 @@ function toggleSelection(path: string) {
 }
 
 function toggleAll() {
-  if (selectedPaths.size === props.resources.length) {
-    selectedPaths = new Set()
-  } else {
-    selectedPaths = new Set(props.resources.map(r => r.path))
-  }
+  selectedPaths = selectedPaths.size === props.resources.length ? new Set() : new Set(props.resources.map(r => r.path))
 }
 
 function getGroupSelectionState(group: EngineGroup): 'all' | 'partial' | 'none' {
@@ -130,6 +126,7 @@ const title = $computed(() => {
     case 'games': { return t('modals.discoveredResources.gamesTitle') }
     case 'engines': { return t('modals.discoveredResources.enginesTitle') }
     case 'templates': { return t('modals.discoveredResources.templatesTitle') }
+    default: { return '' }
   }
 })
 
