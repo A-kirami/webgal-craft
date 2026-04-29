@@ -222,6 +222,7 @@ modals:
     failed:
       title: エンジンの切り替えに失敗しました
       description: エンジンファイルのコピー中にエラーが発生しました。再試行またはキャンセルできます。
+      missingEngine: 選択したエンジンは既に存在しません
       retry: 再試行
       cancel: キャンセルしてロールバック
   switchTemplate:

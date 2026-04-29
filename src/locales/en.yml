@@ -222,6 +222,7 @@ modals:
     failed:
       title: Engine switch failed
       description: An error occurred while copying engine files. You can retry or cancel.
+      missingEngine: The selected engine no longer exists
       retry: Retry
       cancel: Cancel and roll back
   switchTemplate:

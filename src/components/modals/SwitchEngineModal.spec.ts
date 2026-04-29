@@ -58,6 +58,9 @@ function translate(key: string): string {
     case 'modals.switchEngine.failed.description': {
       return '可以重试，或者取消后稍后再试。'
     }
+    case 'modals.switchEngine.failed.missingEngine': {
+      return '所选引擎已不存在'
+    }
     case 'modals.switchEngine.failed.cancel': {
       return '取消'
     }
@@ -325,7 +328,7 @@ describe('SwitchEngineModal', () => {
     await page.getByRole('button', { name: '确认' }).click()
 
     await expect.element(page.getByText('切换失败')).toBeInTheDocument()
-    await expect.element(page.getByText('Selected engine no longer exists')).toBeInTheDocument()
+    await expect.element(page.getByText('所选引擎已不存在')).toBeInTheDocument()
   })
 
   it('刷新当前快照失败时仍然保持切换成功', async () => {

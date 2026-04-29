@@ -222,6 +222,7 @@ modals:
     failed:
       title: 引擎切換失敗
       description: 複製引擎檔案時發生錯誤，可重試或取消切換。
+      missingEngine: 所選引擎已不存在
       retry: 重試
       cancel: 取消並回滾
   switchTemplate:

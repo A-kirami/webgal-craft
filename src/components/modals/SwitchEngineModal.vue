@@ -84,7 +84,7 @@ async function performSwitch(templateDecision?: 'keep' | 'discard'): Promise<voi
   if (!targetEngine) {
     phase = 'failed'
     lastFailedAction = 'switch'
-    lastError = 'Selected engine no longer exists'
+    lastError = t('modals.switchEngine.failed.missingEngine')
     return
   }
 
