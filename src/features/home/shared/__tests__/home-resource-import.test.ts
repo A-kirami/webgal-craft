@@ -53,6 +53,18 @@ describe('首页共享导入纯逻辑', () => {
     })
   })
 
+  it('无效引擎清单错误会映射为无效目录通知', () => {
+    expect(resolveHomeResourceImportNotification(new AppError('IO_ERROR', 'broken manifest', {
+      details: {
+        reason: 'INVALID_ENGINE_MANIFEST',
+        manifestReason: '缺少必填字段',
+      },
+    }))).toEqual({
+      kind: 'invalid-folder',
+      level: 'error',
+    })
+  })
+
   it('重复引擎导入错误会映射为专用通知', () => {
     expect(resolveHomeResourceImportNotification(new AppError('IO_ERROR', 'duplicate', {
       details: { reason: 'DUPLICATE_ENGINE' },

@@ -313,8 +313,12 @@ describe('engineManager', () => {
     validateDirectoryStructureMock.mockResolvedValue(true)
 
     await expect(engineManager.importEngine('/downloads/brokenEngine')).rejects.toEqual(
-      new AppError('IO_ERROR', '不支持导入旧版引擎，请导入包含该引擎的项目或使用受支持的引擎版本', {
-        details: { reason: 'UNSUPPORTED_LEGACY_ENGINE' },
+      new AppError('IO_ERROR', '缺少必填字段', {
+        details: {
+          reason: 'INVALID_ENGINE_MANIFEST',
+          manifestReason: '缺少必填字段',
+          manifestStatus: 'invalid',
+        },
       }),
     )
   })

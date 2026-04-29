@@ -240,9 +240,18 @@ async function assertEngineImportable(enginePath: string): Promise<EngineSnapsho
       },
     )
   }
-  if (classification.status !== 'ok') {
+  if (classification.status === 'missing') {
     throw new AppError('IO_ERROR', '不支持导入旧版引擎，请导入包含该引擎的项目或使用受支持的引擎版本', {
       details: { reason: 'UNSUPPORTED_LEGACY_ENGINE' },
+    })
+  }
+  if (classification.status === 'invalid') {
+    throw new AppError('IO_ERROR', classification.reason, {
+      details: {
+        reason: 'INVALID_ENGINE_MANIFEST',
+        manifestReason: classification.reason,
+        manifestStatus: classification.status,
+      },
     })
   }
 
