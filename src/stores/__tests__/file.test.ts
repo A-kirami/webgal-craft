@@ -1,5 +1,6 @@
 import '~/__tests__/setup'
 
+import { LRUCache } from 'lru-cache'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useFileStore } from '~/stores/file'
@@ -181,6 +182,36 @@ function createStatResult(path: string, isDirectory: boolean) {
     size: isDirectory ? undefined : 12,
     mtime: new Date(`2026-03-18T00:00:0${path.length % 10}.000Z`),
     birthtime: new Date(`2026-03-17T00:00:0${path.length % 10}.000Z`),
+  }
+}
+
+function captureFileStoreCaches() {
+  const setSpy = vi.spyOn(LRUCache.prototype, 'set')
+
+  function findCache<TValue extends object | string>(
+    predicate: (value: unknown) => value is TValue,
+  ): LRUCache<string, TValue> | undefined {
+    const callIndex = setSpy.mock.calls.findIndex(([, value]) => predicate(value))
+    if (callIndex === -1) {
+      return undefined
+    }
+
+    const cache = setSpy.mock.contexts[callIndex]
+    return cache instanceof LRUCache ? cache as LRUCache<string, TValue> : undefined
+  }
+
+  return {
+    get items() {
+      return findCache((value): value is { path: string } =>
+        !!value && typeof value === 'object' && 'path' in value,
+      )
+    },
+    get pathToId() {
+      return findCache((value): value is string => typeof value === 'string')
+    },
+    restore() {
+      setSpy.mockRestore()
+    },
   }
 }
 
@@ -551,16 +582,32 @@ describe('文件状态仓库', () => {
         createFileViewerItem('/root/scene', true),
       ])
 
-    const store = useFileStore()
-    const firstRead = await store.getFolderContents('/root')
-    expect(firstRead.map(item => item.path)).toEqual(['/root/scene'])
+    const caches = captureFileStoreCaches()
 
-    // 模拟 items LRU 驱逐：通过加载大量其他路径使 /root 的 DirItem 被驱逐
-    // 这里直接调用内部机制：再次 getFolderContents 应恢复而非抛出 "路径不是目录"
-    // 为了精确模拟，我们先读取 pathToId 仍有映射的情况
-    // readDirectoryItemsCachedMock 已准备第二次调用的返回值
-    const secondRead = await store.getFolderContents('/root')
-    expect(secondRead.map(item => item.path)).toEqual(['/root/scene'])
+    try {
+      const store = useFileStore()
+      const firstRead = await store.getFolderContents('/root')
+      expect(firstRead.map(item => item.path)).toEqual(['/root/scene'])
+      expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
+
+      const pathToId = caches.pathToId
+      const items = caches.items
+      expect(pathToId).toBeDefined()
+      expect(items).toBeDefined()
+
+      const parentId = pathToId!.get('/root')
+      expect(parentId).toBeDefined()
+
+      items!.delete(parentId!)
+      expect(pathToId!.get('/root')).toBe(parentId)
+      expect(items!.has(parentId!)).toBe(false)
+
+      const secondRead = await store.getFolderContents('/root')
+      expect(secondRead.map(item => item.path)).toEqual(['/root/scene'])
+      expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(2)
+    } finally {
+      caches.restore()
+    }
   })
 
   it('并发 getFolderContents 不会因加载锁缺失而返回空列表', async () => {
@@ -633,18 +680,37 @@ describe('文件状态仓库', () => {
         createFileViewerItem('/root/file-b.txt', false),
       ])
 
-    const store = useFileStore()
+    const caches = captureFileStoreCaches()
 
-    const firstRead = await store.getFolderContents('/root')
-    expect(firstRead).toHaveLength(2)
-    expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
+    try {
+      const store = useFileStore()
 
-    // 模拟所有子项被 LRU 驱逐：清除 items 缓存但不清除 pathToId
-    // 通过重复加载大量目录触发驱逐过于间接，
-    // 此处利用 store.clear 后保留 pathToId 映射来模拟
-    // 实际通过重新读取来验证重新加载逻辑
-    const secondRead = await store.getFolderContents('/root')
-    expect(secondRead).toHaveLength(2)
+      const firstRead = await store.getFolderContents('/root')
+      expect(firstRead).toHaveLength(2)
+      expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
+
+      const pathToId = caches.pathToId
+      const items = caches.items
+      expect(pathToId).toBeDefined()
+      expect(items).toBeDefined()
+
+      const parentId = pathToId!.get('/root')
+      const childIds = ['/root/file-a.txt', '/root/file-b.txt'].map(path => pathToId!.get(path))
+      expect(parentId).toBeDefined()
+      expect(childIds).toEqual([expect.any(String), expect.any(String)])
+
+      for (const childId of childIds) {
+        items!.delete(childId!)
+        expect(items!.has(childId!)).toBe(false)
+      }
+      expect(items!.has(parentId!)).toBe(true)
+
+      const secondRead = await store.getFolderContents('/root')
+      expect(secondRead.map(item => item.path)).toEqual(['/root/file-a.txt', '/root/file-b.txt'])
+      expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(2)
+    } finally {
+      caches.restore()
+    }
   })
 
   it('VFS 写操作会携带 templatePath 传给 rename/delete/ensureWritable/resolveFilePath', async () => {
