@@ -100,7 +100,6 @@ async function switchEngine(
   let step = 0
   let siteEngineUpdated = false
   let siteTemplateUpdated = false
-  let templateCleaned = false
 
   try {
     // 步骤 1：更新 project.wgcp（atomic_write，失败旧文件不受影响）
@@ -119,19 +118,19 @@ async function switchEngine(
     siteEngineUpdated = true
     step = 3
 
-    // 步骤 4：模板清理（仅 discard 分支）
-    if (templateDecision === 'discard') {
-      await vfsCmds.cleanTemplateUpper(game.path)
-      templateCleaned = true
-    }
-    step = 4
-
-    // 步骤 5：更新 VFS 站点模板路径，让运行中的预览立即看到新的 template lower
+    // 步骤 4：更新 VFS 站点模板路径，让运行中的预览立即看到新的 template lower
     await applySiteUpdate(
       () => serverCmds.updateSiteTemplate(game.path, newTemplatePath),
       'updateSiteTemplate',
     )
     siteTemplateUpdated = true
+    step = 4
+
+    // 步骤 5：模板清理（仅 discard 分支）。
+    // 该步骤不可逆，必须排在所有可回滚步骤之后；前面任何步骤失败都不应触及用户的模板上层。
+    if (templateDecision === 'discard') {
+      await vfsCmds.cleanTemplateUpper(game.path)
+    }
     step = 5
 
     // 收尾：刷新 DB 与 workspace 快照，更新 previewAssets.cacheVersion，
@@ -168,7 +167,6 @@ async function switchEngine(
       step,
       siteEngineUpdated,
       siteTemplateUpdated,
-      templateCleaned,
       oldTemplatePath,
     })
     throw error
@@ -179,7 +177,6 @@ interface RollbackContext {
   step: number
   siteEngineUpdated: boolean
   siteTemplateUpdated: boolean
-  templateCleaned: boolean
   oldTemplatePath: string | undefined
 }
 
@@ -189,12 +186,6 @@ async function rollback(
   oldEngine: Engine,
   context: RollbackContext,
 ): Promise<void> {
-  // templateCleaned 为 true 时，已删除的 game/template/** upper / whiteout 不可恢复
-  // 这是已知的回滚边界——见 docs/vfs/phase-4b/02-engine-upgrade.md 风险评估方案 A
-  if (context.templateCleaned) {
-    logger.error(`[引擎切换回滚] ${game.path}: 模板已被清理，无法还原 game/template/** 修改`)
-  }
-
   if (context.siteTemplateUpdated) {
     await applySiteUpdate(
       () => serverCmds.updateSiteTemplate(game.path, context.oldTemplatePath),

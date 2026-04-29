@@ -250,17 +250,22 @@ describe('engineSwitch.switchEngine', () => {
       expect(writeProjectConfigMock).toHaveBeenLastCalledWith('/games/demo', OLD_CONFIG)
     })
 
-    it('步骤 5（updateSiteTemplate）失败时回滚 site engine_path 与 DB / config', async () => {
+    it('步骤 4（updateSiteTemplate）失败时回滚 site engine_path 与 DB / config，且不清理模板', async () => {
       const { game, newEngine } = setupBaseSwitch()
+      evaluateTemplateStrategyMock.mockResolvedValue('dirty')
       updateSiteTemplateMock.mockRejectedValueOnce(new Error('template fail'))
 
-      await expect(engineSwitch.switchEngine(game, newEngine)).rejects.toThrow('template fail')
+      await expect(
+        engineSwitch.switchEngine(game, newEngine, { templateDecision: 'discard' }),
+      ).rejects.toThrow('template fail')
 
       // updateSiteTemplate 抛错时 siteTemplateUpdated 仍为 false，不需要再次回滚 template_path
       expect(updateSiteTemplateMock).toHaveBeenCalledTimes(1)
       expect(updateSiteEngineMock).toHaveBeenNthCalledWith(1, '/games/demo', '/engines/new')
       expect(updateSiteEngineMock).toHaveBeenNthCalledWith(2, '/games/demo', '/engines/old')
       expect(writeProjectConfigMock).toHaveBeenLastCalledWith('/games/demo', OLD_CONFIG)
+      // 模板清理是不可逆操作，必须排在所有可回滚步骤之后；此处不应被触发
+      expect(cleanTemplateUpperMock).not.toHaveBeenCalled()
     })
 
     it('SITE_NOT_REGISTERED 不会冒泡，正常完成切换', async () => {
