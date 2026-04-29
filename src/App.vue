@@ -56,8 +56,10 @@ async function runValidation(label: string, validate: () => Promise<unknown>) {
 onMounted(async () => {
   await logger.attachConsole()
   await initializeApp()
-  await runValidation('引擎校验', () => engineManager.validateAllEngines())
-  await runValidation('模板校验', () => templateManager.validateAllTemplates())
+  await Promise.all([
+    runValidation('引擎校验', () => engineManager.validateAllEngines()),
+    runValidation('模板校验', () => templateManager.validateAllTemplates()),
+  ])
   await openLastProjectIfNeeded()
 })
 
