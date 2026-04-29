@@ -244,4 +244,48 @@ describe('useDiscoverResources', () => {
     expect(getTemplateMetadataMock).toHaveBeenCalledWith('/templates/modern')
     expect(getEnginePreviewAssetsMock).not.toHaveBeenCalled()
   })
+
+  it('模板元数据读取失败时不会把坏模板展示到发现结果里', async () => {
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'templates' })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'templates' })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/templates': {
+          return [
+            { isDirectory: true, name: 'modern' },
+            { isDirectory: true, name: 'broken' },
+          ]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+    validateTemplateMock.mockResolvedValue(true)
+    getTemplateMetadataMock.mockImplementation(async (path: string) => {
+      if (path.endsWith('/broken')) {
+        throw new Error('invalid template metadata')
+      }
+      return {
+        name: 'Modern Template',
+      }
+    })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    expect(modalOpenMock).toHaveBeenCalledWith('DiscoveredResourcesModal', expect.objectContaining({
+      type: 'templates',
+      resources: [
+        {
+          name: 'Modern Template',
+          path: '/templates/modern',
+        },
+      ],
+    }))
+    expect(getTemplateMetadataMock).toHaveBeenCalledWith('/templates/modern')
+    expect(getTemplateMetadataMock).toHaveBeenCalledWith('/templates/broken')
+  })
 })

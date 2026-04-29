@@ -110,19 +110,20 @@ async function discoverTemplates(): Promise<DiscoveredResource[]> {
   }
 
   const templates = await discoverResourcesInDirectory(templateSavePath, templateManager.validateTemplate)
-  return Promise.all(
+  const discoveredTemplates = await Promise.all(
     templates.map(async (template) => {
       try {
         const metadata = await templateManager.getTemplateMetadata(template.path)
-        return {
+        return [{
           ...template,
           name: metadata.name,
-        }
+        }]
       } catch {
-        return template
+        return []
       }
     }),
   )
+  return discoveredTemplates.flat()
 }
 
 async function discoverEngineVersion(versionPath: string, fallbackVersion: string): Promise<DiscoveredResource | undefined> {
