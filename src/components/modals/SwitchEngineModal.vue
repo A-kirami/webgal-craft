@@ -10,6 +10,8 @@ import { useWorkspaceStore } from '~/stores/workspace'
 import type { Game } from '~/database/model'
 
 type Phase = 'idle' | 'switching' | 'failed'
+type FailedAction = 'init' | 'switch'
+type TemplateStrategy = 'explicit' | 'clean' | 'dirty'
 
 const { t } = useI18n()
 const open = defineModel<boolean>('open')
@@ -23,18 +25,46 @@ const workspaceStore = useWorkspaceStore()
 let phase = $ref<Phase>('idle')
 let lastError = $ref<string | undefined>(undefined)
 let selectedEngineId = $ref<string | undefined>(undefined)
-let templateStrategy = $ref<'explicit' | 'clean' | 'dirty'>('clean')
+let templateStrategy = $ref<TemplateStrategy | undefined>(undefined)
 let showDirtyConfirm = $ref(false)
 let lastDecision = $ref<'keep' | 'discard' | undefined>(undefined)
 let preferredGroupId = $ref<string | undefined>(undefined)
+let lastFailedAction = $ref<FailedAction | undefined>(undefined)
 
 const isSameEngine = $computed(() => selectedEngineId === props.game.engineId)
 
 const isSwitching = $computed(() => phase === 'switching')
 
 const canSwitch = $computed(() =>
-  Boolean(selectedEngineId) && !isSameEngine && phase === 'idle',
+  Boolean(selectedEngineId) && !isSameEngine && phase === 'idle' && templateStrategy !== undefined,
 )
+
+async function initOnOpen(): Promise<void> {
+  phase = 'idle'
+  showDirtyConfirm = false
+  lastDecision = undefined
+  templateStrategy = undefined
+
+  // Use the game's current engine as both the initial selection and preferred group.
+  try {
+    const currentEngine = props.game.engineId
+      ? await db.engines.get(props.game.engineId)
+      : undefined
+    selectedEngineId = currentEngine?.id
+    preferredGroupId = currentEngine?.engineId
+
+    const config = await projectConfigCmds.readProjectConfig(props.game.path)
+    templateStrategy = await templateSwitch.evaluateTemplateStrategy(props.game.path, config)
+    lastError = undefined
+    lastFailedAction = undefined
+  } catch (error) {
+    phase = 'failed'
+    lastFailedAction = 'init'
+    showDirtyConfirm = false
+    templateStrategy = undefined
+    lastError = error instanceof Error ? error.message : String(error)
+  }
+}
 
 watch(() => open.value, async (isOpen) => {
   if (!isOpen) {
@@ -42,24 +72,11 @@ watch(() => open.value, async (isOpen) => {
     return
   }
 
-  phase = 'idle'
-  lastError = undefined
-  showDirtyConfirm = false
-  lastDecision = undefined
-
-  // Use the game's current engine as both the initial selection and preferred group.
-  const currentEngine = props.game.engineId
-    ? await db.engines.get(props.game.engineId)
-    : undefined
-  selectedEngineId = currentEngine?.id
-  preferredGroupId = currentEngine?.engineId
-
-  const config = await projectConfigCmds.readProjectConfig(props.game.path)
-  templateStrategy = await templateSwitch.evaluateTemplateStrategy(props.game.path, config)
+  await initOnOpen()
 }, { immediate: true })
 
 async function performSwitch(templateDecision?: 'keep' | 'discard'): Promise<void> {
-  if (!selectedEngineId) {
+  if (!selectedEngineId || templateStrategy === undefined) {
     return
   }
 
@@ -91,6 +108,7 @@ async function performSwitch(templateDecision?: 'keep' | 'discard'): Promise<voi
   } catch (error) {
     // The switch already rolled back internally; let the user retry or cancel from the failed state.
     phase = 'failed'
+    lastFailedAction = 'switch'
     lastError = error instanceof Error ? error.message : String(error)
   }
 }
@@ -107,6 +125,10 @@ async function handleConfirm(): Promise<void> {
 }
 
 async function handleRetry(): Promise<void> {
+  if (lastFailedAction === 'init') {
+    await initOnOpen()
+    return
+  }
   await performSwitch(lastDecision)
 }
 
