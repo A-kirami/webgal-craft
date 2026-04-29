@@ -70,11 +70,21 @@ export const usePreviewSessionStore = defineStore('previewSession', () => {
     refresh()
   }
 
+  async function syncIfCurrentGame(game: PreviewGameTarget): Promise<void> {
+    if (!game.path || currentGamePath !== game.path) {
+      return
+    }
+
+    await syncCurrentGame(game)
+    refresh()
+  }
+
   return $$({
     currentGameServeUrl,
     reloadVersion,
     syncCurrentGame,
     refresh,
     refreshIfCurrentGame,
+    syncIfCurrentGame,
   })
 })

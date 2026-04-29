@@ -18,6 +18,7 @@ const {
   refreshIfCurrentGameMock,
   refreshRegisteredGameSnapshotMock,
   resolveTemplatePathMock,
+  syncIfCurrentGameMock,
   updateSiteEngineMock,
   updateSiteTemplateMock,
   writeProjectConfigMock,
@@ -31,6 +32,7 @@ const {
   refreshIfCurrentGameMock: vi.fn(),
   refreshRegisteredGameSnapshotMock: vi.fn(),
   resolveTemplatePathMock: vi.fn(),
+  syncIfCurrentGameMock: vi.fn(),
   updateSiteEngineMock: vi.fn(),
   updateSiteTemplateMock: vi.fn(),
   writeProjectConfigMock: vi.fn(),
@@ -88,6 +90,7 @@ vi.mock('~/services/template-switch', () => ({
 vi.mock('~/stores/preview-session', () => ({
   usePreviewSessionStore: () => ({
     refreshIfCurrentGame: refreshIfCurrentGameMock,
+    syncIfCurrentGame: syncIfCurrentGameMock,
   }),
 }))
 
@@ -107,6 +110,7 @@ describe('engineSwitch.switchEngine', () => {
     refreshIfCurrentGameMock.mockReset()
     refreshRegisteredGameSnapshotMock.mockReset()
     resolveTemplatePathMock.mockReset()
+    syncIfCurrentGameMock.mockReset()
     updateSiteEngineMock.mockReset()
     updateSiteTemplateMock.mockReset()
     writeProjectConfigMock.mockReset()
@@ -167,7 +171,11 @@ describe('engineSwitch.switchEngine', () => {
     expect(updateSiteEngineMock).toHaveBeenCalledWith('/games/demo', '/engines/new')
     expect(updateSiteTemplateMock).toHaveBeenCalledWith('/games/demo', '/engines/new/game/template')
     expect(cleanTemplateUpperMock).not.toHaveBeenCalled()
-    expect(refreshIfCurrentGameMock).toHaveBeenCalledWith('/games/demo')
+    expect(refreshIfCurrentGameMock).not.toHaveBeenCalled()
+    expect(syncIfCurrentGameMock).toHaveBeenCalledWith({
+      engineId: 'engine-new',
+      path: '/games/demo',
+    })
   })
 
   it('dirty 模板缺少决策时拒绝，不产生副作用', async () => {

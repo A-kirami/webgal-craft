@@ -161,10 +161,13 @@ async function switchEngine(
     }
 
     // 引擎换的是 runtime 本身（webgal.js、index.html、内置资源等），
-    // REFETCH_TEMPLATE_FILES 只会让旧 runtime 重新拉模板 CSS，无法替换 runtime 自身；
-    // 必须重载 iframe 才能跑在新引擎上。
+    // 必须重新解析 serve URL（依赖 engineId+path）并重载 iframe，
+    // 才能让运行时跑在新引擎上。
     try {
-      usePreviewSessionStore().refreshIfCurrentGame(game.path)
+      await usePreviewSessionStore().syncIfCurrentGame({
+        engineId: newEngine.id,
+        path: game.path,
+      })
     } catch (error) {
       logger.warn(`[引擎切换] 重载预览 iframe 失败: ${error}`)
     }
