@@ -3,12 +3,18 @@ import type { Page } from '@playwright/test'
 interface SeedEngine {
   id: string
   path: string
+  engineId: string
+  name: string
+  version?: string
   createdAt: number
   status: 'creating' | 'created'
   metadata: {
     name: string
     icon: string
     description: string
+  }
+  previewAssets: {
+    icon: { path: string }
   }
 }
 
@@ -56,12 +62,18 @@ interface TauriMockGlobal {
 const defaultSeedEngine: SeedEngine = {
   id: 'engine-default',
   path: 'C:/Engines/Default',
+  engineId: 'WebGAL',
+  name: 'Default Engine',
+  version: '1.0.0',
   createdAt: 1,
   status: 'created',
   metadata: {
     name: 'Default Engine',
     icon: 'C:/Engines/Default/icons/favicon.ico',
     description: '用于集成测试的默认引擎',
+  },
+  previewAssets: {
+    icon: { path: 'C:/Engines/Default/icons/favicon.ico' },
   },
 }
 
@@ -502,7 +514,9 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
               return
             }
             case 'plugin:event|emit':
-            case 'plugin:event|emit_to':
+            case 'plugin:event|emit_to': {
+              return
+            }
             case 'plugin:log|log': {
               return
             }
@@ -529,6 +543,13 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
             }
             case 'plugin:fs|exists': {
               return fileSystem.has(normalizePath(String(invokeArgs.path ?? '')))
+            }
+            case 'plugin:fs|mkdir': {
+              ensureDirectory(normalizePath(String(invokeArgs.path ?? '')))
+              return
+            }
+            case 'validate_directory_structure': {
+              return true
             }
             case 'plugin:fs|read_dir': {
               const path = normalizePath(String(invokeArgs.path ?? ''))
@@ -598,6 +619,70 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
             }
             case 'copy_directory_with_progress': {
               createGameSkeleton(String(invokeArgs.destination ?? ''))
+              return
+            }
+            case 'read_project_config_cmd': {
+              const projectPath = normalizePath(String(invokeArgs.projectPath ?? ''))
+              const configPath = joinPaths([projectPath, 'project.wgcp'])
+              const content = fileContents.get(configPath)
+              if (!content) {
+                throw new Error(`项目配置不存在: ${configPath}`)
+              }
+              return JSON.parse(new TextDecoder().decode(content))
+            }
+            case 'write_project_config_cmd': {
+              const projectPath = normalizePath(String(invokeArgs.projectPath ?? ''))
+              const configPath = joinPaths([projectPath, 'project.wgcp'])
+              const json = JSON.stringify(invokeArgs.config ?? {})
+              writeVirtualFile(configPath, new TextEncoder().encode(json))
+              return
+            }
+            case 'update_site_engine':
+            case 'update_site_template': {
+              return
+            }
+            case 'resolve_vfs_path': {
+              const projectPath = normalizePath(String(invokeArgs.projectPath ?? ''))
+              const enginePath = normalizePath(String(invokeArgs.enginePath ?? ''))
+              const relPath = String(invokeArgs.relPath ?? '')
+              const upperPath = relPath ? joinPaths([projectPath, 'game', relPath]) : joinPaths([projectPath, 'game'])
+              if (fileSystem.has(upperPath)) {
+                return upperPath
+              }
+              return relPath ? joinPaths([enginePath, 'game', relPath]) : joinPaths([enginePath, 'game'])
+            }
+            case 'list_vfs_dir': {
+              const projectPath = normalizePath(String(invokeArgs.projectPath ?? ''))
+              const enginePath = normalizePath(String(invokeArgs.enginePath ?? ''))
+              const relPath = String(invokeArgs.relPath ?? '')
+              const upperDir = relPath ? joinPaths([projectPath, 'game', relPath]) : joinPaths([projectPath, 'game'])
+              const lowerDir = relPath ? joinPaths([enginePath, 'game', relPath]) : joinPaths([enginePath, 'game'])
+
+              const merged = new Map<string, { name: string, isDir: boolean, source: string }>()
+              for (const entry of listDirectory(lowerDir)) {
+                merged.set(entry.name, { name: entry.name, isDir: entry.isDirectory, source: 'engineLower' })
+              }
+              for (const entry of listDirectory(upperDir)) {
+                merged.set(entry.name, { name: entry.name, isDir: entry.isDirectory, source: 'upper' })
+              }
+              return [...merged.values()]
+            }
+            case 'ensure_vfs_writable': {
+              const projectPath = normalizePath(String(invokeArgs.projectPath ?? ''))
+              const enginePath = normalizePath(String(invokeArgs.enginePath ?? ''))
+              const relPath = String(invokeArgs.relPath ?? '')
+              const upperPath = joinPaths([projectPath, 'game', relPath])
+              if (!fileSystem.has(upperPath)) {
+                const lowerPath = joinPaths([enginePath, 'game', relPath])
+                const lowerContent = fileContents.get(lowerPath)
+                ensureFile(upperPath, lowerContent ?? new Uint8Array())
+              }
+              return upperPath
+            }
+            case 'is_template_dirty': {
+              return false
+            }
+            case 'clean_template_upper': {
               return
             }
             case 'is_binary_file': {
