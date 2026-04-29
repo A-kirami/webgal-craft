@@ -39,18 +39,16 @@ const { isOverDropZone: isOverDropZoneGrid } = useTauriDropZone(dropZoneGridRef,
 const dropZoneListRef = useTemplateRef<HTMLElement>('dropZoneListRef')
 const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef, paths => emit('drop', paths))
 
-function resolveStandaloneSource(group: TemplateGroupViewModel): StandaloneTemplateSourceItem | undefined {
-  return group.sources.find((source): source is StandaloneTemplateSourceItem => source.kind === 'standalone')
-}
-
-function getGroupMenuItems(item: TemplateCollectionItem): MenuItem[] {
+function buildMenuItems(item: TemplateCollectionItem): MenuItem[] {
   const menuItems: MenuItem[] = []
-  const source = resolveStandaloneSource(item.templateGroup)
-  if (source) {
+  const standaloneSource = item.templateGroup.sources.find(
+    (source): source is StandaloneTemplateSourceItem => source.kind === 'standalone',
+  )
+  if (standaloneSource) {
     menuItems.push({
       icon: Folder,
       label: t('home.templates.actions.openTemplateFolder'),
-      onClick: () => emit('openSourceFolder', source),
+      onClick: () => emit('openSourceFolder', standaloneSource),
     })
   }
   if (item.templateGroup.sourceKind === 'standalone' && !hasTemplateProgress(item.templateGroup)) {
@@ -67,17 +65,13 @@ function getGroupMenuItems(item: TemplateCollectionItem): MenuItem[] {
 const menuItemsMap = $computed(() => {
   const map = new Map<string, MenuItem[]>()
   for (const item of items) {
-    map.set(item.templateGroup.key, getGroupMenuItems(item))
+    map.set(item.templateGroup.key, buildMenuItems(item))
   }
   return map
 })
 
 function getMenuItems(item: TemplateCollectionItem): MenuItem[] {
   return menuItemsMap.get(item.templateGroup.key) ?? []
-}
-
-function handleOpenSourceFolder(source: TemplateGroupSourceItem) {
-  emit('openSourceFolder', source)
 }
 </script>
 
@@ -92,7 +86,7 @@ function handleOpenSourceFolder(source: TemplateGroupSourceItem) {
         :menu-items="getMenuItems(item)"
         :has-progress="hasTemplateProgress(item.templateGroup)"
         :progress="getTemplateProgress(item.templateGroup)"
-        @open-source-folder="handleOpenSourceFolder"
+        @open-source-folder="source => emit('openSourceFolder', source)"
       />
 
       <button
@@ -126,7 +120,7 @@ function handleOpenSourceFolder(source: TemplateGroupSourceItem) {
         :menu-items="getMenuItems(item)"
         :has-progress="hasTemplateProgress(item.templateGroup)"
         :progress="getTemplateProgress(item.templateGroup)"
-        @open-source-folder="handleOpenSourceFolder"
+        @open-source-folder="source => emit('openSourceFolder', source)"
       />
 
       <button

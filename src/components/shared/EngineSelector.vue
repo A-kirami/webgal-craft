@@ -29,11 +29,10 @@ const versionOptions = $computed(() =>
   currentGroup?.engines ?? [],
 )
 
-// 合并 watch：当可用引擎组、modelValue 或偏好引擎变化时，同步内部状态
+// Sync internal selection when available groups, modelValue, or preferred group change.
 watch(
   [() => availableGroups, () => modelValue, () => props.preferredEngineId],
   ([nextGroups, nextModelValue]) => {
-    // 无可用引擎组时重置所有状态
     if (nextGroups.length === 0) {
       selectedGroupId = ''
       selectedEngineId = ''
@@ -41,12 +40,10 @@ watch(
       return
     }
 
-    // modelValue 指向一个有效引擎时，直接同步内部状态
     if (nextModelValue) {
       const matchedGroup = nextGroups.find(group =>
         group.engines.some(engine => engine.id === nextModelValue),
       )
-
       if (matchedGroup) {
         selectedGroupId = matchedGroup.engineId
         selectedEngineId = nextModelValue
@@ -54,7 +51,6 @@ watch(
       }
     }
 
-    // modelValue 无效或为空：回退到偏好引擎组或第一个组的首个引擎
     const fallbackGroup = nextGroups.find(group => group.engineId === props.preferredEngineId) ?? nextGroups[0]
     const fallbackEngine = fallbackGroup?.engines[0]
     selectedGroupId = fallbackGroup?.engineId ?? ''
@@ -64,22 +60,19 @@ watch(
   { immediate: true },
 )
 
-// 用户通过下拉切换引擎组或版本时，同步选中状态并写回 modelValue
+// Reflect user-driven group/version changes back to modelValue.
 watch([() => selectedGroupId, () => selectedEngineId], ([nextGroupId, nextEngineId], [prevGroupId]) => {
-  // 引擎组变更：切换到该组的首个引擎
   if (nextGroupId !== prevGroupId) {
     const group = availableGroups.find(item => item.engineId === nextGroupId)
     if (!group) {
       return
     }
-
     const nextEngine = group.engines.find(engine => engine.id === nextEngineId) ?? group.engines[0]
     selectedEngineId = nextEngine?.id ?? ''
     modelValue = nextEngine?.id
     return
   }
 
-  // 版本变更：直接同步到 modelValue
   modelValue = nextEngineId || undefined
 })
 </script>

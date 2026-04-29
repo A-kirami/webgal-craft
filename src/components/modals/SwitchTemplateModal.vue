@@ -32,7 +32,7 @@ watch(() => open.value, async (isOpen) => {
   isSwitching = false
   showDirtyConfirm = false
 
-  // 默认值取项目当前真实 binding，让弹窗反映现状
+  // Initial binding mirrors the project's current state so the dialog reflects reality.
   try {
     const config = await projectConfigCmds.readProjectConfig(props.game.path)
     selectedBinding = config?.template
@@ -49,7 +49,7 @@ async function performSwitch(skipDirtyCheck: boolean) {
     await templateSwitch.switchTemplate(props.game, selectedBinding, {
       skipDirtyCheck,
     })
-    // 模板绑定改变后刷新 workspace 快照，保持状态栏与后续弹窗读到最新 game
+    // Refresh workspace snapshot so the status bar and downstream modals see the new binding.
     if (workspaceStore.currentGame?.id === props.game.id) {
       await workspaceStore.refreshCurrentGameSnapshot()
     }

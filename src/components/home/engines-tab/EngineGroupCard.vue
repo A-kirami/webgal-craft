@@ -21,17 +21,8 @@ const emit = defineEmits<{
   setDefaultEngine: [engineId: string | undefined]
 }>()
 
-const GRID_ICON_THUMBNAIL: AssetThumbnailOptions = {
-  width: 120,
-  height: 120,
-  resizeMode: 'cover',
-}
-
-const LIST_ICON_THUMBNAIL: AssetThumbnailOptions = {
-  width: 80,
-  height: 80,
-  resizeMode: 'cover',
-}
+const GRID_ICON_THUMBNAIL: AssetThumbnailOptions = { width: 120, height: 120, resizeMode: 'cover' }
+const LIST_ICON_THUMBNAIL: AssetThumbnailOptions = { width: 80, height: 80, resizeMode: 'cover' }
 
 const versionSummary = $computed(() => {
   if (!group.hasAvailableVersion || !group.latestVersionLabel) {
@@ -44,14 +35,10 @@ const versionSummary = $computed(() => {
   })
 })
 
-const defaultEngineActionLabel = $computed(() =>
-  group.isDefault ? t('engine.unsetDefaultEngine') : t('engine.setDefaultEngine'),
-)
-
 const menuItems = $computed<MenuItem[]>(() => [
   {
     icon: Star,
-    label: defaultEngineActionLabel,
+    label: group.isDefault ? t('engine.unsetDefaultEngine') : t('engine.setDefaultEngine'),
     onClick: () => emit('setDefaultEngine', group.isDefault ? undefined : group.engineId),
     disabled: !group.hasAvailableVersion,
   },

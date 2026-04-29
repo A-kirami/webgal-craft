@@ -12,7 +12,7 @@ import { useTabsStore } from '~/stores/tabs'
 import { AppError } from '~/types/errors'
 
 import type { Engine, Game } from '~/database/model'
-import type { EngineRef, ProjectConfig, TemplateBinding } from '~/types/project-config'
+import type { ProjectConfig, TemplateBinding } from '~/types/project-config'
 
 type TemplateStrategy = 'explicit' | 'clean' | 'dirty'
 
@@ -20,24 +20,35 @@ async function templateUpperPath(gamePath: string): Promise<string> {
   return join(gamePath, 'game', 'template')
 }
 
-/** 模板子树是否存在前端编辑器层未保存的文档 */
-async function hasUnsavedTemplateDocument(gamePath: string): Promise<boolean> {
-  try {
-    const editorStore = useEditorStore()
-    const templateRoot = await templateUpperPath(gamePath)
-    return editorStore.hasUnsavedDocumentsUnder(templateRoot)
-  } catch (error) {
-    // 在无 Pinia 上下文（如非渲染进程逻辑）调用时降级为 false，不阻塞核心流程
-    logger.warn(`[模板切换] 未保存文档检测异常: ${error}`)
-    return false
-  }
-}
-
 async function isTemplateDirty(gamePath: string): Promise<boolean> {
   if (await vfsCmds.isTemplateDirty(gamePath)) {
     return true
   }
-  return await hasUnsavedTemplateDocument(gamePath)
+
+  // 在无 Pinia 上下文（如非渲染进程逻辑）调用时降级为 false，不阻塞核心流程
+  try {
+    const templateRoot = await templateUpperPath(gamePath)
+    return useEditorStore().hasUnsavedDocumentsUnder(templateRoot)
+  } catch {
+    return false
+  }
+}
+
+async function closeOpenedTemplateDocuments(gamePath: string): Promise<void> {
+  try {
+    const templateRoot = await templateUpperPath(gamePath)
+    const editorStore = useEditorStore()
+    const tabsStore = useTabsStore()
+    const openedPaths = editorStore.collectDocumentPathsUnder(templateRoot)
+    for (const path of openedPaths) {
+      const index = tabsStore.findTabIndex(path)
+      if (index !== -1) {
+        tabsStore.closeTab(index)
+      }
+    }
+  } catch (error) {
+    logger.warn(`[模板切换] 关闭模板文档失败: ${error}`)
+  }
 }
 
 /**
@@ -55,21 +66,7 @@ async function notifyTemplateChanged(
   gamePath: string,
   options: { nextEnginePath?: string, nextTemplatePath?: string | null } = {},
 ): Promise<void> {
-  const templateRoot = await templateUpperPath(gamePath)
-
-  try {
-    const editorStore = useEditorStore()
-    const tabsStore = useTabsStore()
-    const openedPaths = editorStore.collectDocumentPathsUnder(templateRoot)
-    for (const path of openedPaths) {
-      const index = tabsStore.findTabIndex(path)
-      if (index !== -1) {
-        tabsStore.closeTab(index)
-      }
-    }
-  } catch (error) {
-    logger.warn(`[模板切换] 关闭模板文档失败: ${error}`)
-  }
+  await closeOpenedTemplateDocuments(gamePath)
 
   // 失效 file store 中模板子树缓存并刷新 enginePath / templatePath，
   // 同时由 store 内部 emit `directory:modified` 通知订阅者重读。
@@ -121,20 +118,13 @@ async function resolveTemplatePath(
       return template?.path
     }
     case 'engineBuiltin': {
-      const engine = await resolveEngineFromRef(binding.engine)
-      return engine ? await join(engine.path, 'game', 'template') : undefined
+      const engine = await engineManager.findEngineByRef(binding.engine)
+      return engine?.status === 'created' ? join(engine.path, 'game', 'template') : undefined
     }
     default: {
       return undefined
     }
   }
-}
-
-async function resolveEngineFromRef(
-  ref_: EngineRef,
-): Promise<Pick<Engine, 'path'> | undefined> {
-  const engine = await engineManager.findEngineByRef(ref_)
-  return engine?.status === 'created' ? engine : undefined
 }
 
 async function evaluateTemplateStrategy(
@@ -177,20 +167,7 @@ async function switchTemplate(
   }
 
   // 切换前先关闭模板下打开的文档，避免它们的未保存内容因 cleanTemplateUpper 而残留为「指向已删除路径」
-  const templateRoot = await templateUpperPath(game.path)
-  try {
-    const editorStore = useEditorStore()
-    const tabsStore = useTabsStore()
-    const openedPaths = editorStore.collectDocumentPathsUnder(templateRoot)
-    for (const path of openedPaths) {
-      const index = tabsStore.findTabIndex(path)
-      if (index !== -1) {
-        tabsStore.closeTab(index)
-      }
-    }
-  } catch (error) {
-    logger.warn(`[模板切换] 关闭模板文档失败: ${error}`)
-  }
+  await closeOpenedTemplateDocuments(game.path)
 
   await projectConfigCmds.writeProjectConfig(game.path, newConfig)
   await vfsCmds.cleanTemplateUpper(game.path)

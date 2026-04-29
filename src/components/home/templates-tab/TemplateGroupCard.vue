@@ -5,7 +5,6 @@ import type { TemplateCollectionItem } from '~/features/home/home-collection-ite
 import type {
   StandaloneTemplateSourceItem,
   TemplateGroupSourceItem,
-  TemplateGroupViewModel,
 } from '~/features/home/templates-tab/template-groups'
 import type { AssetThumbnailOptions } from '~/services/platform/asset-url'
 import type { MenuItem } from '~/types/menu-item'
@@ -25,49 +24,38 @@ const emit = defineEmits<{
   openSourceFolder: [source: TemplateGroupSourceItem]
 }>()
 
-const GRID_ENGINE_ICON_THUMBNAIL: AssetThumbnailOptions = {
-  width: 120,
-  height: 120,
-  resizeMode: 'cover',
-}
+const GRID_ICON_THUMBNAIL: AssetThumbnailOptions = { width: 120, height: 120, resizeMode: 'cover' }
+const LIST_ICON_THUMBNAIL: AssetThumbnailOptions = { width: 80, height: 80, resizeMode: 'cover' }
 
-const LIST_ENGINE_ICON_THUMBNAIL: AssetThumbnailOptions = {
-  width: 80,
-  height: 80,
-  resizeMode: 'cover',
-}
+const isEngineBuiltin = $computed(() => item.templateGroup.sourceKind === 'engineBuiltin')
 
-function isEngineBuiltin(group: TemplateGroupViewModel): boolean {
-  return group.sourceKind === 'engineBuiltin'
-}
+const showEngineIcon = $computed(() =>
+  isEngineBuiltin && !!item.representativeEngineItem?.serveUrl,
+)
 
-function resolveSourceKindLabel(group: TemplateGroupViewModel): string {
-  switch (group.sourceKind) {
+const sourceKindLabel = $computed(() => {
+  switch (item.templateGroup.sourceKind) {
     case 'standalone': { return t('home.templates.sourceKind.standalone') }
     case 'engineBuiltin': { return t('home.templates.sourceKind.engineBuiltin') }
     default: { return '' }
   }
-}
+})
 
-function resolveStandaloneSource(group: TemplateGroupViewModel) {
-  return group.sources.find((source): source is StandaloneTemplateSourceItem => source.kind === 'standalone')
-}
-
-function resolveMetadataText(group: TemplateGroupViewModel): string {
+const metadataText = $computed(() => {
+  const group = item.templateGroup
   if (group.sourceKind === 'standalone') {
-    const webgalVersion = resolveStandaloneSource(group)?.webgalVersion
-    return webgalVersion ? t('home.templates.compatibilityVersion', { version: webgalVersion }) : ''
+    const standalone = group.sources.find(
+      (source): source is StandaloneTemplateSourceItem => source.kind === 'standalone',
+    )
+    return standalone?.webgalVersion
+      ? t('home.templates.compatibilityVersion', { version: standalone.webgalVersion })
+      : ''
   }
   return t('home.templates.sourceSummary.engineBuiltin', { count: group.sources.length })
-}
-
-function shouldShowEngineIcon(): boolean {
-  return item.templateGroup.sourceKind === 'engineBuiltin'
-    && !!item.representativeEngineItem?.serveUrl
-}
+})
 
 const iconThumbnail = $computed(() =>
-  viewMode === 'grid' ? GRID_ENGINE_ICON_THUMBNAIL : LIST_ENGINE_ICON_THUMBNAIL,
+  viewMode === 'grid' ? GRID_ICON_THUMBNAIL : LIST_ICON_THUMBNAIL,
 )
 </script>
 
@@ -84,10 +72,10 @@ const iconThumbnail = $computed(() =>
             <div class="flex flex-1 gap-4 min-w-0 items-stretch">
               <div
                 class="rounded-md flex shrink-0 h-12 w-12 items-center justify-center overflow-hidden"
-                :class="{ 'bg-muted': !shouldShowEngineIcon() }"
+                :class="{ 'bg-muted': !showEngineIcon }"
               >
                 <AssetImage
-                  v-if="shouldShowEngineIcon()"
+                  v-if="showEngineIcon"
                   :path="item.representativeEngineItem!.engine.previewAssets.icon.path"
                   :root-path="item.representativeEngineItem!.engine.path"
                   :serve-url="item.representativeEngineItem!.serveUrl"
@@ -106,15 +94,15 @@ const iconThumbnail = $computed(() =>
                   <h4 class="font-medium truncate">
                     {{ item.templateGroup.name }}
                   </h4>
-                  <Badge v-if="isEngineBuiltin(item.templateGroup)" variant="secondary">
-                    {{ resolveSourceKindLabel(item.templateGroup) }}
+                  <Badge v-if="isEngineBuiltin" variant="secondary">
+                    {{ sourceKindLabel }}
                   </Badge>
                 </div>
 
-                <Popover v-if="isEngineBuiltin(item.templateGroup)">
+                <Popover v-if="isEngineBuiltin">
                   <PopoverTrigger as-child>
                     <Button variant="ghost" class="text-[13px] text-muted-foreground font-normal mt-1 p-0 text-left h-auto w-fit">
-                      <span>{{ resolveMetadataText(item.templateGroup) }}</span>
+                      <span>{{ metadataText }}</span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent align="start" class="px-3 py-2 w-56">
@@ -125,10 +113,10 @@ const iconThumbnail = $computed(() =>
                   </PopoverContent>
                 </Popover>
                 <p
-                  v-else-if="resolveMetadataText(item.templateGroup)"
+                  v-else-if="metadataText"
                   class="text-13px text-muted-foreground"
                 >
-                  {{ resolveMetadataText(item.templateGroup) }}
+                  {{ metadataText }}
                 </p>
               </div>
             </div>
@@ -170,10 +158,10 @@ const iconThumbnail = $computed(() =>
         <div class="flex flex-1 gap-3 min-w-0 items-center">
           <div
             class="rounded-md flex shrink-0 h-10 w-10 items-center justify-center overflow-hidden"
-            :class="{ 'bg-muted': !shouldShowEngineIcon() }"
+            :class="{ 'bg-muted': !showEngineIcon }"
           >
             <AssetImage
-              v-if="shouldShowEngineIcon()"
+              v-if="showEngineIcon"
               :path="item.representativeEngineItem!.engine.previewAssets.icon.path"
               :root-path="item.representativeEngineItem!.engine.path"
               :serve-url="item.representativeEngineItem!.serveUrl"
@@ -192,15 +180,15 @@ const iconThumbnail = $computed(() =>
               <h3 class="font-medium truncate">
                 {{ item.templateGroup.name }}
               </h3>
-              <Badge v-if="isEngineBuiltin(item.templateGroup)" variant="secondary">
-                {{ resolveSourceKindLabel(item.templateGroup) }}
+              <Badge v-if="isEngineBuiltin" variant="secondary">
+                {{ sourceKindLabel }}
               </Badge>
             </div>
 
-            <Popover v-if="isEngineBuiltin(item.templateGroup)">
+            <Popover v-if="isEngineBuiltin">
               <PopoverTrigger as-child>
                 <Button variant="ghost" class="text-xs text-muted-foreground font-normal px-0 py-0 h-auto w-fit justify-start">
-                  {{ resolveMetadataText(item.templateGroup) }}
+                  {{ metadataText }}
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="start" class="p-2 w-56">
@@ -211,10 +199,10 @@ const iconThumbnail = $computed(() =>
               </PopoverContent>
             </Popover>
             <p
-              v-else-if="resolveMetadataText(item.templateGroup)"
+              v-else-if="metadataText"
               class="text-xs text-muted-foreground"
             >
-              {{ resolveMetadataText(item.templateGroup) }}
+              {{ metadataText }}
             </p>
           </div>
         </div>

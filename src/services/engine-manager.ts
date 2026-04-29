@@ -88,7 +88,7 @@ async function buildEngineSnapshot(enginePath: string, manifest: EngineManifest)
 }
 
 async function resolveEngineSnapshot(enginePath: string): Promise<EngineSnapshot> {
-  const result = await engineCmds.readEngineManifest(enginePath)
+  const result = await classifyEngine(enginePath)
   if (result.status !== 'ok') {
     throw new AppError('IO_ERROR', '引擎缺少有效的 webgal-engine.json')
   }
@@ -129,7 +129,6 @@ async function getEnginePreviewAssets(enginePath: string): Promise<EnginePreview
 }
 
 async function getEngineSnapshot(enginePath: string): Promise<Pick<Engine, 'engineId' | 'name' | 'version' | 'metadata' | 'previewAssets'>> {
-  const cacheVersion = Date.now()
   const snapshot = await resolveEngineSnapshot(enginePath)
 
   return {
@@ -137,7 +136,7 @@ async function getEngineSnapshot(enginePath: string): Promise<Pick<Engine, 'engi
     name: snapshot.name,
     version: snapshot.version,
     metadata: snapshot.metadata,
-    previewAssets: withEnginePreviewCacheVersion(snapshot.previewAssets, cacheVersion),
+    previewAssets: withEnginePreviewCacheVersion(snapshot.previewAssets),
   }
 }
 
@@ -200,23 +199,20 @@ function buildDeleteCheckResult(associatedGames: Game[]): DeleteEngineCheckResul
 
 async function validateAllEngines(): Promise<void> {
   const engines = await db.engines.toArray()
-  const tasks = engines
+  await Promise.all(engines
     .filter(engine => engine.status !== 'creating' && engine.status !== 'error')
     .map(async (engine) => {
-      const structureValid = await validateEngine(engine.path)
-      const classification = structureValid ? await classifyEngine(engine.path) : undefined
-      const nextStatus = classification?.status === 'ok' ? 'created' : 'unavailable'
-      if (engine.status !== nextStatus) {
-        await db.engines.update(engine.id, { status: nextStatus })
+      try {
+        const structureValid = await validateEngine(engine.path)
+        const classification = structureValid ? await classifyEngine(engine.path) : undefined
+        const nextStatus = classification?.status === 'ok' ? 'created' : 'unavailable'
+        if (engine.status !== nextStatus) {
+          await db.engines.update(engine.id, { status: nextStatus })
+        }
+      } catch (error) {
+        logger.warn(`引擎校验异常: ${error}`)
       }
-    })
-
-  const results = await Promise.allSettled(tasks)
-  for (const result of results) {
-    if (result.status === 'rejected') {
-      logger.warn(`引擎校验异常: ${result.reason}`)
-    }
-  }
+    }))
 }
 
 async function assertEngineImportable(enginePath: string): Promise<EngineSnapshot> {
@@ -277,10 +273,9 @@ async function copyAndFinalizeEngine(
   })
 
   resourceStore.finishProgress(engineId)
-  const snapshot = await getEngineSnapshot(targetPath)
   await db.engines.update(engineId, {
     status: 'created',
-    ...snapshot,
+    ...await getEngineSnapshot(targetPath),
   })
 }
 
@@ -309,8 +304,7 @@ async function importEngine(enginePath: string): Promise<string> {
     return engineId
   } catch (error) {
     logger.error(`[引擎导入] 导入失败: ${error}`)
-    const resourceStore = useResourceStore()
-    resourceStore.finishProgress(engineId)
+    useResourceStore().finishProgress(engineId)
     await db.engines.update(engineId, { status: 'error' }).catch((error_) => {
       logger.warn(`[引擎导入] 清理异常 - 更新状态失败: ${error_}`)
     })

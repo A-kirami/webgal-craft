@@ -72,22 +72,21 @@ const engineGroups = $computed<EngineGroup[]>(() => {
 })
 
 function toggleSelection(path: string) {
-  if (selectedPaths.has(path)) {
-    selectedPaths.delete(path)
+  const next = new Set(selectedPaths)
+  if (next.has(path)) {
+    next.delete(path)
   } else {
-    selectedPaths.add(path)
+    next.add(path)
   }
-  selectedPaths = new Set(selectedPaths)
+  selectedPaths = next
 }
 
 function toggleAll() {
   if (selectedPaths.size === props.resources.length) {
-    selectedPaths.clear()
+    selectedPaths = new Set()
   } else {
     selectedPaths = new Set(props.resources.map(r => r.path))
-    return
   }
-  selectedPaths = new Set(selectedPaths)
 }
 
 function getGroupSelectionState(group: EngineGroup): 'all' | 'partial' | 'none' {
@@ -102,17 +101,16 @@ function getGroupSelectionState(group: EngineGroup): 'all' | 'partial' | 'none' 
 }
 
 function toggleGroup(group: EngineGroup) {
-  const state = getGroupSelectionState(group)
-  if (state === 'all') {
-    for (const version of group.versions) {
-      selectedPaths.delete(version.path)
-    }
-  } else {
-    for (const version of group.versions) {
-      selectedPaths.add(version.path)
+  const next = new Set(selectedPaths)
+  const shouldDeselect = getGroupSelectionState(group) === 'all'
+  for (const version of group.versions) {
+    if (shouldDeselect) {
+      next.delete(version.path)
+    } else {
+      next.add(version.path)
     }
   }
-  selectedPaths = new Set(selectedPaths)
+  selectedPaths = next
 }
 
 function handleImport() {
@@ -127,29 +125,26 @@ function handleSkip() {
 const icon = $computed(() => props.type === 'games' ? Scroll : Box)
 const isAllSelected = $computed(() => selectedPaths.size === props.resources.length)
 
-function resolveTitle(type: ResourceType): string {
-  switch (type) {
+const title = $computed(() => {
+  switch (props.type) {
     case 'games': { return t('modals.discoveredResources.gamesTitle') }
     case 'engines': { return t('modals.discoveredResources.enginesTitle') }
     case 'templates': { return t('modals.discoveredResources.templatesTitle') }
-    default: { return '' }
   }
-}
+})
 
-function resolveDescription(type: ResourceType): string {
-  if (type === 'engines') {
+const description = $computed(() => {
+  if (props.type === 'engines') {
     return t('modals.discoveredResources.enginesDescription', {
       engineCount: engineGroups.length,
       versionCount: props.resources.length,
     })
   }
   const count = props.resources.length
-  switch (type) {
-    case 'games': { return t('modals.discoveredResources.gamesDescription', { count }) }
-    case 'templates': { return t('modals.discoveredResources.templatesDescription', { count }) }
-    default: { return '' }
-  }
-}
+  return props.type === 'games'
+    ? t('modals.discoveredResources.gamesDescription', { count })
+    : t('modals.discoveredResources.templatesDescription', { count })
+})
 
 watch(
   () => props.resources.map(resource => resource.path),
@@ -169,11 +164,7 @@ watch(
 )
 
 function resolveResourceServeUrl(resource: DiscoveredResource): string | undefined {
-  if (props.type === 'templates') {
-    return undefined
-  }
-
-  return previewRuntimeStore.getServeUrl(resource.path)
+  return props.type === 'templates' ? undefined : previewRuntimeStore.getServeUrl(resource.path)
 }
 </script>
 
@@ -182,10 +173,10 @@ function resolveResourceServeUrl(resource: DiscoveredResource): string | undefin
     <DialogScrollContent class="max-h-[80vh] max-w-2xl">
       <DialogHeader>
         <DialogTitle class="flex gap-2 items-center">
-          {{ resolveTitle(type) }}
+          {{ title }}
         </DialogTitle>
         <DialogDescription>
-          {{ resolveDescription(type) }}
+          {{ description }}
         </DialogDescription>
       </DialogHeader>
 

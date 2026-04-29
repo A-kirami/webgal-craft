@@ -37,13 +37,10 @@ function normalizeTemplateMetadata(raw: unknown): TemplateMetadata {
   }
 
   // 兼容 kebab-case 与 camelCase 两种字段写法
-  let rawWebgalVersion: string | undefined
-  if (typeof record['webgal-version'] === 'string') {
-    rawWebgalVersion = record['webgal-version']
-  } else if (typeof record.webgalVersion === 'string') {
-    rawWebgalVersion = record.webgalVersion
-  }
-  const webgalVersion = rawWebgalVersion?.trim() || undefined
+  const rawWebgalVersion = record['webgal-version'] ?? record.webgalVersion
+  const webgalVersion = typeof rawWebgalVersion === 'string'
+    ? rawWebgalVersion.trim() || undefined
+    : undefined
 
   return {
     name,
@@ -118,23 +115,6 @@ async function deleteTemplateDirectoryIfExists(path: string): Promise<void> {
   }
 }
 
-async function tryDeleteTemplateRecord(id: string): Promise<void> {
-  try {
-    await db.templates.delete(id)
-  } catch (error) {
-    logger.warn(`[模板清理] 删除记录失败 (${id}): ${error}`)
-  }
-}
-
-async function tryValidateTemplate(templatePath: string): Promise<boolean> {
-  try {
-    return await validateTemplate(templatePath)
-  } catch (error) {
-    logger.warn(`[模板校验] 校验异常 (${templatePath}): ${error}`)
-    return false
-  }
-}
-
 async function assertTemplateImportable(templatePath: string): Promise<TemplateMetadata> {
   if (!(await validateTemplate(templatePath))) {
     logger.error(`[模板导入] 无效的模板文件夹: ${templatePath}`)
@@ -179,7 +159,9 @@ async function installTemplate(templatePath: string, metadata: TemplateMetadata)
     logger.info(`[模板 ${metadata.name}] 安装完成`)
   } catch (error) {
     resourceStore.finishProgress(id)
-    await tryDeleteTemplateRecord(id)
+    await db.templates.delete(id).catch((error_) => {
+      logger.warn(`[模板清理] 删除记录失败 (${id}): ${error_}`)
+    })
     await deleteTemplateDirectoryIfExists(targetPath)
     throw error
   }
@@ -223,20 +205,27 @@ async function validateAllTemplates(): Promise<void> {
       return
     }
 
-    const isValid = await tryValidateTemplate(template.path)
-    if (template.status === 'created' && !isValid) {
+    if (template.status !== 'created') {
+      return
+    }
+
+    let isValid: boolean
+    try {
+      isValid = await validateTemplate(template.path)
+    } catch (error) {
+      logger.warn(`[模板校验] 校验异常 (${template.path}): ${error}`)
+      isValid = false
+    }
+
+    if (!isValid) {
       await db.templates.delete(template.id)
       return
     }
 
-    if (template.status === 'created') {
-      const metadata = await getTemplateMetadata(template.path)
-      const shouldUpdateMetadata = template.metadata.name !== metadata.name
-        || template.metadata.webgalVersion !== metadata.webgalVersion
-
-      if (shouldUpdateMetadata) {
-        await db.templates.update(template.id, { metadata })
-      }
+    const metadata = await getTemplateMetadata(template.path)
+    if (template.metadata.name !== metadata.name
+      || template.metadata.webgalVersion !== metadata.webgalVersion) {
+      await db.templates.update(template.id, { metadata })
     }
   }))
 }

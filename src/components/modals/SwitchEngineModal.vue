@@ -47,7 +47,7 @@ watch(() => open.value, async (isOpen) => {
   showDirtyConfirm = false
   lastDecision = undefined
 
-  // 以当前游戏使用的引擎作为选择器初始值与默认偏好引擎组
+  // Use the game's current engine as both the initial selection and preferred group.
   const currentEngine = props.game.engineId
     ? await db.engines.get(props.game.engineId)
     : undefined
@@ -77,7 +77,7 @@ async function performSwitch(templateDecision?: 'keep' | 'discard'): Promise<voi
       : {}
 
     await engineSwitch.switchEngine(props.game, targetEngine, options)
-    // 刷新 workspace 快照，让状态栏与后续打开的弹窗读到新的 engineId
+    // Refresh workspace snapshot so the status bar and subsequent modals see the new engineId.
     if (workspaceStore.currentGame?.id === props.game.id) {
       await workspaceStore.refreshCurrentGameSnapshot()
     }
@@ -89,7 +89,7 @@ async function performSwitch(templateDecision?: 'keep' | 'discard'): Promise<voi
       version: versionLabel,
     }))
   } catch (error) {
-    // 切换内部已回滚到旧状态；进入 failed 状态由用户选择重试或取消
+    // The switch already rolled back internally; let the user retry or cancel from the failed state.
     phase = 'failed'
     lastError = error instanceof Error ? error.message : String(error)
   }
@@ -121,7 +121,6 @@ async function handleDirtyDiscard(): Promise<void> {
 }
 
 function handleCancelFailed(): void {
-  // 切换已回滚，直接关闭对话框
   open.value = false
 }
 </script>
@@ -138,7 +137,6 @@ function handleCancelFailed(): void {
         </DialogDescription>
       </DialogHeader>
 
-      <!-- 切换进行中 -->
       <template v-if="phase === 'switching'">
         <div class="py-4 flex flex-col gap-3">
           <span class="text-sm text-muted-foreground text-center">
@@ -147,7 +145,6 @@ function handleCancelFailed(): void {
         </div>
       </template>
 
-      <!-- 切换失败：提供重试与取消 -->
       <template v-else-if="phase === 'failed'">
         <div class="text-sm text-destructive p-3 rounded-md bg-destructive/10 flex flex-col gap-2">
           <div class="font-medium flex gap-2 items-center">

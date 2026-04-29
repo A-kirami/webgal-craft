@@ -45,19 +45,19 @@ async function openLastProjectIfNeeded() {
   }
 }
 
+async function runValidation(label: string, validate: () => Promise<unknown>) {
+  try {
+    await validate()
+  } catch (error) {
+    logger.error(`${label}失败: ${error}`)
+  }
+}
+
 onMounted(async () => {
   await logger.attachConsole()
   await initializeApp()
-  try {
-    await engineManager.validateAllEngines()
-  } catch (error) {
-    logger.error(`引擎校验失败: ${error}`)
-  }
-  try {
-    await templateManager.validateAllTemplates()
-  } catch (error) {
-    logger.error(`模板校验失败: ${error}`)
-  }
+  await runValidation('引擎校验', () => engineManager.validateAllEngines())
+  await runValidation('模板校验', () => templateManager.validateAllTemplates())
   await openLastProjectIfNeeded()
 })
 

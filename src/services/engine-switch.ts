@@ -102,8 +102,6 @@ async function switchEngine(
   const newTemplatePath = await templateSwitch.resolveTemplatePath(newConfig.template, newEngine)
 
   let step = 0
-  let siteEngineUpdated = false
-  let siteTemplateUpdated = false
 
   try {
     // 步骤 1：更新 project.wgcp（atomic_write，失败旧文件不受影响）
@@ -119,7 +117,6 @@ async function switchEngine(
       () => serverCmds.updateSiteEngine(game.path, newEngine.path),
       'updateSiteEngine',
     )
-    siteEngineUpdated = true
     step = 3
 
     // 步骤 4：更新 VFS 站点模板路径，让运行中的预览立即看到新的 template lower
@@ -127,7 +124,6 @@ async function switchEngine(
       () => serverCmds.updateSiteTemplate(game.path, newTemplatePath),
       'updateSiteTemplate',
     )
-    siteTemplateUpdated = true
     step = 4
 
     // 步骤 5：模板清理（仅 discard 分支）。
@@ -139,56 +135,45 @@ async function switchEngine(
 
     // 收尾：刷新 DB 与 workspace 快照，更新 previewAssets.cacheVersion，
     // 让首页卡片与编辑器头部都能拉到新引擎图标，避免浏览器命中旧缓存
-    try {
-      await gameManager.refreshRegisteredGameSnapshot(game.path)
-    } catch (error) {
-      logger.warn(`[引擎切换] 刷新游戏快照失败: ${error}`)
-    }
+    await runFinalizer(() => gameManager.refreshRegisteredGameSnapshot(game.path), '刷新游戏快照失败')
 
     // 收尾：关闭打开的模板文档、刷新文件树、通知预览拉取新模板
     // 显式传入 newEngine.path 与 newTemplatePath：此时 workspaceStore.currentGame
     // 仍是切换前快照，file store 单靠它反查会拿到旧引擎/模板路径，
     // 导致首次切换不刷新模板内容。
     // 该步骤仅做前端通知，且发生在 cleanTemplateUpper 之后，必须吞掉异常以免触发回滚。
-    try {
-      await templateSwitch.notifyTemplateChanged(game.path, {
-        nextEnginePath: newEngine.path,
-        // eslint-disable-next-line unicorn/no-null
-        nextTemplatePath: newTemplatePath ?? null,
-      })
-    } catch (error) {
-      logger.warn(`[引擎切换] 通知模板变更失败: ${error}`)
-    }
+    await runFinalizer(() => templateSwitch.notifyTemplateChanged(game.path, {
+      nextEnginePath: newEngine.path,
+      // eslint-disable-next-line unicorn/no-null
+      nextTemplatePath: newTemplatePath ?? null,
+    }), '通知模板变更失败')
 
     // 引擎换的是 runtime 本身（webgal.js、index.html、内置资源等），
     // 必须重新解析 serve URL（依赖 engineId+path）并重载 iframe，
     // 才能让运行时跑在新引擎上。
-    try {
-      await usePreviewSessionStore().syncIfCurrentGame({
-        engineId: newEngine.id,
-        path: game.path,
-      })
-    } catch (error) {
-      logger.warn(`[引擎切换] 重载预览 iframe 失败: ${error}`)
-    }
+    await runFinalizer(() => usePreviewSessionStore().syncIfCurrentGame({
+      engineId: newEngine.id,
+      path: game.path,
+    }), '重载预览 iframe 失败')
 
     logger.info(`[引擎切换] ${game.path}: 切换完成`)
   } catch (error) {
     logger.warn(`[引擎切换] ${game.path}: 步骤 ${step} 失败，开始回滚`)
-    await rollback(game, oldConfig, oldEngine, {
-      step,
-      siteEngineUpdated,
-      siteTemplateUpdated,
-      oldTemplatePath,
-    })
+    await rollback(game, oldConfig, oldEngine, { step, oldTemplatePath })
     throw error
+  }
+}
+
+async function runFinalizer(action: () => Promise<unknown>, label: string): Promise<void> {
+  try {
+    await action()
+  } catch (error) {
+    logger.warn(`[引擎切换] ${label}: ${error}`)
   }
 }
 
 interface RollbackContext {
   step: number
-  siteEngineUpdated: boolean
-  siteTemplateUpdated: boolean
   oldTemplatePath: string | undefined
 }
 
@@ -198,14 +183,14 @@ async function rollback(
   oldEngine: Engine,
   context: RollbackContext,
 ): Promise<void> {
-  if (context.siteTemplateUpdated) {
+  if (context.step >= 4) {
     await applySiteUpdate(
       () => serverCmds.updateSiteTemplate(game.path, context.oldTemplatePath),
       'rollback updateSiteTemplate',
     ).catch(logRollbackError)
   }
 
-  if (context.siteEngineUpdated) {
+  if (context.step >= 3) {
     await applySiteUpdate(
       () => serverCmds.updateSiteEngine(game.path, oldEngine.path),
       'rollback updateSiteEngine',

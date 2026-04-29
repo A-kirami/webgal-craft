@@ -13,10 +13,6 @@ defineProps<Props>()
 const emit = defineEmits<{
   deleteEngine: [engine: Engine]
 }>()
-
-function isUnavailable(engine: Pick<Engine, 'status'>): boolean {
-  return engine.status === 'unavailable'
-}
 </script>
 
 <template>
@@ -34,7 +30,7 @@ function isUnavailable(engine: Pick<Engine, 'status'>): boolean {
           <Badge v-if="group.latestVersionLabel === item.engine.version" variant="secondary">
             {{ $t('engine.latestBadge') }}
           </Badge>
-          <Badge v-if="isUnavailable(item.engine)" variant="outline">
+          <Badge v-if="item.engine.status === 'unavailable'" variant="outline">
             <TriangleAlert class="mr-1 size-3" />
             {{ $t('engine.unavailable') }}
           </Badge>

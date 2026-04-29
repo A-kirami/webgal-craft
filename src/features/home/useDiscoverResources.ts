@@ -125,6 +125,25 @@ async function discoverTemplates(): Promise<DiscoveredResource[]> {
   )
 }
 
+async function discoverEngineVersion(versionPath: string, fallbackVersion: string): Promise<DiscoveredResource | undefined> {
+  const isValid = await engineManager.validateEngine(versionPath).catch(() => false)
+  if (!isValid) {
+    return
+  }
+
+  const classification = await engineManager.classifyEngine(versionPath).catch(() => undefined)
+  if (classification?.status !== 'ok') {
+    return
+  }
+
+  return {
+    path: versionPath,
+    name: classification.manifest.name,
+    engineId: classification.manifest.id,
+    version: classification.manifest.version ?? fallbackVersion,
+  }
+}
+
 async function discoverEnginesInDirectory(directory: string): Promise<DiscoveredResource[]> {
   try {
     if (!directory || !(await exists(directory))) {
@@ -137,29 +156,14 @@ async function discoverEnginesInDirectory(directory: string): Promise<Discovered
       .map(async (entry) => {
         const namePath = await join(directory, entry.name)
         const subEntries = await readDir(namePath).catch(() => [])
-        const nestedResources = await Promise.all(subEntries
+        const versions = await Promise.all(subEntries
           .filter(subEntry => subEntry.isDirectory)
           .map(async (subEntry) => {
             const versionPath = await join(namePath, subEntry.name)
-            if (!(await engineManager.validateEngine(versionPath).catch(() => false))) {
-              return
-            }
-
-            const classification = await engineManager.classifyEngine(versionPath).catch(() => undefined)
-            if (classification?.status !== 'ok') {
-              return
-            }
-
-            const resource: DiscoveredResource = {
-              path: versionPath,
-              name: classification.manifest.name,
-              engineId: classification.manifest.id,
-              version: classification.manifest.version ?? subEntry.name,
-            }
-            return resource
+            return discoverEngineVersion(versionPath, subEntry.name)
           }))
 
-        return nestedResources.filter((resource): resource is DiscoveredResource => !!resource)
+        return versions.filter((resource): resource is DiscoveredResource => !!resource)
       }))
 
     return discovered.flat()
@@ -188,7 +192,6 @@ function discoverByType(type: ResourceType): Promise<DiscoveredResource[]> {
     case 'games': { return discoverGames() }
     case 'engines': { return discoverEngines() }
     case 'templates': { return discoverTemplates() }
-    default: { return Promise.resolve([]) }
   }
 }
 
@@ -198,19 +201,9 @@ interface ImportMessages {
 }
 
 function resolveImportMessages(type: ResourceType, t: (key: string) => string): ImportMessages {
-  switch (type) {
-    case 'games': {
-      return { success: t('home.games.importSuccess'), error: t('home.games.importUnknownError') }
-    }
-    case 'engines': {
-      return { success: t('home.engines.importSuccess'), error: t('home.engines.importUnknownError') }
-    }
-    case 'templates': {
-      return { success: t('home.templates.importSuccess'), error: t('home.templates.importUnknownError') }
-    }
-    default: {
-      return { success: '', error: '' }
-    }
+  return {
+    success: t(`home.${type}.importSuccess`),
+    error: t(`home.${type}.importUnknownError`),
   }
 }
 
@@ -219,7 +212,6 @@ function resolveImportFn(type: ResourceType): (path: string) => Promise<unknown>
     case 'games': { return path => gameManager.importGame(path, { selectEngine: requestEngineSelection }) }
     case 'engines': { return engineManager.importEngine }
     case 'templates': { return templateManager.importTemplate }
-    default: { return async () => undefined }
   }
 }
 
@@ -241,7 +233,6 @@ export function useDiscoverResources() {
       case 'games': { return resourceStore.games }
       case 'engines': { return resourceStore.engines }
       case 'templates': { return resourceStore.templates }
-      default: { return }
     }
   }
 
