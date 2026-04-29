@@ -109,6 +109,7 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
     return checkIsFieldDirty('gameName')
       || checkIsFieldDirty('gamePath')
       || checkIsFieldDirty('gameEngine')
+      || checkIsFieldDirty('gameTemplate')
   })
 
   const onSubmit = handleSubmit(async ({ gameName, gamePath, gameEngine, gameTemplate }) => {
