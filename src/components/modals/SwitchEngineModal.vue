@@ -82,6 +82,9 @@ async function performSwitch(templateDecision?: 'keep' | 'discard'): Promise<voi
 
   const targetEngine = await db.engines.get(selectedEngineId)
   if (!targetEngine) {
+    phase = 'failed'
+    lastFailedAction = 'switch'
+    lastError = 'Selected engine no longer exists'
     return
   }
 
@@ -94,10 +97,6 @@ async function performSwitch(templateDecision?: 'keep' | 'discard'): Promise<voi
       : {}
 
     await engineSwitch.switchEngine(props.game, targetEngine, options)
-    // Refresh workspace snapshot so the status bar and subsequent modals see the new engineId.
-    if (workspaceStore.currentGame?.id === props.game.id) {
-      await workspaceStore.refreshCurrentGameSnapshot()
-    }
     open.value = false
 
     const versionLabel = targetEngine.version ? ` ${targetEngine.version}` : ''
@@ -110,6 +109,16 @@ async function performSwitch(templateDecision?: 'keep' | 'discard'): Promise<voi
     phase = 'failed'
     lastFailedAction = 'switch'
     lastError = error instanceof Error ? error.message : String(error)
+    return
+  }
+
+  // Refresh workspace snapshot after the switch succeeds so UI-only refresh failures do not rewrite switch status.
+  if (workspaceStore.currentGame?.id === props.game.id) {
+    try {
+      await workspaceStore.refreshCurrentGameSnapshot()
+    } catch (error) {
+      void logger.warn(`[SwitchEngineModal] 刷新当前游戏快照失败: ${String(error)}`)
+    }
   }
 }
 

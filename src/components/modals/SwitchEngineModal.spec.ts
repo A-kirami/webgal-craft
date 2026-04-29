@@ -118,6 +118,14 @@ vi.mock('notivue', () => ({
   },
 }))
 
+vi.mock('@tauri-apps/plugin-log', () => ({
+  attachConsole: vi.fn(),
+  debug: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+}))
+
 vi.mock('vue-i18n', async importOriginal => ({
   ...(await importOriginal<typeof import('vue-i18n')>()),
   useI18n: () => ({
@@ -204,6 +212,11 @@ function renderSwitchEngineModal() {
 describe('SwitchEngineModal', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    const currentGame = createTestGame({
+      id: 'game-1',
+      engineId: 'engine-current',
+      path: '/games/demo',
+    })
 
     const currentEngine = createTestEngine({
       id: 'engine-current',
@@ -232,7 +245,7 @@ describe('SwitchEngineModal', () => {
     engineSwitchMock.mockResolvedValue(undefined)
     refreshCurrentGameSnapshotMock.mockResolvedValue(undefined)
     useWorkspaceStoreMock.mockReturnValue({
-      currentGame: currentEngine,
+      currentGame,
       refreshCurrentGameSnapshot: refreshCurrentGameSnapshotMock,
     })
   })
@@ -279,5 +292,57 @@ describe('SwitchEngineModal', () => {
     })
     expect(readProjectConfigMock).toHaveBeenCalledTimes(1)
     expect(evaluateTemplateStrategyMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('切换当前工作区游戏后会刷新当前快照', async () => {
+    renderSwitchEngineModal()
+
+    await page.getByTestId('select-new-engine').click()
+    await page.getByRole('button', { name: '确认' }).click()
+
+    await vi.waitFor(() => {
+      expect(engineSwitchMock).toHaveBeenCalledTimes(1)
+      expect(refreshCurrentGameSnapshotMock).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('目标引擎已不存在时会进入失败态并展示错误', async () => {
+    dbEngineGetMock.mockImplementation(async (engineId: string) => {
+      if (engineId === 'engine-current') {
+        return createTestEngine({
+          id: 'engine-current',
+          engineId: 'open-webgal.webgal',
+          name: 'WebGAL',
+          version: '4.5.0',
+        })
+      }
+      return
+    })
+
+    renderSwitchEngineModal()
+
+    await page.getByTestId('select-new-engine').click()
+    await page.getByRole('button', { name: '确认' }).click()
+
+    await expect.element(page.getByText('切换失败')).toBeInTheDocument()
+    await expect.element(page.getByText('Selected engine no longer exists')).toBeInTheDocument()
+  })
+
+  it('刷新当前快照失败时仍然保持切换成功', async () => {
+    refreshCurrentGameSnapshotMock.mockRejectedValueOnce(new Error('refresh failed'))
+
+    renderSwitchEngineModal()
+
+    await page.getByTestId('select-new-engine').click()
+    await page.getByRole('button', { name: '确认' }).click()
+
+    await vi.waitFor(() => {
+      expect(engineSwitchMock).toHaveBeenCalledTimes(1)
+      expect(refreshCurrentGameSnapshotMock).toHaveBeenCalledTimes(1)
+      expect(notifySuccessMock).toHaveBeenCalledTimes(1)
+      expect(updateOpenMock).toHaveBeenCalledWith(false)
+    })
+
+    await expect.element(page.getByText('切换失败')).not.toBeInTheDocument()
   })
 })
