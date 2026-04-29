@@ -223,10 +223,19 @@ async function validateAllTemplates(): Promise<void> {
 
     if (!isValid) {
       await db.templates.delete(template.id)
+      await deleteTemplateDirectoryIfExists(template.path)
       return
     }
 
-    const metadata = await getTemplateMetadata(template.path)
+    let metadata: TemplateMetadata
+    try {
+      metadata = await getTemplateMetadata(template.path)
+    } catch (error) {
+      logger.warn(`[模板校验] 读取元数据失败 (${template.path}): ${error}`)
+      await db.templates.delete(template.id)
+      await deleteTemplateDirectoryIfExists(template.path)
+      return
+    }
     if (template.metadata.name !== metadata.name
       || template.metadata.webgalVersion !== metadata.webgalVersion) {
       await db.templates.update(template.id, { metadata })

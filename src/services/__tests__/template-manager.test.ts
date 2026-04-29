@@ -249,10 +249,12 @@ describe('templateManager 模板管理', () => {
       },
     ])
     validateDirectoryStructureMock.mockResolvedValue(false)
+    existsMock.mockImplementation(async (path: string) => path === '/templates/Broken Template')
 
     await templateManager.validateAllTemplates()
 
     expect(dbTemplatesDeleteMock).toHaveBeenCalledWith('template-created')
+    expect(deleteFileMock).toHaveBeenCalledWith('/templates/Broken Template', true)
   })
 
   it('validateAllTemplates 会从 template.json 回刷兼容版本元数据', async () => {
@@ -281,6 +283,29 @@ describe('templateManager 模板管理', () => {
         webgalVersion: '4.8.1',
       },
     })
+  })
+
+  it('validateAllTemplates 在元数据读取失败时会删除记录并清理模板目录', async () => {
+    dbTemplatesToArrayMock.mockResolvedValue([
+      {
+        id: 'template-created',
+        path: '/templates/Broken Metadata',
+        createdAt: 0,
+        status: 'created',
+        metadata: {
+          name: 'Broken Metadata',
+        },
+      },
+    ])
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    existsMock.mockImplementation(async (path: string) => path === '/templates/Broken Metadata')
+    readTextFileMock.mockRejectedValueOnce(new Error('invalid template.json'))
+
+    await templateManager.validateAllTemplates()
+
+    expect(dbTemplatesDeleteMock).toHaveBeenCalledWith('template-created')
+    expect(deleteFileMock).toHaveBeenCalledWith('/templates/Broken Metadata', true)
+    expect(dbTemplatesUpdateMock).not.toHaveBeenCalled()
   })
 
   it('deleteTemplate 会递归删除模板目录并清理数据库记录', async () => {
