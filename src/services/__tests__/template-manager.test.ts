@@ -282,4 +282,36 @@ describe('templateManager 模板管理', () => {
       },
     })
   })
+
+  it('deleteTemplate 会递归删除模板目录并清理数据库记录', async () => {
+    await templateManager.deleteTemplate({
+      id: 'template-created',
+      path: '/templates/Modern Template',
+      createdAt: 0,
+      status: 'created',
+      metadata: {
+        name: 'Modern Template',
+      },
+    })
+
+    expect(deleteFileMock).toHaveBeenCalledWith('/templates/Modern Template', true)
+    expect(dbTemplatesDeleteMock).toHaveBeenCalledWith('template-created')
+  })
+
+  it('deleteTemplate 在目录删除失败时仍会清理数据库记录', async () => {
+    deleteFileMock.mockRejectedValueOnce(new Error('permission denied'))
+
+    await expect(templateManager.deleteTemplate({
+      id: 'template-created',
+      path: '/templates/Modern Template',
+      createdAt: 0,
+      status: 'created',
+      metadata: {
+        name: 'Modern Template',
+      },
+    })).resolves.toBeUndefined()
+
+    expect(deleteFileMock).toHaveBeenCalledWith('/templates/Modern Template', true)
+    expect(dbTemplatesDeleteMock).toHaveBeenCalledWith('template-created')
+  })
 })

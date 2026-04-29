@@ -191,7 +191,11 @@ async function importTemplate(templatePath: string): Promise<void> {
 }
 
 async function deleteTemplate(template: Template): Promise<void> {
-  await fsCmds.deleteFile(template.path)
+  try {
+    await fsCmds.deleteFile(template.path, true)
+  } catch (error) {
+    logger.warn(`[模板删除] 删除模板目录失败，继续清理数据库记录: ${template.path} - ${error}`)
+  }
   await db.templates.delete(template.id)
 }
 
