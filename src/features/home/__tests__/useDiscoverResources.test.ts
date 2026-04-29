@@ -288,4 +288,94 @@ describe('useDiscoverResources', () => {
     expect(getTemplateMetadataMock).toHaveBeenCalledWith('/templates/modern')
     expect(getTemplateMetadataMock).toHaveBeenCalledWith('/templates/broken')
   })
+
+  it('已导入同名模板时不会再次展示不同路径的重复模板', async () => {
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'templates' })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'templates' })
+    useResourceStoreMock.mockReturnValue({
+      engines: [],
+      games: [],
+      templates: [
+        {
+          id: 'template-1',
+          path: '/installed/Modern Template',
+          createdAt: 0,
+          status: 'created',
+          metadata: {
+            name: 'Modern Template',
+          },
+        },
+      ],
+    })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/templates': {
+          return [{ isDirectory: true, name: 'modern-copy' }]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+    validateTemplateMock.mockResolvedValue(true)
+    getTemplateMetadataMock.mockResolvedValue({
+      name: 'Modern Template',
+    })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    expect(modalOpenMock).not.toHaveBeenCalled()
+  })
+
+  it('已导入同版本引擎时不会再次展示不同路径的重复引擎', async () => {
+    useResourceStoreMock.mockReturnValue({
+      engines: [
+        {
+          id: 'engine-1',
+          path: '/installed/WebGAL/4.5.0',
+          engineId: 'open-webgal.webgal',
+          name: 'WebGAL',
+          version: '4.5.0',
+          createdAt: 0,
+          status: 'created',
+          metadata: {},
+          previewAssets: {},
+        },
+      ],
+      games: [],
+      templates: [],
+    })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/engines': {
+          return [{ isDirectory: true, name: 'WebGAL Copy' }]
+        }
+        case '/engines/WebGAL Copy': {
+          return [{ isDirectory: true, name: '4.5.0' }]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+    validateEngineMock.mockResolvedValue(true)
+    classifyEngineMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.5.0',
+      },
+    })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    expect(modalOpenMock).not.toHaveBeenCalled()
+  })
 })

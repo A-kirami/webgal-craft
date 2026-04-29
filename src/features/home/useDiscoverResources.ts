@@ -12,6 +12,7 @@ import { useStorageSettingsStore } from '~/stores/storage-settings'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import type { DiscoveredResource } from './discovered-resource'
+import type { Engine, Game, Template } from '~/database/model'
 import type { StaticSiteConfig } from '~/types/server'
 
 export type { DiscoveredResource } from './discovered-resource'
@@ -174,16 +175,70 @@ async function discoverEnginesInDirectory(directory: string): Promise<Discovered
   }
 }
 
+type ExistingResource = Game | Engine | Template
+
+function isExistingEngine(resource: ExistingResource): resource is Engine {
+  return 'engineId' in resource
+}
+
+function isExistingTemplate(resource: ExistingResource): resource is Template {
+  return 'metadata' in resource
+}
+
+function getDiscoveredResourceKey(type: ResourceType, resource: DiscoveredResource): string {
+  switch (type) {
+    case 'templates': {
+      return resource.name || resource.path
+    }
+    case 'engines': {
+      return resource.engineId && resource.version
+        ? `${resource.engineId}:${resource.version}`
+        : resource.path
+    }
+    case 'games': {
+      return resource.path
+    }
+    default: {
+      throw new Error(`未知的资源类型: ${type satisfies never}`)
+    }
+  }
+}
+
+function getExistingResourceKey(
+  type: ResourceType,
+  resource: ExistingResource,
+): string {
+  switch (type) {
+    case 'templates': {
+      return isExistingTemplate(resource)
+        ? resource.metadata.name || resource.path
+        : resource.path
+    }
+    case 'engines': {
+      return isExistingEngine(resource) && resource.version
+        ? `${resource.engineId}:${resource.version}`
+        : resource.path
+    }
+    case 'games': {
+      return resource.path
+    }
+    default: {
+      throw new Error(`未知的资源类型: ${type satisfies never}`)
+    }
+  }
+}
+
 function filterAlreadyImported(
+  type: ResourceType,
   discovered: DiscoveredResource[],
-  existing: readonly { path: string }[] | undefined,
+  existing: readonly ExistingResource[] | undefined,
 ): DiscoveredResource[] {
   if (!existing?.length) {
     return discovered
   }
 
-  const existingPaths = new Set(existing.map(item => item.path))
-  return discovered.filter(resource => !existingPaths.has(resource.path))
+  const existingKeys = new Set(existing.map(item => getExistingResourceKey(type, item)))
+  return discovered.filter(resource => !existingKeys.has(getDiscoveredResourceKey(type, resource)))
 }
 
 type ResourceType = 'games' | 'engines' | 'templates'
@@ -314,7 +369,7 @@ export function useDiscoverResources() {
 
     const discovered = await discoverByType(type)
     const existing = getResourcesByType(type)
-    const newResources = filterAlreadyImported(discovered, existing)
+    const newResources = filterAlreadyImported(type, discovered, existing)
 
     if (newResources.length === 0) {
       return
