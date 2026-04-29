@@ -101,6 +101,15 @@ describe('首页共享导入纯逻辑', () => {
     })
   })
 
+  it('manifest schema 不受支持错误会映射为专用通知', () => {
+    expect(resolveHomeResourceImportNotification(new AppError('UNKNOWN', 'unsupported manifest schema', {
+      details: { reason: 'UNSUPPORTED_MANIFEST_SCHEMA', found: 2, maxSupported: 1 },
+    }))).toEqual({
+      kind: 'game-schema-too-new',
+      level: 'error',
+    })
+  })
+
   it('引擎不可用错误会映射为专用通知', () => {
     expect(resolveHomeResourceImportNotification(new AppError('IO_ERROR', 'unavailable', {
       details: { reason: 'ENGINE_UNAVAILABLE' },

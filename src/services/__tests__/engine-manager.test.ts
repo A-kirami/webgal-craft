@@ -502,7 +502,7 @@ describe('engineManager', () => {
 
     await engineManager.uninstallEngine(createTestEngine())
 
-    expect(deleteFileMock).toHaveBeenCalledWith('/engines/default')
+    expect(deleteFileMock).toHaveBeenCalledWith('/engines/default', true)
     expect(deleteMock).toHaveBeenCalledWith('engine-1')
   })
 
@@ -513,7 +513,7 @@ describe('engineManager', () => {
 
     await expect(engineManager.uninstallEngine(createTestEngine())).resolves.toBeUndefined()
 
-    expect(deleteFileMock).toHaveBeenCalledWith('/engines/default')
+    expect(deleteFileMock).toHaveBeenCalledWith('/engines/default', true)
     expect(deleteMock).toHaveBeenCalledWith('engine-1')
   })
 
@@ -538,8 +538,8 @@ describe('engineManager', () => {
 
     await engineManager.uninstallEngineGroup('open-webgal.webgal')
 
-    expect(deleteFileMock).toHaveBeenNthCalledWith(1, '/engines/WebGAL/4.5.0')
-    expect(deleteFileMock).toHaveBeenNthCalledWith(2, '/engines/WebGAL/4.4.0')
+    expect(deleteFileMock).toHaveBeenNthCalledWith(1, '/engines/WebGAL/4.5.0', true)
+    expect(deleteFileMock).toHaveBeenNthCalledWith(2, '/engines/WebGAL/4.4.0', true)
     expect(deleteMock).toHaveBeenNthCalledWith(1, 'engine-1')
     expect(deleteMock).toHaveBeenNthCalledWith(2, 'engine-2')
   })

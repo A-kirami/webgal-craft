@@ -59,6 +59,7 @@ function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotific
   // 优先按 details.reason 匹配（更具体的错误分类）
   switch (error.details?.reason) {
     case 'INVALID_ENGINE_MANIFEST': { return 'invalid-folder' }
+    case 'UNSUPPORTED_MANIFEST_SCHEMA': { return 'game-schema-too-new' }
     case 'UNSUPPORTED_LEGACY_ENGINE': { return 'unsupported-legacy-engine' }
     case 'DUPLICATE_ENGINE': { return 'duplicate-engine' }
     case 'GAME_ALREADY_REGISTERED': { return 'game-already-registered' }

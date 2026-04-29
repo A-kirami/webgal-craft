@@ -58,6 +58,8 @@ export interface DirItem extends FileSystemItemBase {
   isDir: true
   childIds: string[]
   isLoaded: boolean
+  loadRevision: number
+  loadingRevision?: number
   loadingPromise?: Promise<void>
 }
 
@@ -150,13 +152,16 @@ export const useFileStore = defineStore('file', () => {
     const normalizedTemplateRoot = normalizeFsPath(templateRoot)
 
     for (const item of items.values()) {
-      if (!item.isDir || !item.isLoaded) {
+      if (!item.isDir) {
         continue
       }
 
       const normalizedPath = normalizeFsPath(item.path)
       if (normalizedPath === normalizedTemplateRoot || normalizedPath.startsWith(`${normalizedTemplateRoot}/`)) {
+        item.loadRevision += 1
         item.isLoaded = false
+        item.loadingRevision = undefined
+        item.loadingPromise = undefined
       }
     }
 
@@ -237,6 +242,7 @@ export const useFileStore = defineStore('file', () => {
         isDir: true,
         childIds: [],
         isLoaded: false,
+        loadRevision: 0,
         ...metadata,
       }
     }
@@ -272,6 +278,7 @@ export const useFileStore = defineStore('file', () => {
         isDir: true,
         childIds: [],
         isLoaded: false,
+        loadRevision: 0,
         ...metadata,
       }
     }
@@ -304,6 +311,7 @@ export const useFileStore = defineStore('file', () => {
         isDir: true,
         childIds: [],
         isLoaded: false,
+        loadRevision: 0,
         source: entry.source,
       }
     }
@@ -372,6 +380,8 @@ export const useFileStore = defineStore('file', () => {
       return
     }
 
+    const loadRevision = parent.loadRevision
+    parent.loadingRevision = loadRevision
     const loadPromise = (async () => {
       try {
         let resolvedItems: FileSystemItem[]
@@ -389,6 +399,10 @@ export const useFileStore = defineStore('file', () => {
           resolvedItems = entries.map(entry => createFileSystemItemFromDirectoryEntry(entry, parentId))
         }
 
+        if (parent.loadRevision !== loadRevision) {
+          return
+        }
+
         for (const item of resolvedItems) {
           items.set(item.id, item)
         }
@@ -396,12 +410,19 @@ export const useFileStore = defineStore('file', () => {
         parent.childIds = resolvedItems.map(item => item.id)
         parent.isLoaded = true
       } catch (error) {
+        if (parent.loadRevision !== loadRevision) {
+          return
+        }
+
         parent.isLoaded = false
         const msg = error instanceof Error ? error.message : String(error)
         void logger.error(`[FileStore] 加载目录 ${path} 失败: ${msg}`)
         throw new AppError('FS_ERROR', `加载目录失败: ${msg}`)
       } finally {
-        parent.loadingPromise = undefined
+        if (parent.loadingRevision === loadRevision) {
+          parent.loadingRevision = undefined
+          parent.loadingPromise = undefined
+        }
       }
     })()
 
@@ -433,6 +454,7 @@ export const useFileStore = defineStore('file', () => {
         isDir: true,
         childIds: [],
         isLoaded: false,
+        loadRevision: 0,
       }
       items.set(parentId, parentDir)
     }

@@ -49,7 +49,7 @@ const {
   vfsCopyPathMock: vi.fn(),
   vfsDeletePathMock: vi.fn(),
   vfsEnsureWritableMock: vi.fn(),
-  vfsListDirMock: vi.fn<(projectPath: string, enginePath: string, relPath: string) => Promise<VfsDirEntry[]>>(),
+  vfsListDirMock: vi.fn<(args: { projectPath: string, enginePath: string, relPath: string, templatePath?: string }) => Promise<VfsDirEntry[]>>(),
   vfsMovePathMock: vi.fn(),
   vfsRenamePathMock: vi.fn(),
   vfsResolvePathMock: vi.fn(),
@@ -786,5 +786,84 @@ describe('文件状态仓库', () => {
       relPath: 'game/original.txt',
       targetRelPath: 'game/folder-move/original.txt',
     })
+  })
+
+  it('refreshTemplateOverlay 后会丢弃旧 overlay 的目录结果并重新加载', async () => {
+    let resolveOldTemplateList: ((value: VfsDirEntry[]) => void) | undefined
+
+    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
+    resolvePreviewSiteMock.mockResolvedValue({
+      projectPath: '/workspace',
+      enginePath: '/engines/webgal',
+      templatePath: '/templates/old',
+    })
+    vfsListDirMock.mockImplementation(async ({ relPath, templatePath }: { relPath: string, templatePath?: string }) => {
+      if (relPath === '') {
+        return [{
+          isDir: true,
+          name: 'template',
+          source: 'upper',
+        }]
+      }
+
+      if (relPath === 'game/template' && templatePath === '/templates/old') {
+        return await new Promise<VfsDirEntry[]>((resolve) => {
+          resolveOldTemplateList = resolve
+        })
+      }
+
+      if (relPath === 'game/template' && templatePath === '/templates/new') {
+        return [{
+          isDir: false,
+          name: 'new.txt',
+          source: 'templateLower',
+        }]
+      }
+
+      return []
+    })
+
+    workspaceStoreState = reactive({
+      CWD: '/workspace',
+      currentGame: {
+        engineId: 'engine-1',
+        path: '/workspace',
+      },
+    })
+    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+
+    const store = useFileStore()
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+
+    const staleLoad = store.getFolderContents('/workspace/game/template')
+    await vi.waitFor(() => {
+      expect(resolveOldTemplateList).toBeDefined()
+    })
+
+    await store.refreshTemplateOverlay('/workspace', {
+      nextEnginePath: '/engines/webgal',
+      nextTemplatePath: '/templates/new',
+    })
+
+    const refreshedLoad = store.getFolderContents('/workspace/game/template')
+    await vi.waitFor(() => {
+      expect(vfsListDirMock).toHaveBeenCalledTimes(3)
+    })
+
+    resolveOldTemplateList!([{
+      isDir: false,
+      name: 'old.txt',
+      source: 'templateLower',
+    }])
+
+    const refreshedItems = await refreshedLoad
+    await staleLoad
+
+    expect(refreshedItems.map(item => item.path)).toEqual(['/workspace/game/template/new.txt'])
+
+    const finalItems = await store.getFolderContents('/workspace/game/template')
+    expect(finalItems.map(item => item.path)).toEqual(['/workspace/game/template/new.txt'])
   })
 })
