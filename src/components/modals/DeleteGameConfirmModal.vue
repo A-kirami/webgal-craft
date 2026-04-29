@@ -5,6 +5,7 @@ import type { Game } from '~/database/model'
 
 let open = $(defineModel<boolean>('open'))
 let confirmInput = $ref('')
+let isProcessing = $ref(false)
 
 const { game, onConfirm } = defineProps<{
   game: Game
@@ -12,8 +13,16 @@ const { game, onConfirm } = defineProps<{
 }>()
 
 async function handleConfirm() {
-  await onConfirm()
-  open = false
+  if (isProcessing) {
+    return
+  }
+  isProcessing = true
+  try {
+    await onConfirm()
+    open = false
+  } finally {
+    isProcessing = false
+  }
 }
 </script>
 
@@ -63,7 +72,7 @@ async function handleConfirm() {
             type="button"
             variant="destructive"
             class="flex-1"
-            :disabled="confirmInput !== game.metadata.name"
+            :disabled="confirmInput !== game.metadata.name || isProcessing"
             @click="handleConfirm"
           >
             {{ $t('modals.deleteGameConfirm.confirmDelete') }}

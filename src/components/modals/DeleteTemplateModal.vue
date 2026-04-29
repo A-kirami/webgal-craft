@@ -12,13 +12,21 @@ const props = defineProps<{
   template: Template
 }>()
 
+let isDeleting = $ref(false)
+
 async function handleConfirm() {
+  if (isDeleting) {
+    return
+  }
+  isDeleting = true
   try {
     await templateManager.deleteTemplate(props.template)
     open.value = false
     notify.success(t('modals.deleteTemplate.deleteSuccess'))
   } catch (error) {
     notify.error(error instanceof Error ? error.message : String(error))
+  } finally {
+    isDeleting = false
   }
 }
 </script>
@@ -49,7 +57,7 @@ async function handleConfirm() {
       </div>
       <AlertDialogFooter>
         <AlertDialogCancel>{{ $t('common.cancel') }}</AlertDialogCancel>
-        <AlertDialogAction variant="destructive" @click="handleConfirm">
+        <AlertDialogAction variant="destructive" :disabled="isDeleting" @click="handleConfirm">
           {{ $t('common.confirm') }}
         </AlertDialogAction>
       </AlertDialogFooter>

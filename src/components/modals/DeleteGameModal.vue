@@ -14,6 +14,7 @@ const { game } = defineProps<{
 }>()
 
 let removeFiles = $ref(false)
+let isConfirming = $ref(false)
 const modalStore = useModalStore()
 
 async function deleteGame() {
@@ -22,14 +23,22 @@ async function deleteGame() {
 }
 
 async function handleConfirm() {
-  if (removeFiles) {
-    modalStore.open('DeleteGameConfirmModal', {
-      game,
-      onConfirm: deleteGame,
-    })
-  } else {
-    await deleteGame()
-    open = false
+  if (isConfirming) {
+    return
+  }
+  isConfirming = true
+  try {
+    if (removeFiles) {
+      modalStore.open('DeleteGameConfirmModal', {
+        game,
+        onConfirm: deleteGame,
+      })
+    } else {
+      await deleteGame()
+      open = false
+    }
+  } finally {
+    isConfirming = false
   }
 }
 </script>
@@ -68,7 +77,7 @@ async function handleConfirm() {
       </div>
       <AlertDialogFooter>
         <AlertDialogCancel>{{ $t('common.cancel') }}</AlertDialogCancel>
-        <AlertDialogAction variant="destructive" @click="handleConfirm">
+        <AlertDialogAction variant="destructive" :disabled="isConfirming" @click="handleConfirm">
           {{ $t('common.confirm') }}
         </AlertDialogAction>
       </AlertDialogFooter>
