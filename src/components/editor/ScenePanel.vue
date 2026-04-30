@@ -176,9 +176,12 @@ const fsRefreshEvents = [
   'directory:created', 'directory:modified', 'directory:removed', 'directory:renamed',
 ] as const
 
-for (const event of fsRefreshEvents) {
-  fileSystemEvents.on(event, debouncedRefresh)
-}
+const stopFsListeners = fsRefreshEvents.map(event => fileSystemEvents.on(event, debouncedRefresh))
+onScopeDispose(() => {
+  for (const stop of stopFsListeners) {
+    stop()
+  }
+})
 </script>
 
 <template>
