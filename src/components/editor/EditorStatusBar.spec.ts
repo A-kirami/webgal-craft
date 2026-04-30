@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import { createBrowserLocalizedI18n } from '~/__tests__/browser'
-import { createBrowserClickStub, renderInBrowser } from '~/__tests__/browser-render'
+import { renderInBrowser } from '~/__tests__/browser-render'
 
 const {
   dayjsMock,

@@ -20,7 +20,6 @@ const fileStore = useFileStore()
 const workspaceStore = useWorkspaceStore()
 const tabsStore = useTabsStore()
 const fileSystemEvents = useFileSystemEvents()
-const { t } = useI18n()
 
 const scenePath = computedAsync(async () => {
   const gamePath = workspaceStore.currentGame?.path
