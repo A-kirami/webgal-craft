@@ -281,8 +281,6 @@ function handleNavigate(item: FileViewerItem): void {
     currentPath = ''
   } else if (normalizedItem.startsWith(`${normalizedBase}/`)) {
     currentPath = normalizedItem.slice(normalizedBase.length + 1)
-  } else {
-    currentPath = normalizedItem
   }
 }
 
