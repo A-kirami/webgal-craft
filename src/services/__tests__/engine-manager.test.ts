@@ -9,6 +9,7 @@ const {
   basenameMock,
   copyDirectoryWithProgressMock,
   deleteFileMock,
+  enginesDeleteMock,
   engineWhereFilterFirstMock,
   engineWhereFilterMock,
   engineWhereToArrayMock,
@@ -33,6 +34,7 @@ const {
   basenameMock: vi.fn(async (path: string) => path.split('/').at(-1) ?? path),
   copyDirectoryWithProgressMock: vi.fn(),
   deleteFileMock: vi.fn(),
+  enginesDeleteMock: vi.fn(),
   engineWhereFilterFirstMock: vi.fn(),
   engineWhereFilterMock: vi.fn(),
   engineWhereToArrayMock: vi.fn(),
@@ -92,7 +94,7 @@ vi.mock('~/database/db', () => ({
   db: {
     engines: {
       add: addMock,
-      delete: vi.fn(),
+      delete: enginesDeleteMock,
       toArray: enginesToArrayMock,
       update: enginesUpdateMock,
       where: engineWhereMock,
@@ -121,6 +123,7 @@ describe('engineManager', () => {
     basenameMock.mockClear()
     copyDirectoryWithProgressMock.mockReset()
     deleteFileMock.mockReset()
+    enginesDeleteMock.mockReset()
     engineWhereFilterFirstMock.mockReset()
     engineWhereFilterMock.mockReset()
     engineWhereToArrayMock.mockReset()
@@ -497,30 +500,26 @@ describe('engineManager', () => {
   })
 
   it('uninstallEngine 会删除托管目录和数据库记录', async () => {
-    const deleteMock = await import('~/database/db').then(module => vi.mocked(module.db.engines.delete))
-    deleteMock.mockResolvedValue(undefined)
+    enginesDeleteMock.mockResolvedValue(undefined)
 
     await engineManager.uninstallEngine(createTestEngine())
 
     expect(deleteFileMock).toHaveBeenCalledWith('/engines/default', true)
-    expect(deleteMock).toHaveBeenCalledWith('engine-1')
+    expect(enginesDeleteMock).toHaveBeenCalledWith('engine-1')
   })
 
   it('uninstallEngine 在删除托管目录失败时仍会移除数据库记录', async () => {
-    const deleteMock = await import('~/database/db').then(module => vi.mocked(module.db.engines.delete))
-    deleteMock.mockResolvedValue(undefined)
+    enginesDeleteMock.mockResolvedValue(undefined)
     deleteFileMock.mockRejectedValueOnce(new Error('path missing'))
 
     await expect(engineManager.uninstallEngine(createTestEngine())).resolves.toBeUndefined()
 
     expect(deleteFileMock).toHaveBeenCalledWith('/engines/default', true)
-    expect(deleteMock).toHaveBeenCalledWith('engine-1')
+    expect(enginesDeleteMock).toHaveBeenCalledWith('engine-1')
   })
 
   it('uninstallEngineGroup 会删除整组版本并清理记录', async () => {
-    const deleteMock = await import('~/database/db').then(module => vi.mocked(module.db.engines.delete))
-    deleteMock.mockReset()
-    deleteMock.mockResolvedValue(undefined)
+    enginesDeleteMock.mockResolvedValue(undefined)
     engineWhereToArrayMock.mockResolvedValue([
       createTestEngine({
         id: 'engine-1',
@@ -540,19 +539,18 @@ describe('engineManager', () => {
 
     expect(deleteFileMock).toHaveBeenNthCalledWith(1, '/engines/WebGAL/4.5.0', true)
     expect(deleteFileMock).toHaveBeenNthCalledWith(2, '/engines/WebGAL/4.4.0', true)
-    expect(deleteMock).toHaveBeenNthCalledWith(1, 'engine-1')
-    expect(deleteMock).toHaveBeenNthCalledWith(2, 'engine-2')
+    expect(enginesDeleteMock).toHaveBeenNthCalledWith(1, 'engine-1')
+    expect(enginesDeleteMock).toHaveBeenNthCalledWith(2, 'engine-2')
   })
 
   it('uninstallEngine 会在 unavailable 状态下仅移除数据库记录', async () => {
-    const deleteMock = await import('~/database/db').then(module => vi.mocked(module.db.engines.delete))
-    deleteMock.mockResolvedValue(undefined)
+    enginesDeleteMock.mockResolvedValue(undefined)
 
     await engineManager.uninstallEngine(createTestEngine({
       status: 'unavailable',
     }))
 
     expect(deleteFileMock).not.toHaveBeenCalled()
-    expect(deleteMock).toHaveBeenCalledWith('engine-1')
+    expect(enginesDeleteMock).toHaveBeenCalledWith('engine-1')
   })
 })
