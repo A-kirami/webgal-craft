@@ -348,4 +348,80 @@ describe('SwitchEngineModal', () => {
 
     await expect.element(page.getByText('切换失败')).not.toBeInTheDocument()
   })
+
+  it('templateStrategy 为 dirty 时确认会先弹出模板改动确认', async () => {
+    evaluateTemplateStrategyMock.mockResolvedValue('dirty')
+
+    renderSwitchEngineModal()
+
+    await page.getByTestId('select-new-engine').click()
+    await page.getByRole('button', { name: '确认' }).click()
+
+    await expect.element(page.getByText('模板已修改')).toBeInTheDocument()
+    expect(engineSwitchMock).not.toHaveBeenCalled()
+  })
+
+  it('dirty 模板下选择保留改动会以 keep 调用 switchEngine', async () => {
+    evaluateTemplateStrategyMock.mockResolvedValue('dirty')
+
+    renderSwitchEngineModal()
+
+    await page.getByTestId('select-new-engine').click()
+    await page.getByRole('button', { name: '确认' }).click()
+    await page.getByRole('button', { name: '保留模板改动' }).click()
+
+    await vi.waitFor(() => {
+      expect(engineSwitchMock).toHaveBeenCalledTimes(1)
+    })
+    expect(engineSwitchMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      { templateDecision: 'keep' },
+    )
+  })
+
+  it('dirty 模板下选择丢弃改动会以 discard 调用 switchEngine', async () => {
+    evaluateTemplateStrategyMock.mockResolvedValue('dirty')
+
+    renderSwitchEngineModal()
+
+    await page.getByTestId('select-new-engine').click()
+    await page.getByRole('button', { name: '确认' }).click()
+    await page.getByRole('button', { name: '丢弃模板改动' }).click()
+
+    await vi.waitFor(() => {
+      expect(engineSwitchMock).toHaveBeenCalledTimes(1)
+    })
+    expect(engineSwitchMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      { templateDecision: 'discard' },
+    )
+  })
+
+  it('dirty 模板切换失败后重试会复用之前的 templateDecision', async () => {
+    evaluateTemplateStrategyMock.mockResolvedValue('dirty')
+    engineSwitchMock
+      .mockRejectedValueOnce(new Error('switch failed'))
+      .mockResolvedValueOnce(undefined)
+
+    renderSwitchEngineModal()
+
+    await page.getByTestId('select-new-engine').click()
+    await page.getByRole('button', { name: '确认' }).click()
+    await page.getByRole('button', { name: '保留模板改动' }).click()
+
+    await expect.element(page.getByText('switch failed')).toBeInTheDocument()
+
+    await page.getByRole('button', { name: '重试' }).click()
+
+    await vi.waitFor(() => {
+      expect(engineSwitchMock).toHaveBeenCalledTimes(2)
+    })
+    expect(engineSwitchMock).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.anything(),
+      { templateDecision: 'keep' },
+    )
+  })
 })
