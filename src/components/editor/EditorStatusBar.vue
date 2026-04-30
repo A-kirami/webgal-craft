@@ -41,6 +41,10 @@ watch(() => workspaceStore.currentGame?.engineId, async (engineId) => {
     return
   }
   const engine = await db.engines.get(engineId)
+  // 异步过程中引擎可能切换，丢弃过时结果
+  if (workspaceStore.currentGame?.engineId !== engineId) {
+    return
+  }
   engineLabel = engine ? formatEngineLabel(engine) : undefined
 }, { immediate: true })
 
