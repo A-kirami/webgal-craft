@@ -7,12 +7,21 @@ import { fsCmds } from '~/commands/fs'
 import { db } from '~/database/db'
 import { Engine, Game } from '~/database/model'
 import { engineIconPath } from '~/services/platform/app-paths'
+import {
+  classifyAvailability,
+  createWarning,
+  normalizeImportPath,
+  ResourceAvailability,
+  ResourceHealthResult,
+  ResourceWarning,
+} from '~/services/resource-health'
 import { EngineMetadata, EnginePreviewAssets } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 import { EngineManifest, EngineManifestResult } from '~/types/engine'
 import { AppError } from '~/types/errors'
 import { EngineRef } from '~/types/project-config'
+import { toComparablePath } from '~/utils/path'
 
 interface EngineSnapshot {
   engineId: string
@@ -154,6 +163,7 @@ async function registerEngine(
     version: options.version,
     createdAt: Date.now(),
     status: options.status ?? 'created',
+    availability: 'available',
     metadata: options.metadata,
     previewAssets,
   })
@@ -203,11 +213,16 @@ async function validateAllEngines(): Promise<void> {
     .filter(engine => engine.status !== 'creating' && engine.status !== 'error')
     .map(async (engine) => {
       try {
-        const structureValid = await validateEngine(engine.path)
+        const pathExists = await exists(engine.path)
+        const structureValid = pathExists ? await validateEngine(engine.path) : false
         const classification = structureValid ? await classifyEngine(engine.path) : undefined
-        const nextStatus = classification?.status === 'ok' ? 'created' : 'unavailable'
-        if (engine.status !== nextStatus) {
-          await db.engines.update(engine.id, { status: nextStatus })
+        const nextAvailability: ResourceAvailability = classifyAvailability({
+          pathExists,
+          structureValid,
+          semanticsValid: classification?.status === 'ok',
+        })
+        if (engine.availability !== nextAvailability) {
+          await db.engines.update(engine.id, { availability: nextAvailability })
         }
       } catch (error) {
         logger.warn(`引擎校验异常: ${error}`)
@@ -221,19 +236,14 @@ async function assertEngineImportable(enginePath: string): Promise<EngineSnapsho
     throw new AppError('INVALID_STRUCTURE', '无效的引擎文件夹')
   }
 
-  const existingByPath = await db.engines.where('path').equals(enginePath).first()
-  if (existingByPath) {
-    throw new AppError('IO_ERROR', '该引擎已导入')
-  }
-
   const classification = await classifyEngine(enginePath)
   if (classification.status === 'unsupportedSchema') {
     throw new AppError(
-      'IO_ERROR',
+      'INVALID_MANIFEST',
       `引擎清单 schemaVersion ${classification.schemaVersion} 不受支持，当前最高支持主版本 ${classification.supportedMajor}，请升级宿主或使用兼容的引擎`,
       {
         details: {
-          reason: 'UNSUPPORTED_MANIFEST_SCHEMA',
+          reason: 'UNSUPPORTED_SCHEMA',
           schemaVersion: classification.schemaVersion,
           supportedMajor: classification.supportedMajor,
         },
@@ -241,16 +251,15 @@ async function assertEngineImportable(enginePath: string): Promise<EngineSnapsho
     )
   }
   if (classification.status === 'missing') {
-    throw new AppError('IO_ERROR', '不支持导入旧版引擎，请导入包含该引擎的项目或使用受支持的引擎版本', {
-      details: { reason: 'UNSUPPORTED_LEGACY_ENGINE' },
+    throw new AppError('INVALID_MANIFEST', '不支持导入旧版引擎，请导入包含该引擎的项目或使用受支持的引擎版本', {
+      details: { reason: 'LEGACY_ENGINE' },
     })
   }
   if (classification.status === 'invalid') {
-    throw new AppError('IO_ERROR', classification.reason, {
+    throw new AppError('INVALID_MANIFEST', classification.reason, {
       details: {
-        reason: 'INVALID_ENGINE_MANIFEST',
+        reason: 'PARSE_FAILED',
         manifestReason: classification.reason,
-        manifestStatus: classification.status,
       },
     })
   }
@@ -262,7 +271,7 @@ async function assertEngineImportable(enginePath: string): Promise<EngineSnapsho
   })
 
   if (duplicate) {
-    throw new AppError('IO_ERROR', '同名同版本的引擎已存在', {
+    throw new AppError('DUPLICATE_RESOURCE', '同名同版本的引擎已存在', {
       details: { reason: 'DUPLICATE_ENGINE' },
     })
   }
@@ -288,17 +297,121 @@ async function copyAndFinalizeEngine(
   })
 }
 
+async function findEngineByComparablePath(rawPath: string): Promise<Engine | undefined> {
+  const { comparablePath } = normalizeImportPath(rawPath)
+  const engines = await db.engines.toArray()
+  return engines.find(engine => toComparablePath(engine.path) === comparablePath)
+}
+
+async function collectEngineWarnings(enginePath: string): Promise<ResourceWarning[]> {
+  const warnings: ResourceWarning[] = []
+  if (!(await exists(await engineIconPath(enginePath)))) {
+    warnings.push(createWarning('missing-favicon', '引擎 favicon 不存在'))
+  }
+  return warnings
+}
+
+async function inspectEngine(
+  rawPath: string,
+): Promise<ResourceHealthResult<EngineSnapshot>> {
+  const { normalizedPath, comparablePath } = normalizeImportPath(rawPath)
+
+  if (!(await exists(normalizedPath))) {
+    return {
+      availability: 'missing',
+      warnings: [],
+      blockingIssue: { code: 'DIR_NOT_FOUND', message: '引擎目录不存在' },
+      normalizedPath,
+      comparablePath,
+    }
+  }
+
+  if (!(await validateEngine(normalizedPath))) {
+    return {
+      availability: 'broken',
+      warnings: [],
+      blockingIssue: { code: 'INVALID_STRUCTURE', message: '无效的引擎文件夹' },
+      normalizedPath,
+      comparablePath,
+    }
+  }
+
+  const classification = await classifyEngine(normalizedPath)
+  if (classification.status !== 'ok') {
+    return {
+      availability: 'broken',
+      warnings: [],
+      blockingIssue: classifyEngineToBlockingIssue(classification),
+      normalizedPath,
+      comparablePath,
+    }
+  }
+
+  const snapshot = await buildEngineSnapshot(normalizedPath, classification.manifest)
+  const warnings = await collectEngineWarnings(normalizedPath)
+
+  return {
+    availability: 'available',
+    warnings,
+    payload: snapshot,
+    normalizedPath,
+    comparablePath,
+  }
+}
+
+function classifyEngineToBlockingIssue(classification: EngineManifestResult) {
+  if (classification.status === 'unsupportedSchema') {
+    return {
+      code: 'INVALID_MANIFEST' as const,
+      message: `引擎清单 schemaVersion ${classification.schemaVersion} 不受支持`,
+      details: {
+        reason: 'UNSUPPORTED_SCHEMA',
+        schemaVersion: classification.schemaVersion,
+        supportedMajor: classification.supportedMajor,
+      },
+    }
+  }
+  if (classification.status === 'missing') {
+    return {
+      code: 'INVALID_MANIFEST' as const,
+      message: '不支持导入旧版引擎',
+      details: { reason: 'LEGACY_ENGINE' },
+    }
+  }
+  if (classification.status === 'invalid') {
+    return {
+      code: 'INVALID_MANIFEST' as const,
+      message: classification.reason,
+      details: { reason: 'PARSE_FAILED', manifestReason: classification.reason },
+    }
+  }
+  return { code: 'INVALID_MANIFEST' as const, message: '引擎清单无效' }
+}
+
 async function importEngine(enginePath: string): Promise<string> {
-  const snapshot = await assertEngineImportable(enginePath)
+  const { normalizedPath } = normalizeImportPath(enginePath)
+
+  // 幂等：源路径已注册直接返回既有 ID
+  const existingBySource = await findEngineByComparablePath(normalizedPath)
+  if (existingBySource) {
+    return existingBySource.id
+  }
+
+  const snapshot = await assertEngineImportable(normalizedPath)
   const targetPath = await resolveManagedEnginePath(snapshot)
 
-  if (enginePath === targetPath) {
-    logger.info(`[引擎导入] 引擎已在托管目录，直接注册: ${enginePath}`)
+  if (normalizedPath === targetPath) {
+    logger.info(`[引擎导入] 引擎已在托管目录，直接注册: ${normalizedPath}`)
     return registerEngine(targetPath, snapshot)
   }
 
+  // 目标路径已注册：幂等返回；否则若 fs 上存在则视为冲突
+  const existingByTarget = await findEngineByComparablePath(targetPath)
+  if (existingByTarget) {
+    return existingByTarget.id
+  }
   if (await exists(targetPath)) {
-    throw new AppError('IO_ERROR', '目标引擎目录已存在，请先清理后重试')
+    throw new AppError('TARGET_CONFLICT', '目标引擎目录已存在，请先清理后重试')
   }
 
   logger.info(`[引擎 ${snapshot.name}] 开始导入`)
@@ -308,7 +421,7 @@ async function importEngine(enginePath: string): Promise<string> {
   })
 
   try {
-    await copyAndFinalizeEngine(engineId, enginePath, targetPath)
+    await copyAndFinalizeEngine(engineId, normalizedPath, targetPath)
     logger.info(`[引擎 ${snapshot.name}] 导入完成`)
     return engineId
   } catch (error) {
@@ -336,7 +449,7 @@ function assertDeletable(deleteCheck: DeleteEngineCheckResult): void {
 async function uninstallEngine(engine: Engine): Promise<void> {
   assertDeletable(await canDeleteEngine(engine.id))
   logger.info(`[引擎卸载] ${engine.name}@${engine.version ?? 'unknown'}: ${engine.path}`)
-  if (engine.status !== 'unavailable') {
+  if (engine.availability === 'available') {
     try {
       await fsCmds.deleteFile(engine.path, true)
     } catch (error) {
@@ -356,6 +469,7 @@ async function uninstallEngineGroup(engineId: string): Promise<void> {
 export const engineManager = {
   validateEngine,
   classifyEngine,
+  inspectEngine,
   getEnginePreviewAssets,
   findEngineByRef,
   canDeleteEngine,

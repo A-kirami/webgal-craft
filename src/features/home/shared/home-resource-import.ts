@@ -57,9 +57,9 @@ function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotific
 
   // 优先按 details.reason 匹配（更具体的错误分类）
   switch (error.details?.reason) {
-    case 'INVALID_ENGINE_MANIFEST': { return 'invalid-folder' }
-    case 'UNSUPPORTED_MANIFEST_SCHEMA': { return 'game-schema-too-new' }
-    case 'UNSUPPORTED_LEGACY_ENGINE': { return 'unsupported-legacy-engine' }
+    case 'PARSE_FAILED': { return 'invalid-folder' }
+    case 'UNSUPPORTED_SCHEMA': { return 'game-schema-too-new' }
+    case 'LEGACY_ENGINE': { return 'unsupported-legacy-engine' }
     case 'DUPLICATE_ENGINE': { return 'duplicate-engine' }
     case 'ENGINE_NOT_FOUND': { return 'engine-not-found' }
     case 'ENGINE_UNAVAILABLE': { return 'engine-unavailable' }
@@ -70,6 +70,8 @@ function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotific
   // 按 error.code 匹配
   switch (error.code) {
     case 'INVALID_STRUCTURE': { return 'invalid-folder' }
+    case 'INVALID_MANIFEST': { return 'invalid-folder' }
+    case 'TARGET_CONFLICT': { return 'duplicate-resource' }
     case 'DUPLICATE_RESOURCE': { return 'duplicate-resource' }
     case 'INVALID_PROJECT_CONFIG': { return 'game-config-corrupted' }
     case 'SCHEMA_VERSION_TOO_NEW': { return 'game-schema-too-new' }

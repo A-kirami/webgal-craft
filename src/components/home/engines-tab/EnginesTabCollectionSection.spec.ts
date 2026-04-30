@@ -64,7 +64,7 @@ function createGroups(): EngineGroupCollectionItem[] {
             id: 'engine-1',
             name: 'WebGAL',
             path: '/engines/WebGAL/4.4.0',
-            status: 'unavailable',
+            availability: 'broken',
             version: '4.4.0',
           }),
           serveUrl: 'http://127.0.0.1:8899/game/webgal/4.4.0/',

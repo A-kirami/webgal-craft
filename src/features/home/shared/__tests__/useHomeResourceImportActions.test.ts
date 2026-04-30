@@ -93,8 +93,8 @@ describe('useHomeResourceImportActions', () => {
 
   it('旧版引擎导入错误时会提示用户改走项目导入', async () => {
     openDialogMock.mockResolvedValue('/engines/legacy')
-    importResourceMock.mockRejectedValue(new AppError('IO_ERROR', 'legacy', {
-      details: { reason: 'UNSUPPORTED_LEGACY_ENGINE' },
+    importResourceMock.mockRejectedValue(new AppError('INVALID_MANIFEST', 'legacy', {
+      details: { reason: 'LEGACY_ENGINE' },
     }))
     const actions = createActions()
 

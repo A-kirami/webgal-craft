@@ -244,6 +244,7 @@ describe('TemplatesTab', () => {
           },
         },
         status: 'created',
+        availability: 'available',
         version: '4.8.2',
       },
     ]

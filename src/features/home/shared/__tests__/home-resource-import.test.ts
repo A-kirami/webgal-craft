@@ -45,8 +45,8 @@ describe('首页共享导入纯逻辑', () => {
   })
 
   it('旧版引擎导入错误会映射为专用通知', () => {
-    expect(resolveHomeResourceImportNotification(new AppError('IO_ERROR', 'legacy', {
-      details: { reason: 'UNSUPPORTED_LEGACY_ENGINE' },
+    expect(resolveHomeResourceImportNotification(new AppError('INVALID_MANIFEST', 'legacy', {
+      details: { reason: 'LEGACY_ENGINE' },
     }))).toEqual({
       kind: 'unsupported-legacy-engine',
       level: 'error',
@@ -54,9 +54,9 @@ describe('首页共享导入纯逻辑', () => {
   })
 
   it('无效引擎清单错误会映射为无效目录通知', () => {
-    expect(resolveHomeResourceImportNotification(new AppError('IO_ERROR', 'broken manifest', {
+    expect(resolveHomeResourceImportNotification(new AppError('INVALID_MANIFEST', 'broken manifest', {
       details: {
-        reason: 'INVALID_ENGINE_MANIFEST',
+        reason: 'PARSE_FAILED',
         manifestReason: '缺少必填字段',
       },
     }))).toEqual({
@@ -66,7 +66,7 @@ describe('首页共享导入纯逻辑', () => {
   })
 
   it('重复引擎导入错误会映射为专用通知', () => {
-    expect(resolveHomeResourceImportNotification(new AppError('IO_ERROR', 'duplicate', {
+    expect(resolveHomeResourceImportNotification(new AppError('DUPLICATE_RESOURCE', 'duplicate', {
       details: { reason: 'DUPLICATE_ENGINE' },
     }))).toEqual({
       kind: 'duplicate-engine',
@@ -93,8 +93,8 @@ describe('首页共享导入纯逻辑', () => {
   })
 
   it('manifest schema 不受支持错误会映射为专用通知', () => {
-    expect(resolveHomeResourceImportNotification(new AppError('UNKNOWN', 'unsupported manifest schema', {
-      details: { reason: 'UNSUPPORTED_MANIFEST_SCHEMA', found: 2, maxSupported: 1 },
+    expect(resolveHomeResourceImportNotification(new AppError('INVALID_MANIFEST', 'unsupported manifest schema', {
+      details: { reason: 'UNSUPPORTED_SCHEMA', schemaVersion: '2.0.0', supportedMajor: 1 },
     }))).toEqual({
       kind: 'game-schema-too-new',
       level: 'error',

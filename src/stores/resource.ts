@@ -50,7 +50,7 @@ export const useResourceStore = defineStore('resource', () => {
   )
 
   const availableEngines = $computed(() =>
-    sortedEngines.filter(engine => engine.status === 'created'),
+    sortedEngines.filter(engine => engine.status === 'created' && engine.availability === 'available'),
   )
 
   const filteredTemplates = $computed(() =>

@@ -109,6 +109,7 @@ describe('工作区状态仓库', () => {
       createdAt: 0,
       lastModified: 0,
       status: 'created',
+      availability: 'available',
       metadata: {
         name: 'new',
         titleImg: 'cover-next.png',

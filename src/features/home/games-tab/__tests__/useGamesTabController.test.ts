@@ -102,7 +102,7 @@ describe('useGamesTabController 行为', () => {
     const controller = createController({
       engines: [
         { id: 'engine-1', status: 'error' },
-        { id: 'engine-2', status: 'unavailable' },
+        { id: 'engine-2', status: 'creating' },
       ],
     })
 

@@ -278,8 +278,8 @@ describe('engineManager', () => {
     validateDirectoryStructureMock.mockResolvedValue(true)
 
     await expect(engineManager.importEngine('/downloads/LegacyEngine')).rejects.toEqual(
-      new AppError('IO_ERROR', '不支持导入旧版引擎，请导入包含该引擎的项目或使用受支持的引擎版本', {
-        details: { reason: 'UNSUPPORTED_LEGACY_ENGINE' },
+      new AppError('INVALID_MANIFEST', '不支持导入旧版引擎，请导入包含该引擎的项目或使用受支持的引擎版本', {
+        details: { reason: 'LEGACY_ENGINE' },
       }),
     )
 
@@ -296,9 +296,9 @@ describe('engineManager', () => {
     validateDirectoryStructureMock.mockResolvedValue(true)
 
     await expect(engineManager.importEngine('/downloads/futureEngine')).rejects.toMatchObject({
-      code: 'IO_ERROR',
+      code: 'INVALID_MANIFEST',
       details: {
-        reason: 'UNSUPPORTED_MANIFEST_SCHEMA',
+        reason: 'UNSUPPORTED_SCHEMA',
         schemaVersion: '2.0.0',
         supportedMajor: 1,
       },
@@ -316,11 +316,10 @@ describe('engineManager', () => {
     validateDirectoryStructureMock.mockResolvedValue(true)
 
     await expect(engineManager.importEngine('/downloads/brokenEngine')).rejects.toEqual(
-      new AppError('IO_ERROR', '缺少必填字段', {
+      new AppError('INVALID_MANIFEST', '缺少必填字段', {
         details: {
-          reason: 'INVALID_ENGINE_MANIFEST',
+          reason: 'PARSE_FAILED',
           manifestReason: '缺少必填字段',
-          manifestStatus: 'invalid',
         },
       }),
     )
@@ -339,21 +338,74 @@ describe('engineManager', () => {
       },
     })
     validateDirectoryStructureMock.mockResolvedValue(true)
-    engineWhereFirstMock
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(createTestEngine({
-        name: 'WebGAL',
-        version: '4.5.0',
-      }))
+    engineWhereFirstMock.mockResolvedValue(createTestEngine({
+      name: 'WebGAL',
+      version: '4.5.0',
+    }))
 
     await expect(engineManager.importEngine('/downloads/webgal')).rejects.toEqual(
-      new AppError('IO_ERROR', '同名同版本的引擎已存在', {
+      new AppError('DUPLICATE_RESOURCE', '同名同版本的引擎已存在', {
         details: { reason: 'DUPLICATE_ENGINE' },
       }),
     )
   })
 
-  it('validateAllEngines 会把失效目录标记为 unavailable', async () => {
+  it('importEngine 在源路径已注册时幂等返回既有 ID', async () => {
+    enginesToArrayMock.mockResolvedValue([
+      createTestEngine({
+        id: 'engine-existing',
+        path: '/downloads/webgal',
+      }),
+    ])
+
+    await expect(engineManager.importEngine('/downloads/webgal')).resolves.toBe('engine-existing')
+
+    expect(addMock).not.toHaveBeenCalled()
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
+  })
+
+  it('importEngine 在目标目录已存在但无 DB 记录时抛出 TARGET_CONFLICT', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.5.0',
+        engineType: 'official',
+        webgalVersion: '4.5.0',
+      },
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    existsMock.mockImplementation(async (path: string) => path === '/engines/WebGAL/4.5.0')
+
+    await expect(engineManager.importEngine('/downloads/webgal')).rejects.toEqual(
+      new AppError('TARGET_CONFLICT', '目标引擎目录已存在，请先清理后重试'),
+    )
+  })
+
+  it('inspectEngine 在 favicon 缺失时只产 warning', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.5.0',
+        engineType: 'official',
+        webgalVersion: '4.5.0',
+      },
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    existsMock.mockImplementation(async (path: string) => path !== '/source/icons/favicon.ico')
+
+    await expect(engineManager.inspectEngine('/source')).resolves.toMatchObject({
+      availability: 'available',
+      warnings: [{ code: 'missing-favicon' }],
+    })
+  })
+
+  it('validateAllEngines 会把失效目录标记为 missing availability', async () => {
     enginesToArrayMock.mockResolvedValue([
       createTestEngine({
         id: 'engine-1',
@@ -361,14 +413,15 @@ describe('engineManager', () => {
         status: 'created',
       }),
     ])
+    existsMock.mockResolvedValue(false)
     validateDirectoryStructureMock.mockResolvedValue(false)
 
     await engineManager.validateAllEngines()
 
-    expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', { status: 'unavailable' })
+    expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', { availability: 'missing' })
   })
 
-  it('validateAllEngines 在 manifest 无效时标记为 unavailable', async () => {
+  it('validateAllEngines 在 manifest 无效时标记为 broken availability', async () => {
     enginesToArrayMock.mockResolvedValue([
       createTestEngine({
         id: 'engine-1',
@@ -376,15 +429,16 @@ describe('engineManager', () => {
         status: 'created',
       }),
     ])
+    existsMock.mockResolvedValue(true)
     validateDirectoryStructureMock.mockResolvedValue(true)
     readEngineManifestMock.mockResolvedValue({ status: 'missing' })
 
     await engineManager.validateAllEngines()
 
-    expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', { status: 'unavailable' })
+    expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', { availability: 'broken' })
   })
 
-  it('validateAllEngines 在目录结构有效时保持 created 状态', async () => {
+  it('validateAllEngines 在目录结构有效时保持 available availability', async () => {
     enginesToArrayMock.mockResolvedValue([
       createTestEngine({
         id: 'engine-1',
@@ -392,6 +446,7 @@ describe('engineManager', () => {
         status: 'created',
       }),
     ])
+    existsMock.mockResolvedValue(true)
     validateDirectoryStructureMock.mockResolvedValue(true)
     readEngineManifestMock.mockResolvedValue({
       status: 'ok',
@@ -410,7 +465,7 @@ describe('engineManager', () => {
     expect(enginesUpdateMock).not.toHaveBeenCalled()
   })
 
-  it('validateAllEngines 在结构有效但 schemaVersion 不受支持时标记为 unavailable', async () => {
+  it('validateAllEngines 在结构有效但 schemaVersion 不受支持时标记为 broken', async () => {
     enginesToArrayMock.mockResolvedValue([
       createTestEngine({
         id: 'engine-1',
@@ -418,6 +473,7 @@ describe('engineManager', () => {
         status: 'created',
       }),
     ])
+    existsMock.mockResolvedValue(true)
     validateDirectoryStructureMock.mockResolvedValue(true)
     readEngineManifestMock.mockResolvedValue({
       status: 'unsupportedSchema',
@@ -427,7 +483,7 @@ describe('engineManager', () => {
 
     await engineManager.validateAllEngines()
 
-    expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', { status: 'unavailable' })
+    expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', { availability: 'broken' })
   })
 
   it('uninstallEngine 会阻止删除仍有关联游戏的引擎', async () => {
@@ -543,11 +599,11 @@ describe('engineManager', () => {
     expect(enginesDeleteMock).toHaveBeenNthCalledWith(2, 'engine-2')
   })
 
-  it('uninstallEngine 会在 unavailable 状态下仅移除数据库记录', async () => {
+  it('uninstallEngine 会在 broken availability 状态下仅移除数据库记录', async () => {
     enginesDeleteMock.mockResolvedValue(undefined)
 
     await engineManager.uninstallEngine(createTestEngine({
-      status: 'unavailable',
+      availability: 'broken',
     }))
 
     expect(deleteFileMock).not.toHaveBeenCalled()

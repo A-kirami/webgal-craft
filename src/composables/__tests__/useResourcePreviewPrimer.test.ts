@@ -151,7 +151,7 @@ describe('useResourcePreviewPrimer', () => {
   it('会跳过状态非 created 的引擎', async () => {
     resourceStoreState.engines = [
       { path: '/engines/fresh', status: 'created' },
-      { path: '/engines/missing', status: 'unavailable' },
+      { path: '/engines/missing', status: 'error' },
     ]
 
     stopPrimer = useResourcePreviewPrimer()
