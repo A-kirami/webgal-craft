@@ -967,4 +967,139 @@ describe('文件状态仓库', () => {
     const finalItems = await store.getFolderContents('/workspace/game/template')
     expect(finalItems.map(item => item.path)).toEqual(['/workspace/game/template/new.txt'])
   })
+
+  it('跨目录 moveEntry 会递归清理源子树并按 post-order 发出 removed 事件', async () => {
+    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
+    getGameEnginePathMock.mockResolvedValue('/engines/webgal')
+    statMock.mockImplementation(async (path: string) => createStatResult(path, false))
+    vfsResolvePathMock.mockResolvedValue('/engines/webgal/game/foo')
+    vfsMovePathMock.mockResolvedValue('game/dest/foo')
+    vfsListDirMock.mockImplementation(async ({ relPath }: { relPath: string }) => {
+      if (relPath === '') {
+        return [
+          { isDir: true, name: 'foo', source: 'upper' },
+          { isDir: true, name: 'dest', source: 'upper' },
+        ]
+      }
+      if (relPath === 'game/foo') {
+        return [{ isDir: true, name: 'bar', source: 'upper' }]
+      }
+      if (relPath === 'game/foo/bar') {
+        return [{ isDir: false, name: 'baz.txt', source: 'upper' }]
+      }
+      if (relPath === 'game/dest') {
+        return []
+      }
+      return []
+    })
+
+    workspaceStoreState = reactive({
+      CWD: '/workspace',
+      currentGame: { engineId: 'engine-1', path: '/workspace' },
+    })
+    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+
+    const store = useFileStore()
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+
+    // 预热整棵子树
+    await store.getFolderContents('/workspace/game/foo')
+    await store.getFolderContents('/workspace/game/foo/bar')
+    await store.getFolderContents('/workspace/game/dest')
+
+    expect(store.getItemByPath('/workspace/game/foo')).toBeDefined()
+    expect(store.getItemByPath('/workspace/game/foo/bar')).toBeDefined()
+    expect(store.getItemByPath('/workspace/game/foo/bar/baz.txt')).toBeDefined()
+
+    emittedEvents.length = 0
+    await store.moveEntry('/workspace/game/foo', '/workspace/game/dest')
+
+    expect(store.getItemByPath('/workspace/game/foo')).toBeUndefined()
+    expect(store.getItemByPath('/workspace/game/foo/bar')).toBeUndefined()
+    expect(store.getItemByPath('/workspace/game/foo/bar/baz.txt')).toBeUndefined()
+
+    const removedPaths = emittedEvents
+      .filter(event => event.type === 'file:removed' || event.type === 'directory:removed')
+      .map(event => event.path)
+    expect(removedPaths).toEqual([
+      '/workspace/game/foo/bar/baz.txt',
+      '/workspace/game/foo/bar',
+      '/workspace/game/foo',
+    ])
+  })
+
+  it('refreshTemplateOverlay 会同步失效父 game 目录', async () => {
+    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
+    resolvePreviewSiteMock.mockResolvedValue({
+      projectPath: '/workspace',
+      enginePath: '/engines/webgal',
+      templatePath: '/templates/old',
+    })
+    vfsListDirMock.mockResolvedValue([
+      { isDir: true, name: 'template', source: 'upper' },
+    ])
+
+    workspaceStoreState = reactive({
+      CWD: '/workspace',
+      currentGame: { engineId: 'engine-1', path: '/workspace' },
+    })
+    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+
+    const store = useFileStore()
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+
+    await store.getFolderContents('/workspace/game')
+    const gameItem = store.getItemByPath('/workspace/game')
+    expect(gameItem).toBeDefined()
+    expect(gameItem?.isDir).toBe(true)
+    expect((gameItem as { isLoaded: boolean }).isLoaded).toBe(true)
+
+    await store.refreshTemplateOverlay('/workspace', { nextTemplatePath: '/templates/new' })
+
+    const refreshedGameItem = store.getItemByPath('/workspace/game')
+    expect((refreshedGameItem as { isLoaded: boolean }).isLoaded).toBe(false)
+  })
+
+  it('refreshTemplateOverlay 在父 game 目录尚未加载时不会抛错', async () => {
+    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
+    resolvePreviewSiteMock.mockResolvedValue({
+      projectPath: '/workspace',
+      enginePath: '/engines/webgal',
+      templatePath: '/templates/old',
+    })
+    vfsListDirMock.mockResolvedValue([])
+
+    workspaceStoreState = reactive({
+      CWD: '/workspace',
+      currentGame: { engineId: 'engine-1', path: '/workspace' },
+    })
+    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+
+    const store = useFileStore()
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+
+    // initialize 内部已加载 game/，需要把它从 items 里移除以模拟"未加载"
+    const caches = captureFileStoreCaches()
+    try {
+      const pathToId = caches.pathToId
+      const items = caches.items
+      const gameId = pathToId?.get('/workspace/game')
+      if (gameId) {
+        items?.delete(gameId)
+        pathToId?.delete('/workspace/game')
+      }
+
+      await expect(
+        store.refreshTemplateOverlay('/workspace', { nextTemplatePath: '/templates/new' }),
+      ).resolves.toBeUndefined()
+    } finally {
+      caches.restore()
+    }
+  })
 })

@@ -167,6 +167,18 @@ export const useFileStore = defineStore('file', () => {
 
     await invalidateDirectoryCacheSafe(templateRoot, true)
 
+    // 失效父 game 目录：`game/template` 的 source/existence 字段是在加载父目录时
+    // 写入的，只刷新模板子树自身无法让父目录下次重渲染时看到新 lower 配置。
+    const parentGameDir = joinPath(currentProjectPath, 'game')
+    const parentItem = getItemByPath(parentGameDir)
+    if (parentItem?.isDir) {
+      parentItem.loadRevision += 1
+      parentItem.isLoaded = false
+      parentItem.loadingRevision = undefined
+      parentItem.loadingPromise = undefined
+    }
+    await invalidateDirectoryCacheSafe(parentGameDir, true)
+
     fileSystemEvents.emit({
       type: 'directory:modified',
       path: templateRoot,
@@ -634,6 +646,53 @@ export const useFileStore = defineStore('file', () => {
     return id ? items.get(id) : undefined
   }
 
+  /**
+   * 递归清理一整棵子树的内存状态。
+   *
+   * 与 `handleRemoveEvent` 不同：watcher 推送的 remove 事件在 OS 层只对应叶子级
+   * 删除，所以那条路径不能假设要枚举子项。本函数仅在我们自己已经知道"整棵子树
+   * 一次性消失"（如 `moveEntry` 跨目录分支）的场合调用，避免源目录下的后代
+   * `FileSystemItem` 与 `pathToId` key 残留为孤儿。
+   *
+   * 子树枚举走 `childIds` 而非按 path prefix 扫全量 `items`：精确且 O(子树)，且
+   * 避免误清同前缀但不同根的项（如 `/a/foo` 与 `/a/foo-bar`）。
+   *
+   * 事件按 post-order（叶子先于目录）发出，与 `handleRemoveEvent` 单 item 语义对齐。
+   */
+  async function removeSubtree(rootPath: string): Promise<void> {
+    const rootItem = getItemByPath(rootPath)
+    if (!rootItem) {
+      await invalidateParentDirectoryCache(rootPath)
+      await invalidateDirectoryCacheSafe(rootPath, true)
+      return
+    }
+
+    const collected: FileSystemItem[] = []
+    function walk(item: FileSystemItem): void {
+      if (item.isDir) {
+        for (const childId of item.childIds) {
+          const child = items.get(childId)
+          if (child) {
+            walk(child)
+          }
+        }
+      }
+      collected.push(item)
+    }
+    walk(rootItem)
+
+    removeChildFromParent(rootItem.id, rootItem.parentId)
+
+    for (const item of collected) {
+      items.delete(item.id)
+      pathToId.delete(normalizeFsPath(item.path))
+      emitFileSystemEvent(item, { eventType: 'removed', path: item.path })
+    }
+
+    await invalidateParentDirectoryCache(rootPath)
+    await invalidateDirectoryCacheSafe(rootPath, true)
+  }
+
   async function handleRemoveEvent(path: string, removedKind?: RemovedEntryKind): Promise<void> {
     const item = getItemByPath(path)
     if (!item) {
@@ -928,7 +987,7 @@ export const useFileStore = defineStore('file', () => {
       if (sourceParentPath === normalizeFsPath(targetPath)) {
         await handleRenameEvent(nextPath, sourcePath)
       } else {
-        await handleRemoveEvent(sourcePath)
+        await removeSubtree(sourcePath)
         await handleCreateEvent(nextPath, targetParentId)
       }
       return nextPath
