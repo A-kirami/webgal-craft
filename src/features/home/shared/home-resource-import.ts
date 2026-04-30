@@ -9,6 +9,7 @@ export interface HomeResourceImportNotification {
     | 'target-conflict'
     | 'unsupported-legacy-engine'
     | 'duplicate-engine'
+    | 'engine-schema-too-new'
     | 'game-config-corrupted'
     | 'game-schema-too-new'
     | 'engine-not-found'
@@ -70,7 +71,7 @@ function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotific
   // 优先按 details.reason 匹配（更具体的错误分类）
   switch (error.details?.reason) {
     case 'PARSE_FAILED': { return 'invalid-folder' }
-    case 'UNSUPPORTED_SCHEMA': { return 'game-schema-too-new' }
+    case 'UNSUPPORTED_SCHEMA': { return 'engine-schema-too-new' }
     case 'LEGACY_ENGINE': { return 'unsupported-legacy-engine' }
     case 'DUPLICATE_ENGINE': { return 'duplicate-engine' }
     case 'ENGINE_NOT_FOUND': { return 'engine-not-found' }

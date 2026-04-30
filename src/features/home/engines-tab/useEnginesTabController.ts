@@ -23,6 +23,7 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
     messages: {
       alreadyRegistered: t => t('home.engines.importAlreadyExists'),
       duplicateEngine: t => t('engine.duplicateEngine'),
+      engineSchemaTooNew: t => t('home.engines.importSchemaTooNew'),
       invalidFolder: t => t('home.engines.importInvalidFolder'),
       multipleFolders: t => t('home.engines.importMultipleFolders'),
       selectFolderTitle: t => t('common.dialogs.selectEngineFolder'),

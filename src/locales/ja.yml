@@ -123,9 +123,10 @@ home:
     engineIcon: "{name} エンジンアイコン"
     importSuccess: エンジンのインポートに成功しました
     importAlreadyExists: このエンジンは既に存在します
-    importInvalidFolder: これは有効なエンジンフォルダではありません
-    importTargetConflict: 移動先に同名のエンジンディレクトリが既に存在します。整理してから再試行してください。
-    importUnsupportedLegacyEngine: レガシーエンジンは直接インポートできません。このエンジンを含むプロジェクトをインポートするか、サポートされたエンジン版を使用してください。
+    importInvalidFolder: エンジンフォルダのようには見えません。中身を確認してください。
+    importSchemaTooNew: このエンジンは現在のアプリには新しすぎます。アプリをアップグレードしてから再度お試しください。
+    importTargetConflict: インストール先が既に使用されています。競合するフォルダを削除してから再試行してください。
+    importUnsupportedLegacyEngine: このエンジンは古すぎます。新しいバージョンを使用してください。
     importUnknownError: エンジンのインポート中に不明なエラーが発生しました
     importMultipleFolders: 一度にインポートできるエンジンフォルダは1つだけです
     noEngineTitle: 利用可能なゲームエンジンがありません

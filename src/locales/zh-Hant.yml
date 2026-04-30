@@ -123,9 +123,10 @@ home:
     engineIcon: "{name} 引擎圖示"
     importSuccess: 引擎匯入成功
     importAlreadyExists: 該引擎已存在
-    importInvalidFolder: 這不是一個有效的引擎資料夾
-    importTargetConflict: 目標位置已有同名引擎目錄，請先清理後重試
-    importUnsupportedLegacyEngine: 不支援直接匯入舊版引擎，請匯入包含該引擎的專案，或改用受支援的引擎版本。
+    importInvalidFolder: 這不像是引擎資料夾，請確認目錄結構
+    importSchemaTooNew: 該引擎版本過新，請升級應用後再嘗試匯入
+    importTargetConflict: 安裝位置已被佔用，請先刪除衝突的資料夾後重試
+    importUnsupportedLegacyEngine: 該引擎版本過舊，請改用新版本
     importUnknownError: 匯入引擎時發生未知錯誤
     importMultipleFolders: 一次只能匯入一個引擎資料夾
     noEngineTitle: 沒有找到可用的遊戲引擎

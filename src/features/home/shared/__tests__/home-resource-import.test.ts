@@ -99,11 +99,11 @@ describe('首页共享导入纯逻辑', () => {
     })
   })
 
-  it('manifest schema 不受支持错误会映射为专用通知', () => {
+  it('engine manifest schema 不受支持错误会映射为引擎专用通知', () => {
     expect(resolveHomeResourceImportNotification(new AppError('INVALID_MANIFEST', 'unsupported manifest schema', {
       details: { reason: 'UNSUPPORTED_SCHEMA', schemaVersion: '2.0.0', supportedMajor: 1 },
     }))).toEqual({
-      kind: 'game-schema-too-new',
+      kind: 'engine-schema-too-new',
       level: 'error',
     })
   })

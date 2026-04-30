@@ -123,9 +123,10 @@ home:
     engineIcon: "{name} engine icon"
     importSuccess: Engine imported successfully
     importAlreadyExists: This engine already exists
-    importInvalidFolder: This is not a valid engine folder
-    importTargetConflict: A managed engine directory already exists at the target. Please clean it up and retry.
-    importUnsupportedLegacyEngine: Legacy engines cannot be imported directly. Import a project containing this engine, or use a supported engine version instead.
+    importInvalidFolder: This does not look like an engine folder. Please check its contents.
+    importSchemaTooNew: This engine is too new for the current app. Please upgrade the app and try again.
+    importTargetConflict: The install location is already in use. Please remove the conflicting folder and retry.
+    importUnsupportedLegacyEngine: This engine is too old. Please use a newer version.
     importUnknownError: An unknown error occurred while importing the engine
     importMultipleFolders: Only one engine folder can be imported at a time
     noEngineTitle: No Available Game Engines
