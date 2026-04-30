@@ -167,6 +167,18 @@ export const useFileStore = defineStore('file', () => {
 
     await invalidateDirectoryCacheSafe(templateRoot, true)
 
+    // 失效父 game 目录：`game/template` 的 source/existence 字段是在加载父目录时
+    // 写入的，只刷新模板子树自身无法让父目录下次重渲染时看到新 lower 配置。
+    const parentGameDir = joinPath(currentProjectPath, 'game')
+    const parentItem = getItemByPath(parentGameDir)
+    if (parentItem?.isDir) {
+      parentItem.loadRevision += 1
+      parentItem.isLoaded = false
+      parentItem.loadingRevision = undefined
+      parentItem.loadingPromise = undefined
+    }
+    await invalidateDirectoryCacheSafe(parentGameDir, true)
+
     fileSystemEvents.emit({
       type: 'directory:modified',
       path: templateRoot,

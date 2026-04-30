@@ -1029,4 +1029,77 @@ describe('文件状态仓库', () => {
       '/workspace/game/foo',
     ])
   })
+
+  it('refreshTemplateOverlay 会同步失效父 game 目录', async () => {
+    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
+    resolvePreviewSiteMock.mockResolvedValue({
+      projectPath: '/workspace',
+      enginePath: '/engines/webgal',
+      templatePath: '/templates/old',
+    })
+    vfsListDirMock.mockResolvedValue([
+      { isDir: true, name: 'template', source: 'upper' },
+    ])
+
+    workspaceStoreState = reactive({
+      CWD: '/workspace',
+      currentGame: { engineId: 'engine-1', path: '/workspace' },
+    })
+    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+
+    const store = useFileStore()
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+
+    await store.getFolderContents('/workspace/game')
+    const gameItem = store.getItemByPath('/workspace/game')
+    expect(gameItem).toBeDefined()
+    expect(gameItem?.isDir).toBe(true)
+    expect((gameItem as { isLoaded: boolean }).isLoaded).toBe(true)
+
+    await store.refreshTemplateOverlay('/workspace', { nextTemplatePath: '/templates/new' })
+
+    const refreshedGameItem = store.getItemByPath('/workspace/game')
+    expect((refreshedGameItem as { isLoaded: boolean }).isLoaded).toBe(false)
+  })
+
+  it('refreshTemplateOverlay 在父 game 目录尚未加载时不会抛错', async () => {
+    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
+    resolvePreviewSiteMock.mockResolvedValue({
+      projectPath: '/workspace',
+      enginePath: '/engines/webgal',
+      templatePath: '/templates/old',
+    })
+    vfsListDirMock.mockResolvedValue([])
+
+    workspaceStoreState = reactive({
+      CWD: '/workspace',
+      currentGame: { engineId: 'engine-1', path: '/workspace' },
+    })
+    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+
+    const store = useFileStore()
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+
+    // initialize 内部已加载 game/，需要把它从 items 里移除以模拟"未加载"
+    const caches = captureFileStoreCaches()
+    try {
+      const pathToId = caches.pathToId
+      const items = caches.items
+      const gameId = pathToId?.get('/workspace/game')
+      if (gameId) {
+        items?.delete(gameId)
+        pathToId?.delete('/workspace/game')
+      }
+
+      await expect(
+        store.refreshTemplateOverlay('/workspace', { nextTemplatePath: '/templates/new' }),
+      ).resolves.toBeUndefined()
+    } finally {
+      caches.restore()
+    }
+  })
 })
