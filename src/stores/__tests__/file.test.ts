@@ -713,6 +713,41 @@ describe('文件状态仓库', () => {
     }
   })
 
+  it('部分子项被 LRU 驱逐后 getFolderContents 也会自动重新加载', async () => {
+    existsMock.mockResolvedValue(true)
+    readDirectoryItemsCachedMock
+      .mockResolvedValueOnce([
+        createFileViewerItem('/root/file-a.txt', false),
+        createFileViewerItem('/root/file-b.txt', false),
+      ])
+      .mockResolvedValueOnce([
+        createFileViewerItem('/root/file-a.txt', false),
+        createFileViewerItem('/root/file-b.txt', false),
+      ])
+
+    const caches = captureFileStoreCaches()
+
+    try {
+      const store = useFileStore()
+
+      const firstRead = await store.getFolderContents('/root')
+      expect(firstRead).toHaveLength(2)
+      expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
+
+      const pathToId = caches.pathToId
+      const items = caches.items
+      const evictedId = pathToId!.get('/root/file-a.txt')
+      expect(evictedId).toBeDefined()
+      items!.delete(evictedId!)
+
+      const secondRead = await store.getFolderContents('/root')
+      expect(secondRead.map(item => item.path)).toEqual(['/root/file-a.txt', '/root/file-b.txt'])
+      expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(2)
+    } finally {
+      caches.restore()
+    }
+  })
+
   it('VFS 写操作会携带 templatePath 传给 rename/delete/ensureWritable/resolveFilePath', async () => {
     existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
     resolvePreviewSiteMock.mockResolvedValue({

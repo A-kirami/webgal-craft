@@ -472,8 +472,8 @@ export const useFileStore = defineStore('file', () => {
     const previousChildCount = parent.childIds.length
     parent.childIds = parent.childIds.filter(id => items.has(id))
 
-    // 子项全部被 LRU 驱逐，重置加载状态触发重新加载
-    if (previousChildCount > 0 && parent.childIds.length === 0) {
+    // 子项被 LRU 驱逐时重置加载状态，避免渲染半残列表
+    if (previousChildCount !== parent.childIds.length) {
       parent.isLoaded = false
       await loadDirectory(path, parentId)
     }
