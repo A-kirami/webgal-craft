@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
   normalizeStatementPanelSingleLineValue,
@@ -6,6 +6,10 @@ import {
 } from '~/features/editor/statement-editor/panel'
 
 import type { EditorField } from '~/features/editor/command-registry/schema'
+
+vi.mock('~/stores/modal', () => ({
+  useModalStore: vi.fn(),
+}))
 
 function createFileContentField(assetType: string): EditorField {
   return {

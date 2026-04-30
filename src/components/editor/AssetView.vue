@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { File, FileImage, FileJson2, FileMusic, FileVideo, FileVolume, Folder } from '@lucide/vue'
-import { basename, join } from '@tauri-apps/api/path'
 
 import { canCreateAssetFile, resolveAssetFileNameParts } from '~/components/editor/asset-file-defaults'
 import { useAssetViewItemsLoader } from '~/components/editor/useAssetViewItemsLoader'
@@ -8,7 +7,6 @@ import { PopoverAnchor } from '~/components/ui/popover'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { getFileTreeNameSelectionEnd, resolveFileTreeDefaultFileDraft } from '~/features/editor/file-tree/file-tree'
 import { gameFs } from '~/services/game-fs'
-import { gameAssetDir } from '~/services/platform/app-paths'
 import { FileSystemItem, useFileStore } from '~/stores/file'
 import { usePreferenceStore } from '~/stores/preference'
 import { usePreviewSessionStore } from '~/stores/preview-session'
@@ -16,6 +14,7 @@ import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { FileViewerItem, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 import { handleError } from '~/utils/error-handler'
+import { getBaseName, joinPath, normalizeFsPath } from '~/utils/path'
 
 import type { FileSystemEvent } from '~/composables/useFileSystemEvents'
 
@@ -112,22 +111,21 @@ onActivated(() => {
   fileViewerRef.value?.viewport?.scrollTo({ top: scrollTop })
 })
 
-const assetBasePath = computedAsync(async () => {
+const assetBasePath = $computed(() => {
   if (!workspaceStore.currentGame?.path) {
     return ''
   }
 
-  return await gameAssetDir(workspaceStore.currentGame.path, assetType)
-}, '')
+  return joinPath(workspaceStore.currentGame.path, 'game', assetType)
+})
 
-const currentDirectoryPath = computedAsync(async () => {
-  const basePath = assetBasePath.value
-  if (!basePath) {
+const currentDirectoryPath = $computed(() => {
+  if (!assetBasePath) {
     return ''
   }
 
-  return await join(basePath, currentPath)
-}, '')
+  return currentPath ? joinPath(assetBasePath, currentPath) : assetBasePath
+})
 
 const {
   errorMsg: errorMsgRef,
@@ -135,10 +133,13 @@ const {
   items: itemsRef,
   scheduleItemsRefresh,
 } = useAssetViewItemsLoader({
-  assetBasePath,
-  currentDirectoryPath,
+  assetBasePath: () => assetBasePath,
+  currentDirectoryPath: () => currentDirectoryPath,
   currentPath: () => currentPath,
-  loadDirectory: directoryPath => fileStore.getFolderContents(directoryPath),
+  loadDirectory: async (directoryPath) => {
+    await fileStore.initialized
+    return fileStore.getFolderContents(directoryPath)
+  },
   mapItem: toFileViewerItem,
 })
 
@@ -157,7 +158,7 @@ const filteredItems = $computed(() => {
 const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(assetType))
 
 const currentDirectoryContextMenuItem = $computed(() => {
-  const directoryPath = currentDirectoryPath.value
+  const directoryPath = currentDirectoryPath
   if (!directoryPath) {
     return
   }
@@ -170,6 +171,7 @@ const currentDirectoryContextMenuItem = $computed(() => {
     isDir: true,
     name: directoryName,
     path: directoryPath,
+    source: fileStore.getItemByPath(directoryPath)?.source,
   }
 })
 
@@ -193,12 +195,7 @@ const isRenameDuplicate = $computed(() => {
   )
 })
 
-watch(() => currentPath, () => {
-  fileViewerRef.value?.scrollToIndex(0)
-  closeRenamePopover()
-})
-
-watch(() => searchQuery, () => {
+watch([() => currentPath, () => searchQuery], () => {
   fileViewerRef.value?.scrollToIndex(0)
   closeRenamePopover()
 })
@@ -218,25 +215,20 @@ function toFileViewerItem(item: FileSystemItem): FileViewerItem {
     size: item.size,
     modifiedAt: item.modifiedAt,
     createdAt: item.createdAt,
+    source: item.source,
   }
 }
 
-function normalizeFileSystemPath(path: string): string {
-  return path
-    .replaceAll('\\', '/')
-    .replace(/\/+$/, '')
-}
-
 function isPathWithinDirectory(path: string, directoryPath: string): boolean {
-  const normalizedPath = normalizeFileSystemPath(path)
-  const normalizedDirectoryPath = normalizeFileSystemPath(directoryPath)
+  const normalizedPath = normalizeFsPath(path)
+  const normalizedDirectoryPath = normalizeFsPath(directoryPath)
 
   return normalizedPath === normalizedDirectoryPath
     || normalizedPath.startsWith(`${normalizedDirectoryPath}/`)
 }
 
 function isFileSystemEventRelevant(event: FileSystemEvent): boolean {
-  const directoryPath = currentDirectoryPath.value
+  const directoryPath = currentDirectoryPath
   if (!directoryPath) {
     return false
   }
@@ -277,13 +269,19 @@ function getIconComponent(item: FileViewerItem) {
 }
 
 function handleNavigate(item: FileViewerItem): void {
-  const basePath = assetBasePath.value
+  const basePath = assetBasePath
   if (!basePath) {
     currentPath = ''
     return
   }
 
-  currentPath = item.path.replace(basePath, '')
+  const normalizedItem = normalizeFsPath(item.path)
+  const normalizedBase = normalizeFsPath(basePath)
+  if (normalizedItem === normalizedBase) {
+    currentPath = ''
+  } else if (normalizedItem.startsWith(`${normalizedBase}/`)) {
+    currentPath = normalizedItem.slice(normalizedBase.length + 1)
+  }
 }
 
 function handleSelect(item: FileViewerItem): void {
@@ -331,7 +329,7 @@ function isItemVisibleInCurrentFilter(path: string): boolean {
 }
 
 function isCurrentDirectorySnapshotActive(directoryPathSnapshot: string | undefined): boolean {
-  return !!directoryPathSnapshot && currentDirectoryPath.value === directoryPathSnapshot
+  return !!directoryPathSnapshot && currentDirectoryPath === directoryPathSnapshot
 }
 
 async function resolveRenameAnchor(
@@ -517,11 +515,11 @@ async function handleContextMenuCreateItem(
     return
   }
 
-  const currentDirectorySnapshot = currentDirectoryPath.value || item.path
+  const currentDirectorySnapshot = currentDirectoryPath || item.path
 
   try {
     const createdPath = await options.create(item.path, options.name)
-    const createdName = await basename(createdPath)
+    const createdName = getBaseName(createdPath)
 
     scheduleItemsRefresh(true)
 

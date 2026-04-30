@@ -44,11 +44,6 @@ export function engineIconPath(enginePath: string): Promise<string> {
   return join(enginePath, 'icons', 'favicon.ico')
 }
 
-/** 引擎清单: {enginePath}/manifest.json */
-export function engineManifestPath(enginePath: string): Promise<string> {
-  return join(enginePath, 'manifest.json')
-}
-
 /** 模板清单: {templatePath}/template.json */
 export function templateManifestPath(templatePath: string): Promise<string> {
   return join(templatePath, 'template.json')

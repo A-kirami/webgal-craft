@@ -1,33 +1,23 @@
 <script setup lang="ts">
-import { sep } from '@tauri-apps/api/path'
-
-import { gameAssetDir } from '~/services/platform/app-paths'
 import { useWorkspaceStore } from '~/stores/workspace'
+import { joinPath } from '~/utils/path'
 
 const { assetType } = defineProps<{ assetType: string }>()
 
 let currentPath = $(defineModel<string>('current-path', { required: true }))
 
 const workspaceStore = useWorkspaceStore()
-const pathSeparator = sep()
 
-const rootPath = computedAsync(async () => {
+const rootPath = $computed(() => {
   const gamePath = workspaceStore.currentGame?.path
   if (!gamePath) {
     return ''
   }
-  return await gameAssetDir(gamePath, assetType)
-}, '')
-
-function toNativePath(path: string): string {
-  if (!path || pathSeparator === '/') {
-    return path
-  }
-  return path.replaceAll('/', pathSeparator)
-}
+  return joinPath(gamePath, 'game', assetType)
+})
 
 function handleNavigate(path: string) {
-  currentPath = toNativePath(path)
+  currentPath = path
 }
 </script>
 

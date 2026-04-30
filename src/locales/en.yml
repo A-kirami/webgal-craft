@@ -539,7 +539,9 @@ edit:
     frames: "{count} frames"
     statements: "{count} statements"
     engine: Engine
+    engineMissing: Engine unavailable
     template: Template
+    templateFollowing: 'Template: Follow Current Engine'
   fileTree:
     newFile: New File
     newFolder: New Folder
