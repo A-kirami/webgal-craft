@@ -10,6 +10,7 @@ import { useModalStore } from '~/stores/modal'
 import { useResourceStore } from '~/stores/resource'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 import { useWorkspaceStore } from '~/stores/workspace'
+import { toComparablePath } from '~/utils/path'
 
 import type { DiscoveredResource } from './discovered-resource'
 import type { Engine, Game, Template } from '~/database/model'
@@ -196,7 +197,7 @@ function getDiscoveredResourceKey(type: ResourceType, resource: DiscoveredResour
         : resource.path
     }
     case 'games': {
-      return resource.path
+      return toComparablePath(resource.path)
     }
     default: {
       throw new Error(`未知的资源类型: ${type satisfies never}`)
@@ -220,7 +221,7 @@ function getExistingResourceKey(
         : resource.path
     }
     case 'games': {
-      return resource.path
+      return toComparablePath(resource.path)
     }
     default: {
       throw new Error(`未知的资源类型: ${type satisfies never}`)
