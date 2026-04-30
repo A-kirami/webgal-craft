@@ -574,7 +574,22 @@ async function inspectGame(
     }
   }
 
-  const metadata = await getGameMetadata(normalizedPath)
+  let metadata: GameMetadata
+  try {
+    metadata = await getGameMetadata(normalizedPath)
+  } catch (error) {
+    return {
+      availability: 'broken',
+      warnings: [],
+      blockingIssue: {
+        code: 'INVALID_CONFIG',
+        message: '游戏配置解析失败',
+        details: { reason: 'PARSE_FAILED', parseError: String(error) },
+      },
+      normalizedPath,
+      comparablePath,
+    }
+  }
   if (!metadata.name?.trim()) {
     return {
       availability: 'broken',
