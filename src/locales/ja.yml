@@ -539,6 +539,7 @@ edit:
     frames: "{count} フレーム"
     statements: "{count} ステートメント"
     engine: エンジン
+    engineMissing: エンジンが利用できません
     template: テンプレート
     templateFollowing: 'テンプレート：現在のエンジンに従う'
   fileTree:

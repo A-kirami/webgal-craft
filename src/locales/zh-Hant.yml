@@ -539,6 +539,7 @@ edit:
     frames: "{count} 幀"
     statements: "{count} 條語句"
     engine: 引擎
+    engineMissing: 引擎不可用
     template: 模板
     templateFollowing: 模板：跟隨目前引擎
   fileTree:

@@ -40,6 +40,8 @@ watch(() => workspaceStore.currentGame?.engineId, async (engineId) => {
     engineLabel = undefined
     return
   }
+  // 切换 engineId 时立即清空，避免显示旧引擎名
+  engineLabel = undefined
   const engine = await db.engines.get(engineId)
   // 异步过程中引擎可能切换，丢弃过时结果
   if (workspaceStore.currentGame?.engineId !== engineId) {
@@ -161,12 +163,12 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
   <div class="text-xs px-3 border-t bg-gray-50 flex h-6 items-center dark:bg-gray-900">
     <div class="flex gap-3 min-w-0 items-center">
       <button
-        v-if="isEngineBound && engineLabel"
+        v-if="isEngineBound"
         class="text-muted-foreground flex gap-1 cursor-pointer transition-colors items-center hover:text-foreground"
         @click="openSwitchEngine"
       >
         <Layers class="h-3 w-3" :stroke-width="1.5" />
-        <span class="max-w-30 truncate">{{ engineLabel }}</span>
+        <span class="max-w-30 truncate">{{ engineLabel ?? $t('edit.statusBar.engineMissing') }}</span>
       </button>
 
       <button
