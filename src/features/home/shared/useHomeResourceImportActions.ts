@@ -23,7 +23,6 @@ export interface HomeResourceImportMessages {
   duplicateEngine?: I18nLike
   engineNotFound?: I18nLike
   engineUnavailable?: I18nLike
-  gameAlreadyRegistered?: I18nLike
   gameConfigCorrupted?: I18nLike
   gameSchemaTooNew?: I18nLike
   importCancelled?: I18nLike
@@ -44,7 +43,6 @@ const NOTIFICATION_MESSAGE_KEYS: Record<HomeResourceImportNotification['kind'], 
   'duplicate-resource': 'duplicateResource',
   'unsupported-legacy-engine': 'unsupportedLegacyEngine',
   'duplicate-engine': 'duplicateEngine',
-  'game-already-registered': 'gameAlreadyRegistered',
   'game-config-corrupted': 'gameConfigCorrupted',
   'game-schema-too-new': 'gameSchemaTooNew',
   'engine-not-found': 'engineNotFound',

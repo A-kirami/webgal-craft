@@ -102,7 +102,6 @@ home:
     dropGameFolder: 將遊戲資料夾拖放到此處匯入
     gameCover: "{name} 遊戲封面"
     gameIcon: "{name} 遊戲圖示"
-    importAlreadyRegistered: 該專案已註冊
     importCancelled: 匯入已取消
     importConfigCorrupted: 專案設定檔損壞
     importEngineNotFound: 引擎不存在

@@ -153,6 +153,8 @@ vi.mock('~/services/template-switch', () => ({
 vi.mock('~/services/platform/app-paths', () => ({
   gameConfigPath: gameConfigPathMock,
   projectConfigPath: projectConfigPathMock,
+  gameIconPath: vi.fn(async (gamePath: string) => `${gamePath}/icons/favicon.ico`),
+  gameCoverPath: vi.fn(async (gamePath: string, fileName: string) => `${gamePath}/game/background/${fileName}`),
 }))
 
 vi.mock('~/stores/resource', () => ({
@@ -498,7 +500,7 @@ describe('gameManager', () => {
     }))
   })
 
-  it('importGame 对匹配到 unavailable 引擎的配置项目会保留关联并记录受限预览警告', async () => {
+  it('importGame 对匹配到 broken availability 引擎的配置项目会保留关联并记录受限预览警告', async () => {
     existsMock
       .mockResolvedValueOnce(true)
       .mockResolvedValueOnce(true)
@@ -513,7 +515,7 @@ describe('gameManager', () => {
       id: 'engine-1',
       name: 'WebGAL',
       version: '4.5.0',
-      status: 'unavailable',
+      availability: 'broken',
     }))
 
     await expect(gameManager.importGame('/games/vfs')).resolves.toBe('game-1')
@@ -602,18 +604,26 @@ describe('gameManager', () => {
     }))
   })
 
-  it('importGame 遇到已注册项目时会返回稳定错误原因', async () => {
+  it('importGame 遇到已注册项目时会幂等返回既有 ID', async () => {
     existsMock.mockResolvedValue(true)
-    dbGameWhereFirstMock.mockResolvedValue(createTestGame({
+    dbGamesToArrayMock.mockResolvedValue([createTestGame({
       id: 'game-existing',
       path: '/games/demo',
-    }))
+    })])
 
-    await expect(gameManager.importGame('/games/demo')).rejects.toEqual(
-      new AppError('IO_ERROR', '该项目已注册', {
-        details: { reason: 'GAME_ALREADY_REGISTERED' },
-      }),
-    )
+    await expect(gameManager.importGame('/games/demo')).resolves.toBe('game-existing')
+    expect(dbGameAddMock).not.toHaveBeenCalled()
+  })
+
+  it('importGame 对大小写不同但归一化相同的路径也会幂等返回既有 ID', async () => {
+    existsMock.mockResolvedValue(true)
+    dbGamesToArrayMock.mockResolvedValue([createTestGame({
+      id: 'game-existing',
+      path: '/Games/Demo',
+    })])
+
+    await expect(gameManager.importGame('/games/demo')).resolves.toBe('game-existing')
+    expect(dbGameAddMock).not.toHaveBeenCalled()
   })
 
   it('importGame 在用户取消选择引擎时会返回取消原因', async () => {
@@ -671,11 +681,11 @@ describe('gameManager', () => {
     })
   })
 
-  it('getGameEnginePath 会忽略 unavailable 引擎，允许回退为仅编辑本地 game 目录', async () => {
+  it('getGameEnginePath 会忽略 broken availability 引擎，允许回退为仅编辑本地 game 目录', async () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
       path: '/engines/WebGAL/4.5.0',
-      status: 'unavailable',
+      availability: 'broken',
     }))
 
     await expect(gameManager.getGameEnginePath({
@@ -688,7 +698,7 @@ describe('gameManager', () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
       path: '/engines/WebGAL/4.5.0',
-      status: 'unavailable',
+      availability: 'broken',
     }))
     readProjectConfigMock.mockResolvedValue({
       version: 1,
@@ -710,6 +720,69 @@ describe('gameManager', () => {
     await expect(gameManager.importGame('/games/invalid')).rejects.toEqual(
       new AppError('INVALID_STRUCTURE', '无效的游戏文件夹'),
     )
+  })
+
+  it('inspectGame 在路径不存在时返回 missing + DIR_NOT_FOUND', async () => {
+    existsMock.mockResolvedValue(false)
+
+    await expect(gameManager.inspectGame('/games/missing')).resolves.toMatchObject({
+      availability: 'missing',
+      warnings: [],
+      blockingIssue: { code: 'DIR_NOT_FOUND' },
+    })
+  })
+
+  it('inspectGame 在缺失 game/config.txt 时返回 broken + INVALID_STRUCTURE', async () => {
+    existsMock.mockImplementation(async (path: string) => path === '/games/demo')
+
+    await expect(gameManager.inspectGame('/games/demo')).resolves.toMatchObject({
+      availability: 'broken',
+      blockingIssue: { code: 'INVALID_STRUCTURE' },
+    })
+  })
+
+  it('inspectGame 在 gameName 为空时返回 broken + INVALID_CONFIG', async () => {
+    existsMock.mockResolvedValue(true)
+    gameCmdsGetGameConfigMock.mockResolvedValue(createGameConfig([
+      { key: 'Game_name', value: '' },
+      { key: 'Title_img', value: 'cover.png' },
+    ]))
+
+    await expect(gameManager.inspectGame('/games/demo')).resolves.toMatchObject({
+      availability: 'broken',
+      blockingIssue: { code: 'INVALID_CONFIG' },
+    })
+  })
+
+  it('inspectGame 在 favicon 缺失时只产 warning', async () => {
+    existsMock.mockImplementation(async (path: string) => path !== '/games/demo/icons/favicon.ico')
+
+    await expect(gameManager.inspectGame('/games/demo')).resolves.toMatchObject({
+      availability: 'available',
+      warnings: [{ code: 'missing-favicon' }],
+    })
+  })
+
+  it('inspectGame 在 titleImg 为空时产 missing-title-image warning', async () => {
+    existsMock.mockResolvedValue(true)
+    gameCmdsGetGameConfigMock.mockResolvedValue(createGameConfig([
+      { key: 'Game_name', value: 'Demo Game' },
+      { key: 'Title_img', value: '' },
+    ]))
+
+    await expect(gameManager.inspectGame('/games/demo')).resolves.toMatchObject({
+      availability: 'available',
+      warnings: [{ code: 'missing-title-image' }],
+    })
+  })
+
+  it('inspectGame 在 titleImg 文件不存在时产 missing-title-image-file warning', async () => {
+    existsMock.mockImplementation(async (path: string) => path !== '/games/demo/game/background/cover.png')
+
+    await expect(gameManager.inspectGame('/games/demo')).resolves.toMatchObject({
+      availability: 'available',
+      warnings: [{ code: 'missing-title-image-file' }],
+    })
   })
 
   it('refreshRegisteredGameSnapshot 会按路径刷新数据库快照，并同步当前工作区游戏', async () => {
@@ -872,6 +945,7 @@ describe('gameManager', () => {
       createdAt: 0,
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
       status: 'created',
+      availability: 'available',
       metadata: {
         name: 'Demo',
         titleImg: 'cover.png',

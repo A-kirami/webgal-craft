@@ -102,7 +102,6 @@ home:
     dropGameFolder: ゲームフォルダをここにドラッグ＆ドロップしてインポート
     gameCover: "{name} ゲームカバー"
     gameIcon: "{name} ゲームアイコン"
-    importAlreadyRegistered: このプロジェクトは既に登録されています
     importCancelled: インポートがキャンセルされました
     importConfigCorrupted: プロジェクト設定ファイルが破損しています
     importEngineNotFound: エンジンが見つかりません

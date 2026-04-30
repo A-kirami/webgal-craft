@@ -33,7 +33,6 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
     messages: {
       engineNotFound: t => t('home.games.importEngineNotFound'),
       engineUnavailable: t => t('home.games.importEngineUnavailable'),
-      gameAlreadyRegistered: t => t('home.games.importAlreadyRegistered'),
       gameConfigCorrupted: t => t('home.games.importConfigCorrupted'),
       gameSchemaTooNew: t => t('home.games.importSchemaVersionTooNew'),
       invalidFolder: t => t('home.games.importInvalidFolder'),

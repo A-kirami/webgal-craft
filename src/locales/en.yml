@@ -102,7 +102,6 @@ home:
     dropGameFolder: Drag and drop game folder here to import
     gameCover: "{name} game cover"
     gameIcon: "{name} game icon"
-    importAlreadyRegistered: This project is already registered
     importCancelled: Import cancelled
     importConfigCorrupted: Project configuration file is corrupted
     importEngineNotFound: Engine not found

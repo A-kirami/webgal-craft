@@ -7,7 +7,6 @@ export interface HomeResourceImportNotification {
     | 'duplicate-resource'
     | 'unsupported-legacy-engine'
     | 'duplicate-engine'
-    | 'game-already-registered'
     | 'game-config-corrupted'
     | 'game-schema-too-new'
     | 'engine-not-found'
@@ -62,7 +61,6 @@ function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotific
     case 'UNSUPPORTED_MANIFEST_SCHEMA': { return 'game-schema-too-new' }
     case 'UNSUPPORTED_LEGACY_ENGINE': { return 'unsupported-legacy-engine' }
     case 'DUPLICATE_ENGINE': { return 'duplicate-engine' }
-    case 'GAME_ALREADY_REGISTERED': { return 'game-already-registered' }
     case 'ENGINE_NOT_FOUND': { return 'engine-not-found' }
     case 'ENGINE_UNAVAILABLE': { return 'engine-unavailable' }
     case 'IMPORT_CANCELLED': { return 'import-cancelled' }

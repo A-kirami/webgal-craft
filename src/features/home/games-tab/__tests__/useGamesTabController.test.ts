@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { AppError } from '~/types/errors'
-
 import { useGamesTabController } from '../useGamesTabController'
 
 const {
@@ -144,16 +142,14 @@ describe('useGamesTabController 行为', () => {
     expect(routerPushMock).toHaveBeenCalledWith('/edit/game-2')
   })
 
-  it('选择目录导入已注册游戏时会提示专用消息', async () => {
+  it('选择目录导入已注册游戏时按幂等成功提示', async () => {
     openDialogMock.mockResolvedValue('/games/registered')
-    importGameMock.mockRejectedValue(new AppError('IO_ERROR', '该项目已注册', {
-      details: { reason: 'GAME_ALREADY_REGISTERED' },
-    }))
+    importGameMock.mockResolvedValue('game-existing')
 
     const controller = createController()
 
     await controller.selectGameFolder()
 
-    expect(notifyErrorMock).toHaveBeenCalledWith('home.games.importAlreadyRegistered')
+    expect(notifyErrorMock).not.toHaveBeenCalled()
   })
 })
