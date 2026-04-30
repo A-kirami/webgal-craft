@@ -26,7 +26,7 @@ const availableTemplates = $computed(() =>
 )
 
 const availableEngines = $computed(() =>
-  (engines ?? []).filter(engine => engine.status === 'created'),
+  (engines ?? []).filter(engine => engine.status === 'created' && engine.availability === 'available'),
 )
 
 const currentEngine = $computed(() =>

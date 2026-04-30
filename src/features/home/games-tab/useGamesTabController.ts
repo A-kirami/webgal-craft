@@ -2,12 +2,19 @@ import { useHomeResourceImportActions } from '~/features/home/shared/useHomeReso
 import { gameManager } from '~/services/game-manager'
 
 import type { EngineStatus, Game } from '~/database/model'
+import type { ResourceAvailability } from '~/services/resource-health'
 import type { EngineRef } from '~/types/project-config'
 import type { I18nT } from '~/utils/i18n-like'
 
+interface EngineAvailabilityCheck {
+  id: string
+  status: EngineStatus
+  availability: ResourceAvailability
+}
+
 interface UseGamesTabControllerOptions {
   activeProgress: ReadonlyMap<string, number>
-  engines?: readonly { id: string, status: EngineStatus }[] | (() => readonly { id: string, status: EngineStatus }[] | undefined)
+  engines?: readonly EngineAvailabilityCheck[] | (() => readonly EngineAvailabilityCheck[] | undefined)
   openCreateGameModal: () => void
   openDeleteGameModal: (game: Game) => void
   openNoEngineAlertModal: (onConfirm: () => void) => void
@@ -63,7 +70,7 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
       return
     }
 
-    const hasUsableEngine = engines.some(engine => engine.status === 'created')
+    const hasUsableEngine = engines.some(engine => engine.status === 'created' && engine.availability === 'available')
     if (!hasUsableEngine) {
       options.openNoEngineAlertModal(options.switchToEnginesTab)
       return

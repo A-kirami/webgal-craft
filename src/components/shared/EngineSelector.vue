@@ -13,7 +13,7 @@ const availableGroups = $computed(() =>
   groups
     .map(group => ({
       ...group,
-      engines: group.engines.filter(engine => engine.status === 'created'),
+      engines: group.engines.filter(engine => engine.status === 'created' && engine.availability === 'available'),
     }))
     .filter(group => group.engines.length > 0),
 )

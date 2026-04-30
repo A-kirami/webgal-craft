@@ -45,7 +45,7 @@ function createGame() {
     return
   }
 
-  const hasUsableEngine = resourceStore.engines.some(engine => engine.status === 'created')
+  const hasUsableEngine = resourceStore.engines.some(engine => engine.status === 'created' && engine.availability === 'available')
   if (!hasUsableEngine) {
     modalStore.open('AlertModal', {
       title: t('home.engines.noEngineTitle'),

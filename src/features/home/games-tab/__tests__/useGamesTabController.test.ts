@@ -54,7 +54,7 @@ describe('useGamesTabController 行为', () => {
   function createController(overrides?: Partial<Parameters<typeof useGamesTabController>[0]>) {
     return useGamesTabController({
       activeProgress: new Map<string, number>(),
-      engines: [{ id: 'engine-1', status: 'created' }],
+      engines: [{ id: 'engine-1', status: 'created', availability: 'available' }],
       openCreateGameModal: openCreateGameModalMock,
       openDeleteGameModal: openDeleteGameModalMock,
       openNoEngineAlertModal: openNoEngineAlertModalMock,
@@ -90,11 +90,11 @@ describe('useGamesTabController 行为', () => {
   })
 
   it('创建游戏时会读取最新的引擎列表', () => {
-    let engines: { id: string, status: 'created' | 'error' }[] | undefined = []
+    let engines: { id: string, status: 'created' | 'error', availability: 'available' | 'broken' }[] | undefined = []
 
     const controller = createController({ engines: () => engines })
 
-    engines = [{ id: 'engine-1', status: 'created' }]
+    engines = [{ id: 'engine-1', status: 'created', availability: 'available' }]
     controller.createGame()
 
     expect(openCreateGameModalMock).toHaveBeenCalledTimes(1)
@@ -104,8 +104,21 @@ describe('useGamesTabController 行为', () => {
   it('已安装引擎全部失效时创建游戏会弹出引导', () => {
     const controller = createController({
       engines: [
-        { id: 'engine-1', status: 'error' },
-        { id: 'engine-2', status: 'creating' },
+        { id: 'engine-1', status: 'error', availability: 'available' },
+        { id: 'engine-2', status: 'creating', availability: 'available' },
+      ],
+    })
+
+    controller.createGame()
+
+    expect(openCreateGameModalMock).not.toHaveBeenCalled()
+    expect(openNoEngineAlertModalMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('已安装引擎仅有 broken availability 时创建游戏会弹出引导', () => {
+    const controller = createController({
+      engines: [
+        { id: 'engine-1', status: 'created', availability: 'broken' },
       ],
     })
 
