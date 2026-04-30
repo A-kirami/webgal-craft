@@ -2,8 +2,7 @@
 import { ChartSpline, FileText, Image as ImageIcon, Layers, Link2, Palette } from '@lucide/vue'
 
 import { fsCmds } from '~/commands/fs'
-import { projectConfigCmds } from '~/commands/project-config'
-import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { useTemplateLabel } from '~/composables/useTemplateLabel'
 import { db } from '~/database/db'
 import {
   calculateEditorStatusBarTextStats,
@@ -59,87 +58,7 @@ function openSwitchTemplate() {
   }
 }
 
-let templateLabel = $ref<string>()
-let isFollowingEngine = $ref(false)
-
-async function refreshTemplateLabel(gamePath: string | undefined) {
-  if (!gamePath) {
-    templateLabel = undefined
-    isFollowingEngine = false
-    return
-  }
-
-  try {
-    const config = await projectConfigCmds.readProjectConfig(gamePath)
-    if (workspaceStore.currentGame?.path !== gamePath) {
-      return
-    }
-
-    const binding = config.template
-
-    if (binding?.kind === 'standalone') {
-      templateLabel = binding.name
-      isFollowingEngine = false
-      return
-    }
-
-    if (binding?.kind === 'engineBuiltin') {
-      const engine = binding.engine.version === undefined
-        ? undefined
-        : await db.engines
-            .where('[engineId+version]')
-            .equals([binding.engine.id, binding.engine.version])
-            .first()
-      if (workspaceStore.currentGame?.path !== gamePath) {
-        return
-      }
-      templateLabel = engine
-        ? formatEngineLabel(engine)
-        : (binding.engine.version
-            ? `${binding.engine.id} ${binding.engine.version}`
-            : binding.engine.id)
-      isFollowingEngine = false
-      return
-    }
-
-    // 缺省 → 跟随当前引擎
-    const engineId = workspaceStore.currentGame?.engineId
-    const engine = engineId ? await db.engines.get(engineId) : undefined
-    if (workspaceStore.currentGame?.path !== gamePath) {
-      return
-    }
-    templateLabel = engine ? formatEngineLabel(engine) : undefined
-    isFollowingEngine = templateLabel !== undefined
-  } catch (error) {
-    handleError(error, { silent: true })
-    templateLabel = undefined
-    isFollowingEngine = false
-  }
-}
-
-watch(() => workspaceStore.currentGame?.path, (path) => {
-  refreshTemplateLabel(path)
-}, { immediate: true })
-
-watch(() => workspaceStore.currentGame?.engineId, () => {
-  // 引擎切换会改变 followEngine / engineBuiltin 的解析结果
-  refreshTemplateLabel(workspaceStore.currentGame?.path)
-})
-
-// 模板切换通过 directory:modified 事件广播
-const fileSystemEvents = useFileSystemEvents()
-const stopTemplateChangeListener = fileSystemEvents.on('directory:modified', (event) => {
-  const gamePath = workspaceStore.currentGame?.path
-  if (!gamePath) {
-    return
-  }
-  const normalizedEvent = event.path.replaceAll('\\', '/')
-  const normalizedRoot = `${gamePath.replaceAll('\\', '/')}/game/template`
-  if (normalizedEvent === normalizedRoot || normalizedEvent.startsWith(`${normalizedRoot}/`)) {
-    refreshTemplateLabel(gamePath)
-  }
-})
-onScopeDispose(stopTemplateChangeListener)
+const { label: templateLabel, followingEngine: isFollowingEngine } = useTemplateLabel()
 
 const editableState = $computed(() =>
   currentState && isEditableEditor(currentState) ? currentState : undefined,
