@@ -212,6 +212,10 @@ function canAutoBindMatchedEngine(engine: Engine): boolean {
   return engine.status === 'created'
 }
 
+function isEngineUsable(engine: Pick<Engine, 'status' | 'availability'>): boolean {
+  return engine.status === 'created' && engine.availability === 'available'
+}
+
 async function writeSelfContainedProjectConfig(gamePath: string): Promise<void> {
   await projectConfigCmds.writeProjectConfig(gamePath, { version: 1 })
 }
@@ -267,7 +271,7 @@ async function resolveSelectableEngine(
     })
   }
 
-  if (engine.status !== 'created' || engine.availability !== 'available') {
+  if (!isEngineUsable(engine)) {
     throw new AppError('IO_ERROR', '引擎不可用', {
       details: { reason: 'ENGINE_UNAVAILABLE' },
     })
@@ -370,7 +374,7 @@ async function createGame(gameName: string, gamePath: string, engineId: string, 
     throw new AppError('IO_ERROR', '引擎不存在')
   }
 
-  if (engine.status !== 'created' || engine.availability !== 'available') {
+  if (!isEngineUsable(engine)) {
     throw new AppError('IO_ERROR', '引擎不可用')
   }
 
@@ -472,7 +476,7 @@ async function deleteGame(game: Game, removeFiles: boolean = false): Promise<voi
 
 async function getGameEnginePath(game: Pick<Game, 'engineId' | 'path'>): Promise<string | undefined> {
   const { engine } = await resolveBoundEngine(game)
-  if (!engine || engine.status !== 'created' || engine.availability !== 'available') {
+  if (!engine || !isEngineUsable(engine)) {
     return undefined
   }
 
@@ -624,7 +628,7 @@ async function resolvePreviewSite(game: Pick<Game, 'engineId' | 'path'>): Promis
   const { config, engine } = await resolveBoundEngine(game)
   const isEngineBound = !!game.engineId || !!config?.engine
 
-  if (isEngineBound && (engine?.status !== 'created' || engine.availability !== 'available')) {
+  if (isEngineBound && (!engine || !isEngineUsable(engine))) {
     throw new AppError('IO_ERROR', '引擎不可用')
   }
 
