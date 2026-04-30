@@ -37,6 +37,13 @@ describe('首页共享导入纯逻辑', () => {
     })
   })
 
+  it('TARGET_CONFLICT 会映射为目标冲突通知', () => {
+    expect(resolveHomeResourceImportNotification(new AppError('TARGET_CONFLICT', '目标引擎目录已存在'))).toEqual({
+      kind: 'target-conflict',
+      level: 'error',
+    })
+  })
+
   it('DUPLICATE_RESOURCE 会映射为重复资源通知', () => {
     expect(resolveHomeResourceImportNotification(new AppError('DUPLICATE_RESOURCE', 'duplicate'))).toEqual({
       kind: 'duplicate-resource',

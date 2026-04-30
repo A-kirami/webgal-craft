@@ -6,6 +6,7 @@ export interface HomeResourceImportNotification {
     | 'already-registered'
     | 'invalid-folder'
     | 'duplicate-resource'
+    | 'target-conflict'
     | 'unsupported-legacy-engine'
     | 'duplicate-engine'
     | 'game-config-corrupted'
@@ -82,7 +83,7 @@ function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotific
   switch (error.code) {
     case 'INVALID_STRUCTURE': { return 'invalid-folder' }
     case 'INVALID_MANIFEST': { return 'invalid-folder' }
-    case 'TARGET_CONFLICT': { return 'duplicate-resource' }
+    case 'TARGET_CONFLICT': { return 'target-conflict' }
     case 'DUPLICATE_RESOURCE': { return 'duplicate-resource' }
     case 'INVALID_PROJECT_CONFIG': { return 'game-config-corrupted' }
     case 'SCHEMA_VERSION_TOO_NEW': { return 'game-schema-too-new' }

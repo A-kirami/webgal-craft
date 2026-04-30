@@ -124,6 +124,7 @@ home:
     importSuccess: Engine imported successfully
     importAlreadyExists: This engine already exists
     importInvalidFolder: This is not a valid engine folder
+    importTargetConflict: A managed engine directory already exists at the target. Please clean it up and retry.
     importUnsupportedLegacyEngine: Legacy engines cannot be imported directly. Import a project containing this engine, or use a supported engine version instead.
     importUnknownError: An unknown error occurred while importing the engine
     importMultipleFolders: Only one engine folder can be imported at a time

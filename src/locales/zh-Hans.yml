@@ -124,6 +124,7 @@ home:
     importSuccess: 引擎导入成功
     importAlreadyExists: 该引擎已存在
     importInvalidFolder: 这不是一个有效的引擎文件夹
+    importTargetConflict: 目标位置已有同名引擎目录，请先清理后重试
     importUnsupportedLegacyEngine: 不支持直接导入旧版引擎，请导入包含该引擎的项目，或改用受支持的引擎版本。
     importUnknownError: 导入引擎时发生未知错误
     importMultipleFolders: 一次只能导入一个引擎文件夹

@@ -124,6 +124,7 @@ home:
     importSuccess: エンジンのインポートに成功しました
     importAlreadyExists: このエンジンは既に存在します
     importInvalidFolder: これは有効なエンジンフォルダではありません
+    importTargetConflict: 移動先に同名のエンジンディレクトリが既に存在します。整理してから再試行してください。
     importUnsupportedLegacyEngine: レガシーエンジンは直接インポートできません。このエンジンを含むプロジェクトをインポートするか、サポートされたエンジン版を使用してください。
     importUnknownError: エンジンのインポート中に不明なエラーが発生しました
     importMultipleFolders: 一度にインポートできるエンジンフォルダは1つだけです

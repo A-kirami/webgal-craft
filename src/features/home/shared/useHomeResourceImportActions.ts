@@ -21,6 +21,7 @@ export interface HomeResourceImportMessages {
   selectFolderTitle: I18nLike
   alreadyRegistered?: I18nLike
   duplicateResource?: I18nLike
+  targetConflict?: I18nLike
   duplicateEngine?: I18nLike
   engineNotFound?: I18nLike
   engineUnavailable?: I18nLike
@@ -43,6 +44,7 @@ const NOTIFICATION_MESSAGE_KEYS: Record<HomeResourceImportNotification['kind'], 
   'already-registered': 'alreadyRegistered',
   'invalid-folder': 'invalidFolder',
   'duplicate-resource': 'duplicateResource',
+  'target-conflict': 'targetConflict',
   'unsupported-legacy-engine': 'unsupportedLegacyEngine',
   'duplicate-engine': 'duplicateEngine',
   'game-config-corrupted': 'gameConfigCorrupted',

@@ -325,7 +325,7 @@ describe('engineManager', () => {
     )
   })
 
-  it('importEngine 会拒绝同名同版本重复引擎', async () => {
+  it('importEngine 在同 engineId+version 已注册时幂等返回既有 ID', async () => {
     readEngineManifestMock.mockResolvedValue({
       status: 'ok',
       manifest: {
@@ -339,15 +339,18 @@ describe('engineManager', () => {
     })
     validateDirectoryStructureMock.mockResolvedValue(true)
     engineWhereFirstMock.mockResolvedValue(createTestEngine({
+      id: 'engine-existing-by-ref',
       name: 'WebGAL',
       version: '4.5.0',
     }))
 
-    await expect(engineManager.importEngine('/downloads/webgal')).rejects.toEqual(
-      new AppError('DUPLICATE_RESOURCE', '同名同版本的引擎已存在', {
-        details: { reason: 'DUPLICATE_ENGINE' },
-      }),
-    )
+    await expect(engineManager.importEngine('/downloads/webgal')).resolves.toEqual({
+      id: 'engine-existing-by-ref',
+      alreadyRegistered: true,
+    })
+
+    expect(addMock).not.toHaveBeenCalled()
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
   })
 
   it('importEngine 在源路径已注册时幂等返回既有 ID', async () => {

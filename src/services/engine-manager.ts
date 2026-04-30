@@ -264,19 +264,7 @@ async function assertEngineImportable(enginePath: string): Promise<EngineSnapsho
     })
   }
 
-  const snapshot = await buildEngineSnapshot(enginePath, classification.manifest)
-  const duplicate = await findEngineByRef({
-    id: snapshot.engineId,
-    version: snapshot.version,
-  })
-
-  if (duplicate) {
-    throw new AppError('DUPLICATE_RESOURCE', '同名同版本的引擎已存在', {
-      details: { reason: 'DUPLICATE_ENGINE' },
-    })
-  }
-
-  return snapshot
+  return buildEngineSnapshot(enginePath, classification.manifest)
 }
 
 async function copyAndFinalizeEngine(
@@ -403,6 +391,16 @@ async function importEngine(enginePath: string): Promise<ImportEngineResult> {
   }
 
   const snapshot = await assertEngineImportable(normalizedPath)
+
+  // 幂等：同 engineId+version 的引擎已注册（首选场景：用户拖入源目录但 DB 里只有托管目标路径）
+  const existingByRef = await findEngineByRef({
+    id: snapshot.engineId,
+    version: snapshot.version,
+  })
+  if (existingByRef) {
+    return { id: existingByRef.id, alreadyRegistered: true }
+  }
+
   const { normalizedPath: targetPath, comparablePath: targetComparablePath } = normalizeImportPath(
     await resolveManagedEnginePath(snapshot),
   )
@@ -413,11 +411,7 @@ async function importEngine(enginePath: string): Promise<ImportEngineResult> {
     return { id: await registerEngine(targetPath, snapshot), alreadyRegistered: false }
   }
 
-  // 目标路径已注册：幂等返回；否则若 fs 上存在则视为冲突
-  const existingByTarget = await findEngineByComparablePath(targetPath)
-  if (existingByTarget) {
-    return { id: existingByTarget.id, alreadyRegistered: true }
-  }
+  // 目标路径在文件系统中已存在但 DB 里无对应记录 → 冲突
   if (await exists(targetPath)) {
     throw new AppError('TARGET_CONFLICT', '目标引擎目录已存在，请先清理后重试')
   }

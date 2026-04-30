@@ -27,6 +27,7 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
       multipleFolders: t => t('home.engines.importMultipleFolders'),
       selectFolderTitle: t => t('common.dialogs.selectEngineFolder'),
       success: t => t('home.engines.importSuccess'),
+      targetConflict: t => t('home.engines.importTargetConflict'),
       unsupportedLegacyEngine: t => t('home.engines.importUnsupportedLegacyEngine'),
       unknownError: t => t('home.engines.importUnknownError'),
     },
