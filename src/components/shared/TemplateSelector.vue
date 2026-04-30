@@ -13,6 +13,7 @@ let modelValue = $(defineModel<TemplateBinding | undefined>())
 
 const props = defineProps<{
   engineId?: string
+  disabled?: boolean
 }>()
 
 const { t } = useI18n()
@@ -110,7 +111,7 @@ const selectedLabel = $computed(() => {
 </script>
 
 <template>
-  <Select v-model="selectedValue">
+  <Select v-model="selectedValue" :disabled="props.disabled">
     <SelectTrigger class="w-full">
       <SelectValue>{{ selectedLabel }}</SelectValue>
     </SelectTrigger>

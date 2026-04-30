@@ -152,6 +152,13 @@ async function switchTemplate(
     throw new AppError('IO_ERROR', '自带引擎项目不支持模板切换')
   }
 
+  const engine = await db.engines.get(game.engineId)
+  if (!engine || engine.status !== 'created' || engine.availability !== 'available') {
+    throw new AppError('IO_ERROR', '引擎不可用，无法切换模板', {
+      details: { reason: 'ENGINE_UNAVAILABLE' },
+    })
+  }
+
   if (!options.skipDirtyCheck && await isTemplateDirty(game.path)) {
     throw new AppError('IO_ERROR', '模板已修改，需要用户确认', {
       details: { reason: 'TEMPLATE_DIRTY' },
@@ -172,7 +179,6 @@ async function switchTemplate(
   await projectConfigCmds.writeProjectConfig(game.path, newConfig)
   await vfsCmds.cleanTemplateUpper(game.path)
 
-  const engine = await db.engines.get(game.engineId)
   const newTemplatePath = await resolveTemplatePath(newBinding, engine)
   await applySiteUpdate(
     () => serverCmds.updateSiteTemplate(game.path, newTemplatePath),

@@ -237,6 +237,7 @@ modals:
       confirm: 切り替えを確認
     success: テンプレートを切り替えました
     error: テンプレートの切り替えに失敗しました
+    engineUnavailable: 紐付けられたエンジンが現在利用できません。エンジンを復旧または再インストールしてからテンプレートを切り替えてください。
   deleteEngineGroup:
     title: すべてのバージョンをアンインストール
     description: エンジン {name} のすべてのバージョンをアンインストールしてもよろしいですか？
@@ -543,6 +544,7 @@ edit:
     engine: エンジン
     engineMissing: エンジンが利用できません
     template: テンプレート
+    templateMissing: テンプレートが利用できません
     templateFollowing: 'テンプレート：現在のエンジンに従う'
   fileTree:
     newFile: 新しいファイル

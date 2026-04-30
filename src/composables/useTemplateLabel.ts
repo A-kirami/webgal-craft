@@ -37,10 +37,13 @@ async function resolveBindingLabel(
     return { label, followingEngine: false }
   }
 
-  // 缺省 → 跟随当前引擎
-  const engine = fallbackEngineId ? await db.engines.get(fallbackEngineId) : undefined
-  const label = engine ? formatEngineLabel(engine) : fallbackEngineId
-  return { label, followingEngine: !!fallbackEngineId }
+  // 缺省 → 跟随当前引擎；引擎记录缺失或不可用时不暴露 UUID，由调用方按 followingEngine + label undefined 决定占位文案
+  if (!fallbackEngineId) {
+    return EMPTY_STATE
+  }
+  const engine = await db.engines.get(fallbackEngineId)
+  const label = engine ? formatEngineLabel(engine) : undefined
+  return { label, followingEngine: true }
 }
 
 export function useTemplateLabel() {

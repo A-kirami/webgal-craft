@@ -237,6 +237,7 @@ modals:
       confirm: 确认切换
     success: 模板已切换
     error: 模板切换失败
+    engineUnavailable: 绑定的引擎当前不可用，请先恢复或重新安装引擎再切换模板。
   deleteEngineGroup:
     title: 卸载全部版本
     description: 确定要卸载引擎 {name} 的全部版本吗？
@@ -543,6 +544,7 @@ edit:
     engine: 引擎
     engineMissing: 引擎不可用
     template: 模板
+    templateMissing: 模板不可用
     templateFollowing: 模板：跟随当前引擎
   fileTree:
     newFile: 新建文件

@@ -237,6 +237,7 @@ modals:
       confirm: Confirm switch
     success: Template switched
     error: Template switch failed
+    engineUnavailable: The bound engine is unavailable. Restore or reinstall it before switching templates.
   deleteEngineGroup:
     title: Uninstall All Versions
     description: Are you sure you want to uninstall all versions of engine {name}?
@@ -543,6 +544,7 @@ edit:
     engine: Engine
     engineMissing: Engine unavailable
     template: Template
+    templateMissing: Template unavailable
     templateFollowing: 'Template: Follow Current Engine'
   fileTree:
     newFile: New File
