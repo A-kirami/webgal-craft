@@ -967,4 +967,66 @@ describe('文件状态仓库', () => {
     const finalItems = await store.getFolderContents('/workspace/game/template')
     expect(finalItems.map(item => item.path)).toEqual(['/workspace/game/template/new.txt'])
   })
+
+  it('跨目录 moveEntry 会递归清理源子树并按 post-order 发出 removed 事件', async () => {
+    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
+    getGameEnginePathMock.mockResolvedValue('/engines/webgal')
+    statMock.mockImplementation(async (path: string) => createStatResult(path, false))
+    vfsResolvePathMock.mockResolvedValue('/engines/webgal/game/foo')
+    vfsMovePathMock.mockResolvedValue('game/dest/foo')
+    vfsListDirMock.mockImplementation(async ({ relPath }: { relPath: string }) => {
+      if (relPath === '') {
+        return [
+          { isDir: true, name: 'foo', source: 'upper' },
+          { isDir: true, name: 'dest', source: 'upper' },
+        ]
+      }
+      if (relPath === 'game/foo') {
+        return [{ isDir: true, name: 'bar', source: 'upper' }]
+      }
+      if (relPath === 'game/foo/bar') {
+        return [{ isDir: false, name: 'baz.txt', source: 'upper' }]
+      }
+      if (relPath === 'game/dest') {
+        return []
+      }
+      return []
+    })
+
+    workspaceStoreState = reactive({
+      CWD: '/workspace',
+      currentGame: { engineId: 'engine-1', path: '/workspace' },
+    })
+    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+
+    const store = useFileStore()
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+
+    // 预热整棵子树
+    await store.getFolderContents('/workspace/game/foo')
+    await store.getFolderContents('/workspace/game/foo/bar')
+    await store.getFolderContents('/workspace/game/dest')
+
+    expect(store.getItemByPath('/workspace/game/foo')).toBeDefined()
+    expect(store.getItemByPath('/workspace/game/foo/bar')).toBeDefined()
+    expect(store.getItemByPath('/workspace/game/foo/bar/baz.txt')).toBeDefined()
+
+    emittedEvents.length = 0
+    await store.moveEntry('/workspace/game/foo', '/workspace/game/dest')
+
+    expect(store.getItemByPath('/workspace/game/foo')).toBeUndefined()
+    expect(store.getItemByPath('/workspace/game/foo/bar')).toBeUndefined()
+    expect(store.getItemByPath('/workspace/game/foo/bar/baz.txt')).toBeUndefined()
+
+    const removedPaths = emittedEvents
+      .filter(event => event.type === 'file:removed' || event.type === 'directory:removed')
+      .map(event => event.path)
+    expect(removedPaths).toEqual([
+      '/workspace/game/foo/bar/baz.txt',
+      '/workspace/game/foo/bar',
+      '/workspace/game/foo',
+    ])
+  })
 })
