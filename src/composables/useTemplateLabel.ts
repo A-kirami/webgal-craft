@@ -16,6 +16,10 @@ interface TemplateLabelState {
 
 const EMPTY_STATE: TemplateLabelState = { label: undefined, followingEngine: false }
 
+function formatBuiltinFallbackLabel(id: string, version: string | undefined): string {
+  return version ? `${id} ${version}` : id
+}
+
 async function resolveBindingLabel(
   binding: TemplateBinding | undefined,
   fallbackEngineId: string | undefined,
@@ -29,10 +33,8 @@ async function resolveBindingLabel(
     const engine = version === undefined
       ? undefined
       : await db.engines.where('[engineId+version]').equals([id, version]).first()
-    return {
-      label: engine ? formatEngineLabel(engine) : (version ? `${id} ${version}` : id),
-      followingEngine: false,
-    }
+    const label = engine ? formatEngineLabel(engine) : formatBuiltinFallbackLabel(id, version)
+    return { label, followingEngine: false }
   }
 
   // 缺省 → 跟随当前引擎
@@ -48,11 +50,15 @@ export function useTemplateLabel() {
   let label = $ref<string>()
   let followingEngine = $ref(false)
 
+  function applyState(state: TemplateLabelState) {
+    label = state.label
+    followingEngine = state.followingEngine
+  }
+
   async function refresh() {
     const gamePath = workspaceStore.currentGame?.path
     if (!gamePath) {
-      label = EMPTY_STATE.label
-      followingEngine = EMPTY_STATE.followingEngine
+      applyState(EMPTY_STATE)
       return
     }
 
@@ -63,12 +69,10 @@ export function useTemplateLabel() {
       if (workspaceStore.currentGame?.path !== gamePath) {
         return
       }
-      label = next.label
-      followingEngine = next.followingEngine
+      applyState(next)
     } catch (error) {
       handleError(error, { silent: true })
-      label = EMPTY_STATE.label
-      followingEngine = EMPTY_STATE.followingEngine
+      applyState(EMPTY_STATE)
     }
   }
 
