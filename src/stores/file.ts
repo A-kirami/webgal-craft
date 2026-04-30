@@ -978,6 +978,7 @@ export const useFileStore = defineStore('file', () => {
       })
     },
     clear,
+    getItemByPath,
     initialize,
     refreshTemplateOverlay,
   })

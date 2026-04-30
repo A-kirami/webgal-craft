@@ -466,6 +466,7 @@ describe('AssetView', () => {
 
     useFileStoreMock.mockReturnValue({
       getFolderContents: getFolderContentsMock,
+      getItemByPath: () => undefined,
       initialized: Promise.resolve(),
     })
     usePreferenceStoreMock.mockReturnValue(reactive({

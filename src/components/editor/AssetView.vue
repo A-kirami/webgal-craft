@@ -171,6 +171,7 @@ const currentDirectoryContextMenuItem = $computed(() => {
     isDir: true,
     name: directoryName,
     path: directoryPath,
+    source: fileStore.getItemByPath(directoryPath)?.source,
   }
 })
 
