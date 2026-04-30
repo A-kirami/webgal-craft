@@ -103,13 +103,13 @@ home:
     gameCover: "{name} 游戏封面"
     gameIcon: "{name} 游戏图标"
     importCancelled: 导入已取消
-    importConfigCorrupted: 项目配置文件损坏
-    importEngineNotFound: 引擎不存在
-    importEngineUnavailable: 引擎不可用
+    importConfigCorrupted: 项目文件已损坏，无法读取
+    importEngineNotFound: 该项目所需的引擎尚未安装
+    importEngineUnavailable: 该项目所需的引擎当前不可用
     importSuccess: 游戏导入成功
     importAlreadyExists: 该项目已存在
-    importInvalidFolder: 这不是一个有效的游戏文件夹
-    importSchemaVersionTooNew: 项目配置版本过新，请升级应用
+    importInvalidFolder: 这不像是游戏项目文件夹，请确认目录结构
+    importSchemaVersionTooNew: 该项目由更新版本的应用创建，请升级应用后再尝试打开
     importUnknownError: 导入游戏时发生未知错误
     importMultipleFolders: 一次只能导入一个游戏文件夹
     importCreating: 游戏正在创建中，请等待创建完成

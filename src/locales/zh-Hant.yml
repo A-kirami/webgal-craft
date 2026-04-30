@@ -103,13 +103,13 @@ home:
     gameCover: "{name} 遊戲封面"
     gameIcon: "{name} 遊戲圖示"
     importCancelled: 匯入已取消
-    importConfigCorrupted: 專案設定檔損壞
-    importEngineNotFound: 引擎不存在
-    importEngineUnavailable: 引擎不可用
+    importConfigCorrupted: 專案檔案已損壞，無法讀取
+    importEngineNotFound: 該專案所需的引擎尚未安裝
+    importEngineUnavailable: 該專案所需的引擎目前不可用
     importSuccess: 遊戲匯入成功
     importAlreadyExists: 該專案已存在
-    importInvalidFolder: 這不是一個有效的遊戲資料夾
-    importSchemaVersionTooNew: 專案設定版本過新，請升級應用
+    importInvalidFolder: 這不像是遊戲專案資料夾，請確認目錄結構
+    importSchemaVersionTooNew: 該專案由更新版本的應用建立，請升級應用後再嘗試開啟
     importUnknownError: 匯入遊戲時發生未知錯誤
     importMultipleFolders: 一次只能匯入一個遊戲資料夾
     importCreating: 遊戲正在建立中，請等待建立完成

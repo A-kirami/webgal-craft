@@ -103,13 +103,13 @@ home:
     gameCover: "{name} game cover"
     gameIcon: "{name} game icon"
     importCancelled: Import cancelled
-    importConfigCorrupted: Project configuration file is corrupted
-    importEngineNotFound: Engine not found
-    importEngineUnavailable: Engine is unavailable
+    importConfigCorrupted: The project file is damaged and cannot be read.
+    importEngineNotFound: The engine required by this project is not installed.
+    importEngineUnavailable: The engine required by this project is unavailable.
     importSuccess: Game imported successfully
     importAlreadyExists: This project already exists
-    importInvalidFolder: This is not a valid game folder
-    importSchemaVersionTooNew: Project config version is too new. Please upgrade the app.
+    importInvalidFolder: This does not look like a game project folder. Please check its contents.
+    importSchemaVersionTooNew: This project was created by a newer version of the app. Please upgrade and try again.
     importUnknownError: An unknown error occurred while importing the game
     importMultipleFolders: Only one game folder can be imported at a time
     importCreating: Game is being created, please wait for the creation to complete

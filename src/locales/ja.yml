@@ -103,13 +103,13 @@ home:
     gameCover: "{name} ゲームカバー"
     gameIcon: "{name} ゲームアイコン"
     importCancelled: インポートがキャンセルされました
-    importConfigCorrupted: プロジェクト設定ファイルが破損しています
-    importEngineNotFound: エンジンが見つかりません
-    importEngineUnavailable: エンジンは利用できません
+    importConfigCorrupted: プロジェクトファイルが破損しており、読み込めません
+    importEngineNotFound: このプロジェクトに必要なエンジンがインストールされていません
+    importEngineUnavailable: このプロジェクトに必要なエンジンが現在利用できません
     importSuccess: ゲームのインポートに成功しました
     importAlreadyExists: このプロジェクトは既に存在します
-    importInvalidFolder: これは有効なゲームフォルダではありません
-    importSchemaVersionTooNew: プロジェクト設定のバージョンが新しすぎます。アプリをアップグレードしてください。
+    importInvalidFolder: ゲームプロジェクトフォルダのようには見えません。中身を確認してください。
+    importSchemaVersionTooNew: このプロジェクトはより新しいバージョンのアプリで作成されています。アプリをアップグレードしてから再度お試しください。
     importUnknownError: ゲームのインポート中に不明なエラーが発生しました
     importMultipleFolders: 一度にインポートできるゲームフォルダは1つだけです
     importCreating: ゲームを作成中です。作成の完了をお待ちください
