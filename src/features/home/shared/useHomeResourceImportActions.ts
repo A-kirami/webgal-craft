@@ -10,7 +10,7 @@ import {
   resolveHomeResourceImportNotification,
 } from './home-resource-import'
 
-import type { HomeResourceImportNotification } from './home-resource-import'
+import type { HomeResourceImportNotification, HomeResourceImportOutcome } from './home-resource-import'
 import type { I18nLike, I18nT } from '~/utils/i18n-like'
 
 export interface HomeResourceImportMessages {
@@ -19,6 +19,7 @@ export interface HomeResourceImportMessages {
   unknownError: I18nLike
   multipleFolders: I18nLike
   selectFolderTitle: I18nLike
+  alreadyRegistered?: I18nLike
   duplicateResource?: I18nLike
   duplicateEngine?: I18nLike
   engineNotFound?: I18nLike
@@ -31,7 +32,7 @@ export interface HomeResourceImportMessages {
 
 interface UseHomeResourceImportActionsOptions {
   activeProgress: ReadonlyMap<string, number>
-  importResource: (path: string) => Promise<unknown>
+  importResource: (path: string) => Promise<HomeResourceImportOutcome | unknown>
   messages: HomeResourceImportMessages
   t: I18nT
 }
@@ -39,6 +40,7 @@ interface UseHomeResourceImportActionsOptions {
 /** 通知类型到消息字段名的映射 */
 const NOTIFICATION_MESSAGE_KEYS: Record<HomeResourceImportNotification['kind'], keyof HomeResourceImportMessages> = {
   'success': 'success',
+  'already-registered': 'alreadyRegistered',
   'invalid-folder': 'invalidFolder',
   'duplicate-resource': 'duplicateResource',
   'unsupported-legacy-engine': 'unsupportedLegacyEngine',
@@ -61,29 +63,46 @@ export function resolveImportNotificationMessage(
   return resolveI18nLike(messages[messageKey] ?? messages.unknownError, t)
 }
 
+function isImportOutcome(value: unknown): value is HomeResourceImportOutcome {
+  return typeof value === 'object' && value !== null && 'alreadyRegistered' in value
+}
+
 export function useHomeResourceImportActions<TResource extends { id: string, path: string }>(
   options: UseHomeResourceImportActionsOptions,
 ) {
   async function importWithNotify(path: string) {
     let importError: unknown
+    let outcome: HomeResourceImportOutcome | undefined
 
     try {
-      await options.importResource(path)
+      const result = await options.importResource(path)
+      if (isImportOutcome(result)) {
+        outcome = result
+      }
     } catch (error) {
       importError = error
     }
 
-    const notification = resolveHomeResourceImportNotification(importError)
+    const notification = resolveHomeResourceImportNotification(importError, outcome)
     if (notification.level === 'silent') {
       return
     }
 
     const message = resolveImportNotificationMessage(notification, options.messages, options.t)
 
-    if (notification.level === 'success') {
-      notify.success(message)
-    } else {
-      notify.error(message)
+    switch (notification.level) {
+      case 'success': {
+        notify.success(message)
+        break
+      }
+      case 'info': {
+        notify.info(message)
+        break
+      }
+      default: {
+        notify.error(message)
+        break
+      }
     }
   }
 

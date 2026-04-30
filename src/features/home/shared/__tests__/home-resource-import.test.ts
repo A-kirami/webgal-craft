@@ -133,6 +133,20 @@ describe('首页共享导入纯逻辑', () => {
     })
   })
 
+  it('幂等命中时返回 info 级 already-registered 通知', () => {
+    expect(resolveHomeResourceImportNotification(undefined, { alreadyRegistered: true })).toEqual({
+      kind: 'already-registered',
+      level: 'info',
+    })
+  })
+
+  it('outcome.alreadyRegistered 为 false 时仍返回成功通知', () => {
+    expect(resolveHomeResourceImportNotification(undefined, { alreadyRegistered: false })).toEqual({
+      kind: 'success',
+      level: 'success',
+    })
+  })
+
   it('能从活动进度映射中读取当前资源状态', () => {
     const activeProgress = new Map<string, number>([['resource-1', 42]])
 

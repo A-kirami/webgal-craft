@@ -242,7 +242,7 @@ describe('engineManager', () => {
       onProgress(100)
     })
 
-    await expect(engineManager.importEngine('/downloads/webgal')).resolves.toBe('engine-1')
+    await expect(engineManager.importEngine('/downloads/webgal')).resolves.toEqual({ id: 'engine-1', alreadyRegistered: false })
 
     expect(addMock).toHaveBeenCalledWith(expect.objectContaining({
       path: '/engines/WebGAL/4.5.0',
@@ -358,7 +358,7 @@ describe('engineManager', () => {
       }),
     ])
 
-    await expect(engineManager.importEngine('/downloads/webgal')).resolves.toBe('engine-existing')
+    await expect(engineManager.importEngine('/downloads/webgal')).resolves.toEqual({ id: 'engine-existing', alreadyRegistered: true })
 
     expect(addMock).not.toHaveBeenCalled()
     expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()

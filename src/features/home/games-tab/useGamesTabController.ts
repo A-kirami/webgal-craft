@@ -31,6 +31,7 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
     activeProgress: options.activeProgress,
     importResource: path => gameManager.importGame(path, { selectEngine }),
     messages: {
+      alreadyRegistered: t => t('home.games.importAlreadyExists'),
       engineNotFound: t => t('home.games.importEngineNotFound'),
       engineUnavailable: t => t('home.games.importEngineUnavailable'),
       gameConfigCorrupted: t => t('home.games.importConfigCorrupted'),

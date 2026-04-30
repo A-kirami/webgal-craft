@@ -27,6 +27,7 @@ const modalStore = useModalStore()
 const { t } = useI18n()
 
 const gameImportMessages: HomeResourceImportMessages = {
+  alreadyRegistered: t => t('home.games.importAlreadyExists'),
   engineNotFound: t => t('home.games.importEngineNotFound'),
   engineUnavailable: t => t('home.games.importEngineUnavailable'),
   gameConfigCorrupted: t => t('home.games.importConfigCorrupted'),

@@ -5,6 +5,7 @@ import { useGamesTabController } from '../useGamesTabController'
 const {
   importGameMock,
   notifyErrorMock,
+  notifyInfoMock,
   notifySuccessMock,
   notifyWarningMock,
   openDialogMock,
@@ -13,6 +14,7 @@ const {
 } = vi.hoisted(() => ({
   importGameMock: vi.fn(),
   notifyErrorMock: vi.fn(),
+  notifyInfoMock: vi.fn(),
   notifySuccessMock: vi.fn(),
   notifyWarningMock: vi.fn(),
   openDialogMock: vi.fn(),
@@ -31,6 +33,7 @@ vi.mock('@tauri-apps/plugin-opener', () => ({
 vi.mock('notivue', () => ({
   push: {
     error: notifyErrorMock,
+    info: notifyInfoMock,
     success: notifySuccessMock,
     warning: notifyWarningMock,
   },
@@ -142,14 +145,16 @@ describe('useGamesTabController 行为', () => {
     expect(routerPushMock).toHaveBeenCalledWith('/edit/game-2')
   })
 
-  it('选择目录导入已注册游戏时按幂等成功提示', async () => {
+  it('选择目录导入已注册游戏时按 info 级提示已存在', async () => {
     openDialogMock.mockResolvedValue('/games/registered')
-    importGameMock.mockResolvedValue('game-existing')
+    importGameMock.mockResolvedValue({ id: 'game-existing', alreadyRegistered: true })
 
     const controller = createController()
 
     await controller.selectGameFolder()
 
     expect(notifyErrorMock).not.toHaveBeenCalled()
+    expect(notifySuccessMock).not.toHaveBeenCalled()
+    expect(notifyInfoMock).toHaveBeenCalledWith('home.games.importAlreadyExists')
   })
 })

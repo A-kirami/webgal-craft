@@ -107,6 +107,7 @@ home:
     importEngineNotFound: 引擎不存在
     importEngineUnavailable: 引擎不可用
     importSuccess: 游戏导入成功
+    importAlreadyExists: 该项目已存在
     importInvalidFolder: 这不是一个有效的游戏文件夹
     importSchemaVersionTooNew: 项目配置版本过新，请升级应用
     importUnknownError: 导入游戏时发生未知错误
@@ -121,6 +122,7 @@ home:
     dropEngineFolder: 将游戏引擎文件夹拖放到此处
     engineIcon: "{name} 引擎图标"
     importSuccess: 引擎导入成功
+    importAlreadyExists: 该引擎已存在
     importInvalidFolder: 这不是一个有效的引擎文件夹
     importUnsupportedLegacyEngine: 不支持直接导入旧版引擎，请导入包含该引擎的项目，或改用受支持的引擎版本。
     importUnknownError: 导入引擎时发生未知错误

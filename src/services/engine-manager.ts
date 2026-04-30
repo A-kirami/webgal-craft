@@ -388,13 +388,18 @@ function classifyEngineToBlockingIssue(classification: EngineManifestResult) {
   return { code: 'INVALID_MANIFEST' as const, message: '引擎清单无效' }
 }
 
-async function importEngine(enginePath: string): Promise<string> {
+export interface ImportEngineResult {
+  id: string
+  alreadyRegistered: boolean
+}
+
+async function importEngine(enginePath: string): Promise<ImportEngineResult> {
   const { normalizedPath } = normalizeImportPath(enginePath)
 
   // 幂等：源路径已注册直接返回既有 ID
   const existingBySource = await findEngineByComparablePath(normalizedPath)
   if (existingBySource) {
-    return existingBySource.id
+    return { id: existingBySource.id, alreadyRegistered: true }
   }
 
   const snapshot = await assertEngineImportable(normalizedPath)
@@ -405,13 +410,13 @@ async function importEngine(enginePath: string): Promise<string> {
 
   if (sourceComparablePath === targetComparablePath) {
     logger.info(`[引擎导入] 引擎已在托管目录，直接注册: ${normalizedPath}`)
-    return registerEngine(targetPath, snapshot)
+    return { id: await registerEngine(targetPath, snapshot), alreadyRegistered: false }
   }
 
   // 目标路径已注册：幂等返回；否则若 fs 上存在则视为冲突
   const existingByTarget = await findEngineByComparablePath(targetPath)
   if (existingByTarget) {
-    return existingByTarget.id
+    return { id: existingByTarget.id, alreadyRegistered: true }
   }
   if (await exists(targetPath)) {
     throw new AppError('TARGET_CONFLICT', '目标引擎目录已存在，请先清理后重试')
@@ -426,7 +431,7 @@ async function importEngine(enginePath: string): Promise<string> {
   try {
     await copyAndFinalizeEngine(engineId, normalizedPath, targetPath)
     logger.info(`[引擎 ${snapshot.name}] 导入完成`)
-    return engineId
+    return { id: engineId, alreadyRegistered: false }
   } catch (error) {
     logger.error(`[引擎导入] 导入失败: ${error}`)
     useResourceStore().finishProgress(engineId)

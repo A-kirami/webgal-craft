@@ -21,6 +21,7 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
     activeProgress: options.activeProgress,
     importResource: path => engineManager.importEngine(path),
     messages: {
+      alreadyRegistered: t => t('home.engines.importAlreadyExists'),
       duplicateEngine: t => t('engine.duplicateEngine'),
       invalidFolder: t => t('home.engines.importInvalidFolder'),
       multipleFolders: t => t('home.engines.importMultipleFolders'),

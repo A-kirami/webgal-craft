@@ -107,6 +107,7 @@ home:
     importEngineNotFound: エンジンが見つかりません
     importEngineUnavailable: エンジンは利用できません
     importSuccess: ゲームのインポートに成功しました
+    importAlreadyExists: このプロジェクトは既に存在します
     importInvalidFolder: これは有効なゲームフォルダではありません
     importSchemaVersionTooNew: プロジェクト設定のバージョンが新しすぎます。アプリをアップグレードしてください。
     importUnknownError: ゲームのインポート中に不明なエラーが発生しました
@@ -121,6 +122,7 @@ home:
     dropEngineFolder: ゲームエンジンフォルダをここにドラッグ＆ドロップ
     engineIcon: "{name} エンジンアイコン"
     importSuccess: エンジンのインポートに成功しました
+    importAlreadyExists: このエンジンは既に存在します
     importInvalidFolder: これは有効なエンジンフォルダではありません
     importUnsupportedLegacyEngine: レガシーエンジンは直接インポートできません。このエンジンを含むプロジェクトをインポートするか、サポートされたエンジン版を使用してください。
     importUnknownError: エンジンのインポート中に不明なエラーが発生しました

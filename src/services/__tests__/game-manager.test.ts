@@ -466,7 +466,7 @@ describe('gameManager', () => {
       .mockResolvedValueOnce(false)
       .mockResolvedValueOnce(true)
 
-    await expect(gameManager.importGame('/games/self-contained')).resolves.toBe('game-1')
+    await expect(gameManager.importGame('/games/self-contained')).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
     expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/self-contained', { version: 1 })
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -492,7 +492,7 @@ describe('gameManager', () => {
       version: '4.5.0',
     }))
 
-    await expect(gameManager.importGame('/games/vfs')).resolves.toBe('game-1')
+    await expect(gameManager.importGame('/games/vfs')).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: 'engine-1',
@@ -518,7 +518,7 @@ describe('gameManager', () => {
       availability: 'broken',
     }))
 
-    await expect(gameManager.importGame('/games/vfs')).resolves.toBe('game-1')
+    await expect(gameManager.importGame('/games/vfs')).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
     expect(writeProjectConfigMock).not.toHaveBeenCalled()
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -554,7 +554,7 @@ describe('gameManager', () => {
 
     await expect(gameManager.importGame('/games/vfs', {
       selectEngine: vi.fn().mockResolvedValue('engine-2'),
-    })).resolves.toBe('game-1')
+    })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
     expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/vfs', {
       version: 1,
@@ -590,7 +590,7 @@ describe('gameManager', () => {
 
     await expect(gameManager.importGame('/games/vfs', {
       selectEngine: vi.fn().mockResolvedValue('engine-2'),
-    })).resolves.toBe('game-1')
+    })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
     expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/vfs', {
       version: 1,
@@ -611,7 +611,10 @@ describe('gameManager', () => {
       path: '/games/demo',
     })])
 
-    await expect(gameManager.importGame('/games/demo')).resolves.toBe('game-existing')
+    await expect(gameManager.importGame('/games/demo')).resolves.toEqual({
+      id: 'game-existing',
+      alreadyRegistered: true,
+    })
     expect(dbGameAddMock).not.toHaveBeenCalled()
   })
 
@@ -622,7 +625,10 @@ describe('gameManager', () => {
       path: '/Games/Demo',
     })])
 
-    await expect(gameManager.importGame('/games/demo')).resolves.toBe('game-existing')
+    await expect(gameManager.importGame('/games/demo')).resolves.toEqual({
+      id: 'game-existing',
+      alreadyRegistered: true,
+    })
     expect(dbGameAddMock).not.toHaveBeenCalled()
   })
 

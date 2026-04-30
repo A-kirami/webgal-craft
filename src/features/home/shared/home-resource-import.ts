@@ -3,6 +3,7 @@ import { AppError } from '~/types/errors'
 export interface HomeResourceImportNotification {
   kind:
     | 'success'
+    | 'already-registered'
     | 'invalid-folder'
     | 'duplicate-resource'
     | 'unsupported-legacy-engine'
@@ -14,13 +15,17 @@ export interface HomeResourceImportNotification {
     | 'import-cancelled'
     | 'unknown-error'
     | 'multiple-folders'
-  level: 'success' | 'error' | 'silent'
+  level: 'success' | 'info' | 'error' | 'silent'
 }
 
 export interface HomeResourceDropPathDecision {
   shouldImport: boolean
   path?: string
   notification?: HomeResourceImportNotification
+}
+
+export interface HomeResourceImportOutcome {
+  alreadyRegistered?: boolean
 }
 
 export function resolveHomeResourceDropPath(paths: readonly string[]): HomeResourceDropPathDecision {
@@ -40,8 +45,14 @@ export function resolveHomeResourceDropPath(paths: readonly string[]): HomeResou
   }
 }
 
-export function resolveHomeResourceImportNotification(error?: unknown): HomeResourceImportNotification {
+export function resolveHomeResourceImportNotification(
+  error?: unknown,
+  outcome?: HomeResourceImportOutcome,
+): HomeResourceImportNotification {
   if (!error) {
+    if (outcome?.alreadyRegistered) {
+      return { kind: 'already-registered', level: 'info' }
+    }
     return { kind: 'success', level: 'success' }
   }
 

@@ -603,13 +603,18 @@ async function inspectGame(
   }
 }
 
-async function importGame(gamePath: string, options: ImportGameOptions = {}): Promise<string> {
+export interface ImportGameResult {
+  id: string
+  alreadyRegistered: boolean
+}
+
+async function importGame(gamePath: string, options: ImportGameOptions = {}): Promise<ImportGameResult> {
   const { normalizedPath } = normalizeImportPath(gamePath)
 
   // 幂等：已注册路径直接返回既有 ID（按归一化后路径比较）
   const existing = await findExistingGameByPath(normalizedPath)
   if (existing) {
-    return existing.id
+    return { id: existing.id, alreadyRegistered: true }
   }
 
   if (!(await validateGame(normalizedPath))) {
@@ -617,11 +622,10 @@ async function importGame(gamePath: string, options: ImportGameOptions = {}): Pr
     throw new AppError('INVALID_STRUCTURE', '无效的游戏文件夹')
   }
 
-  if (await exists(await projectConfigPath(normalizedPath))) {
-    return importConfiguredGame(normalizedPath, options)
-  }
-
-  return importLegacyGame(normalizedPath, options)
+  const id = await exists(await projectConfigPath(normalizedPath))
+    ? await importConfiguredGame(normalizedPath, options)
+    : await importLegacyGame(normalizedPath, options)
+  return { id, alreadyRegistered: false }
 }
 
 async function resolvePreviewSite(game: Pick<Game, 'engineId' | 'path'>): Promise<StaticSiteConfig> {

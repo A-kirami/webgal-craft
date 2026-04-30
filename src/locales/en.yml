@@ -107,6 +107,7 @@ home:
     importEngineNotFound: Engine not found
     importEngineUnavailable: Engine is unavailable
     importSuccess: Game imported successfully
+    importAlreadyExists: This project already exists
     importInvalidFolder: This is not a valid game folder
     importSchemaVersionTooNew: Project config version is too new. Please upgrade the app.
     importUnknownError: An unknown error occurred while importing the game
@@ -121,6 +122,7 @@ home:
     dropEngineFolder: Drag and drop game engine folder here
     engineIcon: "{name} engine icon"
     importSuccess: Engine imported successfully
+    importAlreadyExists: This engine already exists
     importInvalidFolder: This is not a valid engine folder
     importUnsupportedLegacyEngine: Legacy engines cannot be imported directly. Import a project containing this engine, or use a supported engine version instead.
     importUnknownError: An unknown error occurred while importing the engine
