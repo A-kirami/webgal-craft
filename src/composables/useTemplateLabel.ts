@@ -33,16 +33,20 @@ async function resolveBindingLabel(
     const engine = version === undefined
       ? undefined
       : await db.engines.where('[engineId+version]').equals([id, version]).first()
-    const label = engine ? formatEngineLabel(engine) : formatBuiltinFallbackLabel(id, version)
-    return { label, followingEngine: false }
+    if (!engine) {
+      return { label: formatBuiltinFallbackLabel(id, version), followingEngine: false }
+    }
+    const isUsable = engine.status === 'created' && engine.availability === 'available'
+    return { label: isUsable ? formatEngineLabel(engine) : undefined, followingEngine: false }
   }
 
-  // 缺省 → 跟随当前引擎；引擎记录缺失或不可用时不暴露 UUID，由调用方按 followingEngine + label undefined 决定占位文案
+  // 缺省 → 跟随当前引擎；引擎记录缺失或不可用时不暴露 UUID/旧名，由调用方按 followingEngine + label undefined 决定占位文案
   if (!fallbackEngineId) {
     return EMPTY_STATE
   }
   const engine = await db.engines.get(fallbackEngineId)
-  const label = engine ? formatEngineLabel(engine) : undefined
+  const isUsable = !!engine && engine.status === 'created' && engine.availability === 'available'
+  const label = isUsable ? formatEngineLabel(engine) : undefined
   return { label, followingEngine: true }
 }
 
