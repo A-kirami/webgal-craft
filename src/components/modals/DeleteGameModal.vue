@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { TriangleAlert } from '@lucide/vue'
 
-import { Game } from '~/database/model'
 import { gameManager } from '~/services/game-manager'
 import { useModalStore } from '~/stores/modal'
+
+import type { Game } from '~/database/model'
 
 const { t } = useI18n()
 let open = $(defineModel<boolean>('open'))
@@ -13,22 +14,31 @@ const { game } = defineProps<{
 }>()
 
 let removeFiles = $ref(false)
+let isConfirming = $ref(false)
 const modalStore = useModalStore()
 
-function deleteGame() {
-  gameManager.deleteGame(game, removeFiles)
+async function deleteGame() {
+  await gameManager.deleteGame(game, removeFiles)
   notify.success(t('modals.deleteGame.deleteSuccess'))
 }
 
-function handleConfirm() {
-  if (removeFiles) {
-    modalStore.open('DeleteGameConfirmModal', {
-      game,
-      onConfirm: deleteGame,
-    })
-  } else {
-    deleteGame()
-    open = false
+async function handleConfirm() {
+  if (isConfirming) {
+    return
+  }
+  isConfirming = true
+  try {
+    if (removeFiles) {
+      modalStore.open('DeleteGameConfirmModal', {
+        game,
+        onConfirm: deleteGame,
+      })
+    } else {
+      await deleteGame()
+      open = false
+    }
+  } finally {
+    isConfirming = false
   }
 }
 </script>
@@ -67,7 +77,7 @@ function handleConfirm() {
       </div>
       <AlertDialogFooter>
         <AlertDialogCancel>{{ $t('common.cancel') }}</AlertDialogCancel>
-        <AlertDialogAction variant="destructive" @click="handleConfirm">
+        <AlertDialogAction variant="destructive" :disabled="isConfirming" @click="handleConfirm">
           {{ $t('common.confirm') }}
         </AlertDialogAction>
       </AlertDialogFooter>

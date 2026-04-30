@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Info } from '@lucide/vue'
+import { ArrowRightLeft, Info } from '@lucide/vue'
 import { useForm } from 'vee-validate'
 
 import {
@@ -13,6 +13,7 @@ import { configManager } from '~/services/config-manager'
 import { useModalStore } from '~/stores/modal'
 import { handleError } from '~/utils/error-handler'
 
+import type { Game } from '~/database/model'
 import type { GameConfigFormValues } from '~/features/modals/game-config/game-config-form'
 
 interface Props {
@@ -22,6 +23,8 @@ interface Props {
   initialValues: GameConfigFormValues
   serveUrl?: string
   unmanagedLineCount: number
+  game?: Game
+  engineLabel?: string
 }
 
 const props = defineProps<Props>()
@@ -128,6 +131,18 @@ async function handleSave() {
 
   await submitConfig()
 }
+
+function openSwitchEngine() {
+  if (props.game) {
+    modalStore.open('SwitchEngineModal', { game: props.game })
+  }
+}
+
+function openSwitchTemplate() {
+  if (props.game) {
+    modalStore.open('SwitchTemplateModal', { game: props.game })
+  }
+}
 </script>
 
 <template>
@@ -159,6 +174,44 @@ async function handleSave() {
           :serve-url="props.serveUrl"
           class="mx-2"
         />
+
+        <!-- 引擎与模板配置 -->
+        <div v-if="props.game?.engineId" class="mx-2 mt-4 pt-4 border-t flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium">
+                {{ $t('edit.statusBar.engine') }}
+              </div>
+              <div class="text-xs text-muted-foreground">
+                {{ props.engineLabel ?? $t('common.unknown') }}
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              @click="openSwitchEngine"
+            >
+              <ArrowRightLeft class="mr-1 size-3.5" />
+              {{ $t('modals.switchEngine.title') }}
+            </Button>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium">
+                {{ $t('edit.statusBar.template') }}
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              @click="openSwitchTemplate"
+            >
+              <ArrowRightLeft class="mr-1 size-3.5" />
+              {{ $t('modals.switchTemplate.title') }}
+            </Button>
+          </div>
+        </div>
       </ScrollArea>
 
       <DialogFooter>

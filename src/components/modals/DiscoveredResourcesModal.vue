@@ -1,17 +1,31 @@
 <script setup lang="ts">
-import { Box, CheckCircle2, Scroll } from '@lucide/vue'
+import { Box, Scroll } from '@lucide/vue'
 
+import { compareEngineVersions } from '~/domain/engine/version'
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 
+import type { DiscoveredResource } from '~/features/home/discovered-resource'
 import type { AssetThumbnailOptions } from '~/services/platform/asset-url'
+
+type ResourceType = 'games' | 'engines' | 'templates'
+
+interface EngineGroup {
+  engineId: string
+  name: string
+  icon?: string
+  representative: DiscoveredResource
+  versions: DiscoveredResource[]
+}
 
 let open = $(defineModel<boolean>('open'))
 
 const props = defineProps<{
-  type: 'games' | 'engines'
-  resources: { path: string, name: string, icon?: string }[]
+  type: ResourceType
+  resources: DiscoveredResource[]
   onImport?: (paths: string[]) => void
 }>()
+
+const { t } = useI18n()
 
 let selectedPaths = $ref(new Set(props.resources.map(r => r.path)))
 const previewRuntimeStore = usePreviewRuntimeStore()
@@ -22,33 +36,112 @@ const DISCOVERED_RESOURCE_ICON_THUMBNAIL: AssetThumbnailOptions = {
   resizeMode: 'contain',
 }
 
-const toggleSelection = (path: string) => {
-  if (selectedPaths.has(path)) {
-    selectedPaths.delete(path)
-  } else {
-    selectedPaths.add(path)
+const isEnginesType = $computed(() => props.type === 'engines')
+
+const engineGroups = $computed<EngineGroup[]>(() => {
+  if (!isEnginesType) {
+    return []
   }
+
+  const groupsMap = new Map<string, EngineGroup>()
+  for (const resource of props.resources) {
+    const groupKey = resource.engineId ?? resource.name
+    let group = groupsMap.get(groupKey)
+    if (!group) {
+      group = {
+        engineId: groupKey,
+        name: resource.name,
+        icon: resource.icon,
+        representative: resource,
+        versions: [],
+      }
+      groupsMap.set(groupKey, group)
+    }
+    group.versions.push(resource)
+  }
+
+  for (const group of groupsMap.values()) {
+    group.versions.sort((a, b) => compareEngineVersions(a.version, b.version))
+    const representative = group.versions[0] ?? group.representative
+    group.representative = representative
+    group.name = representative.name
+    group.icon = representative.icon
+  }
+
+  return [...groupsMap.values()]
+})
+
+function toggleSelection(path: string) {
+  const next = new Set(selectedPaths)
+  if (next.has(path)) {
+    next.delete(path)
+  } else {
+    next.add(path)
+  }
+  selectedPaths = next
 }
 
-const toggleAll = () => {
-  if (selectedPaths.size === props.resources.length) {
-    selectedPaths.clear()
-  } else {
-    selectedPaths = new Set(props.resources.map(r => r.path))
-  }
+function toggleAll() {
+  selectedPaths = selectedPaths.size === props.resources.length ? new Set() : new Set(props.resources.map(r => r.path))
 }
 
-const handleImport = () => {
+function getGroupSelectionState(group: EngineGroup): 'all' | 'partial' | 'none' {
+  const selectedCount = group.versions.filter(v => selectedPaths.has(v.path)).length
+  if (selectedCount === 0) {
+    return 'none'
+  }
+  if (selectedCount === group.versions.length) {
+    return 'all'
+  }
+  return 'partial'
+}
+
+function toggleGroup(group: EngineGroup) {
+  const next = new Set(selectedPaths)
+  const shouldDeselect = getGroupSelectionState(group) === 'all'
+  for (const version of group.versions) {
+    if (shouldDeselect) {
+      next.delete(version.path)
+    } else {
+      next.add(version.path)
+    }
+  }
+  selectedPaths = next
+}
+
+function handleImport() {
   open = false
   props.onImport?.([...selectedPaths])
 }
 
-const handleSkip = () => {
+function handleSkip() {
   open = false
 }
 
 const icon = $computed(() => props.type === 'games' ? Scroll : Box)
 const isAllSelected = $computed(() => selectedPaths.size === props.resources.length)
+
+const title = $computed(() => {
+  switch (props.type) {
+    case 'games': { return t('modals.discoveredResources.gamesTitle') }
+    case 'engines': { return t('modals.discoveredResources.enginesTitle') }
+    case 'templates': { return t('modals.discoveredResources.templatesTitle') }
+    default: { return '' }
+  }
+})
+
+const description = $computed(() => {
+  if (props.type === 'engines') {
+    return t('modals.discoveredResources.enginesDescription', {
+      engineCount: engineGroups.length,
+      versionCount: props.resources.length,
+    })
+  }
+  const count = props.resources.length
+  return props.type === 'games'
+    ? t('modals.discoveredResources.gamesDescription', { count })
+    : t('modals.discoveredResources.templatesDescription', { count })
+})
 
 watch(
   () => props.resources.map(resource => resource.path),
@@ -58,13 +151,17 @@ watch(
     const addedPaths = paths.filter(path => !previousPathSet.has(path))
     selectedPaths = new Set([...keptPaths, ...addedPaths])
 
-    void previewRuntimeStore.ensureServeUrls(paths.map(projectPath => ({ projectPath })))
+    if (props.type !== 'templates') {
+      void previewRuntimeStore.ensureServeUrls(
+        props.resources.map(resource => resource.previewSite ?? { projectPath: resource.path }),
+      )
+    }
   },
   { immediate: true },
 )
 
-function resolveResourceServeUrl(resource: { path: string }): string | undefined {
-  return previewRuntimeStore.getServeUrl(resource.path)
+function resolveResourceServeUrl(resource: DiscoveredResource): string | undefined {
+  return props.type === 'templates' ? undefined : previewRuntimeStore.getServeUrl(resource.path)
 }
 </script>
 
@@ -73,13 +170,10 @@ function resolveResourceServeUrl(resource: { path: string }): string | undefined
     <DialogScrollContent class="max-h-[80vh] max-w-2xl">
       <DialogHeader>
         <DialogTitle class="flex gap-2 items-center">
-          {{ type === 'games' ? $t('modals.discoveredResources.gamesTitle') : $t('modals.discoveredResources.enginesTitle') }}
+          {{ title }}
         </DialogTitle>
         <DialogDescription>
-          {{ type === 'games'
-            ? $t('modals.discoveredResources.gamesDescription', { count: resources.length })
-            : $t('modals.discoveredResources.enginesDescription', { count: resources.length })
-          }}
+          {{ description }}
         </DialogDescription>
       </DialogHeader>
 
@@ -93,40 +187,102 @@ function resolveResourceServeUrl(resource: { path: string }): string | undefined
           </span>
         </div>
 
-        <div class="border rounded-lg max-h-96 overflow-y-auto divide-y">
-          <div
-            v-for="resource in resources"
-            :key="resource.path"
-            class="p-3 flex cursor-pointer transition-colors items-center justify-between hover:bg-accent/50"
-            :class="{ 'bg-accent': selectedPaths.has(resource.path) }"
-            @click="toggleSelection(resource.path)"
-          >
-            <div class="flex flex-1 gap-3 min-w-0 items-center">
-              <AssetImage
-                v-if="resource.icon"
-                :path="resource.icon"
-                :root-path="resource.path"
-                :serve-url="resolveResourceServeUrl(resource)"
-                :alt="resource.name"
-                fallback-image="/placeholder.svg"
-                :thumbnail="DISCOVERED_RESOURCE_ICON_THUMBNAIL"
-                class="rounded shrink-0 size-10"
-              />
-              <component :is="icon" v-else class="text-muted-foreground shrink-0 size-10" />
-              <div class="flex-1 min-w-0">
-                <h4 class="font-medium truncate">
-                  {{ resource.name }}
-                </h4>
-                <p class="text-xs text-muted-foreground truncate">
-                  {{ resource.path }}
-                </p>
+        <div class="border rounded-lg max-h-96 overflow-y-auto">
+          <template v-if="isEnginesType">
+            <div
+              v-for="(group, groupIndex) in engineGroups"
+              :key="group.engineId"
+              :class="{ 'border-t': groupIndex > 0 }"
+            >
+              <div class="px-3 py-2 bg-muted/40 flex gap-3 items-center">
+                <AssetImage
+                  v-if="group.icon"
+                  :path="group.icon"
+                  :root-path="group.representative.path"
+                  :serve-url="resolveResourceServeUrl(group.representative)"
+                  :alt="group.name"
+                  fallback-image="/placeholder.svg"
+                  :thumbnail="DISCOVERED_RESOURCE_ICON_THUMBNAIL"
+                  class="rounded shrink-0 size-7"
+                />
+                <component :is="icon" v-else class="text-muted-foreground shrink-0 size-7" />
+                <div class="flex flex-1 gap-2 min-w-0 items-baseline">
+                  <h4 class="text-sm font-medium truncate">
+                    {{ group.name }}
+                  </h4>
+                  <span class="text-xs text-muted-foreground shrink-0">
+                    {{ $t('modals.discoveredResources.versionsCount', { count: group.versions.length }) }}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  :aria-label="$t('modals.discoveredResources.toggleGroup', { name: group.name })"
+                  class="text-xs text-muted-foreground px-1.5 rounded h-6 transition-colors hover:text-accent-foreground hover:bg-accent"
+                  @click="toggleGroup(group)"
+                >
+                  {{ getGroupSelectionState(group) === 'all'
+                    ? $t('modals.discoveredResources.deselectAll')
+                    : $t('modals.discoveredResources.selectAll') }}
+                </button>
+              </div>
+
+              <div class="px-3 py-2 pl-10 flex flex-wrap gap-1.5">
+                <button
+                  v-for="version in group.versions"
+                  :key="version.path"
+                  type="button"
+                  :aria-pressed="selectedPaths.has(version.path)"
+                  class="text-xs font-mono px-2 py-1 border rounded-md transition-colors"
+                  :class="selectedPaths.has(version.path)
+                    ? 'bg-primary/10 border-primary/40 text-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/30 hover:text-foreground'"
+                  :title="version.path"
+                  @click="toggleSelection(version.path)"
+                >
+                  {{ version.version ?? $t('common.unknown') }}
+                </button>
               </div>
             </div>
-            <CheckCircle2
-              class="ml-2 shrink-0 size-5 transition-opacity"
-              :class="selectedPaths.has(resource.path) ? 'text-primary opacity-100' : 'text-muted-foreground opacity-0'"
-            />
-          </div>
+          </template>
+
+          <template v-else>
+            <div class="divide-y">
+              <div
+                v-for="resource in resources"
+                :key="resource.path"
+                class="p-3 flex cursor-pointer transition-colors items-center justify-between hover:bg-accent/50"
+                :class="{ 'bg-accent': selectedPaths.has(resource.path) }"
+                @click="toggleSelection(resource.path)"
+              >
+                <div class="flex flex-1 gap-3 min-w-0 items-center">
+                  <Checkbox
+                    :model-value="selectedPaths.has(resource.path)"
+                    :aria-label="resource.name"
+                    @click.stop="toggleSelection(resource.path)"
+                  />
+                  <AssetImage
+                    v-if="resource.icon"
+                    :path="resource.icon"
+                    :root-path="resource.path"
+                    :serve-url="resolveResourceServeUrl(resource)"
+                    :alt="resource.name"
+                    fallback-image="/placeholder.svg"
+                    :thumbnail="DISCOVERED_RESOURCE_ICON_THUMBNAIL"
+                    class="rounded shrink-0 size-10"
+                  />
+                  <component :is="icon" v-else class="text-muted-foreground shrink-0 size-10" />
+                  <div class="flex-1 min-w-0">
+                    <h4 class="font-medium truncate">
+                      {{ resource.name }}
+                    </h4>
+                    <p class="text-xs text-muted-foreground truncate">
+                      {{ resource.path }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
 

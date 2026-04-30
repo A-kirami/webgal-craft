@@ -10,15 +10,18 @@ describe('存储设置状态仓库', () => {
 
     expect(store.gameSavePath).toBe('')
     expect(store.engineSavePath).toBe('')
+    expect(store.templateSavePath).toBe('')
   })
 
-  it('支持更新游戏和引擎存储路径', () => {
+  it('支持更新游戏、引擎和模板存储路径', () => {
     const store = useStorageSettingsStore()
 
     store.gameSavePath = '/games'
     store.engineSavePath = '/engines'
+    store.templateSavePath = '/templates'
 
     expect(store.gameSavePath).toBe('/games')
     expect(store.engineSavePath).toBe('/engines')
+    expect(store.templateSavePath).toBe('/templates')
   })
 })

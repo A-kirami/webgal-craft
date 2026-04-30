@@ -53,7 +53,7 @@ export async function resolveScenePanelTargetPath(
   selectedItem: ScenePanelTreeNode | undefined,
   dirnameFn: (path: string) => Promise<string>,
 ): Promise<string | undefined> {
-  if (rootPath === undefined || rootPath === '') {
+  if (!rootPath) {
     return
   }
 

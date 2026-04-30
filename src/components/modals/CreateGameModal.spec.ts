@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import { createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
@@ -27,6 +27,7 @@ const {
   handleSelectFolderMock,
   onSubmitMock,
   useCreateGameFormMock,
+  usePreferenceStoreMock,
 } = vi.hoisted(() => ({
   handleCompositionEndMock: vi.fn(),
   handleCompositionStartMock: vi.fn(),
@@ -36,10 +37,15 @@ const {
     event?.preventDefault?.()
   }),
   useCreateGameFormMock: vi.fn(),
+  usePreferenceStoreMock: vi.fn(),
 }))
 
 vi.mock('~/features/modals/create-game/useCreateGameForm', () => ({
   useCreateGameForm: useCreateGameFormMock,
+}))
+
+vi.mock('~/stores/preference', () => ({
+  usePreferenceStore: usePreferenceStoreMock,
 }))
 
 const globalStubs = {
@@ -112,6 +118,21 @@ const globalStubs = {
       })
     },
   }),
+  EngineSelector: defineComponent({
+    name: 'StubEngineSelector',
+    props: {
+      preferredEngineId: {
+        type: String,
+        default: undefined,
+      },
+    },
+    setup(props) {
+      return () => h('div', {
+        'data-testid': 'engine-selector',
+        'data-preferred-engine-id': props.preferredEngineId ?? '',
+      })
+    },
+  }),
   Select: createBrowserContainerStub('StubSelect'),
   SelectContent: createBrowserContainerStub('StubSelectContent'),
   SelectItem: createBrowserContainerStub('StubSelectItem'),
@@ -125,15 +146,11 @@ const globalStubs = {
 
 describe('CreateGameModal', () => {
   beforeEach(() => {
-    handleCompositionEndMock.mockReset()
-    handleCompositionStartMock.mockReset()
-    handleGameNameChangeMock.mockReset()
-    handleSelectFolderMock.mockReset()
-    onSubmitMock.mockReset()
+    vi.resetAllMocks()
+
     onSubmitMock.mockImplementation((event?: Event) => {
       event?.preventDefault?.()
     })
-    useCreateGameFormMock.mockReset()
     useCreateGameFormMock.mockReturnValue({
       engineOptions: ref([
         {
@@ -148,10 +165,9 @@ describe('CreateGameModal', () => {
       isFieldDirty: false,
       onSubmit: onSubmitMock,
     })
-  })
-
-  afterEach(() => {
-    vi.clearAllMocks()
+    usePreferenceStoreMock.mockReturnValue({
+      defaultEngineId: 'open-webgal.webgal',
+    })
   })
 
   it('点击选择目录按钮时会调用 useCreateGameForm 提供的目录选择处理器', async () => {
@@ -208,5 +224,23 @@ describe('CreateGameModal', () => {
     await vi.waitFor(() => {
       expect(onSubmitMock).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('会把默认引擎 ID 传给 EngineSelector 作为首选引擎族', async () => {
+    renderInBrowser(CreateGameModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        open: true,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const selector = await page.getByTestId('engine-selector').element()
+
+    expect(selector.dataset.preferredEngineId).toBe('open-webgal.webgal')
   })
 })

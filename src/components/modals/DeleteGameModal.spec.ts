@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import {
@@ -106,14 +106,10 @@ function renderDeleteGameModal(updateOpen = vi.fn()) {
 }
 
 describe('DeleteGameModal', () => {
-  afterEach(() => {
-    vi.clearAllMocks()
-  })
-
   beforeEach(() => {
-    deleteGameMock.mockReset()
-    modalOpenMock.mockReset()
-    notifySuccessMock.mockReset()
+    vi.resetAllMocks()
+
+    deleteGameMock.mockResolvedValue(undefined)
     useModalStoreMock.mockReturnValue({
       open: modalOpenMock,
     })

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { FolderOpen } from '@lucide/vue'
+import { useFieldValue } from 'vee-validate'
 
 import { FormField } from '~/components/ui/form'
 import { useCreateGameForm } from '~/features/modals/create-game/useCreateGameForm'
+import { usePreferenceStore } from '~/stores/preference'
 
 const open = defineModel<boolean>('open')
+const preferenceStore = usePreferenceStore()
 
 const props = defineProps<{
   onSuccess?: (gameId: string) => void
@@ -14,7 +17,6 @@ const gameNameFieldId = 'create-game-name'
 const gamePathFieldId = 'create-game-path'
 
 const {
-  engineOptions,
   handleCompositionEnd,
   handleCompositionStart,
   handleGameNameChange,
@@ -25,6 +27,8 @@ const {
   open,
   onSuccess: props.onSuccess,
 })
+
+const selectedEngineId = useFieldValue<string>('gameEngine')
 </script>
 
 <template>
@@ -89,16 +93,27 @@ const {
                 {{ $t('modals.createGame.gameEngine') }}
               </FormLabel>
               <FormControl>
-                <Select v-bind="componentField">
-                  <SelectTrigger class="w-full">
-                    <SelectValue :placeholder="$t('modals.createGame.selectEngine')" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem v-for="engine in engineOptions" :key="engine.id" :value="engine.id">
-                      {{ engine.name }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <EngineSelector
+                  :model-value="componentField.modelValue"
+                  :preferred-engine-id="preferenceStore.defaultEngineId"
+                  @update:model-value="componentField['onUpdate:modelValue']"
+                />
+              </FormControl>
+              <FormMessage class="col-start-2" />
+            </FormItem>
+          </FormField>
+
+          <FormField v-slot="{ componentField }" name="gameTemplate">
+            <FormItem class="px-2 gap-x-4 gap-y-2 grid grid-cols-[auto_1fr] items-center space-y-0">
+              <FormLabel class="text-right whitespace-nowrap">
+                {{ $t('modals.createGame.gameTemplate') }}
+              </FormLabel>
+              <FormControl>
+                <TemplateSelector
+                  :model-value="componentField.modelValue"
+                  :engine-id="selectedEngineId"
+                  @update:model-value="componentField['onUpdate:modelValue']"
+                />
               </FormControl>
               <FormMessage class="col-start-2" />
             </FormItem>

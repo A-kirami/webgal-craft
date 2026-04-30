@@ -1,19 +1,28 @@
 <script setup lang="ts">
 import { TriangleAlert } from '@lucide/vue'
 
-import { Game } from '~/database/model'
+import type { Game } from '~/database/model'
 
 let open = $(defineModel<boolean>('open'))
 let confirmInput = $ref('')
+let isProcessing = $ref(false)
 
 const { game, onConfirm } = defineProps<{
   game: Game
-  onConfirm: () => void
+  onConfirm: () => Promise<void>
 }>()
 
-function handleConfirm() {
-  onConfirm()
-  open = false
+async function handleConfirm() {
+  if (isProcessing) {
+    return
+  }
+  isProcessing = true
+  try {
+    await onConfirm()
+    open = false
+  } finally {
+    isProcessing = false
+  }
 }
 </script>
 
@@ -63,7 +72,7 @@ function handleConfirm() {
             type="button"
             variant="destructive"
             class="flex-1"
-            :disabled="confirmInput !== game.metadata.name"
+            :disabled="confirmInput !== game.metadata.name || isProcessing"
             @click="handleConfirm"
           >
             {{ $t('modals.deleteGameConfirm.confirmDelete') }}

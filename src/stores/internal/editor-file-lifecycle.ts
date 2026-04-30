@@ -4,7 +4,7 @@ import { fsCmds } from '~/commands/fs'
 import { mime } from '~/plugins/mime'
 import { consumePendingDocumentWrite } from '~/services/document-write-intents'
 import { gameAssetDir } from '~/services/platform/app-paths'
-import { useModalStore } from '~/stores/modal'
+import { normalizeFsPath } from '~/utils/path'
 
 import { applyDocumentTransaction } from './editor-document-actions'
 import { createLoadedDocumentState, markDocumentClean, resolveSceneCursor } from './editor-document-state'
@@ -72,6 +72,7 @@ export interface EditorFileLifecycleContext extends
   getWorkspaceRootPath: () => string | undefined
   patchSceneSelection: (path: string, patch: Partial<SceneSelectionState>) => void
   readTextDocumentFile: (path: string) => Promise<ReadTextDocumentResult>
+  resolveFilePath: (path: string) => Promise<string>
   setTabError: (path: string, error?: string) => void
   setTabLoading: (path: string, isLoading: boolean) => void
   setTabModified: (path: string, isModified: boolean) => void
@@ -93,7 +94,11 @@ interface ExternalDocumentSnapshot {
 const pendingFileModifiedTasks = new Map<string, Promise<void>>()
 
 function isPathInsideDirectory(path: string, directoryPath: string): boolean {
-  return path.startsWith(`${directoryPath}\\`) || path.startsWith(`${directoryPath}/`)
+  // 两侧路径可能分别来自 VFS（正斜杠）与 Tauri API（Windows 反斜杠），
+  // 比较前必须统一形态，否则前缀判断会错失，导致场景文件被识别为纯文本。
+  const normalizedPath = normalizeFsPath(path)
+  const normalizedDir = normalizeFsPath(directoryPath)
+  return normalizedPath.startsWith(`${normalizedDir}/`)
 }
 
 function createPreviewSession(state: AssetPreviewState): EditorSession {
@@ -140,7 +145,8 @@ async function loadNonEditableState(
 
     let fileSize: number | undefined
     try {
-      const fileStat = await stat(path)
+      const physicalPath = await context.resolveFilePath(path)
+      const fileStat = await stat(physicalPath)
       fileSize = fileStat.size
     } catch {
       // 获取文件大小失败时忽略，不影响预览
@@ -156,7 +162,8 @@ async function loadNonEditableState(
   }
 
   try {
-    const isBinary = await fsCmds.isBinaryFile(path)
+    const physicalPath = await context.resolveFilePath(path)
+    const isBinary = await fsCmds.isBinaryFile(physicalPath)
     if (!isBinary) {
       return undefined
     }
@@ -326,6 +333,8 @@ async function confirmExternalDocumentChange(
   path: string,
   allowMerge: boolean,
 ): Promise<'keep-local' | 'load-external' | 'merge' | 'cancel'> {
+  // 延迟加载 modal store 以避免与模板侧组件的循环依赖
+  const { useModalStore } = await import('~/stores/modal')
   const modalStore = useModalStore()
 
   return new Promise((resolve) => {

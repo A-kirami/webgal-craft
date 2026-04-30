@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h, nextTick, ref } from 'vue'
 
 import {
   createBrowserClickStub,
@@ -9,8 +8,6 @@ import {
 } from '~/__tests__/browser-render'
 
 import DiscoveredResourcesModal from './DiscoveredResourcesModal.vue'
-
-import type { PropType } from 'vue'
 
 interface ThumbnailStubValue {
   width: number
@@ -79,9 +76,7 @@ const globalStubs = {
 
 describe('DiscoveredResourcesModal', () => {
   beforeEach(() => {
-    ensureServeUrlsMock.mockReset()
-    getServeUrlMock.mockReset()
-    usePreviewRuntimeStoreMock.mockReset()
+    vi.resetAllMocks()
 
     getServeUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/')
     usePreviewRuntimeStoreMock.mockReturnValue({
@@ -142,6 +137,39 @@ describe('DiscoveredResourcesModal', () => {
 
     const image = await page.getByAltText('Demo Game').element()
     expect(image.dataset.fallbackImage).toBe('/placeholder.svg')
+  })
+
+  it('发现资源支持传入完整预览站点配置以保留 VFS lower', async () => {
+    renderInBrowser(DiscoveredResourcesModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        open: true,
+        resources: [
+          {
+            path: '/games/demo',
+            name: 'Demo Game',
+            icon: 'icons/favicon.ico',
+            previewSite: {
+              projectPath: '/games/demo',
+              enginePath: '/engines/webgal',
+            },
+          },
+        ],
+        type: 'games',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(ensureServeUrlsMock).toHaveBeenCalledWith([{
+        projectPath: '/games/demo',
+        enginePath: '/engines/webgal',
+      }])
+    })
   })
 
   it('资源列表更新时会丢弃已移除路径，并默认选中新加入的资源而不重置现有取消选择', async () => {
@@ -213,5 +241,29 @@ describe('DiscoveredResourcesModal', () => {
 
     expect(betaRow?.classList.contains('bg-accent')).toBe(false)
     expect(charlieRow?.classList.contains('bg-accent')).toBe(true)
+  })
+
+  it('模板资源不会请求预览运行时 serve url', async () => {
+    renderInBrowser(DiscoveredResourcesModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        open: true,
+        resources: [
+          {
+            path: '/templates/modern',
+            name: 'Modern Template',
+          },
+        ],
+        type: 'templates',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('Modern Template')).toBeVisible()
+    expect(ensureServeUrlsMock).not.toHaveBeenCalled()
   })
 })

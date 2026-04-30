@@ -7,6 +7,7 @@ export const usePreferenceStore = defineStore(
   () => {
     const viewMode = $ref<'grid' | 'list'>('grid')
     const assetViewMode = $ref<'grid' | 'list'>('grid')
+    const defaultEngineId = $ref<string | undefined>()
     const assetSortBy = $ref<FileViewerSortBy>('name')
     const assetSortOrder = $ref<FileViewerSortOrder>('asc')
     const editorMode = $ref<'text' | 'visual'>('text')
@@ -24,6 +25,7 @@ export const usePreferenceStore = defineStore(
     return $$({
       viewMode,
       assetViewMode,
+      defaultEngineId,
       assetSortBy,
       assetSortOrder,
       editorMode,

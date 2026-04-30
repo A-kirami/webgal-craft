@@ -13,14 +13,17 @@ common:
   unsaved: 未保存
   back: 返回
   or: 或者
+  more: 更多
   openFolder: 打开文件夹
   search:
     placeholder: 搜索文件或文件夹
     toggle: 切换搜索
     clear: 清空输入
+  unknown: 未知
   dialogs:
     selectGameFolder: 选择游戏文件夹
     selectEngineFolder: 选择引擎文件夹
+    selectTemplateFolder: 选择模板文件夹
   view:
     grid: 网格视图
     list: 列表视图
@@ -63,6 +66,7 @@ filePicker:
     clearRecentHistory: 清空最近历史
   recent:
     title: 最近选择
+
 app:
   name: WebGAL Craft
   description: WebGAL 视觉小说工作室
@@ -73,10 +77,12 @@ home:
   tabs:
     recent: 最近创作
     engines: 游戏引擎
+    templates: 游戏模板
   search:
     placeholder:
       recent: 搜索最近创作...
       engines: 搜索游戏引擎...
+      templates: 搜索模板...
   welcome:
     title: 欢迎使用 WebGAL Craft
     subtitle: 开始你的游戏创作之旅，编写属于你的故事
@@ -96,8 +102,14 @@ home:
     dropGameFolder: 将游戏文件夹拖放到此处导入
     gameCover: "{name} 游戏封面"
     gameIcon: "{name} 游戏图标"
+    importAlreadyRegistered: 该项目已注册
+    importCancelled: 导入已取消
+    importConfigCorrupted: 项目配置文件损坏
+    importEngineNotFound: 引擎不存在
+    importEngineUnavailable: 引擎不可用
     importSuccess: 游戏导入成功
     importInvalidFolder: 这不是一个有效的游戏文件夹
+    importSchemaVersionTooNew: 项目配置版本过新，请升级应用
     importUnknownError: 导入游戏时发生未知错误
     importMultipleFolders: 一次只能导入一个游戏文件夹
     importCreating: 游戏正在创建中，请等待创建完成
@@ -107,17 +119,38 @@ home:
     installEngine: 安装引擎
     installEngineHint: 点击浏览或拖放引擎文件夹到此处
     installGameEngine: 安装游戏引擎
-    uninstallEngine: 卸载引擎
     dropEngineFolder: 将游戏引擎文件夹拖放到此处
     engineIcon: "{name} 引擎图标"
     importSuccess: 引擎导入成功
     importInvalidFolder: 这不是一个有效的引擎文件夹
+    importUnsupportedLegacyEngine: 不支持直接导入旧版引擎，请导入包含该引擎的项目，或改用受支持的引擎版本。
     importUnknownError: 导入引擎时发生未知错误
     importMultipleFolders: 一次只能导入一个引擎文件夹
     noEngineTitle: 没有找到可用的游戏引擎
     noEngineContent: 需要先安装游戏引擎，才能创建游戏
     goToInstall: 前往安装
     later: 之后再说
+  templates:
+    noTemplates: 没有可用的模板
+    noTemplatesDesc: 导入独立模板，或安装带有内置模板的引擎
+    importTemplate: 导入模板
+    importTemplateHint: 点击浏览或拖放模板文件夹到此处
+    deleteTemplate: 删除模板
+    dropTemplateFolder: 将模板文件夹拖放到此处
+    importSuccess: 模板导入成功
+    importInvalidFolder: 这不是一个有效的模板文件夹
+    importDuplicate: 已存在同名模板
+    importUnknownError: 导入模板时发生未知错误
+    importMultipleFolders: 一次只能导入一个模板文件夹
+    compatibilityVersion: 兼容 WebGAL {version}
+    sourceKind:
+      standalone: 独立模板
+      engineBuiltin: 引擎内置
+    sourceSummary:
+      engineBuiltin: 来自 {count} 个引擎版本
+    actions:
+      more: 更多模板操作
+      openTemplateFolder: 打开模板文件夹
 
 modals:
   about:
@@ -133,7 +166,11 @@ modals:
     gameNameRequired: 游戏名称不能为空
     saveLocation: 保存位置
     gameEngine: 游戏引擎
-    selectEngine: 选择游戏引擎
+    gameTemplate: 游戏模板
+    templateFollowEngine: 跟随当前引擎
+    templateFollowEngineWithName: 跟随当前引擎（{name}）
+    templateGroupEngineBuiltin: 引擎内置模板
+    templateGroupStandalone: 独立模板
     create: 创建
     createFailed: 创建游戏失败
     pathNotEmpty: 游戏保存目录必须不存在或为空
@@ -159,17 +196,65 @@ modals:
     title: 卸载引擎
     description: 确定要卸载引擎 {name} 吗？
     warning: 此操作将把引擎文件移到回收站，你可以稍后从回收站恢复。
+    removeTitle: 移除引擎记录
+    removeDescription: 确定要移除引擎 {name} 的记录吗？
+    removeWarning: 引擎目录已不可用，此操作只会移除本地记录，不会删除任何文件。
+    removeSuccess: 引擎记录已移除
+    removeFailed: 引擎记录移除失败
     uninstallSuccess: 引擎卸载成功
+    uninstallFailed: 引擎卸载失败
+  deleteTemplate:
+    title: 删除模板
+    description: 确定要删除模板 {name} 吗？
+    warning: 此操作将把模板文件移到回收站，你可以稍后从回收站恢复。
+    deleteSuccess: 模板删除成功
+  switchEngine:
+    title: 切换引擎
+    description: 选择要切换的游戏引擎
+    engineLabel: 游戏引擎
+    switching: 正在切换引擎，请稍候...
+    templateDirty:
+      title: 模板已被修改
+      description: 切换引擎会影响当前模板中的本地修改，请选择处理方式
+      keep: 保留并固定模板
+      discard: 丢弃模板修改
+    success: 引擎已切换到 {name} {version}
+    failed:
+      title: 引擎切换失败
+      description: 复制引擎文件时出错，可重试或取消切换。
+      missingEngine: 所选引擎已不存在
+      retry: 重试
+      cancel: 取消并回滚
+  switchTemplate:
+    title: 切换模板
+    selectTemplate: 选择要切换的游戏模板
+    templateLabel: 游戏模板
+    dirtyWarning: 当前模板已被修改，切换将清除所有修改。确定要继续吗？
+    dirtyConfirm:
+      title: 切换模板将丢失修改
+      confirm: 确认切换
+    success: 模板已切换
+    error: 模板切换失败
+  deleteEngineGroup:
+    title: 卸载全部版本
+    description: 确定要卸载引擎 {name} 的全部版本吗？
+    warning: 此操作会将该引擎的全部已安装版本移到回收站，你可以稍后从回收站恢复。
+    success: 引擎全部版本卸载成功
+    failed: 引擎全部版本卸载失败
   discoveredResources:
     gamesTitle: 发现游戏
     enginesTitle: 发现引擎
+    templatesTitle: 发现模板
     gamesDescription: 在默认游戏目录中发现了 {count} 个游戏，是否导入？
-    enginesDescription: 在默认引擎目录中发现了 {count} 个引擎，是否导入？
+    enginesDescription: 在默认引擎目录中发现了 {engineCount} 个引擎，共 {versionCount} 个版本，是否导入？
+    templatesDescription: 在默认模板目录中发现了 {count} 个模板，是否导入？
     selectAll: 全选
     deselectAll: 取消全选
     selected: 已选择 {count}/{total}
     skip: 跳过
     import: 导入 ({count})
+    versionsCount: '{count} 个版本'
+    toggleGroup: 切换 {name} 全部版本
   gameConfig:
     title: 游戏配置
     description: 编辑当前游戏的基础信息、资源与相关配置
@@ -453,6 +538,8 @@ edit:
   statusBar:
     frames: "{count} 帧"
     statements: "{count} 条语句"
+    engine: 引擎
+    template: 模板
   fileTree:
     newFile: 新建文件
     newFolder: 新建文件夹
@@ -882,7 +969,30 @@ settings:
     enginePath:
       label: 引擎保存位置
       title: 选择引擎保存位置
+    templatePath:
+      label: 模板保存位置
+      title: 选择模板保存位置
     browse: 浏览
 
 notFound:
   message: 页面不存在
+
+engine:
+  selectName: 选择引擎
+  selectVersion: 选择版本
+  defaultEngine: 默认
+  setDefaultEngine: 设为默认引擎
+  unsetDefaultEngine: 取消默认引擎
+  versionSummary: '{version} · 共 {count} 个版本'
+  noAvailableVersionSummary: 无可用版本 · 共 {count} 个已安装版本
+  latestBadge: 最新
+  deleteVersion: 删除版本
+  uninstallAllVersions: 卸载全部版本
+  duplicateEngine: 同名同版本的引擎已存在
+  deleteBlocked: 无法删除
+  deleteBlockedByGames: 以下游戏正在使用此引擎：
+  unavailable: 不可用
+
+game:
+  selectEngine: 选择引擎
+  selectEngineDescription: 当前引擎不可用，请选择任意可用引擎打开

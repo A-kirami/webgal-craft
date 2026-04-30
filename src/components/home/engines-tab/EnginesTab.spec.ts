@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h, reactive, ref } from 'vue'
 
 import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 import { createTestEngine } from '~/__tests__/factories'
@@ -9,9 +8,10 @@ import { AppError } from '~/types/errors'
 import EnginesTab from './EnginesTab.vue'
 
 import type { Engine } from '~/database/model'
-import type { EngineCollectionItem } from '~/features/home/home-collection-items'
+import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
 
 const {
+  dirnameMock,
   getServeUrlMock,
   importEngineMock,
   modalOpenMock,
@@ -24,6 +24,7 @@ const {
   usePreferenceStoreMock,
   useResourceStoreMock,
 } = vi.hoisted(() => ({
+  dirnameMock: vi.fn(async (path: string) => path.replace(/[/\\][^/\\]+$/, '')),
   getServeUrlMock: vi.fn(),
   importEngineMock: vi.fn(),
   modalOpenMock: vi.fn(),
@@ -36,6 +37,14 @@ const {
   usePreferenceStoreMock: vi.fn(),
   useResourceStoreMock: vi.fn(),
 }))
+
+vi.mock('@tauri-apps/api/path', async () => {
+  const actual = await vi.importActual<typeof import('@tauri-apps/api/path')>('@tauri-apps/api/path')
+  return {
+    ...actual,
+    dirname: dirnameMock,
+  }
+})
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
   open: openDialogMock,
@@ -98,29 +107,40 @@ const globalStubs = {
   EnginesTabCollectionSection: defineComponent({
     name: 'StubEnginesTabCollectionSection',
     props: {
-      items: {
+      groups: {
         type: Array,
         required: true,
       },
     },
-    emits: ['deleteEngine', 'drop', 'importClick', 'openFolder'],
+    emits: ['deleteEngine', 'deleteGroup', 'drop', 'importClick', 'openGroupFolder', 'setDefaultEngine'],
     setup(props, { emit }) {
       return () => h('div', [
-        ...(props.items as EngineCollectionItem[]).map(item => h('article', {
-          'key': item.engine.id,
-          'data-serve-url': item.serveUrl,
-          'data-testid': `engine-item-${item.engine.id}`,
+        ...(props.groups as EngineGroupCollectionItem[]).map(group => h('article', {
+          'key': group.name,
+          'data-group-name': group.name,
+          'data-is-default': String(group.isDefault),
+          'data-serve-url': group.representativeItem?.serveUrl ?? '',
+          'data-testid': `engine-group-${group.name}`,
         }, [
-          h('h3', item.engine.metadata.name),
+          h('h3', group.name),
           h('button', {
             type: 'button',
-            onClick: () => emit('openFolder', item.engine),
+            onClick: () => emit('openGroupFolder', group),
           }, 'common.openFolder'),
           h('button', {
             type: 'button',
-            onClick: () => emit('deleteEngine', item.engine),
+            onClick: () => emit('deleteEngine', group.representativeItem?.engine),
           }, 'home.engines.uninstallEngine'),
+          h('button', {
+            type: 'button',
+            onClick: () => emit('deleteGroup', group.engineId),
+          }, 'engine.uninstallAllVersions'),
+          h('button', {
+            type: 'button',
+            onClick: () => emit('setDefaultEngine', group.isDefault ? undefined : group.engineId),
+          }, group.isDefault ? 'engine.unsetDefaultEngine' : 'engine.setDefaultEngine'),
         ])),
+        /* empty state import button */
         h('button', {
           type: 'button',
           onClick: () => emit('importClick'),
@@ -152,6 +172,7 @@ describe('EnginesTab', () => {
     vi.resetAllMocks()
 
     getServeUrlMock.mockReturnValue('http://127.0.0.1:8899/game/engine/')
+    dirnameMock.mockImplementation(async (path: string) => path.replace(/[/\\][^/\\]+$/, ''))
     importEngineMock.mockResolvedValue(undefined)
     openDialogMock.mockResolvedValue(undefined)
     useModalStoreMock.mockReturnValue({
@@ -161,12 +182,9 @@ describe('EnginesTab', () => {
       getServeUrl: getServeUrlMock,
     })
     usePreferenceStoreMock.mockReturnValue(reactive({
+      defaultEngineId: 'open-webgal.webgal',
       viewMode: 'list' as const,
     }))
-  })
-
-  afterEach(() => {
-    vi.clearAllMocks()
   })
 
   it('空状态下点击安装按钮会选择目录并导入引擎', async () => {
@@ -197,8 +215,13 @@ describe('EnginesTab', () => {
     })
   })
 
-  it('会预先组装包含 serveUrl 的展示项并传给集合组件', async () => {
-    const engine = createTestEngine()
+  it('会预先组装包含默认状态与 representative serveUrl 的引擎族展示项', async () => {
+    const engine = createTestEngine({
+      engineId: 'open-webgal.webgal',
+      name: 'WebGAL',
+      path: '/engines/WebGAL/4.5.0',
+      version: '4.5.0',
+    })
 
     useResourceStoreMock.mockReturnValue(createResourceStore({
       engines: [engine],
@@ -214,10 +237,11 @@ describe('EnginesTab', () => {
       },
     })
 
-    const item = await page.getByTestId('engine-item-engine-1').element()
+    const group = await page.getByTestId('engine-group-WebGAL').element()
 
-    expect(getServeUrlMock).toHaveBeenCalledWith('/engines/default')
-    expect(item.dataset.serveUrl).toBe('http://127.0.0.1:8899/game/engine/custom/')
+    expect(getServeUrlMock).toHaveBeenCalledWith('/engines/WebGAL/4.5.0')
+    expect(group.dataset.serveUrl).toBe('http://127.0.0.1:8899/game/engine/custom/')
+    expect(group.dataset.isDefault).toBe('true')
   })
 
   it('导入非法引擎目录时会显示结构错误通知', async () => {
@@ -243,12 +267,22 @@ describe('EnginesTab', () => {
     })
   })
 
-  it('列表视图操作按钮会打开引擎目录并触发卸载模态框', async () => {
-    const engine = createTestEngine()
+  it('列表视图操作按钮会打开引擎族目录、触发单版本卸载并支持整组操作', async () => {
+    const engine = createTestEngine({
+      engineId: 'open-webgal.webgal',
+      name: 'WebGAL',
+      path: '/engines/WebGAL/4.5.0',
+      version: '4.5.0',
+    })
+    const preferenceStore = reactive({
+      defaultEngineId: undefined as string | undefined,
+      viewMode: 'list' as const,
+    })
 
     useResourceStoreMock.mockReturnValue(createResourceStore({
       engines: [engine],
     }))
+    usePreferenceStoreMock.mockReturnValue(preferenceStore)
 
     renderInBrowser(EnginesTab, {
       browser: {
@@ -261,10 +295,45 @@ describe('EnginesTab', () => {
 
     await page.getByRole('button', { name: 'common.openFolder' }).click()
     await page.getByRole('button', { name: 'home.engines.uninstallEngine' }).click()
+    await page.getByRole('button', { name: 'engine.uninstallAllVersions' }).click()
+    await page.getByRole('button', { name: 'engine.setDefaultEngine' }).click()
 
     await vi.waitFor(() => {
-      expect(openPathMock).toHaveBeenCalledWith('/engines/default')
+      expect(openPathMock).toHaveBeenCalledWith('/engines/WebGAL')
       expect(modalOpenMock).toHaveBeenCalledWith('DeleteEngineModal', { engine })
+      expect(modalOpenMock).toHaveBeenCalledWith('DeleteEngineGroupModal', expect.objectContaining({ engineId: 'open-webgal.webgal' }))
     })
+    expect(preferenceStore.defaultEngineId).toBe('open-webgal.webgal')
+  })
+
+  it('点击默认引擎的取消默认动作会清空默认引擎名', async () => {
+    const engine = createTestEngine({
+      engineId: 'open-webgal.webgal',
+      name: 'WebGAL',
+      path: '/engines/WebGAL/4.5.0',
+      version: '4.5.0',
+    })
+    const preferenceStore = reactive({
+      defaultEngineId: 'open-webgal.webgal' as string | undefined,
+      viewMode: 'list' as const,
+    })
+
+    useResourceStoreMock.mockReturnValue(createResourceStore({
+      engines: [engine],
+    }))
+    usePreferenceStoreMock.mockReturnValue(preferenceStore)
+
+    renderInBrowser(EnginesTab, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'engine.unsetDefaultEngine' }).click()
+
+    expect(preferenceStore.defaultEngineId).toBeUndefined()
   })
 })

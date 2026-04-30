@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { AppError } from '~/types/errors'
+
 import { useGamesTabController } from '../useGamesTabController'
 
 const {
@@ -43,32 +45,31 @@ vi.mock('~/services/game-manager', () => ({
 }))
 
 describe('useGamesTabController 行为', () => {
-  beforeEach(() => {
-    importGameMock.mockReset()
-    notifyErrorMock.mockReset()
-    notifySuccessMock.mockReset()
-    notifyWarningMock.mockReset()
-    openDialogMock.mockReset()
-    openPathMock.mockReset()
-    routerPushMock.mockReset()
-  })
+  const openCreateGameModalMock = vi.fn()
+  const openDeleteGameModalMock = vi.fn()
+  const openNoEngineAlertModalMock = vi.fn()
+  const switchToEnginesTabMock = vi.fn()
 
-  it('拖入多个目录时只提示错误且不会触发导入', async () => {
-    const openCreateGameModalMock = vi.fn()
-    const openDeleteGameModalMock = vi.fn()
-    const openNoEngineAlertModalMock = vi.fn()
-    const switchToEnginesTabMock = vi.fn()
-
-    const controller = useGamesTabController({
+  function createController(overrides?: Partial<Parameters<typeof useGamesTabController>[0]>) {
+    return useGamesTabController({
       activeProgress: new Map<string, number>(),
-      engines: [{ id: 'engine-1' }],
+      engines: [{ id: 'engine-1', status: 'created' }],
       openCreateGameModal: openCreateGameModalMock,
       openDeleteGameModal: openDeleteGameModalMock,
       openNoEngineAlertModal: openNoEngineAlertModalMock,
       pushRoute: routerPushMock,
       switchToEnginesTab: switchToEnginesTabMock,
       t: (key: string) => key,
+      ...overrides,
     })
+  }
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('拖入多个目录时只提示错误且不会触发导入', async () => {
+    const controller = createController()
 
     await controller.handleDrop(['/a', '/b'])
 
@@ -77,21 +78,7 @@ describe('useGamesTabController 行为', () => {
   })
 
   it('无可用引擎时创建游戏会弹出引导并可切到引擎标签', () => {
-    const openCreateGameModalMock = vi.fn()
-    const openDeleteGameModalMock = vi.fn()
-    const openNoEngineAlertModalMock = vi.fn()
-    const switchToEnginesTabMock = vi.fn()
-
-    const controller = useGamesTabController({
-      activeProgress: new Map<string, number>(),
-      engines: [],
-      openCreateGameModal: openCreateGameModalMock,
-      openDeleteGameModal: openDeleteGameModalMock,
-      openNoEngineAlertModal: openNoEngineAlertModalMock,
-      pushRoute: routerPushMock,
-      switchToEnginesTab: switchToEnginesTabMock,
-      t: (key: string) => key,
-    })
+    const controller = createController({ engines: [] })
 
     controller.createGame()
 
@@ -102,46 +89,33 @@ describe('useGamesTabController 行为', () => {
   })
 
   it('创建游戏时会读取最新的引擎列表', () => {
-    let engines: { id: string }[] | undefined = []
-    const openCreateGameModalMock = vi.fn()
-    const openDeleteGameModalMock = vi.fn()
-    const openNoEngineAlertModalMock = vi.fn()
-    const switchToEnginesTabMock = vi.fn()
+    let engines: { id: string, status: 'created' | 'error' }[] | undefined = []
 
-    const controller = useGamesTabController({
-      activeProgress: new Map<string, number>(),
-      engines: () => engines,
-      openCreateGameModal: openCreateGameModalMock,
-      openDeleteGameModal: openDeleteGameModalMock,
-      openNoEngineAlertModal: openNoEngineAlertModalMock,
-      pushRoute: routerPushMock,
-      switchToEnginesTab: switchToEnginesTabMock,
-      t: (key: string) => key,
-    })
+    const controller = createController({ engines: () => engines })
 
-    engines = [{ id: 'engine-1' }]
+    engines = [{ id: 'engine-1', status: 'created' }]
     controller.createGame()
 
     expect(openCreateGameModalMock).toHaveBeenCalledTimes(1)
     expect(openNoEngineAlertModalMock).not.toHaveBeenCalled()
   })
 
-  it('引擎状态未知时创建游戏不会执行任何操作', () => {
-    const openCreateGameModalMock = vi.fn()
-    const openDeleteGameModalMock = vi.fn()
-    const openNoEngineAlertModalMock = vi.fn()
-    const switchToEnginesTabMock = vi.fn()
-
-    const controller = useGamesTabController({
-      activeProgress: new Map<string, number>(),
-      engines: undefined,
-      openCreateGameModal: openCreateGameModalMock,
-      openDeleteGameModal: openDeleteGameModalMock,
-      openNoEngineAlertModal: openNoEngineAlertModalMock,
-      pushRoute: routerPushMock,
-      switchToEnginesTab: switchToEnginesTabMock,
-      t: (key: string) => key,
+  it('已安装引擎全部失效时创建游戏会弹出引导', () => {
+    const controller = createController({
+      engines: [
+        { id: 'engine-1', status: 'error' },
+        { id: 'engine-2', status: 'unavailable' },
+      ],
     })
+
+    controller.createGame()
+
+    expect(openCreateGameModalMock).not.toHaveBeenCalled()
+    expect(openNoEngineAlertModalMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('引擎状态未知时创建游戏不会执行任何操作', () => {
+    const controller = createController({ engines: undefined })
 
     controller.createGame()
 
@@ -151,20 +125,8 @@ describe('useGamesTabController 行为', () => {
   })
 
   it('游戏处理中点击游戏只提示等待，不会跳转', () => {
-    const openCreateGameModalMock = vi.fn()
-    const openDeleteGameModalMock = vi.fn()
-    const openNoEngineAlertModalMock = vi.fn()
-    const switchToEnginesTabMock = vi.fn()
-
-    const controller = useGamesTabController({
+    const controller = createController({
       activeProgress: new Map<string, number>([['game-1', 50]]),
-      engines: [{ id: 'engine-1' }],
-      openCreateGameModal: openCreateGameModalMock,
-      openDeleteGameModal: openDeleteGameModalMock,
-      openNoEngineAlertModal: openNoEngineAlertModalMock,
-      pushRoute: routerPushMock,
-      switchToEnginesTab: switchToEnginesTabMock,
-      t: (key: string) => key,
     })
 
     controller.handleGameClick({ id: 'game-1' })
@@ -174,25 +136,24 @@ describe('useGamesTabController 行为', () => {
   })
 
   it('游戏未处理中点击会跳转到编辑器', () => {
-    const openCreateGameModalMock = vi.fn()
-    const openDeleteGameModalMock = vi.fn()
-    const openNoEngineAlertModalMock = vi.fn()
-    const switchToEnginesTabMock = vi.fn()
-
-    const controller = useGamesTabController({
-      activeProgress: new Map<string, number>(),
-      engines: [{ id: 'engine-1' }],
-      openCreateGameModal: openCreateGameModalMock,
-      openDeleteGameModal: openDeleteGameModalMock,
-      openNoEngineAlertModal: openNoEngineAlertModalMock,
-      pushRoute: routerPushMock,
-      switchToEnginesTab: switchToEnginesTabMock,
-      t: (key: string) => key,
-    })
+    const controller = createController()
 
     controller.handleGameClick({ id: 'game-2' })
 
     expect(notifyWarningMock).not.toHaveBeenCalled()
     expect(routerPushMock).toHaveBeenCalledWith('/edit/game-2')
+  })
+
+  it('选择目录导入已注册游戏时会提示专用消息', async () => {
+    openDialogMock.mockResolvedValue('/games/registered')
+    importGameMock.mockRejectedValue(new AppError('IO_ERROR', '该项目已注册', {
+      details: { reason: 'GAME_ALREADY_REGISTERED' },
+    }))
+
+    const controller = createController()
+
+    await controller.selectGameFolder()
+
+    expect(notifyErrorMock).toHaveBeenCalledWith('home.games.importAlreadyRegistered')
   })
 })

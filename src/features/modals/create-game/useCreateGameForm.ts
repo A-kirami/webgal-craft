@@ -5,40 +5,32 @@ import { useForm } from 'vee-validate'
 import * as z from 'zod'
 
 import {
-  resolveCreateGameDefaultEngineId,
   resolveCreateGamePathSuggestion,
 } from '~/features/modals/create-game/create-game-modal'
 import { gameManager } from '~/services/game-manager'
-import { useResourceStore } from '~/stores/resource'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
+
+import type { TemplateBinding } from '~/types/project-config'
 
 interface UseCreateGameFormOptions {
   open: Ref<boolean | undefined>
   onSuccess?: (gameId: string) => void
 }
 
-interface CreateGameFormValues {
-  gameName: string
-  gamePath: string
-  gameEngine: string
-}
-
 export function useCreateGameForm(options: UseCreateGameFormOptions) {
   const storageSettingsStore = useStorageSettingsStore()
-  const resourceStore = useResourceStore()
   const { t } = useI18n()
 
-  async function checkPath(path: string): Promise<boolean> {
+  async function checkPathAvailable(path: string): Promise<boolean> {
     try {
-      const pathExists = await exists(path)
-      if (!pathExists) {
+      if (!(await exists(path))) {
         return true
       }
 
       const entries = await readDir(path)
       return entries.length === 0
     } catch (error) {
-      void logger.error(`检查路径 ${path} 失败: ${error}`)
+      logger.error(`检查路径 ${path} 失败: ${error}`)
       return false
     }
   }
@@ -49,15 +41,19 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
       z.string().min(1, { error: t('modals.createGame.gameNameRequired') }),
     ),
     gamePath: z.string().refine(
-      async path => await checkPath(path),
+      checkPathAvailable,
       { error: t('modals.createGame.pathNotEmpty') },
     ),
-    gameEngine: z.string(),
+    gameEngine: z.string().min(1, t('home.engines.noEngineContent')),
+    gameTemplate: z.custom<TemplateBinding | undefined>().optional(),
   })
 
   const { handleSubmit, isFieldDirty: checkIsFieldDirty, setFieldValue } = useForm({
     validationSchema: schema,
-    initialValues: { gamePath: storageSettingsStore.gameSavePath },
+    initialValues: {
+      gamePath: storageSettingsStore.gameSavePath,
+      gameTemplate: undefined,
+    },
   })
 
   let isComposing = $ref(false)
@@ -101,13 +97,6 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
     }
   }
 
-  const engineOptions = computed(() => {
-    return resourceStore.engines?.map(engine => ({
-      id: engine.id,
-      name: engine.metadata.name,
-    }))
-  })
-
   function resolveCreateGameErrorMessage(error: unknown): string {
     if (error instanceof Error && error.message) {
       return error.message
@@ -120,29 +109,16 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
     return checkIsFieldDirty('gameName')
       || checkIsFieldDirty('gamePath')
       || checkIsFieldDirty('gameEngine')
+      || checkIsFieldDirty('gameTemplate')
   })
 
-  watch(engineOptions, (options_) => {
-    const defaultEngineId = resolveCreateGameDefaultEngineId(options_)
-    if (!defaultEngineId || checkIsFieldDirty('gameEngine')) {
-      return
-    }
-
-    setFieldValue('gameEngine', defaultEngineId)
-  }, {
-    immediate: true,
-  })
-
-  const onSubmit = handleSubmit(async (values: CreateGameFormValues) => {
-    const engine = resourceStore.engines?.find(engine => engine.id === values.gameEngine)
-    if (!engine) {
-      notify.error(t('home.engines.noEngineContent'))
-      return
-    }
+  const onSubmit = handleSubmit(async ({ gameName, gamePath, gameEngine, gameTemplate }) => {
+    options.open.value = false
 
     try {
-      const gameId = await gameManager.createGame(values.gameName, values.gamePath, engine.path)
-      options.open.value = false
+      const gameId = await gameManager.createGame(gameName, gamePath, gameEngine, {
+        templateBinding: gameTemplate,
+      })
       options.onSuccess?.(gameId)
     } catch (error) {
       notify.error(resolveCreateGameErrorMessage(error))
@@ -150,7 +126,7 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
   })
 
   return {
-    engineOptions,
+    setFieldValue,
     handleCompositionEnd,
     handleCompositionStart,
     handleGameNameChange,

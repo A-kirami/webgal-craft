@@ -11,12 +11,14 @@ import { getAssetUrl } from '~/services/platform/asset-url'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import { canExecuteEditorAutoSave, createEditorAutoSaveController } from '~/stores/editor-auto-save'
 import { createEditorPreviewSync } from '~/stores/editor-preview-sync'
+import { useFileStore } from '~/stores/file'
 import { usePreferenceStore } from '~/stores/preference'
 import { usePreviewSessionStore } from '~/stores/preview-session'
 import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
 import { handleError } from '~/utils/error-handler'
+import { toComparablePath } from '~/utils/path'
 
 import { createEditorDocumentActions } from './internal/editor-document-actions'
 import { createEditorDocumentSaveSnapshot, saveEditorDocument } from './internal/editor-document-save'
@@ -73,7 +75,9 @@ const PREVIEW_SYNC_DEDUPE_WINDOW_MS = 160
 const AUTO_SAVE_DEBOUNCE_MS = 500
 
 async function readTextDocumentFile(path: string): Promise<ReadTextDocumentResult> {
-  const bytes = await readFile(path)
+  const fileStore = useFileStore()
+  const physicalPath = fileStore.isVfs ? await fileStore.resolveFilePath(path) : path
+  const bytes = await readFile(physicalPath)
   return decodeTextFile(bytes)
 }
 
@@ -442,6 +446,10 @@ export const useEditorStore = defineStore('editor', () => {
     },
     patchSceneSelection,
     readTextDocumentFile,
+    resolveFilePath: async (path: string) => {
+      const fileStore = useFileStore()
+      return fileStore.isVfs ? await fileStore.resolveFilePath(path) : path
+    },
     scheduleAutoSave,
     setTabError: updateTabError,
     setTabLoading: updateTabLoading,
@@ -590,12 +598,40 @@ export const useEditorStore = defineStore('editor', () => {
     currentState !== undefined && isEditableEditor(currentState) && currentState.kind === 'animation',
   )
 
+  function toDirectoryPrefix(directory: string): string {
+    const normalized = toComparablePath(directory)
+    return normalized.endsWith('/') ? normalized : `${normalized}/`
+  }
+
+  function hasUnsavedDocumentsUnder(directory: string): boolean {
+    const prefix = toDirectoryPrefix(directory)
+    for (const [path] of sessions) {
+      if (toComparablePath(path).startsWith(prefix) && getEditableState(path)?.isDirty) {
+        return true
+      }
+    }
+    return false
+  }
+
+  function collectDocumentPathsUnder(directory: string): string[] {
+    const prefix = toDirectoryPrefix(directory)
+    const matched: string[] = []
+    for (const [path] of sessions) {
+      if (toComparablePath(path).startsWith(prefix)) {
+        matched.push(path)
+      }
+    }
+    return matched
+  }
+
   return $$({
     hasState,
     getState,
     getPreviewMediaSession,
     canUndoDocument,
     canRedoDocument,
+    hasUnsavedDocumentsUnder,
+    collectDocumentPathsUnder,
     currentState,
     currentTextProjection,
     currentVisualProjection,

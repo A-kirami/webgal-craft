@@ -1,8 +1,21 @@
 import { AppError } from '~/types/errors'
 
 export interface HomeResourceImportNotification {
-  kind: 'success' | 'invalid-folder' | 'unknown-error' | 'multiple-folders'
-  level: 'success' | 'error'
+  kind:
+    | 'success'
+    | 'invalid-folder'
+    | 'duplicate-resource'
+    | 'unsupported-legacy-engine'
+    | 'duplicate-engine'
+    | 'game-already-registered'
+    | 'game-config-corrupted'
+    | 'game-schema-too-new'
+    | 'engine-not-found'
+    | 'engine-unavailable'
+    | 'import-cancelled'
+    | 'unknown-error'
+    | 'multiple-folders'
+  level: 'success' | 'error' | 'silent'
 }
 
 export interface HomeResourceDropPathDecision {
@@ -30,22 +43,39 @@ export function resolveHomeResourceDropPath(paths: readonly string[]): HomeResou
 
 export function resolveHomeResourceImportNotification(error?: unknown): HomeResourceImportNotification {
   if (!error) {
-    return {
-      kind: 'success',
-      level: 'success',
-    }
+    return { kind: 'success', level: 'success' }
   }
 
-  if (error instanceof AppError && error.code === 'INVALID_STRUCTURE') {
-    return {
-      kind: 'invalid-folder',
-      level: 'error',
-    }
+  const kind = resolveErrorNotificationKind(error)
+  const level = kind === 'import-cancelled' ? 'silent' : 'error'
+  return { kind, level }
+}
+
+function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotification['kind'] {
+  if (!(error instanceof AppError)) {
+    return 'unknown-error'
   }
 
-  return {
-    kind: 'unknown-error',
-    level: 'error',
+  // 优先按 details.reason 匹配（更具体的错误分类）
+  switch (error.details?.reason) {
+    case 'INVALID_ENGINE_MANIFEST': { return 'invalid-folder' }
+    case 'UNSUPPORTED_MANIFEST_SCHEMA': { return 'game-schema-too-new' }
+    case 'UNSUPPORTED_LEGACY_ENGINE': { return 'unsupported-legacy-engine' }
+    case 'DUPLICATE_ENGINE': { return 'duplicate-engine' }
+    case 'GAME_ALREADY_REGISTERED': { return 'game-already-registered' }
+    case 'ENGINE_NOT_FOUND': { return 'engine-not-found' }
+    case 'ENGINE_UNAVAILABLE': { return 'engine-unavailable' }
+    case 'IMPORT_CANCELLED': { return 'import-cancelled' }
+    default: { break }
+  }
+
+  // 按 error.code 匹配
+  switch (error.code) {
+    case 'INVALID_STRUCTURE': { return 'invalid-folder' }
+    case 'DUPLICATE_RESOURCE': { return 'duplicate-resource' }
+    case 'INVALID_PROJECT_CONFIG': { return 'game-config-corrupted' }
+    case 'SCHEMA_VERSION_TOO_NEW': { return 'game-schema-too-new' }
+    default: { return 'unknown-error' }
   }
 }
 

@@ -1,32 +1,43 @@
-import { push as notify } from 'notivue'
-
 import { useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
 import { gameManager } from '~/services/game-manager'
 
-import type { Game } from '~/database/model'
+import type { EngineStatus, Game } from '~/database/model'
+import type { EngineRef } from '~/types/project-config'
 import type { I18nT } from '~/utils/i18n-like'
 
 interface UseGamesTabControllerOptions {
   activeProgress: ReadonlyMap<string, number>
-  engines?: readonly { id: string }[] | (() => readonly { id: string }[] | undefined)
+  engines?: readonly { id: string, status: EngineStatus }[] | (() => readonly { id: string, status: EngineStatus }[] | undefined)
   openCreateGameModal: () => void
   openDeleteGameModal: (game: Game) => void
   openNoEngineAlertModal: (onConfirm: () => void) => void
   pushRoute: (path: string) => unknown
+  selectEngine?: (hint?: EngineRef) => Promise<string | undefined>
   t: I18nT
   switchToEnginesTab: () => void
 }
 
-function isGameProcessing(activeProgress: ReadonlyMap<string, number>, gameId: string): boolean {
-  return activeProgress.has(gameId)
-}
-
 export function useGamesTabController(options: UseGamesTabControllerOptions) {
+  async function selectEngine(hint?: EngineRef): Promise<string | undefined> {
+    if (options.selectEngine) {
+      return await options.selectEngine(hint)
+    }
+
+    const { requestEngineSelection } = await import('~/features/modals/engine-selection/request-engine-selection')
+    return await requestEngineSelection(hint)
+  }
+
   const importActions = useHomeResourceImportActions<Game>({
     activeProgress: options.activeProgress,
-    importResource: path => gameManager.importGame(path),
+    importResource: path => gameManager.importGame(path, { selectEngine }),
     messages: {
+      engineNotFound: t => t('home.games.importEngineNotFound'),
+      engineUnavailable: t => t('home.games.importEngineUnavailable'),
+      gameAlreadyRegistered: t => t('home.games.importAlreadyRegistered'),
+      gameConfigCorrupted: t => t('home.games.importConfigCorrupted'),
+      gameSchemaTooNew: t => t('home.games.importSchemaVersionTooNew'),
       invalidFolder: t => t('home.games.importInvalidFolder'),
+      importCancelled: t => t('home.games.importCancelled'),
       multipleFolders: t => t('home.games.importMultipleFolders'),
       selectFolderTitle: t => t('common.dialogs.selectGameFolder'),
       success: t => t('home.games.importSuccess'),
@@ -35,12 +46,8 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
     t: options.t,
   })
 
-  function handleDeleteGame(game: Game) {
-    options.openDeleteGameModal(game)
-  }
-
   function handleGameClick(game: Pick<Game, 'id'>) {
-    if (isGameProcessing(options.activeProgress, game.id)) {
+    if (options.activeProgress.has(game.id)) {
       notify.warning(options.t('home.games.importCreating'))
       return
     }
@@ -56,7 +63,8 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
       return
     }
 
-    if (engines.length === 0) {
+    const hasUsableEngine = engines.some(engine => engine.status === 'created')
+    if (!hasUsableEngine) {
       options.openNoEngineAlertModal(options.switchToEnginesTab)
       return
     }
@@ -67,7 +75,7 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
   return {
     createGame,
     getGameProgress: importActions.getProgress,
-    handleDeleteGame,
+    handleDeleteGame: options.openDeleteGameModal,
     handleDrop: importActions.handleDrop,
     handleGameClick,
     handleOpenFolder: importActions.handleOpenFolder,

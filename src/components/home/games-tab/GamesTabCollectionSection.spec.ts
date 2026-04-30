@@ -22,6 +22,7 @@ vi.mock('~/plugins/dayjs', () => ({
   default: () => ({
     fromNow: () => 'just now',
   }),
+  setDayjsLocale: vi.fn(),
 }))
 
 interface ThumbnailStubValue {
@@ -87,6 +88,7 @@ describe('GamesTabCollectionSection', () => {
   function createItems(games: Game[] = [createTestGame()]): GameCollectionItem[] {
     return games.map(game => ({
       game,
+      rootPath: game.path,
       serveUrl: 'http://127.0.0.1:8899/game/demo/',
     }))
   }
@@ -249,6 +251,7 @@ describe('GamesTabCollectionSection', () => {
       props: {
         items: [{
           game,
+          rootPath: game.path,
           serveUrl: 'http://127.0.0.1:8899/game/demo/',
         }],
         getGameProgress: () => 0,

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { TriangleAlert } from '@lucide/vue'
 
-import { Engine } from '~/database/model'
+import { useDeleteConfirmation } from '~/composables/useDeleteConfirmation'
 import { engineManager } from '~/services/engine-manager'
+
+import type { Engine } from '~/database/model'
 
 const { t } = useI18n()
 const open = defineModel<boolean>('open')
@@ -11,10 +13,59 @@ const props = defineProps<{
   engine: Engine
 }>()
 
-function handleConfirm() {
-  engineManager.uninstallEngine(props.engine)
-  notify.success(t('modals.deleteEngine.uninstallSuccess'))
-}
+const isUnavailable = $computed(() => props.engine.status === 'unavailable')
+const engineDisplayName = $computed(() =>
+  props.engine.version ? `${props.engine.name} ${props.engine.version}` : props.engine.name,
+)
+
+const { associatedGames, isDeleteBlocked, isConfirmDisabled, handleConfirm } =
+  $(useDeleteConfirmation({
+    open,
+    identifier: () => props.engine.id,
+    checkDelete: () => engineManager.canDeleteEngine(props.engine.id),
+    performDelete: () => engineManager.uninstallEngine(props.engine),
+    successMessage: () => isUnavailable
+      ? t('modals.deleteEngine.removeSuccess')
+      : t('modals.deleteEngine.uninstallSuccess'),
+    fallbackErrorMessage: () => isUnavailable
+      ? t('modals.deleteEngine.removeFailed')
+      : t('modals.deleteEngine.uninstallFailed'),
+    logPrefix: '读取引擎删除状态失败',
+  }))
+
+const dialogTitle = $computed(() => {
+  if (isDeleteBlocked) {
+    return t('engine.deleteBlocked')
+  }
+
+  if (isUnavailable) {
+    return t('modals.deleteEngine.removeTitle')
+  }
+
+  return t('modals.deleteEngine.title')
+})
+
+const dialogDescription = $computed(() => {
+  if (isDeleteBlocked) {
+    return t('engine.deleteBlockedByGames')
+  }
+
+  if (isUnavailable) {
+    return t('modals.deleteEngine.removeDescription', { name: engineDisplayName })
+  }
+
+  return t('modals.deleteEngine.description', { name: engineDisplayName })
+})
+
+const dialogWarning = $computed(() => {
+  if (isDeleteBlocked) {
+    return
+  }
+
+  return isUnavailable
+    ? t('modals.deleteEngine.removeWarning')
+    : t('modals.deleteEngine.warning')
+})
 </script>
 
 <template>
@@ -29,21 +80,24 @@ function handleConfirm() {
         </div>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {{ $t('modals.deleteEngine.title') }}
+            {{ dialogTitle }}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            <i18n-t keypath="modals.deleteEngine.description" tag="p">
-              <template #name>
-                <span class="text-black font-bold">{{ engine.metadata.name }}</span>
-              </template>
-            </i18n-t>
-            <p>{{ $t('modals.deleteEngine.warning') }}</p>
+            <p>{{ dialogDescription }}</p>
+            <ul v-if="isDeleteBlocked" class="text-sm mt-3 pl-5 list-disc">
+              <li v-for="game in associatedGames" :key="game.id">
+                {{ game.metadata.name }}
+              </li>
+            </ul>
+            <p v-if="dialogWarning">
+              {{ dialogWarning }}
+            </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
       </div>
       <AlertDialogFooter>
         <AlertDialogCancel>{{ $t('common.cancel') }}</AlertDialogCancel>
-        <AlertDialogAction variant="destructive" @click="handleConfirm">
+        <AlertDialogAction :disabled="isConfirmDisabled" variant="destructive" @click="handleConfirm">
           {{ $t('common.confirm') }}
         </AlertDialogAction>
       </AlertDialogFooter>

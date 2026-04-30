@@ -68,7 +68,7 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
             <div class="bg-gray-100 w-full aspect-16/9 overflow-hidden">
               <AssetImage
                 :path="item.game.previewAssets.cover.path"
-                :root-path="item.game.path"
+                :root-path="item.rootPath"
                 :serve-url="item.serveUrl"
                 :alt="$t('home.games.gameCover', { name: item.game.metadata.name })"
                 :cache-version="item.game.previewAssets.cover.cacheVersion"
@@ -82,7 +82,7 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
               <div class="flex gap-4 items-center">
                 <AssetImage
                   :path="item.game.previewAssets.icon.path"
-                  :root-path="item.game.path"
+                  :root-path="item.rootPath"
                   :serve-url="item.serveUrl"
                   :alt="$t('home.games.gameIcon', { name: item.game.metadata.name })"
                   :cache-version="item.game.previewAssets.icon.cacheVersion"
@@ -109,7 +109,7 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
           </ContextMenuItem>
           <ContextMenuItem
             v-if="!hasGameProgress(item.game)"
-            class="text-destructive text-13px! focus:text-destructive-foreground focus:bg-destructive"
+            class="text-destructive focus:text-destructive-foreground focus:bg-destructive"
             @click="emit('deleteGame', item.game)"
           >
             <Trash2 class="mr-2 size-3.5" />
@@ -148,7 +148,7 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
           <div class="rounded-md h-10 w-10 overflow-hidden">
             <AssetImage
               :path="item.game.previewAssets.cover.path"
-              :root-path="item.game.path"
+              :root-path="item.rootPath"
               :serve-url="item.serveUrl"
               :alt="$t('home.games.gameCover', { name: item.game.metadata.name })"
               :cache-version="item.game.previewAssets.cover.cacheVersion"

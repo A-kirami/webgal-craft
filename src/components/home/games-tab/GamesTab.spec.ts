@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { defineComponent, h, reactive, ref } from 'vue'
 
@@ -213,19 +213,7 @@ function createResourceStore(options: {
 
 describe('GamesTab', () => {
   beforeEach(() => {
-    importGameMock.mockReset()
-    modalOpenMock.mockReset()
-    notifyErrorMock.mockReset()
-    notifySuccessMock.mockReset()
-    notifyWarningMock.mockReset()
-    openDialogMock.mockReset()
-    openPathMock.mockReset()
-    routerPushMock.mockReset()
-    useModalStoreMock.mockReset()
-    usePreferenceStoreMock.mockReset()
-    useResourceStoreMock.mockReset()
-    useRouterMock.mockReset()
-    useWorkspaceStoreMock.mockReset()
+    vi.resetAllMocks()
 
     openDialogMock.mockResolvedValue(undefined)
     getServeUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/')
@@ -245,10 +233,6 @@ describe('GamesTab', () => {
     useWorkspaceStoreMock.mockReturnValue(reactive({
       activeTab: 'recent' as const,
     }))
-  })
-
-  afterEach(() => {
-    vi.clearAllMocks()
   })
 
   function renderGamesTab() {
@@ -367,7 +351,7 @@ describe('GamesTab', () => {
     await page.getByRole('button', { name: '导入游戏' }).click()
 
     await vi.waitFor(() => {
-      expect(importGameMock).toHaveBeenCalledWith('/games/import-target')
+      expect(importGameMock).toHaveBeenCalledWith('/games/import-target', expect.objectContaining({ selectEngine: expect.any(Function) }))
       expect(notifyErrorMock).toHaveBeenCalledWith('这不是一个有效的游戏文件夹')
     })
   })

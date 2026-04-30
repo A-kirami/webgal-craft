@@ -1,4 +1,4 @@
-import type { Engine, Game } from '~/database/model'
+import type { Engine, Game, Template } from '~/database/model'
 
 interface TestGameFactoryOptions extends Partial<Omit<Game, 'metadata' | 'previewAssets'>> {
   metadata?: Partial<Game['metadata']>
@@ -34,15 +34,16 @@ export function createTestGame(options: TestGameFactoryOptions = {}): Game {
     ...rest,
     metadata: {
       name: 'Demo Game',
+      titleImg: 'cover.png',
       ...metadata,
     },
     previewAssets: {
       cover: {
-        path: coverPath ?? `${resolvedGamePath}/cover.png`,
+        path: coverPath ?? 'game/background/cover.png',
         ...cover,
       },
       icon: {
-        path: iconPath ?? `${resolvedGamePath}/icon.png`,
+        path: iconPath ?? 'icons/favicon.ico',
         ...icon,
       },
     },
@@ -54,16 +55,21 @@ export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine
   const resolvedEnginePath = path ?? '/engines/default'
   const { icon: rawIcon } = previewAssets ?? {}
   const { path: iconPath, ...icon } = rawIcon ?? {}
+  const defaultName = options.name ?? 'Default Engine'
+  const defaultEngineId = options.engineId ?? 'default-publisher.default-engine'
 
   return {
     id: 'engine-1',
     path: resolvedEnginePath,
+    engineId: defaultEngineId,
+    name: defaultName,
     createdAt: 0,
+    version: options.version,
     status: 'created',
     ...rest,
     metadata: {
       description: 'Default engine',
-      name: 'Default Engine',
+      icon: 'icons/favicon.ico',
       ...metadata,
     },
     previewAssets: {
@@ -71,6 +77,20 @@ export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine
         path: iconPath ?? `${resolvedEnginePath}/icon.png`,
         ...icon,
       },
+    },
+  }
+}
+
+export function createTestTemplate(options: Partial<Template> = {}): Template {
+  return {
+    id: 'template-1',
+    path: '/templates/default',
+    createdAt: 0,
+    status: 'created',
+    ...options,
+    metadata: {
+      name: 'Default Template',
+      ...options.metadata,
     },
   }
 }

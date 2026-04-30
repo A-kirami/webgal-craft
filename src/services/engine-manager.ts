@@ -1,64 +1,99 @@
 import { join } from '@tauri-apps/api/path'
-import { exists, readTextFile } from '@tauri-apps/plugin-fs'
+import { exists } from '@tauri-apps/plugin-fs'
 import sanitize from 'sanitize-filename'
 
+import { engineCmds } from '~/commands/engine'
 import { fsCmds } from '~/commands/fs'
 import { db } from '~/database/db'
-import { Engine } from '~/database/model'
-import { engineIconPath, engineManifestPath } from '~/services/platform/app-paths'
+import { Engine, Game } from '~/database/model'
+import { engineIconPath } from '~/services/platform/app-paths'
 import { EngineMetadata, EnginePreviewAssets } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
+import { EngineManifest, EngineManifestResult } from '~/types/engine'
 import { AppError } from '~/types/errors'
+import { EngineRef } from '~/types/project-config'
 
-interface RegisterEngineOptions {
-  metadata?: EngineMetadata
-  previewAssets?: EnginePreviewAssets
+interface EngineSnapshot {
+  engineId: string
+  metadata: EngineMetadata
+  name: string
+  previewAssets: EnginePreviewAssets
+  version?: string
+}
+
+interface RegisterEngineOptions extends EngineSnapshot {
   status?: Engine['status']
 }
 
-/**
- * 验证引擎
- * @param enginePath 引擎路径
- * @returns 是否为有效的引擎
- */
-async function validateEngine(enginePath: string): Promise<boolean> {
-  return await fsCmds.validateDirectoryStructure(
-    enginePath,
-    ['assets', 'game', 'icons'],
-    ['index.html', 'manifest.json', 'webgal-serviceworker.js'],
-  )
+interface DeleteEngineCheckResult {
+  associatedGames?: Game[]
+  canDelete: boolean
+  reason?: 'ENGINE_HAS_ASSOCIATED_GAMES'
 }
 
-/**
- * 获取引擎元数据
- * @param enginePath 引擎路径
- * @returns 引擎元数据，仅包含语义字段
- */
-async function getEngineMetadata(enginePath: string): Promise<EngineMetadata> {
-  const manifestPath = await engineManifestPath(enginePath)
-  const metaContent = await readTextFile(manifestPath)
-  const { name, description } = JSON.parse(metaContent)
+function sanitizeEnginePathSegment(value: string, fieldName: '引擎名称' | '引擎版本'): string {
+  const sanitized = sanitize(value ?? '', { replacement: '_' }).trim()
+  if (!sanitized) {
+    throw new AppError('IO_ERROR', `${fieldName}无效`)
+  }
 
+  return sanitized
+}
+
+function buildEngineMetadata(manifest: EngineManifest): EngineMetadata {
   return {
-    name,
-    description,
+    type: manifest.engineType as EngineMetadata['type'],
+    webgalVersion: manifest.webgalVersion,
+    description: manifest.description ?? '',
+    descriptions: manifest.descriptions,
+    maintainer: manifest.maintainer,
+    license: manifest.license,
+    icon: manifest.icon ?? 'icons/favicon.ico',
+    urls: manifest.urls,
+    live2dSupport: manifest.live2dSupport,
+    spineSupport: manifest.spineSupport,
   }
 }
 
-/**
- * 获取引擎预览资源快照
- * @param enginePath 引擎路径
- * @returns 图标路径
- */
-async function getEnginePreviewAssets(enginePath: string): Promise<EnginePreviewAssets> {
-  const iconPath = await engineIconPath(enginePath)
+async function resolveEngineIconPreviewPath(
+  enginePath: string,
+  metadata: EngineMetadata,
+): Promise<string> {
+  if (!metadata.icon || metadata.icon === 'icons/favicon.ico') {
+    return engineIconPath(enginePath)
+  }
+
+  return join(enginePath, metadata.icon)
+}
+
+async function classifyEngine(enginePath: string): Promise<EngineManifestResult> {
+  return engineCmds.readEngineManifest(enginePath)
+}
+
+async function buildEngineSnapshot(enginePath: string, manifest: EngineManifest): Promise<EngineSnapshot> {
+  const metadata = buildEngineMetadata(manifest)
 
   return {
-    icon: {
-      path: iconPath,
+    engineId: manifest.id,
+    name: manifest.name,
+    version: manifest.version,
+    metadata,
+    previewAssets: {
+      icon: {
+        path: await resolveEngineIconPreviewPath(enginePath, metadata),
+      },
     },
   }
+}
+
+async function resolveEngineSnapshot(enginePath: string): Promise<EngineSnapshot> {
+  const result = await classifyEngine(enginePath)
+  if (result.status !== 'ok') {
+    throw new AppError('IO_ERROR', '引擎缺少有效的 webgal-engine.json')
+  }
+
+  return buildEngineSnapshot(enginePath, result.manifest)
 }
 
 function withEnginePreviewCacheVersion(
@@ -73,178 +108,260 @@ function withEnginePreviewCacheVersion(
   }
 }
 
-async function getEngineSnapshot(enginePath: string): Promise<Pick<Engine, 'metadata' | 'previewAssets'>> {
-  const cacheVersion = Date.now()
-  const [metadata, previewAssets] = await Promise.all([
-    getEngineMetadata(enginePath),
-    getEnginePreviewAssets(enginePath),
-  ])
+async function resolveManagedEnginePath(engine: Pick<EngineSnapshot, 'name' | 'version'>): Promise<string> {
+  const storageSettingsStore = useStorageSettingsStore()
+  const nameSegment = sanitizeEnginePathSegment(engine.name, '引擎名称')
+  const versionSegment = sanitizeEnginePathSegment(engine.version ?? '', '引擎版本')
+  return join(storageSettingsStore.engineSavePath, nameSegment, versionSegment)
+}
+
+async function validateEngine(enginePath: string): Promise<boolean> {
+  return fsCmds.validateDirectoryStructure(
+    enginePath,
+    ['game/template'],
+    ['index.html', 'game/config.txt'],
+  )
+}
+
+async function getEnginePreviewAssets(enginePath: string): Promise<EnginePreviewAssets> {
+  const snapshot = await resolveEngineSnapshot(enginePath)
+  return snapshot.previewAssets
+}
+
+async function getEngineSnapshot(enginePath: string): Promise<Pick<Engine, 'engineId' | 'name' | 'version' | 'metadata' | 'previewAssets'>> {
+  const snapshot = await resolveEngineSnapshot(enginePath)
 
   return {
-    metadata,
-    previewAssets: withEnginePreviewCacheVersion(previewAssets, cacheVersion),
+    engineId: snapshot.engineId,
+    name: snapshot.name,
+    version: snapshot.version,
+    metadata: snapshot.metadata,
+    previewAssets: withEnginePreviewCacheVersion(snapshot.previewAssets),
   }
 }
 
-/**
- * 注册引擎到数据库
- * @param enginePath 引擎路径
- * @param options 注册选项；未提供的快照字段会自动补齐
- * @returns 引擎ID
- */
 async function registerEngine(
   enginePath: string,
-  options: RegisterEngineOptions = {},
+  options: RegisterEngineOptions,
 ): Promise<string> {
-  const { status = 'created' } = options
-  let { metadata, previewAssets } = options
+  const previewAssets = withEnginePreviewCacheVersion(options.previewAssets)
 
-  if (!metadata && !previewAssets) {
-    const snapshot = await getEngineSnapshot(enginePath)
-    metadata = snapshot.metadata
-    previewAssets = snapshot.previewAssets
-  } else {
-    metadata ??= await getEngineMetadata(enginePath)
-    previewAssets ??= withEnginePreviewCacheVersion(await getEnginePreviewAssets(enginePath))
-  }
-
-  return await db.engines.add({
+  return db.engines.add({
     id: crypto.randomUUID(),
     path: enginePath,
+    engineId: options.engineId,
+    name: options.name,
+    version: options.version,
     createdAt: Date.now(),
-    status,
-    metadata,
+    status: options.status ?? 'created',
+    metadata: options.metadata,
     previewAssets,
   })
 }
 
-function sanitizeEngineDirectoryName(engineName: string): string {
-  const sanitizedName = sanitize(engineName ?? '', { replacement: '_' }).trim()
-
-  if (!sanitizedName) {
-    throw new AppError('IO_ERROR', '引擎名称无效')
+async function findEngineByRef(engineRef: EngineRef): Promise<Engine | undefined> {
+  if (engineRef.version === undefined) {
+    return undefined
   }
 
-  return sanitizedName
+  return db.engines
+    .where('[engineId+version]')
+    .equals([engineRef.id, engineRef.version])
+    .first()
 }
 
-async function resolveInstalledEnginePath(engineSavePath: string, engineName: string): Promise<string> {
-  return await join(engineSavePath, sanitizeEngineDirectoryName(engineName))
+async function findAssociatedGames(engineDbId: string) {
+  return db.games.where('engineId').equals(engineDbId).toArray()
 }
 
-/**
- * 安装引擎
- * @param enginePath 引擎路径
- */
-async function installEngine(enginePath: string): Promise<void> {
-  const resourceStore = useResourceStore()
-  const storageSettingsStore = useStorageSettingsStore()
+async function findEnginesByEngineId(engineId: string) {
+  return db.engines.where('engineId').equals(engineId).toArray()
+}
 
-  const metadata = await getEngineMetadata(enginePath)
-  const engineName = metadata.name
-  const targetPath = await resolveInstalledEnginePath(storageSettingsStore.engineSavePath, engineName)
-  const targetExisted = await exists(targetPath)
-  const targetPreviewAssets = {
-    icon: {
-      path: await engineIconPath(targetPath),
-    },
+async function canDeleteEngine(id: string): Promise<DeleteEngineCheckResult> {
+  const associatedGames = await findAssociatedGames(id)
+  return buildDeleteCheckResult(associatedGames)
+}
+
+async function canDeleteEngineGroup(engineId: string): Promise<DeleteEngineCheckResult> {
+  const engines = await findEnginesByEngineId(engineId)
+  const gamesByEngine = await Promise.all(engines.map(engine => findAssociatedGames(engine.id)))
+  const uniqueGames = [...new Map(gamesByEngine.flat().map(game => [game.id, game])).values()]
+  return buildDeleteCheckResult(uniqueGames)
+}
+
+function buildDeleteCheckResult(associatedGames: Game[]): DeleteEngineCheckResult {
+  if (associatedGames.length > 0) {
+    return { canDelete: false, reason: 'ENGINE_HAS_ASSOCIATED_GAMES', associatedGames }
   }
+  return { canDelete: true }
+}
 
-  logger.info(`[引擎 ${engineName}] 开始安装`)
-
-  // 1. 先注册到数据库
-  const id = await registerEngine(targetPath, {
-    metadata,
-    previewAssets: targetPreviewAssets,
-    status: 'creating',
-  })
-  logger.info(`[引擎 ${engineName}] 注册到数据库`)
-
-  // 2. 再复制文件
-  logger.info(`[引擎 ${engineName}] 复制引擎文件: ${enginePath} 到 ${targetPath}`)
-  try {
-    await fsCmds.copyDirectoryWithProgress(enginePath, targetPath, (progress) => {
-      resourceStore.updateProgress(id, progress)
-    }, { overwrite: true })
-    logger.info(`[引擎 ${engineName}] 复制引擎文件完成`)
-
-    const installedSnapshot = await getEngineSnapshot(targetPath)
-    await db.engines.update(id, {
-      status: 'created',
-      ...installedSnapshot,
-    })
-
-    resourceStore.finishProgress(id)
-    logger.info(`[引擎 ${engineName}] 安装引擎完成`)
-  } catch (error) {
-    resourceStore.finishProgress(id)
-
-    try {
-      await db.engines.delete(id)
-    } catch (rollbackError) {
-      logger.error(`[引擎 ${engineName}] 回滚数据库记录失败: ${rollbackError}`)
-    }
-
-    // 仅清理本次安装创建出来的目标目录，避免误删原本已存在的内容。
-    if (!targetExisted && await exists(targetPath)) {
+async function validateAllEngines(): Promise<void> {
+  const engines = await db.engines.toArray()
+  await Promise.all(engines
+    .filter(engine => engine.status !== 'creating' && engine.status !== 'error')
+    .map(async (engine) => {
       try {
-        await fsCmds.deleteFile(targetPath, true)
-      } catch (cleanupError) {
-        logger.error(`[引擎 ${engineName}] 清理失败: ${cleanupError}`)
+        const structureValid = await validateEngine(engine.path)
+        const classification = structureValid ? await classifyEngine(engine.path) : undefined
+        const nextStatus = classification?.status === 'ok' ? 'created' : 'unavailable'
+        if (engine.status !== nextStatus) {
+          await db.engines.update(engine.id, { status: nextStatus })
+        }
+      } catch (error) {
+        logger.warn(`引擎校验异常: ${error}`)
       }
-    }
-
-    throw error
-  }
+    }))
 }
 
-/**
- * 卸载引擎
- * @param engine 引擎
- */
-async function uninstallEngine(engine: Engine): Promise<void> {
-  await fsCmds.deleteFile(engine.path)
-  await db.engines.delete(engine.id)
-}
-
-/**
- * 导入引擎
- * @param enginePath 引擎路径
- */
-async function importEngine(enginePath: string): Promise<void> {
-  const storageSettingsStore = useStorageSettingsStore()
-  const isValid = await validateEngine(enginePath)
-
-  if (!isValid) {
+async function assertEngineImportable(enginePath: string): Promise<EngineSnapshot> {
+  if (!(await validateEngine(enginePath))) {
     logger.error(`[引擎导入] 无效的引擎文件夹: ${enginePath}`)
     throw new AppError('INVALID_STRUCTURE', '无效的引擎文件夹')
   }
 
-  const metadata = await getEngineMetadata(enginePath)
-  const targetPath = await resolveInstalledEnginePath(storageSettingsStore.engineSavePath, metadata.name)
+  const existingByPath = await db.engines.where('path').equals(enginePath).first()
+  if (existingByPath) {
+    throw new AppError('IO_ERROR', '该引擎已导入')
+  }
+
+  const classification = await classifyEngine(enginePath)
+  if (classification.status === 'unsupportedSchema') {
+    throw new AppError(
+      'IO_ERROR',
+      `引擎清单 schemaVersion ${classification.schemaVersion} 不受支持，当前最高支持主版本 ${classification.supportedMajor}，请升级宿主或使用兼容的引擎`,
+      {
+        details: {
+          reason: 'UNSUPPORTED_MANIFEST_SCHEMA',
+          schemaVersion: classification.schemaVersion,
+          supportedMajor: classification.supportedMajor,
+        },
+      },
+    )
+  }
+  if (classification.status === 'missing') {
+    throw new AppError('IO_ERROR', '不支持导入旧版引擎，请导入包含该引擎的项目或使用受支持的引擎版本', {
+      details: { reason: 'UNSUPPORTED_LEGACY_ENGINE' },
+    })
+  }
+  if (classification.status === 'invalid') {
+    throw new AppError('IO_ERROR', classification.reason, {
+      details: {
+        reason: 'INVALID_ENGINE_MANIFEST',
+        manifestReason: classification.reason,
+        manifestStatus: classification.status,
+      },
+    })
+  }
+
+  const snapshot = await buildEngineSnapshot(enginePath, classification.manifest)
+  const duplicate = await findEngineByRef({
+    id: snapshot.engineId,
+    version: snapshot.version,
+  })
+
+  if (duplicate) {
+    throw new AppError('IO_ERROR', '同名同版本的引擎已存在', {
+      details: { reason: 'DUPLICATE_ENGINE' },
+    })
+  }
+
+  return snapshot
+}
+
+async function copyAndFinalizeEngine(
+  engineId: string,
+  sourcePath: string,
+  targetPath: string,
+): Promise<void> {
+  const resourceStore = useResourceStore()
+
+  await fsCmds.copyDirectoryWithProgress(sourcePath, targetPath, (progress) => {
+    resourceStore.updateProgress(engineId, progress)
+  })
+
+  resourceStore.finishProgress(engineId)
+  await db.engines.update(engineId, {
+    status: 'created',
+    ...await getEngineSnapshot(targetPath),
+  })
+}
+
+async function importEngine(enginePath: string): Promise<string> {
+  const snapshot = await assertEngineImportable(enginePath)
+  const targetPath = await resolveManagedEnginePath(snapshot)
 
   if (enginePath === targetPath) {
-    logger.info(`[引擎导入] 引擎已在目标位置，直接注册: ${enginePath}`)
-    const previewAssets = withEnginePreviewCacheVersion(await getEnginePreviewAssets(enginePath))
-    await registerEngine(enginePath, {
-      metadata,
-      previewAssets,
+    logger.info(`[引擎导入] 引擎已在托管目录，直接注册: ${enginePath}`)
+    return registerEngine(targetPath, snapshot)
+  }
+
+  if (await exists(targetPath)) {
+    throw new AppError('IO_ERROR', '目标引擎目录已存在，请先清理后重试')
+  }
+
+  logger.info(`[引擎 ${snapshot.name}] 开始导入`)
+  const engineId = await registerEngine(targetPath, {
+    ...snapshot,
+    status: 'creating',
+  })
+
+  try {
+    await copyAndFinalizeEngine(engineId, enginePath, targetPath)
+    logger.info(`[引擎 ${snapshot.name}] 导入完成`)
+    return engineId
+  } catch (error) {
+    logger.error(`[引擎导入] 导入失败: ${error}`)
+    useResourceStore().finishProgress(engineId)
+    await db.engines.update(engineId, { status: 'error' }).catch((error_) => {
+      logger.warn(`[引擎导入] 清理异常 - 更新状态失败: ${error_}`)
     })
-  } else {
-    await installEngine(enginePath)
+    if (await exists(targetPath)) {
+      await fsCmds.deleteFile(targetPath, true).catch((error_) => {
+        logger.warn(`[引擎导入] 清理异常 - 删除目录失败: ${error_}`)
+      })
+    }
+    throw error
   }
 }
 
-/**
- * 引擎管理器对象，提供游戏引擎相关的管理功能
- */
+function assertDeletable(deleteCheck: DeleteEngineCheckResult): void {
+  if (!deleteCheck.canDelete) {
+    const names = deleteCheck.associatedGames?.map(game => game.metadata.name).join('、') ?? ''
+    throw new AppError('IO_ERROR', `无法删除引擎，以下游戏正在使用此引擎：${names}`)
+  }
+}
+
+async function uninstallEngine(engine: Engine): Promise<void> {
+  assertDeletable(await canDeleteEngine(engine.id))
+  logger.info(`[引擎卸载] ${engine.name}@${engine.version ?? 'unknown'}: ${engine.path}`)
+  if (engine.status !== 'unavailable') {
+    try {
+      await fsCmds.deleteFile(engine.path, true)
+    } catch (error) {
+      logger.warn(`[引擎卸载] 删除托管目录失败，继续清理数据库记录: ${engine.path} - ${error}`)
+    }
+  }
+  await db.engines.delete(engine.id)
+}
+
+async function uninstallEngineGroup(engineId: string): Promise<void> {
+  assertDeletable(await canDeleteEngineGroup(engineId))
+  const engines = await findEnginesByEngineId(engineId)
+  logger.info(`[引擎组卸载] ${engineId} (${engines.length} 个版本)`)
+  await Promise.all(engines.map(engine => uninstallEngine(engine)))
+}
+
 export const engineManager = {
   validateEngine,
-  getEngineMetadata,
+  classifyEngine,
   getEnginePreviewAssets,
-  getEngineSnapshot,
-  registerEngine,
-  installEngine,
-  uninstallEngine,
+  findEngineByRef,
+  canDeleteEngine,
+  canDeleteEngineGroup,
+  validateAllEngines,
   importEngine,
+  uninstallEngine,
+  uninstallEngineGroup,
 }

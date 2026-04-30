@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
 
+import { gameManager } from '~/services/game-manager'
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 
 import type { Game } from '~/database/model'
 
-type PreviewGameTarget = Pick<Game, 'path'>
+type PreviewGameTarget = Pick<Game, 'engineId' | 'path'>
 
 export const usePreviewSessionStore = defineStore('previewSession', () => {
   let currentGamePath = $ref<string>()
@@ -32,7 +33,8 @@ export const usePreviewSessionStore = defineStore('previewSession', () => {
     reloadVersion = 0
 
     try {
-      const previewUrl = await previewRuntimeStore.ensureServeUrl({ projectPath: game.path })
+      const previewSite = await gameManager.resolvePreviewSite(game)
+      const previewUrl = await previewRuntimeStore.ensureServeUrl(previewSite)
       if (currentToken !== syncToken) {
         return
       }
@@ -68,11 +70,21 @@ export const usePreviewSessionStore = defineStore('previewSession', () => {
     refresh()
   }
 
+  async function syncIfCurrentGame(game: PreviewGameTarget): Promise<void> {
+    if (!game.path || currentGamePath !== game.path) {
+      return
+    }
+
+    await syncCurrentGame(game)
+    refresh()
+  }
+
   return $$({
     currentGameServeUrl,
     reloadVersion,
     syncCurrentGame,
     refresh,
     refreshIfCurrentGame,
+    syncIfCurrentGame,
   })
 })

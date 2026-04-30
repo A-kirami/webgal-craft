@@ -1,21 +1,33 @@
-import { exists } from '@tauri-apps/plugin-fs'
+import { join } from '@tauri-apps/api/path'
+import { exists, mkdir } from '@tauri-apps/plugin-fs'
 
 import { fsCmds } from '~/commands/fs'
 import { findGameConfigEntryValue, gameCmds } from '~/commands/game'
+import { projectConfigCmds } from '~/commands/project-config'
+import { vfsCmds } from '~/commands/vfs'
 import { db } from '~/database/db'
-import { Game } from '~/database/model'
-import { gameCoverPath, gameIconPath } from '~/services/platform/app-paths'
+import { Engine, Game } from '~/database/model'
+import { engineManager } from '~/services/engine-manager'
+import { gameConfigPath, projectConfigPath } from '~/services/platform/app-paths'
+import { templateSwitch } from '~/services/template-switch'
 import { GameMetadata, GamePreviewAssets } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
+import { EngineRef, ProjectConfig, TemplateBinding } from '~/types/project-config'
 
 import type { GameConfigEntry } from '~/commands/game'
+import type { StaticSiteConfig } from '~/types/server'
 
 interface RegisterGameOptions {
+  engineId?: string
   metadata?: GameMetadata
   previewAssets?: GamePreviewAssets
   status?: Game['status']
+}
+
+interface ImportGameOptions {
+  selectEngine?: (hint?: EngineRef) => Promise<string | undefined>
 }
 
 const GAME_NAME_RAW_KEY = 'Game_name'
@@ -52,50 +64,27 @@ function mergeGameConfigEntries(
   return mergedEntries
 }
 
-/**
- * 验证游戏目录
- * @param gamePath 游戏路径
- * @returns 是否为有效的游戏目录
- */
-async function validateGame(gamePath: string) {
-  return await fsCmds.validateDirectoryStructure(
-    gamePath,
-    ['assets', 'game', 'icons'],
-    ['index.html', 'manifest.json', 'webgal-serviceworker.js'],
-  )
+function buildGamePreviewAssets(titleImage: string | undefined): GamePreviewAssets {
+  return {
+    icon: {
+      path: 'icons/favicon.ico',
+    },
+    cover: {
+      path: titleImage ? `game/background/${titleImage}` : '',
+    },
+  }
 }
 
-/**
- * 获取游戏元数据
- * @param gamePath 游戏路径
- * @returns 游戏元数据，仅包含语义字段
- */
+async function validateGame(gamePath: string): Promise<boolean> {
+  return exists(await gameConfigPath(gamePath))
+}
+
 async function getGameMetadata(gamePath: string): Promise<GameMetadata> {
   const gameConfig = await gameCmds.getGameConfig(gamePath)
 
   return {
     name: findGameConfigEntryValue(gameConfig.entries, GAME_NAME_RAW_KEY) ?? '',
-  }
-}
-
-/**
- * 获取游戏预览资源快照
- * @param gamePath 游戏路径
- * @returns 封面和图标的路径
- */
-async function resolveGamePreviewAssets(gamePath: string, titleImage: string): Promise<GamePreviewAssets> {
-  const [iconPath, coverPath] = await Promise.all([
-    gameIconPath(gamePath),
-    gameCoverPath(gamePath, titleImage),
-  ])
-
-  return {
-    icon: {
-      path: iconPath,
-    },
-    cover: {
-      path: coverPath,
-    },
+    titleImg: findGameConfigEntryValue(gameConfig.entries, TITLE_IMAGE_RAW_KEY) ?? '',
   }
 }
 
@@ -116,24 +105,38 @@ function withGamePreviewCacheVersion(
 }
 
 async function getGamePreviewAssets(gamePath: string): Promise<GamePreviewAssets> {
-  const gameConfig = await gameCmds.getGameConfig(gamePath)
-  return await resolveGamePreviewAssets(gamePath, findGameConfigEntryValue(gameConfig.entries, TITLE_IMAGE_RAW_KEY) ?? '')
+  const metadata = await getGameMetadata(gamePath)
+  return buildGamePreviewAssets(metadata.titleImg)
 }
 
 async function getGameSnapshot(gamePath: string): Promise<Pick<Game, 'metadata' | 'previewAssets'>> {
-  const gameConfig = await gameCmds.getGameConfig(gamePath)
+  const metadata = await getGameMetadata(gamePath)
   const cacheVersion = Date.now()
-  const metadata = {
-    name: findGameConfigEntryValue(gameConfig.entries, GAME_NAME_RAW_KEY) ?? '',
-  }
-  const previewAssets = withGamePreviewCacheVersion(
-    await resolveGamePreviewAssets(gamePath, findGameConfigEntryValue(gameConfig.entries, TITLE_IMAGE_RAW_KEY) ?? ''),
-    cacheVersion,
-  )
 
   return {
     metadata,
-    previewAssets,
+    previewAssets: withGamePreviewCacheVersion(
+      buildGamePreviewAssets(metadata.titleImg),
+      cacheVersion,
+    ),
+  }
+}
+
+function applyCurrentGamePatch(
+  gameId: string,
+  patch: Partial<Pick<Game, 'engineId' | 'lastModified' | 'metadata' | 'previewAssets'>>,
+) {
+  const workspaceStore = useWorkspaceStore()
+  if (!workspaceStore.currentGame || workspaceStore.currentGame.id !== gameId) {
+    return
+  }
+
+  const current = workspaceStore.currentGame
+  workspaceStore.currentGame = {
+    ...current,
+    ...patch,
+    metadata: { ...current.metadata, ...patch.metadata },
+    previewAssets: { ...current.previewAssets, ...patch.previewAssets },
   }
 }
 
@@ -156,42 +159,11 @@ async function refreshRegisteredGameSnapshot(gamePath: string): Promise<void> {
   applyCurrentGamePatch(game.id, patch)
 }
 
-function applyCurrentGamePatch(gameId: string, patch: Partial<Pick<Game, 'lastModified' | 'metadata' | 'previewAssets'>>) {
-  const workspaceStore = useWorkspaceStore()
-  if (!workspaceStore.currentGame || workspaceStore.currentGame.id !== gameId) {
-    return
-  }
-
-  const { currentGame } = workspaceStore
-  workspaceStore.currentGame = {
-    ...currentGame,
-    ...patch,
-    metadata: patch.metadata
-      ? {
-          ...currentGame.metadata,
-          ...patch.metadata,
-        }
-      : currentGame.metadata,
-    previewAssets: patch.previewAssets
-      ? {
-          ...currentGame.previewAssets,
-          ...patch.previewAssets,
-        }
-      : currentGame.previewAssets,
-  }
-}
-
-/**
- * 注册游戏到数据库
- * @param gamePath 游戏路径
- * @param options 注册选项；未提供的快照字段会自动补齐
- * @returns 游戏ID
- */
 async function registerGame(
   gamePath: string,
   options: RegisterGameOptions = {},
 ): Promise<string> {
-  const { status = 'created' } = options
+  const { engineId, status = 'created' } = options
   let { metadata, previewAssets } = options
 
   if (!metadata && !previewAssets) {
@@ -203,9 +175,10 @@ async function registerGame(
     previewAssets ??= withGamePreviewCacheVersion(await getGamePreviewAssets(gamePath))
   }
 
-  return await db.games.add({
+  return db.games.add({
     id: crypto.randomUUID(),
     path: gamePath,
+    engineId,
     createdAt: Date.now(),
     lastModified: Date.now(),
     status,
@@ -214,45 +187,228 @@ async function registerGame(
   })
 }
 
-/**
- * 创建新游戏
- * @param gameName 游戏名称
- * @param gamePath 游戏保存路径
- * @param enginePath 使用的游戏引擎路径
- * @returns 游戏ID
- */
-async function createGame(gameName: string, gamePath: string, enginePath: string): Promise<string> {
-  const resourceStore = useResourceStore()
-  const targetExisted = await exists(gamePath)
+function buildProjectEngineRef(engine: Pick<Engine, 'engineId' | 'version'>): EngineRef {
+  return {
+    id: engine.engineId,
+    version: engine.version,
+  }
+}
 
-  logger.info(`[游戏 ${gameName}] 开始创建`)
+function canAutoBindMatchedEngine(engine: Engine): boolean {
+  return engine.status === 'created' || engine.status === 'unavailable'
+}
 
-  // 1. 先注册到数据库，包含初始元数据
-  const id = await registerGame(gamePath, {
-    metadata: {
-      name: gameName,
-    },
-    previewAssets: {
-      icon: {
-        path: '',
-      },
-      cover: {
-        path: '',
-      },
-    },
-    status: 'creating',
-  })
-  logger.info(`[游戏 ${gameName}] 注册到数据库`)
+async function writeSelfContainedProjectConfig(gamePath: string): Promise<void> {
+  await projectConfigCmds.writeProjectConfig(gamePath, { version: 1 })
+}
 
-  // 2. 复制引擎文件
-  logger.info(`[游戏 ${gameName}] 复制引擎文件: ${enginePath} 到 ${gamePath}`)
+async function readProjectConfigSafe(gamePath: string): Promise<ProjectConfig | undefined> {
   try {
-    await fsCmds.copyDirectoryWithProgress(enginePath, gamePath, (progress) => {
-      resourceStore.updateProgress(id, progress)
-    }, { overwrite: true })
-    logger.info(`[游戏 ${gameName}] 复制引擎文件完成`)
+    return await projectConfigCmds.readProjectConfig(gamePath)
+  } catch (error) {
+    logger.warn(`读取项目配置失败 (${gamePath}): ${error}`)
+    return undefined
+  }
+}
 
-    // 3. 设置游戏配置
+async function resolveBoundEngine(
+  game: Pick<Game, 'engineId' | 'path'>,
+): Promise<{ config?: ProjectConfig, engine?: Engine }> {
+  const config = await readProjectConfigSafe(game.path)
+
+  if (game.engineId) {
+    const engine = await db.engines.get(game.engineId)
+    return { config, engine }
+  }
+
+  if (!config?.engine) {
+    return { config }
+  }
+
+  const engine = await engineManager.findEngineByRef(config.engine)
+  return { config, engine }
+}
+
+async function resolveSelectableEngine(
+  selectEngine: ImportGameOptions['selectEngine'],
+  hint?: EngineRef,
+): Promise<Engine> {
+  if (!selectEngine) {
+    throw new AppError('IO_ERROR', '项目缺少可用引擎，请重新导入并选择引擎', {
+      details: { reason: 'ENGINE_SELECTION_REQUIRED' },
+    })
+  }
+
+  const engineId = await selectEngine(hint)
+  if (!engineId) {
+    throw new AppError('IO_ERROR', '导入已取消', {
+      details: { reason: 'IMPORT_CANCELLED' },
+    })
+  }
+
+  const engine = await db.engines.get(engineId)
+  if (!engine) {
+    throw new AppError('IO_ERROR', '引擎不存在', {
+      details: { reason: 'ENGINE_NOT_FOUND' },
+    })
+  }
+
+  if (engine.status !== 'created') {
+    throw new AppError('IO_ERROR', '引擎不可用', {
+      details: { reason: 'ENGINE_UNAVAILABLE' },
+    })
+  }
+
+  return engine
+}
+
+async function importLegacyGame(
+  gamePath: string,
+  options: ImportGameOptions,
+): Promise<string> {
+  const hasIndexHtml = await exists(await join(gamePath, 'index.html'))
+
+  if (hasIndexHtml) {
+    await writeSelfContainedProjectConfig(gamePath)
+    return registerGame(gamePath)
+  }
+
+  const engine = await resolveSelectableEngine(options.selectEngine)
+  await projectConfigCmds.writeProjectConfig(gamePath, {
+    version: 1,
+    engine: buildProjectEngineRef(engine),
+  })
+
+  return registerGame(gamePath, { engineId: engine.id })
+}
+
+async function importConfiguredGame(
+  gamePath: string,
+  options: ImportGameOptions,
+): Promise<string> {
+  let config: ProjectConfig
+
+  try {
+    config = await projectConfigCmds.readProjectConfig(gamePath)
+  } catch (error) {
+    // 仅处理 INVALID_PROJECT_CONFIG，其他错误（含 SCHEMA_VERSION_TOO_NEW）直接上抛
+    if (!(error instanceof AppError) || error.code !== 'INVALID_PROJECT_CONFIG') {
+      throw error
+    }
+
+    if (await exists(await join(gamePath, 'index.html'))) {
+      logger.warn(`project.wgcp 解析失败，但检测到自带引擎，按自带引擎项目导入: ${gamePath}`)
+      await writeSelfContainedProjectConfig(gamePath)
+      return await registerGame(gamePath)
+    }
+
+    throw new AppError('INVALID_PROJECT_CONFIG', '项目配置文件损坏', {
+      details: { reason: 'CONFIG_CORRUPTED' },
+    })
+  }
+
+  // 无引擎配置：自带引擎项目 或 让用户选择引擎
+  if (!config.engine) {
+    if (await exists(await join(gamePath, 'index.html'))) {
+      return registerGame(gamePath)
+    }
+
+    logger.warn(`engine 字段缺失且 index.html 不存在，引导用户选择引擎: ${gamePath}`)
+    return await bindSelectedEngine(gamePath, config, options)
+  }
+
+  // 有引擎配置：尝试自动匹配已注册引擎
+  const matchedEngine = await engineManager.findEngineByRef(config.engine)
+  if (matchedEngine && canAutoBindMatchedEngine(matchedEngine)) {
+    if (matchedEngine.status === 'unavailable') {
+      logger.warn(`关联的引擎 ${matchedEngine.name} 当前不可用，项目预览将受限: ${gamePath}`)
+    }
+    return registerGame(gamePath, { engineId: matchedEngine.id })
+  }
+
+  return await bindSelectedEngine(gamePath, config, options, config.engine)
+}
+
+/** 让用户选择引擎，写入配置并注册游戏 */
+async function bindSelectedEngine(
+  gamePath: string,
+  config: ProjectConfig,
+  options: ImportGameOptions,
+  hint?: EngineRef,
+): Promise<string> {
+  const engine = await resolveSelectableEngine(options.selectEngine, hint)
+  await projectConfigCmds.writeProjectConfig(gamePath, {
+    ...config,
+    engine: buildProjectEngineRef(engine),
+  })
+  return registerGame(gamePath, { engineId: engine.id })
+}
+
+interface CreateGameOptions {
+  onProgress?: (progress: number) => void
+  templateBinding?: TemplateBinding
+}
+
+async function createGame(gameName: string, gamePath: string, engineId: string, options: CreateGameOptions = {}): Promise<string> {
+  const resourceStore = useResourceStore()
+  const engine = await db.engines.get(engineId)
+  if (!engine) {
+    throw new AppError('IO_ERROR', '引擎不存在')
+  }
+
+  if (engine.status !== 'created') {
+    throw new AppError('IO_ERROR', '引擎不可用')
+  }
+
+  const templateBinding = options.templateBinding
+
+  const targetExisted = await exists(gamePath)
+  let gameId: string | undefined
+
+  try {
+    // 先创建目录和项目配置，确保 preview primer 触发时路径已存在且 VFS 可解析引擎层资源
+    await mkdir(await join(gamePath, 'game'), { recursive: true })
+    await projectConfigCmds.writeProjectConfig(gamePath, {
+      version: 1,
+      engine: buildProjectEngineRef(engine),
+      ...(templateBinding ? { template: templateBinding } : {}),
+    })
+
+    // 读取引擎默认配置获取初始预览资源路径，使创建中也能通过引擎 serve URL 显示封面和图标
+    let initialPreviewAssets: GamePreviewAssets
+    try {
+      const engineConfig = await gameCmds.getGameConfig(engine.path)
+      const titleImg = findGameConfigEntryValue(engineConfig.entries, TITLE_IMAGE_RAW_KEY) ?? ''
+      initialPreviewAssets = buildGamePreviewAssets(titleImg)
+    } catch {
+      initialPreviewAssets = buildGamePreviewAssets(undefined)
+    }
+
+    gameId = await registerGame(gamePath, {
+      engineId,
+      metadata: {
+        name: gameName,
+      },
+      previewAssets: initialPreviewAssets,
+      status: 'creating',
+    })
+
+    // 复制引擎 game/ 到项目（含 config.txt 等），但排除 template/：
+    // 模板按 phase-4b/01 设计走 template lower，不再下沉到项目目录
+    const engineGameDir = await join(engine.path, 'game')
+    if (await exists(engineGameDir)) {
+      const projectGameDir = await join(gamePath, 'game')
+      await fsCmds.copyDirectoryWithProgress(
+        engineGameDir,
+        projectGameDir,
+        (progress) => {
+          resourceStore.updateProgress(gameId!, progress)
+          options.onProgress?.(progress)
+        },
+        { excludes: ['template'] },
+      )
+    }
+
     const gameKey = crypto.randomUUID()
     const gameConfig = await gameCmds.getGameConfig(gamePath)
     await gameCmds.setGameConfig(gamePath, {
@@ -267,44 +423,32 @@ async function createGame(gameName: string, gamePath: string, enginePath: string
         },
       ]),
     })
-    logger.info(`[游戏 ${gameName}] 设置游戏配置`)
 
     const snapshot = await getGameSnapshot(gamePath)
-    await db.games.update(id, {
+    await db.games.update(gameId, {
       status: 'created',
       ...snapshot,
     })
+    resourceStore.finishProgress(gameId)
 
-    resourceStore.finishProgress(id)
-    logger.info(`[游戏 ${gameName}] 创建游戏完成`)
-    return id
+    return gameId
   } catch (error) {
-    resourceStore.finishProgress(id)
-
-    try {
-      await db.games.delete(id)
-    } catch (rollbackError) {
-      logger.error(`[游戏 ${gameName}] 回滚数据库记录失败: ${rollbackError}`)
+    logger.error(`创建游戏失败: ${error}`)
+    if (gameId) {
+      resourceStore.finishProgress(gameId)
+      await db.games.delete(gameId).catch((error_) => {
+        logger.warn(`[游戏创建] 清理异常 - 删除记录失败: ${error_}`)
+      })
     }
-
-    // 仅清理本次创建生成出来的目录，避免误删用户原本选中的现有目录。
     if (!targetExisted && await exists(gamePath)) {
-      try {
-        await fsCmds.deleteFile(gamePath, true)
-      } catch (cleanupError) {
-        logger.error(`[游戏 ${gameName}] 清理失败: ${cleanupError}`)
-      }
+      await fsCmds.deleteFile(gamePath, true).catch((error_) => {
+        logger.warn(`[游戏创建] 清理异常 - 删除目录失败: ${error_}`)
+      })
     }
-
     throw error
   }
 }
 
-/**
- * 删除游戏
- * @param game 游戏
- * @param removeFiles 是否同时删除游戏文件
- */
 async function deleteGame(game: Game, removeFiles: boolean = false): Promise<void> {
   if (removeFiles) {
     await fsCmds.deleteFile(game.path)
@@ -312,26 +456,94 @@ async function deleteGame(game: Game, removeFiles: boolean = false): Promise<voi
   await db.games.delete(game.id)
 }
 
-/**
- * 导入游戏
- * @param gamePath 游戏路径
- * @returns 游戏ID
- */
-async function importGame(gamePath: string): Promise<string> {
-  const isValid = await validateGame(gamePath)
+async function getGameEnginePath(game: Pick<Game, 'engineId' | 'path'>): Promise<string | undefined> {
+  const { engine } = await resolveBoundEngine(game)
+  if (engine?.status !== 'created') {
+    return undefined
+  }
 
-  if (!isValid) {
+  return engine.path
+}
+
+async function ensureConfigWritable(game: Pick<Game, 'engineId' | 'path'>): Promise<void> {
+  const enginePath = await getGameEnginePath(game)
+  if (!enginePath) {
+    return
+  }
+
+  await vfsCmds.ensureWritable({
+    projectPath: game.path,
+    enginePath,
+    relPath: 'game/config.txt',
+  })
+}
+
+async function renameGame(id: string, newName: string): Promise<void> {
+  const game = await db.games.get(id)
+  if (!game) {
+    throw new AppError('IO_ERROR', '游戏不存在')
+  }
+
+  await ensureConfigWritable(game)
+  const gameConfig = await gameCmds.getGameConfig(game.path)
+  await gameCmds.setGameConfig(game.path, {
+    entries: mergeGameConfigEntries(gameConfig.entries, [
+      {
+        key: GAME_NAME_RAW_KEY,
+        value: newName,
+      },
+    ]),
+  })
+
+  const patch = {
+    lastModified: Date.now(),
+    metadata: {
+      name: newName,
+    },
+  }
+  await db.games.update(id, patch)
+  applyCurrentGamePatch(id, patch)
+}
+
+async function importGame(gamePath: string, options: ImportGameOptions = {}): Promise<string> {
+  if (!(await validateGame(gamePath))) {
     logger.error(`[游戏导入] 无效的游戏文件夹: ${gamePath}`)
     throw new AppError('INVALID_STRUCTURE', '无效的游戏文件夹')
   }
 
-  return await registerGame(gamePath)
+  const existing = await db.games.where('path').equals(gamePath).first()
+  if (existing) {
+    throw new AppError('IO_ERROR', '该项目已注册', {
+      details: { reason: 'GAME_ALREADY_REGISTERED' },
+    })
+  }
+
+  if (await exists(await projectConfigPath(gamePath))) {
+    return importConfiguredGame(gamePath, options)
+  }
+
+  return importLegacyGame(gamePath, options)
 }
 
-/**
- * 更新游戏的 lastModified 字段
- * @param gameId 游戏ID
- */
+async function resolvePreviewSite(game: Pick<Game, 'engineId' | 'path'>): Promise<StaticSiteConfig> {
+  const { config, engine } = await resolveBoundEngine(game)
+  const isEngineBound = !!game.engineId || !!config?.engine
+
+  if (isEngineBound && engine?.status !== 'created') {
+    throw new AppError('IO_ERROR', '引擎不可用')
+  }
+
+  const templatePath = config?.engine
+    ? await templateSwitch.resolveTemplatePath(config.template, engine)
+    : undefined
+
+  return {
+    projectPath: game.path,
+    enginePath: engine?.path,
+    templatePath,
+  }
+}
+
 async function updateGameLastModified(gameId: string): Promise<void> {
   const cacheVersion = Date.now()
   const patch: Partial<Pick<Game, 'lastModified' | 'previewAssets'>> = {
@@ -359,17 +571,9 @@ async function updateGameLastModified(gameId: string): Promise<void> {
   applyCurrentGamePatch(gameId, patch)
 }
 
-/**
- * 更新当前游戏的 lastModified 字段
- * @returns Promise<void>
- */
 let lastModifiedTimer: ReturnType<typeof setTimeout> | undefined
 
-/**
- * 更新当前游戏的 lastModified 字段（防抖，500ms）
- *
- * 多次快速调用时仅执行最后一次，适用于批量文件操作（如粘贴多个文件）。
- */
+/** 防抖更新当前游戏的 lastModified 字段（500ms） */
 function updateCurrentGameLastModified(): void {
   const workspaceStore = useWorkspaceStore()
   const gameId = workspaceStore.currentGame?.id
@@ -387,9 +591,6 @@ function updateCurrentGameLastModified(): void {
   }, 500)
 }
 
-/**
- * 游戏管理器对象，提供游戏相关的管理功能
- */
 export const gameManager = {
   validateGame,
   getGameMetadata,
@@ -399,7 +600,10 @@ export const gameManager = {
   registerGame,
   createGame,
   deleteGame,
+  renameGame,
   importGame,
+  getGameEnginePath,
+  resolvePreviewSite,
   updateGameLastModified,
   updateCurrentGameLastModified,
 }

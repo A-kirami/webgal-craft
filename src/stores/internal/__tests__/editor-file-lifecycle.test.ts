@@ -154,6 +154,7 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
       workspaceUnavailable: 'workspace unavailable',
     },
     patchSceneSelection: vi.fn(),
+    resolveFilePath: vi.fn(async (currentPath: string) => currentPath),
     scheduleAutoSave,
     setSession(path: string, nextSession: EditorSession) {
       sessions.set(path, nextSession)

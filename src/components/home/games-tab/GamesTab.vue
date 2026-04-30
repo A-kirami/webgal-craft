@@ -9,6 +9,7 @@ import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 
+import type { Engine } from '~/database/model'
 import type { GameCollectionItem } from '~/features/home/home-collection-items'
 
 const modalStore = useModalStore()
@@ -19,11 +20,26 @@ const workspaceStore = useWorkspaceStore()
 const router = useRouter()
 const { t } = useI18n()
 
+const engineById = $computed(() => {
+  const map = new Map<string, Engine>()
+  for (const engine of resourceStore.engines ?? []) {
+    map.set(engine.id, engine)
+  }
+  return map
+})
+
 const gameCollectionItems = computed<GameCollectionItem[]>(() =>
-  resourceStore.filteredGames.map(game => ({
-    game,
-    serveUrl: previewRuntimeStore.getServeUrl(game.path),
-  })),
+  resourceStore.filteredGames.map((game) => {
+    const isCreating = game.status === 'creating'
+    const engine = game.engineId ? engineById.get(game.engineId) : undefined
+    const useEngineAsRoot = isCreating && engine
+
+    return {
+      game,
+      rootPath: useEngineAsRoot ? engine.path : game.path,
+      serveUrl: previewRuntimeStore.getServeUrl(useEngineAsRoot ? engine.path : game.path),
+    }
+  }),
 )
 const controller = useGamesTabController({
   activeProgress: resourceStore.activeProgress,

@@ -13,14 +13,17 @@ common:
   unsaved: Unsaved
   back: Back
   or: or
+  more: More
   openFolder: Open Folder
   search:
     placeholder: Search files or folders
     toggle: Toggle search
     clear: Clear input
+  unknown: Unknown
   dialogs:
     selectGameFolder: Select Game Folder
     selectEngineFolder: Select Engine Folder
+    selectTemplateFolder: Select Template Folder
   view:
     grid: Grid View
     list: List View
@@ -63,6 +66,7 @@ filePicker:
     clearRecentHistory: Clear recent history
   recent:
     title: Recent
+
 app:
   name: WebGAL Craft
   description: WebGAL Visual Novel Studio
@@ -73,10 +77,12 @@ home:
   tabs:
     recent: Recent Creations
     engines: Game Engines
+    templates: Game Templates
   search:
     placeholder:
       recent: Search recent creations...
       engines: Search game engines...
+      templates: Search templates...
   welcome:
     title: Welcome to WebGAL Craft
     subtitle: Start your game creation journey and write your story
@@ -96,8 +102,14 @@ home:
     dropGameFolder: Drag and drop game folder here to import
     gameCover: "{name} game cover"
     gameIcon: "{name} game icon"
+    importAlreadyRegistered: This project is already registered
+    importCancelled: Import cancelled
+    importConfigCorrupted: Project configuration file is corrupted
+    importEngineNotFound: Engine not found
+    importEngineUnavailable: Engine is unavailable
     importSuccess: Game imported successfully
     importInvalidFolder: This is not a valid game folder
+    importSchemaVersionTooNew: Project config version is too new. Please upgrade the app.
     importUnknownError: An unknown error occurred while importing the game
     importMultipleFolders: Only one game folder can be imported at a time
     importCreating: Game is being created, please wait for the creation to complete
@@ -107,17 +119,38 @@ home:
     installEngine: Install Engine
     installEngineHint: Click to browse or drag and drop engine folder here
     installGameEngine: Install Game Engine
-    uninstallEngine: Uninstall Engine
     dropEngineFolder: Drag and drop game engine folder here
     engineIcon: "{name} engine icon"
     importSuccess: Engine imported successfully
     importInvalidFolder: This is not a valid engine folder
+    importUnsupportedLegacyEngine: Legacy engines cannot be imported directly. Import a project containing this engine, or use a supported engine version instead.
     importUnknownError: An unknown error occurred while importing the engine
     importMultipleFolders: Only one engine folder can be imported at a time
     noEngineTitle: No Available Game Engines
     noEngineContent: You need to install a game engine first to create games
     goToInstall: Go to Install
     later: Later
+  templates:
+    noTemplates: No Available Templates
+    noTemplatesDesc: Import standalone templates or install engines with built-in templates
+    importTemplate: Import Template
+    importTemplateHint: Click to browse or drag and drop template folder here
+    deleteTemplate: Delete Template
+    dropTemplateFolder: Drag and drop template folder here
+    importSuccess: Template imported successfully
+    importInvalidFolder: This is not a valid template folder
+    importDuplicate: A template with the same name already exists
+    importUnknownError: An unknown error occurred while importing the template
+    importMultipleFolders: Only one template folder can be imported at a time
+    compatibilityVersion: Compatible with WebGAL {version}
+    sourceKind:
+      standalone: Standalone
+      engineBuiltin: Built-in
+    sourceSummary:
+      engineBuiltin: From {count} engine versions
+    actions:
+      more: More template actions
+      openTemplateFolder: Open Template Folder
 
 modals:
   about:
@@ -133,7 +166,11 @@ modals:
     gameNameRequired: Game name is required
     saveLocation: Save Location
     gameEngine: Game Engine
-    selectEngine: Select game engine
+    gameTemplate: Game Template
+    templateFollowEngine: Follow Current Engine
+    templateFollowEngineWithName: Follow Current Engine ({name})
+    templateGroupEngineBuiltin: Engine Built-in Templates
+    templateGroupStandalone: Standalone Templates
     create: Create
     createFailed: Failed to create game
     pathNotEmpty: The game save directory must not exist or be empty
@@ -159,17 +196,65 @@ modals:
     title: Uninstall Engine
     description: Are you sure you want to uninstall the engine {name}?
     warning: This operation will move engine files to the recycle bin. You can restore them from there.
+    removeTitle: Remove Engine Record
+    removeDescription: Remove the record for engine {name}?
+    removeWarning: The engine directory is no longer available. This only removes the local record and will not delete any files.
+    removeSuccess: Engine record removed
+    removeFailed: Failed to remove engine record
     uninstallSuccess: Engine uninstalled successfully
+    uninstallFailed: Failed to uninstall engine
+  deleteTemplate:
+    title: Delete Template
+    description: Are you sure you want to delete the template {name}?
+    warning: This operation will move template files to the recycle bin. You can restore them from there.
+    deleteSuccess: Template deleted successfully
+  switchEngine:
+    title: Switch Engine
+    description: Select the game engine to switch to
+    engineLabel: Game Engine
+    switching: Switching engine, please wait...
+    templateDirty:
+      title: Template has been modified
+      description: Switching engines will affect local modifications in the current template. Please choose how to handle them
+      keep: Keep and pin template
+      discard: Discard template changes
+    success: Engine switched to {name} {version}
+    failed:
+      title: Engine switch failed
+      description: An error occurred while copying engine files. You can retry or cancel.
+      missingEngine: The selected engine no longer exists
+      retry: Retry
+      cancel: Cancel and roll back
+  switchTemplate:
+    title: Switch Template
+    selectTemplate: Select the game template to switch to
+    templateLabel: Game Template
+    dirtyWarning: The current template has been modified. Switching will clear all modifications. Are you sure?
+    dirtyConfirm:
+      title: Switching will discard modifications
+      confirm: Confirm switch
+    success: Template switched
+    error: Template switch failed
+  deleteEngineGroup:
+    title: Uninstall All Versions
+    description: Are you sure you want to uninstall all versions of engine {name}?
+    warning: This operation will move all installed versions of this engine to the recycle bin. You can restore them later.
+    success: All engine versions were uninstalled successfully
+    failed: Failed to uninstall all engine versions
   discoveredResources:
     gamesTitle: Discovered Games
     enginesTitle: Discovered Engines
+    templatesTitle: Discovered Templates
     gamesDescription: Found {count} game(s) in the default game directory. Would you like to import them?
-    enginesDescription: Found {count} engine(s) in the default engine directory. Would you like to import them?
+    enginesDescription: Found {engineCount} engine(s) ({versionCount} version(s) in total) in the default engine directory. Would you like to import them?
+    templatesDescription: Found {count} template(s) in the default template directory. Would you like to import them?
     selectAll: Select All
     deselectAll: Deselect All
     selected: Selected {count}/{total}
     skip: Skip
     import: Import ({count})
+    versionsCount: '{count} version(s)'
+    toggleGroup: Toggle all versions of {name}
   gameConfig:
     title: Game Configuration
     description: Edit the current game's basic information, assets, and related settings
@@ -453,6 +538,8 @@ edit:
   statusBar:
     frames: "{count} frames"
     statements: "{count} statements"
+    engine: Engine
+    template: Template
   fileTree:
     newFile: New File
     newFolder: New Folder
@@ -882,7 +969,30 @@ settings:
     enginePath:
       label: Engine Save Location
       title: Select Engine Save Location
+    templatePath:
+      label: Template Save Location
+      title: Select Template Save Location
     browse: Browse
 
 notFound:
   message: Page not found
+
+engine:
+  selectName: Select Engine
+  selectVersion: Select Version
+  defaultEngine: Default
+  setDefaultEngine: Set as Default Engine
+  unsetDefaultEngine: Unset Default Engine
+  versionSummary: '{version} · {count} versions'
+  noAvailableVersionSummary: No available version · {count} installed versions
+  latestBadge: Latest
+  deleteVersion: Delete Version
+  uninstallAllVersions: Uninstall All Versions
+  duplicateEngine: An engine with the same name and version already exists
+  deleteBlocked: Cannot Delete
+  deleteBlockedByGames: 'The following games are using this engine:'
+  unavailable: Unavailable
+
+game:
+  selectEngine: Select game engine
+  selectEngineDescription: Current engine is unavailable, please select any available engine to open

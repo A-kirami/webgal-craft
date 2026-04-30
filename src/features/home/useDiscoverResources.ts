@@ -2,18 +2,20 @@ import { join } from '@tauri-apps/api/path'
 import { exists, readDir } from '@tauri-apps/plugin-fs'
 
 import { resolveHomeTabDefinition } from '~/features/home/home-tabs'
+import { requestEngineSelection } from '~/features/modals/engine-selection/request-engine-selection'
 import { engineManager } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
+import { templateManager } from '~/services/template-manager'
 import { useModalStore } from '~/stores/modal'
 import { useResourceStore } from '~/stores/resource'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 import { useWorkspaceStore } from '~/stores/workspace'
 
-interface DiscoveredResource {
-  path: string
-  name: string
-  icon?: string
-}
+import type { DiscoveredResource } from './discovered-resource'
+import type { Engine, Game, Template } from '~/database/model'
+import type { StaticSiteConfig } from '~/types/server'
+
+export type { DiscoveredResource } from './discovered-resource'
 
 async function discoverResourcesInDirectory(
   directory: string,
@@ -69,10 +71,24 @@ async function discoverGames(): Promise<DiscoveredResource[]> {
   }
 
   const games = await discoverResourcesInDirectory(gameSavePath, gameManager.validateGame)
-  return enrichWithIcons(games, async (path) => {
-    const previewAssets = await gameManager.getGamePreviewAssets(path)
-    return previewAssets.icon.path
-  })
+  return Promise.all(
+    games.map(async (resource) => {
+      const previewAssets = await gameManager.getGamePreviewAssets(resource.path)
+      let previewSite: StaticSiteConfig | undefined
+
+      try {
+        previewSite = await gameManager.resolvePreviewSite({ path: resource.path })
+      } catch {
+        previewSite = { projectPath: resource.path }
+      }
+
+      return {
+        ...resource,
+        icon: previewAssets.icon.path,
+        previewSite,
+      }
+    }),
+  )
 }
 
 async function discoverEngines(): Promise<DiscoveredResource[]> {
@@ -81,32 +97,205 @@ async function discoverEngines(): Promise<DiscoveredResource[]> {
     return []
   }
 
-  const engines = await discoverResourcesInDirectory(engineSavePath, engineManager.validateEngine)
+  const engines = await discoverEnginesInDirectory(engineSavePath)
   return enrichWithIcons(engines, async (path) => {
     const previewAssets = await engineManager.getEnginePreviewAssets(path)
     return previewAssets.icon.path
   })
 }
 
+async function discoverTemplates(): Promise<DiscoveredResource[]> {
+  const { templateSavePath } = useStorageSettingsStore()
+  if (!templateSavePath) {
+    return []
+  }
+
+  const templates = await discoverResourcesInDirectory(templateSavePath, templateManager.validateTemplate)
+  const discoveredTemplates = await Promise.all(
+    templates.map(async (template) => {
+      try {
+        const metadata = await templateManager.getTemplateMetadata(template.path)
+        return [{
+          ...template,
+          name: metadata.name,
+        }]
+      } catch {
+        return []
+      }
+    }),
+  )
+  return discoveredTemplates.flat()
+}
+
+async function discoverEngineVersion(versionPath: string, fallbackVersion: string): Promise<DiscoveredResource | undefined> {
+  const isValid = await engineManager.validateEngine(versionPath).catch(() => false)
+  if (!isValid) {
+    return
+  }
+
+  const classification = await engineManager.classifyEngine(versionPath).catch(() => undefined)
+  if (classification?.status !== 'ok') {
+    return
+  }
+
+  return {
+    path: versionPath,
+    name: classification.manifest.name,
+    engineId: classification.manifest.id,
+    version: classification.manifest.version ?? fallbackVersion,
+  }
+}
+
+async function discoverEnginesInDirectory(directory: string): Promise<DiscoveredResource[]> {
+  try {
+    if (!directory || !(await exists(directory))) {
+      return []
+    }
+
+    const entries = await readDir(directory)
+    const discovered = await Promise.all(entries
+      .filter(entry => entry.isDirectory)
+      .map(async (entry) => {
+        const namePath = await join(directory, entry.name)
+        const subEntries = await readDir(namePath).catch(() => [])
+        const versions = await Promise.all(subEntries
+          .filter(subEntry => subEntry.isDirectory)
+          .map(async (subEntry) => {
+            const versionPath = await join(namePath, subEntry.name)
+            return discoverEngineVersion(versionPath, subEntry.name)
+          }))
+
+        return versions.filter((resource): resource is DiscoveredResource => !!resource)
+      }))
+
+    return discovered.flat()
+  } catch (error) {
+    logger.error(`[资源发现] 检测引擎目录失败: ${error}`)
+    return []
+  }
+}
+
+type ExistingResource = Game | Engine | Template
+
+function isExistingEngine(resource: ExistingResource): resource is Engine {
+  return 'engineId' in resource
+}
+
+function isExistingTemplate(resource: ExistingResource): resource is Template {
+  return 'metadata' in resource
+}
+
+function getDiscoveredResourceKey(type: ResourceType, resource: DiscoveredResource): string {
+  switch (type) {
+    case 'templates': {
+      return resource.name || resource.path
+    }
+    case 'engines': {
+      return resource.engineId && resource.version
+        ? `${resource.engineId}:${resource.version}`
+        : resource.path
+    }
+    case 'games': {
+      return resource.path
+    }
+    default: {
+      throw new Error(`未知的资源类型: ${type satisfies never}`)
+    }
+  }
+}
+
+function getExistingResourceKey(
+  type: ResourceType,
+  resource: ExistingResource,
+): string {
+  switch (type) {
+    case 'templates': {
+      return isExistingTemplate(resource)
+        ? resource.metadata.name || resource.path
+        : resource.path
+    }
+    case 'engines': {
+      return isExistingEngine(resource) && resource.version
+        ? `${resource.engineId}:${resource.version}`
+        : resource.path
+    }
+    case 'games': {
+      return resource.path
+    }
+    default: {
+      throw new Error(`未知的资源类型: ${type satisfies never}`)
+    }
+  }
+}
+
 function filterAlreadyImported(
+  type: ResourceType,
   discovered: DiscoveredResource[],
-  existing: readonly { path: string }[] | undefined,
+  existing: readonly ExistingResource[] | undefined,
 ): DiscoveredResource[] {
   if (!existing?.length) {
     return discovered
   }
 
-  const existingPaths = new Set(existing.map(item => item.path))
-  return discovered.filter(resource => !existingPaths.has(resource.path))
+  const existingKeys = new Set(existing.map(item => getExistingResourceKey(type, item)))
+  return discovered.filter(resource => !existingKeys.has(getDiscoveredResourceKey(type, resource)))
+}
+
+type ResourceType = 'games' | 'engines' | 'templates'
+
+function discoverByType(type: ResourceType): Promise<DiscoveredResource[]> {
+  switch (type) {
+    case 'games': { return discoverGames() }
+    case 'engines': { return discoverEngines() }
+    case 'templates': { return discoverTemplates() }
+    default: { throw new Error(`未知的资源类型: ${type satisfies never}`) }
+  }
+}
+
+interface ImportMessages {
+  success: string
+  error: string
+}
+
+function resolveImportMessages(type: ResourceType, t: (key: string) => string): ImportMessages {
+  switch (type) {
+    case 'games': {
+      return {
+        success: t('home.games.importSuccess'),
+        error: t('home.games.importUnknownError'),
+      }
+    }
+    case 'engines': {
+      return {
+        success: t('home.engines.importSuccess'),
+        error: t('home.engines.importUnknownError'),
+      }
+    }
+    case 'templates': {
+      return {
+        success: t('home.templates.importSuccess'),
+        error: t('home.templates.importUnknownError'),
+      }
+    }
+    default: { throw new Error(`未知的资源类型: ${type satisfies never}`) }
+  }
+}
+
+function resolveImportFn(type: ResourceType): (path: string) => Promise<unknown> {
+  switch (type) {
+    case 'games': { return path => gameManager.importGame(path, { selectEngine: requestEngineSelection }) }
+    case 'engines': { return engineManager.importEngine }
+    case 'templates': { return templateManager.importTemplate }
+    default: { throw new Error(`未知的资源类型: ${type satisfies never}`) }
+  }
 }
 
 // 全局状态：确保每种资源类型只检测一次
 const hasChecked = {
   games: false,
   engines: false,
+  templates: false,
 }
-
-type ResourceType = 'games' | 'engines'
 
 export function useDiscoverResources() {
   const modalStore = useModalStore()
@@ -114,16 +303,23 @@ export function useDiscoverResources() {
   const workspaceStore = useWorkspaceStore()
   const { t } = useI18n()
 
-  async function waitForResourcesLoaded(type: ResourceType) {
-    const resources = type === 'games' ? resourceStore.games : resourceStore.engines
+  function getResourcesByType(type: ResourceType) {
+    switch (type) {
+      case 'games': { return resourceStore.games }
+      case 'engines': { return resourceStore.engines }
+      case 'templates': { return resourceStore.templates }
+      default: { throw new Error(`未知的资源类型: ${type satisfies never}`) }
+    }
+  }
 
-    if (resources) {
+  async function waitForResourcesLoaded(type: ResourceType) {
+    if (getResourcesByType(type)) {
       return
     }
 
     await new Promise<void>((resolve) => {
       const stop = watch(
-        () => (type === 'games' ? resourceStore.games : resourceStore.engines),
+        () => getResourcesByType(type),
         (data) => {
           if (data) {
             stop()
@@ -136,7 +332,7 @@ export function useDiscoverResources() {
 
   async function handleImport(
     paths: string[],
-    importFn: (path: string) => Promise<void>,
+    importFn: (path: string) => Promise<unknown>,
     successMsg: string,
     errorMsg: string,
   ) {
@@ -171,28 +367,21 @@ export function useDiscoverResources() {
 
     await waitForResourcesLoaded(type)
 
-    const discovered = type === 'games' ? await discoverGames() : await discoverEngines()
-    const existing = type === 'games' ? resourceStore.games : resourceStore.engines
-    const newResources = filterAlreadyImported(discovered, existing)
+    const discovered = await discoverByType(type)
+    const existing = getResourcesByType(type)
+    const newResources = filterAlreadyImported(type, discovered, existing)
 
     if (newResources.length === 0) {
       return
     }
 
-    const isGames = type === 'games'
-    const successMsg = isGames ? t('home.games.importSuccess') : t('home.engines.importSuccess')
-    const errorMsg = isGames ? t('home.games.importUnknownError') : t('home.engines.importUnknownError')
-
-    const importFn = isGames
-      ? async (path: string) => {
-        await gameManager.importGame(path)
-      }
-      : engineManager.importEngine
+    const messages = resolveImportMessages(type, t)
+    const importFn = resolveImportFn(type)
 
     modalStore.open('DiscoveredResourcesModal', {
       type,
       resources: newResources,
-      onImport: (paths: string[]) => handleImport(paths, importFn, successMsg, errorMsg),
+      onImport: (paths: string[]) => handleImport(paths, importFn, messages.success, messages.error),
     })
   }
 

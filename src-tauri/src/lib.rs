@@ -71,6 +71,8 @@ pub fn run() {
             // game
             commands::game::get_game_config,
             commands::game::set_game_config,
+            // engine
+            commands::engine::read_engine_manifest,
             // project config
             commands::project_config::read_project_config_cmd,
             commands::project_config::write_project_config_cmd,
