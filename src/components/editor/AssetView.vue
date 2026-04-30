@@ -14,7 +14,7 @@ import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { FileViewerItem, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 import { handleError } from '~/utils/error-handler'
-import { getBaseName, joinPath } from '~/utils/path'
+import { getBaseName, joinPath, normalizeFsPath } from '~/utils/path'
 
 import type { FileSystemEvent } from '~/composables/useFileSystemEvents'
 
@@ -218,15 +218,9 @@ function toFileViewerItem(item: FileSystemItem): FileViewerItem {
   }
 }
 
-function normalizeFileSystemPath(path: string): string {
-  return path
-    .replaceAll('\\', '/')
-    .replace(/\/+$/, '')
-}
-
 function isPathWithinDirectory(path: string, directoryPath: string): boolean {
-  const normalizedPath = normalizeFileSystemPath(path)
-  const normalizedDirectoryPath = normalizeFileSystemPath(directoryPath)
+  const normalizedPath = normalizeFsPath(path)
+  const normalizedDirectoryPath = normalizeFsPath(directoryPath)
 
   return normalizedPath === normalizedDirectoryPath
     || normalizedPath.startsWith(`${normalizedDirectoryPath}/`)
@@ -280,7 +274,7 @@ function handleNavigate(item: FileViewerItem): void {
     return
   }
 
-  currentPath = item.path.replace(normalizeFileSystemPath(basePath), '')
+  currentPath = normalizeFsPath(item.path).replace(normalizeFsPath(basePath), '')
 }
 
 function handleSelect(item: FileViewerItem): void {
