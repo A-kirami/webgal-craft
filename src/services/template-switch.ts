@@ -119,7 +119,9 @@ async function resolveTemplatePath(
     }
     case 'engineBuiltin': {
       const engine = await engineManager.findEngineByRef(binding.engine)
-      return engine?.status === 'created' ? join(engine.path, 'game', 'template') : undefined
+      return engine?.status === 'created' && engine.availability === 'available'
+        ? join(engine.path, 'game', 'template')
+        : undefined
     }
     default: {
       return undefined
