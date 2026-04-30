@@ -277,9 +277,13 @@ function handleNavigate(item: FileViewerItem): void {
 
   const normalizedItem = normalizeFsPath(item.path)
   const normalizedBase = normalizeFsPath(basePath)
-  currentPath = normalizedItem.startsWith(normalizedBase)
-    ? normalizedItem.slice(normalizedBase.length)
-    : normalizedItem
+  if (normalizedItem === normalizedBase) {
+    currentPath = ''
+  } else if (normalizedItem.startsWith(`${normalizedBase}/`)) {
+    currentPath = normalizedItem.slice(normalizedBase.length + 1)
+  } else {
+    currentPath = normalizedItem
+  }
 }
 
 function handleSelect(item: FileViewerItem): void {
