@@ -39,8 +39,8 @@ async function resolveBindingLabel(
 
   // 缺省 → 跟随当前引擎
   const engine = fallbackEngineId ? await db.engines.get(fallbackEngineId) : undefined
-  const label = engine ? formatEngineLabel(engine) : undefined
-  return { label, followingEngine: label !== undefined }
+  const label = engine ? formatEngineLabel(engine) : fallbackEngineId
+  return { label, followingEngine: !!fallbackEngineId }
 }
 
 export function useTemplateLabel() {
@@ -62,11 +62,15 @@ export function useTemplateLabel() {
       return
     }
 
+    const engineId = workspaceStore.currentGame?.engineId
     try {
       const config = await projectConfigCmds.readProjectConfig(gamePath)
-      const next = await resolveBindingLabel(config.template, workspaceStore.currentGame?.engineId)
-      // 异步过程中工程可能切换，丢弃过时结果
-      if (workspaceStore.currentGame?.path !== gamePath) {
+      const next = await resolveBindingLabel(config.template, engineId)
+      // 异步过程中工程或引擎可能切换，丢弃过时结果
+      if (
+        workspaceStore.currentGame?.path !== gamePath
+        || workspaceStore.currentGame?.engineId !== engineId
+      ) {
         return
       }
       applyState(next)
