@@ -47,7 +47,8 @@ watch(() => workspaceStore.currentGame?.engineId, async (engineId) => {
   if (workspaceStore.currentGame?.engineId !== engineId) {
     return
   }
-  engineLabel = engine ? formatEngineLabel(engine) : undefined
+  const isUsable = !!engine && engine.status === 'created' && engine.availability === 'available'
+  engineLabel = isUsable ? formatEngineLabel(engine) : undefined
 }, { immediate: true })
 
 function openSwitchEngine() {
