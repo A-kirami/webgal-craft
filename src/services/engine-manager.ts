@@ -398,9 +398,12 @@ async function importEngine(enginePath: string): Promise<string> {
   }
 
   const snapshot = await assertEngineImportable(normalizedPath)
-  const targetPath = await resolveManagedEnginePath(snapshot)
+  const { normalizedPath: targetPath, comparablePath: targetComparablePath } = normalizeImportPath(
+    await resolveManagedEnginePath(snapshot),
+  )
+  const { comparablePath: sourceComparablePath } = normalizeImportPath(normalizedPath)
 
-  if (normalizedPath === targetPath) {
+  if (sourceComparablePath === targetComparablePath) {
     logger.info(`[引擎导入] 引擎已在托管目录，直接注册: ${normalizedPath}`)
     return registerEngine(targetPath, snapshot)
   }
