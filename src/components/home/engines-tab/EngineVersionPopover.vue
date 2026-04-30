@@ -31,7 +31,7 @@ const emit = defineEmits<{
             {{ $t('engine.latestBadge') }}
           </Badge>
           <Badge v-if="item.engine.availability !== 'available'" variant="outline">
-            <TriangleAlert class="mr-1 size-3" />
+            <TriangleAlert class="size-3" />
             {{ $t('engine.unavailable') }}
           </Badge>
         </div>
