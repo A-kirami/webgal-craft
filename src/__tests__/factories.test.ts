@@ -3,6 +3,18 @@ import { describe, expect, it } from 'vitest'
 import { createTestEngine, createTestGame } from '~/__tests__/factories'
 
 describe('test factories', () => {
+  it('createTestGame 默认带 available availability', () => {
+    expect(createTestGame()).toMatchObject({
+      availability: 'available',
+    })
+  })
+
+  it('createTestEngine 默认带 available availability', () => {
+    expect(createTestEngine()).toMatchObject({
+      availability: 'available',
+    })
+  })
+
   it('createTestGame 会基于解析后的 game path 生成默认预览资源路径', () => {
     expect(createTestGame({
       path: '/games/custom-demo',

@@ -31,6 +31,7 @@ export function createTestGame(options: TestGameFactoryOptions = {}): Game {
     createdAt: 0,
     lastModified: 0,
     status: 'created',
+    availability: 'available',
     ...rest,
     metadata: {
       name: 'Demo Game',
@@ -66,6 +67,7 @@ export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine
     createdAt: 0,
     version: options.version,
     status: 'created',
+    availability: 'available',
     ...rest,
     metadata: {
       description: 'Default engine',
