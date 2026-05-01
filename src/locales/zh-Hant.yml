@@ -102,14 +102,14 @@ home:
     dropGameFolder: 將遊戲資料夾拖放到此處匯入
     gameCover: "{name} 遊戲封面"
     gameIcon: "{name} 遊戲圖示"
-    importAlreadyRegistered: 該專案已註冊
     importCancelled: 匯入已取消
-    importConfigCorrupted: 專案設定檔損壞
-    importEngineNotFound: 引擎不存在
-    importEngineUnavailable: 引擎不可用
+    importConfigCorrupted: 專案檔案已損壞，無法讀取
+    importEngineNotFound: 該專案所需的引擎尚未安裝
+    importEngineUnavailable: 該專案所需的引擎目前不可用
     importSuccess: 遊戲匯入成功
-    importInvalidFolder: 這不是一個有效的遊戲資料夾
-    importSchemaVersionTooNew: 專案設定版本過新，請升級應用
+    importAlreadyExists: 該專案已存在
+    importInvalidFolder: 這不像是遊戲專案資料夾，請確認目錄結構
+    importSchemaVersionTooNew: 該專案由更新版本的應用建立，請升級應用後再嘗試開啟
     importUnknownError: 匯入遊戲時發生未知錯誤
     importMultipleFolders: 一次只能匯入一個遊戲資料夾
     importCreating: 遊戲正在建立中，請等待建立完成
@@ -122,8 +122,11 @@ home:
     dropEngineFolder: 將遊戲引擎資料夾拖放到此處
     engineIcon: "{name} 引擎圖示"
     importSuccess: 引擎匯入成功
-    importInvalidFolder: 這不是一個有效的引擎資料夾
-    importUnsupportedLegacyEngine: 不支援直接匯入舊版引擎，請匯入包含該引擎的專案，或改用受支援的引擎版本。
+    importAlreadyExists: 該引擎已存在
+    importInvalidFolder: 這不像是引擎資料夾，請確認目錄結構
+    importSchemaTooNew: 該引擎版本過新，請升級應用後再嘗試匯入
+    importTargetConflict: 安裝位置已被佔用，請先刪除衝突的資料夾後重試
+    importUnsupportedLegacyEngine: 該引擎版本過舊，請改用新版本
     importUnknownError: 匯入引擎時發生未知錯誤
     importMultipleFolders: 一次只能匯入一個引擎資料夾
     noEngineTitle: 沒有找到可用的遊戲引擎
@@ -235,6 +238,7 @@ modals:
       confirm: 確認切換
     success: 模板已切換
     error: 模板切換失敗
+    engineUnavailable: 綁定的引擎目前不可用，請先恢復或重新安裝引擎再切換模板。
   deleteEngineGroup:
     title: 卸載全部版本
     description: 確定要卸載引擎 {name} 的全部版本嗎？
@@ -541,6 +545,7 @@ edit:
     engine: 引擎
     engineMissing: 引擎不可用
     template: 模板
+    templateMissing: 模板不可用
     templateFollowing: 模板：跟隨目前引擎
   fileTree:
     newFile: 新建檔案
@@ -990,7 +995,6 @@ engine:
   latestBadge: 最新
   deleteVersion: 刪除版本
   uninstallAllVersions: 卸載全部版本
-  duplicateEngine: 同名同版本的引擎已存在
   deleteBlocked: 無法刪除
   deleteBlockedByGames: 以下遊戲正在使用此引擎：
   unavailable: 不可用

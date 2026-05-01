@@ -1,13 +1,21 @@
 import { useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { isEngineUsable } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 
 import type { EngineStatus, Game } from '~/database/model'
+import type { ResourceAvailability } from '~/services/resource-health'
 import type { EngineRef } from '~/types/project-config'
 import type { I18nT } from '~/utils/i18n-like'
 
+interface EngineAvailabilityCheck {
+  id: string
+  status: EngineStatus
+  availability: ResourceAvailability
+}
+
 interface UseGamesTabControllerOptions {
   activeProgress: ReadonlyMap<string, number>
-  engines?: readonly { id: string, status: EngineStatus }[] | (() => readonly { id: string, status: EngineStatus }[] | undefined)
+  engines?: readonly EngineAvailabilityCheck[] | (() => readonly EngineAvailabilityCheck[] | undefined)
   openCreateGameModal: () => void
   openDeleteGameModal: (game: Game) => void
   openNoEngineAlertModal: (onConfirm: () => void) => void
@@ -31,9 +39,9 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
     activeProgress: options.activeProgress,
     importResource: path => gameManager.importGame(path, { selectEngine }),
     messages: {
+      alreadyRegistered: t => t('home.games.importAlreadyExists'),
       engineNotFound: t => t('home.games.importEngineNotFound'),
       engineUnavailable: t => t('home.games.importEngineUnavailable'),
-      gameAlreadyRegistered: t => t('home.games.importAlreadyRegistered'),
       gameConfigCorrupted: t => t('home.games.importConfigCorrupted'),
       gameSchemaTooNew: t => t('home.games.importSchemaVersionTooNew'),
       invalidFolder: t => t('home.games.importInvalidFolder'),
@@ -63,7 +71,7 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
       return
     }
 
-    const hasUsableEngine = engines.some(engine => engine.status === 'created')
+    const hasUsableEngine = engines.some(engine => isEngineUsable(engine))
     if (!hasUsableEngine) {
       options.openNoEngineAlertModal(options.switchToEnginesTab)
       return

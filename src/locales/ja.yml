@@ -102,14 +102,14 @@ home:
     dropGameFolder: ゲームフォルダをここにドラッグ＆ドロップしてインポート
     gameCover: "{name} ゲームカバー"
     gameIcon: "{name} ゲームアイコン"
-    importAlreadyRegistered: このプロジェクトは既に登録されています
     importCancelled: インポートがキャンセルされました
-    importConfigCorrupted: プロジェクト設定ファイルが破損しています
-    importEngineNotFound: エンジンが見つかりません
-    importEngineUnavailable: エンジンは利用できません
+    importConfigCorrupted: プロジェクトファイルが破損しており、読み込めません
+    importEngineNotFound: このプロジェクトに必要なエンジンがインストールされていません
+    importEngineUnavailable: このプロジェクトに必要なエンジンが現在利用できません
     importSuccess: ゲームのインポートに成功しました
-    importInvalidFolder: これは有効なゲームフォルダではありません
-    importSchemaVersionTooNew: プロジェクト設定のバージョンが新しすぎます。アプリをアップグレードしてください。
+    importAlreadyExists: このプロジェクトは既に存在します
+    importInvalidFolder: ゲームプロジェクトフォルダのようには見えません。中身を確認してください。
+    importSchemaVersionTooNew: このプロジェクトはより新しいバージョンのアプリで作成されています。アプリをアップグレードしてから再度お試しください。
     importUnknownError: ゲームのインポート中に不明なエラーが発生しました
     importMultipleFolders: 一度にインポートできるゲームフォルダは1つだけです
     importCreating: ゲームを作成中です。作成の完了をお待ちください
@@ -122,8 +122,11 @@ home:
     dropEngineFolder: ゲームエンジンフォルダをここにドラッグ＆ドロップ
     engineIcon: "{name} エンジンアイコン"
     importSuccess: エンジンのインポートに成功しました
-    importInvalidFolder: これは有効なエンジンフォルダではありません
-    importUnsupportedLegacyEngine: レガシーエンジンは直接インポートできません。このエンジンを含むプロジェクトをインポートするか、サポートされたエンジン版を使用してください。
+    importAlreadyExists: このエンジンは既に存在します
+    importInvalidFolder: エンジンフォルダのようには見えません。中身を確認してください。
+    importSchemaTooNew: このエンジンは現在のアプリには新しすぎます。アプリをアップグレードしてから再度お試しください。
+    importTargetConflict: インストール先が既に使用されています。競合するフォルダを削除してから再試行してください。
+    importUnsupportedLegacyEngine: このエンジンは古すぎます。新しいバージョンを使用してください。
     importUnknownError: エンジンのインポート中に不明なエラーが発生しました
     importMultipleFolders: 一度にインポートできるエンジンフォルダは1つだけです
     noEngineTitle: 利用可能なゲームエンジンがありません
@@ -235,6 +238,7 @@ modals:
       confirm: 切り替えを確認
     success: テンプレートを切り替えました
     error: テンプレートの切り替えに失敗しました
+    engineUnavailable: 紐付けられたエンジンが現在利用できません。エンジンを復旧または再インストールしてからテンプレートを切り替えてください。
   deleteEngineGroup:
     title: すべてのバージョンをアンインストール
     description: エンジン {name} のすべてのバージョンをアンインストールしてもよろしいですか？
@@ -541,6 +545,7 @@ edit:
     engine: エンジン
     engineMissing: エンジンが利用できません
     template: テンプレート
+    templateMissing: テンプレートが利用できません
     templateFollowing: 'テンプレート：現在のエンジンに従う'
   fileTree:
     newFile: 新しいファイル
@@ -990,7 +995,6 @@ engine:
   latestBadge: 最新
   deleteVersion: バージョンを削除
   uninstallAllVersions: すべてのバージョンをアンインストール
-  duplicateEngine: 同名・同バージョンのエンジンは既に存在します
   deleteBlocked: 削除できません
   deleteBlockedByGames: 以下のゲームがこのエンジンを使用しています：
   unavailable: 利用不可

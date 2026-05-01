@@ -72,6 +72,8 @@ vi.mock('~/services/engine-manager', () => ({
   engineManager: {
     importEngine: importEngineMock,
   },
+  isEngineUsable: (engine: { status: string, availability: string }) =>
+    engine.status === 'created' && engine.availability === 'available',
 }))
 
 vi.mock('~/stores/modal', () => ({

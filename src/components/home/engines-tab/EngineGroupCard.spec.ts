@@ -43,7 +43,7 @@ function createGroup(): EngineGroupCollectionItem {
     id: 'unavailable',
     name: 'WebGAL',
     path: '/engines/WebGAL/4.6.0',
-    status: 'unavailable',
+    availability: 'broken',
     version: '4.6.0',
   })
 

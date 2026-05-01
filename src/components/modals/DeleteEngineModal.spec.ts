@@ -185,7 +185,7 @@ describe('DeleteEngineModal', () => {
       vi.fn(),
       createTestEngine({
         name: 'WebGAL',
-        status: 'unavailable',
+        availability: 'broken',
         version: '4.5.0',
       }),
     )

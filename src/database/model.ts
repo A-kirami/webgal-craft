@@ -1,3 +1,4 @@
+import type { ResourceAvailability } from '~/services/resource-health'
 import type { EngineMetadata, EnginePreviewAssets, GameMetadata, GamePreviewAssets, TemplateMetadata } from '~/services/types'
 
 export interface Game {
@@ -7,6 +8,7 @@ export interface Game {
   createdAt: number
   lastModified: number
   status: GameStatus
+  availability: ResourceAvailability
   metadata: GameMetadata
   previewAssets: GamePreviewAssets
 }
@@ -19,6 +21,7 @@ export interface Engine {
   version?: string
   createdAt: number
   status: EngineStatus
+  availability: ResourceAvailability
   metadata: EngineMetadata
   previewAssets: EnginePreviewAssets
 }
@@ -33,6 +36,6 @@ export interface Template {
 
 export type GameStatus = 'created' | 'creating' | 'error'
 
-export type EngineStatus = 'created' | 'creating' | 'error' | 'unavailable'
+export type EngineStatus = 'created' | 'creating' | 'error'
 
 export type TemplateStatus = 'created' | 'creating' | 'error'

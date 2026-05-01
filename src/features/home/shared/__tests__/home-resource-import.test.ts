@@ -37,6 +37,13 @@ describe('首页共享导入纯逻辑', () => {
     })
   })
 
+  it('TARGET_CONFLICT 会映射为目标冲突通知', () => {
+    expect(resolveHomeResourceImportNotification(new AppError('TARGET_CONFLICT', '目标引擎目录已存在'))).toEqual({
+      kind: 'target-conflict',
+      level: 'error',
+    })
+  })
+
   it('DUPLICATE_RESOURCE 会映射为重复资源通知', () => {
     expect(resolveHomeResourceImportNotification(new AppError('DUPLICATE_RESOURCE', 'duplicate'))).toEqual({
       kind: 'duplicate-resource',
@@ -45,8 +52,8 @@ describe('首页共享导入纯逻辑', () => {
   })
 
   it('旧版引擎导入错误会映射为专用通知', () => {
-    expect(resolveHomeResourceImportNotification(new AppError('IO_ERROR', 'legacy', {
-      details: { reason: 'UNSUPPORTED_LEGACY_ENGINE' },
+    expect(resolveHomeResourceImportNotification(new AppError('INVALID_MANIFEST', 'legacy', {
+      details: { reason: 'LEGACY_ENGINE' },
     }))).toEqual({
       kind: 'unsupported-legacy-engine',
       level: 'error',
@@ -54,31 +61,13 @@ describe('首页共享导入纯逻辑', () => {
   })
 
   it('无效引擎清单错误会映射为无效目录通知', () => {
-    expect(resolveHomeResourceImportNotification(new AppError('IO_ERROR', 'broken manifest', {
+    expect(resolveHomeResourceImportNotification(new AppError('INVALID_MANIFEST', 'broken manifest', {
       details: {
-        reason: 'INVALID_ENGINE_MANIFEST',
+        reason: 'PARSE_FAILED',
         manifestReason: '缺少必填字段',
       },
     }))).toEqual({
       kind: 'invalid-folder',
-      level: 'error',
-    })
-  })
-
-  it('重复引擎导入错误会映射为专用通知', () => {
-    expect(resolveHomeResourceImportNotification(new AppError('IO_ERROR', 'duplicate', {
-      details: { reason: 'DUPLICATE_ENGINE' },
-    }))).toEqual({
-      kind: 'duplicate-engine',
-      level: 'error',
-    })
-  })
-
-  it('已注册游戏错误会映射为专用通知', () => {
-    expect(resolveHomeResourceImportNotification(new AppError('IO_ERROR', 'duplicate game', {
-      details: { reason: 'GAME_ALREADY_REGISTERED' },
-    }))).toEqual({
-      kind: 'game-already-registered',
       level: 'error',
     })
   })
@@ -101,11 +90,11 @@ describe('首页共享导入纯逻辑', () => {
     })
   })
 
-  it('manifest schema 不受支持错误会映射为专用通知', () => {
-    expect(resolveHomeResourceImportNotification(new AppError('UNKNOWN', 'unsupported manifest schema', {
-      details: { reason: 'UNSUPPORTED_MANIFEST_SCHEMA', found: 2, maxSupported: 1 },
+  it('engine manifest schema 不受支持错误会映射为引擎专用通知', () => {
+    expect(resolveHomeResourceImportNotification(new AppError('INVALID_MANIFEST', 'unsupported manifest schema', {
+      details: { reason: 'UNSUPPORTED_SCHEMA', schemaVersion: '2.0.0', supportedMajor: 1 },
     }))).toEqual({
-      kind: 'game-schema-too-new',
+      kind: 'engine-schema-too-new',
       level: 'error',
     })
   })
@@ -137,6 +126,20 @@ describe('首页共享导入纯逻辑', () => {
 
   it('无错误时返回成功通知', () => {
     expect(resolveHomeResourceImportNotification()).toEqual({
+      kind: 'success',
+      level: 'success',
+    })
+  })
+
+  it('幂等命中时返回 info 级 already-registered 通知', () => {
+    expect(resolveHomeResourceImportNotification(undefined, { alreadyRegistered: true })).toEqual({
+      kind: 'already-registered',
+      level: 'info',
+    })
+  })
+
+  it('outcome.alreadyRegistered 为 false 时仍返回成功通知', () => {
+    expect(resolveHomeResourceImportNotification(undefined, { alreadyRegistered: false })).toEqual({
       kind: 'success',
       level: 'success',
     })

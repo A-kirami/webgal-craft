@@ -7,14 +7,22 @@ import { projectConfigCmds } from '~/commands/project-config'
 import { vfsCmds } from '~/commands/vfs'
 import { db } from '~/database/db'
 import { Engine, Game } from '~/database/model'
-import { engineManager } from '~/services/engine-manager'
-import { gameConfigPath, projectConfigPath } from '~/services/platform/app-paths'
+import { engineManager, isEngineUsable } from '~/services/engine-manager'
+import { gameConfigPath, gameCoverPath, gameIconPath, projectConfigPath } from '~/services/platform/app-paths'
+import {
+  classifyAvailability,
+  createWarning,
+  normalizeImportPath,
+  ResourceHealthResult,
+  ResourceWarning,
+} from '~/services/resource-health'
 import { templateSwitch } from '~/services/template-switch'
 import { GameMetadata, GamePreviewAssets } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
 import { EngineRef, ProjectConfig, TemplateBinding } from '~/types/project-config'
+import { toComparablePath } from '~/utils/path'
 
 import type { GameConfigEntry } from '~/commands/game'
 import type { StaticSiteConfig } from '~/types/server'
@@ -28,6 +36,11 @@ interface RegisterGameOptions {
 
 interface ImportGameOptions {
   selectEngine?: (hint?: EngineRef) => Promise<string | undefined>
+}
+
+export interface GameInspectionPayload {
+  metadata: GameMetadata
+  previewAssets: GamePreviewAssets
 }
 
 const GAME_NAME_RAW_KEY = 'Game_name'
@@ -182,6 +195,7 @@ async function registerGame(
     createdAt: Date.now(),
     lastModified: Date.now(),
     status,
+    availability: 'available',
     metadata,
     previewAssets,
   })
@@ -195,7 +209,7 @@ function buildProjectEngineRef(engine: Pick<Engine, 'engineId' | 'version'>): En
 }
 
 function canAutoBindMatchedEngine(engine: Engine): boolean {
-  return engine.status === 'created' || engine.status === 'unavailable'
+  return engine.status === 'created'
 }
 
 async function writeSelfContainedProjectConfig(gamePath: string): Promise<void> {
@@ -253,7 +267,7 @@ async function resolveSelectableEngine(
     })
   }
 
-  if (engine.status !== 'created') {
+  if (!isEngineUsable(engine)) {
     throw new AppError('IO_ERROR', '引擎不可用', {
       details: { reason: 'ENGINE_UNAVAILABLE' },
     })
@@ -320,7 +334,7 @@ async function importConfiguredGame(
   // 有引擎配置：尝试自动匹配已注册引擎
   const matchedEngine = await engineManager.findEngineByRef(config.engine)
   if (matchedEngine && canAutoBindMatchedEngine(matchedEngine)) {
-    if (matchedEngine.status === 'unavailable') {
+    if (matchedEngine.availability !== 'available') {
       logger.warn(`关联的引擎 ${matchedEngine.name} 当前不可用，项目预览将受限: ${gamePath}`)
     }
     return registerGame(gamePath, { engineId: matchedEngine.id })
@@ -356,7 +370,7 @@ async function createGame(gameName: string, gamePath: string, engineId: string, 
     throw new AppError('IO_ERROR', '引擎不存在')
   }
 
-  if (engine.status !== 'created') {
+  if (!isEngineUsable(engine)) {
     throw new AppError('IO_ERROR', '引擎不可用')
   }
 
@@ -458,7 +472,7 @@ async function deleteGame(game: Game, removeFiles: boolean = false): Promise<voi
 
 async function getGameEnginePath(game: Pick<Game, 'engineId' | 'path'>): Promise<string | undefined> {
   const { engine } = await resolveBoundEngine(game)
-  if (engine?.status !== 'created') {
+  if (!engine || !isEngineUsable(engine)) {
     return undefined
   }
 
@@ -505,31 +519,125 @@ async function renameGame(id: string, newName: string): Promise<void> {
   applyCurrentGamePatch(id, patch)
 }
 
-async function importGame(gamePath: string, options: ImportGameOptions = {}): Promise<string> {
-  if (!(await validateGame(gamePath))) {
-    logger.error(`[游戏导入] 无效的游戏文件夹: ${gamePath}`)
+async function findExistingGameByPath(rawPath: string): Promise<Game | undefined> {
+  const { comparablePath } = normalizeImportPath(rawPath)
+  const games = await db.games.toArray()
+  return games.find(game => toComparablePath(game.path) === comparablePath)
+}
+
+async function collectGameWarnings(
+  gamePath: string,
+  metadata: GameMetadata,
+): Promise<ResourceWarning[]> {
+  const warnings: ResourceWarning[] = []
+
+  if (!metadata.name?.trim()) {
+    warnings.push(createWarning('missing-game-name', '游戏未配置 Game_name'))
+  }
+
+  if (!(await exists(await gameIconPath(gamePath)))) {
+    warnings.push(createWarning('missing-favicon', '游戏 favicon 不存在'))
+  }
+
+  const titleImg = metadata.titleImg?.trim()
+  if (!titleImg) {
+    warnings.push(createWarning('missing-title-image', '游戏未配置 Title_img'))
+  } else if (!(await exists(await gameCoverPath(gamePath, titleImg)))) {
+    warnings.push(createWarning('missing-title-image-file', `Title_img 指向的文件不存在: ${titleImg}`))
+  }
+
+  return warnings
+}
+
+async function inspectGame(
+  rawPath: string,
+): Promise<ResourceHealthResult<GameInspectionPayload>> {
+  const { normalizedPath, comparablePath } = normalizeImportPath(rawPath)
+
+  if (!(await exists(normalizedPath))) {
+    return {
+      availability: 'missing',
+      warnings: [],
+      blockingIssue: { code: 'DIR_NOT_FOUND', message: '游戏目录不存在' },
+      normalizedPath,
+      comparablePath,
+    }
+  }
+
+  if (!(await exists(await gameConfigPath(normalizedPath)))) {
+    return {
+      availability: 'broken',
+      warnings: [],
+      blockingIssue: { code: 'INVALID_STRUCTURE', message: '无效的游戏文件夹' },
+      normalizedPath,
+      comparablePath,
+    }
+  }
+
+  let metadata: GameMetadata
+  try {
+    metadata = await getGameMetadata(normalizedPath)
+  } catch (error) {
+    return {
+      availability: 'broken',
+      warnings: [],
+      blockingIssue: {
+        code: 'INVALID_CONFIG',
+        message: '游戏配置解析失败',
+        details: { reason: 'PARSE_FAILED', parseError: String(error) },
+      },
+      normalizedPath,
+      comparablePath,
+    }
+  }
+  const warnings = await collectGameWarnings(normalizedPath, metadata)
+
+  return {
+    availability: classifyAvailability({
+      pathExists: true,
+      structureValid: true,
+      semanticsValid: true,
+    }),
+    warnings,
+    payload: {
+      metadata,
+      previewAssets: withGamePreviewCacheVersion(buildGamePreviewAssets(metadata.titleImg)),
+    },
+    normalizedPath,
+    comparablePath,
+  }
+}
+
+export interface ImportGameResult {
+  id: string
+  alreadyRegistered: boolean
+}
+
+async function importGame(gamePath: string, options: ImportGameOptions = {}): Promise<ImportGameResult> {
+  const { normalizedPath } = normalizeImportPath(gamePath)
+
+  // 幂等：已注册路径直接返回既有 ID（按归一化后路径比较）
+  const existing = await findExistingGameByPath(normalizedPath)
+  if (existing) {
+    return { id: existing.id, alreadyRegistered: true }
+  }
+
+  if (!(await validateGame(normalizedPath))) {
+    logger.error(`[游戏导入] 无效的游戏文件夹: ${normalizedPath}`)
     throw new AppError('INVALID_STRUCTURE', '无效的游戏文件夹')
   }
 
-  const existing = await db.games.where('path').equals(gamePath).first()
-  if (existing) {
-    throw new AppError('IO_ERROR', '该项目已注册', {
-      details: { reason: 'GAME_ALREADY_REGISTERED' },
-    })
-  }
-
-  if (await exists(await projectConfigPath(gamePath))) {
-    return importConfiguredGame(gamePath, options)
-  }
-
-  return importLegacyGame(gamePath, options)
+  const id = await exists(await projectConfigPath(normalizedPath))
+    ? await importConfiguredGame(normalizedPath, options)
+    : await importLegacyGame(normalizedPath, options)
+  return { id, alreadyRegistered: false }
 }
 
 async function resolvePreviewSite(game: Pick<Game, 'engineId' | 'path'>): Promise<StaticSiteConfig> {
   const { config, engine } = await resolveBoundEngine(game)
   const isEngineBound = !!game.engineId || !!config?.engine
 
-  if (isEngineBound && engine?.status !== 'created') {
+  if (isEngineBound && (!engine || !isEngineUsable(engine))) {
     throw new AppError('IO_ERROR', '引擎不可用')
   }
 
@@ -593,6 +701,7 @@ function updateCurrentGameLastModified(): void {
 
 export const gameManager = {
   validateGame,
+  inspectGame,
   getGameMetadata,
   getGamePreviewAssets,
   getGameSnapshot,

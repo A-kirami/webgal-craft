@@ -8,6 +8,7 @@ import {
   resolveImportNotificationMessage,
 } from '~/features/home/shared/useHomeResourceImportActions'
 import { requestEngineSelection } from '~/features/modals/engine-selection/request-engine-selection'
+import { isEngineUsable } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 import { useModalStore } from '~/stores/modal'
 import { useResourceStore } from '~/stores/resource'
@@ -27,9 +28,9 @@ const modalStore = useModalStore()
 const { t } = useI18n()
 
 const gameImportMessages: HomeResourceImportMessages = {
+  alreadyRegistered: t => t('home.games.importAlreadyExists'),
   engineNotFound: t => t('home.games.importEngineNotFound'),
   engineUnavailable: t => t('home.games.importEngineUnavailable'),
-  gameAlreadyRegistered: t => t('home.games.importAlreadyRegistered'),
   gameConfigCorrupted: t => t('home.games.importConfigCorrupted'),
   gameSchemaTooNew: t => t('home.games.importSchemaVersionTooNew'),
   invalidFolder: t => t('home.games.importInvalidFolder'),
@@ -45,7 +46,7 @@ function createGame() {
     return
   }
 
-  const hasUsableEngine = resourceStore.engines.some(engine => engine.status === 'created')
+  const hasUsableEngine = resourceStore.engines.some(engine => isEngineUsable(engine))
   if (!hasUsableEngine) {
     modalStore.open('AlertModal', {
       title: t('home.engines.noEngineTitle'),

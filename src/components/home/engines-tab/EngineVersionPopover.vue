@@ -30,8 +30,8 @@ const emit = defineEmits<{
           <Badge v-if="group.latestVersionLabel === item.engine.version" variant="secondary">
             {{ $t('engine.latestBadge') }}
           </Badge>
-          <Badge v-if="item.engine.status === 'unavailable'" variant="outline">
-            <TriangleAlert class="mr-1 size-3" />
+          <Badge v-if="item.engine.availability !== 'available'" variant="outline">
+            <TriangleAlert class="size-3" />
             {{ $t('engine.unavailable') }}
           </Badge>
         </div>

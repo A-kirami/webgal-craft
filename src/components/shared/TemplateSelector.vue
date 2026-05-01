@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useEngines, useTemplates } from '~/composables/useDatabase'
 import { formatEngineLabel } from '~/lib/engine-label'
+import { isEngineUsable } from '~/services/engine-manager'
 
 import type { Engine } from '~/database/model'
 import type { TemplateBinding } from '~/types/project-config'
@@ -13,6 +14,7 @@ let modelValue = $(defineModel<TemplateBinding | undefined>())
 
 const props = defineProps<{
   engineId?: string
+  disabled?: boolean
 }>()
 
 const { t } = useI18n()
@@ -25,7 +27,7 @@ const availableTemplates = $computed(() =>
 )
 
 const availableEngines = $computed(() =>
-  (engines ?? []).filter(engine => engine.status === 'created'),
+  (engines ?? []).filter(engine => isEngineUsable(engine)),
 )
 
 const currentEngine = $computed(() =>
@@ -110,7 +112,7 @@ const selectedLabel = $computed(() => {
 </script>
 
 <template>
-  <Select v-model="selectedValue">
+  <Select v-model="selectedValue" :disabled="props.disabled">
     <SelectTrigger class="w-full">
       <SelectValue>{{ selectedLabel }}</SelectValue>
     </SelectTrigger>

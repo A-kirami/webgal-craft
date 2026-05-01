@@ -1,5 +1,6 @@
 import { groupEngines } from '~/composables/use-engine-groups'
 import { toEngineCollectionItem } from '~/features/home/home-collection-items'
+import { isEngineUsable } from '~/services/engine-manager'
 
 import type { Engine } from '~/database/model'
 import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
@@ -15,7 +16,7 @@ export function buildEngineGroupCollectionItems(
 ): EngineGroupCollectionItem[] {
   return groupEngines(options.engines).map((group) => {
     const items = group.engines.map(engine => toEngineCollectionItem(engine, options.resolveServeUrl))
-    const availableItems = items.filter(item => item.engine.status === 'created')
+    const availableItems = items.filter(item => isEngineUsable(item.engine))
     const latestAvailable = availableItems[0]
     const representative = latestAvailable ?? items[0]
 
@@ -28,7 +29,7 @@ export function buildEngineGroupCollectionItems(
       latestVersionLabel: latestAvailable?.engine.version,
       representativeItem: latestAvailable,
       summary: representative?.engine.metadata.description ?? '',
-      unavailableCount: items.filter(item => item.engine.status === 'unavailable').length,
+      unavailableCount: items.filter(item => item.engine.availability !== 'available').length,
       versionCount: items.length,
     }
   })

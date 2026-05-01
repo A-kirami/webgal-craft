@@ -2,6 +2,8 @@
 import { TriangleAlert } from '@lucide/vue'
 
 import { projectConfigCmds } from '~/commands/project-config'
+import { db } from '~/database/db'
+import { isEngineUsable } from '~/services/engine-manager'
 import { templateSwitch } from '~/services/template-switch'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
@@ -21,6 +23,7 @@ const workspaceStore = useWorkspaceStore()
 let isSwitching = $ref(false)
 let isDirty = $ref(false)
 let showDirtyConfirm = $ref(false)
+let isEngineAvailable = $ref(true)
 let selectedBinding = $ref<TemplateBinding | undefined>(undefined)
 
 watch(() => open.value, async (isOpen) => {
@@ -40,7 +43,14 @@ watch(() => open.value, async (isOpen) => {
     selectedBinding = undefined
   }
 
-  isDirty = await templateSwitch.isTemplateDirty(props.game.path)
+  if (props.game.engineId) {
+    const engine = await db.engines.get(props.game.engineId)
+    isEngineAvailable = !!engine && isEngineUsable(engine)
+  } else {
+    isEngineAvailable = true
+  }
+
+  isDirty = isEngineAvailable ? await templateSwitch.isTemplateDirty(props.game.path) : false
 }, { immediate: true })
 
 async function performSwitch(skipDirtyCheck: boolean) {
@@ -94,6 +104,15 @@ async function handleDirtyConfirm() {
       </DialogHeader>
 
       <div class="gap-4 grid">
+        <div
+          v-if="!isEngineAvailable"
+          class="text-sm text-destructive p-3 border-destructive/50 rounded-md bg-destructive/10 flex gap-2 items-start"
+          role="alert"
+        >
+          <TriangleAlert class="mt-0.5 shrink-0 size-4" />
+          <span>{{ $t('modals.switchTemplate.engineUnavailable') }}</span>
+        </div>
+
         <div class="px-2 gap-x-4 gap-y-2 grid grid-cols-[auto_1fr] items-center">
           <Label class="text-right whitespace-nowrap">
             {{ $t('modals.switchTemplate.templateLabel') }}
@@ -101,6 +120,7 @@ async function handleDirtyConfirm() {
           <TemplateSelector
             ::="selectedBinding"
             :engine-id="props.game.engineId"
+            :disabled="!isEngineAvailable"
           />
         </div>
       </div>
@@ -111,7 +131,7 @@ async function handleDirtyConfirm() {
             {{ $t('common.cancel') }}
           </Button>
         </DialogClose>
-        <Button :disabled="isSwitching" @click="handleConfirm">
+        <Button :disabled="isSwitching || !isEngineAvailable" @click="handleConfirm">
           {{ $t('common.save') }}
         </Button>
       </DialogFooter>

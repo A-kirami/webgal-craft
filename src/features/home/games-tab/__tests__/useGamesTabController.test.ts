@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { AppError } from '~/types/errors'
-
 import { useGamesTabController } from '../useGamesTabController'
 
 const {
   importGameMock,
   notifyErrorMock,
+  notifyInfoMock,
   notifySuccessMock,
   notifyWarningMock,
   openDialogMock,
@@ -15,6 +14,7 @@ const {
 } = vi.hoisted(() => ({
   importGameMock: vi.fn(),
   notifyErrorMock: vi.fn(),
+  notifyInfoMock: vi.fn(),
   notifySuccessMock: vi.fn(),
   notifyWarningMock: vi.fn(),
   openDialogMock: vi.fn(),
@@ -33,6 +33,7 @@ vi.mock('@tauri-apps/plugin-opener', () => ({
 vi.mock('notivue', () => ({
   push: {
     error: notifyErrorMock,
+    info: notifyInfoMock,
     success: notifySuccessMock,
     warning: notifyWarningMock,
   },
@@ -53,7 +54,7 @@ describe('useGamesTabController 行为', () => {
   function createController(overrides?: Partial<Parameters<typeof useGamesTabController>[0]>) {
     return useGamesTabController({
       activeProgress: new Map<string, number>(),
-      engines: [{ id: 'engine-1', status: 'created' }],
+      engines: [{ id: 'engine-1', status: 'created', availability: 'available' }],
       openCreateGameModal: openCreateGameModalMock,
       openDeleteGameModal: openDeleteGameModalMock,
       openNoEngineAlertModal: openNoEngineAlertModalMock,
@@ -89,11 +90,11 @@ describe('useGamesTabController 行为', () => {
   })
 
   it('创建游戏时会读取最新的引擎列表', () => {
-    let engines: { id: string, status: 'created' | 'error' }[] | undefined = []
+    let engines: { id: string, status: 'created' | 'error', availability: 'available' | 'broken' }[] | undefined = []
 
     const controller = createController({ engines: () => engines })
 
-    engines = [{ id: 'engine-1', status: 'created' }]
+    engines = [{ id: 'engine-1', status: 'created', availability: 'available' }]
     controller.createGame()
 
     expect(openCreateGameModalMock).toHaveBeenCalledTimes(1)
@@ -103,8 +104,21 @@ describe('useGamesTabController 行为', () => {
   it('已安装引擎全部失效时创建游戏会弹出引导', () => {
     const controller = createController({
       engines: [
-        { id: 'engine-1', status: 'error' },
-        { id: 'engine-2', status: 'unavailable' },
+        { id: 'engine-1', status: 'error', availability: 'available' },
+        { id: 'engine-2', status: 'creating', availability: 'available' },
+      ],
+    })
+
+    controller.createGame()
+
+    expect(openCreateGameModalMock).not.toHaveBeenCalled()
+    expect(openNoEngineAlertModalMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('已安装引擎仅有 broken availability 时创建游戏会弹出引导', () => {
+    const controller = createController({
+      engines: [
+        { id: 'engine-1', status: 'created', availability: 'broken' },
       ],
     })
 
@@ -144,16 +158,16 @@ describe('useGamesTabController 行为', () => {
     expect(routerPushMock).toHaveBeenCalledWith('/edit/game-2')
   })
 
-  it('选择目录导入已注册游戏时会提示专用消息', async () => {
+  it('选择目录导入已注册游戏时按 info 级提示已存在', async () => {
     openDialogMock.mockResolvedValue('/games/registered')
-    importGameMock.mockRejectedValue(new AppError('IO_ERROR', '该项目已注册', {
-      details: { reason: 'GAME_ALREADY_REGISTERED' },
-    }))
+    importGameMock.mockResolvedValue({ id: 'game-existing', alreadyRegistered: true })
 
     const controller = createController()
 
     await controller.selectGameFolder()
 
-    expect(notifyErrorMock).toHaveBeenCalledWith('home.games.importAlreadyRegistered')
+    expect(notifyErrorMock).not.toHaveBeenCalled()
+    expect(notifySuccessMock).not.toHaveBeenCalled()
+    expect(notifyInfoMock).toHaveBeenCalledWith('home.games.importAlreadyExists')
   })
 })

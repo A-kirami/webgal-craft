@@ -163,7 +163,7 @@ describe('资源状态仓库', () => {
         name: 'Broken',
         path: '/engines/Broken/1.0.0',
         version: '1.0.0',
-        status: 'unavailable',
+        availability: 'broken',
         metadata: {
           description: '',
           icon: 'icons/favicon.ico',
@@ -235,7 +235,7 @@ describe('资源状态仓库', () => {
         name: 'WebGAL',
         path: '/engines/WebGAL/4.8.1',
         version: '4.8.1',
-        status: 'unavailable',
+        availability: 'broken',
         metadata: {
           description: '',
           icon: 'icons/favicon.ico',

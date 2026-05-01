@@ -102,14 +102,14 @@ home:
     dropGameFolder: Drag and drop game folder here to import
     gameCover: "{name} game cover"
     gameIcon: "{name} game icon"
-    importAlreadyRegistered: This project is already registered
     importCancelled: Import cancelled
-    importConfigCorrupted: Project configuration file is corrupted
-    importEngineNotFound: Engine not found
-    importEngineUnavailable: Engine is unavailable
+    importConfigCorrupted: The project file is damaged and cannot be read.
+    importEngineNotFound: The engine required by this project is not installed.
+    importEngineUnavailable: The engine required by this project is unavailable.
     importSuccess: Game imported successfully
-    importInvalidFolder: This is not a valid game folder
-    importSchemaVersionTooNew: Project config version is too new. Please upgrade the app.
+    importAlreadyExists: This project already exists
+    importInvalidFolder: This does not look like a game project folder. Please check its contents.
+    importSchemaVersionTooNew: This project was created by a newer version of the app. Please upgrade and try again.
     importUnknownError: An unknown error occurred while importing the game
     importMultipleFolders: Only one game folder can be imported at a time
     importCreating: Game is being created, please wait for the creation to complete
@@ -122,8 +122,11 @@ home:
     dropEngineFolder: Drag and drop game engine folder here
     engineIcon: "{name} engine icon"
     importSuccess: Engine imported successfully
-    importInvalidFolder: This is not a valid engine folder
-    importUnsupportedLegacyEngine: Legacy engines cannot be imported directly. Import a project containing this engine, or use a supported engine version instead.
+    importAlreadyExists: This engine already exists
+    importInvalidFolder: This does not look like an engine folder. Please check its contents.
+    importSchemaTooNew: This engine is too new for the current app. Please upgrade the app and try again.
+    importTargetConflict: The install location is already in use. Please remove the conflicting folder and retry.
+    importUnsupportedLegacyEngine: This engine is too old. Please use a newer version.
     importUnknownError: An unknown error occurred while importing the engine
     importMultipleFolders: Only one engine folder can be imported at a time
     noEngineTitle: No Available Game Engines
@@ -235,6 +238,7 @@ modals:
       confirm: Confirm switch
     success: Template switched
     error: Template switch failed
+    engineUnavailable: The bound engine is unavailable. Restore or reinstall it before switching templates.
   deleteEngineGroup:
     title: Uninstall All Versions
     description: Are you sure you want to uninstall all versions of engine {name}?
@@ -541,6 +545,7 @@ edit:
     engine: Engine
     engineMissing: Engine unavailable
     template: Template
+    templateMissing: Template unavailable
     templateFollowing: 'Template: Follow Current Engine'
   fileTree:
     newFile: New File
@@ -990,7 +995,6 @@ engine:
   latestBadge: Latest
   deleteVersion: Delete Version
   uninstallAllVersions: Uninstall All Versions
-  duplicateEngine: An engine with the same name and version already exists
   deleteBlocked: Cannot Delete
   deleteBlockedByGames: 'The following games are using this engine:'
   unavailable: Unavailable

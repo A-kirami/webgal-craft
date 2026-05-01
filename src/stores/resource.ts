@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 
 import { useEngines, useGames, useTemplates } from '~/composables/useDatabase'
 import { createTemplateGroups } from '~/features/home/templates-tab/template-groups'
+import { isEngineUsable } from '~/services/engine-manager'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 export const useResourceStore = defineStore('resource', () => {
@@ -50,7 +51,7 @@ export const useResourceStore = defineStore('resource', () => {
   )
 
   const availableEngines = $computed(() =>
-    sortedEngines.filter(engine => engine.status === 'created'),
+    sortedEngines.filter(engine => isEngineUsable(engine)),
   )
 
   const filteredTemplates = $computed(() =>

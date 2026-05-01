@@ -5,7 +5,7 @@ import { serverCmds } from '~/commands/server'
 import { vfsCmds } from '~/commands/vfs'
 import { db } from '~/database/db'
 import { debugCommander } from '~/services/debug-commander'
-import { engineManager } from '~/services/engine-manager'
+import { engineManager, isEngineUsable } from '~/services/engine-manager'
 import { useEditorStore } from '~/stores/editor'
 import { useFileStore } from '~/stores/file'
 import { useTabsStore } from '~/stores/tabs'
@@ -119,7 +119,7 @@ async function resolveTemplatePath(
     }
     case 'engineBuiltin': {
       const engine = await engineManager.findEngineByRef(binding.engine)
-      return engine?.status === 'created' ? join(engine.path, 'game', 'template') : undefined
+      return engine && isEngineUsable(engine) ? join(engine.path, 'game', 'template') : undefined
     }
     default: {
       return undefined
@@ -152,6 +152,13 @@ async function switchTemplate(
     throw new AppError('IO_ERROR', '自带引擎项目不支持模板切换')
   }
 
+  const engine = await db.engines.get(game.engineId)
+  if (!engine || !isEngineUsable(engine)) {
+    throw new AppError('IO_ERROR', '引擎不可用，无法切换模板', {
+      details: { reason: 'ENGINE_UNAVAILABLE' },
+    })
+  }
+
   if (!options.skipDirtyCheck && await isTemplateDirty(game.path)) {
     throw new AppError('IO_ERROR', '模板已修改，需要用户确认', {
       details: { reason: 'TEMPLATE_DIRTY' },
@@ -172,7 +179,6 @@ async function switchTemplate(
   await projectConfigCmds.writeProjectConfig(game.path, newConfig)
   await vfsCmds.cleanTemplateUpper(game.path)
 
-  const engine = await db.engines.get(game.engineId)
   const newTemplatePath = await resolveTemplatePath(newBinding, engine)
   await applySiteUpdate(
     () => serverCmds.updateSiteTemplate(game.path, newTemplatePath),

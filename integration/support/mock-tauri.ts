@@ -8,6 +8,7 @@ interface SeedEngine {
   version?: string
   createdAt: number
   status: 'creating' | 'created'
+  availability: 'available' | 'missing' | 'broken'
   metadata: {
     name: string
     icon: string
@@ -67,6 +68,7 @@ const defaultSeedEngine: SeedEngine = {
   version: '1.0.0',
   createdAt: 1,
   status: 'created',
+  availability: 'available',
   metadata: {
     name: 'Default Engine',
     icon: 'C:/Engines/Default/icons/favicon.ico',

@@ -3,11 +3,12 @@ import { AppError } from '~/types/errors'
 export interface HomeResourceImportNotification {
   kind:
     | 'success'
+    | 'already-registered'
     | 'invalid-folder'
     | 'duplicate-resource'
+    | 'target-conflict'
     | 'unsupported-legacy-engine'
-    | 'duplicate-engine'
-    | 'game-already-registered'
+    | 'engine-schema-too-new'
     | 'game-config-corrupted'
     | 'game-schema-too-new'
     | 'engine-not-found'
@@ -15,13 +16,17 @@ export interface HomeResourceImportNotification {
     | 'import-cancelled'
     | 'unknown-error'
     | 'multiple-folders'
-  level: 'success' | 'error' | 'silent'
+  level: 'success' | 'info' | 'error' | 'silent'
 }
 
 export interface HomeResourceDropPathDecision {
   shouldImport: boolean
   path?: string
   notification?: HomeResourceImportNotification
+}
+
+export interface HomeResourceImportOutcome {
+  alreadyRegistered?: boolean
 }
 
 export function resolveHomeResourceDropPath(paths: readonly string[]): HomeResourceDropPathDecision {
@@ -41,8 +46,14 @@ export function resolveHomeResourceDropPath(paths: readonly string[]): HomeResou
   }
 }
 
-export function resolveHomeResourceImportNotification(error?: unknown): HomeResourceImportNotification {
+export function resolveHomeResourceImportNotification(
+  error?: unknown,
+  outcome?: HomeResourceImportOutcome,
+): HomeResourceImportNotification {
   if (!error) {
+    if (outcome?.alreadyRegistered) {
+      return { kind: 'already-registered', level: 'info' }
+    }
     return { kind: 'success', level: 'success' }
   }
 
@@ -58,11 +69,9 @@ function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotific
 
   // 优先按 details.reason 匹配（更具体的错误分类）
   switch (error.details?.reason) {
-    case 'INVALID_ENGINE_MANIFEST': { return 'invalid-folder' }
-    case 'UNSUPPORTED_MANIFEST_SCHEMA': { return 'game-schema-too-new' }
-    case 'UNSUPPORTED_LEGACY_ENGINE': { return 'unsupported-legacy-engine' }
-    case 'DUPLICATE_ENGINE': { return 'duplicate-engine' }
-    case 'GAME_ALREADY_REGISTERED': { return 'game-already-registered' }
+    case 'PARSE_FAILED': { return 'invalid-folder' }
+    case 'UNSUPPORTED_SCHEMA': { return 'engine-schema-too-new' }
+    case 'LEGACY_ENGINE': { return 'unsupported-legacy-engine' }
     case 'ENGINE_NOT_FOUND': { return 'engine-not-found' }
     case 'ENGINE_UNAVAILABLE': { return 'engine-unavailable' }
     case 'IMPORT_CANCELLED': { return 'import-cancelled' }
@@ -72,6 +81,8 @@ function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotific
   // 按 error.code 匹配
   switch (error.code) {
     case 'INVALID_STRUCTURE': { return 'invalid-folder' }
+    case 'INVALID_MANIFEST': { return 'invalid-folder' }
+    case 'TARGET_CONFLICT': { return 'target-conflict' }
     case 'DUPLICATE_RESOURCE': { return 'duplicate-resource' }
     case 'INVALID_PROJECT_CONFIG': { return 'game-config-corrupted' }
     case 'SCHEMA_VERSION_TOO_NEW': { return 'game-schema-too-new' }

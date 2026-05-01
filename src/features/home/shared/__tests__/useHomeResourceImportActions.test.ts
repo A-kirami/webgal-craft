@@ -37,7 +37,6 @@ function createActions() {
     activeProgress: new Map<string, number>([['resource-1', 55]]),
     importResource: importResourceMock,
     messages: {
-      duplicateEngine: t => t('engine.duplicateEngine'),
       invalidFolder: t => t('home.engines.importInvalidFolder'),
       multipleFolders: t => t('home.engines.importMultipleFolders'),
       selectFolderTitle: t => t('common.dialogs.selectEngineFolder'),
@@ -93,26 +92,14 @@ describe('useHomeResourceImportActions', () => {
 
   it('旧版引擎导入错误时会提示用户改走项目导入', async () => {
     openDialogMock.mockResolvedValue('/engines/legacy')
-    importResourceMock.mockRejectedValue(new AppError('IO_ERROR', 'legacy', {
-      details: { reason: 'UNSUPPORTED_LEGACY_ENGINE' },
+    importResourceMock.mockRejectedValue(new AppError('INVALID_MANIFEST', 'legacy', {
+      details: { reason: 'LEGACY_ENGINE' },
     }))
     const actions = createActions()
 
     await actions.selectFolder()
 
     expect(notifyErrorMock).toHaveBeenCalledWith('home.engines.importUnsupportedLegacyEngine')
-  })
-
-  it('重复引擎导入错误时会提示重复版本', async () => {
-    openDialogMock.mockResolvedValue('/engines/webgal')
-    importResourceMock.mockRejectedValue(new AppError('IO_ERROR', 'duplicate', {
-      details: { reason: 'DUPLICATE_ENGINE' },
-    }))
-    const actions = createActions()
-
-    await actions.selectFolder()
-
-    expect(notifyErrorMock).toHaveBeenCalledWith('engine.duplicateEngine')
   })
 
   it('能够暴露统一的进度读取与目录打开能力', async () => {

@@ -15,6 +15,7 @@ import {
 import { formatEngineLabel } from '~/lib/engine-label'
 import dayjs from '~/plugins/dayjs'
 import { getLanguageDisplayName } from '~/plugins/editor'
+import { isEngineUsable } from '~/services/engine-manager'
 import {
   isEditableEditor,
   useEditorStore,
@@ -47,7 +48,7 @@ watch(() => workspaceStore.currentGame?.engineId, async (engineId) => {
   if (workspaceStore.currentGame?.engineId !== engineId) {
     return
   }
-  engineLabel = engine ? formatEngineLabel(engine) : undefined
+  engineLabel = engine && isEngineUsable(engine) ? formatEngineLabel(engine) : undefined
 }, { immediate: true })
 
 function openSwitchEngine() {
@@ -172,7 +173,7 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
       </button>
 
       <button
-        v-if="isEngineBound && templateLabel"
+        v-if="isEngineBound && (templateLabel || isFollowingEngine)"
         class="text-muted-foreground flex gap-1 cursor-pointer transition-colors items-center hover:text-foreground"
         :title="isFollowingEngine
           ? $t('edit.statusBar.templateFollowing')
@@ -180,7 +181,7 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
         @click="openSwitchTemplate"
       >
         <Palette class="h-3 w-3" :stroke-width="1.5" />
-        <span class="max-w-30 truncate">{{ templateLabel }}</span>
+        <span class="max-w-30 truncate">{{ templateLabel ?? $t('edit.statusBar.templateMissing') }}</span>
         <Link2 v-if="isFollowingEngine" class="h-3 w-3" :stroke-width="1.5" />
       </button>
     </div>

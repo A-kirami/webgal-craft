@@ -1,6 +1,7 @@
 import { projectConfigCmds } from '~/commands/project-config'
 import { db } from '~/database/db'
 import { formatEngineLabel } from '~/lib/engine-label'
+import { isEngineUsable } from '~/services/engine-manager'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
 import { joinPath, normalizeFsPath } from '~/utils/path'
@@ -33,14 +34,19 @@ async function resolveBindingLabel(
     const engine = version === undefined
       ? undefined
       : await db.engines.where('[engineId+version]').equals([id, version]).first()
-    const label = engine ? formatEngineLabel(engine) : formatBuiltinFallbackLabel(id, version)
-    return { label, followingEngine: false }
+    if (!engine) {
+      return { label: formatBuiltinFallbackLabel(id, version), followingEngine: false }
+    }
+    return { label: isEngineUsable(engine) ? formatEngineLabel(engine) : undefined, followingEngine: false }
   }
 
-  // 缺省 → 跟随当前引擎
-  const engine = fallbackEngineId ? await db.engines.get(fallbackEngineId) : undefined
-  const label = engine ? formatEngineLabel(engine) : fallbackEngineId
-  return { label, followingEngine: !!fallbackEngineId }
+  // 缺省 → 跟随当前引擎；引擎记录缺失或不可用时不暴露 UUID/旧名，由调用方按 followingEngine + label undefined 决定占位文案
+  if (!fallbackEngineId) {
+    return EMPTY_STATE
+  }
+  const engine = await db.engines.get(fallbackEngineId)
+  const label = engine && isEngineUsable(engine) ? formatEngineLabel(engine) : undefined
+  return { label, followingEngine: true }
 }
 
 export function useTemplateLabel() {

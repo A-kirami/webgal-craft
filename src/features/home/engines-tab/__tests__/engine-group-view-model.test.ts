@@ -25,7 +25,7 @@ describe('buildEngineGroupCollectionItems', () => {
           name: 'WebGAL',
           path: '/engines/WebGAL/4.6.0',
           version: '4.6.0',
-          status: 'unavailable',
+          availability: 'broken',
           metadata: {
             description: 'broken build',
           },
@@ -65,7 +65,7 @@ describe('buildEngineGroupCollectionItems', () => {
           name: 'Legacy',
           path: '/engines/Legacy/1.0.0',
           version: '1.0.0',
-          status: 'unavailable',
+          availability: 'broken',
           metadata: {
             description: 'legacy only',
           },

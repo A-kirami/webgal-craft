@@ -13,7 +13,7 @@ const props = defineProps<{
   engine: Engine
 }>()
 
-const isUnavailable = $computed(() => props.engine.status === 'unavailable')
+const isUnavailable = $computed(() => props.engine.availability !== 'available')
 const engineDisplayName = $computed(() =>
   props.engine.version ? `${props.engine.name} ${props.engine.version}` : props.engine.name,
 )

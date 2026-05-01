@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useEngineGroups } from '~/composables/use-engine-groups'
+import { isEngineUsable } from '~/services/engine-manager'
 
 let modelValue = $(defineModel<string>())
 
@@ -13,7 +14,7 @@ const availableGroups = $computed(() =>
   groups
     .map(group => ({
       ...group,
-      engines: group.engines.filter(engine => engine.status === 'created'),
+      engines: group.engines.filter(engine => isEngineUsable(engine)),
     }))
     .filter(group => group.engines.length > 0),
 )
