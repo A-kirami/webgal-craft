@@ -50,7 +50,12 @@ export const useWorkspaceStore = defineStore(
       if (!currentGame) {
         return true
       }
+      const expectedId = currentGame.id
       const availability = await resourceReconcile.reconcileGameRecord(currentGame)
+      // reconcile 期间用户可能已切换游戏，避免把过期的可用性写到新工作区
+      if (currentGame?.id === expectedId && currentGame.availability !== availability) {
+        currentGame = { ...currentGame, availability }
+      }
       return availability === 'available'
     }
 
