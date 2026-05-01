@@ -29,7 +29,11 @@ watch(() => workspaceStore.currentGame?.id, async (gameId) => {
     return
   }
   const ok = await workspaceStore.ensureCurrentGameAvailable()
-  if (!ok && workspaceStore.currentGame) {
+  // await 期间用户可能已切换到其他游戏，避免对新游戏误开恢复弹窗
+  if (workspaceStore.currentGame?.id !== gameId) {
+    return
+  }
+  if (!ok) {
     modalStore.open('RecoverGameModal', { game: workspaceStore.currentGame }, gameId, true)
   }
 }, { immediate: true })
