@@ -3,22 +3,26 @@ import { reactive, ref } from 'vue'
 
 const {
   createGameMock,
+  enginesGetMock,
   existsMock,
   joinMock,
   notifyErrorMock,
   openDialogMock,
   readDirMock,
+  reconcileEngineRecordMock,
   isFieldDirtyMock,
   setFieldValueMock,
   useFormMock,
   useStorageSettingsStoreMock,
 } = vi.hoisted(() => ({
   createGameMock: vi.fn(),
+  enginesGetMock: vi.fn(),
   existsMock: vi.fn(),
   joinMock: vi.fn(async (...parts: string[]) => parts.join('/')),
   notifyErrorMock: vi.fn(),
   openDialogMock: vi.fn(),
   readDirMock: vi.fn(),
+  reconcileEngineRecordMock: vi.fn(),
   isFieldDirtyMock: vi.fn(),
   setFieldValueMock: vi.fn(),
   useFormMock: vi.fn(),
@@ -64,6 +68,20 @@ vi.mock('~/services/game-manager', () => ({
   },
 }))
 
+vi.mock('~/services/resource-reconcile', () => ({
+  resourceReconcile: {
+    reconcileEngineRecord: reconcileEngineRecordMock,
+  },
+}))
+
+vi.mock('~/database/db', () => ({
+  db: {
+    engines: {
+      get: enginesGetMock,
+    },
+  },
+}))
+
 vi.mock('~/stores/storage-settings', () => ({
   useStorageSettingsStore: useStorageSettingsStoreMock,
 }))
@@ -93,10 +111,12 @@ describe('useCreateGameForm 行为', () => {
     vi.resetAllMocks()
 
     createGameMock.mockResolvedValue('game-1')
+    enginesGetMock.mockResolvedValue({ id: 'engine-1', path: '/engines/default', availability: 'available' })
     existsMock.mockResolvedValue(false)
     joinMock.mockImplementation(async (...parts: string[]) => parts.join('/'))
     openDialogMock.mockResolvedValue(undefined)
     readDirMock.mockResolvedValue([])
+    reconcileEngineRecordMock.mockResolvedValue('available')
     isFieldDirtyMock.mockReturnValue(false)
 
     useStorageSettingsStoreMock.mockReturnValue({
@@ -196,6 +216,8 @@ describe('useCreateGameForm 行为', () => {
 
     const submitPromise = form.onSubmit()
     await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
 
     expect(open.value).toBe(false)
     expect(onSuccess).not.toHaveBeenCalled()
@@ -221,22 +243,6 @@ describe('useCreateGameForm 行为', () => {
     expect(notifyErrorMock).toHaveBeenCalledWith('create failed')
     expect(open.value).toBe(false)
     expect(onSuccess).not.toHaveBeenCalled()
-  })
-
-  it('提交时服务返回引擎错误会透传提示并保持弹窗关闭', async () => {
-    const open = ref(true)
-    const form = useCreateGameForm({ open })
-
-    createGameMock.mockRejectedValue(new Error('引擎不可用'))
-    formValues.gameName = 'Demo'
-    formValues.gamePath = '/games/Demo'
-    formValues.gameEngine = 'engine-1'
-
-    await form.onSubmit()
-
-    expect(createGameMock).toHaveBeenCalledWith('Demo', '/games/Demo', 'engine-1', { templateBinding: undefined })
-    expect(notifyErrorMock).toHaveBeenCalledWith('引擎不可用')
-    expect(open.value).toBe(false)
   })
 
   it('游戏名称不能为空', async () => {
