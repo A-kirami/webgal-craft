@@ -995,7 +995,6 @@ engine:
   latestBadge: 最新
   deleteVersion: 删除版本
   uninstallAllVersions: 卸载全部版本
-  duplicateEngine: 同名同版本的引擎已存在
   deleteBlocked: 无法删除
   deleteBlockedByGames: 以下游戏正在使用此引擎：
   unavailable: 不可用

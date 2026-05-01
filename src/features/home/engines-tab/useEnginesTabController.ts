@@ -22,7 +22,6 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
     importResource: path => engineManager.importEngine(path),
     messages: {
       alreadyRegistered: t => t('home.engines.importAlreadyExists'),
-      duplicateEngine: t => t('engine.duplicateEngine'),
       engineSchemaTooNew: t => t('home.engines.importSchemaTooNew'),
       invalidFolder: t => t('home.engines.importInvalidFolder'),
       multipleFolders: t => t('home.engines.importMultipleFolders'),

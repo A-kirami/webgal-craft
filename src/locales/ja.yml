@@ -995,7 +995,6 @@ engine:
   latestBadge: 最新
   deleteVersion: バージョンを削除
   uninstallAllVersions: すべてのバージョンをアンインストール
-  duplicateEngine: 同名・同バージョンのエンジンは既に存在します
   deleteBlocked: 削除できません
   deleteBlockedByGames: 以下のゲームがこのエンジンを使用しています：
   unavailable: 利用不可

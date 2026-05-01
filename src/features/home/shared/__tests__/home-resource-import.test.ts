@@ -72,15 +72,6 @@ describe('首页共享导入纯逻辑', () => {
     })
   })
 
-  it('重复引擎导入错误会映射为专用通知', () => {
-    expect(resolveHomeResourceImportNotification(new AppError('DUPLICATE_RESOURCE', 'duplicate', {
-      details: { reason: 'DUPLICATE_ENGINE' },
-    }))).toEqual({
-      kind: 'duplicate-engine',
-      level: 'error',
-    })
-  })
-
   it('配置损坏错误会映射为专用通知', () => {
     expect(resolveHomeResourceImportNotification(new AppError('INVALID_PROJECT_CONFIG', 'broken', {
       details: { reason: 'CONFIG_CORRUPTED' },

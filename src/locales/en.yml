@@ -995,7 +995,6 @@ engine:
   latestBadge: Latest
   deleteVersion: Delete Version
   uninstallAllVersions: Uninstall All Versions
-  duplicateEngine: An engine with the same name and version already exists
   deleteBlocked: Cannot Delete
   deleteBlockedByGames: 'The following games are using this engine:'
   unavailable: Unavailable
