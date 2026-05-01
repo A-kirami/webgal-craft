@@ -69,7 +69,12 @@ async function handleConfirm() {
             {{ isUnavailable ? $t('modals.deleteGame.removeTitle') : $t('modals.deleteGame.title') }}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            <i18n-t :keypath="isUnavailable ? 'modals.deleteGame.removeDescription' : 'modals.deleteGame.description'" tag="p">
+            <i18n-t v-if="isUnavailable" keypath="modals.deleteGame.removeDescription" tag="p">
+              <template #name>
+                <span class="text-foreground font-bold">{{ game.metadata.name }}</span>
+              </template>
+            </i18n-t>
+            <i18n-t v-else keypath="modals.deleteGame.description" tag="p">
               <template #name>
                 <span class="text-foreground font-bold">{{ game.metadata.name }}</span>
               </template>

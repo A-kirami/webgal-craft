@@ -50,7 +50,12 @@ async function handleConfirm() {
             {{ isUnavailable ? $t('modals.deleteTemplate.removeTitle') : $t('modals.deleteTemplate.title') }}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            <i18n-t :keypath="isUnavailable ? 'modals.deleteTemplate.removeDescription' : 'modals.deleteTemplate.description'" tag="p">
+            <i18n-t v-if="isUnavailable" keypath="modals.deleteTemplate.removeDescription" tag="p">
+              <template #name>
+                <span class="text-foreground font-bold">{{ template.metadata.name }}</span>
+              </template>
+            </i18n-t>
+            <i18n-t v-else keypath="modals.deleteTemplate.description" tag="p">
               <template #name>
                 <span class="text-foreground font-bold">{{ template.metadata.name }}</span>
               </template>

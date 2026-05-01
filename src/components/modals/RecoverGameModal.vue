@@ -108,12 +108,12 @@ async function handleGoHome() {
             {{ $t('modals.recoverGame.title') }}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            <i18n-t
-              :keypath="isMissing
-                ? 'modals.recoverGame.descriptionMissing'
-                : 'modals.recoverGame.descriptionBroken'"
-              tag="p"
-            >
+            <i18n-t v-if="isMissing" keypath="modals.recoverGame.descriptionMissing" tag="p">
+              <template #name>
+                <span class="text-foreground font-bold">{{ game.metadata.name }}</span>
+              </template>
+            </i18n-t>
+            <i18n-t v-else keypath="modals.recoverGame.descriptionBroken" tag="p">
               <template #name>
                 <span class="text-foreground font-bold">{{ game.metadata.name }}</span>
               </template>
