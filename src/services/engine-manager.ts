@@ -295,9 +295,13 @@ async function findEngineByComparablePath(rawPath: string): Promise<Engine | und
   return engines.find(engine => toComparablePath(engine.path) === comparablePath)
 }
 
-async function collectEngineWarnings(enginePath: string): Promise<ResourceWarning[]> {
+async function collectEngineWarnings(
+  enginePath: string,
+  metadata: EngineMetadata,
+): Promise<ResourceWarning[]> {
   const warnings: ResourceWarning[] = []
-  if (!(await exists(await engineIconPath(enginePath)))) {
+  const iconPath = await resolveEngineIconPreviewPath(enginePath, metadata)
+  if (!(await exists(iconPath))) {
     warnings.push(createWarning('missing-favicon', '引擎 favicon 不存在'))
   }
   return warnings
@@ -340,7 +344,7 @@ async function inspectEngine(
   }
 
   const snapshot = await buildEngineSnapshot(normalizedPath, classification.manifest)
-  const warnings = await collectEngineWarnings(normalizedPath)
+  const warnings = await collectEngineWarnings(normalizedPath, snapshot.metadata)
 
   return {
     availability: 'available',

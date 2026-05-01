@@ -408,6 +408,29 @@ describe('engineManager', () => {
     })
   })
 
+  it('inspectEngine 检查 manifest 中自定义 icon 路径', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.5.0',
+        engineType: 'official',
+        webgalVersion: '4.5.0',
+        icon: 'assets/custom.png',
+      },
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    // 默认 favicon 路径存在但自定义 icon 不存在，应仍然产生 warning
+    existsMock.mockImplementation(async (path: string) => path !== '/source/assets/custom.png')
+
+    await expect(engineManager.inspectEngine('/source')).resolves.toMatchObject({
+      availability: 'available',
+      warnings: [{ code: 'missing-favicon' }],
+    })
+  })
+
   it('validateAllEngines 会把失效目录标记为 missing availability', async () => {
     enginesToArrayMock.mockResolvedValue([
       createTestEngine({
