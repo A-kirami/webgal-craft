@@ -276,10 +276,14 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
       }
 
       function writeGameConfig(gamePath: string, config: GameConfigReadResult) {
-        gameConfigStore.set(normalizePath(gamePath), {
+        const normalized = normalizePath(gamePath)
+        gameConfigStore.set(normalized, {
           entries: cloneGameConfigEntries(config.entries),
           unmanagedLineCount: config.unmanagedLineCount,
         })
+        // 同步落盘到虚拟文件系统，让 inspectGame/exists 等基于真实文件存在性的检查也能识别到配置
+        const serialized = config.entries.map(entry => `${entry.key}:${entry.value};`).join('\n')
+        ensureFile(joinPaths([normalized, 'game', 'config.txt']), serialized)
       }
 
       function getGameConfig(gamePath: string): GameConfigReadResult {
