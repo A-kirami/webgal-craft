@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { EllipsisVertical, LayoutTemplate } from '@lucide/vue'
+import { EllipsisVertical, LayoutTemplate, TriangleAlert } from '@lucide/vue'
 
 import type { TemplateCollectionItem } from '~/features/home/home-collection-items'
 import type {
@@ -78,7 +78,7 @@ const iconThumbnail = $computed(() =>
         class="rounded-lg shadow-sm relative"
         :class="{
           'cursor-wait': hasProgress,
-          'opacity-60 saturate-50': isUnavailable,
+          'ring-1 ring-destructive/40 border-destructive/30 bg-destructive/[0.03]': isUnavailable,
         }"
       >
         <CardContent class="p-3 flex flex-col gap-1">
@@ -110,6 +110,10 @@ const iconThumbnail = $computed(() =>
                   </h4>
                   <Badge v-if="isEngineBuiltin" variant="secondary">
                     {{ sourceKindLabel }}
+                  </Badge>
+                  <Badge v-if="isUnavailable" variant="destructive">
+                    <TriangleAlert class="size-3" />
+                    {{ $t('home.unavailableBadge') }}
                   </Badge>
                 </div>
 
@@ -170,7 +174,7 @@ const iconThumbnail = $computed(() =>
         class="p-3 flex transition-colors duration-200 items-center justify-between relative hover:bg-primary/5 dark:hover:bg-primary/10"
         :class="{
           'cursor-wait': hasProgress,
-          'opacity-60 saturate-50': isUnavailable,
+          'bg-destructive/[0.04] hover:bg-destructive/[0.08] dark:hover:bg-destructive/[0.12]': isUnavailable,
         }"
       >
         <div class="flex flex-1 gap-3 min-w-0 items-center">
@@ -200,6 +204,10 @@ const iconThumbnail = $computed(() =>
               </h3>
               <Badge v-if="isEngineBuiltin" variant="secondary">
                 {{ sourceKindLabel }}
+              </Badge>
+              <Badge v-if="isUnavailable" variant="destructive">
+                <TriangleAlert class="size-3" />
+                {{ $t('home.unavailableBadge') }}
               </Badge>
             </div>
 

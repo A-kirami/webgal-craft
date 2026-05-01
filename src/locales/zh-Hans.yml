@@ -72,6 +72,7 @@ app:
   description: WebGAL 视觉小说工作室
 
 home:
+  unavailableBadge: 已失效
   header:
     about: 关于
   tabs:
