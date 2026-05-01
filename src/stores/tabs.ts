@@ -330,6 +330,12 @@ export const useTabsStore = defineStore(
       }
     }
 
+    /** 重链接成功后清理某个项目下所有标签页与运行时状态，避免旧项目的工作区上下文带到新路径。 */
+    function clearProjectState(projectId: string) {
+      delete projectTabsMap[projectId]
+      delete runtimeTabStateMap[projectId]
+    }
+
     fileSystemEvents.on('file:removed', (event) => {
       const index = findTabIndex(event.path)
       if (index !== -1) {
@@ -366,6 +372,7 @@ export const useTabsStore = defineStore(
       updateTabError,
       projectTabsMap,
       runtimeTabStateMap,
+      clearProjectState,
     })
   },
   {

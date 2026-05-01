@@ -55,6 +55,7 @@ const controller = useGamesTabController({
       onConfirm,
     })
   },
+  openRecoverGameModal: game => modalStore.open('RecoverGameModal', { game }),
   pushRoute: path => router.push(path),
   switchToEnginesTab: () => {
     workspaceStore.activeTab = 'engines'

@@ -34,6 +34,7 @@ describe('buildTemplateCollectionItems', () => {
               name: 'Modern Template',
               path: '/templates/modern',
               createdAt: 1,
+              availability: 'available',
             },
           ],
         },

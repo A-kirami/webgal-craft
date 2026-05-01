@@ -72,6 +72,7 @@ app:
   description: WebGAL 視覺小說工作室
 
 home:
+  unavailableBadge: 已失效
   header:
     about: 關於
   tabs:
@@ -113,6 +114,7 @@ home:
     importUnknownError: 匯入遊戲時發生未知錯誤
     importMultipleFolders: 一次只能匯入一個遊戲資料夾
     importCreating: 遊戲正在建立中，請等待建立完成
+    openLastProjectUnavailable: 最近專案「{name}」目前不可用，已停留在主頁
   engines:
     noEngines: 沒有可用的遊戲引擎
     noEnginesDesc: 你需要安裝遊戲引擎才能建立遊戲
@@ -176,6 +178,8 @@ modals:
     templateGroupStandalone: 獨立模板
     create: 建立
     createFailed: 建立遊戲失敗
+    engineUnavailable: 所選引擎目前不可用，請重新選擇
+    templateUnavailable: 所選模板目前不可用，請重新選擇
     pathNotEmpty: 遊戲儲存目錄必須不存在或為空
     selectSaveLocation: 遊戲儲存位置
   deleteGame:
@@ -183,6 +187,10 @@ modals:
     description: 確定要刪除遊戲 {name} 嗎？
     deleteFiles: 同時刪除遊戲檔案
     deleteSuccess: 遊戲刪除成功
+    removeTitle: 移除遊戲記錄
+    removeDescription: 確定要移除遊戲 {name} 的記錄嗎？
+    removeWarning: 專案目錄已不可用，此操作只會移除本地記錄，不會刪除任何檔案。
+    removeSuccess: 遊戲記錄已移除
   deleteFile:
     title: 確定要刪除檔案 {name} 嗎？
     folderTitle: 確定要刪除資料夾 {name} 及其內容？
@@ -211,6 +219,10 @@ modals:
     description: 確定要刪除模板 {name} 嗎？
     warning: 此操作將把模板檔案移到資源回收桶，你可以稍後從資源回收桶還原。
     deleteSuccess: 模板刪除成功
+    removeTitle: 移除模板記錄
+    removeDescription: 確定要移除模板 {name} 的記錄嗎？
+    removeWarning: 模板目錄已不可用，此操作只會移除本地記錄，不會刪除任何檔案。
+    removeSuccess: 模板記錄已移除
   switchEngine:
     title: 切換引擎
     description: 選擇要切換的遊戲引擎
@@ -245,6 +257,25 @@ modals:
     warning: 此操作會將該引擎的全部已安裝版本移到資源回收桶，你可以稍後從資源回收桶還原。
     success: 引擎全部版本卸載成功
     failed: 引擎全部版本卸載失敗
+    removeTitle: 移除全部版本記錄
+    removeDescription: 確定要移除引擎 {name} 全部版本的記錄嗎？
+    removeWarning: 引擎目錄已不可用，此操作只會移除本地記錄，不會刪除任何檔案。
+    removeSuccess: 引擎全部版本記錄已移除
+    removeFailed: 引擎全部版本記錄移除失敗
+  recoverGame:
+    title: 專案目前不可用
+    descriptionMissing: 找不到專案 {name} 的目錄，可能外接磁碟未連接或目錄已被外部移除。
+    descriptionBroken: 專案 {name} 的目錄可存取，但核心檔案已損壞或缺失，無法正常開啟。
+    selectNewLocation: 選擇專案的新位置
+    retry: 重試連接
+    recheck: 重新偵測
+    retrySuccess: 專案已恢復
+    retryFailed: 專案仍然不可用
+    relink: 重新連結路徑
+    relinkSuccess: 專案路徑已更新
+    relinkFailed: 重新連結失敗
+    openFolderFailed: 開啟專案目錄失敗
+    backToHome: 返回主頁
   discoveredResources:
     gamesTitle: 發現遊戲
     enginesTitle: 發現引擎

@@ -10,6 +10,7 @@ const open = defineModel<boolean>('open')
 const props = defineProps<{
   engineId: string
   groupName: string
+  allUnavailable?: boolean
 }>()
 
 const { associatedGames, isDeleteBlocked, isConfirmDisabled, handleConfirm } =
@@ -18,14 +19,22 @@ const { associatedGames, isDeleteBlocked, isConfirmDisabled, handleConfirm } =
     identifier: () => props.engineId,
     checkDelete: () => engineManager.canDeleteEngineGroup(props.engineId),
     performDelete: () => engineManager.uninstallEngineGroup(props.engineId),
-    successMessage: () => t('modals.deleteEngineGroup.success'),
-    fallbackErrorMessage: () => t('modals.deleteEngineGroup.failed'),
+    successMessage: () => props.allUnavailable
+      ? t('modals.deleteEngineGroup.removeSuccess')
+      : t('modals.deleteEngineGroup.success'),
+    fallbackErrorMessage: () => props.allUnavailable
+      ? t('modals.deleteEngineGroup.removeFailed')
+      : t('modals.deleteEngineGroup.failed'),
     logPrefix: '读取引擎分组删除状态失败',
   }))
 
 const dialogTitle = $computed(() => {
   if (isDeleteBlocked) {
     return t('engine.deleteBlocked')
+  }
+
+  if (props.allUnavailable) {
+    return t('modals.deleteEngineGroup.removeTitle')
   }
 
   return t('modals.deleteEngineGroup.title')
@@ -36,7 +45,21 @@ const dialogDescription = $computed(() => {
     return t('engine.deleteBlockedByGames')
   }
 
+  if (props.allUnavailable) {
+    return t('modals.deleteEngineGroup.removeDescription', { name: props.groupName })
+  }
+
   return t('modals.deleteEngineGroup.description', { name: props.groupName })
+})
+
+const dialogWarning = $computed(() => {
+  if (isDeleteBlocked) {
+    return
+  }
+
+  return props.allUnavailable
+    ? t('modals.deleteEngineGroup.removeWarning')
+    : t('modals.deleteEngineGroup.warning')
 })
 </script>
 
@@ -61,8 +84,8 @@ const dialogDescription = $computed(() => {
                 {{ game.metadata.name }}
               </li>
             </ul>
-            <p v-else>
-              {{ $t('modals.deleteEngineGroup.warning') }}
+            <p v-if="dialogWarning">
+              {{ dialogWarning }}
             </p>
           </AlertDialogDescription>
         </AlertDialogHeader>

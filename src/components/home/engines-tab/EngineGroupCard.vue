@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { EllipsisVertical, Folder, Star, Trash2 } from '@lucide/vue'
+import { EllipsisVertical, Folder, Star, Trash2, TriangleAlert } from '@lucide/vue'
 
 import type { Engine } from '~/database/model'
 import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
@@ -61,7 +61,9 @@ const menuItems = $computed<MenuItem[]>(() => [
     <ContextMenuTrigger as-child>
       <Card
         v-if="viewMode === 'grid'"
+        :data-availability="group.hasAvailableVersion ? 'available' : 'unavailable'"
         class="rounded-lg shadow-sm"
+        :class="{ 'ring-1 ring-destructive/40 border-destructive/30 bg-destructive/[0.03]': !group.hasAvailableVersion }"
       >
         <CardContent class="p-3 flex flex-col gap-1">
           <div class="flex gap-4 items-start justify-between">
@@ -89,6 +91,10 @@ const menuItems = $computed<MenuItem[]>(() => [
                   </h4>
                   <Badge v-if="group.isDefault" variant="secondary">
                     {{ $t('engine.defaultEngine') }}
+                  </Badge>
+                  <Badge v-if="!group.hasAvailableVersion" variant="destructive">
+                    <TriangleAlert class="size-3" />
+                    {{ $t('home.unavailableBadge') }}
                   </Badge>
                 </div>
 
@@ -136,7 +142,9 @@ const menuItems = $computed<MenuItem[]>(() => [
 
       <div
         v-else
+        :data-availability="group.hasAvailableVersion ? 'available' : 'unavailable'"
         class="p-3 flex transition-colors duration-200 items-center justify-between relative hover:bg-primary/5 dark:hover:bg-primary/10"
+        :class="{ 'bg-destructive/[0.04] hover:bg-destructive/[0.08] dark:hover:bg-destructive/[0.12]': !group.hasAvailableVersion }"
       >
         <div class="flex flex-1 gap-3 min-w-0 items-center">
           <div class="rounded-md flex shrink-0 h-10 w-10 items-center justify-center overflow-hidden">
@@ -162,6 +170,10 @@ const menuItems = $computed<MenuItem[]>(() => [
               </h3>
               <Badge v-if="group.isDefault" variant="secondary">
                 {{ $t('engine.defaultEngine') }}
+              </Badge>
+              <Badge v-if="!group.hasAvailableVersion" variant="destructive">
+                <TriangleAlert class="size-3" />
+                {{ $t('home.unavailableBadge') }}
               </Badge>
             </div>
             <p v-if="group.summary" class="text-xs text-muted-foreground line-clamp-1">

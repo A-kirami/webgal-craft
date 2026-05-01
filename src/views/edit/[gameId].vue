@@ -8,6 +8,7 @@ import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { useFileStore } from '~/stores/file'
 import { useModalStore } from '~/stores/modal'
 import { usePreferenceStore } from '~/stores/preference'
+import { useWorkspaceStore } from '~/stores/workspace'
 
 interface EditorPanelHandle {
   toggleCommandPanel?: () => void
@@ -17,9 +18,25 @@ const editorStore = useEditorStore()
 useFileStore()
 const modalStore = useModalStore()
 const preferenceStore = usePreferenceStore()
+const workspaceStore = useWorkspaceStore()
 const editorPanelRef = useTemplateRef<EditorPanelHandle>('editorPanel')
 
 useAnimationTableSyncBootstrap()
+
+// 进入工作区时即时校验：失效则进入阻断式恢复弹窗，由用户决定重试 / 重链接 / 返回主页
+watch(() => workspaceStore.currentGame?.id, async (gameId) => {
+  if (!gameId) {
+    return
+  }
+  const ok = await workspaceStore.ensureCurrentGameAvailable()
+  // await 期间用户可能已切换到其他游戏，避免对新游戏误开恢复弹窗
+  if (workspaceStore.currentGame?.id !== gameId) {
+    return
+  }
+  if (!ok) {
+    modalStore.open('RecoverGameModal', { game: workspaceStore.currentGame }, gameId, true)
+  }
+}, { immediate: true })
 
 const currentEditorMode = computed(() => {
   const currentState = editorStore.currentState

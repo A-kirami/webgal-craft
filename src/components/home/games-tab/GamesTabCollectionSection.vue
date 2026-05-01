@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Folder, Scroll, Trash2 } from '@lucide/vue'
+import { Folder, Scroll, Trash2, TriangleAlert } from '@lucide/vue'
 
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import dayjs from '~/plugins/dayjs'
@@ -61,11 +61,16 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
       <ContextMenu v-for="item in items" :key="item.game.id">
         <ContextMenuTrigger as-child>
           <Card
+            :data-testid="`game-card-${item.game.id}`"
+            :data-availability="item.game.availability"
             class="group rounded-lg cursor-pointer shadow-sm transition-all duration-300 relative overflow-hidden hover:shadow"
-            :class="{ 'cursor-wait': hasGameProgress(item.game) }"
+            :class="{
+              'cursor-wait': hasGameProgress(item.game),
+              'opacity-90 ring-1 ring-destructive/40 border-destructive/30 bg-destructive/[0.03]': item.game.availability !== 'available',
+            }"
             @click="emit('gameClick', item.game)"
           >
-            <div class="bg-gray-100 w-full aspect-16/9 overflow-hidden">
+            <div class="bg-gray-100 w-full aspect-16/9 relative overflow-hidden">
               <AssetImage
                 :path="item.game.previewAssets.cover.path"
                 :root-path="item.rootPath"
@@ -76,7 +81,21 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
                 fallback-image="/placeholder.svg"
                 :thumbnail="GRID_COVER_THUMBNAIL"
                 class="h-full w-full transition-transform duration-300 group-hover:scale-105"
+                :class="{ 'grayscale': item.game.availability !== 'available' }"
               />
+              <div
+                v-if="item.game.availability !== 'available'"
+                aria-hidden="true"
+                class="bg-destructive/15 pointer-events-none inset-0 absolute"
+              />
+              <Badge
+                v-if="item.game.availability !== 'available'"
+                variant="destructive"
+                class="shadow-sm right-2 top-2 absolute"
+              >
+                <TriangleAlert class="size-3" />
+                {{ $t('home.unavailableBadge') }}
+              </Badge>
             </div>
             <CardContent class="p-3">
               <div class="flex gap-4 items-center">
@@ -140,12 +159,20 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
       <div
         v-for="item in items"
         :key="item.game.id"
+        :data-testid="`game-row-${item.game.id}`"
+        :data-availability="item.game.availability"
         class="p-3 flex cursor-pointer transition-colors duration-200 items-center justify-between relative hover:bg-primary/5 dark:hover:bg-primary/10"
-        :class="{ 'cursor-wait': hasGameProgress(item.game) }"
+        :class="{
+          'cursor-wait': hasGameProgress(item.game),
+          'bg-destructive/[0.04] hover:bg-destructive/[0.08] dark:hover:bg-destructive/[0.12]': item.game.availability !== 'available',
+        }"
         @click="emit('gameClick', item.game)"
       >
-        <div class="flex gap-3 items-center">
-          <div class="rounded-md h-10 w-10 overflow-hidden">
+        <div class="flex flex-1 gap-3 min-w-0 items-center">
+          <div
+            class="rounded-md h-10 w-10 relative overflow-hidden"
+            :class="{ 'ring-1 ring-destructive/40': item.game.availability !== 'available' }"
+          >
             <AssetImage
               :path="item.game.previewAssets.cover.path"
               :root-path="item.rootPath"
@@ -156,12 +183,22 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
               fallback-image="/placeholder.svg"
               :thumbnail="LIST_COVER_THUMBNAIL"
               class="h-full w-full"
+              :class="{ 'grayscale': item.game.availability !== 'available' }"
             />
           </div>
-          <div>
-            <h3 class="font-medium">
-              {{ item.game.metadata.name }}
-            </h3>
+          <div class="flex flex-col min-w-0">
+            <div class="flex flex-wrap gap-2 items-center">
+              <h3 class="font-medium truncate">
+                {{ item.game.metadata.name }}
+              </h3>
+              <Badge
+                v-if="item.game.availability !== 'available'"
+                variant="destructive"
+              >
+                <TriangleAlert class="size-3" />
+                {{ $t('home.unavailableBadge') }}
+              </Badge>
+            </div>
             <p class="text-xs text-muted-foreground">
               {{ hasGameProgress(item.game) ? $t('home.games.creating') : $t('home.games.modifiedAt', { time: dayjs(item.game.lastModified).fromNow() }) }}
             </p>

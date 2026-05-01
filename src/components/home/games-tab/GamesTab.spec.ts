@@ -94,6 +94,10 @@ vi.mock('@tauri-apps/plugin-opener', () => ({
   openPath: openPathMock,
 }))
 
+vi.mock('@tauri-apps/plugin-log', () => ({
+  warn: vi.fn(),
+}))
+
 vi.mock('notivue', () => ({
   push: {
     error: notifyErrorMock,

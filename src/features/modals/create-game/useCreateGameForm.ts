@@ -4,10 +4,12 @@ import { exists, readDir } from '@tauri-apps/plugin-fs'
 import { useForm } from 'vee-validate'
 import * as z from 'zod'
 
+import { db } from '~/database/db'
 import {
   resolveCreateGamePathSuggestion,
 } from '~/features/modals/create-game/create-game-modal'
 import { gameManager } from '~/services/game-manager'
+import { resourceReconcile } from '~/services/resource-reconcile'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 
 import type { TemplateBinding } from '~/types/project-config'
@@ -113,6 +115,28 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
   })
 
   const onSubmit = handleSubmit(async ({ gameName, gamePath, gameEngine, gameTemplate }) => {
+    // 提交时即时校验所选引擎，避免基于过期 availability 创建游戏后才在引擎层报错
+    const engine = await db.engines.get(gameEngine)
+    const engineAvailability = engine ? await resourceReconcile.reconcileEngineRecord(engine) : undefined
+    if (engineAvailability !== 'available') {
+      notify.error(t('modals.createGame.engineUnavailable'))
+      setFieldValue('gameEngine', '', false)
+      return
+    }
+
+    // standalone 模板同样需即时校验，防止在 game/template 复制阶段才报路径不存在
+    if (gameTemplate?.kind === 'standalone') {
+      const template = await db.templates.where('metadata.name').equals(gameTemplate.name).first()
+      if (template) {
+        const templateAvailability = await resourceReconcile.reconcileTemplateRecord(template)
+        if (templateAvailability !== 'available') {
+          notify.error(t('modals.createGame.templateUnavailable'))
+          setFieldValue('gameTemplate', undefined, false)
+          return
+        }
+      }
+    }
+
     options.open.value = false
 
     try {

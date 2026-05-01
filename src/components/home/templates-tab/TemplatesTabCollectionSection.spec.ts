@@ -125,6 +125,7 @@ function createItems(): TemplateCollectionItem[] {
             path: '/templates/modern',
             createdAt: 1,
             webgalVersion: '4.8.1',
+            availability: 'available',
           },
         ],
       },

@@ -72,6 +72,7 @@ app:
   description: WebGAL ビジュアルノベルスタジオ
 
 home:
+  unavailableBadge: 利用不可
   header:
     about: について
   tabs:
@@ -113,6 +114,7 @@ home:
     importUnknownError: ゲームのインポート中に不明なエラーが発生しました
     importMultipleFolders: 一度にインポートできるゲームフォルダは1つだけです
     importCreating: ゲームを作成中です。作成の完了をお待ちください
+    openLastProjectUnavailable: 最近のプロジェクト「{name}」は現在利用できません。ホーム画面に留まります
   engines:
     noEngines: 利用可能なゲームエンジンがありません
     noEnginesDesc: ゲームを作成するにはゲームエンジンをインストールする必要があります
@@ -176,6 +178,8 @@ modals:
     templateGroupStandalone: スタンドアロンテンプレート
     create: 作成
     createFailed: ゲームの作成に失敗しました
+    engineUnavailable: 選択したエンジンは現在利用できません。別のエンジンを選択してください
+    templateUnavailable: 選択したテンプレートは現在利用できません。別のテンプレートを選択してください
     pathNotEmpty: ゲーム保存ディレクトリは存在しないか、空である必要があります
     selectSaveLocation: ゲーム保存場所
   deleteGame:
@@ -183,6 +187,10 @@ modals:
     description: ゲーム {name} を削除してもよろしいですか？
     deleteFiles: ゲームファイルも削除
     deleteSuccess: ゲームの削除に成功しました
+    removeTitle: ゲーム記録を削除
+    removeDescription: ゲーム {name} の記録を削除してもよろしいですか？
+    removeWarning: プロジェクトディレクトリが利用できません。この操作はローカル記録のみ削除し、ファイルは削除されません。
+    removeSuccess: ゲーム記録を削除しました
   deleteFile:
     title: ファイル {name} を削除しますか？
     folderTitle: フォルダー {name} とその内容を削除しますか？
@@ -211,6 +219,10 @@ modals:
     description: テンプレート {name} を削除してもよろしいですか？
     warning: この操作はテンプレートファイルをゴミ箱に移動します。ゴミ箱から復元できます。
     deleteSuccess: テンプレートを削除しました
+    removeTitle: テンプレート記録を削除
+    removeDescription: テンプレート {name} の記録を削除してもよろしいですか？
+    removeWarning: テンプレートディレクトリが利用できません。この操作はローカル記録のみ削除し、ファイルは削除されません。
+    removeSuccess: テンプレート記録を削除しました
   switchEngine:
     title: エンジンを切り替え
     description: 切り替えるゲームエンジンを選択
@@ -245,6 +257,25 @@ modals:
     warning: この操作は、このエンジンのインストール済みバージョンをすべてゴミ箱に移動します。後で復元できます。
     success: エンジンの全バージョンをアンインストールしました
     failed: エンジンの全バージョンのアンインストールに失敗しました
+    removeTitle: すべてのバージョン記録を削除
+    removeDescription: エンジン {name} のすべてのバージョン記録を削除してもよろしいですか？
+    removeWarning: エンジンディレクトリが利用できません。この操作はローカル記録のみ削除し、ファイルは削除されません。
+    removeSuccess: エンジンの全バージョン記録を削除しました
+    removeFailed: エンジンのバージョン記録の削除に失敗しました
+  recoverGame:
+    title: プロジェクトは現在利用できません
+    descriptionMissing: プロジェクト {name} のディレクトリが見つかりません。外部ドライブが未接続か、ディレクトリが外部から削除された可能性があります。
+    descriptionBroken: プロジェクト {name} のディレクトリには到達できますが、コアファイルが破損または欠落しています。
+    selectNewLocation: プロジェクトの新しい場所を選択
+    retry: 再接続
+    recheck: 再チェック
+    retrySuccess: プロジェクトを復旧しました
+    retryFailed: プロジェクトはまだ利用できません
+    relink: パスを再リンク
+    relinkSuccess: プロジェクトのパスを更新しました
+    relinkFailed: 再リンクに失敗しました
+    openFolderFailed: プロジェクトフォルダーを開けませんでした
+    backToHome: ホームに戻る
   discoveredResources:
     gamesTitle: ゲームを発見
     enginesTitle: エンジンを発見

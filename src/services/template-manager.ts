@@ -6,6 +6,7 @@ import { fsCmds } from '~/commands/fs'
 import { db } from '~/database/db'
 import { Template } from '~/database/model'
 import { templateManifestPath } from '~/services/platform/app-paths'
+import { ResourceAvailability } from '~/services/resource-health'
 import { TemplateMetadata } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
@@ -75,6 +76,7 @@ async function registerTemplate(
     path: templatePath,
     createdAt: Date.now(),
     status,
+    availability: 'available',
     metadata,
   })
 }
@@ -191,12 +193,33 @@ async function importTemplate(templatePath: string): Promise<void> {
 }
 
 async function deleteTemplate(template: Template): Promise<void> {
-  try {
-    await fsCmds.deleteFile(template.path, true)
-  } catch (error) {
-    logger.warn(`[模板删除] 删除模板目录失败，继续清理数据库记录: ${template.path} - ${error}`)
+  if (template.availability === 'available') {
+    try {
+      await fsCmds.deleteFile(template.path, true)
+    } catch (error) {
+      logger.warn(`[模板删除] 删除模板目录失败，继续清理数据库记录: ${template.path} - ${error}`)
+    }
   }
   await db.templates.delete(template.id)
+}
+
+async function inspectTemplateAvailability(templatePath: string): Promise<{
+  availability: ResourceAvailability
+  metadata?: TemplateMetadata
+}> {
+  if (!(await exists(templatePath))) {
+    return { availability: 'missing' }
+  }
+  if (!(await validateTemplate(templatePath))) {
+    return { availability: 'broken' }
+  }
+  try {
+    const metadata = await getTemplateMetadata(templatePath)
+    return { availability: 'available', metadata }
+  } catch (error) {
+    logger.warn(`[模板校验] 读取元数据失败 (${templatePath}): ${error}`)
+    return { availability: 'broken' }
+  }
 }
 
 async function validateAllTemplates(): Promise<void> {
@@ -204,6 +227,7 @@ async function validateAllTemplates(): Promise<void> {
 
   await Promise.allSettled(templates.map(async (template) => {
     if (template.status === 'creating') {
+      // creating 是上次未完成的导入残留，仍按既有逻辑清理
       await deleteTemplateDirectoryIfExists(template.path)
       await db.templates.delete(template.id)
       return
@@ -213,32 +237,22 @@ async function validateAllTemplates(): Promise<void> {
       return
     }
 
-    let isValid: boolean
-    try {
-      isValid = await validateTemplate(template.path)
-    } catch (error) {
+    const inspection = await inspectTemplateAvailability(template.path).catch((error) => {
       logger.warn(`[模板校验] 校验异常 (${template.path}): ${error}`)
-      isValid = false
-    }
+      return { availability: 'broken' as ResourceAvailability, metadata: undefined }
+    })
 
-    if (!isValid) {
-      await db.templates.delete(template.id)
-      await deleteTemplateDirectoryIfExists(template.path)
-      return
+    const patch: Partial<Template> = {}
+    if (template.availability !== inspection.availability) {
+      patch.availability = inspection.availability
     }
-
-    let metadata: TemplateMetadata
-    try {
-      metadata = await getTemplateMetadata(template.path)
-    } catch (error) {
-      logger.warn(`[模板校验] 读取元数据失败 (${template.path}): ${error}`)
-      await db.templates.delete(template.id)
-      await deleteTemplateDirectoryIfExists(template.path)
-      return
+    if (inspection.metadata
+      && (template.metadata.name !== inspection.metadata.name
+        || template.metadata.webgalVersion !== inspection.metadata.webgalVersion)) {
+      patch.metadata = inspection.metadata
     }
-    if (template.metadata.name !== metadata.name
-      || template.metadata.webgalVersion !== metadata.webgalVersion) {
-      await db.templates.update(template.id, { metadata })
+    if (Object.keys(patch).length > 0) {
+      await db.templates.update(template.id, patch)
     }
   }))
 }
@@ -246,6 +260,7 @@ async function validateAllTemplates(): Promise<void> {
 export const templateManager = {
   validateTemplate,
   validateAllTemplates,
+  inspectTemplateAvailability,
   getTemplateMetadata,
   importTemplate,
   deleteTemplate,

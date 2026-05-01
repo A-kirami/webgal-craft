@@ -1,4 +1,5 @@
 import { useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { resourceReconcile } from '~/services/resource-reconcile'
 import { templateManager } from '~/services/template-manager'
 
 import type { Template } from '~/database/model'
@@ -34,16 +35,20 @@ export function useTemplatesTabController(options: UseTemplatesTabControllerOpti
     t: options.t,
   })
 
-  function handleDelete(group: TemplateGroupViewModel, templates: readonly Template[]) {
+  async function handleDelete(group: TemplateGroupViewModel, templates: readonly Template[]) {
     const source = findStandaloneSource(group)
     if (!source) {
       return
     }
 
     const template = templates.find(t => t.id === source.templateId)
-    if (template) {
-      options.openDeleteTemplateModal(template)
+    if (!template) {
+      return
     }
+
+    // 删除入口即时校验：失效模板由 DeleteTemplateModal 走"只删记录"分支
+    const availability = await resourceReconcile.reconcileTemplateRecord(template)
+    options.openDeleteTemplateModal({ ...template, availability })
   }
 
   function getTemplateGroupProgress(group: TemplateGroupViewModel): number {

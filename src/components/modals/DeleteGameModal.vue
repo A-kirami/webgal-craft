@@ -17,9 +17,13 @@ let removeFiles = $ref(false)
 let isConfirming = $ref(false)
 const modalStore = useModalStore()
 
-async function deleteGame() {
+const isUnavailable = $computed(() => game.availability !== 'available')
+
+async function performDelete(removeFiles: boolean) {
   await gameManager.deleteGame(game, removeFiles)
-  notify.success(t('modals.deleteGame.deleteSuccess'))
+  notify.success(isUnavailable
+    ? t('modals.deleteGame.removeSuccess')
+    : t('modals.deleteGame.deleteSuccess'))
 }
 
 async function handleConfirm() {
@@ -28,13 +32,20 @@ async function handleConfirm() {
   }
   isConfirming = true
   try {
+    // 失效游戏：磁盘路径不可达，从列表移除时只删数据库记录，不再触碰文件
+    if (isUnavailable) {
+      await performDelete(false)
+      open = false
+      return
+    }
+
     if (removeFiles) {
       modalStore.open('DeleteGameConfirmModal', {
         game,
-        onConfirm: deleteGame,
+        onConfirm: () => performDelete(true),
       })
     } else {
-      await deleteGame()
+      await performDelete(false)
       open = false
     }
   } finally {
@@ -55,15 +66,23 @@ async function handleConfirm() {
         </div>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {{ $t('modals.deleteGame.title') }}
+            {{ isUnavailable ? $t('modals.deleteGame.removeTitle') : $t('modals.deleteGame.title') }}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            <i18n-t keypath="modals.deleteGame.description" tag="p">
+            <i18n-t v-if="isUnavailable" keypath="modals.deleteGame.removeDescription" tag="p">
               <template #name>
                 <span class="text-foreground font-bold">{{ game.metadata.name }}</span>
               </template>
             </i18n-t>
-            <div class="mt-4 flex items-center space-x-2">
+            <i18n-t v-else keypath="modals.deleteGame.description" tag="p">
+              <template #name>
+                <span class="text-foreground font-bold">{{ game.metadata.name }}</span>
+              </template>
+            </i18n-t>
+            <p v-if="isUnavailable" class="text-sm text-muted-foreground mt-3">
+              {{ $t('modals.deleteGame.removeWarning') }}
+            </p>
+            <div v-else class="mt-4 flex items-center space-x-2">
               <Checkbox id="removeFiles" ::="removeFiles" class="data-[state=checked]:border-destructive data-[state=checked]:bg-destructive/80" />
               <label
                 for="removeFiles"

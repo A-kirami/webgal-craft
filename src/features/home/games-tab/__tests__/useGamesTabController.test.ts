@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { createTestGame } from '~/__tests__/factories'
+
 import { useGamesTabController } from '../useGamesTabController'
 
 const {
@@ -10,6 +12,7 @@ const {
   notifyWarningMock,
   openDialogMock,
   openPathMock,
+  reconcileGameRecordMock,
   routerPushMock,
 } = vi.hoisted(() => ({
   importGameMock: vi.fn(),
@@ -19,6 +22,7 @@ const {
   notifyWarningMock: vi.fn(),
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
+  reconcileGameRecordMock: vi.fn(),
   routerPushMock: vi.fn(),
 }))
 
@@ -45,10 +49,17 @@ vi.mock('~/services/game-manager', () => ({
   },
 }))
 
+vi.mock('~/services/resource-reconcile', () => ({
+  resourceReconcile: {
+    reconcileGameRecord: reconcileGameRecordMock,
+  },
+}))
+
 describe('useGamesTabController 行为', () => {
   const openCreateGameModalMock = vi.fn()
   const openDeleteGameModalMock = vi.fn()
   const openNoEngineAlertModalMock = vi.fn()
+  const openRecoverGameModalMock = vi.fn()
   const switchToEnginesTabMock = vi.fn()
 
   function createController(overrides?: Partial<Parameters<typeof useGamesTabController>[0]>) {
@@ -58,6 +69,7 @@ describe('useGamesTabController 行为', () => {
       openCreateGameModal: openCreateGameModalMock,
       openDeleteGameModal: openDeleteGameModalMock,
       openNoEngineAlertModal: openNoEngineAlertModalMock,
+      openRecoverGameModal: openRecoverGameModalMock,
       pushRoute: routerPushMock,
       switchToEnginesTab: switchToEnginesTabMock,
       t: (key: string) => key,
@@ -67,6 +79,7 @@ describe('useGamesTabController 行为', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
+    reconcileGameRecordMock.mockResolvedValue('available')
   })
 
   it('拖入多个目录时只提示错误且不会触发导入', async () => {
@@ -138,24 +151,50 @@ describe('useGamesTabController 行为', () => {
     expect(switchToEnginesTabMock).not.toHaveBeenCalled()
   })
 
-  it('游戏处理中点击游戏只提示等待，不会跳转', () => {
+  it('游戏处理中点击游戏只提示等待，不会跳转', async () => {
     const controller = createController({
       activeProgress: new Map<string, number>([['game-1', 50]]),
     })
 
-    controller.handleGameClick({ id: 'game-1' })
+    await controller.handleGameClick(createTestGame({ id: 'game-1' }))
 
     expect(notifyWarningMock).toHaveBeenCalledWith('home.games.importCreating')
     expect(routerPushMock).not.toHaveBeenCalled()
   })
 
-  it('游戏未处理中点击会跳转到编辑器', () => {
+  it('游戏未处理中点击会跳转到编辑器', async () => {
     const controller = createController()
 
-    controller.handleGameClick({ id: 'game-2' })
+    await controller.handleGameClick(createTestGame({ id: 'game-2' }))
 
     expect(notifyWarningMock).not.toHaveBeenCalled()
     expect(routerPushMock).toHaveBeenCalledWith('/edit/game-2')
+  })
+
+  it('点击时即时校验发现失效会进入恢复弹窗，而不是直接跳转', async () => {
+    reconcileGameRecordMock.mockResolvedValue('missing')
+
+    const controller = createController()
+    const game = createTestGame({ id: 'game-stale', availability: 'available' })
+
+    await controller.handleGameClick(game)
+
+    expect(openRecoverGameModalMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'game-stale', availability: 'missing' }),
+    )
+    expect(routerPushMock).not.toHaveBeenCalled()
+  })
+
+  it('点击时即时校验回切到 available 会照常跳转编辑器', async () => {
+    reconcileGameRecordMock.mockResolvedValue('available')
+
+    const controller = createController()
+    const game = createTestGame({ id: 'game-recovered', availability: 'missing' })
+
+    await controller.handleGameClick(game)
+
+    expect(openRecoverGameModalMock).not.toHaveBeenCalled()
+    expect(routerPushMock).toHaveBeenCalledWith('/edit/game-recovered')
   })
 
   it('选择目录导入已注册游戏时按 info 级提示已存在', async () => {

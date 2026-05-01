@@ -9,6 +9,7 @@ const {
   dbGetMock,
   getGameSnapshotMock,
   previewSessionStoreMock,
+  reconcileGameRecordMock,
   syncCurrentGameMock,
   useRouteMock,
 } = vi.hoisted(() => ({
@@ -18,6 +19,7 @@ const {
     currentGameServeUrl: undefined as string | undefined,
     syncCurrentGame: vi.fn(),
   },
+  reconcileGameRecordMock: vi.fn(),
   syncCurrentGameMock: vi.fn(),
   useRouteMock: vi.fn(),
 }))
@@ -43,6 +45,12 @@ vi.mock('~/database/db', () => ({
 vi.mock('~/services/game-manager', () => ({
   gameManager: {
     getGameSnapshot: getGameSnapshotMock,
+  },
+}))
+
+vi.mock('~/services/resource-reconcile', () => ({
+  resourceReconcile: {
+    reconcileGameRecord: reconcileGameRecordMock,
   },
 }))
 
@@ -161,6 +169,25 @@ describe('工作区状态仓库', () => {
     expect(syncCurrentGameMock).toHaveBeenLastCalledWith(undefined)
     expect(store.currentGame).toBeUndefined()
     expect(previewSessionStoreState.currentGameServeUrl).toBeUndefined()
+  })
+
+  it('ensureCurrentGameAvailable 在 currentGame 可达时返回 true', async () => {
+    const store = useWorkspaceStore()
+    store.currentGame = createTestGame({ id: 'game-1', path: '/games/game-1' })
+
+    reconcileGameRecordMock.mockResolvedValueOnce('available')
+
+    await expect(store.ensureCurrentGameAvailable()).resolves.toBe(true)
+  })
+
+  it('ensureCurrentGameAvailable 在 currentGame 不可达时返回 false', async () => {
+    const store = useWorkspaceStore()
+    store.currentGame = createTestGame({ id: 'game-stale', path: '/games/game-stale' })
+
+    reconcileGameRecordMock.mockResolvedValueOnce('missing')
+
+    await expect(store.ensureCurrentGameAvailable()).resolves.toBe(false)
+    expect(store.currentGame?.id).toBe('game-stale')
   })
 
   it('预览会话同步未写入地址时仍保留当前游戏并允许预览会话保持空地址', async () => {
