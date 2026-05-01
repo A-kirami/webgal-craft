@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Folder, Scroll, TriangleAlert, Trash2 } from '@lucide/vue'
+import { Folder, Scroll, Trash2, TriangleAlert } from '@lucide/vue'
 
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import dayjs from '~/plugins/dayjs'
@@ -86,12 +86,12 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
               <div
                 v-if="item.game.availability !== 'available'"
                 aria-hidden="true"
-                class="bg-destructive/15 inset-0 pointer-events-none absolute"
+                class="bg-destructive/15 pointer-events-none inset-0 absolute"
               />
               <Badge
                 v-if="item.game.availability !== 'available'"
                 variant="destructive"
-                class="top-2 right-2 shadow-sm absolute"
+                class="shadow-sm right-2 top-2 absolute"
               >
                 <TriangleAlert class="size-3" />
                 {{ $t('home.unavailableBadge') }}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { EllipsisVertical, Folder, Star, TriangleAlert, Trash2 } from '@lucide/vue'
+import { EllipsisVertical, Folder, Star, Trash2, TriangleAlert } from '@lucide/vue'
 
 import type { Engine } from '~/database/model'
 import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
