@@ -35,13 +35,22 @@ async function reconcileEngineRecord(engine: Pick<Engine, 'id' | 'path' | 'avail
   }
 }
 
-async function reconcileTemplateRecord(template: Pick<Template, 'id' | 'path' | 'availability'>): Promise<ResourceAvailability> {
+async function reconcileTemplateRecord(template: Pick<Template, 'id' | 'path' | 'availability' | 'metadata'>): Promise<ResourceAvailability> {
   try {
-    const { availability } = await templateManager.inspectTemplateAvailability(template.path)
-    if (template.availability !== availability) {
-      await db.templates.update(template.id, { availability })
+    const inspection = await templateManager.inspectTemplateAvailability(template.path)
+    const patch: Partial<Template> = {}
+    if (template.availability !== inspection.availability) {
+      patch.availability = inspection.availability
     }
-    return availability
+    if (inspection.metadata
+      && (template.metadata.name !== inspection.metadata.name
+        || template.metadata.webgalVersion !== inspection.metadata.webgalVersion)) {
+      patch.metadata = inspection.metadata
+    }
+    if (Object.keys(patch).length > 0) {
+      await db.templates.update(template.id, patch)
+    }
+    return inspection.availability
   } catch (error) {
     logger.warn(`模板校验异常: ${error}`)
     return template.availability
