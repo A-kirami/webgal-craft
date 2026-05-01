@@ -25,6 +25,7 @@ let isRetrying = $ref(false)
 let isRelinking = $ref(false)
 
 const isMissing = $computed(() => props.game.availability === 'missing')
+const isBroken = $computed(() => props.game.availability === 'broken')
 const isBusy = $computed(() => isRetrying || isRelinking)
 
 async function handleRetry() {
@@ -128,10 +129,10 @@ async function handleGoHome() {
         <Button :disabled="isBusy" @click="handleRetry">
           {{ isMissing ? $t('modals.recoverGame.retry') : $t('modals.recoverGame.recheck') }}
         </Button>
-        <Button v-if="isMissing" variant="outline" :disabled="isBusy" @click="handleRelink">
+        <Button variant="outline" :disabled="isBusy" @click="handleRelink">
           {{ $t('modals.recoverGame.relink') }}
         </Button>
-        <Button v-else variant="outline" :disabled="isBusy" @click="handleOpenFolder">
+        <Button v-if="isBroken" variant="outline" :disabled="isBusy" @click="handleOpenFolder">
           {{ $t('common.openFolder') }}
         </Button>
         <Button variant="ghost" :disabled="isBusy" @click="handleGoHome">
