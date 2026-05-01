@@ -142,6 +142,8 @@ vi.mock('~/services/engine-manager', () => ({
   engineManager: {
     findEngineByRef: engineFindByRefMock,
   },
+  isEngineUsable: (engine: { status: string, availability: string }) =>
+    engine.status === 'created' && engine.availability === 'available',
 }))
 
 vi.mock('~/services/template-switch', () => ({

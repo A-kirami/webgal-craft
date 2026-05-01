@@ -1,4 +1,5 @@
 import { useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { isEngineUsable } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 
 import type { EngineStatus, Game } from '~/database/model'
@@ -70,7 +71,7 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
       return
     }
 
-    const hasUsableEngine = engines.some(engine => engine.status === 'created' && engine.availability === 'available')
+    const hasUsableEngine = engines.some(engine => isEngineUsable(engine))
     if (!hasUsableEngine) {
       options.openNoEngineAlertModal(options.switchToEnginesTab)
       return

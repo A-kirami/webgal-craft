@@ -3,6 +3,7 @@ import { TriangleAlert } from '@lucide/vue'
 
 import { projectConfigCmds } from '~/commands/project-config'
 import { db } from '~/database/db'
+import { isEngineUsable } from '~/services/engine-manager'
 import { templateSwitch } from '~/services/template-switch'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
@@ -44,7 +45,7 @@ watch(() => open.value, async (isOpen) => {
 
   if (props.game.engineId) {
     const engine = await db.engines.get(props.game.engineId)
-    isEngineAvailable = !!engine && engine.status === 'created' && engine.availability === 'available'
+    isEngineAvailable = !!engine && isEngineUsable(engine)
   } else {
     isEngineAvailable = true
   }

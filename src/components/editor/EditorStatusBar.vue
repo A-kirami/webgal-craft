@@ -15,6 +15,7 @@ import {
 import { formatEngineLabel } from '~/lib/engine-label'
 import dayjs from '~/plugins/dayjs'
 import { getLanguageDisplayName } from '~/plugins/editor'
+import { isEngineUsable } from '~/services/engine-manager'
 import {
   isEditableEditor,
   useEditorStore,
@@ -47,8 +48,7 @@ watch(() => workspaceStore.currentGame?.engineId, async (engineId) => {
   if (workspaceStore.currentGame?.engineId !== engineId) {
     return
   }
-  const isUsable = !!engine && engine.status === 'created' && engine.availability === 'available'
-  engineLabel = isUsable ? formatEngineLabel(engine) : undefined
+  engineLabel = engine && isEngineUsable(engine) ? formatEngineLabel(engine) : undefined
 }, { immediate: true })
 
 function openSwitchEngine() {

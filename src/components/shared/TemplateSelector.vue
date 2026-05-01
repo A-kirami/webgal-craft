@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useEngines, useTemplates } from '~/composables/useDatabase'
 import { formatEngineLabel } from '~/lib/engine-label'
+import { isEngineUsable } from '~/services/engine-manager'
 
 import type { Engine } from '~/database/model'
 import type { TemplateBinding } from '~/types/project-config'
@@ -26,7 +27,7 @@ const availableTemplates = $computed(() =>
 )
 
 const availableEngines = $computed(() =>
-  (engines ?? []).filter(engine => engine.status === 'created' && engine.availability === 'available'),
+  (engines ?? []).filter(engine => isEngineUsable(engine)),
 )
 
 const currentEngine = $computed(() =>

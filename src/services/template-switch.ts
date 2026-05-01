@@ -5,7 +5,7 @@ import { serverCmds } from '~/commands/server'
 import { vfsCmds } from '~/commands/vfs'
 import { db } from '~/database/db'
 import { debugCommander } from '~/services/debug-commander'
-import { engineManager } from '~/services/engine-manager'
+import { engineManager, isEngineUsable } from '~/services/engine-manager'
 import { useEditorStore } from '~/stores/editor'
 import { useFileStore } from '~/stores/file'
 import { useTabsStore } from '~/stores/tabs'
@@ -119,9 +119,7 @@ async function resolveTemplatePath(
     }
     case 'engineBuiltin': {
       const engine = await engineManager.findEngineByRef(binding.engine)
-      return engine?.status === 'created' && engine.availability === 'available'
-        ? join(engine.path, 'game', 'template')
-        : undefined
+      return engine && isEngineUsable(engine) ? join(engine.path, 'game', 'template') : undefined
     }
     default: {
       return undefined
@@ -155,7 +153,7 @@ async function switchTemplate(
   }
 
   const engine = await db.engines.get(game.engineId)
-  if (!engine || engine.status !== 'created' || engine.availability !== 'available') {
+  if (!engine || !isEngineUsable(engine)) {
     throw new AppError('IO_ERROR', '引擎不可用，无法切换模板', {
       details: { reason: 'ENGINE_UNAVAILABLE' },
     })

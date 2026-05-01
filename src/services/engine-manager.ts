@@ -124,6 +124,10 @@ async function resolveManagedEnginePath(engine: Pick<EngineSnapshot, 'name' | 'v
   return join(storageSettingsStore.engineSavePath, nameSegment, versionSegment)
 }
 
+export function isEngineUsable(engine: Pick<Engine, 'status' | 'availability'>): boolean {
+  return engine.status === 'created' && engine.availability === 'available'
+}
+
 async function validateEngine(enginePath: string): Promise<boolean> {
   return fsCmds.validateDirectoryStructure(
     enginePath,

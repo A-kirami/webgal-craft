@@ -1,6 +1,7 @@
 import { projectConfigCmds } from '~/commands/project-config'
 import { db } from '~/database/db'
 import { formatEngineLabel } from '~/lib/engine-label'
+import { isEngineUsable } from '~/services/engine-manager'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
 import { joinPath, normalizeFsPath } from '~/utils/path'
@@ -36,8 +37,7 @@ async function resolveBindingLabel(
     if (!engine) {
       return { label: formatBuiltinFallbackLabel(id, version), followingEngine: false }
     }
-    const isUsable = engine.status === 'created' && engine.availability === 'available'
-    return { label: isUsable ? formatEngineLabel(engine) : undefined, followingEngine: false }
+    return { label: isEngineUsable(engine) ? formatEngineLabel(engine) : undefined, followingEngine: false }
   }
 
   // 缺省 → 跟随当前引擎；引擎记录缺失或不可用时不暴露 UUID/旧名，由调用方按 followingEngine + label undefined 决定占位文案
@@ -45,8 +45,7 @@ async function resolveBindingLabel(
     return EMPTY_STATE
   }
   const engine = await db.engines.get(fallbackEngineId)
-  const isUsable = !!engine && engine.status === 'created' && engine.availability === 'available'
-  const label = isUsable ? formatEngineLabel(engine) : undefined
+  const label = engine && isEngineUsable(engine) ? formatEngineLabel(engine) : undefined
   return { label, followingEngine: true }
 }
 

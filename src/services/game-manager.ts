@@ -7,7 +7,7 @@ import { projectConfigCmds } from '~/commands/project-config'
 import { vfsCmds } from '~/commands/vfs'
 import { db } from '~/database/db'
 import { Engine, Game } from '~/database/model'
-import { engineManager } from '~/services/engine-manager'
+import { engineManager, isEngineUsable } from '~/services/engine-manager'
 import { gameConfigPath, gameCoverPath, gameIconPath, projectConfigPath } from '~/services/platform/app-paths'
 import {
   classifyAvailability,
@@ -210,10 +210,6 @@ function buildProjectEngineRef(engine: Pick<Engine, 'engineId' | 'version'>): En
 
 function canAutoBindMatchedEngine(engine: Engine): boolean {
   return engine.status === 'created'
-}
-
-function isEngineUsable(engine: Pick<Engine, 'status' | 'availability'>): boolean {
-  return engine.status === 'created' && engine.availability === 'available'
 }
 
 async function writeSelfContainedProjectConfig(gamePath: string): Promise<void> {
