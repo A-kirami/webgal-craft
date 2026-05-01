@@ -113,6 +113,7 @@ home:
     importUnknownError: An unknown error occurred while importing the game
     importMultipleFolders: Only one game folder can be imported at a time
     importCreating: Game is being created, please wait for the creation to complete
+    openLastProjectUnavailable: Last project "{name}" is currently unavailable; staying on the home page
   engines:
     noEngines: No Available Game Engines
     noEnginesDesc: You need to install a game engine to create games
@@ -176,6 +177,8 @@ modals:
     templateGroupStandalone: Standalone Templates
     create: Create
     createFailed: Failed to create game
+    engineUnavailable: The selected engine is currently unavailable, please choose another one
+    templateUnavailable: The selected template is currently unavailable, please choose another one
     pathNotEmpty: The game save directory must not exist or be empty
     selectSaveLocation: Game Save Location
   deleteGame:
@@ -183,6 +186,10 @@ modals:
     description: Are you sure you want to delete the game {name}?
     deleteFiles: Delete game files as well
     deleteSuccess: Game deleted successfully
+    removeTitle: Remove Game Record
+    removeDescription: Are you sure you want to remove the record for {name}?
+    removeWarning: The project directory is unavailable. This will only remove the local record and will not delete any files.
+    removeSuccess: Game record removed
   deleteFile:
     title: Are you sure you want to delete the file {name}?
     folderTitle: Are you sure you want to delete the folder {name} and its contents?
@@ -211,6 +218,10 @@ modals:
     description: Are you sure you want to delete the template {name}?
     warning: This operation will move template files to the recycle bin. You can restore them from there.
     deleteSuccess: Template deleted successfully
+    removeTitle: Remove Template Record
+    removeDescription: Are you sure you want to remove the record for template {name}?
+    removeWarning: The template directory is unavailable. This will only remove the local record and will not delete any files.
+    removeSuccess: Template record removed
   switchEngine:
     title: Switch Engine
     description: Select the game engine to switch to
@@ -245,6 +256,25 @@ modals:
     warning: This operation will move all installed versions of this engine to the recycle bin. You can restore them later.
     success: All engine versions were uninstalled successfully
     failed: Failed to uninstall all engine versions
+    removeTitle: Remove All Version Records
+    removeDescription: Are you sure you want to remove records for all versions of engine {name}?
+    removeWarning: The engine directory is unavailable. This will only remove the local records and will not delete any files.
+    removeSuccess: All engine version records removed
+    removeFailed: Failed to remove engine version records
+  recoverGame:
+    title: Project Currently Unavailable
+    descriptionMissing: Could not locate the directory for project {name}. The drive may be disconnected, or the directory may have been removed externally.
+    descriptionBroken: The directory for project {name} is reachable, but core files are missing or corrupted.
+    selectNewLocation: Select the new location for the project
+    retry: Retry connection
+    recheck: Recheck
+    retrySuccess: Project recovered
+    retryFailed: Project is still unavailable
+    relink: Relink path
+    relinkSuccess: Project path updated
+    relinkFailed: Failed to relink
+    openFolderFailed: Failed to open project folder
+    backToHome: Back to home
   discoveredResources:
     gamesTitle: Discovered Games
     enginesTitle: Discovered Engines

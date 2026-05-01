@@ -113,6 +113,7 @@ home:
     importUnknownError: 导入游戏时发生未知错误
     importMultipleFolders: 一次只能导入一个游戏文件夹
     importCreating: 游戏正在创建中，请等待创建完成
+    openLastProjectUnavailable: 最近项目「{name}」当前不可用，已停留在主页
   engines:
     noEngines: 没有可用的游戏引擎
     noEnginesDesc: 你需要安装游戏引擎才能创建游戏
@@ -176,6 +177,8 @@ modals:
     templateGroupStandalone: 独立模板
     create: 创建
     createFailed: 创建游戏失败
+    engineUnavailable: 所选引擎当前不可用，请重新选择
+    templateUnavailable: 所选模板当前不可用，请重新选择
     pathNotEmpty: 游戏保存目录必须不存在或为空
     selectSaveLocation: 游戏保存位置
   deleteGame:
@@ -183,6 +186,10 @@ modals:
     description: 确定要删除游戏 {name} 吗？
     deleteFiles: 同时删除游戏文件
     deleteSuccess: 游戏删除成功
+    removeTitle: 移除游戏记录
+    removeDescription: 确定要移除游戏 {name} 的记录吗？
+    removeWarning: 项目目录已不可用，此操作只会移除本地记录，不会删除任何文件。
+    removeSuccess: 游戏记录已移除
   deleteFile:
     title: 确定要删除文件 {name} 吗？
     folderTitle: 确定要删除文件夹 {name} 及其内容？
@@ -211,6 +218,10 @@ modals:
     description: 确定要删除模板 {name} 吗？
     warning: 此操作将把模板文件移到回收站，你可以稍后从回收站恢复。
     deleteSuccess: 模板删除成功
+    removeTitle: 移除模板记录
+    removeDescription: 确定要移除模板 {name} 的记录吗？
+    removeWarning: 模板目录已不可用，此操作只会移除本地记录，不会删除任何文件。
+    removeSuccess: 模板记录已移除
   switchEngine:
     title: 切换引擎
     description: 选择要切换的游戏引擎
@@ -245,6 +256,25 @@ modals:
     warning: 此操作会将该引擎的全部已安装版本移到回收站，你可以稍后从回收站恢复。
     success: 引擎全部版本卸载成功
     failed: 引擎全部版本卸载失败
+    removeTitle: 移除全部版本记录
+    removeDescription: 确定要移除引擎 {name} 全部版本的记录吗？
+    removeWarning: 引擎目录已不可用，此操作只会移除本地记录，不会删除任何文件。
+    removeSuccess: 引擎全部版本记录已移除
+    removeFailed: 引擎全部版本记录移除失败
+  recoverGame:
+    title: 项目当前不可用
+    descriptionMissing: 找不到项目 {name} 的目录，可能外置盘未连接或目录已被外部移除。
+    descriptionBroken: 项目 {name} 的目录可访问，但核心文件已损坏或缺失，无法正常打开。
+    selectNewLocation: 选择项目新的位置
+    retry: 重试连接
+    recheck: 重新检测
+    retrySuccess: 项目已恢复
+    retryFailed: 项目仍然不可用
+    relink: 重新链接路径
+    relinkSuccess: 项目路径已更新
+    relinkFailed: 重新链接失败
+    openFolderFailed: 打开项目目录失败
+    backToHome: 返回主页
   discoveredResources:
     gamesTitle: 发现游戏
     enginesTitle: 发现引擎

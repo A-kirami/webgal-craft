@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { exists } from '@tauri-apps/plugin-fs'
-
 import { useResourcePreviewPrimer } from '~/composables/useResourcePreviewPrimer'
 import { db } from '~/database/db'
 import { engineManager } from '~/services/engine-manager'
 import { resolveMissingStorageSavePaths } from '~/services/platform/storage-defaults'
+import { resourceReconcile } from '~/services/resource-reconcile'
 import { templateManager } from '~/services/template-manager'
 import { useGeneralSettingsStore } from '~/stores/general-settings'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
@@ -21,6 +20,7 @@ async function initializeApp() {
 useResourcePreviewPrimer()
 const generalSettingsStore = useGeneralSettingsStore()
 const router = useRouter()
+const { t } = useI18n()
 
 async function openLastProjectIfNeeded() {
   if (!generalSettingsStore.openLastProject || router.currentRoute.value.path !== '/') {
@@ -29,17 +29,18 @@ async function openLastProjectIfNeeded() {
 
   try {
     const lastGame = await db.games.orderBy('lastModified').last()
-
-    if (lastGame && lastGame.status === 'created') {
-      const pathExists = await exists(lastGame.path)
-      if (!pathExists) {
-        logger.warn(`最近项目路径不存在，跳过自动打开: ${lastGame.path}`)
-        return
-      }
-
-      await router.push(`/edit/${lastGame.id}`)
-      logger.info(`自动打开最近项目: ${lastGame.metadata.name}`)
+    if (!lastGame || lastGame.status !== 'created') {
+      return
     }
+
+    if (lastGame.availability !== 'available') {
+      logger.warn(`最近项目当前不可用，跳过自动打开: ${lastGame.path}`)
+      notify.warning(t('home.games.openLastProjectUnavailable', { name: lastGame.metadata.name }))
+      return
+    }
+
+    await router.push(`/edit/${lastGame.id}`)
+    logger.info(`自动打开最近项目: ${lastGame.metadata.name}`)
   } catch (error) {
     logger.error(`自动打开最近项目失败: ${error}`)
   }
@@ -58,6 +59,7 @@ onMounted(async () => {
   await initializeApp()
   await Promise.all([
     runValidation('引擎校验', () => engineManager.validateAllEngines()),
+    runValidation('游戏校验', () => resourceReconcile.reconcileAllGames()),
     runValidation('模板校验', () => templateManager.validateAllTemplates()),
   ])
   await openLastProjectIfNeeded()

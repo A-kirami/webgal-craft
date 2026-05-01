@@ -285,6 +285,11 @@ export const useEditorViewStateStore = defineStore(
       }
     }
 
+    function clearProjectStates(projectId: string) {
+      delete projectViewStatesMap[projectId]
+      delete sessionRecoveryViewStatesMap[projectId]
+    }
+
     return $$({
       projectViewStatesMap,
       sessionRecoveryViewStatesMap,
@@ -296,6 +301,7 @@ export const useEditorViewStateStore = defineStore(
       removeViewState,
       renameViewState,
       clearCurrentProjectStates,
+      clearProjectStates,
     })
   },
   {

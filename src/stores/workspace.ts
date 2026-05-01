@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { db } from '~/database/db'
 import { Game } from '~/database/model'
 import { gameManager } from '~/services/game-manager'
+import { resourceReconcile } from '~/services/resource-reconcile'
 import { usePreviewSessionStore } from '~/stores/preview-session'
 
 import type { HomeTabId } from '~/features/home/home-tabs'
@@ -42,6 +43,15 @@ export const useWorkspaceStore = defineStore(
         ...fresh,
         ...snapshot,
       }
+    }
+
+    /** 校验当前游戏是否仍然可达，结果由调用方决定是否进入恢复弹窗。 */
+    async function ensureCurrentGameAvailable(): Promise<boolean> {
+      if (!currentGame) {
+        return true
+      }
+      const availability = await resourceReconcile.reconcileGameRecord(currentGame)
+      return availability === 'available'
     }
 
     const route = useRoute()
@@ -86,6 +96,7 @@ export const useWorkspaceStore = defineStore(
       currentGame,
       CWD,
       refreshCurrentGameSnapshot,
+      ensureCurrentGameAvailable,
 
       // UI 状态
       activeTab,
