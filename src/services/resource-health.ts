@@ -8,6 +8,7 @@ export type ResourceWarningCode =
   | 'missing-favicon'
   | 'missing-title-image'
   | 'missing-title-image-file'
+  | 'missing-game-name'
 
 export interface ResourceWarning {
   code: ResourceWarningCode

@@ -535,6 +535,10 @@ async function collectGameWarnings(
 ): Promise<ResourceWarning[]> {
   const warnings: ResourceWarning[] = []
 
+  if (!metadata.name?.trim()) {
+    warnings.push(createWarning('missing-game-name', '游戏未配置 Game_name'))
+  }
+
   if (!(await exists(await gameIconPath(gamePath)))) {
     warnings.push(createWarning('missing-favicon', '游戏 favicon 不存在'))
   }
@@ -590,16 +594,6 @@ async function inspectGame(
       comparablePath,
     }
   }
-  if (!metadata.name?.trim()) {
-    return {
-      availability: 'broken',
-      warnings: [],
-      blockingIssue: { code: 'INVALID_CONFIG', message: '游戏配置无效' },
-      normalizedPath,
-      comparablePath,
-    }
-  }
-
   const warnings = await collectGameWarnings(normalizedPath, metadata)
 
   return {

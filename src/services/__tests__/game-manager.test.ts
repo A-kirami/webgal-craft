@@ -747,7 +747,7 @@ describe('gameManager', () => {
     })
   })
 
-  it('inspectGame 在 gameName 为空时返回 broken + INVALID_CONFIG', async () => {
+  it('inspectGame 在 gameName 为空时仅产 missing-game-name warning', async () => {
     existsMock.mockResolvedValue(true)
     gameCmdsGetGameConfigMock.mockResolvedValue(createGameConfig([
       { key: 'Game_name', value: '' },
@@ -755,8 +755,8 @@ describe('gameManager', () => {
     ]))
 
     await expect(gameManager.inspectGame('/games/demo')).resolves.toMatchObject({
-      availability: 'broken',
-      blockingIssue: { code: 'INVALID_CONFIG' },
+      availability: 'available',
+      warnings: [{ code: 'missing-game-name' }],
     })
   })
 
