@@ -27,8 +27,12 @@ const engineGroupItems = computed<EngineGroupCollectionItem[]>(() =>
 const controller = useEnginesTabController({
   activeProgress: resourceStore.activeProgress,
   openDeleteEngineGroupModal: (engineId) => {
-    const groupName = engineGroupItems.value.find(g => g.engineId === engineId)?.name ?? engineId
-    modalStore.open('DeleteEngineGroupModal', { engineId, groupName })
+    const group = engineGroupItems.value.find(g => g.engineId === engineId)
+    modalStore.open('DeleteEngineGroupModal', {
+      engineId,
+      groupName: group?.name ?? engineId,
+      allUnavailable: group ? !group.hasAvailableVersion : false,
+    })
   },
   openDeleteEngineModal: engine => modalStore.open('DeleteEngineModal', { engine }),
   setDefaultEngineId: (engineId) => {

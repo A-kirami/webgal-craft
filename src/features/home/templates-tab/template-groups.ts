@@ -1,6 +1,7 @@
 import { joinPath } from '~/utils/path'
 
 import type { Engine, Template } from '~/database/model'
+import type { ResourceAvailability } from '~/services/resource-health'
 
 export type TemplateGroupSourceKind = 'standalone' | 'engineBuiltin'
 
@@ -11,6 +12,7 @@ export interface StandaloneTemplateSourceItem {
   path: string
   createdAt: number
   webgalVersion?: string
+  availability: ResourceAvailability
 }
 
 export interface EngineBuiltinTemplateSourceItem {
@@ -47,6 +49,7 @@ function createStandaloneTemplateGroup(template: Template): TemplateGroupViewMod
         path: template.path,
         createdAt: template.createdAt,
         webgalVersion: template.metadata.webgalVersion,
+        availability: template.availability,
       },
     ],
   }

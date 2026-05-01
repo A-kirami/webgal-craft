@@ -1,8 +1,10 @@
 import { dirname } from '@tauri-apps/api/path'
 import { openPath } from '@tauri-apps/plugin-opener'
 
+import { db } from '~/database/db'
 import { useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
 import { engineManager } from '~/services/engine-manager'
+import { resourceReconcile } from '~/services/resource-reconcile'
 
 import type { Engine } from '~/database/model'
 import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
@@ -46,10 +48,23 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
     await openPath(targetPath)
   }
 
+  async function handleDelete(engine: Engine) {
+    // 删除入口即时校验，确保 DeleteEngineModal 拿到最新 availability，决定走"卸载文件"还是"只删记录"
+    const availability = await resourceReconcile.reconcileEngineRecord(engine)
+    options.openDeleteEngineModal({ ...engine, availability })
+  }
+
+  async function handleDeleteGroup(engineId: string) {
+    // 全版本删除前对组内每个版本即时校验，让弹窗的 allUnavailable 判断基于最新结果
+    const engines = await db.engines.where('engineId').equals(engineId).toArray()
+    await Promise.all(engines.map(engine => resourceReconcile.reconcileEngineRecord(engine)))
+    options.openDeleteEngineGroupModal(engineId)
+  }
+
   return {
     getEngineProgress: importActions.getProgress,
-    handleDelete: options.openDeleteEngineModal,
-    handleDeleteGroup: options.openDeleteEngineGroupModal,
+    handleDelete,
+    handleDeleteGroup,
     handleDrop: importActions.handleDrop,
     handleOpenGroupFolder,
     handleSetDefaultEngine: options.setDefaultEngineId,

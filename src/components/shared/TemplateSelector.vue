@@ -23,7 +23,9 @@ const templates = $(useTemplates())
 const engines = $(useEngines())
 
 const availableTemplates = $computed(() =>
-  (templates ?? []).filter(template => template.status === 'created'),
+  (templates ?? []).filter(template =>
+    template.status === 'created' && template.availability === 'available',
+  ),
 )
 
 const availableEngines = $computed(() =>

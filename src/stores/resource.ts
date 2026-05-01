@@ -81,6 +81,7 @@ export const useResourceStore = defineStore('resource', () => {
     // 引擎相关
     engines,
     filteredEngines,
+    availableEngines,
     // 模板相关
     templates,
     filteredTemplates,

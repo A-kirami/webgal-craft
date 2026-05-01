@@ -29,6 +29,16 @@ const LIST_ICON_THUMBNAIL: AssetThumbnailOptions = { width: 80, height: 80, resi
 
 const isEngineBuiltin = $computed(() => item.templateGroup.sourceKind === 'engineBuiltin')
 
+const standaloneSource = $computed(() =>
+  item.templateGroup.sources.find(
+    (source): source is StandaloneTemplateSourceItem => source.kind === 'standalone',
+  ),
+)
+
+const isUnavailable = $computed(() =>
+  standaloneSource ? standaloneSource.availability !== 'available' : false,
+)
+
 const showEngineIcon = $computed(() =>
   isEngineBuiltin && !!item.representativeEngineItem?.serveUrl,
 )
@@ -64,8 +74,12 @@ const iconThumbnail = $computed(() =>
     <ContextMenuTrigger as-child :disabled="menuItems.length === 0">
       <Card
         v-if="viewMode === 'grid'"
+        :data-availability="isUnavailable ? 'unavailable' : 'available'"
         class="rounded-lg shadow-sm relative"
-        :class="{ 'cursor-wait': hasProgress }"
+        :class="{
+          'cursor-wait': hasProgress,
+          'opacity-60 saturate-50': isUnavailable,
+        }"
       >
         <CardContent class="p-3 flex flex-col gap-1">
           <div class="flex gap-4 items-start justify-between">
@@ -152,8 +166,12 @@ const iconThumbnail = $computed(() =>
 
       <div
         v-else
+        :data-availability="isUnavailable ? 'unavailable' : 'available'"
         class="p-3 flex transition-colors duration-200 items-center justify-between relative hover:bg-primary/5 dark:hover:bg-primary/10"
-        :class="{ 'cursor-wait': hasProgress }"
+        :class="{
+          'cursor-wait': hasProgress,
+          'opacity-60 saturate-50': isUnavailable,
+        }"
       >
         <div class="flex flex-1 gap-3 min-w-0 items-center">
           <div

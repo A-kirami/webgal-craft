@@ -7,18 +7,22 @@ import { useEnginesTabController } from '../useEnginesTabController'
 
 const {
   dirnameMock,
+  enginesWhereMock,
   importEngineMock,
   notifyErrorMock,
   notifySuccessMock,
   openDialogMock,
   openPathMock,
+  reconcileEngineRecordMock,
 } = vi.hoisted(() => ({
   dirnameMock: vi.fn(async (path: string) => path.replace(/[/\\][^/\\]+$/, '')),
+  enginesWhereMock: vi.fn(),
   importEngineMock: vi.fn(),
   notifyErrorMock: vi.fn(),
   notifySuccessMock: vi.fn(),
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
+  reconcileEngineRecordMock: vi.fn(),
 }))
 
 vi.mock('@tauri-apps/api/path', () => ({
@@ -46,6 +50,20 @@ vi.mock('~/services/engine-manager', () => ({
   },
 }))
 
+vi.mock('~/services/resource-reconcile', () => ({
+  resourceReconcile: {
+    reconcileEngineRecord: reconcileEngineRecordMock,
+  },
+}))
+
+vi.mock('~/database/db', () => ({
+  db: {
+    engines: {
+      where: enginesWhereMock,
+    },
+  },
+}))
+
 describe('useEnginesTabController 行为', () => {
   const openDeleteEngineGroupModalMock = vi.fn()
   const openDeleteEngineModalMock = vi.fn()
@@ -66,6 +84,10 @@ describe('useEnginesTabController 行为', () => {
     vi.resetAllMocks()
 
     openDialogMock.mockResolvedValue(undefined)
+    reconcileEngineRecordMock.mockResolvedValue('available')
+    enginesWhereMock.mockReturnValue({
+      equals: vi.fn(() => ({ toArray: vi.fn().mockResolvedValue([]) })),
+    })
   })
 
   it('拖入多个目录时提示错误且不会触发导入', async () => {
@@ -132,10 +154,10 @@ describe('useEnginesTabController 行为', () => {
     expect(setDefaultEngineIdMock).toHaveBeenCalledWith(undefined)
   })
 
-  it('会把整组删除委托给调用方', () => {
+  it('会把整组删除委托给调用方', async () => {
     const controller = createController()
 
-    controller.handleDeleteGroup('WebGAL')
+    await controller.handleDeleteGroup('WebGAL')
 
     expect(openDeleteEngineGroupModalMock).toHaveBeenCalledWith('WebGAL')
   })

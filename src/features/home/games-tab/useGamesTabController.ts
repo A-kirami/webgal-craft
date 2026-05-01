@@ -1,6 +1,7 @@
 import { useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
 import { isEngineUsable } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
+import { resourceReconcile } from '~/services/resource-reconcile'
 
 import type { EngineStatus, Game } from '~/database/model'
 import type { ResourceAvailability } from '~/services/resource-health'
@@ -19,6 +20,7 @@ interface UseGamesTabControllerOptions {
   openCreateGameModal: () => void
   openDeleteGameModal: (game: Game) => void
   openNoEngineAlertModal: (onConfirm: () => void) => void
+  openRecoverGameModal: (game: Game) => void
   pushRoute: (path: string) => unknown
   selectEngine?: (hint?: EngineRef) => Promise<string | undefined>
   t: I18nT
@@ -54,13 +56,26 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
     t: options.t,
   })
 
-  function handleGameClick(game: Pick<Game, 'id'>) {
+  async function handleGameClick(game: Game) {
     if (options.activeProgress.has(game.id)) {
       notify.warning(options.t('home.games.importCreating'))
       return
     }
 
+    // 点击时即时校验：处理外部增删与外置盘恢复，避免基于过期 availability 误打开或误拦截
+    const availability = await resourceReconcile.reconcileGameRecord(game)
+    if (availability !== 'available') {
+      options.openRecoverGameModal({ ...game, availability })
+      return
+    }
+
     options.pushRoute(`/edit/${game.id}`)
+  }
+
+  async function handleDeleteGame(game: Game) {
+    // 删除入口同样即时校验：让 DeleteGameModal 拿到最新 availability，决定走"卸载文件"还是"只删记录"分支
+    const availability = await resourceReconcile.reconcileGameRecord(game)
+    options.openDeleteGameModal({ ...game, availability })
   }
 
   function createGame() {
@@ -83,7 +98,7 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
   return {
     createGame,
     getGameProgress: importActions.getProgress,
-    handleDeleteGame: options.openDeleteGameModal,
+    handleDeleteGame,
     handleDrop: importActions.handleDrop,
     handleGameClick,
     handleOpenFolder: importActions.handleOpenFolder,

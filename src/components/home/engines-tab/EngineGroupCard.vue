@@ -61,7 +61,9 @@ const menuItems = $computed<MenuItem[]>(() => [
     <ContextMenuTrigger as-child>
       <Card
         v-if="viewMode === 'grid'"
+        :data-availability="group.hasAvailableVersion ? 'available' : 'unavailable'"
         class="rounded-lg shadow-sm"
+        :class="{ 'opacity-60 saturate-50': !group.hasAvailableVersion }"
       >
         <CardContent class="p-3 flex flex-col gap-1">
           <div class="flex gap-4 items-start justify-between">
@@ -136,7 +138,9 @@ const menuItems = $computed<MenuItem[]>(() => [
 
       <div
         v-else
+        :data-availability="group.hasAvailableVersion ? 'available' : 'unavailable'"
         class="p-3 flex transition-colors duration-200 items-center justify-between relative hover:bg-primary/5 dark:hover:bg-primary/10"
+        :class="{ 'opacity-60 saturate-50': !group.hasAvailableVersion }"
       >
         <div class="flex flex-1 gap-3 min-w-0 items-center">
           <div class="rounded-md flex shrink-0 h-10 w-10 items-center justify-center overflow-hidden">

@@ -61,8 +61,13 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
       <ContextMenu v-for="item in items" :key="item.game.id">
         <ContextMenuTrigger as-child>
           <Card
+            :data-testid="`game-card-${item.game.id}`"
+            :data-availability="item.game.availability"
             class="group rounded-lg cursor-pointer shadow-sm transition-all duration-300 relative overflow-hidden hover:shadow"
-            :class="{ 'cursor-wait': hasGameProgress(item.game) }"
+            :class="{
+              'cursor-wait': hasGameProgress(item.game),
+              'opacity-60 saturate-50': item.game.availability !== 'available',
+            }"
             @click="emit('gameClick', item.game)"
           >
             <div class="bg-gray-100 w-full aspect-16/9 overflow-hidden">
@@ -140,8 +145,13 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
       <div
         v-for="item in items"
         :key="item.game.id"
+        :data-testid="`game-row-${item.game.id}`"
+        :data-availability="item.game.availability"
         class="p-3 flex cursor-pointer transition-colors duration-200 items-center justify-between relative hover:bg-primary/5 dark:hover:bg-primary/10"
-        :class="{ 'cursor-wait': hasGameProgress(item.game) }"
+        :class="{
+          'cursor-wait': hasGameProgress(item.game),
+          'opacity-60 saturate-50': item.game.availability !== 'available',
+        }"
         @click="emit('gameClick', item.game)"
       >
         <div class="flex gap-3 items-center">
