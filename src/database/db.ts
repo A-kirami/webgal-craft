@@ -13,7 +13,7 @@ class WebGALCraftDatabase extends Dexie {
     this.version(1).stores({
       games: 'id, path, engineId, createdAt, lastModified, status, availability',
       engines: 'id, path, engineId, name, [engineId+version], createdAt, status, availability',
-      templates: 'id, path, createdAt, status, metadata.name',
+      templates: 'id, path, createdAt, status, availability, metadata.name',
     })
   }
 }

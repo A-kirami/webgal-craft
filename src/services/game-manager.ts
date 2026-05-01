@@ -470,6 +470,32 @@ async function deleteGame(game: Game, removeFiles: boolean = false): Promise<voi
   await db.games.delete(game.id)
 }
 
+/**
+ * 把游戏记录指向新的目录路径。第一版不做 gameKey 身份校验，只要新路径是合法游戏目录即可，
+ * 对应的会话状态由调用方负责清理。
+ */
+async function relinkGame(gameId: string, newPath: string): Promise<Game> {
+  const game = await db.games.get(gameId)
+  if (!game) {
+    throw new AppError('IO_ERROR', '游戏不存在')
+  }
+
+  const inspection = await inspectGame(newPath)
+  if (inspection.availability !== 'available') {
+    throw new AppError('INVALID_STRUCTURE', '所选目录不是合法的游戏文件夹')
+  }
+
+  const patch: Partial<Game> = {
+    path: inspection.normalizedPath,
+    availability: 'available',
+    lastModified: Date.now(),
+    ...inspection.payload,
+  }
+  await db.games.update(gameId, patch)
+
+  return { ...game, ...patch }
+}
+
 async function getGameEnginePath(game: Pick<Game, 'engineId' | 'path'>): Promise<string | undefined> {
   const { engine } = await resolveBoundEngine(game)
   if (!engine || !isEngineUsable(engine)) {
@@ -709,6 +735,7 @@ export const gameManager = {
   registerGame,
   createGame,
   deleteGame,
+  relinkGame,
   renameGame,
   importGame,
   getGameEnginePath,

@@ -236,13 +236,14 @@ describe('templateManager 模板管理', () => {
     expect(dbTemplatesDeleteMock).toHaveBeenCalledWith('template-creating')
   })
 
-  it('validateAllTemplates 会移除无效的已创建模板记录', async () => {
+  it('validateAllTemplates 会把结构无效的已创建模板标记为 broken', async () => {
     dbTemplatesToArrayMock.mockResolvedValue([
       {
         id: 'template-created',
         path: '/templates/Broken Template',
         createdAt: 0,
         status: 'created',
+        availability: 'available',
         metadata: {
           name: 'Broken Template',
         },
@@ -253,8 +254,30 @@ describe('templateManager 模板管理', () => {
 
     await templateManager.validateAllTemplates()
 
-    expect(dbTemplatesDeleteMock).toHaveBeenCalledWith('template-created')
-    expect(deleteFileMock).toHaveBeenCalledWith('/templates/Broken Template', true)
+    expect(dbTemplatesUpdateMock).toHaveBeenCalledWith('template-created', { availability: 'broken' })
+    expect(dbTemplatesDeleteMock).not.toHaveBeenCalled()
+    expect(deleteFileMock).not.toHaveBeenCalled()
+  })
+
+  it('validateAllTemplates 会把路径不存在的已创建模板标记为 missing', async () => {
+    dbTemplatesToArrayMock.mockResolvedValue([
+      {
+        id: 'template-created',
+        path: '/templates/Missing Template',
+        createdAt: 0,
+        status: 'created',
+        availability: 'available',
+        metadata: {
+          name: 'Missing Template',
+        },
+      },
+    ])
+    existsMock.mockResolvedValue(false)
+
+    await templateManager.validateAllTemplates()
+
+    expect(dbTemplatesUpdateMock).toHaveBeenCalledWith('template-created', { availability: 'missing' })
+    expect(dbTemplatesDeleteMock).not.toHaveBeenCalled()
   })
 
   it('validateAllTemplates 会从 template.json 回刷兼容版本元数据', async () => {
@@ -264,12 +287,14 @@ describe('templateManager 模板管理', () => {
         path: '/templates/Modern Template',
         createdAt: 0,
         status: 'created',
+        availability: 'available',
         metadata: {
           name: 'Modern Template',
         },
       },
     ])
     validateDirectoryStructureMock.mockResolvedValue(true)
+    existsMock.mockImplementation(async (path: string) => path === '/templates/Modern Template')
     readTextFileMock.mockResolvedValue(JSON.stringify({
       'name': 'Modern Template',
       'webgal-version': '4.8.1',
@@ -285,13 +310,14 @@ describe('templateManager 模板管理', () => {
     })
   })
 
-  it('validateAllTemplates 在元数据读取失败时会删除记录并清理模板目录', async () => {
+  it('validateAllTemplates 在元数据读取失败时会标记 broken 并保留记录', async () => {
     dbTemplatesToArrayMock.mockResolvedValue([
       {
         id: 'template-created',
         path: '/templates/Broken Metadata',
         createdAt: 0,
         status: 'created',
+        availability: 'available',
         metadata: {
           name: 'Broken Metadata',
         },
@@ -303,9 +329,9 @@ describe('templateManager 模板管理', () => {
 
     await templateManager.validateAllTemplates()
 
-    expect(dbTemplatesDeleteMock).toHaveBeenCalledWith('template-created')
-    expect(deleteFileMock).toHaveBeenCalledWith('/templates/Broken Metadata', true)
-    expect(dbTemplatesUpdateMock).not.toHaveBeenCalled()
+    expect(dbTemplatesUpdateMock).toHaveBeenCalledWith('template-created', { availability: 'broken' })
+    expect(dbTemplatesDeleteMock).not.toHaveBeenCalled()
+    expect(deleteFileMock).not.toHaveBeenCalled()
   })
 
   it('deleteTemplate 会递归删除模板目录并清理数据库记录', async () => {
@@ -314,6 +340,7 @@ describe('templateManager 模板管理', () => {
       path: '/templates/Modern Template',
       createdAt: 0,
       status: 'created',
+      availability: 'available',
       metadata: {
         name: 'Modern Template',
       },
@@ -331,6 +358,7 @@ describe('templateManager 模板管理', () => {
       path: '/templates/Modern Template',
       createdAt: 0,
       status: 'created',
+      availability: 'available',
       metadata: {
         name: 'Modern Template',
       },

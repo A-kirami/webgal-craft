@@ -89,6 +89,7 @@ export function createTestTemplate(options: Partial<Template> = {}): Template {
     path: '/templates/default',
     createdAt: 0,
     status: 'created',
+    availability: 'available',
     ...options,
     metadata: {
       name: 'Default Template',

@@ -31,6 +31,7 @@ export interface Template {
   path: string
   createdAt: number
   status: TemplateStatus
+  availability: ResourceAvailability
   metadata: TemplateMetadata
 }
 
