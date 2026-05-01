@@ -485,6 +485,11 @@ async function relinkGame(gameId: string, newPath: string): Promise<Game> {
     throw new AppError('INVALID_STRUCTURE', '所选目录不是合法的游戏文件夹')
   }
 
+  const conflicting = await findExistingGameByPath(inspection.normalizedPath)
+  if (conflicting && conflicting.id !== gameId) {
+    throw new AppError('DUPLICATE_RESOURCE', '该目录已绑定到其他游戏记录')
+  }
+
   const patch: Partial<Game> = {
     path: inspection.normalizedPath,
     availability: 'available',
