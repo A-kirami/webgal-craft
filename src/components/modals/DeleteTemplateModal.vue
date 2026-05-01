@@ -14,6 +14,8 @@ const props = defineProps<{
 
 let isDeleting = $ref(false)
 
+const isUnavailable = $computed(() => props.template.availability !== 'available')
+
 async function handleConfirm() {
   if (isDeleting) {
     return
@@ -22,7 +24,9 @@ async function handleConfirm() {
   try {
     await templateManager.deleteTemplate(props.template)
     open.value = false
-    notify.success(t('modals.deleteTemplate.deleteSuccess'))
+    notify.success(isUnavailable
+      ? t('modals.deleteTemplate.removeSuccess')
+      : t('modals.deleteTemplate.deleteSuccess'))
   } catch (error) {
     notify.error(error instanceof Error ? error.message : String(error))
   } finally {
@@ -43,15 +47,15 @@ async function handleConfirm() {
         </div>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {{ $t('modals.deleteTemplate.title') }}
+            {{ isUnavailable ? $t('modals.deleteTemplate.removeTitle') : $t('modals.deleteTemplate.title') }}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            <i18n-t keypath="modals.deleteTemplate.description" tag="p">
+            <i18n-t :keypath="isUnavailable ? 'modals.deleteTemplate.removeDescription' : 'modals.deleteTemplate.description'" tag="p">
               <template #name>
                 <span class="text-foreground font-bold">{{ template.metadata.name }}</span>
               </template>
             </i18n-t>
-            <p>{{ $t('modals.deleteTemplate.warning') }}</p>
+            <p>{{ isUnavailable ? $t('modals.deleteTemplate.removeWarning') : $t('modals.deleteTemplate.warning') }}</p>
           </AlertDialogDescription>
         </AlertDialogHeader>
       </div>
