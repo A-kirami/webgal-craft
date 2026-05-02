@@ -151,4 +151,21 @@ mod tests {
             })
         );
     }
+
+    #[test]
+    fn backup_manifest_corrupted_serialization_includes_reason() {
+        let serialized = serde_json::to_value(AppError::BackupManifestCorrupted {
+            reason: "expected `,` or `}`".into(),
+        })
+        .expect("backup manifest corrupted error should serialize");
+
+        assert_eq!(
+            serialized,
+            json!({
+                "code": "BACKUP_MANIFEST_CORRUPTED",
+                "message": "场景历史 manifest 已损坏：expected `,` or `}`",
+                "reason": "expected `,` or `}`",
+            })
+        );
+    }
 }
