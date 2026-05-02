@@ -52,6 +52,9 @@ let modifiedContent = $ref('')
 let editorContainer = $ref<HTMLElement>()
 let diffEditor = $shallowRef<monaco.editor.IStandaloneDiffEditor>()
 
+// 标记最近一次 diff 加载请求；selection 快速切换时用于丢弃过期结果
+let latestDiffRequestId = 0
+
 const selectedEntry = $computed(() =>
   timeline.find(entry => entry.backupPath === selectedBackupPath),
 )
@@ -177,11 +180,15 @@ async function readCurrentSource(): Promise<string> {
 }
 
 async function loadDiffSources(entry: BackupEntry): Promise<void> {
+  const requestId = ++latestDiffRequestId
   try {
     const [historical, current] = await Promise.all([
       backupManager.readBackupContent(projectPath, entry.backupPath),
       readCurrentSource(),
     ])
+    if (requestId !== latestDiffRequestId) {
+      return
+    }
     originalContent = historical
     modifiedContent = current
   } catch (error) {
@@ -249,6 +256,10 @@ watch([$$(originalContent), $$(modifiedContent)], ([original, modified]) => {
   })
   previous?.original.dispose()
   previous?.modified.dispose()
+})
+
+onBeforeUnmount(() => {
+  disposeDiffEditor()
 })
 
 async function runRestore(entry: BackupEntry): Promise<void> {
