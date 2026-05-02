@@ -23,7 +23,7 @@ import { toComparablePath } from '~/utils/path'
 
 import { createEditorDocumentActions } from './internal/editor-document-actions'
 import { createEditorDocumentSaveSnapshot, saveEditorDocument } from './internal/editor-document-save'
-import { DocumentState, resolveSceneCursor } from './internal/editor-document-state'
+import { DocumentState, getDocumentTextContent, isDocumentDirty, resolveSceneCursor } from './internal/editor-document-state'
 import {
   handleFileModifiedEvent as handleFileModifiedEventAction,
   handleFileRenamedEvent as handleFileRenamedEventAction,
@@ -118,6 +118,15 @@ export const useEditorStore = defineStore('editor', () => {
 
   function getDocumentState(path: string): DocumentState | undefined {
     return getEditableSession(path)?.document
+  }
+
+  /** 若文档已打开且有未保存改动，返回当前 buffer 文本；否则返回 undefined。 */
+  function getDirtyBufferContent(path: string): string | undefined {
+    const document = getDocumentState(path)
+    if (!document || !isDocumentDirty(document)) {
+      return undefined
+    }
+    return getDocumentTextContent(document)
   }
 
   function canUndoDocument(path: string): boolean {
@@ -653,6 +662,7 @@ export const useEditorStore = defineStore('editor', () => {
     getPreviewMediaSession,
     canUndoDocument,
     canRedoDocument,
+    getDirtyBufferContent,
     hasUnsavedDocumentsUnder,
     collectDocumentPathsUnder,
     currentState,

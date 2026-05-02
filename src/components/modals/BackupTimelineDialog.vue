@@ -8,6 +8,7 @@ import dayjs from '~/plugins/dayjs'
 import { BASE_EDITOR_OPTIONS, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
 import { backupManager } from '~/services/backup-manager'
 import { useBackupStore } from '~/stores/backup'
+import { useEditorStore } from '~/stores/editor'
 import { useModalStore } from '~/stores/modal'
 import { handleError } from '~/utils/error-handler'
 
@@ -163,6 +164,11 @@ function disposeDiffEditor(): void {
 
 async function readCurrentSource(): Promise<string> {
   const absolute = `${projectPath.replace(/\/+$/, '')}/${logicalPath}`
+  // 编辑器已打开且有未保存改动时，diff 右侧应反映用户眼前的文本，而不是磁盘已保存内容
+  const buffered = useEditorStore().getDirtyBufferContent(absolute)
+  if (buffered !== undefined) {
+    return buffered
+  }
   try {
     return await readTextFile(absolute)
   } catch {
