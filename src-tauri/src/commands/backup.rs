@@ -327,7 +327,12 @@ pub async fn cleanup_backups(
 
     let cutoff = max_days.map(|days| Utc::now() - chrono::Duration::days(days));
 
-    // 按 source_path 分桶后分别按 max_versions 截断；同时整体过滤过期条目
+    // 显式按 timestamp 倒序，确保下面的"每 source 保留前 N 条"逻辑不依赖外部插入顺序
+    manifest
+        .entries
+        .sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+
+    // 按 source_path 分桶：每桶最多保留 max_versions 条最新的；同时整体过滤过期条目
     let mut counts: HashMap<String, usize> = HashMap::new();
     manifest.entries.retain(|entry| {
         if let Some(threshold) = cutoff {
@@ -848,5 +853,43 @@ mod tests {
         let err = read_manifest(tmp.path())
             .expect_err("corrupted manifest must surface as error");
         assert!(matches!(err, AppError::BackupManifestCorrupted { .. }));
+    }
+
+    #[test]
+    fn cleanup_keeps_newest_per_source_regardless_of_manifest_order() {
+        let tmp = TempDir::new().unwrap();
+        let logical = "game/scene/start.txt";
+
+        // 故意把"较老"的条目放在前面，模拟意外乱序的 manifest
+        let entries = [
+            ("2026-03-10T10:00:00Z", "old"),
+            ("2026-03-12T10:00:00Z", "newest"),
+            ("2026-03-11T10:00:00Z", "middle"),
+        ];
+        let mut manifest = BackupManifest::default();
+        for (ts, tag) in entries {
+            let backup_path = format!("scene/start/{}.bak", iso_to_filename(ts));
+            let abs = tmp.path().join(BACKUP_ROOT_REL).join(&backup_path);
+            fs::create_dir_all(abs.parent().unwrap()).unwrap();
+            fs::write(&abs, tag).unwrap();
+            manifest.entries.push(BackupEntry {
+                source_path: logical.into(),
+                backup_path,
+                timestamp: ts.into(),
+                size_bytes: tag.len() as u64,
+                hash: format!("sha256:{tag}"),
+                source_kind: BackupSourceKind::AutoSave,
+                summary: None,
+            });
+        }
+        rt().block_on(write_manifest(tmp.path(), &manifest))
+            .unwrap();
+
+        rt().block_on(cleanup_backups(project_string(&tmp), Some(1), None))
+            .unwrap();
+
+        let kept = list_backups(project_string(&tmp), logical.into()).unwrap();
+        assert_eq!(kept.len(), 1);
+        assert_eq!(kept[0].timestamp, "2026-03-12T10:00:00Z");
     }
 }
