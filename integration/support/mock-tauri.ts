@@ -691,6 +691,28 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
             case 'clean_template_upper': {
               return
             }
+            case 'create_backup': {
+              const logicalPath = String(invokeArgs.logicalPath ?? '')
+              return {
+                sourcePath: logicalPath,
+                backupPath: `scene/mock/${Date.now()}.bak`,
+                timestamp: new Date().toISOString(),
+                sizeBytes: 0,
+                hash: 'sha256:mock',
+                sourceKind: invokeArgs.sourceKind ?? 'manual-save',
+              }
+            }
+            case 'list_backups': {
+              return []
+            }
+            case 'read_backup': {
+              return ''
+            }
+            case 'restore_backup':
+            case 'cleanup_backups':
+            case 'move_backup_history': {
+              return
+            }
             case 'is_binary_file': {
               return isBinaryPath(normalizePath(String(invokeArgs.path ?? '')))
             }

@@ -5679,6 +5679,7 @@ name = "webgal-craft"
 version = "0.0.0"
 dependencies = [
  "axum",
+ "chrono",
  "futures",
  "image",
  "log",
@@ -5686,6 +5687,7 @@ dependencies = [
  "portpicker",
  "serde",
  "serde_json",
+ "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",

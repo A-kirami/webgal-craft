@@ -432,6 +432,7 @@ modals:
       general: General
       edit: Edit
       preview: Preview
+      backup: Backup
       storage: Storage
   saveChanges:
     title: Do you want to save changes to {name}?
@@ -459,6 +460,24 @@ modals:
     keepLocal: Keep local
     loadExternal: Load external
     merge: Merge
+  backupTimeline:
+    title: Scene Version History
+    description: Select a version on the left to view the diff, then restore the scene to that point in time.
+    empty: No history yet for this scene
+    restore: Restore
+    restoreSuccess: Restored successfully
+    restoreConfirmTitle: Restore this version?
+    restoreConfirmContent: 'Restore the version saved at {time}? The current content will be backed up first as a "restore" entry.'
+    sourceKind:
+      manualSave: Manual save
+      autoSave: Auto save
+      restore: Restore
+    section:
+      today: Today
+      yesterday: Yesterday
+      thisWeek: This week
+      earlier: Earlier
+    loadMore: Load earlier versions
 
 edit:
   header:
@@ -594,6 +613,7 @@ edit:
     pasteFailed: Paste failed
     pastePartialFailed: Partial paste failed ({failed}/{total})
     pasteMultipleSuccess: Successfully pasted {count} items
+    viewHistory: View Version History
   previewPanel:
     copyUrl: Copy URL
     refreshPreview: Refresh Preview
@@ -1011,6 +1031,14 @@ settings:
       label: Template Save Location
       title: Select Template Save Location
     browse: Browse
+  backup:
+    local: Local History
+    maxVersions:
+      label: Max Versions per Scene
+      description: Older versions exceeding this limit are removed automatically
+    maxDays:
+      label: Retention Days
+      description: Versions older than this number of days are removed automatically
 
 notFound:
   message: Page not found

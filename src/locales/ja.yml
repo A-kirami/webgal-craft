@@ -432,6 +432,7 @@ modals:
       general: 一般
       edit: 編集
       preview: プレビュー
+      backup: バックアップ
       storage: ストレージ
   saveChanges:
     title: "{name} への変更を保存しますか?"
@@ -459,6 +460,24 @@ modals:
     keepLocal: ローカルを保持
     loadExternal: 外部版を読み込む
     merge: マージ
+  backupTimeline:
+    title: シーンの履歴
+    description: 左側でバージョンを選択して差分を確認し、その時点の内容に復元できます。
+    empty: このシーンにはまだ履歴がありません
+    restore: 復元
+    restoreSuccess: 復元しました
+    restoreConfirmTitle: このバージョンを復元しますか？
+    restoreConfirmContent: '{time} に保存したバージョンを復元します。現在の内容は「復元操作」として自動的にバックアップされます。'
+    sourceKind:
+      manualSave: 手動保存
+      autoSave: 自動保存
+      restore: 復元操作
+    section:
+      today: 今日
+      yesterday: 昨日
+      thisWeek: 今週
+      earlier: それ以前
+    loadMore: 以前のバージョンを読み込む
 
 edit:
   header:
@@ -594,6 +613,7 @@ edit:
     pasteFailed: 貼り付けに失敗しました
     pastePartialFailed: 一部の貼り付けに失敗しました ({failed}/{total})
     pasteMultipleSuccess: "{count} 個のアイテムを貼り付けました"
+    viewHistory: 履歴を表示
   previewPanel:
     copyUrl: URLをコピー
     refreshPreview: プレビューを更新
@@ -1011,6 +1031,14 @@ settings:
       label: テンプレート保存場所
       title: テンプレート保存場所を選択
     browse: 参照
+  backup:
+    local: ローカル履歴
+    maxVersions:
+      label: シーンごとの最大バージョン数
+      description: この数を超えた古いバージョンは自動的に削除されます
+    maxDays:
+      label: 保持日数
+      description: この日数を超えた古いバージョンは自動的に削除されます
 
 notFound:
   message: ページが見つかりません

@@ -86,6 +86,13 @@ pub fn run() {
             commands::vfs::copy_vfs_path,
             commands::vfs::is_template_dirty,
             commands::vfs::clean_template_upper,
+            // backup
+            commands::backup::create_backup,
+            commands::backup::list_backups,
+            commands::backup::read_backup,
+            commands::backup::restore_backup,
+            commands::backup::cleanup_backups,
+            commands::backup::move_backup_history,
             // server
             commands::server::start_server,
             commands::server::add_static_site,

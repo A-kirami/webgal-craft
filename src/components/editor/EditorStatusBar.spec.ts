@@ -73,6 +73,9 @@ vi.mock('~/plugins/dayjs', () => ({
 
 vi.mock('~/plugins/editor', () => ({
   getLanguageDisplayName: getLanguageDisplayNameMock,
+  BASE_EDITOR_OPTIONS: {},
+  THEME_DARK: 'webgal-dark',
+  THEME_LIGHT: 'webgal-light',
 }))
 
 vi.mock('~/stores/workspace', () => ({

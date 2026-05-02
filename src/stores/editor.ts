@@ -6,6 +6,7 @@ import { decodeTextFile } from '~/domain/document/file-codec'
 import { computeLineNumberFromStatementId } from '~/domain/document/scene-selection'
 import { createPreviewMediaSession, normalizePreviewMediaSessionPatch } from '~/features/editor/preview/preview-media-session'
 import { useTabsWatcher } from '~/features/editor/shared/useTabsWatcher'
+import { backupManager } from '~/services/backup-manager'
 import { debugCommander } from '~/services/debug-commander'
 import { getAssetUrl } from '~/services/platform/asset-url'
 import { useEditSettingsStore } from '~/stores/edit-settings'
@@ -357,7 +358,7 @@ export const useEditorStore = defineStore('editor', () => {
     handleSaveError(error) {
       handleError(error, { silent: true })
     },
-    saveDocument: saveFile,
+    saveDocument: path => saveFile(path, 'auto'),
   })
 
   function canReschedulePendingAutoSave(state: EditableEditorState): boolean {
@@ -412,7 +413,7 @@ export const useEditorStore = defineStore('editor', () => {
     saveHooks.delete(path)
   }
 
-  async function saveFile(path: string) {
+  async function saveFile(path: string, trigger: 'manual' | 'auto' = 'manual') {
     cancelAutoSave(path)
     // 在 await 前冻结当前保存快照，避免保存期间的新编辑被误并入本次保存并清除脏标记。
     const saveSnapshot = createEditorDocumentSaveSnapshot(documentSaveContext, path)
@@ -420,6 +421,28 @@ export const useEditorStore = defineStore('editor', () => {
     const savedContent = await saveEditorDocument(documentSaveContext, path, saveSnapshot)
     runPostSaveEffects(path, savedContent, saveSnapshot.docEntry.model.kind)
     await runSaveHook(path)
+    await maybeCreateSceneBackup(path, trigger)
+  }
+
+  async function maybeCreateSceneBackup(path: string, trigger: 'manual' | 'auto'): Promise<void> {
+    const projectPath = useWorkspaceStore().CWD
+    if (!projectPath) {
+      return
+    }
+    const logicalPath = backupManager.toProjectRelative(projectPath, path) ?? path
+    if (!backupManager.isScenePath(logicalPath)) {
+      return
+    }
+    const createBackup = trigger === 'manual'
+      ? backupManager.createManualBackup
+      : backupManager.createAutoBackup
+    try {
+      await createBackup(projectPath, logicalPath)
+    } catch (error) {
+      // 备份失败不应阻断主保存流程，仅记录日志即可
+      const message = error instanceof Error ? error.message : String(error)
+      logger.error(`[editor] 创建场景历史失败: ${message}`)
+    }
   }
 
   const fileLifecycleContext = {
