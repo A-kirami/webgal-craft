@@ -25,7 +25,7 @@ use sha2::{Digest, Sha256};
 
 use crate::vfs::atomic_write;
 
-use super::AppResult;
+use super::{AppError, AppResult};
 
 const BACKUP_ROOT_REL: &str = ".webgalcraft/backups";
 const MANIFEST_FILE: &str = "manifest.json";
@@ -100,7 +100,9 @@ fn read_manifest(project_path: &Path) -> AppResult<BackupManifest> {
         return Ok(BackupManifest::default());
     }
     let content = fs::read_to_string(&path)?;
-    Ok(serde_json::from_str(&content).unwrap_or_default())
+    serde_json::from_str(&content).map_err(|err| AppError::BackupManifestCorrupted {
+        reason: err.to_string(),
+    })
 }
 
 async fn write_manifest(project_path: &Path, manifest: &BackupManifest) -> AppResult<()> {
@@ -108,7 +110,10 @@ async fn write_manifest(project_path: &Path, manifest: &BackupManifest) -> AppRe
     if let Some(parent) = target.parent() {
         fs::create_dir_all(parent)?;
     }
-    let serialized = serde_json::to_vec_pretty(manifest).map_err(std::io::Error::other)?;
+    let serialized =
+        serde_json::to_vec_pretty(manifest).map_err(|err| AppError::BackupManifestCorrupted {
+            reason: err.to_string(),
+        })?;
     atomic_write(&target, &serialized).await?;
     Ok(())
 }
@@ -831,5 +836,17 @@ mod tests {
 
         let content = read_backup(project_string(&tmp), entry.backup_path).unwrap();
         assert_eq!(content, "hello world");
+    }
+
+    #[test]
+    fn corrupted_manifest_is_reported_as_error_not_silently_reset() {
+        let tmp = TempDir::new().unwrap();
+        let manifest_path = manifest_file(tmp.path());
+        fs::create_dir_all(manifest_path.parent().unwrap()).unwrap();
+        fs::write(&manifest_path, "{ not valid json").unwrap();
+
+        let err = read_manifest(tmp.path())
+            .expect_err("corrupted manifest must surface as error");
+        assert!(matches!(err, AppError::BackupManifestCorrupted { .. }));
     }
 }

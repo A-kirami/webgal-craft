@@ -30,6 +30,9 @@ pub enum AppError {
     #[error("项目配置无效：{reason}")]
     InvalidProjectConfig { reason: String },
 
+    #[error("场景历史 manifest 已损坏：{reason}")]
+    BackupManifestCorrupted { reason: String },
+
     #[error("站点未注册")]
     SiteNotRegistered,
 
@@ -49,6 +52,7 @@ impl AppError {
             Self::Vfs(error) => error.code(),
             Self::SchemaVersionTooNew { .. } => "SCHEMA_VERSION_TOO_NEW",
             Self::InvalidProjectConfig { .. } => "INVALID_PROJECT_CONFIG",
+            Self::BackupManifestCorrupted { .. } => "BACKUP_MANIFEST_CORRUPTED",
             Self::SiteNotRegistered => "SITE_NOT_REGISTERED",
             Self::Tauri(_) => "TAURI_ERROR",
         }
@@ -75,6 +79,9 @@ impl serde::Serialize for AppError {
                 s.serialize_field("maxSupported", max_supported)?;
             }
             Self::InvalidProjectConfig { reason } => {
+                s.serialize_field("reason", reason)?;
+            }
+            Self::BackupManifestCorrupted { reason } => {
                 s.serialize_field("reason", reason)?;
             }
             _ => {}
