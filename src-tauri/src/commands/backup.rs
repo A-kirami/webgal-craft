@@ -270,8 +270,8 @@ fn trim_overflow_for_source(
 
 /// 去重判断：返回 true 表示应跳过本次备份。
 ///
-/// - 同 source_path 最近一条若 hash 相同，始终跳过（无论是否 force）
-///   —— 手动保存 / 系统重构内容未变时不应刷出无意义版本；
+/// - 仅与 manifest 中同 source_path 的最新一条比较 hash，相同则跳过
+///   （注意：不做跨条目的全局去重，A→B→A 的第三次保存仍会建条目）；
 ///   Restore 不走该函数，由 `restore_backup` 直写 manifest 保证留痕
 /// - 非 force 时，距上次同 source_path 备份不足 5 分钟则跳过
 fn should_skip_dedup(
