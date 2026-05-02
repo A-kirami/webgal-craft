@@ -984,11 +984,17 @@ export const useFileStore = defineStore('file', () => {
         relPath: moveTarget.relSourcePath,
         targetRelPath: moveTarget.nextRelPath,
       })
-      await backupManager.moveSceneHistory(
-        moveTarget.currentProjectPath,
-        oldLogicalPath,
-        movedRelPath.replaceAll('\\', '/'),
-      )
+      const movedLogicalPath = movedRelPath.replaceAll('\\', '/')
+      try {
+        await backupManager.moveSceneHistory(
+          moveTarget.currentProjectPath,
+          oldLogicalPath,
+          movedLogicalPath,
+        )
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error)
+        void logger.warn(`[FileStore] 迁移场景历史失败 (${oldLogicalPath} -> ${movedLogicalPath}): ${msg}`)
+      }
       const nextPath = normalizeFsPath(`${moveTarget.currentProjectPath}/${movedRelPath}`)
       const targetParentId = getItemByPath(targetPath)?.id
       const sourceParentPath = normalizeFsPath(getParentPath(sourcePath))
@@ -1022,11 +1028,17 @@ export const useFileStore = defineStore('file', () => {
         relPath,
         newName,
       })
-      await backupManager.moveSceneHistory(
-        currentProjectPath,
-        oldLogicalPath,
-        nextRelPath.replaceAll('\\', '/'),
-      )
+      const renamedLogicalPath = nextRelPath.replaceAll('\\', '/')
+      try {
+        await backupManager.moveSceneHistory(
+          currentProjectPath,
+          oldLogicalPath,
+          renamedLogicalPath,
+        )
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error)
+        void logger.warn(`[FileStore] 迁移场景历史失败 (${oldLogicalPath} -> ${renamedLogicalPath}): ${msg}`)
+      }
       const nextPath = normalizeFsPath(`${currentProjectPath}/${nextRelPath}`)
       await handleRenameEvent(nextPath, path)
       return nextPath
