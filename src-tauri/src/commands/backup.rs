@@ -16,7 +16,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fs,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
 use chrono::{DateTime, SecondsFormat, Utc};
@@ -172,11 +172,45 @@ async fn prepend_entry_and_save(
 
 /// 仅 game/scene/*.txt 才参与历史
 fn is_supported_scene_path(logical_path: &str) -> bool {
-    logical_path.starts_with(SCENE_PATH_PREFIX)
-        && Path::new(logical_path)
-            .extension()
-            .and_then(|ext| ext.to_str())
-            == Some(SCENE_FILE_EXT)
+    if !logical_path.starts_with(SCENE_PATH_PREFIX) {
+        return false;
+    }
+    let path = Path::new(logical_path);
+    if path.extension().and_then(|ext| ext.to_str()) != Some(SCENE_FILE_EXT) {
+        return false;
+    }
+    is_safe_relative_path(path)
+}
+
+/// 拒绝绝对路径、`..`、`.` 段以及 Windows 盘符前缀，避免路径遍历。
+fn is_safe_relative_path(path: &Path) -> bool {
+    if path.is_absolute() {
+        return false;
+    }
+    path.components()
+        .all(|component| matches!(component, Component::Normal(_)))
+}
+
+/// 校验 `backup_path` 必须是 `scene/**/.bak` 形式的安全相对路径，防止读出/还原任意文件。
+fn validate_backup_path(backup_path: &str) -> AppResult<&Path> {
+    let path = Path::new(backup_path);
+    let invalid = || {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("invalid backup path: {backup_path}"),
+        )
+    };
+    if !is_safe_relative_path(path) {
+        return Err(invalid().into());
+    }
+    let mut components = path.components();
+    if !matches!(components.next(), Some(Component::Normal(seg)) if seg == "scene") {
+        return Err(invalid().into());
+    }
+    if path.extension().and_then(|ext| ext.to_str()) != Some(BACKUP_FILE_EXT) {
+        return Err(invalid().into());
+    }
+    Ok(path)
 }
 
 #[tauri::command]
@@ -248,7 +282,11 @@ fn trim_overflow_for_source(
         return Ok(());
     }
     indexed.sort_by(|a, b| b.1.cmp(a.1));
-    let drop_indices: HashSet<usize> = indexed.into_iter().skip(max_versions).map(|(i, _)| i).collect();
+    let drop_indices: HashSet<usize> = indexed
+        .into_iter()
+        .skip(max_versions)
+        .map(|(i, _)| i)
+        .collect();
 
     let mut paths_to_remove: Vec<PathBuf> = Vec::with_capacity(drop_indices.len());
     let mut idx = 0;
@@ -314,7 +352,8 @@ pub fn list_backups(project_path: String, logical_path: String) -> AppResult<Vec
 
 #[tauri::command]
 pub fn read_backup(project_path: String, backup_path: String) -> AppResult<String> {
-    let path = backup_root(Path::new(&project_path)).join(&backup_path);
+    let safe_rel = validate_backup_path(&backup_path)?;
+    let path = backup_root(Path::new(&project_path)).join(safe_rel);
     Ok(fs::read_to_string(&path)?)
 }
 
@@ -333,7 +372,8 @@ pub async fn restore_backup(
 
     let project = PathBuf::from(&project_path);
     let backups_root = backup_root(&project);
-    let content = fs::read(backups_root.join(&backup_path))?;
+    let safe_rel = validate_backup_path(&backup_path)?;
+    let content = fs::read(backups_root.join(safe_rel))?;
 
     // 先把内容写回源文件
     atomic_write(&project.join(&logical_path), &content).await?;
@@ -912,8 +952,7 @@ mod tests {
         fs::create_dir_all(manifest_path.parent().unwrap()).unwrap();
         fs::write(&manifest_path, "{ not valid json").unwrap();
 
-        let err = read_manifest(tmp.path())
-            .expect_err("corrupted manifest must surface as error");
+        let err = read_manifest(tmp.path()).expect_err("corrupted manifest must surface as error");
         assert!(matches!(err, AppError::BackupManifestCorrupted { .. }));
     }
 
@@ -961,7 +1000,11 @@ mod tests {
         let logical = "game/scene/start.txt";
 
         for tag in ["v1", "v2", "v3"] {
-            fs::write(tmp.path().join("game/scene").join("start.txt").as_path(), tag).ok();
+            fs::write(
+                tmp.path().join("game/scene").join("start.txt").as_path(),
+                tag,
+            )
+            .ok();
             // 创建目录的副作用由 setup_scene 完成；此处确保父目录存在
             setup_scene(tmp.path(), logical, tag);
             rt().block_on(create_backup(
@@ -978,11 +1021,49 @@ mod tests {
         // 仅保留最近 2 条
         let kept = list_backups(project_string(&tmp), logical.into()).unwrap();
         assert_eq!(kept.len(), 2);
-        assert!(kept.iter().any(|e| e.hash.ends_with(&format!("{:x}", Sha256::digest(b"v3")))));
-        assert!(kept.iter().any(|e| e.hash.ends_with(&format!("{:x}", Sha256::digest(b"v2")))));
+        assert!(kept
+            .iter()
+            .any(|e| e.hash.ends_with(&format!("{:x}", Sha256::digest(b"v3")))));
+        assert!(kept
+            .iter()
+            .any(|e| e.hash.ends_with(&format!("{:x}", Sha256::digest(b"v2")))));
 
         // 被淘汰的 v1 物理文件应不存在
         let v1_hash = format!("sha256:{:x}", Sha256::digest(b"v1"));
         assert!(!kept.iter().any(|e| e.hash == v1_hash));
+    }
+
+    #[test]
+    fn rejects_path_traversal_in_logical_path() {
+        assert!(!is_supported_scene_path("game/scene/../../etc/passwd"));
+        assert!(!is_supported_scene_path("/abs/game/scene/start.txt"));
+    }
+
+    #[test]
+    fn read_backup_rejects_traversal_paths() {
+        let tmp = TempDir::new().unwrap();
+        let cases = [
+            "../../etc/passwd",
+            "scene/../../escape.bak",
+            "scene/start/foo.txt",
+            "/abs/scene/foo.bak",
+        ];
+        for bad in cases {
+            let err = read_backup(project_string(&tmp), bad.into());
+            assert!(err.is_err(), "should reject {bad}");
+        }
+    }
+
+    #[test]
+    fn restore_backup_rejects_traversal_paths() {
+        let tmp = TempDir::new().unwrap();
+        let logical = "game/scene/start.txt";
+        setup_scene(tmp.path(), logical, "v1");
+        let err = rt().block_on(restore_backup(
+            project_string(&tmp),
+            logical.into(),
+            "../../escape.bak".into(),
+        ));
+        assert!(err.is_err(), "should reject traversal in restore");
     }
 }
