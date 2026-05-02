@@ -214,7 +214,7 @@ watchEffect(() => {
   if (!editorContainer || !open.value || diffEditor) {
     return
   }
-  diffEditor = monaco.editor.createDiffEditor(editorContainer, {
+  const editor = monaco.editor.createDiffEditor(editorContainer, {
     ...BASE_EDITOR_OPTIONS,
     readOnly: true,
     renderSideBySide: true,
@@ -222,7 +222,13 @@ watchEffect(() => {
     renderLineHighlightOnlyWhenFocus: true,
     automaticLayout: true,
   })
+  // 创建后立即给一对初始 model，避免依赖 monaco 默认 model 的释放时机
+  editor.setModel({
+    original: monaco.editor.createModel(originalContent, 'webgalscript'),
+    modified: monaco.editor.createModel(modifiedContent, 'webgalscript'),
+  })
   monaco.editor.setTheme(currentTheme)
+  diffEditor = editor
 })
 
 watch($$(currentTheme), (theme) => {
@@ -231,14 +237,16 @@ watch($$(currentTheme), (theme) => {
   }
 })
 
-watch([$$(originalContent), $$(modifiedContent), $$(diffEditor)], ([original, modified, editor]) => {
+watch([$$(originalContent), $$(modifiedContent)], ([original, modified]) => {
+  const editor = diffEditor
   if (!editor) {
     return
   }
-  const originalModel = monaco.editor.createModel(original, 'webgalscript')
-  const modifiedModel = monaco.editor.createModel(modified, 'webgalscript')
   const previous = editor.getModel()
-  editor.setModel({ original: originalModel, modified: modifiedModel })
+  editor.setModel({
+    original: monaco.editor.createModel(original, 'webgalscript'),
+    modified: monaco.editor.createModel(modified, 'webgalscript'),
+  })
   previous?.original.dispose()
   previous?.modified.dispose()
 })
