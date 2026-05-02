@@ -186,6 +186,7 @@ pub async fn create_backup(
     source_kind: BackupSourceKind,
     summary: Option<String>,
     force: bool,
+    max_versions: Option<usize>,
 ) -> AppResult<Option<BackupEntry>> {
     if !is_supported_scene_path(&logical_path) {
         return Ok(None);
@@ -204,11 +205,12 @@ pub async fn create_backup(
         return Ok(None);
     }
 
+    let backups_root = backup_root(&project);
     let backup_path = make_backup_rel_path(&mirror, &timestamp);
-    write_backup_file(&backup_root(&project), &backup_path, &content).await?;
+    write_backup_file(&backups_root, &backup_path, &content).await?;
 
     let entry = BackupEntry {
-        source_path: logical_path,
+        source_path: logical_path.clone(),
         backup_path,
         timestamp,
         size_bytes: content.len() as u64,
@@ -216,9 +218,54 @@ pub async fn create_backup(
         source_kind,
         summary,
     };
-    Ok(Some(
-        prepend_entry_and_save(&project, &mut manifest, entry).await?,
-    ))
+    manifest.entries.insert(0, entry.clone());
+
+    // 顺手裁剪同 source 超额的旧条目，避免每次保存都触发全量 cleanup 扫描
+    if let Some(max) = max_versions {
+        trim_overflow_for_source(&mut manifest, &backups_root, &logical_path, max)?;
+    }
+
+    write_manifest(&project, &manifest).await?;
+    Ok(Some(entry))
+}
+
+/// 移除 manifest 中同 source_path 超出 max_versions 的最旧条目，并删除其备份文件。
+fn trim_overflow_for_source(
+    manifest: &mut BackupManifest,
+    backups_root: &Path,
+    logical_path: &str,
+    max_versions: usize,
+) -> AppResult<()> {
+    // 收集同 source 条目的 (位置, timestamp)，按时间倒序，保留前 max_versions 条
+    let mut indexed: Vec<(usize, &str)> = manifest
+        .entries
+        .iter()
+        .enumerate()
+        .filter(|(_, entry)| entry.source_path == logical_path)
+        .map(|(idx, entry)| (idx, entry.timestamp.as_str()))
+        .collect();
+    if indexed.len() <= max_versions {
+        return Ok(());
+    }
+    indexed.sort_by(|a, b| b.1.cmp(a.1));
+    let drop_indices: HashSet<usize> = indexed.into_iter().skip(max_versions).map(|(i, _)| i).collect();
+
+    let mut paths_to_remove: Vec<PathBuf> = Vec::with_capacity(drop_indices.len());
+    let mut idx = 0;
+    manifest.entries.retain(|entry| {
+        let keep = !drop_indices.contains(&idx);
+        if !keep {
+            paths_to_remove.push(backups_root.join(&entry.backup_path));
+        }
+        idx += 1;
+        keep
+    });
+    for path in paths_to_remove {
+        if path.is_file() {
+            fs::remove_file(&path)?;
+        }
+    }
+    Ok(())
 }
 
 /// 去重判断：返回 true 表示应跳过本次备份。
@@ -497,6 +544,7 @@ mod tests {
                 BackupSourceKind::ManualSave,
                 None,
                 true,
+                None,
             ))
             .expect("create_backup should succeed")
             .expect("manual save should produce entry");
@@ -522,6 +570,7 @@ mod tests {
             BackupSourceKind::ManualSave,
             None,
             true,
+            None,
         ))
         .unwrap();
 
@@ -543,6 +592,7 @@ mod tests {
                 BackupSourceKind::ManualSave,
                 None,
                 true,
+                None,
             ))
             .unwrap();
         assert!(entry.is_none());
@@ -560,6 +610,7 @@ mod tests {
                 BackupSourceKind::AutoSave,
                 None,
                 false,
+                None,
             ))
             .unwrap();
         assert!(first.is_some());
@@ -571,6 +622,7 @@ mod tests {
                 BackupSourceKind::AutoSave,
                 None,
                 false,
+                None,
             ))
             .unwrap();
         assert!(second.is_none(), "same content should be deduped");
@@ -587,6 +639,7 @@ mod tests {
             BackupSourceKind::AutoSave,
             None,
             false,
+            None,
         ))
         .unwrap();
 
@@ -599,6 +652,7 @@ mod tests {
                 BackupSourceKind::AutoSave,
                 None,
                 false,
+                None,
             ))
             .unwrap();
         assert!(throttled.is_none(), "should be throttled by min interval");
@@ -615,6 +669,7 @@ mod tests {
             BackupSourceKind::AutoSave,
             None,
             false,
+            None,
         ))
         .unwrap();
 
@@ -627,6 +682,7 @@ mod tests {
                 BackupSourceKind::ManualSave,
                 None,
                 true,
+                None,
             ))
             .unwrap();
         assert!(forced.is_some());
@@ -639,6 +695,7 @@ mod tests {
                 BackupSourceKind::ManualSave,
                 None,
                 true,
+                None,
             ))
             .unwrap();
         assert!(dup.is_none());
@@ -654,6 +711,7 @@ mod tests {
             BackupSourceKind::ManualSave,
             None,
             true,
+            None,
         ))
         .unwrap();
 
@@ -698,6 +756,7 @@ mod tests {
                 BackupSourceKind::ManualSave,
                 None,
                 true,
+                None,
             ))
             .unwrap()
             .unwrap();
@@ -708,6 +767,7 @@ mod tests {
                 BackupSourceKind::ManualSave,
                 None,
                 true,
+                None,
             ))
             .unwrap()
             .unwrap();
@@ -757,6 +817,7 @@ mod tests {
                 BackupSourceKind::ManualSave,
                 None,
                 true,
+                None,
             ))
             .unwrap()
             .unwrap();
@@ -835,6 +896,7 @@ mod tests {
                 BackupSourceKind::ManualSave,
                 None,
                 true,
+                None,
             ))
             .unwrap()
             .unwrap();
@@ -891,5 +953,36 @@ mod tests {
         let kept = list_backups(project_string(&tmp), logical.into()).unwrap();
         assert_eq!(kept.len(), 1);
         assert_eq!(kept[0].timestamp, "2026-03-12T10:00:00Z");
+    }
+
+    #[test]
+    fn create_backup_inline_trims_overflow_for_same_source() {
+        let tmp = TempDir::new().unwrap();
+        let logical = "game/scene/start.txt";
+
+        for tag in ["v1", "v2", "v3"] {
+            fs::write(tmp.path().join("game/scene").join("start.txt").as_path(), tag).ok();
+            // 创建目录的副作用由 setup_scene 完成；此处确保父目录存在
+            setup_scene(tmp.path(), logical, tag);
+            rt().block_on(create_backup(
+                project_string(&tmp),
+                logical.into(),
+                BackupSourceKind::ManualSave,
+                None,
+                true,
+                Some(2),
+            ))
+            .unwrap();
+        }
+
+        // 仅保留最近 2 条
+        let kept = list_backups(project_string(&tmp), logical.into()).unwrap();
+        assert_eq!(kept.len(), 2);
+        assert!(kept.iter().any(|e| e.hash.ends_with(&format!("{:x}", Sha256::digest(b"v3")))));
+        assert!(kept.iter().any(|e| e.hash.ends_with(&format!("{:x}", Sha256::digest(b"v2")))));
+
+        // 被淘汰的 v1 物理文件应不存在
+        let v1_hash = format!("sha256:{:x}", Sha256::digest(b"v1"));
+        assert!(!kept.iter().any(|e| e.hash == v1_hash));
     }
 }

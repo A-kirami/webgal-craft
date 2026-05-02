@@ -22,7 +22,7 @@ interface ScopedArgs {
 }
 
 function createBackup(
-  args: ScopedArgs & { sourceKind: BackupSourceKind, force?: boolean },
+  args: ScopedArgs & { sourceKind: BackupSourceKind, force?: boolean, maxVersions?: number },
 ): Promise<BackupEntry | null> {
   return safeInvoke('create_backup', { force: false, ...args })
 }

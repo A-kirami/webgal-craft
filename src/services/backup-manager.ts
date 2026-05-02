@@ -50,18 +50,15 @@ async function createSceneBackup(
   if (!isScenePath(logicalPath)) {
     return undefined
   }
-  const entry = await backupCmds.createBackup({ projectPath, logicalPath, ...options })
-  // 后端返回 null 表示被去重策略跳过；不再触发 cleanup，避免无谓 I/O
-  if (!entry) {
-    return undefined
-  }
+  // 把 maxVersions 直接交给后端在 create 时做 in-band 裁剪，避免每次保存都触发全量孤儿扫描
   const settings = useBackupSettingsStore()
-  await backupCmds.cleanupBackups({
+  const entry = await backupCmds.createBackup({
     projectPath,
+    logicalPath,
+    ...options,
     maxVersions: settings.maxVersions,
-    maxDays: settings.maxDays,
   })
-  return entry
+  return entry ?? undefined
 }
 
 function createManualBackup(projectPath: string, logicalPath: string) {
@@ -72,10 +69,17 @@ function createAutoBackup(projectPath: string, logicalPath: string) {
   return createSceneBackup(projectPath, logicalPath, { sourceKind: 'auto-save', force: false })
 }
 
-function loadTimeline(projectPath: string, logicalPath: string): Promise<BackupEntry[]> {
+async function loadTimeline(projectPath: string, logicalPath: string): Promise<BackupEntry[]> {
   if (!isScenePath(logicalPath)) {
-    return Promise.resolve([])
+    return []
   }
+  // 仅在用户主动查看历史时跑一次按天保留与孤儿扫描——这是天然低频路径
+  const settings = useBackupSettingsStore()
+  await backupCmds.cleanupBackups({
+    projectPath,
+    maxVersions: settings.maxVersions,
+    maxDays: settings.maxDays,
+  })
   return backupCmds.listBackups({ projectPath, logicalPath })
 }
 

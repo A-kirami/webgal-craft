@@ -53,7 +53,8 @@ describe('backupManager.isScenePath', () => {
 })
 
 describe('backupManager.createManualBackup', () => {
-  it('为 scene 文件创建 manual-save 历史，强制绕过最小间隔', async () => {
+  it('为 scene 文件创建 manual-save 历史，强制绕过最小间隔，并把 maxVersions 交给后端 in-band 裁剪', async () => {
+    const settings = useBackupSettingsStore()
     await backupManager.createManualBackup('/games/demo', 'game/scene/start.txt')
 
     expect(createBackupMock).toHaveBeenCalledWith({
@@ -61,23 +62,11 @@ describe('backupManager.createManualBackup', () => {
       logicalPath: 'game/scene/start.txt',
       sourceKind: 'manual-save',
       force: true,
-    })
-  })
-
-  it('成功后按设置触发 cleanup', async () => {
-    const settings = useBackupSettingsStore()
-    await backupManager.createManualBackup('/games/demo', 'game/scene/start.txt')
-
-    expect(cleanupBackupsMock).toHaveBeenCalledWith({
-      projectPath: '/games/demo',
       maxVersions: settings.maxVersions,
-      maxDays: settings.maxDays,
     })
   })
 
-  it('后端返回 null 时跳过 cleanup', async () => {
-    // eslint-disable-next-line unicorn/no-null -- Rust Option::None 在 JSON 上即 null
-    createBackupMock.mockResolvedValue(null)
+  it('保存路径不再触发全量 cleanup', async () => {
     await backupManager.createManualBackup('/games/demo', 'game/scene/start.txt')
 
     expect(cleanupBackupsMock).not.toHaveBeenCalled()
@@ -93,6 +82,7 @@ describe('backupManager.createManualBackup', () => {
 
 describe('backupManager.createAutoBackup', () => {
   it('使用 force=false，让后端按 5 分钟最小间隔与哈希去重', async () => {
+    const settings = useBackupSettingsStore()
     await backupManager.createAutoBackup('/games/demo', 'game/scene/start.txt')
 
     expect(createBackupMock).toHaveBeenCalledWith({
@@ -100,6 +90,7 @@ describe('backupManager.createAutoBackup', () => {
       logicalPath: 'game/scene/start.txt',
       sourceKind: 'auto-save',
       force: false,
+      maxVersions: settings.maxVersions,
     })
   })
 })
@@ -139,11 +130,23 @@ describe('backupManager.loadTimeline / readBackupContent', () => {
     expect(entries[0]?.sourceKind).toBe('manual-save')
   })
 
+  it('打开历史时机顺带触发按天保留与孤儿清理', async () => {
+    const settings = useBackupSettingsStore()
+    await backupManager.loadTimeline('/games/demo', 'game/scene/start.txt')
+
+    expect(cleanupBackupsMock).toHaveBeenCalledWith({
+      projectPath: '/games/demo',
+      maxVersions: settings.maxVersions,
+      maxDays: settings.maxDays,
+    })
+  })
+
   it('对非 scene 路径返回空时间线', async () => {
     const entries = await backupManager.loadTimeline('/games/demo', 'game/figure/foo.png')
 
     expect(entries).toEqual([])
     expect(listBackupsMock).not.toHaveBeenCalled()
+    expect(cleanupBackupsMock).not.toHaveBeenCalled()
   })
 
   it('readBackupContent 透传到后端 read_backup', async () => {
