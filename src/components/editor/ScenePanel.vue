@@ -26,28 +26,25 @@ const scenePath = computedAsync(async () => {
   return gamePath ? await gameSceneDir(gamePath) : ''
 })
 
-let itemsKey = $ref(0)
 let isLoading = $ref(false)
-// 刷新模式队列：true 表示静默刷新，false 或 undefined 表示普通刷新
-let refreshModes = $ref<boolean[]>([])
+let refreshTrigger = $ref({ count: 0, silent: false })
 
 const items = computedAsync(async () => {
-  // 按触发顺序消费一次刷新模式；默认视为普通刷新，避免并发覆盖刷新语义
-  const mode = refreshModes.shift()
-  const isSilent = mode === true
+  const { silent: isSilent } = refreshTrigger
 
   if (!isSilent) {
     isLoading = true
   }
+  // computedAsync 仅在首个 await 之前同步收集依赖，所以 refreshTrigger、scenePath、initialized
+  // 这三处响应式访问必须放在任何 await 之前，否则手动刷新与文件系统事件无法触发重算
+  const path = scenePath.value
+  const initialized = fileStore.initialized
   try {
-    const path = scenePath.value
     if (!path) {
       return []
     }
     // 等待 FileStore 初始化完成，避免在 enginePath 未就绪时加载
-    await fileStore.initialized
-    // 使用 itemsKey 作为无意义依赖，强制触发 computedAsync 重新计算
-    void itemsKey
+    await initialized
     return await loadScenePanelTreeNodes(path, currentPath => fileStore.getFolderContents(currentPath))
   } catch (error) {
     logger.error(`[ScenePanel] 获取场景文件夹内容失败: ${error instanceof Error ? error.message : error}`)
@@ -157,8 +154,7 @@ async function handleCreateFolder() {
 }
 
 function handleRefresh() {
-  refreshModes.push(false)
-  itemsKey++
+  refreshTrigger = { count: refreshTrigger.count + 1, silent: false }
 }
 
 function handleCollapseAll() {
@@ -167,8 +163,7 @@ function handleCollapseAll() {
 
 // 监听文件系统事件，自动刷新数据（静默刷新，不显示加载状态）
 const debouncedRefresh = useDebounceFn(() => {
-  refreshModes.push(true)
-  itemsKey++
+  refreshTrigger = { count: refreshTrigger.count + 1, silent: true }
 }, 100)
 
 const fsRefreshEvents = [
@@ -198,7 +193,7 @@ onScopeDispose(() => {
         <Button variant="ghost" size="icon" class="rounded h-6 w-6" @click="handleCreateFolder">
           <FolderPlus class="h-4 w-4" :stroke-width="1.5" />
         </Button>
-        <Button variant="ghost" size="icon" class="rounded h-6 w-6" :disabled="isLoading" @click="handleRefresh">
+        <Button variant="ghost" size="icon" class="rounded h-6 w-6" :disabled="isLoading" data-testid="scene-panel-refresh" @click="handleRefresh">
           <RotateCw class="h-4 w-4" :stroke-width="1.5" />
         </Button>
         <Button variant="ghost" size="icon" class="rounded h-6 w-6" @click="handleCollapseAll">
