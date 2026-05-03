@@ -100,9 +100,29 @@ fn read_manifest(project_path: &Path) -> AppResult<BackupManifest> {
         return Ok(BackupManifest::default());
     }
     let content = fs::read_to_string(&path)?;
-    serde_json::from_str(&content).map_err(|err| AppError::BackupManifestCorrupted {
-        reason: err.to_string(),
-    })
+    let manifest: BackupManifest =
+        serde_json::from_str(&content).map_err(|err| AppError::BackupManifestCorrupted {
+            reason: err.to_string(),
+        })?;
+    // 防止被篡改的 manifest 让 cleanup/trim 删除任意文件：所有路径必须是受控的安全相对路径
+    for entry in &manifest.entries {
+        validate_backup_path(&entry.backup_path).map_err(|_| {
+            AppError::BackupManifestCorrupted {
+                reason: format!("invalid backup_path: {}", entry.backup_path),
+            }
+        })?;
+        if !is_supported_scene_path(&entry.source_path) {
+            return Err(AppError::BackupManifestCorrupted {
+                reason: format!("invalid source_path: {}", entry.source_path),
+            });
+        }
+        if parse_iso(&entry.timestamp).is_none() {
+            return Err(AppError::BackupManifestCorrupted {
+                reason: format!("invalid timestamp: {}", entry.timestamp),
+            });
+        }
+    }
+    Ok(manifest)
 }
 
 async fn write_manifest(project_path: &Path, manifest: &BackupManifest) -> AppResult<()> {
@@ -962,6 +982,26 @@ mod tests {
 
         let err = read_manifest(tmp.path()).expect_err("corrupted manifest must surface as error");
         assert!(matches!(err, AppError::BackupManifestCorrupted { .. }));
+    }
+
+    #[test]
+    fn manifest_with_unsafe_paths_is_rejected() {
+        let tmp = TempDir::new().unwrap();
+        let cases = [
+            // backup_path 越界
+            r#"{"version":1,"entries":[{"sourcePath":"game/scene/a.txt","backupPath":"../escape.bak","timestamp":"2026-03-12T10:00:00Z","sizeBytes":1,"hash":"sha256:x","sourceKind":"manual-save","summary":null}]}"#,
+            // source_path 越界
+            r#"{"version":1,"entries":[{"sourcePath":"../etc/passwd","backupPath":"scene/a/2026-03-12T10-00-00Z.bak","timestamp":"2026-03-12T10:00:00Z","sizeBytes":1,"hash":"sha256:x","sourceKind":"manual-save","summary":null}]}"#,
+            // timestamp 非法
+            r#"{"version":1,"entries":[{"sourcePath":"game/scene/a.txt","backupPath":"scene/a/x.bak","timestamp":"not-a-time","sizeBytes":1,"hash":"sha256:x","sourceKind":"manual-save","summary":null}]}"#,
+        ];
+        for raw in cases {
+            let manifest_path = manifest_file(tmp.path());
+            fs::create_dir_all(manifest_path.parent().unwrap()).unwrap();
+            fs::write(&manifest_path, raw).unwrap();
+            let err = read_manifest(tmp.path()).expect_err("unsafe manifest must be rejected");
+            assert!(matches!(err, AppError::BackupManifestCorrupted { .. }));
+        }
     }
 
     #[test]
