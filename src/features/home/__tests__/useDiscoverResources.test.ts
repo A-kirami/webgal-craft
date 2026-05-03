@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { toResourcePathKey } from '~/services/resource-health'
+
 const {
   classifyEngineMock,
   gameIdentityKeyOfMock,
@@ -20,11 +22,11 @@ const {
   validateTemplateMock,
 } = vi.hoisted(() => ({
   classifyEngineMock: vi.fn(),
-  gameIdentityKeyOfMock: vi.fn((resource: { path: string }) => resource.path.toLowerCase().replace(/\/+$/, '')),
+  gameIdentityKeyOfMock: vi.fn((resource: { path: string }) => toResourcePathKey(resource)),
   engineIdentityKeyOfMock: vi.fn((resource: { path: string, engineId?: string, version?: string }) =>
     resource.engineId && resource.version
       ? `${resource.engineId}:${resource.version}`
-      : resource.path.toLowerCase().replace(/\/+$/, ''),
+      : toResourcePathKey(resource),
   ),
   existsMock: vi.fn(),
   getEnginePreviewAssetsMock: vi.fn(),
