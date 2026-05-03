@@ -87,6 +87,7 @@ describe('工作区状态仓库', () => {
 
     store.currentGame = createTestGame({
       path: '/games/game-1',
+      pathKey: '/games/game-1',
       metadata: {
         name: 'old',
       },
@@ -114,6 +115,7 @@ describe('工作区状态仓库', () => {
     expect(store.currentGame).toEqual({
       id: 'game-1',
       path: '/games/game-1',
+      pathKey: '/games/game-1',
       createdAt: 0,
       lastModified: 0,
       status: 'created',

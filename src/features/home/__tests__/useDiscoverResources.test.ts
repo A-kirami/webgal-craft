@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { toResourcePathKey } from '~/services/resource-health'
+
 const {
   classifyEngineMock,
+  gameIdentityKeyOfMock,
+  engineIdentityKeyOfMock,
   existsMock,
   getEnginePreviewAssetsMock,
   getTemplateMetadataMock,
@@ -18,6 +22,12 @@ const {
   validateTemplateMock,
 } = vi.hoisted(() => ({
   classifyEngineMock: vi.fn(),
+  gameIdentityKeyOfMock: vi.fn((resource: { path: string }) => toResourcePathKey(resource)),
+  engineIdentityKeyOfMock: vi.fn((resource: { path: string, engineId?: string, version?: string }) =>
+    resource.engineId && resource.version
+      ? `${resource.engineId}:${resource.version}`
+      : toResourcePathKey(resource),
+  ),
   existsMock: vi.fn(),
   getEnginePreviewAssetsMock: vi.fn(),
   getTemplateMetadataMock: vi.fn(),
@@ -76,6 +86,7 @@ vi.mock('~/services/engine-manager', () => ({
   engineManager: {
     classifyEngine: classifyEngineMock,
     getEnginePreviewAssets: getEnginePreviewAssetsMock,
+    identityKeyOf: engineIdentityKeyOfMock,
     importEngine: vi.fn(),
     validateEngine: validateEngineMock,
   },
@@ -84,6 +95,7 @@ vi.mock('~/services/engine-manager', () => ({
 vi.mock('~/services/game-manager', () => ({
   gameManager: {
     getGamePreviewAssets: vi.fn(),
+    identityKeyOf: gameIdentityKeyOfMock,
     importGame: vi.fn(),
     resolvePreviewSite: vi.fn(),
     validateGame: vi.fn(),
@@ -119,6 +131,8 @@ describe('useDiscoverResources', () => {
     vi.resetModules()
 
     classifyEngineMock.mockReset()
+    gameIdentityKeyOfMock.mockClear()
+    engineIdentityKeyOfMock.mockClear()
     existsMock.mockReset()
     getEnginePreviewAssetsMock.mockReset()
     getTemplateMetadataMock.mockReset()
@@ -377,5 +391,63 @@ describe('useDiscoverResources', () => {
     await discoverResources.checkResourcesForActiveTab()
 
     expect(modalOpenMock).not.toHaveBeenCalled()
+    expect(engineIdentityKeyOfMock).toHaveBeenCalled()
+  })
+
+  it('已导入同路径游戏时通过 gameManager.identityKeyOf 去重', async () => {
+    const { gameManager } = await import('~/services/game-manager')
+    vi.mocked(gameManager.validateGame).mockResolvedValue(true)
+    vi.mocked(gameManager.getGamePreviewAssets).mockResolvedValue({
+      icon: { path: 'icons/favicon.ico' },
+      cover: { path: 'game/background/cover.png' },
+    })
+    vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
+      projectPath: '/games/demo',
+    })
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'games' })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'games' })
+    useStorageSettingsStoreMock.mockReturnValue({
+      engineSavePath: '/engines',
+      gameSavePath: '/games',
+      templateSavePath: '/templates',
+    })
+    useResourceStoreMock.mockReturnValue({
+      engines: [],
+      games: [
+        {
+          id: 'game-1',
+          path: '/Games/Demo',
+          pathKey: '/games/demo',
+          createdAt: 0,
+          lastModified: 0,
+          status: 'created',
+          availability: 'available',
+          metadata: { name: 'Demo Game' },
+          previewAssets: {
+            icon: { path: 'icons/favicon.ico' },
+            cover: { path: 'game/background/cover.png' },
+          },
+        },
+      ],
+      templates: [],
+    })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/games': {
+          return [{ isDirectory: true, name: 'demo' }]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    expect(modalOpenMock).not.toHaveBeenCalled()
+    expect(gameIdentityKeyOfMock).toHaveBeenCalled()
   })
 })

@@ -6,6 +6,7 @@ export type ResourceAvailability = 'available' | 'missing' | 'broken'
 
 export type ResourceWarningCode =
   | 'missing-favicon'
+  | 'missing-game-icon'
   | 'missing-title-image'
   | 'missing-title-image-file'
   | 'missing-game-name'
@@ -49,6 +50,10 @@ export function normalizeImportPath(rawPath: string): NormalizedImportPath {
     normalizedPath,
     comparablePath: toComparablePath(normalizedPath),
   }
+}
+
+export function toResourcePathKey(input: { path: string }): string {
+  return normalizeImportPath(input.path).comparablePath
 }
 
 export function classifyAvailability(input: AvailabilityClassificationInput): ResourceAvailability {
