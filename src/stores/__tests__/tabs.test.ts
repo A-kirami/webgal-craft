@@ -107,6 +107,22 @@ describe('标签状态仓库', () => {
     })
   })
 
+  it('强制以普通标签重新打开已存在的预览标签时会将其固化', () => {
+    const store = useTabsStore()
+
+    store.openTab('preview.txt', '/game/preview.txt')
+    expect(store.tabs[0]?.isPreview).toBe(true)
+
+    store.openTab('preview.txt', '/game/preview.txt', { forceNormal: true })
+
+    expect(store.tabs).toHaveLength(1)
+    expect(store.tabs[0]).toMatchObject({
+      path: '/game/preview.txt',
+      isPreview: false,
+    })
+    expect(store.shouldFocusEditor).toBe(true)
+  })
+
   it('关闭当前标签页后会回退到最近一次激活的剩余标签', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-18T00:00:00.000Z'))

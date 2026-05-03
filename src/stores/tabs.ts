@@ -205,6 +205,9 @@ export const useTabsStore = defineStore(
       if (existIndex === -1) {
         createAndInsertTab(name, path, false)
       } else {
+        if (forceNormal && currentProjectTabs.tabs[existIndex].isPreview) {
+          fixPreviewTab(existIndex)
+        }
         activateTab(existIndex)
       }
 
