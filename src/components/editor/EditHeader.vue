@@ -6,6 +6,7 @@ import { windowCmds } from '~/commands/window'
 import { parseGameConfigFormValues } from '~/features/modals/game-config/game-config-form'
 import { configManager } from '~/services/config-manager'
 import { gameAssetDir } from '~/services/platform/app-paths'
+import { useEditorStore } from '~/stores/editor'
 import { useModalStore } from '~/stores/modal'
 import { usePreviewSessionStore } from '~/stores/preview-session'
 import { useWorkspaceStore } from '~/stores/workspace'
@@ -17,14 +18,39 @@ const router = useRouter()
 
 const { t } = useI18n()
 
-function handleBack() {
-  void closeTestWindow()
-  router.push('/')
-}
-
+const editorStore = useEditorStore()
 const workspaceStore = useWorkspaceStore()
 const previewSessionStore = usePreviewSessionStore()
 const modalStore = useModalStore()
+
+async function navigateHome() {
+  void closeTestWindow()
+  await router.push('/')
+}
+
+async function handleBack() {
+  const currentGamePath = workspaceStore.currentGame?.path
+  const currentGameName = workspaceStore.currentGame?.metadata.name
+  if (!currentGamePath || !editorStore.hasUnsavedDocumentsUnder(currentGamePath)) {
+    await navigateHome()
+    return
+  }
+
+  modalStore.open('SaveChangesModal', {
+    title: t('edit.leaveConfirm.title', { name: currentGameName }),
+    description: t('edit.leaveConfirm.description'),
+    dontSaveLabel: t('edit.leaveConfirm.dontSave'),
+    onDontSave: navigateHome,
+    onSave: async () => {
+      const dirtyPaths = editorStore.collectDocumentPathsUnder(currentGamePath)
+        .filter(path => editorStore.getDirtyBufferContent(path) !== undefined)
+
+      await Promise.all(dirtyPaths.map(path => editorStore.saveFile(path)))
+      await navigateHome()
+    },
+    saveLabel: t('edit.leaveConfirm.save'),
+  })
+}
 
 const HEADER_ICON_THUMBNAIL = {
   width: 64,
@@ -174,7 +200,7 @@ onBeforeUnmount(() => {
 <template>
   <header class="px-4 border-b bg-white flex h-12 items-center justify-between dark:bg-gray-950">
     <div class="flex gap-2 items-center">
-      <Button variant="ghost" size="icon" class="size-8" @click="handleBack">
+      <Button variant="ghost" size="icon" class="size-8" @click="void handleBack()">
         <ArrowLeft class="size-5!" />
         <span class="sr-only">{{ $t('common.back') }}</span>
       </Button>

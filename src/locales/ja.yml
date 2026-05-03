@@ -574,7 +574,12 @@ edit:
     previewUnavailable: プレビューURLがありません。先にプレビューを起動してください。
     workspaceUnavailable: ワークスペースがまだ初期化されていません。少し待ってから再試行してください。
   unsupported:
-    unsupportedFile: このファイルはバイナリファイル、またはサポートされていないテキストエンコーディングを使用しているため、エディターに表示できません
+    unsupportedFile: このファイルはバイナリ、または未対応のテキストエンコーディングのため、エディターで表示できません
+  leaveConfirm:
+    title: ホームに戻る前に変更を保存しますか？
+    description: 今ホームに戻ると、未保存の変更は失われます。
+    save: 保存して戻る
+    dontSave: 保存せずに戻る
   textEditor:
     languages:
       webgalscript: WebGAL スクリプト

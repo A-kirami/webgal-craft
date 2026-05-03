@@ -574,7 +574,12 @@ edit:
     previewUnavailable: Preview URL is not available. Please start preview first.
     workspaceUnavailable: Workspace is not initialized yet. Please try again shortly.
   unsupported:
-    unsupportedFile: The file is binary or uses an unsupported text encoding, so it cannot be displayed in the editor
+    unsupportedFile: This file is binary or uses an unsupported text encoding and cannot be displayed in the editor
+  leaveConfirm:
+    title: Save changes before returning home?
+    description: If you return to the home page now, your unsaved changes will be lost.
+    save: Save and return
+    dontSave: Return without saving
   textEditor:
     languages:
       webgalscript: WebGAL Script
