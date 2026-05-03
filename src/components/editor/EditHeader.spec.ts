@@ -360,6 +360,7 @@ describe('EditHeader', () => {
     expect(saveFileMock).toHaveBeenNthCalledWith(2, '/games/test/assets/c.png')
     expect(routerPushMock).toHaveBeenCalledWith('/')
   })
+
   it('确认不保存时会直接返回主页且不会触发保存', async () => {
     hasUnsavedDocumentsUnderMock.mockReturnValue(true)
 
@@ -374,9 +375,16 @@ describe('EditHeader', () => {
 
     await page.getByRole('button', { name: 'common.back' }).click()
 
+    await vi.waitFor(() => {
+      expect(modalOpenMock.mock.calls.some(([name]) => name === 'SaveChangesModal')).toBe(true)
+    })
+
     const saveChangesCall = modalOpenMock.mock.calls.find(([name]) => name === 'SaveChangesModal')
-    expect(saveChangesCall).toBeDefined()
-    const modalOptions = saveChangesCall?.[1] as { onDontSave?: () => Promise<void> }
+    if (!saveChangesCall) {
+      throw new Error('expected SaveChangesModal to be opened')
+    }
+
+    const [, modalOptions] = saveChangesCall as [string, { onDontSave?: () => Promise<void> }]
 
     await modalOptions.onDontSave?.()
 
