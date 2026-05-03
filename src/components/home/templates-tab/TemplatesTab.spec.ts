@@ -242,6 +242,7 @@ describe('TemplatesTab', () => {
         },
         name: 'WebGAL',
         path: '/engines/WebGAL/4.8.2',
+        pathKey: '/engines/webgal/4.8.2',
         previewAssets: {
           icon: {
             path: 'icons/favicon.ico',

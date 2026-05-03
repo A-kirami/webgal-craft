@@ -22,7 +22,6 @@ import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
 import { EngineRef, ProjectConfig, TemplateBinding } from '~/types/project-config'
-import { toComparablePath } from '~/utils/path'
 
 import type { GameConfigEntry } from '~/commands/game'
 import type { StaticSiteConfig } from '~/types/server'
@@ -46,6 +45,17 @@ export interface GameInspectionPayload {
 const GAME_NAME_RAW_KEY = 'Game_name'
 const GAME_KEY_RAW_KEY = 'Game_key'
 const TITLE_IMAGE_RAW_KEY = 'Title_img'
+const GAME_ICON_PREVIEW_CANDIDATES = [
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'icons/apple-touch-icon.png',
+  'icons/favicon.ico',
+] as const
+
+interface GamePreviewLookupResult {
+  iconPath: string
+  iconExists: boolean
+}
 
 function mergeGameConfigEntries(
   entries: readonly GameConfigEntry[],
@@ -77,14 +87,34 @@ function mergeGameConfigEntries(
   return mergedEntries
 }
 
-function buildGamePreviewAssets(titleImage: string | undefined): GamePreviewAssets {
+function gamePathKeyOf(input: { path: string }): string {
+  return normalizeImportPath(input.path).comparablePath
+}
+
+function buildGamePreviewAssets(iconPath: string, titleImage: string | undefined): GamePreviewAssets {
   return {
     icon: {
-      path: 'icons/favicon.ico',
+      path: iconPath,
     },
     cover: {
       path: titleImage ? `game/background/${titleImage}` : '',
     },
+  }
+}
+
+async function resolveGameIconPreviewPath(gamePath: string): Promise<GamePreviewLookupResult> {
+  for (const relativePath of GAME_ICON_PREVIEW_CANDIDATES) {
+    if (await exists(await join(gamePath, relativePath))) {
+      return {
+        iconPath: relativePath,
+        iconExists: true,
+      }
+    }
+  }
+
+  return {
+    iconPath: GAME_ICON_PREVIEW_CANDIDATES[GAME_ICON_PREVIEW_CANDIDATES.length - 1],
+    iconExists: false,
   }
 }
 
@@ -119,17 +149,19 @@ function withGamePreviewCacheVersion(
 
 async function getGamePreviewAssets(gamePath: string): Promise<GamePreviewAssets> {
   const metadata = await getGameMetadata(gamePath)
-  return buildGamePreviewAssets(metadata.titleImg)
+  const iconLookup = await resolveGameIconPreviewPath(gamePath)
+  return buildGamePreviewAssets(iconLookup.iconPath, metadata.titleImg)
 }
 
 async function getGameSnapshot(gamePath: string): Promise<Pick<Game, 'metadata' | 'previewAssets'>> {
   const metadata = await getGameMetadata(gamePath)
+  const iconLookup = await resolveGameIconPreviewPath(gamePath)
   const cacheVersion = Date.now()
 
   return {
     metadata,
     previewAssets: withGamePreviewCacheVersion(
-      buildGamePreviewAssets(metadata.titleImg),
+      buildGamePreviewAssets(iconLookup.iconPath, metadata.titleImg),
       cacheVersion,
     ),
   }
@@ -154,7 +186,7 @@ function applyCurrentGamePatch(
 }
 
 async function refreshRegisteredGameSnapshot(gamePath: string): Promise<void> {
-  const game = await db.games.where('path').equals(gamePath).first()
+  const game = await db.games.where('pathKey').equals(gamePathKeyOf({ path: gamePath })).first()
   if (!game) {
     return
   }
@@ -191,6 +223,7 @@ async function registerGame(
   return db.games.add({
     id: crypto.randomUUID(),
     path: gamePath,
+    pathKey: gamePathKeyOf({ path: gamePath }),
     engineId,
     createdAt: Date.now(),
     lastModified: Date.now(),
@@ -393,9 +426,11 @@ async function createGame(gameName: string, gamePath: string, engineId: string, 
     try {
       const engineConfig = await gameCmds.getGameConfig(engine.path)
       const titleImg = findGameConfigEntryValue(engineConfig.entries, TITLE_IMAGE_RAW_KEY) ?? ''
-      initialPreviewAssets = buildGamePreviewAssets(titleImg)
+      const iconLookup = await resolveGameIconPreviewPath(engine.path)
+      initialPreviewAssets = buildGamePreviewAssets(iconLookup.iconPath, titleImg)
     } catch {
-      initialPreviewAssets = buildGamePreviewAssets(undefined)
+      const iconLookup = await resolveGameIconPreviewPath(engine.path)
+      initialPreviewAssets = buildGamePreviewAssets(iconLookup.iconPath, undefined)
     }
 
     gameId = await registerGame(gamePath, {
@@ -492,6 +527,7 @@ async function relinkGame(gameId: string, newPath: string): Promise<Game> {
 
   const patch: Partial<Game> = {
     path: inspection.normalizedPath,
+    pathKey: inspection.comparablePath,
     availability: 'available',
     lastModified: Date.now(),
     ...inspection.payload,
@@ -551,14 +587,17 @@ async function renameGame(id: string, newName: string): Promise<void> {
 }
 
 async function findExistingGameByPath(rawPath: string): Promise<Game | undefined> {
-  const { comparablePath } = normalizeImportPath(rawPath)
-  const games = await db.games.toArray()
-  return games.find(game => toComparablePath(game.path) === comparablePath)
+  return db.games.where('pathKey').equals(gamePathKeyOf({ path: rawPath })).first()
+}
+
+function identityKeyOf(input: Pick<Game, 'path'> | { path: string }): string {
+  return gamePathKeyOf(input)
 }
 
 async function collectGameWarnings(
   gamePath: string,
   metadata: GameMetadata,
+  iconLookup?: GamePreviewLookupResult,
 ): Promise<ResourceWarning[]> {
   const warnings: ResourceWarning[] = []
 
@@ -566,7 +605,8 @@ async function collectGameWarnings(
     warnings.push(createWarning('missing-game-name', '游戏未配置 Game_name'))
   }
 
-  if (!(await exists(await gameIconPath(gamePath)))) {
+  const resolvedIconLookup = iconLookup ?? await resolveGameIconPreviewPath(gamePath)
+  if (!resolvedIconLookup.iconExists) {
     warnings.push(createWarning('missing-favicon', '游戏 favicon 不存在'))
   }
 
@@ -580,11 +620,10 @@ async function collectGameWarnings(
   return warnings
 }
 
-async function inspectGame(
-  rawPath: string,
-): Promise<ResourceHealthResult<GameInspectionPayload>> {
-  const { normalizedPath, comparablePath } = normalizeImportPath(rawPath)
-
+async function inspectGameStructure(
+  normalizedPath: string,
+  comparablePath: string,
+): Promise<ResourceHealthResult<never> | undefined> {
   if (!(await exists(normalizedPath))) {
     return {
       availability: 'missing',
@@ -604,10 +643,51 @@ async function inspectGame(
       comparablePath,
     }
   }
+}
 
-  let metadata: GameMetadata
+async function inspectGameSemantics(
+  normalizedPath: string,
+): Promise<GameInspectionPayload & { warnings: ResourceWarning[] }> {
+  const metadata = await getGameMetadata(normalizedPath)
+  const iconLookup = await resolveGameIconPreviewPath(normalizedPath)
+  const warnings = await collectGameWarnings(normalizedPath, metadata, iconLookup)
+
+  return {
+    metadata,
+    warnings,
+    previewAssets: withGamePreviewCacheVersion(
+      buildGamePreviewAssets(iconLookup.iconPath, metadata.titleImg),
+    ),
+  }
+}
+
+async function inspectGame(
+  rawPath: string,
+): Promise<ResourceHealthResult<GameInspectionPayload>> {
+  const { normalizedPath, comparablePath } = normalizeImportPath(rawPath)
+
+  const structureResult = await inspectGameStructure(normalizedPath, comparablePath)
+  if (structureResult) {
+    return structureResult
+  }
+
   try {
-    metadata = await getGameMetadata(normalizedPath)
+    const payload = await inspectGameSemantics(normalizedPath)
+
+    return {
+      availability: classifyAvailability({
+        pathExists: true,
+        structureValid: true,
+        semanticsValid: true,
+      }),
+      warnings: payload.warnings,
+      payload: {
+        metadata: payload.metadata,
+        previewAssets: payload.previewAssets,
+      },
+      normalizedPath,
+      comparablePath,
+    }
   } catch (error) {
     return {
       availability: 'broken',
@@ -620,22 +700,6 @@ async function inspectGame(
       normalizedPath,
       comparablePath,
     }
-  }
-  const warnings = await collectGameWarnings(normalizedPath, metadata)
-
-  return {
-    availability: classifyAvailability({
-      pathExists: true,
-      structureValid: true,
-      semanticsValid: true,
-    }),
-    warnings,
-    payload: {
-      metadata,
-      previewAssets: withGamePreviewCacheVersion(buildGamePreviewAssets(metadata.titleImg)),
-    },
-    normalizedPath,
-    comparablePath,
   }
 }
 
@@ -747,4 +811,5 @@ export const gameManager = {
   resolvePreviewSite,
   updateGameLastModified,
   updateCurrentGameLastModified,
+  identityKeyOf,
 }

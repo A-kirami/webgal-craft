@@ -21,7 +21,6 @@ import { useStorageSettingsStore } from '~/stores/storage-settings'
 import { EngineManifest, EngineManifestResult } from '~/types/engine'
 import { AppError } from '~/types/errors'
 import { EngineRef } from '~/types/project-config'
-import { toComparablePath } from '~/utils/path'
 
 interface EngineSnapshot {
   engineId: string
@@ -39,6 +38,10 @@ interface DeleteEngineCheckResult {
   associatedGames?: Game[]
   canDelete: boolean
   reason?: 'ENGINE_HAS_ASSOCIATED_GAMES'
+}
+
+function enginePathKeyOf(input: { path: string }): string {
+  return normalizeImportPath(input.path).comparablePath
 }
 
 function sanitizeEnginePathSegment(value: string, fieldName: '引擎名称' | '引擎版本'): string {
@@ -162,6 +165,7 @@ async function registerEngine(
   return db.engines.add({
     id: crypto.randomUUID(),
     path: enginePath,
+    pathKey: enginePathKeyOf({ path: enginePath }),
     engineId: options.engineId,
     name: options.name,
     version: options.version,
@@ -290,9 +294,18 @@ async function copyAndFinalizeEngine(
 }
 
 async function findEngineByComparablePath(rawPath: string): Promise<Engine | undefined> {
-  const { comparablePath } = normalizeImportPath(rawPath)
-  const engines = await db.engines.toArray()
-  return engines.find(engine => toComparablePath(engine.path) === comparablePath)
+  return db.engines.where('pathKey').equals(enginePathKeyOf({ path: rawPath })).first()
+}
+
+function identityKeyOf(
+  input: Pick<Engine, 'path' | 'engineId' | 'version'>
+    | { path: string, engineId?: string, version?: string },
+): string {
+  if (input.engineId && input.version) {
+    return `${input.engineId}:${input.version}`
+  }
+
+  return enginePathKeyOf(input)
 }
 
 async function collectEngineWarnings(
@@ -488,4 +501,5 @@ export const engineManager = {
   importEngine,
   uninstallEngine,
   uninstallEngineGroup,
+  identityKeyOf,
 }

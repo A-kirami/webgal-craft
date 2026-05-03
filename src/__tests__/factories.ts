@@ -1,4 +1,5 @@
 import type { Engine, Game, Template } from '~/database/model'
+import { normalizeImportPath } from '~/services/resource-health'
 
 interface TestGameFactoryOptions extends Partial<Omit<Game, 'metadata' | 'previewAssets'>> {
   metadata?: Partial<Game['metadata']>
@@ -16,7 +17,13 @@ interface TestEngineFactoryOptions extends Partial<Omit<Engine, 'metadata' | 'pr
 }
 
 export function createTestGame(options: TestGameFactoryOptions = {}): Game {
-  const { metadata, path, previewAssets, ...rest } = options
+  const {
+    metadata,
+    path,
+    pathKey,
+    previewAssets,
+    ...rest
+  } = options
   const resolvedGamePath = path ?? '/games/demo'
   const {
     cover: rawCover,
@@ -28,6 +35,7 @@ export function createTestGame(options: TestGameFactoryOptions = {}): Game {
   return {
     id: 'game-1',
     path: resolvedGamePath,
+    pathKey: pathKey ?? normalizeImportPath(resolvedGamePath).comparablePath,
     createdAt: 0,
     lastModified: 0,
     status: 'created',
@@ -52,7 +60,13 @@ export function createTestGame(options: TestGameFactoryOptions = {}): Game {
 }
 
 export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine {
-  const { metadata, path, previewAssets, ...rest } = options
+  const {
+    metadata,
+    path,
+    pathKey,
+    previewAssets,
+    ...rest
+  } = options
   const resolvedEnginePath = path ?? '/engines/default'
   const { icon: rawIcon } = previewAssets ?? {}
   const { path: iconPath, ...icon } = rawIcon ?? {}
@@ -62,6 +76,7 @@ export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine
   return {
     id: 'engine-1',
     path: resolvedEnginePath,
+    pathKey: pathKey ?? normalizeImportPath(resolvedEnginePath).comparablePath,
     engineId: defaultEngineId,
     name: defaultName,
     createdAt: 0,

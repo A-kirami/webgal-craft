@@ -246,6 +246,7 @@ describe('engineManager', () => {
 
     expect(addMock).toHaveBeenCalledWith(expect.objectContaining({
       path: '/engines/WebGAL/4.5.0',
+      pathKey: '/engines/webgal/4.5.0',
       name: 'WebGAL',
       version: '4.5.0',
       status: 'creating',
@@ -354,17 +355,30 @@ describe('engineManager', () => {
   })
 
   it('importEngine 在源路径已注册时幂等返回既有 ID', async () => {
-    enginesToArrayMock.mockResolvedValue([
-      createTestEngine({
-        id: 'engine-existing',
-        path: '/downloads/webgal',
-      }),
-    ])
+    engineWhereFirstMock.mockResolvedValue(createTestEngine({
+      id: 'engine-existing',
+      path: '/downloads/webgal',
+    }))
 
     await expect(engineManager.importEngine('/downloads/webgal')).resolves.toEqual({ id: 'engine-existing', alreadyRegistered: true })
 
     expect(addMock).not.toHaveBeenCalled()
     expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
+  })
+
+  it('engine 身份键优先使用 engineId + version', () => {
+    expect(engineManager.identityKeyOf({
+      path: '/downloads/webgal',
+      engineId: 'open-webgal.webgal',
+      version: '4.5.0',
+    })).toBe('open-webgal.webgal:4.5.0')
+  })
+
+  it('engine 身份键在缺少版本时回退到路径规范化结果', () => {
+    expect(engineManager.identityKeyOf({
+      path: '/Downloads/WebGAL/',
+      engineId: 'open-webgal.webgal',
+    })).toBe('/downloads/webgal')
   })
 
   it('importEngine 在目标目录已存在但无 DB 记录时抛出 TARGET_CONFLICT', async () => {

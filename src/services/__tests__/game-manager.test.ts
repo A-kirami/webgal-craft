@@ -268,6 +268,19 @@ describe('gameManager', () => {
     })
   })
 
+  it('getGamePreviewAssets 按既定候选顺序解析图标', async () => {
+    existsMock.mockImplementation(async (path: string) => path === '/games/demo/icons/icon-192.png')
+
+    await expect(gameManager.getGamePreviewAssets('/games/demo')).resolves.toEqual({
+      icon: {
+        path: 'icons/icon-192.png',
+      },
+      cover: {
+        path: 'game/background/cover.png',
+      },
+    })
+  })
+
   it('registerGame 会保留调用方提供的 metadata 并只补齐缺失的 previewAssets', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
@@ -282,6 +295,7 @@ describe('gameManager', () => {
       metadata: {
         name: 'Provided Name',
       },
+      pathKey: '/games/demo',
       previewAssets: {
         icon: {
           path: 'icons/favicon.ico',
@@ -326,12 +340,30 @@ describe('gameManager', () => {
     copyDirectoryWithProgressMock.mockImplementation(async (_from, _to, onProgress: (progress: number) => void) => {
       onProgress(48)
     })
-    existsMock.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+    existsMock.mockImplementation(async (path: string) => {
+      if (path === '/games/demo') {
+        return false
+      }
+      if (path === '/engines/WebGAL/4.5.0/game') {
+        return true
+      }
+      if (path === '/engines/WebGAL/4.5.0/icons/icon-192.png') {
+        return true
+      }
+      if (path.startsWith('/engines/WebGAL/4.5.0/icons/')) {
+        return false
+      }
+      if (path.startsWith('/games/demo/icons/')) {
+        return false
+      }
+      return false
+    })
 
     await expect(gameManager.createGame('Demo Game', '/games/demo', 'engine-1')).resolves.toBe('game-1')
 
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       path: '/games/demo',
+      pathKey: '/games/demo',
       engineId: 'engine-1',
       status: 'creating',
       metadata: {
@@ -339,7 +371,7 @@ describe('gameManager', () => {
       },
       previewAssets: {
         icon: {
-          path: 'icons/favicon.ico',
+          path: 'icons/icon-192.png',
         },
         cover: {
           path: 'game/background/cover.png',
@@ -395,11 +427,27 @@ describe('gameManager', () => {
       version: '4.5.0',
       path: '/engines/WebGAL/4.5.0',
     }))
-    existsMock
-      .mockResolvedValueOnce(false) // gamePath 不存在
-      .mockResolvedValueOnce(true) // engineGameDir 存在
+    let gamePathChecks = 0
+    existsMock.mockImplementation(async (path: string) => {
+      if (path === '/games/demo') {
+        gamePathChecks += 1
+        return gamePathChecks > 1
+      }
+      if (path === '/engines/WebGAL/4.5.0/game') {
+        return true
+      }
+      if (path === '/engines/WebGAL/4.5.0/icons/icon-192.png') {
+        return true
+      }
+      if (path.startsWith('/engines/WebGAL/4.5.0/icons/')) {
+        return false
+      }
+      if (path.startsWith('/games/demo/icons/')) {
+        return false
+      }
+      return false
+    })
     copyDirectoryWithProgressMock.mockRejectedValue(new Error('copy failed'))
-    existsMock.mockResolvedValueOnce(true) // 回滚时 gamePath 存在
 
     await expect(gameManager.createGame('Demo Game', '/games/demo', 'engine-1')).rejects.toThrow('copy failed')
 
@@ -415,11 +463,27 @@ describe('gameManager', () => {
       version: '4.5.0',
       path: '/engines/WebGAL/4.5.0',
     }))
-    existsMock
-      .mockResolvedValueOnce(false) // gamePath 不存在
-      .mockResolvedValueOnce(true) // engineGameDir 存在
+    let gamePathChecks = 0
+    existsMock.mockImplementation(async (path: string) => {
+      if (path === '/games/demo') {
+        gamePathChecks += 1
+        return gamePathChecks > 1
+      }
+      if (path === '/engines/WebGAL/4.5.0/game') {
+        return true
+      }
+      if (path === '/engines/WebGAL/4.5.0/icons/icon-192.png') {
+        return true
+      }
+      if (path.startsWith('/engines/WebGAL/4.5.0/icons/')) {
+        return false
+      }
+      if (path.startsWith('/games/demo/icons/')) {
+        return false
+      }
+      return false
+    })
     gameCmdsSetGameConfigMock.mockRejectedValue(new Error('config failed'))
-    existsMock.mockResolvedValueOnce(true) // 回滚时 gamePath 存在
 
     await expect(gameManager.createGame('Demo Game', '/games/demo', 'engine-1')).rejects.toThrow('config failed')
 
@@ -474,6 +538,7 @@ describe('gameManager', () => {
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: undefined,
       path: '/games/self-contained',
+      pathKey: '/games/self-contained',
     }))
   })
 
@@ -499,6 +564,7 @@ describe('gameManager', () => {
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: 'engine-1',
       path: '/games/vfs',
+      pathKey: '/games/vfs',
     }))
   })
 
@@ -526,6 +592,7 @@ describe('gameManager', () => {
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: 'engine-1',
       path: '/games/vfs',
+      pathKey: '/games/vfs',
     }))
     expect(warnMock).toHaveBeenCalledWith('关联的引擎 WebGAL 当前不可用，项目预览将受限: /games/vfs')
   })
@@ -568,6 +635,7 @@ describe('gameManager', () => {
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: 'engine-2',
       path: '/games/vfs',
+      pathKey: '/games/vfs',
     }))
   })
 
@@ -603,15 +671,19 @@ describe('gameManager', () => {
     })
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: 'engine-2',
+      pathKey: '/games/vfs',
     }))
   })
 
   it('importGame 遇到已注册项目时会幂等返回既有 ID', async () => {
-    existsMock.mockResolvedValue(true)
-    dbGamesToArrayMock.mockResolvedValue([createTestGame({
-      id: 'game-existing',
-      path: '/games/demo',
-    })])
+    dbGameWhereMock.mockReturnValue({
+      equals: () => ({
+        first: async () => createTestGame({
+          id: 'game-existing',
+          path: '/games/demo',
+        }),
+      }),
+    })
 
     await expect(gameManager.importGame('/games/demo')).resolves.toEqual({
       id: 'game-existing',
@@ -621,17 +693,24 @@ describe('gameManager', () => {
   })
 
   it('importGame 对大小写不同但归一化相同的路径也会幂等返回既有 ID', async () => {
-    existsMock.mockResolvedValue(true)
-    dbGamesToArrayMock.mockResolvedValue([createTestGame({
-      id: 'game-existing',
-      path: '/Games/Demo',
-    })])
+    dbGameWhereMock.mockReturnValue({
+      equals: () => ({
+        first: async () => createTestGame({
+          id: 'game-existing',
+          path: '/Games/Demo',
+        }),
+      }),
+    })
 
     await expect(gameManager.importGame('/games/demo')).resolves.toEqual({
       id: 'game-existing',
       alreadyRegistered: true,
     })
     expect(dbGameAddMock).not.toHaveBeenCalled()
+  })
+
+  it('game 身份键与自动发现复用同一套路径规范化规则', () => {
+    expect(gameManager.identityKeyOf({ path: '/Games/Demo/' })).toBe('/games/demo')
   })
 
   it('importGame 在用户取消选择引擎时会返回取消原因', async () => {
@@ -763,7 +842,10 @@ describe('gameManager', () => {
   })
 
   it('inspectGame 在 favicon 缺失时只产 warning', async () => {
-    existsMock.mockImplementation(async (path: string) => path !== '/games/demo/icons/favicon.ico')
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/demo'
+      || path === '/games/demo/game/config.txt'
+      || path === '/games/demo/game/background/cover.png')
 
     await expect(gameManager.inspectGame('/games/demo')).resolves.toMatchObject({
       availability: 'available',
@@ -950,6 +1032,7 @@ describe('gameManager', () => {
     expect(workspaceStoreState.currentGame).toEqual({
       id: 'game-1',
       path: '/games/demo',
+      pathKey: '/games/demo',
       createdAt: 0,
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
       status: 'created',
