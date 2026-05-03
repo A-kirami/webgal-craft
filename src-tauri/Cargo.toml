@@ -37,6 +37,8 @@ futures = "0.3"
 urlencoding = "2.1"
 tempfile = "3.15"
 percent-encoding = "2.3"
+sha2 = "0.10"
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2.4"

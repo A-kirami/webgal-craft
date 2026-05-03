@@ -5,6 +5,7 @@ import {
   FilePlus,
   FolderOpen,
   FolderPlus,
+  History,
   Pencil,
   Scissors,
   Trash2,
@@ -13,8 +14,10 @@ import { dirname } from '@tauri-apps/api/path'
 import { openPath } from '@tauri-apps/plugin-opener'
 
 import { useFileClipboard } from '~/features/editor/file-tree/useFileClipboard'
+import { backupManager } from '~/services/backup-manager'
 import { gameFs } from '~/services/game-fs'
 import { useModalStore } from '~/stores/modal'
+import { useWorkspaceStore } from '~/stores/workspace'
 import { settleBatch } from '~/utils/batch'
 import { handleError } from '~/utils/error-handler'
 
@@ -47,7 +50,20 @@ const {
 
 const { clipboard, operationType, canPaste, setClipboard, clearClipboard } = $(useFileClipboard(clipboardKey))
 const modalStore = useModalStore()
+const workspaceStore = useWorkspaceStore()
 const { t } = useI18n()
+
+const sceneLogicalPath = $computed(() => {
+  if (item.isDir || isRoot) {
+    return
+  }
+  const projectPath = workspaceStore.CWD
+  if (!projectPath) {
+    return
+  }
+  const relative = backupManager.toProjectRelative(projectPath, item.path)
+  return relative && backupManager.isScenePath(relative) ? relative : undefined
+})
 
 function handleCreateFile(): void {
   onCreateFile?.(item)
@@ -123,6 +139,15 @@ function handleDelete(): void {
   })
 }
 
+function handleViewHistory(): void {
+  const projectPath = workspaceStore.CWD
+  const logicalPath = sceneLogicalPath
+  if (!projectPath || !logicalPath) {
+    return
+  }
+  modalStore.open('BackupTimelineDialog', { projectPath, logicalPath })
+}
+
 async function handleRevealInExplorer(): Promise<void> {
   try {
     const pathToOpen = item.isDir ? item.path : await dirname(item.path)
@@ -175,6 +200,10 @@ const menuItems = $computed(() => {
 
     if (onRename) {
       items.push({ icon: Pencil, label: t('edit.fileTree.rename'), onClick: handleRename })
+    }
+
+    if (sceneLogicalPath) {
+      items.push({ icon: History, label: t('edit.fileTree.viewHistory'), onClick: handleViewHistory })
     }
 
     items.push({

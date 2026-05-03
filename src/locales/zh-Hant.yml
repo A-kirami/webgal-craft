@@ -432,6 +432,7 @@ modals:
       general: 一般
       edit: 編輯
       preview: 預覽
+      backup: 備份
       storage: 儲存
   saveChanges:
     title: 是否要儲存對 {name} 的變更?
@@ -459,6 +460,24 @@ modals:
     keepLocal: 保留本機修改
     loadExternal: 載入外部修改
     merge: 合併內容
+  backupTimeline:
+    title: 場景歷史版本
+    description: 選擇左側版本檢視差異，可還原至該時間點的內容。
+    empty: 此場景尚無歷史紀錄
+    restore: 還原
+    restoreSuccess: 已還原
+    restoreConfirmTitle: 還原此版本？
+    restoreConfirmContent: 將還原 {time} 儲存的版本。目前內容會先作為「還原操作」條目自動備份。
+    sourceKind:
+      manualSave: 手動儲存
+      autoSave: 自動儲存
+      restore: 還原操作
+    section:
+      today: 今天
+      yesterday: 昨天
+      thisWeek: 本週
+      earlier: 更早
+    loadMore: 載入更早的版本
 
 edit:
   header:
@@ -594,6 +613,7 @@ edit:
     pasteFailed: 貼上失敗
     pastePartialFailed: 部分貼上失敗 ({failed}/{total})
     pasteMultipleSuccess: 成功貼上 {count} 個項目
+    viewHistory: 檢視歷史版本
   previewPanel:
     copyUrl: 複製網址
     refreshPreview: 重新整理預覽
@@ -1011,6 +1031,14 @@ settings:
       label: 模板儲存位置
       title: 選擇模板儲存位置
     browse: 瀏覽
+  backup:
+    local: 本地歷史
+    maxVersions:
+      label: 每個場景的最大版本數
+      description: 超出此數量的舊版本會被自動清理
+    maxDays:
+      label: 版本保留天數
+      description: 超過此天數的舊版本會被自動清理
 
 notFound:
   message: 頁面不存在

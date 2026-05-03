@@ -432,6 +432,7 @@ modals:
       general: 常规
       edit: 编辑
       preview: 预览
+      backup: 备份
       storage: 存储
   saveChanges:
     title: 是否要保存对 {name} 的更改?
@@ -459,6 +460,24 @@ modals:
     keepLocal: 保留本地修改
     loadExternal: 加载外部修改
     merge: 合并内容
+  backupTimeline:
+    title: 场景历史版本
+    description: 选择左侧版本查看差异，可还原到该时间点的内容。
+    empty: 此场景暂无历史记录
+    restore: 还原
+    restoreSuccess: 已还原
+    restoreConfirmTitle: 还原此版本？
+    restoreConfirmContent: 将还原 {time} 保存的版本。当前内容会先作为「还原操作」条目自动备份。
+    sourceKind:
+      manualSave: 手动保存
+      autoSave: 自动保存
+      restore: 还原操作
+    section:
+      today: 今天
+      yesterday: 昨天
+      thisWeek: 本周
+      earlier: 更早
+    loadMore: 加载更早的版本
 
 edit:
   header:
@@ -594,6 +613,7 @@ edit:
     pasteFailed: 粘贴失败
     pastePartialFailed: 部分粘贴失败 ({failed}/{total})
     pasteMultipleSuccess: 成功粘贴 {count} 个项目
+    viewHistory: 查看历史版本
   previewPanel:
     copyUrl: 复制地址
     refreshPreview: 刷新预览
@@ -1011,6 +1031,14 @@ settings:
       label: 模板保存位置
       title: 选择模板保存位置
     browse: 浏览
+  backup:
+    local: 本地历史
+    maxVersions:
+      label: 每个场景的最大版本数
+      description: 超出此数量的旧版本会被自动清理
+    maxDays:
+      label: 版本保留天数
+      description: 超过此天数的旧版本会被自动清理
 
 notFound:
   message: 页面不存在

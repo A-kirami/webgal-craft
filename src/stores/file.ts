@@ -5,6 +5,7 @@ import { defineStore } from 'pinia'
 import { vfsCmds } from '~/commands/vfs'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { mime } from '~/plugins/mime'
+import { backupManager } from '~/services/backup-manager'
 import { clearDirectoryItemsCache, invalidateDirectoryItemsCache, readDirectoryItemsCached } from '~/services/directory-cache'
 import { gameManager } from '~/services/game-manager'
 import { projectConfigPath } from '~/services/platform/app-paths'
@@ -974,6 +975,8 @@ export const useFileStore = defineStore('file', () => {
         return undefined
       }
 
+      const oldLogicalPath = moveTarget.relSourcePath.replaceAll('\\', '/')
+
       const movedRelPath = await vfsCmds.movePath({
         projectPath: moveTarget.currentProjectPath,
         enginePath: moveTarget.currentEnginePath,
@@ -981,6 +984,17 @@ export const useFileStore = defineStore('file', () => {
         relPath: moveTarget.relSourcePath,
         targetRelPath: moveTarget.nextRelPath,
       })
+      const movedLogicalPath = movedRelPath.replaceAll('\\', '/')
+      try {
+        await backupManager.moveSceneHistory(
+          moveTarget.currentProjectPath,
+          oldLogicalPath,
+          movedLogicalPath,
+        )
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error)
+        void logger.warn(`[FileStore] 迁移场景历史失败 (${oldLogicalPath} -> ${movedLogicalPath}): ${msg}`)
+      }
       const nextPath = normalizeFsPath(`${moveTarget.currentProjectPath}/${movedRelPath}`)
       const targetParentId = getItemByPath(targetPath)?.id
       const sourceParentPath = normalizeFsPath(getParentPath(sourcePath))
@@ -1005,6 +1019,8 @@ export const useFileStore = defineStore('file', () => {
         return undefined
       }
 
+      const oldLogicalPath = relPath.replaceAll('\\', '/')
+
       const nextRelPath = await vfsCmds.renamePath({
         projectPath: currentProjectPath,
         enginePath: currentEnginePath,
@@ -1012,6 +1028,17 @@ export const useFileStore = defineStore('file', () => {
         relPath,
         newName,
       })
+      const renamedLogicalPath = nextRelPath.replaceAll('\\', '/')
+      try {
+        await backupManager.moveSceneHistory(
+          currentProjectPath,
+          oldLogicalPath,
+          renamedLogicalPath,
+        )
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error)
+        void logger.warn(`[FileStore] 迁移场景历史失败 (${oldLogicalPath} -> ${renamedLogicalPath}): ${msg}`)
+      }
       const nextPath = normalizeFsPath(`${currentProjectPath}/${nextRelPath}`)
       await handleRenameEvent(nextPath, path)
       return nextPath

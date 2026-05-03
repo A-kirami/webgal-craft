@@ -1,3 +1,4 @@
+pub mod backup;
 pub mod engine;
 pub mod error;
 pub mod fs;
