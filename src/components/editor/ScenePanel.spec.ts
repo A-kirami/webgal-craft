@@ -275,4 +275,65 @@ describe('ScenePanel', () => {
     await expect.element(page.getByText('start.txt')).toBeVisible()
     expect(fileSystemEventHandlers.get('directory:modified')).toBeTypeOf('function')
   })
+
+  it('点击刷新按钮会触发场景树重新读取', async () => {
+    const fileStore = createFileStore()
+    useFileStoreMock.mockReturnValue(fileStore)
+
+    renderInBrowser(ScenePanel, {
+      browser: {
+        i18nMode: 'localized',
+        messages: {
+          'zh-Hans': {
+            edit: {},
+          },
+        },
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('start.txt')).toBeVisible()
+    const initialCalls = fileStore.getFolderContents.mock.calls.length
+
+    // 工具栏按钮顺序：FilePlus / FolderPlus / RotateCw / CopyMinus
+    const refreshButton = document.querySelectorAll('button')[2] as HTMLButtonElement
+    refreshButton.click()
+
+    await vi.waitFor(() => {
+      expect(fileStore.getFolderContents.mock.calls.length).toBeGreaterThan(initialCalls)
+    })
+  })
+
+  it('文件系统目录创建事件会触发场景树重新读取', async () => {
+    const fileStore = createFileStore()
+    useFileStoreMock.mockReturnValue(fileStore)
+
+    renderInBrowser(ScenePanel, {
+      browser: {
+        i18nMode: 'localized',
+        messages: {
+          'zh-Hans': {
+            edit: {},
+          },
+        },
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('start.txt')).toBeVisible()
+    const initialCalls = fileStore.getFolderContents.mock.calls.length
+
+    fileSystemEventHandlers.get('directory:created')?.({
+      type: 'directory:created',
+      path: '/games/demo/game/scene/chapter-2',
+    })
+
+    await vi.waitFor(() => {
+      expect(fileStore.getFolderContents.mock.calls.length).toBeGreaterThan(initialCalls)
+    })
+  })
 })

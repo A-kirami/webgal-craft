@@ -39,15 +39,17 @@ const items = computedAsync(async () => {
   if (!isSilent) {
     isLoading = true
   }
+  // computedAsync 仅在首个 await 之前同步收集依赖，所以 itemsKey、scenePath、initialized
+  // 这三处响应式访问必须放在任何 await 之前，否则手动刷新与文件系统事件无法触发重算
+  const path = scenePath.value
+  void itemsKey
+  const initialized = fileStore.initialized
   try {
-    const path = scenePath.value
     if (!path) {
       return []
     }
     // 等待 FileStore 初始化完成，避免在 enginePath 未就绪时加载
-    await fileStore.initialized
-    // 使用 itemsKey 作为无意义依赖，强制触发 computedAsync 重新计算
-    void itemsKey
+    await initialized
     return await loadScenePanelTreeNodes(path, currentPath => fileStore.getFolderContents(currentPath))
   } catch (error) {
     logger.error(`[ScenePanel] 获取场景文件夹内容失败: ${error instanceof Error ? error.message : error}`)
