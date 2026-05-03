@@ -8,7 +8,7 @@ import { vfsCmds } from '~/commands/vfs'
 import { db } from '~/database/db'
 import { Engine, Game } from '~/database/model'
 import { engineManager, isEngineUsable } from '~/services/engine-manager'
-import { gameConfigPath, gameCoverPath, gameIconPath, projectConfigPath } from '~/services/platform/app-paths'
+import { gameConfigPath, gameCoverPath, projectConfigPath } from '~/services/platform/app-paths'
 import {
   classifyAvailability,
   createWarning,
@@ -51,6 +51,7 @@ const GAME_ICON_PREVIEW_CANDIDATES = [
   'icons/apple-touch-icon.png',
   'icons/favicon.ico',
 ] as const
+const DEFAULT_GAME_ICON_PREVIEW_PATH = GAME_ICON_PREVIEW_CANDIDATES.at(-1) ?? 'icons/favicon.ico'
 
 interface GamePreviewLookupResult {
   iconPath: string
@@ -103,17 +104,26 @@ function buildGamePreviewAssets(iconPath: string, titleImage: string | undefined
 }
 
 async function resolveGameIconPreviewPath(gamePath: string): Promise<GamePreviewLookupResult> {
-  for (const relativePath of GAME_ICON_PREVIEW_CANDIDATES) {
-    if (await exists(await join(gamePath, relativePath))) {
+  const candidateChecks = await Promise.all(
+    GAME_ICON_PREVIEW_CANDIDATES.map(async (relativePath) => {
+      const targetPath = await join(gamePath, relativePath)
       return {
-        iconPath: relativePath,
-        iconExists: true,
+        relativePath,
+        iconExists: await exists(targetPath),
       }
+    }),
+  )
+
+  const matchedCandidate = candidateChecks.find(candidate => candidate.iconExists)
+  if (matchedCandidate) {
+    return {
+      iconPath: matchedCandidate.relativePath,
+      iconExists: true,
     }
   }
 
   return {
-    iconPath: GAME_ICON_PREVIEW_CANDIDATES[GAME_ICON_PREVIEW_CANDIDATES.length - 1],
+    iconPath: DEFAULT_GAME_ICON_PREVIEW_PATH,
     iconExists: false,
   }
 }

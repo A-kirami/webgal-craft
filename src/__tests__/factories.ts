@@ -1,5 +1,6 @@
-import type { Engine, Game, Template } from '~/database/model'
 import { normalizeImportPath } from '~/services/resource-health'
+
+import type { Engine, Game, Template } from '~/database/model'
 
 interface TestGameFactoryOptions extends Partial<Omit<Game, 'metadata' | 'previewAssets'>> {
   metadata?: Partial<Game['metadata']>
