@@ -91,12 +91,13 @@ function mergeGameConfigEntries(
 }
 
 function buildGamePreviewAssets(iconPath: string, titleImage: string | undefined): GamePreviewAssets {
+  const normalizedTitle = titleImage?.replaceAll('\\', '/')
   return {
     icon: {
       path: iconPath,
     },
     cover: {
-      path: titleImage ? `game/background/${titleImage}` : '',
+      path: normalizedTitle ? `game/background/${normalizedTitle}` : '',
     },
   }
 }
