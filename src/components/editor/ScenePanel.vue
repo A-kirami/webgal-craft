@@ -27,8 +27,6 @@ const scenePath = computedAsync(async () => {
 })
 
 let isLoading = $ref(false)
-// 将刷新计数与模式合并到同一个响应式对象，确保 computedAsync 重算时拿到的
-// 是当前触发的语义，而不是历史队列中错位的模式
 let refreshTrigger = $ref({ count: 0, silent: false })
 
 const items = computedAsync(async () => {
