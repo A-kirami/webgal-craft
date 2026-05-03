@@ -575,6 +575,11 @@ edit:
     workspaceUnavailable: 工作区尚未初始化，请稍后重试
   unsupported:
     unsupportedFile: 该文件是二进制文件或使用了不受支持的文本编码，无法在编辑器中显示
+  leaveConfirm:
+    title: 返回主页前保存更改？
+    description: 如果现在返回主页，未保存的更改将会丢失。
+    save: 保存并返回
+    dontSave: 直接返回
   textEditor:
     languages:
       webgalscript: WebGAL 脚本

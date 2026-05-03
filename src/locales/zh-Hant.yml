@@ -574,7 +574,12 @@ edit:
     previewUnavailable: 預覽地址不存在，請先啟動預覽
     workspaceUnavailable: 工作區尚未初始化，請稍後重試
   unsupported:
-    unsupportedFile: 該檔案是二進位檔案或使用了不受支援的文字編碼，無法在編輯器中顯示
+    unsupportedFile: 此檔案是二進位檔案或使用了未支援的文字編碼，無法在編輯器中顯示
+  leaveConfirm:
+    title: 返回主頁前要先儲存變更嗎？
+    description: 如果現在返回主頁，未儲存的變更將會遺失。
+    save: 儲存並返回
+    dontSave: 直接返回
   textEditor:
     languages:
       webgalscript: WebGAL 腳本

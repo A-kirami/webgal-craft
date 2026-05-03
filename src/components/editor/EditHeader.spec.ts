@@ -15,22 +15,32 @@ interface ThumbnailStubValue {
 }
 
 const {
+  collectDocumentPathsUnderMock,
   getConfigMock,
+  getDirtyBufferContentMock,
   getByLabelMock,
+  hasUnsavedDocumentsUnderMock,
   loggerErrorMock,
   modalOpenMock,
   routerPushMock,
+  saveFileMock,
   toastErrorMock,
+  useEditorStoreMock,
   useModalStoreMock,
   usePreviewSessionStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
+  collectDocumentPathsUnderMock: vi.fn(),
   getConfigMock: vi.fn(),
+  getDirtyBufferContentMock: vi.fn(),
   getByLabelMock: vi.fn(),
+  hasUnsavedDocumentsUnderMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   modalOpenMock: vi.fn(),
   routerPushMock: vi.fn(),
+  saveFileMock: vi.fn(),
   toastErrorMock: vi.fn(),
+  useEditorStoreMock: vi.fn(),
   useModalStoreMock: vi.fn(),
   usePreviewSessionStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
@@ -67,6 +77,10 @@ vi.mock('~/services/config-manager', () => ({
 
 vi.mock('~/services/platform/app-paths', () => ({
   gameAssetDir: vi.fn(async (gamePath: string, assetType: string) => `${gamePath}/game/${assetType}`),
+}))
+
+vi.mock('~/stores/editor', () => ({
+  useEditorStore: useEditorStoreMock,
 }))
 
 vi.mock('~/stores/modal', () => ({
@@ -141,16 +155,29 @@ const globalStubs = {
 
 describe('EditHeader', () => {
   beforeEach(() => {
+    collectDocumentPathsUnderMock.mockReset()
     getConfigMock.mockReset()
+    getDirtyBufferContentMock.mockReset()
     getByLabelMock.mockReset()
+    hasUnsavedDocumentsUnderMock.mockReset()
     loggerErrorMock.mockReset()
     modalOpenMock.mockReset()
     routerPushMock.mockReset()
+    saveFileMock.mockReset()
     toastErrorMock.mockReset()
+    useEditorStoreMock.mockReset()
     useModalStoreMock.mockReset()
     usePreviewSessionStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
 
+    collectDocumentPathsUnderMock.mockReturnValue([])
+    hasUnsavedDocumentsUnderMock.mockReturnValue(false)
+    useEditorStoreMock.mockReturnValue({
+      collectDocumentPathsUnder: collectDocumentPathsUnderMock,
+      getDirtyBufferContent: getDirtyBufferContentMock,
+      hasUnsavedDocumentsUnder: hasUnsavedDocumentsUnderMock,
+      saveFile: saveFileMock,
+    })
     useModalStoreMock.mockReturnValue({
       open: modalOpenMock,
     })
@@ -241,6 +268,128 @@ describe('EditHeader', () => {
     })
 
     await expect.element(page.getByRole('button', { name: 'edit.header.gameSettings' })).not.toBeInTheDocument()
+  })
+
+  it('返回主页前无未保存更改时直接跳转', async () => {
+    renderInBrowser(EditHeader, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'common.back' }).click()
+
+    await vi.waitFor(() => {
+      expect(hasUnsavedDocumentsUnderMock).toHaveBeenCalledWith('/games/test')
+      expect(routerPushMock).toHaveBeenCalledWith('/')
+    })
+    expect(modalOpenMock).not.toHaveBeenCalledWith('SaveChangesModal', expect.anything())
+  })
+
+  it('返回主页前有未保存更改时会打开确认弹窗', async () => {
+    hasUnsavedDocumentsUnderMock.mockReturnValue(true)
+
+    renderInBrowser(EditHeader, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'common.back' }).click()
+
+    await vi.waitFor(() => {
+      expect(modalOpenMock).toHaveBeenCalledWith('SaveChangesModal', expect.objectContaining({
+        title: 'edit.leaveConfirm.title',
+      }))
+    })
+    expect(routerPushMock).not.toHaveBeenCalled()
+  })
+
+  it('确认保存后会先保存所有脏文档再返回主页', async () => {
+    hasUnsavedDocumentsUnderMock.mockReturnValue(true)
+    collectDocumentPathsUnderMock.mockReturnValue(['/games/test/scene/a.txt', '/games/test/scene/b.txt', '/games/test/assets/c.png'])
+    getDirtyBufferContentMock.mockImplementation((path: string) => {
+      switch (path) {
+        case '/games/test/scene/a.txt': {
+          return 'dirty-a'
+        }
+        case '/games/test/scene/b.txt': {
+          return
+        }
+        case '/games/test/assets/c.png': {
+          return 'dirty-c'
+        }
+        default: {
+          return
+        }
+      }
+    })
+
+    renderInBrowser(EditHeader, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'common.back' }).click()
+
+    await vi.waitFor(() => {
+      expect(modalOpenMock.mock.calls.some(([name]) => name === 'SaveChangesModal')).toBe(true)
+    })
+
+    const saveChangesCall = modalOpenMock.mock.calls.find(([name]) => name === 'SaveChangesModal')
+    if (!saveChangesCall) {
+      throw new Error('expected SaveChangesModal to be opened')
+    }
+
+    const [, modalOptions] = saveChangesCall as [string, { onSave?: () => Promise<void> }]
+
+    await modalOptions.onSave?.()
+
+    expect(saveFileMock).toHaveBeenCalledTimes(2)
+    expect(saveFileMock).toHaveBeenNthCalledWith(1, '/games/test/scene/a.txt')
+    expect(saveFileMock).toHaveBeenNthCalledWith(2, '/games/test/assets/c.png')
+    expect(routerPushMock).toHaveBeenCalledWith('/')
+  })
+
+  it('确认不保存时会直接返回主页且不会触发保存', async () => {
+    hasUnsavedDocumentsUnderMock.mockReturnValue(true)
+
+    renderInBrowser(EditHeader, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'common.back' }).click()
+
+    await vi.waitFor(() => {
+      expect(modalOpenMock.mock.calls.some(([name]) => name === 'SaveChangesModal')).toBe(true)
+    })
+
+    const saveChangesCall = modalOpenMock.mock.calls.find(([name]) => name === 'SaveChangesModal')
+    if (!saveChangesCall) {
+      throw new Error('expected SaveChangesModal to be opened')
+    }
+
+    const [, modalOptions] = saveChangesCall as [string, { onDontSave?: () => Promise<void> }]
+
+    await modalOptions.onDontSave?.()
+
+    expect(saveFileMock).not.toHaveBeenCalled()
+    expect(routerPushMock).toHaveBeenCalledWith('/')
   })
 
   it('打开游戏配置前会先预取配置，再带着准备好的数据打开模态框', async () => {
