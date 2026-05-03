@@ -90,8 +90,12 @@ function mergeGameConfigEntries(
   return mergedEntries
 }
 
+function normalizeLogicalAssetPath(path: string | undefined): string | undefined {
+  return path?.replaceAll('\\', '/')
+}
+
 function buildGamePreviewAssets(iconPath: string, titleImage: string | undefined): GamePreviewAssets {
-  const normalizedTitle = titleImage?.replaceAll('\\', '/')
+  const normalizedTitle = normalizeLogicalAssetPath(titleImage)
   return {
     icon: {
       path: iconPath,
@@ -621,7 +625,7 @@ async function collectGameWarnings(
     warnings.push(createWarning('missing-game-icon', '游戏图标不存在'))
   }
 
-  const titleImg = metadata.titleImg?.trim()
+  const titleImg = normalizeLogicalAssetPath(metadata.titleImg?.trim())
   if (!titleImg) {
     warnings.push(createWarning('missing-title-image', '游戏未配置 Title_img'))
   } else if (!(await exists(await gameCoverPath(gamePath, titleImg)))) {
