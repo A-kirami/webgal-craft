@@ -32,10 +32,8 @@ function handleVersionClick() {
         </div>
         <button
           :class="[
-            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-mono text-sm font-semibold transition-all',
-            version.link
-              ? 'text-primary bg-primary/10 hover:bg-primary/20 hover:scale-105'
-              : 'text-muted-foreground bg-muted/50 cursor-default',
+            'text-sm font-mono font-semibold px-3 py-1.5 rounded-md bg-muted inline-flex gap-1.5 transition-all items-center',
+            version.link ? 'text-primary' : 'text-muted-foreground cursor-default',
           ]"
           @click="handleVersionClick"
         >
