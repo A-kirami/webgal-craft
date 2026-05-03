@@ -10,6 +10,7 @@ pub struct WindowConfig {
     height: Option<f64>,
     resizable: bool,
     center: bool,
+    visible: bool,
     use_custom_title_bar: bool,
 }
 
@@ -25,6 +26,7 @@ impl WindowConfig {
             height: None,
             resizable: true,
             center: false,
+            visible: true,
             use_custom_title_bar: false,
         }
     }
@@ -67,7 +69,13 @@ impl WindowConfig {
             .min_size(620.0, 540.0)
             .size(1280.0, 800.0)
             .center(true)
+            .visible(false)
             .use_custom_title_bar(true)
+    }
+
+    pub fn visible(mut self, visible: bool) -> Self {
+        self.visible = visible;
+        self
     }
 
     fn apply_platform_tweaks<'a, R: Runtime, M: tauri::Manager<R>>(
@@ -112,6 +120,7 @@ impl WindowConfig {
             height,
             resizable,
             center,
+            visible,
             use_custom_title_bar,
         } = self;
 
@@ -119,7 +128,9 @@ impl WindowConfig {
             log::debug!("正在创建窗口 '{}'，URL: '{:?}'", label, url);
         }
 
-        let mut builder = WebviewWindowBuilder::new(handle, &label, url).resizable(resizable);
+        let mut builder = WebviewWindowBuilder::new(handle, &label, url)
+            .resizable(resizable)
+            .visible(visible);
 
         if let (Some(width), Some(height)) = (min_width, min_height) {
             builder = builder.min_inner_size(width, height);
@@ -168,6 +179,7 @@ mod tests {
         assert!(config.height.is_none());
         assert!(config.resizable);
         assert!(!config.center);
+        assert!(config.visible);
         assert!(!config.use_custom_title_bar);
     }
 
@@ -183,6 +195,7 @@ mod tests {
         assert_eq!(config.height, Some(800.0));
         assert!(config.resizable);
         assert!(config.center);
+        assert!(!config.visible);
         assert!(config.use_custom_title_bar);
     }
 }
