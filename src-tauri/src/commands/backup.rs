@@ -373,6 +373,14 @@ pub async fn restore_backup(
     let project = PathBuf::from(&project_path);
     let backups_root = backup_root(&project);
     let safe_rel = validate_backup_path(&backup_path)?;
+    // 防止跨 scene 还原：backup_path 必须落在 logical_path 对应的镜像目录下
+    if !safe_rel.starts_with(&mirror) {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("backup path {backup_path} does not belong to {logical_path}"),
+        )
+        .into());
+    }
     let content = fs::read(backups_root.join(safe_rel))?;
 
     // 先把内容写回源文件
@@ -1065,5 +1073,37 @@ mod tests {
             "../../escape.bak".into(),
         ));
         assert!(err.is_err(), "should reject traversal in restore");
+    }
+
+    #[test]
+    fn restore_backup_rejects_cross_scene_backup_path() {
+        let tmp = TempDir::new().unwrap();
+        setup_scene(tmp.path(), "game/scene/a.txt", "a");
+        setup_scene(tmp.path(), "game/scene/b.txt", "b");
+
+        let a_entry = rt()
+            .block_on(create_backup(
+                project_string(&tmp),
+                "game/scene/a.txt".into(),
+                BackupSourceKind::ManualSave,
+                None,
+                true,
+                None,
+            ))
+            .unwrap()
+            .unwrap();
+
+        // 用 a 的 backup_path 去 restore b：必须被拒绝，避免把 a 的内容写进 b
+        let err = rt().block_on(restore_backup(
+            project_string(&tmp),
+            "game/scene/b.txt".into(),
+            a_entry.backup_path,
+        ));
+        assert!(err.is_err(), "cross-scene restore must be rejected");
+        assert_eq!(
+            fs::read_to_string(tmp.path().join("game/scene/b.txt")).unwrap(),
+            "b",
+            "b's source must be untouched"
+        );
     }
 }
