@@ -677,12 +677,15 @@ describe('gameManager', () => {
 
   it('importGame 遇到已注册项目时会幂等返回既有 ID', async () => {
     dbGameWhereMock.mockReturnValue({
-      equals: () => ({
-        first: async () => createTestGame({
-          id: 'game-existing',
-          path: '/games/demo',
-        }),
-      }),
+      equals: (pathKey: string) => {
+        expect(pathKey).toBe('/games/demo')
+        return {
+          first: async () => createTestGame({
+            id: 'game-existing',
+            path: '/games/demo',
+          }),
+        }
+      },
     })
 
     await expect(gameManager.importGame('/games/demo')).resolves.toEqual({
