@@ -42,11 +42,15 @@ async function handleBack() {
     dontSaveLabel: t('edit.leaveConfirm.dontSave'),
     onDontSave: navigateHome,
     onSave: async () => {
-      const dirtyPaths = editorStore.collectDocumentPathsUnder(currentGamePath)
-        .filter(path => editorStore.getDirtyBufferContent(path) !== undefined)
+      try {
+        const dirtyPaths = editorStore.collectDocumentPathsUnder(currentGamePath)
+          .filter(path => editorStore.getDirtyBufferContent(path) !== undefined)
 
-      await Promise.all(dirtyPaths.map(path => editorStore.saveFile(path)))
-      await navigateHome()
+        await Promise.all(dirtyPaths.map(path => editorStore.saveFile(path)))
+        await navigateHome()
+      } catch (error) {
+        handleError(error)
+      }
     },
     saveLabel: t('edit.leaveConfirm.save'),
   })
