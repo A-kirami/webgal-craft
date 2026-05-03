@@ -6,6 +6,7 @@ export type ResourceAvailability = 'available' | 'missing' | 'broken'
 
 export type ResourceWarningCode =
   | 'missing-favicon'
+  | 'missing-game-icon'
   | 'missing-title-image'
   | 'missing-title-image-file'
   | 'missing-game-name'

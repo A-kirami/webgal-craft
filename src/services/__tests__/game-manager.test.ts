@@ -849,7 +849,7 @@ describe('gameManager', () => {
 
     await expect(gameManager.inspectGame('/games/demo')).resolves.toMatchObject({
       availability: 'available',
-      warnings: [{ code: 'missing-favicon' }],
+      warnings: [{ code: 'missing-game-icon' }],
     })
   })
 

@@ -617,7 +617,7 @@ async function collectGameWarnings(
   }
 
   if (!iconLookup.iconExists) {
-    warnings.push(createWarning('missing-favicon', '游戏 favicon 不存在'))
+    warnings.push(createWarning('missing-game-icon', '游戏图标不存在'))
   }
 
   const titleImg = metadata.titleImg?.trim()
