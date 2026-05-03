@@ -15,6 +15,7 @@ import {
   normalizeImportPath,
   ResourceHealthResult,
   ResourceWarning,
+  toResourcePathKey,
 } from '~/services/resource-health'
 import { templateSwitch } from '~/services/template-switch'
 import { GameMetadata, GamePreviewAssets } from '~/services/types'
@@ -51,7 +52,8 @@ const GAME_ICON_PREVIEW_CANDIDATES = [
   'icons/apple-touch-icon.png',
   'icons/favicon.ico',
 ] as const
-const DEFAULT_GAME_ICON_PREVIEW_PATH = GAME_ICON_PREVIEW_CANDIDATES.at(-1) ?? 'icons/favicon.ico'
+const DEFAULT_GAME_ICON_PREVIEW_PATH: string =
+  GAME_ICON_PREVIEW_CANDIDATES.at(-1)!
 
 interface GamePreviewLookupResult {
   iconPath: string
@@ -86,10 +88,6 @@ function mergeGameConfigEntries(
   }
 
   return mergedEntries
-}
-
-function gamePathKeyOf(input: { path: string }): string {
-  return normalizeImportPath(input.path).comparablePath
 }
 
 function buildGamePreviewAssets(iconPath: string, titleImage: string | undefined): GamePreviewAssets {
@@ -158,14 +156,18 @@ function withGamePreviewCacheVersion(
 }
 
 async function getGamePreviewAssets(gamePath: string): Promise<GamePreviewAssets> {
-  const metadata = await getGameMetadata(gamePath)
-  const iconLookup = await resolveGameIconPreviewPath(gamePath)
+  const [metadata, iconLookup] = await Promise.all([
+    getGameMetadata(gamePath),
+    resolveGameIconPreviewPath(gamePath),
+  ])
   return buildGamePreviewAssets(iconLookup.iconPath, metadata.titleImg)
 }
 
 async function getGameSnapshot(gamePath: string): Promise<Pick<Game, 'metadata' | 'previewAssets'>> {
-  const metadata = await getGameMetadata(gamePath)
-  const iconLookup = await resolveGameIconPreviewPath(gamePath)
+  const [metadata, iconLookup] = await Promise.all([
+    getGameMetadata(gamePath),
+    resolveGameIconPreviewPath(gamePath),
+  ])
   const cacheVersion = Date.now()
 
   return {
@@ -196,7 +198,7 @@ function applyCurrentGamePatch(
 }
 
 async function refreshRegisteredGameSnapshot(gamePath: string): Promise<void> {
-  const game = await db.games.where('pathKey').equals(gamePathKeyOf({ path: gamePath })).first()
+  const game = await db.games.where('pathKey').equals(toResourcePathKey({ path: gamePath })).first()
   if (!game) {
     return
   }
@@ -233,7 +235,7 @@ async function registerGame(
   return db.games.add({
     id: crypto.randomUUID(),
     path: gamePath,
-    pathKey: gamePathKeyOf({ path: gamePath }),
+    pathKey: toResourcePathKey({ path: gamePath }),
     engineId,
     createdAt: Date.now(),
     lastModified: Date.now(),
@@ -432,16 +434,15 @@ async function createGame(gameName: string, gamePath: string, engineId: string, 
     })
 
     // 读取引擎默认配置获取初始预览资源路径，使创建中也能通过引擎 serve URL 显示封面和图标
-    let initialPreviewAssets: GamePreviewAssets
+    const iconLookup = await resolveGameIconPreviewPath(engine.path)
+    let titleImg = ''
     try {
       const engineConfig = await gameCmds.getGameConfig(engine.path)
-      const titleImg = findGameConfigEntryValue(engineConfig.entries, TITLE_IMAGE_RAW_KEY) ?? ''
-      const iconLookup = await resolveGameIconPreviewPath(engine.path)
-      initialPreviewAssets = buildGamePreviewAssets(iconLookup.iconPath, titleImg)
+      titleImg = findGameConfigEntryValue(engineConfig.entries, TITLE_IMAGE_RAW_KEY) ?? ''
     } catch {
-      const iconLookup = await resolveGameIconPreviewPath(engine.path)
-      initialPreviewAssets = buildGamePreviewAssets(iconLookup.iconPath, undefined)
+      // 引擎未提供默认 game/config.txt 时按空 titleImg 处理
     }
+    const initialPreviewAssets = buildGamePreviewAssets(iconLookup.iconPath, titleImg)
 
     gameId = await registerGame(gamePath, {
       engineId,
@@ -597,17 +598,17 @@ async function renameGame(id: string, newName: string): Promise<void> {
 }
 
 async function findExistingGameByPath(rawPath: string): Promise<Game | undefined> {
-  return db.games.where('pathKey').equals(gamePathKeyOf({ path: rawPath })).first()
+  return db.games.where('pathKey').equals(toResourcePathKey({ path: rawPath })).first()
 }
 
-function identityKeyOf(input: Pick<Game, 'path'> | { path: string }): string {
-  return gamePathKeyOf(input)
+function identityKeyOf(input: { path: string }): string {
+  return toResourcePathKey(input)
 }
 
 async function collectGameWarnings(
   gamePath: string,
   metadata: GameMetadata,
-  iconLookup?: GamePreviewLookupResult,
+  iconLookup: GamePreviewLookupResult,
 ): Promise<ResourceWarning[]> {
   const warnings: ResourceWarning[] = []
 
@@ -615,8 +616,7 @@ async function collectGameWarnings(
     warnings.push(createWarning('missing-game-name', '游戏未配置 Game_name'))
   }
 
-  const resolvedIconLookup = iconLookup ?? await resolveGameIconPreviewPath(gamePath)
-  if (!resolvedIconLookup.iconExists) {
+  if (!iconLookup.iconExists) {
     warnings.push(createWarning('missing-favicon', '游戏 favicon 不存在'))
   }
 
@@ -658,8 +658,10 @@ async function inspectGameStructure(
 async function inspectGameSemantics(
   normalizedPath: string,
 ): Promise<GameInspectionPayload & { warnings: ResourceWarning[] }> {
-  const metadata = await getGameMetadata(normalizedPath)
-  const iconLookup = await resolveGameIconPreviewPath(normalizedPath)
+  const [metadata, iconLookup] = await Promise.all([
+    getGameMetadata(normalizedPath),
+    resolveGameIconPreviewPath(normalizedPath),
+  ])
   const warnings = await collectGameWarnings(normalizedPath, metadata, iconLookup)
 
   return {

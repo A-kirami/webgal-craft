@@ -14,6 +14,7 @@ import {
   ResourceAvailability,
   ResourceHealthResult,
   ResourceWarning,
+  toResourcePathKey,
 } from '~/services/resource-health'
 import { EngineMetadata, EnginePreviewAssets } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
@@ -38,10 +39,6 @@ interface DeleteEngineCheckResult {
   associatedGames?: Game[]
   canDelete: boolean
   reason?: 'ENGINE_HAS_ASSOCIATED_GAMES'
-}
-
-function enginePathKeyOf(input: { path: string }): string {
-  return normalizeImportPath(input.path).comparablePath
 }
 
 function sanitizeEnginePathSegment(value: string, fieldName: '引擎名称' | '引擎版本'): string {
@@ -165,7 +162,7 @@ async function registerEngine(
   return db.engines.add({
     id: crypto.randomUUID(),
     path: enginePath,
-    pathKey: enginePathKeyOf({ path: enginePath }),
+    pathKey: toResourcePathKey({ path: enginePath }),
     engineId: options.engineId,
     name: options.name,
     version: options.version,
@@ -294,18 +291,17 @@ async function copyAndFinalizeEngine(
 }
 
 async function findEngineByComparablePath(rawPath: string): Promise<Engine | undefined> {
-  return db.engines.where('pathKey').equals(enginePathKeyOf({ path: rawPath })).first()
+  return db.engines.where('pathKey').equals(toResourcePathKey({ path: rawPath })).first()
 }
 
 function identityKeyOf(
-  input: Pick<Engine, 'path' | 'engineId' | 'version'>
-    | { path: string, engineId?: string, version?: string },
+  input: { path: string, engineId?: string, version?: string },
 ): string {
   if (input.engineId && input.version) {
     return `${input.engineId}:${input.version}`
   }
 
-  return enginePathKeyOf(input)
+  return toResourcePathKey(input)
 }
 
 async function collectEngineWarnings(

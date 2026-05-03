@@ -51,6 +51,10 @@ export function normalizeImportPath(rawPath: string): NormalizedImportPath {
   }
 }
 
+export function toResourcePathKey(input: { path: string }): string {
+  return normalizeImportPath(input.path).comparablePath
+}
+
 export function classifyAvailability(input: AvailabilityClassificationInput): ResourceAvailability {
   if (!input.pathExists) {
     return 'missing'
