@@ -342,9 +342,16 @@ describe('EditHeader', () => {
 
     await page.getByRole('button', { name: 'common.back' }).click()
 
+    await vi.waitFor(() => {
+      expect(modalOpenMock.mock.calls.some(([name]) => name === 'SaveChangesModal')).toBe(true)
+    })
+
     const saveChangesCall = modalOpenMock.mock.calls.find(([name]) => name === 'SaveChangesModal')
-    expect(saveChangesCall).toBeDefined()
-    const modalOptions = saveChangesCall?.[1] as { onSave?: () => Promise<void> }
+    if (!saveChangesCall) {
+      throw new Error('expected SaveChangesModal to be opened')
+    }
+
+    const [, modalOptions] = saveChangesCall as [string, { onSave?: () => Promise<void> }]
 
     await modalOptions.onSave?.()
 
