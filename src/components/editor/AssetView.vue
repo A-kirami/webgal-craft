@@ -340,11 +340,15 @@ async function resolveRenameAnchor(
     return undefined
   }
 
+  // 项被搜索过滤掉时，没有对应 DOM 行可锚定，仅在此场景退回 viewport，
+  // 避免新建后因搜索条件不匹配而完全无法重命名。
+  // 注意不要把这条 fallback 用于「项可见但 DOM 锚点未及时出现」的情况：
+  // 那会让 Popover 错误地相对整个 viewport 定位，造成位置异常。
   if (!isItemVisibleInCurrentFilter(path)) {
     return getRenameFallbackAnchor()
   }
 
-  return await waitForRenameAnchor(path, directoryPathSnapshot) ?? getRenameFallbackAnchor()
+  return await waitForRenameAnchor(path, directoryPathSnapshot)
 }
 
 function normalizeRenameTarget(item: { path: string, name: string, isDir?: boolean }): FileViewerItem {
@@ -518,7 +522,8 @@ async function handleContextMenuCreateItem(
   const currentDirectorySnapshot = currentDirectoryPath || item.path
 
   try {
-    const createdPath = await options.create(item.path, options.name)
+    const rawCreatedPath = await options.create(item.path, options.name)
+    const createdPath = normalizeFsPath(rawCreatedPath)
     const createdName = getBaseName(createdPath)
 
     scheduleItemsRefresh(true)
