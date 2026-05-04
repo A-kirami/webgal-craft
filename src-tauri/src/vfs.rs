@@ -345,18 +345,21 @@ impl OverlayFs {
             return Ok(());
         }
 
-        if self.logical_path_exists(to)? && !self.logical_paths_share_physical_entry(from, to)? {
-            return Err(already_exists_error());
-        }
-
         let source_upper = self.validate_upper_path(from)?;
         let source_lower = self
             .resolve_lower_path(from)
             .filter(|(lower_path, _)| lower_path.exists());
         let target_upper = self.validate_upper_path(to)?;
+        let source_is_whiteouted = source_category.uses_whiteout() && self.is_whiteouted(from)?;
+        let source_exists =
+            source_upper.exists() || (!source_is_whiteouted && source_lower.is_some());
 
-        if !source_upper.exists() && source_lower.is_none() && !self.is_whiteouted(from)? {
+        if !source_exists {
             return Err(VfsError::NotFound);
+        }
+
+        if self.logical_path_exists(to)? && !self.logical_paths_share_physical_entry(from, to)? {
+            return Err(already_exists_error());
         }
 
         self.ensure_directory_target_is_not_nested(from, to)?;
@@ -1834,6 +1837,40 @@ mod tests {
             .expect_err("rename to existing target should fail");
 
         assert_eq!(error.code(), "ALREADY_EXISTS");
+    }
+
+    #[test]
+    fn rename_logical_path_reports_not_found_before_target_conflict() {
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
+
+        fs::create_dir_all(engine.join("game").join("template"))
+            .expect("template directory should be created");
+        fs::create_dir_all(upper.join("game").join("scene"))
+            .expect("scene directory should be created");
+        fs::write(
+            upper.join("game").join("scene").join("existing.txt"),
+            "target",
+        )
+        .expect("conflict target should already exist");
+
+        let overlay = OverlayFs::new(
+            upper,
+            Some(engine.clone()),
+            Some(engine.join("game").join("template")),
+        )
+        .expect("overlay should be created");
+
+        let error = overlay
+            .rename_logical_path(
+                Path::new("game/scene/missing.txt"),
+                Path::new("game/scene/existing.txt"),
+            )
+            .expect_err("missing source should not be masked by target conflict");
+
+        assert!(matches!(error, VfsError::NotFound));
     }
 
     #[test]
