@@ -646,7 +646,11 @@ impl OverlayFs {
             .is_some_and(|(lower_path, _)| lower_path.exists()))
     }
 
-    fn logical_paths_share_physical_entry(&self, left: &Path, right: &Path) -> Result<bool, VfsError> {
+    fn logical_paths_share_physical_entry(
+        &self,
+        left: &Path,
+        right: &Path,
+    ) -> Result<bool, VfsError> {
         let left_resolved = match self.resolve_physical_path(left) {
             Ok(path) => path,
             Err(VfsError::NotFound) => return Ok(false),
@@ -1854,7 +1858,10 @@ mod tests {
         .expect("overlay should be created");
 
         overlay
-            .rename_logical_path(Path::new("game/scene/Hero.png"), Path::new("game/scene/hero.png"))
+            .rename_logical_path(
+                Path::new("game/scene/Hero.png"),
+                Path::new("game/scene/hero.png"),
+            )
             .expect("case-only rename should succeed");
 
         let entry_names = fs::read_dir(upper.join("game").join("scene"))
