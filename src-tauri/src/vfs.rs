@@ -345,18 +345,21 @@ impl OverlayFs {
             return Ok(());
         }
 
-        if self.logical_path_exists(to)? {
-            return Err(already_exists_error());
-        }
-
         let source_upper = self.validate_upper_path(from)?;
         let source_lower = self
             .resolve_lower_path(from)
             .filter(|(lower_path, _)| lower_path.exists());
         let target_upper = self.validate_upper_path(to)?;
+        let source_is_whiteouted = source_category.uses_whiteout() && self.is_whiteouted(from)?;
+        let source_exists =
+            source_upper.exists() || (!source_is_whiteouted && source_lower.is_some());
 
-        if !source_upper.exists() && source_lower.is_none() && !self.is_whiteouted(from)? {
+        if !source_exists {
             return Err(VfsError::NotFound);
+        }
+
+        if self.logical_path_exists(to)? && !self.logical_paths_share_physical_entry(from, to)? {
+            return Err(already_exists_error());
         }
 
         self.ensure_directory_target_is_not_nested(from, to)?;
@@ -644,6 +647,25 @@ impl OverlayFs {
         Ok(self
             .resolve_lower_path(logical_path)
             .is_some_and(|(lower_path, _)| lower_path.exists()))
+    }
+
+    fn logical_paths_share_physical_entry(
+        &self,
+        left: &Path,
+        right: &Path,
+    ) -> Result<bool, VfsError> {
+        let left_resolved = match self.resolve_physical_path(left) {
+            Ok(path) => path,
+            Err(VfsError::NotFound) => return Ok(false),
+            Err(error) => return Err(error),
+        };
+        let right_resolved = match self.resolve_physical_path(right) {
+            Ok(path) => path,
+            Err(VfsError::NotFound) => return Ok(false),
+            Err(error) => return Err(error),
+        };
+
+        same_physical_entry(&left_resolved.physical_path, &right_resolved.physical_path)
     }
 
     fn copy_overlay_path(&self, from: &Path, to: &Path) -> Result<(), VfsError> {
@@ -1047,6 +1069,14 @@ fn already_exists_error() -> VfsError {
         ErrorKind::AlreadyExists,
         "目标路径已存在",
     ))
+}
+
+fn same_physical_entry(left: &Path, right: &Path) -> Result<bool, VfsError> {
+    if !left.exists() || !right.exists() {
+        return Ok(false);
+    }
+
+    Ok(left.canonicalize()? == right.canonicalize()?)
 }
 
 fn strip_template_prefix(path: &Path) -> Option<&Path> {
@@ -1807,6 +1837,81 @@ mod tests {
             .expect_err("rename to existing target should fail");
 
         assert_eq!(error.code(), "ALREADY_EXISTS");
+    }
+
+    #[test]
+    fn rename_logical_path_reports_not_found_before_target_conflict() {
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
+
+        fs::create_dir_all(engine.join("game").join("template"))
+            .expect("template directory should be created");
+        fs::create_dir_all(upper.join("game").join("scene"))
+            .expect("scene directory should be created");
+        fs::write(
+            upper.join("game").join("scene").join("existing.txt"),
+            "target",
+        )
+        .expect("conflict target should already exist");
+
+        let overlay = OverlayFs::new(
+            upper,
+            Some(engine.clone()),
+            Some(engine.join("game").join("template")),
+        )
+        .expect("overlay should be created");
+
+        let error = overlay
+            .rename_logical_path(
+                Path::new("game/scene/missing.txt"),
+                Path::new("game/scene/existing.txt"),
+            )
+            .expect_err("missing source should not be masked by target conflict");
+
+        assert!(matches!(error, VfsError::NotFound));
+    }
+
+    #[test]
+    fn rename_logical_path_allows_case_only_change_for_same_upper_entry() {
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
+
+        fs::create_dir_all(engine.join("game").join("template"))
+            .expect("template directory should be created");
+        fs::create_dir_all(upper.join("game").join("scene"))
+            .expect("scene directory should be created");
+        fs::write(upper.join("game").join("scene").join("Hero.png"), "hero")
+            .expect("source file should be written");
+
+        let overlay = OverlayFs::new(
+            upper.clone(),
+            Some(engine.clone()),
+            Some(engine.join("game").join("template")),
+        )
+        .expect("overlay should be created");
+
+        overlay
+            .rename_logical_path(
+                Path::new("game/scene/Hero.png"),
+                Path::new("game/scene/hero.png"),
+            )
+            .expect("case-only rename should succeed");
+
+        let entry_names = fs::read_dir(upper.join("game").join("scene"))
+            .expect("scene entries should be readable")
+            .map(|entry| {
+                entry
+                    .expect("directory entry should be readable")
+                    .file_name()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(entry_names, vec!["hero.png"]);
     }
 
     #[test]
