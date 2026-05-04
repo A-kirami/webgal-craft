@@ -1,5 +1,5 @@
 import { Channel, invoke } from '@tauri-apps/api/core'
-import { basename, dirname, join } from '@tauri-apps/api/path'
+import { basename, join } from '@tauri-apps/api/path'
 import {
   copyFile as copyFileFs,
   exists,
@@ -131,15 +131,7 @@ async function deleteFile(path: string, permanent = false): Promise<void> {
 }
 
 async function renameFile(oldPath: string, newName: string): Promise<string> {
-  const parentDir = await dirname(oldPath)
-  const newPath = await join(parentDir, newName)
-
-  if (await exists(newPath)) {
-    throw new AppError('IO_ERROR', '目标路径已存在')
-  }
-
-  await rename(oldPath, newPath)
-  return newPath
+  return safeInvoke<string>('rename_file', { path: oldPath, newName })
 }
 
 interface DestinationPath {

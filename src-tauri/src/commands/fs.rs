@@ -1,7 +1,7 @@
 use std::{
     fs::{self, OpenOptions},
     io::{self, ErrorKind},
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
 /// 检测文件是否为二进制文件
@@ -293,6 +293,52 @@ pub async fn delete_file(path: String, permanent: Option<bool>) -> AppResult<()>
     Ok(())
 }
 
+fn build_rename_destination(source_path: &Path, new_name: &str) -> AppResult<PathBuf> {
+    let parent = source_path
+        .parent()
+        .ok_or_else(|| AppError::Server("源路径缺少父目录".into()))?;
+    let mut components = Path::new(new_name).components();
+
+    match (components.next(), components.next()) {
+        (Some(Component::Normal(name)), None) => Ok(parent.join(name)),
+        _ => Err(AppError::Server("重命名目标名称无效".into())),
+    }
+}
+
+fn paths_refer_to_same_entry(left: &Path, right: &Path) -> io::Result<bool> {
+    if !left.exists() || !right.exists() {
+        return Ok(false);
+    }
+
+    Ok(left.canonicalize()? == right.canonicalize()?)
+}
+
+#[tauri::command]
+pub fn rename_file(path: String, new_name: String) -> AppResult<String> {
+    let source_path = PathBuf::from(&path);
+    if !source_path.exists() {
+        return Err(AppError::Server(format!(
+            "路径不存在: {}",
+            source_path.display()
+        )));
+    }
+
+    let target_path = build_rename_destination(&source_path, &new_name)?;
+    if source_path == target_path {
+        return Ok(target_path.to_string_lossy().into_owned());
+    }
+
+    if target_path.exists() && !paths_refer_to_same_entry(&source_path, &target_path)? {
+        return Err(AppError::Io(io::Error::new(
+            ErrorKind::AlreadyExists,
+            "目标路径已存在",
+        )));
+    }
+
+    fs::rename(&source_path, &target_path)?;
+    Ok(target_path.to_string_lossy().into_owned())
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -303,7 +349,7 @@ mod tests {
 
     use super::{
         copy_dir_all, count_files_with_excludes, is_binary_file, read_image_dimensions,
-        validate_directory_structure,
+        rename_file, validate_directory_structure,
     };
 
     const PNG_1X1_BYTES: &[u8] = &[
@@ -504,5 +550,33 @@ mod tests {
 
         fs::remove_dir_all(&src).expect("src temp dir should be removed");
         fs::remove_dir_all(&dst).expect("dst temp dir should be removed");
+    }
+
+    #[test]
+    fn rename_file_allows_case_only_change_for_same_path() {
+        let root = create_temp_dir("webgal-craft-rename-file");
+        let source_path = root.join("scene.txt");
+        fs::write(&source_path, "scene").expect("source file should be created");
+
+        let renamed = rename_file(
+            source_path.to_string_lossy().into_owned(),
+            "Scene.txt".into(),
+        )
+        .expect("case-only rename should succeed");
+
+        let entry_names = fs::read_dir(&root)
+            .expect("root entries should be readable")
+            .map(|entry| {
+                entry
+                    .expect("directory entry should be readable")
+                    .file_name()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(entry_names, vec!["Scene.txt"]);
+        assert_eq!(renamed, root.join("Scene.txt").to_string_lossy());
+
+        fs::remove_dir_all(&root).expect("temp directory should be removed");
     }
 }
