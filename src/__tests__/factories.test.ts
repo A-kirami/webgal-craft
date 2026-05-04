@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { createTestEngine, createTestGame } from '~/__tests__/factories'
 
-describe('test factories', () => {
+describe('测试工厂函数', () => {
   it('createTestGame 默认带 available availability', () => {
     expect(createTestGame()).toMatchObject({
       availability: 'available',

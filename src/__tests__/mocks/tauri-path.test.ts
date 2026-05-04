@@ -5,8 +5,8 @@ import {
   createTauriPathModuleMock,
 } from './tauri-path'
 
-describe('tauri path mock helper', () => {
-  it('provides the default path helpers used by tests', async () => {
+describe('tauri path mock 辅助器', () => {
+  it('提供测试默认使用的路径辅助函数', async () => {
     const pathMock = createDefaultTauriPathMocks()
 
     await expect(pathMock.basename('/game/scene/start.txt')).resolves.toBe('start.txt')
@@ -17,14 +17,14 @@ describe('tauri path mock helper', () => {
     expect(pathMock.sep()).toBe('/')
   })
 
-  it('preserves actual exports while overriding path helpers', async () => {
+  it('覆盖路径辅助函数时保留模块的真实导出', async () => {
     const pathModule = await createTauriPathModuleMock()
 
     expect(pathModule.BaseDirectory.Document).toBeTypeOf('number')
     await expect(pathModule.join('/game', 'scene')).resolves.toBe('/game/scene')
   })
 
-  it('allows per-test overrides for selected helpers', async () => {
+  it('允许按测试覆盖指定辅助函数', async () => {
     const joinMock = vi.fn(async (...parts: string[]) => parts.join('::'))
 
     const pathModule = await createTauriPathModuleMock({

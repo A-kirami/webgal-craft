@@ -28,9 +28,9 @@ describe('createSearchOptionDocuments', () => {
 
 describe('filterSearchOptionDocuments', () => {
   const documents = createSearchOptionDocuments([
-    { label: 'sakiko/default', value: 'sakiko/default' },
-    { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
-    { label: 'anon/cry01', value: 'anon/cry01' },
+    { label: 'charc/default', value: 'charc/default' },
+    { label: 'charc/group01/item01', value: 'charc/group01/item01' },
+    { label: 'chara/variant01', value: 'chara/variant01' },
   ])
 
   it('空查询时返回全部结果', () => {
@@ -38,13 +38,13 @@ describe('filterSearchOptionDocuments', () => {
   })
 
   it('会按空格拆分关键词并要求全部命中', () => {
-    expect(filterSearchOptionDocuments(documents, 'sakiko kime01')).toEqual([
+    expect(filterSearchOptionDocuments(documents, 'charc item01')).toEqual([
       documents[1],
     ])
   })
 
   it('会忽略多余空格并做大小写无关匹配', () => {
-    expect(filterSearchOptionDocuments(documents, '  SAKIKO   DEFAULT  ')).toEqual([
+    expect(filterSearchOptionDocuments(documents, '  CHARC   DEFAULT  ')).toEqual([
       documents[0],
     ])
   })
