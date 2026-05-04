@@ -151,8 +151,8 @@ function renderChoiceRenderer(enableComboboxPathDelimiter: boolean) {
       fields: [field],
       fileRootPaths: {},
       getDynamicOptions: () => [
-        { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
-        { label: 'sakiko/default', value: 'sakiko/default' },
+        { label: 'charc/group01/item01', value: 'charc/group01/item01' },
+        { label: 'charc/default', value: 'charc/default' },
       ],
       getFieldSelectValue: () => '',
       getFieldValue: () => '',

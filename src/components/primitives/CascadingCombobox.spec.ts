@@ -21,10 +21,10 @@ interface ActiveAlignmentMetrics {
 }
 
 const groupedData = buildCascadingComboboxData([
-  { label: 'anon/cry01', value: 'anon/cry01' },
-  { label: 'anon/cry02', value: 'anon/cry02' },
-  { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
-  { label: 'sakiko/default', value: 'sakiko/default' },
+  { label: 'chara/variant01', value: 'chara/variant01' },
+  { label: 'chara/variant02', value: 'chara/variant02' },
+  { label: 'charc/group01/item01', value: 'charc/group01/item01' },
+  { label: 'charc/default', value: 'charc/default' },
 ], {
   grouping: { mode: 'path' },
   resolvedDelimiter: '/',
@@ -103,7 +103,7 @@ const GroupedHarness = defineComponent({
 const NearEdgeHarness = defineComponent({
   components: { CascadingCombobox },
   setup() {
-    const modelValue = ref('sakiko/maskon/kime01')
+    const modelValue = ref('charc/group01/item01')
 
     return {
       groupedData,
@@ -203,12 +203,12 @@ interface CascadingComboboxTestHooks {
 const DynamicSearchDocumentsHarness = defineComponent({
   components: { CascadingCombobox },
   setup() {
-    const modelValue = ref('sakiko/default')
+    const modelValue = ref('charc/default')
     const searchDocuments = ref([...groupedData.searchDocuments])
     const testHooks = globalThis as typeof globalThis & CascadingComboboxTestHooks
 
     function shrinkSearchDocuments() {
-      searchDocuments.value = groupedData.searchDocuments.filter(document => document.value === 'anon/cry01')
+      searchDocuments.value = groupedData.searchDocuments.filter(document => document.value === 'chara/variant01')
     }
 
     onMounted(() => {
@@ -386,13 +386,13 @@ describe('CascadingCombobox', () => {
   it('首次打开已选嵌套值时，根层与级联子层作为独立浮层渲染，并保持向右级联展开', async () => {
     renderInBrowser(GroupedHarness, {
       props: {
-        initialValue: 'sakiko/maskon/kime01',
+        initialValue: 'charc/group01/item01',
       },
     })
 
     await page.getByTestId('grouped-trigger').click()
-    await expect.element(page.getByText('maskon', { exact: true })).toBeInTheDocument()
-    await expect.element(page.getByText('kime01', { exact: true })).toBeInTheDocument()
+    await expect.element(page.getByText('group01', { exact: true })).toBeInTheDocument()
+    await expect.element(page.getByText('item01', { exact: true })).toBeInTheDocument()
 
     const rects = getFloatingRects()
     const rootRect = getElementRect('[data-cascading-root-panel]')
@@ -410,20 +410,20 @@ describe('CascadingCombobox', () => {
   it('搜索态会挂起 submenu，并在清空搜索后恢复之前的 browse path', async () => {
     renderInBrowser(GroupedHarness, {
       props: {
-        initialValue: 'sakiko/maskon/kime01',
+        initialValue: 'charc/group01/item01',
       },
     })
 
     await page.getByTestId('grouped-trigger').click()
-    await expect.element(page.getByText('kime01', { exact: true })).toBeInTheDocument()
+    await expect.element(page.getByText('item01', { exact: true })).toBeInTheDocument()
     expect(getSubpanelRects()).toHaveLength(2)
 
-    await page.getByPlaceholder('Search motion').fill('maskon')
-    await expect.element(page.getByText('kime01', { exact: true })).not.toBeInTheDocument()
+    await page.getByPlaceholder('Search motion').fill('group01')
+    await expect.element(page.getByText('item01', { exact: true })).not.toBeInTheDocument()
     expect(getSubpanelRects()).toHaveLength(0)
 
     await page.getByPlaceholder('Search motion').fill('')
-    await expect.element(page.getByText('kime01', { exact: true })).toBeInTheDocument()
+    await expect.element(page.getByText('item01', { exact: true })).toBeInTheDocument()
     expect(getSubpanelRects()).toHaveLength(2)
   })
 
@@ -431,7 +431,7 @@ describe('CascadingCombobox', () => {
     renderInBrowser(NearEdgeHarness)
 
     await page.getByTestId('edge-trigger').click()
-    await expect.element(page.getByText('kime01', { exact: true })).toBeInTheDocument()
+    await expect.element(page.getByText('item01', { exact: true })).toBeInTheDocument()
 
     const rootRect = getElementRect('[data-cascading-root-panel]')
     const firstSubpanelRect = getElementRect('[data-layer-depth="1"]')
@@ -447,21 +447,21 @@ describe('CascadingCombobox', () => {
     await page.getByTestId('grouped-trigger').click()
     await userEvent.keyboard('{ArrowDown}{ArrowRight}{ArrowLeft}{ArrowRight}{Enter}')
 
-    await expect.element(page.getByTestId('grouped-trigger')).toHaveTextContent('anon/cry01')
+    await expect.element(page.getByTestId('grouped-trigger')).toHaveTextContent('chara/variant01')
   })
 
   it('搜索结果列表暴露 listbox/option 语义，并把当前高亮项关联到搜索框', async () => {
     renderInBrowser(GroupedHarness, {
       props: {
-        initialValue: 'sakiko/default',
+        initialValue: 'charc/default',
       },
     })
 
     await page.getByTestId('grouped-trigger').click()
-    await page.getByPlaceholder('Search motion').fill('sakiko')
+    await page.getByPlaceholder('Search motion').fill('charc')
 
     const listbox = page.getByRole('listbox')
-    const selectedOption = page.getByRole('option', { name: 'sakiko/default' })
+    const selectedOption = page.getByRole('option', { name: 'charc/default' })
 
     await expect.element(listbox).toBeInTheDocument()
     await expect.element(selectedOption).toHaveAttribute('aria-selected', 'true')
@@ -478,37 +478,37 @@ describe('CascadingCombobox', () => {
   it('会把搜索词按空格拆分并要求所有关键词都命中完整路径文本', async () => {
     renderInBrowser(GroupedHarness, {
       props: {
-        initialValue: 'sakiko/default',
+        initialValue: 'charc/default',
       },
     })
 
     await page.getByTestId('grouped-trigger').click()
-    await page.getByPlaceholder('Search motion').fill('sakiko kime01')
+    await page.getByPlaceholder('Search motion').fill('charc item01')
 
-    await expect.element(page.getByRole('option', { name: 'sakiko/maskon/kime01' })).toBeInTheDocument()
-    await expect.element(page.getByRole('option', { name: 'sakiko/default' })).not.toBeInTheDocument()
-    await expect.element(page.getByRole('option', { name: 'anon/cry01' })).not.toBeInTheDocument()
+    await expect.element(page.getByRole('option', { name: 'charc/group01/item01' })).toBeInTheDocument()
+    await expect.element(page.getByRole('option', { name: 'charc/default' })).not.toBeInTheDocument()
+    await expect.element(page.getByRole('option', { name: 'chara/variant01' })).not.toBeInTheDocument()
   })
 
   it('鼠标离开搜索结果列表时，不会回退到已有的键盘高亮项', async () => {
     renderInBrowser(GroupedHarness, {
       props: {
-        initialValue: 'sakiko/default',
+        initialValue: 'charc/default',
       },
     })
 
     await page.getByTestId('grouped-trigger').click()
-    await page.getByPlaceholder('Search motion').fill('sakiko')
+    await page.getByPlaceholder('Search motion').fill('charc')
     await userEvent.keyboard('{ArrowDown}')
 
-    const hoveredOption = findSearchOptionElement('sakiko/default')
+    const hoveredOption = findSearchOptionElement('charc/default')
     const listbox = getSearchListboxElement()
     expect(hoveredOption).toBeDefined()
     expect(listbox).toBeDefined()
-    expect(getActiveSearchOptionElement()?.textContent).toContain('sakiko/maskon/kime01')
+    expect(getActiveSearchOptionElement()?.textContent).toContain('charc/group01/item01')
 
     hoveredOption!.dispatchEvent(new MouseEvent('mouseenter'))
-    await expect.poll(() => getActiveSearchOptionElement()?.textContent?.includes('sakiko/default') ?? false).toBe(true)
+    await expect.poll(() => getActiveSearchOptionElement()?.textContent?.includes('charc/default') ?? false).toBe(true)
 
     listbox!.dispatchEvent(new MouseEvent('mouseleave'))
 
@@ -519,24 +519,24 @@ describe('CascadingCombobox', () => {
     renderInBrowser(DynamicSearchDocumentsHarness)
 
     await page.getByTestId('dynamic-trigger').click()
-    await page.getByPlaceholder('Search motion').fill('cry')
-    await expect.element(page.getByRole('option', { name: 'anon/cry02' })).toBeInTheDocument()
+    await page.getByPlaceholder('Search motion').fill('variant')
+    await expect.element(page.getByRole('option', { name: 'chara/variant02' })).toBeInTheDocument()
 
     await userEvent.keyboard('{ArrowDown}{ArrowDown}')
 
     const testHooks = globalThis as typeof globalThis & CascadingComboboxTestHooks
     testHooks.__shrinkCascadingSearchDocuments?.()
 
-    await expect.element(page.getByRole('option', { name: 'anon/cry02' })).not.toBeInTheDocument()
+    await expect.element(page.getByRole('option', { name: 'chara/variant02' })).not.toBeInTheDocument()
     await userEvent.keyboard('{Enter}')
 
-    await expect.element(page.getByTestId('dynamic-trigger')).toHaveTextContent('sakiko/default')
+    await expect.element(page.getByTestId('dynamic-trigger')).toHaveTextContent('charc/default')
   })
 
   it('点击子菜单叶子项时，会更新选中值并关闭浮层', async () => {
     renderInBrowser(GroupedHarness, {
       props: {
-        initialValue: 'sakiko/maskon/kime01',
+        initialValue: 'charc/group01/item01',
       },
     })
 
@@ -548,38 +548,38 @@ describe('CascadingCombobox', () => {
 
     await userEvent.click(submenuLeafRow!)
 
-    await expect.element(page.getByTestId('grouped-trigger')).toHaveTextContent('sakiko/default')
-    await expect.element(page.getByText('kime01', { exact: true })).not.toBeInTheDocument()
+    await expect.element(page.getByTestId('grouped-trigger')).toHaveTextContent('charc/default')
+    await expect.element(page.getByText('item01', { exact: true })).not.toBeInTheDocument()
   })
 
   it('ArrowLeft 返回上级层时保留当前父层 submenu，ArrowUp/Down 移到其他组项时会自动展开对应 submenu', async () => {
     renderInBrowser(GroupedHarness, {
       props: {
-        initialValue: 'sakiko/maskon/kime01',
+        initialValue: 'charc/group01/item01',
       },
     })
 
     await page.getByTestId('grouped-trigger').click()
-    await expect.element(page.getByText('kime01', { exact: true })).toBeInTheDocument()
+    await expect.element(page.getByText('item01', { exact: true })).toBeInTheDocument()
     expect(getSubpanelRects()).toHaveLength(2)
 
     await userEvent.keyboard('{ArrowLeft}')
 
     expect(getSubpanelRects()).toHaveLength(2)
-    expect(getLayerActiveBrowseText(1)).toContain('maskon')
+    expect(getLayerActiveBrowseText(1)).toContain('group01')
     expect(getLayerActiveBrowseText(2)).toBeUndefined()
 
     await userEvent.keyboard('{ArrowLeft}')
 
     expect(getSubpanelRects()).toHaveLength(1)
-    expect(getLayerActiveBrowseText(0)).toContain('sakiko')
+    expect(getLayerActiveBrowseText(0)).toContain('charc')
     expect(getLayerActiveBrowseText(1)).toBeUndefined()
 
     await userEvent.keyboard('{ArrowUp}')
 
     expect(getSubpanelRects()).toHaveLength(1)
-    expect(getLayerActiveBrowseText(0)).toContain('anon')
-    await expect.element(page.getByText('cry01', { exact: true })).toBeInTheDocument()
+    expect(getLayerActiveBrowseText(0)).toContain('chara')
+    await expect.element(page.getByText('variant01', { exact: true })).toBeInTheDocument()
   })
 
   it('未启用路径分组时浏览态保持扁平列表', async () => {
@@ -636,12 +636,12 @@ describe('CascadingCombobox', () => {
   it('内容未溢出时，根层与子层滚动区域不显示滚动条', async () => {
     renderInBrowser(GroupedHarness, {
       props: {
-        initialValue: 'sakiko/maskon/kime01',
+        initialValue: 'charc/group01/item01',
       },
     })
 
     await page.getByTestId('grouped-trigger').click()
-    await expect.element(page.getByText('maskon', { exact: true })).toBeInTheDocument()
+    await expect.element(page.getByText('group01', { exact: true })).toBeInTheDocument()
 
     const rootViewportMetrics = getLayerViewportMetrics(0)
     const subpanelViewportMetrics = getLayerViewportMetrics(1)
@@ -670,26 +670,26 @@ describe('CascadingCombobox', () => {
   it('点击打开后，从外部 hover 回当前已选组时，不会让已展开的子菜单先收起再重新打开', async () => {
     renderInBrowser(GroupedHarness, {
       props: {
-        initialValue: 'sakiko/maskon/kime01',
+        initialValue: 'charc/group01/item01',
       },
     })
 
     await page.getByTestId('grouped-trigger').click()
-    await expect.element(page.getByText('maskon', { exact: true })).toBeInTheDocument()
+    await expect.element(page.getByText('group01', { exact: true })).toBeInTheDocument()
     expect(getSubpanelRects()).toHaveLength(2)
 
-    const selectedRootGroupRow = findRootGroupRow('sakiko')
+    const selectedRootGroupRow = findRootGroupRow('charc')
     expect(selectedRootGroupRow).toBeDefined()
 
     selectedRootGroupRow!.dispatchEvent(new MouseEvent('mouseenter'))
     await expect.poll(() => getSubpanelRects().length).toBe(2)
-    await expect.poll(() => getLayerActiveBrowseText(1)?.includes('maskon') ?? false).toBe(true)
-    await expect.poll(() => getLayerActiveBrowseText(2)?.includes('kime01') ?? false).toBe(true)
+    await expect.poll(() => getLayerActiveBrowseText(1)?.includes('group01') ?? false).toBe(true)
+    await expect.poll(() => getLayerActiveBrowseText(2)?.includes('item01') ?? false).toBe(true)
 
     expect(getSubpanelRects()).toHaveLength(2)
-    expect(getLayerActiveBrowseText(1)).toContain('maskon')
-    expect(getLayerActiveBrowseText(2)).toContain('kime01')
-    expect(getLayerSelectedBrowseText(2)).toContain('kime01')
+    expect(getLayerActiveBrowseText(1)).toContain('group01')
+    expect(getLayerActiveBrowseText(2)).toContain('item01')
+    expect(getLayerSelectedBrowseText(2)).toContain('item01')
   })
 
   it('hover 组项只展开子菜单，不会自动高亮子层首项', async () => {

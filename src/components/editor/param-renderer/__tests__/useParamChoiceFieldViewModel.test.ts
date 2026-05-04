@@ -114,8 +114,8 @@ describe('useParamChoiceFieldViewModel', () => {
       getComboboxPathDelimiter: () => '/',
       getCustomLabel: () => '',
       getDynamicOptions: () => [
-        { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
-        { label: 'sakiko/default', value: 'sakiko/default' },
+        { label: 'charc/group01/item01', value: 'charc/group01/item01' },
+        { label: 'charc/default', value: 'charc/default' },
       ],
       getPlaceholder: () => 'Search expression',
       getSelectValue: () => '',
@@ -130,22 +130,22 @@ describe('useParamChoiceFieldViewModel', () => {
       browseNodes: [
         {
           kind: 'group',
-          label: 'sakiko',
+          label: 'charc',
           children: [
             {
               kind: 'group',
-              label: 'maskon',
+              label: 'group01',
               children: [
-                { kind: 'item', label: 'kime01', rawLabel: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+                { kind: 'item', label: 'item01', rawLabel: 'charc/group01/item01', value: 'charc/group01/item01' },
               ],
             },
-            { kind: 'item', label: 'default', rawLabel: 'sakiko/default', value: 'sakiko/default' },
+            { kind: 'item', label: 'default', rawLabel: 'charc/default', value: 'charc/default' },
           ],
         },
       ],
       searchDocuments: [
-        { label: 'sakiko/maskon/kime01', originalIndex: 0, pathText: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
-        { label: 'sakiko/default', originalIndex: 1, pathText: 'sakiko/default', value: 'sakiko/default' },
+        { label: 'charc/group01/item01', originalIndex: 0, pathText: 'charc/group01/item01', value: 'charc/group01/item01' },
+        { label: 'charc/default', originalIndex: 1, pathText: 'charc/default', value: 'charc/default' },
       ],
     })
   })
@@ -158,7 +158,7 @@ describe('useParamChoiceFieldViewModel', () => {
       getComboboxPathDelimiter: () => '',
       getCustomLabel: () => '',
       getDynamicOptions: () => [
-        { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+        { label: 'charc/group01/item01', value: 'charc/group01/item01' },
       ],
       getPlaceholder: () => 'Search expression',
       getSelectValue: () => '',
@@ -172,7 +172,7 @@ describe('useParamChoiceFieldViewModel', () => {
     expect(viewModel.viewModels.value.get(field.key)).toMatchObject({
       comboboxData: undefined,
       mode: 'combobox',
-      options: [{ label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' }],
+      options: [{ label: 'charc/group01/item01', value: 'charc/group01/item01' }],
     })
   })
 
@@ -184,8 +184,8 @@ describe('useParamChoiceFieldViewModel', () => {
       getComboboxPathDelimiter: () => ' / ',
       getCustomLabel: () => '',
       getDynamicOptions: () => [
-        { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
-        { label: 'sakiko/default', value: 'sakiko/default' },
+        { label: 'charc/group01/item01', value: 'charc/group01/item01' },
+        { label: 'charc/default', value: 'charc/default' },
       ],
       getPlaceholder: () => 'Search expression',
       getSelectValue: () => '',
@@ -199,7 +199,7 @@ describe('useParamChoiceFieldViewModel', () => {
     expect(trimmedViewModel.viewModels.value.get(field.key)?.comboboxData?.browseNodes).toMatchObject([
       {
         kind: 'group',
-        label: 'sakiko',
+        label: 'charc',
       },
     ])
 
@@ -208,7 +208,7 @@ describe('useParamChoiceFieldViewModel', () => {
       getComboboxPathDelimiter: () => '   ',
       getCustomLabel: () => '',
       getDynamicOptions: () => [
-        { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+        { label: 'charc/group01/item01', value: 'charc/group01/item01' },
       ],
       getPlaceholder: () => 'Search expression',
       getSelectValue: () => '',
@@ -222,7 +222,7 @@ describe('useParamChoiceFieldViewModel', () => {
     expect(whitespaceOnlyViewModel.viewModels.value.get(field.key)).toMatchObject({
       comboboxData: undefined,
       mode: 'combobox',
-      options: [{ label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' }],
+      options: [{ label: 'charc/group01/item01', value: 'charc/group01/item01' }],
     })
   })
 })

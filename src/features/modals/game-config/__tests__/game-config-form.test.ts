@@ -42,8 +42,8 @@ function createReadResult(overrides: Partial<GameConfigReadResult> = {}): GameCo
   }
 }
 
-describe('game-config form helpers', () => {
-  it('parseGameConfigFormValues 会把 raw entries 解析成表单可编辑值，并保留自定义项', () => {
+describe('game-config 表单辅助函数', () => {
+  it('parseGameConfigFormValues 会把原始条目解析成表单可编辑值，并保留自定义项', () => {
     expect(parseGameConfigFormValues(createReadResult({
       entries: [
         {

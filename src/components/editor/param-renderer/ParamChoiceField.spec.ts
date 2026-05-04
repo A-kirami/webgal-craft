@@ -197,10 +197,10 @@ describe('ParamChoiceField', () => {
       props: {
         comboboxData: {
           browseNodes: [
-            { id: 'group:sakiko', kind: 'group', label: 'sakiko', pathSegments: ['sakiko'], children: [] },
+            { id: 'group:charc', kind: 'group', label: 'charc', pathSegments: ['charc'], children: [] },
           ],
           searchDocuments: [
-            { label: 'sakiko/default', originalIndex: 0, pathText: 'sakiko/default', value: 'sakiko/default' },
+            { label: 'charc/default', originalIndex: 0, pathText: 'charc/default', value: 'charc/default' },
           ],
         },
         customInputId: 'target-custom-input',

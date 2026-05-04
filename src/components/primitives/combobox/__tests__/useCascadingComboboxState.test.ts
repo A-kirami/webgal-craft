@@ -6,10 +6,10 @@ import { useCascadingComboboxState } from '../useCascadingComboboxState'
 import type { CascadingComboboxNode } from '../cascading-combobox-data'
 
 const groupedData = buildCascadingComboboxData([
-  { label: 'anon/cry01', value: 'anon/cry01' },
-  { label: 'anon/cry02', value: 'anon/cry02' },
-  { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
-  { label: 'sakiko/default', value: 'sakiko/default' },
+  { label: 'chara/variant01', value: 'chara/variant01' },
+  { label: 'chara/variant02', value: 'chara/variant02' },
+  { label: 'charc/group01/item01', value: 'charc/group01/item01' },
+  { label: 'charc/default', value: 'charc/default' },
 ], {
   grouping: { mode: 'path' },
   resolvedDelimiter: '/',
@@ -56,8 +56,8 @@ function findItemNodeId(nodes: CascadingComboboxNode[], value: string): string {
 }
 
 describe('useCascadingComboboxState', () => {
-  it('restores expanded and highlighted paths from the selected leaf', () => {
-    const modelValue = ref('sakiko/maskon/kime01')
+  it('会从已选叶子节点恢复展开路径与高亮路径', () => {
+    const modelValue = ref('charc/group01/item01')
     const state = useCascadingComboboxState({
       browseNodes: () => groupedData.browseNodes,
       modelValue: () => modelValue.value,
@@ -66,35 +66,35 @@ describe('useCascadingComboboxState', () => {
     state.restoreSelectionPath(modelValue.value)
 
     expect(state.expandedGroupPath.value).toEqual([
-      findGroupNodeId(groupedData.browseNodes, ['sakiko']),
-      findGroupNodeId(groupedData.browseNodes, ['sakiko', 'maskon']),
+      findGroupNodeId(groupedData.browseNodes, ['charc']),
+      findGroupNodeId(groupedData.browseNodes, ['charc', 'group01']),
     ])
     expect(state.highlightedPath.value).toEqual([
-      findGroupNodeId(groupedData.browseNodes, ['sakiko']),
-      findGroupNodeId(groupedData.browseNodes, ['sakiko', 'maskon']),
-      findItemNodeId(groupedData.browseNodes, 'sakiko/maskon/kime01'),
+      findGroupNodeId(groupedData.browseNodes, ['charc']),
+      findGroupNodeId(groupedData.browseNodes, ['charc', 'group01']),
+      findItemNodeId(groupedData.browseNodes, 'charc/group01/item01'),
     ])
   })
 
-  it('moves right into the first child of a highlighted group', () => {
+  it('向右移动时会进入当前高亮分组的第一个子项', () => {
     const state = useCascadingComboboxState({
       browseNodes: () => groupedData.browseNodes,
       modelValue: () => undefined,
     })
-    const anonGroupId = findGroupNodeId(groupedData.browseNodes, ['anon'])
+    const charaGroupId = findGroupNodeId(groupedData.browseNodes, ['chara'])
 
-    state.setHighlightedNode(anonGroupId)
+    state.setHighlightedNode(charaGroupId)
     state.moveRight()
 
-    expect(state.expandedGroupPath.value).toEqual([anonGroupId])
+    expect(state.expandedGroupPath.value).toEqual([charaGroupId])
     expect(state.highlightedPath.value).toEqual([
-      anonGroupId,
-      findItemNodeId(groupedData.browseNodes, 'anon/cry01'),
+      charaGroupId,
+      findItemNodeId(groupedData.browseNodes, 'chara/variant01'),
     ])
   })
 
-  it('clears submenu state while search is active and restores the last browse path when search clears', () => {
-    const modelValue = ref('sakiko/maskon/kime01')
+  it('搜索激活时会清空子菜单状态，并在清空搜索后恢复上次浏览路径', () => {
+    const modelValue = ref('charc/group01/item01')
     const state = useCascadingComboboxState({
       browseNodes: () => groupedData.browseNodes,
       modelValue: () => modelValue.value,
