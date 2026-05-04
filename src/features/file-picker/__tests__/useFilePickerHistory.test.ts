@@ -80,7 +80,7 @@ describe('useFilePickerHistory 行为', () => {
     useStorageMock.mockImplementation((_key: string, initial: Record<string, string[]>) => ref(initial))
   })
 
-  it('刷新 recent history 期间被移除的项不会回写到 invalid map', async () => {
+  it('刷新最近历史记录期间，被移除的项不会回写到无效映射', async () => {
     const { history, scope } = createFixture()
     const pendingExists = createDeferred<boolean>()
 

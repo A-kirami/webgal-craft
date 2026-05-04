@@ -5,7 +5,7 @@ import { createTestEngine } from '~/__tests__/factories'
 import { buildEngineGroupCollectionItems } from '../engine-group-view-model'
 
 describe('buildEngineGroupCollectionItems', () => {
-  it('uses the latest available version as representative item', () => {
+  it('使用最新的可用版本作为代表项', () => {
     const items = buildEngineGroupCollectionItems({
       defaultEngineId: 'open-webgal.webgal',
       engines: [
@@ -57,7 +57,7 @@ describe('buildEngineGroupCollectionItems', () => {
     expect(items[0]?.engines.map(item => item.engine.id)).toEqual(['broken-latest', 'stable', 'legacy'])
   })
 
-  it('keeps groups with no available version but marks them unavailable', () => {
+  it('保留没有可用版本的分组，并将其标记为不可用', () => {
     const items = buildEngineGroupCollectionItems({
       engines: [
         createTestEngine({

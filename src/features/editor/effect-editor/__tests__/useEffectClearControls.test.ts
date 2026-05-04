@@ -21,7 +21,7 @@ function createDeps(initialFields: Record<string, string>) {
 }
 
 describe('useEffectClearControls', () => {
-  it('clears grouped paths and emits a single immediate flush update', () => {
+  it('会清除成组路径，并只触发一次立即 flush 更新', () => {
     const { deps, fields, emitTransform } = createDeps({
       'scale.x': '1',
       'scale.y': '1',
@@ -46,7 +46,7 @@ describe('useEffectClearControls', () => {
     })
   })
 
-  it('does not emit when every target path is already absent', () => {
+  it('当所有目标路径本来就不存在时不会触发更新', () => {
     const { deps, emitTransform } = createDeps({})
     const controls = useEffectClearControls(deps)
 

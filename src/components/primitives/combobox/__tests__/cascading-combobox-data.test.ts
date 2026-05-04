@@ -5,9 +5,9 @@ import { buildCascadingComboboxData } from '../cascading-combobox-data'
 describe('buildCascadingComboboxData', () => {
   it('会把同一路径前缀的候选项聚合成级联树，并保留搜索文档', () => {
     const result = buildCascadingComboboxData([
-      { label: 'anon/cry01', value: 'anon/cry01' },
-      { label: 'anon/cry02', value: 'anon/cry02' },
-      { label: 'saki/cry01', value: 'saki/cry01' },
+      { label: 'chara/variant01', value: 'chara/variant01' },
+      { label: 'chara/variant02', value: 'chara/variant02' },
+      { label: 'charb/variant01', value: 'charb/variant01' },
     ], {
       grouping: { mode: 'path' },
       resolvedDelimiter: '/',
@@ -16,30 +16,30 @@ describe('buildCascadingComboboxData', () => {
     expect(result.browseNodes).toMatchObject([
       {
         kind: 'group',
-        label: 'anon',
+        label: 'chara',
         children: [
-          { kind: 'item', label: 'cry01', rawLabel: 'anon/cry01', value: 'anon/cry01' },
-          { kind: 'item', label: 'cry02', rawLabel: 'anon/cry02', value: 'anon/cry02' },
+          { kind: 'item', label: 'variant01', rawLabel: 'chara/variant01', value: 'chara/variant01' },
+          { kind: 'item', label: 'variant02', rawLabel: 'chara/variant02', value: 'chara/variant02' },
         ],
       },
       {
         kind: 'group',
-        label: 'saki',
+        label: 'charb',
         children: [
-          { kind: 'item', label: 'cry01', rawLabel: 'saki/cry01', value: 'saki/cry01' },
+          { kind: 'item', label: 'variant01', rawLabel: 'charb/variant01', value: 'charb/variant01' },
         ],
       },
     ])
     expect(result.searchDocuments).toEqual([
-      { label: 'anon/cry01', originalIndex: 0, pathText: 'anon/cry01', value: 'anon/cry01' },
-      { label: 'anon/cry02', originalIndex: 1, pathText: 'anon/cry02', value: 'anon/cry02' },
-      { label: 'saki/cry01', originalIndex: 2, pathText: 'saki/cry01', value: 'saki/cry01' },
+      { label: 'chara/variant01', originalIndex: 0, pathText: 'chara/variant01', value: 'chara/variant01' },
+      { label: 'chara/variant02', originalIndex: 1, pathText: 'chara/variant02', value: 'chara/variant02' },
+      { label: 'charb/variant01', originalIndex: 2, pathText: 'charb/variant01', value: 'charb/variant01' },
     ])
   })
 
   it('支持任意深度路径', () => {
     const result = buildCascadingComboboxData([
-      { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+      { label: 'charc/group01/item01', value: 'charc/group01/item01' },
     ], {
       grouping: { mode: 'path' },
       resolvedDelimiter: '/',
@@ -48,13 +48,13 @@ describe('buildCascadingComboboxData', () => {
     expect(result.browseNodes).toMatchObject([
       {
         kind: 'group',
-        label: 'sakiko',
+        label: 'charc',
         children: [
           {
             kind: 'group',
-            label: 'maskon',
+            label: 'group01',
             children: [
-              { kind: 'item', label: 'kime01', rawLabel: 'sakiko/maskon/kime01' },
+              { kind: 'item', label: 'item01', rawLabel: 'charc/group01/item01' },
             ],
           },
         ],
@@ -64,9 +64,9 @@ describe('buildCascadingComboboxData', () => {
 
   it('允许根层叶子和组混排，并稳定处理前缀冲突', () => {
     const result = buildCascadingComboboxData([
-      { label: 'sakiko', value: 'sakiko' },
-      { label: 'sakiko/maskon', value: 'sakiko/maskon' },
-      { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+      { label: 'charc', value: 'charc' },
+      { label: 'charc/group01', value: 'charc/group01' },
+      { label: 'charc/group01/item01', value: 'charc/group01/item01' },
     ], {
       grouping: { mode: 'path' },
       resolvedDelimiter: '/',
@@ -75,29 +75,29 @@ describe('buildCascadingComboboxData', () => {
     expect(result.browseNodes).toMatchObject([
       {
         kind: 'item',
-        label: 'sakiko',
-        rawLabel: 'sakiko',
-        value: 'sakiko',
+        label: 'charc',
+        rawLabel: 'charc',
+        value: 'charc',
       },
       {
         kind: 'group',
-        label: 'sakiko',
+        label: 'charc',
         children: [
           {
             kind: 'item',
-            label: 'maskon',
-            rawLabel: 'sakiko/maskon',
-            value: 'sakiko/maskon',
+            label: 'group01',
+            rawLabel: 'charc/group01',
+            value: 'charc/group01',
           },
           {
             kind: 'group',
-            label: 'maskon',
+            label: 'group01',
             children: [
               {
                 kind: 'item',
-                label: 'kime01',
-                rawLabel: 'sakiko/maskon/kime01',
-                value: 'sakiko/maskon/kime01',
+                label: 'item01',
+                rawLabel: 'charc/group01/item01',
+                value: 'charc/group01/item01',
               },
             ],
           },
@@ -108,18 +108,18 @@ describe('buildCascadingComboboxData', () => {
 
   it('未启用路径分组时保持扁平浏览节点，但仍生成搜索文档', () => {
     const result = buildCascadingComboboxData([
-      { label: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+      { label: 'charc/group01/item01', value: 'charc/group01/item01' },
       { label: 'plain', value: 'plain' },
     ], {
       resolvedDelimiter: '/',
     })
 
     expect(result.browseNodes).toMatchObject([
-      { kind: 'item', label: 'sakiko/maskon/kime01', rawLabel: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+      { kind: 'item', label: 'charc/group01/item01', rawLabel: 'charc/group01/item01', value: 'charc/group01/item01' },
       { kind: 'item', label: 'plain', rawLabel: 'plain', value: 'plain' },
     ])
     expect(result.searchDocuments).toEqual([
-      { label: 'sakiko/maskon/kime01', originalIndex: 0, pathText: 'sakiko/maskon/kime01', value: 'sakiko/maskon/kime01' },
+      { label: 'charc/group01/item01', originalIndex: 0, pathText: 'charc/group01/item01', value: 'charc/group01/item01' },
       { label: 'plain', originalIndex: 1, pathText: 'plain', value: 'plain' },
     ])
   })
