@@ -1629,7 +1629,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     )])
   })
 
-  it('忽略由自身保存触发的文件修改回响', async () => {
+  it('收到与当前已保存内容一致的 file:modified 时不会弹冲突对话框', async () => {
     const tabsStore = useTabsStore()
     const path = '/game/scene/save-echo.txt'
 

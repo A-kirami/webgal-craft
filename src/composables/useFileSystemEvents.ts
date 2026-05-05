@@ -8,6 +8,7 @@ export type FileSystemEvent =
   | { type: 'file:removed', path: string }
   | { type: 'file:renamed', oldPath: string, newPath: string }
   | { type: 'file:modified', path: string }
+  | { type: 'file:written', path: string }
   | { type: 'directory:created', path: string, parentId?: string }
   | { type: 'directory:removed', path: string }
   | { type: 'directory:renamed', oldPath: string, newPath: string }

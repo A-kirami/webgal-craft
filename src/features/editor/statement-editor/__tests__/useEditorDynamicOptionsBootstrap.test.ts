@@ -68,7 +68,7 @@ describe('useEditorDynamicOptionsBootstrap', () => {
     })
 
     expect(registerDynamicOptionsMock).toHaveBeenCalledTimes(dynamicOptionSources.length)
-    expect(onMock).toHaveBeenCalledTimes(7)
+    expect(onMock).toHaveBeenCalledTimes(8)
 
     firstScope.stop()
 
@@ -78,7 +78,7 @@ describe('useEditorDynamicOptionsBootstrap', () => {
     })
 
     expect(registerDynamicOptionsMock).toHaveBeenCalledTimes(dynamicOptionSources.length)
-    expect(onMock).toHaveBeenCalledTimes(14)
+    expect(onMock).toHaveBeenCalledTimes(16)
 
     secondScope.stop()
   })

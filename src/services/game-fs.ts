@@ -2,6 +2,7 @@ import { join } from '@tauri-apps/api/path'
 import { mkdir, writeFile as writeBinaryFile, writeTextFile } from '@tauri-apps/plugin-fs'
 
 import { fsCmds } from '~/commands/fs'
+import { registerPendingFileWrite, rollbackPendingFileWrite } from '~/services/file-write-echo-registry'
 import { gameManager } from '~/services/game-manager'
 import { useFileStore } from '~/stores/file'
 import { buildUniqueEntryName } from '~/utils/path'
@@ -19,7 +20,16 @@ async function writeFile(path: string, content: string): Promise<void> {
 }
 
 async function writeDocumentFile(path: string, content: Uint8Array): Promise<void> {
-  await writeBinaryFile(await resolveWritablePath(path), content)
+  const writablePath = await resolveWritablePath(path)
+  const pendingWrite = registerPendingFileWrite(writablePath, content)
+
+  try {
+    await writeBinaryFile(writablePath, content)
+  } catch (error) {
+    rollbackPendingFileWrite(pendingWrite)
+    throw error
+  }
+
   gameManager.updateCurrentGameLastModified()
 }
 
