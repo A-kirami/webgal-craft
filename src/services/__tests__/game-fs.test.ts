@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { gameFs } from '~/services/game-fs'
 
 const {
+  commitPendingFileWriteMock,
   copyEntryMock,
   createFileMock,
   createFolderMock,
@@ -14,6 +15,8 @@ const {
   mkdirMock,
   moveFileMock,
   moveEntryMock,
+  registerPendingFileWriteMock,
+  rollbackPendingFileWriteMock,
   renameFileMock,
   renameEntryMock,
   resolveFilePathMock,
@@ -22,6 +25,7 @@ const {
   writeBinaryFileMock,
   writeTextFileMock,
 } = vi.hoisted(() => ({
+  commitPendingFileWriteMock: vi.fn(),
   copyEntryMock: vi.fn(),
   createFileMock: vi.fn(),
   createFolderMock: vi.fn(),
@@ -33,6 +37,8 @@ const {
   mkdirMock: vi.fn(),
   moveFileMock: vi.fn(),
   moveEntryMock: vi.fn(),
+  registerPendingFileWriteMock: vi.fn(),
+  rollbackPendingFileWriteMock: vi.fn(),
   renameFileMock: vi.fn(),
   renameEntryMock: vi.fn(),
   resolveFilePathMock: vi.fn(),
@@ -58,6 +64,12 @@ vi.mock('~/services/game-manager', () => ({
   },
 }))
 
+vi.mock('~/services/file-write-echo-registry', () => ({
+  commitPendingFileWrite: commitPendingFileWriteMock,
+  registerPendingFileWrite: registerPendingFileWriteMock,
+  rollbackPendingFileWrite: rollbackPendingFileWriteMock,
+}))
+
 vi.mock('~/commands/fs', () => ({
   fsCmds: {
     renameFile: renameFileMock,
@@ -75,6 +87,7 @@ vi.mock('~/stores/file', () => ({
 
 describe('gameFs 游戏文件系统', () => {
   beforeEach(() => {
+    commitPendingFileWriteMock.mockReset()
     copyEntryMock.mockReset()
     createFileMock.mockReset()
     createFolderMock.mockReset()
@@ -86,6 +99,8 @@ describe('gameFs 游戏文件系统', () => {
     mkdirMock.mockReset()
     moveFileMock.mockReset()
     moveEntryMock.mockReset()
+    registerPendingFileWriteMock.mockReset()
+    rollbackPendingFileWriteMock.mockReset()
     renameFileMock.mockReset()
     renameEntryMock.mockReset()
     resolveFilePathMock.mockReset()
@@ -94,6 +109,10 @@ describe('gameFs 游戏文件系统', () => {
     writeBinaryFileMock.mockReset()
     writeTextFileMock.mockReset()
 
+    registerPendingFileWriteMock.mockReturnValue({
+      physicalPath: '/game/image.bin',
+      id: 1,
+    })
     ensureWritableMock.mockImplementation(async (path: string) => path)
     getFolderContentsMock.mockResolvedValue([])
     renameEntryMock.mockResolvedValue(undefined)
@@ -132,8 +151,42 @@ describe('gameFs 游戏文件系统', () => {
     expect(ensureWritableMock).toHaveBeenNthCalledWith(1, '/game/readme.txt')
     expect(ensureWritableMock).toHaveBeenNthCalledWith(2, '/game/image.bin')
     expect(writeTextFileMock).toHaveBeenCalledWith('/game/.overlay/readme.txt', 'hello')
+    expect(registerPendingFileWriteMock).toHaveBeenCalledWith('/game/.overlay/image.bin', new Uint8Array([1, 2, 3]))
     expect(writeBinaryFileMock).toHaveBeenCalledWith('/game/.overlay/image.bin', new Uint8Array([1, 2, 3]))
+    expect(commitPendingFileWriteMock).toHaveBeenCalledWith({
+      physicalPath: '/game/image.bin',
+      id: 1,
+    })
     expect(updateCurrentGameLastModifiedMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('文档写入失败时会回滚已登记的回响写入', async () => {
+    const handle = {
+      physicalPath: '/game/.overlay/image.bin',
+      id: 7,
+    }
+    const error = new Error('write failed')
+
+    useFileStoreMock.mockReturnValue({
+      copyEntry: copyEntryMock,
+      deleteEntry: vi.fn(async () => false),
+      ensureWritable: ensureWritableMock,
+      getFolderContents: getFolderContentsMock,
+      isVfs: true,
+      moveEntry: moveEntryMock,
+      renameEntry: renameEntryMock,
+      resolveFilePath: resolveFilePathMock,
+    })
+    ensureWritableMock.mockResolvedValueOnce('/game/.overlay/image.bin')
+    registerPendingFileWriteMock.mockReturnValueOnce(handle)
+    writeBinaryFileMock.mockRejectedValueOnce(error)
+
+    await expect(gameFs.writeDocumentFile('/game/image.bin', new Uint8Array([1, 2, 3]))).rejects.toThrow(error)
+
+    expect(registerPendingFileWriteMock).toHaveBeenCalledWith('/game/.overlay/image.bin', new Uint8Array([1, 2, 3]))
+    expect(commitPendingFileWriteMock).not.toHaveBeenCalled()
+    expect(rollbackPendingFileWriteMock).toHaveBeenCalledWith(handle)
+    expect(updateCurrentGameLastModifiedMock).not.toHaveBeenCalled()
   })
 
   it('非 VFS 模式下会直接透传底层文件系统操作', async () => {

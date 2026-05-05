@@ -2,7 +2,6 @@ import { stat } from '@tauri-apps/plugin-fs'
 
 import { fsCmds } from '~/commands/fs'
 import { mime } from '~/plugins/mime'
-import { consumePendingDocumentWrite } from '~/services/document-write-intents'
 import { gameAssetDir } from '~/services/platform/app-paths'
 import { normalizeFsPath } from '~/utils/path'
 
@@ -362,9 +361,6 @@ async function loadExternalDocumentSnapshot(
 
   const { content, metadata } = loadedDocument
   context.setTabError(path, undefined)
-  if (consumePendingDocumentWrite(path, content, metadata)) {
-    return
-  }
 
   const state = context.getEditableState(path)
   if (!state) {

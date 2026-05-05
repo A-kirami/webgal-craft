@@ -42,10 +42,6 @@ vi.mock('~/plugins/mime', () => ({
   },
 }))
 
-vi.mock('~/services/document-write-intents', () => ({
-  consumePendingDocumentWrite: vi.fn(() => false),
-}))
-
 vi.mock('~/stores/modal', () => ({
   useModalStore: () => ({
     open: modalOpenMock,

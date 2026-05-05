@@ -1,4 +1,4 @@
-import { exists, stat, watch as watchFs } from '@tauri-apps/plugin-fs'
+import { exists, readFile, stat, watch as watchFs } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
 import { defineStore } from 'pinia'
 
@@ -7,6 +7,7 @@ import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { mime } from '~/plugins/mime'
 import { backupManager } from '~/services/backup-manager'
 import { clearDirectoryItemsCache, invalidateDirectoryItemsCache, readDirectoryItemsCached } from '~/services/directory-cache'
+import { hasPendingFileWrite, matchesPendingFileWrite } from '~/services/file-write-echo-registry'
 import { gameManager } from '~/services/game-manager'
 import { projectConfigPath } from '~/services/platform/app-paths'
 import { useWorkspaceStore } from '~/stores/workspace'
@@ -29,6 +30,8 @@ const MAX_CACHE_ITEMS = 5000
  * 文件系统监听延迟（毫秒）
  */
 const WATCH_DELAY_MS = 150
+const PENDING_WRITE_STABILITY_DELAY_MS = 10
+const PENDING_WRITE_STABILITY_MAX_READS = 3
 
 /**
  * 文件系统项的基础接口
@@ -67,6 +70,42 @@ export interface DirItem extends FileSystemItemBase {
 export type FileSystemItem = FileItem | DirItem
 
 type RemovedEntryKind = 'file' | 'folder' | undefined
+
+function areBytesEqual(left: Uint8Array, right: Uint8Array): boolean {
+  if (left.byteLength !== right.byteLength) {
+    return false
+  }
+
+  for (let index = 0; index < left.byteLength; index += 1) {
+    if (left[index] !== right[index]) {
+      return false
+    }
+  }
+
+  return true
+}
+
+async function delay(ms: number): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function readStableFileBytes(
+  path: string,
+  previousBytes: Uint8Array,
+  remainingReads: number,
+): Promise<Uint8Array> {
+  if (remainingReads === 0) {
+    return previousBytes
+  }
+
+  await delay(PENDING_WRITE_STABILITY_DELAY_MS)
+  const nextBytes = await readFile(path)
+  if (areBytesEqual(previousBytes, nextBytes)) {
+    return nextBytes
+  }
+
+  return await readStableFileBytes(path, nextBytes, remainingReads - 1)
+}
 
 /**
  * 文件系统状态管理
@@ -766,6 +805,10 @@ export const useFileStore = defineStore('file', () => {
   async function handleModifyEvent(path: string): Promise<void> {
     const item = getItemByPath(path)
 
+    if (await handlePendingWriteEcho(path, item)) {
+      return
+    }
+
     // 未被资源浏览器加载的文件/目录：仅发送事件通知，跳过元数据更新
     if (!item) {
       try {
@@ -792,6 +835,44 @@ export const useFileStore = defineStore('file', () => {
       const msg = error instanceof Error ? error.message : String(error)
       void logger.error(`[FileStore] 处理 ${path} 修改事件失败: ${msg}`)
     }
+  }
+
+  async function handlePendingWriteEcho(
+    path: string,
+    item: FileSystemItem | undefined,
+  ): Promise<boolean> {
+    if (!hasPendingFileWrite(path) || item?.isDir) {
+      return false
+    }
+
+    let currentBytes: Uint8Array
+    try {
+      const firstBytes = await readFile(path)
+      currentBytes = await readStableFileBytes(path, firstBytes, PENDING_WRITE_STABILITY_MAX_READS - 1)
+    } catch {
+      return false
+    }
+
+    if (!matchesPendingFileWrite(path, currentBytes)) {
+      return false
+    }
+
+    try {
+      if (item) {
+        item.name = getBaseName(path)
+        await refreshItemMetadata(item, path)
+      }
+      fileSystemEvents.emit({
+        type: 'file:written',
+        path,
+      })
+      await invalidateParentDirectoryCache(path)
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      void logger.error(`[FileStore] 处理 ${path} 自写入回响失败: ${msg}`)
+    }
+
+    return true
   }
 
   async function handleWatchEvent(event: WatchEvent): Promise<void> {

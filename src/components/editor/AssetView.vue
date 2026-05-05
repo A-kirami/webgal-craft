@@ -73,6 +73,7 @@ const FILE_SYSTEM_REFRESH_EVENT_TYPES = [
   'file:removed',
   'file:renamed',
   'file:modified',
+  'file:written',
   'directory:created',
   'directory:removed',
   'directory:renamed',

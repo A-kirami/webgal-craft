@@ -163,7 +163,7 @@ function bindFileSystemInvalidation() {
     }
 
     const singlePathEvents = [
-      'file:created', 'file:modified', 'file:removed',
+      'file:created', 'file:modified', 'file:removed', 'file:written',
       'directory:created', 'directory:removed',
     ] as const
 

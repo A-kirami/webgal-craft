@@ -1,6 +1,5 @@
 import { normalizeTextLineEnding } from '~/domain/document/document-model'
 import { encodeTextFile } from '~/domain/document/file-codec'
-import { consumePendingDocumentWrite, registerPendingDocumentWrite } from '~/services/document-write-intents'
 import { gameFs } from '~/services/game-fs'
 import { AppError } from '~/types/errors'
 
@@ -98,15 +97,7 @@ export async function saveEditorDocument(
   const finalContent = normalizeTextLineEnding(saveSnapshot.content, metadata.lineEnding)
   const finalBytes = encodeTextFile(finalContent, metadata)
 
-  registerPendingDocumentWrite(path, finalContent, metadata)
-
-  try {
-    await gameFs.writeDocumentFile(path, finalBytes)
-  } catch (error) {
-    consumePendingDocumentWrite(path, finalContent, metadata)
-    throw error
-  }
-
+  await gameFs.writeDocumentFile(path, finalBytes)
   finalizeSavedDocument(context, path, saveSnapshot, finalContent, new Date())
   return finalContent
 }
