@@ -2,7 +2,11 @@ import { join } from '@tauri-apps/api/path'
 import { mkdir, writeFile as writeBinaryFile, writeTextFile } from '@tauri-apps/plugin-fs'
 
 import { fsCmds } from '~/commands/fs'
-import { registerPendingFileWrite, rollbackPendingFileWrite } from '~/services/file-write-echo-registry'
+import {
+  commitPendingFileWrite,
+  registerPendingFileWrite,
+  rollbackPendingFileWrite,
+} from '~/services/file-write-echo-registry'
 import { gameManager } from '~/services/game-manager'
 import { useFileStore } from '~/stores/file'
 import { buildUniqueEntryName } from '~/utils/path'
@@ -30,6 +34,7 @@ async function writeDocumentFile(path: string, content: Uint8Array): Promise<voi
     throw error
   }
 
+  commitPendingFileWrite(pendingWrite)
   gameManager.updateCurrentGameLastModified()
 }
 

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { gameFs } from '~/services/game-fs'
 
 const {
+  commitPendingFileWriteMock,
   copyEntryMock,
   createFileMock,
   createFolderMock,
@@ -24,6 +25,7 @@ const {
   writeBinaryFileMock,
   writeTextFileMock,
 } = vi.hoisted(() => ({
+  commitPendingFileWriteMock: vi.fn(),
   copyEntryMock: vi.fn(),
   createFileMock: vi.fn(),
   createFolderMock: vi.fn(),
@@ -63,6 +65,7 @@ vi.mock('~/services/game-manager', () => ({
 }))
 
 vi.mock('~/services/file-write-echo-registry', () => ({
+  commitPendingFileWrite: commitPendingFileWriteMock,
   registerPendingFileWrite: registerPendingFileWriteMock,
   rollbackPendingFileWrite: rollbackPendingFileWriteMock,
 }))
@@ -84,6 +87,7 @@ vi.mock('~/stores/file', () => ({
 
 describe('gameFs 游戏文件系统', () => {
   beforeEach(() => {
+    commitPendingFileWriteMock.mockReset()
     copyEntryMock.mockReset()
     createFileMock.mockReset()
     createFolderMock.mockReset()
@@ -149,6 +153,10 @@ describe('gameFs 游戏文件系统', () => {
     expect(writeTextFileMock).toHaveBeenCalledWith('/game/.overlay/readme.txt', 'hello')
     expect(registerPendingFileWriteMock).toHaveBeenCalledWith('/game/.overlay/image.bin', new Uint8Array([1, 2, 3]))
     expect(writeBinaryFileMock).toHaveBeenCalledWith('/game/.overlay/image.bin', new Uint8Array([1, 2, 3]))
+    expect(commitPendingFileWriteMock).toHaveBeenCalledWith({
+      physicalPath: '/game/image.bin',
+      id: 1,
+    })
     expect(updateCurrentGameLastModifiedMock).toHaveBeenCalledTimes(2)
   })
 
@@ -176,6 +184,7 @@ describe('gameFs 游戏文件系统', () => {
     await expect(gameFs.writeDocumentFile('/game/image.bin', new Uint8Array([1, 2, 3]))).rejects.toThrow(error)
 
     expect(registerPendingFileWriteMock).toHaveBeenCalledWith('/game/.overlay/image.bin', new Uint8Array([1, 2, 3]))
+    expect(commitPendingFileWriteMock).not.toHaveBeenCalled()
     expect(rollbackPendingFileWriteMock).toHaveBeenCalledWith(handle)
     expect(updateCurrentGameLastModifiedMock).not.toHaveBeenCalled()
   })

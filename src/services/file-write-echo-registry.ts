@@ -87,6 +87,31 @@ export function registerPendingFileWrite(physicalPath: string, bytes: Uint8Array
   }
 }
 
+export function commitPendingFileWrite(handle: PendingFileWriteHandle): void {
+  const normalizedPath = normalizePhysicalPath(handle.physicalPath)
+  pruneExpiredPendingFileWrites(normalizedPath)
+
+  const writes = pendingFileWrites.get(normalizedPath)
+  if (!writes) {
+    return
+  }
+
+  const nextWrites = writes.filter((write) => {
+    if (write.id < handle.id) {
+      clearTimeout(write.cleanupTimer)
+      return false
+    }
+
+    return true
+  })
+  if (nextWrites.length === 0) {
+    pendingFileWrites.delete(normalizedPath)
+    return
+  }
+
+  pendingFileWrites.set(normalizedPath, nextWrites)
+}
+
 export function rollbackPendingFileWrite(handle: PendingFileWriteHandle): void {
   const normalizedPath = normalizePhysicalPath(handle.physicalPath)
   const writes = pendingFileWrites.get(normalizedPath)
