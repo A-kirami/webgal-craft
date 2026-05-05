@@ -288,8 +288,8 @@ modals:
     selected: 選択済み {count}/{total}
     skip: スキップ
     import: インポート ({count})
-    versionsCount: '{count} 個のバージョン'
-    toggleGroup: '{name} のすべてのバージョンを切り替え'
+    versionsCount: "{count} 個のバージョン"
+    toggleGroup: "{name} のすべてのバージョンを切り替え"
   gameConfig:
     title: ゲーム設定
     description: 現在のゲームの基本情報、リソース、関連設定を編集します
@@ -376,7 +376,7 @@ modals:
     description: ビジュアル変換、フィルター、エフェクトパラメータを編集
     apply: 適用
     reset: リセット
-    clearProperty: '{name} の指定を削除'
+    clearProperty: "{name} の指定を削除"
     categories:
       transform: 変換
       effects: エフェクト
@@ -467,7 +467,7 @@ modals:
     restore: 復元
     restoreSuccess: 復元しました
     restoreConfirmTitle: このバージョンを復元しますか？
-    restoreConfirmContent: '{time} に保存したバージョンを復元します。現在の内容は「復元操作」として自動的にバックアップされます。'
+    restoreConfirmContent: "{time} に保存したバージョンを復元します。現在の内容は「復元操作」として自動的にバックアップされます。"
     sourceKind:
       manualSave: 手動保存
       autoSave: 自動保存
@@ -523,8 +523,8 @@ edit:
       wait: 一定時間待機
     arguments:
       when: 条件付き実行
-      continue: 自動続行
-      next: 並行実行
+      continue: 自動進行
+      next: 即時進行
       notend: 次の行に続ける
       concat: 前のセリフに連結
       vocal: ボイス
@@ -601,7 +601,7 @@ edit:
     engineMissing: エンジンが利用できません
     template: テンプレート
     templateMissing: テンプレートが利用できません
-    templateFollowing: 'テンプレート：現在のエンジンに従う'
+    templateFollowing: "テンプレート：現在のエンジンに従う"
   fileTree:
     newFile: 新しいファイル
     newFolder: 新しいフォルダー
@@ -793,8 +793,8 @@ edit:
       unlockBgm: 音楽を BGM ギャラリーに収録します
       unknown: 未認識のコマンド種別です。
     params:
-      continue: 自動続行
-      next: 並行実行
+      continue: 自動進行
+      next: 即時進行
       concat: 前段に接続
       notend: 再生継続
       vocal: ボイス
@@ -1054,7 +1054,7 @@ engine:
   defaultEngine: デフォルト
   setDefaultEngine: デフォルトエンジンに設定
   unsetDefaultEngine: デフォルトエンジンを解除
-  versionSummary: '{version} ・全 {count} バージョン'
+  versionSummary: "{version} ・全 {count} バージョン"
   noAvailableVersionSummary: 利用可能なバージョンなし ・インストール済み {count} バージョン
   latestBadge: 最新
   deleteVersion: バージョンを削除
