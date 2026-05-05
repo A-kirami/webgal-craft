@@ -30,6 +30,8 @@ const MAX_CACHE_ITEMS = 5000
  * 文件系统监听延迟（毫秒）
  */
 const WATCH_DELAY_MS = 150
+const PENDING_WRITE_STABILITY_DELAY_MS = 10
+const PENDING_WRITE_STABILITY_MAX_READS = 3
 
 /**
  * 文件系统项的基础接口
@@ -68,6 +70,42 @@ export interface DirItem extends FileSystemItemBase {
 export type FileSystemItem = FileItem | DirItem
 
 type RemovedEntryKind = 'file' | 'folder' | undefined
+
+function areBytesEqual(left: Uint8Array, right: Uint8Array): boolean {
+  if (left.byteLength !== right.byteLength) {
+    return false
+  }
+
+  for (let index = 0; index < left.byteLength; index += 1) {
+    if (left[index] !== right[index]) {
+      return false
+    }
+  }
+
+  return true
+}
+
+async function delay(ms: number): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function readStableFileBytes(
+  path: string,
+  previousBytes: Uint8Array,
+  remainingReads: number,
+): Promise<Uint8Array> {
+  if (remainingReads === 0) {
+    return previousBytes
+  }
+
+  await delay(PENDING_WRITE_STABILITY_DELAY_MS)
+  const nextBytes = await readFile(path)
+  if (areBytesEqual(previousBytes, nextBytes)) {
+    return nextBytes
+  }
+
+  return await readStableFileBytes(path, nextBytes, remainingReads - 1)
+}
 
 /**
  * 文件系统状态管理
@@ -809,7 +847,8 @@ export const useFileStore = defineStore('file', () => {
 
     let currentBytes: Uint8Array
     try {
-      currentBytes = await readFile(path)
+      const firstBytes = await readFile(path)
+      currentBytes = await readStableFileBytes(path, firstBytes, PENDING_WRITE_STABILITY_MAX_READS - 1)
     } catch {
       return false
     }

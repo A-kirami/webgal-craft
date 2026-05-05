@@ -394,7 +394,7 @@ describe('文件状态仓库', () => {
     ])
 
     const expectedBytes = new Uint8Array([104, 101, 108, 108, 111])
-    readFileMock.mockResolvedValueOnce(expectedBytes)
+    readFileMock.mockResolvedValue(expectedBytes)
 
     pendingWrites.push(registerPendingFileWrite('/workspace/game/echo-loaded.txt', expectedBytes))
 
@@ -428,7 +428,7 @@ describe('文件状态仓库', () => {
     readDirectoryItemsCachedMock.mockResolvedValue([])
 
     const expectedBytes = new Uint8Array([111, 107])
-    readFileMock.mockResolvedValueOnce(expectedBytes)
+    readFileMock.mockResolvedValue(expectedBytes)
 
     pendingWrites.push(registerPendingFileWrite('/workspace/game/echo-unloaded.txt', expectedBytes))
 
@@ -462,7 +462,7 @@ describe('文件状态仓库', () => {
       createFileViewerItem('/workspace/game/echo-mismatch.txt', false),
     ])
 
-    readFileMock.mockResolvedValueOnce(new Uint8Array([98, 121, 101]))
+    readFileMock.mockResolvedValue(new Uint8Array([98, 121, 101]))
 
     pendingWrites.push(registerPendingFileWrite('/workspace/game/echo-mismatch.txt', new Uint8Array([104, 101, 108, 108, 111])))
 
@@ -483,6 +483,45 @@ describe('文件状态仓库', () => {
     expect(emittedEvents).toContainEqual(expect.objectContaining({
       type: 'file:modified',
       path: '/workspace/game/echo-mismatch.txt',
+    }))
+  })
+
+  it('命中待回响路径且字节在短暂波动后稳定时仍识别为自写入回响', async () => {
+    existsMock.mockResolvedValue(true)
+    statMock.mockImplementation(async (path: string) => createStatResult(String(path), false))
+    readDirectoryItemsCachedMock.mockResolvedValue([
+      createFileViewerItem('/workspace/game/echo-partial.txt', false),
+    ])
+
+    const expectedBytes = new Uint8Array([104, 101, 108, 108, 111])
+    readFileMock
+      .mockResolvedValueOnce(new Uint8Array([104, 101]))
+      .mockResolvedValueOnce(expectedBytes)
+      .mockResolvedValue(expectedBytes)
+
+    pendingWrites.push(registerPendingFileWrite('/workspace/game/echo-partial.txt', expectedBytes))
+
+    const store = useFileStore()
+    workspaceStoreState.CWD = '/workspace'
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+
+    await store.getFolderContents('/workspace/game')
+    emittedEvents.length = 0
+    await watchHandler?.({
+      type: { modify: { kind: 'data' } },
+      paths: ['/workspace/game/echo-partial.txt'],
+    })
+
+    expect(readFileMock).toHaveBeenCalledTimes(3)
+    expect(emittedEvents).toContainEqual(expect.objectContaining({
+      type: 'file:written',
+      path: '/workspace/game/echo-partial.txt',
+    }))
+    expect(emittedEvents).not.toContainEqual(expect.objectContaining({
+      type: 'file:modified',
+      path: '/workspace/game/echo-partial.txt',
     }))
   })
 
