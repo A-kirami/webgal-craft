@@ -1,9 +1,9 @@
 import '~/__tests__/setup'
 
 import { LRUCache } from 'lru-cache'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { registerPendingFileWrite } from '~/services/file-write-echo-registry'
+import { registerPendingFileWrite, rollbackPendingFileWrite } from '~/services/file-write-echo-registry'
 import { useFileStore } from '~/stores/file'
 
 import type { readDirectoryItemsCached } from '~/services/directory-cache'
@@ -73,6 +73,7 @@ let workspaceStoreState = reactive<{
 })
 
 let watchHandler: ((event: Record<string, unknown>) => Promise<void>) | undefined
+let pendingWrites: ReturnType<typeof registerPendingFileWrite>[] = []
 
 vi.mock('@tauri-apps/api/path', () => ({
   basename: basenameMock,
@@ -221,6 +222,7 @@ function captureFileStoreCaches() {
 
 describe('文件状态仓库', () => {
   beforeEach(() => {
+    pendingWrites = []
     basenameMock.mockClear()
     existsMock.mockReset()
     getGameEnginePathMock.mockReset()
@@ -260,6 +262,14 @@ describe('文件状态仓库', () => {
       watchHandler = handler
       return () => undefined
     })
+  })
+
+  afterEach(() => {
+    for (const pendingWrite of pendingWrites) {
+      rollbackPendingFileWrite(pendingWrite)
+    }
+    vi.clearAllTimers()
+    vi.useRealTimers()
   })
 
   it('getFolderContents 会懒加载目录内容并复用缓存结果', async () => {
@@ -386,7 +396,7 @@ describe('文件状态仓库', () => {
     const expectedBytes = new Uint8Array([104, 101, 108, 108, 111])
     readFileMock.mockResolvedValueOnce(expectedBytes)
 
-    registerPendingFileWrite('/workspace/game/echo-loaded.txt', expectedBytes)
+    pendingWrites.push(registerPendingFileWrite('/workspace/game/echo-loaded.txt', expectedBytes))
 
     const store = useFileStore()
     workspaceStoreState.CWD = '/workspace'
@@ -420,7 +430,7 @@ describe('文件状态仓库', () => {
     const expectedBytes = new Uint8Array([111, 107])
     readFileMock.mockResolvedValueOnce(expectedBytes)
 
-    registerPendingFileWrite('/workspace/game/echo-unloaded.txt', expectedBytes)
+    pendingWrites.push(registerPendingFileWrite('/workspace/game/echo-unloaded.txt', expectedBytes))
 
     useFileStore()
     workspaceStoreState.CWD = '/workspace'
@@ -454,7 +464,7 @@ describe('文件状态仓库', () => {
 
     readFileMock.mockResolvedValueOnce(new Uint8Array([98, 121, 101]))
 
-    registerPendingFileWrite('/workspace/game/echo-mismatch.txt', new Uint8Array([104, 101, 108, 108, 111]))
+    pendingWrites.push(registerPendingFileWrite('/workspace/game/echo-mismatch.txt', new Uint8Array([104, 101, 108, 108, 111])))
 
     const store = useFileStore()
     workspaceStoreState.CWD = '/workspace'

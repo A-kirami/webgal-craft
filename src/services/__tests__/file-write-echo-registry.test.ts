@@ -9,18 +9,25 @@ import {
 } from '../file-write-echo-registry'
 
 describe('fileWriteEchoRegistry', () => {
+  let pendingWrites: ReturnType<typeof registerPendingFileWrite>[] = []
+
   beforeEach(() => {
+    pendingWrites = []
     vi.useRealTimers()
   })
 
   afterEach(() => {
+    for (const pendingWrite of pendingWrites) {
+      rollbackPendingFileWrite(pendingWrite)
+    }
+    vi.clearAllTimers()
     vi.useRealTimers()
   })
 
   it('同一次写入在过期前可重复命中多次回响', () => {
     const bytes = new Uint8Array([1, 2, 3])
 
-    registerPendingFileWrite(String.raw`C:\project\game\scene-a.txt`, bytes)
+    pendingWrites.push(registerPendingFileWrite(String.raw`C:\project\game\scene-a.txt`, bytes))
 
     expect(hasPendingFileWrite('C:/project/game/scene-a.txt')).toBe(true)
     expect(matchesPendingFileWrite('C:/project/game/scene-a.txt', bytes)).toBe(true)
@@ -31,8 +38,9 @@ describe('fileWriteEchoRegistry', () => {
     const oldBytes = new Uint8Array([1, 2, 3])
     const newBytes = new Uint8Array([4, 5, 6])
 
-    registerPendingFileWrite('/project/game/scene-a.txt', oldBytes)
+    pendingWrites.push(registerPendingFileWrite('/project/game/scene-a.txt', oldBytes))
     const latestWrite = registerPendingFileWrite('/project/game/scene-a.txt', newBytes)
+    pendingWrites.push(latestWrite)
 
     commitPendingFileWrite(latestWrite)
 
@@ -44,6 +52,7 @@ describe('fileWriteEchoRegistry', () => {
   it('回滚后不再命中已登记的写入', () => {
     const bytes = new Uint8Array([4, 5, 6])
     const handle = registerPendingFileWrite('/project/game/scene-b.txt', bytes)
+    pendingWrites.push(handle)
 
     rollbackPendingFileWrite(handle)
 
@@ -55,7 +64,7 @@ describe('fileWriteEchoRegistry', () => {
     vi.useFakeTimers()
     const bytes = new Uint8Array([7, 8, 9])
 
-    registerPendingFileWrite('/project/game/scene-c.txt', bytes)
+    pendingWrites.push(registerPendingFileWrite('/project/game/scene-c.txt', bytes))
     vi.advanceTimersByTime(30 * 1000 + 1)
 
     expect(hasPendingFileWrite('/project/game/scene-c.txt')).toBe(false)
