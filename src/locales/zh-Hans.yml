@@ -288,7 +288,7 @@ modals:
     selected: 已选择 {count}/{total}
     skip: 跳过
     import: 导入 ({count})
-    versionsCount: '{count} 个版本'
+    versionsCount: "{count} 个版本"
     toggleGroup: 切换 {name} 全部版本
   gameConfig:
     title: 游戏配置
@@ -523,8 +523,8 @@ edit:
       wait: 等待一段时间
     arguments:
       when: 执行条件
-      continue: 自动续行
-      next: 并行执行
+      continue: 自动推进
+      next: 立即推进
       notend: 继续播放下一段
       concat: 接续上一段对话
       vocal: 语音
@@ -793,8 +793,8 @@ edit:
       unlockBgm: 将音乐收录进 BGM 鉴赏
       unknown: 未识别的命令类型
     params:
-      continue: 自动续行
-      next: 并行执行
+      continue: 自动推进
+      next: 立即推进
       concat: 接续上段
       notend: 继续播放
       vocal: 语音
@@ -1054,7 +1054,7 @@ engine:
   defaultEngine: 默认
   setDefaultEngine: 设为默认引擎
   unsetDefaultEngine: 取消默认引擎
-  versionSummary: '{version} · 共 {count} 个版本'
+  versionSummary: "{version} · 共 {count} 个版本"
   noAvailableVersionSummary: 无可用版本 · 共 {count} 个已安装版本
   latestBadge: 最新
   deleteVersion: 删除版本
