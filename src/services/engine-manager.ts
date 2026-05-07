@@ -402,7 +402,7 @@ export interface ImportEngineResult {
 }
 
 async function importEngine(enginePath: string): Promise<ImportEngineResult> {
-  const { normalizedPath } = normalizeImportPath(enginePath)
+  const { normalizedPath, lookupKey: sourceLookupKey } = normalizeImportPath(enginePath)
 
   // 幂等：源路径已注册直接返回既有 ID
   const existingBySource = await findEngineByLookupPath(normalizedPath)
@@ -424,7 +424,6 @@ async function importEngine(enginePath: string): Promise<ImportEngineResult> {
   const { normalizedPath: targetPath, lookupKey: targetLookupKey } = normalizeImportPath(
     await resolveManagedEnginePath(snapshot),
   )
-  const { lookupKey: sourceLookupKey } = normalizeImportPath(normalizedPath)
 
   if (sourceLookupKey === targetLookupKey) {
     logger.info(`[引擎导入] 引擎已在托管目录，直接注册: ${normalizedPath}`)
