@@ -91,7 +91,7 @@ function buildFigureCacheKey(ctx: DynamicOptionsContext): string | undefined {
   if (!resolved) {
     return
   }
-  return `${resolved.gameKey}${SPLIT_GAME_PATH_TOKEN}${resolved.relativePath.toLowerCase()}`
+  return `${resolved.gameKey}${SPLIT_GAME_PATH_TOKEN}${resolved.relativePath}`
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
