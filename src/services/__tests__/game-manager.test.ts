@@ -548,10 +548,11 @@ describe('gameManager', () => {
   })
 
   it('importGame 对自带引擎旧项目会补写自包含 project.wgcp', async () => {
-    existsMock
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(false)
-      .mockResolvedValueOnce(true)
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/self-contained'
+      || path === '/games/self-contained/game/config.txt'
+      || path === '/games/self-contained/index.html'
+      || path === '/games/self-contained/game/background/cover.png')
 
     await expect(gameManager.importGame('/games/self-contained')).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
@@ -564,9 +565,11 @@ describe('gameManager', () => {
   })
 
   it('importGame 对匹配到本地引擎的配置项目会直接关联 engineId', async () => {
-    existsMock
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(true)
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/vfs'
+      || path === '/games/vfs/game/config.txt'
+      || path === '/games/vfs/project.wgcp'
+      || path === '/games/vfs/game/background/cover.png')
     readProjectConfigMock.mockResolvedValue({
       version: 1,
       engine: {
@@ -590,9 +593,11 @@ describe('gameManager', () => {
   })
 
   it('importGame 对匹配到 broken availability 引擎的配置项目会保留关联并记录受限预览警告', async () => {
-    existsMock
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(true)
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/vfs'
+      || path === '/games/vfs/game/config.txt'
+      || path === '/games/vfs/project.wgcp'
+      || path === '/games/vfs/game/background/cover.png')
     readProjectConfigMock.mockResolvedValue({
       version: 1,
       engine: {
@@ -619,9 +624,11 @@ describe('gameManager', () => {
   })
 
   it('importGame 对匹配到 error 引擎的配置项目会回退到重新选择可用引擎', async () => {
-    existsMock
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(true)
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/vfs'
+      || path === '/games/vfs/game/config.txt'
+      || path === '/games/vfs/project.wgcp'
+      || path === '/games/vfs/game/background/cover.png')
     readProjectConfigMock.mockResolvedValue({
       version: 1,
       engine: {
@@ -661,9 +668,11 @@ describe('gameManager', () => {
   })
 
   it('importGame 在未匹配到引擎时会请求用户选择并更新 project.wgcp', async () => {
-    existsMock
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(true)
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/vfs'
+      || path === '/games/vfs/game/config.txt'
+      || path === '/games/vfs/project.wgcp'
+      || path === '/games/vfs/game/background/cover.png')
     readProjectConfigMock.mockResolvedValue({
       version: 1,
       engine: {
@@ -738,10 +747,10 @@ describe('gameManager', () => {
   })
 
   it('importGame 在用户取消选择引擎时会返回取消原因', async () => {
-    existsMock
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(false)
-      .mockResolvedValueOnce(false)
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/no-engine'
+      || path === '/games/no-engine/game/config.txt'
+      || path === '/games/no-engine/game/background/cover.png')
 
     await expect(gameManager.importGame('/games/no-engine', {
       selectEngine: vi.fn().mockResolvedValue(undefined),
@@ -753,10 +762,11 @@ describe('gameManager', () => {
   })
 
   it('importGame 对损坏且无法恢复的 project.wgcp 返回配置损坏原因', async () => {
-    existsMock
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(false)
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/broken-config'
+      || path === '/games/broken-config/game/config.txt'
+      || path === '/games/broken-config/project.wgcp'
+      || path === '/games/broken-config/game/background/cover.png')
     readProjectConfigMock.mockRejectedValue(new AppError('INVALID_PROJECT_CONFIG', 'project.wgcp 损坏'))
 
     await expect(gameManager.importGame('/games/broken-config')).rejects.toEqual(
@@ -767,9 +777,11 @@ describe('gameManager', () => {
   })
 
   it('importGame 不会把非配置解析错误伪装成配置损坏', async () => {
-    existsMock
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce(true)
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/io-error'
+      || path === '/games/io-error/game/config.txt'
+      || path === '/games/io-error/project.wgcp'
+      || path === '/games/io-error/game/background/cover.png')
     readProjectConfigMock.mockRejectedValue(new AppError('IO_ERROR', '权限不足'))
 
     await expect(gameManager.importGame('/games/io-error')).rejects.toEqual(
@@ -825,12 +837,29 @@ describe('gameManager', () => {
     })).rejects.toEqual(new AppError('IO_ERROR', '引擎不可用'))
   })
 
-  it('importGame 遇到无效目录时抛出 INVALID_STRUCTURE', async () => {
+  it('importGame 遇到不存在的目录时抛出 DIR_NOT_FOUND', async () => {
     existsMock.mockResolvedValue(false)
+
+    await expect(gameManager.importGame('/games/missing')).rejects.toEqual(
+      new AppError('DIR_NOT_FOUND', '游戏目录不存在'),
+    )
+  })
+
+  it('importGame 遇到缺失 game/config.txt 的目录时抛出 INVALID_STRUCTURE', async () => {
+    existsMock.mockImplementation(async (path: string) => path === '/games/invalid')
 
     await expect(gameManager.importGame('/games/invalid')).rejects.toEqual(
       new AppError('INVALID_STRUCTURE', '无效的游戏文件夹'),
     )
+  })
+
+  it('importGame 在 config.txt 解析失败时抛出 INVALID_CONFIG', async () => {
+    existsMock.mockResolvedValue(true)
+    gameCmdsGetGameConfigMock.mockRejectedValue(new Error('parse failed'))
+
+    await expect(gameManager.importGame('/games/bad-config')).rejects.toMatchObject({
+      code: 'INVALID_CONFIG',
+    })
   })
 
   it('inspectGame 在路径不存在时返回 missing + DIR_NOT_FOUND', async () => {
