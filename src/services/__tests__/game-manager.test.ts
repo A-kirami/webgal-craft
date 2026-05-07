@@ -1019,7 +1019,7 @@ describe('gameManager', () => {
       path: AbsPath.from('/games/demo'),
     }), true)
 
-    expect(deleteFileMock).toHaveBeenCalledWith('/games/demo')
+    expect(deleteFileMock).toHaveBeenCalledWith('/games/demo', true)
     expect(dbGameDeleteMock).toHaveBeenCalledWith('game-1')
     expect(deleteFileMock.mock.invocationCallOrder[0]).toBeLessThan(
       dbGameDeleteMock.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
