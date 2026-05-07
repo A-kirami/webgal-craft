@@ -297,6 +297,40 @@ describe('engineManager', () => {
     )
   })
 
+  it('importEngine 在缺少版本时会回退到基于 engineId 的稳定托管目录', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        engineType: 'official',
+        webgalVersion: '4.5.0',
+        icon: 'branding/icon.png',
+      },
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    addMock.mockResolvedValue('engine-legacy')
+
+    await expect(engineManager.importEngine(AbsPath.from('/downloads/webgal-legacy'))).resolves.toEqual({
+      id: 'engine-legacy',
+      alreadyRegistered: false,
+    })
+
+    expect(addMock).toHaveBeenCalledWith(expect.objectContaining({
+      path: '/engines/WebGAL/open-webgal.webgal',
+      pathLookupKey: '/engines/webgal/open-webgal.webgal',
+      name: 'WebGAL',
+      version: undefined,
+      status: 'creating',
+    }))
+    expect(copyDirectoryWithProgressMock).toHaveBeenCalledWith(
+      '/downloads/webgal-legacy',
+      '/engines/WebGAL/open-webgal.webgal',
+      expect.any(Function),
+    )
+  })
+
   it('importEngine 会拒绝导入旧版引擎目录', async () => {
     readEngineManifestMock.mockResolvedValue({ status: 'missing' })
     validateDirectoryStructureMock.mockResolvedValue(true)

@@ -117,10 +117,10 @@ function withEnginePreviewCacheVersion(
   }
 }
 
-async function resolveManagedEnginePath(engine: Pick<EngineSnapshot, 'name' | 'version'>): Promise<AbsPath> {
+async function resolveManagedEnginePath(engine: Pick<EngineSnapshot, 'engineId' | 'name' | 'version'>): Promise<AbsPath> {
   const storageSettingsStore = useStorageSettingsStore()
   const nameSegment = sanitizeEnginePathSegment(engine.name, '引擎名称')
-  const versionSegment = sanitizeEnginePathSegment(engine.version ?? '', '引擎版本')
+  const versionSegment = sanitizeEnginePathSegment(engine.version ?? engine.engineId, '引擎版本')
   return AbsPath.append(
     AbsPath.append(AbsPath.from(storageSettingsStore.engineSavePath), nameSegment),
     versionSegment,
