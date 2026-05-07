@@ -4,15 +4,14 @@ import { useBackupSettingsStore } from '~/stores/backup-settings'
 
 import type { BackupEntry, BackupSourceKind } from '~/commands/backup'
 
-const SCENE_PATH_PREFIX = RelPath.from('game/scene')
+const SCENE_PATH_PREFIX = 'game/scene/'
 const SCENE_FILE_EXT = '.txt'
 
 /**
  * 仅当 logicalPath 是项目相对路径、位于 `game/scene/` 下且为 `.txt` 文件时返回 true。
  */
 export function isScenePath(logicalPath: RelPath): boolean {
-  const normalizedPath = logicalPath
-  return RelPath.startsWith(normalizedPath, SCENE_PATH_PREFIX) && normalizedPath.endsWith(SCENE_FILE_EXT)
+  return logicalPath.startsWith(SCENE_PATH_PREFIX) && logicalPath.endsWith(SCENE_FILE_EXT)
 }
 
 /**
