@@ -15,7 +15,7 @@ import type { ProjectConfig, TemplateBinding } from '~/types/project-config'
 
 type TemplateStrategy = 'explicit' | 'clean' | 'dirty'
 
-async function templateUpperPath(gamePath: string): Promise<string> {
+function templateUpperPath(gamePath: string): AbsPath {
   return AbsPath.join(AbsPath.from(gamePath), RelPath.from('game/template'))
 }
 
@@ -26,7 +26,7 @@ async function isTemplateDirty(gamePath: string): Promise<boolean> {
 
   // 在无 Pinia 上下文（如非渲染进程逻辑）调用时降级为 false，不阻塞核心流程
   try {
-    const templateRoot = await templateUpperPath(gamePath)
+    const templateRoot = templateUpperPath(gamePath)
     return useEditorStore().hasUnsavedDocumentsUnder(templateRoot)
   } catch {
     return false
@@ -35,7 +35,7 @@ async function isTemplateDirty(gamePath: string): Promise<boolean> {
 
 async function closeOpenedTemplateDocuments(gamePath: string): Promise<void> {
   try {
-    const templateRoot = await templateUpperPath(gamePath)
+    const templateRoot = templateUpperPath(gamePath)
     const editorStore = useEditorStore()
     const tabsStore = useTabsStore()
     const openedPaths = editorStore.collectDocumentPathsUnder(templateRoot)
