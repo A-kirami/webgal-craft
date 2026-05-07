@@ -4,7 +4,7 @@ import { readDir } from '@tauri-apps/plugin-fs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, reactive } from 'vue'
 
-import { createTauriPathModuleMock } from '~/__tests__/mocks/tauri-path'
+import { RelPath } from '~/domain/path'
 
 const {
   onMock,
@@ -13,8 +13,6 @@ const {
   onMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
 }))
-
-vi.mock('@tauri-apps/api/path', () => createTauriPathModuleMock())
 
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
@@ -154,11 +152,11 @@ describe('ResourceIndexService', () => {
       await waitFor(() => catalog.status.value === 'ready')
 
       expect(catalog.status.value).toBe('ready')
-      expect(catalog.hasAsset('background', 'bg.jpg')).toBe(true)
-      expect(catalog.hasAsset('background', 'chapter1/night.png')).toBe(true)
-      expect(catalog.hasAsset('figure', 'hero.png')).toBe(true)
-      expect(catalog.hasAsset('scene', 'intro.txt')).toBe(true)
-      expect(catalog.hasAsset('background', 'missing.png')).toBe(false)
+      expect(catalog.hasAsset('background', RelPath.from('bg.jpg'))).toBe(true)
+      expect(catalog.hasAsset('background', RelPath.from('chapter1/night.png'))).toBe(true)
+      expect(catalog.hasAsset('figure', RelPath.from('hero.png'))).toBe(true)
+      expect(catalog.hasAsset('scene', RelPath.from('intro.txt'))).toBe(true)
+      expect(catalog.hasAsset('background', RelPath.from('missing.png'))).toBe(false)
     } finally {
       scope.stop()
     }
@@ -199,7 +197,7 @@ describe('ResourceIndexService', () => {
       await waitFor(() => catalog.status.value === 'ready')
 
       expect(catalog.status.value).toBe('ready')
-      expect(catalog.hasAsset('background', 'bg.jpg')).toBe(true)
+      expect(catalog.hasAsset('background', RelPath.from('bg.jpg'))).toBe(true)
       expect(readDirMock).toHaveBeenCalledTimes(2)
 
       emitFileSystemEvent('file:removed', {
@@ -208,7 +206,7 @@ describe('ResourceIndexService', () => {
       })
       await flushMicrotasks()
 
-      expect(catalog.hasAsset('background', 'bg.jpg')).toBe(false)
+      expect(catalog.hasAsset('background', RelPath.from('bg.jpg'))).toBe(false)
       expect(readDirMock).toHaveBeenCalledTimes(2)
 
       emitFileSystemEvent('file:created', {
@@ -217,7 +215,7 @@ describe('ResourceIndexService', () => {
       })
       await flushMicrotasks()
 
-      expect(catalog.hasAsset('background', 'new-bg.jpg')).toBe(true)
+      expect(catalog.hasAsset('background', RelPath.from('new-bg.jpg'))).toBe(true)
       expect(readDirMock).toHaveBeenCalledTimes(2)
     } finally {
       scope.stop()
@@ -282,7 +280,7 @@ describe('ResourceIndexService', () => {
 
       slowFigureRead.resolve([])
 
-      await waitFor(() => catalog.status.value === 'ready' && catalog.hasAsset('background', 'new-bg.jpg'))
+      await waitFor(() => catalog.status.value === 'ready' && catalog.hasAsset('background', RelPath.from('new-bg.jpg')))
       expect(backgroundReadCount).toBe(2)
     } finally {
       scope.stop()

@@ -3,6 +3,7 @@ import '~/__tests__/setup'
 import { LRUCache } from 'lru-cache'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { AbsPath, normalizePosix } from '~/domain/path'
 import { registerPendingFileWrite, rollbackPendingFileWrite } from '~/services/file-write-echo-registry'
 import { useFileStore } from '~/stores/file'
 
@@ -11,7 +12,6 @@ import type { VfsDirEntry } from '~/types/project-config'
 import type { handleError } from '~/utils/error-handler'
 
 const {
-  basenameMock,
   clearDirectoryItemsCacheMock,
   fileSystemEventsEmitMock,
   existsMock,
@@ -35,7 +35,6 @@ const {
   vfsResolvePathMock,
   watchFsMock,
 } = vi.hoisted(() => ({
-  basenameMock: vi.fn(async (input: string) => input.split('/').at(-1) ?? input),
   clearDirectoryItemsCacheMock: vi.fn(),
   fileSystemEventsEmitMock: vi.fn(),
   existsMock: vi.fn(),
@@ -44,7 +43,7 @@ const {
   invalidateDirectoryItemsCacheMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   loggerWarnMock: vi.fn(),
-  projectConfigPathMock: vi.fn(async (gamePath: string) => `${gamePath}/project.wgcp`),
+  projectConfigPathMock: vi.fn((gamePath: string) => `${gamePath}/project.wgcp`),
   readFileMock: vi.fn(),
   readDirectoryItemsCachedMock: vi.fn<typeof readDirectoryItemsCached>(),
   resolvePreviewSiteMock: vi.fn(),
@@ -74,12 +73,6 @@ let workspaceStoreState = reactive<{
 
 let watchHandler: ((event: Record<string, unknown>) => Promise<void>) | undefined
 let pendingWrites: ReturnType<typeof registerPendingFileWrite>[] = []
-
-vi.mock('@tauri-apps/api/path', () => ({
-  basename: basenameMock,
-  join: async (...parts: string[]) => normalizePath(parts.join('/')),
-  normalize: async (path: string) => normalizePath(path),
-}))
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
   exists: existsMock,
@@ -151,21 +144,7 @@ vi.mock('~/commands/vfs', () => ({
 }))
 
 function normalizePath(path: string): string {
-  const isAbsolute = path.startsWith('/')
-  const segments: string[] = []
-
-  for (const rawSegment of path.replaceAll('\\', '/').split('/')) {
-    if (!rawSegment || rawSegment === '.') {
-      continue
-    }
-    if (rawSegment === '..') {
-      segments.pop()
-      continue
-    }
-    segments.push(rawSegment)
-  }
-
-  return `${isAbsolute ? '/' : ''}${segments.join('/')}`
+  return normalizePosix(path)
 }
 
 function createFileViewerItem(path: string, isDir: boolean) {
@@ -223,7 +202,6 @@ function captureFileStoreCaches() {
 describe('文件状态仓库', () => {
   beforeEach(() => {
     pendingWrites = []
-    basenameMock.mockClear()
     existsMock.mockReset()
     getGameEnginePathMock.mockReset()
     statMock.mockReset()
@@ -281,8 +259,8 @@ describe('文件状态仓库', () => {
 
     const store = useFileStore()
 
-    const firstRead = await store.getFolderContents('/root')
-    const secondRead = await store.getFolderContents('/root')
+    const firstRead = await store.getFolderContents(AbsPath.from('/root'))
+    const secondRead = await store.getFolderContents(AbsPath.from('/root'))
 
     expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
     expect(firstRead.map(item => item.path)).toEqual(['/root/scene', '/root/readme.txt'])
@@ -309,7 +287,7 @@ describe('文件状态仓库', () => {
       paths: ['/workspace/game/new.txt'],
     })
 
-    const afterCreate = await store.getFolderContents('/workspace/game')
+    const afterCreate = await store.getFolderContents(AbsPath.from('/workspace/game'))
     expect(afterCreate.map(item => item.path)).toContain('/workspace/game/new.txt')
     expect(emittedEvents).toContainEqual(expect.objectContaining({
       type: 'file:created',
@@ -321,7 +299,7 @@ describe('文件状态仓库', () => {
       paths: ['/workspace/game/new.txt'],
     })
 
-    const afterRemove = await store.getFolderContents('/workspace/game')
+    const afterRemove = await store.getFolderContents(AbsPath.from('/workspace/game'))
     expect(afterRemove.map(item => item.path)).not.toContain('/workspace/game/new.txt')
     expect(emittedEvents).toContainEqual(expect.objectContaining({
       type: 'file:removed',
@@ -346,7 +324,7 @@ describe('文件状态仓库', () => {
       paths: ['/workspace/game/old.txt', '/workspace/game/new.txt'],
     })
 
-    const items = await store.getFolderContents('/workspace/game')
+    const items = await store.getFolderContents(AbsPath.from('/workspace/game'))
     expect(items).toEqual([
       expect.objectContaining({
         name: 'new.txt',
@@ -404,7 +382,7 @@ describe('文件状态仓库', () => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
 
-    await store.getFolderContents('/workspace/game')
+    await store.getFolderContents(AbsPath.from('/workspace/game'))
     emittedEvents.length = 0
     await watchHandler?.({
       type: { modify: { kind: 'data' } },
@@ -472,7 +450,7 @@ describe('文件状态仓库', () => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
 
-    await store.getFolderContents('/workspace/game')
+    await store.getFolderContents(AbsPath.from('/workspace/game'))
     emittedEvents.length = 0
     await watchHandler?.({
       type: { modify: { kind: 'data' } },
@@ -507,7 +485,7 @@ describe('文件状态仓库', () => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
 
-    await store.getFolderContents('/workspace/game')
+    await store.getFolderContents(AbsPath.from('/workspace/game'))
     emittedEvents.length = 0
     await watchHandler?.({
       type: { modify: { kind: 'data' } },
@@ -596,7 +574,7 @@ describe('文件状态仓库', () => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
 
-    const before = await store.getFolderContents('/workspace/game')
+    const before = await store.getFolderContents(AbsPath.from('/workspace/game'))
     expect(before).toEqual([
       expect.objectContaining({
         path: '/workspace/game/scene.txt',
@@ -608,7 +586,7 @@ describe('文件状态仓库', () => {
       paths: ['/workspace/game/scene.txt'],
     })
 
-    const after = await store.getFolderContents('/workspace/game')
+    const after = await store.getFolderContents(AbsPath.from('/workspace/game'))
     expect(after).toEqual([
       expect.objectContaining({
         path: '/workspace/game/scene.txt',
@@ -641,16 +619,16 @@ describe('文件状态仓库', () => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
 
-    const before = await store.getFolderContents('/workspace/game')
+    const before = await store.getFolderContents(AbsPath.from('/workspace/game'))
     expect(before).toEqual([
       expect.objectContaining({
         path: '/workspace/game/original.txt',
       }),
     ])
 
-    await store.renameEntry('/workspace/game/original.txt', 'renamed.txt')
+    await store.renameEntry(AbsPath.from('/workspace/game/original.txt'), 'renamed.txt')
 
-    const after = await store.getFolderContents('/workspace/game')
+    const after = await store.getFolderContents(AbsPath.from('/workspace/game'))
     expect(after).toEqual([
       expect.objectContaining({
         path: '/workspace/game/renamed.txt',
@@ -700,7 +678,7 @@ describe('文件状态仓库', () => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
 
-    const before = await store.getFolderContents('/workspace/game')
+    const before = await store.getFolderContents(AbsPath.from('/workspace/game'))
     expect(before).toEqual(expect.arrayContaining([
       expect.objectContaining({
         path: '/workspace/game/folder',
@@ -710,9 +688,9 @@ describe('文件状态仓库', () => {
       }),
     ]))
 
-    await store.moveEntry('/workspace/game/original.txt', '/workspace/game/folder')
+    await store.moveEntry(AbsPath.from('/workspace/game/original.txt'), AbsPath.from('/workspace/game/folder'))
 
-    const after = await store.getFolderContents('/workspace/game/folder')
+    const after = await store.getFolderContents(AbsPath.from('/workspace/game/folder'))
     expect(after).toEqual([
       expect.objectContaining({
         path: '/workspace/game/folder/original.txt',
@@ -741,7 +719,7 @@ describe('文件状态仓库', () => {
 
     try {
       const store = useFileStore()
-      const firstRead = await store.getFolderContents('/root')
+      const firstRead = await store.getFolderContents(AbsPath.from('/root'))
       expect(firstRead.map(item => item.path)).toEqual(['/root/scene'])
       expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
 
@@ -757,12 +735,36 @@ describe('文件状态仓库', () => {
       expect(pathToId!.get('/root')).toBe(parentId)
       expect(items!.has(parentId!)).toBe(false)
 
-      const secondRead = await store.getFolderContents('/root')
+      const secondRead = await store.getFolderContents(AbsPath.from('/root'))
       expect(secondRead.map(item => item.path)).toEqual(['/root/scene'])
       expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(2)
     } finally {
       caches.restore()
     }
+  })
+
+  it('Windows 盘符大小写不同的路径会命中同一个缓存项', async () => {
+    existsMock.mockResolvedValue(true)
+    statMock.mockImplementation(async (path: string) => createStatResult(path, path.endsWith('/game')))
+    readDirectoryItemsCachedMock.mockResolvedValue([
+      createFileViewerItem('C:/workspace/game/scene.txt', false),
+    ])
+
+    workspaceStoreState = reactive({
+      CWD: 'c:/workspace',
+      currentGame: {
+        path: 'c:/workspace',
+      },
+    })
+    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+
+    const store = useFileStore()
+
+    const items = await store.getFolderContents(AbsPath.from('c:/workspace/game'))
+    const sameItem = store.getItemByPath(AbsPath.from('c:/workspace/game/scene.txt'))
+
+    expect(items).toHaveLength(1)
+    expect(sameItem?.path).toBe('C:/workspace/game/scene.txt')
   })
 
   it('并发 getFolderContents 不会因加载锁缺失而返回空列表', async () => {
@@ -802,8 +804,8 @@ describe('文件状态仓库', () => {
 
     // 初始化完成后 game 目录已加载，scene 子目录待加载
     // 并发发起两次对 scene 子目录的加载
-    const loadA = store.getFolderContents('/workspace/game/scene')
-    const loadB = store.getFolderContents('/workspace/game/scene')
+    const loadA = store.getFolderContents(AbsPath.from('/workspace/game/scene'))
+    const loadB = store.getFolderContents(AbsPath.from('/workspace/game/scene'))
 
     await vi.waitFor(() => {
       expect(resolveListDir).toBeDefined()
@@ -840,7 +842,7 @@ describe('文件状态仓库', () => {
     try {
       const store = useFileStore()
 
-      const firstRead = await store.getFolderContents('/root')
+      const firstRead = await store.getFolderContents(AbsPath.from('/root'))
       expect(firstRead).toHaveLength(2)
       expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
 
@@ -860,7 +862,7 @@ describe('文件状态仓库', () => {
       }
       expect(items!.has(parentId!)).toBe(true)
 
-      const secondRead = await store.getFolderContents('/root')
+      const secondRead = await store.getFolderContents(AbsPath.from('/root'))
       expect(secondRead.map(item => item.path)).toEqual(['/root/file-a.txt', '/root/file-b.txt'])
       expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(2)
     } finally {
@@ -885,7 +887,7 @@ describe('文件状态仓库', () => {
     try {
       const store = useFileStore()
 
-      const firstRead = await store.getFolderContents('/root')
+      const firstRead = await store.getFolderContents(AbsPath.from('/root'))
       expect(firstRead).toHaveLength(2)
       expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
 
@@ -895,7 +897,7 @@ describe('文件状态仓库', () => {
       expect(evictedId).toBeDefined()
       items!.delete(evictedId!)
 
-      const secondRead = await store.getFolderContents('/root')
+      const secondRead = await store.getFolderContents(AbsPath.from('/root'))
       expect(secondRead.map(item => item.path)).toEqual(['/root/file-a.txt', '/root/file-b.txt'])
       expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(2)
     } finally {
@@ -935,10 +937,10 @@ describe('文件状态仓库', () => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
 
-    await store.renameEntry('/workspace/game/original.txt', 'renamed.txt')
-    await store.ensureWritable('/workspace/game/renamed.txt')
-    await store.resolveFilePath('/workspace/game/renamed.txt')
-    await store.deleteEntry('/workspace/game/renamed.txt')
+    await store.renameEntry(AbsPath.from('/workspace/game/original.txt'), 'renamed.txt')
+    await store.ensureWritable(AbsPath.from('/workspace/game/renamed.txt'))
+    await store.resolveFilePath(AbsPath.from('/workspace/game/renamed.txt'))
+    await store.deleteEntry(AbsPath.from('/workspace/game/renamed.txt'))
 
     expect(vfsRenamePathMock).toHaveBeenCalledWith({
       projectPath: '/workspace',
@@ -1013,8 +1015,8 @@ describe('文件状态仓库', () => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
 
-    await store.copyEntry('/workspace/game/original.txt', '/workspace/game/folder-copy')
-    await store.moveEntry('/workspace/game/original.txt', '/workspace/game/folder-move')
+    await store.copyEntry(AbsPath.from('/workspace/game/original.txt'), AbsPath.from('/workspace/game/folder-copy'))
+    await store.moveEntry(AbsPath.from('/workspace/game/original.txt'), AbsPath.from('/workspace/game/folder-move'))
 
     expect(vfsResolvePathMock).toHaveBeenNthCalledWith(1, {
       projectPath: '/workspace',
@@ -1093,17 +1095,17 @@ describe('文件状态仓库', () => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
 
-    const staleLoad = store.getFolderContents('/workspace/game/template')
+    const staleLoad = store.getFolderContents(AbsPath.from('/workspace/game/template'))
     await vi.waitFor(() => {
       expect(resolveOldTemplateList).toBeDefined()
     })
 
-    await store.refreshTemplateOverlay('/workspace', {
-      nextEnginePath: '/engines/webgal',
-      nextTemplatePath: '/templates/new',
+    await store.refreshTemplateOverlay(AbsPath.from('/workspace'), {
+      nextEnginePath: AbsPath.from('/engines/webgal'),
+      nextTemplatePath: AbsPath.from('/templates/new'),
     })
 
-    const refreshedLoad = store.getFolderContents('/workspace/game/template')
+    const refreshedLoad = store.getFolderContents(AbsPath.from('/workspace/game/template'))
     await vi.waitFor(() => {
       expect(vfsListDirMock).toHaveBeenCalledTimes(3)
     })
@@ -1119,7 +1121,7 @@ describe('文件状态仓库', () => {
 
     expect(refreshedItems.map(item => item.path)).toEqual(['/workspace/game/template/new.txt'])
 
-    const finalItems = await store.getFolderContents('/workspace/game/template')
+    const finalItems = await store.getFolderContents(AbsPath.from('/workspace/game/template'))
     expect(finalItems.map(item => item.path)).toEqual(['/workspace/game/template/new.txt'])
   })
 
@@ -1160,20 +1162,20 @@ describe('文件状态仓库', () => {
     })
 
     // 预热整棵子树
-    await store.getFolderContents('/workspace/game/foo')
-    await store.getFolderContents('/workspace/game/foo/bar')
-    await store.getFolderContents('/workspace/game/dest')
+    await store.getFolderContents(AbsPath.from('/workspace/game/foo'))
+    await store.getFolderContents(AbsPath.from('/workspace/game/foo/bar'))
+    await store.getFolderContents(AbsPath.from('/workspace/game/dest'))
 
-    expect(store.getItemByPath('/workspace/game/foo')).toBeDefined()
-    expect(store.getItemByPath('/workspace/game/foo/bar')).toBeDefined()
-    expect(store.getItemByPath('/workspace/game/foo/bar/baz.txt')).toBeDefined()
+    expect(store.getItemByPath(AbsPath.from('/workspace/game/foo'))).toBeDefined()
+    expect(store.getItemByPath(AbsPath.from('/workspace/game/foo/bar'))).toBeDefined()
+    expect(store.getItemByPath(AbsPath.from('/workspace/game/foo/bar/baz.txt'))).toBeDefined()
 
     emittedEvents.length = 0
-    await store.moveEntry('/workspace/game/foo', '/workspace/game/dest')
+    await store.moveEntry(AbsPath.from('/workspace/game/foo'), AbsPath.from('/workspace/game/dest'))
 
-    expect(store.getItemByPath('/workspace/game/foo')).toBeUndefined()
-    expect(store.getItemByPath('/workspace/game/foo/bar')).toBeUndefined()
-    expect(store.getItemByPath('/workspace/game/foo/bar/baz.txt')).toBeUndefined()
+    expect(store.getItemByPath(AbsPath.from('/workspace/game/foo'))).toBeUndefined()
+    expect(store.getItemByPath(AbsPath.from('/workspace/game/foo/bar'))).toBeUndefined()
+    expect(store.getItemByPath(AbsPath.from('/workspace/game/foo/bar/baz.txt'))).toBeUndefined()
 
     const removedPaths = emittedEvents
       .filter(event => event.type === 'file:removed' || event.type === 'directory:removed')
@@ -1207,15 +1209,15 @@ describe('文件状态仓库', () => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
 
-    await store.getFolderContents('/workspace/game')
-    const gameItem = store.getItemByPath('/workspace/game')
+    await store.getFolderContents(AbsPath.from('/workspace/game'))
+    const gameItem = store.getItemByPath(AbsPath.from('/workspace/game'))
     expect(gameItem).toBeDefined()
     expect(gameItem?.isDir).toBe(true)
     expect((gameItem as { isLoaded: boolean }).isLoaded).toBe(true)
 
-    await store.refreshTemplateOverlay('/workspace', { nextTemplatePath: '/templates/new' })
+    await store.refreshTemplateOverlay(AbsPath.from('/workspace'), { nextTemplatePath: AbsPath.from('/templates/new') })
 
-    const refreshedGameItem = store.getItemByPath('/workspace/game')
+    const refreshedGameItem = store.getItemByPath(AbsPath.from('/workspace/game'))
     expect((refreshedGameItem as { isLoaded: boolean }).isLoaded).toBe(false)
   })
 
@@ -1244,14 +1246,14 @@ describe('文件状态仓库', () => {
     try {
       const pathToId = caches.pathToId
       const items = caches.items
-      const gameId = pathToId?.get('/workspace/game')
+      const gameId = pathToId?.get(AbsPath.from('/workspace/game'))
       if (gameId) {
         items?.delete(gameId)
-        pathToId?.delete('/workspace/game')
+        pathToId?.delete(AbsPath.from('/workspace/game'))
       }
 
       await expect(
-        store.refreshTemplateOverlay('/workspace', { nextTemplatePath: '/templates/new' }),
+        store.refreshTemplateOverlay(AbsPath.from('/workspace'), { nextTemplatePath: AbsPath.from('/templates/new') }),
       ).resolves.toBeUndefined()
     } finally {
       caches.restore()

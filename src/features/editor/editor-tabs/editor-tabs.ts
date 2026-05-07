@@ -1,3 +1,4 @@
+import type { AbsPath } from '~/domain/path'
 import type { Tab } from '~/stores/tabs'
 
 interface ErrorLogger {
@@ -9,8 +10,8 @@ export interface CloseTabDecisionParams {
   tabIndex: number
   modalTitle: string
   logger: ErrorLogger
-  saveFile: (path: string) => Promise<void>
-  findTabIndex: (path: string) => number
+  saveFile: (path: AbsPath) => Promise<void>
+  findTabIndex: (path: AbsPath) => number
   closeTab: (index: number) => void
 }
 

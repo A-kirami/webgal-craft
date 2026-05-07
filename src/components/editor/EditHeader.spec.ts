@@ -76,7 +76,7 @@ vi.mock('~/services/config-manager', () => ({
 }))
 
 vi.mock('~/services/platform/app-paths', () => ({
-  gameAssetDir: vi.fn(async (gamePath: string, assetType: string) => `${gamePath}/game/${assetType}`),
+  gameAssetDir: vi.fn((gamePath: string, assetType: string) => `${gamePath}/game/${assetType}`),
 }))
 
 vi.mock('~/stores/editor', () => ({

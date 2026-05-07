@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { join } from '@tauri-apps/api/path'
 import { exists } from '@tauri-apps/plugin-fs'
 import sanitize from 'sanitize-filename'
 import { useForm } from 'vee-validate'
 import * as z from 'zod'
 
 import { FormField } from '~/components/ui/form'
+import { AbsPath } from '~/domain/path'
 import { gameFs } from '~/services/game-fs'
 import { gameSceneDir } from '~/services/platform/app-paths'
 import { useWorkspaceStore } from '~/stores/workspace'
@@ -29,8 +29,8 @@ async function buildSceneFilePath(fileName: string): Promise<string | undefined>
     ? sanitizedName
     : `${sanitizedName}.txt`
 
-  const folderPath = await gameSceneDir(workspaceStore.CWD)
-  return await join(folderPath, fileNameWithExt)
+  const folderPath = gameSceneDir(AbsPath.from(workspaceStore.CWD))
+  return AbsPath.append(folderPath, fileNameWithExt)
 }
 
 async function isFileAvailable(fileName: string): Promise<boolean> {
@@ -67,7 +67,7 @@ const onSubmit = handleSubmit(async (values) => {
   }
 
   try {
-    await gameFs.writeFile(filePath, '')
+    await gameFs.writeFile(AbsPath.from(filePath), '')
     open = false
     props.onSuccess?.(filePath)
   } catch (error) {

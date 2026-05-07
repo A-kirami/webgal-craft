@@ -1,17 +1,17 @@
-import { join } from '@tauri-apps/api/path'
 import { exists, readTextFile } from '@tauri-apps/plugin-fs'
 import sanitize from 'sanitize-filename'
 
 import { fsCmds } from '~/commands/fs'
 import { db } from '~/database/db'
 import { Template } from '~/database/model'
+import { AbsPath } from '~/domain/path'
 import { templateManifestPath } from '~/services/platform/app-paths'
 import { ResourceAvailability } from '~/services/resource-health'
+import { caseFoldedEquals } from '~/services/resource-path/lookup'
 import { TemplateMetadata } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 import { AppError } from '~/types/errors'
-import { toComparablePath } from '~/utils/path'
 
 interface RegisterTemplateOptions {
   metadata?: TemplateMetadata
@@ -20,7 +20,7 @@ interface RegisterTemplateOptions {
 
 async function validateTemplate(templatePath: string): Promise<boolean> {
   return fsCmds.validateDirectoryStructure(
-    templatePath,
+    AbsPath.from(templatePath),
     [],
     ['template.json'],
   )
@@ -50,7 +50,7 @@ function normalizeTemplateMetadata(raw: unknown): TemplateMetadata {
 }
 
 async function getTemplateMetadata(templatePath: string): Promise<TemplateMetadata> {
-  const manifestPath = await templateManifestPath(templatePath)
+  const manifestPath = templateManifestPath(AbsPath.from(templatePath))
   const metaContent = await readTextFile(manifestPath)
 
   try {
@@ -91,7 +91,7 @@ function sanitizeTemplateDirectoryName(templateName: string): string {
 }
 
 async function resolveInstalledTemplatePath(templateSavePath: string, templateName: string): Promise<string> {
-  return join(templateSavePath, sanitizeTemplateDirectoryName(templateName))
+  return AbsPath.append(AbsPath.from(templateSavePath), sanitizeTemplateDirectoryName(templateName))
 }
 
 async function findTemplateByName(templateName: string): Promise<Template | undefined> {
@@ -102,15 +102,15 @@ async function findTemplateByName(templateName: string): Promise<Template | unde
 }
 
 async function findTemplateByPath(templatePath: string): Promise<Template | undefined> {
-  const comparablePath = toComparablePath(templatePath)
+  const normalizedPath = AbsPath.from(templatePath)
   const templates = await db.templates.toArray()
-  return templates.find(template => toComparablePath(template.path) === comparablePath)
+  return templates.find(template => caseFoldedEquals(AbsPath.from(template.path), normalizedPath))
 }
 
 async function deleteTemplateDirectoryIfExists(path: string): Promise<void> {
   try {
     if (await exists(path)) {
-      await fsCmds.deleteFile(path, true)
+      await fsCmds.deleteFile(AbsPath.from(path), true)
     }
   } catch (error) {
     logger.warn(`[模板清理] 删除目录失败 (${path}): ${error}`)
@@ -152,7 +152,7 @@ async function installTemplate(templatePath: string, metadata: TemplateMetadata)
   })
 
   try {
-    await fsCmds.copyDirectoryWithProgress(templatePath, targetPath, (progress) => {
+    await fsCmds.copyDirectoryWithProgress(AbsPath.from(templatePath), AbsPath.from(targetPath), (progress) => {
       resourceStore.updateProgress(id, progress)
     })
 
@@ -178,7 +178,7 @@ async function importTemplate(templatePath: string): Promise<void> {
   }
 
   const targetPath = await resolveInstalledTemplatePath(storageSettingsStore.templateSavePath, metadata.name)
-  if (toComparablePath(templatePath) === toComparablePath(targetPath)) {
+  if (caseFoldedEquals(AbsPath.from(templatePath), AbsPath.from(targetPath))) {
     const existingByPath = await findTemplateByPath(templatePath)
     if (existingByPath) {
       throw new AppError('DUPLICATE_RESOURCE', '同名模板已存在')
@@ -195,7 +195,7 @@ async function importTemplate(templatePath: string): Promise<void> {
 async function deleteTemplate(template: Template): Promise<void> {
   if (template.availability === 'available') {
     try {
-      await fsCmds.deleteFile(template.path, true)
+      await fsCmds.deleteFile(AbsPath.from(template.path), true)
     } catch (error) {
       logger.warn(`[模板删除] 删除模板目录失败，继续清理数据库记录: ${template.path} - ${error}`)
     }

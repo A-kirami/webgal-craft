@@ -21,7 +21,7 @@ export function createTestGame(options: TestGameFactoryOptions = {}): Game {
   const {
     metadata,
     path,
-    pathKey,
+    pathLookupKey,
     previewAssets,
     ...rest
   } = options
@@ -36,7 +36,7 @@ export function createTestGame(options: TestGameFactoryOptions = {}): Game {
   return {
     id: 'game-1',
     path: resolvedGamePath,
-    pathKey: pathKey ?? normalizeImportPath(resolvedGamePath).comparablePath,
+    pathLookupKey: pathLookupKey ?? normalizeImportPath(resolvedGamePath).lookupKey,
     createdAt: 0,
     lastModified: 0,
     status: 'created',
@@ -64,7 +64,7 @@ export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine
   const {
     metadata,
     path,
-    pathKey,
+    pathLookupKey,
     previewAssets,
     ...rest
   } = options
@@ -77,7 +77,7 @@ export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine
   return {
     id: 'engine-1',
     path: resolvedEnginePath,
-    pathKey: pathKey ?? normalizeImportPath(resolvedEnginePath).comparablePath,
+    pathLookupKey: pathLookupKey ?? normalizeImportPath(resolvedEnginePath).lookupKey,
     engineId: defaultEngineId,
     name: defaultName,
     createdAt: 0,

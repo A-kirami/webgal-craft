@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { AbsPath, normalizePosix } from '~/domain/path'
 import { isAnimationTableRelatedPath, syncAnimationTable } from '~/services/animation-table-sync'
 
 import type { DirEntry } from '@tauri-apps/plugin-fs'
@@ -7,21 +8,15 @@ import type { DirEntry } from '@tauri-apps/plugin-fs'
 const {
   existsMock,
   gameAssetDirMock,
-  joinMock,
   readDirMock,
   readTextFileMock,
   writeTextFileMock,
 } = vi.hoisted(() => ({
   existsMock: vi.fn(),
   gameAssetDirMock: vi.fn(),
-  joinMock: vi.fn(async (...parts: string[]) => normalizePath(parts.join('/'))),
   readDirMock: vi.fn(),
   readTextFileMock: vi.fn(),
   writeTextFileMock: vi.fn(),
-}))
-
-vi.mock('@tauri-apps/api/path', () => ({
-  join: joinMock,
 }))
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
@@ -36,21 +31,7 @@ vi.mock('~/services/platform/app-paths', () => ({
 }))
 
 function normalizePath(path: string): string {
-  const isAbsolute = path.startsWith('/')
-  const segments: string[] = []
-
-  for (const rawSegment of path.replaceAll('\\', '/').split('/')) {
-    if (!rawSegment || rawSegment === '.') {
-      continue
-    }
-    if (rawSegment === '..') {
-      segments.pop()
-      continue
-    }
-    segments.push(rawSegment)
-  }
-
-  return `${isAbsolute ? '/' : ''}${segments.join('/')}`
+  return normalizePosix(path)
 }
 
 function createDirEntry(name: string, options: Partial<DirEntry> = {}): DirEntry {
@@ -67,12 +48,11 @@ describe('animationTable 索引同步', () => {
   beforeEach(() => {
     existsMock.mockReset()
     gameAssetDirMock.mockReset()
-    joinMock.mockClear()
     readDirMock.mockReset()
     readTextFileMock.mockReset()
     writeTextFileMock.mockReset()
 
-    gameAssetDirMock.mockResolvedValue('/project/game/animation')
+    gameAssetDirMock.mockReturnValue('/project/game/animation')
   })
 
   it('会递归收集动画文件并写入带子目录的相对条目', async () => {
@@ -106,7 +86,7 @@ describe('animationTable 索引同步', () => {
     })
     readTextFileMock.mockRejectedValue(new Error('missing animationTable'))
 
-    await syncAnimationTable('/project')
+    await syncAnimationTable(AbsPath.from('/project'))
 
     expect(writeTextFileMock).toHaveBeenCalledWith(
       '/project/game/animation/animationTable.json',
@@ -143,15 +123,27 @@ describe('animationTable 索引同步', () => {
       '',
     ].join('\n'))
 
-    await syncAnimationTable('/project')
+    await syncAnimationTable(AbsPath.from('/project'))
 
     expect(writeTextFileMock).not.toHaveBeenCalled()
   })
 
   it('只把 animation 目录内非索引路径视为相关路径', () => {
-    expect(isAnimationTableRelatedPath('/project', '/project/game/animation/aaa/bbb.json')).toBe(true)
-    expect(isAnimationTableRelatedPath('/project', '/project/game/animation/aaa')).toBe(true)
-    expect(isAnimationTableRelatedPath('/project', '/project/game/animation/animationTable.json')).toBe(false)
-    expect(isAnimationTableRelatedPath('/project', '/project/game/background/aaa.json')).toBe(false)
+    expect(isAnimationTableRelatedPath(
+      AbsPath.from('/project'),
+      AbsPath.from('/project/game/animation/aaa/bbb.json'),
+    )).toBe(true)
+    expect(isAnimationTableRelatedPath(
+      AbsPath.from('/project'),
+      AbsPath.from('/project/game/animation/aaa'),
+    )).toBe(true)
+    expect(isAnimationTableRelatedPath(
+      AbsPath.from('/project'),
+      AbsPath.from('/project/game/animation/animationTable.json'),
+    )).toBe(false)
+    expect(isAnimationTableRelatedPath(
+      AbsPath.from('/project'),
+      AbsPath.from('/project/game/background/aaa.json'),
+    )).toBe(false)
   })
 })

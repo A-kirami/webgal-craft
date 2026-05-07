@@ -5,7 +5,6 @@ const {
   createGameMock,
   enginesGetMock,
   existsMock,
-  joinMock,
   notifyErrorMock,
   openDialogMock,
   readDirMock,
@@ -18,7 +17,6 @@ const {
   createGameMock: vi.fn(),
   enginesGetMock: vi.fn(),
   existsMock: vi.fn(),
-  joinMock: vi.fn(async (...parts: string[]) => parts.join('/')),
   notifyErrorMock: vi.fn(),
   openDialogMock: vi.fn(),
   readDirMock: vi.fn(),
@@ -27,10 +25,6 @@ const {
   setFieldValueMock: vi.fn(),
   useFormMock: vi.fn(),
   useStorageSettingsStoreMock: vi.fn(),
-}))
-
-vi.mock('@tauri-apps/api/path', () => ({
-  join: joinMock,
 }))
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
@@ -113,7 +107,6 @@ describe('useCreateGameForm 行为', () => {
     createGameMock.mockResolvedValue('game-1')
     enginesGetMock.mockResolvedValue({ id: 'engine-1', path: '/engines/default', availability: 'available' })
     existsMock.mockResolvedValue(false)
-    joinMock.mockImplementation(async (...parts: string[]) => parts.join('/'))
     openDialogMock.mockResolvedValue(undefined)
     readDirMock.mockResolvedValue([])
     reconcileEngineRecordMock.mockResolvedValue('available')
@@ -153,7 +146,6 @@ describe('useCreateGameForm 行为', () => {
       target: { value: 'My:Game' },
     } as never)
 
-    expect(joinMock).toHaveBeenCalledWith('/games', 'My_Game')
     expect(setFieldValueMock).toHaveBeenCalledWith('gamePath', '/games/My_Game', false)
   })
 
@@ -168,7 +160,21 @@ describe('useCreateGameForm 行为', () => {
     } as never)
 
     expect(setFieldValueMock).toHaveBeenCalledWith('gamePath', '/manual/path', false)
-    expect(joinMock).not.toHaveBeenCalled()
+  })
+
+  it('会把 Windows 风格默认保存目录归一化为 POSIX 建议路径', async () => {
+    useStorageSettingsStoreMock.mockReturnValue({
+      gameSavePath: 'C:\\Games\\',
+    })
+
+    const open = ref(true)
+    const form = useCreateGameForm({ open })
+
+    await form.handleGameNameChange({
+      target: { value: 'My:Game' },
+    } as never)
+
+    expect(setFieldValueMock).toHaveBeenCalledWith('gamePath', 'C:/Games/My_Game', false)
   })
 
   it('选择目录时会以目录模式打开对话框并携带默认保存路径', async () => {

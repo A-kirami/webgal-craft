@@ -1,10 +1,11 @@
 import { projectConfigCmds } from '~/commands/project-config'
 import { db } from '~/database/db'
+import { AbsPath, RelPath } from '~/domain/path'
 import { formatEngineLabel } from '~/lib/engine-label'
 import { isEngineUsable } from '~/services/engine-manager'
+import { caseFoldedEquals, toLookupPathKey } from '~/services/resource-path/lookup'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
-import { joinPath, normalizeFsPath } from '~/utils/path'
 
 import { useFileSystemEvents } from './useFileSystemEvents'
 
@@ -16,6 +17,14 @@ interface TemplateLabelState {
 }
 
 const EMPTY_STATE: TemplateLabelState = { label: undefined, followingEngine: false }
+
+function isPathWithinOrEqual(path: AbsPath, root: AbsPath): boolean {
+  if (caseFoldedEquals(path, root)) {
+    return true
+  }
+
+  return toLookupPathKey(path).startsWith(`${toLookupPathKey(root)}/`)
+}
 
 function formatBuiltinFallbackLabel(id: string, version: string | undefined): string {
   return version ? `${id} ${version}` : id
@@ -96,9 +105,9 @@ export function useTemplateLabel() {
     if (!gamePath) {
       return
     }
-    const templateRoot = normalizeFsPath(joinPath(gamePath, 'game', 'template'))
-    const eventPath = normalizeFsPath(event.path)
-    if (eventPath === templateRoot || eventPath.startsWith(`${templateRoot}/`)) {
+
+    const templateRoot = AbsPath.join(AbsPath.from(gamePath), RelPath.from('game/template'))
+    if (isPathWithinOrEqual(event.path, templateRoot)) {
       refresh()
     }
   })

@@ -1,3 +1,4 @@
+import { RelPath } from '~/domain/path'
 import { ArgField, EditorField, readArgFieldStorageKey } from '~/features/editor/command-registry/schema'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
@@ -62,7 +63,7 @@ export function collectStatementFileChecks(
 
 export function resolveMissingFileKeysFromCatalog(
   checks: StatementFileCheckItem[],
-  hasAsset: (assetType: string, relativePath: string) => boolean,
+  hasAsset: (assetType: string, relativePath: RelPath) => boolean,
 ): Set<string> {
   if (checks.length === 0) {
     return new Set()
@@ -75,7 +76,7 @@ export function resolveMissingFileKeysFromCatalog(
       continue
     }
 
-    if (!hasAsset(assetType, value)) {
+    if (!hasAsset(assetType, RelPath.from(value))) {
       missingKeys.add(key)
     }
   }

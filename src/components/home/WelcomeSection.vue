@@ -69,7 +69,7 @@ async function selectGameFolder() {
     directory: true,
     multiple: false,
   })
-  if (!path) {
+  if (typeof path !== 'string') {
     return
   }
 

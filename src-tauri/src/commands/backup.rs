@@ -23,7 +23,7 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::vfs::atomic_write;
+use crate::vfs::{atomic_write, to_posix_string};
 
 use super::{AppError, AppResult};
 
@@ -158,10 +158,8 @@ fn hash_bytes(content: &[u8]) -> String {
 
 /// 构造备份相对路径，例如 `scene/start/2026-03-12T14-30-00Z.bak`，统一使用正斜杠。
 fn make_backup_rel_path(mirror: &Path, timestamp: &str) -> String {
-    mirror
-        .join(format!("{}.{BACKUP_FILE_EXT}", iso_to_filename(timestamp)))
-        .to_string_lossy()
-        .replace('\\', "/")
+    let path = mirror.join(format!("{}.{BACKUP_FILE_EXT}", iso_to_filename(timestamp)));
+    to_posix_string(&path)
 }
 
 /// 把内容原子写入 `<backups>/<backup_rel>`，自动创建父目录。
@@ -176,7 +174,7 @@ async fn write_backup_file(backups_root: &Path, backup_rel: &str, content: &[u8]
 
 /// 把镜像目录转成 manifest 内 backup_path 共享的相对前缀，例如 `scene/start/`。
 fn mirror_rel_prefix(mirror: &Path) -> String {
-    format!("{}/", mirror.to_string_lossy().replace('\\', "/"))
+    format!("{}/", to_posix_string(mirror))
 }
 
 /// 在 manifest 头部插入新条目并落盘。
@@ -510,7 +508,7 @@ fn walk_remove_orphans(
         let Ok(rel) = path.strip_prefix(backups_root) else {
             continue;
         };
-        let rel_str = rel.to_string_lossy().replace('\\', "/");
+        let rel_str = to_posix_string(rel);
         if !kept.contains(&rel_str) {
             fs::remove_file(&path)?;
         }

@@ -97,23 +97,18 @@ describe('场景面板辅助函数', () => {
   })
 
   it('新建目标路径会在根目录、目录自身和文件父目录之间切换', async () => {
-    const dirname = vi.fn(async (path: string) => path.replace(/[\\/][^\\/]+$/, ''))
-
-    await expect(resolveScenePanelTargetPath('/games/demo/game/scene', undefined, dirname)).resolves.toBe('/games/demo/game/scene')
+    await expect(resolveScenePanelTargetPath('/games/demo/game/scene', undefined)).resolves.toBe('/games/demo/game/scene')
     await expect(resolveScenePanelTargetPath('/games/demo/game/scene', {
       children: [],
       id: 'chapter',
       name: 'chapter-1',
       path: '/games/demo/game/scene/chapter-1',
-    }, dirname)).resolves.toBe('/games/demo/game/scene/chapter-1')
+    })).resolves.toBe('/games/demo/game/scene/chapter-1')
     await expect(resolveScenePanelTargetPath('/games/demo/game/scene', {
       id: 'start',
       name: 'start.txt',
       path: '/games/demo/game/scene/start.txt',
-    }, dirname)).resolves.toBe('/games/demo/game/scene')
-    await expect(resolveScenePanelTargetPath(undefined, undefined, dirname)).resolves.toBeUndefined()
-
-    expect(dirname).toHaveBeenCalledOnce()
-    expect(dirname).toHaveBeenCalledWith('/games/demo/game/scene/start.txt')
+    })).resolves.toBe('/games/demo/game/scene')
+    await expect(resolveScenePanelTargetPath(undefined, undefined)).resolves.toBeUndefined()
   })
 })

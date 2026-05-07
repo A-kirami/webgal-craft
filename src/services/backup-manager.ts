@@ -1,20 +1,18 @@
 import { backupCmds } from '~/commands/backup'
+import { AbsPath, RelPath } from '~/domain/path'
 import { useBackupSettingsStore } from '~/stores/backup-settings'
 
 import type { BackupEntry, BackupSourceKind } from '~/commands/backup'
 
-const SCENE_PATH_PREFIX = 'game/scene/'
+const SCENE_PATH_PREFIX = RelPath.from('game/scene')
 const SCENE_FILE_EXT = '.txt'
-
-function normalize(path: string): string {
-  return path.replaceAll('\\', '/').replace(/\/+$/, '')
-}
 
 /**
  * 仅当 logicalPath 是项目相对路径、位于 `game/scene/` 下且为 `.txt` 文件时返回 true。
  */
-export function isScenePath(logicalPath: string): boolean {
-  return logicalPath.startsWith(SCENE_PATH_PREFIX) && logicalPath.endsWith(SCENE_FILE_EXT)
+export function isScenePath(logicalPath: RelPath): boolean {
+  const normalizedPath = logicalPath
+  return RelPath.startsWith(normalizedPath, SCENE_PATH_PREFIX) && normalizedPath.endsWith(SCENE_FILE_EXT)
 }
 
 /**
@@ -22,18 +20,20 @@ export function isScenePath(logicalPath: string): boolean {
  * 若 absolutePath 不在 projectPath 之下则返回 undefined。
  */
 export function toProjectRelative(
-  projectPath: string,
-  absolutePath: string,
-): string | undefined {
-  const project = normalize(projectPath)
-  const target = normalize(absolutePath)
-  if (target === project) {
-    return ''
+  projectPath: AbsPath,
+  absolutePath: AbsPath,
+): RelPath | undefined {
+  const project = projectPath
+  const target = absolutePath
+  if (AbsPath.equals(target, project)) {
+    return RelPath.empty()
   }
-  if (!target.startsWith(`${project}/`)) {
+
+  try {
+    return AbsPath.relativize(target, project)
+  } catch {
     return undefined
   }
-  return target.slice(project.length + 1)
 }
 
 interface CreateBackupOptions {
@@ -43,8 +43,8 @@ interface CreateBackupOptions {
 }
 
 async function createSceneBackup(
-  projectPath: string,
-  logicalPath: string,
+  projectPath: AbsPath,
+  logicalPath: RelPath,
   options: CreateBackupOptions,
 ): Promise<BackupEntry | undefined> {
   if (!isScenePath(logicalPath)) {
@@ -61,15 +61,15 @@ async function createSceneBackup(
   return entry ?? undefined
 }
 
-function createManualBackup(projectPath: string, logicalPath: string) {
+function createManualBackup(projectPath: AbsPath, logicalPath: RelPath) {
   return createSceneBackup(projectPath, logicalPath, { sourceKind: 'manual-save', force: true })
 }
 
-function createAutoBackup(projectPath: string, logicalPath: string) {
+function createAutoBackup(projectPath: AbsPath, logicalPath: RelPath) {
   return createSceneBackup(projectPath, logicalPath, { sourceKind: 'auto-save', force: false })
 }
 
-async function loadTimeline(projectPath: string, logicalPath: string): Promise<BackupEntry[]> {
+async function loadTimeline(projectPath: AbsPath, logicalPath: RelPath): Promise<BackupEntry[]> {
   if (!isScenePath(logicalPath)) {
     return []
   }
@@ -83,11 +83,11 @@ async function loadTimeline(projectPath: string, logicalPath: string): Promise<B
   return backupCmds.listBackups({ projectPath, logicalPath })
 }
 
-function readBackupContent(projectPath: string, backupPath: string): Promise<string> {
+function readBackupContent(projectPath: AbsPath, backupPath: RelPath): Promise<string> {
   return backupCmds.readBackup({ projectPath, backupPath })
 }
 
-function restoreBackup(projectPath: string, logicalPath: string, backupPath: string) {
+function restoreBackup(projectPath: AbsPath, logicalPath: RelPath, backupPath: RelPath) {
   return backupCmds.restoreBackup({ projectPath, logicalPath, backupPath })
 }
 
@@ -97,9 +97,9 @@ function restoreBackup(projectPath: string, logicalPath: string, backupPath: str
  * 目标若已有独立历史，按 VS Code Local History 语义直接覆盖（由后端处理）。
  */
 async function moveSceneHistory(
-  projectPath: string,
-  oldLogicalPath: string,
-  newLogicalPath: string,
+  projectPath: AbsPath,
+  oldLogicalPath: RelPath,
+  newLogicalPath: RelPath,
 ): Promise<void> {
   if (!isScenePath(oldLogicalPath) || !isScenePath(newLogicalPath)) {
     return

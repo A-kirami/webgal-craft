@@ -1,17 +1,16 @@
-import { basename } from '@tauri-apps/api/path'
 import { defineStore } from 'pinia'
 
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { AbsPath } from '~/domain/path'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import { useWorkspaceStore } from '~/stores/workspace'
-import { normalizeFsPath } from '~/utils/path'
 
 /**
  * 持久化标签页元数据。
  */
 export interface PersistedTab {
   name: string // 标签页显示名称
-  path: string // 文件路径或唯一定位
+  path: AbsPath // 文件路径或唯一定位
   activeAt: number // 最后激活时间戳
   isPreview: boolean // 是否为预览标签页
 }
@@ -38,6 +37,43 @@ interface ProjectTabsState {
   activeTabIndex: number
 }
 
+function rebrandProjectTabsMap(rawState: unknown): Record<string, ProjectTabsState> {
+  if (!rawState || typeof rawState !== 'object') {
+    return {}
+  }
+
+  const projectTabsMap = (rawState as { projectTabsMap?: unknown }).projectTabsMap
+  if (!projectTabsMap || typeof projectTabsMap !== 'object') {
+    return {}
+  }
+
+  return Object.fromEntries(
+    Object.entries(projectTabsMap).map(([projectId, projectState]) => {
+      if (!projectState || typeof projectState !== 'object') {
+        return [projectId, { tabs: [], activeTabIndex: -1 } satisfies ProjectTabsState]
+      }
+
+      const { activeTabIndex, tabs } = projectState as {
+        activeTabIndex?: number
+        tabs?: PersistedTab[]
+      }
+
+      return [
+        projectId,
+        {
+          activeTabIndex: typeof activeTabIndex === 'number' ? activeTabIndex : -1,
+          tabs: Array.isArray(tabs)
+            ? tabs.map(tab => ({
+                ...tab,
+                path: AbsPath.from(tab.path),
+              }))
+            : [],
+        } satisfies ProjectTabsState,
+      ]
+    }),
+  )
+}
+
 /**
  * 标签页 Pinia Store，负责管理所有标签页的状态与操作。
  * 支持标签页的打开、关闭、激活、预览等功能。
@@ -46,7 +82,7 @@ export const useTabsStore = defineStore(
   'tabs',
   () => {
     const projectTabsMap = $ref<Record<string, ProjectTabsState>>({})
-    const runtimeTabStateMap = $ref<Record<string, Record<string, RuntimeTabState>>>({})
+    const runtimeTabStateMap = $ref<Record<string, Record<AbsPath, RuntimeTabState>>>({})
 
     const workspaceStore = useWorkspaceStore()
     const fileSystemEvents = useFileSystemEvents()
@@ -61,9 +97,9 @@ export const useTabsStore = defineStore(
       return projectTabsMap[currentProjectId]
     })
 
-    const currentProjectRuntimeTabState = $computed((): Record<string, RuntimeTabState> => {
+    const currentProjectRuntimeTabState = $computed((): Record<AbsPath, RuntimeTabState> => {
       if (!currentProjectId || !runtimeTabStateMap[currentProjectId]) {
-        return {}
+        return {} as Record<AbsPath, RuntimeTabState>
       }
       return runtimeTabStateMap[currentProjectId]
     })
@@ -78,12 +114,12 @@ export const useTabsStore = defineStore(
       return projectTabsMap[currentProjectId]
     }
 
-    function ensureProjectRuntimeState(): Record<string, RuntimeTabState> | undefined {
+    function ensureProjectRuntimeState(): Record<AbsPath, RuntimeTabState> | undefined {
       if (!currentProjectId) {
         return undefined
       }
       if (!runtimeTabStateMap[currentProjectId]) {
-        runtimeTabStateMap[currentProjectId] = {}
+        runtimeTabStateMap[currentProjectId] = {} as Record<AbsPath, RuntimeTabState>
       }
       return runtimeTabStateMap[currentProjectId]
     }
@@ -101,17 +137,16 @@ export const useTabsStore = defineStore(
 
     let shouldFocusEditor = $ref(false)
 
-    function clearRuntimeTabState(path: string): void {
+    function clearRuntimeTabState(path: AbsPath): void {
       const runtimeState = ensureProjectRuntimeState()
       if (!runtimeState) {
         return
       }
-      delete runtimeState[normalizeFsPath(path)]
+      delete runtimeState[path]
     }
 
-    function findTabIndex(path: string): number {
-      const normalized = normalizeFsPath(path)
-      return currentProjectTabs.tabs.findIndex(tab => tab.path === normalized)
+    function findTabIndex(path: AbsPath): number {
+      return currentProjectTabs.tabs.findIndex(tab => tab.path === path)
     }
 
     function isValidTabIndex(index: number): boolean {
@@ -123,30 +158,27 @@ export const useTabsStore = defineStore(
       return lastActiveTab ? findTabIndex(lastActiveTab.path) : -1
     }
 
-    function updateRuntimeTabState(path: string, patch: RuntimeTabState): void {
+    function updateRuntimeTabState(path: AbsPath, patch: RuntimeTabState): void {
       const runtimeState = ensureProjectRuntimeState()
       if (!runtimeState) {
         return
       }
 
-      const normalized = normalizeFsPath(path)
       const nextState: RuntimeTabState = {
-        ...runtimeState[normalized],
+        ...runtimeState[path],
         ...patch,
       }
 
       if (!nextState.isModified && !nextState.isLoading && nextState.error === undefined) {
-        delete runtimeState[normalized]
+        delete runtimeState[path]
         return
       }
 
-      runtimeState[normalized] = nextState
+      runtimeState[path] = nextState
     }
 
-    function moveRuntimeTabState(oldPath: string, newPath: string): void {
-      const normalizedOld = normalizeFsPath(oldPath)
-      const normalizedNew = normalizeFsPath(newPath)
-      if (normalizedOld === normalizedNew) {
+    function moveRuntimeTabState(oldPath: AbsPath, newPath: AbsPath): void {
+      if (oldPath === newPath) {
         return
       }
 
@@ -155,26 +187,25 @@ export const useTabsStore = defineStore(
         return
       }
 
-      const previousState = runtimeState[normalizedOld]
-      delete runtimeState[normalizedOld]
+      const previousState = runtimeState[oldPath]
+      delete runtimeState[oldPath]
 
       if (previousState) {
-        runtimeState[normalizedNew] = previousState
+        runtimeState[newPath] = previousState
       }
     }
 
-    function createAndInsertTab(name: string, path: string, isPreview: boolean) {
+    function createAndInsertTab(name: string, path: AbsPath, isPreview: boolean) {
       const state = ensureProjectState()
       if (!state) {
         return
       }
 
-      const normalized = normalizeFsPath(path)
-      clearRuntimeTabState(normalized)
+      clearRuntimeTabState(path)
 
       const newTab: PersistedTab = {
         name,
-        path: normalized,
+        path,
         activeAt: Date.now(),
         isPreview,
       }
@@ -192,7 +223,7 @@ export const useTabsStore = defineStore(
      * @param options.forceNormal 是否强制以普通模式打开，忽略 enablePreviewTab 配置（默认 false）
      * @param options.focus 是否在打开时直接聚焦编辑器（默认 false）
      */
-    function openTab(name: string, path: string, options?: { forceNormal?: boolean, focus?: boolean }) {
+    function openTab(name: string, path: AbsPath, options?: { forceNormal?: boolean, focus?: boolean }) {
       const { forceNormal = false, focus = false } = options ?? {}
 
       if (!forceNormal && editSettingsStore.enablePreviewTab) {
@@ -227,14 +258,13 @@ export const useTabsStore = defineStore(
      * @param name 标签页名称
      * @param path 文件路径
      */
-    function openPreviewTab(name: string, path: string) {
+    function openPreviewTab(name: string, path: AbsPath) {
       const state = ensureProjectState()
       if (!state) {
         return
       }
 
-      const normalized = normalizeFsPath(path)
-      const existIndex = findTabIndex(normalized)
+      const existIndex = findTabIndex(path)
 
       if (existIndex !== -1) {
         activateTab(existIndex)
@@ -243,10 +273,10 @@ export const useTabsStore = defineStore(
 
       if (activeTabIndex !== -1 && currentProjectTabs.tabs[activeTabIndex].isPreview) {
         clearRuntimeTabState(currentProjectTabs.tabs[activeTabIndex].path)
-        clearRuntimeTabState(normalized)
+        clearRuntimeTabState(path)
         state.tabs[activeTabIndex] = {
           name,
-          path: normalized,
+          path,
           activeAt: Date.now(),
           isPreview: true,
         }
@@ -262,7 +292,7 @@ export const useTabsStore = defineStore(
         }
       }
 
-      createAndInsertTab(name, normalized, true)
+      createAndInsertTab(name, path, true)
     }
 
     /**
@@ -346,17 +376,16 @@ export const useTabsStore = defineStore(
       }
     })
 
-    fileSystemEvents.on('file:renamed', async (event) => {
+    fileSystemEvents.on('file:renamed', (event) => {
       const state = ensureProjectState()
       if (!state) {
         return
       }
       const index = findTabIndex(event.oldPath)
       if (index !== -1) {
-        const newPath = normalizeFsPath(event.newPath)
-        moveRuntimeTabState(event.oldPath, newPath)
-        state.tabs[index].path = newPath
-        state.tabs[index].name = await basename(event.newPath)
+        moveRuntimeTabState(event.oldPath, event.newPath)
+        state.tabs[index].path = event.newPath
+        state.tabs[index].name = AbsPath.basename(event.newPath)
       }
     })
 
@@ -381,6 +410,12 @@ export const useTabsStore = defineStore(
   {
     persist: {
       pick: ['projectTabsMap'],
+      serializer: {
+        serialize: JSON.stringify,
+        deserialize: raw => ({
+          projectTabsMap: rebrandProjectTabsMap(JSON.parse(raw)),
+        }),
+      },
     },
   },
 )

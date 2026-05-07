@@ -1,15 +1,14 @@
-import { join } from '@tauri-apps/api/path'
 import { readDir } from '@tauri-apps/plugin-fs'
 
-import { normalizeRelativePath, toComparablePath } from '~/utils/path'
+import { AbsPath, RelPath } from '~/domain/path'
 
 export interface AssetCatalogSnapshot {
-  assetFiles: Map<string, Set<string>>
+  assetFiles: Map<string, Set<RelPath>>
 }
 
 export function createEmptyAssetCatalogSnapshot(): AssetCatalogSnapshot {
   return {
-    assetFiles: new Map<string, Set<string>>(),
+    assetFiles: new Map<string, Set<RelPath>>(),
   }
 }
 
@@ -21,30 +20,26 @@ export function cloneAssetCatalogSnapshot(snapshot: AssetCatalogSnapshot): Asset
   }
 }
 
-export function toComparableRelativeAssetPath(path: string): string {
-  return toComparablePath(normalizeRelativePath(path))
-}
-
 export function hasAssetInCatalog(
   snapshot: AssetCatalogSnapshot,
   assetType: string,
-  relativePath: string,
+  relativePath: RelPath,
 ): boolean {
   const files = snapshot.assetFiles.get(assetType)
   if (!files) {
     return false
   }
-  return files.has(toComparableRelativeAssetPath(relativePath))
+  return files.has(relativePath)
 }
 
-export async function buildAssetCatalog(gamePath: string): Promise<AssetCatalogSnapshot> {
-  const gameRootPath = await join(gamePath, 'game')
+export async function buildAssetCatalog(gamePath: AbsPath): Promise<AssetCatalogSnapshot> {
+  const gameRootPath = AbsPath.append(gamePath, 'game')
   const rootEntries = await readDir(gameRootPath)
   const assetDirectories = rootEntries.filter(entry => entry.isDirectory && !!entry.name)
   const assetFiles = await Promise.all(assetDirectories.map(async (entry) => {
     const assetType = entry.name!
-    const rootPath = await join(gameRootPath, assetType)
-    const files = await collectAssetFiles(rootPath, '')
+    const rootPath = AbsPath.append(gameRootPath, assetType)
+    const files = await collectAssetFiles(rootPath, RelPath.empty())
     return [assetType, files] as const
   }))
 
@@ -55,8 +50,8 @@ export async function buildAssetCatalog(gamePath: string): Promise<AssetCatalogS
 
 export function addAssetPathToCatalog(
   snapshot: AssetCatalogSnapshot,
-  gamePath: string,
-  absolutePath: string,
+  gamePath: AbsPath,
+  absolutePath: AbsPath,
 ): AssetCatalogSnapshot {
   const resolved = resolveCatalogPath(gamePath, absolutePath)
   if (!resolved) {
@@ -64,7 +59,7 @@ export function addAssetPathToCatalog(
   }
 
   const nextSnapshot = cloneAssetCatalogSnapshot(snapshot)
-  const files = nextSnapshot.assetFiles.get(resolved.assetType) ?? new Set<string>()
+  const files = nextSnapshot.assetFiles.get(resolved.assetType) ?? new Set<RelPath>()
   files.add(resolved.relativePath)
   nextSnapshot.assetFiles.set(resolved.assetType, files)
   return nextSnapshot
@@ -72,8 +67,8 @@ export function addAssetPathToCatalog(
 
 export function removeAssetPathFromCatalog(
   snapshot: AssetCatalogSnapshot,
-  gamePath: string,
-  absolutePath: string,
+  gamePath: AbsPath,
+  absolutePath: AbsPath,
 ): AssetCatalogSnapshot {
   const resolved = resolveCatalogPath(gamePath, absolutePath)
   if (!resolved) {
@@ -92,56 +87,54 @@ export function removeAssetPathFromCatalog(
 
 export function renameAssetPathInCatalog(
   snapshot: AssetCatalogSnapshot,
-  gamePath: string,
-  oldPath: string,
-  newPath: string,
+  gamePath: AbsPath,
+  oldPath: AbsPath,
+  newPath: AbsPath,
 ): AssetCatalogSnapshot {
   const withoutOldPath = removeAssetPathFromCatalog(snapshot, gamePath, oldPath)
   return addAssetPathToCatalog(withoutOldPath, gamePath, newPath)
 }
 
-export function isPathWithinGameRoot(gamePath: string, path: string): boolean {
-  const normalizedGameRoot = `${toComparablePath(gamePath)}/game`
-  const normalizedPath = toComparablePath(path)
-  return normalizedPath === normalizedGameRoot || normalizedPath.startsWith(`${normalizedGameRoot}/`)
+export function isPathWithinGameRoot(gamePath: AbsPath, path: AbsPath): boolean {
+  const gameRootPath = AbsPath.append(gamePath, 'game')
+  return path === gameRootPath || path.startsWith(`${gameRootPath}/`)
 }
 
 async function collectAssetFiles(
-  directoryPath: string,
-  relativePrefix: string,
-): Promise<Set<string>> {
+  directoryPath: AbsPath,
+  relativePrefix: RelPath,
+): Promise<Set<RelPath>> {
   const entries = await readDir(directoryPath)
   const nestedFiles = await Promise.all(entries.flatMap((entry) => {
     if (!entry.name) {
       return []
     }
 
-    const relativePath = normalizeRelativePath(
-      relativePrefix ? `${relativePrefix}/${entry.name}` : entry.name,
-    )
+    const relativePath = RelPath.append(relativePrefix, entry.name)
 
     if (entry.isDirectory) {
-      return [join(directoryPath, entry.name).then(absolutePath => collectAssetFiles(absolutePath, relativePath))]
+      return [collectAssetFiles(AbsPath.append(directoryPath, entry.name), relativePath)]
     }
 
-    return [Promise.resolve(new Set([toComparableRelativeAssetPath(relativePath)]))]
+    return [Promise.resolve(new Set([relativePath]))]
   }))
 
   return new Set(nestedFiles.flatMap(files => [...files]))
 }
 
-function resolveCatalogPath(gamePath: string, absolutePath: string): {
+function resolveCatalogPath(gamePath: AbsPath, absolutePath: AbsPath): {
   assetType: string
-  relativePath: string
+  relativePath: RelPath
 } | undefined {
-  const normalizedGameRoot = `${toComparablePath(gamePath)}/game/`
-  const normalizedPath = toComparablePath(absolutePath)
-
-  if (!normalizedPath.startsWith(normalizedGameRoot)) {
+  const gameRootPath = AbsPath.append(gamePath, 'game')
+  if (!absolutePath.startsWith(`${gameRootPath}/`)) {
     return
   }
 
-  const relativeToGameRoot = normalizedPath.slice(normalizedGameRoot.length)
+  const relativeToGameRoot = AbsPath.relativize(absolutePath, gameRootPath)
+  if (!relativeToGameRoot) {
+    return
+  }
   const segments = relativeToGameRoot.split('/').filter(Boolean)
   if (segments.length < 2) {
     return
@@ -149,6 +142,6 @@ function resolveCatalogPath(gamePath: string, absolutePath: string): {
 
   return {
     assetType: segments[0],
-    relativePath: segments.slice(1).join('/'),
+    relativePath: RelPath.from(segments.slice(1).join('/')),
   }
 }

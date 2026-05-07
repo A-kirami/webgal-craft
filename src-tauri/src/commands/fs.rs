@@ -13,6 +13,7 @@ static RENAME_FILE_LOCK: Mutex<()> = Mutex::new(());
 use tauri::ipc::Channel;
 
 use super::{AppError, AppResult};
+use crate::vfs::to_posix_string;
 
 // 定义复制事件枚举
 #[derive(Clone, serde::Serialize)]
@@ -315,6 +316,10 @@ fn paths_refer_to_same_entry(left: &Path, right: &Path) -> io::Result<bool> {
     Ok(left.canonicalize()? == right.canonicalize()?)
 }
 
+fn to_command_path_string(path: &Path) -> String {
+    to_posix_string(path)
+}
+
 #[tauri::command]
 pub fn rename_file(path: String, new_name: String) -> AppResult<String> {
     let source_path = PathBuf::from(&path);
@@ -331,7 +336,7 @@ pub fn rename_file(path: String, new_name: String) -> AppResult<String> {
     }
 
     if source_path == target_path {
-        return Ok(target_path.to_string_lossy().into_owned());
+        return Ok(to_command_path_string(&target_path));
     }
 
     if target_path.exists() && !paths_refer_to_same_entry(&source_path, &target_path)? {
@@ -342,7 +347,7 @@ pub fn rename_file(path: String, new_name: String) -> AppResult<String> {
     }
 
     fs::rename(&source_path, &target_path)?;
-    Ok(target_path.to_string_lossy().into_owned())
+    Ok(to_command_path_string(&target_path))
 }
 
 #[cfg(test)]
@@ -358,7 +363,7 @@ mod tests {
 
     use super::{
         copy_dir_all, count_files_with_excludes, is_binary_file, read_image_dimensions,
-        rename_file, validate_directory_structure,
+        rename_file, to_command_path_string, validate_directory_structure,
     };
 
     const PNG_1X1_BYTES: &[u8] = &[
@@ -584,7 +589,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
         assert_eq!(entry_names, vec!["Scene.txt"]);
-        assert_eq!(renamed, root.join("Scene.txt").to_string_lossy());
+        assert_eq!(renamed, to_command_path_string(&root.join("Scene.txt")));
 
         fs::remove_dir_all(&root).expect("temp directory should be removed");
     }
@@ -613,5 +618,17 @@ mod tests {
         assert!(source_path.exists(), "source file should remain in place");
 
         fs::remove_dir_all(&root).expect("temp directory should be removed");
+    }
+
+    #[test]
+    fn to_command_path_string_returns_posix_separator() {
+        assert_eq!(
+            to_command_path_string(Path::new(r"C:\Project\game\Scene.txt")),
+            "C:/Project/game/Scene.txt"
+        );
+        assert_eq!(
+            to_command_path_string(Path::new("//server/share/game/Scene.txt")),
+            "//server/share/game/Scene.txt"
+        );
     }
 }

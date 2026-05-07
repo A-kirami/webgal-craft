@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive, toRaw } from 'vue'
 
 import { encodeTextFile } from '~/domain/document/file-codec'
+import { AbsPath } from '~/domain/path'
 
 import { useTabsStore } from '../tabs'
 
@@ -9,27 +10,39 @@ type WriteDocumentFile = typeof import('~/services/game-fs').gameFs.writeDocumen
 
 const {
   handleErrorMock,
+  isBinaryFileMock,
+  loggerDebugMock,
+  loggerErrorMock,
+  loggerInfoMock,
+  loggerWarnMock,
+  mimeGetTypeMock,
+  modalOpenMock,
+  readFileMock,
+  refetchTemplatesMock,
+  statMock,
+  syncSceneMock,
   tabsWatcherCloseHandlerRef,
+  writeDocumentFileMock,
 } = vi.hoisted(() => ({
   handleErrorMock: vi.fn(),
+  isBinaryFileMock: vi.fn(async () => false),
+  loggerDebugMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
+  loggerInfoMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
+  mimeGetTypeMock: vi.fn(() => 'text/plain'),
+  modalOpenMock: vi.fn(),
+  readFileMock: vi.fn(async () => new TextEncoder().encode('hello')),
+  refetchTemplatesMock: vi.fn(async () => undefined),
+  statMock: vi.fn(async () => ({ size: 5 })),
+  syncSceneMock: vi.fn(async () => undefined),
   tabsWatcherCloseHandlerRef: {
     current: undefined as ((path: string) => void) | undefined,
   },
+  writeDocumentFileMock: vi.fn<WriteDocumentFile>(async () => undefined),
 }))
 
-const readFileMock = vi.fn(async () => new TextEncoder().encode('hello'))
-const statMock = vi.fn(async () => ({ size: 5 }))
-const writeDocumentFileMock = vi.fn<WriteDocumentFile>(async () => undefined)
-const isBinaryFileMock = vi.fn(async () => false)
-const syncSceneMock = vi.fn(async () => undefined)
-const refetchTemplatesMock = vi.fn(async () => undefined)
-const loggerWarnMock = vi.fn()
-const loggerErrorMock = vi.fn()
-const loggerDebugMock = vi.fn()
-const loggerInfoMock = vi.fn()
-const mimeGetTypeMock = vi.fn(() => 'text/plain')
 const fileSystemEventHandlers = new Map<string, (event: unknown) => unknown>()
-const modalOpenMock = vi.fn()
 let externalDocumentModalAction: 'keep-local' | 'load-external' | 'merge' | 'cancel' = 'cancel'
 const asyncFixtureTimeoutMs = 10 * 1000
 let useEditorStore: typeof import('../editor').useEditorStore
@@ -78,11 +91,6 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   debug: loggerDebugMock,
   info: loggerInfoMock,
   attachConsole: vi.fn(),
-}))
-
-vi.mock('@tauri-apps/api/path', () => ({
-  basename: async (input: string) => input.split('/').at(-1) ?? input,
-  join: async (...parts: string[]) => parts.join('/').replaceAll('//', '/'),
 }))
 
 vi.mock('vue-i18n', () => ({
@@ -147,7 +155,7 @@ vi.mock('~/services/debug-commander', () => ({
 }))
 
 vi.mock('~/services/platform/app-paths', () => ({
-  gameAssetDir: async (cwd: string, assetType: string) => `${cwd}/${assetType}`,
+  gameAssetDir: (cwd: string, assetType: string) => `${cwd}/${assetType}`,
 }))
 
 vi.mock('~/commands/fs', () => ({
@@ -241,7 +249,7 @@ async function openTabAndWaitFor(
   predicate: () => boolean,
   label: string,
 ) {
-  tabsStore.openTab(name, path, { forceNormal: true })
+  tabsStore.openTab(name, AbsPath.from(path), { forceNormal: true })
 
   await waitForEditorFixture(label, predicate, () => ({
     activeTab: tabsStore.activeTab?.path,
@@ -337,7 +345,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     expect(loadedState.textContent).toBe('hello!')
     expect(loadedState.isDirty).toBe(true)
 
-    await editorStore.saveFile(path)
+    await editorStore.saveFile(AbsPath.from(path))
 
     expect(writeDocumentFileMock).toHaveBeenCalledTimes(1)
     const savedCall = writeDocumentFileMock.mock.calls.at(0)
@@ -417,6 +425,36 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     expect(editorStore.canToggleMode).toBe(false)
   }, asyncFixtureTimeoutMs * 2)
 
+  it('只把真正位于目录下的文档计入 collectDocumentPathsUnder 与 hasUnsavedDocumentsUnder', async () => {
+    const tabsStore = useTabsStore()
+    const editorStore = useEditorStore()
+    const insidePath = '/game/assets/chapter-1/scene.txt'
+    const siblingPath = '/game/assets/chapter-10/scene.txt'
+
+    await openTabAndWaitFor(tabsStore, 'scene.txt', insidePath, () => editorStore.hasState(insidePath), 'load nested document')
+    await openTabAndWaitFor(tabsStore, 'scene.txt', siblingPath, () => editorStore.hasState(siblingPath), 'load sibling document')
+
+    editorStore.replaceTextDocumentContent(insidePath, 'inside changed')
+
+    expect(editorStore.collectDocumentPathsUnder('/game/assets/chapter-1')).toEqual([insidePath])
+    expect(editorStore.hasUnsavedDocumentsUnder('/game/assets/chapter-1')).toBe(true)
+    expect(editorStore.hasUnsavedDocumentsUnder('/game/assets/chapter-10')).toBe(false)
+  }, asyncFixtureTimeoutMs * 2)
+
+  it('目录匹配保持大小写敏感，不会把仅大小写不同的路径视为同一文档树', async () => {
+    const tabsStore = useTabsStore()
+    const editorStore = useEditorStore()
+    const upperCasePath = 'C:/Game/Assets/scene.txt'
+    const lowerCasePath = 'C:/game/assets/scene.txt'
+
+    await openTabAndWaitFor(tabsStore, 'scene.txt', upperCasePath, () => editorStore.hasState(upperCasePath), 'load upper case path document')
+
+    editorStore.replaceTextDocumentContent(upperCasePath, 'case changed')
+
+    expect(editorStore.collectDocumentPathsUnder(lowerCasePath)).toEqual([])
+    expect(editorStore.hasUnsavedDocumentsUnder(lowerCasePath)).toBe(false)
+  }, asyncFixtureTimeoutMs * 2)
+
   it('保存模板样式文件后刷新模板', async () => {
     const tabsStore = useTabsStore()
     const path = '/game/template/example.css'
@@ -427,7 +465,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
     editorStore.applyTextDocumentContent(path, 'body { color: red; }')
 
-    await editorStore.saveFile(path)
+    await editorStore.saveFile(AbsPath.from(path))
 
     expect(refetchTemplatesMock).toHaveBeenCalledTimes(1)
   })
@@ -448,7 +486,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
     editorStore.applyTextDocumentContent(path, 'body { color: red; }')
 
-    const savePromise = editorStore.saveFile(path)
+    const savePromise = editorStore.saveFile(AbsPath.from(path))
 
     expect(tabsWatcherCloseHandlerRef.current).toBeDefined()
     if (!tabsWatcherCloseHandlerRef.current) {
@@ -476,7 +514,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
     editorStore.applyTextDocumentContent(path, 'body { color: red; }')
 
-    await editorStore.saveFile(path)
+    await editorStore.saveFile(AbsPath.from(path))
     await flushEditorWatchers()
 
     expect(handleErrorMock).toHaveBeenCalledTimes(1)
@@ -1000,7 +1038,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     expect(editorStore.canToggleMode).toBe(true)
     expect(toRaw(editorStore.currentState)).toBe(toRaw(visualProjection))
 
-    await editorStore.saveFile(path)
+    await editorStore.saveFile(AbsPath.from(path))
     expect(textProjection.isDirty).toBe(false)
     const savedInvalidWrite = writeDocumentFileMock.mock.calls.at(-1) as [string, Uint8Array] | undefined
     expect(savedInvalidWrite?.[0]).toBe(path)
@@ -1103,7 +1141,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     editorStore.replaceTextDocumentContent(path, '[{"duration":300}]', { preserveDraftText: true })
     expect(editorStore.currentTextProjection?.textContent).toBe('[{"duration":300}]')
 
-    await editorStore.saveFile(path)
+    await editorStore.saveFile(AbsPath.from(path))
 
     expect(editorStore.currentTextProjection?.textContent).toBe('[{"duration":300}]')
     expect(editorStore.currentTextProjection?.textSource).toBe('draft')
@@ -1115,7 +1153,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     editorStore.setActiveProjection('visual', path)
     expect(editorStore.currentTextProjection?.textContent).toBe('[\n  {\n    "duration": 300\n  }\n]')
 
-    await editorStore.saveFile(path)
+    await editorStore.saveFile(AbsPath.from(path))
     expect(editorStore.currentTextProjection?.textContent).toBe('[\n  {\n    "duration": 300\n  }\n]')
   })
 
@@ -1223,7 +1261,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
     editorStore.applyTextDocumentContent(path, 'hello!')
 
-    const savePromise = editorStore.saveFile(path)
+    const savePromise = editorStore.saveFile(AbsPath.from(path))
 
     editorStore.applyTextDocumentContent(path, 'hello!?')
 
@@ -1288,7 +1326,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     vi.useFakeTimers()
     try {
       editorStore.scheduleAutoSave(path)
-      await editorStore.saveFile(path)
+      await editorStore.saveFile(AbsPath.from(path))
 
       expect(writeDocumentFileMock).toHaveBeenCalledTimes(1)
 
@@ -1319,7 +1357,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     editorStore.applyTextDocumentContent(path, 'hello!')
     editorStore.syncSceneSelectionFromTextLine(path, 1)
 
-    await editorStore.saveFile(path)
+    await editorStore.saveFile(AbsPath.from(path))
 
     expect(syncSceneMock).toHaveBeenCalledWith(path, 1, 'hello!', false)
   })
@@ -1490,7 +1528,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     editorStore.applyTextDocumentContent(path, 'hello!')
     editorStore.syncSceneSelectionFromTextLine(path, 1)
 
-    await expect(editorStore.saveFile(path)).rejects.toThrow(saveHookError)
+    await expect(editorStore.saveFile(AbsPath.from(path))).rejects.toThrow(saveHookError)
     expect(syncSceneMock).toHaveBeenCalledWith(path, 1, 'hello!', false)
   })
 
@@ -1615,7 +1653,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     })))
     await emitFileModifiedEvent(path)
 
-    await editorStore.saveFile(path)
+    await editorStore.saveFile(AbsPath.from(path))
 
     const lastWrite = writeDocumentFileMock.mock.calls.at(-1) as [string, Uint8Array] | undefined
     expect(lastWrite).toBeDefined()
@@ -1647,7 +1685,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
     editorStore.applyTextDocumentContent(path, 'hello!')
 
-    await editorStore.saveFile(path)
+    await editorStore.saveFile(AbsPath.from(path))
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('hello!'))
     await emitFileModifiedEvent(path)
@@ -1679,7 +1717,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     }
 
     editorStore.applyTextDocumentContent(path, 'hello!')
-    await editorStore.saveFile(path)
+    await editorStore.saveFile(AbsPath.from(path))
 
     expect(state.textContent).toBe('hello!')
     expect(state.isDirty).toBe(false)
@@ -1716,7 +1754,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
     expect(editorStore.currentTextProjection?.syncError).toBe('invalid-animation-json')
     expect(editorStore.canToggleMode).toBe(true)
 
-    await editorStore.saveFile(path)
+    await editorStore.saveFile(AbsPath.from(path))
     expect(editorStore.currentTextProjection?.isDirty).toBe(false)
     const savedInvalidWrite = writeDocumentFileMock.mock.calls.at(-1) as [string, Uint8Array] | undefined
     expect(savedInvalidWrite?.[0]).toBe(path)

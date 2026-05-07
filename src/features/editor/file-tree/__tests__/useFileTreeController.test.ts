@@ -10,7 +10,6 @@ interface TestTreeItem extends Record<string, unknown> {
 }
 
 const {
-  basenameMock,
   createFileMock,
   createFolderMock,
   getFileTreeExpandedMock,
@@ -19,7 +18,6 @@ const {
   useTabsStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
-  basenameMock: vi.fn(async (filePath: string) => filePath.split(/[/\\]/).at(-1) ?? ''),
   createFileMock: vi.fn(),
   createFolderMock: vi.fn(),
   getFileTreeExpandedMock: vi.fn(),
@@ -27,10 +25,6 @@ const {
   useEditorUIStateStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
-}))
-
-vi.mock('@tauri-apps/api/path', () => ({
-  basename: basenameMock,
 }))
 
 vi.mock('~/services/game-fs', () => ({
@@ -141,7 +135,6 @@ function createFixture(options: {
 
 describe('useFileTreeController 行为', () => {
   beforeEach(() => {
-    basenameMock.mockClear()
     createFileMock.mockReset()
     createFolderMock.mockReset()
     getFileTreeExpandedMock.mockReset()

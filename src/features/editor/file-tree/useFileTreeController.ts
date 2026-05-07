@@ -1,5 +1,4 @@
-import { basename } from '@tauri-apps/api/path'
-
+import { AbsPath } from '~/domain/path'
 import {
   getFileTreeNameSelectionEnd,
   getFileTreeParentPath,
@@ -251,7 +250,7 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
 
     renameState.value.isInProgress = true
     try {
-      await gameFs.renameFile(getItemPath(item.value), newName)
+      await gameFs.renameFile(AbsPath.from(getItemPath(item.value)), newName)
       renameState.value.itemKey = undefined
     } catch (error) {
       handleError(error)
@@ -391,12 +390,13 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     try {
       const isFile = createState.value.type === 'file'
       const createdPath = await (isFile
-        ? gameFs.createFile(createState.value.parentPath, fileName)
-        : gameFs.createFolder(createState.value.parentPath, fileName))
+        ? gameFs.createFile(AbsPath.from(createState.value.parentPath), fileName)
+        : gameFs.createFolder(AbsPath.from(createState.value.parentPath), fileName))
 
       if (options.openCreatedFileInTab() && isFile && createdPath) {
-        const createdName = await basename(createdPath)
-        tabsStore.openTab(createdName, createdPath, { forceNormal: true, focus: true })
+        const normalizedCreatedPath = AbsPath.from(createdPath)
+        const createdName = AbsPath.basename(normalizedCreatedPath)
+        tabsStore.openTab(createdName, normalizedCreatedPath, { forceNormal: true, focus: true })
       }
 
       cancelCreating()

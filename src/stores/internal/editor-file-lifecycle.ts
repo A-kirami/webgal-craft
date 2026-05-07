@@ -1,9 +1,9 @@
 import { stat } from '@tauri-apps/plugin-fs'
 
 import { fsCmds } from '~/commands/fs'
+import { AbsPath, normalizePosix } from '~/domain/path'
 import { mime } from '~/plugins/mime'
 import { gameAssetDir } from '~/services/platform/app-paths'
-import { normalizeFsPath } from '~/utils/path'
 
 import { applyDocumentTransaction } from './editor-document-actions'
 import { createLoadedDocumentState, markDocumentClean, resolveSceneCursor } from './editor-document-state'
@@ -93,10 +93,8 @@ interface ExternalDocumentSnapshot {
 const pendingFileModifiedTasks = new Map<string, Promise<void>>()
 
 function isPathInsideDirectory(path: string, directoryPath: string): boolean {
-  // 两侧路径可能分别来自 VFS（正斜杠）与 Tauri API（Windows 反斜杠），
-  // 比较前必须统一形态，否则前缀判断会错失，导致场景文件被识别为纯文本。
-  const normalizedPath = normalizeFsPath(path)
-  const normalizedDir = normalizeFsPath(directoryPath)
+  const normalizedPath = AbsPath.from(path)
+  const normalizedDir = AbsPath.from(directoryPath)
   return normalizedPath.startsWith(`${normalizedDir}/`)
 }
 
@@ -162,7 +160,7 @@ async function loadNonEditableState(
 
   try {
     const physicalPath = await context.resolveFilePath(path)
-    const isBinary = await fsCmds.isBinaryFile(physicalPath)
+    const isBinary = await fsCmds.isBinaryFile(AbsPath.from(physicalPath))
     if (!isBinary) {
       return undefined
     }
@@ -182,7 +180,7 @@ async function checkFileLocation(
   path: string,
   subPath: string,
 ): Promise<boolean> {
-  const targetPath = await gameAssetDir(requireWorkspaceRootPath(context), subPath)
+  const targetPath = gameAssetDir(AbsPath.from(requireWorkspaceRootPath(context)), subPath)
   return isPathInsideDirectory(path, targetPath)
 }
 
@@ -206,7 +204,7 @@ function isTemplateStyleFile(path: string): boolean {
 }
 
 function isAnimationIndexFile(path: string): boolean {
-  return path.replaceAll('\\', '/').toLowerCase().endsWith('/game/animation/animationtable.json')
+  return normalizePosix(path).toLowerCase().endsWith('/game/animation/animationtable.json')
 }
 
 async function resolveDocumentKind(

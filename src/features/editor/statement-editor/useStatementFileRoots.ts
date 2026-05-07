@@ -1,3 +1,4 @@
+import { AbsPath } from '~/domain/path'
 import { EditorField } from '~/features/editor/command-registry/schema'
 import { gameAssetDir } from '~/services/platform/app-paths'
 import { useWorkspaceStore } from '~/stores/workspace'
@@ -38,7 +39,7 @@ export function useStatementFileRoots(options: UseStatementFileRootsOptions) {
 
       const entries = await Promise.all(
         [...types].map(async (assetType) => {
-          return [assetType, await gameAssetDir(cwd, assetType)] as const
+          return [assetType, gameAssetDir(AbsPath.from(cwd), assetType)] as const
         }),
       )
 

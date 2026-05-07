@@ -2,6 +2,7 @@ import '~/__tests__/setup'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { AbsPath, RelPath } from '~/domain/path'
 import { useBackupStore } from '~/stores/backup'
 
 const { loadTimelineMock, restoreBackupMock } = vi.hoisted(() => ({
@@ -28,18 +29,18 @@ describe('useBackupStore', () => {
     ])
 
     const store = useBackupStore()
-    await store.loadTimeline('/games/demo', 'game/scene/start.txt')
+    await store.loadTimeline(AbsPath.from('/games/demo'), RelPath.from('game/scene/start.txt'))
 
     expect(store.timeline[0]?.sourceKind).toBe('manual-save')
     expect(store.scope).toEqual({
-      projectPath: '/games/demo',
-      logicalPath: 'game/scene/start.txt',
+      projectPath: AbsPath.from('/games/demo'),
+      logicalPath: RelPath.from('game/scene/start.txt'),
     })
   })
 
   it('恢复历史条目后会刷新时间线', async () => {
     const store = useBackupStore()
-    await store.loadTimeline('/games/demo', 'game/scene/start.txt')
+    await store.loadTimeline(AbsPath.from('/games/demo'), RelPath.from('game/scene/start.txt'))
 
     loadTimelineMock.mockResolvedValue([
       { sourceKind: 'restore', backupPath: 'scene/start/r.bak' },
@@ -56,9 +57,9 @@ describe('useBackupStore', () => {
     })
 
     expect(restoreBackupMock).toHaveBeenCalledWith(
-      '/games/demo',
-      'game/scene/start.txt',
-      'scene/start/a.bak',
+      AbsPath.from('/games/demo'),
+      RelPath.from('game/scene/start.txt'),
+      RelPath.from('scene/start/a.bak'),
     )
     expect(store.timeline[0]?.sourceKind).toBe('restore')
   })
@@ -67,7 +68,7 @@ describe('useBackupStore', () => {
     loadTimelineMock.mockResolvedValue([{ sourceKind: 'manual-save', backupPath: 'a.bak' }])
 
     const store = useBackupStore()
-    await store.loadTimeline('/games/demo', 'game/scene/start.txt')
+    await store.loadTimeline(AbsPath.from('/games/demo'), RelPath.from('game/scene/start.txt'))
     store.clearTimeline()
 
     expect(store.scope).toBeUndefined()

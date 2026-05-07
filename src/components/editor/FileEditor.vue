@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Code, File, FilePlus2, FileWarning } from '@lucide/vue'
-import { basename } from '@tauri-apps/api/path'
 
+import { AbsPath } from '~/domain/path'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { useModalStore } from '~/stores/modal'
 import { useTabsStore } from '~/stores/tabs'
@@ -12,9 +12,9 @@ const modalStore = useModalStore()
 
 async function handleCreateScene() {
   modalStore.open('CreateFileModal', {
-    onSuccess: async (filePath: string) => {
-      const fileName = await basename(filePath)
-      tabsStore.openTab(fileName, filePath, { forceNormal: true, focus: true })
+    onSuccess(filePath: string) {
+      const fileName = AbsPath.basename(AbsPath.from(filePath))
+      tabsStore.openTab(fileName, AbsPath.from(filePath), { forceNormal: true, focus: true })
     },
   })
 }

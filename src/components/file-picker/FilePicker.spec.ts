@@ -7,14 +7,12 @@ import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } f
 
 const {
   existsMock,
-  normalizeMock,
   previewSessionStoreState,
   readDirectoryMock,
   statMock,
   workspaceStoreState,
 } = vi.hoisted(() => ({
   existsMock: vi.fn(),
-  normalizeMock: vi.fn(async (value: string) => value.replaceAll('\\', '/')),
   previewSessionStoreState: {
     currentGameServeUrl: 'http://127.0.0.1:8899/game/demo/',
   },
@@ -24,16 +22,6 @@ const {
     CWD: '/games/demo',
   },
 }))
-
-vi.mock('@tauri-apps/api/path', async () => {
-  const actual = await vi.importActual<typeof import('@tauri-apps/api/path')>('@tauri-apps/api/path')
-
-  return {
-    ...actual,
-    join: async (...parts: string[]) => parts.join('/'),
-    normalize: normalizeMock,
-  }
-})
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
   copyFile: vi.fn(),
@@ -187,7 +175,6 @@ describe('FilePicker', () => {
 
   beforeEach(() => {
     existsMock.mockReset()
-    normalizeMock.mockClear()
     readDirectoryMock.mockReset()
     statMock.mockReset()
 

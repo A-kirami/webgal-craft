@@ -1,6 +1,6 @@
-import { join, normalize } from '@tauri-apps/api/path'
 import { exists, stat } from '@tauri-apps/plugin-fs'
 
+import { AbsPath, RelPath } from '~/domain/path'
 import {
   formatFilePickerModelValueForInput,
   getFilePickerParentPath,
@@ -8,7 +8,6 @@ import {
   resolveFilePickerInputFallbackDir,
 } from '~/features/file-picker/file-picker'
 import { AppError } from '~/types/errors'
-import { normalizeRelativePath } from '~/utils/path'
 
 import type { Ref } from 'vue'
 import type { FileViewerItem } from '~/types/file-viewer'
@@ -23,15 +22,15 @@ interface UseFilePickerControllerOptions {
   canonicalRootPath?: Ref<string>
   commitInputOnBlur?: () => boolean
   disabled: () => boolean
-  ensurePathWithinRoot: (path: string, rootPath: string) => Promise<string>
+  ensurePathWithinRoot: (path: AbsPath, rootPath: AbsPath) => Promise<AbsPath>
   exclude: () => string[]
   extensions: () => string[]
   isRecentHistoryInvalid: (path: string) => boolean
   modelValue: () => string
   readDirectory: (
-    path: string,
-    options: { rootPath: string, requestId: number },
-  ) => Promise<{ items: FileViewerItem[], requestId: number }>
+    path: AbsPath,
+    options: { rootPath: AbsPath, requestId: number },
+  ) => Promise<{ absolutePath: AbsPath, items: FileViewerItem[], requestId: number }>
   refreshRecentHistoryInvalidState: () => Promise<void> | void
   removeRecentHistoryPaths: (paths: string[]) => void
   reopenInSelectedParent: () => boolean
@@ -171,7 +170,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
       return false
     }
 
-    return !parsed.keyword.trim() && normalizeRelativePath(parsed.directoryPath) === currentDir.value
+    return !parsed.keyword.trim() && RelPath.from(parsed.directoryPath) === currentDir.value
   }
 
   function getFileExt(name: string): string {
@@ -191,16 +190,16 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
     // `checkRoot()` 保存的是经过 Tauri 规范化的绝对根路径，调用方传入的路径
     // 也来自同一套 Tauri 路径 API。这里保持精确比较，避免在大小写敏感文件系统上
     // 误把大小写不同的路径视为同一个根目录下的相对路径。
-    const root = canonicalRootPath.value.replaceAll('\\', '/')
-    const target = path.replaceAll('\\', '/')
+    const root = canonicalRootPath.value
+    const target = AbsPath.from(path)
     const rootPrefix = root.endsWith('/') ? root : `${root}/`
     if (target === root) {
       return ''
     }
     if (target.startsWith(rootPrefix)) {
-      return normalizeRelativePath(target.slice(rootPrefix.length))
+      return RelPath.from(target.slice(rootPrefix.length))
     }
-    return normalizeRelativePath(path)
+    return RelPath.from(path)
   }
 
   async function checkRoot() {
@@ -209,7 +208,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
     canonicalRootPath.value = ''
 
     try {
-      const normalizedRoot = await normalize(options.rootPath())
+      const normalizedRoot = AbsPath.from(options.rootPath())
       if (!(await exists(normalizedRoot))) {
         isOpen.value = false
         return
@@ -240,14 +239,17 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
     if (!canonicalRootPath.value) {
       return
     }
-    const normalizedDir = normalizeRelativePath(relativeDir)
+    const normalizedDir = RelPath.from(relativeDir)
     const requestId = ++latestReadId
     isLoading.value = true
     errorMsg.value = ''
 
     try {
-      const targetPath = await join(canonicalRootPath.value, normalizedDir)
-      const result = await options.readDirectory(targetPath, { rootPath: canonicalRootPath.value, requestId })
+      const targetPath = AbsPath.join(AbsPath.from(canonicalRootPath.value), normalizedDir)
+      const result = await options.readDirectory(targetPath, {
+        rootPath: AbsPath.from(canonicalRootPath.value),
+        requestId,
+      })
       if (result.requestId !== latestReadId) {
         return
       }
@@ -276,7 +278,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
       return
     }
 
-    const targetDir = normalizeRelativePath(parsed.directoryPath)
+    const targetDir = RelPath.from(parsed.directoryPath)
     const keyword = parsed.keyword.trim()
 
     if (!keyword && targetDir === currentDir.value) {
@@ -309,13 +311,16 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
     }
 
     try {
-      const safePath = await options.ensurePathWithinRoot(await join(canonicalRootPath.value, options.modelValue()), canonicalRootPath.value)
+      const safePath = await options.ensurePathWithinRoot(
+        AbsPath.join(AbsPath.from(canonicalRootPath.value), RelPath.from(options.modelValue())),
+        AbsPath.from(canonicalRootPath.value),
+      )
       if (!(await exists(safePath))) {
         return ''
       }
       const info = await stat(safePath)
       return info.isDirectory
-        ? normalizeRelativePath(options.modelValue())
+        ? RelPath.from(options.modelValue())
         : getFilePickerParentPath(options.modelValue())
     } catch {
       return ''
@@ -353,7 +358,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   }
 
   function commitSelection(relativePath: string, closePopover: boolean) {
-    const normalizedPath = normalizeRelativePath(relativePath)
+    const normalizedPath = RelPath.from(relativePath)
     options.setModelValue(normalizedPath)
     setInputSilently(normalizedPath)
     options.updateRecentHistory(normalizedPath)
@@ -373,7 +378,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   }
 
   function handleBreadcrumbNavigate(path: string) {
-    const normalizedDir = normalizeRelativePath(path)
+    const normalizedDir = RelPath.from(path)
     setInputSilently(normalizedDir ? `${normalizedDir}/` : '')
     void loadDirectory(normalizedDir, '')
   }
@@ -386,7 +391,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   }
 
   function commitInputValue() {
-    const normalizedPath = normalizeRelativePath(inputText.value)
+    const normalizedPath = RelPath.from(inputText.value)
     options.setModelValue(normalizedPath)
     setInputSilently(normalizedPath)
   }
@@ -488,7 +493,10 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
       return
     }
     try {
-      const safePath = await options.ensurePathWithinRoot(await join(canonicalRootPath.value, path), canonicalRootPath.value)
+      const safePath = await options.ensurePathWithinRoot(
+        AbsPath.join(AbsPath.from(canonicalRootPath.value), RelPath.from(path)),
+        AbsPath.from(canonicalRootPath.value),
+      )
       if (!(await exists(safePath))) {
         options.removeRecentHistoryPaths([path])
         return

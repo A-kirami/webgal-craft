@@ -345,8 +345,8 @@ describe('StatementEditorPanel', () => {
     usePreviewSessionStoreMock.mockReturnValue(reactive({
       currentGameServeUrl: 'http://127.0.0.1:8899',
     }))
-    gameAssetDirMock.mockImplementation(async (_cwd: string, assetType: string) => `/games/demo/assets/${assetType}`)
-    gameSceneDirMock.mockResolvedValue('/games/demo/scene')
+    gameAssetDirMock.mockImplementation((_cwd: string, assetType: string) => `/games/demo/assets/${assetType}`)
+    gameSceneDirMock.mockReturnValue('/games/demo/scene')
   })
 
   it('点击标题会触发 focusStatement，点击效果编辑器会打开桥接弹窗', async () => {

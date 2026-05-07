@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia'
 
+import { AbsPath, RelPath } from '~/domain/path'
 import { backupManager } from '~/services/backup-manager'
 
 import type { BackupEntry } from '~/commands/backup'
 
 interface TimelineScope {
-  projectPath: string
-  logicalPath: string
+  projectPath: AbsPath
+  logicalPath: RelPath
 }
 
 export const useBackupStore = defineStore('backup', () => {
@@ -15,7 +16,7 @@ export const useBackupStore = defineStore('backup', () => {
   let loading = $ref(false)
   let restoring = $ref(false)
 
-  async function loadTimeline(projectPath: string, logicalPath: string) {
+  async function loadTimeline(projectPath: AbsPath, logicalPath: RelPath) {
     scope = { projectPath, logicalPath }
     loading = true
     try {
@@ -36,7 +37,7 @@ export const useBackupStore = defineStore('backup', () => {
     }
     restoring = true
     try {
-      await backupManager.restoreBackup(scope.projectPath, scope.logicalPath, entry.backupPath)
+      await backupManager.restoreBackup(scope.projectPath, scope.logicalPath, RelPath.from(entry.backupPath))
       timeline = await backupManager.loadTimeline(scope.projectPath, scope.logicalPath)
     } finally {
       restoring = false

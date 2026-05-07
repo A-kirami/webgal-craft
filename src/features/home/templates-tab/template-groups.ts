@@ -1,4 +1,4 @@
-import { joinPath } from '~/utils/path'
+import { AbsPath, RelPath } from '~/domain/path'
 
 import type { Engine, Template } from '~/database/model'
 import type { ResourceAvailability } from '~/services/resource-health'
@@ -62,7 +62,7 @@ function createEngineBuiltinTemplateSource(engine: Engine): EngineBuiltinTemplat
     engineName: engine.name,
     engineVersion: engine.version,
     enginePath: engine.path,
-    templatePath: joinPath(engine.path, 'game', 'template'),
+    templatePath: AbsPath.join(AbsPath.from(engine.path), RelPath.from('game/template')),
     createdAt: engine.createdAt,
   }
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { AbsPath, RelPath } from '~/domain/path'
 import { useWorkspaceStore } from '~/stores/workspace'
-import { joinPath } from '~/utils/path'
 
 const { assetType } = defineProps<{ assetType: string }>()
 
@@ -13,7 +13,8 @@ const rootPath = $computed(() => {
   if (!gamePath) {
     return ''
   }
-  return joinPath(gamePath, 'game', assetType)
+
+  return AbsPath.join(AbsPath.from(gamePath), RelPath.from(`game/${assetType}`))
 })
 
 function handleNavigate(path: string) {

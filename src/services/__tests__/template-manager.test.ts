@@ -12,7 +12,6 @@ const {
   dbTemplatesUpdateMock,
   deleteFileMock,
   existsMock,
-  joinMock,
   readTextFileMock,
   resourceStoreMock,
   useResourceStoreMock,
@@ -27,7 +26,6 @@ const {
   dbTemplatesUpdateMock: vi.fn(),
   deleteFileMock: vi.fn(),
   existsMock: vi.fn(),
-  joinMock: vi.fn(async (...parts: string[]) => parts.join('/').replaceAll('//', '/')),
   readTextFileMock: vi.fn(),
   resourceStoreMock: {
     finishProgress: vi.fn(),
@@ -36,10 +34,6 @@ const {
   useResourceStoreMock: vi.fn(),
   useStorageSettingsStoreMock: vi.fn(),
   validateDirectoryStructureMock: vi.fn(),
-}))
-
-vi.mock('@tauri-apps/api/path', () => ({
-  join: joinMock,
 }))
 
 vi.mock('@tauri-apps/plugin-log', () => ({
@@ -205,7 +199,6 @@ describe('templateManager 模板管理', () => {
     useStorageSettingsStoreMock.mockReturnValue({
       templateSavePath: 'C:/Templates',
     })
-    joinMock.mockResolvedValue('c:/templates/Modern Template')
 
     await templateManager.importTemplate('C:\\Templates\\Modern Template\\')
 

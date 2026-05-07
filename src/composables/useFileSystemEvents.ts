@@ -1,18 +1,19 @@
 import type { EventBusKey } from '@vueuse/core'
+import type { AbsPath } from '~/domain/path'
 
 /**
  * 文件系统事件类型定义
  */
 export type FileSystemEvent =
-  | { type: 'file:created', path: string, parentId?: string }
-  | { type: 'file:removed', path: string }
-  | { type: 'file:renamed', oldPath: string, newPath: string }
-  | { type: 'file:modified', path: string }
-  | { type: 'file:written', path: string }
-  | { type: 'directory:created', path: string, parentId?: string }
-  | { type: 'directory:removed', path: string }
-  | { type: 'directory:renamed', oldPath: string, newPath: string }
-  | { type: 'directory:modified', path: string }
+  | { type: 'file:created', path: AbsPath, parentId?: string }
+  | { type: 'file:removed', path: AbsPath }
+  | { type: 'file:renamed', oldPath: AbsPath, newPath: AbsPath }
+  | { type: 'file:modified', path: AbsPath }
+  | { type: 'file:written', path: AbsPath }
+  | { type: 'directory:created', path: AbsPath, parentId?: string }
+  | { type: 'directory:removed', path: AbsPath }
+  | { type: 'directory:renamed', oldPath: AbsPath, newPath: AbsPath }
+  | { type: 'directory:modified', path: AbsPath }
 
 /**
  * 文件系统事件总线 Key

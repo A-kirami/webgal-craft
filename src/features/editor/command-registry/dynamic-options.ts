@@ -1,8 +1,9 @@
-import { join } from '@tauri-apps/api/path'
 import { readTextFile } from '@tauri-apps/plugin-fs'
 
+import { AbsPath, normalizePosix, RelPath } from '~/domain/path'
 import { DynamicOptionsContext, DynamicOptionSourceDef } from '~/features/editor/command-registry/schema'
 import { gameAssetDir } from '~/services/platform/app-paths'
+import { toLookupPathKey } from '~/services/resource-path/lookup'
 
 interface FigureMetadata {
   motions: string[]
@@ -11,13 +12,18 @@ interface FigureMetadata {
 
 const SPLIT_GAME_PATH_TOKEN = '|'
 const ANIMATION_TABLE_SUFFIX = /[/\\]game[/\\]animation[/\\]animationTable\.json$/i
+const EMPTY_GAME_LOOKUP_KEY = ''
 
 function normalizePath(path: string): string {
-  return path.replaceAll('\\', '/')
+  return normalizePosix(path)
 }
 
-export function normalizeGamePath(path: string): string {
-  return normalizePath(path).replace(/\/+$/, '').toLowerCase()
+export function resolveGameLookupKey(path: string): string {
+  const trimmedPath = path.trim()
+  if (!trimmedPath) {
+    return EMPTY_GAME_LOOKUP_KEY
+  }
+  return toLookupPathKey(AbsPath.from(trimmedPath))
 }
 
 function normalizeOptionValue(value: string): string | undefined {
@@ -69,7 +75,7 @@ interface FigureModelPath {
 }
 
 function resolveFigureModelPath(ctx: DynamicOptionsContext): FigureModelPath | undefined {
-  const gameKey = normalizeGamePath(ctx.gamePath)
+  const gameKey = resolveGameLookupKey(ctx.gamePath)
   if (!gameKey) {
     return
   }
@@ -155,8 +161,8 @@ async function loadAnimationTableOptions(ctx: DynamicOptionsContext): Promise<{ 
   }
 
   try {
-    const directory = await gameAssetDir(ctx.gamePath, 'animation')
-    const filePath = await join(directory, 'animationTable.json')
+    const directory = gameAssetDir(AbsPath.from(ctx.gamePath), 'animation')
+    const filePath = AbsPath.join(directory, RelPath.from('animationTable.json'))
     const content = await readTextFile(filePath)
     return toOptionItems(parseAnimationTableEntries(JSON.parse(content)))
   } catch (error) {
@@ -172,8 +178,8 @@ async function loadFigureMetadataByContext(ctx: DynamicOptionsContext): Promise<
   }
 
   try {
-    const directory = await gameAssetDir(ctx.gamePath, 'figure')
-    const filePath = await join(directory, resolved.relativePath)
+    const directory = gameAssetDir(AbsPath.from(ctx.gamePath), 'figure')
+    const filePath = AbsPath.join(directory, RelPath.from(resolved.relativePath))
     const content = await readTextFile(filePath)
     return parseFigureMetadata(JSON.parse(content))
   } catch (error) {
@@ -201,7 +207,7 @@ export const editorDynamicOptionSources: DynamicOptionSourceDef[] = [
   {
     key: 'animationTableEntries',
     resolveCacheKey(ctx) {
-      return normalizeGamePath(ctx.gamePath) || undefined
+      return resolveGameLookupKey(ctx.gamePath) || undefined
     },
     loadOptions: loadAnimationTableOptions,
     invalidateByFileModified(path) {

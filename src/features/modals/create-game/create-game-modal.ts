@@ -1,5 +1,7 @@
 import sanitize from 'sanitize-filename'
 
+import { AbsPath } from '~/domain/path'
+
 export interface CreateGameEngineOptionLike {
   id: string
 }
@@ -9,7 +11,6 @@ export interface ResolveCreateGamePathSuggestionOptions {
   gameSavePath: string
   isComposing: boolean
   isPathManuallyChanged: boolean
-  joinPath: (gameSavePath: string, sanitizedGameName: string) => Promise<string>
 }
 
 export function sanitizeCreateGameName(gameName: string): string {
@@ -24,7 +25,11 @@ export async function resolveCreateGamePathSuggestion(
   }
 
   const sanitizedGameName = sanitizeCreateGameName(options.gameName)
-  return await options.joinPath(options.gameSavePath, sanitizedGameName)
+  if (!sanitizedGameName) {
+    return AbsPath.from(options.gameSavePath)
+  }
+
+  return AbsPath.append(AbsPath.from(options.gameSavePath), sanitizedGameName)
 }
 
 export function resolveCreateGameDefaultEngineId(

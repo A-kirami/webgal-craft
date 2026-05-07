@@ -1,5 +1,6 @@
 import { normalizeTextLineEnding } from '~/domain/document/document-model'
 import { encodeTextFile } from '~/domain/document/file-codec'
+import { AbsPath } from '~/domain/path'
 import { gameFs } from '~/services/game-fs'
 import { AppError } from '~/types/errors'
 
@@ -97,7 +98,7 @@ export async function saveEditorDocument(
   const finalContent = normalizeTextLineEnding(saveSnapshot.content, metadata.lineEnding)
   const finalBytes = encodeTextFile(finalContent, metadata)
 
-  await gameFs.writeDocumentFile(path, finalBytes)
+  await gameFs.writeDocumentFile(AbsPath.from(path), finalBytes)
   finalizeSavedDocument(context, path, saveSnapshot, finalContent, new Date())
   return finalContent
 }

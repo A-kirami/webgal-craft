@@ -122,6 +122,15 @@ export default defineConfig(
       ],
       'import-x/newline-after-import': 'warn',
       'import-x/consistent-type-specifier-style': 'warn',
+      'no-restricted-imports': ['error', {
+        paths: [
+          {
+            name: '@tauri-apps/api/path',
+            importNames: ['join', 'dirname', 'basename', 'normalize', 'sep', 'resolve'],
+            message: '路径拼接请使用 src/domain/path',
+          },
+        ],
+      }],
       'unicorn/prevent-abbreviations': 'off',
       'unicorn/consistent-function-scoping': 'off',
       'unicorn/numeric-separators-style': ['warn', { number: { groupLength: 4 } }],
@@ -158,6 +167,35 @@ export default defineConfig(
     rules: {
       'vue/one-component-per-file': 'off',
       'vue/require-default-prop': 'off',
+    },
+  },
+  {
+    files: ['src/**/*.{js,jsx,ts,tsx,vue}'],
+    rules: {
+      'no-restricted-syntax': ['error',
+        {
+          selector: String.raw`CallExpression[callee.property.name='replaceAll'] Literal[value='\\']`,
+          message: String.raw`禁止裸 replaceAll("\\", "/")，请使用 ~/domain/path。`,
+        },
+        {
+          selector: String.raw`CallExpression[callee.property.name='replace'] Literal[value='\\']`,
+          message: String.raw`禁止裸 replace("\\", "/")，请使用 ~/domain/path。`,
+        },
+        {
+          selector: String.raw`CallExpression[callee.property.name='replace'] Literal[regex.pattern='\\\\'][regex.flags='g']`,
+          message: String.raw`禁止裸 replace(/\\\\/g, "/")，请使用 ~/domain/path。`,
+        },
+        {
+          selector: 'TSAsExpression > TSTypeReference[typeName.name=/^(AbsPath|RelPath|LookupPathKey)$/]',
+          message: '禁止用 as AbsPath/RelPath/LookupPathKey 绕过路径工厂，请通过 ~/domain/path 或 ~/services/resource-path/lookup 构造。',
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/domain/path/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-namespace': 'off',
     },
   },
   {

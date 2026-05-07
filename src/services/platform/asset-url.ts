@@ -1,6 +1,6 @@
+import { normalizePosix } from '~/domain/path'
 import { usePreviewSessionStore } from '~/stores/preview-session'
 import { useWorkspaceStore } from '~/stores/workspace'
-import { normalizeFsPath } from '~/utils/path'
 
 export interface AssetThumbnailOptions {
   width: number
@@ -22,7 +22,7 @@ interface ResolvedPath {
 }
 
 function parsePath(input: string): ResolvedPath {
-  const normalizedPath = normalizeFsPath(input)
+  const normalizedPath = normalizePosix(input)
   const uncMatch = normalizedPath.match(/^\/\/([^/]+)\/([^/]+)(?:\/(.*))?$/)
   if (uncMatch) {
     return {
@@ -119,7 +119,10 @@ export function resolveAssetUrl(assetPath: string, options: AssetUrlOptions): st
   }
 
   const relativePath = resolvedPath.segments.slice(resolvedCwd.segments.length).join('/')
-  const url = new URL(relativePath, options.previewBaseUrl)
+  const previewBaseUrl = options.previewBaseUrl.endsWith('/')
+    ? options.previewBaseUrl
+    : `${options.previewBaseUrl}/`
+  const url = new URL(relativePath, previewBaseUrl)
   if (options.cacheVersion !== undefined) {
     url.searchParams.set('t', String(options.cacheVersion))
   }

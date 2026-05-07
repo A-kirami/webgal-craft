@@ -1,3 +1,5 @@
+import { AbsPath } from '~/domain/path'
+
 export interface ScenePanelFolderItem {
   id: string
   isDir: boolean
@@ -51,7 +53,6 @@ export function findScenePanelNodeByPath(
 export async function resolveScenePanelTargetPath(
   rootPath: string | undefined,
   selectedItem: ScenePanelTreeNode | undefined,
-  dirnameFn: (path: string) => Promise<string>,
 ): Promise<string | undefined> {
   if (!rootPath) {
     return
@@ -60,7 +61,7 @@ export async function resolveScenePanelTargetPath(
   if (selectedItem) {
     return selectedItem.children
       ? selectedItem.path
-      : await dirnameFn(selectedItem.path)
+      : AbsPath.parent(AbsPath.from(selectedItem.path))
   }
 
   return rootPath

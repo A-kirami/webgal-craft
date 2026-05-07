@@ -18,6 +18,13 @@ const CURRENT_SCHEMA_VERSION: u32 = 1;
 const VFS_METADATA_DIR: &str = ".wgc-vfs";
 const WHITEOUTS_DIR: &str = "whiteouts";
 
+pub fn to_posix_string(path: &Path) -> String {
+    path.to_string_lossy()
+        .chars()
+        .map(|ch| if ch == '\\' { '/' } else { ch })
+        .collect()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ProjectConfig {
     pub version: u32,

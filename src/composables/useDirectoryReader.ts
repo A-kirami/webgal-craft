@@ -1,13 +1,11 @@
-import { normalize } from '@tauri-apps/api/path'
-
+import { AbsPath } from '~/domain/path'
 import { readDirectoryItemsCached } from '~/services/directory-cache'
 import { AppError } from '~/types/errors'
 import { FileViewerItem } from '~/types/file-viewer'
-import { toComparablePath } from '~/utils/path'
 
 interface ReadDirectoryOptions {
   /** 根目录绝对路径（可选），用于做路径边界校验 */
-  rootPath?: string
+  rootPath?: AbsPath
   /** 是否读取文件元信息（mtime/size 等），默认 true */
   includeStats?: boolean
   /** 外部传入请求 ID（可选） */
@@ -16,35 +14,30 @@ interface ReadDirectoryOptions {
 
 interface DirectoryReadResult {
   requestId: number
-  absolutePath: string
+  absolutePath: AbsPath
   items: FileViewerItem[]
 }
 
-function isPathInsideRoot(path: string, rootPath: string): boolean {
-  const normalizedPath = toComparablePath(path)
-  const normalizedRootPath = toComparablePath(rootPath)
-  return normalizedPath === normalizedRootPath
-    || normalizedPath.startsWith(`${normalizedRootPath}/`)
+function isPathInsideRoot(path: AbsPath, rootPath: AbsPath): boolean {
+  return path === rootPath || path.startsWith(`${rootPath}/`)
 }
 
 export function useDirectoryReader() {
   let latestRequestId = 0
 
-  async function ensurePathWithinRoot(path: string, rootPath?: string): Promise<string> {
-    const normalizedPath = await normalize(path)
+  async function ensurePathWithinRoot(path: AbsPath, rootPath?: AbsPath): Promise<AbsPath> {
     if (!rootPath) {
-      return normalizedPath
+      return path
     }
 
-    const normalizedRootPath = await normalize(rootPath)
-    if (!isPathInsideRoot(normalizedPath, normalizedRootPath)) {
+    if (!isPathInsideRoot(path, rootPath)) {
       throw new AppError('PATH_TRAVERSAL', '路径越界：访问路径不在根目录范围内')
     }
-    return normalizedPath
+    return path
   }
 
   async function readDirectory(
-    absolutePath: string,
+    absolutePath: AbsPath,
     options: ReadDirectoryOptions = {},
   ): Promise<DirectoryReadResult> {
     const requestId = options.requestId ?? ++latestRequestId

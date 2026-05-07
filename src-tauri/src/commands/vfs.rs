@@ -7,8 +7,8 @@ use std::{
 use tauri::State;
 
 use crate::vfs::{
-    self, resolve_default_template_path, sanitize_logical_path, CachedCanonicals, OverlayFs,
-    VfsDirEntry, VfsError,
+    self, resolve_default_template_path, sanitize_logical_path, to_posix_string, CachedCanonicals,
+    OverlayFs, VfsDirEntry, VfsError,
 };
 
 use super::AppResult;
@@ -105,11 +105,11 @@ fn sanitize_move_target(target_rel_path: &str) -> Result<PathBuf, VfsError> {
 /// VFS 命令对外暴露两种路径：物理绝对路径（保留平台分隔符，供前端 `convertFileSrc` 等消费）
 /// 与逻辑相对路径（始终 `/`，作为下次 VFS 调用的 `relPath`）。
 fn to_physical_path_string(path: &Path) -> String {
-    path.to_string_lossy().into_owned()
+    to_posix_string(path)
 }
 
 fn to_logical_path_string(path: &Path) -> String {
-    path.to_string_lossy().replace('\\', "/")
+    to_posix_string(path)
 }
 
 #[tauri::command]
@@ -252,7 +252,10 @@ mod tests {
         time::{SystemTime, UNIX_EPOCH},
     };
 
-    use super::{build_overlay, sanitize_rename_target, OverlayFactoryCache};
+    use super::{
+        build_overlay, sanitize_rename_target, to_logical_path_string, to_physical_path_string,
+        OverlayFactoryCache,
+    };
     use crate::vfs::VfsError;
 
     fn create_temp_dir(prefix: &str) -> PathBuf {
@@ -298,6 +301,30 @@ mod tests {
         assert!(
             build_overlay(upper_str, engine_str, None, &OverlayFactoryCache::default()).is_ok(),
             "missing game/template should not break non-template VFS commands"
+        );
+    }
+
+    #[test]
+    fn to_logical_path_string_returns_posix_separator() {
+        assert_eq!(
+            to_logical_path_string(Path::new(r"game\scene\start.txt")),
+            "game/scene/start.txt"
+        );
+        assert_eq!(
+            to_logical_path_string(Path::new("game/scene/start.txt")),
+            "game/scene/start.txt"
+        );
+    }
+
+    #[test]
+    fn to_physical_path_string_returns_posix_separator() {
+        assert_eq!(
+            to_physical_path_string(Path::new(r"C:\Project\game\scene\start.txt")),
+            "C:/Project/game/scene/start.txt"
+        );
+        assert_eq!(
+            to_physical_path_string(Path::new("//server/share/game/scene/start.txt")),
+            "//server/share/game/scene/start.txt"
         );
     }
 }

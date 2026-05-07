@@ -1,4 +1,4 @@
-import { normalizeFsPath } from '~/utils/path'
+import { AbsPath } from '~/domain/path'
 
 interface PendingFileWrite {
   id: number
@@ -36,7 +36,7 @@ function areBytesEqual(left: Uint8Array, right: Uint8Array): boolean {
 }
 
 function normalizePhysicalPath(path: string): string {
-  return normalizeFsPath(path)
+  return AbsPath.from(path)
 }
 
 function pruneExpiredPendingFileWrites(path: string, now: number = Date.now()): void {

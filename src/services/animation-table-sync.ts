@@ -1,29 +1,21 @@
-import { join } from '@tauri-apps/api/path'
 import { exists, readDir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs'
 
+import { AbsPath, RelPath } from '~/domain/path'
 import { gameAssetDir } from '~/services/platform/app-paths'
 
 const ANIMATION_TABLE_FILE_NAME = 'animationTable.json'
 const JSON_FILE_SUFFIX = '.json'
 
-function normalizePath(path: string): string {
-  return path.replaceAll('\\', '/').replace(/\/+$/, '')
+function getAnimationRootPath(gamePath: AbsPath): AbsPath {
+  return AbsPath.join(gamePath, RelPath.from('game/animation'))
 }
 
-function getAnimationRootPath(gamePath: string): string {
-  return normalizePath(`${gamePath}/game/animation`)
-}
-
-function toAnimationTableEntry(animationRootPath: string, path: string): string | undefined {
-  const normalizedRootPath = normalizePath(animationRootPath)
-  const normalizedPath = normalizePath(path)
-  const normalizedRootPrefix = `${normalizedRootPath}/`
-
-  if (!normalizedPath.startsWith(normalizedRootPrefix)) {
+function toAnimationTableEntry(animationRootPath: AbsPath, path: AbsPath): RelPath | undefined {
+  if (!path.startsWith(`${animationRootPath}/`)) {
     return
   }
 
-  const relativePath = normalizedPath.slice(normalizedRootPrefix.length)
+  const relativePath = AbsPath.relativize(path, animationRootPath)
   const normalizedRelativePath = relativePath.toLowerCase()
   if (!normalizedRelativePath.endsWith(JSON_FILE_SUFFIX)) {
     return
@@ -32,20 +24,20 @@ function toAnimationTableEntry(animationRootPath: string, path: string): string 
     return
   }
 
-  return relativePath.slice(0, -JSON_FILE_SUFFIX.length)
+  return RelPath.from(relativePath.slice(0, -JSON_FILE_SUFFIX.length))
 }
 
 async function collectAnimationEntries(
-  animationRootPath: string,
-  currentPath: string,
-): Promise<string[]> {
+  animationRootPath: AbsPath,
+  currentPath: AbsPath,
+): Promise<RelPath[]> {
   const entries = await readDir(currentPath)
   const nestedEntries = await Promise.all(entries.map(async (entry) => {
     if (!entry.name) {
       return []
     }
 
-    const entryPath = await join(currentPath, entry.name)
+    const entryPath = AbsPath.append(currentPath, entry.name)
     if (entry.isDirectory) {
       return collectAnimationEntries(animationRootPath, entryPath)
     }
@@ -65,23 +57,22 @@ function serializeAnimationTable(entries: string[]): string {
   return `${JSON.stringify(entries, undefined, 2)}\n`
 }
 
-export function isAnimationTableRelatedPath(gamePath: string, path: string): boolean {
+export function isAnimationTableRelatedPath(gamePath: AbsPath, path: AbsPath): boolean {
   const animationRootPath = getAnimationRootPath(gamePath)
-  const normalizedPath = normalizePath(path)
 
-  if (normalizedPath === animationRootPath) {
+  if (path === animationRootPath) {
     return true
   }
 
-  if (!normalizedPath.startsWith(`${animationRootPath}/`)) {
+  if (!path.startsWith(`${animationRootPath}/`)) {
     return false
   }
 
-  return normalizedPath.toLowerCase() !== `${animationRootPath}/${ANIMATION_TABLE_FILE_NAME}`.toLowerCase()
+  return path.toLowerCase() !== `${animationRootPath}/${ANIMATION_TABLE_FILE_NAME}`.toLowerCase()
 }
 
-export async function syncAnimationTable(gamePath: string): Promise<void> {
-  const animationPath = await gameAssetDir(gamePath, 'animation')
+export async function syncAnimationTable(gamePath: AbsPath): Promise<void> {
+  const animationPath = gameAssetDir(gamePath, 'animation')
   if (!await exists(animationPath)) {
     return
   }
@@ -89,7 +80,7 @@ export async function syncAnimationTable(gamePath: string): Promise<void> {
   const nextEntries = [...new Set(await collectAnimationEntries(animationPath, animationPath))]
     .toSorted((left, right) => left.localeCompare(right))
   const nextContent = serializeAnimationTable(nextEntries)
-  const animationTablePath = await join(animationPath, ANIMATION_TABLE_FILE_NAME)
+  const animationTablePath = AbsPath.append(animationPath, ANIMATION_TABLE_FILE_NAME)
 
   let currentContent = ''
   try {

@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 
 import { vfsCmds } from '~/commands/vfs'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { AbsPath, RelPath } from '~/domain/path'
 import { mime } from '~/plugins/mime'
 import { backupManager } from '~/services/backup-manager'
 import { clearDirectoryItemsCache, invalidateDirectoryItemsCache, readDirectoryItemsCached } from '~/services/directory-cache'
@@ -13,8 +14,8 @@ import { projectConfigPath } from '~/services/platform/app-paths'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
 import { FileViewerItem } from '~/types/file-viewer'
+import { buildUniqueEntryName } from '~/utils/entry-name'
 import { handleError } from '~/utils/error-handler'
-import { buildUniqueEntryName, getBaseName, getParentPath, joinPath, normalizeFsPath } from '~/utils/path'
 
 import type { WatchEvent } from '@tauri-apps/plugin-fs'
 import type { VfsDirEntry, VfsSource } from '~/types/project-config'
@@ -39,7 +40,7 @@ const PENDING_WRITE_STABILITY_MAX_READS = 3
 interface FileSystemItemBase {
   id: string
   name: string
-  path: string
+  path: AbsPath
   parentId: string | undefined
   size?: number
   modifiedAt?: number
@@ -90,7 +91,7 @@ async function delay(ms: number): Promise<void> {
 }
 
 async function readStableFileBytes(
-  path: string,
+  path: AbsPath,
   previousBytes: Uint8Array,
   remainingReads: number,
 ): Promise<Uint8Array> {
@@ -119,7 +120,7 @@ export const useFileStore = defineStore('file', () => {
     updateAgeOnHas: true,
   }))
 
-  const pathToId = $ref<LRUCache<string, string>>(new LRUCache({
+  const pathToId = $ref<LRUCache<AbsPath, string>>(new LRUCache({
     max: MAX_CACHE_ITEMS,
     updateAgeOnGet: true,
     updateAgeOnHas: true,
@@ -128,9 +129,9 @@ export const useFileStore = defineStore('file', () => {
   const fileSystemEvents = useFileSystemEvents()
   const workspaceStore = useWorkspaceStore()
   let unwatch: (() => void) | undefined
-  let enginePath = $ref<string>()
-  let templatePath = $ref<string>()
-  let projectPath = $ref<string>()
+  let enginePath = $ref<AbsPath>()
+  let templatePath = $ref<AbsPath>()
+  let projectPath = $ref<AbsPath>()
 
   // 外部可 await 此 Promise 以等待初始化完成
   let resolveInitialized: () => void
@@ -138,16 +139,29 @@ export const useFileStore = defineStore('file', () => {
     resolveInitialized = r
   }))
 
-  function getCurrentEnginePath(): string | undefined {
+  function getCurrentEnginePath(): AbsPath | undefined {
     return enginePath
   }
 
-  function getCurrentProjectPath(): string | undefined {
-    return workspaceStore.currentGame?.path ?? projectPath
+  function getCurrentProjectPath(): AbsPath | undefined {
+    return workspaceStore.currentGame?.path ? AbsPath.from(workspaceStore.currentGame.path) : projectPath
   }
 
-  function getCurrentTemplatePath(): string | undefined {
+  function getCurrentTemplatePath(): AbsPath | undefined {
     return templatePath
+  }
+
+  function isPathWithinOrEqual(path: AbsPath, root: AbsPath): boolean {
+    if (AbsPath.equals(path, root)) {
+      return true
+    }
+
+    try {
+      AbsPath.relativize(path, root)
+      return true
+    } catch {
+      return false
+    }
   }
 
   /**
@@ -165,11 +179,11 @@ export const useFileStore = defineStore('file', () => {
    *   `null` 表示回到"跟随当前引擎默认"，此时后端会从 enginePath 推导默认 template_lower。
    */
   async function refreshTemplateOverlay(
-    projectPath: string,
-    options: { nextEnginePath?: string, nextTemplatePath?: string | null } = {},
+    projectPath: AbsPath,
+    options: { nextEnginePath?: AbsPath, nextTemplatePath?: AbsPath | null } = {},
   ): Promise<void> {
     const currentProjectPath = getCurrentProjectPath()
-    if (!currentProjectPath || normalizeFsPath(projectPath) !== normalizeFsPath(currentProjectPath)) {
+    if (!currentProjectPath || !AbsPath.equals(projectPath, currentProjectPath)) {
       return
     }
 
@@ -177,7 +191,8 @@ export const useFileStore = defineStore('file', () => {
       enginePath = options.nextEnginePath
     } else if (workspaceStore.currentGame) {
       try {
-        enginePath = await gameManager.getGameEnginePath(workspaceStore.currentGame)
+        const nextEnginePath = await gameManager.getGameEnginePath(workspaceStore.currentGame)
+        enginePath = nextEnginePath ? AbsPath.from(nextEnginePath) : undefined
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error)
         void logger.warn(`[FileStore] 刷新 enginePath 失败: ${msg}`)
@@ -188,16 +203,14 @@ export const useFileStore = defineStore('file', () => {
       templatePath = options.nextTemplatePath ?? undefined
     }
 
-    const templateRoot = joinPath(currentProjectPath, 'game', 'template')
-    const normalizedTemplateRoot = normalizeFsPath(templateRoot)
+    const templateRoot = AbsPath.join(currentProjectPath, RelPath.from('game/template'))
 
     for (const item of items.values()) {
       if (!item.isDir) {
         continue
       }
 
-      const normalizedPath = normalizeFsPath(item.path)
-      if (normalizedPath === normalizedTemplateRoot || normalizedPath.startsWith(`${normalizedTemplateRoot}/`)) {
+      if (isPathWithinOrEqual(item.path, templateRoot)) {
         item.loadRevision += 1
         item.isLoaded = false
         item.loadingRevision = undefined
@@ -209,7 +222,7 @@ export const useFileStore = defineStore('file', () => {
 
     // 失效父 game 目录：`game/template` 的 source/existence 字段是在加载父目录时
     // 写入的，只刷新模板子树自身无法让父目录下次重渲染时看到新 lower 配置。
-    const parentGameDir = joinPath(currentProjectPath, 'game')
+    const parentGameDir = AbsPath.join(currentProjectPath, RelPath.from('game'))
     const parentItem = getItemByPath(parentGameDir)
     if (parentItem?.isDir) {
       parentItem.loadRevision += 1
@@ -227,29 +240,26 @@ export const useFileStore = defineStore('file', () => {
 
   // ==================== 路径管理 ====================
 
-  // pathToId 始终以正斜杠 key 索引：watcher 事件在 Windows 上返回反斜杠，
-  // 必须 normalize 后才能与前端构造的 `/`-flavor 路径互查。
-  function getOrCreateItemId(path: string): string {
-    const key = normalizeFsPath(path)
-    const existingId = pathToId.get(key)
+  function getOrCreateItemId(path: AbsPath): string {
+    const existingId = pathToId.get(path)
     if (existingId) {
       return existingId
     }
     const newId = crypto.randomUUID()
-    pathToId.set(key, newId)
+    pathToId.set(path, newId)
     return newId
   }
 
-  function updatePathMappings(oldPath: string, newPath: string, id: string) {
-    pathToId.delete(normalizeFsPath(oldPath))
-    pathToId.set(normalizeFsPath(newPath), id)
+  function updatePathMappings(oldPath: AbsPath, newPath: AbsPath, id: string) {
+    pathToId.delete(oldPath)
+    pathToId.set(newPath, id)
   }
 
   /**
    * 递归更新目录及子项的路径（用于目录重命名/移动）
    */
-  function updateSubtreePaths(item: DirItem, newBasePath: string): void {
-    const newPath = joinPath(newBasePath, item.name)
+  function updateSubtreePaths(item: DirItem, newBasePath: AbsPath): void {
+    const newPath = AbsPath.append(newBasePath, item.name)
 
     const children = item.childIds
       .map(id => items.get(id))
@@ -260,7 +270,7 @@ export const useFileStore = defineStore('file', () => {
         updateSubtreePaths(child, newPath)
       } else {
         const oldPath = child.path
-        child.path = joinPath(newPath, child.name)
+        child.path = AbsPath.append(newPath, child.name)
         updatePathMappings(oldPath, child.path, child.id)
       }
     }
@@ -273,10 +283,10 @@ export const useFileStore = defineStore('file', () => {
   // ==================== 文件系统项工厂 ====================
 
   async function createFileSystemItem(
-    path: string,
+    path: AbsPath,
     parentId: string | undefined,
   ): Promise<FileSystemItem> {
-    const name = getBaseName(path)
+    const name = AbsPath.basename(path)
     const id = getOrCreateItemId(path)
     const fileInfo = await stat(path)
     const metadata = {
@@ -314,7 +324,8 @@ export const useFileStore = defineStore('file', () => {
     entry: FileViewerItem,
     parentId: string | undefined,
   ): FileSystemItem {
-    const id = getOrCreateItemId(entry.path)
+    const entryPath = AbsPath.from(entry.path)
+    const id = getOrCreateItemId(entryPath)
     const metadata = {
       size: entry.size,
       modifiedAt: entry.modifiedAt,
@@ -325,7 +336,7 @@ export const useFileStore = defineStore('file', () => {
       return {
         id,
         name: entry.name,
-        path: entry.path,
+        path: entryPath,
         parentId,
         isDir: true,
         childIds: [],
@@ -338,7 +349,7 @@ export const useFileStore = defineStore('file', () => {
     return {
       id,
       name: entry.name,
-      path: entry.path,
+      path: entryPath,
       parentId,
       isDir: false,
       mimeType: entry.mimeType || mime.getType(entry.path) || '',
@@ -346,12 +357,8 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  function createFileSystemItemFromVfsEntry(
-    entry: VfsDirEntry,
-    parentPath: string,
-    parentId: string | undefined,
-  ): FileSystemItem {
-    const path = normalizeFsPath(`${parentPath}/${entry.name}`)
+  function createFileSystemItemFromVfsEntry(entry: VfsDirEntry, parentPath: AbsPath, parentId: string | undefined): FileSystemItem {
+    const path = AbsPath.append(parentPath, entry.name)
     const id = getOrCreateItemId(path)
 
     if (entry.isDir) {
@@ -383,7 +390,7 @@ export const useFileStore = defineStore('file', () => {
    * 刷新文件系统项元信息
    * 元信息不可用时统一置为 undefined，避免渲染层出现不一致空值
    */
-  async function refreshItemMetadata(item: FileSystemItem, path: string = item.path): Promise<void> {
+  async function refreshItemMetadata(item: FileSystemItem, path: AbsPath = item.path): Promise<void> {
     const fileInfo = await stat(path)
     item.size = fileInfo.size
     item.modifiedAt = fileInfo.mtime?.getTime()
@@ -420,7 +427,7 @@ export const useFileStore = defineStore('file', () => {
 
   // ==================== 核心操作 ====================
 
-  async function loadDirectory(path: string, parentId?: string): Promise<void> {
+  async function loadDirectory(path: AbsPath, parentId?: string): Promise<void> {
     const parent = parentId ? items.get(parentId) : undefined
     if (!parent?.isDir || parent.isLoaded) {
       return
@@ -437,13 +444,14 @@ export const useFileStore = defineStore('file', () => {
     const loadPromise = (async () => {
       try {
         let resolvedItems: FileSystemItem[]
+        const currentTemplatePath = getCurrentTemplatePath()
 
         if (enginePath && projectPath) {
           const entries = await vfsCmds.listDir({
             projectPath,
             enginePath,
             relPath: toRelativeProjectPath(path),
-            templatePath: getCurrentTemplatePath(),
+            templatePath: currentTemplatePath,
           })
           resolvedItems = entries.map(entry => createFileSystemItemFromVfsEntry(entry, path, parentId))
         } else {
@@ -482,17 +490,16 @@ export const useFileStore = defineStore('file', () => {
     await loadPromise
   }
 
-  async function getFolderContents(path: string): Promise<FileSystemItem[]> {
+  async function getFolderContents(path: AbsPath): Promise<FileSystemItem[]> {
     if (!enginePath && !(await exists(path))) {
       throw new AppError('DIR_NOT_FOUND', '目录不存在')
     }
 
-    const key = normalizeFsPath(path)
-    let parentId = pathToId.get(key)
+    let parentId = pathToId.get(path)
 
     // LRU 脱同步：pathToId 仍持有映射但 items 已驱逐该条目
     if (parentId && !items.has(parentId)) {
-      pathToId.delete(key)
+      pathToId.delete(path)
       parentId = undefined
     }
 
@@ -500,7 +507,7 @@ export const useFileStore = defineStore('file', () => {
       parentId = getOrCreateItemId(path)
       const parentDir: DirItem = {
         id: parentId,
-        name: getBaseName(path),
+        name: AbsPath.basename(path),
         path,
         parentId: undefined,
         isDir: true,
@@ -535,7 +542,7 @@ export const useFileStore = defineStore('file', () => {
       .filter((item): item is FileSystemItem => !!item)
   }
 
-  async function updateItemPath(id: string, newPath: string) {
+  async function updateItemPath(id: string, newPath: AbsPath) {
     const item = items.get(id)
     if (!item) {
       throw new AppError('FS_ERROR', '项目不存在')
@@ -565,10 +572,10 @@ export const useFileStore = defineStore('file', () => {
   function emitFileSystemEvent(
     item: FileSystemItem,
     options:
-      | { eventType: 'created', path: string, parentId?: string }
-      | { eventType: 'removed', path: string }
-      | { eventType: 'renamed', oldPath: string, newPath: string }
-      | { eventType: 'modified', path: string },
+      | { eventType: 'created', path: AbsPath, parentId?: string }
+      | { eventType: 'removed', path: AbsPath }
+      | { eventType: 'renamed', oldPath: AbsPath, newPath: AbsPath }
+      | { eventType: 'modified', path: AbsPath },
   ): void {
     const prefix = item.isDir ? 'directory' : 'file'
 
@@ -588,7 +595,7 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  async function invalidateDirectoryCacheSafe(path: string, includeChildren: boolean = false): Promise<void> {
+  async function invalidateDirectoryCacheSafe(path: AbsPath, includeChildren: boolean = false): Promise<void> {
     try {
       await invalidateDirectoryItemsCache(path, { includeChildren })
     } catch (error) {
@@ -597,36 +604,31 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  function invalidateParentDirectoryCache(path: string): Promise<void> {
-    return invalidateDirectoryCacheSafe(getParentPath(path))
+  function invalidateParentDirectoryCache(path: AbsPath): Promise<void> {
+    return invalidateDirectoryCacheSafe(AbsPath.parent(path))
   }
 
-  function toRelativeProjectPath(path: string): string {
+  function toRelativeProjectPath(path: AbsPath): RelPath {
     if (!projectPath) {
-      return ''
+      return RelPath.empty()
     }
 
-    const normalizedProjectPath = normalizeFsPath(projectPath)
-    const normalizedPath = normalizeFsPath(path)
-    if (normalizedPath === normalizedProjectPath) {
-      return ''
+    try {
+      return AbsPath.relativize(path, projectPath)
+    } catch {
+      return RelPath.empty()
     }
-    if (!normalizedPath.startsWith(`${normalizedProjectPath}/`)) {
-      return ''
-    }
-
-    return normalizedPath.slice(normalizedProjectPath.length + 1)
   }
 
   async function prepareVfsPasteTarget(
-    sourcePath: string,
-    targetPath: string,
+    sourcePath: AbsPath,
+    targetPath: AbsPath,
   ): Promise<{
-    currentEnginePath: string
-    currentProjectPath: string
-    nextPath: string
-    nextRelPath: string
-    relSourcePath: string
+    currentEnginePath: AbsPath
+    currentProjectPath: AbsPath
+    nextPath: AbsPath
+    nextRelPath: RelPath
+    relSourcePath: RelPath
   } | undefined> {
     const currentProjectPath = getCurrentProjectPath()
     const currentEnginePath = getCurrentEnginePath()
@@ -637,11 +639,17 @@ export const useFileStore = defineStore('file', () => {
 
     const relSourcePath = toRelativeProjectPath(sourcePath)
     const relTargetDir = toRelativeProjectPath(targetPath)
-    if (!relSourcePath || (!relTargetDir && normalizeFsPath(targetPath) !== normalizeFsPath(currentProjectPath))) {
+    if (
+      RelPath.equals(relSourcePath, RelPath.empty())
+      || (
+        RelPath.equals(relTargetDir, RelPath.empty())
+        && !AbsPath.equals(targetPath, currentProjectPath)
+      )
+    ) {
       return undefined
     }
 
-    const sourceName = getBaseName(sourcePath)
+    const sourceName = AbsPath.basename(sourcePath)
     const resolvedSourcePath = await vfsCmds.resolvePath({
       projectPath: currentProjectPath,
       enginePath: currentEnginePath,
@@ -655,18 +663,18 @@ export const useFileStore = defineStore('file', () => {
       sourceInfo.isDirectory,
       new Set(existingItems.map(item => item.name)),
     )
-    const nextRelPath = normalizeFsPath(relTargetDir ? `${relTargetDir}/${uniqueName}` : uniqueName)
+    const nextRelPath = RelPath.append(relTargetDir, uniqueName)
 
     return {
       currentEnginePath,
       currentProjectPath,
-      nextPath: normalizeFsPath(`${currentProjectPath}/${nextRelPath}`),
+      nextPath: AbsPath.join(currentProjectPath, nextRelPath),
       nextRelPath,
       relSourcePath,
     }
   }
 
-  async function handleCreateEvent(path: string, parentId: string | undefined): Promise<void> {
+  async function handleCreateEvent(path: AbsPath, parentId: string | undefined): Promise<void> {
     try {
       const item = await createFileSystemItem(path, parentId)
       items.set(item.id, item)
@@ -681,8 +689,8 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  function getItemByPath(path: string): FileSystemItem | undefined {
-    const id = pathToId.get(normalizeFsPath(path))
+  function getItemByPath(path: AbsPath): FileSystemItem | undefined {
+    const id = pathToId.get(path)
     return id ? items.get(id) : undefined
   }
 
@@ -699,7 +707,7 @@ export const useFileStore = defineStore('file', () => {
    *
    * 事件按 post-order（叶子先于目录）发出，与 `handleRemoveEvent` 单 item 语义对齐。
    */
-  async function removeSubtree(rootPath: string): Promise<void> {
+  async function removeSubtree(rootPath: AbsPath): Promise<void> {
     const rootItem = getItemByPath(rootPath)
     if (!rootItem) {
       await invalidateParentDirectoryCache(rootPath)
@@ -725,7 +733,7 @@ export const useFileStore = defineStore('file', () => {
 
     for (const item of collected) {
       items.delete(item.id)
-      pathToId.delete(normalizeFsPath(item.path))
+      pathToId.delete(item.path)
       emitFileSystemEvent(item, { eventType: 'removed', path: item.path })
     }
 
@@ -733,7 +741,7 @@ export const useFileStore = defineStore('file', () => {
     await invalidateDirectoryCacheSafe(rootPath, true)
   }
 
-  async function handleRemoveEvent(path: string, removedKind?: RemovedEntryKind): Promise<void> {
+  async function handleRemoveEvent(path: AbsPath, removedKind?: RemovedEntryKind): Promise<void> {
     const item = getItemByPath(path)
     if (!item) {
       if (removedKind === 'file' || removedKind === 'folder') {
@@ -749,7 +757,7 @@ export const useFileStore = defineStore('file', () => {
 
     removeChildFromParent(item.id, item.parentId)
     items.delete(item.id)
-    pathToId.delete(normalizeFsPath(path))
+    pathToId.delete(path)
 
     emitFileSystemEvent(item, { eventType: 'removed', path })
     await invalidateParentDirectoryCache(path)
@@ -759,7 +767,7 @@ export const useFileStore = defineStore('file', () => {
   /**
    * 处理目录重命名：递归更新所有子项路径
    */
-  async function handleRenameEvent(newPath: string, oldPath: string): Promise<void> {
+  async function handleRenameEvent(newPath: AbsPath, oldPath: AbsPath): Promise<void> {
     const item = getItemByPath(oldPath)
     if (!item) {
       const renamedFileInfo = await stat(newPath)
@@ -769,8 +777,8 @@ export const useFileStore = defineStore('file', () => {
         newPath,
       })
       await Promise.all([
-        invalidateDirectoryCacheSafe(getParentPath(oldPath)),
-        invalidateDirectoryCacheSafe(getParentPath(newPath)),
+        invalidateDirectoryCacheSafe(AbsPath.parent(oldPath)),
+        invalidateDirectoryCacheSafe(AbsPath.parent(newPath)),
         invalidateDirectoryCacheSafe(oldPath, true),
         invalidateDirectoryCacheSafe(newPath, true),
       ])
@@ -779,10 +787,10 @@ export const useFileStore = defineStore('file', () => {
 
     try {
       const originalPath = item.path
-      item.name = getBaseName(newPath)
+      item.name = AbsPath.basename(newPath)
 
       if (item.isDir) {
-        updateSubtreePaths(item, getParentPath(newPath))
+        updateSubtreePaths(item, AbsPath.parent(newPath))
       } else {
         item.path = newPath
         updatePathMappings(originalPath, newPath, item.id)
@@ -792,8 +800,8 @@ export const useFileStore = defineStore('file', () => {
 
       emitFileSystemEvent(item, { eventType: 'renamed', oldPath, newPath })
       await Promise.all([
-        invalidateDirectoryCacheSafe(getParentPath(oldPath)),
-        invalidateDirectoryCacheSafe(getParentPath(newPath)),
+        invalidateDirectoryCacheSafe(AbsPath.parent(oldPath)),
+        invalidateDirectoryCacheSafe(AbsPath.parent(newPath)),
         invalidateDirectoryCacheSafe(oldPath, true),
         invalidateDirectoryCacheSafe(newPath, true),
       ])
@@ -802,7 +810,7 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  async function handleModifyEvent(path: string): Promise<void> {
+  async function handleModifyEvent(path: AbsPath): Promise<void> {
     const item = getItemByPath(path)
 
     if (await handlePendingWriteEcho(path, item)) {
@@ -824,7 +832,7 @@ export const useFileStore = defineStore('file', () => {
     }
 
     try {
-      item.name = getBaseName(path)
+      item.name = AbsPath.basename(path)
       await refreshItemMetadata(item, path)
       emitFileSystemEvent(item, { eventType: 'modified', path })
       await invalidateParentDirectoryCache(path)
@@ -838,7 +846,7 @@ export const useFileStore = defineStore('file', () => {
   }
 
   async function handlePendingWriteEcho(
-    path: string,
+    path: AbsPath,
     item: FileSystemItem | undefined,
   ): Promise<boolean> {
     if (!hasPendingFileWrite(path) || item?.isDir) {
@@ -859,7 +867,7 @@ export const useFileStore = defineStore('file', () => {
 
     try {
       if (item) {
-        item.name = getBaseName(path)
+        item.name = AbsPath.basename(path)
         await refreshItemMetadata(item, path)
       }
       fileSystemEvents.emit({
@@ -876,8 +884,8 @@ export const useFileStore = defineStore('file', () => {
   }
 
   async function handleWatchEvent(event: WatchEvent): Promise<void> {
-    const { type, paths: rawPaths } = event
-    const paths = rawPaths.map(p => normalizeFsPath(p))
+    const { type } = event
+    const paths = event.paths.map(p => AbsPath.from(p))
     const path = paths[0]
 
     if (!path) {
@@ -886,7 +894,7 @@ export const useFileStore = defineStore('file', () => {
 
     try {
       if (isEventType(type, 'create')) {
-        const parentPath = getParentPath(path)
+        const parentPath = AbsPath.parent(path)
         const parentId = pathToId.get(parentPath)
         await handleCreateEvent(path, parentId)
       } else if (isEventType(type, 'remove')) {
@@ -939,18 +947,19 @@ export const useFileStore = defineStore('file', () => {
     }
 
     try {
-      projectPath = workspaceStore.currentGame?.path
-      const configPath = projectPath ? await projectConfigPath(projectPath) : undefined
+      projectPath = workspaceStore.currentGame?.path ? AbsPath.from(workspaceStore.currentGame.path) : undefined
+      const configPath = projectPath ? projectConfigPath(projectPath) : undefined
       const hasProjectConfig = configPath ? await exists(configPath) : false
       if (hasProjectConfig && workspaceStore.currentGame) {
         try {
           const site = await gameManager.resolvePreviewSite(workspaceStore.currentGame)
-          enginePath = site.enginePath
-          templatePath = site.templatePath
+          enginePath = site.enginePath ? AbsPath.from(site.enginePath) : undefined
+          templatePath = site.templatePath ? AbsPath.from(site.templatePath) : undefined
         } catch (error) {
           const msg = error instanceof Error ? error.message : String(error)
           void logger.warn(`[FileStore] 解析项目站点失败，回退仅引擎路径: ${msg}`)
-          enginePath = await gameManager.getGameEnginePath(workspaceStore.currentGame)
+          const fallbackEnginePath = await gameManager.getGameEnginePath(workspaceStore.currentGame)
+          enginePath = fallbackEnginePath ? AbsPath.from(fallbackEnginePath) : undefined
           templatePath = undefined
         }
       } else {
@@ -958,7 +967,7 @@ export const useFileStore = defineStore('file', () => {
         templatePath = undefined
       }
 
-      const rootPath = joinPath(workspaceStore.CWD, 'game')
+      const rootPath = AbsPath.join(AbsPath.from(workspaceStore.CWD), RelPath.from('game'))
       await getFolderContents(rootPath)
       unwatch = await watchFs(rootPath, handleWatchEvent, { recursive: true, delayMs: WATCH_DELAY_MS })
       resolveInitialized()
@@ -987,7 +996,7 @@ export const useFileStore = defineStore('file', () => {
   const isVfs = $computed(() => !!enginePath)
 
   return $$({
-    deleteEntry: async (path: string): Promise<boolean> => {
+    deleteEntry: async (path: AbsPath): Promise<boolean> => {
       const currentProjectPath = getCurrentProjectPath()
       const currentEnginePath = getCurrentEnginePath()
       const currentTemplatePath = getCurrentTemplatePath()
@@ -996,7 +1005,7 @@ export const useFileStore = defineStore('file', () => {
       }
 
       const relPath = toRelativeProjectPath(path)
-      if (!relPath) {
+      if (RelPath.equals(relPath, RelPath.empty())) {
         return false
       }
 
@@ -1009,7 +1018,7 @@ export const useFileStore = defineStore('file', () => {
       await handleRemoveEvent(path)
       return true
     },
-    copyEntry: async (sourcePath: string, targetPath: string): Promise<string | undefined> => {
+    copyEntry: async (sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath | undefined> => {
       const moveTarget = await prepareVfsPasteTarget(sourcePath, targetPath)
       if (!moveTarget) {
         return undefined
@@ -1022,11 +1031,11 @@ export const useFileStore = defineStore('file', () => {
         relPath: moveTarget.relSourcePath,
         targetRelPath: moveTarget.nextRelPath,
       })
-      const nextPath = normalizeFsPath(`${moveTarget.currentProjectPath}/${copiedRelPath}`)
+      const nextPath = AbsPath.join(moveTarget.currentProjectPath, copiedRelPath)
       await handleCreateEvent(nextPath, getItemByPath(targetPath)?.id)
       return nextPath
     },
-    ensureWritable: async (path: string): Promise<string> => {
+    ensureWritable: async (path: AbsPath): Promise<AbsPath> => {
       const currentProjectPath = getCurrentProjectPath()
       const currentEnginePath = getCurrentEnginePath()
       const currentTemplatePath = getCurrentTemplatePath()
@@ -1035,7 +1044,7 @@ export const useFileStore = defineStore('file', () => {
       }
 
       const relPath = toRelativeProjectPath(path)
-      if (!relPath) {
+      if (RelPath.equals(relPath, RelPath.empty())) {
         return path
       }
 
@@ -1050,13 +1059,13 @@ export const useFileStore = defineStore('file', () => {
     initialized,
     updateItemPath,
     isVfs,
-    moveEntry: async (sourcePath: string, targetPath: string): Promise<string | undefined> => {
+    moveEntry: async (sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath | undefined> => {
       const moveTarget = await prepareVfsPasteTarget(sourcePath, targetPath)
       if (!moveTarget) {
         return undefined
       }
 
-      const oldLogicalPath = moveTarget.relSourcePath.replaceAll('\\', '/')
+      const oldLogicalPath = moveTarget.relSourcePath
 
       const movedRelPath = await vfsCmds.movePath({
         projectPath: moveTarget.currentProjectPath,
@@ -1065,21 +1074,20 @@ export const useFileStore = defineStore('file', () => {
         relPath: moveTarget.relSourcePath,
         targetRelPath: moveTarget.nextRelPath,
       })
-      const movedLogicalPath = movedRelPath.replaceAll('\\', '/')
       try {
         await backupManager.moveSceneHistory(
           moveTarget.currentProjectPath,
           oldLogicalPath,
-          movedLogicalPath,
+          movedRelPath,
         )
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error)
-        void logger.warn(`[FileStore] 迁移场景历史失败 (${oldLogicalPath} -> ${movedLogicalPath}): ${msg}`)
+        void logger.warn(`[FileStore] 迁移场景历史失败 (${oldLogicalPath} -> ${movedRelPath}): ${msg}`)
       }
-      const nextPath = normalizeFsPath(`${moveTarget.currentProjectPath}/${movedRelPath}`)
+      const nextPath = AbsPath.join(moveTarget.currentProjectPath, movedRelPath)
       const targetParentId = getItemByPath(targetPath)?.id
-      const sourceParentPath = normalizeFsPath(getParentPath(sourcePath))
-      if (sourceParentPath === normalizeFsPath(targetPath)) {
+      const sourceParentPath = AbsPath.parent(sourcePath)
+      if (AbsPath.equals(sourceParentPath, targetPath)) {
         await handleRenameEvent(nextPath, sourcePath)
       } else {
         await removeSubtree(sourcePath)
@@ -1087,7 +1095,7 @@ export const useFileStore = defineStore('file', () => {
       }
       return nextPath
     },
-    renameEntry: async (path: string, newName: string): Promise<string | undefined> => {
+    renameEntry: async (path: AbsPath, newName: string): Promise<AbsPath | undefined> => {
       const currentProjectPath = getCurrentProjectPath()
       const currentEnginePath = getCurrentEnginePath()
       const currentTemplatePath = getCurrentTemplatePath()
@@ -1096,11 +1104,11 @@ export const useFileStore = defineStore('file', () => {
       }
 
       const relPath = toRelativeProjectPath(path)
-      if (!relPath) {
+      if (RelPath.equals(relPath, RelPath.empty())) {
         return undefined
       }
 
-      const oldLogicalPath = relPath.replaceAll('\\', '/')
+      const oldLogicalPath = relPath
 
       const nextRelPath = await vfsCmds.renamePath({
         projectPath: currentProjectPath,
@@ -1109,22 +1117,21 @@ export const useFileStore = defineStore('file', () => {
         relPath,
         newName,
       })
-      const renamedLogicalPath = nextRelPath.replaceAll('\\', '/')
       try {
         await backupManager.moveSceneHistory(
           currentProjectPath,
           oldLogicalPath,
-          renamedLogicalPath,
+          nextRelPath,
         )
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error)
-        void logger.warn(`[FileStore] 迁移场景历史失败 (${oldLogicalPath} -> ${renamedLogicalPath}): ${msg}`)
+        void logger.warn(`[FileStore] 迁移场景历史失败 (${oldLogicalPath} -> ${nextRelPath}): ${msg}`)
       }
-      const nextPath = normalizeFsPath(`${currentProjectPath}/${nextRelPath}`)
+      const nextPath = AbsPath.join(currentProjectPath, nextRelPath)
       await handleRenameEvent(nextPath, path)
       return nextPath
     },
-    resolveFilePath: async (path: string): Promise<string> => {
+    resolveFilePath: async (path: AbsPath): Promise<AbsPath> => {
       const currentProjectPath = getCurrentProjectPath()
       const currentEnginePath = getCurrentEnginePath()
       const currentTemplatePath = getCurrentTemplatePath()
@@ -1133,7 +1140,7 @@ export const useFileStore = defineStore('file', () => {
       }
 
       const relPath = toRelativeProjectPath(path)
-      if (!relPath) {
+      if (RelPath.equals(relPath, RelPath.empty())) {
         return path
       }
 

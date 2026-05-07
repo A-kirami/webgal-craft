@@ -1,4 +1,5 @@
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { AbsPath } from '~/domain/path'
 import { isAnimationTableRelatedPath, syncAnimationTable } from '~/services/animation-table-sync'
 import { useWorkspaceStore } from '~/stores/workspace'
 
@@ -16,7 +17,7 @@ function clearScheduledSync(): void {
   syncTimer = undefined
 }
 
-function scheduleSync(gamePath: string): void {
+function scheduleSync(gamePath: AbsPath): void {
   clearScheduledSync()
 
   syncTimer = setTimeout(() => {
@@ -38,11 +39,17 @@ export function useAnimationTableSyncBootstrap() {
 
   function handlePathChange(path: string) {
     const gamePath = workspaceStore.CWD
-    if (!gamePath || !isAnimationTableRelatedPath(gamePath, path)) {
+    if (!gamePath) {
       return
     }
 
-    scheduleSync(gamePath)
+    const normalizedGamePath = AbsPath.from(gamePath)
+    const normalizedPath = AbsPath.from(path)
+    if (!isAnimationTableRelatedPath(normalizedGamePath, normalizedPath)) {
+      return
+    }
+
+    scheduleSync(normalizedGamePath)
   }
 
   const singlePathEvents = [
@@ -69,7 +76,7 @@ export function useAnimationTableSyncBootstrap() {
       return
     }
 
-    scheduleSync(gamePath)
+    scheduleSync(AbsPath.from(gamePath))
   }, { immediate: true })
 
   onScopeDispose(() => {

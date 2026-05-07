@@ -6,7 +6,6 @@ import { AppError } from '~/types/errors'
 
 const {
   addMock,
-  basenameMock,
   copyDirectoryWithProgressMock,
   deleteFileMock,
   enginesDeleteMock,
@@ -23,7 +22,6 @@ const {
   gameWhereEqualsMock,
   gameWhereMock,
   iconPathMock,
-  joinMock,
   readEngineManifestMock,
   resourceStoreMock,
   useResourceStoreMock,
@@ -31,7 +29,6 @@ const {
   validateDirectoryStructureMock,
 } = vi.hoisted(() => ({
   addMock: vi.fn(),
-  basenameMock: vi.fn(async (path: string) => path.split('/').at(-1) ?? path),
   copyDirectoryWithProgressMock: vi.fn(),
   deleteFileMock: vi.fn(),
   enginesDeleteMock: vi.fn(),
@@ -48,7 +45,6 @@ const {
   gameWhereEqualsMock: vi.fn(),
   gameWhereMock: vi.fn(),
   iconPathMock: vi.fn(),
-  joinMock: vi.fn(async (...parts: string[]) => parts.join('/').replaceAll('//', '/')),
   readEngineManifestMock: vi.fn(),
   resourceStoreMock: {
     finishProgress: vi.fn(),
@@ -57,11 +53,6 @@ const {
   useResourceStoreMock: vi.fn(),
   useStorageSettingsStoreMock: vi.fn(),
   validateDirectoryStructureMock: vi.fn(),
-}))
-
-vi.mock('@tauri-apps/api/path', () => ({
-  basename: basenameMock,
-  join: joinMock,
 }))
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
@@ -120,7 +111,6 @@ vi.mock('~/stores/storage-settings', () => ({
 describe('engineManager', () => {
   beforeEach(() => {
     addMock.mockReset()
-    basenameMock.mockClear()
     copyDirectoryWithProgressMock.mockReset()
     deleteFileMock.mockReset()
     enginesDeleteMock.mockReset()
@@ -137,7 +127,6 @@ describe('engineManager', () => {
     gameWhereEqualsMock.mockReset()
     gameWhereMock.mockReset()
     iconPathMock.mockReset()
-    joinMock.mockClear()
     readEngineManifestMock.mockReset()
     resourceStoreMock.finishProgress.mockReset()
     resourceStoreMock.updateProgress.mockReset()
@@ -145,7 +134,7 @@ describe('engineManager', () => {
     useStorageSettingsStoreMock.mockReset()
     validateDirectoryStructureMock.mockReset()
 
-    iconPathMock.mockImplementation(async (enginePath: string) => `${enginePath}/icons/favicon.ico`)
+    iconPathMock.mockImplementation((enginePath: string) => `${enginePath}/icons/favicon.ico`)
     useResourceStoreMock.mockReturnValue(resourceStoreMock)
     useStorageSettingsStoreMock.mockReturnValue({ engineSavePath: '/engines' })
     engineWhereMock.mockReturnValue({
@@ -246,7 +235,7 @@ describe('engineManager', () => {
 
     expect(addMock).toHaveBeenCalledWith(expect.objectContaining({
       path: '/engines/WebGAL/4.5.0',
-      pathKey: '/engines/webgal/4.5.0',
+      pathLookupKey: '/engines/webgal/4.5.0',
       name: 'WebGAL',
       version: '4.5.0',
       status: 'creating',
@@ -272,6 +261,39 @@ describe('engineManager', () => {
         }),
       },
     }))
+  })
+
+  it('importEngine 会把 Windows 风格托管目录归一化为 POSIX 路径', async () => {
+    useStorageSettingsStoreMock.mockReturnValue({ engineSavePath: 'C:\\Engines\\' })
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.5.0',
+        engineType: 'official',
+        webgalVersion: '4.5.0',
+        icon: 'branding/icon.png',
+      },
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    addMock.mockResolvedValue('engine-1')
+
+    await expect(engineManager.importEngine(String.raw`C:\downloads\webgal`)).resolves.toEqual({
+      id: 'engine-1',
+      alreadyRegistered: false,
+    })
+
+    expect(addMock).toHaveBeenCalledWith(expect.objectContaining({
+      path: 'C:/Engines/WebGAL/4.5.0',
+      pathLookupKey: 'c:/engines/webgal/4.5.0',
+    }))
+    expect(copyDirectoryWithProgressMock).toHaveBeenCalledWith(
+      'C:/downloads/webgal',
+      'C:/Engines/WebGAL/4.5.0',
+      expect.any(Function),
+    )
   })
 
   it('importEngine 会拒绝导入旧版引擎目录', async () => {

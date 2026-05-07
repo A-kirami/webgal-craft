@@ -55,6 +55,22 @@ describe('文件选择器辅助函数', () => {
     })
   })
 
+  it('解析越界相对路径时会退回 fallback 目录并保留输入关键字，而不是抛异常', () => {
+    expect(parseFilePickerInput('../secret.png', 'images/bg')).toEqual({
+      directoryPath: 'images/bg',
+      keyword: '../secret.png',
+      rejectAbsolutePath: false,
+      shouldNavigate: false,
+    })
+
+    expect(parseFilePickerInput('images/../../secret.png', 'images/bg')).toEqual({
+      directoryPath: 'images/bg',
+      keyword: '../secret.png',
+      rejectAbsolutePath: false,
+      shouldNavigate: false,
+    })
+  })
+
   it('处理从当前目录名退格到父目录的 fallback 规则', () => {
     expect(resolveFilePickerInputFallbackDir('chapter', 'scenes/chapter/', 'scenes/chapter')).toBe('scenes')
     expect(resolveFilePickerInputFallbackDir('opening', 'scenes/chapter/', 'scenes/chapter')).toBe('scenes/chapter')
@@ -76,6 +92,11 @@ describe('文件选择器辅助函数', () => {
       currentDir: 'images/bg',
       isOpen: true,
     })).toBe('images/bg/opening.png')
+
+    expect(formatFilePickerModelValueForInput('/images/bg/', {
+      currentDir: '',
+      isOpen: false,
+    })).toBe('images/bg/')
   })
 
   it('提取父路径和文件名时会统一相对路径格式', () => {
@@ -117,7 +138,7 @@ describe('文件选择器辅助函数', () => {
       'images/bg/title.png',
       'images/bg/ending.png',
     ], [
-      'images/bg/title.png',
+      '\\images\\bg\\title.png\\',
       'images/bg/missing.png',
     ])).toEqual([
       'images/bg/opening.png',

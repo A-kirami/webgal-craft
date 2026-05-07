@@ -1,5 +1,7 @@
-import { normalizeFsPath, toComparablePath } from '~/utils/path'
+import { AbsPath } from '~/domain/path'
+import { toLookupPathKey } from '~/services/resource-path/lookup'
 
+import type { LookupPathKey } from '~/services/resource-path/lookup'
 import type { AppErrorDetails, ErrorCode } from '~/types/errors'
 
 export type ResourceAvailability = 'available' | 'missing' | 'broken'
@@ -23,10 +25,8 @@ export interface BlockingIssue {
 }
 
 export interface NormalizedImportPath {
-  /** 反斜杠归一化为正斜杠，去除末尾分隔符与多余分隔符 */
-  normalizedPath: string
-  /** 用于跨平台对比的小写无尾分隔符路径 */
-  comparablePath: string
+  normalizedPath: AbsPath
+  lookupKey: LookupPathKey
 }
 
 export interface AvailabilityClassificationInput {
@@ -40,27 +40,24 @@ export interface ResourceHealthResult<TPayload> {
   warnings: ResourceWarning[]
   blockingIssue?: BlockingIssue
   payload?: TPayload
-  normalizedPath: string
-  comparablePath: string
+  normalizedPath: AbsPath
+  lookupKey: LookupPathKey
 }
 
 export function normalizeImportPath(rawPath: string): NormalizedImportPath {
-  const normalizedPath = normalizeFsPath(rawPath).replaceAll(/\/+/g, '/')
+  const normalizedPath = AbsPath.from(rawPath)
   return {
     normalizedPath,
-    comparablePath: toComparablePath(normalizedPath),
+    lookupKey: toLookupPathKey(normalizedPath),
   }
-}
-
-export function toResourcePathKey(input: { path: string }): string {
-  return normalizeImportPath(input.path).comparablePath
 }
 
 export function classifyAvailability(input: AvailabilityClassificationInput): ResourceAvailability {
-  if (!input.pathExists) {
+  const { pathExists, structureValid, semanticsValid } = input
+  if (!pathExists) {
     return 'missing'
   }
-  if (!input.structureValid || !input.semanticsValid) {
+  if (!structureValid || !semanticsValid) {
     return 'broken'
   }
   return 'available'

@@ -1,20 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, ref } from 'vue'
 
+import { AbsPath } from '~/domain/path'
+
 import { useFilePickerHistory } from '../useFilePickerHistory'
 
 const {
   existsMock,
-  joinMock,
   useStorageMock,
 } = vi.hoisted(() => ({
   existsMock: vi.fn<(path: string) => Promise<boolean>>(async () => true),
-  joinMock: vi.fn<(...parts: string[]) => Promise<string>>(async (...parts: string[]) => parts.join('/').replaceAll('//', '/')),
   useStorageMock: vi.fn((_key: string, initial: Record<string, string[]>) => ref(initial)),
-}))
-
-vi.mock('@tauri-apps/api/path', () => ({
-  join: joinMock,
 }))
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
@@ -50,7 +46,7 @@ function callMaybeRefFunction<TArgs extends unknown[], TResult>(
 function createFixture() {
   const canonicalRootPath = ref('/assets')
   const historyScopeKey = ref('default')
-  const ensurePathWithinRoot = vi.fn(async (path: string) => path)
+  const ensurePathWithinRoot = vi.fn(async (path: AbsPath) => path)
   const scope = effectScope()
 
   const history = scope.run(() => useFilePickerHistory({
@@ -73,10 +69,8 @@ function createFixture() {
 describe('useFilePickerHistory 行为', () => {
   beforeEach(() => {
     existsMock.mockClear()
-    joinMock.mockClear()
     useStorageMock.mockClear()
     existsMock.mockImplementation(async () => true)
-    joinMock.mockImplementation(async (...parts: string[]) => parts.join('/').replaceAll('//', '/'))
     useStorageMock.mockImplementation((_key: string, initial: Record<string, string[]>) => ref(initial))
   })
 

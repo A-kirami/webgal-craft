@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { decodeTextFile } from '~/domain/document/file-codec'
 import { computeLineNumberFromStatementId } from '~/domain/document/scene-selection'
+import { AbsPath } from '~/domain/path'
 import { createPreviewMediaSession, normalizePreviewMediaSessionPatch } from '~/features/editor/preview/preview-media-session'
 import { useTabsWatcher } from '~/features/editor/shared/useTabsWatcher'
 import { backupManager } from '~/services/backup-manager'
@@ -19,7 +20,6 @@ import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
 import { handleError } from '~/utils/error-handler'
-import { toComparablePath } from '~/utils/path'
 
 import { createEditorDocumentActions } from './internal/editor-document-actions'
 import { createEditorDocumentSaveSnapshot, saveEditorDocument } from './internal/editor-document-save'
@@ -77,7 +77,7 @@ const AUTO_SAVE_DEBOUNCE_MS = 500
 
 async function readTextDocumentFile(path: string): Promise<ReadTextDocumentResult> {
   const fileStore = useFileStore()
-  const physicalPath = fileStore.isVfs ? await fileStore.resolveFilePath(path) : path
+  const physicalPath = fileStore.isVfs ? await fileStore.resolveFilePath(AbsPath.from(path)) : path
   const bytes = await readFile(physicalPath)
   return decodeTextFile(bytes)
 }
@@ -250,7 +250,7 @@ export const useEditorStore = defineStore('editor', () => {
   )
 
   function updateTabModified(path: string, isModified: boolean) {
-    const tabIndex = tabsStore.findTabIndex(path)
+    const tabIndex = tabsStore.findTabIndex(AbsPath.from(path))
     if (tabIndex === -1) {
       return
     }
@@ -263,7 +263,7 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function updateTabLoading(path: string, isLoading: boolean) {
-    const tabIndex = tabsStore.findTabIndex(path)
+    const tabIndex = tabsStore.findTabIndex(AbsPath.from(path))
     if (tabIndex === -1) {
       return
     }
@@ -272,7 +272,7 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function updateTabError(path: string, error?: string) {
-    const tabIndex = tabsStore.findTabIndex(path)
+    const tabIndex = tabsStore.findTabIndex(AbsPath.from(path))
     if (tabIndex === -1) {
       return
     }
@@ -438,7 +438,10 @@ export const useEditorStore = defineStore('editor', () => {
     if (!projectPath) {
       return
     }
-    const logicalPath = backupManager.toProjectRelative(projectPath, path) ?? path
+    const logicalPath = backupManager.toProjectRelative(AbsPath.from(projectPath), AbsPath.from(path))
+    if (!logicalPath) {
+      return
+    }
     if (!backupManager.isScenePath(logicalPath)) {
       return
     }
@@ -446,7 +449,7 @@ export const useEditorStore = defineStore('editor', () => {
       ? backupManager.createManualBackup
       : backupManager.createAutoBackup
     try {
-      await createBackup(projectPath, logicalPath)
+      await createBackup(AbsPath.from(projectPath), logicalPath)
     } catch (error) {
       // 备份失败不应阻断主保存流程，仅记录日志即可
       const message = error instanceof Error ? error.message : String(error)
@@ -480,7 +483,7 @@ export const useEditorStore = defineStore('editor', () => {
     readTextDocumentFile,
     resolveFilePath: async (path: string) => {
       const fileStore = useFileStore()
-      return fileStore.isVfs ? await fileStore.resolveFilePath(path) : path
+      return fileStore.isVfs ? await fileStore.resolveFilePath(AbsPath.from(path)) : path
     },
     scheduleAutoSave,
     setTabError: updateTabError,
@@ -630,15 +633,25 @@ export const useEditorStore = defineStore('editor', () => {
     currentState !== undefined && isEditableEditor(currentState) && currentState.kind === 'animation',
   )
 
-  function toDirectoryPrefix(directory: string): string {
-    const normalized = toComparablePath(directory)
-    return normalized.endsWith('/') ? normalized : `${normalized}/`
+  function isDocumentPathWithinDirectory(path: string, directory: string): boolean {
+    try {
+      const normalizedPath = AbsPath.from(path)
+      const normalizedDirectory = AbsPath.from(directory)
+
+      if (AbsPath.equals(normalizedPath, normalizedDirectory)) {
+        return true
+      }
+
+      AbsPath.relativize(normalizedPath, normalizedDirectory)
+      return true
+    } catch {
+      return false
+    }
   }
 
   function hasUnsavedDocumentsUnder(directory: string): boolean {
-    const prefix = toDirectoryPrefix(directory)
     for (const [path] of sessions) {
-      if (toComparablePath(path).startsWith(prefix) && getEditableState(path)?.isDirty) {
+      if (isDocumentPathWithinDirectory(path, directory) && getEditableState(path)?.isDirty) {
         return true
       }
     }
@@ -646,10 +659,9 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function collectDocumentPathsUnder(directory: string): string[] {
-    const prefix = toDirectoryPrefix(directory)
     const matched: string[] = []
     for (const [path] of sessions) {
-      if (toComparablePath(path).startsWith(prefix)) {
+      if (isDocumentPathWithinDirectory(path, directory)) {
         matched.push(path)
       }
     }

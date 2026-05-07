@@ -1,12 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { AbsPath } from '~/domain/path'
 import { getCloseTabDecision, shouldFixPreviewTab } from '~/features/editor/editor-tabs/editor-tabs'
 
 import type { Tab } from '~/stores/tabs'
 
 const createTab = (overrides: Partial<Tab> = {}): Tab => ({
   name: 'demo.txt',
-  path: '/project/demo.txt',
+  path: AbsPath.from('/project/demo.txt'),
   activeAt: 1,
   isPreview: false,
   isModified: false,
@@ -57,7 +58,7 @@ describe('编辑器标签辅助函数', () => {
     expect(decision.modal.title).toBe('save it')
     await decision.modal.onSave()
 
-    expect(saveFile).toHaveBeenCalledWith('/project/demo.txt')
+    expect(saveFile).toHaveBeenCalledWith(AbsPath.from('/project/demo.txt'))
     expect(closeTab).toHaveBeenCalledWith(2)
   })
 
@@ -81,7 +82,7 @@ describe('编辑器标签辅助函数', () => {
 
     decision.modal.onDontSave()
 
-    expect(findTabIndex).toHaveBeenCalledWith('/project/demo.txt')
+    expect(findTabIndex).toHaveBeenCalledWith(AbsPath.from('/project/demo.txt'))
     expect(closeTab).toHaveBeenCalledWith(2)
   })
 

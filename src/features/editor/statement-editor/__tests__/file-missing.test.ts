@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { RelPath } from '~/domain/path'
 import {
   collectStatementFileChecks,
   resolveMissingFileKeysFromCatalog,
@@ -107,7 +108,7 @@ describe('语句编辑器缺失文件检查', () => {
         { key: 'sprite', assetType: 'figure', value: 'hero.png' },
         { key: 'scene', assetType: 'scene', value: 's1.txt' },
       ],
-      (_assetType, relativePath) => relativePath !== 'hero.png',
+      (_assetType, relativePath) => relativePath !== RelPath.from('hero.png'),
     )
 
     expect(missing).toEqual(new Set(['sprite']))
@@ -121,7 +122,7 @@ describe('语句编辑器缺失文件检查', () => {
         { key: 'b', assetType: 'scene', value: 'other.txt' },
       ],
       (_assetType, relativePath) => {
-        checkedPaths.push(relativePath)
+        checkedPaths.push(String(relativePath))
         return true
       },
     )

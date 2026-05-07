@@ -56,7 +56,7 @@ async function handleRelink() {
     directory: true,
     multiple: false,
   })
-  if (!selected || Array.isArray(selected)) {
+  if (typeof selected !== 'string') {
     return
   }
 

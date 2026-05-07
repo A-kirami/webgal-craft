@@ -1,4 +1,5 @@
 import { fsCmds } from '~/commands/fs'
+import { AbsPath } from '~/domain/path'
 
 import type { FileViewerItem } from '~/types/file-viewer'
 
@@ -34,7 +35,7 @@ export async function loadFileViewerImageDimensions(
 
   const request = (async () => {
     try {
-      const [width, height] = await fsCmds.getImageDimensions(item.path)
+      const [width, height] = await fsCmds.getImageDimensions(AbsPath.from(item.path))
       const dimensions = {
         width,
         height,
