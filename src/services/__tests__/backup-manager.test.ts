@@ -49,6 +49,7 @@ describe('backupManager.isScenePath', () => {
     expect(isScenePath(RelPath.from('game/scene/start.bak'))).toBe(false)
     expect(isScenePath(RelPath.from('game/figure/foo.png'))).toBe(false)
     expect(isScenePath(RelPath.from('game/scenes.txt'))).toBe(false)
+    expect(isScenePath(RelPath.from('game/scene'))).toBe(false)
   })
 })
 
