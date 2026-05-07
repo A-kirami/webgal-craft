@@ -4,6 +4,7 @@ import { render } from 'vitest-browser-vue'
 import { defineComponent, h, nextTick, shallowRef } from 'vue'
 
 import { createBrowserTestPlugins } from '~/__tests__/browser'
+import { AbsPath } from '~/domain/path'
 
 const {
   tabsStoreState,
@@ -13,9 +14,9 @@ const {
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
   tabsStoreState: {
-    activeTab: undefined as { path: string } | undefined,
+    activeTab: undefined as { path: AbsPath } | undefined,
     shouldFocusEditor: false,
-    tabs: [] as { path: string }[],
+    tabs: [] as { path: AbsPath }[],
   },
   useFileSystemEventsMock: vi.fn(),
   useTabsWatcherMock: vi.fn(),
@@ -74,7 +75,7 @@ interface EditorStub {
 
 interface WorkspaceHarnessOptions {
   editor: EditorStub
-  path: string
+  path: AbsPath
   restoreOnMount?: boolean
 }
 
@@ -84,8 +85,8 @@ interface WorkspaceHarness {
 }
 
 let currentPinia = createPinia()
-const windowsScenePath = String.raw`X:\Project\WebGALCraft\game\scene.txt`
-const windowsSceneModelUri = 'X:%5CProject%5CWebGALCraft%5Cgame%5Cscene.txt'
+const windowsScenePath = AbsPath.from(String.raw`X:\Project\WebGALCraft\game\scene.txt`)
+const windowsSceneModelUri = 'X:/Project/WebGALCraft/game/scene.txt'
 
 function createViewState(scrollTop: number): EditorViewState {
   return {
@@ -113,7 +114,7 @@ function createViewState(scrollTop: number): EditorViewState {
   }
 }
 
-function createEditor(path: string, viewState: EditorViewState): EditorStub {
+function createEditor(path: AbsPath, viewState: EditorViewState): EditorStub {
   const model = {
     uri: {
       toString: vi.fn(() => path === windowsScenePath ? windowsSceneModelUri : path),

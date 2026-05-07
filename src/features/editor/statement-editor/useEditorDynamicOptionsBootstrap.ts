@@ -1,5 +1,5 @@
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
-import { editorDynamicOptionSources, normalizeGamePath } from '~/features/editor/command-registry/dynamic-options'
+import { editorDynamicOptionSources, resolveGameLookupKey } from '~/features/editor/command-registry/dynamic-options'
 import { DynamicOptionsContext, DynamicOptionSourceDef, DynamicOptionsResult, EditorDynamicOptionsKey } from '~/features/editor/command-registry/schema'
 import { registerDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
 import { useWorkspaceStore } from '~/stores/workspace'
@@ -153,7 +153,7 @@ function bindFileSystemInvalidation() {
       if (!gamePath) {
         return
       }
-      const cacheKey = normalizeGamePath(gamePath)
+      const cacheKey = resolveGameLookupKey(gamePath)
       for (const source of editorDynamicOptionSources) {
         if (!source.invalidateByFileModified?.(path)) {
           continue

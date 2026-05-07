@@ -1,3 +1,4 @@
+import { AbsPath } from '~/domain/path'
 import { useTabsStore } from '~/stores/tabs'
 
 /**
@@ -5,9 +6,9 @@ import { useTabsStore } from '~/stores/tabs'
  *
  * 用于检测标签页的关闭并执行清理操作
  */
-export function useTabsWatcher(onTabClosed: (path: string) => void) {
+export function useTabsWatcher(onTabClosed: (path: AbsPath) => void) {
   const tabsStore = useTabsStore()
-  let previousTabPaths = new Set<string>()
+  let previousTabPaths = new Set<AbsPath>()
 
   const stopWatchingTabs = watch(() => tabsStore.tabs.map(t => t.path), (currentPaths) => {
     const currentPathsSet = new Set(currentPaths)

@@ -6,7 +6,6 @@ import { AppError } from '~/types/errors'
 import { useEnginesTabController } from '../useEnginesTabController'
 
 const {
-  dirnameMock,
   enginesWhereMock,
   importEngineMock,
   notifyErrorMock,
@@ -15,7 +14,6 @@ const {
   openPathMock,
   reconcileEngineRecordMock,
 } = vi.hoisted(() => ({
-  dirnameMock: vi.fn(async (path: string) => path.replace(/[/\\][^/\\]+$/, '')),
   enginesWhereMock: vi.fn(),
   importEngineMock: vi.fn(),
   notifyErrorMock: vi.fn(),
@@ -23,10 +21,6 @@ const {
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
   reconcileEngineRecordMock: vi.fn(),
-}))
-
-vi.mock('@tauri-apps/api/path', () => ({
-  dirname: dirnameMock,
 }))
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({

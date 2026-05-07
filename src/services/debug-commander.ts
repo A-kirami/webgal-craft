@@ -1,6 +1,5 @@
-import { normalize, sep } from '@tauri-apps/api/path'
-
 import { serverCmds } from '~/commands/server'
+import { AbsPath, normalizePosix, RelPath } from '~/domain/path'
 import { Transform } from '~/domain/stage/types'
 import { usePreviewSettingsStore } from '~/stores/preview-settings'
 import { ComponentVisibilityCommand, DebugCommand, DebugMessage } from '~/types/debugProtocol'
@@ -27,10 +26,15 @@ async function sendCommand<T extends DebugCommand>(
  * @returns 提取后的场景名称
  */
 async function extractSceneName(scenePath: string): Promise<string> {
-  const normalizedPath = await normalize(scenePath)
-  const parts = normalizedPath.split(sep())
-  const sceneIndex = parts.indexOf('scene')
-  return parts.slice(sceneIndex + 1).join(sep())
+  const normalizedPath = normalizePosix(scenePath)
+  const absoluteScenePath = AbsPath.from(normalizedPath)
+  const parts = normalizedPath.split('/')
+  const sceneIndex = parts.lastIndexOf('scene')
+  if (sceneIndex === -1) {
+    return AbsPath.basename(absoluteScenePath)
+  }
+
+  return RelPath.from(parts.slice(sceneIndex + 1).join('/'))
 }
 
 /**

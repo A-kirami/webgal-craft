@@ -5,6 +5,7 @@ import { canCreateAssetFile, resolveAssetFileNameParts } from '~/components/edit
 import { useAssetViewItemsLoader } from '~/components/editor/useAssetViewItemsLoader'
 import { PopoverAnchor } from '~/components/ui/popover'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { AbsPath, RelPath } from '~/domain/path'
 import { getFileTreeNameSelectionEnd, resolveFileTreeDefaultFileDraft } from '~/features/editor/file-tree/file-tree'
 import { gameFs } from '~/services/game-fs'
 import { FileSystemItem, useFileStore } from '~/stores/file'
@@ -14,7 +15,6 @@ import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { FileViewerItem, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 import { handleError } from '~/utils/error-handler'
-import { getBaseName, joinPath, normalizeFsPath } from '~/utils/path'
 
 import type { FileSystemEvent } from '~/composables/useFileSystemEvents'
 
@@ -112,12 +112,32 @@ onActivated(() => {
   fileViewerRef.value?.viewport?.scrollTo({ top: scrollTop })
 })
 
+function tryRelativize(path: string, root: string): string | undefined {
+  try {
+    return AbsPath.relativize(AbsPath.from(path), AbsPath.from(root))
+  } catch {
+    return undefined
+  }
+}
+
+function isPathWithinDirectory(path: string, directoryPath: string): boolean {
+  try {
+    const normalizedPath = AbsPath.from(path)
+    const normalizedDirectoryPath = AbsPath.from(directoryPath)
+
+    return AbsPath.equals(normalizedPath, normalizedDirectoryPath)
+      || tryRelativize(path, directoryPath) !== undefined
+  } catch {
+    return false
+  }
+}
+
 const assetBasePath = $computed(() => {
   if (!workspaceStore.currentGame?.path) {
     return ''
   }
 
-  return joinPath(workspaceStore.currentGame.path, 'game', assetType)
+  return AbsPath.join(AbsPath.from(workspaceStore.currentGame.path), RelPath.from(`game/${assetType}`))
 })
 
 const currentDirectoryPath = $computed(() => {
@@ -125,7 +145,7 @@ const currentDirectoryPath = $computed(() => {
     return ''
   }
 
-  return currentPath ? joinPath(assetBasePath, currentPath) : assetBasePath
+  return currentPath ? AbsPath.join(AbsPath.from(assetBasePath), RelPath.from(currentPath)) : assetBasePath
 })
 
 const {
@@ -139,7 +159,7 @@ const {
   currentPath: () => currentPath,
   loadDirectory: async (directoryPath) => {
     await fileStore.initialized
-    return fileStore.getFolderContents(directoryPath)
+    return fileStore.getFolderContents(AbsPath.from(directoryPath))
   },
   mapItem: toFileViewerItem,
 })
@@ -165,14 +185,14 @@ const currentDirectoryContextMenuItem = $computed(() => {
   }
 
   const directoryName = currentPath
-    .split(/[/\\]+/)
-    .findLast(Boolean) ?? assetType
+    ? RelPath.basename(RelPath.from(currentPath))
+    : assetType
 
   return {
     isDir: true,
     name: directoryName,
     path: directoryPath,
-    source: fileStore.getItemByPath(directoryPath)?.source,
+    source: fileStore.getItemByPath(AbsPath.from(directoryPath))?.source,
   }
 })
 
@@ -218,14 +238,6 @@ function toFileViewerItem(item: FileSystemItem): FileViewerItem {
     createdAt: item.createdAt,
     source: item.source,
   }
-}
-
-function isPathWithinDirectory(path: string, directoryPath: string): boolean {
-  const normalizedPath = normalizeFsPath(path)
-  const normalizedDirectoryPath = normalizeFsPath(directoryPath)
-
-  return normalizedPath === normalizedDirectoryPath
-    || normalizedPath.startsWith(`${normalizedDirectoryPath}/`)
 }
 
 function isFileSystemEventRelevant(event: FileSystemEvent): boolean {
@@ -276,21 +288,20 @@ function handleNavigate(item: FileViewerItem): void {
     return
   }
 
-  const normalizedItem = normalizeFsPath(item.path)
-  const normalizedBase = normalizeFsPath(basePath)
-  if (normalizedItem === normalizedBase) {
+  const relativePath = tryRelativize(item.path, basePath)
+  if (relativePath === '') {
     currentPath = ''
-  } else if (normalizedItem.startsWith(`${normalizedBase}/`)) {
-    currentPath = normalizedItem.slice(normalizedBase.length + 1)
+  } else if (relativePath !== undefined) {
+    currentPath = relativePath
   }
 }
 
 function handleSelect(item: FileViewerItem): void {
-  tabsStore.openTab(item.name, item.path)
+  tabsStore.openTab(item.name, AbsPath.from(item.path))
 
   const now = Date.now()
   if (item.path === lastSelectedPath && now - lastSelectedAt <= DOUBLE_CLICK_THRESHOLD_MS) {
-    const index = tabsStore.findTabIndex(item.path)
+    const index = tabsStore.findTabIndex(AbsPath.from(item.path))
     const tab = tabsStore.tabs[index]
     if (tab?.isPreview) {
       tabsStore.fixPreviewTab(index)
@@ -511,7 +522,7 @@ async function handleContextMenuCreateFile(item: { path: string, name: string, i
 async function handleContextMenuCreateItem(
   item: { path: string, name: string, isDir?: boolean },
   options: {
-    create: (targetPath: string, name: string) => Promise<string>
+    create: (targetPath: AbsPath, name: string) => Promise<AbsPath>
     isDir: boolean
     name: string
   },
@@ -523,9 +534,8 @@ async function handleContextMenuCreateItem(
   const currentDirectorySnapshot = currentDirectoryPath || item.path
 
   try {
-    const rawCreatedPath = await options.create(item.path, options.name)
-    const createdPath = normalizeFsPath(rawCreatedPath)
-    const createdName = getBaseName(createdPath)
+    const createdPath = await options.create(AbsPath.from(item.path), options.name)
+    const createdName = AbsPath.basename(AbsPath.from(createdPath))
 
     scheduleItemsRefresh(true)
 
@@ -602,7 +612,7 @@ async function handleRenameSubmit(): Promise<void> {
   isRenameSubmitting = true
 
   try {
-    await gameFs.renameFile(item.path, nextName)
+    await gameFs.renameFile(AbsPath.from(item.path), nextName)
     closeRenamePopover()
   } catch (error) {
     handleError(error)

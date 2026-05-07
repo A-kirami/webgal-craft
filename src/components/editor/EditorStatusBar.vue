@@ -4,6 +4,7 @@ import { ChartSpline, FileText, Image as ImageIcon, Layers, Link2, Palette } fro
 import { fsCmds } from '~/commands/fs'
 import { useTemplateLabel } from '~/composables/useTemplateLabel'
 import { db } from '~/database/db'
+import { AbsPath } from '~/domain/path'
 import {
   calculateEditorStatusBarTextStats,
   isEditorStatusBarImagePreview,
@@ -89,7 +90,7 @@ watch(() => previewState?.path, async (path) => {
   }
 
   try {
-    const [w, h] = await fsCmds.getImageDimensions(path)
+    const [w, h] = await fsCmds.getImageDimensions(AbsPath.from(path))
     // 异步完成后路径可能已变，丢弃过时结果
     if (previewState?.path !== path) {
       return

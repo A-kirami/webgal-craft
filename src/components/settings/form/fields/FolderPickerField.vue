@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { open as openDialog } from '@tauri-apps/plugin-dialog'
+import { open } from '@tauri-apps/plugin-dialog'
 
 import { resolveI18nLike } from '~/utils/i18n-like'
 
@@ -17,14 +17,14 @@ const props = defineProps<Props>()
 const { t } = useI18n()
 
 async function handleSelectFolder() {
-  const selected = await openDialog({
+  const selected = await open({
     title: resolveI18nLike(props.field.dialogTitle ?? props.field.label, t),
     directory: true,
     multiple: false,
     defaultPath: props.value || undefined,
   })
 
-  if (selected) {
+  if (typeof selected === 'string') {
     props.handleChange(selected)
   }
 }

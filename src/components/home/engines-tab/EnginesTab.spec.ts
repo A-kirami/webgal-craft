@@ -11,7 +11,6 @@ import type { Engine } from '~/database/model'
 import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
 
 const {
-  dirnameMock,
   getServeUrlMock,
   importEngineMock,
   modalOpenMock,
@@ -24,7 +23,6 @@ const {
   usePreferenceStoreMock,
   useResourceStoreMock,
 } = vi.hoisted(() => ({
-  dirnameMock: vi.fn(async (path: string) => path.replace(/[/\\][^/\\]+$/, '')),
   getServeUrlMock: vi.fn(),
   importEngineMock: vi.fn(),
   modalOpenMock: vi.fn(),
@@ -37,14 +35,6 @@ const {
   usePreferenceStoreMock: vi.fn(),
   useResourceStoreMock: vi.fn(),
 }))
-
-vi.mock('@tauri-apps/api/path', async () => {
-  const actual = await vi.importActual<typeof import('@tauri-apps/api/path')>('@tauri-apps/api/path')
-  return {
-    ...actual,
-    dirname: dirnameMock,
-  }
-})
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
   open: openDialogMock,
@@ -178,7 +168,6 @@ describe('EnginesTab', () => {
     vi.resetAllMocks()
 
     getServeUrlMock.mockReturnValue('http://127.0.0.1:8899/game/engine/')
-    dirnameMock.mockImplementation(async (path: string) => path.replace(/[/\\][^/\\]+$/, ''))
     importEngineMock.mockResolvedValue(undefined)
     openDialogMock.mockResolvedValue(undefined)
     useModalStoreMock.mockReturnValue({

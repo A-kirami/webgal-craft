@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { TriangleAlert } from '@lucide/vue'
 
+import { AbsPath } from '~/domain/path'
 import { gameFs } from '~/services/game-fs'
 import { usePreferenceStore } from '~/stores/preference'
 import { handleError } from '~/utils/error-handler'
@@ -22,7 +23,7 @@ let skipConfirm = $ref(preferenceStore.skipDeleteFileConfirm)
 
 async function handleConfirm() {
   try {
-    await gameFs.deleteFile(file.path)
+    await gameFs.deleteFile(AbsPath.from(file.path))
     notify.success(t('edit.fileTree.deleteSuccess'))
     preferenceStore.skipDeleteFileConfirm = skipConfirm
     await onConfirm?.()

@@ -10,9 +10,9 @@ import {
   Scissors,
   Trash2,
 } from '@lucide/vue'
-import { dirname } from '@tauri-apps/api/path'
 import { openPath } from '@tauri-apps/plugin-opener'
 
+import { AbsPath, RelPath } from '~/domain/path'
 import { useFileClipboard } from '~/features/editor/file-tree/useFileClipboard'
 import { backupManager } from '~/services/backup-manager'
 import { gameFs } from '~/services/game-fs'
@@ -61,7 +61,7 @@ const sceneLogicalPath = $computed(() => {
   if (!projectPath) {
     return
   }
-  const relative = backupManager.toProjectRelative(projectPath, item.path)
+  const relative = backupManager.toProjectRelative(AbsPath.from(projectPath), AbsPath.from(item.path))
   return relative && backupManager.isScenePath(relative) ? relative : undefined
 })
 
@@ -95,12 +95,14 @@ async function handlePaste(): Promise<void> {
   }
 
   try {
-    const targetPath = item.isDir ? item.path : await dirname(item.path)
+    const targetPath = item.isDir ? item.path : AbsPath.parent(AbsPath.from(item.path))
     const isCut = operationType === 'cut'
 
     const { succeeded, failed } = await settleBatch(
       clipboard.map(clipboardItem => () =>
-        isCut ? gameFs.moveFile(clipboardItem.path, targetPath) : gameFs.copyFile(clipboardItem.path, targetPath),
+        isCut
+          ? gameFs.moveFile(AbsPath.from(clipboardItem.path), AbsPath.from(targetPath))
+          : gameFs.copyFile(AbsPath.from(clipboardItem.path), AbsPath.from(targetPath)),
       ),
     )
 
@@ -145,12 +147,15 @@ function handleViewHistory(): void {
   if (!projectPath || !logicalPath) {
     return
   }
-  modalStore.open('BackupTimelineDialog', { projectPath, logicalPath })
+  modalStore.open('BackupTimelineDialog', {
+    projectPath: AbsPath.from(projectPath),
+    logicalPath: RelPath.from(logicalPath),
+  })
 }
 
 async function handleRevealInExplorer(): Promise<void> {
   try {
-    const pathToOpen = item.isDir ? item.path : await dirname(item.path)
+    const pathToOpen = item.isDir ? item.path : AbsPath.parent(AbsPath.from(item.path))
     await openPath(pathToOpen)
   } catch (error) {
     logger.error(`打开文件管理器失败: ${error}`)

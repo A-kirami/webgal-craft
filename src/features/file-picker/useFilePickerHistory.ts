@@ -1,6 +1,6 @@
-import { join } from '@tauri-apps/api/path'
 import { exists } from '@tauri-apps/plugin-fs'
 
+import { AbsPath, RelPath } from '~/domain/path'
 import {
   insertFilePickerRecentHistoryPath,
   removeFilePickerRecentHistoryPaths,
@@ -10,7 +10,7 @@ import { AppError } from '~/types/errors'
 
 interface UseFilePickerHistoryOptions {
   canonicalRootPath: () => string
-  ensurePathWithinRoot: (path: string, rootPath: string) => Promise<string>
+  ensurePathWithinRoot: (path: AbsPath, rootPath: AbsPath) => Promise<AbsPath>
   historyScopeKey: () => string
 }
 
@@ -85,8 +85,8 @@ export function useFilePickerHistory(options: UseFilePickerHistoryOptions) {
       snapshot.map(async (path) => {
         try {
           const safePath = await options.ensurePathWithinRoot(
-            await join(canonicalRootPath, path),
-            canonicalRootPath,
+            AbsPath.join(AbsPath.from(canonicalRootPath), RelPath.from(path)),
+            AbsPath.from(canonicalRootPath),
           )
 
           return {

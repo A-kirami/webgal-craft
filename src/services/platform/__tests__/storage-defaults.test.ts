@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { AbsPath } from '~/domain/path'
 import { resolveMissingStorageSavePaths } from '~/services/platform/storage-defaults'
 
 describe('resolveMissingStorageSavePaths', () => {
@@ -18,7 +19,7 @@ describe('resolveMissingStorageSavePaths', () => {
   })
 
   it('只会为缺失的路径计算默认值', async () => {
-    const getBaseDir = vi.fn(async () => '/documents')
+    const getBaseDir = vi.fn(async () => AbsPath.from('/documents'))
     const resolveGameSavePath = vi.fn(async (baseDir: string) => `${baseDir}/WebGALCraft/games`)
     const resolveEngineSavePath = vi.fn(async (baseDir: string) => `${baseDir}/WebGALCraft/engines`)
     const resolveTemplateSavePath = vi.fn(async (baseDir: string) => `${baseDir}/WebGALCraft/templates`)

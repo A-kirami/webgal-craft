@@ -1,12 +1,11 @@
-import { join, normalize } from '@tauri-apps/api/path'
 import { exists, readDir, stat } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
 
+import { AbsPath } from '~/domain/path'
 import { mime } from '~/plugins/mime'
 import { AppError } from '~/types/errors'
 import { FileViewerItem } from '~/types/file-viewer'
 import { settleBatch } from '~/utils/batch'
-import { toComparablePath } from '~/utils/path'
 
 const MAX_DIRECTORY_CACHE_ITEMS = 256
 const DEFAULT_DIRECTORY_CACHE_TTL_MS = 5000
@@ -22,7 +21,7 @@ interface InvalidateDirectoryCacheOptions {
 }
 
 interface DirectoryCacheKey {
-  path: string
+  path: AbsPath
   includeStats: boolean
 }
 
@@ -31,7 +30,7 @@ interface DirectoryCacheKeyPair {
   withoutStats: DirectoryCacheKey
 }
 
-const cacheKeyRegistry = new Map<string, DirectoryCacheKeyPair>()
+const cacheKeyRegistry = new Map<AbsPath, DirectoryCacheKeyPair>()
 const inFlightReadMap = new Map<DirectoryCacheKey, Promise<FileViewerItem[]>>()
 
 const directoryCache = new LRUCache<DirectoryCacheKey, FileViewerItem[]>({
@@ -44,22 +43,21 @@ const directoryCache = new LRUCache<DirectoryCacheKey, FileViewerItem[]>({
   },
 })
 
-function getOrCreateCacheKey(path: string, includeStats: boolean): DirectoryCacheKey {
-  const comparablePath = toComparablePath(path)
-  const existingPair = cacheKeyRegistry.get(comparablePath)
+function getOrCreateCacheKey(path: AbsPath, includeStats: boolean): DirectoryCacheKey {
+  const existingPair = cacheKeyRegistry.get(path)
   if (existingPair) {
     return includeStats ? existingPair.withStats : existingPair.withoutStats
   }
 
   const withStatsKey: DirectoryCacheKey = {
-    path: comparablePath,
+    path,
     includeStats: true,
   }
   const withoutStatsKey: DirectoryCacheKey = {
-    path: comparablePath,
+    path,
     includeStats: false,
   }
-  cacheKeyRegistry.set(comparablePath, {
+  cacheKeyRegistry.set(path, {
     withStats: withStatsKey,
     withoutStats: withoutStatsKey,
   })
@@ -74,7 +72,7 @@ function hasCacheEntry(cacheKey: DirectoryCacheKey): boolean {
   return directoryCache.peek(cacheKey) !== undefined
 }
 
-function cleanupCacheKeyRegistry(path: string): void {
+function cleanupCacheKeyRegistry(path: AbsPath): void {
   const keyPair = cacheKeyRegistry.get(path)
   if (!keyPair) {
     return
@@ -87,14 +85,14 @@ function cleanupCacheKeyRegistry(path: string): void {
   }
 }
 
-function isCacheKeyMatchPath(cacheKey: DirectoryCacheKey, comparablePath: string, includeChildren: boolean): boolean {
-  if (cacheKey.path === comparablePath) {
+function isCacheKeyMatchPath(cacheKey: DirectoryCacheKey, path: AbsPath, includeChildren: boolean): boolean {
+  if (cacheKey.path === path) {
     return true
   }
   if (!includeChildren) {
     return false
   }
-  return cacheKey.path.startsWith(`${comparablePath}/`)
+  return cacheKey.path.startsWith(`${path}/`)
 }
 
 function getCachedDirectoryItems(cacheKey: DirectoryCacheKey): FileViewerItem[] | undefined {
@@ -109,7 +107,7 @@ function setCachedDirectoryItems(cacheKey: DirectoryCacheKey, items: FileViewerI
   directoryCache.set(cacheKey, items, { ttl: ttlMs })
 }
 
-async function loadDirectoryItems(absolutePath: string, includeStats: boolean): Promise<FileViewerItem[]> {
+async function loadDirectoryItems(absolutePath: AbsPath, includeStats: boolean): Promise<FileViewerItem[]> {
   if (!(await exists(absolutePath))) {
     throw new AppError('DIR_NOT_FOUND', '目录不存在')
   }
@@ -122,7 +120,11 @@ async function loadDirectoryItems(absolutePath: string, includeStats: boolean): 
   const entries = await readDir(absolutePath)
   const { succeeded: items, failed } = await settleBatch(
     entries.map(entry => async () => {
-      const entryPath = await join(absolutePath, entry.name)
+      if (!entry.name) {
+        throw new AppError('IO_ERROR', '目录项缺少名称')
+      }
+
+      const entryPath = AbsPath.append(absolutePath, entry.name)
       const entryIsDir = entry.isDirectory === true
       const entryStat = includeStats ? await stat(entryPath) : undefined
 
@@ -150,14 +152,13 @@ async function loadDirectoryItems(absolutePath: string, includeStats: boolean): 
 }
 
 export async function readDirectoryItemsCached(
-  absolutePath: string,
+  absolutePath: AbsPath,
   options: ReadDirectoryItemsOptions = {},
 ): Promise<FileViewerItem[]> {
   const includeStats = options.includeStats ?? true
   const useCache = options.useCache ?? true
   const cacheTtlMs = options.cacheTtlMs ?? DEFAULT_DIRECTORY_CACHE_TTL_MS
-  const normalizedPath = await normalize(absolutePath)
-  const cacheKey = useCache ? getOrCreateCacheKey(normalizedPath, includeStats) : undefined
+  const cacheKey = useCache ? getOrCreateCacheKey(absolutePath, includeStats) : undefined
 
   if (useCache && cacheKey) {
     const cachedItems = getCachedDirectoryItems(cacheKey)
@@ -171,7 +172,7 @@ export async function readDirectoryItemsCached(
     }
   }
 
-  const loadTask = loadDirectoryItems(normalizedPath, includeStats)
+  const loadTask = loadDirectoryItems(absolutePath, includeStats)
   if (useCache && cacheKey) {
     inFlightReadMap.set(cacheKey, loadTask)
   }
@@ -191,22 +192,21 @@ export async function readDirectoryItemsCached(
 }
 
 export async function invalidateDirectoryItemsCache(
-  path: string,
+  path: AbsPath,
   options: InvalidateDirectoryCacheOptions = {},
 ): Promise<void> {
   const includeChildren = options.includeChildren ?? false
-  const comparablePath = toComparablePath(await normalize(path))
-  const affectedPaths = new Set<string>()
+  const affectedPaths = new Set<AbsPath>()
 
   for (const key of directoryCache.keys()) {
-    if (isCacheKeyMatchPath(key, comparablePath, includeChildren)) {
+    if (isCacheKeyMatchPath(key, path, includeChildren)) {
       directoryCache.delete(key)
       affectedPaths.add(key.path)
     }
   }
 
   for (const key of inFlightReadMap.keys()) {
-    if (isCacheKeyMatchPath(key, comparablePath, includeChildren)) {
+    if (isCacheKeyMatchPath(key, path, includeChildren)) {
       inFlightReadMap.delete(key)
       affectedPaths.add(key.path)
     }

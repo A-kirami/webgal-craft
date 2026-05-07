@@ -1,6 +1,6 @@
-import { join } from '@tauri-apps/api/path'
 import { exists, readDir } from '@tauri-apps/plugin-fs'
 
+import { AbsPath } from '~/domain/path'
 import { resolveHomeTabDefinition } from '~/features/home/home-tabs'
 import { requestEngineSelection } from '~/features/modals/engine-selection/request-engine-selection'
 import { engineManager } from '~/services/engine-manager'
@@ -27,12 +27,13 @@ async function discoverResourcesInDirectory(
     }
 
     const entries = await readDir(directory)
+    const directoryPath = AbsPath.from(directory)
 
     const results = await Promise.all(
       entries
         .filter(entry => entry.isDirectory)
-        .map(async (entry) => {
-          const fullPath = await join(directory, entry.name)
+        .map(async (entry): Promise<DiscoveredResource | undefined> => {
+          const fullPath = AbsPath.append(directoryPath, entry.name)
           const isValid = await validateFn(fullPath).catch(() => false)
 
           if (isValid) {
@@ -153,15 +154,16 @@ async function discoverEnginesInDirectory(directory: string): Promise<Discovered
     }
 
     const entries = await readDir(directory)
+    const directoryPath = AbsPath.from(directory)
     const discovered = await Promise.all(entries
       .filter(entry => entry.isDirectory)
       .map(async (entry) => {
-        const namePath = await join(directory, entry.name)
+        const namePath = AbsPath.append(directoryPath, entry.name)
         const subEntries = await readDir(namePath).catch(() => [])
         const versions = await Promise.all(subEntries
           .filter(subEntry => subEntry.isDirectory)
           .map(async (subEntry) => {
-            const versionPath = await join(namePath, subEntry.name)
+            const versionPath = AbsPath.append(namePath, subEntry.name)
             return discoverEngineVersion(versionPath, subEntry.name)
           }))
 

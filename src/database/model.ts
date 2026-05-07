@@ -4,7 +4,7 @@ import type { EngineMetadata, EnginePreviewAssets, GameMetadata, GamePreviewAsse
 export interface Game {
   id: string
   path: string
-  pathKey: string
+  pathLookupKey: string
   engineId?: string
   createdAt: number
   lastModified: number
@@ -17,7 +17,7 @@ export interface Game {
 export interface Engine {
   id: string
   path: string
-  pathKey: string
+  pathLookupKey: string
   engineId: string
   name: string
   version?: string

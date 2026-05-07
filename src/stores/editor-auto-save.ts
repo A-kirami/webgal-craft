@@ -1,3 +1,5 @@
+import type { AbsPath } from '~/domain/path'
+
 export interface EditorAutoSaveState {
   isDirty: boolean
   projection: 'text' | 'visual'
@@ -5,9 +7,9 @@ export interface EditorAutoSaveState {
 
 interface CreateEditorAutoSaveControllerOptions {
   debounceMs: number
-  getState: (path: string) => EditorAutoSaveState | undefined
+  getState: (path: AbsPath) => EditorAutoSaveState | undefined
   handleSaveError: (error: unknown) => void
-  saveDocument: (path: string) => Promise<void>
+  saveDocument: (path: AbsPath) => Promise<void>
 }
 
 // 这里只判断文档状态是否仍然值得执行自动保存，不处理用户设置开关。
@@ -16,15 +18,15 @@ export function canExecuteEditorAutoSave(state: EditorAutoSaveState): boolean {
 }
 
 export function createEditorAutoSaveController(options: CreateEditorAutoSaveControllerOptions) {
-  const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>()
-  const inFlightPaths = new Set<string>()
-  const queuedRuns = new Set<string>()
+  const pendingTimers = new Map<AbsPath, ReturnType<typeof setTimeout>>()
+  const inFlightPaths = new Set<AbsPath>()
+  const queuedRuns = new Set<AbsPath>()
 
-  function hasPending(path: string): boolean {
+  function hasPending(path: AbsPath): boolean {
     return pendingTimers.has(path) || inFlightPaths.has(path)
   }
 
-  function cancel(path: string) {
+  function cancel(path: AbsPath) {
     const timer = pendingTimers.get(path)
     if (timer !== undefined) {
       clearTimeout(timer)
@@ -34,7 +36,7 @@ export function createEditorAutoSaveController(options: CreateEditorAutoSaveCont
   }
 
   function cancelAll() {
-    const trackedPaths = new Set([
+    const trackedPaths = new Set<AbsPath>([
       ...pendingTimers.keys(),
       ...inFlightPaths,
       ...queuedRuns,
@@ -44,7 +46,7 @@ export function createEditorAutoSaveController(options: CreateEditorAutoSaveCont
     }
   }
 
-  async function run(path: string) {
+  async function run(path: AbsPath) {
     if (inFlightPaths.has(path)) {
       queuedRuns.add(path)
       return
@@ -70,7 +72,7 @@ export function createEditorAutoSaveController(options: CreateEditorAutoSaveCont
     }
   }
 
-  function schedule(path: string) {
+  function schedule(path: AbsPath) {
     const state = options.getState(path)
     if (!state || !canExecuteEditorAutoSave(state)) {
       cancel(path)

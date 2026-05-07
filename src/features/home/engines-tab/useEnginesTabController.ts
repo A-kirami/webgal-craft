@@ -1,7 +1,7 @@
-import { dirname } from '@tauri-apps/api/path'
 import { openPath } from '@tauri-apps/plugin-opener'
 
 import { db } from '~/database/db'
+import { AbsPath } from '~/domain/path'
 import { useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
 import { engineManager } from '~/services/engine-manager'
 import { resourceReconcile } from '~/services/resource-reconcile'
@@ -43,7 +43,7 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
     }
 
     const targetPath = sourceItem.engine.version
-      ? await dirname(sourceItem.engine.path)
+      ? AbsPath.parent(AbsPath.from(sourceItem.engine.path))
       : sourceItem.engine.path
     await openPath(targetPath)
   }

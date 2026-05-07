@@ -19,7 +19,7 @@ describe('数据库 schema', () => {
     await resetDatabase()
   })
 
-  it('games.pathKey 保持唯一', async () => {
+  it('games.pathLookupKey 保持唯一', async () => {
     await db.games.add(createTestGame({
       id: 'game-1',
       path: '/Games/Demo',
@@ -31,7 +31,7 @@ describe('数据库 schema', () => {
     }))).rejects.toBeDefined()
   })
 
-  it('engines.pathKey 保持唯一', async () => {
+  it('engines.pathLookupKey 保持唯一', async () => {
     await db.engines.add(createTestEngine({
       id: 'engine-1',
       path: '/Engines/WebGAL/4.5.0',

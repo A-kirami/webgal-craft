@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 
+import { AbsPath } from '~/domain/path'
 import { useTextEditorPanel } from '~/features/editor/text-editor/useTextEditorPanel'
 
 import type * as monaco from 'monaco-editor'
@@ -52,7 +53,7 @@ describe('useTextEditorPanel 行为', () => {
     const panel = useTextEditorPanel({
       captureBeforeContentChange,
       editorRef: ref(createEditor(model)),
-      getPath: () => '/game/scene/example.txt',
+      getPath: () => AbsPath.from('/game/scene/example.txt'),
     })
 
     const handled = panel.handleFormUpdate({
@@ -75,7 +76,7 @@ describe('useTextEditorPanel 行为', () => {
     const panel = useTextEditorPanel({
       captureBeforeContentChange,
       editorRef: ref(createEditor(model)),
-      getPath: () => '/game/scene/example.txt',
+      getPath: () => AbsPath.from('/game/scene/example.txt'),
     })
 
     const handled = panel.handleFormUpdate({

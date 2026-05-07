@@ -4,6 +4,7 @@ import { readTextFile } from '@tauri-apps/plugin-fs'
 import * as monaco from 'monaco-editor'
 
 import { colorMode } from '~/composables/color-mode'
+import { AbsPath, RelPath } from '~/domain/path'
 import dayjs from '~/plugins/dayjs'
 import { BASE_EDITOR_OPTIONS, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
 import { backupManager } from '~/services/backup-manager'
@@ -15,8 +16,8 @@ import { handleError } from '~/utils/error-handler'
 import type { BackupEntry, BackupSourceKind } from '~/commands/backup'
 
 interface Props {
-  projectPath: string
-  logicalPath: string
+  projectPath: AbsPath
+  logicalPath: RelPath
 }
 
 type SectionKey = 'today' | 'yesterday' | 'thisWeek' | 'earlier'
@@ -166,7 +167,7 @@ function disposeDiffEditor(): void {
 }
 
 async function readCurrentSource(): Promise<string> {
-  const absolute = `${projectPath.replace(/\/+$/, '')}/${logicalPath}`
+  const absolute = AbsPath.join(projectPath, logicalPath)
   // 编辑器已打开且有未保存改动时，diff 右侧应反映用户眼前的文本，而不是磁盘已保存内容
   const buffered = useEditorStore().getDirtyBufferContent(absolute)
   if (buffered !== undefined) {
@@ -183,7 +184,7 @@ async function loadDiffSources(entry: BackupEntry): Promise<void> {
   const requestId = ++latestDiffRequestId
   try {
     const [historical, current] = await Promise.all([
-      backupManager.readBackupContent(projectPath, entry.backupPath),
+      backupManager.readBackupContent(projectPath, RelPath.from(entry.backupPath)),
       readCurrentSource(),
     ])
     if (requestId !== latestDiffRequestId) {

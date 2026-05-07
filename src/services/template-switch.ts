@@ -1,9 +1,8 @@
-import { join } from '@tauri-apps/api/path'
-
 import { projectConfigCmds } from '~/commands/project-config'
 import { serverCmds } from '~/commands/server'
 import { vfsCmds } from '~/commands/vfs'
 import { db } from '~/database/db'
+import { AbsPath, RelPath } from '~/domain/path'
 import { debugCommander } from '~/services/debug-commander'
 import { engineManager, isEngineUsable } from '~/services/engine-manager'
 import { useEditorStore } from '~/stores/editor'
@@ -16,18 +15,18 @@ import type { ProjectConfig, TemplateBinding } from '~/types/project-config'
 
 type TemplateStrategy = 'explicit' | 'clean' | 'dirty'
 
-async function templateUpperPath(gamePath: string): Promise<string> {
-  return join(gamePath, 'game', 'template')
+function templateUpperPath(gamePath: string): AbsPath {
+  return AbsPath.join(AbsPath.from(gamePath), RelPath.from('game/template'))
 }
 
 async function isTemplateDirty(gamePath: string): Promise<boolean> {
-  if (await vfsCmds.isTemplateDirty(gamePath)) {
+  if (await vfsCmds.isTemplateDirty(AbsPath.from(gamePath))) {
     return true
   }
 
   // 在无 Pinia 上下文（如非渲染进程逻辑）调用时降级为 false，不阻塞核心流程
   try {
-    const templateRoot = await templateUpperPath(gamePath)
+    const templateRoot = templateUpperPath(gamePath)
     return useEditorStore().hasUnsavedDocumentsUnder(templateRoot)
   } catch {
     return false
@@ -36,12 +35,12 @@ async function isTemplateDirty(gamePath: string): Promise<boolean> {
 
 async function closeOpenedTemplateDocuments(gamePath: string): Promise<void> {
   try {
-    const templateRoot = await templateUpperPath(gamePath)
+    const templateRoot = templateUpperPath(gamePath)
     const editorStore = useEditorStore()
     const tabsStore = useTabsStore()
     const openedPaths = editorStore.collectDocumentPathsUnder(templateRoot)
     for (const path of openedPaths) {
-      const index = tabsStore.findTabIndex(path)
+      const index = tabsStore.findTabIndex(AbsPath.from(path))
       if (index !== -1) {
         tabsStore.closeTab(index)
       }
@@ -73,9 +72,13 @@ async function notifyTemplateChanged(
   // 引擎/模板切换不会改动磁盘文件本身（只是 lower 路径变了），
   // OS watcher 不会触发；必须主动失效，否则 listDir 仍会用旧 lower 配置返回。
   try {
-    await useFileStore().refreshTemplateOverlay(gamePath, {
-      nextEnginePath: options.nextEnginePath,
-      nextTemplatePath: options.nextTemplatePath,
+    const nextTemplatePath = typeof options.nextTemplatePath === 'string'
+      ? AbsPath.from(options.nextTemplatePath)
+      : options.nextTemplatePath
+
+    await useFileStore().refreshTemplateOverlay(AbsPath.from(gamePath), {
+      nextEnginePath: options.nextEnginePath ? AbsPath.from(options.nextEnginePath) : undefined,
+      nextTemplatePath,
     })
   } catch (error) {
     logger.warn(`[模板切换] 失效模板 overlay 缓存失败: ${error}`)
@@ -107,7 +110,9 @@ async function resolveTemplatePath(
   currentEngine?: Pick<Engine, 'path'>,
 ): Promise<string | undefined> {
   if (!binding) {
-    return currentEngine ? await join(currentEngine.path, 'game', 'template') : undefined
+    return currentEngine
+      ? AbsPath.join(AbsPath.from(currentEngine.path), RelPath.from('game/template'))
+      : undefined
   }
 
   switch (binding.kind) {
@@ -119,7 +124,9 @@ async function resolveTemplatePath(
     }
     case 'engineBuiltin': {
       const engine = await engineManager.findEngineByRef(binding.engine)
-      return engine && isEngineUsable(engine) ? join(engine.path, 'game', 'template') : undefined
+      return engine && isEngineUsable(engine)
+        ? AbsPath.join(AbsPath.from(engine.path), RelPath.from('game/template'))
+        : undefined
     }
     default: {
       return undefined
@@ -177,7 +184,7 @@ async function switchTemplate(
   await closeOpenedTemplateDocuments(game.path)
 
   await projectConfigCmds.writeProjectConfig(game.path, newConfig)
-  await vfsCmds.cleanTemplateUpper(game.path)
+  await vfsCmds.cleanTemplateUpper(AbsPath.from(game.path))
 
   const newTemplatePath = await resolveTemplatePath(newBinding, engine)
   await applySiteUpdate(

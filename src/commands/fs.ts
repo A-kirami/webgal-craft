@@ -1,5 +1,4 @@
 import { Channel, invoke } from '@tauri-apps/api/core'
-import { basename, join } from '@tauri-apps/api/path'
 import {
   copyFile as copyFileFs,
   exists,
@@ -9,6 +8,7 @@ import {
   writeTextFile,
 } from '@tauri-apps/plugin-fs'
 
+import { AbsPath } from '~/domain/path'
 import { AppError } from '~/types/errors'
 import { safeInvoke } from '~/utils/invoke'
 
@@ -26,7 +26,7 @@ type CopyEvent = {
   }
 }
 
-async function copyDirectory(source: string, destination: string): Promise<void> {
+async function copyDirectory(source: AbsPath, destination: AbsPath): Promise<void> {
   return safeInvoke<void>('copy_directory', { source, destination })
 }
 
@@ -37,8 +37,8 @@ async function copyDirectory(source: string, destination: string): Promise<void>
  * 安装/创建等需要刷新内容的流程应显式传 true，避免上次失败残留与新内容混杂。
  */
 async function copyDirectoryWithProgress(
-  source: string,
-  destination: string,
+  source: AbsPath,
+  destination: AbsPath,
   onProgress: (progress: number) => void,
   options?: { excludes?: string[], overwrite?: boolean },
 ): Promise<void> {
@@ -79,7 +79,7 @@ async function copyDirectoryWithProgress(
 }
 
 async function validateDirectoryStructure(
-  path: string,
+  path: AbsPath,
   requiredDirs: string[],
   requiredFiles: string[],
 ): Promise<boolean> {
@@ -91,84 +91,84 @@ async function validateDirectoryStructure(
 }
 
 /** 生成唯一的文件名 */
-async function generateUniqueFileName(parentPath: string, baseName: string, isDir: boolean): Promise<string> {
+async function generateUniqueFileName(parentPath: AbsPath, baseName: string, isDir: boolean): Promise<string> {
   let counter = 1
   let newName = baseName
-  let newPath = await join(parentPath, newName)
+  let newPath = AbsPath.append(parentPath, newName)
 
   // 提取文件扩展名和基础名称（避免在循环中重复计算）
   const lastDotIndex = baseName.lastIndexOf('.')
   const ext = isDir || lastDotIndex === -1 ? '' : baseName.slice(lastDotIndex)
   const nameWithoutExt = isDir || lastDotIndex === -1 ? baseName : baseName.slice(0, lastDotIndex)
 
+  // 必须串行检查，直到找到未占用名称为止。
   // eslint-disable-next-line no-await-in-loop
   while (await exists(newPath)) {
     newName = `${nameWithoutExt} (${counter})${ext}`
-    // eslint-disable-next-line no-await-in-loop
-    newPath = await join(parentPath, newName)
+    newPath = AbsPath.append(parentPath, newName)
     counter++
   }
 
   return newName
 }
 
-async function createFile(targetPath: string, fileName: string): Promise<string> {
+async function createFile(targetPath: AbsPath, fileName: string): Promise<AbsPath> {
   const uniqueName = await generateUniqueFileName(targetPath, fileName, false)
-  const filePath = await join(targetPath, uniqueName)
+  const filePath = AbsPath.append(targetPath, uniqueName)
   await writeTextFile(filePath, '')
   return filePath
 }
 
-async function createFolder(targetPath: string, folderName: string): Promise<string> {
+async function createFolder(targetPath: AbsPath, folderName: string): Promise<AbsPath> {
   const uniqueName = await generateUniqueFileName(targetPath, folderName, true)
-  const folderPath = await join(targetPath, uniqueName)
+  const folderPath = AbsPath.append(targetPath, uniqueName)
   await mkdir(folderPath, { recursive: true })
   return folderPath
 }
 
-async function deleteFile(path: string, permanent = false): Promise<void> {
+async function deleteFile(path: AbsPath, permanent = false): Promise<void> {
   return safeInvoke<void>('delete_file', { path, permanent })
 }
 
-async function renameFile(oldPath: string, newName: string): Promise<string> {
-  return safeInvoke<string>('rename_file', { path: oldPath, newName })
+async function renameFile(oldPath: AbsPath, newName: string): Promise<AbsPath> {
+  return AbsPath.from(await safeInvoke<string>('rename_file', { path: oldPath, newName }))
 }
 
 interface DestinationPath {
-  destPath: string
+  destPath: AbsPath
   isDir: boolean
 }
 
 /**
  * 获取目标路径（用于复制和移动操作）
  */
-async function getDestinationPath(sourcePath: string, targetPath: string): Promise<DestinationPath> {
-  const sourceName = await basename(sourcePath)
+async function getDestinationPath(sourcePath: AbsPath, targetPath: AbsPath): Promise<DestinationPath> {
+  const sourceName = AbsPath.basename(sourcePath)
   const sourceStat = await stat(sourcePath)
   const isDir = sourceStat.isDirectory
   const uniqueName = await generateUniqueFileName(targetPath, sourceName, isDir)
-  const destPath = await join(targetPath, uniqueName)
+  const destPath = AbsPath.append(targetPath, uniqueName)
   return { destPath, isDir }
 }
 
-async function copyFile(sourcePath: string, targetPath: string): Promise<string> {
+async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath> {
   const { destPath, isDir } = await getDestinationPath(sourcePath, targetPath)
   await (isDir ? copyDirectory(sourcePath, destPath) : copyFileFs(sourcePath, destPath))
   return destPath
 }
 
-async function moveFile(sourcePath: string, targetPath: string): Promise<string> {
+async function moveFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath> {
   const { destPath } = await getDestinationPath(sourcePath, targetPath)
   await rename(sourcePath, destPath)
   return destPath
 }
 
-async function isBinaryFile(path: string): Promise<boolean> {
+async function isBinaryFile(path: AbsPath): Promise<boolean> {
   return safeInvoke<boolean>('is_binary_file', { path })
 }
 
 /** 仅读取文件头部元数据获取图片分辨率，不解码完整图片 */
-async function getImageDimensions(path: string): Promise<[number, number]> {
+async function getImageDimensions(path: AbsPath): Promise<[number, number]> {
   return safeInvoke<[number, number]>('get_image_dimensions', { path })
 }
 

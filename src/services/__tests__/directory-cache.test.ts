@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { AbsPath } from '~/domain/path'
 import {
   clearDirectoryItemsCache,
   invalidateDirectoryItemsCache,
@@ -9,25 +10,16 @@ import { AppError } from '~/types/errors'
 
 const {
   existsMock,
-  joinMock,
   loggerWarnMock,
   mimeGetTypeMock,
-  normalizeMock,
   readDirMock,
   statMock,
 } = vi.hoisted(() => ({
   existsMock: vi.fn(),
-  joinMock: vi.fn(async (...parts: string[]) => parts.join('/').replaceAll('//', '/')),
   loggerWarnMock: vi.fn(),
   mimeGetTypeMock: vi.fn(() => 'text/plain'),
-  normalizeMock: vi.fn(async (path: string) => path.replaceAll('\\', '/')),
   readDirMock: vi.fn(),
   statMock: vi.fn(),
-}))
-
-vi.mock('@tauri-apps/api/path', () => ({
-  join: joinMock,
-  normalize: normalizeMock,
 }))
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
@@ -73,8 +65,6 @@ describe('目录缓存', () => {
   beforeEach(() => {
     clearDirectoryItemsCache()
     existsMock.mockReset()
-    normalizeMock.mockClear()
-    joinMock.mockClear()
     readDirMock.mockReset()
     statMock.mockReset()
     loggerWarnMock.mockReset()
@@ -96,10 +86,10 @@ describe('目录缓存', () => {
     })
     readDirMock.mockResolvedValue([{ name: 'file.txt', isDirectory: false }])
 
-    const _first = await readDirectoryItemsCached('/root')
-    const second = await readDirectoryItemsCached('/root')
+    const _first = await readDirectoryItemsCached(AbsPath.from('/root'))
+    const second = await readDirectoryItemsCached(AbsPath.from('/root'))
     second[0].name = 'mutated'
-    const third = await readDirectoryItemsCached('/root')
+    const third = await readDirectoryItemsCached(AbsPath.from('/root'))
 
     expect(readDirMock).toHaveBeenCalledTimes(1)
     expect(third).toEqual([
@@ -128,8 +118,8 @@ describe('目录缓存', () => {
       return readDirDeferred.promise
     })
 
-    const firstPromise = readDirectoryItemsCached('/root')
-    const secondPromise = readDirectoryItemsCached('/root')
+    const firstPromise = readDirectoryItemsCached(AbsPath.from('/root'))
+    const secondPromise = readDirectoryItemsCached(AbsPath.from('/root'))
     await readDirStarted.promise
 
     expect(readDirMock).toHaveBeenCalledTimes(1)
@@ -143,7 +133,7 @@ describe('目录缓存', () => {
     expect(readDirMock).toHaveBeenCalledTimes(1)
   })
 
-  it('invalidateDirectoryItemsCache 支持包含子目录并按 comparable path 清理', async () => {
+  it('invalidateDirectoryItemsCache 支持包含子目录并按归一化路径清理', async () => {
     existsMock.mockResolvedValue(true)
     statMock.mockImplementation(async (path: string) => {
       if (path === '/root' || path === '/root/child') {
@@ -158,11 +148,11 @@ describe('目录缓存', () => {
       return [{ name: 'nested.txt', isDirectory: false }]
     })
 
-    await readDirectoryItemsCached('/root')
-    await readDirectoryItemsCached('/root/child')
-    await invalidateDirectoryItemsCache(String.raw`\ROOT`, { includeChildren: true })
-    await readDirectoryItemsCached('/root')
-    await readDirectoryItemsCached('/root/child')
+    await readDirectoryItemsCached(AbsPath.from('/root'))
+    await readDirectoryItemsCached(AbsPath.from('/root/child'))
+    await invalidateDirectoryItemsCache(AbsPath.from(String.raw`\root`), { includeChildren: true })
+    await readDirectoryItemsCached(AbsPath.from('/root'))
+    await readDirectoryItemsCached(AbsPath.from('/root/child'))
 
     expect(readDirMock).toHaveBeenCalledTimes(4)
   })
@@ -177,7 +167,7 @@ describe('目录缓存', () => {
     })
     readDirMock.mockResolvedValue([{ name: 'broken.txt', isDirectory: false }])
 
-    await expect(readDirectoryItemsCached('/root', { useCache: false })).rejects.toMatchObject({
+    await expect(readDirectoryItemsCached(AbsPath.from('/root'), { useCache: false })).rejects.toMatchObject({
       code: 'IO_ERROR',
       message: '目录读取失败：目录项全部读取失败',
     })

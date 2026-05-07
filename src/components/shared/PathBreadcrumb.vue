@@ -2,6 +2,7 @@
 import { FolderOpen, MoreHorizontal } from '@lucide/vue'
 
 import { useBreadcrumbCollapse } from '~/composables/useBreadcrumbCollapse'
+import { AbsPath, RelPath } from '~/domain/path'
 
 interface PathBreadcrumbProps {
   /** 根目录绝对路径（用于推导根节点文案） */
@@ -36,7 +37,7 @@ let containerRef = $ref<HTMLElement | undefined>()
 let measureRowRefs = $ref<Record<number, HTMLElement>>({})
 let candidateWidths = $ref<number[]>([])
 
-const normalizedCurrentPath = $computed(() => normalizeRelativePath(currentPath))
+const normalizedCurrentPath = $computed(() => RelPath.from(currentPath))
 const pathSegments = $computed(() => normalizedCurrentPath ? normalizedCurrentPath.split('/') : [])
 const middleSegments = $computed(() => pathSegments.slice(0, -1))
 const hasLastSegment = $computed(() => pathSegments.length > 0)
@@ -44,7 +45,13 @@ const lastSegment = $computed(() => pathSegments.at(-1) ?? '')
 const maxVisibleMiddleCount = $computed(() => middleSegments.length)
 const visibleCountOptions = $computed(() => Array.from({ length: maxVisibleMiddleCount + 1 }, (_, index) => index))
 
-const resolvedRootLabel = $computed(() => inferRootLabel(rootPath))
+const resolvedRootLabel = $computed(() => {
+  if (!rootPath) {
+    return ''
+  }
+
+  return AbsPath.basename(AbsPath.from(rootPath))
+})
 const resolvedRootIcon = $computed(() => rootIcon ?? FolderOpen)
 
 const { visibleMiddleCount, recalculate } = $(useBreadcrumbCollapse({
@@ -68,17 +75,6 @@ const hasCollapsedSegments = $computed(() => hiddenSegments.length > 0)
 
 // -- 工具函数 --
 
-function normalizeRelativePath(path: string): string {
-  return path
-    .replaceAll('\\', '/')
-    .replace(/^\/+/, '')
-    .replace(/\/+$/, '')
-}
-
-function inferRootLabel(path: string): string {
-  return path.replaceAll('\\', '/').split('/').findLast(Boolean) ?? ''
-}
-
 function clampCount(count: number): number {
   return Math.max(0, Math.min(count, maxVisibleMiddleCount))
 }
@@ -98,7 +94,7 @@ function getVisibleMiddleSegmentsByCount(visibleCount: number): string[] {
 // -- 事件处理与 DOM 测量 --
 
 function handleNavigate(path: string) {
-  emit('navigate', normalizeRelativePath(path))
+  emit('navigate', RelPath.from(path))
 }
 
 function setMeasureRowRef(visibleCount: number, element: Element | null) {

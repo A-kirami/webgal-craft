@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { AbsPath } from '~/domain/path'
 import { gameFs } from '~/services/game-fs'
 
 const {
@@ -11,7 +12,6 @@ const {
   deleteFileMock,
   ensureWritableMock,
   getFolderContentsMock,
-  joinMock,
   mkdirMock,
   moveFileMock,
   moveEntryMock,
@@ -33,7 +33,6 @@ const {
   deleteFileMock: vi.fn(),
   ensureWritableMock: vi.fn(),
   getFolderContentsMock: vi.fn(),
-  joinMock: vi.fn(async (...parts: string[]) => parts.join('/').replaceAll('//', '/')),
   mkdirMock: vi.fn(),
   moveFileMock: vi.fn(),
   moveEntryMock: vi.fn(),
@@ -52,10 +51,6 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
   mkdir: mkdirMock,
   writeFile: writeBinaryFileMock,
   writeTextFile: writeTextFileMock,
-}))
-
-vi.mock('@tauri-apps/api/path', () => ({
-  join: joinMock,
 }))
 
 vi.mock('~/services/game-manager', () => ({
@@ -95,7 +90,6 @@ describe('gameFs 游戏文件系统', () => {
     deleteFileMock.mockReset()
     ensureWritableMock.mockReset()
     getFolderContentsMock.mockReset()
-    joinMock.mockClear()
     mkdirMock.mockReset()
     moveFileMock.mockReset()
     moveEntryMock.mockReset()
@@ -145,8 +139,8 @@ describe('gameFs 游戏文件系统', () => {
       .mockResolvedValueOnce('/game/.overlay/readme.txt')
       .mockResolvedValueOnce('/game/.overlay/image.bin')
 
-    await gameFs.writeFile('/game/readme.txt', 'hello')
-    await gameFs.writeDocumentFile('/game/image.bin', new Uint8Array([1, 2, 3]))
+    await gameFs.writeFile(AbsPath.from('/game/readme.txt'), 'hello')
+    await gameFs.writeDocumentFile(AbsPath.from('/game/image.bin'), new Uint8Array([1, 2, 3]))
 
     expect(ensureWritableMock).toHaveBeenNthCalledWith(1, '/game/readme.txt')
     expect(ensureWritableMock).toHaveBeenNthCalledWith(2, '/game/image.bin')
@@ -181,7 +175,7 @@ describe('gameFs 游戏文件系统', () => {
     registerPendingFileWriteMock.mockReturnValueOnce(handle)
     writeBinaryFileMock.mockRejectedValueOnce(error)
 
-    await expect(gameFs.writeDocumentFile('/game/image.bin', new Uint8Array([1, 2, 3]))).rejects.toThrow(error)
+    await expect(gameFs.writeDocumentFile(AbsPath.from('/game/image.bin'), new Uint8Array([1, 2, 3]))).rejects.toThrow(error)
 
     expect(registerPendingFileWriteMock).toHaveBeenCalledWith('/game/.overlay/image.bin', new Uint8Array([1, 2, 3]))
     expect(commitPendingFileWriteMock).not.toHaveBeenCalled()
@@ -196,12 +190,12 @@ describe('gameFs 游戏文件系统', () => {
     copyFileMock.mockResolvedValue('/game/copied.txt')
     moveFileMock.mockResolvedValue('/game/moved.txt')
 
-    await expect(gameFs.renameFile('/game/old.txt', 'new.txt')).resolves.toBe('/game/new.txt')
-    await expect(gameFs.createFile('/game', 'created.txt')).resolves.toBe('/game/created.txt')
-    await expect(gameFs.createFolder('/game', 'folder')).resolves.toBe('/game/folder')
-    await expect(gameFs.copyFile('/from.txt', '/game')).resolves.toBe('/game/copied.txt')
-    await expect(gameFs.moveFile('/from.txt', '/game')).resolves.toBe('/game/moved.txt')
-    await gameFs.deleteFile('/game/deleted.txt', true)
+    await expect(gameFs.renameFile(AbsPath.from('/game/old.txt'), 'new.txt')).resolves.toBe('/game/new.txt')
+    await expect(gameFs.createFile(AbsPath.from('/game'), 'created.txt')).resolves.toBe('/game/created.txt')
+    await expect(gameFs.createFolder(AbsPath.from('/game'), 'folder')).resolves.toBe('/game/folder')
+    await expect(gameFs.copyFile(AbsPath.from('/from.txt'), AbsPath.from('/game'))).resolves.toBe('/game/copied.txt')
+    await expect(gameFs.moveFile(AbsPath.from('/from.txt'), AbsPath.from('/game'))).resolves.toBe('/game/moved.txt')
+    await gameFs.deleteFile(AbsPath.from('/game/deleted.txt'), true)
 
     expect(deleteFileMock).toHaveBeenCalledWith('/game/deleted.txt', true)
     expect(renameEntryMock).not.toHaveBeenCalled()
@@ -231,12 +225,12 @@ describe('gameFs 游戏文件系统', () => {
     createFolderMock.mockResolvedValue('/game/folder')
     deleteEntryMock.mockResolvedValueOnce(true)
 
-    await expect(gameFs.renameFile('/game/old.txt', 'new.txt')).resolves.toBe('/game/new.txt')
-    await expect(gameFs.createFile('/game', 'created.txt')).resolves.toBe('/game/created.txt')
-    await expect(gameFs.createFolder('/game', 'folder')).resolves.toBe('/game/folder')
-    await expect(gameFs.copyFile('/from.txt', '/game')).resolves.toBe('/game/copied.txt')
-    await expect(gameFs.moveFile('/from.txt', '/game')).resolves.toBe('/game/moved.txt')
-    await gameFs.deleteFile('/game/deleted.txt', true)
+    await expect(gameFs.renameFile(AbsPath.from('/game/old.txt'), 'new.txt')).resolves.toBe('/game/new.txt')
+    await expect(gameFs.createFile(AbsPath.from('/game'), 'created.txt')).resolves.toBe('/game/created.txt')
+    await expect(gameFs.createFolder(AbsPath.from('/game'), 'folder')).resolves.toBe('/game/folder')
+    await expect(gameFs.copyFile(AbsPath.from('/from.txt'), AbsPath.from('/game'))).resolves.toBe('/game/copied.txt')
+    await expect(gameFs.moveFile(AbsPath.from('/from.txt'), AbsPath.from('/game'))).resolves.toBe('/game/moved.txt')
+    await gameFs.deleteFile(AbsPath.from('/game/deleted.txt'), true)
 
     expect(renameEntryMock).toHaveBeenCalledWith('/game/old.txt', 'new.txt')
     expect(ensureWritableMock).toHaveBeenNthCalledWith(1, '/game/created.txt')
@@ -275,8 +269,8 @@ describe('gameFs 游戏文件系统', () => {
       .mockResolvedValueOnce('/game/scene (1).txt')
       .mockResolvedValueOnce('/game/bgm (1)')
 
-    await expect(gameFs.createFile('/game', 'scene.txt')).resolves.toBe('/game/scene (1).txt')
-    await expect(gameFs.createFolder('/game', 'bgm')).resolves.toBe('/game/bgm (1)')
+    await expect(gameFs.createFile(AbsPath.from('/game'), 'scene.txt')).resolves.toBe('/game/scene (1).txt')
+    await expect(gameFs.createFolder(AbsPath.from('/game'), 'bgm')).resolves.toBe('/game/bgm (1)')
 
     expect(ensureWritableMock).toHaveBeenNthCalledWith(1, '/game/scene (1).txt')
     expect(ensureWritableMock).toHaveBeenNthCalledWith(2, '/game/bgm (1)')

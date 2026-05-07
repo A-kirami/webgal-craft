@@ -25,7 +25,6 @@ const {
   gameCmdsGetGameConfigMock,
   gameCmdsSetGameConfigMock,
   gameConfigPathMock,
-  joinMock,
   mkdirMock,
   projectConfigPathMock,
   resourceStoreState,
@@ -53,7 +52,6 @@ const {
   gameCmdsGetGameConfigMock: vi.fn(),
   gameCmdsSetGameConfigMock: vi.fn(),
   gameConfigPathMock: vi.fn(),
-  joinMock: vi.fn(async (...parts: string[]) => parts.join('/').replaceAll('//', '/')),
   mkdirMock: vi.fn(),
   projectConfigPathMock: vi.fn(),
   resourceStoreState: {
@@ -67,10 +65,6 @@ const {
   workspaceStoreState: {
     currentGame: undefined as ReturnType<typeof createTestGame> | undefined,
   },
-}))
-
-vi.mock('@tauri-apps/api/path', () => ({
-  join: joinMock,
 }))
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
@@ -155,8 +149,8 @@ vi.mock('~/services/template-switch', () => ({
 vi.mock('~/services/platform/app-paths', () => ({
   gameConfigPath: gameConfigPathMock,
   projectConfigPath: projectConfigPathMock,
-  gameIconPath: vi.fn(async (gamePath: string) => `${gamePath}/icons/favicon.ico`),
-  gameCoverPath: vi.fn(async (gamePath: string, fileName: string) => `${gamePath}/game/background/${fileName}`),
+  gameIconPath: vi.fn((gamePath: string) => `${gamePath}/icons/favicon.ico`),
+  gameCoverPath: vi.fn((gamePath: string, fileName: string) => `${gamePath}/game/background/${fileName}`),
 }))
 
 vi.mock('~/stores/resource', () => ({
@@ -206,7 +200,6 @@ describe('gameManager', () => {
     gameCmdsGetGameConfigMock.mockReset()
     gameCmdsSetGameConfigMock.mockReset()
     gameConfigPathMock.mockReset()
-    joinMock.mockClear()
     mkdirMock.mockReset()
     projectConfigPathMock.mockReset()
     resourceStoreState.finishProgress.mockReset()
@@ -230,8 +223,8 @@ describe('gameManager', () => {
     dbGameDeleteMock.mockResolvedValue(undefined)
     dbGamesToArrayMock.mockResolvedValue([])
 
-    gameConfigPathMock.mockImplementation(async (gamePath: string) => `${gamePath}/game/config.txt`)
-    projectConfigPathMock.mockImplementation(async (gamePath: string) => `${gamePath}/project.wgcp`)
+    gameConfigPathMock.mockImplementation((gamePath: string) => `${gamePath}/game/config.txt`)
+    projectConfigPathMock.mockImplementation((gamePath: string) => `${gamePath}/project.wgcp`)
     gameCmdsGetGameConfigMock.mockResolvedValue(createGameConfig([
       { key: 'Game_name', value: 'Demo Game' },
       { key: 'Title_img', value: 'cover.png' },
@@ -295,7 +288,7 @@ describe('gameManager', () => {
       metadata: {
         name: 'Provided Name',
       },
-      pathKey: '/games/demo',
+      pathLookupKey: '/games/demo',
       previewAssets: {
         icon: {
           path: 'icons/favicon.ico',
@@ -363,7 +356,7 @@ describe('gameManager', () => {
 
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       path: '/games/demo',
-      pathKey: '/games/demo',
+      pathLookupKey: '/games/demo',
       engineId: 'engine-1',
       status: 'creating',
       metadata: {
@@ -418,6 +411,34 @@ describe('gameManager', () => {
       },
     })
     expect(resourceStoreState.finishProgress).toHaveBeenCalledWith('game-1')
+  })
+
+  it('createGame 会把 Windows 风格项目路径归一化后再创建目录', async () => {
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      id: 'engine-1',
+      name: 'WebGAL',
+      version: '4.5.0',
+      path: String.raw`C:\Engines\WebGAL\4.5.0`,
+    }))
+    existsMock.mockImplementation(async (path: string) => {
+      if (path === 'C:/Engines/WebGAL/4.5.0/game') {
+        return true
+      }
+      if (path === 'C:/Engines/WebGAL/4.5.0/icons/icon-192.png') {
+        return true
+      }
+      return false
+    })
+
+    await gameManager.createGame('Demo Game', String.raw`C:\Games\Demo`, 'engine-1')
+
+    expect(mkdirMock).toHaveBeenCalledWith('C:/Games/Demo/game', { recursive: true })
+    expect(copyDirectoryWithProgressMock).toHaveBeenCalledWith(
+      'C:/Engines/WebGAL/4.5.0/game',
+      'C:/Games/Demo/game',
+      expect.any(Function),
+      { excludes: ['template'] },
+    )
   })
 
   it('createGame 在同步复制失败时会清理生成目录', async () => {
@@ -538,7 +559,7 @@ describe('gameManager', () => {
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: undefined,
       path: '/games/self-contained',
-      pathKey: '/games/self-contained',
+      pathLookupKey: '/games/self-contained',
     }))
   })
 
@@ -564,7 +585,7 @@ describe('gameManager', () => {
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: 'engine-1',
       path: '/games/vfs',
-      pathKey: '/games/vfs',
+      pathLookupKey: '/games/vfs',
     }))
   })
 
@@ -592,7 +613,7 @@ describe('gameManager', () => {
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: 'engine-1',
       path: '/games/vfs',
-      pathKey: '/games/vfs',
+      pathLookupKey: '/games/vfs',
     }))
     expect(warnMock).toHaveBeenCalledWith('关联的引擎 WebGAL 当前不可用，项目预览将受限: /games/vfs')
   })
@@ -635,7 +656,7 @@ describe('gameManager', () => {
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: 'engine-2',
       path: '/games/vfs',
-      pathKey: '/games/vfs',
+      pathLookupKey: '/games/vfs',
     }))
   })
 
@@ -671,14 +692,14 @@ describe('gameManager', () => {
     })
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: 'engine-2',
-      pathKey: '/games/vfs',
+      pathLookupKey: '/games/vfs',
     }))
   })
 
   it('importGame 遇到已注册项目时会幂等返回既有 ID', async () => {
     dbGameWhereMock.mockReturnValue({
-      equals: (pathKey: string) => {
-        expect(pathKey).toBe('/games/demo')
+      equals: (pathLookupKey: string) => {
+        expect(pathLookupKey).toBe('/games/demo')
         return {
           first: async () => createTestGame({
             id: 'game-existing',
@@ -1035,7 +1056,7 @@ describe('gameManager', () => {
     expect(workspaceStoreState.currentGame).toEqual({
       id: 'game-1',
       path: '/games/demo',
-      pathKey: '/games/demo',
+      pathLookupKey: '/games/demo',
       createdAt: 0,
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
       status: 'created',

@@ -1,10 +1,10 @@
-import { join } from '@tauri-apps/api/path'
 import { readDir } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
 import * as monaco from 'monaco-editor'
 import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { AbsPath, RelPath } from '~/domain/path'
 import { parseSceneOrEmpty } from '~/domain/script/parser'
 import { gameAssetDir } from '~/services/platform/app-paths'
 import { useWorkspaceStore } from '~/stores/workspace'
@@ -704,7 +704,7 @@ async function getFileSuggestion(
 ): Promise<monaco.languages.CompletionItem[]> {
   const currentLine = model.getLineContent(position.lineNumber)
   const currentWord = model.getWordAtPosition(position)
-  const path = await getPathFromFileType(type, currentPath)
+  const path = getPathFromFileType(type, currentPath)
 
   if (!path) {
     return []
@@ -729,10 +729,10 @@ async function getFileSuggestion(
 /**
  * 根据文件类型和文件名获取完整路径，游戏目录不存在时返回空字符串
  */
-async function getPathFromFileType(
+function getPathFromFileType(
   type: FileType,
   fileName: string,
-): Promise<string> {
+): string {
   const gameDir = useWorkspaceStore().currentGame?.path
   if (!gameDir) {
     return ''
@@ -745,11 +745,11 @@ async function getPathFromFileType(
     subDir = fileName.slice(0, lastDirIndex + 1)
   }
 
-  const basePath = await gameAssetDir(gameDir, type)
+  const basePath = gameAssetDir(AbsPath.from(gameDir), type)
   if (subDir) {
     // 移除 subDir 开头的斜杠（如果有）
     const normalizedSubDir = subDir.startsWith('/') ? subDir.slice(1) : subDir
-    return await join(basePath, normalizedSubDir)
+    return AbsPath.join(basePath, RelPath.from(normalizedSubDir))
   }
   return basePath
 }

@@ -26,6 +26,7 @@ vi.mock('~/stores/command-panel', () => ({
   useCommandPanelStore: useCommandPanelStoreMock,
 }))
 
+import { AbsPath } from '~/domain/path'
 import { useCommandPanelBridgeProvider, useSidebarPanelProvider } from '~/features/editor/shared/useEditorPanelBindings'
 import { useTextEditorBindings } from '~/features/editor/text-editor/useTextEditorBindings'
 
@@ -39,7 +40,7 @@ interface Harness {
 
 function createTextState(textContent: string): TextProjectionState {
   return {
-    path: '/game/scene/example.txt',
+    path: AbsPath.from('/game/scene/example.txt'),
     isDirty: false,
     projection: 'text',
     kind: 'scene',

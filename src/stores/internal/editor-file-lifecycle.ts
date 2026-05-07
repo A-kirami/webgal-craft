@@ -1,9 +1,9 @@
 import { stat } from '@tauri-apps/plugin-fs'
 
 import { fsCmds } from '~/commands/fs'
+import { AbsPath } from '~/domain/path'
 import { mime } from '~/plugins/mime'
 import { gameAssetDir } from '~/services/platform/app-paths'
-import { normalizeFsPath } from '~/utils/path'
 
 import { applyDocumentTransaction } from './editor-document-actions'
 import { createLoadedDocumentState, markDocumentClean, resolveSceneCursor } from './editor-document-state'
@@ -26,28 +26,28 @@ import type { AppError } from '~/types/errors'
 export type ReadTextDocumentResult = DecodeTextFileResult
 
 export interface FileRenamedEvent {
-  newPath: string
-  oldPath: string
+  newPath: AbsPath
+  oldPath: AbsPath
 }
 
 export interface FileModifiedEvent {
-  path: string
+  path: AbsPath
 }
 
 export interface SessionAccessor {
-  getSession: (path: string) => EditorSession | undefined
-  setSession: (path: string, session: EditorSession) => void
-  deleteSession: (path: string) => void
-  hasSession: (path: string) => boolean
-  getEditableSession: (path: string) => EditableEditorSession | undefined
-  getEditableState: (path: string) => EditableEditorState | undefined
+  getSession: (path: AbsPath) => EditorSession | undefined
+  setSession: (path: AbsPath, session: EditorSession) => void
+  deleteSession: (path: AbsPath) => void
+  hasSession: (path: AbsPath) => boolean
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined
+  getEditableState: (path: AbsPath) => EditableEditorState | undefined
 }
 
 export interface AutoSaveAccessor {
-  autoSaveHasPending: (path: string) => boolean
-  cancelAutoSave: (path: string) => void
+  autoSaveHasPending: (path: AbsPath) => boolean
+  cancelAutoSave: (path: AbsPath) => void
   canReschedulePendingAutoSave: (state: EditableEditorState) => boolean
-  scheduleAutoSave: (path: string) => void
+  scheduleAutoSave: (path: AbsPath) => void
 }
 
 export interface EditorFileLifecycleMessages {
@@ -63,20 +63,20 @@ export interface EditorFileLifecycleContext extends
   SessionAccessor,
   AutoSaveAccessor {
   createEditorError: (message: string) => AppError
-  getActiveTabPath: () => string | undefined
-  getAssetUrl: (path: string) => string
+  getActiveTabPath: () => AbsPath | undefined
+  getAssetUrl: (path: AbsPath) => string
   getPreferredProjection: () => 'text' | 'visual'
   getPreviewBaseUrl: () => string | undefined
-  getSceneSelection: (path: string) => SceneSelectionState | undefined
+  getSceneSelection: (path: AbsPath) => SceneSelectionState | undefined
   getWorkspaceRootPath: () => string | undefined
-  patchSceneSelection: (path: string, patch: Partial<SceneSelectionState>) => void
-  readTextDocumentFile: (path: string) => Promise<ReadTextDocumentResult>
-  resolveFilePath: (path: string) => Promise<string>
-  setTabError: (path: string, error?: string) => void
-  setTabLoading: (path: string, isLoading: boolean) => void
-  setTabModified: (path: string, isModified: boolean) => void
+  patchSceneSelection: (path: AbsPath, patch: Partial<SceneSelectionState>) => void
+  readTextDocumentFile: (path: AbsPath) => Promise<ReadTextDocumentResult>
+  resolveFilePath: (path: AbsPath) => Promise<string>
+  setTabError: (path: AbsPath, error?: string) => void
+  setTabLoading: (path: AbsPath, isLoading: boolean) => void
+  setTabModified: (path: AbsPath, isModified: boolean) => void
   messages: EditorFileLifecycleMessages
-  syncScenePreview: (path: string, lineNumber: number, lineText: string, force?: boolean) => void
+  syncScenePreview: (path: AbsPath, lineNumber: number, lineText: string, force?: boolean) => void
 }
 
 interface ExternalDocumentSnapshot {
@@ -92,12 +92,8 @@ interface ExternalDocumentSnapshot {
 
 const pendingFileModifiedTasks = new Map<string, Promise<void>>()
 
-function isPathInsideDirectory(path: string, directoryPath: string): boolean {
-  // 两侧路径可能分别来自 VFS（正斜杠）与 Tauri API（Windows 反斜杠），
-  // 比较前必须统一形态，否则前缀判断会错失，导致场景文件被识别为纯文本。
-  const normalizedPath = normalizeFsPath(path)
-  const normalizedDir = normalizeFsPath(directoryPath)
-  return normalizedPath.startsWith(`${normalizedDir}/`)
+function isPathInsideDirectory(path: AbsPath, directoryPath: AbsPath): boolean {
+  return path.startsWith(`${directoryPath}/`)
 }
 
 function createPreviewSession(state: AssetPreviewState): EditorSession {
@@ -135,7 +131,7 @@ function requireWorkspaceRootPath(context: EditorFileLifecycleContext): string {
 
 async function loadNonEditableState(
   context: EditorFileLifecycleContext,
-  path: string,
+  path: AbsPath,
   mimeType: string,
 ): Promise<AssetPreviewState | UnsupportedState | undefined> {
   if (['image/', 'video/', 'audio/'].some(prefix => mimeType.startsWith(prefix))) {
@@ -162,7 +158,7 @@ async function loadNonEditableState(
 
   try {
     const physicalPath = await context.resolveFilePath(path)
-    const isBinary = await fsCmds.isBinaryFile(physicalPath)
+    const isBinary = await fsCmds.isBinaryFile(AbsPath.from(physicalPath))
     if (!isBinary) {
       return undefined
     }
@@ -179,16 +175,16 @@ async function loadNonEditableState(
 
 async function checkFileLocation(
   context: EditorFileLifecycleContext,
-  path: string,
+  path: AbsPath,
   subPath: string,
 ): Promise<boolean> {
-  const targetPath = await gameAssetDir(requireWorkspaceRootPath(context), subPath)
+  const targetPath = gameAssetDir(AbsPath.from(requireWorkspaceRootPath(context)), subPath)
   return isPathInsideDirectory(path, targetPath)
 }
 
 async function checkFileType(
   context: EditorFileLifecycleContext,
-  path: string,
+  path: AbsPath,
   subPath: string,
   mimeType: string,
   expectedMimeType: string,
@@ -200,18 +196,18 @@ async function checkFileType(
   return checkFileLocation(context, path, subPath)
 }
 
-function isTemplateStyleFile(path: string): boolean {
+function isTemplateStyleFile(path: AbsPath): boolean {
   const normalizedPath = path.toLowerCase()
   return normalizedPath.endsWith('.css') || normalizedPath.endsWith('.scss')
 }
 
-function isAnimationIndexFile(path: string): boolean {
-  return path.replaceAll('\\', '/').toLowerCase().endsWith('/game/animation/animationtable.json')
+function isAnimationIndexFile(path: AbsPath): boolean {
+  return path.toLowerCase().endsWith('/game/animation/animationtable.json')
 }
 
 async function resolveDocumentKind(
   context: EditorFileLifecycleContext,
-  path: string,
+  path: AbsPath,
   mimeType: string,
 ): Promise<DocumentKind> {
   if (await checkFileType(context, path, 'scene', mimeType, 'text/plain')) {
@@ -234,7 +230,7 @@ async function resolveDocumentKind(
 
 async function loadEditableDocumentState(
   context: EditorFileLifecycleContext,
-  path: string,
+  path: AbsPath,
   mimeType: string,
 ): Promise<void> {
   const loadedDocument = await context.readTextDocumentFile(path)
@@ -266,7 +262,7 @@ async function loadEditableDocumentState(
 
 function replaceDocumentModelFromExternal(
   context: EditorFileLifecycleContext,
-  path: string,
+  path: AbsPath,
   content: string,
   metadata: TextMetadata,
 ): void {
@@ -314,7 +310,7 @@ function updateSavedDocumentMetadataBaseline(
 }
 function syncScenePreviewForExternalContent(
   context: EditorFileLifecycleContext,
-  path: string,
+  path: AbsPath,
   content: string,
   kind: DocumentKind,
 ): void {
@@ -329,7 +325,7 @@ function syncScenePreviewForExternalContent(
 }
 
 async function confirmExternalDocumentChange(
-  path: string,
+  path: AbsPath,
   allowMerge: boolean,
 ): Promise<'keep-local' | 'load-external' | 'merge' | 'cancel'> {
   // 延迟加载 modal store 以避免与模板侧组件的循环依赖
@@ -350,7 +346,7 @@ async function confirmExternalDocumentChange(
 
 async function loadExternalDocumentSnapshot(
   context: EditorFileLifecycleContext,
-  path: string,
+  path: AbsPath,
 ): Promise<ExternalDocumentSnapshot | undefined> {
   const loadedDocument = await context.readTextDocumentFile(path)
   if (!loadedDocument.ok) {
@@ -391,7 +387,7 @@ async function loadExternalDocumentSnapshot(
 
 function applyExternalDocumentSnapshot(
   context: EditorFileLifecycleContext,
-  path: string,
+  path: AbsPath,
   snapshot: ExternalDocumentSnapshot,
 ): void {
   const docEntry = snapshot.session.document
@@ -408,7 +404,7 @@ function applyExternalDocumentSnapshot(
 
 function restorePendingAutoSaveIfNeeded(
   context: EditorFileLifecycleContext,
-  path: string,
+  path: AbsPath,
   hadPendingAutoSave: boolean,
 ): void {
   if (!hadPendingAutoSave) {
@@ -507,7 +503,7 @@ async function handleFileModifiedEventInternal(
 
 export async function loadEditorState(
   context: EditorFileLifecycleContext,
-  path: string,
+  path: AbsPath,
 ): Promise<void> {
   if (context.hasSession(path)) {
     return

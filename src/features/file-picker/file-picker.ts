@@ -1,4 +1,5 @@
-import { normalizeRelativePath, toComparablePath } from '~/utils/path'
+import { AbsPath, normalizePosix, RelPath } from '~/domain/path'
+import { toLookupPathKey } from '~/services/resource-path/lookup'
 
 export interface FilePickerInputParseResult {
   directoryPath: string
@@ -16,7 +17,30 @@ const DEFAULT_FILE_PICKER_HISTORY_SCOPE_KEY = 'default'
 const FILE_PICKER_RECENT_HISTORY_LIMIT = 20
 
 function normalizeFilePickerInputPath(path: string): string {
-  return path.trim().replaceAll('\\', '/')
+  const trimmed = path.trim()
+  if (!trimmed) {
+    return ''
+  }
+
+  const hasTrailingSlash = /[\\/]+$/.test(trimmed)
+  const normalized = normalizePosix(trimmed).replace(/^\/+/, '')
+  if (!normalized) {
+    return ''
+  }
+
+  if (!hasTrailingSlash) {
+    return normalized
+  }
+
+  return `${normalized.replace(/\/+$/, '')}/`
+}
+
+function normalizeFilePickerRelativePath(path: string): string | undefined {
+  try {
+    return RelPath.from(path.replace(/^[\\/]+/, ''))
+  } catch {
+    return undefined
+  }
 }
 
 function isAbsoluteFilePickerInput(path: string): boolean {
@@ -30,7 +54,7 @@ export function formatFilePickerModelValueForInput(
   path: string,
   options: FormatFilePickerModelValueForInputOptions,
 ): string {
-  const normalizedPath = normalizeRelativePath(path)
+  const normalizedPath = normalizeFilePickerRelativePath(path) ?? ''
   const normalizedInput = normalizeFilePickerInputPath(path).replace(/^\/+/, '')
 
   if (options.isOpen && normalizedPath && normalizedPath === options.currentDir) {
@@ -46,7 +70,7 @@ export function formatFilePickerModelValueForInput(
 
 export function parseFilePickerInput(input: string, fallbackDir: string): FilePickerInputParseResult {
   const normalized = normalizeFilePickerInputPath(input)
-  const normalizedFallbackDir = normalizeRelativePath(fallbackDir)
+  const normalizedFallbackDir = normalizeFilePickerRelativePath(fallbackDir) ?? ''
 
   if (!normalized) {
     return { directoryPath: '', keyword: '', shouldNavigate: true, rejectAbsolutePath: false }
@@ -71,8 +95,18 @@ export function parseFilePickerInput(input: string, fallbackDir: string): FilePi
   }
 
   if (normalized.endsWith('/')) {
+    const directoryPath = normalizeFilePickerRelativePath(normalized.slice(0, -1))
+    if (directoryPath === undefined) {
+      return {
+        directoryPath: normalizedFallbackDir,
+        keyword: normalized,
+        shouldNavigate: false,
+        rejectAbsolutePath: false,
+      }
+    }
+
     return {
-      directoryPath: normalizeRelativePath(normalized),
+      directoryPath,
       keyword: '',
       shouldNavigate: true,
       rejectAbsolutePath: false,
@@ -80,8 +114,18 @@ export function parseFilePickerInput(input: string, fallbackDir: string): FilePi
   }
 
   const splitIndex = normalized.lastIndexOf('/')
+  const directoryPath = normalizeFilePickerRelativePath(normalized.slice(0, splitIndex))
+  if (directoryPath === undefined) {
+    return {
+      directoryPath: normalizedFallbackDir,
+      keyword: normalized,
+      shouldNavigate: false,
+      rejectAbsolutePath: false,
+    }
+  }
+
   return {
-    directoryPath: normalizeRelativePath(normalized.slice(0, splitIndex)),
+    directoryPath,
     keyword: normalized.slice(splitIndex + 1),
     shouldNavigate: true,
     rejectAbsolutePath: false,
@@ -89,14 +133,11 @@ export function parseFilePickerInput(input: string, fallbackDir: string): FilePi
 }
 
 export function getFilePickerParentPath(path: string): string {
-  const normalized = normalizeRelativePath(path)
-  const index = normalized.lastIndexOf('/')
-  return index === -1 ? '' : normalized.slice(0, index)
+  return RelPath.parent(RelPath.from(normalizeFilePickerInputPath(path)))
 }
 
 export function getFilePickerName(path: string): string {
-  const normalized = normalizeRelativePath(path)
-  return normalized.split('/').at(-1) ?? normalized
+  return RelPath.basename(RelPath.from(normalizeFilePickerInputPath(path)))
 }
 
 export function resolveFilePickerHistoryStorageKey(canonicalRootPath: string, historyScopeKey: string): string {
@@ -106,11 +147,11 @@ export function resolveFilePickerHistoryStorageKey(canonicalRootPath: string, hi
   }
 
   const normalizedScopeKey = historyScopeKey.trim() || DEFAULT_FILE_PICKER_HISTORY_SCOPE_KEY
-  return `${toComparablePath(normalizedRootPath)}::${normalizedScopeKey}`
+  return `${toLookupPathKey(AbsPath.from(normalizedRootPath))}::${normalizedScopeKey}`
 }
 
 export function insertFilePickerRecentHistoryPath(history: string[], relativePath: string): string[] {
-  const normalizedPath = normalizeRelativePath(normalizeFilePickerInputPath(relativePath))
+  const normalizedPath = normalizeFilePickerRelativePath(normalizeFilePickerInputPath(relativePath))
   if (!normalizedPath) {
     return history
   }
@@ -124,7 +165,15 @@ export function removeFilePickerRecentHistoryPaths(history: string[], paths: str
     return history
   }
 
-  const removeSet = new Set(paths)
+  const removeSet = new Set(
+    paths
+      .map(path => normalizeFilePickerRelativePath(normalizeFilePickerInputPath(path)))
+      .filter((path): path is string => typeof path === 'string' && path.length > 0),
+  )
+  if (removeSet.size === 0) {
+    return history
+  }
+
   return history.filter(path => !removeSet.has(path))
 }
 
@@ -133,7 +182,7 @@ export function resolveFilePickerInputFallbackDir(
   previousInput: string,
   fallbackDir: string,
 ): string {
-  const normalizedFallbackDir = normalizeRelativePath(fallbackDir)
+  const normalizedFallbackDir = normalizeFilePickerRelativePath(fallbackDir) ?? ''
   if (!normalizedFallbackDir) {
     return normalizedFallbackDir
   }

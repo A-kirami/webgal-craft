@@ -2,6 +2,7 @@ import { useEditorStore } from '~/stores/editor'
 
 import type { StatementUpdatePayload } from '../statement-editor/useStatementEditor'
 import type * as monaco from 'monaco-editor'
+import type { AbsPath } from '~/domain/path'
 
 interface TextEditorPanelOptions {
   /** Monaco editor 实例 */
@@ -9,7 +10,7 @@ interface TextEditorPanelOptions {
   /** 在真正写入 Monaco 前捕获历史前态 */
   captureBeforeContentChange?: () => void
   /** 当前文件路径 */
-  getPath: () => string
+  getPath: () => AbsPath
 }
 
 /**

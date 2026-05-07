@@ -22,7 +22,6 @@ const {
   fileViewerScrollToIndexMock,
   getFolderContentsMock,
   handleErrorMock,
-  joinMock,
   renameFileMock,
   useFileStoreMock,
   usePreferenceStoreMock,
@@ -37,7 +36,6 @@ const {
   fileViewerScrollToIndexMock: vi.fn(),
   getFolderContentsMock: vi.fn(),
   handleErrorMock: vi.fn(),
-  joinMock: vi.fn(),
   renameFileMock: vi.fn(),
   useFileStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
@@ -51,23 +49,6 @@ function emitFileSystemEvent(type: string, event: Record<string, unknown>): void
     handler(event)
   }
 }
-
-vi.mock('@tauri-apps/api/path', async () => {
-  const actual = await vi.importActual<typeof import('@tauri-apps/api/path')>('@tauri-apps/api/path')
-
-  return {
-    ...actual,
-    basename: vi.fn(async (filePath: string) => filePath.split(/[/\\]/).at(-1) ?? ''),
-    dirname: vi.fn(async (filePath: string) => filePath.replace(/[\\/][^\\/]+$/, '')),
-    extname: vi.fn(async (filePath: string) => {
-      const match = /\.[^./\\]+$/.exec(filePath)
-      return match?.[0] ?? ''
-    }),
-    join: joinMock,
-    normalize: vi.fn(async (filePath: string) => filePath.replaceAll('\\', '/')),
-    sep: '/',
-  }
-})
 
 vi.mock('~/components/editor/FileTreeContextMenuContent.vue', async () => {
   const { defineComponent, h } = await vi.importActual<typeof import('vue')>('vue')
@@ -450,7 +431,6 @@ describe('AssetView', () => {
     fileViewerScrollToIndexMock.mockReset()
     getFolderContentsMock.mockReset()
     handleErrorMock.mockReset()
-    joinMock.mockReset()
     renameFileMock.mockReset()
     useFileStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()
@@ -459,7 +439,6 @@ describe('AssetView', () => {
     useWorkspaceStoreMock.mockReset()
 
     getFolderContentsMock.mockResolvedValue([])
-    joinMock.mockImplementation(async (...paths: string[]) => paths.filter(Boolean).join('/'))
     createFileMock.mockResolvedValue('/project/game/background/新建文件.json')
     createFolderMock.mockResolvedValue('/project/game/background/新建文件夹')
     renameFileMock.mockResolvedValue('/project/game/background/hero-renamed.png')
@@ -873,6 +852,33 @@ describe('AssetView', () => {
 
     expect(getFolderContentsMock).toHaveBeenCalledTimes(2)
     expect(getFolderContentsMock).toHaveBeenLastCalledWith('/games/demo/game/bg/chapter-1')
+  })
+
+  it('归一化后逃出当前目录的事件不会触发刷新', async () => {
+    vi.useFakeTimers()
+
+    renderInBrowser(createHarness('bg', { currentPath: 'chapter-1' }), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createContextMenuFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
+    })
+
+    emitFileSystemEvent('directory:modified', {
+      type: 'directory:modified',
+      path: '/games/demo/game/bg/chapter-1/../chapter-2',
+    })
+
+    await vi.advanceTimersByTimeAsync(100)
+    await nextTick()
+
+    expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
   })
 
   it('静默刷新覆盖普通加载后仍会正确清除 loading 状态', async () => {

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, ref } from 'vue'
 
+import { AbsPath } from '~/domain/path'
+
 import { useAssetViewItemsLoader } from '../useAssetViewItemsLoader'
 
 import type { EffectScope } from 'vue'
@@ -81,7 +83,7 @@ describe('useAssetViewItemsLoader 行为', () => {
     resolveLoad?.([
       createFileItem({
         name: 'opening.png',
-        path: '/games/demo/assets/bg/opening.png',
+        path: AbsPath.from('/games/demo/assets/bg/opening.png'),
       }),
     ])
     await flushLoaderWatchers()
@@ -89,7 +91,7 @@ describe('useAssetViewItemsLoader 行为', () => {
     expect(loader?.items.value).toEqual([
       toFileViewerItem(createFileItem({
         name: 'opening.png',
-        path: '/games/demo/assets/bg/opening.png',
+        path: AbsPath.from('/games/demo/assets/bg/opening.png'),
       })),
     ])
     expect(loader?.isLoading.value).toBe(false)

@@ -11,6 +11,7 @@ import {
 
 import type * as monaco from 'monaco-editor'
 import type { EditorHistoryMetadata, EditorHistorySnapshot } from '~/domain/document/transaction'
+import type { AbsPath } from '~/domain/path'
 import type { TextEditorHistoryAdapterHandle } from '~/features/editor/text-editor/text-editor-history-adapter'
 import type { TextEditorCursorSnapshot } from '~/features/editor/text-editor/text-editor-history-snapshot'
 import type { HistoryApplyResult, TextProjectionState } from '~/stores/editor'
@@ -22,7 +23,7 @@ export interface TextEditorContentChangeContext {
 
 export interface RestoreAfterModelSyncContext {
   capturedModel?: monaco.editor.ITextModel
-  capturedPath?: string
+  capturedPath?: AbsPath
 }
 
 interface UseTextEditorHistoryOptions {
@@ -31,10 +32,10 @@ interface UseTextEditorHistoryOptions {
   isComposing: () => boolean
   handleCompositionEnd: () => void
   handleCompositionStart: () => void
-  undoDocument: (path: string) => HistoryApplyResult
-  redoDocument: (path: string) => HistoryApplyResult
-  syncAnimationTextContentFromEditor: (path: string, content: string) => void
-  scheduleAutoSaveIfEnabled: (path: string) => void
+  undoDocument: (path: AbsPath) => HistoryApplyResult
+  redoDocument: (path: AbsPath) => HistoryApplyResult
+  syncAnimationTextContentFromEditor: (path: AbsPath, content: string) => void
+  scheduleAutoSaveIfEnabled: (path: AbsPath) => void
   syncSceneSelection: (lineNumber: number | undefined) => void
 }
 

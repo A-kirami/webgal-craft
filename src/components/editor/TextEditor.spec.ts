@@ -5,6 +5,7 @@ import { nextTick, reactive } from 'vue'
 import { createBrowserLiteI18n } from '~/__tests__/browser'
 import { renderInBrowser } from '~/__tests__/browser-render'
 import { monacoMockState, resetMonacoMockState } from '~/__tests__/mocks/monaco'
+import { AbsPath } from '~/domain/path'
 import {
   PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME,
   PLAY_TO_LINE_GLYPH_CLASS_NAME,
@@ -89,7 +90,7 @@ import type { TextProjectionState } from '~/stores/editor'
 
 interface EditorStoreMock {
   currentState?: {
-    path: string
+    path: AbsPath
     projection: 'text' | 'visual'
   }
   syncScenePreview?: ReturnType<typeof vi.fn>
@@ -97,7 +98,7 @@ interface EditorStoreMock {
 
 interface TabsStoreMock {
   activeTab?: {
-    path: string
+    path: AbsPath
   }
 }
 
@@ -112,7 +113,7 @@ function createTextState(path: string = '/project/scene-1.txt'): TextProjectionS
   return {
     isDirty: false,
     kind: 'scene',
-    path,
+    path: AbsPath.from(path),
     projection: 'text',
     textContent: 'say:hello',
     textSource: 'projection',
@@ -163,16 +164,17 @@ function createHarness(path: string = '/project/scene-1.txt') {
     minimap: true,
     wordWrap: false,
   })
+  const absPath = AbsPath.from(path)
   const editorStore = reactive<EditorStoreMock>({
     currentState: {
-      path,
+      path: absPath,
       projection: 'text',
     },
     syncScenePreview: vi.fn(),
   })
   const tabsStore = reactive<TabsStoreMock>({
     activeTab: {
-      path,
+      path: absPath,
     },
   })
 
@@ -243,11 +245,11 @@ describe('TextEditor', () => {
   it('未激活时不会立即创建编辑器，激活后才会创建', async () => {
     const { editorStore, state, tabsStore } = createHarness('/project/scene-2.txt')
     editorStore.currentState = {
-      path: '/project/other.txt',
+      path: AbsPath.from('/project/other.txt'),
       projection: 'text',
     }
     tabsStore.activeTab = {
-      path: '/project/other.txt',
+      path: AbsPath.from('/project/other.txt'),
     }
 
     renderTextEditor(state)
@@ -256,11 +258,11 @@ describe('TextEditor', () => {
     expect(monacoMockState.create).not.toHaveBeenCalled()
 
     editorStore.currentState = {
-      path: '/project/scene-2.txt',
+      path: AbsPath.from('/project/scene-2.txt'),
       projection: 'text',
     }
     tabsStore.activeTab = {
-      path: '/project/scene-2.txt',
+      path: AbsPath.from('/project/scene-2.txt'),
     }
 
     await nextTick()

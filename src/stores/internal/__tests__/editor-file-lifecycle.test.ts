@@ -1,15 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { fsCmds } from '~/commands/fs'
+import { AbsPath, RelPath } from '~/domain/path'
+import { mime } from '~/plugins/mime'
+import { gameAssetDir } from '~/services/platform/app-paths'
 import { AppError } from '~/types/errors'
 
 import { createLoadedDocumentState } from '../editor-document-state'
-import { handleFileModifiedEvent, handleFileRenamedEvent } from '../editor-file-lifecycle'
+import { handleFileModifiedEvent, handleFileRenamedEvent, loadEditorState } from '../editor-file-lifecycle'
 import { createEditableSession, syncProjectionStateFromDocument } from '../editor-session'
 
 import type { EditorFileLifecycleContext } from '../editor-file-lifecycle'
 import type { EditableEditorSession, EditorSession } from '../editor-session'
 
-const DOC_PATH = '/game/animation/sample.json'
+const DOC_PATH = AbsPath.from('/game/animation/sample.json')
 const CLEAN_CONTENT = '[{"duration":100}]'
 const DIRTY_CONTENT = '[{"duration":240}]'
 
@@ -51,7 +55,7 @@ vi.mock('~/stores/modal', () => ({
 interface ContextHarnessOptions extends Partial<EditorFileLifecycleContext> {
   autoSavePending?: boolean
   externalContent?: string
-  path?: string
+  path?: AbsPath
 }
 
 function createTextMetadata() {
@@ -201,6 +205,13 @@ async function waitUntil(
 describe('handleFileModifiedEvent 行为', () => {
   beforeEach(() => {
     modalOpenMock.mockReset()
+    vi.mocked(fsCmds.isBinaryFile).mockReset()
+    vi.mocked(fsCmds.isBinaryFile).mockResolvedValue(false)
+    vi.mocked(gameAssetDir).mockReset()
+    vi.mocked(gameAssetDir).mockImplementation((workspaceRootPath, subPath) =>
+      AbsPath.join(workspaceRootPath, RelPath.from(`game/${subPath}`)),
+    )
+    vi.mocked(mime.getType).mockReset()
   })
 
   it('外部文件内容与当前脏草稿一致时直接提升为新基线而不弹冲突对话框', async () => {
@@ -251,8 +262,8 @@ describe('handleFileModifiedEvent 行为', () => {
   })
 
   it('重命名后沿用原文件修改队列，避免同一会话并发处理', async () => {
-    const oldPath = '/game/animation/rename-old.json'
-    const newPath = '/game/animation/rename-new.json'
+    const oldPath = AbsPath.from('/game/animation/rename-old.json')
+    const newPath = AbsPath.from('/game/animation/rename-new.json')
     let resolveOldRead:
       | ((value: { ok: true, content: string, metadata: ReturnType<typeof createTextMetadata> }) => void)
       | undefined
@@ -311,5 +322,41 @@ describe('handleFileModifiedEvent 行为', () => {
 
     expect(readTextDocumentFile).toHaveBeenCalledTimes(2)
     expect(readTextDocumentFile).toHaveBeenNthCalledWith(2, newPath)
+  })
+
+  it('loadEditorState 不会把带 .. 的伪场景路径误判为 scene 文档', async () => {
+    vi.mocked(mime.getType).mockReturnValue('text/plain')
+    const targetPath = AbsPath.from('/workspace/game/scene/../notes.txt')
+    const { context } = createContextHarness({
+      getWorkspaceRootPath: () => '/workspace',
+      readTextDocumentFile: vi.fn(async () => ({
+        ok: true as const,
+        content: 'plain text',
+        metadata: createTextMetadata(),
+      })),
+    })
+
+    await loadEditorState(context, targetPath)
+
+    const session = context.getEditableSession(targetPath)
+    expect(session?.document.model.kind).toBe('plaintext')
+  })
+
+  it('loadEditorState 会在归一化后识别 animationTable.json，避免误判为 animation 文档', async () => {
+    vi.mocked(mime.getType).mockReturnValue('application/json')
+    const targetPath = AbsPath.from('/workspace/game/animation/../animation/animationTable.json')
+    const { context } = createContextHarness({
+      getWorkspaceRootPath: () => '/workspace',
+      readTextDocumentFile: vi.fn(async () => ({
+        ok: true as const,
+        content: '{"list":[]}',
+        metadata: createTextMetadata(),
+      })),
+    })
+
+    await loadEditorState(context, targetPath)
+
+    const session = context.getEditableSession(targetPath)
+    expect(session?.document.model.kind).toBe('plaintext')
   })
 })

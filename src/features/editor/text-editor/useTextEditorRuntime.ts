@@ -14,6 +14,7 @@ import { useTextEditorHistory } from './useTextEditorHistory'
 import { useTextEditorPanel } from './useTextEditorPanel'
 import { useTextEditorWorkspace } from './useTextEditorWorkspace'
 
+import type { AbsPath } from '~/domain/path'
 import type { TextProjectionState } from '~/stores/editor'
 
 interface UseTextEditorRuntimeOptions {
@@ -36,11 +37,11 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
     return options.editorRef.value
   }
 
-  function syncViewStateForSave(path: string) {
+  function syncViewStateForSave(path: AbsPath) {
     textEditorWorkspace.saveViewState(path, { persistSessionRecovery: true })
   }
 
-  let syncedModelPath = $ref<string>()
+  let syncedModelPath = $ref<AbsPath>()
 
   function focusEditor() {
     if (!readEditor()) {
@@ -315,7 +316,7 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
     textEditorHistory,
   })
 
-  function switchModel(newPath: string, oldPath: string) {
+  function switchModel(newPath: AbsPath, oldPath: AbsPath) {
     textEditorWorkspace.switchModel({
       language: currentEditorLanguage.value,
       newPath,

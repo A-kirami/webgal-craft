@@ -32,7 +32,7 @@ vi.mock('~/composables/useFileSystemEvents', () => ({
 
 vi.mock('~/features/editor/command-registry/dynamic-options', () => ({
   editorDynamicOptionSources: dynamicOptionSources,
-  normalizeGamePath: (path: string) => path.toLowerCase(),
+  resolveGameLookupKey: (path: string) => path.toLowerCase(),
 }))
 
 vi.mock('~/features/editor/dynamic-options/dynamic-options', () => ({

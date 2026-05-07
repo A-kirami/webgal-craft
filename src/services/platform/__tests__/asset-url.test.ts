@@ -86,6 +86,13 @@ describe('getAssetUrl 资源地址解析', () => {
     )
   })
 
+  it('预览地址缺少尾随斜杠时仍会复用完整的游戏路由前缀', () => {
+    expect(resolveAssetUrl('/games/demo/assets/bg/intro.png', {
+      cwd: '/games/demo',
+      previewBaseUrl: 'http://127.0.0.1:8899/game/demo',
+    })).toBe('http://127.0.0.1:8899/game/demo/assets/bg/intro.png')
+  })
+
   it('缺少预览地址时会直接抛出错误', () => {
     previewSessionStoreState.currentGameServeUrl = ''
 

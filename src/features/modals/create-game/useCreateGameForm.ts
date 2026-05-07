@@ -1,5 +1,4 @@
-import { join } from '@tauri-apps/api/path'
-import { open as openDialog } from '@tauri-apps/plugin-dialog'
+import { open } from '@tauri-apps/plugin-dialog'
 import { exists, readDir } from '@tauri-apps/plugin-fs'
 import { useForm } from 'vee-validate'
 import * as z from 'zod'
@@ -68,7 +67,6 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
       gameSavePath: storageSettingsStore.gameSavePath,
       isComposing,
       isPathManuallyChanged,
-      joinPath: join,
     })
 
     if (gamePath !== undefined) {
@@ -86,14 +84,14 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
   }
 
   async function handleSelectFolder(): Promise<void> {
-    const selected = await openDialog({
+    const selected = await open({
       title: t('modals.createGame.selectSaveLocation'),
       directory: true,
       multiple: false,
       defaultPath: storageSettingsStore.gameSavePath,
     })
 
-    if (selected) {
+    if (typeof selected === 'string') {
       isPathManuallyChanged = true
       setFieldValue('gamePath', selected, false)
     }

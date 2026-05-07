@@ -3,6 +3,7 @@ import { page } from 'vitest/browser'
 import { reactive } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
+import { AbsPath } from '~/domain/path'
 
 import EditorTabs from './EditorTabs.vue'
 
@@ -51,7 +52,7 @@ function createTabsStore(tabs: Tab[], activeTabIndex: number = 0) {
         store.activeTabIndex = store.tabs.length - 1
       }
     }),
-    findTabIndex: vi.fn((path: string) => store.tabs.findIndex(tab => tab.path === path)),
+    findTabIndex: vi.fn((path: AbsPath) => store.tabs.findIndex(tab => tab.path === path)),
     fixPreviewTab: vi.fn((index: number) => {
       if (store.tabs[index]) {
         store.tabs[index].isPreview = false
@@ -89,7 +90,7 @@ describe('EditorTabs', () => {
         isModified: true,
         isPreview: false,
         name: 'demo.txt',
-        path: '/project/demo.txt',
+        path: AbsPath.from('/project/demo.txt'),
       },
     ]))
 
@@ -112,7 +113,7 @@ describe('EditorTabs', () => {
         activeAt: 1,
         isPreview: true,
         name: 'preview.txt',
-        path: '/project/preview.txt',
+        path: AbsPath.from('/project/preview.txt'),
       },
     ])
 
@@ -135,7 +136,7 @@ describe('EditorTabs', () => {
         isModified: false,
         isPreview: false,
         name: 'plain.txt',
-        path: '/project/plain.txt',
+        path: AbsPath.from('/project/plain.txt'),
       },
     ])
 

@@ -1,3 +1,4 @@
+import { AbsPath, RelPath } from '~/domain/path'
 import { safeInvoke } from '~/utils/invoke'
 
 export type BackupSourceKind = 'manual-save' | 'auto-save' | 'restore'
@@ -17,8 +18,8 @@ export interface BackupEntry {
 }
 
 interface ScopedArgs {
-  projectPath: string
-  logicalPath: string
+  projectPath: AbsPath
+  logicalPath: RelPath
 }
 
 function createBackup(
@@ -31,26 +32,26 @@ function listBackups(args: ScopedArgs): Promise<BackupEntry[]> {
   return safeInvoke('list_backups', { ...args })
 }
 
-function readBackup(args: { projectPath: string, backupPath: string }): Promise<string> {
+function readBackup(args: { projectPath: AbsPath, backupPath: RelPath }): Promise<string> {
   return safeInvoke('read_backup', { ...args })
 }
 
 function restoreBackup(
-  args: ScopedArgs & { backupPath: string },
+  args: ScopedArgs & { backupPath: RelPath },
 ): Promise<BackupEntry | null> {
   return safeInvoke('restore_backup', { ...args })
 }
 
 function cleanupBackups(
-  args: { projectPath: string, maxVersions?: number, maxDays?: number },
+  args: { projectPath: AbsPath, maxVersions?: number, maxDays?: number },
 ): Promise<number> {
   return safeInvoke('cleanup_backups', { ...args })
 }
 
 function moveBackupHistory(args: {
-  projectPath: string
-  oldLogicalPath: string
-  newLogicalPath: string
+  projectPath: AbsPath
+  oldLogicalPath: RelPath
+  newLogicalPath: RelPath
 }): Promise<void> {
   return safeInvoke('move_backup_history', { ...args })
 }

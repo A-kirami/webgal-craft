@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { CopyMinus, FilePlus, FolderPlus, Layers, RotateCw } from '@lucide/vue'
-import { dirname } from '@tauri-apps/api/path'
 
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { AbsPath } from '~/domain/path'
 import {
   findScenePanelNodeByPath,
   loadScenePanelTreeNodes,
@@ -23,7 +23,7 @@ const fileSystemEvents = useFileSystemEvents()
 
 const scenePath = computedAsync(async () => {
   const gamePath = workspaceStore.currentGame?.path
-  return gamePath ? await gameSceneDir(gamePath) : ''
+  return gamePath ? gameSceneDir(AbsPath.from(gamePath)) : ''
 })
 
 let isLoading = $ref(false)
@@ -45,7 +45,7 @@ const items = computedAsync(async () => {
     }
     // 等待 FileStore 初始化完成，避免在 enginePath 未就绪时加载
     await initialized
-    return await loadScenePanelTreeNodes(path, currentPath => fileStore.getFolderContents(currentPath))
+    return await loadScenePanelTreeNodes(path, currentPath => fileStore.getFolderContents(AbsPath.from(currentPath)))
   } catch (error) {
     logger.error(`[ScenePanel] 获取场景文件夹内容失败: ${error instanceof Error ? error.message : error}`)
     throw error
@@ -61,7 +61,7 @@ function handleClick(item: FlattenedItem<ScenePanelTreeNode>) {
     return
   }
   const { name, path } = item.value
-  tabsStore.openTab(name, path)
+  tabsStore.openTab(name, AbsPath.from(path))
 }
 
 function handleDoubleClick(item: FlattenedItem<ScenePanelTreeNode>) {
@@ -69,7 +69,7 @@ function handleDoubleClick(item: FlattenedItem<ScenePanelTreeNode>) {
     return
   }
   const { path } = item.value
-  const index = tabsStore.findTabIndex(path)
+  const index = tabsStore.findTabIndex(AbsPath.from(path))
   const tab = tabsStore.tabs[index]
   if (tab.isPreview) {
     tabsStore.fixPreviewTab(index)
@@ -81,7 +81,7 @@ function handleAuxClick(item: FlattenedItem<ScenePanelTreeNode>) {
     return
   }
   const { name, path } = item.value
-  tabsStore.openTab(name, path, { forceNormal: true })
+  tabsStore.openTab(name, AbsPath.from(path), { forceNormal: true })
 }
 
 let selectedItem = $ref<ScenePanelTreeNode>()
@@ -140,14 +140,14 @@ watch(items, () => {
 })
 
 async function handleCreateFile() {
-  const targetPath = await resolveScenePanelTargetPath(scenePath.value, selectedItem, dirname)
+  const targetPath = await resolveScenePanelTargetPath(scenePath.value, selectedItem)
   if (targetPath) {
     fileTreeRef?.startCreating(targetPath, 'file')
   }
 }
 
 async function handleCreateFolder() {
-  const targetPath = await resolveScenePanelTargetPath(scenePath.value, selectedItem, dirname)
+  const targetPath = await resolveScenePanelTargetPath(scenePath.value, selectedItem)
   if (targetPath) {
     fileTreeRef?.startCreating(targetPath, 'folder')
   }

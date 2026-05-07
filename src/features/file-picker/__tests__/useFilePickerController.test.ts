@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, ref } from 'vue'
 
+import { AbsPath } from '~/domain/path'
 import { AppError } from '~/types/errors'
 
 import { useFilePickerController } from '../useFilePickerController'
@@ -9,19 +10,10 @@ import type { FileViewerItem } from '~/types/file-viewer'
 
 const {
   existsMock,
-  joinMock,
-  normalizeMock,
   statMock,
 } = vi.hoisted(() => ({
   existsMock: vi.fn(async () => true),
-  joinMock: vi.fn(async (...parts: string[]) => parts.join('/').replaceAll('//', '/')),
-  normalizeMock: vi.fn(async (value: string) => value.replaceAll('\\', '/')),
   statMock: vi.fn(async (path: string) => ({ isDirectory: path === '/assets' })),
-}))
-
-vi.mock('@tauri-apps/api/path', () => ({
-  join: joinMock,
-  normalize: normalizeMock,
 }))
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
@@ -47,9 +39,10 @@ function createFixture(options: ControllerFixtureOptions = {}) {
   const reopenInSelectedParent = ref(options.reopenInSelectedParent ?? false)
   const scope = effectScope()
   const readDirectory = vi.fn(async (
-    _path: string,
+    path: AbsPath,
     request: { requestId: number },
-  ): Promise<{ items: FileViewerItem[], requestId: number }> => ({
+  ): Promise<{ absolutePath: AbsPath, items: FileViewerItem[], requestId: number }> => ({
+    absolutePath: path,
     items: [],
     requestId: request.requestId,
   }))
@@ -59,7 +52,7 @@ function createFixture(options: ControllerFixtureOptions = {}) {
     await Promise.resolve()
   })
   const removeRecentHistoryPaths = vi.fn()
-  const ensurePathWithinRoot = vi.fn(async (path: string) => path)
+  const ensurePathWithinRoot = vi.fn(async (path: AbsPath) => path)
 
   const controllerOptions = {
     disabled: () => disabled.value,
@@ -100,12 +93,8 @@ describe('useFilePickerController 行为', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     existsMock.mockClear()
-    joinMock.mockClear()
-    normalizeMock.mockClear()
     statMock.mockClear()
     existsMock.mockImplementation(async () => true)
-    joinMock.mockImplementation(async (...parts: string[]) => parts.join('/').replaceAll('//', '/'))
-    normalizeMock.mockImplementation(async (value: string) => value.replaceAll('\\', '/'))
     statMock.mockImplementation(async (path: string) => ({ isDirectory: path === '/assets' }))
   })
 
@@ -159,6 +148,7 @@ describe('useFilePickerController 行为', () => {
 
     readDirectory
       .mockResolvedValueOnce({
+        absolutePath: AbsPath.from('/assets/images/bg'),
         items: [],
         requestId: 1,
       })
@@ -208,7 +198,8 @@ describe('useFilePickerController 行为', () => {
   it('路径输入前缀过滤会先于搜索框包含过滤叠加生效', async () => {
     const { controller, readDirectory, scope } = createFixture()
 
-    readDirectory.mockImplementation(async (_path: string, request: { requestId: number }) => ({
+    readDirectory.mockImplementation(async (path: AbsPath, request: { requestId: number }) => ({
+      absolutePath: path,
       items: [
         {
           isDir: false,

@@ -123,7 +123,7 @@ export function useHomeResourceImportActions<TResource extends { id: string, pat
       multiple: false,
     })
 
-    if (!path) {
+    if (typeof path !== 'string') {
       return
     }
 

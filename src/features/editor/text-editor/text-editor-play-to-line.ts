@@ -1,5 +1,6 @@
 import { resolvePlayableScenePreviewLine } from '~/features/editor/text-editor/text-editor-scene-sync'
 
+import type { AbsPath } from '~/domain/path'
 import type { TextEditorLineReader } from '~/features/editor/text-editor/text-editor-scene-sync'
 
 export const PLAY_TO_LINE_GLYPH_CLASS_NAME = 'play-to-line-glyph'
@@ -44,11 +45,11 @@ export interface TextEditorPlayToLineMouseEvent {
 interface CreateTextEditorPlayToLineControllerOptions {
   editor: TextEditorPlayToLineEditor
   getHoverMessage: () => string
-  getPath: () => string
+  getPath: () => AbsPath
   glyphMarginTargetType: number
   isEnabled: () => boolean
   isDisabled: () => boolean
-  syncScenePreview: (path: string, lineNumber: number, lineText: string, force: boolean) => void
+  syncScenePreview: (path: AbsPath, lineNumber: number, lineText: string, force: boolean) => void
 }
 
 function createPlayToLineDecoration(

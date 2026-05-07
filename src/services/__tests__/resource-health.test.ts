@@ -5,28 +5,35 @@ import {
   createWarning,
   normalizeImportPath,
 } from '~/services/resource-health'
+import { toLookupPathKey } from '~/services/resource-path/lookup'
 
 describe('resource-health', () => {
   describe('normalizeImportPath', () => {
     it('反斜杠归一化为正斜杠并去除尾部分隔符', () => {
       expect(normalizeImportPath('C:\\Games\\Demo\\')).toEqual({
         normalizedPath: 'C:/Games/Demo',
-        comparablePath: 'c:/games/demo',
+        lookupKey: 'c:/games/demo',
       })
     })
 
     it('保留正斜杠路径并产出小写比较串', () => {
       expect(normalizeImportPath('/Users/Demo/Game')).toEqual({
         normalizedPath: '/Users/Demo/Game',
-        comparablePath: '/users/demo/game',
+        lookupKey: '/users/demo/game',
       })
     })
 
     it('多余分隔符被压缩', () => {
       expect(normalizeImportPath('C:\\\\Games//Demo\\')).toEqual({
         normalizedPath: 'C:/Games/Demo',
-        comparablePath: 'c:/games/demo',
+        lookupKey: 'c:/games/demo',
       })
+    })
+
+    it('lookup key 由专用业务层 API 表达大小写折叠语义', () => {
+      const normalized = normalizeImportPath('C:\\Games\\Demo\\')
+
+      expect(normalized.lookupKey).toBe(toLookupPathKey(normalized.normalizedPath))
     })
   })
 

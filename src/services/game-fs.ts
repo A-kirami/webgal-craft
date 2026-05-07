@@ -1,7 +1,7 @@
-import { join } from '@tauri-apps/api/path'
 import { mkdir, writeFile as writeBinaryFile, writeTextFile } from '@tauri-apps/plugin-fs'
 
 import { fsCmds } from '~/commands/fs'
+import { AbsPath } from '~/domain/path'
 import {
   commitPendingFileWrite,
   registerPendingFileWrite,
@@ -9,21 +9,21 @@ import {
 } from '~/services/file-write-echo-registry'
 import { gameManager } from '~/services/game-manager'
 import { useFileStore } from '~/stores/file'
-import { buildUniqueEntryName } from '~/utils/path'
+import { buildUniqueEntryName } from '~/utils/entry-name'
 
-async function resolveWritablePath(path: string): Promise<string> {
+async function resolveWritablePath(path: AbsPath): Promise<AbsPath> {
   const fileStore = useFileStore()
   return fileStore.isVfs
     ? fileStore.ensureWritable(path)
     : path
 }
 
-async function writeFile(path: string, content: string): Promise<void> {
+async function writeFile(path: AbsPath, content: string): Promise<void> {
   await writeTextFile(await resolveWritablePath(path), content)
   gameManager.updateCurrentGameLastModified()
 }
 
-async function writeDocumentFile(path: string, content: Uint8Array): Promise<void> {
+async function writeDocumentFile(path: AbsPath, content: Uint8Array): Promise<void> {
   const writablePath = await resolveWritablePath(path)
   const pendingWrite = registerPendingFileWrite(writablePath, content)
 
@@ -38,7 +38,7 @@ async function writeDocumentFile(path: string, content: Uint8Array): Promise<voi
   gameManager.updateCurrentGameLastModified()
 }
 
-async function renameFile(oldPath: string, newName: string): Promise<string> {
+async function renameFile(oldPath: AbsPath, newName: string): Promise<AbsPath> {
   const fileStore = useFileStore()
   if (fileStore.isVfs) {
     const renamedPath = await fileStore.renameEntry(oldPath, newName)
@@ -53,7 +53,7 @@ async function renameFile(oldPath: string, newName: string): Promise<string> {
   return result
 }
 
-async function deleteFile(path: string, permanent?: boolean): Promise<void> {
+async function deleteFile(path: AbsPath, permanent?: boolean): Promise<void> {
   const fileStore = useFileStore()
   if (fileStore.isVfs && await fileStore.deleteEntry(path)) {
     gameManager.updateCurrentGameLastModified()
@@ -65,10 +65,10 @@ async function deleteFile(path: string, permanent?: boolean): Promise<void> {
 }
 
 async function resolveVfsCreatePath(
-  targetPath: string,
+  targetPath: AbsPath,
   entryName: string,
   isDir: boolean,
-): Promise<string> {
+): Promise<AbsPath> {
   const fileStore = useFileStore()
   const existingItems = await fileStore.getFolderContents(targetPath)
   const uniqueName = buildUniqueEntryName(
@@ -76,10 +76,10 @@ async function resolveVfsCreatePath(
     isDir,
     new Set(existingItems.map(item => item.name)),
   )
-  return fileStore.ensureWritable(await join(targetPath, uniqueName))
+  return fileStore.ensureWritable(AbsPath.append(targetPath, uniqueName))
 }
 
-async function createFile(targetPath: string, fileName: string): Promise<string> {
+async function createFile(targetPath: AbsPath, fileName: string): Promise<AbsPath> {
   const fileStore = useFileStore()
   if (!fileStore.isVfs) {
     const result = await fsCmds.createFile(targetPath, fileName)
@@ -93,7 +93,7 @@ async function createFile(targetPath: string, fileName: string): Promise<string>
   return writablePath
 }
 
-async function createFolder(targetPath: string, folderName: string): Promise<string> {
+async function createFolder(targetPath: AbsPath, folderName: string): Promise<AbsPath> {
   const fileStore = useFileStore()
   if (!fileStore.isVfs) {
     const result = await fsCmds.createFolder(targetPath, folderName)
@@ -107,7 +107,7 @@ async function createFolder(targetPath: string, folderName: string): Promise<str
   return writablePath
 }
 
-async function copyFile(sourcePath: string, targetPath: string): Promise<string> {
+async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath> {
   const fileStore = useFileStore()
   if (fileStore.isVfs) {
     const copiedPath = await fileStore.copyEntry(sourcePath, targetPath)
@@ -120,12 +120,13 @@ async function copyFile(sourcePath: string, targetPath: string): Promise<string>
   const resolvedSourcePath = fileStore.isVfs
     ? await fileStore.resolveFilePath(sourcePath)
     : sourcePath
-  const result = await fsCmds.copyFile(resolvedSourcePath, targetPath)
+  const writableTargetPath = await resolveWritablePath(targetPath)
+  const result = await fsCmds.copyFile(resolvedSourcePath, writableTargetPath)
   gameManager.updateCurrentGameLastModified()
   return result
 }
 
-async function moveFile(sourcePath: string, targetPath: string): Promise<string> {
+async function moveFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath> {
   const fileStore = useFileStore()
   if (!fileStore.isVfs) {
     const result = await fsCmds.moveFile(sourcePath, targetPath)
@@ -140,7 +141,8 @@ async function moveFile(sourcePath: string, targetPath: string): Promise<string>
   }
 
   const resolvedSourcePath = await fileStore.resolveFilePath(sourcePath)
-  const result = await fsCmds.copyFile(resolvedSourcePath, targetPath)
+  const writableTargetPath = await resolveWritablePath(targetPath)
+  const result = await fsCmds.copyFile(resolvedSourcePath, writableTargetPath)
   await fileStore.deleteEntry(sourcePath)
   gameManager.updateCurrentGameLastModified()
   return result

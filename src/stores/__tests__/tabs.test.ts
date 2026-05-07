@@ -1,16 +1,17 @@
 import '~/__tests__/setup'
 
+import { createPinia, setActivePinia } from 'pinia'
+import { createPersistedState } from 'pinia-plugin-persistedstate'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { reactive } from 'vue'
+import { createApp, reactive } from 'vue'
 
+import { AbsPath } from '~/domain/path'
 import { useTabsStore } from '~/stores/tabs'
 
 const {
-  basenameMock,
   useEditSettingsStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
-  basenameMock: vi.fn(async (input: string) => input.split('/').at(-1) ?? input),
   useEditSettingsStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
 }))
@@ -22,9 +23,19 @@ const editSettingsStoreState = reactive({
   enablePreviewTab: true,
 })
 
-vi.mock('@tauri-apps/api/path', () => ({
-  basename: basenameMock,
-}))
+function createMemoryStorage(seed: Record<string, string> = {}) {
+  const state = new Map(Object.entries(seed))
+  return {
+    getItem(key: string) {
+      // persistedstate 约定未命中时返回 null，这里显式兼容其接口
+      // eslint-disable-next-line unicorn/no-null
+      return state.get(key) ?? null
+    },
+    setItem(key: string, value: string) {
+      state.set(key, value)
+    },
+  }
+}
 
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
@@ -50,7 +61,6 @@ describe('标签状态仓库', () => {
     vi.useRealTimers()
     useWorkspaceStoreMock.mockReset()
     useEditSettingsStoreMock.mockReset()
-    basenameMock.mockClear()
     eventHandlers.clear()
     workspaceStoreState.currentGame = { id: 'game-1' }
     editSettingsStoreState.enablePreviewTab = true
@@ -61,8 +71,8 @@ describe('标签状态仓库', () => {
   it('预览标签页只保留一个，并在再次打开时替换当前预览项', () => {
     const store = useTabsStore()
 
-    store.openTab('scene-1.txt', '/game/scene-1.txt')
-    store.openTab('scene-2.txt', '/game/scene-2.txt')
+    store.openTab('scene-1.txt', AbsPath.from('/game/scene-1.txt'))
+    store.openTab('scene-2.txt', AbsPath.from('/game/scene-2.txt'))
 
     expect(store.tabs).toEqual([
       expect.objectContaining({
@@ -79,9 +89,9 @@ describe('标签状态仓库', () => {
 
     editSettingsStoreState.enablePreviewTab = false
 
-    store.openTab('a.txt', '/game/a.txt')
-    store.openTab('b.txt', '/game/b.txt')
-    store.openTab('a.txt', '/game/a.txt')
+    store.openTab('a.txt', AbsPath.from('/game/a.txt'))
+    store.openTab('b.txt', AbsPath.from('/game/b.txt'))
+    store.openTab('a.txt', AbsPath.from('/game/a.txt'))
 
     expect(store.tabs.map(tab => tab.path)).toEqual(['/game/a.txt', '/game/b.txt'])
     expect(store.activeTab?.path).toBe('/game/a.txt')
@@ -90,14 +100,14 @@ describe('标签状态仓库', () => {
   it('fixPreviewTab 与 updateTabModified 都会把预览标签转为普通标签', () => {
     const store = useTabsStore()
 
-    store.openTab('preview.txt', '/game/preview.txt')
+    store.openTab('preview.txt', AbsPath.from('/game/preview.txt'))
     expect(store.tabs[0]?.isPreview).toBe(true)
 
     store.fixPreviewTab(0)
     expect(store.tabs[0]?.isPreview).toBe(false)
     expect(store.shouldFocusEditor).toBe(true)
 
-    store.openTab('next.txt', '/game/next.txt')
+    store.openTab('next.txt', AbsPath.from('/game/next.txt'))
     expect(store.tabs[1]?.isPreview).toBe(true)
 
     store.updateTabModified(1, true)
@@ -110,10 +120,10 @@ describe('标签状态仓库', () => {
   it('强制以普通标签重新打开已存在的预览标签时会将其固化', () => {
     const store = useTabsStore()
 
-    store.openTab('preview.txt', '/game/preview.txt')
+    store.openTab('preview.txt', AbsPath.from('/game/preview.txt'))
     expect(store.tabs[0]?.isPreview).toBe(true)
 
-    store.openTab('preview.txt', '/game/preview.txt', { forceNormal: true })
+    store.openTab('preview.txt', AbsPath.from('/game/preview.txt'), { forceNormal: true })
 
     expect(store.tabs).toHaveLength(1)
     expect(store.tabs[0]).toMatchObject({
@@ -131,9 +141,9 @@ describe('标签状态仓库', () => {
 
     editSettingsStoreState.enablePreviewTab = false
 
-    store.openTab('a.txt', '/game/a.txt')
+    store.openTab('a.txt', AbsPath.from('/game/a.txt'))
     vi.setSystemTime(new Date('2026-03-18T00:00:01.000Z'))
-    store.openTab('b.txt', '/game/b.txt')
+    store.openTab('b.txt', AbsPath.from('/game/b.txt'))
     vi.setSystemTime(new Date('2026-03-18T00:00:02.000Z'))
     store.activateTab(0)
 
@@ -148,10 +158,10 @@ describe('标签状态仓库', () => {
 
     editSettingsStoreState.enablePreviewTab = false
 
-    store.openTab('scene.txt', '/game/scene.txt')
+    store.openTab('scene.txt', AbsPath.from('/game/scene.txt'))
     store.updateTabModified(0, true)
     store.closeTab(0)
-    store.openTab('scene.txt', '/game/scene.txt')
+    store.openTab('scene.txt', AbsPath.from('/game/scene.txt'))
 
     expect(store.tabs[0]).toMatchObject({
       path: '/game/scene.txt',
@@ -166,8 +176,8 @@ describe('标签状态仓库', () => {
     const store = useTabsStore()
 
     editSettingsStoreState.enablePreviewTab = false
-    store.openTab('scene.txt', '/game/scene.txt')
-    store.openTab('image.png', '/game/image.png')
+    store.openTab('scene.txt', AbsPath.from('/game/scene.txt'))
+    store.openTab('image.png', AbsPath.from('/game/image.png'))
 
     await eventHandlers.get('file:renamed')?.({
       oldPath: '/game/scene.txt',
@@ -186,7 +196,7 @@ describe('标签状态仓库', () => {
     const store = useTabsStore()
 
     editSettingsStoreState.enablePreviewTab = false
-    store.openTab('scene.txt', '/game/scene.txt')
+    store.openTab('scene.txt', AbsPath.from('/game/scene.txt'))
     store.updateTabModified(0, true)
     store.updateTabLoading(0, true)
     store.updateTabError(0, 'rename pending')
@@ -196,8 +206,8 @@ describe('标签状态仓库', () => {
       newPath: '/game/scene-renamed.txt',
     })
 
-    expect(store.findTabIndex('/game/scene.txt')).toBe(-1)
-    expect(store.findTabIndex('/game/scene-renamed.txt')).toBe(0)
+    expect(store.findTabIndex(AbsPath.from('/game/scene.txt'))).toBe(-1)
+    expect(store.findTabIndex(AbsPath.from('/game/scene-renamed.txt'))).toBe(0)
     expect(store.tabs[0]).toMatchObject({
       path: '/game/scene-renamed.txt',
       name: 'scene-renamed.txt',
@@ -212,8 +222,8 @@ describe('标签状态仓库', () => {
 
     editSettingsStoreState.enablePreviewTab = false
 
-    store.openTab('start.txt', 'X:/games/demo/game/scene/start.txt')
-    store.openTab('start.txt', String.raw`X:\games\demo\game\scene\start.txt`)
+    store.openTab('start.txt', AbsPath.from('X:/games/demo/game/scene/start.txt'))
+    store.openTab('start.txt', AbsPath.from(String.raw`X:\games\demo\game\scene\start.txt`))
 
     expect(store.tabs.map(tab => tab.path)).toEqual(['X:/games/demo/game/scene/start.txt'])
     expect(store.activeTab?.path).toBe('X:/games/demo/game/scene/start.txt')
@@ -222,13 +232,44 @@ describe('标签状态仓库', () => {
   it('预览模式下用反斜杠重新打开当前预览标签时不会再插入新标签', () => {
     const store = useTabsStore()
 
-    store.openTab('start.txt', 'X:/games/demo/game/scene/start.txt')
-    store.openTab('start.txt', String.raw`X:\games\demo\game\scene\start.txt`)
+    store.openTab('start.txt', AbsPath.from('X:/games/demo/game/scene/start.txt'))
+    store.openTab('start.txt', AbsPath.from(String.raw`X:\games\demo\game\scene\start.txt`))
 
     expect(store.tabs).toHaveLength(1)
     expect(store.tabs[0]).toMatchObject({
       path: 'X:/games/demo/game/scene/start.txt',
       isPreview: true,
     })
+  })
+
+  it('持久化恢复时会把旧的反斜杠绝对路径重新规范化', () => {
+    const pinia = createPinia()
+    pinia.use(createPersistedState({
+      storage: createMemoryStorage({
+        tabs: JSON.stringify({
+          projectTabsMap: {
+            'game-1': {
+              activeTabIndex: 0,
+              tabs: [
+                {
+                  name: 'start.txt',
+                  path: String.raw`x:\games\demo\game\scene\start.txt`,
+                  activeAt: 1,
+                  isPreview: false,
+                },
+              ],
+            },
+          },
+        }),
+      }),
+    }))
+    createApp({}).use(pinia)
+    setActivePinia(pinia)
+
+    const store = useTabsStore()
+
+    expect(store.tabs).toHaveLength(1)
+    expect(store.tabs[0]?.path).toBe('X:/games/demo/game/scene/start.txt')
+    expect(store.findTabIndex(AbsPath.from(String.raw`X:\games\demo\game\scene\start.txt`))).toBe(0)
   })
 })

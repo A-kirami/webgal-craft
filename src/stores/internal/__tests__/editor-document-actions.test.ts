@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 
 import { createDocumentModel } from '~/domain/document/document-model'
+import { AbsPath } from '~/domain/path'
 
 import {
   applyAnimationFrameInsert,
@@ -19,7 +20,7 @@ import type { TextProjectionState } from '../editor-session'
 import type { SceneSelectionState } from '~/domain/document/scene-selection'
 import type { AnimationFrame } from '~/domain/stage/types'
 
-const DOC_PATH = '/game/docs/document.txt'
+const DOC_PATH = AbsPath.from('/game/docs/document.txt')
 
 const { loggerWarnMock } = vi.hoisted(() => ({
   loggerWarnMock: vi.fn(),
@@ -83,7 +84,7 @@ function createActionHarness() {
 }
 
 function createAnimationActionHarness() {
-  const animationPath = '/game/animation/document.json'
+  const animationPath = AbsPath.from('/game/animation/document.json')
   const document: DocumentState = createDocumentState(createDocumentModel({
     kind: 'animation',
     content: '[{"duration":100}]',
@@ -122,7 +123,7 @@ function createAnimationActionHarness() {
 }
 
 function createSceneActionHarness() {
-  const scenePath = '/game/scene/document.txt'
+  const scenePath = AbsPath.from('/game/scene/document.txt')
   const document: DocumentState = createDocumentState(createDocumentModel({
     kind: 'scene',
     content: 'alpha\nbeta\ngamma',

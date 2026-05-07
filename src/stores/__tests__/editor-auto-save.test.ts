@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { AbsPath } from '~/domain/path'
+
 import { canExecuteEditorAutoSave, createEditorAutoSaveController } from '../editor-auto-save'
 
 function createDeferred<T>() {
@@ -41,17 +43,17 @@ describe('编辑器自动保存', () => {
 
     vi.useFakeTimers()
     try {
-      controller.schedule('/game/docs/example.txt')
-      controller.schedule('/game/docs/example.txt')
+      controller.schedule(AbsPath.from('/game/docs/example.txt'))
+      controller.schedule(AbsPath.from('/game/docs/example.txt'))
 
-      expect(controller.hasPending('/game/docs/example.txt')).toBe(true)
+      expect(controller.hasPending(AbsPath.from('/game/docs/example.txt'))).toBe(true)
 
       await vi.advanceTimersByTimeAsync(499)
       expect(saveDocument).not.toHaveBeenCalled()
 
       await vi.advanceTimersByTimeAsync(1)
       expect(saveDocument).toHaveBeenCalledTimes(1)
-      expect(controller.hasPending('/game/docs/example.txt')).toBe(false)
+      expect(controller.hasPending(AbsPath.from('/game/docs/example.txt'))).toBe(false)
     } finally {
       vi.useRealTimers()
     }
@@ -65,7 +67,7 @@ describe('编辑器自动保存', () => {
     })
     const controller = createEditorAutoSaveController({
       debounceMs: 500,
-      getState: path => path === '/cancelled'
+      getState: path => path === AbsPath.from('/cancelled')
         ? {
             isDirty: true,
             projection: 'text',
@@ -80,12 +82,12 @@ describe('编辑器自动保存', () => {
 
     vi.useFakeTimers()
     try {
-      controller.schedule('/cancelled')
-      controller.cancel('/cancelled')
+      controller.schedule(AbsPath.from('/cancelled'))
+      controller.cancel(AbsPath.from('/cancelled'))
       await vi.advanceTimersByTimeAsync(500)
       expect(saveDocument).not.toHaveBeenCalled()
 
-      controller.schedule('/game/scene.txt')
+      controller.schedule(AbsPath.from('/game/scene.txt'))
       await vi.advanceTimersByTimeAsync(500)
       expect(handleSaveError).toHaveBeenCalledWith(saveError)
     } finally {
@@ -111,11 +113,11 @@ describe('编辑器自动保存', () => {
 
     vi.useFakeTimers()
     try {
-      controller.schedule('/game/scene.txt')
+      controller.schedule(AbsPath.from('/game/scene.txt'))
       await vi.advanceTimersByTimeAsync(500)
       expect(saveDocument).toHaveBeenCalledTimes(1)
 
-      controller.schedule('/game/scene.txt')
+      controller.schedule(AbsPath.from('/game/scene.txt'))
       await vi.advanceTimersByTimeAsync(500)
       expect(saveDocument).toHaveBeenCalledTimes(1)
 
@@ -127,7 +129,7 @@ describe('编辑器自动保存', () => {
 
       secondSave.resolve()
       await vi.waitFor(() => {
-        expect(controller.hasPending('/game/scene.txt')).toBe(false)
+        expect(controller.hasPending(AbsPath.from('/game/scene.txt'))).toBe(false)
       })
     } finally {
       vi.useRealTimers()

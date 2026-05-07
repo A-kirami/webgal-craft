@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { toResourcePathKey } from '~/services/resource-health'
+import { AbsPath } from '~/domain/path'
+import { toLookupPathKey } from '~/services/resource-path/lookup'
 
 const {
   classifyEngineMock,
@@ -9,7 +10,6 @@ const {
   existsMock,
   getEnginePreviewAssetsMock,
   getTemplateMetadataMock,
-  joinMock,
   modalOpenMock,
   readDirMock,
   resolveHomeTabDefinitionMock,
@@ -22,16 +22,15 @@ const {
   validateTemplateMock,
 } = vi.hoisted(() => ({
   classifyEngineMock: vi.fn(),
-  gameIdentityKeyOfMock: vi.fn((resource: { path: string }) => toResourcePathKey(resource)),
+  gameIdentityKeyOfMock: vi.fn((resource: { path: string }) => toLookupPathKey(AbsPath.from(resource.path))),
   engineIdentityKeyOfMock: vi.fn((resource: { path: string, engineId?: string, version?: string }) =>
     resource.engineId && resource.version
       ? `${resource.engineId}:${resource.version}`
-      : toResourcePathKey(resource),
+      : toLookupPathKey(AbsPath.from(resource.path)),
   ),
   existsMock: vi.fn(),
   getEnginePreviewAssetsMock: vi.fn(),
   getTemplateMetadataMock: vi.fn(),
-  joinMock: vi.fn(async (...parts: string[]) => parts.join('/').replaceAll('//', '/')),
   modalOpenMock: vi.fn(),
   readDirMock: vi.fn(),
   resolveHomeTabDefinitionMock: vi.fn(),
@@ -42,10 +41,6 @@ const {
   useWorkspaceStoreMock: vi.fn(),
   validateEngineMock: vi.fn(),
   validateTemplateMock: vi.fn(),
-}))
-
-vi.mock('@tauri-apps/api/path', () => ({
-  join: joinMock,
 }))
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
@@ -136,7 +131,6 @@ describe('useDiscoverResources', () => {
     existsMock.mockReset()
     getEnginePreviewAssetsMock.mockReset()
     getTemplateMetadataMock.mockReset()
-    joinMock.mockClear()
     modalOpenMock.mockReset()
     readDirMock.mockReset()
     resolveHomeTabDefinitionMock.mockReset()
@@ -216,6 +210,38 @@ describe('useDiscoverResources', () => {
     }))
     expect(classifyEngineMock).toHaveBeenCalledWith('/engines/WebGAL/4.5.0')
     expect(classifyEngineMock).toHaveBeenCalledWith('/engines/WebGAL/legacy')
+  })
+
+  it('会把 Windows 风格扫描目录归一化后再发现模板', async () => {
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'templates' })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'templates' })
+    useStorageSettingsStoreMock.mockReturnValue({
+      engineSavePath: '/engines',
+      templateSavePath: 'C:\\Templates\\',
+    })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case 'C:\\Templates\\':
+        case 'C:/Templates': {
+          return [{ isDirectory: true, name: 'modern' }]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+    validateTemplateMock.mockResolvedValue(true)
+    getTemplateMetadataMock.mockResolvedValue({
+      name: 'Modern Template',
+    })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    expect(validateTemplateMock).toHaveBeenCalledWith('C:/Templates/modern')
+    expect(getTemplateMetadataMock).toHaveBeenCalledWith('C:/Templates/modern')
   })
 
   it('会发现有效模板目录并使用模板元数据名称展示', async () => {
@@ -417,7 +443,7 @@ describe('useDiscoverResources', () => {
         {
           id: 'game-1',
           path: '/Games/Demo',
-          pathKey: '/games/demo',
+          pathLookupKey: '/games/demo',
           createdAt: 0,
           lastModified: 0,
           status: 'created',

@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
-import { createTauriPathModuleMock } from '~/__tests__/mocks/tauri-path'
 
 const {
   fileSystemEventHandlers,
@@ -20,8 +19,6 @@ const {
   useWorkspaceStoreMock: vi.fn(),
 }))
 
-vi.mock('@tauri-apps/api/path', () => createTauriPathModuleMock())
-
 vi.mock('@tauri-apps/plugin-log', () => ({
   debug: vi.fn(),
   error: vi.fn(),
@@ -36,13 +33,13 @@ vi.mock('~/services/platform/app-paths', () => ({
   defaultTemplateSavePath: vi.fn(),
   engineIconPath: vi.fn(),
   engineTemplateDir: vi.fn(),
-  gameAssetDir: vi.fn(async (gamePath: string, assetType: string) => `${gamePath}/game/${assetType}`),
-  gameConfigPath: vi.fn(async (gamePath: string) => `${gamePath}/game/config.txt`),
-  gameCoverPath: vi.fn(async (gamePath: string, fileName: string) => `${gamePath}/game/background/${fileName}`),
-  gameIconPath: vi.fn(async (gamePath: string) => `${gamePath}/icons/favicon.ico`),
-  gameRootDir: vi.fn(async (gamePath: string) => `${gamePath}/game`),
+  gameAssetDir: vi.fn((gamePath: string, assetType: string) => `${gamePath}/game/${assetType}`),
+  gameConfigPath: vi.fn((gamePath: string) => `${gamePath}/game/config.txt`),
+  gameCoverPath: vi.fn((gamePath: string, fileName: string) => `${gamePath}/game/background/${fileName}`),
+  gameIconPath: vi.fn((gamePath: string) => `${gamePath}/icons/favicon.ico`),
+  gameRootDir: vi.fn((gamePath: string) => `${gamePath}/game`),
   gameSceneDir: gameSceneDirMock,
-  projectConfigPath: vi.fn(async (gamePath: string) => `${gamePath}/project.wgcp`),
+  projectConfigPath: vi.fn((gamePath: string) => `${gamePath}/project.wgcp`),
   templateManifestPath: vi.fn(),
 }))
 
@@ -187,7 +184,7 @@ describe('ScenePanel', () => {
       }
     })
 
-    gameSceneDirMock.mockResolvedValue('/games/demo/game/scene')
+    gameSceneDirMock.mockReturnValue('/games/demo/game/scene')
     useFileStoreMock.mockReturnValue(createFileStore())
     useTabsStoreMock.mockReturnValue(reactive({
       activeTab: undefined,

@@ -1,6 +1,7 @@
 import { effectScope } from 'vue'
 
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { AbsPath, RelPath } from '~/domain/path'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import {
@@ -19,7 +20,7 @@ const DIRECTORY_REBUILD_DEBOUNCE_MS = 200
 
 interface ResourceCatalogState {
   status: ResourceCatalogStatus
-  gamePath?: string
+  gamePath?: AbsPath
   snapshot: ReturnType<typeof createEmptyAssetCatalogSnapshot>
   dirty: boolean
 }
@@ -47,7 +48,7 @@ function clearPendingDirectoryRebuild(): void {
   }
 }
 
-function scheduleDirectoryRebuild(gamePath: string): void {
+function scheduleDirectoryRebuild(gamePath: AbsPath): void {
   clearPendingDirectoryRebuild()
   pendingDirectoryRebuildTimer = setTimeout(() => {
     pendingDirectoryRebuildTimer = undefined
@@ -69,7 +70,7 @@ function clearCatalogState(): void {
   })
 }
 
-async function rebuildCatalog(gamePath: string): Promise<void> {
+async function rebuildCatalog(gamePath: AbsPath): Promise<void> {
   const currentBuildVersion = ++buildVersion
 
   setCatalogState({
@@ -151,14 +152,18 @@ function bindResourceCatalogBootstrap(): void {
           clearCatalogState()
           return
         }
-        void rebuildCatalog(gamePath)
+        void rebuildCatalog(AbsPath.from(gamePath))
       },
       { immediate: true },
     )
 
     fileSystemEvents.on('file:created', (event) => {
       const gamePath = resourceCatalogState.value.gamePath
-      if (!gamePath || !isPathWithinGameRoot(gamePath, event.path)) {
+      if (!gamePath) {
+        return
+      }
+
+      if (!isPathWithinGameRoot(gamePath, event.path)) {
         return
       }
 
@@ -167,7 +172,11 @@ function bindResourceCatalogBootstrap(): void {
 
     fileSystemEvents.on('file:removed', (event) => {
       const gamePath = resourceCatalogState.value.gamePath
-      if (!gamePath || !isPathWithinGameRoot(gamePath, event.path)) {
+      if (!gamePath) {
+        return
+      }
+
+      if (!isPathWithinGameRoot(gamePath, event.path)) {
         return
       }
 
@@ -179,6 +188,7 @@ function bindResourceCatalogBootstrap(): void {
       if (!gamePath) {
         return
       }
+
       if (!isPathWithinGameRoot(gamePath, event.oldPath) && !isPathWithinGameRoot(gamePath, event.newPath)) {
         return
       }
@@ -191,9 +201,13 @@ function bindResourceCatalogBootstrap(): void {
       ))
     })
 
-    const rebuildOnDirectoryChange = (path: string) => {
+    const rebuildOnDirectoryChange = (path: AbsPath) => {
       const gamePath = resourceCatalogState.value.gamePath
-      if (!gamePath || !isPathWithinGameRoot(gamePath, path)) {
+      if (!gamePath) {
+        return
+      }
+
+      if (!isPathWithinGameRoot(gamePath, path)) {
         return
       }
       scheduleDirectoryRebuild(gamePath)
@@ -206,6 +220,7 @@ function bindResourceCatalogBootstrap(): void {
       if (!gamePath) {
         return
       }
+
       if (!isPathWithinGameRoot(gamePath, event.oldPath) && !isPathWithinGameRoot(gamePath, event.newPath)) {
         return
       }
@@ -236,7 +251,7 @@ export function useResourceCatalogBootstrap() {
 export function useResourceCatalog() {
   return {
     status: computed(() => resourceCatalogState.value.status),
-    hasAsset(assetType: string, relativePath: string): boolean {
+    hasAsset(assetType: string, relativePath: RelPath): boolean {
       return hasAssetInCatalog(resourceCatalogState.value.snapshot, assetType, relativePath)
     },
   }

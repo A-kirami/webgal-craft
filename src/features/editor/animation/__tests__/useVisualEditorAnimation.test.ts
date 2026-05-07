@@ -1,16 +1,18 @@
 import { describe, expect, it, vi } from 'vitest'
 import { effectScope, reactive } from 'vue'
 
+import { AbsPath } from '~/domain/path'
+
 import { useVisualEditorAnimation } from '../useVisualEditorAnimation'
 
 import type { AnimationFrame } from '~/domain/stage/types'
 
 interface VisualAnimationState {
   frames: AnimationFrame[]
-  path: string
+  path: AbsPath
 }
 
-function createState(path: string, frames: AnimationFrame[] = [{ duration: 200 }]): VisualAnimationState {
+function createState(path: AbsPath, frames: AnimationFrame[] = [{ duration: 200 }]): VisualAnimationState {
   return reactive({
     frames,
     path,
@@ -19,11 +21,11 @@ function createState(path: string, frames: AnimationFrame[] = [{ duration: 200 }
 
 function createFixture(options: {
   frames?: AnimationFrame[]
-  path?: string
+  path?: AbsPath
   redoApplied?: boolean
   undoApplied?: boolean
 } = {}) {
-  const state = createState(options.path ?? '/game/animation/opening.json', options.frames)
+  const state = createState(options.path ?? AbsPath.from('/game/animation/opening.json'), options.frames)
   const scope = effectScope()
   const applyAnimationFrameDelete = vi.fn()
   const applyAnimationFrameInsert = vi.fn()
