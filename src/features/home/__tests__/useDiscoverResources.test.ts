@@ -22,11 +22,11 @@ const {
   validateTemplateMock,
 } = vi.hoisted(() => ({
   classifyEngineMock: vi.fn(),
-  gameIdentityKeyOfMock: vi.fn((resource: { path: string }) => toLookupPathKey(AbsPath.from(resource.path))),
-  engineIdentityKeyOfMock: vi.fn((resource: { path: string, engineId?: string, version?: string }) =>
+  gameIdentityKeyOfMock: vi.fn((resource: { path: AbsPath }) => toLookupPathKey(resource.path)),
+  engineIdentityKeyOfMock: vi.fn((resource: { path: AbsPath, engineId?: string, version?: string }) =>
     resource.engineId && resource.version
       ? `${resource.engineId}:${resource.version}`
-      : toLookupPathKey(AbsPath.from(resource.path)),
+      : toLookupPathKey(resource.path),
   ),
   existsMock: vi.fn(),
   getEnginePreviewAssetsMock: vi.fn(),
