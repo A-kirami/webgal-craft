@@ -84,7 +84,7 @@ async function createFile(targetPath: AbsPath, fileName: string): Promise<AbsPat
   if (!fileStore.isVfs) {
     const result = await fsCmds.createFile(targetPath, fileName)
     gameManager.updateCurrentGameLastModified()
-    return AbsPath.from(result)
+    return result
   }
 
   const writablePath = await resolveVfsCreatePath(targetPath, fileName, false)
@@ -98,7 +98,7 @@ async function createFolder(targetPath: AbsPath, folderName: string): Promise<Ab
   if (!fileStore.isVfs) {
     const result = await fsCmds.createFolder(targetPath, folderName)
     gameManager.updateCurrentGameLastModified()
-    return AbsPath.from(result)
+    return result
   }
 
   const writablePath = await resolveVfsCreatePath(targetPath, folderName, true)
@@ -122,7 +122,7 @@ async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
     : sourcePath
   const result = await fsCmds.copyFile(resolvedSourcePath, targetPath)
   gameManager.updateCurrentGameLastModified()
-  return AbsPath.from(result)
+  return result
 }
 
 async function moveFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath> {
@@ -130,7 +130,7 @@ async function moveFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
   if (!fileStore.isVfs) {
     const result = await fsCmds.moveFile(sourcePath, targetPath)
     gameManager.updateCurrentGameLastModified()
-    return AbsPath.from(result)
+    return result
   }
 
   const movedPath = await fileStore.moveEntry(sourcePath, targetPath)
@@ -143,7 +143,7 @@ async function moveFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
   const result = await fsCmds.copyFile(resolvedSourcePath, targetPath)
   await fileStore.deleteEntry(sourcePath)
   gameManager.updateCurrentGameLastModified()
-  return AbsPath.from(result)
+  return result
 }
 
 export const gameFs = {
