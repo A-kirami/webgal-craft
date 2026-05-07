@@ -9,6 +9,7 @@ import { shouldRestoreTextEditorFocus } from '~/features/editor/text-editor/text
 import { useEditorViewStateStore } from '~/stores/editor-view-state'
 import { useTabsStore } from '~/stores/tabs'
 
+import type { AbsPath } from '~/domain/path'
 import type { TextEditorWorkspaceFileState } from '~/features/editor/text-editor/text-editor-workspace-focus'
 
 interface FileWorkspaceState extends TextEditorWorkspaceFileState {
@@ -22,8 +23,8 @@ interface RestoreViewStateContext {
 
 interface SwitchModelOptions {
   language: string
-  newPath: string
-  oldPath: string
+  newPath: AbsPath
+  oldPath: AbsPath
   value: string
 }
 
@@ -32,7 +33,7 @@ interface UseTextEditorWorkspaceOptions {
   focusEditor: () => void
   initializeSceneSelectionFromRestoredCursor: () => void
   isCurrentTabPreview: () => boolean
-  shouldPersistPersistentViewState: (path: string) => boolean
+  shouldPersistPersistentViewState: (path: AbsPath) => boolean
 }
 
 const MAX_CACHED_MODELS = 50
@@ -42,8 +43,8 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
   const viewStateStore = useEditorViewStateStore()
   const fileSystemEvents = useFileSystemEvents()
 
-  const fileStates = new Map<string, FileWorkspaceState>()
-  const modelAccessCache = new LRUCache<string, boolean>({
+  const fileStates = new Map<AbsPath, FileWorkspaceState>()
+  const modelAccessCache = new LRUCache<AbsPath, boolean>({
     max: MAX_CACHED_MODELS,
     dispose: (_value, path) => {
       const uri = monaco.Uri.parse(path)
@@ -100,8 +101,8 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
     return options.editorRef.value
   }
 
-  function readCurrentEditorPath(): string | undefined {
-    return resolveTextEditorWorkspacePath({
+  function readCurrentEditorPath(): AbsPath | undefined {
+    return resolveTextEditorWorkspacePath<AbsPath>({
       activeTabPath: tabsStore.activeTab?.path,
       modelUri: readEditor()?.getModel()?.uri.toString(),
       openTabPaths: tabsStore.tabs.map(tab => tab.path),
@@ -118,7 +119,7 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
     saveViewState(path, { persistSessionRecovery: true })
   }
 
-  function getOrCreateFileState(path: string): FileWorkspaceState {
+  function getOrCreateFileState(path: AbsPath): FileWorkspaceState {
     let fileState = fileStates.get(path)
     if (!fileState) {
       fileState = {}
@@ -127,7 +128,7 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
     return fileState
   }
 
-  function ensureModel(value: string, language: string, path: string): monaco.editor.ITextModel {
+  function ensureModel(value: string, language: string, path: AbsPath): monaco.editor.ITextModel {
     const uri = monaco.Uri.parse(path)
     let model = monaco.editor.getModel(uri)
 
@@ -148,7 +149,7 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
   }
 
   function saveViewState(
-    path: string,
+    path: AbsPath,
     options_: {
       persistSessionRecovery?: boolean
     } = {},
@@ -189,7 +190,7 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
     persistViewState(currentViewState)
   }
 
-  function restoreViewState(path: string, context: RestoreViewStateContext = {}) {
+  function restoreViewState(path: AbsPath, context: RestoreViewStateContext = {}) {
     const editor = readEditor()
     if (!editor) {
       return
@@ -237,11 +238,11 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
     }
   }
 
-  function markFileInteracted(path: string) {
+  function markFileInteracted(path: AbsPath) {
     getOrCreateFileState(path).hasUserInteracted = true
   }
 
-  function markFileOpened(path: string) {
+  function markFileOpened(path: AbsPath) {
     if (!options.isCurrentTabPreview()) {
       getOrCreateFileState(path).hasBeenOpened = true
     }

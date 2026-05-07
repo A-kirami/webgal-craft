@@ -1,8 +1,8 @@
-export interface ResolveTextEditorWorkspacePathOptions {
-  activeTabPath?: string
+export interface ResolveTextEditorWorkspacePathOptions<TPath extends string = string> {
+  activeTabPath?: TPath
   modelUri?: string
-  openTabPaths: Iterable<string>
-  trackedPaths: Iterable<string>
+  openTabPaths: Iterable<TPath>
+  trackedPaths: Iterable<TPath>
 }
 
 export function toTextEditorWorkspacePath(modelUri: string | undefined): string | undefined {
@@ -21,10 +21,10 @@ export function isTextEditorModelPath(modelUri: string | undefined, path: string
   return toTextEditorWorkspacePath(modelUri) === path
 }
 
-function findTextEditorWorkspacePath(
+function findTextEditorWorkspacePath<TPath extends string>(
   workspacePath: string | undefined,
-  candidatePaths: Iterable<string>,
-): string | undefined {
+  candidatePaths: Iterable<TPath>,
+): TPath | undefined {
   if (!workspacePath) {
     return
   }
@@ -36,12 +36,12 @@ function findTextEditorWorkspacePath(
   }
 }
 
-export function resolveTextEditorWorkspacePath(
-  options: ResolveTextEditorWorkspacePathOptions,
-): string | undefined {
+export function resolveTextEditorWorkspacePath<TPath extends string>(
+  options: ResolveTextEditorWorkspacePathOptions<TPath>,
+): TPath | undefined {
   const workspacePath = toTextEditorWorkspacePath(options.modelUri)
 
-  if (options.activeTabPath === workspacePath) {
+  if (options.activeTabPath !== undefined && options.activeTabPath === workspacePath) {
     return options.activeTabPath
   }
 
