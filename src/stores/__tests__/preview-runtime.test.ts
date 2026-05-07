@@ -2,6 +2,7 @@ import '~/__tests__/setup'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { AbsPath } from '~/domain/path'
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 
 const {
@@ -37,12 +38,12 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
 
     expect('ensureServer' in store).toBe(false)
     expect('serverUrl' in store).toBe(false)
-    expect(store.getServeUrl('/games/alpha')).toBeUndefined()
+    expect(store.getServeUrl(AbsPath.from('/games/alpha'))).toBeUndefined()
 
-    await expect(store.ensureServeUrl({ projectPath: '/games/alpha' })).resolves.toBe(
+    await expect(store.ensureServeUrl({ projectPath: AbsPath.from('/games/alpha') })).resolves.toBe(
       'http://127.0.0.1:8899/game/game-alpha/',
     )
-    await expect(store.ensureServeUrl({ projectPath: '/games/alpha' })).resolves.toBe(
+    await expect(store.ensureServeUrl({ projectPath: AbsPath.from('/games/alpha') })).resolves.toBe(
       'http://127.0.0.1:8899/game/game-alpha/',
     )
 
@@ -50,7 +51,7 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     expect(startServerMock).toHaveBeenCalledWith('127.0.0.1', 8899)
     expect(addStaticSiteMock).toHaveBeenCalledTimes(1)
     expect(addStaticSiteMock).toHaveBeenCalledWith({ projectPath: '/games/alpha' })
-    expect(store.getServeUrl('/games/alpha')).toBe('http://127.0.0.1:8899/game/game-alpha/')
+    expect(store.getServeUrl(AbsPath.from('/games/alpha'))).toBe('http://127.0.0.1:8899/game/game-alpha/')
   })
 
   it('ensureServeUrl 并发调用同一路径时只会启动一次服务器并注册一次站点', async () => {
@@ -59,22 +60,22 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     const store = usePreviewRuntimeStore()
 
     const [firstUrl, secondUrl] = await Promise.all([
-      store.ensureServeUrl({ projectPath: '/games/alpha' }),
-      store.ensureServeUrl({ projectPath: '/games/alpha' }),
+      store.ensureServeUrl({ projectPath: AbsPath.from('/games/alpha') }),
+      store.ensureServeUrl({ projectPath: AbsPath.from('/games/alpha') }),
     ])
 
     expect(firstUrl).toBe('http://127.0.0.1:8899/game/game-alpha/')
     expect(secondUrl).toBe('http://127.0.0.1:8899/game/game-alpha/')
     expect(startServerMock).toHaveBeenCalledTimes(1)
     expect(addStaticSiteMock).toHaveBeenCalledTimes(1)
-    expect(store.getServeUrl('/games/alpha')).toBe('http://127.0.0.1:8899/game/game-alpha/')
+    expect(store.getServeUrl(AbsPath.from('/games/alpha'))).toBe('http://127.0.0.1:8899/game/game-alpha/')
   })
 
   it('ensureServeUrl 在服务器启动失败时会记录日志并返回 undefined', async () => {
     startServerMock.mockRejectedValue(new Error('occupied'))
     const store = usePreviewRuntimeStore()
 
-    await expect(store.ensureServeUrl({ projectPath: '/games/alpha' })).resolves.toBeUndefined()
+    await expect(store.ensureServeUrl({ projectPath: AbsPath.from('/games/alpha') })).resolves.toBeUndefined()
 
     expect(loggerErrorMock).toHaveBeenCalledWith('服务器启动失败: Error: occupied')
   })
@@ -84,7 +85,7 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     addStaticSiteMock.mockRejectedValue(new Error('register failed'))
     const store = usePreviewRuntimeStore()
 
-    await expect(store.ensureServeUrl({ projectPath: '/games/alpha' })).resolves.toBeUndefined()
+    await expect(store.ensureServeUrl({ projectPath: AbsPath.from('/games/alpha') })).resolves.toBeUndefined()
 
     expect(loggerErrorMock).toHaveBeenCalledWith(
       '注册静态站点失败: /games/alpha - Error: register failed',
@@ -99,8 +100,8 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     const store = usePreviewRuntimeStore()
 
     await store.ensureServeUrls([
-      { projectPath: '/games/alpha' },
-      { projectPath: '/engines/beta' },
+      { projectPath: AbsPath.from('/games/alpha') },
+      { projectPath: AbsPath.from('/engines/beta') },
     ])
 
     expect(loggerErrorMock).toHaveBeenCalledWith(
@@ -108,16 +109,15 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     )
   })
 
-  it('ensureServeUrls 会过滤空路径，并按原始路径字符串去重', async () => {
+  it('ensureServeUrls 会按原始路径字符串去重', async () => {
     startServerMock.mockResolvedValue('http://127.0.0.1:8899/')
     addStaticSiteMock.mockResolvedValue('game-alpha')
     const store = usePreviewRuntimeStore()
 
     await store.ensureServeUrls([
-      { projectPath: '' },
-      { projectPath: '/games/alpha ' },
-      { projectPath: '/games/alpha ' },
-      { projectPath: '/games/alpha' },
+      { projectPath: AbsPath.from('/games/alpha ') },
+      { projectPath: AbsPath.from('/games/alpha ') },
+      { projectPath: AbsPath.from('/games/alpha') },
     ])
 
     expect(startServerMock).toHaveBeenCalledTimes(1)
@@ -130,11 +130,11 @@ describe('previewRuntimeStore 预览运行时状态仓库', () => {
     startServerMock.mockResolvedValue('http://127.0.0.1:8899/')
     addStaticSiteMock.mockResolvedValue('game-alpha')
     const store = usePreviewRuntimeStore()
-    const serveUrl = computed(() => store.getServeUrl('/games/alpha'))
+    const serveUrl = computed(() => store.getServeUrl(AbsPath.from('/games/alpha')))
 
     expect(serveUrl.value).toBeUndefined()
 
-    await store.ensureServeUrls([{ projectPath: '/games/alpha' }])
+    await store.ensureServeUrls([{ projectPath: AbsPath.from('/games/alpha') }])
 
     expect(serveUrl.value).toBe('http://127.0.0.1:8899/game/game-alpha/')
   })

@@ -3,6 +3,7 @@ import '~/__tests__/setup'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestEngine, createTestGame, createTestTemplate } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 import { useResourceStore } from '~/stores/resource'
 
 import type { Engine, Game, Template } from '~/database/model'
@@ -40,7 +41,7 @@ vi.mock('~/stores/workspace', () => ({
 function createGame(id: string, name: string, lastModified: number): Game {
   return createTestGame({
     id,
-    path: `/games/${id}`,
+    path: AbsPath.from(`/games/${id}`),
     lastModified,
     metadata: {
       name,
@@ -51,7 +52,7 @@ function createGame(id: string, name: string, lastModified: number): Game {
 function createEngine(id: string, name: string, createdAt: number): Engine {
   return createTestEngine({
     id,
-    path: `/engines/${id}`,
+    path: AbsPath.from(`/engines/${id}`),
     createdAt,
     name,
     metadata: {
@@ -64,7 +65,7 @@ function createEngine(id: string, name: string, createdAt: number): Engine {
 function createTemplate(id: string, name: string, createdAt: number, webgalVersion?: string): Template {
   return createTestTemplate({
     id,
-    path: `/templates/${id}`,
+    path: AbsPath.from(`/templates/${id}`),
     createdAt,
     metadata: {
       name,
@@ -138,7 +139,7 @@ describe('资源状态仓库', () => {
         id: 'webgal-481',
         engineId: 'open-webgal.webgal',
         name: 'WebGAL',
-        path: '/engines/WebGAL/4.8.1',
+        path: AbsPath.from('/engines/WebGAL/4.8.1'),
         version: '4.8.1',
         metadata: {
           description: '',
@@ -149,7 +150,7 @@ describe('资源状态仓库', () => {
         id: 'webgal-482',
         engineId: 'open-webgal.webgal',
         name: 'WebGAL',
-        path: '/engines/WebGAL/4.8.2',
+        path: AbsPath.from('/engines/WebGAL/4.8.2'),
         version: '4.8.2',
         status: 'created',
         metadata: {
@@ -161,7 +162,7 @@ describe('资源状态仓库', () => {
         id: 'webgal-unavailable',
         engineId: 'broken-publisher.broken',
         name: 'Broken',
-        path: '/engines/Broken/1.0.0',
+        path: AbsPath.from('/engines/Broken/1.0.0'),
         version: '1.0.0',
         availability: 'broken',
         metadata: {
@@ -209,7 +210,7 @@ describe('资源状态仓库', () => {
         id: 'webgal-created',
         engineId: 'open-webgal.webgal',
         name: 'WebGAL',
-        path: '/engines/WebGAL/4.8.2',
+        path: AbsPath.from('/engines/WebGAL/4.8.2'),
         version: '4.8.2',
         status: 'created',
         metadata: {
@@ -221,7 +222,7 @@ describe('资源状态仓库', () => {
         id: 'webgal-creating',
         engineId: 'open-webgal.webgal',
         name: 'WebGAL',
-        path: '/engines/WebGAL/4.8.3',
+        path: AbsPath.from('/engines/WebGAL/4.8.3'),
         version: '4.8.3',
         status: 'creating',
         metadata: {
@@ -233,7 +234,7 @@ describe('资源状态仓库', () => {
         id: 'webgal-unavailable',
         engineId: 'open-webgal.webgal',
         name: 'WebGAL',
-        path: '/engines/WebGAL/4.8.1',
+        path: AbsPath.from('/engines/WebGAL/4.8.1'),
         version: '4.8.1',
         availability: 'broken',
         metadata: {

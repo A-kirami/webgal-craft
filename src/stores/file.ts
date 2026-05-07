@@ -144,7 +144,7 @@ export const useFileStore = defineStore('file', () => {
   }
 
   function getCurrentProjectPath(): AbsPath | undefined {
-    return workspaceStore.currentGame?.path ? AbsPath.from(workspaceStore.currentGame.path) : projectPath
+    return workspaceStore.currentGame?.path ?? projectPath
   }
 
   function getCurrentTemplatePath(): AbsPath | undefined {
@@ -947,19 +947,19 @@ export const useFileStore = defineStore('file', () => {
     }
 
     try {
-      projectPath = workspaceStore.currentGame?.path ? AbsPath.from(workspaceStore.currentGame.path) : undefined
+      projectPath = workspaceStore.currentGame?.path
       const configPath = projectPath ? projectConfigPath(projectPath) : undefined
       const hasProjectConfig = configPath ? await exists(configPath) : false
       if (hasProjectConfig && workspaceStore.currentGame) {
         try {
           const site = await gameManager.resolvePreviewSite(workspaceStore.currentGame)
-          enginePath = site.enginePath ? AbsPath.from(site.enginePath) : undefined
-          templatePath = site.templatePath ? AbsPath.from(site.templatePath) : undefined
+          enginePath = site.enginePath
+          templatePath = site.templatePath
         } catch (error) {
           const msg = error instanceof Error ? error.message : String(error)
           void logger.warn(`[FileStore] 解析项目站点失败，回退仅引擎路径: ${msg}`)
           const fallbackEnginePath = await gameManager.getGameEnginePath(workspaceStore.currentGame)
-          enginePath = fallbackEnginePath ? AbsPath.from(fallbackEnginePath) : undefined
+          enginePath = fallbackEnginePath
           templatePath = undefined
         }
       } else {

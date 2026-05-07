@@ -4,6 +4,7 @@ import { useForm } from 'vee-validate'
 import * as z from 'zod'
 
 import { db } from '~/database/db'
+import { AbsPath } from '~/domain/path'
 import {
   resolveCreateGamePathSuggestion,
 } from '~/features/modals/create-game/create-game-modal'
@@ -138,7 +139,7 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
     options.open.value = false
 
     try {
-      const gameId = await gameManager.createGame(gameName, gamePath, gameEngine, {
+      const gameId = await gameManager.createGame(gameName, AbsPath.from(gamePath), gameEngine, {
         templateBinding: gameTemplate,
       })
       options.onSuccess?.(gameId)

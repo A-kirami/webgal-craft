@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { AbsPath } from '~/domain/path'
 import { configManager } from '~/services/config-manager'
 
 const {
@@ -38,7 +39,7 @@ describe('configManager 配置管理', () => {
   })
 
   it('setConfig 会写入配置、刷新已注册游戏快照并触发当前预览重载', async () => {
-    await configManager.setConfig('/game', {
+    await configManager.setConfig(AbsPath.from('/game'), {
       entries: [
         {
           key: 'Game_name',

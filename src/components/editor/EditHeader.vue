@@ -3,7 +3,6 @@ import { ArrowLeft, Download, Loader2, MonitorPlay, Pencil, Play, Settings } fro
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 
 import { windowCmds } from '~/commands/window'
-import { AbsPath } from '~/domain/path'
 import { parseGameConfigFormValues } from '~/features/modals/game-config/game-config-form'
 import { configManager } from '~/services/config-manager'
 import { gameAssetDir } from '~/services/platform/app-paths'
@@ -87,8 +86,8 @@ async function handleOpenGameConfig() {
   try {
     const [config, backgroundRootPath, bgmRootPath] = await Promise.all([
       configManager.getConfig(gamePath),
-      gameAssetDir(AbsPath.from(gamePath), 'background'),
-      gameAssetDir(AbsPath.from(gamePath), 'bgm'),
+      gameAssetDir(gamePath, 'background'),
+      gameAssetDir(gamePath, 'bgm'),
     ])
 
     if (workspaceStore.currentGame?.path !== gamePath) {

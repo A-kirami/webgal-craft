@@ -7,6 +7,7 @@ import {
   renderInBrowser,
 } from '~/__tests__/browser-render'
 import { createTestEngine } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 
 import EnginesTabCollectionSection from './EnginesTabCollectionSection.vue'
 
@@ -46,7 +47,7 @@ function createGroups(): EngineGroupCollectionItem[] {
   const stable = createTestEngine({
     id: 'engine-2',
     name: 'WebGAL',
-    path: '/engines/WebGAL/4.5.0',
+    path: AbsPath.from('/engines/WebGAL/4.5.0'),
     version: '4.5.0',
   })
 
@@ -63,7 +64,7 @@ function createGroups(): EngineGroupCollectionItem[] {
           engine: createTestEngine({
             id: 'engine-1',
             name: 'WebGAL',
-            path: '/engines/WebGAL/4.4.0',
+            path: AbsPath.from('/engines/WebGAL/4.4.0'),
             availability: 'broken',
             version: '4.4.0',
           }),

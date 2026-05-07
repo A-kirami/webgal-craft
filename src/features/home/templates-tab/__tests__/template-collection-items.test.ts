@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { createTestEngine } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 
 import { buildTemplateCollectionItems } from '../template-collection-items'
 
@@ -9,13 +10,13 @@ describe('buildTemplateCollectionItems', () => {
     const stableEngine = createTestEngine({
       id: 'webgal-stable',
       name: 'WebGAL',
-      path: '/engines/WebGAL/4.8.2',
+      path: AbsPath.from('/engines/WebGAL/4.8.2'),
       version: '4.8.2',
     })
     const legacyEngine = createTestEngine({
       id: 'webgal-legacy',
       name: 'WebGAL',
-      path: '/engines/WebGAL/4.8.1',
+      path: AbsPath.from('/engines/WebGAL/4.8.1'),
       version: '4.8.1',
     })
 
@@ -32,7 +33,7 @@ describe('buildTemplateCollectionItems', () => {
               kind: 'standalone',
               templateId: 'template-1',
               name: 'Modern Template',
-              path: '/templates/modern',
+              path: AbsPath.from('/templates/modern'),
               createdAt: 1,
               availability: 'available',
             },
@@ -48,8 +49,8 @@ describe('buildTemplateCollectionItems', () => {
               engineId: 'webgal-stable',
               engineName: 'WebGAL',
               engineVersion: '4.8.2',
-              enginePath: '/engines/WebGAL/4.8.2',
-              templatePath: '/engines/WebGAL/4.8.2/game/template',
+              enginePath: AbsPath.from('/engines/WebGAL/4.8.2'),
+              templatePath: AbsPath.from('/engines/WebGAL/4.8.2/game/template'),
               createdAt: 2,
             },
             {
@@ -57,8 +58,8 @@ describe('buildTemplateCollectionItems', () => {
               engineId: 'webgal-legacy',
               engineName: 'WebGAL',
               engineVersion: '4.8.1',
-              enginePath: '/engines/WebGAL/4.8.1',
-              templatePath: '/engines/WebGAL/4.8.1/game/template',
+              enginePath: AbsPath.from('/engines/WebGAL/4.8.1'),
+              templatePath: AbsPath.from('/engines/WebGAL/4.8.1/game/template'),
               createdAt: 1,
             },
           ],
@@ -101,8 +102,8 @@ describe('buildTemplateCollectionItems', () => {
               engineId: 'missing-engine',
               engineName: 'WebGAL',
               engineVersion: '4.8.2',
-              enginePath: '/engines/WebGAL/4.8.2',
-              templatePath: '/engines/WebGAL/4.8.2/game/template',
+              enginePath: AbsPath.from('/engines/WebGAL/4.8.2'),
+              templatePath: AbsPath.from('/engines/WebGAL/4.8.2/game/template'),
               createdAt: 2,
             },
           ],

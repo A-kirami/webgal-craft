@@ -1,7 +1,8 @@
+import type { AbsPath } from '~/domain/path'
 import type { StaticSiteConfig } from '~/types/server'
 
 export interface DiscoveredResource {
-  path: string
+  path: AbsPath
   name: string
   icon?: string
   previewSite?: StaticSiteConfig

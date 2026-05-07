@@ -14,12 +14,13 @@ import { useModalStore } from '~/stores/modal'
 import { handleError } from '~/utils/error-handler'
 
 import type { Game } from '~/database/model'
+import type { AbsPath } from '~/domain/path'
 import type { GameConfigFormValues } from '~/features/modals/game-config/game-config-form'
 
 interface Props {
-  backgroundRootPath: string
-  bgmRootPath: string
-  gamePath: string
+  backgroundRootPath: AbsPath
+  bgmRootPath: AbsPath
+  gamePath: AbsPath
   initialValues: GameConfigFormValues
   serveUrl?: string
   unmanagedLineCount: number

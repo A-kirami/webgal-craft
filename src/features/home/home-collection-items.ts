@@ -1,4 +1,5 @@
 import type { Engine, Game } from '~/database/model'
+import type { AbsPath } from '~/domain/path'
 import type { TemplateGroupViewModel } from '~/features/home/templates-tab/template-groups'
 
 export interface GameCollectionItem {
@@ -14,7 +15,7 @@ export interface EngineCollectionItem {
 
 export function toEngineCollectionItem(
   engine: Engine,
-  resolveServeUrl: (path: string) => string | undefined,
+  resolveServeUrl: (path: AbsPath) => string | undefined,
 ): EngineCollectionItem {
   return {
     engine,

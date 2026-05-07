@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 
 import { serverCmds } from '~/commands/server'
 
+import type { AbsPath } from '~/domain/path'
 import type { StaticSiteConfig } from '~/types/server'
 
 interface RegisteredSite {
@@ -59,7 +60,7 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
     }
   }
 
-  function getServeUrl(path: string): string | undefined {
+  function getServeUrl(path: AbsPath): string | undefined {
     if (!path) {
       return undefined
     }

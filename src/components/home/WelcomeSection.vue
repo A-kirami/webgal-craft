@@ -2,6 +2,7 @@
 import { FolderOpen, Plus } from '@lucide/vue'
 import { open } from '@tauri-apps/plugin-dialog'
 
+import { AbsPath } from '~/domain/path'
 import { resolveHomeResourceImportNotification } from '~/features/home/shared/home-resource-import'
 import {
   HomeResourceImportMessages,
@@ -74,7 +75,7 @@ async function selectGameFolder() {
   }
 
   try {
-    const gameId = await gameManager.importGame(path, { selectEngine: requestEngineSelection })
+    const gameId = await gameManager.importGame(AbsPath.from(path), { selectEngine: requestEngineSelection })
     router.push(`/edit/${gameId}`)
   } catch (error: unknown) {
     logger.error(`导入游戏时发生错误: ${error}`)

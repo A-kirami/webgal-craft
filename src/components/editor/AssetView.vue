@@ -137,7 +137,7 @@ const assetBasePath = $computed(() => {
     return ''
   }
 
-  return AbsPath.join(AbsPath.from(workspaceStore.currentGame.path), RelPath.from(`game/${assetType}`))
+  return AbsPath.join(workspaceStore.currentGame.path, RelPath.from(`game/${assetType}`))
 })
 
 const currentDirectoryPath = $computed(() => {

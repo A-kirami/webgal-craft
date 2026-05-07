@@ -3,6 +3,7 @@ import { page } from 'vitest/browser'
 import { defineComponent, h, ref } from 'vue'
 
 import { createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
+import { AbsPath } from '~/domain/path'
 
 import GameLogoPicker from './GameLogoPicker.vue'
 
@@ -117,8 +118,8 @@ const GameLogoPickerHarness = defineComponent({
     return () => h('div', [
       h(GameLogoPicker, {
         'modelValue': value.value,
-        'gamePath': '/games/demo',
-        'backgroundRootPath': '/games/demo/game/background',
+        'gamePath': AbsPath.from('/games/demo'),
+        'backgroundRootPath': AbsPath.from('/games/demo/game/background'),
         'serveUrl': 'http://127.0.0.1:8899/game/demo/',
         'onUpdate:modelValue': (nextValue: string[]) => {
           value.value = nextValue

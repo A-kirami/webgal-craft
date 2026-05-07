@@ -428,7 +428,7 @@ describe('useDiscoverResources', () => {
       cover: { path: 'game/background/cover.png' },
     })
     vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
-      projectPath: '/games/demo',
+      projectPath: AbsPath.from('/games/demo'),
     })
     resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'games' })
     useWorkspaceStoreMock.mockReturnValue({ activeTab: 'games' })

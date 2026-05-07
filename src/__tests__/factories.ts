@@ -1,3 +1,4 @@
+import { AbsPath } from '~/domain/path'
 import { normalizeImportPath } from '~/services/resource-health'
 
 import type { Engine, Game, Template } from '~/database/model'
@@ -25,7 +26,7 @@ export function createTestGame(options: TestGameFactoryOptions = {}): Game {
     previewAssets,
     ...rest
   } = options
-  const resolvedGamePath = path ?? '/games/demo'
+  const resolvedGamePath = path ?? AbsPath.from('/games/demo')
   const {
     cover: rawCover,
     icon: rawIcon,
@@ -68,7 +69,7 @@ export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine
     previewAssets,
     ...rest
   } = options
-  const resolvedEnginePath = path ?? '/engines/default'
+  const resolvedEnginePath = path ?? AbsPath.from('/engines/default')
   const { icon: rawIcon } = previewAssets ?? {}
   const { path: iconPath, ...icon } = rawIcon ?? {}
   const defaultName = options.name ?? 'Default Engine'
@@ -102,7 +103,7 @@ export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine
 export function createTestTemplate(options: Partial<Template> = {}): Template {
   return {
     id: 'template-1',
-    path: '/templates/default',
+    path: AbsPath.from('/templates/default'),
     createdAt: 0,
     status: 'created',
     availability: 'available',

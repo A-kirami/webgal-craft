@@ -3,6 +3,7 @@ import { TriangleAlert } from '@lucide/vue'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { openPath } from '@tauri-apps/plugin-opener'
 
+import { AbsPath } from '~/domain/path'
 import { gameManager } from '~/services/game-manager'
 import { resourceReconcile } from '~/services/resource-reconcile'
 import { useEditorViewStateStore } from '~/stores/editor-view-state'
@@ -62,7 +63,7 @@ async function handleRelink() {
 
   isRelinking = true
   try {
-    const updated = await gameManager.relinkGame(props.game.id, selected)
+    const updated = await gameManager.relinkGame(props.game.id, AbsPath.from(selected))
     // 重链接后旧路径绑定的标签页与编辑器视图状态需要清掉，避免污染新工作区
     tabsStore.clearProjectState(updated.id)
     editorViewStateStore.clearProjectStates(updated.id)

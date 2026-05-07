@@ -2,7 +2,6 @@ import { projectConfigCmds } from '~/commands/project-config'
 import { serverCmds } from '~/commands/server'
 import { vfsCmds } from '~/commands/vfs'
 import { db } from '~/database/db'
-import { AbsPath } from '~/domain/path'
 import { gameManager } from '~/services/game-manager'
 import { templateSwitch } from '~/services/template-switch'
 import { usePreviewSessionStore } from '~/stores/preview-session'
@@ -131,9 +130,8 @@ async function switchEngine(
     // 步骤 5：模板清理（仅 discard 分支）。
     // 该步骤不可逆，必须排在所有可回滚步骤之后；前面任何步骤失败都不应触及用户的模板上层。
     if (templateDecision === 'discard') {
-      const gameAbsPath = AbsPath.from(game.path)
       noRollbackAfterDiscard = true
-      await vfsCmds.cleanTemplateUpper(gameAbsPath)
+      await vfsCmds.cleanTemplateUpper(game.path)
     }
     step = 5
 

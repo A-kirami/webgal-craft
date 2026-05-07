@@ -1,5 +1,7 @@
+import type { AbsPath } from '~/domain/path'
+
 export interface StaticSiteConfig {
-  projectPath: string
-  enginePath?: string
-  templatePath?: string
+  projectPath: AbsPath
+  enginePath?: AbsPath
+  templatePath?: AbsPath
 }

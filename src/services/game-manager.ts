@@ -107,11 +107,10 @@ function buildGamePreviewAssets(iconPath: string, titleImage: string | undefined
   }
 }
 
-async function resolveGameIconPreviewPath(gamePath: string): Promise<GamePreviewLookupResult> {
-  const absoluteGamePath = AbsPath.from(gamePath)
+async function resolveGameIconPreviewPath(gamePath: AbsPath): Promise<GamePreviewLookupResult> {
   const candidateChecks = await Promise.all(
     GAME_ICON_PREVIEW_CANDIDATES.map(async (relativePath) => {
-      const targetPath = AbsPath.join(absoluteGamePath, RelPath.from(relativePath))
+      const targetPath = AbsPath.join(gamePath, RelPath.from(relativePath))
       return {
         relativePath,
         iconExists: await exists(targetPath),
@@ -133,11 +132,11 @@ async function resolveGameIconPreviewPath(gamePath: string): Promise<GamePreview
   }
 }
 
-async function validateGame(gamePath: string): Promise<boolean> {
-  return exists(gameConfigPath(AbsPath.from(gamePath)))
+async function validateGame(gamePath: AbsPath): Promise<boolean> {
+  return exists(gameConfigPath(gamePath))
 }
 
-async function getGameMetadata(gamePath: string): Promise<GameMetadata> {
+async function getGameMetadata(gamePath: AbsPath): Promise<GameMetadata> {
   const gameConfig = await gameCmds.getGameConfig(gamePath)
 
   return {
@@ -162,7 +161,7 @@ function withGamePreviewCacheVersion(
   }
 }
 
-async function getGamePreviewAssets(gamePath: string): Promise<GamePreviewAssets> {
+async function getGamePreviewAssets(gamePath: AbsPath): Promise<GamePreviewAssets> {
   const [metadata, iconLookup] = await Promise.all([
     getGameMetadata(gamePath),
     resolveGameIconPreviewPath(gamePath),
@@ -170,7 +169,7 @@ async function getGamePreviewAssets(gamePath: string): Promise<GamePreviewAssets
   return buildGamePreviewAssets(iconLookup.iconPath, metadata.titleImg)
 }
 
-async function getGameSnapshot(gamePath: string): Promise<Pick<Game, 'metadata' | 'previewAssets'>> {
+async function getGameSnapshot(gamePath: AbsPath): Promise<Pick<Game, 'metadata' | 'previewAssets'>> {
   const [metadata, iconLookup] = await Promise.all([
     getGameMetadata(gamePath),
     resolveGameIconPreviewPath(gamePath),
@@ -204,8 +203,8 @@ function applyCurrentGamePatch(
   }
 }
 
-async function refreshRegisteredGameSnapshot(gamePath: string): Promise<void> {
-  const game = await db.games.where('pathLookupKey').equals(toLookupPathKey(AbsPath.from(gamePath))).first()
+async function refreshRegisteredGameSnapshot(gamePath: AbsPath): Promise<void> {
+  const game = await db.games.where('pathLookupKey').equals(toLookupPathKey(gamePath)).first()
   if (!game) {
     return
   }
@@ -224,7 +223,7 @@ async function refreshRegisteredGameSnapshot(gamePath: string): Promise<void> {
 }
 
 async function registerGame(
-  gamePath: string,
+  gamePath: AbsPath,
   options: RegisterGameOptions = {},
 ): Promise<string> {
   const { engineId, status = 'created' } = options
@@ -242,7 +241,7 @@ async function registerGame(
   return db.games.add({
     id: crypto.randomUUID(),
     path: gamePath,
-    pathLookupKey: toLookupPathKey(AbsPath.from(gamePath)),
+    pathLookupKey: toLookupPathKey(gamePath),
     engineId,
     createdAt: Date.now(),
     lastModified: Date.now(),
@@ -264,11 +263,11 @@ function canAutoBindMatchedEngine(engine: Engine): boolean {
   return engine.status === 'created'
 }
 
-async function writeSelfContainedProjectConfig(gamePath: string): Promise<void> {
+async function writeSelfContainedProjectConfig(gamePath: AbsPath): Promise<void> {
   await projectConfigCmds.writeProjectConfig(gamePath, { version: 1 })
 }
 
-async function readProjectConfigSafe(gamePath: string): Promise<ProjectConfig | undefined> {
+async function readProjectConfigSafe(gamePath: AbsPath): Promise<ProjectConfig | undefined> {
   try {
     return await projectConfigCmds.readProjectConfig(gamePath)
   } catch (error) {
@@ -329,11 +328,11 @@ async function resolveSelectableEngine(
 }
 
 async function importLegacyGame(
-  gamePath: string,
+  gamePath: AbsPath,
   options: ImportGameOptions,
   inspection: GameInspectionPayload,
 ): Promise<string> {
-  const hasIndexHtml = await exists(AbsPath.join(AbsPath.from(gamePath), RelPath.from('index.html')))
+  const hasIndexHtml = await exists(AbsPath.join(gamePath, RelPath.from('index.html')))
 
   if (hasIndexHtml) {
     await writeSelfContainedProjectConfig(gamePath)
@@ -350,7 +349,7 @@ async function importLegacyGame(
 }
 
 async function importConfiguredGame(
-  gamePath: string,
+  gamePath: AbsPath,
   options: ImportGameOptions,
   inspection: GameInspectionPayload,
 ): Promise<string> {
@@ -364,7 +363,7 @@ async function importConfiguredGame(
       throw error
     }
 
-    if (await exists(AbsPath.join(AbsPath.from(gamePath), RelPath.from('index.html')))) {
+    if (await exists(AbsPath.join(gamePath, RelPath.from('index.html')))) {
       logger.warn(`project.wgcp 解析失败，但检测到自带引擎，按自带引擎项目导入: ${gamePath}`)
       await writeSelfContainedProjectConfig(gamePath)
       return await registerGame(gamePath, { ...inspection })
@@ -377,7 +376,7 @@ async function importConfiguredGame(
 
   // 无引擎配置：自带引擎项目 或 让用户选择引擎
   if (!config.engine) {
-    if (await exists(AbsPath.join(AbsPath.from(gamePath), RelPath.from('index.html')))) {
+    if (await exists(AbsPath.join(gamePath, RelPath.from('index.html')))) {
       return registerGame(gamePath, { ...inspection })
     }
 
@@ -399,7 +398,7 @@ async function importConfiguredGame(
 
 /** 让用户选择引擎，写入配置并注册游戏 */
 async function bindSelectedEngine(
-  gamePath: string,
+  gamePath: AbsPath,
   config: ProjectConfig,
   options: ImportGameOptions,
   inspection: GameInspectionPayload,
@@ -418,7 +417,7 @@ interface CreateGameOptions {
   templateBinding?: TemplateBinding
 }
 
-async function createGame(gameName: string, gamePath: string, engineId: string, options: CreateGameOptions = {}): Promise<string> {
+async function createGame(gameName: string, gamePath: AbsPath, engineId: string, options: CreateGameOptions = {}): Promise<string> {
   const resourceStore = useResourceStore()
   const engine = await db.engines.get(engineId)
   if (!engine) {
@@ -436,7 +435,7 @@ async function createGame(gameName: string, gamePath: string, engineId: string, 
 
   try {
     // 先创建目录和项目配置，确保 preview primer 触发时路径已存在且 VFS 可解析引擎层资源
-    await mkdir(AbsPath.join(AbsPath.from(gamePath), RelPath.from('game')), { recursive: true })
+    await mkdir(AbsPath.join(gamePath, RelPath.from('game')), { recursive: true })
     await projectConfigCmds.writeProjectConfig(gamePath, {
       version: 1,
       engine: buildProjectEngineRef(engine),
@@ -465,9 +464,9 @@ async function createGame(gameName: string, gamePath: string, engineId: string, 
 
     // 复制引擎 game/ 到项目（含 config.txt 等），但排除 template/：
     // 模板按 phase-4b/01 设计走 template lower，不再下沉到项目目录
-    const engineGameDir = AbsPath.join(AbsPath.from(engine.path), RelPath.from('game'))
+    const engineGameDir = AbsPath.join(engine.path, RelPath.from('game'))
     if (await exists(engineGameDir)) {
-      const projectGameDir = AbsPath.join(AbsPath.from(gamePath), RelPath.from('game'))
+      const projectGameDir = AbsPath.join(gamePath, RelPath.from('game'))
       await fsCmds.copyDirectoryWithProgress(
         engineGameDir,
         projectGameDir,
@@ -511,7 +510,7 @@ async function createGame(gameName: string, gamePath: string, engineId: string, 
       })
     }
     if (!targetExisted && await exists(gamePath)) {
-      await fsCmds.deleteFile(AbsPath.from(gamePath), true).catch((error_) => {
+      await fsCmds.deleteFile(gamePath, true).catch((error_) => {
         logger.warn(`[游戏创建] 清理异常 - 删除目录失败: ${error_}`)
       })
     }
@@ -521,7 +520,7 @@ async function createGame(gameName: string, gamePath: string, engineId: string, 
 
 async function deleteGame(game: Game, removeFiles: boolean = false): Promise<void> {
   if (removeFiles) {
-    await fsCmds.deleteFile(AbsPath.from(game.path))
+    await fsCmds.deleteFile(game.path)
   }
   await db.games.delete(game.id)
 }
@@ -530,7 +529,7 @@ async function deleteGame(game: Game, removeFiles: boolean = false): Promise<voi
  * 把游戏记录指向新的目录路径。第一版不做 gameKey 身份校验，只要新路径是合法游戏目录即可，
  * 对应的会话状态由调用方负责清理。
  */
-async function relinkGame(gameId: string, newPath: string): Promise<Game> {
+async function relinkGame(gameId: string, newPath: AbsPath): Promise<Game> {
   const game = await db.games.get(gameId)
   if (!game) {
     throw new AppError('IO_ERROR', '游戏不存在')
@@ -541,7 +540,7 @@ async function relinkGame(gameId: string, newPath: string): Promise<Game> {
     throw new AppError('INVALID_STRUCTURE', '所选目录不是合法的游戏文件夹')
   }
 
-  const conflicting = await findExistingGameByPath(inspection.normalizedPath)
+  const conflicting = await findRegisteredGameByPath(inspection.normalizedPath)
   if (conflicting && conflicting.id !== gameId) {
     throw new AppError('DUPLICATE_RESOURCE', '该目录已绑定到其他游戏记录')
   }
@@ -558,7 +557,7 @@ async function relinkGame(gameId: string, newPath: string): Promise<Game> {
   return { ...game, ...patch }
 }
 
-async function getGameEnginePath(game: Pick<Game, 'engineId' | 'path'>): Promise<string | undefined> {
+async function getGameEnginePath(game: Pick<Game, 'engineId' | 'path'>): Promise<AbsPath | undefined> {
   const { engine } = await resolveBoundEngine(game)
   if (!engine || !isEngineUsable(engine)) {
     return undefined
@@ -574,8 +573,8 @@ async function ensureConfigWritable(game: Pick<Game, 'engineId' | 'path'>): Prom
   }
 
   await vfsCmds.ensureWritable({
-    projectPath: AbsPath.from(game.path),
-    enginePath: AbsPath.from(enginePath),
+    projectPath: game.path,
+    enginePath,
     relPath: RelPath.from('game/config.txt'),
   })
 }
@@ -607,16 +606,16 @@ async function renameGame(id: string, newName: string): Promise<void> {
   applyCurrentGamePatch(id, patch)
 }
 
-async function findExistingGameByPath(rawPath: string): Promise<Game | undefined> {
-  return db.games.where('pathLookupKey').equals(toLookupPathKey(AbsPath.from(rawPath))).first()
+async function findRegisteredGameByPath(path: AbsPath): Promise<Game | undefined> {
+  return db.games.where('pathLookupKey').equals(toLookupPathKey(path)).first()
 }
 
-function identityKeyOf(input: { path: string }): string {
-  return toLookupPathKey(AbsPath.from(input.path))
+function identityKeyOf(input: { path: AbsPath }): string {
+  return toLookupPathKey(input.path)
 }
 
 async function collectGameWarnings(
-  gamePath: string,
+  gamePath: AbsPath,
   metadata: GameMetadata,
   iconLookup: GamePreviewLookupResult,
 ): Promise<ResourceWarning[]> {
@@ -633,7 +632,7 @@ async function collectGameWarnings(
   const titleImg = normalizeLogicalAssetPath(metadata.titleImg?.trim())
   if (!titleImg) {
     warnings.push(createWarning('missing-title-image', '游戏未配置 Title_img'))
-  } else if (!(await exists(gameCoverPath(AbsPath.from(gamePath), titleImg)))) {
+  } else if (!(await exists(gameCoverPath(gamePath, titleImg)))) {
     warnings.push(createWarning('missing-title-image-file', `Title_img 指向的文件不存在: ${titleImg}`))
   }
 
@@ -684,7 +683,7 @@ async function inspectGameSemantics(
 }
 
 async function inspectGame(
-  rawPath: string,
+  rawPath: AbsPath,
 ): Promise<ResourceHealthResult<GameInspectionPayload>> {
   const { normalizedPath, lookupKey } = normalizeImportPath(rawPath)
 
@@ -730,12 +729,12 @@ export interface ImportGameResult {
   alreadyRegistered: boolean
 }
 
-async function importGame(gamePath: string, options: ImportGameOptions = {}): Promise<ImportGameResult> {
+async function importGame(gamePath: AbsPath, options: ImportGameOptions = {}): Promise<ImportGameResult> {
   const { normalizedPath } = normalizeImportPath(gamePath)
 
   // 幂等：已注册路径直接返回既有 ID（按归一化后路径比较）
   // 即使目录已损坏也允许命中既有记录，由后续 reconcile 流程处理 availability
-  const existing = await findExistingGameByPath(normalizedPath)
+  const existing = await findRegisteredGameByPath(normalizedPath)
   if (existing) {
     return { id: existing.id, alreadyRegistered: true }
   }

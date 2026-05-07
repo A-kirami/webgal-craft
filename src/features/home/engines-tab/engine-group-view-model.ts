@@ -3,12 +3,13 @@ import { toEngineCollectionItem } from '~/features/home/home-collection-items'
 import { isEngineUsable } from '~/services/engine-manager'
 
 import type { Engine } from '~/database/model'
+import type { AbsPath } from '~/domain/path'
 import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
 
 export interface BuildEngineGroupCollectionItemsOptions {
   defaultEngineId?: string
   engines: readonly Engine[]
-  resolveServeUrl: (path: string) => string | undefined
+  resolveServeUrl: (path: AbsPath) => string | undefined
 }
 
 export function buildEngineGroupCollectionItems(

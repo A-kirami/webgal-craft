@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import { createBrowserClickStub, renderInBrowser } from '~/__tests__/browser-render'
+import { AbsPath } from '~/domain/path'
 
 import TemplatesTab from './TemplatesTab.vue'
 
@@ -142,7 +143,7 @@ function createResourceStore() {
             kind: 'standalone',
             templateId: 'template-1',
             name: 'Modern Template',
-            path: '/templates/modern',
+            path: AbsPath.from('/templates/modern'),
             createdAt: 1,
           },
         ],
@@ -151,7 +152,7 @@ function createResourceStore() {
     templates: [
       {
         id: 'template-1',
-        path: '/templates/modern',
+        path: AbsPath.from('/templates/modern'),
         createdAt: 1,
         status: 'created',
         metadata: {
@@ -241,7 +242,7 @@ describe('TemplatesTab', () => {
           icon: 'icons/favicon.ico',
         },
         name: 'WebGAL',
-        path: '/engines/WebGAL/4.8.2',
+        path: AbsPath.from('/engines/WebGAL/4.8.2'),
         pathLookupKey: '/engines/webgal/4.8.2',
         previewAssets: {
           icon: {
@@ -265,9 +266,9 @@ describe('TemplatesTab', () => {
             kind: 'engineBuiltin',
             engineId: 'engine-1',
             engineName: 'WebGAL',
-            enginePath: '/engines/WebGAL/4.8.2',
+            enginePath: AbsPath.from('/engines/WebGAL/4.8.2'),
             engineVersion: '4.8.2',
-            templatePath: '/engines/WebGAL/4.8.2/game/template',
+            templatePath: AbsPath.from('/engines/WebGAL/4.8.2/game/template'),
             createdAt: 2,
           },
         ],

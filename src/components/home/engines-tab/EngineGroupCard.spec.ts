@@ -7,6 +7,7 @@ import {
   renderInBrowser,
 } from '~/__tests__/browser-render'
 import { createTestEngine } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 
 import EngineGroupCard from './EngineGroupCard.vue'
 
@@ -33,7 +34,7 @@ function createGroup(): EngineGroupCollectionItem {
   const stable = createTestEngine({
     id: 'stable',
     name: 'WebGAL',
-    path: '/engines/WebGAL/4.5.0',
+    path: AbsPath.from('/engines/WebGAL/4.5.0'),
     version: '4.5.0',
     metadata: {
       description: 'Stable release',
@@ -42,7 +43,7 @@ function createGroup(): EngineGroupCollectionItem {
   const unavailable = createTestEngine({
     id: 'unavailable',
     name: 'WebGAL',
-    path: '/engines/WebGAL/4.6.0',
+    path: AbsPath.from('/engines/WebGAL/4.6.0'),
     availability: 'broken',
     version: '4.6.0',
   })

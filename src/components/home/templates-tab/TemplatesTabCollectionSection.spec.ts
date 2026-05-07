@@ -3,6 +3,7 @@ import { page } from 'vitest/browser'
 
 import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 import { createTestEngine } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 
 import TemplatesTabCollectionSection from './TemplatesTabCollectionSection.vue'
 
@@ -89,7 +90,7 @@ function createItems(): TemplateCollectionItem[] {
   const builtinNovaEngine = createTestEngine({
     id: 'engine-3',
     name: 'WebGAL Nova',
-    path: '/engines/WebGAL Nova/5.0.0',
+    path: AbsPath.from('/engines/WebGAL Nova/5.0.0'),
     previewAssets: {
       icon: {
         cacheVersion: 13,
@@ -101,7 +102,7 @@ function createItems(): TemplateCollectionItem[] {
   const builtinStableEngine = createTestEngine({
     id: 'engine-2',
     name: 'WebGAL',
-    path: '/engines/WebGAL/4.8.2',
+    path: AbsPath.from('/engines/WebGAL/4.8.2'),
     previewAssets: {
       icon: {
         cacheVersion: 21,
@@ -122,7 +123,7 @@ function createItems(): TemplateCollectionItem[] {
             kind: 'standalone',
             templateId: 'template-1',
             name: 'Modern Template',
-            path: '/templates/modern',
+            path: AbsPath.from('/templates/modern'),
             createdAt: 1,
             webgalVersion: '4.8.1',
             availability: 'available',
@@ -145,8 +146,8 @@ function createItems(): TemplateCollectionItem[] {
             engineId: 'engine-3',
             engineName: 'WebGAL Nova',
             engineVersion: '5.0.0',
-            enginePath: '/engines/WebGAL Nova/5.0.0',
-            templatePath: '/engines/WebGAL Nova/5.0.0/game/template',
+            enginePath: AbsPath.from('/engines/WebGAL Nova/5.0.0'),
+            templatePath: AbsPath.from('/engines/WebGAL Nova/5.0.0/game/template'),
             createdAt: 3,
           },
         ],
@@ -167,8 +168,8 @@ function createItems(): TemplateCollectionItem[] {
             engineId: 'engine-2',
             engineName: 'WebGAL',
             engineVersion: '4.8.2',
-            enginePath: '/engines/WebGAL/4.8.2',
-            templatePath: '/engines/WebGAL/4.8.2/game/template',
+            enginePath: AbsPath.from('/engines/WebGAL/4.8.2'),
+            templatePath: AbsPath.from('/engines/WebGAL/4.8.2/game/template'),
             createdAt: 2,
           },
           {
@@ -176,8 +177,8 @@ function createItems(): TemplateCollectionItem[] {
             engineId: 'engine-1',
             engineName: 'WebGAL',
             engineVersion: '4.8.1',
-            enginePath: '/engines/WebGAL/4.8.1',
-            templatePath: '/engines/WebGAL/4.8.1/game/template',
+            enginePath: AbsPath.from('/engines/WebGAL/4.8.1'),
+            templatePath: AbsPath.from('/engines/WebGAL/4.8.1/game/template'),
             createdAt: 1,
           },
         ],

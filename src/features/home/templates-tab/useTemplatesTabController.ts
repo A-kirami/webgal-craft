@@ -63,7 +63,7 @@ export function useTemplatesTabController(options: UseTemplatesTabControllerOpti
 
   function handleOpenSourceFolder(source: TemplateGroupSourceItem) {
     return importActions.handleOpenFolder({
-      path: source.kind === 'standalone' ? source.path : source.templatePath,
+      path: source.kind === 'standalone' ? source.path : source.enginePath,
     })
   }
 

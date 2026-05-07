@@ -3,6 +3,7 @@ import '~/__tests__/setup'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestGame } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 const {
@@ -86,7 +87,7 @@ describe('工作区状态仓库', () => {
     const store = useWorkspaceStore()
 
     store.currentGame = createTestGame({
-      path: '/games/game-1',
+      path: AbsPath.from('/games/game-1'),
       pathLookupKey: '/games/game-1',
       metadata: {
         name: 'old',
@@ -142,7 +143,7 @@ describe('工作区状态仓库', () => {
 
     dbGetMock.mockResolvedValue(createTestGame({
       id: 'game-1',
-      path: '/games/game-1',
+      path: AbsPath.from('/games/game-1'),
       metadata: {
         name: 'Game One',
       },
@@ -175,7 +176,7 @@ describe('工作区状态仓库', () => {
 
   it('ensureCurrentGameAvailable 在 currentGame 可达时返回 true', async () => {
     const store = useWorkspaceStore()
-    store.currentGame = createTestGame({ id: 'game-1', path: '/games/game-1' })
+    store.currentGame = createTestGame({ id: 'game-1', path: AbsPath.from('/games/game-1') })
 
     reconcileGameRecordMock.mockResolvedValueOnce('available')
 
@@ -184,7 +185,7 @@ describe('工作区状态仓库', () => {
 
   it('ensureCurrentGameAvailable 在 currentGame 不可达时返回 false', async () => {
     const store = useWorkspaceStore()
-    store.currentGame = createTestGame({ id: 'game-stale', path: '/games/game-stale' })
+    store.currentGame = createTestGame({ id: 'game-stale', path: AbsPath.from('/games/game-stale') })
 
     reconcileGameRecordMock.mockResolvedValueOnce('missing')
 
@@ -197,7 +198,7 @@ describe('工作区状态仓库', () => {
 
     dbGetMock.mockResolvedValue(createTestGame({
       id: 'game-2',
-      path: '/games/game-2',
+      path: AbsPath.from('/games/game-2'),
       metadata: {
         name: 'Game Two',
       },
