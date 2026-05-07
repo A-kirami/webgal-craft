@@ -421,20 +421,11 @@ describe('gameManager', () => {
       path: String.raw`C:\Engines\WebGAL\4.5.0`,
     }))
     existsMock.mockImplementation(async (path: string) => {
-      if (path === String.raw`C:\Games\Demo`) {
-        return false
-      }
       if (path === 'C:/Engines/WebGAL/4.5.0/game') {
         return true
       }
       if (path === 'C:/Engines/WebGAL/4.5.0/icons/icon-192.png') {
         return true
-      }
-      if (path.startsWith('C:/Engines/WebGAL/4.5.0/icons/')) {
-        return false
-      }
-      if (path.startsWith('C:/Games/Demo/icons/')) {
-        return false
       }
       return false
     })
