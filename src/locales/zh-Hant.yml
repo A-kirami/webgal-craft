@@ -288,7 +288,7 @@ modals:
     selected: 已選擇 {count}/{total}
     skip: 跳過
     import: 匯入 ({count})
-    versionsCount: '{count} 個版本'
+    versionsCount: "{count} 個版本"
     toggleGroup: 切換 {name} 全部版本
   gameConfig:
     title: 遊戲設定
@@ -523,8 +523,8 @@ edit:
       wait: 等待一段時間
     arguments:
       when: 執行條件
-      continue: 自動續行
-      next: 並行執行
+      continue: 自動推進
+      next: 立即推進
       notend: 繼續播放下一段
       concat: 接續上一段對話
       vocal: 語音
@@ -793,8 +793,8 @@ edit:
       unlockBgm: 將音樂收錄進 BGM 鑑賞
       unknown: 未識別的命令類型。
     params:
-      continue: 自動續行
-      next: 並行執行
+      continue: 自動推進
+      next: 立即推進
       concat: 接續上段
       notend: 繼續播放
       vocal: 語音
@@ -1054,7 +1054,7 @@ engine:
   defaultEngine: 預設
   setDefaultEngine: 設為預設引擎
   unsetDefaultEngine: 取消預設引擎
-  versionSummary: '{version} · 共 {count} 個版本'
+  versionSummary: "{version} · 共 {count} 個版本"
   noAvailableVersionSummary: 無可用版本 · 共 {count} 個已安裝版本
   latestBadge: 最新
   deleteVersion: 刪除版本

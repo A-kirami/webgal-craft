@@ -288,7 +288,7 @@ modals:
     selected: Selected {count}/{total}
     skip: Skip
     import: Import ({count})
-    versionsCount: '{count} version(s)'
+    versionsCount: "{count} version(s)"
     toggleGroup: Toggle all versions of {name}
   gameConfig:
     title: Game Configuration
@@ -467,7 +467,7 @@ modals:
     restore: Restore
     restoreSuccess: Restored successfully
     restoreConfirmTitle: Restore this version?
-    restoreConfirmContent: 'Restore the version saved at {time}? The current content will be backed up first as a "restore" entry.'
+    restoreConfirmContent: "Restore the version saved at {time}? The current content will be backed up first as a \"restore\" entry."
     sourceKind:
       manualSave: Manual save
       autoSave: Auto save
@@ -523,8 +523,8 @@ edit:
       wait: Wait for a period of time
     arguments:
       when: Conditional execution
-      continue: Auto-advance to next line
-      next: Execute next line in parallel
+      continue: Auto-advance
+      next: Advance immediately
       notend: Continue to next line
       concat: Concatenate with previous line
       vocal: Voice
@@ -601,7 +601,7 @@ edit:
     engineMissing: Engine unavailable
     template: Template
     templateMissing: Template unavailable
-    templateFollowing: 'Template: Follow Current Engine'
+    templateFollowing: "Template: Follow Current Engine"
   fileTree:
     newFile: New File
     newFolder: New Folder
@@ -794,7 +794,7 @@ edit:
       unknown: Unrecognized command type.
     params:
       continue: Auto-advance
-      next: Parallel
+      next: Advance immediately
       concat: Concatenate
       notend: Not End
       vocal: Voice
@@ -1054,13 +1054,13 @@ engine:
   defaultEngine: Default
   setDefaultEngine: Set as Default Engine
   unsetDefaultEngine: Unset Default Engine
-  versionSummary: '{version} · {count} versions'
+  versionSummary: "{version} · {count} versions"
   noAvailableVersionSummary: No available version · {count} installed versions
   latestBadge: Latest
   deleteVersion: Delete Version
   uninstallAllVersions: Uninstall All Versions
   deleteBlocked: Cannot Delete
-  deleteBlockedByGames: 'The following games are using this engine:'
+  deleteBlockedByGames: "The following games are using this engine:"
   unavailable: Unavailable
 
 game:
