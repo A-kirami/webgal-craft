@@ -374,7 +374,7 @@ describe('文件状态仓库', () => {
     const expectedBytes = new Uint8Array([104, 101, 108, 108, 111])
     readFileMock.mockResolvedValue(expectedBytes)
 
-    pendingWrites.push(registerPendingFileWrite('/workspace/game/echo-loaded.txt', expectedBytes))
+    pendingWrites.push(registerPendingFileWrite(AbsPath.from('/workspace/game/echo-loaded.txt'), expectedBytes))
 
     const store = useFileStore()
     workspaceStoreState.CWD = '/workspace'
@@ -408,7 +408,7 @@ describe('文件状态仓库', () => {
     const expectedBytes = new Uint8Array([111, 107])
     readFileMock.mockResolvedValue(expectedBytes)
 
-    pendingWrites.push(registerPendingFileWrite('/workspace/game/echo-unloaded.txt', expectedBytes))
+    pendingWrites.push(registerPendingFileWrite(AbsPath.from('/workspace/game/echo-unloaded.txt'), expectedBytes))
 
     useFileStore()
     workspaceStoreState.CWD = '/workspace'
@@ -442,7 +442,7 @@ describe('文件状态仓库', () => {
 
     readFileMock.mockResolvedValue(new Uint8Array([98, 121, 101]))
 
-    pendingWrites.push(registerPendingFileWrite('/workspace/game/echo-mismatch.txt', new Uint8Array([104, 101, 108, 108, 111])))
+    pendingWrites.push(registerPendingFileWrite(AbsPath.from('/workspace/game/echo-mismatch.txt'), new Uint8Array([104, 101, 108, 108, 111])))
 
     const store = useFileStore()
     workspaceStoreState.CWD = '/workspace'
@@ -477,7 +477,7 @@ describe('文件状态仓库', () => {
       .mockResolvedValueOnce(expectedBytes)
       .mockResolvedValue(expectedBytes)
 
-    pendingWrites.push(registerPendingFileWrite('/workspace/game/echo-partial.txt', expectedBytes))
+    pendingWrites.push(registerPendingFileWrite(AbsPath.from('/workspace/game/echo-partial.txt'), expectedBytes))
 
     const store = useFileStore()
     workspaceStoreState.CWD = '/workspace'

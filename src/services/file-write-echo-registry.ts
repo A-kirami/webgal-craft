@@ -1,4 +1,4 @@
-import { AbsPath } from '~/domain/path'
+import type { AbsPath } from '~/domain/path'
 
 interface PendingFileWrite {
   id: number
@@ -8,13 +8,13 @@ interface PendingFileWrite {
 }
 
 export interface PendingFileWriteHandle {
-  physicalPath: string
+  physicalPath: AbsPath
   id: number
 }
 
 const PENDING_FILE_WRITE_TTL_MS = 30 * 1000
 
-const pendingFileWrites = new Map<string, PendingFileWrite[]>()
+const pendingFileWrites = new Map<AbsPath, PendingFileWrite[]>()
 let nextPendingFileWriteId = 0
 
 function cloneBytes(bytes: Uint8Array): Uint8Array {
@@ -35,11 +35,7 @@ function areBytesEqual(left: Uint8Array, right: Uint8Array): boolean {
   return true
 }
 
-function normalizePhysicalPath(path: string): string {
-  return AbsPath.from(path)
-}
-
-function pruneExpiredPendingFileWrites(path: string, now: number = Date.now()): void {
+function pruneExpiredPendingFileWrites(path: AbsPath, now: number = Date.now()): void {
   const writes = pendingFileWrites.get(path)
   if (!writes) {
     return
@@ -59,14 +55,13 @@ function pruneExpiredPendingFileWrites(path: string, now: number = Date.now()): 
   pendingFileWrites.set(path, nextWrites)
 }
 
-export function registerPendingFileWrite(physicalPath: string, bytes: Uint8Array): PendingFileWriteHandle {
-  const normalizedPath = normalizePhysicalPath(physicalPath)
+export function registerPendingFileWrite(physicalPath: AbsPath, bytes: Uint8Array): PendingFileWriteHandle {
   const now = Date.now()
-  pruneExpiredPendingFileWrites(normalizedPath, now)
+  pruneExpiredPendingFileWrites(physicalPath, now)
 
   const pendingWriteId = nextPendingFileWriteId
   const cleanupTimer = setTimeout(() => {
-    pruneExpiredPendingFileWrites(normalizedPath)
+    pruneExpiredPendingFileWrites(physicalPath)
   }, PENDING_FILE_WRITE_TTL_MS)
 
   const pendingWrite: PendingFileWrite = {
@@ -77,21 +72,20 @@ export function registerPendingFileWrite(physicalPath: string, bytes: Uint8Array
   }
   nextPendingFileWriteId += 1
 
-  const writes = pendingFileWrites.get(normalizedPath) ?? []
+  const writes = pendingFileWrites.get(physicalPath) ?? []
   writes.push(pendingWrite)
-  pendingFileWrites.set(normalizedPath, writes)
+  pendingFileWrites.set(physicalPath, writes)
 
   return {
-    physicalPath: normalizedPath,
+    physicalPath,
     id: pendingWrite.id,
   }
 }
 
 export function commitPendingFileWrite(handle: PendingFileWriteHandle): void {
-  const normalizedPath = normalizePhysicalPath(handle.physicalPath)
-  pruneExpiredPendingFileWrites(normalizedPath)
+  pruneExpiredPendingFileWrites(handle.physicalPath)
 
-  const writes = pendingFileWrites.get(normalizedPath)
+  const writes = pendingFileWrites.get(handle.physicalPath)
   if (!writes) {
     return
   }
@@ -105,16 +99,15 @@ export function commitPendingFileWrite(handle: PendingFileWriteHandle): void {
     return true
   })
   if (nextWrites.length === 0) {
-    pendingFileWrites.delete(normalizedPath)
+    pendingFileWrites.delete(handle.physicalPath)
     return
   }
 
-  pendingFileWrites.set(normalizedPath, nextWrites)
+  pendingFileWrites.set(handle.physicalPath, nextWrites)
 }
 
 export function rollbackPendingFileWrite(handle: PendingFileWriteHandle): void {
-  const normalizedPath = normalizePhysicalPath(handle.physicalPath)
-  const writes = pendingFileWrites.get(normalizedPath)
+  const writes = pendingFileWrites.get(handle.physicalPath)
   if (!writes) {
     return
   }
@@ -126,24 +119,22 @@ export function rollbackPendingFileWrite(handle: PendingFileWriteHandle): void {
   }
   const nextWrites = writes.filter(write => write.id !== handle.id)
   if (nextWrites.length === 0) {
-    pendingFileWrites.delete(normalizedPath)
+    pendingFileWrites.delete(handle.physicalPath)
     return
   }
 
-  pendingFileWrites.set(normalizedPath, nextWrites)
+  pendingFileWrites.set(handle.physicalPath, nextWrites)
 }
 
-export function hasPendingFileWrite(physicalPath: string): boolean {
-  const normalizedPath = normalizePhysicalPath(physicalPath)
-  pruneExpiredPendingFileWrites(normalizedPath)
-  return (pendingFileWrites.get(normalizedPath)?.length ?? 0) > 0
+export function hasPendingFileWrite(physicalPath: AbsPath): boolean {
+  pruneExpiredPendingFileWrites(physicalPath)
+  return (pendingFileWrites.get(physicalPath)?.length ?? 0) > 0
 }
 
-export function matchesPendingFileWrite(physicalPath: string, bytes: Uint8Array): boolean {
-  const normalizedPath = normalizePhysicalPath(physicalPath)
-  pruneExpiredPendingFileWrites(normalizedPath)
+export function matchesPendingFileWrite(physicalPath: AbsPath, bytes: Uint8Array): boolean {
+  pruneExpiredPendingFileWrites(physicalPath)
 
-  const writes = pendingFileWrites.get(normalizedPath)
+  const writes = pendingFileWrites.get(physicalPath)
   if (!writes || writes.length === 0) {
     return false
   }
