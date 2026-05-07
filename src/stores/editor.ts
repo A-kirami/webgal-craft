@@ -77,7 +77,7 @@ const AUTO_SAVE_DEBOUNCE_MS = 500
 
 async function readTextDocumentFile(path: AbsPath): Promise<ReadTextDocumentResult> {
   const fileStore = useFileStore()
-  const physicalPath = fileStore.isVfs ? await fileStore.resolveFilePath(AbsPath.from(path)) : path
+  const physicalPath = fileStore.isVfs ? await fileStore.resolveFilePath(path) : path
   const bytes = await readFile(physicalPath)
   return decodeTextFile(bytes)
 }
@@ -503,7 +503,7 @@ export const useEditorStore = defineStore('editor', () => {
     readTextDocumentFile,
     resolveFilePath: async (path: AbsPath) => {
       const fileStore = useFileStore()
-      return fileStore.isVfs ? await fileStore.resolveFilePath(AbsPath.from(path)) : path
+      return fileStore.isVfs ? await fileStore.resolveFilePath(path) : path
     },
     scheduleAutoSave,
     setTabError: updateTabError,
