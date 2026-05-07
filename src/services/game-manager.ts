@@ -331,12 +331,13 @@ async function resolveSelectableEngine(
 async function importLegacyGame(
   gamePath: string,
   options: ImportGameOptions,
+  inspection: GameInspectionPayload,
 ): Promise<string> {
   const hasIndexHtml = await exists(AbsPath.join(AbsPath.from(gamePath), RelPath.from('index.html')))
 
   if (hasIndexHtml) {
     await writeSelfContainedProjectConfig(gamePath)
-    return registerGame(gamePath)
+    return registerGame(gamePath, { ...inspection })
   }
 
   const engine = await resolveSelectableEngine(options.selectEngine)
@@ -345,12 +346,13 @@ async function importLegacyGame(
     engine: buildProjectEngineRef(engine),
   })
 
-  return registerGame(gamePath, { engineId: engine.id })
+  return registerGame(gamePath, { ...inspection, engineId: engine.id })
 }
 
 async function importConfiguredGame(
   gamePath: string,
   options: ImportGameOptions,
+  inspection: GameInspectionPayload,
 ): Promise<string> {
   let config: ProjectConfig
 
@@ -365,7 +367,7 @@ async function importConfiguredGame(
     if (await exists(AbsPath.join(AbsPath.from(gamePath), RelPath.from('index.html')))) {
       logger.warn(`project.wgcp 解析失败，但检测到自带引擎，按自带引擎项目导入: ${gamePath}`)
       await writeSelfContainedProjectConfig(gamePath)
-      return await registerGame(gamePath)
+      return await registerGame(gamePath, { ...inspection })
     }
 
     throw new AppError('INVALID_PROJECT_CONFIG', '项目配置文件损坏', {
@@ -376,11 +378,11 @@ async function importConfiguredGame(
   // 无引擎配置：自带引擎项目 或 让用户选择引擎
   if (!config.engine) {
     if (await exists(AbsPath.join(AbsPath.from(gamePath), RelPath.from('index.html')))) {
-      return registerGame(gamePath)
+      return registerGame(gamePath, { ...inspection })
     }
 
     logger.warn(`engine 字段缺失且 index.html 不存在，引导用户选择引擎: ${gamePath}`)
-    return await bindSelectedEngine(gamePath, config, options)
+    return await bindSelectedEngine(gamePath, config, options, inspection)
   }
 
   // 有引擎配置：尝试自动匹配已注册引擎
@@ -389,10 +391,10 @@ async function importConfiguredGame(
     if (matchedEngine.availability !== 'available') {
       logger.warn(`关联的引擎 ${matchedEngine.name} 当前不可用，项目预览将受限: ${gamePath}`)
     }
-    return registerGame(gamePath, { engineId: matchedEngine.id })
+    return registerGame(gamePath, { ...inspection, engineId: matchedEngine.id })
   }
 
-  return await bindSelectedEngine(gamePath, config, options, config.engine)
+  return await bindSelectedEngine(gamePath, config, options, inspection, config.engine)
 }
 
 /** 让用户选择引擎，写入配置并注册游戏 */
@@ -400,6 +402,7 @@ async function bindSelectedEngine(
   gamePath: string,
   config: ProjectConfig,
   options: ImportGameOptions,
+  inspection: GameInspectionPayload,
   hint?: EngineRef,
 ): Promise<string> {
   const engine = await resolveSelectableEngine(options.selectEngine, hint)
@@ -407,7 +410,7 @@ async function bindSelectedEngine(
     ...config,
     engine: buildProjectEngineRef(engine),
   })
-  return registerGame(gamePath, { engineId: engine.id })
+  return registerGame(gamePath, { ...inspection, engineId: engine.id })
 }
 
 interface CreateGameOptions {
@@ -731,19 +734,22 @@ async function importGame(gamePath: string, options: ImportGameOptions = {}): Pr
   const { normalizedPath } = normalizeImportPath(gamePath)
 
   // 幂等：已注册路径直接返回既有 ID（按归一化后路径比较）
+  // 即使目录已损坏也允许命中既有记录，由后续 reconcile 流程处理 availability
   const existing = await findExistingGameByPath(normalizedPath)
   if (existing) {
     return { id: existing.id, alreadyRegistered: true }
   }
 
-  if (!(await validateGame(normalizedPath))) {
-    logger.error(`[游戏导入] 无效的游戏文件夹: ${normalizedPath}`)
-    throw new AppError('INVALID_STRUCTURE', '无效的游戏文件夹')
+  const inspection = await inspectGame(normalizedPath)
+  if (inspection.availability !== 'available') {
+    const { code, message, details } = inspection.blockingIssue!
+    logger.error(`[游戏导入] ${message}: ${normalizedPath}`)
+    throw new AppError(code, message, { details })
   }
 
   const id = await exists(projectConfigPath(normalizedPath))
-    ? await importConfiguredGame(normalizedPath, options)
-    : await importLegacyGame(normalizedPath, options)
+    ? await importConfiguredGame(normalizedPath, options, inspection.payload!)
+    : await importLegacyGame(normalizedPath, options, inspection.payload!)
   return { id, alreadyRegistered: false }
 }
 
