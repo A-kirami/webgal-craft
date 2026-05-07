@@ -192,7 +192,7 @@ export const useFileStore = defineStore('file', () => {
     } else if (workspaceStore.currentGame) {
       try {
         const nextEnginePath = await gameManager.getGameEnginePath(workspaceStore.currentGame)
-        enginePath = nextEnginePath ? AbsPath.from(nextEnginePath) : undefined
+        enginePath = nextEnginePath
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error)
         void logger.warn(`[FileStore] 刷新 enginePath 失败: ${msg}`)
