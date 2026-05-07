@@ -15,15 +15,19 @@ function createRelPath(value: string): RelPath {
 }
 
 function ensureValidRelPath(raw: string): string {
-  const normalized = normalizePosix(raw).replace(/^\/+/, '').replace(/\/+$/, '')
-  if (normalized === '') {
+  const normalized = normalizePosix(raw)
+  if (normalized.startsWith('/') || /^[a-zA-Z]:\//.test(normalized)) {
+    throw new PathError(`不是相对路径: ${raw}`)
+  }
+  const trimmed = normalized.replace(/\/+$/, '')
+  if (trimmed === '') {
     return ''
   }
-  assertRelativePath(normalized)
-  if (normalized.includes('/../') || normalized.endsWith('/..')) {
+  assertRelativePath(trimmed)
+  if (trimmed.includes('/../') || trimmed.endsWith('/..')) {
     throw new PathError(`相对路径不能越界: ${raw}`)
   }
-  return normalized
+  return trimmed
 }
 
 export namespace RelPath {

@@ -199,7 +199,8 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
     if (target.startsWith(rootPrefix)) {
       return RelPath.from(target.slice(rootPrefix.length))
     }
-    return RelPath.from(path)
+    // 大小写或盘符不匹配时不再误判为根下相对路径，按原始路径剥离前导分隔符回退
+    return RelPath.from(target.replace(/^([a-zA-Z]:)?\/+/, ''))
   }
 
   async function checkRoot() {

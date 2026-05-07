@@ -23,7 +23,7 @@ function normalizeFilePickerInputPath(path: string): string {
   }
 
   const hasTrailingSlash = /[\\/]+$/.test(trimmed)
-  const normalized = normalizePosix(trimmed)
+  const normalized = normalizePosix(trimmed).replace(/^\/+/, '')
   if (!normalized) {
     return ''
   }
@@ -37,7 +37,7 @@ function normalizeFilePickerInputPath(path: string): string {
 
 function normalizeFilePickerRelativePath(path: string): string | undefined {
   try {
-    return RelPath.from(path)
+    return RelPath.from(path.replace(/^[\\/]+/, ''))
   } catch {
     return undefined
   }

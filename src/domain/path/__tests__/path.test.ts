@@ -84,6 +84,13 @@ describe('RelPath', () => {
     expect(() => RelPath.from('a/../../x')).toThrow(PathError)
   })
 
+  it('会拒绝绝对路径输入', () => {
+    expect(() => RelPath.from('/absolute/path')).toThrow(PathError)
+    expect(() => RelPath.from('//server/share')).toThrow(PathError)
+    expect(() => RelPath.from('C:/windows/path')).toThrow(PathError)
+    expect(() => RelPath.from(String.raw`C:\windows\path`)).toThrow(PathError)
+  })
+
   it('会保留仅以两个点开头的普通片段', () => {
     expect(RelPath.from('..foo')).toBe('..foo')
     expect(RelPath.from('game/..hidden/intro.txt')).toBe('game/..hidden/intro.txt')
