@@ -29,7 +29,7 @@ async function extractSceneName(scenePath: string): Promise<string> {
   const normalizedPath = normalizePosix(scenePath)
   const absoluteScenePath = AbsPath.from(normalizedPath)
   const parts = normalizedPath.split('/')
-  const sceneIndex = parts.indexOf('scene')
+  const sceneIndex = parts.lastIndexOf('scene')
   if (sceneIndex === -1) {
     return AbsPath.basename(absoluteScenePath)
   }
