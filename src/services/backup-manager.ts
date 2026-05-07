@@ -22,14 +22,12 @@ export function toProjectRelative(
   projectPath: AbsPath,
   absolutePath: AbsPath,
 ): RelPath | undefined {
-  const project = projectPath
-  const target = absolutePath
-  if (AbsPath.equals(target, project)) {
+  if (AbsPath.equals(absolutePath, projectPath)) {
     return RelPath.empty()
   }
 
   try {
-    return AbsPath.relativize(target, project)
+    return AbsPath.relativize(absolutePath, projectPath)
   } catch {
     return undefined
   }
