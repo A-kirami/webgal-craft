@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { AbsPath } from '~/domain/path'
 import { buildSingleStatement } from '~/domain/script/sentence'
 
 import {
@@ -22,7 +23,7 @@ function createTextState(overrides: Partial<TextProjectionState> = {}): TextProj
   return {
     isDirty: false,
     kind: 'scene',
-    path: '/project/scene.txt',
+    path: AbsPath.from('/project/scene.txt'),
     projection: 'text',
     textContent: '',
     textSource: 'projection',
@@ -34,7 +35,7 @@ function createSceneVisualState(overrides: Partial<SceneVisualProjectionState> =
   return {
     isDirty: false,
     kind: 'scene',
-    path: '/project/scene.txt',
+    path: AbsPath.from('/project/scene.txt'),
     projection: 'visual',
     statements: [],
     ...overrides,
@@ -48,7 +49,7 @@ function createAnimationVisualState(
     frames: [],
     isDirty: false,
     kind: 'animation',
-    path: '/project/effect.json',
+    path: AbsPath.from('/project/effect.json'),
     projection: 'visual',
     ...overrides,
   }
@@ -58,7 +59,7 @@ function createPreviewState(overrides: Partial<AssetPreviewState> = {}): AssetPr
   return {
     assetUrl: 'asset://preview/background.png',
     mimeType: 'image/png',
-    path: '/project/background.png',
+    path: AbsPath.from('/project/background.png'),
     view: 'preview',
     ...overrides,
   }
@@ -102,7 +103,7 @@ describe('编辑器状态栏辅助函数', () => {
 
     expect(resolveEditorStatusBarFileLanguage(createTextState({
       kind: 'template',
-      path: '/project/template/example.scss',
+      path: AbsPath.from('/project/template/example.scss'),
     }), { getLanguageDisplayName, t })).toBe('SCSS')
   })
 
@@ -143,7 +144,7 @@ describe('编辑器状态栏辅助函数', () => {
     expect(isEditorStatusBarImagePreview(createPreviewState({
       assetUrl: 'asset://preview/theme.mp3',
       mimeType: 'audio/mpeg',
-      path: '/project/theme.mp3',
+      path: AbsPath.from('/project/theme.mp3'),
     }))).toBe(false)
   })
 })

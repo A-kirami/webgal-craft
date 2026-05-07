@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 
+import { AbsPath } from '~/domain/path'
 import { useTextEditorHistory } from '~/features/editor/text-editor/useTextEditorHistory'
 
 const { installTextEditorHistoryAdapterMock } = vi.hoisted(() => ({
@@ -137,7 +138,7 @@ describe('useTextEditorHistory 行为', () => {
       getState: () => ({
         isDirty: true,
         kind: 'scene',
-        path: '/game/scene.txt',
+        path: AbsPath.from('/game/scene.txt'),
         syncError: undefined,
         textContent: 'hlo\nworld',
       }),
@@ -206,7 +207,7 @@ describe('useTextEditorHistory 行为', () => {
       getState: () => ({
         isDirty: true,
         kind: 'scene',
-        path: '/game/scene.txt',
+        path: AbsPath.from('/game/scene.txt'),
         syncError: undefined,
         textContent: '',
       }),
@@ -251,7 +252,7 @@ describe('useTextEditorHistory 行为', () => {
       getState: () => ({
         isDirty: true,
         kind: 'scene',
-        path: '/game/scene.txt',
+        path: AbsPath.from('/game/scene.txt'),
         syncError: undefined,
         textContent: 'world\nhello',
       }),
@@ -308,7 +309,7 @@ describe('useTextEditorHistory 行为', () => {
       getState: () => ({
         isDirty: true,
         kind: 'scene',
-        path: '/game/scene.txt',
+        path: AbsPath.from('/game/scene.txt'),
         syncError: undefined,
         textContent: 'Xhello\nXworld',
       }),
@@ -385,7 +386,7 @@ describe('useTextEditorHistory 行为', () => {
       getState: () => ({
         isDirty: true,
         kind: 'animation',
-        path: '/game/animation.json',
+        path: AbsPath.from('/game/animation.json'),
         syncError: 'invalid-animation-json',
         textContent: 'broken',
       }),
@@ -423,7 +424,7 @@ describe('useTextEditorHistory 行为', () => {
       getState: () => ({
         isDirty: true,
         kind: 'animation',
-        path: '/game/animation.json',
+        path: AbsPath.from('/game/animation.json'),
         syncError: 'invalid-animation-json',
         textContent: 'broken',
       }),
@@ -465,7 +466,7 @@ describe('useTextEditorHistory 行为', () => {
       getState: () => ({
         isDirty: true,
         kind: 'animation',
-        path: '/game/animation.json',
+        path: AbsPath.from('/game/animation.json'),
         syncError: 'invalid-animation-json',
         textContent: 'broken',
       }),
@@ -502,7 +503,7 @@ describe('useTextEditorHistory 行为', () => {
       getState: () => ({
         isDirty: true,
         kind: 'scene',
-        path: '/game/scene.txt',
+        path: AbsPath.from('/game/scene.txt'),
         syncError: undefined,
         textContent: 'after',
       }),
@@ -543,7 +544,7 @@ describe('useTextEditorHistory 行为', () => {
       getState: () => ({
         isDirty: true,
         kind: 'scene',
-        path: '/game/scene.txt',
+        path: AbsPath.from('/game/scene.txt'),
         syncError: undefined,
         textContent: 'alph\nbet',
       }),
@@ -601,7 +602,7 @@ describe('useTextEditorHistory 行为', () => {
       getState: () => ({
         isDirty: false,
         kind: 'scene',
-        path: '/game/scene.txt',
+        path: AbsPath.from('/game/scene.txt'),
         syncError: undefined,
         textContent: 'hello',
       }),

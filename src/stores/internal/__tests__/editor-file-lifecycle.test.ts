@@ -13,7 +13,7 @@ import { createEditableSession, syncProjectionStateFromDocument } from '../edito
 import type { EditorFileLifecycleContext } from '../editor-file-lifecycle'
 import type { EditableEditorSession, EditorSession } from '../editor-session'
 
-const DOC_PATH = '/game/animation/sample.json'
+const DOC_PATH = AbsPath.from('/game/animation/sample.json')
 const CLEAN_CONTENT = '[{"duration":100}]'
 const DIRTY_CONTENT = '[{"duration":240}]'
 
@@ -55,7 +55,7 @@ vi.mock('~/stores/modal', () => ({
 interface ContextHarnessOptions extends Partial<EditorFileLifecycleContext> {
   autoSavePending?: boolean
   externalContent?: string
-  path?: string
+  path?: AbsPath
 }
 
 function createTextMetadata() {
@@ -262,8 +262,8 @@ describe('handleFileModifiedEvent 行为', () => {
   })
 
   it('重命名后沿用原文件修改队列，避免同一会话并发处理', async () => {
-    const oldPath = '/game/animation/rename-old.json'
-    const newPath = '/game/animation/rename-new.json'
+    const oldPath = AbsPath.from('/game/animation/rename-old.json')
+    const newPath = AbsPath.from('/game/animation/rename-new.json')
     let resolveOldRead:
       | ((value: { ok: true, content: string, metadata: ReturnType<typeof createTextMetadata> }) => void)
       | undefined
@@ -326,7 +326,7 @@ describe('handleFileModifiedEvent 行为', () => {
 
   it('loadEditorState 不会把带 .. 的伪场景路径误判为 scene 文档', async () => {
     vi.mocked(mime.getType).mockReturnValue('text/plain')
-    const targetPath = '/workspace/game/scene/../notes.txt'
+    const targetPath = AbsPath.from('/workspace/game/scene/../notes.txt')
     const { context } = createContextHarness({
       getWorkspaceRootPath: () => '/workspace',
       readTextDocumentFile: vi.fn(async () => ({
@@ -344,7 +344,7 @@ describe('handleFileModifiedEvent 行为', () => {
 
   it('loadEditorState 会在归一化后识别 animationTable.json，避免误判为 animation 文档', async () => {
     vi.mocked(mime.getType).mockReturnValue('application/json')
-    const targetPath = '/workspace/game/animation/../animation/animationTable.json'
+    const targetPath = AbsPath.from('/workspace/game/animation/../animation/animationTable.json')
     const { context } = createContextHarness({
       getWorkspaceRootPath: () => '/workspace',
       readTextDocumentFile: vi.fn(async () => ({

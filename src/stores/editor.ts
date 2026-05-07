@@ -75,7 +75,7 @@ export type {
 const PREVIEW_SYNC_DEDUPE_WINDOW_MS = 160
 const AUTO_SAVE_DEBOUNCE_MS = 500
 
-async function readTextDocumentFile(path: string): Promise<ReadTextDocumentResult> {
+async function readTextDocumentFile(path: AbsPath): Promise<ReadTextDocumentResult> {
   const fileStore = useFileStore()
   const physicalPath = fileStore.isVfs ? await fileStore.resolveFilePath(AbsPath.from(path)) : path
   const bytes = await readFile(physicalPath)
@@ -83,27 +83,27 @@ async function readTextDocumentFile(path: string): Promise<ReadTextDocumentResul
 }
 
 export const useEditorStore = defineStore('editor', () => {
-  const sessions = shallowReactive(new Map<string, EditorSession>())
-  const saveHooks = new Map<string, (path: string) => Promise<void> | void>()
+  const sessions = shallowReactive(new Map<AbsPath, EditorSession>())
+  const saveHooks = new Map<AbsPath, (path: AbsPath) => Promise<void> | void>()
 
-  function getSession(path: string): EditorSession | undefined {
+  function getSession(path: AbsPath): EditorSession | undefined {
     return sessions.get(path)
   }
 
-  function getEditableSession(path: string): EditableEditorSession | undefined {
+  function getEditableSession(path: AbsPath): EditableEditorSession | undefined {
     const session = sessions.get(path)
     return session?.type === 'editable' ? session : undefined
   }
 
-  function getTextProjectionState(path: string): TextProjectionState | undefined {
+  function getTextProjectionState(path: AbsPath): TextProjectionState | undefined {
     return getEditableSession(path)?.textState
   }
 
-  function getVisualProjectionState(path: string): VisualProjectionState | undefined {
+  function getVisualProjectionState(path: AbsPath): VisualProjectionState | undefined {
     return getEditableSession(path)?.visualState
   }
 
-  function getEditableState(path: string): EditableEditorState | undefined {
+  function getEditableState(path: AbsPath): EditableEditorState | undefined {
     const session = getEditableSession(path)
     if (!session) {
       return undefined
@@ -116,12 +116,12 @@ export const useEditorStore = defineStore('editor', () => {
     return session.textState
   }
 
-  function getDocumentState(path: string): DocumentState | undefined {
+  function getDocumentState(path: AbsPath): DocumentState | undefined {
     return getEditableSession(path)?.document
   }
 
   /** 若文档已打开且有未保存改动，返回当前 buffer 文本；否则返回 undefined。 */
-  function getDirtyBufferContent(path: string): string | undefined {
+  function getDirtyBufferContent(path: AbsPath): string | undefined {
     const document = getDocumentState(path)
     if (!document || !isDocumentDirty(document)) {
       return undefined
@@ -129,24 +129,24 @@ export const useEditorStore = defineStore('editor', () => {
     return getDocumentTextContent(document)
   }
 
-  function canUndoDocument(path: string): boolean {
+  function canUndoDocument(path: AbsPath): boolean {
     return getDocumentState(path)?.canUndo ?? false
   }
 
-  function canRedoDocument(path: string): boolean {
+  function canRedoDocument(path: AbsPath): boolean {
     return getDocumentState(path)?.canRedo ?? false
   }
 
-  function hasState(path: string): boolean {
+  function hasState(path: AbsPath): boolean {
     return sessions.has(path)
   }
 
-  function getPreviewMediaSession(path: string): PreviewMediaSession | undefined {
+  function getPreviewMediaSession(path: AbsPath): PreviewMediaSession | undefined {
     const session = getSession(path)
     return session?.type === 'preview' ? session.previewMediaSession : undefined
   }
 
-  function updatePreviewMediaSession(path: string, patch: Partial<PreviewMediaSession>) {
+  function updatePreviewMediaSession(path: AbsPath, patch: Partial<PreviewMediaSession>) {
     const session = getSession(path)
     if (!session || session.type !== 'preview') {
       return
@@ -165,7 +165,7 @@ export const useEditorStore = defineStore('editor', () => {
     session.previewMediaSession = reactive(createPreviewMediaSession(normalizedPatch)) as PreviewMediaSession
   }
 
-  function getState(path: string): EditorState | undefined {
+  function getState(path: AbsPath): EditorState | undefined {
     const session = getSession(path)
     if (!session) {
       return
@@ -199,7 +199,7 @@ export const useEditorStore = defineStore('editor', () => {
     syncSceneSelectionFromTextLine,
   } = createSceneSelectionActions(getEditableSession)
 
-  function syncStateFromDocument(path: string) {
+  function syncStateFromDocument(path: AbsPath) {
     reconcileSceneSelection(path)
     reconcileScenePresentation(path)
 
@@ -215,7 +215,7 @@ export const useEditorStore = defineStore('editor', () => {
     syncTabModified(path)
   }
 
-  function setTextProjectionDraft(path: string, textContent: string, syncError?: TextProjectionState['syncError']) {
+  function setTextProjectionDraft(path: AbsPath, textContent: string, syncError?: TextProjectionState['syncError']) {
     const session = getEditableSession(path)
     const state = session?.textState
     if (!state || !session) {
@@ -235,22 +235,41 @@ export const useEditorStore = defineStore('editor', () => {
   const tabsStore = useTabsStore()
   const fileSystemEvents = useFileSystemEvents()
 
-  const currentState = $computed(() => getState(tabsStore.activeTab?.path ?? ''))
-  const currentTextProjection = $computed(() => getTextProjectionState(tabsStore.activeTab?.path ?? ''))
-  const currentVisualProjection = $computed(() => getVisualProjectionState(tabsStore.activeTab?.path ?? ''))
-  const currentSceneSelection = $computed(() => getSceneSelection(tabsStore.activeTab?.path ?? ''))
-  const currentSelectedSceneStatement = $computed(() => getSelectedSceneStatement(tabsStore.activeTab?.path ?? ''))
-  const currentSelectedSceneStatementIndex = $computed(() => getSceneSelectionIndex(tabsStore.activeTab?.path ?? ''))
-  const currentSelectedSceneStatementPreviousSpeaker = $computed(() =>
-    getSelectedSceneStatementPreviousSpeaker(tabsStore.activeTab?.path ?? ''),
-  )
+  const currentState = $computed(() => {
+    const path = tabsStore.activeTab?.path
+    return path ? getState(path) : undefined
+  })
+  const currentTextProjection = $computed(() => {
+    const path = tabsStore.activeTab?.path
+    return path ? getTextProjectionState(path) : undefined
+  })
+  const currentVisualProjection = $computed(() => {
+    const path = tabsStore.activeTab?.path
+    return path ? getVisualProjectionState(path) : undefined
+  })
+  const currentSceneSelection = $computed(() => {
+    const path = tabsStore.activeTab?.path
+    return path ? getSceneSelection(path) : undefined
+  })
+  const currentSelectedSceneStatement = $computed(() => {
+    const path = tabsStore.activeTab?.path
+    return path ? getSelectedSceneStatement(path) : undefined
+  })
+  const currentSelectedSceneStatementIndex = $computed(() => {
+    const path = tabsStore.activeTab?.path
+    return path ? getSceneSelectionIndex(path) : undefined
+  })
+  const currentSelectedSceneStatementPreviousSpeaker = $computed(() => {
+    const path = tabsStore.activeTab?.path
+    return path ? getSelectedSceneStatementPreviousSpeaker(path) : ''
+  })
 
   const canToggleMode = $computed(() =>
     currentVisualProjection !== undefined,
   )
 
-  function updateTabModified(path: string, isModified: boolean) {
-    const tabIndex = tabsStore.findTabIndex(AbsPath.from(path))
+  function updateTabModified(path: AbsPath, isModified: boolean) {
+    const tabIndex = tabsStore.findTabIndex(path)
     if (tabIndex === -1) {
       return
     }
@@ -258,12 +277,12 @@ export const useEditorStore = defineStore('editor', () => {
     tabsStore.updateTabModified(tabIndex, isModified)
   }
 
-  function syncTabModified(path: string) {
+  function syncTabModified(path: AbsPath) {
     updateTabModified(path, !!getEditableState(path)?.isDirty)
   }
 
-  function updateTabLoading(path: string, isLoading: boolean) {
-    const tabIndex = tabsStore.findTabIndex(AbsPath.from(path))
+  function updateTabLoading(path: AbsPath, isLoading: boolean) {
+    const tabIndex = tabsStore.findTabIndex(path)
     if (tabIndex === -1) {
       return
     }
@@ -271,8 +290,8 @@ export const useEditorStore = defineStore('editor', () => {
     tabsStore.updateTabLoading(tabIndex, isLoading)
   }
 
-  function updateTabError(path: string, error?: string) {
-    const tabIndex = tabsStore.findTabIndex(AbsPath.from(path))
+  function updateTabError(path: AbsPath, error?: string) {
+    const tabIndex = tabsStore.findTabIndex(path)
     if (tabIndex === -1) {
       return
     }
@@ -286,7 +305,7 @@ export const useEditorStore = defineStore('editor', () => {
       void debugCommander.syncScene(path, lineNumber, lineText, force)
     },
   })
-  function syncScenePreview(path: string, lineNumber: number, lineText: string, force: boolean = false) {
+  function syncScenePreview(path: AbsPath, lineNumber: number, lineText: string, force: boolean = false) {
     previewSyncController.syncScenePreview(path, lineNumber, lineText, force)
   }
 
@@ -331,12 +350,12 @@ export const useEditorStore = defineStore('editor', () => {
     getVisualProjectionState,
   } satisfies EditorDocumentSaveContext
 
-  async function runSaveHook(path: string): Promise<void> {
+  async function runSaveHook(path: AbsPath): Promise<void> {
     await saveHooks.get(path)?.(path)
   }
 
   function runPostSaveEffects(
-    path: string,
+    path: AbsPath,
     savedContent: string,
     savedKind: DocumentState['model']['kind'],
   ): void {
@@ -374,7 +393,7 @@ export const useEditorStore = defineStore('editor', () => {
     return canExecuteEditorAutoSave(state)
   }
 
-  function cancelAutoSave(path: string) {
+  function cancelAutoSave(path: AbsPath) {
     autoSaveController.cancel(path)
   }
 
@@ -382,11 +401,11 @@ export const useEditorStore = defineStore('editor', () => {
     autoSaveController.cancelAll()
   }
 
-  function scheduleAutoSave(path: string) {
+  function scheduleAutoSave(path: AbsPath) {
     autoSaveController.schedule(path)
   }
 
-  function scheduleAutoSaveIfEnabled(path: string) {
+  function scheduleAutoSaveIfEnabled(path: AbsPath) {
     if (!editSettingsStore.autoSave) {
       return
     }
@@ -405,11 +424,11 @@ export const useEditorStore = defineStore('editor', () => {
     { flush: 'sync' },
   )
 
-  function registerSaveHook(path: string, hook: (path: string) => Promise<void> | void) {
+  function registerSaveHook(path: AbsPath, hook: (path: AbsPath) => Promise<void> | void) {
     saveHooks.set(path, hook)
   }
 
-  function unregisterSaveHook(path: string, hook?: (path: string) => Promise<void> | void) {
+  function unregisterSaveHook(path: AbsPath, hook?: (path: AbsPath) => Promise<void> | void) {
     const registeredHook = saveHooks.get(path)
     if (!registeredHook) {
       return
@@ -422,7 +441,7 @@ export const useEditorStore = defineStore('editor', () => {
     saveHooks.delete(path)
   }
 
-  async function saveFile(path: string, trigger: 'manual' | 'auto' = 'manual') {
+  async function saveFile(path: AbsPath, trigger: 'manual' | 'auto' = 'manual') {
     cancelAutoSave(path)
     // 在 await 前冻结当前保存快照，避免保存期间的新编辑被误并入本次保存并清除脏标记。
     const saveSnapshot = createEditorDocumentSaveSnapshot(documentSaveContext, path)
@@ -433,12 +452,13 @@ export const useEditorStore = defineStore('editor', () => {
     await maybeCreateSceneBackup(path, trigger)
   }
 
-  async function maybeCreateSceneBackup(path: string, trigger: 'manual' | 'auto'): Promise<void> {
+  async function maybeCreateSceneBackup(path: AbsPath, trigger: 'manual' | 'auto'): Promise<void> {
     const projectPath = useWorkspaceStore().CWD
     if (!projectPath) {
       return
     }
-    const logicalPath = backupManager.toProjectRelative(AbsPath.from(projectPath), AbsPath.from(path))
+    const projectAbsPath = AbsPath.from(projectPath)
+    const logicalPath = backupManager.toProjectRelative(projectAbsPath, path)
     if (!logicalPath) {
       return
     }
@@ -449,7 +469,7 @@ export const useEditorStore = defineStore('editor', () => {
       ? backupManager.createManualBackup
       : backupManager.createAutoBackup
     try {
-      await createBackup(AbsPath.from(projectPath), logicalPath)
+      await createBackup(projectAbsPath, logicalPath)
     } catch (error) {
       // 备份失败不应阻断主保存流程，仅记录日志即可
       const message = error instanceof Error ? error.message : String(error)
@@ -470,9 +490,9 @@ export const useEditorStore = defineStore('editor', () => {
     getPreferredProjection: () => usePreferenceStore().editorMode,
     getPreviewBaseUrl: () => previewSessionStore.currentGameServeUrl,
     getSceneSelection,
-    getSession: (path: string) => sessions.get(path),
+    getSession: (path: AbsPath) => sessions.get(path),
     getWorkspaceRootPath: () => useWorkspaceStore().CWD,
-    hasSession: (path: string) => sessions.has(path),
+    hasSession: (path: AbsPath) => sessions.has(path),
     messages: {
       fileSyncFailed: editorMessages.fileSyncFailed,
       previewUnavailable: editorMessages.previewUnavailable,
@@ -481,7 +501,7 @@ export const useEditorStore = defineStore('editor', () => {
     },
     patchSceneSelection,
     readTextDocumentFile,
-    resolveFilePath: async (path: string) => {
+    resolveFilePath: async (path: AbsPath) => {
       const fileStore = useFileStore()
       return fileStore.isVfs ? await fileStore.resolveFilePath(AbsPath.from(path)) : path
     },
@@ -489,12 +509,12 @@ export const useEditorStore = defineStore('editor', () => {
     setTabError: updateTabError,
     setTabLoading: updateTabLoading,
     setTabModified: updateTabModified,
-    setSession: (path: string, session: EditorSession) => sessions.set(path, session),
-    deleteSession: (path: string) => sessions.delete(path),
+    setSession: (path: AbsPath, session: EditorSession) => sessions.set(path, session),
+    deleteSession: (path: AbsPath) => sessions.delete(path),
     syncScenePreview,
   } satisfies EditorFileLifecycleContext
 
-  function setActiveProjection(projection: 'text' | 'visual', targetPath?: string): boolean {
+  function setActiveProjection(projection: 'text' | 'visual', targetPath?: AbsPath): boolean {
     const path = targetPath ?? tabsStore.activeTab?.path
     if (!path) {
       return false
@@ -540,7 +560,7 @@ export const useEditorStore = defineStore('editor', () => {
     return true
   }
 
-  function switchEditorMode(mode: 'text' | 'visual', targetPath?: string) {
+  function switchEditorMode(mode: 'text' | 'visual', targetPath?: AbsPath) {
     const path = targetPath ?? tabsStore.activeTab?.path
     if (!path) {
       return
@@ -565,7 +585,7 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function consumePendingSceneProjectionActivation(
-    path: string,
+    path: AbsPath,
     targetProjection: SceneProjectionActivation,
   ): boolean {
     const session = getEditableSession(path)
@@ -578,7 +598,7 @@ export const useEditorStore = defineStore('editor', () => {
     return true
   }
 
-  function syncActiveScenePreview(path: string) {
+  function syncActiveScenePreview(path: AbsPath) {
     const session = getEditableSession(path)
     if (!session || session.document.model.kind !== 'scene') {
       return
@@ -633,16 +653,15 @@ export const useEditorStore = defineStore('editor', () => {
     currentState !== undefined && isEditableEditor(currentState) && currentState.kind === 'animation',
   )
 
-  function isDocumentPathWithinDirectory(path: string, directory: string): boolean {
+  function isDocumentPathWithinDirectory(path: AbsPath, directory: string): boolean {
     try {
-      const normalizedPath = AbsPath.from(path)
       const normalizedDirectory = AbsPath.from(directory)
 
-      if (AbsPath.equals(normalizedPath, normalizedDirectory)) {
+      if (AbsPath.equals(path, normalizedDirectory)) {
         return true
       }
 
-      AbsPath.relativize(normalizedPath, normalizedDirectory)
+      AbsPath.relativize(path, normalizedDirectory)
       return true
     } catch {
       return false
@@ -658,8 +677,8 @@ export const useEditorStore = defineStore('editor', () => {
     return false
   }
 
-  function collectDocumentPathsUnder(directory: string): string[] {
-    const matched: string[] = []
+  function collectDocumentPathsUnder(directory: string): AbsPath[] {
+    const matched: AbsPath[] = []
     for (const [path] of sessions) {
       if (isDocumentPathWithinDirectory(path, directory)) {
         matched.push(path)

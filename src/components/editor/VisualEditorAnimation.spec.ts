@@ -4,6 +4,7 @@ import { page } from 'vitest/browser'
 import { computed, defineComponent, h, reactive } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
+import { AbsPath } from '~/domain/path'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
 
@@ -55,7 +56,7 @@ function createAnimationState(path: string) {
     }],
     isDirty: false,
     kind: 'animation' as const,
-    path,
+    path: AbsPath.from(path),
     projection: 'visual' as const,
   }
 }

@@ -321,7 +321,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('加载纯文本文件后可应用补丁、保存并支持撤销重做', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/docs/example.txt'
+    const path = AbsPath.from('/game/docs/example.txt')
 
     const editorStore = useEditorStore()
 
@@ -373,7 +373,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('将模板 CSS 文件识别为模板文档且不创建可视化投影', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/template/example.css'
+    const path = AbsPath.from('/game/template/example.css')
 
     const editorStore = useEditorStore()
 
@@ -391,7 +391,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('识别模板样式文件时忽略大小写', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/template/example.SCSS'
+    const path = AbsPath.from('/game/template/example.SCSS')
 
     const editorStore = useEditorStore()
 
@@ -409,7 +409,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('将模板目录中的非样式文件视为纯文本文档', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/template/example.txt'
+    const path = AbsPath.from('/game/template/example.txt')
 
     const editorStore = useEditorStore()
 
@@ -428,8 +428,8 @@ describe('编辑器状态仓库的文本与文档流程', () => {
   it('只把真正位于目录下的文档计入 collectDocumentPathsUnder 与 hasUnsavedDocumentsUnder', async () => {
     const tabsStore = useTabsStore()
     const editorStore = useEditorStore()
-    const insidePath = '/game/assets/chapter-1/scene.txt'
-    const siblingPath = '/game/assets/chapter-10/scene.txt'
+    const insidePath = AbsPath.from('/game/assets/chapter-1/scene.txt')
+    const siblingPath = AbsPath.from('/game/assets/chapter-10/scene.txt')
 
     await openTabAndWaitFor(tabsStore, 'scene.txt', insidePath, () => editorStore.hasState(insidePath), 'load nested document')
     await openTabAndWaitFor(tabsStore, 'scene.txt', siblingPath, () => editorStore.hasState(siblingPath), 'load sibling document')
@@ -444,8 +444,8 @@ describe('编辑器状态仓库的文本与文档流程', () => {
   it('目录匹配保持大小写敏感，不会把仅大小写不同的路径视为同一文档树', async () => {
     const tabsStore = useTabsStore()
     const editorStore = useEditorStore()
-    const upperCasePath = 'C:/Game/Assets/scene.txt'
-    const lowerCasePath = 'C:/game/assets/scene.txt'
+    const upperCasePath = AbsPath.from('C:/Game/Assets/scene.txt')
+    const lowerCasePath = AbsPath.from('C:/game/assets/scene.txt')
 
     await openTabAndWaitFor(tabsStore, 'scene.txt', upperCasePath, () => editorStore.hasState(upperCasePath), 'load upper case path document')
 
@@ -457,7 +457,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('保存模板样式文件后刷新模板', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/template/example.css'
+    const path = AbsPath.from('/game/template/example.css')
 
     const editorStore = useEditorStore()
 
@@ -472,7 +472,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('保存期间会使用保存快照中的模板类型执行后置效果', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/template/save-race.css'
+    const path = AbsPath.from('/game/template/save-race.css')
     const writeDeferred = createDeferred<void>()
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('body { color: black; }'))
@@ -503,7 +503,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('模板刷新失败时走统一错误处理', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/template/refetch-failure.css'
+    const path = AbsPath.from('/game/template/refetch-failure.css')
     const refetchError = new Error('refetch failed')
 
     refetchTemplatesMock.mockRejectedValueOnce(refetchError)
@@ -528,8 +528,8 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('为预览资源保存媒体会话并在重命名时迁移', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/video/preview.mp4'
-    const renamedPath = '/game/video/preview-renamed.mp4'
+    const path = AbsPath.from('/game/video/preview.mp4')
+    const renamedPath = AbsPath.from('/game/video/preview-renamed.mp4')
 
     mimeGetTypeMock.mockReturnValue('video/mp4')
 
@@ -578,7 +578,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('预览资源缺少预览 URL 时直接暴露错误而不是无限等待', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/video/preview-unavailable.mp4'
+    const path = AbsPath.from('/game/video/preview-unavailable.mp4')
 
     previewSessionStoreMock.currentGameServeUrl = undefined
     mimeGetTypeMock.mockReturnValue('video/mp4')
@@ -599,7 +599,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('工作区不可用时直接暴露错误而不是静默降级文档类型', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/workspace-unavailable.txt'
+    const path = AbsPath.from('/game/scene/workspace-unavailable.txt')
 
     workspaceStoreMock.cwd = undefined
 
@@ -619,7 +619,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('将连续文本输入合并为一次可重做快照', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/docs/merge.txt'
+    const path = AbsPath.from('/game/docs/merge.txt')
 
     const editorStore = useEditorStore()
 
@@ -645,7 +645,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('在合并后的文本历史中使用文本补丁逆操作且不破坏撤销重做', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/docs/patch-inverse-merge.txt'
+    const path = AbsPath.from('/game/docs/patch-inverse-merge.txt')
 
     const editorStore = useEditorStore()
 
@@ -673,7 +673,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('在模式切换后保持文本与可视化投影稳定', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/example.txt'
+    const path = AbsPath.from('/game/scene/example.txt')
 
     const editorStore = useEditorStore()
 
@@ -727,7 +727,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('切换到可视模式时会记录待激活投影并请求重新聚焦编辑器表面', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/switch-mode-focus.txt'
+    const path = AbsPath.from('/game/scene/switch-mode-focus.txt')
 
     const editorStore = useEditorStore()
 
@@ -752,7 +752,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('切回文本模式时由 store 记录并消费文本投影激活标记', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/switch-mode-text-sync.txt'
+    const path = AbsPath.from('/game/scene/switch-mode-text-sync.txt')
 
     preferenceStoreMock.editorMode = 'visual'
 
@@ -785,7 +785,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('重复切换到相同模式时不会清空既有投影激活标记', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/switch-mode-repeat-visual.txt'
+    const path = AbsPath.from('/game/scene/switch-mode-repeat-visual.txt')
 
     const editorStore = useEditorStore()
 
@@ -806,7 +806,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('文本补丁重建语句后仍按语句 ID 保持场景侧栏选中项', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/selection-sync.txt'
+    const path = AbsPath.from('/game/scene/selection-sync.txt')
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('alpha\nbeta'))
     mimeGetTypeMock.mockReturnValue('text/plain')
@@ -846,7 +846,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('切换到其他语句后仍可从历史中恢复可视化场景选中项', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/visual-history-selection.txt'
+    const path = AbsPath.from('/game/scene/visual-history-selection.txt')
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('alpha\nbeta'))
     mimeGetTypeMock.mockReturnValue('text/plain')
@@ -905,8 +905,8 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('将场景折叠卡片状态保存在文档模型外并按语句 ID 对齐', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/collapsed-state.txt'
-    const renamedPath = '/game/scene/collapsed-state-renamed.txt'
+    const path = AbsPath.from('/game/scene/collapsed-state.txt')
+    const renamedPath = AbsPath.from('/game/scene/collapsed-state-renamed.txt')
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('alpha\nbeta'))
 
@@ -957,7 +957,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('删除当前选中语句后会把场景选择迁移到相邻语句，并可被 undo/redo 恢复', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/delete-selection.txt'
+    const path = AbsPath.from('/game/scene/delete-selection.txt')
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('alpha\nbeta'))
 
@@ -1009,7 +1009,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('在可视模式加载非法动画文件时保留原始文本草稿', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/animation/broken.json'
+    const path = AbsPath.from('/game/animation/broken.json')
 
     preferenceStoreMock.editorMode = 'visual'
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('{'))
@@ -1063,7 +1063,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('可视动画文件被外部替换为非法 JSON 时保持可视投影激活并保留原始草稿', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/animation/external-invalid.json'
+    const path = AbsPath.from('/game/animation/external-invalid.json')
 
     preferenceStoreMock.editorMode = 'visual'
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('[{"duration":100}]'))
@@ -1100,7 +1100,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('在文本模式保存时保留有效动画草稿文本，仅在进入可视模式后规范化', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/animation/draft.json'
+    const path = AbsPath.from('/game/animation/draft.json')
 
     preferenceStoreMock.editorMode = 'text'
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('[{"duration":100}]'))
@@ -1159,7 +1159,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('在文本模式撤销重做时恢复有效动画草稿文本', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/animation/undo-redo.json'
+    const path = AbsPath.from('/game/animation/undo-redo.json')
 
     preferenceStoreMock.editorMode = 'text'
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('[{"duration":100}]'))
@@ -1203,7 +1203,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('支持动画可视化投影事务', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/animation/example.json'
+    const path = AbsPath.from('/game/animation/example.json')
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('[{"duration":100}]'))
     mimeGetTypeMock.mockReturnValue('application/json')
@@ -1242,7 +1242,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('保存期间收到新编辑时保持文档脏状态', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/docs/save-race.txt'
+    const path = AbsPath.from('/game/docs/save-race.txt')
     const writeDeferred = createDeferred<void>()
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('hello'))
@@ -1274,7 +1274,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('对相同文档路径的自动保存请求去重', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/docs/auto-save-dedupe.txt'
+    const path = AbsPath.from('/game/docs/auto-save-dedupe.txt')
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('hello'))
 
@@ -1307,7 +1307,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('手动保存先完成时取消待执行的自动保存', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/docs/auto-save-cancelled-by-manual.txt'
+    const path = AbsPath.from('/game/docs/auto-save-cancelled-by-manual.txt')
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('hello'))
 
@@ -1339,7 +1339,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('从文本投影保存后同步场景预览', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/text-save-preview.txt'
+    const path = AbsPath.from('/game/scene/text-save-preview.txt')
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('hello'))
     mimeGetTypeMock.mockReturnValue('text/plain')
@@ -1364,8 +1364,8 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('切换场景标签页时重新同步当前预览行', async () => {
     const tabsStore = useTabsStore()
-    const firstPath = '/game/scene/first.txt'
-    const secondPath = '/game/scene/second.txt'
+    const firstPath = AbsPath.from('/game/scene/first.txt')
+    const secondPath = AbsPath.from('/game/scene/second.txt')
 
     readFileMock
       .mockResolvedValueOnce(new TextEncoder().encode('alpha\nbeta'))
@@ -1406,8 +1406,8 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('可视化场景切换标签页时重新同步当前预览语句', async () => {
     const tabsStore = useTabsStore()
-    const firstPath = '/game/scene/visual-first.txt'
-    const secondPath = '/game/scene/visual-second.txt'
+    const firstPath = AbsPath.from('/game/scene/visual-first.txt')
+    const secondPath = AbsPath.from('/game/scene/visual-second.txt')
 
     preferenceStoreMock.editorMode = 'visual'
     readFileMock
@@ -1464,8 +1464,8 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('切换到脏场景标签页时不会补发预览同步', async () => {
     const tabsStore = useTabsStore()
-    const firstPath = '/game/scene/dirty-first.txt'
-    const secondPath = '/game/scene/clean-second.txt'
+    const firstPath = AbsPath.from('/game/scene/dirty-first.txt')
+    const secondPath = AbsPath.from('/game/scene/clean-second.txt')
 
     readFileMock
       .mockResolvedValueOnce(new TextEncoder().encode('alpha\nbeta'))
@@ -1501,7 +1501,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('第二个保存钩子失败时仍保留已完成的场景预览同步', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/text-save-preview-hook-failure.txt'
+    const path = AbsPath.from('/game/scene/text-save-preview-hook-failure.txt')
     const saveHookError = new Error('save hook failed')
     let hookCalls = 0
 
@@ -1534,7 +1534,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('将外部合并走 replace-all 事务流程并保持撤销历史完整', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/external-merge.txt'
+    const path = AbsPath.from('/game/scene/external-merge.txt')
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('local'))
     mimeGetTypeMock.mockReturnValue('text/plain')
@@ -1579,7 +1579,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('将非 UTF-8 文本文件加载为不支持状态', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/non-utf8.txt'
+    const path = AbsPath.from('/game/scene/non-utf8.txt')
 
     readFileMock.mockResolvedValueOnce(new Uint8Array([0xFF, 0xFE, 0x66, 0x00]))
     mimeGetTypeMock.mockReturnValue('text/plain')
@@ -1604,7 +1604,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('将文件类型检测失败暴露为标签错误', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/detect-failed.txt'
+    const path = AbsPath.from('/game/scene/detect-failed.txt')
 
     isBinaryFileMock.mockRejectedValueOnce(new Error('detector offline'))
     mimeGetTypeMock.mockReturnValue('text/plain')
@@ -1625,7 +1625,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('合并文档后续保存时使用外部元数据', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/external-merge-encoding.txt'
+    const path = AbsPath.from('/game/scene/external-merge-encoding.txt')
 
     readFileMock.mockResolvedValueOnce(new Uint8Array(encodeTextFile('local', {
       lineEnding: '\n',
@@ -1669,7 +1669,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('收到与当前已保存内容一致的 file:modified 时不会弹冲突对话框', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/scene/save-echo.txt'
+    const path = AbsPath.from('/game/scene/save-echo.txt')
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('hello'))
     mimeGetTypeMock.mockReturnValue('text/plain')
@@ -1697,7 +1697,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('接受干净的外部文档替换后重置撤销重做历史', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/docs/external-reload-clean.txt'
+    const path = AbsPath.from('/game/docs/external-reload-clean.txt')
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('hello'))
 
@@ -1733,7 +1733,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('切换到可视模式后仍可保存非法动画草稿并保持草稿完整', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/animation/invalid.json'
+    const path = AbsPath.from('/game/animation/invalid.json')
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('[{"duration":100}]'))
     mimeGetTypeMock.mockReturnValue('application/json')
@@ -1780,7 +1780,7 @@ describe('编辑器状态仓库的文本与文档流程', () => {
 
   it('动画草稿恢复到已保存内容时同步恢复干净脏状态', async () => {
     const tabsStore = useTabsStore()
-    const path = '/game/animation/dirty-reset.json'
+    const path = AbsPath.from('/game/animation/dirty-reset.json')
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('[{"duration":100}]'))
     mimeGetTypeMock.mockReturnValue('application/json')

@@ -9,13 +9,14 @@ import { createAnimationTransformPatch } from '~/features/editor/animation/anima
 import { createDefaultAnimationFrame, useAnimationEditorSession } from '~/features/editor/animation/useAnimationEditorSession'
 
 import type { MaybeRefOrGetter } from 'vue'
+import type { AbsPath } from '~/domain/path'
 import type { AnimationFrame, Transform } from '~/domain/stage/types'
 import type { AnimationTimelineResizeDurationPayload } from '~/features/editor/animation/animation-editor-contract'
 import type { EffectEditorTransformUpdatePayload } from '~/features/editor/effect-editor/useEffectEditorProvider'
 
 interface VisualAnimationStateLike {
   frames: readonly AnimationFrame[]
-  path: string
+  path: AbsPath
 }
 
 interface HistoryMutationResult {
@@ -23,23 +24,23 @@ interface HistoryMutationResult {
 }
 
 interface UseVisualEditorAnimationOptions {
-  applyAnimationFrameDelete: (path: string, frameIndex: number) => void
+  applyAnimationFrameDelete: (path: AbsPath, frameIndex: number) => void
   applyAnimationFrameInsert: (
-    path: string,
+    path: AbsPath,
     insertAfterIndex: number | undefined,
     frame: AnimationFrame,
   ) => void
   applyAnimationFrameUpdate: (
-    path: string,
+    path: AbsPath,
     frameIndex: number,
     patch: Partial<AnimationFrame>,
   ) => void
-  canRedo: (path: string) => boolean
-  canUndo: (path: string) => boolean
-  redoDocument: (path: string) => HistoryMutationResult
-  scheduleAutoSaveIfEnabled: (path: string) => void
+  canRedo: (path: AbsPath) => boolean
+  canUndo: (path: AbsPath) => boolean
+  redoDocument: (path: AbsPath) => HistoryMutationResult
+  scheduleAutoSaveIfEnabled: (path: AbsPath) => void
   state: MaybeRefOrGetter<VisualAnimationStateLike>
-  undoDocument: (path: string) => HistoryMutationResult
+  undoDocument: (path: AbsPath) => HistoryMutationResult
 }
 
 export function useVisualEditorAnimation(options: UseVisualEditorAnimationOptions) {

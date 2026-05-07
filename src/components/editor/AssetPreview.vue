@@ -7,6 +7,8 @@ import {
 import { restorePreviewMediaSession, snapshotPreviewMediaSession } from '~/features/editor/preview/preview-media-session'
 import { AssetPreviewState, useEditorStore } from '~/stores/editor'
 
+import type { AbsPath } from '~/domain/path'
+
 interface Props {
   state: AssetPreviewState
 }
@@ -16,7 +18,7 @@ const editorStore = useEditorStore()
 const mediaElement = useTemplateRef<HTMLMediaElement>('mediaElement')
 
 function persistCurrentMediaSession(
-  path: string,
+  path: AbsPath,
   mimeType: string,
   options?: {
     paused?: boolean
@@ -34,7 +36,7 @@ function persistCurrentMediaSession(
   editorStore.updatePreviewMediaSession(path, snapshotPreviewMediaSession(element, options))
 }
 
-function suspendCurrentMediaSession(path: string, mimeType: string) {
+function suspendCurrentMediaSession(path: AbsPath, mimeType: string) {
   persistCurrentMediaSession(path, mimeType, { paused: true })
 }
 

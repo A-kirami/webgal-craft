@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { AbsPath } from '~/domain/path'
+
 import {
   createDocumentState,
   createLoadedDocumentState,
@@ -23,7 +25,7 @@ describe('编辑器会话的已加载文档状态', () => {
       syncError: 'invalid-animation-json',
     })
 
-    const session = createEditableSession('/game/animation/broken.json', loadedState, 'visual')
+    const session = createEditableSession(AbsPath.from('/game/animation/broken.json'), loadedState, 'visual')
 
     expect(session.activeProjection).toBe('visual')
     expect(session.textState.textContent).toBe('{invalid json')
@@ -35,12 +37,12 @@ describe('编辑器会话的已加载文档状态', () => {
     const content = '[{"duration":100}]'
     const loadedState = createLoadedDocumentState('animation', content)
 
-    const visualSession = createEditableSession('/game/animation/visual.json', loadedState, 'visual')
+    const visualSession = createEditableSession(AbsPath.from('/game/animation/visual.json'), loadedState, 'visual')
     expect(visualSession.activeProjection).toBe('visual')
     expect(visualSession.textState.textSource).toBe('projection')
     expect(visualSession.textState.syncError).toBeUndefined()
 
-    const textSession = createEditableSession('/game/animation/text.json', loadedState, 'text')
+    const textSession = createEditableSession(AbsPath.from('/game/animation/text.json'), loadedState, 'text')
     expect(textSession.activeProjection).toBe('text')
     expect(textSession.textState.textContent).toBe(content)
     expect(textSession.textState.textSource).toBe('draft')
@@ -48,7 +50,7 @@ describe('编辑器会话的已加载文档状态', () => {
 
   it('applyLoadedDocumentState 会从显式快照恢复文本投影', () => {
     const session = createEditableSession(
-      '/game/animation/state.json',
+      AbsPath.from('/game/animation/state.json'),
       createLoadedDocumentState('animation', '[{"duration":100}]'),
       'visual',
     )
@@ -64,7 +66,7 @@ describe('编辑器会话的已加载文档状态', () => {
 
   it('偏好可视模式时，applyLoadedDocumentState 会为非法动画草稿保持可视投影激活', () => {
     const session = createEditableSession(
-      '/game/animation/state.json',
+      AbsPath.from('/game/animation/state.json'),
       createLoadedDocumentState('animation', '[{"duration":100}]'),
       'visual',
     )
@@ -79,7 +81,7 @@ describe('编辑器会话的已加载文档状态', () => {
 
   it('applyLoadedDocumentState 会在同步非法动画草稿前清理陈旧脏状态', () => {
     const session = createEditableSession(
-      '/game/animation/reload.json',
+      AbsPath.from('/game/animation/reload.json'),
       createLoadedDocumentState('animation', '[{"duration":100}]'),
       'text',
     )

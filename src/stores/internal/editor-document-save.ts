@@ -1,6 +1,5 @@
 import { normalizeTextLineEnding } from '~/domain/document/document-model'
 import { encodeTextFile } from '~/domain/document/file-codec'
-import { AbsPath } from '~/domain/path'
 import { gameFs } from '~/services/game-fs'
 import { AppError } from '~/types/errors'
 
@@ -10,12 +9,13 @@ import { getTextProjectionPersistedContent, normalizeAnimationTextProjection } f
 import type { EditorDocumentActionContext } from './editor-document-actions'
 import type { DocumentState } from './editor-document-state'
 import type { EditableEditorState, TextProjectionState, VisualProjectionState } from './editor-session'
+import type { AbsPath } from '~/domain/path'
 
 export interface EditorDocumentSaveContext extends EditorDocumentActionContext {
   createEditorError: (message: string) => AppError
-  getEditableState: (path: string) => EditableEditorState | undefined
-  getTextProjectionState: (path: string) => TextProjectionState | undefined
-  getVisualProjectionState: (path: string) => VisualProjectionState | undefined
+  getEditableState: (path: AbsPath) => EditableEditorState | undefined
+  getTextProjectionState: (path: AbsPath) => TextProjectionState | undefined
+  getVisualProjectionState: (path: AbsPath) => VisualProjectionState | undefined
 }
 
 export interface EditorDocumentSaveSnapshot {
@@ -28,7 +28,7 @@ export interface EditorDocumentSaveSnapshot {
 
 export function createEditorDocumentSaveSnapshot(
   context: EditorDocumentSaveContext,
-  path: string,
+  path: AbsPath,
 ): EditorDocumentSaveSnapshot {
   const state = context.getEditableState(path)
   if (!state) {
@@ -55,7 +55,7 @@ export function createEditorDocumentSaveSnapshot(
 
 function finalizeSavedDocument(
   context: EditorDocumentSaveContext,
-  path: string,
+  path: AbsPath,
   saveContext: EditorDocumentSaveSnapshot,
   savedContent: string,
   savedAt: Date,
@@ -91,14 +91,14 @@ function finalizeSavedDocument(
 
 export async function saveEditorDocument(
   context: EditorDocumentSaveContext,
-  path: string,
+  path: AbsPath,
   saveSnapshot: EditorDocumentSaveSnapshot = createEditorDocumentSaveSnapshot(context, path),
 ): Promise<string> {
   const metadata = saveSnapshot.docEntry.model.metadata
   const finalContent = normalizeTextLineEnding(saveSnapshot.content, metadata.lineEnding)
   const finalBytes = encodeTextFile(finalContent, metadata)
 
-  await gameFs.writeDocumentFile(AbsPath.from(path), finalBytes)
+  await gameFs.writeDocumentFile(path, finalBytes)
   finalizeSavedDocument(context, path, saveSnapshot, finalContent, new Date())
   return finalContent
 }

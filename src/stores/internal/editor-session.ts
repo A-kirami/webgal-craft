@@ -15,11 +15,12 @@ import {
 import type { DocumentState, LoadedDocumentState, LoadedTextProjectionSnapshot } from './editor-document-state'
 import type { DocumentKind, DocumentModel } from '~/domain/document/document-model'
 import type { SceneSelectionState } from '~/domain/document/scene-selection'
+import type { AbsPath } from '~/domain/path'
 import type { PreviewMediaSession } from '~/features/editor/preview/preview-media-session'
 import type { ScenePresentationState } from '~/features/editor/shared/scene-presentation'
 
 export interface CoreEditorState {
-  path: string
+  path: AbsPath
 }
 
 export interface EditableProjectionBase extends CoreEditorState {
@@ -110,7 +111,7 @@ export function isAnimationVisualProjection(state: EditorState): state is Animat
 }
 
 export function createEditableSession(
-  path: string,
+  path: AbsPath,
   loadedState: LoadedDocumentState,
   preferredProjection: 'text' | 'visual',
 ): EditableEditorSession {

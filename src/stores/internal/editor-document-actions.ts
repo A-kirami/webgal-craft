@@ -19,6 +19,7 @@ import type {
   Transaction,
   TransactionSource,
 } from '~/domain/document/transaction'
+import type { AbsPath } from '~/domain/path'
 
 export interface ApplyDocumentTransactionOptions {
   transaction?: Transaction
@@ -31,20 +32,20 @@ export interface ApplyDocumentTransactionOptions {
 }
 
 export interface DocumentStateAccessor {
-  getDocumentState: (path: string) => DocumentState | undefined
+  getDocumentState: (path: AbsPath) => DocumentState | undefined
 }
 
 export interface TextProjectionStateAccessor {
-  getTextProjectionState: (path: string) => TextProjectionState | undefined
+  getTextProjectionState: (path: AbsPath) => TextProjectionState | undefined
 }
 
 export interface SceneSelectionStateAccessor {
-  getSceneSelection: (path: string) => SceneSelectionState | undefined
+  getSceneSelection: (path: AbsPath) => SceneSelectionState | undefined
 }
 
 export interface DocumentStateSyncActions {
-  patchSceneSelection: (path: string, patch: Partial<SceneSelectionState>) => void
-  syncStateFromDocument: (path: string) => void
+  patchSceneSelection: (path: AbsPath, patch: Partial<SceneSelectionState>) => void
+  syncStateFromDocument: (path: AbsPath) => void
 }
 
 export interface EditorDocumentActionContext extends
@@ -55,37 +56,37 @@ export interface EditorDocumentActionContext extends
 
 export function createEditorDocumentActions(context: EditorDocumentActionContext) {
   return {
-    applyAnimationFrameDelete(path: string, index: number): void {
+    applyAnimationFrameDelete(path: AbsPath, index: number): void {
       applyAnimationFrameDelete(context, path, index)
     },
     applyAnimationFrameInsert(
-      path: string,
+      path: AbsPath,
       afterIndex: number | undefined,
       frame: AnimationFrame,
     ): void {
       applyAnimationFrameInsert(context, path, afterIndex, frame)
     },
-    applyAnimationFrameReorder(path: string, fromIndex: number, toIndex: number): void {
+    applyAnimationFrameReorder(path: AbsPath, fromIndex: number, toIndex: number): void {
       applyAnimationFrameReorder(context, path, fromIndex, toIndex)
     },
-    applyAnimationFrameUpdate(path: string, index: number, frame: Partial<AnimationFrame>): void {
+    applyAnimationFrameUpdate(path: AbsPath, index: number, frame: Partial<AnimationFrame>): void {
       applyAnimationFrameUpdate(context, path, index, frame)
     },
-    applySceneStatementDelete(path: string, statementId: number): void {
+    applySceneStatementDelete(path: AbsPath, statementId: number): void {
       applySceneStatementDelete(context, path, statementId)
     },
     applySceneStatementInsert(
-      path: string,
+      path: AbsPath,
       insertedStatements: readonly Pick<SceneStatement, 'id' | 'rawText'>[],
       insertAt: number,
     ): void {
       applySceneStatementInsert(context, path, insertedStatements, insertAt)
     },
-    applySceneStatementReorder(path: string, fromIndex: number, toIndex: number): void {
+    applySceneStatementReorder(path: AbsPath, fromIndex: number, toIndex: number): void {
       applySceneStatementReorder(context, path, fromIndex, toIndex)
     },
     applySceneStatementUpdate(
-      path: string,
+      path: AbsPath,
       statementId: number,
       rawText: string,
       source?: Extract<TransactionSource, 'visual' | 'effect-editor'>,
@@ -93,7 +94,7 @@ export function createEditorDocumentActions(context: EditorDocumentActionContext
       applySceneStatementUpdate(context, path, statementId, rawText, source)
     },
     applyTextDocumentContent(
-      path: string,
+      path: AbsPath,
       nextContent: string,
       options?: {
         editorMetadata?: EditorHistoryMetadata
@@ -102,11 +103,11 @@ export function createEditorDocumentActions(context: EditorDocumentActionContext
     ): void {
       applyTextDocumentContent(context, path, nextContent, options)
     },
-    redoDocument(path: string): HistoryApplyResult {
+    redoDocument(path: AbsPath): HistoryApplyResult {
       return redoDocument(context, path)
     },
     replaceTextDocumentContent(
-      path: string,
+      path: AbsPath,
       content: string,
       options?: {
         editorMetadata?: EditorHistoryMetadata
@@ -116,7 +117,7 @@ export function createEditorDocumentActions(context: EditorDocumentActionContext
     ): boolean {
       return replaceTextDocumentContent(context, path, content, options)
     },
-    undoDocument(path: string): HistoryApplyResult {
+    undoDocument(path: AbsPath): HistoryApplyResult {
       return undoDocument(context, path)
     },
   }
@@ -124,7 +125,7 @@ export function createEditorDocumentActions(context: EditorDocumentActionContext
 
 export function applyTransactionToDocumentModel(
   context: DocumentStateAccessor,
-  path: string,
+  path: AbsPath,
   transaction: Transaction,
 ): boolean {
   const docEntry = context.getDocumentState(path)
@@ -144,7 +145,7 @@ export function applyTransactionToDocumentModel(
 
 export function applyDocumentTransaction(
   context: DocumentStateAccessor & SceneSelectionStateAccessor & DocumentStateSyncActions,
-  path: string,
+  path: AbsPath,
   options: ApplyDocumentTransactionOptions,
 ): boolean {
   const docEntry = context.getDocumentState(path)
@@ -196,7 +197,7 @@ export function applyDocumentTransaction(
 
 export function applySceneStatementUpdate(
   context: DocumentStateAccessor & SceneSelectionStateAccessor & DocumentStateSyncActions,
-  path: string,
+  path: AbsPath,
   statementId: number,
   rawText: string,
   source: Extract<TransactionSource, 'visual' | 'effect-editor'> = 'visual',
@@ -212,7 +213,7 @@ export function applySceneStatementUpdate(
 
 export function applySceneStatementInsert(
   context: DocumentStateAccessor & SceneSelectionStateAccessor & DocumentStateSyncActions,
-  path: string,
+  path: AbsPath,
   insertedStatements: readonly Pick<SceneStatement, 'id' | 'rawText'>[],
   insertAt: number,
 ): void {
@@ -250,7 +251,7 @@ export function applySceneStatementInsert(
 
 export function applySceneStatementDelete(
   context: DocumentStateAccessor & SceneSelectionStateAccessor & DocumentStateSyncActions,
-  path: string,
+  path: AbsPath,
   statementId: number,
 ): void {
   const docEntry = context.getDocumentState(path)
@@ -271,7 +272,7 @@ export function applySceneStatementDelete(
 
 export function applySceneStatementReorder(
   context: DocumentStateAccessor & SceneSelectionStateAccessor & DocumentStateSyncActions,
-  path: string,
+  path: AbsPath,
   fromIndex: number,
   toIndex: number,
 ): void {
@@ -300,7 +301,7 @@ export function applySceneStatementReorder(
 
 export function applyAnimationFrameUpdate(
   context: DocumentStateAccessor & SceneSelectionStateAccessor & DocumentStateSyncActions,
-  path: string,
+  path: AbsPath,
   index: number,
   frame: Partial<AnimationFrame>,
 ): void {
@@ -312,7 +313,7 @@ export function applyAnimationFrameUpdate(
 
 export function applyAnimationFrameInsert(
   context: DocumentStateAccessor & SceneSelectionStateAccessor & DocumentStateSyncActions,
-  path: string,
+  path: AbsPath,
   afterIndex: number | undefined,
   frame: AnimationFrame,
 ): void {
@@ -324,7 +325,7 @@ export function applyAnimationFrameInsert(
 
 export function applyAnimationFrameDelete(
   context: DocumentStateAccessor & SceneSelectionStateAccessor & DocumentStateSyncActions,
-  path: string,
+  path: AbsPath,
   index: number,
 ): void {
   applyDocumentTransaction(context, path, {
@@ -335,7 +336,7 @@ export function applyAnimationFrameDelete(
 
 export function applyAnimationFrameReorder(
   context: DocumentStateAccessor & SceneSelectionStateAccessor & DocumentStateSyncActions,
-  path: string,
+  path: AbsPath,
   fromIndex: number,
   toIndex: number,
 ): void {
@@ -355,7 +356,7 @@ export function applyAnimationFrameReorder(
 
 export function applyTextDocumentContent(
   context: DocumentStateAccessor & SceneSelectionStateAccessor & DocumentStateSyncActions,
-  path: string,
+  path: AbsPath,
   nextContent: string,
   options: {
     editorMetadata?: EditorHistoryMetadata
@@ -391,7 +392,7 @@ export function applyTextDocumentContent(
 
 export function replaceTextDocumentContent(
   context: DocumentStateAccessor & SceneSelectionStateAccessor & DocumentStateSyncActions & Pick<TextProjectionStateAccessor, 'getTextProjectionState'>,
-  path: string,
+  path: AbsPath,
   content: string,
   options: {
     editorMetadata?: EditorHistoryMetadata
@@ -459,7 +460,7 @@ export interface HistoryApplyResult {
 
 export function undoDocument(
   context: DocumentStateAccessor & SceneSelectionStateAccessor & TextProjectionStateAccessor & DocumentStateSyncActions,
-  path: string,
+  path: AbsPath,
 ): HistoryApplyResult {
   const docEntry = context.getDocumentState(path)
   if (!docEntry) {
@@ -495,7 +496,7 @@ export function undoDocument(
 
 export function redoDocument(
   context: DocumentStateAccessor & SceneSelectionStateAccessor & TextProjectionStateAccessor & DocumentStateSyncActions,
-  path: string,
+  path: AbsPath,
 ): HistoryApplyResult {
   const docEntry = context.getDocumentState(path)
   if (!docEntry) {
@@ -531,7 +532,7 @@ export function redoDocument(
 
 function syncAnimationTextProjectionAfterHistoryApply(
   context: TextProjectionStateAccessor,
-  path: string,
+  path: AbsPath,
   document: DocumentState,
   transaction: Transaction,
 ) {
@@ -612,7 +613,7 @@ function resolveSceneSelectionAfterDelete(
 
 function restoreSceneSelectionFromHistory(
   context: SceneSelectionStateAccessor & DocumentStateSyncActions,
-  path: string,
+  path: AbsPath,
   snapshot: SceneSelectionSnapshot | undefined,
 ) {
   if (!snapshot) {

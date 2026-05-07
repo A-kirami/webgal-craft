@@ -1,6 +1,7 @@
 import * as monaco from 'monaco-editor'
 
 import { isAnimationDocumentTextValid } from '~/domain/document/animation-document-codec'
+import { AbsPath } from '~/domain/path'
 import { resolveTextEditorLanguage } from '~/features/editor/text-editor/text-editor-language'
 import { applySceneCursorTarget, prepareSceneCursorTarget } from '~/features/editor/text-editor/text-editor-scene-restore'
 import { resolveSceneCursorTarget, resolveScenePreviewLine } from '~/features/editor/text-editor/text-editor-scene-sync'
@@ -133,7 +134,7 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
     initializeSceneSelectionFromRestoredCursor,
     isCurrentTabPreview,
     shouldPersistPersistentViewState(path) {
-      const currentState = editorStore.getState(path)
+      const currentState = editorStore.getState(AbsPath.from(path))
       return !(currentState && isEditableEditor(currentState) && currentState.isDirty)
     },
   })

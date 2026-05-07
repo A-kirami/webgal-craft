@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
+import { AbsPath } from '~/domain/path'
 
 import AssetPreview from './AssetPreview.vue'
 
@@ -31,7 +32,7 @@ interface MockMediaState {
 
 function createPreviewState(path: string): AssetPreviewState {
   return {
-    path,
+    path: AbsPath.from(path),
     view: 'preview',
     assetUrl: `file://${path}`,
     mimeType: 'audio/mpeg',

@@ -16,6 +16,7 @@ import type { DocumentStateOfKind } from './editor-document-state'
 import type { EditableEditorSession } from './editor-session'
 import type { SceneStatement } from '~/domain/document/document-model'
 import type { SceneSelectionState } from '~/domain/document/scene-selection'
+import type { AbsPath } from '~/domain/path'
 import type { ScenePresentationState } from '~/features/editor/shared/scene-presentation'
 
 // ============================================================
@@ -29,41 +30,41 @@ export interface EditableSceneSession extends EditableEditorSession {
 }
 
 export function createSceneSelectionActions(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
 ) {
   return {
-    getScenePresentationState(path: string): ScenePresentationState | undefined {
+    getScenePresentationState(path: AbsPath): ScenePresentationState | undefined {
       return getScenePresentationState(getEditableSession, path)
     },
-    getSceneSelection(path: string): SceneSelectionState | undefined {
+    getSceneSelection(path: AbsPath): SceneSelectionState | undefined {
       return getSceneSelection(getEditableSession, path)
     },
-    getSceneSelectionIndex(path: string): number | undefined {
+    getSceneSelectionIndex(path: AbsPath): number | undefined {
       return getSceneSelectionIndex(getEditableSession, path)
     },
-    getSelectedSceneStatement(path: string): SceneStatement | undefined {
+    getSelectedSceneStatement(path: AbsPath): SceneStatement | undefined {
       return getSelectedSceneStatement(getEditableSession, path)
     },
-    getSelectedSceneStatementPreviousSpeaker(path: string): string {
+    getSelectedSceneStatementPreviousSpeaker(path: AbsPath): string {
       return getSelectedSceneStatementPreviousSpeaker(getEditableSession, path)
     },
-    isSceneStatementCollapsed(path: string, statementId: number): boolean {
+    isSceneStatementCollapsed(path: AbsPath, statementId: number): boolean {
       return isSceneStatementCollapsed(getEditableSession, path, statementId)
     },
-    patchSceneSelection(path: string, patch: Partial<SceneSelectionState>): void {
+    patchSceneSelection(path: AbsPath, patch: Partial<SceneSelectionState>): void {
       patchSceneSelection(getEditableSession, path, patch)
     },
-    reconcileScenePresentation(path: string): void {
+    reconcileScenePresentation(path: AbsPath): void {
       reconcileScenePresentation(getEditableSession, path)
     },
-    reconcileSceneSelection(path: string): void {
+    reconcileSceneSelection(path: AbsPath): void {
       reconcileSceneSelection(getEditableSession, path)
     },
-    setSceneStatementCollapsed(path: string, statementId: number, collapsed: boolean): void {
+    setSceneStatementCollapsed(path: AbsPath, statementId: number, collapsed: boolean): void {
       setSceneStatementCollapsed(getEditableSession, path, statementId, collapsed)
     },
     syncSceneSelectionFromStatement(
-      path: string,
+      path: AbsPath,
       statementId: number | undefined,
       options?: {
         lastEditedStatementId?: number | undefined
@@ -73,7 +74,7 @@ export function createSceneSelectionActions(
       syncSceneSelectionFromStatement(getEditableSession, path, statementId, options)
     },
     syncSceneSelectionFromTextLine(
-      path: string,
+      path: AbsPath,
       lineNumber: number | undefined,
       patch?: Partial<Pick<SceneSelectionState, 'lastEditedStatementId'>>,
     ): void {
@@ -83,8 +84,8 @@ export function createSceneSelectionActions(
 }
 
 export function getSceneSession(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
 ): EditableSceneSession | undefined {
   const session = getEditableSession(path)
   if (
@@ -100,15 +101,15 @@ export function getSceneSession(
 }
 
 export function getSceneSelection(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
 ): SceneSelectionState | undefined {
   return getSceneSession(getEditableSession, path)?.sceneSelection
 }
 
 export function patchSceneSelection(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
   patch: Partial<SceneSelectionState>,
 ) {
   const selection = getSceneSelection(getEditableSession, path)
@@ -119,15 +120,15 @@ export function patchSceneSelection(
 }
 
 export function getScenePresentationState(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
 ): ScenePresentationState | undefined {
   return getSceneSession(getEditableSession, path)?.scenePresentation
 }
 
 export function isSceneStatementCollapsed(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
   statementId: number,
 ): boolean {
   return isSceneStatementCollapsedForPresentation(
@@ -137,8 +138,8 @@ export function isSceneStatementCollapsed(
 }
 
 export function setSceneStatementCollapsed(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
   statementId: number,
   collapsed: boolean,
 ) {
@@ -150,15 +151,15 @@ export function setSceneStatementCollapsed(
 }
 
 export function getSceneDocumentState(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
 ): DocumentStateOfKind<'scene'> | undefined {
   return getSceneSession(getEditableSession, path)?.document
 }
 
 export function syncSceneSelectionFromTextLine(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
   lineNumber: number | undefined,
   patch: Partial<Pick<SceneSelectionState, 'lastEditedStatementId'>> = {},
 ) {
@@ -179,8 +180,8 @@ export function syncSceneSelectionFromTextLine(
 }
 
 export function syncSceneSelectionFromStatement(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
   statementId: number | undefined,
   options: {
     lastEditedStatementId?: number | undefined
@@ -206,15 +207,15 @@ export function syncSceneSelectionFromStatement(
 }
 
 export function getSceneStatements(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
 ): SceneStatement[] | undefined {
   return getSceneDocumentState(getEditableSession, path)?.model.statements
 }
 
 export function resolveCurrentSceneSelectionState(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
 ) {
   const statements = getSceneStatements(getEditableSession, path)
   if (!statements) {
@@ -225,8 +226,8 @@ export function resolveCurrentSceneSelectionState(
 }
 
 export function reconcileSceneSelection(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
 ) {
   const statements = getSceneStatements(getEditableSession, path)
   const selection = getSceneSelection(getEditableSession, path)
@@ -241,8 +242,8 @@ export function reconcileSceneSelection(
 }
 
 export function reconcileScenePresentation(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
 ) {
   const statements = getSceneStatements(getEditableSession, path)
   if (!statements) {
@@ -256,15 +257,15 @@ export function reconcileScenePresentation(
 }
 
 export function getSceneSelectionIndex(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
 ): number | undefined {
   return resolveCurrentSceneSelectionState(getEditableSession, path)?.index
 }
 
 export function getSelectedSceneStatement(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
 ): SceneStatement | undefined {
   const statements = getSceneStatements(getEditableSession, path)
   if (!statements) {
@@ -277,8 +278,8 @@ export function getSelectedSceneStatement(
 }
 
 export function getSelectedSceneStatementPreviousSpeaker(
-  getEditableSession: (path: string) => EditableEditorSession | undefined,
-  path: string,
+  getEditableSession: (path: AbsPath) => EditableEditorSession | undefined,
+  path: AbsPath,
 ): string {
   const statements = getSceneStatements(getEditableSession, path)
   if (!statements) {
