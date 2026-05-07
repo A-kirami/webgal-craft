@@ -120,7 +120,8 @@ async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
   const resolvedSourcePath = fileStore.isVfs
     ? await fileStore.resolveFilePath(sourcePath)
     : sourcePath
-  const result = await fsCmds.copyFile(resolvedSourcePath, targetPath)
+  const writableTargetPath = await resolveWritablePath(targetPath)
+  const result = await fsCmds.copyFile(resolvedSourcePath, writableTargetPath)
   gameManager.updateCurrentGameLastModified()
   return result
 }
@@ -140,7 +141,8 @@ async function moveFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
   }
 
   const resolvedSourcePath = await fileStore.resolveFilePath(sourcePath)
-  const result = await fsCmds.copyFile(resolvedSourcePath, targetPath)
+  const writableTargetPath = await resolveWritablePath(targetPath)
+  const result = await fsCmds.copyFile(resolvedSourcePath, writableTargetPath)
   await fileStore.deleteEntry(sourcePath)
   gameManager.updateCurrentGameLastModified()
   return result
