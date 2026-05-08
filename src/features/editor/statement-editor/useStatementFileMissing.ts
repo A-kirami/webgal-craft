@@ -1,6 +1,6 @@
 import { ArgField, EditorField } from '~/features/editor/command-registry/schema'
 import { collectStatementFileChecks, resolveMissingFileKeysFromCatalog } from '~/features/editor/statement-editor/file-missing'
-import { useResourceCatalog } from '~/services/resource-index/service'
+import { useResourceIndex } from '~/services/resource-index/service'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
@@ -11,14 +11,14 @@ export interface UseStatementFileMissingOptions {
 }
 
 export function useStatementFileMissing(options: UseStatementFileMissingOptions) {
-  const resourceCatalog = useResourceCatalog()
+  const resourceIndex = useResourceIndex()
 
   const fileMissingKeys = computed(() => {
     const currentParsed = toValue(options.parsed)
     const currentContentField = toValue(options.contentField)
     const currentArgFields = toValue(options.argFields)
 
-    if (!currentParsed || resourceCatalog.status.value !== 'ready') {
+    if (!currentParsed || resourceIndex.status.value !== 'ready') {
       return new Set<string>()
     }
 
@@ -30,7 +30,7 @@ export function useStatementFileMissing(options: UseStatementFileMissingOptions)
 
     return resolveMissingFileKeysFromCatalog(
       checks,
-      (assetType, relativePath) => resourceCatalog.hasAsset(assetType, relativePath),
+      key => resourceIndex.hasAssetKey(key),
     )
   })
 

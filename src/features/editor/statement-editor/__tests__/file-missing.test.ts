@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { RelPath } from '~/domain/path'
 import {
   collectStatementFileChecks,
   resolveMissingFileKeysFromCatalog,
@@ -108,7 +107,7 @@ describe('fileMissing', () => {
         { key: 'sprite', assetType: 'figure', value: 'hero.png' },
         { key: 'scene', assetType: 'scene', value: 's1.txt' },
       ],
-      (_assetType, relativePath) => relativePath !== RelPath.from('hero.png'),
+      key => key.relativePath !== 'hero.png',
     )
 
     expect(missing).toEqual(new Set(['sprite']))
@@ -121,13 +120,31 @@ describe('fileMissing', () => {
         { key: 'a', assetType: 'scene', value: 'myLabel' },
         { key: 'b', assetType: 'scene', value: 'other.txt' },
       ],
-      (_assetType, relativePath) => {
-        checkedPaths.push(String(relativePath))
+      (key) => {
+        checkedPaths.push(String(key.relativePath))
         return true
       },
     )
 
     expect(checkedPaths).toEqual(['other.txt'])
+    expect(missing).toEqual(new Set())
+  })
+
+  it('resolveMissingFileKeysFromCatalog 跳过无法规范化为项目相对路径的值', () => {
+    const checkedKeys: string[] = []
+    const missing = resolveMissingFileKeysFromCatalog(
+      [
+        { key: 'absolute', assetType: 'background', value: '/outside/bg.png' },
+        { key: 'escape', assetType: 'figure', value: '../hero.png' },
+        { key: 'valid', assetType: 'background', value: 'bg.png' },
+      ],
+      (key) => {
+        checkedKeys.push(`${key.assetType}:${key.relativePath}`)
+        return key.assetType === 'background' && key.relativePath === 'bg.png'
+      },
+    )
+
+    expect(checkedKeys).toEqual(['background:bg.png'])
     expect(missing).toEqual(new Set())
   })
 })

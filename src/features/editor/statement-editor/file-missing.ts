@@ -1,28 +1,13 @@
-import { RelPath } from '~/domain/path'
 import { ArgField, EditorField, readArgFieldStorageKey } from '~/features/editor/command-registry/schema'
+import { createReferencedAssetKey, shouldIndexAssetReferenceValue } from '~/services/resource-index/values'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { AssetKey } from '~/services/resource-index/keys'
 
 export interface StatementFileCheckItem {
   key: string
   assetType: string
   value: string
-}
-
-// WebGAL 支持 {varName} 语法引用变量作为文件路径，
-// 变量占位符无法在编辑时检查文件是否存在，跳过检查避免误报
-function isVariablePlaceholder(value: string): boolean {
-  const trimmed = value.trim()
-  return /^\{[^{}]+\}$/.test(trimmed)
-}
-
-function shouldCheckStatementFileValue(assetType: string, value: string): boolean {
-  // scene 中不带 .txt 的值可能是 label，而不是文件路径
-  if (assetType === 'scene' && !value.endsWith('.txt')) {
-    return false
-  }
-
-  return true
 }
 
 export function collectStatementFileChecks(
@@ -35,7 +20,7 @@ export function collectStatementFileChecks(
   const contentFileConfig = contentField?.field.type === 'file'
     ? contentField.field.fileConfig
     : undefined
-  if (parsed.content && contentFileConfig && !isVariablePlaceholder(parsed.content)) {
+  if (contentFileConfig && shouldIndexAssetReferenceValue(contentFileConfig.assetType, parsed.content)) {
     checks.push({
       key: '__content__',
       assetType: contentFileConfig.assetType,
@@ -49,7 +34,11 @@ export function collectStatementFileChecks(
     }
     const argKey = readArgFieldStorageKey(argField)
     const item = parsed.args.find((argItem: arg) => argItem.key === argKey)
-    if (item && typeof item.value === 'string' && item.value && !isVariablePlaceholder(item.value)) {
+    if (
+      item
+      && typeof item.value === 'string'
+      && shouldIndexAssetReferenceValue(argField.field.fileConfig.assetType, item.value)
+    ) {
       checks.push({
         key: argKey,
         assetType: argField.field.fileConfig.assetType,
@@ -63,7 +52,7 @@ export function collectStatementFileChecks(
 
 export function resolveMissingFileKeysFromCatalog(
   checks: StatementFileCheckItem[],
-  hasAsset: (assetType: string, relativePath: RelPath) => boolean,
+  hasAssetKey: (key: AssetKey) => boolean,
 ): Set<string> {
   if (checks.length === 0) {
     return new Set()
@@ -72,11 +61,12 @@ export function resolveMissingFileKeysFromCatalog(
   const missingKeys = new Set<string>()
 
   for (const { key, assetType, value } of checks) {
-    if (!shouldCheckStatementFileValue(assetType, value)) {
+    const assetKey = createReferencedAssetKey(assetType, value)
+    if (!assetKey) {
       continue
     }
 
-    if (!hasAsset(assetType, RelPath.from(value))) {
+    if (!hasAssetKey(assetKey)) {
       missingKeys.add(key)
     }
   }
