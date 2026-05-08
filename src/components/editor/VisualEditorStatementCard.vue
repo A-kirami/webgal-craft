@@ -6,7 +6,7 @@ import { buildStatementPreviewParams, StatementCardPreviewParam } from '~/featur
 import { createStatementIdTarget, StatementUpdatePayload } from '~/features/editor/statement-editor/useStatementEditor'
 import { useStatementFileMissing } from '~/features/editor/statement-editor/useStatementFileMissing'
 import { provideStatementMeta } from '~/features/editor/statement-editor/useStatementMeta'
-import { useResourceCatalogBootstrap } from '~/services/resource-index/service'
+import { useResourceIndexBootstrap } from '~/services/resource-index/service'
 
 const props = defineProps<{
   entry: StatementEntry
@@ -53,7 +53,7 @@ const { parsed, config, contentField, argFields, theme, statementType, commandLa
 
 const { t } = useI18n()
 
-useResourceCatalogBootstrap()
+useResourceIndexBootstrap()
 
 const { fileMissingKeys } = useStatementFileMissing({
   parsed: () => parsed.value,

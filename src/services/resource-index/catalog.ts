@@ -1,50 +1,82 @@
 import { readDir } from '@tauri-apps/plugin-fs'
 
 import { AbsPath, RelPath } from '~/domain/path'
+import { gameAssetDir, gameRootDir } from '~/services/platform/app-paths'
+
+import { createAssetKeyForType, stringifyAssetKey } from './keys'
+
+import type { AssetKey } from './keys'
+
+export interface AssetCatalogEntry {
+  key: AssetKey
+  absolutePath: AbsPath
+  fileName: string
+  extension: string
+}
 
 export interface AssetCatalogSnapshot {
-  assetFiles: Map<string, Set<RelPath>>
+  entries: Map<string, AssetCatalogEntry>
 }
 
 export function createEmptyAssetCatalogSnapshot(): AssetCatalogSnapshot {
   return {
-    assetFiles: new Map<string, Set<RelPath>>(),
+    entries: new Map<string, AssetCatalogEntry>(),
   }
 }
 
-export function cloneAssetCatalogSnapshot(snapshot: AssetCatalogSnapshot): AssetCatalogSnapshot {
+function cloneAssetCatalogSnapshot(snapshot: AssetCatalogSnapshot): AssetCatalogSnapshot {
   return {
-    assetFiles: new Map(
-      Array.from(snapshot.assetFiles.entries(), ([assetType, files]) => [assetType, new Set(files)]),
-    ),
+    entries: new Map(snapshot.entries),
   }
 }
 
 export function hasAssetInCatalog(
   snapshot: AssetCatalogSnapshot,
-  assetType: string,
-  relativePath: RelPath,
+  key: AssetKey,
 ): boolean {
-  const files = snapshot.assetFiles.get(assetType)
-  if (!files) {
-    return false
+  return snapshot.entries.has(stringifyAssetKey(key))
+}
+
+export function getAssetFromCatalog(
+  snapshot: AssetCatalogSnapshot,
+  key: AssetKey,
+): AssetCatalogEntry | undefined {
+  return snapshot.entries.get(stringifyAssetKey(key))
+}
+
+export function resolveAssetByAbsolutePath(
+  snapshot: AssetCatalogSnapshot,
+  absolutePath: AbsPath,
+): AssetCatalogEntry | undefined {
+  for (const entry of snapshot.entries.values()) {
+    if (entry.absolutePath === absolutePath) {
+      return entry
+    }
   }
-  return files.has(relativePath)
+}
+
+export function listAssetsByAssetType(
+  snapshot: AssetCatalogSnapshot,
+  assetType: string,
+): AssetCatalogEntry[] {
+  return [...snapshot.entries.values()]
+    .filter(entry => entry.key.assetType === assetType)
 }
 
 export async function buildAssetCatalog(gamePath: AbsPath): Promise<AssetCatalogSnapshot> {
-  const gameRootPath = AbsPath.append(gamePath, 'game')
+  const gameRootPath = gameRootDir(gamePath)
   const rootEntries = await readDir(gameRootPath)
   const assetDirectories = rootEntries.filter(entry => entry.isDirectory && !!entry.name)
-  const assetFiles = await Promise.all(assetDirectories.map(async (entry) => {
+  const assetEntries = await Promise.all(assetDirectories.map(async (entry) => {
     const assetType = entry.name!
-    const rootPath = AbsPath.append(gameRootPath, assetType)
+    const rootPath = gameAssetDir(gamePath, assetType)
     const files = await collectAssetFiles(rootPath, RelPath.empty())
-    return [assetType, files] as const
+    return [...files].map(relativePath => createCatalogEntry(assetType, rootPath, relativePath))
   }))
 
+  const entries = assetEntries.flat()
   return {
-    assetFiles: new Map(assetFiles),
+    entries: new Map(entries.map(entry => [stringifyAssetKey(entry.key), entry])),
   }
 }
 
@@ -53,15 +85,13 @@ export function addAssetPathToCatalog(
   gamePath: AbsPath,
   absolutePath: AbsPath,
 ): AssetCatalogSnapshot {
-  const resolved = resolveCatalogPath(gamePath, absolutePath)
-  if (!resolved) {
+  const entry = resolveCatalogEntry(gamePath, absolutePath)
+  if (!entry) {
     return snapshot
   }
 
   const nextSnapshot = cloneAssetCatalogSnapshot(snapshot)
-  const files = nextSnapshot.assetFiles.get(resolved.assetType) ?? new Set<RelPath>()
-  files.add(resolved.relativePath)
-  nextSnapshot.assetFiles.set(resolved.assetType, files)
+  nextSnapshot.entries.set(stringifyAssetKey(entry.key), entry)
   return nextSnapshot
 }
 
@@ -70,18 +100,17 @@ export function removeAssetPathFromCatalog(
   gamePath: AbsPath,
   absolutePath: AbsPath,
 ): AssetCatalogSnapshot {
-  const resolved = resolveCatalogPath(gamePath, absolutePath)
-  if (!resolved) {
+  const entry = resolveCatalogEntry(gamePath, absolutePath)
+  if (!entry) {
     return snapshot
   }
 
-  const files = snapshot.assetFiles.get(resolved.assetType)
-  if (!files?.has(resolved.relativePath)) {
+  if (!snapshot.entries.has(stringifyAssetKey(entry.key))) {
     return snapshot
   }
 
   const nextSnapshot = cloneAssetCatalogSnapshot(snapshot)
-  nextSnapshot.assetFiles.get(resolved.assetType)?.delete(resolved.relativePath)
+  nextSnapshot.entries.delete(stringifyAssetKey(entry.key))
   return nextSnapshot
 }
 
@@ -96,7 +125,7 @@ export function renameAssetPathInCatalog(
 }
 
 export function isPathWithinGameRoot(gamePath: AbsPath, path: AbsPath): boolean {
-  const gameRootPath = AbsPath.append(gamePath, 'game')
+  const gameRootPath = gameRootDir(gamePath)
   return path === gameRootPath || path.startsWith(`${gameRootPath}/`)
 }
 
@@ -126,7 +155,7 @@ function resolveCatalogPath(gamePath: AbsPath, absolutePath: AbsPath): {
   assetType: string
   relativePath: RelPath
 } | undefined {
-  const gameRootPath = AbsPath.append(gamePath, 'game')
+  const gameRootPath = gameRootDir(gamePath)
   if (!absolutePath.startsWith(`${gameRootPath}/`)) {
     return
   }
@@ -144,4 +173,32 @@ function resolveCatalogPath(gamePath: AbsPath, absolutePath: AbsPath): {
     assetType: segments[0],
     relativePath: RelPath.from(segments.slice(1).join('/')),
   }
+}
+
+function resolveCatalogEntry(gamePath: AbsPath, absolutePath: AbsPath): AssetCatalogEntry | undefined {
+  const resolved = resolveCatalogPath(gamePath, absolutePath)
+  if (!resolved) {
+    return
+  }
+  const assetRootPath = gameAssetDir(gamePath, resolved.assetType)
+  return createCatalogEntry(resolved.assetType, assetRootPath, resolved.relativePath)
+}
+
+function createCatalogEntry(
+  assetType: string,
+  assetRootPath: AbsPath,
+  relativePath: RelPath,
+): AssetCatalogEntry {
+  const fileName = RelPath.basename(relativePath)
+  return {
+    key: createAssetKeyForType(assetType, relativePath),
+    absolutePath: AbsPath.join(assetRootPath, relativePath),
+    fileName,
+    extension: readExtension(fileName),
+  }
+}
+
+function readExtension(fileName: string): string {
+  const extensionStart = fileName.lastIndexOf('.')
+  return extensionStart === -1 ? '' : fileName.slice(extensionStart)
 }

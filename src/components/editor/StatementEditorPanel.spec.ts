@@ -105,7 +105,8 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
-vi.mock('~/services/platform/app-paths', () => ({
+vi.mock('~/services/platform/app-paths', async importOriginal => ({
+  ...(await importOriginal<typeof import('~/services/platform/app-paths')>()),
   gameAssetDir: gameAssetDirMock,
   gameSceneDir: gameSceneDirMock,
 }))
