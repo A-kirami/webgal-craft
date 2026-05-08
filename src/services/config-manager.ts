@@ -3,13 +3,14 @@ import { gameManager } from '~/services/game-manager'
 import { usePreviewSessionStore } from '~/stores/preview-session'
 
 import type { GameConfigReadResult, GameConfigWritePayload } from '~/commands/game'
+import type { AbsPath } from '~/domain/path'
 
 /**
  * 获取游戏配置
  * @param gamePath 游戏路径
  * @returns 游戏配置对象
  */
-async function getConfig(gamePath: string): Promise<GameConfigReadResult> {
+async function getConfig(gamePath: AbsPath): Promise<GameConfigReadResult> {
   return await gameCmds.getGameConfig(gamePath)
 }
 
@@ -18,7 +19,7 @@ async function getConfig(gamePath: string): Promise<GameConfigReadResult> {
  * @param gamePath 游戏路径
  * @param config 配置对象
  */
-async function setConfig(gamePath: string, config: GameConfigWritePayload) {
+async function setConfig(gamePath: AbsPath, config: GameConfigWritePayload) {
   await gameCmds.setGameConfig(gamePath, config)
   await gameManager.refreshRegisteredGameSnapshot(gamePath)
   usePreviewSessionStore().refreshIfCurrentGame(gamePath)

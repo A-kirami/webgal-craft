@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestEngine, createTestGame } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 import { engineManager } from '~/services/engine-manager'
 import { AppError } from '~/types/errors'
 
@@ -165,7 +166,7 @@ describe('engineManager', () => {
   it('validateEngine 在目录结构有效时返回 true', async () => {
     validateDirectoryStructureMock.mockResolvedValue(true)
 
-    await expect(engineManager.validateEngine('/engines/WebGAL')).resolves.toBe(true)
+    await expect(engineManager.validateEngine(AbsPath.from('/engines/WebGAL'))).resolves.toBe(true)
 
     expect(validateDirectoryStructureMock).toHaveBeenCalledWith(
       '/engines/WebGAL',
@@ -178,7 +179,7 @@ describe('engineManager', () => {
   it('validateEngine 在目录结构无效时返回 false', async () => {
     validateDirectoryStructureMock.mockResolvedValue(false)
 
-    await expect(engineManager.validateEngine('/engines/WebGAL')).resolves.toBe(false)
+    await expect(engineManager.validateEngine(AbsPath.from('/engines/WebGAL'))).resolves.toBe(false)
 
     expect(readEngineManifestMock).not.toHaveBeenCalled()
   })
@@ -231,7 +232,7 @@ describe('engineManager', () => {
       onProgress(100)
     })
 
-    await expect(engineManager.importEngine('/downloads/webgal')).resolves.toEqual({ id: 'engine-1', alreadyRegistered: false })
+    await expect(engineManager.importEngine(AbsPath.from('/downloads/webgal'))).resolves.toEqual({ id: 'engine-1', alreadyRegistered: false })
 
     expect(addMock).toHaveBeenCalledWith(expect.objectContaining({
       path: '/engines/WebGAL/4.5.0',
@@ -280,7 +281,7 @@ describe('engineManager', () => {
     validateDirectoryStructureMock.mockResolvedValue(true)
     addMock.mockResolvedValue('engine-1')
 
-    await expect(engineManager.importEngine(String.raw`C:\downloads\webgal`)).resolves.toEqual({
+    await expect(engineManager.importEngine(AbsPath.from(String.raw`C:\downloads\webgal`))).resolves.toEqual({
       id: 'engine-1',
       alreadyRegistered: false,
     })
@@ -296,11 +297,45 @@ describe('engineManager', () => {
     )
   })
 
+  it('importEngine 在缺少版本时会回退到基于 engineId 的稳定托管目录', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        engineType: 'official',
+        webgalVersion: '4.5.0',
+        icon: 'branding/icon.png',
+      },
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    addMock.mockResolvedValue('engine-legacy')
+
+    await expect(engineManager.importEngine(AbsPath.from('/downloads/webgal-legacy'))).resolves.toEqual({
+      id: 'engine-legacy',
+      alreadyRegistered: false,
+    })
+
+    expect(addMock).toHaveBeenCalledWith(expect.objectContaining({
+      path: '/engines/WebGAL/open-webgal.webgal',
+      pathLookupKey: '/engines/webgal/open-webgal.webgal',
+      name: 'WebGAL',
+      version: undefined,
+      status: 'creating',
+    }))
+    expect(copyDirectoryWithProgressMock).toHaveBeenCalledWith(
+      '/downloads/webgal-legacy',
+      '/engines/WebGAL/open-webgal.webgal',
+      expect.any(Function),
+    )
+  })
+
   it('importEngine 会拒绝导入旧版引擎目录', async () => {
     readEngineManifestMock.mockResolvedValue({ status: 'missing' })
     validateDirectoryStructureMock.mockResolvedValue(true)
 
-    await expect(engineManager.importEngine('/downloads/LegacyEngine')).rejects.toEqual(
+    await expect(engineManager.importEngine(AbsPath.from('/downloads/LegacyEngine'))).rejects.toEqual(
       new AppError('INVALID_MANIFEST', '不支持导入旧版引擎，请导入包含该引擎的项目或使用受支持的引擎版本', {
         details: { reason: 'LEGACY_ENGINE' },
       }),
@@ -318,7 +353,7 @@ describe('engineManager', () => {
     })
     validateDirectoryStructureMock.mockResolvedValue(true)
 
-    await expect(engineManager.importEngine('/downloads/futureEngine')).rejects.toMatchObject({
+    await expect(engineManager.importEngine(AbsPath.from('/downloads/futureEngine'))).rejects.toMatchObject({
       code: 'INVALID_MANIFEST',
       details: {
         reason: 'UNSUPPORTED_SCHEMA',
@@ -338,7 +373,7 @@ describe('engineManager', () => {
     })
     validateDirectoryStructureMock.mockResolvedValue(true)
 
-    await expect(engineManager.importEngine('/downloads/brokenEngine')).rejects.toEqual(
+    await expect(engineManager.importEngine(AbsPath.from('/downloads/brokenEngine'))).rejects.toEqual(
       new AppError('INVALID_MANIFEST', '缺少必填字段', {
         details: {
           reason: 'PARSE_FAILED',
@@ -367,7 +402,7 @@ describe('engineManager', () => {
       version: '4.5.0',
     }))
 
-    await expect(engineManager.importEngine('/downloads/webgal')).resolves.toEqual({
+    await expect(engineManager.importEngine(AbsPath.from('/downloads/webgal'))).resolves.toEqual({
       id: 'engine-existing-by-ref',
       alreadyRegistered: true,
     })
@@ -379,10 +414,10 @@ describe('engineManager', () => {
   it('importEngine 在源路径已注册时幂等返回既有 ID', async () => {
     engineWhereFirstMock.mockResolvedValue(createTestEngine({
       id: 'engine-existing',
-      path: '/downloads/webgal',
+      path: AbsPath.from('/downloads/webgal'),
     }))
 
-    await expect(engineManager.importEngine('/downloads/webgal')).resolves.toEqual({ id: 'engine-existing', alreadyRegistered: true })
+    await expect(engineManager.importEngine(AbsPath.from('/downloads/webgal'))).resolves.toEqual({ id: 'engine-existing', alreadyRegistered: true })
 
     expect(addMock).not.toHaveBeenCalled()
     expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
@@ -390,7 +425,7 @@ describe('engineManager', () => {
 
   it('engine 身份键优先使用 engineId + version', () => {
     expect(engineManager.identityKeyOf({
-      path: '/downloads/webgal',
+      path: AbsPath.from('/downloads/webgal'),
       engineId: 'open-webgal.webgal',
       version: '4.5.0',
     })).toBe('open-webgal.webgal:4.5.0')
@@ -398,7 +433,7 @@ describe('engineManager', () => {
 
   it('engine 身份键在缺少版本时回退到路径规范化结果', () => {
     expect(engineManager.identityKeyOf({
-      path: '/Downloads/WebGAL/',
+      path: AbsPath.from('/Downloads/WebGAL/'),
       engineId: 'open-webgal.webgal',
     })).toBe('/downloads/webgal')
   })
@@ -418,7 +453,7 @@ describe('engineManager', () => {
     validateDirectoryStructureMock.mockResolvedValue(true)
     existsMock.mockImplementation(async (path: string) => path === '/engines/WebGAL/4.5.0')
 
-    await expect(engineManager.importEngine('/downloads/webgal')).rejects.toEqual(
+    await expect(engineManager.importEngine(AbsPath.from('/downloads/webgal'))).rejects.toEqual(
       new AppError('TARGET_CONFLICT', '目标引擎目录已存在，请先清理后重试'),
     )
   })
@@ -438,7 +473,7 @@ describe('engineManager', () => {
     validateDirectoryStructureMock.mockResolvedValue(true)
     existsMock.mockImplementation(async (path: string) => path !== '/source/icons/favicon.ico')
 
-    await expect(engineManager.inspectEngine('/source')).resolves.toMatchObject({
+    await expect(engineManager.inspectEngine(AbsPath.from('/source'))).resolves.toMatchObject({
       availability: 'available',
       warnings: [{ code: 'missing-favicon' }],
     })
@@ -461,7 +496,7 @@ describe('engineManager', () => {
     // 默认 favicon 路径存在但自定义 icon 不存在，应仍然产生 warning
     existsMock.mockImplementation(async (path: string) => path !== '/source/assets/custom.png')
 
-    await expect(engineManager.inspectEngine('/source')).resolves.toMatchObject({
+    await expect(engineManager.inspectEngine(AbsPath.from('/source'))).resolves.toMatchObject({
       availability: 'available',
       warnings: [{ code: 'missing-favicon' }],
     })
@@ -471,7 +506,7 @@ describe('engineManager', () => {
     enginesToArrayMock.mockResolvedValue([
       createTestEngine({
         id: 'engine-1',
-        path: '/engines/webgal',
+        path: AbsPath.from('/engines/webgal'),
         status: 'created',
       }),
     ])
@@ -487,7 +522,7 @@ describe('engineManager', () => {
     enginesToArrayMock.mockResolvedValue([
       createTestEngine({
         id: 'engine-1',
-        path: '/engines/WebGAL/4.5.0',
+        path: AbsPath.from('/engines/WebGAL/4.5.0'),
         status: 'created',
       }),
     ])
@@ -504,7 +539,7 @@ describe('engineManager', () => {
     enginesToArrayMock.mockResolvedValue([
       createTestEngine({
         id: 'engine-1',
-        path: '/engines/WebGAL/4.5.0',
+        path: AbsPath.from('/engines/WebGAL/4.5.0'),
         status: 'created',
       }),
     ])
@@ -531,7 +566,7 @@ describe('engineManager', () => {
     enginesToArrayMock.mockResolvedValue([
       createTestEngine({
         id: 'engine-1',
-        path: '/engines/WebGAL/4.5.0',
+        path: AbsPath.from('/engines/WebGAL/4.5.0'),
         status: 'created',
       }),
     ])
@@ -587,14 +622,14 @@ describe('engineManager', () => {
       id: 'engine-1',
       engineId: 'open-webgal.webgal',
       name: 'WebGAL',
-      path: '/engines/WebGAL/4.5.0',
+      path: AbsPath.from('/engines/WebGAL/4.5.0'),
       version: '4.5.0',
     })
     const legacy = createTestEngine({
       id: 'engine-2',
       engineId: 'open-webgal.webgal',
       name: 'WebGAL',
-      path: '/engines/WebGAL/4.4.0',
+      path: AbsPath.from('/engines/WebGAL/4.4.0'),
       version: '4.4.0',
     })
     const associatedGame = createTestGame({
@@ -642,13 +677,13 @@ describe('engineManager', () => {
       createTestEngine({
         id: 'engine-1',
         name: 'WebGAL',
-        path: '/engines/WebGAL/4.5.0',
+        path: AbsPath.from('/engines/WebGAL/4.5.0'),
         version: '4.5.0',
       }),
       createTestEngine({
         id: 'engine-2',
         name: 'WebGAL',
-        path: '/engines/WebGAL/4.4.0',
+        path: AbsPath.from('/engines/WebGAL/4.4.0'),
         version: '4.4.0',
       }),
     ])

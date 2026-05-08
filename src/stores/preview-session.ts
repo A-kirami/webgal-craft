@@ -4,11 +4,12 @@ import { gameManager } from '~/services/game-manager'
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 
 import type { Game } from '~/database/model'
+import type { AbsPath } from '~/domain/path'
 
 type PreviewGameTarget = Pick<Game, 'engineId' | 'path'>
 
 export const usePreviewSessionStore = defineStore('previewSession', () => {
-  let currentGamePath = $ref<string>()
+  let currentGamePath = $ref<AbsPath>()
   let currentGameServeUrl = $ref<string>()
   let reloadVersion = $ref(0)
   let syncToken = 0
@@ -62,7 +63,7 @@ export const usePreviewSessionStore = defineStore('previewSession', () => {
     reloadVersion++
   }
 
-  function refreshIfCurrentGame(gamePath: string): void {
+  function refreshIfCurrentGame(gamePath: AbsPath): void {
     if (!gamePath || currentGamePath !== gamePath) {
       return
     }

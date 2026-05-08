@@ -18,9 +18,9 @@ interface RegisterTemplateOptions {
   status?: Template['status']
 }
 
-async function validateTemplate(templatePath: string): Promise<boolean> {
+async function validateTemplate(templatePath: AbsPath): Promise<boolean> {
   return fsCmds.validateDirectoryStructure(
-    AbsPath.from(templatePath),
+    templatePath,
     [],
     ['template.json'],
   )
@@ -49,8 +49,8 @@ function normalizeTemplateMetadata(raw: unknown): TemplateMetadata {
   }
 }
 
-async function getTemplateMetadata(templatePath: string): Promise<TemplateMetadata> {
-  const manifestPath = templateManifestPath(AbsPath.from(templatePath))
+async function getTemplateMetadata(templatePath: AbsPath): Promise<TemplateMetadata> {
+  const manifestPath = templateManifestPath(templatePath)
   const metaContent = await readTextFile(manifestPath)
 
   try {
@@ -65,7 +65,7 @@ async function getTemplateMetadata(templatePath: string): Promise<TemplateMetada
 }
 
 async function registerTemplate(
-  templatePath: string,
+  templatePath: AbsPath,
   options: RegisterTemplateOptions = {},
 ): Promise<string> {
   const { status = 'created' } = options
@@ -90,7 +90,7 @@ function sanitizeTemplateDirectoryName(templateName: string): string {
   return sanitizedName
 }
 
-async function resolveInstalledTemplatePath(templateSavePath: string, templateName: string): Promise<string> {
+async function resolveInstalledTemplatePath(templateSavePath: string, templateName: string): Promise<AbsPath> {
   return AbsPath.append(AbsPath.from(templateSavePath), sanitizeTemplateDirectoryName(templateName))
 }
 
@@ -101,23 +101,22 @@ async function findTemplateByName(templateName: string): Promise<Template | unde
     .first()
 }
 
-async function findTemplateByPath(templatePath: string): Promise<Template | undefined> {
-  const normalizedPath = AbsPath.from(templatePath)
+async function findTemplateByPath(templatePath: AbsPath): Promise<Template | undefined> {
   const templates = await db.templates.toArray()
-  return templates.find(template => caseFoldedEquals(AbsPath.from(template.path), normalizedPath))
+  return templates.find(template => caseFoldedEquals(template.path, templatePath))
 }
 
-async function deleteTemplateDirectoryIfExists(path: string): Promise<void> {
+async function deleteTemplateDirectoryIfExists(path: AbsPath): Promise<void> {
   try {
     if (await exists(path)) {
-      await fsCmds.deleteFile(AbsPath.from(path), true)
+      await fsCmds.deleteFile(path, true)
     }
   } catch (error) {
     logger.warn(`[模板清理] 删除目录失败 (${path}): ${error}`)
   }
 }
 
-async function assertTemplateImportable(templatePath: string): Promise<TemplateMetadata> {
+async function assertTemplateImportable(templatePath: AbsPath): Promise<TemplateMetadata> {
   if (!(await validateTemplate(templatePath))) {
     logger.error(`[模板导入] 无效的模板文件夹: ${templatePath}`)
     throw new AppError('INVALID_STRUCTURE', '无效的模板文件夹')
@@ -132,7 +131,7 @@ async function assertTemplateImportable(templatePath: string): Promise<TemplateM
   return metadata
 }
 
-async function installTemplate(templatePath: string, metadata: TemplateMetadata): Promise<void> {
+async function installTemplate(templatePath: AbsPath, metadata: TemplateMetadata): Promise<void> {
   const resourceStore = useResourceStore()
   const storageSettingsStore = useStorageSettingsStore()
 
@@ -152,7 +151,7 @@ async function installTemplate(templatePath: string, metadata: TemplateMetadata)
   })
 
   try {
-    await fsCmds.copyDirectoryWithProgress(AbsPath.from(templatePath), AbsPath.from(targetPath), (progress) => {
+    await fsCmds.copyDirectoryWithProgress(templatePath, targetPath, (progress) => {
       resourceStore.updateProgress(id, progress)
     })
 
@@ -169,7 +168,7 @@ async function installTemplate(templatePath: string, metadata: TemplateMetadata)
   }
 }
 
-async function importTemplate(templatePath: string): Promise<void> {
+async function importTemplate(templatePath: AbsPath): Promise<void> {
   const storageSettingsStore = useStorageSettingsStore()
   const metadata = await assertTemplateImportable(templatePath)
 
@@ -178,7 +177,7 @@ async function importTemplate(templatePath: string): Promise<void> {
   }
 
   const targetPath = await resolveInstalledTemplatePath(storageSettingsStore.templateSavePath, metadata.name)
-  if (caseFoldedEquals(AbsPath.from(templatePath), AbsPath.from(targetPath))) {
+  if (caseFoldedEquals(templatePath, targetPath)) {
     const existingByPath = await findTemplateByPath(templatePath)
     if (existingByPath) {
       throw new AppError('DUPLICATE_RESOURCE', '同名模板已存在')
@@ -195,7 +194,7 @@ async function importTemplate(templatePath: string): Promise<void> {
 async function deleteTemplate(template: Template): Promise<void> {
   if (template.availability === 'available') {
     try {
-      await fsCmds.deleteFile(AbsPath.from(template.path), true)
+      await fsCmds.deleteFile(template.path, true)
     } catch (error) {
       logger.warn(`[模板删除] 删除模板目录失败，继续清理数据库记录: ${template.path} - ${error}`)
     }
@@ -203,7 +202,7 @@ async function deleteTemplate(template: Template): Promise<void> {
   await db.templates.delete(template.id)
 }
 
-async function inspectTemplateAvailability(templatePath: string): Promise<{
+async function inspectTemplateAvailability(templatePath: AbsPath): Promise<{
   availability: ResourceAvailability
   metadata?: TemplateMetadata
 }> {

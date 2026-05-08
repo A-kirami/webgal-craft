@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { createTestEngine, createTestGame } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 
 describe('测试工厂函数', () => {
   it('createTestGame 默认带 available availability', () => {
@@ -17,7 +18,7 @@ describe('测试工厂函数', () => {
 
   it('createTestGame 会基于解析后的 game path 生成默认预览资源路径', () => {
     expect(createTestGame({
-      path: '/games/custom-demo',
+      path: AbsPath.from('/games/custom-demo'),
     })).toMatchObject({
       path: '/games/custom-demo',
       metadata: {
@@ -60,7 +61,7 @@ describe('测试工厂函数', () => {
 
   it('createTestGame 会保留调用方显式提供的预览资源路径', () => {
     expect(createTestGame({
-      path: '/games/custom-demo',
+      path: AbsPath.from('/games/custom-demo'),
       previewAssets: {
         cover: {
           path: '/covers/custom-cover.png',
@@ -83,7 +84,7 @@ describe('测试工厂函数', () => {
 
   it('createTestEngine 会基于解析后的 engine path 生成默认图标路径', () => {
     expect(createTestEngine({
-      path: '/engines/custom-engine',
+      path: AbsPath.from('/engines/custom-engine'),
     })).toMatchObject({
       path: '/engines/custom-engine',
       previewAssets: {
@@ -114,7 +115,7 @@ describe('测试工厂函数', () => {
 
   it('createTestEngine 会保留调用方显式提供的图标路径', () => {
     expect(createTestEngine({
-      path: '/engines/custom-engine',
+      path: AbsPath.from('/engines/custom-engine'),
       previewAssets: {
         icon: {
           path: '/icons/custom-engine-icon.png',

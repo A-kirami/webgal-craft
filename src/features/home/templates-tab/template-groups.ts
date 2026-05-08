@@ -9,7 +9,7 @@ export interface StandaloneTemplateSourceItem {
   kind: 'standalone'
   templateId: string
   name: string
-  path: string
+  path: AbsPath
   createdAt: number
   webgalVersion?: string
   availability: ResourceAvailability
@@ -20,8 +20,8 @@ export interface EngineBuiltinTemplateSourceItem {
   engineId: string
   engineName: string
   engineVersion?: string
-  enginePath: string
-  templatePath: string
+  enginePath: AbsPath
+  templatePath: AbsPath
   createdAt: number
 }
 
@@ -62,7 +62,7 @@ function createEngineBuiltinTemplateSource(engine: Engine): EngineBuiltinTemplat
     engineName: engine.name,
     engineVersion: engine.version,
     enginePath: engine.path,
-    templatePath: AbsPath.join(AbsPath.from(engine.path), RelPath.from('game/template')),
+    templatePath: AbsPath.join(engine.path, RelPath.from('game/template')),
     createdAt: engine.createdAt,
   }
 }

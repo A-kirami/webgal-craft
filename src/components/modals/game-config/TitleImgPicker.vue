@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { GAME_CONFIG_IMAGE_EXTENSIONS } from '~/features/modals/game-config/game-config-images'
 
+import type { AbsPath } from '~/domain/path'
+
 interface TitleImgPickerProps {
-  backgroundRootPath: string
-  gamePath: string
+  backgroundRootPath: AbsPath
+  gamePath: AbsPath
   serveUrl?: string
 }
 

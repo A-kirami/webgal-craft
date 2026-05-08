@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { AbsPath } from '~/domain/path'
 import { templateManager } from '~/services/template-manager'
 import { AppError } from '~/types/errors'
 
@@ -104,7 +105,7 @@ describe('templateManager 模板管理', () => {
       'webgal-version': '4.8.1',
     }))
 
-    await expect(templateManager.getTemplateMetadata('/source/template')).resolves.toEqual({
+    await expect(templateManager.getTemplateMetadata(AbsPath.from('/source/template'))).resolves.toEqual({
       name: 'Modern Template',
       webgalVersion: '4.8.1',
     })
@@ -113,7 +114,7 @@ describe('templateManager 模板管理', () => {
   it('importTemplate 会要求模板目录存在 template.json', async () => {
     validateDirectoryStructureMock.mockResolvedValue(false)
 
-    await expect(templateManager.importTemplate('/source/template')).rejects.toEqual(
+    await expect(templateManager.importTemplate(AbsPath.from('/source/template'))).rejects.toEqual(
       new AppError('INVALID_STRUCTURE', '无效的模板文件夹'),
     )
 
@@ -139,7 +140,7 @@ describe('templateManager 模板管理', () => {
       onProgress(100)
     })
 
-    await templateManager.importTemplate('/source/template')
+    await templateManager.importTemplate(AbsPath.from('/source/template'))
 
     expect(dbTemplatesAddMock).toHaveBeenCalledWith(expect.objectContaining({
       path: '/templates/Modern Template',
@@ -164,15 +165,16 @@ describe('templateManager 模板管理', () => {
     }))
     dbTemplatesFirstMock.mockResolvedValue({
       id: 'existing-template',
-      path: '/templates/Modern Template',
+      path: AbsPath.from('/templates/Modern Template'),
       createdAt: 0,
       status: 'created',
+      availability: 'available',
       metadata: {
         name: 'Modern Template',
       },
     })
 
-    await expect(templateManager.importTemplate('/source/template')).rejects.toEqual(
+    await expect(templateManager.importTemplate(AbsPath.from('/source/template'))).rejects.toEqual(
       new AppError('DUPLICATE_RESOURCE', '同名模板已存在'),
     )
   })
@@ -184,7 +186,7 @@ describe('templateManager 模板管理', () => {
     }))
     existsMock.mockImplementation(async (path: string) => path === '/templates/Modern Template')
 
-    await expect(templateManager.importTemplate('/source/template')).rejects.toEqual(
+    await expect(templateManager.importTemplate(AbsPath.from('/source/template'))).rejects.toEqual(
       new AppError('IO_ERROR', '目标模板目录已存在，请先清理后重试'),
     )
     expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
@@ -200,10 +202,10 @@ describe('templateManager 模板管理', () => {
       templateSavePath: 'C:/Templates',
     })
 
-    await templateManager.importTemplate('C:\\Templates\\Modern Template\\')
+    await templateManager.importTemplate(AbsPath.from('C:\\Templates\\Modern Template\\'))
 
     expect(dbTemplatesAddMock).toHaveBeenCalledWith(expect.objectContaining({
-      path: 'C:\\Templates\\Modern Template\\',
+      path: 'C:/Templates/Modern Template',
       status: 'created',
     }))
     expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
@@ -330,7 +332,7 @@ describe('templateManager 模板管理', () => {
   it('deleteTemplate 会递归删除模板目录并清理数据库记录', async () => {
     await templateManager.deleteTemplate({
       id: 'template-created',
-      path: '/templates/Modern Template',
+      path: AbsPath.from('/templates/Modern Template'),
       createdAt: 0,
       status: 'created',
       availability: 'available',
@@ -348,7 +350,7 @@ describe('templateManager 模板管理', () => {
 
     await expect(templateManager.deleteTemplate({
       id: 'template-created',
-      path: '/templates/Modern Template',
+      path: AbsPath.from('/templates/Modern Template'),
       createdAt: 0,
       status: 'created',
       availability: 'available',

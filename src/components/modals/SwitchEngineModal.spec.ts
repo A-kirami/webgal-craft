@@ -7,6 +7,7 @@ import {
   renderInBrowser,
 } from '~/__tests__/browser-render'
 import { createTestEngine, createTestGame } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 
 import SwitchEngineModal from './SwitchEngineModal.vue'
 
@@ -192,7 +193,7 @@ function renderSwitchEngineModal() {
   const game = createTestGame({
     id: 'game-1',
     engineId: 'engine-current',
-    path: '/games/demo',
+    path: AbsPath.from('/games/demo'),
   })
 
   renderInBrowser(SwitchEngineModal, {
@@ -218,7 +219,7 @@ describe('SwitchEngineModal', () => {
     const currentGame = createTestGame({
       id: 'game-1',
       engineId: 'engine-current',
-      path: '/games/demo',
+      path: AbsPath.from('/games/demo'),
     })
 
     const currentEngine = createTestEngine({

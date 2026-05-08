@@ -3,6 +3,7 @@ import { page } from 'vitest/browser'
 
 import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 import { createTestEngine } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 import { AppError } from '~/types/errors'
 
 import EnginesTab from './EnginesTab.vue'
@@ -214,7 +215,7 @@ describe('EnginesTab', () => {
     const engine = createTestEngine({
       engineId: 'open-webgal.webgal',
       name: 'WebGAL',
-      path: '/engines/WebGAL/4.5.0',
+      path: AbsPath.from('/engines/WebGAL/4.5.0'),
       version: '4.5.0',
     })
 
@@ -266,7 +267,7 @@ describe('EnginesTab', () => {
     const engine = createTestEngine({
       engineId: 'open-webgal.webgal',
       name: 'WebGAL',
-      path: '/engines/WebGAL/4.5.0',
+      path: AbsPath.from('/engines/WebGAL/4.5.0'),
       version: '4.5.0',
     })
     const preferenceStore = reactive({
@@ -305,7 +306,7 @@ describe('EnginesTab', () => {
     const engine = createTestEngine({
       engineId: 'open-webgal.webgal',
       name: 'WebGAL',
-      path: '/engines/WebGAL/4.5.0',
+      path: AbsPath.from('/engines/WebGAL/4.5.0'),
       version: '4.5.0',
     })
     const preferenceStore = reactive({

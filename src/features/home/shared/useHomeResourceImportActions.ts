@@ -1,6 +1,7 @@
 import { open } from '@tauri-apps/plugin-dialog'
 import { openPath } from '@tauri-apps/plugin-opener'
 
+import { AbsPath } from '~/domain/path'
 import { resolveI18nLike } from '~/utils/i18n-like'
 
 import {
@@ -33,7 +34,7 @@ export interface HomeResourceImportMessages {
 
 interface UseHomeResourceImportActionsOptions {
   activeProgress: ReadonlyMap<string, number>
-  importResource: (path: string) => Promise<HomeResourceImportOutcome | unknown>
+  importResource: (path: AbsPath) => Promise<HomeResourceImportOutcome | unknown>
   messages: HomeResourceImportMessages
   t: I18nT
 }
@@ -72,7 +73,7 @@ function isImportOutcome(value: unknown): value is HomeResourceImportOutcome {
 export function useHomeResourceImportActions<TResource extends { id: string, path: string }>(
   options: UseHomeResourceImportActionsOptions,
 ) {
-  async function importWithNotify(path: string) {
+  async function importWithNotify(path: AbsPath) {
     let importError: unknown
     let outcome: HomeResourceImportOutcome | undefined
 
@@ -127,7 +128,7 @@ export function useHomeResourceImportActions<TResource extends { id: string, pat
       return
     }
 
-    await importWithNotify(path)
+    await importWithNotify(AbsPath.from(path))
   }
 
   async function handleDrop(paths: string[]) {
@@ -139,10 +140,10 @@ export function useHomeResourceImportActions<TResource extends { id: string, pat
       return
     }
 
-    await importWithNotify(decision.path)
+    await importWithNotify(AbsPath.from(decision.path))
   }
 
-  async function handleOpenFolder(resource: Pick<TResource, 'path'>) {
+  async function handleOpenFolder(resource: { path: string }) {
     await openPath(resource.path)
   }
 

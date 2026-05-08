@@ -1,9 +1,10 @@
+import type { AbsPath } from '~/domain/path'
 import type { ResourceAvailability } from '~/services/resource-health'
 import type { EngineMetadata, EnginePreviewAssets, GameMetadata, GamePreviewAssets, TemplateMetadata } from '~/services/types'
 
 export interface Game {
   id: string
-  path: string
+  path: AbsPath
   pathLookupKey: string
   engineId?: string
   createdAt: number
@@ -16,7 +17,7 @@ export interface Game {
 
 export interface Engine {
   id: string
-  path: string
+  path: AbsPath
   pathLookupKey: string
   engineId: string
   name: string
@@ -30,7 +31,7 @@ export interface Engine {
 
 export interface Template {
   id: string
-  path: string
+  path: AbsPath
   createdAt: number
   status: TemplateStatus
   availability: ResourceAvailability

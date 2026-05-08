@@ -3,6 +3,7 @@ import '~/__tests__/setup'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestGame } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 import { usePreviewSessionStore } from '~/stores/preview-session'
 
 const {
@@ -57,7 +58,7 @@ describe('previewSessionStore 当前工作区预览会话仓库', () => {
 
     ensureServeUrlMock.mockResolvedValueOnce('http://preview/game-1/')
     await store.syncCurrentGame(createTestGame({
-      path: '/games/game-1',
+      path: AbsPath.from('/games/game-1'),
       engineId: 'engine-1',
     }))
 
@@ -89,13 +90,13 @@ describe('previewSessionStore 当前工作区预览会话仓库', () => {
 
     ensureServeUrlMock.mockResolvedValue('http://preview/game-1/')
     await store.syncCurrentGame(createTestGame({
-      path: '/games/game-1',
+      path: AbsPath.from('/games/game-1'),
     }))
 
-    store.refreshIfCurrentGame('/games/other')
+    store.refreshIfCurrentGame(AbsPath.from('/games/other'))
     expect(store.reloadVersion).toBe(0)
 
-    store.refreshIfCurrentGame('/games/game-1')
+    store.refreshIfCurrentGame(AbsPath.from('/games/game-1'))
     expect(store.reloadVersion).toBe(1)
   })
 
@@ -104,13 +105,13 @@ describe('previewSessionStore 当前工作区预览会话仓库', () => {
 
     ensureServeUrlMock.mockResolvedValue(undefined)
     await store.syncCurrentGame(createTestGame({
-      path: '/games/game-1',
+      path: AbsPath.from('/games/game-1'),
     }))
 
     expect(store.currentGameServeUrl).toBeUndefined()
     expect(loggerErrorMock).toHaveBeenCalledWith('获取预览链接失败: 预览链接不存在')
 
-    store.refreshIfCurrentGame('/games/game-1')
+    store.refreshIfCurrentGame(AbsPath.from('/games/game-1'))
     expect(store.reloadVersion).toBe(1)
   })
 
@@ -122,10 +123,10 @@ describe('previewSessionStore 当前工作区预览会话仓库', () => {
     ensureServeUrlMock.mockResolvedValueOnce('http://preview/game-2/')
 
     const firstSyncTask = store.syncCurrentGame(createTestGame({
-      path: '/games/game-1',
+      path: AbsPath.from('/games/game-1'),
     }))
     const secondSyncTask = store.syncCurrentGame(createTestGame({
-      path: '/games/game-2',
+      path: AbsPath.from('/games/game-2'),
     }))
 
     await secondSyncTask
@@ -142,7 +143,7 @@ describe('previewSessionStore 当前工作区预览会话仓库', () => {
 
     resolvePreviewSiteMock.mockRejectedValue(new Error('engine unavailable'))
     await store.syncCurrentGame(createTestGame({
-      path: '/games/game-1',
+      path: AbsPath.from('/games/game-1'),
     }))
 
     expect(ensureServeUrlMock).not.toHaveBeenCalled()

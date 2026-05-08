@@ -6,6 +6,7 @@ import {
   createBrowserContainerStub,
   renderInBrowser,
 } from '~/__tests__/browser-render'
+import { AbsPath } from '~/domain/path'
 
 import DiscoveredResourcesModal from './DiscoveredResourcesModal.vue'
 
@@ -94,7 +95,7 @@ describe('DiscoveredResourcesModal', () => {
         open: true,
         resources: [
           {
-            path: '/games/demo',
+            path: AbsPath.from('/games/demo'),
             name: 'Demo Game',
             icon: '/games/demo/icons/favicon.ico',
           },
@@ -123,7 +124,7 @@ describe('DiscoveredResourcesModal', () => {
         open: true,
         resources: [
           {
-            path: '/games/demo',
+            path: AbsPath.from('/games/demo'),
             name: 'Demo Game',
             icon: '/games/demo/icons/favicon.ico',
           },
@@ -148,12 +149,12 @@ describe('DiscoveredResourcesModal', () => {
         open: true,
         resources: [
           {
-            path: '/games/demo',
+            path: AbsPath.from('/games/demo'),
             name: 'Demo Game',
             icon: 'icons/favicon.ico',
             previewSite: {
-              projectPath: '/games/demo',
-              enginePath: '/engines/webgal',
+              projectPath: AbsPath.from('/games/demo'),
+              enginePath: AbsPath.from('/engines/webgal'),
             },
           },
         ],
@@ -178,12 +179,12 @@ describe('DiscoveredResourcesModal', () => {
       setup() {
         const resources = ref([
           {
-            path: '/games/alpha',
+            path: AbsPath.from('/games/alpha'),
             name: 'Alpha Game',
             icon: '/games/alpha/icons/favicon.ico',
           },
           {
-            path: '/games/beta',
+            path: AbsPath.from('/games/beta'),
             name: 'Beta Game',
             icon: '/games/beta/icons/favicon.ico',
           },
@@ -192,12 +193,12 @@ describe('DiscoveredResourcesModal', () => {
         function replaceResources() {
           resources.value = [
             {
-              path: '/games/beta',
+              path: AbsPath.from('/games/beta'),
               name: 'Beta Game',
               icon: '/games/beta/icons/favicon.ico',
             },
             {
-              path: '/games/charlie',
+              path: AbsPath.from('/games/charlie'),
               name: 'Charlie Game',
               icon: '/games/charlie/icons/favicon.ico',
             },
@@ -252,7 +253,7 @@ describe('DiscoveredResourcesModal', () => {
         open: true,
         resources: [
           {
-            path: '/templates/modern',
+            path: AbsPath.from('/templates/modern'),
             name: 'Modern Template',
           },
         ],

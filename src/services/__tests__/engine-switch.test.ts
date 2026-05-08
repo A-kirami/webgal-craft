@@ -3,6 +3,7 @@ import '~/__tests__/setup'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestEngine, createTestGame } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 import { engineSwitch } from '~/services/engine-switch'
 import { AppError } from '~/types/errors'
 
@@ -129,7 +130,7 @@ describe('engineSwitch.switchEngine', () => {
 
   it('在自带引擎项目上拒绝切换', async () => {
     const game = createTestGame({ engineId: undefined })
-    const newEngine = createTestEngine({ id: 'engine-new', path: '/engines/new' })
+    const newEngine = createTestEngine({ id: 'engine-new', path: AbsPath.from('/engines/new') })
 
     await expect(engineSwitch.switchEngine(game, newEngine)).rejects.toBeInstanceOf(AppError)
     expect(writeProjectConfigMock).not.toHaveBeenCalled()
@@ -137,8 +138,8 @@ describe('engineSwitch.switchEngine', () => {
 
   it('在旧引擎记录缺失时直接拒绝，不产生任何副作用', async () => {
     dbEngineGetMock.mockResolvedValue(undefined)
-    const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: '/games/demo' })
-    const newEngine = createTestEngine({ id: 'engine-new', path: '/engines/new' })
+    const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: AbsPath.from('/games/demo') })
+    const newEngine = createTestEngine({ id: 'engine-new', path: AbsPath.from('/engines/new') })
 
     await expect(engineSwitch.switchEngine(game, newEngine)).rejects.toThrowError(/当前引擎记录缺失/)
     expect(readProjectConfigMock).not.toHaveBeenCalled()
@@ -148,10 +149,10 @@ describe('engineSwitch.switchEngine', () => {
   })
 
   it('clean 模板时按顺序更新 config / DB / site，并刷新预览', async () => {
-    const oldEngine = createTestEngine({ id: 'engine-old', path: '/engines/old' })
+    const oldEngine = createTestEngine({ id: 'engine-old', path: AbsPath.from('/engines/old') })
     const newEngine = createTestEngine({
       id: 'engine-new',
-      path: '/engines/new',
+      path: AbsPath.from('/engines/new'),
       engineId: 'open-webgal.webgal',
       version: '4.6.0',
     })
@@ -160,7 +161,7 @@ describe('engineSwitch.switchEngine', () => {
       .mockResolvedValueOnce('/engines/old/game/template')
       .mockResolvedValueOnce('/engines/new/game/template')
 
-    const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: '/games/demo' })
+    const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: AbsPath.from('/games/demo') })
 
     await engineSwitch.switchEngine(game, newEngine)
 
@@ -179,11 +180,11 @@ describe('engineSwitch.switchEngine', () => {
   })
 
   it('dirty 模板缺少决策时拒绝，不产生副作用', async () => {
-    const oldEngine = createTestEngine({ id: 'engine-old', path: '/engines/old' })
+    const oldEngine = createTestEngine({ id: 'engine-old', path: AbsPath.from('/engines/old') })
     dbEngineGetMock.mockResolvedValue(oldEngine)
     evaluateTemplateStrategyMock.mockResolvedValue('dirty')
-    const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: '/games/demo' })
-    const newEngine = createTestEngine({ id: 'engine-new', path: '/engines/new' })
+    const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: AbsPath.from('/games/demo') })
+    const newEngine = createTestEngine({ id: 'engine-new', path: AbsPath.from('/engines/new') })
 
     await expect(engineSwitch.switchEngine(game, newEngine)).rejects.toMatchObject({
       details: { reason: 'TEMPLATE_DIRTY_NEEDS_DECISION' },
@@ -193,15 +194,15 @@ describe('engineSwitch.switchEngine', () => {
   })
 
   it('discard 决策会清理模板 upper 并切换到新引擎模板', async () => {
-    const oldEngine = createTestEngine({ id: 'engine-old', path: '/engines/old' })
-    const newEngine = createTestEngine({ id: 'engine-new', path: '/engines/new' })
+    const oldEngine = createTestEngine({ id: 'engine-old', path: AbsPath.from('/engines/old') })
+    const newEngine = createTestEngine({ id: 'engine-new', path: AbsPath.from('/engines/new') })
     dbEngineGetMock.mockResolvedValue(oldEngine)
     evaluateTemplateStrategyMock.mockResolvedValue('dirty')
     resolveTemplatePathMock
       .mockResolvedValueOnce('/engines/old/game/template')
       .mockResolvedValueOnce('/engines/new/game/template')
 
-    const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: '/games/demo' })
+    const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: AbsPath.from('/games/demo') })
 
     await engineSwitch.switchEngine(game, newEngine, { templateDecision: 'discard' })
 
@@ -211,10 +212,10 @@ describe('engineSwitch.switchEngine', () => {
 
   describe('回滚', () => {
     function setupBaseSwitch() {
-      const oldEngine = createTestEngine({ id: 'engine-old', path: '/engines/old' })
+      const oldEngine = createTestEngine({ id: 'engine-old', path: AbsPath.from('/engines/old') })
       const newEngine = createTestEngine({
         id: 'engine-new',
-        path: '/engines/new',
+        path: AbsPath.from('/engines/new'),
         engineId: 'open-webgal.webgal',
         version: '4.6.0',
       })
@@ -222,7 +223,7 @@ describe('engineSwitch.switchEngine', () => {
       resolveTemplatePathMock
         .mockResolvedValueOnce('/engines/old/game/template')
         .mockResolvedValueOnce('/engines/new/game/template')
-      const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: '/games/demo' })
+      const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: AbsPath.from('/games/demo') })
 
       return { game, newEngine }
     }

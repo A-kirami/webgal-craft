@@ -3,6 +3,7 @@ import '~/__tests__/setup'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestEngine, createTestGame } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 import { gameManager } from '~/services/game-manager'
 import { AppError } from '~/types/errors'
 
@@ -239,19 +240,19 @@ describe('gameManager', () => {
   it('validateGame 仅检查 game/config.txt 是否存在', async () => {
     existsMock.mockResolvedValue(true)
 
-    await expect(gameManager.validateGame('/games/demo')).resolves.toBe(true)
+    await expect(gameManager.validateGame(AbsPath.from('/games/demo'))).resolves.toBe(true)
     expect(gameConfigPathMock).toHaveBeenCalledWith('/games/demo')
   })
 
   it('getGameMetadata 只返回语义元数据', async () => {
-    await expect(gameManager.getGameMetadata('/games/demo')).resolves.toEqual({
+    await expect(gameManager.getGameMetadata(AbsPath.from('/games/demo'))).resolves.toEqual({
       name: 'Demo Game',
       titleImg: 'cover.png',
     })
   })
 
   it('getGamePreviewAssets 返回相对预览路径', async () => {
-    await expect(gameManager.getGamePreviewAssets('/games/demo')).resolves.toEqual({
+    await expect(gameManager.getGamePreviewAssets(AbsPath.from('/games/demo'))).resolves.toEqual({
       icon: {
         path: 'icons/favicon.ico',
       },
@@ -264,7 +265,7 @@ describe('gameManager', () => {
   it('getGamePreviewAssets 按既定候选顺序解析图标', async () => {
     existsMock.mockImplementation(async (path: string) => path === '/games/demo/icons/icon-192.png')
 
-    await expect(gameManager.getGamePreviewAssets('/games/demo')).resolves.toEqual({
+    await expect(gameManager.getGamePreviewAssets(AbsPath.from('/games/demo'))).resolves.toEqual({
       icon: {
         path: 'icons/icon-192.png',
       },
@@ -278,7 +279,7 @@ describe('gameManager', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
 
-    await gameManager.registerGame('/games/demo', {
+    await gameManager.registerGame(AbsPath.from('/games/demo'), {
       metadata: {
         name: 'Provided Name',
       },
@@ -305,7 +306,7 @@ describe('gameManager', () => {
   })
 
   it('getGameSnapshot 只持久化语义元数据，并返回相对预览路径', async () => {
-    await expect(gameManager.getGameSnapshot('/games/demo')).resolves.toEqual({
+    await expect(gameManager.getGameSnapshot(AbsPath.from('/games/demo'))).resolves.toEqual({
       metadata: {
         name: 'Demo Game',
         titleImg: 'cover.png',
@@ -328,7 +329,7 @@ describe('gameManager', () => {
       id: 'engine-1',
       name: 'WebGAL',
       version: '4.5.0',
-      path: '/engines/WebGAL/4.5.0',
+      path: AbsPath.from('/engines/WebGAL/4.5.0'),
     }))
     copyDirectoryWithProgressMock.mockImplementation(async (_from, _to, onProgress: (progress: number) => void) => {
       onProgress(48)
@@ -352,7 +353,7 @@ describe('gameManager', () => {
       return false
     })
 
-    await expect(gameManager.createGame('Demo Game', '/games/demo', 'engine-1')).resolves.toBe('game-1')
+    await expect(gameManager.createGame('Demo Game', AbsPath.from('/games/demo'), 'engine-1')).resolves.toBe('game-1')
 
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       path: '/games/demo',
@@ -418,7 +419,7 @@ describe('gameManager', () => {
       id: 'engine-1',
       name: 'WebGAL',
       version: '4.5.0',
-      path: String.raw`C:\Engines\WebGAL\4.5.0`,
+      path: AbsPath.from(String.raw`C:\Engines\WebGAL\4.5.0`),
     }))
     existsMock.mockImplementation(async (path: string) => {
       if (path === 'C:/Engines/WebGAL/4.5.0/game') {
@@ -430,7 +431,7 @@ describe('gameManager', () => {
       return false
     })
 
-    await gameManager.createGame('Demo Game', String.raw`C:\Games\Demo`, 'engine-1')
+    await gameManager.createGame('Demo Game', AbsPath.from(String.raw`C:\Games\Demo`), 'engine-1')
 
     expect(mkdirMock).toHaveBeenCalledWith('C:/Games/Demo/game', { recursive: true })
     expect(copyDirectoryWithProgressMock).toHaveBeenCalledWith(
@@ -446,7 +447,7 @@ describe('gameManager', () => {
       id: 'engine-1',
       name: 'WebGAL',
       version: '4.5.0',
-      path: '/engines/WebGAL/4.5.0',
+      path: AbsPath.from('/engines/WebGAL/4.5.0'),
     }))
     let gamePathChecks = 0
     existsMock.mockImplementation(async (path: string) => {
@@ -470,7 +471,7 @@ describe('gameManager', () => {
     })
     copyDirectoryWithProgressMock.mockRejectedValue(new Error('copy failed'))
 
-    await expect(gameManager.createGame('Demo Game', '/games/demo', 'engine-1')).rejects.toThrow('copy failed')
+    await expect(gameManager.createGame('Demo Game', AbsPath.from('/games/demo'), 'engine-1')).rejects.toThrow('copy failed')
 
     expect(dbGameDeleteMock).toHaveBeenCalledWith('game-1')
     expect(deleteFileMock).toHaveBeenCalledWith('/games/demo', true)
@@ -482,7 +483,7 @@ describe('gameManager', () => {
       id: 'engine-1',
       name: 'WebGAL',
       version: '4.5.0',
-      path: '/engines/WebGAL/4.5.0',
+      path: AbsPath.from('/engines/WebGAL/4.5.0'),
     }))
     let gamePathChecks = 0
     existsMock.mockImplementation(async (path: string) => {
@@ -506,7 +507,7 @@ describe('gameManager', () => {
     })
     gameCmdsSetGameConfigMock.mockRejectedValue(new Error('config failed'))
 
-    await expect(gameManager.createGame('Demo Game', '/games/demo', 'engine-1')).rejects.toThrow('config failed')
+    await expect(gameManager.createGame('Demo Game', AbsPath.from('/games/demo'), 'engine-1')).rejects.toThrow('config failed')
 
     expect(dbGameDeleteMock).toHaveBeenCalledWith('game-1')
     expect(deleteFileMock).toHaveBeenCalledWith('/games/demo', true)
@@ -517,11 +518,11 @@ describe('gameManager', () => {
     dbGameGetMock.mockResolvedValue(createTestGame({
       id: 'game-1',
       engineId: 'engine-1',
-      path: '/games/demo',
+      path: AbsPath.from('/games/demo'),
     }))
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
-      path: '/engines/WebGAL/4.5.0',
+      path: AbsPath.from('/engines/WebGAL/4.5.0'),
       name: 'WebGAL',
       version: '4.5.0',
     }))
@@ -554,7 +555,7 @@ describe('gameManager', () => {
       || path === '/games/self-contained/index.html'
       || path === '/games/self-contained/game/background/cover.png')
 
-    await expect(gameManager.importGame('/games/self-contained')).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
+    await expect(gameManager.importGame(AbsPath.from('/games/self-contained'))).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
     expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/self-contained', { version: 1 })
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -583,7 +584,7 @@ describe('gameManager', () => {
       version: '4.5.0',
     }))
 
-    await expect(gameManager.importGame('/games/vfs')).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
+    await expect(gameManager.importGame(AbsPath.from('/games/vfs'))).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: 'engine-1',
@@ -612,7 +613,7 @@ describe('gameManager', () => {
       availability: 'broken',
     }))
 
-    await expect(gameManager.importGame('/games/vfs')).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
+    await expect(gameManager.importGame(AbsPath.from('/games/vfs'))).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
     expect(writeProjectConfigMock).not.toHaveBeenCalled()
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -649,7 +650,7 @@ describe('gameManager', () => {
       status: 'created',
     }))
 
-    await expect(gameManager.importGame('/games/vfs', {
+    await expect(gameManager.importGame(AbsPath.from('/games/vfs'), {
       selectEngine: vi.fn().mockResolvedValue('engine-2'),
     })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
@@ -688,7 +689,7 @@ describe('gameManager', () => {
       status: 'created',
     }))
 
-    await expect(gameManager.importGame('/games/vfs', {
+    await expect(gameManager.importGame(AbsPath.from('/games/vfs'), {
       selectEngine: vi.fn().mockResolvedValue('engine-2'),
     })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
@@ -712,13 +713,13 @@ describe('gameManager', () => {
         return {
           first: async () => createTestGame({
             id: 'game-existing',
-            path: '/games/demo',
+            path: AbsPath.from('/games/demo'),
           }),
         }
       },
     })
 
-    await expect(gameManager.importGame('/games/demo')).resolves.toEqual({
+    await expect(gameManager.importGame(AbsPath.from('/games/demo'))).resolves.toEqual({
       id: 'game-existing',
       alreadyRegistered: true,
     })
@@ -730,12 +731,12 @@ describe('gameManager', () => {
       equals: () => ({
         first: async () => createTestGame({
           id: 'game-existing',
-          path: '/Games/Demo',
+          path: AbsPath.from('/Games/Demo'),
         }),
       }),
     })
 
-    await expect(gameManager.importGame('/games/demo')).resolves.toEqual({
+    await expect(gameManager.importGame(AbsPath.from('/games/demo'))).resolves.toEqual({
       id: 'game-existing',
       alreadyRegistered: true,
     })
@@ -743,7 +744,7 @@ describe('gameManager', () => {
   })
 
   it('game 身份键与自动发现复用同一套路径规范化规则', () => {
-    expect(gameManager.identityKeyOf({ path: '/Games/Demo/' })).toBe('/games/demo')
+    expect(gameManager.identityKeyOf({ path: AbsPath.from('/Games/Demo/') })).toBe('/games/demo')
   })
 
   it('importGame 在用户取消选择引擎时会返回取消原因', async () => {
@@ -752,7 +753,7 @@ describe('gameManager', () => {
       || path === '/games/no-engine/game/config.txt'
       || path === '/games/no-engine/game/background/cover.png')
 
-    await expect(gameManager.importGame('/games/no-engine', {
+    await expect(gameManager.importGame(AbsPath.from('/games/no-engine'), {
       selectEngine: vi.fn().mockResolvedValue(undefined),
     })).rejects.toEqual(
       new AppError('IO_ERROR', '导入已取消', {
@@ -769,7 +770,7 @@ describe('gameManager', () => {
       || path === '/games/broken-config/game/background/cover.png')
     readProjectConfigMock.mockRejectedValue(new AppError('INVALID_PROJECT_CONFIG', 'project.wgcp 损坏'))
 
-    await expect(gameManager.importGame('/games/broken-config')).rejects.toEqual(
+    await expect(gameManager.importGame(AbsPath.from('/games/broken-config'))).rejects.toEqual(
       new AppError('INVALID_PROJECT_CONFIG', '项目配置文件损坏', {
         details: { reason: 'CONFIG_CORRUPTED' },
       }),
@@ -784,7 +785,7 @@ describe('gameManager', () => {
       || path === '/games/io-error/game/background/cover.png')
     readProjectConfigMock.mockRejectedValue(new AppError('IO_ERROR', '权限不足'))
 
-    await expect(gameManager.importGame('/games/io-error')).rejects.toEqual(
+    await expect(gameManager.importGame(AbsPath.from('/games/io-error'))).rejects.toEqual(
       new AppError('IO_ERROR', '权限不足'),
     )
   })
@@ -792,11 +793,11 @@ describe('gameManager', () => {
   it('resolvePreviewSite 会返回游戏路径与已解析的引擎路径', async () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
-      path: '/engines/WebGAL/4.5.0',
+      path: AbsPath.from('/engines/WebGAL/4.5.0'),
     }))
 
     await expect(gameManager.resolvePreviewSite({
-      path: '/games/demo',
+      path: AbsPath.from('/games/demo'),
       engineId: 'engine-1',
     })).resolves.toEqual({
       projectPath: '/games/demo',
@@ -807,12 +808,12 @@ describe('gameManager', () => {
   it('getGameEnginePath 会忽略 broken availability 引擎，允许回退为仅编辑本地 game 目录', async () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
-      path: '/engines/WebGAL/4.5.0',
+      path: AbsPath.from('/engines/WebGAL/4.5.0'),
       availability: 'broken',
     }))
 
     await expect(gameManager.getGameEnginePath({
-      path: '/games/demo',
+      path: AbsPath.from('/games/demo'),
       engineId: 'engine-1',
     })).resolves.toBeUndefined()
   })
@@ -820,7 +821,7 @@ describe('gameManager', () => {
   it('resolvePreviewSite 会在引擎绑定项目的引擎不可用时直接拒绝预览', async () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
-      path: '/engines/WebGAL/4.5.0',
+      path: AbsPath.from('/engines/WebGAL/4.5.0'),
       availability: 'broken',
     }))
     readProjectConfigMock.mockResolvedValue({
@@ -832,7 +833,7 @@ describe('gameManager', () => {
     })
 
     await expect(gameManager.resolvePreviewSite({
-      path: '/games/demo',
+      path: AbsPath.from('/games/demo'),
       engineId: 'engine-1',
     })).rejects.toEqual(new AppError('IO_ERROR', '引擎不可用'))
   })
@@ -840,7 +841,7 @@ describe('gameManager', () => {
   it('importGame 遇到不存在的目录时抛出 DIR_NOT_FOUND', async () => {
     existsMock.mockResolvedValue(false)
 
-    await expect(gameManager.importGame('/games/missing')).rejects.toEqual(
+    await expect(gameManager.importGame(AbsPath.from('/games/missing'))).rejects.toEqual(
       new AppError('DIR_NOT_FOUND', '游戏目录不存在'),
     )
   })
@@ -848,7 +849,7 @@ describe('gameManager', () => {
   it('importGame 遇到缺失 game/config.txt 的目录时抛出 INVALID_STRUCTURE', async () => {
     existsMock.mockImplementation(async (path: string) => path === '/games/invalid')
 
-    await expect(gameManager.importGame('/games/invalid')).rejects.toEqual(
+    await expect(gameManager.importGame(AbsPath.from('/games/invalid'))).rejects.toEqual(
       new AppError('INVALID_STRUCTURE', '无效的游戏文件夹'),
     )
   })
@@ -857,7 +858,7 @@ describe('gameManager', () => {
     existsMock.mockResolvedValue(true)
     gameCmdsGetGameConfigMock.mockRejectedValue(new Error('parse failed'))
 
-    await expect(gameManager.importGame('/games/bad-config')).rejects.toMatchObject({
+    await expect(gameManager.importGame(AbsPath.from('/games/bad-config'))).rejects.toMatchObject({
       code: 'INVALID_CONFIG',
     })
   })
@@ -865,7 +866,7 @@ describe('gameManager', () => {
   it('inspectGame 在路径不存在时返回 missing + DIR_NOT_FOUND', async () => {
     existsMock.mockResolvedValue(false)
 
-    await expect(gameManager.inspectGame('/games/missing')).resolves.toMatchObject({
+    await expect(gameManager.inspectGame(AbsPath.from('/games/missing'))).resolves.toMatchObject({
       availability: 'missing',
       warnings: [],
       blockingIssue: { code: 'DIR_NOT_FOUND' },
@@ -875,7 +876,7 @@ describe('gameManager', () => {
   it('inspectGame 在缺失 game/config.txt 时返回 broken + INVALID_STRUCTURE', async () => {
     existsMock.mockImplementation(async (path: string) => path === '/games/demo')
 
-    await expect(gameManager.inspectGame('/games/demo')).resolves.toMatchObject({
+    await expect(gameManager.inspectGame(AbsPath.from('/games/demo'))).resolves.toMatchObject({
       availability: 'broken',
       blockingIssue: { code: 'INVALID_STRUCTURE' },
     })
@@ -888,7 +889,7 @@ describe('gameManager', () => {
       { key: 'Title_img', value: 'cover.png' },
     ]))
 
-    await expect(gameManager.inspectGame('/games/demo')).resolves.toMatchObject({
+    await expect(gameManager.inspectGame(AbsPath.from('/games/demo'))).resolves.toMatchObject({
       availability: 'available',
       warnings: [{ code: 'missing-game-name' }],
     })
@@ -900,7 +901,7 @@ describe('gameManager', () => {
       || path === '/games/demo/game/config.txt'
       || path === '/games/demo/game/background/cover.png')
 
-    await expect(gameManager.inspectGame('/games/demo')).resolves.toMatchObject({
+    await expect(gameManager.inspectGame(AbsPath.from('/games/demo'))).resolves.toMatchObject({
       availability: 'available',
       warnings: [{ code: 'missing-game-icon' }],
     })
@@ -913,7 +914,7 @@ describe('gameManager', () => {
       { key: 'Title_img', value: '' },
     ]))
 
-    await expect(gameManager.inspectGame('/games/demo')).resolves.toMatchObject({
+    await expect(gameManager.inspectGame(AbsPath.from('/games/demo'))).resolves.toMatchObject({
       availability: 'available',
       warnings: [{ code: 'missing-title-image' }],
     })
@@ -922,7 +923,7 @@ describe('gameManager', () => {
   it('inspectGame 在 titleImg 文件不存在时产 missing-title-image-file warning', async () => {
     existsMock.mockImplementation(async (path: string) => path !== '/games/demo/game/background/cover.png')
 
-    await expect(gameManager.inspectGame('/games/demo')).resolves.toMatchObject({
+    await expect(gameManager.inspectGame(AbsPath.from('/games/demo'))).resolves.toMatchObject({
       availability: 'available',
       warnings: [{ code: 'missing-title-image-file' }],
     })
@@ -933,7 +934,7 @@ describe('gameManager', () => {
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     dbGameWhereFirstMock.mockResolvedValue(createTestGame({
       id: 'game-1',
-      path: '/games/demo',
+      path: AbsPath.from('/games/demo'),
       metadata: {
         name: 'Old Name',
       },
@@ -954,7 +955,7 @@ describe('gameManager', () => {
     ]))
     workspaceStoreState.currentGame = createTestGame({
       id: 'game-1',
-      path: '/games/demo',
+      path: AbsPath.from('/games/demo'),
       metadata: {
         name: 'Old Name',
       },
@@ -970,7 +971,7 @@ describe('gameManager', () => {
       },
     })
 
-    await gameManager.refreshRegisteredGameSnapshot('/games/demo')
+    await gameManager.refreshRegisteredGameSnapshot(AbsPath.from('/games/demo'))
 
     expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', {
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
@@ -1015,10 +1016,10 @@ describe('gameManager', () => {
   it('deleteGame 在 removeFiles=true 时会通过 fs 命令删除游戏目录后再删除记录', async () => {
     await gameManager.deleteGame(createTestGame({
       id: 'game-1',
-      path: '/games/demo',
+      path: AbsPath.from('/games/demo'),
     }), true)
 
-    expect(deleteFileMock).toHaveBeenCalledWith('/games/demo')
+    expect(deleteFileMock).toHaveBeenCalledWith('/games/demo', true)
     expect(dbGameDeleteMock).toHaveBeenCalledWith('game-1')
     expect(deleteFileMock.mock.invocationCallOrder[0]).toBeLessThan(
       dbGameDeleteMock.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
@@ -1030,7 +1031,7 @@ describe('gameManager', () => {
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     workspaceStoreState.currentGame = createTestGame({
       id: 'game-1',
-      path: '/games/demo',
+      path: AbsPath.from('/games/demo'),
       metadata: {
         name: 'Demo',
       },
@@ -1047,7 +1048,7 @@ describe('gameManager', () => {
     })
     dbGameGetMock.mockResolvedValue(createTestGame({
       id: 'game-1',
-      path: '/games/demo',
+      path: AbsPath.from('/games/demo'),
       metadata: {
         name: 'Demo',
       },
@@ -1123,7 +1124,7 @@ describe('gameManager', () => {
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     dbGameGetMock.mockResolvedValue(createTestGame({
       id: 'game-1',
-      path: '/games/demo',
+      path: AbsPath.from('/games/demo'),
       previewAssets: {
         icon: {
           path: 'icons/current.ico',
@@ -1137,7 +1138,7 @@ describe('gameManager', () => {
     }))
     workspaceStoreState.currentGame = createTestGame({
       id: 'game-1',
-      path: '/games/demo',
+      path: AbsPath.from('/games/demo'),
       previewAssets: {
         icon: {
           path: 'icons/current.ico',
@@ -1175,11 +1176,11 @@ describe('gameManager', () => {
     vi.useFakeTimers()
     workspaceStoreState.currentGame = createTestGame({
       id: 'game-1',
-      path: '/games/demo',
+      path: AbsPath.from('/games/demo'),
     })
     dbGameGetMock.mockResolvedValue(createTestGame({
       id: 'game-1',
-      path: '/games/demo',
+      path: AbsPath.from('/games/demo'),
     }))
 
     gameManager.updateCurrentGameLastModified()

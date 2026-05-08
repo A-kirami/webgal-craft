@@ -1,6 +1,7 @@
 import { toEngineCollectionItem } from '~/features/home/home-collection-items'
 
 import type { Engine } from '~/database/model'
+import type { AbsPath } from '~/domain/path'
 import type {
   EngineCollectionItem,
   TemplateCollectionItem,
@@ -12,7 +13,7 @@ import type {
 
 interface BuildTemplateCollectionItemsOptions {
   engines: readonly Engine[]
-  resolveServeUrl: (path: string) => string | undefined
+  resolveServeUrl: (path: AbsPath) => string | undefined
   templateGroups: readonly TemplateGroupViewModel[]
 }
 
@@ -31,7 +32,7 @@ function resolveRepresentativeEngineSource(
 function resolveRepresentativeEngineItem(
   templateGroup: TemplateGroupViewModel,
   enginesById: ReadonlyMap<string, Engine>,
-  resolveServeUrl: (path: string) => string | undefined,
+  resolveServeUrl: (path: AbsPath) => string | undefined,
 ): EngineCollectionItem | undefined {
   const source = resolveRepresentativeEngineSource(templateGroup)
   if (!source) {

@@ -3,6 +3,7 @@ import { page } from 'vitest/browser'
 import { defineComponent, h, ref } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
+import { AbsPath } from '~/domain/path'
 
 import TitleImgPicker from './TitleImgPicker.vue'
 
@@ -111,8 +112,8 @@ const TitleImgPickerHarness = defineComponent({
     return () => h('div', [
       h(TitleImgPicker, {
         'modelValue': value.value,
-        'gamePath': '/games/demo',
-        'backgroundRootPath': '/games/demo/game/background',
+        'gamePath': AbsPath.from('/games/demo'),
+        'backgroundRootPath': AbsPath.from('/games/demo/game/background'),
         'serveUrl': 'http://127.0.0.1:8899/game/demo/',
         'onUpdate:modelValue': (nextValue: string) => {
           value.value = nextValue

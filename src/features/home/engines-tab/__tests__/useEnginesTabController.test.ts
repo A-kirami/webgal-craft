@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestEngine } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 import { AppError } from '~/types/errors'
 
 import { useEnginesTabController } from '../useEnginesTabController'
@@ -122,7 +123,7 @@ describe('useEnginesTabController 行为', () => {
       engines: [
         {
           engine: createTestEngine({
-            path: '/engines/WebGAL/4.5.0',
+            path: AbsPath.from('/engines/WebGAL/4.5.0'),
             version: '4.5.0',
           }),
         },

@@ -15,12 +15,12 @@ import type { ProjectConfig, TemplateBinding } from '~/types/project-config'
 
 type TemplateStrategy = 'explicit' | 'clean' | 'dirty'
 
-function templateUpperPath(gamePath: string): AbsPath {
-  return AbsPath.join(AbsPath.from(gamePath), RelPath.from('game/template'))
+function templateUpperPath(gamePath: AbsPath): AbsPath {
+  return AbsPath.join(gamePath, RelPath.from('game/template'))
 }
 
-async function isTemplateDirty(gamePath: string): Promise<boolean> {
-  if (await vfsCmds.isTemplateDirty(AbsPath.from(gamePath))) {
+async function isTemplateDirty(gamePath: AbsPath): Promise<boolean> {
+  if (await vfsCmds.isTemplateDirty(gamePath)) {
     return true
   }
 
@@ -33,7 +33,7 @@ async function isTemplateDirty(gamePath: string): Promise<boolean> {
   }
 }
 
-async function closeOpenedTemplateDocuments(gamePath: string): Promise<void> {
+async function closeOpenedTemplateDocuments(gamePath: AbsPath): Promise<void> {
   try {
     const templateRoot = templateUpperPath(gamePath)
     const editorStore = useEditorStore()
@@ -62,8 +62,8 @@ async function closeOpenedTemplateDocuments(gamePath: string): Promise<void> {
  *   "跟随当前引擎默认"（缺省 binding）。
  */
 async function notifyTemplateChanged(
-  gamePath: string,
-  options: { nextEnginePath?: string, nextTemplatePath?: string | null } = {},
+  gamePath: AbsPath,
+  options: { nextEnginePath?: AbsPath, nextTemplatePath?: AbsPath | null } = {},
 ): Promise<void> {
   await closeOpenedTemplateDocuments(gamePath)
 
@@ -72,13 +72,9 @@ async function notifyTemplateChanged(
   // 引擎/模板切换不会改动磁盘文件本身（只是 lower 路径变了），
   // OS watcher 不会触发；必须主动失效，否则 listDir 仍会用旧 lower 配置返回。
   try {
-    const nextTemplatePath = typeof options.nextTemplatePath === 'string'
-      ? AbsPath.from(options.nextTemplatePath)
-      : options.nextTemplatePath
-
-    await useFileStore().refreshTemplateOverlay(AbsPath.from(gamePath), {
-      nextEnginePath: options.nextEnginePath ? AbsPath.from(options.nextEnginePath) : undefined,
-      nextTemplatePath,
+    await useFileStore().refreshTemplateOverlay(gamePath, {
+      nextEnginePath: options.nextEnginePath,
+      nextTemplatePath: options.nextTemplatePath,
     })
   } catch (error) {
     logger.warn(`[模板切换] 失效模板 overlay 缓存失败: ${error}`)
@@ -108,10 +104,10 @@ async function applySiteUpdate(updater: () => Promise<void>, label: string): Pro
 async function resolveTemplatePath(
   binding: TemplateBinding | undefined,
   currentEngine?: Pick<Engine, 'path'>,
-): Promise<string | undefined> {
+): Promise<AbsPath | undefined> {
   if (!binding) {
     return currentEngine
-      ? AbsPath.join(AbsPath.from(currentEngine.path), RelPath.from('game/template'))
+      ? AbsPath.join(currentEngine.path, RelPath.from('game/template'))
       : undefined
   }
 
@@ -125,7 +121,7 @@ async function resolveTemplatePath(
     case 'engineBuiltin': {
       const engine = await engineManager.findEngineByRef(binding.engine)
       return engine && isEngineUsable(engine)
-        ? AbsPath.join(AbsPath.from(engine.path), RelPath.from('game/template'))
+        ? AbsPath.join(engine.path, RelPath.from('game/template'))
         : undefined
     }
     default: {
@@ -135,7 +131,7 @@ async function resolveTemplatePath(
 }
 
 async function evaluateTemplateStrategy(
-  gamePath: string,
+  gamePath: AbsPath,
   config: ProjectConfig,
 ): Promise<TemplateStrategy> {
   if (config.template) {
@@ -184,7 +180,7 @@ async function switchTemplate(
   await closeOpenedTemplateDocuments(game.path)
 
   await projectConfigCmds.writeProjectConfig(game.path, newConfig)
-  await vfsCmds.cleanTemplateUpper(AbsPath.from(game.path))
+  await vfsCmds.cleanTemplateUpper(game.path)
 
   const newTemplatePath = await resolveTemplatePath(newBinding, engine)
   await applySiteUpdate(

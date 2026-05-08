@@ -19,7 +19,7 @@ export type { DiscoveredResource } from './discovered-resource'
 
 async function discoverResourcesInDirectory(
   directory: string,
-  validateFn: (path: string) => Promise<boolean>,
+  validateFn: (path: AbsPath) => Promise<boolean>,
 ): Promise<DiscoveredResource[]> {
   try {
     if (!directory || !(await exists(directory))) {
@@ -51,7 +51,7 @@ async function discoverResourcesInDirectory(
 
 async function enrichWithIcons(
   resources: DiscoveredResource[],
-  resolveIconPath: (path: string) => Promise<string>,
+  resolveIconPath: (path: AbsPath) => Promise<string>,
 ): Promise<DiscoveredResource[]> {
   return Promise.all(
     resources.map(async (resource) => {
@@ -129,18 +129,19 @@ async function discoverTemplates(): Promise<DiscoveredResource[]> {
 }
 
 async function discoverEngineVersion(versionPath: string, fallbackVersion: string): Promise<DiscoveredResource | undefined> {
-  const isValid = await engineManager.validateEngine(versionPath).catch(() => false)
+  const normalizedVersionPath = AbsPath.from(versionPath)
+  const isValid = await engineManager.validateEngine(normalizedVersionPath).catch(() => false)
   if (!isValid) {
     return
   }
 
-  const classification = await engineManager.classifyEngine(versionPath).catch(() => undefined)
+  const classification = await engineManager.classifyEngine(normalizedVersionPath).catch(() => undefined)
   if (classification?.status !== 'ok') {
     return
   }
 
   return {
-    path: versionPath,
+    path: normalizedVersionPath,
     name: classification.manifest.name,
     engineId: classification.manifest.id,
     version: classification.manifest.version ?? fallbackVersion,
@@ -281,11 +282,11 @@ function resolveImportMessages(type: ResourceType, t: (key: string) => string): 
   }
 }
 
-function resolveImportFn(type: ResourceType): (path: string) => Promise<unknown> {
+function resolveImportFn(type: ResourceType): (path: AbsPath) => Promise<unknown> {
   switch (type) {
     case 'games': { return path => gameManager.importGame(path, { selectEngine: requestEngineSelection }) }
-    case 'engines': { return engineManager.importEngine }
-    case 'templates': { return templateManager.importTemplate }
+    case 'engines': { return path => engineManager.importEngine(path) }
+    case 'templates': { return path => templateManager.importTemplate(path) }
     default: { throw new Error(`未知的资源类型: ${type satisfies never}`) }
   }
 }
@@ -331,8 +332,8 @@ export function useDiscoverResources() {
   }
 
   async function handleImport(
-    paths: string[],
-    importFn: (path: string) => Promise<unknown>,
+    paths: AbsPath[],
+    importFn: (path: AbsPath) => Promise<unknown>,
     successMsg: string,
     errorMsg: string,
   ) {
@@ -381,7 +382,7 @@ export function useDiscoverResources() {
     modalStore.open('DiscoveredResourcesModal', {
       type,
       resources: newResources,
-      onImport: (paths: string[]) => handleImport(paths, importFn, messages.success, messages.error),
+      onImport: paths => handleImport(paths, importFn, messages.success, messages.error),
     })
   }
 

@@ -66,21 +66,21 @@ function buildEngineMetadata(manifest: EngineManifest): EngineMetadata {
 }
 
 async function resolveEngineIconPreviewPath(
-  enginePath: string,
+  enginePath: AbsPath,
   metadata: EngineMetadata,
 ): Promise<string> {
   if (!metadata.icon || metadata.icon === 'icons/favicon.ico') {
-    return engineIconPath(AbsPath.from(enginePath))
+    return engineIconPath(enginePath)
   }
 
-  return AbsPath.join(AbsPath.from(enginePath), RelPath.from(metadata.icon))
+  return AbsPath.join(enginePath, RelPath.from(metadata.icon))
 }
 
-async function classifyEngine(enginePath: string): Promise<EngineManifestResult> {
+async function classifyEngine(enginePath: AbsPath): Promise<EngineManifestResult> {
   return engineCmds.readEngineManifest(enginePath)
 }
 
-async function buildEngineSnapshot(enginePath: string, manifest: EngineManifest): Promise<EngineSnapshot> {
+async function buildEngineSnapshot(enginePath: AbsPath, manifest: EngineManifest): Promise<EngineSnapshot> {
   const metadata = buildEngineMetadata(manifest)
 
   return {
@@ -96,7 +96,7 @@ async function buildEngineSnapshot(enginePath: string, manifest: EngineManifest)
   }
 }
 
-async function resolveEngineSnapshot(enginePath: string): Promise<EngineSnapshot> {
+async function resolveEngineSnapshot(enginePath: AbsPath): Promise<EngineSnapshot> {
   const result = await classifyEngine(enginePath)
   if (result.status !== 'ok') {
     throw new AppError('IO_ERROR', '引擎缺少有效的 webgal-engine.json')
@@ -117,10 +117,10 @@ function withEnginePreviewCacheVersion(
   }
 }
 
-async function resolveManagedEnginePath(engine: Pick<EngineSnapshot, 'name' | 'version'>): Promise<string> {
+async function resolveManagedEnginePath(engine: Pick<EngineSnapshot, 'engineId' | 'name' | 'version'>): Promise<AbsPath> {
   const storageSettingsStore = useStorageSettingsStore()
   const nameSegment = sanitizeEnginePathSegment(engine.name, '引擎名称')
-  const versionSegment = sanitizeEnginePathSegment(engine.version ?? '', '引擎版本')
+  const versionSegment = sanitizeEnginePathSegment(engine.version ?? engine.engineId, '引擎版本')
   return AbsPath.append(
     AbsPath.append(AbsPath.from(storageSettingsStore.engineSavePath), nameSegment),
     versionSegment,
@@ -131,20 +131,20 @@ export function isEngineUsable(engine: Pick<Engine, 'status' | 'availability'>):
   return engine.status === 'created' && engine.availability === 'available'
 }
 
-async function validateEngine(enginePath: string): Promise<boolean> {
+async function validateEngine(enginePath: AbsPath): Promise<boolean> {
   return fsCmds.validateDirectoryStructure(
-    AbsPath.from(enginePath),
+    enginePath,
     ['game/template'],
     ['index.html', 'game/config.txt'],
   )
 }
 
-async function getEnginePreviewAssets(enginePath: string): Promise<EnginePreviewAssets> {
+async function getEnginePreviewAssets(enginePath: AbsPath): Promise<EnginePreviewAssets> {
   const snapshot = await resolveEngineSnapshot(enginePath)
   return snapshot.previewAssets
 }
 
-async function getEngineSnapshot(enginePath: string): Promise<Pick<Engine, 'engineId' | 'name' | 'version' | 'metadata' | 'previewAssets'>> {
+async function getEngineSnapshot(enginePath: AbsPath): Promise<Pick<Engine, 'engineId' | 'name' | 'version' | 'metadata' | 'previewAssets'>> {
   const snapshot = await resolveEngineSnapshot(enginePath)
 
   return {
@@ -157,7 +157,7 @@ async function getEngineSnapshot(enginePath: string): Promise<Pick<Engine, 'engi
 }
 
 async function registerEngine(
-  enginePath: string,
+  enginePath: AbsPath,
   options: RegisterEngineOptions,
 ): Promise<string> {
   const previewAssets = withEnginePreviewCacheVersion(options.previewAssets)
@@ -165,7 +165,7 @@ async function registerEngine(
   return db.engines.add({
     id: crypto.randomUUID(),
     path: enginePath,
-    pathLookupKey: toLookupPathKey(AbsPath.from(enginePath)),
+    pathLookupKey: toLookupPathKey(enginePath),
     engineId: options.engineId,
     name: options.name,
     version: options.version,
@@ -238,7 +238,7 @@ async function validateAllEngines(): Promise<void> {
     }))
 }
 
-async function assertEngineImportable(enginePath: string): Promise<EngineSnapshot> {
+async function assertEngineImportable(enginePath: AbsPath): Promise<EngineSnapshot> {
   if (!(await validateEngine(enginePath))) {
     logger.error(`[引擎导入] 无效的引擎文件夹: ${enginePath}`)
     throw new AppError('INVALID_STRUCTURE', '无效的引擎文件夹')
@@ -277,12 +277,12 @@ async function assertEngineImportable(enginePath: string): Promise<EngineSnapsho
 
 async function copyAndFinalizeEngine(
   engineId: string,
-  sourcePath: string,
-  targetPath: string,
+  sourcePath: AbsPath,
+  targetPath: AbsPath,
 ): Promise<void> {
   const resourceStore = useResourceStore()
 
-  await fsCmds.copyDirectoryWithProgress(AbsPath.from(sourcePath), AbsPath.from(targetPath), (progress) => {
+  await fsCmds.copyDirectoryWithProgress(sourcePath, targetPath, (progress) => {
     resourceStore.updateProgress(engineId, progress)
   })
 
@@ -298,17 +298,17 @@ async function findEngineByLookupPath(path: AbsPath): Promise<Engine | undefined
 }
 
 function identityKeyOf(
-  input: { path: string, engineId?: string, version?: string },
+  input: { path: AbsPath, engineId?: string, version?: string },
 ): string {
   if (input.engineId && input.version) {
     return `${input.engineId}:${input.version}`
   }
 
-  return toLookupPathKey(AbsPath.from(input.path))
+  return toLookupPathKey(input.path)
 }
 
 async function collectEngineWarnings(
-  enginePath: string,
+  enginePath: AbsPath,
   metadata: EngineMetadata,
 ): Promise<ResourceWarning[]> {
   const warnings: ResourceWarning[] = []
@@ -320,7 +320,7 @@ async function collectEngineWarnings(
 }
 
 async function inspectEngine(
-  rawPath: string,
+  rawPath: AbsPath,
 ): Promise<ResourceHealthResult<EngineSnapshot>> {
   const { normalizedPath, lookupKey } = normalizeImportPath(rawPath)
 
@@ -401,7 +401,7 @@ export interface ImportEngineResult {
   alreadyRegistered: boolean
 }
 
-async function importEngine(enginePath: string): Promise<ImportEngineResult> {
+async function importEngine(enginePath: AbsPath): Promise<ImportEngineResult> {
   const { normalizedPath, lookupKey: sourceLookupKey } = normalizeImportPath(enginePath)
 
   // 幂等：源路径已注册直接返回既有 ID
@@ -452,7 +452,7 @@ async function importEngine(enginePath: string): Promise<ImportEngineResult> {
       logger.warn(`[引擎导入] 清理异常 - 更新状态失败: ${error_}`)
     })
     if (await exists(targetPath)) {
-      await fsCmds.deleteFile(AbsPath.from(targetPath), true).catch((error_) => {
+      await fsCmds.deleteFile(targetPath, true).catch((error_) => {
         logger.warn(`[引擎导入] 清理异常 - 删除目录失败: ${error_}`)
       })
     }
@@ -472,7 +472,7 @@ async function uninstallEngine(engine: Engine): Promise<void> {
   logger.info(`[引擎卸载] ${engine.name}@${engine.version ?? 'unknown'}: ${engine.path}`)
   if (engine.availability === 'available') {
     try {
-      await fsCmds.deleteFile(AbsPath.from(engine.path), true)
+      await fsCmds.deleteFile(engine.path, true)
     } catch (error) {
       logger.warn(`[引擎卸载] 删除托管目录失败，继续清理数据库记录: ${engine.path} - ${error}`)
     }

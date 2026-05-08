@@ -6,12 +6,13 @@ import { FormField } from '~/components/ui/form'
 import { AUDIO_EXTENSIONS } from '~/features/editor/command-registry/common-params'
 import { createGameConfigKey } from '~/features/modals/game-config/game-config-form'
 
+import type { AbsPath } from '~/domain/path'
 import type { GameConfigFormValues } from '~/features/modals/game-config/game-config-form'
 
 interface Props {
-  backgroundRootPath: string
-  bgmRootPath: string
-  gamePath: string
+  backgroundRootPath: AbsPath
+  bgmRootPath: AbsPath
+  gamePath: AbsPath
   serveUrl?: string
 }
 

@@ -3,9 +3,11 @@ import { Plus, X } from '@lucide/vue'
 
 import { GAME_CONFIG_IMAGE_EXTENSIONS } from '~/features/modals/game-config/game-config-images'
 
+import type { AbsPath } from '~/domain/path'
+
 interface GameLogoPickerProps {
-  backgroundRootPath: string
-  gamePath: string
+  backgroundRootPath: AbsPath
+  gamePath: AbsPath
   serveUrl?: string
 }
 

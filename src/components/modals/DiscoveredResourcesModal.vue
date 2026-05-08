@@ -4,6 +4,7 @@ import { Box, Scroll } from '@lucide/vue'
 import { compareEngineVersions } from '~/domain/engine/version'
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 
+import type { AbsPath } from '~/domain/path'
 import type { DiscoveredResource } from '~/features/home/discovered-resource'
 import type { AssetThumbnailOptions } from '~/services/platform/asset-url'
 
@@ -22,7 +23,7 @@ let open = $(defineModel<boolean>('open'))
 const props = defineProps<{
   type: ResourceType
   resources: DiscoveredResource[]
-  onImport?: (paths: string[]) => void
+  onImport?: (paths: AbsPath[]) => void
 }>()
 
 const { t } = useI18n()
@@ -71,7 +72,7 @@ const engineGroups = $computed<EngineGroup[]>(() => {
   return [...groupsMap.values()]
 })
 
-function toggleSelection(path: string) {
+function toggleSelection(path: AbsPath) {
   const next = new Set(selectedPaths)
   if (next.has(path)) {
     next.delete(path)

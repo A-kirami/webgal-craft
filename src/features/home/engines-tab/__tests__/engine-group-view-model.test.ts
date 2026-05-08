@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { createTestEngine } from '~/__tests__/factories'
+import { AbsPath } from '~/domain/path'
 
 import { buildEngineGroupCollectionItems } from '../engine-group-view-model'
 
@@ -13,7 +14,7 @@ describe('buildEngineGroupCollectionItems', () => {
           id: 'legacy',
           engineId: 'open-webgal.webgal',
           name: 'WebGAL',
-          path: '/engines/WebGAL/4.4.0',
+          path: AbsPath.from('/engines/WebGAL/4.4.0'),
           version: '4.4.0',
           metadata: {
             description: 'legacy build',
@@ -23,7 +24,7 @@ describe('buildEngineGroupCollectionItems', () => {
           id: 'broken-latest',
           engineId: 'open-webgal.webgal',
           name: 'WebGAL',
-          path: '/engines/WebGAL/4.6.0',
+          path: AbsPath.from('/engines/WebGAL/4.6.0'),
           version: '4.6.0',
           availability: 'broken',
           metadata: {
@@ -34,7 +35,7 @@ describe('buildEngineGroupCollectionItems', () => {
           id: 'stable',
           engineId: 'open-webgal.webgal',
           name: 'WebGAL',
-          path: '/engines/WebGAL/4.5.0',
+          path: AbsPath.from('/engines/WebGAL/4.5.0'),
           version: '4.5.0',
           metadata: {
             description: 'stable build',
@@ -63,7 +64,7 @@ describe('buildEngineGroupCollectionItems', () => {
         createTestEngine({
           id: 'unavailable',
           name: 'Legacy',
-          path: '/engines/Legacy/1.0.0',
+          path: AbsPath.from('/engines/Legacy/1.0.0'),
           version: '1.0.0',
           availability: 'broken',
           metadata: {
