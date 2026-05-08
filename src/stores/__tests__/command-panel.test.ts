@@ -20,7 +20,7 @@ function createParsedSentence(command: number): NonNullable<ReturnType<typeof pa
   return { command } as NonNullable<ReturnType<typeof parseSentence>>
 }
 
-describe('useCommandPanelStore 命令面板状态仓库', () => {
+describe('useCommandPanelStore', () => {
   let store: ReturnType<typeof useCommandPanelStore>
 
   beforeEach(() => {

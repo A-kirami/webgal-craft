@@ -5,7 +5,7 @@ import {
   resolvePreviewPanelStageSize,
 } from '../preview-panel'
 
-describe('预览面板辅助函数', () => {
+describe('previewPanel', () => {
   it('没有请求路径时会回退到默认舞台尺寸', () => {
     expect(resolvePreviewPanelStageSize({
       currentGamePath: undefined,

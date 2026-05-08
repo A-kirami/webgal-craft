@@ -17,7 +17,7 @@ function createSentence(overrides: Partial<ISentence>): ISentence {
   } as ISentence
 }
 
-describe('serializeSentence 序列化', () => {
+describe('serializeSentence', () => {
   it('comment 语句会序列化为注释格式', () => {
     expect(serializeSentence(createSentence({
       command: commandType.comment,

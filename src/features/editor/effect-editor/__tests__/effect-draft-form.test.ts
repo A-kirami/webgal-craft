@@ -29,7 +29,7 @@ const baseParam: NumberField & { linkedPairKey: string } = {
   linkedPairKey: 'scale.y',
 }
 
-describe('特效草稿表单辅助函数', () => {
+describe('effectDraftForm', () => {
   it('存在 linkedGroupLabel 时优先使用它', () => {
     const param = {
       ...baseParam,

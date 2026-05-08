@@ -17,7 +17,7 @@ interface BrowserTestI18nHandle {
   }
 }
 
-describe('createBrowserConsoleMonitor 浏览器控制台监视器', () => {
+describe('createBrowserConsoleMonitor', () => {
   const monitor = createBrowserConsoleMonitor() as {
     expectNoConsoleMessage(pattern: string | RegExp): void
   }
@@ -47,7 +47,7 @@ describe('createBrowserConsoleMonitor 浏览器控制台监视器', () => {
   })
 })
 
-describe('browser 测试 i18n 辅助函数', () => {
+describe('浏览器测试国际化', () => {
   it('localized helper 默认使用 zh-Hans 作为测试 locale', () => {
     const i18n = createBrowserLocalizedI18n() as BrowserTestI18nHandle
 

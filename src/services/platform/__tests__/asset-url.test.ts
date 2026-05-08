@@ -25,7 +25,7 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
-describe('getAssetUrl 资源地址解析', () => {
+describe('assetUrl', () => {
   beforeEach(() => {
     workspaceStoreState.CWD = '/games/demo'
     previewSessionStoreState.currentGameServeUrl = 'http://127.0.0.1:8899/game/demo/'

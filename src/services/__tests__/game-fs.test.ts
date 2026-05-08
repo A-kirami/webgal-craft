@@ -80,7 +80,7 @@ vi.mock('~/stores/file', () => ({
   useFileStore: useFileStoreMock,
 }))
 
-describe('gameFs 游戏文件系统', () => {
+describe('gameFs', () => {
   beforeEach(() => {
     commitPendingFileWriteMock.mockReset()
     copyEntryMock.mockReset()

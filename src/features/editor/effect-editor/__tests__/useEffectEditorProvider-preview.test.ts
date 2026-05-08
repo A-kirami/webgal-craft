@@ -9,7 +9,7 @@ import type {
   EffectEditorTransformUpdatePayload,
 } from '~/features/editor/effect-editor/useEffectEditorProvider'
 
-describe('效果预览事件发射器', () => {
+describe('createEffectPreviewEmitter', () => {
   it('emitTransform 会同时触发 transform 与 preview 事件', () => {
     const previewPayloads: EffectEditorPreviewPayload[] = []
     const transformPayloads: EffectEditorTransformUpdatePayload[] = []

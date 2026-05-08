@@ -44,7 +44,7 @@ function createDirEntry(name: string, options: Partial<DirEntry> = {}): DirEntry
   }
 }
 
-describe('animationTable 索引同步', () => {
+describe('animationTableSync', () => {
   beforeEach(() => {
     existsMock.mockReset()
     gameAssetDirMock.mockReset()

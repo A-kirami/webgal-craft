@@ -3,7 +3,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseSentence } from '../parser'
 
-describe('say 形式解析检查', () => {
+describe('对话语句解析', () => {
   it('say:xxxxxx; 解析结果', () => {
     const s = parseSentence('say:xxxxxx;')
     expect(s).toBeDefined()

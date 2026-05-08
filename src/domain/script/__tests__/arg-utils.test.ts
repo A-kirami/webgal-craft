@@ -4,7 +4,7 @@ import { removeArg, setOrRemoveArg, upsertArg } from '~/domain/script/arg-utils'
 
 import type { arg } from 'webgal-parser/src/interface/sceneInterface'
 
-describe('WebGAL 参数工具', () => {
+describe('argUtils', () => {
   it('upsertArg 会在缺失时插入，在已存在时更新', () => {
     const args: arg[] = [{ key: 'duration', value: '300' }]
 

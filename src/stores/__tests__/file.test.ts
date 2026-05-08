@@ -199,7 +199,7 @@ function captureFileStoreCaches() {
   }
 }
 
-describe('文件状态仓库', () => {
+describe('useFileStore', () => {
   beforeEach(() => {
     pendingWrites = []
     existsMock.mockReset()

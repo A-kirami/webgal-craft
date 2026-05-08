@@ -11,7 +11,7 @@ import {
 
 import type { AnimationFrame } from '~/domain/stage/types'
 
-describe('动画帧编辑辅助函数', () => {
+describe('animationFrameEditor', () => {
   it('在选中帧后插入新帧并返回新的选中帧 id', () => {
     const frames = reactive<AnimationFrame[]>([
       { duration: 120, alpha: 0.2 },

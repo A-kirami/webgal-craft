@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import { usePreferenceStore } from '~/stores/preference'
 
-describe('偏好设置状态仓库', () => {
+describe('usePreferenceStore', () => {
   it('提供默认视图偏好', () => {
     const store = usePreferenceStore()
 

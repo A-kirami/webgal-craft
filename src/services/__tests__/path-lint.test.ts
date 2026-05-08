@@ -12,7 +12,7 @@ async function lintText(code: string) {
   })
 }
 
-describe('路径 lint 规则', () => {
+describe('路径校验规则', () => {
   it('会拒绝在 ~/domain/path 之外使用正则归一化反斜杠', async () => {
     const [result] = await lintText([
       'export function normalizePath(path: string) {',

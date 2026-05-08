@@ -43,7 +43,7 @@ function createDeferred<T>() {
   }
 }
 
-describe('previewSessionStore 当前工作区预览会话仓库', () => {
+describe('usePreviewSessionStore', () => {
   beforeEach(() => {
     vi.resetAllMocks()
 

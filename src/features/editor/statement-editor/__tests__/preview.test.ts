@@ -58,7 +58,7 @@ function createContentField(
   }
 }
 
-describe('语句编辑器预览', () => {
+describe('buildStatementPreviewParams', () => {
   it('unsupported 语句展示原始文本', () => {
     const result = buildStatementPreviewParams({
       parsed: createSentence({ content: 'hello' }),

@@ -263,7 +263,7 @@ beforeAll(async () => {
   ({ useEditorStore } = await import('../editor'))
 }, asyncFixtureTimeoutMs * 3)
 
-describe('编辑器状态仓库的文本与文档流程', () => {
+describe('编辑器文本与文档流程', () => {
   beforeEach(() => {
     const tabsStore = useTabsStore()
 

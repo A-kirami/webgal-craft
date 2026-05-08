@@ -11,7 +11,7 @@ function createNullValue(): null {
   return null
 }
 
-describe('text-editor-selection', () => {
+describe('textEditorSelection', () => {
   it('跨行选区会被识别为多个编辑目标', () => {
     expect(hasMultipleEditTargets({
       selection: {

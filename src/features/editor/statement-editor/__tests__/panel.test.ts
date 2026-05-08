@@ -28,7 +28,7 @@ function createFileContentField(assetType: string): EditorField {
   }
 }
 
-describe('语句编辑面板辅助函数', () => {
+describe('panel', () => {
   it('会把多行输入归一化为单行文本', () => {
     expect(normalizeStatementPanelSingleLineValue('line1\nline2\r\nline3')).toBe('line1 line2 line3')
   })

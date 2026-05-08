@@ -133,7 +133,7 @@ function createFixture(options: {
   }
 }
 
-describe('useFileTreeController 行为', () => {
+describe('useFileTreeController', () => {
   beforeEach(() => {
     createFileMock.mockReset()
     createFolderMock.mockReset()

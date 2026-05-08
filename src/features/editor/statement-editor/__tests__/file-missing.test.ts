@@ -42,7 +42,7 @@ function createFileArgField(storageKey: string, fieldKey = storageKey, assetType
   }
 }
 
-describe('语句编辑器缺失文件检查', () => {
+describe('fileMissing', () => {
   it('collectStatementFileChecks 仅收集 content 与 file arg', () => {
     const parsed = {
       command: commandType.changeFigure,

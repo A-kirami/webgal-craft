@@ -67,7 +67,7 @@ afterAll(() => {
   roundtripLoggerTarget.logger = originalLogger
 })
 
-describe('WebGAL 脚本语句往返测试', () => {
+describe('脚本语句往返', () => {
   for (const fixture of SENTENCE_FIXTURES) {
     it(`可以解析 fixture：${fixture.name}`, () => {
       const parsed = parseSentence(fixture.raw)
@@ -88,7 +88,7 @@ describe('WebGAL 脚本语句往返测试', () => {
   }
 })
 
-describe('内容解析器/序列化器', () => {
+describe('content', () => {
   it('setVar 往返测试', () => {
     const content = 'score=10'
     const parsed = parseSetVarContent(content)
@@ -117,7 +117,7 @@ describe('内容解析器/序列化器', () => {
   })
 })
 
-describe('语句列表辅助函数', () => {
+describe('sentence', () => {
   it('split/build/join 保持行边界', () => {
     const raw = 'a\nb\nc'
     expect(splitStatements(raw)).toEqual(['a', 'b', 'c'])

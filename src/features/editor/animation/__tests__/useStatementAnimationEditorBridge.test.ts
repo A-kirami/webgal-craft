@@ -82,7 +82,7 @@ afterEach(() => {
   }
 })
 
-describe('applyAnimationEditorResultToSentence 行为', () => {
+describe('applyAnimationEditorResultToSentence', () => {
   it('setTempAnimation 语句使用单行 JSON 回写动画内容并保留其他参数', () => {
     const sentence = createSentence({
       command: commandType.setTempAnimation,
@@ -107,7 +107,7 @@ describe('applyAnimationEditorResultToSentence 行为', () => {
   })
 })
 
-describe('useStatementAnimationEditorBridge 行为', () => {
+describe('useStatementAnimationEditorBridge', () => {
   it('打开编辑器后使用打开当时的语句与目标快照回写结果', () => {
     const {
       bridge,

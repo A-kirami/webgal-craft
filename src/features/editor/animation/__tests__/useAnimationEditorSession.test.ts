@@ -22,7 +22,7 @@ function createSessionFixture(framesFactory: () => AnimationFrame[] = createFram
   return { frames, scope, session }
 }
 
-describe('useAnimationEditorSession 行为', () => {
+describe('useAnimationEditorSession', () => {
   it('根据帧列表派生关键帧和当前选中帧状态', () => {
     const { scope, session } = createSessionFixture()
 

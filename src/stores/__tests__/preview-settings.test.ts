@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import { usePreviewSettingsStore } from '~/stores/preview-settings'
 
-describe('预览设置状态仓库', () => {
+describe('usePreviewSettingsStore', () => {
   it('初始化时包含预览相关默认值', () => {
     const store = usePreviewSettingsStore()
 

@@ -62,7 +62,7 @@ function createFixture(options: {
   }
 }
 
-describe('useVisualEditorAnimation 行为', () => {
+describe('useVisualEditorAnimation', () => {
   it('撤销成功时会请求自动保存', () => {
     const { controller, scheduleAutoSaveIfEnabled, scope, undoDocument } = createFixture()
 

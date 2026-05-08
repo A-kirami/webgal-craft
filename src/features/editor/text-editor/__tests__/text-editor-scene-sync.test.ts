@@ -8,7 +8,7 @@ import {
   resolveSceneReplayAnchorLine,
 } from '~/features/editor/text-editor/text-editor-scene-sync'
 
-describe('文本编辑器场景同步', () => {
+describe('textEditorSceneSync', () => {
   it('只在行号有效时返回场景预览行内容', () => {
     const reader = {
       getLineContent(lineNumber: number) {

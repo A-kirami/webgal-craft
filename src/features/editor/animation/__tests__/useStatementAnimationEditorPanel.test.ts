@@ -45,7 +45,7 @@ function createFixture(framesFactory: () => AnimationFrame[] = createFrames) {
   }
 }
 
-describe('useStatementAnimationEditorPanel 行为', () => {
+describe('useStatementAnimationEditorPanel', () => {
   it('删除当前帧前会先清空草稿，避免旧草稿挂到重排后的帧上', async () => {
     const { controller, emitFrames, scope } = createFixture()
 

@@ -100,7 +100,7 @@ async function flushBindingUpdates() {
   await Promise.resolve()
 }
 
-describe('useTextEditorBindings 行为', () => {
+describe('useTextEditorBindings', () => {
   afterEach(() => {
     getSceneSelectionMock.mockReset()
     useEditSettingsStoreMock.mockReset()

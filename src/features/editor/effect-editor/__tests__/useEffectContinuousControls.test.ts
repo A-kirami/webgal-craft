@@ -78,7 +78,7 @@ function createDialField(overrides: Partial<DialField> = {}): DialField {
   }
 }
 
-describe('useEffectContinuousControls 行为', () => {
+describe('useEffectContinuousControls', () => {
   beforeEach(() => {
     usePreferenceStoreMock.mockReset()
     preferenceStoreState.effectEditorLinkedSliderLocks = {}

@@ -156,7 +156,7 @@ beforeEach(() => {
   debugCommanderMock.syncScene.mockImplementation(async () => { /* no-op */ })
 })
 
-describe('useEffectEditorProvider 队列并发', () => {
+describe('useEffectEditorProvider', () => {
   it('将 transform 设置为默认值时仍应视为可应用改动', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
 

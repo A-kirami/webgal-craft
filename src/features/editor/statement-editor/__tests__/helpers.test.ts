@@ -75,7 +75,7 @@ function createSetAnimationNode(target?: string): CommandNode {
   }
 }
 
-describe('语句编辑器辅助函数: 核心', () => {
+describe('语句编辑器核心工具', () => {
   it('buildSchemaKeySet 包含参数 key 和 flag-choice 选项 key', () => {
     const keys = buildSchemaKeySet([modeField, speedField])
     expect(keys.has('mode')).toBe(true)
@@ -211,7 +211,7 @@ describe('语句编辑器辅助函数: 核心', () => {
   })
 })
 
-describe('语句编辑器辅助函数: 参数', () => {
+describe('语句编辑器参数工具', () => {
   it('resolveParamSelectValue 在非 customizable 时直接返回当前值', () => {
     const choiceField = af({ key: 'k', type: 'choice', options: [] })
     expect(resolveParamSelectValue({

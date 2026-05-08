@@ -7,7 +7,7 @@ import { createSentence } from '~/features/editor/__tests__/statement-editor-tes
 import { serializeTransform } from '~/features/editor/effect-editor/effect-editor-config'
 import { applyEffectEditorResultToSentence } from '~/features/editor/effect-editor/effect-editor-result'
 
-describe('applyEffectEditorResultToSentence 行为', () => {
+describe('applyEffectEditorResultToSentence', () => {
   it('setTransform 命令写入 content 并同步 duration/ease', () => {
     const sentence = createSentence({
       command: commandType.setTransform,

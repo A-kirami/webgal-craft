@@ -153,7 +153,7 @@ function createFixture(options: {
   }
 }
 
-describe('useEditorPanelShell 行为', () => {
+describe('useEditorPanelShell', () => {
   beforeEach(() => {
     commandPanelBridgeMock.activeBinding.value = undefined
     sidebarPanelMock.activeBinding.value = undefined

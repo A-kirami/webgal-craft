@@ -76,7 +76,7 @@ afterEach(() => {
   globalThis.removeEventListener = originalRemoveEventListener
 })
 
-describe('usePointerDrag 行为', () => {
+describe('usePointerDrag', () => {
   it('正常收到 pointerup 时会结束拖拽', () => {
     const onEnd = vi.fn()
     const onMove = vi.fn()

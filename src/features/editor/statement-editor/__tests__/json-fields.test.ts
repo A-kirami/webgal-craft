@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { UNSPECIFIED } from '~/features/editor/command-registry/schema'
 import { readJsonFieldValue, writeJsonFieldValue } from '~/features/editor/statement-editor/json-fields'
 
-describe('JSON 字段辅助函数', () => {
+describe('jsonFields', () => {
   it('readJsonFieldValue 按字段类型做值归一化', () => {
     expect(readJsonFieldValue('{"ratio":"0.25"}', 'ratio', 'number')).toBe(0.25)
     expect(readJsonFieldValue('{"enabled":"true"}', 'enabled', 'switch')).toBe(true)

@@ -41,7 +41,7 @@ function createDirEntry(name: string, isDirectory: boolean) {
   }
 }
 
-describe('useStatementEditor 行为', () => {
+describe('useStatementEditor', () => {
   it('setTempAnimation 语句显示动画编辑器按钮并隐藏原始 content 字段', () => {
     const { editor } = createHarness('setTempAnimation: [{"duration":0}] -target=fig-left;')
 
@@ -295,7 +295,7 @@ describe('useStatementEditor 行为', () => {
 
   // ─── say 命令：标准形式与简写形式 ───
 
-  describe('say 标准形式（say:内容 -speaker=角色）', () => {
+  describe('标准形式（显式 say 命令）', () => {
     it('命令面板默认 say 语句连续编辑 speaker 和内容时应保留 speaker', () => {
       const { editor, updates } = createHarness('say:;')
 
@@ -371,7 +371,7 @@ describe('useStatementEditor 行为', () => {
     })
   })
 
-  describe('say 简写形式（角色:内容 / 无冒号 / :旁白）', () => {
+  describe('简写形式（角色前缀 / 无冒号 / 旁白）', () => {
     it('有 speaker：编辑内容后保留简写形式和 speaker', () => {
       const { editor, updates } = createHarness('角色A:你好，世界！;')
 

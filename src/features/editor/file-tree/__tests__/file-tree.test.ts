@@ -42,7 +42,7 @@ function createFlattenedItem(
   }
 }
 
-describe('文件树辅助函数', () => {
+describe('fileTree', () => {
   it('计算重命名时的默认选区结束位置', () => {
     expect(getFileTreeNameSelectionEnd('scene.txt', false)).toBe(5)
     expect(getFileTreeNameSelectionEnd('.gitignore', false)).toBe(10)

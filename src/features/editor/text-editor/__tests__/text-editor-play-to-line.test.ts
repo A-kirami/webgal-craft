@@ -23,7 +23,7 @@ function createModel(lines: string[]): EditorModelMock {
   }
 }
 
-describe('文本编辑器播放到此句控制器', () => {
+describe('createTextEditorPlayToLineController', () => {
   it('光标进入可播放行时会创建 glyph margin 装饰，并在无效行时清除', () => {
     const deltaDecorations = vi.fn()
       .mockReturnValueOnce(['glyph-1'])

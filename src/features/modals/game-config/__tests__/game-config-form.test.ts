@@ -42,7 +42,7 @@ function createReadResult(overrides: Partial<GameConfigReadResult> = {}): GameCo
   }
 }
 
-describe('game-config 表单辅助函数', () => {
+describe('gameConfigForm', () => {
   it('parseGameConfigFormValues 会把原始条目解析成表单可编辑值，并保留自定义项', () => {
     expect(parseGameConfigFormValues(createReadResult({
       entries: [

@@ -89,7 +89,7 @@ function createFixture(options: ControllerFixtureOptions = {}) {
   }
 }
 
-describe('useFilePickerController 行为', () => {
+describe('useFilePickerController', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     existsMock.mockClear()

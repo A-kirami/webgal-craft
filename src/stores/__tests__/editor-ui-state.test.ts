@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { useEditorUIStateStore } from '~/stores/editor-ui-state'
 
-describe('编辑器界面状态仓库', () => {
+describe('useEditorUIStateStore', () => {
   let store: ReturnType<typeof useEditorUIStateStore>
 
   beforeEach(() => {

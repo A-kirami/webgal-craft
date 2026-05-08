@@ -12,7 +12,7 @@ function flushMicrotasks(times: number = 4): Promise<void> {
   return Promise.resolve().then(() => flushMicrotasks(times - 1))
 }
 
-describe('createAsyncQueue 异步队列', () => {
+describe('createAsyncQueue', () => {
   it('enqueue 触发 consumer 执行', async () => {
     let called = 0
     const queue = createAsyncQueue(async () => {

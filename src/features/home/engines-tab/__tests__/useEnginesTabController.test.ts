@@ -59,7 +59,7 @@ vi.mock('~/database/db', () => ({
   },
 }))
 
-describe('useEnginesTabController 行为', () => {
+describe('useEnginesTabController', () => {
   const openDeleteEngineGroupModalMock = vi.fn()
   const openDeleteEngineModalMock = vi.fn()
   const setDefaultEngineIdMock = vi.fn()

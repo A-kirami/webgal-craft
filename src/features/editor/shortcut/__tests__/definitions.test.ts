@@ -10,7 +10,7 @@ vi.mock('~/utils/error-handler', () => ({
 
 import { createEditorShortcutDefinitions } from '../definitions'
 
-describe('createEditorShortcutDefinitions 的全局快捷键定义', () => {
+describe('createEditorShortcutDefinitions', () => {
   beforeEach(() => {
     handleErrorMock.mockReset()
   })

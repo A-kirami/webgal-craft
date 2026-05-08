@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import createArtifactComment from '../../../scripts/formatArtifactComment.js'
 
-describe('createArtifactComment 构建产物注释', () => {
+describe('createArtifactComment', () => {
   const originalRepository = process.env.GITHUB_REPOSITORY
 
   afterEach(() => {

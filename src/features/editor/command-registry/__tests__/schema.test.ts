@@ -18,7 +18,7 @@ import {
 
 import type { CommandEntry, NumberField } from '~/features/editor/command-registry/schema'
 
-describe('命令注册表 Schema 辅助函数', () => {
+describe('commandRegistrySchema', () => {
   it('resolveI18n 支持字符串和回调两种输入', () => {
     const t = (key: string) => `t:${key}`
 

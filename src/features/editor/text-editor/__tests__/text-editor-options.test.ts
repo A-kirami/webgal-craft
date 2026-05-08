@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { buildTextEditorOptions } from '~/features/editor/text-editor/text-editor-options'
 
-describe('buildTextEditorOptions 配置映射', () => {
+describe('buildTextEditorOptions', () => {
   it('会把编辑器设置映射到 Monaco 选项', () => {
     expect(buildTextEditorOptions({
       automaticLayout: true,

@@ -55,7 +55,7 @@ vi.mock('~/services/resource-reconcile', () => ({
   },
 }))
 
-describe('useGamesTabController 行为', () => {
+describe('useGamesTabController', () => {
   const openCreateGameModalMock = vi.fn()
   const openDeleteGameModalMock = vi.fn()
   const openNoEngineAlertModalMock = vi.fn()
