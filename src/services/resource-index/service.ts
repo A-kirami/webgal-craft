@@ -1,5 +1,6 @@
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { AbsPath } from '~/domain/path'
+import { gameConfigPath, gameSceneDir } from '~/services/platform/app-paths'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import {
@@ -189,6 +190,9 @@ async function rebuildReferenceForPath(gamePath: AbsPath, path: AbsPath): Promis
   if (shouldDeferPathUpdate(currentState, gamePath)) {
     return
   }
+  if (path !== gameConfigPath(gamePath) && !(path.startsWith(`${gameSceneDir(gamePath)}/`) && path.endsWith('.txt'))) {
+    return
+  }
 
   const updateVersion = beginReferenceSourceUpdate([path])
   const references = await rebuildReferenceSource(currentState.references, gamePath, path)
@@ -219,6 +223,7 @@ function cancelReferenceSourceUpdates(sourcePaths: AbsPath[]): void {
   const cancellationVersion = ++referenceSourceUpdateVersion
   for (const sourcePath of sourcePaths) {
     referenceSourceUpdateVersions.set(sourcePath, cancellationVersion)
+    referenceSourceUpdateVersions.delete(sourcePath)
   }
 }
 

@@ -921,6 +921,101 @@ describe('useResourceIndex', () => {
     }
   })
 
+  it('文件移除时会清理对应的引用更新取消占位', async () => {
+    readDirMock.mockImplementation(async (path: string | URL) => {
+      switch (String(path)) {
+        case '/project/game': {
+          return [
+            createDirEntry('background', true),
+          ]
+        }
+        case '/project/game/background': {
+          return [
+            createDirEntry('bg.jpg', false),
+          ]
+        }
+        default: {
+          throw new TypeError(`unexpected readDir path: ${String(path)}`)
+        }
+      }
+    })
+
+    const deleteSpy = vi.spyOn(Map.prototype, 'delete')
+
+    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+
+    const scope = effectScope()
+    let resourceIndex!: ReturnType<typeof useResourceIndex>
+    scope.run(() => {
+      useResourceIndexBootstrap()
+      resourceIndex = useResourceIndex()
+    })
+
+    try {
+      await waitFor(() => resourceIndex.status.value === 'ready')
+      deleteSpy.mockClear()
+
+      emitFileSystemEvent('file:removed', {
+        type: 'file:removed',
+        path: '/project/game/background/bg.jpg',
+      })
+      await flushMicrotasks()
+
+      expect(resourceIndex.hasAssetKey(createAssetKey('asset', 'background', RelPath.from('bg.jpg')))).toBe(false)
+      expect(deleteSpy.mock.calls.some(([key]) => key === '/project/game/background/bg.jpg')).toBe(true)
+    } finally {
+      deleteSpy.mockRestore()
+      scope.stop()
+    }
+  })
+
+  it('非 scene 与配置文件的修改不会写入引用更新版本', async () => {
+    readDirMock.mockImplementation(async (path: string | URL) => {
+      switch (String(path)) {
+        case '/project/game': {
+          return [
+            createDirEntry('background', true),
+          ]
+        }
+        case '/project/game/background': {
+          return [
+            createDirEntry('bg.jpg', false),
+          ]
+        }
+        default: {
+          throw new TypeError(`unexpected readDir path: ${String(path)}`)
+        }
+      }
+    })
+
+    const setSpy = vi.spyOn(Map.prototype, 'set')
+
+    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+
+    const scope = effectScope()
+    let resourceIndex!: ReturnType<typeof useResourceIndex>
+    scope.run(() => {
+      useResourceIndexBootstrap()
+      resourceIndex = useResourceIndex()
+    })
+
+    try {
+      await waitFor(() => resourceIndex.status.value === 'ready')
+      setSpy.mockClear()
+
+      emitFileSystemEvent('file:modified', {
+        type: 'file:modified',
+        path: '/project/game/background/bg.jpg',
+      })
+      await flushMicrotasks()
+
+      expect(setSpy.mock.calls.some(([key]) => key === '/project/game/background/bg.jpg')).toBe(false)
+    } finally {
+      setSpy.mockRestore()
+      scope.stop()
+    }
+  })
+
   it('构建期间收到文件事件后会在完成后补一次重建', async () => {
     const slowFigureRead = createDeferred<ReturnType<typeof createDirEntry>[]>()
     let backgroundReadCount = 0
