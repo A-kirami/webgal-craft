@@ -66,7 +66,7 @@ function createFixture() {
   }
 }
 
-describe('useFilePickerHistory 行为', () => {
+describe('useFilePickerHistory', () => {
   beforeEach(() => {
     existsMock.mockClear()
     useStorageMock.mockClear()

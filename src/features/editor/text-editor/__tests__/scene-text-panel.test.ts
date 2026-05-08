@@ -19,7 +19,7 @@ function createLineSource(lines: string[]) {
   }
 }
 
-describe('场景文本面板', () => {
+describe('sceneTextPanel', () => {
   it('空快照保持空 entry 和空 previous speaker', () => {
     expect(createEmptySceneTextPanelSnapshot()).toEqual({
       entry: undefined,

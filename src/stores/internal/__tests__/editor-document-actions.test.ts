@@ -165,7 +165,7 @@ function createSceneActionHarness() {
   }
 }
 
-describe('编辑器文档动作的历史回滚', () => {
+describe('编辑器文档动作回滚', () => {
   beforeEach(() => {
     loggerWarnMock.mockReset()
   })

@@ -56,7 +56,7 @@ vi.mock('~/composables/useFileSystemEvents', () => ({
   }),
 }))
 
-describe('标签状态仓库', () => {
+describe('useTabsStore', () => {
   beforeEach(() => {
     vi.useRealTimers()
     useWorkspaceStoreMock.mockReset()

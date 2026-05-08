@@ -202,7 +202,7 @@ async function waitUntil(
   return waitUntil(description, predicate, stableCycles, remainingCycles - 1, nextMatchedCycles)
 }
 
-describe('handleFileModifiedEvent 行为', () => {
+describe('编辑器文件生命周期', () => {
   beforeEach(() => {
     modalOpenMock.mockReset()
     vi.mocked(fsCmds.isBinaryFile).mockReset()

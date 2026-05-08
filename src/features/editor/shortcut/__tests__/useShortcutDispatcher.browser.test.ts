@@ -344,7 +344,7 @@ function createComponentTargetHarnessComponent() {
   })
 }
 
-describe('useShortcutDispatcher 的浏览器分发行为', () => {
+describe('useShortcutDispatcher', () => {
   beforeEach(() => {
     for (const action of Object.values(shortcutActions)) {
       action.mockReset()

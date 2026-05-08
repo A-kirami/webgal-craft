@@ -421,7 +421,7 @@ async function leaveHoverImageTrigger(index: number = 0): Promise<void> {
   await nextTick()
 }
 
-describe('FileViewer 组合式逻辑', () => {
+describe('文件查看器布局与虚拟滚动', () => {
   it('useFileViewerLayout 会根据宽度和缩放返回布局派生状态', async () => {
     const contentWidth = ref(780)
     const zoom = ref(100)
@@ -494,7 +494,7 @@ describe('FileViewer 组合式逻辑', () => {
   })
 })
 
-describe('FileViewer 外观契约', () => {
+describe('FileViewer', () => {
   beforeEach(() => {
     getImageDimensionsMock.mockReset()
     loggerDebugMock.mockReset()

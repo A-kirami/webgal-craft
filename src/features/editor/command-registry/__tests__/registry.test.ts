@@ -4,7 +4,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import { categoryTheme, commandEntries, commandPanelCategories, getCommandConfig } from '../index'
 import { readArgFields, readEditorFields, resolveI18n } from '../schema'
 
-describe('命令注册表 schema 完整性', () => {
+describe('命令注册表完整性', () => {
   it('源条目的命令类型应唯一', () => {
     const seen = new Set<commandType>()
     for (const entry of commandEntries) {

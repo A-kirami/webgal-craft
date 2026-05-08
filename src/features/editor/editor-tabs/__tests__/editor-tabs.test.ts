@@ -14,7 +14,7 @@ const createTab = (overrides: Partial<Tab> = {}): Tab => ({
   ...overrides,
 })
 
-describe('编辑器标签辅助函数', () => {
+describe('editorTabs', () => {
   it('未修改的标签会直接关闭且不会触发模态框', () => {
     const closeTab = vi.fn()
     const decision = getCloseTabDecision({

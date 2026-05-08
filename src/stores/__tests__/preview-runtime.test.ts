@@ -26,7 +26,7 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   error: loggerErrorMock,
 }))
 
-describe('previewRuntimeStore 预览运行时状态仓库', () => {
+describe('usePreviewRuntimeStore', () => {
   beforeEach(() => {
     vi.resetAllMocks()
   })

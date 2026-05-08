@@ -11,7 +11,7 @@ import {
   resolveFilePickerInputFallbackDir,
 } from '../file-picker'
 
-describe('文件选择器辅助函数', () => {
+describe('filePicker', () => {
   it('解析空输入时会回到根目录并触发导航', () => {
     expect(parseFilePickerInput('', 'images/bg')).toEqual({
       directoryPath: '',

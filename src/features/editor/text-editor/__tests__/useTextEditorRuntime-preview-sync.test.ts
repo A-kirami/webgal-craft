@@ -146,7 +146,7 @@ function flushRuntimeWatchers() {
   return nextTick().then(() => nextTick())
 }
 
-describe('useTextEditorRuntime 预览同步', () => {
+describe('useTextEditorRuntime', () => {
   beforeEach(() => {
     applySceneCursorTargetMock.mockReset()
     didResumeSingleEditTargetMock.mockReset()

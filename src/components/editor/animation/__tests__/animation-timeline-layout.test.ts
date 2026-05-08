@@ -9,7 +9,7 @@ import {
   resolveZeroDurationSpanLayoutPercents,
 } from '../animation-timeline-layout'
 
-describe('resolveAnimationTimelineContainerWidth 计算逻辑', () => {
+describe('resolveAnimationTimelineContainerWidth', () => {
   it('当最小片段总宽度超过基础容器宽度时扩展时间轴容器', () => {
     const containerWidth = resolveAnimationTimelineContainerWidth(120, 1, [
       { isHold: true },
@@ -31,7 +31,7 @@ describe('resolveAnimationTimelineContainerWidth 计算逻辑', () => {
   })
 })
 
-describe('resolveZeroDurationSpanLayoutPercents 计算逻辑', () => {
+describe('resolveZeroDurationSpanLayoutPercents', () => {
   it('总时长为 0 时仍保证首帧和后续帧的最小像素宽度', () => {
     const containerWidth = 160
     const layout = resolveZeroDurationSpanLayoutPercents(containerWidth, [
@@ -49,7 +49,7 @@ describe('resolveZeroDurationSpanLayoutPercents 计算逻辑', () => {
   })
 })
 
-describe('resolveAnimationTimelineAnchoredScrollLeft 计算逻辑', () => {
+describe('resolveAnimationTimelineAnchoredScrollLeft', () => {
   it('内容宽度被最小宽度钳制时按真实内容宽度保持滚动锚点', () => {
     const nextScrollLeft = resolveAnimationTimelineAnchoredScrollLeft({
       contentPosition: 80,
@@ -85,7 +85,7 @@ describe('resolveAnimationTimelineAnchoredScrollLeft 计算逻辑', () => {
   })
 })
 
-describe('resolveAnimationTimelineResizeMsPerPixel 计算逻辑', () => {
+describe('resolveAnimationTimelineResizeMsPerPixel', () => {
   it('零时长帧使用至少 1ms/px 的拖拽比例，确保可以从 0ms 拉出', () => {
     expect(resolveAnimationTimelineResizeMsPerPixel(0, 64)).toBe(1)
   })

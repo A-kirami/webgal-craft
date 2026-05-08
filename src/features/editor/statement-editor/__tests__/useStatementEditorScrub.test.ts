@@ -99,7 +99,7 @@ afterEach(() => {
   globalThis.removeEventListener = originalRemoveEventListener
 })
 
-describe('useStatementEditorScrub 行为', () => {
+describe('useStatementEditorScrub', () => {
   it('canScrubParam 根据 surface 与 param 类型生效', () => {
     const contentField = ref()
 

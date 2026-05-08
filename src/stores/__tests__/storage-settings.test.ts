@@ -21,7 +21,7 @@ function createMemoryStorage(seed: Record<string, string> = {}) {
   }
 }
 
-describe('存储设置状态仓库', () => {
+describe('useStorageSettingsStore', () => {
   it('默认保存路径为空', () => {
     const store = useStorageSettingsStore()
 

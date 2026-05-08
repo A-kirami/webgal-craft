@@ -40,7 +40,7 @@ async function flushLoaderWatchers() {
   await Promise.resolve()
 }
 
-describe('useAssetViewItemsLoader 行为', () => {
+describe('useAssetViewItemsLoader', () => {
   let scope: EffectScope | undefined
 
   beforeEach(() => {

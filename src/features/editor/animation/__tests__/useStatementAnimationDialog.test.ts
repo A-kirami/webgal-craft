@@ -74,7 +74,7 @@ afterEach(() => {
   }
 })
 
-describe('useStatementAnimationDialog 行为', () => {
+describe('useStatementAnimationDialog', () => {
   it('非法动画 JSON 会阻止打开并弹出错误 toast', () => {
     const { dialog, openDialog } = mountDialogHarness()
     const handleApply = vi.fn()

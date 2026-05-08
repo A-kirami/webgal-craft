@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { makeParamDef, mustParse } from './utils'
 
-describe('webgal-script 测试工具', () => {
+describe('scriptTestUtils', () => {
   it('mustParse 返回可用的句子对象', () => {
     const sentence = mustParse('bgm: bgm.ogg;')
 

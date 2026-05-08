@@ -99,7 +99,7 @@ function createDeferred<T>() {
   }
 }
 
-describe('useCreateGameForm 行为', () => {
+describe('useCreateGameForm', () => {
   beforeEach(() => {
     formValues = reactive({})
     vi.resetAllMocks()

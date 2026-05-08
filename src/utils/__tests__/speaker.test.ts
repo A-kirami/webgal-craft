@@ -7,7 +7,7 @@ import {
   getPreviousSpeakerAtLine,
 } from '~/utils/speaker'
 
-describe('extractSpeakerChange 说话人变更提取', () => {
+describe('extractSpeakerChange', () => {
   describe('注释行', () => {
     it('跳过纯注释行', () => {
       expect(extractSpeakerChange(';这是注释')).toBeUndefined()
@@ -40,7 +40,7 @@ describe('extractSpeakerChange 说话人变更提取', () => {
     })
   })
 
-  describe('标准 say 写法', () => {
+  describe('标准对话写法', () => {
     it('say: -speaker=角色A → 说话人 A', () => {
       expect(extractSpeakerChange('say:这是一句话。 -speaker=角色A;')).toBe('角色A')
     })
@@ -85,7 +85,7 @@ describe('extractSpeakerChange 说话人变更提取', () => {
   })
 })
 
-describe('说话人辅助函数', () => {
+describe('speaker', () => {
   const entries = [
     { rawText: 'Alice:你好;' },
     { rawText: '接续上一句;' },

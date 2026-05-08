@@ -14,7 +14,7 @@ function createArgField(field: Record<string, unknown> & { key: string, type: st
   }
 }
 
-describe('可见性辅助函数', () => {
+describe('visibility', () => {
   it('buildSchemaKeySet 为 flag-choice 同时收集存储 key 与选项 key', () => {
     const modeField = createArgField({
       key: 'mode',

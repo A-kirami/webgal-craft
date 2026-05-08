@@ -82,7 +82,7 @@ vi.mock('~/stores/storage-settings', () => ({
   useStorageSettingsStore: useStorageSettingsStoreMock,
 }))
 
-describe('templateManager 模板管理', () => {
+describe('templateManager', () => {
   beforeEach(() => {
     vi.resetAllMocks()
 

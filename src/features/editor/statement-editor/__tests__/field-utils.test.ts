@@ -6,7 +6,7 @@ import {
   resolvePanelSliderEmitValue,
 } from '~/features/editor/statement-editor/field-utils'
 
-describe('statement-editor field-utils: 事件工具', () => {
+describe('fieldUtils', () => {
   it('normalizeFieldStringValue 统一归一化输入值', () => {
     const jsonNullValue = JSON.parse('null') as unknown
 

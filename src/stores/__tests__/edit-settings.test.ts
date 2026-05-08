@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 import { useEditSettingsStore } from '~/stores/edit-settings'
 
-describe('编辑设置状态仓库', () => {
+describe('useEditSettingsStore', () => {
   it('提供稳定的编辑器默认配置', () => {
     const store = useEditSettingsStore()
 

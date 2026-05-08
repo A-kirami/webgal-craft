@@ -44,7 +44,7 @@ function createScopedFieldsStore() {
   }
 }
 
-describe('useSettingsForm 行为', () => {
+describe('useSettingsForm', () => {
   beforeEach(() => {
     latestValues = reactive({})
     useFormMock.mockReset()

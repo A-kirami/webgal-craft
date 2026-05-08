@@ -5,7 +5,7 @@ import { serializeDocument } from '~/domain/document/serializer'
 
 import { createDocumentState, getDocumentTextContent, invalidateDocumentTextCache } from '../editor-document-state'
 
-describe('getDocumentTextContent 行为', () => {
+describe('文档文本缓存', () => {
   it('首次调用时序列化并写入缓存', () => {
     const doc = createDocumentState(createDocumentModel({
       kind: 'plaintext',

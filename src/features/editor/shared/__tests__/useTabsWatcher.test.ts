@@ -20,7 +20,7 @@ vi.mock('~/stores/tabs', () => ({
 
 import { useTabsWatcher } from '~/features/editor/shared/useTabsWatcher'
 
-describe('useTabsWatcher 行为', () => {
+describe('useTabsWatcher', () => {
   beforeEach(() => {
     tabsStoreState.tabs = [
       { path: '/game/a.txt' },

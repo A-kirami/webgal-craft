@@ -15,7 +15,7 @@ import { useStatementEditorContent } from '~/features/editor/statement-editor/us
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { ArgField, EditorField } from '~/features/editor/command-registry/schema'
 
-describe('useStatementEditor 内容行为', () => {
+describe('useStatementEditorContent', () => {
   beforeEach(() => {
     resetStatementEditorRuntime()
   })

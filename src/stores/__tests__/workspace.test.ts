@@ -65,7 +65,7 @@ async function flushWorkspaceWatchers() {
   await Promise.resolve()
 }
 
-describe('工作区状态仓库', () => {
+describe('useWorkspaceStore', () => {
   beforeEach(() => {
     vi.resetAllMocks()
 

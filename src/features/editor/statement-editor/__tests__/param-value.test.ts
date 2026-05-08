@@ -49,7 +49,7 @@ function createCommandNode(args: GenericCommandNode['args']): CommandNode {
   } satisfies GenericCommandNode
 }
 
-describe('参数取值辅助函数', () => {
+describe('paramValue', () => {
   it('getParamValueFromArgs 在 json 参数为布尔值时回退默认值', () => {
     const focusXField = createJsonArgField({
       argKey: 'focus',

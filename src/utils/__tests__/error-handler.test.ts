@@ -18,7 +18,7 @@ vi.mock('vue-sonner', () => ({
   },
 }))
 
-describe('handleError 错误处理', () => {
+describe('handleError', () => {
   beforeEach(() => {
     loggerErrorMock.mockReset()
     toastErrorMock.mockReset()

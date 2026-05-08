@@ -115,7 +115,7 @@ function createColorField(
   }
 }
 
-describe('useEffectColorControl 行为', () => {
+describe('useEffectColorControl', () => {
   beforeEach(() => {
     dragController.active = false
     dragController.param = undefined

@@ -31,7 +31,7 @@ vi.mock('~/stores/preview-session', () => ({
   }),
 }))
 
-describe('configManager 配置管理', () => {
+describe('configManager', () => {
   beforeEach(() => {
     refreshIfCurrentGameMock.mockReset()
     refreshRegisteredGameSnapshotMock.mockReset()

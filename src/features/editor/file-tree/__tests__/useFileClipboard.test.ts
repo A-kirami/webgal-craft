@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { useFileClipboard } from '~/features/editor/file-tree/useFileClipboard'
 
-describe('useFileClipboard 行为', () => {
+describe('useFileClipboard', () => {
   it('同一个 key 会共享剪贴板状态', () => {
     const source = useFileClipboard('shared')
     const mirror = useFileClipboard('shared')

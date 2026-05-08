@@ -74,7 +74,7 @@ function createTemplate(id: string, name: string, createdAt: number, webgalVersi
   })
 }
 
-describe('资源状态仓库', () => {
+describe('useResourceStore', () => {
   beforeEach(() => {
     vi.resetAllMocks()
 

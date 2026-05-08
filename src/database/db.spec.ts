@@ -11,7 +11,7 @@ async function resetDatabase() {
   await db.open()
 }
 
-describe('数据库 schema', () => {
+describe('db', () => {
   beforeEach(async () => {
     await resetDatabase()
   })

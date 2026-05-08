@@ -9,7 +9,7 @@ import {
   stringifyStyleRuleContent,
 } from '~/domain/script/content'
 
-describe('WebGAL 内容辅助函数', () => {
+describe('content', () => {
   it('setVar 内容支持解析和序列化', () => {
     expect(parseSetVarContent('score=10')).toEqual({
       name: 'score',

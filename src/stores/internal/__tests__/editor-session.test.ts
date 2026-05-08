@@ -15,7 +15,7 @@ import {
   syncProjectionStateFromDocument,
 } from '../editor-session'
 
-describe('编辑器会话的已加载文档状态', () => {
+describe('编辑器会话与已加载文档状态', () => {
   it('即使偏好可视模式，非法动画草稿仍保留显式文本快照', () => {
     const loadedState = createLoadedDocumentState('animation', '{invalid json')
 

@@ -33,7 +33,7 @@ vi.mock('~/composables/color-mode', () => ({
   },
 }))
 
-describe('通用设置状态仓库', () => {
+describe('useGeneralSettingsStore', () => {
   beforeEach(() => {
     locale.value = 'en'
     systemLanguage.value = 'ja'

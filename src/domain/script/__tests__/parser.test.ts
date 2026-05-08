@@ -23,7 +23,7 @@ afterAll(() => {
   parserLoggerTarget.logger = originalLogger
 })
 
-describe('WebGAL 解析辅助函数', () => {
+describe('parser', () => {
   it('parseScene 会解析多行脚本', () => {
     const scene = parseScene('Alice:Hello -next;\nchangeBg:bg.jpg;')
 

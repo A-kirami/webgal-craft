@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createEditorPreviewSync } from '../editor-preview-sync'
 
-describe('编辑器预览同步', () => {
+describe('createEditorPreviewSync', () => {
   it('会规范化输入并在去重窗口内跳过重复同步', () => {
     const dispatch = vi.fn()
     let now = 100
