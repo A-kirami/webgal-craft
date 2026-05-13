@@ -27,7 +27,12 @@ type ModalAction = (() => void | Promise<void>) | undefined
 
 async function runAction(action: ModalAction): Promise<void> {
   actionHandled = true
-  await action?.()
+  try {
+    await action?.()
+  } catch (error) {
+    actionHandled = false
+    throw error
+  }
 }
 
 async function runActionAndClose(action: ModalAction): Promise<void> {
@@ -41,11 +46,16 @@ async function handleDefault(): Promise<void> {
 
 async function handleDanger(): Promise<void> {
   actionHandled = true
-  const shouldClose = await onDanger?.()
-  if (shouldClose) {
-    open = false
-  } else {
+  try {
+    const shouldClose = await onDanger?.()
+    if (shouldClose) {
+      open = false
+    } else {
+      actionHandled = false
+    }
+  } catch (error) {
     actionHandled = false
+    throw error
   }
 }
 

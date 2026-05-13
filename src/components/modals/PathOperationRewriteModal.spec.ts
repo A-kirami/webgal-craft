@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
+import { defineComponent, h, onErrorCaptured } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
 
@@ -31,6 +32,64 @@ describe('PathOperationRewriteModal', () => {
     await vi.waitFor(() => {
       expect(onDefault).toHaveBeenCalledTimes(1)
       expect(updateOpen).toHaveBeenCalledWith(false)
+    })
+  })
+
+  it('默认回调失败后外部关闭仍会执行取消回调', async () => {
+    const error = new Error('default failed')
+    const capturedErrors: unknown[] = []
+    const onDefault = vi.fn(async () => {
+      throw error
+    })
+    const onCancel = vi.fn(async () => undefined)
+    const updateOpen = vi.fn()
+    const ErrorBoundary = defineComponent({
+      props: {
+        open: {
+          type: Boolean,
+          required: true,
+        },
+      },
+      setup(props) {
+        onErrorCaptured((capturedError) => {
+          capturedErrors.push(capturedError)
+          return false
+        })
+        return () => h(PathOperationRewriteModal, {
+          'open': props.open,
+          'title': 'Update references',
+          'content': 'This will update referenced files.',
+          'defaultText': 'Rename and update',
+          'dangerText': 'Rename only',
+          'cancelText': 'Cancel',
+          onDefault,
+          onCancel,
+          'onUpdate:open': updateOpen,
+        })
+      },
+    })
+
+    const result = renderInBrowser(ErrorBoundary, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        open: true,
+      },
+    })
+
+    await page.getByRole('button', { name: 'Rename and update' }).click()
+
+    await vi.waitFor(() => {
+      expect(onDefault).toHaveBeenCalledTimes(1)
+    })
+    expect(updateOpen).toHaveBeenCalledWith(false)
+    expect(capturedErrors).toContain(error)
+
+    await result.rerender({ open: false })
+
+    await vi.waitFor(() => {
+      expect(onCancel).toHaveBeenCalledTimes(1)
     })
   })
 
