@@ -128,7 +128,9 @@ describe('FileTreeContextMenuContent', () => {
 
     await page.getByText('edit.fileTree.paste').click()
 
-    expect(pathOperationPerformMock).toHaveBeenCalledOnce()
+    await vi.waitFor(() => {
+      expect(pathOperationPerformMock).toHaveBeenCalledOnce()
+    })
     expect(clearClipboardMock).not.toHaveBeenCalled()
     expect(toastMock.success).not.toHaveBeenCalled()
     expect(toastMock.error).not.toHaveBeenCalled()
