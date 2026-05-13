@@ -839,11 +839,12 @@ async function rollbackRewrite(
 
   await deps.gameFs.writeDocumentFile(file.filePath, encodeTextFile(file.snapshotContent, file.metadata))
   if (file.source === 'editor-buffer' && file.baselineRevision.kind === 'editor-buffer') {
+    const expectedRevision = deps.editor.peekSceneRevision(file.filePath) ?? file.baselineRevision.revision
     const reverted = deps.editor.applySystemRefactor(
       file.filePath,
       file.snapshotContent,
       file.metadata,
-      file.baselineRevision.revision,
+      expectedRevision,
     )
     if (!reverted) {
       throw new PathOperationError(

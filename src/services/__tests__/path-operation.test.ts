@@ -5,6 +5,7 @@ import { AbsPath, RelPath } from '~/domain/path'
 import { createPathOperationService } from '~/services/path-operation'
 import { createAssetKey } from '~/services/resource-index/keys'
 
+import type { TextMetadata } from '~/domain/document/document-model'
 import type {
   PathOperationConfirmDecision,
   PathOperationDeps,
@@ -816,6 +817,73 @@ describe('pathOperation', () => {
     expect(new TextDecoder().decode(writeDocumentFile.mock.calls[0]?.[1])).toBe('changeBg:renamed.jpg;')
     expect(new TextDecoder().decode(writeDocumentFile.mock.calls[1]?.[1])).toBe('changeBg:bg.jpg;')
     expect(renameFile).toHaveBeenLastCalledWith('/project/game/background/renamed.jpg', 'bg.jpg')
+  })
+
+  it('回滚编辑器 buffer 重写时使用当前 revision', async () => {
+    const metadata = createTextMetadata('changeBg:bg.jpg;')
+    const referencedRecord = {
+      assetKey: createAssetKey('asset', 'background', RelPath.from('bg.jpg')),
+      fieldKey: '__content__',
+      sourceKind: 'scene',
+      sourcePath: AbsPath.from('/project/game/scene/start.txt'),
+      statementId: 1,
+    } satisfies AssetReferenceRecord
+    const applySystemRefactor = vi.fn((
+      _path: AbsPath,
+      _content: string,
+      _metadata: TextMetadata,
+      expectedRevision: number | string,
+    ) => expectedRevision === 'r1' || expectedRevision === 'r2')
+    const deps = createDeps({
+      editor: {
+        applySystemRefactor,
+        peekSceneBuffer: vi.fn(() => ({
+          content: 'changeBg:bg.jpg;',
+          metadata,
+          revision: 'r1',
+        })),
+        peekSceneRevision: vi.fn()
+          .mockReturnValueOnce('r1')
+          .mockReturnValueOnce('r2'),
+      },
+      fileStore: {
+        getItemByPath: vi.fn((path: AbsPath) =>
+          path === AbsPath.from('/project/game/background/bg.jpg') ? { isDir: false } : undefined,
+        ),
+      },
+      gameManager: {
+        refreshRegisteredGameSnapshot: vi.fn(async () => {
+          throw new Error('refresh failed')
+        }),
+      },
+      resourceIndex: {
+        getReferencesTo: vi.fn(() => [referencedRecord]),
+        listByAssetType: vi.fn(() => []),
+        resolveByAbsolutePath: vi.fn(() => ({
+          absolutePath: AbsPath.from('/project/game/background/bg.jpg'),
+          extension: '.jpg',
+          fileName: 'bg.jpg',
+          key: createAssetKey('asset', 'background', RelPath.from('bg.jpg')),
+        })),
+      },
+    })
+    const service = createPathOperationService(deps)
+
+    const plan = await service.plan({
+      kind: 'rename',
+      sourcePath: AbsPath.from('/project/game/background/bg.jpg'),
+      target: { type: 'name', name: 'renamed.jpg' },
+    })
+
+    await expect(service.apply(plan)).rejects.toThrow('refresh failed')
+
+    expect(applySystemRefactor).toHaveBeenNthCalledWith(
+      2,
+      '/project/game/scene/start.txt',
+      'changeBg:bg.jpg;',
+      metadata,
+      'r2',
+    )
   })
 
   it('本地 mutation 失败时不回滚已成功的 FS 副作用，并主动失效路径缓存', async () => {
