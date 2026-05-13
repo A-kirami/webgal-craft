@@ -472,6 +472,7 @@ modals:
       manualSave: Manual save
       autoSave: Auto save
       restore: Restore
+      systemRefactor: System refactor
     section:
       today: Today
       yesterday: Yesterday
@@ -575,6 +576,39 @@ edit:
     workspaceUnavailable: Workspace is not initialized yet. Please try again shortly.
   unsupported:
     unsupportedFile: This file is binary or uses an unsupported text encoding and cannot be displayed in the editor
+  pathOperation:
+    confirmRewrite:
+      title: Update resource references to "{name}"?
+      renameContent: Renaming this resource will update {referenceCount} references across {fileCount} files.
+      moveContent: Moving this resource will update {referenceCount} references across {fileCount} files.
+      renameConfirm: Rename and update
+      moveConfirm: Move and update
+      renameOnly: Rename only
+      moveOnly: Move only
+    confirmSkipRewrite:
+      renameTitle: Continue and rename only "{name}"?
+      moveTitle: Continue and move only "{name}"?
+      renameContent: Existing resource references may break if you continue.
+      moveContent: Existing resource references may break if you continue.
+      renameConfirm: Rename anyway
+      moveConfirm: Move anyway
+    errors:
+      blockedPlan: Path operation is blocked
+      duplicateTarget: Target path already exists or matches the source path.
+      inFlightConflict: Another path operation is already in progress on this path. Please try again later.
+      crossRootMove: Only reference rewrites within the same resource root are supported.
+      unsupportedReferenceField: "Cannot safely update reference field: {fieldKey}"
+      unsupportedReferenceConfigField: "Cannot safely update game config reference field: {fieldKey}"
+      unsupportedReferenceSource: "Cannot safely update references from {sourceKind}"
+      unsupportedText: "Cannot read text file: {path}"
+      stalePlan: "Path operation plan has expired: {path}"
+      currentProjectUnavailable: Current project is unavailable.
+      missingTextMetadata: "Path operation plan is missing text metadata: {path}"
+      editorContentChanged: "Editor content has changed: {path}"
+      targetPathMismatch: "The actual target path does not match the plan: {path}"
+    warnings:
+      sceneHistoryMigrationFailed: "Scene history migration failed: {oldPath} -> {newPath}: {error}"
+      sceneBackupCreationFailed: "Scene backup creation failed: {path}: {error}"
   leaveConfirm:
     title: Save changes before returning home?
     description: If you return to the home page now, your unsaved changes will be lost.

@@ -329,6 +329,7 @@ useShortcut(() => ({
                             v-model="renameState.value"
                             :class="['px-0 py-0 h-5 text-13px!', isRenameDuplicate(item as FlattenedItem<T>) ? 'text-destructive focus-visible:ring-destructive' : '']"
                             data-renaming-input
+                            :disabled="renameState.isInProgress"
                             autofocus
                             @blur="handleRenameBlur(item as FlattenedItem<T>)"
                             @keydown.stop

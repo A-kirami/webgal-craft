@@ -17,6 +17,7 @@ import DiscoveredResourcesModal from '~/components/modals/DiscoveredResourcesMod
 import EngineSelectionModal from '~/components/modals/EngineSelectionModal.vue'
 import ExternalDocumentChangeModal from '~/components/modals/ExternalDocumentChangeModal.vue'
 import GameConfigModal from '~/components/modals/GameConfigModal.vue'
+import PathOperationRewriteModal from '~/components/modals/PathOperationRewriteModal.vue'
 import RecoverGameModal from '~/components/modals/RecoverGameModal.vue'
 import SaveChangesModal from '~/components/modals/SaveChangesModal.vue'
 import SettingsModal from '~/components/modals/SettingsModal.vue'
@@ -44,6 +45,7 @@ const ModalDialog = {
   EngineSelectionModal,
   ExternalDocumentChangeModal,
   GameConfigModal,
+  PathOperationRewriteModal,
   RecoverGameModal,
   SaveChangesModal,
   SettingsModal,

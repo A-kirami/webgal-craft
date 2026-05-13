@@ -472,6 +472,7 @@ modals:
       manualSave: 手動保存
       autoSave: 自動保存
       restore: 復元操作
+      systemRefactor: システム再書き込み
     section:
       today: 今日
       yesterday: 昨日
@@ -575,6 +576,39 @@ edit:
     workspaceUnavailable: ワークスペースがまだ初期化されていません。少し待ってから再試行してください。
   unsupported:
     unsupportedFile: このファイルはバイナリ、または未対応のテキストエンコーディングのため、エディターで表示できません
+  pathOperation:
+    confirmRewrite:
+      title: 「{name}」のリソース参照を同期更新しますか？
+      renameContent: このリソースの名前を変更すると、{fileCount} 個のファイル内の {referenceCount} 件の参照を同期更新します。
+      moveContent: このリソースを移動すると、{fileCount} 個のファイル内の {referenceCount} 件の参照を同期更新します。
+      renameConfirm: 名前を変更して更新
+      moveConfirm: 移動して更新
+      renameOnly: 名前だけ変更
+      moveOnly: 移動のみ
+    confirmSkipRewrite:
+      renameTitle: 「{name}」を参照更新せずに名前だけ変更しますか？
+      moveTitle: 「{name}」を参照更新せずに移動しますか？
+      renameContent: 続行すると、既存のリソース参照が無効になる可能性があります。
+      moveContent: 続行すると、既存のリソース参照が無効になる可能性があります。
+      renameConfirm: そのまま名前変更
+      moveConfirm: そのまま移動
+    errors:
+      blockedPlan: パス操作はブロックされました
+      duplicateTarget: その移動先は既に存在するか、移動元と同じです。
+      inFlightConflict: このパスでは別のパス操作が進行中です。しばらくしてから再試行してください。
+      crossRootMove: 同じリソースルート内の参照更新のみ対応しています。
+      unsupportedReferenceField: "参照フィールドを安全に更新できません: {fieldKey}"
+      unsupportedReferenceConfigField: "設定参照フィールドを安全に更新できません: {fieldKey}"
+      unsupportedReferenceSource: "{sourceKind} 由来の参照を安全に更新できません"
+      unsupportedText: "テキストファイルを読み込めません: {path}"
+      stalePlan: "パス操作プランの有効期限が切れています: {path}"
+      currentProjectUnavailable: 現在のプロジェクトが利用できません。
+      missingTextMetadata: "パス操作プランにテキストメタデータがありません: {path}"
+      editorContentChanged: "エディターの内容が変更されました: {path}"
+      targetPathMismatch: "実際の移動先がプランと一致しません: {path}"
+    warnings:
+      sceneHistoryMigrationFailed: "シーン履歴の移行に失敗しました: {oldPath} -> {newPath}: {error}"
+      sceneBackupCreationFailed: "シーンバックアップの作成に失敗しました: {path}: {error}"
   leaveConfirm:
     title: ホームに戻る前に変更を保存しますか？
     description: 今ホームに戻ると、未保存の変更は失われます。
