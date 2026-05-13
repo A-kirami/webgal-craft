@@ -975,6 +975,10 @@ function emitRewriteEvents(deps: PathOperationDeps, rewrites: readonly AssetRefe
   }
 }
 
+function isSceneHistoryPath(logicalPath: RelPath): boolean {
+  return logicalPath === RelPath.from('game/scene') || logicalPath.startsWith('game/scene/')
+}
+
 async function migrateSceneHistory(
   deps: PathOperationDeps,
   sourcePath: AbsPath,
@@ -994,6 +998,10 @@ async function migrateSceneHistory(
     oldLogicalPath = AbsPath.relativize(sourcePath, gamePath)
     newLogicalPath = AbsPath.relativize(targetPath, gamePath)
   } catch {
+    return { warnings: [] }
+  }
+
+  if (!isSceneHistoryPath(oldLogicalPath) && !isSceneHistoryPath(newLogicalPath)) {
     return { warnings: [] }
   }
 

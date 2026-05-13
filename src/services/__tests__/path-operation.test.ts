@@ -4,14 +4,12 @@ import { createTextMetadata } from '~/domain/document/document-model'
 import { AbsPath, RelPath } from '~/domain/path'
 import { createPathOperationService } from '~/services/path-operation'
 import { createAssetKey } from '~/services/resource-index/keys'
-import { resolveI18nLike } from '~/utils/i18n-like'
 
 import type {
   PathOperationConfirmDecision,
   PathOperationDeps,
   PathOperationPlan,
 } from '~/services/path-operation'
-import type { TranslatePathOperationMessage } from '~/services/path-operation-feedback'
 import type { AssetReferenceRecord } from '~/services/resource-index/references'
 
 type DeepPartial<T> = {
@@ -151,11 +149,6 @@ beforeEach(() => {
 })
 
 describe('pathOperation', () => {
-  const t = ((key: string, values?: Record<string, string | number> | number) =>
-    values && typeof values === 'object'
-      ? `${key}:${JSON.stringify(values)}`
-      : key) as TranslatePathOperationMessage
-
   beforeEach(() => {
     vi.useRealTimers()
     existsMock.mockReset()
@@ -567,7 +560,7 @@ describe('pathOperation', () => {
     expect(refreshRegisteredGameSnapshot).toHaveBeenCalledTimes(1)
   })
 
-  it('scene 历史迁移失败时会返回可翻译的 warning', async () => {
+  it('非 scene 路径不会迁移场景历史或返回迁移 warning', async () => {
     const referencedRecord = {
       assetKey: createAssetKey('asset', 'background', RelPath.from('bg.jpg')),
       fieldKey: '__content__',
@@ -601,10 +594,8 @@ describe('pathOperation', () => {
     }, async (): Promise<PathOperationConfirmDecision> => 'rewrite')
 
     expect(result.cancelled).toBe(false)
-    expect(result.warnings).toHaveLength(1)
-    expect(resolveI18nLike(result.warnings[0]?.i18nMessage, t)).toBe(
-      'edit.pathOperation.warnings.sceneHistoryMigrationFailed:{"error":"history failed","newPath":"game/background/renamed.jpg","oldPath":"game/background/bg.jpg"}',
-    )
+    expect(result.warnings).toEqual([])
+    expect(deps.history.migrateSceneHistory).not.toHaveBeenCalled()
   })
 
   it('目录 rename 会同步重写其子资源引用', async () => {
