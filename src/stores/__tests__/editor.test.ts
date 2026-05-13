@@ -1723,7 +1723,12 @@ describe('编辑器文本与文档流程', () => {
     writeDeferred.resolve()
     await savePromise
 
-    await fileSystemEventHandlers.get('file:written')?.({
+    const handler = fileSystemEventHandlers.get('file:written')
+    expect(handler).toBeDefined()
+    if (!handler) {
+      throw new TypeError('missing file:written handler')
+    }
+    await handler({
       type: 'file:written',
       path,
       source: 'system-refactor',

@@ -743,6 +743,10 @@ export const useEditorStore = defineStore('editor', () => {
     await handleFileModifiedEventAction(fileLifecycleContext, event)
   })
 
+  fileSystemEvents.on('file:written', () => {
+    // 写盘回声只表示本地保存链路完成，编辑器内容已由保存或系统重构入口同步。
+  })
+
   // 当前活跃文件是否为场景文件
   const isCurrentSceneFile = $computed(() =>
     currentState !== undefined && isEditableEditor(currentState) && currentState.kind === 'scene',
