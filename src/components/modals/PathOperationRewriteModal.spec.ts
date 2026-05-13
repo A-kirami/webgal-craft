@@ -58,8 +58,8 @@ describe('PathOperationRewriteModal', () => {
 
     await vi.waitFor(() => {
       expect(onDanger).toHaveBeenCalledTimes(1)
-      expect(updateOpen).not.toHaveBeenCalledWith(false)
     })
+    expect(updateOpen).not.toHaveBeenCalledWith(false)
   })
 
   it('danger 回调返回 true 时才会关闭模态框', async () => {
