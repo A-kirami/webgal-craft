@@ -82,9 +82,9 @@ describe('PathOperationRewriteModal', () => {
 
     await vi.waitFor(() => {
       expect(onDefault).toHaveBeenCalledTimes(1)
+      expect(updateOpen).toHaveBeenCalledWith(false)
+      expect(capturedErrors).toContain(error)
     })
-    expect(updateOpen).toHaveBeenCalledWith(false)
-    expect(capturedErrors).toContain(error)
 
     await result.rerender({ open: false })
 
