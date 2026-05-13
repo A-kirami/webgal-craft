@@ -285,6 +285,26 @@ describe('gameFs', () => {
     expect(fsMoveFileMock).toHaveBeenCalledWith('/project/game/background/old.txt', '/project/game/background')
   })
 
+  it('缺少 currentGame 时不会把 CWD 下的 template 路径误判为覆盖层操作', async () => {
+    useWorkspaceStoreMock.mockReturnValue({
+      CWD: '/project',
+      currentGame: undefined,
+    })
+    fsRenameFileMock.mockResolvedValue('/project/game/template/new.txt')
+
+    await expect(gameFs.renameFile(
+      AbsPath.from('/project/game/template/old.txt'),
+      'new.txt',
+    )).resolves.toEqual({
+      echoMode: 'watcher',
+      newPath: '/project/game/template/new.txt',
+    })
+
+    expect(resolvePreviewSiteMock).not.toHaveBeenCalled()
+    expect(vfsRenamePathMock).not.toHaveBeenCalled()
+    expect(fsRenameFileMock).toHaveBeenCalledWith('/project/game/template/old.txt', 'new.txt')
+  })
+
   it('只有命中 game/template 路径时才走覆盖层 rename 或 move', async () => {
     const deleteEntryMock = vi.fn()
 

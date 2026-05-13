@@ -65,7 +65,7 @@ function isPathWithinOrEqual(path: AbsPath, root: AbsPath): boolean {
 
 function usesTemplateOverlayPath(path: AbsPath): boolean {
   const workspaceStore = useWorkspaceStore()
-  const projectPath = workspaceStore.currentGame?.path ?? (workspaceStore.CWD ? AbsPath.from(workspaceStore.CWD) : undefined)
+  const projectPath = workspaceStore.currentGame?.path
   if (!projectPath) {
     return false
   }
