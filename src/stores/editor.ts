@@ -23,14 +23,23 @@ import { handleError } from '~/utils/error-handler'
 
 import { createEditorDocumentActions } from './internal/editor-document-actions'
 import { createEditorDocumentSaveSnapshot, saveEditorDocument } from './internal/editor-document-save'
-import { DocumentState, getDocumentTextContent, isDocumentDirty, resolveSceneCursor } from './internal/editor-document-state'
 import {
+  createLoadedDocumentState,
+  DocumentState,
+  getDocumentTextContent,
+  isDocumentDirty,
+  markDocumentClean,
+  resolveSceneCursor,
+} from './internal/editor-document-state'
+import {
+  handleDirectoryRenamedEvent as handleDirectoryRenamedEventAction,
   handleFileModifiedEvent as handleFileModifiedEventAction,
   handleFileRenamedEvent as handleFileRenamedEventAction,
   loadEditorState as loadEditorStateAction,
 } from './internal/editor-file-lifecycle'
 import { createSceneSelectionActions } from './internal/editor-scene-selection'
 import {
+  applyLoadedDocumentState,
   isEditableEditor,
   isSceneVisualProjection,
   isTextProjectionDirty,
@@ -50,6 +59,7 @@ import type {
   TextProjectionState,
   VisualProjectionState,
 } from './internal/editor-session'
+import type { TextMetadata } from '~/domain/document/document-model'
 import type { PreviewMediaSession } from '~/features/editor/preview/preview-media-session'
 
 export {
@@ -74,6 +84,34 @@ export type {
 
 const PREVIEW_SYNC_DEDUPE_WINDOW_MS = 160
 const AUTO_SAVE_DEBOUNCE_MS = 500
+const REVISION_HASH_MODULUS = 2 ** 32
+
+function hashRevisionContent(content: string): string {
+  let hash = 0
+  for (const char of content) {
+    hash = Math.trunc(Math.imul(31, hash) + (char.codePointAt(0) ?? 0)) % REVISION_HASH_MODULUS
+  }
+  return hash.toString(16)
+}
+
+function getEffectiveSceneBufferContent(session: EditableEditorSession): string {
+  return session.textState.textSource === 'draft'
+    ? session.textState.textContent
+    : getDocumentTextContent(session.document)
+}
+
+function createSceneBufferRevision(session: EditableEditorSession): string {
+  const content = getEffectiveSceneBufferContent(session)
+  const { document, textState } = session
+  return [
+    document.historyRevision,
+    document.engine.sequenceNumber,
+    document.savedSequenceNumber,
+    textState.textSource,
+    content.length,
+    hashRevisionContent(content),
+  ].join(':')
+}
 
 async function readTextDocumentFile(path: AbsPath): Promise<ReadTextDocumentResult> {
   const fileStore = useFileStore()
@@ -127,6 +165,61 @@ export const useEditorStore = defineStore('editor', () => {
       return undefined
     }
     return getDocumentTextContent(document)
+  }
+
+  function peekSceneBuffer(path: AbsPath): { content: string, metadata: TextMetadata, revision: string } | undefined {
+    const session = getEditableSession(path)
+    if (!session || session.document.model.kind !== 'scene') {
+      return undefined
+    }
+
+    if (!isTextProjectionDirty(session.document, session.textState)) {
+      return undefined
+    }
+
+    return {
+      content: getEffectiveSceneBufferContent(session),
+      metadata: { ...session.document.model.metadata },
+      revision: createSceneBufferRevision(session),
+    }
+  }
+
+  function peekSceneRevision(path: AbsPath): string | undefined {
+    const session = getEditableSession(path)
+    if (!session || session.document.model.kind !== 'scene') {
+      return undefined
+    }
+
+    return createSceneBufferRevision(session)
+  }
+
+  function applySystemRefactor(
+    path: AbsPath,
+    content: string,
+    metadata: TextMetadata,
+    expectedRevision: number | string,
+  ): boolean {
+    const session = getEditableSession(path)
+    if (!session || session.document.model.kind !== 'scene') {
+      return false
+    }
+
+    if (createSceneBufferRevision(session) !== String(expectedRevision)) {
+      return false
+    }
+
+    const loadedState = createLoadedDocumentState('scene', content, metadata)
+    if (session.textState.textSource === 'draft') {
+      loadedState.textProjection = {
+        content,
+        source: 'draft',
+      }
+    }
+
+    applyLoadedDocumentState(session, loadedState, session.activeProjection)
+    markDocumentClean(session.document)
+    syncStateFromDocument(path)
+    return true
   }
 
   function canUndoDocument(path: AbsPath): boolean {
@@ -694,6 +787,10 @@ export const useEditorStore = defineStore('editor', () => {
     canUndoDocument,
     canRedoDocument,
     getDirtyBufferContent,
+    peekSceneBuffer,
+    peekSceneRevision,
+    readTextDocumentFile,
+    applySystemRefactor,
     hasUnsavedDocumentsUnder,
     collectDocumentPathsUnder,
     currentState,

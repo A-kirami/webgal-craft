@@ -5,15 +5,15 @@ import type { AbsPath } from '~/domain/path'
  * 文件系统事件类型定义
  */
 export type FileSystemEvent =
-  | { type: 'file:created', path: AbsPath, parentId?: string }
-  | { type: 'file:removed', path: AbsPath }
-  | { type: 'file:renamed', oldPath: AbsPath, newPath: AbsPath }
-  | { type: 'file:modified', path: AbsPath }
-  | { type: 'file:written', path: AbsPath }
-  | { type: 'directory:created', path: AbsPath, parentId?: string }
-  | { type: 'directory:removed', path: AbsPath }
-  | { type: 'directory:renamed', oldPath: AbsPath, newPath: AbsPath }
-  | { type: 'directory:modified', path: AbsPath }
+  | { type: 'file:created', path: AbsPath, parentId?: string, source?: 'system-refactor' | 'external' }
+  | { type: 'file:removed', path: AbsPath, source?: 'system-refactor' | 'external' }
+  | { type: 'file:renamed', oldPath: AbsPath, newPath: AbsPath, source?: 'system-refactor' | 'external' }
+  | { type: 'file:modified', path: AbsPath, source?: 'system-refactor' | 'external' }
+  | { type: 'file:written', path: AbsPath, source?: 'system-refactor' | 'external' }
+  | { type: 'directory:created', path: AbsPath, parentId?: string, source?: 'system-refactor' | 'external' }
+  | { type: 'directory:removed', path: AbsPath, source?: 'system-refactor' | 'external' }
+  | { type: 'directory:renamed', oldPath: AbsPath, newPath: AbsPath, source?: 'system-refactor' | 'external' }
+  | { type: 'directory:modified', path: AbsPath, source?: 'system-refactor' | 'external' }
 
 /**
  * 文件系统事件总线 Key

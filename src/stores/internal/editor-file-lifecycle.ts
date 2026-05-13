@@ -28,13 +28,22 @@ export type ReadTextDocumentResult = DecodeTextFileResult
 export interface FileRenamedEvent {
   newPath: AbsPath
   oldPath: AbsPath
+  source?: 'system-refactor' | 'external'
 }
 
 export interface FileModifiedEvent {
   path: AbsPath
+  source?: 'system-refactor' | 'external'
+}
+
+export interface DirectoryRenamedEvent {
+  newPath: AbsPath
+  oldPath: AbsPath
+  source?: 'system-refactor' | 'external'
 }
 
 export interface SessionAccessor {
+  collectSessionPaths: () => AbsPath[]
   getSession: (path: AbsPath) => EditorSession | undefined
   setSession: (path: AbsPath, session: EditorSession) => void
   deleteSession: (path: AbsPath) => void
@@ -90,7 +99,7 @@ interface ExternalDocumentSnapshot {
   state: EditableEditorState
 }
 
-const pendingFileModifiedTasks = new Map<string, Promise<void>>()
+const pendingFileModifiedTasks = new Map<AbsPath, Promise<void>>()
 
 function isPathInsideDirectory(path: AbsPath, directoryPath: AbsPath): boolean {
   return path.startsWith(`${directoryPath}/`)
@@ -417,7 +426,7 @@ function restorePendingAutoSaveIfNeeded(
   }
 }
 
-function migratePendingFileModifiedTask(oldPath: string, newPath: string): void {
+function migratePendingFileModifiedTask(oldPath: AbsPath, newPath: AbsPath): void {
   const pendingTask = pendingFileModifiedTasks.get(oldPath)
   if (!pendingTask) {
     return
@@ -447,7 +456,7 @@ async function handleFileModifiedEventInternal(
     return
   }
 
-  if (!snapshot.state.isDirty || snapshot.hasSameContent) {
+  if (event.source === 'system-refactor' || !snapshot.state.isDirty || snapshot.hasSameContent) {
     applyExternalDocumentSnapshot(context, event.path, snapshot)
     return
   }

@@ -6,10 +6,10 @@ import { vfsCmds } from '~/commands/vfs'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { AbsPath, RelPath } from '~/domain/path'
 import { mime } from '~/plugins/mime'
-import { backupManager } from '~/services/backup-manager'
 import { clearDirectoryItemsCache, invalidateDirectoryItemsCache, readDirectoryItemsCached } from '~/services/directory-cache'
 import { hasPendingFileWrite, matchesPendingFileWrite } from '~/services/file-write-echo-registry'
 import { gameManager } from '~/services/game-manager'
+import { pathOperationRegistry } from '~/services/path-operation-registry'
 import { projectConfigPath } from '~/services/platform/app-paths'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
@@ -589,9 +589,18 @@ export const useFileStore = defineStore('file', () => {
     if (options.eventType === 'created') {
       fileSystemEvents.emit({ type: `${prefix}:created`, path: options.path, parentId: options.parentId })
     } else if (options.eventType === 'renamed') {
-      fileSystemEvents.emit({ type: `${prefix}:renamed`, oldPath: options.oldPath, newPath: options.newPath })
+      fileSystemEvents.emit({
+        type: `${prefix}:renamed`,
+        oldPath: options.oldPath,
+        newPath: options.newPath,
+        source: 'external',
+      })
     } else {
-      fileSystemEvents.emit({ type: `${prefix}:${options.eventType}`, path: options.path })
+      fileSystemEvents.emit({
+        type: `${prefix}:${options.eventType}`,
+        path: options.path,
+        ...(options.eventType === 'modified' ? { source: 'external' as const } : {}),
+      })
     }
   }
 
@@ -606,6 +615,15 @@ export const useFileStore = defineStore('file', () => {
 
   function invalidateParentDirectoryCache(path: AbsPath): Promise<void> {
     return invalidateDirectoryCacheSafe(AbsPath.parent(path))
+  }
+
+  async function invalidatePathOperationCaches(oldPath: AbsPath, newPath: AbsPath): Promise<void> {
+    await Promise.all([
+      invalidateDirectoryCacheSafe(AbsPath.parent(oldPath)),
+      invalidateDirectoryCacheSafe(AbsPath.parent(newPath)),
+      invalidateDirectoryCacheSafe(oldPath, true),
+      invalidateDirectoryCacheSafe(newPath, true),
+    ])
   }
 
   function toRelativeProjectPath(path: AbsPath): RelPath {
@@ -694,51 +712,33 @@ export const useFileStore = defineStore('file', () => {
     return id ? items.get(id) : undefined
   }
 
-  /**
-   * 递归清理一整棵子树的内存状态。
-   *
-   * 与 `handleRemoveEvent` 不同：watcher 推送的 remove 事件在 OS 层只对应叶子级
-   * 删除，所以那条路径不能假设要枚举子项。本函数仅在我们自己已经知道"整棵子树
-   * 一次性消失"（如 `moveEntry` 跨目录分支）的场合调用，避免源目录下的后代
-   * `FileSystemItem` 与 `pathToId` key 残留为孤儿。
-   *
-   * 子树枚举走 `childIds` 而非按 path prefix 扫全量 `items`：精确且 O(子树)，且
-   * 避免误清同前缀但不同根的项（如 `/a/foo` 与 `/a/foo-bar`）。
-   *
-   * 事件按 post-order（叶子先于目录）发出，与 `handleRemoveEvent` 单 item 语义对齐。
-   */
-  async function removeSubtree(rootPath: AbsPath): Promise<void> {
-    const rootItem = getItemByPath(rootPath)
-    if (!rootItem) {
-      await invalidateParentDirectoryCache(rootPath)
-      await invalidateDirectoryCacheSafe(rootPath, true)
+  async function applyPathMutation(oldPath: AbsPath, newPath: AbsPath): Promise<void> {
+    const item = getItemByPath(oldPath)
+    if (!item) {
+      await invalidatePathOperationCaches(oldPath, newPath)
       return
     }
 
-    const collected: FileSystemItem[] = []
-    function walk(item: FileSystemItem): void {
-      if (item.isDir) {
-        for (const childId of item.childIds) {
-          const child = items.get(childId)
-          if (child) {
-            walk(child)
-          }
-        }
-      }
-      collected.push(item)
-    }
-    walk(rootItem)
-
-    removeChildFromParent(rootItem.id, rootItem.parentId)
-
-    for (const item of collected) {
-      items.delete(item.id)
-      pathToId.delete(item.path)
-      emitFileSystemEvent(item, { eventType: 'removed', path: item.path })
+    const oldParentId = item.parentId
+    const newParentId = pathToId.get(AbsPath.parent(newPath))
+    if (oldParentId !== newParentId) {
+      removeChildFromParent(item.id, oldParentId)
+      item.parentId = newParentId
+      addChildToParent(item.id, newParentId)
     }
 
-    await invalidateParentDirectoryCache(rootPath)
-    await invalidateDirectoryCacheSafe(rootPath, true)
+    item.name = AbsPath.basename(newPath)
+
+    if (item.isDir) {
+      updateSubtreePaths(item, AbsPath.parent(newPath))
+    } else {
+      item.path = newPath
+      item.mimeType = mime.getType(newPath) || ''
+      updatePathMappings(oldPath, newPath, item.id)
+    }
+
+    await refreshItemMetadata(item, newPath)
+    await invalidatePathOperationCaches(oldPath, newPath)
   }
 
   async function handleRemoveEvent(path: AbsPath, removedKind?: RemovedEntryKind): Promise<void> {
@@ -765,9 +765,14 @@ export const useFileStore = defineStore('file', () => {
   }
 
   /**
-   * 处理目录重命名：递归更新所有子项路径
+   * 处理重命名事件：目录会递归更新子项路径，文件只更新自身路径。
    */
   async function handleRenameEvent(newPath: AbsPath, oldPath: AbsPath): Promise<void> {
+    if (pathOperationRegistry.consumeRenameEcho(oldPath, newPath)) {
+      await invalidatePathOperationCaches(oldPath, newPath)
+      return
+    }
+
     const item = getItemByPath(oldPath)
     if (!item) {
       const renamedFileInfo = await stat(newPath)
@@ -775,36 +780,15 @@ export const useFileStore = defineStore('file', () => {
         type: renamedFileInfo.isDirectory ? 'directory:renamed' : 'file:renamed',
         oldPath,
         newPath,
+        source: 'external',
       })
-      await Promise.all([
-        invalidateDirectoryCacheSafe(AbsPath.parent(oldPath)),
-        invalidateDirectoryCacheSafe(AbsPath.parent(newPath)),
-        invalidateDirectoryCacheSafe(oldPath, true),
-        invalidateDirectoryCacheSafe(newPath, true),
-      ])
+      await invalidatePathOperationCaches(oldPath, newPath)
       return
     }
 
     try {
-      const originalPath = item.path
-      item.name = AbsPath.basename(newPath)
-
-      if (item.isDir) {
-        updateSubtreePaths(item, AbsPath.parent(newPath))
-      } else {
-        item.path = newPath
-        updatePathMappings(originalPath, newPath, item.id)
-      }
-
-      await refreshItemMetadata(item, newPath)
-
+      await applyPathMutation(oldPath, newPath)
       emitFileSystemEvent(item, { eventType: 'renamed', oldPath, newPath })
-      await Promise.all([
-        invalidateDirectoryCacheSafe(AbsPath.parent(oldPath)),
-        invalidateDirectoryCacheSafe(AbsPath.parent(newPath)),
-        invalidateDirectoryCacheSafe(oldPath, true),
-        invalidateDirectoryCacheSafe(newPath, true),
-      ])
     } catch (error) {
       handleError(error, { silent: true })
     }
@@ -817,6 +801,12 @@ export const useFileStore = defineStore('file', () => {
       return
     }
 
+    const pendingOperation = pathOperationRegistry.lookupPathOperationByPath(path)
+    if (pendingOperation) {
+      await invalidatePathOperationCaches(pendingOperation.sourcePath, pendingOperation.targetPath)
+      return
+    }
+
     // 未被资源浏览器加载的文件/目录：仅发送事件通知，跳过元数据更新
     if (!item) {
       try {
@@ -824,6 +814,7 @@ export const useFileStore = defineStore('file', () => {
         fileSystemEvents.emit({
           type: info.isDirectory ? 'directory:modified' : 'file:modified',
           path,
+          source: 'external',
         })
       } catch {
         // 文件可能已被删除或不可访问，忽略
@@ -873,6 +864,7 @@ export const useFileStore = defineStore('file', () => {
       fileSystemEvents.emit({
         type: 'file:written',
         path,
+        source: 'system-refactor',
       })
       await invalidateParentDirectoryCache(path)
     } catch (error) {
@@ -1059,78 +1051,8 @@ export const useFileStore = defineStore('file', () => {
     initialized,
     updateItemPath,
     isVfs,
-    moveEntry: async (sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath | undefined> => {
-      const moveTarget = await prepareVfsPasteTarget(sourcePath, targetPath)
-      if (!moveTarget) {
-        return undefined
-      }
-
-      const oldLogicalPath = moveTarget.relSourcePath
-
-      const movedRelPath = await vfsCmds.movePath({
-        projectPath: moveTarget.currentProjectPath,
-        enginePath: moveTarget.currentEnginePath,
-        templatePath: getCurrentTemplatePath(),
-        relPath: moveTarget.relSourcePath,
-        targetRelPath: moveTarget.nextRelPath,
-      })
-      try {
-        await backupManager.moveSceneHistory(
-          moveTarget.currentProjectPath,
-          oldLogicalPath,
-          movedRelPath,
-        )
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error)
-        void logger.warn(`[FileStore] 迁移场景历史失败 (${oldLogicalPath} -> ${movedRelPath}): ${msg}`)
-      }
-      const nextPath = AbsPath.join(moveTarget.currentProjectPath, movedRelPath)
-      const targetParentId = getItemByPath(targetPath)?.id
-      const sourceParentPath = AbsPath.parent(sourcePath)
-      if (AbsPath.equals(sourceParentPath, targetPath)) {
-        await handleRenameEvent(nextPath, sourcePath)
-      } else {
-        await removeSubtree(sourcePath)
-        await handleCreateEvent(nextPath, targetParentId)
-      }
-      return nextPath
-    },
-    renameEntry: async (path: AbsPath, newName: string): Promise<AbsPath | undefined> => {
-      const currentProjectPath = getCurrentProjectPath()
-      const currentEnginePath = getCurrentEnginePath()
-      const currentTemplatePath = getCurrentTemplatePath()
-      if (!currentEnginePath || !currentProjectPath) {
-        return undefined
-      }
-
-      const relPath = toRelativeProjectPath(path)
-      if (RelPath.equals(relPath, RelPath.empty())) {
-        return undefined
-      }
-
-      const oldLogicalPath = relPath
-
-      const nextRelPath = await vfsCmds.renamePath({
-        projectPath: currentProjectPath,
-        enginePath: currentEnginePath,
-        templatePath: currentTemplatePath,
-        relPath,
-        newName,
-      })
-      try {
-        await backupManager.moveSceneHistory(
-          currentProjectPath,
-          oldLogicalPath,
-          nextRelPath,
-        )
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error)
-        void logger.warn(`[FileStore] 迁移场景历史失败 (${oldLogicalPath} -> ${nextRelPath}): ${msg}`)
-      }
-      const nextPath = AbsPath.join(currentProjectPath, nextRelPath)
-      await handleRenameEvent(nextPath, path)
-      return nextPath
-    },
+    applyPathMutation,
+    invalidatePathOperationCaches,
     resolveFilePath: async (path: AbsPath): Promise<AbsPath> => {
       const currentProjectPath = getCurrentProjectPath()
       const currentEnginePath = getCurrentEnginePath()
@@ -1154,6 +1076,13 @@ export const useFileStore = defineStore('file', () => {
     clear,
     getItemByPath,
     initialize,
+    refreshItemMetadata: async (path: AbsPath): Promise<void> => {
+      const item = getItemByPath(path)
+      if (!item) {
+        return
+      }
+      await refreshItemMetadata(item, path)
+    },
     refreshTemplateOverlay,
   })
 })

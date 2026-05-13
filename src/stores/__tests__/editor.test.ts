@@ -1695,6 +1695,44 @@ describe('编辑器文本与文档流程', () => {
     expect(state.isDirty).toBe(false)
   })
 
+  it('自动保存期间的 file:written 回声不会回退正在编辑的草稿', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/scene/system-refactor.txt')
+    const writeDeferred = createDeferred<void>()
+
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode('hello'))
+    mimeGetTypeMock.mockReturnValue('text/plain')
+    writeDocumentFileMock.mockImplementationOnce(async () => {
+      await writeDeferred.promise
+    })
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(tabsStore, 'system-refactor.txt', path, () => editorStore.hasState(path), 'load system refactor document')
+
+    const state = editorStore.getState(path)
+    if (!state || !('projection' in state) || state.projection !== 'text') {
+      throw new TypeError('expected text editor state')
+    }
+
+    editorStore.applyTextDocumentContent(path, 'hello!')
+    const savePromise = editorStore.saveFile(AbsPath.from(path))
+
+    editorStore.applyTextDocumentContent(path, 'hello!?')
+
+    writeDeferred.resolve()
+    await savePromise
+
+    await fileSystemEventHandlers.get('file:written')?.({
+      type: 'file:written',
+      path,
+      source: 'system-refactor',
+    })
+
+    expect(state.textContent).toBe('hello!?')
+    expect(state.isDirty).toBe(true)
+  })
+
   it('接受干净的外部文档替换后重置撤销重做历史', async () => {
     const tabsStore = useTabsStore()
     const path = AbsPath.from('/game/docs/external-reload-clean.txt')
