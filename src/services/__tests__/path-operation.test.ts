@@ -694,6 +694,49 @@ describe('pathOperation', () => {
     expect(plan.blockedReasons).toEqual([])
   })
 
+  it('目录 rename 遇到非边界前缀资源时不会切出错误引用路径', async () => {
+    const scenePath = AbsPath.from('/project/game/scene/start.txt')
+    const directoryPath = AbsPath.from('/project/game/background/old')
+    const sourceAsset = {
+      absolutePath: AbsPath.from('/project/game/background/old/bg.jpg'),
+      extension: '.jpg',
+      fileName: 'bg.jpg',
+      key: createAssetKey('asset', 'background', RelPath.from('oldish/bg.jpg')),
+    }
+    const referencedRecord = {
+      assetKey: sourceAsset.key,
+      fieldKey: '__content__',
+      sourceKind: 'scene',
+      sourcePath: scenePath,
+      statementId: 1,
+    } satisfies AssetReferenceRecord
+    const deps = createDeps({
+      gameFs: {
+        readDocumentFile: vi.fn(async () => new TextEncoder().encode('changeBg:oldish/bg.jpg;')),
+      },
+      fileStore: {
+        getItemByPath: vi.fn((path: AbsPath) =>
+          path === directoryPath ? { isDir: true } : undefined,
+        ),
+      },
+      resourceIndex: {
+        getReferencesTo: vi.fn(() => [referencedRecord]),
+        listByAssetType: vi.fn((assetType: string) => assetType === 'background' ? [sourceAsset] : []),
+        resolveByAbsolutePath: vi.fn(() => undefined),
+      },
+    })
+    const service = createPathOperationService(deps)
+
+    const plan = await service.plan({
+      kind: 'rename',
+      sourcePath: directoryPath,
+      target: { type: 'name', name: 'new' },
+    })
+
+    expect(plan.rewrites).toEqual([])
+    expect(plan.blockedReasons).toEqual([])
+  })
+
   it('引用索引指向不存在的语句时生成 unsupported-reference 阻断而不是崩溃', async () => {
     const referencedRecord = {
       assetKey: createAssetKey('asset', 'background', RelPath.from('bg.jpg')),

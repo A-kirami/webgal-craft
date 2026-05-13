@@ -407,6 +407,14 @@ function rebaseRelPath(path: RelPath, oldRoot: RelPath, newRoot: RelPath): RelPa
     return newRoot
   }
 
+  if (RelPath.equals(oldRoot, RelPath.empty())) {
+    return RelPath.from(newRoot ? `${newRoot}/${path}` : path)
+  }
+
+  if (!path.startsWith(`${oldRoot}/`)) {
+    return path
+  }
+
   const suffix = path.slice(oldRoot.length + 1)
   return RelPath.from(newRoot ? `${newRoot}/${suffix}` : suffix)
 }
