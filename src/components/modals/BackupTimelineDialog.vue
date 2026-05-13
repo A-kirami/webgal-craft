@@ -33,6 +33,7 @@ const SOURCE_ICONS: Record<BackupSourceKind, typeof Save> = {
   'manual-save': Save,
   'auto-save': Clock,
   'restore': RotateCcw,
+  'system-refactor': History,
 }
 
 const SECTION_ORDER: SectionKey[] = ['today', 'yesterday', 'thisWeek', 'earlier']
@@ -106,6 +107,9 @@ function sourceLabel(kind: BackupSourceKind): string {
     }
     case 'restore': {
       return t('modals.backupTimeline.sourceKind.restore')
+    }
+    case 'system-refactor': {
+      return t('modals.backupTimeline.sourceKind.systemRefactor')
     }
     default: {
       return ''

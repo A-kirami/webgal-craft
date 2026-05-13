@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { AbsPath } from '~/domain/path'
+import { AbsPath, RelPath } from '~/domain/path'
 import { gameFs } from '~/services/game-fs'
 
 const {
+  getGameEnginePathMock,
   commitPendingFileWriteMock,
   copyEntryMock,
   createFileMock,
@@ -13,18 +14,22 @@ const {
   ensureWritableMock,
   getFolderContentsMock,
   mkdirMock,
-  moveFileMock,
-  moveEntryMock,
+  fsMoveFileMock,
+  vfsMovePathMock,
+  resolvePreviewSiteMock,
   registerPendingFileWriteMock,
   rollbackPendingFileWriteMock,
-  renameFileMock,
-  renameEntryMock,
+  fsRenameFileMock,
+  vfsRenamePathMock,
+  readFileMock,
   resolveFilePathMock,
   useFileStoreMock,
+  useWorkspaceStoreMock,
   updateCurrentGameLastModifiedMock,
   writeBinaryFileMock,
   writeTextFileMock,
 } = vi.hoisted(() => ({
+  getGameEnginePathMock: vi.fn(),
   commitPendingFileWriteMock: vi.fn(),
   copyEntryMock: vi.fn(),
   createFileMock: vi.fn(),
@@ -34,21 +39,25 @@ const {
   ensureWritableMock: vi.fn(),
   getFolderContentsMock: vi.fn(),
   mkdirMock: vi.fn(),
-  moveFileMock: vi.fn(),
-  moveEntryMock: vi.fn(),
+  fsMoveFileMock: vi.fn(),
+  vfsMovePathMock: vi.fn(),
+  resolvePreviewSiteMock: vi.fn(),
   registerPendingFileWriteMock: vi.fn(),
   rollbackPendingFileWriteMock: vi.fn(),
-  renameFileMock: vi.fn(),
-  renameEntryMock: vi.fn(),
+  fsRenameFileMock: vi.fn(),
+  vfsRenamePathMock: vi.fn(),
+  readFileMock: vi.fn(),
   resolveFilePathMock: vi.fn(),
   useFileStoreMock: vi.fn(),
   updateCurrentGameLastModifiedMock: vi.fn(),
   writeBinaryFileMock: vi.fn(),
+  useWorkspaceStoreMock: vi.fn(),
   writeTextFileMock: vi.fn(),
 }))
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
   mkdir: mkdirMock,
+  readFile: readFileMock,
   writeFile: writeBinaryFileMock,
   writeTextFile: writeTextFileMock,
 }))
@@ -56,6 +65,8 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 vi.mock('~/services/game-manager', () => ({
   gameManager: {
     updateCurrentGameLastModified: updateCurrentGameLastModifiedMock,
+    getGameEnginePath: getGameEnginePathMock,
+    resolvePreviewSite: resolvePreviewSiteMock,
   },
 }))
 
@@ -67,17 +78,28 @@ vi.mock('~/services/file-write-echo-registry', () => ({
 
 vi.mock('~/commands/fs', () => ({
   fsCmds: {
-    renameFile: renameFileMock,
     deleteFile: deleteFileMock,
     createFile: createFileMock,
     createFolder: createFolderMock,
     copyFile: copyFileMock,
-    moveFile: moveFileMock,
+    moveFile: fsMoveFileMock,
+    renameFile: fsRenameFileMock,
+  },
+}))
+
+vi.mock('~/commands/vfs', () => ({
+  vfsCmds: {
+    movePath: vfsMovePathMock,
+    renamePath: vfsRenamePathMock,
   },
 }))
 
 vi.mock('~/stores/file', () => ({
   useFileStore: useFileStoreMock,
+}))
+
+vi.mock('~/stores/workspace', () => ({
+  useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
 describe('gameFs', () => {
@@ -91,14 +113,18 @@ describe('gameFs', () => {
     ensureWritableMock.mockReset()
     getFolderContentsMock.mockReset()
     mkdirMock.mockReset()
-    moveFileMock.mockReset()
-    moveEntryMock.mockReset()
+    fsMoveFileMock.mockReset()
+    vfsMovePathMock.mockReset()
+    getGameEnginePathMock.mockReset()
+    resolvePreviewSiteMock.mockReset()
     registerPendingFileWriteMock.mockReset()
     rollbackPendingFileWriteMock.mockReset()
-    renameFileMock.mockReset()
-    renameEntryMock.mockReset()
+    readFileMock.mockReset()
+    fsRenameFileMock.mockReset()
+    vfsRenamePathMock.mockReset()
     resolveFilePathMock.mockReset()
     useFileStoreMock.mockReset()
+    useWorkspaceStoreMock.mockReset()
     updateCurrentGameLastModifiedMock.mockReset()
     writeBinaryFileMock.mockReset()
     writeTextFileMock.mockReset()
@@ -109,17 +135,24 @@ describe('gameFs', () => {
     })
     ensureWritableMock.mockImplementation(async (path: string) => path)
     getFolderContentsMock.mockResolvedValue([])
-    renameEntryMock.mockResolvedValue(undefined)
-    moveEntryMock.mockResolvedValue(undefined)
+    readFileMock.mockResolvedValue(new Uint8Array([1, 2, 3]))
     resolveFilePathMock.mockImplementation(async (path: string) => path)
+    useWorkspaceStoreMock.mockReturnValue({
+      CWD: '/project',
+      currentGame: { path: '/project' },
+    })
+    resolvePreviewSiteMock.mockResolvedValue({
+      projectPath: '/project',
+      enginePath: '/engines/webgal',
+      templatePath: '/templates/current',
+    })
+    getGameEnginePathMock.mockResolvedValue('/engines/webgal')
     useFileStoreMock.mockReturnValue({
       copyEntry: copyEntryMock,
       deleteEntry: vi.fn(async () => false),
       ensureWritable: ensureWritableMock,
       getFolderContents: getFolderContentsMock,
       isVfs: false,
-      moveEntry: moveEntryMock,
-      renameEntry: renameEntryMock,
       resolveFilePath: resolveFilePathMock,
     })
   })
@@ -131,8 +164,6 @@ describe('gameFs', () => {
       ensureWritable: ensureWritableMock,
       getFolderContents: getFolderContentsMock,
       isVfs: true,
-      moveEntry: moveEntryMock,
-      renameEntry: renameEntryMock,
       resolveFilePath: resolveFilePathMock,
     })
     ensureWritableMock
@@ -140,6 +171,7 @@ describe('gameFs', () => {
       .mockResolvedValueOnce('/game/.overlay/image.bin')
 
     await gameFs.writeFile(AbsPath.from('/game/readme.txt'), 'hello')
+    expect(updateCurrentGameLastModifiedMock).toHaveBeenCalledTimes(1)
     await gameFs.writeDocumentFile(AbsPath.from('/game/image.bin'), new Uint8Array([1, 2, 3]))
 
     expect(ensureWritableMock).toHaveBeenNthCalledWith(1, '/game/readme.txt')
@@ -151,7 +183,7 @@ describe('gameFs', () => {
       physicalPath: '/game/image.bin',
       id: 1,
     })
-    expect(updateCurrentGameLastModifiedMock).toHaveBeenCalledTimes(2)
+    expect(updateCurrentGameLastModifiedMock).toHaveBeenCalledTimes(1)
   })
 
   it('文档写入失败时会回滚已登记的回响写入', async () => {
@@ -167,8 +199,6 @@ describe('gameFs', () => {
       ensureWritable: ensureWritableMock,
       getFolderContents: getFolderContentsMock,
       isVfs: true,
-      moveEntry: moveEntryMock,
-      renameEntry: renameEntryMock,
       resolveFilePath: resolveFilePathMock,
     })
     ensureWritableMock.mockResolvedValueOnce('/game/.overlay/image.bin')
@@ -183,27 +213,99 @@ describe('gameFs', () => {
     expect(updateCurrentGameLastModifiedMock).not.toHaveBeenCalled()
   })
 
+  it('VFS 模式下读取文档文件会先解析实际文件路径', async () => {
+    useFileStoreMock.mockReturnValue({
+      copyEntry: copyEntryMock,
+      deleteEntry: vi.fn(async () => false),
+      ensureWritable: ensureWritableMock,
+      getFolderContents: getFolderContentsMock,
+      isVfs: true,
+      resolveFilePath: resolveFilePathMock,
+    })
+    resolveFilePathMock.mockResolvedValueOnce('/game/.overlay/scene.txt')
+
+    await expect(gameFs.readDocumentFile(AbsPath.from('/game/scene.txt'))).resolves.toEqual(new Uint8Array([1, 2, 3]))
+
+    expect(resolveFilePathMock).toHaveBeenCalledWith('/game/scene.txt')
+    expect(readFileMock).toHaveBeenCalledWith('/game/.overlay/scene.txt')
+  })
+
   it('非 VFS 模式下会直接透传底层文件系统操作', async () => {
-    renameFileMock.mockResolvedValue('/game/new.txt')
+    fsRenameFileMock.mockResolvedValue('/game/new.txt')
     createFileMock.mockResolvedValue('/game/created.txt')
     createFolderMock.mockResolvedValue('/game/folder')
     copyFileMock.mockResolvedValue('/game/copied.txt')
-    moveFileMock.mockResolvedValue('/game/moved.txt')
+    fsMoveFileMock.mockResolvedValue('/game/moved.txt')
 
-    await expect(gameFs.renameFile(AbsPath.from('/game/old.txt'), 'new.txt')).resolves.toBe('/game/new.txt')
+    await expect(gameFs.renameFile(AbsPath.from('/game/old.txt'), 'new.txt')).resolves.toEqual({
+      echoMode: 'watcher',
+      newPath: '/game/new.txt',
+    })
     await expect(gameFs.createFile(AbsPath.from('/game'), 'created.txt')).resolves.toBe('/game/created.txt')
     await expect(gameFs.createFolder(AbsPath.from('/game'), 'folder')).resolves.toBe('/game/folder')
     await expect(gameFs.copyFile(AbsPath.from('/from.txt'), AbsPath.from('/game'))).resolves.toBe('/game/copied.txt')
-    await expect(gameFs.moveFile(AbsPath.from('/from.txt'), AbsPath.from('/game'))).resolves.toBe('/game/moved.txt')
+    await expect(gameFs.moveFile(AbsPath.from('/from.txt'), AbsPath.from('/game'))).resolves.toEqual({
+      echoMode: 'watcher',
+      newPath: '/game/moved.txt',
+    })
     await gameFs.deleteFile(AbsPath.from('/game/deleted.txt'), true)
 
     expect(deleteFileMock).toHaveBeenCalledWith('/game/deleted.txt', true)
-    expect(renameEntryMock).not.toHaveBeenCalled()
     expect(mkdirMock).not.toHaveBeenCalled()
-    expect(updateCurrentGameLastModifiedMock).toHaveBeenCalledTimes(6)
+    expect(updateCurrentGameLastModifiedMock).toHaveBeenCalledTimes(4)
   })
 
-  it('VFS 模式下会通过覆盖层完成重命名、复制、移动和删除', async () => {
+  it('VFS 项目中的普通路径 rename 或 move 仍走 native adapter', async () => {
+    useFileStoreMock.mockReturnValue({
+      copyEntry: copyEntryMock,
+      deleteEntry: vi.fn(async () => false),
+      ensureWritable: ensureWritableMock,
+      getFolderContents: getFolderContentsMock,
+      isVfs: true,
+      resolveFilePath: resolveFilePathMock,
+    })
+
+    fsRenameFileMock.mockResolvedValue('/project/game/background/new.txt')
+    fsMoveFileMock.mockResolvedValue('/project/game/background/moved.txt')
+
+    await expect(gameFs.renameFile(AbsPath.from('/project/game/background/old.txt'), 'new.txt')).resolves.toEqual({
+      echoMode: 'watcher',
+      newPath: '/project/game/background/new.txt',
+    })
+    await expect(gameFs.moveFile(
+      AbsPath.from('/project/game/background/old.txt'),
+      AbsPath.from('/project/game/background'),
+    )).resolves.toEqual({
+      echoMode: 'watcher',
+      newPath: '/project/game/background/moved.txt',
+    })
+
+    expect(resolvePreviewSiteMock).not.toHaveBeenCalled()
+    expect(fsRenameFileMock).toHaveBeenCalledWith('/project/game/background/old.txt', 'new.txt')
+    expect(fsMoveFileMock).toHaveBeenCalledWith('/project/game/background/old.txt', '/project/game/background')
+  })
+
+  it('缺少 currentGame 时不会把 CWD 下的 template 路径误判为覆盖层操作', async () => {
+    useWorkspaceStoreMock.mockReturnValue({
+      CWD: '/project',
+      currentGame: undefined,
+    })
+    fsRenameFileMock.mockResolvedValue('/project/game/template/new.txt')
+
+    await expect(gameFs.renameFile(
+      AbsPath.from('/project/game/template/old.txt'),
+      'new.txt',
+    )).resolves.toEqual({
+      echoMode: 'watcher',
+      newPath: '/project/game/template/new.txt',
+    })
+
+    expect(resolvePreviewSiteMock).not.toHaveBeenCalled()
+    expect(vfsRenamePathMock).not.toHaveBeenCalled()
+    expect(fsRenameFileMock).toHaveBeenCalledWith('/project/game/template/old.txt', 'new.txt')
+  })
+
+  it('只有命中 game/template 路径时才走覆盖层 rename 或 move', async () => {
     const deleteEntryMock = vi.fn()
 
     useFileStoreMock.mockReturnValue({
@@ -212,42 +314,57 @@ describe('gameFs', () => {
       ensureWritable: ensureWritableMock,
       getFolderContents: getFolderContentsMock,
       isVfs: true,
-      moveEntry: moveEntryMock,
-      renameEntry: renameEntryMock,
       resolveFilePath: resolveFilePathMock,
     })
 
-    renameEntryMock.mockResolvedValue('/game/new.txt')
-    copyEntryMock
-      .mockResolvedValueOnce('/game/copied.txt')
-    moveEntryMock.mockResolvedValue('/game/moved.txt')
-    createFileMock.mockResolvedValue('/game/created.txt')
-    createFolderMock.mockResolvedValue('/game/folder')
+    resolvePreviewSiteMock.mockResolvedValue({
+      projectPath: '/project',
+      enginePath: '/engines/webgal',
+      templatePath: '/templates/current',
+    })
+    vfsRenamePathMock.mockResolvedValue(RelPath.from('game/template/new.txt'))
+    vfsMovePathMock.mockResolvedValue(RelPath.from('game/template/folder/old.txt'))
+    copyEntryMock.mockResolvedValueOnce('/project/game/copied.txt')
+    createFileMock.mockResolvedValue('/project/game/created.txt')
+    createFolderMock.mockResolvedValue('/project/game/folder')
     deleteEntryMock.mockResolvedValueOnce(true)
 
-    await expect(gameFs.renameFile(AbsPath.from('/game/old.txt'), 'new.txt')).resolves.toBe('/game/new.txt')
-    await expect(gameFs.createFile(AbsPath.from('/game'), 'created.txt')).resolves.toBe('/game/created.txt')
-    await expect(gameFs.createFolder(AbsPath.from('/game'), 'folder')).resolves.toBe('/game/folder')
-    await expect(gameFs.copyFile(AbsPath.from('/from.txt'), AbsPath.from('/game'))).resolves.toBe('/game/copied.txt')
-    await expect(gameFs.moveFile(AbsPath.from('/from.txt'), AbsPath.from('/game'))).resolves.toBe('/game/moved.txt')
-    await gameFs.deleteFile(AbsPath.from('/game/deleted.txt'), true)
+    await expect(gameFs.renameFile(AbsPath.from('/project/game/template/old.txt'), 'new.txt')).resolves.toEqual({
+      echoMode: 'synthetic',
+      newPath: '/project/game/template/new.txt',
+    })
+    await expect(gameFs.createFile(AbsPath.from('/project/game'), 'created.txt')).resolves.toBe('/project/game/created.txt')
+    await expect(gameFs.createFolder(AbsPath.from('/project/game'), 'folder')).resolves.toBe('/project/game/folder')
+    await expect(gameFs.copyFile(AbsPath.from('/project/from.txt'), AbsPath.from('/project/game'))).resolves.toBe('/project/game/copied.txt')
+    await expect(gameFs.moveFile(
+      AbsPath.from('/project/game/template/old.txt'),
+      AbsPath.from('/project/game/template/folder'),
+    )).resolves.toEqual({
+      echoMode: 'synthetic',
+      newPath: '/project/game/template/folder/old.txt',
+    })
+    await gameFs.deleteFile(AbsPath.from('/project/game/deleted.txt'), true)
 
-    expect(renameEntryMock).toHaveBeenCalledWith('/game/old.txt', 'new.txt')
-    expect(ensureWritableMock).toHaveBeenNthCalledWith(1, '/game/created.txt')
-    expect(ensureWritableMock).toHaveBeenNthCalledWith(2, '/game/folder')
-    expect(writeTextFileMock).toHaveBeenCalledWith('/game/created.txt', '')
-    expect(mkdirMock).toHaveBeenCalledWith('/game/folder', { recursive: true })
-    expect(copyEntryMock).toHaveBeenNthCalledWith(1, '/from.txt', '/game')
-    expect(moveEntryMock).toHaveBeenCalledWith('/from.txt', '/game')
-    expect(resolveFilePathMock).not.toHaveBeenCalled()
-    expect(copyFileMock).not.toHaveBeenCalled()
-    expect(createFileMock).not.toHaveBeenCalled()
-    expect(createFolderMock).not.toHaveBeenCalled()
+    expect(resolvePreviewSiteMock).toHaveBeenCalled()
+    expect(vfsRenamePathMock).toHaveBeenCalledWith({
+      projectPath: '/project',
+      enginePath: '/engines/webgal',
+      templatePath: '/templates/current',
+      relPath: 'game/template/old.txt',
+      newName: 'new.txt',
+    })
+    expect(vfsMovePathMock).toHaveBeenCalledWith({
+      projectPath: '/project',
+      enginePath: '/engines/webgal',
+      templatePath: '/templates/current',
+      relPath: 'game/template/old.txt',
+      targetRelPath: 'game/template/folder/old.txt',
+    })
+    expect(copyEntryMock).toHaveBeenNthCalledWith(1, '/project/from.txt', '/project/game')
     expect(deleteEntryMock).toHaveBeenCalledOnce()
-    expect(deleteEntryMock).toHaveBeenCalledWith('/game/deleted.txt')
-    expect(deleteFileMock).not.toHaveBeenCalled()
-    expect(moveFileMock).not.toHaveBeenCalled()
-    expect(updateCurrentGameLastModifiedMock).toHaveBeenCalledTimes(6)
+    expect(deleteEntryMock).toHaveBeenCalledWith('/project/game/deleted.txt')
+    expect(fsRenameFileMock).not.toHaveBeenCalledWith('/project/game/template/old.txt', 'new.txt')
+    expect(fsMoveFileMock).not.toHaveBeenCalledWith('/project/game/template/old.txt', '/project/game/template/folder')
   })
 
   it('VFS 模式下创建同名条目时会先按 overlay 视图生成唯一名称，再解析最终可写路径', async () => {
@@ -257,8 +374,6 @@ describe('gameFs', () => {
       ensureWritable: ensureWritableMock,
       getFolderContents: getFolderContentsMock,
       isVfs: true,
-      moveEntry: moveEntryMock,
-      renameEntry: renameEntryMock,
       resolveFilePath: resolveFilePathMock,
     })
 

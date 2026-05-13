@@ -7,7 +7,12 @@ import { gameAssetDir } from '~/services/platform/app-paths'
 import { AppError } from '~/types/errors'
 
 import { createLoadedDocumentState } from '../editor-document-state'
-import { handleFileModifiedEvent, handleFileRenamedEvent, loadEditorState } from '../editor-file-lifecycle'
+import {
+  handleDirectoryRenamedEvent,
+  handleFileModifiedEvent,
+  handleFileRenamedEvent,
+  loadEditorState,
+} from '../editor-file-lifecycle'
 import { createEditableSession, syncProjectionStateFromDocument } from '../editor-session'
 
 import type { EditorFileLifecycleContext } from '../editor-file-lifecycle'
@@ -114,6 +119,7 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
     autoSaveHasPending: (currentPath: string) => autoSavePending === true && currentPath === path,
     cancelAutoSave,
     canReschedulePendingAutoSave: () => true,
+    collectSessionPaths: () => [...sessions.keys()].map(currentPath => AbsPath.from(currentPath)),
     createEditorError: (message: string) => new AppError('EDITOR_ERROR', message),
     deleteSession(path: string) {
       sessions.delete(path)
@@ -322,6 +328,27 @@ describe('编辑器文件生命周期', () => {
 
     expect(readTextDocumentFile).toHaveBeenCalledTimes(2)
     expect(readTextDocumentFile).toHaveBeenNthCalledWith(2, newPath)
+  })
+
+  it('目录重命名会按前缀迁移已打开会话', () => {
+    const oldPath = AbsPath.from('/game/scene/chapter/start.txt')
+    const oldRoot = AbsPath.from('/game/scene/chapter')
+    const newPath = AbsPath.from('/game/scene/story/start.txt')
+    const newRoot = AbsPath.from('/game/scene/story')
+    const { context, scheduleAutoSave } = createContextHarness({
+      autoSavePending: true,
+      path: oldPath,
+    })
+
+    handleDirectoryRenamedEvent(context, {
+      oldPath: oldRoot,
+      newPath: newRoot,
+    })
+
+    expect(context.getSession(oldPath)).toBeUndefined()
+    expect(context.getSession(newPath)).toBeDefined()
+    expect(context.getEditableState(newPath)?.path).toBe(newPath)
+    expect(scheduleAutoSave).toHaveBeenCalledWith(newPath)
   })
 
   it('loadEditorState 不会把带 .. 的伪场景路径误判为 scene 文档', async () => {

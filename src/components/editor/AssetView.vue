@@ -5,9 +5,12 @@ import { canCreateAssetFile, resolveAssetFileNameParts } from '~/components/edit
 import { useAssetViewItemsLoader } from '~/components/editor/useAssetViewItemsLoader'
 import { PopoverAnchor } from '~/components/ui/popover'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { usePathOperationFeedback } from '~/composables/usePathOperationFeedback'
 import { AbsPath, RelPath } from '~/domain/path'
 import { getFileTreeNameSelectionEnd, resolveFileTreeDefaultFileDraft } from '~/features/editor/file-tree/file-tree'
 import { gameFs } from '~/services/game-fs'
+import { pathOperation } from '~/services/path-operation'
+import { createPathOperationRewriteConfirm } from '~/services/path-operation-confirm'
 import { FileSystemItem, useFileStore } from '~/stores/file'
 import { usePreferenceStore } from '~/stores/preference'
 import { usePreviewSessionStore } from '~/stores/preview-session'
@@ -52,6 +55,8 @@ const fileSystemEvents = useFileSystemEvents()
 const previewSessionStore = usePreviewSessionStore()
 const workspaceStore = useWorkspaceStore()
 const { t } = useI18n()
+const confirmPathOperationRewrite = createPathOperationRewriteConfirm(t)
+const pathOperationFeedback = usePathOperationFeedback()
 
 const fileViewerRef = useTemplateRef<InstanceType<typeof FileViewer>>('fileViewerRef')
 const renameInputRef = useTemplateRef('renameInputRef')
@@ -612,10 +617,15 @@ async function handleRenameSubmit(): Promise<void> {
   isRenameSubmitting = true
 
   try {
-    await gameFs.renameFile(AbsPath.from(item.path), nextName)
+    const result = await pathOperation.perform({
+      kind: 'rename',
+      sourcePath: AbsPath.from(item.path),
+      target: { type: 'name', name: nextName },
+    }, confirmPathOperationRewrite)
+    pathOperationFeedback.reportWarnings(result.warnings)
     closeRenamePopover()
   } catch (error) {
-    handleError(error)
+    pathOperationFeedback.reportError(error)
     renameValue = item.name
     isRenameSubmitting = false
   }

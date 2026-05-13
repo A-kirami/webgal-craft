@@ -1,6 +1,7 @@
 import { normalizeTextLineEnding } from '~/domain/document/document-model'
 import { encodeTextFile } from '~/domain/document/file-codec'
 import { gameFs } from '~/services/game-fs'
+import { gameManager } from '~/services/game-manager'
 import { AppError } from '~/types/errors'
 
 import { markDocumentClean } from './editor-document-state'
@@ -100,5 +101,6 @@ export async function saveEditorDocument(
 
   await gameFs.writeDocumentFile(path, finalBytes)
   finalizeSavedDocument(context, path, saveSnapshot, finalContent, new Date())
+  gameManager.updateCurrentGameLastModified()
   return finalContent
 }

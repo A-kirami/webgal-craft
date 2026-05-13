@@ -9,23 +9,23 @@ import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDis
 
 const {
   handleErrorMock,
-  renameFileMock,
+  pathOperationPerformMock,
   useModalStoreMock,
   useEditorUIStateStoreMock,
   useTabsStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
   handleErrorMock: vi.fn(),
-  renameFileMock: vi.fn(),
+  pathOperationPerformMock: vi.fn(),
   useModalStoreMock: vi.fn(),
   useEditorUIStateStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
 }))
 
-vi.mock('~/services/game-fs', () => ({
-  gameFs: {
-    renameFile: renameFileMock,
+vi.mock('~/services/path-operation', () => ({
+  pathOperation: {
+    perform: pathOperationPerformMock,
   },
 }))
 
@@ -78,6 +78,12 @@ interface FlattenedTreeItem {
   value: FileTreeTestItem
 }
 
+interface Deferred<T> {
+  promise: Promise<T>
+  reject: (reason?: unknown) => void
+  resolve: (value: T) => void
+}
+
 function flattenItems(
   items: FileTreeTestItem[],
   getKey: (item: Record<string, unknown>) => string,
@@ -99,6 +105,21 @@ function flattenItems(
 
     return [flattenedItem, ...children]
   })
+}
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return {
+    promise,
+    reject,
+    resolve,
+  }
 }
 
 const globalStubs = {
@@ -316,13 +337,13 @@ describe('FileTree', () => {
 
   beforeEach(() => {
     handleErrorMock.mockReset()
-    renameFileMock.mockReset()
+    pathOperationPerformMock.mockReset()
     useModalStoreMock.mockReset()
     useEditorUIStateStoreMock.mockReset()
     useTabsStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
 
-    renameFileMock.mockResolvedValue('/project/renamed.txt')
+    pathOperationPerformMock.mockResolvedValue({ cancelled: false, finalPath: '/project/renamed.txt', warnings: [] })
     useModalStoreMock.mockReturnValue({
       open: vi.fn(),
     })
@@ -373,7 +394,7 @@ describe('FileTree', () => {
     }))
   })
 
-  it('按 F2 重命名后回车会调用 gameFs.renameFile', async () => {
+  it('按 F2 重命名后回车会调用 pathOperation.perform', async () => {
     renderFileTree({
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -393,7 +414,62 @@ describe('FileTree', () => {
     await textbox.click()
     await userEvent.keyboard('{Enter}')
 
-    expect(renameFileMock).toHaveBeenCalledWith('/project/scene.txt', 'renamed.txt')
+    expect(pathOperationPerformMock).toHaveBeenCalledWith({
+      kind: 'rename',
+      sourcePath: '/project/scene.txt',
+      target: { type: 'name', name: 'renamed.txt' },
+    }, expect.any(Function))
+  })
+
+  it('重命名成功后会保持输入态直到父层 items 反映新路径', async () => {
+    const renameDeferred = createDeferred<{
+      cancelled: boolean
+      finalPath: string
+      warnings: never[]
+    }>()
+    pathOperationPerformMock.mockReturnValueOnce(renameDeferred.promise)
+
+    const { reactiveProps } = renderReactiveFileTree({
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [
+        {
+          name: 'scene.txt',
+          path: '/project/scene.txt',
+        },
+      ],
+    })
+
+    const treeItem = page.getByRole('treeitem').first()
+    await treeItem.click()
+    await userEvent.keyboard('{F2}')
+
+    const textbox = page.getByRole('textbox')
+    await textbox.fill('renamed.txt')
+    await textbox.click()
+    await userEvent.keyboard('{Enter}')
+
+    await expect.element(page.getByRole('textbox')).toBeInTheDocument()
+
+    renameDeferred.resolve({
+      cancelled: false,
+      finalPath: '/project/renamed.txt',
+      warnings: [],
+    })
+    await Promise.resolve()
+    await nextTick()
+
+    await expect.element(page.getByRole('textbox')).toBeInTheDocument()
+
+    reactiveProps.items = [
+      {
+        name: 'renamed.txt',
+        path: '/project/renamed.txt',
+      },
+    ]
+    await nextTick()
+
+    await expect.element(page.getByRole('textbox')).not.toBeInTheDocument()
+    await expect.element(page.getByText('renamed.txt')).toBeInTheDocument()
   })
 
   it('禁用上下文菜单后，按 F2 不会触发重命名', async () => {
@@ -413,7 +489,7 @@ describe('FileTree', () => {
     await userEvent.keyboard('{F2}')
 
     await expect.element(page.getByRole('textbox')).not.toBeInTheDocument()
-    expect(renameFileMock).not.toHaveBeenCalled()
+    expect(pathOperationPerformMock).not.toHaveBeenCalled()
   })
 
   it('键盘焦点移动到其他条目后，F2 会重命名当前焦点条目', async () => {
@@ -445,7 +521,11 @@ describe('FileTree', () => {
     await textbox.click()
     await userEvent.keyboard('{Enter}')
 
-    expect(renameFileMock).toHaveBeenCalledWith('/project/second.txt', 'renamed-second.txt')
+    expect(pathOperationPerformMock).toHaveBeenCalledWith({
+      kind: 'rename',
+      sourcePath: '/project/second.txt',
+      target: { type: 'name', name: 'renamed-second.txt' },
+    }, expect.any(Function))
   })
 
   it('按 Delete 会打开删除文件确认弹窗', async () => {

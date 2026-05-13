@@ -22,7 +22,7 @@ const {
   fileViewerScrollToIndexMock,
   getFolderContentsMock,
   handleErrorMock,
-  renameFileMock,
+  pathOperationPerformMock,
   useFileStoreMock,
   usePreferenceStoreMock,
   usePreviewSessionStoreMock,
@@ -36,7 +36,7 @@ const {
   fileViewerScrollToIndexMock: vi.fn(),
   getFolderContentsMock: vi.fn(),
   handleErrorMock: vi.fn(),
-  renameFileMock: vi.fn(),
+  pathOperationPerformMock: vi.fn(),
   useFileStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
   usePreviewSessionStoreMock: vi.fn(),
@@ -143,7 +143,12 @@ vi.mock('~/services/game-fs', () => ({
   gameFs: {
     createFile: createFileMock,
     createFolder: createFolderMock,
-    renameFile: renameFileMock,
+  },
+}))
+
+vi.mock('~/services/path-operation', () => ({
+  pathOperation: {
+    perform: pathOperationPerformMock,
   },
 }))
 
@@ -431,7 +436,7 @@ describe('AssetView', () => {
     fileViewerScrollToIndexMock.mockReset()
     getFolderContentsMock.mockReset()
     handleErrorMock.mockReset()
-    renameFileMock.mockReset()
+    pathOperationPerformMock.mockReset()
     useFileStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()
     usePreviewSessionStoreMock.mockReset()
@@ -441,7 +446,11 @@ describe('AssetView', () => {
     getFolderContentsMock.mockResolvedValue([])
     createFileMock.mockResolvedValue('/project/game/background/新建文件.json')
     createFolderMock.mockResolvedValue('/project/game/background/新建文件夹')
-    renameFileMock.mockResolvedValue('/project/game/background/hero-renamed.png')
+    pathOperationPerformMock.mockResolvedValue({
+      cancelled: false,
+      finalPath: '/project/game/background/hero-renamed.png',
+      warnings: [],
+    })
 
     useFileStoreMock.mockReturnValue({
       getFolderContents: getFolderContentsMock,
@@ -501,7 +510,7 @@ describe('AssetView', () => {
     await expect.element(page.getByTestId('preview-context')).toHaveAttribute('data-preview-base-url', 'http://127.0.0.1:8899/game/demo/')
   })
 
-  it('右键重命名会以 Popover 形式打开并调用 gameFs.renameFile', async () => {
+  it('右键重命名会以 Popover 形式打开并调用 pathOperation.perform', async () => {
     getFolderContentsMock.mockResolvedValue([
       {
         createdAt: 1,
@@ -539,7 +548,11 @@ describe('AssetView', () => {
     await textbox.fill('hero-renamed.png')
     await userEvent.keyboard('{Enter}')
 
-    expect(renameFileMock).toHaveBeenCalledWith('/project/game/background/hero.png', 'hero-renamed.png')
+    expect(pathOperationPerformMock).toHaveBeenCalledWith({
+      kind: 'rename',
+      sourcePath: '/project/game/background/hero.png',
+      target: { type: 'name', name: 'hero-renamed.png' },
+    }, expect.any(Function))
     expect(handleErrorMock).not.toHaveBeenCalled()
   })
 

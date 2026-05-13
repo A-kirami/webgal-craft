@@ -7,6 +7,7 @@ import {
   resolveFileTreeCreateBlurAction,
   resolveFileTreeCreateStart,
   resolveFileTreeRenameBlurAction,
+  rewriteExpandedKeysForDirectoryRename,
 } from '../file-tree'
 
 import type { FileTreeBlurAction } from '../file-tree'
@@ -78,6 +79,19 @@ describe('fileTree', () => {
       getName: item => item.name,
       getPath: item => item.path,
     }, '/project/chapter', ' scene.TXT ', '/project/chapter/Scene.txt')).toBe(false)
+  })
+
+  it('目录重命名时会迁移展开状态中的目录前缀并保持原顺序', () => {
+    expect(rewriteExpandedKeysForDirectoryRename([
+      '/project/chapter',
+      '/project/chapter/branch',
+      '/project/scene',
+      '/project/chapter',
+    ], '/project/chapter', '/project/chapter-renamed')).toEqual([
+      '/project/chapter-renamed',
+      '/project/chapter-renamed/branch',
+      '/project/scene',
+    ])
   })
 
   it('在根目录创建文件时会插入到根级文件前而不是目录前', () => {

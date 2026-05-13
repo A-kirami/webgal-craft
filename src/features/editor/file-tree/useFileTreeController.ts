@@ -1,5 +1,8 @@
+import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { usePathOperationFeedback } from '~/composables/usePathOperationFeedback'
 import { AbsPath } from '~/domain/path'
 import {
+  findFileTreeItemByPath,
   getFileTreeNameSelectionEnd,
   getFileTreeParentPath,
   hasFileTreeDuplicateName,
@@ -7,8 +10,11 @@ import {
   resolveFileTreeCreateBlurAction,
   resolveFileTreeCreateStart,
   resolveFileTreeRenameBlurAction,
+  rewriteExpandedKeysForDirectoryRename,
 } from '~/features/editor/file-tree/file-tree'
 import { gameFs } from '~/services/game-fs'
+import { pathOperation } from '~/services/path-operation'
+import { createPathOperationRewriteConfirm } from '~/services/path-operation-confirm'
 import { useEditorUIStateStore } from '~/stores/editor-ui-state'
 import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
@@ -22,6 +28,16 @@ import type { SortableItemAccessor } from '~/utils/sort'
 
 interface ReadonlyRefLike<T = unknown> {
   readonly value: T
+}
+
+interface PendingRenameResult {
+  nextItemKey: string
+  nextName: string
+}
+
+interface PendingDirectoryExpandedRewrite {
+  newPath: string
+  oldPath: string
 }
 
 interface UseFileTreeControllerOptions<T extends object> {
@@ -89,6 +105,10 @@ function resolveViewportElement(source: unknown): HTMLElement | undefined {
 }
 
 export function useFileTreeController<T extends object>(options: UseFileTreeControllerOptions<T>) {
+  const { t } = useI18n()
+  const confirmPathOperationRewrite = createPathOperationRewriteConfirm(t)
+  const pathOperationFeedback = usePathOperationFeedback()
+
   function asRecord(item: T): Record<string, unknown> {
     return item as Record<string, unknown>
   }
@@ -152,12 +172,14 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     return getFileTreeParentPath(getItemPath(sortedItems.value[0]))
   }
 
+  const fileTreeItemAccessor = {
+    getChildren: getItemChildren,
+    getName: getItemName,
+    getPath: getItemPath,
+  } as const
+
   function checkDuplicateName(parentPath: string, name: string, excludePath?: string): boolean {
-    return hasFileTreeDuplicateName(options.items(), {
-      getChildren: getItemChildren,
-      getName: getItemName,
-      getPath: getItemPath,
-    }, parentPath, name, excludePath)
+    return hasFileTreeDuplicateName(options.items(), fileTreeItemAccessor, parentPath, name, excludePath)
   }
 
   function focusInput(
@@ -197,6 +219,8 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     isStarting: false,
     isInProgress: false,
   })
+  const pendingRenameResult = ref<PendingRenameResult>()
+  const pendingDirectoryExpandedRewrite = ref<PendingDirectoryExpandedRewrite>()
 
   const BLUR_CANCEL_DELAY = 50
 
@@ -207,6 +231,10 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   }
 
   function startRenaming(item: FlattenedItem<T>): void {
+    if (renameState.value.isStarting || renameState.value.isInProgress || createState.value.isInProgress) {
+      return
+    }
+
     const key = options.getKey(item.value)
     renameState.value.itemKey = key
     renameState.value.value = getItemName(item.value)
@@ -250,13 +278,31 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
 
     renameState.value.isInProgress = true
     try {
-      await gameFs.renameFile(AbsPath.from(getItemPath(item.value)), newName)
-      renameState.value.itemKey = undefined
+      const result = await pathOperation.perform({
+        kind: 'rename',
+        sourcePath: AbsPath.from(getItemPath(item.value)),
+        target: { type: 'name', name: newName },
+      }, confirmPathOperationRewrite)
+      pathOperationFeedback.reportWarnings(result.warnings)
+      if (result.cancelled) {
+        renameState.value.itemKey = undefined
+        return
+      }
+
+      pendingRenameResult.value = {
+        nextItemKey: result.finalPath,
+        nextName: newName,
+      }
+      renameState.value.value = newName
+      return
     } catch (error) {
-      handleError(error)
+      pathOperationFeedback.reportError(error)
+      pendingRenameResult.value = undefined
       renameState.value.value = oldName
     } finally {
-      renameState.value.isInProgress = false
+      if (!pendingRenameResult.value) {
+        renameState.value.isInProgress = false
+      }
     }
   }
 
@@ -286,6 +332,11 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   }
 
   function handleCancelRename(): void {
+    if (renameState.value.isInProgress) {
+      return
+    }
+
+    pendingRenameResult.value = undefined
     renameState.value.itemKey = undefined
   }
 
@@ -322,6 +373,7 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
 
   const workspaceStore = useWorkspaceStore()
   const editorUIStateStore = useEditorUIStateStore()
+  const fileSystemEvents = useFileSystemEvents()
   const tabsStore = useTabsStore()
 
   const currentGameId = computed(() => workspaceStore.currentGame?.id)
@@ -343,10 +395,7 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     createState.value.type = type
 
     const createStart = resolveFileTreeCreateStart({
-      accessor: {
-        getChildren: getItemChildren,
-        getPath: getItemPath,
-      },
+      accessor: fileTreeItemAccessor,
       defaultFileNameParts: getDefaultFileNameParts(),
       defaultFolderName: options.defaultFolderName(),
       getKey: options.getKey,
@@ -535,6 +584,44 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   watch([currentGameId, () => options.treeName()], () => {
     expanded.value = resolveExpandedState()
   }, { immediate: true })
+
+  const stopDirectoryRenamedListener = fileSystemEvents.on('directory:renamed', (event) => {
+    pendingDirectoryExpandedRewrite.value = {
+      newPath: event.newPath,
+      oldPath: event.oldPath,
+    }
+  })
+  onScopeDispose(stopDirectoryRenamedListener)
+
+  watch(() => options.items(), (items) => {
+    const pendingExpandedRewrite = pendingDirectoryExpandedRewrite.value
+    if (pendingExpandedRewrite) {
+      const renamedDirectory = findFileTreeItemByPath(items, pendingExpandedRewrite.newPath, fileTreeItemAccessor)
+      if (renamedDirectory) {
+        expanded.value = rewriteExpandedKeysForDirectoryRename(
+          expanded.value,
+          pendingExpandedRewrite.oldPath,
+          pendingExpandedRewrite.newPath,
+        )
+        pendingDirectoryExpandedRewrite.value = undefined
+      }
+    }
+
+    const pending = pendingRenameResult.value
+    if (!pending) {
+      return
+    }
+
+    const renamedItem = findFileTreeItemByPath(items, pending.nextItemKey, fileTreeItemAccessor)
+    if (!renamedItem || getItemName(renamedItem) !== pending.nextName) {
+      return
+    }
+
+    pendingRenameResult.value = undefined
+    renameState.value.isInProgress = false
+    renameState.value.itemKey = undefined
+    renameState.value.value = ''
+  }, { deep: true })
 
   function collapseAll(): void {
     expanded.value = []

@@ -28,13 +28,22 @@ export type ReadTextDocumentResult = DecodeTextFileResult
 export interface FileRenamedEvent {
   newPath: AbsPath
   oldPath: AbsPath
+  source?: 'system-refactor' | 'external'
 }
 
 export interface FileModifiedEvent {
   path: AbsPath
+  source?: 'system-refactor' | 'external'
+}
+
+export interface DirectoryRenamedEvent {
+  newPath: AbsPath
+  oldPath: AbsPath
+  source?: 'system-refactor' | 'external'
 }
 
 export interface SessionAccessor {
+  collectSessionPaths: () => AbsPath[]
   getSession: (path: AbsPath) => EditorSession | undefined
   setSession: (path: AbsPath, session: EditorSession) => void
   deleteSession: (path: AbsPath) => void
@@ -90,7 +99,7 @@ interface ExternalDocumentSnapshot {
   state: EditableEditorState
 }
 
-const pendingFileModifiedTasks = new Map<string, Promise<void>>()
+const pendingFileModifiedTasks = new Map<AbsPath, Promise<void>>()
 
 function isPathInsideDirectory(path: AbsPath, directoryPath: AbsPath): boolean {
   return path.startsWith(`${directoryPath}/`)
@@ -417,7 +426,7 @@ function restorePendingAutoSaveIfNeeded(
   }
 }
 
-function migratePendingFileModifiedTask(oldPath: string, newPath: string): void {
+function migratePendingFileModifiedTask(oldPath: AbsPath, newPath: AbsPath): void {
   const pendingTask = pendingFileModifiedTasks.get(oldPath)
   if (!pendingTask) {
     return
@@ -431,6 +440,18 @@ function migratePendingFileModifiedTask(oldPath: string, newPath: string): void 
     }
   })
   pendingFileModifiedTasks.set(newPath, migratedTask)
+}
+
+function rebasePath(path: AbsPath, oldRoot: AbsPath, newRoot: AbsPath): AbsPath | undefined {
+  if (AbsPath.equals(path, oldRoot)) {
+    return newRoot
+  }
+
+  try {
+    return AbsPath.join(newRoot, AbsPath.relativize(path, oldRoot))
+  } catch {
+    return
+  }
 }
 
 async function handleFileModifiedEventInternal(
@@ -447,7 +468,7 @@ async function handleFileModifiedEventInternal(
     return
   }
 
-  if (!snapshot.state.isDirty || snapshot.hasSameContent) {
+  if (event.source === 'system-refactor' || !snapshot.state.isDirty || snapshot.hasSameContent) {
     applyExternalDocumentSnapshot(context, event.path, snapshot)
     return
   }
@@ -573,6 +594,28 @@ export function handleFileRenamedEvent(
   }
 
   migratePendingFileModifiedTask(event.oldPath, event.newPath)
+}
+
+export function handleDirectoryRenamedEvent(
+  context: EditorFileLifecycleContext,
+  event: DirectoryRenamedEvent,
+): void {
+  const sessionsToMove: { oldPath: AbsPath, newPath: AbsPath }[] = []
+
+  for (const oldPath of context.collectSessionPaths()) {
+    const newPath = rebasePath(oldPath, event.oldPath, event.newPath)
+    if (newPath) {
+      sessionsToMove.push({ oldPath, newPath })
+    }
+  }
+
+  for (const { oldPath, newPath } of sessionsToMove) {
+    handleFileRenamedEvent(context, {
+      oldPath,
+      newPath,
+      source: event.source,
+    })
+  }
 }
 
 export async function handleFileModifiedEvent(

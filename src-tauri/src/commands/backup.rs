@@ -30,6 +30,7 @@ use super::{AppError, AppResult};
 const BACKUP_ROOT_REL: &str = ".webgalcraft/backups";
 const MANIFEST_FILE: &str = "manifest.json";
 const BACKUP_FILE_EXT: &str = "bak";
+const SCENE_ROOT_PATH: &str = "game/scene";
 const SCENE_PATH_PREFIX: &str = "game/scene/";
 const SCENE_FILE_EXT: &str = "txt";
 const MANIFEST_SCHEMA_VERSION: u32 = 1;
@@ -42,6 +43,7 @@ pub enum BackupSourceKind {
     ManualSave,
     AutoSave,
     Restore,
+    SystemRefactor,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -92,6 +94,19 @@ fn mirror_dir_for(logical_path: &str) -> Option<PathBuf> {
         return None;
     }
     Some(path.with_extension(""))
+}
+
+/// 把 scene 文件或 scene 目录映射到备份镜像目录。
+///
+/// 文件历史使用 `scene/foo`（去掉 `.txt`），目录历史使用目录本身，
+/// 例如 `game/scene/chapter` -> `scene/chapter`。
+fn mirror_dir_for_scene_history_path(logical_path: &str) -> Option<PathBuf> {
+    if is_supported_scene_path(logical_path) {
+        return mirror_dir_for(logical_path);
+    }
+
+    let relative = logical_path.strip_prefix("game/")?;
+    Some(PathBuf::from(relative))
 }
 
 fn read_manifest(project_path: &Path) -> AppResult<BackupManifest> {
@@ -198,6 +213,25 @@ fn is_supported_scene_path(logical_path: &str) -> bool {
         return false;
     }
     is_safe_relative_path(path)
+}
+
+/// scene 文件或 scene 目录都可以作为历史迁移入口。
+fn is_scene_history_path(logical_path: &str) -> bool {
+    let path = Path::new(logical_path);
+    if !is_safe_relative_path(path) {
+        return false;
+    }
+
+    logical_path == SCENE_ROOT_PATH || logical_path.starts_with(SCENE_PATH_PREFIX)
+}
+
+fn rebase_logical_path(path: &str, old_root: &str, new_root: &str) -> Option<String> {
+    if path == old_root {
+        return Some(new_root.to_owned());
+    }
+
+    path.strip_prefix(&format!("{old_root}/"))
+        .map(|suffix| format!("{new_root}/{suffix}"))
 }
 
 /// 拒绝绝对路径、`..`、`.` 段以及 Windows 盘符前缀，避免路径遍历。
@@ -525,7 +559,7 @@ pub async fn move_backup_history(
     if old_logical_path == new_logical_path {
         return Ok(());
     }
-    if !is_supported_scene_path(&old_logical_path) || !is_supported_scene_path(&new_logical_path) {
+    if !is_scene_history_path(&old_logical_path) || !is_scene_history_path(&new_logical_path) {
         return Ok(());
     }
 
@@ -533,28 +567,23 @@ pub async fn move_backup_history(
     let mut manifest = read_manifest(&project)?;
 
     let (Some(old_mirror), Some(new_mirror)) = (
-        mirror_dir_for(&old_logical_path),
-        mirror_dir_for(&new_logical_path),
+        mirror_dir_for_scene_history_path(&old_logical_path),
+        mirror_dir_for_scene_history_path(&new_logical_path),
     ) else {
         return Ok(());
     };
     let backups_root = backup_root(&project);
     let old_dir = backups_root.join(&old_mirror);
     let new_dir = backups_root.join(&new_mirror);
+    let new_logical_prefix = format!("{new_logical_path}/");
 
     // 目标已有独立历史：按 VS Code Local History 语义直接覆盖。
-    // rename 操作的用户心智是"文件被改名了"，目标的旧历史与新文件不再有关联。
-    if manifest
-        .entries
-        .iter()
-        .any(|entry| entry.source_path == new_logical_path)
-    {
-        manifest
-            .entries
-            .retain(|entry| entry.source_path != new_logical_path);
-        if new_dir.is_dir() {
-            fs::remove_dir_all(&new_dir)?;
-        }
+    // rename/move 操作的用户心智是"文件或目录换了位置"，目标旧历史与新对象不再有关联。
+    manifest.entries.retain(|entry| {
+        entry.source_path != new_logical_path && !entry.source_path.starts_with(&new_logical_prefix)
+    });
+    if new_dir.is_dir() {
+        fs::remove_dir_all(&new_dir)?;
     }
 
     if old_dir.is_dir() {
@@ -567,8 +596,10 @@ pub async fn move_backup_history(
     let old_rel_prefix = mirror_rel_prefix(&old_mirror);
     let new_rel_prefix = mirror_rel_prefix(&new_mirror);
     for entry in &mut manifest.entries {
-        if entry.source_path == old_logical_path {
-            entry.source_path = new_logical_path.clone();
+        if let Some(next_source_path) =
+            rebase_logical_path(&entry.source_path, &old_logical_path, &new_logical_path)
+        {
+            entry.source_path = next_source_path;
             if let Some(rest) = entry.backup_path.strip_prefix(&old_rel_prefix) {
                 entry.backup_path = format!("{new_rel_prefix}{rest}");
             }
@@ -624,6 +655,27 @@ mod tests {
         let listed = list_backups(project_string(&tmp), "game/scene/start.txt".into()).unwrap();
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].backup_path, entry.backup_path);
+    }
+
+    #[test]
+    fn create_backup_accepts_system_refactor_source_kind() {
+        let tmp = TempDir::new().unwrap();
+        setup_scene(tmp.path(), "game/scene/start.txt", "hello");
+
+        let entry = rt()
+            .block_on(create_backup(
+                project_string(&tmp),
+                "game/scene/start.txt".into(),
+                BackupSourceKind::SystemRefactor,
+                Some("system refactor".into()),
+                true,
+                None,
+            ))
+            .expect("create_backup should succeed")
+            .expect("system refactor should produce entry");
+
+        assert_eq!(entry.source_kind, BackupSourceKind::SystemRefactor);
+        assert_eq!(entry.summary.as_deref(), Some("system refactor"));
     }
 
     #[test]
@@ -806,6 +858,73 @@ mod tests {
             .path()
             .join(BACKUP_ROOT_REL)
             .join(&entries[0].backup_path)
+            .is_file());
+    }
+
+    #[test]
+    fn move_backup_history_relocates_directory_manifest_and_files() {
+        let tmp = TempDir::new().unwrap();
+        setup_scene(tmp.path(), "game/scene/chapter/a.txt", "a");
+        setup_scene(tmp.path(), "game/scene/chapter/nested/b.txt", "b");
+
+        rt().block_on(create_backup(
+            project_string(&tmp),
+            "game/scene/chapter/a.txt".into(),
+            BackupSourceKind::ManualSave,
+            None,
+            true,
+            None,
+        ))
+        .unwrap();
+        rt().block_on(create_backup(
+            project_string(&tmp),
+            "game/scene/chapter/nested/b.txt".into(),
+            BackupSourceKind::ManualSave,
+            None,
+            true,
+            None,
+        ))
+        .unwrap();
+
+        rt().block_on(move_backup_history(
+            project_string(&tmp),
+            "game/scene/chapter".into(),
+            "game/scene/story".into(),
+        ))
+        .unwrap();
+
+        assert!(
+            list_backups(project_string(&tmp), "game/scene/chapter/a.txt".into())
+                .unwrap()
+                .is_empty()
+        );
+        assert!(list_backups(
+            project_string(&tmp),
+            "game/scene/chapter/nested/b.txt".into()
+        )
+        .unwrap()
+        .is_empty());
+
+        let a_entries =
+            list_backups(project_string(&tmp), "game/scene/story/a.txt".into()).unwrap();
+        let b_entries =
+            list_backups(project_string(&tmp), "game/scene/story/nested/b.txt".into()).unwrap();
+
+        assert_eq!(a_entries[0].source_path, "game/scene/story/a.txt");
+        assert_eq!(b_entries[0].source_path, "game/scene/story/nested/b.txt");
+        assert!(a_entries[0].backup_path.starts_with("scene/story/a/"));
+        assert!(b_entries[0]
+            .backup_path
+            .starts_with("scene/story/nested/b/"));
+        assert!(tmp
+            .path()
+            .join(BACKUP_ROOT_REL)
+            .join(&a_entries[0].backup_path)
+            .is_file());
+        assert!(tmp
+            .path()
+            .join(BACKUP_ROOT_REL)
+            .join(&b_entries[0].backup_path)
             .is_file());
     }
 

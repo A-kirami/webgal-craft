@@ -2,6 +2,7 @@ import { LRUCache } from 'lru-cache'
 import * as monaco from 'monaco-editor'
 
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
+import { AbsPath } from '~/domain/path'
 import { useTabsWatcher } from '~/features/editor/shared/useTabsWatcher'
 import { isTextEditorModelPath, resolveTextEditorWorkspacePath } from '~/features/editor/text-editor/text-editor-model-uri'
 import { normalizeEditorViewState } from '~/features/editor/text-editor/text-editor-view-state'
@@ -9,7 +10,6 @@ import { shouldRestoreTextEditorFocus } from '~/features/editor/text-editor/text
 import { useEditorViewStateStore } from '~/stores/editor-view-state'
 import { useTabsStore } from '~/stores/tabs'
 
-import type { AbsPath } from '~/domain/path'
 import type { TextEditorWorkspaceFileState } from '~/features/editor/text-editor/text-editor-workspace-focus'
 
 interface FileWorkspaceState extends TextEditorWorkspaceFileState {
@@ -37,6 +37,18 @@ interface UseTextEditorWorkspaceOptions {
 }
 
 const MAX_CACHED_MODELS = 50
+
+function rebasePath(path: AbsPath, oldRoot: AbsPath, newRoot: AbsPath): AbsPath | undefined {
+  if (AbsPath.equals(path, oldRoot)) {
+    return newRoot
+  }
+
+  try {
+    return AbsPath.join(newRoot, AbsPath.relativize(path, oldRoot))
+  } catch {
+    return
+  }
+}
 
 export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
   const tabsStore = useTabsStore()
@@ -69,6 +81,26 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
     viewStateStore.renameViewState(oldPath, newPath)
   })
 
+  const stopDirectoryRenamedListener = fileSystemEvents.on('directory:renamed', (event) => {
+    const rebasedStates: { newPath: AbsPath, oldPath: AbsPath, state: FileWorkspaceState }[] = []
+
+    for (const [oldPath, state] of fileStates) {
+      const newPath = rebasePath(oldPath, event.oldPath, event.newPath)
+      if (!newPath || newPath === oldPath) {
+        continue
+      }
+
+      rebasedStates.push({ oldPath, newPath, state })
+    }
+
+    for (const { oldPath, newPath, state } of rebasedStates) {
+      fileStates.delete(oldPath)
+      fileStates.set(newPath, state)
+    }
+
+    viewStateStore.rebaseViewStatesForDirectoryRename(event.oldPath, event.newPath)
+  })
+
   const stopFileRemovedListener = fileSystemEvents.on('file:removed', (event) => {
     fileStates.delete(event.path)
     viewStateStore.removeViewState(event.path)
@@ -89,6 +121,7 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
 
   function disposeWorkspaceListeners() {
     stopWatchingTabs()
+    stopDirectoryRenamedListener()
     stopFileRenamedListener()
     stopFileRemovedListener()
   }

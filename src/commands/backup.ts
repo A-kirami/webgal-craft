@@ -1,7 +1,7 @@
 import { AbsPath, RelPath } from '~/domain/path'
 import { safeInvoke } from '~/utils/invoke'
 
-export type BackupSourceKind = 'manual-save' | 'auto-save' | 'restore'
+export type BackupSourceKind = 'manual-save' | 'auto-save' | 'restore' | 'system-refactor'
 
 export interface BackupEntry {
   /** 项目相对路径，例如 "game/scene/start.txt" */
@@ -26,6 +26,14 @@ function createBackup(
   args: ScopedArgs & { sourceKind: BackupSourceKind, force?: boolean, maxVersions?: number },
 ): Promise<BackupEntry | null> {
   return safeInvoke('create_backup', { force: false, ...args })
+}
+
+function createSystemRefactorBackup(args: ScopedArgs & { maxVersions?: number }): Promise<BackupEntry | null> {
+  return safeInvoke('create_backup', {
+    ...args,
+    sourceKind: 'system-refactor',
+    force: true,
+  })
 }
 
 function listBackups(args: ScopedArgs): Promise<BackupEntry[]> {
@@ -58,6 +66,7 @@ function moveBackupHistory(args: {
 
 export const backupCmds = {
   createBackup,
+  createSystemRefactorBackup,
   listBackups,
   readBackup,
   restoreBackup,

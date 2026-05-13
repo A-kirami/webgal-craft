@@ -1,7 +1,8 @@
-import { mkdir, writeFile as writeBinaryFile, writeTextFile } from '@tauri-apps/plugin-fs'
+import { mkdir, readFile, writeFile as writeBinaryFile, writeTextFile } from '@tauri-apps/plugin-fs'
 
 import { fsCmds } from '~/commands/fs'
-import { AbsPath } from '~/domain/path'
+import { vfsCmds } from '~/commands/vfs'
+import { AbsPath, RelPath } from '~/domain/path'
 import {
   commitPendingFileWrite,
   registerPendingFileWrite,
@@ -9,7 +10,11 @@ import {
 } from '~/services/file-write-echo-registry'
 import { gameManager } from '~/services/game-manager'
 import { useFileStore } from '~/stores/file'
+import { useWorkspaceStore } from '~/stores/workspace'
+import { AppError } from '~/types/errors'
 import { buildUniqueEntryName } from '~/utils/entry-name'
+
+import type { PathMutationResult } from '~/services/path-mutation'
 
 async function resolveWritablePath(path: AbsPath): Promise<AbsPath> {
   const fileStore = useFileStore()
@@ -35,22 +40,156 @@ async function writeDocumentFile(path: AbsPath, content: Uint8Array): Promise<vo
   }
 
   commitPendingFileWrite(pendingWrite)
-  gameManager.updateCurrentGameLastModified()
 }
 
-async function renameFile(oldPath: AbsPath, newName: string): Promise<AbsPath> {
+async function readDocumentFile(path: AbsPath): Promise<Uint8Array> {
   const fileStore = useFileStore()
-  if (fileStore.isVfs) {
-    const renamedPath = await fileStore.renameEntry(oldPath, newName)
-    if (renamedPath) {
-      gameManager.updateCurrentGameLastModified()
-      return renamedPath
-    }
+  const readablePath = fileStore.isVfs
+    ? await fileStore.resolveFilePath(path)
+    : path
+  return await readFile(readablePath)
+}
+
+function isPathWithinOrEqual(path: AbsPath, root: AbsPath): boolean {
+  if (AbsPath.equals(path, root)) {
+    return true
   }
 
-  const result = await fsCmds.renameFile(oldPath, newName)
-  gameManager.updateCurrentGameLastModified()
-  return result
+  try {
+    AbsPath.relativize(path, root)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function usesTemplateOverlayPath(path: AbsPath): boolean {
+  const workspaceStore = useWorkspaceStore()
+  const projectPath = workspaceStore.currentGame?.path
+  if (!projectPath) {
+    return false
+  }
+
+  const templateRoot = AbsPath.join(projectPath, RelPath.from('game/template'))
+  return isPathWithinOrEqual(path, templateRoot)
+}
+
+interface TemplateOverlayPathContext {
+  projectPath: AbsPath
+  enginePath: AbsPath
+  templatePath?: AbsPath
+}
+
+function toProjectRelative(projectPath: AbsPath, path: AbsPath): RelPath | undefined {
+  if (AbsPath.equals(path, projectPath)) {
+    return RelPath.empty()
+  }
+
+  try {
+    return AbsPath.relativize(path, projectPath)
+  } catch {
+    return undefined
+  }
+}
+
+async function resolveTemplateOverlayPathContext(): Promise<TemplateOverlayPathContext> {
+  const workspaceStore = useWorkspaceStore()
+  const game = workspaceStore.currentGame
+  if (!game) {
+    throw new AppError('FS_ERROR', '当前项目模板覆盖层上下文不可用')
+  }
+
+  try {
+    const site = await gameManager.resolvePreviewSite(game)
+    const enginePath = site.enginePath
+    if (!enginePath) {
+      throw new AppError('FS_ERROR', '当前项目未绑定可用引擎，无法执行模板覆盖层路径操作')
+    }
+
+    return {
+      projectPath: game.path,
+      enginePath,
+      templatePath: site.templatePath,
+    }
+  } catch {
+    const enginePath = await gameManager.getGameEnginePath(game)
+    if (!enginePath) {
+      throw new AppError('FS_ERROR', '当前项目未绑定可用引擎，无法执行模板覆盖层路径操作')
+    }
+
+    return {
+      projectPath: game.path,
+      enginePath,
+      templatePath: undefined,
+    }
+  }
+}
+
+function createTemplateOverlayResult(projectPath: AbsPath, relPath: RelPath): PathMutationResult {
+  return {
+    echoMode: 'synthetic',
+    newPath: AbsPath.join(projectPath, relPath),
+  }
+}
+
+async function renameNativePath(oldPath: AbsPath, newName: string): Promise<PathMutationResult> {
+  return {
+    echoMode: 'watcher',
+    newPath: await fsCmds.renameFile(oldPath, newName),
+  }
+}
+
+async function moveNativePath(sourcePath: AbsPath, targetDirectory: AbsPath): Promise<PathMutationResult> {
+  return {
+    echoMode: 'watcher',
+    newPath: await fsCmds.moveFile(sourcePath, targetDirectory),
+  }
+}
+
+async function renameTemplateOverlayPath(oldPath: AbsPath, newName: string): Promise<PathMutationResult> {
+  const context = await resolveTemplateOverlayPathContext()
+  const relPath = toProjectRelative(context.projectPath, oldPath)
+  if (!relPath || RelPath.equals(relPath, RelPath.empty())) {
+    throw new AppError('FS_ERROR', '不能重命名项目根目录')
+  }
+
+  const nextRelPath = await vfsCmds.renamePath({
+    projectPath: context.projectPath,
+    enginePath: context.enginePath,
+    templatePath: context.templatePath,
+    relPath,
+    newName,
+  })
+
+  return createTemplateOverlayResult(context.projectPath, nextRelPath)
+}
+
+async function moveTemplateOverlayPath(sourcePath: AbsPath, targetDirectory: AbsPath): Promise<PathMutationResult> {
+  const context = await resolveTemplateOverlayPathContext()
+  const relPath = toProjectRelative(context.projectPath, sourcePath)
+  const relTargetDirectory = toProjectRelative(context.projectPath, targetDirectory)
+  if (!relPath || !relTargetDirectory || RelPath.equals(relPath, RelPath.empty())) {
+    throw new AppError('FS_ERROR', '不能移动项目根目录')
+  }
+
+  const targetRelPath = RelPath.append(relTargetDirectory, AbsPath.basename(sourcePath))
+  const movedRelPath = await vfsCmds.movePath({
+    projectPath: context.projectPath,
+    enginePath: context.enginePath,
+    templatePath: context.templatePath,
+    relPath,
+    targetRelPath,
+  })
+
+  return createTemplateOverlayResult(context.projectPath, movedRelPath)
+}
+
+async function renameFile(oldPath: AbsPath, newName: string): Promise<PathMutationResult> {
+  if (usesTemplateOverlayPath(oldPath)) {
+    return renameTemplateOverlayPath(oldPath, newName)
+  }
+
+  return renameNativePath(oldPath, newName)
 }
 
 async function deleteFile(path: AbsPath, permanent?: boolean): Promise<void> {
@@ -126,31 +265,18 @@ async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
   return result
 }
 
-async function moveFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath> {
-  const fileStore = useFileStore()
-  if (!fileStore.isVfs) {
-    const result = await fsCmds.moveFile(sourcePath, targetPath)
-    gameManager.updateCurrentGameLastModified()
-    return result
+async function moveFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<PathMutationResult> {
+  if (usesTemplateOverlayPath(sourcePath) || usesTemplateOverlayPath(targetPath)) {
+    return moveTemplateOverlayPath(sourcePath, targetPath)
   }
 
-  const movedPath = await fileStore.moveEntry(sourcePath, targetPath)
-  if (movedPath) {
-    gameManager.updateCurrentGameLastModified()
-    return movedPath
-  }
-
-  const resolvedSourcePath = await fileStore.resolveFilePath(sourcePath)
-  const writableTargetPath = await resolveWritablePath(targetPath)
-  const result = await fsCmds.copyFile(resolvedSourcePath, writableTargetPath)
-  await fileStore.deleteEntry(sourcePath)
-  gameManager.updateCurrentGameLastModified()
-  return result
+  return moveNativePath(sourcePath, targetPath)
 }
 
 export const gameFs = {
   writeFile,
   writeDocumentFile,
+  readDocumentFile,
   renameFile,
   deleteFile,
   createFile,

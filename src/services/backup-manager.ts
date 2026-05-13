@@ -14,6 +14,10 @@ export function isScenePath(logicalPath: RelPath): boolean {
   return logicalPath.startsWith(SCENE_PATH_PREFIX) && logicalPath.endsWith(SCENE_FILE_EXT)
 }
 
+function isSceneHistoryPath(logicalPath: RelPath): boolean {
+  return logicalPath === RelPath.from('game/scene') || logicalPath.startsWith(SCENE_PATH_PREFIX)
+}
+
 /**
  * 将 `<projectPath>/<logical>` 形式的绝对路径转为项目相对路径。
  * 若 absolutePath 不在 projectPath 之下则返回 undefined。
@@ -66,6 +70,10 @@ function createAutoBackup(projectPath: AbsPath, logicalPath: RelPath) {
   return createSceneBackup(projectPath, logicalPath, { sourceKind: 'auto-save', force: false })
 }
 
+function createSystemRefactorBackup(projectPath: AbsPath, logicalPath: RelPath) {
+  return createSceneBackup(projectPath, logicalPath, { sourceKind: 'system-refactor', force: true })
+}
+
 async function loadTimeline(projectPath: AbsPath, logicalPath: RelPath): Promise<BackupEntry[]> {
   if (!isScenePath(logicalPath)) {
     return []
@@ -98,7 +106,7 @@ async function moveSceneHistory(
   oldLogicalPath: RelPath,
   newLogicalPath: RelPath,
 ): Promise<void> {
-  if (!isScenePath(oldLogicalPath) || !isScenePath(newLogicalPath)) {
+  if (!isSceneHistoryPath(oldLogicalPath) || !isSceneHistoryPath(newLogicalPath)) {
     return
   }
   await backupCmds.moveBackupHistory({ projectPath, oldLogicalPath, newLogicalPath })
@@ -109,6 +117,7 @@ export const backupManager = {
   toProjectRelative,
   createManualBackup,
   createAutoBackup,
+  createSystemRefactorBackup,
   loadTimeline,
   readBackupContent,
   restoreBackup,

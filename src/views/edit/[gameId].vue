@@ -4,6 +4,7 @@ import { useAnimationTableSyncBootstrap } from '~/features/editor/animation/useA
 import { createEditorShortcutDefinitions } from '~/features/editor/shortcut/definitions'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
+import { useResourceIndexBootstrap } from '~/services/resource-index/service'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { useFileStore } from '~/stores/file'
 import { useModalStore } from '~/stores/modal'
@@ -22,6 +23,7 @@ const workspaceStore = useWorkspaceStore()
 const editorPanelRef = useTemplateRef<EditorPanelHandle>('editorPanel')
 
 useAnimationTableSyncBootstrap()
+useResourceIndexBootstrap()
 
 // 进入工作区时即时校验：失效则进入阻断式恢复弹窗，由用户决定重试 / 重链接 / 返回主页
 watch(() => workspaceStore.currentGame?.id, async (gameId) => {

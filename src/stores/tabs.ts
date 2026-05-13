@@ -74,6 +74,18 @@ function rebrandProjectTabsMap(rawState: unknown): Record<string, ProjectTabsSta
   )
 }
 
+function rebasePath(path: AbsPath, oldRoot: AbsPath, newRoot: AbsPath): AbsPath | undefined {
+  if (AbsPath.equals(path, oldRoot)) {
+    return newRoot
+  }
+
+  try {
+    return AbsPath.join(newRoot, AbsPath.relativize(path, oldRoot))
+  } catch {
+    return
+  }
+}
+
 /**
  * 标签页 Pinia Store，负责管理所有标签页的状态与操作。
  * 支持标签页的打开、关闭、激活、预览等功能。
@@ -191,6 +203,24 @@ export const useTabsStore = defineStore(
       delete runtimeState[oldPath]
 
       if (previousState) {
+        runtimeState[newPath] = previousState
+      }
+    }
+
+    function rebaseRuntimeTabState(oldRoot: AbsPath, newRoot: AbsPath): void {
+      const runtimeState = ensureProjectRuntimeState()
+      if (!runtimeState) {
+        return
+      }
+
+      const entries = Object.entries(runtimeState) as [AbsPath, RuntimeTabState][]
+      for (const [oldPath, previousState] of entries) {
+        const newPath = rebasePath(oldPath, oldRoot, newRoot)
+        if (!newPath) {
+          continue
+        }
+
+        delete runtimeState[oldPath]
         runtimeState[newPath] = previousState
       }
     }
@@ -386,6 +416,25 @@ export const useTabsStore = defineStore(
         moveRuntimeTabState(event.oldPath, event.newPath)
         state.tabs[index].path = event.newPath
         state.tabs[index].name = AbsPath.basename(event.newPath)
+      }
+    })
+
+    fileSystemEvents.on('directory:renamed', (event) => {
+      const state = ensureProjectState()
+      if (!state) {
+        return
+      }
+
+      rebaseRuntimeTabState(event.oldPath, event.newPath)
+
+      for (const tab of state.tabs) {
+        const newPath = rebasePath(tab.path, event.oldPath, event.newPath)
+        if (!newPath) {
+          continue
+        }
+
+        tab.path = newPath
+        tab.name = AbsPath.basename(newPath)
       }
     })
 

@@ -16,7 +16,6 @@ import { useStatementEditorScrub } from '~/features/editor/statement-editor/useS
 import { useStatementFileMissing } from '~/features/editor/statement-editor/useStatementFileMissing'
 import { useStatementFileRoots } from '~/features/editor/statement-editor/useStatementFileRoots'
 import { statementMetaKey, useStatementMeta } from '~/features/editor/statement-editor/useStatementMeta'
-import { useResourceIndexBootstrap } from '~/services/resource-index/service'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { TransactionSource } from '~/domain/document/transaction'
@@ -71,7 +70,6 @@ export function isStatementInteractiveTarget(target: EventTarget | null): boolea
 
 export function useStatementEditor(options: UseStatementEditorOptions) {
   useEditorDynamicOptionsBootstrap()
-  useResourceIndexBootstrap()
 
   const entry = computed(() => toValue(options.entry))
   const updateTarget = computed(() => toValue(options.updateTarget) ?? createStatementIdTarget(entry.value.id))

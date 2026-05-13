@@ -1,3 +1,5 @@
+import { AbsPath } from '~/domain/path'
+
 export interface FileTreeItemAccessor<T> {
   getChildren: (item: T) => T[] | undefined
   getName: (item: T) => string
@@ -72,6 +74,44 @@ export function getFileTreeNameSelectionEnd(fileName: string, isFolder: boolean)
 
   const lastDotIndex = fileName.lastIndexOf('.')
   return lastDotIndex > 0 ? lastDotIndex : fileName.length
+}
+
+function rewriteExpandedKeyForDirectoryRename(
+  key: string,
+  oldPath: AbsPath,
+  newPath: AbsPath,
+): string {
+  const normalizedKey = AbsPath.from(key)
+  if (AbsPath.equals(normalizedKey, oldPath)) {
+    return newPath
+  }
+
+  try {
+    const relativePath = AbsPath.relativize(normalizedKey, oldPath)
+    return AbsPath.join(newPath, relativePath)
+  } catch {
+    return key
+  }
+}
+
+export function rewriteExpandedKeysForDirectoryRename(
+  keys: string[],
+  oldPath: string,
+  newPath: string,
+): string[] {
+  const normalizedOldPath = AbsPath.from(oldPath)
+  const normalizedNewPath = AbsPath.from(newPath)
+  const nextKeys: string[] = []
+
+  // 展开状态使用路径作为持久化身份，目录改名时需要整体迁移这一子树的 key。
+  for (const key of keys) {
+    const nextKey = rewriteExpandedKeyForDirectoryRename(key, normalizedOldPath, normalizedNewPath)
+    if (!nextKeys.includes(nextKey)) {
+      nextKeys.push(nextKey)
+    }
+  }
+
+  return nextKeys
 }
 
 export function resolveFileTreeDefaultFileDraft(

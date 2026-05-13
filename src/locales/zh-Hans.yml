@@ -472,6 +472,7 @@ modals:
       manualSave: 手动保存
       autoSave: 自动保存
       restore: 还原操作
+      systemRefactor: 系统重写
     section:
       today: 今天
       yesterday: 昨天
@@ -575,6 +576,39 @@ edit:
     workspaceUnavailable: 工作区尚未初始化，请稍后重试
   unsupported:
     unsupportedFile: 该文件是二进制文件或使用了不受支持的文本编码，无法在编辑器中显示
+  pathOperation:
+    confirmRewrite:
+      title: 是否同步更新“{name}”的资源引用？
+      renameContent: 重命名该资源后，将同步更新 {fileCount} 个文件中的 {referenceCount} 处引用。
+      moveContent: 移动该资源后，将同步更新 {fileCount} 个文件中的 {referenceCount} 处引用。
+      renameConfirm: 重命名并更新
+      moveConfirm: 移动并更新
+      renameOnly: 仅重命名
+      moveOnly: 仅移动
+    confirmSkipRewrite:
+      renameTitle: 是否继续仅重命名“{name}”？
+      moveTitle: 是否继续仅移动“{name}”？
+      renameContent: 继续后，现有资源引用可能会失效。
+      moveContent: 继续后，现有资源引用可能会失效。
+      renameConfirm: 仍然重命名
+      moveConfirm: 仍然移动
+    errors:
+      blockedPlan: 路径操作被阻断
+      duplicateTarget: 目标路径已存在或与源路径相同。
+      inFlightConflict: 该路径上已有进行中的操作，请稍后再试。
+      crossRootMove: 当前仅支持同一资源根目录内的引用重写。
+      unsupportedReferenceField: 无法安全更新引用字段：{fieldKey}
+      unsupportedReferenceConfigField: 无法安全更新配置引用字段：{fieldKey}
+      unsupportedReferenceSource: 无法安全更新引用来源：{sourceKind}
+      unsupportedText: 无法读取文本文件：{path}
+      stalePlan: 路径操作计划已过期：{path}
+      currentProjectUnavailable: 当前项目不可用。
+      missingTextMetadata: 路径操作计划缺少文本元数据：{path}
+      editorContentChanged: 编辑器内容已变化：{path}
+      targetPathMismatch: 实际目标路径与计划不一致：{path}
+    warnings:
+      sceneHistoryMigrationFailed: 场景历史迁移失败：{oldPath} -> {newPath}：{error}
+      sceneBackupCreationFailed: 场景备份创建失败：{path}：{error}
   leaveConfirm:
     title: 返回主页前保存更改？
     description: 如果现在返回主页，未保存的更改将会丢失。
