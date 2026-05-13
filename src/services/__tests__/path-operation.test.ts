@@ -557,6 +557,16 @@ describe('pathOperation', () => {
       oldLogicalPath: 'game/scene/intro.txt',
       newLogicalPath: 'game/scene/start.txt',
     })
+    expect(deps.fileStore.applyPathMutation).toHaveBeenNthCalledWith(
+      1,
+      '/project/game/scene/start.txt',
+      '/project/game/scene/intro.txt',
+    )
+    expect(deps.fileStore.applyPathMutation).toHaveBeenNthCalledWith(
+      2,
+      '/project/game/scene/intro.txt',
+      '/project/game/scene/start.txt',
+    )
     expect(refreshRegisteredGameSnapshot).toHaveBeenCalledTimes(1)
   })
 

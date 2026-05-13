@@ -869,6 +869,14 @@ async function rollbackPathSideEffect(
   await deps.gameFs.moveFile(finalPath, AbsPath.parent(plan.sourcePath))
 }
 
+async function rollbackStorePathMutation(
+  deps: PathOperationDeps,
+  plan: PathOperationPlan,
+  finalPath: AbsPath,
+): Promise<void> {
+  await deps.fileStore.applyPathMutation(finalPath, plan.sourcePath)
+}
+
 function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
@@ -890,6 +898,7 @@ async function rollbackAppliedSideEffects(
   plan: PathOperationPlan,
   appliedRewriteFiles: readonly PlanRollbackContext['files'][number][],
   finalPath: AbsPath,
+  pathMutationApplied: boolean,
   sceneHistoryMigration?: SceneHistoryMigrationContext,
 ): Promise<string[]> {
   const warnings: string[] = []
@@ -903,10 +912,22 @@ async function rollbackAppliedSideEffects(
     }
   }
 
+  let pathSideEffectRolledBack = false
   try {
     await rollbackPathSideEffect(deps, plan, finalPath)
+    pathSideEffectRolledBack = true
   } catch (error) {
     warnings.push(`回滚路径副作用失败: ${finalPath} -> ${plan.sourcePath}: ${toErrorMessage(error)}`)
+  }
+
+  if (pathSideEffectRolledBack) {
+    try {
+      if (pathMutationApplied) {
+        await rollbackStorePathMutation(deps, plan, finalPath)
+      }
+    } catch (error) {
+      warnings.push(`回滚路径状态失败: ${finalPath} -> ${plan.sourcePath}: ${toErrorMessage(error)}`)
+    }
   }
 
   if (sceneHistoryMigration) {
@@ -1112,6 +1133,7 @@ export function createPathOperationService(deps: PathOperationDeps) {
     const appliedRewriteFiles: PlanRollbackContext['files'] = []
     let appliedFsResult: PathMutationResult | undefined
     let sceneHistoryMigration: SceneHistoryMigrationContext | undefined
+    let pathMutationApplied = false
     let pathMutationFailed = false
     const gamePath = deps.getGamePath()
     const warnings: PathOperationWarning[] = []
@@ -1150,6 +1172,7 @@ export function createPathOperationService(deps: PathOperationDeps) {
 
       try {
         await deps.fileStore.applyPathMutation(plan.sourcePath, fsResult.newPath)
+        pathMutationApplied = true
       } catch (error) {
         pathMutationFailed = true
         try {
@@ -1233,6 +1256,7 @@ export function createPathOperationService(deps: PathOperationDeps) {
             plan,
             appliedRewriteFiles,
             appliedFsResult.newPath,
+            pathMutationApplied,
             sceneHistoryMigration,
           )
           logRollbackWarnings(warnings)
