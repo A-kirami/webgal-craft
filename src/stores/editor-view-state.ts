@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 
+import { AbsPath } from '~/domain/path'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import type * as monaco from 'monaco-editor'
@@ -34,6 +35,22 @@ export interface SerializableViewState {
 }
 
 type ProjectViewStates = Record<string, SerializableViewState>
+
+function rebasePath(path: string, oldRoot: string, newRoot: string): string | undefined {
+  const normalizedPath = AbsPath.from(path)
+  const normalizedOldRoot = AbsPath.from(oldRoot)
+  const normalizedNewRoot = AbsPath.from(newRoot)
+
+  if (AbsPath.equals(normalizedPath, normalizedOldRoot)) {
+    return normalizedNewRoot
+  }
+
+  try {
+    return AbsPath.join(normalizedNewRoot, AbsPath.relativize(normalizedPath, normalizedOldRoot))
+  } catch {
+    return
+  }
+}
 
 const noopStorage: StorageLike = {
   getItem() {
@@ -278,6 +295,32 @@ export const useEditorViewStateStore = defineStore(
       }
     }
 
+    function rebaseProjectViewStates(projectStates: ProjectViewStates | undefined, oldRoot: string, newRoot: string) {
+      if (!projectStates) {
+        return
+      }
+
+      const entries = Object.entries(projectStates)
+      for (const [oldPath, viewState] of entries) {
+        const rebasedPath = rebasePath(oldPath, oldRoot, newRoot)
+        if (!rebasedPath || rebasedPath === oldPath) {
+          continue
+        }
+
+        delete projectStates[oldPath]
+        projectStates[rebasedPath] = viewState
+      }
+    }
+
+    function rebaseViewStatesForDirectoryRename(oldRoot: string, newRoot: string) {
+      if (!currentProjectId) {
+        return
+      }
+
+      rebaseProjectViewStates(projectViewStatesMap[currentProjectId], oldRoot, newRoot)
+      rebaseProjectViewStates(sessionRecoveryViewStatesMap[currentProjectId], oldRoot, newRoot)
+    }
+
     function clearCurrentProjectStates() {
       if (currentProjectId) {
         delete projectViewStatesMap[currentProjectId]
@@ -299,6 +342,7 @@ export const useEditorViewStateStore = defineStore(
       consumeSessionRecoveryViewState,
       updatePrimaryCursorLine,
       removeViewState,
+      rebaseViewStatesForDirectoryRename,
       renameViewState,
       clearCurrentProjectStates,
       clearProjectStates,

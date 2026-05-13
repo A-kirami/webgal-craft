@@ -442,6 +442,18 @@ function migratePendingFileModifiedTask(oldPath: AbsPath, newPath: AbsPath): voi
   pendingFileModifiedTasks.set(newPath, migratedTask)
 }
 
+function rebasePath(path: AbsPath, oldRoot: AbsPath, newRoot: AbsPath): AbsPath | undefined {
+  if (AbsPath.equals(path, oldRoot)) {
+    return newRoot
+  }
+
+  try {
+    return AbsPath.join(newRoot, AbsPath.relativize(path, oldRoot))
+  } catch {
+    return
+  }
+}
+
 async function handleFileModifiedEventInternal(
   context: EditorFileLifecycleContext,
   event: FileModifiedEvent,
@@ -582,6 +594,28 @@ export function handleFileRenamedEvent(
   }
 
   migratePendingFileModifiedTask(event.oldPath, event.newPath)
+}
+
+export function handleDirectoryRenamedEvent(
+  context: EditorFileLifecycleContext,
+  event: DirectoryRenamedEvent,
+): void {
+  const sessionsToMove: { oldPath: AbsPath, newPath: AbsPath }[] = []
+
+  for (const oldPath of context.collectSessionPaths()) {
+    const newPath = rebasePath(oldPath, event.oldPath, event.newPath)
+    if (newPath) {
+      sessionsToMove.push({ oldPath, newPath })
+    }
+  }
+
+  for (const { oldPath, newPath } of sessionsToMove) {
+    handleFileRenamedEvent(context, {
+      oldPath,
+      newPath,
+      source: event.source,
+    })
+  }
 }
 
 export async function handleFileModifiedEvent(

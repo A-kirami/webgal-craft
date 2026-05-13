@@ -575,6 +575,7 @@ export const useEditorStore = defineStore('editor', () => {
     autoSaveHasPending: path => autoSaveController.hasPending(path),
     cancelAutoSave,
     canReschedulePendingAutoSave,
+    collectSessionPaths: () => [...sessions.keys()],
     createEditorError,
     getActiveTabPath: () => tabsStore.activeTab?.path,
     getAssetUrl,
@@ -731,6 +732,10 @@ export const useEditorStore = defineStore('editor', () => {
   // 监听文件重命名事件，更新编辑器状态
   fileSystemEvents.on('file:renamed', (event) => {
     handleFileRenamedEventAction(fileLifecycleContext, event)
+  })
+
+  fileSystemEvents.on('directory:renamed', (event) => {
+    handleDirectoryRenamedEventAction(fileLifecycleContext, event)
   })
 
   // 监听文件修改事件，如果文件未编辑，同步新文件内容
