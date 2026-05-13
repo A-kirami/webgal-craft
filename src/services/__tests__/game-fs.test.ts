@@ -21,6 +21,7 @@ const {
   rollbackPendingFileWriteMock,
   fsRenameFileMock,
   vfsRenamePathMock,
+  readFileMock,
   resolveFilePathMock,
   useFileStoreMock,
   useWorkspaceStoreMock,
@@ -45,6 +46,7 @@ const {
   rollbackPendingFileWriteMock: vi.fn(),
   fsRenameFileMock: vi.fn(),
   vfsRenamePathMock: vi.fn(),
+  readFileMock: vi.fn(),
   resolveFilePathMock: vi.fn(),
   useFileStoreMock: vi.fn(),
   updateCurrentGameLastModifiedMock: vi.fn(),
@@ -55,6 +57,7 @@ const {
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
   mkdir: mkdirMock,
+  readFile: readFileMock,
   writeFile: writeBinaryFileMock,
   writeTextFile: writeTextFileMock,
 }))
@@ -116,6 +119,7 @@ describe('gameFs', () => {
     resolvePreviewSiteMock.mockReset()
     registerPendingFileWriteMock.mockReset()
     rollbackPendingFileWriteMock.mockReset()
+    readFileMock.mockReset()
     fsRenameFileMock.mockReset()
     vfsRenamePathMock.mockReset()
     resolveFilePathMock.mockReset()
@@ -131,6 +135,7 @@ describe('gameFs', () => {
     })
     ensureWritableMock.mockImplementation(async (path: string) => path)
     getFolderContentsMock.mockResolvedValue([])
+    readFileMock.mockResolvedValue(new Uint8Array([1, 2, 3]))
     resolveFilePathMock.mockImplementation(async (path: string) => path)
     useWorkspaceStoreMock.mockReturnValue({
       CWD: '/project',
@@ -206,6 +211,23 @@ describe('gameFs', () => {
     expect(commitPendingFileWriteMock).not.toHaveBeenCalled()
     expect(rollbackPendingFileWriteMock).toHaveBeenCalledWith(handle)
     expect(updateCurrentGameLastModifiedMock).not.toHaveBeenCalled()
+  })
+
+  it('VFS 模式下读取文档文件会先解析实际文件路径', async () => {
+    useFileStoreMock.mockReturnValue({
+      copyEntry: copyEntryMock,
+      deleteEntry: vi.fn(async () => false),
+      ensureWritable: ensureWritableMock,
+      getFolderContents: getFolderContentsMock,
+      isVfs: true,
+      resolveFilePath: resolveFilePathMock,
+    })
+    resolveFilePathMock.mockResolvedValueOnce('/game/.overlay/scene.txt')
+
+    await expect(gameFs.readDocumentFile(AbsPath.from('/game/scene.txt'))).resolves.toEqual(new Uint8Array([1, 2, 3]))
+
+    expect(resolveFilePathMock).toHaveBeenCalledWith('/game/scene.txt')
+    expect(readFileMock).toHaveBeenCalledWith('/game/.overlay/scene.txt')
   })
 
   it('非 VFS 模式下会直接透传底层文件系统操作', async () => {

@@ -43,7 +43,11 @@ async function writeDocumentFile(path: AbsPath, content: Uint8Array): Promise<vo
 }
 
 async function readDocumentFile(path: AbsPath): Promise<Uint8Array> {
-  return await readFile(path)
+  const fileStore = useFileStore()
+  const readablePath = fileStore.isVfs
+    ? await fileStore.resolveFilePath(path)
+    : path
+  return await readFile(readablePath)
 }
 
 function isPathWithinOrEqual(path: AbsPath, root: AbsPath): boolean {
