@@ -82,4 +82,27 @@ describe('useDroppableRegistry', () => {
     expect(registry.hoveredTarget.value).toBe(null)
     expect(registry.isDropAllowed.value).toBe(false)
   })
+
+  it('drop 回调失败时仍会清理悬停状态并向外抛出异常', async () => {
+    const registry = useDroppableRegistry()
+    const target = new TestHTMLElement() as unknown as HTMLElement
+    const error = new Error('放置失败')
+    const onDragLeave = vi.fn()
+    setupDocumentFromPoint(target as unknown as Element)
+
+    registry.registerDroppable(target, {
+      accept: 'file-system-item',
+      id: 'folder',
+      onDragLeave,
+      onDrop: vi.fn(() => {
+        throw error
+      }),
+    })
+
+    await expect(registry.drop(filePayload, { x: 10, y: 20 })).rejects.toThrow(error)
+
+    expect(onDragLeave).toHaveBeenCalledWith(filePayload, target)
+    expect(registry.hoveredTarget.value).toBe(null)
+    expect(registry.isDropAllowed.value).toBe(false)
+  })
 })

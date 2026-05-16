@@ -181,8 +181,11 @@ async function drop(payload: DragPayload, position: DragPosition): Promise<boole
     return false
   }
 
-  await match.config.onDrop(payload, match.target)
-  clearHover(payload)
+  try {
+    await match.config.onDrop(payload, match.target)
+  } finally {
+    clearHover(payload)
+  }
   return true
 }
 
