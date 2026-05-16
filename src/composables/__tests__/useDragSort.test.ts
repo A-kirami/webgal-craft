@@ -344,6 +344,45 @@ describe('useDragSort', () => {
     expect(session.state.value.isActive).toBe(false)
   })
 
+  it('settling 未完成时不会开始新的排序会话', () => {
+    vi.useFakeTimers()
+    setupDragDocument()
+    setupAnimationFrame()
+    setupGlobalListeners()
+    const { elements, onSort, sort } = createSortFixture()
+
+    sort.getItemProps(0).onPointerdown(createPointerEvent({
+      clientX: 10,
+      currentTarget: elements[0],
+      pointerId: 11,
+      target: elements[0],
+    }))
+    startDrag(elements[0], 11, 260)
+    elements[0].dispatch('pointerup', {
+      clientX: 260,
+      pointerId: 11,
+      target: elements[0],
+    })
+
+    sort.getItemProps(1).onPointerdown(createPointerEvent({
+      clientX: 110,
+      currentTarget: elements[1],
+      pointerId: 12,
+      target: elements[1],
+    }))
+    startDrag(elements[1], 12, 10)
+
+    expect(sort.phase.value).toBe('settling')
+    expect(sort.dragIndex.value).toBe(0)
+    expect(sort.targetIndex.value).toBe(2)
+
+    vi.runOnlyPendingTimers()
+
+    expect(onSort).toHaveBeenCalledOnce()
+    expect(onSort).toHaveBeenCalledWith(0, 2)
+    expect(sort.phase.value).toBe('idle')
+  })
+
   it('向左拖拽时也使用移除源项后的 targetIndex，避免 hoverIndex 直传导致 off-by-one', () => {
     vi.useFakeTimers()
     setupDragDocument()

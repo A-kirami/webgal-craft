@@ -578,6 +578,10 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
   }
 
   function startSort(event: PointerEvent, sourceElement: HTMLElement, startPosition: DragPosition): boolean {
+    if (phase.value === 'settling' || settlingTimerId !== undefined) {
+      return false
+    }
+
     if (!isHandleAllowed(event, sourceElement, options.handleSelector)) {
       return false
     }
