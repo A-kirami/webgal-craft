@@ -1,4 +1,4 @@
-import { usePointerDrag } from '~/composables/usePointerDrag'
+import { useImmediatePointerDrag } from '~/composables/useImmediatePointerDrag'
 import { applyScrubStepModifier } from '~/utils/math'
 
 interface UseEffectDurationControlOptions {
@@ -65,7 +65,7 @@ export function useEffectDurationControl(options: UseEffectDurationControlOption
     return applyScrubStepModifier(1, event, { altFactor: 1, shiftFactor: 10 })
   }
 
-  const durationScrub = usePointerDrag<{
+  const durationScrub = useImmediatePointerDrag<{
     lastValue: number
     startValue: number
     startX: number

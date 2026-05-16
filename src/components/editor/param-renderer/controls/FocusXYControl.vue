@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { usePointerDrag } from '~/composables/usePointerDrag'
+import { useImmediatePointerDrag } from '~/composables/useImmediatePointerDrag'
 import { normalizeFieldStringValue } from '~/features/editor/statement-editor/field-utils'
 import { cn } from '~/lib/utils'
 import { clamp, roundByStep } from '~/utils/math'
@@ -195,7 +195,7 @@ function updateByPointer(event: PointerEvent, metrics: PadMetrics) {
   scheduleAxisEmit({ x: nextX, y: nextY })
 }
 
-const drag = usePointerDrag<{ metrics: PadMetrics }>({
+const drag = useImmediatePointerDrag<{ metrics: PadMetrics }>({
   onStart(event) {
     if (event.pointerType === 'mouse' && event.button !== 0) {
       return

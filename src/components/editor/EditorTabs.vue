@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { FileText, X } from '@lucide/vue'
-
+import { useDragSort } from '~/composables/useDragSort'
 import { getCloseTabDecision, shouldFixPreviewTab } from '~/features/editor/editor-tabs/editor-tabs'
 import { useEditorStore } from '~/stores/editor'
 import { useModalStore } from '~/stores/modal'
@@ -8,14 +7,52 @@ import { useTabsStore } from '~/stores/tabs'
 import { handleWheelToHorizontalScroll } from '~/utils/wheel'
 
 import type { ScrollArea } from '~/components/ui/scroll-area'
+import type { Tab } from '~/stores/tabs'
 
 const { t } = useI18n()
 
 const tabsStore = useTabsStore()
 const editorStore = useEditorStore()
 const modalStore = useModalStore()
+const tabs = toRef(tabsStore, 'tabs')
+const activeTabPath = $computed(() => tabsStore.activeTab?.path)
 
 const scrollAreaRef = $(useTemplateRef('scrollAreaRef'))
+const scrollViewportRef = shallowRef<HTMLElement>()
+const tabSort = useDragSort<Tab>({
+  direction: 'horizontal',
+  getKey: tab => tab.path,
+  getPayload: tab => ({
+    path: tab.path,
+    source: 'editor-tabs',
+    type: 'editor-tab',
+  }),
+  ignoreSelector: '[data-drag-ignore]',
+  items: tabs,
+  onSort: tabsStore.reorderTab,
+  scrollContainer: scrollViewportRef,
+})
+
+function setTabSortContainerRef(element: Element | ComponentPublicInstance | null) {
+  tabSort.containerRef.value = element instanceof HTMLElement ? element : undefined
+  nextTick(updateScrollViewportRef)
+}
+
+function updateScrollViewportRef() {
+  scrollViewportRef.value = scrollAreaRef?.viewport?.viewportElement
+}
+
+function isActiveTab(tab: Tab): boolean {
+  return activeTabPath === tab.path
+}
+
+function getTabTintClass(tab: Tab, isDragOverlay = false): string {
+  if (isActiveTab(tab)) {
+    return 'opacity-0'
+  }
+
+  return isDragOverlay ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+}
 
 function handleCloseTab(index: number) {
   const tab = tabsStore.tabs[index]
@@ -52,6 +89,12 @@ function handleTabDblClick(index: number) {
   }
 }
 
+function handleTabAuxClick(index: number, event: MouseEvent) {
+  if (event.button === 1) {
+    handleCloseTab(index)
+  }
+}
+
 function scrollToActiveTab() {
   const viewport = scrollAreaRef?.viewport?.viewportElement
   if (!viewport) {
@@ -81,62 +124,48 @@ watch(() => tabsStore.activeTabIndex, () => {
     nextTick(scrollToActiveTab)
   }
 })
+
+onMounted(() => {
+  updateScrollViewportRef()
+})
 </script>
 
 <template>
   <ScrollArea ref="scrollAreaRef" @wheel="handleWheelToHorizontalScroll">
-    <div class="bg-background flex h-8">
-      <Button
-        v-for="(tab, index) in tabsStore.tabs"
+    <div :ref="setTabSortContainerRef" class="bg-background flex h-8">
+      <EditorTabButton
+        v-for="(tab, index) in tabs"
         :key="tab.path"
-        variant="ghost"
-        class="group pl-3 pr-1 border-r rounded-none h-full relative"
-        :class="[
-          tabsStore.activeTab?.path === tab.path
-            ? 'bg-muted before:bg-primary'
-            : 'hover:bg-muted/50'
-        ]"
-        :data-active="tabsStore.activeTab?.path === tab.path"
-        un-before="h-0.5 w-full absolute top-0 inset-x-0 content-empty"
-        @click="() => handleTabClick(index)"
-        @dblclick="() => handleTabDblClick(index)"
-        @auxclick="(e: MouseEvent) => e.button === 1 && handleCloseTab(index)"
-      >
-        <div class="flex gap-1.5 items-center">
-          <FileText class="size-4" />
-          <span
-            class="text-sm font-light"
-            :class="{ 'italic': tab.isPreview }"
-          >
-            {{ tab.name }}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            class="group/close rounded flex h-5 w-5 items-center justify-center relative hover:bg-muted-foreground/20"
-            as="div"
-            tabindex="-1"
-            @click.stop="() => handleCloseTab(index)"
-          >
-            <div class="flex size-3 items-center justify-center relative">
-              <span
-                v-if="tab.isModified"
-                class="rounded-full bg-muted-foreground/50 opacity-100 size-2 transition-opacity absolute group-hover/close:opacity-0"
-              />
-              <X
-                class="size-3 transition-opacity"
-                :class="[
-                  !tab.isModified && tabsStore.activeTab?.path === tab.path ? 'opacity-100' :
-                  tab.isModified ? 'opacity-0 group-hover/close:opacity-100' :
-                  'opacity-0 group-hover:opacity-100'
-                ]"
-              />
-            </div>
-            <span class="sr-only">{{ $t('common.close') }}</span>
-          </Button>
-        </div>
-      </Button>
+        v-bind="tabSort.getItemProps(index)"
+        :active="isActiveTab(tab)"
+        :sorting="tabSort.isSorting.value"
+        :tab="tab"
+        :tint-class="getTabTintClass(tab)"
+        :item-style="tabSort.getItemStyle(index)"
+        :data-active="isActiveTab(tab)"
+        :data-testid="`editor-tab-${tab.path}`"
+        @click="handleTabClick(index)"
+        @dblclick="handleTabDblClick(index)"
+        @auxclick="handleTabAuxClick(index, $event)"
+        @close="handleCloseTab(index)"
+      />
     </div>
     <ScrollBar orientation="horizontal" class="opacity-75 h-1.5 -mb-0.25 hover:opacity-100" />
   </ScrollArea>
+
+  <DragOverlay
+    :visible="tabSort.overlayState.value !== undefined"
+    :overlay-style="tabSort.overlayState.value?.overlayStyle"
+  >
+    <EditorTabButton
+      v-if="tabSort.overlayState.value"
+      as="div"
+      tabindex="-1"
+      :active="isActiveTab(tabSort.overlayState.value.item)"
+      :close-interactive="false"
+      :sorting="tabSort.isSorting.value"
+      :tab="tabSort.overlayState.value.item"
+      :tint-class="getTabTintClass(tabSort.overlayState.value.item, true)"
+    />
+  </DragOverlay>
 </template>

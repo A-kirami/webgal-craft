@@ -1,4 +1,4 @@
-import { usePointerDrag } from '~/composables/usePointerDrag'
+import { useImmediatePointerDrag } from '~/composables/useImmediatePointerDrag'
 import { ArgField, EditorField, resolveSurfaceVariant } from '~/features/editor/command-registry/schema'
 import { createParamDrag } from '~/features/editor/effect-editor/createParamDrag'
 import { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
@@ -110,7 +110,7 @@ export function useStatementEditorScrub(options: UseStatementEditorScrubOptions)
 
   // ─── content 数值拖拽 ───
 
-  const contentScrub = usePointerDrag<ContentScrubState>({
+  const contentScrub = useImmediatePointerDrag<ContentScrubState>({
     onStart(event) {
       if (event.button !== 0 || event.pointerType === 'touch') {
         return

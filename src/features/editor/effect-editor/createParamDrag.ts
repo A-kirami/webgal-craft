@@ -1,7 +1,7 @@
-import { usePointerDrag } from '~/composables/usePointerDrag'
+import { useImmediatePointerDrag } from '~/composables/useImmediatePointerDrag'
 
 /**
- * 工厂函数：封装 pendingParam + usePointerDrag 的"延迟参数传递"模式。
+ * 工厂函数：封装 pendingParam + useImmediatePointerDrag 的"延迟参数传递"模式。
  * 消除 number、dial、color 三个控件中的重复代码。
  */
 
@@ -14,7 +14,7 @@ interface ParamDragCallbacks<P, S> {
 export function createParamDrag<P, S>(callbacks: ParamDragCallbacks<P, S>) {
   const pendingParam = ref<P>()
 
-  const drag = usePointerDrag<S & { param: P }>({
+  const drag = useImmediatePointerDrag<S & { param: P }>({
     onStart(event) {
       const param = pendingParam.value
       pendingParam.value = undefined

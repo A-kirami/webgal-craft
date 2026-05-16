@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { usePointerDrag } from '~/composables/usePointerDrag'
+import { useImmediatePointerDrag } from '~/composables/useImmediatePointerDrag'
 import { resolveI18n } from '~/features/editor/command-registry/schema'
 import { DEFAULT_EASE_OPTION_VALUE, EFFECT_EASE_OPTIONS } from '~/features/editor/effect-editor/effect-editor-config'
 import { clamp } from '~/utils/math'
@@ -217,7 +217,7 @@ interface ResizeDragState {
 const pendingResizePayload = shallowRef<AnimationTimelineResizeDurationPayload>()
 let pendingResizeFrameId = $ref<number>()
 
-const resizeDrag = usePointerDrag<ResizeDragState>({
+const resizeDrag = useImmediatePointerDrag<ResizeDragState>({
   onStart(event) {
     const handle = event.currentTarget as HTMLElement | null
     const spanId = Number(handle?.dataset.spanId)
