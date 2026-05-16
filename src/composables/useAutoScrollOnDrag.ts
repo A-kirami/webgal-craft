@@ -64,14 +64,14 @@ export function useAutoScrollOnDrag(options: UseAutoScrollOnDragOptions): UseAut
   const axis = options.axis ?? 'vertical'
   let pointerPosition: DragPosition | undefined
   let frameId = 0
-  let lastTimestamp = 0
+  let lastTimestamp: number | undefined
 
   function stop() {
     if (frameId !== 0) {
       cancelAnimationFrame(frameId)
       frameId = 0
     }
-    lastTimestamp = 0
+    lastTimestamp = undefined
     pointerPosition = undefined
   }
 
@@ -90,12 +90,14 @@ export function useAutoScrollOnDrag(options: UseAutoScrollOnDragOptions): UseAut
 
     if (axisVelocity === 0) {
       frameId = 0
-      lastTimestamp = 0
+      lastTimestamp = undefined
       return
     }
 
-    if (lastTimestamp === 0) {
+    if (lastTimestamp === undefined) {
       lastTimestamp = timestamp
+      frameId = requestAnimationFrame(tick)
+      return
     }
 
     const deltaTime = (timestamp - lastTimestamp) / 1000
@@ -103,15 +105,25 @@ export function useAutoScrollOnDrag(options: UseAutoScrollOnDragOptions): UseAut
     const left = axis === 'horizontal' ? velocity.x * deltaTime : 0
     const top = axis === 'vertical' ? velocity.y * deltaTime : 0
 
+    if (left === 0 && top === 0) {
+      frameId = requestAnimationFrame(tick)
+      return
+    }
+
+    const previousScrollLeft = container.scrollLeft
+    const previousScrollTop = container.scrollTop
     container.scrollBy({
       behavior: 'auto',
       left,
       top,
     })
-    if (left !== 0 || top !== 0) {
-      options.onScroll?.({ ...pointerPosition })
+
+    if (container.scrollLeft === previousScrollLeft && container.scrollTop === previousScrollTop) {
+      stop()
+      return
     }
 
+    options.onScroll?.({ ...pointerPosition })
     frameId = requestAnimationFrame(tick)
   }
 
