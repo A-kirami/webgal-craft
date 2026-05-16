@@ -365,6 +365,32 @@ export const useTabsStore = defineStore(
       }
     }
 
+    function reorderTab(fromIndex: number, targetIndex: number): void {
+      const state = ensureProjectState()
+      if (!state || !isValidTabIndex(fromIndex)) {
+        return
+      }
+
+      const boundedTargetIndex = Math.min(Math.max(targetIndex, 0), state.tabs.length - 1)
+      if (fromIndex === boundedTargetIndex) {
+        return
+      }
+
+      const activeTabPath = state.activeTabIndex === -1
+        ? undefined
+        : state.tabs[state.activeTabIndex]?.path
+      const [tab] = state.tabs.splice(fromIndex, 1)
+      state.tabs.splice(boundedTargetIndex, 0, tab)
+
+      if (tab.isPreview) {
+        fixPreviewTab(boundedTargetIndex)
+      }
+
+      if (activeTabPath) {
+        state.activeTabIndex = state.tabs.findIndex(currentTab => currentTab.path === activeTabPath)
+      }
+    }
+
     function updateTabLoading(index: number, isLoading: boolean) {
       const tab = currentProjectTabs.tabs[index]
       if (!tab) {
@@ -448,6 +474,7 @@ export const useTabsStore = defineStore(
       activateTab,
       updateTabModified,
       closeTab,
+      reorderTab,
       findTabIndex,
       updateTabLoading,
       updateTabError,

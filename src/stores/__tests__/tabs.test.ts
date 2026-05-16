@@ -153,6 +153,79 @@ describe('useTabsStore', () => {
     expect(store.activeTab?.path).toBe('/game/b.txt')
   })
 
+  it('reorderTab 会按移除源项后的 targetIndex 重排，并保持当前激活标签指向同一文件', () => {
+    const store = useTabsStore()
+
+    editSettingsStoreState.enablePreviewTab = false
+
+    store.openTab('a.txt', AbsPath.from('/game/a.txt'))
+    store.openTab('b.txt', AbsPath.from('/game/b.txt'))
+    store.openTab('c.txt', AbsPath.from('/game/c.txt'))
+    store.activateTab(1)
+
+    store.reorderTab(1, 0)
+
+    expect(store.tabs.map(tab => tab.path)).toEqual([
+      '/game/b.txt',
+      '/game/a.txt',
+      '/game/c.txt',
+    ])
+    expect(store.activeTabIndex).toBe(0)
+    expect(store.activeTab?.path).toBe('/game/b.txt')
+
+    store.reorderTab(2, 0)
+
+    expect(store.tabs.map(tab => tab.path)).toEqual([
+      '/game/c.txt',
+      '/game/b.txt',
+      '/game/a.txt',
+    ])
+    expect(store.activeTabIndex).toBe(1)
+    expect(store.activeTab?.path).toBe('/game/b.txt')
+
+    store.reorderTab(0, 2)
+
+    expect(store.tabs.map(tab => tab.path)).toEqual([
+      '/game/b.txt',
+      '/game/a.txt',
+      '/game/c.txt',
+    ])
+    expect(store.activeTabIndex).toBe(0)
+    expect(store.activeTab?.path).toBe('/game/b.txt')
+  })
+
+  it('reorderTab 只重排当前项目标签，并把被拖拽的预览标签固化为普通标签', () => {
+    const store = useTabsStore()
+
+    editSettingsStoreState.enablePreviewTab = false
+
+    store.openTab('a.txt', AbsPath.from('/game/a.txt'))
+    store.openTab('b.txt', AbsPath.from('/game/b.txt'))
+    editSettingsStoreState.enablePreviewTab = true
+    store.openTab('preview.txt', AbsPath.from('/game/preview.txt'))
+    store.projectTabsMap['game-2'] = {
+      activeTabIndex: 0,
+      tabs: [
+        {
+          activeAt: 1,
+          isPreview: false,
+          name: 'other.txt',
+          path: AbsPath.from('/other/other.txt'),
+        },
+      ],
+    }
+
+    store.reorderTab(2, 0)
+
+    expect(store.tabs.map(tab => [tab.path, tab.isPreview])).toEqual([
+      ['/game/preview.txt', false],
+      ['/game/a.txt', false],
+      ['/game/b.txt', false],
+    ])
+    expect(store.shouldFocusEditor).toBe(true)
+    expect(store.projectTabsMap['game-2']?.tabs.map(tab => tab.path)).toEqual(['/other/other.txt'])
+  })
+
   it('关闭后重新打开同一路径时不会继承旧的运行时状态', () => {
     const store = useTabsStore()
 

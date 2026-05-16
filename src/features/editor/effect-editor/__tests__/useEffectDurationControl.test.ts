@@ -12,8 +12,8 @@ const { dragRuntime } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('~/composables/usePointerDrag', () => ({
-  usePointerDrag<S>(callbacks: {
+vi.mock('~/composables/useImmediatePointerDrag', () => ({
+  useImmediatePointerDrag<S>(callbacks: {
     onEnd: (event: PointerEvent | undefined, state: S) => void
     onMove: (event: PointerEvent, state: S) => void
     onStart: (event: PointerEvent) => S | undefined

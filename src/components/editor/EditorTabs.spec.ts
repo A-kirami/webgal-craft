@@ -9,6 +9,57 @@ import EditorTabs from './EditorTabs.vue'
 
 import type { Tab } from '~/stores/tabs'
 
+function createPointerEvent(type: string, overrides: PointerEventInit = {}): PointerEvent {
+  return new PointerEvent(type, {
+    bubbles: true,
+    button: 0,
+    buttons: type === 'pointerup' || type === 'pointercancel' ? 0 : 1,
+    cancelable: true,
+    isPrimary: true,
+    pointerId: 1,
+    pointerType: 'mouse',
+    ...overrides,
+  })
+}
+
+function setRect(element: HTMLElement, rect: DOMRect) {
+  Object.defineProperty(element, 'getBoundingClientRect', {
+    configurable: true,
+    value: () => rect,
+  })
+}
+
+function createRect(left: number, width: number): DOMRect {
+  return {
+    bottom: 32,
+    height: 32,
+    left,
+    right: left + width,
+    top: 0,
+    width,
+    x: left,
+    y: 0,
+    toJSON: () => ({}),
+  }
+}
+
+function prepareTabRects(paths: readonly string[] = ['/project/a.txt', '/project/b.txt', '/project/c.txt']) {
+  const tabElements = paths.map(path => document.querySelector<HTMLElement>(`[data-testid="editor-tab-${path}"]`))
+
+  for (const [index, element] of tabElements.entries()) {
+    expect(element).not.toBeNull()
+    setRect(element!, createRect(index * 100, 100))
+  }
+
+  const viewport = tabElements[0]?.closest('[data-reka-scroll-area-viewport]') as HTMLElement | null
+  if (viewport) {
+    setRect(viewport, createRect(0, 300))
+    viewport.scrollLeft = 0
+  }
+
+  return tabElements as HTMLElement[]
+}
+
 const {
   modalOpenMock,
   saveFileMock,
@@ -56,6 +107,21 @@ function createTabsStore(tabs: Tab[], activeTabIndex: number = 0) {
     fixPreviewTab: vi.fn((index: number) => {
       if (store.tabs[index]) {
         store.tabs[index].isPreview = false
+      }
+    }),
+    reorderTab: vi.fn((fromIndex: number, toIndex: number) => {
+      const [tab] = store.tabs.splice(fromIndex, 1)
+      store.tabs.splice(toIndex, 0, tab)
+      if (tab?.isPreview) {
+        tab.isPreview = false
+        store.shouldFocusEditor = true
+      }
+      if (store.activeTabIndex === fromIndex) {
+        store.activeTabIndex = toIndex
+      } else if (fromIndex < store.activeTabIndex && toIndex >= store.activeTabIndex) {
+        store.activeTabIndex--
+      } else if (fromIndex > store.activeTabIndex && toIndex <= store.activeTabIndex) {
+        store.activeTabIndex++
       }
     }),
   })
@@ -150,5 +216,98 @@ describe('EditorTabs', () => {
 
     expect(tabsStore.closeTab).toHaveBeenCalledWith(0)
     expect(modalOpenMock).not.toHaveBeenCalled()
+  })
+
+  it('拖拽标签页会按目标位置重排并保持可点击激活', async () => {
+    const tabsStore = createTabsStore([
+      {
+        activeAt: 1,
+        isPreview: false,
+        name: 'a.txt',
+        path: AbsPath.from('/project/a.txt'),
+      },
+      {
+        activeAt: 2,
+        isPreview: false,
+        name: 'b.txt',
+        path: AbsPath.from('/project/b.txt'),
+      },
+      {
+        activeAt: 3,
+        isPreview: false,
+        name: 'c.txt',
+        path: AbsPath.from('/project/c.txt'),
+      },
+    ])
+
+    useTabsStoreMock.mockReturnValue(tabsStore)
+
+    renderInBrowser(EditorTabs, {
+      global: {},
+    })
+
+    const [firstTab] = prepareTabRects()
+
+    firstTab.dispatchEvent(createPointerEvent('pointerdown', { clientX: 10 }))
+    globalThis.dispatchEvent(createPointerEvent('pointermove', { clientX: 260 }))
+    globalThis.dispatchEvent(createPointerEvent('pointerup', { clientX: 260 }))
+    firstTab.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    await vi.waitFor(() => {
+      expect(tabsStore.reorderTab).toHaveBeenCalledWith(0, 2)
+    })
+
+    expect(tabsStore.tabs.map(tab => tab.name)).toEqual(['b.txt', 'c.txt', 'a.txt'])
+    expect(tabsStore.activeTab?.name).toBe('a.txt')
+
+    await page.getByText('b.txt').click()
+
+    expect(tabsStore.activateTab).toHaveBeenCalledWith(0)
+  })
+
+  it('拖拽预览标签后会将其固化为普通标签', async () => {
+    const tabsStore = createTabsStore([
+      {
+        activeAt: 1,
+        isPreview: false,
+        name: 'a.txt',
+        path: AbsPath.from('/project/a.txt'),
+      },
+      {
+        activeAt: 2,
+        isPreview: true,
+        name: 'preview.txt',
+        path: AbsPath.from('/project/preview.txt'),
+      },
+      {
+        activeAt: 3,
+        isPreview: false,
+        name: 'c.txt',
+        path: AbsPath.from('/project/c.txt'),
+      },
+    ], 1)
+
+    useTabsStoreMock.mockReturnValue(tabsStore)
+
+    renderInBrowser(EditorTabs, {
+      global: {},
+    })
+
+    const [, previewTab] = prepareTabRects(['/project/a.txt', '/project/preview.txt', '/project/c.txt'])
+
+    previewTab.dispatchEvent(createPointerEvent('pointerdown', { clientX: 110 }))
+    globalThis.dispatchEvent(createPointerEvent('pointermove', { clientX: 10 }))
+    globalThis.dispatchEvent(createPointerEvent('pointerup', { clientX: 10 }))
+
+    await vi.waitFor(() => {
+      expect(tabsStore.reorderTab).toHaveBeenCalledWith(1, 0)
+    })
+
+    expect(tabsStore.tabs.map(tab => [tab.name, tab.isPreview])).toEqual([
+      ['preview.txt', false],
+      ['a.txt', false],
+      ['c.txt', false],
+    ])
+    expect(tabsStore.shouldFocusEditor).toBe(true)
   })
 })
