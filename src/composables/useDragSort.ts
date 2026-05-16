@@ -520,9 +520,12 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
     }
   }
 
-  function resetSortState() {
+  function resetSortState({ preserveClickSuppression = false } = {}) {
     clearSettlingTimer()
     autoScroll.stop()
+    if (!preserveClickSuppression) {
+      suppressNextClick = false
+    }
     state = undefined
     commitSnapshot = undefined
     phase.value = 'idle'
@@ -533,7 +536,7 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
   }
 
   function endSortSession() {
-    resetSortState()
+    resetSortState({ preserveClickSuppression: true })
     session.end()
   }
 

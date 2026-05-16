@@ -617,6 +617,37 @@ describe('useDragSort', () => {
     vi.runOnlyPendingTimers()
   })
 
+  it('取消拖拽后不会消费后续正常 click', () => {
+    setupDragDocument()
+    setupAnimationFrame()
+    setupGlobalListeners()
+    const { elements, sort } = createSortFixture()
+    const clickEvent = {
+      preventDefault: vi.fn(),
+      stopImmediatePropagation: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as MouseEvent
+
+    sort.getItemProps(0).onPointerdown(createPointerEvent({
+      clientX: 10,
+      currentTarget: elements[0],
+      pointerId: 13,
+      target: elements[0],
+    }))
+    startDrag(elements[0], 13, 260)
+    elements[0].dispatch('pointercancel', {
+      clientX: 260,
+      pointerId: 13,
+      target: elements[0],
+    })
+
+    sort.getItemProps(0).onClickCapture(clickEvent)
+
+    expect(clickEvent.preventDefault).not.toHaveBeenCalled()
+    expect(clickEvent.stopPropagation).not.toHaveBeenCalled()
+    expect(clickEvent.stopImmediatePropagation).not.toHaveBeenCalled()
+  })
+
   it('自动滚动标签页列表时无需新的 pointermove 也会刷新占位目标', () => {
     setupDragDocument()
     const { flushAnimationFrame } = setupControlledAnimationFrame()
