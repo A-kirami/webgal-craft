@@ -119,4 +119,22 @@ describe('useImmediatePointerDrag', () => {
     expect(onEnd).toHaveBeenCalledTimes(1)
     expect(drag.active).toBe(false)
   })
+
+  it('允许 false 作为有效拖拽状态', () => {
+    const onEnd = vi.fn()
+    const onMove = vi.fn()
+    const drag = useImmediatePointerDrag<boolean>({
+      onEnd,
+      onMove,
+      onStart: () => false,
+    })
+
+    expect(drag.start(createPointerEvent({ pointerId: 10 }))).toBe(true)
+    dispatchPointerEvent('pointermove', { pointerId: 10 })
+    dispatchPointerEvent('pointerup', { pointerId: 10 })
+
+    expect(onMove).toHaveBeenCalledWith(expect.anything(), false)
+    expect(onEnd).toHaveBeenCalledWith(expect.anything(), false)
+    expect(drag.active).toBe(false)
+  })
 })
