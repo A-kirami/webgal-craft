@@ -180,13 +180,11 @@ export function useDragSource<TPayload extends DragPayload>(
       updateSessionTransferOperation(event)
       session.updatePosition(context.currentPosition)
       scheduleSuppressNextClickReset()
+      session.end()
       void registry
         .drop(currentPayload, context.currentPosition)
         .catch((error: unknown) => {
           void logger.error(`拖拽放置失败: ${error instanceof Error ? error.message : String(error)}`)
-        })
-        .finally(() => {
-          session.end()
         })
     },
     onDragMove: (event, context) => {

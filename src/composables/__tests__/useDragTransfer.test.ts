@@ -41,6 +41,13 @@ const filePayload: FileSystemDragPayload = {
   source: 'file-tree',
   type: 'file-system-item',
 }
+const secondFilePayload: FileSystemDragPayload = {
+  isDir: false,
+  name: 'next.txt',
+  path: '/project/game/scene/next.txt',
+  source: 'file-tree',
+  type: 'file-system-item',
+}
 
 function createPointerEvent(overrides: PointerLikeEvent): PointerEvent {
   const { pointerId, ...rest } = overrides
@@ -159,7 +166,7 @@ function registerTestDropTarget(
     canDrop?: () => boolean
     onDragEnter?: () => void
     onDragLeave?: () => void
-    onDrop?: (payload: FileSystemDragPayload, target: HTMLElement) => void
+    onDrop?: (payload: FileSystemDragPayload, target: HTMLElement) => Promise<void> | void
   } = {},
 ) {
   const registry = useDroppableRegistry()
@@ -375,6 +382,73 @@ describe('useDragTransfer', () => {
     sourceProps.onClickCapture(clickEvent)
 
     expect(clickEvent.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it('前一次异步 drop 完成后不会清理并发开始的新拖拽会话', async () => {
+    setupGlobalListeners()
+    const target = createTargetElement()
+    setupDragDocument(target)
+    setupAnimationFrame()
+    const session = useDragSession()
+    let resolveFirstDrop!: () => void
+    const onDrop = vi.fn(() => new Promise<void>((resolve) => {
+      resolveFirstDrop = resolve
+    }))
+    const sourceElement = createDragElement()
+    let nextPayload = filePayload
+    const source = useDragSource<FileSystemDragPayload>({
+      getData: () => nextPayload,
+      type: 'file-system-item',
+    })
+    const registry = registerTestDropTarget(target, {
+      onDrop,
+    })
+    const sourceProps = source.sourceProps()
+
+    sourceProps.onPointerdown(createPointerEvent({
+      clientX: 10,
+      clientY: 10,
+      currentTarget: sourceElement,
+      pointerId: 9,
+      target: sourceElement,
+    }))
+    startDrag(sourceElement, 9, 20, 20)
+    sourceElement.dispatch('pointerup', {
+      clientX: 20,
+      clientY: 20,
+      pointerId: 9,
+      target: sourceElement,
+    })
+
+    nextPayload = secondFilePayload
+    sourceProps.onPointerdown(createPointerEvent({
+      clientX: 30,
+      clientY: 30,
+      currentTarget: sourceElement,
+      pointerId: 10,
+      target: sourceElement,
+    }))
+    startDrag(sourceElement, 10, 40, 40)
+
+    expect(session.state.value).toMatchObject({
+      currentDropTarget: target,
+      isActive: true,
+      mode: 'transfer',
+      payload: secondFilePayload,
+      transferOperation: 'move',
+    })
+    expect(registry.hoveredTarget.value).toBe(target)
+
+    resolveFirstDrop()
+    await Promise.resolve()
+
+    expect(session.state.value).toMatchObject({
+      currentDropTarget: target,
+      isActive: true,
+      mode: 'transfer',
+      payload: secondFilePayload,
+      transferOperation: 'move',
+    })
   })
 
   it('按住 Ctrl 时会临时切换 transfer 会话为 copy，松开后恢复 move', () => {
