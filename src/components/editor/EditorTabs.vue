@@ -155,6 +155,7 @@ onMounted(() => {
 
   <DragOverlay
     :visible="tabSort.overlayState.value !== undefined"
+    :frame-style="tabSort.overlayState.value?.overlayFrameStyle"
     :overlay-style="tabSort.overlayState.value?.overlayStyle"
   >
     <EditorTabButton
