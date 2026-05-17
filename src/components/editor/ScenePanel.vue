@@ -85,17 +85,31 @@ function handleAuxClick(item: FlattenedItem<ScenePanelTreeNode>) {
 }
 
 let selectedItem = $ref<ScenePanelTreeNode>()
+let pendingRevealPath = $ref<string>()
+let lastSyncedActiveTabPath = $ref(tabsStore.activeTab?.path)
+let hasLoadedSceneItems = $ref(false)
 
 function updateSelectedItemFromActiveTab() {
   const activeTab = tabsStore.activeTab
   if (!activeTab) {
     selectedItem = undefined
+    pendingRevealPath = undefined
+    lastSyncedActiveTabPath = undefined
     return
   }
 
   const foundNode = findScenePanelNodeByPath(items.value || [], activeTab.path)
-  if (foundNode) {
-    selectedItem = foundNode
+  if (!foundNode) {
+    lastSyncedActiveTabPath = activeTab.path
+    pendingRevealPath = undefined
+    return
+  }
+
+  selectedItem = foundNode
+  lastSyncedActiveTabPath = activeTab.path
+  if (pendingRevealPath === foundNode.path) {
+    pendingRevealPath = undefined
+    nextTick(scrollToSelectedItem)
   }
 }
 
@@ -125,16 +139,14 @@ function scrollToSelectedItem() {
   }
 }
 
-watch($$(selectedItem), () => {
-  if (selectedItem) {
-    nextTick(scrollToSelectedItem)
-  }
+watch(() => tabsStore.activeTab?.path, (path) => {
+  pendingRevealPath = hasLoadedSceneItems && path && path !== lastSyncedActiveTabPath ? path : undefined
+  updateSelectedItemFromActiveTab()
 })
-
-watch(() => tabsStore.activeTab, updateSelectedItemFromActiveTab)
 
 watch(items, () => {
   if (items.value?.length) {
+    hasLoadedSceneItems = true
     updateSelectedItemFromActiveTab()
   }
 })
@@ -212,6 +224,8 @@ onScopeDispose(() => {
       :tooltip-content="(item) => item.value.path"
       :is-loading="isLoading"
       tree-name="scene"
+      enable-drag-transfer
+      :root-path="scenePath"
       :default-file-name-parts="{ stem: '', extension: '.txt' }"
       @click="handleClick"
       @dblclick="handleDoubleClick"

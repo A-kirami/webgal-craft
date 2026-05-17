@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { effectScope, nextTick, reactive, ref } from 'vue'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { effectScope, nextTick, reactive, ref, shallowRef } from 'vue'
 
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { AbsPath } from '~/domain/path'
@@ -25,12 +25,27 @@ interface TestFlattenedItem {
   value: TestTreeItem
 }
 
+class FakeHTMLElement {
+  clientHeight = 400
+  scrollHeight = 800
+  scrollLeft = 0
+  scrollTop = 0
+
+  scrollTo(options: ScrollToOptions): void {
+    this.scrollLeft = Number(options.left ?? this.scrollLeft)
+    const maxScrollTop = Math.max(0, this.scrollHeight - this.clientHeight)
+    this.scrollTop = Math.min(Math.max(0, Number(options.top ?? this.scrollTop)), maxScrollTop)
+  }
+}
+
 const {
   createFileMock,
   createFolderMock,
   fileSystemEventOnMock,
   getFileTreeExpandedMock,
+  getFileTreeScrollPositionMock,
   setFileTreeExpandedMock,
+  setFileTreeScrollPositionMock,
   useEditorUIStateStoreMock,
   useTabsStoreMock,
   useWorkspaceStoreMock,
@@ -39,7 +54,9 @@ const {
   createFolderMock: vi.fn(),
   fileSystemEventOnMock: vi.fn(),
   getFileTreeExpandedMock: vi.fn(),
+  getFileTreeScrollPositionMock: vi.fn(),
   setFileTreeExpandedMock: vi.fn(),
+  setFileTreeScrollPositionMock: vi.fn(),
   useEditorUIStateStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
@@ -142,6 +159,11 @@ function createFixture(options: {
   }
   openCreatedFileInTab?: boolean
   savedExpanded?: string[]
+  savedScrollPosition?: {
+    left: number
+    top: number
+  }
+  scrollAreaRef?: ReturnType<typeof shallowRef<unknown>>
 } = {}) {
   const items = reactive(createItems())
   const tabsStore = {
@@ -149,6 +171,7 @@ function createFixture(options: {
   }
 
   getFileTreeExpandedMock.mockReturnValue(options.savedExpanded ?? [])
+  getFileTreeScrollPositionMock.mockReturnValue(options.savedScrollPosition)
   const eventHandlers = new Map<string, (event: Record<string, unknown>) => void>()
   fileSystemEventOnMock.mockImplementation((eventType: string, handler: (event: Record<string, unknown>) => void) => {
     eventHandlers.set(eventType, handler)
@@ -163,7 +186,9 @@ function createFixture(options: {
   } as ReturnType<typeof useFileSystemEvents>)
   useEditorUIStateStoreMock.mockReturnValue({
     getFileTreeExpanded: getFileTreeExpandedMock,
+    getFileTreeScrollPosition: getFileTreeScrollPositionMock,
     setFileTreeExpanded: setFileTreeExpandedMock,
+    setFileTreeScrollPosition: setFileTreeScrollPositionMock,
   })
   useTabsStoreMock.mockReturnValue(tabsStore)
   useWorkspaceStoreMock.mockReturnValue({
@@ -172,6 +197,7 @@ function createFixture(options: {
     },
   })
 
+  const scrollAreaRef = options.scrollAreaRef ?? shallowRef<unknown>()
   const scope = effectScope()
   const controller = scope.run(() => useFileTreeController<TestTreeItem>({
     creatingInputRef: ref(),
@@ -188,7 +214,7 @@ function createFixture(options: {
     items: () => items,
     nameField: 'name',
     openCreatedFileInTab: () => options.openCreatedFileInTab ?? false,
-    scrollAreaRef: ref(),
+    scrollAreaRef,
     sortBy: () => 'name',
     sortOrder: () => 'asc',
     treeName: () => 'scene',
@@ -202,6 +228,7 @@ function createFixture(options: {
     controller,
     eventHandlers,
     items,
+    scrollAreaRef,
     scope,
     tabsStore,
   }
@@ -213,11 +240,18 @@ describe('useFileTreeController', () => {
     createFolderMock.mockReset()
     fileSystemEventOnMock.mockReset()
     getFileTreeExpandedMock.mockReset()
+    getFileTreeScrollPositionMock.mockReset()
     vi.mocked(pathOperation.perform).mockReset()
     setFileTreeExpandedMock.mockReset()
+    setFileTreeScrollPositionMock.mockReset()
     useEditorUIStateStoreMock.mockReset()
     useTabsStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
+    vi.stubGlobal('HTMLElement', FakeHTMLElement)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('会优先恢复当前项目对应的展开状态并在变更后持久化', async () => {
@@ -246,6 +280,119 @@ describe('useFileTreeController', () => {
       parentPath: '/project/scene',
       type: 'file',
       value: 'untitled.txt',
+    })
+
+    scope.stop()
+  })
+
+  it('会持久化并恢复当前项目对应的滚动位置', async () => {
+    const viewport = new FakeHTMLElement()
+    const scrollAreaRef = shallowRef<unknown>({
+      viewport: {
+        viewportElement: viewport,
+      },
+    })
+    const { controller, scope } = createFixture({
+      savedScrollPosition: {
+        left: 12,
+        top: 180,
+      },
+      scrollAreaRef,
+    })
+
+    await nextTick()
+    await nextTick()
+
+    expect(viewport.scrollTop).toBe(180)
+    expect(viewport.scrollLeft).toBe(12)
+
+    viewport.scrollTop = 220
+    viewport.scrollLeft = 20
+    controller.handleScroll({ target: viewport } as unknown as Event)
+    await nextTick()
+
+    expect(setFileTreeScrollPositionMock).toHaveBeenCalledWith('game-1', 'scene', {
+      left: 20,
+      top: 220,
+    })
+
+    scope.stop()
+  })
+
+  it('内容高度延迟增长后会重试恢复滚动位置', async () => {
+    const viewport = new FakeHTMLElement()
+    viewport.scrollHeight = viewport.clientHeight
+    const scrollAreaRef = shallowRef<unknown>({
+      viewport: {
+        viewportElement: viewport,
+      },
+    })
+    const { items, scope } = createFixture({
+      savedScrollPosition: {
+        left: 0,
+        top: 180,
+      },
+      scrollAreaRef,
+    })
+
+    await nextTick()
+    await nextTick()
+    expect(viewport.scrollTop).toBe(0)
+
+    viewport.scrollHeight = 800
+    items.push({
+      name: 'later.txt',
+      path: '/project/scene/later.txt',
+    })
+    await nextTick()
+    await nextTick()
+
+    expect(viewport.scrollTop).toBe(180)
+
+    scope.stop()
+  })
+
+  it('滚动恢复完成前不会持久化中间滚动位置', async () => {
+    const viewport = new FakeHTMLElement()
+    viewport.scrollHeight = viewport.clientHeight
+    const scrollAreaRef = shallowRef<unknown>({
+      viewport: {
+        viewportElement: viewport,
+      },
+    })
+    const { controller, items, scope } = createFixture({
+      savedScrollPosition: {
+        left: 0,
+        top: 180,
+      },
+      scrollAreaRef,
+    })
+
+    await nextTick()
+    await nextTick()
+    expect(viewport.scrollTop).toBe(0)
+
+    viewport.scrollTop = 40
+    controller.handleScroll({ target: viewport } as unknown as Event)
+
+    expect(setFileTreeScrollPositionMock).not.toHaveBeenCalled()
+
+    viewport.scrollHeight = 800
+    items.push({
+      name: 'later.txt',
+      path: '/project/scene/later.txt',
+    })
+    await nextTick()
+    await nextTick()
+
+    expect(viewport.scrollTop).toBe(180)
+
+    viewport.scrollTop = 220
+    controller.handleScroll({ target: viewport } as unknown as Event)
+
+    expect(setFileTreeScrollPositionMock).toHaveBeenCalledWith('game-1', 'scene', {
+      left: 0,
+      top: 220,
     })
 
     scope.stop()

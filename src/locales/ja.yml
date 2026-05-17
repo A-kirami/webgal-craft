@@ -653,6 +653,7 @@ edit:
     pastePartialFailed: 一部の貼り付けに失敗しました ({failed}/{total})
     pasteMultipleSuccess: "{count} 個のアイテムを貼り付けました"
     viewHistory: 履歴を表示
+    dragPreviewCount: "{count} 個のファイル"
   previewPanel:
     copyUrl: URLをコピー
     refreshPreview: プレビューを更新

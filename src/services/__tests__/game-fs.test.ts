@@ -285,6 +285,25 @@ describe('gameFs', () => {
     expect(fsMoveFileMock).toHaveBeenCalledWith('/project/game/background/old.txt', '/project/game/background')
   })
 
+  it('native move 接收计划目标名时会透传给底层 fs adapter', async () => {
+    fsMoveFileMock.mockResolvedValue('/project/game/background/moved (1).txt')
+
+    await expect(gameFs.moveFile(
+      AbsPath.from('/project/game/background/old.txt'),
+      AbsPath.from('/project/game/background'),
+      'moved (1).txt',
+    )).resolves.toEqual({
+      echoMode: 'watcher',
+      newPath: '/project/game/background/moved (1).txt',
+    })
+
+    expect(fsMoveFileMock).toHaveBeenCalledWith(
+      '/project/game/background/old.txt',
+      '/project/game/background',
+      'moved (1).txt',
+    )
+  })
+
   it('缺少 currentGame 时不会把 CWD 下的 template 路径误判为覆盖层操作', async () => {
     useWorkspaceStoreMock.mockReturnValue({
       CWD: '/project',
@@ -323,7 +342,7 @@ describe('gameFs', () => {
       templatePath: '/templates/current',
     })
     vfsRenamePathMock.mockResolvedValue(RelPath.from('game/template/new.txt'))
-    vfsMovePathMock.mockResolvedValue(RelPath.from('game/template/folder/old.txt'))
+    vfsMovePathMock.mockResolvedValue(RelPath.from('game/template/folder/old (1).txt'))
     copyEntryMock.mockResolvedValueOnce('/project/game/copied.txt')
     createFileMock.mockResolvedValue('/project/game/created.txt')
     createFolderMock.mockResolvedValue('/project/game/folder')
@@ -339,9 +358,10 @@ describe('gameFs', () => {
     await expect(gameFs.moveFile(
       AbsPath.from('/project/game/template/old.txt'),
       AbsPath.from('/project/game/template/folder'),
+      'old (1).txt',
     )).resolves.toEqual({
       echoMode: 'synthetic',
-      newPath: '/project/game/template/folder/old.txt',
+      newPath: '/project/game/template/folder/old (1).txt',
     })
     await gameFs.deleteFile(AbsPath.from('/project/game/deleted.txt'), true)
 
@@ -358,7 +378,7 @@ describe('gameFs', () => {
       enginePath: '/engines/webgal',
       templatePath: '/templates/current',
       relPath: 'game/template/old.txt',
-      targetRelPath: 'game/template/folder/old.txt',
+      targetRelPath: 'game/template/folder/old (1).txt',
     })
     expect(copyEntryMock).toHaveBeenNthCalledWith(1, '/project/from.txt', '/project/game')
     expect(deleteEntryMock).toHaveBeenCalledOnce()

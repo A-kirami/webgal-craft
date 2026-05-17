@@ -7,6 +7,7 @@ const {
   fileSystemEventHandlers,
   fileSystemEventsOnMock,
   gameSceneDirMock,
+  scrollIntoViewMock,
   useFileStoreMock,
   useTabsStoreMock,
   useWorkspaceStoreMock,
@@ -14,6 +15,7 @@ const {
   fileSystemEventHandlers: new Map<string, (event: unknown) => void>(),
   fileSystemEventsOnMock: vi.fn(),
   gameSceneDirMock: vi.fn(),
+  scrollIntoViewMock: vi.fn(),
   useFileStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
@@ -77,6 +79,25 @@ interface TreeNode {
   path: string
 }
 
+interface TestTab {
+  isPreview?: boolean
+  path: string
+}
+
+function createRect(rect: Partial<DOMRect>): DOMRect {
+  return {
+    bottom: rect.bottom ?? 0,
+    height: rect.height ?? 0,
+    left: rect.left ?? 0,
+    right: rect.right ?? 0,
+    toJSON: () => ({}),
+    top: rect.top ?? 0,
+    width: rect.width ?? 0,
+    x: rect.x ?? rect.left ?? 0,
+    y: rect.y ?? rect.top ?? 0,
+  } as DOMRect
+}
+
 function flattenNodes(items: TreeNode[]): TreeNode[] {
   return items.flatMap(item => [
     item,
@@ -111,19 +132,62 @@ const globalStubs = {
         type: Array,
         required: true,
       },
+      selectedItem: {
+        type: Object,
+        default: undefined,
+      },
     },
     emits: ['auxclick', 'click', 'dblclick', 'update:selectedItem'],
-    setup(props, { emit }) {
+    setup(props, { emit, expose }) {
+      const viewportRef = shallowRef<HTMLElement>()
+
+      function setViewportElement(element: unknown) {
+        const viewport = element instanceof HTMLElement ? element : undefined
+        viewportRef.value = viewport
+        if (viewport) {
+          viewport.getBoundingClientRect = () => createRect({
+            bottom: 100,
+            height: 100,
+            right: 240,
+            width: 240,
+          })
+        }
+      }
+
+      function setSelectedElement(element: unknown) {
+        const selectedElement = element instanceof HTMLElement ? element : undefined
+        if (!selectedElement) {
+          return
+        }
+
+        selectedElement.getBoundingClientRect = () => createRect({
+          bottom: 226,
+          height: 26,
+          right: 240,
+          top: 200,
+          width: 240,
+          y: 200,
+        })
+        selectedElement.scrollIntoView = scrollIntoViewMock as typeof selectedElement.scrollIntoView
+      }
+
+      expose({
+        getViewportElement: () => viewportRef.value,
+      })
+
       function renderItems(items: TreeNode[]) {
         return flattenNodes(items).map((item) => {
           const badgeText = (props.itemBadgeText as ((item: TreeNode) => string | undefined) | undefined)?.(item)
           const isDimmed = (props.itemDimmed as ((item: TreeNode) => boolean) | undefined)?.(item) ?? false
+          const isSelected = (props.selectedItem as TreeNode | undefined)?.path === item.path
 
           return h('div', {
             key: item.path,
           }, [
             h('button', {
+              'ref': isSelected ? setSelectedElement : undefined,
               'type': 'button',
+              'data-selected': isSelected ? '' : undefined,
               'data-dimmed': isDimmed ? 'true' : 'false',
               'onClick': () => emit('click', {
                 hasChildren: Array.isArray(item.children),
@@ -135,7 +199,10 @@ const globalStubs = {
         })
       }
 
-      return () => h('div', renderItems(props.items as TreeNode[]))
+      return () => h('div', {
+        'ref': setViewportElement,
+        'data-testid': 'scene-panel-viewport',
+      }, renderItems(props.items as TreeNode[]))
     },
   }),
 }
@@ -172,6 +239,16 @@ function createFileStore() {
   }
 }
 
+function createTabsStore(activeTab?: TestTab) {
+  return reactive({
+    activeTab,
+    tabs: [] as TestTab[],
+    findTabIndex: vi.fn(() => -1),
+    openTab: vi.fn(),
+    fixPreviewTab: vi.fn(),
+  })
+}
+
 describe('ScenePanel', () => {
   beforeEach(() => {
     vi.resetAllMocks()
@@ -186,13 +263,7 @@ describe('ScenePanel', () => {
 
     gameSceneDirMock.mockReturnValue('/games/demo/game/scene')
     useFileStoreMock.mockReturnValue(createFileStore())
-    useTabsStoreMock.mockReturnValue(reactive({
-      activeTab: undefined,
-      tabs: [],
-      findTabIndex: vi.fn(() => -1),
-      openTab: vi.fn(),
-      fixPreviewTab: vi.fn(),
-    }))
+    useTabsStoreMock.mockReturnValue(createTabsStore())
     useWorkspaceStoreMock.mockReturnValue(reactive({
       currentGame: {
         id: 'game-1',
@@ -225,13 +296,7 @@ describe('ScenePanel', () => {
   })
 
   it('点击文件时会通过 tabs store 打开标签页', async () => {
-    const tabsStore = reactive({
-      activeTab: undefined,
-      tabs: [],
-      findTabIndex: vi.fn(() => -1),
-      openTab: vi.fn(),
-      fixPreviewTab: vi.fn(),
-    })
+    const tabsStore = createTabsStore()
 
     useTabsStoreMock.mockReturnValue(tabsStore)
 
@@ -330,6 +395,36 @@ describe('ScenePanel', () => {
 
     await vi.waitFor(() => {
       expect(fileStore.getFolderContents.mock.calls.length).toBeGreaterThan(initialCalls)
+    })
+  })
+
+  it('active tab 路径变化时会滚动显示选中的场景文件', async () => {
+    const tabsStore = createTabsStore()
+    useTabsStoreMock.mockReturnValue(tabsStore)
+
+    renderInBrowser(ScenePanel, {
+      browser: {
+        i18nMode: 'localized',
+        messages: {
+          'zh-Hans': {
+            edit: {},
+          },
+        },
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('branch.txt')).toBeVisible()
+    expect(scrollIntoViewMock).not.toHaveBeenCalled()
+
+    tabsStore.activeTab = {
+      path: '/games/demo/game/scene/chapter-1/branch.txt',
+    }
+
+    await vi.waitFor(() => {
+      expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
     })
   })
 })

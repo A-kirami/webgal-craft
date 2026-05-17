@@ -139,10 +139,12 @@ async function renameNativePath(oldPath: AbsPath, newName: string): Promise<Path
   }
 }
 
-async function moveNativePath(sourcePath: AbsPath, targetDirectory: AbsPath): Promise<PathMutationResult> {
+async function moveNativePath(sourcePath: AbsPath, targetDirectory: AbsPath, targetName?: string): Promise<PathMutationResult> {
   return {
     echoMode: 'watcher',
-    newPath: await fsCmds.moveFile(sourcePath, targetDirectory),
+    newPath: targetName
+      ? await fsCmds.moveFile(sourcePath, targetDirectory, targetName)
+      : await fsCmds.moveFile(sourcePath, targetDirectory),
   }
 }
 
@@ -164,7 +166,11 @@ async function renameTemplateOverlayPath(oldPath: AbsPath, newName: string): Pro
   return createTemplateOverlayResult(context.projectPath, nextRelPath)
 }
 
-async function moveTemplateOverlayPath(sourcePath: AbsPath, targetDirectory: AbsPath): Promise<PathMutationResult> {
+async function moveTemplateOverlayPath(
+  sourcePath: AbsPath,
+  targetDirectory: AbsPath,
+  targetName?: string,
+): Promise<PathMutationResult> {
   const context = await resolveTemplateOverlayPathContext()
   const relPath = toProjectRelative(context.projectPath, sourcePath)
   const relTargetDirectory = toProjectRelative(context.projectPath, targetDirectory)
@@ -172,7 +178,7 @@ async function moveTemplateOverlayPath(sourcePath: AbsPath, targetDirectory: Abs
     throw new AppError('FS_ERROR', '不能移动项目根目录')
   }
 
-  const targetRelPath = RelPath.append(relTargetDirectory, AbsPath.basename(sourcePath))
+  const targetRelPath = RelPath.append(relTargetDirectory, targetName ?? AbsPath.basename(sourcePath))
   const movedRelPath = await vfsCmds.movePath({
     projectPath: context.projectPath,
     enginePath: context.enginePath,
@@ -265,12 +271,12 @@ async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
   return result
 }
 
-async function moveFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<PathMutationResult> {
+async function moveFile(sourcePath: AbsPath, targetPath: AbsPath, targetName?: string): Promise<PathMutationResult> {
   if (usesTemplateOverlayPath(sourcePath) || usesTemplateOverlayPath(targetPath)) {
-    return moveTemplateOverlayPath(sourcePath, targetPath)
+    return moveTemplateOverlayPath(sourcePath, targetPath, targetName)
   }
 
-  return moveNativePath(sourcePath, targetPath)
+  return moveNativePath(sourcePath, targetPath, targetName)
 }
 
 export const gameFs = {

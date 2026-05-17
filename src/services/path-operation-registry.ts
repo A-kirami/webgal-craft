@@ -2,6 +2,7 @@ import type { AbsPath } from '~/domain/path'
 import type { PathEchoMode } from '~/services/path-mutation'
 
 export interface PendingPathOperation {
+  blocksConflicts: boolean
   id: number
   sourcePath: AbsPath
   targetPath: AbsPath
@@ -58,20 +59,13 @@ function clearCleanupTimer(id: number): void {
   cleanupTimers.delete(id)
 }
 
-function safeWarn(message: string): void {
-  try {
-    void logger.warn(message).catch(() => undefined)
-  } catch {
-    // 运行于非 Tauri 环境时，日志通道可能不可用。
-  }
-}
-
 export function registerPathOperation(input: RegisterPathOperationInput): number {
   const id = nextPendingPathOperationId
   nextPendingPathOperationId += 1
 
   const ttlMs = input.ttlMs ?? DEFAULT_TTL_MS
   pendingPathOperations.set(id, {
+    blocksConflicts: true,
     id,
     sourcePath: input.sourcePath,
     targetPath: input.targetPath,
@@ -82,7 +76,7 @@ export function registerPathOperation(input: RegisterPathOperationInput): number
     cleanupTimers.set(id, setTimeout(() => {
       const pending = pendingPathOperations.get(id)
       if (pending && pending.expectedEchoes > 0) {
-        safeWarn(`路径操作回声超时，已释放 pending: ${pending.sourcePath} -> ${pending.targetPath}`)
+        void logger.warn(`路径操作回声超时，已释放 pending: ${pending.sourcePath} -> ${pending.targetPath}`)
       }
       releasePathOperation(id)
     }, ttlMs))
@@ -125,11 +119,22 @@ function decrementPathOperationEcho(id: number): void {
 }
 
 export function hasOverlappingPathOperation(paths: readonly AbsPath[]): boolean {
-  return [...pendingPathOperations.values()].some(pending =>
+  return [...pendingPathOperations.values()].some(pending => pending.blocksConflicts && (
     paths.some(path =>
       hasPathOverlap(path, pending.sourcePath) || hasPathOverlap(path, pending.targetPath),
-    ),
+    )
+  ),
   )
+}
+
+export function markPathOperationSettled(id: number): boolean {
+  const pending = pendingPathOperations.get(id)
+  if (!pending) {
+    return false
+  }
+
+  pending.blocksConflicts = false
+  return true
 }
 
 function lookupPathOperationRenameEcho(
@@ -170,6 +175,7 @@ export const pathOperationRegistry = {
   register: registerPathOperation,
   updateChannel: updatePathOperationChannel,
   release: releasePathOperation,
+  markSettled: markPathOperationSettled,
   hasOverlap: hasOverlappingPathOperation,
   consumeRenameEcho: consumeRenamePathOperationEcho,
   lookupPathOperationByPath,

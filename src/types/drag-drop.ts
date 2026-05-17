@@ -16,6 +16,8 @@ export type DragSourceType =
 
 export type DragMode = 'sort' | 'transfer'
 
+export type DragTransferOperation = 'copy' | 'move'
+
 export interface DragPayloadBase {
   source: DragSourceType
   type: DragEntityType
@@ -23,9 +25,17 @@ export interface DragPayloadBase {
 
 export interface FileSystemDragPayload extends DragPayloadBase {
   isDir: boolean
+  items?: FileSystemDragPayloadItem[]
+  name?: string
   mimeType?: string
   path: string
   type: 'file-system-item'
+}
+
+export interface FileSystemDragPayloadItem {
+  isDir: boolean
+  name?: string
+  path: string
 }
 
 export interface EditorTabDragPayload extends DragPayloadBase {

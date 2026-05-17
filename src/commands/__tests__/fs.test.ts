@@ -90,4 +90,24 @@ describe('fsCmds', () => {
       'C:/project/target/source.txt',
     )
   })
+
+  it('moveFile 接收计划目标名时不再自行生成唯一名称', async () => {
+    statMock.mockResolvedValue({ isDirectory: false })
+
+    await expect(
+      fsCmds.moveFile(
+        AbsPath.from('/project/source.txt'),
+        AbsPath.from('/project/target'),
+        'source (1).txt',
+      ),
+    )
+      .resolves
+      .toBe('/project/target/source (1).txt')
+
+    expect(existsMock).not.toHaveBeenCalled()
+    expect(renameMock).toHaveBeenCalledWith(
+      '/project/source.txt',
+      '/project/target/source (1).txt',
+    )
+  })
 })
