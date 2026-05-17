@@ -117,7 +117,7 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
     >
       <!-- 命令头部 -->
       <div class="flex gap-2 items-center justify-between">
-        <div class="flex gap-1 cursor-grab items-center active:cursor-grabbing">
+        <div class="flex gap-1 cursor-grab items-center active:cursor-grabbing" data-statement-drag-handle>
           <!-- 拖拽手柄 -->
           <div class="i-lucide-grip-vertical text-muted-foreground opacity-40 size-4 transition-opacity group-hover:opacity-70" />
           <!-- 序号 -->

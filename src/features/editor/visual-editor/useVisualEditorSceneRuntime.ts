@@ -18,6 +18,10 @@ interface UseVisualEditorSceneRuntimeOptions {
   getState: () => SceneVisualProjectionState
 }
 
+interface StatementReorderOptions {
+  restoreSelectionPresentation?: boolean
+}
+
 export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntimeOptions) {
   const editorStore = useEditorStore()
   const editorViewStateStore = useEditorViewStateStore()
@@ -248,6 +252,27 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     requestAutoSave()
   }
 
+  function reorderStatements(fromIndex: number, toIndex: number, reorderOptions: StatementReorderOptions = {}) {
+    const statementCount = state.value.statements.length
+    if (statementCount === 0 || fromIndex < 0 || fromIndex >= statementCount) {
+      return
+    }
+
+    const normalizedTargetIndex = Math.min(Math.max(toIndex, 0), statementCount - 1)
+    if (fromIndex === normalizedTargetIndex) {
+      return
+    }
+
+    editorStore.applySceneStatementReorder(state.value.path, fromIndex, normalizedTargetIndex)
+    if (reorderOptions.restoreSelectionPresentation ?? true) {
+      void restoreSelectedStatementPresentation({
+        align: 'auto',
+        focus: true,
+      })
+    }
+    requestAutoSave()
+  }
+
   function moveSelectedStatement(offset: -1 | 1) {
     const currentSelectedStatementId = readSelectedStatementId()
     const currentSelectedIndex = selectedIndex.value
@@ -260,12 +285,7 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
       return
     }
 
-    editorStore.applySceneStatementReorder(state.value.path, currentSelectedIndex, nextIndex)
-    void restoreSelectedStatementPresentation({
-      align: 'auto',
-      focus: true,
-    })
-    requestAutoSave()
+    reorderStatements(currentSelectedIndex, nextIndex)
   }
 
   function handleStatementDelete(id: number) {
@@ -567,7 +587,9 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     isStatementCollapsed,
     measureRowElement: viewport.measureRowElement,
     previousSpeakers,
+    reorderStatements,
     selectedStatementId,
+    statementSortVirtualAdapter: viewport.statementSortVirtualAdapter,
     totalSize: viewport.totalSize,
     virtualRows: viewport.virtualRows,
   }

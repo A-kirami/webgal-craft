@@ -9,6 +9,7 @@ import type { SceneVisualProjectionState } from '~/stores/editor'
 
 const {
   restoreSelectionAndScrollMock,
+  scrollToSelectedStatementMock,
   useCommandPanelBridgeBindingMock,
   useCommandPanelStoreMock,
   useEditSettingsStoreMock,
@@ -21,6 +22,7 @@ const {
   useVisualEditorSceneViewportMock,
 } = vi.hoisted(() => ({
   restoreSelectionAndScrollMock: vi.fn(async () => undefined),
+  scrollToSelectedStatementMock: vi.fn(async () => undefined),
   useCommandPanelBridgeBindingMock: vi.fn(),
   useCommandPanelStoreMock: vi.fn(),
   useEditSettingsStoreMock: vi.fn(),
@@ -121,6 +123,7 @@ describe('useVisualEditorSceneRuntime', () => {
 
   beforeEach(() => {
     restoreSelectionAndScrollMock.mockReset()
+    scrollToSelectedStatementMock.mockReset()
     useCommandPanelBridgeBindingMock.mockReset()
     useCommandPanelStoreMock.mockReset()
     useEditSettingsStoreMock.mockReset()
@@ -177,7 +180,14 @@ describe('useVisualEditorSceneRuntime', () => {
       isPositioning: computed(() => false),
       measureRowElement: vi.fn(),
       restoreSelectionAndScroll: restoreSelectionAndScrollMock,
-      scrollToSelectedStatement: vi.fn(async () => undefined),
+      scrollToSelectedStatement: scrollToSelectedStatementMock,
+      statementSortVirtualAdapter: {
+        getEstimatedItemSize: vi.fn(() => 100),
+        getItemCount: vi.fn(() => 0),
+        getScrollOffset: vi.fn(() => 0),
+        getVisibleItems: vi.fn(() => []),
+        invalidate: vi.fn(),
+      },
       totalSize: computed(() => 0),
       virtualRows: computed(() => []),
     })
@@ -393,6 +403,63 @@ describe('useVisualEditorSceneRuntime', () => {
     expect(applySceneStatementReorder).toHaveBeenCalledWith('/project/scene.txt', 0, 1)
     expect(syncScenePreview).not.toHaveBeenCalled()
     expect(scheduleAutoSaveIfEnabled).toHaveBeenCalledWith('/project/scene.txt')
+    expect(scrollToSelectedStatementMock).toHaveBeenCalledWith('auto')
+
+    scope.stop()
+  })
+
+  it('拖拽重排语句时不会触发滚动恢复', () => {
+    const scope = effectScope()
+    const state = createState([
+      {
+        id: 1,
+        parseError: false,
+        parsed: undefined,
+        rawText: 'say:first',
+      },
+      {
+        id: 2,
+        parseError: false,
+        parsed: undefined,
+        rawText: 'say:second',
+      },
+    ])
+    const applySceneStatementReorder = vi.fn()
+    const scheduleAutoSaveIfEnabled = vi.fn()
+
+    useEditorStoreMock.mockReturnValue(reactive({
+      applySceneStatementDelete: vi.fn(),
+      applySceneStatementInsert: vi.fn(),
+      applySceneStatementReorder,
+      applySceneStatementUpdate: vi.fn(),
+      consumePendingSceneProjectionActivation: vi.fn(() => false),
+      currentState: {
+        kind: 'scene',
+        path: '/project/scene.txt',
+        projection: 'visual',
+      },
+      getSceneSelection: vi.fn(() => ({
+        lastEditedStatementId: 1,
+        lastLineNumber: 1,
+        selectedStatementId: 1,
+      })),
+      isSceneStatementCollapsed: vi.fn(() => false),
+      scheduleAutoSaveIfEnabled,
+      setSceneStatementCollapsed: vi.fn(),
+      syncScenePreview: vi.fn(),
+      syncSceneSelectionFromStatement: vi.fn(),
+    }))
+
+    const runtime = scope.run(() => useVisualEditorSceneRuntime({
+      getScrollArea: () => undefined,
+      getState: () => state,
+    }))
+
+    runtime?.reorderStatements(0, 1, { restoreSelectionPresentation: false })
+
+    expect(applySceneStatementReorder).toHaveBeenCalledWith('/project/scene.txt', 0, 1)
+    expect(scheduleAutoSaveIfEnabled).toHaveBeenCalledWith('/project/scene.txt')
+    expect(scrollToSelectedStatementMock).not.toHaveBeenCalled()
 
     scope.stop()
   })

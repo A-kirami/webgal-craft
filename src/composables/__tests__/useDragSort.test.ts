@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useDragSession } from '../useDragSession'
 import { useDragSort } from '../useDragSort'
 
+import type { DragSortVirtualAdapter } from '../useDragSort'
 import type { Ref, StyleValue } from 'vue'
 import type { EditorTabDragPayload } from '~/types/drag-drop'
 
@@ -79,10 +80,24 @@ function createRect(left: number, width: number, top: number = 0, height: number
   }
 }
 
+function createVerticalRect(top: number, height: number = 100, left: number = 0, width: number = 320): DOMRect {
+  return createRect(left, width, top, height)
+}
+
 function createIgnoredTarget(): TestTargetElement {
   const target = {
     closest(selector: string) {
       return selector === '[data-drag-ignore]' ? target as unknown as Element : null
+    },
+  }
+
+  return target as TestTargetElement
+}
+
+function createHandleTarget(): TestTargetElement {
+  const target = {
+    closest(selector: string) {
+      return selector === '[data-tab-handle]' ? target as unknown as Element : null
     },
   }
 
@@ -257,6 +272,45 @@ function createSortFixture(itemsRef: Ref<string[]> = shallowRef(['a', 'b', 'c'])
     itemsRef,
     onSort,
     sort,
+  }
+}
+
+function createVirtualSortFixture(viewportHeight: number = 300) {
+  const itemsRef = shallowRef(Array.from({ length: 50 }, (_value, index) => `item-${index}`))
+  const elements = [
+    createDragElement(20, createVerticalRect(0)),
+    createDragElement(21, createVerticalRect(100)),
+    createDragElement(22, createVerticalRect(200)),
+  ]
+  const onSort = vi.fn()
+  const virtualAdapter: DragSortVirtualAdapter = {
+    getEstimatedItemSize: () => 100,
+    getItemCount: () => itemsRef.value.length,
+    getScrollOffset: () => 2000,
+    getVisibleItems: () => [
+      { index: 20, size: 100, start: 2000 },
+      { index: 21, size: 100, start: 2100 },
+      { index: 22, size: 100, start: 2200 },
+    ],
+    invalidate: vi.fn(),
+  }
+  const sort = useDragSort<string>({
+    autoScroll: false,
+    direction: 'vertical',
+    getKey: item => item,
+    getPayload: () => tabPayload,
+    items: itemsRef,
+    onSort,
+    virtualAdapter,
+  })
+  sort.containerRef.value = createContainer(elements, createVerticalRect(0, viewportHeight))
+
+  return {
+    elements,
+    itemsRef,
+    onSort,
+    sort,
+    virtualAdapter,
   }
 }
 
@@ -487,6 +541,47 @@ describe('useDragSort', () => {
     expect(onSort).not.toHaveBeenCalled()
   })
 
+  it('命中手柄的 pointerdown 在后续 pointermove 目标变化后仍能启动排序', () => {
+    vi.useFakeTimers()
+    setupDragDocument()
+    setupAnimationFrame()
+    setupGlobalListeners()
+    const itemsRef = shallowRef(['a', 'b', 'c'])
+    const elements = [
+      createDragElement(0, createRect(0, 100)),
+      createDragElement(1, createRect(100, 100)),
+      createDragElement(2, createRect(200, 100)),
+    ]
+    const onSort = vi.fn()
+    const sort = useDragSort<string>({
+      autoScroll: false,
+      direction: 'horizontal',
+      getKey: item => item,
+      getPayload: () => tabPayload,
+      handleSelector: '[data-tab-handle]',
+      items: itemsRef,
+      onSort,
+    })
+    sort.containerRef.value = createContainer(elements)
+    const handleTarget = createHandleTarget()
+
+    sort.getItemProps(0).onPointerdown(createPointerEvent({
+      clientX: 10,
+      currentTarget: elements[0],
+      pointerId: 14,
+      target: handleTarget,
+    }))
+    startDrag(elements[0], 14, 260)
+    elements[0].dispatch('pointerup', {
+      clientX: 260,
+      pointerId: 14,
+      target: elements[0],
+    })
+    vi.runOnlyPendingTimers()
+
+    expect(onSort).toHaveBeenCalledWith(0, 2)
+  })
+
   it('settling 期间投影 key 序列变化时取消提交，避免插入到错误语义位置', () => {
     vi.useFakeTimers()
     setupDragDocument()
@@ -686,5 +781,209 @@ describe('useDragSort', () => {
 
     expect(container.scrollLeft).toBeGreaterThan(0)
     expect(sort.targetIndex.value).toBe(3)
+  })
+
+  it('拖拽项触及容器边缘时即使指针未靠近边缘也会触发自动滚动', () => {
+    setupDragDocument()
+    const { flushAnimationFrame } = setupControlledAnimationFrame()
+    setupGlobalListeners()
+    const elements = [
+      createDragElement(0, createRect(0, 100)),
+      createDragElement(1, createRect(100, 100)),
+      createDragElement(2, createRect(200, 100)),
+      createDragElement(3, createRect(300, 100)),
+      createDragElement(4, createRect(400, 100)),
+    ]
+    const sort = useDragSort<string>({
+      direction: 'horizontal',
+      getKey: item => item,
+      getPayload: () => tabPayload,
+      items: shallowRef(['a', 'b', 'c', 'd', 'e']),
+      onSort: vi.fn(),
+    })
+    const container = createScrollingContainer(elements, createRect(0, 250))
+    sort.containerRef.value = container
+
+    sort.getItemProps(0).onPointerdown(createPointerEvent({
+      clientX: 10,
+      currentTarget: elements[0],
+      pointerId: 26,
+      target: elements[0],
+    }))
+    startDrag(elements[0], 26, 160)
+
+    flushAnimationFrame(50)
+    flushAnimationFrame(100)
+    flushAnimationFrame(200)
+
+    expect(container.scrollLeft).toBeGreaterThan(0)
+  })
+
+  it('拖拽项贴边后继续向边缘外拖动会提高自动滚动速度', () => {
+    setupDragDocument()
+    const { flushAnimationFrame } = setupControlledAnimationFrame()
+    setupGlobalListeners()
+    const elements = [
+      createDragElement(0, createRect(0, 100)),
+      createDragElement(1, createRect(100, 100)),
+      createDragElement(2, createRect(200, 100)),
+      createDragElement(3, createRect(300, 100)),
+      createDragElement(4, createRect(400, 100)),
+    ]
+    const sort = useDragSort<string>({
+      direction: 'horizontal',
+      getKey: item => item,
+      getPayload: () => tabPayload,
+      items: shallowRef(['a', 'b', 'c', 'd', 'e']),
+      onSort: vi.fn(),
+    })
+    const container = createScrollingContainer(elements, createRect(0, 250))
+    sort.containerRef.value = container
+
+    sort.getItemProps(0).onPointerdown(createPointerEvent({
+      clientX: 10,
+      currentTarget: elements[0],
+      pointerId: 27,
+      target: elements[0],
+    }))
+    startDrag(elements[0], 27, 160)
+    flushAnimationFrame(50)
+    flushAnimationFrame(150)
+    const firstDelta = container.scrollLeft
+
+    moveDrag(27, 184)
+    flushAnimationFrame(250)
+    const secondDelta = container.scrollLeft - firstDelta
+
+    expect(secondDelta).toBeGreaterThan(firstDelta)
+  })
+
+  it('虚拟列表向下排序会等拖拽项前缘越过可见项中点后再更新 targetIndex', () => {
+    setupDragDocument()
+    setupAnimationFrame()
+    setupGlobalListeners()
+    const { elements, sort } = createVirtualSortFixture()
+
+    sort.getItemProps(20).onPointerdown(createPointerEvent({
+      clientX: 10,
+      clientY: 10,
+      currentTarget: elements[0],
+      pointerId: 21,
+      target: elements[0],
+    }))
+    startDrag(elements[0], 21, 10, 55)
+
+    expect(sort.targetIndex.value).toBe(20)
+
+    moveDrag(21, 10, 60)
+
+    expect(sort.targetIndex.value).toBe(21)
+
+    moveDrag(21, 10, 160)
+
+    expect(sort.targetIndex.value).toBe(22)
+    expect(sort.getItemStyle(21)).toMatchObject({
+      transform: 'translate3d(0, -100px, 0)',
+    })
+  })
+
+  it('虚拟列表向上排序会等拖拽项前缘越过可见项中点后再更新 targetIndex', () => {
+    setupDragDocument()
+    setupAnimationFrame()
+    setupGlobalListeners()
+    const { elements, sort } = createVirtualSortFixture()
+
+    sort.getItemProps(22).onPointerdown(createPointerEvent({
+      clientX: 10,
+      clientY: 210,
+      currentTarget: elements[2],
+      pointerId: 25,
+      target: elements[2],
+    }))
+    startDrag(elements[2], 25, 10, 165)
+
+    expect(sort.targetIndex.value).toBe(22)
+
+    moveDrag(25, 10, 160)
+
+    expect(sort.targetIndex.value).toBe(21)
+  })
+
+  it('虚拟列表指针落在不可见区时仍按拖拽项可视前缘计算 targetIndex', () => {
+    setupDragDocument()
+    setupAnimationFrame()
+    setupGlobalListeners()
+    const { elements, sort } = createVirtualSortFixture()
+
+    sort.getItemProps(20).onPointerdown(createPointerEvent({
+      clientX: 10,
+      clientY: 10,
+      currentTarget: elements[0],
+      pointerId: 22,
+      target: elements[0],
+    }))
+    startDrag(elements[0], 22, 10, 360)
+
+    expect(sort.targetIndex.value).toBe(22)
+  })
+
+  it('虚拟列表排序提交后会通知 virtualizer 重新测量', async () => {
+    vi.useFakeTimers()
+    setupDragDocument()
+    setupAnimationFrame()
+    setupGlobalListeners()
+    const { elements, onSort, sort, virtualAdapter } = createVirtualSortFixture()
+
+    sort.getItemProps(20).onPointerdown(createPointerEvent({
+      clientX: 10,
+      clientY: 10,
+      currentTarget: elements[0],
+      pointerId: 23,
+      target: elements[0],
+    }))
+    startDrag(elements[0], 23, 10, 360)
+    elements[0].dispatch('pointerup', {
+      clientX: 10,
+      clientY: 360,
+      pointerId: 23,
+      target: elements[0],
+    })
+
+    vi.runOnlyPendingTimers()
+    await nextTick()
+
+    expect(onSort).toHaveBeenCalledWith(20, 22)
+    expect(virtualAdapter.invalidate).toHaveBeenCalledOnce()
+  })
+
+  it('虚拟列表目标槽位在半可见底部项下方时 settling 位置保持真实槽位位置并裁剪到 viewport', () => {
+    setupDragDocument()
+    setupAnimationFrame()
+    setupGlobalListeners()
+    const { elements, sort } = createVirtualSortFixture(250)
+
+    sort.getItemProps(20).onPointerdown(createPointerEvent({
+      clientX: 10,
+      clientY: 10,
+      currentTarget: elements[0],
+      pointerId: 24,
+      target: elements[0],
+    }))
+    startDrag(elements[0], 24, 10, 240)
+    elements[0].dispatch('pointerup', {
+      clientX: 10,
+      clientY: 240,
+      pointerId: 24,
+      target: elements[0],
+    })
+
+    expect(sort.phase.value).toBe('settling')
+    expect(sort.targetIndex.value).toBe(22)
+    expect(styleRecord(sort.overlayState.value?.overlayStyle)).toMatchObject({
+      transform: 'translate3d(0px, 200px, 0)',
+    })
+    expect(styleRecord(sort.overlayState.value?.overlayFrameStyle)).toMatchObject({
+      clipPath: 'inset(0px calc(100% - 320px) calc(100% - 250px) 0px)',
+    })
   })
 })

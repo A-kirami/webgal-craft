@@ -2,6 +2,7 @@ import { useAutoScrollOnDrag } from './useAutoScrollOnDrag'
 import { useDragSession } from './useDragSession'
 import { usePointerDrag } from './usePointerDrag'
 
+import type { DragAutoScrollBounds } from './useAutoScrollOnDrag'
 import type { Ref, StyleValue } from 'vue'
 import type { DragPayload, DragPosition } from '~/types/drag-drop'
 
@@ -11,8 +12,23 @@ export type DragSortPhase = 'dragging' | 'idle' | 'settling'
 export interface DragSortOverlayState<T> {
   item: T
   key: string
+  overlayFrameStyle: StyleValue
   overlayStyle: StyleValue
   phase: DragSortPhase
+}
+
+export interface DragSortVirtualItem {
+  index: number
+  size: number
+  start: number
+}
+
+export interface DragSortVirtualAdapter {
+  getEstimatedItemSize: () => number
+  getItemCount: () => number
+  getScrollOffset: () => number
+  getVisibleItems: () => DragSortVirtualItem[]
+  invalidate: () => void
 }
 
 export interface UseDragSortOptions<T> {
@@ -22,9 +38,10 @@ export interface UseDragSortOptions<T> {
   getPayload: (item: T, index: number, element: HTMLElement) => DragPayload
   handleSelector?: string
   ignoreSelector?: string
-  items: Ref<T[]>
+  items: Readonly<Ref<readonly T[]>>
   onSort: (fromIndex: number, targetIndex: number) => void
   scrollContainer?: Ref<HTMLElement | undefined>
+  virtualAdapter?: DragSortVirtualAdapter
 }
 
 export interface UseDragSortReturn<T> {
@@ -99,6 +116,13 @@ interface LayoutRect {
   mainStart: number
 }
 
+interface FixedRect {
+  height: number
+  width: number
+  x: number
+  y: number
+}
+
 const EMPTY_STYLE = {}
 const SETTLING_DURATION_MS = 120
 const SETTLING_TIMEOUT_MS = SETTLING_DURATION_MS + 40
@@ -143,11 +167,27 @@ function createTranslate(direction: DragSortDirection, distance: number): string
     : `translate3d(0, ${distance}px, 0)`
 }
 
+function getFixedRect(direction: DragSortDirection, rect: LayoutRect): FixedRect {
+  return {
+    height: Math.round(direction === 'horizontal' ? rect.crossSize : rect.mainSize),
+    width: Math.round(direction === 'horizontal' ? rect.mainSize : rect.crossSize),
+    x: Math.round(direction === 'horizontal' ? rect.mainStart : rect.crossStart),
+    y: Math.round(direction === 'horizontal' ? rect.crossStart : rect.mainStart),
+  }
+}
+
+function createOverlayFrameStyle(direction: DragSortDirection, viewport: DragSortViewportSnapshot): StyleValue {
+  const { height, width, x, y } = getFixedRect(direction, viewport)
+  const right = x + width
+  const bottom = y + height
+
+  return {
+    clipPath: `inset(${y}px calc(100% - ${right}px) calc(100% - ${bottom}px) ${x}px)`,
+  }
+}
+
 function createOverlayStyle(direction: DragSortDirection, rect: LayoutRect, transition: string): StyleValue {
-  const x = Math.round(direction === 'horizontal' ? rect.mainStart : rect.crossStart)
-  const y = Math.round(direction === 'horizontal' ? rect.crossStart : rect.mainStart)
-  const width = Math.round(direction === 'horizontal' ? rect.mainSize : rect.crossSize)
-  const height = Math.round(direction === 'horizontal' ? rect.crossSize : rect.mainSize)
+  const { height, width, x, y } = getFixedRect(direction, rect)
 
   return {
     height: `${height}px`,
@@ -156,6 +196,21 @@ function createOverlayStyle(direction: DragSortDirection, rect: LayoutRect, tran
     width: `${width}px`,
     zIndex: '9999',
   }
+}
+
+function createAutoScrollBoundsFromRect(direction: DragSortDirection, rect: LayoutRect): DragAutoScrollBounds {
+  const { height, width, x, y } = getFixedRect(direction, rect)
+
+  return {
+    bottom: y + height,
+    left: x,
+    right: x + width,
+    top: y,
+  }
+}
+
+function projectIndexAfterRemoval(index: number, removedIndex: number): number {
+  return index > removedIndex ? index - 1 : index
 }
 
 function hasClosest(value: EventTarget | null): value is EventTarget & { closest: (selector: string) => Element | null } {
@@ -256,7 +311,7 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
 
     return {
       ...axis,
-      scrollOffset: getScrollOffset(viewport, options.direction),
+      scrollOffset: options.virtualAdapter?.getScrollOffset() ?? getScrollOffset(viewport, options.direction),
     }
   }
 
@@ -284,6 +339,62 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
     }
   }
 
+  function createSnapshotItems(viewport: DragSortViewportSnapshot): DragSortItemSnapshot<T>[] {
+    return getItemElements()
+      .map(element => createSnapshotItem(element, viewport))
+      .filter((item): item is DragSortItemSnapshot<T> => item !== undefined)
+  }
+
+  function getVirtualItemAxis(
+    virtualItem: DragSortVirtualItem,
+    element: HTMLElement | undefined,
+    viewport: DragSortViewportSnapshot,
+  ): AxisRect {
+    if (element) {
+      return getAxisRect(element.getBoundingClientRect(), options.direction)
+    }
+
+    return {
+      crossSize: viewport.crossSize,
+      crossStart: viewport.crossStart,
+      mainSize: virtualItem.size,
+      mainStart: viewport.mainStart + virtualItem.start - viewport.scrollOffset,
+    }
+  }
+
+  function createVirtualSnapshotItems(
+    viewport: DragSortViewportSnapshot,
+  ): DragSortItemSnapshot<T>[] {
+    const adapter = options.virtualAdapter
+    if (!adapter) {
+      return []
+    }
+
+    const elementMap = new Map(getItemElements().map(element => [getElementIndex(element), element]))
+
+    return adapter.getVisibleItems()
+      .map((virtualItem): DragSortItemSnapshot<T> | undefined => {
+        const item = options.items.value[virtualItem.index]
+        if (item === undefined) {
+          return undefined
+        }
+
+        const element = elementMap.get(virtualItem.index)
+        const axis = getVirtualItemAxis(virtualItem, element, viewport)
+
+        return {
+          crossSize: axis.crossSize,
+          crossStart: axis.crossStart,
+          index: virtualItem.index,
+          item,
+          key: options.getKey(item, virtualItem.index, element),
+          mainSize: virtualItem.size,
+          mainStartInContent: virtualItem.start,
+        }
+      })
+      .filter((item): item is DragSortItemSnapshot<T> => item !== undefined)
+  }
+
   function createSnapshot(): DragSortSnapshot<T> | undefined {
     const viewport = getCurrentViewportSnapshot()
     if (!viewport) {
@@ -291,11 +402,20 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
     }
 
     return {
-      items: getItemElements()
-        .map(element => createSnapshotItem(element, viewport))
-        .filter((item): item is DragSortItemSnapshot<T> => item !== undefined),
+      items: options.virtualAdapter
+        ? createVirtualSnapshotItems(viewport)
+        : createSnapshotItems(viewport),
       viewport,
     }
+  }
+
+  function getCurrentSnapshotItems(dragState: DragSortState<T>): DragSortItemSnapshot<T>[] {
+    if (!options.virtualAdapter) {
+      return dragState.snapshots
+    }
+
+    const viewport = getCurrentViewportSnapshot() ?? dragState.viewport
+    return createVirtualSnapshotItems(viewport)
   }
 
   function getProjectedItems(dragState: DragSortState<T> | undefined = state): ProjectedDragSortItem<T>[] {
@@ -305,15 +425,21 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
 
     const { draggedItem } = dragState
 
-    return dragState.snapshots
+    return getCurrentSnapshotItems(dragState)
       .filter(item => item.key !== draggedItem.key)
-      .map((item, projectedIndex) => ({
-        ...item,
-        projectedIndex,
-        projectedMainStartInContent: item.index > draggedItem.index
-          ? item.mainStartInContent - draggedItem.mainSize
-          : item.mainStartInContent,
-      }))
+      .map((item, projectedIndex) => {
+        const nextProjectedIndex = options.virtualAdapter
+          ? projectIndexAfterRemoval(item.index, draggedItem.index)
+          : projectedIndex
+
+        return {
+          ...item,
+          projectedIndex: nextProjectedIndex,
+          projectedMainStartInContent: item.index > draggedItem.index
+            ? item.mainStartInContent - draggedItem.mainSize
+            : item.mainStartInContent,
+        }
+      })
   }
 
   function getProjectedKeys(items: readonly T[], draggedKey: string): string[] {
@@ -362,10 +488,17 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
     pointerOffsetInItem: number,
   ): number {
     return clampMainStartInViewport(
-      getPointerMain(position, options.direction) - pointerOffsetInItem,
+      getLogicalOverlayMainStartInViewport(position, pointerOffsetInItem),
       viewport,
       draggedItem,
     )
+  }
+
+  function getLogicalOverlayMainStartInViewport(
+    position: DragPosition,
+    pointerOffsetInItem: number,
+  ): number {
+    return getPointerMain(position, options.direction) - pointerOffsetInItem
   }
 
   function getOverlayMainStartInContent(
@@ -403,7 +536,71 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
     }
   }
 
+  function resolveEstimatedVirtualTargetIndex(
+    mainInContent: number,
+    adapter: DragSortVirtualAdapter,
+  ): number {
+    const itemCount = adapter.getItemCount()
+    if (itemCount === 0) {
+      return 0
+    }
+
+    const estimatedItemSize = Math.max(1, adapter.getEstimatedItemSize())
+    return clamp(
+      Math.round(mainInContent / estimatedItemSize),
+      0,
+      itemCount - 1,
+    )
+  }
+
+  function resolveVirtualTargetIndex(position: DragPosition): number | undefined {
+    const dragState = state
+    const adapter = options.virtualAdapter
+    if (!dragState || !adapter) {
+      return
+    }
+
+    const { draggedItem } = dragState
+    const overlayBounds = getOverlayMainBoundsInContent(position)
+    if (!overlayBounds) {
+      return
+    }
+
+    if (overlayBounds.start === draggedItem.mainStartInContent) {
+      return dragState.initialTargetIndex
+    }
+
+    const isMovingDown = overlayBounds.start > draggedItem.mainStartInContent
+    const leadingMainInContent = isMovingDown ? overlayBounds.end : overlayBounds.start
+    const projectedItems = getProjectedItems(dragState)
+    const firstProjectedItem = projectedItems[0]
+    const lastProjectedItem = projectedItems.at(-1)
+
+    if (firstProjectedItem && lastProjectedItem) {
+      const firstMainStart = firstProjectedItem.mainStartInContent
+      const lastMainEnd = lastProjectedItem.mainStartInContent + lastProjectedItem.mainSize
+
+      if (leadingMainInContent >= firstMainStart && leadingMainInContent <= lastMainEnd) {
+        const targetItem = projectedItems.find((item) => {
+          const midpoint = item.mainStartInContent + item.mainSize / 2
+          return isMovingDown
+            ? leadingMainInContent < midpoint
+            : leadingMainInContent <= midpoint
+        })
+        const nextIndex = targetItem?.projectedIndex ?? lastProjectedItem.projectedIndex + 1
+        return clamp(nextIndex, 0, Math.max(0, adapter.getItemCount() - 1))
+      }
+    }
+
+    return resolveEstimatedVirtualTargetIndex(leadingMainInContent, adapter)
+  }
+
   function resolveTargetIndex(position: DragPosition): number {
+    const virtualTargetIndex = resolveVirtualTargetIndex(position)
+    if (virtualTargetIndex !== undefined) {
+      return virtualTargetIndex
+    }
+
     const dragState = state
     const overlayBounds = getOverlayMainBoundsInContent(position)
 
@@ -435,10 +632,12 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
     return nextIndex === -1 ? projectedItems.length : nextIndex
   }
 
-  function createOverlayRect(position: DragPosition): LayoutRect | undefined {
+  function createOverlayRect(
+    position: DragPosition,
+    viewport: DragSortViewportSnapshot,
+  ): LayoutRect | undefined {
     const dragState = state
-    const viewport = getCurrentViewportSnapshot()
-    if (!dragState || !viewport) {
+    if (!dragState) {
       return
     }
 
@@ -453,12 +652,51 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
     return createLayoutRectFromMainStart(dragState, viewport, nextMainStart)
   }
 
+  function createLogicalOverlayRect(
+    position: DragPosition,
+    viewport: DragSortViewportSnapshot,
+  ): LayoutRect | undefined {
+    const dragState = state
+    if (!dragState) {
+      return
+    }
+
+    const nextMainStart = getLogicalOverlayMainStartInViewport(
+      position,
+      dragState.pointerOffsetInItem,
+    )
+
+    return createLayoutRectFromMainStart(dragState, viewport, nextMainStart)
+  }
+
+  function createAutoScrollBounds(
+    position: DragPosition,
+    createRect: (position: DragPosition, viewport: DragSortViewportSnapshot) => LayoutRect | undefined,
+  ): DragAutoScrollBounds | undefined {
+    const viewport = getCurrentViewportSnapshot()
+    if (!viewport) {
+      return
+    }
+
+    const rect = createRect(position, viewport)
+    if (!rect) {
+      return
+    }
+
+    return createAutoScrollBoundsFromRect(options.direction, rect)
+  }
+
   function getTargetSlotMainStartInContent(
     draggedItem: DragSortItemSnapshot<T>,
     projectedItems: ProjectedDragSortItem<T>[],
   ): number {
-    const clampedTargetIndex = clamp(targetIndex.value, 0, projectedItems.length)
-    const targetItem = projectedItems[clampedTargetIndex]
+    const maxTargetIndex = options.virtualAdapter
+      ? Math.max(0, options.virtualAdapter.getItemCount() - 1)
+      : projectedItems.length
+    const clampedTargetIndex = clamp(targetIndex.value, 0, maxTargetIndex)
+    const targetItem = options.virtualAdapter
+      ? projectedItems.find(item => item.projectedIndex >= clampedTargetIndex)
+      : projectedItems[clampedTargetIndex]
 
     if (targetItem) {
       return targetItem.projectedMainStartInContent
@@ -470,10 +708,9 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
       : draggedItem.mainStartInContent
   }
 
-  function createTargetSlotRect(): LayoutRect | undefined {
+  function createTargetSlotRect(viewport: DragSortViewportSnapshot): LayoutRect | undefined {
     const dragState = state
-    const viewport = getCurrentViewportSnapshot()
-    if (!dragState || !viewport) {
+    if (!dragState) {
       return
     }
 
@@ -482,19 +719,26 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
       draggedItem,
       getProjectedItems(dragState),
     )
-    const slotMainStart = clampMainStartInViewport(
-      viewport.mainStart + slotMainStartInContent - viewport.scrollOffset,
-      viewport,
-      draggedItem,
-    )
+    const slotMainStartInViewport = viewport.mainStart + slotMainStartInContent - viewport.scrollOffset
+    const slotMainStart = options.virtualAdapter
+      ? slotMainStartInViewport
+      : clampMainStartInViewport(slotMainStartInViewport, viewport, draggedItem)
 
     return createLayoutRectFromMainStart(dragState, viewport, slotMainStart)
   }
 
   function updateOverlay(position: DragPosition, nextPhase: DragSortPhase, transition: string) {
     const draggedItem = state?.draggedItem
-    const rect = nextPhase === 'settling' ? createTargetSlotRect() : createOverlayRect(position)
-    if (!draggedItem || !rect) {
+    const viewport = getCurrentViewportSnapshot()
+    if (!draggedItem || !viewport) {
+      overlayState.value = undefined
+      return
+    }
+
+    const rect = nextPhase === 'settling'
+      ? createTargetSlotRect(viewport)
+      : createOverlayRect(position, viewport)
+    if (!rect) {
       overlayState.value = undefined
       return
     }
@@ -502,6 +746,7 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
     overlayState.value = {
       item: draggedItem.item,
       key: draggedItem.key,
+      overlayFrameStyle: createOverlayFrameStyle(options.direction, viewport),
       overlayStyle: createOverlayStyle(options.direction, rect, transition),
       phase: nextPhase,
     }
@@ -562,6 +807,11 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
 
     if (snapshot.targetIndex !== snapshot.initialTargetIndex) {
       options.onSort(currentFromIndex, snapshot.targetIndex)
+      if (options.virtualAdapter) {
+        void nextTick(() => {
+          options.virtualAdapter?.invalidate()
+        })
+      }
     }
 
     endSortSession()
@@ -582,10 +832,6 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
 
   function startSort(event: PointerEvent, sourceElement: HTMLElement, startPosition: DragPosition): boolean {
     if (phase.value === 'settling' || settlingTimerId !== undefined) {
-      return false
-    }
-
-    if (!isHandleAllowed(event, sourceElement, options.handleSelector)) {
       return false
     }
 
@@ -660,7 +906,11 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
       updateDrag(currentPosition)
 
       if (options.autoScroll !== false) {
-        autoScroll.update(currentPosition)
+        autoScroll.update(
+          currentPosition,
+          createAutoScrollBounds(currentPosition, createOverlayRect),
+          createAutoScrollBounds(currentPosition, createLogicalOverlayRect),
+        )
       }
     },
     onDragStart: (event, context) => startSort(event, context.sourceElement, context.startPosition),
@@ -686,6 +936,10 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
         }
 
         if (matchesSelectorInside(event, sourceElement, options.ignoreSelector)) {
+          return
+        }
+
+        if (!isHandleAllowed(event, sourceElement, options.handleSelector)) {
           return
         }
 

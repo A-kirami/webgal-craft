@@ -2,6 +2,10 @@ import { useVirtualizer } from '@tanstack/vue-virtual'
 
 import { SceneVisualProjectionState } from '~/stores/editor'
 
+import type { DragSortVirtualAdapter } from '~/composables/useDragSort'
+
+const ESTIMATED_STATEMENT_ROW_SIZE = 100
+
 interface UseVisualEditorSceneViewportOptions {
   getScrollArea: () => InstanceType<typeof ScrollArea> | null | undefined
   getSelectedIndex: () => number
@@ -17,7 +21,7 @@ export function useVisualEditorSceneViewport(options: UseVisualEditorSceneViewpo
       count: state.value.statements.length,
       // eslint-disable-next-line unicorn/no-null
       getScrollElement: () => options.getScrollArea()?.viewport?.viewportElement ?? null,
-      estimateSize: () => 100,
+      estimateSize: () => ESTIMATED_STATEMENT_ROW_SIZE,
       overscan: 5,
       paddingStart: 8,
       paddingEnd: 8,
@@ -28,6 +32,29 @@ export function useVisualEditorSceneViewport(options: UseVisualEditorSceneViewpo
   const virtualRows = computed(() => rowVirtualizer.value.getVirtualItems())
   const totalSize = computed(() => rowVirtualizer.value.getTotalSize())
   const isPositioning = ref(false)
+
+  function measureVisibleStatementRows() {
+    const viewportElement = options.getScrollArea()?.viewport?.viewportElement
+    if (!viewportElement) {
+      return
+    }
+
+    for (const element of viewportElement.querySelectorAll<HTMLElement>('[data-index]')) {
+      rowVirtualizer.value.measureElement(element)
+    }
+  }
+
+  const statementSortVirtualAdapter: DragSortVirtualAdapter = {
+    getEstimatedItemSize: () => ESTIMATED_STATEMENT_ROW_SIZE,
+    getItemCount: () => state.value.statements.length,
+    getScrollOffset: () => rowVirtualizer.value.scrollOffset ?? 0,
+    getVisibleItems: () => rowVirtualizer.value.getVirtualItems().map(item => ({
+      index: item.index,
+      size: item.size,
+      start: item.start,
+    })),
+    invalidate: measureVisibleStatementRows,
+  }
   let scrollRequestId = 0
 
   function scrollToSelectedStatement(
@@ -116,6 +143,7 @@ export function useVisualEditorSceneViewport(options: UseVisualEditorSceneViewpo
     measureRowElement,
     restoreSelectionAndScroll,
     scrollToSelectedStatement,
+    statementSortVirtualAdapter,
     totalSize,
     virtualRows,
   }
