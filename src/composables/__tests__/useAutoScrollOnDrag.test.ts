@@ -185,6 +185,40 @@ describe('useAutoScrollOnDrag', () => {
     })
   })
 
+  it('拖拽矩形同时越过两侧边缘时使用绝对值更大的滚动速度', () => {
+    const { flushAnimationFrame } = setupAnimationFrame()
+    const container = createTestContainer()
+    const containerRef = {
+      value: container as unknown as HTMLElement,
+    } as unknown as Ref<HTMLElement | undefined>
+    const autoScroll = useAutoScrollOnDrag({
+      axis: 'vertical',
+      container: containerRef,
+      edgeSize: 20,
+      maxSpeed: 200,
+    })
+
+    autoScroll.update({ x: 50, y: 50 }, {
+      bottom: 130,
+      left: 20,
+      right: 80,
+      top: -10,
+    }, {
+      bottom: 130,
+      left: 20,
+      right: 80,
+      top: 0,
+    })
+    flushAnimationFrame(100)
+    flushAnimationFrame(200)
+
+    expect(container.scrollBy).toHaveBeenLastCalledWith({
+      behavior: 'auto',
+      left: 0,
+      top: 20,
+    })
+  })
+
   it('默认边缘触发距离不会覆盖过大的容器内区域', () => {
     const { flushAnimationFrame } = setupAnimationFrame()
     const container = createTestContainer()

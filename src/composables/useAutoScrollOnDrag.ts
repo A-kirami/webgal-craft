@@ -50,18 +50,18 @@ function calcAxisVelocity(
   maxSpeed: number,
 ): number {
   const accelerationDistance = edgeSize * 2
+  const startVelocity = triggerStart < startEdge + edgeSize
+    ? -maxSpeed * clamp((startEdge + edgeSize - speedStart) / accelerationDistance, 0, 1)
+    : 0
+  const endVelocity = triggerEnd > endEdge - edgeSize
+    ? maxSpeed * clamp((speedEnd - (endEdge - edgeSize)) / accelerationDistance, 0, 1)
+    : 0
 
-  if (triggerStart < startEdge + edgeSize) {
-    const ratio = clamp((startEdge + edgeSize - speedStart) / accelerationDistance, 0, 1)
-    return -maxSpeed * ratio
+  if (Math.abs(startVelocity) > Math.abs(endVelocity)) {
+    return startVelocity
   }
 
-  if (triggerEnd > endEdge - edgeSize) {
-    const ratio = clamp((speedEnd - (endEdge - edgeSize)) / accelerationDistance, 0, 1)
-    return maxSpeed * ratio
-  }
-
-  return 0
+  return endVelocity
 }
 
 function calcVelocity(
