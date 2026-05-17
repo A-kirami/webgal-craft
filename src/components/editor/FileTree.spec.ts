@@ -1080,6 +1080,48 @@ describe('FileTree', () => {
     await expect.element(page.getByText('scene.txt')).toBeInTheDocument()
   })
 
+  it('rootPath 异步更新后会重新注册根目录拖拽目标', async () => {
+    vi.useFakeTimers()
+    const { reactiveProps } = renderReactiveFileTree({
+      enableDragTransfer: true,
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [
+        {
+          name: 'chapter',
+          path: '/project/chapter',
+          children: [
+            {
+              name: 'scene.txt',
+              path: '/project/chapter/scene.txt',
+            },
+          ],
+        },
+      ],
+      rootPath: '',
+    })
+
+    expect(document.querySelector('[data-drop-target-id="file-tree:root-area"]')).toBeNull()
+    expect(document.querySelector('[data-drop-target-id="file-tree:root-container"]')).toBeNull()
+
+    reactiveProps.rootPath = '/project'
+    await nextTick()
+
+    const source = document.querySelector<HTMLElement>('[data-file-tree-path="/project/chapter/scene.txt"]')
+    const rootArea = document.querySelector<HTMLElement>('[data-drop-target-id="file-tree:root-area"]')
+    const rootContainer = document.querySelector<HTMLElement>('[data-drop-target-id="file-tree:root-container"]')
+    if (!source || !rootArea || !rootContainer) {
+      throw new TypeError('预期 rootPath 更新后重新注册根目录拖拽目标')
+    }
+
+    await dragBetween(source, rootArea)
+
+    expect(pathOperationPerformMock).toHaveBeenCalledWith({
+      kind: 'move',
+      sourcePath: '/project/chapter/scene.txt',
+      target: { type: 'directory', directory: '/project' },
+    }, expect.any(Function))
+  })
+
   it('按住 Ctrl 拖拽文件到目录时会复制而不是移动', async () => {
     vi.useFakeTimers()
     renderFileTree({

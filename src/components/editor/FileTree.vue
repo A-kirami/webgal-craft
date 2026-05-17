@@ -60,6 +60,7 @@ const {
 const inputRef: Readonly<ShallowRef<unknown>> = useTemplateRef('inputRef')
 const creatingInputRef: Readonly<ShallowRef<unknown>> = useTemplateRef('creatingInputRef')
 const fileTreeContainerRef = shallowRef<HTMLDivElement>()
+const rootDropAreaRef = shallowRef<HTMLElement>()
 
 const emit = defineEmits<{
   click: [item: FlattenedItem<T>]
@@ -264,22 +265,20 @@ function resolveHTMLElement(value: unknown): HTMLElement | undefined {
   return value && typeof value === 'object' && '$el' in value && value.$el instanceof HTMLElement ? value.$el : undefined
 }
 
+function registerRootDropTargets(): void {
+  registerDropTarget('root-container', fileTreeContainerRef.value, rootFileItem)
+  registerDropTarget('root-area', rootDropAreaRef.value, rootFileItem)
+}
+
 function setFileTreeContainerElement(value: unknown): void {
   const element = resolveHTMLElement(value)
   fileTreeContainerRef.value = element instanceof HTMLDivElement ? element : undefined
-  registerDropTarget('root-container', fileTreeContainerRef.value, {
-    isDir: true,
-    name: '',
-    path: effectiveRootPath,
-  })
+  registerRootDropTargets()
 }
 
 function setRootDropAreaElement(value: unknown): void {
-  registerDropTarget('root-area', resolveHTMLElement(value), {
-    isDir: true,
-    name: '',
-    path: effectiveRootPath,
-  })
+  rootDropAreaRef.value = resolveHTMLElement(value)
+  registerRootDropTargets()
 }
 
 function reportFileTreeMoveError(error: unknown): void {
@@ -752,6 +751,10 @@ useShortcut(() => ({
   keys: enableContextMenu ? 'Delete' : '',
   when: { panelFocus: 'fileTree' },
 }))
+
+watch(() => effectiveRootPath, () => {
+  registerRootDropTargets()
+})
 
 tryOnUnmounted(() => {
   clearHoverExpandTimer()
