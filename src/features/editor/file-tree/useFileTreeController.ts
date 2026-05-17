@@ -410,6 +410,11 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     return { gameId, treeName }
   }
 
+  function hasCompletedScrollRestore(context: FileTreeScrollContext): boolean {
+    return restoredScrollContext.value?.gameId === context.gameId
+      && restoredScrollContext.value.treeName === context.treeName
+  }
+
   function restoreScrollPosition(): void {
     const context = getScrollRestoreContext()
     if (!context) {
@@ -813,7 +818,7 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     }
 
     const context = getScrollRestoreContext()
-    if (context) {
+    if (context && hasCompletedScrollRestore(context)) {
       editorUIStateStore.setFileTreeScrollPosition(context.gameId, context.treeName, {
         left: viewport.scrollLeft,
         top: viewport.scrollTop,

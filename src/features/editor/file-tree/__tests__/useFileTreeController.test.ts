@@ -352,6 +352,52 @@ describe('useFileTreeController', () => {
     scope.stop()
   })
 
+  it('滚动恢复完成前不会持久化中间滚动位置', async () => {
+    const viewport = new FakeHTMLElement()
+    viewport.scrollHeight = viewport.clientHeight
+    const scrollAreaRef = shallowRef<unknown>({
+      viewport: {
+        viewportElement: viewport,
+      },
+    })
+    const { controller, items, scope } = createFixture({
+      savedScrollPosition: {
+        left: 0,
+        top: 180,
+      },
+      scrollAreaRef,
+    })
+
+    await nextTick()
+    await nextTick()
+    expect(viewport.scrollTop).toBe(0)
+
+    viewport.scrollTop = 40
+    controller.handleScroll({ target: viewport } as unknown as Event)
+
+    expect(setFileTreeScrollPositionMock).not.toHaveBeenCalled()
+
+    viewport.scrollHeight = 800
+    items.push({
+      name: 'later.txt',
+      path: '/project/scene/later.txt',
+    })
+    await nextTick()
+    await nextTick()
+
+    expect(viewport.scrollTop).toBe(180)
+
+    viewport.scrollTop = 220
+    controller.handleScroll({ target: viewport } as unknown as Event)
+
+    expect(setFileTreeScrollPositionMock).toHaveBeenCalledWith('game-1', 'scene', {
+      left: 0,
+      top: 220,
+    })
+
+    scope.stop()
+  })
+
   it('目录重命名后会迁移已展开的目录路径', async () => {
     const { controller, eventHandlers, items, scope } = createFixture({
       savedExpanded: ['/project/scene', '/project/scene/chapter'],
