@@ -2,14 +2,13 @@ import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { usePathOperationFeedback } from '~/composables/usePathOperationFeedback'
 import { AbsPath } from '~/domain/path'
 import {
-  canCopyFileTreeItemsToDirectory,
-  canMoveFileTreeItemsToDirectory,
+  canDropFileTreeTransferPayloadToDirectory,
   findFileTreeItemByPath,
   getFileTreeNameSelectionEnd,
   getFileTreeParentPath,
   hasFileTreeDuplicateName,
   insertCreatingFileTreeItem,
-  normalizeFileTreeTransferItems,
+  resolveDroppableFileTreeTransferItems,
   resolveFileTreeCreateBlurAction,
   resolveFileTreeCreateStart,
   resolveFileTreeRenameBlurAction,
@@ -638,61 +637,16 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     startCreating(fileItem.path, 'folder')
   }
 
-  type FileSystemDragItem = NonNullable<FileSystemDragPayload['items']>[number]
-
-  function getFileSystemDragItems(payload: FileSystemDragPayload): FileSystemDragItem[] {
-    return normalizeFileTreeTransferItems(
-      payload.items?.length
-        ? payload.items
-        : [{
-            isDir: payload.isDir,
-            name: payload.name,
-            path: payload.path,
-          }],
-    )
-  }
-
-  function canDropFileSystemDragItems(
-    items: readonly FileSystemDragItem[],
-    targetDirectoryPath: string,
-    operation: DragTransferOperation = 'move',
-  ): boolean {
-    if (operation === 'copy') {
-      return canCopyFileTreeItemsToDirectory({
-        sourceItems: items,
-        targetDirectoryPath,
-      })
-    }
-
-    return canMoveFileTreeItemsToDirectory({
-      sourcePaths: items.map(item => item.path),
-      targetDirectoryPath,
-    })
-  }
-
   function canDropFileSystemItems(
     payload: FileSystemDragPayload,
     targetDirectoryPath: string,
     operation: DragTransferOperation = 'move',
   ): boolean {
-    return canDropFileSystemDragItems(
-      getFileSystemDragItems(payload),
+    return canDropFileTreeTransferPayloadToDirectory(
+      payload,
       targetDirectoryPath,
       operation,
     )
-  }
-
-  function resolveDroppableFileSystemItems(
-    payload: FileSystemDragPayload,
-    targetDirectoryPath: string,
-    operation: DragTransferOperation = 'move',
-  ): FileSystemDragItem[] | undefined {
-    const items = getFileSystemDragItems(payload)
-    if (!canDropFileSystemDragItems(items, targetDirectoryPath, operation)) {
-      return
-    }
-
-    return items
   }
 
   function expandDirectory(path: string): void {
@@ -704,7 +658,7 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   }
 
   async function moveFileSystemItems(payload: FileSystemDragPayload, targetDirectoryPath: string): Promise<void> {
-    const items = resolveDroppableFileSystemItems(payload, targetDirectoryPath)
+    const items = resolveDroppableFileTreeTransferItems(payload, targetDirectoryPath)
     if (!items) {
       return
     }
@@ -723,7 +677,7 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   }
 
   async function copyFileSystemItems(payload: FileSystemDragPayload, targetDirectoryPath: string): Promise<void> {
-    const items = resolveDroppableFileSystemItems(payload, targetDirectoryPath, 'copy')
+    const items = resolveDroppableFileTreeTransferItems(payload, targetDirectoryPath, 'copy')
     if (!items) {
       return
     }

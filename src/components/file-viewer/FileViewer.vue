@@ -1,10 +1,17 @@
 <script setup lang="ts">
+import { File, FileImage, FileJson2, FileMusic, FileVideo, Folder } from '@lucide/vue'
+
 import { useFileViewerLayout } from '~/components/file-viewer/useFileViewerLayout'
 import { useFileViewerVirtualizer } from '~/components/file-viewer/useFileViewerVirtualizer'
+import { useDragSession } from '~/composables/useDragSession'
+import { useDragSource } from '~/composables/useDragTransfer'
+import { useDroppableRegistry } from '~/composables/useDroppableRegistry'
 import { resolveAssetUrl } from '~/services/platform/asset-url'
 import { FileViewerItem, FileViewerPreviewSize, FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 import { createItemComparator } from '~/utils/sort'
 
+import type { StyleValue } from 'vue'
+import type { DragTransferOperation, FileSystemDragPayload } from '~/types/drag-drop'
 import type { SortableItemAccessor } from '~/utils/sort'
 
 interface FileViewerProps {
@@ -32,6 +39,16 @@ interface FileViewerProps {
   gridItemMinWidth?: number
   /** 缩放比例（50-150） */
   zoom?: number
+  /** 是否启用应用内资源拖拽转移 */
+  enableDragTransfer?: boolean
+  /** 当前目录 drop target，用于把资源拖入当前浏览目录 */
+  dropTargetDirectory?: FileViewerItem
+  /** 判断资源是否能投放到目标目录 */
+  canDropFileTransfer?: (
+    payload: FileSystemDragPayload,
+    targetDirectory: FileViewerItem,
+    operation: DragTransferOperation,
+  ) => boolean
 }
 
 interface FileViewerEmits {
@@ -43,6 +60,12 @@ interface FileViewerEmits {
   'update:sortBy': [sortBy: FileViewerSortBy]
   /** 更新排序方向 */
   'update:sortOrder': [sortOrder: FileViewerSortOrder]
+  /** 文件拖拽投放到目录 */
+  'fileTransferDrop': [
+    payload: FileSystemDragPayload,
+    targetDirectory: FileViewerItem,
+    operation: DragTransferOperation,
+  ]
 }
 
 interface FileViewerExpose {
@@ -70,12 +93,28 @@ const {
   errorMsg = '',
   gridItemMinWidth = 80,
   zoom,
+  enableDragTransfer = false,
+  dropTargetDirectory,
+  canDropFileTransfer,
 } = defineProps<FileViewerProps>()
 
 const emit = defineEmits<FileViewerEmits>()
 
 const scrollAreaRef = useTemplateRef<InstanceType<typeof ScrollArea>>('scrollAreaRef')
 const viewportElement = computed(() => scrollAreaRef.value?.viewport?.viewportElement as HTMLElement | undefined)
+const dragSession = useDragSession()
+const dropRegistry = useDroppableRegistry()
+let rootDropTargetElement = $ref<HTMLElement>()
+let rootDropTargetPath = $ref<string>()
+let isRootDropTargetActive = $ref(false)
+let ownedFileViewerDragPayload = $ref<FileSystemDragPayload>()
+
+const DRAG_OVERLAY_OFFSET_X = 6
+const DRAG_OVERLAY_OFFSET_Y = 6
+const DRAG_PREVIEW_SIZE = Object.freeze({
+  width: 64,
+  height: 64,
+})
 
 const { width: viewportWidth } = useElementSize(() => viewportElement.value)
 const contentWidth = computed(() => viewportWidth.value || 0)
@@ -148,6 +187,78 @@ const virtualizer = useFileViewerVirtualizer({
   viewportElement,
 })
 
+const fileDragSource = useDragSource<FileSystemDragPayload>({
+  autoScroll: {
+    container: viewportElement,
+    edgeSize: 40,
+  },
+  getData: getFileViewerDragPayload,
+  type: 'file-system-item',
+})
+
+const globalFileViewerPayload = $computed(() => {
+  const state = dragSession.state.value
+  if (
+    !state.isActive
+    || state.mode !== 'transfer'
+    || state.payload?.type !== 'file-system-item'
+    || state.payload.source !== 'file-viewer'
+  ) {
+    return
+  }
+
+  return state.payload
+})
+
+const activeFileViewerItem = $computed(() => {
+  if (!globalFileViewerPayload || globalFileViewerPayload !== ownedFileViewerDragPayload) {
+    return
+  }
+
+  return sortedItems.value.find(item => item.path === globalFileViewerPayload.path)
+})
+
+const activeFileViewerPayload = $computed(() => {
+  if (!enableDragTransfer || !activeFileViewerItem) {
+    return
+  }
+
+  return globalFileViewerPayload
+})
+
+const dragOverlayStyle = $computed<StyleValue | undefined>(() => {
+  const currentPosition = dragSession.state.value.currentPosition
+  if (!activeFileViewerPayload || !currentPosition) {
+    return
+  }
+
+  return {
+    transform: `translate3d(${currentPosition.x + DRAG_OVERLAY_OFFSET_X}px, ${currentPosition.y + DRAG_OVERLAY_OFFSET_Y}px, 0)`,
+    zIndex: '9999',
+  }
+})
+
+const dragPreviewName = $computed(() =>
+  activeFileViewerPayload?.name || activeFileViewerPayload?.path || '',
+)
+
+const dragPreviewThumbnailUrl = $computed(() => {
+  if (
+    !activeFileViewerItem
+    || activeFileViewerItem.isDir
+    || !activeFileViewerItem.mimeType?.startsWith('image/')
+    || !previewUrlResolver.value
+  ) {
+    return
+  }
+
+  return previewUrlResolver.value(activeFileViewerItem, DRAG_PREVIEW_SIZE)
+})
+
+const dragPreviewIcon = $computed(() =>
+  getDragPreviewIcon(activeFileViewerItem, activeFileViewerPayload),
+)
+
 watch(
   () => [
     viewMode,
@@ -163,6 +274,18 @@ watch(
   { flush: 'post' },
 )
 
+watch(
+  [viewportElement, () => enableDragTransfer, () => dropTargetDirectory],
+  () => {
+    registerRootDropTarget()
+  },
+  { flush: 'post', immediate: true },
+)
+
+tryOnUnmounted(() => {
+  unregisterRootDropTarget()
+})
+
 function handleItemClick(item: FileViewerItem) {
   if (!item.path) {
     return
@@ -172,6 +295,141 @@ function handleItemClick(item: FileViewerItem) {
     return
   }
   emit('select', item)
+}
+
+function getFileViewerDragPayload(element: HTMLElement): FileSystemDragPayload {
+  const { dataset } = element
+  const path = dataset.fileViewerPath ?? ''
+  const name = dataset.fileViewerItemName || path
+  const isDir = dataset.fileViewerIsDir === 'true'
+  const mimeType = dataset.fileViewerMimeType || undefined
+
+  ownedFileViewerDragPayload = {
+    isDir,
+    items: [{
+      isDir,
+      name,
+      path,
+    }],
+    name,
+    path,
+    ...(mimeType ? { mimeType } : {}),
+    source: 'file-viewer',
+    type: 'file-system-item',
+  }
+  return ownedFileViewerDragPayload
+}
+
+function getDragPreviewIcon(
+  item: FileViewerItem | undefined,
+  payload: FileSystemDragPayload | undefined,
+) {
+  if (item?.isDir ?? payload?.isDir) {
+    return Folder
+  }
+
+  const mimeType = item?.mimeType ?? payload?.mimeType ?? ''
+  if (mimeType.startsWith('image/')) {
+    return FileImage
+  }
+  if (mimeType.startsWith('audio/')) {
+    return FileMusic
+  }
+  if (mimeType.startsWith('video/')) {
+    return FileVideo
+  }
+  if (mimeType === 'application/json') {
+    return FileJson2
+  }
+
+  return File
+}
+
+function getDragSourceProps() {
+  return enableDragTransfer ? fileDragSource.sourceProps() : {}
+}
+
+function canDropOnDirectory(payload: FileSystemDragPayload, targetDirectory: FileViewerItem): boolean {
+  if (!enableDragTransfer || !targetDirectory.isDir) {
+    return false
+  }
+
+  return canDropFileTransfer?.(
+    payload,
+    targetDirectory,
+    dragSession.state.value.transferOperation,
+  ) ?? false
+}
+
+function handleRootDragEnter(payload: FileSystemDragPayload, targetDirectory: FileViewerItem): void {
+  if (canDropOnDirectory(payload, targetDirectory)) {
+    isRootDropTargetActive = true
+  }
+}
+
+function handleRootDragLeave(_payload: FileSystemDragPayload, targetDirectory: FileViewerItem): void {
+  if (dropTargetDirectory?.path === targetDirectory.path) {
+    isRootDropTargetActive = false
+  }
+}
+
+function handleRootDrop(payload: FileSystemDragPayload, targetDirectory: FileViewerItem): void {
+  isRootDropTargetActive = false
+  if (!canDropOnDirectory(payload, targetDirectory)) {
+    return
+  }
+
+  emit('fileTransferDrop', payload, targetDirectory, dragSession.state.value.transferOperation)
+}
+
+function unregisterRootDropTarget(): void {
+  if (!rootDropTargetElement) {
+    return
+  }
+
+  dropRegistry.unregisterDroppable(rootDropTargetElement)
+  rootDropTargetElement = undefined
+  rootDropTargetPath = undefined
+  isRootDropTargetActive = false
+}
+
+function registerRootDropTarget(): void {
+  const element = viewportElement.value
+  const targetDirectory = dropTargetDirectory
+
+  if (
+    rootDropTargetElement
+    && (
+      rootDropTargetElement !== element
+      || rootDropTargetPath !== targetDirectory?.path
+    )
+  ) {
+    unregisterRootDropTarget()
+  }
+
+  if (!enableDragTransfer || !targetDirectory?.isDir || !element) {
+    unregisterRootDropTarget()
+    return
+  }
+
+  rootDropTargetElement = element
+  rootDropTargetPath = targetDirectory.path
+  dropRegistry.registerDroppable(element, {
+    accept: 'file-system-item',
+    canDrop: payload => canDropOnDirectory(payload as FileSystemDragPayload, targetDirectory),
+    id: `file-viewer:root:${targetDirectory.path}`,
+    onDragEnter: payload => handleRootDragEnter(payload as FileSystemDragPayload, targetDirectory),
+    onDragLeave: payload => handleRootDragLeave(payload as FileSystemDragPayload, targetDirectory),
+    onDrop: payload => handleRootDrop(payload as FileSystemDragPayload, targetDirectory),
+  })
+}
+
+function handleBodyFileTransferDrop(
+  payload: FileSystemDragPayload,
+  targetDirectory: FileViewerItem,
+  operation: DragTransferOperation,
+): void {
+  emit('fileTransferDrop', payload, targetDirectory, operation)
 }
 
 function scrollToIndex(index: number) {
@@ -212,7 +470,12 @@ defineExpose(fileViewerExpose)
       @update:sort-by="(nextSortBy) => emit('update:sortBy', nextSortBy)"
       @update:sort-order="(nextSortOrder) => emit('update:sortOrder', nextSortOrder)"
     />
-    <div class="flex-1 min-h-0">
+    <div
+      :class="[
+        'flex-1 min-h-0',
+        isRootDropTargetActive ? 'bg-accent/35' : '',
+      ]"
+    >
       <ScrollArea ref="scrollAreaRef" class="flex-scroll-area h-full min-h-0">
         <ContextMenu v-if="isEmptyState && $slots['background-context-menu']">
           <ContextMenuTrigger as-child>
@@ -238,6 +501,9 @@ defineExpose(fileViewerExpose)
 
         <FileViewerBody
           v-else
+          :active-root-drop-target="isRootDropTargetActive"
+          :can-drop-file-transfer="canDropFileTransfer"
+          :enable-drag-transfer="enableDragTransfer"
           :highlighted-item-path="highlightedItemPath"
           :view-mode="viewMode"
           :virtual-rows="virtualizer.virtualRows.value"
@@ -252,7 +518,9 @@ defineExpose(fileViewerExpose)
           :show-list-created-at="layout.showListCreatedAt.value"
           :get-grid-row-items="virtualizer.getGridRowItems"
           :get-list-item="virtualizer.getListItem"
+          :get-drag-source-props="getDragSourceProps"
           :resolve-preview-url="previewUrlResolver"
+          @file-transfer-drop="handleBodyFileTransferDrop"
           @item-click="handleItemClick"
         >
           <template v-if="$slots.icon" #icon="{ item, iconSize }">
@@ -267,5 +535,29 @@ defineExpose(fileViewerExpose)
         </FileViewerBody>
       </ScrollArea>
     </div>
+    <DragOverlay :visible="activeFileViewerPayload !== undefined" :overlay-style="dragOverlayStyle">
+      <div class="text-popover-foreground p-2 border border-border/70 rounded-md bg-popover flex flex-col gap-1.5 w-20 shadow-lg items-center" data-testid="file-viewer-drag-preview">
+        <div class="flex size-16 items-center justify-center overflow-hidden">
+          <img
+            v-if="dragPreviewThumbnailUrl"
+            :alt="dragPreviewName"
+            :src="dragPreviewThumbnailUrl"
+            class="h-full w-full object-contain"
+            data-testid="file-viewer-drag-preview-thumbnail"
+            draggable="false"
+          >
+          <component
+            :is="dragPreviewIcon"
+            v-else
+            class="text-muted-foreground size-12"
+            data-testid="file-viewer-drag-preview-icon"
+            :stroke-width="1.5"
+          />
+        </div>
+        <span class="text-[11px] leading-snug text-center w-full truncate">
+          {{ dragPreviewName }}
+        </span>
+      </div>
+    </DragOverlay>
   </div>
 </template>

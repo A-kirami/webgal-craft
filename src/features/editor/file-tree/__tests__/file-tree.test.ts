@@ -2,11 +2,15 @@ import { describe, expect, it } from 'vitest'
 
 import {
   canCopyFileTreeItemsToDirectory,
+  canDropFileTreeTransferItemsToDirectory,
+  canDropFileTreeTransferPayloadToDirectory,
   canMoveFileTreeItemsToDirectory,
   getFileTreeNameSelectionEnd,
+  getFileTreeTransferPayloadItems,
   hasFileTreeDuplicateName,
   insertCreatingFileTreeItem,
   normalizeFileTreeTransferItems,
+  resolveDroppableFileTreeTransferItems,
   resolveFileTreeCreateBlurAction,
   resolveFileTreeCreateStart,
   resolveFileTreeRenameBlurAction,
@@ -404,6 +408,75 @@ describe('fileTree', () => {
       ])).toEqual([
         { isDir: true, path: '/project/scene/chapter' },
         { isDir: false, path: '/project/scene/ending.txt' },
+      ])
+    })
+
+    it('会从 payload items 或单项 payload 中解析投放集合', () => {
+      expect(getFileTreeTransferPayloadItems({
+        isDir: false,
+        items: [
+          { isDir: false, name: 'branch.txt', path: '/project/scene/chapter/branch.txt' },
+          { isDir: true, name: 'chapter', path: '/project/scene/chapter' },
+        ],
+        name: 'branch.txt',
+        path: '/project/scene/chapter/branch.txt',
+        source: 'file-tree',
+        type: 'file-system-item',
+      })).toEqual([
+        { isDir: true, name: 'chapter', path: '/project/scene/chapter' },
+      ])
+
+      expect(getFileTreeTransferPayloadItems({
+        isDir: false,
+        name: 'start.txt',
+        path: '/project/scene/start.txt',
+        source: 'file-viewer',
+        type: 'file-system-item',
+      })).toEqual([
+        { isDir: false, name: 'start.txt', path: '/project/scene/start.txt' },
+      ])
+    })
+
+    it('会按 move 和 copy 语义判断是否能投放到目录', () => {
+      const directoryItem = { isDir: true, path: '/project/scene/chapter' }
+
+      expect(canDropFileTreeTransferItemsToDirectory(
+        [directoryItem],
+        '/project/scene',
+        'move',
+      )).toBe(false)
+      expect(canDropFileTreeTransferItemsToDirectory(
+        [directoryItem],
+        '/project/scene',
+        'copy',
+      )).toBe(true)
+    })
+
+    it('会复用 payload 规则解析可投放集合', () => {
+      const payload = {
+        isDir: true,
+        name: 'chapter',
+        path: '/project/scene/chapter',
+        source: 'file-viewer' as const,
+        type: 'file-system-item' as const,
+      }
+
+      expect(canDropFileTreeTransferPayloadToDirectory(
+        payload,
+        '/project/scene/chapter/nested',
+        'copy',
+      )).toBe(false)
+      expect(resolveDroppableFileTreeTransferItems(
+        payload,
+        '/project/scene/chapter/nested',
+        'copy',
+      )).toBeUndefined()
+      expect(resolveDroppableFileTreeTransferItems(
+        payload,
+        '/project/scene',
+        'copy',
+      )).toEqual([
+        { isDir: true, name: 'chapter', path: '/project/scene/chapter' },
       ])
     })
   })

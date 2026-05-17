@@ -1,5 +1,7 @@
 import { AbsPath } from '~/domain/path'
 
+import type { DragTransferOperation, FileSystemDragPayload } from '~/types/drag-drop'
+
 export interface FileTreeItemAccessor<T> {
   getChildren: (item: T) => T[] | undefined
   getName: (item: T) => string
@@ -75,6 +77,8 @@ export interface ResolveFileTreeCopyTargetOptions {
   }[]
   targetDirectoryPath: string
 }
+
+export type FileTreeTransferItem = NonNullable<FileSystemDragPayload['items']>[number]
 
 export function getFileTreeParentPath(path: string): string {
   return path.replace(/[\\/][^\\/]+$/, '')
@@ -347,6 +351,59 @@ export function normalizeFileTreeTransferItems<T extends { path: string }>(items
       && isPathWithin(item.path, other.path),
     ),
   )
+}
+
+export function getFileTreeTransferPayloadItems(payload: FileSystemDragPayload): FileTreeTransferItem[] {
+  return normalizeFileTreeTransferItems(
+    payload.items?.length
+      ? payload.items
+      : [{
+          isDir: payload.isDir,
+          name: payload.name,
+          path: payload.path,
+        }],
+  )
+}
+
+export function canDropFileTreeTransferItemsToDirectory(
+  items: readonly FileTreeTransferItem[],
+  targetDirectoryPath: string,
+  operation: DragTransferOperation = 'move',
+): boolean {
+  if (operation === 'copy') {
+    return canCopyFileTreeItemsToDirectory({
+      sourceItems: items,
+      targetDirectoryPath,
+    })
+  }
+
+  return canMoveFileTreeItemsToDirectory({
+    sourcePaths: items.map(item => item.path),
+    targetDirectoryPath,
+  })
+}
+
+export function canDropFileTreeTransferPayloadToDirectory(
+  payload: FileSystemDragPayload,
+  targetDirectoryPath: string,
+  operation: DragTransferOperation = 'move',
+): boolean {
+  return canDropFileTreeTransferItemsToDirectory(
+    getFileTreeTransferPayloadItems(payload),
+    targetDirectoryPath,
+    operation,
+  )
+}
+
+export function resolveDroppableFileTreeTransferItems(
+  payload: FileSystemDragPayload,
+  targetDirectoryPath: string,
+  operation: DragTransferOperation = 'move',
+): FileTreeTransferItem[] | undefined {
+  const items = getFileTreeTransferPayloadItems(payload)
+  return canDropFileTreeTransferItemsToDirectory(items, targetDirectoryPath, operation)
+    ? items
+    : undefined
 }
 
 export function insertCreatingFileTreeItem<T, TFlattened extends FileTreeFlattenedItemLike<T>>(

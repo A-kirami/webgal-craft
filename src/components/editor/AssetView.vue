@@ -7,7 +7,13 @@ import { PopoverAnchor } from '~/components/ui/popover'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { usePathOperationFeedback } from '~/composables/usePathOperationFeedback'
 import { AbsPath, RelPath } from '~/domain/path'
-import { getFileTreeNameSelectionEnd, resolveFileTreeDefaultFileDraft } from '~/features/editor/file-tree/file-tree'
+import {
+  canDropFileTreeTransferItemsToDirectory,
+  getFileTreeNameSelectionEnd,
+  getFileTreeTransferPayloadItems,
+  resolveDroppableFileTreeTransferItems,
+  resolveFileTreeDefaultFileDraft,
+} from '~/features/editor/file-tree/file-tree'
 import { gameFs } from '~/services/game-fs'
 import { pathOperation } from '~/services/path-operation'
 import { createPathOperationRewriteConfirm } from '~/services/path-operation-confirm'
@@ -20,6 +26,8 @@ import { FileViewerItem, FileViewerSortBy, FileViewerSortOrder } from '~/types/f
 import { handleError } from '~/utils/error-handler'
 
 import type { FileSystemEvent } from '~/composables/useFileSystemEvents'
+import type { FileTreeTransferItem } from '~/features/editor/file-tree/file-tree'
+import type { DragTransferOperation, FileSystemDragPayload } from '~/types/drag-drop'
 
 interface AssetViewProps {
   assetType: string
@@ -200,6 +208,94 @@ const currentDirectoryContextMenuItem = $computed(() => {
     source: fileStore.getItemByPath(AbsPath.from(directoryPath))?.source,
   }
 })
+
+function canDropFileTransferItems(
+  items: readonly FileTreeTransferItem[],
+  targetDirectory: FileViewerItem,
+  operation: DragTransferOperation,
+): boolean {
+  if (!targetDirectory.isDir) {
+    return false
+  }
+
+  return canDropFileTreeTransferItemsToDirectory(items, targetDirectory.path, operation)
+}
+
+function canDropFileTransfer(
+  payload: FileSystemDragPayload,
+  targetDirectory: FileViewerItem,
+  operation: DragTransferOperation,
+): boolean {
+  return canDropFileTransferItems(
+    getFileTreeTransferPayloadItems(payload),
+    targetDirectory,
+    operation,
+  )
+}
+
+function resolveDroppableFileTransferItems(
+  payload: FileSystemDragPayload,
+  targetDirectory: FileViewerItem,
+  operation: DragTransferOperation,
+): FileTreeTransferItem[] | undefined {
+  if (!targetDirectory.isDir) {
+    return
+  }
+
+  return resolveDroppableFileTreeTransferItems(payload, targetDirectory.path, operation)
+}
+
+async function moveFileTransferItems(
+  items: readonly FileTreeTransferItem[],
+  targetDirectory: FileViewerItem,
+): Promise<void> {
+  for (const item of items) {
+    // eslint-disable-next-line no-await-in-loop -- 多文件移动按用户拖拽顺序串行执行，避免确认框和 path-operation registry 交错。
+    const result = await pathOperation.perform({
+      kind: 'move',
+      sourcePath: AbsPath.from(item.path),
+      target: { type: 'directory', directory: AbsPath.from(targetDirectory.path) },
+    }, confirmPathOperationRewrite)
+    pathOperationFeedback.reportWarnings(result.warnings)
+  }
+}
+
+async function copyFileTransferItems(
+  items: readonly FileTreeTransferItem[],
+  targetDirectory: FileViewerItem,
+): Promise<void> {
+  for (const item of items) {
+    // eslint-disable-next-line no-await-in-loop -- 多文件复制按用户拖拽顺序串行执行，保持与文件树粘贴入口一致。
+    await gameFs.copyFile(AbsPath.from(item.path), AbsPath.from(targetDirectory.path))
+  }
+}
+
+async function handleFileTransferDrop(
+  payload: FileSystemDragPayload,
+  targetDirectory: FileViewerItem,
+  operation: DragTransferOperation,
+): Promise<void> {
+  const items = resolveDroppableFileTransferItems(payload, targetDirectory, operation)
+  if (!items) {
+    return
+  }
+
+  try {
+    if (operation === 'copy') {
+      await copyFileTransferItems(items, targetDirectory)
+      return
+    }
+
+    await moveFileTransferItems(items, targetDirectory)
+  } catch (error) {
+    if (operation === 'copy') {
+      handleError(error)
+      return
+    }
+
+    pathOperationFeedback.reportError(error)
+  }
+}
 
 const renamePopoverAlign = $computed(() =>
   preferenceStore.assetViewMode === 'grid' ? 'center' : 'start',
@@ -651,6 +747,9 @@ for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
     <FileViewer
       ref="fileViewerRef"
       :error-msg="errorMsg"
+      :can-drop-file-transfer="canDropFileTransfer"
+      :drop-target-directory="currentDirectoryContextMenuItem"
+      enable-drag-transfer
       :highlighted-item-path="renameTargetItem?.path"
       :is-loading="isLoading"
       :items="filteredItems"
@@ -662,6 +761,7 @@ for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
       :zoom="preferenceStore.assetZoom[0]"
       @navigate="handleNavigate"
       @select="handleSelect"
+      @file-transfer-drop="handleFileTransferDrop"
       @update:sort-by="(value) => emit('update:sortBy', value)"
       @update:sort-order="(value) => emit('update:sortOrder', value)"
     >

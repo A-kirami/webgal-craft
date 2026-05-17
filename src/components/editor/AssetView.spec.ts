@@ -12,9 +12,11 @@ import AssetView from './AssetView.vue'
 
 import type { Component, PropType } from 'vue'
 import type { FileSystemItem } from '~/stores/file'
+import type { FileSystemDragPayload } from '~/types/drag-drop'
 import type { FileViewerItem } from '~/types/file-viewer'
 
 const {
+  copyFileMock,
   createFileMock,
   createFolderMock,
   fileSystemEventHandlers,
@@ -29,6 +31,7 @@ const {
   useTabsStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
+  copyFileMock: vi.fn(),
   createFileMock: vi.fn(),
   createFolderMock: vi.fn(),
   fileSystemEventHandlers: new Map<string, ((event: Record<string, unknown>) => void)[]>(),
@@ -141,6 +144,7 @@ vi.mock('~/composables/useFileSystemEvents', () => ({
 
 vi.mock('~/services/game-fs', () => ({
   gameFs: {
+    copyFile: copyFileMock,
     createFile: createFileMock,
     createFolder: createFolderMock,
   },
@@ -358,6 +362,118 @@ function createLoadingStateFileViewerStub() {
   })
 }
 
+function createFileViewerDragPayload(item: FileViewerItem): FileSystemDragPayload {
+  return {
+    isDir: item.isDir,
+    items: [{
+      isDir: item.isDir,
+      name: item.name,
+      path: item.path,
+    }],
+    mimeType: item.mimeType,
+    name: item.name,
+    path: item.path,
+    source: 'file-viewer',
+    type: 'file-system-item',
+  }
+}
+
+function createDragTransferFileViewerStub(operation: 'copy' | 'move' = 'move') {
+  return defineComponent({
+    name: 'StubDragTransferFileViewer',
+    props: {
+      canDropFileTransfer: {
+        type: Function,
+        default: undefined,
+      },
+      dropTargetDirectory: {
+        type: Object as PropType<FileViewerItem>,
+        default: undefined,
+      },
+      enableDragTransfer: {
+        type: Boolean,
+        default: false,
+      },
+      items: {
+        type: Array as PropType<FileViewerItem[]>,
+        required: true,
+      },
+    },
+    emits: ['fileTransferDrop'],
+    setup(props, { emit }) {
+      return () => {
+        const sourceItem = props.items.find(item => !item.isDir)
+        const targetDirectory = props.items.find(item => item.isDir) ?? props.dropTargetDirectory
+        const payload = sourceItem ? createFileViewerDragPayload(sourceItem) : undefined
+        const canDrop = payload && targetDirectory && props.canDropFileTransfer
+          ? props.canDropFileTransfer(payload, targetDirectory, operation)
+          : false
+
+        return h('div', [
+          h('output', { 'data-testid': 'file-viewer-drag-enabled' }, String(props.enableDragTransfer)),
+          h('output', { 'data-testid': 'file-viewer-root-drop-target' }, props.dropTargetDirectory?.path ?? ''),
+          h('output', { 'data-testid': 'file-viewer-can-drop' }, String(canDrop)),
+          h('button', {
+            'type': 'button',
+            'data-testid': 'emit-file-transfer-drop',
+            'disabled': !payload || !targetDirectory,
+            'onClick': () => {
+              if (payload && targetDirectory) {
+                emit('fileTransferDrop', payload, targetDirectory, operation)
+              }
+            },
+          }, 'drop'),
+        ])
+      }
+    },
+  })
+}
+
+function createAssetFileSystemItem(options: {
+  isDir: boolean
+  modifiedAt: number
+  name: string
+  path: string
+  mimeType?: string
+  size?: number
+}) {
+  return {
+    createdAt: 1,
+    modifiedAt: options.modifiedAt,
+    name: options.name,
+    path: options.path,
+    size: options.size ?? 0,
+    ...(options.isDir
+      ? { isDir: true }
+      : { isDir: false, mimeType: options.mimeType }),
+  }
+}
+
+function mockDragTransferFolderContents(): void {
+  getFolderContentsMock.mockResolvedValue([
+    createAssetFileSystemItem({
+      isDir: false,
+      mimeType: 'image/png',
+      modifiedAt: 2,
+      name: 'hero.png',
+      path: '/project/game/background/hero.png',
+      size: 1024,
+    }),
+    createAssetFileSystemItem({
+      isDir: true,
+      modifiedAt: 3,
+      name: 'folder',
+      path: '/project/game/background/folder',
+    }),
+  ])
+  useWorkspaceStoreMock.mockReturnValue(reactive({
+    currentGame: {
+      path: '/project',
+    },
+  }))
+  setPreviewUnavailable()
+}
+
 function createHarness(
   assetType: string = 'bg',
   options: {
@@ -431,6 +547,7 @@ describe('AssetView', () => {
   beforeEach(() => {
     fileSystemEventHandlers.clear()
     fileSystemEventsOnMock.mockReset()
+    copyFileMock.mockReset()
     createFileMock.mockReset()
     createFolderMock.mockReset()
     fileViewerScrollToIndexMock.mockReset()
@@ -444,6 +561,7 @@ describe('AssetView', () => {
     useWorkspaceStoreMock.mockReset()
 
     getFolderContentsMock.mockResolvedValue([])
+    copyFileMock.mockResolvedValue('/project/game/background/folder/hero.png')
     createFileMock.mockResolvedValue('/project/game/background/新建文件.json')
     createFolderMock.mockResolvedValue('/project/game/background/新建文件夹')
     pathOperationPerformMock.mockResolvedValue({
@@ -1004,6 +1122,53 @@ describe('AssetView', () => {
     await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-item-path', '/games/demo/game/background')
     await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-item-name', 'background')
     await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-is-root', 'true')
+  })
+
+  it('会把 FileViewer 的 move drop 交给 pathOperation 执行', async () => {
+    mockDragTransferFolderContents()
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createDragTransferFileViewerStub('move'),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('file-viewer-drag-enabled')).toHaveTextContent('true')
+    await expect.element(page.getByTestId('file-viewer-root-drop-target')).toHaveTextContent('/project/game/background')
+    await expect.element(page.getByTestId('file-viewer-can-drop')).toHaveTextContent('true')
+
+    await page.getByTestId('emit-file-transfer-drop').click()
+
+    expect(pathOperationPerformMock).toHaveBeenCalledWith({
+      kind: 'move',
+      sourcePath: '/project/game/background/hero.png',
+      target: { type: 'directory', directory: '/project/game/background/folder' },
+    }, expect.any(Function))
+    expect(copyFileMock).not.toHaveBeenCalled()
+    expect(handleErrorMock).not.toHaveBeenCalled()
+  })
+
+  it('会把 FileViewer 的 copy drop 交给 gameFs.copyFile 执行', async () => {
+    mockDragTransferFolderContents()
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createDragTransferFileViewerStub('copy'),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('file-viewer-can-drop')).toHaveTextContent('true')
+    await page.getByTestId('emit-file-transfer-drop').click()
+
+    expect(copyFileMock).toHaveBeenCalledWith('/project/game/background/hero.png', '/project/game/background/folder')
+    expect(pathOperationPerformMock).not.toHaveBeenCalled()
+    expect(handleErrorMock).not.toHaveBeenCalled()
   })
 
   it('仅 animation 和 template 目录的右键菜单会显示创建文件入口', async () => {
