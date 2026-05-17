@@ -1,6 +1,6 @@
 /* eslint-disable unicorn/no-null -- 拖拽会话契约显式使用 null 表示无值 */
 import type { Ref } from 'vue'
-import type { DragMode, DragPayload, DragPosition } from '~/types/drag-drop'
+import type { DragMode, DragPayload, DragPosition, DragTransferOperation } from '~/types/drag-drop'
 
 export interface DragSessionState {
   currentDropTarget: HTMLElement | null
@@ -9,6 +9,7 @@ export interface DragSessionState {
   mode: DragMode | null
   payload: DragPayload | null
   startPosition: DragPosition | null
+  transferOperation: DragTransferOperation
 }
 
 export interface UseDragSessionReturn {
@@ -18,6 +19,7 @@ export interface UseDragSessionReturn {
   state: Readonly<Ref<DragSessionState>>
   updateDropTarget: (target: HTMLElement | null) => void
   updatePosition: (position: DragPosition) => void
+  updateTransferOperation: (operation: DragTransferOperation) => void
 }
 
 function createInitialState(): DragSessionState {
@@ -28,6 +30,7 @@ function createInitialState(): DragSessionState {
     mode: null,
     payload: null,
     startPosition: null,
+    transferOperation: 'move',
   }
 }
 
@@ -46,6 +49,7 @@ function start(mode: DragMode, payload: DragPayload, position: DragPosition) {
     mode,
     payload,
     startPosition: { ...position },
+    transferOperation: 'move',
   }
 }
 
@@ -73,6 +77,22 @@ function updateDropTarget(target: HTMLElement | null) {
   }
 }
 
+function updateTransferOperation(operation: DragTransferOperation) {
+  const state = dragSessionState.value
+  if (!state.isActive || state.mode !== 'transfer') {
+    return
+  }
+
+  if (state.transferOperation === operation) {
+    return
+  }
+
+  dragSessionState.value = {
+    ...state,
+    transferOperation: operation,
+  }
+}
+
 function end() {
   resetState()
 }
@@ -89,5 +109,6 @@ export function useDragSession(): UseDragSessionReturn {
     state: readonlyDragSessionState,
     updateDropTarget,
     updatePosition,
+    updateTransferOperation,
   }
 }

@@ -142,11 +142,11 @@ interface DestinationPath {
 /**
  * 获取目标路径（用于复制和移动操作）
  */
-async function getDestinationPath(sourcePath: AbsPath, targetPath: AbsPath): Promise<DestinationPath> {
+async function getDestinationPath(sourcePath: AbsPath, targetPath: AbsPath, targetName?: string): Promise<DestinationPath> {
   const sourceName = AbsPath.basename(sourcePath)
   const sourceStat = await stat(sourcePath)
   const isDir = sourceStat.isDirectory
-  const uniqueName = await generateUniqueFileName(targetPath, sourceName, isDir)
+  const uniqueName = targetName ?? await generateUniqueFileName(targetPath, sourceName, isDir)
   const destPath = AbsPath.append(targetPath, uniqueName)
   return { destPath, isDir }
 }
@@ -157,8 +157,8 @@ async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
   return destPath
 }
 
-async function moveFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath> {
-  const { destPath } = await getDestinationPath(sourcePath, targetPath)
+async function moveFile(sourcePath: AbsPath, targetPath: AbsPath, targetName?: string): Promise<AbsPath> {
+  const { destPath } = await getDestinationPath(sourcePath, targetPath, targetName)
   await rename(sourcePath, destPath)
   return destPath
 }

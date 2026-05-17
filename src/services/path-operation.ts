@@ -17,6 +17,7 @@ import { useResourceIndex } from '~/services/resource-index/service'
 import { useEditorStore } from '~/stores/editor'
 import { useFileStore } from '~/stores/file'
 import { useWorkspaceStore } from '~/stores/workspace'
+import { buildUniqueEntryName } from '~/utils/entry-name'
 
 import type { GameConfigReadResult, GameConfigWritePayload } from '~/commands/game'
 import type { FileSystemEvent } from '~/composables/useFileSystemEvents'
@@ -129,7 +130,7 @@ export interface PathOperationDeps {
   gameFs: {
     readDocumentFile(path: AbsPath): Promise<Uint8Array>
     renameFile(oldPath: AbsPath, newName: string): Promise<PathMutationResult>
-    moveFile(sourcePath: AbsPath, targetDirectory: AbsPath): Promise<PathMutationResult>
+    moveFile(sourcePath: AbsPath, targetDirectory: AbsPath, targetName?: string): Promise<PathMutationResult>
     writeDocumentFile(path: AbsPath, content: Uint8Array): Promise<void>
   }
   gameManager: {
@@ -151,6 +152,7 @@ export interface PathOperationDeps {
       expectedEchoes: number
     }): boolean
     release(id: number): boolean
+    markSettled(id: number): boolean
     hasOverlap(paths: readonly AbsPath[]): boolean
   }
   resourceIndex: {
@@ -184,7 +186,7 @@ export class PathOperationError extends Error {
   }
 }
 
-function resolveTargetPath(input: PathOperationInput): AbsPath {
+function resolveNominalTargetPath(input: PathOperationInput): AbsPath {
   if (input.target.type === 'name') {
     return AbsPath.append(AbsPath.parent(input.sourcePath), input.target.name)
   }
@@ -192,12 +194,44 @@ function resolveTargetPath(input: PathOperationInput): AbsPath {
   return AbsPath.append(input.target.directory, AbsPath.basename(input.sourcePath))
 }
 
-async function isExistingTargetPath(path: AbsPath): Promise<boolean> {
+async function isExistingPath(deps: PathOperationDeps, path: AbsPath): Promise<boolean> {
+  if (deps.fileStore.getItemByPath(path)) {
+    return true
+  }
+
   try {
     return await exists(path)
   } catch {
     return false
   }
+}
+
+async function resolveMoveTargetPath(deps: PathOperationDeps, sourcePath: AbsPath, targetDirectory: AbsPath): Promise<AbsPath> {
+  const sourceItem = deps.fileStore.getItemByPath(sourcePath)
+  const sourceName = AbsPath.basename(sourcePath)
+  if (AbsPath.equals(AbsPath.parent(sourcePath), targetDirectory)) {
+    return AbsPath.append(targetDirectory, sourceName)
+  }
+
+  const existingNames = new Set<string>()
+  let nextName = sourceName
+
+  // 目标名需要按 “foo.ext -> foo (1).ext -> ...” 顺序探测，串行检查才能保持命名确定性。
+  // eslint-disable-next-line no-await-in-loop
+  while (await isExistingPath(deps, AbsPath.append(targetDirectory, nextName))) {
+    existingNames.add(nextName)
+    nextName = buildUniqueEntryName(sourceName, sourceItem?.isDir ?? false, existingNames)
+  }
+
+  return AbsPath.append(targetDirectory, nextName)
+}
+
+async function resolveTargetPath(deps: PathOperationDeps, input: PathOperationInput): Promise<AbsPath> {
+  if (input.kind === 'move' && input.target.type === 'directory') {
+    return await resolveMoveTargetPath(deps, input.sourcePath, input.target.directory)
+  }
+
+  return resolveNominalTargetPath(input)
 }
 
 async function createStableHash(content: string): Promise<string> {
@@ -764,6 +798,15 @@ async function buildReferenceRewrites(
 }
 
 async function validatePlanBaseline(deps: PathOperationDeps, plan: PathOperationPlan): Promise<void> {
+  if (plan.kind === 'move' && await isExistingPath(deps, plan.targetPath)) {
+    throw new PathOperationError(
+      'stale-plan',
+      t => t('edit.pathOperation.errors.stalePlan', {
+        path: plan.targetPath,
+      }),
+    )
+  }
+
   for (const file of plan.rollback.files) {
     // eslint-disable-next-line no-await-in-loop -- 乐观锁校验按 rollback 顺序短路，避免后续副作用基于过期计划继续推进。
     const currentRevision = await readCurrentBaselineRevision(deps, file)
@@ -875,7 +918,7 @@ async function rollbackPathSideEffect(
     return
   }
 
-  await deps.gameFs.moveFile(finalPath, AbsPath.parent(plan.sourcePath))
+  await deps.gameFs.moveFile(finalPath, AbsPath.parent(plan.sourcePath), AbsPath.basename(plan.sourcePath))
 }
 
 async function rollbackStorePathMutation(
@@ -1066,14 +1109,16 @@ async function migrateSceneHistory(
 
 export function createPathOperationService(deps: PathOperationDeps) {
   async function plan(input: PathOperationInput): Promise<PathOperationPlan> {
-    const targetPath = resolveTargetPath(input)
+    const targetPath = await resolveTargetPath(deps, input)
     const blockedReasons: PathOperationBlockReason[] = []
     const gamePath = deps.getGamePath()
 
     if (
       AbsPath.equals(input.sourcePath, targetPath)
-      || deps.fileStore.getItemByPath(targetPath)
-      || await isExistingTargetPath(targetPath)
+      || (
+        input.kind === 'rename'
+        && await isExistingPath(deps, targetPath)
+      )
     ) {
       blockedReasons.push({
         kind: 'duplicate-target',
@@ -1152,7 +1197,11 @@ export function createPathOperationService(deps: PathOperationDeps) {
 
       const fsResult = plan.kind === 'rename'
         ? await deps.gameFs.renameFile(plan.sourcePath, AbsPath.basename(plan.targetPath))
-        : await deps.gameFs.moveFile(plan.sourcePath, AbsPath.parent(plan.targetPath))
+        : await deps.gameFs.moveFile(
+            plan.sourcePath,
+            AbsPath.parent(plan.targetPath),
+            AbsPath.basename(plan.targetPath),
+          )
       appliedFsResult = fsResult
 
       deps.pathOperationRegistry.updateChannel(pendingId, {
@@ -1246,6 +1295,7 @@ export function createPathOperationService(deps: PathOperationDeps) {
       emitPathOperationEvent(deps, plan, fsResult.newPath, isDir)
       emitRewriteEvents(deps, plan.rewrites)
 
+      deps.pathOperationRegistry.markSettled(pendingId)
       if (fsResult.echoMode === 'synthetic') {
         deps.pathOperationRegistry.release(pendingId)
       }

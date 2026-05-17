@@ -91,6 +91,7 @@ function createDeps(overrides: DeepPartial<PathOperationDeps> = {}): PathOperati
     },
     pathOperationRegistry: {
       hasOverlap: vi.fn(() => false),
+      markSettled: vi.fn(),
       register: vi.fn(() => 1),
       release: vi.fn(),
       updateChannel: vi.fn(),
@@ -185,6 +186,7 @@ describe('pathOperation', () => {
       echoMode: 'watcher',
       expectedEchoes: 1,
     })
+    expect(deps.pathOperationRegistry.markSettled).toHaveBeenCalledWith(1)
     expect(deps.pathOperationRegistry.release).not.toHaveBeenCalled()
   })
 
@@ -284,7 +286,7 @@ describe('pathOperation', () => {
     })
   })
 
-  it('目标路径未加载但磁盘已存在时会阻断 duplicate-target', async () => {
+  it('rename 目标路径未加载但磁盘已存在时会阻断 duplicate-target', async () => {
     existsMock.mockResolvedValue(true)
     const deps = createDeps({
       fileStore: {
@@ -304,6 +306,117 @@ describe('pathOperation', () => {
       filePath: '/project/game/background/renamed.jpg',
     }))
     expect(deps.gameFs.renameFile).not.toHaveBeenCalled()
+  })
+
+  it('move 目标存在同名文件时会在 plan 阶段保留两者，并让引用重写指向最终唯一路径', async () => {
+    const referencedRecord = {
+      assetKey: createAssetKey('asset', 'background', RelPath.from('bg.jpg')),
+      fieldKey: '__content__',
+      sourceKind: 'scene',
+      sourcePath: AbsPath.from('/project/game/scene/start.txt'),
+      statementId: 1,
+    } satisfies AssetReferenceRecord
+    existsMock.mockImplementation(async (path: AbsPath) =>
+      path === AbsPath.from('/project/game/background/archive/bg.jpg'),
+    )
+    const deps = createDeps({
+      fileStore: {
+        getItemByPath: vi.fn((path: AbsPath) => {
+          if (path === AbsPath.from('/project/game/background/bg.jpg')) {
+            return { isDir: false }
+          }
+          if (path === AbsPath.from('/project/game/background/archive/bg.jpg')) {
+            return { isDir: false }
+          }
+          return
+        }),
+      },
+      gameFs: {
+        moveFile: vi.fn(async (_sourcePath, targetDirectory) => ({
+          echoMode: 'watcher' as const,
+          newPath: AbsPath.append(targetDirectory, 'bg (1).jpg'),
+        })),
+      },
+      resourceIndex: {
+        getReferencesTo: vi.fn(() => [referencedRecord]),
+        listByAssetType: vi.fn(() => []),
+        resolveByAbsolutePath: vi.fn(() => ({
+          absolutePath: AbsPath.from('/project/game/background/bg.jpg'),
+          extension: '.jpg',
+          fileName: 'bg.jpg',
+          key: createAssetKey('asset', 'background', RelPath.from('bg.jpg')),
+        })),
+      },
+    })
+    const service = createPathOperationService(deps)
+
+    const result = await service.perform({
+      kind: 'move',
+      sourcePath: AbsPath.from('/project/game/background/bg.jpg'),
+      target: { type: 'directory', directory: AbsPath.from('/project/game/background/archive') },
+    }, async (): Promise<PathOperationConfirmDecision> => 'rewrite')
+
+    expect(result.finalPath).toBe('/project/game/background/archive/bg (1).jpg')
+    expect(result.plan.blockedReasons).toEqual([])
+    expect(result.plan.rewrites).toEqual([
+      expect.objectContaining({
+        after: 'changeBg:archive/bg (1).jpg;',
+        before: 'changeBg:bg.jpg;',
+        filePath: '/project/game/scene/start.txt',
+      }),
+    ])
+    expect(deps.gameFs.moveFile).toHaveBeenCalledWith(
+      '/project/game/background/bg.jpg',
+      '/project/game/background/archive',
+      'bg (1).jpg',
+    )
+  })
+
+  it('move 确认期间计划目标被占用时会重新 plan 到下一个唯一名称', async () => {
+    let firstUniqueTargetChecked = false
+    existsMock.mockImplementation(async (path: AbsPath) => {
+      if (path === AbsPath.from('/project/game/background/archive/bg.jpg')) {
+        return true
+      }
+      if (path !== AbsPath.from('/project/game/background/archive/bg (1).jpg')) {
+        return false
+      }
+      if (!firstUniqueTargetChecked) {
+        firstUniqueTargetChecked = true
+        return false
+      }
+      return true
+    })
+    const deps = createDeps({
+      fileStore: {
+        getItemByPath: vi.fn((path: AbsPath) => {
+          if (path === AbsPath.from('/project/game/background/bg.jpg')) {
+            return { isDir: false }
+          }
+          return
+        }),
+      },
+      gameFs: {
+        moveFile: vi.fn(async (_sourcePath, targetDirectory, targetName = 'bg.jpg') => ({
+          echoMode: 'watcher' as const,
+          newPath: AbsPath.append(targetDirectory, targetName),
+        })),
+      },
+    })
+    const service = createPathOperationService(deps)
+
+    const result = await service.perform({
+      kind: 'move',
+      sourcePath: AbsPath.from('/project/game/background/bg.jpg'),
+      target: { type: 'directory', directory: AbsPath.from('/project/game/background/archive') },
+    })
+
+    expect(result.finalPath).toBe('/project/game/background/archive/bg (2).jpg')
+    expect(deps.gameFs.moveFile).toHaveBeenCalledWith(
+      '/project/game/background/bg.jpg',
+      '/project/game/background/archive',
+      'bg (2).jpg',
+    )
   })
 
   it('确认后会写入场景补丁并广播 system-refactor 修改事件', async () => {
@@ -862,6 +975,83 @@ describe('pathOperation', () => {
     expect(renameFile).toHaveBeenLastCalledWith('/project/game/background/renamed.jpg', 'bg.jpg')
   })
 
+  it('move 回滚唯一目标名时会显式恢复源文件名', async () => {
+    const metadata = createTextMetadata('changeBg:bg.jpg;')
+    const referencedRecord = {
+      assetKey: createAssetKey('asset', 'background', RelPath.from('bg.jpg')),
+      fieldKey: '__content__',
+      sourceKind: 'scene',
+      sourcePath: AbsPath.from('/project/game/scene/start.txt'),
+      statementId: 1,
+    } satisfies AssetReferenceRecord
+    existsMock.mockImplementation(async (path: AbsPath) =>
+      path === AbsPath.from('/project/game/background/archive/bg.jpg'),
+    )
+    const moveFile = vi.fn(async (sourcePath: AbsPath, targetDirectory: AbsPath, targetName?: string) => ({
+      echoMode: 'watcher' as const,
+      newPath: AbsPath.append(targetDirectory, targetName ?? AbsPath.basename(sourcePath)),
+    }))
+    const deps = createDeps({
+      editor: {
+        applySystemRefactor: vi.fn(() => false),
+        peekSceneBuffer: vi.fn(() => ({
+          content: 'changeBg:bg.jpg;',
+          metadata,
+          revision: 'r1',
+        })),
+        peekSceneRevision: vi.fn(() => 'r1'),
+      },
+      fileStore: {
+        getItemByPath: vi.fn((path: AbsPath) => {
+          if (path === AbsPath.from('/project/game/background/bg.jpg')) {
+            return { isDir: false }
+          }
+          if (path === AbsPath.from('/project/game/background/archive/bg.jpg')) {
+            return { isDir: false }
+          }
+          return
+        }),
+      },
+      gameFs: {
+        moveFile,
+        readDocumentFile: vi.fn(async () => new TextEncoder().encode('changeBg:bg.jpg;')),
+        writeDocumentFile: vi.fn(),
+      },
+      resourceIndex: {
+        getReferencesTo: vi.fn(() => [referencedRecord]),
+        listByAssetType: vi.fn(() => []),
+        resolveByAbsolutePath: vi.fn(() => ({
+          absolutePath: AbsPath.from('/project/game/background/bg.jpg'),
+          extension: '.jpg',
+          fileName: 'bg.jpg',
+          key: createAssetKey('asset', 'background', RelPath.from('bg.jpg')),
+        })),
+      },
+    })
+    const service = createPathOperationService(deps)
+
+    const plan = await service.plan({
+      kind: 'move',
+      sourcePath: AbsPath.from('/project/game/background/bg.jpg'),
+      target: { type: 'directory', directory: AbsPath.from('/project/game/background/archive') },
+    })
+
+    await expect(service.apply(plan)).rejects.toMatchObject({ code: 'stale-plan' })
+
+    expect(moveFile).toHaveBeenNthCalledWith(
+      1,
+      '/project/game/background/bg.jpg',
+      '/project/game/background/archive',
+      'bg (1).jpg',
+    )
+    expect(moveFile).toHaveBeenNthCalledWith(
+      2,
+      '/project/game/background/archive/bg (1).jpg',
+      '/project/game/background',
+      'bg.jpg',
+    )
+  })
+
   it('回滚编辑器 buffer 重写时使用当前 revision', async () => {
     const metadata = createTextMetadata('changeBg:bg.jpg;')
     const referencedRecord = {
@@ -995,6 +1185,104 @@ describe('pathOperation', () => {
       echoMode: 'synthetic',
       expectedEchoes: 0,
     })
+    expect(deps.pathOperationRegistry.markSettled).toHaveBeenCalledWith(1)
     expect(deps.pathOperationRegistry.release).toHaveBeenCalledWith(1)
+  })
+
+  it.each([
+    {
+      firstSourcePath: '/project/game/scene/chapter/start.txt',
+      firstTargetDirectory: '/project/game/scene',
+      secondSourcePath: '/project/game/scene/start.txt',
+      secondTargetDirectory: '/project/game/scene/chapter',
+    },
+    {
+      firstSourcePath: '/project/game/scene/start.txt',
+      firstTargetDirectory: '/project/game/scene/chapter',
+      secondSourcePath: '/project/game/scene/chapter/start.txt',
+      secondTargetDirectory: '/project/game/scene',
+    },
+  ])('连续反向 move 不会被上一轮 watcher pending 阻断', async ({
+    firstSourcePath,
+    firstTargetDirectory,
+    secondSourcePath,
+    secondTargetDirectory,
+  }) => {
+    const pendingOperations = new Map<number, { blocksConflicts: boolean, sourcePath: AbsPath, targetPath: AbsPath }>()
+    let nextPendingId = 1
+    const hasOverlap = vi.fn((paths: readonly AbsPath[]) =>
+      [...pendingOperations.values()].some(pending =>
+        pending.blocksConflicts
+        && paths.some(path =>
+          path === pending.sourcePath
+          || path === pending.targetPath
+          || path.startsWith(`${pending.sourcePath}/`)
+          || path.startsWith(`${pending.targetPath}/`),
+        ),
+      ),
+    )
+    const register = vi.fn(({ sourcePath, targetPath }: { sourcePath: AbsPath, targetPath: AbsPath }) => {
+      const id = nextPendingId
+      nextPendingId += 1
+      pendingOperations.set(id, {
+        blocksConflicts: true,
+        sourcePath,
+        targetPath,
+      })
+      return id
+    })
+    const markSettled = vi.fn((id: number) => {
+      const pending = pendingOperations.get(id)
+      if (!pending) {
+        return false
+      }
+
+      pending.blocksConflicts = false
+      return true
+    })
+    const filePaths = new Set([
+      firstSourcePath,
+      '/project/game/scene/chapter',
+    ])
+    const deps = createDeps({
+      fileStore: {
+        applyPathMutation: vi.fn((oldPath: AbsPath, newPath: AbsPath) => {
+          filePaths.delete(oldPath)
+          filePaths.add(newPath)
+        }),
+        getItemByPath: vi.fn((path: AbsPath) => {
+          if (filePaths.has(path)) {
+            return { isDir: path === AbsPath.from('/project/game/scene/chapter') }
+          }
+          return
+        }),
+      },
+      gameFs: {
+        moveFile: vi.fn(async (sourcePath, targetDirectory) => ({
+          echoMode: 'watcher' as const,
+          newPath: AbsPath.append(targetDirectory, AbsPath.basename(sourcePath)),
+        })),
+      },
+      pathOperationRegistry: {
+        hasOverlap,
+        markSettled,
+        register,
+      },
+    })
+    const service = createPathOperationService(deps)
+
+    await service.perform({
+      kind: 'move',
+      sourcePath: AbsPath.from(firstSourcePath),
+      target: { type: 'directory', directory: AbsPath.from(firstTargetDirectory) },
+    })
+    await service.perform({
+      kind: 'move',
+      sourcePath: AbsPath.from(secondSourcePath),
+      target: { type: 'directory', directory: AbsPath.from(secondTargetDirectory) },
+    })
+
+    expect(deps.gameFs.moveFile).toHaveBeenCalledTimes(2)
+    expect(markSettled).toHaveBeenCalledTimes(2)
   })
 })

@@ -653,6 +653,7 @@ edit:
     pastePartialFailed: 部分粘贴失败 ({failed}/{total})
     pasteMultipleSuccess: 成功粘贴 {count} 个项目
     viewHistory: 查看历史版本
+    dragPreviewCount: "{count} 个文件"
   previewPanel:
     copyUrl: 复制地址
     refreshPreview: 刷新预览

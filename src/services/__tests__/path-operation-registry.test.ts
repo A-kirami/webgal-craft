@@ -5,6 +5,7 @@ import {
   clearPendingPathOperations,
   hasOverlappingPathOperation,
   lookupPathOperationByPath,
+  markPathOperationSettled,
   pathOperationRegistry,
   registerPathOperation,
   releasePathOperation,
@@ -127,5 +128,31 @@ describe('pathOperationRegistry', () => {
     expect(lookupPathOperationByPath(
       AbsPath.from('/project/game/background/new/chapter/bg.jpg'),
     )?.id).toBe(pendingId)
+  })
+
+  it('路径操作完成本地状态提交后不再阻断新的重叠操作，但仍吞掉 watcher 回声', () => {
+    const pendingId = registerPathOperation({
+      sourcePath: AbsPath.from('/project/game/scene/chapter/start.txt'),
+      targetPath: AbsPath.from('/project/game/scene/start.txt'),
+    })
+
+    updatePathOperationChannel(pendingId, {
+      echoMode: 'watcher',
+      expectedEchoes: 1,
+    })
+    markPathOperationSettled(pendingId)
+
+    expect(hasOverlappingPathOperation([
+      AbsPath.from('/project/game/scene/start.txt'),
+      AbsPath.from('/project/game/scene/chapter/start.txt'),
+    ])).toBe(false)
+
+    expect(pathOperationRegistry.consumeRenameEcho(
+      AbsPath.from('/project/game/scene/chapter/start.txt'),
+      AbsPath.from('/project/game/scene/start.txt'),
+    )).toBe(true)
+    expect(lookupPathOperationByPath(
+      AbsPath.from('/project/game/scene/start.txt'),
+    )).toBeUndefined()
   })
 })

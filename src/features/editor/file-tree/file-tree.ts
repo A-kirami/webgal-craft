@@ -63,6 +63,19 @@ export interface ResolveFileTreeCreateBlurActionOptions {
   value: string
 }
 
+export interface ResolveFileTreeMoveTargetOptions {
+  sourcePaths: readonly string[]
+  targetDirectoryPath: string
+}
+
+export interface ResolveFileTreeCopyTargetOptions {
+  sourceItems: readonly {
+    isDir: boolean
+    path: string
+  }[]
+  targetDirectoryPath: string
+}
+
 export function getFileTreeParentPath(path: string): string {
   return path.replace(/[\\/][^\\/]+$/, '')
 }
@@ -262,6 +275,78 @@ export function hasFileTreeDuplicateName<T>(
 
     return accessor.getName(sibling).trim().toLowerCase() === trimmedName
   })
+}
+
+function isSamePath(left: string, right: string): boolean {
+  return AbsPath.equals(AbsPath.from(left), AbsPath.from(right))
+}
+
+function getNormalizedParentPath(path: string): string {
+  return AbsPath.parent(AbsPath.from(path))
+}
+
+function isPathWithin(path: string, root: string): boolean {
+  try {
+    return AbsPath.relativize(AbsPath.from(path), AbsPath.from(root)) !== ''
+  } catch {
+    return false
+  }
+}
+
+export function canMoveFileTreeItemsToDirectory(options: ResolveFileTreeMoveTargetOptions): boolean {
+  if (options.sourcePaths.length === 0 || !options.targetDirectoryPath) {
+    return false
+  }
+
+  return options.sourcePaths.every((sourcePath) => {
+    if (isSamePath(sourcePath, options.targetDirectoryPath)) {
+      return false
+    }
+
+    if (isSamePath(getNormalizedParentPath(sourcePath), options.targetDirectoryPath)) {
+      return false
+    }
+
+    return !isPathWithin(options.targetDirectoryPath, sourcePath)
+  })
+}
+
+export function canCopyFileTreeItemsToDirectory(options: ResolveFileTreeCopyTargetOptions): boolean {
+  if (options.sourceItems.length === 0 || !options.targetDirectoryPath) {
+    return false
+  }
+
+  return options.sourceItems.every((sourceItem) => {
+    if (!sourceItem.isDir) {
+      return true
+    }
+
+    if (isSamePath(sourceItem.path, options.targetDirectoryPath)) {
+      return false
+    }
+
+    return !isPathWithin(options.targetDirectoryPath, sourceItem.path)
+  })
+}
+
+export function normalizeFileTreeTransferItems<T extends { path: string }>(items: readonly T[]): T[] {
+  const uniqueItems: T[] = []
+
+  for (const item of items) {
+    if (!item.path || uniqueItems.some(existing => isSamePath(existing.path, item.path))) {
+      continue
+    }
+
+    uniqueItems.push(item)
+  }
+
+  // 祖先目录已经会连同整棵子树一起移动/复制；保留它的后代只会造成重复操作。
+  return uniqueItems.filter(item =>
+    !uniqueItems.some(other =>
+      other !== item
+      && isPathWithin(item.path, other.path),
+    ),
+  )
 }
 
 export function insertCreatingFileTreeItem<T, TFlattened extends FileTreeFlattenedItemLike<T>>(

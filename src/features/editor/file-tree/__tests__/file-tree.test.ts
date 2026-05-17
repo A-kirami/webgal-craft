@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  canCopyFileTreeItemsToDirectory,
+  canMoveFileTreeItemsToDirectory,
   getFileTreeNameSelectionEnd,
   hasFileTreeDuplicateName,
   insertCreatingFileTreeItem,
+  normalizeFileTreeTransferItems,
   resolveFileTreeCreateBlurAction,
   resolveFileTreeCreateStart,
   resolveFileTreeRenameBlurAction,
@@ -322,5 +325,86 @@ describe('fileTree', () => {
       type: 'file',
       value: 'branch.txt',
     })).toBe<FileTreeBlurAction>('submit')
+  })
+
+  describe('文件移动目标', () => {
+    it('会拒绝拖入自身、子目录和同父目录', () => {
+      expect(canMoveFileTreeItemsToDirectory({
+        sourcePaths: ['/project/scene/chapter'],
+        targetDirectoryPath: '/project/scene/chapter',
+      })).toBe(false)
+
+      expect(canMoveFileTreeItemsToDirectory({
+        sourcePaths: ['/project/scene/chapter'],
+        targetDirectoryPath: '/project/scene/chapter/nested',
+      })).toBe(false)
+
+      expect(canMoveFileTreeItemsToDirectory({
+        sourcePaths: ['/project/scene/start.txt'],
+        targetDirectoryPath: '/project/scene',
+      })).toBe(false)
+
+      expect(canMoveFileTreeItemsToDirectory({
+        sourcePaths: [String.raw`C:\project\scene\chapter`],
+        targetDirectoryPath: 'C:/project/scene',
+      })).toBe(false)
+
+      expect(canMoveFileTreeItemsToDirectory({
+        sourcePaths: ['/project/scene/chapter/'],
+        targetDirectoryPath: '/project/scene',
+      })).toBe(false)
+    })
+
+    it('所有来源都可以移动时才允许放置', () => {
+      expect(canMoveFileTreeItemsToDirectory({
+        sourcePaths: ['/project/scene/start.txt', '/project/scene/chapter'],
+        targetDirectoryPath: '/project/scene/archive',
+      })).toBe(true)
+
+      expect(canMoveFileTreeItemsToDirectory({
+        sourcePaths: ['/project/scene/start.txt', '/project/scene/archive'],
+        targetDirectoryPath: '/project/scene/archive',
+      })).toBe(false)
+    })
+  })
+
+  describe('文件复制目标', () => {
+    it('目录复制会拒绝拖入自身和子目录，但允许复制到同父目录', () => {
+      expect(canCopyFileTreeItemsToDirectory({
+        sourceItems: [{ isDir: true, path: '/project/scene/chapter' }],
+        targetDirectoryPath: '/project/scene/chapter',
+      })).toBe(false)
+
+      expect(canCopyFileTreeItemsToDirectory({
+        sourceItems: [{ isDir: true, path: '/project/scene/chapter' }],
+        targetDirectoryPath: '/project/scene/chapter/nested',
+      })).toBe(false)
+
+      expect(canCopyFileTreeItemsToDirectory({
+        sourceItems: [{ isDir: true, path: '/project/scene/chapter' }],
+        targetDirectoryPath: '/project/scene',
+      })).toBe(true)
+    })
+
+    it('文件复制允许复制到同父目录', () => {
+      expect(canCopyFileTreeItemsToDirectory({
+        sourceItems: [{ isDir: false, path: '/project/scene/start.txt' }],
+        targetDirectoryPath: '/project/scene',
+      })).toBe(true)
+    })
+  })
+
+  describe('拖拽集合规范化', () => {
+    it('会剔除已被祖先目录覆盖的后代项并保持其余顺序', () => {
+      expect(normalizeFileTreeTransferItems([
+        { isDir: false, path: '/project/scene/chapter/branch.txt' },
+        { isDir: true, path: '/project/scene/chapter' },
+        { isDir: false, path: '/project/scene/ending.txt' },
+        { isDir: false, path: '/project/scene/ending.txt' },
+      ])).toEqual([
+        { isDir: true, path: '/project/scene/chapter' },
+        { isDir: false, path: '/project/scene/ending.txt' },
+      ])
+    })
   })
 })

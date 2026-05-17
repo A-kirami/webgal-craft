@@ -2,11 +2,14 @@ import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { usePathOperationFeedback } from '~/composables/usePathOperationFeedback'
 import { AbsPath } from '~/domain/path'
 import {
+  canCopyFileTreeItemsToDirectory,
+  canMoveFileTreeItemsToDirectory,
   findFileTreeItemByPath,
   getFileTreeNameSelectionEnd,
   getFileTreeParentPath,
   hasFileTreeDuplicateName,
   insertCreatingFileTreeItem,
+  normalizeFileTreeTransferItems,
   resolveFileTreeCreateBlurAction,
   resolveFileTreeCreateStart,
   resolveFileTreeRenameBlurAction,
@@ -23,6 +26,7 @@ import { createItemComparator } from '~/utils/sort'
 
 import type { FlattenedItem } from 'reka-ui'
 import type { FileTreeDefaultFileNameParts } from '~/features/editor/file-tree/file-tree'
+import type { DragTransferOperation, FileSystemDragPayload } from '~/types/drag-drop'
 import type { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 import type { SortableItemAccessor } from '~/utils/sort'
 
@@ -38,6 +42,16 @@ interface PendingRenameResult {
 interface PendingDirectoryExpandedRewrite {
   newPath: string
   oldPath: string
+}
+
+interface FileTreeScrollContext {
+  gameId: string
+  treeName: string
+}
+
+interface FileTreeScrollRestoreMarker extends FileTreeScrollContext {
+  left: number
+  top: number
 }
 
 interface UseFileTreeControllerOptions<T extends object> {
@@ -221,6 +235,7 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   })
   const pendingRenameResult = ref<PendingRenameResult>()
   const pendingDirectoryExpandedRewrite = ref<PendingDirectoryExpandedRewrite>()
+  const restoredScrollContext = ref<FileTreeScrollRestoreMarker>()
 
   const BLUR_CANCEL_DELAY = 50
 
@@ -377,6 +392,62 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   const tabsStore = useTabsStore()
 
   const currentGameId = computed(() => workspaceStore.currentGame?.id)
+
+  function hasRestoredScrollPosition(gameId: string, treeName: string, left: number, top: number): boolean {
+    return restoredScrollContext.value?.gameId === gameId
+      && restoredScrollContext.value.treeName === treeName
+      && restoredScrollContext.value.left === left
+      && restoredScrollContext.value.top === top
+  }
+
+  function getScrollRestoreContext(): FileTreeScrollContext | undefined {
+    const gameId = currentGameId.value
+    const treeName = options.treeName()
+    if (!gameId || !treeName) {
+      return
+    }
+
+    return { gameId, treeName }
+  }
+
+  function restoreScrollPosition(): void {
+    const context = getScrollRestoreContext()
+    if (!context) {
+      return
+    }
+
+    const viewport = getViewportElement()
+    if (!viewport) {
+      return
+    }
+
+    const savedPosition = editorUIStateStore.getFileTreeScrollPosition(context.gameId, context.treeName)
+    if (!savedPosition) {
+      restoredScrollContext.value = {
+        ...context,
+        left: 0,
+        top: 0,
+      }
+      return
+    }
+
+    if (hasRestoredScrollPosition(context.gameId, context.treeName, savedPosition.left, savedPosition.top)) {
+      return
+    }
+
+    viewport.scrollTo({
+      left: savedPosition.left,
+      top: savedPosition.top,
+      behavior: 'auto',
+    })
+    if (viewport.scrollTop === savedPosition.top && viewport.scrollLeft === savedPosition.left) {
+      restoredScrollContext.value = {
+        ...context,
+        left: savedPosition.left,
+        top: savedPosition.top,
+      }
+    }
+  }
 
   function resolveExpandedState(): string[] {
     const treeName = options.treeName()
@@ -562,6 +633,104 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     startCreating(fileItem.path, 'folder')
   }
 
+  type FileSystemDragItem = NonNullable<FileSystemDragPayload['items']>[number]
+
+  function getFileSystemDragItems(payload: FileSystemDragPayload): FileSystemDragItem[] {
+    return normalizeFileTreeTransferItems(
+      payload.items?.length
+        ? payload.items
+        : [{
+            isDir: payload.isDir,
+            name: payload.name,
+            path: payload.path,
+          }],
+    )
+  }
+
+  function canDropFileSystemDragItems(
+    items: readonly FileSystemDragItem[],
+    targetDirectoryPath: string,
+    operation: DragTransferOperation = 'move',
+  ): boolean {
+    if (operation === 'copy') {
+      return canCopyFileTreeItemsToDirectory({
+        sourceItems: items,
+        targetDirectoryPath,
+      })
+    }
+
+    return canMoveFileTreeItemsToDirectory({
+      sourcePaths: items.map(item => item.path),
+      targetDirectoryPath,
+    })
+  }
+
+  function canDropFileSystemItems(
+    payload: FileSystemDragPayload,
+    targetDirectoryPath: string,
+    operation: DragTransferOperation = 'move',
+  ): boolean {
+    return canDropFileSystemDragItems(
+      getFileSystemDragItems(payload),
+      targetDirectoryPath,
+      operation,
+    )
+  }
+
+  function resolveDroppableFileSystemItems(
+    payload: FileSystemDragPayload,
+    targetDirectoryPath: string,
+    operation: DragTransferOperation = 'move',
+  ): FileSystemDragItem[] | undefined {
+    const items = getFileSystemDragItems(payload)
+    if (!canDropFileSystemDragItems(items, targetDirectoryPath, operation)) {
+      return
+    }
+
+    return items
+  }
+
+  function expandDirectory(path: string): void {
+    if (!path || expanded.value.includes(path)) {
+      return
+    }
+
+    expanded.value = [...expanded.value, path]
+  }
+
+  async function moveFileSystemItems(payload: FileSystemDragPayload, targetDirectoryPath: string): Promise<void> {
+    const items = resolveDroppableFileSystemItems(payload, targetDirectoryPath)
+    if (!items) {
+      return
+    }
+
+    for (const item of items) {
+      // eslint-disable-next-line no-await-in-loop -- 多文件移动按用户拖拽顺序串行执行，避免确认框和 path-operation registry 交错。
+      const result = await pathOperation.perform({
+        kind: 'move',
+        sourcePath: AbsPath.from(item.path),
+        target: { type: 'directory', directory: AbsPath.from(targetDirectoryPath) },
+      }, confirmPathOperationRewrite)
+      pathOperationFeedback.reportWarnings(result.warnings)
+    }
+
+    expandDirectory(targetDirectoryPath)
+  }
+
+  async function copyFileSystemItems(payload: FileSystemDragPayload, targetDirectoryPath: string): Promise<void> {
+    const items = resolveDroppableFileSystemItems(payload, targetDirectoryPath, 'copy')
+    if (!items) {
+      return
+    }
+
+    for (const item of items) {
+      // eslint-disable-next-line no-await-in-loop -- 多文件复制按用户拖拽顺序串行执行，保持与文件树菜单粘贴入口一致。
+      await gameFs.copyFile(AbsPath.from(item.path), AbsPath.from(targetDirectoryPath))
+    }
+
+    expandDirectory(targetDirectoryPath)
+  }
+
   function handleEnterKey(item: FlattenedItem<T>): void {
     if (isRenaming(item) && !isRenameDuplicate(item)) {
       void handleRename(item)
@@ -582,7 +751,9 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   })
 
   watch([currentGameId, () => options.treeName()], () => {
+    restoredScrollContext.value = undefined
     expanded.value = resolveExpandedState()
+    nextTick(restoreScrollPosition)
   }, { immediate: true })
 
   const stopDirectoryRenamedListener = fileSystemEvents.on('directory:renamed', (event) => {
@@ -594,6 +765,8 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   onScopeDispose(stopDirectoryRenamedListener)
 
   watch(() => options.items(), (items) => {
+    nextTick(restoreScrollPosition)
+
     const pendingExpandedRewrite = pendingDirectoryExpandedRewrite.value
     if (pendingExpandedRewrite) {
       const renamedDirectory = findFileTreeItemByPath(items, pendingExpandedRewrite.newPath, fileTreeItemAccessor)
@@ -631,6 +804,23 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     return resolveViewportElement(options.scrollAreaRef.value)
   }
 
+  function handleScroll(event: Event): void {
+    const viewport = typeof HTMLElement !== 'undefined' && event.target instanceof HTMLElement
+      ? event.target
+      : getViewportElement()
+    if (!viewport) {
+      return
+    }
+
+    const context = getScrollRestoreContext()
+    if (context) {
+      editorUIStateStore.setFileTreeScrollPosition(context.gameId, context.treeName, {
+        left: viewport.scrollLeft,
+        top: viewport.scrollTop,
+      })
+    }
+  }
+
   return {
     createState,
     expanded,
@@ -652,10 +842,15 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     handleEscapeKey,
     handleRename,
     handleRenameBlur,
+    handleScroll,
     isCreateDuplicate,
     isCreatingItem,
     isRenameDuplicate,
     isRenaming,
+    canDropFileSystemItems,
+    copyFileSystemItems,
+    expandDirectory,
+    moveFileSystemItems,
     processFlattenItems,
     startCreating,
     toFileItem,

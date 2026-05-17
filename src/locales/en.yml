@@ -653,6 +653,7 @@ edit:
     pastePartialFailed: Partial paste failed ({failed}/{total})
     pasteMultipleSuccess: Successfully pasted {count} items
     viewHistory: View Version History
+    dragPreviewCount: "{count} file(s)"
   previewPanel:
     copyUrl: Copy URL
     refreshPreview: Refresh Preview

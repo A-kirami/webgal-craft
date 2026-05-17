@@ -1,15 +1,22 @@
 <script setup lang="ts" generic="T extends object">
 import { LucideFile, LucideFolder, LucideFolderOpen } from '@lucide/vue'
 
+import { useDragSession } from '~/composables/useDragSession'
+import { useDragSource } from '~/composables/useDragTransfer'
+import { useDroppableRegistry } from '~/composables/useDroppableRegistry'
+import { AbsPath } from '~/domain/path'
+import { normalizeFileTreeTransferItems } from '~/features/editor/file-tree/file-tree'
 import { useFileTreeController } from '~/features/editor/file-tree/useFileTreeController'
 import { useShortcut } from '~/features/editor/shortcut/useShortcut'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { useModalStore } from '~/stores/modal'
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
+import { handleError } from '~/utils/error-handler'
 
 import type { FlattenedItem } from 'reka-ui'
-import type { ShallowRef } from 'vue'
+import type { ShallowRef, StyleValue } from 'vue'
 import type { FileTreeDefaultFileNameParts } from '~/features/editor/file-tree/file-tree'
+import type { FileSystemDragPayload } from '~/types/drag-drop'
 
 interface Props {
   items: T[]
@@ -27,6 +34,8 @@ interface Props {
   openCreatedFileInTab?: boolean
   sortBy?: FileViewerSortBy
   sortOrder?: FileViewerSortOrder
+  enableDragTransfer?: boolean
+  rootPath?: string
 }
 
 const {
@@ -45,10 +54,12 @@ const {
   openCreatedFileInTab = false,
   sortBy = 'name',
   sortOrder = 'asc',
+  enableDragTransfer = false,
+  rootPath,
 } = defineProps<Props>()
 const inputRef: Readonly<ShallowRef<unknown>> = useTemplateRef('inputRef')
 const creatingInputRef: Readonly<ShallowRef<unknown>> = useTemplateRef('creatingInputRef')
-const fileTreeContainerRef: Readonly<ShallowRef<HTMLDivElement | null>> = useTemplateRef<HTMLDivElement>('fileTreeContainerRef')
+const fileTreeContainerRef = shallowRef<HTMLDivElement>()
 
 const emit = defineEmits<{
   click: [item: FlattenedItem<T>]
@@ -60,6 +71,8 @@ const emit = defineEmits<{
 
 const selectedItem = defineModel<T>('selectedItem')
 const modalStore = useModalStore()
+const dragSession = useDragSession()
+const dropRegistry = useDroppableRegistry()
 
 const { t } = useI18n()
 const scrollAreaRef: Readonly<ShallowRef<unknown>> = useTemplateRef('scrollAreaRef')
@@ -84,10 +97,15 @@ const {
   handleEscapeKey,
   handleRename,
   handleRenameBlur,
+  handleScroll,
   isCreateDuplicate,
   isCreatingItem,
   isRenameDuplicate,
   isRenaming,
+  canDropFileSystemItems,
+  copyFileSystemItems,
+  expandDirectory,
+  moveFileSystemItems,
   processFlattenItems,
   startCreating,
   toFileItem,
@@ -111,6 +129,7 @@ const {
   sortOrder: () => sortOrder,
   treeName: () => treeName,
 })
+const fileTreeViewportRef = computed(() => getViewportElement())
 
 // 暴露创建入口和折叠操作给父组件，便于 toolbar / 快捷键触发
 defineExpose({
@@ -122,6 +141,525 @@ defineExpose({
 function resolveItemBadgeText(item: T): string | undefined {
   return itemBadgeText?.(item)
 }
+
+interface FileTreeRenderedItem {
+  isDir: boolean
+  name: string
+  path: string
+}
+
+interface FileTreeDragSourceHandlers {
+  onClickCapture?: (event: MouseEvent) => void
+  onPointerdown?: (event: PointerEvent) => void
+}
+
+interface FileTreeCreatingRenderItem {
+  item: FlattenedItem<T>
+  kind: 'creating'
+}
+
+interface FileTreeFileRenderItem {
+  ancestorDirectoryPaths: string[]
+  dropTarget: FileTreeRenderedItem
+  fileItem: FileTreeRenderedItem
+  item: FlattenedItem<T>
+  kind: 'file'
+}
+
+type FileTreeRenderItem = FileTreeCreatingRenderItem | FileTreeFileRenderItem
+
+interface FileTreeDirectoryStackItem {
+  fileItem: FileTreeRenderedItem
+  level: number
+}
+
+const HOVER_EXPAND_DELAY = 800
+const DRAG_OVERLAY_OFFSET_X = 6
+const DRAG_OVERLAY_OFFSET_Y = 6
+const dropTargetElements = new Map<string, HTMLElement>()
+let renderedFileTreePaths: string[] = []
+let activeDropTargetPath = $ref<string>()
+let pendingExpandPath = $ref<string>()
+let selectedFileTreePaths = $ref<string[]>([])
+let selectionAnchorPath = $ref<string>()
+let hoverExpandTimerId: ReturnType<typeof setTimeout> | undefined
+
+const fileDragSource = useDragSource<FileSystemDragPayload>({
+  autoScroll: {
+    container: fileTreeViewportRef,
+    edgeSize: 40,
+  },
+  getData: getFileSystemDragPayload,
+  type: 'file-system-item',
+})
+
+const effectiveRootPath = $computed(() => rootPath ?? getRootPath())
+
+const activeFileTreePayload = $computed(() => {
+  const state = dragSession.state.value
+  if (
+    !state.isActive
+    || state.mode !== 'transfer'
+    || state.payload?.type !== 'file-system-item'
+    || state.payload.source !== 'file-tree'
+  ) {
+    return
+  }
+
+  return state.payload
+})
+
+const rootFileItem = $computed<FileTreeRenderedItem>(() => ({
+  isDir: true,
+  name: '',
+  path: effectiveRootPath,
+}))
+
+const dragPreviewItems = $computed(() => {
+  const payload = activeFileTreePayload
+  if (!payload) {
+    return []
+  }
+
+  return payload.items?.length
+    ? payload.items
+    : [{
+        isDir: payload.isDir,
+        name: payload.name,
+        path: payload.path,
+      }]
+})
+
+const isMultipleDragPreview = $computed(() => dragPreviewItems.length > 1)
+const dragPreviewName = $computed(() => {
+  const firstItem = dragPreviewItems[0]
+  if (!firstItem) {
+    return ''
+  }
+
+  return firstItem.name || firstItem.path.split('/').at(-1) || firstItem.path
+})
+
+const dragPreviewCountLabel = $computed(() =>
+  t('edit.fileTree.dragPreviewCount', { count: dragPreviewItems.length }),
+)
+
+const dragOverlayStyle = $computed<StyleValue | undefined>(() => {
+  const currentPosition = dragSession.state.value.currentPosition
+  if (!activeFileTreePayload || !currentPosition) {
+    return
+  }
+
+  return {
+    transform: `translate3d(${currentPosition.x + DRAG_OVERLAY_OFFSET_X}px, ${currentPosition.y + DRAG_OVERLAY_OFFSET_Y}px, 0)`,
+    zIndex: '9999',
+  }
+})
+
+function resolveHTMLElement(value: unknown): HTMLElement | undefined {
+  if (value instanceof HTMLElement) {
+    return value
+  }
+
+  return value && typeof value === 'object' && '$el' in value && value.$el instanceof HTMLElement ? value.$el : undefined
+}
+
+function setFileTreeContainerElement(value: unknown): void {
+  const element = resolveHTMLElement(value)
+  fileTreeContainerRef.value = element instanceof HTMLDivElement ? element : undefined
+  registerDropTarget('root-container', fileTreeContainerRef.value, {
+    isDir: true,
+    name: '',
+    path: effectiveRootPath,
+  })
+}
+
+function setRootDropAreaElement(value: unknown): void {
+  registerDropTarget('root-area', resolveHTMLElement(value), {
+    isDir: true,
+    name: '',
+    path: effectiveRootPath,
+  })
+}
+
+function reportFileTreeMoveError(error: unknown): void {
+  if (error instanceof Error) {
+    handleError(error)
+    return
+  }
+
+  handleError(new Error(String(error)))
+}
+
+function getRenderedFileItem(item: FlattenedItem<T>): FileTreeRenderedItem {
+  const fileItem = toFileItem(item)
+  itemMap.set(fileItem.path, item)
+  return fileItem
+}
+
+function getRenderedFileItemByPath(path: string): FileTreeRenderedItem | undefined {
+  const item = itemMap.get(path)
+  return item ? toFileItem(item) : undefined
+}
+
+function getRenderedItems(flattenItems: FlattenedItem<T>[]): FileTreeRenderItem[] {
+  const directoryStack: FileTreeDirectoryStackItem[] = []
+  const nextRenderedFileTreePaths: string[] = []
+  itemMap.clear()
+
+  const renderItems: FileTreeRenderItem[] = processFlattenItems(flattenItems).map((item) => {
+    if (isCreatingItem(item)) {
+      return {
+        item,
+        kind: 'creating' as const,
+      }
+    }
+
+    let currentParent = directoryStack.at(-1)
+    while (currentParent && currentParent.level >= item.level) {
+      directoryStack.pop()
+      currentParent = directoryStack.at(-1)
+    }
+
+    const fileItem = getRenderedFileItem(item)
+    const ancestorDirectoryPaths = [effectiveRootPath, ...directoryStack.map(entry => entry.fileItem.path)]
+    const dropTarget = item.hasChildren
+      ? fileItem
+      : currentParent?.fileItem ?? rootFileItem
+
+    if (item.hasChildren) {
+      directoryStack.push({
+        fileItem,
+        level: item.level,
+      })
+    }
+
+    nextRenderedFileTreePaths.push(fileItem.path)
+
+    return {
+      ancestorDirectoryPaths,
+      dropTarget,
+      fileItem,
+      item,
+      kind: 'file' as const,
+    }
+  })
+
+  renderedFileTreePaths = nextRenderedFileTreePaths
+  return renderItems
+}
+
+function toUniquePaths(paths: readonly string[]): string[] {
+  return [...new Set(paths.filter(path => path.length > 0))]
+}
+
+function setSelectedFileTreePaths(paths: readonly string[]): void {
+  selectedFileTreePaths = toUniquePaths(paths)
+}
+
+function syncSelectedFileTreePaths(path?: string): void {
+  if (!path) {
+    setSelectedFileTreePaths([])
+    selectionAnchorPath = undefined
+    return
+  }
+
+  if (
+    selectedFileTreePaths.length === 1
+    && AbsPath.equals(AbsPath.from(selectedFileTreePaths[0]), AbsPath.from(path))
+  ) {
+    selectionAnchorPath = path
+    return
+  }
+
+  setSelectedFileTreePaths([path])
+  selectionAnchorPath = path
+}
+
+function getFileTreePathRange(fromPath: string | undefined, toPath: string): string[] {
+  if (!fromPath) {
+    return [toPath]
+  }
+
+  const fromIndex = renderedFileTreePaths.indexOf(fromPath)
+  const toIndex = renderedFileTreePaths.indexOf(toPath)
+  if (fromIndex === -1 || toIndex === -1) {
+    return [toPath]
+  }
+
+  const startIndex = Math.min(fromIndex, toIndex)
+  const endIndex = Math.max(fromIndex, toIndex)
+  return renderedFileTreePaths.slice(startIndex, endIndex + 1)
+}
+
+function isFileTreePathSelected(path: string): boolean {
+  return selectedFileTreePaths.includes(path)
+}
+
+function getSelectedRenderedFileItems(): FileTreeRenderedItem[] {
+  return renderedFileTreePaths
+    .filter(path => selectedFileTreePaths.includes(path))
+    .map(path => getRenderedFileItemByPath(path))
+    .filter((item): item is FileTreeRenderedItem => item !== undefined)
+}
+
+function getFileTreeSelectedItems(sourceItem: FileTreeRenderedItem): FileTreeRenderedItem[] {
+  if (!isFileTreePathSelected(sourceItem.path) || selectedFileTreePaths.length <= 1) {
+    return [sourceItem]
+  }
+
+  const selectedItems = getSelectedRenderedFileItems()
+  return normalizeFileTreeTransferItems(selectedItems.length > 0 ? selectedItems : [sourceItem])
+}
+
+function stopFileTreeSelectionEvent(event: MouseEvent): void {
+  event.preventDefault()
+  event.stopPropagation()
+  event.stopImmediatePropagation?.()
+}
+
+function handleModifiedFileTreeItemSelection(event: MouseEvent, item: FlattenedItem<T>): boolean {
+  if (isRenaming(item)) {
+    return false
+  }
+
+  const fileItem = toFileItem(item)
+  const shouldExtendRange = event.shiftKey
+  const shouldToggle = event.ctrlKey || event.metaKey
+  if (!shouldExtendRange && !shouldToggle) {
+    return false
+  }
+
+  stopFileTreeSelectionEvent(event)
+  if (shouldExtendRange) {
+    const rangePaths = getFileTreePathRange(selectionAnchorPath, fileItem.path)
+    setSelectedFileTreePaths(shouldToggle
+      ? [...selectedFileTreePaths, ...rangePaths]
+      : rangePaths)
+    return true
+  }
+
+  setSelectedFileTreePaths(isFileTreePathSelected(fileItem.path)
+    ? selectedFileTreePaths.filter(path => path !== fileItem.path)
+    : [...selectedFileTreePaths, fileItem.path])
+  selectionAnchorPath = fileItem.path
+  return true
+}
+
+function handleFileTreeItemClickCapture(event: MouseEvent, item: FlattenedItem<T>): void {
+  handleModifiedFileTreeItemSelection(event, item)
+}
+
+function handleFileTreeItemPointerDown(event: PointerEvent, item: FlattenedItem<T>): void {
+  if (
+    event.button !== 0
+    || event.ctrlKey
+    || event.metaKey
+    || event.shiftKey
+    || isRenaming(item)
+  ) {
+    return
+  }
+
+  const fileItem = toFileItem(item)
+  if (!isFileTreePathSelected(fileItem.path)) {
+    setSelectedFileTreePaths([fileItem.path])
+    selectionAnchorPath = fileItem.path
+  }
+}
+
+function handleFileTreeItemClick(event: MouseEvent, item: FlattenedItem<T>): void {
+  if (handleModifiedFileTreeItemSelection(event, item) || isRenaming(item)) {
+    return
+  }
+
+  const fileItem = toFileItem(item)
+  setSelectedFileTreePaths([fileItem.path])
+  selectionAnchorPath = fileItem.path
+  emit('click', item)
+}
+
+watch(() => {
+  const currentSelectedItem = selectedItem.value as Record<string, unknown> | undefined
+  return typeof currentSelectedItem?.path === 'string' ? currentSelectedItem.path : undefined
+}, syncSelectedFileTreePaths, { immediate: true })
+
+function getFileSystemDragPayload(element: HTMLElement): FileSystemDragPayload {
+  const path = element.dataset.fileTreePath ?? ''
+  const fileItem = getRenderedFileItemByPath(path)
+    ?? {
+      isDir: element.dataset.fileTreeIsDir === 'true',
+      name: element.dataset.fileTreeName ?? '',
+      path,
+    }
+  const dragItems = getFileTreeSelectedItems(fileItem)
+
+  return {
+    isDir: fileItem.isDir,
+    items: dragItems.map(item => ({
+      isDir: item.isDir,
+      name: item.name,
+      path: item.path,
+    })),
+    name: fileItem.name,
+    path: fileItem.path,
+    source: 'file-tree',
+    type: 'file-system-item',
+  }
+}
+
+function clearHoverExpandTimer(path?: string): void {
+  if (path && pendingExpandPath !== path) {
+    return
+  }
+
+  if (hoverExpandTimerId !== undefined) {
+    clearTimeout(hoverExpandTimerId)
+    hoverExpandTimerId = undefined
+  }
+  pendingExpandPath = undefined
+}
+
+function scheduleHoverExpand(path: string): void {
+  clearHoverExpandTimer()
+  pendingExpandPath = path
+  hoverExpandTimerId = setTimeout(() => {
+    if (pendingExpandPath === path) {
+      expandDirectory(path)
+    }
+    clearHoverExpandTimer(path)
+  }, HOVER_EXPAND_DELAY)
+}
+
+function isDropAllowed(payload: FileSystemDragPayload, fileItem: Pick<FileTreeRenderedItem, 'isDir' | 'path'>): boolean {
+  if (!fileItem.isDir) {
+    return false
+  }
+
+  return canDropFileSystemItems(payload, fileItem.path, dragSession.state.value.transferOperation)
+}
+
+function handleDragEnter(payload: FileSystemDragPayload, fileItem: Pick<FileTreeRenderedItem, 'isDir' | 'path'>): void {
+  if (!isDropAllowed(payload, fileItem)) {
+    return
+  }
+
+  activeDropTargetPath = fileItem.path
+  if (fileItem.path !== effectiveRootPath) {
+    scheduleHoverExpand(fileItem.path)
+  }
+}
+
+function handleDragLeave(_payload: FileSystemDragPayload, fileItem: Pick<FileTreeRenderedItem, 'path'>): void {
+  if (activeDropTargetPath === fileItem.path) {
+    activeDropTargetPath = undefined
+  }
+  clearHoverExpandTimer(fileItem.path)
+}
+
+async function handleDrop(payload: FileSystemDragPayload, fileItem: Pick<FileTreeRenderedItem, 'isDir' | 'path'>): Promise<void> {
+  clearHoverExpandTimer(fileItem.path)
+  if (!isDropAllowed(payload, fileItem)) {
+    return
+  }
+
+  try {
+    const operation = dragSession.state.value.transferOperation
+    await (operation === 'copy' ? copyFileSystemItems(payload, fileItem.path) : moveFileSystemItems(payload, fileItem.path))
+  } catch (error) {
+    reportFileTreeMoveError(error)
+  } finally {
+    if (activeDropTargetPath === fileItem.path) {
+      activeDropTargetPath = undefined
+    }
+  }
+}
+
+function registerDropTarget(
+  key: string,
+  element: HTMLElement | undefined,
+  fileItem: Pick<FileTreeRenderedItem, 'isDir' | 'name' | 'path'>,
+): void {
+  const previousElement = dropTargetElements.get(key)
+  if (previousElement && previousElement !== element) {
+    dropRegistry.unregisterDroppable(previousElement)
+    dropTargetElements.delete(key)
+  }
+
+  if (!enableDragTransfer || !element || !fileItem.path) {
+    if (previousElement !== undefined && previousElement === element) {
+      dropRegistry.unregisterDroppable(previousElement)
+      dropTargetElements.delete(key)
+    }
+    return
+  }
+
+  dropTargetElements.set(key, element)
+  dropRegistry.registerDroppable(element, {
+    accept: 'file-system-item',
+    canDrop: payload => isDropAllowed(payload as FileSystemDragPayload, fileItem),
+    id: `file-tree:${key}`,
+    onDragEnter: payload => handleDragEnter(payload as FileSystemDragPayload, fileItem),
+    onDragLeave: payload => handleDragLeave(payload as FileSystemDragPayload, fileItem),
+    onDrop: payload => handleDrop(payload as FileSystemDragPayload, fileItem),
+  })
+}
+
+function setFileTreeItemElement(
+  value: unknown,
+  renderItem: FileTreeFileRenderItem,
+): void {
+  registerDropTarget(renderItem.fileItem.path, resolveHTMLElement(value), renderItem.dropTarget)
+}
+
+function getFileTreeDragSourceProps(item: FlattenedItem<T>) {
+  return enableDragTransfer && !isRenaming(item)
+    ? fileDragSource.sourceProps()
+    : {} as FileTreeDragSourceHandlers
+}
+
+function getFileTreeItemBind(item: FlattenedItem<T>) {
+  const dragSourceProps = getFileTreeDragSourceProps(item)
+
+  return {
+    ...item.bind,
+    ...dragSourceProps,
+    onClickCapture: (event: MouseEvent) => {
+      dragSourceProps.onClickCapture?.(event)
+      if (!event.defaultPrevented) {
+        handleFileTreeItemClickCapture(event, item)
+      }
+    },
+    onPointerdown: (event: PointerEvent) => {
+      handleFileTreeItemPointerDown(event, item)
+      dragSourceProps.onPointerdown?.(event)
+    },
+  }
+}
+
+function isFileTreeDropRangeActive(renderItem: FileTreeFileRenderItem): boolean {
+  return Boolean(
+    activeDropTargetPath !== undefined
+    && (
+      activeDropTargetPath === renderItem.fileItem.path
+      || renderItem.ancestorDirectoryPaths.includes(activeDropTargetPath)
+    ),
+  )
+}
+
+function getFileTreeDropTargetClass(renderItem: FileTreeFileRenderItem): string {
+  if (!isFileTreeDropRangeActive(renderItem)) {
+    return ''
+  }
+
+  return activeDropTargetPath === renderItem.fileItem.path
+    ? 'bg-accent outline outline-1 outline-primary/50'
+    : 'bg-accent/60'
+}
+
+const isRootDropTargetActive = $computed(() =>
+  activeDropTargetPath !== undefined && activeDropTargetPath === effectiveRootPath,
+)
 
 function isItemDimmed(item: T): boolean {
   return itemDimmed?.(item) ?? false
@@ -214,10 +752,18 @@ useShortcut(() => ({
   keys: enableContextMenu ? 'Delete' : '',
   when: { panelFocus: 'fileTree' },
 }))
+
+tryOnUnmounted(() => {
+  clearHoverExpandTimer()
+  for (const element of dropTargetElements.values()) {
+    dropRegistry.unregisterDroppable(element)
+  }
+  dropTargetElements.clear()
+})
 </script>
 
 <template>
-  <ScrollArea ref="scrollAreaRef" class="flex-scroll-area h-full">
+  <ScrollArea ref="scrollAreaRef" class="flex-scroll-area h-full" @scroll="handleScroll">
     <!-- 加载状态提示 -->
     <div v-if="isLoading" role="status" :aria-label="$t('common.loading')" class="flex h-full items-center justify-center">
       <div class="text-muted-foreground flex flex-col gap-3 items-center">
@@ -234,19 +780,25 @@ useShortcut(() => ({
       :items="sortedItems"
       :get-key="getKey"
       selection-behavior="replace"
-      class="text-13px h-full"
+      class="text-13px h-full min-h-0"
     >
       <TooltipProvider :skip-delay-duration="0" :ignore-non-keyboard-focus="true">
-        <div ref="fileTreeContainerRef" class="relative">
+        <div
+          :ref="setFileTreeContainerElement"
+          :class="[
+            'relative shrink-0',
+            isRootDropTargetActive ? 'bg-accent/35' : '',
+          ]"
+        >
           <template
-            v-for="item in processFlattenItems(flattenItemsSlot)"
-            :key="item._id"
+            v-for="renderItem in getRenderedItems(flattenItemsSlot)"
+            :key="renderItem.item._id"
           >
             <!-- 创建项的特殊渲染 -->
-            <template v-if="isCreatingItem(item)">
+            <template v-if="renderItem.kind === 'creating'">
               <TreeItem
-                v-bind="item.bind"
-                :level="item.level"
+                v-bind="renderItem.item.bind"
+                :level="renderItem.item.level"
                 :has-children="createState.type === 'folder'"
               >
                 <TreeItemLabel :has-children="createState.type === 'folder'">
@@ -277,12 +829,7 @@ useShortcut(() => ({
             <!-- 正常项的渲染 -->
             <FileTreeContextMenu
               v-else
-              :item="(() => {
-                const flattenedItem = item as FlattenedItem<T>
-                const fileItem = toFileItem(flattenedItem)
-                itemMap.set(fileItem.path, flattenedItem)
-                return fileItem
-              })()"
+              :item="renderItem.fileItem"
               :on-rename="handleContextMenuRename"
               :on-create-file="handleContextMenuCreateFile"
               :on-create-folder="handleContextMenuCreateFolder"
@@ -290,26 +837,30 @@ useShortcut(() => ({
             >
               <TreeItem
                 v-slot="{ isExpanded }"
-                v-bind="item.bind"
-                :level="item.level"
-                :has-children="item.hasChildren"
-                :data-file-tree-path="toFileItem(item as FlattenedItem<T>).path"
-                class="cursor-pointer"
-                @keydown.enter.prevent="handleEnterKey(item as FlattenedItem<T>)"
-                @keydown.escape.prevent="handleEscapeKey(item as FlattenedItem<T>)"
-                @click="() => {
-                  if (!isRenaming(item as FlattenedItem<T>)) {
-                    emit('click', item as FlattenedItem<T>)
-                  }
-                }"
-                @dblclick="emit('dblclick', item as FlattenedItem<T>)"
-                @auxclick="(e: MouseEvent) => e.button === 1 && emit('auxclick', item as FlattenedItem<T>)"
+                v-bind="getFileTreeItemBind(renderItem.item)"
+                :ref="(value) => setFileTreeItemElement(value, renderItem)"
+                :level="renderItem.item.level"
+                :has-children="renderItem.item.hasChildren"
+                :data-file-tree-path="renderItem.fileItem.path"
+                :data-file-tree-is-dir="renderItem.fileItem.isDir ? 'true' : 'false'"
+                :data-file-tree-name="renderItem.fileItem.name"
+                :data-file-tree-selected="isFileTreePathSelected(renderItem.fileItem.path) ? 'true' : undefined"
+                :class="[
+                  'cursor-pointer touch-none',
+                  isFileTreePathSelected(renderItem.fileItem.path) ? 'bg-accent' : '',
+                  getFileTreeDropTargetClass(renderItem),
+                ]"
+                @keydown.enter.prevent="handleEnterKey(renderItem.item)"
+                @keydown.escape.prevent="handleEscapeKey(renderItem.item)"
+                @click="(event: MouseEvent) => handleFileTreeItemClick(event, renderItem.item)"
+                @dblclick="emit('dblclick', renderItem.item)"
+                @auxclick="(e: MouseEvent) => e.button === 1 && emit('auxclick', renderItem.item)"
               >
                 <Tooltip :disabled="!enableTooltip">
                   <TooltipTrigger as-child>
-                    <TreeItemLabel :has-children="item.hasChildren">
+                    <TreeItemLabel :has-children="renderItem.item.hasChildren">
                       <span class="text-13px flex flex-1 gap-2 min-w-0 w-full items-center">
-                        <template v-if="item.hasChildren">
+                        <template v-if="renderItem.item.hasChildren">
                           <LucideFolderOpen
                             v-if="isExpanded"
                             class="text-muted-foreground size-4 pointer-events-none"
@@ -323,17 +874,17 @@ useShortcut(() => ({
                           v-else
                           class="text-muted-foreground size-4 pointer-events-none"
                         />
-                        <template v-if="isRenaming(item as FlattenedItem<T>)">
+                        <template v-if="isRenaming(renderItem.item)">
                           <Input
                             ref="inputRef"
                             v-model="renameState.value"
-                            :class="['px-0 py-0 h-5 text-13px!', isRenameDuplicate(item as FlattenedItem<T>) ? 'text-destructive focus-visible:ring-destructive' : '']"
+                            :class="['px-0 py-0 h-5 text-13px!', isRenameDuplicate(renderItem.item) ? 'text-destructive focus-visible:ring-destructive' : '']"
                             data-renaming-input
                             :disabled="renameState.isInProgress"
                             autofocus
-                            @blur="handleRenameBlur(item as FlattenedItem<T>)"
+                            @blur="handleRenameBlur(renderItem.item)"
                             @keydown.stop
-                            @keydown.enter="handleRename(item as FlattenedItem<T>)"
+                            @keydown.enter="handleRename(renderItem.item)"
                             @keydown.escape="handleCancelRename"
                           />
                         </template>
@@ -341,27 +892,27 @@ useShortcut(() => ({
                           v-else
                           :class="[
                             'flex flex-1 min-w-0 items-center gap-2',
-                            isItemDimmed((item as FlattenedItem<T>).value) ? 'opacity-70' : '',
+                            isItemDimmed(renderItem.item.value) ? 'opacity-70' : '',
                           ]"
                         >
                           <div class="whitespace-nowrap text-ellipsis overflow-hidden">
-                            {{ getItemName((item as FlattenedItem<T>).value) }}
+                            {{ getItemName(renderItem.item.value) }}
                           </div>
                           <span
-                            v-if="resolveItemBadgeText((item as FlattenedItem<T>).value)"
+                            v-if="resolveItemBadgeText(renderItem.item.value)"
                             class="text-[10px] text-muted-foreground leading-none px-1.5 py-0.5 rounded bg-muted shrink-0"
                           >
-                            {{ resolveItemBadgeText((item as FlattenedItem<T>).value) }}
+                            {{ resolveItemBadgeText(renderItem.item.value) }}
                           </span>
                         </div>
                       </span>
                     </TreeItemLabel>
                   </TooltipTrigger>
                   <TooltipContent
-                    v-if="tooltipContent && !isCreatingItem(item)"
+                    v-if="tooltipContent"
                     :disabled-portal="true"
                   >
-                    <p>{{ tooltipContent(item as FlattenedItem<T>) }}</p>
+                    <p>{{ tooltipContent(renderItem.item) }}</p>
                   </TooltipContent>
                 </Tooltip>
               </TreeItem>
@@ -369,17 +920,49 @@ useShortcut(() => ({
           </template>
         </div>
       </TooltipProvider>
-      <!-- 虚拟根目录区域 -->
+      <!-- 根目录空白区：内容不足一屏时填满剩余空间，内容溢出时保留一行可操作区域。 -->
       <FileTreeContextMenu
         v-if="enableContextMenu"
-        :item="{ path: getRootPath(), name: '', isDir: true }"
+        :item="{ path: effectiveRootPath, name: '', isDir: true }"
         :on-create-file="handleContextMenuCreateFile"
         :on-create-folder="handleContextMenuCreateFolder"
         is-root
         :disabled="false"
       >
-        <div class="h-full min-h-[26px]" />
+        <div
+          :ref="setRootDropAreaElement"
+          :class="[
+            'flex-1 min-h-[26px]',
+            isRootDropTargetActive ? 'bg-accent/60' : '',
+          ]"
+        />
       </FileTreeContextMenu>
     </Tree>
   </ScrollArea>
+
+  <DragOverlay :visible="activeFileTreePayload !== undefined" :overlay-style="dragOverlayStyle">
+    <div class="text-popover-foreground px-2 py-1.5 border border-border/70 rounded bg-popover flex gap-2 max-w-72 min-w-36 shadow-lg items-center" data-testid="file-tree-drag-preview">
+      <div class="shrink-0 size-5 relative">
+        <LucideFile
+          class="text-muted-foreground size-4 absolute"
+          :class="isMultipleDragPreview ? 'left-1 top-0.5' : 'left-0.5 top-0.5'"
+        />
+        <LucideFile
+          v-if="isMultipleDragPreview"
+          class="text-muted-foreground bg-popover size-4 left-0 top-0 absolute"
+        />
+      </div>
+      <div class="flex gap-2 min-w-0 items-center">
+        <span class="text-xs min-w-0 truncate">
+          {{ dragPreviewName }}
+        </span>
+        <span
+          v-if="isMultipleDragPreview"
+          class="text-[10px] text-muted-foreground leading-none px-1.5 py-0.5 rounded-sm bg-muted shrink-0"
+        >
+          {{ dragPreviewCountLabel }}
+        </span>
+      </div>
+    </div>
+  </DragOverlay>
 </template>

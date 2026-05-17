@@ -31,6 +31,7 @@ describe('useDragSession', () => {
       mode: 'sort',
       payload: tabPayload,
       startPosition: { x: 12, y: 24 },
+      transferOperation: 'move',
     })
   })
 
@@ -47,6 +48,7 @@ describe('useDragSession', () => {
       mode: null,
       payload: null,
       startPosition: null,
+      transferOperation: 'move',
     })
   })
 })
