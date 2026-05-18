@@ -2,9 +2,12 @@
 import { File, FileImage, FileJson2, FileMusic, FileVideo, Folder } from '@lucide/vue'
 
 import { loadFileViewerImageDimensions } from '~/components/file-viewer/fileViewerImageDimensions'
+import { useDragSession } from '~/composables/useDragSession'
+import { useDroppableRegistry } from '~/composables/useDroppableRegistry'
 import { formatFileSize } from '~/utils/format'
 import { isValidPositiveNumber } from '~/utils/sort'
 
+import type { DragTransferOperation, FileSystemDragPayload } from '~/types/drag-drop'
 import type { FileViewerItem, FileViewerPreviewSize, FileViewerVirtualRow } from '~/types/file-viewer'
 
 interface FileViewerDisplayItem {
@@ -17,7 +20,25 @@ interface FailedPreviewEntry {
   previewUrl: string
 }
 
+interface FileViewerDragSourceHandlers {
+  onClickCapture?: (event: MouseEvent) => void
+  onPointerdown?: (event: PointerEvent) => void
+}
+
+interface FileViewerDropTargetEntry {
+  element: HTMLElement
+  path: string
+}
+
 interface FileViewerBodyProps {
+  activeRootDropTarget?: boolean
+  enableDragTransfer?: boolean
+  canDropFileTransfer?: (
+    payload: FileSystemDragPayload,
+    targetDirectory: FileViewerItem,
+    operation: DragTransferOperation,
+  ) => boolean
+  getDragSourceProps?: () => FileViewerDragSourceHandlers
   highlightedItemPath?: string
   viewMode: 'list' | 'grid'
   virtualRows: FileViewerVirtualRow[]
@@ -36,6 +57,10 @@ interface FileViewerBodyProps {
 }
 
 const {
+  activeRootDropTarget = false,
+  enableDragTransfer = false,
+  canDropFileTransfer,
+  getDragSourceProps,
   highlightedItemPath,
   viewMode,
   virtualRows,
@@ -54,6 +79,11 @@ const {
 } = defineProps<FileViewerBodyProps>()
 
 const emit = defineEmits<{
+  fileTransferDrop: [
+    payload: FileSystemDragPayload,
+    targetDirectory: FileViewerItem,
+    operation: DragTransferOperation,
+  ]
   itemClick: [item: FileViewerItem]
 }>()
 
@@ -72,7 +102,11 @@ const failedPreviewUrls = reactive(new Map<string, FailedPreviewEntry>())
 const pendingHoverPreviewPreloads = new Map<string, Promise<void>>()
 const pendingHoverPreviewWarmupTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const pendingPreviewRetryTimers = new Map<string, ReturnType<typeof setTimeout>>()
+const dropRegistry = useDroppableRegistry()
+const dragSession = useDragSession()
+const dropTargetEntries = new Map<string, FileViewerDropTargetEntry>()
 let openHoverPreviewPath = $ref<string>()
+let activeDropTargetPath = $ref<string>()
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, {
   year: 'numeric',
@@ -115,6 +149,129 @@ function formatDateTime(timestamp: number): string {
 
 function handleItemClick(item: FileViewerItem): void {
   emit('itemClick', item)
+}
+
+function resolveHTMLElement(value: unknown): HTMLElement | undefined {
+  if (value instanceof HTMLElement) {
+    return value
+  }
+
+  return value && typeof value === 'object' && '$el' in value && value.$el instanceof HTMLElement ? value.$el : undefined
+}
+
+function canDropOnDirectory(payload: FileSystemDragPayload, targetDirectory: FileViewerItem): boolean {
+  if (!enableDragTransfer || !targetDirectory.isDir) {
+    return false
+  }
+
+  return canDropFileTransfer?.(
+    payload,
+    targetDirectory,
+    dragSession.state.value.transferOperation,
+  ) ?? false
+}
+
+function handleDragEnter(payload: FileSystemDragPayload, targetDirectory: FileViewerItem): void {
+  if (canDropOnDirectory(payload, targetDirectory)) {
+    activeDropTargetPath = targetDirectory.path
+  }
+}
+
+function handleDragLeave(_payload: FileSystemDragPayload, targetDirectory: FileViewerItem): void {
+  if (activeDropTargetPath === targetDirectory.path) {
+    activeDropTargetPath = undefined
+  }
+}
+
+function handleDrop(payload: FileSystemDragPayload, targetDirectory: FileViewerItem): void {
+  if (!canDropOnDirectory(payload, targetDirectory)) {
+    return
+  }
+
+  activeDropTargetPath = undefined
+  emit('fileTransferDrop', payload, targetDirectory, dragSession.state.value.transferOperation)
+}
+
+function unregisterDropTarget(key: string): void {
+  const entry = dropTargetEntries.get(key)
+  if (!entry) {
+    return
+  }
+
+  dropRegistry.unregisterDroppable(entry.element)
+  dropTargetEntries.delete(key)
+  if (activeDropTargetPath === key) {
+    activeDropTargetPath = undefined
+  }
+}
+
+function unregisterAllDropTargets(): void {
+  for (const key of dropTargetEntries.keys()) {
+    unregisterDropTarget(key)
+  }
+}
+
+function unregisterInvisibleDropTargets(visiblePaths: readonly string[]): void {
+  if (!enableDragTransfer) {
+    unregisterAllDropTargets()
+    return
+  }
+
+  const visiblePathSet = new Set(visiblePaths)
+  for (const key of dropTargetEntries.keys()) {
+    if (!visiblePathSet.has(key)) {
+      unregisterDropTarget(key)
+    }
+  }
+}
+
+function registerDropTarget(
+  key: string,
+  element: HTMLElement | undefined,
+  targetDirectory: FileViewerItem,
+): void {
+  const previousEntry = dropTargetEntries.get(key)
+  if (previousEntry && previousEntry.element !== element) {
+    unregisterDropTarget(key)
+  }
+
+  if (!enableDragTransfer || !targetDirectory.isDir || !element) {
+    unregisterDropTarget(key)
+    return
+  }
+
+  dropTargetEntries.set(key, {
+    element,
+    path: targetDirectory.path,
+  })
+  dropRegistry.registerDroppable(element, {
+    accept: 'file-system-item',
+    canDrop: payload => canDropOnDirectory(payload as FileSystemDragPayload, targetDirectory),
+    id: `file-viewer:${key}`,
+    onDragEnter: payload => handleDragEnter(payload as FileSystemDragPayload, targetDirectory),
+    onDragLeave: payload => handleDragLeave(payload as FileSystemDragPayload, targetDirectory),
+    onDrop: payload => handleDrop(payload as FileSystemDragPayload, targetDirectory),
+  })
+}
+
+function setFileViewerItemElement(value: unknown, item: FileViewerItem): void {
+  registerDropTarget(item.path, resolveHTMLElement(value), item)
+}
+
+function getFileViewerItemBind(item: FileViewerItem): FileViewerDragSourceHandlers {
+  if (!enableDragTransfer || !item.path) {
+    return {}
+  }
+
+  return getDragSourceProps?.() ?? {}
+}
+
+function getFileViewerDropTargetClass(item: FileViewerItem): string {
+  if (!item.isDir || activeDropTargetPath !== item.path) {
+    return ''
+  }
+
+  return 'bg-accent'
 }
 
 function clearPendingPreviewRetry(itemPath: string): void {
@@ -277,10 +434,11 @@ const visibleItemPaths = computed(() => {
     .filter((path): path is string => !!path)
 })
 
-watch(() => visibleItemPaths.value, (paths) => {
+watch([() => visibleItemPaths.value, () => enableDragTransfer], ([paths]) => {
   if (openHoverPreviewPath && !paths.includes(openHoverPreviewPath)) {
     openHoverPreviewPath = undefined
   }
+  unregisterInvisibleDropTargets(paths)
 })
 
 function getGridRowDisplayItems(rowIndex: number): FileViewerDisplayItem[] {
@@ -320,11 +478,19 @@ onUnmounted(() => {
   }
 
   pendingPreviewRetryTimers.clear()
+
+  unregisterAllDropTargets()
 })
 </script>
 
 <template>
-  <div class="min-h-full w-full relative" :style="{ height: `${totalSize}px` }">
+  <div
+    :class="[
+      'min-h-full w-full relative',
+      activeRootDropTarget ? 'bg-accent/35' : '',
+    ]"
+    :style="{ height: `${totalSize}px` }"
+  >
     <ContextMenu v-if="hasBackgroundContextMenu">
       <ContextMenuTrigger as-child>
         <div
@@ -362,12 +528,19 @@ onUnmounted(() => {
           :item="displayItem.item"
         >
           <button
+            v-bind="getFileViewerItemBind(displayItem.item)"
+            :ref="(value) => setFileViewerItemElement(value, displayItem.item)"
             type="button"
             data-file-viewer-item="true"
+            :data-file-viewer-is-dir="displayItem.item.isDir ? 'true' : 'false'"
+            :data-file-viewer-item-name="displayItem.item.name"
+            :data-file-viewer-mime-type="displayItem.item.mimeType"
             :data-file-viewer-path="displayItem.item.path"
             :class="[
               'p-1.5 rounded-md flex flex-col gap-1 pointer-events-auto items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring',
+              enableDragTransfer ? 'touch-none' : '',
               isItemHighlighted(displayItem.item.path) ? 'bg-accent ring-1 ring-ring/50' : '',
+              getFileViewerDropTargetClass(displayItem.item),
             ]"
             @click="handleItemClick(displayItem.item)"
           >
@@ -392,6 +565,7 @@ onUnmounted(() => {
                   :src="displayItem.previewUrl"
                   class="h-full w-full object-contain"
                   decoding="async"
+                  draggable="false"
                   loading="lazy"
                   @error="handleImageError(displayItem.item.path, displayItem.previewUrl)"
                 >
@@ -428,12 +602,19 @@ onUnmounted(() => {
           :item="displayItem.item"
         >
           <button
+            v-bind="getFileViewerItemBind(displayItem.item)"
+            :ref="(value) => setFileViewerItemElement(value, displayItem.item)"
             type="button"
             data-file-viewer-item="true"
+            :data-file-viewer-is-dir="displayItem.item.isDir ? 'true' : 'false'"
+            :data-file-viewer-item-name="displayItem.item.name"
+            :data-file-viewer-mime-type="displayItem.item.mimeType"
             :data-file-viewer-path="displayItem.item.path"
             :class="[
               'p-2 rounded-md flex gap-2 w-full pointer-events-auto items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring',
+              enableDragTransfer ? 'touch-none' : '',
               isItemHighlighted(displayItem.item.path) ? 'bg-accent ring-1 ring-ring/50' : '',
+              getFileViewerDropTargetClass(displayItem.item),
             ]"
             :style="{ height: `${listItemHeight}px` }"
             @click="handleItemClick(displayItem.item)"
@@ -460,6 +641,7 @@ onUnmounted(() => {
                     :src="displayItem.previewUrl"
                     class="h-full w-full object-contain"
                     decoding="async"
+                    draggable="false"
                     loading="lazy"
                     @error="handleImageError(displayItem.item.path, displayItem.previewUrl)"
                   >

@@ -9,6 +9,7 @@ import { useFileViewerVirtualizer } from '~/components/file-viewer/useFileViewer
 import FileViewer from './FileViewer.vue'
 import FileViewerImageHoverCard from './FileViewerImageHoverCard.vue'
 
+import type { DragTransferOperation, FileSystemDragPayload } from '~/types/drag-drop'
 import type { FileViewerItem, FileViewerPreviewSize } from '~/types/file-viewer'
 
 const {
@@ -248,6 +249,10 @@ const FILE_VIEWER_PREVIEW_PROPS = Object.freeze({
   previewBaseUrl: 'http://127.0.0.1:8899/game/demo/',
   previewCwd: '/games/demo',
 })
+const FILE_VIEWER_DRAG_PREVIEW_SIZE = Object.freeze({
+  width: 64,
+  height: 64,
+})
 
 function createItem(index: number): FileViewerItem {
   return {
@@ -264,6 +269,32 @@ function createImageItem(index: number): FileViewerItem {
   return {
     ...createItem(index),
     mimeType: 'image/png',
+  }
+}
+
+function createDirectoryItem(index: number, options: Partial<Pick<FileViewerItem, 'name' | 'path'>> = {}): FileViewerItem {
+  return {
+    ...createItem(index),
+    isDir: true,
+    mimeType: undefined,
+    name: options.name ?? `folder-${index}`,
+    path: options.path ?? `/assets/folder-${index}`,
+  }
+}
+
+function createFileViewerDragPayload(item: FileViewerItem): FileSystemDragPayload {
+  return {
+    isDir: item.isDir,
+    items: [{
+      isDir: item.isDir,
+      name: item.name,
+      path: item.path,
+    }],
+    mimeType: item.mimeType,
+    name: item.name,
+    path: item.path,
+    source: 'file-viewer',
+    type: 'file-system-item',
   }
 }
 
@@ -419,6 +450,54 @@ async function leaveHoverImageTrigger(index: number = 0): Promise<void> {
   trigger?.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }))
   await nextTick()
   await nextTick()
+}
+
+function dispatchPointerEvent(
+  element: HTMLElement,
+  type: string,
+  options: {
+    clientX: number
+    clientY: number
+    pointerId: number
+  },
+): void {
+  element.dispatchEvent(new PointerEvent(type, {
+    bubbles: true,
+    button: 0,
+    buttons: type === 'pointerup' ? 0 : 1,
+    clientX: options.clientX,
+    clientY: options.clientY,
+    isPrimary: true,
+    pointerId: options.pointerId,
+  }))
+}
+
+function getFileViewerItemElement(item: FileViewerItem): HTMLElement {
+  const element = document.querySelector<HTMLElement>(`[data-file-viewer-path="${item.path}"]`)
+  expect(element).not.toBeNull()
+  return element!
+}
+
+function beginFileViewerDrag(element: HTMLElement): void {
+  dispatchPointerEvent(element, 'pointerdown', { clientX: 10, clientY: 10, pointerId: 1 })
+  dispatchPointerEvent(element, 'pointermove', { clientX: 24, clientY: 24, pointerId: 1 })
+}
+
+function endFileViewerDrag(element: HTMLElement): void {
+  dispatchPointerEvent(element, 'pointerup', { clientX: 24, clientY: 24, pointerId: 1 })
+}
+
+async function dragFileViewerItemToTarget(sourceElement: HTMLElement, targetElement: HTMLElement): Promise<void> {
+  const elementFromPointSpy = vi.spyOn(document, 'elementFromPoint')
+    .mockReturnValue(targetElement)
+
+  try {
+    beginFileViewerDrag(sourceElement)
+    endFileViewerDrag(sourceElement)
+    await nextTick()
+  } finally {
+    elementFromPointSpy.mockRestore()
+  }
 }
 
 describe('文件查看器布局与虚拟滚动', () => {
@@ -1476,5 +1555,258 @@ describe('FileViewer', () => {
     await nextTick()
 
     expect(scrollToIndexMock).toHaveBeenCalledWith(1)
+  })
+
+  it('启用拖拽后会将文件项作为 file-system-item 投放到目录项', async () => {
+    viewportWidthMock.value = 780
+
+    const sourceItem = createImageItem(1)
+    const targetDirectory = createDirectoryItem(2, {
+      name: 'folder',
+      path: '/assets/folder',
+    })
+    const drops: {
+      operation: DragTransferOperation
+      payload: FileSystemDragPayload
+      target: FileViewerItem
+    }[] = []
+
+    renderInBrowser(FileViewer, {
+      props: {
+        canDropFileTransfer: () => true,
+        enableDragTransfer: true,
+        items: [sourceItem, targetDirectory],
+        onFileTransferDrop: (
+          payload: FileSystemDragPayload,
+          target: FileViewerItem,
+          operation: DragTransferOperation,
+        ) => drops.push({ operation, payload, target }),
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    const sourceElement = getFileViewerItemElement(sourceItem)
+    const targetElement = getFileViewerItemElement(targetDirectory)
+
+    await dragFileViewerItemToTarget(sourceElement, targetElement)
+
+    expect(drops).toEqual([{
+      operation: 'move',
+      payload: createFileViewerDragPayload(sourceItem),
+      target: targetDirectory,
+    }])
+  })
+
+  it('投放判断拒绝时不会触发 fileTransferDrop', async () => {
+    viewportWidthMock.value = 780
+
+    const sourceItem = createImageItem(1)
+    const targetDirectory = createDirectoryItem(2)
+    const onFileTransferDrop = vi.fn()
+
+    renderInBrowser(FileViewer, {
+      props: {
+        canDropFileTransfer: () => false,
+        enableDragTransfer: true,
+        items: [sourceItem, targetDirectory],
+        onFileTransferDrop,
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    await dragFileViewerItemToTarget(
+      getFileViewerItemElement(sourceItem),
+      getFileViewerItemElement(targetDirectory),
+    )
+
+    expect(onFileTransferDrop).not.toHaveBeenCalled()
+  })
+
+  it('未提供投放判断时不会默认允许拖入目录项', async () => {
+    viewportWidthMock.value = 780
+
+    const sourceItem = createImageItem(1)
+    const targetDirectory = createDirectoryItem(2)
+    const onFileTransferDrop = vi.fn()
+
+    renderInBrowser(FileViewer, {
+      props: {
+        enableDragTransfer: true,
+        items: [sourceItem, targetDirectory],
+        onFileTransferDrop,
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    await dragFileViewerItemToTarget(
+      getFileViewerItemElement(sourceItem),
+      getFileViewerItemElement(targetDirectory),
+    )
+
+    expect(onFileTransferDrop).not.toHaveBeenCalled()
+  })
+
+  it('拖拽图片资源时会在浮层显示中等缩略图', async () => {
+    viewportWidthMock.value = 780
+    mockBuiltInPreviewResolution()
+
+    const sourceItem = createImageItem(1)
+
+    renderInBrowser(FileViewer, {
+      props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
+        enableDragTransfer: true,
+        items: [sourceItem],
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    const sourceElement = getFileViewerItemElement(sourceItem)
+
+    try {
+      beginFileViewerDrag(sourceElement)
+      await nextTick()
+
+      const preview = document.querySelector<HTMLElement>('[data-testid="file-viewer-drag-preview"]')
+      const thumbnail = document.querySelector<HTMLImageElement>('[data-testid="file-viewer-drag-preview-thumbnail"]')
+
+      expect(preview).not.toBeNull()
+      expect(thumbnail).not.toBeNull()
+      expect(thumbnail?.src).toContain('/assets/file-1.png')
+      expectBuiltInPreviewRequest(sourceItem, FILE_VIEWER_DRAG_PREVIEW_SIZE)
+    } finally {
+      endFileViewerDrag(sourceElement)
+    }
+  })
+
+  it('多个 FileViewer 挂载时只显示发起拖拽的浮层', async () => {
+    viewportWidthMock.value = 780
+
+    const sourceItem = createImageItem(1)
+    const otherItem = createImageItem(2)
+    const FileViewerHarness = defineComponent({
+      name: 'FileViewerDragOverlayHarness',
+      setup() {
+        return () => h('div', [
+          h(FileViewer, {
+            enableDragTransfer: true,
+            items: [sourceItem],
+            viewMode: 'grid',
+          }),
+          h(FileViewer, {
+            enableDragTransfer: true,
+            items: [otherItem],
+            viewMode: 'grid',
+          }),
+        ])
+      },
+    })
+
+    renderInBrowser(FileViewerHarness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    const sourceElement = getFileViewerItemElement(sourceItem)
+
+    try {
+      beginFileViewerDrag(sourceElement)
+      await nextTick()
+
+      expect(document.querySelectorAll('[data-testid="file-viewer-drag-preview"]')).toHaveLength(1)
+    } finally {
+      endFileViewerDrag(sourceElement)
+    }
+  })
+
+  it('多个 FileViewer 挂载同一路径时只显示发起拖拽的浮层', async () => {
+    viewportWidthMock.value = 780
+
+    const sourceItem = createImageItem(1)
+    const FileViewerHarness = defineComponent({
+      name: 'FileViewerSamePathDragOverlayHarness',
+      setup() {
+        return () => h('div', [
+          h(FileViewer, {
+            enableDragTransfer: true,
+            items: [sourceItem],
+            viewMode: 'grid',
+          }),
+          h(FileViewer, {
+            enableDragTransfer: true,
+            items: [sourceItem],
+            viewMode: 'grid',
+          }),
+        ])
+      },
+    })
+
+    renderInBrowser(FileViewerHarness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    const sourceElement = getFileViewerItemElement(sourceItem)
+
+    try {
+      beginFileViewerDrag(sourceElement)
+      await nextTick()
+
+      expect(document.querySelectorAll('[data-testid="file-viewer-drag-preview"]')).toHaveLength(1)
+    } finally {
+      endFileViewerDrag(sourceElement)
+    }
+  })
+
+  async function expectNativeThumbnailDragDisabled(viewMode: 'grid' | 'list'): Promise<void> {
+    viewportWidthMock.value = 780
+    mockBuiltInPreviewResolution()
+
+    const sourceItem = createImageItem(1)
+
+    renderInBrowser(FileViewer, {
+      props: {
+        ...FILE_VIEWER_PREVIEW_PROPS,
+        enableDragTransfer: true,
+        items: [sourceItem],
+        viewMode,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    const thumbnail = document.querySelector<HTMLImageElement>(`img[alt="${sourceItem.name}"]`)
+    expect(thumbnail).not.toBeNull()
+    expect(thumbnail?.draggable).toBe(false)
+  }
+
+  it('会禁用网格资源缩略图的浏览器原生拖拽', async () => {
+    await expectNativeThumbnailDragDisabled('grid')
+  })
+
+  it('会禁用列表资源缩略图的浏览器原生拖拽', async () => {
+    await expectNativeThumbnailDragDisabled('list')
   })
 })
