@@ -46,6 +46,7 @@ export interface MonacoEditorInstanceMock {
   addCommand: MonacoCommandMock
   deltaDecorations: Mock<(oldDecorations: string[], newDecorations: unknown[]) => string[]>
   dispose: Mock<() => void>
+  focus: Mock<() => void>
   getAction: Mock<(actionId: string) => MonacoActionMock | undefined>
   getDomNode: Mock<() => MonacoDomNodeMock | null>
   getModel: Mock<() => unknown>
@@ -120,6 +121,7 @@ function createEditorInstanceMock(): MonacoEditorInstanceMock {
     addCommand: vi.fn<(keybinding: number, handler: MonacoCommandHandler) => unknown>(),
     deltaDecorations: vi.fn<(oldDecorations: string[], newDecorations: unknown[]) => string[]>(),
     dispose: vi.fn<() => void>(),
+    focus: vi.fn<() => void>(),
     getAction: vi.fn<(actionId: string) => MonacoActionMock | undefined>(),
     getDomNode: vi.fn<() => MonacoDomNodeMock | null>(),
     getModel: vi.fn<() => unknown>(),
@@ -178,6 +180,15 @@ export function createMonacoMockModule() {
     KeyMod: {
       CtrlCmd: 2048,
     },
+    Position: class Position {
+      lineNumber: number
+      column: number
+
+      constructor(lineNumber: number, column: number) {
+        this.lineNumber = lineNumber
+        this.column = column
+      }
+    },
     Range: class Range {
       startLineNumber: number
       startColumn: number
@@ -194,10 +205,14 @@ export function createMonacoMockModule() {
     editor: {
       create: monacoMockState.create,
       MouseTargetType: {
+        CONTENT_EMPTY: 7,
         CONTENT_TEXT: 6,
         GUTTER_GLYPH_MARGIN: 2,
       },
       setTheme: monacoMockState.setTheme,
+      TrackedRangeStickiness: {
+        NeverGrowsWhenTypingAtEdges: 0,
+      },
     },
   }
 }

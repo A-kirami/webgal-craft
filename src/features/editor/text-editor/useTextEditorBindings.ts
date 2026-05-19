@@ -19,12 +19,35 @@ interface TextEditorSidebarPanelBindings {
 
 type TextEditorHistoryCoordinator = ReturnType<typeof useTextEditorHistory>
 
+interface ProgrammaticTextEdit {
+  range: monaco.IRange
+  text: string
+}
+
+type MonacoEditSource = 'command-panel' | 'file-drop'
+
 interface UseTextEditorBindingsOptions {
   editorRef: ShallowRef<monaco.editor.IStandaloneCodeEditor | undefined>
   getState: () => TextProjectionState
   isCurrentTextProjectionActive: () => boolean
   formPanel: TextEditorSidebarPanelBindings
   textEditorHistory: TextEditorHistoryCoordinator
+}
+
+function resolveInsertedTextEndPosition(range: monaco.IRange, text: string): monaco.IPosition {
+  const segments = text.split('\n')
+  if (segments.length === 1) {
+    return {
+      lineNumber: range.startLineNumber,
+      column: range.startColumn + text.length,
+    }
+  }
+
+  const lastSegment = segments.at(-1) ?? ''
+  return {
+    lineNumber: range.startLineNumber + segments.length - 1,
+    column: lastSegment.length + 1,
+  }
 }
 
 export function useTextEditorBindings(options: UseTextEditorBindingsOptions) {
@@ -38,6 +61,24 @@ export function useTextEditorBindings(options: UseTextEditorBindingsOptions) {
 
   function readEditor(): monaco.editor.IStandaloneCodeEditor | undefined {
     return options.editorRef.value
+  }
+
+  function applyEditorEdit(
+    editor: monaco.editor.IStandaloneCodeEditor,
+    edit: ProgrammaticTextEdit,
+    editSource: MonacoEditSource,
+  ) {
+    options.textEditorHistory.captureBeforeContentChange()
+    editor.executeEdits(editSource, [{
+      range: edit.range,
+      text: edit.text,
+      forceMoveMarkers: true,
+    }])
+
+    const endPosition = resolveInsertedTextEndPosition(edit.range, edit.text)
+    editor.setPosition(endPosition)
+    editor.revealPositionInCenterIfOutsideViewport(endPosition)
+    editor.focus()
   }
 
   const sidebarSnapshot = computed(() => {
@@ -69,7 +110,7 @@ export function useTextEditorBindings(options: UseTextEditorBindingsOptions) {
     getEntry: () => sidebarSnapshot.value.entry,
     getEmptyState: () => isSingleStatementEditingSuspended ? 'multiple-edit-targets' : undefined,
     getUpdateTarget: () => {
-      const lineNumber = sidebarSnapshot.value.lineNumber
+      const { lineNumber } = sidebarSnapshot.value
       if (lineNumber === undefined) {
         return
       }
@@ -107,18 +148,10 @@ export function useTextEditorBindings(options: UseTextEditorBindingsOptions) {
       endLineNumber: targetLine,
       endColumn: lineLength,
     }
-    options.textEditorHistory.captureBeforeContentChange()
-
-    editor.executeEdits('command-panel', [{
+    applyEditorEdit(editor, {
       range,
       text: textToInsert,
-      forceMoveMarkers: true,
-    }])
-
-    const newLineNumber = targetLine + rawTexts.length - (needsNewline ? 0 : 1)
-    editor.setPosition({ lineNumber: newLineNumber, column: 1 })
-    editor.revealPositionInCenterIfOutsideViewport({ lineNumber: newLineNumber, column: 1 })
-    editor.focus()
+    }, 'command-panel')
   }
 
   useCommandPanelBridgeBinding({
@@ -137,11 +170,49 @@ export function useTextEditorBindings(options: UseTextEditorBindingsOptions) {
     return source
   }
 
+  function applyProgrammaticInsert(
+    edit: ProgrammaticTextEdit,
+    source: TransactionSource = 'external',
+  ): boolean {
+    const editor = readEditor()
+    if (!editor) {
+      return false
+    }
+
+    const model = editor.getModel()
+    if (!model) {
+      return false
+    }
+
+    if (model.getValueInRange(edit.range) === edit.text) {
+      return false
+    }
+
+    pendingTextTransactionSource = source
+    applyEditorEdit(editor, edit, 'file-drop')
+    return true
+  }
+
+  function applyProgrammaticStatementUpdate(
+    payload: StatementUpdatePayload,
+    source: TransactionSource = 'external',
+  ): boolean {
+    pendingTextTransactionSource = source
+    if (!options.formPanel.handleFormUpdate(payload)) {
+      pendingTextTransactionSource = undefined
+      return false
+    }
+
+    return true
+  }
+
   function handleCursorSelectionChange(event: monaco.editor.ICursorSelectionChangedEvent): void {
     isSingleStatementEditingSuspended = hasMultipleEditTargets(event)
   }
 
   return {
+    applyProgrammaticInsert,
+    applyProgrammaticStatementUpdate,
     consumePendingTextTransactionSource,
     handleCursorSelectionChange,
   }

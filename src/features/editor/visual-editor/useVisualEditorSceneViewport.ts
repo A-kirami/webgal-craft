@@ -1,5 +1,6 @@
 import { useVirtualizer } from '@tanstack/vue-virtual'
 
+import { INSERT_BAND_SIZE_PX } from '~/features/editor/visual-editor/visual-editor-file-drop'
 import { SceneVisualProjectionState } from '~/stores/editor'
 
 import type { DragSortVirtualAdapter } from '~/composables/useDragSort'
@@ -23,8 +24,8 @@ export function useVisualEditorSceneViewport(options: UseVisualEditorSceneViewpo
       getScrollElement: () => options.getScrollArea()?.viewport?.viewportElement ?? null,
       estimateSize: () => ESTIMATED_STATEMENT_ROW_SIZE,
       overscan: 5,
-      paddingStart: 8,
-      paddingEnd: 8,
+      paddingStart: INSERT_BAND_SIZE_PX,
+      paddingEnd: INSERT_BAND_SIZE_PX,
       getItemKey: (index: number) => state.value.statements[index]?.id ?? index,
     })),
   )
