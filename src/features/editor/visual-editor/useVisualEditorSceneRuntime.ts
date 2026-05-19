@@ -346,6 +346,10 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
 
     if (action.kind === 'insert-statements') {
       const newEntries = action.rawTexts.flatMap(text => buildStatements(text))
+      if (newEntries.length === 0) {
+        return false
+      }
+
       editorStore.applySceneStatementInsert(state.value.path, newEntries, action.insertIndex)
       void restoreSelectedStatementPresentation({ align: 'auto' })
       requestAutoSave()

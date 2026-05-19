@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, effectScope, nextTick, reactive } from 'vue'
 
 import { computeLineNumberFromStatementId } from '~/domain/document/scene-selection'
+import { buildStatements } from '~/domain/script/sentence'
 
 import { useVisualEditorSceneRuntime } from '../useVisualEditorSceneRuntime'
 
@@ -141,6 +142,12 @@ describe('useVisualEditorSceneRuntime', () => {
     useTabsStoreMock.mockReset()
     useVisualEditorSceneViewportMock.mockReset()
     useWorkspaceStoreMock.mockReset()
+    vi.mocked(buildStatements).mockImplementation((rawText: string) => [{
+      id: 99,
+      parseError: false,
+      parsed: undefined,
+      rawText,
+    }])
 
     useCommandPanelStoreMock.mockReturnValue({
       getInsertText: vi.fn(() => 'say:test'),
@@ -521,11 +528,64 @@ describe('useVisualEditorSceneRuntime', () => {
     })
 
     expect(applied).toBe(true)
-    expect(applySceneStatementInsert).toHaveBeenCalledWith('/project/scene.txt', [{
+    expect(applySceneStatementInsert).toHaveBeenCalledWith('/project/scene.txt', [expect.objectContaining({
       id: 99,
       rawText: 'changeBg:room.png;',
-    }], 0)
+    })], 0)
     expect(scheduleAutoSaveIfEnabled).toHaveBeenCalledWith('/project/scene.txt')
+
+    scope.stop()
+  })
+
+  it('文件投放到插入区但未生成有效语句时会拒绝处理', () => {
+    const scope = effectScope()
+    const state = createState()
+    const applySceneStatementInsert = vi.fn()
+    const scheduleAutoSaveIfEnabled = vi.fn()
+
+    vi.mocked(buildStatements).mockReturnValue([])
+    useEditorStoreMock.mockReturnValue(reactive({
+      applySceneStatementDelete: vi.fn(),
+      applySceneStatementInsert,
+      applySceneStatementReorder: vi.fn(),
+      applySceneStatementUpdate: vi.fn(),
+      consumePendingSceneProjectionActivation: vi.fn(() => false),
+      currentState: {
+        kind: 'scene',
+        path: '/project/scene.txt',
+        projection: 'visual',
+      },
+      getSceneSelection: vi.fn(() => ({
+        lastEditedStatementId: 1,
+        lastLineNumber: 1,
+        selectedStatementId: 1,
+      })),
+      isSceneStatementCollapsed: vi.fn(() => false),
+      scheduleAutoSaveIfEnabled,
+      setSceneStatementCollapsed: vi.fn(),
+      syncScenePreview: vi.fn(),
+      syncSceneSelectionFromStatement: vi.fn(),
+    }))
+
+    const runtime = scope.run(() => useVisualEditorSceneRuntime({
+      getScrollArea: () => undefined,
+      getState: () => state,
+    }))
+
+    const applied = runtime?.handleFileDrop({
+      source: 'file-viewer',
+      type: 'file-system-item',
+      path: '/games/demo/game/background/room.png',
+      isDir: false,
+    }, {
+      placement: 'head',
+      insertIndex: 0,
+    })
+
+    expect(applied).toBe(false)
+    expect(applySceneStatementInsert).not.toHaveBeenCalled()
+    expect(scrollToSelectedStatementMock).not.toHaveBeenCalled()
+    expect(scheduleAutoSaveIfEnabled).not.toHaveBeenCalled()
 
     scope.stop()
   })
