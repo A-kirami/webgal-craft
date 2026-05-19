@@ -45,7 +45,7 @@ function handleVersionClick() {
       <div class="flex gap-1 justify-center">
         <button
           class="group text-muted-foreground rounded flex gap-1.5 transition-colors items-center hover:text-foreground"
-          @click="openUrl('')"
+          @click="openUrl('https://webgalcraft.com')"
         >
           <House class="size-3.5" />
           <span class="text-xs">{{ $t('modals.about.homepage') }}</span>
