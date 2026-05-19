@@ -5,8 +5,11 @@ import { ChooseContentItem, parseChooseContent, parseSetVarContent, parseStyleRu
 import { CommandNode } from '~/domain/script/types'
 import { updateCommandNodeContent } from '~/domain/script/update'
 import { ArgField, CUSTOM_CONTENT, EditorField, FieldDef, readArgFieldStorageKey, resolveI18n } from '~/features/editor/command-registry/schema'
+import { resolveDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
+import { useWorkspaceStore } from '~/stores/workspace'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { DynamicOptionsContext } from '~/features/editor/command-registry/schema'
 
 export interface UseStatementEditorContentOptions {
   parsed: ComputedRef<ISentence | undefined>
@@ -22,15 +25,44 @@ export interface UseStatementEditorContentOptions {
 export function useStatementEditorContent(options: UseStatementEditorContentOptions) {
   const { t } = useI18n()
 
+  function createDynamicOptionsContext(): DynamicOptionsContext {
+    const workspaceStore = useWorkspaceStore()
+    return {
+      content: options.parsed.value?.content ?? '',
+      gamePath: workspaceStore.CWD ?? '',
+    }
+  }
+
+  function getContentDynamicOptions(field: Extract<FieldDef, { type: 'choice' }>): { label: string, value: string }[] {
+    const key = field.dynamicOptionsKey
+    if (!key) {
+      return []
+    }
+    const result = resolveDynamicOptions(key, createDynamicOptionsContext())
+    return result?.options ?? []
+  }
+
+  function isKnownContentChoiceValue(field: Extract<FieldDef, { type: 'choice' }>, value: string): boolean {
+    return field.options.some(option => option.value === value)
+      || getContentDynamicOptions(field).some(option => option.value === value)
+  }
+
   const contentSelectValue = computed(() => {
     const content = options.contentField.value?.field
-    const fieldOptions = content?.type === 'choice' ? content.options : undefined
-    if (!fieldOptions?.length) {
+    if (content?.type !== 'choice') {
       return ''
     }
-    return fieldOptions.some((o: { value: string }) => o.value === options.parsed.value?.content)
-      ? (options.parsed.value?.content ?? '')
-      : CUSTOM_CONTENT
+
+    const currentValue = options.parsed.value?.content ?? ''
+    if (!currentValue) {
+      return ''
+    }
+
+    if (!content.customizable || isKnownContentChoiceValue(content, currentValue)) {
+      return currentValue
+    }
+
+    return CUSTOM_CONTENT
   })
 
   const isCustomContent = computed(() => contentSelectValue.value === CUSTOM_CONTENT)
