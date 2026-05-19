@@ -4,6 +4,7 @@ import { useCommandPanelBridgeBinding, useSidebarPanelBinding } from '~/features
 import { useShortcut } from '~/features/editor/shortcut/useShortcut'
 import { createStatementIdTarget, StatementUpdatePayload } from '~/features/editor/statement-editor/useStatementEditor'
 import { useVisualEditorSceneViewport } from '~/features/editor/visual-editor/useVisualEditorSceneViewport'
+import { resolveVisualEditorCommandDropAction } from '~/features/editor/visual-editor/visual-editor-command-drop'
 import { resolveVisualEditorDropAction } from '~/features/editor/visual-editor/visual-editor-file-drop'
 import { canRestoreVisualEditorCardFocus, findSelectedVisualEditorStatementCard } from '~/features/editor/visual-editor/visual-editor-focus'
 import { useCommandPanelStore } from '~/stores/command-panel'
@@ -15,8 +16,8 @@ import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { buildPreviousSpeakers } from '~/utils/speaker'
 
-import type { VisualEditorDropPlacement } from '~/features/editor/visual-editor/visual-editor-file-drop'
-import type { FileSystemDragPayload } from '~/types/drag-drop'
+import type { VisualEditorDropAction, VisualEditorDropPlacement } from '~/features/editor/visual-editor/visual-editor-drop'
+import type { CommandPanelStatementDragPayload, FileSystemDragPayload } from '~/types/drag-drop'
 
 export interface VisualEditorFileDropTarget {
   insertIndex: number
@@ -338,6 +339,18 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     return resolveFileDropAction(payload, target) !== undefined
   }
 
+  function applyInsertStatementsDropAction(action: Extract<VisualEditorDropAction, { kind: 'insert-statements' }>): boolean {
+    const newEntries = action.rawTexts.flatMap(text => buildStatements(text))
+    if (newEntries.length === 0) {
+      return false
+    }
+
+    editorStore.applySceneStatementInsert(state.value.path, newEntries, action.insertIndex)
+    void restoreSelectedStatementPresentation({ align: 'auto' })
+    requestAutoSave()
+    return true
+  }
+
   function handleFileDrop(payload: FileSystemDragPayload, target: VisualEditorFileDropTarget): boolean {
     const action = resolveFileDropAction(payload, target)
     if (!action) {
@@ -345,15 +358,7 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     }
 
     if (action.kind === 'insert-statements') {
-      const newEntries = action.rawTexts.flatMap(text => buildStatements(text))
-      if (newEntries.length === 0) {
-        return false
-      }
-
-      editorStore.applySceneStatementInsert(state.value.path, newEntries, action.insertIndex)
-      void restoreSelectedStatementPresentation({ align: 'auto' })
-      requestAutoSave()
-      return true
+      return applyInsertStatementsDropAction(action)
     }
 
     editorStore.applySceneStatementUpdate(
@@ -364,6 +369,27 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     )
     requestAutoSave()
     return true
+  }
+
+  function resolveCommandDropAction(payload: CommandPanelStatementDragPayload, target: VisualEditorFileDropTarget) {
+    return resolveVisualEditorCommandDropAction({
+      payload,
+      placement: target.placement,
+      insertIndex: target.insertIndex,
+    })
+  }
+
+  function canHandleCommandDrop(payload: CommandPanelStatementDragPayload, target: VisualEditorFileDropTarget): boolean {
+    return resolveCommandDropAction(payload, target) !== undefined
+  }
+
+  function handleCommandDrop(payload: CommandPanelStatementDragPayload, target: VisualEditorFileDropTarget): boolean {
+    const action = resolveCommandDropAction(payload, target)
+    if (!action) {
+      return false
+    }
+
+    return applyInsertStatementsDropAction(action)
   }
 
   function cutStatement() {
@@ -642,7 +668,9 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
   })
 
   return {
+    canHandleCommandDrop,
     canHandleFileDrop,
+    handleCommandDrop,
     handleCollapsedUpdate,
     handleFileDrop,
     handlePlayTo,

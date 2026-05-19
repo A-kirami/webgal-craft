@@ -3,23 +3,11 @@ import {
   resolveEditorDropAsset,
   updateStatementTextForDroppedAsset,
 } from '~/features/editor/shared/editor-file-drop'
+import { createVisualEditorInsertStatementsDropAction } from '~/features/editor/visual-editor/visual-editor-drop'
 
 import type { AbsPath } from '~/domain/path'
+import type { VisualEditorDropAction, VisualEditorDropPlacement } from '~/features/editor/visual-editor/visual-editor-drop'
 import type { FileSystemDragPayload } from '~/types/drag-drop'
-
-export const INSERT_BAND_SIZE_PX = 8
-
-export type VisualEditorDropPlacement = 'head' | 'gap' | 'update' | 'tail'
-
-export type VisualEditorDropAction =
-  | { kind: 'insert-statements', insertIndex: number, rawTexts: string[] }
-  | { kind: 'update-statement', rawText: string, statementId: number }
-
-function isInsertPlacement(placement: VisualEditorDropPlacement): boolean {
-  return placement === 'head'
-    || placement === 'gap'
-    || placement === 'tail'
-}
 
 export function resolveVisualEditorDropAction(options: {
   gamePath: AbsPath
@@ -37,12 +25,13 @@ export function resolveVisualEditorDropAction(options: {
     return undefined
   }
 
-  if (isInsertPlacement(options.placement)) {
-    return {
-      kind: 'insert-statements',
-      insertIndex: options.insertIndex,
-      rawTexts: [buildInsertedStatementText(asset)],
-    }
+  const insertAction = createVisualEditorInsertStatementsDropAction({
+    insertIndex: options.insertIndex,
+    rawTexts: [buildInsertedStatementText(asset)],
+    placement: options.placement,
+  })
+  if (insertAction) {
+    return insertAction
   }
 
   if (options.statementId === undefined || options.rawText === undefined) {

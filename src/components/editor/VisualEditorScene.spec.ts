@@ -60,6 +60,7 @@ const {
   handleSelectMock,
   handleStatementDeleteMock,
   handleStatementUpdateMock,
+  handleCommandDropMock,
   handleFileDropMock,
   measureRowElementMock,
   reorderStatementsMock,
@@ -76,6 +77,7 @@ const {
   handleSelectMock: vi.fn(),
   handleStatementDeleteMock: vi.fn(),
   handleStatementUpdateMock: vi.fn(),
+  handleCommandDropMock: vi.fn(),
   handleFileDropMock: vi.fn(),
   measureRowElementMock: vi.fn(),
   reorderStatementsMock: vi.fn(),
@@ -193,6 +195,7 @@ describe('VisualEditorScene', () => {
     handleSelectMock.mockReset()
     handleStatementDeleteMock.mockReset()
     handleStatementUpdateMock.mockReset()
+    handleCommandDropMock.mockReset()
     handleFileDropMock.mockReset()
     measureRowElementMock.mockReset()
     reorderStatementsMock.mockReset()
@@ -231,7 +234,9 @@ describe('VisualEditorScene', () => {
       shouldFocusEditor: false,
     }))
     useVisualEditorSceneRuntimeMock.mockReturnValue({
+      canHandleCommandDrop: vi.fn(() => true),
       canHandleFileDrop: vi.fn(() => true),
+      handleCommandDrop: handleCommandDropMock,
       handleCollapsedUpdate: handleCollapsedUpdateMock,
       handleFileDrop: handleFileDropMock,
       handlePlayTo: handlePlayToMock,
@@ -328,7 +333,9 @@ describe('VisualEditorScene', () => {
       { index: 2, size: 100, start: 200 },
     ])
     useVisualEditorSceneRuntimeMock.mockReturnValue({
+      canHandleCommandDrop: vi.fn(() => true),
       canHandleFileDrop: vi.fn(() => true),
+      handleCommandDrop: handleCommandDropMock,
       handleCollapsedUpdate: handleCollapsedUpdateMock,
       handleFileDrop: handleFileDropMock,
       handlePlayTo: handlePlayToMock,
@@ -415,6 +422,14 @@ describe('VisualEditorScene', () => {
       path: '/games/demo/game/scene/chapter2.txt',
       isDir: false,
     } as const
+    const commandPayload = {
+      label: 'Say',
+      rawTexts: ['say:new;'],
+      source: 'command-panel',
+      type: 'command-panel-statement',
+    } as const
+
+    expect(updateConfig.canDrop(commandPayload, document.createElement('div'))).toBe(false)
 
     await updateConfig.onDrop(payload, document.createElement('div'))
 
@@ -431,6 +446,14 @@ describe('VisualEditorScene', () => {
     await gapConfig.onDrop(payload, document.createElement('div'))
 
     expect(handleFileDropMock).toHaveBeenCalledWith(payload, {
+      placement: 'gap',
+      insertIndex: 1,
+    })
+
+    expect(gapConfig.canDrop(commandPayload, document.createElement('div'))).toBe(true)
+    await gapConfig.onDrop(commandPayload, document.createElement('div'))
+
+    expect(handleCommandDropMock).toHaveBeenCalledWith(commandPayload, {
       placement: 'gap',
       insertIndex: 1,
     })

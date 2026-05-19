@@ -4,7 +4,7 @@ import { useDroppableRegistry } from '~/composables/useDroppableRegistry'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { useVisualEditorFocusRequest } from '~/features/editor/visual-editor/useVisualEditorFocusRequest'
 import { useVisualEditorSceneRuntime } from '~/features/editor/visual-editor/useVisualEditorSceneRuntime'
-import { INSERT_BAND_SIZE_PX } from '~/features/editor/visual-editor/visual-editor-file-drop'
+import { INSERT_BAND_SIZE_PX, isVisualEditorInsertDropPlacement } from '~/features/editor/visual-editor/visual-editor-drop'
 import { findSelectedVisualEditorStatementCard } from '~/features/editor/visual-editor/visual-editor-focus'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import { SceneVisualProjectionState } from '~/stores/editor'
@@ -14,6 +14,7 @@ import type { ComponentPublicInstance } from 'vue'
 import type { ScrollArea } from '~/components/ui/scroll-area'
 import type { StatementEntry } from '~/domain/script/sentence'
 import type { VisualEditorFileDropTarget } from '~/features/editor/visual-editor/useVisualEditorSceneRuntime'
+import type { DragPayload } from '~/types/drag-drop'
 
 interface Props {
   state: SceneVisualProjectionState
@@ -178,6 +179,33 @@ function setActiveDropIndicator(target?: VisualEditorFileDropTarget) {
   activeDropIndicator = target
 }
 
+function canHandleDropPayload(payload: DragPayload, target: VisualEditorFileDropTarget): boolean {
+  if (payload.type === 'file-system-item') {
+    return runtime.canHandleFileDrop(payload, target)
+  }
+
+  if (payload.type === 'command-panel-statement') {
+    if (!isVisualEditorInsertDropPlacement(target.placement)) {
+      return false
+    }
+    return runtime.canHandleCommandDrop(payload, target)
+  }
+
+  return false
+}
+
+function handleDropPayload(payload: DragPayload, target: VisualEditorFileDropTarget): boolean {
+  if (payload.type === 'file-system-item') {
+    return runtime.handleFileDrop(payload, target)
+  }
+
+  if (payload.type === 'command-panel-statement') {
+    return runtime.handleCommandDrop(payload, target)
+  }
+
+  return false
+}
+
 function registerDropTarget(
   key: string,
   element: HTMLElement | undefined,
@@ -195,17 +223,19 @@ function registerDropTarget(
 
   dropElements.set(key, element)
   dropRegistry.registerDroppable(element, {
-    accept: 'file-system-item',
+    accept: target.placement === 'update'
+      ? 'file-system-item'
+      : ['file-system-item', 'command-panel-statement'],
     canDrop(payload) {
-      return payload.type === 'file-system-item'
-        && runtime.canHandleFileDrop(payload, target)
+      return canHandleDropPayload(payload, target)
     },
     id: `visual-editor:${key}`,
     onDragEnter(payload) {
-      if (
-        payload.type !== 'file-system-item'
-        || !runtime.canHandleFileDrop(payload, target)
-      ) {
+      if (payload.type === 'command-panel-statement' && !isVisualEditorInsertDropPlacement(target.placement)) {
+        return
+      }
+
+      if (!canHandleDropPayload(payload, target)) {
         return
       }
 
@@ -216,11 +246,8 @@ function registerDropTarget(
     },
     onDrop(payload) {
       setActiveDropIndicator(undefined)
-      if (payload.type !== 'file-system-item') {
-        return
-      }
 
-      if (runtime.handleFileDrop(payload, target)) {
+      if (handleDropPayload(payload, target)) {
         editorSurfaceRef.value?.focus({ preventScroll: true })
       }
     },

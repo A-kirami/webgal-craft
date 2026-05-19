@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useDragSession } from '~/composables/useDragSession'
+import { useDragSource } from '~/composables/useDragTransfer'
 import {
   buildCommandPanelGroupTagEntries,
   resolveCommandPanelVisibleCommands,
@@ -15,8 +17,10 @@ import { StatementGroup, useCommandPanelStore } from '~/stores/command-panel'
 import { useModalStore } from '~/stores/modal'
 import { handleWheelToHorizontalScroll } from '~/utils/wheel'
 
+import type { StyleValue } from 'vue'
 import type { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import type { ScrollArea } from '~/components/ui/scroll-area'
+import type { CommandPanelStatementDragPayload } from '~/types/drag-drop'
 
 const emit = defineEmits<{
   insertCommand: [type: commandType]
@@ -26,6 +30,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const commandPanelStore = useCommandPanelStore()
 const activeCategory = $computed(() => commandPanelStore.activeCategory)
+const dragSession = useDragSession()
 
 const isGroupsView = $computed(() => activeCategory === 'groups')
 const visibleCommands = $computed(() => resolveCommandPanelVisibleCommands(activeCategory))
@@ -63,6 +68,18 @@ function requestDeleteGroup(groupId: string): void {
 }
 
 const commandAreaRef = $(useTemplateRef('commandAreaRef'))
+const commandAreaViewport = $computed(() =>
+  commandAreaRef?.viewport?.viewportElement as HTMLElement | undefined,
+)
+const commandAreaViewportRef = computed(() => commandAreaViewport)
+const commandDragSource = useDragSource<CommandPanelStatementDragPayload>({
+  autoScroll: {
+    container: commandAreaViewportRef,
+    edgeSize: 32,
+  },
+  getData: getCommandPanelDragPayload,
+  type: 'command-panel-statement',
+})
 
 function resetScrollTop(): void {
   nextTick(() => {
@@ -89,6 +106,57 @@ const groupTagEntriesMap = $computed(() => {
 function getGroupTagEntries(groupId: string) {
   return groupTagEntriesMap.get(groupId) ?? []
 }
+
+function getCommandPanelDragPayload(element: HTMLElement): CommandPanelStatementDragPayload {
+  const { dataset } = element
+  const kind = dataset.commandPanelDragKind
+  const label = dataset.commandPanelDragLabel ?? ''
+
+  if (kind === 'group') {
+    const group = commandPanelStore.groups.find(item => item.id === dataset.commandPanelGroupId)
+    return {
+      label: group?.name ?? label,
+      rawTexts: group ? [...group.rawTexts] : [],
+      source: 'command-panel',
+      type: 'command-panel-statement',
+    }
+  }
+
+  const rawType = dataset.commandPanelCommandType
+  const type = rawType === undefined ? undefined : Number(rawType) as commandType
+  return {
+    label,
+    rawTexts: type === undefined ? [] : [commandPanelStore.getInsertText(type)],
+    source: 'command-panel',
+    type: 'command-panel-statement',
+  }
+}
+
+const activeCommandPanelPayload = $computed(() => {
+  const state = dragSession.state.value
+  if (
+    !state.isActive
+    || state.mode !== 'transfer'
+    || state.payload?.type !== 'command-panel-statement'
+    || state.payload.source !== 'command-panel'
+  ) {
+    return
+  }
+
+  return state.payload
+})
+
+const dragOverlayStyle = $computed<StyleValue | undefined>(() => {
+  const currentPosition = dragSession.state.value.currentPosition
+  if (!activeCommandPanelPayload || !currentPosition) {
+    return
+  }
+
+  return {
+    transform: `translate3d(${currentPosition.x + 6}px, ${currentPosition.y + 6}px, 0)`,
+    zIndex: '9999',
+  }
+})
 
 useShortcutContext({
   panelFocus: 'commandPanel',
@@ -151,6 +219,12 @@ useShortcutContext({
               :key="entry.type"
               :title="resolveI18n(entry.label, t)"
               :description="getCommandDescription(entry.type, t)"
+              :drag-data="{
+                kind: 'command',
+                commandType: entry.type,
+                label: resolveI18n(entry.label, t),
+              }"
+              :drag-source="commandDragSource"
               :icon="entry.icon"
               :gradient="categoryTheme[entry.category].gradient"
               :icon-bg="categoryTheme[entry.category].bg"
@@ -163,7 +237,7 @@ useShortcutContext({
                   size="sm"
                   class="p-0 opacity-60 size-6 hover:opacity-100"
                   :title="$t('edit.visualEditor.commandPanel.editDefaults')"
-                  @click.stop="openDefaultsModal(entry.type)"
+                  @click="openDefaultsModal(entry.type)"
                 >
                   <div class="i-lucide-pencil size-3" />
                 </Button>
@@ -176,6 +250,12 @@ useShortcutContext({
               v-for="group in commandPanelStore.groups"
               :key="group.id"
               :title="group.name"
+              :drag-data="{
+                kind: 'group',
+                groupId: group.id,
+                label: group.name,
+              }"
+              :drag-source="commandDragSource"
               icon="i-lucide-box"
               gradient="from-violet-500 to-fuchsia-300"
               icon-bg="bg-violet-50 dark:bg-violet-950"
@@ -206,7 +286,7 @@ useShortcutContext({
                   size="sm"
                   class="p-0 opacity-60 size-6 hover:opacity-100"
                   :title="$t('common.edit')"
-                  @click.stop="openGroupModal(group)"
+                  @click="openGroupModal(group)"
                 >
                   <div class="i-lucide-pencil size-3" />
                 </Button>
@@ -217,7 +297,7 @@ useShortcutContext({
                       size="sm"
                       class="p-0 opacity-60 size-6 hover:text-destructive hover:opacity-100"
                       :title="$t('common.delete')"
-                      @click.stop="requestDeleteGroup(group.id)"
+                      @click="requestDeleteGroup(group.id)"
                     >
                       <div class="i-lucide-trash-2 size-3" />
                     </Button>
@@ -251,5 +331,15 @@ useShortcutContext({
         </div>
       </ScrollArea>
     </TooltipProvider>
+    <DragOverlay :visible="activeCommandPanelPayload !== undefined" :overlay-style="dragOverlayStyle">
+      <div class="text-xs text-popover-foreground px-2.5 py-1.5 border rounded-md bg-popover max-w-48 min-w-28 shadow-lg">
+        <div class="font-medium truncate">
+          {{ activeCommandPanelPayload?.label }}
+        </div>
+        <div class="text-muted-foreground tabular-nums">
+          {{ $t('edit.visualEditor.commandPanel.groupCount', { count: activeCommandPanelPayload?.rawTexts.length ?? 0 }) }}
+        </div>
+      </div>
+    </DragOverlay>
   </div>
 </template>

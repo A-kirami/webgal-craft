@@ -30,11 +30,13 @@ const {
   const ensureModelMock = vi.fn()
   const handleBeforeUnmountMock = vi.fn()
   const runtimeReturnValue = {
+    canHandleCommandDrop: vi.fn(() => true),
     canHandleFileDrop: vi.fn(() => true),
-    clearFileDropHover: vi.fn(),
+    clearDropHover: vi.fn(),
     currentEditorLanguage: { value: 'webgalscript' },
     ensureModel: ensureModelMock,
     handleBeforeUnmount: handleBeforeUnmountMock,
+    handleCommandDrop: vi.fn(),
     handleContentChange: vi.fn(),
     handleCursorPositionChange: vi.fn(),
     handleCursorSelectionChange: vi.fn(),
@@ -42,6 +44,7 @@ const {
     handleEditorCreated: vi.fn(),
     handleFileDrop: vi.fn(),
     handleScrollChange: vi.fn(),
+    syncCommandDropHover: vi.fn(),
     syncFileDropHover: vi.fn(),
   }
 
@@ -211,8 +214,10 @@ describe('TextEditor', () => {
     resetMonacoMockState()
     ensureModelMock.mockReset()
     handleBeforeUnmountMock.mockReset()
+    runtimeReturnValue.canHandleCommandDrop.mockReset()
     runtimeReturnValue.canHandleFileDrop.mockReset()
-    runtimeReturnValue.clearFileDropHover.mockReset()
+    runtimeReturnValue.clearDropHover.mockReset()
+    runtimeReturnValue.handleCommandDrop.mockReset()
     runtimeReturnValue.handleContentChange.mockReset()
     runtimeReturnValue.handleCursorPositionChange.mockReset()
     runtimeReturnValue.handleCursorSelectionChange.mockReset()
@@ -220,7 +225,9 @@ describe('TextEditor', () => {
     runtimeReturnValue.handleEditorCreated.mockReset()
     runtimeReturnValue.handleFileDrop.mockReset()
     runtimeReturnValue.handleScrollChange.mockReset()
+    runtimeReturnValue.syncCommandDropHover.mockReset()
     runtimeReturnValue.syncFileDropHover.mockReset()
+    runtimeReturnValue.canHandleCommandDrop.mockReturnValue(true)
     runtimeReturnValue.canHandleFileDrop.mockReturnValue(true)
     useEditSettingsStoreMock.mockReset()
     useEditorStoreMock.mockReset()
@@ -349,7 +356,7 @@ describe('TextEditor', () => {
     await nextTick()
     await result.unmount()
 
-    expect(runtimeReturnValue.clearFileDropHover).toHaveBeenCalledTimes(1)
+    expect(runtimeReturnValue.clearDropHover).toHaveBeenCalledTimes(1)
     expect(handleBeforeUnmountMock).toHaveBeenCalledTimes(1)
     expect(monacoMockState.editorInstance.dispose).toHaveBeenCalledTimes(1)
   })
@@ -404,7 +411,7 @@ describe('TextEditor', () => {
     expect(runtimeReturnValue.handleFileDrop).toHaveBeenCalledWith(payload, { x: 40, y: 20 })
 
     config.onDragLeave(payload, document.createElement('div'))
-    expect(runtimeReturnValue.clearFileDropHover).toHaveBeenCalled()
+    expect(runtimeReturnValue.clearDropHover).toHaveBeenCalled()
 
     await result.unmount()
     expect(unregisterDroppable).toHaveBeenCalledTimes(1)
@@ -439,6 +446,61 @@ describe('TextEditor', () => {
     config.onDrop(payload, document.createElement('div'))
 
     expect(monacoMockState.editorInstance.focus).toHaveBeenCalledTimes(1)
+  })
+
+  it('命令面板语句投放会把 payload 与当前位置交给 runtime', async () => {
+    const registerDroppable = vi.fn()
+    useDroppableRegistryMock.mockReturnValue({
+      clearHover: vi.fn(),
+      drop: vi.fn(),
+      getMatchAt: vi.fn(),
+      hoveredTarget: shallowRef(),
+      isDropAllowed: shallowRef(false),
+      registerDroppable,
+      unregisterDroppable: vi.fn(),
+      updateHover: vi.fn(),
+    })
+    runtimeReturnValue.handleCommandDrop.mockReturnValue(true)
+    useDragSessionMock.mockReturnValue({
+      state: shallowRef({
+        currentDropTarget: undefined,
+        currentPosition: { x: 80, y: 24 },
+        isActive: true,
+        mode: 'transfer',
+        payload: {
+          label: 'Say',
+          rawTexts: ['say:hello;'],
+          source: 'command-panel',
+          type: 'command-panel-statement',
+        },
+        startPosition: { x: 80, y: 24 },
+        transferOperation: 'copy',
+      }),
+    })
+
+    const { state } = createHarness('/project/scene-command-drop.txt')
+    renderTextEditor(state)
+    await nextTick()
+
+    const [, config] = registerDroppable.mock.calls[0]
+    const payload = {
+      label: 'Say',
+      rawTexts: ['say:hello;'],
+      source: 'command-panel',
+      type: 'command-panel-statement',
+    } as const
+
+    expect(config.canDrop(payload, document.createElement('div'))).toBe(true)
+
+    config.onDragEnter(payload, document.createElement('div'))
+    expect(runtimeReturnValue.syncCommandDropHover).toHaveBeenCalledWith(payload, { x: 80, y: 24 })
+
+    config.onDrop(payload, document.createElement('div'))
+    expect(runtimeReturnValue.handleCommandDrop).toHaveBeenCalledWith(payload, { x: 80, y: 24 })
+    expect(monacoMockState.editorInstance.focus).toHaveBeenCalledTimes(1)
+
+    config.onDragLeave(payload, document.createElement('div'))
+    expect(runtimeReturnValue.clearDropHover).toHaveBeenCalled()
   })
 
   it('animation 文本状态会拒绝脚本文件投放', async () => {
