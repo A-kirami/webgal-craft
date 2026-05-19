@@ -153,6 +153,7 @@ function createResourceStore() {
       {
         id: 'template-1',
         path: AbsPath.from('/templates/modern'),
+        pathLookupKey: '/templates/modern',
         createdAt: 1,
         status: 'created',
         metadata: {

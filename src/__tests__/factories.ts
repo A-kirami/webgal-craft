@@ -101,16 +101,25 @@ export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine
 }
 
 export function createTestTemplate(options: Partial<Template> = {}): Template {
+  const {
+    metadata,
+    path,
+    pathLookupKey,
+    ...rest
+  } = options
+  const resolvedTemplatePath = path ?? AbsPath.from('/templates/default')
+
   return {
     id: 'template-1',
-    path: AbsPath.from('/templates/default'),
+    path: resolvedTemplatePath,
+    pathLookupKey: pathLookupKey ?? normalizeImportPath(resolvedTemplatePath).lookupKey,
     createdAt: 0,
     status: 'created',
     availability: 'available',
-    ...options,
+    ...rest,
     metadata: {
       name: 'Default Template',
-      ...options.metadata,
+      ...metadata,
     },
   }
 }

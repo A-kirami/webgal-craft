@@ -339,6 +339,7 @@ describe('useDiscoverResources', () => {
         {
           id: 'template-1',
           path: '/installed/Modern Template',
+          pathLookupKey: '/installed/modern template',
           createdAt: 0,
           status: 'created',
           metadata: {
