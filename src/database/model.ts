@@ -32,6 +32,7 @@ export interface Engine {
 export interface Template {
   id: string
   path: AbsPath
+  pathLookupKey: string
   createdAt: number
   status: TemplateStatus
   availability: ResourceAvailability

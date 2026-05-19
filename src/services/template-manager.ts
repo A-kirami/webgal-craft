@@ -7,7 +7,7 @@ import { Template } from '~/database/model'
 import { AbsPath } from '~/domain/path'
 import { templateManifestPath } from '~/services/platform/app-paths'
 import { ResourceAvailability } from '~/services/resource-health'
-import { caseFoldedEquals } from '~/services/resource-path/lookup'
+import { caseFoldedEquals, toLookupPathKey } from '~/services/resource-path/lookup'
 import { TemplateMetadata } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
@@ -74,6 +74,7 @@ async function registerTemplate(
   return db.templates.add({
     id: crypto.randomUUID(),
     path: templatePath,
+    pathLookupKey: toLookupPathKey(templatePath),
     createdAt: Date.now(),
     status,
     availability: 'available',
@@ -102,8 +103,10 @@ async function findTemplateByName(templateName: string): Promise<Template | unde
 }
 
 async function findTemplateByPath(templatePath: AbsPath): Promise<Template | undefined> {
-  const templates = await db.templates.toArray()
-  return templates.find(template => caseFoldedEquals(template.path, templatePath))
+  return db.templates
+    .where('pathLookupKey')
+    .equals(toLookupPathKey(templatePath))
+    .first()
 }
 
 async function deleteTemplateDirectoryIfExists(path: AbsPath): Promise<void> {

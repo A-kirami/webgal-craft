@@ -8,9 +8,11 @@ const {
   copyDirectoryWithProgressMock,
   dbTemplatesAddMock,
   dbTemplatesDeleteMock,
+  dbTemplatesEqualsMock,
   dbTemplatesFirstMock,
   dbTemplatesToArrayMock,
   dbTemplatesUpdateMock,
+  dbTemplatesWhereMock,
   deleteFileMock,
   existsMock,
   readTextFileMock,
@@ -22,9 +24,11 @@ const {
   copyDirectoryWithProgressMock: vi.fn(),
   dbTemplatesAddMock: vi.fn(),
   dbTemplatesDeleteMock: vi.fn(),
+  dbTemplatesEqualsMock: vi.fn(),
   dbTemplatesFirstMock: vi.fn(),
   dbTemplatesToArrayMock: vi.fn(),
   dbTemplatesUpdateMock: vi.fn(),
+  dbTemplatesWhereMock: vi.fn(),
   deleteFileMock: vi.fn(),
   existsMock: vi.fn(),
   readTextFileMock: vi.fn(),
@@ -65,13 +69,17 @@ vi.mock('~/database/db', () => ({
       delete: dbTemplatesDeleteMock,
       toArray: dbTemplatesToArrayMock,
       update: dbTemplatesUpdateMock,
-      where: () => ({
-        equals: () => ({
-          first: dbTemplatesFirstMock,
-        }),
-      }),
+      where: dbTemplatesWhereMock,
     },
   },
+}))
+
+dbTemplatesWhereMock.mockImplementation(() => ({
+  equals: dbTemplatesEqualsMock,
+}))
+
+dbTemplatesEqualsMock.mockImplementation(() => ({
+  first: dbTemplatesFirstMock,
 }))
 
 vi.mock('~/stores/resource', () => ({
@@ -88,6 +96,12 @@ describe('templateManager', () => {
 
     dbTemplatesFirstMock.mockResolvedValue(undefined)
     dbTemplatesToArrayMock.mockResolvedValue([])
+    dbTemplatesWhereMock.mockImplementation(() => ({
+      equals: dbTemplatesEqualsMock,
+    }))
+    dbTemplatesEqualsMock.mockImplementation(() => ({
+      first: dbTemplatesFirstMock,
+    }))
     existsMock.mockResolvedValue(false)
     useResourceStoreMock.mockReturnValue(resourceStoreMock)
     useStorageSettingsStoreMock.mockReturnValue({
@@ -144,6 +158,7 @@ describe('templateManager', () => {
 
     expect(dbTemplatesAddMock).toHaveBeenCalledWith(expect.objectContaining({
       path: '/templates/Modern Template',
+      pathLookupKey: '/templates/modern template',
       status: 'creating',
       metadata: {
         name: 'Modern Template',
@@ -166,6 +181,7 @@ describe('templateManager', () => {
     dbTemplatesFirstMock.mockResolvedValue({
       id: 'existing-template',
       path: AbsPath.from('/templates/Modern Template'),
+      pathLookupKey: '/templates/modern template',
       createdAt: 0,
       status: 'created',
       availability: 'available',
@@ -206,8 +222,12 @@ describe('templateManager', () => {
 
     expect(dbTemplatesAddMock).toHaveBeenCalledWith(expect.objectContaining({
       path: 'C:/Templates/Modern Template',
+      pathLookupKey: 'c:/templates/modern template',
       status: 'created',
     }))
+    expect(dbTemplatesWhereMock).toHaveBeenCalledWith('pathLookupKey')
+    expect(dbTemplatesEqualsMock).toHaveBeenCalledWith('c:/templates/modern template')
+    expect(dbTemplatesToArrayMock).not.toHaveBeenCalled()
     expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
   })
 
@@ -216,6 +236,7 @@ describe('templateManager', () => {
       {
         id: 'template-creating',
         path: '/templates/Modern Template',
+        pathLookupKey: '/templates/modern template',
         createdAt: 0,
         status: 'creating',
         metadata: {
@@ -236,6 +257,7 @@ describe('templateManager', () => {
       {
         id: 'template-created',
         path: '/templates/Broken Template',
+        pathLookupKey: '/templates/broken template',
         createdAt: 0,
         status: 'created',
         availability: 'available',
@@ -259,6 +281,7 @@ describe('templateManager', () => {
       {
         id: 'template-created',
         path: '/templates/Missing Template',
+        pathLookupKey: '/templates/missing template',
         createdAt: 0,
         status: 'created',
         availability: 'available',
@@ -280,6 +303,7 @@ describe('templateManager', () => {
       {
         id: 'template-created',
         path: '/templates/Modern Template',
+        pathLookupKey: '/templates/modern template',
         createdAt: 0,
         status: 'created',
         availability: 'available',
@@ -310,6 +334,7 @@ describe('templateManager', () => {
       {
         id: 'template-created',
         path: '/templates/Broken Metadata',
+        pathLookupKey: '/templates/broken metadata',
         createdAt: 0,
         status: 'created',
         availability: 'available',
@@ -333,6 +358,7 @@ describe('templateManager', () => {
     await templateManager.deleteTemplate({
       id: 'template-created',
       path: AbsPath.from('/templates/Modern Template'),
+      pathLookupKey: '/templates/modern template',
       createdAt: 0,
       status: 'created',
       availability: 'available',
@@ -351,6 +377,7 @@ describe('templateManager', () => {
     await expect(templateManager.deleteTemplate({
       id: 'template-created',
       path: AbsPath.from('/templates/Modern Template'),
+      pathLookupKey: '/templates/modern template',
       createdAt: 0,
       status: 'created',
       availability: 'available',
