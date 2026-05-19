@@ -1,7 +1,18 @@
 <script setup lang="ts">
+import type { UseDragSourceReturn } from '~/composables/useDragTransfer'
+
+interface CommandPanelCardDragData {
+  commandType?: number
+  groupId?: string
+  kind: 'command' | 'group'
+  label: string
+}
+
 interface Props {
   title: string
   description?: string
+  dragData?: CommandPanelCardDragData
+  dragSource?: UseDragSourceReturn
   icon?: string
   gradient?: string
   iconBg?: string
@@ -12,6 +23,8 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   description: '',
+  dragData: undefined,
+  dragSource: undefined,
   icon: '',
   gradient: 'from-muted-foreground/40 to-muted-foreground/10',
   iconBg: 'bg-muted/60',
@@ -38,12 +51,37 @@ function handleKeydown(event: KeyboardEvent) {
   event.preventDefault()
   handleClick()
 }
+
+const dragSourceProps = $computed(() => props.dragSource?.sourceProps() ?? {})
+const dragDataAttrs = $computed(() => {
+  if (!props.dragData) {
+    return {}
+  }
+
+  const attrs: Record<string, number | string> = {
+    'data-command-panel-drag-kind': props.dragData.kind,
+    'data-command-panel-drag-label': props.dragData.label,
+  }
+  if (props.dragData.commandType !== undefined) {
+    attrs['data-command-panel-command-type'] = props.dragData.commandType
+  }
+  if (props.dragData.groupId !== undefined) {
+    attrs['data-command-panel-group-id'] = props.dragData.groupId
+  }
+
+  return attrs
+})
+const cardAttrs = $computed(() => ({
+  ...dragDataAttrs,
+  ...dragSourceProps,
+}))
 </script>
 
 <template>
   <Tooltip :disabled="!description && !$slots.tooltip">
     <TooltipTrigger as-child>
       <div
+        v-bind="cardAttrs"
         role="button"
         :tabindex="interactive ? 0 : -1"
         class="group text-left border rounded-lg bg-card w-full transition-[border-color,background-color,box-shadow,transform] relative overflow-hidden hover:border-primary/35 hover:bg-accent/30 hover:shadow-sm"
@@ -65,7 +103,12 @@ function handleKeydown(event: KeyboardEvent) {
           </div>
         </div>
 
-        <div class="pl-3 pr-1.5 opacity-0 flex gap-0.5 transition-opacity items-center right-0 top-1/2 absolute from-card from-65% bg-gradient-to-l group-hover:opacity-100 -translate-y-1/2">
+        <div
+          class="pl-3 pr-1.5 opacity-0 flex gap-0.5 transition-opacity items-center right-0 top-1/2 absolute from-card from-65% bg-gradient-to-l group-hover:opacity-100 -translate-y-1/2"
+          @click.stop
+          @keydown.stop
+          @pointerdown.stop
+        >
           <slot name="actions" />
         </div>
       </div>

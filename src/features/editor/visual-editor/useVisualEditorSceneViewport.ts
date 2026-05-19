@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/vue-virtual'
 
-import { INSERT_BAND_SIZE_PX } from '~/features/editor/visual-editor/visual-editor-file-drop'
+import { INSERT_BAND_SIZE_PX } from '~/features/editor/visual-editor/visual-editor-drop'
 import { SceneVisualProjectionState } from '~/stores/editor'
 
 import type { DragSortVirtualAdapter } from '~/composables/useDragSort'

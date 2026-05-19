@@ -537,6 +537,113 @@ describe('useVisualEditorSceneRuntime', () => {
     scope.stop()
   })
 
+  it('命令面板语句投放到插入区会插入 rawTexts 并触发自动保存', () => {
+    const scope = effectScope()
+    const state = createState()
+    const applySceneStatementInsert = vi.fn()
+    const scheduleAutoSaveIfEnabled = vi.fn()
+
+    useEditorStoreMock.mockReturnValue(reactive({
+      applySceneStatementDelete: vi.fn(),
+      applySceneStatementInsert,
+      applySceneStatementReorder: vi.fn(),
+      applySceneStatementUpdate: vi.fn(),
+      consumePendingSceneProjectionActivation: vi.fn(() => false),
+      currentState: {
+        kind: 'scene',
+        path: '/project/scene.txt',
+        projection: 'visual',
+      },
+      getSceneSelection: vi.fn(() => ({
+        lastEditedStatementId: 1,
+        lastLineNumber: 1,
+        selectedStatementId: 1,
+      })),
+      isSceneStatementCollapsed: vi.fn(() => false),
+      scheduleAutoSaveIfEnabled,
+      setSceneStatementCollapsed: vi.fn(),
+      syncScenePreview: vi.fn(),
+      syncSceneSelectionFromStatement: vi.fn(),
+    }))
+
+    const runtime = scope.run(() => useVisualEditorSceneRuntime({
+      getScrollArea: () => undefined,
+      getState: () => state,
+    }))
+
+    const applied = runtime?.handleCommandDrop({
+      label: 'Group',
+      rawTexts: ['changeBg:room.png;', 'bgm:theme.ogg;'],
+      source: 'command-panel',
+      type: 'command-panel-statement',
+    }, {
+      placement: 'gap',
+      insertIndex: 1,
+    })
+
+    expect(applied).toBe(true)
+    expect(applySceneStatementInsert).toHaveBeenCalledWith('/project/scene.txt', [
+      expect.objectContaining({ rawText: 'changeBg:room.png;' }),
+      expect.objectContaining({ rawText: 'bgm:theme.ogg;' }),
+    ], 1)
+    expect(scheduleAutoSaveIfEnabled).toHaveBeenCalledWith('/project/scene.txt')
+
+    scope.stop()
+  })
+
+  it('命令面板语句投放到更新区会被拒绝', () => {
+    const scope = effectScope()
+    const state = createState()
+    const applySceneStatementInsert = vi.fn()
+    const applySceneStatementUpdate = vi.fn()
+
+    useEditorStoreMock.mockReturnValue(reactive({
+      applySceneStatementDelete: vi.fn(),
+      applySceneStatementInsert,
+      applySceneStatementReorder: vi.fn(),
+      applySceneStatementUpdate,
+      consumePendingSceneProjectionActivation: vi.fn(() => false),
+      currentState: {
+        kind: 'scene',
+        path: '/project/scene.txt',
+        projection: 'visual',
+      },
+      getSceneSelection: vi.fn(() => ({
+        lastEditedStatementId: 1,
+        lastLineNumber: 1,
+        selectedStatementId: 1,
+      })),
+      isSceneStatementCollapsed: vi.fn(() => false),
+      scheduleAutoSaveIfEnabled: vi.fn(),
+      setSceneStatementCollapsed: vi.fn(),
+      syncScenePreview: vi.fn(),
+      syncSceneSelectionFromStatement: vi.fn(),
+    }))
+
+    const runtime = scope.run(() => useVisualEditorSceneRuntime({
+      getScrollArea: () => undefined,
+      getState: () => state,
+    }))
+    const payload = {
+      label: 'Say',
+      rawTexts: ['say:new;'],
+      source: 'command-panel' as const,
+      type: 'command-panel-statement' as const,
+    }
+    const target = {
+      placement: 'update' as const,
+      insertIndex: 0,
+      statementId: 1,
+    }
+
+    expect(runtime?.canHandleCommandDrop(payload, target)).toBe(false)
+    expect(runtime?.handleCommandDrop(payload, target)).toBe(false)
+    expect(applySceneStatementUpdate).not.toHaveBeenCalled()
+    expect(applySceneStatementInsert).not.toHaveBeenCalled()
+
+    scope.stop()
+  })
+
   it('文件投放到插入区但未生成有效语句时会拒绝处理', () => {
     const scope = effectScope()
     const state = createState()

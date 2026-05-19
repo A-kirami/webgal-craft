@@ -1,7 +1,9 @@
 import * as monaco from 'monaco-editor'
 
 import { isAnimationDocumentTextValid } from '~/domain/document/animation-document-codec'
-import { buildTextEditorDropDecorations, resolveTextEditorFileDropAction } from '~/features/editor/text-editor/text-editor-file-drop'
+import { resolveTextEditorCommandDropAction } from '~/features/editor/text-editor/text-editor-command-drop'
+import { buildTextEditorDropDecorations } from '~/features/editor/text-editor/text-editor-drop-action'
+import { resolveTextEditorFileDropAction } from '~/features/editor/text-editor/text-editor-file-drop'
 import { resolveTextEditorLanguage } from '~/features/editor/text-editor/text-editor-language'
 import { applySceneCursorTarget, prepareSceneCursorTarget } from '~/features/editor/text-editor/text-editor-scene-restore'
 import { resolveSceneCursorTarget, resolveScenePreviewLine } from '~/features/editor/text-editor/text-editor-scene-sync'
@@ -16,10 +18,10 @@ import { useTextEditorHistory } from './useTextEditorHistory'
 import { useTextEditorPanel } from './useTextEditorPanel'
 import { useTextEditorWorkspace } from './useTextEditorWorkspace'
 
-import type { TextEditorDropAction } from './text-editor-file-drop'
+import type { TextEditorDropAction, TextEditorInsertStatementLineDropAction } from './text-editor-drop-action'
 import type { AbsPath } from '~/domain/path'
 import type { TextProjectionState } from '~/stores/editor'
-import type { DragPosition, FileSystemDragPayload } from '~/types/drag-drop'
+import type { CommandPanelStatementDragPayload, DragPosition, FileSystemDragPayload } from '~/types/drag-drop'
 
 interface UseTextEditorRuntimeOptions {
   editorRef: ShallowRef<monaco.editor.IStandaloneCodeEditor | undefined>
@@ -37,26 +39,26 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
     return currentState && isEditableEditor(currentState) ? currentState.projection : undefined
   })
   let isComposing = $ref(false)
-  let fileDropDecorationIds: string[] = []
+  let dropDecorationIds: string[] = []
 
   function readEditor(): monaco.editor.IStandaloneCodeEditor | undefined {
     return options.editorRef.value
   }
 
-  function setFileDropDecorations(action?: TextEditorDropAction) {
+  function setDropDecorations(action?: TextEditorDropAction) {
     const editor = readEditor()
     if (!editor) {
       return
     }
 
-    fileDropDecorationIds = editor.deltaDecorations(
-      fileDropDecorationIds,
+    dropDecorationIds = editor.deltaDecorations(
+      dropDecorationIds,
       buildTextEditorDropDecorations({ action }),
     )
   }
 
-  function clearFileDropHover(): void {
-    setFileDropDecorations(undefined)
+  function clearDropHover(): void {
+    setDropDecorations(undefined)
   }
 
   function resolveFileDropAction(payload: FileSystemDragPayload, position: DragPosition): TextEditorDropAction | undefined {
@@ -74,23 +76,52 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
     })
   }
 
+  function resolveCommandDropAction(
+    payload: CommandPanelStatementDragPayload,
+    position: DragPosition,
+  ): TextEditorInsertStatementLineDropAction | undefined {
+    const editor = readEditor()
+    if (state.value.kind !== 'scene' || !editor) {
+      return undefined
+    }
+
+    return resolveTextEditorCommandDropAction({
+      editor,
+      payload,
+      position,
+    })
+  }
+
   function syncFileDropHover(payload: FileSystemDragPayload, position: DragPosition | null): void {
     if (!position) {
-      clearFileDropHover()
+      clearDropHover()
       return
     }
 
-    setFileDropDecorations(resolveFileDropAction(payload, position))
+    setDropDecorations(resolveFileDropAction(payload, position))
+  }
+
+  function syncCommandDropHover(payload: CommandPanelStatementDragPayload, position: DragPosition | null): void {
+    if (!position) {
+      clearDropHover()
+      return
+    }
+
+    setDropDecorations(resolveCommandDropAction(payload, position))
   }
 
   function canHandleFileDrop(payload: FileSystemDragPayload, position: DragPosition | null): boolean {
     return position ? resolveFileDropAction(payload, position) !== undefined : false
   }
 
+  function canHandleCommandDrop(payload: CommandPanelStatementDragPayload, position: DragPosition | null): boolean {
+    return position ? resolveCommandDropAction(payload, position) !== undefined : false
+  }
+
   function handleFileDrop(payload: FileSystemDragPayload, position: DragPosition): boolean {
     const action = resolveFileDropAction(payload, position)
     if (!action) {
-      clearFileDropHover()
+      clearDropHover()
       return false
     }
 
@@ -98,7 +129,20 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
       ? textEditorBindings.applyProgrammaticStatementUpdate(action.payload, 'external')
       : textEditorBindings.applyProgrammaticInsert(action, 'external')
 
-    clearFileDropHover()
+    clearDropHover()
+    return applied
+  }
+
+  function handleCommandDrop(payload: CommandPanelStatementDragPayload, position: DragPosition): boolean {
+    const action = resolveCommandDropAction(payload, position)
+    if (!action) {
+      clearDropHover()
+      return false
+    }
+
+    const applied = textEditorBindings.applyProgrammaticInsert(action, 'external')
+
+    clearDropHover()
     return applied
   }
 
@@ -478,10 +522,12 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
   )
 
   return {
+    canHandleCommandDrop,
     canHandleFileDrop,
-    clearFileDropHover,
+    clearDropHover,
     currentEditorLanguage,
     ensureModel,
+    handleCommandDrop,
     handleBeforeUnmount,
     handleContentChange,
     handleCursorPositionChange,
@@ -490,6 +536,7 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
     handleEditorCreated,
     handleFileDrop,
     handleScrollChange,
+    syncCommandDropHover,
     syncFileDropHover,
   }
 }

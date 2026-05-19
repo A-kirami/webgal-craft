@@ -14,7 +14,7 @@ import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { useTabsStore } from '~/stores/tabs'
 
 import type { TextProjectionState } from '~/stores/editor'
-import type { FileSystemDragPayload } from '~/types/drag-drop'
+import type { DragPayload, DragPosition } from '~/types/drag-drop'
 
 interface Props {
   state: TextProjectionState
@@ -70,9 +70,43 @@ function readCurrentDragPosition() {
   return dragSession.state.value.currentPosition
 }
 
-function readCurrentFileDragPayload(): FileSystemDragPayload | undefined {
-  const payload = dragSession.state.value.payload
-  return payload?.type === 'file-system-item' ? payload : undefined
+function readCurrentDragPayload(): DragPayload | undefined {
+  return dragSession.state.value.payload ?? undefined
+}
+
+function canHandleDropPayload(payload: DragPayload, position: DragPosition | null): boolean {
+  if (payload.type === 'file-system-item') {
+    return runtime.canHandleFileDrop(payload, position)
+  }
+
+  if (payload.type === 'command-panel-statement') {
+    return runtime.canHandleCommandDrop(payload, position)
+  }
+
+  return false
+}
+
+function syncDropHover(payload: DragPayload, position: DragPosition | null): void {
+  if (payload.type === 'file-system-item') {
+    runtime.syncFileDropHover(payload, position)
+    return
+  }
+
+  if (payload.type === 'command-panel-statement') {
+    runtime.syncCommandDropHover(payload, position)
+  }
+}
+
+function handleDropPayload(payload: DragPayload, position: DragPosition): boolean {
+  if (payload.type === 'file-system-item') {
+    return runtime.handleFileDrop(payload, position)
+  }
+
+  if (payload.type === 'command-panel-statement') {
+    return runtime.handleCommandDrop(payload, position)
+  }
+
+  return false
 }
 
 function unregisterTextDropTarget() {
@@ -97,34 +131,27 @@ function registerTextDropTarget() {
   unregisterTextDropTarget()
   textDropTargetElement = editorContainer
   dropRegistry.registerDroppable(editorContainer, {
-    accept: 'file-system-item',
+    accept: ['file-system-item', 'command-panel-statement'],
     canDrop(payload) {
-      return payload.type === 'file-system-item'
-        && runtime.canHandleFileDrop(payload, readCurrentDragPosition())
+      return canHandleDropPayload(payload, readCurrentDragPosition())
     },
     id: `text-editor:${props.state.path}`,
     onDragEnter(payload) {
-      if (payload.type === 'file-system-item') {
-        runtime.syncFileDropHover(payload, readCurrentDragPosition())
-      }
+      syncDropHover(payload, readCurrentDragPosition())
     },
     onDragLeave(payload) {
-      if (payload.type === 'file-system-item') {
-        runtime.clearFileDropHover()
+      if (payload.type === 'file-system-item' || payload.type === 'command-panel-statement') {
+        runtime.clearDropHover()
       }
     },
     onDrop(payload) {
-      if (payload.type !== 'file-system-item') {
-        return
-      }
-
       const position = readCurrentDragPosition()
       if (!position) {
-        runtime.clearFileDropHover()
+        runtime.clearDropHover()
         return
       }
 
-      if (runtime.handleFileDrop(payload, position)) {
+      if (handleDropPayload(payload, position)) {
         editor?.focus()
       }
     },
@@ -253,14 +280,14 @@ watch(() => dragSession.state.value.currentPosition, (position) => {
     return
   }
 
-  const payload = readCurrentFileDragPayload()
+  const payload = readCurrentDragPayload()
   if (payload) {
-    runtime.syncFileDropHover(payload, position)
+    syncDropHover(payload, position)
   }
 })
 
 onUnmounted(() => {
-  runtime.clearFileDropHover()
+  runtime.clearDropHover()
   unregisterTextDropTarget()
 
   if (editor) {

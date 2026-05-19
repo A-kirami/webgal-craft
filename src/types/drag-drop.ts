@@ -4,11 +4,13 @@ export interface DragPosition {
 }
 
 export type DragEntityType =
+  | 'command-panel-statement'
   | 'editor-tab'
   | 'file-system-item'
   | 'scene-statement'
 
 export type DragSourceType =
+  | 'command-panel'
   | 'editor-tabs'
   | 'file-tree'
   | 'file-viewer'
@@ -48,7 +50,14 @@ export interface SceneStatementDragPayload extends DragPayloadBase {
   type: 'scene-statement'
 }
 
+export interface CommandPanelStatementDragPayload extends DragPayloadBase {
+  label: string
+  rawTexts: string[]
+  type: 'command-panel-statement'
+}
+
 export type DragPayload =
+  | CommandPanelStatementDragPayload
   | EditorTabDragPayload
   | FileSystemDragPayload
   | SceneStatementDragPayload

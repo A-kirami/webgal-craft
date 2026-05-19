@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
+import { shallowRef } from 'vue'
 
 import {
   createBrowserActionStub,
@@ -9,13 +10,37 @@ import {
 } from '~/__tests__/browser-render'
 import { useCommandPanelStore } from '~/stores/command-panel'
 
-const { modalOpenMock, useModalStoreMock } = vi.hoisted(() => ({
+const { dragSourcePropsMock, lastDragSourceOptions, modalOpenMock, useDragSessionMock, useDragSourceMock, useModalStoreMock } = vi.hoisted(() => ({
+  dragSourcePropsMock: vi.fn(() => ({
+    onClickCapture: vi.fn(),
+    onPointerdown: vi.fn(),
+  })),
+  lastDragSourceOptions: {
+    value: undefined as undefined | {
+      getData: (element: HTMLElement) => unknown
+    },
+  },
   modalOpenMock: vi.fn(),
+  useDragSessionMock: vi.fn(),
+  useDragSourceMock: vi.fn((options) => {
+    lastDragSourceOptions.value = options
+    return {
+      sourceProps: dragSourcePropsMock,
+    }
+  }),
   useModalStoreMock: vi.fn(),
 }))
 
 vi.mock('~/stores/modal', () => ({
   useModalStore: useModalStoreMock,
+}))
+
+vi.mock('~/composables/useDragSession', () => ({
+  useDragSession: useDragSessionMock,
+}))
+
+vi.mock('~/composables/useDragTransfer', () => ({
+  useDragSource: useDragSourceMock,
 }))
 
 import CommandPanel from './CommandPanel.vue'
@@ -83,6 +108,21 @@ describe('CommandPanel', () => {
 
   beforeEach(() => {
     modalOpenMock.mockReset()
+    dragSourcePropsMock.mockClear()
+    lastDragSourceOptions.value = undefined
+    useDragSessionMock.mockReset()
+    useDragSourceMock.mockClear()
+    useDragSessionMock.mockReturnValue({
+      state: shallowRef({
+        currentDropTarget: undefined,
+        currentPosition: undefined,
+        isActive: false,
+        mode: undefined,
+        payload: undefined,
+        startPosition: undefined,
+        transferOperation: 'move',
+      }),
+    })
     useModalStoreMock.mockReturnValue({
       open: modalOpenMock,
     })
@@ -151,6 +191,47 @@ describe('CommandPanel', () => {
     await page.getByRole('button', { name: 'dialogue-command' }).click()
 
     expect(onInsertCommand).toHaveBeenCalledWith(expect.any(Number))
+  })
+
+  it('命令卡片拖拽会生成 command-panel-statement payload', () => {
+    const { pinia } = renderCommandPanel()
+    const store = useCommandPanelStore(pinia)
+    store.saveDefault(0, 'say:custom;')
+    const getData = lastDragSourceOptions.value?.getData
+
+    const element = document.createElement('div')
+    element.dataset.commandPanelDragKind = 'command'
+    element.dataset.commandPanelCommandType = '0'
+    element.dataset.commandPanelDragLabel = 'dialogue-command'
+
+    expect(getData?.(element)).toEqual({
+      label: 'dialogue-command',
+      rawTexts: ['say:custom;'],
+      source: 'command-panel',
+      type: 'command-panel-statement',
+    })
+  })
+
+  it('语句组卡片拖拽会生成语句组 payload', () => {
+    const { pinia } = renderCommandPanel()
+    const store = useCommandPanelStore(pinia)
+    const group = store.saveGroup({
+      name: 'My Group',
+      rawTexts: ['say:hello;', 'bgm:theme.ogg;'],
+    })
+    const getData = lastDragSourceOptions.value?.getData
+
+    const element = document.createElement('div')
+    element.dataset.commandPanelDragKind = 'group'
+    element.dataset.commandPanelGroupId = group.id
+    element.dataset.commandPanelDragLabel = group.name
+
+    expect(getData?.(element)).toEqual({
+      label: 'My Group',
+      rawTexts: ['say:hello;', 'bgm:theme.ogg;'],
+      source: 'command-panel',
+      type: 'command-panel-statement',
+    })
   })
 
   it('点击命令默认值按钮会打开默认值模态框', async () => {
