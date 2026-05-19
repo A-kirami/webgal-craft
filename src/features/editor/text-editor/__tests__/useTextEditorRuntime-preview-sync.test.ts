@@ -3,6 +3,7 @@ import { effectScope, nextTick, reactive, shallowRef } from 'vue'
 
 import { useTextEditorRuntime } from '~/features/editor/text-editor/useTextEditorRuntime'
 
+import type * as monaco from 'monaco-editor'
 import type { TextProjectionState } from '~/stores/editor'
 
 const {
@@ -14,6 +15,8 @@ const {
   resolveScenePreviewLineMock,
   useEditorStoreMock,
   useTabsStoreMock,
+  useTextEditorBindingsMock,
+  useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
   applySceneCursorTargetMock: vi.fn(),
   didResumeSingleEditTargetMock: vi.fn(() => false),
@@ -32,6 +35,8 @@ const {
   })),
   useEditorStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
+  useTextEditorBindingsMock: vi.fn(),
+  useWorkspaceStoreMock: vi.fn(),
 }))
 
 vi.mock('monaco-editor', () => ({
@@ -69,10 +74,7 @@ vi.mock('~/features/editor/text-editor/text-editor-selection', () => ({
 }))
 
 vi.mock('~/features/editor/text-editor/useTextEditorBindings', () => ({
-  useTextEditorBindings: vi.fn(() => ({
-    consumePendingTextTransactionSource: vi.fn(),
-    handleCursorSelectionChange: vi.fn(),
-  })),
+  useTextEditorBindings: useTextEditorBindingsMock,
 }))
 
 vi.mock('~/features/editor/text-editor/useTextEditorContentSync', () => ({
@@ -117,6 +119,10 @@ vi.mock('~/stores/tabs', () => ({
   useTabsStore: useTabsStoreMock,
 }))
 
+vi.mock('~/stores/workspace', () => ({
+  useWorkspaceStore: useWorkspaceStoreMock,
+}))
+
 function createState(path: string): TextProjectionState {
   return reactive({
     isDirty: false,
@@ -128,8 +134,17 @@ function createState(path: string): TextProjectionState {
   }) as TextProjectionState
 }
 
-function createEditor() {
+interface EditorDouble {
+  deltaDecorations: ReturnType<typeof vi.fn>
+  getModel: ReturnType<typeof vi.fn<() => Pick<monaco.editor.ITextModel, 'getLineContent' | 'getLineCount' | 'getLineMaxColumn'>>>
+  getPosition: ReturnType<typeof vi.fn>
+}
+
+function createEditor(): EditorDouble {
   return {
+    deltaDecorations: vi.fn((_: string[], decorations: unknown[]) =>
+      decorations.map((__, index) => `decoration-${index + 1}`),
+    ),
     getModel: vi.fn(() => ({
       getLineContent: vi.fn((lineNumber: number) => lineNumber === 2 ? 'beta' : 'alpha'),
       getLineCount: vi.fn(() => 2),
@@ -140,6 +155,42 @@ function createEditor() {
       lineNumber: 2,
     })),
   }
+}
+
+function createEditableEditorStore(path: string) {
+  return reactive({
+    currentState: {
+      kind: 'scene',
+      path,
+      projection: 'text' as const,
+    },
+    getSceneSelection: vi.fn(() => ({
+      lastLineNumber: 2,
+      selectedStatementId: 1,
+    })),
+    getState: vi.fn(),
+    redoDocument: vi.fn(),
+    registerSaveHook: vi.fn(),
+    replaceTextDocumentContent: vi.fn(),
+    scheduleAutoSaveIfEnabled: vi.fn(),
+    consumePendingSceneProjectionActivation: vi.fn(() => false),
+    setTextProjectionDraft: vi.fn(),
+    syncScenePreview: vi.fn(),
+    syncSceneSelectionFromTextLine: vi.fn(),
+    undoDocument: vi.fn(),
+    unregisterSaveHook: vi.fn(),
+  })
+}
+
+function createTabsStore(path: string) {
+  return reactive({
+    activeTab: {
+      isPreview: false,
+      path,
+    },
+    shouldFocusEditor: false,
+    tabs: [{ path }],
+  })
 }
 
 function flushRuntimeWatchers() {
@@ -156,9 +207,22 @@ describe('useTextEditorRuntime', () => {
     resolveScenePreviewLineMock.mockClear()
     useEditorStoreMock.mockReset()
     useTabsStoreMock.mockReset()
+    useTextEditorBindingsMock.mockReset()
+    useWorkspaceStoreMock.mockReset()
 
     didResumeSingleEditTargetMock.mockReturnValue(false)
     readEditorHasMultipleEditTargetsMock.mockReturnValue(false)
+    useWorkspaceStoreMock.mockReturnValue({
+      currentGame: {
+        path: '/games/demo',
+      },
+    })
+    useTextEditorBindingsMock.mockReturnValue({
+      applyProgrammaticInsert: vi.fn(() => true),
+      applyProgrammaticStatementUpdate: vi.fn(() => true),
+      consumePendingTextTransactionSource: vi.fn(),
+      handleCursorSelectionChange: vi.fn(),
+    })
 
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
       callback(0)
@@ -292,6 +356,57 @@ describe('useTextEditorRuntime', () => {
 
     expect(editorStore.syncSceneSelectionFromTextLine).not.toHaveBeenCalled()
     expect(editorStore.syncScenePreview).not.toHaveBeenCalled()
+  })
+
+  it('文件投放更新语句时会保留 external 事务来源', () => {
+    const path = '/project/scene-file-drop-update.txt'
+    const state = createState(path)
+    const editor = {
+      ...createEditor(),
+      getTargetAtClientPoint: vi.fn(() => ({
+        position: {
+          column: 10,
+          lineNumber: 1,
+        },
+      })),
+    }
+    editor.getModel.mockReturnValue({
+      getLineContent: vi.fn(() => 'changeBg:old.png;'),
+      getLineCount: vi.fn(() => 1),
+      getLineMaxColumn: vi.fn(() => 18),
+    })
+    const applyProgrammaticStatementUpdate = vi.fn(() => true)
+
+    useEditorStoreMock.mockReturnValue(createEditableEditorStore(path))
+    useTabsStoreMock.mockReturnValue(createTabsStore(path))
+    useTextEditorBindingsMock.mockReturnValue({
+      applyProgrammaticInsert: vi.fn(() => false),
+      applyProgrammaticStatementUpdate,
+      consumePendingTextTransactionSource: vi.fn(),
+      handleCursorSelectionChange: vi.fn(),
+    })
+
+    const runtime = useTextEditorRuntime({
+      editorRef: shallowRef(editor) as never,
+      getState: () => state,
+    })
+
+    expect(runtime.handleFileDrop({
+      source: 'file-viewer',
+      type: 'file-system-item',
+      path: '/games/demo/game/background/room.png',
+      isDir: false,
+    }, {
+      x: 100,
+      y: 40,
+    })).toBe(true)
+
+    expect(applyProgrammaticStatementUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rawText: 'changeBg:room.png;',
+      }),
+      'external',
+    )
   })
 
   it('跨行移动光标时会同步预览到新的关注行', () => {

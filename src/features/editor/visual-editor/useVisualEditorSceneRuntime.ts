@@ -4,6 +4,7 @@ import { useCommandPanelBridgeBinding, useSidebarPanelBinding } from '~/features
 import { useShortcut } from '~/features/editor/shortcut/useShortcut'
 import { createStatementIdTarget, StatementUpdatePayload } from '~/features/editor/statement-editor/useStatementEditor'
 import { useVisualEditorSceneViewport } from '~/features/editor/visual-editor/useVisualEditorSceneViewport'
+import { resolveVisualEditorDropAction } from '~/features/editor/visual-editor/visual-editor-file-drop'
 import { canRestoreVisualEditorCardFocus, findSelectedVisualEditorStatementCard } from '~/features/editor/visual-editor/visual-editor-focus'
 import { useCommandPanelStore } from '~/stores/command-panel'
 import { useEditSettingsStore } from '~/stores/edit-settings'
@@ -11,7 +12,17 @@ import { isEditableEditor, SceneVisualProjectionState, useEditorStore } from '~/
 import { useEditorViewStateStore } from '~/stores/editor-view-state'
 import { usePreferenceStore } from '~/stores/preference'
 import { useTabsStore } from '~/stores/tabs'
+import { useWorkspaceStore } from '~/stores/workspace'
 import { buildPreviousSpeakers } from '~/utils/speaker'
+
+import type { VisualEditorDropPlacement } from '~/features/editor/visual-editor/visual-editor-file-drop'
+import type { FileSystemDragPayload } from '~/types/drag-drop'
+
+export interface VisualEditorFileDropTarget {
+  insertIndex: number
+  placement: VisualEditorDropPlacement
+  statementId?: number
+}
 
 interface UseVisualEditorSceneRuntimeOptions {
   getScrollArea: () => InstanceType<typeof ScrollArea> | null | undefined
@@ -29,6 +40,7 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
   const editSettings = useEditSettingsStore()
   const preferenceStore = usePreferenceStore()
   const commandPanelStore = useCommandPanelStore()
+  const workspaceStore = useWorkspaceStore()
 
   let statementClipboard: string | undefined
   const state = computed(() => options.getState())
@@ -300,6 +312,58 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
       focus: true,
     })
     requestAutoSave()
+  }
+
+  function resolveFileDropAction(payload: FileSystemDragPayload, target: VisualEditorFileDropTarget) {
+    const gamePath = workspaceStore.currentGame?.path
+    if (!gamePath) {
+      return
+    }
+
+    const statementEntry = target.statementId === undefined
+      ? undefined
+      : state.value.statements.find(entry => entry.id === target.statementId)
+
+    return resolveVisualEditorDropAction({
+      gamePath,
+      payload,
+      placement: target.placement,
+      insertIndex: target.insertIndex,
+      rawText: statementEntry?.rawText,
+      statementId: target.statementId,
+    })
+  }
+
+  function canHandleFileDrop(payload: FileSystemDragPayload, target: VisualEditorFileDropTarget): boolean {
+    return resolveFileDropAction(payload, target) !== undefined
+  }
+
+  function handleFileDrop(payload: FileSystemDragPayload, target: VisualEditorFileDropTarget): boolean {
+    const action = resolveFileDropAction(payload, target)
+    if (!action) {
+      return false
+    }
+
+    if (action.kind === 'insert-statements') {
+      const newEntries = action.rawTexts.flatMap(text => buildStatements(text))
+      if (newEntries.length === 0) {
+        return false
+      }
+
+      editorStore.applySceneStatementInsert(state.value.path, newEntries, action.insertIndex)
+      void restoreSelectedStatementPresentation({ align: 'auto' })
+      requestAutoSave()
+      return true
+    }
+
+    editorStore.applySceneStatementUpdate(
+      state.value.path,
+      action.statementId,
+      action.rawText,
+      'visual',
+    )
+    requestAutoSave()
+    return true
   }
 
   function cutStatement() {
@@ -578,7 +642,9 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
   })
 
   return {
+    canHandleFileDrop,
     handleCollapsedUpdate,
+    handleFileDrop,
     handlePlayTo,
     handleSelect,
     handleStatementDelete,

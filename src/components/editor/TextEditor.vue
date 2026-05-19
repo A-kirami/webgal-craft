@@ -2,6 +2,8 @@
 import * as monaco from 'monaco-editor'
 
 import { colorMode } from '~/composables/color-mode'
+import { useDragSession } from '~/composables/useDragSession'
+import { useDroppableRegistry } from '~/composables/useDroppableRegistry'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { buildTextEditorOptions } from '~/features/editor/text-editor/text-editor-options'
 import { createTextEditorPlayToLineController } from '~/features/editor/text-editor/text-editor-play-to-line'
@@ -12,6 +14,7 @@ import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { useTabsStore } from '~/stores/tabs'
 
 import type { TextProjectionState } from '~/stores/editor'
+import type { FileSystemDragPayload } from '~/types/drag-drop'
 
 interface Props {
   state: TextProjectionState
@@ -21,6 +24,8 @@ const props = defineProps<Props>()
 const editorStore = useEditorStore()
 const tabsStore = useTabsStore()
 const editSettings = useEditSettingsStore()
+const dragSession = useDragSession()
+const dropRegistry = useDroppableRegistry()
 const { locale, t } = useI18n()
 const showPlayToLineGlyph = $computed(() => props.state.kind === 'scene')
 const disablePlayToLineGlyph = $computed(() => props.state.kind === 'scene' && props.state.isDirty)
@@ -41,6 +46,7 @@ const editorOptions = $computed<monaco.editor.IEditorConstructionOptions>(() =>
 let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
 let playToLineController = $shallowRef<ReturnType<typeof createTextEditorPlayToLineController>>()
 let editorContainer = $ref<HTMLElement>()
+let textDropTargetElement: HTMLElement | undefined
 let hasPendingPlayToLineGlyphSync = false
 const runtime = useTextEditorRuntime({
   editorRef: $$(editor),
@@ -58,6 +64,71 @@ const isCurrentTextProjectionActive = $computed(() => {
 
 function syncPlayToLineGlyph() {
   playToLineController?.syncFromEditorPosition()
+}
+
+function readCurrentDragPosition() {
+  return dragSession.state.value.currentPosition
+}
+
+function readCurrentFileDragPayload(): FileSystemDragPayload | undefined {
+  const payload = dragSession.state.value.payload
+  return payload?.type === 'file-system-item' ? payload : undefined
+}
+
+function unregisterTextDropTarget() {
+  if (!textDropTargetElement) {
+    return
+  }
+
+  dropRegistry.unregisterDroppable(textDropTargetElement)
+  textDropTargetElement = undefined
+}
+
+function registerTextDropTarget() {
+  if (!editorContainer) {
+    unregisterTextDropTarget()
+    return
+  }
+
+  if (textDropTargetElement === editorContainer) {
+    return
+  }
+
+  unregisterTextDropTarget()
+  textDropTargetElement = editorContainer
+  dropRegistry.registerDroppable(editorContainer, {
+    accept: 'file-system-item',
+    canDrop(payload) {
+      return payload.type === 'file-system-item'
+        && runtime.canHandleFileDrop(payload, readCurrentDragPosition())
+    },
+    id: `text-editor:${props.state.path}`,
+    onDragEnter(payload) {
+      if (payload.type === 'file-system-item') {
+        runtime.syncFileDropHover(payload, readCurrentDragPosition())
+      }
+    },
+    onDragLeave(payload) {
+      if (payload.type === 'file-system-item') {
+        runtime.clearFileDropHover()
+      }
+    },
+    onDrop(payload) {
+      if (payload.type !== 'file-system-item') {
+        return
+      }
+
+      const position = readCurrentDragPosition()
+      if (!position) {
+        runtime.clearFileDropHover()
+        return
+      }
+
+      if (runtime.handleFileDrop(payload, position)) {
+        editor?.focus()
+      }
+    },
+  })
 }
 
 useShortcutContext({
@@ -161,6 +232,7 @@ onMounted(() => {
   if (isCurrentTextProjectionActive) {
     createEditor()
   }
+  registerTextDropTarget()
 })
 
 watch(() => isCurrentTextProjectionActive, (isActive) => {
@@ -169,7 +241,28 @@ watch(() => isCurrentTextProjectionActive, (isActive) => {
   }
 })
 
+watch(() => props.state.path, () => {
+  if (textDropTargetElement) {
+    unregisterTextDropTarget()
+    registerTextDropTarget()
+  }
+})
+
+watch(() => dragSession.state.value.currentPosition, (position) => {
+  if (dropRegistry.hoveredTarget.value !== editorContainer) {
+    return
+  }
+
+  const payload = readCurrentFileDragPayload()
+  if (payload) {
+    runtime.syncFileDropHover(payload, position)
+  }
+})
+
 onUnmounted(() => {
+  runtime.clearFileDropHover()
+  unregisterTextDropTarget()
+
   if (editor) {
     playToLineController?.dispose()
     playToLineController = undefined
@@ -197,4 +290,18 @@ onUnmounted(() => {
 .monaco-editor .glyph-margin-widgets .cgmr.play-to-line-glyph.play-to-line-glyph-disabled {
   @apply cursor-not-allowed text-muted-foreground/50;
 }
+
+.monaco-editor.vs .text-editor-drop-caret,
+.monaco-editor.hc-light .text-editor-drop-caret {
+  border-right: 2px dotted #000000;
+}
+
+.monaco-editor.vs-dark .text-editor-drop-caret {
+  border-right: 2px dotted #aeafad;
+}
+
+.monaco-editor.hc-black .text-editor-drop-caret {
+  border-right: 2px dotted #ffffff;
+}
+
 </style>

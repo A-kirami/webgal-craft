@@ -1,12 +1,14 @@
 import * as monaco from 'monaco-editor'
 
 import { isAnimationDocumentTextValid } from '~/domain/document/animation-document-codec'
+import { buildTextEditorDropDecorations, resolveTextEditorFileDropAction } from '~/features/editor/text-editor/text-editor-file-drop'
 import { resolveTextEditorLanguage } from '~/features/editor/text-editor/text-editor-language'
 import { applySceneCursorTarget, prepareSceneCursorTarget } from '~/features/editor/text-editor/text-editor-scene-restore'
 import { resolveSceneCursorTarget, resolveScenePreviewLine } from '~/features/editor/text-editor/text-editor-scene-sync'
 import { didResumeSingleEditTarget, readEditorHasMultipleEditTargets } from '~/features/editor/text-editor/text-editor-selection'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { useTabsStore } from '~/stores/tabs'
+import { useWorkspaceStore } from '~/stores/workspace'
 
 import { useTextEditorBindings } from './useTextEditorBindings'
 import { useTextEditorContentSync } from './useTextEditorContentSync'
@@ -14,8 +16,10 @@ import { useTextEditorHistory } from './useTextEditorHistory'
 import { useTextEditorPanel } from './useTextEditorPanel'
 import { useTextEditorWorkspace } from './useTextEditorWorkspace'
 
+import type { TextEditorDropAction } from './text-editor-file-drop'
 import type { AbsPath } from '~/domain/path'
 import type { TextProjectionState } from '~/stores/editor'
+import type { DragPosition, FileSystemDragPayload } from '~/types/drag-drop'
 
 interface UseTextEditorRuntimeOptions {
   editorRef: ShallowRef<monaco.editor.IStandaloneCodeEditor | undefined>
@@ -25,16 +29,77 @@ interface UseTextEditorRuntimeOptions {
 export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
   const editorStore = useEditorStore()
   const tabsStore = useTabsStore()
+  const workspaceStore = useWorkspaceStore()
 
   const state = computed(() => options.getState())
   const activeProjection = computed(() => {
-    const currentState = editorStore.currentState
+    const { currentState } = editorStore
     return currentState && isEditableEditor(currentState) ? currentState.projection : undefined
   })
   let isComposing = $ref(false)
+  let fileDropDecorationIds: string[] = []
 
   function readEditor(): monaco.editor.IStandaloneCodeEditor | undefined {
     return options.editorRef.value
+  }
+
+  function setFileDropDecorations(action?: TextEditorDropAction) {
+    const editor = readEditor()
+    if (!editor) {
+      return
+    }
+
+    fileDropDecorationIds = editor.deltaDecorations(
+      fileDropDecorationIds,
+      buildTextEditorDropDecorations({ action }),
+    )
+  }
+
+  function clearFileDropHover(): void {
+    setFileDropDecorations(undefined)
+  }
+
+  function resolveFileDropAction(payload: FileSystemDragPayload, position: DragPosition): TextEditorDropAction | undefined {
+    const gamePath = workspaceStore.currentGame?.path
+    const editor = readEditor()
+    if (state.value.kind !== 'scene' || !gamePath || !editor) {
+      return undefined
+    }
+
+    return resolveTextEditorFileDropAction({
+      editor,
+      gamePath,
+      payload,
+      position,
+    })
+  }
+
+  function syncFileDropHover(payload: FileSystemDragPayload, position: DragPosition | null): void {
+    if (!position) {
+      clearFileDropHover()
+      return
+    }
+
+    setFileDropDecorations(resolveFileDropAction(payload, position))
+  }
+
+  function canHandleFileDrop(payload: FileSystemDragPayload, position: DragPosition | null): boolean {
+    return position ? resolveFileDropAction(payload, position) !== undefined : false
+  }
+
+  function handleFileDrop(payload: FileSystemDragPayload, position: DragPosition): boolean {
+    const action = resolveFileDropAction(payload, position)
+    if (!action) {
+      clearFileDropHover()
+      return false
+    }
+
+    const applied = action.kind === 'update-statement'
+      ? textEditorBindings.applyProgrammaticStatementUpdate(action.payload, 'external')
+      : textEditorBindings.applyProgrammaticInsert(action, 'external')
+
+    clearFileDropHover()
+    return applied
   }
 
   function syncViewStateForSave(path: AbsPath) {
@@ -413,6 +478,8 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
   )
 
   return {
+    canHandleFileDrop,
+    clearFileDropHover,
     currentEditorLanguage,
     ensureModel,
     handleBeforeUnmount,
@@ -421,6 +488,8 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
     handleCursorSelectionChange,
     handleEditorClick,
     handleEditorCreated,
+    handleFileDrop,
     handleScrollChange,
+    syncFileDropHover,
   }
 }

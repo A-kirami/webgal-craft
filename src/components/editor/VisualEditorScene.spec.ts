@@ -1,7 +1,7 @@
 import { createPinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { computed, defineComponent, h, nextTick, reactive, vShow, withDirectives } from 'vue'
+import { computed, defineComponent, h, nextTick, reactive, shallowRef, vShow, withDirectives } from 'vue'
 
 import { createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 import { useShortcutContextRegistry } from '~/features/editor/shortcut/shortcut-context-registry'
@@ -60,9 +60,11 @@ const {
   handleSelectMock,
   handleStatementDeleteMock,
   handleStatementUpdateMock,
+  handleFileDropMock,
   measureRowElementMock,
   reorderStatementsMock,
   statementSortVirtualAdapterMock,
+  useDroppableRegistryMock,
   useEditSettingsStoreMock,
   usePreferenceStoreMock,
   useEditorStoreMock,
@@ -74,6 +76,7 @@ const {
   handleSelectMock: vi.fn(),
   handleStatementDeleteMock: vi.fn(),
   handleStatementUpdateMock: vi.fn(),
+  handleFileDropMock: vi.fn(),
   measureRowElementMock: vi.fn(),
   reorderStatementsMock: vi.fn(),
   statementSortVirtualAdapterMock: {
@@ -91,6 +94,11 @@ const {
   usePreferenceStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
   useVisualEditorSceneRuntimeMock: vi.fn(),
+  useDroppableRegistryMock: vi.fn(),
+}))
+
+vi.mock('~/composables/useDroppableRegistry', () => ({
+  useDroppableRegistry: useDroppableRegistryMock,
 }))
 
 vi.mock('~/stores/edit-settings', () => ({
@@ -185,6 +193,7 @@ describe('VisualEditorScene', () => {
     handleSelectMock.mockReset()
     handleStatementDeleteMock.mockReset()
     handleStatementUpdateMock.mockReset()
+    handleFileDropMock.mockReset()
     measureRowElementMock.mockReset()
     reorderStatementsMock.mockReset()
     statementSortVirtualAdapterMock.getEstimatedItemSize.mockReturnValue(48)
@@ -200,6 +209,7 @@ describe('VisualEditorScene', () => {
     usePreferenceStoreMock.mockReset()
     useTabsStoreMock.mockReset()
     useVisualEditorSceneRuntimeMock.mockReset()
+    useDroppableRegistryMock.mockReset()
 
     useEditSettingsStoreMock.mockReturnValue(reactive({
       collapseStatementsOnSidebarOpen: true,
@@ -221,7 +231,9 @@ describe('VisualEditorScene', () => {
       shouldFocusEditor: false,
     }))
     useVisualEditorSceneRuntimeMock.mockReturnValue({
+      canHandleFileDrop: vi.fn(() => true),
       handleCollapsedUpdate: handleCollapsedUpdateMock,
+      handleFileDrop: handleFileDropMock,
       handlePlayTo: handlePlayToMock,
       handleSelect: handleSelectMock,
       handleStatementDelete: handleStatementDeleteMock,
@@ -238,6 +250,16 @@ describe('VisualEditorScene', () => {
         { index: 0, key: 0, start: 0 },
         { index: 1, key: 1, start: 48 },
       ],
+    })
+    useDroppableRegistryMock.mockReturnValue({
+      clearHover: vi.fn(),
+      drop: vi.fn(),
+      getMatchAt: vi.fn(),
+      hoveredTarget: shallowRef(),
+      isDropAllowed: shallowRef(false),
+      registerDroppable: vi.fn(),
+      unregisterDroppable: vi.fn(),
+      updateHover: vi.fn(),
     })
   })
 
@@ -306,7 +328,9 @@ describe('VisualEditorScene', () => {
       { index: 2, size: 100, start: 200 },
     ])
     useVisualEditorSceneRuntimeMock.mockReturnValue({
+      canHandleFileDrop: vi.fn(() => true),
       handleCollapsedUpdate: handleCollapsedUpdateMock,
+      handleFileDrop: handleFileDropMock,
       handlePlayTo: handlePlayToMock,
       handleSelect: handleSelectMock,
       handleStatementDelete: handleStatementDeleteMock,
@@ -340,6 +364,224 @@ describe('VisualEditorScene', () => {
     expect(firstItem).not.toBeNull()
     expect(firstItem!.dataset.dragIndex).toBe('0')
     expect(firstItem!.querySelector('[data-statement-drag-handle]')).not.toBeNull()
+  })
+
+  it('为 head / gap / update / tail 注册 drop target，并把 drop 目标传给 runtime', async () => {
+    const registerDroppable = vi.fn()
+    useDroppableRegistryMock.mockReturnValue({
+      clearHover: vi.fn(),
+      drop: vi.fn(),
+      getMatchAt: vi.fn(),
+      hoveredTarget: shallowRef(),
+      isDropAllowed: shallowRef(false),
+      registerDroppable,
+      unregisterDroppable: vi.fn(),
+      updateHover: vi.fn(),
+    })
+
+    const state = createSceneState()
+    renderInBrowser(VisualEditorScene, {
+      props: { state },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    expect(registerDroppable).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ id: 'visual-editor:head' }),
+    )
+    expect(registerDroppable).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ id: 'visual-editor:update:1' }),
+    )
+    expect(registerDroppable).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ id: 'visual-editor:gap:1:2' }),
+    )
+    expect(registerDroppable).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ id: 'visual-editor:tail' }),
+    )
+
+    const updateConfig = registerDroppable.mock.calls.find(([, config]) =>
+      config.id === 'visual-editor:update:1',
+    )?.[1]
+    const payload = {
+      source: 'file-viewer',
+      type: 'file-system-item',
+      path: '/games/demo/game/scene/chapter2.txt',
+      isDir: false,
+    } as const
+
+    await updateConfig.onDrop(payload, document.createElement('div'))
+
+    expect(handleFileDropMock).toHaveBeenCalledWith(payload, {
+      placement: 'update',
+      insertIndex: 0,
+      statementId: 1,
+    })
+
+    const gapConfig = registerDroppable.mock.calls.find(([, config]) =>
+      config.id === 'visual-editor:gap:1:2',
+    )?.[1]
+
+    await gapConfig.onDrop(payload, document.createElement('div'))
+
+    expect(handleFileDropMock).toHaveBeenCalledWith(payload, {
+      placement: 'gap',
+      insertIndex: 1,
+    })
+
+    const headConfig = registerDroppable.mock.calls.find(([, config]) =>
+      config.id === 'visual-editor:head',
+    )?.[1]
+
+    await headConfig.onDrop(payload, document.createElement('div'))
+
+    expect(handleFileDropMock).toHaveBeenCalledWith(payload, {
+      placement: 'head',
+      insertIndex: 0,
+    })
+  })
+
+  it('文件投放成功后会恢复可视化编辑器焦点', async () => {
+    const registerDroppable = vi.fn()
+    handleFileDropMock.mockReturnValue(true)
+    useDroppableRegistryMock.mockReturnValue({
+      clearHover: vi.fn(),
+      drop: vi.fn(),
+      getMatchAt: vi.fn(),
+      hoveredTarget: shallowRef(),
+      isDropAllowed: shallowRef(false),
+      registerDroppable,
+      unregisterDroppable: vi.fn(),
+      updateHover: vi.fn(),
+    })
+
+    renderInBrowser(VisualEditorScene, {
+      props: { state: createSceneState() },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    const headConfig = registerDroppable.mock.calls.find(([, config]) =>
+      config.id === 'visual-editor:head',
+    )?.[1]
+    const payload = {
+      source: 'file-viewer',
+      type: 'file-system-item',
+      path: '/games/demo/game/background/room.png',
+      isDir: false,
+    } as const
+
+    await headConfig.onDrop(payload, document.createElement('div'))
+
+    expect(document.activeElement).toHaveAttribute('tabindex', '-1')
+    expect(useShortcutContextRegistry().resolveContext().panelFocus).toBe('editor')
+  })
+
+  it('拖过插入区时会显示语义化插入指示器', async () => {
+    const registerDroppable = vi.fn()
+    useDroppableRegistryMock.mockReturnValue({
+      clearHover: vi.fn(),
+      drop: vi.fn(),
+      getMatchAt: vi.fn(),
+      hoveredTarget: shallowRef(),
+      isDropAllowed: shallowRef(false),
+      registerDroppable,
+      unregisterDroppable: vi.fn(),
+      updateHover: vi.fn(),
+    })
+
+    const result = renderInBrowser(VisualEditorScene, {
+      props: { state: createSceneState() },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    const gapConfig = registerDroppable.mock.calls.find(([, config]) =>
+      config.id === 'visual-editor:gap:1:2',
+    )?.[1]
+    const payload = {
+      source: 'file-viewer',
+      type: 'file-system-item',
+      path: '/games/demo/game/background/room.png',
+      isDir: false,
+    } as const
+
+    gapConfig.onDragEnter(payload)
+    await nextTick()
+
+    const insertIndicator = result.container.querySelector('[data-visual-drop-indicator="insert"]')
+    expect(insertIndicator).not.toBeNull()
+    expect(insertIndicator!.className).toContain('drop-insert-indicator-before')
+    expect((insertIndicator as HTMLElement).style.top).toBe('-0.125rem')
+    expect(result.container.querySelector('[data-visual-drop-indicator="update"]')).toBeNull()
+  })
+
+  it('拖过更新区时会显示语义化更新指示器', async () => {
+    const registerDroppable = vi.fn()
+    useDroppableRegistryMock.mockReturnValue({
+      clearHover: vi.fn(),
+      drop: vi.fn(),
+      getMatchAt: vi.fn(),
+      hoveredTarget: shallowRef(),
+      isDropAllowed: shallowRef(false),
+      registerDroppable,
+      unregisterDroppable: vi.fn(),
+      updateHover: vi.fn(),
+    })
+
+    const result = renderInBrowser(VisualEditorScene, {
+      props: { state: createSceneState() },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    const updateConfig = registerDroppable.mock.calls.find(([, config]) =>
+      config.id === 'visual-editor:update:1',
+    )?.[1]
+    const payload = {
+      source: 'file-viewer',
+      type: 'file-system-item',
+      path: '/games/demo/game/scene/chapter2.txt',
+      isDir: false,
+    } as const
+
+    updateConfig.onDragEnter(payload)
+    await nextTick()
+
+    expect(result.container.querySelector('[data-visual-drop-indicator="update"]')).not.toBeNull()
+    expect(result.container.querySelector('[data-visual-drop-indicator="insert"]')).toBeNull()
+  })
+
+  it('切换到更短场景且虚拟行尚未同步时会跳过越界行', async () => {
+    const state = createSceneState()
+    state.statements = [createStatementEntry(1, 'say:only')]
+
+    expect(() => renderInBrowser(VisualEditorScene, {
+      props: { state },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })).not.toThrow()
+
+    await nextTick()
+    await expect.element(page.getByText('say:only')).toBeVisible()
+    await expect.element(page.getByText('say:world')).not.toBeInTheDocument()
   })
 
   it('拖拽语句手柄会提交语句重排', async () => {

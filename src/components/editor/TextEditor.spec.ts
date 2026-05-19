@@ -1,6 +1,6 @@
 import * as monaco from 'monaco-editor'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { nextTick, reactive } from 'vue'
+import { nextTick, reactive, shallowRef } from 'vue'
 
 import { createBrowserLiteI18n } from '~/__tests__/browser'
 import { renderInBrowser } from '~/__tests__/browser-render'
@@ -22,12 +22,16 @@ const {
   runtimeReturnValue,
   useEditSettingsStoreMock,
   useEditorStoreMock,
+  useDragSessionMock,
+  useDroppableRegistryMock,
   useTextEditorRuntimeMock,
   useTabsStoreMock,
 } = vi.hoisted(() => {
   const ensureModelMock = vi.fn()
   const handleBeforeUnmountMock = vi.fn()
   const runtimeReturnValue = {
+    canHandleFileDrop: vi.fn(() => true),
+    clearFileDropHover: vi.fn(),
     currentEditorLanguage: { value: 'webgalscript' },
     ensureModel: ensureModelMock,
     handleBeforeUnmount: handleBeforeUnmountMock,
@@ -36,13 +40,17 @@ const {
     handleCursorSelectionChange: vi.fn(),
     handleEditorClick: vi.fn(),
     handleEditorCreated: vi.fn(),
+    handleFileDrop: vi.fn(),
     handleScrollChange: vi.fn(),
+    syncFileDropHover: vi.fn(),
   }
 
   return {
     ensureModelMock,
     handleBeforeUnmountMock,
     runtimeReturnValue,
+    useDragSessionMock: vi.fn(),
+    useDroppableRegistryMock: vi.fn(),
     useEditSettingsStoreMock: vi.fn(),
     useEditorStoreMock: vi.fn(),
     useTextEditorRuntimeMock: vi.fn(() => runtimeReturnValue),
@@ -52,6 +60,14 @@ const {
 
 vi.mock('~/features/editor/text-editor/useTextEditorRuntime', () => ({
   useTextEditorRuntime: useTextEditorRuntimeMock,
+}))
+
+vi.mock('~/composables/useDragSession', () => ({
+  useDragSession: useDragSessionMock,
+}))
+
+vi.mock('~/composables/useDroppableRegistry', () => ({
+  useDroppableRegistry: useDroppableRegistryMock,
 }))
 
 vi.mock('~/plugins/editor', () => ({
@@ -195,19 +211,52 @@ describe('TextEditor', () => {
     resetMonacoMockState()
     ensureModelMock.mockReset()
     handleBeforeUnmountMock.mockReset()
+    runtimeReturnValue.canHandleFileDrop.mockReset()
+    runtimeReturnValue.clearFileDropHover.mockReset()
     runtimeReturnValue.handleContentChange.mockReset()
     runtimeReturnValue.handleCursorPositionChange.mockReset()
     runtimeReturnValue.handleCursorSelectionChange.mockReset()
     runtimeReturnValue.handleEditorClick.mockReset()
     runtimeReturnValue.handleEditorCreated.mockReset()
+    runtimeReturnValue.handleFileDrop.mockReset()
     runtimeReturnValue.handleScrollChange.mockReset()
+    runtimeReturnValue.syncFileDropHover.mockReset()
+    runtimeReturnValue.canHandleFileDrop.mockReturnValue(true)
     useEditSettingsStoreMock.mockReset()
     useEditorStoreMock.mockReset()
+    useDragSessionMock.mockReset()
+    useDroppableRegistryMock.mockReset()
     useTabsStoreMock.mockReset()
     useTextEditorRuntimeMock.mockClear()
 
     ensureModelMock.mockReturnValue({
       id: 'model-1',
+    })
+    useDragSessionMock.mockReturnValue({
+      state: shallowRef({
+        currentDropTarget: undefined,
+        currentPosition: { x: 40, y: 20 },
+        isActive: true,
+        mode: 'transfer',
+        payload: {
+          source: 'file-viewer',
+          type: 'file-system-item',
+          path: '/games/demo/game/background/room.png',
+          isDir: false,
+        },
+        startPosition: { x: 40, y: 20 },
+        transferOperation: 'copy',
+      }),
+    })
+    useDroppableRegistryMock.mockReturnValue({
+      clearHover: vi.fn(),
+      drop: vi.fn(),
+      getMatchAt: vi.fn(),
+      hoveredTarget: shallowRef(),
+      isDropAllowed: shallowRef(false),
+      registerDroppable: vi.fn(),
+      unregisterDroppable: vi.fn(),
+      updateHover: vi.fn(),
     })
   })
 
@@ -300,8 +349,125 @@ describe('TextEditor', () => {
     await nextTick()
     await result.unmount()
 
+    expect(runtimeReturnValue.clearFileDropHover).toHaveBeenCalledTimes(1)
     expect(handleBeforeUnmountMock).toHaveBeenCalledTimes(1)
     expect(monacoMockState.editorInstance.dispose).toHaveBeenCalledTimes(1)
+  })
+
+  it('注册文本编辑器 drop target，并在 drop 时把 payload 与当前位置交给 runtime', async () => {
+    const registerDroppable = vi.fn()
+    const unregisterDroppable = vi.fn()
+    const hoveredTarget = shallowRef<HTMLElement>()
+    useDroppableRegistryMock.mockReturnValue({
+      clearHover: vi.fn(),
+      drop: vi.fn(),
+      getMatchAt: vi.fn(),
+      hoveredTarget,
+      isDropAllowed: shallowRef(false),
+      registerDroppable,
+      unregisterDroppable,
+      updateHover: vi.fn(),
+    })
+    useDragSessionMock.mockReturnValue({
+      state: shallowRef({
+        currentDropTarget: undefined,
+        currentPosition: { x: 40, y: 20 },
+        isActive: true,
+        mode: 'transfer',
+        payload: {
+          source: 'file-viewer',
+          type: 'file-system-item',
+          path: '/games/demo/game/background/room.png',
+          isDir: false,
+        },
+        startPosition: { x: 40, y: 20 },
+        transferOperation: 'copy',
+      }),
+    })
+
+    const { state } = createHarness()
+    const result = renderTextEditor(state)
+    await nextTick()
+
+    const [, config] = registerDroppable.mock.calls[0]
+    const payload = {
+      source: 'file-viewer',
+      type: 'file-system-item',
+      path: '/games/demo/game/background/room.png',
+      isDir: false,
+    } as const
+
+    config.onDragEnter(payload, document.createElement('div'))
+    expect(runtimeReturnValue.syncFileDropHover).toHaveBeenCalledWith(payload, { x: 40, y: 20 })
+
+    config.onDrop(payload, document.createElement('div'))
+    expect(runtimeReturnValue.handleFileDrop).toHaveBeenCalledWith(payload, { x: 40, y: 20 })
+
+    config.onDragLeave(payload, document.createElement('div'))
+    expect(runtimeReturnValue.clearFileDropHover).toHaveBeenCalled()
+
+    await result.unmount()
+    expect(unregisterDroppable).toHaveBeenCalledTimes(1)
+  })
+
+  it('文件投放成功后会恢复 Monaco 焦点', async () => {
+    const registerDroppable = vi.fn()
+    useDroppableRegistryMock.mockReturnValue({
+      clearHover: vi.fn(),
+      drop: vi.fn(),
+      getMatchAt: vi.fn(),
+      hoveredTarget: shallowRef(),
+      isDropAllowed: shallowRef(false),
+      registerDroppable,
+      unregisterDroppable: vi.fn(),
+      updateHover: vi.fn(),
+    })
+    runtimeReturnValue.handleFileDrop.mockReturnValue(true)
+
+    const { state } = createHarness('/project/scene-drop-focus.txt')
+    renderTextEditor(state)
+    await nextTick()
+
+    const [, config] = registerDroppable.mock.calls[0]
+    const payload = {
+      source: 'file-viewer',
+      type: 'file-system-item',
+      path: '/games/demo/game/background/room.png',
+      isDir: false,
+    } as const
+
+    config.onDrop(payload, document.createElement('div'))
+
+    expect(monacoMockState.editorInstance.focus).toHaveBeenCalledTimes(1)
+  })
+
+  it('animation 文本状态会拒绝脚本文件投放', async () => {
+    const registerDroppable = vi.fn()
+    runtimeReturnValue.canHandleFileDrop.mockReturnValue(false)
+    useDroppableRegistryMock.mockReturnValue({
+      clearHover: vi.fn(),
+      drop: vi.fn(),
+      getMatchAt: vi.fn(),
+      hoveredTarget: shallowRef(),
+      isDropAllowed: shallowRef(false),
+      registerDroppable,
+      unregisterDroppable: vi.fn(),
+      updateHover: vi.fn(),
+    })
+    const { state } = createHarness('/games/demo/game/animation/opening.json')
+    state.kind = 'animation'
+    state.textContent = '{}'
+
+    renderTextEditor(state)
+    await nextTick()
+
+    const config = registerDroppable.mock.calls[0]?.[1]
+    expect(config?.canDrop?.({
+      source: 'file-viewer',
+      type: 'file-system-item',
+      path: '/games/demo/game/background/room.png',
+      isDir: false,
+    }, document.createElement('div'))).toBe(false)
   })
 
   it('非场景文件不会启用 glyph margin', async () => {
