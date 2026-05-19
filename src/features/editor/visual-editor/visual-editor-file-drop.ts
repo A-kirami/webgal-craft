@@ -45,7 +45,7 @@ export function resolveVisualEditorDropAction(options: {
     }
   }
 
-  if (options.statementId === undefined || !options.rawText) {
+  if (options.statementId === undefined || options.rawText === undefined) {
     return undefined
   }
 

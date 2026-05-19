@@ -1,11 +1,23 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AbsPath } from '~/domain/path'
 import {
   resolveVisualEditorDropAction,
 } from '~/features/editor/visual-editor/visual-editor-file-drop'
 
+import type { EditorDropAsset } from '~/features/editor/shared/editor-file-drop'
 import type { FileSystemDragPayload } from '~/types/drag-drop'
+
+const updateStatementTextForDroppedAssetMock = vi.hoisted(() => vi.fn())
+
+vi.mock('~/features/editor/shared/editor-file-drop', async (importOriginal) => {
+  const original = await importOriginal<typeof import('~/features/editor/shared/editor-file-drop')>()
+
+  return {
+    ...original,
+    updateStatementTextForDroppedAsset: updateStatementTextForDroppedAssetMock,
+  }
+})
 
 function createPayload(path: string): FileSystemDragPayload {
   return {
@@ -18,6 +30,13 @@ function createPayload(path: string): FileSystemDragPayload {
 }
 
 describe('visual-editor-file-drop', () => {
+  beforeEach(async () => {
+    const { updateStatementTextForDroppedAsset } = await vi.importActual<typeof import('~/features/editor/shared/editor-file-drop')>('~/features/editor/shared/editor-file-drop')
+
+    updateStatementTextForDroppedAssetMock.mockReset()
+    updateStatementTextForDroppedAssetMock.mockImplementation((rawText: string, asset: EditorDropAsset) => updateStatementTextForDroppedAsset(rawText, asset))
+  })
+
   it('scene 投放到 choose 更新区时会追加选项文件', () => {
     const action = resolveVisualEditorDropAction({
       gamePath: AbsPath.from('/games/demo'),
@@ -78,6 +97,22 @@ describe('visual-editor-file-drop', () => {
       insertIndex: 5,
       rawTexts: ['changeScene:finale.txt;'],
     })
+  })
+
+  it('空字符串语句投放到 update 区时会进入内容更新判断', () => {
+    resolveVisualEditorDropAction({
+      gamePath: AbsPath.from('/games/demo'),
+      payload: createPayload('/games/demo/game/bgm/theme.ogg'),
+      placement: 'update',
+      rawText: '',
+      insertIndex: 1,
+      statementId: 1,
+    })
+
+    expect(updateStatementTextForDroppedAssetMock).toHaveBeenCalledWith('', expect.objectContaining({
+      assetType: 'bgm',
+      scriptPath: 'theme.ogg',
+    }))
   })
 
   it('不兼容的 update 目标会返回 undefined', () => {
