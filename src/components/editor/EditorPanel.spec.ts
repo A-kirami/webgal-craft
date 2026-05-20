@@ -382,6 +382,21 @@ describe('EditorPanel', () => {
     await expect.element(page.getByRole('button', { name: 'insert-command' })).not.toBeInTheDocument()
   })
 
+  it('空标签页不会挂载辅助侧栏布局', async () => {
+    useEditorStoreMock.mockReturnValue(reactive({
+      currentState: undefined,
+      isCurrentSceneFile: false,
+    }))
+    usePreferenceStoreMock.mockReturnValue(reactive({
+      showSidebar: true,
+    }))
+
+    renderEditorPanel()
+
+    await expect.element(page.getByText('File Editor')).toBeVisible()
+    await expect.element(page.getByTestId('sidebar-slot')).not.toBeInTheDocument()
+  })
+
   it('存在侧栏绑定但未选中语句时会显示文本模式空状态文案', async () => {
     useEditorStoreMock.mockReturnValue(reactive({
       currentState: {
