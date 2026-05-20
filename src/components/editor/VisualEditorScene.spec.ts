@@ -284,6 +284,101 @@ describe('VisualEditorScene', () => {
     await expect.element(page.getByText('say:world')).toBeVisible()
   })
 
+  it('空场景会显示空状态而不是空语句卡片', async () => {
+    const state = createSceneState()
+    state.statements = []
+
+    renderInBrowser(VisualEditorScene, {
+      props: {
+        state,
+      },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('edit.visualEditor.emptyTitle')).toBeVisible()
+    await expect.element(page.getByText('edit.visualEditor.emptyDescription')).toBeVisible()
+    await expect.element(page.getByRole('option')).not.toBeInTheDocument()
+  })
+
+  it('空场景会把空状态区域注册为首条语句投放目标', async () => {
+    const registerDroppable = vi.fn()
+    handleCommandDropMock.mockReturnValue(true)
+    handleFileDropMock.mockReturnValue(true)
+    useDroppableRegistryMock.mockReturnValue({
+      clearHover: vi.fn(),
+      drop: vi.fn(),
+      getMatchAt: vi.fn(),
+      hoveredTarget: shallowRef(),
+      isDropAllowed: shallowRef(false),
+      registerDroppable,
+      unregisterDroppable: vi.fn(),
+      updateHover: vi.fn(),
+    })
+
+    const state = createSceneState()
+    state.statements = []
+
+    const result = renderInBrowser(VisualEditorScene, {
+      props: { state },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    expect(registerDroppable).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ id: 'visual-editor:empty' }),
+    )
+    expect(registerDroppable).not.toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ id: 'visual-editor:tail' }),
+    )
+
+    const emptyConfig = registerDroppable.mock.calls.find(([, config]) =>
+      config.id === 'visual-editor:empty',
+    )?.[1]
+    const commandPayload = {
+      label: 'Say',
+      rawTexts: ['say:new;'],
+      source: 'command-panel',
+      type: 'command-panel-statement',
+    } as const
+    const filePayload = {
+      source: 'file-viewer',
+      type: 'file-system-item',
+      path: '/games/demo/game/background/room.png',
+      isDir: false,
+    } as const
+
+    expect(emptyConfig.canDrop(commandPayload, document.createElement('div'))).toBe(true)
+
+    emptyConfig.onDragEnter(commandPayload)
+    await nextTick()
+
+    expect(result.container.querySelector('[data-visual-drop-indicator="empty"]')).not.toBeNull()
+    expect(result.container.querySelector('[data-visual-drop-indicator="insert"]')).toBeNull()
+
+    await emptyConfig.onDrop(commandPayload, document.createElement('div'))
+
+    expect(handleCommandDropMock).toHaveBeenCalledWith(commandPayload, {
+      placement: 'tail',
+      insertIndex: 0,
+    })
+    expect(document.activeElement).toHaveAttribute('tabindex', '-1')
+
+    await emptyConfig.onDrop(filePayload, document.createElement('div'))
+
+    expect(handleFileDropMock).toHaveBeenCalledWith(filePayload, {
+      placement: 'tail',
+      insertIndex: 0,
+    })
+  })
+
   it('卡片事件会转发到 runtime 处理函数', async () => {
     renderInBrowser(VisualEditorScene, {
       props: {
@@ -617,6 +712,62 @@ describe('VisualEditorScene', () => {
         stubs: globalStubs,
       },
     })
+    await nextTick()
+
+    const listbox = document.querySelector<HTMLElement>('[role="listbox"]')
+    const firstItem = document.querySelector<HTMLElement>('[data-drag-index="0"]')
+    const secondItem = document.querySelector<HTMLElement>('[data-drag-index="1"]')
+    const handle = firstItem?.querySelector<HTMLElement>('[data-statement-drag-handle]')
+
+    expect(listbox).not.toBeNull()
+    expect(firstItem).not.toBeNull()
+    expect(secondItem).not.toBeNull()
+    expect(handle).not.toBeNull()
+
+    setRect(listbox!, createVerticalRect(0, 96))
+    setRect(firstItem!, createVerticalRect(0))
+    setRect(secondItem!, createVerticalRect(48))
+
+    handle!.dispatchEvent(createPointerEvent('pointerdown', { clientX: 8, clientY: 8 }))
+    globalThis.dispatchEvent(createPointerEvent('pointermove', { clientX: 8, clientY: 90 }))
+    globalThis.dispatchEvent(createPointerEvent('pointerup', { clientX: 8, clientY: 90 }))
+
+    await vi.waitFor(() => {
+      expect(reorderStatementsMock).toHaveBeenCalledWith(0, 1, { restoreSelectionPresentation: false })
+    })
+  })
+
+  it('空场景插入首条语句后会恢复语句列表拖拽排序', async () => {
+    const state = reactive({
+      ...createSceneState(),
+      statements: [],
+    }) as SceneVisualProjectionState
+    statementSortVirtualAdapterMock.getItemCount.mockReturnValue(2)
+    statementSortVirtualAdapterMock.getVisibleItems.mockReturnValue([])
+    const Harness = defineComponent({
+      name: 'EmptyToFilledSceneHarness',
+      setup() {
+        return () => h(VisualEditorScene, { state })
+      },
+    })
+
+    renderInBrowser(Harness, {
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    state.statements.push(
+      createStatementEntry(1, 'say:first'),
+      createStatementEntry(2, 'say:second'),
+    )
+    statementSortVirtualAdapterMock.getVisibleItems.mockReturnValue([
+      { index: 0, size: 48, start: 0 },
+      { index: 1, size: 48, start: 48 },
+    ])
+    await nextTick()
     await nextTick()
 
     const listbox = document.querySelector<HTMLElement>('[role="listbox"]')

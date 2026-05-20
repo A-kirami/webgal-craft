@@ -693,6 +693,8 @@ edit:
     toggleSidebar: 補助パネル切替
   visualEditor:
     playToLine: この行まで実行
+    emptyTitle: シーンはまだ空です
+    emptyDescription: コマンドパネルからステートメントを追加するか、リソースファイルをドラッグして直接挿入してください。
     audioPreview:
       play: 音声を再生
       pause: 音声を一時停止

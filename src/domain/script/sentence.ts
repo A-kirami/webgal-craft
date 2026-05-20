@@ -35,6 +35,10 @@ export function createEmptySentence(): ISentence {
  * 未来支持跨行语句时，只需修改此函数。
  */
 export function splitStatements(text: string): string[] {
+  if (text === '') {
+    return []
+  }
+
   return text.split('\n')
 }
 

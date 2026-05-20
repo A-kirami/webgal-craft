@@ -7,6 +7,7 @@ import { AbsPath } from '~/domain/path'
 import {
   applyAnimationFrameInsert,
   applyAnimationFrameUpdate,
+  applySceneStatementInsert,
   applySceneStatementReorder,
   applyTextDocumentContent,
   redoDocument,
@@ -122,13 +123,22 @@ function createAnimationActionHarness() {
   }
 }
 
-function createSceneActionHarness() {
-  const scenePath = AbsPath.from('/game/scene/document.txt')
+function createSceneActionHarness(options: {
+  content?: string
+  path?: string
+  sceneSelection?: SceneSelectionState
+} = {}) {
+  const {
+    content = 'alpha\nbeta\ngamma',
+    path = '/game/scene/document.txt',
+    sceneSelection: initialSceneSelection,
+  } = options
+  const scenePath = AbsPath.from(path)
   const document: DocumentState = createDocumentState(createDocumentModel({
     kind: 'scene',
-    content: 'alpha\nbeta\ngamma',
+    content,
   }))
-  let sceneSelection: SceneSelectionState | undefined = {
+  let sceneSelection: SceneSelectionState | undefined = initialSceneSelection ?? {
     lastEditedStatementId: document.model.kind === 'scene' ? document.model.statements[1]?.id : undefined,
     lastLineNumber: 2,
     selectedStatementId: document.model.kind === 'scene' ? document.model.statements[1]?.id : undefined,
@@ -342,6 +352,28 @@ describe('编辑器文档动作回滚', () => {
       lastEditedStatementId: movedStatementId,
       lastLineNumber: 1,
       selectedStatementId: movedStatementId,
+    })
+  })
+
+  it('空场景插入第一条语句时不会保留首行空语句', () => {
+    const { context, document, readSceneSelection, scenePath, syncStateFromDocument } = createSceneActionHarness({
+      content: '',
+      path: '/game/scene/empty.txt',
+      sceneSelection: undefined,
+    })
+
+    applySceneStatementInsert(context, scenePath, [{ id: 101, rawText: 'say:hello;' }], 0)
+
+    expect(syncStateFromDocument).toHaveBeenCalledTimes(1)
+    expect(document.model.kind).toBe('scene')
+    if (document.model.kind !== 'scene') {
+      throw new TypeError('expected scene document model')
+    }
+    expect(document.model.statements.map(statement => statement.rawText)).toEqual(['say:hello;'])
+    expect(readSceneSelection()).toMatchObject({
+      lastEditedStatementId: 101,
+      lastLineNumber: 1,
+      selectedStatementId: 101,
     })
   })
 })

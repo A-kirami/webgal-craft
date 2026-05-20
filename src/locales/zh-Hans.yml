@@ -693,6 +693,8 @@ edit:
     toggleSidebar: 切换辅助面板
   visualEditor:
     playToLine: 执行到此句
+    emptyTitle: 场景还是空的
+    emptyDescription: 从命令面板添加语句，或拖拽资源文件直接插入。
     audioPreview:
       play: 播放音频
       pause: 暂停音频

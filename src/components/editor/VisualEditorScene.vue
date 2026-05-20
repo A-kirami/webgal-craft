@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { FileText } from '@lucide/vue'
+
 import { useDragSort } from '~/composables/useDragSort'
 import { useDroppableRegistry } from '~/composables/useDroppableRegistry'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
@@ -62,6 +64,7 @@ const {
 } = runtime
 
 const statements = computed(() => props.state.statements)
+const isSceneEmpty = computed(() => props.state.statements.length === 0)
 const scrollViewportRef = shallowRef<HTMLElement>()
 const statementReadonly = $computed(() => preferenceStore.showSidebar && editSettings.collapseStatementsOnSidebarOpen)
 const renderedStatementRows = computed<RenderedVisualStatementRow[]>(() => {
@@ -290,6 +293,10 @@ onMounted(() => {
   updateStatementSortRefs()
 })
 
+watch(isSceneEmpty, () => {
+  updateStatementSortRefs()
+}, { flush: 'post' })
+
 tryOnUnmounted(() => {
   for (const element of dropElements.values()) {
     dropRegistry.unregisterDroppable(element)
@@ -306,7 +313,34 @@ tryOnUnmounted(() => {
         data-visual-editor-content
         :style="{ minHeight: contentMinHeight }"
       >
-        <div ref="statementListRef" role="listbox" :aria-label="$t('edit.visualEditor.statementList')" :style="{ height: `${totalSize}px`, width: '100%', position: 'relative' }">
+        <div
+          v-if="isSceneEmpty"
+          :ref="value => registerDropTarget('empty', resolveHTMLElement(value), tailDropTarget)"
+          data-visual-drop-slot="empty"
+          class="flex flex-1 min-h-64 relative"
+        >
+          <Empty class="border-0 flex-1">
+            <EmptyContent>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <FileText />
+                </EmptyMedia>
+                <EmptyTitle>{{ $t('edit.visualEditor.emptyTitle') }}</EmptyTitle>
+                <EmptyDescription>
+                  {{ $t('edit.visualEditor.emptyDescription') }}
+                </EmptyDescription>
+              </EmptyHeader>
+            </EmptyContent>
+          </Empty>
+          <div
+            v-if="activeDropIndicator?.placement === 'tail'"
+            data-visual-drop-indicator="empty"
+            aria-hidden="true"
+            :class="$style.dropEmptyIndicator"
+          />
+        </div>
+
+        <div v-else ref="statementListRef" role="listbox" :aria-label="$t('edit.visualEditor.statementList')" :style="{ height: `${totalSize}px`, width: '100%', position: 'relative' }">
           <div
             v-for="row in renderedStatementRows"
             :key="row.key"
@@ -372,6 +406,7 @@ tryOnUnmounted(() => {
         </div>
 
         <div
+          v-if="!isSceneEmpty"
           :ref="value => registerDropTarget('tail', resolveHTMLElement(value), tailDropTarget)"
           data-visual-drop-slot="tail"
           class="mx-2 flex-1 relative"
@@ -466,8 +501,22 @@ tryOnUnmounted(() => {
     0 0 0.75rem rgb(var(--drop-indicator-rgb) / 14%);
 }
 
+.drop-empty-indicator {
+  --drop-indicator-rgb: 14 165 233;
+
+  position: absolute;
+  inset: 0.5rem;
+  z-index: 20;
+  pointer-events: none;
+  background: rgb(var(--drop-indicator-rgb) / 8%);
+  border: 1px dashed rgb(var(--drop-indicator-rgb) / 70%);
+  border-radius: 0.5rem;
+  box-shadow: inset 0 0 0 1px rgb(var(--drop-indicator-rgb) / 18%);
+}
+
 :global(.dark) .drop-insert-indicator,
-:global(.dark) .drop-update-indicator {
+:global(.dark) .drop-update-indicator,
+:global(.dark) .drop-empty-indicator {
   --drop-indicator-rgb: 56 189 248;
 }
 </style>
