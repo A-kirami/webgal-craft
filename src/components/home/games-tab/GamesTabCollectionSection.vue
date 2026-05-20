@@ -57,13 +57,13 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
 
 <template>
   <ScrollArea class="h-full min-h-0">
-    <div v-if="viewMode === 'grid'" class="gap-4 grid grid-cols-1 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2">
+    <div v-if="viewMode === 'grid'" class="gap-4 grid auto-rows-fr grid-cols-1 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2">
       <ContextMenu v-for="item in items" :key="item.game.id">
         <ContextMenuTrigger as-child>
           <Card
             :data-testid="`game-card-${item.game.id}`"
             :data-availability="item.game.availability"
-            class="group rounded-lg cursor-pointer shadow-sm transition-all duration-300 relative overflow-hidden hover:shadow"
+            class="group rounded-lg h-full cursor-pointer shadow-sm transition-all duration-300 relative overflow-hidden hover:shadow"
             :class="{
               'cursor-wait': hasGameProgress(item.game),
               'opacity-90 ring-1 ring-destructive/40 border-destructive/30 bg-destructive/[0.03]': item.game.availability !== 'available',
@@ -140,19 +140,21 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
         ref="dropZoneGridRef"
         type="button"
         :aria-label="$t('home.games.importGame')"
-        class="p-4 border-1 border-gray-300 rounded-lg border-dashed bg-gray-50 flex flex-col w-full cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden dark:border-gray-700 hover:border-purple-300 dark:bg-gray-900 dark:hover:border-purple-700"
-        :class="{'border-purple-300 bg-purple-50': isOverDropZoneGrid}"
+        class="p-4 text-center border-1 border-gray-300 rounded-lg border-dashed bg-gray-50 flex flex-col gap-3 h-full w-full cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden dark:border-gray-700 hover:border-purple-300 dark:bg-gray-900 dark:hover:border-purple-700"
+        :class="{ 'border-purple-300 bg-purple-50': isOverDropZoneGrid }"
         @click="emit('importClick')"
       >
-        <div class="mb-3 p-3 rounded-full bg-purple-100 dark:bg-purple-900/20">
+        <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900/20">
           <Scroll class="text-purple-600 h-6 w-6 dark:text-purple-400" />
         </div>
-        <p class="text-sm font-medium">
-          {{ $t('home.games.importGame') }}
-        </p>
-        <p class="text-xs text-muted-foreground mt-1">
-          {{ $t('home.games.importGameHint') }}
-        </p>
+        <div class="px-4 min-w-0">
+          <p class="text-sm font-medium">
+            {{ $t('home.games.importGame') }}
+          </p>
+          <p class="text-xs text-muted-foreground mt-1">
+            {{ $t('home.games.importGameHint') }}
+          </p>
+        </div>
       </button>
     </div>
     <div v-else class="border rounded-lg overflow-hidden divide-y">
