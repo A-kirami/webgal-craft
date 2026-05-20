@@ -111,7 +111,7 @@ watch(
     <div class="px-2 py-1 flex flex-shrink-0 gap-2 items-center justify-between">
       <div class="text-muted-foreground px-2 py-0.25 border border-border/50 rounded-md bg-muted/50 flex flex-1 gap-1.5 items-center overflow-hidden">
         <Link class="shrink-0 size-3" />
-        <span class="text-sm font-mono select-text truncate">{{ previewUrl }}</span>
+        <span class="text-sm font-mono cursor-default select-text truncate">{{ previewUrl }}</span>
       </div>
       <TooltipProvider>
         <div class="text-muted-foreground flex flex-shrink-0 gap-1">
