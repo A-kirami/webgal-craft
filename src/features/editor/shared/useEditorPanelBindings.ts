@@ -35,7 +35,7 @@ function useActiveBinding<TBinding extends ActivatableBinding>(
   if (!context) {
     return
   }
-  const activeBinding = context.activeBinding
+  const { activeBinding } = context
 
   let isRegistered = false
 

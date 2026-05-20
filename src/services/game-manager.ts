@@ -447,7 +447,7 @@ async function createGame(gameName: string, gamePath: AbsPath, engineId: string,
     throw new AppError('IO_ERROR', '引擎不可用')
   }
 
-  const templateBinding = options.templateBinding
+  const { templateBinding } = options
 
   const targetExisted = await exists(gamePath)
   let gameId: string | undefined

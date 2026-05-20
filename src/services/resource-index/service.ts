@@ -311,7 +311,7 @@ function bindResourceIndexBootstrap(): void {
     )
 
     fileSystemEvents.on('file:created', (event) => {
-      const gamePath = resourceIndexState.value.gamePath
+      const { gamePath } = resourceIndexState.value
       if (!gamePath || !isPathWithinGameRoot(gamePath, event.path)) {
         return
       }
@@ -324,7 +324,7 @@ function bindResourceIndexBootstrap(): void {
     })
 
     fileSystemEvents.on('file:removed', (event) => {
-      const gamePath = resourceIndexState.value.gamePath
+      const { gamePath } = resourceIndexState.value
       if (!gamePath || !isPathWithinGameRoot(gamePath, event.path)) {
         return
       }
@@ -337,7 +337,7 @@ function bindResourceIndexBootstrap(): void {
     })
 
     fileSystemEvents.on('file:renamed', (event) => {
-      const gamePath = resourceIndexState.value.gamePath
+      const { gamePath } = resourceIndexState.value
       if (!gamePath) {
         return
       }
@@ -359,7 +359,7 @@ function bindResourceIndexBootstrap(): void {
     })
 
     const rebuildReferenceOnFileChange = (path: AbsPath) => {
-      const gamePath = resourceIndexState.value.gamePath
+      const { gamePath } = resourceIndexState.value
       if (!gamePath || !isPathWithinGameRoot(gamePath, path)) {
         return
       }
@@ -371,7 +371,7 @@ function bindResourceIndexBootstrap(): void {
     fileSystemEvents.on('file:written', event => rebuildReferenceOnFileChange(event.path))
 
     const rebuildOnDirectoryChange = (path: AbsPath) => {
-      const gamePath = resourceIndexState.value.gamePath
+      const { gamePath } = resourceIndexState.value
       if (!gamePath) {
         return
       }

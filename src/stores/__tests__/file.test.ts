@@ -796,8 +796,7 @@ describe('useFileStore', () => {
       expect(firstRead.map(item => item.path)).toEqual(['/root/scene'])
       expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
 
-      const pathToId = caches.pathToId
-      const items = caches.items
+      const { pathToId, items } = caches
       expect(pathToId).toBeDefined()
       expect(items).toBeDefined()
 
@@ -919,8 +918,7 @@ describe('useFileStore', () => {
       expect(firstRead).toHaveLength(2)
       expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
 
-      const pathToId = caches.pathToId
-      const items = caches.items
+      const { pathToId, items } = caches
       expect(pathToId).toBeDefined()
       expect(items).toBeDefined()
 
@@ -964,8 +962,7 @@ describe('useFileStore', () => {
       expect(firstRead).toHaveLength(2)
       expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
 
-      const pathToId = caches.pathToId
-      const items = caches.items
+      const { pathToId, items } = caches
       const evictedId = pathToId!.get('/root/file-a.txt')
       expect(evictedId).toBeDefined()
       items!.delete(evictedId!)
@@ -1286,8 +1283,7 @@ describe('useFileStore', () => {
     // initialize 内部已加载 game/，需要把它从 items 里移除以模拟"未加载"
     const caches = captureFileStoreCaches()
     try {
-      const pathToId = caches.pathToId
-      const items = caches.items
+      const { pathToId, items } = caches
       const gameId = pathToId?.get(AbsPath.from('/workspace/game'))
       if (gameId) {
         items?.delete(gameId)

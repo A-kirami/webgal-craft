@@ -42,7 +42,7 @@ function rebrandProjectTabsMap(rawState: unknown): Record<string, ProjectTabsSta
     return {}
   }
 
-  const projectTabsMap = (rawState as { projectTabsMap?: unknown }).projectTabsMap
+  const { projectTabsMap } = rawState as { projectTabsMap?: unknown }
   if (!projectTabsMap || typeof projectTabsMap !== 'object') {
     return {}
   }

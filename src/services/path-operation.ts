@@ -535,7 +535,7 @@ function rewriteSceneContent(
   const changedSentences = new Map<number, ReturnType<typeof cloneReferenceSentence>>()
 
   for (const record of records) {
-    const statementId = record.statementId
+    const { statementId } = record
     if (statementId === undefined) {
       unsupported.push(record)
       continue

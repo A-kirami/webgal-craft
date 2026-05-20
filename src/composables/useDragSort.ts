@@ -900,7 +900,7 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
       settle(context.currentPosition)
     },
     onDragMove: (_event, context) => {
-      const currentPosition = context.currentPosition
+      const { currentPosition } = context
 
       session.updatePosition(currentPosition)
       updateDrag(currentPosition)

@@ -136,7 +136,7 @@ export function useStatementGroupDraft(options: UseStatementGroupDraftOptions) {
   }
 
   function handleEntryUpdate(payload: StatementUpdatePayload): void {
-    const target = payload.target
+    const { target } = payload
     if (target.kind !== 'statement') {
       return
     }

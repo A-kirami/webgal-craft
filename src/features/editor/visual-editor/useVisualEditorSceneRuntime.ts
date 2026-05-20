@@ -46,7 +46,7 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
   let statementClipboard: string | undefined
   const state = computed(() => options.getState())
   const activeProjection = computed(() => {
-    const currentState = editorStore.currentState
+    const { currentState } = editorStore
     return currentState && isEditableEditor(currentState) ? currentState.projection : undefined
   })
 
@@ -484,13 +484,13 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
   }
 
   function handleStatementUpdate(payload: StatementUpdatePayload) {
-    const target = payload.target
+    const { target } = payload
     if (target.kind !== 'statement') {
       logger.warn(`可视化场景编辑收到非语句目标更新 (${state.value.path})`)
       return
     }
 
-    const statements = state.value.statements
+    const { statements } = state.value
     const index = statements.findIndex(entry => entry.id === target.statementId)
     if (index === -1) {
       return

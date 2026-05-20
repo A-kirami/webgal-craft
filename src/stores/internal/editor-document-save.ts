@@ -95,7 +95,7 @@ export async function saveEditorDocument(
   path: AbsPath,
   saveSnapshot: EditorDocumentSaveSnapshot = createEditorDocumentSaveSnapshot(context, path),
 ): Promise<string> {
-  const metadata = saveSnapshot.docEntry.model.metadata
+  const { metadata } = saveSnapshot.docEntry.model
   const finalContent = normalizeTextLineEnding(saveSnapshot.content, metadata.lineEnding)
   const finalBytes = encodeTextFile(finalContent, metadata)
 

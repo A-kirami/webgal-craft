@@ -115,7 +115,7 @@ export function createEditableSession(
   loadedState: LoadedDocumentState,
   preferredProjection: 'text' | 'visual',
 ): EditableEditorSession {
-  const model = loadedState.model
+  const { model } = loadedState
   const visualStateSnapshot = model.kind === 'scene' || model.kind === 'animation'
     ? createInitialVisualProjectionState(model)
     : undefined

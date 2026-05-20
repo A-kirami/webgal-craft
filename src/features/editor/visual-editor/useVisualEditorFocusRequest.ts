@@ -14,7 +14,7 @@ export function useVisualEditorFocusRequest(options: UseVisualEditorFocusRequest
   const path = computed(() => toValue(options.path))
   const rootElement = computed(() => toValue(options.rootElement))
   const isCurrentVisualSurfaceActive = computed(() => {
-    const currentState = editorStore.currentState
+    const { currentState } = editorStore
     return currentState !== undefined
       && isEditableEditor(currentState)
       && currentState.projection === 'visual'
