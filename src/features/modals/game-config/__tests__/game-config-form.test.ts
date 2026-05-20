@@ -64,7 +64,7 @@ describe('gameConfigForm', () => {
         },
         {
           key: 'Game_Logo',
-          value: 'opening.webp|enter.webp|',
+          value: 'opening.webp|enter.webp',
         },
         {
           key: 'Game_name',
@@ -455,7 +455,7 @@ describe('gameConfigForm', () => {
         },
         {
           key: 'Game_Logo',
-          value: 'opening.webp|enter.webp|',
+          value: 'opening.webp|enter.webp',
         },
         {
           key: 'Enable_Appreciation',
