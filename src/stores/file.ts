@@ -439,7 +439,7 @@ export const useFileStore = defineStore('file', () => {
       return
     }
 
-    const loadRevision = parent.loadRevision
+    const { loadRevision } = parent
     parent.loadingRevision = loadRevision
     const loadPromise = (async () => {
       try {

@@ -35,7 +35,7 @@ export function shouldCaptureBeforeContentChangeKeydown(event: monaco.IKeyboardE
     return false
   }
 
-  const key = event.browserEvent.key
+  const { key } = event.browserEvent
   if (key.length === 1) {
     return true
   }

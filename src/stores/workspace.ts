@@ -66,7 +66,7 @@ export const useWorkspaceStore = defineStore(
         return undefined
       }
 
-      const gameId = route.params.gameId
+      const { gameId } = route.params
       return Array.isArray(gameId) ? gameId[0] : gameId
     }
 

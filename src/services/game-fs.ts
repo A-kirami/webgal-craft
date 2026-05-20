@@ -101,7 +101,7 @@ async function resolveTemplateOverlayPathContext(): Promise<TemplateOverlayPathC
 
   try {
     const site = await gameManager.resolvePreviewSite(game)
-    const enginePath = site.enginePath
+    const { enginePath } = site
     if (!enginePath) {
       throw new AppError('FS_ERROR', '当前项目未绑定可用引擎，无法执行模板覆盖层路径操作')
     }

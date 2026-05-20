@@ -62,7 +62,7 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
   let isPathManuallyChanged = $ref(false)
 
   async function handleGameNameChange(event: Event): Promise<void> {
-    const value = (event.target as HTMLInputElement).value
+    const { value } = event.target as HTMLInputElement
     const gamePath = await resolveCreateGamePathSuggestion({
       gameName: value,
       gameSavePath: storageSettingsStore.gameSavePath,
