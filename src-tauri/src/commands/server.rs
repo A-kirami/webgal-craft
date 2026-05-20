@@ -17,7 +17,6 @@ use axum::{
         header::{ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, ORIGIN, RANGE, VARY},
         HeaderMap, HeaderValue, Request, StatusCode, Uri,
     },
-    middleware::Next,
     response::{IntoResponse, Redirect, Response},
     routing::get,
     Router,
@@ -403,7 +402,7 @@ fn map_vfs_error(error: &VfsError) -> StatusCode {
 }
 
 #[cfg(debug_assertions)]
-async fn timing_middleware(request: Request<Body>, next: Next) -> Response {
+async fn timing_middleware(request: Request<Body>, next: axum::middleware::Next) -> Response {
     let path = request.uri().path().to_owned();
     let start = std::time::Instant::now();
     let response = next.run(request).await;
