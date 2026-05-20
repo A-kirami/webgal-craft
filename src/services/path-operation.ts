@@ -135,7 +135,6 @@ export interface PathOperationDeps {
   }
   gameManager: {
     refreshRegisteredGameSnapshot(gamePath: AbsPath): Promise<void>
-    updateCurrentGameLastModified(): void
   }
   getGamePath(): AbsPath | undefined
   history: {
@@ -1291,7 +1290,6 @@ export function createPathOperationService(deps: PathOperationDeps) {
       if (gamePath) {
         await deps.gameManager.refreshRegisteredGameSnapshot(gamePath)
       }
-      deps.gameManager.updateCurrentGameLastModified()
       emitPathOperationEvent(deps, plan, fsResult.newPath, isDir)
       emitRewriteEvents(deps, plan.rewrites)
 

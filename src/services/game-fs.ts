@@ -25,7 +25,7 @@ async function resolveWritablePath(path: AbsPath): Promise<AbsPath> {
 
 async function writeFile(path: AbsPath, content: string): Promise<void> {
   await writeTextFile(await resolveWritablePath(path), content)
-  gameManager.updateCurrentGameLastModified()
+  gameManager.touchCurrentGameLastModified()
 }
 
 async function writeDocumentFile(path: AbsPath, content: Uint8Array): Promise<void> {
@@ -201,12 +201,12 @@ async function renameFile(oldPath: AbsPath, newName: string): Promise<PathMutati
 async function deleteFile(path: AbsPath, permanent?: boolean): Promise<void> {
   const fileStore = useFileStore()
   if (fileStore.isVfs && await fileStore.deleteEntry(path)) {
-    gameManager.updateCurrentGameLastModified()
+    gameManager.refreshCurrentGamePreviewAssets()
     return
   }
 
   await fsCmds.deleteFile(path, permanent)
-  gameManager.updateCurrentGameLastModified()
+  gameManager.refreshCurrentGamePreviewAssets()
 }
 
 async function resolveVfsCreatePath(
@@ -228,13 +228,13 @@ async function createFile(targetPath: AbsPath, fileName: string): Promise<AbsPat
   const fileStore = useFileStore()
   if (!fileStore.isVfs) {
     const result = await fsCmds.createFile(targetPath, fileName)
-    gameManager.updateCurrentGameLastModified()
+    gameManager.refreshCurrentGamePreviewAssets()
     return result
   }
 
   const writablePath = await resolveVfsCreatePath(targetPath, fileName, false)
   await writeTextFile(writablePath, '')
-  gameManager.updateCurrentGameLastModified()
+  gameManager.refreshCurrentGamePreviewAssets()
   return writablePath
 }
 
@@ -242,13 +242,13 @@ async function createFolder(targetPath: AbsPath, folderName: string): Promise<Ab
   const fileStore = useFileStore()
   if (!fileStore.isVfs) {
     const result = await fsCmds.createFolder(targetPath, folderName)
-    gameManager.updateCurrentGameLastModified()
+    gameManager.refreshCurrentGamePreviewAssets()
     return result
   }
 
   const writablePath = await resolveVfsCreatePath(targetPath, folderName, true)
   await mkdir(writablePath, { recursive: true })
-  gameManager.updateCurrentGameLastModified()
+  gameManager.refreshCurrentGamePreviewAssets()
   return writablePath
 }
 
@@ -257,7 +257,7 @@ async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
   if (fileStore.isVfs) {
     const copiedPath = await fileStore.copyEntry(sourcePath, targetPath)
     if (copiedPath) {
-      gameManager.updateCurrentGameLastModified()
+      gameManager.refreshCurrentGamePreviewAssets()
       return copiedPath
     }
   }
@@ -267,7 +267,7 @@ async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
     : sourcePath
   const writableTargetPath = await resolveWritablePath(targetPath)
   const result = await fsCmds.copyFile(resolvedSourcePath, writableTargetPath)
-  gameManager.updateCurrentGameLastModified()
+  gameManager.refreshCurrentGamePreviewAssets()
   return result
 }
 

@@ -22,10 +22,11 @@ const {
   fsRenameFileMock,
   vfsRenamePathMock,
   readFileMock,
+  refreshCurrentGamePreviewAssetsMock,
   resolveFilePathMock,
+  touchCurrentGameLastModifiedMock,
   useFileStoreMock,
   useWorkspaceStoreMock,
-  updateCurrentGameLastModifiedMock,
   writeBinaryFileMock,
   writeTextFileMock,
 } = vi.hoisted(() => ({
@@ -47,9 +48,10 @@ const {
   fsRenameFileMock: vi.fn(),
   vfsRenamePathMock: vi.fn(),
   readFileMock: vi.fn(),
+  refreshCurrentGamePreviewAssetsMock: vi.fn(),
   resolveFilePathMock: vi.fn(),
+  touchCurrentGameLastModifiedMock: vi.fn(),
   useFileStoreMock: vi.fn(),
-  updateCurrentGameLastModifiedMock: vi.fn(),
   writeBinaryFileMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
   writeTextFileMock: vi.fn(),
@@ -64,7 +66,8 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 
 vi.mock('~/services/game-manager', () => ({
   gameManager: {
-    updateCurrentGameLastModified: updateCurrentGameLastModifiedMock,
+    refreshCurrentGamePreviewAssets: refreshCurrentGamePreviewAssetsMock,
+    touchCurrentGameLastModified: touchCurrentGameLastModifiedMock,
     getGameEnginePath: getGameEnginePathMock,
     resolvePreviewSite: resolvePreviewSiteMock,
   },
@@ -123,9 +126,10 @@ describe('gameFs', () => {
     fsRenameFileMock.mockReset()
     vfsRenamePathMock.mockReset()
     resolveFilePathMock.mockReset()
+    refreshCurrentGamePreviewAssetsMock.mockReset()
+    touchCurrentGameLastModifiedMock.mockReset()
     useFileStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
-    updateCurrentGameLastModifiedMock.mockReset()
     writeBinaryFileMock.mockReset()
     writeTextFileMock.mockReset()
 
@@ -171,7 +175,7 @@ describe('gameFs', () => {
       .mockResolvedValueOnce('/game/.overlay/image.bin')
 
     await gameFs.writeFile(AbsPath.from('/game/readme.txt'), 'hello')
-    expect(updateCurrentGameLastModifiedMock).toHaveBeenCalledTimes(1)
+    expect(touchCurrentGameLastModifiedMock).toHaveBeenCalledTimes(1)
     await gameFs.writeDocumentFile(AbsPath.from('/game/image.bin'), new Uint8Array([1, 2, 3]))
 
     expect(ensureWritableMock).toHaveBeenNthCalledWith(1, '/game/readme.txt')
@@ -183,7 +187,8 @@ describe('gameFs', () => {
       physicalPath: '/game/image.bin',
       id: 1,
     })
-    expect(updateCurrentGameLastModifiedMock).toHaveBeenCalledTimes(1)
+    expect(touchCurrentGameLastModifiedMock).toHaveBeenCalledTimes(1)
+    expect(refreshCurrentGamePreviewAssetsMock).not.toHaveBeenCalled()
   })
 
   it('文档写入失败时会回滚已登记的回响写入', async () => {
@@ -210,7 +215,8 @@ describe('gameFs', () => {
     expect(registerPendingFileWriteMock).toHaveBeenCalledWith('/game/.overlay/image.bin', new Uint8Array([1, 2, 3]))
     expect(commitPendingFileWriteMock).not.toHaveBeenCalled()
     expect(rollbackPendingFileWriteMock).toHaveBeenCalledWith(handle)
-    expect(updateCurrentGameLastModifiedMock).not.toHaveBeenCalled()
+    expect(touchCurrentGameLastModifiedMock).not.toHaveBeenCalled()
+    expect(refreshCurrentGamePreviewAssetsMock).not.toHaveBeenCalled()
   })
 
   it('VFS 模式下读取文档文件会先解析实际文件路径', async () => {
@@ -252,7 +258,8 @@ describe('gameFs', () => {
 
     expect(deleteFileMock).toHaveBeenCalledWith('/game/deleted.txt', true)
     expect(mkdirMock).not.toHaveBeenCalled()
-    expect(updateCurrentGameLastModifiedMock).toHaveBeenCalledTimes(4)
+    expect(refreshCurrentGamePreviewAssetsMock).toHaveBeenCalledTimes(4)
+    expect(touchCurrentGameLastModifiedMock).not.toHaveBeenCalled()
   })
 
   it('VFS 项目中的普通路径 rename 或 move 仍走 native adapter', async () => {

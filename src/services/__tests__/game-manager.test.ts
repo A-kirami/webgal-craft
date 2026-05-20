@@ -16,6 +16,7 @@ const {
   dbGameGetMock,
   dbGamesToArrayMock,
   dbGameUpdateMock,
+  dbTransactionMock,
   dbGameWhereEqualsMock,
   dbGameWhereFirstMock,
   dbGameWhereMock,
@@ -43,6 +44,7 @@ const {
   dbGameGetMock: vi.fn(),
   dbGamesToArrayMock: vi.fn(),
   dbGameUpdateMock: vi.fn(),
+  dbTransactionMock: vi.fn(),
   dbGameWhereEqualsMock: vi.fn(),
   dbGameWhereFirstMock: vi.fn(),
   dbGameWhereMock: vi.fn(),
@@ -130,6 +132,7 @@ vi.mock('~/database/db', () => ({
       update: dbGameUpdateMock,
       where: dbGameWhereMock,
     },
+    transaction: dbTransactionMock,
   },
 }))
 
@@ -183,6 +186,19 @@ function createGameConfig(entries: { key: string, value: string }[]) {
   }
 }
 
+interface Deferred<T> {
+  promise: Promise<T>
+  resolve(value: T): void
+}
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolve_) => {
+    resolve = resolve_
+  })
+  return { promise, resolve }
+}
+
 const importedProjectEngineRef = {
   id: 'default-publisher.default-engine',
   version: '4.5.0',
@@ -206,6 +222,7 @@ describe('gameManager', () => {
     dbGameGetMock.mockReset()
     dbGamesToArrayMock.mockReset()
     dbGameUpdateMock.mockReset()
+    dbTransactionMock.mockReset()
     dbGameWhereEqualsMock.mockReset()
     dbGameWhereFirstMock.mockReset()
     dbGameWhereMock.mockReset()
@@ -238,6 +255,7 @@ describe('gameManager', () => {
     dbGameAddMock.mockResolvedValue('game-1')
     dbGameDeleteMock.mockResolvedValue(undefined)
     dbGamesToArrayMock.mockResolvedValue([])
+    dbTransactionMock.mockImplementation(async (_mode: string, _table: unknown, scope: () => unknown) => scope())
 
     gameConfigPathMock.mockImplementation((gamePath: string) => `${gamePath}/game/config.txt`)
     projectConfigPathMock.mockImplementation((gamePath: string) => `${gamePath}/project.wgcp`)
@@ -1035,7 +1053,63 @@ describe('gameManager', () => {
     )
   })
 
-  it('updateGameLastModified 会刷新预览资源快照与缓存版本', async () => {
+  it('touchGameLastModified 只更新时间戳，不刷新预览资源快照', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
+    const game = createTestGame({
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+      metadata: {
+        name: 'Demo',
+      },
+      previewAssets: {
+        icon: {
+          path: 'icons/current.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: 'game/background/current-cover.png',
+          cacheVersion: 222,
+        },
+      },
+    })
+    dbGameGetMock.mockResolvedValue(game)
+    workspaceStoreState.currentGame = game
+
+    await gameManager.touchGameLastModified('game-1')
+
+    expect(gameCmdsGetGameConfigMock).not.toHaveBeenCalled()
+    expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', {
+      lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
+    })
+    expect(workspaceStoreState.currentGame).toEqual({
+      id: 'game-1',
+      path: '/games/demo',
+      pathLookupKey: '/games/demo',
+      createdAt: 0,
+      lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
+      status: 'created',
+      availability: 'available',
+      metadata: {
+        name: 'Demo',
+        titleImg: 'cover.png',
+      },
+      previewAssets: {
+        icon: {
+          path: 'icons/current.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: 'game/background/current-cover.png',
+          cacheVersion: 222,
+        },
+      },
+    })
+
+    vi.useRealTimers()
+  })
+
+  it('refreshGamePreviewAssets 会刷新预览资源快照与缓存版本', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     workspaceStoreState.currentGame = createTestGame({
@@ -1077,7 +1151,7 @@ describe('gameManager', () => {
       { key: 'Title_img', value: 'cover-next.png' },
     ]))
 
-    await gameManager.updateGameLastModified('game-1')
+    await gameManager.refreshGamePreviewAssets('game-1')
 
     expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', {
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
@@ -1119,16 +1193,102 @@ describe('gameManager', () => {
     vi.useRealTimers()
   })
 
-  it('updateGameLastModified 在游戏记录不存在时不会继续更新数据库或当前工作区状态', async () => {
+  it('refreshGamePreviewAssets 等待资源解析完成后再生成修改时间，避免覆盖更新的 touch', async () => {
+    vi.useFakeTimers()
+    const refreshStartTime = new Date('2026-03-28T10:00:00.000Z').getTime()
+    const touchTime = refreshStartTime + 10
+    const refreshCommitTime = refreshStartTime + 20
+    vi.setSystemTime(refreshStartTime)
+    const configDeferred = createDeferred<ReturnType<typeof createGameConfig>>()
+
+    let storedGame = createTestGame({
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+      lastModified: 0,
+      previewAssets: {
+        icon: {
+          path: 'icons/current.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: 'game/background/current-cover.png',
+          cacheVersion: 222,
+        },
+      },
+    })
+    dbGameGetMock.mockImplementation(async () => storedGame)
+    dbGameUpdateMock.mockImplementation(async (_gameId: string, patch: Partial<typeof storedGame>) => {
+      storedGame = {
+        ...storedGame,
+        ...patch,
+        metadata: { ...storedGame.metadata, ...patch.metadata },
+        previewAssets: { ...storedGame.previewAssets, ...patch.previewAssets },
+      }
+      return 1
+    })
+    workspaceStoreState.currentGame = createTestGame({
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+      lastModified: 0,
+      previewAssets: {
+        icon: {
+          path: 'icons/current.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: 'game/background/current-cover.png',
+          cacheVersion: 222,
+        },
+      },
+    })
+    gameCmdsGetGameConfigMock.mockReturnValue(configDeferred.promise)
+
+    const refreshPromise = gameManager.refreshGamePreviewAssets('game-1')
+    await vi.waitFor(() => {
+      expect(gameCmdsGetGameConfigMock).toHaveBeenCalled()
+    })
+
+    vi.setSystemTime(touchTime)
+    await gameManager.touchGameLastModified('game-1')
+
+    vi.setSystemTime(refreshCommitTime)
+    configDeferred.resolve(createGameConfig([
+      { key: 'Game_name', value: 'Changed Name' },
+      { key: 'Title_img', value: 'cover-next.png' },
+    ]))
+    await refreshPromise
+
+    expect(dbGameUpdateMock).toHaveBeenNthCalledWith(1, 'game-1', {
+      lastModified: touchTime,
+    })
+    expect(dbGameUpdateMock).toHaveBeenNthCalledWith(2, 'game-1', {
+      lastModified: refreshCommitTime,
+      previewAssets: {
+        icon: {
+          path: 'icons/favicon.ico',
+          cacheVersion: refreshCommitTime,
+        },
+        cover: {
+          path: 'game/background/cover-next.png',
+          cacheVersion: refreshCommitTime,
+        },
+      },
+    })
+    expect(workspaceStoreState.currentGame?.lastModified).toBe(refreshCommitTime)
+
+    vi.useRealTimers()
+  })
+
+  it('refreshGamePreviewAssets 在游戏记录不存在时不会继续更新数据库或当前工作区状态', async () => {
     dbGameGetMock.mockResolvedValue(undefined)
 
-    await gameManager.updateGameLastModified('game-1')
+    await gameManager.refreshGamePreviewAssets('game-1')
 
     expect(dbGameUpdateMock).not.toHaveBeenCalled()
     expect(workspaceStoreState.currentGame).toBeUndefined()
   })
 
-  it('updateGameLastModified 在预览资源解析失败时仍会推进预览缓存版本', async () => {
+  it('refreshGamePreviewAssets 在预览资源解析失败时仍会推进预览缓存版本', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     dbGameGetMock.mockResolvedValue(createTestGame({
@@ -1161,7 +1321,7 @@ describe('gameManager', () => {
     })
     gameCmdsGetGameConfigMock.mockRejectedValue(new Error('config missing'))
 
-    await gameManager.updateGameLastModified('game-1')
+    await gameManager.refreshGamePreviewAssets('game-1')
 
     expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', {
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
@@ -1181,7 +1341,7 @@ describe('gameManager', () => {
     vi.useRealTimers()
   })
 
-  it('updateCurrentGameLastModified 会按 500ms 防抖更新当前游戏', async () => {
+  it('touchCurrentGameLastModified 会按 500ms 防抖更新当前游戏', async () => {
     vi.useFakeTimers()
     workspaceStoreState.currentGame = createTestGame({
       id: 'game-1',
@@ -1192,8 +1352,8 @@ describe('gameManager', () => {
       path: AbsPath.from('/games/demo'),
     }))
 
-    gameManager.updateCurrentGameLastModified()
-    gameManager.updateCurrentGameLastModified()
+    gameManager.touchCurrentGameLastModified()
+    gameManager.touchCurrentGameLastModified()
 
     expect(dbGameUpdateMock).not.toHaveBeenCalled()
 
