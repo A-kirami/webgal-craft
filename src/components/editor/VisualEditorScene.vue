@@ -293,6 +293,10 @@ onMounted(() => {
   updateStatementSortRefs()
 })
 
+watch(isSceneEmpty, () => {
+  updateStatementSortRefs()
+}, { flush: 'post' })
+
 tryOnUnmounted(() => {
   for (const element of dropElements.values()) {
     dropRegistry.unregisterDroppable(element)

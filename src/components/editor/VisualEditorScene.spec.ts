@@ -737,6 +737,62 @@ describe('VisualEditorScene', () => {
     })
   })
 
+  it('空场景插入首条语句后会恢复语句列表拖拽排序', async () => {
+    const state = reactive({
+      ...createSceneState(),
+      statements: [],
+    }) as SceneVisualProjectionState
+    statementSortVirtualAdapterMock.getItemCount.mockReturnValue(2)
+    statementSortVirtualAdapterMock.getVisibleItems.mockReturnValue([])
+    const Harness = defineComponent({
+      name: 'EmptyToFilledSceneHarness',
+      setup() {
+        return () => h(VisualEditorScene, { state })
+      },
+    })
+
+    renderInBrowser(Harness, {
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    state.statements.push(
+      createStatementEntry(1, 'say:first'),
+      createStatementEntry(2, 'say:second'),
+    )
+    statementSortVirtualAdapterMock.getVisibleItems.mockReturnValue([
+      { index: 0, size: 48, start: 0 },
+      { index: 1, size: 48, start: 48 },
+    ])
+    await nextTick()
+    await nextTick()
+
+    const listbox = document.querySelector<HTMLElement>('[role="listbox"]')
+    const firstItem = document.querySelector<HTMLElement>('[data-drag-index="0"]')
+    const secondItem = document.querySelector<HTMLElement>('[data-drag-index="1"]')
+    const handle = firstItem?.querySelector<HTMLElement>('[data-statement-drag-handle]')
+
+    expect(listbox).not.toBeNull()
+    expect(firstItem).not.toBeNull()
+    expect(secondItem).not.toBeNull()
+    expect(handle).not.toBeNull()
+
+    setRect(listbox!, createVerticalRect(0, 96))
+    setRect(firstItem!, createVerticalRect(0))
+    setRect(secondItem!, createVerticalRect(48))
+
+    handle!.dispatchEvent(createPointerEvent('pointerdown', { clientX: 8, clientY: 8 }))
+    globalThis.dispatchEvent(createPointerEvent('pointermove', { clientX: 8, clientY: 90 }))
+    globalThis.dispatchEvent(createPointerEvent('pointerup', { clientX: 8, clientY: 90 }))
+
+    await vi.waitFor(() => {
+      expect(reorderStatementsMock).toHaveBeenCalledWith(0, 1, { restoreSelectionPresentation: false })
+    })
+  })
+
   it('拖拽语句排序后会恢复可视化编辑器快捷键焦点上下文', async () => {
     renderInBrowser(VisualEditorScene, {
       props: {
