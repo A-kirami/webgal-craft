@@ -597,7 +597,7 @@ describe('GameConfigModal', () => {
           }),
           expect.objectContaining({
             key: 'Game_Logo',
-            value: 'enter-next.webp|logo-next.webp|',
+            value: 'enter-next.webp|logo-next.webp',
           }),
           expect.objectContaining({
             key: 'Stage_Width',

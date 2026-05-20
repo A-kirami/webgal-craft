@@ -8,9 +8,5 @@ export function parseGameLogoImages(value: string): string[] {
 }
 
 export function serializeGameLogoImages(images: string[]): string {
-  if (images.length === 0) {
-    return ''
-  }
-
-  return `${images.join('|')}|`
+  return images.join('|')
 }
