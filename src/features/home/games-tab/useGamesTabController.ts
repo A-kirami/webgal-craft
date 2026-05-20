@@ -5,7 +5,7 @@ import { resourceReconcile } from '~/services/resource-reconcile'
 
 import type { EngineStatus, Game } from '~/database/model'
 import type { ResourceAvailability } from '~/services/resource-health'
-import type { EngineRef } from '~/types/project-config'
+import type { EngineSelectionContext } from '~/types/engine-selection'
 import type { I18nT } from '~/utils/i18n-like'
 
 interface EngineAvailabilityCheck {
@@ -22,19 +22,19 @@ interface UseGamesTabControllerOptions {
   openNoEngineAlertModal: (onConfirm: () => void) => void
   openRecoverGameModal: (game: Game) => void
   pushRoute: (path: string) => unknown
-  selectEngine?: (hint?: EngineRef) => Promise<string | undefined>
+  selectEngine?: (context?: EngineSelectionContext) => Promise<string | undefined>
   t: I18nT
   switchToEnginesTab: () => void
 }
 
 export function useGamesTabController(options: UseGamesTabControllerOptions) {
-  async function selectEngine(hint?: EngineRef): Promise<string | undefined> {
+  async function selectEngine(context?: EngineSelectionContext): Promise<string | undefined> {
     if (options.selectEngine) {
-      return await options.selectEngine(hint)
+      return await options.selectEngine(context)
     }
 
     const { requestEngineSelection } = await import('~/features/modals/engine-selection/request-engine-selection')
-    return await requestEngineSelection(hint)
+    return await requestEngineSelection(context)
   }
 
   const importActions = useHomeResourceImportActions<Game>({

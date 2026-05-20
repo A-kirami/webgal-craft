@@ -1101,3 +1101,4 @@ engine:
 game:
   selectEngine: 選擇引擎
   selectEngineDescription: 目前引擎不可用，請選擇任意可用引擎開啟
+  selectEngineDescriptionWithName: 「{name}」關聯的引擎不可用，請選擇一個可用引擎繼續匯入。

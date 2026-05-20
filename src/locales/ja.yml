@@ -1101,3 +1101,4 @@ engine:
 game:
   selectEngine: エンジンを選択
   selectEngineDescription: 現在のエンジンが利用できません。利用可能な任意のエンジンを選択して開いてください
+  selectEngineDescriptionWithName: 「{name}」に関連付けられたエンジンは利用できません。インポートを続行するには、利用可能なエンジンを選択してください。

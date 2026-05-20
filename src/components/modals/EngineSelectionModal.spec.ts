@@ -39,18 +39,30 @@ const globalStubs = {
   EngineSelector: defineComponent({
     name: 'StubEngineSelector',
     props: {
+      modelValue: {
+        type: String,
+        default: undefined,
+      },
       preferredEngineId: {
         type: String,
         default: undefined,
       },
     },
-    setup(props) {
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
       return () => h('div', {
         'data-testid': 'engine-selector',
+        'data-model-value': props.modelValue ?? '',
         'data-preferred-engine-id': props.preferredEngineId ?? '',
-      })
+      }, [
+        h('button', {
+          type: 'button',
+          onClick: () => emit('update:modelValue', 'engine-selected'),
+        }, 'select-engine'),
+      ])
     },
   }),
+  Label: createBrowserContainerStub('StubLabel', 'label'),
 }
 
 describe('EngineSelectionModal', () => {
@@ -104,5 +116,30 @@ describe('EngineSelectionModal', () => {
     const selector = await page.getByTestId('engine-selector').element()
 
     expect(selector.dataset.preferredEngineId).toBe('open-webgal.webgal')
+  })
+
+  it('选择引擎后确认会返回选中的 engineId', async () => {
+    const onConfirm = vi.fn()
+    const updateOpen = vi.fn()
+
+    renderInBrowser(EngineSelectionModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        'open': true,
+        onConfirm,
+        'onUpdate:open': updateOpen,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'select-engine' }).click()
+    await page.getByRole('button', { name: 'common.confirm' }).click()
+
+    expect(onConfirm).toHaveBeenCalledWith('engine-selected')
+    expect(updateOpen).toHaveBeenCalledWith(false)
   })
 })

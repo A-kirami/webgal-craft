@@ -183,6 +183,21 @@ function createGameConfig(entries: { key: string, value: string }[]) {
   }
 }
 
+const importedProjectEngineRef = {
+  id: 'default-publisher.default-engine',
+  version: '4.5.0',
+}
+
+const selectedProjectEngineRef = {
+  id: 'default-publisher.default-engine',
+  version: '4.6.0',
+}
+
+const importedEngineSelectionContext = {
+  gameName: 'Demo Game',
+  hint: importedProjectEngineRef,
+}
+
 describe('gameManager', () => {
   beforeEach(() => {
     dbEngineGetMock.mockReset()
@@ -573,10 +588,7 @@ describe('gameManager', () => {
       || path === '/games/vfs/game/background/cover.png')
     readProjectConfigMock.mockResolvedValue({
       version: 1,
-      engine: {
-        id: 'default-publisher.default-engine',
-        version: '4.5.0',
-      },
+      engine: importedProjectEngineRef,
     })
     engineFindByRefMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
@@ -650,16 +662,16 @@ describe('gameManager', () => {
       status: 'created',
     }))
 
+    const selectEngine = vi.fn().mockResolvedValue('engine-2')
+
     await expect(gameManager.importGame(AbsPath.from('/games/vfs'), {
-      selectEngine: vi.fn().mockResolvedValue('engine-2'),
+      selectEngine,
     })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
+    expect(selectEngine).toHaveBeenCalledWith(importedEngineSelectionContext)
     expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/vfs', {
       version: 1,
-      engine: {
-        id: 'default-publisher.default-engine',
-        version: '4.6.0',
-      },
+      engine: selectedProjectEngineRef,
     })
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: 'engine-2',
@@ -676,10 +688,7 @@ describe('gameManager', () => {
       || path === '/games/vfs/game/background/cover.png')
     readProjectConfigMock.mockResolvedValue({
       version: 1,
-      engine: {
-        id: 'default-publisher.default-engine',
-        version: '4.5.0',
-      },
+      engine: importedProjectEngineRef,
     })
     engineFindByRefMock.mockResolvedValue(undefined)
     dbEngineGetMock.mockResolvedValue(createTestEngine({
@@ -689,16 +698,16 @@ describe('gameManager', () => {
       status: 'created',
     }))
 
+    const selectEngine = vi.fn().mockResolvedValue('engine-2')
+
     await expect(gameManager.importGame(AbsPath.from('/games/vfs'), {
-      selectEngine: vi.fn().mockResolvedValue('engine-2'),
+      selectEngine,
     })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
+    expect(selectEngine).toHaveBeenCalledWith(importedEngineSelectionContext)
     expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/vfs', {
       version: 1,
-      engine: {
-        id: 'default-publisher.default-engine',
-        version: '4.6.0',
-      },
+      engine: selectedProjectEngineRef,
     })
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: 'engine-2',
