@@ -164,27 +164,40 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
 <template>
   <div class="text-xs px-3 border-t bg-gray-50 flex h-6 items-center dark:bg-gray-900">
     <div class="flex gap-3 min-w-0 items-center">
-      <button
-        v-if="isEngineBound"
-        class="text-muted-foreground flex gap-1 cursor-pointer transition-colors items-center hover:text-foreground"
-        @click="openSwitchEngine"
-      >
-        <Layers class="h-3 w-3" :stroke-width="1.5" />
-        <span class="max-w-30 truncate">{{ engineLabel ?? $t('edit.statusBar.engineMissing') }}</span>
-      </button>
+      <TooltipProvider>
+        <Tooltip v-if="isEngineBound">
+          <TooltipTrigger as-child>
+            <button
+              :aria-label="$t('edit.statusBar.selectEngine')"
+              class="text-muted-foreground flex gap-1 cursor-pointer transition-colors items-center hover:text-foreground"
+              @click="openSwitchEngine"
+            >
+              <Layers class="h-3 w-3" :stroke-width="1.5" />
+              <span class="max-w-30 truncate">{{ engineLabel ?? $t('edit.statusBar.engineMissing') }}</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" class="px-2 py-1">
+            {{ $t('edit.statusBar.selectEngine') }}
+          </TooltipContent>
+        </Tooltip>
 
-      <button
-        v-if="isEngineBound && (templateLabel || isFollowingEngine)"
-        class="text-muted-foreground flex gap-1 cursor-pointer transition-colors items-center hover:text-foreground"
-        :title="isFollowingEngine
-          ? $t('edit.statusBar.templateFollowing')
-          : $t('edit.statusBar.template')"
-        @click="openSwitchTemplate"
-      >
-        <Palette class="h-3 w-3" :stroke-width="1.5" />
-        <span class="max-w-30 truncate">{{ templateLabel ?? $t('edit.statusBar.templateMissing') }}</span>
-        <Link2 v-if="isFollowingEngine" class="h-3 w-3" :stroke-width="1.5" />
-      </button>
+        <Tooltip v-if="isEngineBound && (templateLabel || isFollowingEngine)">
+          <TooltipTrigger as-child>
+            <button
+              :aria-label="$t('edit.statusBar.selectTemplate')"
+              class="text-muted-foreground flex gap-1 cursor-pointer transition-colors items-center hover:text-foreground"
+              @click="openSwitchTemplate"
+            >
+              <Palette class="h-3 w-3" :stroke-width="1.5" />
+              <span class="max-w-30 truncate">{{ templateLabel ?? $t('edit.statusBar.templateMissing') }}</span>
+              <Link2 v-if="isFollowingEngine" class="h-3 w-3" :stroke-width="1.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" class="px-2 py-1">
+            {{ $t('edit.statusBar.selectTemplate') }}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
 
     <!-- 右侧：文本/可视化编辑器信息 -->
