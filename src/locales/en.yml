@@ -693,6 +693,8 @@ edit:
     toggleSidebar: Toggle Auxiliary Panel
   visualEditor:
     playToLine: Play to this line
+    emptyTitle: This scene is empty
+    emptyDescription: Add a statement from the command panel, or drag a resource file here to insert it.
     audioPreview:
       play: Play audio
       pause: Pause audio

@@ -128,6 +128,13 @@ describe('sentence', () => {
     expect(joinStatements(entries)).toBe(raw)
   })
 
+  it('空内容不会构造幽灵空语句', () => {
+    expect(splitStatements('')).toEqual([])
+    expect(buildStatements('')).toEqual([])
+    expect(buildSceneStatements('')).toEqual([])
+    expect(joinStatements([])).toBe('')
+  })
+
   it('createEmptySentence 序列化为规范的空 say 语句', () => {
     expect(serializeSentence(createEmptySentence())).toBe(':;')
   })

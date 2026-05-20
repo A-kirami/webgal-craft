@@ -284,6 +284,101 @@ describe('VisualEditorScene', () => {
     await expect.element(page.getByText('say:world')).toBeVisible()
   })
 
+  it('空场景会显示空状态而不是空语句卡片', async () => {
+    const state = createSceneState()
+    state.statements = []
+
+    renderInBrowser(VisualEditorScene, {
+      props: {
+        state,
+      },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('edit.visualEditor.emptyTitle')).toBeVisible()
+    await expect.element(page.getByText('edit.visualEditor.emptyDescription')).toBeVisible()
+    await expect.element(page.getByRole('option')).not.toBeInTheDocument()
+  })
+
+  it('空场景会把空状态区域注册为首条语句投放目标', async () => {
+    const registerDroppable = vi.fn()
+    handleCommandDropMock.mockReturnValue(true)
+    handleFileDropMock.mockReturnValue(true)
+    useDroppableRegistryMock.mockReturnValue({
+      clearHover: vi.fn(),
+      drop: vi.fn(),
+      getMatchAt: vi.fn(),
+      hoveredTarget: shallowRef(),
+      isDropAllowed: shallowRef(false),
+      registerDroppable,
+      unregisterDroppable: vi.fn(),
+      updateHover: vi.fn(),
+    })
+
+    const state = createSceneState()
+    state.statements = []
+
+    const result = renderInBrowser(VisualEditorScene, {
+      props: { state },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    expect(registerDroppable).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ id: 'visual-editor:empty' }),
+    )
+    expect(registerDroppable).not.toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ id: 'visual-editor:tail' }),
+    )
+
+    const emptyConfig = registerDroppable.mock.calls.find(([, config]) =>
+      config.id === 'visual-editor:empty',
+    )?.[1]
+    const commandPayload = {
+      label: 'Say',
+      rawTexts: ['say:new;'],
+      source: 'command-panel',
+      type: 'command-panel-statement',
+    } as const
+    const filePayload = {
+      source: 'file-viewer',
+      type: 'file-system-item',
+      path: '/games/demo/game/background/room.png',
+      isDir: false,
+    } as const
+
+    expect(emptyConfig.canDrop(commandPayload, document.createElement('div'))).toBe(true)
+
+    emptyConfig.onDragEnter(commandPayload)
+    await nextTick()
+
+    expect(result.container.querySelector('[data-visual-drop-indicator="empty"]')).not.toBeNull()
+    expect(result.container.querySelector('[data-visual-drop-indicator="insert"]')).toBeNull()
+
+    await emptyConfig.onDrop(commandPayload, document.createElement('div'))
+
+    expect(handleCommandDropMock).toHaveBeenCalledWith(commandPayload, {
+      placement: 'tail',
+      insertIndex: 0,
+    })
+    expect(document.activeElement).toHaveAttribute('tabindex', '-1')
+
+    await emptyConfig.onDrop(filePayload, document.createElement('div'))
+
+    expect(handleFileDropMock).toHaveBeenCalledWith(filePayload, {
+      placement: 'tail',
+      insertIndex: 0,
+    })
+  })
+
   it('卡片事件会转发到 runtime 处理函数', async () => {
     renderInBrowser(VisualEditorScene, {
       props: {
