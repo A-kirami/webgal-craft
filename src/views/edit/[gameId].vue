@@ -121,7 +121,6 @@ useShortcutContext({
         size-unit="px"
         :default-size="380"
         :min-size="280"
-        collapsible
       >
         <LeftPanel />
       </ResizablePanel>
