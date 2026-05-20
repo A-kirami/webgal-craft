@@ -26,6 +26,7 @@ import { EngineRef, ProjectConfig, TemplateBinding } from '~/types/project-confi
 
 import type { GameConfigEntry } from '~/commands/game'
 import type { LookupPathKey } from '~/services/resource-path/lookup'
+import type { EngineSelectionContext } from '~/types/engine-selection'
 import type { StaticSiteConfig } from '~/types/server'
 
 interface RegisterGameOptions {
@@ -36,7 +37,7 @@ interface RegisterGameOptions {
 }
 
 interface ImportGameOptions {
-  selectEngine?: (hint?: EngineRef) => Promise<string | undefined>
+  selectEngine?: (context?: EngineSelectionContext) => Promise<string | undefined>
 }
 
 export interface GameInspectionPayload {
@@ -296,7 +297,7 @@ async function resolveBoundEngine(
 
 async function resolveSelectableEngine(
   selectEngine: ImportGameOptions['selectEngine'],
-  hint?: EngineRef,
+  context?: EngineSelectionContext,
 ): Promise<Engine> {
   if (!selectEngine) {
     throw new AppError('IO_ERROR', '项目缺少可用引擎，请重新导入并选择引擎', {
@@ -304,7 +305,7 @@ async function resolveSelectableEngine(
     })
   }
 
-  const engineId = await selectEngine(hint)
+  const engineId = await selectEngine(context)
   if (!engineId) {
     throw new AppError('IO_ERROR', '导入已取消', {
       details: { reason: 'IMPORT_CANCELLED' },
@@ -327,6 +328,18 @@ async function resolveSelectableEngine(
   return engine
 }
 
+function buildEngineSelectionContext(
+  metadata: GameMetadata,
+  hint?: EngineRef,
+): EngineSelectionContext {
+  const gameName = metadata.name?.trim()
+
+  return {
+    ...(gameName ? { gameName } : {}),
+    ...(hint ? { hint } : {}),
+  }
+}
+
 async function importLegacyGame(
   gamePath: AbsPath,
   options: ImportGameOptions,
@@ -339,7 +352,10 @@ async function importLegacyGame(
     return registerGame(gamePath, { ...inspection })
   }
 
-  const engine = await resolveSelectableEngine(options.selectEngine)
+  const engine = await resolveSelectableEngine(
+    options.selectEngine,
+    buildEngineSelectionContext(inspection.metadata),
+  )
   await projectConfigCmds.writeProjectConfig(gamePath, {
     version: 1,
     engine: buildProjectEngineRef(engine),
@@ -404,7 +420,10 @@ async function bindSelectedEngine(
   inspection: GameInspectionPayload,
   hint?: EngineRef,
 ): Promise<string> {
-  const engine = await resolveSelectableEngine(options.selectEngine, hint)
+  const engine = await resolveSelectableEngine(
+    options.selectEngine,
+    buildEngineSelectionContext(inspection.metadata, hint),
+  )
   await projectConfigCmds.writeProjectConfig(gamePath, {
     ...config,
     engine: buildProjectEngineRef(engine),

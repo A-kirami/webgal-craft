@@ -1,16 +1,31 @@
 <script setup lang="ts">
+import { usePreferenceStore } from '~/stores/preference'
+
 import type { EngineRef } from '~/types/project-config'
 
 let open = $(defineModel<boolean>('open'))
 
 const props = defineProps<{
+  gameName?: string
   hint?: EngineRef
   onCancel?: () => void
   onConfirm?: (engineId: string) => void
 }>()
 
+const { t } = useI18n()
+const preferenceStore = usePreferenceStore()
+
 let selectedEngineId = $ref<string>()
 let settled = $ref(false)
+
+const preferredEngineId = $computed(() => props.hint?.id ?? preferenceStore.defaultEngineId)
+
+const description = $computed(() => {
+  const gameName = props.gameName?.trim()
+  return gameName
+    ? t('game.selectEngineDescriptionWithName', { name: gameName })
+    : t('game.selectEngineDescription')
+})
 
 function handleCancel() {
   if (settled) {
@@ -51,15 +66,23 @@ watch($$(open), (isOpen) => {
 
 <template>
   <Dialog :open="open" @update:open="handleDialogOpenChange">
-    <DialogContent class="sm:max-w-[440px]">
+    <DialogContent class="sm:max-w-[425px]">
       <DialogHeader>
         <DialogTitle>{{ $t('game.selectEngine') }}</DialogTitle>
         <DialogDescription>
-          {{ $t('game.selectEngineDescription') }}
+          {{ description }}
         </DialogDescription>
       </DialogHeader>
 
-      <EngineSelector v-model="selectedEngineId" :preferred-engine-id="hint?.id" />
+      <div class="px-2 gap-x-4 gap-y-2 grid grid-cols-[auto_1fr] items-center">
+        <Label class="text-right whitespace-nowrap">
+          {{ $t('modals.createGame.gameEngine') }}
+        </Label>
+        <EngineSelector
+          ::="selectedEngineId"
+          :preferred-engine-id="preferredEngineId"
+        />
+      </div>
 
       <DialogFooter>
         <Button variant="outline" @click="handleCancel">

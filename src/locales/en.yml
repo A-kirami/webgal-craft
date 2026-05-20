@@ -1101,3 +1101,4 @@ engine:
 game:
   selectEngine: Select game engine
   selectEngineDescription: Current engine is unavailable, please select any available engine to open
+  selectEngineDescriptionWithName: The engine associated with "{name}" is unavailable. Select an available engine to continue importing.
