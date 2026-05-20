@@ -81,10 +81,10 @@ defineExpose({ toggleCommandPanel })
       <EditorToolbar />
     </div>
     <div ref="editorPanel" class="flex-1 min-h-0 relative overflow-hidden">
-      <EditorSidebarLayout ::show="effectiveShowSidebar" class="h-full">
+      <EditorSidebarLayout v-if="isCurrentSceneFile" ::show="effectiveShowSidebar" class="h-full">
         <div class="flex flex-col h-full relative overflow-hidden">
           <!-- 场景文件：编辑器 + 命令面板纵向分割 -->
-          <ResizablePanelGroup v-if="isCurrentSceneFile" auto-save-id="editor-vertical" direction="vertical" class="flex-1 min-h-0">
+          <ResizablePanelGroup auto-save-id="editor-vertical" direction="vertical" class="flex-1 min-h-0">
             <ResizablePanel size-unit="px" :min-size="200">
               <FileEditor />
             </ResizablePanel>
@@ -102,11 +102,9 @@ defineExpose({ toggleCommandPanel })
               />
             </ResizablePanel>
           </ResizablePanelGroup>
-          <!-- 非场景文件：编辑器占满 -->
-          <FileEditor v-else class="flex-1 min-h-0" />
           <!-- 命令面板折叠态：底部居中小标签 -->
           <button
-            v-if="isCurrentSceneFile && isCommandPanelCollapsed"
+            v-if="isCommandPanelCollapsed"
             class="text-xs text-muted-foreground px-3 py-0.5 border border-b-0 rounded-t bg-muted flex gap-1 transition-colors items-center bottom-0 left-1/2 justify-center absolute hover:text-foreground hover:bg-accent -translate-x-1/2"
             @click="toggleCommandPanel"
           >
@@ -132,6 +130,9 @@ defineExpose({ toggleCommandPanel })
           </div>
         </template>
       </EditorSidebarLayout>
+      <div v-else class="flex flex-col h-full relative overflow-hidden">
+        <FileEditor class="flex-1 min-h-0" />
+      </div>
 
       <Sheet :open="effectEditorProvider.isOpen" :modal="false" @update:open="handleEffectEditorSheetOpenChange">
         <div
