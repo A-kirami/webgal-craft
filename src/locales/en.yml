@@ -633,9 +633,10 @@ edit:
     statements: "{count} statements"
     engine: Engine
     engineMissing: Engine unavailable
+    selectEngine: Select Engine
     template: Template
     templateMissing: Template unavailable
-    templateFollowing: "Template: Follow Current Engine"
+    selectTemplate: Select Template
   fileTree:
     newFile: New File
     newFolder: New Folder

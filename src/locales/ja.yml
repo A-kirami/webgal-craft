@@ -633,9 +633,10 @@ edit:
     statements: "{count} ステートメント"
     engine: エンジン
     engineMissing: エンジンが利用できません
+    selectEngine: エンジンを選択
     template: テンプレート
     templateMissing: テンプレートが利用できません
-    templateFollowing: "テンプレート：現在のエンジンに従う"
+    selectTemplate: テンプレートを選択
   fileTree:
     newFile: 新しいファイル
     newFolder: 新しいフォルダー
