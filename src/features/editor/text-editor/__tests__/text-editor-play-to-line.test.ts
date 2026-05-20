@@ -23,14 +23,21 @@ function createModel(lines: string[]): EditorModelMock {
   }
 }
 
+function createDecorationsCollectionMock() {
+  return {
+    clear: vi.fn(),
+    set: vi.fn((decorations: readonly unknown[]) =>
+      decorations.map((_, index) => `glyph-${index + 1}`),
+    ),
+  }
+}
+
 describe('createTextEditorPlayToLineController', () => {
   it('光标进入可播放行时会创建 glyph margin 装饰，并在无效行时清除', () => {
-    const deltaDecorations = vi.fn()
-      .mockReturnValueOnce(['glyph-1'])
-      .mockReturnValueOnce([])
+    const decorations = createDecorationsCollectionMock()
     const controller = createTextEditorPlayToLineController({
       editor: {
-        deltaDecorations,
+        createDecorationsCollection: () => decorations,
         getModel: () => createModel(['say:hello', '; comment']),
         getPosition: () => ({ lineNumber: 1 }),
       },
@@ -45,7 +52,7 @@ describe('createTextEditorPlayToLineController', () => {
     controller.syncFromEditorPosition()
     controller.syncDecorationsForLine(2)
 
-    expect(deltaDecorations).toHaveBeenNthCalledWith(1, [], [
+    expect(decorations.set).toHaveBeenCalledWith([
       {
         range: {
           endColumn: 1,
@@ -61,14 +68,14 @@ describe('createTextEditorPlayToLineController', () => {
         },
       },
     ])
-    expect(deltaDecorations).toHaveBeenNthCalledWith(2, ['glyph-1'], [])
+    expect(decorations.clear).toHaveBeenCalledTimes(1)
   })
 
   it('点击 glyph margin 的可播放行时会强制同步场景预览', () => {
     const syncScenePreview = vi.fn()
     const controller = createTextEditorPlayToLineController({
       editor: {
-        deltaDecorations: vi.fn(),
+        createDecorationsCollection: () => createDecorationsCollectionMock(),
         getModel: () => createModel(['say:hello', '  ']),
         getPosition: () => ({ lineNumber: 1 }),
       },
@@ -112,7 +119,7 @@ describe('createTextEditorPlayToLineController', () => {
     const syncScenePreview = vi.fn()
     const controller = createTextEditorPlayToLineController({
       editor: {
-        deltaDecorations: vi.fn().mockReturnValue(['glyph-1']),
+        createDecorationsCollection: () => createDecorationsCollectionMock(),
         getModel: () => createModel(['say:hello', 'say:world']),
         getPosition: () => ({ lineNumber: 1 }),
       },
@@ -144,7 +151,7 @@ describe('createTextEditorPlayToLineController', () => {
     const syncScenePreview = vi.fn()
     const controller = createTextEditorPlayToLineController({
       editor: {
-        deltaDecorations: vi.fn(),
+        createDecorationsCollection: () => createDecorationsCollectionMock(),
         getModel: () => createModel(['say:hello']),
         getPosition: () => ({ lineNumber: 1 }),
       },
@@ -174,14 +181,12 @@ describe('createTextEditorPlayToLineController', () => {
   })
 
   it('禁用时会清空装饰且忽略点击', () => {
-    const deltaDecorations = vi.fn()
-      .mockReturnValueOnce(['glyph-1'])
-      .mockReturnValueOnce([])
+    const decorations = createDecorationsCollectionMock()
     const syncScenePreview = vi.fn()
     let enabled = true
     const controller = createTextEditorPlayToLineController({
       editor: {
-        deltaDecorations,
+        createDecorationsCollection: () => decorations,
         getModel: () => createModel(['say:hello']),
         getPosition: () => ({ lineNumber: 1 }),
       },
@@ -208,16 +213,16 @@ describe('createTextEditorPlayToLineController', () => {
       },
     })
 
-    expect(deltaDecorations).toHaveBeenNthCalledWith(2, ['glyph-1'], [])
+    expect(decorations.clear).toHaveBeenCalledTimes(1)
     expect(syncScenePreview).not.toHaveBeenCalled()
   })
 
   it('dirty 状态会使用禁用样式并忽略点击', () => {
-    const deltaDecorations = vi.fn().mockReturnValue(['glyph-1'])
+    const decorations = createDecorationsCollectionMock()
     const syncScenePreview = vi.fn()
     const controller = createTextEditorPlayToLineController({
       editor: {
-        deltaDecorations,
+        createDecorationsCollection: () => decorations,
         getModel: () => createModel(['say:hello']),
         getPosition: () => ({ lineNumber: 1 }),
       },
@@ -242,7 +247,7 @@ describe('createTextEditorPlayToLineController', () => {
       },
     })
 
-    expect(deltaDecorations).toHaveBeenCalledWith([], [
+    expect(decorations.set).toHaveBeenCalledWith([
       expect.objectContaining({
         options: expect.objectContaining({
           glyphMarginClassName: `${PLAY_TO_LINE_GLYPH_CLASS_NAME} ${PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME}`,

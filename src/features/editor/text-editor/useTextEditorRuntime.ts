@@ -39,10 +39,15 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
     return currentState && isEditableEditor(currentState) ? currentState.projection : undefined
   })
   let isComposing = $ref(false)
-  let dropDecorationIds: string[] = []
+  let dropDecorations: monaco.editor.IEditorDecorationsCollection | undefined
 
   function readEditor(): monaco.editor.IStandaloneCodeEditor | undefined {
     return options.editorRef.value
+  }
+
+  function getDropDecorations(editor: monaco.editor.IStandaloneCodeEditor) {
+    dropDecorations ??= editor.createDecorationsCollection()
+    return dropDecorations
   }
 
   function setDropDecorations(action?: TextEditorDropAction) {
@@ -51,10 +56,13 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
       return
     }
 
-    dropDecorationIds = editor.deltaDecorations(
-      dropDecorationIds,
-      buildTextEditorDropDecorations({ action }),
-    )
+    const decorations = buildTextEditorDropDecorations({ action })
+    if (decorations.length === 0) {
+      dropDecorations?.clear()
+      return
+    }
+
+    getDropDecorations(editor).set(decorations)
   }
 
   function clearDropHover(): void {
