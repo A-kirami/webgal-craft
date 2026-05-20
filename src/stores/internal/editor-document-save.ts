@@ -101,6 +101,6 @@ export async function saveEditorDocument(
 
   await gameFs.writeDocumentFile(path, finalBytes)
   finalizeSavedDocument(context, path, saveSnapshot, finalContent, new Date())
-  gameManager.updateCurrentGameLastModified()
+  gameManager.touchCurrentGameLastModified()
   return finalContent
 }

@@ -196,11 +196,43 @@ function applyCurrentGamePatch(
   }
 
   const current = workspaceStore.currentGame
+  const lastModified = patch.lastModified === undefined
+    ? current.lastModified
+    : Math.max(current.lastModified, patch.lastModified)
   workspaceStore.currentGame = {
     ...current,
     ...patch,
+    lastModified,
     metadata: { ...current.metadata, ...patch.metadata },
     previewAssets: { ...current.previewAssets, ...patch.previewAssets },
+  }
+}
+
+async function updateGameMonotonicLastModified(
+  gameId: string,
+  patch: Partial<Pick<Game, 'previewAssets'>> & { lastModified: number },
+): Promise<void> {
+  const appliedPatch = await db.transaction('rw', db.games, async () => {
+    const game = await db.games.get(gameId)
+    if (!game) {
+      return
+    }
+
+    const lastModified = Math.max(game.lastModified, patch.lastModified)
+    const nextPatch: Partial<Pick<Game, 'lastModified' | 'previewAssets'>> = {
+      ...patch,
+      lastModified,
+    }
+    if (nextPatch.previewAssets) {
+      nextPatch.previewAssets = withGamePreviewCacheVersion(nextPatch.previewAssets, lastModified)
+    }
+
+    await db.games.update(gameId, nextPatch)
+    return nextPatch
+  })
+
+  if (appliedPatch) {
+    applyCurrentGamePatch(gameId, appliedPatch)
   }
 }
 
@@ -790,49 +822,73 @@ async function resolvePreviewSite(game: Pick<Game, 'engineId' | 'path'>): Promis
   }
 }
 
-async function updateGameLastModified(gameId: string): Promise<void> {
-  const cacheVersion = Date.now()
-  const patch: Partial<Pick<Game, 'lastModified' | 'previewAssets'>> = {
-    lastModified: cacheVersion,
-  }
+async function touchGameLastModified(gameId: string): Promise<void> {
+  const lastModified = Date.now()
+  await updateGameMonotonicLastModified(gameId, { lastModified })
+}
 
+async function refreshGamePreviewAssets(gameId: string): Promise<void> {
   const game = await db.games.get(gameId)
   if (!game) {
     return
   }
 
+  let previewAssets: GamePreviewAssets | undefined
   try {
-    patch.previewAssets = withGamePreviewCacheVersion(
-      await getGamePreviewAssets(game.path),
-      cacheVersion,
-    )
+    previewAssets = await getGamePreviewAssets(game.path)
   } catch (error) {
     if (game.previewAssets) {
-      patch.previewAssets = withGamePreviewCacheVersion(game.previewAssets, cacheVersion)
+      previewAssets = game.previewAssets
     }
     logger.warn(`刷新游戏预览资源快照失败: ${error}`)
   }
 
-  await db.games.update(gameId, patch)
-  applyCurrentGamePatch(gameId, patch)
+  const cacheVersion = Date.now()
+  const patch: Partial<Pick<Game, 'previewAssets'>> & { lastModified: number } = {
+    lastModified: cacheVersion,
+  }
+  if (previewAssets) {
+    patch.previewAssets = previewAssets
+  }
+
+  await updateGameMonotonicLastModified(gameId, patch)
 }
 
-let lastModifiedTimer: ReturnType<typeof setTimeout> | undefined
+let touchLastModifiedTimer: ReturnType<typeof setTimeout> | undefined
+let refreshPreviewAssetsTimer: ReturnType<typeof setTimeout> | undefined
 
 /** 防抖更新当前游戏的 lastModified 字段（500ms） */
-function updateCurrentGameLastModified(): void {
+function touchCurrentGameLastModified(): void {
   const workspaceStore = useWorkspaceStore()
   const gameId = workspaceStore.currentGame?.id
   if (!gameId) {
     return
   }
 
-  clearTimeout(lastModifiedTimer)
-  lastModifiedTimer = setTimeout(async () => {
+  clearTimeout(touchLastModifiedTimer)
+  touchLastModifiedTimer = setTimeout(async () => {
     try {
-      await updateGameLastModified(gameId)
+      await touchGameLastModified(gameId)
     } catch (error) {
       logger.error(`更新游戏 lastModified 失败: ${error}`)
+    }
+  }, 500)
+}
+
+/** 防抖刷新当前游戏的预览资源快照（500ms） */
+function refreshCurrentGamePreviewAssets(): void {
+  const workspaceStore = useWorkspaceStore()
+  const gameId = workspaceStore.currentGame?.id
+  if (!gameId) {
+    return
+  }
+
+  clearTimeout(refreshPreviewAssetsTimer)
+  refreshPreviewAssetsTimer = setTimeout(async () => {
+    try {
+      await refreshGamePreviewAssets(gameId)
+    } catch (error) {
+      logger.error(`刷新游戏预览资源快照失败: ${error}`)
     }
   }, 500)
 }
@@ -852,7 +908,9 @@ export const gameManager = {
   importGame,
   getGameEnginePath,
   resolvePreviewSite,
-  updateGameLastModified,
-  updateCurrentGameLastModified,
+  touchGameLastModified,
+  refreshGamePreviewAssets,
+  touchCurrentGameLastModified,
+  refreshCurrentGamePreviewAssets,
   identityKeyOf,
 }

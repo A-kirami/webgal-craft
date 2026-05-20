@@ -83,7 +83,6 @@ function createDeps(overrides: DeepPartial<PathOperationDeps> = {}): PathOperati
     },
     gameManager: {
       refreshRegisteredGameSnapshot: vi.fn(),
-      updateCurrentGameLastModified: vi.fn(),
     },
     getGamePath: vi.fn(() => AbsPath.from('/project')),
     history: {
@@ -180,7 +179,6 @@ describe('pathOperation', () => {
       newPath: '/project/game/background/renamed.jpg',
       source: 'system-refactor',
     })
-    expect(deps.gameManager.updateCurrentGameLastModified).toHaveBeenCalledTimes(1)
     expect(deps.gameManager.refreshRegisteredGameSnapshot).toHaveBeenCalledWith('/project')
     expect(deps.pathOperationRegistry.updateChannel).toHaveBeenCalledWith(1, {
       echoMode: 'watcher',
@@ -645,7 +643,6 @@ describe('pathOperation', () => {
       },
       gameManager: {
         refreshRegisteredGameSnapshot,
-        updateCurrentGameLastModified: vi.fn(),
       },
       history: {
         migrateSceneHistory,
