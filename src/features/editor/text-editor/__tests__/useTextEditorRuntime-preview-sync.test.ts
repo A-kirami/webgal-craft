@@ -135,16 +135,19 @@ function createState(path: string): TextProjectionState {
 }
 
 interface EditorDouble {
-  deltaDecorations: ReturnType<typeof vi.fn>
+  createDecorationsCollection: ReturnType<typeof vi.fn>
   getModel: ReturnType<typeof vi.fn<() => Pick<monaco.editor.ITextModel, 'getLineContent' | 'getLineCount' | 'getLineMaxColumn'>>>
   getPosition: ReturnType<typeof vi.fn>
 }
 
 function createEditor(): EditorDouble {
   return {
-    deltaDecorations: vi.fn((_: string[], decorations: unknown[]) =>
-      decorations.map((__, index) => `decoration-${index + 1}`),
-    ),
+    createDecorationsCollection: vi.fn(() => ({
+      clear: vi.fn(),
+      set: vi.fn((decorations: readonly unknown[]) =>
+        decorations.map((_, index) => `decoration-${index + 1}`),
+      ),
+    })),
     getModel: vi.fn(() => ({
       getLineContent: vi.fn((lineNumber: number) => lineNumber === 2 ? 'beta' : 'alpha'),
       getLineCount: vi.fn(() => 2),

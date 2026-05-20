@@ -7,12 +7,16 @@ export const PLAY_TO_LINE_GLYPH_CLASS_NAME = 'play-to-line-glyph'
 export const PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME = 'play-to-line-glyph-disabled'
 
 export interface TextEditorPlayToLineEditor {
-  deltaDecorations: (
-    oldDecorations: string[],
-    newDecorations: TextEditorPlayToLineDecoration[],
-  ) => string[]
+  createDecorationsCollection: (
+    decorations?: TextEditorPlayToLineDecoration[],
+  ) => TextEditorPlayToLineDecorationsCollection
   getModel: () => TextEditorLineReader | null | undefined
   getPosition: () => { lineNumber: number } | null | undefined
+}
+
+export interface TextEditorPlayToLineDecorationsCollection {
+  clear: () => void
+  set: (newDecorations: readonly TextEditorPlayToLineDecoration[]) => string[]
 }
 
 export interface TextEditorPlayToLineDecoration {
@@ -76,17 +80,16 @@ function createPlayToLineDecoration(
 }
 
 export function createTextEditorPlayToLineController(options: CreateTextEditorPlayToLineControllerOptions) {
-  let decorationIds: string[] = []
+  const decorations = options.editor.createDecorationsCollection()
   let decoratedLineNumber: number | undefined
 
   function clearDecorations() {
-    decoratedLineNumber = undefined
-
-    if (decorationIds.length === 0) {
+    if (decoratedLineNumber === undefined) {
       return
     }
 
-    decorationIds = options.editor.deltaDecorations(decorationIds, [])
+    decoratedLineNumber = undefined
+    decorations.clear()
   }
 
   function syncDecorationsForLine(lineNumber: number | undefined) {
@@ -107,7 +110,7 @@ export function createTextEditorPlayToLineController(options: CreateTextEditorPl
       return
     }
 
-    decorationIds = options.editor.deltaDecorations(decorationIds, [
+    decorations.set([
       createPlayToLineDecoration(previewLine.lineNumber, options.getHoverMessage(), options.isDisabled()),
     ])
     decoratedLineNumber = previewLine.lineNumber

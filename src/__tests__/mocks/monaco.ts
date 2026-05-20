@@ -31,6 +31,13 @@ interface MonacoDisposableMock {
   dispose: Mock<() => void>
 }
 
+export interface MonacoDecorationsCollectionMock {
+  append: Mock<(newDecorations: readonly unknown[]) => string[]>
+  clear: Mock<() => void>
+  getIds: () => string[]
+  set: Mock<(newDecorations: readonly unknown[]) => string[]>
+}
+
 interface MonacoActionMock {
   id: string
   label: string
@@ -44,7 +51,7 @@ interface MonacoDomNodeMock {
 
 export interface MonacoEditorInstanceMock {
   addCommand: MonacoCommandMock
-  deltaDecorations: Mock<(oldDecorations: string[], newDecorations: unknown[]) => string[]>
+  createDecorationsCollection: Mock<(decorations?: readonly unknown[]) => MonacoDecorationsCollectionMock>
   dispose: Mock<() => void>
   focus: Mock<() => void>
   getAction: Mock<(actionId: string) => MonacoActionMock | undefined>
@@ -79,6 +86,26 @@ function createDecorationIds(nextDecorations: unknown[]) {
   return nextDecorations.map(() => `decoration-${++decorationIdCounter}`)
 }
 
+function createDecorationsCollectionMock(initialDecorations: readonly unknown[] = []): MonacoDecorationsCollectionMock {
+  let decorationIds = createDecorationIds([...initialDecorations])
+
+  return {
+    append: vi.fn<(newDecorations: readonly unknown[]) => string[]>((newDecorations) => {
+      const nextIds = createDecorationIds([...newDecorations])
+      decorationIds = [...decorationIds, ...nextIds]
+      return nextIds
+    }),
+    clear: vi.fn<() => void>(() => {
+      decorationIds = []
+    }),
+    getIds: () => [...decorationIds],
+    set: vi.fn<(newDecorations: readonly unknown[]) => string[]>((newDecorations) => {
+      decorationIds = createDecorationIds([...newDecorations])
+      return decorationIds
+    }),
+  }
+}
+
 function createDisposable(): MonacoDisposableMock {
   return {
     dispose: vi.fn<() => void>(),
@@ -99,9 +126,7 @@ function createDomNodeMock(): MonacoDomNodeMock {
 function applyEditorInstanceMockDefaults(editorInstance: MonacoEditorInstanceMock) {
   const domNode = createDomNodeMock()
 
-  editorInstance.deltaDecorations.mockImplementation((_: string[], nextDecorations: unknown[]) =>
-    createDecorationIds(nextDecorations),
-  )
+  editorInstance.createDecorationsCollection.mockImplementation(createDecorationsCollectionMock)
   editorInstance.getAction.mockImplementation((actionId: string) => ({
     id: actionId,
     label: actionId,
@@ -119,7 +144,7 @@ function applyEditorInstanceMockDefaults(editorInstance: MonacoEditorInstanceMoc
 function createEditorInstanceMock(): MonacoEditorInstanceMock {
   const editorInstance: MonacoEditorInstanceMock = {
     addCommand: vi.fn<(keybinding: number, handler: MonacoCommandHandler) => unknown>(),
-    deltaDecorations: vi.fn<(oldDecorations: string[], newDecorations: unknown[]) => string[]>(),
+    createDecorationsCollection: vi.fn<(decorations?: readonly unknown[]) => MonacoDecorationsCollectionMock>(),
     dispose: vi.fn<() => void>(),
     focus: vi.fn<() => void>(),
     getAction: vi.fn<(actionId: string) => MonacoActionMock | undefined>(),

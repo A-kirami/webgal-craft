@@ -62,9 +62,10 @@ describe('monacoMock', () => {
     expect(monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN).toBe(2)
   })
 
-  it('deltaDecorations 会为每个 decoration 返回可回传的不透明 id', () => {
-    const firstIds = monacoMockState.editorInstance.deltaDecorations([], [{}, {}])
-    const secondIds = monacoMockState.editorInstance.deltaDecorations(firstIds, [{}])
+  it('createDecorationsCollection 会维护可替换的 decoration id 集合', () => {
+    const collection = monacoMockState.editorInstance.createDecorationsCollection([{}, {}])
+    const firstIds = collection.getIds()
+    const secondIds = collection.set([{}])
 
     expect(firstIds).toHaveLength(2)
     expect(firstIds.every(id => typeof id === 'string' && id.length > 0)).toBe(true)
@@ -73,8 +74,11 @@ describe('monacoMock', () => {
     expect(secondIds[0]).not.toBe(firstIds[0])
     expect(secondIds[0]).not.toBe(firstIds[1])
 
+    collection.clear()
+    expect(collection.getIds()).toHaveLength(0)
+
     resetMonacoMockState()
 
-    expect(monacoMockState.editorInstance.deltaDecorations([], [{}])).toHaveLength(1)
+    expect(monacoMockState.editorInstance.createDecorationsCollection([{}]).getIds()).toHaveLength(1)
   })
 })

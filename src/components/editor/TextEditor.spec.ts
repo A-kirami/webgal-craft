@@ -176,6 +176,15 @@ function renderTextEditor(state: TextProjectionState) {
   })
 }
 
+function readPlayToLineDecorations() {
+  const collection = monacoMockState.editorInstance.createDecorationsCollection.mock.results[0]?.value
+  if (!collection) {
+    throw new Error('预期 TextEditor 创建播放按钮装饰集合')
+  }
+
+  return collection
+}
+
 function createHarness(path: string = '/project/scene-1.txt') {
   const editSettingsStore = reactive<EditSettingsStoreMock>({
     fontFamily: 'Fira Code',
@@ -556,7 +565,8 @@ describe('TextEditor', () => {
 
     await nextTick()
 
-    expect(monacoMockState.editorInstance.deltaDecorations).not.toHaveBeenCalled()
+    const decorations = readPlayToLineDecorations()
+    expect(decorations.set).not.toHaveBeenCalled()
 
     const handleContentChange = monacoMockState.editorInstance.onDidChangeModelContent.mock.calls[0]?.[0]
 
@@ -570,7 +580,7 @@ describe('TextEditor', () => {
     await nextTick()
 
     expect(runtimeReturnValue.handleContentChange).toHaveBeenCalledTimes(1)
-    expect(monacoMockState.editorInstance.deltaDecorations).toHaveBeenCalledTimes(1)
+    expect(decorations.set).toHaveBeenCalledTimes(1)
   })
 
   it('换行导致光标行延后更新时，播放按钮会跟随最终光标行', async () => {
@@ -583,7 +593,8 @@ describe('TextEditor', () => {
     renderTextEditor(state)
 
     await nextTick()
-    monacoMockState.editorInstance.deltaDecorations.mockClear()
+    const decorations = readPlayToLineDecorations()
+    decorations.set.mockClear()
 
     const handleContentChange = monacoMockState.editorInstance.onDidChangeModelContent.mock.calls[0]?.[0]
 
@@ -597,8 +608,8 @@ describe('TextEditor', () => {
     await Promise.resolve()
     await nextTick()
 
-    expect(monacoMockState.editorInstance.deltaDecorations).toHaveBeenCalledTimes(1)
-    const [, nextDecorations] = monacoMockState.editorInstance.deltaDecorations.mock.calls[0] ?? []
+    expect(decorations.set).toHaveBeenCalledTimes(1)
+    const [nextDecorations] = decorations.set.mock.calls[0] ?? []
 
     expect(nextDecorations).toEqual([
       expect.objectContaining({
@@ -677,16 +688,17 @@ describe('TextEditor', () => {
 
     await nextTick()
 
-    const [, decorations = []] = monacoMockState.editorInstance.deltaDecorations.mock.calls.at(-1) ?? []
-    expect(decorations).toHaveLength(1)
-    expect(decorations).toEqual([
+    const decorations = readPlayToLineDecorations()
+    const [latestDecorations = []] = decorations.set.mock.calls.at(-1) ?? []
+    expect(latestDecorations).toHaveLength(1)
+    expect(latestDecorations).toEqual([
       expect.objectContaining({
         options: expect.objectContaining({
           glyphMarginClassName: expect.stringContaining(PLAY_TO_LINE_GLYPH_CLASS_NAME),
         }),
       }),
     ])
-    expect(decorations).toEqual([
+    expect(latestDecorations).toEqual([
       expect.objectContaining({
         options: expect.objectContaining({
           glyphMarginClassName: expect.stringContaining(PLAY_TO_LINE_DISABLED_GLYPH_CLASS_NAME),
