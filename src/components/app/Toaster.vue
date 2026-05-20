@@ -41,7 +41,7 @@ const props = defineProps<ToasterProps>()
 </template>
 
 <style>
-@import "vue-sonner/style.css" layer(vue-sonner);
+@import "vue-sonner/style.css";
 
 .toaster[data-sonner-toaster] {
   --width: 20rem !important;
