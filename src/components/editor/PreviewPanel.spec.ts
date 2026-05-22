@@ -344,6 +344,9 @@ describe('PreviewPanel', () => {
   })
 
   it('只向预览地址同源的内嵌预览回传启动信息', async () => {
+    const sameOriginPreviewUrl = new URL('/__webgal_preview_bootstrap_test__', globalThis.location.href)
+    previewSessionStoreState.currentGameServeUrl = sameOriginPreviewUrl.href
+
     renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
@@ -373,7 +376,7 @@ describe('PreviewPanel', () => {
 
     globalThis.dispatchEvent(new MessageEvent('message', {
       data: requestMessage,
-      origin: 'http://127.0.0.1:8899',
+      origin: sameOriginPreviewUrl.origin,
       source: iframeWindow,
     }))
 
@@ -382,7 +385,7 @@ describe('PreviewPanel', () => {
         type: WEBGAL_PREVIEW_BOOTSTRAP_PROVIDE,
         embeddedLaunchId,
       },
-      'http://127.0.0.1:8899',
+      sameOriginPreviewUrl.origin,
     )
   })
 
