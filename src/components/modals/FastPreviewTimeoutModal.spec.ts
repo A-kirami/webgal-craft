@@ -88,6 +88,35 @@ describe('FastPreviewTimeoutModal', () => {
     await expect.poll(() => updateOpen.mock.calls.some(([open]) => open === false)).toBe(true)
   })
 
+  it('确认关闭回调失败时仍会关闭弹窗', async () => {
+    const onClose = vi.fn().mockRejectedValue(new Error('close failed'))
+    const updateOpen = vi.fn()
+
+    renderInBrowser(FastPreviewTimeoutModal, {
+      global: {
+        plugins: [createFastPreviewTimeoutModalI18n()],
+      },
+      props: {
+        'open': true,
+        'payload': {
+          sceneName: 'scene/start.txt',
+          sentenceId: 8,
+          targetSentenceId: 12,
+          forwardedLineCount: 24,
+          elapsedMs: 151,
+          maxDurationMs: 150,
+        },
+        onClose,
+        'onUpdate:open': updateOpen,
+      },
+    })
+
+    await page.getByRole('button', { name: '确认' }).click()
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    await expect.poll(() => updateOpen.mock.calls.some(([open]) => open === false)).toBe(true)
+  })
+
   it('通过 v-model 关闭时也会执行关闭回调', async () => {
     const onClose = vi.fn()
     const state = reactive({
@@ -122,5 +151,42 @@ describe('FastPreviewTimeoutModal', () => {
     await nextTick()
 
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('通过 v-model 关闭回调失败时不会阻断外部关闭流程', async () => {
+    const onClose = vi.fn().mockRejectedValue(new Error('close failed'))
+    const state = reactive({
+      open: true,
+    })
+
+    renderInBrowser({
+      setup() {
+        return () => h(FastPreviewTimeoutModal, {
+          'open': state.open,
+          'payload': {
+            sceneName: 'scene/start.txt',
+            sentenceId: 8,
+            targetSentenceId: 12,
+            forwardedLineCount: 24,
+            elapsedMs: 151,
+            maxDurationMs: 150,
+          },
+          onClose,
+          'onUpdate:open': (open?: boolean) => {
+            state.open = open ?? false
+          },
+        })
+      },
+    }, {
+      global: {
+        plugins: [createFastPreviewTimeoutModalI18n()],
+      },
+    })
+
+    state.open = false
+    await nextTick()
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(state.open).toBe(false)
   })
 })

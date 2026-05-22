@@ -64,8 +64,13 @@ const diagnostics = $computed(() => [
 
 async function handleClose(): Promise<void> {
   closeHandled = true
-  await props.onClose?.()
-  open = false
+  try {
+    await props.onClose?.()
+  } catch {
+    // 关闭回调失败不应阻断弹窗状态收敛。
+  } finally {
+    open = false
+  }
 }
 
 watch(() => open, async (nextOpen, previousOpen) => {
@@ -75,7 +80,13 @@ watch(() => open, async (nextOpen, previousOpen) => {
   }
 
   if (previousOpen && !closeHandled) {
-    await props.onClose?.()
+    try {
+      await props.onClose?.()
+    } catch {
+      // 关闭回调失败不应阻断外部关闭流程。
+    } finally {
+      closeHandled = true
+    }
   }
 })
 </script>
@@ -97,10 +108,10 @@ watch(() => open, async (nextOpen, previousOpen) => {
           <AlertDialogDescription as="div" class="text-left space-y-3">
             <p>{{ $t('modals.fastPreviewTimeout.summary') }}</p>
             <section class="space-y-1.5">
-              <p class="font-medium text-foreground">
+              <p class="text-foreground font-medium">
                 {{ $t('modals.fastPreviewTimeout.suggestionsTitle') }}
               </p>
-              <ul class="list-disc space-y-1 pl-5">
+              <ul class="pl-5 list-disc space-y-1">
                 <li
                   v-for="suggestion in suggestions"
                   :key="suggestion.key"
@@ -110,15 +121,15 @@ watch(() => open, async (nextOpen, previousOpen) => {
               </ul>
             </section>
             <p>{{ $t('modals.fastPreviewTimeout.nextStep') }}</p>
-            <section class="rounded-md border border-border/70 bg-muted/40 p-3 text-xs space-y-2">
-              <p class="font-medium text-foreground">
+            <section class="text-xs p-3 border border-border/70 rounded-md bg-muted/40 space-y-2">
+              <p class="text-foreground font-medium">
                 {{ $t('modals.fastPreviewTimeout.diagnosticsTitle') }}
               </p>
               <dl class="space-y-1.5">
                 <div
                   v-for="diagnostic in diagnostics"
                   :key="diagnostic.key"
-                  class="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-2"
+                  class="gap-x-2 grid grid-cols-[max-content_minmax(0,1fr)]"
                 >
                   <dt>{{ diagnostic.label }}{{ diagnosticSeparator }}</dt>
                   <dd class="text-foreground break-all">
