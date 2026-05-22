@@ -431,7 +431,6 @@ modals:
     tabs:
       general: 一般
       edit: 編集
-      preview: プレビュー
       backup: バックアップ
       storage: ストレージ
   saveChanges:
@@ -460,6 +459,21 @@ modals:
     keepLocal: ローカルを保持
     loadExternal: 外部版を読み込む
     merge: マージ
+  fastPreviewTimeout:
+    title: リアルタイムプレビューを停止しました
+    summary: プレビューが対象行へジャンプしようとした際に時間制限を超えたため、今回の同期を停止しました。
+    suggestionsTitle: 確認してください
+    suggestionLoop: 対象行より前に、繰り返し戻るジャンプや条件分岐がないか。
+    suggestionDistance: 対象行より前に、早送り実行が必要なステートメントが多すぎないか。
+    suggestionBlocking: プレビュー実行時に進行をブロックするステートメントがないか。
+    nextStep: スクリプトを調整した後、対象行を選び直すかプレビューを更新してください。
+    scene: 現在のシーン
+    targetSentence: 対象行
+    sentence: 停止位置
+    forwardedLineCount: 早送り済み行数
+    elapsedTime: 経過時間
+    maxDuration: タイムアウト上限
+    diagnosticsTitle: 診断情報
   backupTimeline:
     title: シーンの履歴
     description: 左側でバージョンを選択して差分を確認し、その時点の内容に復元できます。
@@ -1007,18 +1021,9 @@ settings:
     autoInstallUpdates:
       label: 更新を自動インストール
       description: 最新バージョンのアプリケーションを自動的にダウンロードしてインストールする
-  preview:
-    enableLivePreview:
-      label: ライブプレビュー
-      description: ゲームを編集する際に変更をリアルタイムでプレビュー
-    enableFastPreview:
-      label: 高速ステートメントプレビュー
-      description: 高速プレビュー機能を有効にすると、リアルタイムプレビューの効率が大幅に向上します
-    enableRealtimeEffectPreview:
-      label: リアルタイムエフェクトプレビュー
-      description: エフェクトエディターでパラメータを調整中に効果をリアルタイムで描画します
   edit:
     general: 一般
+    preview: プレビュー
     textEditor: テキストエディター
     visualEditor: ビジュアルエディター
     fontFamily:
@@ -1038,6 +1043,12 @@ settings:
     enablePreviewTab:
       label: プレビュータブを有効にする
       description: シングルクリックでプレビューモードでファイルを開き、ダブルクリックまたは編集で通常のタブに固定
+    enableLivePreview:
+      label: ライブプレビュー
+      description: ゲームを編集する際に変更をリアルタイムでプレビュー
+    enableRealtimeEffectPreview:
+      label: リアルタイムエフェクトプレビュー
+      description: エフェクトエディターでパラメータを調整中に効果をリアルタイムで描画します
     autoApplyEffectEditorChanges:
       label: エフェクトエディターの変更を自動適用
       description: 有効にすると、エフェクトエディターのパラメータ変更をステートメントへ自動反映します

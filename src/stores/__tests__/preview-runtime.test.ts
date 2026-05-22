@@ -1,6 +1,7 @@
 import '~/__tests__/setup'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { computed } from 'vue'
 
 import { AbsPath } from '~/domain/path'
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
@@ -8,16 +9,22 @@ import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 const {
   addStaticSiteMock,
   loggerErrorMock,
+  setActivePreviewSessionMock,
+  setEmbeddedPreviewLaunchIdMock,
   startServerMock,
 } = vi.hoisted(() => ({
   addStaticSiteMock: vi.fn(),
   loggerErrorMock: vi.fn(),
+  setActivePreviewSessionMock: vi.fn(),
+  setEmbeddedPreviewLaunchIdMock: vi.fn(),
   startServerMock: vi.fn(),
 }))
 
 vi.mock('~/commands/server', () => ({
   serverCmds: {
     addStaticSite: addStaticSiteMock,
+    setActivePreviewSession: setActivePreviewSessionMock,
+    setEmbeddedPreviewLaunchId: setEmbeddedPreviewLaunchIdMock,
     startServer: startServerMock,
   },
 }))
@@ -48,7 +55,7 @@ describe('usePreviewRuntimeStore', () => {
     )
 
     expect(startServerMock).toHaveBeenCalledTimes(1)
-    expect(startServerMock).toHaveBeenCalledWith('127.0.0.1', 8899)
+    expect(startServerMock).toHaveBeenCalledWith('127.0.0.1', 8899, expect.any(Function))
     expect(addStaticSiteMock).toHaveBeenCalledTimes(1)
     expect(addStaticSiteMock).toHaveBeenCalledWith({ projectPath: '/games/alpha' })
     expect(store.getServeUrl(AbsPath.from('/games/alpha'))).toBe('http://127.0.0.1:8899/game/game-alpha/')
@@ -137,5 +144,21 @@ describe('usePreviewRuntimeStore', () => {
     await store.ensureServeUrls([{ projectPath: AbsPath.from('/games/alpha') }])
 
     expect(serveUrl.value).toBe('http://127.0.0.1:8899/game/game-alpha/')
+  })
+
+  it('setActivePreviewSession 会把当前活动 gameId 透传给宿主端', async () => {
+    const store = usePreviewRuntimeStore()
+
+    await store.setActivePreviewSession('game-alpha')
+
+    expect(setActivePreviewSessionMock).toHaveBeenCalledWith('game-alpha')
+  })
+
+  it('setEmbeddedPreviewLaunchId 会更新当前内嵌预览槽位', async () => {
+    const store = usePreviewRuntimeStore()
+
+    await store.setEmbeddedPreviewLaunchId('embedded-launch-1')
+
+    expect(setEmbeddedPreviewLaunchIdMock).toHaveBeenCalledWith('embedded-launch-1')
   })
 })

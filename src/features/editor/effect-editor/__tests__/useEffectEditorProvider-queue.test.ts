@@ -14,7 +14,6 @@ import {
 import { applyEffectEditorResultToSentence } from '~/features/editor/effect-editor/effect-editor-result'
 import { createEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { useEditSettingsStore } from '~/stores/edit-settings'
-import { usePreviewSettingsStore } from '~/stores/preview-settings'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { Transform } from '~/domain/stage/types'
@@ -141,11 +140,9 @@ afterAll(() => {
 })
 
 beforeEach(() => {
-  const previewSettingsStore = usePreviewSettingsStore()
-  previewSettingsStore.enableLivePreview = true
-  previewSettingsStore.enableRealtimeEffectPreview = true
-
   const editSettingsStore = useEditSettingsStore()
+  editSettingsStore.enableLivePreview = true
+  editSettingsStore.enableRealtimeEffectPreview = true
   editSettingsStore.autoApplyEffectEditorChanges = true
 
   debugCommanderMock.setEffect.mockReset()

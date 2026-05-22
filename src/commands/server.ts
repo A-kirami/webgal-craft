@@ -5,10 +5,14 @@ import { safeInvoke } from '~/utils/invoke'
 
 import type { StaticSiteConfig } from '~/types/server'
 
-async function startServer(host: string, port: number): Promise<string> {
+async function startServer(
+  host: string,
+  port: number,
+  onMessage: (message: string) => void,
+): Promise<string> {
   try {
     const channel = new Channel<string>()
-    channel.onmessage = () => undefined
+    channel.onmessage = onMessage
 
     return await invoke<string>('start_server', {
       host,
@@ -32,16 +36,16 @@ function updateSiteTemplate(projectPath: string, newTemplatePath?: string): Prom
   return safeInvoke('update_site_template', { projectPath, newTemplatePath })
 }
 
-function broadcastMessage(message: string): Promise<void> {
-  return safeInvoke('broadcast_message', { message })
+async function setActivePreviewSession(gameId?: string): Promise<void> {
+  return safeInvoke<void>('set_active_preview_session', { gameId })
 }
 
-function unicastMessage(clientAddr: string, message: string): Promise<void> {
-  return safeInvoke('unicast_message', { clientAddr, message })
+async function setEmbeddedPreviewLaunchId(embeddedLaunchId?: string): Promise<void> {
+  return safeInvoke<void>('set_embedded_preview_launch_id', { embeddedLaunchId })
 }
 
-function getConnectedClients(): Promise<string[]> {
-  return safeInvoke('get_connected_clients')
+async function sendPreviewCommand(request: string): Promise<void> {
+  return safeInvoke<void>('send_preview_command', { request })
 }
 
 export const serverCmds = {
@@ -49,7 +53,7 @@ export const serverCmds = {
   addStaticSite,
   updateSiteEngine,
   updateSiteTemplate,
-  broadcastMessage,
-  unicastMessage,
-  getConnectedClients,
+  setActivePreviewSession,
+  setEmbeddedPreviewLaunchId,
+  sendPreviewCommand,
 }

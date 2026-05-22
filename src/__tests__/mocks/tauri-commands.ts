@@ -21,10 +21,12 @@ export interface TauriCommandMockBundle {
   }
   serverCmds: {
     addStaticSite: ReturnType<typeof vi.fn>
-    broadcastMessage: ReturnType<typeof vi.fn>
-    getConnectedClients: ReturnType<typeof vi.fn>
+    sendPreviewCommand: ReturnType<typeof vi.fn>
+    setActivePreviewSession: ReturnType<typeof vi.fn>
+    setEmbeddedPreviewLaunchId: ReturnType<typeof vi.fn>
     startServer: ReturnType<typeof vi.fn>
-    unicastMessage: ReturnType<typeof vi.fn>
+    updateSiteEngine: ReturnType<typeof vi.fn>
+    updateSiteTemplate: ReturnType<typeof vi.fn>
   }
   windowCmds: {
     createWindow: ReturnType<typeof vi.fn>
@@ -53,10 +55,12 @@ export function createTauriCommandMockBundle(): TauriCommandMockBundle {
     },
     serverCmds: {
       addStaticSite: vi.fn(),
-      broadcastMessage: vi.fn(),
-      getConnectedClients: vi.fn(),
+      sendPreviewCommand: vi.fn(),
+      setActivePreviewSession: vi.fn(),
+      setEmbeddedPreviewLaunchId: vi.fn(),
       startServer: vi.fn(),
-      unicastMessage: vi.fn(),
+      updateSiteEngine: vi.fn(),
+      updateSiteTemplate: vi.fn(),
     },
     windowCmds: {
       createWindow: vi.fn(),

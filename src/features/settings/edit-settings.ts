@@ -44,6 +44,25 @@ export const editSettingsDefinition = defineSettingsSchema({
       },
     },
   },
+  preview: {
+    label: t => t('settings.edit.preview'),
+    fields: {
+      enableLivePreview: {
+        type: 'switch',
+        default: true,
+        label: t => t('settings.edit.enableLivePreview.label'),
+        description: t => t('settings.edit.enableLivePreview.description'),
+      },
+      enableRealtimeEffectPreview: {
+        type: 'switch',
+        default: true,
+        experimental: true,
+        visibleWhen: 'enableLivePreview',
+        label: t => t('settings.edit.enableRealtimeEffectPreview.label'),
+        description: t => t('settings.edit.enableRealtimeEffectPreview.description'),
+      },
+    },
+  },
   textEditor: {
     label: t => t('settings.edit.textEditor'),
     fields: {

@@ -431,7 +431,6 @@ modals:
     tabs:
       general: 一般
       edit: 編輯
-      preview: 預覽
       backup: 備份
       storage: 儲存
   saveChanges:
@@ -460,6 +459,21 @@ modals:
     keepLocal: 保留本機修改
     loadExternal: 載入外部修改
     merge: 合併內容
+  fastPreviewTimeout:
+    title: 即時預覽已停止
+    summary: 預覽在嘗試跳轉到目標行時超過時間限制，已停止本次同步。
+    suggestionsTitle: 建議檢查
+    suggestionLoop: 目標行之前是否存在反覆跳回的跳轉或條件分支。
+    suggestionDistance: 目標行之前是否有過多需要快轉執行的語句。
+    suggestionBlocking: 是否有語句在預覽執行時阻塞推進。
+    nextStep: 調整腳本後，重新選擇目標行或重新整理預覽。
+    scene: 目前場景
+    targetSentence: 目標行
+    sentence: 停止位置
+    forwardedLineCount: 已快轉行數
+    elapsedTime: 耗時
+    maxDuration: 逾時上限
+    diagnosticsTitle: 診斷資訊
   backupTimeline:
     title: 場景歷史版本
     description: 選擇左側版本檢視差異，可還原至該時間點的內容。
@@ -1007,18 +1021,9 @@ settings:
     autoInstallUpdates:
       label: 自動安裝更新
       description: 自動下載並安裝最新版本的應用程式
-  preview:
-    enableLivePreview:
-      label: 即時預覽
-      description: 編輯遊戲時即時預覽變更
-    enableFastPreview:
-      label: 快速語句預覽
-      description: 啟用快速預覽將顯著提高即時預覽效率
-    enableRealtimeEffectPreview:
-      label: 即時效果預覽
-      description: 在效果編輯器中調整參數時即時渲染預覽效果
   edit:
     general: 通用
+    preview: 預覽
     textEditor: 文字編輯器
     visualEditor: 視覺化編輯器
     fontFamily:
@@ -1038,6 +1043,12 @@ settings:
     enablePreviewTab:
       label: 啟用預覽標籤頁
       description: 單擊檔案時以預覽模式開啟，雙擊或編輯後固定為普通標籤頁
+    enableLivePreview:
+      label: 即時預覽
+      description: 編輯遊戲時即時預覽變更
+    enableRealtimeEffectPreview:
+      label: 即時效果預覽
+      description: 在效果編輯器中調整參數時即時渲染預覽效果
     autoApplyEffectEditorChanges:
       label: 自動套用效果編輯器變更
       description: 啟用後，效果編輯器中的參數變更會自動寫回語句

@@ -1,5 +1,6 @@
 use tauri::Manager;
 mod commands;
+mod generated;
 mod vfs;
 mod window;
 use commands::server::ServerState;
@@ -98,9 +99,9 @@ pub fn run() {
             commands::server::add_static_site,
             commands::server::update_site_engine,
             commands::server::update_site_template,
-            commands::server::broadcast_message,
-            commands::server::unicast_message,
-            commands::server::get_connected_clients,
+            commands::server::set_active_preview_session,
+            commands::server::set_embedded_preview_launch_id,
+            commands::server::send_preview_command,
             // fs
             commands::fs::copy_directory,
             commands::fs::copy_directory_with_progress,

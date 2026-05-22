@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 
 import { serverCmds } from '~/commands/server'
+import { usePreviewSyncStore } from '~/stores/preview-sync'
 
 import type { AbsPath } from '~/domain/path'
 import type { StaticSiteConfig } from '~/types/server'
@@ -41,7 +42,10 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
 
     const startTask = (async () => {
       try {
-        serverUrl = await serverCmds.startServer('127.0.0.1', 8899)
+        const previewSyncStore = usePreviewSyncStore()
+        serverUrl = await serverCmds.startServer('127.0.0.1', 8899, (message) => {
+          previewSyncStore.consumeHostEvent(message)
+        })
         return serverUrl
       } catch (error) {
         logger.error(`服务器启动失败: ${error}`)
@@ -138,9 +142,19 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
     )
   }
 
+  async function setActivePreviewSession(gameId?: string): Promise<void> {
+    await serverCmds.setActivePreviewSession(gameId)
+  }
+
+  async function setEmbeddedPreviewLaunchId(embeddedLaunchId?: string): Promise<void> {
+    await serverCmds.setEmbeddedPreviewLaunchId(embeddedLaunchId)
+  }
+
   return $$({
     getServeUrl,
     ensureServeUrl,
     ensureServeUrls,
+    setActivePreviewSession,
+    setEmbeddedPreviewLaunchId,
   })
 })

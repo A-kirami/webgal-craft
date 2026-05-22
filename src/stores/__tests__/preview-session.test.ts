@@ -8,17 +8,36 @@ import { usePreviewSessionStore } from '~/stores/preview-session'
 
 const {
   ensureServeUrlMock,
+  getGameConfigMock,
   loggerErrorMock,
+  loggerWarnMock,
   resolvePreviewSiteMock,
+  setActivePreviewSessionMock,
 } = vi.hoisted(() => ({
   ensureServeUrlMock: vi.fn(),
+  getGameConfigMock: vi.fn(),
   loggerErrorMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
   resolvePreviewSiteMock: vi.fn(),
+  setActivePreviewSessionMock: vi.fn(),
 }))
+
+vi.mock('~/commands/game', async () => {
+  const actual = await vi.importActual<typeof import('~/commands/game')>('~/commands/game')
+
+  return {
+    ...actual,
+    gameCmds: {
+      ...actual.gameCmds,
+      getGameConfig: getGameConfigMock,
+    },
+  }
+})
 
 vi.mock('~/stores/preview-runtime', () => ({
   usePreviewRuntimeStore: () => ({
     ensureServeUrl: ensureServeUrlMock,
+    setActivePreviewSession: setActivePreviewSessionMock,
   }),
 }))
 
@@ -30,6 +49,7 @@ vi.mock('~/services/game-manager', () => ({
 
 vi.mock('@tauri-apps/plugin-log', () => ({
   error: loggerErrorMock,
+  warn: loggerWarnMock,
 }))
 
 function createDeferred<T>() {
@@ -47,6 +67,12 @@ describe('usePreviewSessionStore', () => {
   beforeEach(() => {
     vi.resetAllMocks()
 
+    getGameConfigMock.mockResolvedValue({
+      entries: [
+        { key: 'Game_key', value: 'demo-game-key' },
+      ],
+      unmanagedLineCount: 0,
+    })
     resolvePreviewSiteMock.mockImplementation(async (game: { path: string, engineId?: string }) => ({
       projectPath: game.path,
       ...(game.engineId ? { enginePath: `/engines/${game.engineId}` } : {}),
@@ -70,6 +96,8 @@ describe('usePreviewSessionStore', () => {
       projectPath: '/games/game-1',
       enginePath: '/engines/engine-1',
     })
+    expect(setActivePreviewSessionMock).toHaveBeenNthCalledWith(1, undefined)
+    expect(setActivePreviewSessionMock).toHaveBeenNthCalledWith(2, 'demo-game-key')
     expect(store.currentGameServeUrl).toBe('http://preview/game-1/')
     expect(store.reloadVersion).toBe(0)
 
@@ -78,6 +106,7 @@ describe('usePreviewSessionStore', () => {
 
     await store.syncCurrentGame(undefined)
 
+    expect(setActivePreviewSessionMock).toHaveBeenLastCalledWith(undefined)
     expect(store.currentGameServeUrl).toBeUndefined()
     expect(store.reloadVersion).toBe(0)
 

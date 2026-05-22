@@ -1,23 +1,20 @@
-import { serverCmds } from '~/commands/server'
 import { AbsPath, normalizePosix, RelPath } from '~/domain/path'
-import { Transform } from '~/domain/stage/types'
-import { usePreviewSettingsStore } from '~/stores/preview-settings'
-import { ComponentVisibilityCommand, DebugCommand, DebugMessage } from '~/types/debugProtocol'
+import { useEditSettingsStore } from '~/stores/edit-settings'
+import { usePreviewSyncStore } from '~/stores/preview-sync'
 
-/**
- * 发送调试命令到游戏
- * @param data - 要发送的命令数据
- * @param event - 可选的事件类型，默认为 'message'
- */
-async function sendCommand<T extends DebugCommand>(
-  data: DebugMessage<T>['data'],
-  event?: DebugMessage<T>['event'],
+import type { Transform } from '~/domain/stage/types'
+import type {
+  PreviewCommandType,
+  RequestPayloadByType,
+  SetComponentVisibilityPayload,
+} from '~/types/editorPreviewProtocol'
+
+async function sendPreviewCommand<TType extends PreviewCommandType>(
+  type: TType,
+  payload: RequestPayloadByType[TType],
 ) {
-  const message: DebugMessage<T> = {
-    event: event ?? 'message',
-    data,
-  }
-  await serverCmds.broadcastMessage(JSON.stringify(message))
+  const previewSyncStore = usePreviewSyncStore()
+  await previewSyncStore.sendPreviewCommand(type, payload)
 }
 
 /**
@@ -62,21 +59,17 @@ function isCurrentLineJump(currentLineValue: string | null): boolean {
  * @param force - 是否强制发送，忽略实时预览设置
  */
 async function syncScene(scenePath: string, lineNumber: number, lineCommandString: string, force?: boolean) {
-  const PreviewSettingsStore = usePreviewSettingsStore()
+  const editSettingsStore = useEditSettingsStore()
 
   const sceneName = await extractSceneName(scenePath)
-  if (!PreviewSettingsStore.enableLivePreview && !force) {
+  if (!editSettingsStore.enableLivePreview && !force) {
     return
   }
 
   if (isCurrentLineJump(lineCommandString)) {
-    await sendCommand({
-      command: DebugCommand.JUMP,
-      sceneMsg: {
-        scene: sceneName,
-        sentence: lineNumber,
-      },
-      message: PreviewSettingsStore.enableFastPreview ? 'exp' : 'sync',
+    await sendPreviewCommand('preview.command.sync-scene', {
+      sceneName,
+      sentenceId: lineNumber,
     })
   }
 }
@@ -86,9 +79,8 @@ async function syncScene(scenePath: string, lineNumber: number, lineCommandStrin
  * @param command - 要执行的场景命令
  */
 async function runTempScene(command: string) {
-  await sendCommand({
-    command: DebugCommand.TEMP_SCENE,
-    message: command,
+  await sendPreviewCommand('preview.command.run-scene-content', {
+    sceneContent: command,
   })
 }
 
@@ -97,9 +89,8 @@ async function runTempScene(command: string) {
  * @param command - 要执行的命令
  */
 async function executeCommand(command: string) {
-  await sendCommand({
-    command: DebugCommand.EXE_COMMAND,
-    message: command,
+  await sendPreviewCommand('preview.command.run-snippet', {
+    snippet: command,
   })
 }
 
@@ -109,21 +100,18 @@ async function executeCommand(command: string) {
  * @param transform - 效果变换参数
  */
 async function setEffect(target: string, transform: Transform) {
-  await sendCommand({
-    command: DebugCommand.SET_EFFECT,
-    message: JSON.stringify({ target, transform }),
+  await sendPreviewCommand('preview.command.set-effect', {
+    target,
+    transform,
   })
 }
 
 /**
  * 设置组件可见性
- * @param message - 组件可见性命令数组
+ * @param payload - 组件可见性映射
  */
-async function setComponentVisibility(message: ComponentVisibilityCommand[]) {
-  await sendCommand({
-    command: DebugCommand.SET_COMPONENT_VISIBILITY,
-    message: JSON.stringify(message),
-  })
+async function setComponentVisibility(payload: SetComponentVisibilityPayload) {
+  await sendPreviewCommand('preview.command.set-component-visibility', payload)
 }
 
 /**
@@ -131,9 +119,18 @@ async function setComponentVisibility(message: ComponentVisibilityCommand[]) {
  * @param enabled - 是否启用字体优化
  */
 async function setFontOptimization(enabled: boolean) {
-  await sendCommand({
-    command: DebugCommand.FONT_OPTIMIZATION,
-    message: enabled.toString(),
+  await sendPreviewCommand('preview.command.set-font-optimization', {
+    enabled,
+  })
+}
+
+/**
+ * 设置文本已读模式
+ * @param isRead - 是否将文本标记为已读
+ */
+async function setTextReadMode(isRead: boolean) {
+  await sendPreviewCommand('preview.command.set-text-read-mode', {
+    isRead,
   })
 }
 
@@ -141,18 +138,16 @@ async function setFontOptimization(enabled: boolean) {
  * 重新获取模板文件
  */
 async function refetchTemplates() {
-  await sendCommand({
-    command: DebugCommand.REFETCH_TEMPLATE_FILES,
-  })
+  await sendPreviewCommand('preview.command.reload-templates', {})
 }
 
 export const debugCommander = {
-  sendCommand,
   setComponentVisibility,
   runTempScene,
   syncScene,
   executeCommand,
   refetchTemplates,
   setFontOptimization,
+  setTextReadMode,
   setEffect,
 }

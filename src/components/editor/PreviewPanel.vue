@@ -4,15 +4,30 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 
 import { findGameConfigEntryValue, gameCmds } from '~/commands/game'
 import {
+  createPreviewBootstrapProvideMessage,
+  isPreviewBootstrapRequestMessage,
+} from '~/features/editor/preview/embedded-preview-bootstrap'
+import {
   DEFAULT_PREVIEW_PANEL_ASPECT_RATIO,
   resolvePreviewPanelStageSize,
 } from '~/features/editor/preview/preview-panel'
+import { resolvePreviewReadySyncTarget } from '~/features/editor/preview/preview-ready-sync-target'
+import { debugCommander } from '~/services/debug-commander'
+import { useEditorStore } from '~/stores/editor'
+import { useModalStore } from '~/stores/modal'
+import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 import { usePreviewSessionStore } from '~/stores/preview-session'
+import { usePreviewSyncStore } from '~/stores/preview-sync'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
 
-const workspaceStore = useWorkspaceStore()
+const editorStore = useEditorStore()
+const modalStore = useModalStore()
+const previewRuntimeStore = usePreviewRuntimeStore()
 const previewSessionStore = usePreviewSessionStore()
+const previewSyncStore = usePreviewSyncStore()
+const workspaceStore = useWorkspaceStore()
+const iframeRef = useTemplateRef<HTMLIFrameElement>('iframeRef')
 
 const previewUrl = $computed(() => previewSessionStore.currentGameServeUrl ?? '')
 const hasPreviewUrl = $computed(() => !!previewSessionStore.currentGameServeUrl)
@@ -22,6 +37,10 @@ const { copy, copied } = useClipboard({ source: $$(previewUrl) })
 const previewTitle = $computed(() => t('edit.previewPanel.previewTitle', { name: workspaceStore.currentGame?.metadata.name }))
 
 let aspectRatio = $ref(DEFAULT_PREVIEW_PANEL_ASPECT_RATIO)
+let embeddedLaunchId = $ref<string>()
+let consumedReadyLaunchId = $ref<string>()
+let embeddedPreviewSlotRevision = 0
+let embeddedPreviewSlotUpdateQueue = Promise.resolve()
 
 async function updateAspectRatio(): Promise<void> {
   const requestedPath = workspaceStore.currentGame?.path
@@ -60,6 +79,37 @@ async function updateAspectRatio(): Promise<void> {
   }
 }
 
+function createEmbeddedPreviewLaunchId(): string {
+  return globalThis.crypto?.randomUUID?.()
+    ?? `embedded-preview-${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function updateEmbeddedPreviewSlot(nextEmbeddedLaunchId?: string): void {
+  const revision = ++embeddedPreviewSlotRevision
+  embeddedLaunchId = nextEmbeddedLaunchId
+  consumedReadyLaunchId = undefined
+  previewSyncStore.resetEmbeddedPreviewState()
+
+  embeddedPreviewSlotUpdateQueue = embeddedPreviewSlotUpdateQueue
+    .catch(() => undefined)
+    .then(async () => {
+      if (revision !== embeddedPreviewSlotRevision) {
+        return
+      }
+
+      try {
+        await previewRuntimeStore.setEmbeddedPreviewLaunchId(nextEmbeddedLaunchId)
+      } catch (error) {
+        logger.error(`更新内嵌预览槽位失败: ${error}`)
+      }
+    })
+}
+
+function refreshEmbeddedPreviewSlot(): void {
+  const nextEmbeddedLaunchId = hasPreviewUrl ? createEmbeddedPreviewLaunchId() : undefined
+  updateEmbeddedPreviewSlot(nextEmbeddedLaunchId)
+}
+
 async function copyUrl(): Promise<void> {
   if (!hasPreviewUrl) {
     return
@@ -75,6 +125,7 @@ let refreshKey = $ref(0)
 
 function refreshIframe(): void {
   refreshKey++
+  refreshEmbeddedPreviewSlot()
   void updateAspectRatio()
 }
 
@@ -90,6 +141,58 @@ async function openPreviewInBrowser(): Promise<void> {
   }
 }
 
+function handleEmbeddedPreviewBootstrap(event: MessageEvent<unknown>): void {
+  if (!embeddedLaunchId || !isPreviewBootstrapRequestMessage(event.data)) {
+    return
+  }
+
+  const iframeWindow = iframeRef.value?.contentWindow
+  if (!iframeWindow || event.source !== iframeWindow) {
+    return
+  }
+
+  iframeWindow.postMessage(
+    createPreviewBootstrapProvideMessage(embeddedLaunchId),
+    '*',
+  )
+}
+
+function resolveCurrentReadySyncTarget() {
+  const currentState = editorStore.currentState
+  const activeDocumentKind = currentState && 'kind' in currentState ? currentState.kind : undefined
+  const activeDocumentPath = currentState && 'path' in currentState ? currentState.path : undefined
+
+  return resolvePreviewReadySyncTarget({
+    activeDocumentKind,
+    activeDocumentPath,
+    selectedLineNumber: editorStore.currentSceneSelection?.lastLineNumber,
+    textContent: editorStore.currentTextProjection?.textContent,
+  })
+}
+
+async function initializeEmbeddedPreview(currentEmbeddedLaunchId: string): Promise<void> {
+  consumedReadyLaunchId = currentEmbeddedLaunchId
+
+  try {
+    const syncTarget = resolveCurrentReadySyncTarget()
+    if (!syncTarget) {
+      return
+    }
+
+    await debugCommander.syncScene(
+      syncTarget.path,
+      syncTarget.lineNumber,
+      syncTarget.lineText,
+      true,
+    )
+  } catch (error) {
+    consumedReadyLaunchId = undefined
+    logger.error(`初始化内嵌预览失败: ${error}`)
+  }
+}
+
+useEventListener(globalThis, 'message', handleEmbeddedPreviewBootstrap)
+
 watch(
   () => workspaceStore.currentGame?.path,
   () => {
@@ -104,6 +207,46 @@ watch(
     refreshIframe()
   },
 )
+
+watch(
+  () => previewUrl,
+  () => {
+    refreshEmbeddedPreviewSlot()
+  },
+  { immediate: true },
+)
+
+watch(
+  [() => previewSyncStore.isPreviewReady, () => embeddedLaunchId],
+  ([isPreviewReady, currentEmbeddedLaunchId]) => {
+    if (!isPreviewReady || !currentEmbeddedLaunchId || consumedReadyLaunchId === currentEmbeddedLaunchId) {
+      return
+    }
+
+    void initializeEmbeddedPreview(currentEmbeddedLaunchId)
+  },
+)
+
+watch(
+  () => previewSyncStore.fastPreviewTimeout,
+  (payload) => {
+    if (!payload) {
+      return
+    }
+
+    modalStore.open(
+      'FastPreviewTimeoutModal',
+      {
+        payload,
+        onClose: previewSyncStore.dismissFastPreviewTimeout,
+      },
+    )
+  },
+)
+
+onBeforeUnmount(() => {
+  updateEmbeddedPreviewSlot(undefined)
+})
 </script>
 
 <template>
@@ -154,6 +297,7 @@ watch(
     <div class="bg-muted size-full relative">
       <div v-if="hasPreviewUrl" class="m-auto max-h-full inset-0 absolute" :style="{ aspectRatio }">
         <iframe
+          ref="iframeRef"
           :key="refreshKey"
           :src="previewUrl"
           :title="previewTitle"

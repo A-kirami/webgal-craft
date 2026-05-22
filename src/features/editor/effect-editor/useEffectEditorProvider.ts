@@ -9,7 +9,6 @@ import { EmitTransformOptions } from '~/features/editor/effect-editor/types'
 import { debugCommander } from '~/services/debug-commander'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import { useModalStore } from '~/stores/modal'
-import { usePreviewSettingsStore } from '~/stores/preview-settings'
 import { createAsyncQueue } from '~/utils/async-queue'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
@@ -154,7 +153,6 @@ function buildPreviewCommandText(session: EffectEditorSession): string {
 }
 
 export function createEffectEditorProvider() {
-  const previewSettings = usePreviewSettingsStore()
   const editSettings = useEditSettingsStore()
 
   let isOpen = $ref(false)
@@ -169,8 +167,8 @@ export function createEffectEditorProvider() {
   }, 40, true, true)
 
   function canSendPreview(): boolean {
-    return previewSettings.enableLivePreview
-      && previewSettings.enableRealtimeEffectPreview
+    return editSettings.enableLivePreview
+      && editSettings.enableRealtimeEffectPreview
   }
 
   function canAutoApply(): boolean {

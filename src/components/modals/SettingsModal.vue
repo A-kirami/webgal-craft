@@ -26,7 +26,6 @@ const TabItem = (props: { value: string, label: string }) => {
         <TabsList class="p-0 bg-transparent flex-col gap-1 min-w-40 justify-start">
           <TabItem value="general" :label="$t('modals.settings.tabs.general')" />
           <TabItem value="edit" :label="$t('modals.settings.tabs.edit')" />
-          <TabItem value="preview" :label="$t('modals.settings.tabs.preview')" />
           <TabItem value="backup" :label="$t('modals.settings.tabs.backup')" />
           <TabItem value="storage" :label="$t('modals.settings.tabs.storage')" />
         </TabsList>
@@ -36,9 +35,6 @@ const TabItem = (props: { value: string, label: string }) => {
           </TabsContent>
           <TabsContent value="edit" class="mt-1 px-4">
             <EditSettings />
-          </TabsContent>
-          <TabsContent value="preview" class="mt-1 px-4">
-            <PreviewSettings />
           </TabsContent>
           <TabsContent value="backup" class="mt-1 px-4">
             <BackupSettings />
