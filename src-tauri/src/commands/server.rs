@@ -184,7 +184,7 @@ async fn handle_ws_socket(socket: WebSocket, state: Arc<AppState>, addr: SocketA
     let (unicast_tx, mut unicast_rx) = mpsc::unbounded_channel();
     state.preview_clients.lock().await.insert(addr, unicast_tx);
 
-    let recv_task = tokio::spawn({
+    let mut recv_task = tokio::spawn({
         let state = state.clone();
         async move {
             while let Some(Ok(message)) = ws_rx.next().await {
@@ -199,7 +199,7 @@ async fn handle_ws_socket(socket: WebSocket, state: Arc<AppState>, addr: SocketA
         }
     });
 
-    let send_task = tokio::spawn(async move {
+    let mut send_task = tokio::spawn(async move {
         while let Some(message) = unicast_rx.recv().await {
             if ws_tx.send(message).await.is_err() {
                 break;
@@ -208,8 +208,14 @@ async fn handle_ws_socket(socket: WebSocket, state: Arc<AppState>, addr: SocketA
     });
 
     tokio::select! {
-        _ = recv_task => (),
-        _ = send_task => (),
+        _ = &mut recv_task => {
+            send_task.abort();
+            let _ = send_task.await;
+        },
+        _ = &mut send_task => {
+            recv_task.abort();
+            let _ = recv_task.await;
+        },
     }
 
     cleanup_disconnected_preview(&state, addr).await;
