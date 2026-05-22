@@ -4,6 +4,10 @@ import { nextTick, reactive, ref } from 'vue'
 
 import { createBrowserLiteI18n } from '~/__tests__/browser'
 import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
+import {
+  WEBGAL_PREVIEW_BOOTSTRAP_PROVIDE,
+  WEBGAL_PREVIEW_BOOTSTRAP_REQUEST,
+} from '~/features/editor/preview/embedded-preview-bootstrap'
 
 const {
   copyMock,
@@ -294,10 +298,10 @@ describe('PreviewPanel', () => {
   })
 
   it('会串行更新宿主端内嵌预览槽位，避免旧槽位异步晚到覆盖新槽位', async () => {
-    const pendingUpdates: Array<{
+    const pendingUpdates: {
       embeddedLaunchId?: string
       update: ReturnType<typeof createDeferred>
-    }> = []
+    }[] = []
     let hostEmbeddedLaunchId: string | undefined
     setEmbeddedPreviewLaunchIdMock.mockImplementation((embeddedLaunchId?: string) => {
       const update = createDeferred()
@@ -337,6 +341,49 @@ describe('PreviewPanel', () => {
     await vi.waitFor(() => {
       expect(hostEmbeddedLaunchId).toBe(latestEmbeddedLaunchId)
     })
+  })
+
+  it('只向预览地址同源的内嵌预览回传启动信息', async () => {
+    renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(setEmbeddedPreviewLaunchIdMock).toHaveBeenCalledWith(expect.any(String))
+    })
+
+    const embeddedLaunchId = setEmbeddedPreviewLaunchIdMock.mock.calls[0]?.[0]
+    const iframeWindow = document.querySelector<HTMLIFrameElement>('iframe')?.contentWindow
+    expect(iframeWindow).not.toBeNull()
+
+    const postMessageSpy = vi.spyOn(iframeWindow as Window, 'postMessage').mockImplementation(() => undefined)
+    const requestMessage = {
+      type: WEBGAL_PREVIEW_BOOTSTRAP_REQUEST,
+    }
+
+    globalThis.dispatchEvent(new MessageEvent('message', {
+      data: requestMessage,
+      origin: 'http://example.invalid',
+      source: iframeWindow,
+    }))
+    expect(postMessageSpy).not.toHaveBeenCalled()
+
+    globalThis.dispatchEvent(new MessageEvent('message', {
+      data: requestMessage,
+      origin: 'http://127.0.0.1:8899',
+      source: iframeWindow,
+    }))
+
+    expect(postMessageSpy).toHaveBeenCalledWith(
+      {
+        type: WEBGAL_PREVIEW_BOOTSTRAP_PROVIDE,
+        embeddedLaunchId,
+      },
+      'http://127.0.0.1:8899',
+    )
   })
 
   it('预览就绪事件触发后会按当前场景行初始化预览', async () => {

@@ -142,18 +142,25 @@ async function openPreviewInBrowser(): Promise<void> {
 }
 
 function handleEmbeddedPreviewBootstrap(event: MessageEvent<unknown>): void {
-  if (!embeddedLaunchId || !isPreviewBootstrapRequestMessage(event.data)) {
+  if (!embeddedLaunchId || !previewUrl || !isPreviewBootstrapRequestMessage(event.data)) {
+    return
+  }
+
+  let previewOrigin: string
+  try {
+    previewOrigin = new URL(previewUrl).origin
+  } catch {
     return
   }
 
   const iframeWindow = iframeRef.value?.contentWindow
-  if (!iframeWindow || event.source !== iframeWindow) {
+  if (!iframeWindow || event.source !== iframeWindow || event.origin !== previewOrigin) {
     return
   }
 
   iframeWindow.postMessage(
     createPreviewBootstrapProvideMessage(embeddedLaunchId),
-    '*',
+    previewOrigin,
   )
 }
 
