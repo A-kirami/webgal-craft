@@ -82,6 +82,7 @@ const defaultSeedEngine: SeedEngine = {
 export async function installMockTauri(page: Page, options: InstallMockTauriOptions = {}) {
   await page.addInitScript(
     async ({ documentDir, seedEngines }) => {
+      const DEFAULT_START_SCENE_CONTENT = '; WebGAL scene\nintro:欢迎来到集成测试。'
       const callbackRegistry = new Map<number, { callback?: (payload: unknown) => void, once: boolean }>()
       const eventListeners = new Map<number, {
         event: string
@@ -167,6 +168,34 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
           mtime: now(),
           birthtime: createdAt,
         })
+      }
+
+      function copyVirtualDirectoryContents(source: string, destination: string) {
+        const normalizedSource = normalizePath(source)
+        const normalizedDestination = normalizePath(destination)
+        const sourcePrefix = normalizedSource.endsWith('/') ? normalizedSource : `${normalizedSource}/`
+
+        ensureDirectory(normalizedDestination)
+
+        for (const [entryPath, entry] of fileSystem.entries()) {
+          if (!entryPath.startsWith(sourcePrefix)) {
+            continue
+          }
+
+          const relativePath = entryPath.slice(sourcePrefix.length)
+          if (!relativePath) {
+            continue
+          }
+
+          const targetPath = joinPaths([normalizedDestination, relativePath])
+          if (entry.isDirectory) {
+            ensureDirectory(targetPath)
+            continue
+          }
+
+          const content = fileContents.get(entryPath)
+          ensureFile(targetPath, content ?? new Uint8Array())
+        }
       }
 
       function listDirectory(path: string) {
@@ -301,22 +330,6 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
         return fallback
       }
 
-      function createGameSkeleton(gamePath: string) {
-        ensureDirectory(gamePath)
-        ensureDirectory(joinPaths([gamePath, 'assets']))
-        ensureDirectory(joinPaths([gamePath, 'game']))
-        ensureDirectory(joinPaths([gamePath, 'game', 'scene']))
-        ensureDirectory(joinPaths([gamePath, 'game', 'background']))
-        ensureDirectory(joinPaths([gamePath, 'icons']))
-        ensureFile(joinPaths([gamePath, 'index.html']))
-        ensureFile(joinPaths([gamePath, 'manifest.json']))
-        ensureFile(joinPaths([gamePath, 'webgal-serviceworker.js']))
-        ensureFile(joinPaths([gamePath, 'icons', 'favicon.ico']))
-        ensureFile(joinPaths([gamePath, 'game', 'background', 'cover.png']))
-        ensureFile(joinPaths([gamePath, 'game', 'scene', 'start.txt']), '; WebGAL scene\nintro:欢迎来到集成测试。')
-        writeGameConfig(gamePath, createDefaultGameConfig(basename(gamePath)))
-      }
-
       function emitWindowEvent(label: string, event: string) {
         for (const [listenerId, listener] of eventListeners.entries()) {
           if (listener.event !== event || listener.targetLabel !== label) {
@@ -348,7 +361,7 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
         ensureFile(joinPaths([engine.path, 'webgal-serviceworker.js']))
         ensureFile(joinPaths([engine.path, 'icons', 'favicon.ico']))
         ensureFile(joinPaths([engine.path, 'game', 'background', 'cover.png']))
-        ensureFile(joinPaths([engine.path, 'game', 'scene', 'start.txt']), '; Engine default scene')
+        ensureFile(joinPaths([engine.path, 'game', 'scene', 'start.txt']), DEFAULT_START_SCENE_CONTENT)
         writeGameConfig(engine.path, createDefaultGameConfig(engine.metadata.name))
       }
 
@@ -367,6 +380,22 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
 
       function isBinaryPath(path: string) {
         return /\.(png|jpe?g|gif|webp|ico|bmp|mp3|wav|ogg|m4a|mp4|webm|mov|ttf|otf|woff2?)$/i.test(path)
+      }
+
+      function isGameContentPath(relPath: string) {
+        return relPath === 'game' || relPath.startsWith('game/')
+      }
+
+      function resolveProjectLogicalPath(projectPath: string, relPath: string) {
+        return relPath ? joinPaths([projectPath, relPath]) : projectPath
+      }
+
+      function resolveEngineLogicalPath(enginePath: string, relPath: string) {
+        if (isGameContentPath(relPath)) {
+          return
+        }
+
+        return relPath ? joinPaths([enginePath, relPath]) : enginePath
       }
 
       function asCommandArgs(value: unknown) {
@@ -624,7 +653,15 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
               return []
             }
             case 'copy_directory_with_progress': {
-              createGameSkeleton(String(invokeArgs.destination ?? ''))
+              copyVirtualDirectoryContents(
+                String(invokeArgs.source ?? ''),
+                String(invokeArgs.destination ?? ''),
+              )
+              return
+            }
+            case 'set_active_preview_session':
+            case 'set_embedded_preview_launch_id':
+            case 'send_preview_command': {
               return
             }
             case 'read_project_config_cmd': {
@@ -651,22 +688,28 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
               const projectPath = normalizePath(String(invokeArgs.projectPath ?? ''))
               const enginePath = normalizePath(String(invokeArgs.enginePath ?? ''))
               const relPath = String(invokeArgs.relPath ?? '')
-              const upperPath = relPath ? joinPaths([projectPath, 'game', relPath]) : joinPaths([projectPath, 'game'])
+              const upperPath = resolveProjectLogicalPath(projectPath, relPath)
               if (fileSystem.has(upperPath)) {
                 return upperPath
               }
-              return relPath ? joinPaths([enginePath, 'game', relPath]) : joinPaths([enginePath, 'game'])
+              const lowerPath = resolveEngineLogicalPath(enginePath, relPath)
+              if (lowerPath) {
+                return lowerPath
+              }
+              return upperPath
             }
             case 'list_vfs_dir': {
               const projectPath = normalizePath(String(invokeArgs.projectPath ?? ''))
               const enginePath = normalizePath(String(invokeArgs.enginePath ?? ''))
               const relPath = String(invokeArgs.relPath ?? '')
-              const upperDir = relPath ? joinPaths([projectPath, 'game', relPath]) : joinPaths([projectPath, 'game'])
-              const lowerDir = relPath ? joinPaths([enginePath, 'game', relPath]) : joinPaths([enginePath, 'game'])
+              const upperDir = resolveProjectLogicalPath(projectPath, relPath)
+              const lowerDir = resolveEngineLogicalPath(enginePath, relPath)
 
               const merged = new Map<string, { name: string, isDir: boolean, source: string }>()
-              for (const entry of listDirectory(lowerDir)) {
-                merged.set(entry.name, { name: entry.name, isDir: entry.isDirectory, source: 'engineLower' })
+              if (lowerDir) {
+                for (const entry of listDirectory(lowerDir)) {
+                  merged.set(entry.name, { name: entry.name, isDir: entry.isDirectory, source: 'engineLower' })
+                }
               }
               for (const entry of listDirectory(upperDir)) {
                 merged.set(entry.name, { name: entry.name, isDir: entry.isDirectory, source: 'upper' })
@@ -677,10 +720,10 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
               const projectPath = normalizePath(String(invokeArgs.projectPath ?? ''))
               const enginePath = normalizePath(String(invokeArgs.enginePath ?? ''))
               const relPath = String(invokeArgs.relPath ?? '')
-              const upperPath = joinPaths([projectPath, 'game', relPath])
+              const upperPath = resolveProjectLogicalPath(projectPath, relPath)
               if (!fileSystem.has(upperPath)) {
-                const lowerPath = joinPaths([enginePath, 'game', relPath])
-                const lowerContent = fileContents.get(lowerPath)
+                const lowerPath = resolveEngineLogicalPath(enginePath, relPath)
+                const lowerContent = lowerPath ? fileContents.get(lowerPath) : undefined
                 ensureFile(upperPath, lowerContent ?? new Uint8Array())
               }
               return upperPath
