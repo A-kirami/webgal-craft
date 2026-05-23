@@ -13,6 +13,7 @@ const props = defineProps<{
 const { locale, t } = useI18n()
 
 let closeHandled = $ref(false)
+let closeRequestId = 0
 
 const suggestions = $computed(() => [
   {
@@ -75,17 +76,21 @@ async function handleClose(): Promise<void> {
 
 watch(() => open, async (nextOpen, previousOpen) => {
   if (nextOpen) {
+    closeRequestId++
     closeHandled = false
     return
   }
 
   if (previousOpen && !closeHandled) {
+    const currentCloseRequestId = ++closeRequestId
     try {
       await props.onClose?.()
     } catch {
       // 关闭回调失败不应阻断外部关闭流程。
     } finally {
-      closeHandled = true
+      if (currentCloseRequestId === closeRequestId) {
+        closeHandled = true
+      }
     }
   }
 })

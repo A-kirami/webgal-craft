@@ -7,6 +7,18 @@ import { renderInBrowser } from '~/__tests__/browser-render'
 
 import FastPreviewTimeoutModal from './FastPreviewTimeoutModal.vue'
 
+function createDeferredClose() {
+  let resolve!: () => void
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+
+  return {
+    promise,
+    resolve,
+  }
+}
+
 function createFastPreviewTimeoutModalI18n() {
   return createBrowserLiteI18n({
     messages: {
@@ -188,5 +200,58 @@ describe('FastPreviewTimeoutModal', () => {
 
     expect(onClose).toHaveBeenCalledTimes(1)
     expect(state.open).toBe(false)
+  })
+
+  it('重新打开后旧关闭回调完成不会跳过下一次外部关闭回调', async () => {
+    const closeRequests: ReturnType<typeof createDeferredClose>[] = []
+    const onClose = vi.fn(() => {
+      const deferredClose = createDeferredClose()
+      closeRequests.push(deferredClose)
+
+      return deferredClose.promise
+    })
+    const state = reactive({
+      open: true,
+    })
+
+    renderInBrowser({
+      setup() {
+        return () => h(FastPreviewTimeoutModal, {
+          'open': state.open,
+          'payload': {
+            sceneName: 'scene/start.txt',
+            sentenceId: 8,
+            targetSentenceId: 12,
+            forwardedLineCount: 24,
+            elapsedMs: 151,
+            maxDurationMs: 150,
+          },
+          onClose,
+          'onUpdate:open': (open?: boolean) => {
+            state.open = open ?? false
+          },
+        })
+      },
+    }, {
+      global: {
+        plugins: [createFastPreviewTimeoutModalI18n()],
+      },
+    })
+
+    state.open = false
+    await nextTick()
+    expect(onClose).toHaveBeenCalledTimes(1)
+
+    state.open = true
+    await nextTick()
+
+    closeRequests[0].resolve()
+    await closeRequests[0].promise
+    await nextTick()
+
+    state.open = false
+    await nextTick()
+
+    expect(onClose).toHaveBeenCalledTimes(2)
   })
 })
