@@ -1,3 +1,5 @@
+mod preview_sync;
+
 use std::{
     collections::HashMap,
     hash::{Hash, Hasher},
@@ -14,7 +16,10 @@ use axum::{
         ConnectInfo, Path as AxumPath, State as AxumState,
     },
     http::{
-        header::{ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, ORIGIN, RANGE, VARY},
+        header::{
+            ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, ORIGIN, RANGE,
+            SEC_WEBSOCKET_PROTOCOL, VARY,
+        },
         HeaderMap, HeaderValue, Request, StatusCode, Uri,
     },
     response::{IntoResponse, Redirect, Response},
@@ -24,10 +29,16 @@ use axum::{
 use futures::{SinkExt, StreamExt};
 use image::{codecs::jpeg::JpegEncoder, imageops::FilterType, ImageFormat};
 use portpicker::pick_unused_port;
+use preview_sync::{
+    build_empty_response, is_event_message, is_preview_command_request,
+    parse_register_preview_request, requests_v1_subprotocol, PreviewSessionRegistry,
+    RegisterPreviewRequestPayload, EDITOR_PREVIEW_PROTOCOL_V1_SUBPROTOCOL,
+    SESSION_REGISTER_PREVIEW_TYPE,
+};
 use tauri::{ipc::Channel, State as TauriState};
 use tokio::{
     net::TcpListener,
-    sync::{broadcast, mpsc, oneshot, Mutex, RwLock},
+    sync::{mpsc, oneshot, Mutex, RwLock},
     task::JoinHandle,
 };
 use tower::util::ServiceExt;
@@ -48,8 +59,9 @@ const STATIC_FILE_ALLOWED_CORS_ORIGINS: [&str; 4] = [
 
 struct AppState {
     sites: RwLock<HashMap<String, CachedCanonicals>>,
-    broadcast_tx: broadcast::Sender<Message>,
-    unicast_clients: Mutex<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>,
+    preview_clients: Mutex<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>,
+    preview_registry: Mutex<PreviewSessionRegistry>,
+    editor_event_channel: RwLock<Option<Channel<String>>>,
 }
 
 pub struct ServerState {
@@ -67,46 +79,118 @@ const JPEG_THUMBNAIL_QUALITY: u8 = 85;
 
 impl ServerState {
     pub fn new() -> Self {
-        let (broadcast_tx, _) = broadcast::channel(100);
-
         Self {
             app_state: Arc::new(AppState {
                 sites: RwLock::new(HashMap::new()),
-                broadcast_tx,
-                unicast_clients: Mutex::new(HashMap::new()),
+                preview_clients: Mutex::new(HashMap::new()),
+                preview_registry: Mutex::new(PreviewSessionRegistry::default()),
+                editor_event_channel: RwLock::new(None),
             }),
             server_handle: None,
         }
     }
 }
 
-async fn handle_ws(
-    ws: WebSocketUpgrade,
-    AxumState(state): AxumState<Arc<AppState>>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    on_message: Channel<String>,
-) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_ws_socket(socket, state, addr, on_message))
+async fn send_message_to_preview(
+    state: &Arc<AppState>,
+    addr: SocketAddr,
+    message: Message,
+) -> AppResult<()> {
+    let clients = state.preview_clients.lock().await;
+    let Some(tx) = clients.get(&addr) else {
+        return Err(AppError::Server("预览客户端不存在".into()));
+    };
+
+    tx.send(message)
+        .map_err(|_| AppError::Server("发送预览消息失败".into()))
 }
 
-async fn handle_ws_socket(
-    socket: WebSocket,
-    state: Arc<AppState>,
+async fn forward_event_to_editor(state: &Arc<AppState>, message: String) {
+    let editor_event_channel = state.editor_event_channel.read().await.clone();
+    if let Some(editor_event_channel) = editor_event_channel {
+        let _ = editor_event_channel.send(message);
+    }
+}
+
+async fn handle_register_preview_request(
+    state: &Arc<AppState>,
     addr: SocketAddr,
-    on_message: Channel<String>,
+    request_id: String,
+    payload: RegisterPreviewRequestPayload,
 ) {
+    let accepted = {
+        let mut preview_registry = state.preview_registry.lock().await;
+        preview_registry.register(addr, payload)
+    };
+
+    if !accepted {
+        let _ = send_message_to_preview(state, addr, Message::Close(None)).await;
+        return;
+    }
+
+    let Ok(response) = build_empty_response(SESSION_REGISTER_PREVIEW_TYPE, &request_id) else {
+        let _ = send_message_to_preview(state, addr, Message::Close(None)).await;
+        return;
+    };
+
+    let _ = send_message_to_preview(state, addr, Message::Text(response.into())).await;
+}
+
+async fn handle_preview_socket_message(state: &Arc<AppState>, addr: SocketAddr, text: String) {
+    if let Some((request_id, payload)) = parse_register_preview_request(&text) {
+        handle_register_preview_request(state, addr, request_id, payload).await;
+        return;
+    }
+
+    if !is_event_message(&text) {
+        return;
+    }
+
+    let should_forward = {
+        let preview_registry = state.preview_registry.lock().await;
+        preview_registry.preferred_event_source() == Some(addr)
+    };
+
+    if should_forward {
+        forward_event_to_editor(state, text).await;
+    }
+}
+
+async fn cleanup_disconnected_preview(state: &Arc<AppState>, addr: SocketAddr) {
+    state.preview_clients.lock().await.remove(&addr);
+    state.preview_registry.lock().await.unregister(addr);
+}
+
+async fn handle_ws(
+    ws: WebSocketUpgrade,
+    headers: HeaderMap,
+    AxumState(state): AxumState<Arc<AppState>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> impl IntoResponse {
+    let requested_subprotocol = headers
+        .get(SEC_WEBSOCKET_PROTOCOL)
+        .and_then(|value| value.to_str().ok());
+    if !requests_v1_subprotocol(requested_subprotocol) {
+        return StatusCode::BAD_REQUEST.into_response();
+    }
+
+    ws.protocols([EDITOR_PREVIEW_PROTOCOL_V1_SUBPROTOCOL])
+        .on_upgrade(move |socket| handle_ws_socket(socket, state, addr))
+        .into_response()
+}
+
+async fn handle_ws_socket(socket: WebSocket, state: Arc<AppState>, addr: SocketAddr) {
     let (mut ws_tx, mut ws_rx) = socket.split();
     let (unicast_tx, mut unicast_rx) = mpsc::unbounded_channel();
-    state.unicast_clients.lock().await.insert(addr, unicast_tx);
-    let mut broadcast_rx = state.broadcast_tx.subscribe();
+    state.preview_clients.lock().await.insert(addr, unicast_tx);
 
-    let recv_task = tokio::spawn({
-        let on_message = on_message.clone();
+    let mut recv_task = tokio::spawn({
+        let state = state.clone();
         async move {
             while let Some(Ok(message)) = ws_rx.next().await {
                 match message {
                     Message::Text(text) => {
-                        let _ = on_message.send(text.to_string());
+                        handle_preview_socket_message(&state, addr, text.to_string()).await;
                     }
                     Message::Close(_) => break,
                     _ => continue,
@@ -115,30 +199,26 @@ async fn handle_ws_socket(
         }
     });
 
-    let send_task = tokio::spawn(async move {
-        loop {
-            tokio::select! {
-                Ok(message) = broadcast_rx.recv() => {
-                    if ws_tx.send(message).await.is_err() {
-                        break;
-                    }
-                }
-                Some(message) = unicast_rx.recv() => {
-                    if ws_tx.send(message).await.is_err() {
-                        break;
-                    }
-                }
-                else => break,
+    let mut send_task = tokio::spawn(async move {
+        while let Some(message) = unicast_rx.recv().await {
+            if ws_tx.send(message).await.is_err() {
+                break;
             }
         }
     });
 
     tokio::select! {
-        _ = recv_task => (),
-        _ = send_task => (),
+        _ = &mut recv_task => {
+            send_task.abort();
+            let _ = send_task.await;
+        },
+        _ = &mut send_task => {
+            recv_task.abort();
+            let _ = recv_task.await;
+        },
     }
 
-    state.unicast_clients.lock().await.remove(&addr);
+    cleanup_disconnected_preview(&state, addr).await;
 }
 
 fn resolve_cors_origin(headers: &HeaderMap) -> Option<&'static str> {
@@ -439,12 +519,10 @@ pub async fn start_server(
 
     let addr = listener.local_addr()?;
     log::info!("HTTP 服务器监听: {addr}");
+    *state_guard.app_state.editor_event_channel.write().await = Some(on_message);
 
     let app = Router::new()
-        .route(
-            "/api/webgalsync",
-            get(move |ws, state, addr| handle_ws(ws, state, addr, on_message)),
-        )
+        .route("/api/webgalsync", get(handle_ws))
         .route("/game/{hash}", get(handle_redirect))
         .route(
             "/game/{hash}/",
@@ -620,46 +698,69 @@ pub async fn update_site_template(
 }
 
 #[tauri::command]
-pub async fn broadcast_message(
+pub async fn set_active_preview_session(
     state: TauriState<'_, Mutex<ServerState>>,
-    message: String,
+    game_id: Option<String>,
 ) -> AppResult<()> {
-    let state_guard = state.lock().await;
-    state_guard
-        .app_state
-        .broadcast_tx
-        .send(Message::Text(message.into()))
-        .map_err(|_| AppError::Server("Broadcast failed".into()))?;
+    let app_state = {
+        let state_guard = state.lock().await;
+        state_guard.app_state.clone()
+    };
+
+    app_state
+        .preview_registry
+        .lock()
+        .await
+        .set_active_game_id(game_id);
     Ok(())
 }
 
 #[tauri::command]
-pub async fn unicast_message(
+pub async fn set_embedded_preview_launch_id(
     state: TauriState<'_, Mutex<ServerState>>,
-    client_addr: String,
-    message: String,
+    embedded_launch_id: Option<String>,
 ) -> AppResult<()> {
-    let state_guard = state.lock().await;
-    let clients = state_guard.app_state.unicast_clients.lock().await;
-    let addr: SocketAddr = client_addr
-        .parse()
-        .map_err(|_| AppError::Server("Invalid client address".into()))?;
+    let app_state = {
+        let state_guard = state.lock().await;
+        state_guard.app_state.clone()
+    };
 
-    let tx = clients
-        .get(&addr)
-        .ok_or_else(|| AppError::Server("Client not found".into()))?;
-
-    tx.send(Message::Text(message.into()))
-        .map_err(|_| AppError::Server("Failed to send unicast message".into()))
+    app_state
+        .preview_registry
+        .lock()
+        .await
+        .set_embedded_launch_id(embedded_launch_id);
+    Ok(())
 }
 
 #[tauri::command]
-pub async fn get_connected_clients(
+pub async fn send_preview_command(
     state: TauriState<'_, Mutex<ServerState>>,
-) -> AppResult<Vec<String>> {
-    let state_guard = state.lock().await;
-    let clients = state_guard.app_state.unicast_clients.lock().await;
-    Ok(clients.keys().map(|addr| addr.to_string()).collect())
+    request: String,
+) -> AppResult<()> {
+    if !is_preview_command_request(&request) {
+        return Err(AppError::Server("无效的预览命令请求".into()));
+    }
+
+    let app_state = {
+        let state_guard = state.lock().await;
+        state_guard.app_state.clone()
+    };
+    let target_addrs = {
+        let preview_registry = app_state.preview_registry.lock().await;
+        preview_registry.session_members()
+    };
+
+    for target_addr in target_addrs {
+        let _ = send_message_to_preview(
+            &app_state,
+            target_addr,
+            Message::Text(request.clone().into()),
+        )
+        .await;
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

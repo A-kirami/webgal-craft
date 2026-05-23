@@ -431,7 +431,6 @@ modals:
     tabs:
       general: General
       edit: Edit
-      preview: Preview
       backup: Backup
       storage: Storage
   saveChanges:
@@ -460,6 +459,21 @@ modals:
     keepLocal: Keep local
     loadExternal: Load external
     merge: Merge
+  fastPreviewTimeout:
+    title: Live preview stopped
+    summary: Preview exceeded the time limit while trying to jump to the target line, so this sync was stopped.
+    suggestionsTitle: Suggested checks
+    suggestionLoop: Check whether a jump or conditional branch before the target line repeatedly jumps back.
+    suggestionDistance: Check whether too many statements need to be fast-forwarded before the target line.
+    suggestionBlocking: Check whether any statement blocks preview progress at runtime.
+    nextStep: After adjusting the script, select the target line again or refresh the preview.
+    scene: Current scene
+    targetSentence: Target line
+    sentence: Stopped at
+    forwardedLineCount: Fast-forwarded lines
+    elapsedTime: Elapsed time
+    maxDuration: Timeout limit
+    diagnosticsTitle: Diagnostic information
   backupTimeline:
     title: Scene Version History
     description: Select a version on the left to view the diff, then restore the scene to that point in time.
@@ -1007,18 +1021,9 @@ settings:
     autoInstallUpdates:
       label: Auto Install Updates
       description: Automatically download and install the latest version of the application
-  preview:
-    enableLivePreview:
-      label: Live Preview
-      description: Preview changes in real-time while editing the game
-    enableFastPreview:
-      label: Fast Statement Preview
-      description: Enabling fast preview will significantly improve real-time preview efficiency
-    enableRealtimeEffectPreview:
-      label: Realtime Effect Preview
-      description: Render effect updates in real-time while adjusting parameters in the effect editor
   edit:
     general: General
+    preview: Preview
     textEditor: Text Editor
     visualEditor: Visual Editor
     fontFamily:
@@ -1038,6 +1043,12 @@ settings:
     enablePreviewTab:
       label: Enable Preview Tabs
       description: Open files in preview mode on single click, pin to regular tab on double click or edit
+    enableLivePreview:
+      label: Live Preview
+      description: Preview changes in real-time while editing the game
+    enableRealtimeEffectPreview:
+      label: Realtime Effect Preview
+      description: Render effect updates in real-time while adjusting parameters in the effect editor
     autoApplyEffectEditorChanges:
       label: Auto Apply Effect Editor Changes
       description: Automatically write effect editor parameter changes back to the statement

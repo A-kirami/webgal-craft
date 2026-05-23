@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 
+import { findGameConfigEntryValue, gameCmds } from '~/commands/game'
 import { gameManager } from '~/services/game-manager'
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 
@@ -7,6 +8,19 @@ import type { Game } from '~/database/model'
 import type { AbsPath } from '~/domain/path'
 
 type PreviewGameTarget = Pick<Game, 'engineId' | 'path'>
+
+const PREVIEW_GAME_KEY_RAW_KEY = 'Game_key'
+
+async function resolvePreviewGameId(gamePath: AbsPath): Promise<string | undefined> {
+  try {
+    const gameConfig = await gameCmds.getGameConfig(gamePath)
+    const gameKey = findGameConfigEntryValue(gameConfig.entries, PREVIEW_GAME_KEY_RAW_KEY)?.trim()
+    return gameKey || undefined
+  } catch (error) {
+    logger.warn(`读取预览会话 Game_key 失败: ${error}`)
+    return
+  }
+}
 
 export const usePreviewSessionStore = defineStore('previewSession', () => {
   let currentGamePath = $ref<AbsPath>()
@@ -26,6 +40,7 @@ export const usePreviewSessionStore = defineStore('previewSession', () => {
     const currentToken = ++syncToken
     if (!game) {
       resetState()
+      await previewRuntimeStore.setActivePreviewSession(undefined)
       return
     }
 
@@ -34,7 +49,11 @@ export const usePreviewSessionStore = defineStore('previewSession', () => {
     reloadVersion = 0
 
     try {
-      const previewSite = await gameManager.resolvePreviewSite(game)
+      await previewRuntimeStore.setActivePreviewSession(undefined)
+      const [previewSite, previewGameId] = await Promise.all([
+        gameManager.resolvePreviewSite(game),
+        resolvePreviewGameId(game.path),
+      ])
       const previewUrl = await previewRuntimeStore.ensureServeUrl(previewSite)
       if (currentToken !== syncToken) {
         return
@@ -42,6 +61,11 @@ export const usePreviewSessionStore = defineStore('previewSession', () => {
 
       if (!previewUrl) {
         logger.error('获取预览链接失败: 预览链接不存在')
+        return
+      }
+
+      await previewRuntimeStore.setActivePreviewSession(previewGameId)
+      if (currentToken !== syncToken) {
         return
       }
 

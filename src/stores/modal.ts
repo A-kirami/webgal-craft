@@ -16,6 +16,7 @@ import DiscardEffectChangesModal from '~/components/modals/DiscardEffectChangesM
 import DiscoveredResourcesModal from '~/components/modals/DiscoveredResourcesModal.vue'
 import EngineSelectionModal from '~/components/modals/EngineSelectionModal.vue'
 import ExternalDocumentChangeModal from '~/components/modals/ExternalDocumentChangeModal.vue'
+import FastPreviewTimeoutModal from '~/components/modals/FastPreviewTimeoutModal.vue'
 import GameConfigModal from '~/components/modals/GameConfigModal.vue'
 import PathOperationRewriteModal from '~/components/modals/PathOperationRewriteModal.vue'
 import RecoverGameModal from '~/components/modals/RecoverGameModal.vue'
@@ -44,6 +45,7 @@ const ModalDialog = {
   DiscoveredResourcesModal,
   EngineSelectionModal,
   ExternalDocumentChangeModal,
+  FastPreviewTimeoutModal,
   GameConfigModal,
   PathOperationRewriteModal,
   RecoverGameModal,
