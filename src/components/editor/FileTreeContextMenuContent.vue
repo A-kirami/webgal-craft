@@ -10,7 +10,7 @@ import {
   Scissors,
   Trash2,
 } from '@lucide/vue'
-import { openPath } from '@tauri-apps/plugin-opener'
+import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener'
 
 import { usePathOperationFeedback } from '~/composables/usePathOperationFeedback'
 import { AbsPath, RelPath } from '~/domain/path'
@@ -175,8 +175,12 @@ function handleViewHistory(): void {
 
 async function handleRevealInExplorer(): Promise<void> {
   try {
-    const pathToOpen = item.isDir ? item.path : AbsPath.parent(AbsPath.from(item.path))
-    await openPath(pathToOpen)
+    if (isRoot) {
+      await openPath(item.path)
+      return
+    }
+
+    await revealItemInDir(item.path)
   } catch (error) {
     logger.error(`打开文件管理器失败: ${error}`)
   }
