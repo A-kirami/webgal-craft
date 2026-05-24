@@ -148,6 +148,19 @@ function hasRemovedTransformPaths(
   return false
 }
 
+function areTransformFieldsEqual(
+  left: Record<string, string>,
+  right: Record<string, string>,
+): boolean {
+  const leftKeys = Object.keys(left)
+  const rightKeys = Object.keys(right)
+  if (leftKeys.length !== rightKeys.length) {
+    return false
+  }
+
+  return leftKeys.every(key => left[key] === right[key])
+}
+
 function buildPreviewCommandText(session: EffectEditorSession): string {
   return serializeSentence(applyEffectEditorResultToSentence(session.baseSentence, session.draft))
 }
@@ -233,6 +246,10 @@ export function createEffectEditorProvider() {
     try {
       const nextPreviewFields = transformToFields(session.draft.transform)
       const hasDeletion = hasRemovedTransformPaths(session.previewedTransformFields, nextPreviewFields)
+
+      if (!hasDeletion && areTransformFieldsEqual(session.previewedTransformFields, nextPreviewFields)) {
+        return
+      }
 
       if (hasDeletion) {
         await debugCommander.syncScene(

@@ -192,7 +192,7 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
               :step="item.param.step"
               :model-value="controls.getSliderTrackValue(item.param)"
               @update:model-value="$event && controls.updateSliderField(item.param, $event[0] ?? 0, { fromSlider: true })"
-              @pointerup="controls.flushSliderField(item.param)"
+              @value-commit="$event && controls.updateSliderField(item.param, $event[0] ?? 0, { fromSlider: true, flush: true })"
             />
             <Input
               :id="controls.sliderInputId(item.param.key)"
@@ -250,7 +250,7 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
                 :step="item.param.step"
                 :model-value="[clamp(controls.getNumberValue(item.param.key, item.param.defaultValue ?? 0), item.param.min, item.param.max)]"
                 @update:model-value="$event && controls.updateLinkedSliderField(item.param, 0, $event[0] ?? 0, { fromSlider: true })"
-                @pointerup="controls.flushLinkedSliderField(item.param, 0)"
+                @value-commit="$event && controls.updateLinkedSliderField(item.param, 0, $event[0] ?? 0, { fromSlider: true, flush: true })"
               />
               <Input
                 type="number"
@@ -273,7 +273,7 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
                 :step="item.param.step"
                 :model-value="[clamp(controls.getNumberValue(item.param.linkedPairKey, item.param.defaultValue ?? 0), item.param.min, item.param.max)]"
                 @update:model-value="$event && controls.updateLinkedSliderField(item.param, 1, $event[0] ?? 0, { fromSlider: true })"
-                @pointerup="controls.flushLinkedSliderField(item.param, 1)"
+                @value-commit="$event && controls.updateLinkedSliderField(item.param, 1, $event[0] ?? 0, { fromSlider: true, flush: true })"
               />
               <Input
                 type="number"
