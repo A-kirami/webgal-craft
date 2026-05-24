@@ -297,6 +297,37 @@ describe('useEffectEditorProvider', () => {
     })
   })
 
+  it('实时预览跳过已经发送过的相同 transform', async () => {
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+
+    const provider = createEffectEditorProvider()
+
+    await provider.open({
+      entryId: 1,
+      scenePath: 'scene/001.txt',
+      baseSentence: createBaseSentence('{"blur":8}'),
+      baseLineNumber: 1,
+      baseLineText: 'changeFigure: figure.png -transform={"blur":8};',
+      previewContextLineNumber: 0,
+      previewContextLineText: '',
+      effectTarget: 'fig-center',
+      onApply() { /* no-op */ },
+    })
+
+    provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
+    provider.requestPreview({ schedule: 'immediate' })
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
+    })
+
+    provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: false })
+    provider.requestPreview({ schedule: 'continuous', flush: true })
+
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
+    })
+  })
+
   it('重置草稿时会回滚场景预览到初始基线', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
 
