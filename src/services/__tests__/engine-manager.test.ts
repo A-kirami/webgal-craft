@@ -249,8 +249,9 @@ describe('engineManager', () => {
       '/engines/WebGAL/4.5.0',
       expect.any(Function),
     )
-    expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(1, 'engine-1', 25)
-    expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(2, 'engine-1', 100)
+    expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(1, 'engine-1', 0)
+    expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(2, 'engine-1', 25)
+    expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(3, 'engine-1', 100)
     expect(resourceStoreMock.finishProgress).toHaveBeenCalledWith('engine-1')
     expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', expect.objectContaining({
       status: 'created',

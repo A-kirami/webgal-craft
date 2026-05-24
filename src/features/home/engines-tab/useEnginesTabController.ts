@@ -12,7 +12,7 @@ import type { I18nT } from '~/utils/i18n-like'
 
 interface UseEnginesTabControllerOptions {
   activeProgress: ReadonlyMap<string, number>
-  openDeleteEngineGroupModal: (engineId: string) => void
+  openDeleteEngineGroupModal: (engineId: string, options: { allUnavailable: boolean }) => void
   openDeleteEngineModal: (engine: Engine) => void
   setDefaultEngineId: (engineId: string | undefined) => void
   t: I18nT
@@ -57,18 +57,22 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
   async function handleDeleteGroup(engineId: string) {
     // 全版本删除前对组内每个版本即时校验，让弹窗的 allUnavailable 判断基于最新结果
     const engines = await db.engines.where('engineId').equals(engineId).toArray()
-    await Promise.all(engines.map(engine => resourceReconcile.reconcileEngineRecord(engine)))
-    options.openDeleteEngineGroupModal(engineId)
+    const latestAvailability = await Promise.all(engines.map(engine => resourceReconcile.reconcileEngineRecord(engine)))
+    const allUnavailable = latestAvailability.length > 0
+      && latestAvailability.every(availability => availability !== 'available')
+
+    options.openDeleteEngineGroupModal(engineId, { allUnavailable })
   }
 
   return {
-    getEngineProgress: importActions.getProgress,
+    getEngineProgress: (engine: Engine) => importActions.hasProgress(engine)
+      ? importActions.getProgress(engine)
+      : undefined,
     handleDelete,
     handleDeleteGroup,
     handleDrop: importActions.handleDrop,
     handleOpenGroupFolder,
     handleSetDefaultEngine: options.setDefaultEngineId,
-    hasEngineProgress: importActions.hasProgress,
     selectEngineFolder: importActions.selectFolder,
   }
 }

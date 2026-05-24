@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
+import { defineComponent, h } from 'vue'
 
 import {
   createBrowserClickStub,
@@ -12,6 +13,25 @@ import { AbsPath } from '~/domain/path'
 import EngineGroupCard from './EngineGroupCard.vue'
 
 import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
+
+function createProgressStub() {
+  return defineComponent({
+    name: 'StubProgress',
+    props: {
+      modelValue: {
+        type: Number,
+        default: 0,
+      },
+    },
+    setup(props, { attrs }) {
+      return () => h('progress', {
+        ...attrs,
+        max: 100,
+        value: props.modelValue,
+      })
+    },
+  })
+}
 
 const globalStubs = {
   AssetImage: createBrowserContainerStub('StubAssetImage', 'img'),
@@ -28,6 +48,7 @@ const globalStubs = {
   Popover: createBrowserContainerStub('StubPopover'),
   PopoverContent: createBrowserContainerStub('StubPopoverContent'),
   PopoverTrigger: createBrowserContainerStub('StubPopoverTrigger', 'button'),
+  Progress: createProgressStub(),
 }
 
 function createGroup(): EngineGroupCollectionItem {
@@ -61,6 +82,8 @@ function createGroup(): EngineGroupCollectionItem {
       },
     ],
     hasAvailableVersion: true,
+    isImporting: false,
+    isUnavailable: false,
     isDefault: true,
     latestVersionLabel: '4.5.0',
     name: 'WebGAL',
@@ -71,6 +94,37 @@ function createGroup(): EngineGroupCollectionItem {
     summary: 'Stable release',
     unavailableCount: 1,
     versionCount: 2,
+  }
+}
+
+function createImportingGroup(): EngineGroupCollectionItem {
+  const importingEngine = createTestEngine({
+    id: 'importing',
+    name: 'WebGAL',
+    path: AbsPath.from('/engines/WebGAL/4.7.0'),
+    status: 'creating',
+    version: '4.7.0',
+  })
+
+  return {
+    ...createGroup(),
+    engines: [
+      {
+        engine: importingEngine,
+        serveUrl: 'serve://importing',
+      },
+    ],
+    hasAvailableVersion: false,
+    isImporting: true,
+    isUnavailable: false,
+    isDefault: false,
+    latestVersionLabel: undefined,
+    representativeItem: {
+      engine: importingEngine,
+      serveUrl: 'serve://importing',
+    },
+    unavailableCount: 0,
+    versionCount: 1,
   }
 }
 
@@ -139,6 +193,8 @@ describe('EngineGroupCard', () => {
         group: {
           ...createGroup(),
           hasAvailableVersion: false,
+          isImporting: false,
+          isUnavailable: true,
           latestVersionLabel: undefined,
         },
         viewMode: 'list',
@@ -152,5 +208,48 @@ describe('EngineGroupCard', () => {
     })
 
     await expect.element(page.getByRole('button', { name: 'engine.unsetDefaultEngine' }).first()).not.toBeDisabled()
+  })
+
+  it('导入中的引擎组不会显示失效徽标', async () => {
+    renderInBrowser(EngineGroupCard, {
+      props: {
+        group: createImportingGroup(),
+        progress: 42,
+        viewMode: 'grid',
+      },
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('home.unavailableBadge')).not.toBeInTheDocument()
+    await expect.element(page.getByText('home.engines.importing')).toBeVisible()
+    await expect.element(page.getByText('engine.noAvailableVersionSummary')).not.toBeInTheDocument()
+    await expect.element(page.getByRole('button', { name: 'engine.uninstallAllVersions' })).not.toBeInTheDocument()
+    await expect.element(page.getByRole('button', { name: 'engine.deleteVersion' })).not.toBeInTheDocument()
+    const progress = await page.getByRole('progressbar').element() as HTMLProgressElement
+    expect(progress.value).toBe(42)
+  })
+
+  it('导入进度尚未开始时也会显示导入中状态', async () => {
+    renderInBrowser(EngineGroupCard, {
+      props: {
+        group: createImportingGroup(),
+        viewMode: 'list',
+      },
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('home.engines.importing')).toBeVisible()
+    await expect.element(page.getByText('engine.noAvailableVersionSummary')).not.toBeInTheDocument()
+    await expect.element(page.getByRole('progressbar')).not.toBeInTheDocument()
   })
 })

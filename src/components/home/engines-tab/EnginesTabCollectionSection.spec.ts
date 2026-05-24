@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
+import { defineComponent, h } from 'vue'
 
 import {
-  createBrowserActionStub,
   createBrowserClickStub,
   renderInBrowser,
 } from '~/__tests__/browser-render'
@@ -11,6 +11,7 @@ import { AbsPath } from '~/domain/path'
 
 import EnginesTabCollectionSection from './EnginesTabCollectionSection.vue'
 
+import type { Engine } from '~/database/model'
 import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
 
 vi.mock('~/composables/useTauriDropZone', () => ({
@@ -22,24 +23,32 @@ vi.mock('~/composables/useTauriDropZone', () => ({
 
 const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
-  EngineGroupCard: createBrowserActionStub('StubEngineGroupCard', {
-    eventName: 'deleteGroup',
-    includeDefaultSlot: false,
-    namedSlots: [],
-    payload: (props: Record<string, unknown>) => String((props.group as EngineGroupCollectionItem).name),
+  EngineGroupCard: defineComponent({
+    name: 'StubEngineGroupCard',
     props: {
       group: {
         type: Object,
         required: true,
+      },
+      progress: {
+        type: Number,
       },
       viewMode: {
         type: String,
         required: true,
       },
     },
-    rootTag: 'article',
-    testId: (props: Record<string, unknown>) => `group-card-${String((props.group as EngineGroupCollectionItem).name)}`,
-    text: (props: Record<string, unknown>) => String((props.group as EngineGroupCollectionItem).name),
+    emits: ['deleteGroup'],
+    setup(props, { emit }) {
+      return () => {
+        const group = props.group as EngineGroupCollectionItem
+        return h('article', {
+          'data-progress': String(props.progress),
+          'data-testid': `group-card-${group.name}`,
+          'onClick': () => emit('deleteGroup', group.name),
+        }, group.name)
+      }
+    },
   }),
 }
 
@@ -72,6 +81,8 @@ function createGroups(): EngineGroupCollectionItem[] {
         },
       ],
       hasAvailableVersion: true,
+      isImporting: false,
+      isUnavailable: false,
       isDefault: false,
       latestVersionLabel: '4.5.0',
       representativeItem: {
@@ -95,8 +106,7 @@ describe('EnginesTabCollectionSection', () => {
       props: {
         groups: createGroups(),
         viewMode: 'grid',
-        getEngineProgress: () => 0,
-        hasEngineProgress: () => false,
+        getEngineProgress: () => undefined,
       },
       browser: {
         i18nMode: 'lite',
@@ -116,8 +126,7 @@ describe('EnginesTabCollectionSection', () => {
       props: {
         groups: createGroups(),
         viewMode: 'list',
-        getEngineProgress: () => 0,
-        hasEngineProgress: () => false,
+        getEngineProgress: () => undefined,
         onDeleteGroup,
       },
       browser: {
@@ -131,5 +140,27 @@ describe('EnginesTabCollectionSection', () => {
     await page.getByText('WebGAL').click()
 
     expect(onDeleteGroup).toHaveBeenCalledWith('WebGAL')
+  })
+
+  it('会按组内导入中的引擎透传进度', async () => {
+    const groups = createGroups()
+    const importingEngine = groups[0]!.engines[0]!.engine
+
+    renderInBrowser(EnginesTabCollectionSection, {
+      props: {
+        groups,
+        viewMode: 'grid',
+        getEngineProgress: (engine: Engine) => engine.id === importingEngine.id ? 64 : undefined,
+      },
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const card = await page.getByTestId('group-card-WebGAL').element()
+    expect(card.dataset.progress).toBe('64')
   })
 })

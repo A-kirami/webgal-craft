@@ -126,6 +126,7 @@ home:
     importSuccess: エンジンのインポートに成功しました
     importAlreadyExists: このエンジンは既に存在します
     importInvalidFolder: エンジンフォルダのようには見えません。中身を確認してください。
+    importing: エンジンをインポート中...
     importSchemaTooNew: このエンジンは現在のアプリには新しすぎます。アプリをアップグレードしてから再度お試しください。
     importTargetConflict: インストール先が既に使用されています。競合するフォルダを削除してから再試行してください。
     importUnsupportedLegacyEngine: このエンジンは古すぎます。新しいバージョンを使用してください。

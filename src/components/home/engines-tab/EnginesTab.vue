@@ -26,12 +26,12 @@ const engineGroupItems = computed<EngineGroupCollectionItem[]>(() =>
 )
 const controller = useEnginesTabController({
   activeProgress: resourceStore.activeProgress,
-  openDeleteEngineGroupModal: (engineId) => {
+  openDeleteEngineGroupModal: (engineId, options) => {
     const group = engineGroupItems.value.find(g => g.engineId === engineId)
     modalStore.open('DeleteEngineGroupModal', {
       engineId,
       groupName: group?.name ?? engineId,
-      allUnavailable: group ? !group.hasAvailableVersion : false,
+      allUnavailable: options.allUnavailable,
     })
   },
   openDeleteEngineModal: engine => modalStore.open('DeleteEngineModal', { engine }),
@@ -49,6 +49,7 @@ const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRe
     v-if="engineGroupItems.length > 0"
     :groups="engineGroupItems"
     :view-mode="preferenceStore.viewMode"
+    :get-engine-progress="controller.getEngineProgress"
     @delete-engine="controller.handleDelete"
     @delete-group="controller.handleDeleteGroup"
     @drop="controller.handleDrop"

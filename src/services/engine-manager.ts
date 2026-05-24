@@ -440,6 +440,7 @@ async function importEngine(enginePath: AbsPath): Promise<ImportEngineResult> {
     ...snapshot,
     status: 'creating',
   })
+  useResourceStore().updateProgress(engineId, 0)
 
   try {
     await copyAndFinalizeEngine(engineId, normalizedPath, targetPath)

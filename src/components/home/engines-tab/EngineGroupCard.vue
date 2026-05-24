@@ -8,10 +8,15 @@ import type { MenuItem } from '~/types/menu-item'
 
 interface Props {
   group: EngineGroupCollectionItem
+  progress?: number
   viewMode: 'grid' | 'list'
 }
 
-const { group, viewMode } = defineProps<Props>()
+const {
+  group,
+  progress,
+  viewMode,
+} = defineProps<Props>()
 const { t } = useI18n()
 
 const emit = defineEmits<{
@@ -24,7 +29,13 @@ const emit = defineEmits<{
 const GRID_ICON_THUMBNAIL: AssetThumbnailOptions = { width: 120, height: 120, resizeMode: 'cover' }
 const LIST_ICON_THUMBNAIL: AssetThumbnailOptions = { width: 80, height: 80, resizeMode: 'cover' }
 
+const isActiveImporting = $computed(() => group.isImporting)
+
 const versionSummary = $computed(() => {
+  if (isActiveImporting) {
+    return t('home.engines.importing')
+  }
+
   if (!group.hasAvailableVersion || !group.latestVersionLabel) {
     return t('engine.noAvailableVersionSummary', { count: group.versionCount })
   }
@@ -35,25 +46,32 @@ const versionSummary = $computed(() => {
   })
 })
 
-const menuItems = $computed<MenuItem[]>(() => [
-  {
-    icon: Star,
-    label: group.isDefault ? t('engine.unsetDefaultEngine') : t('engine.setDefaultEngine'),
-    onClick: () => emit('setDefaultEngine', group.isDefault ? undefined : group.engineId),
-    disabled: !group.hasAvailableVersion && !group.isDefault,
-  },
-  {
-    icon: Folder,
-    label: t('common.openFolder'),
-    onClick: () => emit('openGroupFolder', group),
-  },
-  {
-    icon: Trash2,
-    label: t('engine.uninstallAllVersions'),
-    onClick: () => emit('deleteGroup', group.engineId),
-    class: 'text-destructive focus:text-destructive-foreground focus:bg-destructive',
-  },
-])
+const menuItems = $computed<MenuItem[]>(() => {
+  const items: MenuItem[] = [
+    {
+      icon: Star,
+      label: group.isDefault ? t('engine.unsetDefaultEngine') : t('engine.setDefaultEngine'),
+      onClick: () => emit('setDefaultEngine', group.isDefault ? undefined : group.engineId),
+      disabled: !group.hasAvailableVersion && !group.isDefault,
+    },
+    {
+      icon: Folder,
+      label: t('common.openFolder'),
+      onClick: () => emit('openGroupFolder', group),
+    },
+  ]
+
+  if (!isActiveImporting) {
+    items.push({
+      icon: Trash2,
+      label: t('engine.uninstallAllVersions'),
+      onClick: () => emit('deleteGroup', group.engineId),
+      class: 'text-destructive focus:text-destructive-foreground focus:bg-destructive',
+    })
+  }
+
+  return items
+})
 </script>
 
 <template>
@@ -61,9 +79,12 @@ const menuItems = $computed<MenuItem[]>(() => [
     <ContextMenuTrigger as-child>
       <Card
         v-if="viewMode === 'grid'"
-        :data-availability="group.hasAvailableVersion ? 'available' : 'unavailable'"
-        class="rounded-lg shadow-sm"
-        :class="{ 'ring-1 ring-destructive/40 border-destructive/30 bg-destructive/[0.03]': !group.hasAvailableVersion }"
+        :data-availability="group.isUnavailable ? 'unavailable' : 'available'"
+        class="rounded-lg shadow-sm relative overflow-hidden"
+        :class="{
+          'cursor-wait': isActiveImporting,
+          'ring-1 ring-destructive/40 border-destructive/30 bg-destructive/[0.03]': group.isUnavailable,
+        }"
       >
         <CardContent class="p-3 flex flex-col gap-1">
           <div class="flex gap-4 items-start justify-between">
@@ -92,7 +113,7 @@ const menuItems = $computed<MenuItem[]>(() => [
                   <Badge v-if="group.isDefault" variant="secondary">
                     {{ $t('engine.defaultEngine') }}
                   </Badge>
-                  <Badge v-if="!group.hasAvailableVersion" variant="destructive">
+                  <Badge v-if="group.isUnavailable" variant="destructive">
                     <TriangleAlert class="size-3" />
                     {{ $t('home.unavailableBadge') }}
                   </Badge>
@@ -107,7 +128,11 @@ const menuItems = $computed<MenuItem[]>(() => [
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent align="start" class="px-3 py-2 w-56">
-                    <EngineVersionPopover :group="group" @delete-engine="engine => emit('deleteEngine', engine)" />
+                    <EngineVersionPopover
+                      :group="group"
+                      :can-delete="!isActiveImporting"
+                      @delete-engine="engine => emit('deleteEngine', engine)"
+                    />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -138,13 +163,21 @@ const menuItems = $computed<MenuItem[]>(() => [
             {{ group.summary }}
           </p>
         </CardContent>
+        <Progress
+          v-if="progress !== undefined"
+          :model-value="progress"
+          class="rounded-none h-1 inset-x-0 bottom-0 absolute"
+        />
       </Card>
 
       <div
         v-else
-        :data-availability="group.hasAvailableVersion ? 'available' : 'unavailable'"
+        :data-availability="group.isUnavailable ? 'unavailable' : 'available'"
         class="p-3 flex transition-colors duration-200 items-center justify-between relative hover:bg-primary/5 dark:hover:bg-primary/10"
-        :class="{ 'bg-destructive/[0.04] hover:bg-destructive/[0.08] dark:hover:bg-destructive/[0.12]': !group.hasAvailableVersion }"
+        :class="{
+          'cursor-wait': isActiveImporting,
+          'bg-destructive/[0.04] hover:bg-destructive/[0.08] dark:hover:bg-destructive/[0.12]': group.isUnavailable,
+        }"
       >
         <div class="flex flex-1 gap-3 min-w-0 items-center">
           <div class="rounded-md flex shrink-0 h-10 w-10 items-center justify-center overflow-hidden">
@@ -171,7 +204,7 @@ const menuItems = $computed<MenuItem[]>(() => [
               <Badge v-if="group.isDefault" variant="secondary">
                 {{ $t('engine.defaultEngine') }}
               </Badge>
-              <Badge v-if="!group.hasAvailableVersion" variant="destructive">
+              <Badge v-if="group.isUnavailable" variant="destructive">
                 <TriangleAlert class="size-3" />
                 {{ $t('home.unavailableBadge') }}
               </Badge>
@@ -190,7 +223,11 @@ const menuItems = $computed<MenuItem[]>(() => [
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" class="p-2 w-56">
-              <EngineVersionPopover :group="group" @delete-engine="engine => emit('deleteEngine', engine)" />
+              <EngineVersionPopover
+                :group="group"
+                :can-delete="!isActiveImporting"
+                @delete-engine="engine => emit('deleteEngine', engine)"
+              />
             </PopoverContent>
           </Popover>
 
@@ -214,6 +251,11 @@ const menuItems = $computed<MenuItem[]>(() => [
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        <Progress
+          v-if="progress !== undefined"
+          :model-value="progress"
+          class="rounded-none h-0.75 inset-x-0 bottom-0 absolute"
+        />
       </div>
     </ContextMenuTrigger>
 

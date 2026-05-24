@@ -8,10 +8,15 @@ import type { EngineGroupCollectionItem } from '~/features/home/home-collection-
 
 interface Props {
   groups: EngineGroupCollectionItem[]
+  getEngineProgress: (engine: Engine) => number | undefined
   viewMode: 'grid' | 'list'
 }
 
-const { groups, viewMode } = defineProps<Props>()
+const {
+  groups,
+  getEngineProgress,
+  viewMode,
+} = defineProps<Props>()
 
 const emit = defineEmits<{
   deleteEngine: [engine: Engine]
@@ -27,6 +32,17 @@ const { isOverDropZone: isOverDropZoneGrid } = useTauriDropZone(dropZoneGridRef,
 
 const dropZoneListRef = useTemplateRef<HTMLElement>('dropZoneListRef')
 const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef, paths => emit('drop', paths))
+
+function getGroupProgress(group: EngineGroupCollectionItem): number | undefined {
+  for (const item of group.engines) {
+    const progress = getEngineProgress(item.engine)
+    if (progress !== undefined) {
+      return progress
+    }
+  }
+
+  return undefined
+}
 </script>
 
 <template>
@@ -35,6 +51,7 @@ const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef,
       v-for="group in groups"
       :key="group.name"
       :group="group"
+      :progress="getGroupProgress(group)"
       view-mode="grid"
       @delete-engine="emit('deleteEngine', $event)"
       @delete-group="emit('deleteGroup', $event)"
@@ -69,6 +86,7 @@ const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef,
       v-for="group in groups"
       :key="group.name"
       :group="group"
+      :progress="getGroupProgress(group)"
       view-mode="list"
       @delete-engine="emit('deleteEngine', $event)"
       @delete-group="emit('deleteGroup', $event)"

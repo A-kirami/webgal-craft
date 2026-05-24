@@ -149,11 +149,51 @@ describe('useEnginesTabController', () => {
     expect(setDefaultEngineIdMock).toHaveBeenCalledWith(undefined)
   })
 
-  it('会把整组删除委托给调用方', async () => {
+  it('会用最新校验结果打开整组删除弹窗', async () => {
+    const staleEngine = createTestEngine({
+      id: 'engine-stale',
+      availability: 'available',
+    })
+    const missingEngine = createTestEngine({
+      id: 'engine-missing',
+      availability: 'missing',
+    })
+    enginesWhereMock.mockReturnValue({
+      equals: vi.fn(() => ({ toArray: vi.fn().mockResolvedValue([staleEngine, missingEngine]) })),
+    })
+    reconcileEngineRecordMock
+      .mockResolvedValueOnce('missing')
+      .mockResolvedValueOnce('missing')
     const controller = createController()
 
     await controller.handleDeleteGroup('WebGAL')
 
-    expect(openDeleteEngineGroupModalMock).toHaveBeenCalledWith('WebGAL')
+    expect(openDeleteEngineGroupModalMock).toHaveBeenCalledWith('WebGAL', {
+      allUnavailable: true,
+    })
+  })
+
+  it('仍有可用版本时不会把整组删除视为只删记录', async () => {
+    const availableEngine = createTestEngine({
+      id: 'engine-available',
+      availability: 'available',
+    })
+    const missingEngine = createTestEngine({
+      id: 'engine-missing',
+      availability: 'missing',
+    })
+    enginesWhereMock.mockReturnValue({
+      equals: vi.fn(() => ({ toArray: vi.fn().mockResolvedValue([availableEngine, missingEngine]) })),
+    })
+    reconcileEngineRecordMock
+      .mockResolvedValueOnce('available')
+      .mockResolvedValueOnce('missing')
+    const controller = createController()
+
+    await controller.handleDeleteGroup('WebGAL')
+
+    expect(openDeleteEngineGroupModalMock).toHaveBeenCalledWith('WebGAL', {
+      allUnavailable: false,
+    })
   })
 })
