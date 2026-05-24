@@ -45,7 +45,7 @@ const globalStubs = {
         return h('article', {
           'data-progress': String(props.progress),
           'data-testid': `group-card-${group.name}`,
-          'onClick': () => emit('deleteGroup', group.name),
+          'onClick': () => emit('deleteGroup', group.engineId),
         }, group.name)
       }
     },
@@ -139,7 +139,7 @@ describe('EnginesTabCollectionSection', () => {
 
     await page.getByText('WebGAL').click()
 
-    expect(onDeleteGroup).toHaveBeenCalledWith('WebGAL')
+    expect(onDeleteGroup).toHaveBeenCalledWith('open-webgal.webgal')
   })
 
   it('会按组内导入中的引擎透传进度', async () => {
