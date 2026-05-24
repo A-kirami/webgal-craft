@@ -5,10 +5,11 @@ import type { Engine } from '~/database/model'
 import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
 
 interface Props {
+  canDelete?: boolean
   group: EngineGroupCollectionItem
 }
 
-defineProps<Props>()
+const { canDelete = true, group } = defineProps<Props>()
 
 const emit = defineEmits<{
   deleteEngine: [engine: Engine]
@@ -38,6 +39,7 @@ const emit = defineEmits<{
       </div>
 
       <Button
+        v-if="canDelete"
         :aria-label="$t('engine.deleteVersion')"
         variant="ghost"
         size="icon"

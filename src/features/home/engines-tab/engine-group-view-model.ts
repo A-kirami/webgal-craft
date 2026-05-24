@@ -17,18 +17,21 @@ export function buildEngineGroupCollectionItems(
 ): EngineGroupCollectionItem[] {
   return groupEngines(options.engines).map((group) => {
     const items = group.engines.map(engine => toEngineCollectionItem(engine, options.resolveServeUrl))
-    const availableItems = items.filter(item => isEngineUsable(item.engine))
-    const latestAvailable = availableItems[0]
-    const representative = latestAvailable ?? items[0]
+    const latestAvailable = items.find(item => isEngineUsable(item.engine))
+    const latestDisplayable = items.find(({ engine }) => engine.availability === 'available' && engine.status !== 'error')
+    const representative = latestAvailable ?? latestDisplayable ?? items[0]
+    const isImporting = items.some(({ engine }) => engine.status === 'creating')
 
     return {
       engineId: group.engineId,
       name: group.name,
       engines: items,
-      hasAvailableVersion: availableItems.length > 0,
+      hasAvailableVersion: latestAvailable !== undefined,
+      isImporting,
+      isUnavailable: latestDisplayable === undefined,
       isDefault: group.engineId === options.defaultEngineId,
       latestVersionLabel: latestAvailable?.engine.version,
-      representativeItem: latestAvailable,
+      representativeItem: latestAvailable ?? latestDisplayable,
       summary: representative?.engine.metadata.description ?? '',
       unavailableCount: items.filter(item => item.engine.availability !== 'available').length,
       versionCount: items.length,

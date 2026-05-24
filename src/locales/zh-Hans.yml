@@ -126,6 +126,7 @@ home:
     importSuccess: 引擎导入成功
     importAlreadyExists: 该引擎已存在
     importInvalidFolder: 这不像是引擎文件夹，请确认目录结构
+    importing: 引擎导入中……
     importSchemaTooNew: 该引擎版本过新，请升级应用后再尝试导入
     importTargetConflict: 安装位置已被占用，请先删除冲突的文件夹后重试
     importUnsupportedLegacyEngine: 该引擎版本过旧，请改用新版本

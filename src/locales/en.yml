@@ -126,6 +126,7 @@ home:
     importSuccess: Engine imported successfully
     importAlreadyExists: This engine already exists
     importInvalidFolder: This does not look like an engine folder. Please check its contents.
+    importing: Importing engine...
     importSchemaTooNew: This engine is too new for the current app. Please upgrade the app and try again.
     importTargetConflict: The install location is already in use. Please remove the conflicting folder and retry.
     importUnsupportedLegacyEngine: This engine is too old. Please use a newer version.

@@ -77,10 +77,41 @@ describe('buildEngineGroupCollectionItems', () => {
 
     expect(items[0]).toMatchObject({
       hasAvailableVersion: false,
+      isImporting: false,
+      isUnavailable: true,
       latestVersionLabel: undefined,
       summary: 'legacy only',
       versionCount: 1,
     })
     expect(items[0]?.representativeItem).toBeUndefined()
+  })
+
+  it('导入中的引擎版本不会让分组显示为失效', () => {
+    const items = buildEngineGroupCollectionItems({
+      engines: [
+        createTestEngine({
+          id: 'importing',
+          name: 'WebGAL',
+          path: AbsPath.from('/engines/WebGAL/4.7.0'),
+          version: '4.7.0',
+          status: 'creating',
+          metadata: {
+            description: 'importing build',
+          },
+        }),
+      ],
+      resolveServeUrl: path => `serve://${path}`,
+    })
+
+    expect(items[0]).toMatchObject({
+      hasAvailableVersion: false,
+      isImporting: true,
+      isUnavailable: false,
+      latestVersionLabel: undefined,
+      summary: 'importing build',
+      unavailableCount: 0,
+      versionCount: 1,
+    })
+    expect(items[0]?.representativeItem?.engine.id).toBe('importing')
   })
 })

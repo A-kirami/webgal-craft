@@ -27,6 +27,8 @@ export interface EngineGroupCollectionItem {
   engineId: string
   engines: EngineCollectionItem[]
   hasAvailableVersion: boolean
+  isImporting: boolean
+  isUnavailable: boolean
   isDefault: boolean
   latestVersionLabel?: string
   name: string
