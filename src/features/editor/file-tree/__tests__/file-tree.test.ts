@@ -230,7 +230,6 @@ describe('fileTree', () => {
         extension: '.txt',
         stem: 'new-scene',
       },
-      defaultFolderName: 'new-folder',
       getKey: item => item.path,
       items,
       parentPath: '/project/chapter',
@@ -252,7 +251,6 @@ describe('fileTree', () => {
         extension: '.txt',
         stem: '',
       },
-      defaultFolderName: '新建文件夹',
       getKey: item => item.path,
       items: [] as TestTreeItem[],
       parentPath: '/project',
@@ -263,7 +261,7 @@ describe('fileTree', () => {
     })
   })
 
-  it('开始创建文件夹时会全选默认文件夹名', () => {
+  it('开始创建文件夹时会返回空名称', () => {
     const items: TestTreeItem[] = [
       {
         name: 'scene.txt',
@@ -280,24 +278,22 @@ describe('fileTree', () => {
         extension: '.txt',
         stem: 'new-scene',
       },
-      defaultFolderName: '新建文件夹',
       getKey: item => item.path,
       items,
       parentPath: '/project',
       type: 'folder',
     })).toEqual({
-      selectionEnd: 5,
-      value: '新建文件夹',
+      selectionEnd: 0,
+      value: '',
     })
   })
 
-  it('创建 blur 时默认名或空值会取消创建', () => {
+  it('创建 blur 时文件默认名或空值会取消创建', () => {
     expect(resolveFileTreeCreateBlurAction({
       defaultFileNameParts: {
         extension: '.txt',
         stem: 'new-scene',
       },
-      defaultFolderName: '新建文件夹',
       isStarting: false,
       parentPath: '/project',
       type: 'file',
@@ -309,7 +305,6 @@ describe('fileTree', () => {
         extension: '.txt',
         stem: 'new-scene',
       },
-      defaultFolderName: '新建文件夹',
       isStarting: false,
       parentPath: '/project',
       type: 'folder',
@@ -323,11 +318,21 @@ describe('fileTree', () => {
         extension: '.txt',
         stem: 'new-scene',
       },
-      defaultFolderName: '新建文件夹',
       isStarting: false,
       parentPath: '/project',
       type: 'file',
       value: 'branch.txt',
+    })).toBe<FileTreeBlurAction>('submit')
+
+    expect(resolveFileTreeCreateBlurAction({
+      defaultFileNameParts: {
+        extension: '.txt',
+        stem: 'new-scene',
+      },
+      isStarting: false,
+      parentPath: '/project',
+      type: 'folder',
+      value: '新建文件夹',
     })).toBe<FileTreeBlurAction>('submit')
   })
 

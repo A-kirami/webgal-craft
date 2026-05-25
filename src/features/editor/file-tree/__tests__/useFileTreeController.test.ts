@@ -207,7 +207,6 @@ function createFixture(options: {
       extension: '.txt',
       stem: 'untitled',
     }),
-    defaultFolderName: () => 'untitled-folder',
     fileTreeContainerRef: ref(),
     getKey: item => item.path,
     inputRef: ref(),

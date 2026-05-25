@@ -58,7 +58,6 @@ interface UseFileTreeControllerOptions<T extends object> {
   defaultExpanded: () => string[]
   defaultFileNameParts?: FileTreeDefaultFileNameParts | (() => FileTreeDefaultFileNameParts)
   defaultFileNamePartsFallback: () => FileTreeDefaultFileNameParts
-  defaultFolderName: () => string
   fileTreeContainerRef: ReadonlyRefLike<HTMLElement | null | undefined>
   getKey: (item: T) => string
   inputRef: ReadonlyRefLike<unknown>
@@ -472,7 +471,6 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     const createStart = resolveFileTreeCreateStart({
       accessor: fileTreeItemAccessor,
       defaultFileNameParts: getDefaultFileNameParts(),
-      defaultFolderName: options.defaultFolderName(),
       getKey: options.getKey,
       items: options.items(),
       parentPath,
@@ -534,7 +532,6 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   function handleCreateBlur(): void {
     const action = resolveFileTreeCreateBlurAction({
       defaultFileNameParts: getDefaultFileNameParts(),
-      defaultFolderName: options.defaultFolderName(),
       isStarting: createState.value.isStarting,
       parentPath: createState.value.parentPath,
       type: createState.value.type,
