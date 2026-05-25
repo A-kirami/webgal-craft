@@ -494,7 +494,7 @@ async function inspectTemplateDependencyIssue(
   }
 
   const engine = await engineManager.findEngineByRef(binding.engine)
-  if (engine && isEngineUsable(engine)) {
+  if (engine && isEngineUsable(engine) && await isTemplateBindingUsable(binding, engine)) {
     return undefined
   }
 

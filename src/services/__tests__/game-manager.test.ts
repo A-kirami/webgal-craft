@@ -829,6 +829,83 @@ describe('gameManager', () => {
     })
   })
 
+  it('importGame 会在引用 engineBuiltin 模板无法解析时请求选择可用模板', async () => {
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/vfs'
+      || path === '/games/vfs/game/config.txt'
+      || path === '/games/vfs/project.wgcp'
+      || path === '/games/vfs/game/background/cover.png')
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: importedProjectEngineRef,
+      template: {
+        kind: 'engineBuiltin',
+        engine: {
+          id: 'default-publisher.default-engine',
+          version: '4.4.0',
+        },
+      },
+    })
+    engineFindByRefMock.mockImplementation(async (ref: { version?: string }) => {
+      if (ref.version === '4.5.0') {
+        return createTestEngine({
+          id: 'engine-1',
+          name: 'WebGAL',
+          version: '4.5.0',
+        })
+      }
+      if (ref.version === '4.4.0') {
+        return createTestEngine({
+          id: 'engine-old',
+          name: 'WebGAL',
+          version: '4.4.0',
+        })
+      }
+      return
+    })
+    resolveTemplatePathMock.mockResolvedValue(undefined)
+    const selectedTemplateBinding = {
+      kind: 'standalone',
+      name: 'Available Template',
+    } as const
+    mockTemplateLookupByName({
+      'Available Template': createTestTemplate({
+        metadata: {
+          name: 'Available Template',
+        },
+      }),
+    })
+    const resolveDependencies = vi.fn().mockResolvedValue({
+      template: { action: 'set', binding: selectedTemplateBinding },
+    })
+
+    await expect(gameManager.importGame(AbsPath.from('/games/vfs'), {
+      resolveDependencies,
+    })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
+
+    expect(resolveDependencies).toHaveBeenCalledOnce()
+    expect(resolveDependencies).toHaveBeenCalledWith({
+      ...configuredImportDependencyContext,
+      resolvedEngineId: 'engine-1',
+      template: {
+        current: {
+          kind: 'engineBuiltin',
+          engine: {
+            id: 'default-publisher.default-engine',
+            version: '4.4.0',
+          },
+        },
+        displayName: 'default-publisher.default-engine 4.4.0',
+        reason: 'unavailable',
+      },
+    })
+    expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/vfs', {
+      version: 1,
+      engine: importedProjectEngineRef,
+      template: selectedTemplateBinding,
+    })
+  })
+
   it('importGame 在引擎和模板同时不可用时只请求一次组合决策并一次性写回', async () => {
     existsMock.mockImplementation(async (path: string) =>
       path === '/games/vfs'
