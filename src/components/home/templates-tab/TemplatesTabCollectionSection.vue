@@ -93,8 +93,11 @@ function getMenuItems(item: TemplateCollectionItem): MenuItem[] {
         ref="dropZoneGridRef"
         type="button"
         :aria-label="$t('home.templates.importTemplate')"
-        class="p-3 border-1 border-gray-300 rounded-lg border-dashed bg-gray-50 flex gap-4 cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden dark:border-gray-700 hover:border-primary/40 dark:bg-gray-900 dark:hover:border-primary/60"
-        :class="{ 'border-primary/40 bg-primary/5': isOverDropZoneGrid }"
+        class="p-3 border-1 rounded-lg border-dashed flex gap-4 cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden hover:border-primary/40 dark:hover:border-primary/60"
+        :class="{
+          'border-primary/40 bg-primary/5': isOverDropZoneGrid,
+          'border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900': !isOverDropZoneGrid,
+        }"
         @click="emit('importClick')"
       >
         <div class="p-3 rounded-full bg-primary/10">
@@ -127,8 +130,11 @@ function getMenuItems(item: TemplateCollectionItem): MenuItem[] {
         ref="dropZoneListRef"
         type="button"
         :aria-label="$t('home.templates.importTemplate')"
-        class="p-3 bg-gray-50/50 flex w-full cursor-pointer transition-colors items-center justify-between dark:bg-gray-800/10 hover:bg-gray-100 dark:hover:bg-gray-800/20"
-        :class="{ 'bg-primary/5': isOverDropZoneList }"
+        class="p-3 flex w-full cursor-pointer transition-colors items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-800/20"
+        :class="{
+          'bg-primary/5': isOverDropZoneList,
+          'bg-gray-50/50 dark:bg-gray-800/10': !isOverDropZoneList,
+        }"
         @click="emit('importClick')"
       >
         <div class="flex gap-3 items-center">
