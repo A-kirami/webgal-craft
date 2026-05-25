@@ -160,7 +160,15 @@ async function findTemplateDeleteBlockers(templateName: string): Promise<Templat
 }
 
 async function canDeleteTemplate(templateName: string): Promise<DeleteTemplateCheckResult> {
-  const { associatedGames, uncheckedGames } = await findTemplateDeleteBlockers(templateName)
+  let blockers: TemplateDeleteBlockers
+  try {
+    blockers = await findTemplateDeleteBlockers(templateName)
+  } catch (error) {
+    logger.warn(`[模板删除] 模板引用检查失败，阻止删除以避免误删引用: ${templateName} - ${error}`)
+    return { canDelete: false, reason: 'TEMPLATE_REFERENCE_CHECK_FAILED', uncheckedGames: [] }
+  }
+
+  const { associatedGames, uncheckedGames } = blockers
   if (associatedGames.length > 0) {
     return { canDelete: false, reason: 'TEMPLATE_HAS_ASSOCIATED_GAMES', associatedGames }
   }

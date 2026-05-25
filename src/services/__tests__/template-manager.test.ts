@@ -437,6 +437,16 @@ describe('templateManager', () => {
     })
   })
 
+  it('canDeleteTemplate 会在无法枚举游戏时返回引用检查失败', async () => {
+    dbGamesToArrayMock.mockRejectedValue(new Error('database unavailable'))
+
+    await expect(templateManager.canDeleteTemplate('Modern Template')).resolves.toEqual({
+      canDelete: false,
+      reason: 'TEMPLATE_REFERENCE_CHECK_FAILED',
+      uncheckedGames: [],
+    })
+  })
+
   it('deleteTemplate 会阻止删除仍有关联游戏的模板', async () => {
     dbGamesToArrayMock.mockResolvedValue([
       createTestGame({
