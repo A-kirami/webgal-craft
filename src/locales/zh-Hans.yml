@@ -216,14 +216,19 @@ modals:
     uninstallSuccess: 引擎卸载成功
     uninstallFailed: 引擎卸载失败
   deleteTemplate:
+    blockedTitle: 无法删除
+    blockedByGames: 以下游戏正在使用此模板：
+    blockedByUncheckedGames: 以下游戏的项目配置无法读取，无法确认是否正在使用此模板：
     title: 删除模板
     description: 确定要删除模板 {name} 吗？
     warning: 此操作将把模板文件移到回收站，你可以稍后从回收站恢复。
     deleteSuccess: 模板删除成功
+    deleteFailed: 模板删除失败
     removeTitle: 移除模板记录
     removeDescription: 确定要移除模板 {name} 的记录吗？
     removeWarning: 模板目录已不可用，此操作只会移除本地记录，不会删除任何文件。
     removeSuccess: 模板记录已移除
+    removeFailed: 模板记录移除失败
   switchEngine:
     title: 切换引擎
     description: 选择要切换的游戏引擎
@@ -1114,6 +1119,23 @@ engine:
   unavailable: 不可用
 
 game:
-  selectEngine: 选择引擎
-  selectEngineDescription: 当前引擎不可用，请选择任意可用引擎打开
-  selectEngineDescriptionWithName: 「{name}」关联的引擎不可用，请选择一个可用引擎继续导入。
+  selectTemplatePlaceholder: 选择可用模板
+  importDependencyResolutionTitle: 选择导入所需资源
+  importDependencyResolutionDescription: 当前项目引用的引擎或模板不可用。请选择本机可用资源，应用会更新项目配置后继续导入。
+  importDependencyResolutionDescriptionWithName: 「{name}」引用的引擎或模板不可用。请选择本机可用资源，应用会更新项目配置后继续导入。
+  importDependencyResolutionLegacyDescription: 当前旧版项目目录内没有自带引擎。请选择一个可用引擎，应用会创建项目配置后继续导入。
+  importDependencyResolutionLegacyDescriptionWithName: 「{name}」是旧版项目，目录内没有自带引擎。请选择一个可用引擎，应用会创建项目配置后继续导入。
+  importDependencyResolutionEngineTitle: 绑定引擎
+  importDependencyResolutionTemplateTitle: 绑定模板
+  importDependencyResolutionEngineIssue: 选择一个可用引擎，导入后项目会使用它打开和预览。
+  importDependencyResolutionEngineLegacyIssue: 旧版项目需要绑定一个本机引擎才能继续导入。
+  importDependencyResolutionTemplateIssue: 选择一个可用模板，或跟随所选引擎的默认模板。
+  importDependencyResolutionOriginalEngine: 原引擎
+  importDependencyResolutionOriginalTemplate: 原模板
+  importDependencyResolutionReasonMissing: 未安装
+  importDependencyResolutionReasonUnavailable: 不可用
+  importDependencyResolutionReasonSelectionRequired: 需选择
+  importDependencyResolutionTemplateFollowEngineHint: 选择“跟随引擎默认模板”时，将移除项目中的显式模板引用。
+  importDependencyResolutionScopeHint: 只会更新导入项目的配置，不会移动或删除已安装资源。
+  importDependencyResolutionCancel: 取消导入
+  importDependencyResolutionConfirm: 继续导入

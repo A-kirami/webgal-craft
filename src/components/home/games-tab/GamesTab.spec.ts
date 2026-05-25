@@ -19,6 +19,7 @@ const {
   notifyWarningMock,
   openDialogMock,
   openPathMock,
+  requestImportDependencyResolutionMock,
   routerPushMock,
   getServeUrlMock,
   useModalStoreMock,
@@ -35,6 +36,7 @@ const {
   notifyWarningMock: vi.fn(),
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
+  requestImportDependencyResolutionMock: vi.fn(),
   routerPushMock: vi.fn(),
   getServeUrlMock: vi.fn(),
   useModalStoreMock: vi.fn(),
@@ -134,6 +136,10 @@ vi.mock('~/services/game-manager', () => ({
   gameManager: {
     importGame: importGameMock,
   },
+}))
+
+vi.mock('~/features/modals/import-dependency-resolution/request-import-dependency-resolution', () => ({
+  requestImportDependencyResolution: requestImportDependencyResolutionMock,
 }))
 
 vi.mock('~/stores/modal', () => ({
@@ -355,7 +361,9 @@ describe('GamesTab', () => {
     await page.getByRole('button', { name: '导入游戏' }).click()
 
     await vi.waitFor(() => {
-      expect(importGameMock).toHaveBeenCalledWith('/games/import-target', expect.objectContaining({ selectEngine: expect.any(Function) }))
+      expect(importGameMock).toHaveBeenCalledWith('/games/import-target', expect.objectContaining({
+        resolveDependencies: requestImportDependencyResolutionMock,
+      }))
       expect(notifyErrorMock).toHaveBeenCalledWith('这不是一个有效的游戏文件夹')
     })
   })

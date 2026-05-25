@@ -5,7 +5,6 @@ import { findGameConfigEntryValue, gameCmds } from '~/commands/game'
 import { projectConfigCmds } from '~/commands/project-config'
 import { vfsCmds } from '~/commands/vfs'
 import { db } from '~/database/db'
-import { Engine, Game } from '~/database/model'
 import { AbsPath, RelPath } from '~/domain/path'
 import { engineManager, isEngineUsable } from '~/services/engine-manager'
 import { gameConfigPath, gameCoverPath, projectConfigPath } from '~/services/platform/app-paths'
@@ -22,11 +21,17 @@ import { GameMetadata, GamePreviewAssets } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
-import { EngineRef, ProjectConfig, TemplateBinding } from '~/types/project-config'
 
 import type { GameConfigEntry } from '~/commands/game'
+import type { Engine, Game, Template } from '~/database/model'
 import type { LookupPathKey } from '~/services/resource-path/lookup'
-import type { EngineSelectionContext } from '~/types/engine-selection'
+import type {
+  ImportDependencyResolutionContext,
+  ImportDependencyResolutionResult,
+  ImportTemplateResolutionResult,
+  ResolveImportDependencies,
+} from '~/types/import-dependency-resolution'
+import type { EngineRef, ProjectConfig, TemplateBinding } from '~/types/project-config'
 import type { StaticSiteConfig } from '~/types/server'
 
 interface RegisterGameOptions {
@@ -37,7 +42,7 @@ interface RegisterGameOptions {
 }
 
 interface ImportGameOptions {
-  selectEngine?: (context?: EngineSelectionContext) => Promise<string | undefined>
+  resolveDependencies?: ResolveImportDependencies
 }
 
 export interface GameInspectionPayload {
@@ -292,10 +297,6 @@ function buildProjectEngineRef(engine: Pick<Engine, 'engineId' | 'version'>): En
   }
 }
 
-function canAutoBindMatchedEngine(engine: Engine): boolean {
-  return engine.status === 'created'
-}
-
 async function writeSelfContainedProjectConfig(gamePath: AbsPath): Promise<void> {
   await projectConfigCmds.writeProjectConfig(gamePath, { version: 1 })
 }
@@ -327,24 +328,37 @@ async function resolveBoundEngine(
   return { config, engine }
 }
 
-async function resolveSelectableEngine(
-  selectEngine: ImportGameOptions['selectEngine'],
-  context?: EngineSelectionContext,
-): Promise<Engine> {
-  if (!selectEngine) {
-    throw new AppError('IO_ERROR', '项目缺少可用引擎，请重新导入并选择引擎', {
-      details: { reason: 'ENGINE_SELECTION_REQUIRED' },
-    })
+function buildImportDependencyContext(
+  source: ImportDependencyResolutionContext['source'],
+  metadata: GameMetadata,
+): ImportDependencyResolutionContext {
+  const gameName = metadata.name?.trim()
+  return {
+    ...(gameName ? { gameName } : {}),
+    source,
   }
+}
 
-  const engineId = await selectEngine(context)
-  if (!engineId) {
-    throw new AppError('IO_ERROR', '导入已取消', {
-      details: { reason: 'IMPORT_CANCELLED' },
-    })
+function formatTemplateBindingName(binding: TemplateBinding): string {
+  switch (binding.kind) {
+    case 'standalone': {
+      return binding.name
+    }
+    case 'engineBuiltin': {
+      return binding.engine.version
+        ? `${binding.engine.id} ${binding.engine.version}`
+        : binding.engine.id
+    }
+    default: {
+      return binding satisfies never
+    }
   }
+}
 
-  const engine = await db.engines.get(engineId)
+async function resolveUsableEngine(engineId: string | undefined): Promise<Engine> {
+  const engine = engineId
+    ? await db.engines.get(engineId)
+    : undefined
   if (!engine) {
     throw new AppError('IO_ERROR', '引擎不存在', {
       details: { reason: 'ENGINE_NOT_FOUND' },
@@ -360,15 +374,134 @@ async function resolveSelectableEngine(
   return engine
 }
 
-function buildEngineSelectionContext(
-  metadata: GameMetadata,
-  hint?: EngineRef,
-): EngineSelectionContext {
-  const gameName = metadata.name?.trim()
+function isTemplateUsable(template: Template | undefined): template is Template {
+  return template?.status === 'created' && template.availability === 'available'
+}
+
+async function findStandaloneTemplate(templateName: string): Promise<Template | undefined> {
+  return db.templates
+    .where('metadata.name')
+    .equals(templateName)
+    .first()
+}
+
+async function isTemplateBindingUsable(binding: TemplateBinding, engine?: Engine): Promise<boolean> {
+  if (binding.kind === 'standalone') {
+    return isTemplateUsable(await findStandaloneTemplate(binding.name))
+  }
+
+  const templatePath = await templateSwitch.resolveTemplatePath(binding, engine)
+  return !!templatePath
+}
+
+async function assertTemplateDecisionUsable(
+  decision: ImportTemplateResolutionResult | undefined,
+  finalEngine: Engine,
+): Promise<void> {
+  if (!decision) {
+    return
+  }
+
+  if (decision.action === 'followEngine') {
+    const templatePath = await templateSwitch.resolveTemplatePath(undefined, finalEngine)
+    if (!templatePath) {
+      throw new AppError('MISSING_TEMPLATE', '项目引用的模板不存在或不可用', {
+        details: { reason: 'TEMPLATE_UNAVAILABLE' },
+      })
+    }
+    return
+  }
+
+  const { binding } = decision
+  if (!(await isTemplateBindingUsable(binding, finalEngine))) {
+    throw new AppError('MISSING_TEMPLATE', '项目引用的模板不存在或不可用', {
+      details: {
+        reason: 'TEMPLATE_UNAVAILABLE',
+        templateName: formatTemplateBindingName(binding),
+      },
+    })
+  }
+}
+
+async function resolveImportDependencyDecision(
+  context: ImportDependencyResolutionContext,
+  options: ImportGameOptions,
+): Promise<ImportDependencyResolutionResult> {
+  if (!context.engine && !context.template) {
+    return {}
+  }
+
+  if (!options.resolveDependencies) {
+    throw new AppError('IO_ERROR', '项目依赖需要修复，请重新导入并选择可用依赖', {
+      details: {
+        reason: context.engine ? 'ENGINE_SELECTION_REQUIRED' : 'TEMPLATE_SELECTION_REQUIRED',
+      },
+    })
+  }
+
+  const result = await options.resolveDependencies(context)
+  if (!result) {
+    throw new AppError('IO_ERROR', '导入已取消', {
+      details: { reason: 'IMPORT_CANCELLED' },
+    })
+  }
+
+  if (context.template && !result.template) {
+    throw new AppError('MISSING_TEMPLATE', '项目引用的模板不存在或不可用', {
+      details: {
+        reason: 'TEMPLATE_SELECTION_REQUIRED',
+        templateName: context.template.displayName,
+      },
+    })
+  }
+
+  return result
+}
+
+function applyTemplateDecision(
+  config: ProjectConfig,
+  decision: ImportTemplateResolutionResult | undefined,
+): ProjectConfig {
+  if (!decision) {
+    return config
+  }
+
+  if (decision.action === 'set') {
+    return { ...config, template: decision.binding }
+  }
+
+  const { template: _template, ...nextConfig } = config
+  return nextConfig
+}
+
+async function inspectTemplateDependencyIssue(
+  binding: TemplateBinding,
+): Promise<ImportDependencyResolutionContext['template']> {
+  const displayName = formatTemplateBindingName(binding)
+
+  if (binding.kind === 'standalone') {
+    const template = await findStandaloneTemplate(binding.name)
+
+    if (isTemplateUsable(template)) {
+      return undefined
+    }
+
+    return {
+      current: binding,
+      displayName,
+      reason: template ? 'unavailable' : 'missing',
+    }
+  }
+
+  const engine = await engineManager.findEngineByRef(binding.engine)
+  if (engine && isEngineUsable(engine) && await isTemplateBindingUsable(binding, engine)) {
+    return undefined
+  }
 
   return {
-    ...(gameName ? { gameName } : {}),
-    ...(hint ? { hint } : {}),
+    current: binding,
+    displayName,
+    reason: engine ? 'unavailable' : 'missing',
   }
 }
 
@@ -384,10 +517,13 @@ async function importLegacyGame(
     return registerGame(gamePath, { ...inspection })
   }
 
-  const engine = await resolveSelectableEngine(
-    options.selectEngine,
-    buildEngineSelectionContext(inspection.metadata),
-  )
+  const context = buildImportDependencyContext('legacy', inspection.metadata)
+  context.engine = {
+    reason: 'selectionRequired',
+  }
+  const decision = await resolveImportDependencyDecision(context, options)
+  const engine = await resolveUsableEngine(decision.engineId)
+
   await projectConfigCmds.writeProjectConfig(gamePath, {
     version: 1,
     engine: buildProjectEngineRef(engine),
@@ -422,45 +558,56 @@ async function importConfiguredGame(
     })
   }
 
-  // 无引擎配置：自带引擎项目 或 让用户选择引擎
-  if (!config.engine) {
-    if (await exists(AbsPath.join(gamePath, RelPath.from('index.html')))) {
-      return registerGame(gamePath, { ...inspection })
-    }
+  const hasIndexHtml = await exists(AbsPath.join(gamePath, RelPath.from('index.html')))
+  let matchedEngine: Engine | undefined
+  const context = buildImportDependencyContext('configured', inspection.metadata)
 
+  if (config.engine) {
+    matchedEngine = await engineManager.findEngineByRef(config.engine)
+    if (matchedEngine && isEngineUsable(matchedEngine)) {
+      context.resolvedEngineId = matchedEngine.id
+    } else {
+      context.engine = {
+        current: config.engine,
+        reason: matchedEngine ? 'unavailable' : 'missing',
+      }
+    }
+  } else if (hasIndexHtml) {
+    return registerGame(gamePath, { ...inspection })
+  } else {
     logger.warn(`engine 字段缺失且 index.html 不存在，引导用户选择引擎: ${gamePath}`)
-    return await bindSelectedEngine(gamePath, config, options, inspection)
-  }
-
-  // 有引擎配置：尝试自动匹配已注册引擎
-  const matchedEngine = await engineManager.findEngineByRef(config.engine)
-  if (matchedEngine && canAutoBindMatchedEngine(matchedEngine)) {
-    if (matchedEngine.availability !== 'available') {
-      logger.warn(`关联的引擎 ${matchedEngine.name} 当前不可用，项目预览将受限: ${gamePath}`)
+    context.engine = {
+      reason: 'missing',
     }
-    return registerGame(gamePath, { ...inspection, engineId: matchedEngine.id })
   }
 
-  return await bindSelectedEngine(gamePath, config, options, inspection, config.engine)
-}
+  if (config.template) {
+    context.template = await inspectTemplateDependencyIssue(config.template)
+  }
 
-/** 让用户选择引擎，写入配置并注册游戏 */
-async function bindSelectedEngine(
-  gamePath: AbsPath,
-  config: ProjectConfig,
-  options: ImportGameOptions,
-  inspection: GameInspectionPayload,
-  hint?: EngineRef,
-): Promise<string> {
-  const engine = await resolveSelectableEngine(
-    options.selectEngine,
-    buildEngineSelectionContext(inspection.metadata, hint),
-  )
-  await projectConfigCmds.writeProjectConfig(gamePath, {
-    ...config,
-    engine: buildProjectEngineRef(engine),
-  })
-  return registerGame(gamePath, { ...inspection, engineId: engine.id })
+  const decision = await resolveImportDependencyDecision(context, options)
+  const finalEngine = context.engine
+    ? await resolveUsableEngine(decision.engineId)
+    : matchedEngine
+  const nextEngineRef = finalEngine ? buildProjectEngineRef(finalEngine) : undefined
+  const templateDecision = context.template ? decision.template : undefined
+  if (templateDecision && finalEngine) {
+    await assertTemplateDecisionUsable(templateDecision, finalEngine)
+  }
+
+  let nextConfig = applyTemplateDecision(config, templateDecision)
+  if (nextEngineRef) {
+    nextConfig = {
+      ...nextConfig,
+      engine: nextEngineRef,
+    }
+  }
+
+  if (context.engine || templateDecision) {
+    await projectConfigCmds.writeProjectConfig(gamePath, nextConfig)
+  }
+
+  return registerGame(gamePath, { ...inspection, engineId: finalEngine?.id })
 }
 
 interface CreateGameOptions {

@@ -2,8 +2,8 @@ import { exists, readTextFile } from '@tauri-apps/plugin-fs'
 import sanitize from 'sanitize-filename'
 
 import { fsCmds } from '~/commands/fs'
+import { projectConfigCmds } from '~/commands/project-config'
 import { db } from '~/database/db'
-import { Template } from '~/database/model'
 import { AbsPath } from '~/domain/path'
 import { templateManifestPath } from '~/services/platform/app-paths'
 import { ResourceAvailability } from '~/services/resource-health'
@@ -13,9 +13,28 @@ import { useResourceStore } from '~/stores/resource'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 import { AppError } from '~/types/errors'
 
+import type { Game, Template } from '~/database/model'
+
 interface RegisterTemplateOptions {
   metadata?: TemplateMetadata
   status?: Template['status']
+}
+
+interface DeleteTemplateCheckResult {
+  canDelete: boolean
+  reason?: 'TEMPLATE_HAS_ASSOCIATED_GAMES' | 'TEMPLATE_REFERENCE_CHECK_FAILED'
+  associatedGames?: Game[]
+  uncheckedGames?: Game[]
+}
+
+interface TemplateDeleteBlockers {
+  associatedGames: Game[]
+  uncheckedGames: Game[]
+}
+
+interface TemplateAssociationInspection {
+  associatedGame?: Game
+  uncheckedGame?: Game
 }
 
 async function validateTemplate(templatePath: AbsPath): Promise<boolean> {
@@ -109,6 +128,57 @@ async function findTemplateByPath(templatePath: AbsPath): Promise<Template | und
     .first()
 }
 
+async function inspectTemplateAssociation(
+  templateName: string,
+  game: Game,
+): Promise<TemplateAssociationInspection> {
+  try {
+    const config = await projectConfigCmds.readProjectConfig(game.path)
+    if (config.template?.kind === 'standalone' && config.template.name === templateName) {
+      return { associatedGame: game }
+    }
+  } catch (error) {
+    logger.warn(`[模板删除] 读取游戏项目配置失败，阻止删除以避免误删引用: ${game.path} - ${error}`)
+    return { uncheckedGame: game }
+  }
+
+  return {}
+}
+
+async function findTemplateDeleteBlockers(templateName: string): Promise<TemplateDeleteBlockers> {
+  const games = await db.games.toArray()
+  const inspections = await Promise.all(games.map(game => inspectTemplateAssociation(templateName, game)))
+
+  return {
+    associatedGames: inspections
+      .map(inspection => inspection.associatedGame)
+      .filter(game => game !== undefined),
+    uncheckedGames: inspections
+      .map(inspection => inspection.uncheckedGame)
+      .filter(game => game !== undefined),
+  }
+}
+
+async function canDeleteTemplate(templateName: string): Promise<DeleteTemplateCheckResult> {
+  let blockers: TemplateDeleteBlockers
+  try {
+    blockers = await findTemplateDeleteBlockers(templateName)
+  } catch (error) {
+    logger.warn(`[模板删除] 模板引用检查失败，阻止删除以避免误删引用: ${templateName} - ${error}`)
+    return { canDelete: false, reason: 'TEMPLATE_REFERENCE_CHECK_FAILED', uncheckedGames: [] }
+  }
+
+  const { associatedGames, uncheckedGames } = blockers
+  if (associatedGames.length > 0) {
+    return { canDelete: false, reason: 'TEMPLATE_HAS_ASSOCIATED_GAMES', associatedGames }
+  }
+  if (uncheckedGames.length > 0) {
+    return { canDelete: false, reason: 'TEMPLATE_REFERENCE_CHECK_FAILED', uncheckedGames }
+  }
+
+  return { canDelete: true }
+}
+
 async function deleteTemplateDirectoryIfExists(path: AbsPath): Promise<void> {
   try {
     if (await exists(path)) {
@@ -195,6 +265,16 @@ async function importTemplate(templatePath: AbsPath): Promise<void> {
 }
 
 async function deleteTemplate(template: Template): Promise<void> {
+  const deleteCheck = await canDeleteTemplate(template.metadata.name)
+  if (!deleteCheck.canDelete) {
+    const message = deleteCheck.reason === 'TEMPLATE_REFERENCE_CHECK_FAILED'
+      ? '模板引用关系无法确认，无法删除'
+      : '模板仍被游戏使用，无法删除'
+    throw new AppError('RESOURCE_IN_USE', message, {
+      details: { reason: deleteCheck.reason },
+    })
+  }
+
   if (template.availability === 'available') {
     try {
       await fsCmds.deleteFile(template.path, true)
@@ -264,6 +344,7 @@ export const templateManager = {
   validateAllTemplates,
   inspectTemplateAvailability,
   getTemplateMetadata,
+  canDeleteTemplate,
   importTemplate,
   deleteTemplate,
 }

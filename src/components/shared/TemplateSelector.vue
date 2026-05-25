@@ -12,10 +12,13 @@ const STANDALONE_PREFIX = 'standalone:'
 
 let modelValue = $(defineModel<TemplateBinding | undefined>())
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
+  allowFollowEngine?: boolean
   engineId?: string
   disabled?: boolean
-}>()
+}>(), {
+  allowFollowEngine: true,
+})
 
 const { t } = useI18n()
 
@@ -97,7 +100,9 @@ const selectedValue = $computed({
 const selectedLabel = $computed(() => {
   const binding = modelValue
   if (!binding) {
-    return followEngineLabel
+    return props.allowFollowEngine
+      ? followEngineLabel
+      : t('game.selectTemplatePlaceholder')
   }
   if (binding.kind === 'engineBuiltin') {
     const engine = availableEngines.find(
@@ -119,7 +124,7 @@ const selectedLabel = $computed(() => {
       <SelectValue>{{ selectedLabel }}</SelectValue>
     </SelectTrigger>
     <SelectContent>
-      <SelectItem :value="FOLLOW_ENGINE_VALUE">
+      <SelectItem v-if="props.allowFollowEngine" :value="FOLLOW_ENGINE_VALUE">
         {{ followEngineLabel }}
       </SelectItem>
 

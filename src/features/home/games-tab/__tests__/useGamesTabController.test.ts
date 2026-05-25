@@ -13,6 +13,7 @@ const {
   openDialogMock,
   openPathMock,
   reconcileGameRecordMock,
+  requestImportDependencyResolutionMock,
   routerPushMock,
 } = vi.hoisted(() => ({
   importGameMock: vi.fn(),
@@ -23,6 +24,7 @@ const {
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
   reconcileGameRecordMock: vi.fn(),
+  requestImportDependencyResolutionMock: vi.fn(),
   routerPushMock: vi.fn(),
 }))
 
@@ -53,6 +55,10 @@ vi.mock('~/services/resource-reconcile', () => ({
   resourceReconcile: {
     reconcileGameRecord: reconcileGameRecordMock,
   },
+}))
+
+vi.mock('~/features/modals/import-dependency-resolution/request-import-dependency-resolution', () => ({
+  requestImportDependencyResolution: requestImportDependencyResolutionMock,
 }))
 
 describe('useGamesTabController', () => {
@@ -208,5 +214,18 @@ describe('useGamesTabController', () => {
     expect(notifyErrorMock).not.toHaveBeenCalled()
     expect(notifySuccessMock).not.toHaveBeenCalled()
     expect(notifyInfoMock).toHaveBeenCalledWith('home.games.importAlreadyExists')
+  })
+
+  it('导入游戏时会提供组合依赖解析回调', async () => {
+    openDialogMock.mockResolvedValue('/games/import-target')
+    importGameMock.mockResolvedValue({ id: 'game-imported', alreadyRegistered: false })
+
+    const controller = createController()
+
+    await controller.selectGameFolder()
+
+    expect(importGameMock).toHaveBeenCalledWith('/games/import-target', {
+      resolveDependencies: requestImportDependencyResolutionMock,
+    })
   })
 })

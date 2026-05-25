@@ -216,14 +216,19 @@ modals:
     uninstallSuccess: Engine uninstalled successfully
     uninstallFailed: Failed to uninstall engine
   deleteTemplate:
+    blockedTitle: Cannot Delete
+    blockedByGames: "The following games are using this template:"
+    blockedByUncheckedGames: "The following games' project configs cannot be read, so template usage cannot be confirmed:"
     title: Delete Template
     description: Are you sure you want to delete the template {name}?
     warning: This operation will move template files to the recycle bin. You can restore them from there.
     deleteSuccess: Template deleted successfully
+    deleteFailed: Failed to delete template
     removeTitle: Remove Template Record
     removeDescription: Are you sure you want to remove the record for template {name}?
     removeWarning: The template directory is unavailable. This will only remove the local record and will not delete any files.
     removeSuccess: Template record removed
+    removeFailed: Failed to remove template record
   switchEngine:
     title: Switch Engine
     description: Select the game engine to switch to
@@ -1114,6 +1119,23 @@ engine:
   unavailable: Unavailable
 
 game:
-  selectEngine: Select game engine
-  selectEngineDescription: Current engine is unavailable, please select any available engine to open
-  selectEngineDescriptionWithName: The engine associated with "{name}" is unavailable. Select an available engine to continue importing.
+  selectTemplatePlaceholder: Select an available template
+  importDependencyResolutionTitle: Select Resources for Import
+  importDependencyResolutionDescription: This project references an unavailable engine or template. Select resources available on this device; the app will update the project config and continue importing.
+  importDependencyResolutionDescriptionWithName: "\"{name}\" references an unavailable engine or template. Select resources available on this device; the app will update the project config and continue importing."
+  importDependencyResolutionLegacyDescription: This legacy project folder does not include its own engine. Select an available engine; the app will create a project config and continue importing.
+  importDependencyResolutionLegacyDescriptionWithName: "\"{name}\" is a legacy project and its folder does not include its own engine. Select an available engine; the app will create a project config and continue importing."
+  importDependencyResolutionEngineTitle: Bind Engine
+  importDependencyResolutionTemplateTitle: Bind Template
+  importDependencyResolutionEngineIssue: Select an available engine. The imported project will use it for opening and previewing.
+  importDependencyResolutionEngineLegacyIssue: Legacy projects need a local engine binding before they can be imported.
+  importDependencyResolutionTemplateIssue: Select an available template or follow the selected engine default template.
+  importDependencyResolutionOriginalEngine: Original Engine
+  importDependencyResolutionOriginalTemplate: Original Template
+  importDependencyResolutionReasonMissing: Not Installed
+  importDependencyResolutionReasonUnavailable: Unavailable
+  importDependencyResolutionReasonSelectionRequired: Selection Required
+  importDependencyResolutionTemplateFollowEngineHint: Choosing "follow the engine default template" removes the explicit template reference from the project.
+  importDependencyResolutionScopeHint: Only the imported project's config will be updated. Installed resources will not be moved or deleted.
+  importDependencyResolutionCancel: Cancel Import
+  importDependencyResolutionConfirm: Continue Import

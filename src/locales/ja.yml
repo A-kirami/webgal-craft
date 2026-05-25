@@ -216,14 +216,19 @@ modals:
     uninstallSuccess: エンジンのアンインストールに成功しました
     uninstallFailed: エンジンのアンインストールに失敗しました
   deleteTemplate:
+    blockedTitle: 削除できません
+    blockedByGames: 以下のゲームがこのテンプレートを使用しています：
+    blockedByUncheckedGames: 以下のゲームのプロジェクト設定を読み取れないため、このテンプレートを使用しているか確認できません：
     title: テンプレートを削除
     description: テンプレート {name} を削除してもよろしいですか？
     warning: この操作はテンプレートファイルをゴミ箱に移動します。ゴミ箱から復元できます。
     deleteSuccess: テンプレートを削除しました
+    deleteFailed: テンプレートの削除に失敗しました
     removeTitle: テンプレート記録を削除
     removeDescription: テンプレート {name} の記録を削除してもよろしいですか？
     removeWarning: テンプレートディレクトリが利用できません。この操作はローカル記録のみ削除し、ファイルは削除されません。
     removeSuccess: テンプレート記録を削除しました
+    removeFailed: テンプレート記録の削除に失敗しました
   switchEngine:
     title: エンジンを切り替え
     description: 切り替えるゲームエンジンを選択
@@ -1114,6 +1119,23 @@ engine:
   unavailable: 利用不可
 
 game:
-  selectEngine: エンジンを選択
-  selectEngineDescription: 現在のエンジンが利用できません。利用可能な任意のエンジンを選択して開いてください
-  selectEngineDescriptionWithName: 「{name}」に関連付けられたエンジンは利用できません。インポートを続行するには、利用可能なエンジンを選択してください。
+  selectTemplatePlaceholder: 利用可能なテンプレートを選択
+  importDependencyResolutionTitle: インポートに必要なリソースを選択
+  importDependencyResolutionDescription: このプロジェクトが参照しているエンジンまたはテンプレートは利用できません。この端末で利用可能なリソースを選択すると、アプリがプロジェクト設定を更新してインポートを続行します。
+  importDependencyResolutionDescriptionWithName: 「{name}」が参照しているエンジンまたはテンプレートは利用できません。この端末で利用可能なリソースを選択すると、アプリがプロジェクト設定を更新してインポートを続行します。
+  importDependencyResolutionLegacyDescription: この旧式プロジェクトのフォルダには内蔵エンジンがありません。利用可能なエンジンを選択すると、アプリがプロジェクト設定を作成してインポートを続行します。
+  importDependencyResolutionLegacyDescriptionWithName: 「{name}」は旧式プロジェクトで、フォルダには内蔵エンジンがありません。利用可能なエンジンを選択すると、アプリがプロジェクト設定を作成してインポートを続行します。
+  importDependencyResolutionEngineTitle: エンジンを割り当て
+  importDependencyResolutionTemplateTitle: テンプレートを割り当て
+  importDependencyResolutionEngineIssue: 利用可能なエンジンを選択してください。インポート後のプロジェクトは、そのエンジンで開いてプレビューします。
+  importDependencyResolutionEngineLegacyIssue: 旧式プロジェクトをインポートするには、ローカルのエンジンを割り当てる必要があります。
+  importDependencyResolutionTemplateIssue: 利用可能なテンプレートを選択するか、選択したエンジンの既定テンプレートに従ってください。
+  importDependencyResolutionOriginalEngine: 元のエンジン
+  importDependencyResolutionOriginalTemplate: 元のテンプレート
+  importDependencyResolutionReasonMissing: 未インストール
+  importDependencyResolutionReasonUnavailable: 利用不可
+  importDependencyResolutionReasonSelectionRequired: 選択が必要
+  importDependencyResolutionTemplateFollowEngineHint: 「エンジンの既定テンプレートに従う」を選択すると、プロジェクト内の明示的なテンプレート参照は削除されます。
+  importDependencyResolutionScopeHint: 更新されるのはインポート対象プロジェクトの設定のみです。インストール済みリソースは移動・削除されません。
+  importDependencyResolutionCancel: インポートをキャンセル
+  importDependencyResolutionConfirm: インポートを続行

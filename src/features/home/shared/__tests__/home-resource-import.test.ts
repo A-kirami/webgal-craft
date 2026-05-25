@@ -108,12 +108,12 @@ describe('首页共享导入纯逻辑', () => {
     })
   })
 
-  it('导入取消错误会映射为静默通知', () => {
+  it('导入取消错误会映射为信息通知', () => {
     expect(resolveHomeResourceImportNotification(new AppError('IO_ERROR', 'cancelled', {
       details: { reason: 'IMPORT_CANCELLED' },
     }))).toEqual({
       kind: 'import-cancelled',
-      level: 'silent',
+      level: 'info',
     })
   })
 

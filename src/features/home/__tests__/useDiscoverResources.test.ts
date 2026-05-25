@@ -11,7 +11,11 @@ const {
   getEnginePreviewAssetsMock,
   getTemplateMetadataMock,
   modalOpenMock,
+  notifyErrorMock,
+  notifyInfoMock,
+  notifySuccessMock,
   readDirMock,
+  requestImportDependencyResolutionMock,
   resolveHomeTabDefinitionMock,
   templateImportMock,
   useModalStoreMock,
@@ -32,7 +36,11 @@ const {
   getEnginePreviewAssetsMock: vi.fn(),
   getTemplateMetadataMock: vi.fn(),
   modalOpenMock: vi.fn(),
+  notifyErrorMock: vi.fn(),
+  notifyInfoMock: vi.fn(),
+  notifySuccessMock: vi.fn(),
   readDirMock: vi.fn(),
+  requestImportDependencyResolutionMock: vi.fn(),
   resolveHomeTabDefinitionMock: vi.fn(),
   templateImportMock: vi.fn(),
   useModalStoreMock: vi.fn(),
@@ -58,8 +66,9 @@ vi.mock('@tauri-apps/plugin-log', () => ({
 
 vi.mock('notivue', () => ({
   push: {
-    error: vi.fn(),
-    success: vi.fn(),
+    error: notifyErrorMock,
+    info: notifyInfoMock,
+    success: notifySuccessMock,
   },
 }))
 
@@ -73,8 +82,8 @@ vi.mock('~/features/home/home-tabs', () => ({
   resolveHomeTabDefinition: resolveHomeTabDefinitionMock,
 }))
 
-vi.mock('~/features/modals/engine-selection/request-engine-selection', () => ({
-  requestEngineSelection: vi.fn(),
+vi.mock('~/features/modals/import-dependency-resolution/request-import-dependency-resolution', () => ({
+  requestImportDependencyResolution: requestImportDependencyResolutionMock,
 }))
 
 vi.mock('~/services/engine-manager', () => ({
@@ -132,7 +141,11 @@ describe('useDiscoverResources', () => {
     getEnginePreviewAssetsMock.mockReset()
     getTemplateMetadataMock.mockReset()
     modalOpenMock.mockReset()
+    notifyErrorMock.mockReset()
+    notifyInfoMock.mockReset()
+    notifySuccessMock.mockReset()
     readDirMock.mockReset()
+    requestImportDependencyResolutionMock.mockReset()
     resolveHomeTabDefinitionMock.mockReset()
     templateImportMock.mockReset()
     useModalStoreMock.mockReset()
@@ -476,5 +489,138 @@ describe('useDiscoverResources', () => {
 
     expect(modalOpenMock).not.toHaveBeenCalled()
     expect(gameIdentityKeyOfMock).toHaveBeenCalled()
+  })
+
+  it('批量导入发现的游戏时会提供组合依赖解析回调', async () => {
+    const { gameManager } = await import('~/services/game-manager')
+    vi.mocked(gameManager.validateGame).mockResolvedValue(true)
+    vi.mocked(gameManager.getGamePreviewAssets).mockResolvedValue({
+      icon: { path: 'icons/favicon.ico' },
+      cover: { path: 'game/background/cover.png' },
+    })
+    vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
+      projectPath: AbsPath.from('/games/demo'),
+    })
+    vi.mocked(gameManager.importGame).mockResolvedValue({
+      id: 'game-imported',
+      alreadyRegistered: false,
+    })
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'games' })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'games' })
+    useStorageSettingsStoreMock.mockReturnValue({
+      engineSavePath: '/engines',
+      gameSavePath: '/games',
+      templateSavePath: '/templates',
+    })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/games': {
+          return [{ isDirectory: true, name: 'demo' }]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    const modalProps = modalOpenMock.mock.calls[0]?.[1] as { onImport?: (paths: AbsPath[]) => Promise<void> } | undefined
+    await modalProps?.onImport?.([AbsPath.from('/games/demo')])
+
+    expect(gameManager.importGame).toHaveBeenCalledWith('/games/demo', {
+      resolveDependencies: requestImportDependencyResolutionMock,
+    })
+  })
+
+  it('批量导入发现的游戏命中已注册资源时提示已导入', async () => {
+    const { gameManager } = await import('~/services/game-manager')
+    vi.mocked(gameManager.validateGame).mockResolvedValue(true)
+    vi.mocked(gameManager.getGamePreviewAssets).mockResolvedValue({
+      icon: { path: 'icons/favicon.ico' },
+      cover: { path: 'game/background/cover.png' },
+    })
+    vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
+      projectPath: AbsPath.from('/games/demo'),
+    })
+    vi.mocked(gameManager.importGame).mockResolvedValue({
+      id: 'game-existing',
+      alreadyRegistered: true,
+    })
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'games' })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'games' })
+    useStorageSettingsStoreMock.mockReturnValue({
+      engineSavePath: '/engines',
+      gameSavePath: '/games',
+      templateSavePath: '/templates',
+    })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/games': {
+          return [{ isDirectory: true, name: 'demo' }]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    const modalProps = modalOpenMock.mock.calls[0]?.[1] as { onImport?: (paths: AbsPath[]) => Promise<void> } | undefined
+    await modalProps?.onImport?.([AbsPath.from('/games/demo')])
+
+    expect(notifyInfoMock).toHaveBeenCalledWith('home.games.importAlreadyExists (1/1)')
+    expect(notifySuccessMock).not.toHaveBeenCalled()
+  })
+
+  it('批量导入发现的游戏被取消时提示导入已取消而不是未知错误', async () => {
+    const { gameManager } = await import('~/services/game-manager')
+    const { AppError } = await import('~/types/errors')
+    vi.mocked(gameManager.validateGame).mockResolvedValue(true)
+    vi.mocked(gameManager.getGamePreviewAssets).mockResolvedValue({
+      icon: { path: 'icons/favicon.ico' },
+      cover: { path: 'game/background/cover.png' },
+    })
+    vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
+      projectPath: AbsPath.from('/games/demo'),
+    })
+    vi.mocked(gameManager.importGame).mockRejectedValue(new AppError('IO_ERROR', 'cancelled', {
+      details: { reason: 'IMPORT_CANCELLED' },
+    }))
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'games' })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'games' })
+    useStorageSettingsStoreMock.mockReturnValue({
+      engineSavePath: '/engines',
+      gameSavePath: '/games',
+      templateSavePath: '/templates',
+    })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/games': {
+          return [{ isDirectory: true, name: 'demo' }]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    const modalProps = modalOpenMock.mock.calls[0]?.[1] as { onImport?: (paths: AbsPath[]) => Promise<void> } | undefined
+    await modalProps?.onImport?.([AbsPath.from('/games/demo')])
+
+    expect(notifyErrorMock).not.toHaveBeenCalled()
+    expect(notifyInfoMock).toHaveBeenCalledWith('home.games.importCancelled (1/1)')
   })
 })
