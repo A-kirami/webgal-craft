@@ -14,6 +14,7 @@ import { useWorkspaceStore } from '~/stores/workspace'
 
 import type { DiscoveredResource } from './discovered-resource'
 import type { Engine, Game, Template } from '~/database/model'
+import type { HomeResourceImportOutcome } from '~/features/home/shared/home-resource-import'
 import type { StaticSiteConfig } from '~/types/server'
 
 export type { DiscoveredResource } from './discovered-resource'
@@ -255,15 +256,21 @@ function discoverByType(type: ResourceType): Promise<DiscoveredResource[]> {
 }
 
 interface ImportMessages {
+  alreadyRegistered?: string
   cancelled?: string
   success: string
   error: string
+}
+
+function isHomeResourceImportOutcome(value: unknown): value is HomeResourceImportOutcome {
+  return typeof value === 'object' && value !== null && 'alreadyRegistered' in value
 }
 
 function resolveImportMessages(type: ResourceType, t: (key: string) => string): ImportMessages {
   switch (type) {
     case 'games': {
       return {
+        alreadyRegistered: t('home.games.importAlreadyExists'),
         cancelled: t('home.games.importCancelled'),
         success: t('home.games.importSuccess'),
         error: t('home.games.importUnknownError'),
@@ -271,6 +278,7 @@ function resolveImportMessages(type: ResourceType, t: (key: string) => string): 
     }
     case 'engines': {
       return {
+        alreadyRegistered: t('home.engines.importAlreadyExists'),
         success: t('home.engines.importSuccess'),
         error: t('home.engines.importUnknownError'),
       }
@@ -342,8 +350,9 @@ export function useDiscoverResources() {
     const results = await Promise.all(
       paths.map(async (path) => {
         try {
-          await importFn(path)
-          return resolveHomeResourceImportNotification()
+          const result = await importFn(path)
+          const outcome = isHomeResourceImportOutcome(result) ? result : undefined
+          return resolveHomeResourceImportNotification(undefined, outcome)
         } catch (error) {
           const notification = resolveHomeResourceImportNotification(error)
           if (notification.kind !== 'import-cancelled') {
@@ -355,11 +364,15 @@ export function useDiscoverResources() {
     )
 
     const successCount = results.filter(result => result.level === 'success').length
+    const alreadyRegisteredCount = results.filter(result => result.kind === 'already-registered').length
     const cancelCount = results.filter(result => result.kind === 'import-cancelled').length
     const failCount = results.filter(result => result.level === 'error').length
 
     if (successCount > 0) {
       notify.success(`${messages.success} (${successCount}/${paths.length})`)
+    }
+    if (alreadyRegisteredCount > 0 && messages.alreadyRegistered) {
+      notify.info(`${messages.alreadyRegistered} (${alreadyRegisteredCount}/${paths.length})`)
     }
     if (cancelCount > 0 && messages.cancelled) {
       notify.info(`${messages.cancelled} (${cancelCount}/${paths.length})`)

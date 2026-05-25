@@ -536,6 +536,50 @@ describe('useDiscoverResources', () => {
     })
   })
 
+  it('批量导入发现的游戏命中已注册资源时提示已导入', async () => {
+    const { gameManager } = await import('~/services/game-manager')
+    vi.mocked(gameManager.validateGame).mockResolvedValue(true)
+    vi.mocked(gameManager.getGamePreviewAssets).mockResolvedValue({
+      icon: { path: 'icons/favicon.ico' },
+      cover: { path: 'game/background/cover.png' },
+    })
+    vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
+      projectPath: AbsPath.from('/games/demo'),
+    })
+    vi.mocked(gameManager.importGame).mockResolvedValue({
+      id: 'game-existing',
+      alreadyRegistered: true,
+    })
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'games' })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'games' })
+    useStorageSettingsStoreMock.mockReturnValue({
+      engineSavePath: '/engines',
+      gameSavePath: '/games',
+      templateSavePath: '/templates',
+    })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/games': {
+          return [{ isDirectory: true, name: 'demo' }]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    const modalProps = modalOpenMock.mock.calls[0]?.[1] as { onImport?: (paths: AbsPath[]) => Promise<void> } | undefined
+    await modalProps?.onImport?.([AbsPath.from('/games/demo')])
+
+    expect(notifyInfoMock).toHaveBeenCalledWith('home.games.importAlreadyExists (1/1)')
+    expect(notifySuccessMock).not.toHaveBeenCalled()
+  })
+
   it('批量导入发现的游戏被取消时提示导入已取消而不是未知错误', async () => {
     const { gameManager } = await import('~/services/game-manager')
     const { AppError } = await import('~/types/errors')
