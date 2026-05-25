@@ -118,7 +118,6 @@ const {
     extension: '.txt',
     stem: t('edit.fileTree.defaultFileStem'),
   }),
-  defaultFolderName: () => t('edit.fileTree.defaultFolderName'),
   fileTreeContainerRef,
   getKey,
   inputRef,
