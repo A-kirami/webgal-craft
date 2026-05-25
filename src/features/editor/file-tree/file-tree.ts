@@ -182,9 +182,14 @@ export function findFileTreeItemByPath<T>(
 export function resolveFileTreeCreateStart<T>(
   options: ResolveFileTreeCreateStartOptions<T>,
 ): FileTreeCreateStartResult {
-  const fileDraft = resolveFileTreeDefaultFileDraft(options.defaultFileNameParts)
-  const value = options.type === 'file' ? fileDraft.value : ''
-  const selectionEnd = options.type === 'file' ? fileDraft.selectionEnd : 0
+  let value = ''
+  let selectionEnd = 0
+
+  if (options.type === 'file') {
+    const fileDraft = resolveFileTreeDefaultFileDraft(options.defaultFileNameParts)
+    value = fileDraft.value
+    selectionEnd = fileDraft.selectionEnd
+  }
 
   const parentItem = findFileTreeItemByPath(options.items, options.parentPath, options.accessor)
 
