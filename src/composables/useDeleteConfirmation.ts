@@ -52,7 +52,7 @@ export function useDeleteConfirmation(options: UseDeleteConfirmationOptions) {
       }
       associatedGames = []
       uncheckedGames = []
-      canDelete = true
+      canDelete = false
       logger.error(`${options.logPrefix}: ${error}`)
     } finally {
       if (requestId === checkRequestId) {
