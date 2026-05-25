@@ -8,7 +8,7 @@ import {
   HomeResourceImportMessages,
   resolveImportNotificationMessage,
 } from '~/features/home/shared/useHomeResourceImportActions'
-import { requestEngineSelection } from '~/features/modals/engine-selection/request-engine-selection'
+import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
 import { isEngineUsable } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 import { useModalStore } from '~/stores/modal'
@@ -75,16 +75,25 @@ async function selectGameFolder() {
   }
 
   try {
-    const gameId = await gameManager.importGame(AbsPath.from(path), { selectEngine: requestEngineSelection })
-    router.push(`/edit/${gameId}`)
+    const { id } = await gameManager.importGame(AbsPath.from(path), {
+      resolveDependencies: requestImportDependencyResolution,
+    })
+    router.push(`/edit/${id}`)
   } catch (error: unknown) {
     logger.error(`导入游戏时发生错误: ${error}`)
     const notification = resolveHomeResourceImportNotification(error)
-    if (notification.level === 'silent') {
-      return
-    }
     const message = resolveImportNotificationMessage(notification, gameImportMessages, t)
-    notify.error(message)
+
+    switch (notification.level) {
+      case 'info': {
+        notify.info(message)
+        break
+      }
+      default: {
+        notify.error(message)
+        break
+      }
+    }
   }
 }
 </script>

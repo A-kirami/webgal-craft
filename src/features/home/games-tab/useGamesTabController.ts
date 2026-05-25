@@ -1,11 +1,12 @@
 import { useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
 import { isEngineUsable } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 import { resourceReconcile } from '~/services/resource-reconcile'
 
 import type { EngineStatus, Game } from '~/database/model'
 import type { ResourceAvailability } from '~/services/resource-health'
-import type { EngineSelectionContext } from '~/types/engine-selection'
+import type { ResolveImportDependencies } from '~/types/import-dependency-resolution'
 import type { I18nT } from '~/utils/i18n-like'
 
 interface EngineAvailabilityCheck {
@@ -22,24 +23,16 @@ interface UseGamesTabControllerOptions {
   openNoEngineAlertModal: (onConfirm: () => void) => void
   openRecoverGameModal: (game: Game) => void
   pushRoute: (path: string) => unknown
-  selectEngine?: (context?: EngineSelectionContext) => Promise<string | undefined>
+  resolveDependencies?: ResolveImportDependencies
   t: I18nT
   switchToEnginesTab: () => void
 }
 
 export function useGamesTabController(options: UseGamesTabControllerOptions) {
-  async function selectEngine(context?: EngineSelectionContext): Promise<string | undefined> {
-    if (options.selectEngine) {
-      return await options.selectEngine(context)
-    }
-
-    const { requestEngineSelection } = await import('~/features/modals/engine-selection/request-engine-selection')
-    return await requestEngineSelection(context)
-  }
-
+  const resolveDependencies = options.resolveDependencies ?? requestImportDependencyResolution
   const importActions = useHomeResourceImportActions<Game>({
     activeProgress: options.activeProgress,
-    importResource: path => gameManager.importGame(path, { selectEngine }),
+    importResource: path => gameManager.importGame(path, { resolveDependencies }),
     messages: {
       alreadyRegistered: t => t('home.games.importAlreadyExists'),
       engineNotFound: t => t('home.games.importEngineNotFound'),

@@ -6,12 +6,14 @@ import { AppError } from '~/types/errors'
 const {
   importResourceMock,
   notifyErrorMock,
+  notifyInfoMock,
   notifySuccessMock,
   openDialogMock,
   openPathMock,
 } = vi.hoisted(() => ({
   importResourceMock: vi.fn(),
   notifyErrorMock: vi.fn(),
+  notifyInfoMock: vi.fn(),
   notifySuccessMock: vi.fn(),
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
@@ -28,6 +30,7 @@ vi.mock('@tauri-apps/plugin-opener', () => ({
 vi.mock('notivue', () => ({
   push: {
     error: notifyErrorMock,
+    info: notifyInfoMock,
     success: notifySuccessMock,
   },
 }))
@@ -38,6 +41,7 @@ function createActions() {
     importResource: importResourceMock,
     messages: {
       invalidFolder: t => t('home.engines.importInvalidFolder'),
+      importCancelled: t => t('home.games.importCancelled'),
       multipleFolders: t => t('home.engines.importMultipleFolders'),
       selectFolderTitle: t => t('common.dialogs.selectEngineFolder'),
       success: t => t('home.engines.importSuccess'),
@@ -100,6 +104,19 @@ describe('useHomeResourceImportActions', () => {
     await actions.selectFolder()
 
     expect(notifyErrorMock).toHaveBeenCalledWith('home.engines.importUnsupportedLegacyEngine')
+  })
+
+  it('导入被取消时用信息通知而不是错误通知', async () => {
+    openDialogMock.mockResolvedValue('/engines/cancelled')
+    importResourceMock.mockRejectedValue(new AppError('IO_ERROR', 'cancelled', {
+      details: { reason: 'IMPORT_CANCELLED' },
+    }))
+    const actions = createActions()
+
+    await actions.selectFolder()
+
+    expect(notifyErrorMock).not.toHaveBeenCalled()
+    expect(notifyInfoMock).toHaveBeenCalledWith('home.games.importCancelled')
   })
 
   it('能够暴露统一的进度读取与目录打开能力', async () => {

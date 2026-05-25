@@ -1,13 +1,19 @@
 import type { ModelRef } from 'vue'
 import type { Game } from '~/database/model'
 
+interface DeleteCheckResult {
+  associatedGames?: Game[]
+  canDelete?: boolean
+  uncheckedGames?: Game[]
+}
+
 interface UseDeleteConfirmationOptions {
   /** 控制对话框开关的 v-model ref */
   open: ModelRef<boolean | undefined>
   /** 返回用于监听变化的标识符（如 engine.id、groupName） */
   identifier: () => unknown
-  /** 检查是否可删除，返回关联的游戏列表 */
-  checkDelete: () => Promise<{ associatedGames?: Game[] }>
+  /** 检查是否可删除，返回阻止删除的原因和游戏列表 */
+  checkDelete: () => Promise<DeleteCheckResult>
   /** 执行实际删除操作 */
   performDelete: () => Promise<void>
   /** 删除成功后的提示信息 */
@@ -20,11 +26,13 @@ interface UseDeleteConfirmationOptions {
 
 export function useDeleteConfirmation(options: UseDeleteConfirmationOptions) {
   let associatedGames = $ref<Game[]>([])
+  let uncheckedGames = $ref<Game[]>([])
+  let canDelete = $ref(true)
   let isCheckingDelete = $ref(false)
   let isDeleting = $ref(false)
   let checkRequestId = 0
 
-  const isDeleteBlocked = $computed(() => associatedGames.length > 0)
+  const isDeleteBlocked = $computed(() => !canDelete || associatedGames.length > 0 || uncheckedGames.length > 0)
   const isConfirmDisabled = $computed(() => isCheckingDelete || isDeleteBlocked || isDeleting)
 
   async function loadDeleteCheck(): Promise<void> {
@@ -36,11 +44,15 @@ export function useDeleteConfirmation(options: UseDeleteConfirmationOptions) {
         return
       }
       associatedGames = result.associatedGames ?? []
+      uncheckedGames = result.uncheckedGames ?? []
+      canDelete = result.canDelete ?? (associatedGames.length === 0 && uncheckedGames.length === 0)
     } catch (error) {
       if (requestId !== checkRequestId) {
         return
       }
       associatedGames = []
+      uncheckedGames = []
+      canDelete = true
       logger.error(`${options.logPrefix}: ${error}`)
     } finally {
       if (requestId === checkRequestId) {
@@ -53,6 +65,8 @@ export function useDeleteConfirmation(options: UseDeleteConfirmationOptions) {
     if (!isOpen) {
       checkRequestId++
       associatedGames = []
+      uncheckedGames = []
+      canDelete = true
       isCheckingDelete = false
       return
     }
@@ -83,6 +97,7 @@ export function useDeleteConfirmation(options: UseDeleteConfirmationOptions) {
 
   return $$({
     associatedGames,
+    uncheckedGames,
     isCheckingDelete,
     isDeleteBlocked,
     isConfirmDisabled,

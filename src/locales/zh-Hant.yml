@@ -216,14 +216,19 @@ modals:
     uninstallSuccess: 引擎卸載成功
     uninstallFailed: 引擎卸載失敗
   deleteTemplate:
+    blockedTitle: 無法刪除
+    blockedByGames: 以下遊戲正在使用此模板：
+    blockedByUncheckedGames: 以下遊戲的專案設定無法讀取，無法確認是否正在使用此模板：
     title: 刪除模板
     description: 確定要刪除模板 {name} 嗎？
     warning: 此操作將把模板檔案移到資源回收桶，你可以稍後從資源回收桶還原。
     deleteSuccess: 模板刪除成功
+    deleteFailed: 模板刪除失敗
     removeTitle: 移除模板記錄
     removeDescription: 確定要移除模板 {name} 的記錄嗎？
     removeWarning: 模板目錄已不可用，此操作只會移除本地記錄，不會刪除任何檔案。
     removeSuccess: 模板記錄已移除
+    removeFailed: 模板記錄移除失敗
   switchEngine:
     title: 切換引擎
     description: 選擇要切換的遊戲引擎
@@ -1114,6 +1119,23 @@ engine:
   unavailable: 不可用
 
 game:
-  selectEngine: 選擇引擎
-  selectEngineDescription: 目前引擎不可用，請選擇任意可用引擎開啟
-  selectEngineDescriptionWithName: 「{name}」關聯的引擎不可用，請選擇一個可用引擎繼續匯入。
+  selectTemplatePlaceholder: 選擇可用模板
+  importDependencyResolutionTitle: 選擇匯入所需資源
+  importDependencyResolutionDescription: 目前專案引用的引擎或模板不可用。請選擇本機可用資源，應用會更新專案設定後繼續匯入。
+  importDependencyResolutionDescriptionWithName: 「{name}」引用的引擎或模板不可用。請選擇本機可用資源，應用會更新專案設定後繼續匯入。
+  importDependencyResolutionLegacyDescription: 目前舊版專案目錄內沒有自帶引擎。請選擇一個可用引擎，應用會建立專案設定後繼續匯入。
+  importDependencyResolutionLegacyDescriptionWithName: 「{name}」是舊版專案，目錄內沒有自帶引擎。請選擇一個可用引擎，應用會建立專案設定後繼續匯入。
+  importDependencyResolutionEngineTitle: 綁定引擎
+  importDependencyResolutionTemplateTitle: 綁定模板
+  importDependencyResolutionEngineIssue: 選擇一個可用引擎，匯入後專案會使用它開啟和預覽。
+  importDependencyResolutionEngineLegacyIssue: 舊版專案需要綁定一個本機引擎才能繼續匯入。
+  importDependencyResolutionTemplateIssue: 選擇一個可用模板，或跟隨所選引擎的預設模板。
+  importDependencyResolutionOriginalEngine: 原引擎
+  importDependencyResolutionOriginalTemplate: 原模板
+  importDependencyResolutionReasonMissing: 未安裝
+  importDependencyResolutionReasonUnavailable: 不可用
+  importDependencyResolutionReasonSelectionRequired: 需選擇
+  importDependencyResolutionTemplateFollowEngineHint: 選擇「跟隨引擎預設模板」時，將移除專案中的顯式模板引用。
+  importDependencyResolutionScopeHint: 只會更新匯入專案的設定，不會移動或刪除已安裝資源。
+  importDependencyResolutionCancel: 取消匯入
+  importDependencyResolutionConfirm: 繼續匯入

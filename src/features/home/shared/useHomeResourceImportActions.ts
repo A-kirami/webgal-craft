@@ -87,10 +87,6 @@ export function useHomeResourceImportActions<TResource extends { id: string, pat
     }
 
     const notification = resolveHomeResourceImportNotification(importError, outcome)
-    if (notification.level === 'silent') {
-      return
-    }
-
     const message = resolveImportNotificationMessage(notification, options.messages, options.t)
 
     switch (notification.level) {

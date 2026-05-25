@@ -14,10 +14,10 @@ import DeleteGameModal from '~/components/modals/DeleteGameModal.vue'
 import DeleteTemplateModal from '~/components/modals/DeleteTemplateModal.vue'
 import DiscardEffectChangesModal from '~/components/modals/DiscardEffectChangesModal.vue'
 import DiscoveredResourcesModal from '~/components/modals/DiscoveredResourcesModal.vue'
-import EngineSelectionModal from '~/components/modals/EngineSelectionModal.vue'
 import ExternalDocumentChangeModal from '~/components/modals/ExternalDocumentChangeModal.vue'
 import FastPreviewTimeoutModal from '~/components/modals/FastPreviewTimeoutModal.vue'
 import GameConfigModal from '~/components/modals/GameConfigModal.vue'
+import ImportDependencyResolutionModal from '~/components/modals/ImportDependencyResolutionModal.vue'
 import PathOperationRewriteModal from '~/components/modals/PathOperationRewriteModal.vue'
 import RecoverGameModal from '~/components/modals/RecoverGameModal.vue'
 import SaveChangesModal from '~/components/modals/SaveChangesModal.vue'
@@ -43,10 +43,10 @@ const ModalDialog = {
   DeleteGameConfirmModal,
   DeleteTemplateModal,
   DiscoveredResourcesModal,
-  EngineSelectionModal,
   ExternalDocumentChangeModal,
   FastPreviewTimeoutModal,
   GameConfigModal,
+  ImportDependencyResolutionModal,
   PathOperationRewriteModal,
   RecoverGameModal,
   SaveChangesModal,

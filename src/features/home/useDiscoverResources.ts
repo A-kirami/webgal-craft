@@ -2,7 +2,8 @@ import { exists, readDir } from '@tauri-apps/plugin-fs'
 
 import { AbsPath } from '~/domain/path'
 import { resolveHomeTabDefinition } from '~/features/home/home-tabs'
-import { requestEngineSelection } from '~/features/modals/engine-selection/request-engine-selection'
+import { resolveHomeResourceImportNotification } from '~/features/home/shared/home-resource-import'
+import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
 import { engineManager } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 import { templateManager } from '~/services/template-manager'
@@ -254,6 +255,7 @@ function discoverByType(type: ResourceType): Promise<DiscoveredResource[]> {
 }
 
 interface ImportMessages {
+  cancelled?: string
   success: string
   error: string
 }
@@ -262,6 +264,7 @@ function resolveImportMessages(type: ResourceType, t: (key: string) => string): 
   switch (type) {
     case 'games': {
       return {
+        cancelled: t('home.games.importCancelled'),
         success: t('home.games.importSuccess'),
         error: t('home.games.importUnknownError'),
       }
@@ -284,7 +287,7 @@ function resolveImportMessages(type: ResourceType, t: (key: string) => string): 
 
 function resolveImportFn(type: ResourceType): (path: AbsPath) => Promise<unknown> {
   switch (type) {
-    case 'games': { return path => gameManager.importGame(path, { selectEngine: requestEngineSelection }) }
+    case 'games': { return path => gameManager.importGame(path, { resolveDependencies: requestImportDependencyResolution }) }
     case 'engines': { return path => engineManager.importEngine(path) }
     case 'templates': { return path => templateManager.importTemplate(path) }
     default: { throw new Error(`未知的资源类型: ${type satisfies never}`) }
@@ -334,29 +337,35 @@ export function useDiscoverResources() {
   async function handleImport(
     paths: AbsPath[],
     importFn: (path: AbsPath) => Promise<unknown>,
-    successMsg: string,
-    errorMsg: string,
+    messages: ImportMessages,
   ) {
     const results = await Promise.all(
       paths.map(async (path) => {
         try {
           await importFn(path)
-          return true
+          return resolveHomeResourceImportNotification()
         } catch (error) {
-          logger.error(`[资源发现] 导入失败: ${path} - ${error}`)
-          return false
+          const notification = resolveHomeResourceImportNotification(error)
+          if (notification.kind !== 'import-cancelled') {
+            logger.error(`[资源发现] 导入失败: ${path} - ${error}`)
+          }
+          return notification
         }
       }),
     )
 
-    const successCount = results.filter(Boolean).length
-    const failCount = results.length - successCount
+    const successCount = results.filter(result => result.level === 'success').length
+    const cancelCount = results.filter(result => result.kind === 'import-cancelled').length
+    const failCount = results.filter(result => result.level === 'error').length
 
     if (successCount > 0) {
-      notify.success(`${successMsg} (${successCount}/${paths.length})`)
+      notify.success(`${messages.success} (${successCount}/${paths.length})`)
+    }
+    if (cancelCount > 0 && messages.cancelled) {
+      notify.info(`${messages.cancelled} (${cancelCount}/${paths.length})`)
     }
     if (failCount > 0) {
-      notify.error(`${errorMsg} (${failCount}/${paths.length})`)
+      notify.error(`${messages.error} (${failCount}/${paths.length})`)
     }
   }
 
@@ -382,7 +391,7 @@ export function useDiscoverResources() {
     modalStore.open('DiscoveredResourcesModal', {
       type,
       resources: newResources,
-      onImport: paths => handleImport(paths, importFn, messages.success, messages.error),
+      onImport: paths => handleImport(paths, importFn, messages),
     })
   }
 

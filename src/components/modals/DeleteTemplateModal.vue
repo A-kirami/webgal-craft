@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { TriangleAlert } from '@lucide/vue'
 
+import { useDeleteConfirmation } from '~/composables/useDeleteConfirmation'
 import { templateManager } from '~/services/template-manager'
 
 import type { Template } from '~/database/model'
@@ -12,27 +13,63 @@ const props = defineProps<{
   template: Template
 }>()
 
-let isDeleting = $ref(false)
-
 const isUnavailable = $computed(() => props.template.availability !== 'available')
+const templateName = $computed(() => props.template.metadata.name)
 
-async function handleConfirm() {
-  if (isDeleting) {
+const { associatedGames, uncheckedGames, isDeleteBlocked, isConfirmDisabled, handleConfirm } =
+  $(useDeleteConfirmation({
+    open,
+    identifier: () => `${props.template.id}:${props.template.metadata.name}`,
+    checkDelete: () => templateManager.canDeleteTemplate(templateName),
+    performDelete: () => templateManager.deleteTemplate(props.template),
+    successMessage: () => isUnavailable
+      ? t('modals.deleteTemplate.removeSuccess')
+      : t('modals.deleteTemplate.deleteSuccess'),
+    fallbackErrorMessage: () => isUnavailable
+      ? t('modals.deleteTemplate.removeFailed')
+      : t('modals.deleteTemplate.deleteFailed'),
+    logPrefix: '读取模板删除状态失败',
+  }))
+
+const blockedGames = $computed(() => uncheckedGames.length > 0 ? uncheckedGames : associatedGames)
+
+const dialogTitle = $computed(() => {
+  if (isDeleteBlocked) {
+    return t('modals.deleteTemplate.blockedTitle')
+  }
+
+  if (isUnavailable) {
+    return t('modals.deleteTemplate.removeTitle')
+  }
+
+  return t('modals.deleteTemplate.title')
+})
+
+const dialogDescription = $computed(() => {
+  if (isDeleteBlocked) {
+    if (uncheckedGames.length > 0) {
+      return t('modals.deleteTemplate.blockedByUncheckedGames')
+    }
+
+    return t('modals.deleteTemplate.blockedByGames')
+  }
+
+  if (isUnavailable) {
+    return t('modals.deleteTemplate.removeDescription', { name: templateName })
+  }
+
+  return t('modals.deleteTemplate.description', { name: templateName })
+})
+
+const dialogWarning = $computed(() => {
+  if (isDeleteBlocked) {
     return
   }
-  isDeleting = true
-  try {
-    await templateManager.deleteTemplate(props.template)
-    open.value = false
-    notify.success(isUnavailable
-      ? t('modals.deleteTemplate.removeSuccess')
-      : t('modals.deleteTemplate.deleteSuccess'))
-  } catch (error) {
-    notify.error(error instanceof Error ? error.message : String(error))
-  } finally {
-    isDeleting = false
-  }
-}
+
+  return isUnavailable
+    ? t('modals.deleteTemplate.removeWarning')
+    : t('modals.deleteTemplate.warning')
+})
 </script>
 
 <template>
@@ -47,26 +84,24 @@ async function handleConfirm() {
         </div>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            {{ isUnavailable ? $t('modals.deleteTemplate.removeTitle') : $t('modals.deleteTemplate.title') }}
+            {{ dialogTitle }}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            <i18n-t v-if="isUnavailable" keypath="modals.deleteTemplate.removeDescription" tag="p">
-              <template #name>
-                <span class="text-foreground font-bold">{{ template.metadata.name }}</span>
-              </template>
-            </i18n-t>
-            <i18n-t v-else keypath="modals.deleteTemplate.description" tag="p">
-              <template #name>
-                <span class="text-foreground font-bold">{{ template.metadata.name }}</span>
-              </template>
-            </i18n-t>
-            <p>{{ isUnavailable ? $t('modals.deleteTemplate.removeWarning') : $t('modals.deleteTemplate.warning') }}</p>
+            <p>{{ dialogDescription }}</p>
+            <ul v-if="blockedGames.length > 0" class="text-sm mt-3 pl-5 list-disc">
+              <li v-for="game in blockedGames" :key="game.id">
+                {{ game.metadata.name }}
+              </li>
+            </ul>
+            <p v-if="dialogWarning">
+              {{ dialogWarning }}
+            </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
       </div>
       <AlertDialogFooter>
         <AlertDialogCancel>{{ $t('common.cancel') }}</AlertDialogCancel>
-        <AlertDialogAction variant="destructive" :disabled="isDeleting" @click="handleConfirm">
+        <AlertDialogAction variant="destructive" :disabled="isConfirmDisabled" @click="handleConfirm">
           {{ $t('common.confirm') }}
         </AlertDialogAction>
       </AlertDialogFooter>

@@ -2,7 +2,7 @@ import '~/__tests__/setup'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createTestEngine, createTestGame } from '~/__tests__/factories'
+import { createTestEngine, createTestGame, createTestTemplate } from '~/__tests__/factories'
 import { AbsPath } from '~/domain/path'
 import { gameManager } from '~/services/game-manager'
 import { AppError } from '~/types/errors'
@@ -20,6 +20,9 @@ const {
   dbGameWhereEqualsMock,
   dbGameWhereFirstMock,
   dbGameWhereMock,
+  dbTemplateWhereEqualsMock,
+  dbTemplateWhereFirstMock,
+  dbTemplateWhereMock,
   deleteFileMock,
   engineFindByRefMock,
   ensureWritableMock,
@@ -31,6 +34,7 @@ const {
   projectConfigPathMock,
   resourceStoreState,
   readProjectConfigMock,
+  resolveTemplatePathMock,
   toastWarningMock,
   warnMock,
   writeProjectConfigMock,
@@ -48,6 +52,9 @@ const {
   dbGameWhereEqualsMock: vi.fn(),
   dbGameWhereFirstMock: vi.fn(),
   dbGameWhereMock: vi.fn(),
+  dbTemplateWhereEqualsMock: vi.fn(),
+  dbTemplateWhereFirstMock: vi.fn(),
+  dbTemplateWhereMock: vi.fn(),
   deleteFileMock: vi.fn(),
   engineFindByRefMock: vi.fn(),
   ensureWritableMock: vi.fn(),
@@ -62,6 +69,7 @@ const {
     updateProgress: vi.fn(),
   },
   readProjectConfigMock: vi.fn(),
+  resolveTemplatePathMock: vi.fn(),
   toastWarningMock: vi.fn(),
   warnMock: vi.fn(),
   writeProjectConfigMock: vi.fn(),
@@ -124,6 +132,9 @@ vi.mock('~/database/db', () => ({
     engines: {
       get: dbEngineGetMock,
     },
+    templates: {
+      where: dbTemplateWhereMock,
+    },
     games: {
       add: dbGameAddMock,
       delete: dbGameDeleteMock,
@@ -146,7 +157,7 @@ vi.mock('~/services/engine-manager', () => ({
 
 vi.mock('~/services/template-switch', () => ({
   templateSwitch: {
-    resolveTemplatePath: vi.fn(),
+    resolveTemplatePath: resolveTemplatePathMock,
   },
 }))
 
@@ -199,6 +210,14 @@ function createDeferred<T>(): Deferred<T> {
   return { promise, resolve }
 }
 
+function mockTemplateLookupByName(templates: Record<string, ReturnType<typeof createTestTemplate> | undefined>) {
+  dbTemplateWhereMock.mockReturnValue({
+    equals: (name: string) => ({
+      first: async () => templates[name],
+    }),
+  })
+}
+
 const importedProjectEngineRef = {
   id: 'default-publisher.default-engine',
   version: '4.5.0',
@@ -209,10 +228,18 @@ const selectedProjectEngineRef = {
   version: '4.6.0',
 }
 
-const importedEngineSelectionContext = {
+const configuredImportDependencyContext = {
   gameName: 'Demo Game',
-  hint: importedProjectEngineRef,
-}
+  source: 'configured',
+} as const
+
+const legacyImportDependencyContext = {
+  gameName: 'Demo Game',
+  source: 'legacy',
+  engine: {
+    reason: 'selectionRequired',
+  },
+} as const
 
 describe('gameManager', () => {
   beforeEach(() => {
@@ -226,6 +253,9 @@ describe('gameManager', () => {
     dbGameWhereEqualsMock.mockReset()
     dbGameWhereFirstMock.mockReset()
     dbGameWhereMock.mockReset()
+    dbTemplateWhereEqualsMock.mockReset()
+    dbTemplateWhereFirstMock.mockReset()
+    dbTemplateWhereMock.mockReset()
     deleteFileMock.mockReset()
     engineFindByRefMock.mockReset()
     ensureWritableMock.mockReset()
@@ -238,6 +268,7 @@ describe('gameManager', () => {
     resourceStoreState.finishProgress.mockReset()
     resourceStoreState.updateProgress.mockReset()
     readProjectConfigMock.mockReset()
+    resolveTemplatePathMock.mockReset()
     copyDirectoryWithProgressMock.mockReset()
     copyFileFsMock.mockReset()
     toastWarningMock.mockReset()
@@ -251,7 +282,14 @@ describe('gameManager', () => {
     dbGameWhereEqualsMock.mockReturnValue({
       first: dbGameWhereFirstMock,
     })
+    dbTemplateWhereMock.mockReturnValue({
+      equals: dbTemplateWhereEqualsMock,
+    })
+    dbTemplateWhereEqualsMock.mockReturnValue({
+      first: dbTemplateWhereFirstMock,
+    })
     dbGameWhereFirstMock.mockResolvedValue(undefined)
+    dbTemplateWhereFirstMock.mockResolvedValue(undefined)
     dbGameAddMock.mockResolvedValue('game-1')
     dbGameDeleteMock.mockResolvedValue(undefined)
     dbGamesToArrayMock.mockResolvedValue([])
@@ -268,6 +306,7 @@ describe('gameManager', () => {
     deleteFileMock.mockResolvedValue(undefined)
     ensureWritableMock.mockImplementation(async ({ enginePath, relPath }: { enginePath: string, relPath: string }) => `${enginePath}/${relPath}`)
     copyDirectoryWithProgressMock.mockResolvedValue(undefined)
+    resolveTemplatePathMock.mockResolvedValue(undefined)
   })
 
   it('validateGame 仅检查 game/config.txt 是否存在', async () => {
@@ -623,7 +662,244 @@ describe('gameManager', () => {
     }))
   })
 
-  it('importGame 对匹配到 broken availability 引擎的配置项目会保留关联并记录受限预览警告', async () => {
+  it('importGame 会在引用 standalone 模板缺失时请求选择可用模板并更新 project.wgcp', async () => {
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/vfs'
+      || path === '/games/vfs/game/config.txt'
+      || path === '/games/vfs/project.wgcp'
+      || path === '/games/vfs/game/background/cover.png')
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: importedProjectEngineRef,
+      template: {
+        kind: 'standalone',
+        name: 'Modern Template',
+      },
+    })
+    engineFindByRefMock.mockResolvedValue(createTestEngine({
+      id: 'engine-1',
+      name: 'WebGAL',
+      version: '4.5.0',
+    }))
+    resolveTemplatePathMock.mockResolvedValue(undefined)
+    const selectedTemplateBinding = {
+      kind: 'standalone',
+      name: 'Available Template',
+    } as const
+    mockTemplateLookupByName({
+      'Available Template': createTestTemplate({
+        metadata: {
+          name: 'Available Template',
+        },
+      }),
+    })
+    const resolveDependencies = vi.fn().mockResolvedValue({
+      template: { action: 'set', binding: selectedTemplateBinding },
+    })
+
+    await expect(gameManager.importGame(AbsPath.from('/games/vfs'), {
+      resolveDependencies,
+    })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
+
+    expect(resolveDependencies).toHaveBeenCalledOnce()
+    expect(resolveDependencies).toHaveBeenCalledWith({
+      ...configuredImportDependencyContext,
+      resolvedEngineId: 'engine-1',
+      template: {
+        current: {
+          kind: 'standalone',
+          name: 'Modern Template',
+        },
+        displayName: 'Modern Template',
+        reason: 'missing',
+      },
+    })
+    expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/vfs', {
+      version: 1,
+      engine: importedProjectEngineRef,
+      template: selectedTemplateBinding,
+    })
+    expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
+      engineId: 'engine-1',
+      path: '/games/vfs',
+      pathLookupKey: '/games/vfs',
+    }))
+  })
+
+  it('importGame 在用户取消选择模板时会返回取消原因', async () => {
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/vfs'
+      || path === '/games/vfs/game/config.txt'
+      || path === '/games/vfs/project.wgcp'
+      || path === '/games/vfs/game/background/cover.png')
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: importedProjectEngineRef,
+      template: {
+        kind: 'standalone',
+        name: 'Modern Template',
+      },
+    })
+    engineFindByRefMock.mockResolvedValue(createTestEngine({
+      id: 'engine-1',
+      name: 'WebGAL',
+      version: '4.5.0',
+    }))
+    resolveTemplatePathMock.mockResolvedValue(undefined)
+
+    await expect(gameManager.importGame(AbsPath.from('/games/vfs'), {
+      resolveDependencies: vi.fn().mockResolvedValue(undefined),
+    })).rejects.toEqual(
+      new AppError('IO_ERROR', '导入已取消', {
+        details: { reason: 'IMPORT_CANCELLED' },
+      }),
+    )
+
+    expect(writeProjectConfigMock).not.toHaveBeenCalled()
+    expect(dbGameAddMock).not.toHaveBeenCalled()
+  })
+
+  it('importGame 会在引用 engineBuiltin 模板缺失时请求选择可用模板并更新 project.wgcp', async () => {
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/vfs'
+      || path === '/games/vfs/game/config.txt'
+      || path === '/games/vfs/project.wgcp'
+      || path === '/games/vfs/game/background/cover.png')
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: importedProjectEngineRef,
+      template: {
+        kind: 'engineBuiltin',
+        engine: {
+          id: 'default-publisher.default-engine',
+          version: '4.4.0',
+        },
+      },
+    })
+    engineFindByRefMock.mockImplementation(async (ref: { version?: string }) => {
+      if (ref.version === '4.5.0') {
+        return createTestEngine({
+          id: 'engine-1',
+          name: 'WebGAL',
+          version: '4.5.0',
+        })
+      }
+      return
+    })
+    resolveTemplatePathMock.mockResolvedValue(undefined)
+    const selectedTemplateBinding = {
+      kind: 'standalone',
+      name: 'Available Template',
+    } as const
+    mockTemplateLookupByName({
+      'Available Template': createTestTemplate({
+        metadata: {
+          name: 'Available Template',
+        },
+      }),
+    })
+    const resolveDependencies = vi.fn().mockResolvedValue({
+      template: { action: 'set', binding: selectedTemplateBinding },
+    })
+
+    await expect(gameManager.importGame(AbsPath.from('/games/vfs'), {
+      resolveDependencies,
+    })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
+
+    expect(resolveDependencies).toHaveBeenCalledOnce()
+    expect(resolveDependencies).toHaveBeenCalledWith({
+      ...configuredImportDependencyContext,
+      resolvedEngineId: 'engine-1',
+      template: {
+        current: {
+          kind: 'engineBuiltin',
+          engine: {
+            id: 'default-publisher.default-engine',
+            version: '4.4.0',
+          },
+        },
+        displayName: 'default-publisher.default-engine 4.4.0',
+        reason: 'missing',
+      },
+    })
+    expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/vfs', {
+      version: 1,
+      engine: importedProjectEngineRef,
+      template: selectedTemplateBinding,
+    })
+  })
+
+  it('importGame 在引擎和模板同时不可用时只请求一次组合决策并一次性写回', async () => {
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/vfs'
+      || path === '/games/vfs/game/config.txt'
+      || path === '/games/vfs/project.wgcp'
+      || path === '/games/vfs/game/background/cover.png')
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: importedProjectEngineRef,
+      template: {
+        kind: 'standalone',
+        name: 'Modern Template',
+      },
+    })
+    engineFindByRefMock.mockResolvedValue(undefined)
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      id: 'engine-2',
+      name: 'WebGAL',
+      version: '4.6.0',
+      status: 'created',
+    }))
+    mockTemplateLookupByName({
+      'Available Template': createTestTemplate({
+        metadata: {
+          name: 'Available Template',
+        },
+      }),
+    })
+    resolveTemplatePathMock.mockResolvedValue(undefined)
+    const selectedTemplateBinding = {
+      kind: 'standalone',
+      name: 'Available Template',
+    } as const
+    const resolveDependencies = vi.fn().mockResolvedValue({
+      engineId: 'engine-2',
+      template: { action: 'set', binding: selectedTemplateBinding },
+    })
+
+    await expect(gameManager.importGame(AbsPath.from('/games/vfs'), {
+      resolveDependencies,
+    })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
+
+    expect(resolveDependencies).toHaveBeenCalledOnce()
+    expect(resolveDependencies).toHaveBeenCalledWith({
+      ...configuredImportDependencyContext,
+      engine: {
+        current: importedProjectEngineRef,
+        reason: 'missing',
+      },
+      template: {
+        current: {
+          kind: 'standalone',
+          name: 'Modern Template',
+        },
+        displayName: 'Modern Template',
+        reason: 'missing',
+      },
+    })
+    expect(writeProjectConfigMock).toHaveBeenCalledOnce()
+    expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/vfs', {
+      version: 1,
+      engine: selectedProjectEngineRef,
+      template: selectedTemplateBinding,
+    })
+    expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
+      engineId: 'engine-2',
+      pathLookupKey: '/games/vfs',
+    }))
+  })
+
+  it('importGame 对匹配到 broken availability 引擎的配置项目会请求用户修复', async () => {
     existsMock.mockImplementation(async (path: string) =>
       path === '/games/vfs'
       || path === '/games/vfs/game/config.txt'
@@ -642,16 +918,39 @@ describe('gameManager', () => {
       version: '4.5.0',
       availability: 'broken',
     }))
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      id: 'engine-2',
+      name: 'WebGAL',
+      version: '4.6.0',
+      status: 'created',
+    }))
+    const resolveDependencies = vi.fn().mockResolvedValue({
+      engineId: 'engine-2',
+    })
 
-    await expect(gameManager.importGame(AbsPath.from('/games/vfs'))).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
+    await expect(gameManager.importGame(AbsPath.from('/games/vfs'), {
+      resolveDependencies,
+    })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
-    expect(writeProjectConfigMock).not.toHaveBeenCalled()
+    expect(resolveDependencies).toHaveBeenCalledWith({
+      ...configuredImportDependencyContext,
+      engine: {
+        current: {
+          id: 'default-publisher.default-engine',
+          version: '4.5.0',
+        },
+        reason: 'unavailable',
+      },
+    })
+    expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/vfs', {
+      version: 1,
+      engine: selectedProjectEngineRef,
+    })
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
-      engineId: 'engine-1',
+      engineId: 'engine-2',
       path: '/games/vfs',
       pathLookupKey: '/games/vfs',
     }))
-    expect(warnMock).toHaveBeenCalledWith('关联的引擎 WebGAL 当前不可用，项目预览将受限: /games/vfs')
   })
 
   it('importGame 对匹配到 error 引擎的配置项目会回退到重新选择可用引擎', async () => {
@@ -680,13 +979,21 @@ describe('gameManager', () => {
       status: 'created',
     }))
 
-    const selectEngine = vi.fn().mockResolvedValue('engine-2')
+    const resolveDependencies = vi.fn().mockResolvedValue({
+      engineId: 'engine-2',
+    })
 
     await expect(gameManager.importGame(AbsPath.from('/games/vfs'), {
-      selectEngine,
+      resolveDependencies,
     })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
-    expect(selectEngine).toHaveBeenCalledWith(importedEngineSelectionContext)
+    expect(resolveDependencies).toHaveBeenCalledWith({
+      ...configuredImportDependencyContext,
+      engine: {
+        current: importedProjectEngineRef,
+        reason: 'unavailable',
+      },
+    })
     expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/vfs', {
       version: 1,
       engine: selectedProjectEngineRef,
@@ -716,13 +1023,21 @@ describe('gameManager', () => {
       status: 'created',
     }))
 
-    const selectEngine = vi.fn().mockResolvedValue('engine-2')
+    const resolveDependencies = vi.fn().mockResolvedValue({
+      engineId: 'engine-2',
+    })
 
     await expect(gameManager.importGame(AbsPath.from('/games/vfs'), {
-      selectEngine,
+      resolveDependencies,
     })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
-    expect(selectEngine).toHaveBeenCalledWith(importedEngineSelectionContext)
+    expect(resolveDependencies).toHaveBeenCalledWith({
+      ...configuredImportDependencyContext,
+      engine: {
+        current: importedProjectEngineRef,
+        reason: 'missing',
+      },
+    })
     expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/vfs', {
       version: 1,
       engine: selectedProjectEngineRef,
@@ -774,14 +1089,41 @@ describe('gameManager', () => {
     expect(gameManager.identityKeyOf({ path: AbsPath.from('/Games/Demo/') })).toBe('/games/demo')
   })
 
-  it('importGame 在用户取消选择引擎时会返回取消原因', async () => {
+  it('importGame 在 legacy 项目需要选择引擎时复用组合依赖解析流程', async () => {
+    existsMock.mockImplementation(async (path: string) =>
+      path === '/games/no-engine'
+      || path === '/games/no-engine/game/config.txt'
+      || path === '/games/no-engine/game/background/cover.png')
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      id: 'engine-2',
+      name: 'WebGAL',
+      version: '4.6.0',
+      status: 'created',
+    }))
+    const resolveDependencies = vi.fn().mockResolvedValue({
+      engineId: 'engine-2',
+    })
+
+    await expect(gameManager.importGame(AbsPath.from('/games/no-engine'), {
+      resolveDependencies,
+    })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
+
+    expect(resolveDependencies).toHaveBeenCalledOnce()
+    expect(resolveDependencies).toHaveBeenCalledWith(legacyImportDependencyContext)
+    expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/no-engine', {
+      version: 1,
+      engine: selectedProjectEngineRef,
+    })
+  })
+
+  it('importGame 在用户取消选择依赖时会返回取消原因', async () => {
     existsMock.mockImplementation(async (path: string) =>
       path === '/games/no-engine'
       || path === '/games/no-engine/game/config.txt'
       || path === '/games/no-engine/game/background/cover.png')
 
     await expect(gameManager.importGame(AbsPath.from('/games/no-engine'), {
-      selectEngine: vi.fn().mockResolvedValue(undefined),
+      resolveDependencies: vi.fn().mockResolvedValue(undefined),
     })).rejects.toEqual(
       new AppError('IO_ERROR', '导入已取消', {
         details: { reason: 'IMPORT_CANCELLED' },

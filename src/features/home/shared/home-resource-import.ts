@@ -16,7 +16,7 @@ export interface HomeResourceImportNotification {
     | 'import-cancelled'
     | 'unknown-error'
     | 'multiple-folders'
-  level: 'success' | 'info' | 'error' | 'silent'
+  level: 'success' | 'info' | 'error'
 }
 
 export interface HomeResourceDropPathDecision {
@@ -58,7 +58,7 @@ export function resolveHomeResourceImportNotification(
   }
 
   const kind = resolveErrorNotificationKind(error)
-  const level = kind === 'import-cancelled' ? 'silent' : 'error'
+  const level = kind === 'import-cancelled' ? 'info' : 'error'
   return { kind, level }
 }
 
