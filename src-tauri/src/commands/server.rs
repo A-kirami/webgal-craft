@@ -521,7 +521,8 @@ impl ThumbnailCache {
         let expired_keys = self
             .entries
             .iter()
-            .filter_map(|(key, entry)| (now > entry.created_at + ttl).then(|| key.clone()))
+            .filter(|(_, entry)| now > entry.created_at + ttl)
+            .map(|(key, _)| key.clone())
             .collect::<Vec<_>>();
 
         for key in expired_keys {
@@ -749,7 +750,7 @@ fn build_thumbnail_from_source(
     source: &[u8],
     request: ThumbnailRequest,
 ) -> Option<EncodedThumbnail> {
-    let image = image::load_from_memory(&source).ok()?;
+    let image = image::load_from_memory(source).ok()?;
     let thumbnail = match request.resize_mode {
         ThumbnailResizeMode::Contain => {
             image.resize(request.width, request.height, FilterType::Lanczos3)
