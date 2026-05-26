@@ -11,7 +11,7 @@ use std::{
 };
 
 use axum::{
-    body::Body,
+    body::{Body, Bytes},
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         ConnectInfo, Path as AxumPath, State as AxumState,
@@ -354,7 +354,7 @@ struct ThumbnailRequest {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct EncodedThumbnail {
-    body: Vec<u8>,
+    body: Bytes,
     content_type: &'static str,
 }
 
@@ -403,7 +403,7 @@ impl Default for ThumbnailCacheConfig {
 }
 
 struct ThumbnailCacheEntry {
-    thumbnail: EncodedThumbnail,
+    thumbnail: Arc<EncodedThumbnail>,
     created_at: Instant,
     last_accessed: Instant,
 }
@@ -441,7 +441,7 @@ impl ThumbnailCache {
         key: &ThumbnailContentKey,
         alias: ThumbnailRequestAlias,
         now: Instant,
-    ) -> Option<EncodedThumbnail> {
+    ) -> Option<Arc<EncodedThumbnail>> {
         self.remove_expired(now);
 
         let entry = self.entries.get_mut(key)?;
@@ -457,7 +457,7 @@ impl ThumbnailCache {
         &mut self,
         alias: &ThumbnailRequestAlias,
         now: Instant,
-    ) -> Option<EncodedThumbnail> {
+    ) -> Option<Arc<EncodedThumbnail>> {
         self.remove_expired(now);
 
         let content_key = {
@@ -475,7 +475,7 @@ impl ThumbnailCache {
         &mut self,
         key: ThumbnailContentKey,
         alias: ThumbnailRequestAlias,
-        thumbnail: EncodedThumbnail,
+        thumbnail: Arc<EncodedThumbnail>,
         now: Instant,
     ) {
         self.remove_expired(now);
@@ -691,10 +691,11 @@ async fn try_build_thumbnail_response(
         return Some(build_thumbnail_response(encoded_thumbnail));
     }
 
-    let encoded_thumbnail =
+    let encoded_thumbnail = Arc::new(
         tokio::task::spawn_blocking(move || build_thumbnail_from_source(&source, request))
             .await
-            .ok()??;
+            .ok()??,
+    );
 
     state.thumbnail_cache.lock().await.insert(
         content_key,
@@ -730,8 +731,8 @@ fn supports_thumbnail(path: &Path) -> bool {
         })
 }
 
-fn build_thumbnail_response(encoded_thumbnail: EncodedThumbnail) -> Response {
-    let mut response = Response::new(encoded_thumbnail.body.into());
+fn build_thumbnail_response(encoded_thumbnail: Arc<EncodedThumbnail>) -> Response {
+    let mut response = Response::new(Body::from(encoded_thumbnail.body.clone()));
     response.headers_mut().insert(
         CONTENT_TYPE,
         HeaderValue::from_static(encoded_thumbnail.content_type),
@@ -765,7 +766,7 @@ fn build_thumbnail_from_source(
         thumbnail.write_to(&mut cursor, ImageFormat::Png).ok()?;
 
         return Some(EncodedThumbnail {
-            body: cursor.into_inner(),
+            body: Bytes::from(cursor.into_inner()),
             content_type: "image/png",
         });
     }
@@ -776,7 +777,7 @@ fn build_thumbnail_from_source(
         .ok()?;
 
     Some(EncodedThumbnail {
-        body,
+        body: Bytes::from(body),
         content_type: "image/jpeg",
     })
 }
@@ -1085,7 +1086,7 @@ pub async fn send_preview_command(
 #[cfg(test)]
 mod tests {
     use axum::{
-        body::{to_bytes, Body},
+        body::{to_bytes, Body, Bytes},
         extract::{Path as AxumPath, State as AxumState},
         http::{
             header::{ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, ORIGIN, VARY},
@@ -1273,7 +1274,7 @@ mod tests {
 
     fn test_thumbnail(body: &[u8]) -> EncodedThumbnail {
         EncodedThumbnail {
-            body: body.to_vec(),
+            body: Bytes::copy_from_slice(body),
             content_type: "image/png",
         }
     }
@@ -1390,20 +1391,23 @@ mod tests {
         let first_alias = test_alias("site-a", "icons/favicon.ico", request);
         let second_alias = test_alias("site-b", "assets/copy/favicon.ico", request);
         let content_key = ThumbnailContentKey::from_source(b"same image bytes", request);
-        let thumbnail = test_thumbnail(b"encoded-thumbnail");
+        let thumbnail = Arc::new(test_thumbnail(b"encoded-thumbnail"));
         let now = Instant::now();
 
         cache.insert(content_key.clone(), first_alias, thumbnail.clone(), now);
 
-        assert_eq!(
-            cache.get_by_content_and_bind_alias(&content_key, second_alias.clone(), now),
-            Some(thumbnail.clone())
-        );
-        assert_eq!(
-            cache.get_by_alias(&second_alias, now),
-            Some(thumbnail),
+        let content_hit = cache
+            .get_by_content_and_bind_alias(&content_key, second_alias.clone(), now)
+            .expect("内容缓存命中应返回缩略图");
+        let alias_hit = cache
+            .get_by_alias(&second_alias, now)
+            .expect("别名缓存命中应返回缩略图");
+
+        assert!(
+            Arc::ptr_eq(&content_hit, &alias_hit),
             "路径别名应绑定到同一个内容缓存项，便于源文件失效后回退"
         );
+        assert_eq!(content_hit.as_ref(), thumbnail.as_ref());
         assert_eq!(cache.entry_count(), 1);
     }
 
@@ -1415,7 +1419,12 @@ mod tests {
         let content_key = ThumbnailContentKey::from_source(b"cover bytes", request);
         let now = Instant::now();
 
-        cache.insert(content_key, alias.clone(), test_thumbnail(b"cached"), now);
+        cache.insert(
+            content_key,
+            alias.clone(),
+            Arc::new(test_thumbnail(b"cached")),
+            now,
+        );
 
         assert_eq!(
             cache.get_by_alias(&alias, now + Duration::from_secs(61)),
@@ -1441,20 +1450,22 @@ mod tests {
         cache.insert(
             ThumbnailContentKey::from_source(b"first", request),
             first_alias.clone(),
-            test_thumbnail(b"first-thumbnail"),
+            Arc::new(test_thumbnail(b"first-thumbnail")),
             now,
         );
         cache.insert(
             ThumbnailContentKey::from_source(b"second", request),
             second_alias.clone(),
-            test_thumbnail(b"second-thumbnail"),
+            Arc::new(test_thumbnail(b"second-thumbnail")),
             now + Duration::from_secs(1),
         );
 
         assert_eq!(cache.get_by_alias(&first_alias, now), None);
         assert_eq!(
-            cache.get_by_alias(&second_alias, now + Duration::from_secs(1)),
-            Some(test_thumbnail(b"second-thumbnail"))
+            cache
+                .get_by_alias(&second_alias, now + Duration::from_secs(1))
+                .as_deref(),
+            Some(&test_thumbnail(b"second-thumbnail"))
         );
         assert_eq!(cache.entry_count(), 1);
     }
