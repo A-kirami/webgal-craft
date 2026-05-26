@@ -3,10 +3,11 @@ mod preview_sync;
 use std::{
     collections::HashMap,
     hash::{Hash, Hasher},
-    io::Cursor,
+    io::{Cursor, ErrorKind},
     net::SocketAddr,
     path::{Path, PathBuf},
     sync::Arc,
+    time::{Duration, Instant},
 };
 
 use axum::{
@@ -35,6 +36,7 @@ use preview_sync::{
     RegisterPreviewRequestPayload, EDITOR_PREVIEW_PROTOCOL_V1_SUBPROTOCOL,
     SESSION_REGISTER_PREVIEW_TYPE,
 };
+use sha2::{Digest, Sha256};
 use tauri::{ipc::Channel, State as TauriState};
 use tokio::{
     net::TcpListener,
@@ -45,7 +47,8 @@ use tower::util::ServiceExt;
 use tower_http::services::ServeFile;
 
 use crate::vfs::{
-    resolve_default_template_path, sanitize_request_path, CachedCanonicals, OverlayFs, VfsError,
+    resolve_default_template_path, sanitize_request_path, to_posix_string, CachedCanonicals,
+    OverlayFs, VfsError,
 };
 
 use super::{AppError, AppResult};
@@ -62,6 +65,7 @@ struct AppState {
     preview_clients: Mutex<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>,
     preview_registry: Mutex<PreviewSessionRegistry>,
     editor_event_channel: RwLock<Option<Channel<String>>>,
+    thumbnail_cache: Mutex<ThumbnailCache>,
 }
 
 pub struct ServerState {
@@ -76,6 +80,10 @@ struct ServerHandle {
 
 const MAX_THUMBNAIL_DIMENSION: u32 = 2048;
 const JPEG_THUMBNAIL_QUALITY: u8 = 85;
+const THUMBNAIL_CACHE_TTL: Duration = Duration::from_secs(24 * 60 * 60);
+const THUMBNAIL_CACHE_MAX_ENTRIES: usize = 512;
+const THUMBNAIL_CACHE_MAX_BYTES: usize = 64 * 1024 * 1024;
+const THUMBNAIL_CACHE_MAX_ALIASES: usize = 2048;
 
 impl ServerState {
     pub fn new() -> Self {
@@ -85,6 +93,7 @@ impl ServerState {
                 preview_clients: Mutex::new(HashMap::new()),
                 preview_registry: Mutex::new(PreviewSessionRegistry::default()),
                 editor_event_channel: RwLock::new(None),
+                thumbnail_cache: Mutex::new(ThumbnailCache::default()),
             }),
             server_handle: None,
         }
@@ -270,26 +279,34 @@ async fn handle_static_request(
         Ok(path) => path,
         Err(error) => return finalize_cors(map_vfs_error(&error).into_response(), origin),
     };
+    let thumbnail_alias = resolve_thumbnail_request(&query).map(|request| ThumbnailRequestAlias {
+        site_hash: hash.clone(),
+        logical_path: to_posix_string(&logical_path),
+        request,
+    });
 
     let overlay = OverlayFs::from_cached(&site);
 
     let physical_path =
         match tokio::task::spawn_blocking(move || overlay.resolve_file(&logical_path)).await {
             Ok(Ok(path)) => path,
-            Ok(Err(error)) => return finalize_cors(map_vfs_error(&error).into_response(), origin),
+            Ok(Err(error)) => {
+                if let Some(response) =
+                    try_fallback_thumbnail_response(&state, thumbnail_alias.as_ref(), &error).await
+                {
+                    return finalize_thumbnail_response(response, origin);
+                }
+
+                return finalize_cors(map_vfs_error(&error).into_response(), origin);
+            }
             Err(_) => {
                 return finalize_cors(StatusCode::INTERNAL_SERVER_ERROR.into_response(), origin)
             }
         };
 
-    if let Some(thumbnail_request) = resolve_thumbnail_request(&query) {
-        if let Some(response) =
-            try_build_thumbnail_response(&physical_path, thumbnail_request).await
-        {
-            return finalize_cors(
-                apply_cache_control(response, CacheControlPolicy::Thumbnail),
-                origin,
-            );
+    if let Some(alias) = thumbnail_alias {
+        if let Some(response) = try_build_thumbnail_response(&state, &physical_path, alias).await {
+            return finalize_thumbnail_response(response, origin);
         }
     }
 
@@ -321,23 +338,250 @@ struct StaticAssetQuery {
     resize_mode: Option<ThumbnailResizeMode>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq)]
 enum ThumbnailResizeMode {
     #[default]
     Contain,
     Cover,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 struct ThumbnailRequest {
     width: u32,
     height: u32,
     resize_mode: ThumbnailResizeMode,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct EncodedThumbnail {
     body: Vec<u8>,
     content_type: &'static str,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+struct ThumbnailContentKey {
+    source_hash: [u8; 32],
+    request: ThumbnailRequest,
+}
+
+impl ThumbnailContentKey {
+    fn from_source(source: &[u8], request: ThumbnailRequest) -> Self {
+        let mut source_hash = [0; 32];
+        source_hash.copy_from_slice(&Sha256::digest(source));
+
+        Self {
+            source_hash,
+            request,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+struct ThumbnailRequestAlias {
+    site_hash: String,
+    logical_path: String,
+    request: ThumbnailRequest,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ThumbnailCacheConfig {
+    ttl: Duration,
+    max_entries: usize,
+    max_bytes: usize,
+    max_aliases: usize,
+}
+
+impl Default for ThumbnailCacheConfig {
+    fn default() -> Self {
+        Self {
+            ttl: THUMBNAIL_CACHE_TTL,
+            max_entries: THUMBNAIL_CACHE_MAX_ENTRIES,
+            max_bytes: THUMBNAIL_CACHE_MAX_BYTES,
+            max_aliases: THUMBNAIL_CACHE_MAX_ALIASES,
+        }
+    }
+}
+
+struct ThumbnailCacheEntry {
+    thumbnail: EncodedThumbnail,
+    created_at: Instant,
+    last_accessed: Instant,
+}
+
+struct ThumbnailAliasEntry {
+    content_key: ThumbnailContentKey,
+    last_accessed: Instant,
+}
+
+struct ThumbnailCache {
+    config: ThumbnailCacheConfig,
+    entries: HashMap<ThumbnailContentKey, ThumbnailCacheEntry>,
+    aliases: HashMap<ThumbnailRequestAlias, ThumbnailAliasEntry>,
+    total_bytes: usize,
+}
+
+impl Default for ThumbnailCache {
+    fn default() -> Self {
+        Self::new(ThumbnailCacheConfig::default())
+    }
+}
+
+impl ThumbnailCache {
+    fn new(config: ThumbnailCacheConfig) -> Self {
+        Self {
+            config,
+            entries: HashMap::new(),
+            aliases: HashMap::new(),
+            total_bytes: 0,
+        }
+    }
+
+    fn get_by_content_and_bind_alias(
+        &mut self,
+        key: &ThumbnailContentKey,
+        alias: ThumbnailRequestAlias,
+        now: Instant,
+    ) -> Option<EncodedThumbnail> {
+        self.remove_expired(now);
+
+        let entry = self.entries.get_mut(key)?;
+        entry.last_accessed = now;
+        let thumbnail = entry.thumbnail.clone();
+        self.bind_alias(alias, key.clone(), now);
+        self.enforce_alias_limit();
+
+        Some(thumbnail)
+    }
+
+    fn get_by_alias(
+        &mut self,
+        alias: &ThumbnailRequestAlias,
+        now: Instant,
+    ) -> Option<EncodedThumbnail> {
+        self.remove_expired(now);
+
+        let content_key = {
+            let alias_entry = self.aliases.get_mut(alias)?;
+            alias_entry.last_accessed = now;
+            alias_entry.content_key.clone()
+        };
+        let entry = self.entries.get_mut(&content_key)?;
+        entry.last_accessed = now;
+
+        Some(entry.thumbnail.clone())
+    }
+
+    fn insert(
+        &mut self,
+        key: ThumbnailContentKey,
+        alias: ThumbnailRequestAlias,
+        thumbnail: EncodedThumbnail,
+        now: Instant,
+    ) {
+        self.remove_expired(now);
+
+        let size_bytes = thumbnail.body.len();
+        if let Some(previous) = self.entries.remove(&key) {
+            self.total_bytes = self
+                .total_bytes
+                .saturating_sub(previous.thumbnail.body.len());
+        }
+
+        self.total_bytes += size_bytes;
+        self.entries.insert(
+            key.clone(),
+            ThumbnailCacheEntry {
+                thumbnail,
+                created_at: now,
+                last_accessed: now,
+            },
+        );
+        self.bind_alias(alias, key, now);
+
+        self.enforce_limits();
+    }
+
+    fn bind_alias(
+        &mut self,
+        alias: ThumbnailRequestAlias,
+        content_key: ThumbnailContentKey,
+        now: Instant,
+    ) {
+        self.aliases.insert(
+            alias,
+            ThumbnailAliasEntry {
+                content_key,
+                last_accessed: now,
+            },
+        );
+    }
+
+    fn remove_expired(&mut self, now: Instant) {
+        let ttl = self.config.ttl;
+        let expired_keys = self
+            .entries
+            .iter()
+            .filter_map(|(key, entry)| (now > entry.created_at + ttl).then(|| key.clone()))
+            .collect::<Vec<_>>();
+
+        for key in expired_keys {
+            self.remove_entry(&key);
+        }
+    }
+
+    fn enforce_limits(&mut self) {
+        while self.entries.len() > self.config.max_entries
+            || self.total_bytes > self.config.max_bytes
+        {
+            let Some(key) = self.least_recently_used_entry_key() else {
+                break;
+            };
+            self.remove_entry(&key);
+        }
+
+        self.enforce_alias_limit();
+    }
+
+    fn enforce_alias_limit(&mut self) {
+        while self.aliases.len() > self.config.max_aliases {
+            let Some(alias) = self.least_recently_used_alias_key() else {
+                break;
+            };
+            self.aliases.remove(&alias);
+        }
+    }
+
+    fn least_recently_used_entry_key(&self) -> Option<ThumbnailContentKey> {
+        self.entries
+            .iter()
+            .min_by_key(|(_, entry)| entry.last_accessed)
+            .map(|(key, _)| key.clone())
+    }
+
+    fn least_recently_used_alias_key(&self) -> Option<ThumbnailRequestAlias> {
+        self.aliases
+            .iter()
+            .min_by_key(|(_, entry)| entry.last_accessed)
+            .map(|(key, _)| key.clone())
+    }
+
+    fn remove_entry(&mut self, key: &ThumbnailContentKey) {
+        if let Some(entry) = self.entries.remove(key) {
+            self.total_bytes = self.total_bytes.saturating_sub(entry.thumbnail.body.len());
+        }
+        self.aliases
+            .retain(|_, alias_entry| alias_entry.content_key != *key);
+    }
+
+    #[cfg(test)]
+    fn entry_count(&self) -> usize {
+        self.entries.len()
+    }
+
+    #[cfg(test)]
+    fn alias_count(&self) -> usize {
+        self.aliases.len()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -395,27 +639,83 @@ fn resolve_thumbnail_request(query: &StaticAssetQuery) -> Option<ThumbnailReques
     })
 }
 
+fn can_fallback_to_thumbnail_cache(error: &VfsError) -> bool {
+    matches!(error, VfsError::NotFound)
+        || matches!(error, VfsError::Io(error) if error.kind() == ErrorKind::NotFound)
+}
+
+async fn try_fallback_thumbnail_response(
+    state: &Arc<AppState>,
+    alias: Option<&ThumbnailRequestAlias>,
+    error: &VfsError,
+) -> Option<Response> {
+    if !can_fallback_to_thumbnail_cache(error) {
+        return None;
+    }
+
+    try_build_cached_thumbnail_response(state, alias?).await
+}
+
 async fn try_build_thumbnail_response(
+    state: &Arc<AppState>,
     physical_path: &Path,
-    thumbnail_request: ThumbnailRequest,
+    alias: ThumbnailRequestAlias,
 ) -> Option<Response> {
     if !supports_thumbnail(physical_path) {
         return None;
     }
 
-    let encoded_thumbnail = tokio::task::spawn_blocking({
+    let request = alias.request;
+    let source = match tokio::task::spawn_blocking({
         let path = physical_path.to_path_buf();
-        move || build_thumbnail(&path, thumbnail_request)
+        move || std::fs::read(path)
     })
     .await
-    .ok()??;
+    {
+        Ok(Ok(source)) => source,
+        Ok(Err(error)) if error.kind() == ErrorKind::NotFound => {
+            return try_build_cached_thumbnail_response(state, &alias).await;
+        }
+        Ok(Err(_)) | Err(_) => return None,
+    };
+    let content_key = ThumbnailContentKey::from_source(&source, request);
+    let now = Instant::now();
 
-    let mut response = Response::new(encoded_thumbnail.body.into());
-    response.headers_mut().insert(
-        CONTENT_TYPE,
-        HeaderValue::from_static(encoded_thumbnail.content_type),
+    if let Some(encoded_thumbnail) = state
+        .thumbnail_cache
+        .lock()
+        .await
+        .get_by_content_and_bind_alias(&content_key, alias.clone(), now)
+    {
+        return Some(build_thumbnail_response(encoded_thumbnail));
+    }
+
+    let encoded_thumbnail =
+        tokio::task::spawn_blocking(move || build_thumbnail_from_source(&source, request))
+            .await
+            .ok()??;
+
+    state.thumbnail_cache.lock().await.insert(
+        content_key,
+        alias,
+        encoded_thumbnail.clone(),
+        Instant::now(),
     );
-    Some(response)
+
+    Some(build_thumbnail_response(encoded_thumbnail))
+}
+
+async fn try_build_cached_thumbnail_response(
+    state: &Arc<AppState>,
+    alias: &ThumbnailRequestAlias,
+) -> Option<Response> {
+    let encoded_thumbnail = state
+        .thumbnail_cache
+        .lock()
+        .await
+        .get_by_alias(alias, Instant::now())?;
+
+    Some(build_thumbnail_response(encoded_thumbnail))
 }
 
 fn supports_thumbnail(path: &Path) -> bool {
@@ -429,8 +729,26 @@ fn supports_thumbnail(path: &Path) -> bool {
         })
 }
 
-fn build_thumbnail(path: &Path, request: ThumbnailRequest) -> Option<EncodedThumbnail> {
-    let source = std::fs::read(path).ok()?;
+fn build_thumbnail_response(encoded_thumbnail: EncodedThumbnail) -> Response {
+    let mut response = Response::new(encoded_thumbnail.body.into());
+    response.headers_mut().insert(
+        CONTENT_TYPE,
+        HeaderValue::from_static(encoded_thumbnail.content_type),
+    );
+    response
+}
+
+fn finalize_thumbnail_response(response: Response, origin: Option<&'static str>) -> Response {
+    finalize_cors(
+        apply_cache_control(response, CacheControlPolicy::Thumbnail),
+        origin,
+    )
+}
+
+fn build_thumbnail_from_source(
+    source: &[u8],
+    request: ThumbnailRequest,
+) -> Option<EncodedThumbnail> {
     let image = image::load_from_memory(&source).ok()?;
     let thumbnail = match request.resize_mode {
         ThumbnailResizeMode::Contain => {
@@ -766,20 +1084,30 @@ pub async fn send_preview_command(
 #[cfg(test)]
 mod tests {
     use axum::{
-        body::Body,
+        body::{to_bytes, Body},
+        extract::{Path as AxumPath, State as AxumState},
         http::{
             header::{ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, ORIGIN, VARY},
-            HeaderMap, HeaderValue,
+            HeaderMap, HeaderValue, StatusCode, Uri,
         },
         response::Response,
     };
-    use std::path::Path;
+    use std::{
+        fs,
+        future::Future,
+        path::Path,
+        sync::Arc,
+        time::{Duration, Instant},
+    };
+    use tempfile::TempDir;
 
     use super::{
-        append_cors_headers, apply_cache_control, resolve_cors_origin, resolve_thumbnail_request,
-        supports_thumbnail, CacheControlPolicy, StaticAssetQuery, ThumbnailRequest,
-        ThumbnailResizeMode,
+        append_cors_headers, apply_cache_control, handle_static_request, resolve_cors_origin,
+        resolve_thumbnail_request, supports_thumbnail, AppState, CacheControlPolicy,
+        EncodedThumbnail, ServerState, StaticAssetQuery, ThumbnailCache, ThumbnailCacheConfig,
+        ThumbnailContentKey, ThumbnailRequest, ThumbnailRequestAlias, ThumbnailResizeMode,
     };
+    use crate::vfs::CachedCanonicals;
 
     fn headers_with_origin(origin: &'static str) -> HeaderMap {
         let mut headers = HeaderMap::new();
@@ -923,5 +1251,210 @@ mod tests {
         assert!(!supports_thumbnail(Path::new("cover.bmp")));
         assert!(!supports_thumbnail(Path::new("cover.tif")));
         assert!(!supports_thumbnail(Path::new("cover.tiff")));
+    }
+
+    fn test_cache_config() -> ThumbnailCacheConfig {
+        ThumbnailCacheConfig {
+            ttl: Duration::from_secs(60),
+            max_entries: 8,
+            max_bytes: 1024,
+            max_aliases: 8,
+        }
+    }
+
+    fn test_thumbnail_request() -> ThumbnailRequest {
+        ThumbnailRequest {
+            width: 128,
+            height: 128,
+            resize_mode: ThumbnailResizeMode::Contain,
+        }
+    }
+
+    fn test_thumbnail(body: &[u8]) -> EncodedThumbnail {
+        EncodedThumbnail {
+            body: body.to_vec(),
+            content_type: "image/png",
+        }
+    }
+
+    fn test_alias(
+        site_hash: &str,
+        logical_path: &str,
+        request: ThumbnailRequest,
+    ) -> ThumbnailRequestAlias {
+        ThumbnailRequestAlias {
+            site_hash: site_hash.into(),
+            logical_path: logical_path.into(),
+            request,
+        }
+    }
+
+    fn block_on(future: impl Future<Output = ()>) {
+        tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap()
+            .block_on(future);
+    }
+
+    fn create_test_png(root: &Path, relative_path: &str) {
+        let path = root.join(relative_path);
+        fs::create_dir_all(path.parent().expect("测试图片应存在父目录")).unwrap();
+        let image = image::RgbaImage::from_pixel(4, 4, image::Rgba([255, 0, 0, 255]));
+        image.save(path).unwrap();
+    }
+
+    async fn registered_state(root: &Path) -> Arc<AppState> {
+        let state = ServerState::new().app_state;
+        state.sites.write().await.insert(
+            "site".into(),
+            CachedCanonicals::compute(root.to_path_buf(), None, None).unwrap(),
+        );
+        state
+    }
+
+    async fn request_thumbnail(state: Arc<AppState>, logical_path: &str) -> Response {
+        let uri = format!("/game/site/{logical_path}?w=64&h=64")
+            .parse::<Uri>()
+            .unwrap();
+
+        handle_static_request(
+            AxumState(state),
+            AxumPath("site".into()),
+            uri,
+            Some(logical_path.into()),
+            HeaderMap::new(),
+        )
+        .await
+    }
+
+    async fn response_body(response: Response) -> Vec<u8> {
+        to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap()
+            .to_vec()
+    }
+
+    #[test]
+    fn thumbnail_request_falls_back_to_alias_cache_when_source_disappears() {
+        block_on(async {
+            let root = TempDir::new().unwrap();
+            create_test_png(root.path(), "icons/favicon.png");
+            let state = registered_state(root.path()).await;
+
+            let first_response = request_thumbnail(state.clone(), "icons/favicon.png").await;
+            assert_eq!(first_response.status(), StatusCode::OK);
+            let first_body = response_body(first_response).await;
+            assert!(!first_body.is_empty());
+
+            fs::remove_file(root.path().join("icons/favicon.png")).unwrap();
+            let second_response = request_thumbnail(state, "icons/favicon.png").await;
+
+            assert_eq!(second_response.status(), StatusCode::OK);
+            assert_eq!(response_body(second_response).await, first_body);
+        });
+    }
+
+    #[test]
+    fn thumbnail_request_reuses_content_cache_between_different_paths() {
+        block_on(async {
+            let root = TempDir::new().unwrap();
+            create_test_png(root.path(), "icons/favicon.png");
+            fs::create_dir_all(root.path().join("assets/copy")).unwrap();
+            fs::copy(
+                root.path().join("icons/favicon.png"),
+                root.path().join("assets/copy/favicon.png"),
+            )
+            .unwrap();
+
+            let state = registered_state(root.path()).await;
+
+            let first_response = request_thumbnail(state.clone(), "icons/favicon.png").await;
+            assert_eq!(first_response.status(), StatusCode::OK);
+            let first_body = response_body(first_response).await;
+
+            let second_response = request_thumbnail(state.clone(), "assets/copy/favicon.png").await;
+            assert_eq!(second_response.status(), StatusCode::OK);
+            assert_eq!(response_body(second_response).await, first_body);
+
+            let cache = state.thumbnail_cache.lock().await;
+            assert_eq!(cache.entry_count(), 1);
+            assert_eq!(cache.alias_count(), 2);
+        });
+    }
+
+    #[test]
+    fn thumbnail_cache_reuses_content_between_different_paths() {
+        let mut cache = ThumbnailCache::new(test_cache_config());
+        let request = test_thumbnail_request();
+        let first_alias = test_alias("site-a", "icons/favicon.ico", request);
+        let second_alias = test_alias("site-b", "assets/copy/favicon.ico", request);
+        let content_key = ThumbnailContentKey::from_source(b"same image bytes", request);
+        let thumbnail = test_thumbnail(b"encoded-thumbnail");
+        let now = Instant::now();
+
+        cache.insert(content_key.clone(), first_alias, thumbnail.clone(), now);
+
+        assert_eq!(
+            cache.get_by_content_and_bind_alias(&content_key, second_alias.clone(), now),
+            Some(thumbnail.clone())
+        );
+        assert_eq!(
+            cache.get_by_alias(&second_alias, now),
+            Some(thumbnail),
+            "路径别名应绑定到同一个内容缓存项，便于源文件失效后回退"
+        );
+        assert_eq!(cache.entry_count(), 1);
+    }
+
+    #[test]
+    fn thumbnail_cache_expires_content_and_alias_together() {
+        let mut cache = ThumbnailCache::new(test_cache_config());
+        let request = test_thumbnail_request();
+        let alias = test_alias("site", "cover.png", request);
+        let content_key = ThumbnailContentKey::from_source(b"cover bytes", request);
+        let now = Instant::now();
+
+        cache.insert(content_key, alias.clone(), test_thumbnail(b"cached"), now);
+
+        assert_eq!(
+            cache.get_by_alias(&alias, now + Duration::from_secs(61)),
+            None
+        );
+        assert_eq!(cache.entry_count(), 0);
+        assert_eq!(cache.alias_count(), 0);
+    }
+
+    #[test]
+    fn thumbnail_cache_evicts_least_recently_used_entries_over_capacity() {
+        let mut cache = ThumbnailCache::new(ThumbnailCacheConfig {
+            ttl: Duration::from_secs(60),
+            max_entries: 1,
+            max_bytes: 1024,
+            max_aliases: 4,
+        });
+        let request = test_thumbnail_request();
+        let first_alias = test_alias("site", "first.png", request);
+        let second_alias = test_alias("site", "second.png", request);
+        let now = Instant::now();
+
+        cache.insert(
+            ThumbnailContentKey::from_source(b"first", request),
+            first_alias.clone(),
+            test_thumbnail(b"first-thumbnail"),
+            now,
+        );
+        cache.insert(
+            ThumbnailContentKey::from_source(b"second", request),
+            second_alias.clone(),
+            test_thumbnail(b"second-thumbnail"),
+            now + Duration::from_secs(1),
+        );
+
+        assert_eq!(cache.get_by_alias(&first_alias, now), None);
+        assert_eq!(
+            cache.get_by_alias(&second_alias, now + Duration::from_secs(1)),
+            Some(test_thumbnail(b"second-thumbnail"))
+        );
+        assert_eq!(cache.entry_count(), 1);
     }
 }
