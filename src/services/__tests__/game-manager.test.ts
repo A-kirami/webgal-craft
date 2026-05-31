@@ -2078,4 +2078,86 @@ describe('gameManager', () => {
 
     vi.useRealTimers()
   })
+
+  it('refreshCurrentGamePreviewAssets 会按游戏隔离防抖状态和资源失效范围', async () => {
+    vi.useFakeTimers()
+    try {
+      const refreshRequestTime = new Date('2026-03-28T10:00:00.000Z').getTime()
+      const refreshCommitTime = refreshRequestTime + 500
+      vi.setSystemTime(refreshRequestTime)
+
+      const gameOne = createTestGame({
+        id: 'game-1',
+        path: AbsPath.from('/games/one'),
+        previewAssets: {
+          icon: {
+            path: 'icons/favicon.ico',
+            cacheVersion: 111,
+          },
+          cover: {
+            path: 'game/background/cover.png',
+            cacheVersion: 222,
+          },
+        },
+      })
+      const gameTwo = createTestGame({
+        id: 'game-2',
+        path: AbsPath.from('/games/two'),
+        previewAssets: {
+          icon: {
+            path: 'icons/favicon.ico',
+            cacheVersion: 333,
+          },
+          cover: {
+            path: 'game/background/cover.png',
+            cacheVersion: 444,
+          },
+        },
+      })
+      dbGameGetMock.mockImplementation(async (gameId: string) => {
+        if (gameId === 'game-1') {
+          return gameOne
+        }
+
+        if (gameId === 'game-2') {
+          return gameTwo
+        }
+      })
+
+      workspaceStoreState.currentGame = gameOne
+      gameManager.refreshCurrentGamePreviewAssets({ invalidate: 'icon' })
+      workspaceStoreState.currentGame = gameTwo
+      gameManager.refreshCurrentGamePreviewAssets({ invalidate: 'cover' })
+
+      await vi.advanceTimersByTimeAsync(500)
+
+      expect(dbGameUpdateMock).toHaveBeenCalledTimes(2)
+      expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', expect.objectContaining({
+        previewAssets: {
+          icon: {
+            path: 'icons/favicon.ico',
+            cacheVersion: refreshCommitTime,
+          },
+          cover: {
+            path: 'game/background/cover.png',
+            cacheVersion: 222,
+          },
+        },
+      }))
+      expect(dbGameUpdateMock).toHaveBeenCalledWith('game-2', expect.objectContaining({
+        previewAssets: {
+          icon: {
+            path: 'icons/favicon.ico',
+            cacheVersion: 333,
+          },
+          cover: {
+            path: 'game/background/cover.png',
+            cacheVersion: refreshCommitTime,
+          },
+        },
+      }))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

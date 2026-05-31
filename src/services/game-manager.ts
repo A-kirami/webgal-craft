@@ -1120,8 +1120,8 @@ async function refreshGamePreviewAssets(gameId: string, options?: GamePreviewRef
 }
 
 let touchLastModifiedTimer: ReturnType<typeof setTimeout> | undefined
-let refreshPreviewAssetsTimer: ReturnType<typeof setTimeout> | undefined
-let pendingPreviewInvalidation: GamePreviewInvalidation | undefined
+const refreshPreviewAssetsTimers = new Map<string, ReturnType<typeof setTimeout>>()
+const pendingPreviewInvalidations = new Map<string, GamePreviewInvalidation | undefined>()
 
 /** 防抖更新当前游戏的 lastModified 字段（500ms） */
 function touchCurrentGameLastModified(): void {
@@ -1149,17 +1149,23 @@ function refreshCurrentGamePreviewAssets(options?: GamePreviewRefreshOptions): v
     return
   }
 
-  pendingPreviewInvalidation = mergeGamePreviewInvalidation(pendingPreviewInvalidation, options?.invalidate)
-  clearTimeout(refreshPreviewAssetsTimer)
-  refreshPreviewAssetsTimer = setTimeout(async () => {
-    const invalidate = pendingPreviewInvalidation
-    pendingPreviewInvalidation = undefined
+  pendingPreviewInvalidations.set(
+    gameId,
+    mergeGamePreviewInvalidation(pendingPreviewInvalidations.get(gameId), options?.invalidate),
+  )
+  clearTimeout(refreshPreviewAssetsTimers.get(gameId))
+
+  const refreshPreviewAssetsTimer = setTimeout(async () => {
+    const invalidate = pendingPreviewInvalidations.get(gameId)
+    pendingPreviewInvalidations.delete(gameId)
+    refreshPreviewAssetsTimers.delete(gameId)
     try {
       await refreshGamePreviewAssets(gameId, { invalidate })
     } catch (error) {
       logger.error(`刷新游戏预览资源快照失败: ${error}`)
     }
   }, 500)
+  refreshPreviewAssetsTimers.set(gameId, refreshPreviewAssetsTimer)
 }
 
 export const gameManager = {
