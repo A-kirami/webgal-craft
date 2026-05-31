@@ -119,7 +119,6 @@ describe('loadIconEditorSourceData', () => {
     }))
 
     await expect(loadIconEditorSourceData(AbsPath.from('/games/demo'))).resolves.toBeUndefined()
-    expect(readFileMock).not.toHaveBeenCalledWith('/games/demo/.webgalcraft/icon-data/foreground.png')
-    expect(readFileMock).not.toHaveBeenCalledWith('/games/demo/.webgalcraft/icon-data/background.png')
+    expect(readFileMock).not.toHaveBeenCalled()
   })
 })
