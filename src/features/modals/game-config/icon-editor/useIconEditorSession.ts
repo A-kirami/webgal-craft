@@ -381,7 +381,7 @@ export function useIconEditorSession(options: UseIconEditorSessionOptions) {
     try {
       const outputs = await buildIconExportOutputs(state.value)
       await saveIconEditorOutputs(gamePath, outputs)
-      await gameManager.refreshRegisteredGameSnapshot(gamePath)
+      await gameManager.refreshRegisteredGameSnapshot(gamePath, { invalidate: 'icon' })
       options.open.value = false
     } catch (error) {
       handleError(error, { context: options.t('modals.gameConfig.iconEditor.generateFailed') })

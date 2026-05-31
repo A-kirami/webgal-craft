@@ -171,6 +171,7 @@ describe('engineSwitch.switchEngine', () => {
     expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', { engineId: 'engine-new' })
     expect(updateSiteEngineMock).toHaveBeenCalledWith('/games/demo', '/engines/new')
     expect(updateSiteTemplateMock).toHaveBeenCalledWith('/games/demo', '/engines/new/game/template')
+    expect(refreshRegisteredGameSnapshotMock).toHaveBeenCalledWith('/games/demo', { invalidate: 'all' })
     expect(cleanTemplateUpperMock).not.toHaveBeenCalled()
     expect(refreshIfCurrentGameMock).not.toHaveBeenCalled()
     expect(syncIfCurrentGameMock).toHaveBeenCalledWith({

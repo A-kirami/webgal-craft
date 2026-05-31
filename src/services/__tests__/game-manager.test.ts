@@ -1419,7 +1419,7 @@ describe('gameManager', () => {
     })
   })
 
-  it('refreshRegisteredGameSnapshot 会按路径刷新数据库快照，并同步当前工作区游戏', async () => {
+  it('refreshRegisteredGameSnapshot 会按路径刷新数据库快照，并只刷新变化资源的缓存版本', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     dbGameWhereFirstMock.mockResolvedValue(createTestGame({
@@ -1472,7 +1472,7 @@ describe('gameManager', () => {
       previewAssets: {
         icon: {
           path: 'icons/favicon.ico',
-          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+          cacheVersion: 111,
         },
         cover: {
           path: 'game/background/cover-next.png',
@@ -1490,7 +1490,7 @@ describe('gameManager', () => {
       previewAssets: {
         icon: {
           path: 'icons/favicon.ico',
-          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+          cacheVersion: 111,
         },
         cover: {
           path: 'game/background/cover-next.png',
@@ -1499,6 +1499,150 @@ describe('gameManager', () => {
       },
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
     })
+
+    vi.useRealTimers()
+  })
+
+  it('refreshRegisteredGameSnapshot 在语义元数据变化但预览路径不变时保留资源缓存版本', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
+    dbGameWhereFirstMock.mockResolvedValue(createTestGame({
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+      metadata: {
+        name: 'Old Name',
+        titleImg: 'cover.png',
+      },
+      previewAssets: {
+        icon: {
+          path: 'icons/favicon.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: 'game/background/cover.png',
+          cacheVersion: 222,
+        },
+      },
+    }))
+    gameCmdsGetGameConfigMock.mockResolvedValue(createGameConfig([
+      { key: 'Game_name', value: 'Renamed Game' },
+      { key: 'Title_img', value: 'cover.png' },
+    ]))
+
+    await gameManager.refreshRegisteredGameSnapshot(AbsPath.from('/games/demo'))
+
+    expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', {
+      lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
+      metadata: {
+        name: 'Renamed Game',
+        titleImg: 'cover.png',
+      },
+      previewAssets: {
+        icon: {
+          path: 'icons/favicon.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: 'game/background/cover.png',
+          cacheVersion: 222,
+        },
+      },
+    })
+
+    vi.useRealTimers()
+  })
+
+  it('refreshRegisteredGameSnapshot 写入前会基于最新游戏记录合并预览缓存版本', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
+      const staleGame = createTestGame({
+        id: 'game-1',
+        path: AbsPath.from('/games/demo'),
+        previewAssets: {
+          icon: {
+            path: 'icons/favicon.ico',
+            cacheVersion: 111,
+          },
+          cover: {
+            path: 'game/background/cover.png',
+            cacheVersion: 222,
+          },
+        },
+      })
+      const latestGame = createTestGame({
+        id: 'game-1',
+        path: AbsPath.from('/games/demo'),
+        previewAssets: {
+          icon: {
+            path: 'icons/favicon.ico',
+            cacheVersion: 333,
+          },
+          cover: {
+            path: 'game/background/cover.png',
+            cacheVersion: 444,
+          },
+        },
+      })
+      dbGameWhereFirstMock
+        .mockResolvedValueOnce(staleGame)
+        .mockResolvedValueOnce(latestGame)
+      gameCmdsGetGameConfigMock.mockResolvedValue(createGameConfig([
+        { key: 'Game_name', value: 'Renamed Game' },
+        { key: 'Title_img', value: 'cover.png' },
+      ]))
+
+      await gameManager.refreshRegisteredGameSnapshot(AbsPath.from('/games/demo'))
+
+      expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', expect.objectContaining({
+        previewAssets: {
+          icon: {
+            path: 'icons/favicon.ico',
+            cacheVersion: 333,
+          },
+          cover: {
+            path: 'game/background/cover.png',
+            cacheVersion: 444,
+          },
+        },
+      }))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('refreshRegisteredGameSnapshot 支持显式只刷新图标缓存版本', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
+    dbGameWhereFirstMock.mockResolvedValue(createTestGame({
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+      previewAssets: {
+        icon: {
+          path: 'icons/favicon.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: 'game/background/cover.png',
+          cacheVersion: 222,
+        },
+      },
+    }))
+
+    await gameManager.refreshRegisteredGameSnapshot(AbsPath.from('/games/demo'), { invalidate: 'icon' })
+
+    expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', expect.objectContaining({
+      previewAssets: {
+        icon: {
+          path: 'icons/favicon.ico',
+          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+        },
+        cover: {
+          path: 'game/background/cover.png',
+          cacheVersion: 222,
+        },
+      },
+    }))
 
     vi.useRealTimers()
   })
@@ -1527,7 +1671,7 @@ describe('gameManager', () => {
       },
       previewAssets: {
         icon: {
-          path: 'icons/current.ico',
+          path: 'icons/favicon.ico',
           cacheVersion: 111,
         },
         cover: {
@@ -1559,7 +1703,7 @@ describe('gameManager', () => {
       },
       previewAssets: {
         icon: {
-          path: 'icons/current.ico',
+          path: 'icons/favicon.ico',
           cacheVersion: 111,
         },
         cover: {
@@ -1572,7 +1716,7 @@ describe('gameManager', () => {
     vi.useRealTimers()
   })
 
-  it('refreshGamePreviewAssets 会刷新预览资源快照与缓存版本', async () => {
+  it('refreshGamePreviewAssets 会刷新预览资源快照，并只刷新变化资源的缓存版本', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     workspaceStoreState.currentGame = createTestGame({
@@ -1583,7 +1727,7 @@ describe('gameManager', () => {
       },
       previewAssets: {
         icon: {
-          path: 'icons/current.ico',
+          path: 'icons/favicon.ico',
           cacheVersion: 111,
         },
         cover: {
@@ -1600,7 +1744,7 @@ describe('gameManager', () => {
       },
       previewAssets: {
         icon: {
-          path: 'icons/current.ico',
+          path: 'icons/favicon.ico',
           cacheVersion: 111,
         },
         cover: {
@@ -1621,7 +1765,7 @@ describe('gameManager', () => {
       previewAssets: {
         icon: {
           path: 'icons/favicon.ico',
-          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+          cacheVersion: 111,
         },
         cover: {
           path: 'game/background/cover-next.png',
@@ -1644,7 +1788,7 @@ describe('gameManager', () => {
       previewAssets: {
         icon: {
           path: 'icons/favicon.ico',
-          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
+          cacheVersion: 111,
         },
         cover: {
           path: 'game/background/cover-next.png',
@@ -1654,6 +1798,65 @@ describe('gameManager', () => {
     })
 
     vi.useRealTimers()
+  })
+
+  it('refreshGamePreviewAssets 写入前会基于最新游戏记录合并预览缓存版本', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
+      const staleGame = createTestGame({
+        id: 'game-1',
+        path: AbsPath.from('/games/demo'),
+        previewAssets: {
+          icon: {
+            path: 'icons/favicon.ico',
+            cacheVersion: 111,
+          },
+          cover: {
+            path: 'game/background/cover.png',
+            cacheVersion: 222,
+          },
+        },
+      })
+      const latestGame = createTestGame({
+        id: 'game-1',
+        path: AbsPath.from('/games/demo'),
+        previewAssets: {
+          icon: {
+            path: 'icons/favicon.ico',
+            cacheVersion: 333,
+          },
+          cover: {
+            path: 'game/background/cover.png',
+            cacheVersion: 444,
+          },
+        },
+      })
+      dbGameGetMock
+        .mockResolvedValueOnce(staleGame)
+        .mockResolvedValueOnce(latestGame)
+      gameCmdsGetGameConfigMock.mockResolvedValue(createGameConfig([
+        { key: 'Game_name', value: 'Renamed Game' },
+        { key: 'Title_img', value: 'cover.png' },
+      ]))
+
+      await gameManager.refreshGamePreviewAssets('game-1')
+
+      expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', expect.objectContaining({
+        previewAssets: {
+          icon: {
+            path: 'icons/favicon.ico',
+            cacheVersion: 333,
+          },
+          cover: {
+            path: 'game/background/cover.png',
+            cacheVersion: 444,
+          },
+        },
+      }))
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('refreshGamePreviewAssets 等待资源解析完成后再生成修改时间，避免覆盖更新的 touch', async () => {
@@ -1670,7 +1873,7 @@ describe('gameManager', () => {
       lastModified: 0,
       previewAssets: {
         icon: {
-          path: 'icons/current.ico',
+          path: 'icons/favicon.ico',
           cacheVersion: 111,
         },
         cover: {
@@ -1695,7 +1898,7 @@ describe('gameManager', () => {
       lastModified: 0,
       previewAssets: {
         icon: {
-          path: 'icons/current.ico',
+          path: 'icons/favicon.ico',
           cacheVersion: 111,
         },
         cover: {
@@ -1729,7 +1932,7 @@ describe('gameManager', () => {
       previewAssets: {
         icon: {
           path: 'icons/favicon.ico',
-          cacheVersion: refreshCommitTime,
+          cacheVersion: 111,
         },
         cover: {
           path: 'game/background/cover-next.png',
@@ -1751,7 +1954,7 @@ describe('gameManager', () => {
     expect(workspaceStoreState.currentGame).toBeUndefined()
   })
 
-  it('refreshGamePreviewAssets 在预览资源解析失败时仍会推进预览缓存版本', async () => {
+  it('refreshGamePreviewAssets 在预览资源解析失败时只推进修改时间', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
     dbGameGetMock.mockResolvedValue(createTestGame({
@@ -1788,16 +1991,6 @@ describe('gameManager', () => {
 
     expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', {
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
-      previewAssets: {
-        icon: {
-          path: 'icons/current.ico',
-          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
-        },
-        cover: {
-          path: 'game/background/current-cover.png',
-          cacheVersion: new Date('2026-03-28T10:00:00.000Z').getTime(),
-        },
-      },
     })
     expect(warnMock).toHaveBeenCalledWith('刷新游戏预览资源快照失败: Error: config missing')
 
@@ -1828,5 +2021,143 @@ describe('gameManager', () => {
     }))
 
     vi.useRealTimers()
+  })
+
+  it('refreshCurrentGamePreviewAssets 会合并防抖窗口内的资源失效范围', async () => {
+    vi.useFakeTimers()
+    const refreshRequestTime = new Date('2026-03-28T10:00:00.000Z').getTime()
+    const refreshCommitTime = refreshRequestTime + 500
+    vi.setSystemTime(refreshRequestTime)
+    workspaceStoreState.currentGame = createTestGame({
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+      previewAssets: {
+        icon: {
+          path: 'icons/favicon.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: 'game/background/cover.png',
+          cacheVersion: 222,
+        },
+      },
+    })
+    dbGameGetMock.mockResolvedValue(createTestGame({
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+      previewAssets: {
+        icon: {
+          path: 'icons/favicon.ico',
+          cacheVersion: 111,
+        },
+        cover: {
+          path: 'game/background/cover.png',
+          cacheVersion: 222,
+        },
+      },
+    }))
+
+    gameManager.refreshCurrentGamePreviewAssets({ invalidate: 'icon' })
+    gameManager.refreshCurrentGamePreviewAssets({ invalidate: 'cover' })
+
+    await vi.advanceTimersByTimeAsync(500)
+
+    expect(dbGameUpdateMock).toHaveBeenCalledTimes(1)
+    expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', expect.objectContaining({
+      previewAssets: {
+        icon: {
+          path: 'icons/favicon.ico',
+          cacheVersion: refreshCommitTime,
+        },
+        cover: {
+          path: 'game/background/cover.png',
+          cacheVersion: refreshCommitTime,
+        },
+      },
+    }))
+
+    vi.useRealTimers()
+  })
+
+  it('refreshCurrentGamePreviewAssets 会按游戏隔离防抖状态和资源失效范围', async () => {
+    vi.useFakeTimers()
+    try {
+      const refreshRequestTime = new Date('2026-03-28T10:00:00.000Z').getTime()
+      const refreshCommitTime = refreshRequestTime + 500
+      vi.setSystemTime(refreshRequestTime)
+
+      const gameOne = createTestGame({
+        id: 'game-1',
+        path: AbsPath.from('/games/one'),
+        previewAssets: {
+          icon: {
+            path: 'icons/favicon.ico',
+            cacheVersion: 111,
+          },
+          cover: {
+            path: 'game/background/cover.png',
+            cacheVersion: 222,
+          },
+        },
+      })
+      const gameTwo = createTestGame({
+        id: 'game-2',
+        path: AbsPath.from('/games/two'),
+        previewAssets: {
+          icon: {
+            path: 'icons/favicon.ico',
+            cacheVersion: 333,
+          },
+          cover: {
+            path: 'game/background/cover.png',
+            cacheVersion: 444,
+          },
+        },
+      })
+      dbGameGetMock.mockImplementation(async (gameId: string) => {
+        if (gameId === 'game-1') {
+          return gameOne
+        }
+
+        if (gameId === 'game-2') {
+          return gameTwo
+        }
+      })
+
+      workspaceStoreState.currentGame = gameOne
+      gameManager.refreshCurrentGamePreviewAssets({ invalidate: 'icon' })
+      workspaceStoreState.currentGame = gameTwo
+      gameManager.refreshCurrentGamePreviewAssets({ invalidate: 'cover' })
+
+      await vi.advanceTimersByTimeAsync(500)
+
+      expect(dbGameUpdateMock).toHaveBeenCalledTimes(2)
+      expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', expect.objectContaining({
+        previewAssets: {
+          icon: {
+            path: 'icons/favicon.ico',
+            cacheVersion: refreshCommitTime,
+          },
+          cover: {
+            path: 'game/background/cover.png',
+            cacheVersion: 222,
+          },
+        },
+      }))
+      expect(dbGameUpdateMock).toHaveBeenCalledWith('game-2', expect.objectContaining({
+        previewAssets: {
+          icon: {
+            path: 'icons/favicon.ico',
+            cacheVersion: 333,
+          },
+          cover: {
+            path: 'game/background/cover.png',
+            cacheVersion: refreshCommitTime,
+          },
+        },
+      }))
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
