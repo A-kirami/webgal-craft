@@ -75,4 +75,51 @@ describe('loadIconEditorSourceData', () => {
 
     await expect(loadIconEditorSourceData(AbsPath.from('/games/demo'))).resolves.toBeUndefined()
   })
+
+  it('纯色背景只读取前景源图快照', async () => {
+    readTextFileMock.mockResolvedValue(JSON.stringify({
+      backgroundColor: '#112233',
+      backgroundOffsetRatio: { x: 0, y: 0 },
+      backgroundScale: 1,
+      backgroundType: 'color',
+      foregroundOffsetRatio: { x: 0, y: 0 },
+      foregroundScale: 1,
+      iconShape: 'square',
+      version: 1,
+    }))
+    readFileMock.mockResolvedValue(new Uint8Array([1, 2]))
+
+    await expect(loadIconEditorSourceData(AbsPath.from('/games/demo'))).resolves.toEqual({
+      foregroundBytes: new Uint8Array([1, 2]),
+      state: {
+        backgroundColor: '#112233',
+        backgroundOffsetRatio: { x: 0, y: 0 },
+        backgroundScale: 1,
+        backgroundType: 'color',
+        foregroundOffsetRatio: { x: 0, y: 0 },
+        foregroundScale: 1,
+        iconShape: 'square',
+        version: 1,
+      },
+    })
+    expect(readFileMock).toHaveBeenCalledWith('/games/demo/.webgalcraft/icon-data/foreground.png')
+    expect(readFileMock).not.toHaveBeenCalledWith('/games/demo/.webgalcraft/icon-data/background.png')
+  })
+
+  it('持久化状态解析失败时不会读取源图快照', async () => {
+    readTextFileMock.mockResolvedValue(JSON.stringify({
+      backgroundColor: '#112233',
+      backgroundOffsetRatio: { x: 0, y: 0 },
+      backgroundScale: 1,
+      backgroundType: 'color',
+      foregroundOffsetRatio: { x: 0, y: 0 },
+      foregroundScale: 1,
+      iconShape: 'square',
+      version: 0,
+    }))
+
+    await expect(loadIconEditorSourceData(AbsPath.from('/games/demo'))).resolves.toBeUndefined()
+    expect(readFileMock).not.toHaveBeenCalledWith('/games/demo/.webgalcraft/icon-data/foreground.png')
+    expect(readFileMock).not.toHaveBeenCalledWith('/games/demo/.webgalcraft/icon-data/background.png')
+  })
 })
