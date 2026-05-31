@@ -13,6 +13,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const canvas = $(useTemplateRef<HTMLCanvasElement>('canvas'))
+let scheduledFrameId: number | undefined
 
 function drawPreview() {
   if (!canvas) {
@@ -28,10 +29,30 @@ function drawPreview() {
   context?.drawImage(source, 0, 0, canvas.width, canvas.height)
 }
 
-onMounted(drawPreview)
+function scheduleDraw() {
+  if (scheduledFrameId !== undefined) {
+    return
+  }
+
+  scheduledFrameId = requestAnimationFrame(() => {
+    scheduledFrameId = undefined
+    drawPreview()
+  })
+}
+
+onMounted(scheduleDraw)
+onBeforeUnmount(() => {
+  if (scheduledFrameId === undefined) {
+    return
+  }
+
+  cancelAnimationFrame(scheduledFrameId)
+  scheduledFrameId = undefined
+})
+
 watch(
   () => props.state,
-  drawPreview,
+  scheduleDraw,
   { deep: true },
 )
 </script>
