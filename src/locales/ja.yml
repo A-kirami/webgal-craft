@@ -377,6 +377,44 @@ modals:
       pickerTitle: 起動画像を選択
       previewAlt: 起動画像のプレビュー
       count: "{count} 枚"
+    iconEditor:
+      title: アイコンエディター
+      description: Web、デスクトップ、モバイル向けのアイコンを生成します。
+      entryTitle: アイコン
+      previewAlt: 現在のゲームアイコン
+      noIcon: アイコンはまだ生成されていません
+      noImage: 画像未選択
+      imageSelected: 画像を選択済み
+      imageFilter: 画像
+      selectImage: 画像を選択
+      replaceImage: 画像を変更
+      loadImageFailed: アイコン元画像の読み込みに失敗しました
+      generate: 生成
+      generateFailed: アイコン生成に失敗しました
+      generateHint: アイコンを生成するには前景画像を選択してください。
+      foreground:
+        title: 前景
+      background:
+        title: 背景
+        color: 単色
+        image: 画像
+      controls:
+        scale: 拡大率
+        offsetX: 横方向オフセット
+        offsetY: 縦方向オフセット
+      shape:
+        title: クロップ形状
+        circle: 円形
+        square: 正方形
+        rounded: 角丸
+      preview:
+        title: プレビュー
+        web: Web
+        webMaskable: Web Maskable
+        desktop: Desktop
+        androidFullBleed: Android Full Bleed
+        androidLegacy: Android Legacy
+        androidRound: Android Round
   effectEditor:
     title: エフェクトエディター
     description: ビジュアル変換、フィルター、エフェクトパラメータを編集

@@ -377,6 +377,44 @@ modals:
       pickerTitle: 选择启动图片
       previewAlt: 启动图片预览
       count: 共 {count} 张
+    iconEditor:
+      title: 图标编辑器
+      description: 生成适配 Web、桌面与移动端的图标
+      entryTitle: 图标
+      previewAlt: 当前游戏图标
+      noIcon: 尚未生成图标
+      noImage: 未选择图片
+      imageSelected: 已选择图片
+      imageFilter: 图片
+      selectImage: 选择图片
+      replaceImage: 更换图片
+      loadImageFailed: 读取图标源图失败
+      generate: 生成
+      generateFailed: 生成图标失败
+      generateHint: 选择前景图后可生成图标
+      foreground:
+        title: 前景
+      background:
+        title: 背景
+        color: 纯色
+        image: 图片
+      controls:
+        scale: 缩放
+        offsetX: 水平偏移
+        offsetY: 垂直偏移
+      shape:
+        title: 裁剪形状
+        circle: 圆形
+        square: 方形
+        rounded: 圆角
+      preview:
+        title: 预览
+        web: Web
+        webMaskable: Web Maskable
+        desktop: Desktop
+        androidFullBleed: Android Full Bleed
+        androidLegacy: Android Legacy
+        androidRound: Android Round
   effectEditor:
     title: 效果编辑器
     description: 编辑视觉变换、滤镜和效果参数

@@ -11,6 +11,7 @@ import {
 } from '~/features/modals/game-config/game-config-form'
 import { configManager } from '~/services/config-manager'
 import { useModalStore } from '~/stores/modal'
+import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
 
 import type { Game } from '~/database/model'
@@ -33,6 +34,7 @@ const open = defineModel<boolean>('open', { default: false })
 
 const { t } = useI18n()
 const modalStore = useModalStore()
+const workspaceStore = useWorkspaceStore()
 const validationSchema = createGameConfigSchema(t)
 
 const {
@@ -46,7 +48,18 @@ const {
 })
 
 let isSaving = $ref(false)
+let iconEditorOpen = $ref(false)
 const isDirty = $computed(() => meta.value.dirty)
+const iconPreviewAsset = $computed(() => {
+  const currentGame = workspaceStore.currentGame
+  if (currentGame?.path === props.gamePath) {
+    return currentGame.previewAssets.icon
+  }
+
+  return props.game?.previewAssets.icon
+})
+const iconPreviewPath = $computed(() => iconPreviewAsset?.path)
+const iconPreviewCacheVersion = $computed(() => iconPreviewAsset?.cacheVersion)
 
 function resetToEmptyForm() {
   resetForm({
@@ -144,6 +157,7 @@ function openSwitchTemplate() {
     modalStore.open('SwitchTemplateModal', { game: props.game })
   }
 }
+
 </script>
 
 <template>
@@ -168,6 +182,61 @@ function openSwitchTemplate() {
       </DialogHeader>
 
       <ScrollArea data-testid="game-config-modal-scroll-area" class="min-h-0">
+        <section
+          data-testid="game-config-icon-editor-field"
+          class="mx-2 mb-5 flex flex-col gap-2"
+        >
+          <h3
+            id="game-config-icon-editor-label"
+            class="text-sm font-medium"
+          >
+            {{ $t('modals.gameConfig.iconEditor.entryTitle') }}
+          </h3>
+          <button
+            type="button"
+            class="group text-left max-w-24 w-full"
+            aria-labelledby="game-config-icon-editor-label"
+            @click="iconEditorOpen = true"
+          >
+            <div
+              data-testid="game-config-icon-editor-surface"
+              :class="[
+                'border rounded-md aspect-square relative flex items-center justify-center overflow-hidden',
+                iconPreviewPath
+                  ? 'bg-checkerboard'
+                  : 'border-dashed bg-muted/30 transition-colors duration-200 group-focus-visible:border-primary/40 group-focus-visible:bg-muted/50 group-hover:border-primary/40 group-hover:bg-muted/50',
+              ]"
+            >
+              <AssetImage
+                v-if="iconPreviewPath"
+                :path="iconPreviewPath"
+                :root-path="props.gamePath"
+                :serve-url="props.serveUrl"
+                :cache-version="iconPreviewCacheVersion"
+                :alt="$t('modals.gameConfig.iconEditor.previewAlt')"
+                fallback-image="/placeholder.svg"
+                object-fit="contain"
+                class="size-full"
+              />
+              <div
+                v-else
+                class="text-xs text-muted-foreground px-4 text-center flex flex-col gap-2 h-full items-center justify-center"
+              >
+                <div class="i-lucide-image size-5" aria-hidden="true" />
+                <span>{{ $t('modals.gameConfig.iconEditor.noIcon') }}</span>
+              </div>
+              <div
+                data-testid="game-config-icon-editor-edit-overlay"
+                class="bg-black/0 flex transition-colors duration-200 items-center inset-0 justify-center absolute group-focus-visible:bg-black/45 group-hover:bg-black/45"
+              >
+                <span class="text-sm font-medium px-3 py-1.5 rounded-full bg-background/95 opacity-0 inline-flex gap-1.5 shadow-sm transition-opacity duration-200 items-center group-focus-visible:opacity-100 group-hover:opacity-100">
+                  {{ $t('common.edit') }}
+                </span>
+              </div>
+            </div>
+          </button>
+        </section>
+
         <GameConfigFieldsSection
           :background-root-path="props.backgroundRootPath"
           :bgm-root-path="props.bgmRootPath"
@@ -214,6 +283,11 @@ function openSwitchTemplate() {
           </div>
         </div>
       </ScrollArea>
+
+      <IconEditorDialog
+        ::open="iconEditorOpen"
+        :game-path="props.gamePath"
+      />
 
       <DialogFooter>
         <Button

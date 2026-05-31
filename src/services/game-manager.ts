@@ -8,6 +8,7 @@ import { db } from '~/database/db'
 import { AbsPath, RelPath } from '~/domain/path'
 import { engineManager, isEngineUsable } from '~/services/engine-manager'
 import { gameConfigPath, gameCoverPath, projectConfigPath } from '~/services/platform/app-paths'
+import { resolveGameIconPreviewPath as resolveProjectIconPreviewPath } from '~/services/project-icon-assets'
 import {
   classifyAvailability,
   createWarning,
@@ -24,6 +25,7 @@ import { AppError } from '~/types/errors'
 
 import type { GameConfigEntry } from '~/commands/game'
 import type { Engine, Game, Template } from '~/database/model'
+import type { GameIconPathExistsContext } from '~/services/project-icon-assets'
 import type { LookupPathKey } from '~/services/resource-path/lookup'
 import type {
   ImportDependencyResolutionContext,
@@ -53,14 +55,7 @@ export interface GameInspectionPayload {
 const GAME_NAME_RAW_KEY = 'Game_name'
 const GAME_KEY_RAW_KEY = 'Game_key'
 const TITLE_IMAGE_RAW_KEY = 'Title_img'
-const GAME_ICON_PREVIEW_CANDIDATES = [
-  'icons/icon-192.png',
-  'icons/icon-512.png',
-  'icons/apple-touch-icon.png',
-  'icons/favicon.ico',
-] as const
-const DEFAULT_GAME_ICON_PREVIEW_PATH: string =
-  GAME_ICON_PREVIEW_CANDIDATES.at(-1)!
+const DEFAULT_GAME_ICON_PREVIEW_PATH = 'icons/favicon.ico'
 
 interface GamePreviewLookupResult {
   iconPath: string
@@ -113,21 +108,10 @@ function buildGamePreviewAssets(iconPath: string, titleImage: string | undefined
   }
 }
 
-async function resolveGameIconPreviewPath(gamePath: AbsPath): Promise<GamePreviewLookupResult> {
-  const candidateChecks = await Promise.all(
-    GAME_ICON_PREVIEW_CANDIDATES.map(async (relativePath) => {
-      const targetPath = AbsPath.join(gamePath, RelPath.from(relativePath))
-      return {
-        relativePath,
-        iconExists: await exists(targetPath),
-      }
-    }),
-  )
-
-  const matchedCandidate = candidateChecks.find(candidate => candidate.iconExists)
-  if (matchedCandidate) {
+function buildGameIconLookupResult(iconPath: RelPath | undefined): GamePreviewLookupResult {
+  if (iconPath) {
     return {
-      iconPath: matchedCandidate.relativePath,
+      iconPath,
       iconExists: true,
     }
   }
@@ -135,6 +119,49 @@ async function resolveGameIconPreviewPath(gamePath: AbsPath): Promise<GamePrevie
   return {
     iconPath: DEFAULT_GAME_ICON_PREVIEW_PATH,
     iconExists: false,
+  }
+}
+
+async function resolvePhysicalGameIconPreviewPath(rootPath: AbsPath): Promise<GamePreviewLookupResult> {
+  return buildGameIconLookupResult(await resolveProjectIconPreviewPath(rootPath))
+}
+
+async function resolveGameIconPreviewPath(gamePath: AbsPath): Promise<GamePreviewLookupResult> {
+  const site = await resolvePreviewSiteForIconLookup(gamePath)
+
+  return buildGameIconLookupResult(await resolveProjectIconPreviewPath(
+    gamePath,
+    { pathExists: context => gameIconPathExists(context, site) },
+  ))
+}
+
+async function resolvePreviewSiteForIconLookup(gamePath: AbsPath): Promise<StaticSiteConfig | undefined> {
+  try {
+    return await resolvePreviewSite({ path: gamePath })
+  } catch {
+    return undefined
+  }
+}
+
+async function gameIconPathExists(context: GameIconPathExistsContext, site: StaticSiteConfig | undefined): Promise<boolean> {
+  if (!site?.enginePath) {
+    return exists(context.absolutePath)
+  }
+
+  try {
+    await vfsCmds.resolvePath({
+      projectPath: site.projectPath,
+      enginePath: site.enginePath,
+      templatePath: site.templatePath,
+      relPath: context.relativePath,
+    })
+    return true
+  } catch (error) {
+    if (error instanceof AppError && error.code === 'NOT_FOUND') {
+      return false
+    }
+
+    throw error
   }
 }
 
@@ -641,7 +668,7 @@ async function createGame(gameName: string, gamePath: AbsPath, engineId: string,
     })
 
     // 读取引擎默认配置获取初始预览资源路径，使创建中也能通过引擎 serve URL 显示封面和图标
-    const iconLookup = await resolveGameIconPreviewPath(engine.path)
+    const iconLookup = await resolvePhysicalGameIconPreviewPath(engine.path)
     let titleImg = ''
     try {
       const engineConfig = await gameCmds.getGameConfig(engine.path)

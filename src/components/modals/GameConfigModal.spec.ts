@@ -19,11 +19,15 @@ const {
   notifySuccessMock,
   setConfigMock,
   useModalStoreMock,
+  workspaceStoreState,
 } = vi.hoisted(() => ({
   modalOpenMock: vi.fn(),
   notifySuccessMock: vi.fn(),
   setConfigMock: vi.fn(),
   useModalStoreMock: vi.fn(),
+  workspaceStoreState: {
+    currentGame: undefined as unknown,
+  },
 }))
 
 vi.mock('~/services/config-manager', () => ({
@@ -34,6 +38,10 @@ vi.mock('~/services/config-manager', () => ({
 
 vi.mock('~/stores/modal', () => ({
   useModalStore: useModalStoreMock,
+}))
+
+vi.mock('~/stores/workspace', () => ({
+  useWorkspaceStore: () => workspaceStoreState,
 }))
 
 vi.mock('notivue', () => ({
@@ -69,6 +77,46 @@ const preparedModalProps = {
 
 const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
+  AssetImage: defineComponent({
+    name: 'StubAssetImage',
+    props: {
+      alt: {
+        type: String,
+        default: '',
+      },
+      cacheVersion: {
+        type: Number,
+        default: undefined,
+      },
+      path: {
+        type: String,
+        default: '',
+      },
+    },
+    setup(props) {
+      return () => h('img', {
+        'alt': props.alt,
+        'data-cache-version': props.cacheVersion,
+        'data-path': props.path,
+      })
+    },
+  }),
+  IconEditorDialog: defineComponent({
+    name: 'StubIconEditorDialog',
+    props: {
+      open: {
+        type: Boolean,
+        default: false,
+      },
+    },
+    emits: ['update:open'],
+    setup(props) {
+      return () => h('div', {
+        'data-open': String(props.open),
+        'data-testid': 'icon-editor-dialog-stub',
+      })
+    },
+  }),
   TitleImgPicker: defineComponent({
     name: 'StubTitleImgPicker',
     props: {
@@ -217,24 +265,7 @@ describe('GameConfigModal', () => {
     useModalStoreMock.mockReturnValue({
       open: modalOpenMock,
     })
-  })
-
-  it('使用传入的预取配置渲染表单时，不再主动读取配置文件', async () => {
-    renderInBrowser(GameConfigModal, {
-      browser: {
-        i18nMode: 'lite',
-      },
-      props: {
-        'open': true,
-        'onUpdate:open': vi.fn(),
-        ...preparedModalProps,
-      },
-      global: {
-        stubs: globalStubs,
-      },
-    })
-
-    await expect.element(page.getByTestId('game-config-game-name')).toHaveValue('Demo Game')
+    workspaceStoreState.currentGame = undefined
   })
 
   it('打开时会渲染预取配置中的关键字段', async () => {
@@ -261,6 +292,90 @@ describe('GameConfigModal', () => {
     await expect.element(page.getByTestId('game-logo-picker-value')).toHaveTextContent('opening.webp|enter.webp')
     await expect.element(page.getByTestId('game-config-game-key')).toHaveValue('demo-key')
     await expect.element(page.getByTestId('game-config-package-name')).toHaveValue('org.demo.game')
+  })
+
+  it('点击图标图片入口会打开图标编辑器', async () => {
+    renderInBrowser(GameConfigModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        'open': true,
+        'onUpdate:open': vi.fn(),
+        ...preparedModalProps,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByTestId('game-config-icon-editor-surface').click()
+    await expect.element(page.getByTestId('icon-editor-dialog-stub')).toHaveAttribute('data-open', 'true')
+  })
+
+  it('使用当前游戏快照中的图标预览路径', async () => {
+    workspaceStoreState.currentGame = {
+      id: 'game-vfs',
+      path: '/games/vfs',
+      pathLookupKey: '/games/vfs',
+      createdAt: 0,
+      lastModified: 0,
+      status: 'created',
+      availability: 'available',
+      metadata: {
+        name: 'VFS Game',
+      },
+      previewAssets: {
+        icon: {
+          path: 'icons/icon-512.png',
+          cacheVersion: 789,
+        },
+        cover: {
+          path: 'game/background/cover.png',
+        },
+      },
+    }
+
+    renderInBrowser(GameConfigModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        'open': true,
+        'onUpdate:open': vi.fn(),
+        ...preparedModalProps,
+        'backgroundRootPath': '/games/vfs/game/background',
+        'bgmRootPath': '/games/vfs/game/bgm',
+        'gamePath': '/games/vfs',
+        'game': {
+          id: 'game-vfs',
+          path: '/games/vfs',
+          pathLookupKey: '/games/vfs',
+          createdAt: 0,
+          lastModified: 0,
+          status: 'created',
+          availability: 'available',
+          metadata: {
+            name: 'VFS Game',
+          },
+          previewAssets: {
+            icon: {
+              path: 'icons/icon-192.png',
+              cacheVersion: 456,
+            },
+            cover: {
+              path: 'game/background/cover.png',
+            },
+          },
+        },
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByAltText('modals.gameConfig.iconEditor.previewAlt')).toHaveAttribute('data-path', 'icons/icon-512.png')
+    await expect.element(page.getByAltText('modals.gameConfig.iconEditor.previewAlt')).toHaveAttribute('data-cache-version', '789')
   })
 
   it('非法包名会在失焦后才显示校验信息', async () => {

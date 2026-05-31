@@ -34,6 +34,7 @@ const {
   projectConfigPathMock,
   resourceStoreState,
   readProjectConfigMock,
+  resolvePathMock,
   resolveTemplatePathMock,
   toastWarningMock,
   warnMock,
@@ -69,6 +70,7 @@ const {
     updateProgress: vi.fn(),
   },
   readProjectConfigMock: vi.fn(),
+  resolvePathMock: vi.fn(),
   resolveTemplatePathMock: vi.fn(),
   toastWarningMock: vi.fn(),
   warnMock: vi.fn(),
@@ -124,6 +126,7 @@ vi.mock('~/commands/project-config', () => ({
 vi.mock('~/commands/vfs', () => ({
   vfsCmds: {
     ensureWritable: ensureWritableMock,
+    resolvePath: resolvePathMock,
   },
 }))
 
@@ -268,6 +271,7 @@ describe('gameManager', () => {
     resourceStoreState.finishProgress.mockReset()
     resourceStoreState.updateProgress.mockReset()
     readProjectConfigMock.mockReset()
+    resolvePathMock.mockReset()
     resolveTemplatePathMock.mockReset()
     copyDirectoryWithProgressMock.mockReset()
     copyFileFsMock.mockReset()
@@ -305,6 +309,7 @@ describe('gameManager', () => {
     copyFileFsMock.mockResolvedValue(undefined)
     deleteFileMock.mockResolvedValue(undefined)
     ensureWritableMock.mockImplementation(async ({ enginePath, relPath }: { enginePath: string, relPath: string }) => `${enginePath}/${relPath}`)
+    resolvePathMock.mockRejectedValue(new AppError('NOT_FOUND', '文件未找到'))
     copyDirectoryWithProgressMock.mockResolvedValue(undefined)
     resolveTemplatePathMock.mockResolvedValue(undefined)
   })
@@ -345,6 +350,45 @@ describe('gameManager', () => {
         path: 'game/background/cover.png',
       },
     })
+  })
+
+  it('getGamePreviewAssets 会通过 VFS overlay 解析引擎绑定项目的图标', async () => {
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      id: 'engine-1',
+      path: AbsPath.from('/engines/WebGAL/4.5.0'),
+    }))
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: importedProjectEngineRef,
+    })
+    engineFindByRefMock.mockResolvedValue(createTestEngine({
+      id: 'engine-1',
+      path: AbsPath.from('/engines/WebGAL/4.5.0'),
+    }))
+    resolveTemplatePathMock.mockResolvedValue(AbsPath.from('/engines/WebGAL/4.5.0/game/template'))
+    resolvePathMock.mockImplementation(async ({ relPath }: { relPath: string }) => {
+      if (relPath === 'icons/icon-192.png') {
+        return AbsPath.from('/engines/WebGAL/4.5.0/icons/icon-192.png')
+      }
+      throw new AppError('NOT_FOUND', '文件未找到')
+    })
+
+    await expect(gameManager.getGamePreviewAssets(AbsPath.from('/games/vfs'))).resolves.toEqual({
+      icon: {
+        path: 'icons/icon-192.png',
+      },
+      cover: {
+        path: 'game/background/cover.png',
+      },
+    })
+
+    expect(resolvePathMock).toHaveBeenCalledWith({
+      projectPath: '/games/vfs',
+      enginePath: '/engines/WebGAL/4.5.0',
+      templatePath: '/engines/WebGAL/4.5.0/game/template',
+      relPath: 'icons/icon-192.png',
+    })
+    expect(existsMock).not.toHaveBeenCalledWith('/games/vfs/icons/icon-192.png')
   })
 
   it('registerGame 会保留调用方提供的 metadata 并只补齐缺失的 previewAssets', async () => {
