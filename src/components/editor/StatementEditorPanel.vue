@@ -89,7 +89,6 @@ const showCommandFieldsSection = $computed(() => {
 
 const { openEffectEditor } = useStatementEffectEditorBridge({
   updateTarget: () => props.updateTarget,
-  rawText: () => props.entry.rawText,
   parsed: () => parsed.value,
   emitUpdate,
 })
