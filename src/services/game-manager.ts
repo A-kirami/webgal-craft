@@ -59,6 +59,9 @@ export interface GameInspectionPayload {
   previewAssets: GamePreviewAssets
 }
 
+type MonotonicGamePatch = Partial<Pick<Game, 'previewAssets'>> & { lastModified: number }
+type MonotonicGamePatchSource = MonotonicGamePatch | ((game: Game) => MonotonicGamePatch)
+
 const GAME_NAME_RAW_KEY = 'Game_name'
 const GAME_KEY_RAW_KEY = 'Game_key'
 const TITLE_IMAGE_RAW_KEY = 'Title_img'
@@ -313,7 +316,7 @@ function applyCurrentGamePatch(
 
 async function updateGameMonotonicLastModified(
   gameId: string,
-  patch: Partial<Pick<Game, 'previewAssets'>> & { lastModified: number },
+  patch: MonotonicGamePatchSource,
 ): Promise<void> {
   const appliedPatch = await db.transaction('rw', db.games, async () => {
     const game = await db.games.get(gameId)
@@ -321,9 +324,10 @@ async function updateGameMonotonicLastModified(
       return
     }
 
-    const lastModified = Math.max(game.lastModified, patch.lastModified)
+    const rawPatch = typeof patch === 'function' ? patch(game) : patch
+    const lastModified = Math.max(game.lastModified, rawPatch.lastModified)
     const nextPatch: Partial<Pick<Game, 'lastModified' | 'previewAssets'>> = {
-      ...patch,
+      ...rawPatch,
       lastModified,
     }
     await db.games.update(gameId, nextPatch)
@@ -335,6 +339,36 @@ async function updateGameMonotonicLastModified(
   }
 }
 
+async function updateRegisteredGameSnapshot(
+  gamePath: AbsPath,
+  snapshot: Pick<Game, 'metadata' | 'previewAssets'>,
+  options: GamePreviewRefreshOptions | undefined,
+  snapshotVersion: number,
+): Promise<void> {
+  const pathLookupKey = toLookupPathKey(gamePath)
+  const appliedUpdate = await db.transaction('rw', db.games, async () => {
+    const game = await db.games.where('pathLookupKey').equals(pathLookupKey).first()
+    if (!game) {
+      return
+    }
+
+    const patch: Partial<Pick<Game, 'lastModified' | 'metadata' | 'previewAssets'>> = {
+      lastModified: Math.max(game.lastModified, snapshotVersion),
+      metadata: snapshot.metadata,
+      previewAssets: mergeGamePreviewAssets(game.previewAssets, snapshot.previewAssets, options, snapshotVersion),
+    }
+    await db.games.update(game.id, patch)
+    return {
+      gameId: game.id,
+      patch,
+    }
+  })
+
+  if (appliedUpdate) {
+    applyCurrentGamePatch(appliedUpdate.gameId, appliedUpdate.patch)
+  }
+}
+
 async function refreshRegisteredGameSnapshot(gamePath: AbsPath, options?: GamePreviewRefreshOptions): Promise<void> {
   const game = await db.games.where('pathLookupKey').equals(toLookupPathKey(gamePath)).first()
   if (!game) {
@@ -343,15 +377,7 @@ async function refreshRegisteredGameSnapshot(gamePath: AbsPath, options?: GamePr
 
   const snapshot = await getGameSnapshot(gamePath)
   const snapshotVersion = Date.now()
-  const previewAssets = mergeGamePreviewAssets(game.previewAssets, snapshot.previewAssets, options, snapshotVersion)
-  const patch: Partial<Pick<Game, 'lastModified' | 'metadata' | 'previewAssets'>> = {
-    lastModified: snapshotVersion,
-    metadata: snapshot.metadata,
-    previewAssets,
-  }
-
-  await db.games.update(game.id, patch)
-  applyCurrentGamePatch(game.id, patch)
+  await updateRegisteredGameSnapshot(gamePath, snapshot, options, snapshotVersion)
 }
 
 async function registerGame(
@@ -1082,14 +1108,15 @@ async function refreshGamePreviewAssets(gameId: string, options?: GamePreviewRef
   }
 
   const cacheVersion = Date.now()
-  const patch: Partial<Pick<Game, 'previewAssets'>> & { lastModified: number } = {
-    lastModified: cacheVersion,
-  }
-  if (previewAssets) {
-    patch.previewAssets = mergeGamePreviewAssets(game.previewAssets, previewAssets, options, cacheVersion)
-  }
-
-  await updateGameMonotonicLastModified(gameId, patch)
+  await updateGameMonotonicLastModified(gameId, (latestGame) => {
+    const patch: MonotonicGamePatch = {
+      lastModified: cacheVersion,
+    }
+    if (previewAssets) {
+      patch.previewAssets = mergeGamePreviewAssets(latestGame.previewAssets, previewAssets, options, cacheVersion)
+    }
+    return patch
+  })
 }
 
 let touchLastModifiedTimer: ReturnType<typeof setTimeout> | undefined
