@@ -15,7 +15,8 @@ use crate::commands::{AppError, AppResult};
 
 const PROJECT_CONFIG_FILE: &str = "project.wgcp";
 const CURRENT_SCHEMA_VERSION: u32 = 1;
-const VFS_METADATA_DIR: &str = ".wgc-vfs";
+const APP_METADATA_DIR: &str = ".webgalcraft";
+const VFS_METADATA_DIR: &str = "vfs";
 const WHITEOUTS_DIR: &str = "whiteouts";
 
 pub fn to_posix_string(path: &Path) -> String {
@@ -199,7 +200,7 @@ impl OverlayFs {
 
     /// 使用已缓存的 canonical 路径构造 OverlayFs，跳过 canonicalize 系统调用
     pub fn from_cached(cached: &CachedCanonicals) -> Self {
-        let whiteout_root = cached.upper.join(VFS_METADATA_DIR).join(WHITEOUTS_DIR);
+        let whiteout_root = whiteout_root_path(&cached.upper);
         Self {
             upper: cached.upper.clone(),
             upper_canonical: cached.upper_canonical.clone(),
@@ -870,10 +871,7 @@ struct TemplatePaths {
 }
 
 fn template_paths(project_path: &Path) -> TemplatePaths {
-    let whiteout_base = project_path
-        .join(VFS_METADATA_DIR)
-        .join(WHITEOUTS_DIR)
-        .join("game");
+    let whiteout_base = whiteout_root_path(project_path).join("game");
 
     TemplatePaths {
         upper: project_path.join("game").join("template"),
@@ -886,7 +884,7 @@ fn template_paths(project_path: &Path) -> TemplatePaths {
 ///
 /// 脏状态命中条件：
 /// 1. `game/template/` 下存在任何 upper 文件或目录
-/// 2. `.wgc-vfs/whiteouts/` 下存在 `game/template/**` 相关 whiteout
+/// 2. `.webgalcraft/vfs/whiteouts/` 下存在 `game/template/**` 相关 whiteout
 pub fn is_template_dirty(project_path: &Path) -> Result<bool, VfsError> {
     let paths = template_paths(project_path);
 
@@ -998,8 +996,15 @@ fn is_internal_metadata_path(path: &Path) -> bool {
     matches!(
         path.components().next(),
         Some(Component::Normal(first))
-            if matches!(first.to_str(), Some(VFS_METADATA_DIR | PROJECT_CONFIG_FILE))
+            if matches!(first.to_str(), Some(APP_METADATA_DIR | PROJECT_CONFIG_FILE))
     )
+}
+
+fn whiteout_root_path(project_path: &Path) -> PathBuf {
+    project_path
+        .join(APP_METADATA_DIR)
+        .join(VFS_METADATA_DIR)
+        .join(WHITEOUTS_DIR)
 }
 
 fn validate_physical_path(physical_path: &Path, root_canonical: &Path) -> Result<(), VfsError> {
@@ -1178,6 +1183,14 @@ mod tests {
         assert!(sanitize_logical_path("icons\\favicon.ico").is_err());
         assert!(sanitize_logical_path("CON").is_err());
         assert!(sanitize_logical_path("assets:evil").is_err());
+        assert!(matches!(
+            sanitize_logical_path(".webgalcraft"),
+            Err(VfsError::PathDenied)
+        ));
+        assert!(matches!(
+            sanitize_logical_path(".webgalcraft/vfs/whiteouts/game/.wh.scene"),
+            Err(VfsError::PathDenied)
+        ));
     }
 
     #[test]
@@ -1585,7 +1598,7 @@ mod tests {
             "lower scene",
         )
         .expect("scene file should be written");
-        create_dir_link(&escape, &upper.join(".wgc-vfs"));
+        create_dir_link(&escape, &upper.join(".webgalcraft"));
 
         let overlay = OverlayFs::new(
             upper,
@@ -1601,6 +1614,7 @@ mod tests {
         assert!(matches!(error, VfsError::PathDenied));
         assert!(
             !escape
+                .join("vfs")
                 .join("whiteouts")
                 .join("game")
                 .join("scene")
