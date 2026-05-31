@@ -245,7 +245,17 @@ export function useIconEditorSession(options: UseIconEditorSessionOptions) {
       }
 
       resetEditorState()
-      await restoreEditorStateFromSource(gamePath, version)
+      try {
+        await restoreEditorStateFromSource(gamePath, version)
+      } catch (error) {
+        if (!isCurrentRestore(version, gamePath)) {
+          return
+        }
+
+        handleError(error)
+        resetEditorState()
+        isSaving.value = false
+      }
     },
     { immediate: true },
   )
