@@ -97,6 +97,7 @@ async function handleOpenGameConfig() {
     modalStore.open('GameConfigModal', {
       backgroundRootPath,
       bgmRootPath,
+      game: currentGame,
       gamePath,
       initialValues: parseGameConfigFormValues(config),
       serveUrl: currentGameServeUrl,

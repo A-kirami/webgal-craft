@@ -377,6 +377,44 @@ modals:
       pickerTitle: Choose Startup Images
       previewAlt: Startup image preview
       count: "{count} image(s)"
+    iconEditor:
+      title: Icon Editor
+      description: Generate icons for Web, desktop, and mobile.
+      entryTitle: Icon
+      previewAlt: Current game icon
+      noIcon: No icon generated yet
+      noImage: No image selected
+      imageSelected: Image selected
+      imageFilter: Images
+      selectImage: Select Image
+      replaceImage: Replace Image
+      loadImageFailed: Failed to load icon source image
+      generate: Generate
+      generateFailed: Failed to generate icons
+      generateHint: Select a foreground image to generate icons.
+      foreground:
+        title: Foreground
+      background:
+        title: Background
+        color: Color
+        image: Image
+      controls:
+        scale: Scale
+        offsetX: Offset X
+        offsetY: Offset Y
+      shape:
+        title: Crop Shape
+        circle: Circle
+        square: Square
+        rounded: Rounded
+      preview:
+        title: Preview
+        web: Web
+        webMaskable: Web Maskable
+        desktop: Desktop
+        androidFullBleed: Android Full Bleed
+        androidLegacy: Android Legacy
+        androidRound: Android Round
   effectEditor:
     title: Effect Editor
     description: Edit visual transform, filter and effect parameters

@@ -409,6 +409,10 @@ describe('EditHeader', () => {
       expect(modalOpenMock).toHaveBeenCalledWith('GameConfigModal', {
         backgroundRootPath: '/games/test/game/background',
         bgmRootPath: '/games/test/game/bgm',
+        game: expect.objectContaining({
+          id: 'game-test',
+          path: '/games/test',
+        }),
         gamePath: '/games/test',
         initialValues: {
           defaultLanguage: 'zh_CN',
