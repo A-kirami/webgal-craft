@@ -63,10 +63,15 @@ describe('useIconEditorSession', () => {
 
     await flushRestoreTasks()
 
+    expect(session).toBeDefined()
+    if (!session) {
+      throw new Error('useIconEditorSession 未返回会话')
+    }
+
     expect(handleErrorMock).toHaveBeenCalledWith(restoreError)
-    expect(session?.state.value.foregroundImage).toBeUndefined()
-    expect(session?.state.value.backgroundImage).toBeUndefined()
-    expect(session?.isSaving.value).toBe(false)
+    expect(session.state.value.foregroundImage).toBeUndefined()
+    expect(session.state.value.backgroundImage).toBeUndefined()
+    expect(session.isSaving.value).toBe(false)
 
     scope.stop()
   })
