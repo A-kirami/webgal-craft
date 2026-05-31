@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
 import { createDefaultIconEditorState } from '~/features/modals/game-config/icon-editor/icon-editor-state'
@@ -34,6 +34,10 @@ describe('IconEditorPreviewCanvas', () => {
       return nextFrameId
     }))
     vi.stubGlobal('cancelAnimationFrame', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('同一帧内多次状态变化只会触发一次预览重绘', async () => {
