@@ -1,10 +1,8 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { readSentenceArgString } from '~/domain/script/sentence'
-import { serializeSentence } from '~/domain/script/serialize'
 import { Transform } from '~/domain/stage/types'
 import { fieldsToTransform, isTransformEqual, parseTransformJson, transformToFields } from '~/features/editor/effect-editor/effect-editor-config'
-import { applyEffectEditorResultToSentence } from '~/features/editor/effect-editor/effect-editor-result'
 import { EmitTransformOptions } from '~/features/editor/effect-editor/types'
 import { debugCommander } from '~/services/debug-commander'
 import { useEditSettingsStore } from '~/stores/edit-settings'
@@ -33,26 +31,13 @@ export interface EffectEditorDraft {
 }
 
 export interface EffectEditorOpenTarget {
-  entryId: number
-  scenePath: string
   baseSentence: ISentence
-  baseLineNumber: number
-  baseLineText: string
-  previewContextLineNumber: number
-  previewContextLineText: string
   effectTarget?: string
   onApply: (result: EffectEditorDraft) => void | Promise<void>
 }
 
 export interface EffectEditorSession {
   sessionId: number
-  entryId: number
-  scenePath: string
-  baseSentence: ISentence
-  baseLineNumber: number
-  baseLineText: string
-  previewContextLineNumber: number
-  previewContextLineText: string
   effectTarget: string
   draft: EffectEditorDraft
   /** 打开编辑器时的初始草稿快照，用于"重置"操作的目标 */
@@ -136,18 +121,6 @@ function isDraftEqual(left: EffectEditorDraft, right: EffectEditorDraft): boolea
     && isTransformEqual(left.transform, right.transform)
 }
 
-function hasRemovedTransformPaths(
-  previousFields: Record<string, string>,
-  nextFields: Record<string, string>,
-): boolean {
-  for (const path of Object.keys(previousFields)) {
-    if (nextFields[path] === undefined) {
-      return true
-    }
-  }
-  return false
-}
-
 function areTransformFieldsEqual(
   left: Record<string, string>,
   right: Record<string, string>,
@@ -161,8 +134,16 @@ function areTransformFieldsEqual(
   return leftKeys.every(key => left[key] === right[key])
 }
 
-function buildPreviewCommandText(session: EffectEditorSession): string {
-  return serializeSentence(applyEffectEditorResultToSentence(session.baseSentence, session.draft))
+function hasPreviewTransformChanged(session: EffectEditorSession): boolean {
+  return !areTransformFieldsEqual(
+    session.previewedTransformFields,
+    transformToFields(session.initialDraft.transform),
+  )
+}
+
+function needsPreviewBaselineReset(session: EffectEditorSession): boolean {
+  return hasPreviewTransformChanged(session)
+    || !isTransformEqual(session.draft.transform, session.initialDraft.transform)
 }
 
 export function createEffectEditorProvider() {
@@ -186,6 +167,13 @@ export function createEffectEditorProvider() {
 
   function canAutoApply(): boolean {
     return editSettings.autoApplyEffectEditorChanges
+  }
+
+  function warnMissingEffectTarget(currentSession: EffectEditorSession): void {
+    if (!currentSession.missingTargetWarned) {
+      logger.warn('效果编辑器缺少 target，跳过实时预览')
+    }
+    currentSession.missingTargetWarned = true
   }
 
   function cancelScheduledPreview() {
@@ -245,30 +233,13 @@ export function createEffectEditorProvider() {
 
     try {
       const nextPreviewFields = transformToFields(session.draft.transform)
-      const hasDeletion = hasRemovedTransformPaths(session.previewedTransformFields, nextPreviewFields)
 
-      if (!hasDeletion && areTransformFieldsEqual(session.previewedTransformFields, nextPreviewFields)) {
-        return
-      }
-
-      if (hasDeletion) {
-        await debugCommander.syncScene(
-          session.scenePath,
-          session.previewContextLineNumber,
-          session.previewContextLineText,
-          true,
-        )
-        await debugCommander.executeCommand(buildPreviewCommandText(session))
-        session.previewedTransformFields = nextPreviewFields
-        session.previewErrorWarned = false
+      if (areTransformFieldsEqual(session.previewedTransformFields, nextPreviewFields)) {
         return
       }
 
       if (!session.effectTarget) {
-        if (!session.missingTargetWarned) {
-          logger.warn('效果编辑器缺少 target，跳过实时预览')
-        }
-        session.missingTargetWarned = true
+        warnMissingEffectTarget(session)
         return
       }
 
@@ -355,6 +326,8 @@ export function createEffectEditorProvider() {
     }
 
     const currentSession = session
+    const shouldResetPreview = needsPreviewBaselineReset(currentSession)
+
     updateDraft({
       transform: cloneTransform(currentSession.initialDraft.transform),
       duration: currentSession.initialDraft.duration,
@@ -367,25 +340,27 @@ export function createEffectEditorProvider() {
     previewQueue.cancel()
     cancelScheduledPreview()
 
-    // 还原时直接回放场景，避免仅 setEffect 导致预览残留。
-    currentSession.previewedTransformFields = transformToFields(currentSession.initialDraft.transform)
-    void rollbackPreview(currentSession)
+    if (shouldResetPreview) {
+      void resetPreviewToBaseline(currentSession)
+    }
 
     if (canAutoApply()) {
       autoApplyQueue.enqueue()
     }
   }
 
-  async function rollbackPreview(currentSession: EffectEditorSession) {
+  async function resetPreviewToBaseline(currentSession: EffectEditorSession) {
+    if (!currentSession.effectTarget) {
+      warnMissingEffectTarget(currentSession)
+      return
+    }
+
     try {
-      await debugCommander.syncScene(
-        currentSession.scenePath,
-        currentSession.baseLineNumber,
-        currentSession.baseLineText,
-        true,
-      )
+      await debugCommander.setEffect(currentSession.effectTarget, {})
+      currentSession.previewedTransformFields = transformToFields(currentSession.initialDraft.transform)
+      currentSession.previewErrorWarned = false
     } catch (error) {
-      logger.error(`回滚效果预览失败: ${error}`)
+      logger.error(`重置效果预览失败: ${error}`)
     }
   }
 
@@ -401,7 +376,7 @@ export function createEffectEditorProvider() {
     })
   }
 
-  async function close(options: { forceDiscard?: boolean, skipRollback?: boolean } = {}): Promise<boolean> {
+  async function close(options: { forceDiscard?: boolean, skipPreviewReset?: boolean } = {}): Promise<boolean> {
     if (!session) {
       isOpen = false
       return true
@@ -430,11 +405,15 @@ export function createEffectEditorProvider() {
     const currentSession = session
 
     autoApplyQueue.cancel()
+    previewQueue.cancel()
     cancelScheduledPreview()
 
-    // 仅在存在未提交更改时回放，避免"未改动关闭也刷新预览"。
-    if (!options.skipRollback && !currentSession.hasApplied && currentSession.dirty) {
-      await rollbackPreview(currentSession)
+    if (
+      !options.skipPreviewReset
+      && !currentSession.hasApplied
+      && needsPreviewBaselineReset(currentSession)
+    ) {
+      await resetPreviewToBaseline(currentSession)
     }
 
     session = undefined
@@ -468,7 +447,7 @@ export function createEffectEditorProvider() {
       }
     }
 
-    return await close({ forceDiscard: true, skipRollback: true })
+    return await close({ forceDiscard: true, skipPreviewReset: true })
   }
 
   async function open(target: EffectEditorOpenTarget): Promise<boolean> {
@@ -490,13 +469,6 @@ export function createEffectEditorProvider() {
 
     session = {
       sessionId,
-      entryId: target.entryId,
-      scenePath: target.scenePath,
-      baseSentence,
-      baseLineNumber: target.baseLineNumber,
-      baseLineText: target.baseLineText,
-      previewContextLineNumber: target.previewContextLineNumber,
-      previewContextLineText: target.previewContextLineText,
       effectTarget,
       draft: cloneDraft(initialDraft),
       initialDraft: cloneDraft(initialDraft),

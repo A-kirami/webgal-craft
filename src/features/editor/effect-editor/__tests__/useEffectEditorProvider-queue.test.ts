@@ -4,14 +4,12 @@ import '~/__tests__/mocks/modal-store'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { serializeSentence } from '~/domain/script/serialize'
 import {
   fieldsToTransform,
   parseTransformJson,
   serializeTransform,
   transformToFields,
 } from '~/features/editor/effect-editor/effect-editor-config'
-import { applyEffectEditorResultToSentence } from '~/features/editor/effect-editor/effect-editor-result'
 import { createEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 
@@ -161,13 +159,7 @@ describe('useEffectEditorProvider', () => {
     const provider = createEffectEditorProvider()
 
     await provider.open({
-      entryId: 1,
-      scenePath: 'scene/001.txt',
       baseSentence: createBaseSentence(),
-      baseLineNumber: 1,
-      baseLineText: 'changeFigure: figure.png;',
-      previewContextLineNumber: 0,
-      previewContextLineText: '',
       effectTarget: 'fig-center',
       onApply(result) {
         applyCalls.push(cloneDraft(result))
@@ -185,20 +177,13 @@ describe('useEffectEditorProvider', () => {
     expect(applyCalls[0]?.transform.blur).toBe(0)
   })
 
-  it('实时预览在字段被清除后会回到当前句前文，并执行修改后的当前命令', async () => {
+  it('实时预览在字段被清除后直接发送缺失该字段的 setEffect', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
 
-    const baseSentence = createBaseSentence('{"alpha":0.5,"blur":8}')
     const provider = createEffectEditorProvider()
 
     await provider.open({
-      entryId: 1,
-      scenePath: 'scene/001.txt',
-      baseSentence,
-      baseLineNumber: 3,
-      baseLineText: 'changeFigure: figure.png -transform={"alpha":0.5,"blur":8};',
-      previewContextLineNumber: 2,
-      previewContextLineText: 'say:previous;',
+      baseSentence: createBaseSentence('{"alpha":0.5,"blur":8}'),
       effectTarget: 'fig-center',
       onApply() { /* no-op */ },
     })
@@ -206,40 +191,23 @@ describe('useEffectEditorProvider', () => {
     provider.updateDraft({ transform: { alpha: 0.5 } })
     provider.requestPreview({ schedule: 'immediate' })
     await vi.waitFor(() => {
-      expect(debugCommanderMock.syncScene).toHaveBeenCalledTimes(1)
-      expect(debugCommanderMock.executeCommand).toHaveBeenCalledTimes(1)
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
     })
 
-    expect(debugCommanderMock.syncScene).toHaveBeenCalledWith(
-      'scene/001.txt',
-      2,
-      'say:previous;',
-      true,
-    )
-    expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
-    expect(debugCommanderMock.executeCommand).toHaveBeenCalledWith(serializeSentence(
-      applyEffectEditorResultToSentence(baseSentence, {
-        transform: { alpha: 0.5 },
-        duration: '',
-        ease: '',
-      }),
-    ))
+    expect(debugCommanderMock.syncScene).not.toHaveBeenCalled()
+    expect(debugCommanderMock.executeCommand).not.toHaveBeenCalled()
+    expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {
+      alpha: 0.5,
+    })
   })
 
-  it('实时预览在最后一个显式字段被清除后会执行去掉 transform 的当前命令', async () => {
+  it('实时预览在最后一个显式字段被清除后发送空 transform', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
 
-    const baseSentence = createBaseSentence('{"blur":8}')
     const provider = createEffectEditorProvider()
 
     await provider.open({
-      entryId: 1,
-      scenePath: 'scene/001.txt',
-      baseSentence,
-      baseLineNumber: 1,
-      baseLineText: 'changeFigure: figure.png -transform={"blur":8};',
-      previewContextLineNumber: 0,
-      previewContextLineText: '',
+      baseSentence: createBaseSentence('{"blur":8}'),
       effectTarget: 'fig-center',
       onApply() { /* no-op */ },
     })
@@ -247,39 +215,21 @@ describe('useEffectEditorProvider', () => {
     provider.updateDraft({ transform: {} })
     provider.requestPreview({ schedule: 'immediate' })
     await vi.waitFor(() => {
-      expect(debugCommanderMock.syncScene).toHaveBeenCalledTimes(1)
-      expect(debugCommanderMock.executeCommand).toHaveBeenCalledTimes(1)
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
     })
 
-    expect(debugCommanderMock.syncScene).toHaveBeenCalledWith(
-      'scene/001.txt',
-      0,
-      '',
-      true,
-    )
-    expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
-    expect(debugCommanderMock.executeCommand).toHaveBeenCalledWith(serializeSentence(
-      applyEffectEditorResultToSentence(baseSentence, {
-        transform: {},
-        duration: '',
-        ease: '',
-      }),
-    ))
+    expect(debugCommanderMock.syncScene).not.toHaveBeenCalled()
+    expect(debugCommanderMock.executeCommand).not.toHaveBeenCalled()
+    expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {})
   })
 
-  it('非删除型实时预览仍直接发送 setEffect', async () => {
+  it('实时预览在字段更新时直接发送 setEffect', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
 
     const provider = createEffectEditorProvider()
 
     await provider.open({
-      entryId: 1,
-      scenePath: 'scene/001.txt',
       baseSentence: createBaseSentence('{"blur":8}'),
-      baseLineNumber: 1,
-      baseLineText: 'changeFigure: figure.png -transform={"blur":8};',
-      previewContextLineNumber: 0,
-      previewContextLineText: '',
       effectTarget: 'fig-center',
       onApply() { /* no-op */ },
     })
@@ -303,13 +253,7 @@ describe('useEffectEditorProvider', () => {
     const provider = createEffectEditorProvider()
 
     await provider.open({
-      entryId: 1,
-      scenePath: 'scene/001.txt',
       baseSentence: createBaseSentence('{"blur":8}'),
-      baseLineNumber: 1,
-      baseLineText: 'changeFigure: figure.png -transform={"blur":8};',
-      previewContextLineNumber: 0,
-      previewContextLineText: '',
       effectTarget: 'fig-center',
       onApply() { /* no-op */ },
     })
@@ -328,19 +272,13 @@ describe('useEffectEditorProvider', () => {
     })
   })
 
-  it('重置草稿时会回滚场景预览到初始基线', async () => {
+  it('重置草稿时通过空 setEffect 回到效果预览基线', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
 
     const provider = createEffectEditorProvider()
 
     await provider.open({
-      entryId: 1,
-      scenePath: 'scene/001.txt',
       baseSentence: createBaseSentence('{"blur":8}'),
-      baseLineNumber: 3,
-      baseLineText: 'changeFigure: figure.png -transform={"blur":8};',
-      previewContextLineNumber: 2,
-      previewContextLineText: 'say:previous;',
       effectTarget: 'fig-center',
       onApply() { /* no-op */ },
     })
@@ -349,21 +287,24 @@ describe('useEffectEditorProvider', () => {
       duration: '300',
       transform: { blur: 12 },
     })
+    provider.requestPreview({ schedule: 'immediate' })
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {
+        blur: 12,
+      })
+    })
+
+    debugCommanderMock.setEffect.mockClear()
 
     provider.resetToInitialDraft()
 
     await vi.waitFor(() => {
-      expect(debugCommanderMock.syncScene).toHaveBeenCalledTimes(1)
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
     })
 
-    expect(debugCommanderMock.syncScene).toHaveBeenCalledWith(
-      'scene/001.txt',
-      3,
-      'changeFigure: figure.png -transform={"blur":8};',
-      true,
-    )
+    expect(debugCommanderMock.syncScene).not.toHaveBeenCalled()
     expect(debugCommanderMock.executeCommand).not.toHaveBeenCalled()
-    expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
+    expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {})
     expect(provider.session?.draft).toEqual({
       duration: '',
       ease: '',
@@ -373,19 +314,87 @@ describe('useEffectEditorProvider', () => {
     expect(provider.canReset).toBe(false)
   })
 
+  it('重置仅修改时长的草稿不会发送效果预览重置', async () => {
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+
+    const provider = createEffectEditorProvider()
+
+    await provider.open({
+      baseSentence: createBaseSentence('{"blur":8}'),
+      effectTarget: 'fig-center',
+      onApply() { /* no-op */ },
+    })
+
+    provider.updateDraft({ duration: '300' })
+    provider.resetToInitialDraft()
+
+    expect(debugCommanderMock.syncScene).not.toHaveBeenCalled()
+    expect(debugCommanderMock.executeCommand).not.toHaveBeenCalled()
+    expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
+    expect(provider.session?.draft).toEqual({
+      duration: '',
+      ease: '',
+      transform: { blur: 8 },
+    })
+  })
+
+  it('关闭并丢弃未应用变更时通过空 setEffect 重置预览', async () => {
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+
+    const provider = createEffectEditorProvider()
+
+    await provider.open({
+      baseSentence: createBaseSentence('{"blur":8}'),
+      effectTarget: 'fig-center',
+      onApply() { /* no-op */ },
+    })
+
+    provider.updateDraft({ transform: { blur: 12 } })
+    provider.requestPreview({ schedule: 'immediate' })
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {
+        blur: 12,
+      })
+    })
+
+    debugCommanderMock.setEffect.mockClear()
+
+    const closed = await provider.close({ forceDiscard: true })
+
+    expect(closed).toBe(true)
+    expect(debugCommanderMock.syncScene).not.toHaveBeenCalled()
+    expect(debugCommanderMock.executeCommand).not.toHaveBeenCalled()
+    expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {})
+  })
+
+  it('关闭并丢弃仅修改时长的草稿不会发送效果预览重置', async () => {
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+
+    const provider = createEffectEditorProvider()
+
+    await provider.open({
+      baseSentence: createBaseSentence('{"blur":8}'),
+      effectTarget: 'fig-center',
+      onApply() { /* no-op */ },
+    })
+
+    provider.updateDraft({ duration: '300' })
+
+    const closed = await provider.close({ forceDiscard: true })
+
+    expect(closed).toBe(true)
+    expect(debugCommanderMock.syncScene).not.toHaveBeenCalled()
+    expect(debugCommanderMock.executeCommand).not.toHaveBeenCalled()
+    expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
+  })
+
   it('autoApplyQueued 在提交未完成时可串行消费后续草稿', async () => {
     const applyCalls: EffectEditorDraft[] = []
     const resolvers: (() => void)[] = []
     const provider = createEffectEditorProvider()
 
     await provider.open({
-      entryId: 1,
-      scenePath: 'scene/001.txt',
       baseSentence: createBaseSentence(),
-      baseLineNumber: 1,
-      baseLineText: 'changeFigure: figure.png;',
-      previewContextLineNumber: 0,
-      previewContextLineText: '',
       effectTarget: 'fig-center',
       onApply(result) {
         applyCalls.push(cloneDraft(result))
@@ -429,13 +438,7 @@ describe('useEffectEditorProvider', () => {
     })
 
     await provider.open({
-      entryId: 1,
-      scenePath: 'scene/001.txt',
       baseSentence: createBaseSentence(),
-      baseLineNumber: 1,
-      baseLineText: 'changeFigure: figure.png;',
-      previewContextLineNumber: 0,
-      previewContextLineText: '',
       effectTarget: 'fig-center',
       onApply(result) {
         applyCalls.push(cloneDraft(result))

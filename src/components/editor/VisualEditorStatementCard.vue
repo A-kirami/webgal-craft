@@ -81,7 +81,6 @@ function handleCardDblClick() {
 
 const { openEffectEditor } = useStatementEffectEditorBridge({
   updateTarget: () => createStatementIdTarget(props.entry.id),
-  rawText: () => props.entry.rawText,
   parsed: () => parsed.value,
   emitUpdate: payload => emit('update', payload),
 })
