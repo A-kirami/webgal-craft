@@ -129,6 +129,53 @@ describe('useEffectContinuousControls', () => {
     expect(fields.scaleY).toBe('12')
   })
 
+  it('滑条输入框仅提交展示用默认值时不会写入缺失字段', () => {
+    const { deps, emitTransform, fields } = createDeps()
+    const controls = useEffectContinuousControls(deps)
+
+    controls.flushSliderField(createNumberField({
+      key: 'alpha',
+      defaultValue: 1,
+      min: 0,
+      max: 1,
+    }))
+
+    expect(fields.alpha).toBeUndefined()
+    expect(emitTransform).not.toHaveBeenCalled()
+  })
+
+  it('滑条仅回传当前默认值时不会写入缺失字段', () => {
+    const { deps, emitTransform, fields } = createDeps()
+    const controls = useEffectContinuousControls(deps)
+
+    controls.updateSliderField(createNumberField({
+      key: 'alpha',
+      defaultValue: 1,
+      min: 0,
+      max: 1,
+    }), 1, { fromSlider: true, flush: true })
+
+    expect(fields.alpha).toBeUndefined()
+    expect(emitTransform).not.toHaveBeenCalled()
+  })
+
+  it('linked-slider 仅提交默认展示值时不会写入缺失字段', () => {
+    const { deps, emitTransform, fields } = createDeps()
+    const controls = useEffectContinuousControls(deps)
+    const linkedField = createLinkedNumberField({
+      defaultValue: 1,
+      min: 0,
+      max: 2,
+    })
+
+    controls.flushLinkedSliderField(linkedField, 0)
+    controls.updateLinkedSliderField(linkedField, 0, 1, { fromSlider: true, flush: true })
+
+    expect(fields.scaleX).toBeUndefined()
+    expect(fields.scaleY).toBeUndefined()
+    expect(emitTransform).not.toHaveBeenCalled()
+  })
+
   it('锁定快照主轴为 0 时，linked-slider 会回退为双轴同步', () => {
     const { deps, fields } = createDeps({
       scaleX: '0',
@@ -160,5 +207,16 @@ describe('useEffectContinuousControls', () => {
     controls.updateDialField(dialField, 90, { flush: true })
     expect(Number(fields.rotate)).toBeCloseTo(1.5708)
     expect(controls.getDialInputValue(dialField)).toBe('90')
+  })
+
+  it('dial 提交已有值时不会把弧度存储值当成角度重复转换', () => {
+    const { deps, fields } = createDeps({
+      rotate: String(Math.PI / 2),
+    })
+    const controls = useEffectContinuousControls(deps)
+
+    controls.flushDialField(createDialField())
+
+    expect(Number(fields.rotate)).toBeCloseTo(Math.PI / 2)
   })
 })

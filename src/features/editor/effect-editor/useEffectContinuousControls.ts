@@ -145,6 +145,15 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     return [clamp(raw, param.min, param.max)]
   }
 
+  function getStoredFieldValue(path: string): string | undefined {
+    const value = deps.getFieldValue(path)
+    return value === '' ? undefined : value
+  }
+
+  function isImplicitDefaultWrite(path: string, value: number, defaultValue?: number): boolean {
+    return defaultValue !== undefined && value === defaultValue && getStoredFieldValue(path) === undefined
+  }
+
   function updateSliderField(
     param: NumberField,
     rawValue: string | number,
@@ -157,12 +166,19 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     const normalized = options.fromSlider
       ? applySliderCenterSnap(clamp(result.value, param.min ?? 0, param.max ?? 0), param.center ?? 0, param.min ?? 0, param.max ?? 0)
       : result.value
+    if (options.fromSlider && isImplicitDefaultWrite(param.key, normalized, param.defaultValue)) {
+      return
+    }
     deps.setNumericField(result.fields, param.key, normalized)
     deps.emitTransform(result.fields, { schedule: 'continuous', flush: options.flush, deferAutoApply: !options.flush })
   }
 
   function flushSliderField(param: NumberField) {
-    updateSliderField(param, getSliderInputValue(param), { flush: true })
+    const storedValue = getStoredFieldValue(param.key)
+    if (storedValue === undefined) {
+      return
+    }
+    updateSliderField(param, storedValue, { flush: true })
   }
 
   // ═══════════════════════════════════════
@@ -249,6 +265,14 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
       ? applySliderCenterSnap(clamp(result.value, param.min ?? 0, param.max ?? 0), param.center ?? 0, param.min ?? 0, param.max ?? 0)
       : result.value
 
+    if (
+      options.fromSlider
+      && isImplicitDefaultWrite(activePath, normalizedActive, param.defaultValue)
+      && (!isLinkedSliderLocked(param) || getStoredFieldValue(passivePath) === undefined)
+    ) {
+      return
+    }
+
     deps.setNumericField(result.fields, activePath, normalizedActive)
 
     if (isLinkedSliderLocked(param)) {
@@ -268,7 +292,12 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   }
 
   function flushLinkedSliderField(param: LinkedNumberField, index: 0 | 1) {
-    updateLinkedSliderField(param, index, getLinkedSliderInputValue(param, index), { flush: true })
+    const path = index === 0 ? param.key : param.linkedPairKey
+    const storedValue = getStoredFieldValue(path)
+    if (storedValue === undefined) {
+      return
+    }
+    updateLinkedSliderField(param, index, storedValue, { flush: true })
   }
 
   // ═══════════════════════════════════════
@@ -320,6 +349,9 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   }
 
   function flushDialField(param: DialField) {
+    if (getStoredFieldValue(param.key) === undefined) {
+      return
+    }
     updateDialField(param, getDialInputValue(param), { flush: true })
   }
 

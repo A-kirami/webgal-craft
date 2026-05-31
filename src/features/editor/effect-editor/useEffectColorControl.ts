@@ -12,6 +12,10 @@ export function useEffectColorControl(deps: EffectControlDeps) {
   // 拖拽期间仅做 deferred 预览，拖拽结束时（onEnd）才用暂存值执行一次 flush
   let pendingColorFlushValue = $ref<[number, number, number]>()
 
+  function isColorEqual(left: [number, number, number], right: [number, number, number]): boolean {
+    return left[0] === right[0] && left[1] === right[1] && left[2] === right[2]
+  }
+
   function getColorValue(param: EffectColorField): [number, number, number] {
     const red = normalizeColorChannel(deps.getNumberValue(param.colorPaths[0], param.colorDefaults[0]), param.colorDefaults[0])
     const green = normalizeColorChannel(deps.getNumberValue(param.colorPaths[1], param.colorDefaults[1]), param.colorDefaults[1])
@@ -42,11 +46,15 @@ export function useEffectColorControl(deps: EffectControlDeps) {
     Record<string, never>
   >({
     onStart() {
+      pendingColorFlushValue = undefined
       return {}
     },
     onMove() { /* noop */ },
     onEnd(_event, state) {
-      const targetColor = pendingColorFlushValue ?? getColorValue(state.param)
+      if (!pendingColorFlushValue) {
+        return
+      }
+      const targetColor = pendingColorFlushValue
       pendingColorFlushValue = undefined
       updateColorField(state.param, targetColor, {
         flush: true,
@@ -58,6 +66,10 @@ export function useEffectColorControl(deps: EffectControlDeps) {
   function handleColorPickerChange(param: EffectColorField, rawValue: unknown) {
     const parsed = extractRgbColor(rawValue)
     if (!parsed) {
+      return
+    }
+
+    if (isColorEqual(parsed, getColorValue(param))) {
       return
     }
 
