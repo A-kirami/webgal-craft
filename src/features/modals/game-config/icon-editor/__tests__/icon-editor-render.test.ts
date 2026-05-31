@@ -45,14 +45,14 @@ vi.mock('../icon-editor-render', () => ({
   renderIconSourceSnapshotCanvas: renderIconSourceSnapshotCanvasMock,
 }))
 
-function createImageSource(bytes: number[] = [1, 2, 3]): IconEditorImageSource {
+function createImageSource(bytes: number[] = [1, 2, 3], width = 10, height = 11): IconEditorImageSource {
   return {
     bytes: new Uint8Array(bytes),
     image: {
-      height: 256,
-      naturalHeight: 256,
-      naturalWidth: 256,
-      width: 256,
+      height,
+      naturalHeight: height,
+      naturalWidth: width,
+      width,
     } as HTMLImageElement,
   }
 }
@@ -72,7 +72,7 @@ describe('图标编辑器导出流程', () => {
     const state = createDefaultIconEditorState()
     state.foregroundImage = createImageSource([11, 12])
     state.backgroundType = 'image'
-    state.backgroundImage = createImageSource([8, 9])
+    state.backgroundImage = createImageSource([8, 9], 12, 13)
     state.backgroundColor = '#112233'
     state.backgroundOffsetRatio = { x: -0.1, y: 0.2 }
     state.backgroundScale = 1.25
@@ -93,8 +93,8 @@ describe('图标编辑器导出流程', () => {
       RelPath.from('.webgalcraft/icon-data/foreground.png'),
       RelPath.from('.webgalcraft/icon-data/background.png'),
     ])
-    expect(outputs.find(output => output.relativePath === RelPath.from('.webgalcraft/icon-data/foreground.png'))?.bytes).toEqual(new Uint8Array([256, 256]))
-    expect(outputs.find(output => output.relativePath === RelPath.from('.webgalcraft/icon-data/background.png'))?.bytes).toEqual(new Uint8Array([256, 256]))
+    expect(outputs.find(output => output.relativePath === RelPath.from('.webgalcraft/icon-data/foreground.png'))?.bytes).toEqual(new Uint8Array([10, 11]))
+    expect(outputs.find(output => output.relativePath === RelPath.from('.webgalcraft/icon-data/background.png'))?.bytes).toEqual(new Uint8Array([12, 13]))
     expect(renderIconSourceSnapshotCanvasMock).toHaveBeenCalledWith(state.foregroundImage)
     expect(renderIconSourceSnapshotCanvasMock).toHaveBeenCalledWith(state.backgroundImage)
 
