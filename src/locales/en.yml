@@ -525,7 +525,7 @@ modals:
     restore: Restore
     restoreSuccess: Restored successfully
     restoreConfirmTitle: Restore this version?
-    restoreConfirmContent: "Restore the version saved at {time}? The current content will be backed up first as a \"restore\" entry."
+    restoreConfirmContent: 'Restore the version saved at {time}? The current content will be backed up first as a "restore" entry.'
     sourceKind:
       manualSave: Manual save
       autoSave: Auto save
@@ -689,10 +689,8 @@ edit:
   statusBar:
     frames: "{count} frames"
     statements: "{count} statements"
-    engine: Engine
     engineMissing: Engine unavailable
     selectEngine: Select Engine
-    template: Template
     templateMissing: Template unavailable
     selectTemplate: Select Template
   fileTree:
@@ -1160,9 +1158,9 @@ game:
   selectTemplatePlaceholder: Select an available template
   importDependencyResolutionTitle: Select Resources for Import
   importDependencyResolutionDescription: This project references an unavailable engine or template. Select resources available on this device; the app will update the project config and continue importing.
-  importDependencyResolutionDescriptionWithName: "\"{name}\" references an unavailable engine or template. Select resources available on this device; the app will update the project config and continue importing."
+  importDependencyResolutionDescriptionWithName: '"{name}" references an unavailable engine or template. Select resources available on this device; the app will update the project config and continue importing.'
   importDependencyResolutionLegacyDescription: This legacy project folder does not include its own engine. Select an available engine; the app will create a project config and continue importing.
-  importDependencyResolutionLegacyDescriptionWithName: "\"{name}\" is a legacy project and its folder does not include its own engine. Select an available engine; the app will create a project config and continue importing."
+  importDependencyResolutionLegacyDescriptionWithName: '"{name}" is a legacy project and its folder does not include its own engine. Select an available engine; the app will create a project config and continue importing.'
   importDependencyResolutionEngineTitle: Bind Engine
   importDependencyResolutionTemplateTitle: Bind Template
   importDependencyResolutionEngineIssue: Select an available engine. The imported project will use it for opening and previewing.
