@@ -137,7 +137,7 @@ async function switchEngine(
 
     // 收尾：刷新 DB 与 workspace 快照，更新 previewAssets.cacheVersion，
     // 让首页卡片与编辑器头部都能拉到新引擎图标，避免浏览器命中旧缓存
-    await runFinalizer(() => gameManager.refreshRegisteredGameSnapshot(game.path), '刷新游戏快照失败')
+    await runFinalizer(() => gameManager.refreshRegisteredGameSnapshot(game.path, { invalidate: 'all' }), '刷新游戏快照失败')
 
     // 收尾：关闭打开的模板文档、刷新文件树、通知预览拉取新模板
     // 显式传入 newEngine.path 与 newTemplatePath：此时 workspaceStore.currentGame

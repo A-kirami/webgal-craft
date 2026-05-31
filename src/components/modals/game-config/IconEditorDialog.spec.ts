@@ -667,7 +667,7 @@ describe('IconEditorDialog', () => {
           relativePath: RelPath.from('icons/favicon.ico'),
         },
       ])
-      expect(refreshRegisteredGameSnapshotMock).toHaveBeenCalledWith('/games/demo')
+      expect(refreshRegisteredGameSnapshotMock).toHaveBeenCalledWith('/games/demo', { invalidate: 'icon' })
       expect(updateOpen).toHaveBeenCalledWith(false)
     })
   })

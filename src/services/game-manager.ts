@@ -18,7 +18,6 @@ import {
 } from '~/services/resource-health'
 import { toLookupPathKey } from '~/services/resource-path/lookup'
 import { templateSwitch } from '~/services/template-switch'
-import { GameMetadata, GamePreviewAssets } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
@@ -27,6 +26,7 @@ import type { GameConfigEntry } from '~/commands/game'
 import type { Engine, Game, Template } from '~/database/model'
 import type { GameIconPathExistsContext } from '~/services/project-icon-assets'
 import type { LookupPathKey } from '~/services/resource-path/lookup'
+import type { GameMetadata, GamePreviewAssets, PreviewAsset } from '~/services/types'
 import type {
   ImportDependencyResolutionContext,
   ImportDependencyResolutionResult,
@@ -45,6 +45,13 @@ interface RegisterGameOptions {
 
 interface ImportGameOptions {
   resolveDependencies?: ResolveImportDependencies
+}
+
+export type GamePreviewAssetKey = keyof GamePreviewAssets
+export type GamePreviewInvalidation = GamePreviewAssetKey | 'all'
+
+export interface GamePreviewRefreshOptions {
+  invalidate?: GamePreviewInvalidation
 }
 
 export interface GameInspectionPayload {
@@ -194,6 +201,70 @@ function withGamePreviewCacheVersion(
   }
 }
 
+function isPreviewAssetInvalidated(key: GamePreviewAssetKey, invalidation: GamePreviewInvalidation | undefined): boolean {
+  return invalidation === 'all' || invalidation === key
+}
+
+function mergeGamePreviewInvalidation(
+  current: GamePreviewInvalidation | undefined,
+  next: GamePreviewInvalidation | undefined,
+): GamePreviewInvalidation | undefined {
+  if (!current) {
+    return next
+  }
+
+  if (!next) {
+    return current
+  }
+
+  if (current === next) {
+    return current
+  }
+
+  return 'all'
+}
+
+function mergePreviewAsset(
+  previous: PreviewAsset,
+  next: PreviewAsset,
+  invalidated: boolean,
+  cacheVersion: number,
+): PreviewAsset {
+  if (invalidated || previous.path !== next.path) {
+    return {
+      ...next,
+      cacheVersion,
+    }
+  }
+
+  return {
+    ...next,
+    cacheVersion: previous.cacheVersion,
+  }
+}
+
+function mergeGamePreviewAssets(
+  previous: GamePreviewAssets,
+  next: GamePreviewAssets,
+  options: GamePreviewRefreshOptions | undefined,
+  cacheVersion: number,
+): GamePreviewAssets {
+  return {
+    icon: mergePreviewAsset(
+      previous.icon,
+      next.icon,
+      isPreviewAssetInvalidated('icon', options?.invalidate),
+      cacheVersion,
+    ),
+    cover: mergePreviewAsset(
+      previous.cover,
+      next.cover,
+      isPreviewAssetInvalidated('cover', options?.invalidate),
+      cacheVersion,
+    ),
+  }
+}
+
 async function getGamePreviewAssets(gamePath: AbsPath): Promise<GamePreviewAssets> {
   const [metadata, iconLookup] = await Promise.all([
     getGameMetadata(gamePath),
@@ -255,10 +326,6 @@ async function updateGameMonotonicLastModified(
       ...patch,
       lastModified,
     }
-    if (nextPatch.previewAssets) {
-      nextPatch.previewAssets = withGamePreviewCacheVersion(nextPatch.previewAssets, lastModified)
-    }
-
     await db.games.update(gameId, nextPatch)
     return nextPatch
   })
@@ -268,19 +335,19 @@ async function updateGameMonotonicLastModified(
   }
 }
 
-async function refreshRegisteredGameSnapshot(gamePath: AbsPath): Promise<void> {
+async function refreshRegisteredGameSnapshot(gamePath: AbsPath, options?: GamePreviewRefreshOptions): Promise<void> {
   const game = await db.games.where('pathLookupKey').equals(toLookupPathKey(gamePath)).first()
   if (!game) {
     return
   }
 
   const snapshot = await getGameSnapshot(gamePath)
-  const snapshotVersion = snapshot.previewAssets.icon.cacheVersion
-    ?? snapshot.previewAssets.cover.cacheVersion
-    ?? Date.now()
+  const snapshotVersion = Date.now()
+  const previewAssets = mergeGamePreviewAssets(game.previewAssets, snapshot.previewAssets, options, snapshotVersion)
   const patch: Partial<Pick<Game, 'lastModified' | 'metadata' | 'previewAssets'>> = {
     lastModified: snapshotVersion,
-    ...snapshot,
+    metadata: snapshot.metadata,
+    previewAssets,
   }
 
   await db.games.update(game.id, patch)
@@ -1001,7 +1068,7 @@ async function touchGameLastModified(gameId: string): Promise<void> {
   await updateGameMonotonicLastModified(gameId, { lastModified })
 }
 
-async function refreshGamePreviewAssets(gameId: string): Promise<void> {
+async function refreshGamePreviewAssets(gameId: string, options?: GamePreviewRefreshOptions): Promise<void> {
   const game = await db.games.get(gameId)
   if (!game) {
     return
@@ -1011,9 +1078,6 @@ async function refreshGamePreviewAssets(gameId: string): Promise<void> {
   try {
     previewAssets = await getGamePreviewAssets(game.path)
   } catch (error) {
-    if (game.previewAssets) {
-      previewAssets = game.previewAssets
-    }
     logger.warn(`刷新游戏预览资源快照失败: ${error}`)
   }
 
@@ -1022,7 +1086,7 @@ async function refreshGamePreviewAssets(gameId: string): Promise<void> {
     lastModified: cacheVersion,
   }
   if (previewAssets) {
-    patch.previewAssets = previewAssets
+    patch.previewAssets = mergeGamePreviewAssets(game.previewAssets, previewAssets, options, cacheVersion)
   }
 
   await updateGameMonotonicLastModified(gameId, patch)
@@ -1030,6 +1094,7 @@ async function refreshGamePreviewAssets(gameId: string): Promise<void> {
 
 let touchLastModifiedTimer: ReturnType<typeof setTimeout> | undefined
 let refreshPreviewAssetsTimer: ReturnType<typeof setTimeout> | undefined
+let pendingPreviewInvalidation: GamePreviewInvalidation | undefined
 
 /** 防抖更新当前游戏的 lastModified 字段（500ms） */
 function touchCurrentGameLastModified(): void {
@@ -1050,17 +1115,20 @@ function touchCurrentGameLastModified(): void {
 }
 
 /** 防抖刷新当前游戏的预览资源快照（500ms） */
-function refreshCurrentGamePreviewAssets(): void {
+function refreshCurrentGamePreviewAssets(options?: GamePreviewRefreshOptions): void {
   const workspaceStore = useWorkspaceStore()
   const gameId = workspaceStore.currentGame?.id
   if (!gameId) {
     return
   }
 
+  pendingPreviewInvalidation = mergeGamePreviewInvalidation(pendingPreviewInvalidation, options?.invalidate)
   clearTimeout(refreshPreviewAssetsTimer)
   refreshPreviewAssetsTimer = setTimeout(async () => {
+    const invalidate = pendingPreviewInvalidation
+    pendingPreviewInvalidation = undefined
     try {
-      await refreshGamePreviewAssets(gameId)
+      await refreshGamePreviewAssets(gameId, { invalidate })
     } catch (error) {
       logger.error(`刷新游戏预览资源快照失败: ${error}`)
     }

@@ -14,6 +14,7 @@ import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
 import { buildUniqueEntryName } from '~/utils/entry-name'
 
+import type { GamePreviewInvalidation } from '~/services/game-manager'
 import type { PathMutationResult } from '~/services/path-mutation'
 
 async function resolveWritablePath(path: AbsPath): Promise<AbsPath> {
@@ -61,6 +62,59 @@ function isPathWithinOrEqual(path: AbsPath, root: AbsPath): boolean {
   } catch {
     return false
   }
+}
+
+function resolvePreviewAssetPath(assetPath: string | undefined): AbsPath | undefined {
+  const workspaceStore = useWorkspaceStore()
+  const gamePath = workspaceStore.currentGame?.path
+  if (!gamePath || !assetPath) {
+    return undefined
+  }
+
+  return AbsPath.join(gamePath, RelPath.from(assetPath))
+}
+
+function doesChangedPathAffectAsset(
+  changedPath: AbsPath,
+  assetPath: AbsPath,
+  includeChildren: boolean,
+): boolean {
+  return includeChildren
+    ? isPathWithinOrEqual(assetPath, changedPath)
+    : AbsPath.equals(changedPath, assetPath)
+}
+
+function resolvePreviewInvalidation(changedPath: AbsPath, includeChildren = false): GamePreviewInvalidation | undefined {
+  const workspaceStore = useWorkspaceStore()
+  const previewAssets = workspaceStore.currentGame?.previewAssets
+  if (!previewAssets) {
+    return undefined
+  }
+
+  const iconPath = resolvePreviewAssetPath(previewAssets.icon.path)
+  const coverPath = resolvePreviewAssetPath(previewAssets.cover.path)
+  const affectsIcon = !!iconPath && doesChangedPathAffectAsset(changedPath, iconPath, includeChildren)
+  const affectsCover = !!coverPath && doesChangedPathAffectAsset(changedPath, coverPath, includeChildren)
+
+  if (affectsIcon && affectsCover) {
+    return 'all'
+  }
+
+  if (affectsIcon) {
+    return 'icon'
+  }
+
+  return affectsCover ? 'cover' : undefined
+}
+
+function markPathChanged(path: AbsPath, options: { includeChildren?: boolean } = {}): void {
+  const invalidation = resolvePreviewInvalidation(path, options.includeChildren)
+  if (invalidation) {
+    gameManager.refreshCurrentGamePreviewAssets({ invalidate: invalidation })
+    return
+  }
+
+  gameManager.touchCurrentGameLastModified()
 }
 
 function usesTemplateOverlayPath(path: AbsPath): boolean {
@@ -201,12 +255,12 @@ async function renameFile(oldPath: AbsPath, newName: string): Promise<PathMutati
 async function deleteFile(path: AbsPath, permanent?: boolean): Promise<void> {
   const fileStore = useFileStore()
   if (fileStore.isVfs && await fileStore.deleteEntry(path)) {
-    gameManager.refreshCurrentGamePreviewAssets()
+    markPathChanged(path, { includeChildren: true })
     return
   }
 
   await fsCmds.deleteFile(path, permanent)
-  gameManager.refreshCurrentGamePreviewAssets()
+  markPathChanged(path, { includeChildren: true })
 }
 
 async function resolveVfsCreatePath(
@@ -228,13 +282,13 @@ async function createFile(targetPath: AbsPath, fileName: string): Promise<AbsPat
   const fileStore = useFileStore()
   if (!fileStore.isVfs) {
     const result = await fsCmds.createFile(targetPath, fileName)
-    gameManager.refreshCurrentGamePreviewAssets()
+    markPathChanged(result)
     return result
   }
 
   const writablePath = await resolveVfsCreatePath(targetPath, fileName, false)
   await writeTextFile(writablePath, '')
-  gameManager.refreshCurrentGamePreviewAssets()
+  markPathChanged(writablePath)
   return writablePath
 }
 
@@ -242,13 +296,13 @@ async function createFolder(targetPath: AbsPath, folderName: string): Promise<Ab
   const fileStore = useFileStore()
   if (!fileStore.isVfs) {
     const result = await fsCmds.createFolder(targetPath, folderName)
-    gameManager.refreshCurrentGamePreviewAssets()
+    gameManager.touchCurrentGameLastModified()
     return result
   }
 
   const writablePath = await resolveVfsCreatePath(targetPath, folderName, true)
   await mkdir(writablePath, { recursive: true })
-  gameManager.refreshCurrentGamePreviewAssets()
+  gameManager.touchCurrentGameLastModified()
   return writablePath
 }
 
@@ -257,7 +311,7 @@ async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
   if (fileStore.isVfs) {
     const copiedPath = await fileStore.copyEntry(sourcePath, targetPath)
     if (copiedPath) {
-      gameManager.refreshCurrentGamePreviewAssets()
+      markPathChanged(copiedPath)
       return copiedPath
     }
   }
@@ -267,7 +321,7 @@ async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
     : sourcePath
   const writableTargetPath = await resolveWritablePath(targetPath)
   const result = await fsCmds.copyFile(resolvedSourcePath, writableTargetPath)
-  gameManager.refreshCurrentGamePreviewAssets()
+  markPathChanged(result)
   return result
 }
 

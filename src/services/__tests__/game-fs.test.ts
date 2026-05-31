@@ -143,7 +143,13 @@ describe('gameFs', () => {
     resolveFilePathMock.mockImplementation(async (path: string) => path)
     useWorkspaceStoreMock.mockReturnValue({
       CWD: '/project',
-      currentGame: { path: '/project' },
+      currentGame: {
+        path: '/project',
+        previewAssets: {
+          icon: { path: 'icons/favicon.ico' },
+          cover: { path: 'game/background/cover.png' },
+        },
+      },
     })
     resolvePreviewSiteMock.mockResolvedValue({
       projectPath: '/project',
@@ -258,7 +264,24 @@ describe('gameFs', () => {
 
     expect(deleteFileMock).toHaveBeenCalledWith('/game/deleted.txt', true)
     expect(mkdirMock).not.toHaveBeenCalled()
-    expect(refreshCurrentGamePreviewAssetsMock).toHaveBeenCalledTimes(4)
+    expect(refreshCurrentGamePreviewAssetsMock).not.toHaveBeenCalled()
+    expect(touchCurrentGameLastModifiedMock).toHaveBeenCalledTimes(4)
+  })
+
+  it('创建当前图标文件时只刷新图标预览资源', async () => {
+    createFileMock.mockResolvedValue('/project/icons/favicon.ico')
+
+    await expect(gameFs.createFile(AbsPath.from('/project/icons'), 'favicon.ico')).resolves.toBe('/project/icons/favicon.ico')
+
+    expect(refreshCurrentGamePreviewAssetsMock).toHaveBeenCalledWith({ invalidate: 'icon' })
+    expect(touchCurrentGameLastModifiedMock).not.toHaveBeenCalled()
+  })
+
+  it('删除当前封面文件时只刷新封面预览资源', async () => {
+    await gameFs.deleteFile(AbsPath.from('/project/game/background/cover.png'), true)
+
+    expect(deleteFileMock).toHaveBeenCalledWith('/project/game/background/cover.png', true)
+    expect(refreshCurrentGamePreviewAssetsMock).toHaveBeenCalledWith({ invalidate: 'cover' })
     expect(touchCurrentGameLastModifiedMock).not.toHaveBeenCalled()
   })
 
