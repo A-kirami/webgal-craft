@@ -155,6 +155,33 @@ describe('useEffectColorControl', () => {
     })
   })
 
+  it('颜色选择器打开时回传当前默认颜色不会写入缺失字段', () => {
+    const { deps, emitTransform, fields } = createDeps()
+    const control = useEffectColorControl(deps)
+    const field = createColorField({
+      colorDefaults: [255, 255, 255],
+    })
+
+    control.handleColorPickerChange(field, { rgba: { r: 255, g: 255, b: 255 } })
+
+    expect(fields).toEqual({})
+    expect(emitTransform).not.toHaveBeenCalled()
+  })
+
+  it('颜色触发按钮仅 pointerdown/up 时不会写入缺失字段', () => {
+    const { deps, emitTransform, fields } = createDeps()
+    const control = useEffectColorControl(deps)
+    const field = createColorField({
+      colorDefaults: [255, 255, 255],
+    })
+
+    control.handleColorPickerPointerDown(createPointerEvent(), field)
+    control.colorDrag.stop?.(createPointerEvent())
+
+    expect(fields).toEqual({})
+    expect(emitTransform).not.toHaveBeenCalled()
+  })
+
   it('拖拽期间只做 deferred preview，结束时才 flush 最终颜色', () => {
     const { deps, emitTransform, fields } = createDeps()
     const control = useEffectColorControl(deps)
