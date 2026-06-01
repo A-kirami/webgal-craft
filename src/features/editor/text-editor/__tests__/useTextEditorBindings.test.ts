@@ -5,11 +5,9 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 const {
   getSceneSelectionMock,
-  useEditSettingsStoreMock,
   useCommandPanelStoreMock,
 } = vi.hoisted(() => ({
   getSceneSelectionMock: vi.fn(),
-  useEditSettingsStoreMock: vi.fn(),
   useCommandPanelStoreMock: vi.fn(),
 }))
 
@@ -17,10 +15,6 @@ vi.mock('~/stores/editor', () => ({
   useEditorStore: () => ({
     getSceneSelection: getSceneSelectionMock,
   }),
-}))
-
-vi.mock('~/stores/edit-settings', () => ({
-  useEditSettingsStore: useEditSettingsStoreMock,
 }))
 
 vi.mock('~/stores/command-panel', () => ({
@@ -140,7 +134,6 @@ async function flushBindingUpdates() {
 describe('useTextEditorBindings', () => {
   afterEach(() => {
     getSceneSelectionMock.mockReset()
-    useEditSettingsStoreMock.mockReset()
     useCommandPanelStoreMock.mockReset()
   })
 
@@ -148,9 +141,6 @@ describe('useTextEditorBindings', () => {
     getSceneSelectionMock.mockReturnValue({
       lastLineNumber: 2,
       selectedStatementId: 2,
-    })
-    useEditSettingsStoreMock.mockReturnValue({
-      commandInsertPosition: 'cursor',
     })
     useCommandPanelStoreMock.mockReturnValue({
       getInsertText: vi.fn(),
@@ -175,9 +165,6 @@ describe('useTextEditorBindings', () => {
     getSceneSelectionMock.mockReturnValue({
       lastLineNumber: 2,
       selectedStatementId: 2,
-    })
-    useEditSettingsStoreMock.mockReturnValue({
-      commandInsertPosition: 'cursor',
     })
     useCommandPanelStoreMock.mockReturnValue({
       getInsertText: vi.fn(),
@@ -204,9 +191,6 @@ describe('useTextEditorBindings', () => {
     getSceneSelectionMock.mockReturnValue({
       lastLineNumber: 2,
       selectedStatementId: 2,
-    })
-    useEditSettingsStoreMock.mockReturnValue({
-      commandInsertPosition: 'cursor',
     })
     useCommandPanelStoreMock.mockReturnValue({
       getInsertText: vi.fn(),
@@ -238,9 +222,6 @@ describe('useTextEditorBindings', () => {
       lastLineNumber: 2,
       selectedStatementId: 2,
     })
-    useEditSettingsStoreMock.mockReturnValue({
-      commandInsertPosition: 'cursor',
-    })
     useCommandPanelStoreMock.mockReturnValue({
       getInsertText: vi.fn(),
     })
@@ -271,16 +252,13 @@ describe('useTextEditorBindings', () => {
     expect(binding?.getEmptyState?.()).not.toBe('multiple-edit-targets')
   })
 
-  it('命令面板插入单条命令后会把光标移动到插入文本末尾', async () => {
+  it('命令面板点击插入单条命令会跟随光标所在行并把光标移动到插入文本末尾', async () => {
     getSceneSelectionMock.mockReturnValue(undefined)
-    useEditSettingsStoreMock.mockReturnValue({
-      commandInsertPosition: 'cursor',
-    })
     useCommandPanelStoreMock.mockReturnValue({
       getInsertText: vi.fn(() => 'changeBg:room.png;'),
     })
 
-    const harness = await mountHarness('say:hello;\nold line')
+    const harness = await mountHarness('say:hello;\nold line\nfinal line')
     await flushBindingUpdates()
 
     harness.readCommandPanelHandler()?.insertCommand(commandType.say)
@@ -299,16 +277,13 @@ describe('useTextEditorBindings', () => {
     expect(harness.editor.revealPositionInCenterIfOutsideViewport).toHaveBeenCalledWith({ lineNumber: 3, column: 19 })
   })
 
-  it('插入命令组后会把光标移动到最后一行末尾', async () => {
+  it('命令面板点击插入命令组会跟随光标所在行并把光标移动到最后一行末尾', async () => {
     getSceneSelectionMock.mockReturnValue(undefined)
-    useEditSettingsStoreMock.mockReturnValue({
-      commandInsertPosition: 'cursor',
-    })
     useCommandPanelStoreMock.mockReturnValue({
       getInsertText: vi.fn(),
     })
 
-    const harness = await mountHarness('say:hello;\nold line')
+    const harness = await mountHarness('say:hello;\nold line\nfinal line')
     await flushBindingUpdates()
 
     harness.readCommandPanelHandler()?.insertGroup({
@@ -334,9 +309,6 @@ describe('useTextEditorBindings', () => {
 
   it('程序化语句更新会保留指定事务来源', async () => {
     getSceneSelectionMock.mockReturnValue(undefined)
-    useEditSettingsStoreMock.mockReturnValue({
-      commandInsertPosition: 'cursor',
-    })
     useCommandPanelStoreMock.mockReturnValue({
       getInsertText: vi.fn(),
     })

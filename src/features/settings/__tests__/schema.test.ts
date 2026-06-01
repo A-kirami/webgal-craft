@@ -14,13 +14,13 @@ describe('defineSettingsSchema', () => {
             immediate: true,
             label: '自动保存',
           },
-          effectEditorSide: {
+          selectField: {
             type: 'select',
-            default: 'right',
-            label: '效果编辑器方向',
+            default: 'primary',
+            label: '选择字段',
             options: [
-              { value: 'left', label: '左侧' },
-              { value: 'right', label: '右侧' },
+              { value: 'primary', label: '选项 A' },
+              { value: 'secondary', label: '选项 B' },
             ],
           },
           fontSize: {
@@ -41,13 +41,13 @@ describe('defineSettingsSchema', () => {
 
     expect(result.defaults).toEqual({
       autoSave: true,
-      effectEditorSide: 'right',
+      selectField: 'primary',
       fontSize: 14,
       projectPath: '',
     })
     expect(result.fieldNames).toEqual([
       'autoSave',
-      'effectEditorSide',
+      'selectField',
       'fontSize',
       'projectPath',
     ])
@@ -55,26 +55,26 @@ describe('defineSettingsSchema', () => {
 
     expect(result.validationSchema.parse({
       autoSave: false,
-      effectEditorSide: 'left',
+      selectField: 'secondary',
       fontSize: 24,
       projectPath: '/demo',
     })).toEqual({
       autoSave: false,
-      effectEditorSide: 'left',
+      selectField: 'secondary',
       fontSize: 24,
       projectPath: '/demo',
     })
 
     expect(() => result.validationSchema.parse({
       autoSave: true,
-      effectEditorSide: 'center',
+      selectField: 'unknown',
       fontSize: 14,
       projectPath: '',
     })).toThrow()
 
     expect(() => result.validationSchema.parse({
       autoSave: true,
-      effectEditorSide: 'right',
+      selectField: 'primary',
       fontSize: 4,
       projectPath: '',
     })).toThrow()

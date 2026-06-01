@@ -3,11 +3,9 @@ import { ResizablePanel } from '~/components/ui/resizable'
 import { useEditorPanelShell } from '~/features/editor/shell/useEditorPanelShell'
 import { useShortcut } from '~/features/editor/shortcut/useShortcut'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
-import { useEditSettingsStore } from '~/stores/edit-settings'
 
 const commandPanelRef = useTemplateRef<InstanceType<typeof ResizablePanel>>('commandPanel')
 const editorPanelRef = $(useTemplateRef('editorPanel'))
-const editSettingsStore = useEditSettingsStore()
 const { t } = useI18n()
 
 const {
@@ -144,7 +142,7 @@ defineExpose({ toggleCommandPanel })
         <SheetContent
           :to="editorPanelRef ?? undefined"
           :overlay="false"
-          :side="editSettingsStore.effectEditorSide"
+          side="right"
           class="p-4 max-w-none w-108 absolute sm:max-w-none"
           @open-auto-focus.prevent
           @close-auto-focus.prevent

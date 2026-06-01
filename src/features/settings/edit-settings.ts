@@ -22,26 +22,6 @@ export const editSettingsDefinition = defineSettingsSchema({
         label: t => t('settings.edit.autoApplyEffectEditorChanges.label'),
         description: t => t('settings.edit.autoApplyEffectEditorChanges.description'),
       },
-      commandInsertPosition: {
-        type: 'select',
-        default: 'afterCursor',
-        label: t => t('settings.edit.commandInsertPosition.label'),
-        description: t => t('settings.edit.commandInsertPosition.description'),
-        options: [
-          { value: 'afterCursor', label: t => t('settings.edit.commandInsertPosition.afterCursor') },
-          { value: 'end', label: t => t('settings.edit.commandInsertPosition.end') },
-        ],
-      },
-      effectEditorSide: {
-        type: 'select',
-        default: 'right',
-        label: t => t('settings.edit.effectEditorSide.label'),
-        description: t => t('settings.edit.effectEditorSide.description'),
-        options: [
-          { value: 'left', label: t => t('settings.edit.effectEditorSide.left') },
-          { value: 'right', label: t => t('settings.edit.effectEditorSide.right') },
-        ],
-      },
     },
   },
   preview: {

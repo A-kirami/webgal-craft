@@ -11,7 +11,6 @@ const {
   expandCommandPanelMock,
   sidebarPanelMock,
   statementAnimationDialogMock,
-  useEditSettingsStoreMock,
   useEditorStoreMock,
   usePreferenceStoreMock,
   useStatementAnimationDialogMock,
@@ -63,7 +62,6 @@ const {
     resetToDefault: vi.fn(),
     updateFrames: vi.fn(),
   },
-  useEditSettingsStoreMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
   useStatementAnimationDialogMock: vi.fn(),
@@ -81,10 +79,6 @@ vi.mock('~/stores/editor', () => ({
 
 vi.mock('~/stores/preference', () => ({
   usePreferenceStore: usePreferenceStoreMock,
-}))
-
-vi.mock('~/stores/edit-settings', () => ({
-  useEditSettingsStore: useEditSettingsStoreMock,
 }))
 
 vi.mock('~/stores/tabs', () => ({
@@ -322,7 +316,6 @@ describe('EditorPanel', () => {
     effectEditorProviderMock.isOpen = false
     effectEditorProviderMock.session = undefined
     useStatementAnimationDialogMock.mockReset()
-    useEditSettingsStoreMock.mockReset()
     useEditorStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()
     useTabsStoreMock.mockReset()
@@ -337,9 +330,6 @@ describe('EditorPanel', () => {
     }))
     usePreferenceStoreMock.mockReturnValue(reactive({
       showSidebar: true,
-    }))
-    useEditSettingsStoreMock.mockReturnValue(reactive({
-      effectEditorSide: 'right',
     }))
     useStatementAnimationDialogMock.mockReturnValue(statementAnimationDialogMock)
     useTabsStoreMock.mockReturnValue(reactive({

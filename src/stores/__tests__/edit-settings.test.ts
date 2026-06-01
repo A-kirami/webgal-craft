@@ -12,8 +12,6 @@ describe('useEditSettingsStore', () => {
     expect(store.fontSize).toBe(14)
     expect(store.wordWrap).toBe(true)
     expect(store.minimap).toBe(false)
-    expect(store.effectEditorSide).toBe('right')
-    expect(store.commandInsertPosition).toBe('afterCursor')
     expect(store.enableComboboxPathDelimiter).toBe(true)
     expect(store.comboboxPathDelimiter).toBe('/')
     expect(store.enableLivePreview).toBe(true)
@@ -27,8 +25,6 @@ describe('useEditSettingsStore', () => {
     store.enableLivePreview = false
     store.enableRealtimeEffectPreview = false
     store.autoApplyEffectEditorChanges = true
-    store.effectEditorSide = 'left'
-    store.commandInsertPosition = 'end'
     store.enableComboboxPathDelimiter = false
     store.comboboxPathDelimiter = '>'
 
@@ -36,8 +32,6 @@ describe('useEditSettingsStore', () => {
     expect(store.enableLivePreview).toBe(false)
     expect(store.enableRealtimeEffectPreview).toBe(false)
     expect(store.autoApplyEffectEditorChanges).toBe(true)
-    expect(store.effectEditorSide).toBe('left')
-    expect(store.commandInsertPosition).toBe('end')
     expect(store.enableComboboxPathDelimiter).toBe(false)
     expect(store.comboboxPathDelimiter).toBe('>')
   })

@@ -1097,11 +1097,6 @@ settings:
     collapseStatementsOnSidebarOpen:
       label: 補助パネル展開時にすべてのステートメントを折りたたむ
       description: 補助パネルを開いた際、すべてのステートメントカードを折りたたみ状態にロックします
-    effectEditorSide:
-      description: エフェクトエディターのドロワーがスライドする方向を選択します
-      label: エフェクトエディターのスライド方向
-      left: 左
-      right: 右
     showSidebarAssetPreview:
       label: 補助パネルのステートメント資源プレビュー
       description: エディターの補助パネルでステートメントが参照する画像などのアセットをプレビュー
@@ -1111,11 +1106,6 @@ settings:
     comboboxPathDelimiter:
       label: カスケード選択の区切り文字
       description: 候補の階層を区切るための区切り文字を指定します。例：/
-    commandInsertPosition:
-      label: コマンド挿入位置
-      description: コマンドパネルからステートメントを挿入する位置
-      afterCursor: カーソルの後
-      end: 末尾
   storage:
     gamePath:
       label: ゲーム保存場所
