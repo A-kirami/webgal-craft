@@ -85,6 +85,11 @@ const { openEffectEditor } = useStatementEffectEditorBridge({
   emitUpdate: payload => emit('update', payload),
 })
 
+function handleOpenEffectEditor() {
+  emit('select', props.entry.id)
+  openEffectEditor()
+}
+
 const { openAnimationEditor } = useStatementAnimationEditorBridge({
   updateTarget: () => createStatementIdTarget(props.entry.id),
   parsed: () => parsed.value,
@@ -221,7 +226,7 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
             ::show-inline-comment="showInlineComment"
             @update="emit('update', $event)"
             @open-animation-editor="openAnimationEditor"
-            @open-effect-editor="openEffectEditor"
+            @open-effect-editor="handleOpenEffectEditor"
           />
         </CollapsibleContent>
       </Collapsible>
