@@ -419,6 +419,24 @@ describe('useEffectContinuousControls', () => {
     expect(emitTransform).not.toHaveBeenCalled()
   })
 
+  it('linked-slider 回到缺失字段默认值时不会发射同帧内排队的旧值', () => {
+    const { deps, emitTransform, sourceFields } = createSnapshotDeps()
+    const controls = useEffectContinuousControls(deps)
+    const linkedField = createLinkedNumberField({
+      defaultValue: 1,
+      min: 0,
+      max: 2,
+    })
+
+    controls.updateLinkedSliderField(linkedField, 0, 0.8, { fromSlider: true })
+    controls.updateLinkedSliderField(linkedField, 0, 1, { fromSlider: true })
+    flushAllAnimationFrames()
+
+    expect(sourceFields.scaleX).toBeUndefined()
+    expect(sourceFields.scaleY).toBeUndefined()
+    expect(emitTransform).not.toHaveBeenCalled()
+  })
+
   it('锁定快照主轴为 0 时，linked-slider 会回退为双轴同步', () => {
     const { deps, fields } = createDeps({
       scaleX: '0',

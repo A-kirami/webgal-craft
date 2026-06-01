@@ -108,6 +108,17 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     return true
   }
 
+  function clearPendingContinuousTransformFields(paths: readonly string[]): boolean {
+    if (!pendingContinuousTransformEmit) {
+      return false
+    }
+    if (!paths.some(path => path in pendingContinuousTransformEmit!.fields)) {
+      return false
+    }
+    cancelScheduledContinuousTransformEmit()
+    return true
+  }
+
   function applyFieldUpdate(
     path: string,
     rawValue: string | number,
@@ -354,6 +365,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
       && isImplicitDefaultWrite(activePath, normalizedActive, param.defaultValue)
       && (!isLinkedSliderLocked(param) || getStoredFieldValue(passivePath) === undefined)
     ) {
+      clearPendingContinuousTransformFields([activePath, passivePath])
       return
     }
 
