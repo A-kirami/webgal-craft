@@ -8,7 +8,6 @@ import { resolveVisualEditorCommandDropAction } from '~/features/editor/visual-e
 import { resolveVisualEditorDropAction } from '~/features/editor/visual-editor/visual-editor-file-drop'
 import { canRestoreVisualEditorCardFocus, findSelectedVisualEditorStatementCard } from '~/features/editor/visual-editor/visual-editor-focus'
 import { useCommandPanelStore } from '~/stores/command-panel'
-import { useEditSettingsStore } from '~/stores/edit-settings'
 import { isEditableEditor, SceneVisualProjectionState, useEditorStore } from '~/stores/editor'
 import { useEditorViewStateStore } from '~/stores/editor-view-state'
 import { usePreferenceStore } from '~/stores/preference'
@@ -38,7 +37,6 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
   const editorStore = useEditorStore()
   const editorViewStateStore = useEditorViewStateStore()
   const tabsStore = useTabsStore()
-  const editSettings = useEditSettingsStore()
   const preferenceStore = usePreferenceStore()
   const commandPanelStore = useCommandPanelStore()
   const workspaceStore = useWorkspaceStore()
@@ -452,9 +450,7 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     }
 
     const newEntries = rawTexts.flatMap(text => buildStatements(text))
-    const insertAt = editSettings.commandInsertPosition === 'end'
-      ? state.value.statements.length
-      : resolveInsertIndexAfterSelection()
+    const insertAt = resolveInsertIndexAfterSelection()
     editorStore.applySceneStatementInsert(state.value.path, newEntries, insertAt)
 
     const lastInserted = newEntries.at(-1)

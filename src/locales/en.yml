@@ -1097,11 +1097,6 @@ settings:
     collapseStatementsOnSidebarOpen:
       label: Collapse All Statements When Auxiliary Panel Opens
       description: Lock all statement cards in collapsed state when the auxiliary panel is opened
-    effectEditorSide:
-      description: Choose which side the effect editor drawer slides in from
-      label: Effect Editor Slide Direction
-      left: Left
-      right: Right
     showSidebarAssetPreview:
       label: Auxiliary Panel Statement Asset Preview
       description: Preview images and other assets referenced by statements in the editor auxiliary panel
@@ -1111,11 +1106,6 @@ settings:
     comboboxPathDelimiter:
       label: Cascading Selection Delimiter
       description: Specify the delimiter used to separate option hierarchy levels, for example /
-    commandInsertPosition:
-      label: Command Insert Position
-      description: Where to insert statements from the command panel
-      afterCursor: After Cursor
-      end: End
   storage:
     gamePath:
       label: Game Save Location

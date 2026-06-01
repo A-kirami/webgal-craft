@@ -1097,11 +1097,6 @@ settings:
     collapseStatementsOnSidebarOpen:
       label: 展開輔助面板時強制摺疊全部語句
       description: 開啟輔助面板時，鎖定所有語句卡片為摺疊狀態
-    effectEditorSide:
-      description: 選擇效果編輯器抽屜從哪一側滑出
-      label: 效果編輯器滑出方向
-      left: 左側
-      right: 右側
     showSidebarAssetPreview:
       label: 輔助面板語句資源預覽
       description: 在編輯器輔助面板中預覽語句引用的圖片等資源
@@ -1111,11 +1106,6 @@ settings:
     comboboxPathDelimiter:
       label: 級聯選擇分隔符
       description: 指定用於劃分選項層級的分隔符，例如 /
-    commandInsertPosition:
-      label: 命令插入位置
-      description: 從命令面板插入語句時的插入位置
-      afterCursor: 游標之後
-      end: 末尾
   storage:
     gamePath:
       label: 遊戲儲存位置

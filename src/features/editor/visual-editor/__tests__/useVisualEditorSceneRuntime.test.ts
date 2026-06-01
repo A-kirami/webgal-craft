@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, effectScope, nextTick, reactive } from 'vue'
+import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { computeLineNumberFromStatementId } from '~/domain/document/scene-selection'
 import { buildStatements } from '~/domain/script/sentence'
@@ -13,7 +14,6 @@ const {
   scrollToSelectedStatementMock,
   useCommandPanelBridgeBindingMock,
   useCommandPanelStoreMock,
-  useEditSettingsStoreMock,
   useEditorStoreMock,
   useEditorViewStateStoreMock,
   usePreferenceStoreMock,
@@ -27,7 +27,6 @@ const {
   scrollToSelectedStatementMock: vi.fn(async () => undefined),
   useCommandPanelBridgeBindingMock: vi.fn(),
   useCommandPanelStoreMock: vi.fn(),
-  useEditSettingsStoreMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
   useEditorViewStateStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
@@ -74,10 +73,6 @@ vi.mock('~/features/editor/visual-editor/visual-editor-focus', () => ({
 
 vi.mock('~/stores/command-panel', () => ({
   useCommandPanelStore: useCommandPanelStoreMock,
-}))
-
-vi.mock('~/stores/edit-settings', () => ({
-  useEditSettingsStore: useEditSettingsStoreMock,
 }))
 
 vi.mock('~/stores/editor', () => ({
@@ -133,7 +128,6 @@ describe('useVisualEditorSceneRuntime', () => {
     scrollToSelectedStatementMock.mockReset()
     useCommandPanelBridgeBindingMock.mockReset()
     useCommandPanelStoreMock.mockReset()
-    useEditSettingsStoreMock.mockReset()
     useEditorStoreMock.mockReset()
     useEditorViewStateStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()
@@ -152,9 +146,6 @@ describe('useVisualEditorSceneRuntime', () => {
     useCommandPanelStoreMock.mockReturnValue({
       getInsertText: vi.fn(() => 'say:test'),
     })
-    useEditSettingsStoreMock.mockReturnValue(reactive({
-      commandInsertPosition: 'after',
-    }))
     useEditorStoreMock.mockReturnValue(reactive({
       applySceneStatementDelete: vi.fn(),
       applySceneStatementInsert: vi.fn(),
@@ -245,6 +236,70 @@ describe('useVisualEditorSceneRuntime', () => {
         visualType: 'scene',
       },
     }))
+
+    scope.stop()
+  })
+
+  it('命令面板点击插入会跟随当前选中语句', () => {
+    const scope = effectScope()
+    const state = createState([
+      {
+        id: 1,
+        parseError: false,
+        parsed: undefined,
+        rawText: 'say:first',
+      },
+      {
+        id: 2,
+        parseError: false,
+        parsed: undefined,
+        rawText: 'say:second',
+      },
+      {
+        id: 3,
+        parseError: false,
+        parsed: undefined,
+        rawText: 'say:third',
+      },
+    ])
+    const applySceneStatementInsert = vi.fn()
+    const scheduleAutoSaveIfEnabled = vi.fn()
+
+    useEditorStoreMock.mockReturnValue(reactive({
+      applySceneStatementDelete: vi.fn(),
+      applySceneStatementInsert,
+      applySceneStatementReorder: vi.fn(),
+      applySceneStatementUpdate: vi.fn(),
+      consumePendingSceneProjectionActivation: vi.fn(() => false),
+      currentState: {
+        kind: 'scene',
+        path: '/project/scene.txt',
+        projection: 'visual',
+      },
+      getSceneSelection: vi.fn(() => ({
+        lastEditedStatementId: 2,
+        lastLineNumber: 2,
+        selectedStatementId: 2,
+      })),
+      isSceneStatementCollapsed: vi.fn(() => false),
+      scheduleAutoSaveIfEnabled,
+      setSceneStatementCollapsed: vi.fn(),
+      syncScenePreview: vi.fn(),
+      syncSceneSelectionFromStatement: vi.fn(),
+    }))
+
+    scope.run(() => useVisualEditorSceneRuntime({
+      getScrollArea: () => undefined,
+      getState: () => state,
+    }))
+
+    const commandBinding = useCommandPanelBridgeBindingMock.mock.calls.at(-1)?.[0]
+    commandBinding?.insertCommand(commandType.say)
+
+    expect(applySceneStatementInsert).toHaveBeenCalledWith('/project/scene.txt', [
+      expect.objectContaining({ rawText: 'say:test' }),
+    ], 2)
+    expect(scheduleAutoSaveIfEnabled).toHaveBeenCalledWith('/project/scene.txt')
 
     scope.stop()
   })

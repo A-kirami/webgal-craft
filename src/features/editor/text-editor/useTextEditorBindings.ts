@@ -3,7 +3,6 @@ import { createEmptySceneTextPanelSnapshot, resolveSceneTextPanelSnapshotFromCon
 import { hasMultipleEditTargets } from '~/features/editor/text-editor/text-editor-selection'
 import { useTextEditorHistory } from '~/features/editor/text-editor/useTextEditorHistory'
 import { useCommandPanelStore } from '~/stores/command-panel'
-import { useEditSettingsStore } from '~/stores/edit-settings'
 import { useEditorStore } from '~/stores/editor'
 
 import { createTextLineTarget } from '../statement-editor/useStatementEditor'
@@ -52,7 +51,6 @@ function resolveInsertedTextEndPosition(range: monaco.IRange, text: string): mon
 
 export function useTextEditorBindings(options: UseTextEditorBindingsOptions) {
   const editorStore = useEditorStore()
-  const editSettings = useEditSettingsStore()
   const commandPanelStore = useCommandPanelStore()
   const state = computed(() => options.getState())
 
@@ -134,9 +132,7 @@ export function useTextEditorBindings(options: UseTextEditorBindingsOptions) {
 
     const position = editor.getPosition() ?? { lineNumber: model.getLineCount(), column: 1 }
     const lineCount = model.getLineCount()
-    const targetLine = editSettings.commandInsertPosition === 'end'
-      ? lineCount
-      : Math.min(position.lineNumber, lineCount)
+    const targetLine = Math.min(position.lineNumber, lineCount)
     const lineLength = model.getLineMaxColumn(targetLine)
 
     const currentLineContent = model.getLineContent(targetLine)

@@ -1097,11 +1097,6 @@ settings:
     collapseStatementsOnSidebarOpen:
       label: 展开辅助面板时强制折叠全部语句
       description: 打开辅助面板时，锁定所有语句卡片为折叠状态
-    effectEditorSide:
-      description: 选择效果编辑器抽屉从哪一侧滑出
-      label: 效果编辑器滑出方向
-      left: 左侧
-      right: 右侧
     showSidebarAssetPreview:
       label: 辅助面板语句资源预览
       description: 在编辑器辅助面板中预览语句引用的图片等资源
@@ -1111,11 +1106,6 @@ settings:
     comboboxPathDelimiter:
       label: 级联选择分隔符
       description: 指定用于划分选项层级的分隔符，例如 /
-    commandInsertPosition:
-      label: 命令插入位置
-      description: 从命令面板插入语句时的插入位置
-      afterCursor: 光标之后
-      end: 末尾
   storage:
     gamePath:
       label: 游戏保存位置
