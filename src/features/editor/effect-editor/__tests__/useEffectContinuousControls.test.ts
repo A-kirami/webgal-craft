@@ -113,6 +113,26 @@ function createDeps(initialFields: Record<string, string> = {}) {
   return { deps, emitTransform, fields }
 }
 
+function createSnapshotDeps(initialFields: Record<string, string> = {}) {
+  const sourceFields = reactive({ ...initialFields }) as Record<string, string>
+  const emitTransform = vi.fn()
+
+  const deps: EffectControlDeps = {
+    getFields: () => ({ ...sourceFields }),
+    getFieldValue: path => sourceFields[path] ?? '',
+    getNumberValue: (path, fallback) => {
+      const value = Number(sourceFields[path])
+      return Number.isFinite(value) ? value : fallback
+    },
+    setNumericField: (targetFields, path, value) => {
+      targetFields[path] = String(value)
+    },
+    emitTransform,
+  }
+
+  return { deps, emitTransform, sourceFields }
+}
+
 function createNumberField(overrides: Partial<NumberField> = {}): NumberField {
   return {
     key: 'x',
@@ -168,6 +188,12 @@ function flushNextAnimationFrame() {
   const [frameId, callback] = nextFrame!
   animationFrameCallbacks.delete(frameId)
   callback(performance.now())
+}
+
+function flushAllAnimationFrames() {
+  while (animationFrameCallbacks.size > 0) {
+    flushNextAnimationFrame()
+  }
 }
 
 describe('useEffectContinuousControls', () => {
@@ -355,6 +381,24 @@ describe('useEffectContinuousControls', () => {
     }), 1, { fromSlider: true, flush: true })
 
     expect(fields.alpha).toBeUndefined()
+    expect(emitTransform).not.toHaveBeenCalled()
+  })
+
+  it('滑条回到缺失字段默认值时不会发射同帧内排队的旧值', () => {
+    const { deps, emitTransform, sourceFields } = createSnapshotDeps()
+    const controls = useEffectContinuousControls(deps)
+    const field = createNumberField({
+      key: 'alpha',
+      defaultValue: 1,
+      min: 0,
+      max: 1,
+    })
+
+    controls.updateSliderField(field, 0.8, { fromSlider: true })
+    controls.updateSliderField(field, 1, { fromSlider: true })
+    flushAllAnimationFrames()
+
+    expect(sourceFields.alpha).toBeUndefined()
     expect(emitTransform).not.toHaveBeenCalled()
   })
 

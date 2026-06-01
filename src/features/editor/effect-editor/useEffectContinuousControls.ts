@@ -100,6 +100,14 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     })
   }
 
+  function clearPendingContinuousTransformField(path: string): boolean {
+    if (!pendingContinuousTransformEmit || !(path in pendingContinuousTransformEmit.fields)) {
+      return false
+    }
+    cancelScheduledContinuousTransformEmit()
+    return true
+  }
+
   function applyFieldUpdate(
     path: string,
     rawValue: string | number,
@@ -233,6 +241,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
       ? applySliderCenterSnap(clamp(result.value, param.min ?? 0, param.max ?? 0), param.center ?? 0, param.min ?? 0, param.max ?? 0)
       : result.value
     if (options.fromSlider && isImplicitDefaultWrite(param.key, normalized, param.defaultValue)) {
+      clearPendingContinuousTransformField(param.key)
       return
     }
     deps.setNumericField(result.fields, param.key, normalized)
@@ -246,6 +255,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   function flushSliderField(param: NumberField) {
     const storedValue = getStoredFieldValue(param.key)
     if (storedValue === undefined) {
+      clearPendingContinuousTransformField(param.key)
       return
     }
     updateSliderField(param, storedValue, { flush: true })
