@@ -7,7 +7,14 @@ type ListenerMap = Record<string, Set<EventListenerOrEventListenerObject>>
 interface PointerLikeEvent {
   buttons?: number
   clientX?: number
+  currentTarget?: PointerCaptureTarget | null
   pointerId: number
+}
+
+interface PointerCaptureTarget {
+  hasPointerCapture?: (pointerId: number) => boolean
+  releasePointerCapture?: (pointerId: number) => void
+  setPointerCapture?: (pointerId: number) => void
 }
 
 const originalAddEventListener = globalThis.addEventListener
@@ -75,6 +82,31 @@ afterEach(() => {
 })
 
 describe('useImmediatePointerDrag', () => {
+  it('开始拖拽时会捕获当前指针并在结束时释放', () => {
+    const capturedPointers = new Set<number>()
+    const target: PointerCaptureTarget = {
+      hasPointerCapture: vi.fn(pointerId => capturedPointers.has(pointerId)),
+      releasePointerCapture: vi.fn((pointerId) => {
+        capturedPointers.delete(pointerId)
+      }),
+      setPointerCapture: vi.fn((pointerId) => {
+        capturedPointers.add(pointerId)
+      }),
+    }
+    const drag = useImmediatePointerDrag({
+      onEnd: vi.fn(),
+      onMove: vi.fn(),
+      onStart: event => ({ startX: event.clientX }),
+    })
+
+    drag.start(createPointerEvent({ currentTarget: target, pointerId: 7 }))
+    dispatchPointerEvent('pointerup', { pointerId: 7 })
+
+    expect(target.setPointerCapture).toHaveBeenCalledWith(7)
+    expect(target.releasePointerCapture).toHaveBeenCalledWith(7)
+    expect(capturedPointers.has(7)).toBe(false)
+  })
+
   it('正常收到 pointerup 时会结束拖拽', () => {
     const onEnd = vi.fn()
     const onMove = vi.fn()
