@@ -402,6 +402,70 @@ describe('useEffectContinuousControls', () => {
     expect(emitTransform).not.toHaveBeenCalled()
   })
 
+  it('滑条回到默认值时不会取消只触碰其他字段的待发射变更', () => {
+    const { deps, emitTransform, sourceFields } = createSnapshotDeps({
+      alpha: '1',
+    })
+    const controls = useEffectContinuousControls(deps)
+    const alphaField = createNumberField({
+      key: 'alpha',
+      defaultValue: 1,
+      min: 0,
+      max: 1,
+    })
+    const blurField = createNumberField({
+      key: 'blur',
+      defaultValue: 0,
+      min: 0,
+      max: 50,
+    })
+
+    controls.updateSliderField(blurField, 8, { fromSlider: true })
+    delete sourceFields.alpha
+    controls.updateSliderField(alphaField, 1, { fromSlider: true })
+    flushAllAnimationFrames()
+
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(expect.objectContaining({
+      blur: '8',
+    }), {
+      schedule: 'continuous',
+      flush: undefined,
+      deferAutoApply: true,
+    })
+  })
+
+  it('滑条清理后一帧内部分待发射字段时会保留其他已触碰字段', () => {
+    const { deps, emitTransform } = createSnapshotDeps()
+    const controls = useEffectContinuousControls(deps)
+    const alphaField = createNumberField({
+      key: 'alpha',
+      defaultValue: 1,
+      min: 0,
+      max: 1,
+    })
+    const blurField = createNumberField({
+      key: 'blur',
+      defaultValue: 0,
+      min: 0,
+      max: 50,
+    })
+
+    controls.updateSliderField(alphaField, 0.8, { fromSlider: true })
+    controls.updateSliderField(blurField, 8, { fromSlider: true })
+    controls.updateSliderField(blurField, 0, { fromSlider: true })
+    flushAllAnimationFrames()
+
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(expect.objectContaining({
+      alpha: '0.8',
+    }), {
+      schedule: 'continuous',
+      flush: undefined,
+      deferAutoApply: true,
+    })
+  })
+
   it('linked-slider 仅提交默认展示值时不会写入缺失字段', () => {
     const { deps, emitTransform, fields } = createDeps()
     const controls = useEffectContinuousControls(deps)
@@ -435,6 +499,40 @@ describe('useEffectContinuousControls', () => {
     expect(sourceFields.scaleX).toBeUndefined()
     expect(sourceFields.scaleY).toBeUndefined()
     expect(emitTransform).not.toHaveBeenCalled()
+  })
+
+  it('linked-slider 回到默认值时不会取消只触碰其他字段的待发射变更', () => {
+    const { deps, emitTransform, sourceFields } = createSnapshotDeps({
+      scaleX: '1',
+      scaleY: '1',
+    })
+    const controls = useEffectContinuousControls(deps)
+    const linkedField = createLinkedNumberField({
+      defaultValue: 1,
+      min: 0,
+      max: 2,
+    })
+    const blurField = createNumberField({
+      key: 'blur',
+      defaultValue: 0,
+      min: 0,
+      max: 50,
+    })
+
+    controls.updateSliderField(blurField, 8, { fromSlider: true })
+    delete sourceFields.scaleX
+    delete sourceFields.scaleY
+    controls.updateLinkedSliderField(linkedField, 0, 1, { fromSlider: true })
+    flushAllAnimationFrames()
+
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(expect.objectContaining({
+      blur: '8',
+    }), {
+      schedule: 'continuous',
+      flush: undefined,
+      deferAutoApply: true,
+    })
   })
 
   it('锁定快照主轴为 0 时，linked-slider 会回退为双轴同步', () => {

@@ -53,9 +53,15 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   interface PendingContinuousTransformEmit {
     fields: Record<string, string>
     options: EmitTransformOptions
+    touchedPaths: Set<string>
   }
 
   type ContinuousTransformEmitTiming = 'immediate' | 'nextFrame'
+
+  interface ContinuousTransformEmitConfig {
+    timing?: ContinuousTransformEmitTiming
+    touchedPaths?: readonly string[]
+  }
 
   let pendingContinuousTransformEmit: PendingContinuousTransformEmit | undefined
   let pendingContinuousTransformFrameId: number | undefined
@@ -71,8 +77,10 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   function emitContinuousTransform(
     fields: Record<string, string>,
     options: EmitTransformOptions,
-    timing: ContinuousTransformEmitTiming = 'immediate',
+    config: ContinuousTransformEmitConfig = {},
   ) {
+    const { timing = 'immediate', touchedPaths = [] } = config
+
     if (options.flush) {
       cancelScheduledContinuousTransformEmit()
       deps.emitTransform(fields, options)
@@ -84,7 +92,25 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
       return
     }
 
-    pendingContinuousTransformEmit = { fields, options }
+    const nextTouchedPaths = new Set(touchedPaths)
+    if (pendingContinuousTransformEmit) {
+      for (const path of pendingContinuousTransformEmit.touchedPaths) {
+        if (!nextTouchedPaths.has(path)) {
+          if (path in pendingContinuousTransformEmit.fields) {
+            fields[path] = pendingContinuousTransformEmit.fields[path]
+          } else {
+            delete fields[path]
+          }
+        }
+        nextTouchedPaths.add(path)
+      }
+    }
+
+    pendingContinuousTransformEmit = {
+      fields,
+      options,
+      touchedPaths: nextTouchedPaths,
+    }
     if (pendingContinuousTransformFrameId !== undefined) {
       return
     }
@@ -101,21 +127,29 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   }
 
   function clearPendingContinuousTransformField(path: string): boolean {
-    if (!pendingContinuousTransformEmit || !(path in pendingContinuousTransformEmit.fields)) {
-      return false
-    }
-    cancelScheduledContinuousTransformEmit()
-    return true
+    return clearPendingContinuousTransformFields([path])
   }
 
   function clearPendingContinuousTransformFields(paths: readonly string[]): boolean {
-    if (!pendingContinuousTransformEmit) {
+    const pending = pendingContinuousTransformEmit
+    if (!pending) {
       return false
     }
-    if (!paths.some(path => path in pendingContinuousTransformEmit!.fields)) {
+
+    let hasTouchedPath = false
+    for (const path of paths) {
+      delete pending.fields[path]
+      if (pending.touchedPaths.delete(path)) {
+        hasTouchedPath = true
+      }
+    }
+
+    if (!hasTouchedPath) {
       return false
     }
-    cancelScheduledContinuousTransformEmit()
+    if (pending.touchedPaths.size === 0) {
+      cancelScheduledContinuousTransformEmit()
+    }
     return true
   }
 
@@ -127,7 +161,9 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     const fields = deps.getFields()
     if (!rawValue && rawValue !== 0) {
       delete fields[path]
-      emitContinuousTransform(fields, createContinuousTransformOptions(options?.flush))
+      emitContinuousTransform(fields, createContinuousTransformOptions(options?.flush), {
+        touchedPaths: [path],
+      })
       return undefined
     }
     const num = Number(rawValue)
@@ -156,7 +192,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     emitContinuousTransform(
       result.fields,
       createContinuousTransformOptions(options.flush),
-      emitTiming,
+      { timing: emitTiming, touchedPaths: [param.key] },
     )
   }
 
@@ -259,7 +295,10 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     emitContinuousTransform(
       result.fields,
       createContinuousTransformOptions(options.flush),
-      options.fromSlider ? 'nextFrame' : 'immediate',
+      {
+        timing: options.fromSlider ? 'nextFrame' : 'immediate',
+        touchedPaths: [param.key],
+      },
     )
   }
 
@@ -350,7 +389,10 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
         emitContinuousTransform(
           fields,
           createContinuousTransformOptions(options.flush),
-          options.fromSlider ? 'nextFrame' : 'immediate',
+          {
+            timing: options.fromSlider ? 'nextFrame' : 'immediate',
+            touchedPaths: [activePath, passivePath],
+          },
         )
       }
       return
@@ -370,6 +412,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     }
 
     deps.setNumericField(result.fields, activePath, normalizedActive)
+    const touchedPaths = [activePath]
 
     if (isLinkedSliderLocked(param)) {
       const snapshot = getLinkedSliderLockSnapshot(param)
@@ -382,12 +425,16 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
         nextPassive = applySliderCenterSnap(clamp(nextPassive, param.min ?? 0, param.max ?? 0), param.center ?? 0, param.min ?? 0, param.max ?? 0)
       }
       deps.setNumericField(result.fields, passivePath, nextPassive)
+      touchedPaths.push(passivePath)
     }
 
     emitContinuousTransform(
       result.fields,
       createContinuousTransformOptions(options.flush),
-      options.fromSlider ? 'nextFrame' : 'immediate',
+      {
+        timing: options.fromSlider ? 'nextFrame' : 'immediate',
+        touchedPaths,
+      },
     )
   }
 
@@ -453,7 +500,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     emitContinuousTransform(
       result.fields,
       createContinuousTransformOptions(options.flush),
-      emitTiming,
+      { timing: emitTiming, touchedPaths: [param.key] },
     )
   }
 
