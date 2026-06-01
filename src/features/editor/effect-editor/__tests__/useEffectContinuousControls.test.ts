@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 
 import { useEffectContinuousControls } from '~/features/editor/effect-editor/useEffectContinuousControls'
@@ -6,8 +6,17 @@ import { useEffectContinuousControls } from '~/features/editor/effect-editor/use
 import type { DialField, NumberField } from '~/features/editor/command-registry/schema'
 import type { EffectControlDeps } from '~/features/editor/effect-editor/types'
 
-const { setupPreferenceStoreMock, usePreferenceStoreMock } = vi.hoisted(() => {
+type ParamDragState = object & { param: unknown }
+
+interface ParamDragRuntime {
+  end: (event?: PointerEvent) => void
+  move: (event: PointerEvent) => void
+  state: ParamDragState | undefined
+}
+
+const { paramDragRuntimes, setupPreferenceStoreMock, usePreferenceStoreMock } = vi.hoisted(() => {
   const usePreferenceStoreMock = vi.fn()
+  const paramDragRuntimes: ParamDragRuntime[] = []
 
   function setupPreferenceStoreMock() {
     return {
@@ -16,6 +25,7 @@ const { setupPreferenceStoreMock, usePreferenceStoreMock } = vi.hoisted(() => {
   }
 
   return {
+    paramDragRuntimes,
     setupPreferenceStoreMock,
     usePreferenceStoreMock,
   }
@@ -24,8 +34,64 @@ const { setupPreferenceStoreMock, usePreferenceStoreMock } = vi.hoisted(() => {
 const preferenceStoreState = reactive({
   effectEditorLinkedSliderLocks: {} as Record<string, boolean>,
 })
+const animationFrameCallbacks = new Map<number, FrameRequestCallback>()
+let nextAnimationFrameId = 0
 
 vi.mock('~/stores/preference', setupPreferenceStoreMock)
+
+vi.mock('~/features/editor/effect-editor/createParamDrag', () => ({
+  createParamDrag<P, S extends object>(callbacks: {
+    onEnd: (event: PointerEvent | undefined, state: S & { param: P }) => void
+    onMove: (event: PointerEvent, state: S & { param: P }) => void
+    onStart: (event: PointerEvent, param: P) => S | undefined
+  }) {
+    const runtime: ParamDragRuntime = {
+      state: undefined,
+      move(event) {
+        if (!runtime.state) {
+          return
+        }
+        callbacks.onMove(event, runtime.state as S & { param: P })
+      },
+      end(event) {
+        if (!runtime.state) {
+          return
+        }
+        const currentState = runtime.state as S & { param: P }
+        runtime.state = undefined
+        callbacks.onEnd(event, currentState)
+      },
+    }
+
+    paramDragRuntimes.push(runtime)
+
+    return {
+      drag: {
+        get active() {
+          return runtime.state !== undefined
+        },
+        get state() {
+          return runtime.state as (S & { param: P }) | undefined
+        },
+        start() {
+          return false
+        },
+        stop(event?: PointerEvent) {
+          runtime.end(event)
+        },
+      },
+      start(event: PointerEvent, param: P) {
+        const state = callbacks.onStart(event, param)
+        if (!state) {
+          runtime.state = undefined
+          return false
+        }
+        runtime.state = { ...state, param } as S & { param: P }
+        return true
+      },
+    }
+  },
+}))
 
 function createDeps(initialFields: Record<string, string> = {}) {
   const fields = reactive({ ...initialFields }) as Record<string, string>
@@ -45,6 +111,26 @@ function createDeps(initialFields: Record<string, string> = {}) {
   }
 
   return { deps, emitTransform, fields }
+}
+
+function createSnapshotDeps(initialFields: Record<string, string> = {}) {
+  const sourceFields = reactive({ ...initialFields }) as Record<string, string>
+  const emitTransform = vi.fn()
+
+  const deps: EffectControlDeps = {
+    getFields: () => ({ ...sourceFields }),
+    getFieldValue: path => sourceFields[path] ?? '',
+    getNumberValue: (path, fallback) => {
+      const value = Number(sourceFields[path])
+      return Number.isFinite(value) ? value : fallback
+    },
+    setNumericField: (targetFields, path, value) => {
+      targetFields[path] = String(value)
+    },
+    emitTransform,
+  }
+
+  return { deps, emitTransform, sourceFields }
 }
 
 function createNumberField(overrides: Partial<NumberField> = {}): NumberField {
@@ -78,11 +164,59 @@ function createDialField(overrides: Partial<DialField> = {}): DialField {
   }
 }
 
+function createPointerEvent(overrides: Partial<PointerEvent> = {}): PointerEvent {
+  return {
+    button: 0,
+    buttons: 1,
+    clientX: 100,
+    pointerId: 1,
+    pointerType: 'mouse',
+    preventDefault: vi.fn(),
+    ...overrides,
+  } as PointerEvent
+}
+
+function getParamDragRuntime(index: number): ParamDragRuntime {
+  const runtime = paramDragRuntimes[index]
+  expect(runtime).toBeDefined()
+  return runtime!
+}
+
+function flushNextAnimationFrame() {
+  const nextFrame = animationFrameCallbacks.entries().next().value
+  expect(nextFrame).toBeDefined()
+  const [frameId, callback] = nextFrame!
+  animationFrameCallbacks.delete(frameId)
+  callback(performance.now())
+}
+
+function flushAllAnimationFrames() {
+  while (animationFrameCallbacks.size > 0) {
+    flushNextAnimationFrame()
+  }
+}
+
 describe('useEffectContinuousControls', () => {
   beforeEach(() => {
     usePreferenceStoreMock.mockReset()
     preferenceStoreState.effectEditorLinkedSliderLocks = {}
     usePreferenceStoreMock.mockReturnValue(preferenceStoreState)
+    paramDragRuntimes.length = 0
+    animationFrameCallbacks.clear()
+    nextAnimationFrameId = 0
+
+    vi.stubGlobal('cancelAnimationFrame', vi.fn((frameId: number) => {
+      animationFrameCallbacks.delete(frameId)
+    }))
+    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
+      nextAnimationFrameId += 1
+      animationFrameCallbacks.set(nextAnimationFrameId, callback)
+      return nextAnimationFrameId
+    }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('updateNumberField 支持裁剪并按 continuous 模式 flush', () => {
@@ -100,6 +234,97 @@ describe('useEffectContinuousControls', () => {
       flush: true,
       deferAutoApply: false,
     })
+  })
+
+  it('position scrub 在同一帧内合并连续 transform 发射', () => {
+    const { deps, emitTransform, fields } = createDeps()
+    const controls = useEffectContinuousControls(deps)
+    const field = createNumberField({
+      defaultValue: 0,
+      effectGroup: 'position',
+      key: 'position.x',
+      scrubStep: 1,
+    })
+
+    controls.handleNumberLabelPointerDown(createPointerEvent(), field)
+    const numberScrub = getParamDragRuntime(0)
+
+    numberScrub.move(createPointerEvent({ clientX: 101 }))
+    numberScrub.move(createPointerEvent({ clientX: 105 }))
+
+    expect(fields['position.x']).toBe('5')
+    expect(emitTransform).not.toHaveBeenCalled()
+
+    flushNextAnimationFrame()
+
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(fields, {
+      schedule: 'continuous',
+      flush: false,
+      deferAutoApply: true,
+    })
+
+    numberScrub.end(createPointerEvent({ clientX: 105 }))
+
+    expect(emitTransform).toHaveBeenCalledTimes(2)
+    expect(emitTransform).toHaveBeenLastCalledWith(fields, {
+      schedule: 'continuous',
+      flush: true,
+      deferAutoApply: false,
+    })
+  })
+
+  it('滑条拖拽在同一帧内只发射最后一次 transform', () => {
+    const { deps, emitTransform, fields } = createDeps()
+    const controls = useEffectContinuousControls(deps)
+    const field = createNumberField({
+      key: 'alpha',
+      defaultValue: 1,
+      min: 0,
+      max: 1,
+      step: 0.01,
+    })
+
+    controls.updateSliderField(field, 0.8, { fromSlider: true })
+    controls.updateSliderField(field, 0.6, { fromSlider: true })
+
+    expect(fields.alpha).toBe('0.6')
+    expect(emitTransform).not.toHaveBeenCalled()
+
+    flushNextAnimationFrame()
+
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(fields, {
+      schedule: 'continuous',
+      flush: undefined,
+      deferAutoApply: true,
+    })
+  })
+
+  it('滑条提交会取消尚未发射的拖拽 transform', () => {
+    const { deps, emitTransform, fields } = createDeps()
+    const controls = useEffectContinuousControls(deps)
+    const field = createNumberField({
+      key: 'alpha',
+      defaultValue: 1,
+      min: 0,
+      max: 1,
+      step: 0.01,
+    })
+
+    controls.updateSliderField(field, 0.8, { fromSlider: true })
+    controls.updateSliderField(field, 0.6, { fromSlider: true, flush: true })
+
+    expect(fields.alpha).toBe('0.6')
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(fields, {
+      schedule: 'continuous',
+      flush: true,
+      deferAutoApply: false,
+    })
+
+    expect(animationFrameCallbacks.size).toBe(0)
+    expect(emitTransform).toHaveBeenCalledTimes(1)
   })
 
   it('slider 与 linked-slider 会应用中心吸附与锁定比例', () => {
@@ -159,6 +384,88 @@ describe('useEffectContinuousControls', () => {
     expect(emitTransform).not.toHaveBeenCalled()
   })
 
+  it('滑条回到缺失字段默认值时不会发射同帧内排队的旧值', () => {
+    const { deps, emitTransform, sourceFields } = createSnapshotDeps()
+    const controls = useEffectContinuousControls(deps)
+    const field = createNumberField({
+      key: 'alpha',
+      defaultValue: 1,
+      min: 0,
+      max: 1,
+    })
+
+    controls.updateSliderField(field, 0.8, { fromSlider: true })
+    controls.updateSliderField(field, 1, { fromSlider: true })
+    flushAllAnimationFrames()
+
+    expect(sourceFields.alpha).toBeUndefined()
+    expect(emitTransform).not.toHaveBeenCalled()
+  })
+
+  it('滑条回到默认值时不会取消只触碰其他字段的待发射变更', () => {
+    const { deps, emitTransform, sourceFields } = createSnapshotDeps({
+      alpha: '1',
+    })
+    const controls = useEffectContinuousControls(deps)
+    const alphaField = createNumberField({
+      key: 'alpha',
+      defaultValue: 1,
+      min: 0,
+      max: 1,
+    })
+    const blurField = createNumberField({
+      key: 'blur',
+      defaultValue: 0,
+      min: 0,
+      max: 50,
+    })
+
+    controls.updateSliderField(blurField, 8, { fromSlider: true })
+    delete sourceFields.alpha
+    controls.updateSliderField(alphaField, 1, { fromSlider: true })
+    flushAllAnimationFrames()
+
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(expect.objectContaining({
+      blur: '8',
+    }), {
+      schedule: 'continuous',
+      flush: undefined,
+      deferAutoApply: true,
+    })
+  })
+
+  it('滑条清理后一帧内部分待发射字段时会保留其他已触碰字段', () => {
+    const { deps, emitTransform } = createSnapshotDeps()
+    const controls = useEffectContinuousControls(deps)
+    const alphaField = createNumberField({
+      key: 'alpha',
+      defaultValue: 1,
+      min: 0,
+      max: 1,
+    })
+    const blurField = createNumberField({
+      key: 'blur',
+      defaultValue: 0,
+      min: 0,
+      max: 50,
+    })
+
+    controls.updateSliderField(alphaField, 0.8, { fromSlider: true })
+    controls.updateSliderField(blurField, 8, { fromSlider: true })
+    controls.updateSliderField(blurField, 0, { fromSlider: true })
+    flushAllAnimationFrames()
+
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(expect.objectContaining({
+      alpha: '0.8',
+    }), {
+      schedule: 'continuous',
+      flush: undefined,
+      deferAutoApply: true,
+    })
+  })
+
   it('linked-slider 仅提交默认展示值时不会写入缺失字段', () => {
     const { deps, emitTransform, fields } = createDeps()
     const controls = useEffectContinuousControls(deps)
@@ -174,6 +481,58 @@ describe('useEffectContinuousControls', () => {
     expect(fields.scaleX).toBeUndefined()
     expect(fields.scaleY).toBeUndefined()
     expect(emitTransform).not.toHaveBeenCalled()
+  })
+
+  it('linked-slider 回到缺失字段默认值时不会发射同帧内排队的旧值', () => {
+    const { deps, emitTransform, sourceFields } = createSnapshotDeps()
+    const controls = useEffectContinuousControls(deps)
+    const linkedField = createLinkedNumberField({
+      defaultValue: 1,
+      min: 0,
+      max: 2,
+    })
+
+    controls.updateLinkedSliderField(linkedField, 0, 0.8, { fromSlider: true })
+    controls.updateLinkedSliderField(linkedField, 0, 1, { fromSlider: true })
+    flushAllAnimationFrames()
+
+    expect(sourceFields.scaleX).toBeUndefined()
+    expect(sourceFields.scaleY).toBeUndefined()
+    expect(emitTransform).not.toHaveBeenCalled()
+  })
+
+  it('linked-slider 回到默认值时不会取消只触碰其他字段的待发射变更', () => {
+    const { deps, emitTransform, sourceFields } = createSnapshotDeps({
+      scaleX: '1',
+      scaleY: '1',
+    })
+    const controls = useEffectContinuousControls(deps)
+    const linkedField = createLinkedNumberField({
+      defaultValue: 1,
+      min: 0,
+      max: 2,
+    })
+    const blurField = createNumberField({
+      key: 'blur',
+      defaultValue: 0,
+      min: 0,
+      max: 50,
+    })
+
+    controls.updateSliderField(blurField, 8, { fromSlider: true })
+    delete sourceFields.scaleX
+    delete sourceFields.scaleY
+    controls.updateLinkedSliderField(linkedField, 0, 1, { fromSlider: true })
+    flushAllAnimationFrames()
+
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(expect.objectContaining({
+      blur: '8',
+    }), {
+      schedule: 'continuous',
+      flush: undefined,
+      deferAutoApply: true,
+    })
   })
 
   it('锁定快照主轴为 0 时，linked-slider 会回退为双轴同步', () => {
@@ -204,7 +563,7 @@ describe('useEffectContinuousControls', () => {
     const dialField = createDialField()
 
     expect(controls.getDialDegree(dialField)).toBeCloseTo(180)
-    controls.updateDialField(dialField, 90, { flush: true })
+    controls.updateDialField(dialField, 90)
     expect(Number(fields.rotate)).toBeCloseTo(1.5708)
     expect(controls.getDialInputValue(dialField)).toBe('90')
   })
