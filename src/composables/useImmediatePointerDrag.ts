@@ -11,16 +11,59 @@ export interface UseImmediatePointerDragResult<S> {
   stop: (event?: PointerEvent) => void
 }
 
+interface PointerCaptureTarget {
+  hasPointerCapture?: (pointerId: number) => boolean
+  releasePointerCapture?: (pointerId: number) => void
+  setPointerCapture?: (pointerId: number) => void
+}
+
 export function useImmediatePointerDrag<S>(
   callbacks: ImmediatePointerDragCallbacks<S>,
 ): UseImmediatePointerDragResult<S> {
   let state: S | undefined
   let pointerId: number | undefined
+  let captureTarget: PointerCaptureTarget | undefined
 
   function removeListeners() {
     globalThis.removeEventListener('pointermove', handlePointerMove)
     globalThis.removeEventListener('pointerup', handlePointerEnd)
     globalThis.removeEventListener('pointercancel', handlePointerEnd)
+  }
+
+  function capturePointer(event: PointerEvent) {
+    const target = event.currentTarget as PointerCaptureTarget | null
+    if (typeof target?.setPointerCapture !== 'function') {
+      return
+    }
+
+    try {
+      target.setPointerCapture(event.pointerId)
+      captureTarget = target
+    } catch {
+      // capture 是增强能力，失败时仍保留全局事件监听。
+    }
+  }
+
+  function releasePointerCapture() {
+    if (captureTarget === undefined || pointerId === undefined) {
+      return
+    }
+
+    const target = captureTarget
+    captureTarget = undefined
+
+    if (typeof target.hasPointerCapture === 'function' && !target.hasPointerCapture(pointerId)) {
+      return
+    }
+    if (typeof target.releasePointerCapture !== 'function') {
+      return
+    }
+
+    try {
+      target.releasePointerCapture(pointerId)
+    } catch {
+      // capture 在元素失活时可能已经被浏览器释放。
+    }
   }
 
   function handlePointerMove(event: PointerEvent) {
@@ -50,6 +93,7 @@ export function useImmediatePointerDrag<S>(
 
     const current = state
     state = undefined
+    releasePointerCapture()
     pointerId = undefined
     removeListeners()
     callbacks.onEnd(event, current)
@@ -64,6 +108,7 @@ export function useImmediatePointerDrag<S>(
     stop()
     state = nextState
     pointerId = event.pointerId
+    capturePointer(event)
 
     globalThis.addEventListener('pointermove', handlePointerMove)
     globalThis.addEventListener('pointerup', handlePointerEnd)
