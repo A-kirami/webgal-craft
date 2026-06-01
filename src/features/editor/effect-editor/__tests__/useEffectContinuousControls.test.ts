@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 
 import { useEffectContinuousControls } from '~/features/editor/effect-editor/useEffectContinuousControls'
@@ -6,8 +6,17 @@ import { useEffectContinuousControls } from '~/features/editor/effect-editor/use
 import type { DialField, NumberField } from '~/features/editor/command-registry/schema'
 import type { EffectControlDeps } from '~/features/editor/effect-editor/types'
 
-const { setupPreferenceStoreMock, usePreferenceStoreMock } = vi.hoisted(() => {
+type ParamDragState = object & { param: unknown }
+
+interface ParamDragRuntime {
+  end: (event?: PointerEvent) => void
+  move: (event: PointerEvent) => void
+  state: ParamDragState | undefined
+}
+
+const { paramDragRuntimes, setupPreferenceStoreMock, usePreferenceStoreMock } = vi.hoisted(() => {
   const usePreferenceStoreMock = vi.fn()
+  const paramDragRuntimes: ParamDragRuntime[] = []
 
   function setupPreferenceStoreMock() {
     return {
@@ -16,6 +25,7 @@ const { setupPreferenceStoreMock, usePreferenceStoreMock } = vi.hoisted(() => {
   }
 
   return {
+    paramDragRuntimes,
     setupPreferenceStoreMock,
     usePreferenceStoreMock,
   }
@@ -24,8 +34,64 @@ const { setupPreferenceStoreMock, usePreferenceStoreMock } = vi.hoisted(() => {
 const preferenceStoreState = reactive({
   effectEditorLinkedSliderLocks: {} as Record<string, boolean>,
 })
+const animationFrameCallbacks = new Map<number, FrameRequestCallback>()
+let nextAnimationFrameId = 0
 
 vi.mock('~/stores/preference', setupPreferenceStoreMock)
+
+vi.mock('~/features/editor/effect-editor/createParamDrag', () => ({
+  createParamDrag<P, S extends object>(callbacks: {
+    onEnd: (event: PointerEvent | undefined, state: S & { param: P }) => void
+    onMove: (event: PointerEvent, state: S & { param: P }) => void
+    onStart: (event: PointerEvent, param: P) => S | undefined
+  }) {
+    const runtime: ParamDragRuntime = {
+      state: undefined,
+      move(event) {
+        if (!runtime.state) {
+          return
+        }
+        callbacks.onMove(event, runtime.state as S & { param: P })
+      },
+      end(event) {
+        if (!runtime.state) {
+          return
+        }
+        const currentState = runtime.state as S & { param: P }
+        runtime.state = undefined
+        callbacks.onEnd(event, currentState)
+      },
+    }
+
+    paramDragRuntimes.push(runtime)
+
+    return {
+      drag: {
+        get active() {
+          return runtime.state !== undefined
+        },
+        get state() {
+          return runtime.state as (S & { param: P }) | undefined
+        },
+        start() {
+          return false
+        },
+        stop(event?: PointerEvent) {
+          runtime.end(event)
+        },
+      },
+      start(event: PointerEvent, param: P) {
+        const state = callbacks.onStart(event, param)
+        if (!state) {
+          runtime.state = undefined
+          return false
+        }
+        runtime.state = { ...state, param } as S & { param: P }
+        return true
+      },
+    }
+  },
+}))
 
 function createDeps(initialFields: Record<string, string> = {}) {
   const fields = reactive({ ...initialFields }) as Record<string, string>
@@ -78,11 +144,53 @@ function createDialField(overrides: Partial<DialField> = {}): DialField {
   }
 }
 
+function createPointerEvent(overrides: Partial<PointerEvent> = {}): PointerEvent {
+  return {
+    button: 0,
+    buttons: 1,
+    clientX: 100,
+    pointerId: 1,
+    pointerType: 'mouse',
+    preventDefault: vi.fn(),
+    ...overrides,
+  } as PointerEvent
+}
+
+function getParamDragRuntime(index: number): ParamDragRuntime {
+  const runtime = paramDragRuntimes[index]
+  expect(runtime).toBeDefined()
+  return runtime!
+}
+
+function flushNextAnimationFrame() {
+  const nextFrame = animationFrameCallbacks.entries().next().value
+  expect(nextFrame).toBeDefined()
+  const [frameId, callback] = nextFrame!
+  animationFrameCallbacks.delete(frameId)
+  callback(performance.now())
+}
+
 describe('useEffectContinuousControls', () => {
   beforeEach(() => {
     usePreferenceStoreMock.mockReset()
     preferenceStoreState.effectEditorLinkedSliderLocks = {}
     usePreferenceStoreMock.mockReturnValue(preferenceStoreState)
+    paramDragRuntimes.length = 0
+    animationFrameCallbacks.clear()
+    nextAnimationFrameId = 0
+
+    vi.stubGlobal('cancelAnimationFrame', vi.fn((frameId: number) => {
+      animationFrameCallbacks.delete(frameId)
+    }))
+    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
+      nextAnimationFrameId += 1
+      animationFrameCallbacks.set(nextAnimationFrameId, callback)
+      return nextAnimationFrameId
+    }))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('updateNumberField 支持裁剪并按 continuous 模式 flush', () => {
@@ -100,6 +208,97 @@ describe('useEffectContinuousControls', () => {
       flush: true,
       deferAutoApply: false,
     })
+  })
+
+  it('position scrub 在同一帧内合并连续 transform 发射', () => {
+    const { deps, emitTransform, fields } = createDeps()
+    const controls = useEffectContinuousControls(deps)
+    const field = createNumberField({
+      defaultValue: 0,
+      effectGroup: 'position',
+      key: 'position.x',
+      scrubStep: 1,
+    })
+
+    controls.handleNumberLabelPointerDown(createPointerEvent(), field)
+    const numberScrub = getParamDragRuntime(0)
+
+    numberScrub.move(createPointerEvent({ clientX: 101 }))
+    numberScrub.move(createPointerEvent({ clientX: 105 }))
+
+    expect(fields['position.x']).toBe('5')
+    expect(emitTransform).not.toHaveBeenCalled()
+
+    flushNextAnimationFrame()
+
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(fields, {
+      schedule: 'continuous',
+      flush: false,
+      deferAutoApply: true,
+    })
+
+    numberScrub.end(createPointerEvent({ clientX: 105 }))
+
+    expect(emitTransform).toHaveBeenCalledTimes(2)
+    expect(emitTransform).toHaveBeenLastCalledWith(fields, {
+      schedule: 'continuous',
+      flush: true,
+      deferAutoApply: false,
+    })
+  })
+
+  it('滑条拖拽在同一帧内只发射最后一次 transform', () => {
+    const { deps, emitTransform, fields } = createDeps()
+    const controls = useEffectContinuousControls(deps)
+    const field = createNumberField({
+      key: 'alpha',
+      defaultValue: 1,
+      min: 0,
+      max: 1,
+      step: 0.01,
+    })
+
+    controls.updateSliderField(field, 0.8, { fromSlider: true })
+    controls.updateSliderField(field, 0.6, { fromSlider: true })
+
+    expect(fields.alpha).toBe('0.6')
+    expect(emitTransform).not.toHaveBeenCalled()
+
+    flushNextAnimationFrame()
+
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(fields, {
+      schedule: 'continuous',
+      flush: undefined,
+      deferAutoApply: true,
+    })
+  })
+
+  it('滑条提交会取消尚未发射的拖拽 transform', () => {
+    const { deps, emitTransform, fields } = createDeps()
+    const controls = useEffectContinuousControls(deps)
+    const field = createNumberField({
+      key: 'alpha',
+      defaultValue: 1,
+      min: 0,
+      max: 1,
+      step: 0.01,
+    })
+
+    controls.updateSliderField(field, 0.8, { fromSlider: true })
+    controls.updateSliderField(field, 0.6, { fromSlider: true, flush: true })
+
+    expect(fields.alpha).toBe('0.6')
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(fields, {
+      schedule: 'continuous',
+      flush: true,
+      deferAutoApply: false,
+    })
+
+    expect(animationFrameCallbacks.size).toBe(0)
+    expect(emitTransform).toHaveBeenCalledTimes(1)
   })
 
   it('slider 与 linked-slider 会应用中心吸附与锁定比例', () => {
@@ -204,7 +403,7 @@ describe('useEffectContinuousControls', () => {
     const dialField = createDialField()
 
     expect(controls.getDialDegree(dialField)).toBeCloseTo(180)
-    controls.updateDialField(dialField, 90, { flush: true })
+    controls.updateDialField(dialField, 90)
     expect(Number(fields.rotate)).toBeCloseTo(1.5708)
     expect(controls.getDialInputValue(dialField)).toBe('90')
   })

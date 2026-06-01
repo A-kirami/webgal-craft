@@ -1,10 +1,9 @@
-import { DialField } from '~/features/editor/command-registry/schema'
 import { createParamDrag } from '~/features/editor/effect-editor/createParamDrag'
-import { EffectControlDeps } from '~/features/editor/effect-editor/types'
 import { usePreferenceStore } from '~/stores/preference'
 import { applyScrubStepModifier, clamp, degreeToRadian, getPointerAngleDegrees, normalizeAngleDelta, normalizeDegree, radianToDegree, roundByStep, roundToPrecision } from '~/utils/math'
 
-import type { NumberField } from '~/features/editor/command-registry/schema'
+import type { DialField, NumberField } from '~/features/editor/command-registry/schema'
+import type { EffectControlDeps, EmitTransformOptions } from '~/features/editor/effect-editor/types'
 
 /** NumberField 且必定有 linkedPairKey 的子类型（用于 linked-slider 控件） */
 type LinkedNumberField = NumberField & { linkedPairKey: string }
@@ -17,6 +16,10 @@ const SLIDER_CENTER_SNAP_TOLERANCE = 0.02
 const DIAL_DEGREE_SNAP = 15
 // 弧度值存储精度（4 位小数，约 0.006 度误差）
 const RADIAN_STORAGE_PRECISION = 4
+
+function createContinuousTransformOptions(flush?: boolean): EmitTransformOptions {
+  return { schedule: 'continuous', flush, deferAutoApply: !flush }
+}
 
 function getFieldValueWithDefault(
   getFieldValue: (path: string) => string,
@@ -47,6 +50,56 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     value: number
   }
 
+  interface PendingContinuousTransformEmit {
+    fields: Record<string, string>
+    options: EmitTransformOptions
+  }
+
+  type ContinuousTransformEmitTiming = 'immediate' | 'nextFrame'
+
+  let pendingContinuousTransformEmit: PendingContinuousTransformEmit | undefined
+  let pendingContinuousTransformFrameId: number | undefined
+
+  function cancelScheduledContinuousTransformEmit() {
+    if (pendingContinuousTransformFrameId !== undefined) {
+      cancelAnimationFrame(pendingContinuousTransformFrameId)
+      pendingContinuousTransformFrameId = undefined
+    }
+    pendingContinuousTransformEmit = undefined
+  }
+
+  function emitContinuousTransform(
+    fields: Record<string, string>,
+    options: EmitTransformOptions,
+    timing: ContinuousTransformEmitTiming = 'immediate',
+  ) {
+    if (options.flush) {
+      cancelScheduledContinuousTransformEmit()
+      deps.emitTransform(fields, options)
+      return
+    }
+
+    if (timing === 'immediate') {
+      deps.emitTransform(fields, options)
+      return
+    }
+
+    pendingContinuousTransformEmit = { fields, options }
+    if (pendingContinuousTransformFrameId !== undefined) {
+      return
+    }
+
+    pendingContinuousTransformFrameId = requestAnimationFrame(() => {
+      pendingContinuousTransformFrameId = undefined
+      const pending = pendingContinuousTransformEmit
+      pendingContinuousTransformEmit = undefined
+      if (!pending) {
+        return
+      }
+      deps.emitTransform(pending.fields, pending.options)
+    })
+  }
+
   function applyFieldUpdate(
     path: string,
     rawValue: string | number,
@@ -55,7 +108,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     const fields = deps.getFields()
     if (!rawValue && rawValue !== 0) {
       delete fields[path]
-      deps.emitTransform(fields, { schedule: 'continuous', flush: options?.flush, deferAutoApply: !options?.flush })
+      emitContinuousTransform(fields, createContinuousTransformOptions(options?.flush))
       return undefined
     }
     const num = Number(rawValue)
@@ -69,10 +122,11 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   // Number 控件
   // ═══════════════════════════════════════
 
-  function updateNumberField(
+  function updateNumberFieldValue(
     param: NumberField,
     rawValue: string,
     options: { flush?: boolean, clampValue?: boolean } = {},
+    emitTiming: ContinuousTransformEmitTiming = 'immediate',
   ) {
     const result = applyFieldUpdate(param.key, rawValue, options)
     if (!result) {
@@ -80,7 +134,19 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     }
     const finalValue = options.clampValue ? clamp(result.value, param.min, param.max) : result.value
     deps.setNumericField(result.fields, param.key, finalValue)
-    deps.emitTransform(result.fields, { schedule: 'continuous', flush: options.flush, deferAutoApply: !options.flush })
+    emitContinuousTransform(
+      result.fields,
+      createContinuousTransformOptions(options.flush),
+      emitTiming,
+    )
+  }
+
+  function updateNumberField(
+    param: NumberField,
+    rawValue: string,
+    options: { flush?: boolean, clampValue?: boolean } = {},
+  ) {
+    updateNumberFieldValue(param, rawValue, options)
   }
 
   function canScrubNumber(param: NumberField): boolean {
@@ -120,10 +186,10 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
       }
 
       state.lastValue = normalized
-      updateNumberField(state.param, String(normalized), { flush: false, clampValue: true })
+      updateNumberFieldValue(state.param, String(normalized), { flush: false, clampValue: true }, 'nextFrame')
     },
     onEnd(_event, state) {
-      updateNumberField(state.param, String(state.lastValue), { flush: true, clampValue: true })
+      updateNumberFieldValue(state.param, String(state.lastValue), { flush: true, clampValue: true })
     },
   })
 
@@ -170,7 +236,11 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
       return
     }
     deps.setNumericField(result.fields, param.key, normalized)
-    deps.emitTransform(result.fields, { schedule: 'continuous', flush: options.flush, deferAutoApply: !options.flush })
+    emitContinuousTransform(
+      result.fields,
+      createContinuousTransformOptions(options.flush),
+      options.fromSlider ? 'nextFrame' : 'immediate',
+    )
   }
 
   function flushSliderField(param: NumberField) {
@@ -256,7 +326,11 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
         const fields = deps.getFields()
         delete fields[activePath]
         delete fields[passivePath]
-        deps.emitTransform(fields, { schedule: 'continuous', flush: options.flush, deferAutoApply: !options.flush })
+        emitContinuousTransform(
+          fields,
+          createContinuousTransformOptions(options.flush),
+          options.fromSlider ? 'nextFrame' : 'immediate',
+        )
       }
       return
     }
@@ -288,7 +362,11 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
       deps.setNumericField(result.fields, passivePath, nextPassive)
     }
 
-    deps.emitTransform(result.fields, { schedule: 'continuous', flush: options.flush, deferAutoApply: !options.flush })
+    emitContinuousTransform(
+      result.fields,
+      createContinuousTransformOptions(options.flush),
+      options.fromSlider ? 'nextFrame' : 'immediate',
+    )
   }
 
   function flushLinkedSliderField(param: LinkedNumberField, index: 0 | 1) {
@@ -338,14 +416,23 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     return value
   }
 
-  function updateDialField(param: DialField, rawDegree: string | number, options: { flush?: boolean } = {}) {
+  function updateDialField(
+    param: DialField,
+    rawDegree: string | number,
+    options: { flush?: boolean } = {},
+    emitTiming: ContinuousTransformEmitTiming = 'immediate',
+  ) {
     const result = applyFieldUpdate(param.key, rawDegree, options)
     if (!result) {
       return
     }
     const storeValue = dialDegreeToStoreValue(param, result.value)
     deps.setNumericField(result.fields, param.key, storeValue)
-    deps.emitTransform(result.fields, { schedule: 'continuous', flush: options.flush, deferAutoApply: !options.flush })
+    emitContinuousTransform(
+      result.fields,
+      createContinuousTransformOptions(options.flush),
+      emitTiming,
+    )
   }
 
   function flushDialField(param: DialField) {
@@ -395,7 +482,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
       }
 
       state.lastDegree = snappedDegree
-      updateDialField(state.param, snappedDegree, { flush: false })
+      updateDialField(state.param, snappedDegree, { flush: false }, 'nextFrame')
     },
     onEnd(_event, state) {
       updateDialField(state.param, String(state.lastDegree), { flush: true })
@@ -414,6 +501,8 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   function resetLinkedSliderState() {
     linkedSliderLockSnapshots = {}
   }
+
+  tryOnUnmounted(cancelScheduledContinuousTransformEmit)
 
   return {
     // number
