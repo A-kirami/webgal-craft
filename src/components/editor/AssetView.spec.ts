@@ -362,6 +362,35 @@ function createLoadingStateFileViewerStub() {
   })
 }
 
+function createAuxClickFileViewerStub() {
+  return defineComponent({
+    name: 'StubAuxClickFileViewer',
+    props: {
+      items: {
+        type: Array as PropType<FileViewerItem[]>,
+        required: true,
+      },
+    },
+    emits: ['auxclick'],
+    setup(props, { emit }) {
+      return () => {
+        const fileItem = props.items.find(item => !item.isDir)
+
+        return h('button', {
+          'type': 'button',
+          'data-testid': 'auxclick-file',
+          'disabled': !fileItem,
+          'onClick': () => {
+            if (fileItem) {
+              emit('auxclick', fileItem)
+            }
+          },
+        }, 'auxclick')
+      }
+    },
+  })
+}
+
 function createFileViewerDragPayload(item: FileViewerItem): FileSystemDragPayload {
   return {
     isDir: item.isDir,
@@ -626,6 +655,47 @@ describe('AssetView', () => {
 
     await expect.element(page.getByTestId('preview-context')).toHaveAttribute('data-preview-cwd', '/games/demo')
     await expect.element(page.getByTestId('preview-context')).toHaveAttribute('data-preview-base-url', 'http://127.0.0.1:8899/game/demo/')
+  })
+
+  it('FileViewer 上抛中键点击时会以普通标签打开资源', async () => {
+    const openTab = vi.fn()
+    useTabsStoreMock.mockReturnValue({
+      findTabIndex: vi.fn(() => -1),
+      fixPreviewTab: vi.fn(),
+      openTab,
+      tabs: [],
+    })
+    getFolderContentsMock.mockResolvedValue([
+      createAssetFileSystemItem({
+        isDir: false,
+        mimeType: 'image/png',
+        modifiedAt: 2,
+        name: 'hero.png',
+        path: '/project/game/background/hero.png',
+        size: 1024,
+      }),
+    ])
+    setPreviewUnavailable()
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createAuxClickFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledTimes(1)
+    })
+    await page.getByTestId('auxclick-file').click()
+
+    expect(openTab).toHaveBeenCalledWith(
+      'hero.png',
+      '/project/game/background/hero.png',
+      { forceNormal: true },
+    )
   })
 
   it('右键重命名会以 Popover 形式打开并调用 pathOperation.perform', async () => {

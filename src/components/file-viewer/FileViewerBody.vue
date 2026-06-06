@@ -85,6 +85,7 @@ const emit = defineEmits<{
     operation: DragTransferOperation,
   ]
   itemClick: [item: FileViewerItem]
+  itemAuxClick: [item: FileViewerItem]
 }>()
 
 const slots = useSlots()
@@ -149,6 +150,13 @@ function formatDateTime(timestamp: number): string {
 
 function handleItemClick(item: FileViewerItem): void {
   emit('itemClick', item)
+}
+
+function handleItemAuxClick(event: MouseEvent, item: FileViewerItem): void {
+  if (event.button !== 1) {
+    return
+  }
+  emit('itemAuxClick', item)
 }
 
 function resolveHTMLElement(value: unknown): HTMLElement | undefined {
@@ -543,6 +551,7 @@ onUnmounted(() => {
               getFileViewerDropTargetClass(displayItem.item),
             ]"
             @click="handleItemClick(displayItem.item)"
+            @auxclick="(event: MouseEvent) => handleItemAuxClick(event, displayItem.item)"
           >
             <FileViewerImageHoverCard
               :close-delay="resolveHoverCardCloseDelay(displayItem.item.path)"
@@ -618,6 +627,7 @@ onUnmounted(() => {
             ]"
             :style="{ height: `${listItemHeight}px` }"
             @click="handleItemClick(displayItem.item)"
+            @auxclick="(event: MouseEvent) => handleItemAuxClick(event, displayItem.item)"
           >
             <div class="flex flex-1 gap-2 min-w-0 items-center">
               <FileViewerImageHoverCard
