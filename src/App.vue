@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useResourcePreviewPrimer } from '~/composables/useResourcePreviewPrimer'
 import { db } from '~/database/db'
+import { useAppUpdateController } from '~/features/app-update/useAppUpdateController'
 import { engineManager } from '~/services/engine-manager'
 import { resolveMissingStorageSavePaths } from '~/services/platform/storage-defaults'
 import { resourceReconcile } from '~/services/resource-reconcile'
@@ -19,6 +20,7 @@ async function initializeApp() {
 
 useResourcePreviewPrimer()
 const generalSettingsStore = useGeneralSettingsStore()
+const appUpdateController = useAppUpdateController()
 const router = useRouter()
 const { t } = useI18n()
 
@@ -63,6 +65,7 @@ onMounted(async () => {
     runValidation('模板校验', () => templateManager.validateAllTemplates()),
   ])
   await openLastProjectIfNeeded()
+  void appUpdateController.checkForUpdate('startup')
 })
 
 // 全局阻止鼠标中键点击的默认滚动行为

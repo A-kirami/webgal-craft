@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 
 import { AbsPath, RelPath } from '~/domain/path'
 import { backupManager } from '~/services/backup-manager'
+import { useRuntimeTaskStore } from '~/stores/runtime-task'
 
 import type { BackupEntry } from '~/commands/backup'
 
@@ -35,12 +36,15 @@ export const useBackupStore = defineStore('backup', () => {
     if (!scope) {
       return
     }
+    const finishUpdateBlocker = useRuntimeTaskStore()
+      .beginBlockingTask(`backup-restore:${crypto.randomUUID()}`)
     restoring = true
     try {
       await backupManager.restoreBackup(scope.projectPath, scope.logicalPath, RelPath.from(entry.backupPath))
       timeline = await backupManager.loadTimeline(scope.projectPath, scope.logicalPath)
     } finally {
       restoring = false
+      finishUpdateBlocker()
     }
   }
 

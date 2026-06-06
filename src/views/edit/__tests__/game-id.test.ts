@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { nextTick, reactive } from 'vue'
+import '~/__tests__/setup'
 
-import { createBrowserTextStub, renderInBrowser } from '~/__tests__/browser-render'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createSSRApp, reactive } from 'vue'
+import { renderToString } from 'vue/server-renderer'
 
 const {
   createEditorShortcutDefinitionsMock,
@@ -27,6 +28,69 @@ const {
   useShortcutContextMock: vi.fn(),
   useShortcutDispatcherMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
+}))
+
+vi.mock('~/components/ui/resizable', () => ({
+  ResizablePanel: {
+    name: 'StubResizablePanel',
+    setup() {
+      return () => undefined
+    },
+  },
+}))
+
+vi.mock('~/components/editor/EditHeader.vue', () => ({
+  default: {
+    name: 'StubEditHeader',
+    setup() {
+      return () => undefined
+    },
+  },
+}))
+
+vi.mock('~/components/editor/EditorPanel.vue', () => ({
+  default: {
+    name: 'StubEditorPanel',
+    setup() {
+      return () => undefined
+    },
+  },
+}))
+
+vi.mock('~/components/editor/EditorStatusBar.vue', () => ({
+  default: {
+    name: 'StubEditorStatusBar',
+    setup() {
+      return () => undefined
+    },
+  },
+}))
+
+vi.mock('~/components/editor/LeftPanel.vue', () => ({
+  default: {
+    name: 'StubLeftPanel',
+    setup() {
+      return () => undefined
+    },
+  },
+}))
+
+vi.mock('~/components/ui/resizable/ResizableHandle.vue', () => ({
+  default: {
+    name: 'StubResizableHandle',
+    setup() {
+      return () => undefined
+    },
+  },
+}))
+
+vi.mock('~/components/ui/resizable/ResizablePanelGroup.vue', () => ({
+  default: {
+    name: 'StubResizablePanelGroup',
+    setup() {
+      return () => undefined
+    },
+  },
 }))
 
 vi.mock('~/features/editor/animation/useAnimationTableSyncBootstrap', () => ({
@@ -72,15 +136,7 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
-const globalStubs = {
-  EditHeader: createBrowserTextStub('StubEditHeader', 'Edit Header'),
-  EditorPanel: createBrowserTextStub('StubEditorPanel', 'Editor Panel'),
-  EditorStatusBar: createBrowserTextStub('StubEditorStatusBar', 'Editor Status Bar'),
-  LeftPanel: createBrowserTextStub('StubLeftPanel', 'Left Panel'),
-  ResizableHandle: createBrowserTextStub('StubResizableHandle', 'Resizable Handle'),
-  ResizablePanel: createBrowserTextStub('StubResizablePanel', 'Resizable Panel'),
-  ResizablePanelGroup: createBrowserTextStub('StubResizablePanelGroup', 'Resizable Panel Group'),
-}
+const mountedApps: { unmount: () => void }[] = []
 
 describe('edit/[gameId]', () => {
   beforeEach(() => {
@@ -130,19 +186,17 @@ describe('edit/[gameId]', () => {
   })
 
   afterEach(() => {
-    document.body.innerHTML = ''
+    while (mountedApps.length > 0) {
+      mountedApps.pop()?.unmount()
+    }
   })
 
   it('会在编辑页壳层启动资源索引 bootstrap', async () => {
-    const view = await import('./[gameId].vue')
+    const view = await import('../[gameId].vue')
+    const app = createSSRApp(view.default)
 
-    renderInBrowser(view.default, {
-      global: {
-        stubs: globalStubs,
-      },
-    })
-
-    await nextTick()
+    await renderToString(app)
+    mountedApps.push(app)
 
     expect(useResourceIndexBootstrapMock).toHaveBeenCalledOnce()
   })

@@ -71,6 +71,48 @@ app:
   name: WebGAL Craft
   description: WebGAL Visual Novel Studio
 
+appUpdate:
+  action:
+    checkForUpdate: Check for updates
+  toast:
+    availableTitle: Version {version} is available
+    availableDescription: You are on {currentVersion}. Update to get the latest improvements.
+    checkStartedTitle: Checking for updates...
+    checkUpToDateTitle: You are on the latest version
+    checkUpToDateDescription: Your current version is already the latest release.
+    checkFailedDescription: Could not reach the update service. Try again later or view the releases manually.
+    openReleasePage: View releases
+    updateNow: Update now
+    viewUpdate: View update
+    updateStartedDescription: The update package will download in the background, so you can keep using the app.
+    updateStartedProgressTitle: Downloading update
+    updateDownloadingDescription: Fetching update package...
+    updateDownloadingProgressDescription: "Download progress: {percent}%"
+    downloadedTitle: Update package ready
+    downloadedDescription: Before installing, save your work and wait for imports, file operations, or backups to finish.
+    installUpdateNow: Install update
+    updateInstallingTitle: Installing update
+    updateInstallingDescription: The app will try to restart after installation finishes.
+    installBlockedTitle: Cannot install yet
+    installBlockedDescription: Save your changes and wait for imports, file operations, or backups to finish, then try again.
+    restartBlockedTitle: Cannot restart yet
+    restartBlockedDescription: Save your changes and wait for imports, file operations, or backups to finish, then try again.
+    retry: Retry
+  details:
+    title: Version {version} is available
+    description: "Current version: {currentVersion}"
+    releaseNotes: Release notes
+    emptyReleaseNotes: This update does not include release notes.
+    openReleasePage: View on GitHub
+    updateNow: Update now
+    installUpdateNow: Install update
+    skipVersion: Skip this version
+    later: Later
+  error:
+    checkFailed: Failed to check for updates
+    updateFailed: Failed to download or install the update
+    restartFailed: Failed to restart the app
+
 home:
   unavailableBadge: Unavailable
   header:
@@ -162,6 +204,7 @@ modals:
   about:
     homepage: Official Website
     sourceCode: Source Code Repository
+    changelog: Changelog
     issues: Issue Feedback
     copyright: "© 2025 Akirami"
     license: License MPL-2.0
@@ -1060,9 +1103,6 @@ settings:
     openLastProject:
       label: Open Last Edited Game on Startup
       description: Automatically load the last edited game project when the application starts
-    autoInstallUpdates:
-      label: Auto Install Updates
-      description: Automatically download and install the latest version of the application
   edit:
     general: General
     preview: Preview

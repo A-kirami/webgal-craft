@@ -10,6 +10,7 @@ import {
 } from '~/services/file-write-echo-registry'
 import { gameManager } from '~/services/game-manager'
 import { useFileStore } from '~/stores/file'
+import { useRuntimeTaskStore } from '~/stores/runtime-task'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
 import { buildUniqueEntryName } from '~/utils/entry-name'
@@ -308,21 +309,28 @@ async function createFolder(targetPath: AbsPath, folderName: string): Promise<Ab
 
 async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath> {
   const fileStore = useFileStore()
-  if (fileStore.isVfs) {
-    const copiedPath = await fileStore.copyEntry(sourcePath, targetPath)
-    if (copiedPath) {
-      markPathChanged(copiedPath)
-      return copiedPath
-    }
-  }
+  const finishUpdateBlocker = useRuntimeTaskStore()
+    .beginBlockingTask(`copy-file:${crypto.randomUUID()}`)
 
-  const resolvedSourcePath = fileStore.isVfs
-    ? await fileStore.resolveFilePath(sourcePath)
-    : sourcePath
-  const writableTargetPath = await resolveWritablePath(targetPath)
-  const result = await fsCmds.copyFile(resolvedSourcePath, writableTargetPath)
-  markPathChanged(result)
-  return result
+  try {
+    if (fileStore.isVfs) {
+      const copiedPath = await fileStore.copyEntry(sourcePath, targetPath)
+      if (copiedPath) {
+        markPathChanged(copiedPath)
+        return copiedPath
+      }
+    }
+
+    const resolvedSourcePath = fileStore.isVfs
+      ? await fileStore.resolveFilePath(sourcePath)
+      : sourcePath
+    const writableTargetPath = await resolveWritablePath(targetPath)
+    const result = await fsCmds.copyFile(resolvedSourcePath, writableTargetPath)
+    markPathChanged(result)
+    return result
+  } finally {
+    finishUpdateBlocker()
+  }
 }
 
 async function moveFile(sourcePath: AbsPath, targetPath: AbsPath, targetName?: string): Promise<PathMutationResult> {

@@ -754,6 +754,9 @@ export const useEditorStore = defineStore('editor', () => {
   const isCurrentAnimationFile = $computed(() =>
     currentState !== undefined && isEditableEditor(currentState) && currentState.kind === 'animation',
   )
+  const hasUnsavedDocuments = $computed(() =>
+    [...sessions.keys()].some(path => !!getEditableState(path)?.isDirty),
+  )
 
   function isDocumentPathWithinDirectory(path: AbsPath, directory: string): boolean {
     try {
@@ -815,6 +818,7 @@ export const useEditorStore = defineStore('editor', () => {
     getSceneSelectionIndex,
     getSelectedSceneStatementPreviousSpeaker,
     isSceneStatementCollapsed,
+    hasUnsavedDocuments,
     canToggleMode,
     isCurrentSceneFile,
     isCurrentAnimationFile,

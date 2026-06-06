@@ -25,6 +25,7 @@ import SettingsModal from '~/components/modals/SettingsModal.vue'
 import StatementGroupModal from '~/components/modals/StatementGroupModal.vue'
 import SwitchEngineModal from '~/components/modals/SwitchEngineModal.vue'
 import SwitchTemplateModal from '~/components/modals/SwitchTemplateModal.vue'
+import UpdateDetailsModal from '~/components/modals/UpdateDetailsModal.vue'
 import UpgradeModal from '~/components/modals/UpgradeModal.vue'
 import { ComponentProps } from '~/types/index'
 
@@ -55,6 +56,7 @@ const ModalDialog = {
   SwitchEngineModal,
   SwitchTemplateModal,
   UpgradeModal,
+  UpdateDetailsModal,
 } as const satisfies Record<string, Component>
 
 type ModalComponent = keyof typeof ModalDialog

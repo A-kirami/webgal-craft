@@ -19,6 +19,7 @@ import {
 import { toLookupPathKey } from '~/services/resource-path/lookup'
 import { templateSwitch } from '~/services/template-switch'
 import { useResourceStore } from '~/stores/resource'
+import { useRuntimeTaskStore } from '~/stores/runtime-task'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
 
@@ -750,6 +751,8 @@ async function createGame(gameName: string, gamePath: AbsPath, engineId: string,
 
   const targetExisted = await exists(gamePath)
   let gameId: string | undefined
+  const finishUpdateBlocker = useRuntimeTaskStore()
+    .beginBlockingTask(`create-game:${crypto.randomUUID()}`)
 
   try {
     // 先创建目录和项目配置，确保 preview primer 触发时路径已存在且 VFS 可解析引擎层资源
@@ -833,6 +836,8 @@ async function createGame(gameName: string, gamePath: AbsPath, engineId: string,
       })
     }
     throw error
+  } finally {
+    finishUpdateBlocker()
   }
 }
 

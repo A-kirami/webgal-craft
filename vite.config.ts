@@ -62,6 +62,7 @@ export default defineConfig({
     }),
     Components({
       dts: 'src/components.d.ts',
+      syncMode: 'overwrite',
     }),
     UnoCSS(),
     VueI18nPlugin({
