@@ -555,6 +555,19 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
             case 'plugin:log|log': {
               return
             }
+            case 'plugin:updater|check': {
+              return
+            }
+            case 'plugin:updater|download': {
+              return 1
+            }
+            case 'plugin:updater|install':
+            case 'plugin:updater|download_and_install':
+            case 'plugin:process|restart':
+            case 'plugin:opener|open_url':
+            case 'plugin:opener|open_path': {
+              return
+            }
             case 'plugin:path|resolve_directory': {
               return documentDir
             }

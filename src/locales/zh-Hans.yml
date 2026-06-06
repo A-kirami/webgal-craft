@@ -71,6 +71,48 @@ app:
   name: WebGAL Craft
   description: WebGAL 视觉小说工作室
 
+appUpdate:
+  action:
+    checkForUpdate: 检查更新
+  toast:
+    availableTitle: 发现新版本 {version}
+    availableDescription: 当前版本为 {currentVersion}，更新后可获得最新改进。
+    checkStartedTitle: 正在检查更新……
+    checkUpToDateTitle: 已是最新版本
+    checkUpToDateDescription: 当前版本已经是最新发布版本。
+    checkFailedDescription: 无法连接到更新服务，可以稍后重试或手动查看发布页面。
+    openReleasePage: 前往发布页
+    updateNow: 立即更新
+    viewUpdate: 查看更新
+    updateStartedDescription: 更新包会在后台下载，你可以继续使用应用。
+    updateStartedProgressTitle: 正在下载更新
+    updateDownloadingDescription: 正在获取更新包……
+    updateDownloadingProgressDescription: 下载进度：{percent}%
+    downloadedTitle: 更新包已就绪
+    downloadedDescription: 安装前请先保存文档，并等待导入、文件操作或备份任务完成。
+    installUpdateNow: 安装更新
+    updateInstallingTitle: 正在安装更新
+    updateInstallingDescription: 安装完成后会尝试重启应用。
+    installBlockedTitle: 现在还不能安装
+    installBlockedDescription: 请先保存文档，并等待导入、文件操作或备份任务完成后再试。
+    restartBlockedTitle: 现在还不能重启
+    restartBlockedDescription: 请先保存文档，并等待导入、文件操作或备份任务完成后再试。
+    retry: 重试
+  details:
+    title: 发现新版本 {version}
+    description: 当前版本：{currentVersion}
+    releaseNotes: 更新内容
+    emptyReleaseNotes: 本次更新没有提供更新说明。
+    openReleasePage: 在 GitHub 查看
+    updateNow: 立即更新
+    installUpdateNow: 安装更新
+    skipVersion: 跳过此版本
+    later: 稍后
+  error:
+    checkFailed: 检查更新失败
+    updateFailed: 下载或安装更新失败
+    restartFailed: 重启应用失败
+
 home:
   unavailableBadge: 已失效
   header:
@@ -162,6 +204,7 @@ modals:
   about:
     homepage: 官方网站
     sourceCode: 源码仓库
+    changelog: 更新日志
     issues: 问题反馈
     copyright: "© 2025 Akirami"
     license: License MPL-2.0
@@ -1060,9 +1103,6 @@ settings:
     openLastProject:
       label: 启动时打开最后编辑的游戏
       description: 应用启动时自动加载最后编辑的游戏项目
-    autoInstallUpdates:
-      label: 自动安装更新
-      description: 自动下载并安装最新版本的应用程序
   edit:
     general: 通用
     preview: 预览

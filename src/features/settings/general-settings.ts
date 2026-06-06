@@ -23,12 +23,6 @@ export const generalSettingsDefinition = defineSettingsSchema({
         label: t => t('settings.general.openLastProject.label'),
         description: t => t('settings.general.openLastProject.description'),
       },
-      autoInstallUpdates: {
-        type: 'switch',
-        default: true,
-        label: t => t('settings.general.autoInstallUpdates.label'),
-        description: t => t('settings.general.autoInstallUpdates.description'),
-      },
     },
   },
 } as const)

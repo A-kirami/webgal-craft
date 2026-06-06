@@ -71,6 +71,48 @@ app:
   name: WebGAL Craft
   description: WebGAL ビジュアルノベルスタジオ
 
+appUpdate:
+  action:
+    checkForUpdate: 更新を確認
+  toast:
+    availableTitle: 新しいバージョン {version} があります
+    availableDescription: 現在のバージョンは {currentVersion} です。更新すると最新の改善を利用できます。
+    checkStartedTitle: 更新を確認中……
+    checkUpToDateTitle: 最新バージョンです
+    checkUpToDateDescription: 現在のバージョンは最新のリリースです。
+    checkFailedDescription: 更新サービスに接続できません。しばらくしてから再試行するか、リリースページを手動で確認してください。
+    openReleasePage: リリースページへ
+    updateNow: 今すぐ更新
+    viewUpdate: 更新を表示
+    updateStartedDescription: 更新パッケージはバックグラウンドでダウンロードされるため、アプリを引き続き使用できます。
+    updateStartedProgressTitle: 更新をダウンロード中
+    updateDownloadingDescription: 更新パッケージを取得しています...
+    updateDownloadingProgressDescription: "ダウンロード進捗: {percent}%"
+    downloadedTitle: 更新パッケージの準備ができました
+    downloadedDescription: インストール前に変更を保存し、インポート、ファイル操作、バックアップが完了するまでお待ちください。
+    installUpdateNow: 更新をインストール
+    updateInstallingTitle: 更新をインストール中
+    updateInstallingDescription: インストール完了後、アプリの再起動を試みます。
+    installBlockedTitle: まだインストールできません
+    installBlockedDescription: 変更を保存し、インポート、ファイル操作、バックアップが完了してからもう一度お試しください。
+    restartBlockedTitle: まだ再起動できません
+    restartBlockedDescription: 変更を保存し、インポート、ファイル操作、バックアップが完了してからもう一度お試しください。
+    retry: 再試行
+  details:
+    title: 新しいバージョン {version} があります
+    description: 現在のバージョン：{currentVersion}
+    releaseNotes: リリースノート
+    emptyReleaseNotes: この更新にはリリースノートがありません。
+    openReleasePage: GitHub で確認
+    updateNow: 今すぐ更新
+    installUpdateNow: 更新をインストール
+    skipVersion: このバージョンをスキップ
+    later: 後で
+  error:
+    checkFailed: 更新の確認に失敗しました
+    updateFailed: 更新のダウンロードまたはインストールに失敗しました
+    restartFailed: アプリの再起動に失敗しました
+
 home:
   unavailableBadge: 利用不可
   header:
@@ -162,6 +204,7 @@ modals:
   about:
     homepage: 公式サイト
     sourceCode: ソースコード
+    changelog: 更新履歴
     issues: 問題レポート
     copyright: "© 2025 Akirami"
     license: License MPL-2.0
@@ -1060,9 +1103,6 @@ settings:
     openLastProject:
       label: 起動時に最後に編集したゲームを開く
       description: アプリケーション起動時に最後に編集したゲームプロジェクトを自動的に読み込む
-    autoInstallUpdates:
-      label: 更新を自動インストール
-      description: 最新バージョンのアプリケーションを自動的にダウンロードしてインストールする
   edit:
     general: 一般
     preview: プレビュー

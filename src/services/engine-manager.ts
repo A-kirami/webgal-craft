@@ -18,6 +18,7 @@ import {
 import { toLookupPathKey } from '~/services/resource-path/lookup'
 import { EngineMetadata, EnginePreviewAssets } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
+import { useRuntimeTaskStore } from '~/stores/runtime-task'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 import { EngineManifest, EngineManifestResult } from '~/types/engine'
 import { AppError } from '~/types/errors'
@@ -441,6 +442,8 @@ async function importEngine(enginePath: AbsPath): Promise<ImportEngineResult> {
     status: 'creating',
   })
   useResourceStore().updateProgress(engineId, 0)
+  const finishUpdateBlocker = useRuntimeTaskStore()
+    .beginBlockingTask(`import-engine:${engineId}`)
 
   try {
     await copyAndFinalizeEngine(engineId, normalizedPath, targetPath)
@@ -458,6 +461,8 @@ async function importEngine(enginePath: AbsPath): Promise<ImportEngineResult> {
       })
     }
     throw error
+  } finally {
+    finishUpdateBlocker()
   }
 }
 
