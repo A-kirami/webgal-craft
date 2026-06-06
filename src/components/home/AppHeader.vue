@@ -4,7 +4,6 @@ import { openUrl } from '@tauri-apps/plugin-opener'
 
 import { useModalStore } from '~/stores/modal'
 
-import { github } from '~build/git'
 import webgalCraftTextSvg from '/webgal-craft-text.svg?raw'
 
 const modalStore = useModalStore()
@@ -14,8 +13,8 @@ const modalStore = useModalStore()
   <header class="border-b bg-white dark:bg-gray-950">
     <div class="mx-auto px-4 container flex h-16 items-center lg:px-8 sm:px-6">
       <div
-        class="mr-4 flex gap-2 items-center" :class="{ 'cursor-pointer': github }"
-        @click="github && openUrl(github)"
+        class="mr-4 flex gap-2 cursor-pointer items-center"
+        @click="openUrl('https://webgalcraft.com')"
       >
         <img src="/webgal-craft-logo.svg" class="size-10" alt="WebGAL Craft logo">
         <!-- eslint-disable-next-line vue/no-v-html -->
