@@ -7,12 +7,12 @@ const AppMiniMap = (
   <div class="p-1 rounded-sm bg-[--color-background] flex flex-col gap-0.75 h-full">
     <div class="rounded-xs bg-[--color-contrast] h-1.5" />
     <div class="flex flex-1 gap-0.75">
-      <div class="rounded-xs bg-[--color-contrast] w-4" />
-      <div class="flex flex-col gap-0.75 w-10">
+      <div class="rounded-xs bg-[--color-contrast] w-7" />
+      <div class="flex flex-col gap-0.75 w-12">
         <div class="rounded-xs bg-[--color-contrast] h-full" />
         <div class="rounded-xs bg-[--color-contrast] h-5" />
       </div>
-      <div class="rounded-xs bg-[--color-contrast] w-9" />
+      <div class="rounded-xs bg-[--color-contrast] w-5" />
     </div>
   </div>
 )
