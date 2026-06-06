@@ -1373,6 +1373,32 @@ describe('FileViewer', () => {
     expect(document.querySelector('[data-file-viewer-background-surface="true"]')).toBeNull()
   })
 
+  it('中键点击文件项会上抛 auxclick，且不会触发左键选择', async () => {
+    viewportWidthMock.value = 780
+    const item = createItem(1)
+    const onSelect = vi.fn()
+    const onAuxclick = vi.fn()
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [item],
+        onAuxclick,
+        onSelect,
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    getFileViewerItemElement(item)
+      .dispatchEvent(new MouseEvent('auxclick', { bubbles: true, button: 1 }))
+    await nextTick()
+
+    expect(onAuxclick).toHaveBeenCalledWith(item)
+    expect(onSelect).not.toHaveBeenCalled()
+  })
+
   it('提供 #context-menu slot 时会向每个条目透传当前 item', async () => {
     viewportWidthMock.value = 780
 

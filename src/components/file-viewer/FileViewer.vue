@@ -54,6 +54,8 @@ interface FileViewerProps {
 interface FileViewerEmits {
   /** 文件被单击选中 */
   'select': [item: FileViewerItem]
+  /** 资源项被鼠标中键点击 */
+  'auxclick': [item: FileViewerItem]
   /** 文件夹被单击，请求导航进入 */
   'navigate': [item: FileViewerItem]
   /** 更新排序字段 */
@@ -297,6 +299,13 @@ function handleItemClick(item: FileViewerItem) {
   emit('select', item)
 }
 
+function handleItemAuxClick(item: FileViewerItem) {
+  if (!item.path) {
+    return
+  }
+  emit('auxclick', item)
+}
+
 function getFileViewerDragPayload(element: HTMLElement): FileSystemDragPayload {
   const { dataset } = element
   const path = dataset.fileViewerPath ?? ''
@@ -521,6 +530,7 @@ defineExpose(fileViewerExpose)
           :get-drag-source-props="getDragSourceProps"
           :resolve-preview-url="previewUrlResolver"
           @file-transfer-drop="handleBodyFileTransferDrop"
+          @item-aux-click="handleItemAuxClick"
           @item-click="handleItemClick"
         >
           <template v-if="$slots.icon" #icon="{ item, iconSize }">

@@ -413,6 +413,13 @@ function handleSelect(item: FileViewerItem): void {
   lastSelectedAt = now
 }
 
+function handleAuxClick(item: FileViewerItem): void {
+  if (item.isDir) {
+    return
+  }
+  tabsStore.openTab(item.name, AbsPath.from(item.path), { forceNormal: true })
+}
+
 function closeRenamePopover(): void {
   isRenamePopoverOpen = false
   isRenameSubmitting = false
@@ -761,6 +768,7 @@ for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
       :zoom="preferenceStore.assetZoom[0]"
       @navigate="handleNavigate"
       @select="handleSelect"
+      @auxclick="handleAuxClick"
       @file-transfer-drop="handleFileTransferDrop"
       @update:sort-by="(value) => emit('update:sortBy', value)"
       @update:sort-order="(value) => emit('update:sortOrder', value)"
