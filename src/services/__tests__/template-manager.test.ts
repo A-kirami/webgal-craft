@@ -498,6 +498,38 @@ describe('templateManager', () => {
     expect(dbTemplatesUpdateMock).toHaveBeenCalledWith('template-second', { availability: 'broken' })
   })
 
+  it('validateAllTemplates 标记 broken 失败时仍返回校验失败摘要', async () => {
+    dbTemplatesToArrayMock.mockResolvedValue([
+      {
+        id: 'template-created',
+        path: '/templates/broken',
+        pathLookupKey: '/templates/broken',
+        createdAt: 0,
+        status: 'created',
+        availability: 'available',
+        metadata: {
+          name: 'Broken',
+        },
+      },
+    ])
+    existsMock.mockResolvedValue(true)
+    validateDirectoryStructureMock.mockRejectedValue(new Error('disk unavailable'))
+    dbTemplatesUpdateMock.mockRejectedValue(new Error('indexeddb unavailable'))
+
+    await expect(templateManager.validateAllTemplates()).resolves.toEqual({
+      failed: 1,
+      failures: [
+        { error: 'Error: disk unavailable', path: '/templates/broken' },
+      ],
+      total: 1,
+    })
+
+    expect(dbTemplatesUpdateMock).toHaveBeenCalledWith('template-created', { availability: 'broken' })
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      '[模板校验] 标记模板为 broken 失败 (/templates/broken): Error: indexeddb unavailable',
+    )
+  })
+
   it('deleteTemplate 会递归删除模板目录并清理数据库记录', async () => {
     await templateManager.deleteTemplate({
       id: 'template-created',

@@ -364,7 +364,11 @@ async function validateTemplateRecordForBatch(template: Template): Promise<Resou
       : undefined
   } catch (error) {
     if (template.availability !== 'broken') {
-      await db.templates.update(template.id, { availability: 'broken' })
+      try {
+        await db.templates.update(template.id, { availability: 'broken' })
+      } catch (updateError) {
+        logger.warn(`[模板校验] 标记模板为 broken 失败 (${template.path}): ${updateError}`)
+      }
     }
     return createResourceValidationFailure(template.path, error)
   }
