@@ -381,7 +381,8 @@ export function useDiscoverResources() {
         .slice(0, 3)
         .map(({ error, path }) => `${path} -> ${error}`)
         .join('; ')
-      const suffix = failedImports.length > 3 ? ` 等 ${failedImports.length} 个` : ''
+      const remaining = Math.max(0, failedImports.length - 3)
+      const suffix = failedImports.length > 3 ? ` 等 ${remaining} 个` : ''
       logger.error(
         `[资源发现] 批量导入失败: 失败 ${failedImports.length}/${paths.length}, `
         + `样例 ${samplePaths}${suffix}`,
