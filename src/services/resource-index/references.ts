@@ -233,7 +233,7 @@ export function logReferenceSourceFailures(failures: AssetReferenceSourceFailure
     .slice(0, 3)
     .map(({ error, sourcePath }) => `${sourcePath} -> ${String(error)}`)
     .join('; ')
-  const suffix = nextFailures.length > 3 ? ` 等 ${nextFailures.length} 个` : ''
+  const suffix = nextFailures.length > 3 ? ` 等 ${nextFailures.length - 3} 个` : ''
   logger.warn(
     `资源索引跳过 ${nextFailures.length} 个解析失败的引用来源: `
     + `${sampleFailures}${suffix}`,

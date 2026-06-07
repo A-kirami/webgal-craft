@@ -377,6 +377,8 @@ describe('useResourceIndex', () => {
           return [
             createDirEntry('bad-a.txt', false),
             createDirEntry('bad-b.txt', false),
+            createDirEntry('bad-c.txt', false),
+            createDirEntry('bad-d.txt', false),
           ]
         }
         default: {
@@ -388,7 +390,13 @@ describe('useResourceIndex', () => {
       if (String(path).endsWith('bad-a.txt')) {
         throw new Error('missing semicolon')
       }
-      throw new Error('invalid command')
+      if (String(path).endsWith('bad-b.txt')) {
+        throw new Error('invalid command')
+      }
+      if (String(path).endsWith('bad-c.txt')) {
+        throw new Error('unknown asset')
+      }
+      throw new Error('unclosed quote')
     })
 
     const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
@@ -408,7 +416,7 @@ describe('useResourceIndex', () => {
       )
       expect(parseFailureLogCalls).toHaveLength(1)
       expect(parseFailureLogCalls[0]).toEqual([
-        '资源索引跳过 2 个解析失败的引用来源: /project/game/scene/bad-a.txt -> Error: missing semicolon; /project/game/scene/bad-b.txt -> Error: invalid command',
+        '资源索引跳过 4 个解析失败的引用来源: /project/game/scene/bad-a.txt -> Error: missing semicolon; /project/game/scene/bad-b.txt -> Error: invalid command; /project/game/scene/bad-c.txt -> Error: unknown asset 等 1 个',
       ])
     } finally {
       scope.stop()
