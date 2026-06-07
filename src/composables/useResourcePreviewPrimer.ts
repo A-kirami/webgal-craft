@@ -20,13 +20,20 @@ export function useResourcePreviewPrimer(): () => void {
         const gameResults = await Promise.allSettled(
           games.map(game => gameManager.resolvePreviewSite(game)),
         )
+        const failedGameResults: string[] = []
         const gameSites = gameResults.flatMap((result, index) => {
           if (result.status === 'fulfilled') {
             return [result.value]
           }
-          void logger.warn(`跳过游戏预览预热 ${games[index]?.path}: ${result.reason}`)
+          failedGameResults.push(`${games[index]?.path ?? 'unknown'}: ${String(result.reason)}`)
           return []
         })
+        if (failedGameResults.length > 0) {
+          const sample = failedGameResults.slice(0, 3).join('; ')
+          const suffix = failedGameResults.length > 3 ? `; 另有 ${failedGameResults.length - 3} 个失败` : ''
+          void logger.warn(`资源预览预热跳过 ${failedGameResults.length} 个游戏: ${sample}${suffix}`)
+        }
+
         const engineSites = engines
           .filter(engine => engine.status === 'created')
           .map(engine => ({ projectPath: engine.path }))

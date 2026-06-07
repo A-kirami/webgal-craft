@@ -8,12 +8,18 @@ import { AbsPath } from '~/domain/path'
 import { templateManifestPath } from '~/services/platform/app-paths'
 import { ResourceAvailability } from '~/services/resource-health'
 import { caseFoldedEquals, toLookupPathKey } from '~/services/resource-path/lookup'
+import {
+  createResourceValidationFailure,
+  createResourceValidationSummary,
+  logResourceValidationSummary,
+} from '~/services/resource-validation-summary'
 import { TemplateMetadata } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 import { AppError } from '~/types/errors'
 
 import type { Game, Template } from '~/database/model'
+import type { ResourceValidationFailure, ResourceValidationSummary } from '~/services/resource-validation-summary'
 
 interface RegisterTemplateOptions {
   metadata?: TemplateMetadata
@@ -35,6 +41,12 @@ interface TemplateDeleteBlockers {
 interface TemplateAssociationInspection {
   associatedGame?: Game
   uncheckedGame?: Game
+}
+
+interface TemplateAvailabilityInspection {
+  availability: ResourceAvailability
+  failure?: unknown
+  metadata?: TemplateMetadata
 }
 
 async function validateTemplate(templatePath: AbsPath): Promise<boolean> {
@@ -179,19 +191,19 @@ async function canDeleteTemplate(templateName: string): Promise<DeleteTemplateCh
   return { canDelete: true }
 }
 
-async function deleteTemplateDirectoryIfExists(path: AbsPath): Promise<void> {
+async function deleteTemplateDirectoryIfExists(path: AbsPath): Promise<unknown | undefined> {
   try {
     if (await exists(path)) {
       await fsCmds.deleteFile(path, true)
     }
   } catch (error) {
-    logger.warn(`[模板清理] 删除目录失败 (${path}): ${error}`)
+    return error
   }
 }
 
 async function assertTemplateImportable(templatePath: AbsPath): Promise<TemplateMetadata> {
   if (!(await validateTemplate(templatePath))) {
-    logger.error(`[模板导入] 无效的模板文件夹: ${templatePath}`)
+    logger.warn(`[模板导入] 无效的模板文件夹: ${templatePath}`)
     throw new AppError('INVALID_STRUCTURE', '无效的模板文件夹')
   }
 
@@ -217,7 +229,7 @@ async function installTemplate(templatePath: AbsPath, metadata: TemplateMetadata
     throw new AppError('IO_ERROR', '目标模板目录已存在，请先清理后重试')
   }
 
-  logger.info(`[模板 ${metadata.name}] 开始安装`)
+  logger.info(`[模板安装] 开始: 名称=${metadata.name}, 源=${templatePath}, 目标=${targetPath}`)
   const id = await registerTemplate(targetPath, {
     metadata,
     status: 'creating',
@@ -230,13 +242,17 @@ async function installTemplate(templatePath: AbsPath, metadata: TemplateMetadata
 
     await db.templates.update(id, { status: 'created' })
     resourceStore.finishProgress(id)
-    logger.info(`[模板 ${metadata.name}] 安装完成`)
+    logger.info(`[模板安装] 完成: ID=${id}, 名称=${metadata.name}, 源=${templatePath}, 目标=${targetPath}`)
   } catch (error) {
+    logger.error(`[模板安装] 失败: ID=${id}, 名称=${metadata.name}, 源=${templatePath}, 目标=${targetPath} - ${error}`)
     resourceStore.finishProgress(id)
     await db.templates.delete(id).catch((error_) => {
-      logger.warn(`[模板清理] 删除记录失败 (${id}): ${error_}`)
+      logger.warn(`[模板清理] 删除记录失败: ID=${id}, 目标=${targetPath} - ${error_}`)
     })
-    await deleteTemplateDirectoryIfExists(targetPath)
+    const directoryCleanupError = await deleteTemplateDirectoryIfExists(targetPath)
+    if (directoryCleanupError) {
+      logger.warn(`[模板清理] 删除目录失败 (${targetPath}): ${directoryCleanupError}`)
+    }
     throw error
   }
 }
@@ -285,10 +301,7 @@ async function deleteTemplate(template: Template): Promise<void> {
   await db.templates.delete(template.id)
 }
 
-async function inspectTemplateAvailability(templatePath: AbsPath): Promise<{
-  availability: ResourceAvailability
-  metadata?: TemplateMetadata
-}> {
+async function inspectTemplateAvailabilityInternal(templatePath: AbsPath): Promise<TemplateAvailabilityInspection> {
   if (!(await exists(templatePath))) {
     return { availability: 'missing' }
   }
@@ -299,31 +312,41 @@ async function inspectTemplateAvailability(templatePath: AbsPath): Promise<{
     const metadata = await getTemplateMetadata(templatePath)
     return { availability: 'available', metadata }
   } catch (error) {
-    logger.warn(`[模板校验] 读取元数据失败 (${templatePath}): ${error}`)
-    return { availability: 'broken' }
+    return { availability: 'broken', failure: error }
   }
 }
 
-async function validateAllTemplates(): Promise<void> {
-  const templates = await db.templates.toArray()
+async function inspectTemplateAvailability(templatePath: AbsPath): Promise<{
+  availability: ResourceAvailability
+  metadata?: TemplateMetadata
+}> {
+  const { availability, failure, metadata } = await inspectTemplateAvailabilityInternal(templatePath)
+  if (failure) {
+    logger.warn(`[模板校验] 读取元数据失败 (${templatePath}): ${failure}`)
+  }
+  return { availability, metadata }
+}
 
-  await Promise.allSettled(templates.map(async (template) => {
-    if (template.status === 'creating') {
-      // creating 是上次未完成的导入残留，仍按既有逻辑清理
-      await deleteTemplateDirectoryIfExists(template.path)
+async function validateTemplateRecordForBatch(template: Template): Promise<ResourceValidationFailure | undefined> {
+  if (template.status === 'creating') {
+    // creating 是上次未完成的导入残留，仍按既有逻辑清理
+    const directoryCleanupError = await deleteTemplateDirectoryIfExists(template.path)
+    try {
       await db.templates.delete(template.id)
-      return
+    } catch (error) {
+      return createResourceValidationFailure(template.path, error)
     }
+    return directoryCleanupError
+      ? createResourceValidationFailure(template.path, directoryCleanupError)
+      : undefined
+  }
 
-    if (template.status !== 'created') {
-      return
-    }
+  if (template.status !== 'created') {
+    return
+  }
 
-    const inspection = await inspectTemplateAvailability(template.path).catch((error) => {
-      logger.warn(`[模板校验] 校验异常 (${template.path}): ${error}`)
-      return { availability: 'broken' as ResourceAvailability, metadata: undefined }
-    })
-
+  try {
+    const inspection = await inspectTemplateAvailabilityInternal(template.path)
     const patch: Partial<Template> = {}
     if (template.availability !== inspection.availability) {
       patch.availability = inspection.availability
@@ -336,7 +359,31 @@ async function validateAllTemplates(): Promise<void> {
     if (Object.keys(patch).length > 0) {
       await db.templates.update(template.id, patch)
     }
-  }))
+    return inspection.failure
+      ? createResourceValidationFailure(template.path, inspection.failure)
+      : undefined
+  } catch (error) {
+    if (template.availability !== 'broken') {
+      try {
+        await db.templates.update(template.id, { availability: 'broken' })
+      } catch (updateError) {
+        logger.warn(`[模板校验] 标记模板为 broken 失败 (${template.path}): ${updateError}`)
+      }
+    }
+    return createResourceValidationFailure(template.path, error)
+  }
+}
+
+async function validateAllTemplates(): Promise<ResourceValidationSummary> {
+  const templates = await db.templates.toArray()
+
+  const targets = templates.filter(template => template.status === 'created' || template.status === 'creating')
+  const validationResults = await Promise.all(targets.map(template => validateTemplateRecordForBatch(template)))
+  const failures = validationResults
+    .filter((failure): failure is ResourceValidationFailure => failure !== undefined)
+  const summary = createResourceValidationSummary(targets.length, failures)
+  logResourceValidationSummary('模板校验', summary)
+  return summary
 }
 
 export const templateManager = {

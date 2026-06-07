@@ -17,7 +17,7 @@ async function resolvePreviewGameId(gamePath: AbsPath): Promise<string | undefin
     const gameKey = findGameConfigEntryValue(gameConfig.entries, PREVIEW_GAME_KEY_RAW_KEY)?.trim()
     return gameKey || undefined
   } catch (error) {
-    logger.warn(`读取预览会话 Game_key 失败: ${error}`)
+    logger.warn(`读取预览会话 Game_key 失败: ${gamePath} - ${error}`)
     return
   }
 }

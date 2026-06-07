@@ -106,9 +106,7 @@ function updateDisplayPreviewUrl(): void {
 
   try {
     displayPreviewUrl = props.resolvePreviewUrl?.(props.item, resolvedPreviewSize)
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    void logger.error(`[FileViewer] 资源地址生成失败: ${props.item.path} - ${errorMessage}`)
+  } catch {
     displayPreviewUrl = undefined
   }
 }
@@ -143,7 +141,6 @@ function handlePreviewLoad(): void {
 function handlePreviewError(): void {
   displayPreviewUrl = undefined
   isPreviewLoaded = false
-  void logger.error(`[FileViewer] 悬浮预览加载失败: ${props.item.path}`)
 }
 
 function getPreviewFrameSize(

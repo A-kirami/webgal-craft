@@ -31,6 +31,7 @@ vi.mock('~/commands/server', () => ({
 
 vi.mock('@tauri-apps/plugin-log', () => ({
   error: loggerErrorMock,
+  info: vi.fn(),
 }))
 
 describe('usePreviewRuntimeStore', () => {

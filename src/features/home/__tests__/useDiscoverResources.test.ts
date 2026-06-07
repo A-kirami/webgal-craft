@@ -10,6 +10,7 @@ const {
   existsMock,
   getEnginePreviewAssetsMock,
   getTemplateMetadataMock,
+  loggerErrorMock,
   modalOpenMock,
   notifyErrorMock,
   notifyInfoMock,
@@ -35,6 +36,7 @@ const {
   existsMock: vi.fn(),
   getEnginePreviewAssetsMock: vi.fn(),
   getTemplateMetadataMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
   modalOpenMock: vi.fn(),
   notifyErrorMock: vi.fn(),
   notifyInfoMock: vi.fn(),
@@ -57,7 +59,7 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 }))
 
 vi.mock('@tauri-apps/plugin-log', () => ({
-  error: vi.fn(),
+  error: loggerErrorMock,
   info: vi.fn(),
   warn: vi.fn(),
   debug: vi.fn(),
@@ -140,6 +142,7 @@ describe('useDiscoverResources', () => {
     existsMock.mockReset()
     getEnginePreviewAssetsMock.mockReset()
     getTemplateMetadataMock.mockReset()
+    loggerErrorMock.mockReset()
     modalOpenMock.mockReset()
     notifyErrorMock.mockReset()
     notifyInfoMock.mockReset()
@@ -622,5 +625,50 @@ describe('useDiscoverResources', () => {
 
     expect(notifyErrorMock).not.toHaveBeenCalled()
     expect(notifyInfoMock).toHaveBeenCalledWith('home.games.importCancelled (1/1)')
+  })
+
+  it('批量导入失败日志只统计样例之外的剩余失败数', async () => {
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'templates' })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'templates' })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/templates': {
+          return [
+            { isDirectory: true, name: 'first' },
+            { isDirectory: true, name: 'second' },
+            { isDirectory: true, name: 'third' },
+            { isDirectory: true, name: 'fourth' },
+          ]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+    validateTemplateMock.mockResolvedValue(true)
+    getTemplateMetadataMock.mockImplementation(async (path: AbsPath) => ({
+      name: AbsPath.basename(path),
+    }))
+    templateImportMock.mockImplementation(async (path: AbsPath) => {
+      throw new Error(`failed ${AbsPath.basename(path)}`)
+    })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    const modalProps = modalOpenMock.mock.calls[0]?.[1] as { onImport?: (paths: AbsPath[]) => Promise<void> } | undefined
+    await modalProps?.onImport?.([
+      AbsPath.from('/templates/first'),
+      AbsPath.from('/templates/second'),
+      AbsPath.from('/templates/third'),
+      AbsPath.from('/templates/fourth'),
+    ])
+
+    expect(loggerErrorMock).toHaveBeenCalledWith(
+      expect.stringContaining('样例 /templates/first -> Error: failed first; /templates/second -> Error: failed second; /templates/third -> Error: failed third 等 1 个'),
+    )
+    expect(loggerErrorMock).not.toHaveBeenCalledWith(expect.stringContaining(' 等 4 个'))
   })
 })

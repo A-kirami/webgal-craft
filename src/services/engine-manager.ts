@@ -16,6 +16,11 @@ import {
   ResourceWarning,
 } from '~/services/resource-health'
 import { toLookupPathKey } from '~/services/resource-path/lookup'
+import {
+  createResourceValidationFailure,
+  createResourceValidationSummary,
+  logResourceValidationSummary,
+} from '~/services/resource-validation-summary'
 import { EngineMetadata, EnginePreviewAssets } from '~/services/types'
 import { useResourceStore } from '~/stores/resource'
 import { useRuntimeTaskStore } from '~/stores/runtime-task'
@@ -23,6 +28,8 @@ import { useStorageSettingsStore } from '~/stores/storage-settings'
 import { EngineManifest, EngineManifestResult } from '~/types/engine'
 import { AppError } from '~/types/errors'
 import { EngineRef } from '~/types/project-config'
+
+import type { ResourceValidationFailure, ResourceValidationSummary } from '~/services/resource-validation-summary'
 
 interface EngineSnapshot {
   engineId: string
@@ -216,36 +223,67 @@ function buildDeleteCheckResult(associatedGames: Game[]): DeleteEngineCheckResul
   return { canDelete: true }
 }
 
-async function validateAllEngines(): Promise<void> {
+async function validateEngineRecordForBatch(engine: Engine): Promise<ResourceValidationFailure | undefined> {
+  try {
+    const pathExists = await exists(engine.path)
+    const structureValid = pathExists ? await validateEngine(engine.path) : false
+    const classification = structureValid ? await classifyEngine(engine.path) : undefined
+    const nextAvailability: ResourceAvailability = classifyAvailability({
+      pathExists,
+      structureValid,
+      semanticsValid: classification?.status === 'ok',
+    })
+    if (engine.availability !== nextAvailability) {
+      await db.engines.update(engine.id, { availability: nextAvailability })
+    }
+    const manifestIssue = describeEngineManifestValidationIssue(classification)
+    return manifestIssue
+      ? createResourceValidationFailure(engine.path, manifestIssue)
+      : undefined
+  } catch (error) {
+    return createResourceValidationFailure(engine.path, error)
+  }
+}
+
+function describeEngineManifestValidationIssue(classification: EngineManifestResult | undefined): string | undefined {
+  if (!classification || classification.status === 'ok') {
+    return
+  }
+
+  if (classification.status === 'missing') {
+    return '缺少 webgal-engine.json'
+  }
+
+  if (classification.status === 'invalid') {
+    return classification.reason
+  }
+
+  return `schemaVersion ${classification.schemaVersion} 不受支持，最高支持主版本 ${classification.supportedMajor}`
+}
+
+async function validateAllEngines(): Promise<ResourceValidationSummary> {
   const engines = await db.engines.toArray()
-  await Promise.all(engines
+  const targets = engines
     .filter(engine => engine.status !== 'creating' && engine.status !== 'error')
-    .map(async (engine) => {
-      try {
-        const pathExists = await exists(engine.path)
-        const structureValid = pathExists ? await validateEngine(engine.path) : false
-        const classification = structureValid ? await classifyEngine(engine.path) : undefined
-        const nextAvailability: ResourceAvailability = classifyAvailability({
-          pathExists,
-          structureValid,
-          semanticsValid: classification?.status === 'ok',
-        })
-        if (engine.availability !== nextAvailability) {
-          await db.engines.update(engine.id, { availability: nextAvailability })
-        }
-      } catch (error) {
-        logger.warn(`引擎校验异常: ${error}`)
-      }
-    }))
+  const validationResults = await Promise.all(targets.map(engine => validateEngineRecordForBatch(engine)))
+  const failures = validationResults
+    .filter((failure): failure is ResourceValidationFailure => failure !== undefined)
+  const summary = createResourceValidationSummary(targets.length, failures)
+  logResourceValidationSummary('引擎校验', summary)
+  return summary
 }
 
 async function assertEngineImportable(enginePath: AbsPath): Promise<EngineSnapshot> {
   if (!(await validateEngine(enginePath))) {
-    logger.error(`[引擎导入] 无效的引擎文件夹: ${enginePath}`)
+    logger.warn(`[引擎导入] 无效的引擎文件夹: ${enginePath}`)
     throw new AppError('INVALID_STRUCTURE', '无效的引擎文件夹')
   }
 
   const classification = await classifyEngine(enginePath)
+  const manifestIssue = describeEngineManifestValidationIssue(classification)
+  if (manifestIssue) {
+    logger.warn(`[引擎导入] 引擎清单无效: 路径=${enginePath}, 原因=${manifestIssue}`)
+  }
   if (classification.status === 'unsupportedSchema') {
     throw new AppError(
       'INVALID_MANIFEST',
@@ -427,7 +465,10 @@ async function importEngine(enginePath: AbsPath): Promise<ImportEngineResult> {
   )
 
   if (sourceLookupKey === targetLookupKey) {
-    logger.info(`[引擎导入] 引擎已在托管目录，直接注册: ${normalizedPath}`)
+    logger.info(
+      `[引擎导入] 直接注册托管目录: 名称=${snapshot.name}, 引擎ID=${snapshot.engineId}, `
+      + `版本=${snapshot.version ?? '未知'}, 路径=${normalizedPath}`,
+    )
     return { id: await registerEngine(targetPath, snapshot), alreadyRegistered: false }
   }
 
@@ -436,7 +477,10 @@ async function importEngine(enginePath: AbsPath): Promise<ImportEngineResult> {
     throw new AppError('TARGET_CONFLICT', '目标引擎目录已存在，请先清理后重试')
   }
 
-  logger.info(`[引擎 ${snapshot.name}] 开始导入`)
+  logger.info(
+    `[引擎导入] 开始: 名称=${snapshot.name}, 引擎ID=${snapshot.engineId}, `
+    + `版本=${snapshot.version ?? '未知'}, 源=${normalizedPath}, 目标=${targetPath}`,
+  )
   const engineId = await registerEngine(targetPath, {
     ...snapshot,
     status: 'creating',
@@ -447,17 +491,23 @@ async function importEngine(enginePath: AbsPath): Promise<ImportEngineResult> {
 
   try {
     await copyAndFinalizeEngine(engineId, normalizedPath, targetPath)
-    logger.info(`[引擎 ${snapshot.name}] 导入完成`)
+    logger.info(
+      `[引擎导入] 完成: ID=${engineId}, 名称=${snapshot.name}, 引擎ID=${snapshot.engineId}, `
+      + `版本=${snapshot.version ?? '未知'}, 源=${normalizedPath}, 目标=${targetPath}`,
+    )
     return { id: engineId, alreadyRegistered: false }
   } catch (error) {
-    logger.error(`[引擎导入] 导入失败: ${error}`)
+    logger.error(
+      `[引擎导入] 失败: ID=${engineId}, 名称=${snapshot.name}, 引擎ID=${snapshot.engineId}, `
+      + `版本=${snapshot.version ?? '未知'}, 源=${normalizedPath}, 目标=${targetPath} - ${error}`,
+    )
     useResourceStore().finishProgress(engineId)
     await db.engines.update(engineId, { status: 'error' }).catch((error_) => {
-      logger.warn(`[引擎导入] 清理异常 - 更新状态失败: ${error_}`)
+      logger.warn(`[引擎导入] 清理异常 - 更新状态失败: ID=${engineId}, 目标=${targetPath} - ${error_}`)
     })
     if (await exists(targetPath)) {
       await fsCmds.deleteFile(targetPath, true).catch((error_) => {
-        logger.warn(`[引擎导入] 清理异常 - 删除目录失败: ${error_}`)
+        logger.warn(`[引擎导入] 清理异常 - 删除目录失败: ID=${engineId}, 目标=${targetPath} - ${error_}`)
       })
     }
     throw error
@@ -475,7 +525,7 @@ function assertDeletable(deleteCheck: DeleteEngineCheckResult): void {
 
 async function uninstallEngine(engine: Engine): Promise<void> {
   assertDeletable(await canDeleteEngine(engine.id))
-  logger.info(`[引擎卸载] ${engine.name}@${engine.version ?? 'unknown'}: ${engine.path}`)
+  logger.info(`[引擎卸载] ${engine.name}@${engine.version ?? '未知'}: ${engine.path}`)
   if (engine.availability === 'available') {
     try {
       await fsCmds.deleteFile(engine.path, true)

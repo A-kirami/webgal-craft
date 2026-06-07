@@ -25,7 +25,7 @@ function parseHostEvent(rawEvent: string): EventEnvelopeByType | undefined {
 
     return parsed
   } catch (error) {
-    logger.warn(`解析预览同步 host event 失败: ${error}`)
+    logger.debug(`解析预览同步 host event 失败: ${error}`)
     return undefined
   }
 }
@@ -52,7 +52,7 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
       }
       case 'preview.event.fast-preview-timeout': {
         fastPreviewTimeout = event.payload
-        logger.warn(
+        logger.debug(
           `实时预览快进超时: scene=${event.payload.sceneName}, target=${event.payload.targetSentenceId}, stopped=${event.payload.sentenceId}, forwarded=${event.payload.forwardedLineCount}, elapsed=${event.payload.elapsedMs}/${event.payload.maxDurationMs}ms`,
         )
         return

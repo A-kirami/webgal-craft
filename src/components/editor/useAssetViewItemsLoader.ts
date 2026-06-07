@@ -103,7 +103,6 @@ export function useAssetViewItemsLoader<TItem>(options: UseAssetViewItemsLoaderO
       }
 
       if (!relativePath && error instanceof AppError && error.code === 'DIR_NOT_FOUND') {
-        void logger.debug(`资源目录 ${toValue(options.assetBasePath)} 不存在，返回空列表`)
         items.value = []
         return
       }

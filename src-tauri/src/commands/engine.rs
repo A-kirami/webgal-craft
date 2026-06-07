@@ -95,7 +95,6 @@ pub async fn read_engine_manifest(engine_path: String) -> AppResult<EngineManife
     let manifest = match serde_json::from_str::<EngineManifest>(&content) {
         Ok(m) => m,
         Err(e) => {
-            log::error!("引擎清单解析失败 {}: {e}", manifest_path.display());
             return Ok(EngineManifestResult::Invalid {
                 reason: format!("解析失败: {e}"),
             });
@@ -103,7 +102,6 @@ pub async fn read_engine_manifest(engine_path: String) -> AppResult<EngineManife
     };
 
     if !manifest.has_required_fields() {
-        log::error!("引擎清单缺少必填字段: {}", manifest_path.display());
         return Ok(EngineManifestResult::Invalid {
             reason: "缺少必填字段".to_owned(),
         });
@@ -113,26 +111,13 @@ pub async fn read_engine_manifest(engine_path: String) -> AppResult<EngineManife
         Some(major) if major == SUPPORTED_SCHEMA_MAJOR => Ok(EngineManifestResult::Ok {
             manifest: Box::new(manifest),
         }),
-        Some(major) => {
-            log::error!(
-                "引擎清单 schemaVersion 不受支持 {}: 发现主版本 {major}，最高支持 {SUPPORTED_SCHEMA_MAJOR}",
-                manifest_path.display()
-            );
-            Ok(EngineManifestResult::UnsupportedSchema {
-                schema_version: manifest.schema_version,
-                supported_major: SUPPORTED_SCHEMA_MAJOR,
-            })
-        }
-        None => {
-            log::error!(
-                "引擎清单 schemaVersion 格式无效 {}: {}",
-                manifest_path.display(),
-                manifest.schema_version
-            );
-            Ok(EngineManifestResult::Invalid {
-                reason: format!("schemaVersion 格式无效: {}", manifest.schema_version),
-            })
-        }
+        Some(_) => Ok(EngineManifestResult::UnsupportedSchema {
+            schema_version: manifest.schema_version,
+            supported_major: SUPPORTED_SCHEMA_MAJOR,
+        }),
+        None => Ok(EngineManifestResult::Invalid {
+            reason: format!("schemaVersion 格式无效: {}", manifest.schema_version),
+        }),
     }
 }
 

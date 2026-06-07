@@ -45,10 +45,37 @@ export interface AssetReferenceIndexSnapshot {
   records: AssetReferenceRecord[]
 }
 
+export interface AssetReferenceSourceFailure {
+  sourcePath: AbsPath
+  error: unknown
+}
+
+interface AssetReferenceSlice extends AssetReferenceIndexSnapshot {
+  failures: AssetReferenceSourceFailure[]
+}
+
+export interface AssetReferenceSourceUpdate {
+  snapshot: AssetReferenceIndexSnapshot
+  failures: AssetReferenceSourceFailure[]
+}
+
+interface LoggedReferenceSourceFailure {
+  signature: string
+  loggedAt: number
+}
+
+const REFERENCE_SOURCE_FAILURE_RELOG_INTERVAL_MS = 5 * 60 * 1000
+
+const loggedReferenceSourceFailures = new Map<AbsPath, LoggedReferenceSourceFailure>()
+
 export function createEmptyAssetReferenceIndexSnapshot(): AssetReferenceIndexSnapshot {
   return {
     records: [],
   }
+}
+
+export function clearReferenceSourceFailureLogCache(): void {
+  loggedReferenceSourceFailures.clear()
 }
 
 export async function buildAssetReferenceIndex(
@@ -59,6 +86,7 @@ export async function buildAssetReferenceIndex(
     ...listAssetsByAssetType(catalog, 'scene').map(entry => buildSceneReferenceSlice(entry.absolutePath)),
     buildGameConfigReferenceSlice(gamePath),
   ])
+  logReferenceSourceFailures(sourceSlices.flatMap(slice => slice.failures))
 
   return {
     records: sourceSlices.flatMap(slice => slice.records),
@@ -69,22 +97,34 @@ export async function rebuildReferenceSource(
   snapshot: AssetReferenceIndexSnapshot,
   gamePath: AbsPath,
   sourcePath: AbsPath,
-): Promise<AssetReferenceIndexSnapshot> {
+): Promise<AssetReferenceSourceUpdate> {
   if (isGameConfigPath(gamePath, sourcePath)) {
-    return replaceReferenceSource(snapshot, sourcePath, await buildGameConfigReferenceSlice(gamePath))
+    const slice = await buildGameConfigReferenceSlice(gamePath)
+    return {
+      snapshot: replaceReferenceSource(snapshot, sourcePath, slice),
+      failures: slice.failures,
+    }
   }
 
   if (isScenePath(gamePath, sourcePath)) {
-    return replaceReferenceSource(snapshot, sourcePath, await buildSceneReferenceSlice(sourcePath))
+    const slice = await buildSceneReferenceSlice(sourcePath)
+    return {
+      snapshot: replaceReferenceSource(snapshot, sourcePath, slice),
+      failures: slice.failures,
+    }
   }
 
-  return snapshot
+  return {
+    snapshot,
+    failures: [],
+  }
 }
 
 export function removeReferenceSource(
   snapshot: AssetReferenceIndexSnapshot,
   sourcePath: AbsPath,
 ): AssetReferenceIndexSnapshot {
+  clearReferenceSourceFailure(sourcePath)
   return {
     records: snapshot.records.filter(record => record.sourcePath !== sourcePath),
   }
@@ -95,9 +135,12 @@ export async function renameReferenceSource(
   gamePath: AbsPath,
   oldPath: AbsPath,
   newPath: AbsPath,
-): Promise<AssetReferenceIndexSnapshot> {
+): Promise<AssetReferenceSourceUpdate> {
   if (!isGameConfigPath(gamePath, newPath) && !isScenePath(gamePath, newPath)) {
-    return removeReferenceSource(snapshot, oldPath)
+    return {
+      snapshot: removeReferenceSource(snapshot, oldPath),
+      failures: [],
+    }
   }
 
   return rebuildReferenceSource(removeReferenceSource(snapshot, oldPath), gamePath, newPath)
@@ -155,23 +198,66 @@ function replaceReferenceSource(
   }
 }
 
-async function buildSceneReferenceSlice(sourcePath: AbsPath): Promise<AssetReferenceIndexSnapshot> {
+function createEmptyAssetReferenceSlice(failures: AssetReferenceSourceFailure[] = []): AssetReferenceSlice {
+  return {
+    records: [],
+    failures,
+  }
+}
+
+function clearReferenceSourceFailure(sourcePath: AbsPath): void {
+  loggedReferenceSourceFailures.delete(sourcePath)
+}
+
+export function logReferenceSourceFailures(failures: AssetReferenceSourceFailure[]): void {
+  const now = Date.now()
+  const nextFailures = failures.filter(({ error, sourcePath }) => {
+    const signature = String(error)
+    const loggedFailure = loggedReferenceSourceFailures.get(sourcePath)
+    if (
+      loggedFailure?.signature === signature
+      && now - loggedFailure.loggedAt < REFERENCE_SOURCE_FAILURE_RELOG_INTERVAL_MS
+    ) {
+      return false
+    }
+
+    loggedReferenceSourceFailures.set(sourcePath, { signature, loggedAt: now })
+    return true
+  })
+
+  if (nextFailures.length === 0) {
+    return
+  }
+
+  const sampleFailures = nextFailures
+    .slice(0, 3)
+    .map(({ error, sourcePath }) => `${sourcePath} -> ${String(error)}`)
+    .join('; ')
+  const suffix = nextFailures.length > 3 ? ` 等 ${nextFailures.length - 3} 个` : ''
+  logger.warn(
+    `资源索引跳过 ${nextFailures.length} 个解析失败的引用来源: `
+    + `${sampleFailures}${suffix}`,
+  )
+}
+
+async function buildSceneReferenceSlice(sourcePath: AbsPath): Promise<AssetReferenceSlice> {
   try {
     const text = await readTextFile(sourcePath)
     const scene = parseScene(text, AbsPath.basename(sourcePath), sourcePath)
     const sentences = scene?.sentenceList ?? []
+    clearReferenceSourceFailure(sourcePath)
     return {
       records: sentences.flatMap((sentence, index) =>
         extractSentenceReferences(sourcePath, sentence, index + 1),
       ),
+      failures: [],
     }
   } catch (error) {
-    logger.warn(`资源索引跳过解析失败的场景文件 (${sourcePath}): ${error}`)
-    return createEmptyAssetReferenceIndexSnapshot()
+    return createEmptyAssetReferenceSlice([{ sourcePath, error }])
   }
 }
 
-async function buildGameConfigReferenceSlice(gamePath: AbsPath): Promise<AssetReferenceIndexSnapshot> {
+async function buildGameConfigReferenceSlice(gamePath: AbsPath): Promise<AssetReferenceSlice> {
   const sourcePath = gameConfigPath(gamePath)
 
   try {
@@ -180,16 +266,17 @@ async function buildGameConfigReferenceSlice(gamePath: AbsPath): Promise<AssetRe
     const titleBgm = findGameConfigEntryValue(config.entries, 'Title_bgm')
     const gameLogo = findGameConfigEntryValue(config.entries, 'Game_Logo')
 
+    clearReferenceSourceFailure(sourcePath)
     return {
       records: [
         ...createGameConfigReferenceRecords(sourcePath, 'Title_img', 'background', titleImage),
         ...createGameConfigReferenceRecords(sourcePath, 'Title_bgm', 'bgm', titleBgm),
         ...createGameConfigReferenceRecords(sourcePath, 'Game_Logo', 'background', gameLogo, { splitValues: true }),
       ],
+      failures: [],
     }
   } catch (error) {
-    logger.warn(`资源索引跳过解析失败的游戏配置 (${sourcePath}): ${error}`)
-    return createEmptyAssetReferenceIndexSnapshot()
+    return createEmptyAssetReferenceSlice([{ sourcePath, error }])
   }
 }
 

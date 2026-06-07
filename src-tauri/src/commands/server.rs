@@ -801,18 +801,6 @@ fn map_vfs_error(error: &VfsError) -> StatusCode {
     }
 }
 
-#[cfg(debug_assertions)]
-async fn timing_middleware(request: Request<Body>, next: axum::middleware::Next) -> Response {
-    let path = request.uri().path().to_owned();
-    let start = std::time::Instant::now();
-    let response = next.run(request).await;
-    let elapsed = start.elapsed();
-    if elapsed > std::time::Duration::from_millis(10) {
-        log::debug!("慢请求: {} - {:?}", path, elapsed);
-    }
-    response
-}
-
 #[tauri::command]
 pub async fn start_server(
     state: TauriState<'_, Mutex<ServerState>>,
@@ -833,6 +821,7 @@ pub async fn start_server(
         Err(_) => {
             let new_port =
                 pick_unused_port().ok_or_else(|| AppError::Server("无法找到可用端口".into()))?;
+            log::warn!("HTTP 服务器端口不可用，回退端口: {address} -> {host}:{new_port}");
             TcpListener::bind(format!("{host}:{new_port}")).await?
         }
     };
@@ -868,9 +857,6 @@ pub async fn start_server(
             ),
         )
         .with_state(state_guard.app_state.clone());
-
-    #[cfg(debug_assertions)]
-    let app = app.layer(axum::middleware::from_fn(timing_middleware));
 
     let (shutdown_tx, shutdown_rx) = oneshot::channel();
     let join_handle = tokio::spawn(async move {
@@ -956,7 +942,6 @@ pub async fn add_static_site(
         .await
         .insert(hash.clone(), cached_canonicals);
 
-    log::debug!("注册站点: {hash} -> {}", project_path.display());
     Ok(hash)
 }
 

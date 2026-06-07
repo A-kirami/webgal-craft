@@ -16,10 +16,12 @@ import {
 } from './catalog'
 import {
   buildAssetReferenceIndex,
+  clearReferenceSourceFailureLogCache,
   createEmptyAssetReferenceIndexSnapshot,
   findMissingAssetReferences,
   getReferencesFromSource,
   getReferencesToAsset,
+  logReferenceSourceFailures,
   rebuildReferenceSource,
   removeReferenceSource,
   renameReferenceSource,
@@ -27,7 +29,7 @@ import {
 
 import type { AssetCatalogSnapshot } from './catalog'
 import type { AssetKey } from './keys'
-import type { AssetReferenceIndexSnapshot, AssetReferenceRecord } from './references'
+import type { AssetReferenceIndexSnapshot, AssetReferenceRecord, AssetReferenceSourceFailure } from './references'
 
 type ResourceIndexStatus = 'idle' | 'building' | 'ready' | 'degraded'
 
@@ -56,6 +58,10 @@ let pendingDirectoryRebuildTimer: ReturnType<typeof setTimeout> | undefined
 let referenceSourceUpdateVersion = 0
 const referenceSourceUpdateVersions = new Map<AbsPath, number>()
 
+interface RebuildResourceIndexOptions {
+  completionLogLevel?: 'debug' | 'info'
+}
+
 function setResourceIndexState(nextState: ResourceIndexState): void {
   resourceIndexState.value = nextState
 }
@@ -74,13 +80,14 @@ function scheduleDirectoryRebuild(gamePath: AbsPath): void {
     if (resourceIndexState.value.gamePath !== gamePath) {
       return
     }
-    void rebuildResourceIndex(gamePath)
+    void rebuildResourceIndex(gamePath, { completionLogLevel: 'debug' })
   }, DIRECTORY_REBUILD_DEBOUNCE_MS)
 }
 
 function clearResourceIndexState(): void {
   buildVersion += 1
   referenceSourceUpdateVersions.clear()
+  clearReferenceSourceFailureLogCache()
   clearPendingDirectoryRebuild()
   setResourceIndexState({
     status: 'idle',
@@ -91,10 +98,20 @@ function clearResourceIndexState(): void {
   })
 }
 
-async function rebuildResourceIndex(gamePath: AbsPath): Promise<void> {
+async function rebuildResourceIndex(
+  gamePath: AbsPath,
+  options: RebuildResourceIndexOptions = {},
+): Promise<void> {
   const currentBuildVersion = ++buildVersion
+  const startedAt = Date.now()
+  const previousGamePath = resourceIndexState.value.gamePath
+  const completionLogLevel = options.completionLogLevel ?? 'info'
   referenceSourceUpdateVersions.clear()
+  if (previousGamePath !== gamePath) {
+    clearReferenceSourceFailureLogCache()
+  }
 
+  logger.debug(`资源索引开始构建: ${gamePath}`)
   setResourceIndexState({
     status: 'building',
     gamePath,
@@ -119,12 +136,17 @@ async function rebuildResourceIndex(gamePath: AbsPath): Promise<void> {
       references,
       dirty: false,
     })
+    const completionMessage = `资源索引构建完成: ${gamePath}, `
+      + `资源 ${catalog.entries.size} 个, 引用 ${references.records.length} 条, `
+      + `耗时 ${Date.now() - startedAt}ms`
+    logger[completionLogLevel](completionMessage)
 
     if (needsFollowUpRebuild) {
-      void rebuildResourceIndex(gamePath)
+      logger.debug(`资源索引构建期间收到变更，安排跟进重建: ${gamePath}`)
+      void rebuildResourceIndex(gamePath, { completionLogLevel })
     }
   } catch (error) {
-    logger.warn(`资源索引构建失败: ${error}`)
+    logger.warn(`资源索引构建失败: ${gamePath}, 耗时 ${Date.now() - startedAt}ms - ${error}`)
     if (currentBuildVersion !== buildVersion) {
       return
     }
@@ -195,8 +217,8 @@ async function rebuildReferenceForPath(gamePath: AbsPath, path: AbsPath): Promis
   }
 
   const updateVersion = beginReferenceSourceUpdate([path])
-  const references = await rebuildReferenceSource(currentState.references, gamePath, path)
-  applyReferenceSourceUpdate(gamePath, [path], path, getReferencesFromSource(references, path), updateVersion)
+  const { failures, snapshot } = await rebuildReferenceSource(currentState.references, gamePath, path)
+  applyReferenceSourceUpdate(gamePath, [path], path, getReferencesFromSource(snapshot, path), failures, updateVersion)
 }
 
 function beginReferenceSourceUpdate(sourcePaths: AbsPath[]): number {
@@ -247,6 +269,7 @@ function applyReferenceSourceUpdate(
   removedSourcePaths: AbsPath[],
   sourcePath: AbsPath,
   records: AssetReferenceRecord[],
+  failures: AssetReferenceSourceFailure[],
   updateVersion: number,
 ): void {
   const currentState = resourceIndexState.value
@@ -266,6 +289,7 @@ function applyReferenceSourceUpdate(
       records,
     ),
   })
+  logReferenceSourceFailures(failures)
   clearReferenceSourceUpdate(removedSourcePaths, updateVersion)
 }
 
@@ -277,12 +301,13 @@ async function renameReferenceForPath(gamePath: AbsPath, oldPath: AbsPath, newPa
 
   const affectedSourcePaths = [oldPath, newPath]
   const updateVersion = beginReferenceSourceUpdate(affectedSourcePaths)
-  const references = await renameReferenceSource(currentState.references, gamePath, oldPath, newPath)
+  const { failures, snapshot } = await renameReferenceSource(currentState.references, gamePath, oldPath, newPath)
   applyReferenceSourceUpdate(
     gamePath,
     affectedSourcePaths,
     newPath,
-    getReferencesFromSource(references, newPath),
+    getReferencesFromSource(snapshot, newPath),
+    failures,
     updateVersion,
   )
 }

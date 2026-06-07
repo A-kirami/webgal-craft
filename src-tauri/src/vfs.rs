@@ -770,7 +770,7 @@ pub fn sanitize_request_path(raw_path: &str) -> Result<PathBuf, VfsError> {
 
 pub fn sanitize_logical_path(raw_path: &str) -> Result<PathBuf, VfsError> {
     if raw_path.contains('\0') || raw_path.contains('\\') || raw_path.contains("//") {
-        log::warn!("路径被拒绝（非法字符）: {raw_path:?}");
+        log::debug!("路径被拒绝（非法字符）: {raw_path:?}");
         return Err(VfsError::PathDenied);
     }
 
@@ -974,7 +974,7 @@ fn validate_path_segment(segment: &str) -> Result<(), VfsError> {
         || segment.ends_with('.')
         || segment.ends_with(' ')
     {
-        log::warn!("路径段被拒绝（无效格式）: {segment:?}");
+        log::debug!("路径段被拒绝（无效格式）: {segment:?}");
         return Err(VfsError::PathDenied);
     }
 
@@ -985,7 +985,7 @@ fn validate_path_segment(segment: &str) -> Result<(), VfsError> {
     ];
 
     if RESERVED.contains(&upper.as_str()) {
-        log::warn!("路径段被拒绝（Windows 保留名称）: {segment:?}");
+        log::debug!("路径段被拒绝（Windows 保留名称）: {segment:?}");
         return Err(VfsError::PathDenied);
     }
 

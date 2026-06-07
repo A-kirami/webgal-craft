@@ -42,18 +42,14 @@ const primarySrc = $computed(() => {
         previewBaseUrl: props.serveUrl,
         thumbnail: props.thumbnail,
       })
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      void logger.error(`[AssetImage] 资源地址生成失败: ${props.path} - ${errorMessage}`)
+    } catch {
       return
     }
   }
 
   try {
     return getAssetUrl(props.path, props.cacheVersion, props.serveUrl, props.thumbnail)
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    void logger.error(`[AssetImage] 资源地址生成失败: ${props.path} - ${errorMessage}`)
+  } catch {
     return
   }
 })
@@ -84,7 +80,6 @@ watch(
 
 function handleError() {
   hasLoadError = true
-  void logger.error(`[AssetImage] 图片加载失败: ${props.path}`)
 }
 </script>
 

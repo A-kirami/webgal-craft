@@ -53,7 +53,7 @@ function handleMediaLoadedMetadata() {
 
   if (shouldResumePlayback) {
     void element.play().catch((error) => {
-      logger.warn(`资源预览恢复播放失败 (${props.state.path}): ${error}`)
+      logger.debug(`资源预览恢复播放失败 (${props.state.path}): ${error}`)
     })
   }
 }

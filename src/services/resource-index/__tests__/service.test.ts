@@ -9,10 +9,12 @@ import { createAssetKey } from '~/services/resource-index/keys'
 
 const {
   getConfigMock,
+  loggerWarnMock,
   onMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
   getConfigMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
   onMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
 }))
@@ -28,7 +30,9 @@ vi.mock('~/composables/useFileSystemEvents', () => ({
 }))
 
 vi.mock('@tauri-apps/plugin-log', () => ({
-  warn: vi.fn(),
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: loggerWarnMock,
 }))
 
 vi.mock('~/services/config-manager', () => ({
@@ -122,6 +126,7 @@ describe('useResourceIndex', () => {
       entries: [],
       unmanagedLineCount: 0,
     })
+    loggerWarnMock.mockReset()
   })
 
   it('启动后会建立资源清单，并支持按 assetType 和相对路径查询', async () => {
@@ -355,6 +360,200 @@ describe('useResourceIndex', () => {
           ],
         },
       ])
+    } finally {
+      scope.stop()
+    }
+  })
+
+  it('全量构建遇到多个解析失败的 scene 文件时只写入一条聚合诊断日志', async () => {
+    readDirMock.mockImplementation(async (path: string | URL) => {
+      switch (String(path)) {
+        case '/project/game': {
+          return [
+            createDirEntry('scene', true),
+          ]
+        }
+        case '/project/game/scene': {
+          return [
+            createDirEntry('bad-a.txt', false),
+            createDirEntry('bad-b.txt', false),
+            createDirEntry('bad-c.txt', false),
+            createDirEntry('bad-d.txt', false),
+          ]
+        }
+        default: {
+          throw new TypeError(`unexpected readDir path: ${String(path)}`)
+        }
+      }
+    })
+    readTextFileMock.mockImplementation(async (path: string | URL) => {
+      if (String(path).endsWith('bad-a.txt')) {
+        throw new Error('missing semicolon')
+      }
+      if (String(path).endsWith('bad-b.txt')) {
+        throw new Error('invalid command')
+      }
+      if (String(path).endsWith('bad-c.txt')) {
+        throw new Error('unknown asset')
+      }
+      throw new Error('unclosed quote')
+    })
+
+    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+
+    const scope = effectScope()
+    let resourceIndex!: ReturnType<typeof useResourceIndex>
+    scope.run(() => {
+      useResourceIndexBootstrap()
+      resourceIndex = useResourceIndex()
+    })
+
+    try {
+      await waitFor(() => resourceIndex.status.value === 'ready')
+
+      const parseFailureLogCalls = loggerWarnMock.mock.calls.filter(([message]) =>
+        String(message).startsWith('资源索引跳过'),
+      )
+      expect(parseFailureLogCalls).toHaveLength(1)
+      expect(parseFailureLogCalls[0]).toEqual([
+        '资源索引跳过 4 个解析失败的引用来源: /project/game/scene/bad-a.txt -> Error: missing semicolon; /project/game/scene/bad-b.txt -> Error: invalid command; /project/game/scene/bad-c.txt -> Error: unknown asset 等 1 个',
+      ])
+    } finally {
+      scope.stop()
+    }
+  })
+
+  it('增量重建遇到相同解析失败时会按冷却窗口写入诊断日志', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
+    readDirMock.mockImplementation(async (path: string | URL) => {
+      switch (String(path)) {
+        case '/project/game': {
+          return [
+            createDirEntry('background', true),
+            createDirEntry('scene', true),
+          ]
+        }
+        case '/project/game/background': {
+          return [
+            createDirEntry('old-bg.jpg', false),
+          ]
+        }
+        case '/project/game/scene': {
+          return [
+            createDirEntry('intro.txt', false),
+          ]
+        }
+        default: {
+          throw new TypeError(`unexpected readDir path: ${String(path)}`)
+        }
+      }
+    })
+    readTextFileMock.mockResolvedValue('changeBg:old-bg.jpg;')
+
+    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+
+    const scope = effectScope()
+    let resourceIndex!: ReturnType<typeof useResourceIndex>
+    scope.run(() => {
+      useResourceIndexBootstrap()
+      resourceIndex = useResourceIndex()
+    })
+
+    try {
+      await waitFor(() => resourceIndex.status.value === 'ready')
+      loggerWarnMock.mockClear()
+
+      readTextFileMock.mockRejectedValue(new Error('invalid command'))
+      emitFileSystemEvent('file:modified', {
+        type: 'file:modified',
+        path: '/project/game/scene/intro.txt',
+      })
+      await waitFor(() => loggerWarnMock.mock.calls.length === 1)
+
+      emitFileSystemEvent('file:modified', {
+        type: 'file:modified',
+        path: '/project/game/scene/intro.txt',
+      })
+      await flushMicrotasks()
+
+      expect(loggerWarnMock).toHaveBeenCalledTimes(1)
+
+      vi.setSystemTime(new Date(Date.now() + 10 * 60 * 1000))
+      emitFileSystemEvent('file:modified', {
+        type: 'file:modified',
+        path: '/project/game/scene/intro.txt',
+      })
+      await waitFor(() => loggerWarnMock.mock.calls.length === 2)
+
+      emitFileSystemEvent('file:removed', {
+        type: 'file:removed',
+        path: '/project/game/scene/intro.txt',
+      })
+      await flushMicrotasks()
+      emitFileSystemEvent('file:created', {
+        type: 'file:created',
+        path: '/project/game/scene/intro.txt',
+      })
+      await waitFor(() => loggerWarnMock.mock.calls.length === 3)
+
+      readTextFileMock.mockRejectedValue(new Error('missing semicolon'))
+      emitFileSystemEvent('file:modified', {
+        type: 'file:modified',
+        path: '/project/game/scene/intro.txt',
+      })
+      await waitFor(() => loggerWarnMock.mock.calls.length === 4)
+    } finally {
+      vi.useRealTimers()
+      scope.stop()
+    }
+  })
+
+  it('清空工作目录后重新打开同一路径时会重新记录解析失败', async () => {
+    readDirMock.mockImplementation(async (path: string | URL) => {
+      switch (String(path)) {
+        case '/project/game': {
+          return [
+            createDirEntry('scene', true),
+          ]
+        }
+        case '/project/game/scene': {
+          return [
+            createDirEntry('intro.txt', false),
+          ]
+        }
+        default: {
+          throw new TypeError(`unexpected readDir path: ${String(path)}`)
+        }
+      }
+    })
+    readTextFileMock.mockRejectedValue(new Error('invalid command'))
+
+    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+
+    const scope = effectScope()
+    let resourceIndex!: ReturnType<typeof useResourceIndex>
+    scope.run(() => {
+      useResourceIndexBootstrap()
+      resourceIndex = useResourceIndex()
+    })
+
+    try {
+      await waitFor(() => resourceIndex.status.value === 'ready')
+      expect(loggerWarnMock.mock.calls.filter(([message]) =>
+        String(message).startsWith('资源索引跳过'),
+      )).toHaveLength(1)
+
+      loggerWarnMock.mockClear()
+      workspaceStoreState.CWD = undefined
+      await waitFor(() => resourceIndex.status.value === 'idle')
+
+      workspaceStoreState.CWD = '/project'
+      await waitFor(() => resourceIndex.status.value === 'ready')
+
+      expect(loggerWarnMock.mock.calls.filter(([message]) =>
+        String(message).startsWith('资源索引跳过'),
+      )).toHaveLength(1)
     } finally {
       scope.stop()
     }
@@ -618,7 +817,7 @@ describe('useResourceIndex', () => {
     }
   })
 
-  it('同一 scene 连续修改时会忽略较早完成的旧切片', async () => {
+  it('同一 scene 连续修改时会忽略较早完成的旧切片及其解析失败日志', async () => {
     readDirMock.mockImplementation(async (path: string | URL) => {
       switch (String(path)) {
         case '/project/game': {
@@ -667,10 +866,10 @@ describe('useResourceIndex', () => {
       await waitFor(() => resourceIndex.status.value === 'ready')
 
       const oldKey = createAssetKey('asset', 'background', RelPath.from('old.jpg'))
-      const staleKey = createAssetKey('asset', 'background', RelPath.from('stale.jpg'))
       const freshKey = createAssetKey('asset', 'background', RelPath.from('fresh.jpg'))
 
       expect(resourceIndex.getReferencesTo(oldKey)).toHaveLength(1)
+      loggerWarnMock.mockClear()
 
       const staleRead = createDeferred<string>()
       const freshRead = createDeferred<string>()
@@ -689,12 +888,12 @@ describe('useResourceIndex', () => {
       freshRead.resolve('changeBg:fresh.jpg;')
       await waitFor(() => resourceIndex.getReferencesTo(freshKey).length === 1)
 
-      staleRead.resolve('changeBg:stale.jpg;')
+      staleRead.reject(new Error('stale read failed'))
       await flushMicrotasks()
 
       expect(resourceIndex.getReferencesTo(oldKey)).toHaveLength(0)
-      expect(resourceIndex.getReferencesTo(staleKey)).toHaveLength(0)
       expect(resourceIndex.getReferencesTo(freshKey)).toHaveLength(1)
+      expect(loggerWarnMock).not.toHaveBeenCalled()
     } finally {
       scope.stop()
     }

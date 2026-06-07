@@ -64,7 +64,6 @@ async function updateAspectRatio(): Promise<void> {
     }
 
     aspectRatio = nextStageSize.aspectRatio
-    logger.debug(`预览面板分辨率: ${nextStageSize.stageWidth}x${nextStageSize.stageHeight}`)
   } catch (error) {
     const fallbackStageSize = resolvePreviewPanelStageSize({
       currentGamePath: workspaceStore.currentGame?.path,

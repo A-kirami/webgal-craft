@@ -1,25 +1,37 @@
 import { db } from '~/database/db'
 import { engineManager } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
+import {
+  createResourceValidationFailure,
+  createResourceValidationSummary,
+  logResourceValidationSummary,
+} from '~/services/resource-validation-summary'
 import { templateManager } from '~/services/template-manager'
 
 import type { Engine, Game, Template } from '~/database/model'
 import type { ResourceAvailability } from '~/services/resource-health'
+import type { ResourceValidationFailure, ResourceValidationSummary } from '~/services/resource-validation-summary'
 
 // 三个 reconcile 函数结构一致：跑 inspect、若 availability 变化则落库、把最新结果回给调用方。
 // 这里有意保持三份独立实现，避免为差异极小的资源类型引入泛型抽象。
 
 async function reconcileGameRecord(game: Pick<Game, 'id' | 'path' | 'availability'>): Promise<ResourceAvailability> {
   try {
-    const { availability } = await gameManager.inspectGame(game.path)
-    if (game.availability !== availability) {
-      await db.games.update(game.id, { availability })
-    }
-    return availability
+    return await inspectAndPatchGameAvailability(game)
   } catch (error) {
     logger.warn(`游戏校验异常: ${error}`)
     return game.availability
   }
+}
+
+async function inspectAndPatchGameAvailability(
+  game: Pick<Game, 'id' | 'path' | 'availability'>,
+): Promise<ResourceAvailability> {
+  const { availability } = await gameManager.inspectGame(game.path)
+  if (game.availability !== availability) {
+    await db.games.update(game.id, { availability })
+  }
+  return availability
 }
 
 async function reconcileEngineRecord(engine: Pick<Engine, 'id' | 'path' | 'availability'>): Promise<ResourceAvailability> {
@@ -57,11 +69,30 @@ async function reconcileTemplateRecord(template: Pick<Template, 'id' | 'path' | 
   }
 }
 
-async function reconcileAllGames(): Promise<void> {
+async function reconcileGameRecordForBatch(
+  game: Pick<Game, 'id' | 'path' | 'availability'>,
+): Promise<ResourceValidationFailure | undefined> {
+  try {
+    await inspectAndPatchGameAvailability(game)
+    return
+  } catch (error) {
+    if (game.availability !== 'broken') {
+      await db.games.update(game.id, { availability: 'broken' })
+    }
+    return createResourceValidationFailure(game.path, error)
+  }
+}
+
+async function reconcileAllGames(): Promise<ResourceValidationSummary> {
   const games = await db.games.toArray()
-  await Promise.all(games
+  const targets = games
     .filter(game => game.status === 'created')
-    .map(game => reconcileGameRecord(game)))
+  const validationResults = await Promise.all(targets.map(game => reconcileGameRecordForBatch(game)))
+  const failures = validationResults
+    .filter((failure): failure is ResourceValidationFailure => failure !== undefined)
+  const summary = createResourceValidationSummary(targets.length, failures)
+  logResourceValidationSummary('游戏校验', summary)
+  return summary
 }
 
 export const resourceReconcile = {
