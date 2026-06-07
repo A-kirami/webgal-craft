@@ -366,9 +366,7 @@ function resolveDisplayPreviewUrl(item: FileViewerItem, previewSize: FileViewerP
     }
 
     return previewUrl
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    void logger.error(`[FileViewer] 资源地址生成失败: ${item.path} - ${errorMessage}`)
+  } catch {
     return undefined
   }
 }

@@ -63,7 +63,6 @@ export function useTextEditorWorkspace(options: UseTextEditorWorkspaceOptions) {
       const model = monaco.editor.getModel(uri)
       if (model) {
         model.dispose()
-        logger.debug(`[TextEditor] LRU 淘汰模型: ${path}`)
       }
     },
   })

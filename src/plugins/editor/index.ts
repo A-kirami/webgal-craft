@@ -593,7 +593,6 @@ async function getContentSuggestion(model: monaco.editor.ITextModel, position: m
       // 使用映射表获取文件类型
       const fileType = COMMAND_TO_FILE_TYPE_MAP[command]
       if (!fileType) {
-        logger.debug(`[editor][completion] 未实现的文件补全命令类型: "${String(command)}"`)
         return []
       }
       return await getFileSuggestion(model, position, fileType, content)

@@ -20,8 +20,6 @@ import { handleError } from '~/utils/error-handler'
 import type { WatchEvent } from '@tauri-apps/plugin-fs'
 import type { VfsDirEntry, VfsSource } from '~/types/project-config'
 
-import { isDebug } from '~build/meta'
-
 /**
  * 最大缓存项数
  */
@@ -578,13 +576,6 @@ export const useFileStore = defineStore('file', () => {
       | { eventType: 'modified', path: AbsPath },
   ): void {
     const prefix = item.isDir ? 'directory' : 'file'
-
-    if (isDebug) {
-      const detail = options.eventType === 'renamed'
-        ? `${options.oldPath} -> ${options.newPath}`
-        : options.path
-      logger.debug(`[FileSystemEvent] ${prefix}:${options.eventType} - ${detail}`)
-    }
 
     if (options.eventType === 'created') {
       fileSystemEvents.emit({ type: `${prefix}:created`, path: options.path, parentId: options.parentId })

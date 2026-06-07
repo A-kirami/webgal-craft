@@ -1334,6 +1334,8 @@ describe('gameManager', () => {
     await expect(gameManager.importGame(AbsPath.from('/games/missing'))).rejects.toEqual(
       new AppError('DIR_NOT_FOUND', '游戏目录不存在'),
     )
+
+    expect(warnMock).toHaveBeenCalledWith('[游戏导入] 游戏目录不存在: /games/missing')
   })
 
   it('importGame 遇到缺失 game/config.txt 的目录时抛出 INVALID_STRUCTURE', async () => {
@@ -1342,6 +1344,8 @@ describe('gameManager', () => {
     await expect(gameManager.importGame(AbsPath.from('/games/invalid'))).rejects.toEqual(
       new AppError('INVALID_STRUCTURE', '无效的游戏文件夹'),
     )
+
+    expect(warnMock).toHaveBeenCalledWith('[游戏导入] 无效的游戏文件夹: /games/invalid')
   })
 
   it('importGame 在 config.txt 解析失败时抛出 INVALID_CONFIG', async () => {
@@ -1351,6 +1355,8 @@ describe('gameManager', () => {
     await expect(gameManager.importGame(AbsPath.from('/games/bad-config'))).rejects.toMatchObject({
       code: 'INVALID_CONFIG',
     })
+
+    expect(warnMock).toHaveBeenCalledWith(expect.stringContaining('[游戏导入] 游戏配置解析失败: /games/bad-config'))
   })
 
   it('inspectGame 在路径不存在时返回 missing + DIR_NOT_FOUND', async () => {

@@ -1190,6 +1190,13 @@ export function createPathOperationService(deps: PathOperationDeps) {
     let pathMutationFailed = false
     const gamePath = deps.getGamePath()
     const warnings: PathOperationWarning[] = []
+    const startedAt = Date.now()
+    const rewriteCount = plan.rewrites.length
+    const referenceCount = plan.rewrites.reduce((total, rewrite) => total + rewrite.referenceCount, 0)
+    logger.debug(
+      `[PathOperation] 开始执行: ${plan.kind} ${plan.sourcePath} -> ${plan.targetPath}, `
+      + `重写文件 ${rewriteCount} 个, 引用 ${referenceCount} 处`,
+    )
 
     try {
       await validatePlanBaseline(deps, plan)
@@ -1297,6 +1304,10 @@ export function createPathOperationService(deps: PathOperationDeps) {
       if (fsResult.echoMode === 'synthetic') {
         deps.pathOperationRegistry.release(pendingId)
       }
+      logger.info(
+        `[PathOperation] 执行完成: ${plan.kind} ${plan.sourcePath} -> ${fsResult.newPath}, `
+        + `重写文件 ${rewriteCount} 个, 警告 ${warnings.length} 个, 耗时 ${Date.now() - startedAt}ms`,
+      )
 
       return {
         plan,
@@ -1321,6 +1332,10 @@ export function createPathOperationService(deps: PathOperationDeps) {
       } finally {
         deps.pathOperationRegistry.release(pendingId)
       }
+      logger.warn(
+        `[PathOperation] 执行失败: ${plan.kind} ${plan.sourcePath} -> ${plan.targetPath}, `
+        + `已应用文件变更 ${appliedFsResult ? '是' : '否'}, 耗时 ${Date.now() - startedAt}ms - ${toErrorMessage(error)}`,
+      )
       throw error
     }
   }
@@ -1351,6 +1366,7 @@ export function createPathOperationService(deps: PathOperationDeps) {
       return await apply(confirmedPlan)
     } catch (error) {
       if (error instanceof PathOperationError && error.code === 'stale-plan') {
+        logger.debug(`[PathOperation] 计划过期，重新规划: ${input.kind} ${input.sourcePath}`)
         const nextPlan = await plan(input)
         if (nextPlan.blockedReasons.length > 0) {
           throw createBlockedPlanError(nextPlan)

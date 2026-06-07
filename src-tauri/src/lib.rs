@@ -9,6 +9,11 @@ use commands::vfs::OverlayFactoryCache;
 use tauri_plugin_prevent_default::PlatformOptions;
 use tokio::sync::Mutex;
 
+#[cfg(debug_assertions)]
+const LOG_LEVEL: log::LevelFilter = log::LevelFilter::Debug;
+#[cfg(not(debug_assertions))]
+const LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default().setup(|app| {
@@ -59,9 +64,9 @@ pub fn run() {
                 .target(tauri_plugin_log::Target::new(
                     tauri_plugin_log::TargetKind::Webview,
                 ))
-                .level(log::LevelFilter::Debug)
+                .level(LOG_LEVEL)
                 .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
-                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(10))
                 .filter(|metadata| {
                     metadata.target() != "tao::platform_impl::platform::event_loop::runner"
                 })

@@ -43,9 +43,11 @@ export const usePreviewRuntimeStore = defineStore('previewRuntime', () => {
     const startTask = (async () => {
       try {
         const previewSyncStore = usePreviewSyncStore()
+        logger.info('预览服务器开始启动: 127.0.0.1:8899')
         serverUrl = await serverCmds.startServer('127.0.0.1', 8899, (message) => {
           previewSyncStore.consumeHostEvent(message)
         })
+        logger.info(`预览服务器启动完成: ${serverUrl}`)
         return serverUrl
       } catch (error) {
         logger.error(`服务器启动失败: ${error}`)

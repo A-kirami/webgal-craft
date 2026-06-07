@@ -42,9 +42,8 @@ export async function loadFileViewerImageDimensions(
       }
       imageDimensionsCache.set(cacheKey, dimensions)
       return dimensions
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      void logger.error(`[FileViewer] 读取图片尺寸失败: ${item.path} - ${errorMessage}`)
+    } catch {
+      return
     } finally {
       pendingImageDimensionRequests.delete(cacheKey)
     }

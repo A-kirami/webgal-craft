@@ -36,6 +36,13 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
   exists: existsMock,
 }))
 
+vi.mock('@tauri-apps/plugin-log', () => ({
+  debug: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+}))
+
 vi.mock('~/services/backup-manager', () => ({
   backupManager: backupManagerMock,
 }))

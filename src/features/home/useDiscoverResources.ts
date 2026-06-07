@@ -352,21 +352,41 @@ export function useDiscoverResources() {
         try {
           const result = await importFn(path)
           const outcome = isHomeResourceImportOutcome(result) ? result : undefined
-          return resolveHomeResourceImportNotification(undefined, outcome)
+          return {
+            notification: resolveHomeResourceImportNotification(undefined, outcome),
+          }
         } catch (error) {
           const notification = resolveHomeResourceImportNotification(error)
-          if (notification.kind !== 'import-cancelled') {
-            logger.error(`[资源发现] 导入失败: ${path} - ${error}`)
+          return {
+            notification,
+            failure: notification.kind === 'import-cancelled'
+              ? undefined
+              : { path, error },
           }
-          return notification
         }
       }),
     )
+    const notifications = results.map(result => result.notification)
+    const failedImports = results
+      .map(result => result.failure)
+      .filter((failure): failure is { path: AbsPath, error: unknown } => failure !== undefined)
 
-    const successCount = results.filter(result => result.level === 'success').length
-    const alreadyRegisteredCount = results.filter(result => result.kind === 'already-registered').length
-    const cancelCount = results.filter(result => result.kind === 'import-cancelled').length
-    const failCount = results.filter(result => result.level === 'error').length
+    const successCount = notifications.filter(result => result.level === 'success').length
+    const alreadyRegisteredCount = notifications.filter(result => result.kind === 'already-registered').length
+    const cancelCount = notifications.filter(result => result.kind === 'import-cancelled').length
+    const failCount = notifications.filter(result => result.level === 'error').length
+
+    if (failedImports.length > 0) {
+      const samplePaths = failedImports
+        .slice(0, 3)
+        .map(({ error, path }) => `${path} -> ${error}`)
+        .join('; ')
+      const suffix = failedImports.length > 3 ? ` 等 ${failedImports.length} 个` : ''
+      logger.error(
+        `[资源发现] 批量导入失败: 失败 ${failedImports.length}/${paths.length}, `
+        + `样例 ${samplePaths}${suffix}`,
+      )
+    }
 
     if (successCount > 0) {
       notify.success(`${messages.success} (${successCount}/${paths.length})`)

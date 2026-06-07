@@ -275,7 +275,7 @@ async function playCurrentSource() {
   try {
     await instance.play()
   } catch (error) {
-    logger.warn(`辅助面板音频预览播放失败 (${src}): ${String(error)}`)
+    logger.debug(`辅助面板音频预览播放失败 (${src}): ${String(error)}`)
   }
 }
 

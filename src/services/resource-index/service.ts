@@ -16,6 +16,7 @@ import {
 } from './catalog'
 import {
   buildAssetReferenceIndex,
+  clearReferenceSourceFailureLogCache,
   createEmptyAssetReferenceIndexSnapshot,
   findMissingAssetReferences,
   getReferencesFromSource,
@@ -56,6 +57,10 @@ let pendingDirectoryRebuildTimer: ReturnType<typeof setTimeout> | undefined
 let referenceSourceUpdateVersion = 0
 const referenceSourceUpdateVersions = new Map<AbsPath, number>()
 
+interface RebuildResourceIndexOptions {
+  completionLogLevel?: 'debug' | 'info'
+}
+
 function setResourceIndexState(nextState: ResourceIndexState): void {
   resourceIndexState.value = nextState
 }
@@ -74,13 +79,14 @@ function scheduleDirectoryRebuild(gamePath: AbsPath): void {
     if (resourceIndexState.value.gamePath !== gamePath) {
       return
     }
-    void rebuildResourceIndex(gamePath)
+    void rebuildResourceIndex(gamePath, { completionLogLevel: 'debug' })
   }, DIRECTORY_REBUILD_DEBOUNCE_MS)
 }
 
 function clearResourceIndexState(): void {
   buildVersion += 1
   referenceSourceUpdateVersions.clear()
+  clearReferenceSourceFailureLogCache()
   clearPendingDirectoryRebuild()
   setResourceIndexState({
     status: 'idle',
@@ -91,10 +97,20 @@ function clearResourceIndexState(): void {
   })
 }
 
-async function rebuildResourceIndex(gamePath: AbsPath): Promise<void> {
+async function rebuildResourceIndex(
+  gamePath: AbsPath,
+  options: RebuildResourceIndexOptions = {},
+): Promise<void> {
   const currentBuildVersion = ++buildVersion
+  const startedAt = Date.now()
+  const previousGamePath = resourceIndexState.value.gamePath
+  const completionLogLevel = options.completionLogLevel ?? 'info'
   referenceSourceUpdateVersions.clear()
+  if (previousGamePath !== gamePath) {
+    clearReferenceSourceFailureLogCache()
+  }
 
+  logger.debug(`资源索引开始构建: ${gamePath}`)
   setResourceIndexState({
     status: 'building',
     gamePath,
@@ -119,12 +135,17 @@ async function rebuildResourceIndex(gamePath: AbsPath): Promise<void> {
       references,
       dirty: false,
     })
+    const completionMessage = `资源索引构建完成: ${gamePath}, `
+      + `资源 ${catalog.entries.size} 个, 引用 ${references.records.length} 条, `
+      + `耗时 ${Date.now() - startedAt}ms`
+    logger[completionLogLevel](completionMessage)
 
     if (needsFollowUpRebuild) {
-      void rebuildResourceIndex(gamePath)
+      logger.debug(`资源索引构建期间收到变更，安排跟进重建: ${gamePath}`)
+      void rebuildResourceIndex(gamePath, { completionLogLevel })
     }
   } catch (error) {
-    logger.warn(`资源索引构建失败: ${error}`)
+    logger.warn(`资源索引构建失败: ${gamePath}, 耗时 ${Date.now() - startedAt}ms - ${error}`)
     if (currentBuildVersion !== buildVersion) {
       return
     }

@@ -145,7 +145,7 @@ async function loadDirectoryItems(absolutePath: AbsPath, includeStats: boolean):
   }
 
   if (failed.length > 0) {
-    void logger.warn(`[DirectoryCache] 目录 ${absolutePath} 有 ${failed.length} 个项目读取失败，已跳过`)
+    void logger.debug(`[DirectoryCache] 目录 ${absolutePath} 有 ${failed.length} 个项目读取失败，已跳过`)
   }
 
   return items

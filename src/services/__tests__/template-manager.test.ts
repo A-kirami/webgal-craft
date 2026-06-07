@@ -17,6 +17,7 @@ const {
   dbTemplatesWhereMock,
   deleteFileMock,
   existsMock,
+  loggerWarnMock,
   readTextFileMock,
   readProjectConfigMock,
   resourceStoreMock,
@@ -35,6 +36,7 @@ const {
   dbTemplatesWhereMock: vi.fn(),
   deleteFileMock: vi.fn(),
   existsMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
   readTextFileMock: vi.fn(),
   readProjectConfigMock: vi.fn(),
   resourceStoreMock: {
@@ -51,7 +53,7 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   debug: vi.fn(),
   error: vi.fn(),
   info: vi.fn(),
-  warn: vi.fn(),
+  warn: loggerWarnMock,
 }))
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
@@ -154,6 +156,7 @@ describe('templateManager', () => {
       ['template.json'],
     )
     expect(readTextFileMock).not.toHaveBeenCalled()
+    expect(loggerWarnMock).toHaveBeenCalledWith('[模板导入] 无效的模板文件夹: /source/template')
   })
 
   it('importTemplate 会复制到模板托管目录并写入数据库', async () => {
@@ -268,6 +271,33 @@ describe('templateManager', () => {
     expect(dbTemplatesDeleteMock).toHaveBeenCalledWith('template-creating')
   })
 
+  it('validateAllTemplates 清理 creating 残留失败时会返回失败摘要', async () => {
+    dbTemplatesToArrayMock.mockResolvedValue([
+      {
+        id: 'template-creating',
+        path: '/templates/Creating Template',
+        pathLookupKey: '/templates/creating template',
+        createdAt: 0,
+        status: 'creating',
+        metadata: {
+          name: 'Creating Template',
+        },
+      },
+    ])
+    existsMock.mockImplementation(async (path: string) => path === '/templates/Creating Template')
+    deleteFileMock.mockRejectedValue(new Error('trash unavailable'))
+
+    await expect(templateManager.validateAllTemplates()).resolves.toEqual({
+      failed: 1,
+      failures: [
+        { error: 'Error: trash unavailable', path: '/templates/Creating Template' },
+      ],
+      total: 1,
+    })
+
+    expect(dbTemplatesDeleteMock).toHaveBeenCalledWith('template-creating')
+  })
+
   it('validateAllTemplates 会把结构无效的已创建模板标记为 broken', async () => {
     dbTemplatesToArrayMock.mockResolvedValue([
       {
@@ -368,6 +398,104 @@ describe('templateManager', () => {
     expect(dbTemplatesUpdateMock).toHaveBeenCalledWith('template-created', { availability: 'broken' })
     expect(dbTemplatesDeleteMock).not.toHaveBeenCalled()
     expect(deleteFileMock).not.toHaveBeenCalled()
+  })
+
+  it('validateAllTemplates 遇到多个元数据读取失败时会返回失败摘要', async () => {
+    dbTemplatesToArrayMock.mockResolvedValue([
+      {
+        id: 'template-first',
+        path: '/templates/first',
+        pathLookupKey: '/templates/first',
+        createdAt: 0,
+        status: 'created',
+        availability: 'available',
+        metadata: {
+          name: 'First',
+        },
+      },
+      {
+        id: 'template-second',
+        path: '/templates/second',
+        pathLookupKey: '/templates/second',
+        createdAt: 0,
+        status: 'created',
+        availability: 'available',
+        metadata: {
+          name: 'Second',
+        },
+      },
+    ])
+    existsMock.mockResolvedValue(true)
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    readTextFileMock.mockImplementation(async (path: string | URL) => {
+      if (String(path).includes('/templates/first')) {
+        throw new Error('invalid template.json')
+      }
+      throw new Error('permission denied')
+    })
+
+    await expect(templateManager.validateAllTemplates()).resolves.toEqual({
+      failed: 2,
+      failures: [
+        { error: 'Error: invalid template.json', path: '/templates/first' },
+        { error: 'Error: permission denied', path: '/templates/second' },
+      ],
+      total: 2,
+    })
+
+    expect(dbTemplatesUpdateMock).toHaveBeenCalledWith('template-first', { availability: 'broken' })
+    expect(dbTemplatesUpdateMock).toHaveBeenCalledWith('template-second', { availability: 'broken' })
+  })
+
+  it('validateAllTemplates 遇到多个校验异常时会返回失败摘要', async () => {
+    dbTemplatesToArrayMock.mockResolvedValue([
+      {
+        id: 'template-first',
+        path: '/templates/first',
+        pathLookupKey: '/templates/first',
+        createdAt: 0,
+        status: 'created',
+        availability: 'available',
+        metadata: {
+          name: 'First',
+        },
+      },
+      {
+        id: 'template-second',
+        path: '/templates/second',
+        pathLookupKey: '/templates/second',
+        createdAt: 0,
+        status: 'created',
+        availability: 'available',
+        metadata: {
+          name: 'Second',
+        },
+      },
+    ])
+    existsMock.mockImplementation(async (path: string) => {
+      if (path === '/templates/first' || path === '/templates/second') {
+        return true
+      }
+      return false
+    })
+    validateDirectoryStructureMock.mockImplementation(async (path: string) => {
+      if (path === '/templates/first') {
+        throw new Error('disk unavailable')
+      }
+      throw new Error('permission denied')
+    })
+
+    await expect(templateManager.validateAllTemplates()).resolves.toEqual({
+      failed: 2,
+      failures: [
+        { error: 'Error: disk unavailable', path: '/templates/first' },
+        { error: 'Error: permission denied', path: '/templates/second' },
+      ],
+      total: 2,
+    })
+
+    expect(dbTemplatesUpdateMock).toHaveBeenCalledWith('template-first', { availability: 'broken' })
+    expect(dbTemplatesUpdateMock).toHaveBeenCalledWith('template-second', { availability: 'broken' })
   })
 
   it('deleteTemplate 会递归删除模板目录并清理数据库记录', async () => {

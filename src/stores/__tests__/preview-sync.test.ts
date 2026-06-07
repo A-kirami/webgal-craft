@@ -17,6 +17,7 @@ vi.mock('~/commands/server', () => ({
 }))
 
 vi.mock('@tauri-apps/plugin-log', () => ({
+  debug: vi.fn(),
   warn: vi.fn(),
 }))
 

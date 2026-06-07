@@ -750,6 +750,11 @@ async function createGame(gameName: string, gamePath: AbsPath, engineId: string,
   const { templateBinding } = options
 
   const targetExisted = await exists(gamePath)
+  const templateLabel = templateBinding ? formatTemplateBindingName(templateBinding) : '无'
+  logger.info(
+    `[游戏创建] 开始: 名称=${gameName}, 路径=${gamePath}, 引擎ID=${engineId}, `
+    + `模板=${templateLabel}, 目标已存在=${targetExisted ? '是' : '否'}`,
+  )
   let gameId: string | undefined
   const finishUpdateBlocker = useRuntimeTaskStore()
     .beginBlockingTask(`create-game:${crypto.randomUUID()}`)
@@ -820,19 +825,32 @@ async function createGame(gameName: string, gamePath: AbsPath, engineId: string,
       ...snapshot,
     })
     resourceStore.finishProgress(gameId)
+    logger.info(
+      `[游戏创建] 完成: ID=${gameId}, 名称=${gameName}, 路径=${gamePath}, `
+      + `引擎ID=${engineId}, 模板=${templateLabel}`,
+    )
 
     return gameId
   } catch (error) {
-    logger.error(`创建游戏失败: ${error}`)
+    logger.error(
+      `[游戏创建] 失败: 记录ID=${gameId ?? '无'}, 名称=${gameName}, 路径=${gamePath}, `
+      + `引擎ID=${engineId}, 模板=${templateLabel} - ${error}`,
+    )
     if (gameId) {
       resourceStore.finishProgress(gameId)
       await db.games.delete(gameId).catch((error_) => {
-        logger.warn(`[游戏创建] 清理异常 - 删除记录失败: ${error_}`)
+        logger.warn(
+          `[游戏创建] 清理异常 - 删除记录失败: ID=${gameId}, 名称=${gameName}, 路径=${gamePath}, `
+          + `引擎ID=${engineId}, 模板=${templateLabel} - ${error_}`,
+        )
       })
     }
     if (!targetExisted && await exists(gamePath)) {
       await fsCmds.deleteFile(gamePath, true).catch((error_) => {
-        logger.warn(`[游戏创建] 清理异常 - 删除目录失败: ${error_}`)
+        logger.warn(
+          `[游戏创建] 清理异常 - 删除目录失败: 记录ID=${gameId ?? '无'}, 名称=${gameName}, 路径=${gamePath}, `
+          + `引擎ID=${engineId}, 模板=${templateLabel} - ${error_}`,
+        )
       })
     }
     throw error
@@ -1065,7 +1083,7 @@ async function importGame(gamePath: AbsPath, options: ImportGameOptions = {}): P
   const inspection = await inspectGame(normalizedPath)
   if (inspection.availability !== 'available') {
     const { code, message, details } = inspection.blockingIssue!
-    logger.error(`[游戏导入] ${message}: ${normalizedPath}`)
+    logger.warn(`[游戏导入] ${message}: ${normalizedPath}`)
     throw new AppError(code, message, { details })
   }
 
