@@ -21,6 +21,7 @@ import {
   findMissingAssetReferences,
   getReferencesFromSource,
   getReferencesToAsset,
+  logReferenceSourceFailures,
   rebuildReferenceSource,
   removeReferenceSource,
   renameReferenceSource,
@@ -28,7 +29,7 @@ import {
 
 import type { AssetCatalogSnapshot } from './catalog'
 import type { AssetKey } from './keys'
-import type { AssetReferenceIndexSnapshot, AssetReferenceRecord } from './references'
+import type { AssetReferenceIndexSnapshot, AssetReferenceRecord, AssetReferenceSourceFailure } from './references'
 
 type ResourceIndexStatus = 'idle' | 'building' | 'ready' | 'degraded'
 
@@ -216,8 +217,8 @@ async function rebuildReferenceForPath(gamePath: AbsPath, path: AbsPath): Promis
   }
 
   const updateVersion = beginReferenceSourceUpdate([path])
-  const references = await rebuildReferenceSource(currentState.references, gamePath, path)
-  applyReferenceSourceUpdate(gamePath, [path], path, getReferencesFromSource(references, path), updateVersion)
+  const { failures, snapshot } = await rebuildReferenceSource(currentState.references, gamePath, path)
+  applyReferenceSourceUpdate(gamePath, [path], path, getReferencesFromSource(snapshot, path), failures, updateVersion)
 }
 
 function beginReferenceSourceUpdate(sourcePaths: AbsPath[]): number {
@@ -268,6 +269,7 @@ function applyReferenceSourceUpdate(
   removedSourcePaths: AbsPath[],
   sourcePath: AbsPath,
   records: AssetReferenceRecord[],
+  failures: AssetReferenceSourceFailure[],
   updateVersion: number,
 ): void {
   const currentState = resourceIndexState.value
@@ -287,6 +289,7 @@ function applyReferenceSourceUpdate(
       records,
     ),
   })
+  logReferenceSourceFailures(failures)
   clearReferenceSourceUpdate(removedSourcePaths, updateVersion)
 }
 
@@ -298,12 +301,13 @@ async function renameReferenceForPath(gamePath: AbsPath, oldPath: AbsPath, newPa
 
   const affectedSourcePaths = [oldPath, newPath]
   const updateVersion = beginReferenceSourceUpdate(affectedSourcePaths)
-  const references = await renameReferenceSource(currentState.references, gamePath, oldPath, newPath)
+  const { failures, snapshot } = await renameReferenceSource(currentState.references, gamePath, oldPath, newPath)
   applyReferenceSourceUpdate(
     gamePath,
     affectedSourcePaths,
     newPath,
-    getReferencesFromSource(references, newPath),
+    getReferencesFromSource(snapshot, newPath),
+    failures,
     updateVersion,
   )
 }

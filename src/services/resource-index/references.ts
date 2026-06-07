@@ -45,12 +45,17 @@ export interface AssetReferenceIndexSnapshot {
   records: AssetReferenceRecord[]
 }
 
-interface AssetReferenceSourceFailure {
+export interface AssetReferenceSourceFailure {
   sourcePath: AbsPath
   error: unknown
 }
 
 interface AssetReferenceSlice extends AssetReferenceIndexSnapshot {
+  failures: AssetReferenceSourceFailure[]
+}
+
+export interface AssetReferenceSourceUpdate {
+  snapshot: AssetReferenceIndexSnapshot
   failures: AssetReferenceSourceFailure[]
 }
 
@@ -92,20 +97,27 @@ export async function rebuildReferenceSource(
   snapshot: AssetReferenceIndexSnapshot,
   gamePath: AbsPath,
   sourcePath: AbsPath,
-): Promise<AssetReferenceIndexSnapshot> {
+): Promise<AssetReferenceSourceUpdate> {
   if (isGameConfigPath(gamePath, sourcePath)) {
     const slice = await buildGameConfigReferenceSlice(gamePath)
-    logReferenceSourceFailures(slice.failures)
-    return replaceReferenceSource(snapshot, sourcePath, slice)
+    return {
+      snapshot: replaceReferenceSource(snapshot, sourcePath, slice),
+      failures: slice.failures,
+    }
   }
 
   if (isScenePath(gamePath, sourcePath)) {
     const slice = await buildSceneReferenceSlice(sourcePath)
-    logReferenceSourceFailures(slice.failures)
-    return replaceReferenceSource(snapshot, sourcePath, slice)
+    return {
+      snapshot: replaceReferenceSource(snapshot, sourcePath, slice),
+      failures: slice.failures,
+    }
   }
 
-  return snapshot
+  return {
+    snapshot,
+    failures: [],
+  }
 }
 
 export function removeReferenceSource(
@@ -123,9 +135,12 @@ export async function renameReferenceSource(
   gamePath: AbsPath,
   oldPath: AbsPath,
   newPath: AbsPath,
-): Promise<AssetReferenceIndexSnapshot> {
+): Promise<AssetReferenceSourceUpdate> {
   if (!isGameConfigPath(gamePath, newPath) && !isScenePath(gamePath, newPath)) {
-    return removeReferenceSource(snapshot, oldPath)
+    return {
+      snapshot: removeReferenceSource(snapshot, oldPath),
+      failures: [],
+    }
   }
 
   return rebuildReferenceSource(removeReferenceSource(snapshot, oldPath), gamePath, newPath)
@@ -194,7 +209,7 @@ function clearReferenceSourceFailure(sourcePath: AbsPath): void {
   loggedReferenceSourceFailures.delete(sourcePath)
 }
 
-function logReferenceSourceFailures(failures: AssetReferenceSourceFailure[]): void {
+export function logReferenceSourceFailures(failures: AssetReferenceSourceFailure[]): void {
   const now = Date.now()
   const nextFailures = failures.filter(({ error, sourcePath }) => {
     const signature = String(error)

@@ -809,7 +809,7 @@ describe('useResourceIndex', () => {
     }
   })
 
-  it('同一 scene 连续修改时会忽略较早完成的旧切片', async () => {
+  it('同一 scene 连续修改时会忽略较早完成的旧切片及其解析失败日志', async () => {
     readDirMock.mockImplementation(async (path: string | URL) => {
       switch (String(path)) {
         case '/project/game': {
@@ -858,10 +858,10 @@ describe('useResourceIndex', () => {
       await waitFor(() => resourceIndex.status.value === 'ready')
 
       const oldKey = createAssetKey('asset', 'background', RelPath.from('old.jpg'))
-      const staleKey = createAssetKey('asset', 'background', RelPath.from('stale.jpg'))
       const freshKey = createAssetKey('asset', 'background', RelPath.from('fresh.jpg'))
 
       expect(resourceIndex.getReferencesTo(oldKey)).toHaveLength(1)
+      loggerWarnMock.mockClear()
 
       const staleRead = createDeferred<string>()
       const freshRead = createDeferred<string>()
@@ -880,12 +880,12 @@ describe('useResourceIndex', () => {
       freshRead.resolve('changeBg:fresh.jpg;')
       await waitFor(() => resourceIndex.getReferencesTo(freshKey).length === 1)
 
-      staleRead.resolve('changeBg:stale.jpg;')
+      staleRead.reject(new Error('stale read failed'))
       await flushMicrotasks()
 
       expect(resourceIndex.getReferencesTo(oldKey)).toHaveLength(0)
-      expect(resourceIndex.getReferencesTo(staleKey)).toHaveLength(0)
       expect(resourceIndex.getReferencesTo(freshKey)).toHaveLength(1)
+      expect(loggerWarnMock).not.toHaveBeenCalled()
     } finally {
       scope.stop()
     }
