@@ -78,5 +78,7 @@ describe('resourceReconcile', () => {
       ],
       total: 2,
     })
+    expect(dbGamesUpdateMock).toHaveBeenCalledWith('game-1', { availability: 'broken' })
+    expect(dbGamesUpdateMock).toHaveBeenCalledWith('game-2', { availability: 'broken' })
   })
 })

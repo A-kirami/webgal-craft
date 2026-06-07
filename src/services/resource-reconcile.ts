@@ -76,6 +76,9 @@ async function reconcileGameRecordForBatch(
     await inspectAndPatchGameAvailability(game)
     return
   } catch (error) {
+    if (game.availability !== 'broken') {
+      await db.games.update(game.id, { availability: 'broken' })
+    }
     return createResourceValidationFailure(game.path, error)
   }
 }
