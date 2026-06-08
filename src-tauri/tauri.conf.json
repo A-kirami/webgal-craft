@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "webgal-craft",
+  "productName": "WebGAL Craft",
   "version": "../package.json",
-  "identifier": "com.akirami.webgal-craft",
+  "identifier": "com.akirami.webgalcraft",
   "build": {
     "beforeDevCommand": "bun dev:web",
     "devUrl": "http://localhost:1420",
@@ -19,6 +19,14 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "Akirami",
+    "category": "DeveloperTool",
+    "shortDescription": "WebGAL visual novel studio.",
+    "longDescription": "WebGAL Craft is a desktop visual novel creation tool for WebGAL, with visual editing, script editing, and real-time preview workflows.",
+    "homepage": "https://webgalcraft.com",
+    "license": "MPL-2.0",
+    "licenseFile": "../LICENSE",
+    "copyright": "Copyright (c) 2025 Akirami",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -26,6 +34,18 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "windows": {
+      "allowDowngrades": false,
+      "wix": {
+        "language": ["en-US", "ja-JP", "zh-CN", "zh-TW"],
+        "upgradeCode": "bdba7c85-7131-5208-9076-cf4b42f755f3"
+      },
+      "nsis": {
+        "languages": ["English", "Japanese", "SimpChinese", "TradChinese"],
+        "displayLanguageSelector": true,
+        "installerIcon": "icons/icon.ico"
+      }
+    },
     "createUpdaterArtifacts": true
   },
   "plugins": {
