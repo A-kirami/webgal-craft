@@ -1,4 +1,3 @@
-import { autoAnimatePlugin } from '@formkit/auto-animate/vue'
 import { createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 
@@ -21,7 +20,6 @@ app.use(router)
   .use(pinia)
   .use(i18n)
   .use(notivue)
-  .use(autoAnimatePlugin)
 
 // 全局错误兜底
 app.config.errorHandler = (err) => {

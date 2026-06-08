@@ -11,7 +11,6 @@ import AutoImport from 'unplugin-auto-import/vite'
 import Info from 'unplugin-info/vite'
 import TurboConsole from 'unplugin-turbo-console/vite'
 import Components from 'unplugin-vue-components/vite'
-import VueReactivityFunction from 'unplugin-vue-reactivity-function/vite'
 import { defineConfig } from 'vite'
 import VueDevTools from 'vite-plugin-vue-devtools'
 import MetaLayouts from 'vite-plugin-vue-meta-layouts'
@@ -39,9 +38,6 @@ export default defineConfig({
         prefix: '::',
       },
       betterDefine: false,
-    }),
-    VueReactivityFunction({
-      ignore: ['$fetch'],
     }),
     MetaLayouts(),
     AutoImport({
@@ -172,7 +168,6 @@ export default defineConfig({
         optimizeDeps: {
           noDiscovery: true,
           include: [
-            'alfaaz',
             'dayjs',
             'dayjs/locale/en',
             'dayjs/locale/ja',

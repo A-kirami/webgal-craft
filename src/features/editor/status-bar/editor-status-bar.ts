@@ -1,5 +1,3 @@
-import { countLines, countWords } from 'alfaaz'
-
 import type { AssetPreviewState, EditableEditorState } from '~/stores/editor'
 
 export interface EditorStatusBarTextStats {
@@ -17,6 +15,24 @@ export interface ResolveEditorStatusBarFileLanguageOptions {
   t: (key: string) => string
 }
 
+const textUnitPattern = /[A-Za-z0-9_]+|[^\sA-Za-z0-9_]/gu
+
+function countTextUnits(text: string): number {
+  return text.match(textUnitPattern)?.length ?? 0
+}
+
+function countTextLines(text: string): number {
+  let lineCount = 1
+
+  for (const character of text) {
+    if (character === '\n') {
+      lineCount++
+    }
+  }
+
+  return lineCount
+}
+
 export function isEditorStatusBarSaved(editableState: Pick<EditableEditorState, 'isDirty'> | undefined): boolean {
   return !(editableState?.isDirty ?? false)
 }
@@ -30,8 +46,8 @@ export function shouldShowEditorStatusBarRelativeTime(
 
 export function calculateEditorStatusBarTextStats(textContent: string): EditorStatusBarTextStats {
   return {
-    wordCount: countWords(textContent),
-    lineCount: countLines(textContent),
+    wordCount: countTextUnits(textContent),
+    lineCount: countTextLines(textContent),
   }
 }
 
