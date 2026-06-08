@@ -17,6 +17,6 @@ WebGAL Craft 是一个社区驱动的开源项目，我们欢迎任何形式的�
 
 ## 📄 许可证
 
-Code: MPL-2.0, 2025, Akirami
+Code: MPL-2.0, 2026, Akirami
 
 Logo: CC-BY-NC-ND, Designs by Akirami
