@@ -81,7 +81,7 @@ function handleResetToFactory(): void {
     return
   }
 
-  const rawText = factoryRawText
+  const rawText: string = factoryRawText
   commandPanelStore.resetDefault(type)
   draftEntry = buildSingleStatement(rawText)
   initialRawText = rawText
