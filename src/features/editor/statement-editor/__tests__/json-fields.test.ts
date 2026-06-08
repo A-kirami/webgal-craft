@@ -20,7 +20,11 @@ describe('jsonFields', () => {
   })
 
   it('writeJsonFieldValue 在值为空或 UNSPECIFIED 时移除字段', () => {
+    const nullValue: null = JSON.parse('null') as null
+
     expect(writeJsonFieldValue('{"ratio":0.5}', 'ratio', '')).toBe('')
     expect(writeJsonFieldValue('{"ratio":0.5,"keep":"x"}', 'ratio', UNSPECIFIED)).toBe('{"keep":"x"}')
+    expect(writeJsonFieldValue('{"ratio":0.5,"keep":"x"}', 'ratio', nullValue)).toBe('{"keep":"x"}')
+    expect(writeJsonFieldValue('{"ratio":0.5,"keep":"x"}', 'ratio', undefined)).toBe('{"keep":"x"}')
   })
 })

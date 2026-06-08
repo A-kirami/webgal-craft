@@ -37,7 +37,7 @@ export function readJsonFieldValue(
 export function writeJsonFieldValue(
   rawValue: string,
   fieldKey: string,
-  value: string | number | boolean,
+  value: string | number | boolean | null | undefined,
   fieldType?: FieldDef['type'],
 ): string {
   let objectValue: Record<string, unknown> = {}
