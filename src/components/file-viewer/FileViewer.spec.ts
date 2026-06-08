@@ -473,7 +473,7 @@ function dispatchPointerEvent(
 }
 
 function getFileViewerItemElement(item: FileViewerItem): HTMLElement {
-  const element = document.querySelector<HTMLElement>(`[data-file-viewer-path="${item.path}"]`)
+  const element = document.querySelector<HTMLElement>(`[data-file-viewer-path="${CSS.escape(item.path)}"]`)
   expect(element).not.toBeNull()
   return element!
 }
@@ -816,7 +816,7 @@ describe('FileViewer', () => {
 
   it('图片预览失败一段时间后会自动再次尝试同一个 URL', async () => {
     const item = createImageItem(18)
-    const queryImage = () => document.querySelector<HTMLImageElement>(`img[alt="${item.name}"]`)
+    const queryImage = () => document.querySelector<HTMLImageElement>(`img[alt="${CSS.escape(item.name)}"]`)
 
     vi.useFakeTimers()
     viewportWidthMock.value = 780
@@ -976,8 +976,8 @@ describe('FileViewer', () => {
   it('hover 图片加载完成前不会提前显示棋盘格背景', async () => {
     const item = createImageItem(20)
     const srcSetterSpy = vi.spyOn(HTMLImageElement.prototype, 'src', 'set')
-      .mockImplementation(function mockSrcSetter(this: HTMLImageElement, value: string) {
-        this.dataset.mockSrc = value
+      .mockImplementation((value: string) => {
+        void value
       })
 
     try {
@@ -1823,7 +1823,7 @@ describe('FileViewer', () => {
     })
     await nextTick()
 
-    const thumbnail = document.querySelector<HTMLImageElement>(`img[alt="${sourceItem.name}"]`)
+    const thumbnail = document.querySelector<HTMLImageElement>(`img[alt="${CSS.escape(sourceItem.name)}"]`)
     expect(thumbnail).not.toBeNull()
     expect(thumbnail?.draggable).toBe(false)
   }

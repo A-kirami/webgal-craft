@@ -64,7 +64,7 @@ export const useCommandPanelStore = defineStore(
       }
 
       const nextGroups = [...groups]
-      nextGroups.splice(existingIndex, 1, normalizedGroup)
+      nextGroups[existingIndex] = normalizedGroup
       groups = nextGroups
       return normalizedGroup
     }

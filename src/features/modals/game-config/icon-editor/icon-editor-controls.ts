@@ -6,6 +6,9 @@ import type {
   IconEditorShape,
 } from './icon-editor-state'
 
+const iconEditorBackgroundTypes = new Set<unknown>(['color', 'image'])
+const iconEditorShapes = new Set<unknown>(['square', 'rounded', 'circle'])
+
 export interface IconEditorTransformControl {
   id: string
   label: string
@@ -153,9 +156,9 @@ export function resolveBackgroundColor(value: unknown): string | undefined {
 }
 
 export function isIconEditorBackgroundType(value: unknown): value is IconEditorBackgroundType {
-  return value === 'color' || value === 'image'
+  return iconEditorBackgroundTypes.has(value)
 }
 
 export function isIconEditorShape(value: unknown): value is IconEditorShape {
-  return value === 'square' || value === 'rounded' || value === 'circle'
+  return iconEditorShapes.has(value)
 }

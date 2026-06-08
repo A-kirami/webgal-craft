@@ -46,8 +46,8 @@ function resolveDefaultTarget(instance: ReturnType<typeof getCurrentInstance>): 
     return proxyElement
   }
 
-  const subTreeElement = instance?.subTree?.el
-  return subTreeElement instanceof HTMLElement ? subTreeElement : undefined
+  const subtreeElement = instance?.subTree?.el
+  return subtreeElement instanceof HTMLElement ? subtreeElement : undefined
 }
 
 export function useShortcutContext(

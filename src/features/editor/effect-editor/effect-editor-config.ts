@@ -108,6 +108,7 @@ const FILTER_SEGMENT_OPTIONS: { label: I18nLike, value: string }[] = [
   { label: t => t('modals.effectEditor.filterOptions.on'), value: '1' },
   { label: t => t('modals.effectEditor.filterOptions.off'), value: '0' },
 ]
+const EMPTY_EFFECT_FIELD_VALUES = new Set<unknown>([undefined, '', UNSPECIFIED])
 
 // ─── 效果编辑器 ease 选项（在注册表 EASE.options 基础上增加"默认"占位） ───
 
@@ -345,7 +346,7 @@ function fieldsToObject(fields: Record<string, string>, obj: Record<string, unkn
   let hasValue = false
   for (const rule of EFFECT_PATH_RULES) {
     const raw = fields[rule.path]
-    if (raw === undefined || raw === '' || raw === UNSPECIFIED) {
+    if (EMPTY_EFFECT_FIELD_VALUES.has(raw)) {
       continue
     }
     const num = coerceRuleValue(rule, raw)

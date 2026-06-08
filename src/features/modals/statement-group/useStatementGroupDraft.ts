@@ -71,7 +71,7 @@ export function useStatementGroupDraft(options: UseStatementGroupDraftOptions) {
 
   function replaceDraftEntry(index: number, entry: StatementEntry): void {
     const nextEntries = [...draftEntries.value]
-    nextEntries.splice(index, 1, markRaw(entry))
+    nextEntries[index] = markRaw(entry)
     draftEntries.value = nextEntries
   }
 

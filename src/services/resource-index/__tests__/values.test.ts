@@ -7,7 +7,7 @@ import { createReferencedAssetKey, shouldIndexAssetReferenceValue } from '../val
 
 describe('resource-index values', () => {
   it('会先去除空白再判断是否索引资源引用值', () => {
-    expect(shouldIndexAssetReferenceValue('background', '   ')).toBe(false)
+    expect(shouldIndexAssetReferenceValue('background', ' '.repeat(3))).toBe(false)
     expect(shouldIndexAssetReferenceValue('scene', '  intro.txt  ')).toBe(true)
     expect(shouldIndexAssetReferenceValue('scene', '  intro  ')).toBe(false)
   })

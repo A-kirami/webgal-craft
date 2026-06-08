@@ -76,8 +76,8 @@ describe('角度与弧度转换', () => {
 
 describe('roundToPrecision', () => {
   it('按指定位数舍入', () => {
-    expect(roundToPrecision(3.1415_9, 2)).toBe(3.14)
-    expect(roundToPrecision(3.1415_9, 0)).toBe(3)
+    expect(roundToPrecision(3.14159, 2)).toBe(3.14)
+    expect(roundToPrecision(3.14159, 0)).toBe(3)
   })
 })
 

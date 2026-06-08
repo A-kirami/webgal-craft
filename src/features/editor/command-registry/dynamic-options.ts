@@ -52,7 +52,7 @@ function toOptionItems(items: string[]): { label: string, value: string }[] {
 // 对应的 motion/expression 字段仍会显示（由 media.ts 的 isAnimatedContent 控制），
 // 用于展示文本模式下已写入的参数值，但不提供动态选项的自动补全。
 function sanitizeModelPath(content: string): string | undefined {
-  const normalized = normalizePath(content.split('?')[0]?.trim() ?? '')
+  const normalized = normalizePath(content.split('?', 1)[0]?.trim() ?? '')
   if (!normalized) {
     return
   }

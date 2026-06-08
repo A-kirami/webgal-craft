@@ -180,7 +180,7 @@ describe('fileTree', () => {
   it('重命名 blur 时空值会取消重命名', () => {
     expect(resolveFileTreeRenameBlurAction({
       currentItemKey: '/project/scene.txt',
-      currentValue: '   ',
+      currentValue: ' '.repeat(3),
       isStarting: false,
       originalName: 'scene.txt',
       renamingItemKey: '/project/scene.txt',
@@ -308,7 +308,7 @@ describe('fileTree', () => {
       isStarting: false,
       parentPath: '/project',
       type: 'folder',
-      value: '   ',
+      value: ' '.repeat(3),
     })).toBe('cancel')
   })
 

@@ -7,7 +7,8 @@ export class PathError extends Error {
 }
 
 export function normalizePosix(raw: string): string {
-  const source = raw.split('\\').join('/')
+  // eslint-disable-next-line no-restricted-syntax -- normalizePosix 是路径规范化入口，需要在此统一转换分隔符。
+  const source = raw.replaceAll('\\', '/')
   const uncPrefix = source.startsWith('//') && !source.startsWith('///')
   const absolutePrefix = source.startsWith('/') && !uncPrefix
   const drivePrefixMatch = source.match(/^([a-zA-Z]:)\//)

@@ -30,6 +30,13 @@ const textEditorHistoryKeyMod = {
   ctrlCmd: 2048,
 } as const
 
+const textEditorHistoryContentChangeKeyCodes = new Set<number>([
+  textEditorHistoryKeyCode.backspace,
+  textEditorHistoryKeyCode.delete,
+  textEditorHistoryKeyCode.enter,
+  textEditorHistoryKeyCode.tab,
+])
+
 export function shouldCaptureBeforeContentChangeKeydown(event: monaco.IKeyboardEvent): boolean {
   if (event.ctrlKey || event.metaKey || event.altKey) {
     return false
@@ -40,10 +47,7 @@ export function shouldCaptureBeforeContentChangeKeydown(event: monaco.IKeyboardE
     return true
   }
 
-  return event.keyCode === textEditorHistoryKeyCode.backspace
-    || event.keyCode === textEditorHistoryKeyCode.delete
-    || event.keyCode === textEditorHistoryKeyCode.enter
-    || event.keyCode === textEditorHistoryKeyCode.tab
+  return textEditorHistoryContentChangeKeyCodes.has(event.keyCode)
 }
 
 export function installTextEditorHistoryAdapter(

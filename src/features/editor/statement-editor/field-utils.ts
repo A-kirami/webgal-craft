@@ -1,7 +1,11 @@
 // ─── 事件工具 ────────────────────────────────────
 
+function isNullish(value: unknown): value is null | undefined {
+  return value === null || value === undefined
+}
+
 export function normalizeFieldStringValue(value: unknown): string {
-  if (value === null || value === undefined) {
+  if (isNullish(value)) {
     return ''
   }
   return String(value)
@@ -12,7 +16,7 @@ export function normalizeFieldStringValue(value: unknown): string {
  * 与 normalizeFieldStringValue 不同，这里将 false 视为“未设置”，用于避免输入框显示 "false"。
  */
 export function resolveFieldModelStringValue(value?: unknown): string {
-  if (value === null || value === undefined || value === false) {
+  if (isNullish(value) || value === false) {
     return ''
   }
   return String(value)

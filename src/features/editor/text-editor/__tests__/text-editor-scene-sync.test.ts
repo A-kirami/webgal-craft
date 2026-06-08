@@ -30,7 +30,7 @@ describe('textEditorSceneSync', () => {
   it('仅在非空且非注释行时返回可播放场景预览行', () => {
     const reader = {
       getLineContent(lineNumber: number) {
-        return ['say:hello', '   ', '  ; comment'][lineNumber - 1] ?? ''
+        return ['say:hello', ' '.repeat(3), '  ; comment'][lineNumber - 1] ?? ''
       },
       getLineCount() {
         return 3
@@ -52,7 +52,7 @@ describe('textEditorSceneSync', () => {
   it('为命令重放选择最近的可执行前文行，并跳过空白和注释', () => {
     const reader = {
       getLineContent(lineNumber: number) {
-        return ['say:intro', '   ', ' ; comment', 'changeFigure: hero.png;'][lineNumber - 1] ?? ''
+        return ['say:intro', ' '.repeat(3), ' ; comment', 'changeFigure: hero.png;'][lineNumber - 1] ?? ''
       },
       getLineCount() {
         return 4

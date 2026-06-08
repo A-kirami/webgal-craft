@@ -140,6 +140,7 @@ export default defineConfig(
       ],
       'unicorn/no-useless-undefined': ['warn', { checkArguments: false, checkArrowFunctionBody: false }],
       'no-useless-assignment': 'off',
+      'unicorn/prefer-https': 'off', // SVG data URI 中的链接不受控制，禁止启用该规则
     },
   },
   {

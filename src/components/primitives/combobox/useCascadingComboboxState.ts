@@ -243,6 +243,7 @@ export function useCascadingComboboxState(
       return
     }
 
+    // eslint-disable-next-line unicorn/better-dom-traversing -- 这里的 children 是数据树节点数组，不是 DOM 子元素。
     const firstChild = record.node.children[0]
     if (!firstChild) {
       return

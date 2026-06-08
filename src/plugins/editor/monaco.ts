@@ -6,19 +6,23 @@ import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 
+const cssWorkerLabels = new Set(['css', 'scss', 'less'])
+const htmlWorkerLabels = new Set(['html', 'handlebars', 'razor'])
+const tsWorkerLabels = new Set(['typescript', 'javascript'])
+
 // eslint-disable-next-line unicorn/prefer-global-this
 self.MonacoEnvironment = {
   getWorker(_, label) {
     if (label === 'json') {
       return new jsonWorker()
     }
-    if (label === 'css' || label === 'scss' || label === 'less') {
+    if (cssWorkerLabels.has(label)) {
       return new cssWorker()
     }
-    if (label === 'html' || label === 'handlebars' || label === 'razor') {
+    if (htmlWorkerLabels.has(label)) {
       return new htmlWorker()
     }
-    if (label === 'typescript' || label === 'javascript') {
+    if (tsWorkerLabels.has(label)) {
       return new tsWorker()
     }
     return new editorWorker()

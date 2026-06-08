@@ -44,7 +44,7 @@ function createRect(left: number, width: number): DOMRect {
 }
 
 function prepareTabRects(paths: readonly string[] = ['/project/a.txt', '/project/b.txt', '/project/c.txt']) {
-  const tabElements = paths.map(path => document.querySelector<HTMLElement>(`[data-testid="editor-tab-${path}"]`))
+  const tabElements = paths.map(path => document.querySelector<HTMLElement>(`[data-testid="editor-tab-${CSS.escape(path)}"]`))
 
   for (const [index, element] of tabElements.entries()) {
     expect(element).not.toBeNull()
@@ -92,7 +92,7 @@ function createTabsStore(tabs: Tab[], activeTabIndex: number = 0) {
     activeTabIndex,
     shouldFocusEditor: false,
     get activeTab() {
-      return this.activeTabIndex >= 0 ? this.tabs[this.activeTabIndex] : undefined
+      return store.activeTabIndex >= 0 ? store.tabs[store.activeTabIndex] : undefined
     },
     activateTab: vi.fn((index: number) => {
       store.activeTabIndex = index

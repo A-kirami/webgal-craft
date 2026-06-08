@@ -116,11 +116,10 @@ function buildFactorySentence(type: commandType): ISentence {
   // 有 commandRaw 字段但无 defaultValue 时，使用 SCRIPT_CONFIG 中的脚本字符串作为标准形式
   // （如 say 命令：空状态下使用 say:; 标准形式，用户设置说话人后由 serializeSayNode 切换为简写）；
   // 无 commandRaw 字段时从 SCRIPT_CONFIG 获取正确的脚本字符串（如 pixi → pixiPerform）
-  const commandRaw = commandRawField
-    ? ('defaultValue' in commandRawField && typeof commandRawField.defaultValue === 'string'
-        ? commandRawField.defaultValue
-        : (scriptStringMap.get(type) ?? commandType[type]))
-    : (scriptStringMap.get(type) ?? commandType[type])
+  const fallbackCommandRaw = scriptStringMap.get(type) ?? commandType[type]
+  const commandRaw = commandRawField && 'defaultValue' in commandRawField && typeof commandRawField.defaultValue === 'string'
+    ? commandRawField.defaultValue
+    : fallbackCommandRaw
 
   return {
     command: type,

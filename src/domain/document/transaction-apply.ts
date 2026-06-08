@@ -182,10 +182,10 @@ export function applyAnimationTransaction(
         return model
       }
 
-      nextFrames.splice(transaction.index, 1, markRaw({
+      nextFrames[transaction.index] = markRaw({
         ...currentFrame,
         ...transaction.frame,
-      }))
+      })
       return {
         ...model,
         frames: nextFrames,
