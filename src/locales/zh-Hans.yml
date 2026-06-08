@@ -206,7 +206,7 @@ modals:
     sourceCode: 源码仓库
     changelog: 更新日志
     issues: 问题反馈
-    copyright: "© 2025 Akirami"
+    copyright: "© 2026 Akirami"
     license: License MPL-2.0
   createGame:
     title: 创建新游戏
