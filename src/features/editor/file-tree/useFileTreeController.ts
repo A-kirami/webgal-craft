@@ -214,7 +214,7 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
           return
         }
 
-        const containerInput = containerElement.querySelector(`[${dataAttr}]`) as HTMLInputElement | null
+        const containerInput = containerElement.querySelector(`[${CSS.escape(dataAttr)}]`) as HTMLInputElement | null
         if (!containerInput) {
           return
         }

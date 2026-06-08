@@ -120,6 +120,6 @@ describe('animationFrameEditor', () => {
 
   it('规范化 ease 输入时会裁剪空白并把空字符串转成 undefined', () => {
     expect(normalizeAnimationFrameEaseInput(' easeOut ')).toBe('easeOut')
-    expect(normalizeAnimationFrameEaseInput('   ')).toBeUndefined()
+    expect(normalizeAnimationFrameEaseInput(' '.repeat(3))).toBeUndefined()
   })
 })

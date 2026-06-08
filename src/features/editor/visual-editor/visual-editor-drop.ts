@@ -8,10 +8,10 @@ export type VisualEditorDropAction =
 
 type VisualEditorInsertStatementsDropAction = Extract<VisualEditorDropAction, { kind: 'insert-statements' }>
 
+const visualEditorInsertDropPlacements = new Set<VisualEditorDropPlacement>(['head', 'gap', 'tail'])
+
 export function isVisualEditorInsertDropPlacement(placement: VisualEditorDropPlacement): boolean {
-  return placement === 'head'
-    || placement === 'gap'
-    || placement === 'tail'
+  return visualEditorInsertDropPlacements.has(placement)
 }
 
 export function createVisualEditorInsertStatementsDropAction(options: {

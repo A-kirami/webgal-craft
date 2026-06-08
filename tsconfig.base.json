@@ -17,7 +17,6 @@
   "vueCompilerOptions": {
     "plugins": [
       "vue-macros/volar",
-      "unplugin-vue-reactivity-function/volar",
       "vue-router/volar/sfc-typed-router",
       "vue-router/volar/sfc-route-blocks"
     ],

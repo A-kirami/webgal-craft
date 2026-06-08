@@ -13,7 +13,7 @@ export function clamp(value: number, min?: number, max?: number): number {
 export function normalizeStepPrecision(step: number): number {
   const stepText = String(step)
   if (stepText.includes('e-')) {
-    const exponent = Number(stepText.split('e-')[1])
+    const exponent = Number(stepText.split('e-', 2)[1])
     return Number.isFinite(exponent) ? exponent : 0
   }
   const dotIndex = stepText.indexOf('.')

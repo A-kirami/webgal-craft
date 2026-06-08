@@ -27,9 +27,9 @@ use axum::{
     routing::get,
     Router,
 };
-use futures::{SinkExt, StreamExt};
+use futures_util::{SinkExt, StreamExt};
 use image::{codecs::jpeg::JpegEncoder, imageops::FilterType, ImageFormat};
-use portpicker::pick_unused_port;
+use percent_encoding::percent_decode_str;
 use preview_sync::{
     build_empty_response, is_event_message, is_preview_command_request,
     parse_register_preview_request, requests_v1_subprotocol, PreviewSessionRegistry,
@@ -606,7 +606,7 @@ fn parse_static_asset_query(query: Option<&str>) -> StaticAssetQuery {
             continue;
         };
 
-        let decoded_value = urlencoding::decode(value).ok();
+        let decoded_value = percent_decode_str(value).decode_utf8().ok();
         let decoded_value = decoded_value.as_deref().unwrap_or(value);
 
         match key {
@@ -818,11 +818,9 @@ pub async fn start_server(
     let address = format!("{host}:{port}");
     let listener = match TcpListener::bind(&address).await {
         Ok(listener) => listener,
-        Err(_) => {
-            let new_port =
-                pick_unused_port().ok_or_else(|| AppError::Server("无法找到可用端口".into()))?;
-            log::warn!("HTTP 服务器端口不可用，回退端口: {address} -> {host}:{new_port}");
-            TcpListener::bind(format!("{host}:{new_port}")).await?
+        Err(error) => {
+            log::warn!("HTTP 服务器端口不可用，回退到系统分配端口: {address}, error: {error}");
+            TcpListener::bind(format!("{host}:0")).await?
         }
     };
 

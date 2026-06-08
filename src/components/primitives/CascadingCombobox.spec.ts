@@ -285,34 +285,42 @@ function findRootGroupRow(label: string): HTMLButtonElement | undefined {
     .find(element => element.textContent?.includes(label))
 }
 
+function getLayerSelector(layerDepth: number): string {
+  return `[data-layer-depth="${CSS.escape(String(layerDepth))}"]`
+}
+
+function getLayerElement(layerDepth: number): HTMLElement | null {
+  return document.querySelector<HTMLElement>(getLayerSelector(layerDepth))
+}
+
 function getLayerActiveBrowseText(layerDepth: number): string | undefined {
   return document
-    .querySelector<HTMLElement>(`[data-layer-depth="${layerDepth}"] [data-active-browse="true"]`)
+    .querySelector<HTMLElement>(`${getLayerSelector(layerDepth)} [data-active-browse="true"]`)
     ?.textContent
     ?.trim()
 }
 
 function getLayerSelectedBrowseText(layerDepth: number): string | undefined {
   return document
-    .querySelector<HTMLElement>(`[data-layer-depth="${layerDepth}"] [data-selected-browse-item="true"]`)
+    .querySelector<HTMLElement>(`${getLayerSelector(layerDepth)} [data-selected-browse-item="true"]`)
     ?.textContent
     ?.trim()
 }
 
 function findLayerGroupRow(layerDepth: number, label: string): HTMLButtonElement | undefined {
-  const layerElement = document.querySelector<HTMLElement>(`[data-layer-depth="${layerDepth}"]`)
+  const layerElement = getLayerElement(layerDepth)
   return [...(layerElement?.querySelectorAll<HTMLButtonElement>('[data-node-id]') ?? [])]
     .find(element => element.textContent?.includes(label))
 }
 
 function findLayerRow(layerDepth: number, label: string): HTMLButtonElement | undefined {
-  const layerElement = document.querySelector<HTMLElement>(`[data-layer-depth="${layerDepth}"]`)
+  const layerElement = getLayerElement(layerDepth)
   return [...(layerElement?.querySelectorAll<HTMLButtonElement>('[data-node-id]') ?? [])]
     .find(element => element.textContent?.includes(label))
 }
 
 function getLayerScrollViewport(layerDepth: number): HTMLElement | undefined {
-  const layerElement = document.querySelector<HTMLElement>(`[data-layer-depth="${layerDepth}"]`)
+  const layerElement = getLayerElement(layerDepth)
   if (!layerElement) {
     return
   }

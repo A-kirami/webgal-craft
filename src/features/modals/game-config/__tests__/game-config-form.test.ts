@@ -224,7 +224,7 @@ describe('gameConfigForm', () => {
     })).success).toBe(false)
 
     expect(schema.safeParse(createFormValues({
-      gameName: '   ',
+      gameName: ' '.repeat(3),
     })).success).toBe(false)
   })
 
@@ -400,7 +400,7 @@ describe('gameConfigForm', () => {
           value: '',
         },
         {
-          key: '   ',
+          key: ' '.repeat(3),
           value: '',
         },
         {
@@ -514,7 +514,7 @@ describe('gameConfigForm', () => {
           value: '',
         },
         {
-          key: '   ',
+          key: ' '.repeat(3),
           value: '',
         },
         {

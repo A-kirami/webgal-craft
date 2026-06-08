@@ -1,5 +1,9 @@
 import { FieldDef, UNSPECIFIED } from '~/features/editor/command-registry/schema'
 
+function isNullish(value: unknown): value is null | undefined {
+  return value === null || value === undefined
+}
+
 export function readJsonFieldValue(
   rawValue: string,
   fieldKey: string,
@@ -33,7 +37,7 @@ export function readJsonFieldValue(
 export function writeJsonFieldValue(
   rawValue: string,
   fieldKey: string,
-  value: string | number | boolean,
+  value: string | number | boolean | null | undefined,
   fieldType?: FieldDef['type'],
 ): string {
   let objectValue: Record<string, unknown> = {}
@@ -43,7 +47,7 @@ export function writeJsonFieldValue(
     // 忽略 JSON 解析错误，按空对象继续
   }
 
-  if (value === '' || value === null || value === undefined || value === UNSPECIFIED) {
+  if (isNullish(value) || value === '' || value === UNSPECIFIED) {
     delete objectValue[fieldKey]
   } else if (fieldType === 'switch') {
     objectValue[fieldKey] = value === true || value === 'true'

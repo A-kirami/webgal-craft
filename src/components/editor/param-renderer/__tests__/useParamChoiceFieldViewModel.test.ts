@@ -205,7 +205,7 @@ describe('useParamChoiceFieldViewModel', () => {
 
     const whitespaceOnlyViewModel = useParamChoiceFieldViewModel({
       getChoiceFieldMode: () => 'combobox',
-      getComboboxPathDelimiter: () => '   ',
+      getComboboxPathDelimiter: () => ' '.repeat(3),
       getCustomLabel: () => '',
       getDynamicOptions: () => [
         { label: 'charc/group01/item01', value: 'charc/group01/item01' },

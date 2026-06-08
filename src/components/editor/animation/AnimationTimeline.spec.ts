@@ -132,8 +132,9 @@ describe('AnimationTimeline', () => {
     })
 
     for (const time of [0, 200]) {
-      const rulerMark = document.querySelector<HTMLElement>(`[data-animation-ruler-mark="${time}"]`)
-      const endMarker = document.querySelector<HTMLElement>(`[data-animation-end-marker="${time}"]`)
+      const timeKey = String(time)
+      const rulerMark = document.querySelector<HTMLElement>(`[data-animation-ruler-mark="${CSS.escape(timeKey)}"]`)
+      const endMarker = document.querySelector<HTMLElement>(`[data-animation-end-marker="${CSS.escape(timeKey)}"]`)
 
       expect(rulerMark).not.toBeNull()
       expect(endMarker).not.toBeNull()

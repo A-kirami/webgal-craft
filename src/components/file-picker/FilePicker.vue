@@ -91,7 +91,7 @@ let showRecentHistory = $ref(preferenceStore.filePickerShowRecentHistory ?? defa
 
 const hasHeader = $computed(() => !!slots['popover-header'] || !!popoverTitle)
 const hasTriggerSlot = $computed(() => !!slots.trigger)
-const zoomPercent = $computed(() => ZOOM_MAP[zoomLevel])
+const zoomPercent = $computed(() => resolveZoomPercent(zoomLevel))
 const {
   clearRecentHistory,
   historyStorageKey,
@@ -196,6 +196,10 @@ function resolveZoomLevelFromAssetZoom(value: number | undefined): ZoomLevel | u
     return 'large'
   }
   return 'extraLarge'
+}
+
+function resolveZoomPercent(level: ZoomLevel): number {
+  return ZOOM_MAP[level]
 }
 
 function collectFileButtons(): HTMLButtonElement[] {

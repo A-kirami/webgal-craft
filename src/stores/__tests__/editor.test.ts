@@ -76,7 +76,7 @@ const workspaceStoreMock = reactive({
   currentGame: { id: 'game-1', path: '/game' } as { id: string, path: string } | undefined,
   cwd: '/game' as string | undefined,
   get CWD() {
-    return this.cwd
+    return workspaceStoreMock.cwd
   },
 })
 

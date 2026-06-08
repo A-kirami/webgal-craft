@@ -1,16 +1,14 @@
 import { fileURLToPath } from 'node:url'
 
-import { includeIgnoreFile } from '@eslint/compat'
 import eslint from '@eslint/js'
 import vueI18n from '@intlify/eslint-plugin-vue-i18n'
 import stylistic from '@stylistic/eslint-plugin'
 import unocss from '@unocss/eslint-config/flat'
 import vueMacros from '@vue-macros/eslint-config'
-import { defineConfig } from 'eslint/config'
+import { defineConfig, includeIgnoreFile } from 'eslint/config'
 import eslintPluginImportX from 'eslint-plugin-import-x'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import eslintPluginVue from 'eslint-plugin-vue'
-import eslintPluginYml from 'eslint-plugin-yml'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
@@ -26,7 +24,6 @@ export default defineConfig(
   stylistic.configs.recommended,
   ...eslintPluginVue.configs['flat/recommended'],
   ...vueI18n.configs.recommended,
-  ...eslintPluginYml.configs.recommended,
   unocss,
   vueMacros,
   includeIgnoreFile(gitignorePath),
@@ -143,6 +140,7 @@ export default defineConfig(
       ],
       'unicorn/no-useless-undefined': ['warn', { checkArguments: false, checkArrowFunctionBody: false }],
       'no-useless-assignment': 'off',
+      'unicorn/prefer-https': 'off', // SVG data URI 中的链接不受控制，禁止启用该规则
     },
   },
   {

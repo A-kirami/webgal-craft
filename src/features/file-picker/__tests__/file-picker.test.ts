@@ -109,7 +109,7 @@ describe('filePicker', () => {
   it('生成 recent history 存储 key 时会标准化根路径和 scope key', () => {
     expect(resolveFilePickerHistoryStorageKey('', 'shots')).toBe('')
     expect(resolveFilePickerHistoryStorageKey('/Assets/CG/', '  story  ')).toBe('/assets/cg::story')
-    expect(resolveFilePickerHistoryStorageKey('/Assets/CG/', '   ')).toBe('/assets/cg::default')
+    expect(resolveFilePickerHistoryStorageKey('/Assets/CG/', ' '.repeat(3))).toBe('/assets/cg::default')
   })
 
   it('插入 recent history 时会规范路径、去重并限制最大条数', () => {

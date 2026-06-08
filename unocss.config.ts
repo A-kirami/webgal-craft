@@ -1,4 +1,3 @@
-import { presetWind4 } from '@unocss/preset-wind4'
 import {
   defineConfig,
   presetAttributify,
@@ -7,6 +6,7 @@ import {
   transformerDirectives,
   transformerVariantGroup,
 } from 'unocss'
+import { presetWind4 } from 'unocss/preset-wind4'
 import { presetAnimations } from 'unocss-preset-animations'
 import { presetShadcn } from 'unocss-preset-shadcn'
 

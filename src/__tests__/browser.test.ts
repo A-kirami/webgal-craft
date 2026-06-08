@@ -80,7 +80,7 @@ describe('浏览器测试国际化', () => {
     }) as BrowserTestI18nHandle
 
     expect(i18n.global.t('common.confirm')).toBe('Confirm')
-    expect(() => i18n.global.t('common.saved')).toThrowError('[browser-test-i18n] Missing translation: en.common.saved')
+    expect(() => i18n.global.t('common.saved')).toThrow('[browser-test-i18n] Missing translation: en.common.saved')
   })
 
   it('plugins helper 会按显式 i18nMode 创建对应的 i18n 插件', () => {

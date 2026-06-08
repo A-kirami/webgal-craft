@@ -10,34 +10,31 @@ name = "webgal_craft_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.5", features = [] }
+tauri-build = { version = "2.6", features = [] }
 
 [dependencies]
-tauri = { version = "2.10", features = ["macos-private-api"] }
-tauri-plugin-dialog = "2.6"
+tauri = { version = "2.11", features = ["macos-private-api"] }
+tauri-plugin-dialog = "2.7"
 tauri-plugin-log = "2.8"
 tauri-plugin-os = "2.3"
 tauri-plugin-process = "2.3"
 tauri-plugin-opener = "2.5"
-tauri-plugin-fs = { version = "2.4", features = ["watch"] }
-tauri-plugin-persisted-scope = "2.3"
-tauri-plugin-prevent-default = { version = "4.0", features = ["platform-windows"] }
+tauri-plugin-fs = { version = "2.5", features = ["watch"] }
+tauri-plugin-prevent-default = { version = "5.0", features = ["platform-windows"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 log = "0.4"
 axum = { version = "0.8", features = ["ws"] }
-tokio = { version = "1.50", features = ["rt", "sync", "fs"] }
+tokio = { version = "1.52", features = ["rt", "sync", "fs", "net"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["fs"] }
-portpicker = "0.1"
 thiserror = "2.0"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "ico"] }
 trash = "5.2"
-futures = "0.3"
-urlencoding = "2.1"
-tempfile = "3.15"
+futures-util = "0.3"
+tempfile = "3.27"
 percent-encoding = "2.3"
-sha2 = "0.10"
+sha2 = "0.11"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

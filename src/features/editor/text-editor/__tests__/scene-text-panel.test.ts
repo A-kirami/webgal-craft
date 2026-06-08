@@ -46,7 +46,7 @@ describe('sceneTextPanel', () => {
   it('遇到空白行时返回空快照', () => {
     const snapshot = resolveSceneTextPanelSnapshot(2, createLineSource([
       'Alice:第一句;',
-      '   ',
+      ' '.repeat(3),
       'Bob:第三句;',
     ]))
 

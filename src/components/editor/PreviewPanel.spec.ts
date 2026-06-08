@@ -209,8 +209,8 @@ describe('PreviewPanel', () => {
     previewSessionStoreState = reactive({
       currentGameServeUrl: 'http://127.0.0.1:8899',
       reloadVersion: 0,
-      refresh() {
-        this.reloadVersion++
+      refresh: () => {
+        previewSessionStoreState.reloadVersion++
       },
     })
     usePreviewSessionStoreMock.mockReturnValue(previewSessionStoreState)
@@ -369,7 +369,7 @@ describe('PreviewPanel', () => {
 
     globalThis.dispatchEvent(new MessageEvent('message', {
       data: requestMessage,
-      origin: 'http://example.invalid',
+      origin: 'https://example.invalid',
       source: iframeWindow,
     }))
     expect(postMessageSpy).not.toHaveBeenCalled()

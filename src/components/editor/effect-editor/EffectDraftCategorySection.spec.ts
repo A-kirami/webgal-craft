@@ -15,12 +15,15 @@ import type { EffectDraftCategoryControls } from './effectDraftForm.types'
 
 function createControls() {
   const clearPaths = vi.fn()
+  const clearablePathKeys = new Set([
+    'position.x',
+    'alpha',
+    'scale.x|scale.y',
+    'colorRed|colorGreen|colorBlue',
+  ])
   const canClearPaths = vi.fn((paths: readonly string[]) => {
     const key = paths.join('|')
-    return key === 'position.x'
-      || key === 'alpha'
-      || key === 'scale.x|scale.y'
-      || key === 'colorRed|colorGreen|colorBlue'
+    return clearablePathKeys.has(key)
   })
 
   const controls = {

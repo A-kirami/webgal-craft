@@ -141,7 +141,7 @@ describe('engineSwitch.switchEngine', () => {
     const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: AbsPath.from('/games/demo') })
     const newEngine = createTestEngine({ id: 'engine-new', path: AbsPath.from('/engines/new') })
 
-    await expect(engineSwitch.switchEngine(game, newEngine)).rejects.toThrowError(/当前引擎记录缺失/)
+    await expect(engineSwitch.switchEngine(game, newEngine)).rejects.toThrow(/当前引擎记录缺失/)
     expect(readProjectConfigMock).not.toHaveBeenCalled()
     expect(writeProjectConfigMock).not.toHaveBeenCalled()
     expect(dbGameUpdateMock).not.toHaveBeenCalled()

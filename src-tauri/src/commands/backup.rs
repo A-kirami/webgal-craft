@@ -167,8 +167,20 @@ fn iso_to_filename(timestamp: &str) -> String {
     timestamp.replace(':', "-")
 }
 
+fn bytes_to_lower_hex(bytes: impl AsRef<[u8]>) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+
+    let bytes = bytes.as_ref();
+    let mut output = String::with_capacity(bytes.len() * 2);
+    for &byte in bytes {
+        output.push(HEX[(byte >> 4) as usize] as char);
+        output.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    output
+}
+
 fn hash_bytes(content: &[u8]) -> String {
-    format!("sha256:{:x}", Sha256::digest(content))
+    format!("sha256:{}", bytes_to_lower_hex(Sha256::digest(content)))
 }
 
 /// 构造备份相对路径，例如 `scene/start/2026-03-12T14-30-00Z.bak`，统一使用正斜杠。
@@ -1188,13 +1200,13 @@ mod tests {
         assert_eq!(kept.len(), 2);
         assert!(kept
             .iter()
-            .any(|e| e.hash.ends_with(&format!("{:x}", Sha256::digest(b"v3")))));
+            .any(|e| e.hash.ends_with(&bytes_to_lower_hex(Sha256::digest(b"v3")))));
         assert!(kept
             .iter()
-            .any(|e| e.hash.ends_with(&format!("{:x}", Sha256::digest(b"v2")))));
+            .any(|e| e.hash.ends_with(&bytes_to_lower_hex(Sha256::digest(b"v2")))));
 
         // 被淘汰的 v1 物理文件应不存在
-        let v1_hash = format!("sha256:{:x}", Sha256::digest(b"v1"));
+        let v1_hash = format!("sha256:{}", bytes_to_lower_hex(Sha256::digest(b"v1")));
         assert!(!kept.iter().any(|e| e.hash == v1_hash));
     }
 
