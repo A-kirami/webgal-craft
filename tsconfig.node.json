@@ -3,7 +3,7 @@
   "compilerOptions": {
     "lib": ["ES2023"],
     "allowJs": true,
-    "types": ["node"]
+    "types": ["bun"]
   },
   "include": [
     "vite.config.ts",
