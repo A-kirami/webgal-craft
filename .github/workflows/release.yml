@@ -94,5 +94,5 @@ jobs:
           releaseName: WebGAL Craft v__VERSION__
           releaseBody: ${{ needs.changelog.outputs.changelog }}
           releaseDraft: true
-          assetNamePattern: "[name]-v[version]-${{ matrix.releaseLabel }}[setup][ext]"
+          assetNamePattern: "webgal-craft-v[version]-${{ matrix.releaseLabel }}[setup][ext]"
           args: -t ${{ matrix.target }}
