@@ -18,6 +18,7 @@ const {
   reconcileGameRecordMock,
   requestGameRuntimeRebindMock,
   requestImportDependencyResolutionMock,
+  resolveRuntimeRebindIssueMock,
   routerPushMock,
 } = vi.hoisted(() => ({
   ensureEditorRuntimeCompatibleMock: vi.fn(),
@@ -31,6 +32,7 @@ const {
   reconcileGameRecordMock: vi.fn(),
   requestGameRuntimeRebindMock: vi.fn(),
   requestImportDependencyResolutionMock: vi.fn(),
+  resolveRuntimeRebindIssueMock: vi.fn(),
   routerPushMock: vi.fn(),
 }))
 
@@ -70,10 +72,7 @@ vi.mock('~/features/modals/import-dependency-resolution/request-import-dependenc
 
 vi.mock('~/features/modals/import-dependency-resolution/request-game-runtime-rebind', () => ({
   requestGameRuntimeRebind: requestGameRuntimeRebindMock,
-  resolveRuntimeRebindIssue: () => ({
-    compatibilityIssue: 'versionTooOld',
-    reason: 'incompatible',
-  }),
+  resolveRuntimeRebindIssue: resolveRuntimeRebindIssueMock,
 }))
 
 describe('useGamesTabController', () => {
@@ -103,6 +102,20 @@ describe('useGamesTabController', () => {
     ensureEditorRuntimeCompatibleMock.mockResolvedValue(undefined)
     reconcileGameRecordMock.mockResolvedValue('available')
     requestGameRuntimeRebindMock.mockResolvedValue(false)
+    resolveRuntimeRebindIssueMock.mockImplementation((issue: unknown) => {
+      switch (issue) {
+        case 'unavailable': {
+          return { reason: 'unavailable' }
+        }
+        case 'versionInvalid':
+        case 'versionTooOld': {
+          return { compatibilityIssue: issue, reason: 'incompatible' }
+        }
+        default: {
+          return { reason: 'incompatible' }
+        }
+      }
+    })
   })
 
   it('拖入多个目录时只提示错误且不会触发导入', async () => {
@@ -250,6 +263,7 @@ describe('useGamesTabController', () => {
 
     await controller.handleGameClick(game)
 
+    expect(resolveRuntimeRebindIssueMock).toHaveBeenCalledWith('versionTooOld')
     expect(requestGameRuntimeRebindMock).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'game-old-engine',
@@ -279,7 +293,18 @@ describe('useGamesTabController', () => {
 
     await controller.handleGameClick(game)
 
-    expect(requestGameRuntimeRebindMock).toHaveBeenCalledTimes(1)
+    expect(resolveRuntimeRebindIssueMock).toHaveBeenCalledWith('versionTooOld')
+    expect(requestGameRuntimeRebindMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'game-old-engine',
+        availability: 'available',
+      }),
+      {
+        compatibilityIssue: 'versionTooOld',
+        reason: 'incompatible',
+        resolveDependencies: requestImportDependencyResolutionMock,
+      },
+    )
     expect(routerPushMock).not.toHaveBeenCalled()
   })
 
