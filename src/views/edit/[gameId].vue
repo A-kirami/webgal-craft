@@ -5,6 +5,7 @@ import { createEditorShortcutDefinitions } from '~/features/editor/shortcut/defi
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
 import { requestGameRuntimeRebind, resolveRuntimeRebindIssue } from '~/features/modals/import-dependency-resolution/request-game-runtime-rebind'
+import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
 import { gameManager } from '~/services/game-manager'
 import { useResourceIndexBootstrap } from '~/services/resource-index/service'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
@@ -23,7 +24,15 @@ useFileStore()
 const modalStore = useModalStore()
 const preferenceStore = usePreferenceStore()
 const workspaceStore = useWorkspaceStore()
+const router = useRouter()
 const editorPanelRef = useTemplateRef<EditorPanelHandle>('editorPanel')
+
+let pendingEditExit: Promise<void> | undefined
+
+function exitEditMode(): Promise<void> {
+  pendingEditExit ??= router.replace('/').then(() => undefined)
+  return pendingEditExit
+}
 
 useAnimationTableSyncBootstrap()
 useResourceIndexBootstrap()
@@ -54,10 +63,30 @@ watch(() => workspaceStore.currentGame?.id, async (gameId) => {
       return
     }
     if (error instanceof AppError && error.code === 'ENGINE_EDITOR_INCOMPATIBLE') {
-      const rebound = await requestGameRuntimeRebind(currentGame, {
-        ...resolveRuntimeRebindIssue(error.details?.issue),
-      })
-      if (rebound && workspaceStore.currentGame?.id === gameId) {
+      let rebound = false
+      try {
+        rebound = await requestGameRuntimeRebind(currentGame, {
+          ...resolveRuntimeRebindIssue(error.details?.issue),
+          resolveDependencies: context => requestImportDependencyResolution(context, {
+            onCancel: () => {
+              void exitEditMode()
+            },
+          }),
+        })
+      } catch (rebindError) {
+        void logger.warn(`[编辑器入口] 运行时重绑失败，已离开编辑页: ${String(rebindError)}`)
+      }
+
+      if (workspaceStore.currentGame?.id !== gameId) {
+        return
+      }
+
+      if (!rebound) {
+        await exitEditMode()
+        return
+      }
+
+      if (workspaceStore.currentGame?.id === gameId) {
         try {
           await workspaceStore.refreshCurrentGameSnapshot()
         } catch (refreshError) {

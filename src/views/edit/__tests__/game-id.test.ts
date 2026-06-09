@@ -12,6 +12,7 @@ const {
   ensureEditorRuntimeCompatibleMock,
   modalOpenMock,
   requestGameRuntimeRebindMock,
+  routerReplaceMock,
   useAnimationTableSyncBootstrapMock,
   useEditorStoreMock,
   useFileStoreMock,
@@ -27,6 +28,7 @@ const {
   ensureEditorRuntimeCompatibleMock: vi.fn(),
   modalOpenMock: vi.fn(),
   requestGameRuntimeRebindMock: vi.fn(),
+  routerReplaceMock: vi.fn(),
   useAnimationTableSyncBootstrapMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
   useFileStoreMock: vi.fn(),
@@ -130,11 +132,21 @@ vi.mock('~/services/game-manager', () => ({
   },
 }))
 
+vi.mock('@tauri-apps/plugin-log', () => ({
+  warn: vi.fn(),
+}))
+
 vi.mock('~/features/modals/import-dependency-resolution/request-game-runtime-rebind', () => ({
   requestGameRuntimeRebind: requestGameRuntimeRebindMock,
   resolveRuntimeRebindIssue: () => ({
     compatibilityIssue: 'versionTooOld',
     reason: 'incompatible',
+  }),
+}))
+
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    replace: routerReplaceMock,
   }),
 }))
 
@@ -178,6 +190,8 @@ describe('edit/[gameId]', () => {
     ensureEditorRuntimeCompatibleMock.mockResolvedValue(undefined)
     modalOpenMock.mockReset()
     requestGameRuntimeRebindMock.mockResolvedValue(false)
+    routerReplaceMock.mockReset()
+    routerReplaceMock.mockResolvedValue(undefined)
 
     useEditorStoreMock.mockReturnValue(reactive({
       currentSelectedSceneStatement: undefined,
@@ -248,12 +262,85 @@ describe('edit/[gameId]', () => {
     mountedApps.push(app)
 
     await vi.waitFor(() => {
-      expect(requestGameRuntimeRebindMock).toHaveBeenCalledWith(currentGame, {
+      expect(requestGameRuntimeRebindMock).toHaveBeenCalledWith(currentGame, expect.objectContaining({
         compatibilityIssue: 'versionTooOld',
         reason: 'incompatible',
-      })
+        resolveDependencies: expect.any(Function),
+      }))
     })
     expect(modalOpenMock).not.toHaveBeenCalledWith('SwitchEngineModal', expect.anything(), expect.anything(), expect.anything())
     expect(modalOpenMock).not.toHaveBeenCalledWith('RecoverGameModal', expect.anything(), expect.anything(), expect.anything())
+  })
+
+  it('当前游戏运行时不兼容且用户取消重绑时会离开编辑页', async () => {
+    const currentGame = createTestGame({ id: 'game-old-engine', engineId: 'engine-old' })
+    ensureEditorRuntimeCompatibleMock.mockRejectedValue(new AppError('ENGINE_EDITOR_INCOMPATIBLE', '引擎版本过低', {
+      details: {
+        issue: 'versionTooOld',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    }))
+    requestGameRuntimeRebindMock.mockImplementation(async (_game, options) => {
+      const result = await options.resolveDependencies?.({
+        purpose: 'runtimeRebind',
+        source: 'configured',
+        engine: {
+          reason: 'incompatible',
+        },
+      })
+      return Boolean(result?.engineId)
+    })
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame,
+      ensureCurrentGameAvailable: vi.fn(async () => true),
+    }))
+
+    const view = await import('../[gameId].vue')
+    const app = createSSRApp(view.default)
+
+    await renderToString(app)
+    mountedApps.push(app)
+
+    await vi.waitFor(() => {
+      expect(modalOpenMock).toHaveBeenCalledWith(
+        'GameDependencyResolutionModal',
+        expect.objectContaining({
+          onCancel: expect.any(Function),
+        }),
+        expect.any(String),
+      )
+    })
+    const [, props] = modalOpenMock.mock.calls.find(([modal]) => modal === 'GameDependencyResolutionModal')!
+    props.onCancel()
+
+    await vi.waitFor(() => {
+      expect(routerReplaceMock).toHaveBeenCalledWith('/')
+    })
+    expect(routerReplaceMock).toHaveBeenCalledOnce()
+  })
+
+  it('当前游戏运行时不兼容且重绑失败时会离开编辑页', async () => {
+    const currentGame = createTestGame({ id: 'game-old-engine', engineId: 'engine-old' })
+    ensureEditorRuntimeCompatibleMock.mockRejectedValue(new AppError('ENGINE_EDITOR_INCOMPATIBLE', '引擎版本过低', {
+      details: {
+        issue: 'versionTooOld',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    }))
+    requestGameRuntimeRebindMock.mockRejectedValue(new AppError('IO_ERROR', '重绑失败'))
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame,
+      ensureCurrentGameAvailable: vi.fn(async () => true),
+    }))
+
+    const view = await import('../[gameId].vue')
+    const app = createSSRApp(view.default)
+
+    await renderToString(app)
+    mountedApps.push(app)
+
+    await vi.waitFor(() => {
+      expect(routerReplaceMock).toHaveBeenCalledWith('/')
+    })
   })
 })
