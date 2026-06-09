@@ -63,13 +63,17 @@ vi.mock('~/composables/useTauriDropZone', () => ({
   }),
 }))
 
-vi.mock('~/services/engine-manager', () => ({
-  engineManager: {
-    importEngine: importEngineMock,
-  },
-  isEngineUsable: (engine: { status: string, availability: string }) =>
-    engine.status === 'created' && engine.availability === 'available',
-}))
+vi.mock('~/services/engine-manager', async (importActual) => {
+  const actual = await importActual<typeof import('~/services/engine-manager')>()
+
+  return {
+    ...actual,
+    engineManager: {
+      ...actual.engineManager,
+      importEngine: importEngineMock,
+    },
+  }
+})
 
 vi.mock('~/stores/modal', () => ({
   useModalStore: useModalStoreMock,

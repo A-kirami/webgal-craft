@@ -4,12 +4,16 @@ import { useAnimationTableSyncBootstrap } from '~/features/editor/animation/useA
 import { createEditorShortcutDefinitions } from '~/features/editor/shortcut/definitions'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
+import { requestGameRuntimeRebind, resolveRuntimeRebindIssue } from '~/features/modals/import-dependency-resolution/request-game-runtime-rebind'
+import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
+import { gameManager } from '~/services/game-manager'
 import { useResourceIndexBootstrap } from '~/services/resource-index/service'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { useFileStore } from '~/stores/file'
 import { useModalStore } from '~/stores/modal'
 import { usePreferenceStore } from '~/stores/preference'
 import { useWorkspaceStore } from '~/stores/workspace'
+import { AppError } from '~/types/errors'
 
 interface EditorPanelHandle {
   toggleCommandPanel?: () => void
@@ -20,7 +24,15 @@ useFileStore()
 const modalStore = useModalStore()
 const preferenceStore = usePreferenceStore()
 const workspaceStore = useWorkspaceStore()
+const router = useRouter()
 const editorPanelRef = useTemplateRef<EditorPanelHandle>('editorPanel')
+
+let pendingEditExit: Promise<void> | undefined
+
+function exitEditMode(): Promise<void> {
+  pendingEditExit ??= router.replace('/').then(() => undefined)
+  return pendingEditExit
+}
 
 useAnimationTableSyncBootstrap()
 useResourceIndexBootstrap()
@@ -35,8 +47,55 @@ watch(() => workspaceStore.currentGame?.id, async (gameId) => {
   if (workspaceStore.currentGame?.id !== gameId) {
     return
   }
+  const currentGame = workspaceStore.currentGame
+  if (!currentGame) {
+    return
+  }
   if (!ok) {
-    modalStore.open('RecoverGameModal', { game: workspaceStore.currentGame }, gameId, true)
+    modalStore.open('RecoverGameModal', { game: currentGame }, gameId, true)
+    return
+  }
+
+  try {
+    await gameManager.ensureEditorRuntimeCompatible(currentGame)
+  } catch (error) {
+    if (workspaceStore.currentGame?.id !== gameId) {
+      return
+    }
+    if (error instanceof AppError && error.code === 'ENGINE_EDITOR_INCOMPATIBLE') {
+      let rebound = false
+      try {
+        rebound = await requestGameRuntimeRebind(currentGame, {
+          ...resolveRuntimeRebindIssue(error.details?.issue),
+          resolveDependencies: context => requestImportDependencyResolution(context, {
+            onCancel: () => {
+              void exitEditMode()
+            },
+          }),
+        })
+      } catch (rebindError) {
+        void logger.warn(`[编辑器入口] 运行时重绑失败，已离开编辑页: ${String(rebindError)}`)
+      }
+
+      if (workspaceStore.currentGame?.id !== gameId) {
+        return
+      }
+
+      if (!rebound) {
+        await exitEditMode()
+        return
+      }
+
+      if (workspaceStore.currentGame?.id === gameId) {
+        try {
+          await workspaceStore.refreshCurrentGameSnapshot()
+        } catch (refreshError) {
+          void logger.warn(`[编辑器入口] 运行时重绑后刷新游戏快照失败: ${String(refreshError)}`)
+        }
+      }
+      return
+    }
+    throw error
   }
 }, { immediate: true })
 

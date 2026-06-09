@@ -2,6 +2,7 @@ import { projectConfigCmds } from '~/commands/project-config'
 import { serverCmds } from '~/commands/server'
 import { vfsCmds } from '~/commands/vfs'
 import { db } from '~/database/db'
+import { assertEngineEditorCompatible } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 import { templateSwitch } from '~/services/template-switch'
 import { usePreviewSessionStore } from '~/stores/preview-session'
@@ -69,9 +70,7 @@ async function switchEngine(
     throw new AppError('IO_ERROR', '自带引擎项目不支持引擎切换')
   }
 
-  if (newEngine.status !== 'created') {
-    throw new AppError('IO_ERROR', '目标引擎不可用，无法切换')
-  }
+  assertEngineEditorCompatible(newEngine)
 
   const oldEngine = await db.engines.get(game.engineId)
   if (!oldEngine) {

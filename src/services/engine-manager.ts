@@ -1,4 +1,5 @@
 import { exists } from '@tauri-apps/plugin-fs'
+import { compareVersions, validateStrict } from 'compare-versions'
 import sanitize from 'sanitize-filename'
 
 import { engineCmds } from '~/commands/engine'
@@ -48,6 +49,17 @@ interface DeleteEngineCheckResult {
   canDelete: boolean
   reason?: 'ENGINE_HAS_ASSOCIATED_GAMES'
 }
+
+export const MIN_WEBGAL_EDITOR_RUNTIME_VERSION = '4.6.1'
+
+export type EngineEditorCompatibilityIssue =
+  | 'unavailable'
+  | 'versionInvalid'
+  | 'versionTooOld'
+
+export type EngineEditorCompatibility =
+  | { compatible: true }
+  | { compatible: false, issue: EngineEditorCompatibilityIssue }
 
 function sanitizeEnginePathSegment(value: string, fieldName: '引擎名称' | '引擎版本'): string {
   const sanitized = sanitize(value ?? '', { replacement: '_' }).trim()
@@ -137,6 +149,52 @@ async function resolveManagedEnginePath(engine: Pick<EngineSnapshot, 'engineId' 
 
 export function isEngineUsable(engine: Pick<Engine, 'status' | 'availability'>): boolean {
   return engine.status === 'created' && engine.availability === 'available'
+}
+
+function normalizeStrictWebgalVersion(version: string | undefined): string | undefined {
+  const trimmed = version?.trim()
+  if (!trimmed || !validateStrict(trimmed)) {
+    return undefined
+  }
+
+  return trimmed
+}
+
+export function evaluateEngineEditorCompatibility(
+  engine: Pick<Engine, 'status' | 'availability' | 'metadata'>,
+): EngineEditorCompatibility {
+  if (!isEngineUsable(engine)) {
+    return { compatible: false, issue: 'unavailable' }
+  }
+
+  const webgalVersion = normalizeStrictWebgalVersion(engine.metadata.webgalVersion)
+  if (!webgalVersion) {
+    return { compatible: false, issue: 'versionInvalid' }
+  }
+
+  if (compareVersions(webgalVersion, MIN_WEBGAL_EDITOR_RUNTIME_VERSION) < 0) {
+    return { compatible: false, issue: 'versionTooOld' }
+  }
+
+  return { compatible: true }
+}
+
+export function isEngineEditorCompatible(engine: Pick<Engine, 'status' | 'availability' | 'metadata'>): boolean {
+  return evaluateEngineEditorCompatibility(engine).compatible
+}
+
+export function assertEngineEditorCompatible(engine: Pick<Engine, 'status' | 'availability' | 'metadata'>): void {
+  const compatibility = evaluateEngineEditorCompatibility(engine)
+  if (compatibility.compatible) {
+    return
+  }
+
+  throw new AppError('ENGINE_EDITOR_INCOMPATIBLE', '引擎不能作为 WebGAL Craft 编辑器运行时', {
+    details: {
+      reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      issue: compatibility.issue,
+    },
+  })
 }
 
 async function validateEngine(enginePath: AbsPath): Promise<boolean> {
@@ -450,6 +508,11 @@ async function importEngine(enginePath: AbsPath): Promise<ImportEngineResult> {
   }
 
   const snapshot = await assertEngineImportable(normalizedPath)
+  assertEngineEditorCompatible({
+    status: 'created',
+    availability: 'available',
+    metadata: snapshot.metadata,
+  })
 
   // 幂等：同 engineId+version 的引擎已注册（首选场景：用户拖入源目录但 DB 里只有托管目标路径）
   const existingByRef = await findEngineByRef({
@@ -556,4 +619,7 @@ export const engineManager = {
   uninstallEngine,
   uninstallEngineGroup,
   identityKeyOf,
+  evaluateEngineEditorCompatibility,
+  isEngineEditorCompatible,
+  assertEngineEditorCompatible,
 }

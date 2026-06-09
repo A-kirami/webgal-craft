@@ -9,7 +9,7 @@ import {
   resolveImportNotificationMessage,
 } from '~/features/home/shared/useHomeResourceImportActions'
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
-import { isEngineUsable } from '~/services/engine-manager'
+import { isEngineEditorCompatible, MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 import { useModalStore } from '~/stores/modal'
 import { useResourceStore } from '~/stores/resource'
@@ -30,8 +30,11 @@ const { t } = useI18n()
 
 const gameImportMessages: HomeResourceImportMessages = {
   alreadyRegistered: t => t('home.games.importAlreadyExists'),
+  engineEditorIncompatible: t => t('home.games.importEngineEditorIncompatible'),
   engineNotFound: t => t('home.games.importEngineNotFound'),
   engineUnavailable: t => t('home.games.importEngineUnavailable'),
+  engineVersionInvalid: t => t('home.games.importEngineVersionInvalid'),
+  engineVersionTooOld: t => t('home.games.importEngineVersionTooOld', { version: MIN_WEBGAL_EDITOR_RUNTIME_VERSION }),
   gameConfigCorrupted: t => t('home.games.importConfigCorrupted'),
   gameSchemaTooNew: t => t('home.games.importSchemaVersionTooNew'),
   invalidFolder: t => t('home.games.importInvalidFolder'),
@@ -47,7 +50,7 @@ function createGame() {
     return
   }
 
-  const hasUsableEngine = resourceStore.engines.some(engine => isEngineUsable(engine))
+  const hasUsableEngine = resourceStore.engines.some(engine => isEngineEditorCompatible(engine))
   if (!hasUsableEngine) {
     modalStore.open('AlertModal', {
       title: t('home.engines.noEngineTitle'),

@@ -89,6 +89,7 @@ export function createTestEngine(options: TestEngineFactoryOptions = {}): Engine
     metadata: {
       description: 'Default engine',
       icon: 'icons/favicon.ico',
+      webgalVersion: '4.6.1',
       ...metadata,
     },
     previewAssets: {

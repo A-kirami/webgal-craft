@@ -6,13 +6,13 @@ import { nextTick, reactive } from 'vue'
 const {
   ensureServeUrlsMock,
   loggerErrorMock,
-  resolvePreviewSiteMock,
+  resolveStaticAssetSiteMock,
   usePreviewRuntimeStoreMock,
   useResourceStoreMock,
 } = vi.hoisted(() => ({
   ensureServeUrlsMock: vi.fn(),
   loggerErrorMock: vi.fn(),
-  resolvePreviewSiteMock: vi.fn(),
+  resolveStaticAssetSiteMock: vi.fn(),
   usePreviewRuntimeStoreMock: vi.fn(),
   useResourceStoreMock: vi.fn(),
 }))
@@ -36,7 +36,7 @@ vi.mock('~/stores/preview-runtime', () => ({
 
 vi.mock('~/services/game-manager', () => ({
   gameManager: {
-    resolvePreviewSite: resolvePreviewSiteMock,
+    resolveStaticAssetSite: resolveStaticAssetSiteMock,
   },
 }))
 
@@ -65,7 +65,7 @@ describe('useResourcePreviewPrimer', () => {
     useResourceStoreMock.mockReturnValue(resourceStoreState)
     usePreviewRuntimeStoreMock.mockReturnValue(previewRuntimeStoreState)
     ensureServeUrlsMock.mockResolvedValue(undefined)
-    resolvePreviewSiteMock.mockImplementation(async (game: { path: string }) => ({ projectPath: game.path }))
+    resolveStaticAssetSiteMock.mockImplementation(async (game: { path: string }) => ({ projectPath: game.path }))
   })
 
   afterEach(() => {
@@ -132,7 +132,7 @@ describe('useResourcePreviewPrimer', () => {
     resourceStoreState.engines = [
       { path: '/engines/fresh', status: 'created' },
     ]
-    resolvePreviewSiteMock.mockImplementation(async (game: { path: string }) => {
+    resolveStaticAssetSiteMock.mockImplementation(async (game: { path: string }) => {
       if (game.path === '/games/broken') {
         throw new Error('引擎不可用')
       }

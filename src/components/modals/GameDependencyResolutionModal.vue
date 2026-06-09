@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { usePreferenceStore } from '~/stores/preference'
 
-import type { ImportDependencyIssueReason, ImportDependencyResolutionContext, ImportDependencyResolutionResult, ImportTemplateResolutionResult } from '~/types/import-dependency-resolution'
+import type {
+  ImportDependencyIssueReason,
+  ImportDependencyResolutionContext,
+  ImportDependencyResolutionResult,
+  ImportEngineDependencyIssue,
+  ImportTemplateResolutionResult,
+} from '~/types/import-dependency-resolution'
 import type { EngineRef, TemplateBinding } from '~/types/project-config'
 
 let open = $(defineModel<boolean>('open'))
@@ -39,31 +45,62 @@ const engineReference = $computed(() =>
     : undefined,
 )
 const templateReference = $computed(() => props.context.template?.displayName)
+const isRuntimeRebind = $computed(() => props.context.purpose === 'runtimeRebind')
+const title = $computed(() =>
+  isRuntimeRebind
+    ? t('game.gameDependencyResolutionRuntimeRebindTitle')
+    : t('game.gameDependencyResolutionTitle'),
+)
 
 const description = $computed(() => {
   const gameName = props.context.gameName?.trim()
+  if (isRuntimeRebind) {
+    return gameName
+      ? t('game.gameDependencyResolutionRuntimeRebindDescriptionWithName', { name: gameName })
+      : t('game.gameDependencyResolutionRuntimeRebindDescription')
+  }
+
   if (props.context.source === 'legacy') {
     return gameName
-      ? t('game.importDependencyResolutionLegacyDescriptionWithName', { name: gameName })
-      : t('game.importDependencyResolutionLegacyDescription')
+      ? t('game.gameDependencyResolutionLegacyDescriptionWithName', { name: gameName })
+      : t('game.gameDependencyResolutionLegacyDescription')
   }
 
   if (gameName) {
-    return t('game.importDependencyResolutionDescriptionWithName', { name: gameName })
+    return t('game.gameDependencyResolutionDescriptionWithName', { name: gameName })
   }
-  return t('game.importDependencyResolutionDescription')
+  return t('game.gameDependencyResolutionDescription')
 })
 
-const engineIssue = $computed(() =>
-  props.context.source === 'legacy'
-    ? t('game.importDependencyResolutionEngineLegacyIssue')
-    : t('game.importDependencyResolutionEngineIssue'),
-)
+const engineIssue = $computed(() => {
+  if (isRuntimeRebind) {
+    return t('game.gameDependencyResolutionRuntimeRebindEngineIssue')
+  }
+
+  return props.context.source === 'legacy'
+    ? t('game.gameDependencyResolutionEngineLegacyIssue')
+    : t('game.gameDependencyResolutionEngineIssue')
+})
 const engineReasonLabel = $computed(() =>
-  resolveReasonLabel(props.context.engine?.reason),
+  resolveEngineReasonLabel(props.context.engine),
 )
 const templateReasonLabel = $computed(() =>
   resolveReasonLabel(props.context.template?.reason),
+)
+const scopeHint = $computed(() =>
+  isRuntimeRebind
+    ? t('game.gameDependencyResolutionRuntimeRebindScopeHint')
+    : t('game.gameDependencyResolutionScopeHint'),
+)
+const cancelLabel = $computed(() =>
+  isRuntimeRebind
+    ? t('game.gameDependencyResolutionRuntimeRebindCancel')
+    : t('game.gameDependencyResolutionCancel'),
+)
+const confirmLabel = $computed(() =>
+  isRuntimeRebind
+    ? t('game.gameDependencyResolutionRuntimeRebindConfirm')
+    : t('game.gameDependencyResolutionConfirm'),
 )
 
 const canConfirm = $computed(() =>
@@ -75,16 +112,44 @@ function formatEngineReference(engine: EngineRef) {
   return engine.version ? `${engine.id} ${engine.version}` : engine.id
 }
 
+function resolveEngineReasonLabel(issue: ImportEngineDependencyIssue | undefined) {
+  if (!issue) {
+    return
+  }
+
+  if (issue.reason !== 'incompatible') {
+    return resolveReasonLabel(issue.reason)
+  }
+
+  switch (issue.compatibilityIssue) {
+    case 'versionInvalid': {
+      return t('game.gameDependencyResolutionReasonVersionInvalid')
+    }
+    case 'versionTooOld': {
+      return t('game.gameDependencyResolutionReasonVersionTooOld')
+    }
+    case undefined: {
+      return t('game.gameDependencyResolutionReasonIncompatible')
+    }
+    default: {
+      return issue.compatibilityIssue satisfies never
+    }
+  }
+}
+
 function resolveReasonLabel(reason: ImportDependencyIssueReason | undefined) {
   switch (reason) {
     case 'missing': {
-      return t('game.importDependencyResolutionReasonMissing')
+      return t('game.gameDependencyResolutionReasonMissing')
     }
     case 'unavailable': {
-      return t('game.importDependencyResolutionReasonUnavailable')
+      return t('game.gameDependencyResolutionReasonUnavailable')
+    }
+    case 'incompatible': {
+      return t('game.gameDependencyResolutionReasonIncompatible')
     }
     case 'selectionRequired': {
-      return t('game.importDependencyResolutionReasonSelectionRequired')
+      return t('game.gameDependencyResolutionReasonSelectionRequired')
     }
     case undefined: {
       return
@@ -152,7 +217,7 @@ watch(
   <Dialog :open="open" @update:open="handleDialogOpenChange">
     <DialogContent class="sm:max-w-[520px]">
       <DialogHeader>
-        <DialogTitle>{{ $t('game.importDependencyResolutionTitle') }}</DialogTitle>
+        <DialogTitle>{{ title }}</DialogTitle>
         <DialogDescription>
           {{ description }}
         </DialogDescription>
@@ -163,7 +228,7 @@ watch(
           <div class="gap-1 grid">
             <div class="flex flex-wrap gap-2 items-center">
               <Label class="text-sm font-medium">
-                {{ $t('game.importDependencyResolutionEngineTitle') }}
+                {{ $t('game.gameDependencyResolutionEngineTitle') }}
               </Label>
               <span
                 v-if="engineReasonLabel"
@@ -180,7 +245,7 @@ watch(
           <dl v-if="engineReference" class="text-xs px-2.5 py-2 border rounded-md bg-background/70 gap-1 grid">
             <div class="gap-2 grid sm:grid-cols-[5rem_1fr]">
               <dt class="text-muted-foreground">
-                {{ $t('game.importDependencyResolutionOriginalEngine') }}
+                {{ $t('game.gameDependencyResolutionOriginalEngine') }}
               </dt>
               <dd class="font-mono break-all">
                 {{ engineReference }}
@@ -198,7 +263,7 @@ watch(
           <div class="gap-1 grid">
             <div class="flex flex-wrap gap-2 items-center">
               <Label class="text-sm font-medium">
-                {{ $t('game.importDependencyResolutionTemplateTitle') }}
+                {{ $t('game.gameDependencyResolutionTemplateTitle') }}
               </Label>
               <span
                 v-if="templateReasonLabel"
@@ -208,14 +273,14 @@ watch(
               </span>
             </div>
             <p class="text-xs text-muted-foreground">
-              {{ $t('game.importDependencyResolutionTemplateIssue') }}
+              {{ $t('game.gameDependencyResolutionTemplateIssue') }}
             </p>
           </div>
 
           <dl v-if="templateReference" class="text-xs px-2.5 py-2 border rounded-md bg-background/70 gap-1 grid">
             <div class="gap-2 grid sm:grid-cols-[5rem_1fr]">
               <dt class="text-muted-foreground">
-                {{ $t('game.importDependencyResolutionOriginalTemplate') }}
+                {{ $t('game.gameDependencyResolutionOriginalTemplate') }}
               </dt>
               <dd class="break-all">
                 {{ templateReference }}
@@ -230,21 +295,21 @@ watch(
           />
 
           <p class="text-xs text-muted-foreground">
-            {{ $t('game.importDependencyResolutionTemplateFollowEngineHint') }}
+            {{ $t('game.gameDependencyResolutionTemplateFollowEngineHint') }}
           </p>
         </section>
 
         <p class="text-xs text-muted-foreground">
-          {{ $t('game.importDependencyResolutionScopeHint') }}
+          {{ scopeHint }}
         </p>
       </div>
 
       <DialogFooter>
         <Button variant="outline" @click="handleCancel">
-          {{ $t('game.importDependencyResolutionCancel') }}
+          {{ cancelLabel }}
         </Button>
         <Button :disabled="!canConfirm" @click="handleConfirm">
-          {{ $t('game.importDependencyResolutionConfirm') }}
+          {{ confirmLabel }}
         </Button>
       </DialogFooter>
     </DialogContent>

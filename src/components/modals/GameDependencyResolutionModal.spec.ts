@@ -7,7 +7,7 @@ import {
   renderInBrowser,
 } from '~/__tests__/browser-render'
 
-import ImportDependencyResolutionModal from './ImportDependencyResolutionModal.vue'
+import GameDependencyResolutionModal from './GameDependencyResolutionModal.vue'
 
 import type { ImportDependencyResolutionContext, ImportDependencyResolutionResult } from '~/types/import-dependency-resolution'
 import type { TemplateBinding } from '~/types/project-config'
@@ -19,6 +19,7 @@ const selectedTemplate = {
 
 const configuredEngineContext = {
   gameName: 'Demo Game',
+  purpose: 'import',
   source: 'configured',
   engine: {
     current: {
@@ -31,6 +32,7 @@ const configuredEngineContext = {
 
 const configuredTemplateContext = {
   gameName: 'Demo Game',
+  purpose: 'import',
   source: 'configured',
   resolvedEngineId: 'engine-resolved',
   template: {
@@ -129,17 +131,16 @@ const globalStubs = {
   }),
 }
 
-interface RenderImportDependencyResolutionModalOptions {
+interface RenderGameDependencyResolutionModalOptions {
   context: ImportDependencyResolutionContext
-  i18nMode?: 'lite' | 'localized'
   onCancel?: () => void
   onConfirm?: (result: ImportDependencyResolutionResult) => void
   open?: boolean
   updateOpen?: (open: boolean) => void
 }
 
-function renderImportDependencyResolutionModal(options: RenderImportDependencyResolutionModalOptions) {
-  const { i18nMode = 'lite', updateOpen, ...props } = options
+function renderGameDependencyResolutionModal(options: RenderGameDependencyResolutionModalOptions) {
+  const { updateOpen, ...props } = options
   const modalProps = {
     open: true,
     ...props,
@@ -148,10 +149,7 @@ function renderImportDependencyResolutionModal(options: RenderImportDependencyRe
     Object.assign(modalProps, { 'onUpdate:open': updateOpen })
   }
 
-  renderInBrowser(ImportDependencyResolutionModal, {
-    browser: {
-      i18nMode,
-    },
+  renderInBrowser(GameDependencyResolutionModal, {
     props: modalProps,
     global: {
       stubs: globalStubs,
@@ -159,13 +157,13 @@ function renderImportDependencyResolutionModal(options: RenderImportDependencyRe
   })
 }
 
-describe('ImportDependencyResolutionModal', () => {
+describe('GameDependencyResolutionModal', () => {
   beforeEach(() => {
     vi.resetAllMocks()
   })
 
   it('只需要引擎时只显示引擎选择', async () => {
-    renderImportDependencyResolutionModal({
+    renderGameDependencyResolutionModal({
       context: configuredEngineContext,
     })
 
@@ -173,20 +171,8 @@ describe('ImportDependencyResolutionModal', () => {
     await expect.element(page.getByTestId('template-selector')).not.toBeInTheDocument()
   })
 
-  it('显示不可用引擎的原引用并使用导入语义动作', async () => {
-    renderImportDependencyResolutionModal({
-      context: configuredEngineContext,
-      i18nMode: 'localized',
-    })
-
-    await expect.element(page.getByText('原引擎')).toBeInTheDocument()
-    await expect.element(page.getByText('open-webgal.webgal 4.5.0')).toBeInTheDocument()
-    await expect.element(page.getByRole('button', { name: '取消导入' })).toBeInTheDocument()
-    await expect.element(page.getByRole('button', { name: '继续导入' })).toBeInTheDocument()
-  })
-
   it('只需要模板时只显示模板选择并使用已解析引擎', async () => {
-    renderImportDependencyResolutionModal({
+    renderGameDependencyResolutionModal({
       context: configuredTemplateContext,
     })
 
@@ -196,19 +182,8 @@ describe('ImportDependencyResolutionModal', () => {
     expect(selector.dataset.engineId).toBe('engine-resolved')
   })
 
-  it('显示不可用模板的原引用和跟随引擎默认模板的影响', async () => {
-    renderImportDependencyResolutionModal({
-      context: configuredTemplateContext,
-      i18nMode: 'localized',
-    })
-
-    await expect.element(page.getByText('原模板')).toBeInTheDocument()
-    await expect.element(page.getByText('Old Template')).toBeInTheDocument()
-    await expect.element(page.getByText('选择“跟随引擎默认模板”时，将移除项目中的显式模板引用。')).toBeInTheDocument()
-  })
-
   it('引擎和模板都需要修复时模板选择随当前引擎联动', async () => {
-    renderImportDependencyResolutionModal({
+    renderGameDependencyResolutionModal({
       context: {
         ...configuredTemplateContext,
         resolvedEngineId: undefined,
@@ -225,7 +200,7 @@ describe('ImportDependencyResolutionModal', () => {
   it('确认会返回组合结果', async () => {
     const onConfirm = vi.fn()
 
-    renderImportDependencyResolutionModal({
+    renderGameDependencyResolutionModal({
       context: {
         ...configuredTemplateContext,
         resolvedEngineId: undefined,
@@ -236,7 +211,7 @@ describe('ImportDependencyResolutionModal', () => {
 
     await page.getByRole('button', { name: 'select-engine' }).click()
     await page.getByRole('button', { name: 'select-template' }).click()
-    await page.getByRole('button', { name: 'game.importDependencyResolutionConfirm' }).click()
+    await page.getByRole('button', { name: 'game.gameDependencyResolutionConfirm' }).click()
 
     expect(onConfirm).toHaveBeenCalledWith({
       engineId: 'engine-selected',
@@ -250,13 +225,13 @@ describe('ImportDependencyResolutionModal', () => {
   it('允许确认跟随所选引擎默认模板', async () => {
     const onConfirm = vi.fn()
 
-    renderImportDependencyResolutionModal({
+    renderGameDependencyResolutionModal({
       context: configuredTemplateContext,
       onConfirm,
     })
 
     await page.getByRole('button', { name: 'follow-engine' }).click()
-    await page.getByRole('button', { name: 'game.importDependencyResolutionConfirm' }).click()
+    await page.getByRole('button', { name: 'game.gameDependencyResolutionConfirm' }).click()
 
     expect(onConfirm).toHaveBeenCalledWith({
       template: {
@@ -268,7 +243,7 @@ describe('ImportDependencyResolutionModal', () => {
   it('被动关闭走取消流程', async () => {
     const onCancel = vi.fn()
     const updateOpen = vi.fn()
-    renderImportDependencyResolutionModal({
+    renderGameDependencyResolutionModal({
       context: configuredEngineContext,
       onCancel,
       updateOpen,

@@ -204,7 +204,7 @@ describe('useResourceStore', () => {
     ])
   })
 
-  it('模板族只会纳入状态正常的引擎内置模板来源', () => {
+  it('模板族只会纳入可作为编辑器运行时的引擎内置模板来源', () => {
     enginesRef.value = [
       createTestEngine({
         id: 'webgal-created',
@@ -240,6 +240,18 @@ describe('useResourceStore', () => {
         metadata: {
           description: '',
           icon: 'icons/favicon.ico',
+        },
+      }),
+      createTestEngine({
+        id: 'webgal-incompatible',
+        engineId: 'open-webgal.webgal',
+        name: 'WebGAL',
+        path: AbsPath.from('/engines/WebGAL/4.6.0'),
+        version: '4.6.0',
+        metadata: {
+          description: '',
+          icon: 'icons/favicon.ico',
+          webgalVersion: '4.6.0',
         },
       }),
     ]

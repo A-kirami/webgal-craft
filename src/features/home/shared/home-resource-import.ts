@@ -13,6 +13,9 @@ export interface HomeResourceImportNotification {
     | 'game-schema-too-new'
     | 'engine-not-found'
     | 'engine-unavailable'
+    | 'engine-editor-incompatible'
+    | 'engine-version-invalid'
+    | 'engine-version-too-old'
     | 'import-cancelled'
     | 'unknown-error'
     | 'multiple-folders'
@@ -74,6 +77,7 @@ function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotific
     case 'LEGACY_ENGINE': { return 'unsupported-legacy-engine' }
     case 'ENGINE_NOT_FOUND': { return 'engine-not-found' }
     case 'ENGINE_UNAVAILABLE': { return 'engine-unavailable' }
+    case 'ENGINE_EDITOR_INCOMPATIBLE': { return resolveEngineEditorIncompatibleNotificationKind(error) }
     case 'IMPORT_CANCELLED': { return 'import-cancelled' }
     default: { break }
   }
@@ -86,7 +90,16 @@ function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotific
     case 'DUPLICATE_RESOURCE': { return 'duplicate-resource' }
     case 'INVALID_PROJECT_CONFIG': { return 'game-config-corrupted' }
     case 'SCHEMA_VERSION_TOO_NEW': { return 'game-schema-too-new' }
+    case 'ENGINE_EDITOR_INCOMPATIBLE': { return resolveEngineEditorIncompatibleNotificationKind(error) }
     default: { return 'unknown-error' }
+  }
+}
+
+function resolveEngineEditorIncompatibleNotificationKind(error: AppError): HomeResourceImportNotification['kind'] {
+  switch (error.details?.issue) {
+    case 'versionInvalid': { return 'engine-version-invalid' }
+    case 'versionTooOld': { return 'engine-version-too-old' }
+    default: { return 'engine-editor-incompatible' }
   }
 }
 

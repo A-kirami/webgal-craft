@@ -108,6 +108,38 @@ describe('首页共享导入纯逻辑', () => {
     })
   })
 
+  it('编辑器运行时不兼容错误会按 issue 映射为专用通知', () => {
+    expect(resolveHomeResourceImportNotification(new AppError('ENGINE_EDITOR_INCOMPATIBLE', 'too old', {
+      details: {
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+        issue: 'versionTooOld',
+      },
+    }))).toEqual({
+      kind: 'engine-version-too-old',
+      level: 'error',
+    })
+
+    expect(resolveHomeResourceImportNotification(new AppError('ENGINE_EDITOR_INCOMPATIBLE', 'invalid version', {
+      details: {
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+        issue: 'versionInvalid',
+      },
+    }))).toEqual({
+      kind: 'engine-version-invalid',
+      level: 'error',
+    })
+
+    expect(resolveHomeResourceImportNotification(new AppError('ENGINE_EDITOR_INCOMPATIBLE', 'unavailable', {
+      details: {
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+        issue: 'unavailable',
+      },
+    }))).toEqual({
+      kind: 'engine-editor-incompatible',
+      level: 'error',
+    })
+  })
+
   it('导入取消错误会映射为信息通知', () => {
     expect(resolveHomeResourceImportNotification(new AppError('IO_ERROR', 'cancelled', {
       details: { reason: 'IMPORT_CANCELLED' },

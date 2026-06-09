@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestEngine } from '~/__tests__/factories'
 import { AbsPath } from '~/domain/path'
+import { MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
 import { AppError } from '~/types/errors'
 
 import { useEnginesTabController } from '../useEnginesTabController'
@@ -39,11 +40,16 @@ vi.mock('notivue', () => ({
   },
 }))
 
-vi.mock('~/services/engine-manager', () => ({
-  engineManager: {
-    importEngine: importEngineMock,
-  },
-}))
+vi.mock('~/services/engine-manager', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('~/services/engine-manager')>()
+
+  return {
+    engineManager: {
+      importEngine: importEngineMock,
+    },
+    MIN_WEBGAL_EDITOR_RUNTIME_VERSION: actual.MIN_WEBGAL_EDITOR_RUNTIME_VERSION,
+  }
+})
 
 vi.mock('~/services/resource-reconcile', () => ({
   resourceReconcile: {
@@ -114,6 +120,28 @@ describe('useEnginesTabController', () => {
     await controller.selectEngineFolder()
 
     expect(notifyErrorMock).toHaveBeenCalledWith('home.engines.importInvalidFolder')
+  })
+
+  it('导入过旧引擎时会把最低运行时版本传给通知文案', async () => {
+    importEngineMock.mockRejectedValue(new AppError('ENGINE_EDITOR_INCOMPATIBLE', 'too old', {
+      details: {
+        issue: 'versionTooOld',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    }))
+    openDialogMock.mockResolvedValue('/engines/old')
+    const t = vi.fn((key: string, ...args: unknown[]) => {
+      const named = args[0] as { version?: unknown } | undefined
+      return `${key}:${String(named?.version ?? '')}`
+    })
+
+    const controller = createController({ t })
+
+    await controller.selectEngineFolder()
+
+    expect(notifyErrorMock).toHaveBeenCalledWith(
+      `home.engines.importVersionTooOld:${MIN_WEBGAL_EDITOR_RUNTIME_VERSION}`,
+    )
   })
 
   it('打开引擎族目录时会跳到名称层目录', async () => {

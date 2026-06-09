@@ -6,7 +6,13 @@ import { projectConfigCmds } from '~/commands/project-config'
 import { vfsCmds } from '~/commands/vfs'
 import { db } from '~/database/db'
 import { AbsPath, RelPath } from '~/domain/path'
-import { engineManager, isEngineUsable } from '~/services/engine-manager'
+import {
+  assertEngineEditorCompatible,
+  engineManager,
+  evaluateEngineEditorCompatibility,
+  isEngineEditorCompatible,
+  isEngineUsable,
+} from '~/services/engine-manager'
 import { gameConfigPath, gameCoverPath, projectConfigPath } from '~/services/platform/app-paths'
 import { resolveGameIconPreviewPath as resolveProjectIconPreviewPath } from '~/services/project-icon-assets'
 import {
@@ -138,7 +144,7 @@ async function resolvePhysicalGameIconPreviewPath(rootPath: AbsPath): Promise<Ga
 }
 
 async function resolveGameIconPreviewPath(gamePath: AbsPath): Promise<GamePreviewLookupResult> {
-  const site = await resolvePreviewSiteForIconLookup(gamePath)
+  const site = await resolveStaticAssetSiteForIconLookup(gamePath)
 
   return buildGameIconLookupResult(await resolveProjectIconPreviewPath(
     gamePath,
@@ -146,9 +152,9 @@ async function resolveGameIconPreviewPath(gamePath: AbsPath): Promise<GamePrevie
   ))
 }
 
-async function resolvePreviewSiteForIconLookup(gamePath: AbsPath): Promise<StaticSiteConfig | undefined> {
+async function resolveStaticAssetSiteForIconLookup(gamePath: AbsPath): Promise<StaticSiteConfig | undefined> {
   try {
-    return await resolvePreviewSite({ path: gamePath })
+    return await resolveStaticAssetSite({ path: gamePath })
   } catch {
     return undefined
   }
@@ -418,10 +424,6 @@ function buildProjectEngineRef(engine: Pick<Engine, 'engineId' | 'version'>): En
   }
 }
 
-async function writeSelfContainedProjectConfig(gamePath: AbsPath): Promise<void> {
-  await projectConfigCmds.writeProjectConfig(gamePath, { version: 1 })
-}
-
 async function readProjectConfigSafe(gamePath: AbsPath): Promise<ProjectConfig | undefined> {
   try {
     return await projectConfigCmds.readProjectConfig(gamePath)
@@ -449,6 +451,31 @@ async function resolveBoundEngine(
   return { config, engine }
 }
 
+function assertBoundEngineFound(isEngineBound: boolean, engine: Engine | undefined): void {
+  if (!isEngineBound || engine) {
+    return
+  }
+
+  throw new AppError('IO_ERROR', '引擎不存在', {
+    details: { reason: 'ENGINE_NOT_FOUND' },
+  })
+}
+
+function assertBoundEngineEditorCompatible(isEngineBound: boolean, engine: Engine | undefined): void {
+  assertBoundEngineFound(isEngineBound, engine)
+  if (isEngineBound && engine) {
+    assertEngineEditorCompatible(engine)
+  }
+}
+
+async function resolveBoundTemplatePath(config: ProjectConfig | undefined, engine: Engine | undefined): Promise<AbsPath | undefined> {
+  if (!config?.engine) {
+    return undefined
+  }
+
+  return await templateSwitch.resolveTemplatePath(config.template, engine)
+}
+
 function buildImportDependencyContext(
   source: ImportDependencyResolutionContext['source'],
   metadata: GameMetadata,
@@ -456,6 +483,7 @@ function buildImportDependencyContext(
   const gameName = metadata.name?.trim()
   return {
     ...(gameName ? { gameName } : {}),
+    purpose: 'import',
     source,
   }
 }
@@ -486,11 +514,7 @@ async function resolveUsableEngine(engineId: string | undefined): Promise<Engine
     })
   }
 
-  if (!isEngineUsable(engine)) {
-    throw new AppError('IO_ERROR', '引擎不可用', {
-      details: { reason: 'ENGINE_UNAVAILABLE' },
-    })
-  }
+  assertEngineEditorCompatible(engine)
 
   return engine
 }
@@ -626,18 +650,41 @@ async function inspectTemplateDependencyIssue(
   }
 }
 
+function buildConfiguredEngineIssue(
+  engineRef: EngineRef,
+  engine: Engine | undefined,
+): ImportDependencyResolutionContext['engine'] {
+  if (!engine) {
+    return {
+      current: engineRef,
+      reason: 'missing',
+    }
+  }
+
+  const compatibility = evaluateEngineEditorCompatibility(engine)
+  if (compatibility.compatible) {
+    return undefined
+  }
+
+  if (compatibility.issue === 'unavailable') {
+    return {
+      current: engineRef,
+      reason: 'unavailable',
+    }
+  }
+
+  return {
+    compatibilityIssue: compatibility.issue,
+    current: engineRef,
+    reason: 'incompatible',
+  }
+}
+
 async function importLegacyGame(
   gamePath: AbsPath,
   options: ImportGameOptions,
   inspection: GameInspectionPayload,
 ): Promise<string> {
-  const hasIndexHtml = await exists(AbsPath.join(gamePath, RelPath.from('index.html')))
-
-  if (hasIndexHtml) {
-    await writeSelfContainedProjectConfig(gamePath)
-    return registerGame(gamePath, { ...inspection })
-  }
-
   const context = buildImportDependencyContext('legacy', inspection.metadata)
   context.engine = {
     reason: 'selectionRequired',
@@ -668,35 +715,22 @@ async function importConfiguredGame(
       throw error
     }
 
-    if (await exists(AbsPath.join(gamePath, RelPath.from('index.html')))) {
-      logger.warn(`project.wgcp 解析失败，但检测到自带引擎，按自带引擎项目导入: ${gamePath}`)
-      await writeSelfContainedProjectConfig(gamePath)
-      return await registerGame(gamePath, { ...inspection })
-    }
-
     throw new AppError('INVALID_PROJECT_CONFIG', '项目配置文件损坏', {
       details: { reason: 'CONFIG_CORRUPTED' },
     })
   }
 
-  const hasIndexHtml = await exists(AbsPath.join(gamePath, RelPath.from('index.html')))
   let matchedEngine: Engine | undefined
   const context = buildImportDependencyContext('configured', inspection.metadata)
 
   if (config.engine) {
     matchedEngine = await engineManager.findEngineByRef(config.engine)
-    if (matchedEngine && isEngineUsable(matchedEngine)) {
+    context.engine = buildConfiguredEngineIssue(config.engine, matchedEngine)
+    if (!context.engine && matchedEngine) {
       context.resolvedEngineId = matchedEngine.id
-    } else {
-      context.engine = {
-        current: config.engine,
-        reason: matchedEngine ? 'unavailable' : 'missing',
-      }
     }
-  } else if (hasIndexHtml) {
-    return registerGame(gamePath, { ...inspection })
   } else {
-    logger.warn(`engine 字段缺失且 index.html 不存在，引导用户选择引擎: ${gamePath}`)
+    logger.warn(`engine 字段缺失，引导用户选择兼容引擎: ${gamePath}`)
     context.engine = {
       reason: 'missing',
     }
@@ -743,9 +777,7 @@ async function createGame(gameName: string, gamePath: AbsPath, engineId: string,
     throw new AppError('IO_ERROR', '引擎不存在')
   }
 
-  if (!isEngineUsable(engine)) {
-    throw new AppError('IO_ERROR', '引擎不可用')
-  }
+  assertEngineEditorCompatible(engine)
 
   const { templateBinding } = options
 
@@ -1097,19 +1129,38 @@ async function resolvePreviewSite(game: Pick<Game, 'engineId' | 'path'>): Promis
   const { config, engine } = await resolveBoundEngine(game)
   const isEngineBound = !!game.engineId || !!config?.engine
 
-  if (isEngineBound && (!engine || !isEngineUsable(engine))) {
-    throw new AppError('IO_ERROR', '引擎不可用')
-  }
+  assertBoundEngineEditorCompatible(isEngineBound, engine)
 
-  const templatePath = config?.engine
-    ? await templateSwitch.resolveTemplatePath(config.template, engine)
-    : undefined
+  const templatePath = await resolveBoundTemplatePath(config, engine)
 
   return {
     projectPath: game.path,
     enginePath: engine?.path,
     templatePath,
   }
+}
+
+async function resolveStaticAssetSite(game: Pick<Game, 'engineId' | 'path'>): Promise<StaticSiteConfig> {
+  const { config, engine } = await resolveBoundEngine(game)
+
+  if (!engine || !isEngineEditorCompatible(engine)) {
+    return {
+      projectPath: game.path,
+    }
+  }
+
+  return {
+    projectPath: game.path,
+    enginePath: engine.path,
+    templatePath: await resolveBoundTemplatePath(config, engine),
+  }
+}
+
+async function ensureEditorRuntimeCompatible(game: Pick<Game, 'engineId' | 'path'>): Promise<void> {
+  const { config, engine } = await resolveBoundEngine(game)
+  const isEngineBound = !!game.engineId || !!config?.engine
+
+  assertBoundEngineEditorCompatible(isEngineBound, engine)
 }
 
 async function touchGameLastModified(gameId: string): Promise<void> {
@@ -1206,6 +1257,8 @@ export const gameManager = {
   importGame,
   getGameEnginePath,
   resolvePreviewSite,
+  resolveStaticAssetSite,
+  ensureEditorRuntimeCompatible,
   touchGameLastModified,
   refreshGamePreviewAssets,
   touchCurrentGameLastModified,

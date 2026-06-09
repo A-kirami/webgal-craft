@@ -149,6 +149,9 @@ home:
     importConfigCorrupted: プロジェクトファイルが破損しており、読み込めません
     importEngineNotFound: このプロジェクトに必要なエンジンがインストールされていません
     importEngineUnavailable: このプロジェクトに必要なエンジンが現在利用できません
+    importEngineEditorIncompatible: このプロジェクトに紐付いたエンジンは WebGAL Craft では使用できません。別のエンジンを選択してください
+    importEngineVersionInvalid: このプロジェクトに紐付いたエンジンには有効なバージョン情報がありません。別のエンジンを選択してください
+    importEngineVersionTooOld: このプロジェクトに紐付いたエンジンは古すぎます。WebGAL {version} 以降に対応したエンジンを選択してください
     importSuccess: ゲームのインポートに成功しました
     importAlreadyExists: このプロジェクトは既に存在します
     importInvalidFolder: ゲームプロジェクトフォルダのようには見えません。中身を確認してください。
@@ -172,6 +175,9 @@ home:
     importSchemaTooNew: このエンジンは現在のアプリには新しすぎます。アプリをアップグレードしてから再度お試しください。
     importTargetConflict: インストール先が既に使用されています。競合するフォルダを削除してから再試行してください。
     importUnsupportedLegacyEngine: このエンジンは古すぎます。新しいバージョンを使用してください。
+    importEditorIncompatible: このエンジンは WebGAL Craft では使用できません
+    importVersionInvalid: このエンジンには有効な WebGAL バージョン情報がありません
+    importVersionTooOld: このエンジンは古すぎます。WebGAL {version} 以降に対応したエンジンをインポートしてください
     importUnknownError: エンジンのインポート中に不明なエラーが発生しました
     importMultipleFolders: 一度にインポートできるエンジンフォルダは1つだけです
     noEngineTitle: 利用可能なゲームエンジンがありません
@@ -223,6 +229,7 @@ modals:
     create: 作成
     createFailed: ゲームの作成に失敗しました
     engineUnavailable: 選択したエンジンは現在利用できません。別のエンジンを選択してください
+    engineIncompatible: 選択したエンジンは WebGAL Craft では使用できません。別のエンジンを選択してください
     templateUnavailable: 選択したテンプレートは現在利用できません。別のテンプレートを選択してください
     pathNotEmpty: ゲーム保存ディレクトリは存在しないか、空である必要があります
     selectSaveLocation: ゲーム保存場所
@@ -1186,22 +1193,32 @@ engine:
 
 game:
   selectTemplatePlaceholder: 利用可能なテンプレートを選択
-  importDependencyResolutionTitle: インポートに必要なリソースを選択
-  importDependencyResolutionDescription: このプロジェクトが参照しているエンジンまたはテンプレートは利用できません。この端末で利用可能なリソースを選択すると、アプリがプロジェクト設定を更新してインポートを続行します。
-  importDependencyResolutionDescriptionWithName: 「{name}」が参照しているエンジンまたはテンプレートは利用できません。この端末で利用可能なリソースを選択すると、アプリがプロジェクト設定を更新してインポートを続行します。
-  importDependencyResolutionLegacyDescription: この旧式プロジェクトのフォルダには内蔵エンジンがありません。利用可能なエンジンを選択すると、アプリがプロジェクト設定を作成してインポートを続行します。
-  importDependencyResolutionLegacyDescriptionWithName: 「{name}」は旧式プロジェクトで、フォルダには内蔵エンジンがありません。利用可能なエンジンを選択すると、アプリがプロジェクト設定を作成してインポートを続行します。
-  importDependencyResolutionEngineTitle: エンジンを割り当て
-  importDependencyResolutionTemplateTitle: テンプレートを割り当て
-  importDependencyResolutionEngineIssue: 利用可能なエンジンを選択してください。インポート後のプロジェクトは、そのエンジンで開いてプレビューします。
-  importDependencyResolutionEngineLegacyIssue: 旧式プロジェクトをインポートするには、ローカルのエンジンを割り当てる必要があります。
-  importDependencyResolutionTemplateIssue: 利用可能なテンプレートを選択するか、選択したエンジンの既定テンプレートに従ってください。
-  importDependencyResolutionOriginalEngine: 元のエンジン
-  importDependencyResolutionOriginalTemplate: 元のテンプレート
-  importDependencyResolutionReasonMissing: 未インストール
-  importDependencyResolutionReasonUnavailable: 利用不可
-  importDependencyResolutionReasonSelectionRequired: 選択が必要
-  importDependencyResolutionTemplateFollowEngineHint: 「エンジンの既定テンプレートに従う」を選択すると、プロジェクト内の明示的なテンプレート参照は削除されます。
-  importDependencyResolutionScopeHint: 更新されるのはインポート対象プロジェクトの設定のみです。インストール済みリソースは移動・削除されません。
-  importDependencyResolutionCancel: インポートをキャンセル
-  importDependencyResolutionConfirm: インポートを続行
+  gameDependencyResolutionTitle: プロジェクトに必要なリソースを選択
+  gameDependencyResolutionRuntimeRebindTitle: プロジェクトのエンジンを変更
+  gameDependencyResolutionDescription: このプロジェクトに必要なエンジンまたはテンプレートは現在利用できません。利用可能なリソースを選択すると、アプリがプロジェクト設定を更新してインポートを続行します。
+  gameDependencyResolutionDescriptionWithName: 「{name}」に必要なエンジンまたはテンプレートは現在利用できません。利用可能なリソースを選択すると、アプリがプロジェクト設定を更新してインポートを続行します。
+  gameDependencyResolutionRuntimeRebindDescription: このプロジェクトに紐付いたエンジンは利用できないか、WebGAL Craft では使用できません。利用可能なエンジンを選択すると、アプリがプロジェクト設定を更新してプロジェクトを再度開きます。
+  gameDependencyResolutionRuntimeRebindDescriptionWithName: 「{name}」に紐付いたエンジンは利用できないか、WebGAL Craft では使用できません。利用可能なエンジンを選択すると、アプリがプロジェクト設定を更新してプロジェクトを再度開きます。
+  gameDependencyResolutionLegacyDescription: この旧式プロジェクトでは、WebGAL Craft で使用できるエンジンを選択する必要があります。アプリがプロジェクト設定を作成してインポートを続行します。
+  gameDependencyResolutionLegacyDescriptionWithName: 「{name}」は旧式プロジェクトのため、WebGAL Craft で使用できるエンジンを選択する必要があります。アプリがプロジェクト設定を作成してインポートを続行します。
+  gameDependencyResolutionEngineTitle: エンジンを選択
+  gameDependencyResolutionTemplateTitle: テンプレートを選択
+  gameDependencyResolutionEngineIssue: WebGAL Craft で使用できるエンジンを選択してください。インポート後、プロジェクトはそのエンジンで開いてプレビューします。
+  gameDependencyResolutionRuntimeRebindEngineIssue: WebGAL Craft で使用できるエンジンを選択してください。変更後、プロジェクトはそのエンジンで開いてプレビューします。
+  gameDependencyResolutionEngineLegacyIssue: 旧式プロジェクトをインポートするには、先に WebGAL Craft で使用できるエンジンを選択する必要があります。
+  gameDependencyResolutionTemplateIssue: 利用可能なテンプレートを選択するか、選択したエンジンの既定テンプレートを使用してください。
+  gameDependencyResolutionOriginalEngine: 現在のエンジン
+  gameDependencyResolutionOriginalTemplate: 現在のテンプレート
+  gameDependencyResolutionReasonMissing: 未インストール
+  gameDependencyResolutionReasonUnavailable: 利用不可
+  gameDependencyResolutionReasonIncompatible: 使用できません
+  gameDependencyResolutionReasonVersionInvalid: バージョン情報が無効
+  gameDependencyResolutionReasonVersionTooOld: バージョンが古い
+  gameDependencyResolutionReasonSelectionRequired: 選択が必要
+  gameDependencyResolutionTemplateFollowEngineHint: 「エンジンの既定テンプレートに従う」を選択すると、プロジェクトの個別テンプレート指定は削除されます。
+  gameDependencyResolutionScopeHint: 更新されるのはこのプロジェクトの設定のみです。インストール済みリソースは移動・削除されません。
+  gameDependencyResolutionRuntimeRebindScopeHint: 更新されるのはこのプロジェクトで使用するエンジンのみです。インストール済みリソースは移動・削除されません。
+  gameDependencyResolutionCancel: インポートをキャンセル
+  gameDependencyResolutionRuntimeRebindCancel: キャンセル
+  gameDependencyResolutionConfirm: インポートを続行
+  gameDependencyResolutionRuntimeRebindConfirm: 変更して続行
