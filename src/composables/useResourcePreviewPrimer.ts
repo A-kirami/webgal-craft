@@ -18,7 +18,7 @@ export function useResourcePreviewPrimer(): () => void {
 
       try {
         const gameResults = await Promise.allSettled(
-          games.map(game => gameManager.resolvePreviewSite(game)),
+          games.map(game => gameManager.resolveStaticAssetSite(game)),
         )
         const failedGameResults: string[] = []
         const gameSites = gameResults.flatMap((result, index) => {

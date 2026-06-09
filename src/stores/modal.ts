@@ -17,7 +17,7 @@ import DiscoveredResourcesModal from '~/components/modals/DiscoveredResourcesMod
 import ExternalDocumentChangeModal from '~/components/modals/ExternalDocumentChangeModal.vue'
 import FastPreviewTimeoutModal from '~/components/modals/FastPreviewTimeoutModal.vue'
 import GameConfigModal from '~/components/modals/GameConfigModal.vue'
-import ImportDependencyResolutionModal from '~/components/modals/ImportDependencyResolutionModal.vue'
+import GameDependencyResolutionModal from '~/components/modals/GameDependencyResolutionModal.vue'
 import PathOperationRewriteModal from '~/components/modals/PathOperationRewriteModal.vue'
 import RecoverGameModal from '~/components/modals/RecoverGameModal.vue'
 import SaveChangesModal from '~/components/modals/SaveChangesModal.vue'
@@ -47,7 +47,7 @@ const ModalDialog = {
   ExternalDocumentChangeModal,
   FastPreviewTimeoutModal,
   GameConfigModal,
-  ImportDependencyResolutionModal,
+  GameDependencyResolutionModal,
   PathOperationRewriteModal,
   RecoverGameModal,
   SaveChangesModal,

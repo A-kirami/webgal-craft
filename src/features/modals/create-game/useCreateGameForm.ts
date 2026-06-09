@@ -8,6 +8,7 @@ import { AbsPath } from '~/domain/path'
 import {
   resolveCreateGamePathSuggestion,
 } from '~/features/modals/create-game/create-game-modal'
+import { isEngineEditorCompatible } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 import { resourceReconcile } from '~/services/resource-reconcile'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
@@ -117,8 +118,13 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
     // 提交时即时校验所选引擎，避免基于过期 availability 创建游戏后才在引擎层报错
     const engine = await db.engines.get(gameEngine)
     const engineAvailability = engine ? await resourceReconcile.reconcileEngineRecord(engine) : undefined
-    if (engineAvailability !== 'available') {
+    if (!engine || engineAvailability !== 'available') {
       notify.error(t('modals.createGame.engineUnavailable'))
+      setFieldValue('gameEngine', '', false)
+      return
+    }
+    if (!isEngineEditorCompatible({ ...engine, availability: engineAvailability })) {
+      notify.error(t('modals.createGame.engineIncompatible'))
       setFieldValue('gameEngine', '', false)
       return
     }

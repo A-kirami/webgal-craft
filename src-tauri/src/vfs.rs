@@ -249,7 +249,11 @@ impl OverlayFs {
             }
         }
 
-        // 无 lower 层时回退到 upper（引擎运行时文件可能只存在于 upper）
+        if category == PathCategory::EngineRuntime && self.engine_lower.is_some() {
+            return Err(VfsError::NotFound);
+        }
+
+        // 仅对允许 upper fallback 的路径继续解析 project upper。
         if let Some(resolved) = self.try_resolve_upper(logical_path)? {
             return Ok(resolved);
         }
@@ -1373,10 +1377,8 @@ mod tests {
 
         fs::create_dir_all(engine.join("game").join("template"))
             .expect("template directory should be created");
-        fs::write(upper.join("manifest.json"), "{\"name\":\"upper\"}")
-            .expect("upper manifest should be written");
-        fs::write(engine.join("manifest.json"), "{\"name\":\"engine\"}")
-            .expect("engine manifest should be written");
+        fs::write(upper.join("index.html"), "upper").expect("upper runtime should be written");
+        fs::write(engine.join("index.html"), "engine").expect("engine runtime should be written");
 
         let overlay = OverlayFs::new(
             upper,
@@ -1386,14 +1388,60 @@ mod tests {
         .expect("overlay should be created");
 
         let resolved = overlay
-            .resolve_physical_path(Path::new("manifest.json"))
-            .expect("manifest should resolve from engine lower");
+            .resolve_physical_path(Path::new("index.html"))
+            .expect("runtime should resolve from engine lower");
 
-        assert_eq!(resolved.physical_path, engine.join("manifest.json"));
+        assert_eq!(resolved.physical_path, engine.join("index.html"));
         assert_eq!(
             resolved.canonical_root,
             engine.canonicalize().expect("engine should canonicalize")
         );
+    }
+
+    #[test]
+    fn resolve_physical_path_does_not_fallback_engine_runtime_to_upper_when_lower_missing() {
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
+
+        fs::create_dir_all(engine.join("game").join("template"))
+            .expect("template directory should be created");
+        fs::create_dir_all(upper.join("assets").join("js"))
+            .expect("upper assets directory should be created");
+        fs::write(upper.join("index.html"), "upper index").expect("upper index should be written");
+        fs::write(
+            upper.join("assets").join("js").join("main.js"),
+            "upper asset",
+        )
+        .expect("upper asset should be written");
+        fs::write(upper.join("manifest.json"), "{\"name\":\"upper\"}")
+            .expect("upper manifest should be written");
+        fs::write(upper.join("webgal-serviceworker.js"), "upper worker")
+            .expect("upper worker should be written");
+
+        let overlay = OverlayFs::new(
+            upper,
+            Some(engine.clone()),
+            Some(engine.join("game").join("template")),
+        )
+        .expect("overlay should be created");
+
+        for runtime_path in [
+            Path::new("index.html"),
+            Path::new("assets/js/main.js"),
+            Path::new("manifest.json"),
+            Path::new("webgal-serviceworker.js"),
+        ] {
+            assert!(
+                matches!(
+                    overlay.resolve_physical_path(runtime_path),
+                    Err(VfsError::NotFound)
+                ),
+                "{} should not fall back to project upper",
+                runtime_path.display()
+            );
+        }
     }
 
     #[test]
@@ -1405,12 +1453,12 @@ mod tests {
 
         fs::create_dir_all(engine.join("game").join("template"))
             .expect("template directory should be created");
-        fs::write(upper.join("manifest.json"), "{\"name\":\"upper\"}")
-            .expect("upper manifest should be written");
+        fs::write(upper.join("index.html"), "upper runtime")
+            .expect("upper runtime should be written");
         fs::write(upper.join("notes.txt"), "upper only")
             .expect("upper unclassified file should be written");
-        fs::write(engine.join("manifest.json"), "{\"name\":\"engine\"}")
-            .expect("engine manifest should be written");
+        fs::write(engine.join("index.html"), "engine runtime")
+            .expect("engine runtime should be written");
 
         let overlay = OverlayFs::new(
             upper,
@@ -1424,8 +1472,8 @@ mod tests {
             .expect("root entries should be listed");
 
         assert!(
-            entries.iter().any(|entry| entry.name == "manifest.json"),
-            "manifest should be visible"
+            entries.iter().any(|entry| entry.name == "index.html"),
+            "runtime entry should be visible"
         );
         assert!(!entries.iter().any(|entry| entry.name == "notes.txt"));
     }

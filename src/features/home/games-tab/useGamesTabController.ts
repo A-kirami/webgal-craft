@@ -1,19 +1,16 @@
 import { useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { requestGameRuntimeRebind, resolveRuntimeRebindIssue } from '~/features/modals/import-dependency-resolution/request-game-runtime-rebind'
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
-import { isEngineUsable } from '~/services/engine-manager'
+import { isEngineEditorCompatible, MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 import { resourceReconcile } from '~/services/resource-reconcile'
+import { AppError } from '~/types/errors'
 
-import type { EngineStatus, Game } from '~/database/model'
-import type { ResourceAvailability } from '~/services/resource-health'
+import type { Engine, Game } from '~/database/model'
 import type { ResolveImportDependencies } from '~/types/import-dependency-resolution'
 import type { I18nT } from '~/utils/i18n-like'
 
-interface EngineAvailabilityCheck {
-  id: string
-  status: EngineStatus
-  availability: ResourceAvailability
-}
+type EngineAvailabilityCheck = Pick<Engine, 'availability' | 'id' | 'metadata' | 'status'>
 
 interface UseGamesTabControllerOptions {
   activeProgress: ReadonlyMap<string, number>
@@ -35,8 +32,11 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
     importResource: path => gameManager.importGame(path, { resolveDependencies }),
     messages: {
       alreadyRegistered: t => t('home.games.importAlreadyExists'),
+      engineEditorIncompatible: t => t('home.games.importEngineEditorIncompatible'),
       engineNotFound: t => t('home.games.importEngineNotFound'),
       engineUnavailable: t => t('home.games.importEngineUnavailable'),
+      engineVersionInvalid: t => t('home.games.importEngineVersionInvalid'),
+      engineVersionTooOld: t => t('home.games.importEngineVersionTooOld', { version: MIN_WEBGAL_EDITOR_RUNTIME_VERSION }),
       gameConfigCorrupted: t => t('home.games.importConfigCorrupted'),
       gameSchemaTooNew: t => t('home.games.importSchemaVersionTooNew'),
       invalidFolder: t => t('home.games.importInvalidFolder'),
@@ -62,6 +62,23 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
       return
     }
 
+    const availableGame = { ...game, availability }
+    try {
+      await gameManager.ensureEditorRuntimeCompatible(availableGame)
+    } catch (error) {
+      if (error instanceof AppError && error.code === 'ENGINE_EDITOR_INCOMPATIBLE') {
+        const rebound = await requestGameRuntimeRebind(availableGame, {
+          ...resolveRuntimeRebindIssue(error.details?.issue),
+          resolveDependencies,
+        })
+        if (rebound) {
+          options.pushRoute(`/edit/${game.id}`)
+        }
+        return
+      }
+      throw error
+    }
+
     options.pushRoute(`/edit/${game.id}`)
   }
 
@@ -79,7 +96,7 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
       return
     }
 
-    const hasUsableEngine = engines.some(engine => isEngineUsable(engine))
+    const hasUsableEngine = engines.some(engine => isEngineEditorCompatible(engine))
     if (!hasUsableEngine) {
       options.openNoEngineAlertModal(options.switchToEnginesTab)
       return

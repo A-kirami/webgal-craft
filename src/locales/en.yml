@@ -149,6 +149,9 @@ home:
     importConfigCorrupted: The project file is damaged and cannot be read.
     importEngineNotFound: The engine required by this project is not installed.
     importEngineUnavailable: The engine required by this project is unavailable.
+    importEngineEditorIncompatible: The engine bound to this project cannot be used in WebGAL Craft. Choose another engine.
+    importEngineVersionInvalid: The engine bound to this project does not provide valid version information. Choose another engine.
+    importEngineVersionTooOld: The engine bound to this project is too old. Choose an engine for WebGAL {version} or later.
     importSuccess: Game imported successfully
     importAlreadyExists: This project already exists
     importInvalidFolder: This does not look like a game project folder. Please check its contents.
@@ -172,6 +175,9 @@ home:
     importSchemaTooNew: This engine is too new for the current app. Please upgrade the app and try again.
     importTargetConflict: The install location is already in use. Please remove the conflicting folder and retry.
     importUnsupportedLegacyEngine: This engine is too old. Please use a newer version.
+    importEditorIncompatible: This engine cannot be used in WebGAL Craft.
+    importVersionInvalid: This engine does not provide valid WebGAL version information.
+    importVersionTooOld: This engine is too old. Import an engine for WebGAL {version} or later.
     importUnknownError: An unknown error occurred while importing the engine
     importMultipleFolders: Only one engine folder can be imported at a time
     noEngineTitle: No Available Game Engines
@@ -223,6 +229,7 @@ modals:
     create: Create
     createFailed: Failed to create game
     engineUnavailable: The selected engine is currently unavailable, please choose another one
+    engineIncompatible: The selected engine cannot be used in WebGAL Craft. Choose another one.
     templateUnavailable: The selected template is currently unavailable, please choose another one
     pathNotEmpty: The game save directory must not exist or be empty
     selectSaveLocation: Game Save Location
@@ -1186,22 +1193,32 @@ engine:
 
 game:
   selectTemplatePlaceholder: Select an available template
-  importDependencyResolutionTitle: Select Resources for Import
-  importDependencyResolutionDescription: This project references an unavailable engine or template. Select resources available on this device; the app will update the project config and continue importing.
-  importDependencyResolutionDescriptionWithName: '"{name}" references an unavailable engine or template. Select resources available on this device; the app will update the project config and continue importing.'
-  importDependencyResolutionLegacyDescription: This legacy project folder does not include its own engine. Select an available engine; the app will create a project config and continue importing.
-  importDependencyResolutionLegacyDescriptionWithName: '"{name}" is a legacy project and its folder does not include its own engine. Select an available engine; the app will create a project config and continue importing.'
-  importDependencyResolutionEngineTitle: Bind Engine
-  importDependencyResolutionTemplateTitle: Bind Template
-  importDependencyResolutionEngineIssue: Select an available engine. The imported project will use it for opening and previewing.
-  importDependencyResolutionEngineLegacyIssue: Legacy projects need a local engine binding before they can be imported.
-  importDependencyResolutionTemplateIssue: Select an available template or follow the selected engine default template.
-  importDependencyResolutionOriginalEngine: Original Engine
-  importDependencyResolutionOriginalTemplate: Original Template
-  importDependencyResolutionReasonMissing: Not Installed
-  importDependencyResolutionReasonUnavailable: Unavailable
-  importDependencyResolutionReasonSelectionRequired: Selection Required
-  importDependencyResolutionTemplateFollowEngineHint: Choosing "follow the engine default template" removes the explicit template reference from the project.
-  importDependencyResolutionScopeHint: Only the imported project's config will be updated. Installed resources will not be moved or deleted.
-  importDependencyResolutionCancel: Cancel Import
-  importDependencyResolutionConfirm: Continue Import
+  gameDependencyResolutionTitle: Select Required Resources
+  gameDependencyResolutionRuntimeRebindTitle: Change Project Engine
+  gameDependencyResolutionDescription: The engine or template required by this project is currently unavailable. Select an available resource, and the app will update the project config before continuing the import.
+  gameDependencyResolutionDescriptionWithName: 'The engine or template required by "{name}" is currently unavailable. Select an available resource, and the app will update the project config before continuing the import.'
+  gameDependencyResolutionRuntimeRebindDescription: The engine bound to this project is unavailable or cannot be used in WebGAL Craft. Select an available engine, and the app will update the project config before reopening the project.
+  gameDependencyResolutionRuntimeRebindDescriptionWithName: 'The engine bound to "{name}" is unavailable or cannot be used in WebGAL Craft. Select an available engine, and the app will update the project config before reopening the project.'
+  gameDependencyResolutionLegacyDescription: This legacy project needs an engine that can be used in WebGAL Craft. The app will create a project config and continue importing.
+  gameDependencyResolutionLegacyDescriptionWithName: '"{name}" is a legacy project and needs an engine that can be used in WebGAL Craft. The app will create a project config and continue importing.'
+  gameDependencyResolutionEngineTitle: Select Engine
+  gameDependencyResolutionTemplateTitle: Select Template
+  gameDependencyResolutionEngineIssue: Select an engine that can be used in WebGAL Craft. After import, the project will use it for opening and previewing.
+  gameDependencyResolutionRuntimeRebindEngineIssue: Select an engine that can be used in WebGAL Craft. After the change, the project will use it for opening and previewing.
+  gameDependencyResolutionEngineLegacyIssue: Legacy projects need an engine that can be used in WebGAL Craft before they can be imported.
+  gameDependencyResolutionTemplateIssue: Select an available template, or use the selected engine's default template.
+  gameDependencyResolutionOriginalEngine: Current Engine
+  gameDependencyResolutionOriginalTemplate: Current Template
+  gameDependencyResolutionReasonMissing: Not Installed
+  gameDependencyResolutionReasonUnavailable: Unavailable
+  gameDependencyResolutionReasonIncompatible: Cannot Be Used
+  gameDependencyResolutionReasonVersionInvalid: Invalid Version
+  gameDependencyResolutionReasonVersionTooOld: Version Too Old
+  gameDependencyResolutionReasonSelectionRequired: Selection Required
+  gameDependencyResolutionTemplateFollowEngineHint: Choosing "follow the engine default template" removes the project's separate template selection.
+  gameDependencyResolutionScopeHint: Only this project's config will be updated. Installed resources will not be moved or deleted.
+  gameDependencyResolutionRuntimeRebindScopeHint: Only the engine used by this project will be updated. Installed resources will not be moved or deleted.
+  gameDependencyResolutionCancel: Cancel Import
+  gameDependencyResolutionRuntimeRebindCancel: Cancel
+  gameDependencyResolutionConfirm: Continue Import
+  gameDependencyResolutionRuntimeRebindConfirm: Change and Continue

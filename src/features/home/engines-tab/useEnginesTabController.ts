@@ -3,7 +3,7 @@ import { openPath } from '@tauri-apps/plugin-opener'
 import { db } from '~/database/db'
 import { AbsPath } from '~/domain/path'
 import { useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
-import { engineManager } from '~/services/engine-manager'
+import { engineManager, MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
 import { resourceReconcile } from '~/services/resource-reconcile'
 
 import type { Engine } from '~/database/model'
@@ -24,6 +24,9 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
     importResource: path => engineManager.importEngine(path),
     messages: {
       alreadyRegistered: t => t('home.engines.importAlreadyExists'),
+      engineEditorIncompatible: t => t('home.engines.importEditorIncompatible'),
+      engineVersionInvalid: t => t('home.engines.importVersionInvalid'),
+      engineVersionTooOld: t => t('home.engines.importVersionTooOld', { version: MIN_WEBGAL_EDITOR_RUNTIME_VERSION }),
       engineSchemaTooNew: t => t('home.engines.importSchemaTooNew'),
       invalidFolder: t => t('home.engines.importInvalidFolder'),
       multipleFolders: t => t('home.engines.importMultipleFolders'),

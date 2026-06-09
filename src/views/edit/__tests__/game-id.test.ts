@@ -4,8 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSSRApp, reactive } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 
+import { createTestGame } from '~/__tests__/factories'
+import { AppError } from '~/types/errors'
+
 const {
   createEditorShortcutDefinitionsMock,
+  ensureEditorRuntimeCompatibleMock,
+  modalOpenMock,
+  requestGameRuntimeRebindMock,
   useAnimationTableSyncBootstrapMock,
   useEditorStoreMock,
   useFileStoreMock,
@@ -18,6 +24,9 @@ const {
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
   createEditorShortcutDefinitionsMock: vi.fn(() => []),
+  ensureEditorRuntimeCompatibleMock: vi.fn(),
+  modalOpenMock: vi.fn(),
+  requestGameRuntimeRebindMock: vi.fn(),
   useAnimationTableSyncBootstrapMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
   useFileStoreMock: vi.fn(),
@@ -115,6 +124,20 @@ vi.mock('~/services/resource-index/service', () => ({
   useResourceIndexBootstrap: useResourceIndexBootstrapMock,
 }))
 
+vi.mock('~/services/game-manager', () => ({
+  gameManager: {
+    ensureEditorRuntimeCompatible: ensureEditorRuntimeCompatibleMock,
+  },
+}))
+
+vi.mock('~/features/modals/import-dependency-resolution/request-game-runtime-rebind', () => ({
+  requestGameRuntimeRebind: requestGameRuntimeRebindMock,
+  resolveRuntimeRebindIssue: () => ({
+    compatibilityIssue: 'versionTooOld',
+    reason: 'incompatible',
+  }),
+}))
+
 vi.mock('~/stores/editor', () => ({
   isEditableEditor: (state: { projection?: string } | undefined) => !!state?.projection,
   useEditorStore: useEditorStoreMock,
@@ -152,6 +175,9 @@ describe('edit/[gameId]', () => {
     useWorkspaceStoreMock.mockReset()
     createEditorShortcutDefinitionsMock.mockReset()
     createEditorShortcutDefinitionsMock.mockReturnValue([])
+    ensureEditorRuntimeCompatibleMock.mockResolvedValue(undefined)
+    modalOpenMock.mockReset()
+    requestGameRuntimeRebindMock.mockResolvedValue(false)
 
     useEditorStoreMock.mockReturnValue(reactive({
       currentSelectedSceneStatement: undefined,
@@ -164,6 +190,7 @@ describe('edit/[gameId]', () => {
     useFileStoreMock.mockReturnValue(undefined)
     useModalStoreMock.mockReturnValue(reactive({
       modalStack: reactive(new Map()),
+      open: modalOpenMock,
     }))
     usePreferenceStoreMock.mockReturnValue(reactive({
       leftPanelView: 'scene',
@@ -199,5 +226,34 @@ describe('edit/[gameId]', () => {
     mountedApps.push(app)
 
     expect(useResourceIndexBootstrapMock).toHaveBeenCalledOnce()
+  })
+
+  it('当前游戏运行时不兼容时请求依赖重选重绑引擎，而不是打开切换引擎弹窗', async () => {
+    const currentGame = createTestGame({ id: 'game-old-engine', engineId: 'engine-old' })
+    ensureEditorRuntimeCompatibleMock.mockRejectedValue(new AppError('ENGINE_EDITOR_INCOMPATIBLE', '引擎版本过低', {
+      details: {
+        issue: 'versionTooOld',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    }))
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame,
+      ensureCurrentGameAvailable: vi.fn(async () => true),
+    }))
+
+    const view = await import('../[gameId].vue')
+    const app = createSSRApp(view.default)
+
+    await renderToString(app)
+    mountedApps.push(app)
+
+    await vi.waitFor(() => {
+      expect(requestGameRuntimeRebindMock).toHaveBeenCalledWith(currentGame, {
+        compatibilityIssue: 'versionTooOld',
+        reason: 'incompatible',
+      })
+    })
+    expect(modalOpenMock).not.toHaveBeenCalledWith('SwitchEngineModal', expect.anything(), expect.anything(), expect.anything())
+    expect(modalOpenMock).not.toHaveBeenCalledWith('RecoverGameModal', expect.anything(), expect.anything(), expect.anything())
   })
 })

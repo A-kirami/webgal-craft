@@ -71,7 +71,15 @@ describe('EngineSelector', () => {
               id: 'created-engine',
               engineId: 'open-webgal.webgal',
               name: 'WebGAL',
-              version: '4.5.0',
+              version: '4.6.1',
+              status: 'created',
+            }),
+            createTestEngine({
+              id: 'incompatible-engine',
+              engineId: 'open-webgal.webgal',
+              name: 'WebGAL',
+              version: '4.6.0',
+              metadata: { webgalVersion: '4.6.0' },
               status: 'created',
             }),
             createTestEngine({
@@ -104,7 +112,8 @@ describe('EngineSelector', () => {
 
     await expect.poll(() => document.body.textContent ?? '').toContain('WebGAL')
     expect(document.body.textContent ?? '').not.toContain('Legacy')
-    expect(document.body.textContent ?? '').toContain('4.5.0')
+    expect(document.body.textContent ?? '').toContain('4.6.1')
+    expect(document.body.textContent ?? '').not.toContain('4.6.0')
     expect(document.body.textContent ?? '').not.toContain('4.4.0')
     await vi.waitFor(() => {
       expect(updateModelValue).toHaveBeenCalledWith('created-engine')

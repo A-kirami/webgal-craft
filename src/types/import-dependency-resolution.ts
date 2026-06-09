@@ -2,9 +2,14 @@ import type { EngineRef, TemplateBinding } from '~/types/project-config'
 
 export type ImportDependencySource = 'configured' | 'legacy'
 
-export type ImportDependencyIssueReason = 'missing' | 'unavailable' | 'selectionRequired'
+export type ImportDependencyResolutionPurpose = 'import' | 'runtimeRebind'
+
+export type ImportDependencyIssueReason = 'missing' | 'unavailable' | 'incompatible' | 'selectionRequired'
+
+export type ImportEngineDependencyCompatibilityIssue = 'versionInvalid' | 'versionTooOld'
 
 export interface ImportEngineDependencyIssue {
+  compatibilityIssue?: ImportEngineDependencyCompatibilityIssue
   current?: EngineRef
   reason: ImportDependencyIssueReason
 }
@@ -17,6 +22,7 @@ export interface ImportTemplateDependencyIssue {
 
 export interface ImportDependencyResolutionContext {
   gameName?: string
+  purpose: ImportDependencyResolutionPurpose
   source: ImportDependencySource
   engine?: ImportEngineDependencyIssue
   template?: ImportTemplateDependencyIssue

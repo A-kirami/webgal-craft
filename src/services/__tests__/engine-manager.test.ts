@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestEngine, createTestGame } from '~/__tests__/factories'
 import { AbsPath } from '~/domain/path'
-import { engineManager } from '~/services/engine-manager'
+import { engineManager, evaluateEngineEditorCompatibility } from '~/services/engine-manager'
 import { AppError } from '~/types/errors'
 
 const {
@@ -215,6 +215,34 @@ describe('engineManager', () => {
     expect(engineWhereFilterMock).not.toHaveBeenCalled()
   })
 
+  it('evaluateEngineEditorCompatibility 会按严格三段版本判断编辑器运行时兼容性', () => {
+    expect(evaluateEngineEditorCompatibility(createTestEngine({
+      metadata: { webgalVersion: '4.6.1' },
+    }))).toEqual({ compatible: true })
+    expect(evaluateEngineEditorCompatibility(createTestEngine({
+      metadata: { webgalVersion: '4.10.0' },
+    }))).toEqual({ compatible: true })
+    expect(evaluateEngineEditorCompatibility(createTestEngine({
+      metadata: { webgalVersion: '4.6.0' },
+    }))).toEqual({ compatible: false, issue: 'versionTooOld' })
+    expect(evaluateEngineEditorCompatibility(createTestEngine({
+      metadata: { webgalVersion: '4.6.1-beta' },
+    }))).toEqual({ compatible: false, issue: 'versionTooOld' })
+    expect(evaluateEngineEditorCompatibility(createTestEngine({
+      metadata: { webgalVersion: undefined },
+    }))).toEqual({ compatible: false, issue: 'versionInvalid' })
+    expect(evaluateEngineEditorCompatibility(createTestEngine({
+      metadata: { webgalVersion: '4.6' },
+    }))).toEqual({ compatible: false, issue: 'versionInvalid' })
+    expect(evaluateEngineEditorCompatibility(createTestEngine({
+      metadata: { webgalVersion: 'invalid-build' },
+    }))).toEqual({ compatible: false, issue: 'versionInvalid' })
+    expect(evaluateEngineEditorCompatibility(createTestEngine({
+      availability: 'broken',
+      metadata: { webgalVersion: '4.10.0' },
+    }))).toEqual({ compatible: false, issue: 'unavailable' })
+  })
+
   it('importEngine 会把新版引擎复制到 name/version 托管目录并回写状态', async () => {
     readEngineManifestMock.mockResolvedValue({
       status: 'ok',
@@ -222,9 +250,9 @@ describe('engineManager', () => {
         schemaVersion: '1.0.0',
         id: 'open-webgal.webgal',
         name: 'WebGAL',
-        version: '4.5.0',
+        version: '4.6.1',
         engineType: 'official',
-        webgalVersion: '4.5.0',
+        webgalVersion: '4.6.1',
         icon: 'branding/icon.png',
       },
     })
@@ -238,10 +266,10 @@ describe('engineManager', () => {
     await expect(engineManager.importEngine(AbsPath.from('/downloads/webgal'))).resolves.toEqual({ id: 'engine-1', alreadyRegistered: false })
 
     expect(addMock).toHaveBeenCalledWith(expect.objectContaining({
-      path: '/engines/WebGAL/4.5.0',
-      pathLookupKey: '/engines/webgal/4.5.0',
+      path: '/engines/WebGAL/4.6.1',
+      pathLookupKey: '/engines/webgal/4.6.1',
       name: 'WebGAL',
-      version: '4.5.0',
+      version: '4.6.1',
       status: 'creating',
       metadata: expect.objectContaining({
         type: 'official',
@@ -249,7 +277,7 @@ describe('engineManager', () => {
     }))
     expect(copyDirectoryWithProgressMock).toHaveBeenCalledWith(
       '/downloads/webgal',
-      '/engines/WebGAL/4.5.0',
+      '/engines/WebGAL/4.6.1',
       expect.any(Function),
     )
     expect(resourceStoreMock.updateProgress).toHaveBeenNthCalledWith(1, 'engine-1', 0)
@@ -259,10 +287,10 @@ describe('engineManager', () => {
     expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', expect.objectContaining({
       status: 'created',
       name: 'WebGAL',
-      version: '4.5.0',
+      version: '4.6.1',
       previewAssets: {
         icon: expect.objectContaining({
-          path: '/engines/WebGAL/4.5.0/branding/icon.png',
+          path: '/engines/WebGAL/4.6.1/branding/icon.png',
         }),
       },
     }))
@@ -276,9 +304,9 @@ describe('engineManager', () => {
         schemaVersion: '1.0.0',
         id: 'open-webgal.webgal',
         name: 'WebGAL',
-        version: '4.5.0',
+        version: '4.6.1',
         engineType: 'official',
-        webgalVersion: '4.5.0',
+        webgalVersion: '4.6.1',
         icon: 'branding/icon.png',
       },
     })
@@ -291,12 +319,12 @@ describe('engineManager', () => {
     })
 
     expect(addMock).toHaveBeenCalledWith(expect.objectContaining({
-      path: 'C:/Engines/WebGAL/4.5.0',
-      pathLookupKey: 'c:/engines/webgal/4.5.0',
+      path: 'C:/Engines/WebGAL/4.6.1',
+      pathLookupKey: 'c:/engines/webgal/4.6.1',
     }))
     expect(copyDirectoryWithProgressMock).toHaveBeenCalledWith(
       'C:/downloads/webgal',
-      'C:/Engines/WebGAL/4.5.0',
+      'C:/Engines/WebGAL/4.6.1',
       expect.any(Function),
     )
   })
@@ -309,7 +337,7 @@ describe('engineManager', () => {
         id: 'open-webgal.webgal',
         name: 'WebGAL',
         engineType: 'official',
-        webgalVersion: '4.5.0',
+        webgalVersion: '4.6.1',
         icon: 'branding/icon.png',
       },
     })
@@ -348,6 +376,58 @@ describe('engineManager', () => {
     expect(addMock).not.toHaveBeenCalled()
     expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
     expect(loggerWarnMock).toHaveBeenCalledWith('[引擎导入] 引擎清单无效: 路径=/downloads/unsupportedEngine, 原因=缺少 webgal-engine.json')
+  })
+
+  it('importEngine 会拒绝不满足编辑器运行时版本门禁的引擎', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.6.0',
+        engineType: 'official',
+        webgalVersion: '4.6.0',
+      },
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+
+    await expect(engineManager.importEngine(AbsPath.from('/downloads/webgal'))).rejects.toMatchObject({
+      code: 'ENGINE_EDITOR_INCOMPATIBLE',
+      details: {
+        issue: 'versionTooOld',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    })
+
+    expect(addMock).not.toHaveBeenCalled()
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
+  })
+
+  it('importEngine 会拒绝 webgalVersion 缺失或格式异常的引擎', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.6.1',
+        engineType: 'official',
+        webgalVersion: '4.6',
+      },
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+
+    await expect(engineManager.importEngine(AbsPath.from('/downloads/webgal'))).rejects.toMatchObject({
+      code: 'ENGINE_EDITOR_INCOMPATIBLE',
+      details: {
+        issue: 'versionInvalid',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    })
+
+    expect(addMock).not.toHaveBeenCalled()
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
   })
 
   it('importEngine 会拒绝 schemaVersion 不受支持的引擎', async () => {
@@ -394,22 +474,36 @@ describe('engineManager', () => {
   })
 
   it('importEngine 在同 engineId+version 已注册时幂等返回既有 ID', async () => {
+    const existingEngine = createTestEngine({
+      id: 'engine-existing-by-ref',
+      name: 'WebGAL',
+      version: '4.6.1',
+    })
     readEngineManifestMock.mockResolvedValue({
       status: 'ok',
       manifest: {
         schemaVersion: '1.0.0',
         id: 'open-webgal.webgal',
         name: 'WebGAL',
-        version: '4.5.0',
+        version: '4.6.1',
         engineType: 'official',
-        webgalVersion: '4.5.0',
+        webgalVersion: '4.6.1',
       },
     })
     validateDirectoryStructureMock.mockResolvedValue(true)
-    engineWhereFirstMock.mockResolvedValue(createTestEngine({
-      id: 'engine-existing-by-ref',
-      name: 'WebGAL',
-      version: '4.5.0',
+    engineWhereMock.mockImplementation((index: string) => ({
+      equals: (value: unknown) => ({
+        first: async () => {
+          if (index !== '[engineId+version]' || !Array.isArray(value)) {
+            return
+          }
+
+          const [engineId, version] = value
+          return engineId === 'open-webgal.webgal' && version === '4.6.1'
+            ? existingEngine
+            : undefined
+        },
+      }),
     }))
 
     await expect(engineManager.importEngine(AbsPath.from('/downloads/webgal'))).resolves.toEqual({
@@ -417,6 +511,8 @@ describe('engineManager', () => {
       alreadyRegistered: true,
     })
 
+    expect(engineWhereMock).toHaveBeenNthCalledWith(1, 'pathLookupKey')
+    expect(engineWhereMock).toHaveBeenNthCalledWith(2, '[engineId+version]')
     expect(addMock).not.toHaveBeenCalled()
     expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
   })
@@ -455,13 +551,13 @@ describe('engineManager', () => {
         schemaVersion: '1.0.0',
         id: 'open-webgal.webgal',
         name: 'WebGAL',
-        version: '4.5.0',
+        version: '4.6.1',
         engineType: 'official',
-        webgalVersion: '4.5.0',
+        webgalVersion: '4.6.1',
       },
     })
     validateDirectoryStructureMock.mockResolvedValue(true)
-    existsMock.mockImplementation(async (path: string) => path === '/engines/WebGAL/4.5.0')
+    existsMock.mockImplementation(async (path: string) => path === '/engines/WebGAL/4.6.1')
 
     await expect(engineManager.importEngine(AbsPath.from('/downloads/webgal'))).rejects.toEqual(
       new AppError('TARGET_CONFLICT', '目标引擎目录已存在，请先清理后重试'),

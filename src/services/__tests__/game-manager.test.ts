@@ -154,13 +154,17 @@ vi.mock('~/database/db', () => ({
   },
 }))
 
-vi.mock('~/services/engine-manager', () => ({
-  engineManager: {
-    findEngineByRef: engineFindByRefMock,
-  },
-  isEngineUsable: (engine: { status: string, availability: string }) =>
-    engine.status === 'created' && engine.availability === 'available',
-}))
+vi.mock('~/services/engine-manager', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('~/services/engine-manager')>()
+
+  return {
+    ...actual,
+    engineManager: {
+      ...actual.engineManager,
+      findEngineByRef: engineFindByRefMock,
+    },
+  }
+})
 
 vi.mock('~/services/template-switch', () => ({
   templateSwitch: {
@@ -227,21 +231,23 @@ function mockTemplateLookupByName(templates: Record<string, ReturnType<typeof cr
 
 const importedProjectEngineRef = {
   id: 'default-publisher.default-engine',
-  version: '4.5.0',
+  version: '4.6.1',
 }
 
 const selectedProjectEngineRef = {
   id: 'default-publisher.default-engine',
-  version: '4.6.0',
+  version: '4.6.1',
 }
 
 const configuredImportDependencyContext = {
   gameName: 'Demo Game',
+  purpose: 'import',
   source: 'configured',
 } as const
 
 const legacyImportDependencyContext = {
   gameName: 'Demo Game',
+  purpose: 'import',
   source: 'legacy',
   engine: {
     reason: 'selectionRequired',
@@ -395,6 +401,33 @@ describe('gameManager', () => {
     expect(existsMock).not.toHaveBeenCalledWith('/games/vfs/icons/icon-192.png')
   })
 
+  it('getGamePreviewAssets 在绑定引擎不兼容时仍按项目静态资源解析图标', async () => {
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      id: 'engine-legacy',
+      metadata: { webgalVersion: '4.6.0' },
+      path: AbsPath.from('/engines/WebGAL/4.6.0'),
+    }))
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: {
+        id: 'default-publisher.default-engine',
+        version: '4.6.0',
+      },
+    })
+    existsMock.mockImplementation(async (path: string) => path === '/games/vfs/icons/icon-192.png')
+
+    await expect(gameManager.getGamePreviewAssets(AbsPath.from('/games/vfs'))).resolves.toEqual({
+      icon: {
+        path: 'icons/icon-192.png',
+      },
+      cover: {
+        path: 'game/background/cover.png',
+      },
+    })
+
+    expect(resolvePathMock).not.toHaveBeenCalled()
+  })
+
   it('registerGame 会保留调用方提供的 metadata 并只补齐缺失的 previewAssets', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
@@ -534,6 +567,49 @@ describe('gameManager', () => {
     expect(resourceStoreState.finishProgress).toHaveBeenCalledWith('game-1')
   })
 
+  it('createGame 会拒绝不能作为编辑器运行时的引擎', async () => {
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      id: 'engine-legacy',
+      name: 'WebGAL',
+      version: '4.6.0',
+      metadata: { webgalVersion: '4.6.0' },
+    }))
+
+    await expect(gameManager.createGame('Demo Game', AbsPath.from('/games/demo'), 'engine-legacy')).rejects.toMatchObject({
+      code: 'ENGINE_EDITOR_INCOMPATIBLE',
+      details: {
+        issue: 'versionTooOld',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    })
+
+    expect(mkdirMock).not.toHaveBeenCalled()
+    expect(writeProjectConfigMock).not.toHaveBeenCalled()
+    expect(dbGameAddMock).not.toHaveBeenCalled()
+  })
+
+  it('createGame 会把不可用引擎报告为编辑器运行时不兼容', async () => {
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      availability: 'broken',
+      id: 'engine-broken',
+      metadata: { webgalVersion: '4.6.1' },
+      name: 'WebGAL',
+      version: '4.6.1',
+    }))
+
+    await expect(gameManager.createGame('Demo Game', AbsPath.from('/games/demo'), 'engine-broken')).rejects.toMatchObject({
+      code: 'ENGINE_EDITOR_INCOMPATIBLE',
+      details: {
+        issue: 'unavailable',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    })
+
+    expect(mkdirMock).not.toHaveBeenCalled()
+    expect(writeProjectConfigMock).not.toHaveBeenCalled()
+    expect(dbGameAddMock).not.toHaveBeenCalled()
+  })
+
   it('createGame 会把 Windows 风格项目路径归一化后再创建目录', async () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
@@ -668,19 +744,34 @@ describe('gameManager', () => {
     })
   })
 
-  it('importGame 对自带引擎旧项目会补写自包含 project.wgcp', async () => {
+  it('importGame 对带自带引擎入口的旧项目会要求选择兼容引擎并写入 project.wgcp', async () => {
     mockExistingPaths(
       '/games/self-contained',
       '/games/self-contained/game/config.txt',
       '/games/self-contained/index.html',
       '/games/self-contained/game/background/cover.png',
     )
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      id: 'engine-2',
+      name: 'WebGAL',
+      version: '4.6.1',
+      status: 'created',
+    }))
+    const resolveDependencies = vi.fn().mockResolvedValue({
+      engineId: 'engine-2',
+    })
 
-    await expect(gameManager.importGame(AbsPath.from('/games/self-contained'))).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
+    await expect(gameManager.importGame(AbsPath.from('/games/self-contained'), {
+      resolveDependencies,
+    })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
-    expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/self-contained', { version: 1 })
+    expect(resolveDependencies).toHaveBeenCalledWith(legacyImportDependencyContext)
+    expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/self-contained', {
+      version: 1,
+      engine: selectedProjectEngineRef,
+    })
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
-      engineId: undefined,
+      engineId: 'engine-2',
       path: '/games/self-contained',
       pathLookupKey: '/games/self-contained',
     }))
@@ -700,13 +791,63 @@ describe('gameManager', () => {
     engineFindByRefMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
       name: 'WebGAL',
-      version: '4.5.0',
+      version: '4.6.1',
     }))
 
     await expect(gameManager.importGame(AbsPath.from('/games/vfs'))).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
       engineId: 'engine-1',
+      path: '/games/vfs',
+      pathLookupKey: '/games/vfs',
+    }))
+  })
+
+  it('importGame 对匹配到协议不兼容引擎的配置项目会请求用户重选兼容引擎', async () => {
+    mockExistingPaths(
+      '/games/vfs',
+      '/games/vfs/game/config.txt',
+      '/games/vfs/project.wgcp',
+      '/games/vfs/game/background/cover.png',
+    )
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: importedProjectEngineRef,
+    })
+    engineFindByRefMock.mockResolvedValue(createTestEngine({
+      id: 'engine-old',
+      name: 'WebGAL',
+      version: '4.6.0',
+      metadata: { webgalVersion: '4.6.0' },
+    }))
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      id: 'engine-2',
+      name: 'WebGAL',
+      version: '4.6.1',
+      status: 'created',
+    }))
+    const resolveDependencies = vi.fn().mockResolvedValue({
+      engineId: 'engine-2',
+    })
+
+    await expect(gameManager.importGame(AbsPath.from('/games/vfs'), {
+      resolveDependencies,
+    })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
+
+    expect(resolveDependencies).toHaveBeenCalledWith({
+      ...configuredImportDependencyContext,
+      engine: {
+        compatibilityIssue: 'versionTooOld',
+        current: importedProjectEngineRef,
+        reason: 'incompatible',
+      },
+    })
+    expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/vfs', {
+      version: 1,
+      engine: selectedProjectEngineRef,
+    })
+    expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
+      engineId: 'engine-2',
       path: '/games/vfs',
       pathLookupKey: '/games/vfs',
     }))
@@ -730,7 +871,7 @@ describe('gameManager', () => {
     engineFindByRefMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
       name: 'WebGAL',
-      version: '4.5.0',
+      version: '4.6.1',
     }))
     resolveTemplatePathMock.mockResolvedValue(undefined)
     const selectedTemplateBinding = {
@@ -830,11 +971,11 @@ describe('gameManager', () => {
       },
     })
     engineFindByRefMock.mockImplementation(async (ref: { version?: string }) => {
-      if (ref.version === '4.5.0') {
+      if (ref.version === '4.6.1') {
         return createTestEngine({
           id: 'engine-1',
           name: 'WebGAL',
-          version: '4.5.0',
+          version: '4.6.1',
         })
       }
       return
@@ -901,11 +1042,11 @@ describe('gameManager', () => {
       },
     })
     engineFindByRefMock.mockImplementation(async (ref: { version?: string }) => {
-      if (ref.version === '4.5.0') {
+      if (ref.version === '4.6.1') {
         return createTestEngine({
           id: 'engine-1',
           name: 'WebGAL',
-          version: '4.5.0',
+          version: '4.6.1',
         })
       }
       if (ref.version === '4.4.0') {
@@ -979,7 +1120,7 @@ describe('gameManager', () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-2',
       name: 'WebGAL',
-      version: '4.6.0',
+      version: '4.6.1',
       status: 'created',
     }))
     mockTemplateLookupByName({
@@ -1054,7 +1195,7 @@ describe('gameManager', () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-2',
       name: 'WebGAL',
-      version: '4.6.0',
+      version: '4.6.1',
       status: 'created',
     }))
     const resolveDependencies = vi.fn().mockResolvedValue({
@@ -1095,21 +1236,18 @@ describe('gameManager', () => {
     )
     readProjectConfigMock.mockResolvedValue({
       version: 1,
-      engine: {
-        id: 'default-publisher.default-engine',
-        version: '4.5.0',
-      },
+      engine: importedProjectEngineRef,
     })
     engineFindByRefMock.mockResolvedValue(createTestEngine({
       id: 'engine-error',
       name: 'WebGAL',
-      version: '4.5.0',
+      version: '4.6.1',
       status: 'error',
     }))
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-2',
       name: 'WebGAL',
-      version: '4.6.0',
+      version: '4.6.1',
       status: 'created',
     }))
 
@@ -1154,7 +1292,7 @@ describe('gameManager', () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-2',
       name: 'WebGAL',
-      version: '4.6.0',
+      version: '4.6.1',
       status: 'created',
     }))
 
@@ -1233,7 +1371,7 @@ describe('gameManager', () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-2',
       name: 'WebGAL',
-      version: '4.6.0',
+      version: '4.6.1',
       status: 'created',
     }))
     const resolveDependencies = vi.fn().mockResolvedValue({
@@ -1250,6 +1388,36 @@ describe('gameManager', () => {
       version: 1,
       engine: selectedProjectEngineRef,
     })
+  })
+
+  it('importGame 会拒绝依赖选择返回的不可用引擎', async () => {
+    mockExistingPaths(
+      '/games/no-engine',
+      '/games/no-engine/game/config.txt',
+      '/games/no-engine/game/background/cover.png',
+    )
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      availability: 'broken',
+      id: 'engine-broken',
+      metadata: { webgalVersion: '4.6.1' },
+      name: 'WebGAL',
+      version: '4.6.1',
+    }))
+
+    await expect(gameManager.importGame(AbsPath.from('/games/no-engine'), {
+      resolveDependencies: vi.fn().mockResolvedValue({
+        engineId: 'engine-broken',
+      }),
+    })).rejects.toMatchObject({
+      code: 'ENGINE_EDITOR_INCOMPATIBLE',
+      details: {
+        issue: 'unavailable',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    })
+
+    expect(writeProjectConfigMock).not.toHaveBeenCalled()
+    expect(dbGameAddMock).not.toHaveBeenCalled()
   })
 
   it('importGame 在用户取消选择依赖时会返回取消原因', async () => {
@@ -1282,6 +1450,26 @@ describe('gameManager', () => {
         details: { reason: 'CONFIG_CORRUPTED' },
       }),
     )
+  })
+
+  it('importGame 不会因为 project.wgcp 损坏且存在 index.html 而降级成自带引擎项目', async () => {
+    mockExistingPaths(
+      '/games/broken-config',
+      '/games/broken-config/game/config.txt',
+      '/games/broken-config/project.wgcp',
+      '/games/broken-config/index.html',
+      '/games/broken-config/game/background/cover.png',
+    )
+    readProjectConfigMock.mockRejectedValue(new AppError('INVALID_PROJECT_CONFIG', 'project.wgcp 损坏'))
+
+    await expect(gameManager.importGame(AbsPath.from('/games/broken-config'))).rejects.toEqual(
+      new AppError('INVALID_PROJECT_CONFIG', '项目配置文件损坏', {
+        details: { reason: 'CONFIG_CORRUPTED' },
+      }),
+    )
+
+    expect(writeProjectConfigMock).not.toHaveBeenCalled()
+    expect(dbGameAddMock).not.toHaveBeenCalled()
   })
 
   it('importGame 不会把非配置解析错误伪装成配置损坏', async () => {
@@ -1343,7 +1531,162 @@ describe('gameManager', () => {
     await expect(gameManager.resolvePreviewSite({
       path: AbsPath.from('/games/demo'),
       engineId: 'engine-1',
-    })).rejects.toEqual(new AppError('IO_ERROR', '引擎不可用'))
+    })).rejects.toMatchObject({
+      code: 'ENGINE_EDITOR_INCOMPATIBLE',
+      details: {
+        issue: 'unavailable',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    })
+  })
+
+  it('resolvePreviewSite 会在已绑定引擎记录缺失时返回结构化缺失原因', async () => {
+    dbEngineGetMock.mockResolvedValue(undefined)
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: {
+        id: 'default-publisher.default-engine',
+        version: '4.6.1',
+      },
+    })
+
+    await expect(gameManager.resolvePreviewSite({
+      path: AbsPath.from('/games/demo'),
+      engineId: 'engine-missing',
+    })).rejects.toMatchObject({
+      code: 'IO_ERROR',
+      details: {
+        reason: 'ENGINE_NOT_FOUND',
+      },
+    })
+  })
+
+  it('resolvePreviewSite 会拒绝协议不兼容的已绑定引擎', async () => {
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      id: 'engine-1',
+      path: AbsPath.from('/engines/WebGAL/4.6.0'),
+      metadata: { webgalVersion: '4.6.0' },
+    }))
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: {
+        id: 'default-publisher.default-engine',
+        version: '4.6.0',
+      },
+    })
+
+    await expect(gameManager.resolvePreviewSite({
+      path: AbsPath.from('/games/demo'),
+      engineId: 'engine-1',
+    })).rejects.toMatchObject({
+      code: 'ENGINE_EDITOR_INCOMPATIBLE',
+      details: {
+        issue: 'versionTooOld',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    })
+  })
+
+  it('resolveStaticAssetSite 会在绑定引擎不兼容时回退为项目静态站点', async () => {
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      id: 'engine-1',
+      path: AbsPath.from('/engines/WebGAL/4.6.0'),
+      metadata: { webgalVersion: '4.6.0' },
+    }))
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: {
+        id: 'default-publisher.default-engine',
+        version: '4.6.0',
+      },
+    })
+
+    await expect(gameManager.resolveStaticAssetSite({
+      path: AbsPath.from('/games/demo'),
+      engineId: 'engine-1',
+    })).resolves.toEqual({
+      projectPath: '/games/demo',
+    })
+
+    expect(resolveTemplatePathMock).not.toHaveBeenCalled()
+  })
+
+  it('resolveStaticAssetSite 会在绑定引擎兼容时保留 VFS 静态资源上下文', async () => {
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      id: 'engine-1',
+      path: AbsPath.from('/engines/WebGAL/4.6.1'),
+      metadata: { webgalVersion: '4.6.1' },
+    }))
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: {
+        id: 'default-publisher.default-engine',
+        version: '4.6.1',
+      },
+    })
+    resolveTemplatePathMock.mockResolvedValue(AbsPath.from('/engines/WebGAL/4.6.1/game/template'))
+
+    await expect(gameManager.resolveStaticAssetSite({
+      path: AbsPath.from('/games/demo'),
+      engineId: 'engine-1',
+    })).resolves.toEqual({
+      projectPath: '/games/demo',
+      enginePath: '/engines/WebGAL/4.6.1',
+      templatePath: '/engines/WebGAL/4.6.1/game/template',
+    })
+  })
+
+  it('ensureEditorRuntimeCompatible 会拒绝不兼容引擎且不改写游戏可用性', async () => {
+    dbEngineGetMock.mockResolvedValue(createTestEngine({
+      id: 'engine-1',
+      metadata: { webgalVersion: '4.6.0' },
+      path: AbsPath.from('/engines/WebGAL/4.6.0'),
+    }))
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: {
+        id: 'default-publisher.default-engine',
+        version: '4.6.0',
+      },
+    })
+
+    const game = createTestGame({
+      availability: 'available',
+      engineId: 'engine-1',
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+    })
+
+    await expect(gameManager.ensureEditorRuntimeCompatible(game)).rejects.toMatchObject({
+      code: 'ENGINE_EDITOR_INCOMPATIBLE',
+      details: {
+        issue: 'versionTooOld',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    })
+
+    expect(dbGameUpdateMock).not.toHaveBeenCalled()
+  })
+
+  it('ensureEditorRuntimeCompatible 会在已绑定引擎记录缺失时返回结构化缺失原因', async () => {
+    dbEngineGetMock.mockResolvedValue(undefined)
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: {
+        id: 'default-publisher.default-engine',
+        version: '4.6.1',
+      },
+    })
+
+    await expect(gameManager.ensureEditorRuntimeCompatible({
+      path: AbsPath.from('/games/demo'),
+      engineId: 'engine-missing',
+    })).rejects.toMatchObject({
+      code: 'IO_ERROR',
+      details: {
+        reason: 'ENGINE_NOT_FOUND',
+      },
+    })
   })
 
   it('importGame 遇到不存在的目录时抛出 DIR_NOT_FOUND', async () => {

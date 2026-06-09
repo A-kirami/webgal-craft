@@ -149,6 +149,9 @@ home:
     importConfigCorrupted: 專案檔案已損壞，無法讀取
     importEngineNotFound: 該專案所需的引擎尚未安裝
     importEngineUnavailable: 該專案所需的引擎目前不可用
+    importEngineEditorIncompatible: 該專案綁定的引擎無法在 WebGAL Craft 中使用，請重新選擇其他引擎
+    importEngineVersionInvalid: 該專案綁定的引擎缺少有效的版本資訊，請重新選擇其他引擎
+    importEngineVersionTooOld: 該專案綁定的引擎版本過舊，請重新選擇 WebGAL {version} 及以上版本的引擎
     importSuccess: 遊戲匯入成功
     importAlreadyExists: 該專案已存在
     importInvalidFolder: 這不像是遊戲專案資料夾，請確認目錄結構
@@ -172,6 +175,9 @@ home:
     importSchemaTooNew: 該引擎版本過新，請升級應用後再嘗試匯入
     importTargetConflict: 安裝位置已被佔用，請先刪除衝突的資料夾後重試
     importUnsupportedLegacyEngine: 該引擎版本過舊，請改用新版本
+    importEditorIncompatible: 該引擎無法在 WebGAL Craft 中使用
+    importVersionInvalid: 該引擎缺少有效的 WebGAL 版本資訊
+    importVersionTooOld: 該引擎版本過舊，請匯入 WebGAL {version} 及以上版本的引擎
     importUnknownError: 匯入引擎時發生未知錯誤
     importMultipleFolders: 一次只能匯入一個引擎資料夾
     noEngineTitle: 沒有找到可用的遊戲引擎
@@ -223,6 +229,7 @@ modals:
     create: 建立
     createFailed: 建立遊戲失敗
     engineUnavailable: 所選引擎目前不可用，請重新選擇
+    engineIncompatible: 所選引擎無法在 WebGAL Craft 中使用，請重新選擇
     templateUnavailable: 所選模板目前不可用，請重新選擇
     pathNotEmpty: 遊戲儲存目錄必須不存在或為空
     selectSaveLocation: 遊戲儲存位置
@@ -1185,23 +1192,33 @@ engine:
   unavailable: 不可用
 
 game:
-  selectTemplatePlaceholder: 選擇可用模板
-  importDependencyResolutionTitle: 選擇匯入所需資源
-  importDependencyResolutionDescription: 目前專案引用的引擎或模板不可用。請選擇本機可用資源，應用會更新專案設定後繼續匯入。
-  importDependencyResolutionDescriptionWithName: 「{name}」引用的引擎或模板不可用。請選擇本機可用資源，應用會更新專案設定後繼續匯入。
-  importDependencyResolutionLegacyDescription: 目前舊版專案目錄內沒有自帶引擎。請選擇一個可用引擎，應用會建立專案設定後繼續匯入。
-  importDependencyResolutionLegacyDescriptionWithName: 「{name}」是舊版專案，目錄內沒有自帶引擎。請選擇一個可用引擎，應用會建立專案設定後繼續匯入。
-  importDependencyResolutionEngineTitle: 綁定引擎
-  importDependencyResolutionTemplateTitle: 綁定模板
-  importDependencyResolutionEngineIssue: 選擇一個可用引擎，匯入後專案會使用它開啟和預覽。
-  importDependencyResolutionEngineLegacyIssue: 舊版專案需要綁定一個本機引擎才能繼續匯入。
-  importDependencyResolutionTemplateIssue: 選擇一個可用模板，或跟隨所選引擎的預設模板。
-  importDependencyResolutionOriginalEngine: 原引擎
-  importDependencyResolutionOriginalTemplate: 原模板
-  importDependencyResolutionReasonMissing: 未安裝
-  importDependencyResolutionReasonUnavailable: 不可用
-  importDependencyResolutionReasonSelectionRequired: 需選擇
-  importDependencyResolutionTemplateFollowEngineHint: 選擇「跟隨引擎預設模板」時，將移除專案中的顯式模板引用。
-  importDependencyResolutionScopeHint: 只會更新匯入專案的設定，不會移動或刪除已安裝資源。
-  importDependencyResolutionCancel: 取消匯入
-  importDependencyResolutionConfirm: 繼續匯入
+  selectTemplatePlaceholder: 選擇一個可用模板
+  gameDependencyResolutionTitle: 選擇專案所需資源
+  gameDependencyResolutionRuntimeRebindTitle: 為專案更換引擎
+  gameDependencyResolutionDescription: 該專案所需的引擎或模板目前不可用。請選擇可用資源，應用會更新專案設定後繼續匯入。
+  gameDependencyResolutionDescriptionWithName: 「{name}」所需的引擎或模板目前不可用。請選擇可用資源，應用會更新專案設定後繼續匯入。
+  gameDependencyResolutionRuntimeRebindDescription: 目前專案綁定的引擎不可用，或無法在 WebGAL Craft 中使用。請選擇一個可用引擎，應用會更新專案設定後繼續開啟專案。
+  gameDependencyResolutionRuntimeRebindDescriptionWithName: 「{name}」綁定的引擎不可用，或無法在 WebGAL Craft 中使用。請選擇一個可用引擎，應用會更新專案設定後繼續開啟專案。
+  gameDependencyResolutionLegacyDescription: 該舊版專案需要選擇一個可在 WebGAL Craft 中使用的引擎。應用會建立專案設定後繼續匯入。
+  gameDependencyResolutionLegacyDescriptionWithName: 「{name}」是舊版專案，需要選擇一個可在 WebGAL Craft 中使用的引擎。應用會建立專案設定後繼續匯入。
+  gameDependencyResolutionEngineTitle: 選擇引擎
+  gameDependencyResolutionTemplateTitle: 選擇模板
+  gameDependencyResolutionEngineIssue: 請選擇一個可在 WebGAL Craft 中使用的引擎。匯入後，專案會使用它開啟和預覽。
+  gameDependencyResolutionRuntimeRebindEngineIssue: 請選擇一個可在 WebGAL Craft 中使用的引擎。更換後，專案會改用它開啟和預覽。
+  gameDependencyResolutionEngineLegacyIssue: 舊版專案需要先選擇一個可在 WebGAL Craft 中使用的引擎，才能繼續匯入。
+  gameDependencyResolutionTemplateIssue: 請選擇一個可用模板，或使用所選引擎的預設模板。
+  gameDependencyResolutionOriginalEngine: 目前引擎
+  gameDependencyResolutionOriginalTemplate: 目前模板
+  gameDependencyResolutionReasonMissing: 未安裝
+  gameDependencyResolutionReasonUnavailable: 不可用
+  gameDependencyResolutionReasonIncompatible: 無法使用
+  gameDependencyResolutionReasonVersionInvalid: 版本資訊無效
+  gameDependencyResolutionReasonVersionTooOld: 版本過舊
+  gameDependencyResolutionReasonSelectionRequired: 需要選擇
+  gameDependencyResolutionTemplateFollowEngineHint: 選擇「跟隨引擎預設模板」後，專案將不再單獨指定模板。
+  gameDependencyResolutionScopeHint: 只會更新該專案的設定，不會移動或刪除已安裝資源。
+  gameDependencyResolutionRuntimeRebindScopeHint: 只會更新該專案使用的引擎，不會移動或刪除已安裝資源。
+  gameDependencyResolutionCancel: 取消匯入
+  gameDependencyResolutionRuntimeRebindCancel: 取消
+  gameDependencyResolutionConfirm: 繼續匯入
+  gameDependencyResolutionRuntimeRebindConfirm: 更換並繼續

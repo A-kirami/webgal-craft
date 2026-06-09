@@ -105,7 +105,15 @@ describe('useCreateGameForm', () => {
     vi.resetAllMocks()
 
     createGameMock.mockResolvedValue('game-1')
-    enginesGetMock.mockResolvedValue({ id: 'engine-1', path: '/engines/default', availability: 'available' })
+    enginesGetMock.mockResolvedValue({
+      id: 'engine-1',
+      path: '/engines/default',
+      status: 'created',
+      availability: 'available',
+      metadata: {
+        webgalVersion: '4.6.1',
+      },
+    })
     existsMock.mockResolvedValue(false)
     openDialogMock.mockResolvedValue(undefined)
     readDirMock.mockResolvedValue([])
@@ -209,6 +217,30 @@ describe('useCreateGameForm', () => {
     expect(onSuccess).toHaveBeenCalledWith('game-1')
   })
 
+  it('提交时使用即时校验后的引擎可用性判断运行时兼容性', async () => {
+    const open = ref(true)
+    const form = useCreateGameForm({ open })
+    enginesGetMock.mockResolvedValue({
+      id: 'engine-1',
+      path: '/engines/default',
+      status: 'created',
+      availability: 'broken',
+      metadata: {
+        webgalVersion: '4.6.1',
+      },
+    })
+    reconcileEngineRecordMock.mockResolvedValue('available')
+    formValues.gameName = 'Demo'
+    formValues.gamePath = '/games/Demo'
+    formValues.gameEngine = 'engine-1'
+
+    await form.onSubmit()
+
+    expect(createGameMock).toHaveBeenCalledWith('Demo', '/games/Demo', 'engine-1', { templateBinding: undefined })
+    expect(notifyErrorMock).not.toHaveBeenCalled()
+    expect(open.value).toBe(false)
+  })
+
   it('创建开始后会立即关闭弹窗，不等待创建完成', async () => {
     const open = ref(true)
     const onSuccess = vi.fn()
@@ -249,6 +281,30 @@ describe('useCreateGameForm', () => {
     expect(notifyErrorMock).toHaveBeenCalledWith('create failed')
     expect(open.value).toBe(false)
     expect(onSuccess).not.toHaveBeenCalled()
+  })
+
+  it('提交时会拒绝不能作为编辑器运行时的引擎', async () => {
+    const open = ref(true)
+    const form = useCreateGameForm({ open })
+    enginesGetMock.mockResolvedValue({
+      id: 'engine-old',
+      path: '/engines/old',
+      status: 'created',
+      availability: 'available',
+      metadata: {
+        webgalVersion: '4.6.0',
+      },
+    })
+    formValues.gameName = 'Demo'
+    formValues.gamePath = '/games/Demo'
+    formValues.gameEngine = 'engine-old'
+
+    await form.onSubmit()
+
+    expect(createGameMock).not.toHaveBeenCalled()
+    expect(notifyErrorMock).toHaveBeenCalledWith('modals.createGame.engineIncompatible')
+    expect(setFieldValueMock).toHaveBeenCalledWith('gameEngine', '', false)
+    expect(open.value).toBe(true)
   })
 
   it('游戏名称不能为空', async () => {

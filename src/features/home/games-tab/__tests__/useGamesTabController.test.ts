@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createTestGame } from '~/__tests__/factories'
+import { createTestEngine, createTestGame } from '~/__tests__/factories'
+import { MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
+import { AppError } from '~/types/errors'
 
 import { useGamesTabController } from '../useGamesTabController'
 
 const {
+  ensureEditorRuntimeCompatibleMock,
   importGameMock,
   notifyErrorMock,
   notifyInfoMock,
@@ -13,9 +16,11 @@ const {
   openDialogMock,
   openPathMock,
   reconcileGameRecordMock,
+  requestGameRuntimeRebindMock,
   requestImportDependencyResolutionMock,
   routerPushMock,
 } = vi.hoisted(() => ({
+  ensureEditorRuntimeCompatibleMock: vi.fn(),
   importGameMock: vi.fn(),
   notifyErrorMock: vi.fn(),
   notifyInfoMock: vi.fn(),
@@ -24,6 +29,7 @@ const {
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
   reconcileGameRecordMock: vi.fn(),
+  requestGameRuntimeRebindMock: vi.fn(),
   requestImportDependencyResolutionMock: vi.fn(),
   routerPushMock: vi.fn(),
 }))
@@ -47,6 +53,7 @@ vi.mock('notivue', () => ({
 
 vi.mock('~/services/game-manager', () => ({
   gameManager: {
+    ensureEditorRuntimeCompatible: ensureEditorRuntimeCompatibleMock,
     importGame: importGameMock,
   },
 }))
@@ -61,6 +68,14 @@ vi.mock('~/features/modals/import-dependency-resolution/request-import-dependenc
   requestImportDependencyResolution: requestImportDependencyResolutionMock,
 }))
 
+vi.mock('~/features/modals/import-dependency-resolution/request-game-runtime-rebind', () => ({
+  requestGameRuntimeRebind: requestGameRuntimeRebindMock,
+  resolveRuntimeRebindIssue: () => ({
+    compatibilityIssue: 'versionTooOld',
+    reason: 'incompatible',
+  }),
+}))
+
 describe('useGamesTabController', () => {
   const openCreateGameModalMock = vi.fn()
   const openDeleteGameModalMock = vi.fn()
@@ -71,7 +86,7 @@ describe('useGamesTabController', () => {
   function createController(overrides?: Partial<Parameters<typeof useGamesTabController>[0]>) {
     return useGamesTabController({
       activeProgress: new Map<string, number>(),
-      engines: [{ id: 'engine-1', status: 'created', availability: 'available' }],
+      engines: [createTestEngine({ id: 'engine-1' })],
       openCreateGameModal: openCreateGameModalMock,
       openDeleteGameModal: openDeleteGameModalMock,
       openNoEngineAlertModal: openNoEngineAlertModalMock,
@@ -85,7 +100,9 @@ describe('useGamesTabController', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
+    ensureEditorRuntimeCompatibleMock.mockResolvedValue(undefined)
     reconcileGameRecordMock.mockResolvedValue('available')
+    requestGameRuntimeRebindMock.mockResolvedValue(false)
   })
 
   it('拖入多个目录时只提示错误且不会触发导入', async () => {
@@ -109,11 +126,11 @@ describe('useGamesTabController', () => {
   })
 
   it('创建游戏时会读取最新的引擎列表', () => {
-    let engines: { id: string, status: 'created' | 'error', availability: 'available' | 'broken' }[] | undefined = []
+    let engines: ReturnType<typeof createTestEngine>[] | undefined = []
 
     const controller = createController({ engines: () => engines })
 
-    engines = [{ id: 'engine-1', status: 'created', availability: 'available' }]
+    engines = [createTestEngine({ id: 'engine-1' })]
     controller.createGame()
 
     expect(openCreateGameModalMock).toHaveBeenCalledTimes(1)
@@ -123,8 +140,8 @@ describe('useGamesTabController', () => {
   it('已安装引擎全部失效时创建游戏会弹出引导', () => {
     const controller = createController({
       engines: [
-        { id: 'engine-1', status: 'error', availability: 'available' },
-        { id: 'engine-2', status: 'creating', availability: 'available' },
+        createTestEngine({ id: 'engine-1', status: 'error', availability: 'available' }),
+        createTestEngine({ id: 'engine-2', status: 'creating', availability: 'available' }),
       ],
     })
 
@@ -137,7 +154,23 @@ describe('useGamesTabController', () => {
   it('已安装引擎仅有 broken availability 时创建游戏会弹出引导', () => {
     const controller = createController({
       engines: [
-        { id: 'engine-1', status: 'created', availability: 'broken' },
+        createTestEngine({ id: 'engine-1', availability: 'broken' }),
+      ],
+    })
+
+    controller.createGame()
+
+    expect(openCreateGameModalMock).not.toHaveBeenCalled()
+    expect(openNoEngineAlertModalMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('已安装引擎仅有不兼容运行时时创建游戏会弹出引导', () => {
+    const controller = createController({
+      engines: [
+        createTestEngine({
+          id: 'engine-old',
+          metadata: { webgalVersion: '4.6.0' },
+        }),
       ],
     })
 
@@ -203,6 +236,53 @@ describe('useGamesTabController', () => {
     expect(routerPushMock).toHaveBeenCalledWith('/edit/game-recovered')
   })
 
+  it('点击时运行时不兼容会请求依赖重选重绑引擎，成功后进入编辑器', async () => {
+    ensureEditorRuntimeCompatibleMock.mockRejectedValue(new AppError('ENGINE_EDITOR_INCOMPATIBLE', '引擎版本过低', {
+      details: {
+        issue: 'versionTooOld',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    }))
+    requestGameRuntimeRebindMock.mockResolvedValue(true)
+
+    const controller = createController()
+    const game = createTestGame({ id: 'game-old-engine', availability: 'available' })
+
+    await controller.handleGameClick(game)
+
+    expect(requestGameRuntimeRebindMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'game-old-engine',
+        availability: 'available',
+      }),
+      {
+        compatibilityIssue: 'versionTooOld',
+        reason: 'incompatible',
+        resolveDependencies: requestImportDependencyResolutionMock,
+      },
+    )
+    expect(openRecoverGameModalMock).not.toHaveBeenCalled()
+    expect(routerPushMock).toHaveBeenCalledWith('/edit/game-old-engine')
+  })
+
+  it('点击时运行时不兼容但用户取消依赖重选时不会进入编辑器', async () => {
+    ensureEditorRuntimeCompatibleMock.mockRejectedValue(new AppError('ENGINE_EDITOR_INCOMPATIBLE', '引擎版本过低', {
+      details: {
+        issue: 'versionTooOld',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    }))
+    requestGameRuntimeRebindMock.mockResolvedValue(false)
+
+    const controller = createController()
+    const game = createTestGame({ id: 'game-old-engine', availability: 'available' })
+
+    await controller.handleGameClick(game)
+
+    expect(requestGameRuntimeRebindMock).toHaveBeenCalledTimes(1)
+    expect(routerPushMock).not.toHaveBeenCalled()
+  })
+
   it('选择目录导入已注册游戏时按 info 级提示已存在', async () => {
     openDialogMock.mockResolvedValue('/games/registered')
     importGameMock.mockResolvedValue({ id: 'game-existing', alreadyRegistered: true })
@@ -214,6 +294,28 @@ describe('useGamesTabController', () => {
     expect(notifyErrorMock).not.toHaveBeenCalled()
     expect(notifySuccessMock).not.toHaveBeenCalled()
     expect(notifyInfoMock).toHaveBeenCalledWith('home.games.importAlreadyExists')
+  })
+
+  it('导入绑定过旧引擎的游戏时会把最低运行时版本传给通知文案', async () => {
+    openDialogMock.mockResolvedValue('/games/old-engine')
+    importGameMock.mockRejectedValue(new AppError('ENGINE_EDITOR_INCOMPATIBLE', 'too old', {
+      details: {
+        issue: 'versionTooOld',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    }))
+    const t = vi.fn((key: string, ...args: unknown[]) => {
+      const named = args[0] as { version?: unknown } | undefined
+      return `${key}:${String(named?.version ?? '')}`
+    })
+
+    const controller = createController({ t })
+
+    await controller.selectGameFolder()
+
+    expect(notifyErrorMock).toHaveBeenCalledWith(
+      `home.games.importEngineVersionTooOld:${MIN_WEBGAL_EDITOR_RUNTIME_VERSION}`,
+    )
   })
 
   it('导入游戏时会提供组合依赖解析回调', async () => {

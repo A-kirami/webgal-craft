@@ -24,8 +24,11 @@ export interface HomeResourceImportMessages {
   duplicateResource?: I18nLike
   targetConflict?: I18nLike
   engineNotFound?: I18nLike
+  engineEditorIncompatible?: I18nLike
   engineSchemaTooNew?: I18nLike
   engineUnavailable?: I18nLike
+  engineVersionInvalid?: I18nLike
+  engineVersionTooOld?: I18nLike
   gameConfigCorrupted?: I18nLike
   gameSchemaTooNew?: I18nLike
   importCancelled?: I18nLike
@@ -52,6 +55,9 @@ const NOTIFICATION_MESSAGE_KEYS: Record<HomeResourceImportNotification['kind'], 
   'game-schema-too-new': 'gameSchemaTooNew',
   'engine-not-found': 'engineNotFound',
   'engine-unavailable': 'engineUnavailable',
+  'engine-editor-incompatible': 'engineEditorIncompatible',
+  'engine-version-invalid': 'engineVersionInvalid',
+  'engine-version-too-old': 'engineVersionTooOld',
   'import-cancelled': 'importCancelled',
   'unknown-error': 'unknownError',
   'multiple-folders': 'multipleFolders',

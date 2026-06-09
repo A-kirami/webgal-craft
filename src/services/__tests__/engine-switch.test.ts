@@ -148,6 +148,25 @@ describe('engineSwitch.switchEngine', () => {
     expect(updateSiteEngineMock).not.toHaveBeenCalled()
   })
 
+  it('拒绝切换到不能作为编辑器运行时的目标引擎', async () => {
+    const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: AbsPath.from('/games/demo') })
+    const newEngine = createTestEngine({
+      id: 'engine-new',
+      path: AbsPath.from('/engines/new'),
+      metadata: { webgalVersion: '4.6.0' },
+    })
+
+    await expect(engineSwitch.switchEngine(game, newEngine)).rejects.toMatchObject({
+      code: 'ENGINE_EDITOR_INCOMPATIBLE',
+      details: {
+        issue: 'versionTooOld',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    })
+    expect(dbEngineGetMock).not.toHaveBeenCalled()
+    expect(writeProjectConfigMock).not.toHaveBeenCalled()
+  })
+
   it('clean 模板时按顺序更新 config / DB / site，并刷新预览', async () => {
     const oldEngine = createTestEngine({ id: 'engine-old', path: AbsPath.from('/engines/old') })
     const newEngine = createTestEngine({
@@ -178,6 +197,31 @@ describe('engineSwitch.switchEngine', () => {
       engineId: 'engine-new',
       path: '/games/demo',
     })
+  })
+
+  it('允许从旧不兼容引擎切换到新兼容引擎', async () => {
+    const oldEngine = createTestEngine({
+      id: 'engine-old',
+      path: AbsPath.from('/engines/old'),
+      metadata: { webgalVersion: '4.6.0' },
+    })
+    const newEngine = createTestEngine({
+      id: 'engine-new',
+      path: AbsPath.from('/engines/new'),
+      engineId: 'open-webgal.webgal',
+      version: '4.6.1',
+    })
+    dbEngineGetMock.mockResolvedValue(oldEngine)
+    resolveTemplatePathMock
+      .mockResolvedValueOnce('/engines/old/game/template')
+      .mockResolvedValueOnce('/engines/new/game/template')
+
+    const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: AbsPath.from('/games/demo') })
+
+    await expect(engineSwitch.switchEngine(game, newEngine)).resolves.toBeUndefined()
+    expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/demo', expect.objectContaining({
+      engine: { id: 'open-webgal.webgal', version: '4.6.1' },
+    }))
   })
 
   it('dirty 模板缺少决策时拒绝，不产生副作用', async () => {
