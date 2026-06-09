@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test'
 interface SeedEngine {
   id: string
   path: string
+  pathLookupKey: string
   engineId: string
   name: string
   version?: string
@@ -13,6 +14,7 @@ interface SeedEngine {
     name: string
     icon: string
     description: string
+    webgalVersion: string
   }
   previewAssets: {
     icon: { path: string }
@@ -63,6 +65,7 @@ interface TauriMockGlobal {
 const defaultSeedEngine: SeedEngine = {
   id: 'engine-default',
   path: 'C:/Engines/Default',
+  pathLookupKey: 'c:/engines/default',
   engineId: 'WebGAL',
   name: 'Default Engine',
   version: '1.0.0',
@@ -73,6 +76,7 @@ const defaultSeedEngine: SeedEngine = {
     name: 'Default Engine',
     icon: 'C:/Engines/Default/icons/favicon.ico',
     description: '用于集成测试的默认引擎',
+    webgalVersion: '4.6.1',
   },
   previewAssets: {
     icon: { path: 'C:/Engines/Default/icons/favicon.ico' },
@@ -413,17 +417,21 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
 
             if (!db.objectStoreNames.contains('games')) {
               const games = db.createObjectStore('games', { keyPath: 'id' })
-              games.createIndex('path', 'path', { unique: false })
-              games.createIndex('createdAt', 'createdAt', { unique: false })
+              games.createIndex('pathLookupKey', 'pathLookupKey', { unique: true })
+              games.createIndex('engineId', 'engineId', { unique: false })
               games.createIndex('lastModified', 'lastModified', { unique: false })
-              games.createIndex('status', 'status', { unique: false })
             }
 
             if (!db.objectStoreNames.contains('engines')) {
               const enginesStore = db.createObjectStore('engines', { keyPath: 'id' })
-              enginesStore.createIndex('path', 'path', { unique: false })
-              enginesStore.createIndex('createdAt', 'createdAt', { unique: false })
-              enginesStore.createIndex('status', 'status', { unique: false })
+              enginesStore.createIndex('pathLookupKey', 'pathLookupKey', { unique: true })
+              enginesStore.createIndex('[engineId+version]', ['engineId', 'version'], { unique: false })
+            }
+
+            if (!db.objectStoreNames.contains('templates')) {
+              const templatesStore = db.createObjectStore('templates', { keyPath: 'id' })
+              templatesStore.createIndex('pathLookupKey', 'pathLookupKey', { unique: true })
+              templatesStore.createIndex('metadata.name', 'metadata.name', { unique: false })
             }
           }
 
@@ -434,18 +442,24 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
           request.onsuccess = () => {
             const db = request.result
 
-            if (!db.objectStoreNames.contains('games') || !db.objectStoreNames.contains('engines')) {
+            if (
+              !db.objectStoreNames.contains('games')
+              || !db.objectStoreNames.contains('engines')
+              || !db.objectStoreNames.contains('templates')
+            ) {
               db.close()
-              reject(new Error('IndexedDB 缺少 games 或 engines store'))
+              reject(new Error('IndexedDB 缺少 games、engines 或 templates store'))
               return
             }
 
-            const tx = db.transaction(['games', 'engines'], 'readwrite')
+            const tx = db.transaction(['games', 'engines', 'templates'], 'readwrite')
             const gamesStore = tx.objectStore('games')
             const enginesStore = tx.objectStore('engines')
+            const templatesStore = tx.objectStore('templates')
 
             void gamesStore.clear()
             void enginesStore.clear()
+            void templatesStore.clear()
 
             for (const engine of engines) {
               void enginesStore.put(engine)
