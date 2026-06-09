@@ -76,7 +76,7 @@ async function discoverGames(): Promise<DiscoveredResource[]> {
   const games = await discoverResourcesInDirectory(gameSavePath, gameManager.validateGame)
   return Promise.all(
     games.map(async (resource) => {
-      const previewAssets = await gameManager.getGamePreviewAssets(resource.path)
+      const snapshot = await gameManager.getGameSnapshot(resource.path)
       let previewSite: StaticSiteConfig | undefined
 
       try {
@@ -87,7 +87,8 @@ async function discoverGames(): Promise<DiscoveredResource[]> {
 
       return {
         ...resource,
-        icon: previewAssets.icon.path,
+        name: snapshot.metadata.name,
+        icon: snapshot.previewAssets.icon.path,
         previewSite,
       }
     }),
