@@ -63,21 +63,17 @@ vi.mock('~/composables/useTauriDropZone', () => ({
   }),
 }))
 
-vi.mock('~/services/engine-manager', () => ({
-  MIN_WEBGAL_EDITOR_RUNTIME_VERSION: '4.6.1',
-  assertEngineEditorCompatible: vi.fn(),
-  engineManager: {
-    importEngine: importEngineMock,
-  },
-  evaluateEngineEditorCompatibility: (engine: { status: string, availability: string }) =>
-    engine.status === 'created' && engine.availability === 'available'
-      ? { compatible: true }
-      : { compatible: false, issue: 'unavailable' },
-  isEngineEditorCompatible: (engine: { status: string, availability: string }) =>
-    engine.status === 'created' && engine.availability === 'available',
-  isEngineUsable: (engine: { status: string, availability: string }) =>
-    engine.status === 'created' && engine.availability === 'available',
-}))
+vi.mock('~/services/engine-manager', async (importActual) => {
+  const actual = await importActual<typeof import('~/services/engine-manager')>()
+
+  return {
+    ...actual,
+    engineManager: {
+      ...actual.engineManager,
+      importEngine: importEngineMock,
+    },
+  }
+})
 
 vi.mock('~/stores/modal', () => ({
   useModalStore: useModalStoreMock,
