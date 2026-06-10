@@ -3,27 +3,53 @@ import '~/__tests__/setup'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive } from 'vue'
 
+interface TestGame {
+  engineId?: string
+  path: string
+}
+
+interface TestEngine {
+  availability: 'available' | 'broken' | 'missing'
+  metadata: {
+    webgalVersion?: string
+  }
+  path: string
+  status: 'created' | 'creating' | 'error'
+}
+
 const {
   ensureServeUrlsMock,
   loggerErrorMock,
+  loggerWarnMock,
   resolveStaticAssetSiteMock,
   usePreviewRuntimeStoreMock,
   useResourceStoreMock,
 } = vi.hoisted(() => ({
   ensureServeUrlsMock: vi.fn(),
   loggerErrorMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
   resolveStaticAssetSiteMock: vi.fn(),
   usePreviewRuntimeStoreMock: vi.fn(),
   useResourceStoreMock: vi.fn(),
 }))
 
 const resourceStoreState = reactive({
-  games: [] as { path: string }[],
-  engines: [] as { path: string, status?: string }[],
+  games: undefined as TestGame[] | undefined,
+  engines: undefined as TestEngine[] | undefined,
 })
 
 const previewRuntimeStoreState = {
   ensureServeUrls: ensureServeUrlsMock,
+}
+
+function createTestEngine(path: string, overrides: Partial<Omit<TestEngine, 'path'>> = {}): TestEngine {
+  return {
+    availability: 'available',
+    metadata: { webgalVersion: '4.6.1' },
+    path,
+    status: 'created',
+    ...overrides,
+  }
 }
 
 vi.mock('~/stores/resource', () => ({
@@ -42,7 +68,7 @@ vi.mock('~/services/game-manager', () => ({
 
 vi.mock('@tauri-apps/plugin-log', () => ({
   error: loggerErrorMock,
-  warn: vi.fn(),
+  warn: loggerWarnMock,
 }))
 
 import { useResourcePreviewPrimer } from '~/composables/useResourcePreviewPrimer'
@@ -59,8 +85,8 @@ describe('useResourcePreviewPrimer', () => {
   beforeEach(() => {
     vi.resetAllMocks()
 
-    resourceStoreState.games = []
-    resourceStoreState.engines = []
+    resourceStoreState.games = undefined
+    resourceStoreState.engines = undefined
 
     useResourceStoreMock.mockReturnValue(resourceStoreState)
     usePreviewRuntimeStoreMock.mockReturnValue(previewRuntimeStoreState)
@@ -78,7 +104,7 @@ describe('useResourcePreviewPrimer', () => {
       { path: '/games/alpha' },
     ]
     resourceStoreState.engines = [
-      { path: '/engines/fresh', status: 'created' },
+      createTestEngine('/engines/fresh'),
     ]
 
     stopPrimer = useResourcePreviewPrimer()
@@ -91,6 +117,9 @@ describe('useResourcePreviewPrimer', () => {
   })
 
   it('没有资源时不会触发预热', async () => {
+    resourceStoreState.games = []
+    resourceStoreState.engines = []
+
     stopPrimer = useResourcePreviewPrimer()
     await flushPrimerWatchers()
 
@@ -98,6 +127,9 @@ describe('useResourcePreviewPrimer', () => {
   })
 
   it('会在资源列表变化后补做预热', async () => {
+    resourceStoreState.games = []
+    resourceStoreState.engines = []
+
     stopPrimer = useResourcePreviewPrimer()
     await flushPrimerWatchers()
 
@@ -111,10 +143,45 @@ describe('useResourcePreviewPrimer', () => {
     expect(ensureServeUrlsMock).toHaveBeenCalledWith([{ projectPath: '/games/alpha' }])
   })
 
+  it('资源查询未全部初始化时不会预热', async () => {
+    resourceStoreState.games = [
+      { path: '/games/broken' },
+    ]
+
+    stopPrimer = useResourcePreviewPrimer()
+    await flushPrimerWatchers()
+
+    expect(resolveStaticAssetSiteMock).not.toHaveBeenCalled()
+    expect(loggerWarnMock).not.toHaveBeenCalled()
+  })
+
+  it('资源列表等价更新时不会重复预热', async () => {
+    resourceStoreState.games = [
+      { path: '/games/broken' },
+    ]
+    resourceStoreState.engines = []
+    resolveStaticAssetSiteMock.mockRejectedValue(new Error('引擎不可用'))
+
+    stopPrimer = useResourcePreviewPrimer()
+    await flushPrimerWatchers()
+
+    expect(resolveStaticAssetSiteMock).toHaveBeenCalledTimes(1)
+    expect(loggerWarnMock).toHaveBeenCalledTimes(1)
+
+    resourceStoreState.games = [
+      { path: '/games/broken' },
+    ]
+    await flushPrimerWatchers()
+
+    expect(resolveStaticAssetSiteMock).toHaveBeenCalledTimes(1)
+    expect(loggerWarnMock).toHaveBeenCalledTimes(1)
+  })
+
   it('预热失败时会记录错误而不是吞掉拒绝', async () => {
     resourceStoreState.games = [
       { path: '/games/alpha' },
     ]
+    resourceStoreState.engines = []
     ensureServeUrlsMock.mockRejectedValue(new Error('server unavailable'))
 
     stopPrimer = useResourcePreviewPrimer()
@@ -130,7 +197,7 @@ describe('useResourcePreviewPrimer', () => {
       { path: '/games/broken' },
     ]
     resourceStoreState.engines = [
-      { path: '/engines/fresh', status: 'created' },
+      createTestEngine('/engines/fresh'),
     ]
     resolveStaticAssetSiteMock.mockImplementation(async (game: { path: string }) => {
       if (game.path === '/games/broken') {
@@ -149,9 +216,14 @@ describe('useResourcePreviewPrimer', () => {
   })
 
   it('会跳过状态非 created 的引擎', async () => {
+    resourceStoreState.games = []
     resourceStoreState.engines = [
-      { path: '/engines/fresh', status: 'created' },
-      { path: '/engines/missing', status: 'error' },
+      createTestEngine('/engines/fresh'),
+      createTestEngine('/engines/missing', {
+        availability: 'missing',
+        metadata: {},
+        status: 'error',
+      }),
     ]
 
     stopPrimer = useResourcePreviewPrimer()
