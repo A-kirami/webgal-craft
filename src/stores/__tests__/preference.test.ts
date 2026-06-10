@@ -12,7 +12,7 @@ describe('usePreferenceStore', () => {
     expect(store.assetViewMode).toBe('grid')
     expect(store.defaultEngineId).toBeUndefined()
     expect(store.editorMode).toBe('text')
-    expect(store.showSidebar).toBe(true)
+    expect(store.showSidebar).toBe(false)
     expect(store.assetZoom).toEqual([100])
   })
 
