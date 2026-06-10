@@ -8,6 +8,7 @@
     "dbaeumer.vscode-eslint",
     "stylelint.vscode-stylelint",
     "lokalise.i18n-ally",
-    "editorconfig.editorconfig"
+    "editorconfig.editorconfig",
+    "vitest.explorer"
   ]
 }
