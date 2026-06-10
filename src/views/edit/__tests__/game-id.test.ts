@@ -209,7 +209,7 @@ describe('edit/[gameId]', () => {
     usePreferenceStoreMock.mockReturnValue(reactive({
       leftPanelView: 'scene',
       showPreviewPanel: true,
-      showSidebar: true,
+      showSidebar: false,
     }))
     useResourceIndexMock.mockReturnValue({
       findMissingReferences: vi.fn(() => []),
