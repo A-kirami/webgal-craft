@@ -147,7 +147,6 @@ describe('useResourcePreviewPrimer', () => {
     resourceStoreState.games = [
       { path: '/games/broken' },
     ]
-    resolveStaticAssetSiteMock.mockRejectedValue(new Error('引擎不可用'))
 
     stopPrimer = useResourcePreviewPrimer()
     await flushPrimerWatchers()
