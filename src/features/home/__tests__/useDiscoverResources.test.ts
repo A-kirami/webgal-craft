@@ -9,6 +9,7 @@ const {
   engineIdentityKeyOfMock,
   existsMock,
   getEnginePreviewAssetsMock,
+  getGameSnapshotMock,
   getTemplateMetadataMock,
   loggerErrorMock,
   modalOpenMock,
@@ -35,6 +36,7 @@ const {
   ),
   existsMock: vi.fn(),
   getEnginePreviewAssetsMock: vi.fn(),
+  getGameSnapshotMock: vi.fn(),
   getTemplateMetadataMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   modalOpenMock: vi.fn(),
@@ -100,7 +102,7 @@ vi.mock('~/services/engine-manager', () => ({
 
 vi.mock('~/services/game-manager', () => ({
   gameManager: {
-    getGamePreviewAssets: vi.fn(),
+    getGameSnapshot: getGameSnapshotMock,
     identityKeyOf: gameIdentityKeyOfMock,
     importGame: vi.fn(),
     resolvePreviewSite: vi.fn(),
@@ -141,6 +143,7 @@ describe('useDiscoverResources', () => {
     engineIdentityKeyOfMock.mockClear()
     existsMock.mockReset()
     getEnginePreviewAssetsMock.mockReset()
+    getGameSnapshotMock.mockReset()
     getTemplateMetadataMock.mockReset()
     loggerErrorMock.mockReset()
     modalOpenMock.mockReset()
@@ -174,6 +177,16 @@ describe('useDiscoverResources', () => {
     getEnginePreviewAssetsMock.mockResolvedValue({
       icon: {
         path: '/engines/WebGAL/4.5.0/icons/favicon.ico',
+      },
+    })
+    getGameSnapshotMock.mockResolvedValue({
+      metadata: {
+        name: 'Demo Game',
+        titleImg: 'cover.png',
+      },
+      previewAssets: {
+        icon: { path: 'icons/favicon.ico' },
+        cover: { path: 'game/background/cover.png' },
       },
     })
   })
@@ -437,13 +450,63 @@ describe('useDiscoverResources', () => {
     expect(engineIdentityKeyOfMock).toHaveBeenCalled()
   })
 
+  it('发现有效游戏目录时会使用游戏配置名称展示', async () => {
+    const { gameManager } = await import('~/services/game-manager')
+    vi.mocked(gameManager.validateGame).mockResolvedValue(true)
+    vi.mocked(gameManager.getGameSnapshot).mockResolvedValue({
+      metadata: {
+        name: 'Config Game',
+        titleImg: 'cover.png',
+      },
+      previewAssets: {
+        icon: { path: 'icons/favicon.ico' },
+        cover: { path: 'game/background/cover.png' },
+      },
+    })
+    vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
+      projectPath: AbsPath.from('/games/demo-folder'),
+    })
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'games' })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'games' })
+    useStorageSettingsStoreMock.mockReturnValue({
+      engineSavePath: '/engines',
+      gameSavePath: '/games',
+      templateSavePath: '/templates',
+    })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/games': {
+          return [{ isDirectory: true, name: 'demo-folder' }]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    expect(modalOpenMock).toHaveBeenCalledWith('DiscoveredResourcesModal', expect.objectContaining({
+      type: 'games',
+      resources: [
+        {
+          icon: 'icons/favicon.ico',
+          name: 'Config Game',
+          path: '/games/demo-folder',
+          previewSite: {
+            projectPath: '/games/demo-folder',
+          },
+        },
+      ],
+    }))
+  })
+
   it('已导入同路径游戏时通过 gameManager.identityKeyOf 去重', async () => {
     const { gameManager } = await import('~/services/game-manager')
     vi.mocked(gameManager.validateGame).mockResolvedValue(true)
-    vi.mocked(gameManager.getGamePreviewAssets).mockResolvedValue({
-      icon: { path: 'icons/favicon.ico' },
-      cover: { path: 'game/background/cover.png' },
-    })
     vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
       projectPath: AbsPath.from('/games/demo'),
     })
@@ -497,10 +560,6 @@ describe('useDiscoverResources', () => {
   it('批量导入发现的游戏时会提供组合依赖解析回调', async () => {
     const { gameManager } = await import('~/services/game-manager')
     vi.mocked(gameManager.validateGame).mockResolvedValue(true)
-    vi.mocked(gameManager.getGamePreviewAssets).mockResolvedValue({
-      icon: { path: 'icons/favicon.ico' },
-      cover: { path: 'game/background/cover.png' },
-    })
     vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
       projectPath: AbsPath.from('/games/demo'),
     })
@@ -542,10 +601,6 @@ describe('useDiscoverResources', () => {
   it('批量导入发现的游戏命中已注册资源时提示已导入', async () => {
     const { gameManager } = await import('~/services/game-manager')
     vi.mocked(gameManager.validateGame).mockResolvedValue(true)
-    vi.mocked(gameManager.getGamePreviewAssets).mockResolvedValue({
-      icon: { path: 'icons/favicon.ico' },
-      cover: { path: 'game/background/cover.png' },
-    })
     vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
       projectPath: AbsPath.from('/games/demo'),
     })
@@ -587,10 +642,6 @@ describe('useDiscoverResources', () => {
     const { gameManager } = await import('~/services/game-manager')
     const { AppError } = await import('~/types/errors')
     vi.mocked(gameManager.validateGame).mockResolvedValue(true)
-    vi.mocked(gameManager.getGamePreviewAssets).mockResolvedValue({
-      icon: { path: 'icons/favicon.ico' },
-      cover: { path: 'game/background/cover.png' },
-    })
     vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
       projectPath: AbsPath.from('/games/demo'),
     })
