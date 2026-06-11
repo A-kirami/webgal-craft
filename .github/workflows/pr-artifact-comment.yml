@@ -11,11 +11,12 @@ jobs:
     if: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'cancelled' }}
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       pull-requests: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.3
 
       - name: Fetch PR context
         id: pr-context
@@ -30,7 +31,7 @@ jobs:
 
       - name: Format artifact comment
         id: format-artifact-comment
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9.0.0
         with:
           result-encoding: string
           script: |
@@ -44,7 +45,7 @@ jobs:
             return createArtifactComment(artifactCommentData);
 
       - name: Post artifact comment to PR
-        uses: marocchino/sticky-pull-request-comment@v3
+        uses: marocchino/sticky-pull-request-comment@v3.0.4
         with:
           number: ${{ steps.pr-context.outputs.number }}
           header: artifacts

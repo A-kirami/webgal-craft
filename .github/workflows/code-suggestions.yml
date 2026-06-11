@@ -4,10 +4,11 @@ on:
   pull_request:
     paths:
       - "src/**"
+      - "scripts/**"
       - "package.json"
       - "bun.lock"
-      - "eslint.config.js"
-      - "stylelint.config.js"
+      - "*.config.js"
+      - "*.config.ts"
       - ".github/workflows/code-suggestions.yml"
       - ".github/workflows/lint.yml"
 
@@ -26,20 +27,20 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.3
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version-file: package.json
 
       - name: Install dependencies
-        run: bun install
+        run: bun ci
 
       - name: Run ESLint with reviewdog
         id: eslint
         continue-on-error: true
-        uses: reviewdog/action-eslint@v1
+        uses: reviewdog/action-eslint@v1.34.0
         with:
           reporter: github-pr-review
           tool_name: eslint
@@ -48,7 +49,7 @@ jobs:
       - name: Run ESLint i18n with reviewdog
         id: i18n
         continue-on-error: true
-        uses: reviewdog/action-eslint@v1
+        uses: reviewdog/action-eslint@v1.34.0
         with:
           reporter: github-pr-review
           tool_name: i18n
@@ -57,7 +58,7 @@ jobs:
       - name: Run Stylelint with reviewdog
         id: stylelint
         continue-on-error: true
-        uses: reviewdog/action-stylelint@v1
+        uses: reviewdog/action-stylelint@v1.30.2
         with:
           reporter: github-pr-review
           stylelint_input: "src/**/*.{css,vue}"

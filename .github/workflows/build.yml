@@ -11,8 +11,8 @@ on:
       - "src-tauri/**"
       - "package.json"
       - "bun.lock"
-      - "vite.config.ts"
-      - "unocss.config.ts"
+      - "*.config.js"
+      - "*.config.ts"
       - "tsconfig*.json"
       - ".github/workflows/build.yml"
   pull_request:
@@ -24,8 +24,8 @@ on:
       - "src-tauri/**"
       - "package.json"
       - "bun.lock"
-      - "vite.config.ts"
-      - "unocss.config.ts"
+      - "*.config.js"
+      - "*.config.ts"
       - "tsconfig*.json"
       - ".github/workflows/build.yml"
   workflow_dispatch:
@@ -67,7 +67,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.3
 
       - name: Install system dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
@@ -81,17 +81,17 @@ jobs:
           targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Rust cache
-        uses: swatinem/rust-cache@v2
+        uses: swatinem/rust-cache@v2.9.1
         with:
           workspaces: ./src-tauri -> target
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version-file: package.json
 
       - name: Install dependencies
-        run: bun install
+        run: bun ci
 
       - name: Build app
         id: tauri-build
@@ -120,7 +120,7 @@ jobs:
 
       - name: Upload build artifacts
         continue-on-error: true
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: ${{ steps.artifact-name.outputs.name }}
           path: "${{ join(fromJSON(steps.tauri-build.outputs.artifactPaths), '\n') }}"
