@@ -5,19 +5,22 @@ on:
     branches: [main]
     paths:
       - "src/**"
+      - "scripts/**"
       - "package.json"
       - "bun.lock"
-      - "eslint.config.js"
-      - "stylelint.config.js"
+      - "*.config.js"
+      - "*.config.ts"
       - ".github/workflows/lint.yml"
   pull_request:
     paths:
       - "src/**"
+      - "scripts/**"
       - "package.json"
       - "bun.lock"
-      - "eslint.config.js"
-      - "stylelint.config.js"
+      - "*.config.js"
+      - "*.config.ts"
       - ".github/workflows/lint.yml"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
@@ -41,15 +44,15 @@ jobs:
             command: bun lint:i18n
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
 
       - name: Install dependencies
-        run: bun install
+        run: bun ci
 
       - name: Run lint checks
         run: ${{ matrix.command }}
