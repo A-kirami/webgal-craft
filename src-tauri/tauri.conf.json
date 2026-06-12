@@ -18,7 +18,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis", "dmg", "appimage", "deb"],
     "publisher": "Akirami",
     "category": "DeveloperTool",
     "shortDescription": "WebGAL visual novel studio.",
@@ -36,10 +36,6 @@
     ],
     "windows": {
       "allowDowngrades": false,
-      "wix": {
-        "language": ["en-US", "ja-JP", "zh-CN", "zh-TW"],
-        "upgradeCode": "bdba7c85-7131-5208-9076-cf4b42f755f3"
-      },
       "nsis": {
         "languages": ["English", "Japanese", "SimpChinese", "TradChinese"],
         "displayLanguageSelector": true,
