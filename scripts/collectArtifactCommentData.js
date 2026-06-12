@@ -87,7 +87,7 @@ function collectFailedJob(job, uploadedPlatforms) {
     }
   }
 
-  if (!uploadedPlatforms.has(job.name)) {
+  if (job.conclusion === 'success' && !uploadedPlatforms.has(job.name)) {
     return {
       platform: job.name,
       failedStep: 'Upload build artifacts',

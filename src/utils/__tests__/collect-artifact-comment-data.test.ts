@@ -194,6 +194,37 @@ describe('collectArtifactCommentData', () => {
     expect(result.totalPlatformJobCount).toBe(1)
   })
 
+  it('忽略未成功且非失败的平台 job 缺失 artifact', async () => {
+    const { github } = createGithubClient({
+      jobs: [
+        {
+          name: 'linux-x64',
+          conclusion: 'skipped',
+          html_url: jobUrl(104),
+          steps: [
+            { name: 'Build app', conclusion: 'skipped' },
+          ],
+        },
+        {
+          name: 'macos-x64',
+          conclusion: 'neutral',
+          html_url: jobUrl(105),
+          steps: [
+            { name: 'Build app', conclusion: 'neutral' },
+          ],
+        },
+      ],
+    })
+
+    const result = await collectForTest({
+      github,
+      jobsApiSyncMaxAttempts: 1,
+    })
+
+    expect(result.failedJobs).toEqual([])
+    expect(result.totalPlatformJobCount).toBe(2)
+  })
+
   it('等待平台 job 结论同步后再判断构建异常', async () => {
     const { github, paginate } = createGithubClient({
       artifacts: [windowsArtifact],
