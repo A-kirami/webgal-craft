@@ -3,7 +3,26 @@
 
 const artifactPlatformPattern = /(?<platform>(?<os>windows|macos|linux)-(?<arch>[a-z0-9]+))(?:-|$)/
 const platformJobPattern = /^(windows|macos|linux)-[a-z0-9]+$/
-const failedStepConclusions = new Set(['failure', 'cancelled', 'timed_out', 'startup_failure'])
+const failedJobConclusions = new Set(['failure', 'cancelled', 'timed_out', 'startup_failure', 'action_required'])
+const defaultJobsApiSyncDelayMs = 5000
+const defaultJobsApiSyncMaxAttempts = 6
+
+/**
+ * @typedef {{id:number, name: string, size_in_bytes: number, workflow_run: {id:number}}} Artifact
+ * @typedef {{name: string, conclusion?: string | null}} JobStep
+ * @typedef {{name: string, conclusion?: string | null, html_url: string, steps?: JobStep[]}} WorkflowJob
+ * @typedef {{artifacts: Artifact[], platformJobs: WorkflowJob[]}} ArtifactCommentSnapshot
+ * @typedef {{
+ *   rest: {
+ *     actions: {
+ *       listWorkflowRunArtifacts: (input: {owner: string, repo: string, run_id: number}) => Promise<{data: {artifacts: Artifact[]}}>,
+ *       listJobsForWorkflowRun: unknown,
+ *     }
+ *   },
+ *   paginate: (route: unknown, input: {owner: string, repo: string, run_id: number, per_page: number}) => Promise<WorkflowJob[]>,
+ * }} GitHubActionsClient
+ * @typedef {{repo: {owner: string, repo: string}, payload: {workflow_run: {id: number}}}} GitHubWorkflowContext
+ */
 
 /**
  * @param {{name: string}[]} artifacts
@@ -27,7 +46,16 @@ function getUploadedPlatforms(artifacts) {
  * @param {{conclusion?: string | null, name: string}[]} [steps]
  */
 function getFailedStepName(steps) {
-  return steps?.find(step => step.conclusion && failedStepConclusions.has(step.conclusion))?.name ?? 'Unknown step'
+  return steps?.find(step => step.conclusion && failedJobConclusions.has(step.conclusion))?.name ?? 'Unknown step'
+}
+
+/**
+ * @param {number} milliseconds
+ */
+function waitForMilliseconds(milliseconds) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds)
+  })
 }
 
 /**
@@ -41,7 +69,16 @@ function getFailedStepName(steps) {
  * @returns {{platform: string, failedStep: string, conclusion: string, jobUrl: string} | undefined}
  */
 function collectFailedJob(job, uploadedPlatforms) {
-  if (job.conclusion !== 'success') {
+  if (!job.conclusion) {
+    return {
+      platform: job.name,
+      failedStep: getFailedStepName(job.steps),
+      conclusion: 'unknown',
+      jobUrl: job.html_url,
+    }
+  }
+
+  if (failedJobConclusions.has(job.conclusion)) {
     return {
       platform: job.name,
       failedStep: getFailedStepName(job.steps),
@@ -50,7 +87,7 @@ function collectFailedJob(job, uploadedPlatforms) {
     }
   }
 
-  if (!uploadedPlatforms.has(job.name)) {
+  if (job.conclusion === 'success' && !uploadedPlatforms.has(job.name)) {
     return {
       platform: job.name,
       failedStep: 'Upload build artifacts',
@@ -61,24 +98,42 @@ function collectFailedJob(job, uploadedPlatforms) {
 }
 
 /**
- * @param {{
- *   github: {
- *     rest: {
- *       actions: {
- *         listWorkflowRunArtifacts: (input: {owner: string, repo: string, run_id: number}) => Promise<{data: {artifacts: {id:number, name: string, size_in_bytes: number, workflow_run: {id:number}}[]}}>,
- *         listJobsForWorkflowRun: unknown,
- *       }
- *     },
- *     paginate: (route: unknown, input: {owner: string, repo: string, run_id: number, per_page: number}) => Promise<{name: string, conclusion?: string | null, html_url: string, steps?: {name: string, conclusion?: string | null}[]}[]>,
- *   },
- *   context: {
- *     repo: {owner: string, repo: string},
- *     payload: {workflow_run: {id: number}},
- *   },
- *   sha: string,
- * }} options
+ * @param {{name: string, conclusion?: string | null}[]} platformJobs
  */
-async function collectArtifactCommentData({ github, context, sha }) {
+function hasPendingJobConclusion(platformJobs) {
+  return platformJobs.some(job => !job.conclusion)
+}
+
+/**
+ * @param {{name: string, conclusion?: string | null}[]} platformJobs
+ * @param {Set<string>} uploadedPlatforms
+ */
+function hasMissingSuccessfulPlatformArtifact(platformJobs, uploadedPlatforms) {
+  return platformJobs.some(job => job.conclusion === 'success' && !uploadedPlatforms.has(job.name))
+}
+
+/**
+ * @param {{name: string}[]} artifacts
+ * @param {{name: string, conclusion?: string | null}[]} platformJobs
+ */
+function isArtifactCommentSnapshotSynced(artifacts, platformJobs) {
+  const uploadedPlatforms = getUploadedPlatforms(artifacts)
+
+  return !hasPendingJobConclusion(platformJobs)
+    && !hasMissingSuccessfulPlatformArtifact(platformJobs, uploadedPlatforms)
+}
+
+/**
+ * @param {{
+ *   github: GitHubActionsClient,
+ *   context: GitHubWorkflowContext,
+ * }} options
+ * @returns {Promise<ArtifactCommentSnapshot>}
+ */
+async function fetchArtifactCommentSnapshot({
+  github,
+  context,
+}) {
   const artifactsResponse = await github.rest.actions.listWorkflowRunArtifacts({
     owner: context.repo.owner,
     repo: context.repo.repo,
@@ -90,9 +145,79 @@ async function collectArtifactCommentData({ github, context, sha }) {
     run_id: context.payload.workflow_run.id,
     per_page: 100,
   })
-  const artifacts = artifactsResponse.data.artifacts
+
+  return {
+    artifacts: artifactsResponse.data.artifacts,
+    platformJobs: jobs.filter(job => platformJobPattern.test(job.name)),
+  }
+}
+
+/**
+ * @param {{
+ *   github: GitHubActionsClient,
+ *   context: GitHubWorkflowContext,
+ *   wait: (milliseconds: number) => Promise<void>,
+ *   jobsApiSyncDelayMs: number,
+ *   jobsApiSyncMaxAttempts: number,
+ *   attempt?: number,
+ * }} options
+ * @returns {Promise<ArtifactCommentSnapshot>}
+ */
+async function fetchSyncedArtifactCommentSnapshot({
+  github,
+  context,
+  wait,
+  jobsApiSyncDelayMs,
+  jobsApiSyncMaxAttempts,
+  attempt = 1,
+}) {
+  const snapshot = await fetchArtifactCommentSnapshot({ github, context })
+
+  if (isArtifactCommentSnapshotSynced(snapshot.artifacts, snapshot.platformJobs) || attempt >= jobsApiSyncMaxAttempts) {
+    return snapshot
+  }
+
+  await wait(jobsApiSyncDelayMs)
+
+  return fetchSyncedArtifactCommentSnapshot({
+    github,
+    context,
+    wait,
+    jobsApiSyncDelayMs,
+    jobsApiSyncMaxAttempts,
+    attempt: attempt + 1,
+  })
+}
+
+/**
+ * @param {{
+ *   github: GitHubActionsClient,
+ *   context: GitHubWorkflowContext,
+ *   sha: string,
+ *   wait?: (milliseconds: number) => Promise<void>,
+ *   jobsApiSyncDelayMs?: number,
+ *   jobsApiSyncMaxAttempts?: number,
+ * }} options
+ */
+async function collectArtifactCommentData({
+  github,
+  context,
+  sha,
+  wait = waitForMilliseconds,
+  jobsApiSyncDelayMs = defaultJobsApiSyncDelayMs,
+  jobsApiSyncMaxAttempts = defaultJobsApiSyncMaxAttempts,
+}) {
+  const maxAttempts = Math.max(1, jobsApiSyncMaxAttempts)
+  const delayMs = Math.max(0, jobsApiSyncDelayMs)
+  const { artifacts, platformJobs } = await fetchSyncedArtifactCommentSnapshot({
+    github,
+    context,
+    wait,
+    jobsApiSyncDelayMs: delayMs,
+    jobsApiSyncMaxAttempts: maxAttempts,
+  })
+
   const uploadedPlatforms = getUploadedPlatforms(artifacts)
-  const platformJobs = jobs.filter(job => platformJobPattern.test(job.name))
   const failedJobs = platformJobs
     .flatMap((job) => {
       const failedJob = collectFailedJob(job, uploadedPlatforms)
