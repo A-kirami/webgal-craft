@@ -7,7 +7,10 @@ import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } f
 import {
   WEBGAL_PREVIEW_BOOTSTRAP_PROVIDE,
   WEBGAL_PREVIEW_BOOTSTRAP_REQUEST,
-} from '~/features/editor/preview/embedded-preview-bootstrap'
+  WEBGAL_PREVIEW_VIEWPORT_POINTER,
+  WEBGAL_PREVIEW_VIEWPORT_SPACE_KEY,
+  WEBGAL_PREVIEW_VIEWPORT_WHEEL,
+} from '~/features/editor/preview/embedded-preview-messages'
 
 const {
   copyMock,
@@ -172,6 +175,98 @@ function createPreviewPanelLiteI18n() {
   })
 }
 
+function parsePreviewTransform(transform: string): {
+  panX: number
+  panY: number
+  zoom: number
+} {
+  const match = /^translate\((-?\d+(?:\.\d+)?)px, (-?\d+(?:\.\d+)?)px\) scale\((-?\d+(?:\.\d+)?)\)$/.exec(transform)
+  if (!match) {
+    throw new Error(`无法解析预览变换: ${transform}`)
+  }
+
+  const [, panX, panY, zoom] = match
+
+  return {
+    panX: Number(panX),
+    panY: Number(panY),
+    zoom: Number(zoom),
+  }
+}
+
+function expectCloseToCssNumber(actual: number, expected: number): void {
+  expect(Math.abs(actual - expected)).toBeLessThan(0.01)
+}
+
+function getPreviewIframe(): {
+  iframe: HTMLIFrameElement
+  iframeWindow: Window
+} {
+  const iframe = document.querySelector<HTMLIFrameElement>('iframe')
+  const iframeWindow = iframe?.contentWindow
+
+  if (!iframe || !iframeWindow) {
+    throw new Error('预览 iframe 应已渲染')
+  }
+
+  return {
+    iframe,
+    iframeWindow,
+  }
+}
+
+function dispatchPreviewSpaceKeyMessage(iframeWindow: Window, pressed: boolean): void {
+  globalThis.dispatchEvent(new MessageEvent('message', {
+    data: {
+      type: WEBGAL_PREVIEW_VIEWPORT_SPACE_KEY,
+      pressed,
+    },
+    origin: 'http://127.0.0.1:8899',
+    source: iframeWindow,
+  }))
+}
+
+function dispatchPreviewWheelMessage(
+  iframeWindow: Window,
+  data: {
+    clientX: number
+    clientY: number
+    ctrlKey: boolean
+    deltaY: number
+    metaKey: boolean
+  },
+): void {
+  globalThis.dispatchEvent(new MessageEvent('message', {
+    data: {
+      type: WEBGAL_PREVIEW_VIEWPORT_WHEEL,
+      ...data,
+    },
+    origin: 'http://127.0.0.1:8899',
+    source: iframeWindow,
+  }))
+}
+
+function dispatchPreviewPointerMessage(
+  iframeWindow: Window,
+  data: {
+    button: number
+    buttons: number
+    clientX: number
+    clientY: number
+    eventType: 'pointercancel' | 'pointerdown' | 'pointermove' | 'pointerup'
+    pointerId: number
+  },
+): void {
+  globalThis.dispatchEvent(new MessageEvent('message', {
+    data: {
+      type: WEBGAL_PREVIEW_VIEWPORT_POINTER,
+      ...data,
+    },
+    origin: 'http://127.0.0.1:8899',
+    source: iframeWindow,
+  }))
+}
+
 describe('PreviewPanel', () => {
   afterEach(() => {
     vi.clearAllMocks()
@@ -261,9 +356,195 @@ describe('PreviewPanel', () => {
 
     await expect.element(page.getByText('http://127.0.0.1:8899')).toBeVisible()
     await expect.element(page.getByTitle('preview-title::Demo Game')).toHaveAttribute('src', 'http://127.0.0.1:8899')
+    await expect.element(page.getByText('1280 x 720')).toBeVisible()
+    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.fitToView' })).toBeVisible()
     expect(getGameConfigMock).toHaveBeenCalledWith('/games/demo')
     expect(resetEmbeddedPreviewStateMock).toHaveBeenCalledTimes(1)
     expect(setEmbeddedPreviewLaunchIdMock).toHaveBeenCalledWith(expect.any(String))
+  })
+
+  it('收到同源 iframe 转发的空格按键消息时会让 iframe 上的拖拽交给外层视口平移', async () => {
+    renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getGameConfigMock).toHaveBeenCalledTimes(1)
+    })
+
+    const { iframe, iframeWindow } = getPreviewIframe()
+
+    expect(iframe.style.pointerEvents).toBe('')
+    expect(document.querySelector('[data-testid="preview-interaction-overlay"]')).toBeNull()
+
+    dispatchPreviewSpaceKeyMessage(iframeWindow, true)
+    await nextTick()
+
+    expect(iframe.style.pointerEvents).toBe('none')
+    const overlay = document.querySelector<HTMLElement>('[data-testid="preview-interaction-overlay"]')
+    expect(overlay).not.toBeNull()
+    expect(getComputedStyle(overlay as HTMLElement).cursor).toBe('grab')
+  })
+
+  it('iframe 内松开空格后会立即用 auto 光标重置覆盖层', async () => {
+    renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getGameConfigMock).toHaveBeenCalledTimes(1)
+    })
+
+    const { iframe, iframeWindow } = getPreviewIframe()
+
+    dispatchPreviewSpaceKeyMessage(iframeWindow, true)
+    await nextTick()
+
+    dispatchPreviewSpaceKeyMessage(iframeWindow, false)
+    await nextTick()
+
+    const resetOverlay = document.querySelector<HTMLElement>('[data-testid="preview-interaction-overlay"]')
+    expect(resetOverlay).not.toBeNull()
+    expect(iframe.style.pointerEvents).toBe('none')
+    expect(getComputedStyle(resetOverlay as HTMLElement).cursor).toBe('auto')
+
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+
+    expect(document.querySelector('[data-testid="preview-interaction-overlay"]')).toBeNull()
+    expect(iframe.style.pointerEvents).toBe('')
+  })
+
+  it('按下 Ctrl 不会进入抓手交互态', async () => {
+    renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getGameConfigMock).toHaveBeenCalledTimes(1)
+    })
+
+    const { iframe } = getPreviewIframe()
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', {
+      code: 'ControlLeft',
+      ctrlKey: true,
+    }))
+    await nextTick()
+
+    expect(iframe.style.pointerEvents).toBe('')
+    expect(document.querySelector('[data-testid="preview-interaction-overlay"]')).toBeNull()
+  })
+
+  it('收到同源 iframe 转发的 Cmd 或 Ctrl 滚轮消息时会缩放视口', async () => {
+    renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getGameConfigMock).toHaveBeenCalledTimes(1)
+    })
+
+    const canvas = document.querySelector<HTMLElement>('[data-testid="preview-canvas"]')
+    const { iframeWindow } = getPreviewIframe()
+    expect(canvas).not.toBeNull()
+
+    await vi.waitFor(() => {
+      expect(parsePreviewTransform(canvas?.style.transform ?? '').zoom).not.toBe(1)
+    })
+
+    const initialTransform = parsePreviewTransform(canvas?.style.transform ?? '')
+
+    dispatchPreviewWheelMessage(iframeWindow, {
+      clientX: 120,
+      clientY: 64,
+      ctrlKey: true,
+      deltaY: -1,
+      metaKey: false,
+    })
+    await nextTick()
+
+    const nextTransform = parsePreviewTransform(canvas?.style.transform ?? '')
+    const expectedZoom = initialTransform.zoom * 1.1
+
+    expectCloseToCssNumber(nextTransform.zoom, expectedZoom)
+    expectCloseToCssNumber(nextTransform.panX, initialTransform.panX - (120 * (expectedZoom - initialTransform.zoom)))
+    expectCloseToCssNumber(nextTransform.panY, initialTransform.panY - (64 * (expectedZoom - initialTransform.zoom)))
+  })
+
+  it('收到同源 iframe 转发的中键指针消息时会平移视口', async () => {
+    renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getGameConfigMock).toHaveBeenCalledTimes(1)
+    })
+
+    const canvas = document.querySelector<HTMLElement>('[data-testid="preview-canvas"]')
+    const { iframe, iframeWindow } = getPreviewIframe()
+    expect(canvas).not.toBeNull()
+
+    await vi.waitFor(() => {
+      expect(parsePreviewTransform(canvas?.style.transform ?? '').zoom).not.toBe(1)
+    })
+
+    const initialTransform = parsePreviewTransform(canvas?.style.transform ?? '')
+
+    dispatchPreviewPointerMessage(iframeWindow, {
+      button: 1,
+      buttons: 4,
+      clientX: 100,
+      clientY: 120,
+      eventType: 'pointerdown',
+      pointerId: 7,
+    })
+    await nextTick()
+
+    expect(iframe.style.pointerEvents).toBe('none')
+    expect(getComputedStyle(document.querySelector<HTMLElement>('[data-testid="preview-interaction-overlay"]') as HTMLElement).cursor).toBe('grabbing')
+
+    dispatchPreviewPointerMessage(iframeWindow, {
+      button: -1,
+      buttons: 4,
+      clientX: 140,
+      clientY: 180,
+      eventType: 'pointermove',
+      pointerId: 7,
+    })
+    await nextTick()
+
+    const nextTransform = parsePreviewTransform(canvas?.style.transform ?? '')
+
+    expectCloseToCssNumber(nextTransform.panX, initialTransform.panX + (40 * initialTransform.zoom))
+    expectCloseToCssNumber(nextTransform.panY, initialTransform.panY + (60 * initialTransform.zoom))
+
+    dispatchPreviewPointerMessage(iframeWindow, {
+      button: 1,
+      buttons: 0,
+      clientX: 140,
+      clientY: 180,
+      eventType: 'pointerup',
+      pointerId: 7,
+    })
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+
+    expect(document.querySelector('[data-testid="preview-interaction-overlay"]')).toBeNull()
+    expect(iframe.style.pointerEvents).toBe('')
   })
 
   it('点击复制和浏览器打开按钮会调用对应动作', async () => {

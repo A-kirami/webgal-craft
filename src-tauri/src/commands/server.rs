@@ -11,15 +11,15 @@ use std::{
 };
 
 use axum::{
-    body::{Body, Bytes},
+    body::{to_bytes, Body, Bytes},
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         ConnectInfo, Path as AxumPath, State as AxumState,
     },
     http::{
         header::{
-            ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_TYPE, ORIGIN, RANGE,
-            SEC_WEBSOCKET_PROTOCOL, VARY,
+            ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_LENGTH, CONTENT_TYPE, ORIGIN,
+            RANGE, SEC_WEBSOCKET_PROTOCOL, VARY,
         },
         HeaderMap, HeaderValue, Request, StatusCode, Uri,
     },
@@ -59,6 +59,279 @@ const STATIC_FILE_ALLOWED_CORS_ORIGINS: [&str; 4] = [
     "http://tauri.localhost",
     "tauri://localhost",
 ];
+const PREVIEW_VIEWPORT_BRIDGE_MARKER: &str = "webgal-craft-preview-viewport-bridge";
+const PREVIEW_VIEWPORT_BRIDGE_MAX_HTML_BYTES: u64 = 2 * 1024 * 1024;
+const PREVIEW_VIEWPORT_BRIDGE_SCRIPT: &str = r#"<script data-webgal-craft-preview-viewport-bridge>
+(() => {
+  if (window.parent === window) {
+    return;
+  }
+
+  const spaceKeyMessageType = 'webgal.preview.viewport.space-key';
+  const pointerMessageType = 'webgal.preview.viewport.pointer';
+  const wheelMessageType = 'webgal.preview.viewport.wheel';
+  const spaceCursorAttribute = 'data-webgal-craft-preview-viewport-space';
+  const style = document.createElement('style');
+  style.textContent = `
+    [${spaceCursorAttribute}="grab"],
+    [${spaceCursorAttribute}="grab"] * {
+      cursor: grab !important;
+    }
+
+    [${spaceCursorAttribute}="grabbing"],
+    [${spaceCursorAttribute}="grabbing"] * {
+      cursor: grabbing !important;
+    }
+
+    [${spaceCursorAttribute}="auto"],
+    [${spaceCursorAttribute}="auto"] * {
+      cursor: auto !important;
+    }
+  `;
+  const styleHost = document.head || document.documentElement;
+  if (styleHost) {
+    styleHost.append(style);
+  }
+
+  const parentTargetOrigin = (() => {
+    if (!document.referrer) {
+      return '*';
+    }
+
+    try {
+      return new URL(document.referrer).origin;
+    } catch {
+      return '*';
+    }
+  })();
+
+  const isEditableTarget = (target) => {
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+
+    const tagName = target.tagName.toLowerCase();
+    return target.isContentEditable
+      || tagName === 'input'
+      || tagName === 'select'
+      || tagName === 'textarea';
+  };
+
+  const postSpaceKey = (pressed) => {
+    window.parent.postMessage({
+      type: spaceKeyMessageType,
+      pressed,
+    }, parentTargetOrigin);
+  };
+
+  const postPointer = (eventType, event) => {
+    window.parent.postMessage({
+      type: pointerMessageType,
+      eventType,
+      button: event.button,
+      buttons: event.buttons,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      pointerId: event.pointerId,
+    }, parentTargetOrigin);
+  };
+
+  let cursorResetFrameId;
+  let middlePointerCaptureTarget;
+  let middlePointerId;
+
+  const cancelCursorReset = () => {
+    if (cursorResetFrameId === undefined) {
+      return;
+    }
+
+    cancelAnimationFrame(cursorResetFrameId);
+    cursorResetFrameId = undefined;
+  };
+
+  const applySpaceCursor = (cursor) => {
+    if (!cursor) {
+      document.documentElement.removeAttribute(spaceCursorAttribute);
+      return;
+    }
+
+    document.documentElement.setAttribute(spaceCursorAttribute, cursor);
+  };
+
+  const scheduleCursorReset = () => {
+    cancelCursorReset();
+    applySpaceCursor('auto');
+
+    cursorResetFrameId = requestAnimationFrame(() => {
+      cursorResetFrameId = requestAnimationFrame(() => {
+        cursorResetFrameId = undefined;
+        applySpaceCursor('');
+      });
+    });
+  };
+
+  const setSpaceCursor = (pressed) => {
+    if (pressed) {
+      cancelCursorReset();
+      applySpaceCursor('grab');
+      return;
+    }
+
+    scheduleCursorReset();
+  };
+
+  const captureMiddlePointer = (event) => {
+    if (!(event.target instanceof Element) || typeof event.target.setPointerCapture !== 'function') {
+      return;
+    }
+
+    try {
+      event.target.setPointerCapture(event.pointerId);
+      middlePointerCaptureTarget = event.target;
+    } catch {
+      middlePointerCaptureTarget = undefined;
+    }
+  };
+
+  const releaseMiddlePointer = () => {
+    if (!middlePointerCaptureTarget || middlePointerId === undefined) {
+      return;
+    }
+
+    const captureTarget = middlePointerCaptureTarget;
+    middlePointerCaptureTarget = undefined;
+
+    if (typeof captureTarget.hasPointerCapture === 'function' && !captureTarget.hasPointerCapture(middlePointerId)) {
+      return;
+    }
+    if (typeof captureTarget.releasePointerCapture !== 'function') {
+      return;
+    }
+
+    try {
+      captureTarget.releasePointerCapture(middlePointerId);
+    } catch {
+      // 指针捕获可能已被浏览器自动释放。
+    }
+  };
+
+  const endMiddlePointer = (eventType, event) => {
+    if (event.pointerId !== middlePointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    postPointer(eventType, event);
+    releaseMiddlePointer();
+    middlePointerId = undefined;
+    scheduleCursorReset();
+  };
+
+  window.addEventListener('mousedown', (event) => {
+    if (event.button === 1) {
+      event.preventDefault();
+    }
+  });
+
+  window.addEventListener('auxclick', (event) => {
+    if (event.button === 1) {
+      event.preventDefault();
+    }
+  });
+
+  window.addEventListener('pointerdown', (event) => {
+    if (event.button !== 1) {
+      return;
+    }
+
+    event.preventDefault();
+    middlePointerId = event.pointerId;
+    captureMiddlePointer(event);
+    cancelCursorReset();
+    applySpaceCursor('grabbing');
+    postPointer('pointerdown', event);
+  });
+
+  window.addEventListener('pointermove', (event) => {
+    if (event.pointerId !== middlePointerId) {
+      return;
+    }
+
+    event.preventDefault();
+    postPointer('pointermove', event);
+  });
+
+  window.addEventListener('pointerup', (event) => {
+    endMiddlePointer('pointerup', event);
+  });
+
+  window.addEventListener('pointercancel', (event) => {
+    endMiddlePointer('pointercancel', event);
+  });
+
+  window.addEventListener('keydown', (event) => {
+    if (event.code !== 'Space' || isEditableTarget(event.target)) {
+      return;
+    }
+
+    event.preventDefault();
+    setSpaceCursor(true);
+    postSpaceKey(true);
+  });
+
+  window.addEventListener('keyup', (event) => {
+    if (event.code !== 'Space') {
+      return;
+    }
+
+    setSpaceCursor(false);
+    postSpaceKey(false);
+  });
+
+  window.addEventListener('blur', () => {
+    requestAnimationFrame(() => {
+      if (document.hasFocus()) {
+        return;
+      }
+
+      setSpaceCursor(false);
+      postSpaceKey(false);
+    });
+  });
+
+  window.addEventListener('message', (event) => {
+    if (event.source !== window.parent) {
+      return;
+    }
+
+    const data = event.data;
+    if (!data
+      || typeof data !== 'object'
+      || data.type !== spaceKeyMessageType
+      || typeof data.pressed !== 'boolean') {
+      return;
+    }
+
+    setSpaceCursor(data.pressed);
+  });
+
+  window.addEventListener('wheel', (event) => {
+    if (!event.ctrlKey && !event.metaKey) {
+      return;
+    }
+
+    event.preventDefault();
+    window.parent.postMessage({
+      type: wheelMessageType,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      ctrlKey: event.ctrlKey,
+      deltaY: event.deltaY,
+      metaKey: event.metaKey,
+    }, parentTargetOrigin);
+  }, { passive: false });
+})();
+</script>"#;
 
 struct AppState {
     sites: RwLock<HashMap<String, CachedCanonicals>>,
@@ -256,6 +529,58 @@ fn finalize_cors(mut response: Response, origin: Option<&'static str>) -> Respon
     response
 }
 
+fn should_inject_preview_viewport_bridge(logical_path: &Path, response: &Response) -> bool {
+    if response.status() != StatusCode::OK || logical_path != Path::new("index.html") {
+        return false;
+    }
+
+    response
+        .headers()
+        .get(CONTENT_LENGTH)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<u64>().ok())
+        .is_some_and(|length| length <= PREVIEW_VIEWPORT_BRIDGE_MAX_HTML_BYTES)
+}
+
+fn inject_preview_viewport_bridge(html: &str) -> String {
+    if html.contains(PREVIEW_VIEWPORT_BRIDGE_MARKER) {
+        return html.to_string();
+    }
+
+    let index = html.find("</head>").unwrap_or_default();
+    let mut output = String::with_capacity(html.len() + PREVIEW_VIEWPORT_BRIDGE_SCRIPT.len());
+    output.push_str(&html[..index]);
+    output.push_str(PREVIEW_VIEWPORT_BRIDGE_SCRIPT);
+    output.push_str(&html[index..]);
+    output
+}
+
+async fn inject_preview_viewport_bridge_response(
+    logical_path: &Path,
+    response: Response,
+) -> Response {
+    if !should_inject_preview_viewport_bridge(logical_path, &response) {
+        return response;
+    }
+
+    let (mut parts, body) = response.into_parts();
+    let Ok(bytes) = to_bytes(body, PREVIEW_VIEWPORT_BRIDGE_MAX_HTML_BYTES as usize).await else {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    };
+    let Ok(html) = String::from_utf8(bytes.to_vec()) else {
+        return Response::from_parts(parts, Body::from(bytes));
+    };
+
+    let injected_html = inject_preview_viewport_bridge(&html);
+    parts.headers.remove(CONTENT_LENGTH);
+    let mut response = Response::from_parts(parts, Body::from(injected_html));
+    response.headers_mut().insert(
+        CONTENT_TYPE,
+        HeaderValue::from_static("text/html; charset=utf-8"),
+    );
+    response
+}
+
 async fn handle_static_request(
     AxumState(state): AxumState<Arc<AppState>>,
     AxumPath(hash): AxumPath<String>,
@@ -287,8 +612,11 @@ async fn handle_static_request(
 
     let overlay = OverlayFs::from_cached(&site);
 
+    let resolved_logical_path = logical_path.clone();
     let physical_path =
-        match tokio::task::spawn_blocking(move || overlay.resolve_file(&logical_path)).await {
+        match tokio::task::spawn_blocking(move || overlay.resolve_file(&resolved_logical_path))
+            .await
+        {
             Ok(Ok(path)) => path,
             Ok(Err(error)) => {
                 if let Some(response) =
@@ -324,6 +652,7 @@ async fn handle_static_request(
         .await
         .map(IntoResponse::into_response)
         .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response());
+    let response = inject_preview_viewport_bridge_response(&logical_path, response).await;
 
     finalize_cors(
         apply_cache_control(response, CacheControlPolicy::StaticAsset),
@@ -1075,7 +1404,7 @@ mod tests {
             header::{ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, ORIGIN, VARY},
             HeaderMap, HeaderValue, StatusCode, Uri,
         },
-        response::Response,
+        response::{IntoResponse, Response},
     };
     use std::{
         fs,
@@ -1087,10 +1416,12 @@ mod tests {
     use tempfile::TempDir;
 
     use super::{
-        append_cors_headers, apply_cache_control, handle_static_request, resolve_cors_origin,
-        resolve_thumbnail_request, supports_thumbnail, AppState, CacheControlPolicy,
+        append_cors_headers, apply_cache_control, handle_static_request,
+        inject_preview_viewport_bridge, resolve_cors_origin, resolve_thumbnail_request,
+        should_inject_preview_viewport_bridge, supports_thumbnail, AppState, CacheControlPolicy,
         EncodedThumbnail, ServerState, StaticAssetQuery, ThumbnailCache, ThumbnailCacheConfig,
         ThumbnailContentKey, ThumbnailRequest, ThumbnailRequestAlias, ThumbnailResizeMode,
+        PREVIEW_VIEWPORT_BRIDGE_MARKER,
     };
     use crate::vfs::CachedCanonicals;
 
@@ -1236,6 +1567,48 @@ mod tests {
         assert!(!supports_thumbnail(Path::new("cover.bmp")));
         assert!(!supports_thumbnail(Path::new("cover.tif")));
         assert!(!supports_thumbnail(Path::new("cover.tiff")));
+    }
+
+    #[test]
+    fn preview_index_html_injection_adds_viewport_bridge() {
+        let html = "<!doctype html><html><head></head><body></body></html>";
+        let injected = inject_preview_viewport_bridge(html);
+        let script_index = injected
+            .find(PREVIEW_VIEWPORT_BRIDGE_MARKER)
+            .expect("预览桥接脚本应被插入");
+        let head_end_index = injected
+            .find("</head>")
+            .expect("测试 HTML 应包含 head 结束标签");
+
+        assert!(script_index < head_end_index);
+        assert!(injected.contains("window.parent === window"));
+        assert!(injected.contains("data-webgal-craft-preview-viewport-space"));
+        assert!(injected.contains("event.source !== window.parent"));
+        assert!(injected.contains("webgal.preview.viewport.space-key"));
+        assert!(injected.contains("webgal.preview.viewport.wheel"));
+        assert!(injected.contains("webgal.preview.viewport.pointer"));
+        assert!(injected.contains("pointerdown"));
+    }
+
+    #[test]
+    fn preview_index_html_injection_is_idempotent() {
+        let html = format!(
+            "<!doctype html><html><head>{}</head><body></body></html>",
+            PREVIEW_VIEWPORT_BRIDGE_MARKER
+        );
+        let injected = inject_preview_viewport_bridge(&html);
+
+        assert_eq!(injected, html);
+    }
+
+    #[test]
+    fn preview_index_html_injection_requires_ok_response() {
+        let response = StatusCode::PARTIAL_CONTENT.into_response();
+
+        assert!(!should_inject_preview_viewport_bridge(
+            Path::new("index.html"),
+            &response
+        ));
     }
 
     fn test_cache_config() -> ThumbnailCacheConfig {

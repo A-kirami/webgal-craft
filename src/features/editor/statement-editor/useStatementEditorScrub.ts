@@ -4,6 +4,8 @@ import { createParamDrag } from '~/features/editor/effect-editor/createParamDrag
 import { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
 import { clamp, roundByStep } from '~/utils/math'
 
+import type { ImmediatePointerDragEvent } from '~/composables/useImmediatePointerDrag'
+
 interface UseStatementEditorScrubOptions {
   surface: StatementEditorSurface
   contentField: Readonly<Ref<EditorField | undefined>>
@@ -57,7 +59,7 @@ export function useStatementEditorScrub(options: UseStatementEditorScrubOptions)
     return 0
   }
 
-  function resolveScrubStep(argField: NumericArgField, event: PointerEvent): number {
+  function resolveScrubStep(argField: NumericArgField, event: ImmediatePointerDragEvent): number {
     const baseStep = argField.field.scrubStep ?? 1
     if (event.altKey) {
       return argField.field.scrubStepAlt ?? baseStep / 10

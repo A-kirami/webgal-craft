@@ -1,25 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { useEffectDurationControl } from '~/features/editor/effect-editor/useEffectDurationControl'
+
+import type { ImmediatePointerDragEvent } from '~/composables/useImmediatePointerDrag'
+
 const { dragRuntime } = vi.hoisted(() => ({
   dragRuntime: {
     callbacks: undefined as undefined | {
-      onEnd: (event: PointerEvent | undefined, state: { lastValue: number, startValue: number, startX: number }) => void
-      onMove: (event: PointerEvent, state: { lastValue: number, startValue: number, startX: number }) => void
-      onStart: (event: PointerEvent) => { lastValue: number, startValue: number, startX: number } | undefined
+      onEnd: (event: ImmediatePointerDragEvent | undefined, state: { lastValue: number, startValue: number, startX: number }) => void
+      onMove: (event: ImmediatePointerDragEvent, state: { lastValue: number, startValue: number, startX: number }) => void
+      onStart: (event: ImmediatePointerDragEvent) => { lastValue: number, startValue: number, startX: number } | undefined
     },
     state: undefined as undefined | { lastValue: number, startValue: number, startX: number },
-    stop: undefined as undefined | ((event?: PointerEvent) => void),
+    stop: undefined as undefined | ((event?: ImmediatePointerDragEvent) => void),
   },
 }))
 
 vi.mock('~/composables/useImmediatePointerDrag', () => ({
   useImmediatePointerDrag<S>(callbacks: {
-    onEnd: (event: PointerEvent | undefined, state: S) => void
-    onMove: (event: PointerEvent, state: S) => void
-    onStart: (event: PointerEvent) => S | undefined
+    onEnd: (event: ImmediatePointerDragEvent | undefined, state: S) => void
+    onMove: (event: ImmediatePointerDragEvent, state: S) => void
+    onStart: (event: ImmediatePointerDragEvent) => S | undefined
   }) {
     dragRuntime.callbacks = callbacks as typeof dragRuntime.callbacks
-    dragRuntime.stop = (event?: PointerEvent) => {
+    dragRuntime.stop = (event?: ImmediatePointerDragEvent) => {
       if (!dragRuntime.state) {
         return
       }
@@ -36,26 +40,28 @@ vi.mock('~/composables/useImmediatePointerDrag', () => ({
       get state() {
         return dragRuntime.state as S | undefined
       },
-      start(event: PointerEvent) {
+      start(event: ImmediatePointerDragEvent) {
         dragRuntime.state = callbacks.onStart(event) as typeof dragRuntime.state
         return dragRuntime.state !== undefined
       },
-      stop(event?: PointerEvent) {
+      stop(event?: ImmediatePointerDragEvent) {
         dragRuntime.stop?.(event)
       },
     }
   },
 }))
 
-import { useEffectDurationControl } from '~/features/editor/effect-editor/useEffectDurationControl'
-
 function createPointerEvent(overrides: Partial<PointerEvent> = {}): PointerEvent {
   return {
+    altKey: false,
     button: 0,
+    buttons: 1,
     clientX: 0,
+    clientY: 0,
     pointerId: 1,
     pointerType: 'mouse',
     preventDefault: vi.fn(),
+    shiftKey: false,
     ...overrides,
   } as PointerEvent
 }

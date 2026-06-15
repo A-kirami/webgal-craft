@@ -1,7 +1,7 @@
 export const DEFAULT_PREVIEW_PANEL_ASPECT_RATIO = '16/9'
 
-const DEFAULT_PREVIEW_PANEL_STAGE_WIDTH = 2560
-const DEFAULT_PREVIEW_PANEL_STAGE_HEIGHT = 1440
+export const DEFAULT_PREVIEW_PANEL_STAGE_WIDTH = 2560
+export const DEFAULT_PREVIEW_PANEL_STAGE_HEIGHT = 1440
 
 export interface PreviewPanelGameConfigLike {
   stageHeight?: unknown

@@ -1,14 +1,16 @@
 import { useImmediatePointerDrag } from '~/composables/useImmediatePointerDrag'
 
+import type { ImmediatePointerDragEvent } from '~/composables/useImmediatePointerDrag'
+
 /**
  * 工厂函数：封装 pendingParam + useImmediatePointerDrag 的"延迟参数传递"模式。
  * 消除 number、dial、color 三个控件中的重复代码。
  */
 
 interface ParamDragCallbacks<P, S> {
-  onStart: (event: PointerEvent, param: P) => S | undefined
-  onMove: (event: PointerEvent, state: S & { param: P }) => void
-  onEnd: (event: PointerEvent | undefined, state: S & { param: P }) => void
+  onStart: (event: ImmediatePointerDragEvent, param: P) => S | undefined
+  onMove: (event: ImmediatePointerDragEvent, state: S & { param: P }) => void
+  onEnd: (event: ImmediatePointerDragEvent | undefined, state: S & { param: P }) => void
 }
 
 export function createParamDrag<P, S>(callbacks: ParamDragCallbacks<P, S>) {

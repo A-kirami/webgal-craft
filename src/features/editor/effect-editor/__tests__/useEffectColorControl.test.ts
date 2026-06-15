@@ -3,6 +3,7 @@ import { reactive } from 'vue'
 
 import { useEffectColorControl } from '~/features/editor/effect-editor/useEffectColorControl'
 
+import type { ImmediatePointerDragEvent } from '~/composables/useImmediatePointerDrag'
 import type { ColorField } from '~/features/editor/command-registry/schema'
 import type { EffectControlDeps } from '~/features/editor/effect-editor/types'
 
@@ -15,11 +16,10 @@ const { createParamDragModule, dragController } = vi.hoisted(() => {
   function createParamDragModule() {
     return {
       createParamDrag<P, S>(callbacks: {
-        onStart: (event: PointerEvent, param: P) => unknown
-        // useEffectColorControl tests only exercise start/end semantics, so onMove is part of
-        // the mock signature for API parity but is intentionally not simulated here.
-        onMove: (event: PointerEvent, state: S & { param: P }) => unknown
-        onEnd: (event: PointerEvent | undefined, state: S & { param: P }) => void
+        onStart: (event: ImmediatePointerDragEvent, param: P) => unknown
+        // 这些测试只覆盖开始/结束语义；保留 onMove 是为了让 mock 签名贴近真实 API。
+        onMove: (event: ImmediatePointerDragEvent, state: S & { param: P }) => unknown
+        onEnd: (event: ImmediatePointerDragEvent | undefined, state: S & { param: P }) => void
       }) {
         return {
           drag: {
@@ -29,7 +29,7 @@ const { createParamDragModule, dragController } = vi.hoisted(() => {
             get state() {
               return dragController.active ? { param: dragController.param as P } as S & { param: P } : undefined
             },
-            stop(event?: PointerEvent) {
+            stop(event?: ImmediatePointerDragEvent) {
               if (!dragController.active) {
                 return
               }
@@ -38,7 +38,7 @@ const { createParamDragModule, dragController } = vi.hoisted(() => {
               dragController.param = undefined
             },
           },
-          start(event: PointerEvent, param: P) {
+          start(event: ImmediatePointerDragEvent, param: P) {
             callbacks.onStart(event, param)
             dragController.active = true
             dragController.param = param
@@ -78,7 +78,9 @@ function createDeps(initialFields: Record<string, string> = {}) {
 
 function createPointerEvent(overrides?: Partial<PointerEvent>): PointerEvent {
   return {
+    altKey: false,
     button: 0,
+    buttons: 1,
     clientX: 10,
     clientY: 10,
     currentTarget: {
@@ -92,6 +94,7 @@ function createPointerEvent(overrides?: Partial<PointerEvent>): PointerEvent {
     pointerId: 1,
     pointerType: 'mouse',
     preventDefault: vi.fn(),
+    shiftKey: false,
     ...overrides,
   } as PointerEvent
 }
