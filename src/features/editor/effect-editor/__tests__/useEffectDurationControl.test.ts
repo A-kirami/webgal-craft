@@ -41,6 +41,7 @@ vi.mock('~/composables/useImmediatePointerDrag', () => ({
         return dragRuntime.state as S | undefined
       },
       start(event: ImmediatePointerDragEvent) {
+        dragRuntime.stop?.()
         dragRuntime.state = callbacks.onStart(event) as typeof dragRuntime.state
         return dragRuntime.state !== undefined
       },
@@ -116,5 +117,26 @@ describe('useEffectDurationControl', () => {
 
     expect(emitDuration).toHaveBeenCalledTimes(1)
     expect(emitDuration).toHaveBeenLastCalledWith('12')
+  })
+
+  it('重复开始拖拽时先提交上一次拖拽的最终值', () => {
+    let currentDuration = '10'
+    const emitDuration = vi.fn((value: string) => {
+      currentDuration = value
+    })
+
+    const control = useEffectDurationControl({
+      getDuration: () => currentDuration,
+      emitDuration,
+      emitEase: vi.fn(),
+      defaultEaseValue: '__default__',
+    })
+
+    control.handleDurationLabelPointerDown(createPointerEvent({ clientX: 0, pointerId: 1 }))
+    dragRuntime.callbacks?.onMove(createPointerEvent({ clientX: 5, pointerId: 1 }), dragRuntime.state!)
+    control.handleDurationLabelPointerDown(createPointerEvent({ clientX: 20, pointerId: 2 }))
+
+    expect(emitDuration).toHaveBeenCalledTimes(1)
+    expect(emitDuration).toHaveBeenLastCalledWith('15')
   })
 })
