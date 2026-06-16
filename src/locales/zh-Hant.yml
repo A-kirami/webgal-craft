@@ -768,6 +768,11 @@ edit:
     copyUrlSuccess: 複製網址成功
     openFailed: 開啟預覽失敗
     previewTitle: "遊戲預覽 - {name}"
+    zoomOut: 縮小
+    zoomIn: 放大
+    fitToView: 適應視圖
+    zoomLevel: 縮放比例
+    resolution: 預覽解析度
   assetPanel:
     tabs:
       figure: 立繪

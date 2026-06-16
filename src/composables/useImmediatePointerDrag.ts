@@ -1,14 +1,28 @@
+export interface ImmediatePointerDragEvent {
+  altKey: boolean
+  button: number
+  buttons: number
+  clientX: number
+  clientY: number
+  currentTarget?: EventTarget | null
+  pointerId: number
+  pointerType?: string
+  shiftKey: boolean
+}
+
 export interface ImmediatePointerDragCallbacks<S> {
-  onStart: (event: PointerEvent) => S | undefined
-  onMove: (event: PointerEvent, state: S) => void
-  onEnd: (event: PointerEvent | undefined, state: S) => void
+  onStart: (event: ImmediatePointerDragEvent) => S | undefined
+  onMove: (event: ImmediatePointerDragEvent, state: S) => void
+  onEnd: (event: ImmediatePointerDragEvent | undefined, state: S) => void
 }
 
 export interface UseImmediatePointerDragResult<S> {
   active: boolean
+  end: (event: ImmediatePointerDragEvent) => void
+  move: (event: ImmediatePointerDragEvent) => void
   state: S | undefined
-  start: (event: PointerEvent) => boolean
-  stop: (event?: PointerEvent) => void
+  start: (event: ImmediatePointerDragEvent) => boolean
+  stop: (event?: ImmediatePointerDragEvent) => void
 }
 
 interface PointerCaptureTarget {
@@ -30,7 +44,7 @@ export function useImmediatePointerDrag<S>(
     globalThis.removeEventListener('pointercancel', handlePointerEnd)
   }
 
-  function capturePointer(event: PointerEvent) {
+  function capturePointer(event: ImmediatePointerDragEvent) {
     const target = event.currentTarget as PointerCaptureTarget | null
     if (typeof target?.setPointerCapture !== 'function') {
       return
@@ -66,7 +80,7 @@ export function useImmediatePointerDrag<S>(
     }
   }
 
-  function handlePointerMove(event: PointerEvent) {
+  function handlePointerMove(event: ImmediatePointerDragEvent) {
     if (state === undefined || event.pointerId !== pointerId) {
       return
     }
@@ -79,14 +93,14 @@ export function useImmediatePointerDrag<S>(
     callbacks.onMove(event, state)
   }
 
-  function handlePointerEnd(event: PointerEvent) {
+  function handlePointerEnd(event: ImmediatePointerDragEvent) {
     if (event.pointerId !== pointerId) {
       return
     }
     stop(event)
   }
 
-  function stop(event?: PointerEvent) {
+  function stop(event?: ImmediatePointerDragEvent) {
     if (state === undefined) {
       return
     }
@@ -99,7 +113,7 @@ export function useImmediatePointerDrag<S>(
     callbacks.onEnd(event, current)
   }
 
-  function start(event: PointerEvent): boolean {
+  function start(event: ImmediatePointerDragEvent): boolean {
     const nextState = callbacks.onStart(event)
     if (nextState === undefined) {
       return false
@@ -122,6 +136,8 @@ export function useImmediatePointerDrag<S>(
     get active() {
       return state !== undefined
     },
+    end: handlePointerEnd,
+    move: handlePointerMove,
     get state() {
       return state
     },

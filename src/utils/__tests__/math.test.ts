@@ -13,8 +13,8 @@ import {
   roundToPrecision,
 } from '~/utils/math'
 
-function createPointerEvent(clientX: number, clientY: number): PointerEvent {
-  return { clientX, clientY } as PointerEvent
+function createPointerPoint(clientX: number, clientY: number): { clientX: number, clientY: number } {
+  return { clientX, clientY }
 }
 
 describe('clamp', () => {
@@ -115,9 +115,9 @@ describe('normalizeDegree', () => {
 
 describe('getPointerAngleDegrees', () => {
   it.each([
-    ['指针位于中心右侧时返回 0°', createPointerEvent(200, 100), 0],
-    ['指针位于中心下方时返回 90°', createPointerEvent(100, 200), 90],
-    ['指针位于中心上方时返回 -90°', createPointerEvent(100, 0), -90],
+    ['指针位于中心右侧时返回 0°', createPointerPoint(200, 100), 0],
+    ['指针位于中心下方时返回 90°', createPointerPoint(100, 200), 90],
+    ['指针位于中心上方时返回 -90°', createPointerPoint(100, 0), -90],
   ])('%s', (_, event, expected) => {
     expect(getPointerAngleDegrees(event, 100, 100)).toBeCloseTo(expected)
   })

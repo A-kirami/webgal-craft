@@ -2,6 +2,7 @@ import { createParamDrag } from '~/features/editor/effect-editor/createParamDrag
 import { usePreferenceStore } from '~/stores/preference'
 import { applyScrubStepModifier, clamp, degreeToRadian, getPointerAngleDegrees, normalizeAngleDelta, normalizeDegree, radianToDegree, roundByStep, roundToPrecision } from '~/utils/math'
 
+import type { ImmediatePointerDragEvent } from '~/composables/useImmediatePointerDrag'
 import type { DialField, NumberField } from '~/features/editor/command-registry/schema'
 import type { EffectControlDeps, EmitTransformOptions } from '~/features/editor/effect-editor/types'
 
@@ -208,7 +209,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     return param.scrubbable !== false
   }
 
-  function resolveNumberScrubStep(param: NumberField, event: PointerEvent): number {
+  function resolveNumberScrubStep(param: NumberField, event: ImmediatePointerDragEvent): number {
     const baseStep = param.scrubStep ?? 1
     return applyScrubStepModifier(baseStep, event, {
       altFactor: param.scrubStepAlt === undefined ? undefined : param.scrubStepAlt / baseStep,

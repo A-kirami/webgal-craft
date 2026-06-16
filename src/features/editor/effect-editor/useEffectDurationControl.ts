@@ -1,6 +1,8 @@
 import { useImmediatePointerDrag } from '~/composables/useImmediatePointerDrag'
 import { applyScrubStepModifier } from '~/utils/math'
 
+import type { ImmediatePointerDragEvent } from '~/composables/useImmediatePointerDrag'
+
 interface UseEffectDurationControlOptions {
   getDuration: () => string
   emitDuration: (value: string) => void
@@ -61,7 +63,7 @@ export function useEffectDurationControl(options: UseEffectDurationControlOption
     return (Number.isFinite(duration) && duration >= 0) ? duration : 0
   }
 
-  function resolveDurationScrubStep(event: PointerEvent): number {
+  function resolveDurationScrubStep(event: ImmediatePointerDragEvent): number {
     return applyScrubStepModifier(1, event, { altFactor: 1, shiftFactor: 10 })
   }
 

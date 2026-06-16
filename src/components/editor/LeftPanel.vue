@@ -60,8 +60,8 @@ function handlePreviewExpand() {
     <ResizablePanel
       ref="previewPanel"
       size-unit="px"
-      :default-size="245"
-      :min-size="80"
+      :default-size="270"
+      :min-size="150"
       collapsible
       @collapse="handlePreviewCollapse"
       @expand="handlePreviewExpand"

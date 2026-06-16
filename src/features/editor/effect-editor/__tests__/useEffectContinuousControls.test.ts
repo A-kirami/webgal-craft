@@ -3,14 +3,15 @@ import { reactive } from 'vue'
 
 import { useEffectContinuousControls } from '~/features/editor/effect-editor/useEffectContinuousControls'
 
+import type { ImmediatePointerDragEvent } from '~/composables/useImmediatePointerDrag'
 import type { DialField, NumberField } from '~/features/editor/command-registry/schema'
 import type { EffectControlDeps } from '~/features/editor/effect-editor/types'
 
 type ParamDragState = object & { param: unknown }
 
 interface ParamDragRuntime {
-  end: (event?: PointerEvent) => void
-  move: (event: PointerEvent) => void
+  end: (event?: ImmediatePointerDragEvent) => void
+  move: (event: ImmediatePointerDragEvent) => void
   state: ParamDragState | undefined
 }
 
@@ -41,9 +42,9 @@ vi.mock('~/stores/preference', setupPreferenceStoreMock)
 
 vi.mock('~/features/editor/effect-editor/createParamDrag', () => ({
   createParamDrag<P, S extends object>(callbacks: {
-    onEnd: (event: PointerEvent | undefined, state: S & { param: P }) => void
-    onMove: (event: PointerEvent, state: S & { param: P }) => void
-    onStart: (event: PointerEvent, param: P) => S | undefined
+    onEnd: (event: ImmediatePointerDragEvent | undefined, state: S & { param: P }) => void
+    onMove: (event: ImmediatePointerDragEvent, state: S & { param: P }) => void
+    onStart: (event: ImmediatePointerDragEvent, param: P) => S | undefined
   }) {
     const runtime: ParamDragRuntime = {
       state: undefined,
@@ -76,11 +77,11 @@ vi.mock('~/features/editor/effect-editor/createParamDrag', () => ({
         start() {
           return false
         },
-        stop(event?: PointerEvent) {
+        stop(event?: ImmediatePointerDragEvent) {
           runtime.end(event)
         },
       },
-      start(event: PointerEvent, param: P) {
+      start(event: ImmediatePointerDragEvent, param: P) {
         const state = callbacks.onStart(event, param)
         if (!state) {
           runtime.state = undefined
@@ -166,12 +167,15 @@ function createDialField(overrides: Partial<DialField> = {}): DialField {
 
 function createPointerEvent(overrides: Partial<PointerEvent> = {}): PointerEvent {
   return {
+    altKey: false,
     button: 0,
     buttons: 1,
     clientX: 100,
+    clientY: 100,
     pointerId: 1,
     pointerType: 'mouse',
     preventDefault: vi.fn(),
+    shiftKey: false,
     ...overrides,
   } as PointerEvent
 }

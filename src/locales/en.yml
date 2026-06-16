@@ -768,6 +768,11 @@ edit:
     copyUrlSuccess: URL copied successfully
     openFailed: Failed to open preview
     previewTitle: "Game Preview - {name}"
+    zoomOut: Zoom Out
+    zoomIn: Zoom In
+    fitToView: Fit to View
+    zoomLevel: Zoom Level
+    resolution: Preview Resolution
   assetPanel:
     tabs:
       figure: Figure

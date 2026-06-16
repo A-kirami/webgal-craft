@@ -768,6 +768,11 @@ edit:
     copyUrlSuccess: 复制地址成功
     openFailed: 打开预览失败
     previewTitle: "游戏预览 - {name}"
+    zoomOut: 缩小
+    zoomIn: 放大
+    fitToView: 适应视图
+    zoomLevel: 缩放比例
+    resolution: 预览分辨率
   assetPanel:
     tabs:
       figure: 立绘

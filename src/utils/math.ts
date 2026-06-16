@@ -55,7 +55,7 @@ export function normalizeDegree(degree: number): number {
   return normalized < 0 ? normalized + 360 : normalized
 }
 
-export function getPointerAngleDegrees(event: PointerEvent, centerX: number, centerY: number): number {
+export function getPointerAngleDegrees(event: { clientX: number, clientY: number }, centerX: number, centerY: number): number {
   return radianToDegree(Math.atan2(event.clientY - centerY, event.clientX - centerX))
 }
 

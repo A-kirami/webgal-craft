@@ -5,6 +5,7 @@ import { cn } from '~/lib/utils'
 import { clamp, roundByStep } from '~/utils/math'
 
 import type { HTMLAttributes } from 'vue'
+import type { ImmediatePointerDragEvent } from '~/composables/useImmediatePointerDrag'
 
 interface Props {
   class?: HTMLAttributes['class']
@@ -183,7 +184,7 @@ function readPadMetrics(): PadMetrics | undefined {
   }
 }
 
-function updateByPointer(event: PointerEvent, metrics: PadMetrics) {
+function updateByPointer(event: ImmediatePointerDragEvent, metrics: PadMetrics) {
   const xRatio = clamp((event.clientX - metrics.contentLeft) / metrics.contentWidth, 0, 1)
   const yRatio = clamp((event.clientY - metrics.contentTop) / metrics.contentHeight, 0, 1)
 

@@ -768,6 +768,11 @@ edit:
     copyUrlSuccess: URLのコピーに成功しました
     openFailed: プレビューの開始に失敗しました
     previewTitle: ゲームプレビュー - {name}
+    zoomOut: 縮小
+    zoomIn: 拡大
+    fitToView: 表示に合わせる
+    zoomLevel: ズーム率
+    resolution: プレビュー解像度
   assetPanel:
     tabs:
       figure: 立ち絵

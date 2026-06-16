@@ -2,16 +2,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useImmediatePointerDrag } from '../useImmediatePointerDrag'
 
+import type { ImmediatePointerDragEvent } from '../useImmediatePointerDrag'
+
 type ListenerMap = Record<string, Set<EventListenerOrEventListenerObject>>
 
 interface PointerLikeEvent {
+  altKey?: boolean
+  button?: number
   buttons?: number
   clientX?: number
+  clientY?: number
   currentTarget?: PointerCaptureTarget | null
   pointerId: number
+  pointerType?: string
+  shiftKey?: boolean
 }
 
-interface PointerCaptureTarget {
+interface PointerCaptureTarget extends EventTarget {
   hasPointerCapture?: (pointerId: number) => boolean
   releasePointerCapture?: (pointerId: number) => void
   setPointerCapture?: (pointerId: number) => void
@@ -21,15 +28,20 @@ const originalAddEventListener = globalThis.addEventListener
 const originalRemoveEventListener = globalThis.removeEventListener
 const listenerMap: ListenerMap = {}
 
-function createPointerEvent(overrides: PointerLikeEvent): PointerEvent {
+function createPointerEvent(overrides: PointerLikeEvent): ImmediatePointerDragEvent {
   const { pointerId, ...rest } = overrides
 
   return {
+    altKey: false,
+    button: 0,
     buttons: 1,
     clientX: 0,
+    clientY: 0,
     pointerId,
+    pointerType: 'mouse',
+    shiftKey: false,
     ...rest,
-  } as PointerEvent
+  }
 }
 
 function invokeListener(listener: EventListenerOrEventListenerObject, payload: PointerLikeEvent) {
@@ -84,7 +96,7 @@ afterEach(() => {
 describe('useImmediatePointerDrag', () => {
   it('开始拖拽时会捕获当前指针并在结束时释放', () => {
     const capturedPointers = new Set<number>()
-    const target: PointerCaptureTarget = {
+    const target: PointerCaptureTarget = Object.assign(new EventTarget(), {
       hasPointerCapture: vi.fn(pointerId => capturedPointers.has(pointerId)),
       releasePointerCapture: vi.fn((pointerId) => {
         capturedPointers.delete(pointerId)
@@ -92,7 +104,7 @@ describe('useImmediatePointerDrag', () => {
       setPointerCapture: vi.fn((pointerId) => {
         capturedPointers.add(pointerId)
       }),
-    }
+    })
     const drag = useImmediatePointerDrag({
       onEnd: vi.fn(),
       onMove: vi.fn(),
