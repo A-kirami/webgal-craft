@@ -73,6 +73,7 @@ export function resolveTextEditorFileDropAction(options: {
           rawText: nextRawText,
           parsed,
         },
+        selectionLineNumber: hit.lineNumber,
       }
     }
   }
@@ -81,5 +82,6 @@ export function resolveTextEditorFileDropAction(options: {
     kind: 'insert-text',
     text: asset.scriptPath,
     range: createTextEditorCollapsedRange(hit),
+    selectionLineNumber: hit.lineNumber,
   }
 }
