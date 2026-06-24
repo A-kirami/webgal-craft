@@ -272,7 +272,7 @@ describe('useEffectEditorProvider', () => {
     })
   })
 
-  it('重置草稿时通过空 setEffect 回到效果预览基线', async () => {
+  it('重置草稿时通过打开表单时的 transform 回到效果预览基线', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
 
     const provider = createEffectEditorProvider()
@@ -304,7 +304,9 @@ describe('useEffectEditorProvider', () => {
 
     expect(debugCommanderMock.syncScene).not.toHaveBeenCalled()
     expect(debugCommanderMock.executeCommand).not.toHaveBeenCalled()
-    expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {})
+    expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {
+      blur: 8,
+    })
     expect(provider.session?.draft).toEqual({
       duration: '',
       ease: '',
@@ -338,7 +340,7 @@ describe('useEffectEditorProvider', () => {
     })
   })
 
-  it('关闭并丢弃未应用变更时通过空 setEffect 重置预览', async () => {
+  it('关闭并丢弃未应用变更时通过打开表单时的 transform 重置预览', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
 
     const provider = createEffectEditorProvider()
@@ -364,7 +366,9 @@ describe('useEffectEditorProvider', () => {
     expect(closed).toBe(true)
     expect(debugCommanderMock.syncScene).not.toHaveBeenCalled()
     expect(debugCommanderMock.executeCommand).not.toHaveBeenCalled()
-    expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {})
+    expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {
+      blur: 8,
+    })
   })
 
   it('关闭并丢弃仅修改时长的草稿不会发送效果预览重置', async () => {

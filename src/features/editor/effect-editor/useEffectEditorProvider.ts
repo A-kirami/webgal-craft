@@ -356,8 +356,9 @@ export function createEffectEditorProvider() {
     }
 
     try {
-      await debugCommander.setEffect(currentSession.effectTarget, {})
-      currentSession.previewedTransformFields = transformToFields(currentSession.initialDraft.transform)
+      const baselineTransform = cloneTransform(currentSession.initialDraft.transform)
+      await debugCommander.setEffect(currentSession.effectTarget, baselineTransform)
+      currentSession.previewedTransformFields = transformToFields(baselineTransform)
       currentSession.previewErrorWarned = false
     } catch (error) {
       logger.error(`重置效果预览失败: ${error}`)
