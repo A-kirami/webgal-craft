@@ -137,6 +137,9 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
       ? textEditorBindings.applyProgrammaticStatementUpdate(action.payload, 'external')
       : textEditorBindings.applyProgrammaticInsert(action, 'external')
 
+    if (applied) {
+      syncSceneSelection(action.selectionLineNumber)
+    }
     clearDropHover()
     return applied
   }
@@ -150,6 +153,9 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
 
     const applied = textEditorBindings.applyProgrammaticInsert(action, 'external')
 
+    if (applied) {
+      syncSceneSelection(action.selectionLineNumber)
+    }
     clearDropHover()
     return applied
   }

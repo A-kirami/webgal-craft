@@ -66,6 +66,7 @@ describe('resolveTextEditorCommandDropAction', () => {
       kind: 'insert-statement-line',
       text: 'changeBg:room.png;',
       range: { startLineNumber: 2, startColumn: 1, endLineNumber: 2, endColumn: 1 },
+      selectionLineNumber: 2,
     })
   })
 
@@ -83,6 +84,7 @@ describe('resolveTextEditorCommandDropAction', () => {
       kind: 'insert-statement-line',
       text: 'changeBg:room.png;\n',
       range: { startLineNumber: 2, startColumn: 1, endLineNumber: 2, endColumn: 1 },
+      selectionLineNumber: 2,
     })
   })
 
@@ -100,6 +102,7 @@ describe('resolveTextEditorCommandDropAction', () => {
       kind: 'insert-statement-line',
       text: '\nchangeBg:room.png;',
       range: { startLineNumber: 2, startColumn: 24, endLineNumber: 2, endColumn: 24 },
+      selectionLineNumber: 3,
     })
   })
 
@@ -117,6 +120,7 @@ describe('resolveTextEditorCommandDropAction', () => {
       kind: 'insert-statement-line',
       text: '\nchangeBg:room.png;\nbgm:theme.ogg;',
       range: { startLineNumber: 2, startColumn: 11, endLineNumber: 2, endColumn: 11 },
+      selectionLineNumber: 4,
     })
   })
 })

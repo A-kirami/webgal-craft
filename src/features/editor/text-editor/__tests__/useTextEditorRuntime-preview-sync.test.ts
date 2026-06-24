@@ -464,6 +464,53 @@ describe('useTextEditorRuntime', () => {
     )
   })
 
+  it('命令面板语句投放插入新行后会选中新插入语句', () => {
+    const path = '/project/scene-command-drop-selection.txt'
+    const state = createState(path)
+    const editor = {
+      ...createEditor(),
+      getTargetAtClientPoint: vi.fn(() => ({
+        position: {
+          column: 5,
+          lineNumber: 1,
+        },
+      })),
+    }
+    editor.getModel.mockReturnValue({
+      getLineContent: vi.fn(() => 'say:old;'),
+      getLineCount: vi.fn(() => 1),
+      getLineMaxColumn: vi.fn(() => 9),
+    })
+    const applyProgrammaticInsert = vi.fn(() => true)
+    const editorStore = createEditableEditorStore(path)
+
+    useEditorStoreMock.mockReturnValue(editorStore)
+    useTabsStoreMock.mockReturnValue(createTabsStore(path))
+    useTextEditorBindingsMock.mockReturnValue({
+      applyProgrammaticInsert,
+      applyProgrammaticStatementUpdate: vi.fn(() => false),
+      consumePendingTextTransactionSource: vi.fn(),
+      handleCursorSelectionChange: vi.fn(),
+    })
+
+    const runtime = useTextEditorRuntime({
+      editorRef: shallowRef(editor) as never,
+      getState: () => state,
+    })
+
+    expect(runtime.handleCommandDrop({
+      label: 'Say',
+      rawTexts: ['say:new;'],
+      source: 'command-panel',
+      type: 'command-panel-statement',
+    }, {
+      x: 100,
+      y: 40,
+    })).toBe(true)
+
+    expect(editorStore.syncSceneSelectionFromTextLine).toHaveBeenCalledWith(path, 2)
+  })
+
   it('跨行移动光标时会同步预览到新的关注行', () => {
     const path = '/project/scene-cross-line.txt'
     const state = createState(path)

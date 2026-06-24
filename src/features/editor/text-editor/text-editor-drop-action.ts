@@ -6,12 +6,14 @@ import type { DragPosition } from '~/types/drag-drop'
 export interface TextEditorInsertTextDropAction {
   kind: 'insert-text'
   range: monaco.IRange
+  selectionLineNumber: number
   text: string
 }
 
 export interface TextEditorInsertStatementLineDropAction {
   kind: 'insert-statement-line'
   range: monaco.IRange
+  selectionLineNumber: number
   text: string
 }
 
@@ -19,6 +21,7 @@ export interface TextEditorUpdateStatementDropAction {
   caretRange: monaco.IRange
   kind: 'update-statement'
   payload: StatementUpdatePayload
+  selectionLineNumber: number
 }
 
 export type TextEditorDropAction =
@@ -58,6 +61,10 @@ function createLineEdgeRange(lineNumber: number, column: number): monaco.IRange 
   }
 }
 
+function countInsertedStatementLines(text: string): number {
+  return text.split('\n').length
+}
+
 export function createTextEditorStatementLineDropAction(options: {
   hit: monaco.IPosition
   inlinePlacement?: TextEditorInlineStatementPlacement
@@ -77,6 +84,7 @@ export function createTextEditorStatementLineDropAction(options: {
       kind: 'insert-statement-line',
       text: insertedStatementText,
       range: createLineEdgeRange(hit.lineNumber, 1),
+      selectionLineNumber: hit.lineNumber + countInsertedStatementLines(insertedStatementText) - 1,
     }
   }
 
@@ -85,6 +93,7 @@ export function createTextEditorStatementLineDropAction(options: {
       kind: 'insert-statement-line',
       text: `${insertedStatementText}\n`,
       range: createLineEdgeRange(hit.lineNumber, 1),
+      selectionLineNumber: hit.lineNumber + countInsertedStatementLines(insertedStatementText) - 1,
     }
   }
 
@@ -93,6 +102,7 @@ export function createTextEditorStatementLineDropAction(options: {
       kind: 'insert-statement-line',
       text: `\n${insertedStatementText}`,
       range: createLineEdgeRange(hit.lineNumber, lineMaxColumn),
+      selectionLineNumber: hit.lineNumber + countInsertedStatementLines(insertedStatementText),
     }
   }
 }

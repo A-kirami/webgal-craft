@@ -90,6 +90,7 @@ describe('text-editor-file-drop', () => {
       kind: 'insert-statement-line',
       text: 'changeBg:room.png;',
       range: { startLineNumber: 2, startColumn: 1, endLineNumber: 2, endColumn: 1 },
+      selectionLineNumber: 2,
     })
   })
 
@@ -108,6 +109,7 @@ describe('text-editor-file-drop', () => {
       kind: 'insert-statement-line',
       text: 'changeBg:room.png;\n',
       range: { startLineNumber: 2, startColumn: 1, endLineNumber: 2, endColumn: 1 },
+      selectionLineNumber: 2,
     })
   })
 
@@ -125,6 +127,7 @@ describe('text-editor-file-drop', () => {
     expect(action).toMatchObject({
       kind: 'update-statement',
       caretRange: { startLineNumber: 2, startColumn: 10, endLineNumber: 2, endColumn: 10 },
+      selectionLineNumber: 2,
       payload: {
         rawText: 'say:world -speaker=Bob -line-2.ogg;',
       },
@@ -146,6 +149,7 @@ describe('text-editor-file-drop', () => {
       kind: 'insert-text',
       text: 'room.png',
       range: { startLineNumber: 2, startColumn: 5, endLineNumber: 2, endColumn: 5 },
+      selectionLineNumber: 2,
     })
   })
 
@@ -163,6 +167,7 @@ describe('text-editor-file-drop', () => {
     expect(action).toMatchObject({
       kind: 'insert-text',
       range: { startLineNumber: 2, startColumn: 11, endLineNumber: 2, endColumn: 11 },
+      selectionLineNumber: 2,
     })
   })
 
