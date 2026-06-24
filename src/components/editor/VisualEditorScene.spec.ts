@@ -468,6 +468,29 @@ describe('VisualEditorScene', () => {
     expect(firstItem!.querySelector('[data-statement-drag-handle]')).not.toBeNull()
   })
 
+  it('普通状态下插入投放区会放行指针事件', async () => {
+    const state = createSceneState()
+    renderInBrowser(VisualEditorScene, {
+      props: {
+        state,
+      },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+
+    await nextTick()
+
+    const headDropSlot = document.querySelector<HTMLElement>('[data-visual-drop-slot="head"]')
+    const gapDropSlot = document.querySelector<HTMLElement>('[data-visual-drop-slot="gap-1-2"]')
+
+    expect(headDropSlot).not.toBeNull()
+    expect(gapDropSlot).not.toBeNull()
+    expect(headDropSlot!.classList.contains('pointer-events-none')).toBe(true)
+    expect(gapDropSlot!.classList.contains('pointer-events-none')).toBe(true)
+  })
+
   it('为 head / gap / update / tail 注册 drop target，并把 drop 目标传给 runtime', async () => {
     const registerDroppable = vi.fn()
     useDroppableRegistryMock.mockReturnValue({

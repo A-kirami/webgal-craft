@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { FileText } from '@lucide/vue'
 
+import { useDragSession } from '~/composables/useDragSession'
 import { useDragSort } from '~/composables/useDragSort'
 import { useDroppableRegistry } from '~/composables/useDroppableRegistry'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
@@ -35,6 +36,7 @@ interface RenderedVisualStatementRow {
 
 const props = defineProps<Props>()
 
+const dragSession = useDragSession()
 const editSettings = useEditSettingsStore()
 const dropRegistry = useDroppableRegistry()
 const editorSurfaceRef = useTemplateRef<HTMLDivElement>('editorSurfaceRef')
@@ -67,6 +69,12 @@ const statements = computed(() => props.state.statements)
 const isSceneEmpty = computed(() => props.state.statements.length === 0)
 const scrollViewportRef = shallowRef<HTMLElement>()
 const statementReadonly = $computed(() => preferenceStore.showSidebar && editSettings.collapseStatementsOnSidebarOpen)
+const isDropHitTestingEnabled = computed(() => {
+  const { isActive, mode, payload } = dragSession.state.value
+  return isActive
+    && mode === 'transfer'
+    && (payload?.type === 'file-system-item' || payload?.type === 'command-panel-statement')
+})
 const renderedStatementRows = computed<RenderedVisualStatementRow[]>(() => {
   const rows: RenderedVisualStatementRow[] = []
 
@@ -364,6 +372,7 @@ tryOnUnmounted(() => {
               <div
                 :ref="value => registerDropTarget(row.insertDropKey, resolveHTMLElement(value), row.insertDropTarget)"
                 :data-visual-drop-slot="row.insertDropSlot"
+                :class="{'pointer-events-none': !isDropHitTestingEnabled}"
                 class="inset-x-0 absolute z-10"
                 :style="buildInsertDropStyle(row)"
               />
@@ -409,6 +418,7 @@ tryOnUnmounted(() => {
           v-if="!isSceneEmpty"
           :ref="value => registerDropTarget('tail', resolveHTMLElement(value), tailDropTarget)"
           data-visual-drop-slot="tail"
+          :class="{'pointer-events-none': !isDropHitTestingEnabled}"
           class="mx-2 flex-1 relative"
           :style="{
             flexBasis: tailDropAreaSize,
