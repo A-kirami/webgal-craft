@@ -307,6 +307,39 @@ describe('useTextEditorBindings', () => {
     expect(harness.editor.revealPositionInCenterIfOutsideViewport).toHaveBeenCalledWith({ lineNumber: 4, column: 17 })
   })
 
+  it('行首拖拽插入语句后会把光标停在插入语句行末', async () => {
+    getSceneSelectionMock.mockReturnValue(undefined)
+    useCommandPanelStoreMock.mockReturnValue({
+      getInsertText: vi.fn(),
+    })
+
+    const harness = await mountHarness('say:hello;\nchangeBg:old.png;')
+    await flushBindingUpdates()
+
+    expect(harness.bindings.applyProgrammaticInsert({
+      range: {
+        startLineNumber: 2,
+        startColumn: 1,
+        endLineNumber: 2,
+        endColumn: 1,
+      },
+      text: 'changeBg:room.png;\n',
+    }, 'external')).toBe(true)
+
+    expect(harness.editor.executeEdits).toHaveBeenCalledWith('file-drop', [{
+      range: {
+        startLineNumber: 2,
+        startColumn: 1,
+        endLineNumber: 2,
+        endColumn: 1,
+      },
+      text: 'changeBg:room.png;\n',
+      forceMoveMarkers: true,
+    }])
+    expect(harness.editor.setPosition).toHaveBeenCalledWith({ lineNumber: 2, column: 19 })
+    expect(harness.editor.revealPositionInCenterIfOutsideViewport).toHaveBeenCalledWith({ lineNumber: 2, column: 19 })
+  })
+
   it('程序化语句更新会保留指定事务来源', async () => {
     getSceneSelectionMock.mockReturnValue(undefined)
     useCommandPanelStoreMock.mockReturnValue({

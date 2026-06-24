@@ -34,11 +34,12 @@ interface UseTextEditorBindingsOptions {
 }
 
 function resolveInsertedTextEndPosition(range: monaco.IRange, text: string): monaco.IPosition {
-  const segments = text.split('\n')
+  const cursorText = text.endsWith('\n') ? text.slice(0, -1) : text
+  const segments = cursorText.split('\n')
   if (segments.length === 1) {
     return {
       lineNumber: range.startLineNumber,
-      column: range.startColumn + text.length,
+      column: range.startColumn + cursorText.length,
     }
   }
 
