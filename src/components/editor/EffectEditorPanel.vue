@@ -16,6 +16,7 @@ interface EffectEditorPanelProps {
 const props = withDefaults(defineProps<EffectEditorPanelProps>(), {
   showFooter: true,
 })
+const panelRef = useTemplateRef<HTMLElement>('panelRef')
 
 const emit = defineEmits<{
   'update:transform': [payload: EffectEditorTransformUpdatePayload]
@@ -43,12 +44,17 @@ function tryEmitReset() {
 useShortcutContext({
   panelFocus: 'effectEditor',
 }, {
+  target: panelRef,
   trackFocus: true,
+})
+
+onMounted(() => {
+  panelRef.value?.focus({ preventScroll: true })
 })
 </script>
 
 <template>
-  <div class="flex flex-col h-full min-h-0">
+  <div ref="panelRef" tabindex="-1" class="outline-none flex flex-col h-full min-h-0">
     <EffectDraftForm
       class="flex-1 min-h-0"
       :transform="props.transform"

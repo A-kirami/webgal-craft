@@ -10,6 +10,7 @@ import { useTabsStore } from '~/stores/tabs'
 
 import type { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import type { Transform } from '~/domain/stage/types'
+import type { ShortcutDefinition } from '~/features/editor/shortcut/types'
 
 interface ResizablePanelLike {
   collapse: () => void
@@ -23,6 +24,13 @@ interface ReadonlyRefLike<T = unknown> {
 
 interface UseEditorPanelShellOptions {
   commandPanelRef: ReadonlyRefLike<ResizablePanelLike | null | undefined>
+}
+
+interface EffectEditorShortcutDefinition {
+  action: () => void
+  i18nKey: string
+  id: string
+  keys: ShortcutDefinition['keys']
 }
 
 export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
@@ -95,6 +103,43 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     keys: ['Mod+Shift+Z', 'Mod+Y'],
     when: { panelFocus: 'statementEditor' },
   })
+
+  const effectEditorShortcutDefinitions: EffectEditorShortcutDefinition[] = [
+    {
+      action: effectEditorProvider.undoDraft,
+      i18nKey: 'shortcut.effect.undo',
+      id: 'effect.undo',
+      keys: 'Mod+Z',
+    },
+    {
+      action: effectEditorProvider.redoDraft,
+      i18nKey: 'shortcut.effect.redo',
+      id: 'effect.redo',
+      keys: ['Mod+Shift+Z', 'Mod+Y'],
+    },
+    {
+      action: effectEditorProvider.copyCurrentEffect,
+      i18nKey: 'shortcut.effect.copy',
+      id: 'effect.copy',
+      keys: 'Mod+C',
+    },
+    {
+      action: effectEditorProvider.pasteCurrentEffect,
+      i18nKey: 'shortcut.effect.paste',
+      id: 'effect.paste',
+      keys: 'Mod+V',
+    },
+  ]
+
+  for (const shortcut of effectEditorShortcutDefinitions) {
+    useShortcut({
+      execute: shortcut.action,
+      i18nKey: shortcut.i18nKey,
+      id: shortcut.id,
+      keys: shortcut.keys,
+      when: { panelFocus: 'effectEditor' },
+    })
+  }
 
   function focusTextEditorAfterEffectEditorClose(): void {
     if (currentProjection.value === 'text') {

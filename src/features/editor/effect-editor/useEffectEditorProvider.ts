@@ -153,6 +153,10 @@ export function createEffectEditorProvider() {
   let session = $ref<EffectEditorSession>()
   let colorPreviewFrameId = $ref<number>()
   let nextSessionId = $ref(0)
+  let draftUndoStack: EffectEditorDraft[] = []
+  let draftRedoStack: EffectEditorDraft[] = []
+  let pendingDraftHistoryBefore: EffectEditorDraft | undefined
+  let effectClipboard: EffectEditorDraft | undefined
 
   // 40ms 节流（约 25fps）：平衡实时预览流畅度与 IPC 通信开销。
   // trailing=true 确保拖拽结束时的最终值一定会触发预览
@@ -180,6 +184,45 @@ export function createEffectEditorProvider() {
     if (colorPreviewFrameId !== undefined) {
       cancelAnimationFrame(colorPreviewFrameId)
       colorPreviewFrameId = undefined
+    }
+  }
+
+  function clearDraftHistory(): void {
+    draftUndoStack = []
+    draftRedoStack = []
+    pendingDraftHistoryBefore = undefined
+  }
+
+  function pushDraftUndoSnapshot(previousDraft: EffectEditorDraft, nextDraft: EffectEditorDraft): void {
+    if (isDraftEqual(previousDraft, nextDraft)) {
+      return
+    }
+
+    const snapshot = cloneDraft(previousDraft)
+    const lastSnapshot = draftUndoStack.at(-1)
+    if (!lastSnapshot || !isDraftEqual(lastSnapshot, snapshot)) {
+      draftUndoStack.push(snapshot)
+    }
+    draftRedoStack = []
+  }
+
+  function applyDraftSnapshot(
+    draftSnapshot: EffectEditorDraft,
+    options: { autoApply?: boolean, preview?: boolean } = {},
+  ): void {
+    if (!session) {
+      return
+    }
+
+    const nextDraft = cloneDraft(draftSnapshot)
+    session.draft = nextDraft
+    session.dirty = !isDraftEqual(nextDraft, session.baseDraft)
+
+    if (options.preview) {
+      requestPreview({ schedule: 'immediate', flush: true })
+    }
+    if (options.autoApply) {
+      autoApplyQueue.enqueue()
     }
   }
 
@@ -306,14 +349,35 @@ export function createEffectEditorProvider() {
       return
     }
 
+    const nextTransform = patch.transform === undefined
+      ? cloneTransform(session.draft.transform)
+      : cloneTransform(patch.transform)
+
     const nextDraft: EffectEditorDraft = {
-      transform: patch.transform ? cloneTransform(patch.transform) : cloneTransform(session.draft.transform),
+      transform: nextTransform,
       duration: patch.duration ?? session.draft.duration,
       ease: patch.ease ?? session.draft.ease,
     }
+    const previousDraft = cloneDraft(session.draft)
+    const changed = !isDraftEqual(previousDraft, nextDraft)
+    const shouldFinalizePendingHistory = !options.deferAutoApply && pendingDraftHistoryBefore !== undefined
 
-    session.draft = nextDraft
-    session.dirty = !isDraftEqual(nextDraft, session.baseDraft)
+    if (!changed && !shouldFinalizePendingHistory) {
+      return
+    }
+
+    if (options.deferAutoApply) {
+      if (!pendingDraftHistoryBefore) {
+        pendingDraftHistoryBefore = previousDraft
+      }
+    } else {
+      pushDraftUndoSnapshot(pendingDraftHistoryBefore ?? previousDraft, nextDraft)
+      pendingDraftHistoryBefore = undefined
+    }
+
+    if (changed) {
+      applyDraftSnapshot(nextDraft)
+    }
 
     if (!options.deferAutoApply) {
       autoApplyQueue.enqueue()
@@ -327,14 +391,12 @@ export function createEffectEditorProvider() {
 
     const currentSession = session
     const shouldResetPreview = needsPreviewBaselineReset(currentSession)
+    const previousDraft = cloneDraft(currentSession.draft)
+    const nextDraft = cloneDraft(currentSession.initialDraft)
 
-    updateDraft({
-      transform: cloneTransform(currentSession.initialDraft.transform),
-      duration: currentSession.initialDraft.duration,
-      ease: currentSession.initialDraft.ease,
-    }, {
-      deferAutoApply: true,
-    })
+    pushDraftUndoSnapshot(previousDraft, nextDraft)
+    pendingDraftHistoryBefore = undefined
+    applyDraftSnapshot(nextDraft)
 
     autoApplyQueue.cancel()
     previewQueue.cancel()
@@ -365,6 +427,64 @@ export function createEffectEditorProvider() {
     }
   }
 
+  function undoDraft(): boolean {
+    if (!session) {
+      return false
+    }
+
+    const targetDraft = draftUndoStack.pop()
+    if (!targetDraft) {
+      return false
+    }
+
+    pendingDraftHistoryBefore = undefined
+    draftRedoStack.push(cloneDraft(session.draft))
+    applyDraftSnapshot(targetDraft, { autoApply: true, preview: true })
+    return true
+  }
+
+  function redoDraft(): boolean {
+    if (!session) {
+      return false
+    }
+
+    const targetDraft = draftRedoStack.pop()
+    if (!targetDraft) {
+      return false
+    }
+
+    pendingDraftHistoryBefore = undefined
+    draftUndoStack.push(cloneDraft(session.draft))
+    applyDraftSnapshot(targetDraft, { autoApply: true, preview: true })
+    return true
+  }
+
+  function copyCurrentEffect(): boolean {
+    if (!session) {
+      return false
+    }
+
+    effectClipboard = cloneDraft(session.draft)
+    return true
+  }
+
+  function pasteCurrentEffect(): boolean {
+    if (!session || !effectClipboard) {
+      return false
+    }
+
+    const previousDraft = cloneDraft(session.draft)
+    const nextDraft = cloneDraft(effectClipboard)
+    if (isDraftEqual(previousDraft, nextDraft)) {
+      return false
+    }
+
+    pushDraftUndoSnapshot(previousDraft, nextDraft)
+    pendingDraftHistoryBefore = undefined
+    applyDraftSnapshot(nextDraft, { autoApply: true, preview: true })
+    return true
+  }
+
   async function confirmDiscardChanges(): Promise<EffectEditorCloseAction> {
     const modalStore = useModalStore()
 
@@ -380,6 +500,7 @@ export function createEffectEditorProvider() {
   async function close(options: { forceDiscard?: boolean, skipPreviewReset?: boolean } = {}): Promise<boolean> {
     if (!session) {
       isOpen = false
+      clearDraftHistory()
       return true
     }
 
@@ -389,6 +510,7 @@ export function createEffectEditorProvider() {
       // 需要二次检查 session 是否仍然存在
       if (!session) {
         isOpen = false
+        clearDraftHistory()
         return true
       }
     }
@@ -419,6 +541,7 @@ export function createEffectEditorProvider() {
 
     session = undefined
     isOpen = false
+    clearDraftHistory()
     return true
   }
 
@@ -484,6 +607,7 @@ export function createEffectEditorProvider() {
 
     autoApplyQueue.cancel()
     previewQueue.cancel()
+    clearDraftHistory()
     isOpen = true
     return true
   }
@@ -507,6 +631,10 @@ export function createEffectEditorProvider() {
     updateDraft,
     resetToInitialDraft,
     requestPreview,
+    undoDraft,
+    redoDraft,
+    copyCurrentEffect,
+    pasteCurrentEffect,
   }
 }
 
