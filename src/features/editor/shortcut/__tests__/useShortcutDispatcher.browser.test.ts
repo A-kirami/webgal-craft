@@ -5,6 +5,7 @@ import { defineComponent, h, ref } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
 import CommandPanelCard from '~/components/editor/CommandPanelCard.vue'
+import EffectEditorPanel from '~/components/editor/EffectEditorPanel.vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '~/components/ui/tabs'
 import { TooltipProvider } from '~/components/ui/tooltip'
@@ -21,6 +22,7 @@ const shortcutActions = vi.hoisted(() => ({
   rename: vi.fn(),
   save: vi.fn(),
   setLeftPanelView: vi.fn(),
+  undoEffect: vi.fn(),
   toggleCommandPanel: vi.fn(),
   togglePreviewPanel: vi.fn(),
   toggleSidebar: vi.fn(),
@@ -282,6 +284,97 @@ function createStatementEditorSelectHarnessComponent() {
   })
 }
 
+function createEffectEditorFocusHarness() {
+  const EditorShortcutTarget = defineComponent({
+    name: 'EffectEditorFocusEditorTarget',
+    setup() {
+      const targetRef = ref<HTMLButtonElement>()
+
+      useShortcutContext({
+        panelFocus: 'editor',
+      }, {
+        target: targetRef,
+        trackFocus: true,
+      })
+
+      useShortcut({
+        execute: () => {
+          shortcutActions.undo()
+        },
+        i18nKey: 'shortcut.visual.undo',
+        id: 'visual.undo',
+        keys: 'Mod+Z',
+        when: {
+          panelFocus: 'editor',
+        },
+      })
+
+      return () => h('button', {
+        ref: targetRef,
+        type: 'button',
+      }, 'file-editor-surface')
+    },
+  })
+
+  const EffectEditorShortcutTarget = defineComponent({
+    name: 'EffectEditorFocusEffectTarget',
+    setup() {
+      useShortcut({
+        execute: () => {
+          shortcutActions.undoEffect()
+        },
+        i18nKey: 'shortcut.effect.undo',
+        id: 'effect.undo',
+        keys: 'Mod+Z',
+        when: {
+          panelFocus: 'effectEditor',
+        },
+      })
+
+      return () => h(EffectEditorPanel, {
+        canApply: false,
+        canReset: false,
+        duration: '',
+        ease: '',
+        transform: {},
+      })
+    },
+  })
+
+  const isEffectEditorOpen = ref(false)
+
+  function openEffectEditor() {
+    isEffectEditorOpen.value = true
+  }
+
+  const component = defineComponent({
+    name: 'EffectEditorFocusHarness',
+    setup() {
+      useShortcutDispatcher({
+        bindings: [],
+        executeContext: {},
+        platform: 'windows',
+      })
+
+      useShortcutContext({
+        panelFocus: 'none',
+      })
+
+      return () => h('div', [
+        h(EditorShortcutTarget),
+        isEffectEditorOpen.value
+          ? h(EffectEditorShortcutTarget)
+          : undefined,
+      ])
+    },
+  })
+
+  return {
+    component,
+    openEffectEditor,
+  }
+}
+
 function createComponentTargetHarnessComponent() {
   const ValueExposedButton = defineComponent({
     name: 'ValueExposedButton',
@@ -489,5 +582,53 @@ describe('useShortcutDispatcher', () => {
     }))
 
     expect(shortcutActions.undo).toHaveBeenCalledOnce()
+  })
+
+  it('效果编辑器打开后会接管焦点上下文并响应自身快捷键', async () => {
+    const { component, openEffectEditor } = createEffectEditorFocusHarness()
+
+    renderInBrowser(component, {
+      global: {
+        plugins: [createPinia()],
+        stubs: {
+          Button: defineComponent({
+            name: 'TestButtonStub',
+            setup(_, { attrs, slots }) {
+              return () => h('button', {
+                ...attrs,
+                type: 'button',
+              }, slots.default?.())
+            },
+          }),
+          EffectDraftForm: defineComponent({
+            name: 'EffectDraftForm',
+            setup() {
+              return () => h('div', 'effect-draft-form')
+            },
+          }),
+        },
+      },
+    })
+
+    const editorButton = page.getByRole('button', { name: 'file-editor-surface' })
+    const editorElement = await editorButton.element()
+
+    editorElement.focus()
+    expect(document.activeElement).toBe(editorElement)
+
+    openEffectEditor()
+
+    await expect.element(page.getByText('effect-draft-form')).toBeVisible()
+    await vi.waitFor(() => {
+      expect(useShortcutContextRegistry().resolveContext().panelFocus).toBe('effectEditor')
+    })
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', {
+      ctrlKey: true,
+      key: 'z',
+    }))
+
+    expect(shortcutActions.undoEffect).toHaveBeenCalledOnce()
+    expect(shortcutActions.undo).not.toHaveBeenCalled()
   })
 })

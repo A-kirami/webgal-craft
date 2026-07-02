@@ -46,10 +46,14 @@ const {
     canApply: false,
     canReset: false,
     close: vi.fn(async () => true),
+    copyCurrentEffect: vi.fn(() => true),
     isOpen: false,
+    pasteCurrentEffect: vi.fn(() => true),
     requestPreview: vi.fn(),
+    redoDraft: vi.fn(() => false),
     resetToInitialDraft: vi.fn(),
     session: undefined,
+    undoDraft: vi.fn(() => false),
     updateDraft: vi.fn(),
   },
   sidebarPanelMock: {
@@ -153,6 +157,12 @@ function createFixture(options: {
   }
 }
 
+function collectEffectShortcutBindings() {
+  return useShortcutMock.mock.calls
+    .map(call => call[0])
+    .filter(binding => String(binding.id).startsWith('effect.'))
+}
+
 describe('useEditorPanelShell', () => {
   beforeEach(() => {
     commandPanelBridgeMock.activeBinding.value = undefined
@@ -162,6 +172,12 @@ describe('useEditorPanelShell', () => {
     effectEditorProviderMock.canReset = false
     effectEditorProviderMock.close.mockClear()
     effectEditorProviderMock.close.mockResolvedValue(true)
+    effectEditorProviderMock.copyCurrentEffect.mockClear()
+    effectEditorProviderMock.pasteCurrentEffect.mockClear()
+    effectEditorProviderMock.redoDraft.mockClear()
+    effectEditorProviderMock.redoDraft.mockReturnValue(false)
+    effectEditorProviderMock.undoDraft.mockClear()
+    effectEditorProviderMock.undoDraft.mockReturnValue(false)
     effectEditorProviderMock.updateDraft.mockClear()
     effectEditorProviderMock.resetToInitialDraft.mockClear()
     useShortcutMock.mockReset()
@@ -214,6 +230,55 @@ describe('useEditorPanelShell', () => {
       keys: ['Mod+Shift+Z', 'Mod+Y'],
       when: { panelFocus: 'statementEditor' },
     }))
+
+    scope.stop()
+  })
+
+  it('只会注册 effect editor 焦点下的效果历史和剪贴板快捷键', () => {
+    const { scope } = createFixture()
+
+    expect(useShortcutMock).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'effect.undo',
+      keys: 'Mod+Z',
+      when: {
+        panelFocus: 'effectEditor',
+      },
+    }))
+    expect(useShortcutMock).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'effect.copy',
+      keys: 'Mod+C',
+      when: {
+        panelFocus: 'effectEditor',
+      },
+    }))
+    const effectBindings = collectEffectShortcutBindings()
+
+    expect(effectBindings.map(binding => [binding.id, binding.keys])).toEqual([
+      ['effect.undo', 'Mod+Z'],
+      ['effect.redo', ['Mod+Shift+Z', 'Mod+Y']],
+      ['effect.copy', 'Mod+C'],
+      ['effect.paste', 'Mod+V'],
+    ])
+    expect(effectBindings.every(binding => binding.allowInInput !== true)).toBe(true)
+    expect(effectBindings.every(binding => binding.when.panelFocus === 'effectEditor')).toBe(true)
+
+    scope.stop()
+  })
+
+  it('effect 历史和剪贴板快捷键会委托给 effect editor provider', async () => {
+    const { scope } = createFixture()
+    const effectBindings = new Map(collectEffectShortcutBindings()
+      .map(binding => [binding.id, binding]))
+
+    await effectBindings.get('effect.undo')?.execute()
+    await effectBindings.get('effect.redo')?.execute()
+    await effectBindings.get('effect.copy')?.execute()
+    await effectBindings.get('effect.paste')?.execute()
+
+    expect(effectEditorProviderMock.undoDraft).toHaveBeenCalledOnce()
+    expect(effectEditorProviderMock.redoDraft).toHaveBeenCalledOnce()
+    expect(effectEditorProviderMock.copyCurrentEffect).toHaveBeenCalledOnce()
+    expect(effectEditorProviderMock.pasteCurrentEffect).toHaveBeenCalledOnce()
 
     scope.stop()
   })

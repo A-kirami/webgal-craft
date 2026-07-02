@@ -485,4 +485,75 @@ describe('useEffectEditorProvider', () => {
       expect(provider.canApply).toBe(false)
     })
   })
+
+  it('自动应用关闭时会把一次拖拽变换记录为单个本地撤销条目', async () => {
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+
+    const provider = createEffectEditorProvider()
+
+    await provider.open({
+      baseSentence: createBaseSentence('{"blur":8}'),
+      effectTarget: 'fig-center',
+      onApply: vi.fn(),
+    })
+
+    provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
+    provider.updateDraft({ transform: { blur: 16 } })
+    provider.requestPreview({ schedule: 'immediate', flush: true })
+
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 16 })
+    })
+
+    debugCommanderMock.setEffect.mockClear()
+
+    expect(provider.undoDraft()).toBe(true)
+    expect(provider.session?.draft.transform).toEqual({ blur: 8 })
+
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 8 })
+    })
+
+    debugCommanderMock.setEffect.mockClear()
+
+    expect(provider.redoDraft()).toBe(true)
+    expect(provider.session?.draft.transform).toEqual({ blur: 16 })
+
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 16 })
+    })
+  })
+
+  it('复制和粘贴当前效果时会克隆完整草稿并记录本地历史', async () => {
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+
+    const provider = createEffectEditorProvider()
+
+    await provider.open({
+      baseSentence: createBaseSentence('{"blur":8}'),
+      effectTarget: 'fig-center',
+      onApply: vi.fn(),
+    })
+
+    provider.updateDraft({
+      duration: '300',
+      ease: 'easeInOut',
+      transform: { alpha: 0.5, blur: 12 },
+    })
+
+    expect(provider.copyCurrentEffect()).toBe(true)
+
+    provider.updateDraft({
+      duration: '100',
+      ease: '',
+      transform: { blur: 2 },
+    })
+
+    expect(provider.pasteCurrentEffect()).toBe(true)
+    expect(provider.session?.draft).toEqual({
+      duration: '300',
+      ease: 'easeInOut',
+      transform: { alpha: 0.5, blur: 12 },
+    })
+  })
 })
