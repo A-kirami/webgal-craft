@@ -775,6 +775,10 @@ edit:
     fitToView: Fit to View
     zoomLevel: Zoom Level
     resolution: Preview Resolution
+    transformOverlay:
+      move: Move target
+      rotate: Rotate target
+      scale: Scale target
   assetPanel:
     tabs:
       figure: Figure
