@@ -10,6 +10,7 @@ import type { EffectControlDeps } from '~/features/editor/effect-editor/types'
 type ParamDragState = object & { param: unknown }
 
 interface ParamDragRuntime {
+  cancel: () => void
   end: (event?: ImmediatePointerDragEvent) => void
   move: (event: ImmediatePointerDragEvent) => void
   state: ParamDragState | undefined
@@ -42,12 +43,21 @@ vi.mock('~/stores/preference', setupPreferenceStoreMock)
 
 vi.mock('~/features/editor/effect-editor/createParamDrag', () => ({
   createParamDrag<P, S extends object>(callbacks: {
+    onCancel?: (state: S & { param: P }) => void
     onEnd: (event: ImmediatePointerDragEvent | undefined, state: S & { param: P }) => void
     onMove: (event: ImmediatePointerDragEvent, state: S & { param: P }) => void
     onStart: (event: ImmediatePointerDragEvent, param: P) => S | undefined
   }) {
     const runtime: ParamDragRuntime = {
       state: undefined,
+      cancel() {
+        if (!runtime.state) {
+          return
+        }
+        const currentState = runtime.state as S & { param: P }
+        runtime.state = undefined
+        callbacks.onCancel?.(currentState)
+      },
       move(event) {
         if (!runtime.state) {
           return
@@ -80,6 +90,9 @@ vi.mock('~/features/editor/effect-editor/createParamDrag', () => ({
         stop(event?: ImmediatePointerDragEvent) {
           runtime.end(event)
         },
+        cancel() {
+          runtime.cancel()
+        },
       },
       start(event: ImmediatePointerDragEvent, param: P) {
         const state = callbacks.onStart(event, param)
@@ -101,6 +114,7 @@ function createDeps(initialFields: Record<string, string> = {}) {
   const deps: EffectControlDeps = {
     getFields: () => fields,
     getFieldValue: path => fields[path] ?? '',
+    getStoredFieldValue: path => fields[path],
     getNumberValue: (path, fallback) => {
       const value = Number(fields[path])
       return Number.isFinite(value) ? value : fallback
@@ -121,6 +135,7 @@ function createSnapshotDeps(initialFields: Record<string, string> = {}) {
   const deps: EffectControlDeps = {
     getFields: () => ({ ...sourceFields }),
     getFieldValue: path => sourceFields[path] ?? '',
+    getStoredFieldValue: path => sourceFields[path],
     getNumberValue: (path, fallback) => {
       const value = Number(sourceFields[path])
       return Number.isFinite(value) ? value : fallback
@@ -278,6 +293,34 @@ describe('useEffectContinuousControls', () => {
     })
   })
 
+  it('number scrub 取消时会取消当前预览交互而不是 flush 最终值', () => {
+    const { deps, emitTransform } = createDeps()
+    const cancelPreview = vi.fn()
+    const depsWithCancel = deps as EffectControlDeps & { cancelPreview: () => void }
+    depsWithCancel.cancelPreview = cancelPreview
+    const controls = useEffectContinuousControls(depsWithCancel)
+    const field = createNumberField({
+      defaultValue: 0,
+      key: 'position.x',
+      scrubStep: 1,
+    })
+
+    controls.handleNumberLabelPointerDown(createPointerEvent(), field)
+    const numberScrub = getParamDragRuntime(0)
+
+    numberScrub.move(createPointerEvent({ clientX: 104 }))
+    flushNextAnimationFrame()
+    numberScrub.cancel()
+
+    expect(cancelPreview).toHaveBeenCalledOnce()
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(expect.any(Object), {
+      schedule: 'continuous',
+      flush: false,
+      deferAutoApply: true,
+    })
+  })
+
   it('滑条拖拽在同一帧内只发射最后一次 transform', () => {
     const { deps, emitTransform, fields } = createDeps()
     const controls = useEffectContinuousControls(deps)
@@ -331,7 +374,7 @@ describe('useEffectContinuousControls', () => {
     expect(emitTransform).toHaveBeenCalledTimes(1)
   })
 
-  it('slider 与 linked-slider 会应用中心吸附与锁定比例', () => {
+  it('普通滑条与联动滑条会应用中心吸附与锁定比例', () => {
     const { deps, fields } = createDeps({
       scaleX: '2',
       scaleY: '4',
@@ -470,7 +513,7 @@ describe('useEffectContinuousControls', () => {
     })
   })
 
-  it('linked-slider 仅提交默认展示值时不会写入缺失字段', () => {
+  it('联动滑条仅提交默认展示值时不会写入缺失字段', () => {
     const { deps, emitTransform, fields } = createDeps()
     const controls = useEffectContinuousControls(deps)
     const linkedField = createLinkedNumberField({
@@ -487,7 +530,7 @@ describe('useEffectContinuousControls', () => {
     expect(emitTransform).not.toHaveBeenCalled()
   })
 
-  it('linked-slider 回到缺失字段默认值时不会发射同帧内排队的旧值', () => {
+  it('联动滑条回到缺失字段默认值时不会发射同帧内排队的旧值', () => {
     const { deps, emitTransform, sourceFields } = createSnapshotDeps()
     const controls = useEffectContinuousControls(deps)
     const linkedField = createLinkedNumberField({
@@ -505,7 +548,7 @@ describe('useEffectContinuousControls', () => {
     expect(emitTransform).not.toHaveBeenCalled()
   })
 
-  it('linked-slider 回到默认值时不会取消只触碰其他字段的待发射变更', () => {
+  it('联动滑条回到默认值时不会取消只触碰其他字段的待发射变更', () => {
     const { deps, emitTransform, sourceFields } = createSnapshotDeps({
       scaleX: '1',
       scaleY: '1',
@@ -539,7 +582,7 @@ describe('useEffectContinuousControls', () => {
     })
   })
 
-  it('锁定快照主轴为 0 时，linked-slider 会回退为双轴同步', () => {
+  it('锁定快照主轴为 0 时联动滑条会回退为双轴同步', () => {
     const { deps, fields } = createDeps({
       scaleX: '0',
       scaleY: '5',
@@ -556,6 +599,41 @@ describe('useEffectContinuousControls', () => {
 
     expect(fields.scaleX).toBe('3')
     expect(fields.scaleY).toBe('3')
+  })
+
+  it('dial 拖拽取消时会取消当前预览交互而不是 flush 最终值', () => {
+    const { deps, emitTransform } = createDeps()
+    const cancelPreview = vi.fn()
+    const depsWithCancel = deps as EffectControlDeps & { cancelPreview: () => void }
+    depsWithCancel.cancelPreview = cancelPreview
+    const controls = useEffectContinuousControls(depsWithCancel)
+    const field = createDialField({
+      dialUnit: 'deg',
+    })
+
+    controls.handleDialPointerDown(createPointerEvent({
+      currentTarget: {
+        getBoundingClientRect: () => ({
+          height: 20,
+          left: 90,
+          top: 90,
+          width: 20,
+        }),
+      } as unknown as EventTarget,
+    }), field)
+    const dialDrag = getParamDragRuntime(1)
+
+    dialDrag.move(createPointerEvent({ clientX: 100, clientY: 120 }))
+    flushNextAnimationFrame()
+    dialDrag.cancel()
+
+    expect(cancelPreview).toHaveBeenCalledOnce()
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(expect.any(Object), {
+      schedule: 'continuous',
+      flush: false,
+      deferAutoApply: true,
+    })
   })
 
   it('dial 会在 deg/rad 之间双向转换，并保留四位弧度精度', () => {
@@ -581,5 +659,19 @@ describe('useEffectContinuousControls', () => {
     controls.flushDialField(createDialField())
 
     expect(Number(fields.rotate)).toBeCloseTo(Math.PI / 2)
+  })
+
+  it('角度旋钮会按展示精度写入，避免显示值和生效值不一致', () => {
+    const { deps, fields } = createDeps()
+    const controls = useEffectContinuousControls(deps)
+
+    controls.updateDialField(createDialField({
+      dialUnit: 'deg',
+    }), 12.3456)
+
+    expect(fields.rotate).toBe('12.35')
+    expect(controls.getDialInputValue(createDialField({
+      dialUnit: 'deg',
+    }))).toBe('12.35')
   })
 })

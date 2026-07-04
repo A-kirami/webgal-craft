@@ -12,6 +12,7 @@ function createDeps(initialFields: Record<string, string>) {
   const deps: EffectControlDeps = {
     getFields: () => fields,
     getFieldValue: path => fields[path] ?? '',
+    getStoredFieldValue: path => fields[path],
     getNumberValue: () => 0,
     setNumericField: vi.fn(),
     emitTransform,

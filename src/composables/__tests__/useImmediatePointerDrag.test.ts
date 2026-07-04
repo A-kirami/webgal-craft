@@ -53,6 +53,15 @@ function invokeListener(listener: EventListenerOrEventListenerObject, payload: P
   listener.handleEvent(createPointerEvent(payload) as unknown as Event)
 }
 
+function invokeGlobalListener(listener: EventListenerOrEventListenerObject, event: Event) {
+  if (typeof listener === 'function') {
+    listener(event)
+    return
+  }
+
+  listener.handleEvent(event)
+}
+
 function dispatchPointerEvent(eventName: string, payload: PointerLikeEvent) {
   const listeners = listenerMap[eventName]
   if (!listeners) {
@@ -61,6 +70,17 @@ function dispatchPointerEvent(eventName: string, payload: PointerLikeEvent) {
 
   for (const listener of listeners) {
     invokeListener(listener, payload)
+  }
+}
+
+function dispatchGlobalEvent(eventName: string, event: Event) {
+  const listeners = listenerMap[eventName]
+  if (!listeners) {
+    return
+  }
+
+  for (const listener of listeners) {
+    invokeGlobalListener(listener, event)
   }
 }
 
@@ -134,6 +154,101 @@ describe('useImmediatePointerDrag', () => {
 
     expect(onMove).toHaveBeenCalledTimes(1)
     expect(onEnd).toHaveBeenCalledTimes(1)
+    expect(drag.active).toBe(false)
+  })
+
+  it('取消拖拽时释放指针且不触发结束回调', () => {
+    const capturedPointers = new Set<number>()
+    const target: PointerCaptureTarget = Object.assign(new EventTarget(), {
+      hasPointerCapture: vi.fn(pointerId => capturedPointers.has(pointerId)),
+      releasePointerCapture: vi.fn((pointerId) => {
+        capturedPointers.delete(pointerId)
+      }),
+      setPointerCapture: vi.fn((pointerId) => {
+        capturedPointers.add(pointerId)
+      }),
+    })
+    const onEnd = vi.fn()
+    const onCancel = vi.fn()
+    const onMove = vi.fn()
+    const drag = useImmediatePointerDrag({
+      onCancel,
+      onEnd,
+      onMove,
+      onStart: event => ({ startX: event.clientX }),
+    })
+
+    drag.start(createPointerEvent({ currentTarget: target, pointerId: 7 }))
+    drag.cancel()
+    dispatchPointerEvent('pointermove', { clientX: 20, pointerId: 7 })
+
+    expect(target.releasePointerCapture).toHaveBeenCalledWith(7)
+    expect(capturedPointers.has(7)).toBe(false)
+    expect(onCancel).toHaveBeenCalledWith({ startX: 0 })
+    expect(onEnd).not.toHaveBeenCalled()
+    expect(onMove).not.toHaveBeenCalled()
+    expect(drag.active).toBe(false)
+  })
+
+  it('收到 pointercancel 时会取消拖拽而不是结束拖拽', () => {
+    const onCancel = vi.fn()
+    const onEnd = vi.fn()
+    const onMove = vi.fn()
+    const drag = useImmediatePointerDrag({
+      onCancel,
+      onEnd,
+      onMove,
+      onStart: event => ({ startX: event.clientX }),
+    })
+
+    drag.start(createPointerEvent({ clientX: 10, pointerId: 7 }))
+    dispatchPointerEvent('pointermove', { clientX: 20, pointerId: 7 })
+    dispatchPointerEvent('pointercancel', { clientX: 20, pointerId: 7 })
+    dispatchPointerEvent('pointermove', { clientX: 30, pointerId: 7 })
+
+    expect(onMove).toHaveBeenCalledTimes(1)
+    expect(onCancel).toHaveBeenCalledWith({ startX: 10 })
+    expect(onEnd).not.toHaveBeenCalled()
+    expect(drag.active).toBe(false)
+  })
+
+  it('按下 Escape 时会取消拖拽而不是结束拖拽', () => {
+    const onCancel = vi.fn()
+    const onEnd = vi.fn()
+    const drag = useImmediatePointerDrag({
+      onCancel,
+      onEnd,
+      onMove: vi.fn(),
+      onStart: event => ({ startX: event.clientX }),
+    })
+
+    drag.start(createPointerEvent({ clientX: 10, pointerId: 7 }))
+    const event = Object.assign(new Event('keydown', { cancelable: true }), {
+      key: 'Escape',
+    })
+    dispatchGlobalEvent('keydown', event)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(onCancel).toHaveBeenCalledWith({ startX: 10 })
+    expect(onEnd).not.toHaveBeenCalled()
+    expect(drag.active).toBe(false)
+  })
+
+  it('窗口失焦时会取消拖拽而不是结束拖拽', () => {
+    const onCancel = vi.fn()
+    const onEnd = vi.fn()
+    const drag = useImmediatePointerDrag({
+      onCancel,
+      onEnd,
+      onMove: vi.fn(),
+      onStart: event => ({ startX: event.clientX }),
+    })
+
+    drag.start(createPointerEvent({ clientX: 10, pointerId: 7 }))
+    dispatchGlobalEvent('blur', new Event('blur'))
+
+    expect(onCancel).toHaveBeenCalledWith({ startX: 10 })
+    expect(onEnd).not.toHaveBeenCalled()
     expect(drag.active).toBe(false)
   })
 

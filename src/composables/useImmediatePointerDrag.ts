@@ -14,10 +14,12 @@ export interface ImmediatePointerDragCallbacks<S> {
   onStart: (event: ImmediatePointerDragEvent) => S | undefined
   onMove: (event: ImmediatePointerDragEvent, state: S) => void
   onEnd: (event: ImmediatePointerDragEvent | undefined, state: S) => void
+  onCancel?: (state: S) => void
 }
 
 export interface UseImmediatePointerDragResult<S> {
   active: boolean
+  cancel: () => void
   end: (event: ImmediatePointerDragEvent) => void
   move: (event: ImmediatePointerDragEvent) => void
   state: S | undefined
@@ -41,7 +43,9 @@ export function useImmediatePointerDrag<S>(
   function removeListeners() {
     globalThis.removeEventListener('pointermove', handlePointerMove)
     globalThis.removeEventListener('pointerup', handlePointerEnd)
-    globalThis.removeEventListener('pointercancel', handlePointerEnd)
+    globalThis.removeEventListener('pointercancel', handlePointerCancel)
+    globalThis.removeEventListener('keydown', handleKeyDown)
+    globalThis.removeEventListener('blur', handleWindowBlur)
   }
 
   function capturePointer(event: ImmediatePointerDragEvent) {
@@ -100,6 +104,30 @@ export function useImmediatePointerDrag<S>(
     stop(event)
   }
 
+  function handlePointerCancel(event: ImmediatePointerDragEvent) {
+    if (event.pointerId !== pointerId) {
+      return
+    }
+    cancel()
+  }
+
+  function handleKeyDown(event: KeyboardEvent) {
+    if (event.key !== 'Escape' || state === undefined) {
+      return
+    }
+
+    event.preventDefault()
+    cancel()
+  }
+
+  function handleWindowBlur() {
+    if (state === undefined) {
+      return
+    }
+
+    cancel()
+  }
+
   function stop(event?: ImmediatePointerDragEvent) {
     if (state === undefined) {
       return
@@ -111,6 +139,19 @@ export function useImmediatePointerDrag<S>(
     pointerId = undefined
     removeListeners()
     callbacks.onEnd(event, current)
+  }
+
+  function cancel() {
+    if (state === undefined) {
+      return
+    }
+
+    const current = state
+    state = undefined
+    releasePointerCapture()
+    pointerId = undefined
+    removeListeners()
+    callbacks.onCancel?.(current)
   }
 
   function start(event: ImmediatePointerDragEvent): boolean {
@@ -126,16 +167,19 @@ export function useImmediatePointerDrag<S>(
 
     globalThis.addEventListener('pointermove', handlePointerMove)
     globalThis.addEventListener('pointerup', handlePointerEnd)
-    globalThis.addEventListener('pointercancel', handlePointerEnd)
+    globalThis.addEventListener('pointercancel', handlePointerCancel)
+    globalThis.addEventListener('keydown', handleKeyDown)
+    globalThis.addEventListener('blur', handleWindowBlur)
     return true
   }
 
-  tryOnUnmounted(stop)
+  tryOnUnmounted(cancel)
 
   return {
     get active() {
       return state !== undefined
     },
+    cancel,
     end: handlePointerEnd,
     move: handlePointerMove,
     get state() {
