@@ -24,12 +24,20 @@ export function createPreviewRequestEnvelope<TType extends PreviewRequestType>(
   )
 }
 
+/**
+ * 通过 Tauri IPC 发送预览请求，但不等待预览端 ack 或响应。
+ * 返回的 promise 只表示本地命令派发完成。
+ */
 export async function sendPreviewRequestEnvelope<TType extends PreviewRequestType>(
   request: RequestEnvelopeByType<TType>,
 ): Promise<void> {
   await serverCmds.sendPreviewCommand(JSON.stringify(request))
 }
 
+/**
+ * 发送预览命令请求，但不会注册到待处理响应跟踪器。
+ * 调用方需要 ack、响应或超时处理时，应使用预览同步 store。
+ */
 export async function sendPreviewCommandRequest<TType extends PreviewCommandType>(
   type: TType,
   payload: RequestPayloadByType[TType],
