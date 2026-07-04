@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ResizablePanel } from '~/components/ui/resizable'
 import { useAnimationTableSyncBootstrap } from '~/features/editor/animation/useAnimationTableSyncBootstrap'
+import { useEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { createEditorShortcutDefinitions } from '~/features/editor/shortcut/definitions'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
+import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
+import { useTransformOverlayBridge } from '~/features/editor/transform-overlay/useTransformOverlayBridge'
 import { requestGameRuntimeRebind, resolveRuntimeRebindIssue } from '~/features/modals/import-dependency-resolution/request-game-runtime-rebind'
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
 import { gameManager } from '~/services/game-manager'
@@ -26,6 +29,12 @@ const preferenceStore = usePreferenceStore()
 const workspaceStore = useWorkspaceStore()
 const router = useRouter()
 const editorPanelRef = useTemplateRef<EditorPanelHandle>('editorPanel')
+const effectEditorProvider = useEffectEditorProvider()
+const transformOverlayBridge = useTransformOverlayBridge({
+  provider: effectEditorProvider,
+})
+
+provide(TRANSFORM_OVERLAY_BRIDGE_KEY, transformOverlayBridge)
 
 let pendingEditExit: Promise<void> | undefined
 
