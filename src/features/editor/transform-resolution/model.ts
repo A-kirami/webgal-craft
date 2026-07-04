@@ -122,16 +122,21 @@ export function cloneTransform(transform: Transform = {}): Transform {
   return structuredClone(toRaw(transform))
 }
 
+function coerceFieldValue(path: TransformFieldPath, value: string | number): unknown {
+  const partialTransform = fieldsToTransform({ [path]: String(value) })
+
+  return getValueByPath(partialTransform as unknown as Record<string, unknown>, path)
+}
+
 function writeField(
   transform: Transform,
   path: TransformFieldPath,
   value: string | number,
 ): void {
-  const partialTransform = fieldsToTransform({ [path]: String(value) })
   setValueByPath(
     transform as unknown as Record<string, unknown>,
     path,
-    getValueByPath(partialTransform as unknown as Record<string, unknown>, path),
+    coerceFieldValue(path, value),
   )
 }
 
@@ -149,8 +154,7 @@ function writeFieldMapValue(
     return
   }
 
-  const partialTransform = fieldsToTransform({ [path]: String(value) })
-  const nextValue = getValueByPath(partialTransform as unknown as Record<string, unknown>, path)
+  const nextValue = coerceFieldValue(path, value)
 
   if (nextValue === undefined) {
     unsetValueByPath(transform as unknown as Record<string, unknown>, path)
