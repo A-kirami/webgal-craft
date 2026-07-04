@@ -15,6 +15,12 @@ export interface PreviewViewportPoint {
   y: number
 }
 
+export interface PreviewCanvasPlacement {
+  left: number
+  scale: number
+  top: number
+}
+
 export interface UsePreviewViewportOptions {
   getCanvasSize: () => PreviewViewportSize
   getViewportElement: () => HTMLElement | null | undefined
@@ -73,6 +79,11 @@ export function usePreviewViewport(options: UsePreviewViewportOptions) {
   const viewportTransform = computed(() => {
     return `translate(${formatCssNumber(panX.value)}px, ${formatCssNumber(panY.value)}px) scale(${formatCssNumber(zoom.value)})`
   })
+  const canvasPlacement = computed<PreviewCanvasPlacement>(() => ({
+    left: panX.value,
+    scale: zoom.value,
+    top: panY.value,
+  }))
 
   function getViewportRect(): DOMRect | undefined {
     return options.getViewportElement()?.getBoundingClientRect()
@@ -359,6 +370,7 @@ export function usePreviewViewport(options: UsePreviewViewportOptions) {
   useEventListener(globalThis, 'blur', handleWindowBlur)
 
   return {
+    canvasPlacement,
     fitToView,
     handleForwardedPointerEvent,
     handlePointerDown,

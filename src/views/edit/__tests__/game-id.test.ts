@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSSRApp, reactive } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 
+import { createBrowserLiteI18n } from '~/__tests__/browser'
 import { createTestGame } from '~/__tests__/factories'
 import { AppError } from '~/types/errors'
 
@@ -173,6 +174,15 @@ vi.mock('~/stores/workspace', () => ({
 
 const mountedApps: { unmount: () => void }[] = []
 
+async function renderEditView() {
+  const view = await import('../[gameId].vue')
+  const app = createSSRApp(view.default)
+
+  app.use(createBrowserLiteI18n())
+  await renderToString(app)
+  mountedApps.push(app)
+}
+
 describe('edit/[gameId]', () => {
   beforeEach(() => {
     useAnimationTableSyncBootstrapMock.mockReset()
@@ -233,11 +243,7 @@ describe('edit/[gameId]', () => {
   })
 
   it('会在编辑页壳层启动资源索引 bootstrap', async () => {
-    const view = await import('../[gameId].vue')
-    const app = createSSRApp(view.default)
-
-    await renderToString(app)
-    mountedApps.push(app)
+    await renderEditView()
 
     expect(useResourceIndexBootstrapMock).toHaveBeenCalledOnce()
   })
@@ -255,11 +261,7 @@ describe('edit/[gameId]', () => {
       ensureCurrentGameAvailable: vi.fn(async () => true),
     }))
 
-    const view = await import('../[gameId].vue')
-    const app = createSSRApp(view.default)
-
-    await renderToString(app)
-    mountedApps.push(app)
+    await renderEditView()
 
     await vi.waitFor(() => {
       expect(requestGameRuntimeRebindMock).toHaveBeenCalledWith(currentGame, expect.objectContaining({
@@ -295,11 +297,7 @@ describe('edit/[gameId]', () => {
       ensureCurrentGameAvailable: vi.fn(async () => true),
     }))
 
-    const view = await import('../[gameId].vue')
-    const app = createSSRApp(view.default)
-
-    await renderToString(app)
-    mountedApps.push(app)
+    await renderEditView()
 
     await vi.waitFor(() => {
       expect(modalOpenMock).toHaveBeenCalledWith(
@@ -333,11 +331,7 @@ describe('edit/[gameId]', () => {
       ensureCurrentGameAvailable: vi.fn(async () => true),
     }))
 
-    const view = await import('../[gameId].vue')
-    const app = createSSRApp(view.default)
-
-    await renderToString(app)
-    mountedApps.push(app)
+    await renderEditView()
 
     await vi.waitFor(() => {
       expect(routerReplaceMock).toHaveBeenCalledWith('/')

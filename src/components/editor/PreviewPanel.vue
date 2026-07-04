@@ -19,6 +19,7 @@ import {
   resolvePreviewPanelStageSize,
 } from '~/features/editor/preview/preview-panel'
 import { resolvePreviewReadySyncTarget } from '~/features/editor/preview/preview-ready-sync-target'
+import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
 import { debugCommander } from '~/services/debug-commander'
 import { useEditorStore } from '~/stores/editor'
 import { useModalStore } from '~/stores/modal'
@@ -28,9 +29,11 @@ import { usePreviewSyncStore } from '~/stores/preview-sync'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
 
+import TransformOverlay from './TransformOverlay.vue'
 import ViewportControls from './ViewportControls.vue'
 
 import type { PreviewPanelStageSize } from '~/features/editor/preview/preview-panel'
+import type { DisplayTransform } from '~/features/editor/transform-overlay/model'
 
 const editorStore = useEditorStore()
 const modalStore = useModalStore()
@@ -40,6 +43,10 @@ const previewSyncStore = usePreviewSyncStore()
 const workspaceStore = useWorkspaceStore()
 const iframeRef = useTemplateRef<HTMLIFrameElement>('iframeRef')
 const viewportRef = useTemplateRef<HTMLElement>('viewportRef')
+const transformOverlayBridge = inject(TRANSFORM_OVERLAY_BRIDGE_KEY, undefined)
+const transformOverlayEnabled = $computed(() => transformOverlayBridge?.enabled.value ?? false)
+const transformOverlayReferenceBox = $computed(() => transformOverlayBridge?.referenceBox.value)
+const transformOverlayDisplayTransform = $computed(() => transformOverlayBridge?.displayTransform.value)
 
 const previewUrl = $computed(() => previewSessionStore.currentGameServeUrl ?? '')
 const hasPreviewUrl = $computed(() => !!previewSessionStore.currentGameServeUrl)
@@ -133,6 +140,18 @@ function applyStageSize(nextStageSize: PreviewPanelStageSize) {
   aspectRatio = nextStageSize.aspectRatio
   stageWidth = nextStageSize.stageWidth
   stageHeight = nextStageSize.stageHeight
+}
+
+function previewTransformOverlayDisplayTransform(value: DisplayTransform): void {
+  transformOverlayBridge?.updateDisplayTransform(value)
+}
+
+function commitTransformOverlayDisplayTransform(value: DisplayTransform): void {
+  transformOverlayBridge?.updateDisplayTransform(value, { flush: true })
+}
+
+function cancelTransformOverlayDisplayTransform(): void {
+  transformOverlayBridge?.cancelDisplayTransform()
 }
 
 async function fitViewportToCurrentStage(): Promise<void> {
@@ -511,55 +530,68 @@ onBeforeUnmount(() => {
         </div>
       </TooltipProvider>
     </div>
-    <div
-      ref="viewportRef"
-      data-testid="preview-viewport"
-      class="bg-muted size-full relative overflow-hidden"
-      :class="previewViewportClass"
-      @wheel="previewViewport.handleWheel"
-      @pointerdown="previewViewport.handlePointerDown"
-    >
+    <div data-effect-editor-interactive-region class="flex flex-1 flex-col min-h-0 divide-y">
       <div
-        v-if="hasPreviewUrl"
-        data-testid="preview-canvas"
-        class="bg-background shadow-sm origin-top-left left-0 top-0 absolute"
-        :style="previewCanvasStyle"
+        ref="viewportRef"
+        data-testid="preview-viewport"
+        class="bg-muted flex-1 min-h-0 relative overflow-hidden"
+        :class="previewViewportClass"
+        @wheel="previewViewport.handleWheel"
+        @pointerdown="previewViewport.handlePointerDown"
       >
-        <iframe
-          ref="iframeRef"
-          :key="refreshKey"
-          :src="previewUrl"
-          :title="previewTitle"
-          class="border-0 size-full"
-          :style="previewIframeStyle"
+        <div
+          v-if="hasPreviewUrl"
+          data-testid="preview-canvas"
+          class="bg-background shadow-sm origin-top-left left-0 top-0 absolute"
+          :style="previewCanvasStyle"
+        >
+          <iframe
+            ref="iframeRef"
+            :key="refreshKey"
+            :src="previewUrl"
+            :title="previewTitle"
+            class="border-0 size-full"
+            :style="previewIframeStyle"
+          />
+        </div>
+        <TransformOverlay
+          v-if="hasPreviewUrl && transformOverlayEnabled"
+          :box="transformOverlayReferenceBox"
+          :canvas-height="stageHeight"
+          :canvas-placement="previewViewport.canvasPlacement.value"
+          :canvas-width="stageWidth"
+          :display-transform="transformOverlayDisplayTransform"
+          @cancel:display-transform="cancelTransformOverlayDisplayTransform"
+          @commit:display-transform="commitTransformOverlayDisplayTransform"
+          @preview:display-transform="previewTransformOverlayDisplayTransform"
+        />
+        <div
+          v-if="isPreviewInteractionOverlayVisible"
+          data-testid="preview-interaction-overlay"
+          aria-hidden="true"
+          class="inset-0 absolute z-5"
+          :style="previewInteractionOverlayStyle"
         />
       </div>
       <div
-        v-if="isPreviewInteractionOverlayVisible"
-        data-testid="preview-interaction-overlay"
-        aria-hidden="true"
-        class="inset-0 absolute z-5"
-        :style="previewInteractionOverlayStyle"
-      />
-    </div>
-    <div
-      v-if="hasPreviewUrl"
-      data-testid="preview-bottom-toolbar"
-      class="text-muted-foreground px-2 bg-background/80 flex flex-shrink-0 h-6.5 items-center justify-between"
-    >
-      <output
-        data-testid="preview-resolution"
-        class="text-xs leading-none font-medium font-mono pointer-events-none select-none tabular-nums"
-        :aria-label="$t('edit.previewPanel.resolution')"
+        v-if="hasPreviewUrl"
+        data-testid="preview-bottom-toolbar"
+        class="text-muted-foreground px-2 bg-background/80 flex flex-shrink-0 h-6.5 items-center justify-between"
       >
-        {{ resolutionLabel }}
-      </output>
-      <ViewportControls
-        :zoom-ratio="previewViewport.zoomRatio.value"
-        @zoom-in="previewViewport.zoomIn"
-        @zoom-out="previewViewport.zoomOut"
-        @fit-to-view="previewViewport.fitToView"
-      />
+        <output
+          data-testid="preview-resolution"
+          class="text-xs leading-none font-medium font-mono pointer-events-none select-none tabular-nums"
+          :aria-label="$t('edit.previewPanel.resolution')"
+        >
+          {{ resolutionLabel }}
+        </output>
+        <ViewportControls
+          :zoom-ratio="previewViewport.zoomRatio.value"
+          @zoom-in="previewViewport.zoomIn"
+          @zoom-out="previewViewport.zoomOut"
+          @fit-to-view="previewViewport.fitToView"
+        />
+      </div>
     </div>
   </div>
 </template>
