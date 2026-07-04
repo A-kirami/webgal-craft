@@ -72,7 +72,7 @@ function createProvider(session: EffectEditorSession | undefined): EffectEditorP
     close: vi.fn(),
     apply: vi.fn(),
     cancelPreview: vi.fn(),
-    updateDraft: vi.fn((patch, options) => {
+    updateDraft: vi.fn((patch, _options) => {
       if (!session) {
         return
       }
