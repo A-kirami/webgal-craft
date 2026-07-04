@@ -64,6 +64,7 @@ export interface ResolveTransformBaselineSessionOptions {
 }
 
 const DEFAULT_TARGET_LOADING_RETRIES = 2
+const TARGET_LOADING_RETRY_DELAY_MS = 16
 
 function createDefaultTransformBaselineRevision(): string {
   return globalThis.crypto?.randomUUID?.()
@@ -74,6 +75,16 @@ function isBaseTransformReady(
   result: BaseTransformQueryResult,
 ): result is Extract<BaseTransformQueryResult, { status: 'ready' }> {
   return result.status === 'ready'
+}
+
+function getTargetLoadingRetryDelay(loadingCount: number): number {
+  return TARGET_LOADING_RETRY_DELAY_MS * (loadingCount + 1)
+}
+
+async function waitTargetLoadingRetry(loadingCount: number): Promise<void> {
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, getTargetLoadingRetryDelay(loadingCount))
+  })
 }
 
 async function queryTransformBaselineWithRetry(
@@ -94,6 +105,8 @@ async function queryTransformBaselineWithRetry(
       reason: 'target transform loading retry exhausted',
     }
   }
+
+  await waitTargetLoadingRetry(loadingCount)
 
   return queryTransformBaselineWithRetry(
     client,

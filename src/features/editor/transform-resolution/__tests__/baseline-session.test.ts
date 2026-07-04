@@ -29,6 +29,13 @@ function createClient(options: {
   }
 }
 
+async function flushBaselineQueryMicrotasks(): Promise<void> {
+  await Promise.resolve()
+  await Promise.resolve()
+  await Promise.resolve()
+  await Promise.resolve()
+}
+
 describe('resolveTransformBaselineSession', () => {
   it('普通变换命令只使用基础变换并发送不带修订号的同步请求', async () => {
     const client = createClient({
@@ -167,6 +174,64 @@ describe('resolveTransformBaselineSession', () => {
     expect(client.queryTransformBaseline).toHaveBeenCalledTimes(2)
     expect(client.queryTransformBaseline).toHaveBeenNthCalledWith(1, 'fig-center', 'rev-effect-1')
     expect(client.queryTransformBaseline).toHaveBeenNthCalledWith(2, 'fig-center', 'rev-effect-1')
+  })
+
+  it('目标基线 loading 重试前会等待短暂退避', async () => {
+    vi.useFakeTimers()
+
+    try {
+      const client = createClient({
+        baseTransform: {
+          status: 'ready',
+          transform: {
+            position: { x: 0, y: 20 },
+          },
+        },
+        transformBaselines: [
+          {
+            status: 'loading',
+          },
+          {
+            status: 'ready',
+            transform: {
+              position: { x: 1000 },
+            },
+          },
+        ],
+      })
+
+      const resultPromise = resolveTransformBaselineSession({
+        client,
+        request: {
+          command: commandType.setTransform,
+          lineCommandString: 'setTransform:;',
+          scenePath: 'scene/start.txt',
+          sentenceId: 5,
+          target: 'fig-center',
+          writeDefault: false,
+        },
+        createTransformBaselineRevision: () => 'rev-effect-1',
+      })
+
+      await flushBaselineQueryMicrotasks()
+
+      expect(client.queryTransformBaseline).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(15)
+      expect(client.queryTransformBaseline).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(1)
+
+      await expect(resultPromise).resolves.toEqual({
+        baselineSource: 'protocol',
+        baselineTransform: {
+          position: { x: 1000, y: 20 },
+        },
+      })
+      expect(client.queryTransformBaseline).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('目标基线加载重试耗尽后会降级为未知来源', async () => {
