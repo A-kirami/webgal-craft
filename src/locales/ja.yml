@@ -775,6 +775,10 @@ edit:
     fitToView: 表示に合わせる
     zoomLevel: ズーム率
     resolution: プレビュー解像度
+    transformOverlay:
+      move: 対象を移動
+      rotate: 対象を回転
+      scale: 対象を拡大縮小
   assetPanel:
     tabs:
       figure: 立ち絵

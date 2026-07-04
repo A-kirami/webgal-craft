@@ -775,6 +775,10 @@ edit:
     fitToView: 适应视图
     zoomLevel: 缩放比例
     resolution: 预览分辨率
+    transformOverlay:
+      move: 移动目标
+      rotate: 旋转目标
+      scale: 缩放目标
   assetPanel:
     tabs:
       figure: 立绘
