@@ -1,9 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h, reactive } from 'vue'
+import { defineComponent, h, nextTick, reactive, shallowRef } from 'vue'
 
 import { createBrowserLocalizedI18n } from '~/__tests__/browser'
 import { renderInBrowser } from '~/__tests__/browser-render'
+import { shortcutDispatcherRegistryKey } from '~/features/editor/shortcut/useShortcutDispatcher'
+import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
+
+import EditorPanel from './EditorPanel.vue'
+
+import type { ShortcutDefinition } from '~/features/editor/shortcut/types'
 
 const {
   commandBridgeMock,
@@ -155,8 +161,6 @@ vi.mock('~/components/ui/resizable', () => {
   }
 })
 
-import EditorPanel from './EditorPanel.vue'
-
 const globalStubs = {
   CommandPanel: defineComponent({
     name: 'StubCommandPanel',
@@ -212,7 +216,20 @@ const globalStubs = {
   FileEditor: defineComponent({
     name: 'StubFileEditor',
     setup() {
-      return () => h('div', 'File Editor')
+      return () => h('div', [
+        h('div', 'File Editor'),
+        h('div', {
+          'data-effect-editor-interactive-region': '',
+          'data-testid': 'preview-interactive-region',
+          'style': {
+            height: '120px',
+            left: '160px',
+            position: 'fixed',
+            top: '120px',
+            width: '240px',
+          },
+        }),
+      ])
     },
   }),
   ResizableHandle: defineComponent({
@@ -248,8 +265,11 @@ const globalStubs = {
   }),
   SheetContent: defineComponent({
     name: 'StubSheetContent',
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.())
+    setup(_, { attrs, slots }) {
+      return () => h('div', {
+        'data-testid': 'effect-editor-sheet',
+        ...attrs,
+      }, slots.default?.())
     },
   }),
   SheetDescription: defineComponent({
@@ -288,13 +308,50 @@ function createEditorPanelI18n() {
   return createBrowserLocalizedI18n()
 }
 
-function renderEditorPanel() {
+function renderEditorPanel(options: {
+  provide?: Record<symbol, unknown>
+} = {}) {
   renderInBrowser(EditorPanel, {
     global: {
       plugins: [createEditorPanelI18n()],
+      provide: options.provide,
       stubs: globalStubs,
     },
   })
+}
+
+function renderEditorPanelWithShortcutRegistry() {
+  const bindings = new Map<symbol, ShortcutDefinition<unknown>>()
+  renderEditorPanel({
+    provide: {
+      [shortcutDispatcherRegistryKey as symbol]: {
+        registerBinding: () => Symbol('shortcut-binding'),
+        unregisterBinding: (token: symbol) => bindings.delete(token),
+        updateBinding: (token: symbol, binding: ShortcutDefinition<unknown>) => {
+          bindings.set(token, binding)
+        },
+      },
+    },
+  })
+
+  return bindings
+}
+
+function createTransformOverlayBridge(enabled: boolean) {
+  return {
+    enabled: shallowRef(enabled),
+    formDisplayTransform: shallowRef(undefined),
+    handlePanelTransformUpdate: vi.fn(),
+  }
+}
+
+async function updateEffectEditorInteractiveRegion(): Promise<void> {
+  globalThis.dispatchEvent(new Event('resize'))
+  await nextTick()
+}
+
+function getEffectEditorDismissLayers(): HTMLElement[] {
+  return [...document.querySelectorAll<HTMLElement>('[data-testid="effect-editor-dismiss-layer"]')]
 }
 
 describe('EditorPanel', () => {
@@ -430,5 +487,60 @@ describe('EditorPanel', () => {
 
     await expect.element(page.getByText('当前存在多个编辑目标，语句编辑已暂停')).toBeVisible()
     await expect.element(page.getByText('Statement Editor Panel')).not.toBeInTheDocument()
+  })
+
+  it('变换浮层聚焦时按下回车或组合回车会应用效果编辑器变更', async () => {
+    effectEditorProviderMock.canApply = true
+    effectEditorProviderMock.apply.mockResolvedValue(true)
+
+    const bindings = renderEditorPanelWithShortcutRegistry()
+    await vi.waitFor(() => {
+      expect(bindings.size).toBeGreaterThan(0)
+    })
+
+    const binding = [...bindings.values()].find(item =>
+      item.when?.panelFocus === 'transformOverlay'
+      && item.keys.includes('Enter')
+      && item.keys.includes('Mod+Enter'),
+    )
+    expect(binding).toBeDefined()
+
+    await binding!.execute(undefined)
+
+    expect(effectEditorProviderMock.apply).toHaveBeenCalledOnce()
+  })
+
+  it('效果编辑器打开但变换框不可用时不会放行预览交互区域', async () => {
+    effectEditorProviderMock.isOpen = true
+
+    renderEditorPanel({
+      provide: {
+        [TRANSFORM_OVERLAY_BRIDGE_KEY as symbol]: createTransformOverlayBridge(false),
+      },
+    })
+
+    const region = document.querySelector<HTMLElement>('[data-testid="preview-interactive-region"]')
+    expect(region?.getBoundingClientRect().width).toBeGreaterThan(0)
+
+    await updateEffectEditorInteractiveRegion()
+
+    expect(getEffectEditorDismissLayers()).toHaveLength(1)
+  })
+
+  it('效果编辑器打开且变换框可用时会保留预览交互区域', async () => {
+    effectEditorProviderMock.isOpen = true
+
+    renderEditorPanel({
+      provide: {
+        [TRANSFORM_OVERLAY_BRIDGE_KEY as symbol]: createTransformOverlayBridge(true),
+      },
+    })
+
+    const region = document.querySelector<HTMLElement>('[data-testid="preview-interactive-region"]')
+    expect(region?.getBoundingClientRect().width).toBeGreaterThan(0)
+
+    await updateEffectEditorInteractiveRegion()
+
+    expect(getEffectEditorDismissLayers().length).toBeGreaterThan(1)
   })
 })

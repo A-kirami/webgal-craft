@@ -183,6 +183,11 @@ describe('usePreviewViewport', () => {
     expect(viewport?.zoom.value).toBeCloseTo(0.5)
     expect(viewport?.zoomRatio.value).toBe(1)
     expect(viewport?.viewportTransform.value).toBe('translate(0px, 75px) scale(0.5)')
+    expect(viewport?.canvasPlacement.value).toEqual({
+      left: 0,
+      scale: 0.5,
+      top: 75,
+    })
 
     scope.stop()
   })
