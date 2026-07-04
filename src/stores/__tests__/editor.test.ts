@@ -1359,7 +1359,7 @@ describe('编辑器文本与文档流程', () => {
 
     await editorStore.saveFile(AbsPath.from(path))
 
-    expect(syncSceneMock).toHaveBeenCalledWith(path, 1, 'hello!', false)
+    expect(syncSceneMock).toHaveBeenLastCalledWith(path, 1, 'hello!', { force: false })
   })
 
   it('切换场景标签页时重新同步当前预览行', async () => {
@@ -1396,12 +1396,12 @@ describe('编辑器文本与文档流程', () => {
     tabsStore.activateTab(0)
     await flushEditorWatchers()
 
-    expect(syncSceneMock).toHaveBeenNthCalledWith(1, firstPath, 2, 'beta', false)
+    expect(syncSceneMock).toHaveBeenNthCalledWith(1, firstPath, 2, 'beta', { force: false })
 
     tabsStore.activateTab(1)
     await flushEditorWatchers()
 
-    expect(syncSceneMock).toHaveBeenNthCalledWith(2, secondPath, 2, 'delta', false)
+    expect(syncSceneMock).toHaveBeenNthCalledWith(2, secondPath, 2, 'delta', { force: false })
   })
 
   it('可视化场景切换标签页时重新同步当前预览语句', async () => {
@@ -1454,12 +1454,12 @@ describe('编辑器文本与文档流程', () => {
     tabsStore.activateTab(0)
     await flushEditorWatchers()
 
-    expect(syncSceneMock).toHaveBeenNthCalledWith(1, firstPath, 2, 'beta', false)
+    expect(syncSceneMock).toHaveBeenNthCalledWith(1, firstPath, 2, 'beta', { force: false })
 
     tabsStore.activateTab(1)
     await flushEditorWatchers()
 
-    expect(syncSceneMock).toHaveBeenNthCalledWith(2, secondPath, 2, 'delta', false)
+    expect(syncSceneMock).toHaveBeenNthCalledWith(2, secondPath, 2, 'delta', { force: false })
   })
 
   it('切换到脏场景标签页时不会补发预览同步', async () => {
@@ -1529,7 +1529,7 @@ describe('编辑器文本与文档流程', () => {
     editorStore.syncSceneSelectionFromTextLine(path, 1)
 
     await expect(editorStore.saveFile(AbsPath.from(path))).rejects.toThrow(saveHookError)
-    expect(syncSceneMock).toHaveBeenCalledWith(path, 1, 'hello!', false)
+    expect(syncSceneMock).toHaveBeenLastCalledWith(path, 1, 'hello!', { force: false })
   })
 
   it('将外部合并走 replace-all 事务流程并保持撤销历史完整', async () => {
