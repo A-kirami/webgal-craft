@@ -1387,6 +1387,13 @@ pub async fn send_preview_command(
         preview_registry.target_addrs_for_request_scope(target_scope)
     };
 
+    if target_addrs.is_empty() {
+        log::warn!(
+            "send_preview_command: 未找到可用预览目标 scope={target_scope:?}; 预览命令未发送"
+        );
+        return Ok(());
+    }
+
     for target_addr in target_addrs {
         let _ = send_message_to_preview(
             &app_state,
