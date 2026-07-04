@@ -1,20 +1,24 @@
 import { AbsPath, normalizePosix, RelPath } from '~/domain/path'
+import { sendPreviewCommandRequest } from '~/services/preview-protocol-client'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import { usePreviewSyncStore } from '~/stores/preview-sync'
 
-import type { Transform } from '~/domain/stage/types'
 import type {
-  PreviewCommandType,
   RequestPayloadByType,
   SetComponentVisibilityPayload,
+  SetEffectPhase,
+  SyncSceneSettleMode,
+  Transform,
 } from '~/types/editorPreviewProtocol'
 
-async function sendPreviewCommand<TType extends PreviewCommandType>(
-  type: TType,
-  payload: RequestPayloadByType[TType],
-) {
-  const previewSyncStore = usePreviewSyncStore()
-  await previewSyncStore.sendPreviewCommand(type, payload)
+interface SyncSceneOptions {
+  force?: boolean
+  transformBaselineRevision?: string
+  settleMode?: SyncSceneSettleMode
+}
+
+interface SetEffectOptions {
+  phase?: SetEffectPhase
 }
 
 /**
@@ -56,21 +60,34 @@ function isCurrentLineJump(currentLineValue: string | null): boolean {
  * @param scenePath - 场景文件路径
  * @param lineNumber - 行号
  * @param lineCommandString - 行命令字符串
- * @param force - 是否强制发送，忽略实时预览设置
+ * @param options - 同步选项
  */
-async function syncScene(scenePath: string, lineNumber: number, lineCommandString: string, force?: boolean) {
+async function syncScene(
+  scenePath: string,
+  lineNumber: number,
+  lineCommandString: string,
+  options: SyncSceneOptions = {},
+) {
   const editSettingsStore = useEditSettingsStore()
 
   const sceneName = await extractSceneName(scenePath)
-  if (!editSettingsStore.enableLivePreview && !force) {
+  if (!editSettingsStore.enableLivePreview && !options.force) {
     return
   }
 
   if (isCurrentLineJump(lineCommandString)) {
-    await sendPreviewCommand('preview.command.sync-scene', {
+    const payload: RequestPayloadByType['preview.command.sync-scene'] = {
       sceneName,
       sentenceId: lineNumber,
-    })
+    }
+    if (options.transformBaselineRevision !== undefined) {
+      payload.transformBaselineRevision = options.transformBaselineRevision
+    }
+    if (options.settleMode !== undefined) {
+      payload.settleMode = options.settleMode
+    }
+
+    await sendPreviewCommandRequest('preview.command.sync-scene', payload)
   }
 }
 
@@ -79,7 +96,7 @@ async function syncScene(scenePath: string, lineNumber: number, lineCommandStrin
  * @param command - 要执行的场景命令
  */
 async function runTempScene(command: string) {
-  await sendPreviewCommand('preview.command.run-scene-content', {
+  await sendPreviewCommandRequest('preview.command.run-scene-content', {
     sceneContent: command,
   })
 }
@@ -89,7 +106,7 @@ async function runTempScene(command: string) {
  * @param command - 要执行的命令
  */
 async function executeCommand(command: string) {
-  await sendPreviewCommand('preview.command.run-snippet', {
+  await sendPreviewCommandRequest('preview.command.run-snippet', {
     snippet: command,
   })
 }
@@ -99,11 +116,18 @@ async function executeCommand(command: string) {
  * @param target - 目标对象
  * @param transform - 效果变换参数
  */
-async function setEffect(target: string, transform: Transform) {
-  await sendPreviewCommand('preview.command.set-effect', {
+async function setEffect(target: string, transform: Transform, options: SetEffectOptions = {}) {
+  const previewSyncStore = usePreviewSyncStore()
+  const payload: RequestPayloadByType['preview.command.set-effect'] = {
     target,
     transform,
-  })
+  }
+
+  if (options.phase !== undefined) {
+    payload.phase = options.phase
+  }
+
+  await previewSyncStore.sendPreviewCommand('preview.command.set-effect', payload)
 }
 
 /**
@@ -111,7 +135,7 @@ async function setEffect(target: string, transform: Transform) {
  * @param payload - 组件可见性映射
  */
 async function setComponentVisibility(payload: SetComponentVisibilityPayload) {
-  await sendPreviewCommand('preview.command.set-component-visibility', payload)
+  await sendPreviewCommandRequest('preview.command.set-component-visibility', payload)
 }
 
 /**
@@ -119,7 +143,7 @@ async function setComponentVisibility(payload: SetComponentVisibilityPayload) {
  * @param enabled - 是否启用字体优化
  */
 async function setFontOptimization(enabled: boolean) {
-  await sendPreviewCommand('preview.command.set-font-optimization', {
+  await sendPreviewCommandRequest('preview.command.set-font-optimization', {
     enabled,
   })
 }
@@ -129,7 +153,7 @@ async function setFontOptimization(enabled: boolean) {
  * @param isRead - 是否将文本标记为已读
  */
 async function setTextReadMode(isRead: boolean) {
-  await sendPreviewCommand('preview.command.set-text-read-mode', {
+  await sendPreviewCommandRequest('preview.command.set-text-read-mode', {
     isRead,
   })
 }
@@ -138,7 +162,7 @@ async function setTextReadMode(isRead: boolean) {
  * 重新获取模板文件
  */
 async function refetchTemplates() {
-  await sendPreviewCommand('preview.command.reload-templates', {})
+  await sendPreviewCommandRequest('preview.command.reload-templates', {})
 }
 
 export const debugCommander = {

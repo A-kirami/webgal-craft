@@ -1359,7 +1359,41 @@ describe('编辑器文本与文档流程', () => {
 
     await editorStore.saveFile(AbsPath.from(path))
 
-    expect(syncSceneMock).toHaveBeenCalledWith(path, 1, 'hello!', false)
+    expect(syncSceneMock).toHaveBeenLastCalledWith(path, 1, 'hello!', { force: false })
+  })
+
+  it('场景预览同步失败时走统一错误处理', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/scene/text-save-preview-failure.txt')
+    const syncError = new Error('preview sync failed')
+
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode('hello'))
+    mimeGetTypeMock.mockReturnValue('text/plain')
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'text-save-preview-failure.txt',
+      path,
+      () => editorStore.currentTextProjection !== undefined && editorStore.currentVisualProjection !== undefined,
+      'load text save preview failure projections',
+    )
+
+    editorStore.applyTextDocumentContent(path, 'hello!')
+    editorStore.syncSceneSelectionFromTextLine(path, 1)
+    syncSceneMock.mockRejectedValueOnce(syncError)
+
+    await editorStore.saveFile(AbsPath.from(path))
+    await flushEditorWatchers()
+
+    expect(handleErrorMock).toHaveBeenCalledTimes(1)
+    expect(handleErrorMock.mock.calls[0]?.[1]).toEqual({ silent: true })
+    expect(handleErrorMock.mock.calls[0]?.[0]).toMatchObject({
+      code: 'EDITOR_ERROR',
+      message: '同步预览失败',
+      cause: syncError,
+    })
   })
 
   it('切换场景标签页时重新同步当前预览行', async () => {
@@ -1396,12 +1430,12 @@ describe('编辑器文本与文档流程', () => {
     tabsStore.activateTab(0)
     await flushEditorWatchers()
 
-    expect(syncSceneMock).toHaveBeenNthCalledWith(1, firstPath, 2, 'beta', false)
+    expect(syncSceneMock).toHaveBeenNthCalledWith(1, firstPath, 2, 'beta', { force: false })
 
     tabsStore.activateTab(1)
     await flushEditorWatchers()
 
-    expect(syncSceneMock).toHaveBeenNthCalledWith(2, secondPath, 2, 'delta', false)
+    expect(syncSceneMock).toHaveBeenNthCalledWith(2, secondPath, 2, 'delta', { force: false })
   })
 
   it('可视化场景切换标签页时重新同步当前预览语句', async () => {
@@ -1454,12 +1488,12 @@ describe('编辑器文本与文档流程', () => {
     tabsStore.activateTab(0)
     await flushEditorWatchers()
 
-    expect(syncSceneMock).toHaveBeenNthCalledWith(1, firstPath, 2, 'beta', false)
+    expect(syncSceneMock).toHaveBeenNthCalledWith(1, firstPath, 2, 'beta', { force: false })
 
     tabsStore.activateTab(1)
     await flushEditorWatchers()
 
-    expect(syncSceneMock).toHaveBeenNthCalledWith(2, secondPath, 2, 'delta', false)
+    expect(syncSceneMock).toHaveBeenNthCalledWith(2, secondPath, 2, 'delta', { force: false })
   })
 
   it('切换到脏场景标签页时不会补发预览同步', async () => {
@@ -1529,7 +1563,7 @@ describe('编辑器文本与文档流程', () => {
     editorStore.syncSceneSelectionFromTextLine(path, 1)
 
     await expect(editorStore.saveFile(AbsPath.from(path))).rejects.toThrow(saveHookError)
-    expect(syncSceneMock).toHaveBeenCalledWith(path, 1, 'hello!', false)
+    expect(syncSceneMock).toHaveBeenLastCalledWith(path, 1, 'hello!', { force: false })
   })
 
   it('将外部合并走 replace-all 事务流程并保持撤销历史完整', async () => {

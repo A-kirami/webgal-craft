@@ -1,37 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  createRequestEnvelope,
   isEventEnvelope,
   isHostEventEnvelope,
   isPreviewCommandRequestEnvelope,
   isPreviewCommandType,
+  isPreviewRequestEnvelope,
+  isPreviewRequestType,
+  isPreviewResponseEnvelope,
 } from '../editorPreviewProtocol'
 
-describe('editorPreviewProtocol 协议定义', () => {
-  it('暴露 V1 子协议常量', async () => {
-    const moduleUrl = new URL('../editorPreviewProtocol.ts', import.meta.url)
-
-    await expect(import(moduleUrl.href)).resolves.toMatchObject({
-      EDITOR_PREVIEW_PROTOCOL_V1_SUBPROTOCOL: 'webgal-editor-preview-sync.v1',
-    })
-  })
-
-  it('在本地构造 register-preview 请求', () => {
-    expect(createRequestEnvelope('session.register-preview', 'req-register-preview', {
-      gameId: 'demo-game',
-      embeddedLaunchId: 'embedded-launch-1',
-    })).toEqual({
-      kind: 'request',
-      type: 'session.register-preview',
-      requestId: 'req-register-preview',
-      payload: {
-        gameId: 'demo-game',
-        embeddedLaunchId: 'embedded-launch-1',
-      },
-    })
-  })
-
+describe('editorPreviewProtocol', () => {
   it('接受宿主端的就绪事件', () => {
     expect(isEventEnvelope({
       kind: 'event',
@@ -96,40 +75,23 @@ describe('editorPreviewProtocol 协议定义', () => {
     })).toBe(false)
   })
 
-  it('在本地构造 sync-scene 请求', () => {
-    expect(createRequestEnvelope('preview.command.sync-scene', 'req-sync-scene', {
-      sceneName: 'scene/start.txt',
-      sentenceId: 7,
-    })).toEqual({
-      kind: 'request',
-      type: 'preview.command.sync-scene',
-      requestId: 'req-sync-scene',
-      payload: {
-        sceneName: 'scene/start.txt',
-        sentenceId: 7,
-      },
-    })
-  })
-
-  it('在本地构造 text-read-mode 请求', () => {
-    expect(createRequestEnvelope('preview.command.set-text-read-mode', 'req-text-read-mode', {
-      isRead: true,
-    })).toEqual({
-      kind: 'request',
-      type: 'preview.command.set-text-read-mode',
-      requestId: 'req-text-read-mode',
-      payload: {
-        isRead: true,
-      },
-    })
-  })
-
   it('暴露预览命令类型守卫', () => {
     expect(isPreviewCommandType('preview.command.sync-scene')).toBe(true)
     expect(isPreviewCommandType('preview.command.run-snippet')).toBe(true)
     expect(isPreviewCommandType('preview.command.set-text-read-mode')).toBe(true)
     expect(isPreviewCommandType('preview.command.unknown')).toBe(false)
     expect(isPreviewCommandType('session.register-preview')).toBe(false)
+    expect(isPreviewCommandType('preview.query.reference-box')).toBe(false)
+    expect(isPreviewCommandType('preview.query.base-transform')).toBe(false)
+  })
+
+  it('暴露预览请求类型守卫', () => {
+    expect(isPreviewRequestType('preview.command.sync-scene')).toBe(true)
+    expect(isPreviewRequestType('preview.query.reference-box')).toBe(true)
+    expect(isPreviewRequestType('preview.query.base-transform')).toBe(true)
+    expect(isPreviewRequestType('preview.query.transform-baseline')).toBe(true)
+    expect(isPreviewRequestType('preview.query.unknown')).toBe(false)
+    expect(isPreviewRequestType('session.register-preview')).toBe(false)
   })
 
   it('仅接受可执行的预览命令请求', () => {
@@ -167,6 +129,102 @@ describe('editorPreviewProtocol 协议定义', () => {
       isPreviewCommandRequestEnvelope({
         kind: 'event',
         type: 'preview.command.sync-scene',
+        payload: {},
+      }),
+    ).toBe(false)
+  })
+
+  it('接受带 preview phase 的效果预览命令请求', () => {
+    expect(
+      isPreviewCommandRequestEnvelope({
+        kind: 'request',
+        type: 'preview.command.set-effect',
+        requestId: 'req-set-effect-preview',
+        payload: {
+          target: 'fig-center',
+          transform: {
+            position: { x: 24 },
+          },
+          phase: 'preview',
+        },
+      }),
+    ).toBe(true)
+  })
+
+  it('仅接受受支持的预览请求', () => {
+    expect(
+      isPreviewRequestEnvelope({
+        kind: 'request',
+        type: 'preview.query.reference-box',
+        requestId: 'req-reference-box',
+        payload: {
+          target: 'fig-center',
+        },
+      }),
+    ).toBe(true)
+
+    expect(
+      isPreviewRequestEnvelope({
+        kind: 'request',
+        type: 'preview.query.transform-baseline',
+        requestId: 'req-transform-baseline',
+        payload: {
+          target: 'fig-center',
+          transformBaselineRevision: 'rev-effect-1',
+        },
+      }),
+    ).toBe(true)
+
+    expect(
+      isPreviewRequestEnvelope({
+        kind: 'request',
+        type: 'session.register-preview',
+        requestId: 'req-register-preview',
+        payload: {},
+      }),
+    ).toBe(false)
+
+    expect(
+      isPreviewRequestEnvelope({
+        kind: 'event',
+        type: 'preview.query.reference-box',
+        payload: {},
+      }),
+    ).toBe(false)
+  })
+
+  it('仅接受受支持的预览响应', () => {
+    expect(
+      isPreviewResponseEnvelope({
+        kind: 'response',
+        type: 'preview.query.reference-box',
+        requestId: 'req-reference-box',
+        payload: {
+          target: 'fig-center',
+          status: 'ready',
+        },
+      }),
+    ).toBe(true)
+
+    expect(
+      isPreviewResponseEnvelope({
+        kind: 'response',
+        type: 'preview.query.transform-baseline',
+        requestId: 'req-transform-baseline',
+        payload: {
+          status: 'ready',
+          transform: {
+            position: { x: 1000 },
+          },
+        },
+      }),
+    ).toBe(true)
+
+    expect(
+      isPreviewResponseEnvelope({
+        kind: 'response',
+        type: 'session.register-preview',
+        requestId: 'req-register-preview',
         payload: {},
       }),
     ).toBe(false)

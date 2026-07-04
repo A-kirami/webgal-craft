@@ -368,7 +368,7 @@ async function initializeEmbeddedPreview(currentEmbeddedLaunchId: string): Promi
       syncTarget.path,
       syncTarget.lineNumber,
       syncTarget.lineText,
-      true,
+      { force: true },
     )
   } catch (error) {
     consumedReadyLaunchId = undefined

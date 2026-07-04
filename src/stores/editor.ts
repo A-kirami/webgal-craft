@@ -395,7 +395,9 @@ export const useEditorStore = defineStore('editor', () => {
   const previewSyncController = createEditorPreviewSync({
     dedupeWindowMs: PREVIEW_SYNC_DEDUPE_WINDOW_MS,
     dispatch(path, lineNumber, lineText, force) {
-      void debugCommander.syncScene(path, lineNumber, lineText, force)
+      void debugCommander.syncScene(path, lineNumber, lineText, { force }).catch((error) => {
+        handleError(new AppError('EDITOR_ERROR', '同步预览失败', { cause: error }), { silent: true })
+      })
     },
   })
   function syncScenePreview(path: AbsPath, lineNumber: number, lineText: string, force: boolean = false) {
