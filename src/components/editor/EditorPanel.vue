@@ -225,7 +225,7 @@ watch(
     await nextTick()
     updateEffectEditorInteractiveRegion()
   },
-  { flush: 'post' },
+  { flush: 'post', immediate: true },
 )
 
 const sidebarEmptyText = $computed(() => (

@@ -543,4 +543,18 @@ describe('EditorPanel', () => {
 
     expect(getEffectEditorDismissLayers().length).toBeGreaterThan(1)
   })
+
+  it('效果编辑器初始打开且变换框可用时会立即保留预览交互区域', async () => {
+    effectEditorProviderMock.isOpen = true
+
+    renderEditorPanel({
+      provide: {
+        [TRANSFORM_OVERLAY_BRIDGE_KEY as symbol]: createTransformOverlayBridge(true),
+      },
+    })
+
+    await nextTick()
+
+    expect(getEffectEditorDismissLayers().length).toBeGreaterThan(1)
+  })
 })
