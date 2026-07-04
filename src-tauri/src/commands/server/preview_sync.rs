@@ -2,15 +2,13 @@ use std::{collections::BTreeMap, net::SocketAddr};
 
 use crate::generated::editor_preview_protocol::{
     is_preview_request_type, is_preview_response_type, HOST_EVENT_TYPES, PREVIEW_COMMAND_TYPES,
-    PREVIEW_QUERY_TYPES,
+    PREVIEW_QUERY_TYPES, SET_EFFECT_COMMAND_TYPE,
 };
 pub use crate::generated::editor_preview_protocol::{
     EDITOR_PREVIEW_PROTOCOL_V1_SUBPROTOCOL, SESSION_REGISTER_PREVIEW_TYPE,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
-const SET_EFFECT_COMMAND_TYPE: &str = "preview.command.set-effect";
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]

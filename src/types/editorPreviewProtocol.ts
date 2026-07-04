@@ -126,6 +126,8 @@ export interface SetEffectPayload {
   phase?: SetEffectPhase
 }
 
+export const SET_EFFECT_COMMAND_TYPE = 'preview.command.set-effect' as const
+
 export interface SetFontOptimizationPayload {
   enabled: boolean
 }
@@ -189,7 +191,7 @@ export const PREVIEW_COMMAND_PAYLOADS = definePayloadMap({
   'preview.command.run-scene-content': payload<RunSceneContentPayload>(),
   'preview.command.run-snippet': payload<RunSnippetPayload>(),
   'preview.command.reload-templates': payload<ReloadTemplatesPayload>(),
-  'preview.command.set-effect': payload<SetEffectPayload>(),
+  [SET_EFFECT_COMMAND_TYPE]: payload<SetEffectPayload>(),
   'preview.command.set-component-visibility': payload<SetComponentVisibilityPayload>(),
   'preview.command.set-font-optimization': payload<SetFontOptimizationPayload>(),
   'preview.command.set-text-read-mode': payload<SetTextReadModePayload>(),

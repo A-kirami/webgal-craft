@@ -2,6 +2,7 @@
 
 pub const EDITOR_PREVIEW_PROTOCOL_V1_SUBPROTOCOL: &str = "webgal-editor-preview-sync.v1";
 pub const SESSION_REGISTER_PREVIEW_TYPE: &str = "session.register-preview";
+pub const SET_EFFECT_COMMAND_TYPE: &str = "preview.command.set-effect";
 
 pub const PREVIEW_COMMAND_TYPES: [&str; 8] = [
     "preview.command.sync-scene",
