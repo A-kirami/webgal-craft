@@ -185,4 +185,43 @@ describe('useStatementEffectEditorBridge', () => {
       sentenceId: 42,
     }))
   })
+
+  it('视觉模式打开非当前选中语句时会从语句列表计算行号', () => {
+    computeLineNumberFromStatementIdMock.mockReturnValue(7)
+    const parsed = createSentence({
+      command: commandType.changeFigure,
+      content: 'hero.png',
+    })
+    const statements = [
+      { id: 1, rawText: 'say:first;' },
+      { id: 2, rawText: 'changeFigure:hero.png;' },
+    ]
+
+    useEditorStoreMock.mockReturnValue({
+      currentSceneSelection: {
+        lastLineNumber: 42,
+        selectedStatementId: 1,
+      },
+      currentState: {
+        kind: 'scene',
+        path: 'scene/start.txt',
+        projection: 'visual',
+        statements,
+      },
+    })
+
+    const bridge = createApp({}).runWithContext(() => useStatementEffectEditorBridge({
+      parsed,
+      updateTarget: createStatementIdTarget(2),
+      emitUpdate() { /* no-op */ },
+    }))
+
+    bridge.openEffectEditor()
+
+    expect(computeLineNumberFromStatementIdMock).toHaveBeenCalledWith(statements, 2)
+    expect(effectEditorOpenMock).toHaveBeenCalledWith(expect.objectContaining({
+      scenePath: 'scene/start.txt',
+      sentenceId: 7,
+    }))
+  })
 })
