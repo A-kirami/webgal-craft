@@ -374,7 +374,7 @@ export type ResponseEnvelopeByType<TType extends keyof ResponsePayloadByType = k
   [K in TType]: ResponseEnvelope<ResponsePayloadByType[K], K>
 }[TType]
 
-export type PreviewRequestErrorEnvelopeByType<TType extends keyof RequestPayloadByType = keyof RequestPayloadByType> = {
+export type PreviewRequestErrorEnvelopeByType<TType extends PreviewRequestType = PreviewRequestType> = {
   [K in TType]: PreviewRequestErrorEnvelope<K>
 }[TType]
 
@@ -572,6 +572,6 @@ export function isKnownProtocolEnvelope(value: unknown): value is KnownProtocolE
     isHostEventEnvelope(value)
     || isKnownRequestEnvelope(value)
     || isKnownResponseEnvelope(value)
-    || (isPreviewRequestErrorEnvelope(value) && isRequestType(value.type))
+    || isKnownPreviewRequestErrorEnvelope(value)
   )
 }
