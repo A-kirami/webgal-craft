@@ -7,10 +7,11 @@ const outputFileUrl = new URL('editor_preview_protocol.rs', generatedDirectoryUr
 
 const {
   EDITOR_PREVIEW_PROTOCOL_V1_SUBPROTOCOL,
+  HOST_EVENT_TYPES,
   PREVIEW_COMMAND_TYPES,
+  PREVIEW_QUERY_TYPES,
+  SESSION_REGISTER_PREVIEW_TYPE,
 } = await import(protocolModuleUrl.href)
-
-const SESSION_REGISTER_PREVIEW_TYPE = 'session.register-preview'
 
 function renderRustStringArray(name, values) {
   if (values.length <= 2) {
@@ -29,6 +30,16 @@ pub const EDITOR_PREVIEW_PROTOCOL_V1_SUBPROTOCOL: &str = ${JSON.stringify(EDITOR
 pub const SESSION_REGISTER_PREVIEW_TYPE: &str = ${JSON.stringify(SESSION_REGISTER_PREVIEW_TYPE)};
 
 ${renderRustStringArray('PREVIEW_COMMAND_TYPES', PREVIEW_COMMAND_TYPES)}
+${renderRustStringArray('PREVIEW_QUERY_TYPES', PREVIEW_QUERY_TYPES)}
+${renderRustStringArray('HOST_EVENT_TYPES', HOST_EVENT_TYPES)}
+
+pub fn is_preview_request_type(message_type: &str) -> bool {
+    PREVIEW_COMMAND_TYPES.contains(&message_type) || PREVIEW_QUERY_TYPES.contains(&message_type)
+}
+
+pub fn is_preview_response_type(message_type: &str) -> bool {
+    is_preview_request_type(message_type)
+}
 `
 }
 
