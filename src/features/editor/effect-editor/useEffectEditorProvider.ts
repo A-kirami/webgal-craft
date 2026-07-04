@@ -167,6 +167,7 @@ function needsPreviewBaselineReset(
 export function createEffectEditorProvider(options: CreateEffectEditorProviderOptions = {}) {
   const editSettings = useEditSettingsStore()
   const previewSyncStore = usePreviewSyncStore()
+  const { t } = useI18n()
   const baselineClient = options.baselineClient ?? {
     queryBaseTransform: previewSyncStore.queryBaseTransform,
     queryTransformBaseline: previewSyncStore.queryTransformBaseline,
@@ -261,7 +262,11 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
       return
     }
 
-    logger.warn('效果编辑器运行时预览状态未同步，请先重试应用或重新打开效果编辑器')
+    logger.warn('效果编辑器运行时预览状态未同步，请重新选择目标行，或显式丢弃后重新打开效果编辑器')
+    notify.warning({
+      title: t('modals.effectEditor.previewUnsyncedCloseBlockedTitle'),
+      message: t('modals.effectEditor.previewUnsyncedCloseBlockedMessage'),
+    })
     previewSyncStateWarned = true
   }
 
@@ -1023,6 +1028,10 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
       clearDraftHistory()
       return true
     }
+    if (isPreviewTerminalUnsynced() && options.forceDiscard) {
+      discardPreviewSession()
+      return true
+    }
     if (isPreviewTerminalUnsynced()) {
       warnPreviewTerminalUnsynced()
       return false
@@ -1133,7 +1142,7 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
 
   async function open(target: EffectEditorOpenTarget): Promise<boolean> {
     if (isOpen) {
-      if (isPreviewTerminalUnsynced()) {
+      if (isPreviewTerminalUnsynced() && !session?.dirty) {
         discardPreviewSession()
       } else {
         const closed = await close()

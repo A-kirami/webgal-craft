@@ -470,6 +470,8 @@ modals:
     description: ビジュアル変換、フィルター、エフェクトパラメータを編集
     apply: 適用
     reset: リセット
+    previewUnsyncedCloseBlockedTitle: ランタイムプレビューが同期されていません
+    previewUnsyncedCloseBlockedMessage: 現在のエフェクトはプレビュー実行環境に反映済みの可能性がありますが、エディターは同期状態を確認できませんでした。対象行を選び直すか、明示的に破棄してからエフェクトエディターを開き直してください。
     clearProperty: "{name} の指定を削除"
     categories:
       transform: 変換

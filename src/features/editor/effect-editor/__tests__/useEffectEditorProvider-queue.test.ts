@@ -33,6 +33,7 @@ const previewSyncStoreMock = vi.hoisted(() => ({
 
 const loggerWarnMock = vi.hoisted(() => vi.fn())
 const loggerErrorMock = vi.hoisted(() => vi.fn())
+const notifyWarningMock = vi.hoisted(() => vi.fn())
 const modalOpenMock = vi.hoisted(() => vi.fn((
   _name: string,
   payload: { onApply?: () => void, onDiscard?: () => void, onCancel?: () => void },
@@ -57,6 +58,12 @@ vi.mock('~/stores/modal', () => ({
 vi.mock('@tauri-apps/plugin-log', () => ({
   error: loggerErrorMock,
   warn: loggerWarnMock,
+}))
+
+vi.mock('notivue', () => ({
+  push: {
+    warning: notifyWarningMock,
+  },
 }))
 
 function createBaseSentence(transformJson: string = ''): ISentence {
@@ -270,6 +277,7 @@ beforeEach(() => {
   previewSyncStoreMock.isPreviewReady = true
   loggerWarnMock.mockReset()
   loggerErrorMock.mockReset()
+  notifyWarningMock.mockReset()
   previewSyncStoreMock.queryBaseTransform.mockImplementation(async () => ({ status: 'unavailable' }))
   previewSyncStoreMock.queryTransformBaseline.mockImplementation(async () => ({ status: 'unavailable' }))
 })
@@ -1406,6 +1414,39 @@ describe('useEffectEditorProvider', () => {
     expect(provider.session?.draft.transform).toEqual({ blur: 12 })
   })
 
+  it('commit accepted 状态未知后关闭会提示运行时预览未同步', async () => {
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+
+    const provider = createProvider()
+
+    debugCommanderMock.setEffect.mockImplementation(async (_target, _transform, options) => {
+      if (options?.phase === 'commit') {
+        throw new Error('preview state reset')
+      }
+    })
+
+    await provider.open(createOpenTarget({
+      baseSentence: createBaseSentence('{"blur":8}'),
+    }))
+
+    provider.updateDraft({ transform: { blur: 12 } })
+    expect(await provider.apply()).toBe(false)
+
+    const closed = await provider.close()
+
+    expect(closed).toBe(false)
+    expect(provider.isOpen).toBe(true)
+    expect(notifyWarningMock).toHaveBeenCalledWith({
+      message: 'modals.effectEditor.previewUnsyncedCloseBlockedMessage',
+      title: 'modals.effectEditor.previewUnsyncedCloseBlockedTitle',
+    })
+
+    const forceClosed = await provider.close({ forceDiscard: true })
+
+    expect(forceClosed).toBe(true)
+    expect(provider.isOpen).toBe(false)
+  })
+
   it('commit 普通 timeout 后允许继续预览并基于最新草稿再次应用', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
 
@@ -1506,11 +1547,11 @@ describe('useEffectEditorProvider', () => {
     })
   })
 
-  it('commit accepted 状态未知后重新打开会废弃旧 preview session 并创建新 session', async () => {
+  it('commit accepted 状态未知且有未保存草稿时重新打开不会废弃旧 session', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
 
     const provider = createProvider()
-    let failCommit = true
+    const failCommit = true
 
     debugCommanderMock.setEffect.mockImplementation(async (_target, _transform, options) => {
       if (options?.phase === 'commit' && failCommit) {
@@ -1525,7 +1566,8 @@ describe('useEffectEditorProvider', () => {
     provider.updateDraft({ transform: { blur: 12 } })
     expect(await provider.apply()).toBe(false)
 
-    failCommit = false
+    const previousSessionId = provider.session?.sessionId
+    notifyWarningMock.mockClear()
     debugCommanderMock.setEffect.mockClear()
 
     const opened = await provider.open(createOpenTarget({
@@ -1533,18 +1575,14 @@ describe('useEffectEditorProvider', () => {
       effectTarget: 'fig-right',
     }))
 
-    expect(opened).toBe(true)
+    expect(opened).toBe(false)
     expect(provider.isOpen).toBe(true)
-    expect(provider.session?.effectTarget).toBe('fig-right')
-    expect(provider.session?.draft.transform).toEqual({ blur: 4 })
-
-    provider.updateDraft({ transform: { blur: 6 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
-
-    await vi.waitFor(() => {
-      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-right', { blur: 6 }, {
-        phase: 'preview',
-      })
+    expect(provider.session?.sessionId).toBe(previousSessionId)
+    expect(provider.session?.effectTarget).toBe('fig-center')
+    expect(provider.session?.draft.transform).toEqual({ blur: 12 })
+    expect(notifyWarningMock).toHaveBeenCalledWith({
+      message: 'modals.effectEditor.previewUnsyncedCloseBlockedMessage',
+      title: 'modals.effectEditor.previewUnsyncedCloseBlockedTitle',
     })
   })
 
