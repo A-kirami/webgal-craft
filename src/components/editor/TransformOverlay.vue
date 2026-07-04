@@ -388,8 +388,12 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
     return
   }
 
-  const step = event.shiftKey ? KEYBOARD_FAST_MOVE_STEP : KEYBOARD_MOVE_STEP
   event.preventDefault()
+  if (event.repeat) {
+    return
+  }
+
+  const step = event.shiftKey ? KEYBOARD_FAST_MOVE_STEP : KEYBOARD_MOVE_STEP
   emitDisplayTransform({
     ...props.displayTransform,
     position: {

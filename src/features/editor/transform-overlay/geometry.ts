@@ -74,6 +74,7 @@ const RESIZE_CURSOR_HOTSPOT = 16
 const RESIZE_CURSOR_CACHE_LIMIT = 64
 const CURSOR_CACHE_KEY_DECIMAL_PLACES = 6
 const ROTATE_CURSOR_HOTSPOT = 16
+const RESIZE_CURSOR_SNAP_DEGREE = 5
 const ROTATE_CURSOR_STEP_DEGREE = 5
 const ROTATE_CURSOR_CACHE_LIMIT = 360 / ROTATE_CURSOR_STEP_DEGREE
 export const TRANSFORM_OVERLAY_DEFAULT_CURSOR = 'url("data:image/svg+xml,%3Csvg%20viewBox%3D%220%200%2033%2032%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2233%22%20height%3D%2232%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M0%200h33v32H0z%22%2F%3E%3Cpath%20d%3D%22m6.364%202.771%2010.24%209.882c.995.96.268%202.798-1.102%202.987-1.452.2-3.118.563-4.66%201.218-1.541.654-2.96%201.6-4.112%202.505-1.088.854-2.916.1-2.915-1.282L3.823%203.85c0-1.323%201.59-1.997%202.541-1.079%22%20fill%3D%22%23000%22%20fill-rule%3D%22evenodd%22%2F%3E%3Cpath%20d%3D%22m7.059%202.052%2010.24%209.882q.29.279.47.616.194.36.263.788.037.232.035.463-.005.496-.192.99-.154.406-.405.74-.185.245-.42.451-.357.311-.772.48-.304.122-.64.169-2.518.347-4.405%201.147-1.886.8-3.886%202.371-.266.21-.566.343-.409.181-.88.222-.313.026-.617-.011-.414-.052-.814-.224-.485-.208-.845-.549-.168-.159-.308-.347-.26-.347-.385-.737-.117-.364-.117-.766l.008-14.23q0-.45.142-.847.109-.306.301-.581.187-.268.428-.473.288-.245.652-.4.365-.154.74-.191.315-.03.638.02.332.054.627.188.385.174.708.486m9.546%2010.601L6.365%202.771c-.953-.918-2.542-.244-2.542%201.079l-.008%2014.23c0%201.383%201.827%202.137%202.915%201.283%201.152-.905%202.57-1.85%204.113-2.505%201.541-.655%203.207-1.018%204.659-1.218%201.37-.189%202.097-2.027%201.103-2.987%22%20fill%3D%22%23fff%22%20fill-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E") 4 4, default'
@@ -542,11 +543,21 @@ function normalizeResizeCursorDirection(direction: number): number {
   return normalized
 }
 
-function resolveResizeCursorFallback(direction: number): typeof RESIZE_CURSOR_FALLBACKS[number] {
-  const normalized = ((direction % HALF_TURN_RADIAN) + HALF_TURN_RADIAN) % HALF_TURN_RADIAN
-  const cursorIndex = Math.round(normalized / RESIZE_CURSOR_STEP_RADIAN) % RESIZE_CURSOR_FALLBACKS.length
+function snapResizeCursorDirection(direction: number): number {
+  const degree = (direction * 180) / Math.PI
+  const snappedDegree = Math.round(degree / RESIZE_CURSOR_SNAP_DEGREE) * RESIZE_CURSOR_SNAP_DEGREE
+  const snappedDirection = (snappedDegree * Math.PI) / 180
 
-  return RESIZE_CURSOR_FALLBACKS[cursorIndex]
+  return Object.is(snappedDirection, -0) ? 0 : snappedDirection
+}
+
+function resolveResizeCursorFallback(direction: number): typeof RESIZE_CURSOR_FALLBACKS[number] {
+  const cursorIndex = Math.round(direction / RESIZE_CURSOR_STEP_RADIAN)
+  const fallbackIndex = cursorIndex < 0
+    ? RESIZE_CURSOR_FALLBACKS.length + cursorIndex
+    : cursorIndex
+
+  return RESIZE_CURSOR_FALLBACKS[fallbackIndex]
 }
 
 function rotateCursorPoint(point: StagePoint, direction: number): StagePoint {
@@ -612,15 +623,16 @@ function createResizeCursorSvg(direction: number): string {
 
 function createResizeCursor(direction: number): string {
   const normalizedDirection = normalizeResizeCursorDirection(direction)
-  const cacheKey = formatCursorCacheKey(normalizedDirection)
+  const snappedDirection = snapResizeCursorDirection(normalizedDirection)
+  const cacheKey = formatCursorCacheKey(snappedDirection)
   const cachedCursor = resizeCursorCache.get(cacheKey)
   if (cachedCursor) {
     return cachedCursor
   }
 
-  const svg = createResizeCursorSvg(normalizedDirection)
+  const svg = createResizeCursorSvg(snappedDirection)
   const encodedSvg = encodeURIComponent(svg)
-  const cursor = `url("data:image/svg+xml,${encodedSvg}") ${RESIZE_CURSOR_HOTSPOT} ${RESIZE_CURSOR_HOTSPOT}, ${resolveResizeCursorFallback(normalizedDirection)}`
+  const cursor = `url("data:image/svg+xml,${encodedSvg}") ${RESIZE_CURSOR_HOTSPOT} ${RESIZE_CURSOR_HOTSPOT}, ${resolveResizeCursorFallback(snappedDirection)}`
 
   if (resizeCursorCache.size >= RESIZE_CURSOR_CACHE_LIMIT) {
     const oldestKey = resizeCursorCache.keys().next().value

@@ -85,6 +85,24 @@ describe('TransformOverlay', () => {
     })
   })
 
+  it('方向键自动重复时不会重复提交移动', async () => {
+    const onCommit = vi.fn()
+    renderTransformOverlay({ onCommit })
+
+    const firstEvent = dispatchKeydown('ArrowRight')
+    await nextTick()
+    const repeatedEvent = dispatchKeydown('ArrowRight', { repeat: true })
+    await nextTick()
+
+    expect(firstEvent.defaultPrevented).toBe(true)
+    expect(repeatedEvent.defaultPrevented).toBe(true)
+    expect(onCommit).toHaveBeenCalledOnce()
+    expect(onCommit).toHaveBeenCalledWith({
+      ...displayTransform,
+      position: { x: 11, y: 20 },
+    })
+  })
+
   it('输入控件聚焦时方向键不会抢占表单操作', async () => {
     const onUpdate = vi.fn()
     renderTransformOverlay({ onCommit: onUpdate, onPreview: onUpdate })

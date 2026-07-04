@@ -175,8 +175,8 @@ describe('useTransformControl', () => {
     expect(changes.at(-1)?.position).toEqual({ x: 45, y: 0 })
   })
 
-  it('拖拽期间会暴露当前活动控件并在结束后清空', () => {
-    const { control } = createControl()
+  it('拖拽期间会暴露当前活动控件并在结束时提交最后变换', () => {
+    const { changes, control } = createControl()
 
     expect(control.activeHandle).toBeUndefined()
 
@@ -188,10 +188,14 @@ describe('useTransformControl', () => {
     expect(control.active).toBe(true)
     expect(control.activeHandle).toBe('e')
 
+    pointerDragHarness.callbacks?.onMove(createPointerEvent({ clientX: 130, clientY: 50 }), pointerDragHarness.state)
     control.stop()
 
     expect(control.active).toBe(false)
     expect(control.activeHandle).toBeUndefined()
+    expect(changes).toHaveLength(2)
+    expect(changes.at(-1)?.scale.x).toBeCloseTo(1.3)
+    expect(changes.at(-1)?.position.x).toBeCloseTo(15)
   })
 
   it('取消拖拽时不会提交最终变换', () => {

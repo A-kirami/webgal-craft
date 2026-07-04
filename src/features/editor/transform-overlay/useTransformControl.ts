@@ -82,6 +82,7 @@ interface TransformDragState {
   box: ReferenceBox
   center: StagePoint
   frame: TransformFrame
+  latestTransform: DisplayTransform
   moveAxisLock?: MoveAxisLock
   operationHandle: TransformControlHandle
   placement: TransformCanvasPlacement
@@ -255,6 +256,7 @@ export function useTransformControl(options: UseTransformControlOptions) {
           x: pointerEvent.clientX,
           y: pointerEvent.clientY,
         },
+        latestTransform: startTransform,
         startPointer,
         startTransform,
       }
@@ -263,6 +265,7 @@ export function useTransformControl(options: UseTransformControlOptions) {
       const pointer = resolveStagePointer(event as PointerEvent, state.frame, state.canvasOffset, state.placement)
       const transform = resolveNextTransform(event as PointerEvent, pointer, state)
 
+      state.latestTransform = transform
       options.onChange(transform)
       if (state.operationHandle === 'rotate') {
         options.onRotateTooltipChange?.(resolveRotateTooltip(
@@ -279,8 +282,9 @@ export function useTransformControl(options: UseTransformControlOptions) {
         : state.startPointer
       const transform = currentEvent
         ? resolveNextTransform(currentEvent, pointer, state)
-        : state.startTransform
+        : state.latestTransform
 
+      state.latestTransform = transform
       activeHandle = undefined
       options.onChange(transform, { flush: true })
       options.onRotateTooltipChange?.(undefined)

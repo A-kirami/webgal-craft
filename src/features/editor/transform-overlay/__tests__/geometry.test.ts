@@ -6,6 +6,7 @@ import {
   applyScale,
   canvasPointToStagePoint,
   computeTransformFrame,
+  resolveResizeCursor,
   resolveSizeLabelPlacement,
 } from '../geometry'
 
@@ -302,5 +303,12 @@ describe('geometry', () => {
       x: 200,
       y: 208,
     })
+  })
+
+  it('缩放光标会复用同一方向段内的缓存结果', () => {
+    const baseCursor = resolveResizeCursor('e', 0)
+    const slightlyRotatedCursor = resolveResizeCursor('e', Math.PI / 180)
+
+    expect(slightlyRotatedCursor).toBe(baseCursor)
   })
 })
