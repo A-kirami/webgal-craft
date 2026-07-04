@@ -5,7 +5,7 @@ import type {
 
 export function useEffectClearControls(deps: EffectControlDeps) {
   function canClearPaths(paths: readonly string[]): boolean {
-    return paths.some(path => deps.getFieldValue(path) !== '')
+    return paths.some(path => deps.getStoredFieldValue(path) !== undefined)
   }
 
   function clearPaths(paths: readonly string[], options: EmitTransformOptions): void {

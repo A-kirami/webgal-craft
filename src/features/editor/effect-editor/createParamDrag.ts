@@ -11,6 +11,7 @@ interface ParamDragCallbacks<P, S> {
   onStart: (event: ImmediatePointerDragEvent, param: P) => S | undefined
   onMove: (event: ImmediatePointerDragEvent, state: S & { param: P }) => void
   onEnd: (event: ImmediatePointerDragEvent | undefined, state: S & { param: P }) => void
+  onCancel?: (state: S & { param: P }) => void
 }
 
 export function createParamDrag<P, S>(callbacks: ParamDragCallbacks<P, S>) {
@@ -31,6 +32,7 @@ export function createParamDrag<P, S>(callbacks: ParamDragCallbacks<P, S>) {
     },
     onMove: callbacks.onMove,
     onEnd: callbacks.onEnd,
+    onCancel: callbacks.onCancel,
   })
 
   function start(event: PointerEvent, param: P) {

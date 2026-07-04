@@ -1,6 +1,10 @@
 import { createParamDrag } from '~/features/editor/effect-editor/createParamDrag'
+import {
+  effectRotationDegreeToStoredRadian,
+  formatEffectRotationDegree,
+} from '~/features/editor/effect-editor/transform-rotation-format'
 import { usePreferenceStore } from '~/stores/preference'
-import { applyScrubStepModifier, clamp, degreeToRadian, getPointerAngleDegrees, normalizeAngleDelta, normalizeDegree, radianToDegree, roundByStep, roundToPrecision } from '~/utils/math'
+import { applyScrubStepModifier, clamp, getPointerAngleDegrees, normalizeAngleDelta, normalizeDegree, radianToDegree, roundByStep } from '~/utils/math'
 
 import type { ImmediatePointerDragEvent } from '~/composables/useImmediatePointerDrag'
 import type { DialField, NumberField } from '~/features/editor/command-registry/schema'
@@ -15,8 +19,6 @@ type LinkedNumberField = NumberField & { linkedPairKey: string }
 const SLIDER_CENTER_SNAP_TOLERANCE = 0.02
 // 按住 Shift 时旋钮的角度吸附步进（每 15 度）
 const DIAL_DEGREE_SNAP = 15
-// 弧度值存储精度（4 位小数，约 0.006 度误差）
-const RADIAN_STORAGE_PRECISION = 4
 
 function createContinuousTransformOptions(flush?: boolean): EmitTransformOptions {
   return { schedule: 'continuous', flush, deferAutoApply: !flush }
@@ -73,6 +75,11 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
       pendingContinuousTransformFrameId = undefined
     }
     pendingContinuousTransformEmit = undefined
+  }
+
+  function cancelCurrentPreviewInteraction() {
+    cancelScheduledContinuousTransformEmit()
+    void deps.cancelPreview?.()
   }
 
   function emitContinuousTransform(
@@ -247,6 +254,9 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     onEnd(_event, state) {
       updateNumberFieldValue(state.param, String(state.lastValue), { flush: true, clampValue: true })
     },
+    onCancel() {
+      cancelCurrentPreviewInteraction()
+    },
   })
 
   function handleNumberLabelPointerDown(event: PointerEvent, param: NumberField) {
@@ -268,7 +278,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   }
 
   function getStoredFieldValue(path: string): string | undefined {
-    const value = deps.getFieldValue(path)
+    const value = deps.getStoredFieldValue(path)
     return value === '' ? undefined : value
   }
 
@@ -461,9 +471,9 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
 
   function dialDegreeToStoreValue(param: DialField, degree: number): number {
     if (param.dialUnit === 'deg') {
-      return degree
+      return formatEffectRotationDegree(degree)
     }
-    return roundToPrecision(degreeToRadian(degree), RADIAN_STORAGE_PRECISION)
+    return effectRotationDegreeToStoredRadian(degree)
   }
 
   function getDialDegree(param: DialField): number {
@@ -476,7 +486,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   }
 
   function getDialInputValue(param: DialField): string {
-    return String(roundByStep(getDialDegree(param), 0.01))
+    return String(formatEffectRotationDegree(getDialDegree(param)))
   }
 
   function applyDialSnap(value: number, shiftKey: boolean): number {
@@ -543,7 +553,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
       const pointerAngle = getPointerAngleDegrees(event, state.centerX, state.centerY)
       const deltaAngle = normalizeAngleDelta(pointerAngle - state.lastPointerAngle)
       const rawDegree = state.rawDegree + deltaAngle
-      const snappedDegree = roundByStep(applyDialSnap(rawDegree, event.shiftKey), 0.01)
+      const snappedDegree = formatEffectRotationDegree(applyDialSnap(rawDegree, event.shiftKey))
 
       state.lastPointerAngle = pointerAngle
       state.rawDegree = rawDegree
@@ -556,6 +566,9 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     },
     onEnd(_event, state) {
       updateDialField(state.param, String(state.lastDegree), { flush: true })
+    },
+    onCancel() {
+      cancelCurrentPreviewInteraction()
     },
   })
 

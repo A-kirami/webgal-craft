@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { Transform } from '~/domain/stage/types'
-import { EffectEditorPreviewPayload, EffectEditorTransformUpdatePayload } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
+
+import type { Transform } from '~/domain/stage/types'
+import type {
+  EffectEditorPreviewPayload,
+  EffectEditorTransformUpdatePayload,
+} from '~/features/editor/effect-editor/useEffectEditorProvider'
+import type { TransformBaselineSource } from '~/features/editor/transform-resolution/model'
 
 interface EffectEditorPanelProps {
   transform: Transform
+  baselineSource?: TransformBaselineSource
+  baselineTransform?: Transform
+  previewFieldValue?: (path: string) => string | undefined
   duration: string
   ease: string
   canApply: boolean
@@ -23,6 +31,7 @@ const emit = defineEmits<{
   'update:duration': [value: string]
   'update:ease': [value: string]
   'preview': [payload: EffectEditorPreviewPayload]
+  'cancel-preview': []
   'apply': []
   'reset': []
 }>()
@@ -58,6 +67,9 @@ onMounted(() => {
     <EffectDraftForm
       class="flex-1 min-h-0"
       :transform="props.transform"
+      :baseline-source="props.baselineSource"
+      :baseline-transform="props.baselineTransform"
+      :preview-field-value="props.previewFieldValue"
       :duration="props.duration"
       :ease="props.ease"
       :inline="props.inline"
@@ -66,6 +78,7 @@ onMounted(() => {
       @update:duration="emit('update:duration', $event)"
       @update:ease="emit('update:ease', $event)"
       @preview="emit('preview', $event)"
+      @cancel-preview="emit('cancel-preview')"
     />
 
     <div v-if="props.showFooter" class="mt-4 flex gap-2 justify-end">

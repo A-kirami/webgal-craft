@@ -1,5 +1,7 @@
-import { ChoiceField, EditorDynamicOptionsKey, UNSPECIFIED } from '~/features/editor/command-registry/schema'
-import { EmitTransformOptions } from '~/features/editor/effect-editor/types'
+import { UNSPECIFIED } from '~/features/editor/command-registry/schema'
+
+import type { ChoiceField, EditorDynamicOptionsKey } from '~/features/editor/command-registry/schema'
+import type { EmitTransformOptions } from '~/features/editor/effect-editor/types'
 
 export interface EffectSegmentedOption {
   iconClass: string

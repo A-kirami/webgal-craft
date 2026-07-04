@@ -16,6 +16,7 @@ const { createParamDragModule, dragController } = vi.hoisted(() => {
   function createParamDragModule() {
     return {
       createParamDrag<P, S>(callbacks: {
+        onCancel?: (state: S & { param: P }) => void
         onStart: (event: ImmediatePointerDragEvent, param: P) => unknown
         // 这些测试只覆盖开始/结束语义；保留 onMove 是为了让 mock 签名贴近真实 API。
         onMove: (event: ImmediatePointerDragEvent, state: S & { param: P }) => unknown
@@ -34,6 +35,14 @@ const { createParamDragModule, dragController } = vi.hoisted(() => {
                 return
               }
               callbacks.onEnd(event, { param: dragController.param as P } as S & { param: P })
+              dragController.active = false
+              dragController.param = undefined
+            },
+            cancel() {
+              if (!dragController.active) {
+                return
+              }
+              callbacks.onCancel?.({ param: dragController.param as P } as S & { param: P })
               dragController.active = false
               dragController.param = undefined
             },
@@ -63,6 +72,7 @@ function createDeps(initialFields: Record<string, string> = {}) {
   const deps: EffectControlDeps = {
     getFields: () => fields,
     getFieldValue: path => fields[path] ?? '',
+    getStoredFieldValue: path => fields[path],
     getNumberValue: (path, fallback) => {
       const value = Number(fields[path])
       return Number.isFinite(value) ? value : fallback
@@ -209,6 +219,26 @@ describe('useEffectColorControl', () => {
       r: '10',
       g: '20',
       b: '30',
+    })
+  })
+
+  it('颜色拖拽取消时会取消当前预览交互并丢弃 pending flush', () => {
+    const { deps, emitTransform } = createDeps()
+    const cancelPreview = vi.fn()
+    const depsWithCancel = deps as EffectControlDeps & { cancelPreview: () => void }
+    depsWithCancel.cancelPreview = cancelPreview
+    const control = useEffectColorControl(depsWithCancel)
+    const field = createColorField()
+
+    control.handleColorPickerPointerDown(createPointerEvent(), field)
+    control.handleColorPickerChange(field, { rgba: { r: 10, g: 20, b: 30 } })
+    control.colorDrag.cancel?.()
+
+    expect(cancelPreview).toHaveBeenCalledOnce()
+    expect(emitTransform).toHaveBeenCalledTimes(1)
+    expect(emitTransform).toHaveBeenLastCalledWith(expect.any(Object), {
+      schedule: 'color',
+      deferAutoApply: true,
     })
   })
 })

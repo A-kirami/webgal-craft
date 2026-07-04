@@ -61,6 +61,10 @@ export function useEffectColorControl(deps: EffectControlDeps) {
         deferAutoApply: false,
       })
     },
+    onCancel() {
+      pendingColorFlushValue = undefined
+      void deps.cancelPreview?.()
+    },
   })
 
   function handleColorPickerChange(param: EffectColorField, rawValue: unknown) {

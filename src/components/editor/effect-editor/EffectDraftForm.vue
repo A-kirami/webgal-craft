@@ -13,7 +13,6 @@ import {
   DEFAULT_EASE_OPTION_VALUE,
   EFFECT_CATEGORIES,
   EFFECT_EASE_OPTIONS,
-  getValueByPath,
   transformToFields,
 } from '~/features/editor/effect-editor/effect-editor-config'
 import { useEffectClearControls } from '~/features/editor/effect-editor/useEffectClearControls'
@@ -24,6 +23,7 @@ import {
   createEffectPreviewEmitter,
 } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { useEffectSegmentedControl } from '~/features/editor/effect-editor/useEffectSegmentedControl'
+import { resolveTransformDraftDisplay } from '~/features/editor/transform-resolution/model'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import type {
@@ -38,9 +38,13 @@ import type {
   EffectEditorPreviewPayload,
   EffectEditorTransformUpdatePayload,
 } from '~/features/editor/effect-editor/useEffectEditorProvider'
+import type { TransformBaselineSource } from '~/features/editor/transform-resolution/model'
 
 interface EffectDraftFormProps {
   transform: Transform
+  baselineSource?: TransformBaselineSource
+  baselineTransform?: Transform
+  previewFieldValue?: (path: string) => string | undefined
   duration: string
   ease: string
   easeDisabled?: boolean
@@ -59,6 +63,7 @@ const emit = defineEmits<{
   'update:duration': [value: string]
   'update:ease': [value: string]
   'preview': [payload: EffectEditorPreviewPayload]
+  'cancel-preview': []
 }>()
 
 const EFFECT_DRAFT_CATEGORY_RENDER_MODELS: EffectDraftCategoryRenderModel[] = EFFECT_CATEGORIES.map((category, index) => ({
@@ -72,9 +77,15 @@ const workspaceStore = useWorkspaceStore()
 const resolveEffectDraftLabel = (value: I18nLike | undefined) => resolveI18n(value, t)
 const easeModelValue = $computed(() => props.ease || DEFAULT_EASE_OPTION_VALUE)
 const isPanelLayout = $computed(() => props.layout === 'panel')
+const storedFields = $computed(() => transformToFields(props.transform))
+const displayFields = $computed(() => transformToFields(resolveTransformDraftDisplay({
+  baselineSource: props.baselineSource,
+  baselineTransform: props.baselineTransform,
+  explicitDraftTransform: props.transform,
+}).displayTransform))
 
 function getFields(): Record<string, string> {
-  return transformToFields(props.transform)
+  return { ...storedFields }
 }
 
 const { emitTransform } = createEffectPreviewEmitter({
@@ -95,9 +106,11 @@ const {
 })
 
 function getFieldValue(path: string): string {
-  const source = props.transform as unknown as Record<string, unknown>
-  const value = getValueByPath(source, path)
-  return (value === undefined) ? '' : String(value)
+  return props.previewFieldValue?.(path) ?? displayFields[path] ?? ''
+}
+
+function getStoredFieldValue(path: string): string | undefined {
+  return storedFields[path]
 }
 
 function getNumberValue(path: string, fallback: number): number {
@@ -120,9 +133,11 @@ function setNumericField(fields: Record<string, string>, path: string, value: nu
 const controlDeps: EffectControlDeps = {
   getFields,
   getFieldValue,
+  getStoredFieldValue,
   getNumberValue,
   setNumericField,
   emitTransform,
+  cancelPreview: () => emit('cancel-preview'),
 }
 
 const {
@@ -251,9 +266,9 @@ const categoryControls: EffectDraftCategoryControls = {
 
 onUnmounted(() => {
   stopDurationScrub()
-  numberScrub.stop()
-  dialDrag.stop()
-  colorDrag.stop()
+  numberScrub.cancel()
+  dialDrag.cancel()
+  colorDrag.cancel()
   clearPendingColorFlush()
   resetLinkedSliderState()
 })
