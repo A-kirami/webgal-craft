@@ -395,7 +395,7 @@ export const useEditorStore = defineStore('editor', () => {
   const previewSyncController = createEditorPreviewSync({
     dedupeWindowMs: PREVIEW_SYNC_DEDUPE_WINDOW_MS,
     dispatch(path, lineNumber, lineText, force) {
-      void debugCommander.syncScene(path, lineNumber, lineText, force)
+      void debugCommander.syncScene(path, lineNumber, lineText, { force })
     },
   })
   function syncScenePreview(path: AbsPath, lineNumber: number, lineText: string, force: boolean = false) {

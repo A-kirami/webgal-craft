@@ -693,7 +693,7 @@ describe('PreviewPanel', () => {
       '/games/demo/scene/start.txt',
       2,
       'second line',
-      true,
+      { force: true },
     )
   })
 
