@@ -1,5 +1,6 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { computeLineNumberFromStatementId } from '~/domain/document/scene-selection'
 import { hasSentenceTruthyFlag, readSentenceArgString } from '~/domain/script/sentence'
 import { serializeSentence } from '~/domain/script/serialize'
 import { applyEffectEditorResultToSentence, EffectEditorResult } from '~/features/editor/effect-editor/effect-editor-result'
@@ -13,6 +14,11 @@ interface UseStatementEffectEditorBridgeOptions {
   updateTarget?: MaybeRefOrGetter<StatementUpdateTarget | undefined>
   parsed: MaybeRefOrGetter<ISentence | undefined>
   emitUpdate: (payload: StatementUpdatePayload) => void
+}
+
+interface SceneStatementLineLookupEntry {
+  id: number
+  rawText: string
 }
 
 const EFFECT_TARGET_BG_MAIN = 'bg-main'
@@ -57,6 +63,18 @@ export type EffectEditorOpenOverride = (
 
 export const EFFECT_EDITOR_OPEN_OVERRIDE_KEY: InjectionKey<EffectEditorOpenOverride> =
   Symbol('effectEditorOpenOverride')
+
+function resolveVisualStatementLineNumber(
+  statements: readonly SceneStatementLineLookupEntry[],
+  selection: { selectedStatementId?: number, lastLineNumber?: number } | undefined,
+  statementId: number,
+): number | undefined {
+  if (selection?.selectedStatementId === statementId && selection.lastLineNumber !== undefined) {
+    return selection.lastLineNumber
+  }
+
+  return computeLineNumberFromStatementId(statements, statementId)
+}
 
 export function useStatementEffectEditorBridge(options: UseStatementEffectEditorBridgeOptions) {
   const updateTarget = computed(() => toValue(options.updateTarget))
@@ -104,9 +122,23 @@ export function useStatementEffectEditorBridge(options: UseStatementEffectEditor
       return
     }
 
+    const selection = editorStore.currentSceneSelection
+    const statementId = updateTarget.value?.kind === 'statement'
+      ? updateTarget.value.statementId
+      : selection?.selectedStatementId
+    const sentenceId = statementId === undefined || state.projection !== 'visual'
+      ? selection?.lastLineNumber
+      : resolveVisualStatementLineNumber(state.statements, selection, statementId)
+    if (sentenceId === undefined) {
+      logger.warn('无法定位效果编辑器语句行号，跳过打开效果编辑器')
+      return
+    }
+
     void effectEditorProvider.open({
       baseSentence: parsed.value,
       effectTarget: resolveEffectPreviewTarget(parsed.value),
+      scenePath: state.path,
+      sentenceId,
       onApply: applyEffectEditorResult,
     })
   }
