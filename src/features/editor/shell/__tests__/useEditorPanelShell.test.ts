@@ -163,6 +163,17 @@ function collectEffectShortcutBindings() {
     .filter(binding => String(binding.id).startsWith('effect.'))
 }
 
+function findEffectShortcutBinding(panelFocus: string, id: string) {
+  const binding = collectEffectShortcutBindings()
+    .find(item => item.id === id && item.when.panelFocus === panelFocus)
+
+  if (!binding) {
+    throw new Error(`缺少 ${panelFocus} 焦点下的 ${id} 快捷键`)
+  }
+
+  return binding
+}
+
 describe('useEditorPanelShell', () => {
   beforeEach(() => {
     commandPanelBridgeMock.activeBinding.value = undefined
@@ -234,51 +245,44 @@ describe('useEditorPanelShell', () => {
     scope.stop()
   })
 
-  it('只会注册 effect editor 焦点下的效果历史和剪贴板快捷键', () => {
+  it('会注册 effect editor 和 transform overlay 焦点下的效果历史与剪贴板快捷键', () => {
     const { scope } = createFixture()
 
-    expect(useShortcutMock).toHaveBeenCalledWith(expect.objectContaining({
-      id: 'effect.undo',
-      keys: 'Mod+Z',
-      when: {
-        panelFocus: 'effectEditor',
-      },
-    }))
-    expect(useShortcutMock).toHaveBeenCalledWith(expect.objectContaining({
-      id: 'effect.copy',
-      keys: 'Mod+C',
-      when: {
-        panelFocus: 'effectEditor',
-      },
-    }))
     const effectBindings = collectEffectShortcutBindings()
-
-    expect(effectBindings.map(binding => [binding.id, binding.keys])).toEqual([
+    const expectedBindings = [
       ['effect.undo', 'Mod+Z'],
       ['effect.redo', ['Mod+Shift+Z', 'Mod+Y']],
       ['effect.copy', 'Mod+C'],
       ['effect.paste', 'Mod+V'],
-    ])
+    ]
+
+    for (const panelFocus of ['effectEditor', 'transformOverlay']) {
+      const focusedBindings = effectBindings.filter(binding => binding.when.panelFocus === panelFocus)
+      expect(focusedBindings.map(binding => [binding.id, binding.keys])).toEqual(expectedBindings)
+    }
     expect(effectBindings.every(binding => binding.allowInInput !== true)).toBe(true)
-    expect(effectBindings.every(binding => binding.when.panelFocus === 'effectEditor')).toBe(true)
 
     scope.stop()
   })
 
   it('effect 历史和剪贴板快捷键会委托给 effect editor provider', async () => {
     const { scope } = createFixture()
-    const effectBindings = new Map(collectEffectShortcutBindings()
-      .map(binding => [binding.id, binding]))
 
-    await effectBindings.get('effect.undo')?.execute()
-    await effectBindings.get('effect.redo')?.execute()
-    await effectBindings.get('effect.copy')?.execute()
-    await effectBindings.get('effect.paste')?.execute()
+    await Promise.all([
+      findEffectShortcutBinding('effectEditor', 'effect.undo').execute(),
+      findEffectShortcutBinding('effectEditor', 'effect.redo').execute(),
+      findEffectShortcutBinding('effectEditor', 'effect.copy').execute(),
+      findEffectShortcutBinding('effectEditor', 'effect.paste').execute(),
+      findEffectShortcutBinding('transformOverlay', 'effect.undo').execute(),
+      findEffectShortcutBinding('transformOverlay', 'effect.redo').execute(),
+      findEffectShortcutBinding('transformOverlay', 'effect.copy').execute(),
+      findEffectShortcutBinding('transformOverlay', 'effect.paste').execute(),
+    ])
 
-    expect(effectEditorProviderMock.undoDraft).toHaveBeenCalledOnce()
-    expect(effectEditorProviderMock.redoDraft).toHaveBeenCalledOnce()
-    expect(effectEditorProviderMock.copyCurrentEffect).toHaveBeenCalledOnce()
-    expect(effectEditorProviderMock.pasteCurrentEffect).toHaveBeenCalledOnce()
+    expect(effectEditorProviderMock.undoDraft).toHaveBeenCalledTimes(2)
+    expect(effectEditorProviderMock.redoDraft).toHaveBeenCalledTimes(2)
+    expect(effectEditorProviderMock.copyCurrentEffect).toHaveBeenCalledTimes(2)
+    expect(effectEditorProviderMock.pasteCurrentEffect).toHaveBeenCalledTimes(2)
 
     scope.stop()
   })

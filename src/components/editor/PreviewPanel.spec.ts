@@ -11,6 +11,8 @@ import {
   WEBGAL_PREVIEW_VIEWPORT_SPACE_KEY,
   WEBGAL_PREVIEW_VIEWPORT_WHEEL,
 } from '~/features/editor/preview/embedded-preview-messages'
+import { useShortcutContextRegistry } from '~/features/editor/shortcut/shortcut-context-registry'
+import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
 
 const {
   copyMock,
@@ -119,6 +121,10 @@ vi.mock('notivue', () => ({
 
 import PreviewPanel from './PreviewPanel.vue'
 
+import type { DisplayTransform } from '~/features/editor/transform-overlay/model'
+import type { useTransformOverlayBridge } from '~/features/editor/transform-overlay/useTransformOverlayBridge'
+import type { ReferenceBox } from '~/types/editorPreviewProtocol'
+
 const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
   Tooltip: createBrowserContainerStub('StubTooltip'),
@@ -141,6 +147,22 @@ let previewSessionStoreState: {
   currentGameServeUrl: string
   reloadVersion: number
   refresh: () => void
+}
+
+const transformOverlayReferenceBox: ReferenceBox = {
+  originX: 640,
+  originY: 360,
+  width: 200,
+  height: 100,
+  anchorX: 0.5,
+  anchorY: 0.5,
+  stageWidth: 1280,
+  stageHeight: 720,
+}
+const transformOverlayDisplayTransform: DisplayTransform = {
+  position: { x: 0, y: 0 },
+  scale: { x: 1, y: 1 },
+  rotation: 0,
 }
 
 async function flushPreviewWatchers() {
@@ -173,6 +195,18 @@ function createPreviewPanelLiteI18n() {
       },
     },
   })
+}
+
+function createTransformOverlayBridge(): ReturnType<typeof useTransformOverlayBridge> {
+  return {
+    displayTransform: ref(transformOverlayDisplayTransform),
+    enabled: ref(true),
+    formDisplayTransform: ref(transformOverlayDisplayTransform),
+    referenceBox: ref(transformOverlayReferenceBox),
+    cancelDisplayTransform: vi.fn(),
+    handlePanelTransformUpdate: vi.fn(),
+    updateDisplayTransform: vi.fn(),
+  } as unknown as ReturnType<typeof useTransformOverlayBridge>
 }
 
 function parsePreviewTransform(transform: string): {
@@ -561,6 +595,43 @@ describe('PreviewPanel', () => {
     expect(copyMock).toHaveBeenCalledTimes(1)
     expect(notifySuccessMock).toHaveBeenCalledWith('edit.previewPanel.copyUrlSuccess')
     expect(openUrlMock).toHaveBeenCalledWith('http://127.0.0.1:8899')
+  })
+
+  it('变换浮层开启时点击预览空白区域和底部工具栏会保持浮层快捷键上下文', async () => {
+    renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        provide: {
+          [TRANSFORM_OVERLAY_BRIDGE_KEY as symbol]: createTransformOverlayBridge(),
+        },
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByTestId('transform-overlay')).toBeVisible()
+
+    const externalInput = document.createElement('input')
+    document.body.append(externalInput)
+
+    try {
+      externalInput.focus()
+
+      document.querySelector<HTMLElement>('[data-testid="transform-overlay"]')?.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+      }))
+      await nextTick()
+
+      expect(useShortcutContextRegistry().resolveContext().panelFocus).toBe('transformOverlay')
+
+      externalInput.focus()
+
+      await page.getByRole('button', { name: 'edit.previewPanel.zoomOut' }).click()
+
+      expect(useShortcutContextRegistry().resolveContext().panelFocus).toBe('transformOverlay')
+    } finally {
+      externalInput.remove()
+    }
   })
 
   it('点击刷新按钮会重新读取游戏配置并刷新内嵌预览槽位', async () => {
