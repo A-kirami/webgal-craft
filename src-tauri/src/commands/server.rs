@@ -31,9 +31,9 @@ use futures_util::{SinkExt, StreamExt};
 use image::{codecs::jpeg::JpegEncoder, imageops::FilterType, ImageFormat};
 use percent_encoding::percent_decode_str;
 use preview_sync::{
-    build_empty_response, is_event_message, is_preview_command_request,
-    parse_register_preview_request, requests_v1_subprotocol, PreviewSessionRegistry,
-    RegisterPreviewRequestPayload, EDITOR_PREVIEW_PROTOCOL_V1_SUBPROTOCOL,
+    build_empty_response, build_preview_ready_updated_event, is_host_message,
+    parse_register_preview_request, requests_v1_subprotocol, target_scope_for_preview_request,
+    PreviewSessionRegistry, RegisterPreviewRequestPayload, EDITOR_PREVIEW_PROTOCOL_V1_SUBPROTOCOL,
     SESSION_REGISTER_PREVIEW_TYPE,
 };
 use sha2::{Digest, Sha256};
@@ -387,7 +387,7 @@ async fn send_message_to_preview(
         .map_err(|_| AppError::Server("发送预览消息失败".into()))
 }
 
-async fn forward_event_to_editor(state: &Arc<AppState>, message: String) {
+async fn forward_host_message_to_editor(state: &Arc<AppState>, message: String) {
     let editor_event_channel = state.editor_event_channel.read().await.clone();
     if let Some(editor_event_channel) = editor_event_channel {
         let _ = editor_event_channel.send(message);
@@ -424,7 +424,7 @@ async fn handle_preview_socket_message(state: &Arc<AppState>, addr: SocketAddr, 
         return;
     }
 
-    if !is_event_message(&text) {
+    if !is_host_message(&text) {
         return;
     }
 
@@ -434,13 +434,19 @@ async fn handle_preview_socket_message(state: &Arc<AppState>, addr: SocketAddr, 
     };
 
     if should_forward {
-        forward_event_to_editor(state, text).await;
+        forward_host_message_to_editor(state, text).await;
     }
 }
 
 async fn cleanup_disconnected_preview(state: &Arc<AppState>, addr: SocketAddr) {
     state.preview_clients.lock().await.remove(&addr);
-    state.preview_registry.lock().await.unregister(addr);
+    let preferred_event_source_changed = state.preview_registry.lock().await.unregister(addr);
+
+    if preferred_event_source_changed {
+        if let Ok(message) = build_preview_ready_updated_event(false) {
+            forward_host_message_to_editor(state, message).await;
+        }
+    }
 }
 
 async fn handle_ws(
@@ -1370,17 +1376,15 @@ pub async fn send_preview_command(
     state: TauriState<'_, Mutex<ServerState>>,
     request: String,
 ) -> AppResult<()> {
-    if !is_preview_command_request(&request) {
-        return Err(AppError::Server("无效的预览命令请求".into()));
-    }
-
     let app_state = {
         let state_guard = state.lock().await;
         state_guard.app_state.clone()
     };
+    let target_scope = target_scope_for_preview_request(&request)
+        .ok_or_else(|| AppError::Server("无效的预览请求".into()))?;
     let target_addrs = {
         let preview_registry = app_state.preview_registry.lock().await;
-        preview_registry.session_members()
+        preview_registry.target_addrs_for_request_scope(target_scope)
     };
 
     for target_addr in target_addrs {

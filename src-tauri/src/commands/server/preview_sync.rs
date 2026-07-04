@@ -1,11 +1,16 @@
 use std::{collections::BTreeMap, net::SocketAddr};
 
-use crate::generated::editor_preview_protocol::PREVIEW_COMMAND_TYPES;
+use crate::generated::editor_preview_protocol::{
+    is_preview_request_type, is_preview_response_type, HOST_EVENT_TYPES, PREVIEW_COMMAND_TYPES,
+    PREVIEW_QUERY_TYPES,
+};
 pub use crate::generated::editor_preview_protocol::{
     EDITOR_PREVIEW_PROTOCOL_V1_SUBPROTOCOL, SESSION_REGISTER_PREVIEW_TYPE,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+const SET_EFFECT_COMMAND_TYPE: &str = "preview.command.set-effect";
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -25,10 +30,12 @@ struct IncomingRequestEnvelope<TPayload = Value> {
 }
 
 #[derive(Debug, Deserialize)]
-struct IncomingEventEnvelope {
+struct IncomingHostEnvelope {
     kind: String,
     #[serde(rename = "type")]
     message_type: String,
+    #[serde(rename = "requestId")]
+    request_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -43,6 +50,12 @@ struct OutgoingEmptyResponseEnvelope<'a> {
 
 #[derive(Debug, Serialize, Default)]
 struct EmptyPayload {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PreviewRequestTargetScope {
+    SessionMembers,
+    EmbeddedPreview,
+}
 
 fn normalize_optional_string(value: Option<String>) -> Option<String> {
     value.and_then(|value| {
@@ -91,17 +104,61 @@ pub fn parse_register_preview_request(
     ))
 }
 
-pub fn is_preview_command_request(message: &str) -> bool {
+pub fn target_scope_for_preview_request(message: &str) -> Option<PreviewRequestTargetScope> {
     let Ok(envelope) = serde_json::from_str::<IncomingRequestEnvelope<Value>>(message) else {
+        return None;
+    };
+
+    if envelope.kind != "request" || !is_preview_request_type(envelope.message_type.as_str()) {
+        return None;
+    }
+
+    target_scope_for_preview_request_type(&envelope.message_type)
+}
+
+fn target_scope_for_preview_request_type(message_type: &str) -> Option<PreviewRequestTargetScope> {
+    if message_type == SET_EFFECT_COMMAND_TYPE {
+        return Some(PreviewRequestTargetScope::EmbeddedPreview);
+    }
+
+    if PREVIEW_COMMAND_TYPES.contains(&message_type) {
+        return Some(PreviewRequestTargetScope::SessionMembers);
+    }
+
+    if PREVIEW_QUERY_TYPES.contains(&message_type) {
+        return Some(PreviewRequestTargetScope::EmbeddedPreview);
+    }
+
+    None
+}
+
+pub fn is_host_message(message: &str) -> bool {
+    let Ok(envelope) = serde_json::from_str::<IncomingHostEnvelope>(message) else {
         return false;
     };
 
-    envelope.kind == "request" && PREVIEW_COMMAND_TYPES.contains(&envelope.message_type.as_str())
+    match envelope.kind.as_str() {
+        "event" => HOST_EVENT_TYPES.contains(&envelope.message_type.as_str()),
+        "response" => {
+            matches!(envelope.request_id, Some(request_id) if !request_id.trim().is_empty())
+                && is_preview_response_type(envelope.message_type.as_str())
+        }
+        "error" => {
+            matches!(envelope.request_id, Some(request_id) if !request_id.trim().is_empty())
+                && is_preview_request_type(envelope.message_type.as_str())
+        }
+        _ => false,
+    }
 }
 
-pub fn is_event_message(message: &str) -> bool {
-    let envelope = serde_json::from_str::<IncomingEventEnvelope>(message);
-    matches!(envelope, Ok(envelope) if envelope.kind == "event" && !envelope.message_type.is_empty())
+pub fn build_preview_ready_updated_event(ready: bool) -> Result<String, serde_json::Error> {
+    serde_json::to_string(&serde_json::json!({
+        "kind": "event",
+        "type": "preview.ready.updated",
+        "payload": {
+            "ready": ready,
+        },
+    }))
 }
 
 pub fn build_empty_response(
@@ -132,8 +189,10 @@ impl PreviewSessionRegistry {
         self.embedded_launch_id = normalize_optional_string(embedded_launch_id);
     }
 
-    pub fn unregister(&mut self, addr: SocketAddr) {
+    pub fn unregister(&mut self, addr: SocketAddr) -> bool {
+        let previous_preferred_event_source = self.preferred_event_source();
         self.registrations.remove(&addr);
+        previous_preferred_event_source != self.preferred_event_source()
     }
 
     pub fn register(&mut self, addr: SocketAddr, payload: RegisterPreviewRequestPayload) -> bool {
@@ -149,6 +208,18 @@ impl PreviewSessionRegistry {
 
     pub fn session_members(&self) -> Vec<SocketAddr> {
         self.session_registrations().map(|(addr, _)| addr).collect()
+    }
+
+    pub fn target_addrs_for_request_scope(
+        &self,
+        target_scope: PreviewRequestTargetScope,
+    ) -> Vec<SocketAddr> {
+        match target_scope {
+            PreviewRequestTargetScope::SessionMembers => self.session_members(),
+            PreviewRequestTargetScope::EmbeddedPreview => {
+                self.embedded_preview_addr().into_iter().collect()
+            }
+        }
     }
 
     pub fn embedded_preview_addr(&self) -> Option<SocketAddr> {
@@ -185,11 +256,10 @@ impl PreviewSessionRegistry {
 mod tests {
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-    use crate::generated::editor_preview_protocol::PREVIEW_COMMAND_TYPES;
-
     use super::{
-        is_preview_command_request, parse_register_preview_request, requests_v1_subprotocol,
-        PreviewSessionRegistry, RegisterPreviewRequestPayload,
+        is_host_message, parse_register_preview_request, requests_v1_subprotocol,
+        target_scope_for_preview_request, PreviewRequestTargetScope, PreviewSessionRegistry,
+        RegisterPreviewRequestPayload,
     };
 
     fn socket_addr(last_octet: u8, port: u16) -> SocketAddr {
@@ -238,40 +308,75 @@ mod tests {
     }
 
     #[test]
-    fn preview_command_request_accepts_every_generated_command_type() {
-        for command_type in PREVIEW_COMMAND_TYPES {
-            let message = format!(
-                r#"{{
-                "kind": "request",
-                "type": "{command_type}",
-                "requestId": "req-preview-command",
-                "payload": {{}}
-            }}"#
-            );
-
-            assert!(
-                is_preview_command_request(&message),
-                "command type {command_type} should be accepted",
-            );
-        }
+    fn host_message_accepts_reference_box_response() {
+        assert!(is_host_message(
+            r#"{
+                "kind": "response",
+                "type": "preview.query.reference-box",
+                "requestId": "req-reference-box",
+                "payload": {
+                    "target": "fig-center",
+                    "status": "ready"
+                }
+            }"#,
+        ));
     }
 
     #[test]
-    fn preview_command_request_rejects_unknown_or_non_request_messages() {
-        assert!(!is_preview_command_request(
+    fn host_message_accepts_transform_query_responses() {
+        assert!(is_host_message(
             r#"{
-                "kind": "request",
-                "type": "preview.command.unknown",
-                "requestId": "req-unknown-command",
-                "payload": {}
+                "kind": "response",
+                "type": "preview.query.base-transform",
+                "requestId": "req-base-transform",
+                "payload": {
+                    "baseTransform": {
+                        "position": { "x": 0, "y": 20 }
+                    }
+                }
             }"#,
         ));
 
-        assert!(!is_preview_command_request(
+        assert!(is_host_message(
             r#"{
-                "kind": "event",
-                "type": "preview.command.sync-scene",
-                "payload": {}
+                "kind": "response",
+                "type": "preview.query.transform-baseline",
+                "requestId": "req-transform-baseline",
+                "payload": {
+                    "status": "ready",
+                    "transform": {
+                        "position": { "x": 1000 }
+                    }
+                }
+            }"#,
+        ));
+    }
+
+    #[test]
+    fn host_message_accepts_preview_request_error_envelope() {
+        assert!(is_host_message(
+            r#"{
+                "kind": "error",
+                "type": "preview.query.transform-baseline",
+                "requestId": "req-transform-baseline",
+                "error": {
+                    "code": "unsupported-request-type",
+                    "message": "unsupported request type"
+                }
+            }"#,
+        ));
+    }
+
+    #[test]
+    fn host_message_rejects_response_without_request_id() {
+        assert!(!is_host_message(
+            r#"{
+                "kind": "response",
+                "type": "preview.query.reference-box",
+                "payload": {
+                    "target": "fig-center",
+                    "status": "ready"
+                }
             }"#,
         ));
     }
@@ -314,6 +419,151 @@ mod tests {
     }
 
     #[test]
+    fn target_scope_for_preview_request_routes_core_commands_to_session_members() {
+        let target_scope = target_scope_for_preview_request(
+            r#"{
+                "kind": "request",
+                "type": "preview.command.sync-scene",
+                "requestId": "req-preview-command",
+                "payload": {}
+            }"#,
+        );
+
+        assert_eq!(
+            target_scope,
+            Some(PreviewRequestTargetScope::SessionMembers)
+        );
+    }
+
+    #[test]
+    fn target_scope_for_preview_request_routes_set_effect_to_embedded_preview() {
+        let target_scope = target_scope_for_preview_request(
+            r#"{
+                "kind": "request",
+                "type": "preview.command.set-effect",
+                "requestId": "req-set-effect",
+                "payload": {
+                    "target": "fig-center",
+                    "transform": {
+                        "blur": 12
+                    },
+                    "phase": "preview"
+                }
+            }"#,
+        );
+
+        assert_eq!(
+            target_scope,
+            Some(PreviewRequestTargetScope::EmbeddedPreview)
+        );
+    }
+
+    #[test]
+    fn target_scope_for_preview_request_rejects_unknown_request_type() {
+        let target_scope = target_scope_for_preview_request(
+            r#"{
+                "kind": "request",
+                "type": "preview.command.future-command",
+                "requestId": "req-unknown-command",
+                "payload": {}
+            }"#,
+        );
+
+        assert_eq!(target_scope, None);
+    }
+
+    #[test]
+    fn target_scope_for_preview_request_routes_queries_to_embedded_preview() {
+        let target_scope = target_scope_for_preview_request(
+            r#"{
+                "kind": "request",
+                "type": "preview.query.reference-box",
+                "requestId": "req-reference-box",
+                "payload": {
+                    "target": "fig-center"
+                }
+            }"#,
+        );
+
+        assert_eq!(
+            target_scope,
+            Some(PreviewRequestTargetScope::EmbeddedPreview)
+        );
+
+        let target_scope = target_scope_for_preview_request(
+            r#"{
+                "kind": "request",
+                "type": "preview.query.transform-baseline",
+                "requestId": "req-transform-baseline",
+                "payload": {
+                    "target": "fig-center",
+                    "transformBaselineRevision": "rev-effect-1"
+                }
+            }"#,
+        );
+
+        assert_eq!(
+            target_scope,
+            Some(PreviewRequestTargetScope::EmbeddedPreview)
+        );
+    }
+
+    #[test]
+    fn target_addrs_for_request_scope_uses_only_bound_embedded_preview_for_reference_box() {
+        let mut registry = PreviewSessionRegistry::default();
+        registry.set_active_game_id(Some("game-a".to_string()));
+        registry.set_embedded_launch_id(Some("embedded-launch-1".to_string()));
+
+        let external_addr = socket_addr(1, 3001);
+        let embedded_addr = socket_addr(2, 3002);
+
+        assert!(registry.register(
+            external_addr,
+            RegisterPreviewRequestPayload {
+                game_id: Some("game-a".to_string()),
+                embedded_launch_id: None,
+            },
+        ));
+        assert!(registry.register(
+            embedded_addr,
+            RegisterPreviewRequestPayload {
+                game_id: Some("game-a".to_string()),
+                embedded_launch_id: Some("embedded-launch-1".to_string()),
+            },
+        ));
+
+        assert_eq!(
+            registry.target_addrs_for_request_scope(PreviewRequestTargetScope::SessionMembers),
+            vec![external_addr, embedded_addr]
+        );
+        assert_eq!(
+            registry.target_addrs_for_request_scope(PreviewRequestTargetScope::EmbeddedPreview),
+            vec![embedded_addr]
+        );
+    }
+
+    #[test]
+    fn target_addrs_for_request_scope_does_not_fallback_when_embedded_preview_is_missing() {
+        let mut registry = PreviewSessionRegistry::default();
+        registry.set_active_game_id(Some("game-a".to_string()));
+
+        let external_addr = socket_addr(1, 3001);
+
+        assert!(registry.register(
+            external_addr,
+            RegisterPreviewRequestPayload {
+                game_id: Some("game-a".to_string()),
+                embedded_launch_id: None,
+            },
+        ));
+
+        assert_eq!(
+            registry.target_addrs_for_request_scope(PreviewRequestTargetScope::EmbeddedPreview),
+            Vec::<std::net::SocketAddr>::new()
+        );
+    }
+
+    #[test]
     fn preferred_event_source_uses_bound_embedded_preview_when_present() {
         let mut registry = PreviewSessionRegistry::default();
         registry.set_active_game_id(Some("game-a".to_string()));
@@ -338,5 +588,33 @@ mod tests {
         ));
 
         assert_eq!(registry.preferred_event_source(), Some(embedded_addr));
+    }
+
+    #[test]
+    fn unregister_reports_when_preferred_event_source_changes() {
+        let mut registry = PreviewSessionRegistry::default();
+        registry.set_active_game_id(Some("game-a".to_string()));
+        registry.set_embedded_launch_id(Some("embedded-launch-1".to_string()));
+
+        let external_addr = socket_addr(1, 3001);
+        let embedded_addr = socket_addr(2, 3002);
+
+        assert!(registry.register(
+            external_addr,
+            RegisterPreviewRequestPayload {
+                game_id: Some("game-a".to_string()),
+                embedded_launch_id: None,
+            },
+        ));
+        assert!(registry.register(
+            embedded_addr,
+            RegisterPreviewRequestPayload {
+                game_id: Some("game-a".to_string()),
+                embedded_launch_id: Some("embedded-launch-1".to_string()),
+            },
+        ));
+
+        assert!(!registry.unregister(external_addr));
+        assert!(registry.unregister(embedded_addr));
     }
 }
