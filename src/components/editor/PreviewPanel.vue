@@ -19,6 +19,7 @@ import {
   resolvePreviewPanelStageSize,
 } from '~/features/editor/preview/preview-panel'
 import { resolvePreviewReadySyncTarget } from '~/features/editor/preview/preview-ready-sync-target'
+import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
 import { debugCommander } from '~/services/debug-commander'
 import { useEditorStore } from '~/stores/editor'
@@ -42,6 +43,7 @@ const previewSessionStore = usePreviewSessionStore()
 const previewSyncStore = usePreviewSyncStore()
 const workspaceStore = useWorkspaceStore()
 const iframeRef = useTemplateRef<HTMLIFrameElement>('iframeRef')
+const previewWorkspaceRef = useTemplateRef<HTMLElement>('previewWorkspace')
 const viewportRef = useTemplateRef<HTMLElement>('viewportRef')
 const transformOverlayBridge = inject(TRANSFORM_OVERLAY_BRIDGE_KEY, undefined)
 const transformOverlayEnabled = $computed(() => transformOverlayBridge?.enabled.value ?? false)
@@ -55,6 +57,8 @@ const { t } = useI18n()
 const { copy, copied } = useClipboard({ source: $$(previewUrl) })
 const previewTitle = $computed(() => t('edit.previewPanel.previewTitle', { name: workspaceStore.currentGame?.metadata.name }))
 const resolutionLabel = $computed(() => `${stageWidth} x ${stageHeight}`)
+
+const PREVIEW_WORKSPACE_FOCUSABLE_SELECTOR = 'a[href], button, input, textarea, select, [contenteditable="true"], [tabindex]:not([tabindex="-1"])'
 
 let aspectRatio = $ref(DEFAULT_PREVIEW_PANEL_ASPECT_RATIO)
 let stageWidth = $ref(DEFAULT_PREVIEW_PANEL_STAGE_WIDTH)
@@ -134,6 +138,21 @@ function resolvePreviewInteractionCursor(): 'auto' | 'grab' | 'grabbing' | undef
   }
 
   return undefined
+}
+
+function isPointerFocusManagedByTarget(target: EventTarget | null): boolean {
+  return target instanceof Element
+    && target.closest(PREVIEW_WORKSPACE_FOCUSABLE_SELECTOR) !== null
+}
+
+function handlePreviewWorkspacePointerDown(event: PointerEvent): void {
+  if (!transformOverlayEnabled || isPointerFocusManagedByTarget(event.target)) {
+    return
+  }
+
+  if (event.currentTarget instanceof HTMLElement) {
+    event.currentTarget.focus({ preventScroll: true })
+  }
 }
 
 function applyStageSize(nextStageSize: PreviewPanelStageSize) {
@@ -475,6 +494,14 @@ watch(
   },
 )
 
+useShortcutContext({
+  panelFocus: 'transformOverlay',
+}, {
+  active: computed(() => transformOverlayEnabled),
+  target: previewWorkspaceRef,
+  trackFocus: true,
+})
+
 onMounted(() => {
   void fitViewportToCurrentStage()
 })
@@ -530,7 +557,13 @@ onBeforeUnmount(() => {
         </div>
       </TooltipProvider>
     </div>
-    <div data-effect-editor-interactive-region class="flex flex-1 flex-col min-h-0 divide-y">
+    <div
+      ref="previewWorkspace"
+      data-effect-editor-interactive-region
+      tabindex="-1"
+      class="outline-none flex flex-1 flex-col min-h-0 divide-y"
+      @pointerdown="handlePreviewWorkspacePointerDown"
+    >
       <div
         ref="viewportRef"
         data-testid="preview-viewport"

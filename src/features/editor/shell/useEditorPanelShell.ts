@@ -104,6 +104,7 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     when: { panelFocus: 'statementEditor' },
   })
 
+  const effectEditorShortcutPanelFocuses = ['effectEditor', 'transformOverlay'] as const
   const effectEditorShortcutDefinitions: EffectEditorShortcutDefinition[] = [
     {
       action: effectEditorProvider.undoDraft,
@@ -131,14 +132,16 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     },
   ]
 
-  for (const shortcut of effectEditorShortcutDefinitions) {
-    useShortcut({
-      execute: shortcut.action,
-      i18nKey: shortcut.i18nKey,
-      id: shortcut.id,
-      keys: shortcut.keys,
-      when: { panelFocus: 'effectEditor' },
-    })
+  for (const panelFocus of effectEditorShortcutPanelFocuses) {
+    for (const shortcut of effectEditorShortcutDefinitions) {
+      useShortcut({
+        execute: shortcut.action,
+        i18nKey: shortcut.i18nKey,
+        id: shortcut.id,
+        keys: shortcut.keys,
+        when: { panelFocus },
+      })
+    }
   }
 
   function focusTextEditorAfterEffectEditorClose(): void {
