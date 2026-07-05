@@ -327,6 +327,19 @@ describe('useEditorPanelShell', () => {
     scope.stop()
   })
 
+  it('effect 翻转快捷键在缺少当前会话时不会更新草稿和预览', () => {
+    const { scope } = createFixture()
+
+    effectEditorProviderMock.session = undefined
+
+    findEffectShortcutBinding('effectEditor', 'effect.flipHorizontal').execute()
+
+    expect(effectEditorProviderMock.updateDraft).not.toHaveBeenCalled()
+    expect(effectEditorProviderMock.requestPreview).not.toHaveBeenCalled()
+
+    scope.stop()
+  })
+
   it('文本模式关闭 effect editor 后会请求重新聚焦文本编辑器', async () => {
     const { scope, shell, tabsStore } = createFixture({
       currentProjection: 'text',
