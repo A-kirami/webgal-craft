@@ -209,7 +209,7 @@ describe('engineSwitch.switchEngine', () => {
       id: 'engine-new',
       path: AbsPath.from('/engines/new'),
       engineId: 'open-webgal.webgal',
-      version: '4.6.1',
+      version: '4.6.2',
     })
     dbEngineGetMock.mockResolvedValue(oldEngine)
     resolveTemplatePathMock
@@ -220,7 +220,7 @@ describe('engineSwitch.switchEngine', () => {
 
     await expect(engineSwitch.switchEngine(game, newEngine)).resolves.toBeUndefined()
     expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/demo', expect.objectContaining({
-      engine: { id: 'open-webgal.webgal', version: '4.6.1' },
+      engine: { id: 'open-webgal.webgal', version: '4.6.2' },
     }))
   })
 

@@ -111,7 +111,7 @@ describe('useCreateGameForm', () => {
       status: 'created',
       availability: 'available',
       metadata: {
-        webgalVersion: '4.6.1',
+        webgalVersion: '4.6.2',
       },
     })
     existsMock.mockResolvedValue(false)
@@ -226,7 +226,7 @@ describe('useCreateGameForm', () => {
       status: 'created',
       availability: 'broken',
       metadata: {
-        webgalVersion: '4.6.1',
+        webgalVersion: '4.6.2',
       },
     })
     reconcileEngineRecordMock.mockResolvedValue('available')

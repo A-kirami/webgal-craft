@@ -46,7 +46,7 @@ describe('requestGameRuntimeRebind', () => {
     const selectedEngine = createTestEngine({
       id: 'engine-new',
       engineId: 'open-webgal.webgal',
-      version: '4.6.1',
+      version: '4.6.2',
     })
     const game = createTestGame({
       engineId: 'engine-old',
