@@ -141,7 +141,7 @@ function resolvePreviewInteractionCursor(): 'auto' | 'grab' | 'grabbing' | undef
 }
 
 function isPointerFocusManagedByTarget(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement
+  return target instanceof Element
     && target.closest(PREVIEW_WORKSPACE_FOCUSABLE_SELECTOR) !== null
 }
 
