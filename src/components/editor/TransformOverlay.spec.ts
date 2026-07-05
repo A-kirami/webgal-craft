@@ -58,6 +58,17 @@ function dispatchKeydown(key: string, options: KeyboardEventInit = {}): Keyboard
   return event
 }
 
+function dispatchKeyup(key: string, options: KeyboardEventInit = {}): KeyboardEvent {
+  const event = new KeyboardEvent('keyup', {
+    bubbles: true,
+    cancelable: true,
+    key,
+    ...options,
+  })
+  globalThis.dispatchEvent(event)
+  return event
+}
+
 function findMoveHandle(): HTMLButtonElement | null {
   return document.querySelector('[aria-label="edit.previewPanel.transformOverlay.move"]')
 }
@@ -69,37 +80,61 @@ describe('TransformOverlay', () => {
     vi.unstubAllGlobals()
   })
 
-  it('方向键会按舞台坐标微调位置', async () => {
+  it('方向键会先预览移动并在松开时提交', async () => {
     const onCommit = vi.fn()
     const onPreview = vi.fn()
     renderTransformOverlay({ onCommit, onPreview })
 
-    const event = dispatchKeydown('ArrowRight')
+    const keydownEvent = dispatchKeydown('ArrowRight')
     await nextTick()
 
-    expect(event.defaultPrevented).toBe(true)
-    expect(onPreview).not.toHaveBeenCalled()
+    expect(keydownEvent.defaultPrevented).toBe(true)
+    expect(onCommit).not.toHaveBeenCalled()
+    expect(onPreview).toHaveBeenCalledWith({
+      ...displayTransform,
+      position: { x: 11, y: 20 },
+    })
+
+    const keyupEvent = dispatchKeyup('ArrowRight')
+    await nextTick()
+
+    expect(keyupEvent.defaultPrevented).toBe(true)
+    expect(onCommit).toHaveBeenCalledOnce()
     expect(onCommit).toHaveBeenCalledWith({
       ...displayTransform,
       position: { x: 11, y: 20 },
     })
   })
 
-  it('方向键自动重复时不会重复提交移动', async () => {
+  it('方向键自动重复时会持续预览并只在松开时提交一次', async () => {
     const onCommit = vi.fn()
-    renderTransformOverlay({ onCommit })
+    const onPreview = vi.fn()
+    renderTransformOverlay({ onCommit, onPreview })
 
     const firstEvent = dispatchKeydown('ArrowRight')
     await nextTick()
     const repeatedEvent = dispatchKeydown('ArrowRight', { repeat: true })
     await nextTick()
+    const fastRepeatedEvent = dispatchKeydown('ArrowRight', { repeat: true, shiftKey: true })
+    await nextTick()
 
     expect(firstEvent.defaultPrevented).toBe(true)
     expect(repeatedEvent.defaultPrevented).toBe(true)
+    expect(fastRepeatedEvent.defaultPrevented).toBe(true)
+    expect(onCommit).not.toHaveBeenCalled()
+    expect(onPreview).toHaveBeenCalledTimes(3)
+    expect(onPreview).toHaveBeenLastCalledWith({
+      ...displayTransform,
+      position: { x: 22, y: 20 },
+    })
+
+    dispatchKeyup('ArrowRight')
+    await nextTick()
+
     expect(onCommit).toHaveBeenCalledOnce()
     expect(onCommit).toHaveBeenCalledWith({
       ...displayTransform,
-      position: { x: 11, y: 20 },
+      position: { x: 22, y: 20 },
     })
   })
 
@@ -156,6 +191,48 @@ describe('TransformOverlay', () => {
     expect(onCancel).toHaveBeenCalledOnce()
     expect(onPreview).not.toHaveBeenCalled()
     expect(onCommit).not.toHaveBeenCalled()
+  })
+
+  it('Escape 会取消正在进行的方向键移动而不是提交变换', async () => {
+    const onCancel = vi.fn()
+    const onCommit = vi.fn()
+    const onPreview = vi.fn()
+    renderTransformOverlay({ onCancel, onCommit, onPreview })
+
+    dispatchKeydown('ArrowRight')
+    await nextTick()
+
+    expect(onPreview).toHaveBeenCalledOnce()
+
+    const event = dispatchKeydown('Escape')
+    await nextTick()
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(onCancel).toHaveBeenCalledOnce()
+    expect(onCommit).not.toHaveBeenCalled()
+  })
+
+  it('window blur 会提交正在进行的方向键移动', async () => {
+    const onCancel = vi.fn()
+    const onCommit = vi.fn()
+    const onPreview = vi.fn()
+    renderTransformOverlay({ onCancel, onCommit, onPreview })
+
+    dispatchKeydown('ArrowDown')
+    await nextTick()
+    dispatchKeydown('ArrowDown', { repeat: true })
+    await nextTick()
+
+    globalThis.dispatchEvent(new Event('blur'))
+    await nextTick()
+
+    expect(onCancel).not.toHaveBeenCalled()
+    expect(onPreview).toHaveBeenCalledTimes(2)
+    expect(onCommit).toHaveBeenCalledOnce()
+    expect(onCommit).toHaveBeenCalledWith({
+      ...displayTransform,
+      position: { x: 10, y: 22 },
+    })
   })
 
   it('pointercancel 会取消正在进行的拖拽而不是提交变换', async () => {
