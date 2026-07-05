@@ -32,4 +32,16 @@ describe('flipTransformScaleAxis', () => {
       scale: { y: -0.8 },
     })
   })
+
+  it('无显式缩放和基线时使用编辑器默认展示值翻转指定轴', () => {
+    expect(flipTransformScaleAxis({
+      axis: 'x',
+      transform: {
+        alpha: 0.6,
+      },
+    })).toEqual({
+      alpha: 0.6,
+      scale: { x: -1 },
+    })
+  })
 })
