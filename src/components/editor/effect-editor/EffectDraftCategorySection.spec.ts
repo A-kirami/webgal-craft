@@ -14,7 +14,11 @@ import EffectDraftCategorySection from './EffectDraftCategorySection.vue'
 
 import type { EffectDraftCategoryControls } from './effectDraftForm.types'
 
-function createControls() {
+interface CreateControlsOptions {
+  linkedSliderLockByPath?: Record<string, boolean>
+}
+
+function createControls(options: CreateControlsOptions = {}) {
   const clearPaths = vi.fn()
   const clearablePathKeys = new Set([
     'position.x',
@@ -42,7 +46,7 @@ function createControls() {
     getSliderInputValue: () => '1',
     updateSliderField: vi.fn(),
     flushSliderField: vi.fn(),
-    isLinkedSliderLocked: () => true,
+    isLinkedSliderLocked: (param: { key: string }) => options.linkedSliderLockByPath?.[param.key] ?? true,
     toggleLinkedSliderLock: vi.fn(),
     getLinkedSliderLabel: () => 'Scale',
     getAxisCompactLabel: (path: string) => path.endsWith('.x') ? 'X' : 'Y',
@@ -82,6 +86,14 @@ const globalStubs = {
   Label: createBrowserContainerStub('StubLabel', 'label'),
   SegmentedControl: createBrowserValueStub('StubSegmentedControl'),
   Slider: createBrowserValueStub('StubSlider'),
+}
+
+const globalStubsWithTooltip = {
+  ...globalStubs,
+  Tooltip: createBrowserContainerStub('StubTooltip'),
+  TooltipContent: createBrowserContainerStub('StubTooltipContent'),
+  TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
+  TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
 }
 
 describe('EffectDraftCategorySection', () => {
@@ -239,6 +251,68 @@ describe('EffectDraftCategorySection', () => {
 
     expect(controls.flipScaleAxis).toHaveBeenNthCalledWith(1, 'x')
     expect(controls.flipScaleAxis).toHaveBeenNthCalledWith(2, 'y')
+  })
+
+  it('根据缩放关联状态显示对应的切换提示', async () => {
+    const { controls } = createControls({
+      linkedSliderLockByPath: {
+        'locked-scale.x': true,
+        'unlocked-scale.x': false,
+      },
+    })
+
+    renderInBrowser(EffectDraftCategorySection, {
+      props: {
+        category: {
+          key: 'transform',
+          label: 'Transform',
+          items: [
+            {
+              kind: 'linked-slider',
+              key: 'locked-scale',
+              param: {
+                key: 'locked-scale.x',
+                linkedPairKey: 'locked-scale.y',
+                type: 'number',
+                label: 'Scale X',
+                linkedGroupLabel: 'Scale',
+                min: 0,
+                max: 2,
+                step: 0.01,
+                defaultValue: 1,
+              },
+            },
+            {
+              kind: 'linked-slider',
+              key: 'unlocked-scale',
+              param: {
+                key: 'unlocked-scale.x',
+                linkedPairKey: 'unlocked-scale.y',
+                type: 'number',
+                label: 'Scale X',
+                linkedGroupLabel: 'Scale',
+                min: 0,
+                max: 2,
+                step: 0.01,
+                defaultValue: 1,
+              },
+            },
+          ],
+        },
+        controls,
+        isPanelLayout: false,
+        resolveLabel: (value: string | undefined) => String(value ?? ''),
+      },
+      global: {
+        plugins: [createBrowserLocalizedI18n()],
+        stubs: globalStubsWithTooltip,
+      },
+    })
+
+    await expect.element(page.getByRole('button', { name: '解除缩放关联' })).toBeInTheDocument()
+    await expect.element(page.getByText('解除缩放关联')).toBeInTheDocument()
+    await expect.element(page.getByRole('button', { name: '关联 X/Y 缩放' })).toBeInTheDocument()
+    await expect.element(page.getByText('关联 X/Y 缩放')).toBeInTheDocument()
   })
 
   it('将固定宽度放在标签与按钮的公共头部容器上，让按钮贴近标签文本', async () => {

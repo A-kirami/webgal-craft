@@ -476,6 +476,8 @@ modals:
     flip: Flip
     flipHorizontal: Flip Horizontal
     flipVertical: Flip Vertical
+    linkScale: Link X/Y Scale
+    unlinkScale: Unlink X/Y Scale
     categories:
       transform: Transform
       effects: Effects

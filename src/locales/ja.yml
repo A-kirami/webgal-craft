@@ -476,6 +476,8 @@ modals:
     flip: 反転
     flipHorizontal: 水平方向に反転
     flipVertical: 垂直方向に反転
+    linkScale: X/Y スケールを連動
+    unlinkScale: スケール連動を解除
     categories:
       transform: 変換
       effects: エフェクト
