@@ -3,6 +3,9 @@ import { computed, effectScope, reactive, shallowRef } from 'vue'
 
 import { useEditorPanelShell } from '../useEditorPanelShell'
 
+import type { Transform } from '~/domain/stage/types'
+import type { TransformBaselineSource } from '~/features/editor/transform-resolution/model'
+
 interface BindingMock {
   enableFocusStatement: boolean
   getEntry: () => unknown
@@ -23,6 +26,14 @@ interface CommandPanelLike {
 
 interface ReadonlyRefLike<T> {
   readonly value: T
+}
+
+interface EffectEditorSessionMock {
+  baselineSource?: TransformBaselineSource
+  baselineTransform?: Transform
+  draft: {
+    transform: Transform
+  }
 }
 
 const {
@@ -52,7 +63,7 @@ const {
     requestPreview: vi.fn(),
     redoDraft: vi.fn(() => false),
     resetToInitialDraft: vi.fn(),
-    session: undefined,
+    session: undefined as EffectEditorSessionMock | undefined,
     undoDraft: vi.fn(() => false),
     updateDraft: vi.fn(),
   },
@@ -185,8 +196,10 @@ describe('useEditorPanelShell', () => {
     effectEditorProviderMock.close.mockResolvedValue(true)
     effectEditorProviderMock.copyCurrentEffect.mockClear()
     effectEditorProviderMock.pasteCurrentEffect.mockClear()
+    effectEditorProviderMock.requestPreview.mockClear()
     effectEditorProviderMock.redoDraft.mockClear()
     effectEditorProviderMock.redoDraft.mockReturnValue(false)
+    effectEditorProviderMock.session = undefined
     effectEditorProviderMock.undoDraft.mockClear()
     effectEditorProviderMock.undoDraft.mockReturnValue(false)
     effectEditorProviderMock.updateDraft.mockClear()
@@ -245,7 +258,7 @@ describe('useEditorPanelShell', () => {
     scope.stop()
   })
 
-  it('会注册 effect editor 和 transform overlay 焦点下的效果历史与剪贴板快捷键', () => {
+  it('会注册 effect editor 和 transform overlay 焦点下的效果编辑快捷键', () => {
     const { scope } = createFixture()
 
     const effectBindings = collectEffectShortcutBindings()
@@ -254,6 +267,8 @@ describe('useEditorPanelShell', () => {
       ['effect.redo', ['Mod+Shift+Z', 'Mod+Y']],
       ['effect.copy', 'Mod+C'],
       ['effect.paste', 'Mod+V'],
+      ['effect.flipHorizontal', 'Shift+H'],
+      ['effect.flipVertical', 'Shift+V'],
     ]
 
     for (const panelFocus of ['effectEditor', 'transformOverlay']) {
@@ -265,7 +280,15 @@ describe('useEditorPanelShell', () => {
     scope.stop()
   })
 
-  it('effect 历史和剪贴板快捷键会委托给 effect editor provider', async () => {
+  it('effect 历史、剪贴板和翻转快捷键会委托给 effect editor provider', async () => {
+    effectEditorProviderMock.session = {
+      baselineTransform: { scale: { x: 1, y: 0.75 } },
+      draft: {
+        transform: {
+          scale: { x: 1.25 },
+        },
+      },
+    }
     const { scope } = createFixture()
 
     await Promise.all([
@@ -277,12 +300,42 @@ describe('useEditorPanelShell', () => {
       findEffectShortcutBinding('transformOverlay', 'effect.redo').execute(),
       findEffectShortcutBinding('transformOverlay', 'effect.copy').execute(),
       findEffectShortcutBinding('transformOverlay', 'effect.paste').execute(),
+      findEffectShortcutBinding('effectEditor', 'effect.flipHorizontal').execute(),
+      findEffectShortcutBinding('transformOverlay', 'effect.flipVertical').execute(),
     ])
 
     expect(effectEditorProviderMock.undoDraft).toHaveBeenCalledTimes(2)
     expect(effectEditorProviderMock.redoDraft).toHaveBeenCalledTimes(2)
     expect(effectEditorProviderMock.copyCurrentEffect).toHaveBeenCalledTimes(2)
     expect(effectEditorProviderMock.pasteCurrentEffect).toHaveBeenCalledTimes(2)
+    expect(effectEditorProviderMock.updateDraft).toHaveBeenNthCalledWith(1, {
+      transform: {
+        scale: { x: -1.25 },
+      },
+    })
+    expect(effectEditorProviderMock.updateDraft).toHaveBeenNthCalledWith(2, {
+      transform: {
+        scale: { x: 1.25, y: -0.75 },
+      },
+    })
+    expect(effectEditorProviderMock.requestPreview).toHaveBeenCalledTimes(2)
+    expect(effectEditorProviderMock.requestPreview).toHaveBeenCalledWith({
+      flush: true,
+      schedule: 'immediate',
+    })
+
+    scope.stop()
+  })
+
+  it('effect 翻转快捷键在缺少当前会话时不会更新草稿和预览', () => {
+    const { scope } = createFixture()
+
+    effectEditorProviderMock.session = undefined
+
+    findEffectShortcutBinding('effectEditor', 'effect.flipHorizontal').execute()
+
+    expect(effectEditorProviderMock.updateDraft).not.toHaveBeenCalled()
+    expect(effectEditorProviderMock.requestPreview).not.toHaveBeenCalled()
 
     scope.stop()
   })

@@ -473,6 +473,9 @@ modals:
     previewUnsyncedCloseBlockedTitle: 运行时预览未同步
     previewUnsyncedCloseBlockedMessage: 当前效果可能已经提交到预览运行时，但编辑器尚未确认同步状态。请重新选择目标行，或显式丢弃后重新打开效果编辑器。
     clearProperty: 清除{name}
+    flip: 翻转
+    flipHorizontal: 水平翻转
+    flipVertical: 垂直翻转
     categories:
       transform: 变换
       effects: 效果

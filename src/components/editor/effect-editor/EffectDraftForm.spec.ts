@@ -58,6 +58,58 @@ describe('EffectDraftForm', () => {
     expectNoConsoleMessage('Invalid prop: type check failed for prop "modelValue"')
   })
 
+  it('在旋转控件旁提供水平和垂直翻转按钮', async () => {
+    const transformUpdates = vi.fn()
+
+    renderInBrowser(EffectDraftForm, {
+      props: {
+        'duration': '200',
+        'ease': '',
+        'onUpdate:transform': transformUpdates,
+        'transform': {
+          position: { x: 12 },
+          rotation: 0.5,
+          scale: {
+            x: 1.25,
+            y: -0.75,
+          },
+        },
+      },
+      global: {
+        plugins: [createPinia(), createBrowserLocalizedI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: '水平翻转' }).click()
+    await page.getByRole('button', { name: '垂直翻转' }).click()
+
+    expect(transformUpdates).toHaveBeenNthCalledWith(1, {
+      value: {
+        position: { x: 12 },
+        rotation: 0.5,
+        scale: {
+          x: -1.25,
+          y: -0.75,
+        },
+      },
+      deferAutoApply: false,
+      flush: true,
+    })
+    expect(transformUpdates).toHaveBeenNthCalledWith(2, {
+      value: {
+        position: { x: 12 },
+        rotation: 0.5,
+        scale: {
+          x: 1.25,
+          y: 0.75,
+        },
+      },
+      deferAutoApply: false,
+      flush: true,
+    })
+  })
+
   it('渲染顶部控件并按分类输出特效参数区域', async () => {
     renderInBrowser(EffectDraftForm, {
       props: {
@@ -77,7 +129,7 @@ describe('EffectDraftForm', () => {
     })
 
     await expect.element(page.getByText('过渡时间')).toBeInTheDocument()
-    expect(page.getByRole('group').elements()).toHaveLength(EFFECT_CATEGORIES.length)
+    expect(page.getByTestId('effect-draft-category-section').elements()).toHaveLength(EFFECT_CATEGORIES.length)
   })
 
   it('显示基线字段后修改其他字段不会把基线写入变换', async () => {

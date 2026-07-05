@@ -18,7 +18,7 @@ interface Props {
 const props = defineProps<Props>()
 
 type EffectDraftRenderItem = EffectDraftCategoryRenderModel['items'][number]
-type EffectDraftClearableItem = Exclude<EffectDraftRenderItem, { kind: 'choice' | 'position' }>
+type EffectDraftClearableItem = Exclude<EffectDraftRenderItem, { kind: 'choice' | 'flip-actions' | 'position' }>
 
 const CLEAR_IMMEDIATE_OPTIONS = {
   schedule: 'immediate',
@@ -76,7 +76,7 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
       {{ resolveLabel(category.label) }}
     </legend>
 
-    <div class="flex flex-col gap-2.5">
+    <div class="flex flex-wrap gap-2.5">
       <template
         v-for="item in category.items"
         :key="item.key"
@@ -84,7 +84,7 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
         <div
           v-if="item.kind === 'position'"
           class="gap-2 grid"
-          :class="isPanelLayout ? 'w-fit grid-cols-[repeat(2,minmax(0,14rem))]' : 'grid-cols-2'"
+          :class="isPanelLayout ? 'w-fit grid-cols-[repeat(2,minmax(0,14rem))]' : 'w-full grid-cols-2'"
         >
           <div
             v-for="param in item.params"
@@ -128,7 +128,7 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
           </div>
         </div>
 
-        <div v-else-if="item.kind === 'number'" class="group/field flex gap-2 items-center">
+        <div v-else-if="item.kind === 'number'" class="group/field flex gap-2 w-full items-center">
           <div class="flex shrink-0 gap-1 min-w-0 w-24 items-center">
             <Label
               :for="controls.numberInputId(item.param.key)"
@@ -165,7 +165,7 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
           />
         </div>
 
-        <div v-else-if="item.kind === 'slider'" class="group/field flex gap-2 items-center">
+        <div v-else-if="item.kind === 'slider'" class="group/field flex gap-2 w-full items-center">
           <div class="flex shrink-0 gap-1 min-w-0 w-24 items-center">
             <Label :for="controls.sliderInputId(item.param.key)" class="text-xs text-muted-foreground shrink min-w-0">
               <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
@@ -206,7 +206,7 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
           </div>
         </div>
 
-        <div v-else-if="item.kind === 'linked-slider'" class="group/field px-2.5 py-2 border border-border/60 rounded-md">
+        <div v-else-if="item.kind === 'linked-slider'" class="group/field px-2.5 py-2 border border-border/60 rounded-md w-full">
           <div class="mb-2 flex items-center justify-between" :class="isPanelLayout ? 'max-w-[28rem]' : ''">
             <div class="flex gap-1 min-w-0 items-center">
               <span class="text-xs text-muted-foreground truncate">
@@ -288,28 +288,17 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
           </div>
         </div>
 
-        <div v-else-if="item.kind === 'dial'" class="group/field flex gap-2 items-center">
-          <div v-if="!item.param.compact" class="flex shrink-0 gap-1 min-w-0 w-24 items-center">
-            <Label :for="controls.dialInputId(item.param.key)" class="text-xs text-muted-foreground shrink min-w-0">
-              <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
-            </Label>
-            <div class="flex shrink-0 size-5 items-center justify-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                :class="getClearButtonClass(getClearPathsForItem(item))"
-                :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
-                :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
-                :title="getClearPropertyLabel(item.param.label)"
-                :aria-label="getClearPropertyLabel(item.param.label)"
-                @click="clearPaths(getClearPathsForItem(item))"
-              >
-                <div class="i-lucide-rotate-ccw size-3" />
-              </Button>
-            </div>
-          </div>
-          <div :class="item.param.compact ? 'px-2 py-1.5 border border-border/60 rounded-md inline-flex gap-2 items-center' : 'flex flex-1 gap-2 items-center'">
-            <div v-if="item.param.compact" class="flex gap-1 min-w-0 items-center">
+        <div
+          v-else-if="item.kind === 'dial'"
+          class="group/field flex gap-2 items-center"
+          :class="!item.param.compact && 'w-full'"
+        >
+          <div
+            :class="item.param.compact ? 'px-2 py-1.5 border border-border/60 rounded-md inline-flex gap-2 items-center' : 'flex flex-1 gap-2 items-center'"
+            role="group"
+            :aria-label="resolveLabel(item.param.label)"
+          >
+            <div class="flex shrink-0 gap-1 min-w-0 items-center" :class="!item.param.compact && 'w-24'">
               <Label :for="controls.dialInputId(item.param.key)" class="text-xs text-muted-foreground shrink min-w-0">
                 <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
               </Label>
@@ -353,7 +342,54 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
           </div>
         </div>
 
-        <div v-else-if="item.kind === 'color'" class="group/field flex gap-2 items-start">
+        <div
+          v-else-if="item.kind === 'flip-actions'"
+          class="px-2 py-1.5 border border-border/60 rounded-md inline-flex gap-1 items-center"
+          role="group"
+          :aria-label="$t('modals.effectEditor.flip')"
+        >
+          <span class="text-xs text-muted-foreground shrink-0">
+            {{ $t('modals.effectEditor.flip') }}
+          </span>
+          <TooltipProvider :delay-duration="0">
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  class="h-7 w-9"
+                  :aria-label="$t('modals.effectEditor.flipHorizontal')"
+                  @click="controls.flipScaleAxis('x')"
+                >
+                  <div class="i-lucide-flip-horizontal size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" class="px-2 py-1">
+                {{ $t('modals.effectEditor.flipHorizontal') }}
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  class="h-7 w-9"
+                  :aria-label="$t('modals.effectEditor.flipVertical')"
+                  @click="controls.flipScaleAxis('y')"
+                >
+                  <div class="i-lucide-flip-vertical size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" class="px-2 py-1">
+                {{ $t('modals.effectEditor.flipVertical') }}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        <div v-else-if="item.kind === 'color'" class="group/field flex gap-2 w-full items-start">
           <div class="flex shrink-0 gap-1 min-w-0 w-24 items-start">
             <Label :for="controls.colorControlId(item.param)" class="text-xs text-muted-foreground pt-1 shrink min-w-0">
               <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
@@ -384,7 +420,7 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
           </div>
         </div>
 
-        <div v-else-if="item.kind === 'choice'" class="group/field flex gap-2 items-center">
+        <div v-else-if="item.kind === 'choice'" class="group/field flex gap-2 w-full items-center">
           <div class="flex shrink-0 min-w-0 w-24 items-center">
             <Label :for="controls.segmentedControlId(item.param.key)" class="text-xs text-muted-foreground shrink min-w-0">
               <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>

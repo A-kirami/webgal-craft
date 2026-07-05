@@ -6,6 +6,7 @@ import type {
   NumberField,
 } from '~/features/editor/command-registry/schema'
 import type { EffectRenderItem } from '~/features/editor/effect-editor/effect-editor-config'
+import type { TransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 import type { EmitTransformOptions } from '~/features/editor/effect-editor/types'
 import type { EffectSegmentedOption } from '~/features/editor/effect-editor/useEffectSegmentedControl'
 
@@ -58,6 +59,7 @@ export interface EffectDraftCategoryControls {
   updateDialField: (param: DialField, rawDegree: string | number) => void
   flushDialField: (param: DialField) => void
   handleDialPointerDown: (event: PointerEvent, param: DialField) => void
+  flipScaleAxis: (axis: TransformScaleAxis) => void
   getColorPickerValue: (param: EffectDraftColorField) => { b: number, g: number, r: number }
   handleColorPickerPointerDown: (event: PointerEvent, param: EffectDraftColorField) => void
   handleColorPickerChange: (param: EffectDraftColorField, rawValue: unknown) => void
