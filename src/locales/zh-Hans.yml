@@ -476,6 +476,8 @@ modals:
     flip: 翻转
     flipHorizontal: 水平翻转
     flipVertical: 垂直翻转
+    linkScale: 关联 X/Y 缩放
+    unlinkScale: 解除缩放关联
     categories:
       transform: 变换
       effects: 效果

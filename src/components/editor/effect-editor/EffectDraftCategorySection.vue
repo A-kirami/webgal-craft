@@ -227,16 +227,29 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
                 </Button>
               </div>
             </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              :aria-label="controls.getLinkedSliderLabel(item.param)"
-              :aria-pressed="controls.isLinkedSliderLocked(item.param)"
-              :class="['h-7 w-7', controls.isLinkedSliderLocked(item.param) && 'bg-accent text-accent-foreground hover:bg-accent/80']"
-              @click="controls.toggleLinkedSliderLock(item.param)"
-            >
-              <div :class="controls.isLinkedSliderLocked(item.param) ? 'i-lucide-link' : 'i-lucide-unlink'" class="size-3.5" />
-            </Button>
+            <TooltipProvider :delay-duration="0">
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    :aria-label="controls.isLinkedSliderLocked(item.param) ? $t('modals.effectEditor.unlinkScale') : $t('modals.effectEditor.linkScale')"
+                    :aria-pressed="controls.isLinkedSliderLocked(item.param)"
+                    :class="['h-7 w-7', controls.isLinkedSliderLocked(item.param) && 'bg-accent text-accent-foreground hover:bg-accent/80']"
+                    @click="controls.toggleLinkedSliderLock(item.param)"
+                  >
+                    <div :class="controls.isLinkedSliderLocked(item.param) ? 'i-lucide-link' : 'i-lucide-unlink'" class="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" class="px-2 py-1">
+                  {{
+                    controls.isLinkedSliderLocked(item.param)
+                      ? $t('modals.effectEditor.unlinkScale')
+                      : $t('modals.effectEditor.linkScale')
+                  }}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           <div class="flex flex-col gap-2" :class="isPanelLayout ? 'max-w-[28rem]' : 'max-w-76'">
