@@ -48,21 +48,29 @@ WebGAL Craft 是一款为 [WebGAL](https://github.com/OpenWebGAL/WebGAL) 游戏�
 
 ## 特性
 
-**轻松创作**
+**资源管理**
 
-可视化编辑与脚本编辑并行，命令默认值与语句编组减少重复配置，让创作者更快组织演出内容。
+集中管理立绘、背景、音效等项目素材，在创作过程中随取随用。
 
-**高效工作流**
+**可视化编辑**
 
-命令面板、快捷键、资源面板与实时预览串联常用操作，编辑、检查和调整可以在同一工作流中完成。
+在可视化界面中组织剧情、对白和演出参数，同时保留脚本编辑能力，兼顾上手效率与精细控制。
 
-**安心管理**
+**本地历史版本**
 
-本地历史保留场景版本，引擎与模板管理支持项目依赖切换，复杂项目也能更稳妥地维护。
+自动记录场景保存历史，脚本变更可追溯、可回退，长篇项目也能更稳妥地维护。
 
-**清晰易用**
+**快速预览**
 
-界面围绕项目、脚本、资源和预览组织，操作简单易用，让创作者更专注于故事与演出本身。
+在编辑器中实时预览演出效果，边创作边验证，减少在编辑器和游戏窗口之间反复切换。
+
+**引擎与模板切换**
+
+按作品需要管理和切换 WebGAL 引擎与项目模板，便于适配不同版本和制作风格。
+
+**演出参数复用**
+
+保存常用语句默认值与语句组，减少重复配置和手写脚本，让创作流程更稳定。
 
 ## 下载安装
 
@@ -70,7 +78,7 @@ WebGAL Craft 是一款为 [WebGAL](https://github.com/OpenWebGAL/WebGAL) 游戏�
 
 | 平台 | 构建 | 推荐下载 |
 | --- | --- | --- |
-| Windows | 64-bit | `.exe` / `.msi` |
+| Windows | 64-bit | `.exe` |
 | macOS | Intel / Apple Silicon | `.dmg` |
 | Linux | x64 | `.AppImage` / `.deb` |
 
@@ -96,9 +104,9 @@ Logo: CC-BY-NC-ND, Designs by Akirami
 
 ## 鸣谢
 
-### 开发者
+### 贡献者
 
-感谢以下开发者对 WebGAL Craft 作出的贡献
+感谢以下贡献者对 WebGAL Craft 作出的贡献
 
 <a href="https://github.com/A-kirami/webgal-craft/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=A-kirami/webgal-craft" />
