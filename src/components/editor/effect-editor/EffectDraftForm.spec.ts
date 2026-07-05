@@ -87,7 +87,7 @@ describe('EffectDraftForm', () => {
     expect(transformUpdates).toHaveBeenNthCalledWith(1, {
       value: {
         position: { x: 12 },
-        rotation: 0.5,
+        rotation: -0.5,
         scale: {
           x: -1.25,
           y: -0.75,
@@ -99,7 +99,7 @@ describe('EffectDraftForm', () => {
     expect(transformUpdates).toHaveBeenNthCalledWith(2, {
       value: {
         position: { x: 12 },
-        rotation: 0.5,
+        rotation: -0.5,
         scale: {
           x: 1.25,
           y: 0.75,
