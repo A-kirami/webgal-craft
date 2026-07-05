@@ -71,7 +71,7 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
   const effectEditorSession = computed(() => effectEditorProvider.session)
 
   function flipEffectScaleAxis(axis: TransformScaleAxis): void {
-    const currentSession = effectEditorProvider.session
+    const currentSession = effectEditorSession.value
     if (!currentSession) {
       return
     }
