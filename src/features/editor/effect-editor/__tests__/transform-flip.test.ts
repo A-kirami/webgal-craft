@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { flipTransformScaleAxis } from '../transform-flip'
 
 describe('flipTransformScaleAxis', () => {
-  it('按当前显式缩放值翻转指定轴并保留其他字段', () => {
+  it('按屏幕轴翻转指定缩放轴并反转旋转方向', () => {
     expect(flipTransformScaleAxis({
       axis: 'x',
       transform: {
@@ -13,7 +13,7 @@ describe('flipTransformScaleAxis', () => {
       },
     })).toEqual({
       position: { x: 12 },
-      rotation: 0.5,
+      rotation: -0.5,
       scale: { x: -1.25, y: -0.75 },
     })
   })
