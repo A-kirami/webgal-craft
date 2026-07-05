@@ -202,7 +202,7 @@ describe('EffectDraftCategorySection', () => {
     })
   })
 
-  it('将翻转按钮放在独立分组中，而不是旋转控件内部', async () => {
+  it('按独立渲染项输出翻转分组并委托对应轴向操作', async () => {
     const { controls } = createControls()
 
     renderInBrowser(EffectDraftCategorySection, {
@@ -212,16 +212,8 @@ describe('EffectDraftCategorySection', () => {
           label: 'Transform',
           items: [
             {
-              kind: 'dial',
-              key: 'rotation',
-              param: {
-                key: 'rotation',
-                type: 'dial',
-                label: 'Rotation',
-                defaultValue: 0,
-                dialUnit: 'rad',
-                compact: true,
-              },
+              kind: 'flip-actions',
+              key: 'transform-flip',
             },
           ],
         },
@@ -235,15 +227,18 @@ describe('EffectDraftCategorySection', () => {
       },
     })
 
-    const rotationGroup = await page.getByRole('group', { name: 'Rotation' }).element()
     const flipGroup = await page.getByRole('group', { name: '翻转' }).element()
     const horizontalFlipButton = await page.getByRole('button', { name: '水平翻转' }).element()
     const verticalFlipButton = await page.getByRole('button', { name: '垂直翻转' }).element()
 
-    expect(rotationGroup.contains(horizontalFlipButton)).toBe(false)
-    expect(rotationGroup.contains(verticalFlipButton)).toBe(false)
     expect(flipGroup.contains(horizontalFlipButton)).toBe(true)
     expect(flipGroup.contains(verticalFlipButton)).toBe(true)
+
+    await page.getByRole('button', { name: '水平翻转' }).click()
+    await page.getByRole('button', { name: '垂直翻转' }).click()
+
+    expect(controls.flipScaleAxis).toHaveBeenNthCalledWith(1, 'x')
+    expect(controls.flipScaleAxis).toHaveBeenNthCalledWith(2, 'y')
   })
 
   it('将固定宽度放在标签与按钮的公共头部容器上，让按钮贴近标签文本', async () => {

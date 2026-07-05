@@ -14,11 +14,16 @@ export interface EffectCategory {
   icon: string
   defaultOpen?: boolean
   params: EffectParamDef[]
+  actions?: EffectCategoryAction[]
 }
 
 // ─── EffectRenderItem：判别联合，用于模板类型安全分发 ───
 
+export type EffectCategoryAction =
+  | { kind: 'flip-actions', key: string }
+
 export type EffectRenderItem =
+  | EffectCategoryAction
   | { kind: 'position', key: string, params: NumberField[] }
   | { kind: 'number', key: string, param: NumberField }
   | { kind: 'slider', key: string, param: NumberField }
@@ -37,8 +42,9 @@ export function getEffectParamKey(param: EffectParamDef): string {
   return param.key
 }
 
-export function buildCategoryRenderItems(params: EffectParamDef[]): EffectRenderItem[] {
+export function buildCategoryRenderItems(category: EffectCategory): EffectRenderItem[] {
   const items: EffectRenderItem[] = []
+  const { params } = category
 
   // 收集 position 参数
   const positionParams = params.filter(
@@ -100,6 +106,8 @@ export function buildCategoryRenderItems(params: EffectParamDef[]): EffectRender
     }
   }
 
+  items.push(...category.actions ?? [])
+
   return items
 }
 
@@ -130,6 +138,9 @@ export const EFFECT_CATEGORIES: EffectCategory[] = [
       { key: 'scale.x', type: 'number', label: t => t('modals.effectEditor.params.scaleX'), linkedGroupLabel: t => t('modals.effectEditor.params.scale'), defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, linkedPairKey: 'scale.y', variant: 'slider-input' },
       { key: 'scale.y', type: 'number', label: t => t('modals.effectEditor.params.scaleY'), defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, linkedPairKey: 'scale.x', variant: 'slider-input' },
       { key: 'rotation', type: 'dial', label: t => t('modals.effectEditor.params.rotation'), defaultValue: 0, dialUnit: 'rad', compact: true },
+    ],
+    actions: [
+      { kind: 'flip-actions', key: 'transform-flip' },
     ],
   },
   {

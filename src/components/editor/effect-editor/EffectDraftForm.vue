@@ -71,7 +71,7 @@ const emit = defineEmits<{
 const EFFECT_DRAFT_CATEGORY_RENDER_MODELS: EffectDraftCategoryRenderModel[] = EFFECT_CATEGORIES.map((category, index) => ({
   key: `${category.icon}-${index}`,
   label: category.label,
-  items: buildCategoryRenderItems(category.params),
+  items: buildCategoryRenderItems(category),
 }))
 
 const { t } = useI18n()
