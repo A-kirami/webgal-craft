@@ -50,7 +50,7 @@ interface DeleteEngineCheckResult {
   reason?: 'ENGINE_HAS_ASSOCIATED_GAMES'
 }
 
-export const MIN_WEBGAL_EDITOR_RUNTIME_VERSION = '4.6.1'
+export const MIN_WEBGAL_EDITOR_RUNTIME_VERSION = '4.6.2'
 
 export type EngineEditorCompatibilityIssue =
   | 'unavailable'

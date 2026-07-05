@@ -231,12 +231,12 @@ function mockTemplateLookupByName(templates: Record<string, ReturnType<typeof cr
 
 const importedProjectEngineRef = {
   id: 'default-publisher.default-engine',
-  version: '4.6.1',
+  version: '4.6.2',
 }
 
 const selectedProjectEngineRef = {
   id: 'default-publisher.default-engine',
-  version: '4.6.1',
+  version: '4.6.2',
 }
 
 const configuredImportDependencyContext = {
@@ -592,9 +592,9 @@ describe('gameManager', () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       availability: 'broken',
       id: 'engine-broken',
-      metadata: { webgalVersion: '4.6.1' },
+      metadata: { webgalVersion: '4.6.2' },
       name: 'WebGAL',
-      version: '4.6.1',
+      version: '4.6.2',
     }))
 
     await expect(gameManager.createGame('Demo Game', AbsPath.from('/games/demo'), 'engine-broken')).rejects.toMatchObject({
@@ -754,7 +754,7 @@ describe('gameManager', () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-2',
       name: 'WebGAL',
-      version: '4.6.1',
+      version: '4.6.2',
       status: 'created',
     }))
     const resolveDependencies = vi.fn().mockResolvedValue({
@@ -791,7 +791,7 @@ describe('gameManager', () => {
     engineFindByRefMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
       name: 'WebGAL',
-      version: '4.6.1',
+      version: '4.6.2',
     }))
 
     await expect(gameManager.importGame(AbsPath.from('/games/vfs'))).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
@@ -823,7 +823,7 @@ describe('gameManager', () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-2',
       name: 'WebGAL',
-      version: '4.6.1',
+      version: '4.6.2',
       status: 'created',
     }))
     const resolveDependencies = vi.fn().mockResolvedValue({
@@ -871,7 +871,7 @@ describe('gameManager', () => {
     engineFindByRefMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
       name: 'WebGAL',
-      version: '4.6.1',
+      version: '4.6.2',
     }))
     resolveTemplatePathMock.mockResolvedValue(undefined)
     const selectedTemplateBinding = {
@@ -971,11 +971,11 @@ describe('gameManager', () => {
       },
     })
     engineFindByRefMock.mockImplementation(async (ref: { version?: string }) => {
-      if (ref.version === '4.6.1') {
+      if (ref.version === '4.6.2') {
         return createTestEngine({
           id: 'engine-1',
           name: 'WebGAL',
-          version: '4.6.1',
+          version: '4.6.2',
         })
       }
       return
@@ -1042,11 +1042,11 @@ describe('gameManager', () => {
       },
     })
     engineFindByRefMock.mockImplementation(async (ref: { version?: string }) => {
-      if (ref.version === '4.6.1') {
+      if (ref.version === '4.6.2') {
         return createTestEngine({
           id: 'engine-1',
           name: 'WebGAL',
-          version: '4.6.1',
+          version: '4.6.2',
         })
       }
       if (ref.version === '4.4.0') {
@@ -1120,7 +1120,7 @@ describe('gameManager', () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-2',
       name: 'WebGAL',
-      version: '4.6.1',
+      version: '4.6.2',
       status: 'created',
     }))
     mockTemplateLookupByName({
@@ -1195,7 +1195,7 @@ describe('gameManager', () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-2',
       name: 'WebGAL',
-      version: '4.6.1',
+      version: '4.6.2',
       status: 'created',
     }))
     const resolveDependencies = vi.fn().mockResolvedValue({
@@ -1241,13 +1241,13 @@ describe('gameManager', () => {
     engineFindByRefMock.mockResolvedValue(createTestEngine({
       id: 'engine-error',
       name: 'WebGAL',
-      version: '4.6.1',
+      version: '4.6.2',
       status: 'error',
     }))
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-2',
       name: 'WebGAL',
-      version: '4.6.1',
+      version: '4.6.2',
       status: 'created',
     }))
 
@@ -1292,7 +1292,7 @@ describe('gameManager', () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-2',
       name: 'WebGAL',
-      version: '4.6.1',
+      version: '4.6.2',
       status: 'created',
     }))
 
@@ -1371,7 +1371,7 @@ describe('gameManager', () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-2',
       name: 'WebGAL',
-      version: '4.6.1',
+      version: '4.6.2',
       status: 'created',
     }))
     const resolveDependencies = vi.fn().mockResolvedValue({
@@ -1399,9 +1399,9 @@ describe('gameManager', () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       availability: 'broken',
       id: 'engine-broken',
-      metadata: { webgalVersion: '4.6.1' },
+      metadata: { webgalVersion: '4.6.2' },
       name: 'WebGAL',
-      version: '4.6.1',
+      version: '4.6.2',
     }))
 
     await expect(gameManager.importGame(AbsPath.from('/games/no-engine'), {
@@ -1546,7 +1546,7 @@ describe('gameManager', () => {
       version: 1,
       engine: {
         id: 'default-publisher.default-engine',
-        version: '4.6.1',
+        version: '4.6.2',
       },
     })
 
@@ -1614,25 +1614,25 @@ describe('gameManager', () => {
   it('resolveStaticAssetSite 会在绑定引擎兼容时保留 VFS 静态资源上下文', async () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
-      path: AbsPath.from('/engines/WebGAL/4.6.1'),
-      metadata: { webgalVersion: '4.6.1' },
+      path: AbsPath.from('/engines/WebGAL/4.6.2'),
+      metadata: { webgalVersion: '4.6.2' },
     }))
     readProjectConfigMock.mockResolvedValue({
       version: 1,
       engine: {
         id: 'default-publisher.default-engine',
-        version: '4.6.1',
+        version: '4.6.2',
       },
     })
-    resolveTemplatePathMock.mockResolvedValue(AbsPath.from('/engines/WebGAL/4.6.1/game/template'))
+    resolveTemplatePathMock.mockResolvedValue(AbsPath.from('/engines/WebGAL/4.6.2/game/template'))
 
     await expect(gameManager.resolveStaticAssetSite({
       path: AbsPath.from('/games/demo'),
       engineId: 'engine-1',
     })).resolves.toEqual({
       projectPath: '/games/demo',
-      enginePath: '/engines/WebGAL/4.6.1',
-      templatePath: '/engines/WebGAL/4.6.1/game/template',
+      enginePath: '/engines/WebGAL/4.6.2',
+      templatePath: '/engines/WebGAL/4.6.2/game/template',
     })
   })
 
@@ -1674,7 +1674,7 @@ describe('gameManager', () => {
       version: 1,
       engine: {
         id: 'default-publisher.default-engine',
-        version: '4.6.1',
+        version: '4.6.2',
       },
     })
 

@@ -76,7 +76,7 @@ const defaultSeedEngine: SeedEngine = {
     name: 'Default Engine',
     icon: 'C:/Engines/Default/icons/favicon.ico',
     description: '用于集成测试的默认引擎',
-    webgalVersion: '4.6.1',
+    webgalVersion: '4.6.2',
   },
   previewAssets: {
     icon: { path: 'C:/Engines/Default/icons/favicon.ico' },

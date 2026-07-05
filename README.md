@@ -77,7 +77,7 @@ WebGAL Craft 是一款为 [WebGAL](https://github.com/OpenWebGAL/WebGAL) 游戏�
 ## 快速上手
 
 > [!IMPORTANT]
-> WebGAL Craft 需要 WebGAL `4.6.1` 或以上版本的引擎，可在 [WebGAL Releases](https://github.com/OpenWebGAL/WebGAL/releases) 获取
+> WebGAL Craft 需要 WebGAL `4.6.2` 或以上版本的引擎，可在 [WebGAL Releases](https://github.com/OpenWebGAL/WebGAL/releases) 获取
 
 1. 下载并安装适合你系统的 WebGAL Craft。
 2. 打开 WebGAL Craft，在主页安装游戏引擎。

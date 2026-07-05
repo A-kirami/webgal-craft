@@ -45,7 +45,7 @@ const previewRuntimeStoreState = {
 function createTestEngine(path: string, overrides: Partial<Omit<TestEngine, 'path'>> = {}): TestEngine {
   return {
     availability: 'available',
-    metadata: { webgalVersion: '4.6.1' },
+    metadata: { webgalVersion: '4.6.2' },
     path,
     status: 'created',
     ...overrides,
