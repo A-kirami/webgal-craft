@@ -34,6 +34,11 @@ interface Props {
   displayTransform?: DisplayTransform
 }
 
+interface KeyboardMoveSession {
+  activeKey: string
+  latestTransform: DisplayTransform
+}
+
 const props = defineProps<Props>()
 const emit = defineEmits<{
   'cancel:displayTransform': []
@@ -101,6 +106,7 @@ const scaleHandlePlacementStyles: Record<TransformScaleHandle, CSSProperties> = 
   },
 }
 let rotateTooltip = $ref<TransformRotateTooltip>()
+let keyboardMoveSession: KeyboardMoveSession | undefined
 
 const canvasFrame = $computed<TransformFrame | undefined>(() => {
   if (!props.box || !props.displayTransform) {
@@ -306,6 +312,7 @@ function handlePointerDown(event: PointerEvent, handle: TransformControlHandle):
     event.currentTarget.focus({ preventScroll: true })
   }
 
+  commitKeyboardMoveSession()
   control.start({
     event,
     handle,
@@ -352,6 +359,14 @@ function isEditingText(target: EventTarget | null): boolean {
     || target.isContentEditable
 }
 
+function cloneDisplayTransform(transform: DisplayTransform): DisplayTransform {
+  return {
+    position: { ...transform.position },
+    rotation: transform.rotation,
+    scale: { ...transform.scale },
+  }
+}
+
 function resolveKeyboardMoveDelta(key: string): { x: number, y: number } | undefined {
   switch (key) {
     case 'ArrowLeft': {
@@ -372,14 +387,75 @@ function resolveKeyboardMoveDelta(key: string): { x: number, y: number } | undef
   }
 }
 
-function handleGlobalKeydown(event: KeyboardEvent): void {
-  if (!canvasFrame || !props.displayTransform || isEditingText(event.target) || isEditingText(document.activeElement)) {
+function applyKeyboardMoveDelta(
+  transform: DisplayTransform,
+  delta: { x: number, y: number },
+  step: number,
+): DisplayTransform {
+  return {
+    position: {
+      x: transform.position.x + (delta.x * step),
+      y: transform.position.y + (delta.y * step),
+    },
+    rotation: transform.rotation,
+    scale: { ...transform.scale },
+  }
+}
+
+function updateKeyboardMoveSession(event: KeyboardEvent, delta: { x: number, y: number }): void {
+  if (!props.displayTransform) {
     return
   }
 
-  if (event.key === 'Escape' && control.active) {
+  keyboardMoveSession ??= {
+    activeKey: event.key,
+    latestTransform: cloneDisplayTransform(props.displayTransform),
+  }
+
+  if (keyboardMoveSession.activeKey !== event.key) {
+    return
+  }
+
+  const step = event.shiftKey ? KEYBOARD_FAST_MOVE_STEP : KEYBOARD_MOVE_STEP
+  keyboardMoveSession.latestTransform = applyKeyboardMoveDelta(
+    keyboardMoveSession.latestTransform,
+    delta,
+    step,
+  )
+  emitDisplayTransform(keyboardMoveSession.latestTransform, 'preview')
+}
+
+function commitKeyboardMoveSession(): void {
+  if (!keyboardMoveSession) {
+    return
+  }
+
+  const transform = keyboardMoveSession.latestTransform
+  keyboardMoveSession = undefined
+  emitDisplayTransform(transform, 'commit')
+}
+
+function cancelKeyboardMoveSession(): void {
+  if (!keyboardMoveSession) {
+    return
+  }
+
+  keyboardMoveSession = undefined
+  emitCancelDisplayTransform()
+}
+
+function handleGlobalKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && (control.active || keyboardMoveSession)) {
     event.preventDefault()
-    control.cancel()
+    if (control.active) {
+      control.cancel()
+    } else {
+      cancelKeyboardMoveSession()
+    }
+    return
+  }
+
+  if (!canvasFrame || !props.displayTransform || isEditingText(event.target) || isEditingText(document.activeElement)) {
     return
   }
 
@@ -389,24 +465,23 @@ function handleGlobalKeydown(event: KeyboardEvent): void {
   }
 
   event.preventDefault()
-  if (event.repeat) {
+  updateKeyboardMoveSession(event, delta)
+}
+
+function handleGlobalKeyup(event: KeyboardEvent): void {
+  if (!keyboardMoveSession || keyboardMoveSession.activeKey !== event.key) {
     return
   }
 
-  const step = event.shiftKey ? KEYBOARD_FAST_MOVE_STEP : KEYBOARD_MOVE_STEP
-  emitDisplayTransform({
-    ...props.displayTransform,
-    position: {
-      x: props.displayTransform.position.x + (delta.x * step),
-      y: props.displayTransform.position.y + (delta.y * step),
-    },
-  }, 'commit')
+  event.preventDefault()
+  commitKeyboardMoveSession()
 }
 
 function handleWindowBlur(): void {
   if (control.active) {
     control.cancel()
   }
+  commitKeyboardMoveSession()
 }
 
 function projectFrameToViewport(
@@ -427,6 +502,7 @@ function projectFrameToViewport(
 }
 
 useEventListener(globalThis, 'keydown', handleGlobalKeydown)
+useEventListener(globalThis, 'keyup', handleGlobalKeyup)
 useEventListener(globalThis, 'blur', handleWindowBlur)
 </script>
 
