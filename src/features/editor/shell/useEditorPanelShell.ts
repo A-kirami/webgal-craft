@@ -1,4 +1,5 @@
 import { useStatementAnimationDialog } from '~/features/editor/animation/useStatementAnimationDialog'
+import { flipTransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 import { useEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { readResizablePanelCollapsed } from '~/features/editor/shared/resizable-panel'
 import { useCommandPanelBridgeProvider, useSidebarPanelProvider } from '~/features/editor/shared/useEditorPanelBindings'
@@ -10,6 +11,7 @@ import { useTabsStore } from '~/stores/tabs'
 
 import type { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import type { Transform } from '~/domain/stage/types'
+import type { TransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 import type { ShortcutDefinition } from '~/features/editor/shortcut/types'
 
 interface ResizablePanelLike {
@@ -67,6 +69,26 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
 
   const isCommandPanelCollapsed = computed(() => readResizablePanelCollapsed(options.commandPanelRef.value))
   const effectEditorSession = computed(() => effectEditorProvider.session)
+
+  function flipEffectScaleAxis(axis: TransformScaleAxis): void {
+    const currentSession = effectEditorProvider.session
+    if (!currentSession) {
+      return
+    }
+
+    effectEditorProvider.updateDraft({
+      transform: flipTransformScaleAxis({
+        axis,
+        baselineSource: currentSession.baselineSource,
+        baselineTransform: currentSession.baselineTransform,
+        transform: currentSession.draft.transform,
+      }),
+    })
+    effectEditorProvider.requestPreview({
+      flush: true,
+      schedule: 'immediate',
+    })
+  }
 
   function toggleCommandPanel(): void {
     const panel = options.commandPanelRef.value
@@ -129,6 +151,18 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
       i18nKey: 'shortcut.effect.paste',
       id: 'effect.paste',
       keys: 'Mod+V',
+    },
+    {
+      action: () => flipEffectScaleAxis('x'),
+      i18nKey: 'shortcut.effect.flipHorizontal',
+      id: 'effect.flipHorizontal',
+      keys: 'Shift+H',
+    },
+    {
+      action: () => flipEffectScaleAxis('y'),
+      i18nKey: 'shortcut.effect.flipVertical',
+      id: 'effect.flipVertical',
+      keys: 'Shift+V',
     },
   ]
 

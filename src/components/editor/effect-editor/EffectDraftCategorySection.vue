@@ -65,6 +65,10 @@ function clearPaths(paths: readonly string[]): void {
 function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): string {
   return props.controls.getClearPropertyLabel(label)
 }
+
+function shouldShowFlipActions(item: EffectDraftRenderItem): boolean {
+  return item.kind === 'dial' && item.param.key === 'rotation'
+}
 </script>
 
 <template>
@@ -288,28 +292,13 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
           </div>
         </div>
 
-        <div v-else-if="item.kind === 'dial'" class="group/field flex gap-2 items-center">
-          <div v-if="!item.param.compact" class="flex shrink-0 gap-1 min-w-0 w-24 items-center">
-            <Label :for="controls.dialInputId(item.param.key)" class="text-xs text-muted-foreground shrink min-w-0">
-              <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
-            </Label>
-            <div class="flex shrink-0 size-5 items-center justify-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                :class="getClearButtonClass(getClearPathsForItem(item))"
-                :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
-                :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
-                :title="getClearPropertyLabel(item.param.label)"
-                :aria-label="getClearPropertyLabel(item.param.label)"
-                @click="clearPaths(getClearPathsForItem(item))"
-              >
-                <div class="i-lucide-rotate-ccw size-3" />
-              </Button>
-            </div>
-          </div>
-          <div :class="item.param.compact ? 'px-2 py-1.5 border border-border/60 rounded-md inline-flex gap-2 items-center' : 'flex flex-1 gap-2 items-center'">
-            <div v-if="item.param.compact" class="flex gap-1 min-w-0 items-center">
+        <div v-else-if="item.kind === 'dial'" class="group/field flex flex-wrap gap-2 items-center">
+          <div
+            :class="item.param.compact ? 'px-2 py-1.5 border border-border/60 rounded-md inline-flex gap-2 items-center' : 'flex flex-1 gap-2 items-center'"
+            role="group"
+            :aria-label="resolveLabel(item.param.label)"
+          >
+            <div class="flex shrink-0 gap-1 min-w-0 items-center" :class="!item.param.compact && 'w-24'">
               <Label :for="controls.dialInputId(item.param.key)" class="text-xs text-muted-foreground shrink min-w-0">
                 <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
               </Label>
@@ -350,6 +339,52 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
                 @keydown.enter="controls.flushDialField(item.param)"
               />
             </div>
+          </div>
+          <div
+            v-if="shouldShowFlipActions(item)"
+            class="px-2 py-1.5 border border-border/60 rounded-md inline-flex gap-1 items-center"
+            role="group"
+            :aria-label="$t('modals.effectEditor.flip')"
+          >
+            <span class="text-xs text-muted-foreground shrink-0">
+              {{ $t('modals.effectEditor.flip') }}
+            </span>
+            <TooltipProvider :delay-duration="0">
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    class="h-7 w-9"
+                    :aria-label="$t('modals.effectEditor.flipHorizontal')"
+                    @click="controls.flipScaleAxis('x')"
+                  >
+                    <div class="i-lucide-flip-horizontal size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" class="px-2 py-1">
+                  {{ $t('modals.effectEditor.flipHorizontal') }}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    class="h-7 w-9"
+                    :aria-label="$t('modals.effectEditor.flipVertical')"
+                    @click="controls.flipScaleAxis('y')"
+                  >
+                    <div class="i-lucide-flip-vertical size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" class="px-2 py-1">
+                  {{ $t('modals.effectEditor.flipVertical') }}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
 

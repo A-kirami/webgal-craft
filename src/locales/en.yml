@@ -473,6 +473,9 @@ modals:
     previewUnsyncedCloseBlockedTitle: Runtime preview is out of sync
     previewUnsyncedCloseBlockedMessage: The current effect may already be committed to the preview runtime, but the editor could not confirm the sync state. Select the target line again, or explicitly discard before reopening the effect editor.
     clearProperty: Clear {name}
+    flip: Flip
+    flipHorizontal: Flip Horizontal
+    flipVertical: Flip Vertical
     categories:
       transform: Transform
       effects: Effects

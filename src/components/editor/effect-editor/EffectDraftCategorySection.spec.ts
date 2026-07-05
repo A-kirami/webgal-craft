@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
+import { createBrowserLocalizedI18n } from '~/__tests__/browser'
 import {
   createBrowserClickStub,
   createBrowserContainerStub,
@@ -55,6 +56,7 @@ function createControls() {
     updateDialField: vi.fn(),
     flushDialField: vi.fn(),
     handleDialPointerDown: vi.fn(),
+    flipScaleAxis: vi.fn(),
     getColorPickerValue: () => ({ b: 255, g: 255, r: 255 }),
     handleColorPickerPointerDown: vi.fn(),
     handleColorPickerChange: vi.fn(),
@@ -198,6 +200,50 @@ describe('EffectDraftCategorySection', () => {
       schedule: 'immediate',
       flush: true,
     })
+  })
+
+  it('将翻转按钮放在独立分组中，而不是旋转控件内部', async () => {
+    const { controls } = createControls()
+
+    renderInBrowser(EffectDraftCategorySection, {
+      props: {
+        category: {
+          key: 'transform',
+          label: 'Transform',
+          items: [
+            {
+              kind: 'dial',
+              key: 'rotation',
+              param: {
+                key: 'rotation',
+                type: 'dial',
+                label: 'Rotation',
+                defaultValue: 0,
+                dialUnit: 'rad',
+                compact: true,
+              },
+            },
+          ],
+        },
+        controls,
+        isPanelLayout: false,
+        resolveLabel: (value: string | undefined) => String(value ?? ''),
+      },
+      global: {
+        plugins: [createBrowserLocalizedI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    const rotationGroup = await page.getByRole('group', { name: 'Rotation' }).element()
+    const flipGroup = await page.getByRole('group', { name: '翻转' }).element()
+    const horizontalFlipButton = await page.getByRole('button', { name: '水平翻转' }).element()
+    const verticalFlipButton = await page.getByRole('button', { name: '垂直翻转' }).element()
+
+    expect(rotationGroup.contains(horizontalFlipButton)).toBe(false)
+    expect(rotationGroup.contains(verticalFlipButton)).toBe(false)
+    expect(flipGroup.contains(horizontalFlipButton)).toBe(true)
+    expect(flipGroup.contains(verticalFlipButton)).toBe(true)
   })
 
   it('将固定宽度放在标签与按钮的公共头部容器上，让按钮贴近标签文本', async () => {

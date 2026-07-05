@@ -15,6 +15,7 @@ import {
   EFFECT_EASE_OPTIONS,
   transformToFields,
 } from '~/features/editor/effect-editor/effect-editor-config'
+import { flipTransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 import { useEffectClearControls } from '~/features/editor/effect-editor/useEffectClearControls'
 import { useEffectColorControl } from '~/features/editor/effect-editor/useEffectColorControl'
 import { useEffectContinuousControls } from '~/features/editor/effect-editor/useEffectContinuousControls'
@@ -33,6 +34,7 @@ import type {
 } from './effectDraftForm.types'
 import type { Transform } from '~/domain/stage/types'
 import type { ColorField, I18nLike } from '~/features/editor/command-registry/schema'
+import type { TransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 import type { EffectControlDeps } from '~/features/editor/effect-editor/types'
 import type {
   EffectEditorPreviewPayload,
@@ -225,6 +227,21 @@ function colorControlId(param: ColorField): string {
   return buildControlId(`color-${(param.colorPaths ?? [param.key]).join('-')}`)
 }
 
+function flipScaleAxis(axis: TransformScaleAxis): void {
+  const nextTransform = flipTransformScaleAxis({
+    axis,
+    baselineSource: props.baselineSource,
+    baselineTransform: props.baselineTransform,
+    transform: props.transform,
+  })
+
+  emitTransform(transformToFields(nextTransform), {
+    deferAutoApply: false,
+    flush: true,
+    schedule: 'immediate',
+  })
+}
+
 const categoryControls: EffectDraftCategoryControls = {
   numberInputId,
   sliderInputId,
@@ -254,6 +271,7 @@ const categoryControls: EffectDraftCategoryControls = {
   updateDialField,
   flushDialField,
   handleDialPointerDown,
+  flipScaleAxis,
   getColorPickerValue,
   handleColorPickerPointerDown,
   handleColorPickerChange,
