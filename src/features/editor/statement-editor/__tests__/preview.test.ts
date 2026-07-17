@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { buildStatementPreviewParams } from '~/features/editor/statement-editor/preview'
+import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { ArgField, EditorField } from '~/features/editor/command-registry/schema'
@@ -61,6 +62,7 @@ function createContentField(
 describe('buildStatementPreviewParams', () => {
   it('unsupported 语句展示原始文本', () => {
     const result = buildStatementPreviewParams({
+      autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
       parsed: createSentence({ content: 'hello' }),
       statementType: 'unsupported',
       entryRawText: '  @unknown hello  ',
@@ -82,6 +84,7 @@ describe('buildStatementPreviewParams', () => {
     })
 
     const withColon = buildStatementPreviewParams({
+      autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
       parsed,
       statementType: 'say',
       entryRawText: 'Alice:Hi',
@@ -92,6 +95,7 @@ describe('buildStatementPreviewParams', () => {
       t: identityTranslate,
     })
     const withoutColon = buildStatementPreviewParams({
+      autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
       parsed,
       statementType: 'say',
       entryRawText: 'Hi',
@@ -108,6 +112,7 @@ describe('buildStatementPreviewParams', () => {
 
   it('content select/file 分支可正确展示匹配值与缺失状态', () => {
     const selectResult = buildStatementPreviewParams({
+      autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
       parsed: createSentence({ command: commandType.playEffect, content: 'rain' }),
       statementType: 'command',
       entryRawText: 'playEffect:rain',
@@ -120,6 +125,7 @@ describe('buildStatementPreviewParams', () => {
       t: identityTranslate,
     })
     const fileResult = buildStatementPreviewParams({
+      autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
       parsed: createSentence({ command: commandType.changeBg, content: 'bg.jpg' }),
       statementType: 'command',
       entryRawText: 'changeBg:bg.jpg',
@@ -134,6 +140,45 @@ describe('buildStatementPreviewParams', () => {
 
     expect(selectResult[0]).toMatchObject({ value: '雨' })
     expect(fileResult[0]).toMatchObject({ isFile: true, fileMissing: true, value: 'bg.jpg' })
+  })
+
+  it('text autocomplete 参数使用统一解析后的候选名称', () => {
+    const result = buildStatementPreviewParams({
+      autocompleteOptions: {
+        ...EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
+        sceneLabels: [{ label: '开始', value: 'start' }],
+      },
+      parsed: createSentence({
+        command: commandType.changeFigure,
+        content: 'start',
+        args: [{ key: 'target', value: 'fig-left' }],
+      }),
+      statementType: 'command',
+      entryRawText: '',
+      previousSpeaker: '',
+      contentField: createContentField('text', {
+        variant: 'autocomplete',
+        autocomplete: [{ type: 'scene', collection: 'sceneLabels' }],
+      }),
+      argFields: [
+        createArgField('target', 'text', {
+          field: {
+            variant: 'autocomplete',
+            autocomplete: [{
+              type: 'static',
+              options: [{ value: 'fig-left', label: () => '左侧立绘' }],
+            }],
+          },
+        }),
+      ],
+      fileMissingKeys: new Set(),
+      t: identityTranslate,
+    })
+
+    expect(result).toEqual([
+      { label: '', value: '开始', isFile: false, fileMissing: false },
+      { label: 'target', value: '左侧立绘', color: undefined, isFile: false, fileMissing: false },
+    ])
   })
 
   it('args 分支会过滤默认值并支持 flag-choice/switch/file/color 展示', () => {
@@ -173,6 +218,7 @@ describe('buildStatementPreviewParams', () => {
     ]
 
     const result = buildStatementPreviewParams({
+      autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
       parsed: createSentence({
         command: commandType.changeFigure,
         content: 'figureA',
@@ -228,6 +274,7 @@ describe('buildStatementPreviewParams', () => {
     ]
 
     const result = buildStatementPreviewParams({
+      autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
       parsed: createSentence({
         command: commandType.changeFigure,
         content: 'figureA',

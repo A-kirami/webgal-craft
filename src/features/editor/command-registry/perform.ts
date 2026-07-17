@@ -1,6 +1,6 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { AUDIO_EXTENSIONS, BACKGROUND_EXTENSIONS, DEFAULT_ENTER_DURATION, DEFAULT_EXIT_DURATION, EFFECT_DURATION, EFFECT_EASE, EFFECT_TRANSFORM, ENTER_ANIMATION, EXIT_ANIMATION, FIGURE_EXTENSIONS, ID, IMAGE_EXTENSIONS, NEXT, SERIES, UNLOCK_NAME, VOLUME } from './common-params'
+import { AUDIO_EXTENSIONS, BACKGROUND_EXTENSIONS, DEFAULT_ENTER_DURATION, DEFAULT_EXIT_DURATION, EFFECT_DURATION, EFFECT_EASE, EFFECT_TRANSFORM, ENTER_ANIMATION, EXIT_ANIMATION, FIGURE_EXTENSIONS, FIGURE_ID, IMAGE_EXTENSIONS, NEXT, SERIES, SOUND_EFFECT_ID, UNLOCK_NAME, VOLUME } from './common-params'
 import { arg, commandRaw, content, UNSPECIFIED } from './schema'
 
 import type { CommandEntry } from './schema'
@@ -115,7 +115,7 @@ export const performEntries: CommandEntry[] = [
         ],
       }),
       arg({ key: 'zIndex', label: t => t('edit.visualEditor.params.zIndex'), type: 'number' }),
-      arg({ ...ID, key: 'id', label: t => t('edit.visualEditor.params.figureId') }),
+      arg({ ...FIGURE_ID, key: 'id', label: t => t('edit.visualEditor.params.figureId') }),
       arg({
         key: 'motion',
         label: (t, content) => isSpineContent(content ?? '') ? t('edit.visualEditor.params.spineMotion') : t('edit.visualEditor.params.motion'),
@@ -228,7 +228,7 @@ export const performEntries: CommandEntry[] = [
     fields: [
       content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'vocal', extensions: AUDIO_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.playEffect') } }),
       arg(VOLUME),
-      arg(ID),
+      arg(SOUND_EFFECT_ID),
     ],
   },
 ]

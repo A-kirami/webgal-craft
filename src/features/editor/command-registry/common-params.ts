@@ -72,7 +72,8 @@ export const VOLUME: NumberField = {
 }
 export const UNLOCK_NAME: TextField = { key: 'unlockname', label: t => t('edit.visualEditor.params.unlockname'), type: 'text' }
 export const SERIES: TextField = { key: 'series', label: t => t('edit.visualEditor.params.series'), type: 'text' }
-export const ID: TextField = { key: 'id', label: t => t('edit.visualEditor.params.id'), type: 'text' }
+export const FIGURE_ID: AutocompleteTextField = { key: 'id', label: t => t('edit.visualEditor.params.id'), type: 'text', variant: 'autocomplete', autocomplete: [{ type: 'scene', collection: 'figureIds' }] }
+export const SOUND_EFFECT_ID: AutocompleteTextField = { key: 'id', label: t => t('edit.visualEditor.params.id'), type: 'text', variant: 'autocomplete', autocomplete: [{ type: 'scene', collection: 'soundEffectIds' }] }
 export const WRITE_DEFAULT: SwitchField = { key: 'writeDefault', label: t => t('edit.visualEditor.params.writeDefault'), type: 'switch', defaultValue: false }
 export const KEEP: SwitchField = { key: 'keep', label: t => t('edit.visualEditor.params.keep'), type: 'switch', defaultValue: false }
 

@@ -1,9 +1,12 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { ArgField, EditorField, I18nT, isFlagChoiceField, readArgFieldStorageKey, resolveI18n } from '~/features/editor/command-registry/schema'
+import { isFlagChoiceField, readArgFieldStorageKey, resolveI18n } from '~/features/editor/command-registry/schema'
 import { getActiveEffectCategories } from '~/features/editor/effect-editor/effect-editor-config'
+import { resolveAutocompleteOptions } from '~/features/editor/statement-editor/autocomplete-options'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { ArgField, EditorField, FieldDef, I18nT } from '~/features/editor/command-registry/schema'
+import type { SceneAutocompleteOptions } from '~/features/editor/statement-editor/scene-autocomplete'
 
 export type StatementCardType = 'empty' | 'comment' | 'say' | 'command' | 'unsupported'
 
@@ -27,6 +30,7 @@ interface BuildStatementPreviewParamsInput {
   previousSpeaker?: string
   statementType: StatementCardType
   t: I18nT
+  autocompleteOptions: SceneAutocompleteOptions
 }
 
 function resolveArgDisplayLabel(
@@ -58,14 +62,39 @@ function resolveArgDisplayValue(
   value: string,
   t: I18nT,
   content: string,
+  autocompleteOptions: SceneAutocompleteOptions,
 ): string {
   const argField = argFieldByStorageKey.get(key)
-  if (!argField || argField.field.type !== 'choice') {
+  if (!argField) {
     return value
   }
-  const option = argField.field.options.find(opt => opt.value === value)
-  if (!option) {
-    return value
+
+  return resolveFieldDisplayValue(argField.field, value, t, content, autocompleteOptions)
+}
+
+function resolveFieldDisplayValue(
+  field: FieldDef,
+  value: string,
+  t: I18nT,
+  content: string,
+  autocompleteOptions: SceneAutocompleteOptions,
+): string {
+  if (field.type === 'choice') {
+    const option = field.options.find(option => option.value === value)
+    return option ? resolveI18n(option.label, t, content) : value
+  }
+  if (field.type === 'text' && field.autocomplete) {
+    return resolveAutocompleteOptions(field.autocomplete, {
+      content,
+      sceneOptions: autocompleteOptions,
+      t,
+    })
+      .find(option => option.value === value)
+      ?.label ?? value
+  }
+
+  return value
+}
   }
   return resolveI18n(option.label, t, content)
 }
@@ -73,6 +102,7 @@ function resolveArgDisplayValue(
 export function buildStatementPreviewParams(input: BuildStatementPreviewParamsInput): StatementCardPreviewParam[] {
   const {
     argFields,
+    autocompleteOptions,
     contentField,
     entryRawText,
     fileMissingKeys,
@@ -177,11 +207,8 @@ export function buildStatementPreviewParams(input: BuildStatementPreviewParamsIn
         params.push({ label: '', value: resolveI18n(switchLabel, t, content) })
       }
     } else {
-      const matchedOption = contentDefinition?.type === 'choice'
-        ? contentDefinition.options.find(option => option.value === content)
-        : undefined
-      const displayValue = matchedOption
-        ? resolveI18n(matchedOption.label, t, content)
+      const displayValue = contentDefinition
+        ? `${resolveFieldDisplayValue(contentDefinition, content, t, content, autocompleteOptions)}${unit}`
         : `${content}${unit}`
       params.push({
         label: '',
@@ -232,13 +259,7 @@ export function buildStatementPreviewParams(input: BuildStatementPreviewParamsIn
             continue
           }
           const fieldUnit = 'unit' in jsonField.field ? ` ${resolveI18n(jsonField.field.unit, t, content)}` : ''
-          let displayValue = String(fieldValue)
-          if (jsonField.field.type === 'choice') {
-            const option = jsonField.field.options.find(opt => opt.value === displayValue)
-            if (option) {
-              displayValue = resolveI18n(option.label, t, content)
-            }
-          }
+          const displayValue = resolveFieldDisplayValue(jsonField.field, String(fieldValue), t, content, autocompleteOptions)
           params.push({
             label: resolveI18n(jsonField.field.label, t, content),
             value: `${displayValue}${fieldUnit}`,
@@ -283,7 +304,7 @@ export function buildStatementPreviewParams(input: BuildStatementPreviewParamsIn
     const unit = argField && 'unit' in argField.field ? ` ${resolveI18n(argField.field.unit, t, content)}` : ''
     params.push({
       label: resolveArgDisplayLabel(argFieldByStorageKey, item.key, argFields, t, content),
-      value: `${resolveArgDisplayValue(argFieldByStorageKey, item.key, String(item.value), t, content)}${unit}`,
+      value: `${resolveArgDisplayValue(argFieldByStorageKey, item.key, String(item.value), t, content, autocompleteOptions)}${unit}`,
       color: isColor ? String(item.value) : undefined,
       isFile: isFileParam,
       fileMissing: isFileParam && fileMissingKeys.has(item.key),

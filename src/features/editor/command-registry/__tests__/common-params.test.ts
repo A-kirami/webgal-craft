@@ -18,6 +18,7 @@ import {
   TRANSFORM,
   VIDEO_EXTENSIONS,
 } from '~/features/editor/command-registry/common-params'
+import { resolveI18n } from '~/features/editor/command-registry/schema'
 
 describe('命令注册表通用参数', () => {
   it('背景与立绘扩展名集合覆盖预期资源类型', () => {
@@ -28,20 +29,24 @@ describe('命令注册表通用参数', () => {
     expect(FIGURE_EXTENSIONS).toEqual(expect.arrayContaining(['.png', '.json', '.skel']))
   })
 
-  it('TARGET 是可自定义的 choice 参数，并提供内置目标位点', () => {
-    expect(TARGET.type).toBe('choice')
-    if (TARGET.type !== 'choice') {
-      throw new TypeError('expected TARGET to be a choice field')
-    }
+  it('TARGET 是文本自动补全参数，并合并预设目标与立绘 ID 来源', () => {
+    expect(TARGET.variant).toBe('autocomplete')
+    expect(TARGET.autocomplete).toHaveLength(2)
 
-    expect(TARGET.customizable).toBe(true)
-    expect(TARGET.options.map(option => option.value)).toEqual([
-      'fig-left',
-      'fig-center',
-      'fig-right',
-      'bg-main',
-      'stage-main',
-    ])
+    const [presetSource, figureIdSource] = TARGET.autocomplete
+    expect(presetSource.type).toBe('static')
+    expect(resolveI18n(presetSource.groupLabel, key => key)).toBe('edit.visualEditor.autocompleteGroups.preset')
+    if (presetSource.type === 'static') {
+      expect(presetSource.options.map(option => option.value)).toEqual([
+        'fig-left',
+        'fig-center',
+        'fig-right',
+        'bg-main',
+        'stage-main',
+      ])
+    }
+    expect(figureIdSource).toMatchObject({ type: 'scene', collection: 'figureIds' })
+    expect(resolveI18n(figureIdSource.groupLabel, key => key)).toBe('edit.visualEditor.params.associatedFigureId')
   })
 
   it('效果编辑器托管参数复用原 key，并额外标记 managedByEffectEditor', () => {
