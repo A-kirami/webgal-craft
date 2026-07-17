@@ -1,12 +1,16 @@
 import { onTestFinished, vi } from 'vitest'
-import { effectScope, ref, shallowReactive } from 'vue'
+import { ref, shallowReactive } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { createTestRenderer } from '~/features/editor/__tests__/utils/createTestRenderer'
+import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
+import { sceneAutocompleteOptionsKey } from '~/features/editor/statement-editor/scene-autocomplete-context'
 import { useStatementEditor } from '~/features/editor/statement-editor/useStatementEditor'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { StatementEntry } from '~/domain/script/sentence'
 import type { ArgField } from '~/features/editor/command-registry/schema'
+import type { SceneAutocompleteOptions } from '~/features/editor/statement-editor/scene-autocomplete'
 import type { StatementUpdatePayload } from '~/features/editor/statement-editor/useStatementEditor'
 
 const {
@@ -103,30 +107,46 @@ export function createSentence(overrides: Partial<ISentence> = {}): ISentence {
   }
 }
 
-function createScopedEditor(factory: () => ReturnType<typeof useStatementEditor>) {
-  const scope = effectScope()
-  const editor = scope.run(factory)
+function createScopedEditor(
+  factory: () => ReturnType<typeof useStatementEditor>,
+  autocompleteOptions: SceneAutocompleteOptions = EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
+) {
+  let editor: ReturnType<typeof useStatementEditor> | undefined
+  const app = createTestRenderer().createApp({
+    setup() {
+      editor = factory()
+      return () => undefined
+    },
+  })
+  app.provide(sceneAutocompleteOptionsKey, ref(autocompleteOptions))
+  app.mount({ type: 'root', children: [] })
 
   if (!editor) {
-    scope.stop()
-    throw new TypeError('failed to create statement editor within effect scope')
+    app.unmount()
+    throw new TypeError('failed to create statement editor within test host')
   }
 
   onTestFinished(() => {
-    scope.stop()
+    app.unmount()
   })
 
   return editor
 }
 
-export function createHarness(rawText: string) {
+export function createHarness(
+  rawText: string,
+  options: { autocompleteOptions?: SceneAutocompleteOptions } = {},
+) {
   const updates: StatementUpdatePayload[] = []
-  const editor = createScopedEditor(() => useStatementEditor({
-    entry: createEntry(rawText),
-    emitUpdate(payload) {
-      updates.push(payload)
-    },
-  }))
+  const editor = createScopedEditor(
+    () => useStatementEditor({
+      entry: createEntry(rawText),
+      emitUpdate(payload) {
+        updates.push(payload)
+      },
+    }),
+    options.autocompleteOptions,
+  )
   return { editor, updates }
 }
 

@@ -21,7 +21,6 @@ interface Props {
   specialContent: StatementSpecialContentBindings
   sceneRootPath: string
   paramRendererSharedProps: StatementParamRendererSharedProps
-  customOptionLabel: string
   onUpdateValue: (payload: ParamRendererValuePayload) => void
   onUpdateSelect: (payload: ParamRendererSelectPayload) => void
   onLabelPointerDown: (payload: ParamRendererLabelPointerPayload) => void
@@ -107,7 +106,6 @@ function handleOpenEffectEditor() {
       v-bind="props.paramRendererSharedProps"
       :mode="paramRendererMode"
       :fields="props.basicRenderFields"
-      :custom-option-label="props.customOptionLabel"
       @update-value="props.onUpdateValue"
       @update-select="props.onUpdateSelect"
       @label-pointer-down="props.onLabelPointerDown"

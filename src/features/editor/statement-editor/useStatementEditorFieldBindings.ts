@@ -2,15 +2,19 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { EditorField, readArgFieldStorageKey } from '~/features/editor/command-registry/schema'
 import { resolveDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
+import { resolveAutocompleteOptions } from '~/features/editor/statement-editor/autocomplete-options'
 import { useStatementEditorContent } from '~/features/editor/statement-editor/useStatementEditorContent'
 import { useStatementEditorParams } from '~/features/editor/statement-editor/useStatementEditorParams'
 import { useStatementEditorSay } from '~/features/editor/statement-editor/useStatementEditorSay'
 import { useStatementEditorScrub } from '~/features/editor/statement-editor/useStatementEditorScrub'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { ResolvedAutocompleteOption } from '~/features/editor/statement-editor/autocomplete-options'
+import type { SceneAutocompleteOptions } from '~/features/editor/statement-editor/scene-autocomplete'
 
 interface UseStatementEditorFieldBindingsOptions {
   parsed: ComputedRef<ISentence | undefined>
+  autocompleteOptions: ComputedRef<SceneAutocompleteOptions>
   say: Pick<
     ReturnType<typeof useStatementEditorSay>,
     'effectiveSpeaker' | 'handleSpeakerChange' | 'isNoColonStatement'
@@ -20,8 +24,6 @@ interface UseStatementEditorFieldBindingsOptions {
     | 'contentSelectValue'
     | 'getContentFieldSelectOptions'
     | 'handleContentChange'
-    | 'handleContentSelectChange'
-    | 'isCustomContent'
     | 'isMultilineTextField'
     | 'newlineToPipe'
     | 'pipeToNewline'
@@ -34,8 +36,6 @@ interface UseStatementEditorFieldBindingsOptions {
     | 'getArgSelectValue'
     | 'getArgValue'
     | 'handleArgFieldChange'
-    | 'handleArgSelectChange'
-    | 'isArgCustom'
     | 'isArgVisible'
     | 'resolveFieldArgField'
   >
@@ -52,6 +52,8 @@ interface UseStatementEditorFieldBindingsOptions {
 export function useStatementEditorFieldBindings(
   options: UseStatementEditorFieldBindingsOptions,
 ) {
+  const { t } = useI18n()
+
   function getFieldValue(field: EditorField): string | boolean | number {
     if (field.storage === 'arg') {
       return options.params.getArgValue(field.argField)
@@ -96,6 +98,18 @@ export function useStatementEditorFieldBindings(
     return []
   }
 
+  function getFieldAutocompleteOptions(field: EditorField): ResolvedAutocompleteOption[] {
+    if (field.field.type !== 'text' || !field.field.autocomplete) {
+      return []
+    }
+
+    return resolveAutocompleteOptions(field.field.autocomplete, {
+      content: options.parsed.value?.content,
+      sceneOptions: options.autocompleteOptions.value,
+      t,
+    })
+  }
+
   function getFieldSelectOptions(field: EditorField): { label: string, value: string }[] {
     if (field.storage === 'arg') {
       return options.params.getArgSelectOptions(field.argField)
@@ -104,17 +118,6 @@ export function useStatementEditorFieldBindings(
       return options.content.getContentFieldSelectOptions(field.field)
     }
     return []
-  }
-
-  function isFieldCustom(field: EditorField): boolean {
-    if (field.storage === 'arg') {
-      return options.params.isArgCustom(field.argField)
-    }
-    if (field.storage === 'content' && field.field.type === 'choice') {
-      return field.field.customizable === true
-        && options.content.isCustomContent.value
-    }
-    return false
   }
 
   function isFieldVisible(field: EditorField): boolean {
@@ -168,11 +171,11 @@ export function useStatementEditorFieldBindings(
 
   function handleFieldSelectChange(field: EditorField, value: string) {
     if (field.storage === 'arg') {
-      options.params.handleArgSelectChange(field.argField, value)
+      options.params.handleArgFieldChange(field.argField, value)
       return
     }
     if (field.storage === 'content') {
-      options.content.handleContentSelectChange(value)
+      options.content.handleContentChange(value)
       return
     }
     options.say.handleSpeakerChange(value)
@@ -218,10 +221,10 @@ export function useStatementEditorFieldBindings(
 
   const paramRendererSharedProps = computed(() => ({
     parsed: options.parsed.value,
+    getAutocompleteOptions: getFieldAutocompleteOptions,
     getDynamicOptions: getFieldDynamicOptions,
     getFieldValue,
     getFieldSelectValue,
-    isFieldCustom,
     isFieldVisible,
     isFieldFileMissing,
     canScrub: canScrubField,
@@ -230,9 +233,9 @@ export function useStatementEditorFieldBindings(
   return {
     getFieldValue,
     getFieldSelectValue,
+    getFieldAutocompleteOptions,
     getFieldDynamicOptions,
     getFieldSelectOptions,
-    isFieldCustom,
     isFieldVisible,
     isFieldFileMissing,
     handleFieldValueChange,

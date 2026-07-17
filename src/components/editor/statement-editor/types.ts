@@ -1,6 +1,7 @@
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { ChooseContentItem, SetVarContent, StyleRuleContentItem } from '~/domain/script/content'
 import type { EditorField } from '~/features/editor/command-registry/schema'
+import type { ResolvedAutocompleteOption } from '~/features/editor/statement-editor/autocomplete-options'
 
 export interface ValueBinding<T> {
   readonly value: T
@@ -27,10 +28,10 @@ export interface StatementSpecialContentBindings {
 export interface StatementParamRendererSharedProps {
   canScrub: (field: EditorField) => boolean
   fileRootPaths: Record<string, string>
+  getAutocompleteOptions: (field: EditorField) => ResolvedAutocompleteOption[]
   getDynamicOptions: (field: EditorField) => { label: string, value: string }[]
   getFieldSelectValue: (field: EditorField) => string
   getFieldValue: (field: EditorField) => string | number | boolean
-  isFieldCustom: (field: EditorField) => boolean
   isFieldFileMissing: (field: EditorField) => boolean
   isFieldVisible: (field: EditorField) => boolean
   parsed?: ISentence

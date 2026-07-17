@@ -16,8 +16,6 @@ function createChoiceField(key: string = 'motion'): EditorField {
     placeholder: 'Select motion',
     type: 'choice',
     variant: 'combobox',
-    customizable: true,
-    customLabel: 'Custom motion',
   }
 
   return {
@@ -53,18 +51,15 @@ describe('useParamChoiceFieldViewModel', () => {
       { label: 'Dynamic Joy', value: 'joy' },
       { label: 'Idle', value: 'idle' },
     ])
-    const customLabel = ref('Custom motion')
     const placeholder = ref('Search motion')
     const selectValue = ref('joy')
 
     const viewModel = useParamChoiceFieldViewModel({
       getChoiceFieldMode: () => 'combobox',
       getComboboxPathDelimiter: () => '/',
-      getCustomLabel: () => customLabel.value,
       getDynamicOptions: () => dynamicOptions.value,
       getPlaceholder: () => placeholder.value,
       getSelectValue: () => selectValue.value,
-      isCustomField: () => false,
       i18nContent: () => '',
       shouldRenderSegmented: () => false,
       t: key => key,
@@ -73,8 +68,6 @@ describe('useParamChoiceFieldViewModel', () => {
 
     expect(viewModel.viewModels.value.get(field.key)).toMatchObject({
       comboboxData: undefined,
-      customLabel: 'Custom motion',
-      isCustomField: false,
       mode: 'combobox',
       options: [
         { label: 'Dynamic Joy', value: 'joy' },
@@ -88,14 +81,11 @@ describe('useParamChoiceFieldViewModel', () => {
 
     dynamicOptions.value = [{ label: 'Joy', value: 'joy' }]
     placeholder.value = 'Filter motion'
-    customLabel.value = 'Custom expression'
     selectValue.value = 'idle'
 
     await nextTick()
 
     expect(viewModel.viewModels.value.get(field.key)).toMatchObject({
-      customLabel: 'Custom expression',
-      isCustomField: false,
       placeholder: 'Filter motion',
       renderSegmented: false,
       selectValue: 'idle',
@@ -112,14 +102,12 @@ describe('useParamChoiceFieldViewModel', () => {
     const viewModel = useParamChoiceFieldViewModel({
       getChoiceFieldMode: () => 'combobox',
       getComboboxPathDelimiter: () => '/',
-      getCustomLabel: () => '',
       getDynamicOptions: () => [
         { label: 'charc/group01/item01', value: 'charc/group01/item01' },
         { label: 'charc/default', value: 'charc/default' },
       ],
       getPlaceholder: () => 'Search expression',
       getSelectValue: () => '',
-      isCustomField: () => false,
       i18nContent: () => '',
       shouldRenderSegmented: () => false,
       t: key => key,
@@ -156,13 +144,11 @@ describe('useParamChoiceFieldViewModel', () => {
     const viewModel = useParamChoiceFieldViewModel({
       getChoiceFieldMode: () => 'combobox',
       getComboboxPathDelimiter: () => '',
-      getCustomLabel: () => '',
       getDynamicOptions: () => [
         { label: 'charc/group01/item01', value: 'charc/group01/item01' },
       ],
       getPlaceholder: () => 'Search expression',
       getSelectValue: () => '',
-      isCustomField: () => false,
       i18nContent: () => '',
       shouldRenderSegmented: () => false,
       t: key => key,
@@ -182,14 +168,12 @@ describe('useParamChoiceFieldViewModel', () => {
     const trimmedViewModel = useParamChoiceFieldViewModel({
       getChoiceFieldMode: () => 'combobox',
       getComboboxPathDelimiter: () => ' / ',
-      getCustomLabel: () => '',
       getDynamicOptions: () => [
         { label: 'charc/group01/item01', value: 'charc/group01/item01' },
         { label: 'charc/default', value: 'charc/default' },
       ],
       getPlaceholder: () => 'Search expression',
       getSelectValue: () => '',
-      isCustomField: () => false,
       i18nContent: () => '',
       shouldRenderSegmented: () => false,
       t: key => key,
@@ -206,13 +190,11 @@ describe('useParamChoiceFieldViewModel', () => {
     const whitespaceOnlyViewModel = useParamChoiceFieldViewModel({
       getChoiceFieldMode: () => 'combobox',
       getComboboxPathDelimiter: () => ' '.repeat(3),
-      getCustomLabel: () => '',
       getDynamicOptions: () => [
         { label: 'charc/group01/item01', value: 'charc/group01/item01' },
       ],
       getPlaceholder: () => 'Search expression',
       getSelectValue: () => '',
-      isCustomField: () => false,
       i18nContent: () => '',
       shouldRenderSegmented: () => false,
       t: key => key,

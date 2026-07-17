@@ -29,10 +29,10 @@ function createParamRendererSharedProps(): StatementParamRendererSharedProps {
   return {
     canScrub: () => false,
     fileRootPaths: {},
+    getAutocompleteOptions: () => [],
     getDynamicOptions: () => [],
     getFieldSelectValue: () => '',
     getFieldValue: () => '',
-    isFieldCustom: () => false,
     isFieldFileMissing: () => false,
     isFieldVisible: () => true,
   }
@@ -57,7 +57,6 @@ describe('StatementCommandFieldsSection', () => {
         specialContent: createSpecialContentBindings(),
         sceneRootPath: '',
         paramRendererSharedProps: createParamRendererSharedProps(),
-        customOptionLabel: 'Custom',
         onUpdateValue: () => { /* no-op */ },
         onUpdateSelect: () => { /* no-op */ },
         onLabelPointerDown: () => { /* no-op */ },
@@ -82,7 +81,6 @@ describe('StatementCommandFieldsSection', () => {
         specialContent: createSpecialContentBindings(),
         sceneRootPath: '',
         paramRendererSharedProps: createParamRendererSharedProps(),
-        customOptionLabel: 'Custom',
         onUpdateValue: () => { /* no-op */ },
         onUpdateSelect: () => { /* no-op */ },
         onLabelPointerDown: () => { /* no-op */ },

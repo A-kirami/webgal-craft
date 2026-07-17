@@ -3,6 +3,7 @@ import { ResizablePanel } from '~/components/ui/resizable'
 import { useEditorPanelShell } from '~/features/editor/shell/useEditorPanelShell'
 import { useShortcut } from '~/features/editor/shortcut/useShortcut'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
+import { sceneAutocompleteOptionsKey } from '~/features/editor/statement-editor/scene-autocomplete-context'
 import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
 
 const commandPanelRef = useTemplateRef<InstanceType<typeof ResizablePanel>>('commandPanel')
@@ -53,6 +54,7 @@ const {
   isCommandPanelCollapsed,
   isCurrentSceneFile,
   isTextMode,
+  sceneAutocompleteOptions,
   selectedStatement,
   selectedStatementIndex,
   selectedStatementPreviousSpeaker,
@@ -62,6 +64,8 @@ const {
 } = useEditorPanelShell({
   commandPanelRef,
 })
+
+provide(sceneAutocompleteOptionsKey, sceneAutocompleteOptions)
 
 const canUseEffectEditorPreviewRegion = $computed(() => transformOverlayBridge?.enabled.value === true)
 

@@ -14,7 +14,6 @@ import {
   resetStatementEditorRuntime,
   workspaceStoreState,
 } from '~/features/editor/__tests__/statement-editor-test-utils'
-import { CUSTOM_CONTENT } from '~/features/editor/command-registry/schema'
 import { registerDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
 import { useStatementEditorParams } from '~/features/editor/statement-editor/useStatementEditorParams'
 
@@ -70,14 +69,6 @@ describe('useStatementEditorParams', () => {
     expect(updates.at(-1)?.parsed.args).toEqual([
       { key: 'focus', value: '{"x":0.2,"y":-0.3}' },
     ])
-  })
-
-  it('customizable select 在自定义值时会暴露 CUSTOM_CONTENT token', () => {
-    const { editor } = createHarness('setAnimation: bounce -target=node-custom;')
-    const targetField = requireArgField(editor, 'target')
-
-    expect(editor.params.getArgSelectValue(targetField)).toBe(CUSTOM_CONTENT)
-    expect(editor.params.isArgCustom(targetField)).toBe(true)
   })
 
   it('控制参数变化后会裁剪已经隐藏的依赖参数', () => {

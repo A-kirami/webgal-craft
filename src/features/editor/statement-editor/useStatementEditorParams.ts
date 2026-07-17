@@ -3,7 +3,7 @@ import { serializeCommandNode } from '~/domain/script/codec'
 import { readCommandNodeParamValue } from '~/domain/script/params'
 import { CommandNode } from '~/domain/script/types'
 import { updateCommandNodeParam } from '~/domain/script/update'
-import { ArgField, CUSTOM_CONTENT, DynamicOptionsContext, EditorField, isFlagChoiceField, readArgFieldStorageKey, resolveI18n, UNSPECIFIED } from '~/features/editor/command-registry/schema'
+import { ArgField, DynamicOptionsContext, EditorField, isFlagChoiceField, readArgFieldStorageKey, resolveI18n, UNSPECIFIED } from '~/features/editor/command-registry/schema'
 import { resolveDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
 import { readJsonFieldValue, writeJsonFieldValue } from '~/features/editor/statement-editor/json-fields'
 import { getParamValueFromArgs, hasParamExplicitValue, resolveParamSelectValue } from '~/features/editor/statement-editor/param-value'
@@ -99,33 +99,13 @@ export function useStatementEditorParams(opts: UseStatementEditorParamsOptions) 
 
   function getArgSelectValue(argField: ArgField): string {
     return resolveParamSelectValue({
-      argField,
       currentValue: String(getArgValue(argField) || ''),
       hasExplicitValue: hasParamExplicitValue({
         argField,
         commandNode: opts.commandNode.value,
-        args: opts.parsed.value?.args,
       }),
-      dynamicOptions: getArgDynamicOptions(argField),
       staticOptions: getArgSelectOptions(argField),
     })
-  }
-
-  function isArgCustom(argField: ArgField): boolean {
-    return argField.field.type === 'choice'
-      && argField.field.customizable === true
-      && getArgSelectValue(argField) === CUSTOM_CONTENT
-  }
-
-  function handleArgSelectChange(argField: ArgField, value: string) {
-    if (
-      argField.field.type === 'choice'
-      && argField.field.customizable
-      && value === CUSTOM_CONTENT
-    ) {
-      return
-    }
-    handleArgFieldChange(argField, value)
   }
 
   function isArgVisible(argField: ArgField): boolean {
@@ -288,8 +268,6 @@ export function useStatementEditorParams(opts: UseStatementEditorParamsOptions) 
     getArgDynamicOptions,
     getArgSelectOptions,
     getArgSelectValue,
-    isArgCustom,
-    handleArgSelectChange,
     isArgVisible,
     handleArgFieldChange,
     isArgFileMissing,

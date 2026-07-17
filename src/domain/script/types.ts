@@ -69,6 +69,14 @@ export type CommandNode = TypedCommandNode | GenericCommandNode
 // ─── 共享常量与类型守卫 ────────────────────────────
 
 export const FIGURE_POSITION_FLAGS = ['left', 'center', 'right', 'id'] as const
+export const SAY_FIGURE_POSITIONS = ['left', 'center', 'right'] as const
+export type SayFigurePosition = (typeof SAY_FIGURE_POSITIONS)[number]
+
+export const FIGURE_POSITION_TARGET_IDS = {
+  left: 'fig-left',
+  center: 'fig-center',
+  right: 'fig-right',
+} as const satisfies Record<SayFigurePosition, string>
 
 export function isGenericNode(node: CommandNode): node is GenericCommandNode {
   return 'args' in node

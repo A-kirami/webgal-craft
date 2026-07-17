@@ -4,12 +4,9 @@ import { serializeCommandNode } from '~/domain/script/codec'
 import { ChooseContentItem, parseChooseContent, parseSetVarContent, parseStyleRuleContent, stringifyChooseContent, stringifySetVarContent, stringifyStyleRuleContent, StyleRuleContentItem } from '~/domain/script/content'
 import { CommandNode } from '~/domain/script/types'
 import { updateCommandNodeContent } from '~/domain/script/update'
-import { ArgField, CUSTOM_CONTENT, EditorField, FieldDef, readArgFieldStorageKey, resolveI18n } from '~/features/editor/command-registry/schema'
-import { resolveDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
-import { useWorkspaceStore } from '~/stores/workspace'
+import { ArgField, EditorField, FieldDef, readArgFieldStorageKey, resolveI18n } from '~/features/editor/command-registry/schema'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-import type { DynamicOptionsContext } from '~/features/editor/command-registry/schema'
 
 export interface UseStatementEditorContentOptions {
   parsed: ComputedRef<ISentence | undefined>
@@ -25,28 +22,6 @@ export interface UseStatementEditorContentOptions {
 export function useStatementEditorContent(options: UseStatementEditorContentOptions) {
   const { t } = useI18n()
 
-  function createDynamicOptionsContext(): DynamicOptionsContext {
-    const workspaceStore = useWorkspaceStore()
-    return {
-      content: options.parsed.value?.content ?? '',
-      gamePath: workspaceStore.CWD ?? '',
-    }
-  }
-
-  function getContentDynamicOptions(field: Extract<FieldDef, { type: 'choice' }>): { label: string, value: string }[] {
-    const key = field.dynamicOptionsKey
-    if (!key) {
-      return []
-    }
-    const result = resolveDynamicOptions(key, createDynamicOptionsContext())
-    return result?.options ?? []
-  }
-
-  function isKnownContentChoiceValue(field: Extract<FieldDef, { type: 'choice' }>, value: string): boolean {
-    return field.options.some(option => option.value === value)
-      || getContentDynamicOptions(field).some(option => option.value === value)
-  }
-
   const contentSelectValue = computed(() => {
     const content = options.contentField.value?.field
     if (content?.type !== 'choice') {
@@ -58,14 +33,8 @@ export function useStatementEditorContent(options: UseStatementEditorContentOpti
       return ''
     }
 
-    if (!content.customizable || isKnownContentChoiceValue(content, currentValue)) {
-      return currentValue
-    }
-
-    return CUSTOM_CONTENT
+    return currentValue
   })
-
-  const isCustomContent = computed(() => contentSelectValue.value === CUSTOM_CONTENT)
 
   // WebGAL 使用 | 作为多行文本分隔符（如 "第一行|第二行"），
   // 编辑器中用 textarea 展示时需要双向转换：| ↔ \n。
@@ -119,10 +88,6 @@ export function useStatementEditorContent(options: UseStatementEditorContentOpti
       return
     }
     options.emitUpdate({ content: newContent })
-  }
-
-  function handleContentSelectChange(value: string) {
-    handleContentChange(value === CUSTOM_CONTENT ? '' : value)
   }
 
   function getContentFieldSelectOptions(field: Extract<FieldDef, { type: 'choice' }>): { label: string, value: string }[] {
@@ -238,12 +203,10 @@ export function useStatementEditorContent(options: UseStatementEditorContentOpti
 
   return {
     contentSelectValue,
-    isCustomContent,
     pipeToNewline,
     newlineToPipe,
     isMultilineTextField,
     handleContentChange,
-    handleContentSelectChange,
     getContentFieldSelectOptions,
     specialContent: {
       setVar: setVarContent,

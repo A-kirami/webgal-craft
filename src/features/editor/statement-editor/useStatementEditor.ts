@@ -1,4 +1,3 @@
-import { hasInjectionContext } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseCommandNode, serializeCommandNode } from '~/domain/script/codec'
@@ -6,6 +5,8 @@ import { createEmptySentence, ensureParsed, StatementEntry } from '~/domain/scri
 import { serializeSentence } from '~/domain/script/serialize'
 import { updateCommandNodeInlineComment } from '~/domain/script/update'
 import { resolveStatementSpecialContentMode } from '~/features/editor/command-registry/schema'
+import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
+import { sceneAutocompleteOptionsKey } from '~/features/editor/statement-editor/scene-autocomplete-context'
 import { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
 import { useEditorDynamicOptionsBootstrap } from '~/features/editor/statement-editor/useEditorDynamicOptionsBootstrap'
 import { useStatementEditorContent } from '~/features/editor/statement-editor/useStatementEditorContent'
@@ -74,12 +75,17 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   const entry = computed(() => toValue(options.entry))
   const updateTarget = computed(() => toValue(options.updateTarget) ?? createStatementIdTarget(entry.value.id))
   const previousSpeaker = computed(() => toValue(options.previousSpeaker) ?? '')
+  const injectedAutocompleteOptions = inject(sceneAutocompleteOptionsKey, undefined)
+  const autocompleteOptions = computed(() => {
+    return injectedAutocompleteOptions?.value
+      ?? EMPTY_SCENE_AUTOCOMPLETE_OPTIONS
+  })
 
   // ─── 元信息（派生链） ───
   // 卡片内嵌场景：VisualEditorStatementCard 已 provide，直接复用；
   // 侧边栏 StatementEditorPanel 不在卡片组件树内，inject 返回 undefined，自动 fallback；
-  const injected = hasInjectionContext() ? inject(statementMetaKey, undefined) : undefined
-  const meta = injected ?? useStatementMeta(entry)
+  const injectedMeta = inject(statementMetaKey, undefined)
+  const meta = injectedMeta ?? useStatementMeta(entry)
   const { parsed: sourceParsed, config, editorFields, argFields, contentField, theme, statementType, commandLabel } = meta
 
   const localDraft = ref<{ rawText: string, parsed: ISentence }>()
@@ -198,6 +204,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
 
   const fieldBindings = useStatementEditorFieldBindings({
     parsed,
+    autocompleteOptions,
     say,
     content: contentComposable,
     params,
@@ -302,12 +309,10 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
 
     content: {
       contentSelectValue: contentComposable.contentSelectValue,
-      isCustomContent: contentComposable.isCustomContent,
       pipeToNewline: contentComposable.pipeToNewline,
       newlineToPipe: contentComposable.newlineToPipe,
       isMultilineTextField: contentComposable.isMultilineTextField,
       handleChange: contentComposable.handleContentChange,
-      handleSelectChange: contentComposable.handleContentSelectChange,
       getSelectOptions: contentComposable.getContentFieldSelectOptions,
       specialContent: contentComposable.specialContent,
     },
@@ -319,8 +324,6 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       getArgDynamicOptions: params.getArgDynamicOptions,
       getArgSelectOptions: params.getArgSelectOptions,
       getArgSelectValue: params.getArgSelectValue,
-      isArgCustom: params.isArgCustom,
-      handleArgSelectChange: params.handleArgSelectChange,
       isArgVisible: params.isArgVisible,
       handleArgFieldChange: params.handleArgFieldChange,
       isArgFileMissing: params.isArgFileMissing,
@@ -328,7 +331,6 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       getFieldSelectValue: fieldBindings.getFieldSelectValue,
       getFieldSelectOptions: fieldBindings.getFieldSelectOptions,
       getFieldDynamicOptions: fieldBindings.getFieldDynamicOptions,
-      isFieldCustom: fieldBindings.isFieldCustom,
       isFieldVisible: fieldBindings.isFieldVisible,
       isFieldFileMissing: fieldBindings.isFieldFileMissing,
       handleFieldValueChange: fieldBindings.handleFieldValueChange,

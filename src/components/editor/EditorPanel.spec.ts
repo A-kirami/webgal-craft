@@ -382,6 +382,7 @@ describe('EditorPanel', () => {
         kind: 'scene',
         path: '/game/start.txt',
         projection: 'visual',
+        statements: [],
       },
       isCurrentSceneFile: true,
     }))
@@ -450,6 +451,7 @@ describe('EditorPanel', () => {
         kind: 'scene',
         path: '/game/start.txt',
         projection: 'text',
+        textContent: '',
       },
       isCurrentSceneFile: true,
     }))
@@ -472,6 +474,7 @@ describe('EditorPanel', () => {
         kind: 'scene',
         path: '/game/start.txt',
         projection: 'text',
+        textContent: '',
       },
       isCurrentSceneFile: true,
     }))

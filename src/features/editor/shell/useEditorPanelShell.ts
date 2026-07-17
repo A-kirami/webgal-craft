@@ -4,6 +4,11 @@ import { useEffectEditorProvider } from '~/features/editor/effect-editor/useEffe
 import { readResizablePanelCollapsed } from '~/features/editor/shared/resizable-panel'
 import { useCommandPanelBridgeProvider, useSidebarPanelProvider } from '~/features/editor/shared/useEditorPanelBindings'
 import { useShortcut } from '~/features/editor/shortcut/useShortcut'
+import {
+  buildSceneAutocompleteOptionsFromStatements,
+  buildSceneAutocompleteOptionsFromText,
+  EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
+} from '~/features/editor/statement-editor/scene-autocomplete'
 import { StatementGroup } from '~/stores/command-panel'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { usePreferenceStore } from '~/stores/preference'
@@ -57,6 +62,18 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
   const currentProjection = computed(() => {
     const state = editorStore.currentState
     return state && isEditableEditor(state) ? state.projection : undefined
+  })
+  const sceneAutocompleteOptions = computed(() => {
+    const state = editorStore.currentState
+    if (!state || !isEditableEditor(state) || state.kind !== 'scene') {
+      return EMPTY_SCENE_AUTOCOMPLETE_OPTIONS
+    }
+
+    if (state.projection === 'visual') {
+      return buildSceneAutocompleteOptionsFromStatements(state.statements)
+    }
+
+    return buildSceneAutocompleteOptionsFromText(state.textContent)
   })
   const isTextMode = computed(() => currentProjection.value === 'text')
 
@@ -243,6 +260,7 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     isCommandPanelCollapsed,
     isCurrentSceneFile,
     isTextMode,
+    sceneAutocompleteOptions,
     selectedStatement,
     selectedStatementIndex,
     selectedStatementPreviousSpeaker,

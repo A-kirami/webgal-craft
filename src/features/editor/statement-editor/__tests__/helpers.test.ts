@@ -1,13 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { CUSTOM_CONTENT, UNSPECIFIED } from '~/features/editor/command-registry/schema'
-import { readJsonFieldValue, writeJsonFieldValue } from '~/features/editor/statement-editor/json-fields'
-import {
-  getParamValueFromArgs,
-  hasParamExplicitValue,
-  resolveParamSelectValue,
-} from '~/features/editor/statement-editor/param-value'
+import { UNSPECIFIED } from '~/features/editor/command-registry/schema'
+import { getParamValueFromArgs } from '~/features/editor/statement-editor/param-value'
 import {
   buildSchemaKeySet,
   filterExtraArgs,
@@ -18,7 +13,6 @@ import {
 } from '~/features/editor/statement-editor/visibility'
 
 import type { arg } from 'webgal-parser/src/interface/sceneInterface'
-import type { CommandNode } from '~/domain/script/types'
 import type { ArgField } from '~/features/editor/command-registry/schema'
 
 /** 从字段属性快速构造 ArgField 测试夹具 */
@@ -52,28 +46,6 @@ const speedField = af({ key: 'speed', type: 'number', defaultValue: 100 })
 const detailField = af({ key: 'detail', type: 'text', visibleWhen: { key: 'mode', value: 'left' } })
 const titleField = af({ key: 'title', type: 'text', visibleWhen: { key: 'name', notEmpty: true } })
 const subtitleField = af({ key: 'subtitle', type: 'text', visibleWhen: { key: 'name', empty: true } })
-
-function createSayNode(): CommandNode {
-  return {
-    type: commandType.say, commandRaw: '', inlineComment: '',
-    text: '', speaker: '', next: true, continue: false,
-    concat: true, notend: false, clear: false, extraArgs: [],
-  }
-}
-
-function createSetAnimationNode(target?: string): CommandNode {
-  const args: arg[] = []
-  if (target !== undefined) {
-    args.push({ key: 'target', value: target })
-  }
-  return {
-    type: commandType.setAnimation,
-    commandRaw: 'setAnimation',
-    inlineComment: '',
-    content: 'bounce',
-    args,
-  }
-}
 
 describe('语句编辑器核心工具', () => {
   it('buildSchemaKeySet 包含参数 key 和 flag-choice 选项 key', () => {
@@ -208,122 +180,5 @@ describe('语句编辑器核心工具', () => {
       { key: 'left', value: true },
       { key: 'custom', value: 'x' },
     ])
-  })
-})
-
-describe('语句编辑器参数工具', () => {
-  it('resolveParamSelectValue 在非 customizable 时直接返回当前值', () => {
-    const choiceField = af({ key: 'k', type: 'choice', options: [] })
-    expect(resolveParamSelectValue({
-      argField: choiceField, currentValue: 'foo', hasExplicitValue: true,
-      dynamicOptions: [], staticOptions: [],
-    })).toBe('foo')
-  })
-
-  it('resolveParamSelectValue 在 customizable 且显式值缺失时返回当前值', () => {
-    const choiceField = af({ key: 'k', type: 'choice', options: [], customizable: true })
-    expect(resolveParamSelectValue({
-      argField: choiceField, currentValue: 'foo', hasExplicitValue: false,
-      dynamicOptions: [], staticOptions: [],
-    })).toBe('foo')
-  })
-
-  it('resolveParamSelectValue 匹配到动态或静态选项时保留当前值', () => {
-    const choiceField = af({ key: 'k', type: 'choice', options: [], customizable: true })
-    expect(resolveParamSelectValue({
-      argField: choiceField, currentValue: 'motionA', hasExplicitValue: true,
-      dynamicOptions: [{ label: 'A', value: 'motionA' }], staticOptions: [],
-    })).toBe('motionA')
-    expect(resolveParamSelectValue({
-      argField: choiceField, currentValue: 'motionB', hasExplicitValue: true,
-      dynamicOptions: [], staticOptions: [{ label: 'B', value: 'motionB' }],
-    })).toBe('motionB')
-  })
-
-  it('resolveParamSelectValue 未命中选项时返回 CUSTOM_CONTENT', () => {
-    const choiceField = af({ key: 'k', type: 'choice', options: [], customizable: true })
-    expect(resolveParamSelectValue({
-      argField: choiceField, currentValue: 'unknown', hasExplicitValue: true,
-      dynamicOptions: [{ label: 'A', value: 'motionA' }],
-      staticOptions: [{ label: 'B', value: 'motionB' }],
-    })).toBe(CUSTOM_CONTENT)
-  })
-
-  it('hasParamExplicitValue 支持 args 与 flag-choice args 判定', () => {
-    const targetField = af({ key: 'target', type: 'choice', options: [] })
-    const flagField = af({ key: 'k', type: 'choice', mode: 'flag', options: [{ label: '', value: 'next' }] })
-    expect(hasParamExplicitValue({
-      argField: targetField, args: [{ key: 'target', value: 'hero' }],
-    })).toBe(true)
-    expect(hasParamExplicitValue({
-      argField: flagField, args: [{ key: 'next', value: true }],
-    })).toBe(true)
-    expect(hasParamExplicitValue({
-      argField: flagField, args: [{ key: 'next', value: false }],
-    })).toBe(false)
-  })
-
-  it('hasParamExplicitValue 支持 commandNode 判定', () => {
-    const sayNode = createSayNode()
-    const concatChoiceField = af({ key: 'concat', type: 'choice', options: [] })
-    const flagField = af({ key: 'k', type: 'choice', mode: 'flag', options: [{ label: '', value: 'concat' }] })
-    expect(hasParamExplicitValue({ argField: concatChoiceField, commandNode: sayNode })).toBe(true)
-    expect(hasParamExplicitValue({ argField: flagField, commandNode: sayNode })).toBe(true)
-  })
-
-  it('hasParamExplicitValue 在 commandNode 中将 customizable 空字符串视为显式值', () => {
-    const setAnimationNode = createSetAnimationNode('')
-    const targetField = af({ key: 'target', type: 'choice', options: [], customizable: true })
-    const nonCustomField = af({ key: 'target', type: 'choice', options: [], customizable: false })
-
-    expect(hasParamExplicitValue({ argField: targetField, commandNode: setAnimationNode })).toBe(true)
-    expect(hasParamExplicitValue({ argField: nonCustomField, commandNode: setAnimationNode })).toBe(false)
-  })
-
-  it('hasParamExplicitValue 支持 flattened json 字段判定', () => {
-    const focusX = jsonAf({ argKey: 'focus', fieldKey: 'x', type: 'number' })
-    expect(hasParamExplicitValue({
-      argField: focusX,
-      args: [{ key: 'focus', value: '{"x":0.25}' }],
-    })).toBe(true)
-    expect(hasParamExplicitValue({
-      argField: focusX,
-      args: [{ key: 'focus', value: '{}' }],
-    })).toBe(false)
-  })
-
-  it('hasParamExplicitValue 支持 flattened json 的 choice/file 字段判定', () => {
-    const motionField = jsonAf({ argKey: 'focus', fieldKey: 'motion', type: 'choice', variant: 'combobox' })
-    const assetField = jsonAf({ argKey: 'focus', fieldKey: 'asset', type: 'file' })
-
-    expect(hasParamExplicitValue({
-      argField: motionField,
-      args: [{ key: 'focus', value: '{"motion":"walk"}' }],
-    })).toBe(true)
-    expect(hasParamExplicitValue({
-      argField: assetField,
-      args: [{ key: 'focus', value: '{"asset":"figure/hero.png"}' }],
-    })).toBe(true)
-    expect(hasParamExplicitValue({
-      argField: motionField,
-      args: [{ key: 'focus', value: '{}' }],
-    })).toBe(false)
-  })
-
-  it('readJsonFieldValue 与 writeJsonFieldValue 行为正确', () => {
-    expect(readJsonFieldValue('{"x":1,"name":"hero"}', 'x')).toBe('1')
-    expect(readJsonFieldValue('invalid-json', 'x')).toBe('')
-    expect(readJsonFieldValue('{"x":1}', 'x', 'number')).toBe(1)
-    expect(readJsonFieldValue('{"enabled":true}', 'enabled', 'switch')).toBe(true)
-    expect(readJsonFieldValue('{"ratio":"0.5"}', 'ratio', 'number')).toBe(0.5)
-    expect(writeJsonFieldValue('{"x":1}', 'x', '2', 'number')).toBe('{"x":2}')
-    expect(writeJsonFieldValue('{"enabled":false}', 'enabled', true, 'switch')).toBe('{"enabled":true}')
-    expect(writeJsonFieldValue('{"ratio":"0.5"}', 'ratio', '0.75', 'number')).toBe('{"ratio":0.75}')
-    expect(writeJsonFieldValue('{"x":1}', 'x', UNSPECIFIED)).toBe('')
-    expect(writeJsonFieldValue('{"name":"hero"}', 'name', '')).toBe('')
-    expect(writeJsonFieldValue('{}', 'name', 'hero')).toBe('{"name":"hero"}')
-    expect(writeJsonFieldValue('{}', 'asset', 'figure/hero.png', 'file')).toBe('{"asset":"figure/hero.png"}')
-    expect(writeJsonFieldValue('{}', 'motion', 'idle', 'choice')).toBe('{"motion":"idle"}')
-    expect(writeJsonFieldValue('{}', 'instant', '1', 'choice')).toBe('{"instant":"1"}')
   })
 })

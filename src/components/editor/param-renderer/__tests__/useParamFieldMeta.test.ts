@@ -63,6 +63,13 @@ describe('useParamFieldMeta', () => {
       type: 'text',
       variant: { inline: 'input', panel: 'textarea-grow' },
     })
+    const autocomplete = createField({
+      key: 'id',
+      label: 'ID',
+      type: 'text',
+      variant: 'autocomplete',
+      autocomplete: [{ type: 'scene', collection: 'figureIds' }],
+    })
     const combobox = createField({
       key: 'target',
       label: 'Target',
@@ -78,6 +85,7 @@ describe('useParamFieldMeta', () => {
 
     expect(meta.fieldMode(numberWithUnit)).toBe('numberWithUnit')
     expect(meta.fieldMode(textAreaGrow)).toBe('textareaGrow')
+    expect(meta.fieldMode(autocomplete)).toBe('autocomplete')
     expect(meta.fieldMode(combobox)).toBe('combobox')
     expect(meta.fieldMode(switchField)).toBe('switch')
 
@@ -86,7 +94,7 @@ describe('useParamFieldMeta', () => {
     expect(meta.fieldLayout(textAreaGrow, true)).toBe('row')
   })
 
-  it('inputAutoWidth 仅在 input 形态下生效', () => {
+  it('autocomplete 默认使用内容宽度，inputAutoWidth 仅控制 input 形态', () => {
     const meta = createMeta()
     const textInput = createField({
       inputAutoWidth: true,
@@ -101,6 +109,13 @@ describe('useParamFieldMeta', () => {
       label: 'Line',
       type: 'text',
       variant: 'textarea-auto',
+    })
+    const textAutocomplete = createField({
+      key: 'id',
+      label: 'ID',
+      type: 'text',
+      variant: 'autocomplete',
+      autocomplete: [{ type: 'scene', collection: 'figureIds' }],
     })
     const numberInput = createField({
       inputAutoWidth: true,
@@ -120,14 +135,14 @@ describe('useParamFieldMeta', () => {
 
     expect(meta.shouldUseInputAutoWidth(textInput)).toBe(true)
     expect(meta.shouldUseInputAutoWidth(textArea)).toBe(false)
+    expect(meta.shouldUseInputAutoWidth(textAutocomplete)).toBe(true)
     expect(meta.shouldUseInputAutoWidth(numberInput)).toBe(true)
     expect(meta.shouldUseInputAutoWidth(numberUnit)).toBe(false)
   })
 
-  it('解析 placeholder/customLabel/unit/fileTitle 与 switch model 值', () => {
+  it('解析 placeholder/unit/fileTitle 与 switch model 值', () => {
     const meta = createMeta()
     const choiceField = createField({
-      customLabel: 'Custom target',
       key: 'target',
       label: 'Target',
       options: [],
@@ -163,7 +178,6 @@ describe('useParamFieldMeta', () => {
     })
 
     expect(meta.placeholder(choiceField)).toBe('Select target')
-    expect(meta.customLabel(choiceField)).toBe('Custom target')
     expect(meta.unitLabel(numberField)).toBe('ms')
     expect(meta.fileTitle(fileField)).toBe('Choose file')
     expect(meta.switchModelValue(contentSwitch, 'continue')).toBe(true)

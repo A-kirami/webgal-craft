@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { CUSTOM_CONTENT, UNSPECIFIED } from '~/features/editor/command-registry/schema'
+import { UNSPECIFIED } from '~/features/editor/command-registry/schema'
 import {
   getParamValueFromArgs,
   hasParamExplicitValue,
@@ -69,35 +69,23 @@ describe('paramValue', () => {
         { label: 'inherit', value: UNSPECIFIED },
         { label: 'left', value: 'left' },
       ],
-      customizable: true,
     })
 
     expect(resolveParamSelectValue({
-      argField: field,
       currentValue: '',
       hasExplicitValue: false,
-      dynamicOptions: [],
       staticOptions: field.field.type === 'choice'
         ? field.field.options.map(option => ({ label: String(option.label), value: option.value }))
         : [],
     })).toBe(UNSPECIFIED)
   })
 
-  it('resolveParamSelectValue 在 customizable 值未命中选项时返回 CUSTOM_CONTENT', () => {
-    const field = createArgField({
-      key: 'target',
-      type: 'choice',
-      customizable: true,
-      options: [{ label: 'left', value: 'fig-left' }],
-    })
-
+  it('resolveParamSelectValue 在选项未命中时保留当前值', () => {
     expect(resolveParamSelectValue({
-      argField: field,
       currentValue: 'custom-node',
       hasExplicitValue: true,
-      dynamicOptions: [],
       staticOptions: [{ label: 'left', value: 'fig-left' }],
-    })).toBe(CUSTOM_CONTENT)
+    })).toBe('custom-node')
   })
 
   it('hasParamExplicitValue 对 commandNode 的 json 父参数按存在性判定', () => {
@@ -114,11 +102,10 @@ describe('paramValue', () => {
     })).toBe(true)
   })
 
-  it('hasParamExplicitValue 对 customizable choice 的空字符串保留显式值语义', () => {
+  it('hasParamExplicitValue 对 commandNode 的 extraArgs 空字符串按存在性判定', () => {
     const targetField = createArgField({
       key: 'target',
       type: 'choice',
-      customizable: true,
       options: [],
     })
 

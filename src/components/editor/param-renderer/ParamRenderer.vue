@@ -7,31 +7,29 @@ import { cn } from '~/lib/utils'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 
 import { useParamChoiceFieldViewModel } from './useParamChoiceFieldViewModel'
-import { useParamCustomField } from './useParamCustomField'
 import { useParamFieldMeta } from './useParamFieldMeta'
 import { useParamXyPad } from './useParamXyPad'
 
 import type { StatementSchemaParamMode } from './useParamFieldMeta'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { NumberField } from '~/features/editor/command-registry/schema'
+import type { ResolvedAutocompleteOption } from '~/features/editor/statement-editor/autocomplete-options'
 
 interface Props {
   canScrub: (field: EditorField) => boolean
-  customOptionLabel?: string
   fields: EditorField[]
   fileRootPaths: Record<string, string>
+  getAutocompleteOptions: (field: EditorField) => ResolvedAutocompleteOption[]
   getDynamicOptions: (field: EditorField) => { label: string, value: string }[]
   getFieldSelectValue: (field: EditorField) => string
   getFieldValue: (field: EditorField) => string | number | boolean
   isFieldFileMissing: (field: EditorField) => boolean
-  isFieldCustom: (field: EditorField) => boolean
   isFieldVisible: (field: EditorField) => boolean
   mode?: StatementSchemaParamMode
   parsed?: ISentence
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  customOptionLabel: '',
   mode: 'all',
 })
 
@@ -68,12 +66,6 @@ const visibleFieldIndexMap = $computed(() => {
 
 const isInline = $computed(() => surface === 'inline')
 const notSelectedLabel = $computed(() => t('edit.visualEditor.options.notSelected'))
-
-const customField = useParamCustomField({
-  visibleFields: () => visibleFields,
-  getFieldSelectValue: field => props.getFieldSelectValue(field),
-  isFieldCustom: field => props.isFieldCustom(field),
-})
 
 function label(field: EditorField): string {
   return resolveI18n(field.field.label, t, i18nContent)
@@ -142,10 +134,6 @@ function resolvedPlaceholder(field: EditorField): string {
   return ''
 }
 
-function customLabel(field: EditorField): string {
-  return fieldMeta.customLabel(field)
-}
-
 function unitLabel(field: EditorField): string {
   return fieldMeta.unitLabel(field)
 }
@@ -174,6 +162,11 @@ function isFileFieldInvalid(field: EditorField): boolean {
   return isFileField(field) && props.isFieldFileMissing(field)
 }
 
+function shouldRenderAutocomplete(field: EditorField): boolean {
+  return field.field.type === 'text'
+    && fieldMode(field) === 'autocomplete'
+}
+
 function shouldRenderSegmented(field: EditorField): boolean {
   return field.field.type === 'choice'
     && resolveSurfaceVariant(field.field.variant, surface, 'select') === 'segmented'
@@ -181,10 +174,6 @@ function shouldRenderSegmented(field: EditorField): boolean {
 
 function handleSelectUpdate(field: EditorField, value: unknown) {
   const normalizedValue = normalizeFieldStringValue(value)
-  if (customField.onSelectChange(field, normalizedValue)) {
-    // 进入 custom 模式时清空当前值，避免沿用上一个预设选项值。
-    emit('updateValue', { field, value: '' })
-  }
   emit('updateSelect', { field, value: normalizedValue })
 }
 
@@ -227,10 +216,6 @@ function fileExclude(field: EditorField): string[] | undefined {
 
 const { buildControlId } = useControlId('param')
 
-function customFieldInputId(field: EditorField): string {
-  return buildControlId(`custom-${field.key}`)
-}
-
 function fieldInputId(field: EditorField): string {
   return buildControlId(`field-${field.key}`)
 }
@@ -245,11 +230,9 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
 
     return editSettingsStore.comboboxPathDelimiter
   },
-  getCustomLabel: customLabel,
   getDynamicOptions: field => props.getDynamicOptions(field),
   getPlaceholder: resolvedPlaceholder,
-  getSelectValue: field => customField.selectModelValue(field),
-  isCustomField: field => customField.isCustomField(field),
+  getSelectValue: field => props.getFieldSelectValue(field),
   i18nContent: () => i18nContent,
   shouldRenderSegmented,
   t,
@@ -266,7 +249,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
         :class="cn(
           'group w-full flex gap-1',
           fieldLayout(field) === 'row' ? 'w-auto flex-row gap-1.5 items-center' : 'flex-col',
-          shouldUseInputAutoWidth(field) && 'w-full max-w-full min-w-0',
+          shouldUseInputAutoWidth(field) && 'max-w-full min-w-0',
           isFileField(field) && 'max-w-full min-w-0',
           isInlineStandalone(field) && 'w-full',
         )"
@@ -320,24 +303,16 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
 
         <ParamChoiceField
           v-else-if="choiceFieldViewModels.get(field.key)"
-          :field="field"
           :mode="choiceFieldViewModels.get(field.key)?.mode ?? 'select'"
           :input-id="fieldInputId(field)"
-          :custom-input-id="customFieldInputId(field)"
-          :surface="surface"
           :combobox-data="choiceFieldViewModels.get(field.key)?.comboboxData"
           :control-class="controlClass(field)"
           :options="choiceFieldViewModels.get(field.key)?.options ?? []"
           :select-value="choiceFieldViewModels.get(field.key)?.selectValue ?? ''"
-          :value="getFieldValue(field)"
-          :custom-label="choiceFieldViewModels.get(field.key)?.customLabel"
-          :custom-option-label="customOptionLabel"
           :not-selected-label="notSelectedLabel"
           :placeholder="choiceFieldViewModels.get(field.key)?.placeholder ?? ''"
-          :is-custom-field="choiceFieldViewModels.get(field.key)?.isCustomField ?? false"
           :render-segmented="choiceFieldViewModels.get(field.key)?.renderSegmented ?? false"
           @update-select="handleSelectUpdate(field, $event)"
-          @update-value="emit('updateValue', { field, value: $event })"
         />
 
         <ColorPicker
@@ -379,6 +354,27 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
           @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
         />
 
+        <Autocomplete
+          v-else-if="shouldRenderAutocomplete(field)"
+          :id="fieldInputId(field)"
+          :model-value="String(getFieldValue(field) || '')"
+          :options="getAutocompleteOptions(field)"
+          :placeholder="resolvedPlaceholder(field)"
+          :container-class="cn(
+            !isInline && 'w-full',
+            shouldUseInputAutoWidth(field) && isInline && 'inline-flex max-w-full min-w-0',
+            isInlineStandalone(field) && !shouldUseInputAutoWidth(field) && 'w-full min-w-0',
+          )"
+          :class="cn(
+            'text-xs h-6 px-2.5 w-24 shadow-none',
+            !isInline && 'h-7 px-3 w-full',
+            shouldUseInputAutoWidth(field) && isInline && 'field-sizing-content w-auto max-w-full min-w-22',
+            isInlineStandalone(field) && !shouldUseInputAutoWidth(field) && 'w-full min-w-0',
+            controlClass(field),
+          )"
+          @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
+        />
+
         <Input
           v-else
           :id="fieldInputId(field)"
@@ -388,34 +384,6 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
             shouldUseInputAutoWidth(field) && 'field-sizing-content w-auto max-w-full min-w-24',
             isInlineStandalone(field) && 'w-full min-w-0',
             controlClass(field),
-          )"
-          @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
-        />
-      </div>
-
-      <div
-        v-if="customField.isCustomField(field) && field.field.type !== 'choice'"
-        :class="cn('group flex gap-1.5 w-auto max-w-full min-w-0 flex-row items-center data-[surface=panel]:w-full data-[surface=panel]:flex-col data-[surface=panel]:gap-1 data-[surface=panel]:items-stretch')"
-        :data-surface="surface"
-      >
-        <Label
-          v-if="customLabel(field)"
-          :for="customFieldInputId(field)"
-          :class="cn(
-            'text-xs text-muted-foreground w-fit shrink-0',
-            'group-data-[surface=panel]:font-medium',
-          )"
-        >
-          {{ customLabel(field) }}
-        </Label>
-        <Input
-          :id="customFieldInputId(field)"
-          :model-value="String(getFieldValue(field) || '')"
-          :class="cn(
-            controlClass(field),
-            'text-xs h-6 px-2.5 w-24 shadow-none',
-            'field-sizing-content w-auto max-w-full min-w-24 group-data-[surface=panel]:w-full',
-            'group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-3',
           )"
           @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
         />

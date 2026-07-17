@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { CUSTOM_CONTENT } from '~/features/editor/command-registry/schema'
 import { normalizeFieldStringValue } from '~/features/editor/statement-editor/field-utils'
 import { cn } from '~/lib/utils'
 
@@ -8,8 +7,6 @@ import type { HTMLAttributes } from 'vue'
 
 interface Props {
   id?: string
-  customizable?: boolean
-  customOptionLabel: string
   groupClass?: HTMLAttributes['class']
   itemClass?: HTMLAttributes['class']
   modelValue?: string
@@ -25,15 +22,6 @@ const emit = defineEmits<{
 }>()
 
 const controlValue = $computed(() => props.modelValue ?? props.selectValue ?? '')
-const mergedOptions = $computed(() => {
-  if (!props.customizable) {
-    return props.options
-  }
-  return [...props.options, {
-    value: CUSTOM_CONTENT,
-    label: props.customOptionLabel,
-  }]
-})
 
 function emitNormalizedSelect(value: unknown) {
   const normalized = normalizeFieldStringValue(value)
@@ -52,7 +40,7 @@ function emitNormalizedSelect(value: unknown) {
     @update:model-value="emitNormalizedSelect"
   >
     <ToggleGroupItem
-      v-for="opt in mergedOptions"
+      v-for="opt in options"
       :key="opt.value"
       :value="opt.value"
       :class="cn('text-xs leading-none px-2 border-0 rounded-sm gap-1 h-4.5 justify-center min-w-0 flex-1 shadow-none data-[state=on]:text-accent-foreground data-[state=on]:bg-accent hover:bg-muted/60 group-data-[surface=panel]:h-5.5 ', itemClass)"
