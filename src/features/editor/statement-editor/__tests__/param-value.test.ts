@@ -88,7 +88,7 @@ describe('paramValue', () => {
     })).toBe('custom-node')
   })
 
-  it('hasParamExplicitValue 对 commandNode 的 json 父参数按存在性判定', () => {
+  it('hasParamExplicitValue 对 commandNode 的 json 子字段按存在性判定', () => {
     const focusMotionField = createJsonArgField({
       argKey: 'focus',
       fieldKey: 'motion',
@@ -100,6 +100,19 @@ describe('paramValue', () => {
       argField: focusMotionField,
       commandNode: createCommandNode([{ key: 'focus', value: '{"motion":"idle"}' }]),
     })).toBe(true)
+  })
+
+  it('hasParamExplicitValue 在 json 父参数存在但目标子字段缺失时返回 false', () => {
+    const focusXField = createJsonArgField({
+      argKey: 'focus',
+      fieldKey: 'x',
+      type: 'number',
+    })
+
+    expect(hasParamExplicitValue({
+      argField: focusXField,
+      commandNode: createCommandNode([{ key: 'focus', value: '{"motion":"idle"}' }]),
+    })).toBe(false)
   })
 
   it('hasParamExplicitValue 对 commandNode 的 extraArgs 空字符串按存在性判定', () => {

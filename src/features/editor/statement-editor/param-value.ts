@@ -1,4 +1,4 @@
-import { hasCommandNodeParam } from '~/domain/script/params'
+import { hasCommandNodeParam, readCommandNodeParamValue } from '~/domain/script/params'
 import { CommandNode } from '~/domain/script/types'
 import { ArgField, isFlagChoiceField, readArgFieldStorageKey, UNSPECIFIED } from '~/features/editor/command-registry/schema'
 import { readJsonFieldValue } from '~/features/editor/statement-editor/json-fields'
@@ -69,7 +69,16 @@ export function hasParamExplicitValue(options: HasParamExplicitValueOptions): bo
   }
 
   if (argField.jsonMeta) {
-    return hasCommandNodeParam(commandNode, argField.jsonMeta.argKey)
+    const rawValue = readCommandNodeParamValue(commandNode, {
+      key: argField.jsonMeta.argKey,
+      type: 'string',
+    })
+    if (typeof rawValue !== 'string') {
+      return false
+    }
+
+    const fieldValue = readJsonFieldValue(rawValue, argField.jsonMeta.fieldKey, argField.field.type)
+    return fieldValue !== '' && fieldValue !== undefined
   }
   if (argField.field.type === 'choice' && isFlagChoiceField(argField.field)) {
     return argField.field.options.some(option => hasCommandNodeParam(commandNode, option.value))
