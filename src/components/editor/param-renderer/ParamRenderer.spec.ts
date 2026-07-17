@@ -112,6 +112,7 @@ function createTextareaStub() {
     emits: ['update:model-value'],
     setup(props, { emit }) {
       return () => h('textarea', {
+        'class': props.class,
         'data-testid': props.id ?? 'textarea',
         'id': props.id,
         'placeholder': props.placeholder,
@@ -307,6 +308,12 @@ describe('ParamRenderer', () => {
 
     await expect.element(page.getByText('Dialogue')).not.toBeInTheDocument()
     await expect.element(page.getByRole('textbox')).toHaveAttribute('placeholder', '')
+  })
+
+  it('textarea stub 显式转发调用方样式类', async () => {
+    renderRenderer('inline', { className: 'min-w-20' })
+
+    await expect.element(page.getByRole('textbox')).toHaveClass('min-w-20')
   })
 
   it('启用路径分隔符时，为 path grouping 字段构建级联 combobox 数据', async () => {
