@@ -1,5 +1,8 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { parseCommandNode } from '~/domain/script/codec'
+import { readSayFigureTargetId } from '~/domain/script/say-figure'
+import { SAY_FIGURE_POSITIONS } from '~/domain/script/types'
 import { isFlagChoiceField, readArgFieldStorageKey, resolveI18n } from '~/features/editor/command-registry/schema'
 import { getActiveEffectCategories } from '~/features/editor/effect-editor/effect-editor-config'
 import { resolveAutocompleteOptions } from '~/features/editor/statement-editor/autocomplete-options'
@@ -95,8 +98,38 @@ function resolveFieldDisplayValue(
 
   return value
 }
+
+function readPreviewArgs(parsed: ISentence): arg[] {
+  if (parsed.command !== commandType.say) {
+    return parsed.args
   }
-  return resolveI18n(option.label, t, content)
+
+  const node = parseCommandNode(parsed)
+  if (node.type !== commandType.say) {
+    return parsed.args
+  }
+  const figureTargetId = readSayFigureTargetId(node)
+  if (!figureTargetId) {
+    return parsed.args
+  }
+
+  let insertedFigureId = false
+  return parsed.args.flatMap((item) => {
+    if (!isSayFigureArg(item)) {
+      return item
+    }
+    if (insertedFigureId) {
+      return []
+    }
+
+    insertedFigureId = true
+    return { key: 'figureId', value: figureTargetId }
+  })
+}
+
+function isSayFigureArg(item: arg): boolean {
+  return item.key === 'figureId'
+    || (item.value === true && (SAY_FIGURE_POSITIONS as readonly string[]).includes(item.key))
 }
 
 export function buildStatementPreviewParams(input: BuildStatementPreviewParamsInput): StatementCardPreviewParam[] {
@@ -219,7 +252,7 @@ export function buildStatementPreviewParams(input: BuildStatementPreviewParamsIn
     }
   }
 
-  const visibleArgs = parsed.args
+  const visibleArgs = readPreviewArgs(parsed)
     .filter((item: arg) => item.key !== 'next' && item.key !== 'continue')
     .filter((item: arg) => !(parsed.command === commandType.say && item.key === 'speaker'))
     .filter((item: arg) => {

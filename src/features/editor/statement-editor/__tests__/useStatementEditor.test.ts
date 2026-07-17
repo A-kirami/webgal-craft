@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { SAY_CONTINUATION_RAW } from '~/domain/script/codec'
+import { FIGURE_POSITION_TARGET_IDS } from '~/domain/script/types'
 import {
   createEntry,
   createHarness,
@@ -51,18 +52,16 @@ describe('useStatementEditor', () => {
     expect(editor.view.commandRenderFields.value.some(field => field.storage === 'content')).toBe(false)
   })
 
-  it('flag-choice 写回优先走 typed 路径，并清理隐藏依赖参数', () => {
-    const { editor, updates } = createHarness('Alice: hello -id -figureId=hero;')
-    const figurePositionField = requireArgField(editor, 'figurePosition')
+  it('say 位置语法糖在编辑器中显示为运行时目标 ID，修改后写入 figureId', () => {
+    const { editor, updates } = createHarness('Alice: hello -left;')
+    const associatedFigureField = requireArgField(editor, 'figureId')
 
-    editor.params.handleArgFieldChange(figurePositionField, 'left')
+    expect(editor.params.getArgValue(associatedFigureField)).toBe(FIGURE_POSITION_TARGET_IDS.left)
 
-    const latest = updates.at(-1)
-    expect(latest).toBeDefined()
-    expect(latest!.parsed.command).toBe(commandType.say)
-    expect(latest!.parsed.args).toEqual([
+    editor.params.handleArgFieldChange(associatedFigureField, 'hero')
+    expect(updates.at(-1)?.parsed.args).toEqual([
       { key: 'speaker', value: 'Alice' },
-      { key: 'left', value: true },
+      { key: 'figureId', value: 'hero' },
     ])
   })
 

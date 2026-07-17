@@ -171,17 +171,23 @@ describe('命令节点参数访问', () => {
     expect(readCommandNodeParamValue(unlockBgmNode, makeParamDef('x', 'text'))).toBe(1)
   })
 
-  it('读取类型化 say 标志参数', () => {
-    const sentence = mustParse('Alice: hello -fontSize=medium -vocal=voice.ogg -volume=80 -id -figureId=hero -next -continue -concat -notend;')
+  it('读取类型化 say 参数', () => {
+    const sentence = mustParse('Alice: hello -fontSize=medium -vocal=voice.ogg -volume=80 -next -continue -concat -notend;')
     const node = parseCommandNode(sentence)
 
     expect(readCommandNodeParamValue(node, makeParamDef('fontSize', 'select'))).toBe('medium')
     expect(readCommandNodeParamValue(node, makeParamDef('vocal', 'text'))).toBe('voice.ogg')
     expect(readCommandNodeParamValue(node, makeParamDef('volume', 'number'))).toBe(80)
-    expect(readCommandNodeParamValue(node, makeParamDef('figurePosition', 'select'))).toBe('id')
-    expect(readCommandNodeParamValue(node, makeParamDef('figureId', 'text'))).toBe('hero')
     expect(readCommandNodeParamValue(node, makeParamDef('concat', 'switch'))).toBe(true)
     expect(readCommandNodeParamValue(node, makeParamDef('notend', 'switch'))).toBe(true)
+  })
+
+  it('将 say 位置语法糖映射为运行时目标 ID，并优先读取显式 figureId', () => {
+    const positionNode = parseCommandNode(mustParse('Alice: hello -left;'))
+    const explicitIdNode = parseCommandNode(mustParse('Alice: hello -left -figureId=hero;'))
+
+    expect(readCommandNodeParamValue(positionNode, makeParamDef('figureId', 'text'))).toBe('fig-left')
+    expect(readCommandNodeParamValue(explicitIdNode, makeParamDef('figureId', 'text'))).toBe('hero')
   })
 
   it('未知 key 回退到 args/extraArgs', () => {
@@ -192,13 +198,10 @@ describe('命令节点参数访问', () => {
   })
 
   it('检测类型化已知参数是否存在', () => {
-    const sentence = mustParse('Alice: hello -fontSize=medium -left -figureId=hero -next -concat;')
+    const sentence = mustParse('Alice: hello -fontSize=medium -next -concat;')
     const node = parseCommandNode(sentence)
 
     expect(hasCommandNodeParam(node, 'fontSize')).toBe(true)
-    expect(hasCommandNodeParam(node, 'figurePosition')).toBe(true)
-    expect(hasCommandNodeParam(node, 'left')).toBe(true)
-    expect(hasCommandNodeParam(node, 'figureId')).toBe(true)
     expect(hasCommandNodeParam(node, 'next')).toBe(false)
     expect(hasCommandNodeParam(node, 'concat')).toBe(true)
     expect(hasCommandNodeParam(node, 'continue')).toBe(false)

@@ -138,6 +138,17 @@ describe('命令注册表完整性', () => {
       grouping: { mode: 'path' },
     })
   })
+
+  it('立绘引用和标签名称字段声明对应 autocomplete 来源', () => {
+    const sayFields = readEditorFields(getCommandConfig(commandType.say))
+    const associatedFigureField = sayFields.find(field => field.key === 'figureId')?.field
+    expect(associatedFigureField).toMatchObject({
+      type: 'text',
+      variant: 'autocomplete',
+      autocomplete: expect.arrayContaining([{ type: 'scene', collection: 'figureIds', groupLabel: expect.any(Function) }]),
+    })
+    expect(sayFields.some(field => field.key === 'figurePosition')).toBe(false)
+
     const argCases = [
       { type: commandType.changeFigure, key: 'id', collection: 'figureIds' },
       { type: commandType.playEffect, key: 'id', collection: 'soundEffectIds' },
@@ -159,6 +170,8 @@ describe('命令注册表完整性', () => {
         autocomplete: [{ type: 'scene', collection: 'sceneLabels' }],
       })
     }
+  })
+
   it('pixi 特效名使用带内置候选的 autocomplete 文本字段', () => {
     const pixiContent = readContentField(getCommandConfig(commandType.pixi))
 

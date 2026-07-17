@@ -1050,7 +1050,6 @@ edit:
     assetPreview:
       loadFailed: 読み込み失敗
     options:
-      unspecified: 未指定
       notSelected: 未選択
       default: デフォルト
       left: 左
@@ -1059,7 +1058,6 @@ edit:
       figureLeft: 左側立ち絵
       figureCenter: 中央立ち絵
       figureRight: 右側立ち絵
-      useFigureId: 立ち絵IDを使用
       blendNormal: 通常
       blendAdd: 覆い焼きリニア（加算）
       blendMultiply: 乗算

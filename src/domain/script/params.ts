@@ -1,6 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { CommandNode, FIGURE_POSITION_FLAGS, GenericCommandNode, isGenericNode, SayCommandNode } from '~/domain/script/types'
+import { readSayFigureTargetId } from '~/domain/script/say-figure'
+import { CommandNode, GenericCommandNode, isGenericNode } from '~/domain/script/types'
 import { getCommandConfig } from '~/features/editor/command-registry/index'
 import { isFlagChoiceField, readArgFields } from '~/features/editor/command-registry/schema'
 
@@ -95,16 +96,6 @@ export function getRegistryKnownKeys(type: commandType): Set<string> {
 
 const CHANGE_FIGURE_POSITION_FLAGS = ['left', 'right'] as const
 
-function readSayFlagSelect(node: SayCommandNode, key: string): ParamValue | typeof NOT_HANDLED {
-  if (key === 'figurePosition') {
-    return node.figurePosition
-  }
-  if ((FIGURE_POSITION_FLAGS as readonly string[]).includes(key)) {
-    return node.figurePosition === key
-  }
-  return NOT_HANDLED
-}
-
 function readChangeFigurePosition(node: GenericCommandNode, key: string): ParamValue | typeof NOT_HANDLED {
   if (node.type !== commandType.changeFigure || key !== 'position') {
     return NOT_HANDLED
@@ -117,19 +108,6 @@ function readChangeFigurePosition(node: GenericCommandNode, key: string): ParamV
   return undefined
 }
 
-function hasSayFlagSelect(node: SayCommandNode, key: string): boolean | typeof NOT_HANDLED {
-  if (key === 'figurePosition') {
-    return node.figurePosition !== undefined
-  }
-  if ((FIGURE_POSITION_FLAGS as readonly string[]).includes(key)) {
-    return node.figurePosition === key
-  }
-  if (key === 'speaker') {
-    return node.speaker.trim().length > 0
-  }
-  return NOT_HANDLED
-}
-
 // ─── 字段读取核心 ───────────────────────────────────
 
 function readFromFieldTable(
@@ -137,12 +115,10 @@ function readFromFieldTable(
   key: string,
   overrideType?: string,
 ): ParamValue | typeof NOT_HANDLED {
-  if (node.type === commandType.say) {
-    const flagResult = readSayFlagSelect(node as SayCommandNode, key)
-    if (flagResult !== NOT_HANDLED) {
-      return flagResult
-    }
+  if (node.type === commandType.say && key === 'figureId') {
+    return readSayFigureTargetId(node)
   }
+
   if (isGenericNode(node)) {
     const positionResult = readChangeFigurePosition(node, key)
     if (positionResult !== NOT_HANDLED) {
@@ -192,13 +168,6 @@ function hasFromFieldTable(
   node: CommandNode,
   key: string,
 ): boolean | typeof NOT_HANDLED {
-  if (node.type === commandType.say) {
-    const flagResult = hasSayFlagSelect(node as SayCommandNode, key)
-    if (flagResult !== NOT_HANDLED) {
-      return flagResult
-    }
-  }
-
   const value = readFromFieldTable(node, key)
   if (value === NOT_HANDLED) {
     return NOT_HANDLED

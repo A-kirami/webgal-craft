@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { getCommandConfig } from '~/features/editor/command-registry'
+import { readArgFields } from '~/features/editor/command-registry/schema'
 import { buildStatementPreviewParams } from '~/features/editor/statement-editor/preview'
 import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
 
@@ -108,6 +110,64 @@ describe('buildStatementPreviewParams', () => {
 
     expect(withColon[0]).toMatchObject({ label: 'Alice', value: 'Hi', truncate: true })
     expect(withoutColon[0]).toMatchObject({ label: 'Bob', value: 'Hi', truncate: true })
+  })
+
+  it('say 关联位置立绘显示语义名称', () => {
+    const result = buildStatementPreviewParams({
+      autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
+      parsed: createSentence({
+        commandRaw: 'Alice',
+        content: 'Hi',
+        args: [{ key: 'left', value: true }],
+      }),
+      statementType: 'say',
+      entryRawText: 'Alice:Hi -left;',
+      previousSpeaker: '',
+      contentField: createContentField('text'),
+      argFields: readArgFields(getCommandConfig(commandType.say)),
+      fileMissingKeys: new Set(),
+      t: identityTranslate,
+    })
+
+    expect(result).toEqual([
+      { label: 'Alice', value: 'Hi', truncate: true },
+      {
+        color: undefined,
+        fileMissing: false,
+        isFile: false,
+        label: 'edit.visualEditor.params.associatedFigure',
+        value: 'edit.visualEditor.options.figureLeft',
+      },
+    ])
+  })
+
+  it('say 自由立绘 ID 显示原始值', () => {
+    const result = buildStatementPreviewParams({
+      autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
+      parsed: createSentence({
+        commandRaw: 'Alice',
+        content: 'Hi',
+        args: [{ key: 'figureId', value: 'hero' }],
+      }),
+      statementType: 'say',
+      entryRawText: 'Alice:Hi -figureId=hero;',
+      previousSpeaker: '',
+      contentField: createContentField('text'),
+      argFields: readArgFields(getCommandConfig(commandType.say)),
+      fileMissingKeys: new Set(),
+      t: identityTranslate,
+    })
+
+    expect(result).toEqual([
+      { label: 'Alice', value: 'Hi', truncate: true },
+      {
+        color: undefined,
+        fileMissing: false,
+        isFile: false,
+        label: 'edit.visualEditor.params.associatedFigure',
+        value: 'hero',
+      },
+    ])
   })
 
   it('content select/file 分支可正确展示匹配值与缺失状态', () => {

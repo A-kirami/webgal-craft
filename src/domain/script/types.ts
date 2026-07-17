@@ -17,7 +17,7 @@ export interface SayCommandNode extends CommandNodeBase<commandType.say> {
   fontSize?: string
   vocal?: string
   volume?: number
-  figurePosition?: 'left' | 'center' | 'right' | 'id'
+  figurePosition?: SayFigurePosition
   figureId?: string
   next: boolean
   continue: boolean
@@ -68,7 +68,6 @@ export type CommandNode = TypedCommandNode | GenericCommandNode
 
 // ─── 共享常量与类型守卫 ────────────────────────────
 
-export const FIGURE_POSITION_FLAGS = ['left', 'center', 'right', 'id'] as const
 export const SAY_FIGURE_POSITIONS = ['left', 'center', 'right'] as const
 export type SayFigurePosition = (typeof SAY_FIGURE_POSITIONS)[number]
 

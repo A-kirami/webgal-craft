@@ -1050,7 +1050,6 @@ edit:
     assetPreview:
       loadFailed: 載入失敗
     options:
-      unspecified: 未指定
       notSelected: 未選擇
       default: 預設
       left: 左側
@@ -1059,7 +1058,6 @@ edit:
       figureLeft: 左側立繪
       figureCenter: 中間立繪
       figureRight: 右側立繪
-      useFigureId: 使用立繪 ID
       blendNormal: 正常
       blendAdd: 線性減淡
       blendMultiply: 正片疊底
