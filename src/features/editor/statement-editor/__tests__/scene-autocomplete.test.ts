@@ -2,14 +2,11 @@ import { describe, expect, it } from 'vitest'
 
 import { buildStatements } from '~/domain/script/sentence'
 
-import {
-  buildSceneAutocompleteOptionsFromStatements,
-  buildSceneAutocompleteOptionsFromText,
-} from '../scene-autocomplete'
+import { buildSceneAutocompleteOptionsFromStatements } from '../scene-autocomplete'
 
-describe('buildSceneAutocompleteOptionsFromText', () => {
+describe('buildSceneAutocompleteOptionsFromStatements', () => {
   it('按语义提取去重后的候选项', () => {
-    const options = buildSceneAutocompleteOptionsFromText([
+    const statements = buildStatements([
       'changeFigure: hero.png -id=hero;',
       'playEffect: beep.ogg -id=fx-main;',
       'changeFigure: another.png -id=hero;',
@@ -17,6 +14,7 @@ describe('buildSceneAutocompleteOptionsFromText', () => {
       'jumpLabel: start;',
       'label: next;',
     ].join('\n'))
+    const options = buildSceneAutocompleteOptionsFromStatements(statements)
 
     expect(options.figureIds).toEqual([
       { label: 'hero', value: 'hero' },
@@ -29,9 +27,7 @@ describe('buildSceneAutocompleteOptionsFromText', () => {
       { label: 'next', value: 'next' },
     ])
   })
-})
 
-describe('buildSceneAutocompleteOptionsFromStatements', () => {
   it('从 StatementEntry 列表提取候选项并忽略空值', () => {
     const statements = buildStatements([
       'changeFigure: hero.png -id=hero;',

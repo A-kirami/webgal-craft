@@ -1,7 +1,6 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { parseSentence } from '~/domain/script/parser'
-import { ensureParsed, readSentenceArgString, splitStatements } from '~/domain/script/sentence'
+import { ensureParsed, readSentenceArgString } from '~/domain/script/sentence'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { StatementEntry } from '~/domain/script/sentence'
@@ -83,16 +82,6 @@ export function buildSceneAutocompleteOptionsFromStatements(
 
   for (const statement of statements) {
     collectSentenceAutocompleteOptions(ensureParsed(statement), buckets)
-  }
-
-  return buildOptions(buckets)
-}
-
-export function buildSceneAutocompleteOptionsFromText(text: string): SceneAutocompleteOptions {
-  const buckets = createBuckets()
-
-  for (const rawStatement of splitStatements(text)) {
-    collectSentenceAutocompleteOptions(parseSentence(rawStatement), buckets)
   }
 
   return buildOptions(buckets)

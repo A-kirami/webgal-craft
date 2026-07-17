@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, effectScope, reactive, shallowRef } from 'vue'
 
+import { buildStatements } from '~/domain/script/sentence'
+
 import { useEditorPanelShell } from '../useEditorPanelShell'
 
 import type { Transform } from '~/domain/stage/types'
@@ -119,13 +121,23 @@ vi.mock('~/stores/tabs', () => ({
 function createFixture(options: {
   currentProjection?: string
   isCurrentSceneFile?: boolean
+  sceneStatements?: ReturnType<typeof buildStatements>
+  sceneTextContent?: string
 } = {}) {
+  const sceneStatements = options.sceneStatements ?? []
   const tabsStore = {
     shouldFocusEditor: false,
   }
   const editorStore = {
     currentState: {
+      kind: 'scene',
       projection: options.currentProjection ?? 'visual',
+      statements: sceneStatements,
+      textContent: options.sceneTextContent ?? '',
+    },
+    currentVisualProjection: {
+      kind: 'scene',
+      statements: sceneStatements,
     },
     isCurrentSceneFile: options.isCurrentSceneFile ?? true,
   }
@@ -349,6 +361,20 @@ describe('useEditorPanelShell', () => {
 
     expect(effectEditorProviderMock.close).toHaveBeenCalledTimes(1)
     expect(tabsStore.shouldFocusEditor).toBe(true)
+
+    scope.stop()
+  })
+
+  it('文本模式复用可视化投影语句构建场景自动补全', () => {
+    const { scope, shell } = createFixture({
+      currentProjection: 'text',
+      sceneStatements: buildStatements('changeFigure: hero.png -id=cached-hero;'),
+      sceneTextContent: 'changeFigure: hero.png -id=text-hero;',
+    })
+
+    expect(shell.sceneAutocompleteOptions.value.figureIds).toEqual([
+      { label: 'cached-hero', value: 'cached-hero' },
+    ])
 
     scope.stop()
   })

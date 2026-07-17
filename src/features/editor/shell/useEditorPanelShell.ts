@@ -6,7 +6,6 @@ import { useCommandPanelBridgeProvider, useSidebarPanelProvider } from '~/featur
 import { useShortcut } from '~/features/editor/shortcut/useShortcut'
 import {
   buildSceneAutocompleteOptionsFromStatements,
-  buildSceneAutocompleteOptionsFromText,
   EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
 } from '~/features/editor/statement-editor/scene-autocomplete'
 import { StatementGroup } from '~/stores/command-panel'
@@ -64,16 +63,12 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     return state && isEditableEditor(state) ? state.projection : undefined
   })
   const sceneAutocompleteOptions = computed(() => {
-    const state = editorStore.currentState
-    if (!state || !isEditableEditor(state) || state.kind !== 'scene') {
+    const state = editorStore.currentVisualProjection
+    if (!state || state.kind !== 'scene') {
       return EMPTY_SCENE_AUTOCOMPLETE_OPTIONS
     }
 
-    if (state.projection === 'visual') {
-      return buildSceneAutocompleteOptionsFromStatements(state.statements)
-    }
-
-    return buildSceneAutocompleteOptionsFromText(state.textContent)
+    return buildSceneAutocompleteOptionsFromStatements(state.statements)
   })
   const isTextMode = computed(() => currentProjection.value === 'text')
 
