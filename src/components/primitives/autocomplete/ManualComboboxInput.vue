@@ -83,9 +83,15 @@ function handleCompositionEndCapture() {
 }
 
 function handleKeydownCapture(event: KeyboardEvent) {
-  if (!isComposing && !event.isComposing && MANUAL_HIGHLIGHT_KEYS.has(event.key)) {
-    markHighlightIntent()
+  if (isComposing || event.isComposing || !MANUAL_HIGHLIGHT_KEYS.has(event.key)) {
+    return
   }
+
+  if (!rootContext.open.value && (event.key === 'Home' || event.key === 'End')) {
+    return
+  }
+
+  markHighlightIntent()
 }
 
 defineExpose({

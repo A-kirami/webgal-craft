@@ -67,6 +67,25 @@ const PortalHarness = defineComponent({
   `,
 })
 
+const ClosedValueHarness = defineComponent({
+  components: { Autocomplete },
+  setup() {
+    const modelValue = ref('sta')
+
+    return {
+      modelValue,
+      options,
+    }
+  },
+  template: `
+    <Autocomplete
+      v-model="modelValue"
+      data-testid="closed-value-autocomplete"
+      :options="options"
+    />
+  `,
+})
+
 const LabelHarness = defineComponent({
   components: { Autocomplete },
   setup() {
@@ -354,6 +373,43 @@ describe('Autocomplete', () => {
 
     expect(document.querySelector('[role="listbox"]')).toBeNull()
     await expect.element(input).toHaveValue('sta')
+    await expect.element(input).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it.each(['Home', 'End'])('候选浮层关闭时按 %s 后重新展开不会保留自动高亮', async (key) => {
+    renderInBrowser(ClosedValueHarness)
+
+    const input = page.getByTestId('closed-value-autocomplete')
+    const inputElement = await input.element() as HTMLInputElement
+    inputElement.focus()
+    const selectionPosition = key === 'Home' ? inputElement.value.length : 0
+    inputElement.setSelectionRange(selectionPosition, selectionPosition)
+    await userEvent.keyboard(`{${key}}`)
+    await expect.element(input).toHaveAttribute('aria-expanded', 'false')
+
+    await input.click()
+
+    const option = page.getByRole('option', { name: 'start' })
+    await expect.element(option).toBeInTheDocument()
+    await expect.element(option).not.toHaveAttribute('data-highlighted')
+    await expect.element(input).not.toHaveAttribute('aria-activedescendant')
+
+    await userEvent.keyboard('{Enter}')
+
+    await expect.element(input).toHaveValue('sta')
+    await expect.element(input).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('候选浮层关闭时方向键仍可展开并选择候选项', async () => {
+    renderInBrowser(ClosedValueHarness)
+
+    const input = page.getByTestId('closed-value-autocomplete')
+    const inputElement = await input.element() as HTMLInputElement
+    inputElement.focus()
+
+    await userEvent.keyboard('{ArrowDown}{Enter}')
+
+    await expect.element(input).toHaveValue('start')
     await expect.element(input).toHaveAttribute('aria-expanded', 'false')
   })
 
