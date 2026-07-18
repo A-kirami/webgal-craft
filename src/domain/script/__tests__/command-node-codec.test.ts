@@ -198,6 +198,18 @@ describe('命令节点编解码', () => {
     }
   })
 
+  it('保留无法解析的 defaultChoose 参数', () => {
+    const node = parseCommandNode(mustParse('choose:A:a.txt|B:b.txt -defaultChoose=abc;'))
+    expect(node.type).toBe(commandType.choose)
+    if (node.type !== commandType.choose) {
+      return
+    }
+
+    expect(node.defaultChoose).toBeUndefined()
+    expect(node.extraArgs).toContainEqual({ key: 'defaultChoose', value: 'abc' })
+    expect(serializeCommandNode(node).args).toContainEqual({ key: 'defaultChoose', value: 'abc' })
+  })
+
   it('非类型化命令解析为通用节点', () => {
     const sentence = mustParse('changeBg: bg.jpg -unlockname=bg1 -duration=300 -next -custom=abc;')
     const node = parseCommandNode(sentence)
