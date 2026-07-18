@@ -137,10 +137,10 @@ describe('命令节点参数更新器', () => {
     ])
   })
 
-  it('可更新 getUserInput default 值', () => {
+  it('可更新 getUserInput defaultValue 值', () => {
     const sentence = mustParse('getUserInput: playerName -title=YourName -x=1;')
     const node = parseCommandNode(sentence)
-    const updated = updateCommandNodeParam(node, makeParamDef('default', 'text'), 'Guest')
+    const updated = updateCommandNodeParam(node, makeParamDef('defaultValue', 'text'), 'Guest')
     expect(updated).toBeDefined()
 
     const serialized = serializeCommandNode(updated!)
@@ -148,7 +148,19 @@ describe('命令节点参数更新器', () => {
     expect(serialized.content).toBe('playerName')
     expect(serialized.args).toEqual([
       { key: 'title', value: 'YourName' },
-      { key: 'default', value: 'Guest' },
+      { key: 'defaultValue', value: 'Guest' },
+      { key: 'x', value: 1 },
+    ])
+  })
+
+  it('可更新 choose defaultChoose 并保留额外参数', () => {
+    const sentence = mustParse('choose:a:a.txt|b:b.txt -x=1;')
+    const node = parseCommandNode(sentence)
+    const updated = updateCommandNodeParam(node, makeParamDef('defaultChoose', 'number'), 2)
+    expect(updated).toBeDefined()
+
+    expect(serializeCommandNode(updated!).args).toEqual([
+      { key: 'defaultChoose', value: 2 },
       { key: 'x', value: 1 },
     ])
   })

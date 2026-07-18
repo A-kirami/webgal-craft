@@ -173,7 +173,6 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     parsed,
     commandNode,
     contentField,
-    argFields,
     emitUpdate,
   })
 
@@ -237,6 +236,10 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   const commandRenderFields = computed(() => {
     return editorFields.value.filter((field) => {
       if (specialContentMode.value && field.storage === 'content') {
+        return false
+      }
+
+      if (specialContentMode.value && field.field.managedBySpecialContentEditor) {
         return false
       }
 

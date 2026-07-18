@@ -265,6 +265,20 @@ export function buildStatementPreviewParams(input: BuildStatementPreviewParamsIn
   for (const item of visibleArgs) {
     const argField = argFieldByStorageKey.get(item.key)
 
+    if (parsed.command === commandType.choose && item.key === 'defaultChoose') {
+      const node = parseCommandNode(parsed)
+      if (node.type === commandType.choose && node.defaultChoose !== undefined) {
+        const choice = node.choices[node.defaultChoose - 1]
+        if (choice) {
+          params.push({
+            label: resolveArgDisplayLabel(argFieldByStorageKey, item.key, argFields, t, content),
+            value: choice.name || t('edit.visualEditor.unnamedChoice'),
+          })
+        }
+      }
+      continue
+    }
+
     if (argField?.field.managedByEffectEditor && typeof item.value === 'string' && item.value.startsWith('{')) {
       const categories = getActiveEffectCategories(item.value)
       for (const category of categories) {

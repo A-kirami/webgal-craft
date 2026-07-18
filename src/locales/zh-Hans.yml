@@ -641,52 +641,9 @@ edit:
       wait: 等待一段时间
     arguments:
       when: 执行条件
-      continue: 自动推进
-      next: 立即推进
-      notend: 继续播放下一段
-      concat: 接续上一段对话
-      vocal: 语音
-      fontSize: 字体大小
-      fontColor: 字体颜色
-      backgroundColor: 背景颜色
-      backgroundImage: 背景图片
-      figureId: 立绘 ID
       left: 左侧位置
       right: 右侧位置
       center: 中间位置
-      zIndex: 显示层级
-      animationFlag: 动画标志
-      mouthOpen: 立绘张口差分
-      mouthHalfOpen: 立绘半张口差分
-      mouthClose: 立绘闭口差分
-      eyesOpen: 立绘睁眼差分
-      eyesClose: 立绘闭眼差分
-      motion: Live2D/Spine 动作
-      expression: Live2D 表情
-      bounds: Live2D 边界扩展
-      blink: Live2D 眨眼参数
-      focus: Live2D 注视参数
-      transform: 变换效果
-      enter: 入场动画
-      exit: 退场动画
-      duration: 动画持续时间（毫秒）
-      ease: 动画缓动类型
-      animationTarget: 动画目标对象
-      transitionTarget: 过渡目标对象
-      animation: 每行文字入场动画
-      delayTime: 每行文字入场延迟时间
-      writeDefault: 填充默认值
-      keep: 跨语句播放动画
-      volume: 音量大小（0-100）
-      soundEffectId: 音效 ID
-      unlockName: "解锁 {type} 名称"
-      unlockSeries: "{type} 所属系列"
-      skipOff: 禁止跳过
-      hold: 结束后停留
-      userForward: 点击显示下一句
-      title: 输入框标题
-      buttonText: 确认按钮文本
-      defaultValue: 输入框默认值
   errors:
     fileSyncFailed: 文件同步失败，请稍后重试
     previewUnavailable: 预览地址不存在，请先启动预览
@@ -818,6 +775,10 @@ edit:
     toggleSidebar: 切换辅助面板
   visualEditor:
     playToLine: 执行到此句
+    unnamedChoice: 未命名选项
+    accessibility:
+      setDefaultChoice: 将第 {index} 个选项设为默认
+      clearDefaultChoice: 取消第 {index} 个选项的默认设置
     emptyTitle: 场景还是空的
     emptyDescription: 从命令面板添加语句，或拖拽资源文件直接插入。
     audioPreview:
@@ -883,6 +844,7 @@ edit:
       oldStyleName: 原样式名
       newStyleName: 新样式名
       searchMotion: 搜索动作
+      searchSkin: 搜索皮肤
       searchAnimation: 搜索动画
       searchExpression: 搜索表情
     addOption: 添加选项
@@ -959,6 +921,9 @@ edit:
     params:
       continue: 自动推进
       next: 立即推进
+      parallel: 并行播放
+      ignoreDefault: 忽略默认效果
+      order: 展示顺序
       concat: 接续上段
       notend: 继续播放
       vocal: 语音
@@ -976,6 +941,7 @@ edit:
       motion: 动作
       spineMotion: 动画
       expression: 表情
+      skin: 皮肤
       transform: 变换
       duration: 过渡时间
       ease: 缓动类型
@@ -983,7 +949,6 @@ edit:
       mouthHalfOpen: 半张口差分
       mouthClose: 闭口差分
       eyesOpen: 睁眼差分
-      eyesHalfOpen: 半睁眼差分
       eyesClose: 闭眼差分
       enter: 淡入时间
       unlockname: 解锁名称
@@ -999,7 +964,13 @@ edit:
       inputTitle: 对话框标题
       buttonText: 确认按钮文本
       defaultValue: 默认值
+      rule: 校验正则
+      ruleFlag: 正则标记
+      ruleText: 校验失败提示
+      ruleButtonText: 校验提示按钮
+      defaultChoose: 默认选项
       waitTime: 时间
+      nobreak: 禁止跳过
       unitMs: 毫秒
       textboxState: 显示
       textboxStateOff: 隐藏

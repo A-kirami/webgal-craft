@@ -2,7 +2,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { FIGURE_POSITION_TARGET_IDS } from '~/domain/script/types'
 
-import { AUDIO_EXTENSIONS, BACKGROUND_EXTENSIONS, DEFAULT_ENTER_DURATION, DEFAULT_EXIT_DURATION, EFFECT_DURATION, EFFECT_EASE, EFFECT_TRANSFORM, ENTER_ANIMATION, EXIT_ANIMATION, FIGURE_EXTENSIONS, FIGURE_ID, IMAGE_EXTENSIONS, NEXT, SERIES, SOUND_EFFECT_ID, UNLOCK_NAME, VOLUME } from './common-params'
+import { AUDIO_EXTENSIONS, BACKGROUND_EXTENSIONS, CONTINUE, DEFAULT_ENTER_DURATION, DEFAULT_EXIT_DURATION, EFFECT_DURATION, EFFECT_EASE, EFFECT_TRANSFORM, ENTER_ANIMATION, EXIT_ANIMATION, FIGURE_EXTENSIONS, FIGURE_ID, IGNORE_DEFAULT, IMAGE_EXTENSIONS, NEXT, ORDER, SERIES, SOUND_EFFECT_ID, UNLOCK_NAME, VOLUME } from './common-params'
 import { arg, commandRaw, content, UNSPECIFIED } from './schema'
 
 import type { CommandEntry } from './schema'
@@ -93,6 +93,7 @@ export const performEntries: CommandEntry[] = [
       content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'background', extensions: BACKGROUND_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.background') } }),
       arg(UNLOCK_NAME),
       arg({ ...SERIES, visibleWhen: { key: 'unlockname', notEmpty: true } }),
+      arg({ ...ORDER, visibleWhen: { key: 'series', notEmpty: true } }),
       arg(EFFECT_TRANSFORM),
       arg(EFFECT_DURATION),
       arg(EFFECT_EASE),
@@ -100,7 +101,9 @@ export const performEntries: CommandEntry[] = [
       arg(EXIT_ANIMATION),
       arg(DEFAULT_ENTER_DURATION),
       arg(DEFAULT_EXIT_DURATION),
+      arg(IGNORE_DEFAULT),
       arg(NEXT),
+      arg(CONTINUE),
     ],
   },
   {
@@ -138,6 +141,7 @@ export const performEntries: CommandEntry[] = [
         options: [],
       }),
       arg({ key: 'expression', label: t => t('edit.visualEditor.params.expression'), type: 'choice', variant: 'combobox', placeholder: t => t('edit.visualEditor.placeholder.searchExpression'), dynamicOptionsKey: 'figureExpressions', grouping: { mode: 'path' }, visibleWhenContent: isLive2dContent, options: [] }),
+      arg({ key: 'skin', label: t => t('edit.visualEditor.params.skin'), type: 'choice', variant: 'combobox', placeholder: t => t('edit.visualEditor.placeholder.searchSkin'), dynamicOptionsKey: 'figureSkins', visibleWhenContent: isSpineContent, options: [] }),
       arg({
         key: 'blendMode',
         label: t => t('edit.visualEditor.params.blendMode'),
@@ -164,7 +168,6 @@ export const performEntries: CommandEntry[] = [
       arg({ key: 'mouthHalfOpen', label: t => t('edit.visualEditor.params.mouthHalfOpen'), type: 'text', visibleWhenContent: isImageContent, advanced: true, visibleWhen: { key: 'animationFlag', value: true } }),
       arg({ key: 'mouthClose', label: t => t('edit.visualEditor.params.mouthClose'), type: 'text', visibleWhenContent: isImageContent, advanced: true, visibleWhen: { key: 'animationFlag', value: true } }),
       arg({ key: 'eyesOpen', label: t => t('edit.visualEditor.params.eyesOpen'), type: 'text', visibleWhenContent: isImageContent, advanced: true, visibleWhen: { key: 'animationFlag', value: true } }),
-      arg({ key: 'eyesHalfOpen', label: t => t('edit.visualEditor.params.eyesHalfOpen'), type: 'text', visibleWhenContent: isImageContent, advanced: true, visibleWhen: { key: 'animationFlag', value: true } }),
       arg({ key: 'eyesClose', label: t => t('edit.visualEditor.params.eyesClose'), type: 'text', visibleWhenContent: isImageContent, advanced: true, visibleWhen: { key: 'animationFlag', value: true } }),
       arg({ key: 'bounds', label: t => t('edit.visualEditor.params.bounds'), type: 'text', visibleWhenContent: isLive2dContent, advanced: true }),
       arg({
@@ -202,7 +205,9 @@ export const performEntries: CommandEntry[] = [
           },
         ],
       }),
+      arg(IGNORE_DEFAULT),
       arg(NEXT),
+      arg(CONTINUE),
     ],
   },
   {

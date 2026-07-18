@@ -11,12 +11,14 @@ export type StatementSpecialContentMode = 'applyStyle' | 'choose' | 'setVar'
 
 export interface StatementSpecialContentBindings {
   choose: ValueBinding<ChooseContentItem[]>
+  defaultChooseIndex: ValueBinding<number | undefined>
   setVar: ValueBinding<SetVarContent>
   styleRules: ValueBinding<StyleRuleContentItem[]>
   handleSetVarNameChange: (value: string) => void
   handleSetVarValueChange: (value: string) => void
   handleChooseNameChange: (index: number, value: string) => void
   handleChooseFileChange: (index: number, file: string) => void
+  handleChooseDefaultChange: (index: number) => void
   handleRemoveChooseItem: (index: number) => void
   handleAddChooseItem: () => void
   handleStyleOldNameChange: (index: number, value: string) => void

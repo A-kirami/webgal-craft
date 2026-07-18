@@ -40,6 +40,7 @@ export interface SetVarCommandNode extends CommandNodeBase<commandType.setVar> {
 
 export interface ChooseCommandNode extends CommandNodeBase<commandType.choose> {
   choices: ChooseContentItem[]
+  defaultChoose?: number
   extraArgs: arg[]
 }
 

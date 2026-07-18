@@ -1,6 +1,6 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { content } from './schema'
+import { arg, content } from './schema'
 
 import type { CommandEntry } from './schema'
 
@@ -27,7 +27,16 @@ export const sceneEntries: CommandEntry[] = [
     description: t => t('edit.visualEditor.commandDescriptions.choose'),
     icon: 'i-lucide-list',
     category: 'scene',
-    fields: [content({ key: 'file', label: t => t('edit.visualEditor.params.choiceText'), type: 'file', fileConfig: { assetType: 'scene', extensions: ['.txt'], title: t => t('edit.visualEditor.filePicker.scene') } })],
+    fields: [
+      content({ key: 'file', label: t => t('edit.visualEditor.params.choiceText'), type: 'file', fileConfig: { assetType: 'scene', extensions: ['.txt'], title: t => t('edit.visualEditor.filePicker.scene') } }),
+      arg({
+        key: 'defaultChoose',
+        label: t => t('edit.visualEditor.params.defaultChoose'),
+        type: 'number',
+        min: 1,
+        managedBySpecialContentEditor: true,
+      }),
+    ],
   },
   {
     type: commandType.label,

@@ -175,7 +175,7 @@ describe('命令节点编解码', () => {
   })
 
   it('解析类型化 choose/applyStyle 节点', () => {
-    const chooseSentence = mustParse('choose: A:scene1.txt|B:scene2.txt -next;')
+    const chooseSentence = mustParse('choose: A:scene1.txt|B:scene2.txt -defaultChoose=2 -next;')
     const chooseNode = parseCommandNode(chooseSentence)
     expect(chooseNode.type).toBe(commandType.choose)
     if (chooseNode.type === commandType.choose) {
@@ -183,6 +183,7 @@ describe('命令节点编解码', () => {
         { name: 'A', file: 'scene1.txt' },
         { name: 'B', file: 'scene2.txt' },
       ])
+      expect(chooseNode.defaultChoose).toBe(2)
       expect(chooseNode.extraArgs).toEqual([{ key: 'next', value: true }])
     }
 
@@ -231,7 +232,7 @@ describe('命令节点编解码', () => {
       'Alice: hello -fontSize=medium -vocal=voice.ogg -volume=80 -figureId=hero -next -continue -concat -notend -x=1;',
       '; this is comment',
       'setVar: score=10 -global -custom=foo;',
-      'choose: A:scene1.txt|B:scene2.txt -next;',
+      'choose: A:scene1.txt|B:scene2.txt -defaultChoose=2 -next;',
       'applyStyle: old->new,foo->bar;',
     ] as const
 

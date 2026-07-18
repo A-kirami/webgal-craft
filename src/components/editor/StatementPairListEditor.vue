@@ -21,6 +21,12 @@ const emit = defineEmits<{
   add: []
 }>()
 
+defineSlots<{
+  'second-field'?: (props: { item: { first: string, second: string }, index: number }) => unknown
+  'second-field-panel'?: (props: { item: { first: string, second: string }, index: number, inputId: string }) => unknown
+  'trailing-control'?: (props: { item: { first: string, second: string }, index: number }) => unknown
+}>()
+
 const isInline = $computed(() => props.surface === 'inline')
 const { buildControlId } = useControlId('pair-list')
 
@@ -139,7 +145,10 @@ function secondInputId(index: number): string {
             @update:model-value="emit('updateSecond', { index: i, value: String($event) })"
           />
         </slot>
+        <slot name="trailing-control" :item="item" :index="i" />
         <Button
+          :aria-label="$t('common.delete')"
+          type="button"
           variant="ghost"
           size="sm"
           class="text-xs text-muted-foreground px-1.5 shrink-0 h-6 hover:text-destructive"
@@ -157,14 +166,19 @@ function secondInputId(index: number): string {
             >
               {{ firstLabel }}
             </Label>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="text-muted-foreground ml-auto p-1 size-6 hover:text-destructive"
-              @click="handleRemove(i)"
-            >
-              <div class="i-lucide-x size-3.5" />
-            </Button>
+            <div class="ml-auto flex gap-1.5 items-center">
+              <slot name="trailing-control" :item="item" :index="i" />
+              <Button
+                :aria-label="$t('common.delete')"
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="text-muted-foreground p-1 size-6 hover:text-destructive"
+                @click="handleRemove(i)"
+              >
+                <div class="i-lucide-x size-3.5" />
+              </Button>
+            </div>
           </div>
           <Input
             :id="firstInputId(i)"

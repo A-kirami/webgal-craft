@@ -641,52 +641,9 @@ edit:
       wait: 一定時間待機
     arguments:
       when: 条件付き実行
-      continue: 自動進行
-      next: 即時進行
-      notend: 次の行に続ける
-      concat: 前のセリフに連結
-      vocal: ボイス
-      fontSize: フォントサイズ
-      fontColor: フォントカラー
-      backgroundColor: 背景色
-      backgroundImage: 背景画像
-      figureId: 立ち絵 ID
       left: 左側位置
       right: 右側位置
       center: 中央位置
-      zIndex: 表示レイヤー
-      animationFlag: アニメーションフラグ
-      mouthOpen: 口開き差分
-      mouthHalfOpen: 半開き差分
-      mouthClose: 口閉じ差分
-      eyesOpen: 目開き差分
-      eyesClose: 目閉じ差分
-      motion: Live2D/Spine モーション
-      expression: Live2D 表情
-      bounds: Live2D 境界拡張
-      blink: Live2D まばたきパラメータ
-      focus: Live2D 注視パラメータ
-      transform: 変換エフェクト
-      enter: 入場アニメーション
-      exit: 退場アニメーション
-      duration: アニメーション時間（ms）
-      ease: イージングタイプ
-      animationTarget: アニメーション対象オブジェクト
-      transitionTarget: トランジション対象オブジェクト
-      animation: 各行の入場アニメーション
-      delayTime: 各行の入場遅延時間
-      writeDefault: デフォルト値を埋める
-      keep: 行をまたぐアニメーション再生
-      volume: 音量（0-100）
-      soundEffectId: 効果音 ID
-      unlockName: "解放する {type} 名"
-      unlockSeries: "{type} シリーズ"
-      skipOff: スキップ禁止
-      hold: 終了後に停止
-      userForward: クリックで次の文を表示
-      title: 入力欄タイトル
-      buttonText: 確認ボタンテキスト
-      defaultValue: 入力欄デフォルト値
   errors:
     fileSyncFailed: ファイルの同期に失敗しました。しばらくしてからもう一度お試しください。
     previewUnavailable: プレビューURLがありません。先にプレビューを起動してください。
@@ -818,6 +775,10 @@ edit:
     toggleSidebar: 補助パネル切替
   visualEditor:
     playToLine: この行まで実行
+    unnamedChoice: 名前のない選択肢
+    accessibility:
+      setDefaultChoice: 選択肢 {index} をデフォルトに設定
+      clearDefaultChoice: 選択肢 {index} のデフォルト設定を解除
     emptyTitle: シーンはまだ空です
     emptyDescription: コマンドパネルからステートメントを追加するか、リソースファイルをドラッグして直接挿入してください。
     audioPreview:
@@ -883,6 +844,7 @@ edit:
       oldStyleName: 元のスタイル名
       newStyleName: 新しいスタイル名
       searchMotion: モーションを検索
+      searchSkin: スキンを検索
       searchAnimation: アニメーションを検索
       searchExpression: 表情を検索
     addOption: 選択肢を追加
@@ -959,6 +921,9 @@ edit:
     params:
       continue: 自動進行
       next: 即時進行
+      parallel: 並列再生
+      ignoreDefault: デフォルト効果を無視
+      order: 表示順
       concat: 前段に接続
       notend: 再生継続
       vocal: ボイス
@@ -976,6 +941,7 @@ edit:
       motion: モーション
       spineMotion: アニメーション
       expression: 表情
+      skin: スキン
       transform: 変換
       duration: トランジション時間
       ease: イージングタイプ
@@ -983,7 +949,6 @@ edit:
       mouthHalfOpen: 口半開き差分
       mouthClose: 口閉じ差分
       eyesOpen: 目開き差分
-      eyesHalfOpen: 目半開き差分
       eyesClose: 目閉じ差分
       enter: フェードイン
       unlockname: 解放名
@@ -999,7 +964,13 @@ edit:
       inputTitle: ダイアログタイトル
       buttonText: 確認ボタンテキスト
       defaultValue: デフォルト値
+      rule: 検証パターン
+      ruleFlag: 正規表現フラグ
+      ruleText: 検証エラーメッセージ
+      ruleButtonText: 検証ダイアログのボタン
+      defaultChoose: デフォルト選択肢
       waitTime: 時間
+      nobreak: スキップを無効化
       unitMs: ミリ秒
       textboxState: 表示
       textboxStateOff: 非表示
