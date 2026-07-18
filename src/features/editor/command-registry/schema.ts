@@ -12,6 +12,7 @@ export const EDITOR_DYNAMIC_OPTIONS_KEYS = [
   'animationTableEntries',
   'figureMotions',
   'figureExpressions',
+  'figureSkins',
 ] as const
 
 export type EditorDynamicOptionsKey = (typeof EDITOR_DYNAMIC_OPTIONS_KEYS)[number]
@@ -84,6 +85,7 @@ interface FieldBase {
   visibleWhenContent?: (content: string) => boolean
   advanced?: boolean
   managedByEffectEditor?: boolean
+  managedBySpecialContentEditor?: boolean
   /** 布局提示：自定义 CSS class */
   className?: string
   /** 效果编辑器分组标识（如 'transform'、'effects'、'colorAdjustment'） */

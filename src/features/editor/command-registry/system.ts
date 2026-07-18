@@ -1,6 +1,6 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { AUDIO_EXTENSIONS, BACKGROUND_EXTENSIONS, SERIES } from './common-params'
+import { AUDIO_EXTENSIONS, BACKGROUND_EXTENSIONS, ORDER, SERIES } from './common-params'
 import { arg, content } from './schema'
 
 import type { CommandEntry } from './schema'
@@ -33,7 +33,11 @@ export const systemEntries: CommandEntry[] = [
       content({ key: 'varName', label: t => t('edit.visualEditor.params.varName'), type: 'text' }),
       arg({ key: 'title', label: t => t('edit.visualEditor.params.inputTitle'), type: 'text' }),
       arg({ key: 'buttonText', label: t => t('edit.visualEditor.params.buttonText'), type: 'text' }),
-      arg({ key: 'default', label: t => t('edit.visualEditor.params.defaultValue'), type: 'text' }),
+      arg({ key: 'defaultValue', label: t => t('edit.visualEditor.params.defaultValue'), type: 'text' }),
+      arg({ key: 'rule', label: t => t('edit.visualEditor.params.rule'), type: 'text' }),
+      arg({ key: 'ruleFlag', label: t => t('edit.visualEditor.params.ruleFlag'), type: 'text', visibleWhen: { key: 'rule', notEmpty: true } }),
+      arg({ key: 'ruleText', label: t => t('edit.visualEditor.params.ruleText'), type: 'text', visibleWhen: { key: 'rule', notEmpty: true } }),
+      arg({ key: 'ruleButtonText', label: t => t('edit.visualEditor.params.ruleButtonText'), type: 'text', visibleWhen: { key: 'rule', notEmpty: true } }),
     ],
   },
   {
@@ -42,7 +46,10 @@ export const systemEntries: CommandEntry[] = [
     description: t => t('edit.visualEditor.commandDescriptions.wait'),
     icon: 'i-lucide-timer',
     category: 'system',
-    fields: [content({ key: 'time', label: t => t('edit.visualEditor.params.waitTime'), unit: t => t('edit.visualEditor.params.unitMs'), min: 0, type: 'number' })],
+    fields: [
+      content({ key: 'time', label: t => t('edit.visualEditor.params.waitTime'), unit: t => t('edit.visualEditor.params.unitMs'), min: 0, type: 'number' }),
+      arg({ key: 'nobreak', label: t => t('edit.visualEditor.params.nobreak'), type: 'switch', defaultValue: false }),
+    ],
   },
   {
     type: commandType.unlockCg,
@@ -54,6 +61,7 @@ export const systemEntries: CommandEntry[] = [
       content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'background', extensions: BACKGROUND_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.unlockCg') } }),
       arg({ key: 'name', label: t => t('edit.visualEditor.params.unlockDisplayName'), type: 'text' }),
       arg({ ...SERIES, visibleWhen: { key: 'name', notEmpty: true } }),
+      arg({ ...ORDER, visibleWhen: { key: 'series', notEmpty: true } }),
     ],
   },
   {

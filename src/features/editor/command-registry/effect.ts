@@ -1,6 +1,6 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { DURATION, EFFECT_DURATION, EFFECT_EASE, ENTER_ANIMATION, EXIT_ANIMATION, KEEP, NEXT, TARGET, WRITE_DEFAULT } from './common-params'
+import { CONTINUE, DURATION, EFFECT_DURATION, EFFECT_EASE, ENTER_ANIMATION, EXIT_ANIMATION, IGNORE_DEFAULT, KEEP, NEXT, PARALLEL, TARGET, WRITE_DEFAULT } from './common-params'
 import { arg, content } from './schema'
 
 import type { CommandEntry } from './schema'
@@ -20,7 +20,10 @@ export const effectEntries: CommandEntry[] = [
       arg(EFFECT_EASE),
       arg(WRITE_DEFAULT),
       arg(KEEP),
+      arg(PARALLEL),
+      arg(IGNORE_DEFAULT),
       arg(NEXT),
+      arg(CONTINUE),
     ],
   },
   {
@@ -35,7 +38,10 @@ export const effectEntries: CommandEntry[] = [
       arg(TARGET),
       arg(WRITE_DEFAULT),
       arg(KEEP),
+      arg(PARALLEL),
+      arg(IGNORE_DEFAULT),
       arg(NEXT),
+      arg(CONTINUE),
     ],
   },
   {
@@ -49,7 +55,10 @@ export const effectEntries: CommandEntry[] = [
       arg(TARGET),
       arg(WRITE_DEFAULT),
       arg(KEEP),
+      arg(PARALLEL),
+      arg(IGNORE_DEFAULT),
       arg(NEXT),
+      arg(CONTINUE),
     ],
   },
   {
@@ -71,6 +80,7 @@ export const effectEntries: CommandEntry[] = [
       arg(TARGET),
       arg(DURATION),
       arg(NEXT),
+      arg(CONTINUE),
     ],
   },
   {
@@ -83,6 +93,7 @@ export const effectEntries: CommandEntry[] = [
       arg(TARGET),
       arg({ ...ENTER_ANIMATION, advanced: false }),
       arg({ ...EXIT_ANIMATION, advanced: false }),
+      arg(IGNORE_DEFAULT),
     ],
   },
   // 粒子特效

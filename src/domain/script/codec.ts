@@ -65,8 +65,12 @@ function consumeNumberArg(args: arg[], key: string): number | undefined {
   }
 
   const numberValue = Number(args[index].value)
+  if (!Number.isFinite(numberValue)) {
+    return
+  }
+
   args.splice(index, 1)
-  return Number.isFinite(numberValue) ? numberValue : undefined
+  return numberValue
 }
 
 function toSentenceBase(node: CommandNode): Omit<ISentence, 'content' | 'args'> {
@@ -102,8 +106,8 @@ class ArgBuilder {
   number(key: string, value: number | undefined): this {
     if (value !== undefined) {
       this.args.push({ key, value })
+      this.keys.push(key)
     }
-    this.keys.push(key)
     return this
   }
 
@@ -304,12 +308,14 @@ function serializeSetVarNode(node: SetVarCommandNode): ISentence {
 }
 
 function parseChooseNode(sentence: ISentence): ChooseCommandNode {
+  const args = cloneArgs(sentence.args)
   return {
     type: commandType.choose,
     commandRaw: sentence.commandRaw,
     inlineComment: sentence.inlineComment,
     choices: parseChooseContent(sentence.content),
-    extraArgs: cloneArgs(sentence.args),
+    defaultChoose: consumeNumberArg(args, 'defaultChoose'),
+    extraArgs: args,
   }
 }
 
@@ -317,7 +323,9 @@ function serializeChooseNode(node: ChooseCommandNode): ISentence {
   return {
     ...toSentenceBase(node),
     content: stringifyChooseContent(node.choices),
-    args: cloneArgs(node.extraArgs),
+    args: argBuilder()
+      .number('defaultChoose', node.defaultChoose)
+      .build(node.extraArgs),
   }
 }
 

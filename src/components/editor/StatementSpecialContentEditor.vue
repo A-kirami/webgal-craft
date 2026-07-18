@@ -8,6 +8,7 @@ interface Props {
   mode: 'setVar' | 'choose' | 'applyStyle'
   setVarContent: SetVarContent
   chooseItems: ChooseContentItem[]
+  defaultChooseIndex?: number
   styleRuleItems: StyleRuleContentItem[]
   sceneRootPath: string
 }
@@ -19,6 +20,7 @@ const emit = defineEmits<{
   setVarValue: [value: string]
   chooseName: [payload: { index: number, value: string }]
   chooseFile: [payload: { index: number, file: string }]
+  chooseDefault: [index: number]
   removeChoose: [index: number]
   addChoose: []
   styleOldName: [payload: { index: number, value: string }]
@@ -98,6 +100,22 @@ const stylePairItems = $computed(() =>
     @remove="emit('removeChoose', $event)"
     @add="emit('addChoose')"
   >
+    <template #trailing-control="{ index }">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        :aria-label="defaultChooseIndex === index
+          ? $t('edit.visualEditor.accessibility.clearDefaultChoice', { index: index + 1 })
+          : $t('edit.visualEditor.accessibility.setDefaultChoice', { index: index + 1 })"
+        :aria-pressed="defaultChooseIndex === index"
+        :data-state="defaultChooseIndex === index ? 'on' : 'off'"
+        class="text-xs text-muted-foreground px-2 shrink-0 h-6 whitespace-nowrap shadow-none data-[state=on]:(text-accent-foreground bg-accent)"
+        @click="emit('chooseDefault', index)"
+      >
+        {{ $t('edit.visualEditor.options.default') }}
+      </Button>
+    </template>
     <template #second-field="{ item, index }">
       <FilePicker
         :model-value="item.second"

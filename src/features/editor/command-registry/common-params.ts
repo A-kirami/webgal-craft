@@ -76,6 +76,9 @@ export const FIGURE_ID: AutocompleteTextField = { key: 'id', label: t => t('edit
 export const SOUND_EFFECT_ID: AutocompleteTextField = { key: 'id', label: t => t('edit.visualEditor.params.id'), type: 'text', variant: 'autocomplete', autocomplete: [{ type: 'scene', collection: 'soundEffectIds' }] }
 export const WRITE_DEFAULT: SwitchField = { key: 'writeDefault', label: t => t('edit.visualEditor.params.writeDefault'), type: 'switch', defaultValue: false }
 export const KEEP: SwitchField = { key: 'keep', label: t => t('edit.visualEditor.params.keep'), type: 'switch', defaultValue: false }
+export const PARALLEL: SwitchField = { key: 'parallel', label: t => t('edit.visualEditor.params.parallel'), type: 'switch', defaultValue: false }
+export const IGNORE_DEFAULT: SwitchField = { key: 'ignoreDefault', label: t => t('edit.visualEditor.params.ignoreDefault'), type: 'switch', defaultValue: false }
+export const ORDER: NumberField = { key: 'order', label: t => t('edit.visualEditor.params.order'), type: 'number' }
 
 // ─── 效果编辑器托管的参数副本 ───
 

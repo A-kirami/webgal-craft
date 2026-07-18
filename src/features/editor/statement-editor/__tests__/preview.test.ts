@@ -202,6 +202,58 @@ describe('buildStatementPreviewParams', () => {
     expect(fileResult[0]).toMatchObject({ isFile: true, fileMissing: true, value: 'bg.jpg' })
   })
 
+  it('choose 默认分支显示选项文本而不是存储序号', () => {
+    const result = buildStatementPreviewParams({
+      autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
+      parsed: createSentence({
+        command: commandType.choose,
+        commandRaw: 'choose',
+        content: '继续:next.txt|返回:back.txt',
+        args: [{ key: 'defaultChoose', value: 2 }],
+      }),
+      statementType: 'command',
+      entryRawText: 'choose:继续:next.txt|返回:back.txt -defaultChoose=2;',
+      previousSpeaker: '',
+      contentField: createContentField('file'),
+      argFields: readArgFields(getCommandConfig(commandType.choose)),
+      fileMissingKeys: new Set(),
+      t: identityTranslate,
+    })
+
+    expect(result).toContainEqual({
+      label: 'edit.visualEditor.params.defaultChoose',
+      value: '返回',
+    })
+  })
+
+  it('choose 默认分支未命名或索引非法时不回退显示存储序号', () => {
+    const buildChoosePreview = (content: string, defaultChoose: number) => buildStatementPreviewParams({
+      autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
+      parsed: createSentence({
+        command: commandType.choose,
+        commandRaw: 'choose',
+        content,
+        args: [{ key: 'defaultChoose', value: defaultChoose }],
+      }),
+      statementType: 'command',
+      entryRawText: '',
+      previousSpeaker: '',
+      contentField: createContentField('file'),
+      argFields: readArgFields(getCommandConfig(commandType.choose)),
+      fileMissingKeys: new Set(),
+      t: identityTranslate,
+    })
+
+    const unnamedResult = buildChoosePreview(':next.txt|返回:back.txt', 1)
+    const invalidResult = buildChoosePreview('继续:next.txt|返回:back.txt', 3)
+
+    expect(unnamedResult).toContainEqual({
+      label: 'edit.visualEditor.params.defaultChoose',
+      value: 'edit.visualEditor.unnamedChoice',
+    })
+    expect(invalidResult.some(item => item.label === 'edit.visualEditor.params.defaultChoose')).toBe(false)
+  })
+
   it('text autocomplete 参数使用统一解析后的候选名称', () => {
     const result = buildStatementPreviewParams({
       autocompleteOptions: {

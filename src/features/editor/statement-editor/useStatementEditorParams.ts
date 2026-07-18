@@ -7,7 +7,7 @@ import { ArgField, DynamicOptionsContext, EditorField, isFlagChoiceField, readAr
 import { resolveDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
 import { readJsonFieldValue, writeJsonFieldValue } from '~/features/editor/statement-editor/json-fields'
 import { getParamValueFromArgs, hasParamExplicitValue, resolveParamSelectValue } from '~/features/editor/statement-editor/param-value'
-import { isParamVisibleByReader, pruneHiddenDependentArgsByReader } from '~/features/editor/statement-editor/visibility'
+import { isParamVisibleByReader } from '~/features/editor/statement-editor/visibility'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
@@ -117,24 +117,6 @@ export function useStatementEditorParams(opts: UseStatementEditorParamsOptions) 
     })
   }
 
-  function removeHiddenArgs(newArgs: arg[], changedField: ArgField, newValue: string | boolean | number) {
-    const pruned = pruneHiddenDependentArgsByReader({
-      args: newArgs,
-      changedField,
-      newValue,
-      argFields: opts.argFields.value,
-      content: opts.parsed.value?.content ?? '',
-      readParamValue: (af: ArgField) => af.field.key === changedField.field.key ? newValue : readArgRuntimeValue(af),
-    })
-    if (pruned.length !== newArgs.length) {
-      newArgs.splice(0, newArgs.length, ...pruned)
-    }
-  }
-
-  function normalizeSchemaParamValue(newValue: string | boolean | number): string | boolean | number {
-    return (typeof newValue === 'string' && newValue === UNSPECIFIED) ? '' : newValue
-  }
-
   // ─── CommandNode 通用更新路径 ───
 
   function tryUpdateViaCommandNode(
@@ -153,12 +135,10 @@ export function useStatementEditorParams(opts: UseStatementEditorParamsOptions) 
       return false
     }
     const updatedSentence = serializeCommandNode(updatedNode)
-    const nextArgs = [...updatedSentence.args]
-    removeHiddenArgs(nextArgs, argField, normalizedValue)
     opts.emitUpdate({
       commandRaw: updatedSentence.commandRaw,
       content: updatedSentence.content,
-      args: nextArgs,
+      args: updatedSentence.args,
     })
     return true
   }
@@ -181,7 +161,6 @@ export function useStatementEditorParams(opts: UseStatementEditorParamsOptions) 
       upsertArg(newArgs, argKey, nextJsonValue)
     }
 
-    removeHiddenArgs(newArgs, argField, normalizedValue)
     opts.emitUpdate({ args: newArgs })
   }
 
@@ -202,7 +181,6 @@ export function useStatementEditorParams(opts: UseStatementEditorParamsOptions) 
     if (strVal !== '') {
       newArgs.push({ key: strVal, value: true })
     }
-    removeHiddenArgs(newArgs, argField, normalizedValue)
     opts.emitUpdate({ args: newArgs })
   }
 
@@ -224,7 +202,6 @@ export function useStatementEditorParams(opts: UseStatementEditorParamsOptions) 
       setOrRemoveArg(newArgs, storageKey, String(normalizedValue), defaultValue)
     }
 
-    removeHiddenArgs(newArgs, argField, normalizedValue)
     opts.emitUpdate({ args: newArgs })
   }
 
@@ -233,7 +210,7 @@ export function useStatementEditorParams(opts: UseStatementEditorParamsOptions) 
       return
     }
 
-    const normalizedValue = normalizeSchemaParamValue(newValue)
+    const normalizedValue = typeof newValue === 'string' && newValue === UNSPECIFIED ? '' : newValue
     const newArgs = opts.readEditableArgs()
 
     if (argField.jsonMeta) {

@@ -10,12 +10,14 @@ import type { StatementParamRendererSharedProps, StatementSpecialContentBindings
 function createSpecialContentBindings(): StatementSpecialContentBindings {
   return {
     choose: { value: [] },
+    defaultChooseIndex: { value: undefined },
     setVar: { value: { name: '', value: '' } },
     styleRules: { value: [] },
     handleSetVarNameChange: () => { /* no-op */ },
     handleSetVarValueChange: () => { /* no-op */ },
     handleChooseNameChange: () => { /* no-op */ },
     handleChooseFileChange: () => { /* no-op */ },
+    handleChooseDefaultChange: () => { /* no-op */ },
     handleRemoveChooseItem: () => { /* no-op */ },
     handleAddChooseItem: () => { /* no-op */ },
     handleStyleOldNameChange: () => { /* no-op */ },

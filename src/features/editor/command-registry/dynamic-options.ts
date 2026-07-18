@@ -8,6 +8,7 @@ import { toLookupPathKey } from '~/services/resource-path/lookup'
 interface FigureMetadata {
   motions: string[]
   expressions: string[]
+  skins: string[]
 }
 
 const SPLIT_GAME_PATH_TOKEN = '|'
@@ -49,7 +50,7 @@ function toOptionItems(items: string[]): { label: string, value: string }[] {
 // 剥离查询参数（如 ?type=spine），校验路径安全性和 .json 后缀。
 // 仅接受 .json 描述文件（Live2D model.json / Spine JSON），
 // .skel（Spine 二进制骨骼）无法通过 JSON 解析提取元数据，因此不在此处理——
-// 对应的 motion/expression 字段仍会显示（由 media.ts 的 isAnimatedContent 控制），
+// 对应的 motion/expression 字段仍会显示（由命令注册表的 content 可见性规则控制），
 // 用于展示文本模式下已写入的参数值，但不提供动态选项的自动补全。
 function sanitizeModelPath(content: string): string | undefined {
   const normalized = normalizePath(content.split('?', 1)[0]?.trim() ?? '')
@@ -106,22 +107,33 @@ function parseAnimationTableEntries(raw: unknown): string[] {
   return raw.filter((item): item is string => typeof item === 'string')
 }
 
-// Live2D / Spine 模型描述文件的 motions 和 expressions 字段格式不统一：
+// Live2D / Spine 模型描述文件的 motions、expressions 和 skins 字段格式不统一：
 // - Live2D v2: { motions: { idle: [...] }, expressions: [{ name: "smile" }] }
 // - Live2D v3+: { FileReferences: { Motions: {...}, Expressions: [...] } }
 // - 简化格式: { animations: { walk: {...} } }
-// 此函数兼容以上格式，提取所有可用的动作和表情名称
+// 提取所有可用的动作、表情和皮肤名称。
 function parseFigureMetadata(raw: unknown): FigureMetadata {
   if (!isRecord(raw)) {
-    return { motions: [], expressions: [] }
+    return { motions: [], expressions: [], skins: [] }
   }
 
   const motions: string[] = []
   const expressions: string[] = []
+  const skins: string[] = []
+
+  if (Array.isArray(raw.skins)) {
+    for (const skin of raw.skins) {
+      if (isRecord(skin) && typeof skin.name === 'string') {
+        skins.push(skin.name)
+      }
+    }
+  } else if (isRecord(raw.skins)) {
+    skins.push(...Object.keys(raw.skins))
+  }
 
   if (isRecord(raw.animations)) {
     motions.push(...Object.keys(raw.animations))
-    return { motions, expressions }
+    return { motions, expressions, skins }
   }
 
   if (isRecord(raw.motions)) {
@@ -152,6 +164,7 @@ function parseFigureMetadata(raw: unknown): FigureMetadata {
   return {
     motions,
     expressions,
+    skins,
   }
 }
 
@@ -174,7 +187,7 @@ async function loadAnimationTableOptions(ctx: DynamicOptionsContext): Promise<{ 
 async function loadFigureMetadataByContext(ctx: DynamicOptionsContext): Promise<FigureMetadata> {
   const resolved = resolveFigureModelPath(ctx)
   if (!resolved) {
-    return { motions: [], expressions: [] }
+    return { motions: [], expressions: [], skins: [] }
   }
 
   try {
@@ -184,12 +197,12 @@ async function loadFigureMetadataByContext(ctx: DynamicOptionsContext): Promise<
     return parseFigureMetadata(JSON.parse(content))
   } catch (error) {
     logger.error(`解析立绘模型失败 ${ctx.content}: ${error}`)
-    return { motions: [], expressions: [] }
+    return { motions: [], expressions: [], skins: [] }
   }
 }
 
 function createFigureSource(
-  key: 'figureMotions' | 'figureExpressions',
+  key: 'figureMotions' | 'figureExpressions' | 'figureSkins',
   pick: (metadata: FigureMetadata) => string[],
 ): DynamicOptionSourceDef {
   return {
@@ -216,4 +229,5 @@ export const editorDynamicOptionSources: DynamicOptionSourceDef[] = [
   },
   createFigureSource('figureMotions', metadata => metadata.motions),
   createFigureSource('figureExpressions', metadata => metadata.expressions),
+  createFigureSource('figureSkins', metadata => metadata.skins),
 ]

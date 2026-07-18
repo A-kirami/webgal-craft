@@ -154,7 +154,9 @@ function createEditorReturn(overrides: Record<string, unknown> = {}) {
     content: {
       specialContent: {
         choose: { value: [] },
+        defaultChooseIndex: { value: undefined },
         handleAddChooseItem: vi.fn(),
+        handleChooseDefaultChange: vi.fn(),
         handleChooseFileChange: vi.fn(),
         handleChooseNameChange: vi.fn(),
         handleRemoveChooseItem: vi.fn(),

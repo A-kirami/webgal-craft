@@ -44,6 +44,13 @@ function createDirEntry(name: string, isDirectory: boolean) {
 }
 
 describe('useStatementEditor', () => {
+  it('choose 默认分支由特殊内容编辑器托管，不显示独立参数字段', () => {
+    const { editor } = createHarness('choose:a:a.txt|b:b.txt -defaultChoose=2;')
+
+    expect(editor.params.argFields.value.some(field => field.field.key === 'defaultChoose')).toBe(true)
+    expect(editor.view.basicRenderFields.value.some(field => field.field.key === 'defaultChoose')).toBe(false)
+  })
+
   it('setTempAnimation 语句显示动画编辑器按钮并隐藏原始 content 字段', () => {
     const { editor } = createHarness('setTempAnimation: [{"duration":0}] -target=fig-left;')
 
@@ -63,18 +70,6 @@ describe('useStatementEditor', () => {
       { key: 'speaker', value: 'Alice' },
       { key: 'figureId', value: 'hero' },
     ])
-  })
-
-  it('visibleWhen 变更后会裁剪已隐藏参数（typed 写回场景）', () => {
-    const { editor, updates } = createHarness('changeBg: bg.jpg -enter=fadeIn -enterDuration=200;')
-    const enterField = requireArgField(editor, 'enter')
-
-    editor.params.handleArgFieldChange(enterField, 'zoomIn')
-
-    const latest = updates.at(-1)
-    expect(latest).toBeDefined()
-    expect(latest!.parsed.command).toBe(commandType.changeBg)
-    expect(latest!.parsed.args).toEqual([{ key: 'enter', value: 'zoomIn' }])
   })
 
   it('连续修改 typed 参数时应以本地 draft 为准，不依赖外层 entry 回写时序', () => {

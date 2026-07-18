@@ -71,7 +71,7 @@ describe('useStatementEditorParams', () => {
     ])
   })
 
-  it('控制参数变化后会裁剪已经隐藏的依赖参数', () => {
+  it('控制参数变化后保留已经隐藏的依赖参数', () => {
     const { editor, updates } = createHarness('changeBg: bg.jpg -enter=fadeIn -enterDuration=200;')
     const enterField = requireArgField(editor, 'enter')
 
@@ -79,6 +79,7 @@ describe('useStatementEditorParams', () => {
 
     expect(updates.at(-1)?.parsed.args).toEqual([
       { key: 'enter', value: 'zoomIn' },
+      { key: 'enterDuration', value: 200 },
     ])
   })
 

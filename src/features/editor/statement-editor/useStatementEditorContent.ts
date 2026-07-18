@@ -4,7 +4,7 @@ import { serializeCommandNode } from '~/domain/script/codec'
 import { ChooseContentItem, parseChooseContent, parseSetVarContent, parseStyleRuleContent, stringifyChooseContent, stringifySetVarContent, stringifyStyleRuleContent, StyleRuleContentItem } from '~/domain/script/content'
 import { CommandNode } from '~/domain/script/types'
 import { updateCommandNodeContent } from '~/domain/script/update'
-import { ArgField, EditorField, FieldDef, readArgFieldStorageKey, resolveI18n } from '~/features/editor/command-registry/schema'
+import { EditorField, FieldDef, resolveI18n } from '~/features/editor/command-registry/schema'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
@@ -12,7 +12,6 @@ export interface UseStatementEditorContentOptions {
   parsed: ComputedRef<ISentence | undefined>
   commandNode: ComputedRef<CommandNode | undefined>
   contentField: ComputedRef<EditorField | undefined>
-  argFields: ComputedRef<ArgField[]>
   emitUpdate: (patch: Partial<ISentence>) => void
 }
 
@@ -65,29 +64,23 @@ export function useStatementEditorContent(options: UseStatementEditorContentOpti
     return variants.some(v => v === 'textarea-auto' || v === 'textarea-grow')
   }
 
+  function emitCommandNodeUpdate(updatedNode: CommandNode) {
+    const updatedSentence = serializeCommandNode(updatedNode)
+    options.emitUpdate({
+      commandRaw: updatedSentence.commandRaw,
+      content: updatedSentence.content,
+      args: updatedSentence.args,
+    })
+  }
+
   function handleContentChange(value: string | number) {
     const newContent = String(value)
-    if (options.commandNode.value) {
-      const updatedNode = updateCommandNodeContent(options.commandNode.value, newContent)
-      const updatedSentence = serializeCommandNode(updatedNode)
-      const nextArgs = [...updatedSentence.args]
-      for (const dep of options.argFields.value) {
-        if (dep.field.visibleWhenContent && !dep.field.visibleWhenContent(updatedSentence.content)) {
-          const idx = nextArgs.findIndex(a => a.key === readArgFieldStorageKey(dep))
-          if (idx !== -1) {
-            nextArgs.splice(idx, 1)
-          }
-        }
-      }
-      const patch: Partial<ISentence> = {
-        commandRaw: updatedSentence.commandRaw,
-        content: updatedSentence.content,
-        args: nextArgs,
-      }
-      options.emitUpdate(patch)
+    const commandNode = options.commandNode.value
+    if (!commandNode) {
+      options.emitUpdate({ content: newContent })
       return
     }
-    options.emitUpdate({ content: newContent })
+    emitCommandNodeUpdate(updateCommandNodeContent(commandNode, newContent))
   }
 
   function getContentFieldSelectOptions(field: Extract<FieldDef, { type: 'choice' }>): { label: string, value: string }[] {
@@ -113,6 +106,18 @@ export function useStatementEditorContent(options: UseStatementEditorContentOpti
       return node.choices
     }
     return parseChooseContent(toValue(options.parsed)?.content ?? '')
+  })
+
+  const defaultChooseIndex = computed<number | undefined>(() => {
+    const node = toValue(options.commandNode)
+    if (node?.type !== commandType.choose
+      || node.defaultChoose === undefined
+      || !Number.isInteger(node.defaultChoose)
+      || node.defaultChoose < 1
+      || node.defaultChoose > node.choices.length) {
+      return
+    }
+    return node.defaultChoose - 1
   })
 
   const styleRuleItems = computed<StyleRuleContentItem[]>(() => {
@@ -152,27 +157,70 @@ export function useStatementEditorContent(options: UseStatementEditorContentOpti
   function handleChooseNameChange(index: number, value: string | number) {
     const items = patchListItem(chooseItems.value, index, { name: String(value) })
     if (items) {
-      handleContentChange(stringifyChooseContent(items))
+      handleChooseContentChange(items)
     }
   }
 
   function handleChooseFileChange(index: number, file: string) {
     const items = patchListItem(chooseItems.value, index, { file })
     if (items) {
-      handleContentChange(stringifyChooseContent(items))
+      handleChooseContentChange(items)
     }
+  }
+
+  function handleChooseDefaultChange(index: number) {
+    const commandNode = options.commandNode.value
+    if (commandNode?.type !== commandType.choose || !chooseItems.value[index]) {
+      return
+    }
+    emitCommandNodeUpdate({
+      ...commandNode,
+      defaultChoose: defaultChooseIndex.value === index ? undefined : index + 1,
+    })
+  }
+
+  function adjustDefaultChooseAfterRemoval(
+    defaultChoose: number | undefined,
+    removedChoiceNumber: number,
+    previousChoiceCount: number,
+  ): number | undefined {
+    if (defaultChoose === undefined
+      || !Number.isInteger(defaultChoose)
+      || defaultChoose < 1
+      || defaultChoose > previousChoiceCount) {
+      return defaultChoose
+    }
+    if (defaultChoose === removedChoiceNumber) {
+      return
+    }
+    return defaultChoose < removedChoiceNumber ? defaultChoose : defaultChoose - 1
+  }
+
+  function handleChooseContentChange(items: ChooseContentItem[], removedChoiceNumber?: number) {
+    const commandNode = options.commandNode.value
+    if (commandNode?.type !== commandType.choose) {
+      handleContentChange(stringifyChooseContent(items))
+      return
+    }
+    emitCommandNodeUpdate({
+      ...commandNode,
+      choices: items,
+      defaultChoose: removedChoiceNumber === undefined
+        ? commandNode.defaultChoose
+        : adjustDefaultChooseAfterRemoval(commandNode.defaultChoose, removedChoiceNumber, commandNode.choices.length),
+    })
   }
 
   function handleRemoveChooseItem(index: number) {
     const items = removeListItem(chooseItems.value, index)
     if (items) {
-      handleContentChange(stringifyChooseContent(items))
+      handleChooseContentChange(items, index + 1)
     }
   }
 
   function handleAddChooseItem() {
     const items: ChooseContentItem[] = [...chooseItems.value, { name: '', file: '' }]
-    handleContentChange(stringifyChooseContent(items))
+    handleChooseContentChange(items)
   }
 
   function handleStyleOldNameChange(index: number, value: string | number) {
@@ -211,11 +259,13 @@ export function useStatementEditorContent(options: UseStatementEditorContentOpti
     specialContent: {
       setVar: setVarContent,
       choose: chooseItems,
+      defaultChooseIndex,
       styleRules: styleRuleItems,
       handleSetVarNameChange,
       handleSetVarValueChange,
       handleChooseNameChange,
       handleChooseFileChange,
+      handleChooseDefaultChange,
       handleRemoveChooseItem,
       handleAddChooseItem,
       handleStyleOldNameChange,

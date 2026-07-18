@@ -641,52 +641,9 @@ edit:
       wait: Wait for a period of time
     arguments:
       when: Conditional execution
-      continue: Auto-advance
-      next: Advance immediately
-      notend: Continue to next line
-      concat: Concatenate with previous line
-      vocal: Voice
-      fontSize: Font size
-      fontColor: Font color
-      backgroundColor: Background color
-      backgroundImage: Background image
-      figureId: Figure ID
       left: Left position
       right: Right position
       center: Center position
-      zIndex: Display layer
-      animationFlag: Animation flag
-      mouthOpen: Mouth open variant
-      mouthHalfOpen: Mouth half-open variant
-      mouthClose: Mouth closed variant
-      eyesOpen: Eyes open variant
-      eyesClose: Eyes closed variant
-      motion: Live2D/Spine motion
-      expression: Live2D expression
-      bounds: Live2D bounds expansion
-      blink: Live2D blink parameters
-      focus: Live2D focus parameters
-      transform: Transform effect
-      enter: Enter animation
-      exit: Exit animation
-      duration: Animation duration (ms)
-      ease: Animation easing type
-      animationTarget: Animation target object
-      transitionTarget: Transition target object
-      animation: Line enter animation
-      delayTime: Line enter delay time
-      writeDefault: Fill default values
-      keep: Cross-statement animation playback
-      volume: Volume (0-100)
-      soundEffectId: Sound effect ID
-      unlockName: "Unlock {type} name"
-      unlockSeries: "{type} series"
-      skipOff: Disable skipping
-      hold: Stay after finish
-      userForward: Click to show next sentence
-      title: Input box title
-      buttonText: Confirm button text
-      defaultValue: Input box default value
   errors:
     fileSyncFailed: Failed to sync the file. Please try again shortly.
     previewUnavailable: Preview URL is not available. Please start preview first.
@@ -818,6 +775,10 @@ edit:
     toggleSidebar: Toggle Auxiliary Panel
   visualEditor:
     playToLine: Play to this line
+    unnamedChoice: Unnamed Choice
+    accessibility:
+      setDefaultChoice: Set option {index} as default
+      clearDefaultChoice: Clear default from option {index}
     emptyTitle: This scene is empty
     emptyDescription: Add a statement from the command panel, or drag a resource file here to insert it.
     audioPreview:
@@ -883,6 +844,7 @@ edit:
       oldStyleName: Original style name
       newStyleName: New style name
       searchMotion: Search motion
+      searchSkin: Search skin
       searchAnimation: Search animation
       searchExpression: Search expression
     addOption: Add option
@@ -959,6 +921,9 @@ edit:
     params:
       continue: Auto-advance
       next: Advance immediately
+      parallel: Play in parallel
+      ignoreDefault: Ignore default effect
+      order: Display order
       concat: Concatenate
       notend: Not End
       vocal: Voice
@@ -976,6 +941,7 @@ edit:
       motion: Motion
       spineMotion: Animation
       expression: Expression
+      skin: Skin
       transform: Transform
       duration: Transition
       ease: Easing Type
@@ -983,7 +949,6 @@ edit:
       mouthHalfOpen: Mouth Half Open
       mouthClose: Mouth Close
       eyesOpen: Eyes Open
-      eyesHalfOpen: Eyes Half Open
       eyesClose: Eyes Close
       enter: Fade In
       unlockname: Unlock Name
@@ -999,7 +964,13 @@ edit:
       inputTitle: Dialog Title
       buttonText: Confirm Button Text
       defaultValue: Default Value
+      rule: Validation Pattern
+      ruleFlag: Regular Expression Flags
+      ruleText: Validation Error Message
+      ruleButtonText: Validation Dialog Button
+      defaultChoose: Default Choice
       waitTime: Time
+      nobreak: Disable Skip
       unitMs: ms
       textboxState: Show
       textboxStateOff: Hide
