@@ -282,6 +282,7 @@ function handleOverlayCollapsedUpdate(collapsed: boolean) {
 }
 
 useShortcutContext({
+  hasStatements: computed(() => !isSceneEmpty.value),
   panelFocus: 'editor',
 }, {
   target: editorSurfaceRef,

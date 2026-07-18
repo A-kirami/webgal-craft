@@ -10,6 +10,7 @@ import { useVisualEditorSceneRuntime } from '../useVisualEditorSceneRuntime'
 import type { SceneVisualProjectionState } from '~/stores/editor'
 
 const {
+  findSelectedVisualEditorStatementCardMock,
   restoreSelectionAndScrollMock,
   scrollToSelectedStatementMock,
   useCommandPanelBridgeBindingMock,
@@ -23,6 +24,7 @@ const {
   useVisualEditorSceneViewportMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
+  findSelectedVisualEditorStatementCardMock: vi.fn(),
   restoreSelectionAndScrollMock: vi.fn(async () => undefined),
   scrollToSelectedStatementMock: vi.fn(async () => undefined),
   useCommandPanelBridgeBindingMock: vi.fn(),
@@ -68,7 +70,7 @@ vi.mock('~/features/editor/visual-editor/useVisualEditorSceneViewport', () => ({
 
 vi.mock('~/features/editor/visual-editor/visual-editor-focus', () => ({
   canRestoreVisualEditorCardFocus: vi.fn(() => true),
-  findSelectedVisualEditorStatementCard: vi.fn(() => undefined),
+  findSelectedVisualEditorStatementCard: findSelectedVisualEditorStatementCardMock,
 }))
 
 vi.mock('~/stores/command-panel', () => ({
@@ -124,6 +126,8 @@ describe('useVisualEditorSceneRuntime', () => {
   })
 
   beforeEach(() => {
+    findSelectedVisualEditorStatementCardMock.mockReset()
+    findSelectedVisualEditorStatementCardMock.mockReturnValue(undefined)
     restoreSelectionAndScrollMock.mockReset()
     scrollToSelectedStatementMock.mockReset()
     useCommandPanelBridgeBindingMock.mockReset()
@@ -236,6 +240,91 @@ describe('useVisualEditorSceneRuntime', () => {
         visualType: 'scene',
       },
     }))
+
+    scope.stop()
+  })
+
+  it('Home 和 End 会选择场景首尾语句并按边界滚动，且不在输入框中放行', async () => {
+    const scope = effectScope()
+    const state = createState([
+      {
+        id: 1,
+        parseError: false,
+        parsed: undefined,
+        rawText: 'say:first',
+      },
+      {
+        id: 2,
+        parseError: false,
+        parsed: undefined,
+        rawText: 'say:second',
+      },
+      {
+        id: 3,
+        parseError: false,
+        parsed: undefined,
+        rawText: 'say:last',
+      },
+    ])
+    const editorStore = useEditorStoreMock()
+    const focus = vi.fn()
+    class HTMLElementMock {
+      focus = focus
+    }
+    const selectedCard = new HTMLElementMock()
+    const viewportElement = {}
+
+    vi.stubGlobal('document', {
+      activeElement: undefined,
+    })
+    vi.stubGlobal('HTMLElement', HTMLElementMock)
+    findSelectedVisualEditorStatementCardMock.mockReturnValue(selectedCard)
+
+    scope.run(() => useVisualEditorSceneRuntime({
+      getScrollArea: () => ({
+        viewport: {
+          viewportElement,
+        },
+      }) as never,
+      getState: () => state,
+    }))
+
+    const homeShortcut = useShortcutMock.mock.calls.find(([shortcut]) => shortcut.id === 'visual.selectFirst')?.[0]
+    const endShortcut = useShortcutMock.mock.calls.find(([shortcut]) => shortcut.id === 'visual.selectLast')?.[0]
+
+    expect(homeShortcut).toMatchObject({
+      keys: 'Home',
+      when: {
+        hasStatements: true,
+        panelFocus: 'editor',
+        visualType: 'scene',
+      },
+    })
+    expect(endShortcut).toMatchObject({
+      keys: 'End',
+      when: {
+        hasStatements: true,
+        panelFocus: 'editor',
+        visualType: 'scene',
+      },
+    })
+    expect(homeShortcut).not.toHaveProperty('allowInInput')
+    expect(endShortcut).not.toHaveProperty('allowInInput')
+
+    await homeShortcut?.execute()
+    expect(scrollToSelectedStatementMock).toHaveBeenCalledWith('start')
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+    expect(editorStore.syncSceneSelectionFromStatement).toHaveBeenLastCalledWith('/project/scene.txt', 1, {
+      lastEditedStatementId: 1,
+      lineNumber: 1,
+    })
+
+    await endShortcut?.execute()
+    expect(scrollToSelectedStatementMock).toHaveBeenCalledWith('end')
+    expect(editorStore.syncSceneSelectionFromStatement).toHaveBeenLastCalledWith('/project/scene.txt', 3, {
+      lastEditedStatementId: 3,
+      lineNumber: 3,
+    })
 
     scope.stop()
   })

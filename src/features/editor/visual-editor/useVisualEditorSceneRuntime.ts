@@ -188,13 +188,13 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
 
     const selectedCard = findSelectedVisualEditorStatementCard(viewportElement)
     if (selectedCard instanceof HTMLElement) {
-      selectedCard.focus()
+      selectedCard.focus({ preventScroll: true })
     }
   }
 
   async function restoreSelectedStatementPresentation(
     options_: {
-      align?: 'center' | 'auto'
+      align?: 'center' | 'auto' | 'start' | 'end'
       focus?: boolean
     } = {},
   ) {
@@ -522,6 +522,21 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     }
   }
 
+  function selectBoundaryStatement(boundary: 'first' | 'last'): Promise<void> | undefined {
+    const statement = boundary === 'first'
+      ? state.value.statements[0]
+      : state.value.statements.at(-1)
+    if (!statement) {
+      return
+    }
+
+    handleSelect(statement.id)
+    return restoreSelectedStatementPresentation({
+      align: boundary === 'first' ? 'start' : 'end',
+      focus: true,
+    })
+  }
+
   function handlePlayTo(id: number) {
     syncStatementPreview(id, true)
   }
@@ -634,6 +649,28 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
     when: {
       ...sceneShortcutWhen,
       hasSelection: true,
+    },
+  })
+
+  useShortcut({
+    execute: () => selectBoundaryStatement('first'),
+    i18nKey: 'shortcut.visual.selectFirst',
+    id: 'visual.selectFirst',
+    keys: 'Home',
+    when: {
+      ...sceneShortcutWhen,
+      hasStatements: true,
+    },
+  })
+
+  useShortcut({
+    execute: () => selectBoundaryStatement('last'),
+    i18nKey: 'shortcut.visual.selectLast',
+    id: 'visual.selectLast',
+    keys: 'End',
+    when: {
+      ...sceneShortcutWhen,
+      hasStatements: true,
     },
   })
 

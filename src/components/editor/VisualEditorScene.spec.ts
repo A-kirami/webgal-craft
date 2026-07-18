@@ -303,6 +303,28 @@ describe('VisualEditorScene', () => {
     await expect.element(page.getByRole('option')).not.toBeInTheDocument()
   })
 
+  it('快捷键上下文会反映场景是否存在语句', async () => {
+    const state = reactive(createSceneState())
+    const result = renderInBrowser(VisualEditorScene, {
+      props: {
+        state,
+      },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+    const editorSurface = result.container.firstElementChild as HTMLElement
+
+    editorSurface.focus()
+    await nextTick()
+    expect(useShortcutContextRegistry().resolveContext().hasStatements).toBe(true)
+
+    state.statements = []
+    await nextTick()
+    expect(useShortcutContextRegistry().resolveContext().hasStatements).toBe(false)
+  })
+
   it('空场景会把空状态区域注册为首条语句投放目标', async () => {
     const registerDroppable = vi.fn()
     handleCommandDropMock.mockReturnValue(true)
