@@ -1,6 +1,8 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { AUDIO_EXTENSIONS, BACKGROUND_EXTENSIONS, DEFAULT_ENTER_DURATION, DEFAULT_EXIT_DURATION, EFFECT_DURATION, EFFECT_EASE, EFFECT_TRANSFORM, ENTER_ANIMATION, EXIT_ANIMATION, FIGURE_EXTENSIONS, ID, IMAGE_EXTENSIONS, NEXT, SERIES, UNLOCK_NAME, VOLUME } from './common-params'
+import { FIGURE_POSITION_TARGET_IDS } from '~/domain/script/types'
+
+import { AUDIO_EXTENSIONS, BACKGROUND_EXTENSIONS, DEFAULT_ENTER_DURATION, DEFAULT_EXIT_DURATION, EFFECT_DURATION, EFFECT_EASE, EFFECT_TRANSFORM, ENTER_ANIMATION, EXIT_ANIMATION, FIGURE_EXTENSIONS, FIGURE_ID, IMAGE_EXTENSIONS, NEXT, SERIES, SOUND_EFFECT_ID, UNLOCK_NAME, VOLUME } from './common-params'
 import { arg, commandRaw, content, UNSPECIFIED } from './schema'
 
 import type { CommandEntry } from './schema'
@@ -55,19 +57,27 @@ export const performEntries: CommandEntry[] = [
       arg({ key: 'vocal', label: t => t('edit.visualEditor.params.vocal'), type: 'file', fileConfig: { assetType: 'vocal', extensions: AUDIO_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.vocal') } }),
       arg({ ...VOLUME, visibleWhen: { key: 'vocal', notEmpty: true } }),
       arg({
-        key: 'figurePosition',
+        key: 'figureId',
         label: t => t('edit.visualEditor.params.associatedFigure'),
-        type: 'choice',
-        mode: 'flag',
-        options: [
-          { label: t => t('edit.visualEditor.options.unspecified'), value: UNSPECIFIED },
-          { label: t => t('edit.visualEditor.options.figureLeft'), value: 'left' },
-          { label: t => t('edit.visualEditor.options.figureCenter'), value: 'center' },
-          { label: t => t('edit.visualEditor.options.figureRight'), value: 'right' },
-          { label: t => t('edit.visualEditor.options.useFigureId'), value: 'id' },
+        type: 'text',
+        variant: 'autocomplete',
+        autocomplete: [
+          {
+            type: 'static',
+            groupLabel: t => t('edit.visualEditor.autocompleteGroups.preset'),
+            options: [
+              { label: t => t('edit.visualEditor.options.figureLeft'), value: FIGURE_POSITION_TARGET_IDS.left },
+              { label: t => t('edit.visualEditor.options.figureCenter'), value: FIGURE_POSITION_TARGET_IDS.center },
+              { label: t => t('edit.visualEditor.options.figureRight'), value: FIGURE_POSITION_TARGET_IDS.right },
+            ],
+          },
+          {
+            type: 'scene',
+            collection: 'figureIds',
+            groupLabel: t => t('edit.visualEditor.params.associatedFigureId'),
+          },
         ],
       }),
-      arg({ key: 'figureId', label: t => t('edit.visualEditor.params.associatedFigureId'), type: 'text', visibleWhen: { key: 'figurePosition', value: 'id' } }),
       arg({ key: 'concat', label: t => t('edit.visualEditor.params.concat'), type: 'switch', defaultValue: false }),
       arg({ key: 'notend', label: t => t('edit.visualEditor.params.notend'), type: 'switch', defaultValue: false }),
     ],
@@ -115,7 +125,7 @@ export const performEntries: CommandEntry[] = [
         ],
       }),
       arg({ key: 'zIndex', label: t => t('edit.visualEditor.params.zIndex'), type: 'number' }),
-      arg({ ...ID, key: 'id', label: t => t('edit.visualEditor.params.figureId') }),
+      arg({ ...FIGURE_ID, key: 'id', label: t => t('edit.visualEditor.params.figureId') }),
       arg({
         key: 'motion',
         label: (t, content) => isSpineContent(content ?? '') ? t('edit.visualEditor.params.spineMotion') : t('edit.visualEditor.params.motion'),
@@ -228,7 +238,7 @@ export const performEntries: CommandEntry[] = [
     fields: [
       content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'vocal', extensions: AUDIO_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.playEffect') } }),
       arg(VOLUME),
-      arg(ID),
+      arg(SOUND_EFFECT_ID),
     ],
   },
 ]

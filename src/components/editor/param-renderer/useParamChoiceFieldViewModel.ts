@@ -11,11 +11,9 @@ type TranslateFn = (key: string, ...args: unknown[]) => string
 interface UseParamChoiceFieldViewModelOptions {
   getChoiceFieldMode: (field: EditorField) => ChoiceFieldMode | undefined
   getComboboxPathDelimiter: () => string
-  getCustomLabel: (field: EditorField) => string
   getDynamicOptions: (field: EditorField) => ParamSelectOptionItem[]
   getPlaceholder: (field: EditorField) => string
   getSelectValue: (field: EditorField) => string
-  isCustomField: (field: EditorField) => boolean
   i18nContent: () => string
   shouldRenderSegmented: (field: EditorField) => boolean
   t: TranslateFn
@@ -24,8 +22,6 @@ interface UseParamChoiceFieldViewModelOptions {
 
 export interface ParamChoiceFieldViewModel {
   comboboxData?: CascadingComboboxData
-  customLabel: string
-  isCustomField: boolean
   mode: ChoiceFieldMode
   options: ParamSelectOptionItem[]
   placeholder: string
@@ -108,8 +104,6 @@ function createViewModel(
 
   return {
     comboboxData: resolveComboboxData(field, mode, mergedOptions, options),
-    customLabel: options.getCustomLabel(field),
-    isCustomField: options.isCustomField(field),
     mode,
     options: mergedOptions,
     placeholder: options.getPlaceholder(field),

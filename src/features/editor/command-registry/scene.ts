@@ -35,7 +35,7 @@ export const sceneEntries: CommandEntry[] = [
     description: t => t('edit.visualEditor.commandDescriptions.label'),
     icon: 'i-lucide-bookmark',
     category: 'scene',
-    fields: [content({ key: 'name', label: t => t('edit.visualEditor.params.labelName'), type: 'text', inputAutoWidth: true })],
+    fields: [content({ key: 'name', label: t => t('edit.visualEditor.params.labelName'), type: 'text', variant: 'autocomplete', autocomplete: [{ type: 'scene', collection: 'sceneLabels' }] })],
   },
   {
     type: commandType.jumpLabel,
@@ -43,7 +43,7 @@ export const sceneEntries: CommandEntry[] = [
     description: t => t('edit.visualEditor.commandDescriptions.jumpLabel'),
     icon: 'i-lucide-arrow-down-to-dot',
     category: 'scene',
-    fields: [content({ key: 'name', label: t => t('edit.visualEditor.params.labelName'), type: 'text', inputAutoWidth: true })],
+    fields: [content({ key: 'name', label: t => t('edit.visualEditor.params.labelName'), type: 'text', variant: 'autocomplete', autocomplete: [{ type: 'scene', collection: 'sceneLabels' }] })],
   },
   {
     type: commandType.end,

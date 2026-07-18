@@ -822,6 +822,8 @@ edit:
       play: 播放音訊
       pause: 暫停音訊
       unavailable: 音訊預覽目前不可用
+    autocompleteGroups:
+      preset: 預設
     animation:
       title: 動畫編輯器
       description: 調整目前動畫各關鍵影格的時長、緩動與變換
@@ -1009,7 +1011,6 @@ edit:
       defaultEnterDuration: 預設入場動畫時間
       defaultExitDuration: 預設退場動畫時間
       effectName: 特效
-      effectCustomName: 特效名稱
       introText: 文字內容
       backgroundColor: 背景顏色
       backgroundImage: 背景圖片
@@ -1035,7 +1036,6 @@ edit:
       zIndex: 顯示層級
       writeDefault: 繼承預設
       keep: 跨語句播放
-      customTargetId: 目標 ID
     filePicker:
       vocal: 選擇語音檔案
       background: 選擇背景檔案
@@ -1050,7 +1050,6 @@ edit:
     assetPreview:
       loadFailed: 載入失敗
     options:
-      unspecified: 未指定
       notSelected: 未選擇
       default: 預設
       left: 左側
@@ -1059,7 +1058,6 @@ edit:
       figureLeft: 左側立繪
       figureCenter: 中間立繪
       figureRight: 右側立繪
-      useFigureId: 使用立繪 ID
       blendNormal: 正常
       blendAdd: 線性減淡
       blendMultiply: 正片疊底
@@ -1086,7 +1084,6 @@ edit:
       targetFigRight: 右側立繪
       targetBgMain: 背景圖片
       targetStageMain: 舞台畫面
-      custom: 自訂
       delaySeconds: "{seconds} 秒"
       animFadeIn: 淡入
       animSlideIn: 滑入

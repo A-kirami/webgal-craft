@@ -96,16 +96,17 @@ export const effectEntries: CommandEntry[] = [
       content({
         key: 'effect',
         label: t => t('edit.visualEditor.params.effectName'),
-        type: 'choice',
-        className: 'min-w-20',
-        customizable: true,
-        customLabel: t => t('edit.visualEditor.params.effectCustomName'),
-        options: [
-          { label: t => t('edit.visualEditor.options.effectRain'), value: 'rain' },
-          { label: t => t('edit.visualEditor.options.effectSnow'), value: 'snow' },
-          { label: t => t('edit.visualEditor.options.effectHeavySnow'), value: 'heavySnow' },
-          { label: t => t('edit.visualEditor.options.effectCherryBlossoms'), value: 'cherryBlossoms' },
-        ],
+        type: 'text',
+        variant: 'autocomplete',
+        autocomplete: [{
+          type: 'static',
+          options: [
+            { label: t => t('edit.visualEditor.options.effectRain'), value: 'rain' },
+            { label: t => t('edit.visualEditor.options.effectSnow'), value: 'snow' },
+            { label: t => t('edit.visualEditor.options.effectHeavySnow'), value: 'heavySnow' },
+            { label: t => t('edit.visualEditor.options.effectCherryBlossoms'), value: 'cherryBlossoms' },
+          ],
+        }],
       }),
     ],
   },

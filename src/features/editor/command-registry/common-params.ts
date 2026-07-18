@@ -1,6 +1,6 @@
-import { ChoiceField, SwitchField, TextField } from '~/features/editor/command-registry/schema'
+import { FIGURE_POSITION_TARGET_IDS } from '~/domain/script/types'
 
-import type { NumberField } from '~/features/editor/command-registry/schema'
+import type { AutocompleteTextField, ChoiceField, NumberField, SwitchField, TextField } from '~/features/editor/command-registry/schema'
 
 // ─── WebGAL 支持的文件扩展名 ───
 
@@ -37,18 +37,28 @@ export const EASE: ChoiceField = {
   ],
 }
 export const TRANSFORM: TextField = { key: 'transform', label: t => t('edit.visualEditor.params.transform'), type: 'text' }
-export const TARGET: ChoiceField = {
+export const TARGET: AutocompleteTextField = {
   key: 'target',
   label: t => t('edit.visualEditor.params.target'),
-  type: 'choice',
-  customizable: true,
-  customLabel: t => t('edit.visualEditor.params.customTargetId'),
-  options: [
-    { label: t => t('edit.visualEditor.options.targetFigLeft'), value: 'fig-left' },
-    { label: t => t('edit.visualEditor.options.targetFigCenter'), value: 'fig-center' },
-    { label: t => t('edit.visualEditor.options.targetFigRight'), value: 'fig-right' },
-    { label: t => t('edit.visualEditor.options.targetBgMain'), value: 'bg-main' },
-    { label: t => t('edit.visualEditor.options.targetStageMain'), value: 'stage-main' },
+  type: 'text',
+  variant: 'autocomplete',
+  autocomplete: [
+    {
+      type: 'static',
+      groupLabel: t => t('edit.visualEditor.autocompleteGroups.preset'),
+      options: [
+        { label: t => t('edit.visualEditor.options.targetFigLeft'), value: FIGURE_POSITION_TARGET_IDS.left },
+        { label: t => t('edit.visualEditor.options.targetFigCenter'), value: FIGURE_POSITION_TARGET_IDS.center },
+        { label: t => t('edit.visualEditor.options.targetFigRight'), value: FIGURE_POSITION_TARGET_IDS.right },
+        { label: t => t('edit.visualEditor.options.targetBgMain'), value: 'bg-main' },
+        { label: t => t('edit.visualEditor.options.targetStageMain'), value: 'stage-main' },
+      ],
+    },
+    {
+      type: 'scene',
+      collection: 'figureIds',
+      groupLabel: t => t('edit.visualEditor.params.associatedFigureId'),
+    },
   ],
 }
 export const VOLUME: NumberField = {
@@ -62,7 +72,8 @@ export const VOLUME: NumberField = {
 }
 export const UNLOCK_NAME: TextField = { key: 'unlockname', label: t => t('edit.visualEditor.params.unlockname'), type: 'text' }
 export const SERIES: TextField = { key: 'series', label: t => t('edit.visualEditor.params.series'), type: 'text' }
-export const ID: TextField = { key: 'id', label: t => t('edit.visualEditor.params.id'), type: 'text' }
+export const FIGURE_ID: AutocompleteTextField = { key: 'id', label: t => t('edit.visualEditor.params.id'), type: 'text', variant: 'autocomplete', autocomplete: [{ type: 'scene', collection: 'figureIds' }] }
+export const SOUND_EFFECT_ID: AutocompleteTextField = { key: 'id', label: t => t('edit.visualEditor.params.id'), type: 'text', variant: 'autocomplete', autocomplete: [{ type: 'scene', collection: 'soundEffectIds' }] }
 export const WRITE_DEFAULT: SwitchField = { key: 'writeDefault', label: t => t('edit.visualEditor.params.writeDefault'), type: 'switch', defaultValue: false }
 export const KEEP: SwitchField = { key: 'keep', label: t => t('edit.visualEditor.params.keep'), type: 'switch', defaultValue: false }
 

@@ -11,6 +11,7 @@ export type StatementParamFieldMode =
   | 'select'
   | 'combobox'
   | 'color'
+  | 'autocomplete'
   | 'textareaAuto'
   | 'textareaGrow'
   | 'file'
@@ -41,6 +42,9 @@ function resolveFieldMode(
     }
     if (variant === 'textarea-grow') {
       return 'textareaGrow'
+    }
+    if (variant === 'autocomplete') {
+      return 'autocomplete'
     }
     return 'text'
   }
@@ -118,13 +122,6 @@ export function useParamFieldMeta(options: UseParamFieldMetaOptions) {
     return undefined
   }
 
-  function customLabel(field: EditorField): string {
-    if ('customLabel' in field.field) {
-      return resolveI18n(field.field.customLabel, options.t, options.i18nContent())
-    }
-    return ''
-  }
-
   function unitLabel(field: EditorField): string {
     if ('unit' in field.field) {
       return resolveI18n(field.field.unit, options.t, options.i18nContent())
@@ -156,6 +153,9 @@ export function useParamFieldMeta(options: UseParamFieldMetaOptions) {
 
   function shouldUseInputAutoWidth(field: EditorField): boolean {
     if (field.field.type === 'text') {
+      if (field.field.variant === 'autocomplete') {
+        return true
+      }
       return field.field.inputAutoWidth === true && fieldMode(field) === 'text'
     }
 
@@ -171,7 +171,6 @@ export function useParamFieldMeta(options: UseParamFieldMetaOptions) {
   }
 
   return {
-    customLabel,
     fieldLayout,
     fieldMode,
     fileTitle,

@@ -3,6 +3,8 @@ import { ensureParsed, StatementEntry } from '~/domain/script/sentence'
 import { useStatementAnimationEditorBridge } from '~/features/editor/animation/useStatementAnimationEditorBridge'
 import { useStatementEffectEditorBridge } from '~/features/editor/effect-editor/useStatementEffectEditorBridge'
 import { buildStatementPreviewParams, StatementCardPreviewParam } from '~/features/editor/statement-editor/preview'
+import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
+import { sceneAutocompleteOptionsKey } from '~/features/editor/statement-editor/scene-autocomplete-context'
 import { createStatementIdTarget, StatementUpdatePayload } from '~/features/editor/statement-editor/useStatementEditor'
 import { useStatementFileMissing } from '~/features/editor/statement-editor/useStatementFileMissing'
 import { provideStatementMeta } from '~/features/editor/statement-editor/useStatementMeta'
@@ -51,6 +53,7 @@ watch(() => collapsed, (isCollapsed) => {
 const { parsed, config, contentField, argFields, theme, statementType, commandLabel } = provideStatementMeta(() => props.entry)
 
 const { t } = useI18n()
+const sceneAutocompleteOptions = inject(sceneAutocompleteOptionsKey, undefined)
 
 const { fileMissingKeys } = useStatementFileMissing({
   parsed: () => parsed.value,
@@ -59,6 +62,7 @@ const { fileMissingKeys } = useStatementFileMissing({
 })
 
 const previewParams = $computed<StatementCardPreviewParam[]>(() => buildStatementPreviewParams({
+  autocompleteOptions: sceneAutocompleteOptions?.value ?? EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
   parsed: parsed.value,
   statementType: statementType.value,
   entryRawText: props.entry.rawText,

@@ -822,6 +822,8 @@ edit:
       play: 音声を再生
       pause: 音声を一時停止
       unavailable: 音声プレビューは現在利用できません
+    autocompleteGroups:
+      preset: プリセット
     animation:
       title: アニメーションエディタ
       description: 現在のアニメーションの各キーフレームの時間、イージング、変形を調整します
@@ -1009,7 +1011,6 @@ edit:
       defaultEnterDuration: デフォルト入場アニメーション時間
       defaultExitDuration: デフォルト退場アニメーション時間
       effectName: エフェクト
-      effectCustomName: エフェクト名
       introText: テキスト内容
       backgroundColor: 背景色
       backgroundImage: 背景画像
@@ -1035,7 +1036,6 @@ edit:
       zIndex: 表示レイヤー
       writeDefault: デフォルト継承
       keep: 跨文再生
-      customTargetId: ターゲットID
     filePicker:
       vocal: 音声ファイルを選択
       background: 背景ファイルを選択
@@ -1050,7 +1050,6 @@ edit:
     assetPreview:
       loadFailed: 読み込み失敗
     options:
-      unspecified: 未指定
       notSelected: 未選択
       default: デフォルト
       left: 左
@@ -1059,7 +1058,6 @@ edit:
       figureLeft: 左側立ち絵
       figureCenter: 中央立ち絵
       figureRight: 右側立ち絵
-      useFigureId: 立ち絵IDを使用
       blendNormal: 通常
       blendAdd: 覆い焼きリニア（加算）
       blendMultiply: 乗算
@@ -1086,7 +1084,6 @@ edit:
       targetFigRight: 右側立ち絵
       targetBgMain: 背景画像
       targetStageMain: ステージ
-      custom: カスタム
       delaySeconds: "{seconds} 秒"
       animFadeIn: フェードイン
       animSlideIn: スライドイン

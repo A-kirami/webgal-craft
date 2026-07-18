@@ -2,7 +2,7 @@ import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseChooseContent, parseSetVarContent, parseStyleRuleContent, stringifyChooseContent, stringifySetVarContent, stringifyStyleRuleContent } from '~/domain/script/content'
-import { ApplyStyleCommandNode, ChooseCommandNode, CommandNode, CommentCommandNode, FIGURE_POSITION_FLAGS, GenericCommandNode, GenericCommandType, SayCommandNode, SetVarCommandNode, TypedCommandNode } from '~/domain/script/types'
+import { ApplyStyleCommandNode, ChooseCommandNode, CommandNode, CommentCommandNode, GenericCommandNode, GenericCommandType, SAY_FIGURE_POSITIONS, SayCommandNode, SetVarCommandNode, TypedCommandNode } from '~/domain/script/types'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
@@ -133,13 +133,14 @@ function argBuilder(): ArgBuilder {
   return new ArgBuilder()
 }
 
-function consumeSayFigurePositionFlag(args: arg[]): typeof FIGURE_POSITION_FLAGS[number] | undefined {
-  for (const flag of FIGURE_POSITION_FLAGS) {
-    if (consumeFlagArg(args, flag)) {
-      return flag
+function consumeSayFigurePosition(args: arg[]): SayCommandNode['figurePosition'] {
+  let figurePosition: SayCommandNode['figurePosition']
+  for (const position of SAY_FIGURE_POSITIONS) {
+    if (consumeFlagArg(args, position) && figurePosition === undefined) {
+      figurePosition = position
     }
   }
-  return undefined
+  return figurePosition
 }
 
 /**
@@ -190,6 +191,8 @@ function parseSayNode(sentence: ISentence): SayCommandNode {
   const clearFromArgs = consumeFlagArg(args, 'clear')
   // 简写旁白形式（:内容;）中 commandRaw 为空字符串，隐含 clear
   const clear = clearFromArgs || (sentence.commandRaw === '' && !speaker)
+  const figurePosition = consumeSayFigurePosition(args)
+  const figureId = consumeStringArg(args, 'figureId')
   return {
     type: commandType.say,
     commandRaw: sentence.commandRaw,
@@ -200,8 +203,8 @@ function parseSayNode(sentence: ISentence): SayCommandNode {
     fontSize: consumeStringArg(args, 'fontSize'),
     vocal: consumeStringArg(args, 'vocal'),
     volume: consumeNumberArg(args, 'volume'),
-    figurePosition: consumeSayFigurePositionFlag(args),
-    figureId: consumeStringArg(args, 'figureId'),
+    figurePosition,
+    figureId,
     next: consumeFlagArg(args, 'next'),
     continue: consumeFlagArg(args, 'continue'),
     concat: consumeFlagArg(args, 'concat'),
@@ -238,7 +241,7 @@ function serializeSayNode(node: SayCommandNode): ISentence {
     .string('fontSize', node.fontSize)
     .string('vocal', node.vocal)
     .number('volume', node.volume)
-    .positionFlag(node.figurePosition, FIGURE_POSITION_FLAGS)
+    .positionFlag(node.figurePosition, SAY_FIGURE_POSITIONS)
     .string('figureId', node.figureId)
     .flag('next', node.next)
     .flag('continue', node.continue)

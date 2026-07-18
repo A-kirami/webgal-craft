@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { SAY_CONTINUATION_RAW } from '~/domain/script/codec'
+import { FIGURE_POSITION_TARGET_IDS } from '~/domain/script/types'
 import {
   createEntry,
   createHarness,
@@ -18,8 +19,9 @@ import {
   resetStatementEditorRuntime,
   workspaceStoreState,
 } from '~/features/editor/__tests__/statement-editor-test-utils'
-import { CUSTOM_CONTENT, UNSPECIFIED } from '~/features/editor/command-registry/schema'
+import { UNSPECIFIED } from '~/features/editor/command-registry/schema'
 import { registerDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
+import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
 
 import type { ArgField } from '~/features/editor/command-registry/schema'
 
@@ -50,18 +52,16 @@ describe('useStatementEditor', () => {
     expect(editor.view.commandRenderFields.value.some(field => field.storage === 'content')).toBe(false)
   })
 
-  it('flag-choice 写回优先走 typed 路径，并清理隐藏依赖参数', () => {
-    const { editor, updates } = createHarness('Alice: hello -id -figureId=hero;')
-    const figurePositionField = requireArgField(editor, 'figurePosition')
+  it('say 位置语法糖在编辑器中显示为运行时目标 ID，修改后写入 figureId', () => {
+    const { editor, updates } = createHarness('Alice: hello -left;')
+    const associatedFigureField = requireArgField(editor, 'figureId')
 
-    editor.params.handleArgFieldChange(figurePositionField, 'left')
+    expect(editor.params.getArgValue(associatedFigureField)).toBe(FIGURE_POSITION_TARGET_IDS.left)
 
-    const latest = updates.at(-1)
-    expect(latest).toBeDefined()
-    expect(latest!.parsed.command).toBe(commandType.say)
-    expect(latest!.parsed.args).toEqual([
+    editor.params.handleArgFieldChange(associatedFigureField, 'hero')
+    expect(updates.at(-1)?.parsed.args).toEqual([
       { key: 'speaker', value: 'Alice' },
-      { key: 'left', value: true },
+      { key: 'figureId', value: 'hero' },
     ])
   })
 
@@ -94,21 +94,6 @@ describe('useStatementEditor', () => {
     ])
   })
 
-  it('customizable select 在已有自定义值时能识别 custom token', () => {
-    const customHarness = createHarness('setAnimation: bounce -target=node-custom;')
-    const customTargetField = requireArgField(customHarness.editor, 'target')
-    expect(customHarness.editor.params.getArgSelectValue(customTargetField)).toBe(CUSTOM_CONTENT)
-  })
-
-  it('customizable select 切换到 custom token 时不应立即改写参数', () => {
-    const { editor, updates } = createHarness('setAnimation: bounce -target=fig-left;')
-    const targetField = requireArgField(editor, 'target')
-
-    editor.params.handleArgSelectChange(targetField, CUSTOM_CONTENT)
-
-    expect(updates.length).toBe(0)
-  })
-
   it('静态选项与动态选项分离读取，且 selectable 判定基于合并结果', () => {
     registerDynamicOptions('animationTableEntries', () => ({
       options: [{ label: 'flash (dynamic)', value: 'flash' }],
@@ -122,7 +107,6 @@ describe('useStatementEditor', () => {
         key: 'enter',
         type: 'choice',
         label: () => 'enter',
-        customizable: true,
         dynamicOptionsKey: 'animationTableEntries',
         options: [{ label: () => 'fade (static)', value: 'fade' }],
       },
@@ -135,6 +119,20 @@ describe('useStatementEditor', () => {
       { label: 'flash (dynamic)', value: 'flash' },
     ])
     expect(editor.params.getArgSelectValue(enterField)).toBe('flash')
+  })
+
+  it('ParamRenderer shared props 暴露文本字段的场景候选项', () => {
+    const { editor } = createHarness('jumpLabel: ;', {
+      autocompleteOptions: {
+        ...EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
+        sceneLabels: [{ label: 'start', value: 'start' }],
+      },
+    })
+    const labelField = editor.view.commandRenderFields.value.find(field => field.storage === 'content')
+    expect(labelField).toBeDefined()
+    expect(editor.paramRenderer.sharedProps.value.getAutocompleteOptions(labelField!)).toEqual([
+      { label: 'start', value: 'start' },
+    ])
   })
 
   it('可视化编辑标准参数时应保留文本中已有的 extraArgs', () => {
@@ -165,7 +163,6 @@ describe('useStatementEditor', () => {
         key: 'focus.instant',
         type: 'choice',
         label: () => 'focus.instant',
-        customizable: true,
         dynamicOptionsKey: 'animationTableEntries',
         options: [],
       },
@@ -179,32 +176,6 @@ describe('useStatementEditor', () => {
       { label: 'flash (dynamic)', value: 'flash' },
     ])
     expect(editor.params.getArgSelectValue(jsonComboboxField)).toBe('flash')
-  })
-
-  it('flattened json customizable combobox 未命中选项时返回 CUSTOM_CONTENT', () => {
-    registerDynamicOptions('animationTableEntries', () => ({
-      options: [{ label: 'flash (dynamic)', value: 'flash' }],
-      loading: false,
-    }))
-
-    const { editor } = createHarness('changeFigure: figure.json -focus={"instant":"unknown-motion"};')
-    const jsonComboboxField: ArgField = {
-      storageKey: 'focus',
-      field: {
-        key: 'focus.instant',
-        type: 'choice',
-        label: () => 'focus.instant',
-        customizable: true,
-        dynamicOptionsKey: 'animationTableEntries',
-        options: [],
-      },
-      jsonMeta: {
-        argKey: 'focus',
-        fieldKey: 'instant',
-      },
-    }
-
-    expect(editor.params.getArgSelectValue(jsonComboboxField)).toBe(CUSTOM_CONTENT)
   })
 
   it('flattened json choice 含 UNSPECIFIED 选项时，缺省值应回显为 UNSPECIFIED', () => {

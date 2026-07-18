@@ -36,6 +36,22 @@ describe('命令节点编解码', () => {
     expect(node.concat).toBe(true)
     expect(node.notend).toBe(true)
     expect(node.extraArgs).toEqual([{ key: 'x', value: 1 }])
+
+    const serializedArgs = serializeCommandNode(node).args
+    expect(serializedArgs).toContainEqual({ key: 'left', value: true })
+    expect(serializedArgs).toContainEqual({ key: 'figureId', value: 'hero' })
+  })
+
+  it.each(['left', 'center', 'right'])('解析并序列化 say 位置语法糖 -%s', (position) => {
+    const node = parseCommandNode(mustParse(`Alice: hello -${position};`))
+
+    expect(node.type).toBe(commandType.say)
+    if (node.type !== commandType.say) {
+      return
+    }
+    expect(node.figurePosition).toBe(position)
+    expect(node.figureId).toBeUndefined()
+    expect(serializeCommandNode(node).args).toContainEqual({ key: position, value: true })
   })
 
   it('显式 say 命令从 -speaker 参数读取角色名', () => {
@@ -212,7 +228,7 @@ describe('命令节点编解码', () => {
 
   it('类型化节点经 parse/serialize/parse 后保持稳定', () => {
     const fixtures = [
-      'Alice: hello -fontSize=medium -vocal=voice.ogg -volume=80 -id -figureId=hero -next -continue -concat -notend -x=1;',
+      'Alice: hello -fontSize=medium -vocal=voice.ogg -volume=80 -figureId=hero -next -continue -concat -notend -x=1;',
       '; this is comment',
       'setVar: score=10 -global -custom=foo;',
       'choose: A:scene1.txt|B:scene2.txt -next;',

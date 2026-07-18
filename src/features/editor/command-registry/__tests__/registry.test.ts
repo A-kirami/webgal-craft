@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { categoryTheme, commandEntries, commandPanelCategories, getCommandConfig } from '../index'
-import { readArgFields, readEditorFields, resolveI18n } from '../schema'
+import { readArgFields, readContentField, readEditorFields, resolveI18n } from '../schema'
 
 describe('命令注册表完整性', () => {
   it('源条目的命令类型应唯一', () => {
@@ -137,5 +137,57 @@ describe('命令注册表完整性', () => {
       variant: 'combobox',
       grouping: { mode: 'path' },
     })
+  })
+
+  it('立绘引用和标签名称字段声明对应 autocomplete 来源', () => {
+    const sayFields = readEditorFields(getCommandConfig(commandType.say))
+    const associatedFigureField = sayFields.find(field => field.key === 'figureId')?.field
+    expect(associatedFigureField).toMatchObject({
+      type: 'text',
+      variant: 'autocomplete',
+      autocomplete: expect.arrayContaining([{ type: 'scene', collection: 'figureIds', groupLabel: expect.any(Function) }]),
+    })
+    expect(sayFields.some(field => field.key === 'figurePosition')).toBe(false)
+
+    const argCases = [
+      { type: commandType.changeFigure, key: 'id', collection: 'figureIds' },
+      { type: commandType.playEffect, key: 'id', collection: 'soundEffectIds' },
+    ] as const
+    for (const { type, key, collection } of argCases) {
+      const field = readEditorFields(getCommandConfig(type)).find(item => item.key === key)?.field
+      expect(field).toMatchObject({
+        type: 'text',
+        variant: 'autocomplete',
+        autocomplete: [{ type: 'scene', collection }],
+      })
+    }
+
+    const contentCommands = [commandType.label, commandType.jumpLabel]
+    for (const type of contentCommands) {
+      expect(readContentField(getCommandConfig(type))).toMatchObject({
+        type: 'text',
+        variant: 'autocomplete',
+        autocomplete: [{ type: 'scene', collection: 'sceneLabels' }],
+      })
+    }
+  })
+
+  it('pixi 特效名使用带内置候选的 autocomplete 文本字段', () => {
+    const pixiContent = readContentField(getCommandConfig(commandType.pixi))
+
+    if (pixiContent?.type !== 'text' || pixiContent.variant !== 'autocomplete') {
+      throw new TypeError('pixi content field must be an autocomplete text field')
+    }
+
+    const [source] = pixiContent.autocomplete
+    if (source?.type !== 'static') {
+      throw new TypeError('pixi autocomplete must use a static source')
+    }
+    expect(source.options.map(option => option.value)).toEqual([
+      'rain',
+      'snow',
+      'heavySnow',
+      'cherryBlossoms',
+    ])
   })
 })

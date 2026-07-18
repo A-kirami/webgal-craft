@@ -7,7 +7,6 @@ export interface ParamSelectOptionItem {
 }
 
 export interface ParamControlCommonProps {
-  customOptionLabel: string
   dynamicOptions?: ParamSelectOptionItem[]
   fileRootPath: string
   fileTitle: string

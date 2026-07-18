@@ -206,17 +206,13 @@ describe('命令节点参数更新器', () => {
     ])
   })
 
-  it('可更新 say figurePosition 为 id', () => {
-    const sentence = mustParse('Alice: hello -left -figureId=hero -x=1;')
-    const node = parseCommandNode(sentence)
-    const updated = updateCommandNodeParam(node, makeParamDef('figurePosition', 'select'), 'id')
+  it('更新 say 关联立绘时切换为显式 figureId 语法', () => {
+    const node = parseCommandNode(mustParse('Alice: hello -left -x=1;'))
+    const updated = updateCommandNodeParam(node, makeParamDef('figureId', 'text'), 'hero')
     expect(updated).toBeDefined()
 
-    const serialized = serializeCommandNode(updated!)
-    expect(serialized.command).toBe(commandType.say)
-    expect(serialized.args).toEqual([
+    expect(serializeCommandNode(updated!).args).toEqual([
       { key: 'speaker', value: 'Alice' },
-      { key: 'id', value: true },
       { key: 'figureId', value: 'hero' },
       { key: 'x', value: 1 },
     ])

@@ -3,7 +3,8 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import { cloneArgs } from '~/domain/script/codec'
 import { parseChooseContent, parseSetVarContent, parseStyleRuleContent } from '~/domain/script/content'
 import { CommandParamDescriptor, getRegistryKnownKeys, resolveRegistryFieldMeta } from '~/domain/script/params'
-import { CommandNode, FIGURE_POSITION_FLAGS, GenericCommandNode, isGenericNode, TypedCommandNode } from '~/domain/script/types'
+import { updateSayFigureTargetId } from '~/domain/script/say-figure'
+import { CommandNode, GenericCommandNode, isGenericNode, TypedCommandNode } from '~/domain/script/types'
 
 import type { arg } from 'webgal-parser/src/interface/sceneInterface'
 
@@ -26,14 +27,6 @@ function isUnsetValue(paramDef: CommandParamDescriptor, newValue: ParamUpdateVal
 function toOptionalNumber(value: ParamUpdateValue): number | undefined {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : undefined
-}
-
-function updateSayFigurePosition(node: CommandNode, newValue: ParamUpdateValue): CommandNode {
-  const value = String(newValue)
-  return {
-    ...node,
-    figurePosition: (FIGURE_POSITION_FLAGS as readonly string[]).includes(value) ? value : undefined,
-  } as CommandNode
 }
 
 function updateChangeFigurePosition(node: CommandNode, newValue: ParamUpdateValue): CommandNode {
@@ -164,9 +157,10 @@ function updateFromFieldTable(
   paramDef: CommandParamDescriptor,
   newValue: ParamUpdateValue,
 ): CommandNode | typeof NOT_HANDLED {
-  if (node.type === commandType.say && paramDef.key === 'figurePosition') {
-    return updateSayFigurePosition(node, newValue)
+  if (node.type === commandType.say && paramDef.key === 'figureId') {
+    return updateSayFigureTargetId(node, String(newValue))
   }
+
   if (node.type === commandType.changeFigure && paramDef.key === 'position') {
     return updateChangeFigurePosition(node, newValue)
   }

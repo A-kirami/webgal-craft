@@ -822,6 +822,8 @@ edit:
       play: Play audio
       pause: Pause audio
       unavailable: Audio preview is currently unavailable
+    autocompleteGroups:
+      preset: Presets
     animation:
       title: Animation Editor
       description: Adjust the duration, easing, and transforms of each keyframe in the current animation
@@ -1009,7 +1011,6 @@ edit:
       defaultEnterDuration: Default Enter Duration
       defaultExitDuration: Default Exit Duration
       effectName: Effect
-      effectCustomName: Effect Name
       introText: Text Content
       backgroundColor: Background Color
       backgroundImage: Background Image
@@ -1035,7 +1036,6 @@ edit:
       zIndex: Z-Index
       writeDefault: Write Default
       keep: Keep Playing
-      customTargetId: Target ID
     filePicker:
       vocal: Select voice file
       background: Select background file
@@ -1050,7 +1050,6 @@ edit:
     assetPreview:
       loadFailed: Failed to load
     options:
-      unspecified: Unspecified
       notSelected: Not selected
       default: Default
       left: Left
@@ -1059,7 +1058,6 @@ edit:
       figureLeft: Left Figure
       figureCenter: Center Figure
       figureRight: Right Figure
-      useFigureId: Use Figure ID
       blendNormal: Normal
       blendAdd: Linear Dodge (Add)
       blendMultiply: Multiply
@@ -1086,7 +1084,6 @@ edit:
       targetFigRight: Right Figure
       targetBgMain: Background
       targetStageMain: Stage
-      custom: Custom
       delaySeconds: "{seconds} sec"
       animFadeIn: Fade In
       animSlideIn: Slide In

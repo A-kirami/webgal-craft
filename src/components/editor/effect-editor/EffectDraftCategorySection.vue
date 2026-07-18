@@ -444,7 +444,6 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
               :id="controls.segmentedControlId(item.param.key)"
               :model-value="controls.getSegmentedValue(item.param)"
               :options="controls.getSegmentedOptions(item.param)"
-              custom-option-label=""
               group-class="p-0.5 border border-border/60 rounded-md bg-muted/20 inline-flex gap-0.5 w-full h-7"
               item-class="text-xs leading-none px-2 border-0 rounded-sm gap-1.5 h-5.5 flex-1 shadow-none data-[state=on]:text-accent-foreground data-[state=on]:bg-accent hover:bg-muted/60"
               @update-value="controls.updateSegmentedField(item.param, String($event ?? UNSPECIFIED))"

@@ -822,6 +822,8 @@ edit:
       play: 播放音频
       pause: 暂停音频
       unavailable: 音频预览当前不可用
+    autocompleteGroups:
+      preset: 预设
     animation:
       title: 动画编辑器
       description: 调整当前动画各关键帧的时长、缓动和变换
@@ -1009,7 +1011,6 @@ edit:
       defaultEnterDuration: 默认入场动画时间
       defaultExitDuration: 默认退场动画时间
       effectName: 特效
-      effectCustomName: 特效名称
       introText: 文字内容
       backgroundColor: 背景颜色
       backgroundImage: 背景图片
@@ -1035,7 +1036,6 @@ edit:
       zIndex: 显示层级
       writeDefault: 继承默认
       keep: 跨语句播放
-      customTargetId: 目标 ID
     filePicker:
       vocal: 选择语音文件
       background: 选择背景文件
@@ -1050,7 +1050,6 @@ edit:
     assetPreview:
       loadFailed: 加载失败
     options:
-      unspecified: 未指定
       notSelected: 未选择
       default: 默认
       left: 左侧
@@ -1059,7 +1058,6 @@ edit:
       figureLeft: 左侧立绘
       figureCenter: 中间立绘
       figureRight: 右侧立绘
-      useFigureId: 使用立绘 ID
       blendNormal: 正常
       blendAdd: 线性减淡
       blendMultiply: 正片叠底
@@ -1086,7 +1084,6 @@ edit:
       targetFigRight: 右侧立绘
       targetBgMain: 背景图片
       targetStageMain: 舞台画面
-      custom: 自定义
       delaySeconds: "{seconds} 秒"
       animFadeIn: 淡入
       animSlideIn: 滑入

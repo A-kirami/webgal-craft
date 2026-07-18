@@ -38,7 +38,6 @@ export interface FileFieldConfig {
 }
 
 export const UNSPECIFIED = '__unspecified__'
-export const CUSTOM_CONTENT = '__custom__'
 
 // ─── I18nLike：简化 i18n 声明 ─────────────────────
 
@@ -53,6 +52,27 @@ export function resolveI18n(value: I18nLike | undefined, t: I18nT, content?: str
 export type SurfaceAware<V extends string> = V | { inline?: V, panel?: V }
 
 export type InlineLayout = 'default' | 'standalone'
+
+export type SceneAutocompleteCollection = 'figureIds' | 'sceneLabels' | 'soundEffectIds'
+
+interface TextFieldAutocompleteOption {
+  label: I18nLike
+  value: string
+}
+
+type TextFieldAutocompleteSource =
+  | {
+    type: 'static'
+    options: readonly TextFieldAutocompleteOption[]
+    groupLabel?: I18nLike
+  }
+  | {
+    type: 'scene'
+    collection: SceneAutocompleteCollection
+    groupLabel?: I18nLike
+  }
+
+export type TextFieldAutocompleteSources = readonly [TextFieldAutocompleteSource, ...TextFieldAutocompleteSource[]]
 
 // ─── FieldDef 判别联合 ───────────────────────────
 
@@ -84,14 +104,25 @@ interface OptionsMixin {
   options: { label: I18nLike, value: string }[]
 }
 
-export interface TextField extends FieldBase {
+interface TextFieldBase extends FieldBase {
   type: 'text'
   placeholder?: I18nLike
   defaultValue?: string
+}
+
+export interface PlainTextField extends TextFieldBase {
   variant?: SurfaceAware<'input' | 'textarea-auto' | 'textarea-grow'>
   /** 仅在 variant 解析为 input 时生效：输入框宽度随内容增长 */
   inputAutoWidth?: boolean
+  autocomplete?: never
 }
+
+export interface AutocompleteTextField extends TextFieldBase {
+  variant: 'autocomplete'
+  autocomplete: TextFieldAutocompleteSources
+}
+
+export type TextField = PlainTextField | AutocompleteTextField
 
 export interface SwitchField extends FieldBase {
   type: 'switch'
@@ -132,8 +163,6 @@ export interface ValueChoiceField extends FieldBase, OptionsMixin {
   placeholder?: I18nLike
   dynamicOptionsKey?: EditorDynamicOptionsKey
   grouping?: ChoiceFieldGrouping
-  customizable?: boolean
-  customLabel?: I18nLike
   variant?: SurfaceAware<'select' | 'segmented' | 'combobox'>
 }
 
@@ -144,8 +173,6 @@ export interface FlagChoiceField extends FieldBase, OptionsMixin {
   placeholder?: I18nLike
   variant?: SurfaceAware<'select' | 'segmented'>
   dynamicOptionsKey?: never
-  customizable?: never
-  customLabel?: never
 }
 
 export interface ChoiceFieldPathGrouping {
@@ -209,8 +236,8 @@ export function content(field: FieldDef): CommandFieldDef {
 }
 
 /** 工厂函数：commandRaw 字段 */
-export function commandRaw(field: Omit<TextField, 'type'> & { type?: 'text' }): CommandFieldDef {
-  return { storage: 'commandRaw', field: { type: 'text', ...field } as FieldDef }
+export function commandRaw(field: Omit<PlainTextField, 'type'>): CommandFieldDef {
+  return { storage: 'commandRaw', field: { type: 'text', ...field } }
 }
 
 /** 工厂函数：arg 字段 */
