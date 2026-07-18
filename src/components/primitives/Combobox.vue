@@ -224,7 +224,15 @@ watch(() => searchQuery, async (nextQuery) => {
           >
         </div>
         <ScrollArea ref="scrollAreaRef" class="max-h-40vh" type="auto">
+          <div
+            v-if="filteredDocuments.length === 0"
+            role="status"
+            class="text-sm text-muted-foreground px-2 py-6 text-center"
+          >
+            {{ searchQuery.trim() ? $t('common.noResults') : $t('common.noOptions') }}
+          </div>
           <ul
+            v-else
             ref="listRef"
             role="listbox"
             class="text-xs m-0 p-1 list-none"
@@ -246,12 +254,6 @@ watch(() => searchQuery, async (nextQuery) => {
             >
               <div class="i-lucide-check shrink-0 size-3.5" :class="props.modelValue === option.value ? 'opacity-100' : 'opacity-0'" />
               <span class="truncate">{{ option.label }}</span>
-            </li>
-            <li
-              v-if="filteredDocuments.length === 0"
-              class="text-sm text-muted-foreground px-2 py-6 text-center"
-            >
-              {{ $t('edit.visualEditor.noResults') }}
             </li>
           </ul>
         </ScrollArea>

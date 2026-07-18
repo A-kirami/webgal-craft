@@ -1,5 +1,7 @@
 common:
   loading: 読み込み中...
+  noOptions: 利用可能な選択肢がありません
+  noResults: 検索結果がありません
   cancel: キャンセル
   confirm: 確認
   create: 作成
@@ -1101,7 +1103,6 @@ edit:
     effectEditor: エフェクトエディター
     statementList: ステートメントリスト
     noSelection: 編集するステートメントを選択してください
-    noResults: 検索結果がありません
   welcome:
     startEditing: 編集を開始
     selectOrCreate: ファイルを選択して編集を開始するか、新しいファイルを作成

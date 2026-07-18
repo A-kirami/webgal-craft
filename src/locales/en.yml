@@ -1,5 +1,7 @@
 common:
   loading: Loading...
+  noOptions: No options available
+  noResults: No results found
   cancel: Cancel
   confirm: Confirm
   create: Create
@@ -1101,7 +1103,6 @@ edit:
     effectEditor: Effect Editor
     statementList: Statement list
     noSelection: Select a statement to edit
-    noResults: No results found
   welcome:
     startEditing: Start Editing
     selectOrCreate: Select a file to start editing, or create a new file

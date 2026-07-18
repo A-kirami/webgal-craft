@@ -63,6 +63,11 @@ const activeSearchOptionId = $computed(() => (
 const searchResults = $computed(() => {
   return filterSearchOptionDocuments(props.searchDocuments, searchQuery)
 })
+const hasVisibleOptions = $computed(() => (
+  isSearchMode
+    ? searchResults.length > 0
+    : props.browseNodes.length > 0
+))
 
 const selectedLabel = $computed(() => {
   if (!props.modelValue) {
@@ -351,7 +356,7 @@ watch(() => searchQuery, (nextQuery, previousQuery) => {
             ref="inputRef"
             v-model="searchQuery"
             :aria-activedescendant="isSearchMode ? activeSearchOptionId : undefined"
-            :aria-controls="isSearchMode ? searchListboxId : undefined"
+            :aria-controls="isSearchMode && hasVisibleOptions ? searchListboxId : undefined"
             type="text"
             role="searchbox"
             :placeholder="searchPlaceholder"
@@ -360,8 +365,16 @@ watch(() => searchQuery, (nextQuery, previousQuery) => {
           >
         </div>
 
+        <div
+          v-if="!hasVisibleOptions"
+          role="status"
+          class="text-sm text-muted-foreground px-2 py-6 text-center"
+        >
+          {{ isSearchMode ? $t('common.noResults') : $t('common.noOptions') }}
+        </div>
+
         <ScrollAreaRoot
-          v-if="!isSearchMode"
+          v-else-if="!isSearchMode"
           type="auto"
           class="w-full relative overflow-hidden"
         >
@@ -424,12 +437,6 @@ watch(() => searchQuery, (nextQuery, previousQuery) => {
               >
                 <div class="i-lucide-check shrink-0 size-3.5" :class="props.modelValue === result.value ? 'opacity-100' : 'opacity-0'" />
                 <span class="truncate">{{ result.label }}</span>
-              </li>
-              <li
-                v-if="searchResults.length === 0"
-                class="text-sm text-muted-foreground px-2 py-6 text-center"
-              >
-                {{ $t('edit.visualEditor.noResults') }}
               </li>
             </ul>
           </ScrollAreaViewport>
