@@ -115,7 +115,7 @@ function secondInputId(index: number): string {
 
 <template>
   <div
-    class="group flex flex-col gap-1.5 w-full data-[surface=panel]:gap-2.5 data-[surface=panel]:w-auto"
+    class="group flex flex-col gap-1.5 w-full data-[surface=panel]:gap-2.5"
     :data-surface="props.surface"
   >
     <div
