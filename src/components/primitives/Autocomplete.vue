@@ -276,7 +276,7 @@ function handleBeforeInput(event: InputEvent) {
             </template>
           </template>
           <ComboboxEmpty class="text-sm text-muted-foreground px-2 py-6 text-center">
-            {{ $t('edit.visualEditor.noResults') }}
+            {{ $t('common.noResults') }}
           </ComboboxEmpty>
         </ComboboxViewport>
       </ComboboxContent>

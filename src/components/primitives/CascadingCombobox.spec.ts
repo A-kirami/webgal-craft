@@ -36,6 +36,11 @@ const flatData = buildCascadingComboboxData([
   { label: 'Sad', value: 'sad' },
 ])
 
+const emptyData = buildCascadingComboboxData([], {
+  grouping: { mode: 'path' },
+  resolvedDelimiter: '/',
+})
+
 const tallGroupedData = buildCascadingComboboxData([
   ...Array.from({ length: 12 }, (_, index) => ({
     label: `root-${String(index + 1).padStart(2, '0')}/default`,
@@ -148,6 +153,28 @@ const FlatHarness = defineComponent({
       :search-documents="flatData.searchDocuments"
       placeholder="Select mood"
       search-placeholder="Search mood"
+    />
+  `,
+})
+
+const EmptyHarness = defineComponent({
+  components: { CascadingCombobox },
+  setup() {
+    const modelValue = ref('example-expression')
+
+    return {
+      emptyData,
+      modelValue,
+    }
+  },
+  template: `
+    <CascadingCombobox
+      v-model="modelValue"
+      data-testid="empty-trigger"
+      :browse-nodes="emptyData.browseNodes"
+      :search-documents="emptyData.searchDocuments"
+      placeholder="Select expression"
+      search-placeholder="Search expression"
     />
   `,
 })
@@ -391,6 +418,16 @@ function findSearchOptionElement(label: string): HTMLElement | undefined {
 }
 
 describe('CascadingCombobox', () => {
+  it('空候选面板显示可播报且不可选择的状态', async () => {
+    renderInBrowser(EmptyHarness)
+
+    await page.getByTestId('empty-trigger').click()
+
+    await expect.element(page.getByRole('status')).toBeVisible()
+    await expect.element(page.getByRole('status')).toHaveTextContent('common.noOptions')
+    await expect.element(page.getByRole('option')).not.toBeInTheDocument()
+  })
+
   it('首次打开已选嵌套值时，根层与级联子层作为独立浮层渲染，并保持向右级联展开', async () => {
     renderInBrowser(GroupedHarness, {
       props: {
@@ -481,6 +518,17 @@ describe('CascadingCombobox', () => {
     expect(searchInput).toBeDefined()
     expect(activeOption).toBeDefined()
     expect(searchInput!.getAttribute('aria-activedescendant')).toBe(activeOption!.id)
+  })
+
+  it('搜索无匹配项时显示可播报且不可选择的空状态', async () => {
+    renderInBrowser(GroupedHarness)
+
+    await page.getByTestId('grouped-trigger').click()
+    await page.getByPlaceholder('Search motion').fill('zzz')
+
+    await expect.element(page.getByRole('status')).toBeVisible()
+    await expect.element(page.getByRole('status')).toHaveTextContent('common.noResults')
+    await expect.element(page.getByRole('option')).not.toBeInTheDocument()
   })
 
   it('会把搜索词按空格拆分并要求所有关键词都命中完整路径文本', async () => {

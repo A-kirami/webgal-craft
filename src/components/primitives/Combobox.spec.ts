@@ -75,26 +75,6 @@ const globalStubs = {
       }, slots.default?.())
     },
   }),
-  ScrollArea: defineComponent({
-    name: 'StubScrollArea',
-    setup(_, { attrs, slots, expose }) {
-      const viewportElement = ref<HTMLElement>()
-
-      expose({
-        viewport: {
-          get viewportElement() {
-            return viewportElement.value
-          },
-        },
-      })
-
-      return () => h('div', {
-        ...attrs,
-        style: 'max-height: 64px; overflow: auto;',
-        ref: viewportElement,
-      }, slots.default?.())
-    },
-  }),
 }
 
 const ComboboxHarness = defineComponent({
@@ -113,6 +93,18 @@ const ComboboxHarness = defineComponent({
       id="motion"
       data-testid="motion-trigger"
       :options="baseOptions"
+      placeholder="Select motion"
+      search-placeholder="Search motion"
+    />
+  `,
+})
+
+const EmptyComboboxHarness = defineComponent({
+  components: { Combobox },
+  template: `
+    <Combobox
+      data-testid="empty-trigger"
+      :options="[]"
       placeholder="Select motion"
       search-placeholder="Search motion"
     />
@@ -162,6 +154,20 @@ const MultiKeywordComboboxHarness = defineComponent({
 })
 
 describe('Combobox', () => {
+  it('候选集合为空时显示无可用选项', async () => {
+    renderInBrowser(EmptyComboboxHarness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByTestId('empty-trigger').click()
+
+    await expect.element(page.getByRole('status')).toBeVisible()
+    await expect.element(page.getByRole('status')).toHaveTextContent('common.noOptions')
+    await expect.element(page.getByRole('option')).not.toBeInTheDocument()
+  })
+
   it('打开后会把焦点交给搜索框', async () => {
     renderInBrowser(ComboboxHarness, {
       global: {
@@ -230,7 +236,7 @@ describe('Combobox', () => {
     await expect.element(page.getByTestId('motion-trigger')).toHaveTextContent('Joy')
   })
 
-  it('无匹配项时显示空状态', async () => {
+  it('无匹配项时显示可播报且不可选择的空状态', async () => {
     renderInBrowser(ComboboxHarness, {
       global: {
         stubs: globalStubs,
@@ -240,7 +246,9 @@ describe('Combobox', () => {
     await page.getByTestId('motion-trigger').click()
     await page.getByPlaceholder('Search motion').fill('zzz')
 
-    await expect.element(page.getByText('edit.visualEditor.noResults')).toBeInTheDocument()
+    await expect.element(page.getByRole('status')).toBeVisible()
+    await expect.element(page.getByRole('status')).toHaveTextContent('common.noResults')
+    await expect.element(page.getByRole('option')).not.toBeInTheDocument()
   })
 
   it('会把搜索词按空格拆分并要求所有关键词都命中', async () => {

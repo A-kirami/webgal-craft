@@ -1,5 +1,7 @@
 common:
   loading: 載入中...
+  noOptions: 無可用選項
+  noResults: 未找到結果
   cancel: 取消
   confirm: 確認
   create: 建立
@@ -1101,7 +1103,6 @@ edit:
     effectEditor: 效果編輯器
     statementList: 語句列表
     noSelection: 請選擇一條語句進行編輯
-    noResults: 未找到結果
   welcome:
     startEditing: 開始編輯
     selectOrCreate: 選擇一個檔案開始編輯，或建立新檔案
