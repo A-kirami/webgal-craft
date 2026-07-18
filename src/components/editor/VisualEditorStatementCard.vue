@@ -117,7 +117,7 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
       role="option"
       :aria-selected="selected"
       tabindex="-1"
-      class="group px-3 py-1 border border-border rounded-lg bg-card transition-[border-color,background-color,box-shadow] duration-150 relative hover:border-primary/25 hover:shadow-sm"
+      class="group px-3 py-1 border border-border rounded-lg bg-card transition-[border-color,background-color,box-shadow] duration-150 relative focus-visible:outline-none hover:border-primary/25 hover:shadow-sm"
       :class="{
         'border-primary/45 ring-1 ring-primary/20 shadow-sm': selected,
       }"

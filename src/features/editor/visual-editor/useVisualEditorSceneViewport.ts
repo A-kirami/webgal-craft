@@ -59,7 +59,7 @@ export function useVisualEditorSceneViewport(options: UseVisualEditorSceneViewpo
   let scrollRequestId = 0
 
   function scrollToSelectedStatement(
-    align: 'center' | 'auto' = 'center',
+    align: 'center' | 'auto' | 'start' | 'end' = 'center',
     options_: {
       trackPositioning?: boolean
     } = {},

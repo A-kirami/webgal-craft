@@ -38,6 +38,7 @@ function createScrollArea(viewportElement: HTMLElement): InstanceType<typeof Scr
 describe('useVisualEditorSceneViewport', () => {
   afterEach(() => {
     vi.clearAllMocks()
+    vi.unstubAllGlobals()
   })
 
   beforeEach(() => {
@@ -74,6 +75,44 @@ describe('useVisualEditorSceneViewport', () => {
     expect(virtualizer.measure).not.toHaveBeenCalled()
     expect(virtualizer.measureElement).toHaveBeenCalledWith(firstRow)
     expect(virtualizer.measureElement).toHaveBeenCalledWith(secondRow)
+
+    scope.stop()
+  })
+
+  it('滚动到首尾语句时会保留列表边界对齐方式', async () => {
+    const scope = effectScope()
+    let selectedIndex = 0
+    const viewportElement = {
+      querySelectorAll: vi.fn(() => []),
+    } as unknown as HTMLElement
+    const virtualizer = {
+      getTotalSize: vi.fn(() => 200),
+      getVirtualItems: vi.fn(() => []),
+      measure: vi.fn(),
+      measureElement: vi.fn(),
+      scrollOffset: 0,
+      scrollToIndex: vi.fn(),
+    }
+
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+      callback(0)
+      return 0
+    })
+    useVirtualizerMock.mockReturnValue(shallowRef(virtualizer))
+
+    const viewport = scope.run(() => useVisualEditorSceneViewport({
+      getScrollArea: () => createScrollArea(viewportElement),
+      getSelectedIndex: () => selectedIndex,
+      getState: createState,
+      restoreSelection: vi.fn(),
+    }))
+
+    await viewport?.scrollToSelectedStatement('start')
+    expect(virtualizer.scrollToIndex).toHaveBeenLastCalledWith(0, { align: 'start' })
+
+    selectedIndex = 1
+    await viewport?.scrollToSelectedStatement('end')
+    expect(virtualizer.scrollToIndex).toHaveBeenLastCalledWith(1, { align: 'end' })
 
     scope.stop()
   })
