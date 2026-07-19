@@ -47,7 +47,6 @@ const {
   enableFocusStatement,
   handleEffectApply,
   handleEffectEditorSheetOpenChange,
-  handleEffectReset,
   handleEffectTransformUpdate,
   handleInsertCommand,
   handleInsertGroup,
@@ -380,14 +379,14 @@ defineExpose({ toggleCommandPanel })
               :duration="effectEditorSession.draft.duration"
               :ease="effectEditorSession.draft.ease"
               :can-apply="effectEditorProvider.canApply"
-              :can-reset="effectEditorProvider.canReset"
+              :can-clear="effectEditorProvider.canClear"
               @update:transform="handleEffectEditorTransformUpdate"
               @update:duration="effectEditorProvider.updateDraft({ duration: $event })"
               @update:ease="effectEditorProvider.updateDraft({ ease: $event })"
               @preview="effectEditorProvider.requestPreview"
               @cancel-preview="effectEditorProvider.cancelPreview"
               @apply="handleEffectApply"
-              @reset="handleEffectReset"
+              @clear="effectEditorProvider.clearDraft"
             />
           </div>
         </SheetContent>

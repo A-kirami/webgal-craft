@@ -57,14 +57,12 @@ const {
   effectEditorProviderMock: {
     apply: vi.fn(async () => true),
     canApply: false,
-    canReset: false,
     close: vi.fn(async () => true),
     copyCurrentEffect: vi.fn(() => true),
     isOpen: false,
     pasteCurrentEffect: vi.fn(() => true),
     requestPreview: vi.fn(),
     redoDraft: vi.fn(() => false),
-    resetToInitialDraft: vi.fn(),
     session: undefined as EffectEditorSessionMock | undefined,
     undoDraft: vi.fn(() => false),
     updateDraft: vi.fn(),
@@ -203,7 +201,6 @@ describe('useEditorPanelShell', () => {
     sidebarPanelMock.activeBinding.value = undefined
     effectEditorProviderMock.apply.mockClear()
     effectEditorProviderMock.canApply = false
-    effectEditorProviderMock.canReset = false
     effectEditorProviderMock.close.mockClear()
     effectEditorProviderMock.close.mockResolvedValue(true)
     effectEditorProviderMock.copyCurrentEffect.mockClear()
@@ -215,7 +212,6 @@ describe('useEditorPanelShell', () => {
     effectEditorProviderMock.undoDraft.mockClear()
     effectEditorProviderMock.undoDraft.mockReturnValue(false)
     effectEditorProviderMock.updateDraft.mockClear()
-    effectEditorProviderMock.resetToInitialDraft.mockClear()
     useShortcutMock.mockReset()
     useEditorStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()

@@ -471,7 +471,7 @@ modals:
     title: Effect Editor
     description: Edit visual transform, filter and effect parameters
     apply: Apply
-    reset: Reset
+    clear: Clear
     previewUnsyncedCloseBlockedTitle: Runtime preview is out of sync
     previewUnsyncedCloseBlockedMessage: The current effect may already be committed to the preview runtime, but the editor could not confirm the sync state. Select the target line again, or explicitly discard before reopening the effect editor.
     clearProperty: Clear {name}
