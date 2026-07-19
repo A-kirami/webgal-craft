@@ -16,7 +16,7 @@ interface EffectEditorPanelProps {
   duration: string
   ease: string
   canApply: boolean
-  canReset: boolean
+  canClear: boolean
   showFooter?: boolean
   inline?: boolean
 }
@@ -33,22 +33,8 @@ const emit = defineEmits<{
   'preview': [payload: EffectEditorPreviewPayload]
   'cancel-preview': []
   'apply': []
-  'reset': []
+  'clear': []
 }>()
-
-function tryEmitApply() {
-  if (!props.canApply) {
-    return
-  }
-  emit('apply')
-}
-
-function tryEmitReset() {
-  if (!props.canReset) {
-    return
-  }
-  emit('reset')
-}
 
 useShortcutContext({
   panelFocus: 'effectEditor',
@@ -60,6 +46,12 @@ useShortcutContext({
 onMounted(() => {
   panelRef.value?.focus({ preventScroll: true })
 })
+
+async function handleClear(): Promise<void> {
+  emit('clear')
+  await nextTick()
+  panelRef.value?.focus({ preventScroll: true })
+}
 </script>
 
 <template>
@@ -82,10 +74,10 @@ onMounted(() => {
     />
 
     <div v-if="props.showFooter" class="mt-4 flex gap-2 justify-end">
-      <Button variant="outline" class="text-xs px-3 h-7" :disabled="!props.canReset" @click="tryEmitReset">
-        {{ $t('modals.effectEditor.reset') }}
+      <Button variant="outline" class="text-xs px-3 h-7 shadow-none" :disabled="!props.canClear" @click="handleClear">
+        {{ $t('modals.effectEditor.clear') }}
       </Button>
-      <Button class="text-xs px-3 h-7" :disabled="!props.canApply" @click="tryEmitApply">
+      <Button class="text-xs px-3 h-7" :disabled="!props.canApply" @click="emit('apply')">
         {{ $t('modals.effectEditor.apply') }}
       </Button>
     </div>

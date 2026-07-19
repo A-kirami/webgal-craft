@@ -53,8 +53,6 @@ export interface EffectEditorSession {
   sentenceId: number
   lineCommandString: string
   draft: EffectEditorDraft
-  /** 打开编辑器时的初始草稿快照，用于"重置"操作的目标 */
-  initialDraft: EffectEditorDraft
   /** 最近一次成功提交后的草稿快照，用于判断 dirty 状态和增量提交 */
   baseDraft: EffectEditorDraft
   dirty: boolean
@@ -156,12 +154,10 @@ function isDraftEqual(left: EffectEditorDraft, right: EffectEditorDraft): boolea
     && isTransformEqual(left.transform, right.transform)
 }
 
-function needsPreviewBaselineReset(
-  previousDraft: EffectEditorDraft,
-  nextDraft: EffectEditorDraft,
-  isVisualPreviewDirty: boolean,
-): boolean {
-  return isVisualPreviewDirty || !isTransformEqual(previousDraft.transform, nextDraft.transform)
+function isDraftEmpty(draft: EffectEditorDraft): boolean {
+  return draft.duration === ''
+    && draft.ease === ''
+    && isTransformEqual(draft.transform, {})
 }
 
 export function createEffectEditorProvider(options: CreateEffectEditorProviderOptions = {}) {
@@ -771,35 +767,34 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
       : cloneTransform(transform)
   }
 
-  function resetToInitialDraft() {
+  function clearDraft(): boolean {
     if (!session) {
-      return
+      return false
     }
     if (!ensureCanEditPreviewSession()) {
-      return
+      return false
     }
 
-    const currentSession = session
-    const previousDraft = cloneDraft(currentSession.draft)
-    const nextDraft = cloneDraft(currentSession.initialDraft)
-    const shouldResetPreview = needsPreviewBaselineReset(previousDraft, nextDraft, visualPreviewDirty)
+    const previousDraft = cloneDraft(session.draft)
+    if (isDraftEmpty(previousDraft)) {
+      return false
+    }
 
+    const nextDraft: EffectEditorDraft = {
+      transform: {},
+      duration: '',
+      ease: '',
+    }
+
+    // 先结算连续编辑，确保撤销清除时恢复的是清除前的完整草稿。
+    if (pendingDraftHistoryBefore) {
+      pushDraftUndoSnapshot(pendingDraftHistoryBefore, previousDraft)
+    }
     pushDraftUndoSnapshot(previousDraft, nextDraft)
     pendingDraftHistoryBefore = undefined
     applyDraftSnapshot(nextDraft)
-
-    autoApplyQueue.cancel()
-    cancelQueuedPreview()
-    cancelScheduledPreview()
-
-    if (canAutoApply()) {
-      autoApplyQueue.enqueue()
-      return
-    }
-
-    if (shouldResetPreview) {
-      void restorePreviewAfterIdle(currentSession, nextDraft, '重置效果预览失败')
-    }
+    syncExplicitHistoryDraft()
+    return true
   }
 
   async function resolveSessionBaseline(
@@ -1153,7 +1148,7 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
     }
 
     const baseSentence = cloneBaseSentence(target.baseSentence)
-    const initialDraft: EffectEditorDraft = {
+    const openingDraft: EffectEditorDraft = {
       transform: parseTransformJson(readTransformJson(baseSentence)),
       duration: readSentenceArgString(baseSentence, 'duration'),
       ease: readSentenceArgString(baseSentence, 'ease'),
@@ -1169,9 +1164,8 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
       scenePath: target.scenePath,
       sentenceId: target.sentenceId,
       lineCommandString,
-      draft: cloneDraft(initialDraft),
-      initialDraft: cloneDraft(initialDraft),
-      baseDraft: cloneDraft(initialDraft),
+      draft: cloneDraft(openingDraft),
+      baseDraft: cloneDraft(openingDraft),
       dirty: false,
       hasApplied: false,
       missingTargetWarned: false,
@@ -1218,15 +1212,15 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
     get canApply() {
       return Boolean(session?.dirty)
     },
-    get canReset() {
-      return Boolean(session && !isDraftEqual(session.draft, session.initialDraft))
+    get canClear() {
+      return Boolean(session && !isDraftEmpty(session.draft))
     },
     open,
     close,
     apply,
     updateDraft,
     updatePreviewTransform,
-    resetToInitialDraft,
+    clearDraft,
     requestPreview,
     undoDraft,
     redoDraft,

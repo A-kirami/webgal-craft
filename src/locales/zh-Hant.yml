@@ -471,7 +471,7 @@ modals:
     title: 效果編輯器
     description: 編輯視覺變換、濾鏡和效果參數
     apply: 套用
-    reset: 還原
+    clear: 清除
     previewUnsyncedCloseBlockedTitle: 執行時預覽未同步
     previewUnsyncedCloseBlockedMessage: 目前效果可能已提交到預覽執行時，但編輯器尚未確認同步狀態。請重新選擇目標行，或明確捨棄後重新開啟效果編輯器。
     clearProperty: 清除{name}

@@ -997,72 +997,73 @@ describe('useEffectEditorProvider', () => {
     expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
   })
 
-  it('重置草稿时通过打开表单时的 transform 回到效果预览基线', async () => {
+  it('清除完整草稿后会发送空效果预览，并可通过撤销恢复清除前草稿', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
 
     const provider = createProvider()
+    const baseSentence = createBaseSentence('{"blur":8}')
+    baseSentence.args.push(
+      { key: 'duration', value: '300' },
+      { key: 'ease', value: 'easeInOut' },
+    )
 
     await provider.open(createOpenTarget({
-      baseSentence: createBaseSentence('{"blur":8}'),
+      baseSentence,
     }))
 
-    provider.updateDraft({
-      duration: '300',
-      transform: { blur: 12 },
-    })
-    provider.requestPreview({ schedule: 'immediate' })
+    expect(provider.canClear).toBe(true)
+    expect(provider.clearDraft()).toBe(true)
+
     await vi.waitFor(() => {
-      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {
-        blur: 12,
-      }, {
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {}, {
         phase: 'preview',
       })
     })
 
-    debugCommanderMock.setEffect.mockClear()
-
-    provider.resetToInitialDraft()
-
-    await vi.waitFor(() => {
-      expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
-    })
-
-    expect(debugCommanderMock.syncScene).not.toHaveBeenCalled()
-    expect(debugCommanderMock.executeCommand).not.toHaveBeenCalled()
-    expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {
-      blur: 8,
-    }, {
-      phase: 'preview',
-    })
     expect(provider.session?.draft).toEqual({
       duration: '',
       ease: '',
+      transform: {},
+    })
+    expect(provider.canApply).toBe(true)
+    expect(provider.canClear).toBe(false)
+    expect(provider.clearDraft()).toBe(false)
+    expect(modalOpenMock).not.toHaveBeenCalled()
+
+    debugCommanderMock.setEffect.mockClear()
+
+    expect(provider.undoDraft()).toBe(true)
+    expect(provider.session?.draft).toEqual({
+      duration: '300',
+      ease: 'easeInOut',
       transform: { blur: 8 },
     })
-    expect(provider.canApply).toBe(false)
-    expect(provider.canReset).toBe(false)
+
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 8 }, {
+        phase: 'preview',
+      })
+    })
   })
 
-  it('重置仅修改时长的草稿不会发送效果预览重置', async () => {
-    useEditSettingsStore().autoApplyEffectEditorChanges = false
+  it('清除未结算的连续编辑草稿时会把清除前状态保留为独立撤销项', async () => {
+    const editSettings = useEditSettingsStore()
+    editSettings.autoApplyEffectEditorChanges = false
+    editSettings.enableRealtimeEffectPreview = false
 
     const provider = createProvider()
-
     await provider.open(createOpenTarget({
       baseSentence: createBaseSentence('{"blur":8}'),
     }))
 
-    provider.updateDraft({ duration: '300' })
-    provider.resetToInitialDraft()
+    provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
+    expect(provider.clearDraft()).toBe(true)
 
-    expect(debugCommanderMock.syncScene).not.toHaveBeenCalled()
-    expect(debugCommanderMock.executeCommand).not.toHaveBeenCalled()
-    expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
-    expect(provider.session?.draft).toEqual({
-      duration: '',
-      ease: '',
-      transform: { blur: 8 },
-    })
+    expect(provider.undoDraft()).toBe(true)
+    expect(provider.session?.draft.transform).toEqual({ blur: 12 })
+
+    expect(provider.undoDraft()).toBe(true)
+    expect(provider.session?.draft.transform).toEqual({ blur: 8 })
   })
 
   it('关闭并丢弃未应用变更时通过打开表单时的 transform 重置预览', async () => {
@@ -1761,24 +1762,32 @@ describe('useEffectEditorProvider', () => {
     })
   })
 
-  it('自动应用 reset 时会先发送 runtime commit 再持久化编辑器草稿', async () => {
+  it('自动应用清除时会先同步空效果预览，再提交 runtime 并持久化空草稿', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = true
 
+    const order: string[] = []
     const applyCalls: EffectEditorDraft[] = []
     const provider = createProvider()
+
+    debugCommanderMock.setEffect.mockImplementation(async (_target, transform, options) => {
+      order.push(`${options?.phase}:${JSON.stringify(transform)}`)
+    })
 
     await provider.open(createOpenTarget({
       baseSentence: createBaseSentence('{"blur":8}'),
       onApply(result) {
+        order.push(`apply:${JSON.stringify(result.transform)}`)
         applyCalls.push(cloneDraft(result))
       },
     }))
 
-    provider.updateDraft({ transform: { blur: 12 } })
-    provider.requestPreview({ schedule: 'immediate', flush: true })
+    expect(provider.clearDraft()).toBe(true)
 
     await vi.waitFor(() => {
-      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 12 }, {
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {}, {
+        phase: 'preview',
+      })
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {}, {
         phase: 'commit',
       })
     })
@@ -1787,30 +1796,15 @@ describe('useEffectEditorProvider', () => {
         {
           duration: '',
           ease: '',
-          transform: { blur: 12 },
+          transform: {},
         },
       ])
     })
-
-    debugCommanderMock.setEffect.mockClear()
-    applyCalls.length = 0
-
-    provider.resetToInitialDraft()
-
-    await vi.waitFor(() => {
-      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 8 }, {
-        phase: 'commit',
-      })
-    })
-    await vi.waitFor(() => {
-      expect(applyCalls).toEqual([
-        {
-          duration: '',
-          ease: '',
-          transform: { blur: 8 },
-        },
-      ])
-    })
+    expect(order).toEqual([
+      'preview:{}',
+      'commit:{}',
+      'apply:{}',
+    ])
   })
 
   it('取消未发送的 queued preview 不会同步场景', async () => {

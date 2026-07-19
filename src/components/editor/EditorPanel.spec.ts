@@ -9,7 +9,16 @@ import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overla
 
 import EditorPanel from './EditorPanel.vue'
 
+import type { Transform } from '~/domain/stage/types'
+import type { EffectEditorDraft } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import type { ShortcutDefinition } from '~/features/editor/shortcut/types'
+import type { TransformBaselineSource } from '~/features/editor/transform-resolution/model'
+
+interface EffectEditorSessionMock {
+  baselineSource: TransformBaselineSource
+  baselineTransform?: Transform
+  draft: EffectEditorDraft
+}
 
 const {
   commandBridgeMock,
@@ -33,12 +42,12 @@ const {
   effectEditorProviderMock: {
     apply: vi.fn(),
     canApply: false,
-    canReset: false,
+    canClear: false,
+    clearDraft: vi.fn(),
     close: vi.fn(async () => true),
     isOpen: false,
     requestPreview: vi.fn(),
-    resetToInitialDraft: vi.fn(),
-    session: undefined,
+    session: undefined as EffectEditorSessionMock | undefined,
     updateDraft: vi.fn(),
   },
   expandCommandPanelMock: vi.fn(),
@@ -209,8 +218,15 @@ const globalStubs = {
   }),
   EffectEditorPanel: defineComponent({
     name: 'StubEffectEditorPanel',
-    setup() {
-      return () => h('div', 'Effect Editor Panel')
+    emits: ['clear'],
+    setup(_, { emit }) {
+      return () => h('div', [
+        h('div', 'Effect Editor Panel'),
+        h('button', {
+          type: 'button',
+          onClick: () => emit('clear'),
+        }, 'clear-effect'),
+      ])
     },
   }),
   FileEditor: defineComponent({
@@ -364,12 +380,12 @@ describe('EditorPanel', () => {
     sidebarPanelMock.activeBinding.value = undefined
     expandCommandPanelMock.mockReset()
     effectEditorProviderMock.apply.mockReset()
+    effectEditorProviderMock.clearDraft.mockReset()
     effectEditorProviderMock.close.mockReset()
     effectEditorProviderMock.requestPreview.mockReset()
-    effectEditorProviderMock.resetToInitialDraft.mockReset()
     effectEditorProviderMock.updateDraft.mockReset()
     effectEditorProviderMock.canApply = false
-    effectEditorProviderMock.canReset = false
+    effectEditorProviderMock.canClear = false
     effectEditorProviderMock.isOpen = false
     effectEditorProviderMock.session = undefined
     useStatementAnimationDialogMock.mockReset()
@@ -511,6 +527,23 @@ describe('EditorPanel', () => {
     await binding!.execute(undefined)
 
     expect(effectEditorProviderMock.apply).toHaveBeenCalledOnce()
+  })
+
+  it('点击效果编辑器清除操作会直接委托给 provider', async () => {
+    effectEditorProviderMock.isOpen = true
+    effectEditorProviderMock.session = {
+      baselineSource: 'unknown',
+      draft: {
+        duration: '300',
+        ease: 'easeInOut',
+        transform: { blur: 8 },
+      },
+    }
+
+    renderEditorPanel()
+    await page.getByRole('button', { name: 'clear-effect' }).click()
+
+    expect(effectEditorProviderMock.clearDraft).toHaveBeenCalledOnce()
   })
 
   it('效果编辑器打开但变换框不可用时不会放行预览交互区域', async () => {

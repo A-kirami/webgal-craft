@@ -34,11 +34,6 @@ function createSession(options: {
       ease: '',
       transform: {},
     },
-    initialDraft: {
-      duration: '',
-      ease: '',
-      transform: {},
-    },
     baseDraft: {
       duration: '',
       ease: '',
@@ -65,7 +60,7 @@ function createProvider(session: EffectEditorSession | undefined): EffectEditorP
     get canApply() {
       return false
     },
-    get canReset() {
+    get canClear() {
       return false
     },
     open: vi.fn(),
@@ -81,7 +76,7 @@ function createProvider(session: EffectEditorSession | undefined): EffectEditorP
       }
     }),
     updatePreviewTransform: vi.fn(),
-    resetToInitialDraft: vi.fn(),
+    clearDraft: vi.fn(),
     requestPreview: vi.fn(),
   } as unknown as EffectEditorProvider
 }

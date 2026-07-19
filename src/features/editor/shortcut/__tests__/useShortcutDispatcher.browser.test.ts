@@ -319,6 +319,8 @@ function createEffectEditorFocusHarness() {
   const EffectEditorShortcutTarget = defineComponent({
     name: 'EffectEditorFocusEffectTarget',
     setup() {
+      const canClear = ref(true)
+
       useShortcut({
         execute: () => {
           shortcutActions.undoEffect()
@@ -333,10 +335,13 @@ function createEffectEditorFocusHarness() {
 
       return () => h(EffectEditorPanel, {
         canApply: false,
-        canReset: false,
+        canClear: canClear.value,
         duration: '',
         ease: '',
-        transform: {},
+        onClear: () => {
+          canClear.value = false
+        },
+        transform: { blur: 8 },
       })
     },
   })
@@ -630,5 +635,44 @@ describe('useShortcutDispatcher', () => {
 
     expect(shortcutActions.undoEffect).toHaveBeenCalledOnce()
     expect(shortcutActions.undo).not.toHaveBeenCalled()
+  })
+
+  it('点击清除后仍保持效果编辑器快捷键焦点上下文', async () => {
+    const { component, openEffectEditor } = createEffectEditorFocusHarness()
+
+    renderInBrowser(component, {
+      global: {
+        plugins: [createPinia()],
+        stubs: {
+          Button: defineComponent({
+            name: 'TestButtonStub',
+            setup(_, { attrs, slots }) {
+              return () => h('button', {
+                ...attrs,
+                type: 'button',
+              }, slots.default?.())
+            },
+          }),
+          EffectDraftForm: defineComponent({
+            name: 'EffectDraftForm',
+            setup() {
+              return () => h('div', 'effect-draft-form')
+            },
+          }),
+        },
+      },
+    })
+
+    openEffectEditor()
+    const clearButton = page.getByRole('button', { name: 'modals.effectEditor.clear' })
+    await clearButton.click()
+    await expect.element(clearButton).toBeDisabled()
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', {
+      ctrlKey: true,
+      key: 'z',
+    }))
+
+    expect(shortcutActions.undoEffect).toHaveBeenCalledOnce()
   })
 })

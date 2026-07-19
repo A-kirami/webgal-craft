@@ -237,14 +237,6 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     }
   }
 
-  function handleEffectReset(): void {
-    if (!effectEditorProvider.canReset) {
-      return
-    }
-
-    effectEditorProvider.resetToInitialDraft()
-  }
-
   return {
     binding,
     commandPanelBinding,
@@ -264,7 +256,6 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     closeEffectEditor,
     handleEffectApply,
     handleEffectEditorSheetOpenChange,
-    handleEffectReset,
     handleEffectTransformUpdate,
     handleInsertCommand,
     handleInsertGroup,
