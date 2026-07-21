@@ -11,7 +11,7 @@ function isVariableResourceReference(value: string): boolean {
 
 function normalizeResourceReferencePath(assetType: string, value: string): string {
   const path = value.trim().split('?', 1)[0]?.trim() ?? ''
-  if (assetType === 'animation' && path) {
+  if (assetType === 'animation' && path && !path.endsWith('.json')) {
     return `${path}.json`
   }
   return path

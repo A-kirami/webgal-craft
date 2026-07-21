@@ -34,4 +34,10 @@ describe('resource-index values', () => {
       createAssetKeyForType('animation', RelPath.from('effects/fade.json')),
     )
   })
+
+  it('动画脚本引用已有 json 后缀时不会重复追加', () => {
+    expect(createReferencedAssetKey('animation', ' effects/fade.json ')).toEqual(
+      createAssetKeyForType('animation', RelPath.from('effects/fade.json')),
+    )
+  })
 })
