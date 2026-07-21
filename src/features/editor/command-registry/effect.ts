@@ -1,6 +1,6 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { CONTINUE, DURATION, EFFECT_DURATION, EFFECT_EASE, ENTER_ANIMATION, EXIT_ANIMATION, IGNORE_DEFAULT, KEEP, NEXT, PARALLEL, TARGET, WRITE_DEFAULT } from './common-params'
+import { ANIMATION_RESOURCE_REFERENCE, CONTINUE, DURATION, EFFECT_DURATION, EFFECT_EASE, ENTER_ANIMATION, EXIT_ANIMATION, IGNORE_DEFAULT, KEEP, NEXT, PARALLEL, TARGET, WRITE_DEFAULT } from './common-params'
 import { arg, content } from './schema'
 
 import type { CommandEntry } from './schema'
@@ -51,7 +51,7 @@ export const effectEntries: CommandEntry[] = [
     icon: 'i-lucide-file-video',
     category: 'effect',
     fields: [
-      content({ key: 'animation', label: t => t('edit.visualEditor.params.animationName'), type: 'choice', variant: 'combobox', placeholder: t => t('edit.visualEditor.placeholder.searchAnimation'), dynamicOptionsKey: 'animationTableEntries', grouping: { mode: 'path' }, options: [] }),
+      content({ key: 'animation', label: t => t('edit.visualEditor.params.animationName'), type: 'choice', resourceReference: ANIMATION_RESOURCE_REFERENCE, variant: 'combobox', placeholder: t => t('edit.visualEditor.placeholder.searchAnimation'), dynamicOptionsKey: 'animationTableEntries', grouping: { mode: 'path' }, options: [] }),
       arg(TARGET),
       arg(WRITE_DEFAULT),
       arg(KEEP),

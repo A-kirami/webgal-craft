@@ -50,6 +50,7 @@ const resourceIndexState = shallowRef<ResourceIndexState>({
   references: createEmptyAssetReferenceIndexSnapshot(),
   dirty: false,
 })
+const resourceIndexRevision = shallowRef(0)
 
 let buildVersion = 0
 let bootstrapConsumerCount = 0
@@ -64,6 +65,7 @@ interface RebuildResourceIndexOptions {
 
 function setResourceIndexState(nextState: ResourceIndexState): void {
   resourceIndexState.value = nextState
+  resourceIndexRevision.value += 1
 }
 
 function clearPendingDirectoryRebuild(): void {
@@ -445,6 +447,7 @@ export function useResourceIndexBootstrap() {
 export function useResourceIndex() {
   return {
     status: computed(() => resourceIndexState.value.status),
+    revision: computed(() => resourceIndexRevision.value),
     hasAssetKey(key: AssetKey): boolean {
       return hasAssetInCatalog(resourceIndexState.value.catalog, key)
     },

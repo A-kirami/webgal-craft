@@ -797,6 +797,8 @@ export const useEditorStore = defineStore('editor', () => {
   return $$({
     hasState,
     getState,
+    getTextProjectionState,
+    getVisualProjectionState,
     getPreviewMediaSession,
     canUndoDocument,
     canRedoDocument,

@@ -38,6 +38,10 @@ export interface FileFieldConfig {
   exclude?: string[]
 }
 
+export interface ResourceReferenceConfig {
+  assetType: string
+}
+
 export const UNSPECIFIED = '__unspecified__'
 
 // ─── I18nLike：简化 i18n 声明 ─────────────────────
@@ -80,6 +84,7 @@ export type TextFieldAutocompleteSources = readonly [TextFieldAutocompleteSource
 interface FieldBase {
   key: string
   label: I18nLike
+  resourceReference?: ResourceReferenceConfig
   inlineLayout?: InlineLayout
   visibleWhen?: { key: string, value?: string | boolean, notEmpty?: boolean, empty?: boolean }
   visibleWhenContent?: (content: string) => boolean
@@ -191,6 +196,7 @@ export function isFlagChoiceField(field: ChoiceField): field is FlagChoiceField 
 
 export interface FileField extends FieldBase {
   type: 'file'
+  resourceReference?: never
   fileConfig: FileFieldConfig
 }
 
@@ -222,6 +228,13 @@ export type FieldDef =
   | FileField | ColorField
   | DialField
   | JsonObjectField
+
+export function readFieldResourceReference(field: FieldDef): ResourceReferenceConfig | undefined {
+  if (field.type === 'file') {
+    return field.fileConfig
+  }
+  return field.resourceReference
+}
 
 // ─── CommandFieldDef：统一字段 = 存储位置 + 控件定义 ─
 

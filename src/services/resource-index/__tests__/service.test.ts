@@ -196,6 +196,12 @@ describe('useResourceIndex', () => {
           RelPath.from('bg.jpg'),
           RelPath.from('chapter1/night.png'),
         ])
+
+      const readyRevision = resourceIndex.revision.value
+      emitFileSystemEvent('file:created', {
+        path: AbsPath.from('/project/game/background/new.png'),
+      })
+      expect(resourceIndex.revision.value).toBeGreaterThan(readyRevision)
     } finally {
       scope.stop()
     }
