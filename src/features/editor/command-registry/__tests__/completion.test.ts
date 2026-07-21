@@ -62,6 +62,17 @@ describe('buildArgumentCompletionInfo', () => {
     ])
   })
 
+  it('choice 参数值补全不会暴露未指定哨兵', async () => {
+    const options = await queryArgumentValueCompletions(commandType.changeFigure, 'position', {
+      content: '',
+    }, t)
+
+    expect(options).toEqual([
+      { label: 'edit.visualEditor.options.left', value: 'left' },
+      { label: 'edit.visualEditor.options.right', value: 'right' },
+    ])
+  })
+
   it('资源候选使用完整路径，不截断目录前缀', async () => {
     const options = await queryArgumentValueCompletions(commandType.changeBg, 'content', {
       content: 'a/',

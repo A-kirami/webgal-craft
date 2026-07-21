@@ -131,10 +131,12 @@ function getFieldForCompletion(command: commandType, key: string): FieldDef | un
 
 function resolveStaticOptions(field: FieldDef, t: I18nT, content: string, sceneOptions?: SceneAutocompleteOptionCollections): CompletionOption[] {
   if (field.type === 'choice') {
-    return field.options.map(option => ({
-      label: resolveI18n(option.label, t, content),
-      value: option.value,
-    }))
+    return field.options
+      .filter(option => option.value !== UNSPECIFIED)
+      .map(option => ({
+        label: resolveI18n(option.label, t, content),
+        value: option.value,
+      }))
   }
   if (field.type === 'text' && field.variant === 'autocomplete') {
     return resolveAutocompleteOptions(field.autocomplete, { content, sceneOptions, t })
