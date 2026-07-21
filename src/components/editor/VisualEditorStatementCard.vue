@@ -6,12 +6,15 @@ import { buildStatementPreviewParams, StatementCardPreviewParam } from '~/featur
 import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
 import { sceneAutocompleteOptionsKey } from '~/features/editor/statement-editor/scene-autocomplete-context'
 import { createStatementIdTarget, StatementUpdatePayload } from '~/features/editor/statement-editor/useStatementEditor'
-import { useStatementFileMissing } from '~/features/editor/statement-editor/useStatementFileMissing'
+import { useStatementFieldDiagnostics } from '~/features/editor/statement-editor/useStatementFieldDiagnostics'
 import { provideStatementMeta } from '~/features/editor/statement-editor/useStatementMeta'
+
+import type { SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 
 const props = defineProps<{
   entry: StatementEntry
   index: number
+  diagnostics?: readonly SceneEditorDiagnostic[]
   playToDisabled?: boolean
   selected?: boolean
   readonly?: boolean
@@ -55,10 +58,9 @@ const { parsed, config, contentField, argFields, theme, statementType, commandLa
 const { t } = useI18n()
 const sceneAutocompleteOptions = inject(sceneAutocompleteOptionsKey, undefined)
 
-const { fileMissingKeys } = useStatementFileMissing({
+const { getFieldStatus } = useStatementFieldDiagnostics({
+  diagnostics: () => props.diagnostics,
   parsed: () => parsed.value,
-  contentField: () => contentField.value,
-  argFields: () => argFields.value,
 })
 
 const previewParams = $computed<StatementCardPreviewParam[]>(() => buildStatementPreviewParams({
@@ -69,7 +71,7 @@ const previewParams = $computed<StatementCardPreviewParam[]>(() => buildStatemen
   previousSpeaker: props.previousSpeaker,
   contentField: contentField.value,
   argFields: argFields.value,
-  fileMissingKeys: fileMissingKeys.value,
+  getFieldStatus,
   t,
 }))
 
@@ -101,8 +103,11 @@ const { openAnimationEditor } = useStatementAnimationEditorBridge({
 })
 
 function paramBadgeClass(param: StatementCardPreviewParam): string {
-  if (param.fileMissing) {
+  if (param.status === 'error') {
     return 'bg-destructive/10 text-destructive'
+  }
+  if (param.status === 'warning') {
+    return 'text-yellow-700 bg-yellow/10 dark:text-yellow-300'
   }
   if (param.isEffect) {
     return 'bg-violet-500/10 text-violet-600 dark:text-violet-400'
@@ -165,7 +170,13 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
               ]"
               :style="{ animationDelay: `${i * 40}ms` }"
             >
-              <span v-if="param.label" class="font-medium px-1.5 py-0.5" :class="param.fileMissing ? 'bg-destructive/15' : 'bg-muted-foreground/10'">{{ param.label }}</span>
+              <span
+                v-if="param.label"
+                class="font-medium px-1.5 py-0.5"
+                :class="param.status === 'error'
+                  ? 'bg-destructive/15'
+                  : param.status === 'warning' ? 'bg-yellow/15' : 'bg-muted-foreground/10'"
+              >{{ param.label }}</span>
               <span
                 v-if="param.color"
                 class="m-0.5 border border-foreground/10 rounded size-4"
@@ -225,6 +236,7 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
           <Separator class="my-1.5" />
           <StatementEditorInline
             :entry="entry"
+            :diagnostics="diagnostics"
             :previous-speaker="previousSpeaker"
             :update-target="createStatementIdTarget(entry.id)"
             ::show-inline-comment="showInlineComment"

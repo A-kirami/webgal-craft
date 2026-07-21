@@ -91,6 +91,7 @@ function handleOpenEffectEditor() {
       :default-choose-index="props.specialContent.defaultChooseIndex.value"
       :style-rule-items="props.specialContent.styleRules.value"
       :scene-root-path="props.sceneRootPath"
+      :get-choice-diagnostics="props.specialContent.getChoiceDiagnostics"
       @set-var-name="props.specialContent.handleSetVarNameChange"
       @set-var-value="props.specialContent.handleSetVarValueChange"
       @choose-name="props.specialContent.handleChooseNameChange($event.index, $event.value)"

@@ -221,7 +221,7 @@ function handleBeforeInput(event: InputEvent) {
         <div
           v-if="shouldShowSuggestions"
           aria-hidden="true"
-          class="i-lucide-chevron-down opacity-50 shrink-0 h-4 w-4 pointer-events-none right-2 top-1/2 absolute -translate-y-1/2"
+          class="i-lucide-chevron-down opacity-50 shrink-0 h-4 w-4 pointer-events-none right-2 top-1/2 absolute -translate-y-1/2 group-data-[severity=error]/statement-diagnostic:text-destructive! group-data-[severity=warning]/statement-diagnostic:text-yellow-700! dark:group-data-[severity=warning]/statement-diagnostic:text-yellow-300!"
           data-testid="autocomplete-indicator"
         />
       </div>

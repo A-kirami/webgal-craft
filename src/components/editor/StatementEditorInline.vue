@@ -3,10 +3,12 @@ import { StatementEntry } from '~/domain/script/sentence'
 import { statementEditorSurfaceKey } from '~/features/editor/statement-editor/surface-context'
 import { isStatementInteractiveTarget, useStatementEditor } from '~/features/editor/statement-editor/useStatementEditor'
 
+import type { SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 import type { StatementUpdatePayload, StatementUpdateTarget } from '~/features/editor/statement-editor/useStatementEditor'
 
 const props = defineProps<{
   entry: StatementEntry
+  diagnostics?: readonly SceneEditorDiagnostic[]
   /** 上一条 say 语句的说话人（用于 concat 占位符） */
   previousSpeaker?: string
   /** 更新目标定位，默认使用 entry.id 作为语句 id */
@@ -35,6 +37,7 @@ const {
   paramRenderer,
 } = useStatementEditor({
   entry: () => props.entry,
+  diagnostics: () => props.diagnostics,
   updateTarget: () => props.updateTarget,
   previousSpeaker: () => props.previousSpeaker,
   emitUpdate: payload => emit('update', payload),

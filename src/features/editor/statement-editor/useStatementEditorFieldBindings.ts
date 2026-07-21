@@ -10,6 +10,8 @@ import { useStatementEditorScrub } from '~/features/editor/statement-editor/useS
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { ResolvedAutocompleteOption } from '~/features/editor/command-registry/autocomplete-options'
+import type { ResourceReferenceSource } from '~/features/editor/command-registry/diagnostics'
+import type { EditorFieldDiagnostic } from '~/features/editor/diagnostics/types'
 import type { SceneAutocompleteOptions } from '~/features/editor/statement-editor/scene-autocomplete'
 
 interface UseStatementEditorFieldBindingsOptions {
@@ -39,7 +41,7 @@ interface UseStatementEditorFieldBindingsOptions {
     | 'isArgVisible'
     | 'resolveFieldArgField'
   >
-  fileMissingKeys: Readonly<Ref<Set<string>>>
+  getFieldDiagnostics: (field: ResourceReferenceSource) => readonly EditorFieldDiagnostic[]
   scrub: Pick<
     ReturnType<typeof useStatementEditorScrub>,
     | 'canScrubArgField'
@@ -133,17 +135,22 @@ export function useStatementEditorFieldBindings(
     return true
   }
 
-  function isFieldFileMissing(field: EditorField): boolean {
-    if (field.field.type !== 'file') {
-      return false
-    }
+  function resolveFieldDiagnosticSource(field: EditorField): ResourceReferenceSource | undefined {
     if (field.storage === 'content') {
-      return options.fileMissingKeys.value.has('__content__')
+      return { kind: 'content' }
     }
     if (field.storage === 'arg') {
-      return options.fileMissingKeys.value.has(readArgFieldStorageKey(field.argField))
+      return {
+        kind: 'argument',
+        key: readArgFieldStorageKey(field.argField),
+      }
     }
-    return false
+    return
+  }
+
+  function getFieldDiagnostics(field: EditorField): readonly EditorFieldDiagnostic[] {
+    const source = resolveFieldDiagnosticSource(field)
+    return source ? options.getFieldDiagnostics(source) : []
   }
 
   function handleFieldValueChange(field: EditorField, value: string | number | boolean) {
@@ -225,8 +232,8 @@ export function useStatementEditorFieldBindings(
     getDynamicOptions: getFieldDynamicOptions,
     getFieldValue,
     getFieldSelectValue,
+    getFieldDiagnostics,
     isFieldVisible,
-    isFieldFileMissing,
     canScrub: canScrubField,
   }))
 
@@ -237,7 +244,6 @@ export function useStatementEditorFieldBindings(
     getFieldDynamicOptions,
     getFieldSelectOptions,
     isFieldVisible,
-    isFieldFileMissing,
     handleFieldValueChange,
     handleFieldSelectChange,
     paramRenderer: {

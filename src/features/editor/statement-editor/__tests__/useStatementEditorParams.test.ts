@@ -4,7 +4,7 @@ import '~/__tests__/mocks/tauri-fs'
 import '~/__tests__/mocks/modal-store'
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 
 import { mustParse } from '~/domain/script/__tests__/utils'
 import { parseCommandNode } from '~/domain/script/codec'
@@ -98,7 +98,6 @@ describe('useStatementEditorParams', () => {
       parsed: computed(() => sentence),
       commandNode: computed(() => parseCommandNode(sentence)),
       argFields: computed(() => [concatField]),
-      fileMissingKeys: ref(new Set<string>()),
       readEditableArgs: () => structuredClone(sentence.args),
       emitUpdate: patch => emittedPatches.push(patch),
     })

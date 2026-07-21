@@ -57,6 +57,7 @@ const {
   isTextMode,
   sceneAutocompleteOptions,
   selectedStatement,
+  selectedStatementDiagnostics,
   selectedStatementIndex,
   selectedStatementPreviousSpeaker,
   selectedStatementUpdateTarget,
@@ -324,6 +325,7 @@ defineExpose({ toggleCommandPanel })
             <StatementEditorPanel
               v-if="binding && selectedStatement"
               :entry="selectedStatement"
+              :diagnostics="selectedStatementDiagnostics"
               :index="selectedStatementIndex"
               :previous-speaker="selectedStatementPreviousSpeaker"
               :update-target="selectedStatementUpdateTarget"

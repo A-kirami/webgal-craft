@@ -16,7 +16,6 @@ export interface UseStatementEditorParamsOptions {
   parsed: ComputedRef<ISentence | undefined>
   commandNode: ComputedRef<CommandNode | undefined>
   argFields: ComputedRef<ArgField[]>
-  fileMissingKeys: Readonly<Ref<Set<string>>>
   readEditableArgs: () => arg[]
   emitUpdate: (patch: Partial<ISentence>) => void
 }
@@ -232,13 +231,6 @@ export function useStatementEditorParams(opts: UseStatementEditorParamsOptions) 
     handleNormalFieldFallback(argField, normalizedValue, newArgs)
   }
 
-  function isArgFileMissing(argField: ArgField): boolean {
-    if (argField.field.type !== 'file') {
-      return false
-    }
-    return opts.fileMissingKeys.value.has(readArgFieldStorageKey(argField))
-  }
-
   return {
     resolveFieldArgField,
     getArgValue,
@@ -247,7 +239,6 @@ export function useStatementEditorParams(opts: UseStatementEditorParamsOptions) 
     getArgSelectValue,
     isArgVisible,
     handleArgFieldChange,
-    isArgFileMissing,
     readArgRuntimeValue,
     createDynamicOptionsContext,
   }

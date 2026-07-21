@@ -11,11 +11,13 @@ import { INSERT_BAND_SIZE_PX, isVisualEditorInsertDropPlacement } from '~/featur
 import { findSelectedVisualEditorStatementCard } from '~/features/editor/visual-editor/visual-editor-focus'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import { SceneVisualProjectionState } from '~/stores/editor'
+import { useEditorDiagnosticsStore } from '~/stores/editor-diagnostics'
 import { usePreferenceStore } from '~/stores/preference'
 
 import type { ComponentPublicInstance } from 'vue'
 import type { ScrollArea } from '~/components/ui/scroll-area'
 import type { StatementEntry } from '~/domain/script/sentence'
+import type { SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 import type { VisualEditorFileDropTarget } from '~/features/editor/visual-editor/useVisualEditorSceneRuntime'
 import type { DragPayload } from '~/types/drag-drop'
 
@@ -37,6 +39,7 @@ interface RenderedVisualStatementRow {
 const props = defineProps<Props>()
 
 const dragSession = useDragSession()
+const diagnosticsStore = useEditorDiagnosticsStore()
 const editSettings = useEditSettingsStore()
 const dropRegistry = useDroppableRegistry()
 const editorSurfaceRef = useTemplateRef<HTMLDivElement>('editorSurfaceRef')
@@ -66,6 +69,10 @@ const {
 } = runtime
 
 const statements = computed(() => props.state.statements)
+
+function getStatementDiagnostics(statementIndex: number): readonly SceneEditorDiagnostic[] {
+  return diagnosticsStore.readStatementDiagnostics(props.state.path, statementIndex)
+}
 const isSceneEmpty = computed(() => props.state.statements.length === 0)
 const scrollViewportRef = shallowRef<HTMLElement>()
 const statementReadonly = $computed(() => preferenceStore.showSidebar && editSettings.collapseStatementsOnSidebarOpen)
@@ -386,6 +393,7 @@ tryOnUnmounted(() => {
                   :collapsed="isStatementCollapsed(row.statement.id)"
                   :entry="row.statement"
                   :index="row.index"
+                  :diagnostics="getStatementDiagnostics(row.index)"
                   :play-to-disabled="props.state.isDirty"
                   :selected="row.statement.id === selectedStatementId"
                   :readonly="statementReadonly"
@@ -448,6 +456,7 @@ tryOnUnmounted(() => {
         :collapsed="isStatementCollapsed(statementOverlayState.item.id)"
         :entry="statementOverlayState.item"
         :index="statementOverlayIndex"
+        :diagnostics="getStatementDiagnostics(statementOverlayIndex)"
         :play-to-disabled="true"
         :selected="statementOverlayState.item.id === selectedStatementId"
         :readonly="statementReadonly"

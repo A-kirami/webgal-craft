@@ -24,6 +24,7 @@ function createSpecialContentBindings(): StatementSpecialContentBindings {
     handleStyleNewNameChange: () => { /* no-op */ },
     handleRemoveStyleRule: () => { /* no-op */ },
     handleAddStyleRule: () => { /* no-op */ },
+    getChoiceDiagnostics: () => [],
   }
 }
 
@@ -35,7 +36,7 @@ function createParamRendererSharedProps(): StatementParamRendererSharedProps {
     getDynamicOptions: () => [],
     getFieldSelectValue: () => '',
     getFieldValue: () => '',
-    isFieldFileMissing: () => false,
+    getFieldDiagnostics: () => [],
     isFieldVisible: () => true,
   }
 }

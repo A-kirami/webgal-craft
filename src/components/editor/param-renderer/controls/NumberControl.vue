@@ -2,8 +2,11 @@
 import { normalizeFieldStringValue, resolveFieldModelStringValue, resolvePanelSliderEmitValue } from '~/features/editor/statement-editor/field-utils'
 import { cn } from '~/lib/utils'
 
+import type { HTMLAttributes } from 'vue'
+
 interface Props {
   autoWidthByContent?: boolean
+  class?: HTMLAttributes['class']
   id?: string
   max?: number
   min?: number
@@ -12,7 +15,7 @@ interface Props {
   variant?: string
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   commitSlider: [event: Event]
@@ -33,7 +36,7 @@ function handlePanelSliderUpdate(values?: number[]) {
 </script>
 
 <template>
-  <div v-if="variant === 'slider-input'" class="flex gap-2 items-center">
+  <div v-if="variant === 'slider-input'" :class="cn('flex gap-2 items-center', props.class)">
     <Slider
       class="grow"
       :model-value="[Number(value) || 0]"
@@ -52,7 +55,10 @@ function handlePanelSliderUpdate(values?: number[]) {
     />
   </div>
 
-  <InputGroup v-else-if="variant === 'input-with-unit'" class="h-6 w-24 shadow-none group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-auto">
+  <InputGroup
+    v-else-if="variant === 'input-with-unit'"
+    :class="cn('h-6 w-24 shadow-none group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-auto', props.class)"
+  >
     <InputGroupInput
       :id="id"
       type="number"
@@ -77,6 +83,7 @@ function handlePanelSliderUpdate(values?: number[]) {
     :class="cn(
       'text-xs h-6 px-2.5 w-16 shadow-none group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-3 group-data-[surface=panel]:w-auto',
       autoWidthByContent && 'field-sizing-content w-auto max-w-full min-w-16',
+      props.class,
     )"
     @update:model-value="emitNormalizedValue"
   />

@@ -10,12 +10,14 @@ import VisualEditorStatementCard from './VisualEditorStatementCard.vue'
 import type { StatementEntry } from '~/domain/script/sentence'
 
 const {
+  buildStatementPreviewParamsMock,
   openAnimationEditorMock,
   openEffectEditorMock,
   provideStatementMetaMock,
   useStatementAnimationEditorBridgeMock,
   useStatementEffectEditorBridgeMock,
 } = vi.hoisted(() => ({
+  buildStatementPreviewParamsMock: vi.fn((): { label: string, status?: string, value: string }[] => []),
   openAnimationEditorMock: vi.fn(),
   openEffectEditorMock: vi.fn(),
   provideStatementMetaMock: vi.fn(),
@@ -32,7 +34,7 @@ vi.mock('~/features/editor/effect-editor/useStatementEffectEditorBridge', () => 
 }))
 
 vi.mock('~/features/editor/statement-editor/preview', () => ({
-  buildStatementPreviewParams: vi.fn(() => []),
+  buildStatementPreviewParams: buildStatementPreviewParamsMock,
 }))
 
 vi.mock('~/features/editor/statement-editor/useStatementEditor', () => ({
@@ -44,9 +46,9 @@ vi.mock('~/features/editor/statement-editor/useStatementEditor', () => ({
   useStatementEditor: vi.fn(),
 }))
 
-vi.mock('~/features/editor/statement-editor/useStatementFileMissing', () => ({
-  useStatementFileMissing: () => ({
-    fileMissingKeys: computed(() => new Set<string>()),
+vi.mock('~/features/editor/statement-editor/useStatementFieldDiagnostics', () => ({
+  useStatementFieldDiagnostics: () => ({
+    getFieldStatus: () => 'none',
   }),
 }))
 
@@ -110,12 +112,14 @@ const globalStubs = {
 describe('VisualEditorStatementCard', () => {
   beforeEach(() => {
     openAnimationEditorMock.mockReset()
+    buildStatementPreviewParamsMock.mockReset()
     openEffectEditorMock.mockReset()
     provideStatementMetaMock.mockReset()
     useStatementAnimationEditorBridgeMock.mockReset()
     useStatementEffectEditorBridgeMock.mockReset()
 
     provideStatementMetaMock.mockReturnValue(createStatementMeta())
+    buildStatementPreviewParamsMock.mockReturnValue([])
     useStatementAnimationEditorBridgeMock.mockReturnValue({
       openAnimationEditor: openAnimationEditorMock,
     })
@@ -151,5 +155,28 @@ describe('VisualEditorStatementCard', () => {
 
     expect(events.slice(0, 2)).toEqual(['select', 'openEffectEditor'])
     expect(onSelect).toHaveBeenCalledWith(7)
+  })
+
+  it('内容 warning 时把折叠参数标记为黄色警告样式', async () => {
+    buildStatementPreviewParamsMock.mockReturnValue([{
+      label: '',
+      status: 'warning',
+      value: 'start',
+    }])
+
+    renderInBrowser(VisualEditorStatementCard, {
+      props: {
+        collapsed: true,
+        entry: createStatementEntry(7, 'label:start;'),
+        index: 0,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const value = await page.getByText('start').element()
+    expect(value.parentElement).toHaveClass('text-yellow-700', 'bg-yellow/10')
+    expect(value.parentElement).not.toHaveClass('text-destructive')
   })
 })

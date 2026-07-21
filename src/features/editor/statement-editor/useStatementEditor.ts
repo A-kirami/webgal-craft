@@ -14,12 +14,13 @@ import { useStatementEditorFieldBindings } from '~/features/editor/statement-edi
 import { useStatementEditorParams } from '~/features/editor/statement-editor/useStatementEditorParams'
 import { useStatementEditorSay } from '~/features/editor/statement-editor/useStatementEditorSay'
 import { useStatementEditorScrub } from '~/features/editor/statement-editor/useStatementEditorScrub'
-import { useStatementFileMissing } from '~/features/editor/statement-editor/useStatementFileMissing'
+import { useStatementFieldDiagnostics } from '~/features/editor/statement-editor/useStatementFieldDiagnostics'
 import { useStatementFileRoots } from '~/features/editor/statement-editor/useStatementFileRoots'
 import { statementMetaKey, useStatementMeta } from '~/features/editor/statement-editor/useStatementMeta'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { TransactionSource } from '~/domain/document/transaction'
+import type { SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 
 export interface StatementIdTarget {
   kind: 'statement'
@@ -41,6 +42,7 @@ export interface StatementUpdatePayload {
 }
 
 interface UseStatementEditorOptions {
+  diagnostics?: MaybeRefOrGetter<readonly SceneEditorDiagnostic[] | undefined>
   entry: MaybeRefOrGetter<StatementEntry>
   updateTarget?: MaybeRefOrGetter<StatementUpdateTarget | undefined>
   previousSpeaker?: MaybeRefOrGetter<string | undefined>
@@ -93,10 +95,9 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   const commandNode = computed(() => parsed.value ? parseCommandNode(parsed.value) : undefined)
 
   // ─── 资源路径解析 ───
-  const { fileMissingKeys } = useStatementFileMissing({
+  const { getFieldDiagnostics } = useStatementFieldDiagnostics({
+    diagnostics: options.diagnostics,
     parsed,
-    contentField,
-    argFields,
   })
 
   const { fileRootPaths } = useStatementFileRoots({
@@ -181,7 +182,6 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     parsed,
     commandNode,
     argFields,
-    fileMissingKeys,
     readEditableArgs,
     emitUpdate,
   })
@@ -207,7 +207,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     say,
     content: contentComposable,
     params,
-    fileMissingKeys,
+    getFieldDiagnostics,
     scrub: {
       canScrubArgField,
       commitSliderInput,
@@ -215,6 +215,10 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       handleContentLabelPointerDown,
     },
   })
+  const specialContent = {
+    ...contentComposable.specialContent,
+    getChoiceDiagnostics: (index: number) => getFieldDiagnostics({ kind: 'choice', index }),
+  }
 
   const hasVisibleAdvancedParams = computed(() => {
     return !!parsed.value
@@ -317,7 +321,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       isMultilineTextField: contentComposable.isMultilineTextField,
       handleChange: contentComposable.handleContentChange,
       getSelectOptions: contentComposable.getContentFieldSelectOptions,
-      specialContent: contentComposable.specialContent,
+      specialContent,
     },
 
     params: {
@@ -329,13 +333,11 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       getArgSelectValue: params.getArgSelectValue,
       isArgVisible: params.isArgVisible,
       handleArgFieldChange: params.handleArgFieldChange,
-      isArgFileMissing: params.isArgFileMissing,
       getFieldValue: fieldBindings.getFieldValue,
       getFieldSelectValue: fieldBindings.getFieldSelectValue,
       getFieldSelectOptions: fieldBindings.getFieldSelectOptions,
       getFieldDynamicOptions: fieldBindings.getFieldDynamicOptions,
       isFieldVisible: fieldBindings.isFieldVisible,
-      isFieldFileMissing: fieldBindings.isFieldFileMissing,
       handleFieldValueChange: fieldBindings.handleFieldValueChange,
       handleFieldSelectChange: fieldBindings.handleFieldSelectChange,
       readArgRuntimeValue: params.readArgRuntimeValue,
@@ -356,7 +358,6 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     },
 
     resource: {
-      fileMissingKeys,
       fileRootPaths,
     },
 

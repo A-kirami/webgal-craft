@@ -1,6 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseCommandNode } from '~/domain/script/codec'
+import { parseChooseContent } from '~/domain/script/content'
 import { readSayFigureTargetId } from '~/domain/script/say-figure'
 import { SAY_FIGURE_POSITIONS } from '~/domain/script/types'
 import { resolveAutocompleteOptions } from '~/features/editor/command-registry/autocomplete-options'
@@ -8,7 +9,9 @@ import { isFlagChoiceField, readArgFieldStorageKey, resolveI18n } from '~/featur
 import { getActiveEffectCategories } from '~/features/editor/effect-editor/effect-editor-config'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { ResourceReferenceSource } from '~/features/editor/command-registry/diagnostics'
 import type { ArgField, EditorField, FieldDef, I18nT } from '~/features/editor/command-registry/schema'
+import type { DiagnosticFieldStatus } from '~/features/editor/diagnostics/presentation'
 import type { SceneAutocompleteOptions } from '~/features/editor/statement-editor/scene-autocomplete'
 
 export type StatementCardType = 'empty' | 'comment' | 'say' | 'command' | 'unsupported'
@@ -18,7 +21,7 @@ export interface StatementCardPreviewParam {
   value: string
   color?: string
   isFile?: boolean
-  fileMissing?: boolean
+  status?: Exclude<DiagnosticFieldStatus, 'none'>
   truncate?: boolean
   isEffect?: boolean
   effectIcon?: string
@@ -28,7 +31,7 @@ interface BuildStatementPreviewParamsInput {
   argFields: ArgField[]
   contentField?: EditorField
   entryRawText: string
-  fileMissingKeys: Set<string>
+  getFieldStatus: (field: ResourceReferenceSource) => DiagnosticFieldStatus
   parsed?: ISentence
   previousSpeaker?: string
   statementType: StatementCardType
@@ -138,7 +141,7 @@ export function buildStatementPreviewParams(input: BuildStatementPreviewParamsIn
     autocompleteOptions,
     contentField,
     entryRawText,
-    fileMissingKeys,
+    getFieldStatus,
     parsed,
     previousSpeaker,
     statementType,
@@ -186,13 +189,16 @@ export function buildStatementPreviewParams(input: BuildStatementPreviewParamsIn
   } else if (content.length > 0) {
     const unit = contentDefinition && 'unit' in contentDefinition ? ` ${resolveI18n(contentDefinition.unit, t, content)}` : ''
     if (parsed.command === commandType.choose) {
-      const items = content.split('|').filter(Boolean)
-      for (const item of items) {
-        const [optionName, sceneFile] = item.split(':')
+      for (const [index, item] of parseChooseContent(content).entries()) {
+        const { file: sceneFile, name: optionName } = item
         if (!optionName && !sceneFile) {
           continue
         }
-        params.push({ label: optionName ?? '', value: sceneFile ?? '' })
+        params.push({
+          label: optionName ?? '',
+          value: sceneFile ?? '',
+          ...resolvePreviewStatus(getFieldStatus({ kind: 'choice', index })),
+        })
       }
     } else if (parsed.command === commandType.applyStyle) {
       const rules = content.split(',').filter(Boolean)
@@ -247,7 +253,7 @@ export function buildStatementPreviewParams(input: BuildStatementPreviewParamsIn
         label: '',
         value: displayValue,
         isFile: isFileContent,
-        fileMissing: isFileContent && fileMissingKeys.has('__content__'),
+        ...resolvePreviewStatus(getFieldStatus({ kind: 'content' })),
       })
     }
   }
@@ -348,15 +354,22 @@ export function buildStatementPreviewParams(input: BuildStatementPreviewParamsIn
 
     const isColor = /color/i.test(item.key)
     const isFileParam = argField?.field.type === 'file'
+    const status = getFieldStatus({ kind: 'argument', key: item.key })
     const unit = argField && 'unit' in argField.field ? ` ${resolveI18n(argField.field.unit, t, content)}` : ''
     params.push({
       label: resolveArgDisplayLabel(argFieldByStorageKey, item.key, argFields, t, content),
       value: `${resolveArgDisplayValue(argFieldByStorageKey, item.key, String(item.value), t, content, autocompleteOptions)}${unit}`,
       color: isColor ? String(item.value) : undefined,
       isFile: isFileParam,
-      fileMissing: isFileParam && fileMissingKeys.has(item.key),
+      ...resolvePreviewStatus(status),
     })
   }
 
   return params
+}
+
+function resolvePreviewStatus(
+  status: DiagnosticFieldStatus,
+): Pick<StatementCardPreviewParam, 'status'> {
+  return status === 'none' ? {} : { status }
 }

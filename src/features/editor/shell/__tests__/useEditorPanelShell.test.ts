@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, effectScope, reactive, shallowRef } from 'vue'
 
-import { buildStatements } from '~/domain/script/sentence'
+import { buildSingleStatement, buildStatements, createTransientStatementEntry } from '~/domain/script/sentence'
 
 import { useEditorPanelShell } from '../useEditorPanelShell'
 
 import type { Transform } from '~/domain/stage/types'
+import type { SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 import type { TransformBaselineSource } from '~/features/editor/transform-resolution/model'
 
 interface BindingMock {
@@ -45,6 +46,7 @@ const {
   statementAnimationDialogMock,
   useShortcutMock,
   useEditorStoreMock,
+  useEditorDiagnosticsStoreMock,
   usePreferenceStoreMock,
   useTabsStoreMock,
 } = vi.hoisted(() => ({
@@ -82,6 +84,7 @@ const {
   },
   useShortcutMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
+  useEditorDiagnosticsStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
 }))
@@ -106,6 +109,10 @@ vi.mock('~/features/editor/shared/useEditorPanelBindings', () => ({
 vi.mock('~/stores/editor', () => ({
   isEditableEditor: (state: { projection?: string }) => 'projection' in state,
   useEditorStore: useEditorStoreMock,
+}))
+
+vi.mock('~/stores/editor-diagnostics', () => ({
+  useEditorDiagnosticsStore: useEditorDiagnosticsStoreMock,
 }))
 
 vi.mock('~/stores/preference', () => ({
@@ -135,6 +142,7 @@ function createFixture(options: {
     },
     currentVisualProjection: {
       kind: 'scene',
+      path: '/project/scene.txt',
       statements: sceneStatements,
     },
     isCurrentSceneFile: options.isCurrentSceneFile ?? true,
@@ -214,8 +222,12 @@ describe('useEditorPanelShell', () => {
     effectEditorProviderMock.updateDraft.mockClear()
     useShortcutMock.mockReset()
     useEditorStoreMock.mockReset()
+    useEditorDiagnosticsStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()
     useTabsStoreMock.mockReset()
+    useEditorDiagnosticsStoreMock.mockReturnValue({
+      readStatementDiagnostics: vi.fn(() => []),
+    })
   })
 
   it('侧栏显隐会同时受用户偏好和当前文件类型约束', () => {
@@ -371,6 +383,68 @@ describe('useEditorPanelShell', () => {
     expect(shell.sceneAutocompleteOptions.value.figureIds).toEqual([
       { label: 'cached-hero', value: 'cached-hero' },
     ])
+
+    scope.stop()
+  })
+
+  it('选中语句时按语句索引读取诊断', () => {
+    const diagnostic: SceneEditorDiagnostic = {
+      code: 'duplicate-label',
+      count: 2,
+      field: { kind: 'content' },
+      label: 'start',
+      severity: 'warning',
+      source: 'scene',
+      statementIndex: 1,
+    }
+    useEditorDiagnosticsStoreMock.mockReturnValue({
+      readStatementDiagnostics: (_path: string, statementIndex: number) =>
+        statementIndex === 1 ? [diagnostic] : [],
+    })
+    const sceneStatements = buildStatements('label:start;\nlabel:start;\nsay:hello;')
+    sidebarPanelMock.activeBinding.value = {
+      enableFocusStatement: true,
+      getEntry: () => sceneStatements[1],
+      onUpdate: vi.fn(),
+    }
+    const { scope, shell } = createFixture({ sceneStatements })
+
+    expect(shell.selectedStatementDiagnostics.value).toEqual([diagnostic])
+
+    scope.stop()
+  })
+
+  it('文本模式按行号读取诊断，不会把临时语句 ID 误当成可视化语句 ID', () => {
+    const diagnostic: SceneEditorDiagnostic = {
+      code: 'duplicate-label',
+      count: 2,
+      field: { kind: 'content' },
+      label: 'start',
+      severity: 'warning',
+      source: 'scene',
+      statementIndex: 1,
+    }
+    useEditorDiagnosticsStoreMock.mockReturnValue({
+      readStatementDiagnostics: (_path: string, statementIndex: number) =>
+        statementIndex === 1 ? [diagnostic] : [],
+    })
+    const sceneStatements = [
+      buildSingleStatement('changeBg:WebGAL_New_Enter_Image.webp;', 100),
+      buildSingleStatement('changeBg:WebGalEnter.webpx;', 1),
+    ]
+    sidebarPanelMock.activeBinding.value = {
+      enableFocusStatement: false,
+      getEntry: () => createTransientStatementEntry('changeBg:WebGAL_New_Enter_Image.webp;', 1),
+      getUpdateTarget: () => ({ kind: 'line', lineNumber: 1 }),
+      onUpdate: vi.fn(),
+    }
+    const { scope, shell } = createFixture({
+      currentProjection: 'text',
+      sceneStatements,
+      sceneTextContent: 'changeBg:WebGAL_New_Enter_Image.webp;\nchangeBg:WebGalEnter.webpx;',
+    })
+
+    expect(shell.selectedStatementDiagnostics.value).toEqual([])
 
     scope.stop()
   })
