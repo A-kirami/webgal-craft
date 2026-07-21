@@ -1,6 +1,6 @@
 import { FIGURE_POSITION_TARGET_IDS } from '~/domain/script/types'
 
-import type { AutocompleteTextField, ChoiceField, NumberField, SwitchField, TextField } from '~/features/editor/command-registry/schema'
+import type { AutocompleteTextField, ChoiceField, NumberField, ResourceReferenceConfig, SwitchField, TextField } from '~/features/editor/command-registry/schema'
 
 // ─── WebGAL 支持的文件扩展名 ───
 
@@ -9,6 +9,7 @@ export const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp']
 export const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mkv']
 export const BACKGROUND_EXTENSIONS = [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS, '.skel']
 export const FIGURE_EXTENSIONS = [...IMAGE_EXTENSIONS, '.json', '.skel']
+export const ANIMATION_RESOURCE_REFERENCE: ResourceReferenceConfig = { assetType: 'animation' }
 
 // ─── 通用参数预设（跨命令复用） ───
 
@@ -88,7 +89,7 @@ export const EFFECT_EASE: ChoiceField = { ...EASE, managedByEffectEditor: true }
 
 // ─── 入场/退场动画（高级参数） ───
 
-export const ENTER_ANIMATION: ChoiceField = { key: 'enter', label: t => t('edit.visualEditor.params.enterAnimation'), type: 'choice', placeholder: t => t('edit.visualEditor.placeholder.searchAnimation'), dynamicOptionsKey: 'animationTableEntries', grouping: { mode: 'path' }, advanced: true, variant: 'combobox', options: [] }
-export const EXIT_ANIMATION: ChoiceField = { key: 'exit', label: t => t('edit.visualEditor.params.exitAnimation'), type: 'choice', placeholder: t => t('edit.visualEditor.placeholder.searchAnimation'), dynamicOptionsKey: 'animationTableEntries', grouping: { mode: 'path' }, advanced: true, variant: 'combobox', options: [] }
+export const ENTER_ANIMATION: ChoiceField = { key: 'enter', label: t => t('edit.visualEditor.params.enterAnimation'), type: 'choice', resourceReference: ANIMATION_RESOURCE_REFERENCE, placeholder: t => t('edit.visualEditor.placeholder.searchAnimation'), dynamicOptionsKey: 'animationTableEntries', grouping: { mode: 'path' }, advanced: true, variant: 'combobox', options: [] }
+export const EXIT_ANIMATION: ChoiceField = { key: 'exit', label: t => t('edit.visualEditor.params.exitAnimation'), type: 'choice', resourceReference: ANIMATION_RESOURCE_REFERENCE, placeholder: t => t('edit.visualEditor.placeholder.searchAnimation'), dynamicOptionsKey: 'animationTableEntries', grouping: { mode: 'path' }, advanced: true, variant: 'combobox', options: [] }
 export const DEFAULT_ENTER_DURATION: NumberField = { key: 'enterDuration', label: t => t('edit.visualEditor.params.defaultEnterDuration'), type: 'number', min: 0, unit: t => t('edit.visualEditor.params.unitMs'), advanced: true, visibleWhen: { key: 'enter', empty: true } }
 export const DEFAULT_EXIT_DURATION: NumberField = { key: 'exitDuration', label: t => t('edit.visualEditor.params.defaultExitDuration'), type: 'number', min: 0, unit: t => t('edit.visualEditor.params.unitMs'), advanced: true, visibleWhen: { key: 'exit', empty: true } }

@@ -68,6 +68,7 @@ describe('命令注册表通用参数', () => {
     expect(ENTER_ANIMATION).toMatchObject({
       key: 'enter',
       type: 'choice',
+      resourceReference: { assetType: 'animation' },
       dynamicOptionsKey: 'animationTableEntries',
       advanced: true,
       variant: 'combobox',
@@ -76,6 +77,7 @@ describe('命令注册表通用参数', () => {
     expect(EXIT_ANIMATION).toMatchObject({
       key: 'exit',
       type: 'choice',
+      resourceReference: { assetType: 'animation' },
       dynamicOptionsKey: 'animationTableEntries',
       advanced: true,
       variant: 'combobox',
