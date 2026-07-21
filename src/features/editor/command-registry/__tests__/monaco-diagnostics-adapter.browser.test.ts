@@ -111,6 +111,18 @@ describe('updateEditorDiagnostics', () => {
     expect(readMarkers(model).map(marker => marker.startColumn)).toEqual([14, 33])
   })
 
+  it('choose 过滤空选项后仍按诊断索引定位 marker', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => false),
+    })
+
+    const model = createModel('choose:First:missing.txt||Second:missing.txt;')
+    updateEditorDiagnostics(model)
+
+    expect(readMarkers(model).map(marker => marker.startColumn)).toEqual([14, 34])
+  })
+
   it('为同一场景中的全部重复标签创建黄色 marker', () => {
     useResourceIndex.mockReturnValue({
       status: { value: 'building' },

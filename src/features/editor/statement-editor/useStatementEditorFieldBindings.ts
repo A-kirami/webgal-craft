@@ -10,9 +10,9 @@ import { useStatementEditorScrub } from '~/features/editor/statement-editor/useS
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { ResolvedAutocompleteOption } from '~/features/editor/command-registry/autocomplete-options'
-import type { ResourceReferenceSource } from '~/features/editor/command-registry/diagnostics'
 import type { EditorFieldDiagnostic } from '~/features/editor/diagnostics/types'
 import type { SceneAutocompleteOptions } from '~/features/editor/statement-editor/scene-autocomplete'
+import type { ResourceReferenceSource } from '~/services/resource-index/reference-query'
 
 interface UseStatementEditorFieldBindingsOptions {
   parsed: ComputedRef<ISentence | undefined>

@@ -266,12 +266,19 @@ watch(
     () => props.state.kind,
     () => props.state.isDirty,
     () => props.state.path,
-    () => locale.value,
   ],
   () => {
     syncPlayToLineGlyph()
   },
 )
+
+watch(() => locale.value, () => {
+  syncPlayToLineGlyph()
+  const model = editor?.getModel()
+  if (model) {
+    updateEditorDiagnostics(model)
+  }
+})
 
 onMounted(() => {
   if (isCurrentTextProjectionActive) {
@@ -286,11 +293,18 @@ watch(() => isCurrentTextProjectionActive, (isActive) => {
   }
 })
 
-watch(() => props.state.path, () => {
+watch([() => props.state.path, () => props.state.kind], () => {
   if (textDropTargetElement) {
     unregisterTextDropTarget()
     registerTextDropTarget()
   }
+
+  nextTick(() => {
+    const model = editor?.getModel()
+    if (model) {
+      updateEditorDiagnostics(model)
+    }
+  })
 })
 
 watch(() => dragSession.state.value.currentPosition, (position) => {

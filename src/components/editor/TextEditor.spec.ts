@@ -165,11 +165,18 @@ function createMonacoModel(lines: string[]) {
   }
 }
 
-function createTextEditorLiteI18n() {
+function createTextEditorLiteI18n(locale = 'zh-Hans') {
   return createBrowserLiteI18n({
-    locale: 'zh-Hans',
+    locale,
     messages: {
       'zh-Hans': {
+        edit: {
+          visualEditor: {
+            playToLine: 'play-to-line',
+          },
+        },
+      },
+      'en': {
         edit: {
           visualEditor: {
             playToLine: 'play-to-line',
@@ -180,13 +187,13 @@ function createTextEditorLiteI18n() {
   })
 }
 
-function renderTextEditor(state: TextProjectionState) {
+function renderTextEditor(state: TextProjectionState, i18n = createTextEditorLiteI18n()) {
   return renderInBrowser(TextEditor, {
     props: {
       state,
     },
     global: {
-      plugins: [createTextEditorLiteI18n()],
+      plugins: [i18n],
     },
   })
 }
@@ -638,6 +645,44 @@ describe('TextEditor', () => {
     updateEditorDiagnosticsMock.mockClear()
 
     resourceIndexRevision.value += 1
+    await nextTick()
+
+    expect(updateEditorDiagnosticsMock).toHaveBeenCalledWith(model)
+  })
+
+  it('切换语言后会刷新当前模型的诊断消息', async () => {
+    const { state } = createHarness('/project/scene-locale.txt')
+    const model = createMonacoModel(['label:start;'])
+    monacoMockState.editorInstance.getModel.mockReturnValue(model)
+    const i18n = createTextEditorLiteI18n()
+
+    renderTextEditor(state, i18n)
+    await nextTick()
+    updateEditorDiagnosticsMock.mockClear()
+
+    if (typeof i18n.global.locale !== 'string') {
+      i18n.global.locale.value = 'en'
+    }
+    await nextTick()
+
+    expect(updateEditorDiagnosticsMock).toHaveBeenCalledWith(model)
+  })
+
+  it('切换缓存文档后会重新诊断当前模型', async () => {
+    const { state } = createHarness('/project/scene-first.txt')
+    const model = createMonacoModel(['label:start;'])
+    monacoMockState.editorInstance.getModel.mockReturnValue(model)
+
+    const result = renderTextEditor(state)
+    await nextTick()
+    updateEditorDiagnosticsMock.mockClear()
+
+    await result.rerender({
+      state: {
+        ...state,
+        path: AbsPath.from('/project/scene-second.txt'),
+      },
+    })
     await nextTick()
 
     expect(updateEditorDiagnosticsMock).toHaveBeenCalledWith(model)

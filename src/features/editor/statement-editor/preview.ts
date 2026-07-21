@@ -9,10 +9,10 @@ import { isFlagChoiceField, readArgFieldStorageKey, resolveI18n } from '~/featur
 import { getActiveEffectCategories } from '~/features/editor/effect-editor/effect-editor-config'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
-import type { ResourceReferenceSource } from '~/features/editor/command-registry/diagnostics'
 import type { ArgField, EditorField, FieldDef, I18nT } from '~/features/editor/command-registry/schema'
 import type { DiagnosticFieldStatus } from '~/features/editor/diagnostics/presentation'
 import type { SceneAutocompleteOptions } from '~/features/editor/statement-editor/scene-autocomplete'
+import type { ResourceReferenceSource } from '~/services/resource-index/reference-query'
 
 export type StatementCardType = 'empty' | 'comment' | 'say' | 'command' | 'unsupported'
 

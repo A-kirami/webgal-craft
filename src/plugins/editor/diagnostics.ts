@@ -7,7 +7,7 @@ import { i18n } from '~/plugins/i18n'
 import { useResourceIndex } from '~/services/resource-index/service'
 import { useWorkspaceStore } from '~/stores/workspace'
 
-import type { ResourceReferenceQuery } from '~/features/editor/command-registry/diagnostics'
+import type { ResourceReferenceQuery } from '~/services/resource-index/reference-query'
 
 const OWNER = 'webgal-editor-diagnostics'
 const TEMP_SCENE_NAME = 'tempScene'

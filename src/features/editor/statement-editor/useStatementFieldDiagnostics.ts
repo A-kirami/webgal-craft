@@ -1,15 +1,13 @@
-import {
-  findMissingSentenceResourceReferences,
-  isSameResourceReferenceSource,
-} from '~/features/editor/command-registry/diagnostics'
+import { findMissingSentenceResourceReferences } from '~/features/editor/command-registry/diagnostics'
 import { getDiagnosticFieldStatus } from '~/features/editor/diagnostics/presentation'
 import { selectHighestDiagnosticSeverity } from '~/features/editor/diagnostics/types'
+import { isSameResourceReferenceSource } from '~/services/resource-index/reference-query'
 import { useResourceIndex } from '~/services/resource-index/service'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-import type { ResourceReferenceQuery, ResourceReferenceSource } from '~/features/editor/command-registry/diagnostics'
 import type { DiagnosticFieldStatus } from '~/features/editor/diagnostics/presentation'
 import type { EditorFieldDiagnostic, SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
+import type { ResourceReferenceQuery, ResourceReferenceSource } from '~/services/resource-index/reference-query'
 
 export interface UseStatementFieldDiagnosticsOptions {
   parsed: MaybeRefOrGetter<ISentence | undefined>

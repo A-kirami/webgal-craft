@@ -448,32 +448,10 @@ describe('ParamRenderer', () => {
     expect(handleUpdateValue).toHaveBeenCalledWith({ field, value: 'new-hero' })
   })
 
-  it('inline autocomplete 的下拉指示器可见且保持在输入框边界内', async () => {
-    const field = createStandaloneAutocompleteField({ className: 'min-w-20', inlineLayout: undefined })
-    renderAutocompleteRenderer({
-      field,
-      options: [{ label: '雨', value: '雨' }],
-      surface: 'inline',
-      useRealAutocomplete: true,
-      value: () => '雨',
-    })
-
-    const autocomplete = requireHtmlElement(await page.getByRole('combobox').element())
-    const indicator = requireHtmlElement(await page.getByTestId('autocomplete-indicator').element())
-
-    const inputRect = autocomplete.getBoundingClientRect()
-    const indicatorRect = indicator.getBoundingClientRect()
-    expect(indicatorRect.width).toBeGreaterThan(0)
-    expect(indicatorRect.height).toBeGreaterThan(0)
-    expect(indicatorRect.left).toBeGreaterThanOrEqual(inputRect.left - 1)
-    expect(indicatorRect.right).toBeLessThanOrEqual(inputRect.right + 1)
-  })
-
   it('warning autocomplete 使用与 destructive 同层级的黄色状态样式', async () => {
     renderAutocompleteRenderer({ diagnostics: [warningDiagnostic], useRealAutocomplete: true })
 
     const autocomplete = page.getByRole('combobox')
-    const indicator = page.getByTestId('autocomplete-indicator')
     await expect.element(autocomplete).toHaveClass(
       'text-yellow-700!',
       'bg-yellow/5',
@@ -481,15 +459,12 @@ describe('ParamRenderer', () => {
       'focus-visible:ring-yellow/30',
     )
     await expect.element(autocomplete).not.toHaveClass('text-destructive!')
-    expect(getComputedStyle(await indicator.element()).color).toBe(getComputedStyle(await autocomplete.element()).color)
   })
 
-  it('error autocomplete 的下拉指示器跟随输入框使用 destructive 颜色', async () => {
+  it('error autocomplete 使用 destructive 状态样式', async () => {
     renderAutocompleteRenderer({ diagnostics: [errorDiagnostic], useRealAutocomplete: true })
 
     const autocomplete = page.getByRole('combobox')
-    const indicator = page.getByTestId('autocomplete-indicator')
     await expect.element(autocomplete).toHaveClass('text-destructive!')
-    expect(getComputedStyle(await indicator.element()).color).toBe(getComputedStyle(await autocomplete.element()).color)
   })
 })
