@@ -7,6 +7,8 @@ import { createAssetKeyForType, stringifyAssetKey } from './keys'
 
 import type { AssetKey } from './keys'
 
+const ANIMATION_TABLE_FILE_NAME = 'animationTable.json'
+
 export interface AssetCatalogEntry {
   key: AssetKey
   absolutePath: AbsPath
@@ -70,7 +72,8 @@ export async function buildAssetCatalog(gamePath: AbsPath): Promise<AssetCatalog
   const assetEntries = await Promise.all(assetDirectories.map(async (entry) => {
     const assetType = entry.name!
     const rootPath = gameAssetDir(gamePath, assetType)
-    const files = await collectAssetFiles(rootPath, RelPath.empty())
+    const files = [...await collectAssetFiles(rootPath, RelPath.empty())]
+      .filter(relativePath => shouldCatalogAsset(assetType, relativePath))
     return [...files].map(relativePath => createCatalogEntry(assetType, rootPath, relativePath))
   }))
 
@@ -177,11 +180,16 @@ function resolveCatalogPath(gamePath: AbsPath, absolutePath: AbsPath): {
 
 function resolveCatalogEntry(gamePath: AbsPath, absolutePath: AbsPath): AssetCatalogEntry | undefined {
   const resolved = resolveCatalogPath(gamePath, absolutePath)
-  if (!resolved) {
+  if (!resolved || !shouldCatalogAsset(resolved.assetType, resolved.relativePath)) {
     return
   }
   const assetRootPath = gameAssetDir(gamePath, resolved.assetType)
   return createCatalogEntry(resolved.assetType, assetRootPath, resolved.relativePath)
+}
+
+function shouldCatalogAsset(assetType: string, relativePath: RelPath): boolean {
+  return assetType !== 'animation'
+    || relativePath.toLowerCase() !== ANIMATION_TABLE_FILE_NAME.toLowerCase()
 }
 
 function createCatalogEntry(

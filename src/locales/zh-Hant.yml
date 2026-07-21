@@ -609,36 +609,6 @@ edit:
     description: 從左側檔案列表中選擇一個檔案開始編輯，或建立一個新的場景檔案
     createScene: 建立場景檔案
   completion:
-    commands:
-      changeBg: 切換背景圖片
-      changeFigure: 切換角色立繪
-      bgm: 背景音樂
-      playVideo: 播放影片
-      pixiPerform: 套用特效
-      pixiInit: 初始化/重置特效
-      intro: 全螢幕文字
-      miniAvatar: 角落小頭像
-      changeScene: 切換場景
-      choose: 分支選項
-      end: 結束遊戲並返回標題介面
-      setComplexAnimation: 設定內建動畫
-      label: 設定標籤
-      jumpLabel: 跳轉至標籤
-      setVar: 設定變數
-      callScene: 呼叫場景
-      showVars: 顯示變數
-      unlockCg: 解鎖 CG 鑑賞
-      unlockBgm: 解鎖 BGM 鑑賞
-      filmMode: 電影模式
-      setTextbox: 設定對話框
-      setAnimation: 調用動畫
-      playEffect: 播放音效
-      setTempAnimation: 設定進階動畫
-      setTransform: 設定簡單動畫
-      setTransition: 設定過渡動畫
-      getUserInput: 取得輸入
-      applyStyle: 套用樣式
-      wait: 等待一段時間
     arguments:
       when: 執行條件
       left: 左側位置

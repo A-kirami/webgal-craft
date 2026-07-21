@@ -1,7 +1,7 @@
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { ChooseContentItem, SetVarContent, StyleRuleContentItem } from '~/domain/script/content'
+import type { ResolvedAutocompleteOption } from '~/features/editor/command-registry/autocomplete-options'
 import type { EditorField } from '~/features/editor/command-registry/schema'
-import type { ResolvedAutocompleteOption } from '~/features/editor/statement-editor/autocomplete-options'
 
 export interface ValueBinding<T> {
   readonly value: T

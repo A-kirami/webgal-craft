@@ -1,15 +1,15 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { resolveAutocompleteOptions } from '~/features/editor/command-registry/autocomplete-options'
 import { EditorField, readArgFieldStorageKey } from '~/features/editor/command-registry/schema'
 import { resolveDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
-import { resolveAutocompleteOptions } from '~/features/editor/statement-editor/autocomplete-options'
 import { useStatementEditorContent } from '~/features/editor/statement-editor/useStatementEditorContent'
 import { useStatementEditorParams } from '~/features/editor/statement-editor/useStatementEditorParams'
 import { useStatementEditorSay } from '~/features/editor/statement-editor/useStatementEditorSay'
 import { useStatementEditorScrub } from '~/features/editor/statement-editor/useStatementEditorScrub'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-import type { ResolvedAutocompleteOption } from '~/features/editor/statement-editor/autocomplete-options'
+import type { ResolvedAutocompleteOption } from '~/features/editor/command-registry/autocomplete-options'
 import type { SceneAutocompleteOptions } from '~/features/editor/statement-editor/scene-autocomplete'
 
 interface UseStatementEditorFieldBindingsOptions {

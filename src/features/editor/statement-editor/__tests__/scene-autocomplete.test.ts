@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { buildStatements } from '~/domain/script/sentence'
 
-import { buildSceneAutocompleteOptionsFromStatements } from '../scene-autocomplete'
+import { buildSceneAutocompleteOptionsFromStatements, buildSceneAutocompleteOptionsFromText } from '../scene-autocomplete'
 
 describe('buildSceneAutocompleteOptionsFromStatements', () => {
   it('按语义提取去重后的候选项', () => {
@@ -42,5 +42,15 @@ describe('buildSceneAutocompleteOptionsFromStatements', () => {
     expect(options.figureIds).toEqual([{ label: 'hero', value: 'hero' }])
     expect(options.soundEffectIds).toEqual([{ label: 'fx-main', value: 'fx-main' }])
     expect(options.sceneLabels).toEqual([{ label: 'start', value: 'start' }])
+  })
+})
+
+describe('buildSceneAutocompleteOptionsFromText', () => {
+  it('从纯文本构建候选而不要求创建语句条目', () => {
+    expect(buildSceneAutocompleteOptionsFromText('label:start;\nchangeFigure:hero -id=hero-id;')).toEqual({
+      figureIds: [{ label: 'hero-id', value: 'hero-id' }],
+      sceneLabels: [{ label: 'start', value: 'start' }],
+      soundEffectIds: [],
+    })
   })
 })

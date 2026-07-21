@@ -16,8 +16,8 @@ import 'virtual:uno.css'
 import ParamRenderer from './ParamRenderer.vue'
 
 import type { PropType } from 'vue'
+import type { ResolvedAutocompleteOption } from '~/features/editor/command-registry/autocomplete-options'
 import type { AutocompleteTextField, EditorField, PlainTextField, ValueChoiceField } from '~/features/editor/command-registry/schema'
-import type { ResolvedAutocompleteOption } from '~/features/editor/statement-editor/autocomplete-options'
 import type { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
 
 const defaultStandaloneTextField = {

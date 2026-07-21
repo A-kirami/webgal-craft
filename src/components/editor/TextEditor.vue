@@ -40,6 +40,9 @@ const editorOptions = $computed<monaco.editor.IEditorConstructionOptions>(() =>
     }),
     glyphMargin: showPlayToLineGlyph,
     lineNumbersMinChars: 3,
+    suggest: {
+      showWords: props.state.kind !== 'scene',
+    },
   }) as monaco.editor.IEditorConstructionOptions,
 )
 

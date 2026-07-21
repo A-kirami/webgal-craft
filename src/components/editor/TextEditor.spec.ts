@@ -300,9 +300,31 @@ describe('TextEditor', () => {
       model: {
         id: 'model-1',
       },
+      suggest: {
+        showWords: false,
+      },
       theme: 'webgal-light',
       wordWrap: 'off',
     }))
+
+    await result.unmount()
+  })
+
+  it('非场景文本保留 Monaco 文档单词补全', async () => {
+    const { state } = createHarness('/project/animation.json')
+    state.kind = 'animation'
+
+    const result = renderTextEditor(state)
+    await nextTick()
+
+    expect(monacoMockState.create).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({
+        suggest: {
+          showWords: true,
+        },
+      }),
+    )
 
     await result.unmount()
   })
