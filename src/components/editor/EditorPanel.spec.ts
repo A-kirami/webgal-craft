@@ -30,6 +30,7 @@ const {
   usePreferenceStoreMock,
   useStatementAnimationDialogMock,
   useTabsStoreMock,
+  useEditorDiagnosticsMock,
 } = vi.hoisted(() => ({
   commandBridgeMock: {
     activeBinding: {
@@ -81,6 +82,11 @@ const {
   usePreferenceStoreMock: vi.fn(),
   useStatementAnimationDialogMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
+  useEditorDiagnosticsMock: vi.fn(),
+}))
+
+vi.mock('~/features/editor/diagnostics/useEditorDiagnostics', () => ({
+  useEditorDiagnostics: useEditorDiagnosticsMock,
 }))
 
 vi.mock('~/stores/editor', () => ({

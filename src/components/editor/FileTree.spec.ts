@@ -469,6 +469,33 @@ function renderReactiveFileTree(initialProps: Record<string, unknown>) {
 }
 
 describe('FileTree', () => {
+  it('通过 itemSeverity 投影只给文件名称应用问题等级', async () => {
+    renderFileTree({
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      itemSeverity: (item: Record<string, unknown>) => item.path === '/project/error.txt' ? 'error' : undefined,
+      items: [
+        {
+          name: 'error.txt',
+          path: '/project/error.txt',
+        },
+        {
+          name: 'clean.txt',
+          path: '/project/clean.txt',
+        },
+      ],
+    })
+
+    const errorItem = page.getByText('error.txt').element().closest('[data-diagnostic-severity]')
+
+    expect(errorItem).toHaveAttribute('data-diagnostic-severity', 'error')
+    expect(errorItem).toHaveClass('text-destructive')
+    expect(page.getByText('clean.txt').element().closest('[data-diagnostic-severity]')).toBeNull()
+
+    const treeItem = document.querySelector<HTMLElement>('[data-file-tree-path="/project/error.txt"]')
+    expect(treeItem?.querySelector('.lucide-file')).toHaveClass('text-muted-foreground')
+    expect(treeItem?.querySelector('.lucide-file')).not.toHaveClass('text-destructive')
+  })
+
   afterEach(() => {
     vi.clearAllMocks()
     vi.useRealTimers()

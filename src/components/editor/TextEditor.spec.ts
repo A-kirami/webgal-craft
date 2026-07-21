@@ -61,6 +61,19 @@ const {
   }
 })
 
+const { updateEditorDiagnosticsMock, useResourceIndexMock } = vi.hoisted(() => ({
+  updateEditorDiagnosticsMock: vi.fn(),
+  useResourceIndexMock: vi.fn(),
+}))
+
+vi.mock('~/plugins/editor/diagnostics', () => ({
+  updateEditorDiagnostics: updateEditorDiagnosticsMock,
+}))
+
+vi.mock('~/services/resource-index/service', () => ({
+  useResourceIndex: useResourceIndexMock,
+}))
+
 vi.mock('~/features/editor/text-editor/useTextEditorRuntime', () => ({
   useTextEditorRuntime: useTextEditorRuntimeMock,
 }))
@@ -106,6 +119,8 @@ vi.mock('~/composables/color-mode', () => ({
 import TextEditor from './TextEditor.vue'
 
 import type { TextProjectionState } from '~/stores/editor'
+
+let resourceIndexRevision = shallowRef(0)
 
 interface EditorStoreMock {
   currentState?: {
@@ -244,6 +259,10 @@ describe('TextEditor', () => {
     useDroppableRegistryMock.mockReset()
     useTabsStoreMock.mockReset()
     useTextEditorRuntimeMock.mockClear()
+    updateEditorDiagnosticsMock.mockReset()
+    useResourceIndexMock.mockReset()
+    resourceIndexRevision = shallowRef(0)
+    useResourceIndexMock.mockReturnValue({ revision: resourceIndexRevision })
 
     ensureModelMock.mockReturnValue({
       id: 'model-1',
@@ -285,6 +304,7 @@ describe('TextEditor', () => {
     expect(useTextEditorRuntimeMock).toHaveBeenCalledTimes(1)
     expect(ensureModelMock).toHaveBeenCalledTimes(1)
     expect(monacoMockState.create).toHaveBeenCalledTimes(1)
+    expect(updateEditorDiagnosticsMock).toHaveBeenCalledWith({ id: 'model-1' })
 
     const [container, options] = monacoMockState.create.mock.calls[0]
     expect(container).toBeInstanceOf(HTMLElement)
@@ -602,7 +622,25 @@ describe('TextEditor', () => {
     await nextTick()
 
     expect(runtimeReturnValue.handleContentChange).toHaveBeenCalledTimes(1)
+    expect(updateEditorDiagnosticsMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      getLineContent: expect.any(Function),
+    }))
     expect(decorations.set).toHaveBeenCalledTimes(1)
+  })
+
+  it('资源索引修订后会重新诊断当前模型', async () => {
+    const { state } = createHarness('/project/scene-resource-revision.txt')
+    const model = createMonacoModel(['changeBg:missing.png;'])
+    monacoMockState.editorInstance.getModel.mockReturnValue(model)
+
+    renderTextEditor(state)
+    await nextTick()
+    updateEditorDiagnosticsMock.mockClear()
+
+    resourceIndexRevision.value += 1
+    await nextTick()
+
+    expect(updateEditorDiagnosticsMock).toHaveBeenCalledWith(model)
   })
 
   it('换行导致光标行延后更新时，播放按钮会跟随最终光标行', async () => {

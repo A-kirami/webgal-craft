@@ -2,6 +2,7 @@
 import { useDragSort } from '~/composables/useDragSort'
 import { getCloseTabDecision, shouldFixPreviewTab } from '~/features/editor/editor-tabs/editor-tabs'
 import { useEditorStore } from '~/stores/editor'
+import { useEditorDiagnosticsStore } from '~/stores/editor-diagnostics'
 import { useModalStore } from '~/stores/modal'
 import { useTabsStore } from '~/stores/tabs'
 import { handleWheelToHorizontalScroll } from '~/utils/wheel'
@@ -12,6 +13,7 @@ import type { Tab } from '~/stores/tabs'
 const { t } = useI18n()
 
 const tabsStore = useTabsStore()
+const diagnosticsStore = useEditorDiagnosticsStore()
 const editorStore = useEditorStore()
 const modalStore = useModalStore()
 const tabs = toRef(tabsStore, 'tabs')
@@ -138,6 +140,7 @@ onMounted(() => {
         :key="tab.path"
         v-bind="tabSort.getItemProps(index)"
         :active="isActiveTab(tab)"
+        :diagnostic-severity="diagnosticsStore.getHighestSeverity(tab.path)"
         :sorting="tabSort.isSorting.value"
         :tab="tab"
         :tint-class="getTabTintClass(tab)"
@@ -163,6 +166,7 @@ onMounted(() => {
       as="div"
       tabindex="-1"
       :active="isActiveTab(tabSort.overlayState.value.item)"
+      :diagnostic-severity="diagnosticsStore.getHighestSeverity(tabSort.overlayState.value.item.path)"
       :close-interactive="false"
       :sorting="tabSort.isSorting.value"
       :tab="tabSort.overlayState.value.item"

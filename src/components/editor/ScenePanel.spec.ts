@@ -9,6 +9,7 @@ const {
   gameSceneDirMock,
   scrollIntoViewMock,
   useFileStoreMock,
+  useEditorDiagnosticsStoreMock,
   useTabsStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ const {
   gameSceneDirMock: vi.fn(),
   scrollIntoViewMock: vi.fn(),
   useFileStoreMock: vi.fn(),
+  useEditorDiagnosticsStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
 }))
@@ -47,6 +49,10 @@ vi.mock('~/services/platform/app-paths', () => ({
 
 vi.mock('~/stores/file', () => ({
   useFileStore: useFileStoreMock,
+}))
+
+vi.mock('~/stores/editor-diagnostics', () => ({
+  useEditorDiagnosticsStore: useEditorDiagnosticsStoreMock,
 }))
 
 vi.mock('~/stores/tabs', () => ({
@@ -128,6 +134,10 @@ const globalStubs = {
         type: Function,
         default: undefined,
       },
+      itemSeverity: {
+        type: Function,
+        default: undefined,
+      },
       items: {
         type: Array,
         required: true,
@@ -179,6 +189,7 @@ const globalStubs = {
         return flattenNodes(items).map((item) => {
           const badgeText = (props.itemBadgeText as ((item: TreeNode) => string | undefined) | undefined)?.(item)
           const isDimmed = (props.itemDimmed as ((item: TreeNode) => boolean) | undefined)?.(item) ?? false
+          const severity = (props.itemSeverity as ((item: TreeNode) => string | undefined) | undefined)?.(item)
           const isSelected = (props.selectedItem as TreeNode | undefined)?.path === item.path
 
           return h('div', {
@@ -189,6 +200,7 @@ const globalStubs = {
               'type': 'button',
               'data-selected': isSelected ? '' : undefined,
               'data-dimmed': isDimmed ? 'true' : 'false',
+              'data-diagnostic-severity': severity,
               'onClick': () => emit('click', {
                 hasChildren: Array.isArray(item.children),
                 value: item,
@@ -263,6 +275,9 @@ describe('ScenePanel', () => {
 
     gameSceneDirMock.mockReturnValue('/games/demo/game/scene')
     useFileStoreMock.mockReturnValue(createFileStore())
+    useEditorDiagnosticsStoreMock.mockReturnValue({
+      getHighestSeverity: vi.fn(() => undefined),
+    })
     useTabsStoreMock.mockReturnValue(createTabsStore())
     useWorkspaceStoreMock.mockReturnValue(reactive({
       currentGame: {
@@ -293,6 +308,32 @@ describe('ScenePanel', () => {
     const fileStore = useFileStoreMock.mock.results[0]?.value as ReturnType<typeof createFileStore>
     expect(fileStore.getFolderContents).toHaveBeenCalledWith('/games/demo/game/scene')
     expect(fileStore.getFolderContents).toHaveBeenCalledWith('/games/demo/game/scene/chapter-1')
+  })
+
+  it('只给诊断索引中存在问题的已分析场景文件着色', async () => {
+    useEditorDiagnosticsStoreMock.mockReturnValue({
+      getHighestSeverity: (path: string) => path.endsWith('/start.txt') ? 'error' : undefined,
+    })
+
+    renderInBrowser(ScenePanel, {
+      browser: {
+        i18nMode: 'localized',
+        messages: {
+          'zh-Hans': {
+            edit: {},
+          },
+        },
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('start.txt')).toBeVisible()
+
+    expect(page.getByText('start.txt').element()).toHaveAttribute('data-diagnostic-severity', 'error')
+    expect(page.getByText('branch.txt').element()).not.toHaveAttribute('data-diagnostic-severity')
+    expect(page.getByText('chapter-1').element()).not.toHaveAttribute('data-diagnostic-severity')
   })
 
   it('点击文件时会通过 tabs store 打开标签页', async () => {

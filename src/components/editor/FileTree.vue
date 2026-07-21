@@ -5,6 +5,7 @@ import { useDragSession } from '~/composables/useDragSession'
 import { useDragSource } from '~/composables/useDragTransfer'
 import { useDroppableRegistry } from '~/composables/useDroppableRegistry'
 import { AbsPath } from '~/domain/path'
+import { getDiagnosticSeverityTextClass } from '~/features/editor/diagnostics/presentation'
 import { normalizeFileTreeTransferItems } from '~/features/editor/file-tree/file-tree'
 import { useFileTreeController } from '~/features/editor/file-tree/useFileTreeController'
 import { useShortcut } from '~/features/editor/shortcut/useShortcut'
@@ -15,6 +16,7 @@ import { handleError } from '~/utils/error-handler'
 
 import type { FlattenedItem } from 'reka-ui'
 import type { ShallowRef, StyleValue } from 'vue'
+import type { DiagnosticSeverity } from '~/features/editor/diagnostics/types'
 import type { FileTreeDefaultFileNameParts } from '~/features/editor/file-tree/file-tree'
 import type { FileSystemDragPayload } from '~/types/drag-drop'
 
@@ -25,6 +27,7 @@ interface Props {
   nameField?: keyof T | ((item: T) => string)
   itemBadgeText?: (item: T) => string | undefined
   itemDimmed?: (item: T) => boolean
+  itemSeverity?: (item: T) => DiagnosticSeverity | undefined
   enableTooltip?: boolean
   tooltipContent?: (item: FlattenedItem<T>) => string
   enableContextMenu?: boolean
@@ -45,6 +48,7 @@ const {
   nameField,
   itemBadgeText,
   itemDimmed,
+  itemSeverity,
   enableTooltip = false,
   tooltipContent,
   enableContextMenu = true,
@@ -140,6 +144,14 @@ defineExpose({
 
 function resolveItemBadgeText(item: T): string | undefined {
   return itemBadgeText?.(item)
+}
+
+function resolveItemSeverity(item: T): DiagnosticSeverity | undefined {
+  return itemSeverity?.(item)
+}
+
+function resolveItemSeverityClass(item: T): string | undefined {
+  return getDiagnosticSeverityTextClass(resolveItemSeverity(item))
 }
 
 interface FileTreeRenderedItem {
@@ -861,7 +873,9 @@ tryOnUnmounted(() => {
                 <Tooltip :disabled="!enableTooltip">
                   <TooltipTrigger as-child>
                     <TreeItemLabel :has-children="renderItem.item.hasChildren">
-                      <span class="text-13px flex flex-1 gap-2 min-w-0 w-full items-center">
+                      <span
+                        class="text-13px flex flex-1 gap-2 min-w-0 w-full items-center"
+                      >
                         <template v-if="renderItem.item.hasChildren">
                           <LucideFolderOpen
                             v-if="isExpanded"
@@ -897,7 +911,11 @@ tryOnUnmounted(() => {
                             isItemDimmed(renderItem.item.value) ? 'opacity-70' : '',
                           ]"
                         >
-                          <div class="whitespace-nowrap text-ellipsis overflow-hidden">
+                          <div
+                            class="whitespace-nowrap text-ellipsis overflow-hidden"
+                            :class="resolveItemSeverityClass(renderItem.item.value)"
+                            :data-diagnostic-severity="resolveItemSeverity(renderItem.item.value)"
+                          >
                             {{ getItemName(renderItem.item.value) }}
                           </div>
                           <span

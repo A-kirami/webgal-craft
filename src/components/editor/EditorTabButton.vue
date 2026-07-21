@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { StyleValue } from 'vue'
+import type { DiagnosticSeverity } from '~/features/editor/diagnostics/types'
 import type { Tab } from '~/stores/tabs'
 
 defineOptions({
@@ -9,6 +10,7 @@ defineOptions({
 interface Props {
   active: boolean
   closeInteractive?: boolean
+  diagnosticSeverity?: DiagnosticSeverity
   itemStyle?: StyleValue
   sorting?: boolean
   tab: Tab
@@ -50,6 +52,7 @@ const attrs = useAttrs()
         :tab="props.tab"
         :active="props.active"
         :close-interactive="props.closeInteractive"
+        :diagnostic-severity="props.diagnosticSeverity"
         @close="emit('close')"
       />
     </span>
