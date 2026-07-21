@@ -12,6 +12,7 @@ const {
   createEditorShortcutDefinitionsMock,
   ensureEditorRuntimeCompatibleMock,
   modalOpenMock,
+  querySentenceResourceReferencesMock,
   requestGameRuntimeRebindMock,
   routerReplaceMock,
   useAnimationTableSyncBootstrapMock,
@@ -28,6 +29,7 @@ const {
   createEditorShortcutDefinitionsMock: vi.fn(() => []),
   ensureEditorRuntimeCompatibleMock: vi.fn(),
   modalOpenMock: vi.fn(),
+  querySentenceResourceReferencesMock: vi.fn(() => []),
   requestGameRuntimeRebindMock: vi.fn(),
   routerReplaceMock: vi.fn(),
   useAnimationTableSyncBootstrapMock: vi.fn(),
@@ -107,6 +109,10 @@ vi.mock('~/components/ui/resizable/ResizablePanelGroup.vue', () => ({
 
 vi.mock('~/features/editor/animation/useAnimationTableSyncBootstrap', () => ({
   useAnimationTableSyncBootstrap: useAnimationTableSyncBootstrapMock,
+}))
+
+vi.mock('~/features/editor/command-registry/diagnostics', () => ({
+  querySentenceResourceReferences: querySentenceResourceReferencesMock,
 }))
 
 vi.mock('~/features/editor/shortcut/definitions', () => ({
@@ -246,6 +252,7 @@ describe('edit/[gameId]', () => {
     await renderEditView()
 
     expect(useResourceIndexBootstrapMock).toHaveBeenCalledOnce()
+    expect(useResourceIndexBootstrapMock).toHaveBeenCalledWith(querySentenceResourceReferencesMock)
   })
 
   it('当前游戏运行时不兼容时请求依赖重选重绑引擎，而不是打开切换引擎弹窗', async () => {

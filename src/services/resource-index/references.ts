@@ -3,7 +3,6 @@ import { readTextFile } from '@tauri-apps/plugin-fs'
 import { findGameConfigEntryValue } from '~/commands/game'
 import { AbsPath } from '~/domain/path'
 import { parseScene } from '~/domain/script/parser'
-import { querySentenceResourceReferences } from '~/features/editor/command-registry/diagnostics'
 import { configManager } from '~/services/config-manager'
 import { gameConfigPath, gameSceneDir } from '~/services/platform/app-paths'
 
@@ -16,6 +15,7 @@ import { createReferencedAssetKey, shouldIndexAssetReferenceValue } from './valu
 
 import type { AssetCatalogSnapshot } from './catalog'
 import type { AssetKey } from './keys'
+import type { ResourceReferenceQuery, SentenceResourceReferenceQuery } from './reference-query'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 export type AssetReferenceSourceKind = 'scene' | 'game-config'
@@ -74,9 +74,10 @@ export function clearReferenceSourceFailureLogCache(): void {
 export async function buildAssetReferenceIndex(
   gamePath: AbsPath,
   catalog: AssetCatalogSnapshot,
+  querySentenceResourceReferences: SentenceResourceReferenceQuery,
 ): Promise<AssetReferenceIndexSnapshot> {
   const sourceSlices = await Promise.all([
-    ...listAssetsByAssetType(catalog, 'scene').map(entry => buildSceneReferenceSlice(entry.absolutePath)),
+    ...listAssetsByAssetType(catalog, 'scene').map(entry => buildSceneReferenceSlice(entry.absolutePath, querySentenceResourceReferences)),
     buildGameConfigReferenceSlice(gamePath),
   ])
   logReferenceSourceFailures(sourceSlices.flatMap(slice => slice.failures))
@@ -90,6 +91,7 @@ export async function rebuildReferenceSource(
   snapshot: AssetReferenceIndexSnapshot,
   gamePath: AbsPath,
   sourcePath: AbsPath,
+  querySentenceResourceReferences: SentenceResourceReferenceQuery,
 ): Promise<AssetReferenceSourceUpdate> {
   if (isGameConfigPath(gamePath, sourcePath)) {
     const slice = await buildGameConfigReferenceSlice(gamePath)
@@ -100,7 +102,7 @@ export async function rebuildReferenceSource(
   }
 
   if (isScenePath(gamePath, sourcePath)) {
-    const slice = await buildSceneReferenceSlice(sourcePath)
+    const slice = await buildSceneReferenceSlice(sourcePath, querySentenceResourceReferences)
     return {
       snapshot: replaceReferenceSource(snapshot, sourcePath, slice),
       failures: slice.failures,
@@ -128,6 +130,7 @@ export async function renameReferenceSource(
   gamePath: AbsPath,
   oldPath: AbsPath,
   newPath: AbsPath,
+  querySentenceResourceReferences: SentenceResourceReferenceQuery,
 ): Promise<AssetReferenceSourceUpdate> {
   if (!isGameConfigPath(gamePath, newPath) && !isScenePath(gamePath, newPath)) {
     return {
@@ -136,7 +139,7 @@ export async function renameReferenceSource(
     }
   }
 
-  return rebuildReferenceSource(removeReferenceSource(snapshot, oldPath), gamePath, newPath)
+  return rebuildReferenceSource(removeReferenceSource(snapshot, oldPath), gamePath, newPath, querySentenceResourceReferences)
 }
 
 export function getReferencesToAsset(
@@ -233,7 +236,10 @@ export function logReferenceSourceFailures(failures: AssetReferenceSourceFailure
   )
 }
 
-async function buildSceneReferenceSlice(sourcePath: AbsPath): Promise<AssetReferenceSlice> {
+async function buildSceneReferenceSlice(
+  sourcePath: AbsPath,
+  querySentenceResourceReferences: SentenceResourceReferenceQuery,
+): Promise<AssetReferenceSlice> {
   try {
     const text = await readTextFile(sourcePath)
     const scene = parseScene(text, AbsPath.basename(sourcePath), sourcePath)
@@ -241,7 +247,7 @@ async function buildSceneReferenceSlice(sourcePath: AbsPath): Promise<AssetRefer
     clearReferenceSourceFailure(sourcePath)
     return {
       records: sentences.flatMap((sentence, index) =>
-        extractSentenceReferences(sourcePath, sentence, index + 1),
+        extractSentenceReferences(sourcePath, sentence, index + 1, querySentenceResourceReferences),
       ),
       failures: [],
     }
@@ -277,6 +283,7 @@ function extractSentenceReferences(
   sourcePath: AbsPath,
   sentence: ISentence,
   statementId: number,
+  querySentenceResourceReferences: SentenceResourceReferenceQuery,
 ): AssetReferenceRecord[] {
   return querySentenceResourceReferences(sentence).map(reference => ({
     sourcePath,
@@ -288,7 +295,7 @@ function extractSentenceReferences(
 }
 
 function resolveReferenceFieldKey(
-  reference: ReturnType<typeof querySentenceResourceReferences>[number],
+  reference: ResourceReferenceQuery,
 ): string {
   const source = reference.source
   switch (source.kind) {

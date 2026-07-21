@@ -8,41 +8,8 @@ import { deriveArgFieldsFromEditorFields, readEditorFields, readFieldResourceRef
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { AssetKey } from '~/services/resource-index/keys'
+import type { ResourceReferenceQuery, ResourceReferenceSource } from '~/services/resource-index/reference-query'
 
-export type ResourceReferenceSource =
-  | { kind: 'content' }
-  | { kind: 'argument', key: string }
-  | { kind: 'choice', index: number }
-
-export interface ResourceReferenceQuery {
-  assetKey: AssetKey
-  value: string
-  source: ResourceReferenceSource
-}
-
-export function isSameResourceReferenceSource(
-  left: ResourceReferenceSource,
-  right: ResourceReferenceSource,
-): boolean {
-  if (left.kind !== right.kind) {
-    return false
-  }
-
-  if (left.kind === 'argument' && right.kind === 'argument') {
-    return left.key === right.key
-  }
-
-  if (left.kind === 'choice' && right.kind === 'choice') {
-    return left.index === right.index
-  }
-
-  return true
-}
-
-/**
- * 从已解析语句和命令注册表投影带路径身份的资源引用。
- * 由调用方决定如何检查资源索引以及如何呈现引用位置。
- */
 export function querySentenceResourceReferences(sentence: ISentence): ResourceReferenceQuery[] {
   const entry = getCommandConfig(sentence.command)
   const editorFields = readEditorFields(entry)
@@ -66,12 +33,10 @@ export function querySentenceResourceReferences(sentence: ISentence): ResourceRe
     if (argField.jsonMeta || !resourceReference) {
       continue
     }
-
     const item = sentence.args.find(candidate => candidate.key === argField.storageKey)
     if (!item || typeof item.value !== 'string') {
       continue
     }
-
     addReference(result, resourceReference.assetType, item.value, {
       kind: 'argument',
       key: argField.storageKey,
@@ -94,6 +59,5 @@ function addReference(result: ResourceReferenceQuery[], assetType: string, value
   if (!assetKey) {
     return
   }
-
   result.push({ assetKey, value: value.trim(), source })
 }

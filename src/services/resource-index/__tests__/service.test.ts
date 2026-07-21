@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, reactive } from 'vue'
 
 import { AbsPath, RelPath } from '~/domain/path'
+import { querySentenceResourceReferences } from '~/features/editor/command-registry/diagnostics'
 import { createAssetKey } from '~/services/resource-index/keys'
 
 const {
@@ -166,12 +167,12 @@ describe('useResourceIndex', () => {
       }
     })
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -286,12 +287,12 @@ describe('useResourceIndex', () => {
       unmanagedLineCount: 0,
     })
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -405,12 +406,12 @@ describe('useResourceIndex', () => {
       throw new Error('unclosed quote')
     })
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -457,12 +458,12 @@ describe('useResourceIndex', () => {
     })
     readTextFileMock.mockResolvedValue('changeBg:old-bg.jpg;')
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -535,12 +536,12 @@ describe('useResourceIndex', () => {
     })
     readTextFileMock.mockRejectedValue(new Error('invalid command'))
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -594,12 +595,12 @@ describe('useResourceIndex', () => {
     readTextFileMock.mockResolvedValueOnce('changeBg:bg.jpg;')
     readTextFileMock.mockResolvedValue('changeBg:new-bg.jpg;')
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -677,12 +678,12 @@ describe('useResourceIndex', () => {
         unmanagedLineCount: 0,
       })
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -773,12 +774,12 @@ describe('useResourceIndex', () => {
       }
     })
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -859,12 +860,12 @@ describe('useResourceIndex', () => {
       return pendingRead ? pendingRead.promise : 'changeBg:old.jpg;'
     })
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -932,12 +933,12 @@ describe('useResourceIndex', () => {
 
     readTextFileMock.mockResolvedValue('changeBg:bg.jpg;')
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -1019,12 +1020,12 @@ describe('useResourceIndex', () => {
       }
     })
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -1085,12 +1086,12 @@ describe('useResourceIndex', () => {
       }
     })
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -1147,12 +1148,12 @@ describe('useResourceIndex', () => {
 
     const deleteSpy = vi.spyOn(Map.prototype, 'delete')
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -1195,12 +1196,12 @@ describe('useResourceIndex', () => {
 
     const setSpy = vi.spyOn(Map.prototype, 'set')
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -1257,12 +1258,12 @@ describe('useResourceIndex', () => {
       }
     })
 
-    const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
     const scope = effectScope()
     let resourceIndex!: ReturnType<typeof useResourceIndex>
     scope.run(() => {
-      useResourceIndexBootstrap()
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
       resourceIndex = useResourceIndex()
     })
 
@@ -1311,12 +1312,12 @@ describe('useResourceIndex', () => {
         }
       })
 
-      const { useResourceIndex, useResourceIndexBootstrap } = await import('../service')
+      const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
 
       const scope = effectScope()
       let resourceIndex!: ReturnType<typeof useResourceIndex>
       scope.run(() => {
-        useResourceIndexBootstrap()
+        useResourceIndexBootstrapImpl(querySentenceResourceReferences)
         resourceIndex = useResourceIndex()
       })
 

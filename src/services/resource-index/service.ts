@@ -29,6 +29,7 @@ import {
 
 import type { AssetCatalogSnapshot } from './catalog'
 import type { AssetKey } from './keys'
+import type { SentenceResourceReferenceQuery } from './reference-query'
 import type { AssetReferenceIndexSnapshot, AssetReferenceRecord, AssetReferenceSourceFailure } from './references'
 
 type ResourceIndexStatus = 'idle' | 'building' | 'ready' | 'degraded'
@@ -75,14 +76,14 @@ function clearPendingDirectoryRebuild(): void {
   }
 }
 
-function scheduleDirectoryRebuild(gamePath: AbsPath): void {
+function scheduleDirectoryRebuild(gamePath: AbsPath, querySentenceResourceReferences: SentenceResourceReferenceQuery): void {
   clearPendingDirectoryRebuild()
   pendingDirectoryRebuildTimer = setTimeout(() => {
     pendingDirectoryRebuildTimer = undefined
     if (resourceIndexState.value.gamePath !== gamePath) {
       return
     }
-    void rebuildResourceIndex(gamePath, { completionLogLevel: 'debug' })
+    void rebuildResourceIndex(gamePath, querySentenceResourceReferences, { completionLogLevel: 'debug' })
   }, DIRECTORY_REBUILD_DEBOUNCE_MS)
 }
 
@@ -102,6 +103,7 @@ function clearResourceIndexState(): void {
 
 async function rebuildResourceIndex(
   gamePath: AbsPath,
+  querySentenceResourceReferences: SentenceResourceReferenceQuery,
   options: RebuildResourceIndexOptions = {},
 ): Promise<void> {
   const currentBuildVersion = ++buildVersion
@@ -124,7 +126,7 @@ async function rebuildResourceIndex(
 
   try {
     const catalog = await buildAssetCatalog(gamePath)
-    const references = await buildAssetReferenceIndex(gamePath, catalog)
+    const references = await buildAssetReferenceIndex(gamePath, catalog, querySentenceResourceReferences)
     if (currentBuildVersion !== buildVersion) {
       return
     }
@@ -145,7 +147,7 @@ async function rebuildResourceIndex(
 
     if (needsFollowUpRebuild) {
       logger.debug(`资源索引构建期间收到变更，安排跟进重建: ${gamePath}`)
-      void rebuildResourceIndex(gamePath, { completionLogLevel })
+      void rebuildResourceIndex(gamePath, querySentenceResourceReferences, { completionLogLevel })
     }
   } catch (error) {
     logger.warn(`资源索引构建失败: ${gamePath}, 耗时 ${Date.now() - startedAt}ms - ${error}`)
@@ -209,7 +211,11 @@ function applyReadyResourceIndexState(
   })
 }
 
-async function rebuildReferenceForPath(gamePath: AbsPath, path: AbsPath): Promise<void> {
+async function rebuildReferenceForPath(
+  gamePath: AbsPath,
+  path: AbsPath,
+  querySentenceResourceReferences: SentenceResourceReferenceQuery,
+): Promise<void> {
   const currentState = resourceIndexState.value
   if (shouldDeferPathUpdate(currentState, gamePath)) {
     return
@@ -219,7 +225,7 @@ async function rebuildReferenceForPath(gamePath: AbsPath, path: AbsPath): Promis
   }
 
   const updateVersion = beginReferenceSourceUpdate([path])
-  const { failures, snapshot } = await rebuildReferenceSource(currentState.references, gamePath, path)
+  const { failures, snapshot } = await rebuildReferenceSource(currentState.references, gamePath, path, querySentenceResourceReferences)
   applyReferenceSourceUpdate(gamePath, [path], path, getReferencesFromSource(snapshot, path), failures, updateVersion)
 }
 
@@ -295,7 +301,12 @@ function applyReferenceSourceUpdate(
   clearReferenceSourceUpdate(removedSourcePaths, updateVersion)
 }
 
-async function renameReferenceForPath(gamePath: AbsPath, oldPath: AbsPath, newPath: AbsPath): Promise<void> {
+async function renameReferenceForPath(
+  gamePath: AbsPath,
+  oldPath: AbsPath,
+  newPath: AbsPath,
+  querySentenceResourceReferences: SentenceResourceReferenceQuery,
+): Promise<void> {
   const currentState = resourceIndexState.value
   if (shouldDeferPathUpdate(currentState, gamePath)) {
     return
@@ -303,7 +314,7 @@ async function renameReferenceForPath(gamePath: AbsPath, oldPath: AbsPath, newPa
 
   const affectedSourcePaths = [oldPath, newPath]
   const updateVersion = beginReferenceSourceUpdate(affectedSourcePaths)
-  const { failures, snapshot } = await renameReferenceSource(currentState.references, gamePath, oldPath, newPath)
+  const { failures, snapshot } = await renameReferenceSource(currentState.references, gamePath, oldPath, newPath, querySentenceResourceReferences)
   applyReferenceSourceUpdate(
     gamePath,
     affectedSourcePaths,
@@ -314,7 +325,7 @@ async function renameReferenceForPath(gamePath: AbsPath, oldPath: AbsPath, newPa
   )
 }
 
-function bindResourceIndexBootstrap(): void {
+function bindResourceIndexBootstrap(querySentenceResourceReferences: SentenceResourceReferenceQuery): void {
   bootstrapConsumerCount += 1
   if (bootstrapScope) {
     return
@@ -332,7 +343,7 @@ function bindResourceIndexBootstrap(): void {
           clearResourceIndexState()
           return
         }
-        void rebuildResourceIndex(AbsPath.from(gamePath))
+        void rebuildResourceIndex(AbsPath.from(gamePath), querySentenceResourceReferences)
       },
       { immediate: true },
     )
@@ -347,7 +358,7 @@ function bindResourceIndexBootstrap(): void {
         catalog: addAssetPathToCatalog(state.catalog, gamePath, event.path),
         references: state.references,
       }))
-      void rebuildReferenceForPath(gamePath, event.path)
+      void rebuildReferenceForPath(gamePath, event.path, querySentenceResourceReferences)
     })
 
     fileSystemEvents.on('file:removed', (event) => {
@@ -382,7 +393,7 @@ function bindResourceIndexBootstrap(): void {
         ),
         references: state.references,
       }))
-      void renameReferenceForPath(gamePath, event.oldPath, event.newPath)
+      void renameReferenceForPath(gamePath, event.oldPath, event.newPath, querySentenceResourceReferences)
     })
 
     const rebuildReferenceOnFileChange = (path: AbsPath) => {
@@ -391,7 +402,7 @@ function bindResourceIndexBootstrap(): void {
         return
       }
 
-      void rebuildReferenceForPath(gamePath, path)
+      void rebuildReferenceForPath(gamePath, path, querySentenceResourceReferences)
     }
 
     fileSystemEvents.on('file:modified', event => rebuildReferenceOnFileChange(event.path))
@@ -406,7 +417,7 @@ function bindResourceIndexBootstrap(): void {
       if (!isPathWithinGameRoot(gamePath, path)) {
         return
       }
-      scheduleDirectoryRebuild(gamePath)
+      scheduleDirectoryRebuild(gamePath, querySentenceResourceReferences)
     }
 
     fileSystemEvents.on('directory:created', event => rebuildOnDirectoryChange(event.path))
@@ -420,7 +431,7 @@ function bindResourceIndexBootstrap(): void {
       if (!isPathWithinGameRoot(gamePath, event.oldPath) && !isPathWithinGameRoot(gamePath, event.newPath)) {
         return
       }
-      scheduleDirectoryRebuild(gamePath)
+      scheduleDirectoryRebuild(gamePath, querySentenceResourceReferences)
     })
   })
 }
@@ -436,8 +447,8 @@ function releaseResourceIndexBootstrap(): void {
   bootstrapScope = undefined
 }
 
-export function useResourceIndexBootstrap() {
-  bindResourceIndexBootstrap()
+export function useResourceIndexBootstrap(querySentenceResourceReferences: SentenceResourceReferenceQuery) {
+  bindResourceIndexBootstrap(querySentenceResourceReferences)
 
   onScopeDispose(() => {
     releaseResourceIndexBootstrap()

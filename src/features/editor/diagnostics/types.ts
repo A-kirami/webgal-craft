@@ -1,5 +1,5 @@
-import type { ResourceReferenceSource } from '~/features/editor/command-registry/diagnostics'
 import type { AssetKey } from '~/services/resource-index/keys'
+import type { ResourceReferenceSource } from '~/services/resource-index/reference-query'
 
 export type DiagnosticSeverity = 'error' | 'warning' | 'info' | 'hint'
 export type EditorDiagnosticSource = 'document' | 'scene' | 'resource'

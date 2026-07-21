@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AbsPath } from '~/domain/path'
+import { querySentenceResourceReferences } from '~/features/editor/command-registry/diagnostics'
 
 import { createEmptyAssetReferenceIndexSnapshot, rebuildReferenceSource } from '../references'
 
@@ -22,6 +23,7 @@ describe('rebuildReferenceSource', () => {
       createEmptyAssetReferenceIndexSnapshot(),
       gamePath,
       sourcePath,
+      querySentenceResourceReferences,
     )
 
     expect(result.failures).toEqual([])

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ResizablePanel } from '~/components/ui/resizable'
 import { useAnimationTableSyncBootstrap } from '~/features/editor/animation/useAnimationTableSyncBootstrap'
+import { querySentenceResourceReferences } from '~/features/editor/command-registry/diagnostics'
 import { useEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { createEditorShortcutDefinitions } from '~/features/editor/shortcut/definitions'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
@@ -44,7 +45,7 @@ function exitEditMode(): Promise<void> {
 }
 
 useAnimationTableSyncBootstrap()
-useResourceIndexBootstrap()
+useResourceIndexBootstrap(querySentenceResourceReferences)
 
 // 进入工作区时即时校验：失效则进入阻断式恢复弹窗，由用户决定重试 / 重链接 / 返回主页
 watch(() => workspaceStore.currentGame?.id, async (gameId) => {
