@@ -1,16 +1,9 @@
 import { readTextFile } from '@tauri-apps/plugin-fs'
-import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { findGameConfigEntryValue } from '~/commands/game'
 import { AbsPath } from '~/domain/path'
-import { parseChooseContent } from '~/domain/script/content'
 import { parseScene } from '~/domain/script/parser'
-import { readCommandConfig } from '~/features/editor/command-registry'
-import {
-  deriveArgFieldsFromEditorFields,
-  readArgFieldStorageKey,
-  readEditorFields,
-} from '~/features/editor/command-registry/schema'
+import { querySentenceResourceReferences } from '~/features/editor/command-registry/diagnostics'
 import { configManager } from '~/services/config-manager'
 import { gameConfigPath, gameSceneDir } from '~/services/platform/app-paths'
 
@@ -23,7 +16,7 @@ import { createReferencedAssetKey, shouldIndexAssetReferenceValue } from './valu
 
 import type { AssetCatalogSnapshot } from './catalog'
 import type { AssetKey } from './keys'
-import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 export type AssetReferenceSourceKind = 'scene' | 'game-config'
 
@@ -285,64 +278,33 @@ function extractSentenceReferences(
   sentence: ISentence,
   statementId: number,
 ): AssetReferenceRecord[] {
-  const entry = readCommandConfig(sentence.command)
-  const editorFields = readEditorFields(entry)
-  const contentField = editorFields.find(field => field.storage === 'content')
-  const argFields = deriveArgFieldsFromEditorFields(editorFields)
-
-  return [
-    ...extractContentReferences(sourcePath, sentence, statementId, contentField?.field),
-    ...extractArgReferences(sourcePath, sentence, statementId, argFields),
-  ]
+  return querySentenceResourceReferences(sentence).map(reference => ({
+    sourcePath,
+    sourceKind: 'scene',
+    assetKey: reference.assetKey,
+    fieldKey: resolveReferenceFieldKey(reference),
+    statementId,
+  }))
 }
 
-function extractContentReferences(
-  sourcePath: AbsPath,
-  sentence: ISentence,
-  statementId: number,
-  field: ReturnType<typeof readEditorFields>[number]['field'] | undefined,
-): AssetReferenceRecord[] {
-  if (field?.type !== 'file') {
-    return []
-  }
-
-  const { assetType } = field.fileConfig
-  if (assetType === 'scene' && sentence.command === commandType.choose) {
-    return parseChooseContent(sentence.content)
-      .flatMap((item, index) =>
-        createReferenceRecord(sourcePath, 'scene', assetType, item.file, `choose[${index}].file`, statementId),
-      )
-  }
-
-  return createReferenceRecord(sourcePath, 'scene', assetType, sentence.content, '__content__', statementId)
-}
-
-function extractArgReferences(
-  sourcePath: AbsPath,
-  sentence: ISentence,
-  statementId: number,
-  argFields: ReturnType<typeof deriveArgFieldsFromEditorFields>,
-): AssetReferenceRecord[] {
-  return argFields.flatMap((argField) => {
-    if (argField.jsonMeta || argField.field.type !== 'file') {
-      return []
+function resolveReferenceFieldKey(
+  reference: ReturnType<typeof querySentenceResourceReferences>[number],
+): string {
+  const source = reference.source
+  switch (source.kind) {
+    case 'content': {
+      return '__content__'
     }
-
-    const argKey = readArgFieldStorageKey(argField)
-    const item = sentence.args.find((argItem: arg) => argItem.key === argKey)
-    if (!item || typeof item.value !== 'string') {
-      return []
+    case 'argument': {
+      return source.key
     }
-
-    return createReferenceRecord(
-      sourcePath,
-      'scene',
-      argField.field.fileConfig.assetType,
-      item.value,
-      argKey,
-      statementId,
-    )
-  })
+    case 'choice': {
+      return `choose[${source.index}].file`
+    }
+    default: {
+      return source satisfies never
+    }
+  }
 }
 
 function createReferenceRecord(
