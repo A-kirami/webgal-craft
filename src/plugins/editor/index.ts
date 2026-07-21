@@ -1,29 +1,31 @@
-import { readDir } from '@tauri-apps/plugin-fs'
-import { LRUCache } from 'lru-cache'
 import * as monaco from 'monaco-editor'
 import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { AbsPath, RelPath } from '~/domain/path'
 import { parseSceneOrEmpty } from '~/domain/script/parser'
-import { gameAssetDir } from '~/services/platform/app-paths'
+import { getCommandConfig } from '~/features/editor/command-registry'
+import { editorDynamicOptionSources } from '~/features/editor/command-registry/dynamic-options'
+import { readContentField } from '~/features/editor/command-registry/schema'
+import { buildSceneAutocompleteOptionsFromText } from '~/features/editor/statement-editor/scene-autocomplete'
+import { resolveWebgalArgumentCompletionTarget } from '~/features/editor/text-editor/webgal-completion-context'
+import { i18n } from '~/plugins/i18n'
+import { useResourceIndex } from '~/services/resource-index/service'
 import { useWorkspaceStore } from '~/stores/workspace'
-import { handleError } from '~/utils/error-handler'
 
 import { getArgKeyCompletions } from './completion/webgal-argument-keys'
 import { getCommandCompletions } from './completion/webgal-commands'
+import { extendWebgalValueCompletionRange, getWebgalValueCompletions } from './completion/webgal-values'
 import darkTheme from './themes/webgal-dark.json'
 import lightTheme from './themes/webgal-light.json'
 
 import type { IScene } from 'webgal-parser/src/interface/sceneInterface'
+import type { DynamicOptionsContext, EditorDynamicOptionsKey } from '~/features/editor/command-registry/schema'
 
 import './monaco'
 
 // 常量定义
 const TEMP_SCENE_NAME = 'tempScene'
 const TEMP_SCENE_URL = 'tempUrl'
-const FILE_CACHE_TTL = 5000 // 文件缓存过期时间（毫秒）
-const FILE_CACHE_MAX_SIZE = 100 // 文件缓存最大条目数
 
 // WebGAL 脚本句子部分枚举
 enum SentencePart {
@@ -32,32 +34,6 @@ enum SentencePart {
   Argument, // 参数
   Comment, // 注释
 }
-
-// 文件类型, 以目录区分
-type FileType = 'background' | 'figure' | 'scene' | 'bgm' | 'vocal' | 'video'
-
-// 命令到文件类型的映射
-const COMMAND_TO_FILE_TYPE_MAP: Partial<Record<commandType, FileType>> = {
-  [commandType.changeBg]: 'background',
-  [commandType.changeFigure]: 'figure',
-  [commandType.bgm]: 'bgm',
-  [commandType.video]: 'video',
-  [commandType.changeScene]: 'scene',
-  [commandType.callScene]: 'scene',
-  [commandType.playEffect]: 'vocal',
-  [commandType.unlockCg]: 'background',
-  [commandType.unlockBgm]: 'bgm',
-}
-
-// 文件系统缓存
-interface CacheEntry {
-  entries: { name: string, isDirectory: boolean }[]
-}
-
-const fileSystemCache = new LRUCache<string, CacheEntry>({
-  max: FILE_CACHE_MAX_SIZE,
-  ttl: FILE_CACHE_TTL,
-})
 
 // 主题名称常量
 export const THEME_LIGHT = 'webgal-light'
@@ -80,6 +56,7 @@ export const BASE_EDITOR_OPTIONS = {
   },
   smoothScrolling: true,
   quickSuggestions: { other: true, comments: false, strings: true },
+  fixedOverflowWidgets: true,
 } as const satisfies monaco.editor.IEditorConstructionOptions
 
 // 定义主题
@@ -100,7 +77,7 @@ monaco.languages.setLanguageConfiguration('webgalscript', {
 })
 
 monaco.languages.registerCompletionItemProvider('webgalscript', {
-  triggerCharacters: [':', ' -', '/'],
+  triggerCharacters: [':', '-', '=', '/'],
   provideCompletionItems: async (model, position) => {
     let suggestions: monaco.languages.CompletionItem[] = []
     const currentLine = model.getLineContent(position.lineNumber)
@@ -116,7 +93,7 @@ monaco.languages.registerCompletionItemProvider('webgalscript', {
         break
       }
       case SentencePart.Argument: {
-        suggestions = getArgumentSuggestion(model, position)
+        suggestions = await getArgumentSuggestion(model, position)
         break
       }
       // no default
@@ -526,45 +503,44 @@ function getCommandSuggestion(model: monaco.editor.ITextModel, position: monaco.
   })
 }
 
-/**
- * 获取参数补全（目前只实现了键补全，值补全功能待实现）
- */
-function getArgumentSuggestion(model: monaco.editor.ITextModel, position: monaco.Position): monaco.languages.CompletionItem[] {
+async function getArgumentSuggestion(model: monaco.editor.ITextModel, position: monaco.Position): Promise<monaco.languages.CompletionItem[]> {
   const currentLine = model.getLineContent(position.lineNumber)
-  const currentWord = model.getWordAtPosition(position)
 
-  // 从行内容中提取命令类型
-  let command: commandType = commandType.say
   const parsedScene = parseSceneOrEmpty(currentLine, TEMP_SCENE_NAME, TEMP_SCENE_URL)
-  command = parsedScene.sentenceList[0]?.command || commandType.say
+  const sentence = parsedScene.sentenceList[0]
+  const command = sentence?.command ?? commandType.say
 
-  if (!currentWord) {
-    return getArgKeyCompletions(
-      {
-        startLineNumber: position.lineNumber,
-        endLineNumber: position.lineNumber,
-        startColumn: position.column,
-        endColumn: position.column,
-      },
+  const target = resolveWebgalArgumentCompletionTarget(currentLine, position.column - 1)
+  if (target.kind === 'value') {
+    const range = extendWebgalValueCompletionRange(currentLine, {
+      startLineNumber: position.lineNumber,
+      endLineNumber: position.lineNumber,
+      startColumn: target.startOffset + 1,
+      endColumn: position.column,
+    }, 'argument')
+    return buildValueCompletions(
+      model,
       command,
+      target.key,
+      target.prefix,
+      range,
+      sentence?.content ?? '',
     )
   }
 
-  const charAfterWord = model.getValueInRange({
-    startLineNumber: position.lineNumber,
-    endLineNumber: position.lineNumber,
-    startColumn: currentWord.endColumn,
-    endColumn: currentWord.endColumn + 1,
-  })
-  const isEqualSignAfterWord = charAfterWord === '='
+  if (target.kind === 'none') {
+    return []
+  }
+
   return getArgKeyCompletions(
     {
       startLineNumber: position.lineNumber,
       endLineNumber: position.lineNumber,
-      startColumn: currentWord.startColumn,
-      endColumn: currentWord.endColumn + (isEqualSignAfterWord ? 1 : 0),
+      startColumn: target.startOffset + 1,
+      endColumn: target.endOffset + 1,
     },
     command,
+    target.hasLeadingDash,
   )
 }
 
@@ -573,45 +549,76 @@ function getArgumentSuggestion(model: monaco.editor.ITextModel, position: monaco
  */
 async function getContentSuggestion(model: monaco.editor.ITextModel, position: monaco.Position): Promise<monaco.languages.CompletionItem[]> {
   const parsedScene = getParsedSceneFromLine(model, position)
-  const command = parsedScene.sentenceList[0]?.command || commandType.say
-  const content = parsedScene.sentenceList[0]?.content || ''
-
-  switch (command) {
-    case commandType.say: {
-      // say 命令不需要文件补全
-      return []
-    }
-    case commandType.changeBg:
-    case commandType.changeFigure:
-    case commandType.bgm:
-    case commandType.video:
-    case commandType.changeScene:
-    case commandType.callScene:
-    case commandType.playEffect:
-    case commandType.unlockCg:
-    case commandType.unlockBgm: {
-      // 使用映射表获取文件类型
-      const fileType = COMMAND_TO_FILE_TYPE_MAP[command]
-      if (!fileType) {
-        return []
-      }
-      return await getFileSuggestion(model, position, fileType, content)
-    }
-    case commandType.choose: {
-      // 找到最后一个冒号到光标位置的内容作为路径, 然后提供场景文件补全
-      // 该冒号不能为第一个冒号
-      const currentLineBeforeCursor = model.getLineContent(position.lineNumber).slice(0, position.column - 1)
-      const lastColonIndex = currentLineBeforeCursor.lastIndexOf(':')
-      const colonCount = currentLineBeforeCursor.split(':').length - 1
-      if (lastColonIndex !== -1 && colonCount >= 2) {
-        return await getFileSuggestion(model, position, 'scene', currentLineBeforeCursor.slice(lastColonIndex + 1))
-      }
-      return []
-    }
-    default: {
-      return []
-    }
+  const sentence = parsedScene.sentenceList[0]
+  const command = sentence?.command ?? commandType.say
+  const content = sentence?.content ?? ''
+  const contentField = readContentField(getCommandConfig(command))
+  const currentLineBeforeCursor = model.getLineContent(position.lineNumber).slice(0, position.column - 1)
+  const colonCount = currentLineBeforeCursor.split(':').length - 1
+  if (command === commandType.choose && colonCount < 2) {
+    return []
   }
+  const valuePrefix = command === commandType.choose
+    ? currentLineBeforeCursor.slice(currentLineBeforeCursor.lastIndexOf(':') + 1)
+    : content
+
+  if (!contentField || command === commandType.say || command === commandType.comment) {
+    return []
+  }
+
+  const valueStart = position.column - valuePrefix.length
+  const range = extendWebgalValueCompletionRange(model.getLineContent(position.lineNumber), {
+    startLineNumber: position.lineNumber,
+    endLineNumber: position.lineNumber,
+    startColumn: valueStart,
+    endColumn: position.column,
+  }, command === commandType.choose ? 'choice' : 'content')
+  return buildValueCompletions(model, command, 'content', valuePrefix, range, valuePrefix)
+}
+
+function getResourceOptions(assetType: string) {
+  return useResourceIndex().listByAssetType(assetType)
+    .map((entry) => {
+      const value = String(entry.key.relativePath)
+      return { label: value, value }
+    })
+    .toSorted((a, b) => a.value.localeCompare(b.value))
+}
+
+async function resolveDynamicOptions(key: EditorDynamicOptionsKey, context: DynamicOptionsContext) {
+  const source = editorDynamicOptionSources.find(item => item.key === key)
+  if (!source) {
+    return []
+  }
+  try {
+    return await source.loadOptions(context)
+  } catch (error) {
+    logger.debug(`文本编辑器动态候选加载失败(${key}): ${String(error)}`)
+    return []
+  }
+}
+
+function buildValueCompletions(
+  model: monaco.editor.ITextModel,
+  command: commandType,
+  key: string,
+  prefix: string,
+  range: monaco.IRange,
+  contentContext: string,
+): Promise<monaco.languages.CompletionItem[]> {
+  const workspace = useWorkspaceStore()
+  const gamePath = workspace.currentGame?.path
+  return getWebgalValueCompletions({
+    command,
+    key,
+    prefix,
+    range,
+    content: contentContext,
+    gamePath,
+    sceneOptions: buildSceneAutocompleteOptionsFromText(model.getValue()),
+    listResources: getResourceOptions,
+    resolveDynamicOptions: (dynamicKey, context) => resolveDynamicOptions(dynamicKey, context),
+  }, i18n.global.t)
 }
 
 /**
@@ -622,135 +629,6 @@ function getParsedSceneFromLine(model: monaco.editor.ITextModel, position: monac
   const lineBeforeCursor = line.slice(0, position.column - 1)
 
   return parseSceneOrEmpty(lineBeforeCursor, TEMP_SCENE_NAME, TEMP_SCENE_URL)
-}
-
-/**
- * 计算补全项的替换范围
- */
-function calculateCompletionRange(
-  currentLine: string,
-  position: monaco.Position,
-  currentWord: monaco.editor.IWordAtPosition | null,
-  isDirectory: boolean,
-): monaco.IRange {
-  const currentLineBeforeCursor = currentLine.slice(0, position.column - 1)
-  const lastSlashIndex = currentLineBeforeCursor.lastIndexOf('/')
-
-  // 计算内容结束列（行尾、注释前、参数前的最小值）
-  let contentEndColumn = currentLine.length + 1
-  const argIndex = currentLine.indexOf(' -')
-  if (argIndex !== -1) {
-    contentEndColumn = Math.min(contentEndColumn, argIndex + 1)
-  }
-  const commentIndex = currentLine.indexOf(';')
-  if (commentIndex !== -1) {
-    contentEndColumn = Math.min(contentEndColumn, commentIndex + 1)
-  }
-
-  // 目录的结束列需要特殊处理
-  let dirEndColumn = contentEndColumn
-  const restLine = currentLine.slice(position.column - 1)
-  const slashIndexInRest = restLine.indexOf('/')
-  if (slashIndexInRest !== -1) {
-    dirEndColumn = Math.min(dirEndColumn, position.column + slashIndexInRest)
-  }
-
-  const startColumn = lastSlashIndex === -1
-    ? (currentWord?.startColumn || position.column)
-    : lastSlashIndex + 2
-
-  return {
-    startLineNumber: position.lineNumber,
-    endLineNumber: position.lineNumber,
-    startColumn,
-    endColumn: isDirectory ? dirEndColumn : contentEndColumn,
-  }
-}
-
-/**
- * 从缓存获取或读取目录内容
- */
-async function getDirectoryEntries(path: string): Promise<{ name: string, isDirectory: boolean }[]> {
-  const cached = fileSystemCache.get(path)
-  if (cached) {
-    return cached.entries
-  }
-
-  try {
-    const dirInfo = await readDir(path)
-    const entries = dirInfo.map(entry => ({
-      name: entry.name,
-      isDirectory: entry.isDirectory,
-    }))
-
-    fileSystemCache.set(path, { entries })
-
-    return entries
-  } catch (error) {
-    fileSystemCache.delete(path)
-    throw error
-  }
-}
-
-/**
- * 获取文件路径补全
- */
-async function getFileSuggestion(
-  model: monaco.editor.ITextModel,
-  position: monaco.Position,
-  type: FileType,
-  currentPath: string,
-): Promise<monaco.languages.CompletionItem[]> {
-  const currentLine = model.getLineContent(position.lineNumber)
-  const currentWord = model.getWordAtPosition(position)
-  const path = getPathFromFileType(type, currentPath)
-
-  if (!path) {
-    return []
-  }
-
-  try {
-    const entries = await getDirectoryEntries(path)
-    return entries.map(entry => ({
-      label: entry.name,
-      insertText: entry.name,
-      kind: entry.isDirectory
-        ? monaco.languages.CompletionItemKind.Folder
-        : monaco.languages.CompletionItemKind.File,
-      range: calculateCompletionRange(currentLine, position, currentWord, entry.isDirectory),
-    }))
-  } catch (error) {
-    handleError(error, { silent: true })
-    return []
-  }
-}
-
-/**
- * 根据文件类型和文件名获取完整路径，游戏目录不存在时返回空字符串
- */
-function getPathFromFileType(
-  type: FileType,
-  fileName: string,
-): string {
-  const gameDir = useWorkspaceStore().currentGame?.path
-  if (!gameDir) {
-    return ''
-  }
-
-  // 提取最后一级目录作为子目录
-  let subDir = ''
-  const lastDirIndex = fileName.lastIndexOf('/')
-  if (lastDirIndex !== -1) {
-    subDir = fileName.slice(0, lastDirIndex + 1)
-  }
-
-  const basePath = gameAssetDir(AbsPath.from(gameDir), type)
-  if (subDir) {
-    // 移除 subDir 开头的斜杠（如果有）
-    const normalizedSubDir = subDir.startsWith('/') ? subDir.slice(1) : subDir
-    return AbsPath.join(basePath, RelPath.from(normalizedSubDir))
-  }
-  return basePath
 }
 
 /**

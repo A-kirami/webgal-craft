@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveAutocompleteOptions } from '~/features/editor/statement-editor/autocomplete-options'
-import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
+import { resolveAutocompleteOptions } from '../autocomplete-options'
 
 const identityTranslate = (key: string): string => key
 
@@ -17,7 +16,6 @@ describe('resolveAutocompleteOptions', () => {
 
     expect(resolveAutocompleteOptions(sources, {
       content: '',
-      sceneOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
       t: identityTranslate,
     })).toEqual([
       { label: 'effect.rain', value: 'rain' },
@@ -45,7 +43,6 @@ describe('resolveAutocompleteOptions', () => {
     expect(resolveAutocompleteOptions(sources, {
       content: '',
       sceneOptions: {
-        ...EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
         figureIds: [
           { label: 'fig-left', value: 'fig-left' },
           { label: 'hero', value: 'hero' },
@@ -73,7 +70,6 @@ describe('resolveAutocompleteOptions', () => {
 
     expect(resolveAutocompleteOptions(sources, {
       sceneOptions: {
-        ...EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
         sceneLabels: [{ label: 'empty', value: '' }],
       },
       t: identityTranslate,

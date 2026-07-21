@@ -71,6 +71,10 @@ const scriptStringMap = new Map<commandType, string>(
   SCRIPT_CONFIG.map(c => [c.scriptType, c.scriptString]),
 )
 
+export function getCommandScriptString(type: commandType): string | undefined {
+  return scriptStringMap.get(type)
+}
+
 const defaultEntry: CommandEntry = {
   type: commandType.say,
   label: t => t('edit.visualEditor.commands.unknown'),

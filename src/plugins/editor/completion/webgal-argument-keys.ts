@@ -26,12 +26,22 @@ function readArgumentCompletions(command: commandType) {
   return completions
 }
 
-export function getArgKeyCompletions(range: monaco.IRange, command: commandType): monaco.languages.CompletionItem[] {
+export function getArgKeyCompletions(
+  range: monaco.IRange,
+  command: commandType,
+  hasLeadingDash: boolean,
+): monaco.languages.CompletionItem[] {
   return readArgumentCompletions(command).map(item => ({
     label: item.key,
-    insertText: item.key + (item.simplified ? '' : '='),
+    insertText: `${hasLeadingDash ? '' : '-'}${item.key}${item.simplified ? '' : '='}`,
     detail: item.detail,
     kind: monaco.languages.CompletionItemKind.Function,
     range,
+    ...(item.hasValueCompletions && {
+      command: {
+        id: 'editor.action.triggerSuggest',
+        title: '',
+      },
+    }),
   }))
 }

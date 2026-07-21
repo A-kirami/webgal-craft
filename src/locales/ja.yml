@@ -609,36 +609,6 @@ edit:
     description: 左側のファイルリストからファイルを選択して編集を開始するか、新しいシーンファイルを作成してください
     createScene: シーンファイルを作成
   completion:
-    commands:
-      changeBg: 背景画像を切り替え
-      changeFigure: キャラクター立ち絵を切り替え
-      bgm: 背景音楽
-      playVideo: 動画を再生
-      pixiPerform: エフェクトを適用
-      pixiInit: エフェクトを初期化/リセット
-      intro: 全画面テキスト
-      miniAvatar: コーナー小アバター
-      changeScene: シーンを切り替え
-      choose: 分岐オプション
-      end: ゲームを終了してタイトル画面に戻る
-      setComplexAnimation: 内蔵アニメーションを設定
-      label: ラベルを設定
-      jumpLabel: ラベルへジャンプ
-      setVar: 変数を設定
-      callScene: シーンを呼び出し
-      showVars: 変数を表示
-      unlockCg: CG 鑑賞を解放
-      unlockBgm: BGM 鑑賞を解放
-      filmMode: フィルムモード
-      setTextbox: テキストボックスを設定
-      setAnimation: アニメーションを呼び出し
-      playEffect: 効果音を再生
-      setTempAnimation: 高度アニメーションを設定
-      setTransform: シンプルアニメーションを設定
-      setTransition: 入退場アニメーションを設定
-      getUserInput: 入力を取得
-      applyStyle: スタイルを適用
-      wait: 一定時間待機
     arguments:
       when: 条件付き実行
       left: 左側位置

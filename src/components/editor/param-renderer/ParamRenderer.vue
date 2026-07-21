@@ -12,8 +12,8 @@ import { useParamXyPad } from './useParamXyPad'
 
 import type { StatementSchemaParamMode } from './useParamFieldMeta'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { ResolvedAutocompleteOption } from '~/features/editor/command-registry/autocomplete-options'
 import type { NumberField } from '~/features/editor/command-registry/schema'
-import type { ResolvedAutocompleteOption } from '~/features/editor/statement-editor/autocomplete-options'
 
 interface Props {
   canScrub: (field: EditorField) => boolean
