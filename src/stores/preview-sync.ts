@@ -2,6 +2,9 @@ import { defineStore } from 'pinia'
 
 import {
   createPreviewRequestEnvelope,
+  isPreviewPanelOpen,
+  isPreviewStateResetError,
+  PREVIEW_STATE_RESET_REASON,
   sendPreviewRequestEnvelope,
 } from '~/services/preview-protocol-client'
 import {
@@ -207,7 +210,7 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
     stageSnapshot = undefined
     fastPreviewTimeout = undefined
     cachedBaseTransform = undefined
-    settlePendingPreviewResponses('preview state reset')
+    settlePendingPreviewResponses(PREVIEW_STATE_RESET_REASON)
   }
 
   function consumePreviewResponse(message: ResponseEnvelopeByType<PreviewResponseType>): void {
@@ -257,8 +260,11 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
       }
 
       clearTimeout(pending.timeoutId)
-      logger.error(`发送 ${request.type} 查询失败: ${error}`)
-      pending.settleFailure(failureReason)
+      const isReset = isPreviewStateResetError(error)
+      if (!isReset) {
+        logger.error(`发送 ${request.type} 查询失败: ${error}`)
+      }
+      pending.settleFailure(isReset ? PREVIEW_STATE_RESET_REASON : failureReason)
     })
   }
 
@@ -267,6 +273,10 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
     payload: RequestPayloadByType[TType],
     options: PreviewCommandOptions = {},
   ): Promise<void> {
+    if (!isPreviewPanelOpen()) {
+      return Promise.reject(new Error(PREVIEW_STATE_RESET_REASON))
+    }
+
     const request = createPreviewRequestEnvelope(type, payload)
     const { requestId } = request
 
@@ -295,7 +305,10 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
         }
 
         clearTimeout(timeoutId)
-        logger.error(`发送 ${request.type} command 失败: ${error}`)
+        const isReset = isPreviewStateResetError(error)
+        if (!isReset) {
+          logger.error(`发送 ${request.type} command 失败: ${error}`)
+        }
         reject(error instanceof Error ? error : new Error(String(error)))
       })
     })
@@ -306,6 +319,14 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
     options: ReferenceBoxQueryOptions = {},
   ): Promise<ReferenceBoxQueryResultPayload> {
     const type = 'preview.query.reference-box'
+    if (!isPreviewPanelOpen()) {
+      return Promise.resolve({
+        target,
+        status: 'unsupported',
+        reason: PREVIEW_STATE_RESET_REASON,
+      })
+    }
+
     const request = createPreviewRequestEnvelope(
       type,
       { target },
@@ -346,6 +367,13 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
   }
 
   function queryBaseTransform(options: PreviewQueryOptions = {}): Promise<BaseTransformQueryResult> {
+    if (!isPreviewPanelOpen()) {
+      return Promise.resolve({
+        status: 'unavailable',
+        reason: PREVIEW_STATE_RESET_REASON,
+      })
+    }
+
     const cachedTransform = cloneCachedBaseTransform()
     if (cachedTransform) {
       return Promise.resolve({
@@ -395,6 +423,13 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
     options: PreviewQueryOptions = {},
   ): Promise<TransformBaselineQueryResult> {
     const type = 'preview.query.transform-baseline'
+    if (!isPreviewPanelOpen()) {
+      return Promise.resolve({
+        status: 'unavailable',
+        reason: PREVIEW_STATE_RESET_REASON,
+      })
+    }
+
     const request = createPreviewRequestEnvelope(
       type,
       { target, transformBaselineRevision },

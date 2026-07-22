@@ -12,6 +12,7 @@ import {
 } from '~/features/editor/effect-editor/effect-editor-config'
 import { createEffectEditorProvider, useEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { useEditSettingsStore } from '~/stores/edit-settings'
+import { usePreferenceStore } from '~/stores/preference'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { Transform } from '~/domain/stage/types'
@@ -287,6 +288,27 @@ afterEach(() => {
 })
 
 describe('useEffectEditorProvider', () => {
+  it('预览面板关闭时会丢弃运行时请求但仍允许应用脚本变更', async () => {
+    usePreferenceStore().showPreviewPanel = false
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+    const applyMock = vi.fn()
+    const provider = createProvider()
+
+    await provider.open(createOpenTarget({ onApply: applyMock }))
+    provider.updateDraft({ transform: { blur: 12 } })
+    provider.requestPreview({ schedule: 'immediate' })
+    await vi.waitFor(() => {
+      expect(provider.canApply).toBe(true)
+    })
+
+    expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
+    await expect(provider.apply()).resolves.toBe(true)
+    expect(applyMock).toHaveBeenCalledWith(expect.objectContaining({
+      transform: { blur: 12 },
+    }))
+    expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
+  })
+
   it('未产生 visual preview 时关闭效果编辑器不会重复恢复场景预览', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
     const provider = createEffectEditorProvider()

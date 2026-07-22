@@ -2,6 +2,7 @@ import '~/__tests__/setup'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { usePreferenceStore } from '../preference'
 import { usePreviewSyncStore } from '../preview-sync'
 
 const {
@@ -412,5 +413,73 @@ describe('usePreviewSyncStore', () => {
     }))
 
     await expect(pending).rejects.toThrow('set effect failed')
+  })
+
+  it('预览面板关闭时会丢弃请求，重新打开后恢复发送', async () => {
+    const preferenceStore = usePreferenceStore()
+    preferenceStore.showPreviewPanel = false
+    const store = usePreviewSyncStore()
+
+    await expect(store.queryReferenceBox('fig-center')).resolves.toEqual({
+      target: 'fig-center',
+      status: 'unsupported',
+      reason: 'preview state reset',
+    })
+    await expect(store.sendPreviewCommand('preview.command.set-effect', {
+      target: 'fig-center',
+      transform: { blur: 12 },
+    })).rejects.toThrow('preview state reset')
+    expect(sendPreviewCommandMock).not.toHaveBeenCalled()
+
+    preferenceStore.showPreviewPanel = true
+    const pending = store.queryReferenceBox('fig-center')
+    expect(sendPreviewCommandMock).toHaveBeenCalledTimes(1)
+    const request = JSON.parse(sendPreviewCommandMock.mock.calls[0][0])
+    store.consumeHostEvent(JSON.stringify({
+      kind: 'response',
+      type: 'preview.query.reference-box',
+      requestId: request.requestId,
+      payload: {
+        target: 'fig-center',
+        status: 'unsupported',
+        reason: 'not ready',
+      },
+    }))
+
+    await expect(pending).resolves.toEqual({
+      target: 'fig-center',
+      status: 'unsupported',
+      reason: 'not ready',
+    })
+  })
+
+  it('预览面板关闭时不会继续使用缓存的基础变换', async () => {
+    const store = usePreviewSyncStore()
+    const pending = store.queryBaseTransform()
+    const request = JSON.parse(sendPreviewCommandMock.mock.calls[0][0])
+
+    store.consumeHostEvent(JSON.stringify({
+      kind: 'response',
+      type: 'preview.query.base-transform',
+      requestId: request.requestId,
+      payload: {
+        baseTransform: {
+          position: { x: 12 },
+        },
+      },
+    }))
+    await expect(pending).resolves.toEqual({
+      status: 'ready',
+      transform: {
+        position: { x: 12 },
+      },
+    })
+
+    usePreferenceStore().showPreviewPanel = false
+    await expect(store.queryBaseTransform()).resolves.toEqual({
+      status: 'unavailable',
+      reason: 'preview state reset',
+    })
+    expect(sendPreviewCommandMock).toHaveBeenCalledTimes(1)
   })
 })

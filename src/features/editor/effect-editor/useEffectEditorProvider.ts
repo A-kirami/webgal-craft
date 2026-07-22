@@ -5,6 +5,7 @@ import { serializeSentence } from '~/domain/script/serialize'
 import { fieldsToTransform, isTransformEqual, parseTransformJson } from '~/features/editor/effect-editor/effect-editor-config'
 import { resolveTransformBaselineSession } from '~/features/editor/transform-resolution/baseline-session'
 import { debugCommander } from '~/services/debug-commander'
+import { isPreviewPanelOpen } from '~/services/preview-protocol-client'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import { useModalStore } from '~/stores/modal'
 import { usePreviewSyncStore } from '~/stores/preview-sync'
@@ -483,6 +484,10 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
     const currentSession = session
     if (!currentSession || currentSession.sessionId !== request.sessionId) {
       return false
+    }
+    if (!isPreviewPanelOpen()) {
+      // 面板关闭时跳过运行时请求，但不阻止脚本层提交效果编辑器草稿。
+      return true
     }
     if (isPreviewTerminalUnsynced()) {
       return false
