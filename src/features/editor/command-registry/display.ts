@@ -82,7 +82,7 @@ export const displayEntries: CommandEntry[] = [
     description: t => t('edit.visualEditor.commandDescriptions.filmMode'),
     icon: 'i-lucide-clapperboard',
     category: 'display',
-    fields: [content({ key: 'state', type: 'switch', onValue: 'on', offValue: 'off', label: t => t('edit.visualEditor.params.filmModeState'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.filmModeState.on'), off: t => t('edit.visualEditor.paramTooltips.filmModeState.off') }, offLabel: t => t('edit.visualEditor.params.filmModeStateOff') })],
+    fields: [content({ key: 'state', type: 'switch', onValue: 'on', offValue: '', label: t => t('edit.visualEditor.params.filmModeState'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.filmModeState.on'), off: t => t('edit.visualEditor.paramTooltips.filmModeState.off') }, offLabel: t => t('edit.visualEditor.params.filmModeStateOff') })],
   },
   {
     type: commandType.setTextbox,

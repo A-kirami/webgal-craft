@@ -1027,8 +1027,8 @@ edit:
         on: Show the dialogue textbox during subsequent dialogue.
         off: Hide the dialogue textbox during subsequent dialogue.
       animationFlag:
-        on: Enable mouth and eye changes using the configured differential images.
-        off: Do not animate mouth and eye changes from differential images.
+        on: Configure differential images for mouth and eye animation in related statements.
+        off: Do not configure differential images for mouth and eye animation in related statements.
       global:
         on: Store the variable in the global scope so it is not tied to the current scene.
         off: Store the variable in the current game's scene state.

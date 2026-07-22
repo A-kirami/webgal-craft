@@ -190,4 +190,14 @@ describe('命令注册表完整性', () => {
       'cherryBlossoms',
     ])
   })
+
+  it('filmMode 开关关闭时写入空内容以恢复普通画面', () => {
+    const filmMode = readContentField(getCommandConfig(commandType.filmMode))
+
+    expect(filmMode).toMatchObject({
+      type: 'switch',
+      onValue: 'on',
+      offValue: '',
+    })
+  })
 })
