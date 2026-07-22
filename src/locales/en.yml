@@ -986,6 +986,55 @@ edit:
       zIndex: Z-Index
       writeDefault: Write Default
       keep: Keep Playing
+    paramTooltips:
+      next:
+        on: Evaluate the next statement immediately without waiting for this effect to finish.
+        off: Wait for the current effect before the next statement is evaluated.
+      continue:
+        on: Continue to the next statement automatically when this effect finishes.
+        off: Wait for player or script-driven progress when this effect finishes.
+      parallel:
+        on: Keep existing effects running while this effect plays alongside them.
+        off: Stop the existing effect on the same target before playing this one.
+      ignoreDefault:
+        on: Apply only the explicitly specified effect values instead of filling in defaults.
+        off: Fill unspecified effect values with their defaults.
+      writeDefault:
+        on: Calculate unspecified animation values from the engine defaults.
+        off: Inherit unspecified animation values from the target's current state.
+      keep:
+        on: Keep the effect active after its duration until another command replaces it.
+        off: Stop the effect automatically when its duration ends.
+      concat:
+        on: Append this dialogue to the previous line in the same dialogue box.
+        off: Show this line as new dialogue and replace the current text.
+      notend:
+        on: Let the script continue before this line has finished displaying.
+        off: Wait for this line to finish displaying before continuing.
+      hold:
+        on: Keep the fullscreen text on screen after it finishes until the player advances.
+        off: End the fullscreen text automatically after its configured delay.
+      userForward:
+        on: Show each fullscreen text segment only when the player advances.
+        off: Show each fullscreen text segment automatically after its configured delay.
+      skipOff:
+        on: Prevent the player from skipping the video with a double-click.
+        off: Allow the player to end the video early with a double-click.
+      filmModeState:
+        on: Show cinematic letterbox bars and use the immersive dialogue layout.
+        off: Restore the standard view without cinematic letterbox bars.
+      textboxState:
+        on: Show the dialogue textbox during subsequent dialogue.
+        off: Hide the dialogue textbox during subsequent dialogue.
+      animationFlag:
+        on: Enable mouth and eye changes using the configured differential images.
+        off: Do not animate mouth and eye changes from differential images.
+      global:
+        on: Store the variable in the global scope so it is not tied to the current scene.
+        off: Store the variable in the current game's scene state.
+      nobreak:
+        on: Prevent manual skipping and automatic progress during the wait.
+        off: Allow manual skipping or automatic progress during the wait.
     filePicker:
       vocal: Select voice file
       background: Select background file

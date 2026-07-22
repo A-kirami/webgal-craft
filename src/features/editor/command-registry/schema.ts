@@ -134,6 +134,11 @@ export type TextField = PlainTextField | AutocompleteTextField
 export interface SwitchField extends FieldBase {
   type: 'switch'
   defaultValue?: boolean
+  /** 根据当前状态展示的运行时效果说明 */
+  tooltip?: {
+    on: I18nLike
+    off: I18nLike
+  }
   /** content switch 专用：开启时的值 */
   onValue?: string
   /** content switch 专用：关闭时的值 */

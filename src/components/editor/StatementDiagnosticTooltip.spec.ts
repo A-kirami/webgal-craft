@@ -31,9 +31,9 @@ const errorDiagnostic: EditorFieldDiagnostic = {
   value: 'missing.png',
 }
 
-function renderTooltip(diagnostics: readonly EditorFieldDiagnostic[]) {
+function renderTooltip(diagnostics: readonly EditorFieldDiagnostic[], tooltip?: string) {
   renderInBrowser(StatementDiagnosticTooltip, {
-    props: { diagnostics },
+    props: { diagnostics, tooltip },
     browser: {
       i18nMode: 'localized',
     },
@@ -76,5 +76,13 @@ describe('StatementDiagnosticTooltip', () => {
     await page.getByRole('button', { name: 'Field control' }).hover()
 
     await expect.element(page.getByRole('tooltip')).not.toBeInTheDocument()
+  })
+
+  it('无诊断时通过 tooltip 文案说明控件效果', async () => {
+    renderTooltip([], 'The next statement runs immediately.')
+
+    await page.getByRole('button', { name: 'Field control' }).hover()
+
+    await expect.element(page.getByRole('note')).toHaveTextContent('The next statement runs immediately.')
   })
 })

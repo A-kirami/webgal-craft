@@ -74,6 +74,14 @@ function label(field: EditorField): string {
   return resolveI18n(field.field.label, t, i18nContent)
 }
 
+function tooltip(field: EditorField): string | undefined {
+  if (field.field.type !== 'switch' || !field.field.tooltip) {
+    return undefined
+  }
+  const tooltip = switchModelValue(field) ? field.field.tooltip.on : field.field.tooltip.off
+  return resolveI18n(tooltip, t, i18nContent)
+}
+
 function controlClass(field: EditorField): string {
   return cn(
     field.field.className,
@@ -296,6 +304,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
 
         <StatementDiagnosticTooltip
           :diagnostics="getFieldDiagnostics(field)"
+          :tooltip="tooltip(field)"
           :class="diagnosticTriggerClass(field)"
         >
           <Switch

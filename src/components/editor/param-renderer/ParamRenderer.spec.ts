@@ -4,6 +4,7 @@ import { page } from 'vitest/browser'
 import { defineComponent, h } from 'vue'
 
 import {
+  createBrowserCheckboxStub,
   createBrowserContainerStub,
   createBrowserInputStub,
   renderInBrowser,
@@ -20,7 +21,7 @@ import ParamRenderer from './ParamRenderer.vue'
 
 import type { PropType } from 'vue'
 import type { ResolvedAutocompleteOption } from '~/features/editor/command-registry/autocomplete-options'
-import type { AutocompleteTextField, EditorField, NumberField, PlainTextField, ValueChoiceField } from '~/features/editor/command-registry/schema'
+import type { AutocompleteTextField, EditorField, NumberField, PlainTextField, SwitchField, ValueChoiceField } from '~/features/editor/command-registry/schema'
 import type { EditorFieldDiagnostic } from '~/features/editor/diagnostics/types'
 import type { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
 
@@ -92,14 +93,24 @@ function createPathChoiceField(): EditorField {
   }
 }
 
-function createSwitchField(): EditorField {
+function createSwitchField(key: string = 'enabled'): EditorField {
+  const field: SwitchField = {
+    key,
+    label: 'Enabled',
+    tooltip: {
+      on: 'The next statement runs immediately.',
+      off: 'The next statement waits for the current effect.',
+    },
+    type: 'switch',
+  }
+
   return {
-    key: 'enabled',
-    storage: 'content',
-    field: {
-      key: 'enabled',
-      label: 'Enabled',
-      type: 'switch',
+    key,
+    storage: 'arg',
+    field,
+    argField: {
+      field,
+      storageKey: key,
     },
   }
 }
@@ -231,6 +242,22 @@ const globalStubs = {
   Switch: createBrowserContainerStub('SwitchStub'),
   Textarea: createTextareaStub(),
 }
+
+const statementTooltipProbe = defineComponent({
+  name: 'StatementTooltipProbe',
+  props: {
+    tooltip: {
+      type: String,
+      default: undefined,
+    },
+  },
+  setup(props, { slots }) {
+    return () => h('div', {
+      'data-testid': 'param-field-tooltip',
+      'data-tooltip': props.tooltip,
+    }, slots.default?.())
+  },
+})
 
 type BrowserRenderOptions = NonNullable<Parameters<typeof renderInBrowser>[1]>
 type BrowserStubs = NonNullable<NonNullable<BrowserRenderOptions['global']>['stubs']>
@@ -371,6 +398,39 @@ describe('ParamRenderer', () => {
     const control = requireHtmlElement(document.querySelector('[role="switch"]'))
     expect(trigger.getBoundingClientRect().width).toBeCloseTo(control.getBoundingClientRect().width, 0)
     expect(trigger.getBoundingClientRect().width).toBeLessThan(field.getBoundingClientRect().width)
+  })
+
+  it('switch tooltip 按当前开关状态展示对应效果', () => {
+    renderInBrowser(ParamRenderer, {
+      props: {
+        canScrub: () => false,
+        fields: [createSwitchField('disabled'), createSwitchField('enabled')],
+        fileRootPaths: {},
+        getAutocompleteOptions: () => [],
+        getDynamicOptions: () => [],
+        getFieldSelectValue: () => '',
+        getFieldValue: (field: EditorField) => field.key === 'enabled',
+        getFieldDiagnostics: () => [],
+        isFieldVisible: () => true,
+      },
+      global: {
+        provide: {
+          [statementEditorSurfaceKey]: 'panel',
+        },
+        stubs: {
+          ...globalStubs,
+          StatementDiagnosticTooltip: statementTooltipProbe,
+          Switch: createBrowserCheckboxStub('SwitchStub'),
+        },
+      },
+    })
+
+    const tooltips = [...document.querySelectorAll<HTMLElement>('[data-testid="param-field-tooltip"]')]
+      .map(element => element.dataset.tooltip)
+    expect(tooltips).toEqual([
+      'The next statement waits for the current effect.',
+      'The next statement runs immediately.',
+    ])
   })
 
   it('inline 下 standalone 文本字段隐藏外部标签并回退 label 为 placeholder', async () => {

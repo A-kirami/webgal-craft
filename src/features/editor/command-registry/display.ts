@@ -61,8 +61,8 @@ export const displayEntries: CommandEntry[] = [
           value: String(delay),
         })),
       }),
-      arg({ key: 'hold', label: t => t('edit.visualEditor.params.hold'), type: 'switch', defaultValue: false }),
-      arg({ key: 'userForward', label: t => t('edit.visualEditor.params.userForward'), type: 'switch', defaultValue: false }),
+      arg({ key: 'hold', label: t => t('edit.visualEditor.params.hold'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.hold.on'), off: t => t('edit.visualEditor.paramTooltips.hold.off') }, type: 'switch', defaultValue: false }),
+      arg({ key: 'userForward', label: t => t('edit.visualEditor.params.userForward'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.userForward.on'), off: t => t('edit.visualEditor.paramTooltips.userForward.off') }, type: 'switch', defaultValue: false }),
     ],
   },
   {
@@ -73,7 +73,7 @@ export const displayEntries: CommandEntry[] = [
     category: 'display',
     fields: [
       content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'video', extensions: VIDEO_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.video') } }),
-      arg({ key: 'skipOff', label: t => t('edit.visualEditor.params.skipOff'), type: 'switch', defaultValue: false }),
+      arg({ key: 'skipOff', label: t => t('edit.visualEditor.params.skipOff'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.skipOff.on'), off: t => t('edit.visualEditor.paramTooltips.skipOff.off') }, type: 'switch', defaultValue: false }),
     ],
   },
   {
@@ -82,7 +82,7 @@ export const displayEntries: CommandEntry[] = [
     description: t => t('edit.visualEditor.commandDescriptions.filmMode'),
     icon: 'i-lucide-clapperboard',
     category: 'display',
-    fields: [content({ key: 'state', type: 'switch', onValue: 'on', offValue: 'off', label: t => t('edit.visualEditor.params.filmModeState'), offLabel: t => t('edit.visualEditor.params.filmModeStateOff') })],
+    fields: [content({ key: 'state', type: 'switch', onValue: 'on', offValue: 'off', label: t => t('edit.visualEditor.params.filmModeState'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.filmModeState.on'), off: t => t('edit.visualEditor.paramTooltips.filmModeState.off') }, offLabel: t => t('edit.visualEditor.params.filmModeStateOff') })],
   },
   {
     type: commandType.setTextbox,
@@ -90,7 +90,7 @@ export const displayEntries: CommandEntry[] = [
     description: t => t('edit.visualEditor.commandDescriptions.setTextbox'),
     icon: 'i-lucide-panel-bottom',
     category: 'display',
-    fields: [content({ key: 'state', type: 'switch', onValue: 'show', offValue: 'hide', label: t => t('edit.visualEditor.params.textboxState'), offLabel: t => t('edit.visualEditor.params.textboxStateOff') })],
+    fields: [content({ key: 'state', type: 'switch', onValue: 'show', offValue: 'hide', label: t => t('edit.visualEditor.params.textboxState'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.textboxState.on'), off: t => t('edit.visualEditor.paramTooltips.textboxState.off') }, offLabel: t => t('edit.visualEditor.params.textboxStateOff') })],
   },
   {
     type: commandType.applyStyle,
