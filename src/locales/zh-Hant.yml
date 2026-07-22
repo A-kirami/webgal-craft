@@ -614,6 +614,10 @@ edit:
       left: 左側位置
       right: 右側位置
       center: 中間位置
+    missingResource: "找不到資源：{path}"
+  diagnostics:
+    duplicateLabel: '標籤「{label}」在目前場景中定義了 {count} 次，跳轉目標不明確。'
+    missingLabel: '標籤「{label}」未在目前場景中定義。'
   errors:
     fileSyncFailed: 檔案同步失敗，請稍後重試
     previewUnavailable: 預覽地址不存在，請先啟動預覽

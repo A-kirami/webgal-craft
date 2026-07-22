@@ -3,8 +3,7 @@ import '~/__tests__/mocks/router'
 import '~/__tests__/mocks/tauri-fs'
 import '~/__tests__/mocks/modal-store'
 
-import { exists, readDir } from '@tauri-apps/plugin-fs'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { SAY_CONTINUATION_RAW } from '~/domain/script/codec'
@@ -25,23 +24,9 @@ import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-ed
 
 import type { ArgField } from '~/features/editor/command-registry/schema'
 
-const mockExists = vi.mocked(exists)
-const readDirMock = vi.mocked(readDir)
-
 beforeEach(() => {
   resetStatementEditorRuntime()
-  readDirMock.mockReset()
-  mockExists.mockReset()
 })
-
-function createDirEntry(name: string, isDirectory: boolean) {
-  return {
-    name,
-    isDirectory,
-    isFile: !isDirectory,
-    isSymlink: false,
-  }
-}
 
 describe('useStatementEditor', () => {
   it('choose 默认分支由特殊内容编辑器托管，不显示独立参数字段', () => {
@@ -459,41 +444,5 @@ describe('useStatementEditor', () => {
     await flushMicrotasks(3)
 
     expect(editor.resource.fileRootPaths.value).toEqual({})
-  })
-
-  it('file missing 应复用资源索引，而不是在编辑器热路径中直接调用 exists', async () => {
-    vi.useFakeTimers()
-
-    try {
-      workspaceStoreState.CWD = '/project'
-      readDirMock.mockImplementation(async (path: string | URL) => {
-        switch (String(path)) {
-          case '/project/game': {
-            return [
-              createDirEntry('background', true),
-            ]
-          }
-          case '/project/game/background': {
-            return [
-              createDirEntry('bg.jpg', false),
-            ]
-          }
-          default: {
-            throw new TypeError(`unexpected readDir path: ${String(path)}`)
-          }
-        }
-      })
-      mockExists.mockResolvedValue(false)
-
-      const { editor } = createReactiveHarness('changeBg: bg.jpg;')
-
-      await vi.runAllTimersAsync()
-      await flushMicrotasks(6)
-
-      expect(editor.resource.fileMissingKeys.value).toEqual(new Set())
-      expect(mockExists).not.toHaveBeenCalled()
-    } finally {
-      vi.useRealTimers()
-    }
   })
 })

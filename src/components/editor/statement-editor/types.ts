@@ -2,6 +2,7 @@ import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { ChooseContentItem, SetVarContent, StyleRuleContentItem } from '~/domain/script/content'
 import type { ResolvedAutocompleteOption } from '~/features/editor/command-registry/autocomplete-options'
 import type { EditorField } from '~/features/editor/command-registry/schema'
+import type { EditorFieldDiagnostic } from '~/features/editor/diagnostics/types'
 
 export interface ValueBinding<T> {
   readonly value: T
@@ -25,6 +26,7 @@ export interface StatementSpecialContentBindings {
   handleStyleNewNameChange: (index: number, value: string) => void
   handleRemoveStyleRule: (index: number) => void
   handleAddStyleRule: () => void
+  getChoiceDiagnostics: (index: number) => readonly EditorFieldDiagnostic[]
 }
 
 export interface StatementParamRendererSharedProps {
@@ -34,7 +36,7 @@ export interface StatementParamRendererSharedProps {
   getDynamicOptions: (field: EditorField) => { label: string, value: string }[]
   getFieldSelectValue: (field: EditorField) => string
   getFieldValue: (field: EditorField) => string | number | boolean
-  isFieldFileMissing: (field: EditorField) => boolean
+  getFieldDiagnostics: (field: EditorField) => readonly EditorFieldDiagnostic[]
   isFieldVisible: (field: EditorField) => boolean
   parsed?: ISentence
 }

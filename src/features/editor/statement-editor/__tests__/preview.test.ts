@@ -10,6 +10,7 @@ import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { ArgField, EditorField } from '~/features/editor/command-registry/schema'
 
 const identityTranslate = (key: string): string => key
+const noFieldStatus = () => 'none' as const
 
 function createSentence(overrides?: Partial<ISentence>): ISentence {
   return {
@@ -62,6 +63,27 @@ function createContentField(
 }
 
 describe('buildStatementPreviewParams', () => {
+  it('内容无效时标记对应的折叠参数', () => {
+    const result = buildStatementPreviewParams({
+      autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
+      parsed: createSentence({ command: commandType.label, content: 'start' }),
+      statementType: 'command',
+      entryRawText: 'label:start;',
+      previousSpeaker: '',
+      contentField: createContentField('text'),
+      argFields: [],
+      getFieldStatus: field => field.kind === 'content' ? 'warning' : 'none',
+      t: identityTranslate,
+    })
+
+    expect(result).toEqual([{
+      label: '',
+      value: 'start',
+      isFile: false,
+      status: 'warning',
+    }])
+  })
+
   it('unsupported 语句展示原始文本', () => {
     const result = buildStatementPreviewParams({
       autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
@@ -71,7 +93,7 @@ describe('buildStatementPreviewParams', () => {
       previousSpeaker: '',
       contentField: undefined,
       argFields: [],
-      fileMissingKeys: new Set(),
+      getFieldStatus: noFieldStatus,
       t: identityTranslate,
     })
 
@@ -93,7 +115,7 @@ describe('buildStatementPreviewParams', () => {
       previousSpeaker: 'Bob',
       contentField: createContentField('text'),
       argFields: [],
-      fileMissingKeys: new Set(),
+      getFieldStatus: noFieldStatus,
       t: identityTranslate,
     })
     const withoutColon = buildStatementPreviewParams({
@@ -104,7 +126,7 @@ describe('buildStatementPreviewParams', () => {
       previousSpeaker: 'Bob',
       contentField: createContentField('text'),
       argFields: [],
-      fileMissingKeys: new Set(),
+      getFieldStatus: noFieldStatus,
       t: identityTranslate,
     })
 
@@ -125,7 +147,7 @@ describe('buildStatementPreviewParams', () => {
       previousSpeaker: '',
       contentField: createContentField('text'),
       argFields: readArgFields(getCommandConfig(commandType.say)),
-      fileMissingKeys: new Set(),
+      getFieldStatus: noFieldStatus,
       t: identityTranslate,
     })
 
@@ -133,7 +155,6 @@ describe('buildStatementPreviewParams', () => {
       { label: 'Alice', value: 'Hi', truncate: true },
       {
         color: undefined,
-        fileMissing: false,
         isFile: false,
         label: 'edit.visualEditor.params.associatedFigure',
         value: 'edit.visualEditor.options.figureLeft',
@@ -154,7 +175,7 @@ describe('buildStatementPreviewParams', () => {
       previousSpeaker: '',
       contentField: createContentField('text'),
       argFields: readArgFields(getCommandConfig(commandType.say)),
-      fileMissingKeys: new Set(),
+      getFieldStatus: noFieldStatus,
       t: identityTranslate,
     })
 
@@ -162,7 +183,6 @@ describe('buildStatementPreviewParams', () => {
       { label: 'Alice', value: 'Hi', truncate: true },
       {
         color: undefined,
-        fileMissing: false,
         isFile: false,
         label: 'edit.visualEditor.params.associatedFigure',
         value: 'hero',
@@ -181,7 +201,7 @@ describe('buildStatementPreviewParams', () => {
         options: [{ value: 'rain', label: () => '雨' }],
       }),
       argFields: [],
-      fileMissingKeys: new Set(),
+      getFieldStatus: noFieldStatus,
       t: identityTranslate,
     })
     const fileResult = buildStatementPreviewParams({
@@ -194,12 +214,12 @@ describe('buildStatementPreviewParams', () => {
         fileConfig: { assetType: 'bgm', extensions: ['.jpg'], title: () => 'file' },
       }),
       argFields: [],
-      fileMissingKeys: new Set(['__content__']),
+      getFieldStatus: field => field.kind === 'content' ? 'error' : 'none',
       t: identityTranslate,
     })
 
     expect(selectResult[0]).toMatchObject({ value: '雨' })
-    expect(fileResult[0]).toMatchObject({ isFile: true, fileMissing: true, value: 'bg.jpg' })
+    expect(fileResult[0]).toMatchObject({ isFile: true, status: 'error', value: 'bg.jpg' })
   })
 
   it('choose 默认分支显示选项文本而不是存储序号', () => {
@@ -216,7 +236,7 @@ describe('buildStatementPreviewParams', () => {
       previousSpeaker: '',
       contentField: createContentField('file'),
       argFields: readArgFields(getCommandConfig(commandType.choose)),
-      fileMissingKeys: new Set(),
+      getFieldStatus: noFieldStatus,
       t: identityTranslate,
     })
 
@@ -224,6 +244,29 @@ describe('buildStatementPreviewParams', () => {
       label: 'edit.visualEditor.params.defaultChoose',
       value: '返回',
     })
+  })
+
+  it('choose 折叠预览与诊断使用过滤空项后的相同索引', () => {
+    const result = buildStatementPreviewParams({
+      autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
+      parsed: createSentence({
+        command: commandType.choose,
+        commandRaw: 'choose',
+        content: '继续:next.txt||返回:missing.txt',
+      }),
+      statementType: 'command',
+      entryRawText: 'choose:继续:next.txt||返回:missing.txt;',
+      previousSpeaker: '',
+      contentField: createContentField('file'),
+      argFields: [],
+      getFieldStatus: field => field.kind === 'choice' && field.index === 1 ? 'error' : 'none',
+      t: identityTranslate,
+    })
+
+    expect(result).toEqual([
+      { label: '继续', value: 'next.txt' },
+      { label: '返回', value: 'missing.txt', status: 'error' },
+    ])
   })
 
   it('choose 默认分支未命名或索引非法时不回退显示存储序号', () => {
@@ -240,7 +283,7 @@ describe('buildStatementPreviewParams', () => {
       previousSpeaker: '',
       contentField: createContentField('file'),
       argFields: readArgFields(getCommandConfig(commandType.choose)),
-      fileMissingKeys: new Set(),
+      getFieldStatus: noFieldStatus,
       t: identityTranslate,
     })
 
@@ -283,13 +326,13 @@ describe('buildStatementPreviewParams', () => {
           },
         }),
       ],
-      fileMissingKeys: new Set(),
+      getFieldStatus: noFieldStatus,
       t: identityTranslate,
     })
 
     expect(result).toEqual([
-      { label: '', value: '开始', isFile: false, fileMissing: false },
-      { label: 'target', value: '左侧立绘', color: undefined, isFile: false, fileMissing: false },
+      { label: '', value: '开始', isFile: false },
+      { label: 'target', value: '左侧立绘', color: undefined, isFile: false },
     ])
   })
 
@@ -349,14 +392,14 @@ describe('buildStatementPreviewParams', () => {
       previousSpeaker: '',
       contentField: createContentField('text'),
       argFields,
-      fileMissingKeys: new Set(['sprite']),
+      getFieldStatus: field => field.kind === 'argument' && field.key === 'sprite' ? 'error' : 'none',
       t: identityTranslate,
     })
 
     expect(result.some(item => item.label === '模式' && item.value === '雨')).toBe(true)
     expect(result.some(item => item.label === '自动' && item.value === '')).toBe(true)
     expect(result.some(item => item.label === '速度')).toBe(false)
-    expect(result.some(item => item.label === '立绘' && item.fileMissing)).toBe(true)
+    expect(result.some(item => item.label === '立绘' && item.status === 'error')).toBe(true)
     expect(result.some(item => item.label === '颜色' && item.color === '#ffffff')).toBe(true)
   })
 
@@ -397,12 +440,12 @@ describe('buildStatementPreviewParams', () => {
       previousSpeaker: '',
       contentField: createContentField('text'),
       argFields,
-      fileMissingKeys: new Set(),
+      getFieldStatus: noFieldStatus,
       t: identityTranslate,
     })
 
     expect(result).toEqual([
-      { label: '', value: 'figureA', isFile: false, fileMissing: false },
+      { label: '', value: 'figureA', isFile: false },
       { label: 'X', value: '10' },
       { label: '缓动', value: '线性' },
     ])

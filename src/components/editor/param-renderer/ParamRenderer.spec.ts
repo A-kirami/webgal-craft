@@ -9,15 +9,19 @@ import {
   renderInBrowser,
 } from '~/__tests__/browser-render'
 import Autocomplete from '~/components/primitives/Autocomplete.vue'
+import Switch from '~/components/ui/switch/Switch.vue'
 import { statementEditorSurfaceKey } from '~/features/editor/statement-editor/surface-context'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import 'virtual:uno.css'
 
+import NumberControl from './controls/NumberControl.vue'
+import ParamChoiceField from './ParamChoiceField.vue'
 import ParamRenderer from './ParamRenderer.vue'
 
 import type { PropType } from 'vue'
 import type { ResolvedAutocompleteOption } from '~/features/editor/command-registry/autocomplete-options'
-import type { AutocompleteTextField, EditorField, PlainTextField, ValueChoiceField } from '~/features/editor/command-registry/schema'
+import type { AutocompleteTextField, EditorField, NumberField, PlainTextField, ValueChoiceField } from '~/features/editor/command-registry/schema'
+import type { EditorFieldDiagnostic } from '~/features/editor/diagnostics/types'
 import type { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
 
 const defaultStandaloneTextField = {
@@ -86,6 +90,45 @@ function createPathChoiceField(): EditorField {
       storageKey: 'expression',
     },
   }
+}
+
+function createSwitchField(): EditorField {
+  return {
+    key: 'enabled',
+    storage: 'content',
+    field: {
+      key: 'enabled',
+      label: 'Enabled',
+      type: 'switch',
+    },
+  }
+}
+
+function createNumberField(): EditorField {
+  const field: NumberField = {
+    key: 'time',
+    label: 'Time',
+    type: 'number',
+    unit: 'ms',
+  }
+  return { key: 'time', storage: 'content', field }
+}
+
+const warningDiagnostic: EditorFieldDiagnostic = {
+  code: 'duplicate-label',
+  count: 2,
+  field: { kind: 'content' },
+  label: 'start',
+  severity: 'warning',
+  source: 'scene',
+}
+
+const errorDiagnostic: EditorFieldDiagnostic = {
+  code: 'missing-label',
+  field: { kind: 'content' },
+  label: 'missing',
+  severity: 'error',
+  source: 'scene',
 }
 
 function createTextareaStub() {
@@ -189,9 +232,14 @@ const globalStubs = {
   Textarea: createTextareaStub(),
 }
 
-function renderRenderer(surface: StatementEditorSurface, fieldOverrides: Partial<PlainTextField> = {}) {
-  const field = createStandaloneTextField(fieldOverrides)
+type BrowserRenderOptions = NonNullable<Parameters<typeof renderInBrowser>[1]>
+type BrowserStubs = NonNullable<NonNullable<BrowserRenderOptions['global']>['stubs']>
 
+function renderFieldRenderer(
+  surface: StatementEditorSurface,
+  field: EditorField,
+  stubs: BrowserStubs = globalStubs,
+) {
   return renderInBrowser(ParamRenderer, {
     props: {
       canScrub: () => false,
@@ -201,19 +249,27 @@ function renderRenderer(surface: StatementEditorSurface, fieldOverrides: Partial
       getDynamicOptions: () => [],
       getFieldSelectValue: () => '',
       getFieldValue: () => '',
-      isFieldFileMissing: () => false,
+      getFieldDiagnostics: () => [],
       isFieldVisible: () => true,
     },
     global: {
       provide: {
         [statementEditorSurfaceKey]: surface,
       },
-      stubs: globalStubs,
+      stubs,
     },
   })
 }
 
-function renderChoiceRenderer(enableComboboxPathDelimiter: boolean) {
+function renderRenderer(surface: StatementEditorSurface, fieldOverrides: Partial<PlainTextField> = {}) {
+  return renderFieldRenderer(surface, createStandaloneTextField(fieldOverrides))
+}
+
+function renderChoiceRenderer(
+  enableComboboxPathDelimiter: boolean,
+  useRealControl: boolean = false,
+  diagnostics: readonly EditorFieldDiagnostic[] = [],
+) {
   const field = createPathChoiceField()
   const pinia = createPinia()
   const store = useEditSettingsStore(pinia)
@@ -231,7 +287,7 @@ function renderChoiceRenderer(enableComboboxPathDelimiter: boolean) {
       ],
       getFieldSelectValue: () => '',
       getFieldValue: () => '',
-      isFieldFileMissing: () => false,
+      getFieldDiagnostics: () => diagnostics,
       isFieldVisible: () => true,
     },
     browser: {
@@ -243,7 +299,7 @@ function renderChoiceRenderer(enableComboboxPathDelimiter: boolean) {
       },
       stubs: {
         ...globalStubs,
-        ParamChoiceField: createParamChoiceFieldProbeStub(),
+        ParamChoiceField: useRealControl ? ParamChoiceField : createParamChoiceFieldProbeStub(),
       },
     },
   })
@@ -252,6 +308,7 @@ function renderChoiceRenderer(enableComboboxPathDelimiter: boolean) {
 interface RenderAutocompleteOptions {
   field?: EditorField
   onUpdateValue?: (item: { field: EditorField, value: string | number | boolean }) => void
+  diagnostics?: readonly EditorFieldDiagnostic[]
   options?: ResolvedAutocompleteOption[]
   surface?: StatementEditorSurface
   useRealAutocomplete?: boolean
@@ -270,7 +327,7 @@ function renderAutocompleteRenderer(options: RenderAutocompleteOptions = {}) {
       getDynamicOptions: () => [],
       getFieldSelectValue: () => '',
       getFieldValue: () => options.value?.() ?? 'hero',
-      isFieldFileMissing: () => false,
+      getFieldDiagnostics: () => options.diagnostics ?? [],
       isFieldVisible: () => true,
       onUpdateValue: options.onUpdateValue,
     },
@@ -292,8 +349,28 @@ describe('ParamRenderer', () => {
   it('panel 下 standalone 文本字段显示外部标签且不回退 label 为 placeholder', async () => {
     renderRenderer('panel')
 
-    await expect.element(page.getByText('Dialogue')).toBeInTheDocument()
-    await expect.element(page.getByRole('textbox')).toHaveAttribute('placeholder', '')
+    const label = page.getByText('Dialogue')
+    const textbox = page.getByRole('textbox')
+    await expect.element(label).toBeInTheDocument()
+    await expect.element(textbox).toHaveAttribute('placeholder', '')
+
+    const trigger = document.querySelector('[data-statement-diagnostic-trigger]')
+    expect(trigger).toContain(textbox.element())
+    expect(trigger).not.toContain(label.element())
+    expect(trigger).toHaveClass('w-full', 'flex-col')
+  })
+
+  it('panel 下 switch 的诊断锚点与控件等宽且不占满字段', () => {
+    renderFieldRenderer('panel', createSwitchField(), {
+      ...globalStubs,
+      Switch,
+    })
+
+    const trigger = requireHtmlElement(document.querySelector('[data-statement-diagnostic-trigger]'))
+    const field = requireHtmlElement(trigger.closest('[data-layout="row"]'))
+    const control = requireHtmlElement(document.querySelector('[role="switch"]'))
+    expect(trigger.getBoundingClientRect().width).toBeCloseTo(control.getBoundingClientRect().width, 0)
+    expect(trigger.getBoundingClientRect().width).toBeLessThan(field.getBoundingClientRect().width)
   })
 
   it('inline 下 standalone 文本字段隐藏外部标签并回退 label 为 placeholder', async () => {
@@ -319,13 +396,44 @@ describe('ParamRenderer', () => {
   it('启用路径分隔符时，为 path grouping 字段构建级联 combobox 数据', async () => {
     renderChoiceRenderer(true)
 
-    await expect.element(page.getByTestId('param-choice-field')).toHaveAttribute('data-has-cascading-combobox', 'true')
+    const control = page.getByTestId('param-choice-field')
+    await expect.element(control).toHaveAttribute('data-has-cascading-combobox', 'true')
   })
 
   it('关闭路径分隔符时，path grouping 字段回退为基础 combobox 数据', async () => {
     renderChoiceRenderer(false)
 
     await expect.element(page.getByTestId('param-choice-field')).toHaveAttribute('data-has-cascading-combobox', 'false')
+  })
+
+  it('panel 下 choice 控件占满诊断锚点', async () => {
+    renderChoiceRenderer(true, true)
+
+    const trigger = requireHtmlElement(document.querySelector('[data-statement-diagnostic-trigger]'))
+    const choice = requireHtmlElement(await page.getByRole('combobox').element())
+    expect(choice.getBoundingClientRect().width).toBeCloseTo(trigger.getBoundingClientRect().width, 0)
+  })
+
+  it('error combobox 使用 destructive 状态样式', async () => {
+    renderChoiceRenderer(true, true, [errorDiagnostic])
+
+    await expect.element(page.getByRole('combobox')).toHaveClass(
+      'text-destructive!',
+      'bg-destructive/5',
+      'border-destructive/50',
+      'focus-visible:ring-destructive/30',
+    )
+  })
+
+  it('panel 下 number 控件占满诊断锚点', () => {
+    renderFieldRenderer('panel', createNumberField(), {
+      ...globalStubs,
+      NumberControl,
+    })
+
+    const trigger = requireHtmlElement(document.querySelector('[data-statement-diagnostic-trigger]'))
+    const number = requireHtmlElement(document.querySelector('[data-slot="input-group"]'))
+    expect(number.getBoundingClientRect().width).toBeCloseTo(trigger.getBoundingClientRect().width, 0)
   })
 
   it('普通文本 autocomplete 字段渲染 Autocomplete 并保留自由输入', async () => {
@@ -340,24 +448,23 @@ describe('ParamRenderer', () => {
     expect(handleUpdateValue).toHaveBeenCalledWith({ field, value: 'new-hero' })
   })
 
-  it('inline autocomplete 的下拉指示器可见且保持在输入框边界内', async () => {
-    const field = createStandaloneAutocompleteField({ className: 'min-w-20', inlineLayout: undefined })
-    renderAutocompleteRenderer({
-      field,
-      options: [{ label: '雨', value: '雨' }],
-      surface: 'inline',
-      useRealAutocomplete: true,
-      value: () => '雨',
-    })
+  it('warning autocomplete 使用与 destructive 同层级的黄色状态样式', async () => {
+    renderAutocompleteRenderer({ diagnostics: [warningDiagnostic], useRealAutocomplete: true })
 
-    const autocomplete = requireHtmlElement(await page.getByRole('combobox').element())
-    const indicator = requireHtmlElement(await page.getByTestId('autocomplete-indicator').element())
+    const autocomplete = page.getByRole('combobox')
+    await expect.element(autocomplete).toHaveClass(
+      'text-yellow-700!',
+      'bg-yellow/5',
+      'border-yellow/50',
+      'focus-visible:ring-yellow/30',
+    )
+    await expect.element(autocomplete).not.toHaveClass('text-destructive!')
+  })
 
-    const inputRect = autocomplete.getBoundingClientRect()
-    const indicatorRect = indicator.getBoundingClientRect()
-    expect(indicatorRect.width).toBeGreaterThan(0)
-    expect(indicatorRect.height).toBeGreaterThan(0)
-    expect(indicatorRect.left).toBeGreaterThanOrEqual(inputRect.left - 1)
-    expect(indicatorRect.right).toBeLessThanOrEqual(inputRect.right + 1)
+  it('error autocomplete 使用 destructive 状态样式', async () => {
+    renderAutocompleteRenderer({ diagnostics: [errorDiagnostic], useRealAutocomplete: true })
+
+    const autocomplete = page.getByRole('combobox')
+    await expect.element(autocomplete).toHaveClass('text-destructive!')
   })
 })

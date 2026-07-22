@@ -9,14 +9,17 @@ import {
   resolveScenePanelTargetPath,
 } from '~/features/editor/scene-panel/scene-panel'
 import { gameSceneDir } from '~/services/platform/app-paths'
+import { useEditorDiagnosticsStore } from '~/stores/editor-diagnostics'
 import { useFileStore } from '~/stores/file'
 import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import type { FlattenedItem } from 'reka-ui'
+import type { DiagnosticSeverity } from '~/features/editor/diagnostics/types'
 import type { ScenePanelTreeNode } from '~/features/editor/scene-panel/scene-panel'
 
 const fileStore = useFileStore()
+const diagnosticsStore = useEditorDiagnosticsStore()
 const workspaceStore = useWorkspaceStore()
 const tabsStore = useTabsStore()
 const fileSystemEvents = useFileSystemEvents()
@@ -62,6 +65,13 @@ function handleClick(item: FlattenedItem<ScenePanelTreeNode>) {
   }
   const { name, path } = item.value
   tabsStore.openTab(name, AbsPath.from(path))
+}
+
+function getSceneItemDiagnosticSeverity(item: ScenePanelTreeNode): DiagnosticSeverity | undefined {
+  if (item.children) {
+    return
+  }
+  return diagnosticsStore.getHighestSeverity(AbsPath.from(item.path))
 }
 
 function handleDoubleClick(item: FlattenedItem<ScenePanelTreeNode>) {
@@ -218,6 +228,7 @@ onScopeDispose(() => {
       ref="fileTreeRef"
       ::selected-item="selectedItem"
       :items="items"
+      :item-severity="getSceneItemDiagnosticSeverity"
       :get-key="(item) => item.path"
       open-created-file-in-tab
       :enable-tooltip="false"

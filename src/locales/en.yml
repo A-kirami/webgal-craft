@@ -614,6 +614,10 @@ edit:
       left: Left position
       right: Right position
       center: Center position
+    missingResource: "Resource not found: {path}"
+  diagnostics:
+    duplicateLabel: 'Label "{label}" is defined {count} times in this scene, so jump targets are ambiguous.'
+    missingLabel: 'Label "{label}" is not defined in this scene.'
   errors:
     fileSyncFailed: Failed to sync the file. Please try again shortly.
     previewUnavailable: Preview URL is not available. Please start preview first.

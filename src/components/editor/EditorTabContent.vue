@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { FileText, X } from '@lucide/vue'
 
+import { getDiagnosticSeverityTextClass } from '~/features/editor/diagnostics/presentation'
+
+import type { DiagnosticSeverity } from '~/features/editor/diagnostics/types'
 import type { Tab } from '~/stores/tabs'
 
 interface Props {
   active: boolean
   closeInteractive?: boolean
+  diagnosticSeverity?: DiagnosticSeverity
   tab: Tab
 }
 
@@ -32,7 +36,11 @@ function handleCloseClick() {
     <FileText class="size-4" />
     <span
       class="text-sm font-light"
-      :class="{ 'italic': props.tab.isPreview }"
+      :class="[
+        { 'italic': props.tab.isPreview },
+        getDiagnosticSeverityTextClass(props.diagnosticSeverity),
+      ]"
+      :data-diagnostic-severity="props.diagnosticSeverity"
     >
       {{ props.tab.name }}
     </span>

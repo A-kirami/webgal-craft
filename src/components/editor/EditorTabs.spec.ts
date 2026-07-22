@@ -64,18 +64,24 @@ const {
   modalOpenMock,
   saveFileMock,
   useEditorStoreMock,
+  useEditorDiagnosticsStoreMock,
   useModalStoreMock,
   useTabsStoreMock,
 } = vi.hoisted(() => ({
   modalOpenMock: vi.fn(),
   saveFileMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
+  useEditorDiagnosticsStoreMock: vi.fn(),
   useModalStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
 }))
 
 vi.mock('~/stores/editor', () => ({
   useEditorStore: useEditorStoreMock,
+}))
+
+vi.mock('~/stores/editor-diagnostics', () => ({
+  useEditorDiagnosticsStore: useEditorDiagnosticsStoreMock,
 }))
 
 vi.mock('~/stores/modal', () => ({
@@ -138,15 +144,70 @@ describe('EditorTabs', () => {
     modalOpenMock.mockReset()
     saveFileMock.mockReset()
     useEditorStoreMock.mockReset()
+    useEditorDiagnosticsStoreMock.mockReset()
     useModalStoreMock.mockReset()
     useTabsStoreMock.mockReset()
 
     useEditorStoreMock.mockReturnValue({
       saveFile: saveFileMock,
     })
+    useEditorDiagnosticsStoreMock.mockReturnValue({
+      getHighestSeverity: vi.fn(() => undefined),
+    })
     useModalStoreMock.mockReturnValue({
       open: modalOpenMock,
     })
+  })
+
+  it('按文档最高问题等级只给标签名称着色', async () => {
+    useTabsStoreMock.mockReturnValue(createTabsStore([
+      {
+        activeAt: 1,
+        isPreview: false,
+        name: 'warning.txt',
+        path: AbsPath.from('/project/warning.txt'),
+      },
+      {
+        activeAt: 2,
+        isPreview: false,
+        name: 'error.txt',
+        path: AbsPath.from('/project/error.txt'),
+      },
+      {
+        activeAt: 3,
+        isPreview: false,
+        name: 'clean.txt',
+        path: AbsPath.from('/project/clean.txt'),
+      },
+    ]))
+    useEditorDiagnosticsStoreMock.mockReturnValue({
+      getHighestSeverity: (path: AbsPath) => {
+        if (path.endsWith('/warning.txt')) {
+          return 'warning'
+        }
+        if (path.endsWith('/error.txt')) {
+          return 'error'
+        }
+      },
+    })
+
+    renderInBrowser(EditorTabs, { global: {} })
+
+    const warning = page.getByText('warning.txt').element().closest('[data-diagnostic-severity]')
+    const error = page.getByText('error.txt').element().closest('[data-diagnostic-severity]')
+    const clean = page.getByText('clean.txt').element().closest('[data-diagnostic-severity]')
+
+    expect(warning).toHaveAttribute('data-diagnostic-severity', 'warning')
+    expect(warning).toHaveClass('text-yellow-700')
+    expect(error).toHaveAttribute('data-diagnostic-severity', 'error')
+    expect(error).toHaveClass('text-destructive')
+    expect(clean).toBeNull()
+
+    const warningTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/warning.txt"]')
+    const errorTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/error.txt"]')
+    expect(warningTab?.querySelector('.lucide-file-text')).not.toHaveClass('text-yellow-700')
+    expect(errorTab?.querySelector('.lucide-file-text')).not.toHaveClass('text-destructive')
+    expect(errorTab?.querySelector('.lucide-x')).not.toHaveClass('text-destructive')
   })
 
   it('中键关闭已修改标签时会先打开保存确认模态框', async () => {

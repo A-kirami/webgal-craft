@@ -10,11 +10,13 @@ import {
 } from '~/features/editor/statement-editor/scene-autocomplete'
 import { StatementGroup } from '~/stores/command-panel'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
+import { useEditorDiagnosticsStore } from '~/stores/editor-diagnostics'
 import { usePreferenceStore } from '~/stores/preference'
 import { useTabsStore } from '~/stores/tabs'
 
 import type { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import type { Transform } from '~/domain/stage/types'
+import type { SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 import type { TransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 import type { ShortcutDefinition } from '~/features/editor/shortcut/types'
 
@@ -41,6 +43,7 @@ interface EffectEditorShortcutDefinition {
 
 export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
   const editorStore = useEditorStore()
+  const diagnosticsStore = useEditorDiagnosticsStore()
   const preferenceStore = usePreferenceStore()
   const tabsStore = useTabsStore()
 
@@ -69,6 +72,23 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     }
 
     return buildSceneAutocompleteOptionsFromStatements(state.statements)
+  })
+  const selectedStatementDiagnostics = computed<readonly SceneEditorDiagnostic[]>(() => {
+    const state = editorStore.currentVisualProjection
+    const statementId = selectedStatement.value?.id
+    if (!state || state.kind !== 'scene' || statementId === undefined) {
+      return []
+    }
+
+    const updateTarget = selectedStatementUpdateTarget.value
+    const statementIndex = updateTarget?.kind === 'line'
+      ? updateTarget.lineNumber - 1
+      : state.statements.findIndex(statement => statement.id === statementId)
+    if (statementIndex < 0 || statementIndex >= state.statements.length) {
+      return []
+    }
+
+    return diagnosticsStore.readStatementDiagnostics(state.path, statementIndex)
   })
   const isTextMode = computed(() => currentProjection.value === 'text')
 
@@ -249,6 +269,7 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     isTextMode,
     sceneAutocompleteOptions,
     selectedStatement,
+    selectedStatementDiagnostics,
     selectedStatementIndex,
     selectedStatementPreviousSpeaker,
     selectedStatementUpdateTarget,

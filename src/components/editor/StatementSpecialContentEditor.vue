@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { useControlId } from '~/composables/useControlId'
 import { ChooseContentItem, SetVarContent, StyleRuleContentItem } from '~/domain/script/content'
+import { getDiagnosticFieldStatus } from '~/features/editor/diagnostics/presentation'
+import { selectHighestDiagnosticSeverity } from '~/features/editor/diagnostics/types'
 import { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
+
+import StatementDiagnosticTooltip from './StatementDiagnosticTooltip.vue'
+
+import type { EditorFieldDiagnostic } from '~/features/editor/diagnostics/types'
 
 interface Props {
   surface: StatementEditorSurface
@@ -11,6 +17,7 @@ interface Props {
   defaultChooseIndex?: number
   styleRuleItems: StyleRuleContentItem[]
   sceneRootPath: string
+  getChoiceDiagnostics: (index: number) => readonly EditorFieldDiagnostic[]
 }
 
 const props = defineProps<Props>()
@@ -41,10 +48,18 @@ const choosePairItems = $computed(() =>
 const stylePairItems = $computed(() =>
   props.styleRuleItems.map(item => ({ first: item.oldName, second: item.newName })),
 )
+
+function choiceStatus(index: number) {
+  return getDiagnosticFieldStatus(selectHighestDiagnosticSeverity(props.getChoiceDiagnostics(index)))
+}
 </script>
 
 <template>
-  <div v-if="mode === 'setVar'" :class="isInline ? 'flex gap-1.5 max-w-full min-w-0 items-center' : 'flex flex-col gap-2'">
+  <div
+    v-if="mode === 'setVar'"
+    data-statement-set-var-editor
+    :class="isInline ? 'flex gap-1.5 max-w-full min-w-0 items-center' : 'flex flex-col gap-2 w-full shrink-0'"
+  >
     <template v-if="isInline">
       <Input
         :model-value="setVarContent.name"
@@ -117,27 +132,33 @@ const stylePairItems = $computed(() =>
       </Button>
     </template>
     <template #second-field="{ item, index }">
-      <FilePicker
-        :model-value="item.second"
-        :root-path="sceneRootPath"
-        :extensions="['.txt']"
-        :popover-title="$t('edit.visualEditor.filePicker.scene')"
-        :placeholder="$t('edit.visualEditor.filePicker.scene')"
-        class="flex-1 [&_input]:(text-xs pl-2.5 h-6 min-w-24 shadow-none field-sizing-content)"
-        @update:model-value="emit('chooseFile', { index, file: String($event) })"
-      />
+      <StatementDiagnosticTooltip class="flex-1" :diagnostics="getChoiceDiagnostics(index)">
+        <FilePicker
+          :model-value="item.second"
+          :invalid="choiceStatus(index) === 'error'"
+          :root-path="sceneRootPath"
+          :extensions="['.txt']"
+          :popover-title="$t('edit.visualEditor.filePicker.scene')"
+          :placeholder="$t('edit.visualEditor.filePicker.scene')"
+          class="flex-1 [&_input]:(text-xs pl-2.5 h-6 min-w-24 shadow-none field-sizing-content)"
+          @update:model-value="emit('chooseFile', { index, file: String($event) })"
+        />
+      </StatementDiagnosticTooltip>
     </template>
     <template #second-field-panel="{ item, index, inputId }">
-      <FilePicker
-        :input-id="inputId"
-        :model-value="item.second"
-        :root-path="sceneRootPath"
-        :extensions="['.txt']"
-        :popover-title="$t('edit.visualEditor.filePicker.scene')"
-        :placeholder="$t('edit.visualEditor.filePicker.scene')"
-        class="[&_input]:(text-xs h-7 shadow-none)"
-        @update:model-value="emit('chooseFile', { index, file: String($event) })"
-      />
+      <StatementDiagnosticTooltip class="flex-col w-full" :diagnostics="getChoiceDiagnostics(index)">
+        <FilePicker
+          :input-id="inputId"
+          :model-value="item.second"
+          :invalid="choiceStatus(index) === 'error'"
+          :root-path="sceneRootPath"
+          :extensions="['.txt']"
+          :popover-title="$t('edit.visualEditor.filePicker.scene')"
+          :placeholder="$t('edit.visualEditor.filePicker.scene')"
+          class="[&_input]:(text-xs h-7 shadow-none)"
+          @update:model-value="emit('chooseFile', { index, file: String($event) })"
+        />
+      </StatementDiagnosticTooltip>
     </template>
   </StatementPairListEditor>
 

@@ -11,10 +11,12 @@ import { useEditSettingsStore } from '~/stores/edit-settings'
 import { usePreviewSessionStore } from '~/stores/preview-session'
 import { useWorkspaceStore } from '~/stores/workspace'
 
+import type { SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 import type { StatementUpdatePayload, StatementUpdateTarget } from '~/features/editor/statement-editor/useStatementEditor'
 
 const props = withDefaults(defineProps<{
   entry: StatementEntry
+  diagnostics?: readonly SceneEditorDiagnostic[]
   /** 语句在列表中的序号（0-based） */
   index?: number
   /** 上一条 say 语句的说话人（用于 concat 占位符） */
@@ -59,6 +61,7 @@ const {
   paramRenderer,
 } = useStatementEditor({
   entry: () => props.entry,
+  diagnostics: () => props.diagnostics,
   updateTarget: () => props.updateTarget,
   previousSpeaker: () => props.previousSpeaker,
   emitUpdate,

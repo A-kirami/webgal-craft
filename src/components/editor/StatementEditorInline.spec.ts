@@ -91,7 +91,9 @@ function createEditorReturn(overrides: Record<string, unknown> = {}) {
       handleLabelPointerDown: vi.fn(),
       handleUpdateSelect: vi.fn(),
       handleUpdateValue: vi.fn(),
-      sharedProps: computed(() => ({})),
+      sharedProps: computed(() => ({
+        getFieldDiagnostics: () => [],
+      })),
     },
     ...overrides,
   }
@@ -122,7 +124,9 @@ const globalStubs = {
     emits: ['openAnimationEditor', 'openEffectEditor'],
     setup(_, { emit }) {
       return () => h('div', [
-        h('div', { 'data-testid': 'command-fields-section' }, 'CommandFieldsSection'),
+        h('div', {
+          'data-testid': 'command-fields-section',
+        }, 'CommandFieldsSection'),
         h('button', {
           type: 'button',
           onClick: () => emit('openEffectEditor'),

@@ -27,9 +27,11 @@ const {
   sidebarPanelMock,
   statementAnimationDialogMock,
   useEditorStoreMock,
+  useEditorDiagnosticsStoreMock,
   usePreferenceStoreMock,
   useStatementAnimationDialogMock,
   useTabsStoreMock,
+  useEditorDiagnosticsMock,
 } = vi.hoisted(() => ({
   commandBridgeMock: {
     activeBinding: {
@@ -78,9 +80,15 @@ const {
     updateFrames: vi.fn(),
   },
   useEditorStoreMock: vi.fn(),
+  useEditorDiagnosticsStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
   useStatementAnimationDialogMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
+  useEditorDiagnosticsMock: vi.fn(),
+}))
+
+vi.mock('~/features/editor/diagnostics/useEditorDiagnostics', () => ({
+  useEditorDiagnostics: useEditorDiagnosticsMock,
 }))
 
 vi.mock('~/stores/editor', () => ({
@@ -90,6 +98,10 @@ vi.mock('~/stores/editor', () => ({
   isSceneVisualProjection: (state: { kind?: string, projection?: string }) =>
     state.kind === 'scene' && state.projection === 'visual',
   useEditorStore: useEditorStoreMock,
+}))
+
+vi.mock('~/stores/editor-diagnostics', () => ({
+  useEditorDiagnosticsStore: useEditorDiagnosticsStoreMock,
 }))
 
 vi.mock('~/stores/preference', () => ({
@@ -309,7 +321,9 @@ const globalStubs = {
   StatementEditorPanel: defineComponent({
     name: 'StubStatementEditorPanel',
     setup() {
-      return () => h('div', 'Statement Editor Panel')
+      return () => h('div', {
+        'data-testid': 'statement-editor-panel',
+      }, 'Statement Editor Panel')
     },
   }),
   StatementAnimationSubDialog: defineComponent({
@@ -390,6 +404,7 @@ describe('EditorPanel', () => {
     effectEditorProviderMock.session = undefined
     useStatementAnimationDialogMock.mockReset()
     useEditorStoreMock.mockReset()
+    useEditorDiagnosticsStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()
     useTabsStoreMock.mockReset()
 
@@ -402,6 +417,9 @@ describe('EditorPanel', () => {
       },
       isCurrentSceneFile: true,
     }))
+    useEditorDiagnosticsStoreMock.mockReturnValue({
+      readStatementDiagnostics: vi.fn(() => []),
+    })
     usePreferenceStoreMock.mockReturnValue(reactive({
       showSidebar: true,
     }))

@@ -9,6 +9,8 @@ import { buildTextEditorOptions } from '~/features/editor/text-editor/text-edito
 import { createTextEditorPlayToLineController } from '~/features/editor/text-editor/text-editor-play-to-line'
 import { useTextEditorRuntime } from '~/features/editor/text-editor/useTextEditorRuntime'
 import { BASE_EDITOR_OPTIONS, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
+import { updateEditorDiagnostics } from '~/plugins/editor/diagnostics'
+import { useResourceIndex } from '~/services/resource-index/service'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { useTabsStore } from '~/stores/tabs'
@@ -55,6 +57,7 @@ const runtime = useTextEditorRuntime({
   editorRef: $$(editor),
   getState: () => props.state,
 })
+const resourceIndex = useResourceIndex()
 
 const currentTheme = $computed(() => colorMode.value === 'dark' ? THEME_DARK : THEME_LIGHT)
 const isCurrentTextProjectionActive = $computed(() => {
@@ -182,6 +185,10 @@ function schedulePlayToLineGlyphSync() {
 
 function handleModelContentChange(event: monaco.editor.IModelContentChangedEvent) {
   runtime.handleContentChange(event)
+  const model = editor?.getModel()
+  if (model) {
+    updateEditorDiagnostics(model)
+  }
   schedulePlayToLineGlyphSync()
 }
 
@@ -231,8 +238,16 @@ function createEditor() {
   editor.onMouseDown(handleEditorMouseDown)
 
   runtime.handleEditorCreated()
+  updateEditorDiagnostics(initialModel)
   syncPlayToLineGlyph()
 }
+
+watch(() => resourceIndex.revision.value, () => {
+  const model = editor?.getModel()
+  if (model) {
+    updateEditorDiagnostics(model)
+  }
+})
 
 watch(() => currentTheme, (newTheme) => {
   if (editor) {
@@ -251,12 +266,19 @@ watch(
     () => props.state.kind,
     () => props.state.isDirty,
     () => props.state.path,
-    () => locale.value,
   ],
   () => {
     syncPlayToLineGlyph()
   },
 )
+
+watch(() => locale.value, () => {
+  syncPlayToLineGlyph()
+  const model = editor?.getModel()
+  if (model) {
+    updateEditorDiagnostics(model)
+  }
+})
 
 onMounted(() => {
   if (isCurrentTextProjectionActive) {
@@ -271,11 +293,18 @@ watch(() => isCurrentTextProjectionActive, (isActive) => {
   }
 })
 
-watch(() => props.state.path, () => {
+watch([() => props.state.path, () => props.state.kind], () => {
   if (textDropTargetElement) {
     unregisterTextDropTarget()
     registerTextDropTarget()
   }
+
+  nextTick(() => {
+    const model = editor?.getModel()
+    if (model) {
+      updateEditorDiagnostics(model)
+    }
+  })
 })
 
 watch(() => dragSession.state.value.currentPosition, (position) => {

@@ -614,6 +614,10 @@ edit:
       left: 左侧位置
       right: 右侧位置
       center: 中间位置
+    missingResource: "资源不存在：{path}"
+  diagnostics:
+    duplicateLabel: '标签“{label}”在当前场景中定义了 {count} 次，跳转目标不明确。'
+    missingLabel: '标签“{label}”未在当前场景中定义。'
   errors:
     fileSyncFailed: 文件同步失败，请稍后重试
     previewUnavailable: 预览地址不存在，请先启动预览

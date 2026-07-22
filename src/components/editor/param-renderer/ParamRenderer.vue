@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useControlId } from '~/composables/useControlId'
 import { EditorField, FileFieldConfig, resolveI18n, resolveSurfaceVariant } from '~/features/editor/command-registry/schema'
+import { getDiagnosticFieldStatus } from '~/features/editor/diagnostics/presentation'
+import { selectHighestDiagnosticSeverity } from '~/features/editor/diagnostics/types'
 import { normalizeFieldStringValue } from '~/features/editor/statement-editor/field-utils'
 import { statementEditorSurfaceKey } from '~/features/editor/statement-editor/surface-context'
 import { cn } from '~/lib/utils'
@@ -14,6 +16,7 @@ import type { StatementSchemaParamMode } from './useParamFieldMeta'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { ResolvedAutocompleteOption } from '~/features/editor/command-registry/autocomplete-options'
 import type { NumberField } from '~/features/editor/command-registry/schema'
+import type { EditorFieldDiagnostic } from '~/features/editor/diagnostics/types'
 
 interface Props {
   canScrub: (field: EditorField) => boolean
@@ -23,7 +26,7 @@ interface Props {
   getDynamicOptions: (field: EditorField) => { label: string, value: string }[]
   getFieldSelectValue: (field: EditorField) => string
   getFieldValue: (field: EditorField) => string | number | boolean
-  isFieldFileMissing: (field: EditorField) => boolean
+  getFieldDiagnostics: (field: EditorField) => readonly EditorFieldDiagnostic[]
   isFieldVisible: (field: EditorField) => boolean
   mode?: StatementSchemaParamMode
   parsed?: ISentence
@@ -72,7 +75,10 @@ function label(field: EditorField): string {
 }
 
 function controlClass(field: EditorField): string {
-  return field.field.className ?? ''
+  return cn(
+    field.field.className,
+    shouldFillControlWidth(field) && 'w-full',
+  )
 }
 
 const xyPad = isInline
@@ -119,6 +125,11 @@ function isInlineStandalone(field: EditorField): boolean {
   return isInline && field.field.inlineLayout === 'standalone'
 }
 
+function shouldFillControlWidth(field: EditorField): boolean {
+  return isInlineStandalone(field)
+    || (!isInline && fieldMode(field) !== 'switch')
+}
+
 function fieldLayout(field: EditorField): 'row' | 'column' {
   return fieldMeta.fieldLayout(field, isInline)
 }
@@ -158,8 +169,26 @@ function isFileField(field: EditorField): boolean {
   return fieldMeta.isFileField(field)
 }
 
-function isFileFieldInvalid(field: EditorField): boolean {
-  return isFileField(field) && props.isFieldFileMissing(field)
+function fieldStatus(field: EditorField) {
+  return getDiagnosticFieldStatus(selectHighestDiagnosticSeverity(props.getFieldDiagnostics(field)))
+}
+
+function fieldStatusClass(field: EditorField): string {
+  switch (fieldStatus(field)) {
+    case 'warning': {
+      return 'text-yellow-700! bg-yellow/5 border-yellow/50 focus-visible:ring-yellow/30 dark:text-yellow-300!'
+    }
+    case 'error': {
+      return 'text-destructive! bg-destructive/5 border-destructive/50 focus-visible:ring-destructive/30'
+    }
+    default: {
+      return ''
+    }
+  }
+}
+
+function diagnosticTriggerClass(field: EditorField): string {
+  return shouldFillControlWidth(field) ? 'w-full flex-col' : ''
 }
 
 function shouldRenderAutocomplete(field: EditorField): boolean {
@@ -265,128 +294,134 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
           {{ xyPad?.displayLabel(field) ?? label(field) }}
         </Label>
 
-        <Switch
-          v-if="fieldMode(field) === 'switch'"
-          :id="fieldInputId(field)"
-          :class="cn('scale-75 group-data-[surface=panel]:scale-100', controlClass(field))"
-          :model-value="switchModelValue(field)"
-          @update:model-value="emit('updateValue', { field, value: !!$event })"
-        />
+        <StatementDiagnosticTooltip
+          :diagnostics="getFieldDiagnostics(field)"
+          :class="diagnosticTriggerClass(field)"
+        >
+          <Switch
+            v-if="fieldMode(field) === 'switch'"
+            :id="fieldInputId(field)"
+            :class="cn('scale-75 group-data-[surface=panel]:scale-100', controlClass(field))"
+            :model-value="switchModelValue(field)"
+            @update:model-value="emit('updateValue', { field, value: !!$event })"
+          />
 
-        <FocusXYControl
-          v-else-if="xyPad?.shouldRenderPanelXyPad(field)"
-          :id="fieldInputId(field)"
-          :class="xyPad?.panelXyControlClass(field)"
-          :min="xyPad?.panelXyMin(field)"
-          :max="xyPad?.panelXyMax(field)"
-          :step="xyPad?.panelXyStep(field)"
-          x-label="X"
-          y-label="Y"
-          :x-value="xyPad?.panelXyValue(field, 'x')"
-          :y-value="xyPad?.panelXyValue(field, 'y')"
-          @update-value="handlePanelXyUpdate(field, $event)"
-        />
+          <FocusXYControl
+            v-else-if="xyPad?.shouldRenderPanelXyPad(field)"
+            :id="fieldInputId(field)"
+            :class="xyPad?.panelXyControlClass(field)"
+            :min="xyPad?.panelXyMin(field)"
+            :max="xyPad?.panelXyMax(field)"
+            :step="xyPad?.panelXyStep(field)"
+            x-label="X"
+            y-label="Y"
+            :x-value="xyPad?.panelXyValue(field, 'x')"
+            :y-value="xyPad?.panelXyValue(field, 'y')"
+            @update-value="handlePanelXyUpdate(field, $event)"
+          />
 
-        <NumberControl
-          v-else-if="isNumberMode(field)"
-          :id="fieldInputId(field)"
-          :auto-width-by-content="shouldUseInputAutoWidth(field)"
-          :class="controlClass(field)"
-          :variant="resolveNumberControlVariant(field)"
-          :min="getNumericField(field)?.min"
-          :max="getNumericField(field)?.max"
-          :value="getFieldValue(field)"
-          :unit-label="unitLabel(field)"
-          @update-value="emit('updateValue', { field, value: $event })"
-          @commit-slider="emit('commitSlider', { field, event: $event })"
-        />
+          <NumberControl
+            v-else-if="isNumberMode(field)"
+            :id="fieldInputId(field)"
+            :auto-width-by-content="shouldUseInputAutoWidth(field)"
+            :class="controlClass(field)"
+            :variant="resolveNumberControlVariant(field)"
+            :min="getNumericField(field)?.min"
+            :max="getNumericField(field)?.max"
+            :value="getFieldValue(field)"
+            :unit-label="unitLabel(field)"
+            @update-value="emit('updateValue', { field, value: $event })"
+            @commit-slider="emit('commitSlider', { field, event: $event })"
+          />
 
-        <ParamChoiceField
-          v-else-if="choiceFieldViewModels.get(field.key)"
-          :mode="choiceFieldViewModels.get(field.key)?.mode ?? 'select'"
-          :input-id="fieldInputId(field)"
-          :combobox-data="choiceFieldViewModels.get(field.key)?.comboboxData"
-          :control-class="controlClass(field)"
-          :options="choiceFieldViewModels.get(field.key)?.options ?? []"
-          :select-value="choiceFieldViewModels.get(field.key)?.selectValue ?? ''"
-          :not-selected-label="notSelectedLabel"
-          :placeholder="choiceFieldViewModels.get(field.key)?.placeholder ?? ''"
-          :render-segmented="choiceFieldViewModels.get(field.key)?.renderSegmented ?? false"
-          @update-select="handleSelectUpdate(field, $event)"
-        />
+          <ParamChoiceField
+            v-else-if="choiceFieldViewModels.get(field.key)"
+            :mode="choiceFieldViewModels.get(field.key)?.mode ?? 'select'"
+            :input-id="fieldInputId(field)"
+            :combobox-data="choiceFieldViewModels.get(field.key)?.comboboxData"
+            :control-class="cn(controlClass(field), fieldStatusClass(field))"
+            :options="choiceFieldViewModels.get(field.key)?.options ?? []"
+            :select-value="choiceFieldViewModels.get(field.key)?.selectValue ?? ''"
+            :not-selected-label="notSelectedLabel"
+            :placeholder="choiceFieldViewModels.get(field.key)?.placeholder ?? ''"
+            :render-segmented="choiceFieldViewModels.get(field.key)?.renderSegmented ?? false"
+            @update-select="handleSelectUpdate(field, $event)"
+          />
 
-        <ColorPicker
-          v-else-if="fieldMode(field) === 'color'"
-          :trigger-id="fieldInputId(field)"
-          :class="controlClass(field)"
-          :model-value="String(getFieldValue(field) || '')"
-          @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
-        />
+          <ColorPicker
+            v-else-if="fieldMode(field) === 'color'"
+            :trigger-id="fieldInputId(field)"
+            :class="controlClass(field)"
+            :model-value="String(getFieldValue(field) || '')"
+            @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
+          />
 
-        <Textarea
-          v-else-if="isTextareaMode(field)"
-          :id="fieldInputId(field)"
-          :model-value="String(getFieldValue(field) || '')"
-          :placeholder="resolvedPlaceholder(field)"
-          :class="cn(
-            'text-xs py-1 shadow-none resize-none overflow-y-auto px-2.5 w-32 group-data-[surface=panel]:flex-1 group-data-[surface=panel]:px-3 group-data-[surface=panel]:w-full',
-            fieldMode(field) === 'textareaGrow' ? 'min-h-14.5 max-h-[50vh] field-sizing-content' : 'min-h-6 max-h-14.5 field-sizing-content group-data-[surface=panel]:min-h-7',
-            isInlineStandalone(field) && 'w-full min-w-0',
-            controlClass(field)
-          )"
-          @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
-        />
+          <Textarea
+            v-else-if="isTextareaMode(field)"
+            :id="fieldInputId(field)"
+            :model-value="String(getFieldValue(field) || '')"
+            :placeholder="resolvedPlaceholder(field)"
+            :class="cn(
+              'text-xs py-1 shadow-none resize-none overflow-y-auto px-2.5 w-32 group-data-[surface=panel]:flex-1 group-data-[surface=panel]:px-3 group-data-[surface=panel]:w-full',
+              fieldMode(field) === 'textareaGrow' ? 'min-h-14.5 max-h-[50vh] field-sizing-content' : 'min-h-6 max-h-14.5 field-sizing-content group-data-[surface=panel]:min-h-7',
+              isInlineStandalone(field) && 'w-full min-w-0',
+              controlClass(field)
+            )"
+            @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
+          />
 
-        <FilePicker
-          v-else-if="fieldMode(field) === 'file'"
-          :input-id="fieldInputId(field)"
-          :model-value="String(getFieldValue(field) || '')"
-          :invalid="isFileFieldInvalid(field)"
-          :root-path="fileRootPath(field)"
-          :extensions="fileExtensions(field)"
-          :exclude="fileExclude(field)"
-          :popover-title="fileTitle(field) || undefined"
-          :placeholder="fileTitle(field) || undefined"
-          :class="cn(
-            'w-auto max-w-full min-w-0 group-data-[surface=panel]:w-full [&_input]:text-xs [&_input]:h-6 [&_input]:pl-2.5 [&_input]:field-sizing-content [&_input]:w-auto [&_input]:max-w-full [&_input]:min-w-24 [&_input]:shadow-none group-data-[surface=panel]:[&_input]:h-7 group-data-[surface=panel]:[&_input]:pl-3 group-data-[surface=panel]:[&_input]:w-full',
-            controlClass(field),
-          )"
-          @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
-        />
+          <FilePicker
+            v-else-if="fieldMode(field) === 'file'"
+            :input-id="fieldInputId(field)"
+            :model-value="String(getFieldValue(field) || '')"
+            :invalid="isFileField(field) && fieldStatus(field) === 'error'"
+            :root-path="fileRootPath(field)"
+            :extensions="fileExtensions(field)"
+            :exclude="fileExclude(field)"
+            :popover-title="fileTitle(field) || undefined"
+            :placeholder="fileTitle(field) || undefined"
+            :class="cn(
+              'w-auto max-w-full min-w-0 group-data-[surface=panel]:w-full [&_input]:text-xs [&_input]:h-6 [&_input]:pl-2.5 [&_input]:field-sizing-content [&_input]:w-auto [&_input]:max-w-full [&_input]:min-w-24 [&_input]:shadow-none group-data-[surface=panel]:[&_input]:h-7 group-data-[surface=panel]:[&_input]:pl-3 group-data-[surface=panel]:[&_input]:w-full',
+              controlClass(field),
+            )"
+            @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
+          />
 
-        <Autocomplete
-          v-else-if="shouldRenderAutocomplete(field)"
-          :id="fieldInputId(field)"
-          :model-value="String(getFieldValue(field) || '')"
-          :options="getAutocompleteOptions(field)"
-          :placeholder="resolvedPlaceholder(field)"
-          :container-class="cn(
-            !isInline && 'w-full',
-            shouldUseInputAutoWidth(field) && isInline && 'inline-flex max-w-full min-w-0',
-            isInlineStandalone(field) && !shouldUseInputAutoWidth(field) && 'w-full min-w-0',
-          )"
-          :class="cn(
-            'text-xs h-6 px-2.5 w-24 shadow-none',
-            !isInline && 'h-7 px-3 w-full',
-            shouldUseInputAutoWidth(field) && isInline && 'field-sizing-content w-auto max-w-full min-w-22',
-            isInlineStandalone(field) && !shouldUseInputAutoWidth(field) && 'w-full min-w-0',
-            controlClass(field),
-          )"
-          @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
-        />
+          <Autocomplete
+            v-else-if="shouldRenderAutocomplete(field)"
+            :id="fieldInputId(field)"
+            :model-value="String(getFieldValue(field) || '')"
+            :options="getAutocompleteOptions(field)"
+            :placeholder="resolvedPlaceholder(field)"
+            :container-class="cn(
+              !isInline && 'w-full',
+              shouldUseInputAutoWidth(field) && isInline && 'inline-flex max-w-full min-w-0',
+              isInlineStandalone(field) && !shouldUseInputAutoWidth(field) && 'w-full min-w-0',
+            )"
+            :class="cn(
+              'text-xs h-6 px-2.5 w-24 shadow-none',
+              !isInline && 'h-7 px-3 w-full',
+              shouldUseInputAutoWidth(field) && isInline && 'field-sizing-content w-auto max-w-full min-w-22',
+              isInlineStandalone(field) && !shouldUseInputAutoWidth(field) && 'w-full min-w-0',
+              fieldStatusClass(field),
+              controlClass(field),
+            )"
+            @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
+          />
 
-        <Input
-          v-else
-          :id="fieldInputId(field)"
-          :model-value="String(getFieldValue(field) || '')"
-          :class="cn(
-            'text-xs h-6 px-2.5 w-24 shadow-none group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-3 group-data-[surface=panel]:w-auto',
-            shouldUseInputAutoWidth(field) && 'field-sizing-content w-auto max-w-full min-w-24',
-            isInlineStandalone(field) && 'w-full min-w-0',
-            controlClass(field),
-          )"
-          @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
-        />
+          <Input
+            v-else
+            :id="fieldInputId(field)"
+            :model-value="String(getFieldValue(field) || '')"
+            :class="cn(
+              'text-xs h-6 px-2.5 w-24 shadow-none group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-3 group-data-[surface=panel]:w-auto',
+              shouldUseInputAutoWidth(field) && 'field-sizing-content w-auto max-w-full min-w-24',
+              isInlineStandalone(field) && 'w-full min-w-0',
+              controlClass(field),
+            )"
+            @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
+          />
+        </StatementDiagnosticTooltip>
       </div>
     </template>
   </template>

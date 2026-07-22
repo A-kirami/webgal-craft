@@ -67,6 +67,7 @@ const {
   statementSortVirtualAdapterMock,
   useDroppableRegistryMock,
   useEditSettingsStoreMock,
+  useEditorDiagnosticsStoreMock,
   usePreferenceStoreMock,
   useEditorStoreMock,
   useTabsStoreMock,
@@ -92,6 +93,7 @@ const {
     invalidate: vi.fn(),
   },
   useEditSettingsStoreMock: vi.fn(),
+  useEditorDiagnosticsStoreMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
@@ -105,6 +107,10 @@ vi.mock('~/composables/useDroppableRegistry', () => ({
 
 vi.mock('~/stores/edit-settings', () => ({
   useEditSettingsStore: useEditSettingsStoreMock,
+}))
+
+vi.mock('~/stores/editor-diagnostics', () => ({
+  useEditorDiagnosticsStore: useEditorDiagnosticsStoreMock,
 }))
 
 vi.mock('~/stores/preference', () => ({
@@ -135,6 +141,10 @@ const globalStubs = {
         required: true,
       },
       index: Number,
+      diagnostics: {
+        type: Array,
+        default: () => [],
+      },
       playToDisabled: Boolean,
       previousSpeaker: String,
       readonly: Boolean,
@@ -146,6 +156,7 @@ const globalStubs = {
         h('div', {
           'aria-label': String(props.entry.rawText),
           'aria-selected': props.selected,
+          'data-diagnostic-severity': (props.diagnostics[0] as { severity?: string } | undefined)?.severity ?? 'none',
           'role': 'option',
           'tabindex': props.selected ? 0 : -1,
         }, [
@@ -208,6 +219,7 @@ describe('VisualEditorScene', () => {
     ])
     statementSortVirtualAdapterMock.invalidate.mockReset()
     useEditSettingsStoreMock.mockReset()
+    useEditorDiagnosticsStoreMock.mockReset()
     useEditorStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()
     useTabsStoreMock.mockReset()
@@ -217,6 +229,9 @@ describe('VisualEditorScene', () => {
     useEditSettingsStoreMock.mockReturnValue(reactive({
       collapseStatementsOnSidebarOpen: true,
     }))
+    useEditorDiagnosticsStoreMock.mockReturnValue({
+      readStatementDiagnostics: vi.fn(() => []),
+    })
     useEditorStoreMock.mockReturnValue(reactive({
       currentState: {
         kind: 'scene',
@@ -282,6 +297,71 @@ describe('VisualEditorScene', () => {
     await expect.element(page.getByRole('listbox')).toBeVisible()
     await expect.element(page.getByText('say:hello')).toBeVisible()
     await expect.element(page.getByText('say:world')).toBeVisible()
+  })
+
+  it('只把同名标签语句的内容控件标记为无效', async () => {
+    useEditorDiagnosticsStoreMock.mockReturnValue({
+      readStatementDiagnostics: (_path: string, statementIndex: number) =>
+        statementIndex === 0 || statementIndex === 2
+          ? [{
+              code: 'duplicate-label',
+              count: 2,
+              field: { kind: 'content' },
+              label: 'start',
+              severity: 'warning',
+              source: 'scene',
+              statementIndex,
+            }]
+          : [],
+    })
+    const state = createSceneState()
+    state.statements = [
+      createStatementEntry(1, 'label: start;'),
+      createStatementEntry(2, 'say:hello;'),
+      createStatementEntry(3, 'label:start;'),
+    ]
+    statementSortVirtualAdapterMock.getItemCount.mockReturnValue(3)
+    statementSortVirtualAdapterMock.getVisibleItems.mockReturnValue([
+      { index: 0, size: 48, start: 0 },
+      { index: 1, size: 48, start: 48 },
+      { index: 2, size: 48, start: 96 },
+    ])
+    useVisualEditorSceneRuntimeMock.mockReturnValue({
+      canHandleCommandDrop: vi.fn(() => true),
+      canHandleFileDrop: vi.fn(() => true),
+      handleCommandDrop: handleCommandDropMock,
+      handleCollapsedUpdate: handleCollapsedUpdateMock,
+      handleFileDrop: handleFileDropMock,
+      handlePlayTo: handlePlayToMock,
+      handleSelect: handleSelectMock,
+      handleStatementDelete: handleStatementDeleteMock,
+      handleStatementUpdate: handleStatementUpdateMock,
+      isPositioning: computed(() => false),
+      isStatementCollapsed: () => false,
+      measureRowElement: measureRowElementMock,
+      previousSpeakers: computed(() => ['', '', '']),
+      reorderStatements: reorderStatementsMock,
+      selectedStatementId: 1,
+      statementSortVirtualAdapter: statementSortVirtualAdapterMock,
+      totalSize: 144,
+      virtualRows: [
+        { index: 0, key: 1, start: 0 },
+        { index: 1, key: 2, start: 48 },
+        { index: 2, key: 3, start: 96 },
+      ],
+    })
+
+    renderInBrowser(VisualEditorScene, {
+      props: { state },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+
+    expect(document.querySelector('[aria-label="label: start;"]')).toHaveAttribute('data-diagnostic-severity', 'warning')
+    expect(document.querySelector('[aria-label="say:hello;"]')).toHaveAttribute('data-diagnostic-severity', 'none')
+    expect(document.querySelector('[aria-label="label:start;"]')).toHaveAttribute('data-diagnostic-severity', 'warning')
   })
 
   it('空场景会显示空状态而不是空语句卡片', async () => {
