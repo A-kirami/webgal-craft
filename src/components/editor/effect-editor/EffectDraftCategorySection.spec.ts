@@ -132,7 +132,7 @@ describe('EffectDraftCategorySection', () => {
       },
     })
 
-    const positionXInput = await page.getByRole('spinbutton', { name: 'Position X' }).element()
+    const positionXInput = await page.getByRole('spinbutton', { name: 'Position X' }).element() as HTMLInputElement
     await page.getByRole('spinbutton', { name: 'Position X' }).fill('0.5')
 
     expect(positionXInput.validity.stepMismatch).toBe(false)
