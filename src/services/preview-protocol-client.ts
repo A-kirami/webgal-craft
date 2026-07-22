@@ -1,4 +1,5 @@
 import { serverCmds } from '~/commands/server'
+import { usePreferenceStore } from '~/stores/preference'
 import { createRequestEnvelope } from '~/types/editorPreviewProtocol'
 
 import type {
@@ -7,6 +8,16 @@ import type {
   RequestEnvelopeByType,
   RequestPayloadByType,
 } from '~/types/editorPreviewProtocol'
+
+export const PREVIEW_STATE_RESET_REASON = 'preview state reset'
+
+export function isPreviewPanelOpen(): boolean {
+  return usePreferenceStore().showPreviewPanel
+}
+
+export function isPreviewStateResetError(error: unknown): boolean {
+  return error instanceof Error && error.message === PREVIEW_STATE_RESET_REASON
+}
 
 function createPreviewRequestId(): string {
   return globalThis.crypto?.randomUUID?.()
@@ -31,6 +42,10 @@ export function createPreviewRequestEnvelope<TType extends PreviewRequestType>(
 export async function sendPreviewRequestEnvelope<TType extends PreviewRequestType>(
   request: RequestEnvelopeByType<TType>,
 ): Promise<void> {
+  if (!isPreviewPanelOpen()) {
+    throw new Error(PREVIEW_STATE_RESET_REASON)
+  }
+
   await serverCmds.sendPreviewCommand(JSON.stringify(request))
 }
 
@@ -42,6 +57,18 @@ export async function sendPreviewCommandRequest<TType extends PreviewCommandType
   type: TType,
   payload: RequestPayloadByType[TType],
 ): Promise<void> {
+  if (!isPreviewPanelOpen()) {
+    return
+  }
+
   const request = createPreviewRequestEnvelope(type, payload)
-  await sendPreviewRequestEnvelope(request)
+  try {
+    await sendPreviewRequestEnvelope(request)
+  } catch (error) {
+    if (isPreviewStateResetError(error)) {
+      return
+    }
+
+    throw error
+  }
 }
