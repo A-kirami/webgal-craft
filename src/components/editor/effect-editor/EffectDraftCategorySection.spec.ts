@@ -104,6 +104,40 @@ const globalStubsWithTooltip = {
 }
 
 describe('EffectDraftCategorySection', () => {
+  it('位移输入允许小数值，不触发浏览器原生步长校验', async () => {
+    const { controls } = createControls()
+
+    renderInBrowser(EffectDraftCategorySection, {
+      props: {
+        category: {
+          key: 'transform',
+          label: 'Transform',
+          items: [
+            {
+              kind: 'position',
+              key: 'position',
+              params: [
+                { key: 'position.x', type: 'number', label: 'Position X', defaultValue: 0 },
+                { key: 'position.y', type: 'number', label: 'Position Y', defaultValue: 0 },
+              ],
+            },
+          ],
+        },
+        controls,
+        isPanelLayout: false,
+        resolveLabel: (value: string | undefined) => String(value ?? ''),
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const positionXInput = await page.getByRole('spinbutton', { name: 'Position X' }).element()
+    await page.getByRole('spinbutton', { name: 'Position X' }).fill('0.5')
+
+    expect(positionXInput.validity.stepMismatch).toBe(false)
+  })
+
   it('只允许可清除字段交互，并将不同控件映射到正确的路径组', async () => {
     const { controls, canClearPaths, clearPaths } = createControls()
 

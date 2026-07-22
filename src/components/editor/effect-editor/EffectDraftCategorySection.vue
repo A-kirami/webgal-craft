@@ -124,6 +124,7 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               <InputGroupInput
                 :id="controls.numberInputId(param.key)"
                 type="number"
+                step="any"
                 :model-value="controls.getFieldValue(param.key)"
                 class="text-xs pr-1 flex-1 h-7 min-w-0 shadow-none"
                 :placeholder="controls.getSliderInputValue(param)"
@@ -167,6 +168,7 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
             <InputGroupInput
               :id="controls.numberInputId(item.param.key)"
               type="number"
+              step="any"
               :model-value="controls.getFieldValue(item.param.key)"
               class="text-xs pr-1 h-7 shadow-none"
               :placeholder="controls.getSliderInputValue(item.param)"
@@ -215,6 +217,7 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               <InputGroupInput
                 :id="controls.sliderInputId(item.param.key)"
                 type="number"
+                step="any"
                 :model-value="controls.getSliderInputValue(item.param)"
                 class="text-xs pr-1 h-7 shadow-none"
                 @update:model-value="controls.updateSliderField(item.param, String($event ?? ''))"
@@ -292,6 +295,7 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               <InputGroup class="h-7 shadow-none" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-12.5'">
                 <InputGroupInput
                   type="number"
+                  step="any"
                   :model-value="controls.getLinkedSliderInputValue(item.param, axisIndex)"
                   :aria-label="controls.getLinkedSliderInputAriaLabel(item.param, axisIndex)"
                   class="text-xs pr-1 h-7 shadow-none"
@@ -352,6 +356,7 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                 <InputGroupInput
                   :id="controls.dialInputId(item.param.key)"
                   type="number"
+                  step="any"
                   :model-value="controls.getDialInputValue(item.param)"
                   class="text-xs pr-1 h-7 shadow-none"
                   @update:model-value="controls.updateDialField(item.param, String($event ?? ''))"
