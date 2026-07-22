@@ -4,7 +4,6 @@ import { page } from 'vitest/browser'
 import { defineComponent, h } from 'vue'
 
 import {
-  createBrowserCheckboxStub,
   createBrowserContainerStub,
   createBrowserInputStub,
   renderInBrowser,
@@ -246,7 +245,7 @@ const globalStubs = {
 const statementTooltipProbe = defineComponent({
   name: 'StatementTooltipProbe',
   props: {
-    tooltip: {
+    description: {
       type: String,
       default: undefined,
     },
@@ -254,7 +253,7 @@ const statementTooltipProbe = defineComponent({
   setup(props, { slots }) {
     return () => h('div', {
       'data-testid': 'param-field-tooltip',
-      'data-tooltip': props.tooltip,
+      'data-description': props.description,
     }, slots.default?.())
   },
 })
@@ -420,14 +419,13 @@ describe('ParamRenderer', () => {
         stubs: {
           ...globalStubs,
           StatementDiagnosticTooltip: statementTooltipProbe,
-          Switch: createBrowserCheckboxStub('SwitchStub'),
         },
       },
     })
 
-    const tooltips = [...document.querySelectorAll<HTMLElement>('[data-testid="param-field-tooltip"]')]
-      .map(element => element.dataset.tooltip)
-    expect(tooltips).toEqual([
+    const descriptions = [...document.querySelectorAll<HTMLElement>('[data-testid="param-field-tooltip"]')]
+      .map(element => element.dataset.description)
+    expect(descriptions).toEqual([
       'The next statement waits for the current effect.',
       'The next statement runs immediately.',
     ])
