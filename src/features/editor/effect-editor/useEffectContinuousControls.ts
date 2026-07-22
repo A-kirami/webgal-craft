@@ -297,14 +297,6 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     return effectDisplayBounds(param).step
   }
 
-  function getSliderCenterPosition(param: EffectNumberField): number | undefined {
-    const bounds = effectDisplayBounds(param)
-    if (bounds.min === undefined || bounds.max === undefined || bounds.center === undefined || bounds.max <= bounds.min) {
-      return undefined
-    }
-    return ((bounds.center - bounds.min) / (bounds.max - bounds.min)) * 100
-  }
-
   function getFieldUnit(param: EffectNumberField | EffectDialField) {
     return param.display?.unit
   }
@@ -632,7 +624,6 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     getSliderMin,
     getSliderMax,
     getSliderStep,
-    getSliderCenterPosition,
     getFieldUnit,
     getSliderInputValue,
     updateSliderField,

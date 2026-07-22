@@ -201,7 +201,7 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
             </div>
           </div>
           <div class="flex flex-1 gap-2 items-center" :class="isPanelLayout ? 'max-w-[28rem]' : 'max-w-76'">
-            <div class="flex-1 relative">
+            <div class="flex-1">
               <Slider
                 :min="controls.getSliderMin(item.param)"
                 :max="controls.getSliderMax(item.param)"
@@ -209,12 +209,6 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                 :model-value="controls.getSliderTrackValue(item.param)"
                 @update:model-value="$event && controls.updateSliderField(item.param, $event[0] ?? 0, { fromSlider: true })"
                 @value-commit="$event && controls.updateSliderField(item.param, $event[0] ?? 0, { fromSlider: true, flush: true })"
-              />
-              <span
-                v-if="controls.getSliderCenterPosition(item.param) !== undefined"
-                aria-hidden="true"
-                class="bg-muted-foreground/60 h-2.5 w-px pointer-events-none left-0 top-1/2 absolute -translate-y-1/2"
-                :style="{ left: `${controls.getSliderCenterPosition(item.param)}%` }"
               />
             </div>
             <InputGroup class="h-7 shadow-none" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-12.5'">
@@ -285,7 +279,7 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               <span class="text-xs text-muted-foreground font-mono text-center shrink-0 w-4">
                 {{ controls.getAxisCompactLabel(getLinkedSliderPath(item.param, axisIndex)) }}
               </span>
-              <div class="flex-1 relative">
+              <div class="flex-1">
                 <Slider
                   :min="controls.getSliderMin(item.param)"
                   :max="controls.getSliderMax(item.param)"
@@ -293,12 +287,6 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                   :model-value="controls.getLinkedSliderTrackValue(item.param, axisIndex)"
                   @update:model-value="$event && controls.updateLinkedSliderField(item.param, axisIndex, $event[0] ?? 0, { fromSlider: true })"
                   @value-commit="$event && controls.updateLinkedSliderField(item.param, axisIndex, $event[0] ?? 0, { fromSlider: true, flush: true })"
-                />
-                <span
-                  v-if="controls.getSliderCenterPosition(item.param) !== undefined"
-                  aria-hidden="true"
-                  class="bg-muted-foreground/60 h-2.5 w-px pointer-events-none left-0 top-1/2 absolute -translate-y-1/2"
-                  :style="{ left: `${controls.getSliderCenterPosition(item.param)}%` }"
                 />
               </div>
               <InputGroup class="h-7 shadow-none" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-12.5'">

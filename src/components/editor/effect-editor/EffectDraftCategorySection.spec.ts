@@ -46,7 +46,6 @@ function createControls(options: CreateControlsOptions = {}) {
     getSliderMin: () => 0,
     getSliderMax: () => 1,
     getSliderStep: () => 0.01,
-    getSliderCenterPosition: () => undefined,
     getFieldUnit: () => undefined,
     getSliderInputValue: () => '1',
     updateSliderField: vi.fn(),
