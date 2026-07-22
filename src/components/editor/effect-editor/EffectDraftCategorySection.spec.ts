@@ -43,6 +43,10 @@ function createControls(options: CreateControlsOptions = {}) {
     canScrubNumber: () => false,
     handleNumberLabelPointerDown: vi.fn(),
     getSliderTrackValue: () => [1],
+    getSliderMin: () => 0,
+    getSliderMax: () => 1,
+    getSliderStep: () => 0.01,
+    getFieldUnit: () => undefined,
     getSliderInputValue: () => '1',
     updateSliderField: vi.fn(),
     flushSliderField: vi.fn(),
@@ -52,6 +56,7 @@ function createControls(options: CreateControlsOptions = {}) {
     getAxisCompactLabel: (path: string) => path.endsWith('.x') ? 'X' : 'Y',
     getLinkedSliderInputAriaLabel: (_param: unknown, index: 0 | 1) => `Scale ${index === 0 ? 'X' : 'Y'}`,
     getLinkedSliderInputValue: () => '1',
+    getLinkedSliderTrackValue: () => [1],
     updateLinkedSliderField: vi.fn(),
     flushLinkedSliderField: vi.fn(),
     getDialDegree: () => 0,
@@ -82,7 +87,9 @@ function createControls(options: CreateControlsOptions = {}) {
 const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
   ColorPicker: createBrowserValueStub('StubColorPicker'),
-  Input: createBrowserInputStub('StubInput'),
+  InputGroup: createBrowserContainerStub('StubInputGroup'),
+  InputGroupAddon: createBrowserContainerStub('StubInputGroupAddon', 'span'),
+  InputGroupInput: createBrowserInputStub('StubInputGroupInput'),
   Label: createBrowserContainerStub('StubLabel', 'label'),
   SegmentedControl: createBrowserValueStub('StubSegmentedControl'),
   Slider: createBrowserValueStub('StubSlider'),
@@ -97,6 +104,40 @@ const globalStubsWithTooltip = {
 }
 
 describe('EffectDraftCategorySection', () => {
+  it('位移输入允许小数值，不触发浏览器原生步长校验', async () => {
+    const { controls } = createControls()
+
+    renderInBrowser(EffectDraftCategorySection, {
+      props: {
+        category: {
+          key: 'transform',
+          label: 'Transform',
+          items: [
+            {
+              kind: 'position',
+              key: 'position',
+              params: [
+                { key: 'position.x', type: 'number', label: 'Position X', defaultValue: 0 },
+                { key: 'position.y', type: 'number', label: 'Position Y', defaultValue: 0 },
+              ],
+            },
+          ],
+        },
+        controls,
+        isPanelLayout: false,
+        resolveLabel: (value: string | undefined) => String(value ?? ''),
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const positionXInput = await page.getByRole('spinbutton', { name: 'Position X' }).element() as HTMLInputElement
+    await page.getByRole('spinbutton', { name: 'Position X' }).fill('0.5')
+
+    expect(positionXInput.validity.stepMismatch).toBe(false)
+  })
+
   it('只允许可清除字段交互，并将不同控件映射到正确的路径组', async () => {
     const { controls, canClearPaths, clearPaths } = createControls()
 

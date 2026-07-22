@@ -772,6 +772,9 @@ edit:
       emptyTitle: 還沒有影格
       emptyDescription: 先新增一個關鍵影格來開始編輯動畫
       unitMs: ms
+      unitPercent: '%'
+      unitPx: px
+      unitDegree: °
       toolbar:
         addFrame: 新增影格
         delete: 刪除

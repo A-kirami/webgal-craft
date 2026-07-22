@@ -772,6 +772,9 @@ edit:
       emptyTitle: 还没有帧
       emptyDescription: 先添加一个关键帧来开始编辑动画
       unitMs: ms
+      unitPercent: '%'
+      unitPx: px
+      unitDegree: °
       toolbar:
         addFrame: 添加帧
         delete: 删除

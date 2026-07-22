@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { UNSPECIFIED } from '~/features/editor/command-registry/schema'
-import { clamp } from '~/utils/math'
 
 import type {
   EffectDraftCategoryControls,
   EffectDraftCategoryRenderModel,
   EffectDraftLabelResolver,
+  EffectDraftLinkedNumberField,
 } from './effectDraftForm.types'
 
 interface Props {
@@ -24,6 +24,7 @@ const CLEAR_IMMEDIATE_OPTIONS = {
   schedule: 'immediate',
   flush: true,
 } as const
+const LINKED_SLIDER_AXES = [0, 1] as const
 
 function getClearPathsForItem(item: EffectDraftClearableItem): readonly string[] {
   switch (item.kind) {
@@ -64,6 +65,10 @@ function clearPaths(paths: readonly string[]): void {
 
 function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): string {
   return props.controls.getClearPropertyLabel(label)
+}
+
+function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1): string {
+  return index === 0 ? param.key : param.linkedPairKey
 }
 </script>
 
@@ -115,16 +120,22 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
                 </Button>
               </div>
             </div>
-            <Input
-              :id="controls.numberInputId(param.key)"
-              type="number"
-              :model-value="controls.getFieldValue(param.key)"
-              class="text-xs flex-1 h-7 min-w-0"
-              :placeholder="String(param.defaultValue)"
-              @update:model-value="controls.updateNumberField(param, String($event ?? ''))"
-              @blur="controls.updateNumberField(param, controls.getFieldValue(param.key), { flush: true })"
-              @keydown.enter="controls.updateNumberField(param, controls.getFieldValue(param.key), { flush: true })"
-            />
+            <InputGroup class="flex-1 h-7 min-w-0 shadow-none">
+              <InputGroupInput
+                :id="controls.numberInputId(param.key)"
+                type="number"
+                step="any"
+                :model-value="controls.getFieldValue(param.key)"
+                class="text-xs pr-1 flex-1 h-7 min-w-0 shadow-none"
+                :placeholder="controls.getSliderInputValue(param)"
+                @update:model-value="controls.updateNumberField(param, String($event ?? ''))"
+                @blur="controls.updateNumberField(param, controls.getFieldValue(param.key), { flush: true })"
+                @keydown.enter="controls.updateNumberField(param, controls.getFieldValue(param.key), { flush: true })"
+              />
+              <InputGroupAddon v-if="controls.getFieldUnit(param)" align="inline-end" class="text-xs">
+                {{ controls.getFieldUnit(param) }}
+              </InputGroupAddon>
+            </InputGroup>
           </div>
         </div>
 
@@ -153,16 +164,22 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
               </Button>
             </div>
           </div>
-          <Input
-            :id="controls.numberInputId(item.param.key)"
-            type="number"
-            :model-value="controls.getFieldValue(item.param.key)"
-            class="text-xs flex-1 h-7"
-            :placeholder="String(item.param.defaultValue)"
-            @update:model-value="controls.updateNumberField(item.param, String($event ?? ''))"
-            @blur="controls.updateNumberField(item.param, controls.getFieldValue(item.param.key), { flush: true })"
-            @keydown.enter="controls.updateNumberField(item.param, controls.getFieldValue(item.param.key), { flush: true })"
-          />
+          <InputGroup class="flex-1 h-7 shadow-none">
+            <InputGroupInput
+              :id="controls.numberInputId(item.param.key)"
+              type="number"
+              step="any"
+              :model-value="controls.getFieldValue(item.param.key)"
+              class="text-xs pr-1 h-7 shadow-none"
+              :placeholder="controls.getSliderInputValue(item.param)"
+              @update:model-value="controls.updateNumberField(item.param, String($event ?? ''))"
+              @blur="controls.updateNumberField(item.param, controls.getFieldValue(item.param.key), { flush: true })"
+              @keydown.enter="controls.updateNumberField(item.param, controls.getFieldValue(item.param.key), { flush: true })"
+            />
+            <InputGroupAddon v-if="controls.getFieldUnit(item.param)" align="inline-end" class="text-xs">
+              {{ controls.getFieldUnit(item.param) }}
+            </InputGroupAddon>
+          </InputGroup>
         </div>
 
         <div v-else-if="item.kind === 'slider'" class="group/field flex gap-2 w-full items-center">
@@ -186,23 +203,31 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
             </div>
           </div>
           <div class="flex flex-1 gap-2 items-center" :class="isPanelLayout ? 'max-w-[28rem]' : 'max-w-76'">
-            <Slider
-              :min="item.param.min"
-              :max="item.param.max"
-              :step="item.param.step"
-              :model-value="controls.getSliderTrackValue(item.param)"
-              @update:model-value="$event && controls.updateSliderField(item.param, $event[0] ?? 0, { fromSlider: true })"
-              @value-commit="$event && controls.updateSliderField(item.param, $event[0] ?? 0, { fromSlider: true, flush: true })"
-            />
-            <Input
-              :id="controls.sliderInputId(item.param.key)"
-              type="number"
-              :model-value="controls.getSliderInputValue(item.param)"
-              class="text-xs h-7 w-12.5"
-              @update:model-value="controls.updateSliderField(item.param, String($event ?? ''))"
-              @blur="controls.flushSliderField(item.param)"
-              @keydown.enter="controls.flushSliderField(item.param)"
-            />
+            <div class="flex-1">
+              <Slider
+                :min="controls.getSliderMin(item.param)"
+                :max="controls.getSliderMax(item.param)"
+                :step="controls.getSliderStep(item.param)"
+                :model-value="controls.getSliderTrackValue(item.param)"
+                @update:model-value="$event && controls.updateSliderField(item.param, $event[0] ?? 0, { fromSlider: true })"
+                @value-commit="$event && controls.updateSliderField(item.param, $event[0] ?? 0, { fromSlider: true, flush: true })"
+              />
+            </div>
+            <InputGroup class="h-7 shadow-none" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-12.5'">
+              <InputGroupInput
+                :id="controls.sliderInputId(item.param.key)"
+                type="number"
+                step="any"
+                :model-value="controls.getSliderInputValue(item.param)"
+                class="text-xs pr-1 h-7 shadow-none"
+                @update:model-value="controls.updateSliderField(item.param, String($event ?? ''))"
+                @blur="controls.flushSliderField(item.param)"
+                @keydown.enter="controls.flushSliderField(item.param)"
+              />
+              <InputGroupAddon v-if="controls.getFieldUnit(item.param)" align="inline-end" class="text-xs">
+                {{ controls.getFieldUnit(item.param) }}
+              </InputGroupAddon>
+            </InputGroup>
           </div>
         </div>
 
@@ -253,50 +278,35 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
           </div>
 
           <div class="flex flex-col gap-2" :class="isPanelLayout ? 'max-w-[28rem]' : 'max-w-76'">
-            <div class="flex gap-2 items-center">
+            <div v-for="axisIndex in LINKED_SLIDER_AXES" :key="axisIndex" class="flex gap-2 items-center">
               <span class="text-xs text-muted-foreground font-mono text-center shrink-0 w-4">
-                {{ controls.getAxisCompactLabel(item.param.key) }}
+                {{ controls.getAxisCompactLabel(getLinkedSliderPath(item.param, axisIndex)) }}
               </span>
-              <Slider
-                :min="item.param.min"
-                :max="item.param.max"
-                :step="item.param.step"
-                :model-value="[clamp(controls.getNumberValue(item.param.key, item.param.defaultValue ?? 0), item.param.min, item.param.max)]"
-                @update:model-value="$event && controls.updateLinkedSliderField(item.param, 0, $event[0] ?? 0, { fromSlider: true })"
-                @value-commit="$event && controls.updateLinkedSliderField(item.param, 0, $event[0] ?? 0, { fromSlider: true, flush: true })"
-              />
-              <Input
-                type="number"
-                :model-value="controls.getLinkedSliderInputValue(item.param, 0)"
-                :aria-label="controls.getLinkedSliderInputAriaLabel(item.param, 0)"
-                class="text-xs h-7 w-12.5"
-                @update:model-value="controls.updateLinkedSliderField(item.param, 0, String($event ?? ''))"
-                @blur="controls.flushLinkedSliderField(item.param, 0)"
-                @keydown.enter="controls.flushLinkedSliderField(item.param, 0)"
-              />
-            </div>
-
-            <div class="flex gap-2 items-center">
-              <span class="text-xs text-muted-foreground font-mono text-center shrink-0 w-4">
-                {{ controls.getAxisCompactLabel(item.param.linkedPairKey) }}
-              </span>
-              <Slider
-                :min="item.param.min"
-                :max="item.param.max"
-                :step="item.param.step"
-                :model-value="[clamp(controls.getNumberValue(item.param.linkedPairKey, item.param.defaultValue ?? 0), item.param.min, item.param.max)]"
-                @update:model-value="$event && controls.updateLinkedSliderField(item.param, 1, $event[0] ?? 0, { fromSlider: true })"
-                @value-commit="$event && controls.updateLinkedSliderField(item.param, 1, $event[0] ?? 0, { fromSlider: true, flush: true })"
-              />
-              <Input
-                type="number"
-                :model-value="controls.getLinkedSliderInputValue(item.param, 1)"
-                :aria-label="controls.getLinkedSliderInputAriaLabel(item.param, 1)"
-                class="text-xs h-7 w-12.5"
-                @update:model-value="controls.updateLinkedSliderField(item.param, 1, String($event ?? ''))"
-                @blur="controls.flushLinkedSliderField(item.param, 1)"
-                @keydown.enter="controls.flushLinkedSliderField(item.param, 1)"
-              />
+              <div class="flex-1">
+                <Slider
+                  :min="controls.getSliderMin(item.param)"
+                  :max="controls.getSliderMax(item.param)"
+                  :step="controls.getSliderStep(item.param)"
+                  :model-value="controls.getLinkedSliderTrackValue(item.param, axisIndex)"
+                  @update:model-value="$event && controls.updateLinkedSliderField(item.param, axisIndex, $event[0] ?? 0, { fromSlider: true })"
+                  @value-commit="$event && controls.updateLinkedSliderField(item.param, axisIndex, $event[0] ?? 0, { fromSlider: true, flush: true })"
+                />
+              </div>
+              <InputGroup class="h-7 shadow-none" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-12.5'">
+                <InputGroupInput
+                  type="number"
+                  step="any"
+                  :model-value="controls.getLinkedSliderInputValue(item.param, axisIndex)"
+                  :aria-label="controls.getLinkedSliderInputAriaLabel(item.param, axisIndex)"
+                  class="text-xs pr-1 h-7 shadow-none"
+                  @update:model-value="controls.updateLinkedSliderField(item.param, axisIndex, String($event ?? ''))"
+                  @blur="controls.flushLinkedSliderField(item.param, axisIndex)"
+                  @keydown.enter="controls.flushLinkedSliderField(item.param, axisIndex)"
+                />
+                <InputGroupAddon v-if="controls.getFieldUnit(item.param)" align="inline-end" class="text-xs">
+                  {{ controls.getFieldUnit(item.param) }}
+                </InputGroupAddon>
+              </InputGroup>
             </div>
           </div>
         </div>
@@ -342,15 +352,21 @@ function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): 
                   :style="{ transform: `translateY(-50%) rotate(${controls.getDialIndicatorDegree(controls.getDialDegree(item.param))}deg)` }"
                 />
               </button>
-              <Input
-                :id="controls.dialInputId(item.param.key)"
-                type="number"
-                :model-value="controls.getDialInputValue(item.param)"
-                class="text-xs h-7 w-15"
-                @update:model-value="controls.updateDialField(item.param, String($event ?? ''))"
-                @blur="controls.flushDialField(item.param)"
-                @keydown.enter="controls.flushDialField(item.param)"
-              />
+              <InputGroup class="h-7 shadow-none" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-15'">
+                <InputGroupInput
+                  :id="controls.dialInputId(item.param.key)"
+                  type="number"
+                  step="any"
+                  :model-value="controls.getDialInputValue(item.param)"
+                  class="text-xs pr-1 h-7 shadow-none"
+                  @update:model-value="controls.updateDialField(item.param, String($event ?? ''))"
+                  @blur="controls.flushDialField(item.param)"
+                  @keydown.enter="controls.flushDialField(item.param)"
+                />
+                <InputGroupAddon v-if="controls.getFieldUnit(item.param)" align="inline-end" class="text-xs">
+                  {{ controls.getFieldUnit(item.param) }}
+                </InputGroupAddon>
+              </InputGroup>
             </div>
           </div>
         </div>

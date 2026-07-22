@@ -1,17 +1,22 @@
 import { createParamDrag } from '~/features/editor/effect-editor/createParamDrag'
 import {
+  effectDisplayBounds,
+  effectDisplayToStored,
+  effectStoredToDisplay,
+} from '~/features/editor/effect-editor/effect-editor-config'
+import {
   effectRotationDegreeToStoredRadian,
   formatEffectRotationDegree,
 } from '~/features/editor/effect-editor/transform-rotation-format'
 import { usePreferenceStore } from '~/stores/preference'
-import { applyScrubStepModifier, clamp, getPointerAngleDegrees, normalizeAngleDelta, normalizeDegree, radianToDegree, roundByStep } from '~/utils/math'
+import { applyScrubStepModifier, clamp, getPointerAngleDegrees, normalizeAngleDelta, normalizeDegree, roundByStep } from '~/utils/math'
 
 import type { ImmediatePointerDragEvent } from '~/composables/useImmediatePointerDrag'
-import type { DialField, NumberField } from '~/features/editor/command-registry/schema'
+import type { EffectDialField, EffectNumberField } from '~/features/editor/effect-editor/effect-editor-config'
 import type { EffectControlDeps, EmitTransformOptions } from '~/features/editor/effect-editor/types'
 
 /** NumberField 且必定有 linkedPairKey 的子类型（用于 linked-slider 控件） */
-type LinkedNumberField = NumberField & { linkedPairKey: string }
+type LinkedNumberField = EffectNumberField & { linkedPairKey: string }
 
 // ─── 内部工具 ───
 
@@ -161,7 +166,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     return true
   }
 
-  function applyFieldUpdate(
+  function parseFieldUpdate(
     path: string,
     rawValue: string | number,
     options?: { flush?: boolean },
@@ -186,16 +191,17 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   // ═══════════════════════════════════════
 
   function updateNumberFieldValue(
-    param: NumberField,
+    param: EffectNumberField,
     rawValue: string,
     options: { flush?: boolean, clampValue?: boolean } = {},
     emitTiming: ContinuousTransformEmitTiming = 'immediate',
   ) {
-    const result = applyFieldUpdate(param.key, rawValue, options)
+    const result = parseFieldUpdate(param.key, rawValue, options)
     if (!result) {
       return
     }
-    const finalValue = options.clampValue ? clamp(result.value, param.min, param.max) : result.value
+    const storedValue = effectDisplayToStored(param, result.value)
+    const finalValue = options.clampValue ? clamp(storedValue, param.min, param.max) : storedValue
     deps.setNumericField(result.fields, param.key, finalValue)
     emitContinuousTransform(
       result.fields,
@@ -205,18 +211,18 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   }
 
   function updateNumberField(
-    param: NumberField,
+    param: EffectNumberField,
     rawValue: string,
     options: { flush?: boolean, clampValue?: boolean } = {},
   ) {
     updateNumberFieldValue(param, rawValue, options)
   }
 
-  function canScrubNumber(param: NumberField): boolean {
+  function canScrubNumber(param: EffectNumberField): boolean {
     return param.scrubbable !== false
   }
 
-  function resolveNumberScrubStep(param: NumberField, event: ImmediatePointerDragEvent): number {
+  function resolveNumberScrubStep(param: EffectNumberField, event: ImmediatePointerDragEvent): number {
     const baseStep = param.scrubStep ?? 1
     return applyScrubStepModifier(baseStep, event, {
       altFactor: param.scrubStepAlt === undefined ? undefined : param.scrubStepAlt / baseStep,
@@ -225,7 +231,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   }
 
   const { drag: numberScrub, start: startNumberScrub } = createParamDrag<
-    NumberField,
+    EffectNumberField,
     { lastValue: number, startValue: number, startX: number }
   >({
     onStart(event, param) {
@@ -249,17 +255,17 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
       }
 
       state.lastValue = normalized
-      updateNumberFieldValue(state.param, String(normalized), { flush: false, clampValue: true }, 'nextFrame')
+      updateNumberFieldValue(state.param, String(effectStoredToDisplay(state.param, normalized)), { flush: false, clampValue: true }, 'nextFrame')
     },
     onEnd(_event, state) {
-      updateNumberFieldValue(state.param, String(state.lastValue), { flush: true, clampValue: true })
+      updateNumberFieldValue(state.param, String(effectStoredToDisplay(state.param, state.lastValue)), { flush: true, clampValue: true })
     },
     onCancel() {
       cancelCurrentPreviewInteraction()
     },
   })
 
-  function handleNumberLabelPointerDown(event: PointerEvent, param: NumberField) {
+  function handleNumberLabelPointerDown(event: PointerEvent, param: EffectNumberField) {
     event.preventDefault()
     startNumberScrub(event, param)
   }
@@ -268,13 +274,31 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   // Slider 控件
   // ═══════════════════════════════════════
 
-  function getSliderInputValue(param: NumberField): string {
-    return getFieldValueWithDefault(deps.getFieldValue, param.key, param.defaultValue ?? 0)
+  function getSliderInputValue(param: EffectNumberField): string {
+    return getFieldValueWithDefault(deps.getFieldValue, param.key, effectStoredToDisplay(param, param.defaultValue ?? 0))
   }
 
-  function getSliderTrackValue(param: NumberField): number[] {
+  function getSliderTrackValue(param: EffectNumberField): number[] {
     const raw = deps.getNumberValue(param.key, param.defaultValue ?? 0)
-    return [clamp(raw, param.min, param.max)]
+    const displayValue = effectStoredToDisplay(param, raw)
+    const bounds = effectDisplayBounds(param)
+    return [clamp(displayValue, bounds.min, bounds.max)]
+  }
+
+  function getSliderMin(param: EffectNumberField): number | undefined {
+    return effectDisplayBounds(param).min
+  }
+
+  function getSliderMax(param: EffectNumberField): number | undefined {
+    return effectDisplayBounds(param).max
+  }
+
+  function getSliderStep(param: EffectNumberField): number | undefined {
+    return effectDisplayBounds(param).step
+  }
+
+  function getFieldUnit(param: EffectNumberField | EffectDialField) {
+    return param.display?.unit
   }
 
   function getStoredFieldValue(path: string): string | undefined {
@@ -287,17 +311,18 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   }
 
   function updateSliderField(
-    param: NumberField,
+    param: EffectNumberField,
     rawValue: string | number,
     options: { fromSlider?: boolean, flush?: boolean } = {},
   ) {
-    const result = applyFieldUpdate(param.key, rawValue, options)
+    const result = parseFieldUpdate(param.key, rawValue, options)
     if (!result) {
       return
     }
+    const storedValue = effectDisplayToStored(param, result.value)
     const normalized = options.fromSlider
-      ? applySliderCenterSnap(clamp(result.value, param.min ?? 0, param.max ?? 0), param.center ?? 0, param.min ?? 0, param.max ?? 0)
-      : result.value
+      ? applySliderCenterSnap(clamp(storedValue, param.min ?? 0, param.max ?? 0), param.center ?? 0, param.min ?? 0, param.max ?? 0)
+      : storedValue
     if (options.fromSlider && isImplicitDefaultWrite(param.key, normalized, param.defaultValue)) {
       clearPendingContinuousTransformField(param.key)
       return
@@ -313,13 +338,13 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     )
   }
 
-  function flushSliderField(param: NumberField) {
+  function flushSliderField(param: EffectNumberField) {
     const storedValue = getStoredFieldValue(param.key)
     if (storedValue === undefined) {
       clearPendingContinuousTransformField(param.key)
       return
     }
-    updateSliderField(param, storedValue, { flush: true })
+    updateSliderField(param, getSliderInputValue(param), { flush: true })
   }
 
   // ═══════════════════════════════════════
@@ -341,7 +366,14 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
 
   function getLinkedSliderInputValue(param: LinkedNumberField, index: 0 | 1): string {
     const path = index === 0 ? param.key : param.linkedPairKey
-    return getFieldValueWithDefault(deps.getFieldValue, path, param.defaultValue ?? 0)
+    return getFieldValueWithDefault(deps.getFieldValue, path, effectStoredToDisplay(param, param.defaultValue ?? 0))
+  }
+
+  function getLinkedSliderTrackValue(param: LinkedNumberField, index: 0 | 1): number[] {
+    const path = index === 0 ? param.key : param.linkedPairKey
+    const raw = deps.getNumberValue(path, param.defaultValue ?? 0)
+    const bounds = effectDisplayBounds(param)
+    return [clamp(effectStoredToDisplay(param, raw), bounds.min, bounds.max)]
   }
 
   function createLinkedSliderLockSnapshot(param: LinkedNumberField): LinkedSliderLockSnapshot {
@@ -390,7 +422,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     const activePath = index === 0 ? param.key : param.linkedPairKey
     const passivePath = index === 0 ? param.linkedPairKey : param.key
 
-    const result = applyFieldUpdate(activePath, rawValue, options)
+    const result = parseFieldUpdate(activePath, rawValue, options)
     if (!result) {
       // 空值清除场景：同步清除被动字段
       if (!rawValue && rawValue !== 0 && isLinkedSliderLocked(param)) {
@@ -409,9 +441,10 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
       return
     }
 
+    const storedValue = effectDisplayToStored(param, result.value)
     const normalizedActive = options.fromSlider
-      ? applySliderCenterSnap(clamp(result.value, param.min ?? 0, param.max ?? 0), param.center ?? 0, param.min ?? 0, param.max ?? 0)
-      : result.value
+      ? applySliderCenterSnap(clamp(storedValue, param.min ?? 0, param.max ?? 0), param.center ?? 0, param.min ?? 0, param.max ?? 0)
+      : storedValue
 
     if (
       options.fromSlider
@@ -455,37 +488,30 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     if (storedValue === undefined) {
       return
     }
-    updateLinkedSliderField(param, index, storedValue, { flush: true })
+    updateLinkedSliderField(param, index, getLinkedSliderInputValue(param, index), { flush: true })
   }
 
   // ═══════════════════════════════════════
   // Dial 控件
   // ═══════════════════════════════════════
 
-  function dialStoreValueToDegree(param: DialField, value: number): number {
-    if (param.dialUnit === 'deg') {
-      return value
-    }
-    return radianToDegree(value)
-  }
-
-  function dialDegreeToStoreValue(param: DialField, degree: number): number {
+  function dialDegreeToStoreValue(param: EffectDialField, degree: number): number {
     if (param.dialUnit === 'deg') {
       return formatEffectRotationDegree(degree)
     }
     return effectRotationDegreeToStoredRadian(degree)
   }
 
-  function getDialDegree(param: DialField): number {
+  function getDialDegree(param: EffectDialField): number {
     const rawValue = deps.getNumberValue(param.key, param.defaultValue ?? 0)
-    return dialStoreValueToDegree(param, rawValue)
+    return effectStoredToDisplay(param, rawValue)
   }
 
   function getDialIndicatorDegree(degree: number): number {
     return normalizeDegree(degree)
   }
 
-  function getDialInputValue(param: DialField): string {
+  function getDialInputValue(param: EffectDialField): string {
     return String(formatEffectRotationDegree(getDialDegree(param)))
   }
 
@@ -497,12 +523,12 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   }
 
   function updateDialField(
-    param: DialField,
+    param: EffectDialField,
     rawDegree: string | number,
     options: { flush?: boolean } = {},
     emitTiming: ContinuousTransformEmitTiming = 'immediate',
   ) {
-    const result = applyFieldUpdate(param.key, rawDegree, options)
+    const result = parseFieldUpdate(param.key, rawDegree, options)
     if (!result) {
       return
     }
@@ -515,7 +541,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     )
   }
 
-  function flushDialField(param: DialField) {
+  function flushDialField(param: EffectDialField) {
     if (getStoredFieldValue(param.key) === undefined) {
       return
     }
@@ -523,7 +549,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
   }
 
   const { drag: dialDrag, start: startDialDrag } = createParamDrag<
-    DialField,
+    EffectDialField,
     { centerX: number, centerY: number, lastDegree: number, lastPointerAngle: number, rawDegree: number }
   >({
     onStart(event, param) {
@@ -572,7 +598,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     },
   })
 
-  function handleDialPointerDown(event: PointerEvent, param: DialField) {
+  function handleDialPointerDown(event: PointerEvent, param: EffectDialField) {
     event.preventDefault()
     startDialDrag(event, param)
   }
@@ -595,6 +621,10 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     numberScrub,
     // slider
     getSliderTrackValue,
+    getSliderMin,
+    getSliderMax,
+    getSliderStep,
+    getFieldUnit,
     getSliderInputValue,
     updateSliderField,
     flushSliderField,
@@ -602,6 +632,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     isLinkedSliderLocked,
     toggleLinkedSliderLock,
     getLinkedSliderInputValue,
+    getLinkedSliderTrackValue,
     updateLinkedSliderField,
     flushLinkedSliderField,
     resetLinkedSliderState,

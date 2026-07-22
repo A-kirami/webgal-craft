@@ -17,10 +17,9 @@ import EffectDraftForm from './EffectDraftForm.vue'
 const globalStubs = {
   Button: createBrowserValueStub('StubButton', 'button'),
   ColorPicker: createBrowserValueStub('StubColorPicker'),
-  Input: createBrowserInputStub('StubInput'),
   InputGroup: createBrowserValueStub('StubInputGroup'),
   InputGroupAddon: createBrowserValueStub('StubInputGroupAddon', 'span'),
-  InputGroupInput: createBrowserValueStub('StubInputGroupInput', 'input'),
+  InputGroupInput: createBrowserInputStub('StubInputGroupInput'),
   Label: createBrowserValueStub('StubLabel', 'label'),
   ScrollArea: createBrowserValueStub('StubScrollArea'),
   SegmentedControl: createBrowserValueStub('StubSegmentedControl'),
@@ -35,6 +34,37 @@ const globalStubs = {
 const { expectNoConsoleMessage } = createBrowserConsoleMonitor()
 
 describe('EffectDraftForm', () => {
+  it('按字段元数据显示单位并转换原始数值', async () => {
+    renderInBrowser(EffectDraftForm, {
+      props: {
+        duration: '200',
+        ease: '',
+        transform: {
+          alpha: 0.8,
+          brightness: 1.5,
+          blur: 4,
+          gamma: 1,
+          rotation: Math.PI / 2,
+          scale: { x: 1.25, y: 1.25 },
+        },
+      },
+      global: {
+        plugins: [createPinia(), createBrowserLocalizedI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('spinbutton', { name: '缩放 X' })).toHaveValue(125)
+    await expect.element(page.getByRole('group', { name: '效果' }).getByRole('spinbutton', { name: '不透明度' })).toHaveValue(80)
+    await expect.element(page.getByRole('group', { name: '颜色调整' }).getByRole('spinbutton', { name: '亮度' })).toHaveValue(150)
+    await expect.element(page.getByRole('group', { name: '颜色调整' }).getByRole('spinbutton', { name: '伽马' })).toHaveValue(1)
+    await expect.element(page.getByRole('group', { name: '变换' }).getByRole('spinbutton', { name: '旋转' })).toHaveValue(90)
+    await expect.element(page.getByRole('group', { name: '效果' }).getByRole('spinbutton', { name: '模糊' })).toHaveValue(4)
+    await expect.element(page.getByText('%').first()).toBeInTheDocument()
+    await expect.element(page.getByText('°').first()).toBeInTheDocument()
+    await expect.element(page.getByText('px').first()).toBeInTheDocument()
+  })
+
   it('为联动滑条的 X/Y 数字输入提供唯一的可访问名称', async () => {
     renderInBrowser(EffectDraftForm, {
       props: {
@@ -154,7 +184,7 @@ describe('EffectDraftForm', () => {
     await expect.element(page.getByRole('spinbutton', { name: 'X 位移' })).toHaveValue(1000)
 
     const alphaInput = page.getByRole('group', { name: '效果' }).getByRole('spinbutton', { name: '不透明度' })
-    await alphaInput.fill('0.8')
+    await alphaInput.fill('80')
 
     expect(transformUpdates).toHaveBeenCalledWith({
       value: {
@@ -210,7 +240,7 @@ describe('EffectDraftForm', () => {
     await expect.element(page.getByRole('spinbutton', { name: 'X 位移' })).toHaveValue(88)
 
     const alphaInput = page.getByRole('group', { name: '效果' }).getByRole('spinbutton', { name: '不透明度' })
-    await alphaInput.fill('0.8')
+    await alphaInput.fill('80')
 
     expect(transformUpdates).toHaveBeenCalledWith({
       value: {

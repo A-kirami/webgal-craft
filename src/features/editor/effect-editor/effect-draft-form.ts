@@ -1,10 +1,10 @@
 import type {
   I18nLike,
   I18nT,
-  NumberField,
 } from '~/features/editor/command-registry/schema'
+import type { EffectNumberField } from '~/features/editor/effect-editor/effect-editor-config'
 
-type LinkedSliderParam = NumberField & {
+type LinkedSliderParam = EffectNumberField & {
   linkedPairKey?: string
 }
 

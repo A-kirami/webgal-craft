@@ -1,5 +1,6 @@
 import { EASE } from '~/features/editor/command-registry/common-params'
 import { UNSPECIFIED } from '~/features/editor/command-registry/schema'
+import { degreeToRadian, radianToDegree, roundToPrecision } from '~/utils/math'
 
 import type { Transform } from '~/domain/stage/types'
 import type { ChoiceField, ColorField, DialField, I18nLike, NumberField } from '~/features/editor/command-registry/schema'
@@ -7,7 +8,65 @@ import type { ChoiceField, ColorField, DialField, I18nLike, NumberField } from '
 // ─── 效果编辑器参数类型（基于 FieldDef 子集） ───
 
 /** 效果编辑器支持的参数类型：NumberField（含 slider / linked-slider）、DialField、ColorField、ChoiceField（segmented） */
-export type EffectParamDef = NumberField | DialField | ColorField | ChoiceField
+export interface EffectDisplayMeta {
+  unit?: I18nLike
+  scale?: number
+}
+
+export type EffectNumberField = NumberField & { display?: EffectDisplayMeta }
+export type EffectDialField = DialField & { display?: Pick<EffectDisplayMeta, 'unit'> }
+export type EffectParamDef = EffectNumberField | EffectDialField | ColorField | ChoiceField
+
+const EFFECT_PARAM_BY_PATH = new Map<string, EffectNumberField | EffectDialField>()
+const EFFECT_DISPLAY_PRECISION = 12
+
+function displayScale(param: EffectNumberField): number {
+  return param.display?.scale ?? 1
+}
+
+export function effectStoredToDisplay(param: EffectNumberField | EffectDialField, value: number): number {
+  if (param.type === 'dial') {
+    return param.dialUnit === 'deg' ? value : radianToDegree(value)
+  }
+  return roundToPrecision(value * displayScale(param), EFFECT_DISPLAY_PRECISION)
+}
+
+export function effectDisplayToStored(param: EffectNumberField | EffectDialField, value: number): number {
+  if (param.type === 'dial') {
+    return param.dialUnit === 'deg' ? value : degreeToRadian(value)
+  }
+  return value / displayScale(param)
+}
+
+export function effectDisplayBounds(param: EffectNumberField): { min?: number, max?: number, step?: number, center?: number } {
+  const scale = displayScale(param)
+  return {
+    min: param.min === undefined ? undefined : param.min * scale,
+    max: param.max === undefined ? undefined : param.max * scale,
+    step: param.step === undefined ? undefined : param.step * scale,
+    center: param.center === undefined ? undefined : param.center * scale,
+  }
+}
+
+export function effectParamForPath(path: string): EffectNumberField | EffectDialField | undefined {
+  return EFFECT_PARAM_BY_PATH.get(path)
+}
+
+export function effectFieldValueToDisplay(path: string, rawValue: string): string {
+  const param = effectParamForPath(path)
+  if (!param) {
+    return rawValue
+  }
+  const value = Number(rawValue)
+  if (!Number.isFinite(value)) {
+    return rawValue
+  }
+  return String(effectStoredToDisplay(param, value))
+}
+
+export function transformFieldsToDisplay(fields: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(fields).map(([path, value]) => [path, effectFieldValueToDisplay(path, value)]))
+}
 
 export interface EffectCategory {
   label: I18nLike
@@ -24,11 +83,11 @@ export type EffectCategoryAction =
 
 export type EffectRenderItem =
   | EffectCategoryAction
-  | { kind: 'position', key: string, params: NumberField[] }
-  | { kind: 'number', key: string, param: NumberField }
-  | { kind: 'slider', key: string, param: NumberField }
-  | { kind: 'linked-slider', key: string, param: NumberField & { linkedPairKey: string } }
-  | { kind: 'dial', key: string, param: DialField }
+  | { kind: 'position', key: string, params: EffectNumberField[] }
+  | { kind: 'number', key: string, param: EffectNumberField }
+  | { kind: 'slider', key: string, param: EffectNumberField }
+  | { kind: 'linked-slider', key: string, param: EffectNumberField & { linkedPairKey: string } }
+  | { kind: 'dial', key: string, param: EffectDialField }
   | { kind: 'color', key: string, param: ColorField & { colorPaths: [string, string, string], colorDefaults: [number, number, number] } }
   | { kind: 'choice', key: string, param: ChoiceField }
 
@@ -48,7 +107,7 @@ export function buildCategoryRenderItems(category: EffectCategory): EffectRender
 
   // 收集 position 参数
   const positionParams = params.filter(
-    (p): p is NumberField => p.type === 'number' && p.effectGroup === 'position',
+    (p): p is EffectNumberField => p.type === 'number' && p.effectGroup === 'position',
   )
   if (positionParams.length > 0) {
     items.push({ kind: 'position', key: 'position', params: positionParams })
@@ -71,7 +130,7 @@ export function buildCategoryRenderItems(category: EffectCategory): EffectRender
             items.push({
               kind: 'linked-slider',
               key,
-              param: param as NumberField & { linkedPairKey: string },
+              param: param as EffectNumberField & { linkedPairKey: string },
             })
           }
         } else if (param.variant === 'slider-input') {
@@ -117,6 +176,16 @@ const FILTER_SEGMENT_OPTIONS: { label: I18nLike, value: string }[] = [
   { label: t => t('modals.effectEditor.filterOptions.off'), value: '0' },
 ]
 const EMPTY_EFFECT_FIELD_VALUES = new Set<unknown>([undefined, '', UNSPECIFIED])
+const PERCENT_DISPLAY: EffectDisplayMeta = {
+  unit: t => t('edit.visualEditor.animation.unitPercent'),
+  scale: 100,
+}
+const PIXEL_DISPLAY: EffectDisplayMeta = {
+  unit: t => t('edit.visualEditor.animation.unitPx'),
+}
+const DEGREE_DISPLAY: Pick<EffectDisplayMeta, 'unit'> = {
+  unit: t => t('edit.visualEditor.animation.unitDegree'),
+}
 
 // ─── 效果编辑器 ease 选项（在注册表 EASE.options 基础上增加"默认"占位） ───
 
@@ -133,11 +202,11 @@ export const EFFECT_CATEGORIES: EffectCategory[] = [
     icon: 'i-lucide-move',
     defaultOpen: true,
     params: [
-      { key: 'position.x', type: 'number', label: t => t('modals.effectEditor.params.positionX'), defaultValue: 0, effectGroup: 'position', scrubbable: true, scrubStep: 1 },
-      { key: 'position.y', type: 'number', label: t => t('modals.effectEditor.params.positionY'), defaultValue: 0, effectGroup: 'position', scrubbable: true, scrubStep: 1 },
-      { key: 'scale.x', type: 'number', label: t => t('modals.effectEditor.params.scaleX'), linkedGroupLabel: t => t('modals.effectEditor.params.scale'), defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, linkedPairKey: 'scale.y', variant: 'slider-input' },
-      { key: 'scale.y', type: 'number', label: t => t('modals.effectEditor.params.scaleY'), defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, linkedPairKey: 'scale.x', variant: 'slider-input' },
-      { key: 'rotation', type: 'dial', label: t => t('modals.effectEditor.params.rotation'), defaultValue: 0, dialUnit: 'rad', compact: true },
+      { key: 'position.x', type: 'number', label: t => t('modals.effectEditor.params.positionX'), defaultValue: 0, display: PIXEL_DISPLAY, effectGroup: 'position', scrubbable: true, scrubStep: 1 },
+      { key: 'position.y', type: 'number', label: t => t('modals.effectEditor.params.positionY'), defaultValue: 0, display: PIXEL_DISPLAY, effectGroup: 'position', scrubbable: true, scrubStep: 1 },
+      { key: 'scale.x', type: 'number', label: t => t('modals.effectEditor.params.scaleX'), linkedGroupLabel: t => t('modals.effectEditor.params.scale'), display: PERCENT_DISPLAY, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, linkedPairKey: 'scale.y', variant: 'slider-input' },
+      { key: 'scale.y', type: 'number', label: t => t('modals.effectEditor.params.scaleY'), display: PERCENT_DISPLAY, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, linkedPairKey: 'scale.x', variant: 'slider-input' },
+      { key: 'rotation', type: 'dial', label: t => t('modals.effectEditor.params.rotation'), display: DEGREE_DISPLAY, defaultValue: 0, dialUnit: 'rad', compact: true },
     ],
     actions: [
       { kind: 'flip-actions', key: 'transform-flip' },
@@ -148,17 +217,17 @@ export const EFFECT_CATEGORIES: EffectCategory[] = [
     icon: 'i-lucide-eye',
     defaultOpen: true,
     params: [
-      { key: 'alpha', type: 'number', label: t => t('modals.effectEditor.params.alpha'), defaultValue: 1, min: 0, max: 1, step: 0.01, center: 1, variant: 'slider-input' },
-      { key: 'blur', type: 'number', label: t => t('modals.effectEditor.params.blur'), defaultValue: 0, min: 0, max: 50, step: 0.5, center: 0, variant: 'slider-input' },
+      { key: 'alpha', type: 'number', label: t => t('modals.effectEditor.params.alpha'), display: PERCENT_DISPLAY, defaultValue: 1, min: 0, max: 1, step: 0.01, center: 1, variant: 'slider-input' },
+      { key: 'blur', type: 'number', label: t => t('modals.effectEditor.params.blur'), display: PIXEL_DISPLAY, defaultValue: 0, min: 0, max: 50, step: 0.5, center: 0, variant: 'slider-input' },
     ],
   },
   {
     label: t => t('modals.effectEditor.categories.colorAdjustment'),
     icon: 'i-lucide-palette',
     params: [
-      { key: 'brightness', type: 'number', label: t => t('modals.effectEditor.params.brightness'), defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
-      { key: 'contrast', type: 'number', label: t => t('modals.effectEditor.params.contrast'), defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
-      { key: 'saturation', type: 'number', label: t => t('modals.effectEditor.params.saturation'), defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
+      { key: 'brightness', type: 'number', label: t => t('modals.effectEditor.params.brightness'), display: PERCENT_DISPLAY, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
+      { key: 'contrast', type: 'number', label: t => t('modals.effectEditor.params.contrast'), display: PERCENT_DISPLAY, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
+      { key: 'saturation', type: 'number', label: t => t('modals.effectEditor.params.saturation'), display: PERCENT_DISPLAY, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
       { key: 'gamma', type: 'number', label: t => t('modals.effectEditor.params.gamma'), defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
       { key: 'color', type: 'color', label: t => t('modals.effectEditor.params.color'), colorPaths: ['colorRed', 'colorGreen', 'colorBlue'], colorDefaults: [255, 255, 255] },
     ],
@@ -167,20 +236,20 @@ export const EFFECT_CATEGORIES: EffectCategory[] = [
     label: t => t('modals.effectEditor.categories.bloom'),
     icon: 'i-lucide-sun',
     params: [
-      { key: 'bloom', type: 'number', label: t => t('modals.effectEditor.params.bloom'), defaultValue: 0, min: 0, max: 1, step: 0.01, center: 0, variant: 'slider-input' },
-      { key: 'bloomBrightness', type: 'number', label: t => t('modals.effectEditor.params.bloomBrightness'), defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
-      { key: 'bloomThreshold', type: 'number', label: t => t('modals.effectEditor.params.bloomThreshold'), defaultValue: 0, min: 0, max: 1, step: 0.01, center: 0, variant: 'slider-input' },
-      { key: 'bloomBlur', type: 'number', label: t => t('modals.effectEditor.params.bloomBlur'), defaultValue: 0, min: 0, max: 50, step: 0.5, center: 0, variant: 'slider-input' },
+      { key: 'bloom', type: 'number', label: t => t('modals.effectEditor.params.bloom'), display: PERCENT_DISPLAY, defaultValue: 0, min: 0, max: 5, step: 0.01, center: 0, variant: 'slider-input' },
+      { key: 'bloomBrightness', type: 'number', label: t => t('modals.effectEditor.params.bloomBrightness'), display: PERCENT_DISPLAY, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
+      { key: 'bloomThreshold', type: 'number', label: t => t('modals.effectEditor.params.bloomThreshold'), display: PERCENT_DISPLAY, defaultValue: 0, min: 0, max: 1, step: 0.01, center: 0, variant: 'slider-input' },
+      { key: 'bloomBlur', type: 'number', label: t => t('modals.effectEditor.params.bloomBlur'), display: PIXEL_DISPLAY, defaultValue: 0, min: 0, max: 50, step: 0.5, center: 0, variant: 'slider-input' },
     ],
   },
   {
     label: t => t('modals.effectEditor.categories.bevel'),
     icon: 'i-lucide-layers',
     params: [
-      { key: 'bevelThickness', type: 'number', label: t => t('modals.effectEditor.params.bevelThickness'), defaultValue: 0, min: 0, max: 100, step: 0.5, center: 0, variant: 'slider-input' },
-      { key: 'bevel', type: 'number', label: t => t('modals.effectEditor.params.bevel'), defaultValue: 0, min: 0, max: 1, step: 0.01, center: 0, variant: 'slider-input' },
-      { key: 'bevelSoftness', type: 'number', label: t => t('modals.effectEditor.params.bevelSoftness'), defaultValue: 0, min: 0, max: 1, step: 0.01, center: 0, variant: 'slider-input' },
-      { key: 'bevelRotation', type: 'dial', label: t => t('modals.effectEditor.params.bevelRotation'), defaultValue: 0, dialUnit: 'deg' },
+      { key: 'bevelThickness', type: 'number', label: t => t('modals.effectEditor.params.bevelThickness'), display: PIXEL_DISPLAY, defaultValue: 0, min: 0, max: 100, step: 0.5, center: 0, variant: 'slider-input' },
+      { key: 'bevel', type: 'number', label: t => t('modals.effectEditor.params.bevel'), display: PERCENT_DISPLAY, defaultValue: 0, min: 0, max: 1, step: 0.01, center: 0, variant: 'slider-input' },
+      { key: 'bevelSoftness', type: 'number', label: t => t('modals.effectEditor.params.bevelSoftness'), display: PERCENT_DISPLAY, defaultValue: 0, min: 0, max: 1, step: 0.01, center: 0, variant: 'slider-input' },
+      { key: 'bevelRotation', type: 'dial', label: t => t('modals.effectEditor.params.bevelRotation'), display: DEGREE_DISPLAY, defaultValue: 0, dialUnit: 'deg' },
       { key: 'bevelColor', type: 'color', label: t => t('modals.effectEditor.params.bevelColor'), colorPaths: ['bevelRed', 'bevelGreen', 'bevelBlue'], colorDefaults: [255, 255, 255] },
     ],
   },
@@ -197,6 +266,14 @@ export const EFFECT_CATEGORIES: EffectCategory[] = [
     ],
   },
 ]
+
+for (const category of EFFECT_CATEGORIES) {
+  for (const param of category.params) {
+    if (param.type === 'number' || param.type === 'dial') {
+      EFFECT_PARAM_BY_PATH.set(param.key, param)
+    }
+  }
+}
 
 // ─── Path Rules（从 FieldDef 参数定义派生） ───
 

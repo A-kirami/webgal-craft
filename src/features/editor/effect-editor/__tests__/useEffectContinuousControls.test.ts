@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 
+import { effectParamForPath } from '~/features/editor/effect-editor/effect-editor-config'
 import { useEffectContinuousControls } from '~/features/editor/effect-editor/useEffectContinuousControls'
 
 import type { ImmediatePointerDragEvent } from '~/composables/useImmediatePointerDrag'
 import type { DialField, NumberField } from '~/features/editor/command-registry/schema'
+import type { EffectDialField, EffectNumberField } from '~/features/editor/effect-editor/effect-editor-config'
 import type { EffectControlDeps } from '~/features/editor/effect-editor/types'
 
 type ParamDragState = object & { param: unknown }
@@ -180,6 +182,22 @@ function createDialField(overrides: Partial<DialField> = {}): DialField {
   }
 }
 
+function getEffectNumberParam(path: string): EffectNumberField {
+  const param = effectParamForPath(path)
+  if (param?.type !== 'number') {
+    throw new Error(`Expected numeric effect parameter: ${path}`)
+  }
+  return param
+}
+
+function getEffectDialParam(path: string): EffectDialField {
+  const param = effectParamForPath(path)
+  if (param?.type !== 'dial') {
+    throw new Error(`Expected dial effect parameter: ${path}`)
+  }
+  return param
+}
+
 function createPointerEvent(overrides: Partial<PointerEvent> = {}): PointerEvent {
   return {
     altKey: false,
@@ -346,6 +364,34 @@ describe('useEffectContinuousControls', () => {
       flush: undefined,
       deferAutoApply: true,
     })
+  })
+
+  it('按展示元数据将百分比输入写回原始倍率且不限制泛光强度', () => {
+    const { deps, fields } = createDeps()
+    const controls = useEffectContinuousControls(deps)
+    const alpha = getEffectNumberParam('alpha')
+    const bloom = getEffectNumberParam('bloom')
+
+    controls.updateSliderField(alpha, 80)
+    controls.updateSliderField(bloom, 250)
+
+    expect(fields.alpha).toBe('0.8')
+    expect(fields.bloom).toBe('2.5')
+    expect(controls.getSliderMax(bloom)).toBe(500)
+
+    controls.updateSliderField(bloom, 500, { fromSlider: true })
+    expect(fields.bloom).toBe('5')
+  })
+
+  it('百分比滑条拖拽后重新读取轨道值不会出现浮点长尾', () => {
+    const { deps, fields } = createDeps()
+    const controls = useEffectContinuousControls(deps)
+    const scaleX = getEffectNumberParam('scale.x')
+
+    controls.updateSliderField(scaleX, 113, { fromSlider: true })
+
+    expect(fields['scale.x']).toBe('1.13')
+    expect(controls.getSliderTrackValue(scaleX)).toEqual([113])
   })
 
   it('滑条提交会取消尚未发射的拖拽 transform', () => {
@@ -648,6 +694,25 @@ describe('useEffectContinuousControls', () => {
     controls.updateDialField(dialField, 90)
     expect(Number(fields.rotate)).toBeCloseTo(1.5708)
     expect(controls.getDialInputValue(dialField)).toBe('90')
+  })
+
+  it('容器和斜面旋转使用相同角度展示但保留各自存储单位', () => {
+    const { deps, fields } = createDeps({
+      bevelRotation: '45',
+      rotation: String(Math.PI / 2),
+    })
+    const controls = useEffectContinuousControls(deps)
+    const rotation = getEffectDialParam('rotation')
+    const bevelRotation = getEffectDialParam('bevelRotation')
+
+    expect(controls.getDialInputValue(rotation)).toBe('90')
+    expect(controls.getDialInputValue(bevelRotation)).toBe('45')
+
+    controls.updateDialField(rotation, 180)
+    controls.updateDialField(bevelRotation, 90)
+
+    expect(fields.rotation).toBe('3.1416')
+    expect(fields.bevelRotation).toBe('90')
   })
 
   it('dial 提交已有值时不会把弧度存储值当成角度重复转换', () => {
