@@ -417,10 +417,17 @@ describe('usePreviewSyncStore', () => {
 
   it('预览面板关闭时会丢弃请求，重新打开后恢复发送', async () => {
     const preferenceStore = usePreferenceStore()
-    preferenceStore.showPreviewPanel = false
     const store = usePreviewSyncStore()
+    const pendingBeforeClose = store.queryReferenceBox('fig-center')
+
+    preferenceStore.showPreviewPanel = false
 
     await expect(store.queryReferenceBox('fig-center')).resolves.toEqual({
+      target: 'fig-center',
+      status: 'unsupported',
+      reason: 'preview state reset',
+    })
+    await expect(pendingBeforeClose).resolves.toEqual({
       target: 'fig-center',
       status: 'unsupported',
       reason: 'preview state reset',
@@ -429,12 +436,12 @@ describe('usePreviewSyncStore', () => {
       target: 'fig-center',
       transform: { blur: 12 },
     })).rejects.toThrow('preview state reset')
-    expect(sendPreviewCommandMock).not.toHaveBeenCalled()
+    expect(sendPreviewCommandMock).toHaveBeenCalledTimes(1)
 
     preferenceStore.showPreviewPanel = true
     const pending = store.queryReferenceBox('fig-center')
-    expect(sendPreviewCommandMock).toHaveBeenCalledTimes(1)
-    const request = JSON.parse(sendPreviewCommandMock.mock.calls[0][0])
+    expect(sendPreviewCommandMock).toHaveBeenCalledTimes(2)
+    const request = JSON.parse(sendPreviewCommandMock.mock.calls[1][0])
     store.consumeHostEvent(JSON.stringify({
       kind: 'response',
       type: 'preview.query.reference-box',

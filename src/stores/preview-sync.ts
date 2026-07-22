@@ -320,6 +320,7 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
   ): Promise<ReferenceBoxQueryResultPayload> {
     const type = 'preview.query.reference-box'
     if (!isPreviewPanelOpen()) {
+      resetEmbeddedPreviewState()
       return Promise.resolve({
         target,
         status: 'unsupported',
