@@ -13,6 +13,8 @@ import {
   DEFAULT_EASE_OPTION_VALUE,
   EFFECT_CATEGORIES,
   EFFECT_EASE_OPTIONS,
+  effectFieldValueToDisplay,
+  transformFieldsToDisplay,
   transformToFields,
 } from '~/features/editor/effect-editor/effect-editor-config'
 import { flipTransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
@@ -80,11 +82,12 @@ const resolveEffectDraftLabel = (value: I18nLike | undefined) => resolveI18n(val
 const easeModelValue = $computed(() => props.ease || DEFAULT_EASE_OPTION_VALUE)
 const isPanelLayout = $computed(() => props.layout === 'panel')
 const storedFields = $computed(() => transformToFields(props.transform))
-const displayFields = $computed(() => transformToFields(resolveTransformDraftDisplay({
+const resolvedFields = $computed(() => transformToFields(resolveTransformDraftDisplay({
   baselineSource: props.baselineSource,
   baselineTransform: props.baselineTransform,
   explicitDraftTransform: props.transform,
 }).displayTransform))
+const displayFields = $computed(() => transformFieldsToDisplay(resolvedFields))
 
 function getFields(): Record<string, string> {
   return { ...storedFields }
@@ -108,7 +111,10 @@ const {
 })
 
 function getFieldValue(path: string): string {
-  return props.previewFieldValue?.(path) ?? displayFields[path] ?? ''
+  const previewValue = props.previewFieldValue?.(path)
+  return previewValue === undefined
+    ? displayFields[path] ?? ''
+    : effectFieldValueToDisplay(path, previewValue)
 }
 
 function getStoredFieldValue(path: string): string | undefined {
@@ -116,7 +122,7 @@ function getStoredFieldValue(path: string): string | undefined {
 }
 
 function getNumberValue(path: string, fallback: number): number {
-  const rawValue = getFieldValue(path)
+  const rawValue = props.previewFieldValue?.(path) ?? resolvedFields[path]
   if (!rawValue) {
     return fallback
   }
@@ -148,12 +154,18 @@ const {
   handleNumberLabelPointerDown,
   numberScrub,
   getSliderTrackValue,
+  getSliderMin,
+  getSliderMax,
+  getSliderStep,
+  getSliderCenterPosition,
+  getSliderUnit: getSliderUnitValue,
   getSliderInputValue,
   updateSliderField,
   flushSliderField,
   isLinkedSliderLocked,
   toggleLinkedSliderLock,
   getLinkedSliderInputValue,
+  getLinkedSliderTrackValue,
   updateLinkedSliderField,
   flushLinkedSliderField,
   getDialDegree,
@@ -195,6 +207,11 @@ const {
 const clearControls = useEffectClearControls(controlDeps)
 const durationInputId = buildControlId('duration')
 const easeTriggerId = buildControlId('ease')
+
+function getSliderUnit(param: Parameters<typeof getSliderUnitValue>[0]): string | undefined {
+  const unit = getSliderUnitValue(param)
+  return unit ? resolveI18n(unit, t) : undefined
+}
 
 function getLinkedSliderLabel(param: EffectDraftLinkedNumberField): string {
   return getEffectDraftFormLinkedSliderLabel(param, resolveEffectDraftLabel)
@@ -254,6 +271,11 @@ const categoryControls: EffectDraftCategoryControls = {
   canScrubNumber,
   handleNumberLabelPointerDown,
   getSliderTrackValue,
+  getSliderMin,
+  getSliderMax,
+  getSliderStep,
+  getSliderCenterPosition,
+  getSliderUnit,
   getSliderInputValue,
   updateSliderField,
   flushSliderField,
@@ -263,6 +285,7 @@ const categoryControls: EffectDraftCategoryControls = {
   getAxisCompactLabel,
   getLinkedSliderInputAriaLabel,
   getLinkedSliderInputValue,
+  getLinkedSliderTrackValue,
   updateLinkedSliderField,
   flushLinkedSliderField,
   getDialDegree,

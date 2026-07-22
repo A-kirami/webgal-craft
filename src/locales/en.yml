@@ -772,6 +772,9 @@ edit:
       emptyTitle: No Frames Yet
       emptyDescription: Add a keyframe to start editing this animation
       unitMs: ms
+      unitPercent: '%'
+      unitPx: px
+      unitDegree: °
       toolbar:
         addFrame: Add Frame
         delete: Delete

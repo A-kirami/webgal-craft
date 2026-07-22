@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 
+import { effectParamForPath } from '~/features/editor/effect-editor/effect-editor-config'
 import { useEffectContinuousControls } from '~/features/editor/effect-editor/useEffectContinuousControls'
 
 import type { ImmediatePointerDragEvent } from '~/composables/useImmediatePointerDrag'
@@ -348,6 +349,21 @@ describe('useEffectContinuousControls', () => {
     })
   })
 
+  it('按展示元数据将百分比输入写回原始倍率且不限制泛光强度', () => {
+    const { deps, fields } = createDeps()
+    const controls = useEffectContinuousControls(deps)
+    const alpha = effectParamForPath('alpha')
+    const bloom = effectParamForPath('bloom')
+
+    expect(alpha?.type).toBe('number')
+    expect(bloom?.type).toBe('number')
+    controls.updateSliderField(alpha as NumberField, 80)
+    controls.updateSliderField(bloom as NumberField, 250)
+
+    expect(fields.alpha).toBe('0.8')
+    expect(fields.bloom).toBe('2.5')
+  })
+
   it('滑条提交会取消尚未发射的拖拽 transform', () => {
     const { deps, emitTransform, fields } = createDeps()
     const controls = useEffectContinuousControls(deps)
@@ -648,6 +664,27 @@ describe('useEffectContinuousControls', () => {
     controls.updateDialField(dialField, 90)
     expect(Number(fields.rotate)).toBeCloseTo(1.5708)
     expect(controls.getDialInputValue(dialField)).toBe('90')
+  })
+
+  it('容器和斜面旋转使用相同角度展示但保留各自存储单位', () => {
+    const { deps, fields } = createDeps({
+      bevelRotation: '45',
+      rotation: String(Math.PI / 2),
+    })
+    const controls = useEffectContinuousControls(deps)
+    const rotation = effectParamForPath('rotation')
+    const bevelRotation = effectParamForPath('bevelRotation')
+
+    expect(rotation?.type).toBe('dial')
+    expect(bevelRotation?.type).toBe('dial')
+    expect(controls.getDialInputValue(rotation as DialField)).toBe('90')
+    expect(controls.getDialInputValue(bevelRotation as DialField)).toBe('45')
+
+    controls.updateDialField(rotation as DialField, 180)
+    controls.updateDialField(bevelRotation as DialField, 90)
+
+    expect(fields.rotation).toBe('3.1416')
+    expect(fields.bevelRotation).toBe('90')
   })
 
   it('dial 提交已有值时不会把弧度存储值当成角度重复转换', () => {

@@ -772,6 +772,9 @@ edit:
       emptyTitle: まだフレームがありません
       emptyDescription: キーフレームを追加してアニメーション編集を始めてください
       unitMs: ms
+      unitPercent: '%'
+      unitPx: px
+      unitDegree: °
       toolbar:
         addFrame: フレームを追加
         delete: 削除
