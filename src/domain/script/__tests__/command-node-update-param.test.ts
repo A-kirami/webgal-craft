@@ -204,6 +204,28 @@ describe('命令节点参数更新器', () => {
     expect(serialized.args).toEqual([{ key: 'skipOff', value: true }])
   })
 
+  it('开启 next 时会关闭 generic 命令的 continue', () => {
+    const node = parseCommandNode(mustParse('changeBg: bg.jpg -continue -x=1;'))
+    const updated = updateCommandNodeParam(node, makeParamDef('next', 'switch'), true)
+
+    expect(updated).toBeDefined()
+    expect(serializeCommandNode(updated!).args).toEqual([
+      { key: 'next', value: true },
+      { key: 'x', value: 1 },
+    ])
+  })
+
+  it('开启 continue 时会关闭 generic 命令的 next', () => {
+    const node = parseCommandNode(mustParse('changeBg: bg.jpg -next -x=1;'))
+    const updated = updateCommandNodeParam(node, makeParamDef('continue', 'switch'), true)
+
+    expect(updated).toBeDefined()
+    expect(serializeCommandNode(updated!).args).toEqual([
+      { key: 'continue', value: true },
+      { key: 'x', value: 1 },
+    ])
+  })
+
   it('可关闭 say concat 标志', () => {
     const sentence = mustParse('Alice: hello -concat -x=1;')
     const node = parseCommandNode(sentence)

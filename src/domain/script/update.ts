@@ -10,6 +10,17 @@ import type { arg } from 'webgal-parser/src/interface/sceneInterface'
 
 const NOT_HANDLED = Symbol('command-param-not-handled')
 
+type ControlFlagKey = 'next' | 'continue'
+
+function getOppositeControlFlag(key: string): ControlFlagKey | undefined {
+  if (key === 'next') {
+    return 'continue'
+  }
+  if (key === 'continue') {
+    return 'next'
+  }
+}
+
 type ParamUpdateValue = string | boolean | number
 
 // 判断新值是否等效于"未设置"：
@@ -187,6 +198,10 @@ function updateFromFieldTable(
       case 'boolean': {
         removeArgByKey(nextArgs, paramDef.key)
         if (newValue === true) {
+          const oppositeKey = getOppositeControlFlag(paramDef.key)
+          if (oppositeKey) {
+            removeArgByKey(nextArgs, oppositeKey)
+          }
           upsertArgValue(nextArgs, paramDef.key, true, knownKeys)
         }
         return { ...node, args: nextArgs }
