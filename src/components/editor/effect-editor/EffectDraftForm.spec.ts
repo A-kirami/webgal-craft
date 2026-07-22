@@ -17,7 +17,6 @@ import EffectDraftForm from './EffectDraftForm.vue'
 const globalStubs = {
   Button: createBrowserValueStub('StubButton', 'button'),
   ColorPicker: createBrowserValueStub('StubColorPicker'),
-  Input: createBrowserInputStub('StubInput'),
   InputGroup: createBrowserValueStub('StubInputGroup'),
   InputGroupAddon: createBrowserValueStub('StubInputGroupAddon', 'span'),
   InputGroupInput: createBrowserInputStub('StubInputGroupInput'),

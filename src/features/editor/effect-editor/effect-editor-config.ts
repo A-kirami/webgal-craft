@@ -1,5 +1,6 @@
 import { EASE } from '~/features/editor/command-registry/common-params'
 import { UNSPECIFIED } from '~/features/editor/command-registry/schema'
+import { degreeToRadian, radianToDegree } from '~/utils/math'
 
 import type { Transform } from '~/domain/stage/types'
 import type { ChoiceField, ColorField, DialField, I18nLike, NumberField } from '~/features/editor/command-registry/schema'
@@ -10,43 +11,40 @@ import type { ChoiceField, ColorField, DialField, I18nLike, NumberField } from '
 export interface EffectDisplayMeta {
   unit?: I18nLike
   scale?: number
-  min?: number
-  max?: number
-  step?: number
-  center?: number
 }
 
 export type EffectNumberField = NumberField & { display?: EffectDisplayMeta }
-export type EffectDialField = DialField & { display?: EffectDisplayMeta }
+export type EffectDialField = DialField & { display?: Pick<EffectDisplayMeta, 'unit'> }
 export type EffectParamDef = EffectNumberField | EffectDialField | ColorField | ChoiceField
 
 const EFFECT_PARAM_BY_PATH = new Map<string, EffectNumberField | EffectDialField>()
 
-function displayScale(param: EffectNumberField | EffectDialField): number {
+function displayScale(param: EffectNumberField): number {
   return param.display?.scale ?? 1
 }
 
 export function effectStoredToDisplay(param: EffectNumberField | EffectDialField, value: number): number {
+  if (param.type === 'dial') {
+    return param.dialUnit === 'deg' ? value : radianToDegree(value)
+  }
   return value * displayScale(param)
 }
 
 export function effectDisplayToStored(param: EffectNumberField | EffectDialField, value: number): number {
+  if (param.type === 'dial') {
+    return param.dialUnit === 'deg' ? value : degreeToRadian(value)
+  }
   return value / displayScale(param)
 }
 
 export function effectDisplayBounds(param: EffectNumberField): { min?: number, max?: number, step?: number, center?: number } {
   const scale = displayScale(param)
-  const display = param.display
   return {
-    min: display?.min ?? (param.min === undefined ? undefined : param.min * scale),
-    max: display?.max ?? (param.max === undefined ? undefined : param.max * scale),
-    step: display?.step ?? (param.step === undefined ? undefined : param.step * scale),
-    center: display?.center ?? (param.center === undefined ? undefined : param.center * scale),
+    min: param.min === undefined ? undefined : param.min * scale,
+    max: param.max === undefined ? undefined : param.max * scale,
+    step: param.step === undefined ? undefined : param.step * scale,
+    center: param.center === undefined ? undefined : param.center * scale,
   }
-}
-
-export function effectDisplayUnit(param: EffectNumberField | EffectDialField): I18nLike | undefined {
-  return param.display?.unit
 }
 
 export function effectParamForPath(path: string): EffectNumberField | EffectDialField | undefined {
@@ -177,6 +175,16 @@ const FILTER_SEGMENT_OPTIONS: { label: I18nLike, value: string }[] = [
   { label: t => t('modals.effectEditor.filterOptions.off'), value: '0' },
 ]
 const EMPTY_EFFECT_FIELD_VALUES = new Set<unknown>([undefined, '', UNSPECIFIED])
+const PERCENT_DISPLAY: EffectDisplayMeta = {
+  unit: t => t('edit.visualEditor.animation.unitPercent'),
+  scale: 100,
+}
+const PIXEL_DISPLAY: EffectDisplayMeta = {
+  unit: t => t('edit.visualEditor.animation.unitPx'),
+}
+const DEGREE_DISPLAY: Pick<EffectDisplayMeta, 'unit'> = {
+  unit: t => t('edit.visualEditor.animation.unitDegree'),
+}
 
 // ─── 效果编辑器 ease 选项（在注册表 EASE.options 基础上增加"默认"占位） ───
 
@@ -193,11 +201,11 @@ export const EFFECT_CATEGORIES: EffectCategory[] = [
     icon: 'i-lucide-move',
     defaultOpen: true,
     params: [
-      { key: 'position.x', type: 'number', label: t => t('modals.effectEditor.params.positionX'), defaultValue: 0, display: { unit: t => t('edit.visualEditor.animation.unitPx') }, effectGroup: 'position', scrubbable: true, scrubStep: 1 },
-      { key: 'position.y', type: 'number', label: t => t('modals.effectEditor.params.positionY'), defaultValue: 0, display: { unit: t => t('edit.visualEditor.animation.unitPx') }, effectGroup: 'position', scrubbable: true, scrubStep: 1 },
-      { key: 'scale.x', type: 'number', label: t => t('modals.effectEditor.params.scaleX'), linkedGroupLabel: t => t('modals.effectEditor.params.scale'), display: { unit: t => t('edit.visualEditor.animation.unitPercent'), scale: 100, min: 0, max: 200, step: 1, center: 100 }, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, linkedPairKey: 'scale.y', variant: 'slider-input' },
-      { key: 'scale.y', type: 'number', label: t => t('modals.effectEditor.params.scaleY'), display: { unit: t => t('edit.visualEditor.animation.unitPercent'), scale: 100, min: 0, max: 200, step: 1, center: 100 }, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, linkedPairKey: 'scale.x', variant: 'slider-input' },
-      { key: 'rotation', type: 'dial', label: t => t('modals.effectEditor.params.rotation'), display: { unit: t => t('edit.visualEditor.animation.unitDegree'), scale: 180 / Math.PI }, defaultValue: 0, dialUnit: 'rad', compact: true },
+      { key: 'position.x', type: 'number', label: t => t('modals.effectEditor.params.positionX'), defaultValue: 0, display: PIXEL_DISPLAY, effectGroup: 'position', scrubbable: true, scrubStep: 1 },
+      { key: 'position.y', type: 'number', label: t => t('modals.effectEditor.params.positionY'), defaultValue: 0, display: PIXEL_DISPLAY, effectGroup: 'position', scrubbable: true, scrubStep: 1 },
+      { key: 'scale.x', type: 'number', label: t => t('modals.effectEditor.params.scaleX'), linkedGroupLabel: t => t('modals.effectEditor.params.scale'), display: PERCENT_DISPLAY, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, linkedPairKey: 'scale.y', variant: 'slider-input' },
+      { key: 'scale.y', type: 'number', label: t => t('modals.effectEditor.params.scaleY'), display: PERCENT_DISPLAY, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, linkedPairKey: 'scale.x', variant: 'slider-input' },
+      { key: 'rotation', type: 'dial', label: t => t('modals.effectEditor.params.rotation'), display: DEGREE_DISPLAY, defaultValue: 0, dialUnit: 'rad', compact: true },
     ],
     actions: [
       { kind: 'flip-actions', key: 'transform-flip' },
@@ -208,18 +216,18 @@ export const EFFECT_CATEGORIES: EffectCategory[] = [
     icon: 'i-lucide-eye',
     defaultOpen: true,
     params: [
-      { key: 'alpha', type: 'number', label: t => t('modals.effectEditor.params.alpha'), display: { unit: t => t('edit.visualEditor.animation.unitPercent'), scale: 100, min: 0, max: 100, step: 1, center: 100 }, defaultValue: 1, min: 0, max: 1, step: 0.01, center: 1, variant: 'slider-input' },
-      { key: 'blur', type: 'number', label: t => t('modals.effectEditor.params.blur'), display: { unit: t => t('edit.visualEditor.animation.unitPx') }, defaultValue: 0, min: 0, max: 50, step: 0.5, center: 0, variant: 'slider-input' },
+      { key: 'alpha', type: 'number', label: t => t('modals.effectEditor.params.alpha'), display: PERCENT_DISPLAY, defaultValue: 1, min: 0, max: 1, step: 0.01, center: 1, variant: 'slider-input' },
+      { key: 'blur', type: 'number', label: t => t('modals.effectEditor.params.blur'), display: PIXEL_DISPLAY, defaultValue: 0, min: 0, max: 50, step: 0.5, center: 0, variant: 'slider-input' },
     ],
   },
   {
     label: t => t('modals.effectEditor.categories.colorAdjustment'),
     icon: 'i-lucide-palette',
     params: [
-      { key: 'brightness', type: 'number', label: t => t('modals.effectEditor.params.brightness'), display: { unit: t => t('edit.visualEditor.animation.unitPercent'), scale: 100, min: 0, max: 200, step: 1, center: 100 }, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
-      { key: 'contrast', type: 'number', label: t => t('modals.effectEditor.params.contrast'), display: { unit: t => t('edit.visualEditor.animation.unitPercent'), scale: 100, min: 0, max: 200, step: 1, center: 100 }, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
-      { key: 'saturation', type: 'number', label: t => t('modals.effectEditor.params.saturation'), display: { unit: t => t('edit.visualEditor.animation.unitPercent'), scale: 100, min: 0, max: 200, step: 1, center: 100 }, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
-      { key: 'gamma', type: 'number', label: t => t('modals.effectEditor.params.gamma'), display: { scale: 1 }, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
+      { key: 'brightness', type: 'number', label: t => t('modals.effectEditor.params.brightness'), display: PERCENT_DISPLAY, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
+      { key: 'contrast', type: 'number', label: t => t('modals.effectEditor.params.contrast'), display: PERCENT_DISPLAY, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
+      { key: 'saturation', type: 'number', label: t => t('modals.effectEditor.params.saturation'), display: PERCENT_DISPLAY, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
+      { key: 'gamma', type: 'number', label: t => t('modals.effectEditor.params.gamma'), defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
       { key: 'color', type: 'color', label: t => t('modals.effectEditor.params.color'), colorPaths: ['colorRed', 'colorGreen', 'colorBlue'], colorDefaults: [255, 255, 255] },
     ],
   },
@@ -227,20 +235,20 @@ export const EFFECT_CATEGORIES: EffectCategory[] = [
     label: t => t('modals.effectEditor.categories.bloom'),
     icon: 'i-lucide-sun',
     params: [
-      { key: 'bloom', type: 'number', label: t => t('modals.effectEditor.params.bloom'), display: { unit: t => t('edit.visualEditor.animation.unitPercent'), scale: 100, min: 0, max: 500, step: 1, center: 0 }, defaultValue: 0, min: 0, max: 5, step: 0.01, center: 0, variant: 'slider-input' },
-      { key: 'bloomBrightness', type: 'number', label: t => t('modals.effectEditor.params.bloomBrightness'), display: { unit: t => t('edit.visualEditor.animation.unitPercent'), scale: 100, min: 0, max: 200, step: 1, center: 100 }, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
-      { key: 'bloomThreshold', type: 'number', label: t => t('modals.effectEditor.params.bloomThreshold'), display: { unit: t => t('edit.visualEditor.animation.unitPercent'), scale: 100, min: 0, max: 100, step: 1, center: 0 }, defaultValue: 0, min: 0, max: 1, step: 0.01, center: 0, variant: 'slider-input' },
-      { key: 'bloomBlur', type: 'number', label: t => t('modals.effectEditor.params.bloomBlur'), display: { unit: t => t('edit.visualEditor.animation.unitPx') }, defaultValue: 0, min: 0, max: 50, step: 0.5, center: 0, variant: 'slider-input' },
+      { key: 'bloom', type: 'number', label: t => t('modals.effectEditor.params.bloom'), display: PERCENT_DISPLAY, defaultValue: 0, min: 0, max: 5, step: 0.01, center: 0, variant: 'slider-input' },
+      { key: 'bloomBrightness', type: 'number', label: t => t('modals.effectEditor.params.bloomBrightness'), display: PERCENT_DISPLAY, defaultValue: 1, min: 0, max: 2, step: 0.01, center: 1, variant: 'slider-input' },
+      { key: 'bloomThreshold', type: 'number', label: t => t('modals.effectEditor.params.bloomThreshold'), display: PERCENT_DISPLAY, defaultValue: 0, min: 0, max: 1, step: 0.01, center: 0, variant: 'slider-input' },
+      { key: 'bloomBlur', type: 'number', label: t => t('modals.effectEditor.params.bloomBlur'), display: PIXEL_DISPLAY, defaultValue: 0, min: 0, max: 50, step: 0.5, center: 0, variant: 'slider-input' },
     ],
   },
   {
     label: t => t('modals.effectEditor.categories.bevel'),
     icon: 'i-lucide-layers',
     params: [
-      { key: 'bevelThickness', type: 'number', label: t => t('modals.effectEditor.params.bevelThickness'), display: { unit: t => t('edit.visualEditor.animation.unitPx') }, defaultValue: 0, min: 0, max: 100, step: 0.5, center: 0, variant: 'slider-input' },
-      { key: 'bevel', type: 'number', label: t => t('modals.effectEditor.params.bevel'), display: { unit: t => t('edit.visualEditor.animation.unitPercent'), scale: 100, min: 0, max: 100, step: 1, center: 0 }, defaultValue: 0, min: 0, max: 1, step: 0.01, center: 0, variant: 'slider-input' },
-      { key: 'bevelSoftness', type: 'number', label: t => t('modals.effectEditor.params.bevelSoftness'), display: { unit: t => t('edit.visualEditor.animation.unitPercent'), scale: 100, min: 0, max: 100, step: 1, center: 0 }, defaultValue: 0, min: 0, max: 1, step: 0.01, center: 0, variant: 'slider-input' },
-      { key: 'bevelRotation', type: 'dial', label: t => t('modals.effectEditor.params.bevelRotation'), display: { unit: t => t('edit.visualEditor.animation.unitDegree'), scale: 1 }, defaultValue: 0, dialUnit: 'deg' },
+      { key: 'bevelThickness', type: 'number', label: t => t('modals.effectEditor.params.bevelThickness'), display: PIXEL_DISPLAY, defaultValue: 0, min: 0, max: 100, step: 0.5, center: 0, variant: 'slider-input' },
+      { key: 'bevel', type: 'number', label: t => t('modals.effectEditor.params.bevel'), display: PERCENT_DISPLAY, defaultValue: 0, min: 0, max: 1, step: 0.01, center: 0, variant: 'slider-input' },
+      { key: 'bevelSoftness', type: 'number', label: t => t('modals.effectEditor.params.bevelSoftness'), display: PERCENT_DISPLAY, defaultValue: 0, min: 0, max: 1, step: 0.01, center: 0, variant: 'slider-input' },
+      { key: 'bevelRotation', type: 'dial', label: t => t('modals.effectEditor.params.bevelRotation'), display: DEGREE_DISPLAY, defaultValue: 0, dialUnit: 'deg' },
       { key: 'bevelColor', type: 'color', label: t => t('modals.effectEditor.params.bevelColor'), colorPaths: ['bevelRed', 'bevelGreen', 'bevelBlue'], colorDefaults: [255, 255, 255] },
     ],
   },

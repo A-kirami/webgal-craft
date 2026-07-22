@@ -47,7 +47,7 @@ function createControls(options: CreateControlsOptions = {}) {
     getSliderMax: () => 1,
     getSliderStep: () => 0.01,
     getSliderCenterPosition: () => undefined,
-    getSliderUnit: () => undefined,
+    getFieldUnit: () => undefined,
     getSliderInputValue: () => '1',
     updateSliderField: vi.fn(),
     flushSliderField: vi.fn(),
@@ -88,7 +88,6 @@ function createControls(options: CreateControlsOptions = {}) {
 const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
   ColorPicker: createBrowserValueStub('StubColorPicker'),
-  Input: createBrowserInputStub('StubInput'),
   InputGroup: createBrowserContainerStub('StubInputGroup'),
   InputGroupAddon: createBrowserContainerStub('StubInputGroupAddon', 'span'),
   InputGroupInput: createBrowserInputStub('StubInputGroupInput'),

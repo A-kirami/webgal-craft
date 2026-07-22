@@ -158,7 +158,7 @@ const {
   getSliderMax,
   getSliderStep,
   getSliderCenterPosition,
-  getSliderUnit: getSliderUnitValue,
+  getFieldUnit: getFieldUnitValue,
   getSliderInputValue,
   updateSliderField,
   flushSliderField,
@@ -208,8 +208,8 @@ const clearControls = useEffectClearControls(controlDeps)
 const durationInputId = buildControlId('duration')
 const easeTriggerId = buildControlId('ease')
 
-function getSliderUnit(param: Parameters<typeof getSliderUnitValue>[0]): string | undefined {
-  const unit = getSliderUnitValue(param)
+function getFieldUnit(param: Parameters<typeof getFieldUnitValue>[0]): string | undefined {
+  const unit = getFieldUnitValue(param)
   return unit ? resolveI18n(unit, t) : undefined
 }
 
@@ -275,7 +275,7 @@ const categoryControls: EffectDraftCategoryControls = {
   getSliderMax,
   getSliderStep,
   getSliderCenterPosition,
-  getSliderUnit,
+  getFieldUnit,
   getSliderInputValue,
   updateSliderField,
   flushSliderField,

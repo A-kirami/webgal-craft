@@ -6,6 +6,7 @@ import { useEffectContinuousControls } from '~/features/editor/effect-editor/use
 
 import type { ImmediatePointerDragEvent } from '~/composables/useImmediatePointerDrag'
 import type { DialField, NumberField } from '~/features/editor/command-registry/schema'
+import type { EffectDialField, EffectNumberField } from '~/features/editor/effect-editor/effect-editor-config'
 import type { EffectControlDeps } from '~/features/editor/effect-editor/types'
 
 type ParamDragState = object & { param: unknown }
@@ -181,6 +182,22 @@ function createDialField(overrides: Partial<DialField> = {}): DialField {
   }
 }
 
+function getEffectNumberParam(path: string): EffectNumberField {
+  const param = effectParamForPath(path)
+  if (param?.type !== 'number') {
+    throw new Error(`Expected numeric effect parameter: ${path}`)
+  }
+  return param
+}
+
+function getEffectDialParam(path: string): EffectDialField {
+  const param = effectParamForPath(path)
+  if (param?.type !== 'dial') {
+    throw new Error(`Expected dial effect parameter: ${path}`)
+  }
+  return param
+}
+
 function createPointerEvent(overrides: Partial<PointerEvent> = {}): PointerEvent {
   return {
     altKey: false,
@@ -352,16 +369,18 @@ describe('useEffectContinuousControls', () => {
   it('按展示元数据将百分比输入写回原始倍率且不限制泛光强度', () => {
     const { deps, fields } = createDeps()
     const controls = useEffectContinuousControls(deps)
-    const alpha = effectParamForPath('alpha')
-    const bloom = effectParamForPath('bloom')
+    const alpha = getEffectNumberParam('alpha')
+    const bloom = getEffectNumberParam('bloom')
 
-    expect(alpha?.type).toBe('number')
-    expect(bloom?.type).toBe('number')
-    controls.updateSliderField(alpha as NumberField, 80)
-    controls.updateSliderField(bloom as NumberField, 250)
+    controls.updateSliderField(alpha, 80)
+    controls.updateSliderField(bloom, 250)
 
     expect(fields.alpha).toBe('0.8')
     expect(fields.bloom).toBe('2.5')
+    expect(controls.getSliderMax(bloom)).toBe(500)
+
+    controls.updateSliderField(bloom, 500, { fromSlider: true })
+    expect(fields.bloom).toBe('5')
   })
 
   it('滑条提交会取消尚未发射的拖拽 transform', () => {
@@ -672,16 +691,14 @@ describe('useEffectContinuousControls', () => {
       rotation: String(Math.PI / 2),
     })
     const controls = useEffectContinuousControls(deps)
-    const rotation = effectParamForPath('rotation')
-    const bevelRotation = effectParamForPath('bevelRotation')
+    const rotation = getEffectDialParam('rotation')
+    const bevelRotation = getEffectDialParam('bevelRotation')
 
-    expect(rotation?.type).toBe('dial')
-    expect(bevelRotation?.type).toBe('dial')
-    expect(controls.getDialInputValue(rotation as DialField)).toBe('90')
-    expect(controls.getDialInputValue(bevelRotation as DialField)).toBe('45')
+    expect(controls.getDialInputValue(rotation)).toBe('90')
+    expect(controls.getDialInputValue(bevelRotation)).toBe('45')
 
-    controls.updateDialField(rotation as DialField, 180)
-    controls.updateDialField(bevelRotation as DialField, 90)
+    controls.updateDialField(rotation, 180)
+    controls.updateDialField(bevelRotation, 90)
 
     expect(fields.rotation).toBe('3.1416')
     expect(fields.bevelRotation).toBe('90')

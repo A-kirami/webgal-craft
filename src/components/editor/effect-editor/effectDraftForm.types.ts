@@ -39,7 +39,7 @@ export interface EffectDraftCategoryControls {
   getSliderMax: (param: EffectNumberField) => number | undefined
   getSliderStep: (param: EffectNumberField) => number | undefined
   getSliderCenterPosition: (param: EffectNumberField) => number | undefined
-  getSliderUnit: (param: EffectNumberField | EffectDialField) => string | undefined
+  getFieldUnit: (param: EffectNumberField | EffectDialField) => string | undefined
   getSliderInputValue: (param: EffectNumberField) => string
   updateSliderField: (param: EffectNumberField, rawValue: string | number, options?: { fromSlider?: boolean, flush?: boolean }) => void
   flushSliderField: (param: EffectNumberField) => void

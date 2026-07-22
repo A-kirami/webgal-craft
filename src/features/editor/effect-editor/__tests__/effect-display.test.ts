@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  effectDisplayBounds,
   effectDisplayToStored,
   effectParamForPath,
   effectStoredToDisplay,
@@ -42,12 +43,33 @@ describe('效果字段展示转换', () => {
     expect(effectStoredToDisplay(brightness!, 1)).toBe(100)
   })
 
-  it('所有归一化效果字段都能在展示空间完成边界 round-trip', () => {
-    for (const path of ['alpha', 'brightness', 'contrast', 'saturation', 'bloom', 'bloomBrightness', 'bloomThreshold', 'bevel', 'bevelSoftness']) {
+  it('所有归一化效果字段都按原始边界换算展示范围并完成 round-trip', () => {
+    const expectedBounds = {
+      alpha: [0, 100],
+      brightness: [0, 200],
+      contrast: [0, 200],
+      saturation: [0, 200],
+      bloom: [0, 500],
+      bloomBrightness: [0, 200],
+      bloomThreshold: [0, 100],
+      bevel: [0, 100],
+      bevelSoftness: [0, 100],
+    } as const
+
+    for (const [path, [displayMin, displayMax]] of Object.entries(expectedBounds)) {
       const param = effectParamForPath(path)
       expect(param).toBeDefined()
-      const displayValue = effectStoredToDisplay(param!, 0.8)
-      expect(effectDisplayToStored(param!, displayValue)).toBeCloseTo(0.8)
+      if (param?.type !== 'number') {
+        throw new Error(`Expected numeric effect parameter: ${path}`)
+      }
+
+      const bounds = effectDisplayBounds(param)
+      expect(bounds.min).toBe(displayMin)
+      expect(bounds.max).toBe(displayMax)
+      expect(effectStoredToDisplay(param, param.min!)).toBe(displayMin)
+      expect(effectStoredToDisplay(param, param.max!)).toBe(displayMax)
+      expect(effectDisplayToStored(param, displayMin)).toBeCloseTo(param.min!)
+      expect(effectDisplayToStored(param, displayMax)).toBeCloseTo(param.max!)
     }
   })
 
