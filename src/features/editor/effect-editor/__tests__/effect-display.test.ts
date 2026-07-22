@@ -43,6 +43,14 @@ describe('效果字段展示转换', () => {
     expect(effectStoredToDisplay(brightness!, 1)).toBe(100)
   })
 
+  it('百分比存储值转换为展示值时不暴露浮点误差', () => {
+    const scaleX = effectParamForPath('scale.x')
+
+    expect(scaleX).toBeDefined()
+    expect(effectStoredToDisplay(scaleX!, 1.13)).toBe(113)
+    expect(transformFieldsToDisplay({ 'scale.x': '1.13' })).toEqual({ 'scale.x': '113' })
+  })
+
   it('所有归一化效果字段都按原始边界换算展示范围并完成 round-trip', () => {
     const expectedBounds = {
       alpha: [0, 100],

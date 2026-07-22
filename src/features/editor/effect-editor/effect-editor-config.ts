@@ -1,6 +1,6 @@
 import { EASE } from '~/features/editor/command-registry/common-params'
 import { UNSPECIFIED } from '~/features/editor/command-registry/schema'
-import { degreeToRadian, radianToDegree } from '~/utils/math'
+import { degreeToRadian, radianToDegree, roundToPrecision } from '~/utils/math'
 
 import type { Transform } from '~/domain/stage/types'
 import type { ChoiceField, ColorField, DialField, I18nLike, NumberField } from '~/features/editor/command-registry/schema'
@@ -18,6 +18,7 @@ export type EffectDialField = DialField & { display?: Pick<EffectDisplayMeta, 'u
 export type EffectParamDef = EffectNumberField | EffectDialField | ColorField | ChoiceField
 
 const EFFECT_PARAM_BY_PATH = new Map<string, EffectNumberField | EffectDialField>()
+const EFFECT_DISPLAY_PRECISION = 12
 
 function displayScale(param: EffectNumberField): number {
   return param.display?.scale ?? 1
@@ -27,7 +28,7 @@ export function effectStoredToDisplay(param: EffectNumberField | EffectDialField
   if (param.type === 'dial') {
     return param.dialUnit === 'deg' ? value : radianToDegree(value)
   }
-  return value * displayScale(param)
+  return roundToPrecision(value * displayScale(param), EFFECT_DISPLAY_PRECISION)
 }
 
 export function effectDisplayToStored(param: EffectNumberField | EffectDialField, value: number): number {

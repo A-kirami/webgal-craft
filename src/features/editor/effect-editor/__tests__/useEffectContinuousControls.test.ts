@@ -383,6 +383,17 @@ describe('useEffectContinuousControls', () => {
     expect(fields.bloom).toBe('5')
   })
 
+  it('百分比滑条拖拽后重新读取轨道值不会出现浮点长尾', () => {
+    const { deps, fields } = createDeps()
+    const controls = useEffectContinuousControls(deps)
+    const scaleX = getEffectNumberParam('scale.x')
+
+    controls.updateSliderField(scaleX, 113, { fromSlider: true })
+
+    expect(fields['scale.x']).toBe('1.13')
+    expect(controls.getSliderTrackValue(scaleX)).toEqual([113])
+  })
+
   it('滑条提交会取消尚未发射的拖拽 transform', () => {
     const { deps, emitTransform, fields } = createDeps()
     const controls = useEffectContinuousControls(deps)
