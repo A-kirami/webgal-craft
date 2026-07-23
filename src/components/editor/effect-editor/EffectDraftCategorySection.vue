@@ -121,16 +121,13 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               </div>
             </div>
             <InputGroup class="flex-1 h-7 min-w-0 shadow-none">
-              <InputGroupInput
+              <EffectDraftNumberInput
                 :id="controls.numberInputId(param.key)"
-                type="number"
-                step="any"
                 :model-value="controls.getFieldValue(param.key)"
                 class="text-xs pr-1 flex-1 h-7 min-w-0 shadow-none"
                 :placeholder="controls.getSliderInputValue(param)"
                 @update:model-value="controls.updateNumberField(param, String($event ?? ''))"
-                @blur="controls.updateNumberField(param, controls.getFieldValue(param.key), { flush: true })"
-                @keydown.enter="controls.updateNumberField(param, controls.getFieldValue(param.key), { flush: true })"
+                @commit="controls.updateNumberField(param, $event, { flush: true })"
               />
               <InputGroupAddon v-if="controls.getFieldUnit(param)" align="inline-end" class="text-xs">
                 {{ controls.getFieldUnit(param) }}
@@ -165,16 +162,13 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
             </div>
           </div>
           <InputGroup class="flex-1 h-7 shadow-none">
-            <InputGroupInput
+            <EffectDraftNumberInput
               :id="controls.numberInputId(item.param.key)"
-              type="number"
-              step="any"
               :model-value="controls.getFieldValue(item.param.key)"
               class="text-xs pr-1 h-7 shadow-none"
               :placeholder="controls.getSliderInputValue(item.param)"
               @update:model-value="controls.updateNumberField(item.param, String($event ?? ''))"
-              @blur="controls.updateNumberField(item.param, controls.getFieldValue(item.param.key), { flush: true })"
-              @keydown.enter="controls.updateNumberField(item.param, controls.getFieldValue(item.param.key), { flush: true })"
+              @commit="controls.updateNumberField(item.param, $event, { flush: true })"
             />
             <InputGroupAddon v-if="controls.getFieldUnit(item.param)" align="inline-end" class="text-xs">
               {{ controls.getFieldUnit(item.param) }}
@@ -214,15 +208,12 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               />
             </div>
             <InputGroup class="h-7 shadow-none" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-12.5'">
-              <InputGroupInput
+              <EffectDraftNumberInput
                 :id="controls.sliderInputId(item.param.key)"
-                type="number"
-                step="any"
                 :model-value="controls.getSliderInputValue(item.param)"
                 class="text-xs pr-1 h-7 shadow-none"
                 @update:model-value="controls.updateSliderField(item.param, String($event ?? ''))"
-                @blur="controls.flushSliderField(item.param)"
-                @keydown.enter="controls.flushSliderField(item.param)"
+                @commit="controls.updateSliderField(item.param, $event, { flush: true })"
               />
               <InputGroupAddon v-if="controls.getFieldUnit(item.param)" align="inline-end" class="text-xs">
                 {{ controls.getFieldUnit(item.param) }}
@@ -293,15 +284,12 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                 />
               </div>
               <InputGroup class="h-7 shadow-none" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-12.5'">
-                <InputGroupInput
-                  type="number"
-                  step="any"
+                <EffectDraftNumberInput
                   :model-value="controls.getLinkedSliderInputValue(item.param, axisIndex)"
                   :aria-label="controls.getLinkedSliderInputAriaLabel(item.param, axisIndex)"
                   class="text-xs pr-1 h-7 shadow-none"
                   @update:model-value="controls.updateLinkedSliderField(item.param, axisIndex, String($event ?? ''))"
-                  @blur="controls.flushLinkedSliderField(item.param, axisIndex)"
-                  @keydown.enter="controls.flushLinkedSliderField(item.param, axisIndex)"
+                  @commit="controls.updateLinkedSliderField(item.param, axisIndex, $event, { flush: true })"
                 />
                 <InputGroupAddon v-if="controls.getFieldUnit(item.param)" align="inline-end" class="text-xs">
                   {{ controls.getFieldUnit(item.param) }}
@@ -353,15 +341,12 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                 />
               </button>
               <InputGroup class="h-7 shadow-none" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-15'">
-                <InputGroupInput
+                <EffectDraftNumberInput
                   :id="controls.dialInputId(item.param.key)"
-                  type="number"
-                  step="any"
                   :model-value="controls.getDialInputValue(item.param)"
                   class="text-xs pr-1 h-7 shadow-none"
                   @update:model-value="controls.updateDialField(item.param, String($event ?? ''))"
-                  @blur="controls.flushDialField(item.param)"
-                  @keydown.enter="controls.flushDialField(item.param)"
+                  @commit="controls.updateDialField(item.param, $event, { flush: true })"
                 />
                 <InputGroupAddon v-if="controls.getFieldUnit(item.param)" align="inline-end" class="text-xs">
                   {{ controls.getFieldUnit(item.param) }}

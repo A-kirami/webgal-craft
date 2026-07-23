@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
+import { nextTick } from 'vue'
 
 import { createBrowserLocalizedI18n } from '~/__tests__/browser'
 import {
@@ -13,6 +14,7 @@ import {
 import EffectDraftCategorySection from './EffectDraftCategorySection.vue'
 
 import type { EffectDraftCategoryControls } from './effectDraftForm.types'
+import type { Mock } from 'vitest'
 
 interface CreateControlsOptions {
   linkedSliderLockByPath?: Record<string, boolean>
@@ -49,7 +51,6 @@ function createControls(options: CreateControlsOptions = {}) {
     getFieldUnit: () => undefined,
     getSliderInputValue: () => '1',
     updateSliderField: vi.fn(),
-    flushSliderField: vi.fn(),
     isLinkedSliderLocked: (param: { key: string }) => options.linkedSliderLockByPath?.[param.key] ?? true,
     toggleLinkedSliderLock: vi.fn(),
     getLinkedSliderLabel: () => 'Scale',
@@ -58,12 +59,10 @@ function createControls(options: CreateControlsOptions = {}) {
     getLinkedSliderInputValue: () => '1',
     getLinkedSliderTrackValue: () => [1],
     updateLinkedSliderField: vi.fn(),
-    flushLinkedSliderField: vi.fn(),
     getDialDegree: () => 0,
     getDialIndicatorDegree: () => 0,
     getDialInputValue: () => '0',
     updateDialField: vi.fn(),
-    flushDialField: vi.fn(),
     handleDialPointerDown: vi.fn(),
     flipScaleAxis: vi.fn(),
     getColorPickerValue: () => ({ b: 255, g: 255, r: 255 }),
@@ -104,22 +103,44 @@ const globalStubsWithTooltip = {
 }
 
 describe('EffectDraftCategorySection', () => {
-  it('位移输入允许小数值，不触发浏览器原生步长校验', async () => {
+  it('提交各类浮点输入时转发原始文本并立即刷新', async () => {
     const { controls } = createControls()
 
     renderInBrowser(EffectDraftCategorySection, {
       props: {
         category: {
-          key: 'transform',
-          label: 'Transform',
+          key: 'continuous',
+          label: 'Continuous',
           items: [
             {
-              kind: 'position',
-              key: 'position',
-              params: [
-                { key: 'position.x', type: 'number', label: 'Position X', defaultValue: 0 },
-                { key: 'position.y', type: 'number', label: 'Position Y', defaultValue: 0 },
-              ],
+              kind: 'number',
+              key: 'offset',
+              param: { key: 'offset', type: 'number', label: 'Offset', defaultValue: 0 },
+            },
+            {
+              kind: 'slider',
+              key: 'alpha',
+              param: { key: 'alpha', type: 'number', label: 'Alpha', min: 0, max: 1, step: 0.01, defaultValue: 1 },
+            },
+            {
+              kind: 'linked-slider',
+              key: 'scale',
+              param: {
+                key: 'scale.x',
+                linkedPairKey: 'scale.y',
+                type: 'number',
+                label: 'Scale X',
+                linkedGroupLabel: 'Scale',
+                min: 0,
+                max: 2,
+                step: 0.01,
+                defaultValue: 1,
+              },
+            },
+            {
+              kind: 'dial',
+              key: 'rotation',
+              param: { key: 'rotation', type: 'dial', label: 'Rotation', defaultValue: 0, dialUnit: 'deg' },
             },
           ],
         },
@@ -132,10 +153,47 @@ describe('EffectDraftCategorySection', () => {
       },
     })
 
-    const positionXInput = await page.getByRole('spinbutton', { name: 'Position X' }).element() as HTMLInputElement
-    await page.getByRole('spinbutton', { name: 'Position X' }).fill('0.5')
+    async function expectCommittedValue(
+      input: ReturnType<typeof page.getByRole>,
+      rawValue: string,
+      update: Mock,
+      expectedArgs: unknown[],
+    ): Promise<void> {
+      await input.fill(rawValue)
+      update.mockClear()
 
-    expect(positionXInput.validity.stepMismatch).toBe(false)
+      const inputElement = await input.element()
+      inputElement.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }))
+      await nextTick()
+
+      expect(update).toHaveBeenCalledOnce()
+      expect(update).toHaveBeenCalledWith(...expectedArgs)
+    }
+
+    await expectCommittedValue(
+      page.getByRole('textbox', { name: 'Offset' }),
+      '12.5',
+      vi.mocked(controls.updateNumberField),
+      [expect.objectContaining({ key: 'offset' }), '12.5', { flush: true }],
+    )
+    await expectCommittedValue(
+      page.getByRole('textbox', { name: 'Alpha' }),
+      '0.75',
+      vi.mocked(controls.updateSliderField),
+      [expect.objectContaining({ key: 'alpha' }), '0.75', { flush: true }],
+    )
+    await expectCommittedValue(
+      page.getByRole('textbox', { name: 'Scale X' }),
+      '1.25',
+      vi.mocked(controls.updateLinkedSliderField),
+      [expect.objectContaining({ key: 'scale.x' }), 0, '1.25', { flush: true }],
+    )
+    await expectCommittedValue(
+      page.getByRole('textbox', { name: 'Rotation' }),
+      '45.5',
+      vi.mocked(controls.updateDialField),
+      [expect.objectContaining({ key: 'rotation' }), '45.5', { flush: true }],
+    )
   })
 
   it('只允许可清除字段交互，并将不同控件映射到正确的路径组', async () => {
@@ -424,7 +482,7 @@ describe('EffectDraftCategorySection', () => {
 
     const clearButton = await page.getByRole('button', { name: '清除 Position X' }).element()
     const header = clearButton.parentElement?.parentElement
-    const input = await page.getByRole('spinbutton', { name: 'Position X' }).element()
+    const input = await page.getByRole('textbox', { name: 'Position X' }).element()
 
     expect(header).not.toBeNull()
     expect(header?.className ?? '').not.toContain('w-24')
@@ -474,9 +532,9 @@ describe('EffectDraftCategorySection', () => {
     })
 
     const alphaButton = await page.getByRole('button', { name: '清除 Alpha' }).element()
-    const alphaInput = await page.getByRole('spinbutton', { name: 'Alpha' }).element()
+    const alphaInput = await page.getByRole('textbox', { name: 'Alpha' }).element()
     const scaleButton = await page.getByRole('button', { name: '清除 Scale' }).element()
-    const scaleInput = await page.getByRole('spinbutton', { name: 'Scale X' }).element()
+    const scaleInput = await page.getByRole('textbox', { name: 'Scale X' }).element()
     const alphaGroup = alphaButton.closest('div[class*="group/field"]')
     const scaleGroup = scaleButton.closest('div[class*="group/field"]')
 

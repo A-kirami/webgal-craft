@@ -447,21 +447,6 @@ describe('useEffectContinuousControls', () => {
     expect(fields.scaleY).toBe('12')
   })
 
-  it('滑条输入框仅提交展示用默认值时不会写入缺失字段', () => {
-    const { deps, emitTransform, fields } = createDeps()
-    const controls = useEffectContinuousControls(deps)
-
-    controls.flushSliderField(createNumberField({
-      key: 'alpha',
-      defaultValue: 1,
-      min: 0,
-      max: 1,
-    }))
-
-    expect(fields.alpha).toBeUndefined()
-    expect(emitTransform).not.toHaveBeenCalled()
-  })
-
   it('滑条仅回传当前默认值时不会写入缺失字段', () => {
     const { deps, emitTransform, fields } = createDeps()
     const controls = useEffectContinuousControls(deps)
@@ -557,23 +542,6 @@ describe('useEffectContinuousControls', () => {
       flush: undefined,
       deferAutoApply: true,
     })
-  })
-
-  it('联动滑条仅提交默认展示值时不会写入缺失字段', () => {
-    const { deps, emitTransform, fields } = createDeps()
-    const controls = useEffectContinuousControls(deps)
-    const linkedField = createLinkedNumberField({
-      defaultValue: 1,
-      min: 0,
-      max: 2,
-    })
-
-    controls.flushLinkedSliderField(linkedField, 0)
-    controls.updateLinkedSliderField(linkedField, 0, 1, { fromSlider: true, flush: true })
-
-    expect(fields.scaleX).toBeUndefined()
-    expect(fields.scaleY).toBeUndefined()
-    expect(emitTransform).not.toHaveBeenCalled()
   })
 
   it('联动滑条回到缺失字段默认值时不会发射同帧内排队的旧值', () => {
@@ -721,7 +689,7 @@ describe('useEffectContinuousControls', () => {
     })
     const controls = useEffectContinuousControls(deps)
 
-    controls.flushDialField(createDialField())
+    controls.updateDialField(createDialField(), '90', { flush: true })
 
     expect(Number(fields.rotate)).toBeCloseTo(Math.PI / 2)
   })

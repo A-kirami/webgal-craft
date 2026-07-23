@@ -41,7 +41,6 @@ export interface EffectDraftCategoryControls {
   getFieldUnit: (param: EffectNumberField | EffectDialField) => string | undefined
   getSliderInputValue: (param: EffectNumberField) => string
   updateSliderField: (param: EffectNumberField, rawValue: string | number, options?: { fromSlider?: boolean, flush?: boolean }) => void
-  flushSliderField: (param: EffectNumberField) => void
   isLinkedSliderLocked: (param: EffectDraftLinkedNumberField) => boolean
   toggleLinkedSliderLock: (param: EffectDraftLinkedNumberField) => void
   getLinkedSliderLabel: (param: EffectDraftLinkedNumberField) => string
@@ -55,12 +54,10 @@ export interface EffectDraftCategoryControls {
     rawValue: string | number,
     options?: { fromSlider?: boolean, flush?: boolean },
   ) => void
-  flushLinkedSliderField: (param: EffectDraftLinkedNumberField, index: 0 | 1) => void
   getDialDegree: (param: EffectDialField) => number
   getDialIndicatorDegree: (degree: number) => number
   getDialInputValue: (param: EffectDialField) => string
-  updateDialField: (param: EffectDialField, rawDegree: string | number) => void
-  flushDialField: (param: EffectDialField) => void
+  updateDialField: (param: EffectDialField, rawDegree: string | number, options?: { flush?: boolean }) => void
   handleDialPointerDown: (event: PointerEvent, param: EffectDialField) => void
   flipScaleAxis: (axis: TransformScaleAxis) => void
   getColorPickerValue: (param: EffectDraftColorField) => { b: number, g: number, r: number }
