@@ -10,15 +10,19 @@ import type { arg } from 'webgal-parser/src/interface/sceneInterface'
 
 const NOT_HANDLED = Symbol('command-param-not-handled')
 
-type ControlFlagKey = 'next' | 'continue'
+type ControlFlagKey = 'next' | 'continue' | 'keep'
 
-function getOppositeControlFlag(key: string): ControlFlagKey | undefined {
+function getConflictingControlFlags(key: string): readonly ControlFlagKey[] {
   if (key === 'next') {
-    return 'continue'
+    return ['continue']
   }
   if (key === 'continue') {
-    return 'next'
+    return ['next', 'keep']
   }
+  if (key === 'keep') {
+    return ['continue']
+  }
+  return []
 }
 
 type ParamUpdateValue = string | boolean | number
@@ -198,9 +202,10 @@ function updateFromFieldTable(
       case 'boolean': {
         removeArgByKey(nextArgs, paramDef.key)
         if (newValue === true) {
-          const oppositeKey = getOppositeControlFlag(paramDef.key)
-          if (oppositeKey) {
-            removeArgByKey(nextArgs, oppositeKey)
+          for (const conflictingKey of getConflictingControlFlags(paramDef.key)) {
+            if (knownKeys.has(conflictingKey)) {
+              removeArgByKey(nextArgs, conflictingKey)
+            }
           }
           upsertArgValue(nextArgs, paramDef.key, true, knownKeys)
         }

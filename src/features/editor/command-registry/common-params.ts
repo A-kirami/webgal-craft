@@ -13,8 +13,8 @@ export const ANIMATION_RESOURCE_REFERENCE: ResourceReferenceConfig = { assetType
 
 // ─── 通用参数预设（跨命令复用） ───
 
-export const NEXT: SwitchField = { key: 'next', label: t => t('edit.visualEditor.params.next'), type: 'switch', defaultValue: false }
-export const CONTINUE: SwitchField = { key: 'continue', label: t => t('edit.visualEditor.params.continue'), type: 'switch', defaultValue: false }
+export const NEXT: SwitchField = { key: 'next', label: t => t('edit.visualEditor.params.next'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.next.on'), off: t => t('edit.visualEditor.paramTooltips.next.off') }, type: 'switch', defaultValue: false }
+export const CONTINUE: SwitchField = { key: 'continue', label: t => t('edit.visualEditor.params.continue'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.continue.on'), off: t => t('edit.visualEditor.paramTooltips.continue.off') }, type: 'switch', defaultValue: false }
 export const DURATION: NumberField = { key: 'duration', label: t => t('edit.visualEditor.params.duration'), type: 'number', min: 0, unit: t => t('edit.visualEditor.params.unitMs') }
 export const EASE: ChoiceField = {
   key: 'ease',
@@ -75,10 +75,10 @@ export const UNLOCK_NAME: TextField = { key: 'unlockname', label: t => t('edit.v
 export const SERIES: TextField = { key: 'series', label: t => t('edit.visualEditor.params.series'), type: 'text' }
 export const FIGURE_ID: AutocompleteTextField = { key: 'id', label: t => t('edit.visualEditor.params.id'), type: 'text', variant: 'autocomplete', autocomplete: [{ type: 'scene', collection: 'figureIds' }] }
 export const SOUND_EFFECT_ID: AutocompleteTextField = { key: 'id', label: t => t('edit.visualEditor.params.id'), type: 'text', variant: 'autocomplete', autocomplete: [{ type: 'scene', collection: 'soundEffectIds' }] }
-export const WRITE_DEFAULT: SwitchField = { key: 'writeDefault', label: t => t('edit.visualEditor.params.writeDefault'), type: 'switch', defaultValue: false }
-export const KEEP: SwitchField = { key: 'keep', label: t => t('edit.visualEditor.params.keep'), type: 'switch', defaultValue: false }
-export const PARALLEL: SwitchField = { key: 'parallel', label: t => t('edit.visualEditor.params.parallel'), type: 'switch', defaultValue: false }
-export const IGNORE_DEFAULT: SwitchField = { key: 'ignoreDefault', label: t => t('edit.visualEditor.params.ignoreDefault'), type: 'switch', defaultValue: false }
+export const WRITE_DEFAULT: SwitchField = { key: 'writeDefault', label: t => t('edit.visualEditor.params.writeDefault'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.writeDefault.on'), off: t => t('edit.visualEditor.paramTooltips.writeDefault.off') }, type: 'switch', defaultValue: false }
+export const KEEP: SwitchField = { key: 'keep', label: t => t('edit.visualEditor.params.keep'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.keep.on'), off: t => t('edit.visualEditor.paramTooltips.keep.off') }, type: 'switch', defaultValue: false }
+export const PARALLEL: SwitchField = { key: 'parallel', label: t => t('edit.visualEditor.params.parallel'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.parallel.on'), off: t => t('edit.visualEditor.paramTooltips.parallel.off') }, type: 'switch', defaultValue: false }
+export const IGNORE_DEFAULT: SwitchField = { key: 'ignoreDefault', label: t => t('edit.visualEditor.params.ignoreDefault'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.ignoreDefault.on'), off: t => t('edit.visualEditor.paramTooltips.ignoreDefault.off') }, type: 'switch', defaultValue: false }
 export const ORDER: NumberField = { key: 'order', label: t => t('edit.visualEditor.params.order'), type: 'number' }
 
 // ─── 效果编辑器托管的参数副本 ───

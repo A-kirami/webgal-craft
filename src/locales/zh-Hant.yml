@@ -616,8 +616,8 @@ edit:
       center: 中間位置
     missingResource: "找不到資源：{path}"
   diagnostics:
-    duplicateLabel: '標籤「{label}」在目前場景中定義了 {count} 次，跳轉目標不明確。'
-    missingLabel: '標籤「{label}」未在目前場景中定義。'
+    duplicateLabel: "標籤「{label}」在目前場景中定義了 {count} 次，跳轉目標不明確。"
+    missingLabel: "標籤「{label}」未在目前場景中定義。"
   errors:
     fileSyncFailed: 檔案同步失敗，請稍後重試
     previewUnavailable: 預覽地址不存在，請先啟動預覽
@@ -772,7 +772,7 @@ edit:
       emptyTitle: 還沒有影格
       emptyDescription: 先新增一個關鍵影格來開始編輯動畫
       unitMs: ms
-      unitPercent: '%'
+      unitPercent: "%"
       unitPx: px
       unitDegree: °
       toolbar:
@@ -986,6 +986,55 @@ edit:
       zIndex: 顯示層級
       writeDefault: 繼承預設
       keep: 跨語句播放
+    paramTooltips:
+      next:
+        on: 不等待目前演出完成，立即開始執行下一句。
+        off: 本句執行後停下，不會立即執行下一句。
+      continue:
+        on: 目前演出播放完後，自動進入下一句。
+        off: 目前演出播放完後，不會自動進入下一句。
+      parallel:
+        on: 與同一物件已有動畫同時播放，並只改變目前動畫中已設定的效果。
+        off: 先結束同一物件已有動畫，再播放目前動畫。
+      ignoreDefault:
+        on: 只套用動畫中已設定的位置、大小、透明度等，其他效果保持不變。
+        off: 未設定的效果也會補齊：開啟「繼承預設」時使用系統預設值，否則沿用物件目前值；並行播放時不補齊。
+      writeDefault:
+        on: 動畫以物件預設狀態為基準，不沿用物件目前的位置、大小、透明度等。
+        off: 動畫以物件目前狀態為基準；沒有可沿用的狀態時使用系統預設值。
+      keep:
+        on: 進入後續語句後，保持目前動畫播放。
+        off: 切換到後續語句時，直接結束目前動畫。
+      concat:
+        on: 將本句接在上一句文字後，繼續顯示在同一個對話框中。
+        off: 清除上一句文字，在對話框中單獨顯示本句。
+      notend:
+        on: 文字顯示完成後，立即自動進入下一句。
+        off: 文字顯示完成後停留，等待玩家繼續。
+      hold:
+        on: 所有全螢幕文字顯示後停留，等待玩家繼續。
+        off: 所有全螢幕文字顯示後自動進入下一句；開啟「點擊顯示下一句」時除外。
+      userForward:
+        on: 每次玩家操作時顯示下一段全螢幕文字。
+        off: 按設定的間隔自動顯示各段全螢幕文字。
+      skipOff:
+        on: 影片播放期間，玩家無法提前結束影片。
+        off: 玩家可以雙擊畫面提前結束影片。
+      filmModeState:
+        on: 顯示寬銀幕黑邊，並使用沉浸式對話版面。
+        off: 恢復普通對話框，不顯示寬銀幕黑邊。
+      textboxState:
+        on: 在普通對話中顯示文字框。
+        off: 在普通對話中隱藏文字框，電影模式不受影響。
+      animationFlag:
+        on: 為立繪設定嘴型和眨眼差分圖。
+        off: 不使用嘴型和眨眼差分圖。
+      global:
+        on: 在所有存檔中共用此變數，重新開始遊戲後也會保留。
+        off: 變數會隨目前遊戲進度儲存和讀取。
+      nobreak:
+        on: 等待結束前，玩家操作和自動播放都無法進入下一句。
+        off: 玩家操作或自動播放可以提前結束等待。
     filePicker:
       vocal: 選擇語音檔案
       background: 選擇背景檔案

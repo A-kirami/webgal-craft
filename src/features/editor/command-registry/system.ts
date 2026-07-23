@@ -12,7 +12,7 @@ export const systemEntries: CommandEntry[] = [
     description: t => t('edit.visualEditor.commandDescriptions.setVar'),
     icon: 'i-lucide-variable',
     category: 'system',
-    fields: [arg({ key: 'global', label: t => t('edit.visualEditor.params.global'), type: 'switch', defaultValue: false })],
+    fields: [arg({ key: 'global', label: t => t('edit.visualEditor.params.global'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.global.on'), off: t => t('edit.visualEditor.paramTooltips.global.off') }, type: 'switch', defaultValue: false })],
   },
   {
     type: commandType.showVars,
@@ -48,7 +48,7 @@ export const systemEntries: CommandEntry[] = [
     category: 'system',
     fields: [
       content({ key: 'time', label: t => t('edit.visualEditor.params.waitTime'), unit: t => t('edit.visualEditor.params.unitMs'), min: 0, type: 'number' }),
-      arg({ key: 'nobreak', label: t => t('edit.visualEditor.params.nobreak'), type: 'switch', defaultValue: false }),
+      arg({ key: 'nobreak', label: t => t('edit.visualEditor.params.nobreak'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.nobreak.on'), off: t => t('edit.visualEditor.paramTooltips.nobreak.off') }, type: 'switch', defaultValue: false }),
     ],
   },
   {

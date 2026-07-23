@@ -14,12 +14,14 @@ import type { EditorFieldDiagnostic } from '~/features/editor/diagnostics/types'
 
 const props = defineProps<{
   class?: HTMLAttributes['class']
+  description?: string
   diagnostics: readonly EditorFieldDiagnostic[]
 }>()
 
 const { t } = useI18n()
 
 const severity = $computed(() => selectHighestDiagnosticSeverity(props.diagnostics))
+const hasTooltipContent = $computed(() => props.diagnostics.length > 0 || !!props.description)
 
 function diagnosticMessage(diagnostic: EditorFieldDiagnostic): string {
   return getEditorDiagnosticMessage(diagnostic, t)
@@ -36,7 +38,7 @@ const contentClass = $computed(() => cn(
 
 <template>
   <TooltipProvider :delay-duration="250" :skip-delay-duration="0">
-    <Tooltip :disabled="props.diagnostics.length === 0">
+    <Tooltip :disabled="!hasTooltipContent">
       <TooltipTrigger as-child>
         <div
           :class="cn('group/statement-diagnostic inline-flex max-w-full min-w-0', props.class)"
@@ -46,8 +48,11 @@ const contentClass = $computed(() => cn(
           <slot />
         </div>
       </TooltipTrigger>
-      <TooltipContent side="top" :class="contentClass" data-statement-diagnostic-tooltip>
-        <ul class="flex flex-col gap-1">
+      <TooltipContent v-if="hasTooltipContent" side="top" :class="contentClass" data-statement-diagnostic-tooltip>
+        <p v-if="props.description">
+          {{ props.description }}
+        </p>
+        <ul v-if="props.diagnostics.length > 0" class="flex flex-col gap-1" :class="props.description && 'mt-1'">
           <li v-for="(diagnostic, index) in props.diagnostics" :key="`${diagnostic.code}:${diagnostic.source}:${index}`">
             {{ diagnosticMessage(diagnostic) }}
           </li>

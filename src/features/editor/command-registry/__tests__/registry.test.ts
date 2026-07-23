@@ -19,6 +19,25 @@ describe('命令注册表完整性', () => {
     }
   })
 
+  it('每个开关字段均提供开启和关闭状态说明', () => {
+    let switchFieldCount = 0
+    for (const entry of commandEntries) {
+      for (const { field } of readEditorFields(entry)) {
+        if (field.type !== 'switch') {
+          continue
+        }
+
+        switchFieldCount++
+        expect(field.tooltip).toMatchObject({
+          on: expect.anything(),
+          off: expect.anything(),
+        })
+      }
+    }
+
+    expect(switchFieldCount).toBeGreaterThan(0)
+  })
+
   it('字段存储类型应有效且每个命令的 arg key 唯一', () => {
     for (const entry of commandEntries) {
       const argKeys = new Set<string>()
@@ -189,5 +208,15 @@ describe('命令注册表完整性', () => {
       'heavySnow',
       'cherryBlossoms',
     ])
+  })
+
+  it('filmMode 开关关闭时写入空内容以恢复普通画面', () => {
+    const filmMode = readContentField(getCommandConfig(commandType.filmMode))
+
+    expect(filmMode).toMatchObject({
+      type: 'switch',
+      onValue: 'on',
+      offValue: '',
+    })
   })
 })
