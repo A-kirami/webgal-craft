@@ -772,7 +772,7 @@ edit:
       emptyTitle: No Frames Yet
       emptyDescription: Add a keyframe to start editing this animation
       unitMs: ms
-      unitPercent: '%'
+      unitPercent: "%"
       unitPx: px
       unitDegree: °
       toolbar:
@@ -994,17 +994,17 @@ edit:
         on: Move to the next statement automatically when the current effect finishes.
         off: Do not move to the next statement automatically when the current effect finishes.
       parallel:
-        on: Keep animations already playing on the same object and play this animation at the same time.
-        off: Stop animations already playing on the same object before playing this animation.
+        on: Play alongside animations already running on the same object and change only effects set in the current animation.
+        off: Stop animations already running on the same object before playing the current animation.
       ignoreDefault:
-        on: Change only the properties specified in the animation and leave the others unchanged.
-        off: Use default settings for properties not specified in the animation.
+        on: Apply only position, size, opacity, and other effects set in the animation; leave all other effects unchanged.
+        off: Fill in effects not set in the animation using system defaults when "Write Default" is enabled, or the object's current values otherwise; do not fill them in during parallel playback.
       writeDefault:
-        on: Use initial settings for properties not specified in the animation.
-        off: Keep the object's current settings for properties not specified in the animation.
+        on: Use the object's default state as the animation baseline instead of its current position, size, opacity, and other effects.
+        off: Use the object's current state as the animation baseline; use system defaults when there is no current state to inherit.
       keep:
-        on: Allow the current animation to keep playing across later statements.
-        off: Finish the current animation before running later statements.
+        on: Keep the current animation playing after later statements begin.
+        off: End the current animation immediately when moving to a later statement.
       concat:
         on: Append this line to the previous text in the same dialogue box.
         off: Clear the previous text and show this line separately in the dialogue box.
@@ -1012,25 +1012,25 @@ edit:
         on: Move to the next statement automatically as soon as the text finishes appearing.
         off: Keep the finished text on screen and wait for the player to continue.
       hold:
-        on: Keep all fullscreen text on screen after it appears until the player continues.
-        off: Close the fullscreen text and move to the next statement automatically after it appears.
+        on: Keep all fullscreen text on screen after it appears and wait for the player to continue.
+        off: Move to the next statement automatically after all fullscreen text appears, unless "Click to show next sentence" is enabled.
       userForward:
-        on: Show the next fullscreen text segment each time the player acts.
-        off: Show fullscreen text segments automatically at the configured interval.
+        on: Show the next fullscreen text segment each time the player provides input.
+        off: Show each fullscreen text segment automatically at the configured interval.
       skipOff:
-        on: Prevent the player from skipping the video while it is playing.
-        off: Allow the player to end the video early.
+        on: Prevent the player from ending the video early.
+        off: Allow the player to double-click the screen to end the video early.
       filmModeState:
-        on: Show black bars at the top and bottom and use the cinematic dialogue box.
-        off: Hide the black bars and restore the standard dialogue box.
+        on: Show widescreen black bars and use an immersive dialogue layout.
+        off: Restore the standard dialogue box and hide the widescreen black bars.
       textboxState:
         on: Show the textbox during standard dialogue.
         off: Hide the textbox during standard dialogue; cinematic mode is unaffected.
       animationFlag:
-        on: Allow mouth-sync and blinking images to be set for this sprite.
-        off: Do not use mouth-sync or blinking images for this sprite.
+        on: Set mouth-sync and blinking variant images for this sprite.
+        off: Do not use mouth-sync or blinking variant images for this sprite.
       global:
-        on: Share this variable across all saves and keep it when the game restarts.
+        on: Share this variable across all saves and keep it even after starting a new game.
         off: Save and load this variable with the current playthrough.
       nobreak:
         on: Prevent player actions and autoplay from moving on before the wait finishes.
