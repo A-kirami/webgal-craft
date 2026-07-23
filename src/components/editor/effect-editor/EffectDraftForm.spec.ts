@@ -54,12 +54,12 @@ describe('EffectDraftForm', () => {
       },
     })
 
-    await expect.element(page.getByRole('spinbutton', { name: '缩放 X' })).toHaveValue(125)
-    await expect.element(page.getByRole('group', { name: '效果' }).getByRole('spinbutton', { name: '不透明度' })).toHaveValue(80)
-    await expect.element(page.getByRole('group', { name: '颜色调整' }).getByRole('spinbutton', { name: '亮度' })).toHaveValue(150)
-    await expect.element(page.getByRole('group', { name: '颜色调整' }).getByRole('spinbutton', { name: '伽马' })).toHaveValue(1)
-    await expect.element(page.getByRole('group', { name: '变换' }).getByRole('spinbutton', { name: '旋转' })).toHaveValue(90)
-    await expect.element(page.getByRole('group', { name: '效果' }).getByRole('spinbutton', { name: '模糊' })).toHaveValue(4)
+    await expect.element(page.getByRole('textbox', { name: '缩放 X' })).toHaveValue('125')
+    await expect.element(page.getByRole('group', { name: '效果' }).getByRole('textbox', { name: '不透明度' })).toHaveValue('80')
+    await expect.element(page.getByRole('group', { name: '颜色调整' }).getByRole('textbox', { name: '亮度' })).toHaveValue('150')
+    await expect.element(page.getByRole('group', { name: '颜色调整' }).getByRole('textbox', { name: '伽马' })).toHaveValue('1')
+    await expect.element(page.getByRole('group', { name: '变换' }).getByRole('textbox', { name: '旋转' })).toHaveValue('90')
+    await expect.element(page.getByRole('group', { name: '效果' }).getByRole('textbox', { name: '模糊' })).toHaveValue('4')
     await expect.element(page.getByText('%').first()).toBeInTheDocument()
     await expect.element(page.getByText('°').first()).toBeInTheDocument()
     await expect.element(page.getByText('px').first()).toBeInTheDocument()
@@ -83,8 +83,8 @@ describe('EffectDraftForm', () => {
       },
     })
 
-    await expect.element(page.getByRole('spinbutton', { name: '缩放 X' })).toBeInTheDocument()
-    await expect.element(page.getByRole('spinbutton', { name: '缩放 Y' })).toBeInTheDocument()
+    await expect.element(page.getByRole('textbox', { name: '缩放 X' })).toBeInTheDocument()
+    await expect.element(page.getByRole('textbox', { name: '缩放 Y' })).toBeInTheDocument()
     expectNoConsoleMessage('Invalid prop: type check failed for prop "modelValue"')
   })
 
@@ -181,9 +181,9 @@ describe('EffectDraftForm', () => {
       },
     })
 
-    await expect.element(page.getByRole('spinbutton', { name: 'X 位移' })).toHaveValue(1000)
+    await expect.element(page.getByRole('textbox', { name: 'X 位移' })).toHaveValue('1000')
 
-    const alphaInput = page.getByRole('group', { name: '效果' }).getByRole('spinbutton', { name: '不透明度' })
+    const alphaInput = page.getByRole('group', { name: '效果' }).getByRole('textbox', { name: '不透明度' })
     await alphaInput.fill('80')
 
     expect(transformUpdates).toHaveBeenCalledWith({
@@ -212,8 +212,8 @@ describe('EffectDraftForm', () => {
       },
     })
 
-    await expect.element(page.getByRole('spinbutton', { name: 'X 位移' })).toHaveValue(1000)
-    await expect.element(page.getByRole('spinbutton', { name: 'Y 位移' })).toHaveValue(20)
+    await expect.element(page.getByRole('textbox', { name: 'X 位移' })).toHaveValue('1000')
+    await expect.element(page.getByRole('textbox', { name: 'Y 位移' })).toHaveValue('20')
     await expect.element(page.getByRole('button', { name: '清除X 位移' })).not.toBeInTheDocument()
     await expect.element(page.getByRole('button', { name: '清除Y 位移' })).not.toBeInTheDocument()
   })
@@ -237,9 +237,9 @@ describe('EffectDraftForm', () => {
       },
     })
 
-    await expect.element(page.getByRole('spinbutton', { name: 'X 位移' })).toHaveValue(88)
+    await expect.element(page.getByRole('textbox', { name: 'X 位移' })).toHaveValue('88')
 
-    const alphaInput = page.getByRole('group', { name: '效果' }).getByRole('spinbutton', { name: '不透明度' })
+    const alphaInput = page.getByRole('group', { name: '效果' }).getByRole('textbox', { name: '不透明度' })
     await alphaInput.fill('80')
 
     expect(transformUpdates).toHaveBeenCalledWith({

@@ -338,15 +338,6 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     )
   }
 
-  function flushSliderField(param: EffectNumberField) {
-    const storedValue = getStoredFieldValue(param.key)
-    if (storedValue === undefined) {
-      clearPendingContinuousTransformField(param.key)
-      return
-    }
-    updateSliderField(param, getSliderInputValue(param), { flush: true })
-  }
-
   // ═══════════════════════════════════════
   // Linked Slider 控件
   // ═══════════════════════════════════════
@@ -482,15 +473,6 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     )
   }
 
-  function flushLinkedSliderField(param: LinkedNumberField, index: 0 | 1) {
-    const path = index === 0 ? param.key : param.linkedPairKey
-    const storedValue = getStoredFieldValue(path)
-    if (storedValue === undefined) {
-      return
-    }
-    updateLinkedSliderField(param, index, getLinkedSliderInputValue(param, index), { flush: true })
-  }
-
   // ═══════════════════════════════════════
   // Dial 控件
   // ═══════════════════════════════════════
@@ -539,13 +521,6 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
       createContinuousTransformOptions(options.flush),
       { timing: emitTiming, touchedPaths: [param.key] },
     )
-  }
-
-  function flushDialField(param: EffectDialField) {
-    if (getStoredFieldValue(param.key) === undefined) {
-      return
-    }
-    updateDialField(param, getDialInputValue(param), { flush: true })
   }
 
   const { drag: dialDrag, start: startDialDrag } = createParamDrag<
@@ -627,21 +602,18 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     getFieldUnit,
     getSliderInputValue,
     updateSliderField,
-    flushSliderField,
     // linked slider
     isLinkedSliderLocked,
     toggleLinkedSliderLock,
     getLinkedSliderInputValue,
     getLinkedSliderTrackValue,
     updateLinkedSliderField,
-    flushLinkedSliderField,
     resetLinkedSliderState,
     // dial
     getDialDegree,
     getDialIndicatorDegree,
     getDialInputValue,
     updateDialField,
-    flushDialField,
     handleDialPointerDown,
     dialDrag,
   }
