@@ -1,5 +1,6 @@
 import { getCurrentWebview } from '@tauri-apps/api/webview'
 
+import type { PhysicalPosition } from '@tauri-apps/api/dpi'
 import type { DragDropEvent } from '@tauri-apps/api/webview'
 
 export interface UseTauriDropZoneOptions {
@@ -75,8 +76,9 @@ export function useTauriDropZone(
     }
   }
 
-  function elementAtPosition(position: { x: number, y: number }): Element | null {
-    return document.elementFromPoint(position.x, position.y)
+  function elementAtPosition(position: PhysicalPosition): Element | null {
+    const logicalPosition = position.toLogical(globalThis.devicePixelRatio || 1)
+    return document.elementFromPoint(logicalPosition.x, logicalPosition.y)
   }
 
   function handleDragDropEvent(payload: DragDropEvent): void {
