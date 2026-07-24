@@ -61,7 +61,7 @@ export interface EffectDraftCategoryControls {
   handleDialPointerDown: (event: PointerEvent, param: EffectDialField) => void
   flipScaleAxis: (axis: TransformScaleAxis) => void
   getColorPickerValue: (param: EffectDraftColorField) => { b: number, g: number, r: number }
-  handleColorPickerPointerDown: (event: PointerEvent, param: EffectDraftColorField) => void
+  handleColorPickerOpenChange: (param: EffectDraftColorField, open: boolean) => void
   handleColorPickerChange: (param: EffectDraftColorField, rawValue: unknown) => void
   getSegmentedValue: (param: ChoiceField) => string
   getSegmentedOptions: (param: ChoiceField) => EffectSegmentedOption[]

@@ -423,12 +423,13 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               </Button>
             </div>
           </div>
-          <div class="flex flex-1 gap-2 items-center" @pointerdown="controls.handleColorPickerPointerDown($event, item.param)">
+          <div class="flex flex-1 gap-2 items-center">
             <ColorPicker
               :id="controls.colorControlId(item.param)"
               :model-value="controls.getColorPickerValue(item.param)"
               disable-alpha
               class="h-7 w-24"
+              @update:open="controls.handleColorPickerOpenChange(item.param, $event)"
               @update:model-value="controls.handleColorPickerChange(item.param, $event)"
             />
           </div>

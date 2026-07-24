@@ -66,7 +66,7 @@ function createControls(options: CreateControlsOptions = {}) {
     handleDialPointerDown: vi.fn(),
     flipScaleAxis: vi.fn(),
     getColorPickerValue: () => ({ b: 255, g: 255, r: 255 }),
-    handleColorPickerPointerDown: vi.fn(),
+    handleColorPickerOpenChange: vi.fn(),
     handleColorPickerChange: vi.fn(),
     getSegmentedValue: () => '__unspecified__',
     getSegmentedOptions: () => [],

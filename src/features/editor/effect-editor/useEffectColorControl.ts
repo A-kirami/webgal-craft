@@ -1,5 +1,4 @@
 import { ColorField } from '~/features/editor/command-registry/schema'
-import { createParamDrag } from '~/features/editor/effect-editor/createParamDrag'
 import { EffectControlDeps } from '~/features/editor/effect-editor/types'
 import { extractRgbColor, normalizeColorChannel } from '~/utils/color'
 
@@ -7,10 +6,10 @@ import { extractRgbColor, normalizeColorChannel } from '~/utils/color'
 type EffectColorField = ColorField & { colorPaths: [string, string, string], colorDefaults: [number, number, number] }
 
 export function useEffectColorControl(deps: EffectControlDeps) {
-  // 颜色拖拽期间暂存最终颜色值。
-  // color picker 在拖拽过程中高频触发 onChange，每次都 flush 会导致大量 IPC 调用；
-  // 拖拽期间仅做 deferred 预览，拖拽结束时（onEnd）才用暂存值执行一次 flush
-  let pendingColorFlushValue = $ref<[number, number, number]>()
+  // 选择器打开期间暂存最终颜色值，关闭时才执行一次 flush。
+  // 以 Popover 生命周期为界可同时覆盖色板拖拽、触摸和键盘输入。
+  let activeColorParam: EffectColorField | undefined
+  let pendingColorFlushValue: [number, number, number] | undefined
 
   function isColorEqual(left: [number, number, number], right: [number, number, number]): boolean {
     return left[0] === right[0] && left[1] === right[1] && left[2] === right[2]
@@ -41,31 +40,36 @@ export function useEffectColorControl(deps: EffectControlDeps) {
     deps.emitTransform(fields, { schedule: 'color', ...options })
   }
 
-  const { drag: colorDrag, start: startColorDrag } = createParamDrag<
-    EffectColorField,
-    Record<string, never>
-  >({
-    onStart() {
-      pendingColorFlushValue = undefined
-      return {}
-    },
-    onMove() { /* noop */ },
-    onEnd(_event, state) {
-      if (!pendingColorFlushValue) {
-        return
-      }
-      const targetColor = pendingColorFlushValue
-      pendingColorFlushValue = undefined
-      updateColorField(state.param, targetColor, {
-        flush: true,
-        deferAutoApply: false,
-      })
-    },
-    onCancel() {
-      pendingColorFlushValue = undefined
-      void deps.cancelPreview?.()
-    },
-  })
+  function flushColorInteraction(param: EffectColorField) {
+    if (activeColorParam !== param) {
+      return
+    }
+
+    activeColorParam = undefined
+    if (!pendingColorFlushValue) {
+      return
+    }
+
+    const targetColor = pendingColorFlushValue
+    pendingColorFlushValue = undefined
+    updateColorField(param, targetColor, {
+      flush: true,
+      deferAutoApply: false,
+    })
+  }
+
+  function handleColorPickerOpenChange(param: EffectColorField, open: boolean) {
+    if (!open) {
+      flushColorInteraction(param)
+      return
+    }
+
+    if (activeColorParam && activeColorParam !== param) {
+      flushColorInteraction(activeColorParam)
+    }
+    activeColorParam = param
+    pendingColorFlushValue = undefined
+  }
 
   function handleColorPickerChange(param: EffectColorField, rawValue: unknown) {
     const parsed = extractRgbColor(rawValue)
@@ -77,8 +81,7 @@ export function useEffectColorControl(deps: EffectControlDeps) {
       return
     }
 
-    const isDraggingCurrentParam = colorDrag.active && colorDrag.state?.param === param
-    if (!isDraggingCurrentParam) {
+    if (activeColorParam !== param) {
       updateColorField(param, parsed, {
         flush: true,
         deferAutoApply: false,
@@ -90,17 +93,21 @@ export function useEffectColorControl(deps: EffectControlDeps) {
     updateColorField(param, parsed, { deferAutoApply: true })
   }
 
-  function clearPendingColorFlush() {
+  function cancelColorInteraction() {
+    const wasActive = activeColorParam !== undefined
+    activeColorParam = undefined
     pendingColorFlushValue = undefined
+    if (wasActive) {
+      void deps.cancelPreview?.()
+    }
   }
 
   return {
     getColorValue,
     getColorPickerValue,
     updateColorField,
-    handleColorPickerPointerDown: startColorDrag,
+    handleColorPickerOpenChange,
     handleColorPickerChange,
-    clearPendingColorFlush,
-    colorDrag,
+    cancelColorInteraction,
   }
 }
