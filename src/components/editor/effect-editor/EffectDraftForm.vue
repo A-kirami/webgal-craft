@@ -176,10 +176,9 @@ const {
 
 const {
   getColorPickerValue,
-  handleColorPickerPointerDown,
+  handleColorPickerOpenChange,
   handleColorPickerChange,
-  clearPendingColorFlush,
-  colorDrag,
+  cancelColorInteraction,
 } = useEffectColorControl(controlDeps)
 
 const { buildControlId } = useControlId(props.idNamespace)
@@ -288,7 +287,7 @@ const categoryControls: EffectDraftCategoryControls = {
   handleDialPointerDown,
   flipScaleAxis,
   getColorPickerValue,
-  handleColorPickerPointerDown,
+  handleColorPickerOpenChange,
   handleColorPickerChange,
   getSegmentedValue,
   getSegmentedOptions,
@@ -301,8 +300,7 @@ onUnmounted(() => {
   stopDurationScrub()
   numberScrub.cancel()
   dialDrag.cancel()
-  colorDrag.cancel()
-  clearPendingColorFlush()
+  cancelColorInteraction()
   resetLinkedSliderState()
 })
 </script>

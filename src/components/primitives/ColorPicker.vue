@@ -21,6 +21,7 @@ const {
 } = defineProps<Props>()
 
 const color = defineModel<ColorPickerValue>({ default: '#000000' })
+const open = defineModel<boolean>('open', { default: false })
 
 function isRgbLike(value: unknown): value is { a?: number, b: number | string, g: number | string, r: number | string } {
   if (!value || typeof value !== 'object') {
@@ -75,7 +76,7 @@ function resolvePreviewColor(value: ColorPickerValue): string {
 </script>
 
 <template>
-  <Popover>
+  <Popover ::open="open">
     <PopoverTrigger as-child>
       <button
         :id="id"
