@@ -4,16 +4,15 @@ import { open } from '@tauri-apps/plugin-dialog'
 
 import { AbsPath } from '~/domain/path'
 import { resolveHomeResourceImportNotification } from '~/features/home/shared/home-resource-import'
-import {
-  HomeResourceImportMessages,
-  resolveImportNotificationMessage,
-} from '~/features/home/shared/useHomeResourceImportActions'
+import { reportHomeResourceImportNotification } from '~/features/home/shared/useHomeResourceImportActions'
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
 import { isEngineEditorCompatible, MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 import { useModalStore } from '~/stores/modal'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
+
+import type { HomeResourceImportMessages } from '~/features/home/shared/useHomeResourceImportActions'
 
 const workspaceStore = useWorkspaceStore()
 const resourceStore = useResourceStore()
@@ -38,10 +37,8 @@ const gameImportMessages: HomeResourceImportMessages = {
   gameConfigCorrupted: t => t('home.games.importConfigCorrupted'),
   gameSchemaTooNew: t => t('home.games.importSchemaVersionTooNew'),
   invalidFolder: t => t('home.games.importInvalidFolder'),
-  importCancelled: t => t('home.games.importCancelled'),
   multipleFolders: t => t('home.games.importMultipleFolders'),
   selectFolderTitle: t => t('common.dialogs.selectGameFolder'),
-  success: t => t('home.games.importSuccess'),
   unknownError: t => t('home.games.importUnknownError'),
 }
 
@@ -85,18 +82,7 @@ async function selectGameFolder() {
   } catch (error: unknown) {
     logger.error(`导入游戏时发生错误: ${error}`)
     const notification = resolveHomeResourceImportNotification(error)
-    const message = resolveImportNotificationMessage(notification, gameImportMessages, t)
-
-    switch (notification.level) {
-      case 'info': {
-        notify.info(message)
-        break
-      }
-      default: {
-        notify.error(message)
-        break
-      }
-    }
+    reportHomeResourceImportNotification(notification, gameImportMessages, t)
   }
 }
 </script>

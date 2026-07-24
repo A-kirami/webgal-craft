@@ -147,14 +147,12 @@ home:
     dropGameFolder: 将游戏文件夹拖放到此处导入
     gameCover: "{name} 游戏封面"
     gameIcon: "{name} 游戏图标"
-    importCancelled: 导入已取消
     importConfigCorrupted: 项目文件已损坏，无法读取
     importEngineNotFound: 该项目所需的引擎尚未安装
     importEngineUnavailable: 该项目所需的引擎当前不可用
     importEngineEditorIncompatible: 该项目绑定的引擎无法在 WebGAL Craft 中使用，请重新选择其他引擎
     importEngineVersionInvalid: 该项目绑定的引擎缺少有效的版本信息，请重新选择其他引擎
     importEngineVersionTooOld: 该项目绑定的引擎版本过旧，请重新选择 WebGAL {version} 及以上版本的引擎
-    importSuccess: 游戏导入成功
     importAlreadyExists: 该项目已存在
     importInvalidFolder: 这不像是游戏项目文件夹，请确认目录结构
     importSchemaVersionTooNew: 该项目由更新版本的应用创建，请升级应用后再尝试打开
@@ -170,7 +168,6 @@ home:
     installGameEngine: 安装游戏引擎
     dropEngineFolder: 将游戏引擎文件夹拖放到此处
     engineIcon: "{name} 引擎图标"
-    importSuccess: 引擎导入成功
     importAlreadyExists: 该引擎已存在
     importInvalidFolder: 这不像是引擎文件夹，请确认目录结构
     importing: 引擎导入中……
@@ -193,7 +190,6 @@ home:
     importTemplateHint: 点击浏览或拖放模板文件夹到此处
     deleteTemplate: 删除模板
     dropTemplateFolder: 将模板文件夹拖放到此处
-    importSuccess: 模板导入成功
     importInvalidFolder: 这不是一个有效的模板文件夹
     importDuplicate: 已存在同名模板
     importUnknownError: 导入模板时发生未知错误
@@ -239,11 +235,11 @@ modals:
     title: 删除游戏
     description: 确定要删除游戏 {name} 吗？
     deleteFiles: 同时删除游戏文件
-    deleteSuccess: 游戏删除成功
+    deleteFailed: 游戏删除失败
     removeTitle: 移除游戏记录
     removeDescription: 确定要移除游戏 {name} 的记录吗？
     removeWarning: 项目目录已不可用，此操作只会移除本地记录，不会删除任何文件。
-    removeSuccess: 游戏记录已移除
+    removeFailed: 游戏记录移除失败
   deleteFile:
     title: 确定要删除文件 {name} 吗？
     folderTitle: 确定要删除文件夹 {name} 及其内容？
@@ -263,9 +259,7 @@ modals:
     removeTitle: 移除引擎记录
     removeDescription: 确定要移除引擎 {name} 的记录吗？
     removeWarning: 引擎目录已不可用，此操作只会移除本地记录，不会删除任何文件。
-    removeSuccess: 引擎记录已移除
     removeFailed: 引擎记录移除失败
-    uninstallSuccess: 引擎卸载成功
     uninstallFailed: 引擎卸载失败
   deleteTemplate:
     blockedTitle: 无法删除
@@ -274,12 +268,10 @@ modals:
     title: 删除模板
     description: 确定要删除模板 {name} 吗？
     warning: 此操作将把模板文件移到回收站，你可以稍后从回收站恢复。
-    deleteSuccess: 模板删除成功
     deleteFailed: 模板删除失败
     removeTitle: 移除模板记录
     removeDescription: 确定要移除模板 {name} 的记录吗？
     removeWarning: 模板目录已不可用，此操作只会移除本地记录，不会删除任何文件。
-    removeSuccess: 模板记录已移除
     removeFailed: 模板记录移除失败
   switchEngine:
     title: 切换引擎
@@ -291,7 +283,6 @@ modals:
       description: 切换引擎会影响当前模板中的本地修改，请选择处理方式
       keep: 保留并固定模板
       discard: 丢弃模板修改
-    success: 引擎已切换到 {name} {version}
     failed:
       title: 引擎切换失败
       description: 复制引擎文件时出错，可重试或取消切换。
@@ -306,19 +297,16 @@ modals:
     dirtyConfirm:
       title: 切换模板将丢失修改
       confirm: 确认切换
-    success: 模板已切换
     error: 模板切换失败
     engineUnavailable: 绑定的引擎当前不可用，请先恢复或重新安装引擎再切换模板。
   deleteEngineGroup:
     title: 卸载全部版本
     description: 确定要卸载引擎 {name} 的全部版本吗？
     warning: 此操作会将该引擎的全部已安装版本移到回收站，你可以稍后从回收站恢复。
-    success: 引擎全部版本卸载成功
     failed: 引擎全部版本卸载失败
     removeTitle: 移除全部版本记录
     removeDescription: 确定要移除引擎 {name} 全部版本的记录吗？
     removeWarning: 引擎目录已不可用，此操作只会移除本地记录，不会删除任何文件。
-    removeSuccess: 引擎全部版本记录已移除
     removeFailed: 引擎全部版本记录移除失败
   recoverGame:
     title: 项目当前不可用
@@ -327,10 +315,8 @@ modals:
     selectNewLocation: 选择项目新的位置
     retry: 重试连接
     recheck: 重新检测
-    retrySuccess: 项目已恢复
     retryFailed: 项目仍然不可用
     relink: 重新链接路径
-    relinkSuccess: 项目路径已更新
     relinkFailed: 重新链接失败
     openFolderFailed: 打开项目目录失败
     backToHome: 返回主页
@@ -582,7 +568,6 @@ modals:
     description: 选择左侧版本查看差异，可还原到该时间点的内容。
     empty: 此场景暂无历史记录
     restore: 还原
-    restoreSuccess: 已还原
     restoreConfirmTitle: 还原此版本？
     restoreConfirmContent: 将还原 {time} 保存的版本。当前内容会先作为「还原操作」条目自动备份。
     sourceKind:
@@ -689,23 +674,19 @@ edit:
     defaultFileStem: 新文件
     defaultFolderName: 新文件夹
     rename: 重命名
-    deleteSuccess: 删除成功
     deleteFailed: 删除失败
     copy: 复制
     cut: 剪切
     paste: 粘贴
     revealInExplorer: 在文件资源管理器中显示
-    pasteSuccess: 粘贴成功
     pasteFailed: 粘贴失败
     pastePartialFailed: 部分粘贴失败 ({failed}/{total})
-    pasteMultipleSuccess: 成功粘贴 {count} 个项目
     viewHistory: 查看历史版本
     dragPreviewCount: "{count} 个文件"
   previewPanel:
     copyUrl: 复制地址
     refreshPreview: 刷新预览
     openInBrowser: 在浏览器中打开
-    copyUrlSuccess: 复制地址成功
     openFailed: 打开预览失败
     previewTitle: "游戏预览 - {name}"
     zoomOut: 缩小
@@ -789,7 +770,6 @@ edit:
       editDefaults: 编辑默认值
       editDefaultsTitle: 编辑默认值 — {command}
       resetDefaults: 重置
-      resetSuccess: 已重置为默认值
       createGroup: 新建语句组
       createGroupDescription: 创建一组可重复插入的语句组合
       confirmDeleteGroup: 确定要删除此语句组吗？

@@ -19,7 +19,7 @@ export interface HomeResourceImportNotification {
     | 'import-cancelled'
     | 'unknown-error'
     | 'multiple-folders'
-  level: 'success' | 'info' | 'error'
+  level: 'silent' | 'info' | 'error'
 }
 
 export interface HomeResourceDropPathDecision {
@@ -57,11 +57,11 @@ export function resolveHomeResourceImportNotification(
     if (outcome?.alreadyRegistered) {
       return { kind: 'already-registered', level: 'info' }
     }
-    return { kind: 'success', level: 'success' }
+    return { kind: 'success', level: 'silent' }
   }
 
   const kind = resolveErrorNotificationKind(error)
-  const level = kind === 'import-cancelled' ? 'info' : 'error'
+  const level = kind === 'import-cancelled' ? 'silent' : 'error'
   return { kind, level }
 }
 

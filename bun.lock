@@ -26,7 +26,6 @@
         "markdown-it": "^14.2.0",
         "mime": "^4.1.0",
         "monaco-editor": "~0.51.0",
-        "notivue": "^2.4.5",
         "pinia": "^3.0.4",
         "pinia-plugin-persistedstate": "^4.7.1",
         "reka-ui": "^2.9.9",
@@ -1279,8 +1278,6 @@
     "nopt": ["nopt@7.2.1", "", { "dependencies": { "abbrev": "^2.0.0" }, "bin": { "nopt": "bin/nopt.js" } }, "sha512-taM24ViiimT/XntxbPyJQzCG+p4EKOpgD3mxFwW38mGjVUrfERQOeY4EDHjdnptttfHuHQXFx+lTP08Q+mLa/w=="],
 
     "normalize-path": ["normalize-path@3.0.0", "", {}, "sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA=="],
-
-    "notivue": ["notivue@2.4.5", "", { "peerDependencies": { "@nuxt/kit": ">=3.5.0", "@nuxt/schema": ">=3.5.0", "defu": ">=6" }, "optionalPeers": ["@nuxt/kit", "@nuxt/schema", "defu"] }, "sha512-7yBdaKesUZIwdcQP3nv1oWYyisI2bURkZ+D9KfLgeNqguHUzkQ1WdhGcTj59PBZa8mqa1/K5Mh8YsphSToMKcQ=="],
 
     "nth-check": ["nth-check@2.1.1", "", { "dependencies": { "boolbase": "^1.0.0" } }, "sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w=="],
 

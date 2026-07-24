@@ -140,12 +140,12 @@ describe('首页共享导入纯逻辑', () => {
     })
   })
 
-  it('导入取消错误会映射为信息通知', () => {
+  it('导入取消错误会映射为静默反馈', () => {
     expect(resolveHomeResourceImportNotification(new AppError('IO_ERROR', 'cancelled', {
       details: { reason: 'IMPORT_CANCELLED' },
     }))).toEqual({
       kind: 'import-cancelled',
-      level: 'info',
+      level: 'silent',
     })
   })
 
@@ -156,10 +156,10 @@ describe('首页共享导入纯逻辑', () => {
     })
   })
 
-  it('无错误时返回成功通知', () => {
+  it('无错误时返回静默成功反馈', () => {
     expect(resolveHomeResourceImportNotification()).toEqual({
       kind: 'success',
-      level: 'success',
+      level: 'silent',
     })
   })
 
@@ -170,10 +170,10 @@ describe('首页共享导入纯逻辑', () => {
     })
   })
 
-  it('outcome.alreadyRegistered 为 false 时仍返回成功通知', () => {
+  it('outcome.alreadyRegistered 为 false 时仍返回静默成功反馈', () => {
     expect(resolveHomeResourceImportNotification(undefined, { alreadyRegistered: false })).toEqual({
       kind: 'success',
-      level: 'success',
+      level: 'silent',
     })
   })
 

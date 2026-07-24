@@ -14,9 +14,9 @@ import type { GameCollectionItem } from '~/features/home/home-collection-items'
 const {
   importGameMock,
   modalOpenMock,
-  notifyErrorMock,
-  notifySuccessMock,
-  notifyWarningMock,
+  toastErrorMock,
+  toastSuccessMock,
+  toastWarningMock,
   openDialogMock,
   openPathMock,
   requestImportDependencyResolutionMock,
@@ -31,9 +31,9 @@ const {
 } = vi.hoisted(() => ({
   importGameMock: vi.fn(),
   modalOpenMock: vi.fn(),
-  notifyErrorMock: vi.fn(),
-  notifySuccessMock: vi.fn(),
-  notifyWarningMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
+  toastWarningMock: vi.fn(),
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
   requestImportDependencyResolutionMock: vi.fn(),
@@ -100,11 +100,11 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   warn: vi.fn(),
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    error: notifyErrorMock,
-    success: notifySuccessMock,
-    warning: notifyWarningMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    error: toastErrorMock,
+    success: toastSuccessMock,
+    warning: toastWarningMock,
   },
 }))
 
@@ -344,7 +344,7 @@ describe('GamesTab', () => {
 
     await page.getByRole('heading', { name: 'Demo Game' }).click()
 
-    expect(notifyWarningMock).toHaveBeenCalledWith('游戏正在创建中，请等待创建完成')
+    expect(toastWarningMock).toHaveBeenCalledWith('游戏正在创建中，请等待创建完成')
     expect(routerPushMock).not.toHaveBeenCalled()
   })
 
@@ -364,7 +364,7 @@ describe('GamesTab', () => {
       expect(importGameMock).toHaveBeenCalledWith('/games/import-target', expect.objectContaining({
         resolveDependencies: requestImportDependencyResolutionMock,
       }))
-      expect(notifyErrorMock).toHaveBeenCalledWith('这不是一个有效的游戏文件夹')
+      expect(toastErrorMock).toHaveBeenCalledWith('这不是一个有效的游戏文件夹')
     })
   })
 })

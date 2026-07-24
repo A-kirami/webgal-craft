@@ -16,13 +16,13 @@ import type { PropType } from 'vue'
 
 const {
   modalOpenMock,
-  notifySuccessMock,
+  toastSuccessMock,
   setConfigMock,
   useModalStoreMock,
   workspaceStoreState,
 } = vi.hoisted(() => ({
   modalOpenMock: vi.fn(),
-  notifySuccessMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
   setConfigMock: vi.fn(),
   useModalStoreMock: vi.fn(),
   workspaceStoreState: {
@@ -44,9 +44,9 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: () => workspaceStoreState,
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    success: notifySuccessMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    success: toastSuccessMock,
   },
 }))
 
@@ -723,7 +723,7 @@ describe('GameConfigModal', () => {
     })
 
     await vi.waitFor(() => {
-      expect(notifySuccessMock).toHaveBeenCalledWith('common.saved')
+      expect(toastSuccessMock).not.toHaveBeenCalled()
       expect(updateOpen).toHaveBeenCalledWith(false)
     })
   })

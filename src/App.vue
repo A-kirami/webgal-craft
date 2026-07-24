@@ -46,7 +46,6 @@ useEventListener('mousedown', (e: MouseEvent) => {
 
 <template>
   <RouterView />
-  <Notification />
   <Toaster />
   <ModalWindow />
 </template>

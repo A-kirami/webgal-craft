@@ -22,13 +22,11 @@ const { associatedGames, uncheckedGames, isDeleteBlocked, isConfirmDisabled, han
     identifier: () => `${props.template.id}:${props.template.metadata.name}`,
     checkDelete: () => templateManager.canDeleteTemplate(templateName),
     performDelete: () => templateManager.deleteTemplate(props.template),
-    successMessage: () => isUnavailable
-      ? t('modals.deleteTemplate.removeSuccess')
-      : t('modals.deleteTemplate.deleteSuccess'),
     fallbackErrorMessage: () => isUnavailable
       ? t('modals.deleteTemplate.removeFailed')
       : t('modals.deleteTemplate.deleteFailed'),
     logPrefix: '读取模板删除状态失败',
+    deleteLogPrefix: '删除模板失败',
   }))
 
 const blockedGames = $computed(() => uncheckedGames.length > 0 ? uncheckedGames : associatedGames)

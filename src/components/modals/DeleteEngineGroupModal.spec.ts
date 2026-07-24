@@ -12,13 +12,13 @@ import DeleteEngineGroupModal from './DeleteEngineGroupModal.vue'
 
 const {
   canDeleteEngineGroupMock,
-  notifyErrorMock,
-  notifySuccessMock,
+  toastErrorMock,
+  toastSuccessMock,
   uninstallEngineGroupMock,
 } = vi.hoisted(() => ({
   canDeleteEngineGroupMock: vi.fn(),
-  notifyErrorMock: vi.fn(),
-  notifySuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
   uninstallEngineGroupMock: vi.fn(),
 }))
 
@@ -45,9 +45,6 @@ function translate(key: string, params?: Record<string, unknown>): string {
     case 'modals.deleteEngineGroup.warning': {
       return '此操作会删除该引擎的全部已安装版本。'
     }
-    case 'modals.deleteEngineGroup.success': {
-      return '引擎全部版本卸载成功'
-    }
     case 'modals.deleteEngineGroup.failed': {
       return '引擎全部版本卸载失败'
     }
@@ -64,10 +61,10 @@ vi.mock('~/services/engine-manager', () => ({
   },
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    error: notifyErrorMock,
-    success: notifySuccessMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    error: toastErrorMock,
+    success: toastSuccessMock,
   },
 }))
 
@@ -144,7 +141,7 @@ describe('DeleteEngineGroupModal', () => {
     await page.getByRole('button', { name: '确认' }).click()
 
     expect(uninstallEngineGroupMock).toHaveBeenCalledWith('WebGAL')
-    expect(notifySuccessMock).toHaveBeenCalledWith('引擎全部版本卸载成功')
+    expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(updateOpen).toHaveBeenCalledWith(false)
   })
 })

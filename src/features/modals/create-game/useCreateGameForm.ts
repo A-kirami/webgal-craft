@@ -119,12 +119,12 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
     const engine = await db.engines.get(gameEngine)
     const engineAvailability = engine ? await resourceReconcile.reconcileEngineRecord(engine) : undefined
     if (!engine || engineAvailability !== 'available') {
-      notify.error(t('modals.createGame.engineUnavailable'))
+      toast.error(t('modals.createGame.engineUnavailable'))
       setFieldValue('gameEngine', '', false)
       return
     }
     if (!isEngineEditorCompatible({ ...engine, availability: engineAvailability })) {
-      notify.error(t('modals.createGame.engineIncompatible'))
+      toast.error(t('modals.createGame.engineIncompatible'))
       setFieldValue('gameEngine', '', false)
       return
     }
@@ -135,7 +135,7 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
       if (template) {
         const templateAvailability = await resourceReconcile.reconcileTemplateRecord(template)
         if (templateAvailability !== 'available') {
-          notify.error(t('modals.createGame.templateUnavailable'))
+          toast.error(t('modals.createGame.templateUnavailable'))
           setFieldValue('gameTemplate', undefined, false)
           return
         }
@@ -150,7 +150,7 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
       })
       options.onSuccess?.(gameId)
     } catch (error) {
-      notify.error(resolveCreateGameErrorMessage(error))
+      toast.error(resolveCreateGameErrorMessage(error))
     }
   })
 

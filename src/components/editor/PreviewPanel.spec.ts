@@ -18,7 +18,7 @@ const {
   copyMock,
   getGameConfigMock,
   modalOpenMock,
-  notifySuccessMock,
+  toastSuccessMock,
   openUrlMock,
   dismissFastPreviewTimeoutMock,
   resetEmbeddedPreviewStateMock,
@@ -35,7 +35,7 @@ const {
   copyMock: vi.fn(),
   getGameConfigMock: vi.fn(),
   modalOpenMock: vi.fn(),
-  notifySuccessMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
   openUrlMock: vi.fn(),
   dismissFastPreviewTimeoutMock: vi.fn(),
   resetEmbeddedPreviewStateMock: vi.fn(),
@@ -113,9 +113,9 @@ vi.mock('~/services/debug-commander', () => ({
   },
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    success: notifySuccessMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    success: toastSuccessMock,
   },
 }))
 
@@ -311,7 +311,7 @@ describe('PreviewPanel', () => {
     dismissFastPreviewTimeoutMock.mockReset()
     getGameConfigMock.mockReset()
     modalOpenMock.mockReset()
-    notifySuccessMock.mockReset()
+    toastSuccessMock.mockReset()
     openUrlMock.mockReset()
     resetEmbeddedPreviewStateMock.mockReset()
     setEmbeddedPreviewLaunchIdMock.mockReset()
@@ -593,7 +593,7 @@ describe('PreviewPanel', () => {
     await page.getByRole('button', { name: 'edit.previewPanel.openInBrowser' }).click()
 
     expect(copyMock).toHaveBeenCalledTimes(1)
-    expect(notifySuccessMock).toHaveBeenCalledWith('edit.previewPanel.copyUrlSuccess')
+    expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(openUrlMock).toHaveBeenCalledWith('http://127.0.0.1:8899')
   })
 

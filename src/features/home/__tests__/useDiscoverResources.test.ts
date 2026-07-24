@@ -13,9 +13,9 @@ const {
   getTemplateMetadataMock,
   loggerErrorMock,
   modalOpenMock,
-  notifyErrorMock,
-  notifyInfoMock,
-  notifySuccessMock,
+  toastErrorMock,
+  toastInfoMock,
+  toastSuccessMock,
   readDirMock,
   requestImportDependencyResolutionMock,
   resolveHomeTabDefinitionMock,
@@ -40,9 +40,9 @@ const {
   getTemplateMetadataMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   modalOpenMock: vi.fn(),
-  notifyErrorMock: vi.fn(),
-  notifyInfoMock: vi.fn(),
-  notifySuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  toastInfoMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
   readDirMock: vi.fn(),
   requestImportDependencyResolutionMock: vi.fn(),
   resolveHomeTabDefinitionMock: vi.fn(),
@@ -68,11 +68,11 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   attachConsole: vi.fn(),
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    error: notifyErrorMock,
-    info: notifyInfoMock,
-    success: notifySuccessMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    error: toastErrorMock,
+    info: toastInfoMock,
+    success: toastSuccessMock,
   },
 }))
 
@@ -147,9 +147,9 @@ describe('useDiscoverResources', () => {
     getTemplateMetadataMock.mockReset()
     loggerErrorMock.mockReset()
     modalOpenMock.mockReset()
-    notifyErrorMock.mockReset()
-    notifyInfoMock.mockReset()
-    notifySuccessMock.mockReset()
+    toastErrorMock.mockReset()
+    toastInfoMock.mockReset()
+    toastSuccessMock.mockReset()
     readDirMock.mockReset()
     requestImportDependencyResolutionMock.mockReset()
     resolveHomeTabDefinitionMock.mockReset()
@@ -634,11 +634,11 @@ describe('useDiscoverResources', () => {
     const modalProps = modalOpenMock.mock.calls[0]?.[1] as { onImport?: (paths: AbsPath[]) => Promise<void> } | undefined
     await modalProps?.onImport?.([AbsPath.from('/games/demo')])
 
-    expect(notifyInfoMock).toHaveBeenCalledWith('home.games.importAlreadyExists (1/1)')
-    expect(notifySuccessMock).not.toHaveBeenCalled()
+    expect(toastInfoMock).toHaveBeenCalledWith('home.games.importAlreadyExists (1/1)')
+    expect(toastSuccessMock).not.toHaveBeenCalled()
   })
 
-  it('批量导入发现的游戏被取消时提示导入已取消而不是未知错误', async () => {
+  it('批量导入发现的游戏被取消时保持静默', async () => {
     const { gameManager } = await import('~/services/game-manager')
     const { AppError } = await import('~/types/errors')
     vi.mocked(gameManager.validateGame).mockResolvedValue(true)
@@ -674,8 +674,9 @@ describe('useDiscoverResources', () => {
     const modalProps = modalOpenMock.mock.calls[0]?.[1] as { onImport?: (paths: AbsPath[]) => Promise<void> } | undefined
     await modalProps?.onImport?.([AbsPath.from('/games/demo')])
 
-    expect(notifyErrorMock).not.toHaveBeenCalled()
-    expect(notifyInfoMock).toHaveBeenCalledWith('home.games.importCancelled (1/1)')
+    expect(toastErrorMock).not.toHaveBeenCalled()
+    expect(toastInfoMock).not.toHaveBeenCalled()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
   })
 
   it('批量导入失败日志只统计样例之外的剩余失败数', async () => {

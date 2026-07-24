@@ -98,12 +98,6 @@ async function performSwitch(templateDecision?: 'keep' | 'discard'): Promise<voi
 
     await engineSwitch.switchEngine(props.game, targetEngine, options)
     open.value = false
-
-    const versionLabel = targetEngine.version ? ` ${targetEngine.version}` : ''
-    notify.success(t('modals.switchEngine.success', {
-      name: targetEngine.name,
-      version: versionLabel,
-    }))
   } catch (error) {
     // The switch already rolled back internally; let the user retry or cancel from the failed state.
     phase = 'failed'

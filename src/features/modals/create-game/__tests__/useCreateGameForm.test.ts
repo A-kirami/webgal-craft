@@ -5,7 +5,7 @@ const {
   createGameMock,
   enginesGetMock,
   existsMock,
-  notifyErrorMock,
+  toastErrorMock,
   openDialogMock,
   readDirMock,
   reconcileEngineRecordMock,
@@ -17,7 +17,7 @@ const {
   createGameMock: vi.fn(),
   enginesGetMock: vi.fn(),
   existsMock: vi.fn(),
-  notifyErrorMock: vi.fn(),
+  toastErrorMock: vi.fn(),
   openDialogMock: vi.fn(),
   readDirMock: vi.fn(),
   reconcileEngineRecordMock: vi.fn(),
@@ -46,9 +46,9 @@ vi.mock('vue-i18n', () => ({
   },
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    error: notifyErrorMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    error: toastErrorMock,
   },
 }))
 
@@ -237,7 +237,7 @@ describe('useCreateGameForm', () => {
     await form.onSubmit()
 
     expect(createGameMock).toHaveBeenCalledWith('Demo', '/games/Demo', 'engine-1', { templateBinding: undefined })
-    expect(notifyErrorMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).not.toHaveBeenCalled()
     expect(open.value).toBe(false)
   })
 
@@ -278,7 +278,7 @@ describe('useCreateGameForm', () => {
 
     await form.onSubmit()
 
-    expect(notifyErrorMock).toHaveBeenCalledWith('create failed')
+    expect(toastErrorMock).toHaveBeenCalledWith('create failed')
     expect(open.value).toBe(false)
     expect(onSuccess).not.toHaveBeenCalled()
   })
@@ -302,7 +302,7 @@ describe('useCreateGameForm', () => {
     await form.onSubmit()
 
     expect(createGameMock).not.toHaveBeenCalled()
-    expect(notifyErrorMock).toHaveBeenCalledWith('modals.createGame.engineIncompatible')
+    expect(toastErrorMock).toHaveBeenCalledWith('modals.createGame.engineIncompatible')
     expect(setFieldValueMock).toHaveBeenCalledWith('gameEngine', '', false)
     expect(open.value).toBe(true)
   })

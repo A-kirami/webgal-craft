@@ -125,7 +125,6 @@ const submitConfig = handleSubmit(async (formValues) => {
   isSaving = true
   try {
     await configManager.setConfig(props.gamePath, serializeGameConfigEntries(formValues))
-    notify.success(t('common.saved'))
     resetForm({
       values: cloneGameConfigFormValues(formValues),
     })

@@ -15,8 +15,8 @@ const {
   getServeUrlMock,
   importEngineMock,
   modalOpenMock,
-  notifyErrorMock,
-  notifySuccessMock,
+  toastErrorMock,
+  toastSuccessMock,
   openDialogMock,
   openPathMock,
   useModalStoreMock,
@@ -27,8 +27,8 @@ const {
   getServeUrlMock: vi.fn(),
   importEngineMock: vi.fn(),
   modalOpenMock: vi.fn(),
-  notifyErrorMock: vi.fn(),
-  notifySuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
   useModalStoreMock: vi.fn(),
@@ -49,10 +49,10 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   warn: vi.fn(),
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    error: notifyErrorMock,
-    success: notifySuccessMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    error: toastErrorMock,
+    success: toastSuccessMock,
   },
 }))
 
@@ -211,7 +211,7 @@ describe('EnginesTab', () => {
         title: 'common.dialogs.selectEngineFolder',
       }))
       expect(importEngineMock).toHaveBeenCalledWith('/engines/import-target')
-      expect(notifySuccessMock).toHaveBeenCalledWith('home.engines.importSuccess')
+      expect(toastSuccessMock).not.toHaveBeenCalled()
     })
   })
 
@@ -263,7 +263,7 @@ describe('EnginesTab', () => {
     await page.getByRole('button', { name: 'home.engines.installGameEngine' }).click()
 
     await vi.waitFor(() => {
-      expect(notifyErrorMock).toHaveBeenCalledWith('home.engines.importInvalidFolder')
+      expect(toastErrorMock).toHaveBeenCalledWith('home.engines.importInvalidFolder')
     })
   })
 

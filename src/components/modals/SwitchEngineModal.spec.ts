@@ -17,7 +17,7 @@ const {
   dbEngineGetMock,
   engineSwitchMock,
   evaluateTemplateStrategyMock,
-  notifySuccessMock,
+  toastSuccessMock,
   readProjectConfigMock,
   refreshCurrentGameSnapshotMock,
   updateOpenMock,
@@ -26,7 +26,7 @@ const {
   dbEngineGetMock: vi.fn(),
   engineSwitchMock: vi.fn(),
   evaluateTemplateStrategyMock: vi.fn(),
-  notifySuccessMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
   readProjectConfigMock: vi.fn(),
   refreshCurrentGameSnapshotMock: vi.fn(),
   updateOpenMock: vi.fn(),
@@ -116,9 +116,9 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    success: notifySuccessMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    success: toastSuccessMock,
   },
 }))
 
@@ -343,7 +343,7 @@ describe('SwitchEngineModal', () => {
     await vi.waitFor(() => {
       expect(engineSwitchMock).toHaveBeenCalledTimes(1)
       expect(refreshCurrentGameSnapshotMock).toHaveBeenCalledTimes(1)
-      expect(notifySuccessMock).toHaveBeenCalledTimes(1)
+      expect(toastSuccessMock).not.toHaveBeenCalled()
       expect(updateOpenMock).toHaveBeenCalledWith(false)
     })
 

@@ -220,7 +220,6 @@ export function useStatementGroupDraft(options: UseStatementGroupDraftOptions) {
     }
 
     replaceDraftEntry(index, { ...rebuilt, id: entry.id })
-    notify.success(options.t('edit.visualEditor.commandPanel.resetSuccess'))
   }
 
   function handleSaveGroup(): void {

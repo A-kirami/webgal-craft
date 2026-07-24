@@ -24,13 +24,11 @@ const { associatedGames, isDeleteBlocked, isConfirmDisabled, handleConfirm } =
     identifier: () => props.engine.id,
     checkDelete: () => engineManager.canDeleteEngine(props.engine.id),
     performDelete: () => engineManager.uninstallEngine(props.engine),
-    successMessage: () => isUnavailable
-      ? t('modals.deleteEngine.removeSuccess')
-      : t('modals.deleteEngine.uninstallSuccess'),
     fallbackErrorMessage: () => isUnavailable
       ? t('modals.deleteEngine.removeFailed')
       : t('modals.deleteEngine.uninstallFailed'),
     logPrefix: '读取引擎删除状态失败',
+    deleteLogPrefix: '删除引擎失败',
   }))
 
 const dialogTitle = $computed(() => {

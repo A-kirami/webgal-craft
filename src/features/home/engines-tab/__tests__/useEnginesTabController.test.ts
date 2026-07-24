@@ -10,16 +10,16 @@ import { useEnginesTabController } from '../useEnginesTabController'
 const {
   enginesWhereMock,
   importEngineMock,
-  notifyErrorMock,
-  notifySuccessMock,
+  toastErrorMock,
+  toastSuccessMock,
   openDialogMock,
   openPathMock,
   reconcileEngineRecordMock,
 } = vi.hoisted(() => ({
   enginesWhereMock: vi.fn(),
   importEngineMock: vi.fn(),
-  notifyErrorMock: vi.fn(),
-  notifySuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
   reconcileEngineRecordMock: vi.fn(),
@@ -33,10 +33,10 @@ vi.mock('@tauri-apps/plugin-opener', () => ({
   openPath: openPathMock,
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    error: notifyErrorMock,
-    success: notifySuccessMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    error: toastErrorMock,
+    success: toastSuccessMock,
   },
 }))
 
@@ -97,7 +97,7 @@ describe('useEnginesTabController', () => {
     await controller.handleDrop(['/a', '/b'])
 
     expect(importEngineMock).not.toHaveBeenCalled()
-    expect(notifyErrorMock).toHaveBeenCalledWith('home.engines.importMultipleFolders')
+    expect(toastErrorMock).toHaveBeenCalledWith('home.engines.importMultipleFolders')
   })
 
   it('从选择对话框选中目录后导入引擎', async () => {
@@ -108,7 +108,7 @@ describe('useEnginesTabController', () => {
     await controller.selectEngineFolder()
 
     expect(importEngineMock).toHaveBeenCalledWith('/engines/selected')
-    expect(notifySuccessMock).toHaveBeenCalledWith('home.engines.importSuccess')
+    expect(toastSuccessMock).not.toHaveBeenCalled()
   })
 
   it('导入结构错误时提示非法目录', async () => {
@@ -119,7 +119,7 @@ describe('useEnginesTabController', () => {
 
     await controller.selectEngineFolder()
 
-    expect(notifyErrorMock).toHaveBeenCalledWith('home.engines.importInvalidFolder')
+    expect(toastErrorMock).toHaveBeenCalledWith('home.engines.importInvalidFolder')
   })
 
   it('导入过旧引擎时会把最低运行时版本传给通知文案', async () => {
@@ -139,7 +139,7 @@ describe('useEnginesTabController', () => {
 
     await controller.selectEngineFolder()
 
-    expect(notifyErrorMock).toHaveBeenCalledWith(
+    expect(toastErrorMock).toHaveBeenCalledWith(
       `home.engines.importVersionTooOld:${MIN_WEBGAL_EDITOR_RUNTIME_VERSION}`,
     )
   })

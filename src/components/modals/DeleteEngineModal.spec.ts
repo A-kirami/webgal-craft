@@ -12,13 +12,13 @@ import DeleteEngineModal from './DeleteEngineModal.vue'
 
 const {
   canDeleteEngineMock,
-  notifyErrorMock,
-  notifySuccessMock,
+  toastErrorMock,
+  toastSuccessMock,
   uninstallEngineMock,
 } = vi.hoisted(() => ({
   canDeleteEngineMock: vi.fn(),
-  notifyErrorMock: vi.fn(),
-  notifySuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
   uninstallEngineMock: vi.fn(),
 }))
 
@@ -45,9 +45,6 @@ function translate(key: string, params?: Record<string, unknown>): string {
     case 'modals.deleteEngine.warning': {
       return '此操作将把引擎文件移到回收站，你可以稍后从回收站恢复。'
     }
-    case 'modals.deleteEngine.uninstallSuccess': {
-      return '引擎卸载成功'
-    }
     case 'modals.deleteEngine.uninstallFailed': {
       return '引擎卸载失败'
     }
@@ -59,9 +56,6 @@ function translate(key: string, params?: Record<string, unknown>): string {
     }
     case 'modals.deleteEngine.removeWarning': {
       return '引擎目录已不可用，此操作只会移除本地记录，不会删除任何文件。'
-    }
-    case 'modals.deleteEngine.removeSuccess': {
-      return '引擎记录已移除'
     }
     case 'modals.deleteEngine.removeFailed': {
       return '引擎记录移除失败'
@@ -79,10 +73,10 @@ vi.mock('~/services/engine-manager', () => ({
   },
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    error: notifyErrorMock,
-    success: notifySuccessMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    error: toastErrorMock,
+    success: toastSuccessMock,
   },
 }))
 
@@ -164,7 +158,7 @@ describe('DeleteEngineModal', () => {
     await page.getByRole('button', { name: '确认' }).click()
 
     expect(uninstallEngineMock).toHaveBeenCalledWith(engine)
-    expect(notifySuccessMock).toHaveBeenCalledWith('引擎卸载成功')
+    expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(updateOpen).toHaveBeenCalledWith(false)
   })
 

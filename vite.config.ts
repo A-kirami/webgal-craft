@@ -48,7 +48,6 @@ export default defineConfig({
         VueRouterAutoImports,
         {
           '@tauri-apps/plugin-log': [['*', 'logger']],
-          'notivue': [['push', 'notify']],
           'vue-sonner': ['toast'],
         },
       ],

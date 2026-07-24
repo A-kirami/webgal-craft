@@ -13,8 +13,8 @@ const {
   getServeUrlMock,
   importTemplateMock,
   modalOpenMock,
-  notifyErrorMock,
-  notifySuccessMock,
+  toastErrorMock,
+  toastSuccessMock,
   openDialogMock,
   openPathMock,
   useModalStoreMock,
@@ -25,8 +25,8 @@ const {
   getServeUrlMock: vi.fn(),
   importTemplateMock: vi.fn(),
   modalOpenMock: vi.fn(),
-  notifyErrorMock: vi.fn(),
-  notifySuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
   useModalStoreMock: vi.fn(),
@@ -47,10 +47,10 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   warn: vi.fn(),
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    error: notifyErrorMock,
-    success: notifySuccessMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    error: toastErrorMock,
+    success: toastSuccessMock,
   },
 }))
 
@@ -204,7 +204,7 @@ describe('TemplatesTab', () => {
         title: 'common.dialogs.selectTemplateFolder',
       }))
       expect(importTemplateMock).toHaveBeenCalledWith('/templates/import-target')
-      expect(notifySuccessMock).toHaveBeenCalledWith('home.templates.importSuccess')
+      expect(toastSuccessMock).not.toHaveBeenCalled()
     })
   })
 
