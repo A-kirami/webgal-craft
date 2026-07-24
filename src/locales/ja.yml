@@ -147,14 +147,12 @@ home:
     dropGameFolder: ゲームフォルダをここにドラッグ＆ドロップしてインポート
     gameCover: "{name} ゲームカバー"
     gameIcon: "{name} ゲームアイコン"
-    importCancelled: インポートがキャンセルされました
     importConfigCorrupted: プロジェクトファイルが破損しており、読み込めません
     importEngineNotFound: このプロジェクトに必要なエンジンがインストールされていません
     importEngineUnavailable: このプロジェクトに必要なエンジンが現在利用できません
     importEngineEditorIncompatible: このプロジェクトに紐付いたエンジンは WebGAL Craft では使用できません。別のエンジンを選択してください
     importEngineVersionInvalid: このプロジェクトに紐付いたエンジンには有効なバージョン情報がありません。別のエンジンを選択してください
     importEngineVersionTooOld: このプロジェクトに紐付いたエンジンは古すぎます。WebGAL {version} 以降に対応したエンジンを選択してください
-    importSuccess: ゲームのインポートに成功しました
     importAlreadyExists: このプロジェクトは既に存在します
     importInvalidFolder: ゲームプロジェクトフォルダのようには見えません。中身を確認してください。
     importSchemaVersionTooNew: このプロジェクトはより新しいバージョンのアプリで作成されています。アプリをアップグレードしてから再度お試しください。
@@ -170,7 +168,6 @@ home:
     installGameEngine: ゲームエンジンをインストール
     dropEngineFolder: ゲームエンジンフォルダをここにドラッグ＆ドロップ
     engineIcon: "{name} エンジンアイコン"
-    importSuccess: エンジンのインポートに成功しました
     importAlreadyExists: このエンジンは既に存在します
     importInvalidFolder: エンジンフォルダのようには見えません。中身を確認してください。
     importing: エンジンをインポート中...
@@ -193,7 +190,6 @@ home:
     importTemplateHint: クリックして参照するか、テンプレートフォルダをここにドラッグ＆ドロップ
     deleteTemplate: テンプレートを削除
     dropTemplateFolder: テンプレートフォルダをここにドラッグ＆ドロップ
-    importSuccess: テンプレートのインポートに成功しました
     importInvalidFolder: これは有効なテンプレートフォルダではありません
     importDuplicate: 同じ名前のテンプレートが既に存在します
     importUnknownError: テンプレートのインポート中に不明なエラーが発生しました
@@ -239,11 +235,11 @@ modals:
     title: ゲームを削除
     description: ゲーム {name} を削除してもよろしいですか？
     deleteFiles: ゲームファイルも削除
-    deleteSuccess: ゲームの削除に成功しました
+    deleteFailed: ゲームの削除に失敗しました
     removeTitle: ゲーム記録を削除
     removeDescription: ゲーム {name} の記録を削除してもよろしいですか？
     removeWarning: プロジェクトディレクトリが利用できません。この操作はローカル記録のみ削除し、ファイルは削除されません。
-    removeSuccess: ゲーム記録を削除しました
+    removeFailed: ゲーム記録の削除に失敗しました
   deleteFile:
     title: ファイル {name} を削除しますか？
     folderTitle: フォルダー {name} とその内容を削除しますか？
@@ -263,9 +259,7 @@ modals:
     removeTitle: エンジン記録を削除
     removeDescription: エンジン {name} の記録を削除してもよろしいですか？
     removeWarning: エンジンディレクトリは利用できません。この操作はローカル記録だけを削除し、ファイルは削除しません。
-    removeSuccess: エンジン記録を削除しました
     removeFailed: エンジン記録の削除に失敗しました
-    uninstallSuccess: エンジンのアンインストールに成功しました
     uninstallFailed: エンジンのアンインストールに失敗しました
   deleteTemplate:
     blockedTitle: 削除できません
@@ -274,12 +268,10 @@ modals:
     title: テンプレートを削除
     description: テンプレート {name} を削除してもよろしいですか？
     warning: この操作はテンプレートファイルをゴミ箱に移動します。ゴミ箱から復元できます。
-    deleteSuccess: テンプレートを削除しました
     deleteFailed: テンプレートの削除に失敗しました
     removeTitle: テンプレート記録を削除
     removeDescription: テンプレート {name} の記録を削除してもよろしいですか？
     removeWarning: テンプレートディレクトリが利用できません。この操作はローカル記録のみ削除し、ファイルは削除されません。
-    removeSuccess: テンプレート記録を削除しました
     removeFailed: テンプレート記録の削除に失敗しました
   switchEngine:
     title: エンジンを切り替え
@@ -291,7 +283,6 @@ modals:
       description: エンジンを切り替えると現在のテンプレートのローカル変更に影響します。処理方法を選択してください
       keep: 変更を保持してテンプレートを固定
       discard: テンプレートの変更を破棄
-    success: エンジンを {name} {version} に切り替えました
     failed:
       title: エンジンの切り替えに失敗しました
       description: エンジンファイルのコピー中にエラーが発生しました。再試行またはキャンセルできます。
@@ -306,19 +297,16 @@ modals:
     dirtyConfirm:
       title: 切り替えると変更が失われます
       confirm: 切り替えを確認
-    success: テンプレートを切り替えました
     error: テンプレートの切り替えに失敗しました
     engineUnavailable: 紐付けられたエンジンが現在利用できません。エンジンを復旧または再インストールしてからテンプレートを切り替えてください。
   deleteEngineGroup:
     title: すべてのバージョンをアンインストール
     description: エンジン {name} のすべてのバージョンをアンインストールしてもよろしいですか？
     warning: この操作は、このエンジンのインストール済みバージョンをすべてゴミ箱に移動します。後で復元できます。
-    success: エンジンの全バージョンをアンインストールしました
     failed: エンジンの全バージョンのアンインストールに失敗しました
     removeTitle: すべてのバージョン記録を削除
     removeDescription: エンジン {name} のすべてのバージョン記録を削除してもよろしいですか？
     removeWarning: エンジンディレクトリが利用できません。この操作はローカル記録のみ削除し、ファイルは削除されません。
-    removeSuccess: エンジンの全バージョン記録を削除しました
     removeFailed: エンジンのバージョン記録の削除に失敗しました
   recoverGame:
     title: プロジェクトは現在利用できません
@@ -327,10 +315,8 @@ modals:
     selectNewLocation: プロジェクトの新しい場所を選択
     retry: 再接続
     recheck: 再チェック
-    retrySuccess: プロジェクトを復旧しました
     retryFailed: プロジェクトはまだ利用できません
     relink: パスを再リンク
-    relinkSuccess: プロジェクトのパスを更新しました
     relinkFailed: 再リンクに失敗しました
     openFolderFailed: プロジェクトフォルダーを開けませんでした
     backToHome: ホームに戻る
@@ -582,7 +568,6 @@ modals:
     description: 左側でバージョンを選択して差分を確認し、その時点の内容に復元できます。
     empty: このシーンにはまだ履歴がありません
     restore: 復元
-    restoreSuccess: 復元しました
     restoreConfirmTitle: このバージョンを復元しますか？
     restoreConfirmContent: "{time} に保存したバージョンを復元します。現在の内容は「復元操作」として自動的にバックアップされます。"
     sourceKind:
@@ -689,23 +674,19 @@ edit:
     defaultFileStem: 新しいファイル
     defaultFolderName: 新しいフォルダー
     rename: 名前を変更
-    deleteSuccess: 削除に成功しました
     deleteFailed: 削除に失敗しました
     copy: コピー
     cut: 切り取り
     paste: 貼り付け
     revealInExplorer: エクスプローラーで表示
-    pasteSuccess: 貼り付けに成功しました
     pasteFailed: 貼り付けに失敗しました
     pastePartialFailed: 一部の貼り付けに失敗しました ({failed}/{total})
-    pasteMultipleSuccess: "{count} 個のアイテムを貼り付けました"
     viewHistory: 履歴を表示
     dragPreviewCount: "{count} 個のファイル"
   previewPanel:
     copyUrl: URLをコピー
     refreshPreview: プレビューを更新
     openInBrowser: ブラウザで開く
-    copyUrlSuccess: URLのコピーに成功しました
     openFailed: プレビューの開始に失敗しました
     previewTitle: ゲームプレビュー - {name}
     zoomOut: 縮小
@@ -789,7 +770,6 @@ edit:
       editDefaults: デフォルト値を編集
       editDefaultsTitle: デフォルト値を編集 — {command}
       resetDefaults: リセット
-      resetSuccess: デフォルトにリセットしました
       createGroup: ステートメントグループを作成
       createGroupDescription: 再利用できるステートメントの組み合わせを作成します
       confirmDeleteGroup: このグループを削除してもよろしいですか？

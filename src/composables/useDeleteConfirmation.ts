@@ -16,12 +16,12 @@ interface UseDeleteConfirmationOptions {
   checkDelete: () => Promise<DeleteCheckResult>
   /** 执行实际删除操作 */
   performDelete: () => Promise<void>
-  /** 删除成功后的提示信息 */
-  successMessage: () => string
   /** 删除失败时的兜底错误信息 */
   fallbackErrorMessage: () => string
-  /** 日志前缀，用于 logger.error */
+  /** 删除检查失败时的日志前缀 */
   logPrefix: string
+  /** 执行删除失败时的日志前缀 */
+  deleteLogPrefix: string
 }
 
 export function useDeleteConfirmation(options: UseDeleteConfirmationOptions) {
@@ -83,12 +83,10 @@ export function useDeleteConfirmation(options: UseDeleteConfirmationOptions) {
     options.performDelete()
       .then(() => {
         options.open.value = false
-        notify.success(options.successMessage())
       })
       .catch((error) => {
-        notify.error(error instanceof Error
-          ? error.message
-          : options.fallbackErrorMessage())
+        logger.error(`${options.deleteLogPrefix}: ${error}`)
+        toast.error(options.fallbackErrorMessage())
       })
       .finally(() => {
         isDeleting = false

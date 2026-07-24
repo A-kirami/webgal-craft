@@ -9,10 +9,10 @@ import { useGamesTabController } from '../useGamesTabController'
 const {
   ensureEditorRuntimeCompatibleMock,
   importGameMock,
-  notifyErrorMock,
-  notifyInfoMock,
-  notifySuccessMock,
-  notifyWarningMock,
+  toastErrorMock,
+  toastInfoMock,
+  toastSuccessMock,
+  toastWarningMock,
   openDialogMock,
   openPathMock,
   reconcileGameRecordMock,
@@ -23,10 +23,10 @@ const {
 } = vi.hoisted(() => ({
   ensureEditorRuntimeCompatibleMock: vi.fn(),
   importGameMock: vi.fn(),
-  notifyErrorMock: vi.fn(),
-  notifyInfoMock: vi.fn(),
-  notifySuccessMock: vi.fn(),
-  notifyWarningMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  toastInfoMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
+  toastWarningMock: vi.fn(),
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
   reconcileGameRecordMock: vi.fn(),
@@ -44,12 +44,12 @@ vi.mock('@tauri-apps/plugin-opener', () => ({
   openPath: openPathMock,
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    error: notifyErrorMock,
-    info: notifyInfoMock,
-    success: notifySuccessMock,
-    warning: notifyWarningMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    error: toastErrorMock,
+    info: toastInfoMock,
+    success: toastSuccessMock,
+    warning: toastWarningMock,
   },
 }))
 
@@ -124,7 +124,7 @@ describe('useGamesTabController', () => {
     await controller.handleDrop(['/a', '/b'])
 
     expect(importGameMock).not.toHaveBeenCalled()
-    expect(notifyErrorMock).toHaveBeenCalledWith('home.games.importMultipleFolders')
+    expect(toastErrorMock).toHaveBeenCalledWith('home.games.importMultipleFolders')
   })
 
   it('无可用引擎时创建游戏会弹出引导并可切到引擎标签', () => {
@@ -210,7 +210,7 @@ describe('useGamesTabController', () => {
 
     await controller.handleGameClick(createTestGame({ id: 'game-1' }))
 
-    expect(notifyWarningMock).toHaveBeenCalledWith('home.games.importCreating')
+    expect(toastWarningMock).toHaveBeenCalledWith('home.games.importCreating')
     expect(routerPushMock).not.toHaveBeenCalled()
   })
 
@@ -219,7 +219,7 @@ describe('useGamesTabController', () => {
 
     await controller.handleGameClick(createTestGame({ id: 'game-2' }))
 
-    expect(notifyWarningMock).not.toHaveBeenCalled()
+    expect(toastWarningMock).not.toHaveBeenCalled()
     expect(routerPushMock).toHaveBeenCalledWith('/edit/game-2')
   })
 
@@ -316,9 +316,9 @@ describe('useGamesTabController', () => {
 
     await controller.selectGameFolder()
 
-    expect(notifyErrorMock).not.toHaveBeenCalled()
-    expect(notifySuccessMock).not.toHaveBeenCalled()
-    expect(notifyInfoMock).toHaveBeenCalledWith('home.games.importAlreadyExists')
+    expect(toastErrorMock).not.toHaveBeenCalled()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(toastInfoMock).toHaveBeenCalledWith('home.games.importAlreadyExists')
   })
 
   it('导入绑定过旧引擎的游戏时会把最低运行时版本传给通知文案', async () => {
@@ -338,7 +338,7 @@ describe('useGamesTabController', () => {
 
     await controller.selectGameFolder()
 
-    expect(notifyErrorMock).toHaveBeenCalledWith(
+    expect(toastErrorMock).toHaveBeenCalledWith(
       `home.games.importEngineVersionTooOld:${MIN_WEBGAL_EDITOR_RUNTIME_VERSION}`,
     )
   })

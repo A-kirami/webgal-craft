@@ -9,7 +9,7 @@ let isProcessing = $ref(false)
 
 const { game, onConfirm } = defineProps<{
   game: Game
-  onConfirm: () => Promise<void>
+  onConfirm: () => Promise<boolean>
 }>()
 
 async function handleConfirm() {
@@ -18,8 +18,9 @@ async function handleConfirm() {
   }
   isProcessing = true
   try {
-    await onConfirm()
-    open = false
+    if (await onConfirm()) {
+      open = false
+    }
   } finally {
     isProcessing = false
   }

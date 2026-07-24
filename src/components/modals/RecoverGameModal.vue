@@ -37,11 +37,10 @@ async function handleRetry() {
   try {
     const availability = await resourceReconcile.reconcileGameRecord(props.game)
     if (availability !== 'available') {
-      notify.error(t('modals.recoverGame.retryFailed'))
+      toast.error(t('modals.recoverGame.retryFailed'))
       return
     }
     open = false
-    notify.success(t('modals.recoverGame.retrySuccess'))
   } finally {
     isRetrying = false
   }
@@ -68,13 +67,12 @@ async function handleRelink() {
     tabsStore.clearProjectState(updated.id)
     editorViewStateStore.clearProjectStates(updated.id)
     open = false
-    notify.success(t('modals.recoverGame.relinkSuccess'))
 
     // 通过路由刷新让工作区在新路径上重新加载
     await router.push('/')
     await router.push(`/edit/${updated.id}`)
   } catch (error) {
-    notify.error(error instanceof Error ? error.message : t('modals.recoverGame.relinkFailed'))
+    toast.error(error instanceof Error ? error.message : t('modals.recoverGame.relinkFailed'))
   } finally {
     isRelinking = false
   }
@@ -85,7 +83,7 @@ async function handleOpenFolder() {
     await openPath(props.game.path)
   } catch (error) {
     logger.error(`打开项目目录失败: ${error}`)
-    notify.error(t('modals.recoverGame.openFolderFailed'))
+    toast.error(t('modals.recoverGame.openFolderFailed'))
   }
 }
 

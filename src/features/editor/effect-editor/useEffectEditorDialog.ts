@@ -104,7 +104,6 @@ export function useEffectEditorDialog() {
     draftTransform = parseTransformJson('')
     draftDuration = ''
     draftEase = ''
-    notify.success(t('edit.visualEditor.commandPanel.resetSuccess'))
   }
 
   // 注入 override，让子组件中的 bridge 使用此 Dialog

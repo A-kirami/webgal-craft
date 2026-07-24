@@ -64,7 +64,6 @@ async function performSwitch(skipDirtyCheck: boolean) {
       await workspaceStore.refreshCurrentGameSnapshot()
     }
     open.value = false
-    notify.success(t('modals.switchTemplate.success'))
   } catch (error) {
     handleError(error, { context: t('modals.switchTemplate.error') })
   } finally {

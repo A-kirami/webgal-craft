@@ -258,8 +258,6 @@ function discoverByType(type: ResourceType): Promise<DiscoveredResource[]> {
 
 interface ImportMessages {
   alreadyRegistered?: string
-  cancelled?: string
-  success: string
   error: string
 }
 
@@ -272,21 +270,17 @@ function resolveImportMessages(type: ResourceType, t: (key: string) => string): 
     case 'games': {
       return {
         alreadyRegistered: t('home.games.importAlreadyExists'),
-        cancelled: t('home.games.importCancelled'),
-        success: t('home.games.importSuccess'),
         error: t('home.games.importUnknownError'),
       }
     }
     case 'engines': {
       return {
         alreadyRegistered: t('home.engines.importAlreadyExists'),
-        success: t('home.engines.importSuccess'),
         error: t('home.engines.importUnknownError'),
       }
     }
     case 'templates': {
       return {
-        success: t('home.templates.importSuccess'),
         error: t('home.templates.importUnknownError'),
       }
     }
@@ -372,9 +366,7 @@ export function useDiscoverResources() {
       .map(result => result.failure)
       .filter((failure): failure is { path: AbsPath, error: unknown } => failure !== undefined)
 
-    const successCount = notifications.filter(result => result.level === 'success').length
     const alreadyRegisteredCount = notifications.filter(result => result.kind === 'already-registered').length
-    const cancelCount = notifications.filter(result => result.kind === 'import-cancelled').length
     const failCount = notifications.filter(result => result.level === 'error').length
 
     if (failedImports.length > 0) {
@@ -390,17 +382,11 @@ export function useDiscoverResources() {
       )
     }
 
-    if (successCount > 0) {
-      notify.success(`${messages.success} (${successCount}/${paths.length})`)
-    }
     if (alreadyRegisteredCount > 0 && messages.alreadyRegistered) {
-      notify.info(`${messages.alreadyRegistered} (${alreadyRegisteredCount}/${paths.length})`)
-    }
-    if (cancelCount > 0 && messages.cancelled) {
-      notify.info(`${messages.cancelled} (${cancelCount}/${paths.length})`)
+      toast.info(`${messages.alreadyRegistered} (${alreadyRegisteredCount}/${paths.length})`)
     }
     if (failCount > 0) {
-      notify.error(`${messages.error} (${failCount}/${paths.length})`)
+      toast.error(`${messages.error} (${failCount}/${paths.length})`)
     }
   }
 

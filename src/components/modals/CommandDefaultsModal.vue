@@ -85,7 +85,6 @@ function handleResetToFactory(): void {
   commandPanelStore.resetDefault(type)
   draftEntry = buildSingleStatement(rawText)
   initialRawText = rawText
-  notify.success(t('edit.visualEditor.commandPanel.resetSuccess'))
 }
 
 function handleSave(): void {

@@ -19,13 +19,11 @@ const { associatedGames, isDeleteBlocked, isConfirmDisabled, handleConfirm } =
     identifier: () => props.engineId,
     checkDelete: () => engineManager.canDeleteEngineGroup(props.engineId),
     performDelete: () => engineManager.uninstallEngineGroup(props.engineId),
-    successMessage: () => props.allUnavailable
-      ? t('modals.deleteEngineGroup.removeSuccess')
-      : t('modals.deleteEngineGroup.success'),
     fallbackErrorMessage: () => props.allUnavailable
       ? t('modals.deleteEngineGroup.removeFailed')
       : t('modals.deleteEngineGroup.failed'),
     logPrefix: '读取引擎分组删除状态失败',
+    deleteLogPrefix: '删除引擎分组失败',
   }))
 
 const dialogTitle = $computed(() => {

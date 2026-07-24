@@ -136,15 +136,8 @@ async function handlePaste(): Promise<void> {
       )
     }
 
-    if (completedCount > 0) {
-      if (isCut && completedCount === clipboard.length && failed.length === 0) {
-        clearClipboard()
-      }
-      toast.success(
-        clipboard.length === 1
-          ? t('edit.fileTree.pasteSuccess')
-          : t('edit.fileTree.pasteMultipleSuccess', { count: completedCount }),
-      )
+    if (completedCount > 0 && isCut && completedCount === clipboard.length && failed.length === 0) {
+      clearClipboard()
     }
   } catch (error) {
     handleError(error)

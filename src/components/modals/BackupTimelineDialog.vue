@@ -270,7 +270,6 @@ onBeforeUnmount(() => {
 async function runRestore(entry: BackupEntry): Promise<void> {
   try {
     await store.restoreEntry(entry)
-    toast.success(t('modals.backupTimeline.restoreSuccess'))
     selectedBackupPath = timeline[0]?.backupPath
   } catch (error) {
     handleError(error)

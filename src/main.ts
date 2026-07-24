@@ -2,7 +2,6 @@ import { createPinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 
 import { i18n } from '~/plugins/i18n'
-import { notivue } from '~/plugins/notivue'
 import { router } from '~/router'
 import { handleError } from '~/utils/error-handler'
 
@@ -19,7 +18,6 @@ const app = createApp(App)
 app.use(router)
   .use(pinia)
   .use(i18n)
-  .use(notivue)
 
 // 全局错误兜底
 app.config.errorHandler = (err) => {

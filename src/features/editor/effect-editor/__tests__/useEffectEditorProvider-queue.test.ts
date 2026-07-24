@@ -34,7 +34,7 @@ const previewSyncStoreMock = vi.hoisted(() => ({
 
 const loggerWarnMock = vi.hoisted(() => vi.fn())
 const loggerErrorMock = vi.hoisted(() => vi.fn())
-const notifyWarningMock = vi.hoisted(() => vi.fn())
+const toastWarningMock = vi.hoisted(() => vi.fn())
 const modalOpenMock = vi.hoisted(() => vi.fn((
   _name: string,
   payload: { onApply?: () => void, onDiscard?: () => void, onCancel?: () => void },
@@ -61,9 +61,9 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   warn: loggerWarnMock,
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    warning: notifyWarningMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    warning: toastWarningMock,
   },
 }))
 
@@ -278,7 +278,7 @@ beforeEach(() => {
   previewSyncStoreMock.isPreviewReady = true
   loggerWarnMock.mockReset()
   loggerErrorMock.mockReset()
-  notifyWarningMock.mockReset()
+  toastWarningMock.mockReset()
   previewSyncStoreMock.queryBaseTransform.mockImplementation(async () => ({ status: 'unavailable' }))
   previewSyncStoreMock.queryTransformBaseline.mockImplementation(async () => ({ status: 'unavailable' }))
 })
@@ -1459,9 +1459,8 @@ describe('useEffectEditorProvider', () => {
 
     expect(closed).toBe(false)
     expect(provider.isOpen).toBe(true)
-    expect(notifyWarningMock).toHaveBeenCalledWith({
-      message: 'modals.effectEditor.previewUnsyncedCloseBlockedMessage',
-      title: 'modals.effectEditor.previewUnsyncedCloseBlockedTitle',
+    expect(toastWarningMock).toHaveBeenCalledWith('modals.effectEditor.previewUnsyncedCloseBlockedTitle', {
+      description: 'modals.effectEditor.previewUnsyncedCloseBlockedMessage',
     })
 
     const forceClosed = await provider.close({ forceDiscard: true })
@@ -1590,7 +1589,7 @@ describe('useEffectEditorProvider', () => {
     expect(await provider.apply()).toBe(false)
 
     const previousSessionId = provider.session?.sessionId
-    notifyWarningMock.mockClear()
+    toastWarningMock.mockClear()
     debugCommanderMock.setEffect.mockClear()
 
     const opened = await provider.open(createOpenTarget({
@@ -1603,9 +1602,8 @@ describe('useEffectEditorProvider', () => {
     expect(provider.session?.sessionId).toBe(previousSessionId)
     expect(provider.session?.effectTarget).toBe('fig-center')
     expect(provider.session?.draft.transform).toEqual({ blur: 12 })
-    expect(notifyWarningMock).toHaveBeenCalledWith({
-      message: 'modals.effectEditor.previewUnsyncedCloseBlockedMessage',
-      title: 'modals.effectEditor.previewUnsyncedCloseBlockedTitle',
+    expect(toastWarningMock).toHaveBeenCalledWith('modals.effectEditor.previewUnsyncedCloseBlockedTitle', {
+      description: 'modals.effectEditor.previewUnsyncedCloseBlockedMessage',
     })
   })
 

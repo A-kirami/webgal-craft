@@ -13,13 +13,17 @@ import DeleteGameModal from './DeleteGameModal.vue'
 
 const {
   deleteGameMock,
+  loggerErrorMock,
   modalOpenMock,
-  notifySuccessMock,
+  toastErrorMock,
+  toastSuccessMock,
   useModalStoreMock,
 } = vi.hoisted(() => ({
   deleteGameMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
   modalOpenMock: vi.fn(),
-  notifySuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
   useModalStoreMock: vi.fn(),
 }))
 
@@ -34,8 +38,14 @@ function translate(key: string): string {
     case 'modals.deleteGame.deleteFiles': {
       return '同时删除游戏文件'
     }
-    case 'modals.deleteGame.deleteSuccess': {
-      return '游戏删除成功'
+    case 'modals.deleteGame.deleteFailed': {
+      return '游戏删除失败'
+    }
+    case 'modals.deleteGame.removeFailed': {
+      return '游戏记录移除失败'
+    }
+    case 'modals.deleteGame.removeTitle': {
+      return '移除游戏记录'
     }
     case 'modals.deleteGame.title': {
       return '删除游戏'
@@ -52,13 +62,22 @@ vi.mock('~/services/game-manager', () => ({
   },
 }))
 
+vi.mock('@tauri-apps/plugin-log', () => ({
+  attachConsole: vi.fn(),
+  debug: vi.fn(),
+  error: loggerErrorMock,
+  info: vi.fn(),
+  warn: vi.fn(),
+}))
+
 vi.mock('~/stores/modal', () => ({
   useModalStore: useModalStoreMock,
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    success: notifySuccessMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    error: toastErrorMock,
+    success: toastSuccessMock,
   },
 }))
 
@@ -82,9 +101,7 @@ const globalStubs = {
   'i18n-t': createBrowserContainerStub('MockI18nT', 'span'),
 }
 
-function renderDeleteGameModal(updateOpen = vi.fn()) {
-  const game = createTestGame()
-
+function renderDeleteGameModal(updateOpen = vi.fn(), game = createTestGame()) {
   renderInBrowser(DeleteGameModal, {
     props: {
       'open': true,
@@ -121,7 +138,7 @@ describe('DeleteGameModal', () => {
     await page.getByRole('button', { name: '确认' }).click()
 
     expect(deleteGameMock).toHaveBeenCalledWith(game, false)
-    expect(notifySuccessMock).toHaveBeenCalledWith('游戏删除成功')
+    expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(updateOpen).toHaveBeenCalledWith(false)
   })
 
@@ -136,5 +153,49 @@ describe('DeleteGameModal', () => {
       game,
       onConfirm: expect.any(Function),
     }))
+  })
+
+  it('直接删除失败时记录原因、展示兜底消息且保持模态框打开', async () => {
+    deleteGameMock.mockRejectedValueOnce(new Error('permission denied'))
+    const { updateOpen } = renderDeleteGameModal()
+
+    await page.getByRole('button', { name: '确认' }).click()
+
+    await vi.waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('游戏删除失败')
+    })
+    expect(loggerErrorMock).toHaveBeenCalledWith('删除游戏失败: Error: permission denied')
+    expect(updateOpen).not.toHaveBeenCalledWith(false)
+  })
+
+  it('移除不可用游戏记录失败时展示兜底消息且保持模态框打开', async () => {
+    deleteGameMock.mockRejectedValueOnce('unknown failure')
+    const { updateOpen } = renderDeleteGameModal(
+      vi.fn(),
+      createTestGame({ availability: 'missing' }),
+    )
+
+    await page.getByRole('button', { name: '确认' }).click()
+
+    await vi.waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('游戏记录移除失败')
+    })
+    expect(loggerErrorMock).toHaveBeenCalledWith('移除游戏记录失败: unknown failure')
+    expect(updateOpen).not.toHaveBeenCalledWith(false)
+  })
+
+  it('二次确认删除失败时展示兜底消息并返回失败结果', async () => {
+    deleteGameMock.mockRejectedValueOnce('unknown failure')
+    const { game } = renderDeleteGameModal()
+
+    await page.getByRole('checkbox').click()
+    await page.getByRole('button', { name: '确认' }).click()
+
+    const confirmProps = modalOpenMock.mock.calls[0]?.[1] as {
+      onConfirm: () => Promise<boolean>
+    }
+    await expect(confirmProps.onConfirm()).resolves.toBe(false)
+    expect(deleteGameMock).toHaveBeenCalledWith(game, true)
+    expect(toastErrorMock).toHaveBeenCalledWith('游戏删除失败')
   })
 })

@@ -73,7 +73,7 @@ async function openLastProjectIfNeeded(options: RunAppStartupOptions): Promise<v
 
     if (lastGame.availability !== 'available') {
       logger.warn(`最近项目当前不可用，跳过自动打开: ${lastGame.path}`)
-      notify.warning(options.t('home.games.openLastProjectUnavailable', { name: lastGame.metadata.name }))
+      toast.warning(options.t('home.games.openLastProjectUnavailable', { name: lastGame.metadata.name }))
       return
     }
 

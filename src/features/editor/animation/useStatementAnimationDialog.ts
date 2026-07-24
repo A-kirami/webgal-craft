@@ -77,7 +77,6 @@ export function useStatementAnimationDialog() {
 
   function resetToDefault() {
     draftFrames = []
-    notify.success(t('edit.visualEditor.commandPanel.resetSuccess'))
   }
 
   provide(STATEMENT_ANIMATION_EDITOR_OPEN_OVERRIDE_KEY, openDialog)

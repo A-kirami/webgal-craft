@@ -24,7 +24,6 @@ let skipConfirm = $ref(preferenceStore.skipDeleteFileConfirm)
 async function handleConfirm() {
   try {
     await gameFs.deleteFile(AbsPath.from(file.path))
-    notify.success(t('edit.fileTree.deleteSuccess'))
     preferenceStore.skipDeleteFileConfirm = skipConfirm
     await onConfirm?.()
     open = false

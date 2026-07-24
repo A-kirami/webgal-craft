@@ -47,7 +47,7 @@ export function usePathOperationFeedback() {
 
   function reportWarnings(warnings: readonly PathOperationWarning[]): void {
     for (const warning of formatPathOperationWarnings(t, warnings)) {
-      notify.warning(warning)
+      toast.warning(warning)
     }
   }
 

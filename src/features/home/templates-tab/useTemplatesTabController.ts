@@ -29,7 +29,6 @@ export function useTemplatesTabController(options: UseTemplatesTabControllerOpti
       invalidFolder: t => t('home.templates.importInvalidFolder'),
       multipleFolders: t => t('home.templates.importMultipleFolders'),
       selectFolderTitle: t => t('common.dialogs.selectTemplateFolder'),
-      success: t => t('home.templates.importSuccess'),
       unknownError: t => t('home.templates.importUnknownError'),
     },
     t: options.t,

@@ -40,10 +40,8 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
       gameConfigCorrupted: t => t('home.games.importConfigCorrupted'),
       gameSchemaTooNew: t => t('home.games.importSchemaVersionTooNew'),
       invalidFolder: t => t('home.games.importInvalidFolder'),
-      importCancelled: t => t('home.games.importCancelled'),
       multipleFolders: t => t('home.games.importMultipleFolders'),
       selectFolderTitle: t => t('common.dialogs.selectGameFolder'),
-      success: t => t('home.games.importSuccess'),
       unknownError: t => t('home.games.importUnknownError'),
     },
     t: options.t,
@@ -51,7 +49,7 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
 
   async function handleGameClick(game: Game) {
     if (options.activeProgress.has(game.id)) {
-      notify.warning(options.t('home.games.importCreating'))
+      toast.warning(options.t('home.games.importCreating'))
       return
     }
 

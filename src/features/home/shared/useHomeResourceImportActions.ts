@@ -15,7 +15,6 @@ import type { HomeResourceImportNotification, HomeResourceImportOutcome } from '
 import type { I18nLike, I18nT } from '~/utils/i18n-like'
 
 export interface HomeResourceImportMessages {
-  success: I18nLike
   invalidFolder: I18nLike
   unknownError: I18nLike
   multipleFolders: I18nLike
@@ -31,7 +30,6 @@ export interface HomeResourceImportMessages {
   engineVersionTooOld?: I18nLike
   gameConfigCorrupted?: I18nLike
   gameSchemaTooNew?: I18nLike
-  importCancelled?: I18nLike
   unsupportedLegacyEngine?: I18nLike
 }
 
@@ -43,8 +41,7 @@ interface UseHomeResourceImportActionsOptions {
 }
 
 /** 通知类型到消息字段名的映射 */
-const NOTIFICATION_MESSAGE_KEYS: Record<HomeResourceImportNotification['kind'], keyof HomeResourceImportMessages> = {
-  'success': 'success',
+const NOTIFICATION_MESSAGE_KEYS: Partial<Record<HomeResourceImportNotification['kind'], keyof HomeResourceImportMessages>> = {
   'already-registered': 'alreadyRegistered',
   'invalid-folder': 'invalidFolder',
   'duplicate-resource': 'duplicateResource',
@@ -58,7 +55,6 @@ const NOTIFICATION_MESSAGE_KEYS: Record<HomeResourceImportNotification['kind'], 
   'engine-editor-incompatible': 'engineEditorIncompatible',
   'engine-version-invalid': 'engineVersionInvalid',
   'engine-version-too-old': 'engineVersionTooOld',
-  'import-cancelled': 'importCancelled',
   'unknown-error': 'unknownError',
   'multiple-folders': 'multipleFolders',
 }
@@ -67,9 +63,35 @@ export function resolveImportNotificationMessage(
   notification: ReturnType<typeof resolveHomeResourceImportNotification>,
   messages: HomeResourceImportMessages,
   t: I18nT,
-): string {
+): string | undefined {
   const messageKey = NOTIFICATION_MESSAGE_KEYS[notification.kind]
+  if (!messageKey) {
+    return
+  }
+
   return resolveI18nLike(messages[messageKey] ?? messages.unknownError, t)
+}
+
+export function reportHomeResourceImportNotification(
+  notification: ReturnType<typeof resolveHomeResourceImportNotification>,
+  messages: HomeResourceImportMessages,
+  t: I18nT,
+): void {
+  if (notification.level === 'silent') {
+    return
+  }
+
+  const message = resolveImportNotificationMessage(notification, messages, t)
+  if (!message) {
+    return
+  }
+
+  if (notification.level === 'info') {
+    toast.info(message)
+    return
+  }
+
+  toast.error(message)
 }
 
 function isImportOutcome(value: unknown): value is HomeResourceImportOutcome {
@@ -79,7 +101,7 @@ function isImportOutcome(value: unknown): value is HomeResourceImportOutcome {
 export function useHomeResourceImportActions<TResource extends { id: string, path: string }>(
   options: UseHomeResourceImportActionsOptions,
 ) {
-  async function importWithNotify(path: AbsPath) {
+  async function importWithFeedback(path: AbsPath) {
     let importError: unknown
     let outcome: HomeResourceImportOutcome | undefined
 
@@ -93,22 +115,7 @@ export function useHomeResourceImportActions<TResource extends { id: string, pat
     }
 
     const notification = resolveHomeResourceImportNotification(importError, outcome)
-    const message = resolveImportNotificationMessage(notification, options.messages, options.t)
-
-    switch (notification.level) {
-      case 'success': {
-        notify.success(message)
-        break
-      }
-      case 'info': {
-        notify.info(message)
-        break
-      }
-      default: {
-        notify.error(message)
-        break
-      }
-    }
+    reportHomeResourceImportNotification(notification, options.messages, options.t)
   }
 
   function getProgress(resource: Pick<TResource, 'id'>): number {
@@ -130,19 +137,19 @@ export function useHomeResourceImportActions<TResource extends { id: string, pat
       return
     }
 
-    await importWithNotify(AbsPath.from(path))
+    await importWithFeedback(AbsPath.from(path))
   }
 
   async function handleDrop(paths: string[]) {
     const decision = resolveHomeResourceDropPath(paths)
     if (!decision.shouldImport || !decision.path) {
       if (decision.notification) {
-        notify.error(resolveImportNotificationMessage(decision.notification, options.messages, options.t))
+        reportHomeResourceImportNotification(decision.notification, options.messages, options.t)
       }
       return
     }
 
-    await importWithNotify(AbsPath.from(decision.path))
+    await importWithFeedback(AbsPath.from(decision.path))
   }
 
   async function handleOpenFolder(resource: { path: string }) {

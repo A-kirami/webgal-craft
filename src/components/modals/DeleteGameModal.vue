@@ -6,24 +6,31 @@ import { useModalStore } from '~/stores/modal'
 
 import type { Game } from '~/database/model'
 
-const { t } = useI18n()
 let open = $(defineModel<boolean>('open'))
 
 const { game } = defineProps<{
   game: Game
 }>()
 
+const { t } = useI18n()
 let removeFiles = $ref(false)
 let isConfirming = $ref(false)
 const modalStore = useModalStore()
 
 const isUnavailable = $computed(() => game.availability !== 'available')
 
-async function performDelete(removeFiles: boolean) {
-  await gameManager.deleteGame(game, removeFiles)
-  notify.success(isUnavailable
-    ? t('modals.deleteGame.removeSuccess')
-    : t('modals.deleteGame.deleteSuccess'))
+async function performDelete(removeFiles: boolean): Promise<boolean> {
+  try {
+    await gameManager.deleteGame(game, removeFiles)
+    return true
+  } catch (error) {
+    const fallbackMessage = isUnavailable
+      ? t('modals.deleteGame.removeFailed')
+      : t('modals.deleteGame.deleteFailed')
+    logger.error(`${isUnavailable ? '移除游戏记录失败' : '删除游戏失败'}: ${error}`)
+    toast.error(fallbackMessage)
+    return false
+  }
 }
 
 async function handleConfirm() {
@@ -34,8 +41,9 @@ async function handleConfirm() {
   try {
     // 失效游戏：磁盘路径不可达，从列表移除时只删数据库记录，不再触碰文件
     if (isUnavailable) {
-      await performDelete(false)
-      open = false
+      if (await performDelete(false)) {
+        open = false
+      }
       return
     }
 
@@ -45,8 +53,9 @@ async function handleConfirm() {
         onConfirm: () => performDelete(true),
       })
     } else {
-      await performDelete(false)
-      open = false
+      if (await performDelete(false)) {
+        open = false
+      }
     }
   } finally {
     isConfirming = false

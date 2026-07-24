@@ -147,14 +147,12 @@ home:
     dropGameFolder: 將遊戲資料夾拖放到此處匯入
     gameCover: "{name} 遊戲封面"
     gameIcon: "{name} 遊戲圖示"
-    importCancelled: 匯入已取消
     importConfigCorrupted: 專案檔案已損壞，無法讀取
     importEngineNotFound: 該專案所需的引擎尚未安裝
     importEngineUnavailable: 該專案所需的引擎目前不可用
     importEngineEditorIncompatible: 該專案綁定的引擎無法在 WebGAL Craft 中使用，請重新選擇其他引擎
     importEngineVersionInvalid: 該專案綁定的引擎缺少有效的版本資訊，請重新選擇其他引擎
     importEngineVersionTooOld: 該專案綁定的引擎版本過舊，請重新選擇 WebGAL {version} 及以上版本的引擎
-    importSuccess: 遊戲匯入成功
     importAlreadyExists: 該專案已存在
     importInvalidFolder: 這不像是遊戲專案資料夾，請確認目錄結構
     importSchemaVersionTooNew: 該專案由更新版本的應用建立，請升級應用後再嘗試開啟
@@ -170,7 +168,6 @@ home:
     installGameEngine: 安裝遊戲引擎
     dropEngineFolder: 將遊戲引擎資料夾拖放到此處
     engineIcon: "{name} 引擎圖示"
-    importSuccess: 引擎匯入成功
     importAlreadyExists: 該引擎已存在
     importInvalidFolder: 這不像是引擎資料夾，請確認目錄結構
     importing: 引擎匯入中……
@@ -193,7 +190,6 @@ home:
     importTemplateHint: 點擊瀏覽或拖放模板資料夾到此處
     deleteTemplate: 刪除模板
     dropTemplateFolder: 將模板資料夾拖放到此處
-    importSuccess: 模板匯入成功
     importInvalidFolder: 這不是一個有效的模板資料夾
     importDuplicate: 已存在同名模板
     importUnknownError: 匯入模板時發生未知錯誤
@@ -239,11 +235,11 @@ modals:
     title: 刪除遊戲
     description: 確定要刪除遊戲 {name} 嗎？
     deleteFiles: 同時刪除遊戲檔案
-    deleteSuccess: 遊戲刪除成功
+    deleteFailed: 遊戲刪除失敗
     removeTitle: 移除遊戲記錄
     removeDescription: 確定要移除遊戲 {name} 的記錄嗎？
     removeWarning: 專案目錄已不可用，此操作只會移除本地記錄，不會刪除任何檔案。
-    removeSuccess: 遊戲記錄已移除
+    removeFailed: 遊戲記錄移除失敗
   deleteFile:
     title: 確定要刪除檔案 {name} 嗎？
     folderTitle: 確定要刪除資料夾 {name} 及其內容？
@@ -263,9 +259,7 @@ modals:
     removeTitle: 移除引擎記錄
     removeDescription: 確定要移除引擎 {name} 的記錄嗎？
     removeWarning: 引擎目錄已不可用，此操作只會移除本地記錄，不會刪除任何檔案。
-    removeSuccess: 引擎記錄已移除
     removeFailed: 引擎記錄移除失敗
-    uninstallSuccess: 引擎卸載成功
     uninstallFailed: 引擎卸載失敗
   deleteTemplate:
     blockedTitle: 無法刪除
@@ -274,12 +268,10 @@ modals:
     title: 刪除模板
     description: 確定要刪除模板 {name} 嗎？
     warning: 此操作將把模板檔案移到資源回收桶，你可以稍後從資源回收桶還原。
-    deleteSuccess: 模板刪除成功
     deleteFailed: 模板刪除失敗
     removeTitle: 移除模板記錄
     removeDescription: 確定要移除模板 {name} 的記錄嗎？
     removeWarning: 模板目錄已不可用，此操作只會移除本地記錄，不會刪除任何檔案。
-    removeSuccess: 模板記錄已移除
     removeFailed: 模板記錄移除失敗
   switchEngine:
     title: 切換引擎
@@ -291,7 +283,6 @@ modals:
       description: 切換引擎會影響當前模板中的本地修改，請選擇處理方式
       keep: 保留並固定模板
       discard: 捨棄模板修改
-    success: 引擎已切換到 {name} {version}
     failed:
       title: 引擎切換失敗
       description: 複製引擎檔案時發生錯誤，可重試或取消切換。
@@ -306,19 +297,16 @@ modals:
     dirtyConfirm:
       title: 切換模板將遺失修改
       confirm: 確認切換
-    success: 模板已切換
     error: 模板切換失敗
     engineUnavailable: 綁定的引擎目前不可用，請先恢復或重新安裝引擎再切換模板。
   deleteEngineGroup:
     title: 卸載全部版本
     description: 確定要卸載引擎 {name} 的全部版本嗎？
     warning: 此操作會將該引擎的全部已安裝版本移到資源回收桶，你可以稍後從資源回收桶還原。
-    success: 引擎全部版本卸載成功
     failed: 引擎全部版本卸載失敗
     removeTitle: 移除全部版本記錄
     removeDescription: 確定要移除引擎 {name} 全部版本的記錄嗎？
     removeWarning: 引擎目錄已不可用，此操作只會移除本地記錄，不會刪除任何檔案。
-    removeSuccess: 引擎全部版本記錄已移除
     removeFailed: 引擎全部版本記錄移除失敗
   recoverGame:
     title: 專案目前不可用
@@ -327,10 +315,8 @@ modals:
     selectNewLocation: 選擇專案的新位置
     retry: 重試連接
     recheck: 重新偵測
-    retrySuccess: 專案已恢復
     retryFailed: 專案仍然不可用
     relink: 重新連結路徑
-    relinkSuccess: 專案路徑已更新
     relinkFailed: 重新連結失敗
     openFolderFailed: 開啟專案目錄失敗
     backToHome: 返回主頁
@@ -582,7 +568,6 @@ modals:
     description: 選擇左側版本檢視差異，可還原至該時間點的內容。
     empty: 此場景尚無歷史紀錄
     restore: 還原
-    restoreSuccess: 已還原
     restoreConfirmTitle: 還原此版本？
     restoreConfirmContent: 將還原 {time} 儲存的版本。目前內容會先作為「還原操作」條目自動備份。
     sourceKind:
@@ -689,23 +674,19 @@ edit:
     defaultFileStem: 新檔案
     defaultFolderName: 新資料夾
     rename: 重新命名
-    deleteSuccess: 刪除成功
     deleteFailed: 刪除失敗
     copy: 複製
     cut: 剪下
     paste: 貼上
     revealInExplorer: 在檔案總管中顯示
-    pasteSuccess: 貼上成功
     pasteFailed: 貼上失敗
     pastePartialFailed: 部分貼上失敗 ({failed}/{total})
-    pasteMultipleSuccess: 成功貼上 {count} 個項目
     viewHistory: 檢視歷史版本
     dragPreviewCount: "{count} 個檔案"
   previewPanel:
     copyUrl: 複製網址
     refreshPreview: 重新整理預覽
     openInBrowser: 在瀏覽器中開啟
-    copyUrlSuccess: 複製網址成功
     openFailed: 開啟預覽失敗
     previewTitle: "遊戲預覽 - {name}"
     zoomOut: 縮小
@@ -789,7 +770,6 @@ edit:
       editDefaults: 編輯預設值
       editDefaultsTitle: 編輯預設值 — {command}
       resetDefaults: 重設
-      resetSuccess: 已重設為預設值
       createGroup: 新建語句組
       createGroupDescription: 建立可重複插入的語句組合
       confirmDeleteGroup: 確定要刪除此語句組嗎？

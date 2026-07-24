@@ -147,14 +147,12 @@ home:
     dropGameFolder: Drag and drop game folder here to import
     gameCover: "{name} game cover"
     gameIcon: "{name} game icon"
-    importCancelled: Import cancelled
     importConfigCorrupted: The project file is damaged and cannot be read.
     importEngineNotFound: The engine required by this project is not installed.
     importEngineUnavailable: The engine required by this project is unavailable.
     importEngineEditorIncompatible: The engine bound to this project cannot be used in WebGAL Craft. Choose another engine.
     importEngineVersionInvalid: The engine bound to this project does not provide valid version information. Choose another engine.
     importEngineVersionTooOld: The engine bound to this project is too old. Choose an engine for WebGAL {version} or later.
-    importSuccess: Game imported successfully
     importAlreadyExists: This project already exists
     importInvalidFolder: This does not look like a game project folder. Please check its contents.
     importSchemaVersionTooNew: This project was created by a newer version of the app. Please upgrade and try again.
@@ -170,7 +168,6 @@ home:
     installGameEngine: Install Game Engine
     dropEngineFolder: Drag and drop game engine folder here
     engineIcon: "{name} engine icon"
-    importSuccess: Engine imported successfully
     importAlreadyExists: This engine already exists
     importInvalidFolder: This does not look like an engine folder. Please check its contents.
     importing: Importing engine...
@@ -193,7 +190,6 @@ home:
     importTemplateHint: Click to browse or drag and drop template folder here
     deleteTemplate: Delete Template
     dropTemplateFolder: Drag and drop template folder here
-    importSuccess: Template imported successfully
     importInvalidFolder: This is not a valid template folder
     importDuplicate: A template with the same name already exists
     importUnknownError: An unknown error occurred while importing the template
@@ -239,11 +235,11 @@ modals:
     title: Delete Game
     description: Are you sure you want to delete the game {name}?
     deleteFiles: Delete game files as well
-    deleteSuccess: Game deleted successfully
+    deleteFailed: Failed to delete game
     removeTitle: Remove Game Record
     removeDescription: Are you sure you want to remove the record for {name}?
     removeWarning: The project directory is unavailable. This will only remove the local record and will not delete any files.
-    removeSuccess: Game record removed
+    removeFailed: Failed to remove game record
   deleteFile:
     title: Are you sure you want to delete the file {name}?
     folderTitle: Are you sure you want to delete the folder {name} and its contents?
@@ -263,9 +259,7 @@ modals:
     removeTitle: Remove Engine Record
     removeDescription: Remove the record for engine {name}?
     removeWarning: The engine directory is no longer available. This only removes the local record and will not delete any files.
-    removeSuccess: Engine record removed
     removeFailed: Failed to remove engine record
-    uninstallSuccess: Engine uninstalled successfully
     uninstallFailed: Failed to uninstall engine
   deleteTemplate:
     blockedTitle: Cannot Delete
@@ -274,12 +268,10 @@ modals:
     title: Delete Template
     description: Are you sure you want to delete the template {name}?
     warning: This operation will move template files to the recycle bin. You can restore them from there.
-    deleteSuccess: Template deleted successfully
     deleteFailed: Failed to delete template
     removeTitle: Remove Template Record
     removeDescription: Are you sure you want to remove the record for template {name}?
     removeWarning: The template directory is unavailable. This will only remove the local record and will not delete any files.
-    removeSuccess: Template record removed
     removeFailed: Failed to remove template record
   switchEngine:
     title: Switch Engine
@@ -291,7 +283,6 @@ modals:
       description: Switching engines will affect local modifications in the current template. Please choose how to handle them
       keep: Keep and pin template
       discard: Discard template changes
-    success: Engine switched to {name} {version}
     failed:
       title: Engine switch failed
       description: An error occurred while copying engine files. You can retry or cancel.
@@ -306,19 +297,16 @@ modals:
     dirtyConfirm:
       title: Switching will discard modifications
       confirm: Confirm switch
-    success: Template switched
     error: Template switch failed
     engineUnavailable: The bound engine is unavailable. Restore or reinstall it before switching templates.
   deleteEngineGroup:
     title: Uninstall All Versions
     description: Are you sure you want to uninstall all versions of engine {name}?
     warning: This operation will move all installed versions of this engine to the recycle bin. You can restore them later.
-    success: All engine versions were uninstalled successfully
     failed: Failed to uninstall all engine versions
     removeTitle: Remove All Version Records
     removeDescription: Are you sure you want to remove records for all versions of engine {name}?
     removeWarning: The engine directory is unavailable. This will only remove the local records and will not delete any files.
-    removeSuccess: All engine version records removed
     removeFailed: Failed to remove engine version records
   recoverGame:
     title: Project Currently Unavailable
@@ -327,10 +315,8 @@ modals:
     selectNewLocation: Select the new location for the project
     retry: Retry connection
     recheck: Recheck
-    retrySuccess: Project recovered
     retryFailed: Project is still unavailable
     relink: Relink path
-    relinkSuccess: Project path updated
     relinkFailed: Failed to relink
     openFolderFailed: Failed to open project folder
     backToHome: Back to home
@@ -582,7 +568,6 @@ modals:
     description: Select a version on the left to view the diff, then restore the scene to that point in time.
     empty: No history yet for this scene
     restore: Restore
-    restoreSuccess: Restored successfully
     restoreConfirmTitle: Restore this version?
     restoreConfirmContent: 'Restore the version saved at {time}? The current content will be backed up first as a "restore" entry.'
     sourceKind:
@@ -689,23 +674,19 @@ edit:
     defaultFileStem: New File
     defaultFolderName: New Folder
     rename: Rename
-    deleteSuccess: Deleted successfully
     deleteFailed: Delete failed
     copy: Copy
     cut: Cut
     paste: Paste
     revealInExplorer: Reveal in File Explorer
-    pasteSuccess: Pasted successfully
     pasteFailed: Paste failed
     pastePartialFailed: Partial paste failed ({failed}/{total})
-    pasteMultipleSuccess: Successfully pasted {count} items
     viewHistory: View Version History
     dragPreviewCount: "{count} file(s)"
   previewPanel:
     copyUrl: Copy URL
     refreshPreview: Refresh Preview
     openInBrowser: Open in Browser
-    copyUrlSuccess: URL copied successfully
     openFailed: Failed to open preview
     previewTitle: "Game Preview - {name}"
     zoomOut: Zoom Out
@@ -789,7 +770,6 @@ edit:
       editDefaults: Edit defaults
       editDefaultsTitle: Edit defaults — {command}
       resetDefaults: Reset
-      resetSuccess: Reset to defaults
       createGroup: New Statement Group
       createGroupDescription: Create a reusable bundle of statements
       confirmDeleteGroup: Are you sure you want to delete this group?

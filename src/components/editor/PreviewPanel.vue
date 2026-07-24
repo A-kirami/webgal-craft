@@ -54,7 +54,7 @@ const previewUrl = $computed(() => previewSessionStore.currentGameServeUrl ?? ''
 const hasPreviewUrl = $computed(() => !!previewSessionStore.currentGameServeUrl)
 
 const { t } = useI18n()
-const { copy, copied } = useClipboard({ source: $$(previewUrl) })
+const { copy } = useClipboard({ source: $$(previewUrl) })
 const previewTitle = $computed(() => t('edit.previewPanel.previewTitle', { name: workspaceStore.currentGame?.metadata.name }))
 const resolutionLabel = $computed(() => `${stageWidth} x ${stageHeight}`)
 
@@ -258,9 +258,6 @@ async function copyUrl(): Promise<void> {
   }
 
   await copy()
-  if (copied.value) {
-    notify.success(t('edit.previewPanel.copyUrlSuccess'))
-  }
 }
 
 let refreshKey = $ref(0)

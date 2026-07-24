@@ -5,16 +5,16 @@ import { AppError } from '~/types/errors'
 
 const {
   importResourceMock,
-  notifyErrorMock,
-  notifyInfoMock,
-  notifySuccessMock,
+  toastErrorMock,
+  toastInfoMock,
+  toastSuccessMock,
   openDialogMock,
   openPathMock,
 } = vi.hoisted(() => ({
   importResourceMock: vi.fn(),
-  notifyErrorMock: vi.fn(),
-  notifyInfoMock: vi.fn(),
-  notifySuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  toastInfoMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
 }))
@@ -27,11 +27,11 @@ vi.mock('@tauri-apps/plugin-opener', () => ({
   openPath: openPathMock,
 }))
 
-vi.mock('notivue', () => ({
-  push: {
-    error: notifyErrorMock,
-    info: notifyInfoMock,
-    success: notifySuccessMock,
+vi.mock('vue-sonner', () => ({
+  toast: {
+    error: toastErrorMock,
+    info: toastInfoMock,
+    success: toastSuccessMock,
   },
 }))
 
@@ -41,10 +41,8 @@ function createActions() {
     importResource: importResourceMock,
     messages: {
       invalidFolder: t => t('home.engines.importInvalidFolder'),
-      importCancelled: t => t('home.games.importCancelled'),
       multipleFolders: t => t('home.engines.importMultipleFolders'),
       selectFolderTitle: t => t('common.dialogs.selectEngineFolder'),
-      success: t => t('home.engines.importSuccess'),
       unsupportedLegacyEngine: t => t('home.engines.importUnsupportedLegacyEngine'),
       unknownError: t => t('home.engines.importUnknownError'),
     },
@@ -60,7 +58,7 @@ describe('useHomeResourceImportActions', () => {
     openDialogMock.mockResolvedValue(undefined)
   })
 
-  it('选择目录后会导入并提示成功', async () => {
+  it('选择目录导入成功时保持静默', async () => {
     openDialogMock.mockResolvedValue('/engines/selected')
     const actions = createActions()
 
@@ -72,7 +70,9 @@ describe('useHomeResourceImportActions', () => {
       title: 'common.dialogs.selectEngineFolder',
     }))
     expect(importResourceMock).toHaveBeenCalledWith('/engines/selected')
-    expect(notifySuccessMock).toHaveBeenCalledWith('home.engines.importSuccess')
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(toastInfoMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
   it('拖入多个目录时只提示错误且不会触发导入', async () => {
@@ -81,7 +81,7 @@ describe('useHomeResourceImportActions', () => {
     await actions.handleDrop(['/engines/one', '/engines/two'])
 
     expect(importResourceMock).not.toHaveBeenCalled()
-    expect(notifyErrorMock).toHaveBeenCalledWith('home.engines.importMultipleFolders')
+    expect(toastErrorMock).toHaveBeenCalledWith('home.engines.importMultipleFolders')
   })
 
   it('导入结构错误时会提示无效目录', async () => {
@@ -91,7 +91,7 @@ describe('useHomeResourceImportActions', () => {
 
     await actions.selectFolder()
 
-    expect(notifyErrorMock).toHaveBeenCalledWith('home.engines.importInvalidFolder')
+    expect(toastErrorMock).toHaveBeenCalledWith('home.engines.importInvalidFolder')
   })
 
   it('旧版引擎导入错误时会提示用户改走项目导入', async () => {
@@ -103,10 +103,10 @@ describe('useHomeResourceImportActions', () => {
 
     await actions.selectFolder()
 
-    expect(notifyErrorMock).toHaveBeenCalledWith('home.engines.importUnsupportedLegacyEngine')
+    expect(toastErrorMock).toHaveBeenCalledWith('home.engines.importUnsupportedLegacyEngine')
   })
 
-  it('导入被取消时用信息通知而不是错误通知', async () => {
+  it('导入被用户取消时保持静默', async () => {
     openDialogMock.mockResolvedValue('/engines/cancelled')
     importResourceMock.mockRejectedValue(new AppError('IO_ERROR', 'cancelled', {
       details: { reason: 'IMPORT_CANCELLED' },
@@ -115,8 +115,9 @@ describe('useHomeResourceImportActions', () => {
 
     await actions.selectFolder()
 
-    expect(notifyErrorMock).not.toHaveBeenCalled()
-    expect(notifyInfoMock).toHaveBeenCalledWith('home.games.importCancelled')
+    expect(toastErrorMock).not.toHaveBeenCalled()
+    expect(toastInfoMock).not.toHaveBeenCalled()
+    expect(toastSuccessMock).not.toHaveBeenCalled()
   })
 
   it('能够暴露统一的进度读取与目录打开能力', async () => {

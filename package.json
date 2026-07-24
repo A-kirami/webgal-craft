@@ -57,7 +57,6 @@
     "markdown-it": "^14.2.0",
     "mime": "^4.1.0",
     "monaco-editor": "~0.51.0",
-    "notivue": "^2.4.5",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "reka-ui": "^2.9.9",
