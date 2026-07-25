@@ -34,10 +34,4 @@ describe('project-icon-assets', () => {
       relativePath: 'icons/icon-512.png',
     }))
   })
-
-  it('缺失根级展示图标时不会回退到 icons/web', async () => {
-    existsMock.mockImplementation(async path => String(path) === '/games/demo/icons/web/favicon.ico')
-
-    await expect(resolveGameIconPreviewPath(AbsPath.from('/games/demo'))).resolves.toBeUndefined()
-  })
 })

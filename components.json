@@ -4,7 +4,7 @@
   "typescript": true,
   "tailwind": {
     "config": "unocss.config.ts",
-    "css": "src/style/main.css",
+    "css": "src/styles/main.css",
     "baseColor": "neutral",
     "cssVariables": true,
     "prefix": ""

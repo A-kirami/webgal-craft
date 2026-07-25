@@ -2,11 +2,12 @@ import { documentDir } from '@tauri-apps/api/path'
 
 import { AbsPath } from '~/domain/path'
 
-import { defaultEngineSavePath, defaultGameSavePath, defaultTemplateSavePath } from './app-paths'
+import { defaultEngineSavePath, defaultExportSavePath, defaultGameSavePath, defaultTemplateSavePath } from './app-paths'
 
 export interface StorageSavePathState {
   gameSavePath: string
   engineSavePath: string
+  exportSavePath: string
   templateSavePath: string
 }
 
@@ -14,6 +15,7 @@ interface ResolveMissingStorageSavePathsOptions {
   getBaseDir?: () => Promise<AbsPath>
   resolveGameSavePath?: (baseDir: AbsPath) => string | Promise<string>
   resolveEngineSavePath?: (baseDir: AbsPath) => string | Promise<string>
+  resolveExportSavePath?: (baseDir: AbsPath) => string | Promise<string>
   resolveTemplateSavePath?: (baseDir: AbsPath) => string | Promise<string>
 }
 
@@ -23,6 +25,7 @@ const DEFAULTS: Record<
 > = {
   gameSavePath: { resolverKey: 'resolveGameSavePath', fallback: defaultGameSavePath },
   engineSavePath: { resolverKey: 'resolveEngineSavePath', fallback: defaultEngineSavePath },
+  exportSavePath: { resolverKey: 'resolveExportSavePath', fallback: defaultExportSavePath },
   templateSavePath: { resolverKey: 'resolveTemplateSavePath', fallback: defaultTemplateSavePath },
 }
 

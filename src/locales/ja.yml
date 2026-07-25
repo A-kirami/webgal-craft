@@ -582,6 +582,53 @@ modals:
       earlier: それ以前
     loadMore: 以前のバージョンを読み込む
 
+export:
+  title: ゲームを書き出す
+  description: 対象プラットフォームを選択してゲームを書き出します
+  steps:
+    platform: プラットフォーム
+    configure: 設定
+    export: 書き出し
+  platformWeb: Web
+  platformWebDescription: 単独で配信できる静的サイトを書き出します
+  platformDesktop: デスクトップ
+  platformDesktopDescription: Windows、macOS、Linux の対象を複数選択できます
+  platformAndroid: Android
+  platformAndroidDescription: Android APK を書き出します
+  comingSoon: 近日公開
+  selectPlatformHint: 続行するには、プラットフォームを 1 つ以上選択してください
+  next: 次へ
+  previousStep: 前へ
+  outputDirectory: 書き出し先フォルダー
+  browse: 参照
+  finalOutputPath: 最終出力先
+  selectDirectoryHint: 続行するには、書き出し先フォルダーを選択してください
+  selectDirectory: 書き出し先フォルダーを選択
+  selectDirectoryFailed: 書き出し先フォルダーを選択できませんでした
+  start: 書き出す
+  retry: 再度書き出す
+  exporting: 書き出し中
+  done: 完了
+  elapsed:
+    total: 所要時間 {seconds} 秒
+    separator: ·
+  openDirectory: フォルダーを開く
+  failed: Web 書き出しに失敗しました
+  openDirectoryFailed: 書き出し先フォルダーを開けませんでした
+  overwrite:
+    title: 書き出し先が既に存在します
+    description: 上書きすると、{path} の既存内容がすべて置き換えられます。既存ファイルは新しい書き出しに統合されません。
+    confirm: 上書きする
+  progress:
+    ready: 書き出しの準備ができました
+    preparing: 書き出しを準備しています...
+    copyingEngine: エンジンファイルをコピーしています...
+    copyingGame: ゲームリソースをコピーしています...
+    copyingIcons: アイコンをコピーしています...
+    updatingManifest: マニフェストを更新しています...
+    finished: 書き出しが完了しました
+    failed: 書き出しに失敗しました
+
 edit:
   header:
     testGame: ゲームをテスト
@@ -1154,6 +1201,9 @@ settings:
     templatePath:
       label: テンプレート保存場所
       title: テンプレート保存場所を選択
+    exportPath:
+      label: デフォルトの書き出し先
+      title: デフォルトの書き出し先を選択
     browse: 参照
   backup:
     local: ローカル履歴

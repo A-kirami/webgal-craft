@@ -582,6 +582,53 @@ modals:
       earlier: Earlier
     loadMore: Load earlier versions
 
+export:
+  title: Export game
+  description: Choose a target platform and export your game
+  steps:
+    platform: Platforms
+    configure: Configure
+    export: Export
+  platformWeb: Web
+  platformWebDescription: Export a standalone static website
+  platformDesktop: Desktop
+  platformDesktopDescription: Choose one or more Windows, macOS, or Linux targets
+  platformAndroid: Android
+  platformAndroidDescription: Export an Android APK
+  comingSoon: Coming soon
+  selectPlatformHint: Select at least one platform to continue
+  next: Next
+  previousStep: Previous
+  outputDirectory: Export folder
+  browse: Browse
+  finalOutputPath: Final output
+  selectDirectoryHint: Select an export folder to continue
+  selectDirectory: Select export folder
+  selectDirectoryFailed: Failed to select the export folder
+  start: Export
+  retry: Retry export
+  exporting: Exporting
+  done: Done
+  elapsed:
+    total: Took {seconds}s
+    separator: ·
+  openDirectory: Open folder
+  failed: Web export failed
+  openDirectoryFailed: Failed to open the export folder
+  overwrite:
+    title: Export folder already exists
+    description: Overwriting will completely replace the existing contents of {path}. Existing files will not be merged into the new export.
+    confirm: Overwrite export
+  progress:
+    ready: Ready to export
+    preparing: Preparing export...
+    copyingEngine: Copying engine files...
+    copyingGame: Copying game resources...
+    copyingIcons: Copying icons...
+    updatingManifest: Updating manifest...
+    finished: Export complete
+    failed: Export failed
+
 edit:
   header:
     testGame: Test Game
@@ -1154,6 +1201,9 @@ settings:
     templatePath:
       label: Template Save Location
       title: Select Template Save Location
+    exportPath:
+      label: Default Export Location
+      title: Select Default Export Location
     browse: Browse
   backup:
     local: Local History

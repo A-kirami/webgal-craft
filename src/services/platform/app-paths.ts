@@ -70,3 +70,8 @@ export function defaultEngineSavePath(baseDir: AbsPath): AbsPath {
 export function defaultTemplateSavePath(baseDir: AbsPath): AbsPath {
   return AbsPath.join(baseDir, RelPath.from('WebGALCraft/templates'))
 }
+
+/** 默认导出目录: {baseDir}/WebGALCraft/exports */
+export function defaultExportSavePath(baseDir: AbsPath): AbsPath {
+  return AbsPath.join(baseDir, RelPath.from('WebGALCraft/exports'))
+}

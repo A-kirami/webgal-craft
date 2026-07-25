@@ -582,6 +582,53 @@ modals:
       earlier: 更早
     loadMore: 載入更早的版本
 
+export:
+  title: 匯出遊戲
+  description: 選擇目標平台並匯出遊戲
+  steps:
+    platform: 選擇平台
+    configure: 設定
+    export: 匯出
+  platformWeb: Web
+  platformWebDescription: 匯出為可獨立部署的靜態網站
+  platformDesktop: 桌面端
+  platformDesktopDescription: Windows、macOS、Linux 目標可多選
+  platformAndroid: Android
+  platformAndroidDescription: 匯出 Android APK 安裝套件
+  comingSoon: 即將推出
+  selectPlatformHint: 請至少選擇一個平台以繼續
+  next: 下一步
+  previousStep: 上一步
+  outputDirectory: 匯出目錄
+  browse: 瀏覽
+  finalOutputPath: 最終輸出位置
+  selectDirectoryHint: 請先選擇匯出目錄以繼續
+  selectDirectory: 選擇匯出目錄
+  selectDirectoryFailed: 無法選擇匯出目錄
+  start: 開始匯出
+  retry: 重新匯出
+  exporting: 正在匯出
+  done: 完成
+  elapsed:
+    total: 耗時 {seconds} 秒
+    separator: ·
+  openDirectory: 開啟目錄
+  failed: Web 匯出失敗
+  openDirectoryFailed: 無法開啟匯出目錄
+  overwrite:
+    title: 匯出目錄已存在
+    description: 覆蓋匯出將完整取代 {path} 中的現有內容。原有檔案不會與新匯出合併。
+    confirm: 覆蓋匯出
+  progress:
+    ready: 等待開始匯出
+    preparing: 正在準備匯出...
+    copyingEngine: 正在複製引擎檔案...
+    copyingGame: 正在複製遊戲資源...
+    copyingIcons: 正在複製圖示...
+    updatingManifest: 正在更新資訊清單...
+    finished: 匯出完成
+    failed: 匯出失敗
+
 edit:
   header:
     testGame: 測試遊戲
@@ -1154,6 +1201,9 @@ settings:
     templatePath:
       label: 模板儲存位置
       title: 選擇模板儲存位置
+    exportPath:
+      label: 預設匯出位置
+      title: 選擇預設匯出位置
     browse: 瀏覽
   backup:
     local: 本地歷史

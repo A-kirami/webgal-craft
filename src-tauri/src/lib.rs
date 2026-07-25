@@ -78,6 +78,8 @@ pub fn run() {
             commands::game::set_game_config,
             // engine
             commands::engine::read_engine_manifest,
+            // export
+            commands::export::export_web,
             // project config
             commands::project_config::read_project_config_cmd,
             commands::project_config::write_project_config_cmd,

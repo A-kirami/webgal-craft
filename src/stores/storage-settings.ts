@@ -29,6 +29,7 @@ export const useStorageSettingsStore = defineStore(
             ...state,
             gameSavePath: rebrandStoredAbsPath(state.gameSavePath),
             engineSavePath: rebrandStoredAbsPath(state.engineSavePath),
+            exportSavePath: rebrandStoredAbsPath(state.exportSavePath),
             templateSavePath: rebrandStoredAbsPath(state.templateSavePath),
           }
         },
