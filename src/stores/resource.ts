@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 
 import { useEngines, useGames, useTemplates } from '~/composables/useDatabase'
+import { resolveEngineModelCapabilities } from '~/domain/engine/model-capabilities'
 import { createTemplateGroups } from '~/features/home/templates-tab/template-groups'
 import { isEngineEditorCompatible } from '~/services/engine-manager'
 import { useWorkspaceStore } from '~/stores/workspace'
@@ -54,6 +55,18 @@ export const useResourceStore = defineStore('resource', () => {
     sortedEngines.filter(isEngineEditorCompatible),
   )
 
+  const currentEngineCapabilities = $computed(() => {
+    const currentEngineId = workspaceStore.currentGame?.engineId
+    if (!engines || !currentEngineId) {
+      return
+    }
+
+    const currentEngine = engines.find(engine => engine.id === currentEngineId)
+    return currentEngine
+      ? resolveEngineModelCapabilities(currentEngine.metadata)
+      : undefined
+  })
+
   const filteredTemplates = $computed(() =>
     filterBySearchQuery(sortedTemplates, template => template.metadata.name),
   )
@@ -82,6 +95,7 @@ export const useResourceStore = defineStore('resource', () => {
     engines,
     filteredEngines,
     availableEngines,
+    currentEngineCapabilities,
     // 模板相关
     templates,
     filteredTemplates,

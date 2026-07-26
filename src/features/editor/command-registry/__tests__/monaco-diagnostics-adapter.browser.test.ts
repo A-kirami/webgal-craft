@@ -1,15 +1,17 @@
 import * as monaco from 'monaco-editor'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { useResourceIndex, useWorkspaceStore } = vi.hoisted(() => ({
+const { useResourceIndex, useResourceStore, useWorkspaceStore } = vi.hoisted(() => ({
   useResourceIndex: vi.fn(),
+  useResourceStore: vi.fn(),
   useWorkspaceStore: vi.fn(),
 }))
 
 vi.mock('~/services/resource-index/service', () => ({ useResourceIndex }))
+vi.mock('~/stores/resource', () => ({ useResourceStore }))
 vi.mock('~/stores/workspace', () => ({ useWorkspaceStore }))
 vi.mock('~/plugins/i18n', () => ({
-  i18n: { global: { t: (key: string, params: Record<string, unknown>) => `${key}:${Object.values(params).join(':')}` } },
+  i18n: { global: { t: (key: string, params: Record<string, unknown> = {}) => `${key}:${Object.values(params).join(':')}` } },
 }))
 
 import { updateEditorDiagnostics } from '~/plugins/editor/diagnostics'
@@ -39,7 +41,9 @@ describe('updateEditorDiagnostics', () => {
 
   beforeEach(() => {
     useResourceIndex.mockReset()
+    useResourceStore.mockReset()
     useWorkspaceStore.mockReset()
+    useResourceStore.mockReturnValue({ currentEngineCapabilities: undefined })
     useWorkspaceStore.mockReturnValue({ currentGame: { path: '/game' } })
   })
 
@@ -170,5 +174,40 @@ describe('updateEditorDiagnostics', () => {
       severity: monaco.MarkerSeverity.Error,
       message: 'edit.diagnostics.missingLabel:missing',
     })])
+  })
+
+  it('为当前引擎不支持的 Live2D 与 Spine 引用创建黄色 marker', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+    useResourceStore.mockReturnValue({
+      currentEngineCapabilities: { live2d: false, spine: false },
+    })
+
+    const model = createModel([
+      'changeFigure:live2d/hero.json;',
+      'changeFigure:spine/hero.json?type=spine;',
+      'changeFigure:spine/hero.skel;',
+    ].join('\n'))
+    updateEditorDiagnostics(model)
+
+    expect(readMarkers(model)).toEqual([
+      expect.objectContaining({
+        startLineNumber: 1,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.unsupportedLive2d:',
+      }),
+      expect.objectContaining({
+        startLineNumber: 2,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.unsupportedSpine:',
+      }),
+      expect.objectContaining({
+        startLineNumber: 3,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.unsupportedSpine:',
+      }),
+    ])
   })
 })

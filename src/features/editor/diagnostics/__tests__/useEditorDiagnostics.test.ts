@@ -8,11 +8,13 @@ const {
   useEditorDiagnosticsStoreMock,
   useEditorStoreMock,
   useResourceIndexMock,
+  useResourceStoreMock,
   useTabsStoreMock,
 } = vi.hoisted(() => ({
   useEditorDiagnosticsStoreMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
   useResourceIndexMock: vi.fn(),
+  useResourceStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
 }))
 
@@ -28,6 +30,10 @@ vi.mock('~/services/resource-index/service', () => ({
   useResourceIndex: useResourceIndexMock,
 }))
 
+vi.mock('~/stores/resource', () => ({
+  useResourceStore: useResourceStoreMock,
+}))
+
 vi.mock('~/stores/tabs', () => ({
   useTabsStore: useTabsStoreMock,
 }))
@@ -39,7 +45,11 @@ describe('useEditorDiagnostics', () => {
     useEditorDiagnosticsStoreMock.mockReset()
     useEditorStoreMock.mockReset()
     useResourceIndexMock.mockReset()
+    useResourceStoreMock.mockReset()
     useTabsStoreMock.mockReset()
+    useResourceStoreMock.mockReturnValue(reactive({
+      currentEngineCapabilities: undefined,
+    }))
   })
 
   it('只发布已打开文档，并在资源索引变化后使资源诊断失效再重算', async () => {
@@ -133,6 +143,50 @@ describe('useEditorDiagnostics', () => {
     await nextTick()
 
     expect(diagnosticsStore.publish).toHaveBeenLastCalledWith(path, [])
+    scope.stop()
+  })
+
+  it('当前引擎能力变化后重新发布兼容性诊断', async () => {
+    const path = AbsPath.from('/game/scene/start.txt')
+    const diagnosticsStore = {
+      invalidateSource: vi.fn(),
+      publish: vi.fn(),
+    }
+    const resourceStore = reactive<{
+      currentEngineCapabilities?: { live2d: boolean, spine: boolean }
+    }>({
+      currentEngineCapabilities: { live2d: false, spine: false },
+    })
+
+    useEditorDiagnosticsStoreMock.mockReturnValue(diagnosticsStore)
+    useEditorStoreMock.mockReturnValue({
+      getTextProjectionState: vi.fn(() => undefined),
+      getVisualProjectionState: vi.fn(() => reactive({
+        kind: 'scene' as const,
+        statements: buildStatements('changeFigure:hero.json;'),
+      })),
+      peekSceneRevision: vi.fn(() => 'revision-1'),
+    })
+    useResourceIndexMock.mockReturnValue({
+      hasAssetKey: vi.fn(() => true),
+      revision: shallowRef(0),
+      status: shallowRef('ready'),
+    })
+    useResourceStoreMock.mockReturnValue(resourceStore)
+    useTabsStoreMock.mockReturnValue(reactive({ tabs: [{ path }] }))
+
+    const scope = effectScope()
+    scope.run(useEditorDiagnostics)
+
+    expect(diagnosticsStore.publish).toHaveBeenLastCalledWith(path, [
+      expect.objectContaining({ code: 'unsupported-live2d' }),
+    ])
+
+    resourceStore.currentEngineCapabilities = { live2d: true, spine: false }
+    await nextTick()
+
+    expect(diagnosticsStore.publish).toHaveBeenLastCalledWith(path, [])
+    expect(diagnosticsStore.invalidateSource).not.toHaveBeenCalledWith('resource')
     scope.stop()
   })
 })

@@ -77,6 +77,69 @@ describe('diagnoseScene', () => {
       }),
     ])
   })
+
+  it('根据引擎能力诊断 Live2D 与 Spine 模型引用', () => {
+    const sentences = [
+      parseSentence('changeFigure:live2d/hero.json;'),
+      parseSentence('changeFigure:spine/hero.json?type=spine;'),
+      parseSentence('changeFigure:spine/hero.skel;'),
+      parseSentence('changeFigure:images/hero.png;'),
+      parseSentence('changeAnimation:opening.json;'),
+      parseSentence('unlockCg:gallery/model.skel;'),
+      parseSentence('miniAvatar:avatar.json;'),
+    ]
+
+    expect(diagnoseScene(sentences, {
+      engineCapabilities: { live2d: true, spine: false },
+    })).toEqual([
+      {
+        code: 'unsupported-spine',
+        field: { kind: 'content' },
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 1,
+        value: 'spine/hero.json?type=spine',
+      },
+      {
+        code: 'unsupported-spine',
+        field: { kind: 'content' },
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 2,
+        value: 'spine/hero.skel',
+      },
+    ])
+  })
+
+  it('仅将 .skel 背景作为 Spine 模型诊断', () => {
+    const sentences = [
+      parseSentence('changeBg:live2d/background.json;'),
+      parseSentence('changeBg:spine/background.json?type=spine;'),
+      parseSentence('changeBg:spine/background.SKEL;'),
+      parseSentence('changeBg:spine/background.skel?version=1;'),
+      parseSentence('changeBg:images/background.png -enter=transitions/fade.json -exit=transitions/fade.skel;'),
+    ]
+
+    expect(diagnoseScene(sentences, {
+      engineCapabilities: { live2d: false, spine: false },
+    })).toEqual([
+      {
+        code: 'unsupported-spine',
+        field: { kind: 'content' },
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 2,
+        value: 'spine/background.SKEL',
+      },
+    ])
+  })
+
+  it('没有可用的引擎能力上下文时不生成兼容性诊断', () => {
+    expect(diagnoseScene([
+      parseSentence('changeFigure:live2d/hero.json;'),
+      parseSentence('changeFigure:spine/hero.skel;'),
+    ])).toEqual([])
+  })
 })
 
 describe('diagnoseEditorDocument', () => {

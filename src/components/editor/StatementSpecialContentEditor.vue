@@ -135,7 +135,7 @@ function choiceStatus(index: number) {
       <StatementDiagnosticTooltip class="flex-1" :diagnostics="getChoiceDiagnostics(index)">
         <FilePicker
           :model-value="item.second"
-          :invalid="choiceStatus(index) === 'error'"
+          :status="choiceStatus(index)"
           :root-path="sceneRootPath"
           :extensions="['.txt']"
           :popover-title="$t('edit.visualEditor.filePicker.scene')"
@@ -150,7 +150,7 @@ function choiceStatus(index: number) {
         <FilePicker
           :input-id="inputId"
           :model-value="item.second"
-          :invalid="choiceStatus(index) === 'error'"
+          :status="choiceStatus(index)"
           :root-path="sceneRootPath"
           :extensions="['.txt']"
           :popover-title="$t('edit.visualEditor.filePicker.scene')"

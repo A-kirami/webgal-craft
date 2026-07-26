@@ -13,6 +13,7 @@ import { updateEditorDiagnostics } from '~/plugins/editor/diagnostics'
 import { useResourceIndex } from '~/services/resource-index/service'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
+import { useResourceStore } from '~/stores/resource'
 import { useTabsStore } from '~/stores/tabs'
 
 import type { TextProjectionState } from '~/stores/editor'
@@ -58,6 +59,7 @@ const runtime = useTextEditorRuntime({
   getState: () => props.state,
 })
 const resourceIndex = useResourceIndex()
+const resourceStore = useResourceStore()
 
 const currentTheme = $computed(() => colorMode.value === 'dark' ? THEME_DARK : THEME_LIGHT)
 const isCurrentTextProjectionActive = $computed(() => {
@@ -185,11 +187,15 @@ function schedulePlayToLineGlyphSync() {
 
 function handleModelContentChange(event: monaco.editor.IModelContentChangedEvent) {
   runtime.handleContentChange(event)
+  updateCurrentModelDiagnostics()
+  schedulePlayToLineGlyphSync()
+}
+
+function updateCurrentModelDiagnostics(): void {
   const model = editor?.getModel()
   if (model) {
     updateEditorDiagnostics(model)
   }
-  schedulePlayToLineGlyphSync()
 }
 
 function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedEvent) {
@@ -242,12 +248,10 @@ function createEditor() {
   syncPlayToLineGlyph()
 }
 
-watch(() => resourceIndex.revision.value, () => {
-  const model = editor?.getModel()
-  if (model) {
-    updateEditorDiagnostics(model)
-  }
-})
+watch([
+  () => resourceIndex.revision.value,
+  () => resourceStore.currentEngineCapabilities,
+], updateCurrentModelDiagnostics)
 
 watch(() => currentTheme, (newTheme) => {
   if (editor) {
@@ -274,10 +278,7 @@ watch(
 
 watch(() => locale.value, () => {
   syncPlayToLineGlyph()
-  const model = editor?.getModel()
-  if (model) {
-    updateEditorDiagnostics(model)
-  }
+  updateCurrentModelDiagnostics()
 })
 
 onMounted(() => {
@@ -300,10 +301,7 @@ watch([() => props.state.path, () => props.state.kind], () => {
   }
 
   nextTick(() => {
-    const model = editor?.getModel()
-    if (model) {
-      updateEditorDiagnostics(model)
-    }
+    updateCurrentModelDiagnostics()
   })
 })
 

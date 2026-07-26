@@ -383,7 +383,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
             v-else-if="fieldMode(field) === 'file'"
             :input-id="fieldInputId(field)"
             :model-value="String(getFieldValue(field) || '')"
-            :invalid="isFileField(field) && fieldStatus(field) === 'error'"
+            :status="fieldStatus(field)"
             :root-path="fileRootPath(field)"
             :extensions="fileExtensions(field)"
             :exclude="fileExclude(field)"

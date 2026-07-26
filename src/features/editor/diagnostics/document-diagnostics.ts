@@ -2,6 +2,7 @@ import { ensureParsed } from '~/domain/script/sentence'
 import { diagnoseScene } from '~/features/editor/diagnostics/scene-diagnostics'
 
 import type { EditorDiagnostic } from './types'
+import type { EngineModelCapabilities } from '~/domain/engine/model-capabilities'
 import type { StatementEntry } from '~/domain/script/sentence'
 import type { AssetKey } from '~/services/resource-index/keys'
 
@@ -16,6 +17,7 @@ interface EditorDiagnosticVisualProjection {
 }
 
 interface DiagnoseEditorDocumentOptions {
+  engineCapabilities?: EngineModelCapabilities
   hasAssetKey?: (key: AssetKey) => boolean
   textProjection?: EditorDiagnosticTextProjection
   visualProjection?: EditorDiagnosticVisualProjection

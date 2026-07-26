@@ -1,5 +1,6 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { classifyEngineModelReference } from '~/domain/engine/model-capabilities'
 import { parseChooseContent } from '~/domain/script/content'
 import { createReferencedAssetKey } from '~/services/resource-index/values'
 
@@ -7,8 +8,15 @@ import { getCommandConfig } from './index'
 import { deriveArgFieldsFromEditorFields, readEditorFields, readFieldResourceReference } from './schema'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { EngineModelCapabilities, EngineModelType } from '~/domain/engine/model-capabilities'
 import type { AssetKey } from '~/services/resource-index/keys'
 import type { ResourceReferenceQuery, ResourceReferenceSource } from '~/services/resource-index/reference-query'
+
+export interface UnsupportedEngineModelReference {
+  modelType: EngineModelType
+  source: { kind: 'content' }
+  value: string
+}
 
 export function querySentenceResourceReferences(sentence: ISentence): ResourceReferenceQuery[] {
   const entry = getCommandConfig(sentence.command)
@@ -52,6 +60,35 @@ export function findMissingSentenceResourceReferences(
 ): ResourceReferenceQuery[] {
   return querySentenceResourceReferences(sentence)
     .filter(reference => !hasAssetKey(reference.assetKey))
+}
+
+export function findUnsupportedEngineModelReferences(
+  sentence: ISentence,
+  capabilities: EngineModelCapabilities,
+): UnsupportedEngineModelReference[] {
+  const value = sentence.content.trim()
+  const modelType = classifySentenceEngineModelReference(sentence.command, value)
+  if (!modelType || capabilities[modelType]) {
+    return []
+  }
+
+  return [{
+    modelType,
+    source: { kind: 'content' },
+    value,
+  }]
+}
+
+function classifySentenceEngineModelReference(
+  command: commandType,
+  value: string,
+): EngineModelType | undefined {
+  if (command === commandType.changeFigure) {
+    return classifyEngineModelReference(value)
+  }
+  if (command === commandType.changeBg && value.toLowerCase().endsWith('.skel')) {
+    return 'spine'
+  }
 }
 
 function addReference(result: ResourceReferenceQuery[], assetType: string, value: string, source: ResourceReferenceSource): void {

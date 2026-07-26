@@ -665,6 +665,8 @@ edit:
   diagnostics:
     duplicateLabel: "ラベル「{label}」は現在のシーンで{count}回定義されているため、ジャンプ先が曖昧です。"
     missingLabel: "ラベル「{label}」は現在のシーンで定義されていません。"
+    unsupportedLive2d: 現在のエンジンは Live2D モデルをサポートしていません。
+    unsupportedSpine: 現在のエンジンは Spine モデルをサポートしていません。
   errors:
     fileSyncFailed: ファイルの同期に失敗しました。しばらくしてからもう一度お試しください。
     previewUnavailable: プレビューURLがありません。先にプレビューを起動してください。

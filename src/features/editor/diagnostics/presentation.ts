@@ -47,6 +47,12 @@ export function getEditorDiagnosticMessage(
     case 'missing-resource': {
       return t('edit.completion.missingResource', { path: diagnostic.value })
     }
+    case 'unsupported-live2d': {
+      return t('edit.diagnostics.unsupportedLive2d')
+    }
+    case 'unsupported-spine': {
+      return t('edit.diagnostics.unsupportedSpine')
+    }
     default: {
       const exhaustiveCheck: never = diagnostic
       return exhaustiveCheck

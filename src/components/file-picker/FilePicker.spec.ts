@@ -54,6 +54,10 @@ vi.mock('~/stores/preview-session', () => ({
 
 import FilePicker from './FilePicker.vue'
 
+import type { PropType } from 'vue'
+
+type FilePickerStatus = 'none' | 'warning' | 'error'
+
 const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
   DropdownMenu: createBrowserContainerStub('StubDropdownMenu'),
@@ -153,6 +157,10 @@ const FilePickerHarness = defineComponent({
       type: String,
       required: true,
     },
+    status: {
+      type: String as PropType<FilePickerStatus>,
+      default: 'none',
+    },
   },
   setup(props) {
     const model = ref(props.initialValue)
@@ -168,6 +176,7 @@ const FilePickerHarness = defineComponent({
         'modelValue': model.value,
         'inputId': 'file-picker-input',
         'rootPath': '/assets',
+        'status': props.status,
         'onUpdate:modelValue': handleUpdate,
       }),
       h('label', { for: 'file-picker-input' }, 'File Path'),
@@ -200,6 +209,35 @@ describe('FilePicker', () => {
     })
     workspaceStoreState.CWD = '/games/demo'
     previewSessionStoreState.currentGameServeUrl = 'http://127.0.0.1:8899/game/demo/'
+  })
+
+  it.each([
+    {
+      buttonClasses: ['text-yellow-700/60', 'hover:text-yellow-700'],
+      inputClasses: ['text-yellow-700!', 'bg-yellow/5', 'border-yellow/50', 'focus-visible:ring-yellow/30'],
+      status: 'warning' as const,
+    },
+    {
+      buttonClasses: ['text-destructive/60', 'hover:text-destructive'],
+      inputClasses: ['text-destructive!', 'bg-destructive/5', 'border-destructive/50', 'focus-visible:ring-destructive/30'],
+      status: 'error' as const,
+    },
+  ])('$status 状态为输入框和清除按钮应用对应样式', async ({ buttonClasses, inputClasses, status }) => {
+    await renderInBrowser(FilePickerHarness, {
+      props: {
+        initialValue: 'figure/model.json',
+        status,
+      },
+      browser: {
+        pinia: true,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('textbox', { name: 'File Path' })).toHaveClass(...inputClasses)
+    await expect.element(page.getByRole('button', { name: 'filePicker.clearInput' })).toHaveClass(...buttonClasses)
   })
 
   it('同步外部文件路径中间态时不会立即归一化并回写父层', async () => {
