@@ -132,6 +132,54 @@ describe('GamesTabCollectionSection', () => {
     await expect.element(page.getByRole('button', { name: 'home.games.deleteGame' })).not.toBeInTheDocument()
   })
 
+  it('网格视图只为路径仍可达的游戏显示打开文件夹操作', async () => {
+    const brokenGame = createTestGame({ id: 'game-broken', availability: 'broken' })
+    const missingGame = createTestGame({ id: 'game-missing', availability: 'missing' })
+    const onOpenFolder = vi.fn()
+
+    renderInBrowser(GamesTabCollectionSection, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        items: createItems([brokenGame, missingGame]),
+        getGameProgress: () => 0,
+        hasGameProgress: () => false,
+        onOpenFolder,
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const openFolderButtons = page.getByRole('button', { name: 'common.openFolder' })
+    expect(openFolderButtons.elements()).toHaveLength(1)
+
+    await openFolderButtons.click()
+    expect(onOpenFolder).toHaveBeenCalledOnce()
+    expect(onOpenFolder).toHaveBeenCalledWith(brokenGame)
+  })
+
+  it('列表视图不会为路径已失效的游戏显示打开文件夹快捷操作', async () => {
+    renderInBrowser(GamesTabCollectionSection, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        items: createItems([createTestGame({ availability: 'missing' })]),
+        getGameProgress: () => 0,
+        hasGameProgress: () => false,
+        viewMode: 'list',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('button', { name: 'common.openFolder' })).not.toBeInTheDocument()
+  })
+
   it('导入入口使用按钮语义并会触发 importClick', async () => {
     const onImportClick = vi.fn()
 

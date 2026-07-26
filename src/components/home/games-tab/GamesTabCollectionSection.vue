@@ -122,7 +122,10 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
           </Card>
         </ContextMenuTrigger>
         <ContextMenuContent class="w-42">
-          <ContextMenuItem @click="emit('openFolder', item.game)">
+          <ContextMenuItem
+            v-if="item.game.availability !== 'missing'"
+            @click="emit('openFolder', item.game)"
+          >
             <Folder class="mr-2 size-3.5" />
             {{ $t('common.openFolder') }}
           </ContextMenuItem>
@@ -208,7 +211,7 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
         </div>
         <div v-if="!hasGameProgress(item.game)" class="flex gap-2 items-center">
           <TooltipProvider>
-            <Tooltip>
+            <Tooltip v-if="item.game.availability !== 'missing'">
               <TooltipTrigger as-child>
                 <Button
                   :aria-label="$t('common.openFolder')"
