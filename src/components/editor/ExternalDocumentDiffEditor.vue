@@ -27,13 +27,14 @@ let diffEditor = $shallowRef<monaco.editor.IStandaloneDiffEditor>()
 let lineChanges = $ref<monaco.editor.ILineChange[]>([])
 let currentChangeIndex = $ref(0)
 let diffReady = $ref(false)
+let pendingChangeLineNumber: number | undefined
 
 const currentTheme = $computed(() => colorMode.value === 'dark' ? THEME_DARK : THEME_LIGHT)
 const currentChange = $computed(() => lineChanges[currentChangeIndex])
 
 function invalidateLineChanges(): void {
+  pendingChangeLineNumber ??= currentChange?.modifiedStartLineNumber
   lineChanges = []
-  currentChangeIndex = 0
   diffReady = false
 }
 
@@ -45,7 +46,27 @@ function syncLineChanges(): void {
   }
 
   lineChanges = changes
-  currentChangeIndex = Math.min(currentChangeIndex, Math.max(0, lineChanges.length - 1))
+  const previousLineNumber = pendingChangeLineNumber
+  const matchingIndex = previousLineNumber === undefined
+    ? -1
+    : lineChanges.findIndex(change => change.modifiedStartLineNumber === previousLineNumber)
+  let closestIndex = matchingIndex
+
+  if (closestIndex === -1 && previousLineNumber !== undefined) {
+    let closestDistance = Number.POSITIVE_INFINITY
+    for (const [index, change] of lineChanges.entries()) {
+      const distance = Math.abs(change.modifiedStartLineNumber - previousLineNumber)
+      if (distance < closestDistance) {
+        closestIndex = index
+        closestDistance = distance
+      }
+    }
+  }
+
+  currentChangeIndex = closestIndex === -1
+    ? Math.min(currentChangeIndex, Math.max(0, lineChanges.length - 1))
+    : closestIndex
+  pendingChangeLineNumber = undefined
   diffReady = true
 }
 
