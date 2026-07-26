@@ -51,6 +51,12 @@ function renderModal(props: Record<string, unknown>) {
 }
 
 describe('ExternalDocumentChangeModal', () => {
+  it('打开时聚焦取消操作', async () => {
+    renderModal({})
+
+    await expect.element(page.getByRole('button', { name: 'common.cancel' })).toHaveFocus()
+  })
+
   it('先打开差异编辑器，应用结果后再执行合并回调并关闭模态框', async () => {
     const onMerge = vi.fn(async () => undefined)
     const updateOpen = vi.fn()

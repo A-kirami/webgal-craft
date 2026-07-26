@@ -81,7 +81,6 @@ watch(() => open, async (nextOpen, previousOpen) => {
   <AlertDialog ::open="open">
     <AlertDialogContent
       :class="view === 'merge' && 'h-[min(84vh,860px)] max-w-[min(94vw,1500px)] grid-rows-[auto_minmax(0,1fr)]'"
-      @open-auto-focus="event => event.preventDefault()"
     >
       <div class="flex flex-col gap-2 sm:flex-row sm:gap-4 max-sm:items-center">
         <div
