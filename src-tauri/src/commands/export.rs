@@ -490,7 +490,7 @@ where
 
 #[expect(
     clippy::too_many_arguments,
-    reason = "Tauri command parameters mirror the frontend invoke contract",
+    reason = "Tauri command parameters mirror the frontend invoke contract"
 )]
 #[tauri::command]
 pub async fn export_web(
