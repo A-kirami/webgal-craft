@@ -137,6 +137,12 @@ function applyMergeResult(): void {
   }
 }
 
+function getModifiedEditor(): monaco.editor.IStandaloneCodeEditor | undefined {
+  return diffEditor?.getModifiedEditor()
+}
+
+defineExpose({ getModifiedEditor })
+
 function disposeDiffEditor(): void {
   if (!diffEditor) {
     return

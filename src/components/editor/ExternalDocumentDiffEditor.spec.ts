@@ -1,6 +1,7 @@
 import * as monaco from 'monaco-editor'
 import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
+import { defineComponent, h } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
 
@@ -73,24 +74,31 @@ describe('ExternalDocumentDiffEditor', () => {
 
   it('提交右侧手动编辑后的内容', async () => {
     const onApply = vi.fn()
+    let editorHandle: {
+      getModifiedEditor: () => monaco.editor.IStandaloneCodeEditor | undefined
+    } | undefined
 
-    renderInBrowser(ExternalDocumentDiffEditor, {
+    const TestHarness = defineComponent(() => () => h(ExternalDocumentDiffEditor, {
+      ref: (instance) => {
+        editorHandle = instance as unknown as typeof editorHandle
+      },
+      path: '/game/scene/example.txt',
+      kind: 'scene',
+      localContent: 'local',
+      externalContent: 'external',
+      onApply,
+    }))
+
+    renderInBrowser(TestHarness, {
       browser: {
         i18nMode: 'lite',
-      },
-      props: {
-        path: '/game/scene/example.txt',
-        kind: 'scene',
-        localContent: 'local',
-        externalContent: 'external',
-        onApply,
       },
     })
 
     await expect.element(page.getByRole('status')).toHaveTextContent(
       'modals.externalDocumentChange.diff.changeStatus',
     )
-    const resultModel = monaco.editor.getModels().find(model => model.getValue() === 'external')
+    const resultModel = editorHandle?.getModifiedEditor()?.getModel()
     expect(resultModel).toBeDefined()
     resultModel?.setValue('manually merged')
 
