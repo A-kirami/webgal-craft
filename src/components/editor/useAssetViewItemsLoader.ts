@@ -7,9 +7,9 @@ import type { MaybeRefOrGetter } from 'vue'
 import type { FileViewerItem } from '~/types/file-viewer'
 
 interface UseAssetViewItemsLoaderOptions<TItem> {
-  assetBasePath: MaybeRefOrGetter<string>
   currentDirectoryPath: MaybeRefOrGetter<string>
   currentPath: MaybeRefOrGetter<string>
+  rootDirectoryExists: (directoryPath: string) => Promise<boolean>
   loadDirectory: (directoryPath: string) => Promise<TItem[]>
   mapItem: (item: TItem) => FileViewerItem
 }
@@ -18,6 +18,7 @@ export function useAssetViewItemsLoader<TItem>(options: UseAssetViewItemsLoaderO
   const items = ref<FileViewerItem[]>([])
   const isLoading = ref(false)
   const errorMsg = ref('')
+  const isRootDirectoryMissing = ref(false)
   const itemsRefreshKey = ref(0)
   const nextItemsRefreshIsSilent = ref(false)
   const pendingItemsLoad = ref<{ directoryPath: string, isSilent: boolean }>()
@@ -89,13 +90,18 @@ export function useAssetViewItemsLoader<TItem>(options: UseAssetViewItemsLoaderO
       if (!directoryPath) {
         if (loadToken === latestLoadToken) {
           items.value = []
+          isRootDirectoryMissing.value = false
         }
         return
       }
 
-      const result = await options.loadDirectory(directoryPath)
+      const [result, rootDirectoryExists] = await Promise.all([
+        options.loadDirectory(directoryPath),
+        relativePath ? true : options.rootDirectoryExists(directoryPath),
+      ])
       if (loadToken === latestLoadToken) {
         items.value = result.map(item => options.mapItem(item))
+        isRootDirectoryMissing.value = !rootDirectoryExists
       }
     } catch (error) {
       if (loadToken !== latestLoadToken) {
@@ -104,11 +110,13 @@ export function useAssetViewItemsLoader<TItem>(options: UseAssetViewItemsLoaderO
 
       if (!relativePath && error instanceof AppError && error.code === 'DIR_NOT_FOUND') {
         items.value = []
+        isRootDirectoryMissing.value = true
         return
       }
 
       errorMsg.value = error instanceof Error ? error.message : String(error)
       items.value = []
+      isRootDirectoryMissing.value = false
     } finally {
       if (loadToken === latestLoadToken) {
         isLoading.value = false
@@ -120,6 +128,7 @@ export function useAssetViewItemsLoader<TItem>(options: UseAssetViewItemsLoaderO
     items,
     isLoading,
     errorMsg,
+    isRootDirectoryMissing,
     scheduleItemsRefresh,
   }
 }

@@ -60,15 +60,14 @@ describe('useAssetViewItemsLoader', () => {
     })
     const loadDirectory = vi.fn().mockReturnValue(firstLoad)
 
-    const assetBasePath = ref('/games/demo/assets/bg')
     const currentDirectoryPath = ref('/games/demo/assets/bg')
     const currentPath = ref('')
 
     scope = effectScope()
     const loader = scope.run(() => useAssetViewItemsLoader({
-      assetBasePath,
       currentDirectoryPath,
       currentPath,
+      rootDirectoryExists: vi.fn().mockResolvedValue(true),
       loadDirectory,
       mapItem: toFileViewerItem,
     }))
@@ -103,15 +102,14 @@ describe('useAssetViewItemsLoader', () => {
       .mockResolvedValueOnce([])
       .mockImplementationOnce(() => new Promise<FileSystemItem[]>(() => undefined))
 
-    const assetBasePath = ref('/games/demo/assets/bg')
     const currentDirectoryPath = ref('/games/demo/assets/bg')
     const currentPath = ref('')
 
     scope = effectScope()
     const loader = scope.run(() => useAssetViewItemsLoader({
-      assetBasePath,
       currentDirectoryPath,
       currentPath,
+      rootDirectoryExists: vi.fn().mockResolvedValue(true),
       loadDirectory,
       mapItem: toFileViewerItem,
     }))
@@ -132,5 +130,35 @@ describe('useAssetViewItemsLoader', () => {
     expect(loadDirectory).toHaveBeenCalledTimes(2)
     expect(loadDirectory).toHaveBeenLastCalledWith('/games/demo/assets/bg/chapter-1')
     expect(loader?.isLoading.value).toBe(true)
+  })
+
+  it('根目录不存在时会保留缺失状态，并在物理目录恢复后清除', async () => {
+    const rootDirectoryExists = vi.fn()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true)
+    const loadDirectory = vi.fn().mockResolvedValue([])
+    const currentDirectoryPath = ref('/games/demo/assets/bg')
+    const currentPath = ref('')
+
+    scope = effectScope()
+    const loader = scope.run(() => useAssetViewItemsLoader({
+      currentDirectoryPath,
+      currentPath,
+      rootDirectoryExists,
+      loadDirectory,
+      mapItem: toFileViewerItem,
+    }))
+
+    await flushLoaderWatchers()
+    await flushLoaderWatchers()
+
+    expect(loader?.isRootDirectoryMissing.value).toBe(true)
+    expect(loader?.errorMsg.value).toBe('')
+
+    loader?.scheduleItemsRefresh(false)
+    await flushLoaderWatchers()
+    await flushLoaderWatchers()
+
+    expect(loader?.isRootDirectoryMissing.value).toBe(false)
   })
 })

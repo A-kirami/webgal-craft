@@ -41,6 +41,7 @@ interface Props {
   onCreateFolder?: (item: FileItem) => void
   clipboardKey?: string
   isRoot?: boolean
+  revealInExplorerDisabled?: boolean
 }
 
 const {
@@ -50,6 +51,7 @@ const {
   onCreateFolder,
   clipboardKey = 'default',
   isRoot = false,
+  revealInExplorerDisabled = false,
 } = defineProps<Props>()
 
 const { clipboard, operationType, canPaste, setClipboard, clearClipboard } = $(useFileClipboard(clipboardKey))
@@ -238,7 +240,12 @@ const menuItems = $computed(() => {
 
   if (item.source !== 'engineLower' && item.source !== 'templateLower') {
     pushSeparator(items)
-    items.push({ icon: FolderOpen, label: t('edit.fileTree.revealInExplorer'), onClick: handleRevealInExplorer })
+    items.push({
+      icon: FolderOpen,
+      label: t('edit.fileTree.revealInExplorer'),
+      onClick: handleRevealInExplorer,
+      disabled: revealInExplorerDisabled,
+    })
   }
 
   return items
