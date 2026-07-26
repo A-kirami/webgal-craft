@@ -1,3 +1,4 @@
+// 遵循 Monaco ILineChange：endLineNumber === 0 表示插入或删除场景中的空区间。
 interface DiffLineRange {
   startLineNumber: number
   endLineNumber: number
