@@ -544,10 +544,25 @@ modals:
     discard: Discard
   externalDocumentChange:
     title: External file change detected
-    description: File {path} changed outside the editor. Keep local changes, load the external version, or merge both sides in text mode.
+    description: File {path} changed outside the editor. Keep local changes, load the external version, or review both sides before merging.
     keepLocal: Keep local
     loadExternal: Load external
-    merge: Merge
+    reviewAndMerge: Review and merge
+    diff:
+      title: Review and merge external changes
+      description: Compare both versions of {path}. Edit the merge result or adopt either side for the current change.
+      localVersion: Local version
+      mergeResult: Merge result
+      readOnly: Read-only
+      editable: Editable, starts from the external version
+      computing: Computing differences...
+      noDifferences: Both sides now match
+      changeStatus: Change {current} of {total}
+      previousChange: Previous change
+      nextChange: Next change
+      useLeft: Use left
+      keepRight: Keep right
+      applyResult: Apply merge result
   fastPreviewTimeout:
     title: Live preview stopped
     summary: Preview exceeded the time limit while trying to jump to the target line, so this sync was stopped.

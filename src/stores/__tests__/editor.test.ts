@@ -43,7 +43,10 @@ const {
 }))
 
 const fileSystemEventHandlers = new Map<string, (event: unknown) => unknown>()
-let externalDocumentModalAction: 'keep-local' | 'load-external' | 'merge' | 'cancel' = 'cancel'
+type ExternalDocumentModalAction =
+  | { type: 'keep-local' | 'load-external' | 'cancel' }
+  | { type: 'merge', content: string }
+let externalDocumentModalAction: ExternalDocumentModalAction = { type: 'cancel' }
 const asyncFixtureTimeoutMs = 10 * 1000
 let useEditorStore: typeof import('../editor').useEditorStore
 
@@ -289,9 +292,14 @@ describe('编辑器文本与文档流程', () => {
     fileSystemEventHandlers.clear()
     tabsWatcherCloseHandlerRef.current = undefined
     modalOpenMock.mockReset()
-    externalDocumentModalAction = 'cancel'
-    modalOpenMock.mockImplementation((_name: string, payload: Record<string, () => void>) => {
-      switch (externalDocumentModalAction) {
+    externalDocumentModalAction = { type: 'cancel' }
+    modalOpenMock.mockImplementation((_name: string, payload: {
+      onCancel?: () => void
+      onKeepLocal?: () => void
+      onLoadExternal?: () => void
+      onMerge?: (content: string) => void
+    }) => {
+      switch (externalDocumentModalAction.type) {
         case 'keep-local': {
           payload.onKeepLocal?.()
           return
@@ -301,7 +309,7 @@ describe('编辑器文本与文档流程', () => {
           return
         }
         case 'merge': {
-          payload.onMerge?.()
+          payload.onMerge?.(externalDocumentModalAction.content)
           return
         }
         default: {
@@ -1572,7 +1580,10 @@ describe('编辑器文本与文档流程', () => {
 
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('local'))
     mimeGetTypeMock.mockReturnValue('text/plain')
-    externalDocumentModalAction = 'merge'
+    externalDocumentModalAction = {
+      type: 'merge',
+      content: 'before\r\nlocal and remote\r\nafter',
+    }
 
     const editorStore = useEditorStore()
 
@@ -1597,18 +1608,23 @@ describe('编辑器文本与文档流程', () => {
     readFileMock.mockResolvedValueOnce(new TextEncoder().encode('remote\r\nchange'))
     await emitFileModifiedEvent(path)
 
-    expect(textProjection.textContent).toBe(
-      '<<<<<<< LOCAL\r\nlocal!\r\n=======\r\nremote\r\nchange\r\n>>>>>>> EXTERNAL',
+    expect(modalOpenMock).toHaveBeenLastCalledWith(
+      'ExternalDocumentChangeModal',
+      expect.objectContaining({
+        documentKind: 'scene',
+        localContent: 'local!',
+        externalContent: 'remote\r\nchange',
+      }),
+      expect.stringContaining('external-document-change-'),
     )
+    expect(textProjection.textContent).toBe('before\r\nlocal and remote\r\nafter')
     expect(textProjection.isDirty).toBe(true)
 
     expect(editorStore.undoDocument(path).applied).toBe(true)
     expect(textProjection.textContent).toBe('local!')
 
     expect(editorStore.redoDocument(path).applied).toBe(true)
-    expect(textProjection.textContent).toBe(
-      '<<<<<<< LOCAL\r\nlocal!\r\n=======\r\nremote\r\nchange\r\n>>>>>>> EXTERNAL',
-    )
+    expect(textProjection.textContent).toBe('before\r\nlocal and remote\r\nafter')
   })
 
   it('将非 UTF-8 文本文件加载为不支持状态', async () => {
@@ -1667,7 +1683,10 @@ describe('编辑器文本与文档流程', () => {
       encoding: 'utf-8',
     })))
     mimeGetTypeMock.mockReturnValue('text/plain')
-    externalDocumentModalAction = 'merge'
+    externalDocumentModalAction = {
+      type: 'merge',
+      content: 'merged\nresult',
+    }
 
     const editorStore = useEditorStore()
 
@@ -1693,7 +1712,7 @@ describe('编辑器文本与文档流程', () => {
     expect(lastWrite).toBeDefined()
     expect(lastWrite?.[0]).toBe(path)
     expect([...lastWrite?.[1] ?? []]).toEqual([...encodeTextFile(
-      '<<<<<<< LOCAL\r\nlocal!\r\n=======\r\nremote\r\nchange\r\n>>>>>>> EXTERNAL',
+      'merged\r\nresult',
       {
         lineEnding: '\r\n',
         encoding: 'utf-8-bom',

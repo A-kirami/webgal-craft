@@ -544,10 +544,25 @@ modals:
     discard: 捨棄
   externalDocumentChange:
     title: 偵測到外部檔案變更
-    description: 檔案 {path} 已在編輯器外部被修改。請選擇保留本機修改、載入外部修改，或在文字模式下合併兩側內容。
+    description: 檔案 {path} 已在編輯器外部被修改。請選擇保留本機修改、載入外部修改，或先查看兩側差異再合併。
     keepLocal: 保留本機修改
     loadExternal: 載入外部修改
-    merge: 合併內容
+    reviewAndMerge: 查看並合併
+    diff:
+      title: 查看並合併外部修改
+      description: 比較 {path} 的兩個版本。你可以編輯合併結果，或為目前的差異區塊採用任一側內容。
+      localVersion: 本機版本
+      mergeResult: 合併結果
+      readOnly: 唯讀
+      editable: 可編輯，初始為外部版本
+      computing: 正在計算差異...
+      noDifferences: 兩側內容已一致
+      changeStatus: 第 {current} / {total} 個差異區塊
+      previousChange: 上一個差異區塊
+      nextChange: 下一個差異區塊
+      useLeft: 採用左側
+      keepRight: 保留右側
+      applyResult: 套用合併結果
   fastPreviewTimeout:
     title: 即時預覽已停止
     summary: 預覽在嘗試跳轉到目標行時超過時間限制，已停止本次同步。

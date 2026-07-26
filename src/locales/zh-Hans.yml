@@ -544,10 +544,25 @@ modals:
     discard: 丢弃
   externalDocumentChange:
     title: 检测到外部文件变更
-    description: 文件 {path} 已在外部发生变化。请选择保留本地修改、加载外部修改，或在文本模式下合并两侧内容。
+    description: 文件 {path} 已在外部发生变化。请选择保留本地修改、加载外部修改，或先查看两侧差异再合并。
     keepLocal: 保留本地修改
     loadExternal: 加载外部修改
-    merge: 合并内容
+    reviewAndMerge: 查看并合并
+    diff:
+      title: 查看并合并外部修改
+      description: 对比 {path} 的两个版本。你可以编辑合并结果，或为当前差异块采用任一侧内容。
+      localVersion: 本地版本
+      mergeResult: 合并结果
+      readOnly: 只读
+      editable: 可编辑，初始为外部版本
+      computing: 正在计算差异...
+      noDifferences: 两侧内容已一致
+      changeStatus: 第 {current} / {total} 个差异块
+      previousChange: 上一个差异块
+      nextChange: 下一个差异块
+      useLeft: 采用左侧
+      keepRight: 保留右侧
+      applyResult: 应用合并结果
   fastPreviewTimeout:
     title: 实时预览已停止
     summary: 预览在尝试跳转到目标行时超过时间限制，已停止本次同步。

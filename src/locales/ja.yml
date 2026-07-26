@@ -544,10 +544,25 @@ modals:
     discard: 破棄
   externalDocumentChange:
     title: 外部ファイルの変更を検出しました
-    description: ファイル {path} がエディター外で変更されました。ローカル変更を保持するか、外部版を読み込むか、テキストモードで両方をマージしてください。
+    description: ファイル {path} がエディター外で変更されました。ローカル変更を保持するか、外部版を読み込むか、両方を確認してからマージしてください。
     keepLocal: ローカルを保持
     loadExternal: 外部版を読み込む
-    merge: マージ
+    reviewAndMerge: 確認してマージ
+    diff:
+      title: 外部変更を確認してマージ
+      description: "{path} の両方の版を比較します。マージ結果を編集するか、現在の変更で左右どちらかを採用してください。"
+      localVersion: ローカル版
+      mergeResult: マージ結果
+      readOnly: 読み取り専用
+      editable: 編集可能、外部版から開始
+      computing: 差分を計算しています...
+      noDifferences: 両側の内容が一致しました
+      changeStatus: 変更 {current} / {total}
+      previousChange: 前の変更
+      nextChange: 次の変更
+      useLeft: 左側を採用
+      keepRight: 右側を保持
+      applyResult: マージ結果を適用
   fastPreviewTimeout:
     title: リアルタイムプレビューを停止しました
     summary: プレビューが対象行へジャンプしようとした際に時間制限を超えたため、今回の同期を停止しました。
