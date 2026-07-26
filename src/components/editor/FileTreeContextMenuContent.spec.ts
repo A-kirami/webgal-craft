@@ -135,4 +135,24 @@ describe('FileTreeContextMenuContent', () => {
     expect(toastMock.success).not.toHaveBeenCalled()
     expect(toastMock.error).not.toHaveBeenCalled()
   })
+
+  it('根目录打开文件夹操作可按目录状态禁用', async () => {
+    renderInBrowser(FileTreeContextMenuContent, {
+      props: {
+        isRoot: true,
+        item: {
+          isDir: true,
+          name: 'background',
+          path: '/project/game/background',
+        },
+        revealInExplorerDisabled: true,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const openFolderItem = page.getByText('edit.fileTree.revealInExplorer')
+    await expect.element(openFolderItem).toBeDisabled()
+  })
 })

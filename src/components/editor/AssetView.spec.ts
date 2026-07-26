@@ -19,6 +19,7 @@ const {
   copyFileMock,
   createFileMock,
   createFolderMock,
+  existsMock,
   fileSystemEventHandlers,
   fileSystemEventsOnMock,
   fileViewerScrollToIndexMock,
@@ -34,6 +35,7 @@ const {
   copyFileMock: vi.fn(),
   createFileMock: vi.fn(),
   createFolderMock: vi.fn(),
+  existsMock: vi.fn(),
   fileSystemEventHandlers: new Map<string, ((event: Record<string, unknown>) => void)[]>(),
   fileSystemEventsOnMock: vi.fn(),
   fileViewerScrollToIndexMock: vi.fn(),
@@ -45,6 +47,11 @@ const {
   usePreviewSessionStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
+}))
+
+vi.mock('@tauri-apps/plugin-fs', async importOriginal => ({
+  ...await importOriginal<typeof import('@tauri-apps/plugin-fs')>(),
+  exists: existsMock,
 }))
 
 function emitFileSystemEvent(type: string, event: Record<string, unknown>): void {
@@ -80,6 +87,10 @@ vi.mock('~/components/editor/FileTreeContextMenuContent.vue', async () => {
           type: Function,
           default: undefined,
         },
+        revealInExplorerDisabled: {
+          type: Boolean,
+          default: false,
+        },
       },
       setup(props) {
         return () => h('div', {
@@ -87,6 +98,7 @@ vi.mock('~/components/editor/FileTreeContextMenuContent.vue', async () => {
           'data-item-name': (props.item as FileViewerItem).name,
           'data-item-path': (props.item as FileViewerItem).path,
           'data-is-root': String(props.isRoot),
+          'data-reveal-in-explorer-disabled': String(props.revealInExplorerDisabled),
         }, [
           h('button', {
             'type': 'button',
@@ -579,6 +591,7 @@ describe('AssetView', () => {
     copyFileMock.mockReset()
     createFileMock.mockReset()
     createFolderMock.mockReset()
+    existsMock.mockReset()
     fileViewerScrollToIndexMock.mockReset()
     getFolderContentsMock.mockReset()
     handleErrorMock.mockReset()
@@ -590,6 +603,7 @@ describe('AssetView', () => {
     useWorkspaceStoreMock.mockReset()
 
     getFolderContentsMock.mockResolvedValue([])
+    existsMock.mockResolvedValue(true)
     copyFileMock.mockResolvedValue('/project/game/background/folder/hero.png')
     createFileMock.mockResolvedValue('/project/game/background/新建文件.json')
     createFolderMock.mockResolvedValue('/project/game/background/新建文件夹')
@@ -1192,6 +1206,25 @@ describe('AssetView', () => {
     await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-item-path', '/games/demo/game/background')
     await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-item-name', 'background')
     await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-is-root', 'true')
+  })
+
+  it('资源根目录不存在时会禁用根目录菜单的打开文件夹操作', async () => {
+    existsMock.mockResolvedValue(false)
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createContextMenuFileViewerStub(),
+        },
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getFolderContentsMock).toHaveBeenCalledOnce()
+    })
+    expect(existsMock).toHaveBeenCalledWith('/games/demo/game/background')
+    await expect.element(page.getByTestId('file-tree-context-menu-root')).toHaveAttribute('data-reveal-in-explorer-disabled', 'true')
   })
 
   it('会把 FileViewer 的 move drop 交给 pathOperation 执行', async () => {

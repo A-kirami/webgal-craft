@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { File, FileImage, FileJson2, FileMusic, FileVideo, FileVolume, Folder } from '@lucide/vue'
+import { exists } from '@tauri-apps/plugin-fs'
 
 import { canCreateAssetFile, resolveAssetFileNameParts } from '~/components/editor/asset-file-defaults'
 import { useAssetViewItemsLoader } from '~/components/editor/useAssetViewItemsLoader'
@@ -164,12 +165,13 @@ const currentDirectoryPath = $computed(() => {
 const {
   errorMsg: errorMsgRef,
   isLoading: isLoadingRef,
+  isRootDirectoryMissing: isRootDirectoryMissingRef,
   items: itemsRef,
   scheduleItemsRefresh,
 } = useAssetViewItemsLoader({
-  assetBasePath: () => assetBasePath,
   currentDirectoryPath: () => currentDirectoryPath,
   currentPath: () => currentPath,
+  rootDirectoryExists: directoryPath => exists(AbsPath.from(directoryPath)),
   loadDirectory: async (directoryPath) => {
     await fileStore.initialized
     return fileStore.getFolderContents(AbsPath.from(directoryPath))
@@ -180,6 +182,7 @@ const {
 const items = $computed(() => itemsRef.value)
 const isLoading = $computed(() => isLoadingRef.value)
 const errorMsg = $computed(() => errorMsgRef.value)
+const isRootDirectoryMissing = $computed(() => isRootDirectoryMissingRef.value)
 
 const filteredItems = $computed(() => {
   const keyword = searchQuery.trim().toLocaleLowerCase()
@@ -793,6 +796,7 @@ for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
           is-root
           :on-create-file="canCreateFileInCurrentDirectory ? handleContextMenuCreateFile : undefined"
           :on-create-folder="handleContextMenuCreateFolder"
+          :reveal-in-explorer-disabled="isRootDirectoryMissing"
         />
       </template>
     </FileViewer>
