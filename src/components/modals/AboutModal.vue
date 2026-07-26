@@ -10,6 +10,11 @@ import {
 } from '@lucide/vue'
 import { openUrl } from '@tauri-apps/plugin-opener'
 
+import {
+  collectAboutEnvironmentInfo,
+  createBugReportUrl,
+  formatAboutEnvironmentInfo,
+} from '~/features/about/feedback'
 import { useAppUpdateController } from '~/features/app-update/useAppUpdateController'
 import { getVersion } from '~/utils/metadata'
 
@@ -19,6 +24,10 @@ const open = defineModel<boolean>('open')
 
 const version = getVersion()
 const appUpdateController = useAppUpdateController()
+const environmentInfo = collectAboutEnvironmentInfo(version.name)
+const environmentInfoText = formatAboutEnvironmentInfo(environmentInfo)
+const repositoryUrl = github || 'https://github.com/A-kirami/webgal-craft'
+const bugReportUrl = createBugReportUrl(repositoryUrl, environmentInfo)
 
 function handleVersionClick() {
   if (version.link) {
@@ -33,11 +42,34 @@ function handleCheckForUpdate(): void {
 function handleOpenReleaseList(): void {
   void appUpdateController.openReleasePage()
 }
+
+function isEditableCopyTarget(target: EventTarget | null): boolean {
+  return target instanceof Element
+    && target.closest('input, textarea, [contenteditable]:not([contenteditable="false"])') !== null
+}
+
+function handleCopy(event: ClipboardEvent): void {
+  if (
+    event.defaultPrevented
+    || isEditableCopyTarget(event.target)
+    || globalThis.getSelection()?.isCollapsed === false
+    || !event.clipboardData
+  ) {
+    return
+  }
+
+  event.clipboardData.setData('text/plain', environmentInfoText)
+  event.preventDefault()
+}
+
+function handleOpenBugReport(): void {
+  void openUrl(bugReportUrl)
+}
 </script>
 
 <template>
   <Dialog ::open="open">
-    <DialogContent class="sm:max-w-[480px]">
+    <DialogContent class="sm:max-w-[480px]" @copy="handleCopy">
       <div class="mt-4 flex flex-col gap-4 items-center">
         <img src="/webgal-craft-logo.svg" alt="WebGAL Craft Logo" class="size-20">
         <div class="text-center space-y-2">
@@ -105,7 +137,7 @@ function handleOpenReleaseList(): void {
 
         <button
           class="group text-muted-foreground rounded flex gap-1.5 transition-colors items-center hover:text-foreground"
-          @click="github && openUrl(github + '/issues')"
+          @click="handleOpenBugReport"
         >
           <Bug class="size-3.5" />
           <span class="text-xs">{{ $t('modals.about.issues') }}</span>
