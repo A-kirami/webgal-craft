@@ -173,6 +173,7 @@ where
     .filter(|entry| !entry.is_dir && WEB_ICON_FILE_NAMES.contains(&entry.name.as_str()))
     .collect::<Vec<_>>();
     let total_files = icon_files.len();
+    let mut last_reported_percentage = range.0;
 
     for (index, entry) in icon_files.into_iter().enumerate() {
         let logical_path = icons_path.join(entry.name);
@@ -186,8 +187,9 @@ where
         let span = usize::from(range.1 - range.0);
         let progress = usize::from(range.0) + span * (index + 1) / total_files;
         let percentage = progress as u8;
-        if percentage < range.1 {
+        if percentage > last_reported_percentage && percentage < range.1 {
             report(STEP_COPYING_ICONS, percentage)?;
+            last_reported_percentage = percentage;
         }
     }
 
@@ -542,7 +544,10 @@ mod tests {
     use serde_json::Value;
     use tempfile::tempdir;
 
-    use super::{export_web_to_directory, AppError, STEP_FINISHED};
+    use super::{
+        copy_web_icons, export_web_to_directory, AppError, CachedCanonicals, OverlayFs,
+        STEP_COPYING_ICONS, STEP_FINISHED,
+    };
 
     fn write_file(path: &Path, content: &str) {
         fs::create_dir_all(path.parent().expect("fixture file should have parent"))
@@ -711,6 +716,46 @@ mod tests {
         .expect("web export should succeed without icons");
 
         assert!(!output.join("icons").exists());
+    }
+
+    #[test]
+    fn reports_icon_progress_only_when_percentage_increases() {
+        let root = tempdir().expect("temp root should be created");
+        create_export_fixture(root.path());
+        for name in [
+            "apple-touch-icon.png",
+            "icon-192-maskable.png",
+            "icon-512-maskable.png",
+            "icon-512.png",
+        ] {
+            write_file(&root.path().join("game/icons").join(name), "project-icon");
+        }
+
+        let cached = CachedCanonicals::compute(
+            root.path().join("game"),
+            Some(root.path().join("engine")),
+            Some(root.path().join("template")),
+        )
+        .expect("fixture paths should be canonicalized");
+        let overlay = OverlayFs::from_cached(&cached);
+        let destination = root.path().join("output");
+        fs::create_dir(&destination).expect("output directory should be created");
+        let mut progress = Vec::new();
+
+        copy_web_icons(&overlay, &destination, (82, 84), &mut |step, percentage| {
+            progress.push((step.to_owned(), percentage));
+            Ok(())
+        })
+        .expect("icon copy should succeed");
+
+        assert_eq!(
+            progress,
+            vec![
+                (STEP_COPYING_ICONS.to_owned(), 82),
+                (STEP_COPYING_ICONS.to_owned(), 83),
+                (STEP_COPYING_ICONS.to_owned(), 84),
+            ]
+        );
     }
 
     #[test]
