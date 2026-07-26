@@ -75,6 +75,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   let latestReadId = 0
   let latestRootId = 0
   let latestInputSyncId = 0
+  let isRootMissing = false
 
   const canOpen = computed(() => !options.disabled() && isRootReady.value && !!canonicalRootPath.value)
   const filteredItems = computed(() => {
@@ -186,6 +187,14 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
     return !!ext && extensionSet.value.has(ext)
   }
 
+  function setEmptyDirectoryState(relativeDir: string, keyword: string) {
+    items.value = []
+    currentDir.value = RelPath.from(relativeDir)
+    filterKeyword.value = keyword.trim()
+    errorMsg.value = ''
+    isLoading.value = false
+  }
+
   function toRelativeFromAbsolute(path: string): string {
     // `checkRoot()` 保存的是经过 Tauri 规范化的绝对根路径，调用方传入的路径
     // 也来自同一套 Tauri 路径 API。这里保持精确比较，避免在大小写敏感文件系统上
@@ -211,15 +220,25 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
     try {
       const normalizedRoot = AbsPath.from(options.rootPath())
       if (!(await exists(normalizedRoot))) {
-        isOpen.value = false
+        if (requestId !== latestRootId) {
+          return
+        }
+        // 防止旧根目录的在途读取在缺失状态建立后回写过期内容。
+        latestReadId += 1
+        canonicalRootPath.value = normalizedRoot
+        isRootMissing = true
+        isRootReady.value = true
+        setEmptyDirectoryState('', '')
+        options.syncRecentHistory()
         return
       }
       const info = await stat(normalizedRoot)
-      if (!info.isDirectory) {
-        isOpen.value = false
+      if (requestId !== latestRootId) {
         return
       }
-      if (requestId !== latestRootId) {
+      isRootMissing = false
+      if (!info.isDirectory) {
+        isOpen.value = false
         return
       }
       isRootReady.value = true
@@ -241,6 +260,10 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
       return
     }
     const normalizedDir = RelPath.from(relativeDir)
+    if (isRootMissing) {
+      setEmptyDirectoryState(normalizedDir, keyword)
+      return
+    }
     const requestId = ++latestReadId
     isLoading.value = true
     errorMsg.value = ''
@@ -259,6 +282,11 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
       filterKeyword.value = keyword.trim()
     } catch (error) {
       if (requestId !== latestReadId) {
+        return
+      }
+      if (error instanceof AppError && error.code === 'DIR_NOT_FOUND' && !normalizedDir) {
+        isRootMissing = true
+        setEmptyDirectoryState('', keyword)
         return
       }
       if (error instanceof AppError && error.code === 'DIR_NOT_FOUND') {
@@ -329,6 +357,9 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   }
 
   async function openPopover(openOptions: OpenPopoverOptions = {}) {
+    if (!options.disabled() && (!isRootReady.value || isRootMissing)) {
+      await checkRoot()
+    }
     if (!canOpen.value) {
       return
     }

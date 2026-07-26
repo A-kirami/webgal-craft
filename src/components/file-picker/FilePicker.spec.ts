@@ -130,7 +130,18 @@ const globalStubs = {
       return () => h('div')
     },
   }),
-  Popover: createBrowserContainerStub('StubPopover'),
+  Popover: defineComponent({
+    name: 'StubPopover',
+    props: {
+      open: Boolean,
+    },
+    setup(props, { slots }) {
+      return () => h('div', {
+        'data-testid': 'file-picker-popover',
+        'data-open': String(props.open),
+      }, slots.default?.())
+    },
+  }),
   PopoverContent: createBrowserContainerStub('StubPopoverContent'),
   PopoverTrigger: createBrowserContainerStub('StubPopoverTrigger'),
 }
@@ -256,6 +267,52 @@ describe('FilePicker', () => {
 
     await expect.element(page.getByTestId('file-viewer-preview-context')).toHaveAttribute('data-preview-cwd', '/games/demo')
     await expect.element(page.getByTestId('file-viewer-preview-context')).toHaveAttribute('data-preview-base-url', 'http://127.0.0.1:8899/game/demo/')
+    expectNoConsoleMessage('decodeEntities option is passed but will be ignored in non-browser builds')
+    await result.unmount()
+  })
+
+  it('资源根目录不存在时点击输入框仍会打开选择器且不读取目录', async () => {
+    existsMock.mockResolvedValue(false)
+    const result = await renderInBrowser(FilePickerHarness, {
+      props: {
+        initialValue: '',
+      },
+      browser: {
+        pinia: true,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('textbox', { name: 'File Path' }).click()
+    await nextTick()
+
+    await expect.element(page.getByTestId('file-picker-popover')).toHaveAttribute('data-open', 'true')
+    expect(readDirectoryMock).not.toHaveBeenCalled()
+    expectNoConsoleMessage('decodeEntities option is passed but will be ignored in non-browser builds')
+    await result.unmount()
+  })
+
+  it('资源根目录不存在时通过键盘聚焦输入框仍会打开选择器', async () => {
+    existsMock.mockResolvedValue(false)
+    const result = await renderInBrowser(FilePickerHarness, {
+      props: {
+        initialValue: '',
+      },
+      browser: {
+        pinia: true,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await userEvent.tab()
+    await nextTick()
+
+    await expect.element(page.getByRole('textbox', { name: 'File Path' })).toHaveFocus()
+    await expect.element(page.getByTestId('file-picker-popover')).toHaveAttribute('data-open', 'true')
     expectNoConsoleMessage('decodeEntities option is passed but will be ignored in non-browser builds')
     await result.unmount()
   })

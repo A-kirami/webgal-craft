@@ -23,6 +23,7 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 
 interface ControllerFixtureOptions {
   commitInputOnBlur?: boolean
+  extensions?: string[]
   modelValue?: string
   reopenInSelectedParent?: boolean
   rootPath?: string
@@ -59,7 +60,7 @@ function createFixture(options: ControllerFixtureOptions = {}) {
     commitInputOnBlur: () => options.commitInputOnBlur ?? true,
     ensurePathWithinRoot,
     exclude: () => [],
-    extensions: () => [],
+    extensions: () => options.extensions ?? [],
     isRecentHistoryInvalid: () => false,
     modelValue: () => modelValue.value,
     readDirectory,
@@ -101,6 +102,121 @@ describe('useFilePickerController', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.clearAllMocks()
+  })
+
+  it('根目录为空时仍会打开并显示空列表', async () => {
+    const { controller, readDirectory, scope } = createFixture()
+
+    await flushControllerTasks()
+    await controller.openPopover()
+
+    expect(controller.isOpen.value).toBe(true)
+    expect(controller.filteredItems.value).toEqual([])
+    expect(controller.errorMsg.value).toBe('')
+    expect(readDirectory).toHaveBeenCalledOnce()
+
+    scope.stop()
+  })
+
+  it('根目录不存在时仍会打开为空列表且不读取目录', async () => {
+    existsMock.mockResolvedValue(false)
+    const { controller, readDirectory, scope } = createFixture()
+
+    await flushControllerTasks()
+    await controller.openPopover()
+
+    expect(controller.isOpen.value).toBe(true)
+    expect(controller.filteredItems.value).toEqual([])
+    expect(controller.errorMsg.value).toBe('')
+    expect(readDirectory).not.toHaveBeenCalled()
+
+    scope.stop()
+  })
+
+  it('根目录不存在时仍允许输入子路径并保持空状态', async () => {
+    existsMock.mockResolvedValue(false)
+    const { controller, readDirectory, scope } = createFixture()
+
+    await flushControllerTasks()
+    await controller.openPopover()
+    await nextTick()
+
+    controller.inputText.value = 'images/'
+    await vi.advanceTimersByTimeAsync(300)
+    await flushControllerTasks()
+
+    expect(controller.currentDir.value).toBe('images')
+    expect(controller.filteredItems.value).toEqual([])
+    expect(controller.errorMsg.value).toBe('')
+    expect(readDirectory).not.toHaveBeenCalled()
+
+    scope.stop()
+  })
+
+  it('缺失的根目录随后创建后会在重新打开时读取内容', async () => {
+    let rootExists = false
+    existsMock.mockImplementation(async () => rootExists)
+    const { controller, readDirectory, scope } = createFixture()
+
+    await flushControllerTasks()
+    await controller.openPopover()
+    controller.handlePopoverOpenChange(false)
+
+    rootExists = true
+    readDirectory.mockImplementation(async (path: AbsPath, request: { requestId: number }) => ({
+      absolutePath: path,
+      items: [{
+        isDir: false,
+        name: 'opening.png',
+        path: '/assets/opening.png',
+      }],
+      requestId: request.requestId,
+    }))
+    await controller.openPopover()
+
+    expect(controller.isOpen.value).toBe(true)
+    expect(readDirectory).toHaveBeenCalledOnce()
+    expect(controller.filteredItems.value.map(item => item.name)).toEqual(['opening.png'])
+
+    scope.stop()
+  })
+
+  it('根目录只有不支持的文件时仍会打开为空列表', async () => {
+    const { controller, readDirectory, scope } = createFixture({
+      extensions: ['.png'],
+    })
+    readDirectory.mockImplementation(async (path: AbsPath, request: { requestId: number }) => ({
+      absolutePath: path,
+      items: [{
+        isDir: false,
+        name: 'notes.txt',
+        path: '/assets/notes.txt',
+      }],
+      requestId: request.requestId,
+    }))
+
+    await flushControllerTasks()
+    await controller.openPopover()
+
+    expect(controller.isOpen.value).toBe(true)
+    expect(controller.filteredItems.value).toEqual([])
+    expect(controller.errorMsg.value).toBe('')
+    expect(readDirectory).toHaveBeenCalledOnce()
+
+    scope.stop()
+  })
+
+  it('根路径不是目录时不会打开或尝试读取', async () => {
+    statMock.mockResolvedValue({ isDirectory: false })
+    const { controller, readDirectory, scope } = createFixture()
+
+    await flushControllerTasks()
+    await controller.openPopover()
+
+    expect(controller.isOpen.value).toBe(false)
+    expect(readDirectory).not.toHaveBeenCalled()
+
+    scope.stop()
   })
 
   it('reopenInSelectedParent 打开时会回到当前选中文件的父目录', async () => {
@@ -167,6 +283,20 @@ describe('useFilePickerController', () => {
 
     expect(controller.currentDir.value).toBe('images/bg')
     expect(controller.errorMsg.value).toBe('目录不存在')
+    expect(controller.isLoading.value).toBe(false)
+
+    scope.stop()
+  })
+
+  it('目录读取失败时仍会打开并显示现有错误状态', async () => {
+    const { controller, readDirectory, scope } = createFixture()
+    readDirectory.mockRejectedValue(new AppError('IO_ERROR', '没有目录读取权限'))
+
+    await flushControllerTasks()
+    await controller.openPopover()
+
+    expect(controller.isOpen.value).toBe(true)
+    expect(controller.errorMsg.value).toBe('没有目录读取权限')
     expect(controller.isLoading.value).toBe(false)
 
     scope.stop()
