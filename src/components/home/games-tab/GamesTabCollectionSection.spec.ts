@@ -69,10 +69,6 @@ const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
   Card: createBrowserContainerStub('StubCard'),
   CardContent: createBrowserContainerStub('StubCardContent'),
-  ContextMenu: createBrowserContainerStub('StubContextMenu'),
-  ContextMenuContent: createBrowserContainerStub('StubContextMenuContent'),
-  ContextMenuItem: createBrowserClickStub('StubContextMenuItem'),
-  ContextMenuTrigger: createBrowserContainerStub('StubContextMenuTrigger'),
   Progress: createBrowserContainerStub('StubProgress'),
   Tooltip: createBrowserContainerStub('StubTooltip'),
   TooltipContent: createBrowserContainerStub('StubTooltipContent'),
@@ -153,12 +149,17 @@ describe('GamesTabCollectionSection', () => {
       },
     })
 
-    const openFolderButtons = page.getByRole('button', { name: 'common.openFolder' })
-    expect(openFolderButtons.elements()).toHaveLength(1)
+    await page.getByTestId(`game-card-${brokenGame.id}`).click({ button: 'right' })
 
-    await openFolderButtons.click()
+    const openFolderMenuItem = page.getByRole('menuitem', { name: 'common.openFolder' })
+    await expect.element(openFolderMenuItem).toBeVisible()
+
+    await openFolderMenuItem.click()
     expect(onOpenFolder).toHaveBeenCalledOnce()
     expect(onOpenFolder).toHaveBeenCalledWith(brokenGame)
+
+    await page.getByTestId(`game-card-${missingGame.id}`).click({ button: 'right' })
+    await expect.element(openFolderMenuItem).not.toBeInTheDocument()
   })
 
   it('列表视图不会为路径已失效的游戏显示打开文件夹快捷操作', async () => {
