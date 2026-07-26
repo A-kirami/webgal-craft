@@ -46,6 +46,7 @@ function createStartupOptions(overrides: Partial<RunAppStartupOptions> = {}): Ru
     storageSettingsStore: {
       $patch: vi.fn(),
       engineSavePath: '',
+      exportSavePath: '',
       gameSavePath: '',
       templateSavePath: '',
     },
@@ -94,6 +95,7 @@ describe('runAppStartup', () => {
       storageSettingsStore: {
         $patch: patch,
         engineSavePath: '',
+        exportSavePath: '',
         gameSavePath: '',
         templateSavePath: '',
       },

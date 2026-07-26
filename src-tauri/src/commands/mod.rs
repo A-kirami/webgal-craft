@@ -1,6 +1,7 @@
 pub mod backup;
 pub mod engine;
 pub mod error;
+pub mod export;
 pub mod fs;
 pub mod game;
 pub mod project_config;

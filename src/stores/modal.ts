@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 
+import ExportDialog from '~/components/export/ExportDialog.vue'
 import AboutModal from '~/components/modals/AboutModal.vue'
 import AlertModal from '~/components/modals/AlertModal.vue'
 import BackupTimelineDialog from '~/components/modals/BackupTimelineDialog.vue'
@@ -45,6 +46,7 @@ const ModalDialog = {
   DeleteTemplateModal,
   DiscoveredResourcesModal,
   ExternalDocumentChangeModal,
+  ExportDialog,
   FastPreviewTimeoutModal,
   GameConfigModal,
   GameDependencyResolutionModal,

@@ -270,6 +270,26 @@ describe('EditHeader', () => {
     await expect.element(page.getByRole('button', { name: 'edit.header.gameSettings' })).not.toBeInTheDocument()
   })
 
+  it('点击导出会把当前游戏交给导出弹窗', async () => {
+    renderInBrowser(EditHeader, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'edit.header.export' }).click()
+
+    expect(modalOpenMock).toHaveBeenCalledWith('ExportDialog', {
+      game: expect.objectContaining({
+        id: 'game-test',
+        path: '/games/test',
+      }),
+    })
+  })
+
   it('返回主页前无未保存更改时直接跳转', async () => {
     renderInBrowser(EditHeader, {
       browser: {

@@ -162,8 +162,12 @@ pub struct GameConfigWritePayload {
 
 #[tauri::command]
 pub fn get_game_config(game_path: String) -> AppResult<GameConfigReadResult> {
+    read_game_config(Path::new(&game_path))
+}
+
+pub(crate) fn read_game_config(game_path: &Path) -> AppResult<GameConfigReadResult> {
     // 构建配置文件路径
-    let config_path = Path::new(&game_path).join("game").join("config.txt");
+    let config_path = game_path.join("game").join("config.txt");
 
     // 读取配置文件内容
     let content = fs::read_to_string(&config_path)?;

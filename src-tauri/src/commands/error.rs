@@ -21,6 +21,12 @@ pub enum AppError {
     #[error("窗口错误: {0}")]
     Window(String),
 
+    #[error("导出错误: {0}")]
+    Export(String),
+
+    #[error("目标目录已存在: {0}")]
+    TargetConflict(String),
+
     #[error(transparent)]
     Vfs(#[from] VfsError),
 
@@ -49,6 +55,8 @@ impl AppError {
             Self::Server(_) => "SERVER_ERROR",
             Self::Config(_) => "CONFIG_ERROR",
             Self::Window(_) => "WINDOW_ERROR",
+            Self::Export(_) => "EXPORT_ERROR",
+            Self::TargetConflict(_) => "TARGET_CONFLICT",
             Self::Vfs(error) => error.code(),
             Self::SchemaVersionTooNew { .. } => "SCHEMA_VERSION_TOO_NEW",
             Self::InvalidProjectConfig { .. } => "INVALID_PROJECT_CONFIG",
@@ -108,6 +116,11 @@ mod tests {
         assert_eq!(AppError::Server("server".into()).code(), "SERVER_ERROR");
         assert_eq!(AppError::Config("config".into()).code(), "CONFIG_ERROR");
         assert_eq!(AppError::Window("window".into()).code(), "WINDOW_ERROR");
+        assert_eq!(AppError::Export("export".into()).code(), "EXPORT_ERROR");
+        assert_eq!(
+            AppError::TargetConflict("C:/exports/Demo".into()).code(),
+            "TARGET_CONFLICT"
+        );
         assert_eq!(
             AppError::SchemaVersionTooNew {
                 found: 2,

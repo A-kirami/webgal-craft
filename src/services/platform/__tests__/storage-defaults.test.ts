@@ -10,6 +10,7 @@ describe('resolveMissingStorageSavePaths', () => {
     await expect(resolveMissingStorageSavePaths({
       gameSavePath: '/games',
       engineSavePath: '/engines',
+      exportSavePath: '/exports',
       templateSavePath: '/templates',
     }, {
       getBaseDir,
@@ -27,6 +28,7 @@ describe('resolveMissingStorageSavePaths', () => {
     await expect(resolveMissingStorageSavePaths({
       gameSavePath: '',
       engineSavePath: '/engines',
+      exportSavePath: '',
       templateSavePath: '',
     }, {
       getBaseDir,
@@ -35,6 +37,7 @@ describe('resolveMissingStorageSavePaths', () => {
       resolveTemplateSavePath,
     })).resolves.toEqual({
       gameSavePath: '/documents/WebGALCraft/games',
+      exportSavePath: '/documents/WebGALCraft/exports',
       templateSavePath: '/documents/WebGALCraft/templates',
     })
 

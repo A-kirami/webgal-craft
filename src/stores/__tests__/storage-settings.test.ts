@@ -27,18 +27,21 @@ describe('useStorageSettingsStore', () => {
 
     expect(store.gameSavePath).toBe('')
     expect(store.engineSavePath).toBe('')
+    expect(store.exportSavePath).toBe('')
     expect(store.templateSavePath).toBe('')
   })
 
-  it('支持更新游戏、引擎和模板存储路径', () => {
+  it('支持更新游戏、引擎、模板和导出存储路径', () => {
     const store = useStorageSettingsStore()
 
     store.gameSavePath = '/games'
     store.engineSavePath = '/engines'
+    store.exportSavePath = '/exports'
     store.templateSavePath = '/templates'
 
     expect(store.gameSavePath).toBe('/games')
     expect(store.engineSavePath).toBe('/engines')
+    expect(store.exportSavePath).toBe('/exports')
     expect(store.templateSavePath).toBe('/templates')
   })
 
@@ -49,6 +52,7 @@ describe('useStorageSettingsStore', () => {
         'storage-settings': JSON.stringify({
           gameSavePath: String.raw`c:\games${'\\'}`,
           engineSavePath: String.raw`D:\engines`,
+          exportSavePath: String.raw`e:\exports${'\\'}`,
           templateSavePath: String.raw`\\server\share\templates${'\\'}`,
         }),
       }),
@@ -60,6 +64,7 @@ describe('useStorageSettingsStore', () => {
 
     expect(store.gameSavePath).toBe('C:/games')
     expect(store.engineSavePath).toBe('D:/engines')
+    expect(store.exportSavePath).toBe('E:/exports')
     expect(store.templateSavePath).toBe('//server/share/templates')
   })
 })

@@ -27,6 +27,14 @@ export const storageSettingsDefinition = defineSettingsSchema({
         dialogTitle: t => t('settings.storage.templatePath.title'),
         label: t => t('settings.storage.templatePath.label'),
       },
+      exportSavePath: {
+        type: 'folderPicker',
+        default: '',
+        immediate: true,
+        buttonLabel: t => t('settings.storage.browse'),
+        dialogTitle: t => t('settings.storage.exportPath.title'),
+        label: t => t('settings.storage.exportPath.label'),
+      },
     },
   },
 } as const)

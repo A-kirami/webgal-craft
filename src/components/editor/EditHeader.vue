@@ -65,6 +65,7 @@ const HEADER_ICON_THUMBNAIL = {
 const currentGameServeUrl = $computed(() => previewSessionStore.currentGameServeUrl)
 const canTestGame = $computed(() => !!currentGameServeUrl && !!workspaceStore.currentGame)
 const canOpenGameConfig = $computed(() => !!workspaceStore.currentGame?.path)
+const canExportGame = $computed(() => !!workspaceStore.currentGame?.path)
 const testWindowLabel = $computed(() => (workspaceStore.currentGame ? `test-${workspaceStore.currentGame.id}` : ''))
 
 let isTestOpening = $ref(false)
@@ -109,6 +110,15 @@ async function handleOpenGameConfig() {
   } finally {
     isGameConfigOpening = false
   }
+}
+
+function handleOpenExport() {
+  const currentGame = workspaceStore.currentGame
+  if (!currentGame) {
+    return
+  }
+
+  modalStore.open('ExportDialog', { game: currentGame })
 }
 
 async function handleTestGame() {
@@ -248,7 +258,13 @@ onBeforeUnmount(() => {
         <Play v-else class="size-4" />
         {{ $t('edit.header.testGame') }}
       </Button>
-      <Button variant="outline" size="sm" class="gap-1 h-8">
+      <Button
+        variant="outline"
+        size="sm"
+        class="gap-1 h-8"
+        :disabled="!canExportGame"
+        @click="handleOpenExport"
+      >
         <Download class="size-4" />
         {{ $t('edit.header.export') }}
       </Button>
