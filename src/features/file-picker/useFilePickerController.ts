@@ -68,7 +68,6 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   const isLoading = ref(false)
   const errorMsg = ref('')
   const isRootReady = ref(false)
-  const isRootMissing = ref(false)
   const isInputFocused = ref(false)
   const isPopoverFocused = ref(false)
   const suppressBlurCommit = ref(false)
@@ -76,6 +75,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   let latestReadId = 0
   let latestRootId = 0
   let latestInputSyncId = 0
+  let isRootMissing = false
 
   const canOpen = computed(() => !options.disabled() && isRootReady.value && !!canonicalRootPath.value)
   const filteredItems = computed(() => {
@@ -215,7 +215,6 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   async function checkRoot() {
     const requestId = ++latestRootId
     isRootReady.value = false
-    isRootMissing.value = false
     canonicalRootPath.value = ''
 
     try {
@@ -227,7 +226,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
         // 防止旧根目录的在途读取在缺失状态建立后回写过期内容。
         latestReadId += 1
         canonicalRootPath.value = normalizedRoot
-        isRootMissing.value = true
+        isRootMissing = true
         isRootReady.value = true
         setEmptyDirectoryState('', '')
         options.syncRecentHistory()
@@ -237,6 +236,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
       if (requestId !== latestRootId) {
         return
       }
+      isRootMissing = false
       if (!info.isDirectory) {
         isOpen.value = false
         return
@@ -260,7 +260,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
       return
     }
     const normalizedDir = RelPath.from(relativeDir)
-    if (isRootMissing.value) {
+    if (isRootMissing) {
       setEmptyDirectoryState(normalizedDir, keyword)
       return
     }
@@ -285,7 +285,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
         return
       }
       if (error instanceof AppError && error.code === 'DIR_NOT_FOUND' && !normalizedDir) {
-        isRootMissing.value = true
+        isRootMissing = true
         setEmptyDirectoryState('', keyword)
         return
       }
@@ -357,7 +357,7 @@ export function useFilePickerController(options: UseFilePickerControllerOptions)
   }
 
   async function openPopover(openOptions: OpenPopoverOptions = {}) {
-    if (!options.disabled() && (!isRootReady.value || isRootMissing.value)) {
+    if (!options.disabled() && (!isRootReady.value || isRootMissing)) {
       await checkRoot()
     }
     if (!canOpen.value) {

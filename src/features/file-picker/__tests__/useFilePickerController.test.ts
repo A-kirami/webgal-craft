@@ -163,10 +163,20 @@ describe('useFilePickerController', () => {
     controller.handlePopoverOpenChange(false)
 
     rootExists = true
+    readDirectory.mockImplementation(async (path: AbsPath, request: { requestId: number }) => ({
+      absolutePath: path,
+      items: [{
+        isDir: false,
+        name: 'opening.png',
+        path: '/assets/opening.png',
+      }],
+      requestId: request.requestId,
+    }))
     await controller.openPopover()
 
     expect(controller.isOpen.value).toBe(true)
     expect(readDirectory).toHaveBeenCalledOnce()
+    expect(controller.filteredItems.value.map(item => item.name)).toEqual(['opening.png'])
 
     scope.stop()
   })
@@ -191,6 +201,7 @@ describe('useFilePickerController', () => {
     expect(controller.isOpen.value).toBe(true)
     expect(controller.filteredItems.value).toEqual([])
     expect(controller.errorMsg.value).toBe('')
+    expect(readDirectory).toHaveBeenCalledOnce()
 
     scope.stop()
   })
