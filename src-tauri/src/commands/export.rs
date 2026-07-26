@@ -10,7 +10,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
 use super::{game::read_game_config, AppError, AppResult};
-use crate::vfs::{CachedCanonicals, OverlayFs, VfsDirEntry};
+use crate::vfs::{CachedCanonicals, OverlayFs, VfsDirEntry, VfsError};
 
 const PLATFORM_WEB: &str = "web";
 const STEP_PREPARING: &str = "export.progress.preparing";
@@ -163,11 +163,15 @@ where
     report(STEP_COPYING_ICONS, range.0)?;
 
     let icons_path = Path::new("icons");
-    let icon_files = overlay
-        .list_entries(icons_path)?
-        .into_iter()
-        .filter(|entry| !entry.is_dir && WEB_ICON_FILE_NAMES.contains(&entry.name.as_str()))
-        .collect::<Vec<_>>();
+    let icon_files = match overlay.list_entries(icons_path) {
+        Ok(entries) => entries,
+        Err(VfsError::NotFound) => Vec::new(),
+        Err(VfsError::Io(error)) if error.kind() == ErrorKind::NotFound => Vec::new(),
+        Err(error) => return Err(error.into()),
+    }
+    .into_iter()
+    .filter(|entry| !entry.is_dir && WEB_ICON_FILE_NAMES.contains(&entry.name.as_str()))
+    .collect::<Vec<_>>();
     let total_files = icon_files.len();
 
     for (index, entry) in icon_files.into_iter().enumerate() {
@@ -684,6 +688,29 @@ mod tests {
         assert_eq!(manifest["theme_color"], "#000000");
         assert_eq!(progress.last(), Some(&(STEP_FINISHED.to_owned(), 100)));
         assert!(progress.windows(2).all(|pair| pair[0] != pair[1]));
+    }
+
+    #[test]
+    fn exports_without_an_icons_directory() {
+        let root = tempdir().expect("temp root should be created");
+        create_export_fixture(root.path());
+        fs::remove_dir_all(root.path().join("engine/icons"))
+            .expect("engine icons should be removed");
+        fs::remove_dir_all(root.path().join("game/icons")).expect("game icons should be removed");
+        let output = root.path().join("output/Demo");
+
+        export_web_to_directory(
+            &root.path().join("engine"),
+            &root.path().join("game"),
+            Some(&root.path().join("template")),
+            &output,
+            "My Game",
+            false,
+            |_, _| Ok(()),
+        )
+        .expect("web export should succeed without icons");
+
+        assert!(!output.join("icons").exists());
     }
 
     #[test]
