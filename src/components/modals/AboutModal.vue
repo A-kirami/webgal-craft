@@ -16,6 +16,7 @@ import {
   formatAboutEnvironmentInfo,
 } from '~/features/about/feedback'
 import { useAppUpdateController } from '~/features/app-update/useAppUpdateController'
+import { isDesktopRuntime } from '~/services/platform/runtime'
 import { getVersion } from '~/utils/metadata'
 
 import { github } from '~build/git'
@@ -24,6 +25,7 @@ const open = defineModel<boolean>('open')
 
 const version = getVersion()
 const appUpdateController = useAppUpdateController()
+const canCheckForUpdate = isDesktopRuntime()
 const environmentInfo = collectAboutEnvironmentInfo(version.name)
 const environmentInfoText = formatAboutEnvironmentInfo(environmentInfo)
 const repositoryUrl = github || 'https://github.com/A-kirami/webgal-craft'
@@ -92,6 +94,7 @@ function handleOpenBugReport(): void {
             <span>{{ version.name }}</span>
           </button>
           <Button
+            v-if="canCheckForUpdate"
             size="icon"
             variant="ghost"
             class="text-muted-foreground bg-muted size-8"

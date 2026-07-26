@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { type as getOsType } from '@tauri-apps/plugin-os'
 
+import { isDesktopRuntime } from '~/services/platform/runtime'
+
 const osType = getOsType()
+const isDesktop = isDesktopRuntime()
 const route = useRoute()
 
 const isHomePage = $computed(() => route.path === '/')
@@ -9,6 +12,7 @@ const isHomePage = $computed(() => route.path === '/')
 
 <template>
   <header
+    v-if="isDesktop"
     data-tauri-drag-region
     class="text-gray-500 bg-background flex h-7 w-full relative"
   >

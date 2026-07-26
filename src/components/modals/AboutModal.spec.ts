@@ -16,8 +16,9 @@ import AboutModal from './AboutModal.vue'
 
 import type { AboutEnvironmentInfo } from '~/features/about/feedback'
 
-const { openUrlMock, repositoryUrl } = vi.hoisted(() => ({
+const { openUrlMock, platformMock, repositoryUrl } = vi.hoisted(() => ({
   openUrlMock: vi.fn(),
+  platformMock: vi.fn(() => 'macos'),
   repositoryUrl: 'https://github.com/A-kirami/webgal-craft',
 }))
 
@@ -35,7 +36,7 @@ vi.mock('@tauri-apps/plugin-opener', () => ({
 
 vi.mock('@tauri-apps/plugin-os', () => ({
   arch: () => 'aarch64',
-  platform: () => 'macos',
+  platform: platformMock,
   version: () => '15.5 & newer',
 }))
 
@@ -118,7 +119,16 @@ describe('AboutModal', () => {
   afterEach(() => {
     document.body.innerHTML = ''
     openUrlMock.mockReset()
+    platformMock.mockReturnValue('macos')
     globalThis.getSelection()?.removeAllRanges()
+  })
+
+  it('移动端不显示桌面应用更新入口', () => {
+    platformMock.mockReturnValue('android')
+
+    renderAboutModal()
+
+    expect(page.getByRole('button', { name: 'appUpdate.action.checkForUpdate' })).not.toBeInTheDocument()
   })
 
   it('弹窗内没有可复制内容时通过复制快捷键写入稳定的版本和环境信息', async () => {

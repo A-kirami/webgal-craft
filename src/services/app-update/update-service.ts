@@ -1,6 +1,7 @@
 import { openUrl } from '@tauri-apps/plugin-opener'
 import { relaunch } from '@tauri-apps/plugin-process'
-import { check } from '@tauri-apps/plugin-updater'
+
+import { isDesktopRuntime } from '~/services/platform/runtime'
 
 import type { Update } from '@tauri-apps/plugin-updater'
 
@@ -51,7 +52,12 @@ async function closePendingUpdate(): Promise<void> {
 }
 
 async function checkForUpdate(timeoutMs?: number): Promise<AppUpdateInfo | undefined> {
+  if (!isDesktopRuntime()) {
+    return
+  }
+
   try {
+    const { check } = await import('@tauri-apps/plugin-updater')
     const update = await check({ timeout: timeoutMs })
 
     if (!update) {
