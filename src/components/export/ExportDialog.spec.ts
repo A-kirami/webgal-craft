@@ -203,7 +203,7 @@ describe('ExportDialog', () => {
     exportWebMock.mockImplementation(config => new Promise<AbsPath>((resolve) => {
       config.onProgress?.({
         exportId: 'export-1',
-        percentage: 72,
+        percentage: 72.6,
         platform: 'web',
         step: 'export.progress.copyingGame',
       })
@@ -230,7 +230,8 @@ describe('ExportDialog', () => {
     await expect.element(page.getByText('export.progress.copyingGame')).toBeInTheDocument()
     await expect.element(page.getByText(/export\.elapsed\./)).not.toBeInTheDocument()
     const progress = await page.getByRole('progressbar').element() as HTMLProgressElement
-    expect(progress.value).toBe(72)
+    expect(progress.value).toBe(72.6)
+    await expect.element(page.getByText('73%')).toBeInTheDocument()
 
     completeExport?.()
     await expect.element(page.getByText('export.progress.finished')).toBeInTheDocument()

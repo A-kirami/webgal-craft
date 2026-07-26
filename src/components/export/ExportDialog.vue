@@ -303,7 +303,7 @@ const startLabel = $computed(() => status === 'failed'
                 class="flex-1"
                 :indicator-class="exportProgressIndicatorClass"
               />
-              <span class="text-xs text-muted-foreground text-right shrink-0 w-9 tabular-nums" aria-hidden="true">{{ progress }}%</span>
+              <span class="text-xs text-muted-foreground text-right shrink-0 w-9 tabular-nums" aria-hidden="true">{{ Math.round(progress) }}%</span>
             </div>
           </section>
         </div>
