@@ -34,6 +34,7 @@ const {
   foregroundTransformControls,
   generate,
   isDirty,
+  isSaving,
   previewVersion,
   selectBackgroundImage,
   selectForeground,
@@ -52,6 +53,10 @@ function closeDialog() {
 }
 
 function requestClose() {
+  if (isSaving.value) {
+    return
+  }
+
   if (!isDirty.value) {
     closeDialog()
     return

@@ -333,6 +333,28 @@ describe('IconEditorDialog', () => {
     expect(updateOpen).toHaveBeenCalledWith(false)
   })
 
+  it('生成期间忽略关闭请求', async () => {
+    const save = createDeferred<void>()
+    saveIconEditorOutputsMock.mockReturnValueOnce(save.promise)
+    const updateOpen = renderOpenIconEditorDialog()
+
+    await page.getByTestId('icon-editor-select-foreground').click()
+    await page.getByTestId('icon-editor-generate').click()
+    await vi.waitFor(() => {
+      expect(saveIconEditorOutputsMock).toHaveBeenCalled()
+    })
+
+    await page.getByTestId('icon-editor-close-request').click()
+
+    expect(updateOpen).not.toHaveBeenCalledWith(false)
+    expect(modalOpenMock).not.toHaveBeenCalled()
+
+    save.resolve()
+    await vi.waitFor(() => {
+      expect(updateOpen).toHaveBeenCalledWith(false)
+    })
+  })
+
   it('打开时使用 icon-data 初始化编辑状态', async () => {
     loadIconEditorSourceDataMock.mockResolvedValue({
       backgroundBytes: new Uint8Array([8, 9]),
