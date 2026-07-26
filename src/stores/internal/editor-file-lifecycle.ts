@@ -292,16 +292,6 @@ function replaceDocumentModelFromExternal(
   context.syncStateFromDocument(path)
 }
 
-function mergeExternalDocumentContent(localContent: string, externalContent: string): string {
-  return [
-    '<<<<<<< LOCAL',
-    localContent,
-    '=======',
-    externalContent,
-    '>>>>>>> EXTERNAL',
-  ].join('\n')
-}
-
 function isSameTextMetadata(left: TextMetadata, right: TextMetadata): boolean {
   return left.encoding === right.encoding && left.lineEnding === right.lineEnding
 }
@@ -335,8 +325,11 @@ function syncScenePreviewForExternalContent(
 
 async function confirmExternalDocumentChange(
   path: AbsPath,
-  allowMerge: boolean,
-): Promise<'keep-local' | 'load-external' | 'merge' | 'cancel'> {
+  snapshot: ExternalDocumentSnapshot,
+): Promise<
+  | { type: 'keep-local' | 'load-external' | 'cancel' }
+  | { type: 'merge', content: string }
+> {
   // 延迟加载 modal store 以避免与模板侧组件的循环依赖
   const { useModalStore } = await import('~/stores/modal')
   const modalStore = useModalStore()
@@ -344,11 +337,14 @@ async function confirmExternalDocumentChange(
   return new Promise((resolve) => {
     modalStore.open('ExternalDocumentChangeModal', {
       path,
-      allowMerge,
-      onKeepLocal: () => resolve('keep-local'),
-      onLoadExternal: () => resolve('load-external'),
-      onMerge: () => resolve('merge'),
-      onCancel: () => resolve('cancel'),
+      documentKind: snapshot.state.kind,
+      allowMerge: snapshot.allowMerge,
+      localContent: snapshot.currentContent,
+      externalContent: snapshot.content,
+      onKeepLocal: () => resolve({ type: 'keep-local' }),
+      onLoadExternal: () => resolve({ type: 'load-external' }),
+      onMerge: content => resolve({ type: 'merge', content }),
+      onCancel: () => resolve({ type: 'cancel' }),
     }, `external-document-change-${path}-${Date.now()}`)
   })
 }
@@ -478,25 +474,24 @@ async function handleFileModifiedEventInternal(
   let shouldRestoreAutoSave = true
 
   try {
-    const action = await confirmExternalDocumentChange(event.path, snapshot.allowMerge)
-    if (action === 'cancel' || action === 'keep-local') {
+    const action = await confirmExternalDocumentChange(event.path, snapshot)
+    if (action.type === 'cancel' || action.type === 'keep-local') {
       return
     }
 
-    if (action === 'load-external' || !snapshot.state.isDirty) {
+    if (action.type === 'load-external' || !snapshot.state.isDirty) {
       applyExternalDocumentSnapshot(context, event.path, snapshot)
       shouldRestoreAutoSave = false
       return
     }
 
-    if (action === 'merge' && snapshot.allowMerge) {
+    if (action.type === 'merge' && snapshot.allowMerge) {
       const docEntry = snapshot.session.document
-      const mergedContent = mergeExternalDocumentContent(snapshot.currentContent, snapshot.content)
       snapshot.session.activeProjection = 'text'
       applyDocumentTransaction(context, event.path, {
         transaction: {
           type: 'replace-all',
-          content: mergedContent,
+          content: action.content,
           metadata: {
             encoding: snapshot.metadata.encoding,
             lineEnding: snapshot.metadata.lineEnding,
