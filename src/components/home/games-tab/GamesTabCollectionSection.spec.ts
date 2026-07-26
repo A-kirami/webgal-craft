@@ -69,10 +69,6 @@ const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
   Card: createBrowserContainerStub('StubCard'),
   CardContent: createBrowserContainerStub('StubCardContent'),
-  ContextMenu: createBrowserContainerStub('StubContextMenu'),
-  ContextMenuContent: createBrowserContainerStub('StubContextMenuContent'),
-  ContextMenuItem: createBrowserClickStub('StubContextMenuItem'),
-  ContextMenuTrigger: createBrowserContainerStub('StubContextMenuTrigger'),
   Progress: createBrowserContainerStub('StubProgress'),
   Tooltip: createBrowserContainerStub('StubTooltip'),
   TooltipContent: createBrowserContainerStub('StubTooltipContent'),
@@ -130,6 +126,59 @@ describe('GamesTabCollectionSection', () => {
     })
 
     await expect.element(page.getByRole('button', { name: 'home.games.deleteGame' })).not.toBeInTheDocument()
+  })
+
+  it('网格视图只为路径仍可达的游戏显示打开文件夹操作', async () => {
+    const brokenGame = createTestGame({ id: 'game-broken', availability: 'broken' })
+    const missingGame = createTestGame({ id: 'game-missing', availability: 'missing' })
+    const onOpenFolder = vi.fn()
+
+    renderInBrowser(GamesTabCollectionSection, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        items: createItems([brokenGame, missingGame]),
+        getGameProgress: () => 0,
+        hasGameProgress: () => false,
+        onOpenFolder,
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByTestId(`game-card-${brokenGame.id}`).click({ button: 'right' })
+
+    const openFolderMenuItem = page.getByRole('menuitem', { name: 'common.openFolder' })
+    await expect.element(openFolderMenuItem).toBeVisible()
+
+    await openFolderMenuItem.click()
+    expect(onOpenFolder).toHaveBeenCalledOnce()
+    expect(onOpenFolder).toHaveBeenCalledWith(brokenGame)
+
+    await page.getByTestId(`game-card-${missingGame.id}`).click({ button: 'right' })
+    await expect.element(openFolderMenuItem).not.toBeInTheDocument()
+  })
+
+  it('列表视图不会为路径已失效的游戏显示打开文件夹快捷操作', async () => {
+    renderInBrowser(GamesTabCollectionSection, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        items: createItems([createTestGame({ availability: 'missing' })]),
+        getGameProgress: () => 0,
+        hasGameProgress: () => false,
+        viewMode: 'list',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('button', { name: 'common.openFolder' })).not.toBeInTheDocument()
   })
 
   it('导入入口使用按钮语义并会触发 importClick', async () => {
