@@ -119,7 +119,7 @@ describe('StatementSpecialContentEditor', () => {
 
     const inputs = document.querySelectorAll<HTMLInputElement>('[placeholder="edit.visualEditor.filePicker.scene"]')
     expect(inputs).toHaveLength(2)
-    expect(inputs[0]).toHaveAttribute('invalid', 'false')
-    expect(inputs[1]).toHaveAttribute('invalid', 'true')
+    expect(inputs[0]).toHaveAttribute('status', 'none')
+    expect(inputs[1]).toHaveAttribute('status', 'error')
   })
 })

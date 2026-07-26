@@ -20,7 +20,11 @@ const {
   useWorkspaceStoreMock: vi.fn(),
 }))
 
-const workspaceStoreState = reactive({
+const workspaceStoreState = reactive<{
+  currentGame?: Game
+  searchQuery: string
+}>({
+  currentGame: undefined,
   searchQuery: '',
 })
 
@@ -79,6 +83,7 @@ describe('useResourceStore', () => {
     vi.resetAllMocks()
 
     workspaceStoreState.searchQuery = ''
+    workspaceStoreState.currentGame = undefined
     gamesRef.value = undefined
     enginesRef.value = undefined
     templatesRef.value = undefined
@@ -128,6 +133,45 @@ describe('useResourceStore', () => {
 
     workspaceStoreState.searchQuery = 'classic'
     expect(store.filteredTemplates.map(template => template.id)).toEqual(['classic'])
+  })
+
+  it('从当前游戏绑定的引擎派生模型能力，并将缺失字段视为不支持', () => {
+    enginesRef.value = [
+      createTestEngine({
+        id: 'engine-with-defaults',
+        metadata: {
+          description: '',
+          icon: 'icons/favicon.ico',
+        },
+      }),
+      createTestEngine({
+        id: 'engine-with-live2d',
+        metadata: {
+          description: '',
+          icon: 'icons/favicon.ico',
+          live2dSupport: true,
+          spineSupport: false,
+        },
+      }),
+    ]
+    workspaceStoreState.currentGame = createTestGame({ engineId: 'engine-with-defaults' })
+
+    const store = useResourceStore()
+
+    expect(store.currentEngineCapabilities).toEqual({ live2d: false, spine: false })
+
+    workspaceStoreState.currentGame = createTestGame({ engineId: 'engine-with-live2d' })
+    expect(store.currentEngineCapabilities).toEqual({ live2d: true, spine: false })
+  })
+
+  it('引擎记录尚未加载或当前绑定无法解析时不提供能力上下文', () => {
+    workspaceStoreState.currentGame = createTestGame({ engineId: 'missing-engine' })
+    const store = useResourceStore()
+
+    expect(store.currentEngineCapabilities).toBeUndefined()
+
+    enginesRef.value = []
+    expect(store.currentEngineCapabilities).toBeUndefined()
   })
 
   it('会把独立模板和引擎内置模板整理为模板族展示模型', () => {

@@ -20,7 +20,7 @@ import ParamRenderer from './ParamRenderer.vue'
 
 import type { PropType } from 'vue'
 import type { ResolvedAutocompleteOption } from '~/features/editor/command-registry/autocomplete-options'
-import type { AutocompleteTextField, EditorField, NumberField, PlainTextField, SwitchField, ValueChoiceField } from '~/features/editor/command-registry/schema'
+import type { AutocompleteTextField, EditorField, FileField, NumberField, PlainTextField, SwitchField, ValueChoiceField } from '~/features/editor/command-registry/schema'
 import type { EditorFieldDiagnostic } from '~/features/editor/diagnostics/types'
 import type { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
 
@@ -122,6 +122,20 @@ function createNumberField(): EditorField {
     unit: 'ms',
   }
   return { key: 'time', storage: 'content', field }
+}
+
+function createFileField(): EditorField {
+  const field: FileField = {
+    key: 'file',
+    label: 'File',
+    type: 'file',
+    fileConfig: {
+      assetType: 'figure',
+      extensions: ['.png', '.json'],
+      title: 'Figure',
+    },
+  }
+  return { key: 'file', storage: 'content', field }
 }
 
 const warningDiagnostic: EditorFieldDiagnostic = {
@@ -229,6 +243,24 @@ function createAutocompleteProbeStub() {
   })
 }
 
+function createFilePickerProbeStub() {
+  return defineComponent({
+    name: 'FilePickerProbeStub',
+    props: {
+      status: {
+        type: String,
+        default: 'none',
+      },
+    },
+    setup(props) {
+      return () => h('input', {
+        'data-status': props.status,
+        'data-testid': 'file-picker',
+      })
+    },
+  })
+}
+
 const globalStubs = {
   Autocomplete: createAutocompleteProbeStub(),
   ColorPicker: createBrowserContainerStub('ColorPickerStub'),
@@ -265,6 +297,7 @@ function renderFieldRenderer(
   surface: StatementEditorSurface,
   field: EditorField,
   stubs: BrowserStubs = globalStubs,
+  diagnostics: readonly EditorFieldDiagnostic[] = [],
 ) {
   return renderInBrowser(ParamRenderer, {
     props: {
@@ -275,7 +308,7 @@ function renderFieldRenderer(
       getDynamicOptions: () => [],
       getFieldSelectValue: () => '',
       getFieldValue: () => '',
-      getFieldDiagnostics: () => [],
+      getFieldDiagnostics: () => diagnostics,
       isFieldVisible: () => true,
     },
     global: {
@@ -517,6 +550,15 @@ describe('ParamRenderer', () => {
       'focus-visible:ring-yellow/30',
     )
     await expect.element(autocomplete).not.toHaveClass('text-destructive!')
+  })
+
+  it('warning 文件字段向 FilePicker 传递 warning 状态', async () => {
+    renderFieldRenderer('panel', createFileField(), {
+      ...globalStubs,
+      FilePicker: createFilePickerProbeStub(),
+    }, [warningDiagnostic])
+
+    await expect.element(page.getByTestId('file-picker')).toHaveAttribute('data-status', 'warning')
   })
 
   it('error autocomplete 使用 destructive 状态样式', async () => {

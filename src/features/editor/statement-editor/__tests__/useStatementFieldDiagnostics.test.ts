@@ -7,12 +7,17 @@ import { useStatementFieldDiagnostics } from '~/features/editor/statement-editor
 
 import type { SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 
-const { useResourceIndexMock } = vi.hoisted(() => ({
+const { useResourceIndexMock, useResourceStoreMock } = vi.hoisted(() => ({
   useResourceIndexMock: vi.fn(),
+  useResourceStoreMock: vi.fn(),
 }))
 
 vi.mock('~/services/resource-index/service', () => ({
   useResourceIndex: useResourceIndexMock,
+}))
+
+vi.mock('~/stores/resource', () => ({
+  useResourceStore: useResourceStoreMock,
 }))
 
 function missingArgumentDiagnostic(key: string): SceneEditorDiagnostic {
@@ -42,6 +47,7 @@ describe('useStatementFieldDiagnostics', () => {
       hasAssetKey,
       status: resourceIndexStatus,
     })
+    useResourceStoreMock.mockReturnValue({ currentEngineCapabilities: undefined })
   })
 
   it('已发布诊断按完整字段地址解析且不会回退到本地资源检查', () => {
@@ -97,6 +103,26 @@ describe('useStatementFieldDiagnostics', () => {
     const result = useStatementFieldDiagnostics({ parsed })
 
     expect(result.getFieldStatus({ kind: 'content' })).toBe('none')
+    expect(hasAssetKey).not.toHaveBeenCalled()
+  })
+
+  it('临时草稿在资源索引未就绪时仍会诊断不受支持的模型', () => {
+    resourceIndexStatus.value = 'idle'
+    useResourceStoreMock.mockReturnValue({
+      currentEngineCapabilities: { live2d: false, spine: true },
+    })
+    const parsed = computed(() => parseSentence('changeFigure:live2d/hero.json;'))
+
+    const result = useStatementFieldDiagnostics({ parsed })
+
+    expect(result.getFieldDiagnostics({ kind: 'content' })).toEqual([{
+      code: 'unsupported-live2d',
+      field: { kind: 'content' },
+      severity: 'warning',
+      source: 'engine',
+      value: 'live2d/hero.json',
+    }])
+    expect(result.getFieldStatus({ kind: 'content' })).toBe('warning')
     expect(hasAssetKey).not.toHaveBeenCalled()
   })
 })

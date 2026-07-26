@@ -2,12 +2,14 @@ import { diagnoseEditorDocument } from '~/features/editor/diagnostics/document-d
 import { useResourceIndex } from '~/services/resource-index/service'
 import { useEditorStore } from '~/stores/editor'
 import { useEditorDiagnosticsStore } from '~/stores/editor-diagnostics'
+import { useResourceStore } from '~/stores/resource'
 import { useTabsStore } from '~/stores/tabs'
 
 export function useEditorDiagnostics(): void {
   const diagnosticsStore = useEditorDiagnosticsStore()
   const editorStore = useEditorStore()
   const resourceIndex = useResourceIndex()
+  const resourceStore = useResourceStore()
   const tabsStore = useTabsStore()
 
   function publishOpenDocumentDiagnostics(): void {
@@ -23,11 +25,12 @@ export function useEditorDiagnostics(): void {
       }
 
       diagnosticsStore.publish(tab.path, diagnoseEditorDocument({
+        engineCapabilities: resourceStore.currentEngineCapabilities,
+        hasAssetKey: canCheckResources
+          ? key => resourceIndex.hasAssetKey(key)
+          : undefined,
         textProjection,
         visualProjection,
-        ...(canCheckResources
-          ? { hasAssetKey: key => resourceIndex.hasAssetKey(key) }
-          : {}),
       }))
     }
   }
@@ -48,6 +51,10 @@ export function useEditorDiagnostics(): void {
 
   watch(() => resourceIndex.revision.value, () => {
     diagnosticsStore.invalidateSource('resource')
+    publishOpenDocumentDiagnostics()
+  })
+
+  watch(() => resourceStore.currentEngineCapabilities, () => {
     publishOpenDocumentDiagnostics()
   })
 }

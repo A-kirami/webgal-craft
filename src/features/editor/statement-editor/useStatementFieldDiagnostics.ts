@@ -1,10 +1,15 @@
-import { findMissingSentenceResourceReferences } from '~/features/editor/command-registry/diagnostics'
+import {
+  findMissingSentenceResourceReferences,
+  findUnsupportedEngineModelReferences,
+} from '~/features/editor/command-registry/diagnostics'
 import { getDiagnosticFieldStatus } from '~/features/editor/diagnostics/presentation'
 import { selectHighestDiagnosticSeverity } from '~/features/editor/diagnostics/types'
 import { isSameResourceReferenceSource } from '~/services/resource-index/reference-query'
 import { useResourceIndex } from '~/services/resource-index/service'
+import { useResourceStore } from '~/stores/resource'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { UnsupportedEngineModelReference } from '~/features/editor/command-registry/diagnostics'
 import type { DiagnosticFieldStatus } from '~/features/editor/diagnostics/presentation'
 import type { EditorFieldDiagnostic, SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 import type { ResourceReferenceQuery, ResourceReferenceSource } from '~/services/resource-index/reference-query'
@@ -26,22 +31,47 @@ function toLocalMissingResourceDiagnostic(reference: ResourceReferenceQuery): Ed
   }
 }
 
+function toLocalUnsupportedEngineModelDiagnostic(
+  reference: UnsupportedEngineModelReference,
+): EditorFieldDiagnostic {
+  return {
+    code: reference.modelType === 'live2d' ? 'unsupported-live2d' : 'unsupported-spine',
+    field: reference.source,
+    severity: 'warning',
+    source: 'engine',
+    value: reference.value,
+  }
+}
+
 export function useStatementFieldDiagnostics(options: UseStatementFieldDiagnosticsOptions) {
   const resourceIndex = useResourceIndex()
+  const resourceStore = useResourceStore()
 
   const publishedDiagnostics = computed(() =>
     options.diagnostics === undefined ? undefined : toValue(options.diagnostics),
   )
   const localDiagnostics = computed<readonly EditorFieldDiagnostic[]>(() => {
     const parsed = toValue(options.parsed)
-    if (!parsed || resourceIndex.status.value !== 'ready') {
+    if (!parsed) {
       return []
     }
 
-    return findMissingSentenceResourceReferences(
-      parsed,
-      key => resourceIndex.hasAssetKey(key),
-    ).map(reference => toLocalMissingResourceDiagnostic(reference))
+    const diagnostics: EditorFieldDiagnostic[] = []
+    if (resourceStore.currentEngineCapabilities) {
+      diagnostics.push(...findUnsupportedEngineModelReferences(
+        parsed,
+        resourceStore.currentEngineCapabilities,
+      ).map(reference => toLocalUnsupportedEngineModelDiagnostic(reference)))
+    }
+
+    if (resourceIndex.status.value === 'ready') {
+      diagnostics.push(...findMissingSentenceResourceReferences(
+        parsed,
+        key => resourceIndex.hasAssetKey(key),
+      ).map(reference => toLocalMissingResourceDiagnostic(reference)))
+    }
+
+    return diagnostics
   })
 
   function getFieldDiagnostics(field: ResourceReferenceSource): readonly EditorFieldDiagnostic[] {

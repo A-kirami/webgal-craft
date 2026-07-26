@@ -665,6 +665,8 @@ edit:
   diagnostics:
     duplicateLabel: 'Label "{label}" is defined {count} times in this scene, so jump targets are ambiguous.'
     missingLabel: 'Label "{label}" is not defined in this scene.'
+    unsupportedLive2d: The current engine does not support Live2D models.
+    unsupportedSpine: The current engine does not support Spine models.
   errors:
     fileSyncFailed: Failed to sync the file. Please try again shortly.
     previewUnavailable: Preview URL is not available. Please start preview first.

@@ -5,6 +5,7 @@ import { getEditorDiagnosticMessage } from '~/features/editor/diagnostics/presen
 import { diagnoseScene } from '~/features/editor/diagnostics/scene-diagnostics'
 import { i18n } from '~/plugins/i18n'
 import { useResourceIndex } from '~/services/resource-index/service'
+import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import type { ResourceReferenceQuery } from '~/services/resource-index/reference-query'
@@ -21,14 +22,18 @@ export function updateEditorDiagnostics(model: monaco.editor.ITextModel): void {
 
   const workspace = useWorkspaceStore()
   const resourceIndex = useResourceIndex()
+  const resourceStore = useResourceStore()
   const canCheckResources = Boolean(workspace.currentGame?.path) && resourceIndex.status.value === 'ready'
   const markers: monaco.editor.IMarkerData[] = []
   const lines = model.getLinesContent()
   const sentences = lines.map(line => parseSceneOrEmpty(line, TEMP_SCENE_NAME, TEMP_SCENE_URL).sentenceList[0])
 
-  const diagnostics = diagnoseScene(sentences, canCheckResources
-    ? { hasAssetKey: key => resourceIndex.hasAssetKey(key) }
-    : {})
+  const diagnostics = diagnoseScene(sentences, {
+    engineCapabilities: resourceStore.currentEngineCapabilities,
+    hasAssetKey: canCheckResources
+      ? key => resourceIndex.hasAssetKey(key)
+      : undefined,
+  })
 
   for (const diagnostic of diagnostics) {
     const lineNumber = diagnostic.statementIndex + 1
@@ -52,6 +57,18 @@ export function updateEditorDiagnostics(model: monaco.editor.ITextModel): void {
       markers.push({
         ...locateContent(lineNumber, line, sentence.commandRaw, diagnostic.label),
         severity: monaco.MarkerSeverity.Error,
+        message,
+      })
+      continue
+    }
+
+    if (diagnostic.code === 'unsupported-live2d' || diagnostic.code === 'unsupported-spine') {
+      markers.push({
+        ...locateReference(lineNumber, line, sentence.commandRaw, {
+          source: diagnostic.field,
+          value: diagnostic.value,
+        }),
+        severity: monaco.MarkerSeverity.Warning,
         message,
       })
       continue

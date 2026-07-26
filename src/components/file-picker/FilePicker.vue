@@ -12,11 +12,12 @@ import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
 import type { HTMLAttributes } from 'vue'
 
+type FilePickerStatus = 'none' | 'warning' | 'error'
+
 interface FilePickerProps {
   class?: HTMLAttributes['class']
   inputId?: string
-  /** 仅用于控制输入框错误样式，校验逻辑由外部负责 */
-  invalid?: boolean
+  status?: FilePickerStatus
   rootPath: string
   extensions?: string[]
   exclude?: string[]
@@ -41,13 +42,23 @@ type ViewMode = 'list' | 'grid'
 type ZoomLevel = 'small' | 'medium' | 'large' | 'extraLarge'
 
 const ZOOM_MAP: Record<ZoomLevel, number> = { small: 80, medium: 100, large: 120, extraLarge: 140 }
+const INPUT_STATUS_CLASS: Record<FilePickerStatus, string> = {
+  none: '',
+  warning: 'text-yellow-700! bg-yellow/5 border-yellow/50 focus-visible:ring-yellow/30 dark:text-yellow-300!',
+  error: 'text-destructive! bg-destructive/5 border-destructive/50 focus-visible:ring-destructive/30',
+}
+const CLEAR_BUTTON_STATUS_CLASS: Record<FilePickerStatus, string> = {
+  none: 'text-muted-foreground hover:text-foreground',
+  warning: 'text-yellow-700/60 hover:text-yellow-700 dark:text-yellow-300/60 dark:hover:text-yellow-300',
+  error: 'text-destructive/60 hover:text-destructive',
+}
 
 defineOptions({ inheritAttrs: false })
 
 const {
   class: rootClass,
   inputId,
-  invalid = false,
+  status = 'none',
   rootPath,
   extensions = [],
   exclude = [],
@@ -247,7 +258,7 @@ function handleFileListKeydown(event: KeyboardEvent) {
           :placeholder="placeholder || $t('filePicker.placeholder')"
           :class="[
             inputText ? 'pr-7' : '',
-            invalid ? 'text-destructive! bg-destructive/5 border-destructive/50 focus-visible:ring-destructive/30' : '',
+            INPUT_STATUS_CLASS[status],
           ]"
           @focus="handleInputFocus"
           @blur="handleInputBlur"
@@ -258,7 +269,7 @@ function handleFileListKeydown(event: KeyboardEvent) {
           v-if="inputText"
           type="button"
           class="size-4 right-2 top-1/2 absolute -translate-y-1/2"
-          :class="invalid ? 'text-destructive/60 hover:text-destructive' : 'text-muted-foreground hover:text-foreground'"
+          :class="CLEAR_BUTTON_STATUS_CLASS[status]"
           :aria-label="$t('filePicker.clearInput')"
           @click="handleClear"
         >

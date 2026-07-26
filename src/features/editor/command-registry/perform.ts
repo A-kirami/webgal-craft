@@ -1,5 +1,6 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { classifyEngineModelReference } from '~/domain/engine/model-capabilities'
 import { FIGURE_POSITION_TARGET_IDS } from '~/domain/script/types'
 
 import { AUDIO_EXTENSIONS, BACKGROUND_EXTENSIONS, CONTINUE, DEFAULT_ENTER_DURATION, DEFAULT_EXIT_DURATION, EFFECT_DURATION, EFFECT_EASE, EFFECT_TRANSFORM, ENTER_ANIMATION, EXIT_ANIMATION, FIGURE_EXTENSIONS, FIGURE_ID, IGNORE_DEFAULT, IMAGE_EXTENSIONS, NEXT, ORDER, SERIES, SOUND_EFFECT_ID, UNLOCK_NAME, VOLUME } from './common-params'
@@ -8,18 +9,18 @@ import { arg, commandRaw, content, UNSPECIFIED } from './schema'
 import type { CommandEntry } from './schema'
 
 function isLive2dContent(content: string): boolean {
-  return content.endsWith('.json') && !content.includes('?type=spine')
+  return classifyEngineModelReference(content) === 'live2d'
 }
 
 // 判断 content 是否为动画类立绘（Live2D / Spine），用于控制 motion/expression 字段的可见性。
 // 包含 .skel 和 ?type=spine：虽然 .skel 二进制格式无法提供动态选项的自动补全，
 // 但仍需显示字段，确保用户在文本模式下写入的参数在可视化编辑器中可见。
 function isAnimatedContent(content: string): boolean {
-  return content.endsWith('.json') || content.endsWith('.skel') || content.includes('?type=spine')
+  return classifyEngineModelReference(content) !== undefined
 }
 
 function isSpineContent(content: string): boolean {
-  return content.endsWith('.skel') || content.includes('?type=spine')
+  return classifyEngineModelReference(content) === 'spine'
 }
 
 function isImageContent(content: string): boolean {

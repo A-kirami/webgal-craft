@@ -2,7 +2,7 @@ import type { AssetKey } from '~/services/resource-index/keys'
 import type { ResourceReferenceSource } from '~/services/resource-index/reference-query'
 
 export type DiagnosticSeverity = 'error' | 'warning' | 'info' | 'hint'
-export type EditorDiagnosticSource = 'document' | 'scene' | 'resource'
+export type EditorDiagnosticSource = 'document' | 'scene' | 'resource' | 'engine'
 
 interface EditorDiagnosticBase {
   code: string
@@ -40,6 +40,20 @@ export interface MissingResourceEditorDiagnostic extends SceneEditorDiagnosticBa
   value: string
 }
 
+export interface UnsupportedLive2dEditorDiagnostic extends SceneEditorDiagnosticBase {
+  code: 'unsupported-live2d'
+  severity: 'warning'
+  source: 'engine'
+  value: string
+}
+
+export interface UnsupportedSpineEditorDiagnostic extends SceneEditorDiagnosticBase {
+  code: 'unsupported-spine'
+  severity: 'warning'
+  source: 'engine'
+  value: string
+}
+
 export interface InvalidAnimationDocumentDiagnostic extends EditorDiagnosticBase {
   code: 'invalid-animation-json'
   severity: 'error'
@@ -50,11 +64,15 @@ export type SceneEditorDiagnostic =
   | DuplicateLabelEditorDiagnostic
   | MissingLabelEditorDiagnostic
   | MissingResourceEditorDiagnostic
+  | UnsupportedLive2dEditorDiagnostic
+  | UnsupportedSpineEditorDiagnostic
 
 export type EditorFieldDiagnostic =
   | Omit<DuplicateLabelEditorDiagnostic, 'statementIndex'>
   | Omit<MissingLabelEditorDiagnostic, 'statementIndex'>
   | Omit<MissingResourceEditorDiagnostic, 'statementIndex'>
+  | Omit<UnsupportedLive2dEditorDiagnostic, 'statementIndex'>
+  | Omit<UnsupportedSpineEditorDiagnostic, 'statementIndex'>
 
 export type EditorDiagnostic =
   | SceneEditorDiagnostic

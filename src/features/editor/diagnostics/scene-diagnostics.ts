@@ -1,11 +1,16 @@
 import { diagnoseDuplicateSceneLabels, diagnoseMissingSceneLabels } from '~/domain/script/diagnostics'
-import { findMissingSentenceResourceReferences } from '~/features/editor/command-registry/diagnostics'
+import {
+  findMissingSentenceResourceReferences,
+  findUnsupportedEngineModelReferences,
+} from '~/features/editor/command-registry/diagnostics'
 
 import type { SceneEditorDiagnostic } from './types'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { EngineModelCapabilities } from '~/domain/engine/model-capabilities'
 import type { AssetKey } from '~/services/resource-index/keys'
 
 interface DiagnoseSceneOptions {
+  engineCapabilities?: EngineModelCapabilities
   hasAssetKey?: (key: AssetKey) => boolean
 }
 
@@ -48,6 +53,25 @@ export function diagnoseScene(
           field: reference.source,
           severity: 'error',
           source: 'resource',
+          statementIndex,
+          value: reference.value,
+        })
+      }
+    }
+  }
+
+  if (options.engineCapabilities) {
+    for (const [statementIndex, sentence] of sentences.entries()) {
+      if (!sentence) {
+        continue
+      }
+
+      for (const reference of findUnsupportedEngineModelReferences(sentence, options.engineCapabilities)) {
+        diagnostics.push({
+          code: reference.modelType === 'live2d' ? 'unsupported-live2d' : 'unsupported-spine',
+          field: reference.source,
+          severity: 'warning',
+          source: 'engine',
           statementIndex,
           value: reference.value,
         })

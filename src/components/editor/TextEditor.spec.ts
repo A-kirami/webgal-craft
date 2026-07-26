@@ -61,9 +61,10 @@ const {
   }
 })
 
-const { updateEditorDiagnosticsMock, useResourceIndexMock } = vi.hoisted(() => ({
+const { updateEditorDiagnosticsMock, useResourceIndexMock, useResourceStoreMock } = vi.hoisted(() => ({
   updateEditorDiagnosticsMock: vi.fn(),
   useResourceIndexMock: vi.fn(),
+  useResourceStoreMock: vi.fn(),
 }))
 
 vi.mock('~/plugins/editor/diagnostics', () => ({
@@ -72,6 +73,10 @@ vi.mock('~/plugins/editor/diagnostics', () => ({
 
 vi.mock('~/services/resource-index/service', () => ({
   useResourceIndex: useResourceIndexMock,
+}))
+
+vi.mock('~/stores/resource', () => ({
+  useResourceStore: useResourceStoreMock,
 }))
 
 vi.mock('~/features/editor/text-editor/useTextEditorRuntime', () => ({
@@ -121,6 +126,11 @@ import TextEditor from './TextEditor.vue'
 import type { TextProjectionState } from '~/stores/editor'
 
 let resourceIndexRevision = shallowRef(0)
+const resourceStoreState = reactive<{
+  currentEngineCapabilities?: { live2d: boolean, spine: boolean }
+}>({
+  currentEngineCapabilities: undefined,
+})
 
 interface EditorStoreMock {
   currentState?: {
@@ -268,8 +278,11 @@ describe('TextEditor', () => {
     useTextEditorRuntimeMock.mockClear()
     updateEditorDiagnosticsMock.mockReset()
     useResourceIndexMock.mockReset()
+    useResourceStoreMock.mockReset()
     resourceIndexRevision = shallowRef(0)
     useResourceIndexMock.mockReturnValue({ revision: resourceIndexRevision })
+    resourceStoreState.currentEngineCapabilities = undefined
+    useResourceStoreMock.mockReturnValue(resourceStoreState)
 
     ensureModelMock.mockReturnValue({
       id: 'model-1',
@@ -645,6 +658,21 @@ describe('TextEditor', () => {
     updateEditorDiagnosticsMock.mockClear()
 
     resourceIndexRevision.value += 1
+    await nextTick()
+
+    expect(updateEditorDiagnosticsMock).toHaveBeenCalledWith(model)
+  })
+
+  it('当前引擎能力变化后会重新诊断当前模型', async () => {
+    const { state } = createHarness('/project/scene-engine-capabilities.txt')
+    const model = createMonacoModel(['changeFigure:hero.json;'])
+    monacoMockState.editorInstance.getModel.mockReturnValue(model)
+
+    renderTextEditor(state)
+    await nextTick()
+    updateEditorDiagnosticsMock.mockClear()
+
+    resourceStoreState.currentEngineCapabilities = { live2d: false, spine: false }
     await nextTick()
 
     expect(updateEditorDiagnosticsMock).toHaveBeenCalledWith(model)
