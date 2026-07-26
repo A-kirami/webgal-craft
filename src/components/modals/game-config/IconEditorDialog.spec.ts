@@ -5,6 +5,7 @@ import { page } from 'vitest/browser'
 import { defineComponent, h, nextTick } from 'vue'
 
 import {
+  createBrowserActionStub,
   createBrowserClickStub,
   createBrowserContainerStub,
   createBrowserInputStub,
@@ -27,6 +28,7 @@ const {
   buildIconExportOutputsMock,
   handleErrorMock,
   loadIconEditorSourceDataMock,
+  modalOpenMock,
   openDialogMock,
   readFileMock,
   refreshRegisteredGameSnapshotMock,
@@ -37,6 +39,7 @@ const {
   fromExternalAbsPathMock: vi.fn(),
   handleErrorMock: vi.fn(),
   loadIconEditorSourceDataMock: vi.fn(),
+  modalOpenMock: vi.fn(),
   openDialogMock: vi.fn(),
   readFileMock: vi.fn(),
   refreshRegisteredGameSnapshotMock: vi.fn(),
@@ -70,6 +73,12 @@ vi.mock('~/services/platform/path-boundary', () => ({
   fromExternalAbsPath: fromExternalAbsPathMock,
 }))
 
+vi.mock('~/stores/modal', () => ({
+  useModalStore: () => ({
+    open: modalOpenMock,
+  }),
+}))
+
 vi.mock('~/utils/error-handler', () => ({
   handleError: handleErrorMock,
 }))
@@ -77,7 +86,12 @@ vi.mock('~/utils/error-handler', () => ({
 const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
   ColorPicker: createBrowserValueStub('StubColorPicker', 'button'),
-  Dialog: createBrowserContainerStub('StubDialog'),
+  Dialog: createBrowserActionStub('StubDialog', {
+    eventName: 'update:open',
+    includeDefaultSlot: true,
+    payload: false,
+    testId: 'icon-editor-close-request',
+  }),
   DialogContent: createBrowserContainerStub('StubDialogContent', 'section'),
   DialogDescription: createBrowserContainerStub('StubDialogDescription'),
   DialogFooter: createBrowserContainerStub('StubDialogFooter'),
@@ -181,6 +195,38 @@ function createDeferred<T>(): Deferred<T> {
   }
 }
 
+function renderOpenIconEditorDialog() {
+  const updateOpen = vi.fn()
+
+  renderInBrowser(IconEditorDialog, {
+    browser: {
+      i18nMode: 'lite',
+    },
+    props: {
+      'open': true,
+      'gamePath': '/games/demo',
+      'onUpdate:open': updateOpen,
+    },
+    global: {
+      stubs: globalStubs,
+    },
+  })
+
+  return updateOpen
+}
+
+function getSaveChangesCallbacks() {
+  const call = modalOpenMock.mock.calls.find(([name]) => name === 'SaveChangesModal')
+  if (!call) {
+    throw new Error('未打开 SaveChangesModal')
+  }
+
+  return call[1] as {
+    onDontSave: () => void
+    onSave: () => Promise<void>
+  }
+}
+
 describe('IconEditorDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -221,6 +267,92 @@ describe('IconEditorDialog', () => {
     await expect.element(page.getByTestId('icon-editor-preview-grid')).toBeVisible()
     await expect.element(page.getByTestId('icon-editor-generate-hint')).toBeVisible()
     await expect.element(page.getByTestId('icon-editor-generate')).toBeDisabled()
+  })
+
+  it('修改后请求关闭会二次确认而不是直接退出', async () => {
+    const updateOpen = renderOpenIconEditorDialog()
+
+    await page.getByTestId('icon-editor-select-foreground').click()
+    await page.getByTestId('icon-editor-close-request').click()
+
+    expect(updateOpen).not.toHaveBeenCalledWith(false)
+    expect(modalOpenMock).toHaveBeenCalledWith('SaveChangesModal', expect.objectContaining({
+      onDontSave: expect.any(Function),
+      onSave: expect.any(Function),
+    }))
+
+    getSaveChangesCallbacks().onDontSave()
+
+    expect(updateOpen).toHaveBeenCalledWith(false)
+  })
+
+  it('未修改时请求关闭会直接退出', async () => {
+    const updateOpen = renderOpenIconEditorDialog()
+
+    await page.getByTestId('icon-editor-close-request').click()
+
+    expect(modalOpenMock).not.toHaveBeenCalled()
+    expect(updateOpen).toHaveBeenCalledWith(false)
+  })
+
+  it('恢复已有图标配置后未修改会直接退出', async () => {
+    loadIconEditorSourceDataMock.mockResolvedValue({
+      foregroundBytes: new Uint8Array([6, 7]),
+      state: {
+        backgroundColor: '#112233',
+        backgroundOffsetRatio: { x: 0, y: 0 },
+        backgroundScale: 1,
+        backgroundType: 'color',
+        foregroundOffsetRatio: { x: 0.1, y: 0.2 },
+        foregroundScale: 1.4,
+        iconShape: 'rounded',
+        version: 1,
+      },
+    } satisfies IconEditorSourceData)
+
+    const updateOpen = renderOpenIconEditorDialog()
+
+    await vi.waitFor(() => {
+      expect(page.getByTestId('icon-editor-generate').element()).not.toBeDisabled()
+    })
+    await page.getByTestId('icon-editor-close-request').click()
+
+    expect(modalOpenMock).not.toHaveBeenCalled()
+    expect(updateOpen).toHaveBeenCalledWith(false)
+  })
+
+  it('修改后确认保存会生成图标并关闭编辑器', async () => {
+    const updateOpen = renderOpenIconEditorDialog()
+
+    await page.getByTestId('icon-editor-select-foreground').click()
+    await page.getByTestId('icon-editor-close-request').click()
+
+    await getSaveChangesCallbacks().onSave()
+
+    expect(saveIconEditorOutputsMock).toHaveBeenCalledWith('/games/demo', expect.any(Array))
+    expect(updateOpen).toHaveBeenCalledWith(false)
+  })
+
+  it('生成期间忽略关闭请求', async () => {
+    const save = createDeferred<void>()
+    saveIconEditorOutputsMock.mockReturnValueOnce(save.promise)
+    const updateOpen = renderOpenIconEditorDialog()
+
+    await page.getByTestId('icon-editor-select-foreground').click()
+    await page.getByTestId('icon-editor-generate').click()
+    await vi.waitFor(() => {
+      expect(saveIconEditorOutputsMock).toHaveBeenCalled()
+    })
+
+    await page.getByTestId('icon-editor-close-request').click()
+
+    expect(updateOpen).not.toHaveBeenCalledWith(false)
+    expect(modalOpenMock).not.toHaveBeenCalled()
+
+    save.resolve()
+    await vi.waitFor(() => {
+      expect(updateOpen).toHaveBeenCalledWith(false)
+    })
   })
 
   it('打开时使用 icon-data 初始化编辑状态', async () => {

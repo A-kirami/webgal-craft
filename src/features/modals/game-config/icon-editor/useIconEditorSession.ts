@@ -1,6 +1,6 @@
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { readFile } from '@tauri-apps/plugin-fs'
-import { computed, markRaw, ref, toValue, watch } from 'vue'
+import { computed, markRaw, ref, shallowRef, toValue, watch } from 'vue'
 
 import { AbsPath } from '~/domain/path'
 import { gameManager } from '~/services/game-manager'
@@ -36,7 +36,7 @@ import type {
   IconEditorTransformControlValue,
   IconEditorTransformUpdateOptions,
 } from './icon-editor-controls'
-import type { IconEditorImageSource } from './icon-editor-state'
+import type { IconEditorImageSource, IconEditorState } from './icon-editor-state'
 import type { MaybeRefOrGetter, Ref } from 'vue'
 import type { I18nT } from '~/utils/i18n-like'
 
@@ -46,10 +46,33 @@ interface UseIconEditorSessionOptions {
   t: I18nT
 }
 
+function createIconEditorStateSnapshot(state: IconEditorState): IconEditorState {
+  return {
+    ...state,
+    backgroundOffsetRatio: { ...state.backgroundOffsetRatio },
+    foregroundOffsetRatio: { ...state.foregroundOffsetRatio },
+  }
+}
+
+function isIconEditorStateEqual(left: IconEditorState, right: IconEditorState): boolean {
+  return left.backgroundColor === right.backgroundColor
+    && left.backgroundImage === right.backgroundImage
+    && left.backgroundOffsetRatio.x === right.backgroundOffsetRatio.x
+    && left.backgroundOffsetRatio.y === right.backgroundOffsetRatio.y
+    && left.backgroundScale === right.backgroundScale
+    && left.backgroundType === right.backgroundType
+    && left.foregroundImage === right.foregroundImage
+    && left.foregroundOffsetRatio.x === right.foregroundOffsetRatio.x
+    && left.foregroundOffsetRatio.y === right.foregroundOffsetRatio.y
+    && left.foregroundScale === right.foregroundScale
+    && left.iconShape === right.iconShape
+}
+
 export function useIconEditorSession(options: UseIconEditorSessionOptions) {
   const state = ref(createDefaultIconEditorState())
   const previewVersion = ref(0)
   const isSaving = ref(false)
+  const initialStateSnapshot = shallowRef(createIconEditorStateSnapshot(state.value))
   let restoreVersion = 0
 
   const foregroundName = computed(() => state.value.foregroundImage
@@ -65,6 +88,7 @@ export function useIconEditorSession(options: UseIconEditorSessionOptions) {
     ? options.t('modals.gameConfig.iconEditor.replaceImage')
     : options.t('modals.gameConfig.iconEditor.selectImage'))
   const canGenerate = computed(() => Boolean(toValue(options.gamePath) && state.value.foregroundImage && !isSaving.value))
+  const isDirty = computed(() => !isIconEditorStateEqual(state.value, initialStateSnapshot.value))
 
   const foregroundTransformControls = computed((): IconEditorTransformControl[] => [
     createScaleControl('foreground', state.value.foregroundScale, setForegroundScale),
@@ -159,6 +183,7 @@ export function useIconEditorSession(options: UseIconEditorSessionOptions) {
 
   function resetEditorState() {
     state.value = createDefaultIconEditorState()
+    initialStateSnapshot.value = createIconEditorStateSnapshot(state.value)
     bumpPreviewVersion()
   }
 
@@ -231,6 +256,7 @@ export function useIconEditorSession(options: UseIconEditorSessionOptions) {
       foregroundScale,
       iconShape,
     }
+    initialStateSnapshot.value = createIconEditorStateSnapshot(state.value)
     bumpPreviewVersion()
   }
 
@@ -399,6 +425,7 @@ export function useIconEditorSession(options: UseIconEditorSessionOptions) {
     foregroundSelectLabel,
     foregroundTransformControls,
     generate,
+    isDirty,
     isSaving,
     previewVersion,
     selectBackgroundImage,

@@ -5,6 +5,7 @@ import { Button } from '~/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '~/components/ui/dialog'
 import { AbsPath } from '~/domain/path'
 import { useIconEditorSession } from '~/features/modals/game-config/icon-editor/useIconEditorSession'
+import { useModalStore } from '~/stores/modal'
 
 import type { IconPreviewKind } from '~/features/modals/game-config/icon-editor/icon-editor-render'
 
@@ -21,6 +22,7 @@ const props = defineProps<Props>()
 const open = defineModel<boolean>('open', { default: false })
 
 const { t } = useI18n()
+const modalStore = useModalStore()
 
 const {
   backgroundName,
@@ -31,6 +33,8 @@ const {
   foregroundSelectLabel,
   foregroundTransformControls,
   generate,
+  isDirty,
+  isSaving,
   previewVersion,
   selectBackgroundImage,
   selectForeground,
@@ -44,6 +48,39 @@ const {
   t,
 })
 
+function closeDialog() {
+  open.value = false
+}
+
+function requestClose() {
+  if (isSaving.value) {
+    return
+  }
+
+  if (!isDirty.value) {
+    closeDialog()
+    return
+  }
+
+  modalStore.open('SaveChangesModal', {
+    title: t('modals.saveChanges.title', {
+      name: t('modals.gameConfig.iconEditor.title'),
+    }),
+    saveLabel: t('modals.gameConfig.iconEditor.generate'),
+    onSave: generate,
+    onDontSave: closeDialog,
+  })
+}
+
+function handleDialogOpenChange(nextOpen: boolean) {
+  if (nextOpen) {
+    open.value = true
+    return
+  }
+
+  requestClose()
+}
+
 const previewItems = $computed((): PreviewItem[] => [
   { key: 'web', label: t('modals.gameConfig.iconEditor.preview.web') },
   { key: 'web-maskable', label: t('modals.gameConfig.iconEditor.preview.webMaskable') },
@@ -55,7 +92,7 @@ const previewItems = $computed((): PreviewItem[] => [
 </script>
 
 <template>
-  <Dialog :open="open" @update:open="open = $event">
+  <Dialog :open="open" @update:open="handleDialogOpenChange">
     <DialogContent
       data-testid="icon-editor-dialog"
       class="grid grid-rows-[auto_minmax(0,1fr)_auto] h-38rem max-w-228 overflow-hidden"
