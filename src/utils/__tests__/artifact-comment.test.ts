@@ -32,6 +32,12 @@ describe('createArtifactComment', () => {
           size_in_bytes: 20 * 1024 ** 2,
           workflow_run: { id: 42 },
         },
+        {
+          id: 3,
+          name: 'webgal-craft-v1.2.3-android-arm64-pr-12-abcdef0',
+          size_in_bytes: 30 * 1024 ** 2,
+          workflow_run: { id: 42 },
+        },
       ],
       sha: 'abcdef0123456789',
       failedJobs: [],
@@ -39,8 +45,10 @@ describe('createArtifactComment', () => {
 
     expect(comment).toContain('| 🪟 windows-x64 |')
     expect(comment).toContain('| 🍎 macos-arm64 |')
+    expect(comment).toContain('| 🤖 android-arm64 |')
     expect(comment).toContain('[webgal-craft-v1.2.3-windows-x64-pr-12-abcdef0](https://github.com/project/webgal-craft/actions/runs/42/artifacts/1)')
     expect(comment).toContain('[webgal-craft-v1.2.3-macos-arm64-commit-fedcba9](https://github.com/project/webgal-craft/actions/runs/42/artifacts/2)')
+    expect(comment).toContain('[webgal-craft-v1.2.3-android-arm64-pr-12-abcdef0](https://github.com/project/webgal-craft/actions/runs/42/artifacts/3)')
     expect(comment).toContain(String.raw`\**从提交 abcdef0123456789 构建*`)
     expect(comment).not.toContain('以下构建任务出现异常')
   })

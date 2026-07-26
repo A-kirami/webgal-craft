@@ -6,6 +6,7 @@ const platformIcon = {
   windows: '🪟',
   macos: '🍎',
   linux: '🐧',
+  android: '🤖',
   unknown: '❔',
 }
 
@@ -13,7 +14,7 @@ const platformIcon = {
  * @param {string} name
  */
 function getArtifactPlatform(name) {
-  const match = /(?<platform>(?<os>windows|macos|linux)-(?<arch>[a-z0-9]+))(?:-|$)/.exec(name)
+  const match = /(?<platform>(?<os>windows|macos|linux|android)-(?<arch>[a-z0-9]+))(?:-|$)/.exec(name)
   if (!match?.groups) {
     return {
       icon: platformIcon.unknown,

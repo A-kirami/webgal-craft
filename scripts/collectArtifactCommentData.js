@@ -1,8 +1,8 @@
 // @ts-check
 /* eslint-disable camelcase */
 
-const artifactPlatformPattern = /(?<platform>(?<os>windows|macos|linux)-(?<arch>[a-z0-9]+))(?:-|$)/
-const platformJobPattern = /^(windows|macos|linux)-[a-z0-9]+$/
+const artifactPlatformPattern = /(?<platform>(?<os>windows|macos|linux|android)-(?<arch>[a-z0-9]+))(?:-|$)/
+const platformJobPattern = /^(windows|macos|linux|android)-[a-z0-9]+$/
 const failedJobConclusions = new Set(['failure', 'cancelled', 'timed_out', 'startup_failure', 'action_required'])
 const defaultJobsApiSyncDelayMs = 5000
 const defaultJobsApiSyncMaxAttempts = 6
