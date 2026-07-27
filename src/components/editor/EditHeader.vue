@@ -6,6 +6,7 @@ import { windowCmds } from '~/commands/window'
 import { parseGameConfigFormValues } from '~/features/modals/game-config/game-config-form'
 import { configManager } from '~/services/config-manager'
 import { gameAssetDir } from '~/services/platform/app-paths'
+import { isDesktopRuntime } from '~/services/platform/runtime'
 import { useEditorStore } from '~/stores/editor'
 import { useModalStore } from '~/stores/modal'
 import { usePreviewSessionStore } from '~/stores/preview-session'
@@ -22,6 +23,7 @@ const editorStore = useEditorStore()
 const workspaceStore = useWorkspaceStore()
 const previewSessionStore = usePreviewSessionStore()
 const modalStore = useModalStore()
+const isDesktop = isDesktopRuntime()
 
 async function navigateHome() {
   void closeTestWindow()
@@ -246,6 +248,7 @@ onBeforeUnmount(() => {
     </div>
     <div class="flex gap-2 items-center">
       <Button
+        v-if="isDesktop"
         :variant="isTestWindowActive ? 'outline' : 'default'"
         size="sm"
         class="gap-1 h-8"

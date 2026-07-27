@@ -72,7 +72,6 @@ impl WindowConfig {
             .use_custom_title_bar(true)
     }
 
-    #[cfg(desktop)]
     fn apply_platform_tweaks<'a, R: Runtime, M: tauri::Manager<R>>(
         use_custom_title_bar: bool,
         builder: WebviewWindowBuilder<'a, R, M>,
@@ -82,7 +81,7 @@ impl WindowConfig {
             "--force_high_performance_gpu --autoplay-policy=no-user-gesture-required",
         );
 
-        #[cfg(any(target_os = "windows", target_os = "linux"))]
+        #[cfg(not(target_os = "macos"))]
         let builder = if use_custom_title_bar {
             builder.decorations(false)
         } else {
@@ -105,37 +104,45 @@ impl WindowConfig {
         self,
         handle: &AppHandle<R>,
     ) -> tauri::Result<tauri::WebviewWindow<R>> {
-        let label = self.label;
-        let url = self.url;
+        let WindowConfig {
+            label,
+            url,
+            title,
+            min_width,
+            min_height,
+            width,
+            height,
+            resizable,
+            center,
+            visible,
+            use_custom_title_bar,
+        } = self;
 
         if label != "main" {
             log::debug!("正在创建窗口 '{}'，URL: '{:?}'", label, url);
         }
 
         let mut builder = WebviewWindowBuilder::new(handle, &label, url)
-            .resizable(self.resizable)
-            .visible(self.visible);
+            .resizable(resizable)
+            .visible(visible);
 
-        if let (Some(width), Some(height)) = (self.min_width, self.min_height) {
+        if let (Some(width), Some(height)) = (min_width, min_height) {
             builder = builder.min_inner_size(width, height);
         }
 
-        if let (Some(width), Some(height)) = (self.width, self.height) {
+        if let (Some(width), Some(height)) = (width, height) {
             builder = builder.inner_size(width, height);
         }
 
-        if let Some(title) = self.title {
+        if let Some(title) = title {
             builder = builder.title(title);
         }
 
-        #[cfg(desktop)]
-        {
-            if self.center {
-                builder = builder.center();
-            }
-
-            builder = Self::apply_platform_tweaks(self.use_custom_title_bar, builder);
+        if center {
+            builder = builder.center();
         }
+
+        builder = Self::apply_platform_tweaks(use_custom_title_bar, builder);
 
         builder.build()
     }

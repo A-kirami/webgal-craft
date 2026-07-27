@@ -20,6 +20,7 @@ const {
   getDirtyBufferContentMock,
   getByLabelMock,
   hasUnsavedDocumentsUnderMock,
+  isDesktopRuntimeMock,
   loggerErrorMock,
   modalOpenMock,
   routerPushMock,
@@ -35,6 +36,7 @@ const {
   getDirtyBufferContentMock: vi.fn(),
   getByLabelMock: vi.fn(),
   hasUnsavedDocumentsUnderMock: vi.fn(),
+  isDesktopRuntimeMock: vi.fn(() => true),
   loggerErrorMock: vi.fn(),
   modalOpenMock: vi.fn(),
   routerPushMock: vi.fn(),
@@ -77,6 +79,10 @@ vi.mock('~/services/config-manager', () => ({
 
 vi.mock('~/services/platform/app-paths', () => ({
   gameAssetDir: vi.fn((gamePath: string, assetType: string) => `${gamePath}/game/${assetType}`),
+}))
+
+vi.mock('~/services/platform/runtime', () => ({
+  isDesktopRuntime: isDesktopRuntimeMock,
 }))
 
 vi.mock('~/stores/editor', () => ({
@@ -162,6 +168,7 @@ describe('EditHeader', () => {
     hasUnsavedDocumentsUnderMock.mockReset()
     loggerErrorMock.mockReset()
     modalOpenMock.mockReset()
+    isDesktopRuntimeMock.mockReset()
     routerPushMock.mockReset()
     saveFileMock.mockReset()
     toastErrorMock.mockReset()
@@ -172,6 +179,7 @@ describe('EditHeader', () => {
 
     collectDocumentPathsUnderMock.mockReturnValue([])
     hasUnsavedDocumentsUnderMock.mockReturnValue(false)
+    isDesktopRuntimeMock.mockReturnValue(true)
     useEditorStoreMock.mockReturnValue({
       collectDocumentPathsUnder: collectDocumentPathsUnderMock,
       getDirtyBufferContent: getDirtyBufferContentMock,
@@ -288,6 +296,34 @@ describe('EditHeader', () => {
         path: '/games/test',
       }),
     })
+  })
+
+  it('桌面端显示测试窗口入口', async () => {
+    renderInBrowser(EditHeader, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('button', { name: 'edit.header.testGame' })).toBeInTheDocument()
+  })
+
+  it('移动端不显示桌面测试窗口入口', async () => {
+    isDesktopRuntimeMock.mockReturnValue(false)
+
+    renderInBrowser(EditHeader, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('button', { name: 'edit.header.testGame' })).not.toBeInTheDocument()
   })
 
   it('返回主页前无未保存更改时直接跳转', async () => {

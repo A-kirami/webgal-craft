@@ -2,6 +2,7 @@ use tauri::Manager;
 mod commands;
 mod generated;
 mod vfs;
+#[cfg(desktop)]
 mod window;
 use commands::server::ServerState;
 use commands::vfs::OverlayFactoryCache;
@@ -18,7 +19,12 @@ const LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 pub fn run() {
     let builder = tauri::Builder::default().setup(|app| {
         let app_handle = app.handle();
+        #[cfg(desktop)]
         let _window = window::create_main(app_handle, "WebGAL Craft")?;
+        #[cfg(mobile)]
+        let _window =
+            tauri::WebviewWindowBuilder::new(app_handle, "main", tauri::WebviewUrl::default())
+                .build()?;
 
         #[cfg(debug_assertions)]
         _window.open_devtools();
@@ -115,6 +121,7 @@ pub fn run() {
             commands::fs::is_binary_file,
             commands::fs::get_image_dimensions,
             // window
+            #[cfg(desktop)]
             commands::window::create_window,
         ])
         .run(tauri::generate_context!())

@@ -56,7 +56,6 @@ pub async fn create_window(app_handle: AppHandle, options: CreateWindowOptions) 
 
     if let Some(window) = app_handle.get_webview_window(&label) {
         if reuse.unwrap_or(false) {
-            #[cfg(desktop)]
             if window.is_minimized()? {
                 window.unminimize()?;
             }

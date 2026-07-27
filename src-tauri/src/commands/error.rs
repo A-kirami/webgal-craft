@@ -18,6 +18,7 @@ pub enum AppError {
     #[error("配置错误: {0}")]
     Config(String),
 
+    #[cfg(desktop)]
     #[error("窗口错误: {0}")]
     Window(String),
 
@@ -54,6 +55,7 @@ impl AppError {
             Self::Image(_) => "IMAGE_ERROR",
             Self::Server(_) => "SERVER_ERROR",
             Self::Config(_) => "CONFIG_ERROR",
+            #[cfg(desktop)]
             Self::Window(_) => "WINDOW_ERROR",
             Self::Export(_) => "EXPORT_ERROR",
             Self::TargetConflict(_) => "TARGET_CONFLICT",
@@ -115,6 +117,7 @@ mod tests {
         assert_eq!(AppError::Image("image".into()).code(), "IMAGE_ERROR");
         assert_eq!(AppError::Server("server".into()).code(), "SERVER_ERROR");
         assert_eq!(AppError::Config("config".into()).code(), "CONFIG_ERROR");
+        #[cfg(desktop)]
         assert_eq!(AppError::Window("window".into()).code(), "WINDOW_ERROR");
         assert_eq!(AppError::Export("export".into()).code(), "EXPORT_ERROR");
         assert_eq!(
