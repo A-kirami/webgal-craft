@@ -235,6 +235,7 @@ modals:
     title: 删除游戏
     description: 确定要删除游戏 {name} 吗？
     deleteFiles: 同时删除游戏文件
+    moveFilesToTrash: 同时将游戏文件移到回收站
     deleteFailed: 游戏删除失败
     removeTitle: 移除游戏记录
     removeDescription: 确定要移除游戏 {name} 的记录吗？
