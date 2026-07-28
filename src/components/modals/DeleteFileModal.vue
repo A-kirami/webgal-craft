@@ -3,6 +3,7 @@ import { TriangleAlert } from '@lucide/vue'
 
 import { AbsPath } from '~/domain/path'
 import { gameFs } from '~/services/game-fs'
+import { isDesktopRuntime } from '~/services/platform/runtime'
 import { usePreferenceStore } from '~/stores/preference'
 import { handleError } from '~/utils/error-handler'
 
@@ -19,12 +20,15 @@ const { file, onConfirm } = defineProps<{
 }>()
 
 const preferenceStore = usePreferenceStore()
+const isDesktop = isDesktopRuntime()
 let skipConfirm = $ref(preferenceStore.skipDeleteFileConfirm)
 
 async function handleConfirm() {
   try {
-    await gameFs.deleteFile(AbsPath.from(file.path))
-    preferenceStore.skipDeleteFileConfirm = skipConfirm
+    await gameFs.deleteFile(AbsPath.from(file.path), !isDesktop)
+    if (isDesktop) {
+      preferenceStore.skipDeleteFileConfirm = skipConfirm
+    }
     await onConfirm?.()
     open = false
   } catch (error) {
@@ -54,12 +58,16 @@ async function handleConfirm() {
           <AlertDialogDescription>
             <span>
               {{
-                file.isDir
-                  ? $t('modals.deleteFile.folderDescription')
-                  : $t('modals.deleteFile.description')
+                isDesktop
+                  ? (file.isDir
+                    ? $t('modals.deleteFile.folderDescription')
+                    : $t('modals.deleteFile.description'))
+                  : (file.isDir
+                    ? $t('modals.deleteFile.permanentFolderDescription')
+                    : $t('modals.deleteFile.permanentDescription'))
               }}
             </span>
-            <div class="mt-4 flex items-center space-x-2">
+            <div v-if="isDesktop" class="mt-4 flex items-center space-x-2">
               <Checkbox
                 id="skipConfirm"
                 ::="skipConfirm"
@@ -78,7 +86,7 @@ async function handleConfirm() {
       <AlertDialogFooter>
         <AlertDialogCancel>{{ $t('common.cancel') }}</AlertDialogCancel>
         <AlertDialogAction variant="destructive" @click="handleConfirm">
-          {{ $t('common.moveToTrash') }}
+          {{ isDesktop ? $t('common.moveToTrash') : $t('common.delete') }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

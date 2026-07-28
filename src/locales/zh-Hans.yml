@@ -246,6 +246,8 @@ modals:
     folderTitle: 确定要删除文件夹 {name} 及其内容？
     description: 你可以从回收站还原此文件。
     folderDescription: 删除后你可以从回收站还原此文件夹及内容。
+    permanentDescription: 此文件将被永久删除，操作无法撤销。
+    permanentFolderDescription: 此文件夹及其内容将被永久删除，操作无法撤销。
     skipConfirm: 不再显示此提示
   deleteGameConfirm:
     title: 最终确认

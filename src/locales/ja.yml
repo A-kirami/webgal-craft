@@ -246,6 +246,8 @@ modals:
     folderTitle: フォルダー {name} とその内容を削除しますか？
     description: このファイルはゴミ箱から復元できます。
     folderDescription: このフォルダーとその内容はゴミ箱から復元できます。
+    permanentDescription: このファイルは完全に削除されます。この操作は元に戻せません。
+    permanentFolderDescription: このフォルダーとその内容は完全に削除されます。この操作は元に戻せません。
     skipConfirm: 今後この確認を表示しない
   deleteGameConfirm:
     title: 最終確認
