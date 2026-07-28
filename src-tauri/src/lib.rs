@@ -26,7 +26,7 @@ pub fn run() {
             tauri::WebviewWindowBuilder::new(app_handle, "main", tauri::WebviewUrl::default())
                 .build()?;
 
-        #[cfg(debug_assertions)]
+        #[cfg(all(desktop, debug_assertions))]
         _window.open_devtools();
 
         app.manage(OverlayFactoryCache::default());
