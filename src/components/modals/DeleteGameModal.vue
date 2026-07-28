@@ -2,6 +2,7 @@
 import { TriangleAlert } from '@lucide/vue'
 
 import { gameManager } from '~/services/game-manager'
+import { isDesktopRuntime } from '~/services/platform/runtime'
 import { useModalStore } from '~/stores/modal'
 
 import type { Game } from '~/database/model'
@@ -18,6 +19,10 @@ let isConfirming = $ref(false)
 const modalStore = useModalStore()
 
 const isUnavailable = $computed(() => game.availability !== 'available')
+const isDesktop = isDesktopRuntime()
+const removeFilesLabel = isDesktop
+  ? t('modals.deleteGame.moveFilesToTrash')
+  : t('modals.deleteGame.deleteFiles')
 
 async function performDelete(removeFiles: boolean): Promise<boolean> {
   try {
@@ -47,13 +52,13 @@ async function handleConfirm() {
       return
     }
 
-    if (removeFiles) {
+    if (removeFiles && !isDesktop) {
       modalStore.open('DeleteGameConfirmModal', {
         game,
         onConfirm: () => performDelete(true),
       })
     } else {
-      if (await performDelete(false)) {
+      if (await performDelete(removeFiles)) {
         open = false
       }
     }
@@ -97,7 +102,7 @@ async function handleConfirm() {
                 for="removeFiles"
                 class="text-sm leading-none font-medium peer-disabled:opacity-70 peer-disabled:cursor-not-allowed"
               >
-                {{ $t('modals.deleteGame.deleteFiles') }}
+                {{ removeFilesLabel }}
               </label>
             </div>
           </AlertDialogDescription>
@@ -105,9 +110,9 @@ async function handleConfirm() {
       </div>
       <AlertDialogFooter>
         <AlertDialogCancel>{{ $t('common.cancel') }}</AlertDialogCancel>
-        <AlertDialogAction variant="destructive" :disabled="isConfirming" @click="handleConfirm">
-          {{ $t('common.confirm') }}
-        </AlertDialogAction>
+        <Button variant="destructive" :disabled="isConfirming" @click="handleConfirm">
+          {{ removeFiles && isDesktop ? $t('common.moveToTrash') : $t('common.confirm') }}
+        </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>

@@ -2015,17 +2015,28 @@ describe('gameManager', () => {
     vi.useRealTimers()
   })
 
-  it('deleteGame 在 removeFiles=true 时会通过 fs 命令删除游戏目录后再删除记录', async () => {
+  it('deleteGame 在 removeFiles=true 时会将游戏目录移到回收站后再删除记录', async () => {
     await gameManager.deleteGame(createTestGame({
       id: 'game-1',
       path: AbsPath.from('/games/demo'),
     }), true)
 
-    expect(deleteFileMock).toHaveBeenCalledWith('/games/demo', true)
+    expect(deleteFileMock).toHaveBeenCalledWith('/games/demo')
     expect(dbGameDeleteMock).toHaveBeenCalledWith('game-1')
     expect(deleteFileMock.mock.invocationCallOrder[0]).toBeLessThan(
       dbGameDeleteMock.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
     )
+  })
+
+  it('deleteGame 在移动游戏目录失败时会保留游戏记录', async () => {
+    deleteFileMock.mockRejectedValueOnce(new Error('trash unavailable'))
+
+    await expect(gameManager.deleteGame(createTestGame({
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+    }), true)).rejects.toThrow('trash unavailable')
+
+    expect(dbGameDeleteMock).not.toHaveBeenCalled()
   })
 
   it('touchGameLastModified 只更新时间戳，不刷新预览资源快照', async () => {

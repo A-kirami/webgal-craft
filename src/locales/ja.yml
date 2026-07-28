@@ -235,6 +235,7 @@ modals:
     title: ゲームを削除
     description: ゲーム {name} を削除してもよろしいですか？
     deleteFiles: ゲームファイルも削除
+    moveFilesToTrash: ゲームファイルもゴミ箱に移動
     deleteFailed: ゲームの削除に失敗しました
     removeTitle: ゲーム記録を削除
     removeDescription: ゲーム {name} の記録を削除してもよろしいですか？

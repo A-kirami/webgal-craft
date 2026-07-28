@@ -893,7 +893,7 @@ async function createGame(gameName: string, gamePath: AbsPath, engineId: string,
 
 async function deleteGame(game: Game, removeFiles: boolean = false): Promise<void> {
   if (removeFiles) {
-    await fsCmds.deleteFile(game.path, true)
+    await fsCmds.deleteFile(game.path)
   }
   await db.games.delete(game.id)
 }

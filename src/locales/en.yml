@@ -235,6 +235,7 @@ modals:
     title: Delete Game
     description: Are you sure you want to delete the game {name}?
     deleteFiles: Delete game files as well
+    moveFilesToTrash: Move game files to the recycle bin as well
     deleteFailed: Failed to delete game
     removeTitle: Remove Game Record
     removeDescription: Are you sure you want to remove the record for {name}?
