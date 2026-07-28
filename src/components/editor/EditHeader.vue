@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ArrowLeft, Download, Loader2, MonitorPlay, Pencil, Play, Settings } from '@lucide/vue'
+import { onBackButtonPress } from '@tauri-apps/api/app'
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 
 import { windowCmds } from '~/commands/window'
 import { parseGameConfigFormValues } from '~/features/modals/game-config/game-config-form'
 import { configManager } from '~/services/config-manager'
 import { gameAssetDir } from '~/services/platform/app-paths'
-import { isDesktopRuntime } from '~/services/platform/runtime'
+import { isAndroidRuntime, isDesktopRuntime } from '~/services/platform/runtime'
 import { useEditorStore } from '~/stores/editor'
 import { useModalStore } from '~/stores/modal'
 import { usePreviewSessionStore } from '~/stores/preview-session'
@@ -14,6 +15,7 @@ import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
+import type { AbsPath } from '~/domain/path'
 
 const router = useRouter()
 
@@ -24,6 +26,14 @@ const workspaceStore = useWorkspaceStore()
 const previewSessionStore = usePreviewSessionStore()
 const modalStore = useModalStore()
 const isDesktop = isDesktopRuntime()
+const isAndroid = isAndroidRuntime()
+
+async function saveDirtyDocumentsUnder(gamePath: AbsPath) {
+  const dirtyPaths = editorStore.collectDocumentPathsUnder(gamePath)
+    .filter(path => editorStore.getDirtyBufferContent(path) !== undefined)
+
+  await Promise.all(dirtyPaths.map(path => editorStore.saveFile(path)))
+}
 
 async function navigateHome() {
   void closeTestWindow()
@@ -45,10 +55,7 @@ async function handleBack() {
     onDontSave: navigateHome,
     onSave: async () => {
       try {
-        const dirtyPaths = editorStore.collectDocumentPathsUnder(currentGamePath)
-          .filter(path => editorStore.getDirtyBufferContent(path) !== undefined)
-
-        await Promise.all(dirtyPaths.map(path => editorStore.saveFile(path)))
+        await saveDirtyDocumentsUnder(currentGamePath)
         await navigateHome()
       } catch (error) {
         handleError(error)
@@ -73,8 +80,52 @@ const testWindowLabel = $computed(() => (workspaceStore.currentGame ? `test-${wo
 let isTestOpening = $ref(false)
 let isTestWindowActive = $ref(false)
 let unlistenWindowClosed: UnlistenFn | undefined
+let backButtonListener: Awaited<ReturnType<typeof onBackButtonPress>> | undefined
 let lastTestWindowLabel = $ref('')
 let isGameConfigOpening = false
+let isUnmounted = false
+
+async function saveBeforeBackground() {
+  if (document.visibilityState !== 'hidden') {
+    return
+  }
+
+  const currentGamePath = workspaceStore.currentGame?.path
+  if (!currentGamePath) {
+    return
+  }
+
+  try {
+    await saveDirtyDocumentsUnder(currentGamePath)
+  } catch (error) {
+    handleError(error)
+  }
+}
+
+if (isAndroid) {
+  useEventListener(document, 'visibilitychange', () => {
+    void saveBeforeBackground()
+  })
+}
+
+onMounted(async () => {
+  if (!isAndroid) {
+    return
+  }
+
+  try {
+    const listener = await onBackButtonPress(() => {
+      void handleBack()
+    })
+    if (isUnmounted) {
+      await listener.unregister()
+      return
+    }
+    backButtonListener = listener
+  } catch (error) {
+    handleError(error, { silent: true })
+  }
+})
 
 async function handleOpenGameConfig() {
   const currentGame = workspaceStore.currentGame
@@ -209,8 +260,10 @@ async function closeTestWindow() {
 }
 
 onBeforeUnmount(() => {
+  isUnmounted = true
   void closeTestWindow()
   unlistenWindowClosed?.()
+  void backButtonListener?.unregister()
 })
 </script>
 

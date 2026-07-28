@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { defineComponent, h, ref } from 'vue'
 
@@ -10,6 +10,10 @@ import GamesTabCollectionSection from './GamesTabCollectionSection.vue'
 import type { PropType } from 'vue'
 import type { Game } from '~/database/model'
 import type { GameCollectionItem } from '~/features/home/home-collection-items'
+
+const { isAndroidRuntimeMock } = vi.hoisted(() => ({
+  isAndroidRuntimeMock: vi.fn(() => false),
+}))
 
 vi.mock('~/composables/useTauriDropZone', () => ({
   useTauriDropZone: () => ({
@@ -23,6 +27,10 @@ vi.mock('~/plugins/dayjs', () => ({
     fromNow: () => 'just now',
   }),
   setDayjsLocale: vi.fn(),
+}))
+
+vi.mock('~/services/platform/runtime', () => ({
+  isAndroidRuntime: isAndroidRuntimeMock,
 }))
 
 interface ThumbnailStubValue {
@@ -77,6 +85,10 @@ const globalStubs = {
 }
 
 describe('GamesTabCollectionSection', () => {
+  beforeEach(() => {
+    isAndroidRuntimeMock.mockReturnValue(false)
+  })
+
   afterEach(() => {
     vi.clearAllMocks()
   })
@@ -126,6 +138,36 @@ describe('GamesTabCollectionSection', () => {
     })
 
     await expect.element(page.getByRole('button', { name: 'home.games.deleteGame' })).not.toBeInTheDocument()
+  })
+
+  it('Android 网格视图提供可直接触控的删除操作且不会打开游戏', async () => {
+    isAndroidRuntimeMock.mockReturnValue(true)
+    const game = createTestGame()
+    const onDeleteGame = vi.fn()
+    const onGameClick = vi.fn()
+
+    renderInBrowser(GamesTabCollectionSection, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        items: createItems([game]),
+        getGameProgress: () => 0,
+        hasGameProgress: () => false,
+        onDeleteGame,
+        onGameClick,
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'home.games.deleteGame' }).click()
+
+    expect(onDeleteGame).toHaveBeenCalledOnce()
+    expect(onDeleteGame).toHaveBeenCalledWith(game)
+    expect(onGameClick).not.toHaveBeenCalled()
   })
 
   it('网格视图只为路径仍可达的游戏显示打开文件夹操作', async () => {

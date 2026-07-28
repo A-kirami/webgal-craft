@@ -36,6 +36,19 @@ body {
     display: none;
     appearance: none;
   }
+
+  @media (pointer: coarse) {
+    button:not(:disabled),
+    [role="button"]:not(:disabled) {
+      min-width: 44px;
+      min-height: 44px;
+    }
+  }
+}
+
+.safe-area-scroll-dialog-overlay {
+  padding-block: calc(env(safe-area-inset-top) + 2rem) calc(env(safe-area-inset-bottom) + 2rem);
+  padding-inline: calc(env(safe-area-inset-left) + 1rem) calc(env(safe-area-inset-right) + 1rem);
 }
 
 .bg-checkerboard {
