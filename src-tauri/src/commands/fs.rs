@@ -281,16 +281,22 @@ pub async fn delete_file(path: String, permanent: Option<bool>) -> AppResult<()>
 
     let should_permanent_delete = permanent.unwrap_or(false);
 
-    if should_permanent_delete {
-        // 直接删除
-        if path.is_dir() {
-            fs::remove_dir_all(path)?;
-        } else {
-            fs::remove_file(path)?;
+    if !should_permanent_delete {
+        #[cfg(desktop)]
+        {
+            trash::delete(path)
+                .map_err(|e| AppError::Server(format!("移动到回收站失败: {}", e)))?;
+            return Ok(());
         }
+
+        #[cfg(mobile)]
+        return Err(AppError::Server("移动端暂不支持将文件移入回收站".into()));
+    }
+
+    if path.is_dir() {
+        fs::remove_dir_all(path)?;
     } else {
-        // 移动到回收站
-        trash::delete(path).map_err(|e| AppError::Server(format!("移动到回收站失败: {}", e)))?;
+        fs::remove_file(path)?;
     }
 
     Ok(())

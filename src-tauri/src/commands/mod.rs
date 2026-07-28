@@ -7,6 +7,7 @@ pub mod game;
 pub mod project_config;
 pub mod server;
 pub mod vfs;
+#[cfg(desktop)]
 pub mod window;
 
 pub use error::{AppError, AppResult};

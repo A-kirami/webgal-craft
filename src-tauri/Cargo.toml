@@ -30,7 +30,6 @@ tower = "0.5"
 tower-http = { version = "0.6", features = ["fs"] }
 thiserror = "2.0"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "ico"] }
-trash = "5.2"
 futures-util = "0.3"
 tempfile = "3.27"
 percent-encoding = "2.3"
@@ -41,6 +40,7 @@ chrono = { version = "0.4", default-features = false, features = ["clock", "serd
 tauri-plugin-single-instance = "2.4"
 tauri-plugin-updater = "2.10"
 tauri-plugin-window-state = "2.4"
+trash = "5.2"
 
 [profile.dev]
 incremental = true # Compile your binary in smaller steps.

@@ -1,12 +1,16 @@
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { ref } from 'vue'
 
+import { isDesktopRuntime } from '~/services/platform/runtime'
+
 export const appWindow = getCurrentWebviewWindow()
 export const isWindowMaximized = ref(false)
 
-appWindow.onResized(async () => {
-  isWindowMaximized.value = await appWindow.isMaximized()
-})
+if (isDesktopRuntime()) {
+  appWindow.onResized(async () => {
+    isWindowMaximized.value = await appWindow.isMaximized()
+  })
+}
 
 export const minimizeWindow = async () => {
   await appWindow.minimize()

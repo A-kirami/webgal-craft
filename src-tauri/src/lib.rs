@@ -2,6 +2,7 @@ use tauri::Manager;
 mod commands;
 mod generated;
 mod vfs;
+#[cfg(desktop)]
 mod window;
 use commands::server::ServerState;
 use commands::vfs::OverlayFactoryCache;
@@ -16,11 +17,16 @@ const LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let mut builder = tauri::Builder::default().setup(|app| {
+    let builder = tauri::Builder::default().setup(|app| {
         let app_handle = app.handle();
+        #[cfg(desktop)]
         let _window = window::create_main(app_handle, "WebGAL Craft")?;
+        #[cfg(mobile)]
+        let _window =
+            tauri::WebviewWindowBuilder::new(app_handle, "main", tauri::WebviewUrl::default())
+                .build()?;
 
-        #[cfg(debug_assertions)]
+        #[cfg(all(desktop, debug_assertions))]
         _window.open_devtools();
 
         app.manage(OverlayFactoryCache::default());
@@ -30,17 +36,15 @@ pub fn run() {
     });
 
     #[cfg(desktop)]
-    {
-        builder = builder
-            .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-                let _ = app
-                    .get_webview_window("main")
-                    .expect("no main window")
-                    .set_focus();
-            }))
-            .plugin(tauri_plugin_updater::Builder::new().build())
-            .plugin(tauri_plugin_window_state::Builder::new().build());
-    }
+    let builder = builder
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            let _ = app
+                .get_webview_window("main")
+                .expect("no main window")
+                .set_focus();
+        }))
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_window_state::Builder::new().build());
 
     let prevent_default_plugin = tauri_plugin_prevent_default::Builder::new()
         .with_flags(tauri_plugin_prevent_default::Flags::debug());
@@ -117,6 +121,7 @@ pub fn run() {
             commands::fs::is_binary_file,
             commands::fs::get_image_dimensions,
             // window
+            #[cfg(desktop)]
             commands::window::create_window,
         ])
         .run(tauri::generate_context!())

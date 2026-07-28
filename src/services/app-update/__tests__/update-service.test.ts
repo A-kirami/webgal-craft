@@ -9,6 +9,7 @@ const {
   downloadMock,
   installMock,
   openUrlMock,
+  platformMock,
   relaunchMock,
 } = vi.hoisted(() => ({
   checkMock: vi.fn(),
@@ -17,6 +18,7 @@ const {
   downloadMock: vi.fn(),
   installMock: vi.fn(),
   openUrlMock: vi.fn(),
+  platformMock: vi.fn(),
   relaunchMock: vi.fn(),
 }))
 
@@ -26,6 +28,10 @@ vi.mock('@tauri-apps/plugin-updater', () => ({
 
 vi.mock('@tauri-apps/plugin-opener', () => ({
   openUrl: openUrlMock,
+}))
+
+vi.mock('@tauri-apps/plugin-os', () => ({
+  platform: platformMock,
 }))
 
 vi.mock('@tauri-apps/plugin-process', () => ({
@@ -62,6 +68,16 @@ async function importService() {
 describe('appUpdateService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    platformMock.mockReturnValue('windows')
+  })
+
+  it('Android 不调用桌面更新检查', async () => {
+    platformMock.mockReturnValue('android')
+    const { appUpdateService } = await importService()
+
+    await expect(appUpdateService.checkForUpdate()).resolves.toBeUndefined()
+
+    expect(checkMock).not.toHaveBeenCalled()
   })
 
   it('下载更新时只调用 download，不触发 install 或 downloadAndInstall', async () => {

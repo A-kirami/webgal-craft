@@ -44,6 +44,12 @@ const windowsArtifact: ArtifactFixture = {
   size_in_bytes: 10 * 1024 ** 2,
   workflow_run: { id: workflowRunId },
 }
+const androidArtifact: ArtifactFixture = {
+  id: 2,
+  name: 'webgal-craft-v1.2.3-android-arm64-pr-12-abcdef0',
+  size_in_bytes: 20 * 1024 ** 2,
+  workflow_run: { id: workflowRunId },
+}
 const successfulBuildSteps: JobStepFixture[] = [
   { name: 'Build app', conclusion: 'success' },
   { name: 'Upload build artifacts', conclusion: 'success' },
@@ -107,7 +113,7 @@ function collectForTest({
 describe('collectArtifactCommentData', () => {
   it('汇总 artifact 并归一化构建失败与上传失败的 job', async () => {
     const { github } = createGithubClient({
-      artifacts: [windowsArtifact],
+      artifacts: [windowsArtifact, androidArtifact],
       jobs: [
         {
           name: 'windows-x64',
@@ -129,6 +135,12 @@ describe('collectArtifactCommentData', () => {
           html_url: jobUrl(102),
           steps: successfulBuildSteps,
         },
+        {
+          name: 'android-arm64',
+          conclusion: 'success',
+          html_url: jobUrl(103),
+          steps: successfulBuildSteps,
+        },
       ],
     })
 
@@ -138,9 +150,9 @@ describe('collectArtifactCommentData', () => {
     })
 
     expect(result).toEqual({
-      artifacts: [windowsArtifact],
+      artifacts: [windowsArtifact, androidArtifact],
       sha,
-      totalPlatformJobCount: 3,
+      totalPlatformJobCount: 4,
       failedJobs: [
         {
           platform: 'linux-x64',
