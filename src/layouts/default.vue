@@ -5,7 +5,10 @@ const isDesktop = isDesktopRuntime()
 </script>
 
 <template>
-  <div class="grid grid-rows-[auto_minmax(0,1fr)] h-screen">
+  <div
+    class="grid h-screen"
+    :class="isDesktop ? 'grid-rows-[auto_minmax(0,1fr)]' : 'grid-rows-[minmax(0,1fr)]'"
+  >
     <AppTitlebar v-if="isDesktop" />
     <RouterView />
   </div>
