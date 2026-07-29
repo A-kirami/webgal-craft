@@ -151,11 +151,11 @@ describe('CommandPanel', () => {
   }
 
   function getFavoriteButton(commandName: string, actionName: string): HTMLButtonElement {
-    const favoriteButton = [...document.querySelectorAll('button')]
-      .find(button => (
-        button.getAttribute('aria-label') === actionName
-        && button.parentElement?.querySelector('button')?.textContent === commandName
-      ))
+    const commandCard = [...document.querySelectorAll<HTMLButtonElement>('button')]
+      .find(button => button.textContent?.trim() === commandName)
+      ?.parentElement
+    const favoriteButton = [...commandCard?.querySelectorAll<HTMLButtonElement>('button') ?? []]
+      .find(button => button.getAttribute('aria-label') === actionName)
     if (!favoriteButton) {
       throw new TypeError(`expected favorite button for ${commandName}`)
     }
