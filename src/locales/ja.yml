@@ -848,8 +848,12 @@ edit:
       moveUp: 上へ移動
       moveDown: 下へ移動
       groupCount: "{count} 件のステートメント"
+      addFavorite: このステートメントをお気に入りに追加
+      removeFavorite: このステートメントをお気に入りから削除
+      emptyFavorites: お気に入りのコマンドはまだありません
       categories:
         all: すべて
+        favorites: お気に入り
         perform: 演出
         effect: エフェクト
         display: 表示

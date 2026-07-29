@@ -5,21 +5,8 @@ import { createPersistedState } from 'pinia-plugin-persistedstate'
 import { describe, expect, it } from 'vitest'
 import { createApp } from 'vue'
 
+import { createMemoryStorage } from '~/__tests__/memory-storage'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
-
-function createMemoryStorage(seed: Record<string, string> = {}) {
-  const state = new Map(Object.entries(seed))
-  return {
-    getItem(key: string) {
-      // persistedstate 约定未命中时返回 null，这里显式兼容其接口
-      // eslint-disable-next-line unicorn/no-null
-      return state.get(key) ?? null
-    },
-    setItem(key: string, value: string) {
-      state.set(key, value)
-    },
-  }
-}
 
 describe('useStorageSettingsStore', () => {
   it('默认保存路径为空', () => {

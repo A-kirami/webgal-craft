@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { commandType } from 'webgal-parser/src/interface/sceneInterface'
+
+import { commandEntries } from '~/features/editor/command-registry'
 
 import {
   buildCommandPanelGroupTagEntries,
@@ -15,6 +18,19 @@ describe('commandPanel', () => {
     expect(performCommands.length).toBeGreaterThan(0)
     expect(performCommands.every(entry => entry.category === 'perform')).toBe(true)
     expect(performCommands.length).toBeLessThan(allCommands.length)
+  })
+
+  it('常用视图按收藏顺序复用注册项并忽略重复和失效的命令标识', () => {
+    const favoriteCommands = resolveCommandPanelVisibleCommands(
+      'favorites',
+      ['filmMode', 'say', 'filmMode', 'removed-command'],
+    )
+
+    expect(favoriteCommands.map(entry => entry.type)).toEqual([
+      commandType.filmMode,
+      commandType.say,
+    ])
+    expect(favoriteCommands.every(entry => commandEntries.includes(entry))).toBe(true)
   })
 
   it('会按命令标签聚合同类语句组条目', () => {

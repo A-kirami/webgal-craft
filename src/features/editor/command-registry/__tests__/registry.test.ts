@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { categoryTheme, commandEntries, commandPanelCategories, getCommandConfig } from '../index'
+import { categoryTheme, commandEntries, commandPanelCategories, getCommandConfig, getCommandId } from '../index'
 import { readArgFields, readContentField, readEditorFields, resolveI18n } from '../schema'
 
 describe('命令注册表完整性', () => {
+  it('所有命令注册项都有唯一稳定标识', () => {
+    const commandIds = commandEntries.map(entry => getCommandId(entry.type))
+
+    expect(commandIds).not.toContain(undefined)
+    expect(new Set(commandIds).size).toBe(commandEntries.length)
+  })
+
   it('源条目的命令类型应唯一', () => {
     const seen = new Set<commandType>()
     for (const entry of commandEntries) {

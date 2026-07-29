@@ -848,8 +848,12 @@ edit:
       moveUp: Move up
       moveDown: Move down
       groupCount: "{count} statements"
+      addFavorite: Add this statement to favorites
+      removeFavorite: Remove this statement from favorites
+      emptyFavorites: No favorite commands yet
       categories:
         all: All
+        favorites: Favorites
         perform: Perform
         effect: Effects
         display: Display

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Pencil, Star } from '@lucide/vue'
+
 import { useDragSession } from '~/composables/useDragSession'
 import { useDragSource } from '~/composables/useDragTransfer'
 import {
@@ -33,7 +35,11 @@ const activeCategory = $computed(() => commandPanelStore.activeCategory)
 const dragSession = useDragSession()
 
 const isGroupsView = $computed(() => activeCategory === 'groups')
-const visibleCommands = $computed(() => resolveCommandPanelVisibleCommands(activeCategory))
+const visibleCommands = $computed(() => resolveCommandPanelVisibleCommands(
+  activeCategory,
+  commandPanelStore.favoriteCommandIds,
+))
+const isEmptyFavorites = $computed(() => activeCategory === 'favorites' && visibleCommands.length === 0)
 const modalStore = useModalStore()
 
 function openDefaultsModal(type: commandType): void {
@@ -57,6 +63,13 @@ function clearPendingDeleteGroup(): void {
 
 function handleCategoryClick(category: CommandPanelCategory): void {
   commandPanelStore.setActiveCategory(category)
+}
+
+function getFavoriteActionLabel(type: commandType): string {
+  if (commandPanelStore.isFavorite(type)) {
+    return t('edit.visualEditor.commandPanel.removeFavorite')
+  }
+  return t('edit.visualEditor.commandPanel.addFavorite')
 }
 
 function handleDeletePopoverOpenChange(groupId: string, open: boolean): void {
@@ -175,6 +188,7 @@ useShortcutContext({
             size="sm"
             class="px-3 rounded-sm shrink-0 h-6"
             :class="activeCategory === 'all' && 'bg-accent text-accent-foreground'"
+            :aria-pressed="activeCategory === 'all'"
             @click="handleCategoryClick('all')"
           >
             {{ getCategoryLabel('all', t) }}
@@ -186,6 +200,7 @@ useShortcutContext({
             size="sm"
             class="px-3 rounded-sm shrink-0 h-6"
             :class="activeCategory === category && `${categoryTheme[category].bg} ${categoryTheme[category].text} ${categoryTheme[category].hoverBg} ${categoryTheme[category].hoverText}`"
+            :aria-pressed="activeCategory === category"
             @click="handleCategoryClick(category)"
           >
             {{ getCategoryLabel(category, t) }}
@@ -196,20 +211,43 @@ useShortcutContext({
 
       <Separator orientation="vertical" class="h-5" />
 
-      <Button
-        variant="ghost"
-        size="sm"
-        class="px-3 py-1 rounded-sm shrink-0 h-6"
-        :class="activeCategory === 'groups' && 'bg-violet-50 dark:bg-violet-950 text-violet-500 hover:bg-violet-100 dark:hover:bg-violet-900 hover:text-violet-600 dark:hover:text-violet-400'"
-        @click="handleCategoryClick('groups')"
-      >
-        {{ getCategoryLabel('groups', t) }}
-      </Button>
+      <div class="flex gap-1 items-center">
+        <Button
+          variant="ghost"
+          size="sm"
+          class="px-3 py-1 rounded-sm shrink-0 h-6"
+          :class="activeCategory === 'favorites' && 'bg-cyan-50 dark:bg-cyan-950 text-cyan-500 hover:bg-cyan-100 dark:hover:bg-cyan-900 hover:text-cyan-600 dark:hover:text-cyan-400'"
+          :aria-pressed="activeCategory === 'favorites'"
+          @click="handleCategoryClick('favorites')"
+        >
+          {{ getCategoryLabel('favorites', t) }}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          class="px-3 py-1 rounded-sm shrink-0 h-6"
+          :class="activeCategory === 'groups' && 'bg-violet-50 dark:bg-violet-950 text-violet-500 hover:bg-violet-100 dark:hover:bg-violet-900 hover:text-violet-600 dark:hover:text-violet-400'"
+          :aria-pressed="activeCategory === 'groups'"
+          @click="handleCategoryClick('groups')"
+        >
+          {{ getCategoryLabel('groups', t) }}
+        </Button>
+      </div>
     </div>
 
     <TooltipProvider :skip-delay-duration="0">
       <ScrollArea ref="commandAreaRef" class="flex-1 min-h-0">
         <div
+          v-if="isEmptyFavorites"
+          class="text-muted-foreground p-2 text-center grid inset-0 place-items-center absolute"
+          role="status"
+        >
+          <p class="text-sm">
+            {{ $t('edit.visualEditor.commandPanel.emptyFavorites') }}
+          </p>
+        </div>
+        <div
+          v-else
           class="p-2 gap-1.5 grid"
           style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));"
         >
@@ -229,17 +267,34 @@ useShortcutContext({
               :gradient="categoryTheme[entry.category].gradient"
               :icon-bg="categoryTheme[entry.category].bg"
               :icon-text="categoryTheme[entry.category].text"
+              :actions-always-visible="commandPanelStore.isFavorite(entry.type)"
               @click="emit('insertCommand', entry.type)"
             >
-              <template v-if="!entry.locked" #actions>
+              <template #actions>
                 <Button
+                  v-if="!entry.locked"
                   variant="ghost"
                   size="sm"
-                  class="p-0 opacity-60 size-6 hover:opacity-100"
+                  class="p-0 opacity-0 size-6 group-focus-visible:opacity-60 group-has-[:focus-visible]:opacity-60 group-hover:opacity-60 hover:opacity-100 [&_svg]:size-3.5"
                   :title="$t('edit.visualEditor.commandPanel.editDefaults')"
                   @click="openDefaultsModal(entry.type)"
                 >
-                  <div class="i-lucide-pencil size-3" />
+                  <Pencil aria-hidden="true" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  class="p-0 size-6 transition-all hover:text-amber-500 hover:opacity-100 [&_svg]:size-3.5"
+                  :class="commandPanelStore.isFavorite(entry.type) ? 'text-amber-500 opacity-100' : 'opacity-60'"
+                  :title="getFavoriteActionLabel(entry.type)"
+                  :aria-label="getFavoriteActionLabel(entry.type)"
+                  :aria-pressed="commandPanelStore.isFavorite(entry.type)"
+                  @click="commandPanelStore.toggleFavorite(entry.type)"
+                >
+                  <Star
+                    :fill="commandPanelStore.isFavorite(entry.type) ? 'currentColor' : 'none'"
+                    aria-hidden="true"
+                  />
                 </Button>
               </template>
             </CommandPanelCard>
@@ -284,11 +339,11 @@ useShortcutContext({
                 <Button
                   variant="ghost"
                   size="sm"
-                  class="p-0 opacity-60 size-6 hover:opacity-100"
+                  class="p-0 opacity-60 size-6 hover:opacity-100 [&_svg]:size-3"
                   :title="$t('common.edit')"
                   @click="openGroupModal(group)"
                 >
-                  <div class="i-lucide-pencil size-3" />
+                  <Pencil aria-hidden="true" />
                 </Button>
                 <Popover :open="pendingDeleteGroupId === group.id" @update:open="value => handleDeletePopoverOpenChange(group.id, value)">
                   <PopoverTrigger as-child>

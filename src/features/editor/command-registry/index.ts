@@ -36,7 +36,7 @@ export const commandPanelCategories = [
   'system',
 ] as const satisfies readonly CommandCategory[]
 
-export type CommandPanelCategory = (typeof commandPanelCategories)[number] | 'all' | 'groups'
+export type CommandPanelCategory = (typeof commandPanelCategories)[number] | 'all' | 'favorites' | 'groups'
 
 /**
  * 获取命令面板分类的本地化标签
@@ -44,6 +44,7 @@ export type CommandPanelCategory = (typeof commandPanelCategories)[number] | 'al
 export function getCategoryLabel(category: CommandPanelCategory, t: I18nT): string {
   const labelMap: Record<CommandPanelCategory, string> = {
     all: t('edit.visualEditor.commandPanel.categories.all'),
+    favorites: t('edit.visualEditor.commandPanel.categories.favorites'),
     perform: t('edit.visualEditor.commandPanel.categories.perform'),
     effect: t('edit.visualEditor.commandPanel.categories.effect'),
     display: t('edit.visualEditor.commandPanel.categories.display'),
@@ -73,6 +74,14 @@ const scriptStringMap = new Map<commandType, string>(
 
 export function getCommandScriptString(type: commandType): string | undefined {
   return scriptStringMap.get(type)
+}
+
+export function getCommandId(type: commandType): string | undefined {
+  // 注释没有 SCRIPT_CONFIG 脚本关键字，但仍需要稳定的注册项标识。
+  if (type === commandType.comment) {
+    return 'comment'
+  }
+  return getCommandScriptString(type)
 }
 
 const defaultEntry: CommandEntry = {

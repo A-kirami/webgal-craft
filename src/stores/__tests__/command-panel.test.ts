@@ -1,23 +1,43 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-
 import '~/__tests__/setup'
 
+import { createPinia, setActivePinia } from 'pinia'
+import { createPersistedState } from 'pinia-plugin-persistedstate'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createApp, nextTick } from 'vue'
+import { commandType } from 'webgal-parser/src/interface/sceneInterface'
+
+import { createMemoryStorage } from '~/__tests__/memory-storage'
 import { parseSentence } from '~/domain/script/parser'
 import { getFactoryDefaultCommandText } from '~/features/editor/command-registry'
 import { useCommandPanelStore } from '~/stores/command-panel'
 
 vi.mock('~/features/editor/command-registry', () => ({
+  getCommandId: vi.fn((type: number) => {
+    if (type === 0) {
+      return 'say'
+    }
+    if (type === 23) {
+      return 'filmMode'
+    }
+  }),
   getFactoryDefaultCommandText: vi.fn((type: number) => `factory:${type}`),
 }))
 vi.mock('~/domain/script/parser', () => ({
   parseSentence: vi.fn(),
 }))
 vi.mock('webgal-parser/src/interface/sceneInterface', () => ({
-  commandType: { say: 0, changeBg: 1 },
+  commandType: { say: 0, changeBg: 1, filmMode: 23 },
 }))
 
 function createParsedSentence(command: number): NonNullable<ReturnType<typeof parseSentence>> {
   return { command } as NonNullable<ReturnType<typeof parseSentence>>
+}
+
+function activatePersistedPinia(storage: ReturnType<typeof createMemoryStorage>): void {
+  const pinia = createPinia()
+  pinia.use(createPersistedState({ storage }))
+  createApp({}).use(pinia)
+  setActivePinia(pinia)
 }
 
 describe('useCommandPanelStore', () => {
@@ -57,6 +77,42 @@ describe('useCommandPanelStore', () => {
     store.resetDefault(1)
     expect(store.defaults[1]).toBeUndefined()
     expect(store.getInsertText(1)).toBe('factory:1')
+  })
+
+  // --- favorites ---
+
+  it('切换常用命令会添加、移除并允许重新添加', () => {
+    store.toggleFavorite(commandType.say)
+    expect(store.favoriteCommandIds).toEqual(['say'])
+    expect(store.isFavorite(commandType.say)).toBe(true)
+
+    store.toggleFavorite(commandType.say)
+    expect(store.favoriteCommandIds).toEqual([])
+    expect(store.isFavorite(commandType.say)).toBe(false)
+
+    store.toggleFavorite(commandType.say)
+    expect(store.favoriteCommandIds).toEqual(['say'])
+  })
+
+  it('拒绝没有稳定标识的未知命令类型', () => {
+    expect(() => store.toggleFavorite(999 as commandType)).toThrow('Unknown command type: 999')
+  })
+
+  it('持久化恢复后保留常用命令类型身份', async () => {
+    const storage = createMemoryStorage()
+    activatePersistedPinia(storage)
+
+    const persistedStore = useCommandPanelStore()
+    persistedStore.toggleFavorite(commandType.say)
+    persistedStore.toggleFavorite(commandType.filmMode)
+    await nextTick()
+
+    const persistedState = JSON.parse(storage.getItem('command-panel') ?? '{}')
+    expect(persistedState.favoriteCommandIds).toEqual(['say', 'filmMode'])
+
+    activatePersistedPinia(storage)
+    const restoredStore = useCommandPanelStore()
+    expect(restoredStore.favoriteCommandIds).toEqual(['say', 'filmMode'])
   })
 
   // --- saveGroup ---

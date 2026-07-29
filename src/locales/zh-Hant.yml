@@ -848,8 +848,12 @@ edit:
       moveUp: 上移
       moveDown: 下移
       groupCount: 共 {count} 條語句
+      addFavorite: 將此語句加入常用
+      removeFavorite: 將此語句移出常用
+      emptyFavorites: 暫無常用命令
       categories:
         all: 全部
+        favorites: 常用
         perform: 演出
         effect: 效果
         display: 顯示
