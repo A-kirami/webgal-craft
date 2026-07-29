@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import { createBrowserLocalizedI18n } from '~/__tests__/browser'
@@ -82,6 +82,14 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
+const resourceIndexStatus = shallowRef<'idle' | 'building' | 'ready' | 'degraded'>('idle')
+
+vi.mock('~/services/resource-index/service', () => ({
+  useResourceIndex: () => ({
+    status: resourceIndexStatus,
+  }),
+}))
+
 vi.mock('~/utils/error-handler', () => ({
   handleError: vi.fn(),
 }))
@@ -104,6 +112,8 @@ function createEditorStatusBarLocalizedI18n() {
           },
           statusBar: {
             frames: '{count} 帧',
+            resourceIndexBuilding: '正在构建资源索引',
+            resourceIndexUnavailable: '资源索引不可用',
             statements: '{count} 条语句',
           },
           textEditor: {
@@ -129,9 +139,18 @@ function createEditorStore() {
   })
 }
 
+function renderEditorStatusBar() {
+  renderInBrowser(EditorStatusBar, {
+    global: {
+      plugins: [createEditorStatusBarLocalizedI18n()],
+    },
+  })
+}
+
 describe('EditorStatusBar', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    resourceIndexStatus.value = 'idle'
 
     dayjsMock.mockReturnValue({
       fromNow: () => 'just now',
@@ -151,6 +170,10 @@ describe('EditorStatusBar', () => {
     }))
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('会显示文本编辑器的保存状态、语言与行词统计', async () => {
     const editorStore = createEditorStore()
     editorStore.currentState = {
@@ -167,11 +190,7 @@ describe('EditorStatusBar', () => {
 
     useEditorStoreMock.mockReturnValue(editorStore)
 
-    renderInBrowser(EditorStatusBar, {
-      global: {
-        plugins: [createEditorStatusBarLocalizedI18n()],
-      },
-    })
+    renderEditorStatusBar()
 
     await expect.element(page.getByText('已保存')).toBeVisible()
     await expect.element(page.getByText('just now')).toBeVisible()
@@ -192,14 +211,52 @@ describe('EditorStatusBar', () => {
     getImageDimensionsMock.mockResolvedValue([1280, 720])
     useEditorStoreMock.mockReturnValue(editorStore)
 
-    renderInBrowser(EditorStatusBar, {
-      global: {
-        plugins: [createEditorStatusBarLocalizedI18n()],
-      },
-    })
+    renderEditorStatusBar()
 
     await expect.element(page.getByText('1280 × 720')).toBeVisible()
     await expect.element(page.getByText('2.0 KiB')).toBeVisible()
     expect(getImageDimensionsMock).toHaveBeenCalledWith('/project/background.png')
+  })
+
+  it('资源索引持续构建超过延迟后才显示状态', async () => {
+    vi.useFakeTimers()
+    resourceIndexStatus.value = 'building'
+    useEditorStoreMock.mockReturnValue(createEditorStore())
+
+    renderEditorStatusBar()
+
+    await expect.element(page.getByText('正在构建资源索引')).not.toBeInTheDocument()
+
+    await vi.advanceTimersByTimeAsync(299)
+    await expect.element(page.getByText('正在构建资源索引')).not.toBeInTheDocument()
+
+    await vi.advanceTimersByTimeAsync(1)
+    await expect.element(page.getByText('正在构建资源索引')).toBeVisible()
+  })
+
+  it('资源索引在显示延迟内就绪时不显示状态', async () => {
+    vi.useFakeTimers()
+    resourceIndexStatus.value = 'building'
+    useEditorStoreMock.mockReturnValue(createEditorStore())
+
+    renderEditorStatusBar()
+
+    resourceIndexStatus.value = 'ready'
+    await nextTick()
+    await vi.advanceTimersByTimeAsync(300)
+
+    await expect.element(page.getByText('正在构建资源索引')).not.toBeInTheDocument()
+  })
+
+  it('资源索引不可用时持续显示警告状态', async () => {
+    resourceIndexStatus.value = 'degraded'
+    useEditorStoreMock.mockReturnValue(createEditorStore())
+
+    renderEditorStatusBar()
+
+    await expect.element(page.getByText('资源索引不可用')).toBeVisible()
+
+    resourceIndexStatus.value = 'ready'
+    await expect.element(page.getByText('资源索引不可用')).not.toBeInTheDocument()
   })
 })

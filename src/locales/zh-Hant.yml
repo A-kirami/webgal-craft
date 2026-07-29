@@ -728,6 +728,8 @@ edit:
     resource: 資源
   statusBar:
     frames: "{count} 幀"
+    resourceIndexBuilding: 正在建立資源索引
+    resourceIndexUnavailable: 資源索引無法使用
     statements: "{count} 條語句"
     engineMissing: 引擎不可用
     selectEngine: 選擇引擎
