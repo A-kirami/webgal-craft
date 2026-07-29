@@ -5,20 +5,8 @@ import { createPersistedState } from 'pinia-plugin-persistedstate'
 import { describe, expect, it } from 'vitest'
 import { createApp, nextTick } from 'vue'
 
+import { createMemoryStorage } from '~/__tests__/memory-storage'
 import { useAppUpdateStore } from '~/stores/app-update'
-
-function createMemoryStorage(seed: Record<string, string> = {}) {
-  const state = new Map(Object.entries(seed))
-  return {
-    getItem(key: string) {
-      // eslint-disable-next-line unicorn/no-null -- persistedstate 遵循 Web Storage 约定。
-      return state.get(key) ?? null
-    },
-    setItem(key: string, value: string) {
-      state.set(key, value)
-    },
-  }
-}
 
 describe('useAppUpdateStore', () => {
   it('记录可用更新时会清理旧版本的跳过状态', () => {

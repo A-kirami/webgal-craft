@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { page } from 'vitest/browser'
-import { shallowRef } from 'vue'
+import { page, userEvent } from 'vitest/browser'
+import { nextTick, shallowRef } from 'vue'
+import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import {
   createBrowserActionStub,
@@ -85,12 +86,18 @@ function createCommandPanelBrowserOptions() {
             commandPanel: {
               categories: {
                 all: 'all-category',
+                favorites: 'favorites-category',
+                perform: 'perform-category',
                 groups: 'groups-category',
               },
+              addFavorite: '将此语句加入常用',
+              removeFavorite: '将此语句移出常用',
+              emptyFavorites: 'no-favorite-commands',
               confirmDeleteGroup: 'confirm-delete-group',
               editDefaults: 'edit-defaults',
             },
             commands: {
+              filmMode: 'film-mode-command',
               say: 'dialogue-command',
             },
           },
@@ -143,6 +150,18 @@ describe('CommandPanel', () => {
     return { pinia }
   }
 
+  function getFavoriteButton(commandName: string, actionName: string): HTMLButtonElement {
+    const favoriteButton = [...document.querySelectorAll('button')]
+      .find(button => (
+        button.getAttribute('aria-label') === actionName
+        && button.parentElement?.querySelector('button')?.textContent === commandName
+      ))
+    if (!favoriteButton) {
+      throw new TypeError(`expected favorite button for ${commandName}`)
+    }
+    return favoriteButton
+  }
+
   it('渲染分类标签栏', async () => {
     renderCommandPanel()
 
@@ -151,6 +170,15 @@ describe('CommandPanel', () => {
       exact: true,
     })
     await expect.element(allTab).toBeVisible()
+
+    const favoritesTab = page.getByRole('button', {
+      name: 'favorites-category',
+      exact: true,
+    })
+    await expect.element(favoritesTab).toBeVisible()
+    await expect.element(favoritesTab).toHaveAttribute('aria-pressed', 'false')
+    await favoritesTab.click()
+    await expect.element(favoritesTab).toHaveAttribute('aria-pressed', 'true')
 
     const groupsTab = page.getByRole('button', {
       name: 'groups-category',
@@ -175,10 +203,53 @@ describe('CommandPanel', () => {
     expect(store.activeCategory).toBe('groups')
   })
 
-  it('点击命令卡片会发出 insertCommand 事件', async () => {
+  it('可以跨分类添加、取消并重新添加常用命令', async () => {
+    const { pinia } = renderCommandPanel()
+    const store = useCommandPanelStore(pinia)
+
+    const addDialogueFavorite = getFavoriteButton('dialogue-command', '将此语句加入常用')
+    expect(addDialogueFavorite).toHaveAttribute('aria-pressed', 'false')
+
+    await userEvent.click(addDialogueFavorite)
+    await userEvent.click(getFavoriteButton('film-mode-command', '将此语句加入常用'))
+    expect(store.isFavorite(commandType.say)).toBe(true)
+    expect(store.isFavorite(commandType.filmMode)).toBe(true)
+    expect(addDialogueFavorite).toHaveAttribute('aria-label', '将此语句移出常用')
+    expect(addDialogueFavorite).toHaveAttribute('aria-pressed', 'true')
+
+    await page.getByRole('button', { name: 'favorites-category', exact: true }).click()
+    await expect.element(page.getByRole('button', { name: 'dialogue-command', exact: true })).toBeVisible()
+    await expect.element(page.getByRole('button', { name: 'film-mode-command', exact: true })).toBeVisible()
+
+    await userEvent.click(getFavoriteButton('dialogue-command', '将此语句移出常用'))
+    expect(store.isFavorite(commandType.say)).toBe(false)
+
+    await page.getByRole('button', { name: 'perform-category', exact: true }).click()
+    await userEvent.click(getFavoriteButton('dialogue-command', '将此语句加入常用'))
+    await page.getByRole('button', { name: 'favorites-category', exact: true }).click()
+
+    expect(store.isFavorite(commandType.say)).toBe(true)
+    expect(store.isFavorite(commandType.filmMode)).toBe(true)
+    await expect.element(page.getByRole('button', { name: 'dialogue-command', exact: true })).toBeVisible()
+    await expect.element(page.getByRole('button', { name: 'film-mode-command', exact: true })).toBeVisible()
+  })
+
+  it('常用列表为空或只包含失效项时显示稳定空状态', async () => {
+    const { pinia } = renderCommandPanel()
+    const store = useCommandPanelStore(pinia)
+    store.favoriteCommandIds = ['removed-command']
+    store.setActiveCategory('favorites')
+    await nextTick()
+
+    const emptyState = page.getByRole('status')
+    await expect.element(emptyState).toBeVisible()
+    await expect.element(emptyState).toHaveTextContent('no-favorite-commands')
+  })
+
+  it('从常用分类点击命令卡片会发出 insertCommand 事件', async () => {
     const onInsertCommand = vi.fn()
 
-    renderInBrowser(CommandPanel, {
+    const { pinia } = renderInBrowser(CommandPanel, {
       browser: createCommandPanelBrowserOptions(),
       props: {
         onInsertCommand,
@@ -187,21 +258,28 @@ describe('CommandPanel', () => {
         stubs: globalStubs,
       },
     })
+    if (!pinia) {
+      throw new TypeError('expected browser test pinia')
+    }
+    const store = useCommandPanelStore(pinia)
+    store.toggleFavorite(commandType.say)
+    store.setActiveCategory('favorites')
+    await nextTick()
 
-    await page.getByRole('button', { name: 'dialogue-command' }).click()
+    await page.getByRole('button', { name: 'dialogue-command', exact: true }).click()
 
-    expect(onInsertCommand).toHaveBeenCalledWith(expect.any(Number))
+    expect(onInsertCommand).toHaveBeenCalledWith(commandType.say)
   })
 
-  it('命令卡片拖拽会生成 command-panel-statement payload', () => {
+  it('命令卡片拖拽会使用当前用户默认值生成 payload', () => {
     const { pinia } = renderCommandPanel()
     const store = useCommandPanelStore(pinia)
-    store.saveDefault(0, 'say:custom;')
+    store.saveDefault(commandType.say, 'say:custom;')
     const getData = lastDragSourceOptions.value?.getData
 
     const element = document.createElement('div')
     element.dataset.commandPanelDragKind = 'command'
-    element.dataset.commandPanelCommandType = '0'
+    element.dataset.commandPanelCommandType = String(commandType.say)
     element.dataset.commandPanelDragLabel = 'dialogue-command'
 
     expect(getData?.(element)).toEqual({

@@ -1,5 +1,5 @@
 import { parseSentence } from '~/domain/script/parser'
-import { commandEntries, getCommandConfig } from '~/features/editor/command-registry'
+import { commandEntries, getCommandConfig, getCommandId } from '~/features/editor/command-registry'
 import { resolveI18n } from '~/features/editor/command-registry/schema'
 
 import type { CommandPanelCategory } from '~/features/editor/command-registry'
@@ -13,10 +13,32 @@ export interface CommandPanelGroupTagEntry {
 
 export function resolveCommandPanelVisibleCommands(
   activeCategory: CommandPanelCategory,
+  favoriteCommandIds: readonly string[] = [],
   entries: readonly CommandEntry[] = commandEntries,
 ): readonly CommandEntry[] {
   if (activeCategory === 'all' || activeCategory === 'groups') {
     return entries
+  }
+
+  if (activeCategory === 'favorites') {
+    const entriesById = new Map<string, CommandEntry>()
+    for (const entry of entries) {
+      const id = getCommandId(entry.type)
+      if (id !== undefined) {
+        entriesById.set(id, entry)
+      }
+    }
+
+    const favoriteEntries: CommandEntry[] = []
+    const seenIds = new Set<string>()
+    for (const id of favoriteCommandIds) {
+      const entry = entriesById.get(id)
+      if (entry && !seenIds.has(id)) {
+        favoriteEntries.push(entry)
+        seenIds.add(id)
+      }
+    }
+    return favoriteEntries
   }
 
   return entries.filter(entry => entry.category === activeCategory)

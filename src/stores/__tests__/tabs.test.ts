@@ -5,6 +5,7 @@ import { createPersistedState } from 'pinia-plugin-persistedstate'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp, reactive } from 'vue'
 
+import { createMemoryStorage } from '~/__tests__/memory-storage'
 import { AbsPath } from '~/domain/path'
 import { useTabsStore } from '~/stores/tabs'
 
@@ -22,20 +23,6 @@ const workspaceStoreState = reactive<{ currentGame?: { id: string } }>({
 const editSettingsStoreState = reactive({
   enablePreviewTab: true,
 })
-
-function createMemoryStorage(seed: Record<string, string> = {}) {
-  const state = new Map(Object.entries(seed))
-  return {
-    getItem(key: string) {
-      // persistedstate 约定未命中时返回 null，这里显式兼容其接口
-      // eslint-disable-next-line unicorn/no-null
-      return state.get(key) ?? null
-    },
-    setItem(key: string, value: string) {
-      state.set(key, value)
-    },
-  }
-}
 
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,

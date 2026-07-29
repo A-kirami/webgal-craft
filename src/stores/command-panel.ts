@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseSentence } from '~/domain/script/parser'
-import { CommandPanelCategory, getFactoryDefaultCommandText } from '~/features/editor/command-registry'
+import { CommandPanelCategory, getCommandId, getFactoryDefaultCommandText } from '~/features/editor/command-registry'
 
 export interface StatementGroup {
   id: string
@@ -20,6 +20,7 @@ export const useCommandPanelStore = defineStore(
   () => {
     let defaults = $ref<Partial<Record<commandType, string>>>({})
     let groups = $ref<StatementGroup[]>([])
+    let favoriteCommandIds = $ref<string[]>([])
     let activeCategory = $ref<CommandPanelCategory>('all')
 
     function getInsertText(type: commandType): string {
@@ -46,6 +47,21 @@ export const useCommandPanelStore = defineStore(
       const nextDefaults = { ...defaults }
       delete nextDefaults[type]
       defaults = nextDefaults
+    }
+
+    function isFavorite(type: commandType): boolean {
+      const commandId = getCommandId(type)
+      return commandId !== undefined && favoriteCommandIds.includes(commandId)
+    }
+
+    function toggleFavorite(type: commandType): void {
+      const commandId = getCommandId(type)
+      if (commandId === undefined) {
+        throw new RangeError(`Unknown command type: ${type}`)
+      }
+      favoriteCommandIds = favoriteCommandIds.includes(commandId)
+        ? favoriteCommandIds.filter(favoriteId => favoriteId !== commandId)
+        : [...favoriteCommandIds, commandId]
     }
 
     function saveGroup(input: Omit<StatementGroup, 'id' | 'createdAt'> & Partial<Pick<StatementGroup, 'id' | 'createdAt'>>) {
@@ -99,10 +115,13 @@ export const useCommandPanelStore = defineStore(
     return $$({
       defaults,
       groups,
+      favoriteCommandIds,
       activeCategory,
       getInsertText,
       saveDefault,
       resetDefault,
+      isFavorite,
+      toggleFavorite,
       saveGroup,
       deleteGroup,
       resetGroup,

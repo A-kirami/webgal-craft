@@ -19,6 +19,7 @@ interface Props {
   iconText?: string
   interactive?: boolean
   dashed?: boolean
+  actionsAlwaysVisible?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -31,6 +32,7 @@ const props = withDefaults(defineProps<Props>(), {
   iconText: 'text-foreground/80',
   interactive: true,
   dashed: false,
+  actionsAlwaysVisible: false,
 })
 
 const emit = defineEmits<{
@@ -104,7 +106,8 @@ const cardAttrs = $computed(() => ({
         </div>
 
         <div
-          class="pl-3 pr-1.5 opacity-0 flex gap-0.5 transition-opacity items-center right-0 top-1/2 absolute from-card from-65% bg-gradient-to-l group-hover:opacity-100 -translate-y-1/2"
+          class="pl-3 pr-1.5 flex gap-0.5 transition-opacity items-center right-0 top-1/2 absolute from-card from-65% bg-gradient-to-l -translate-y-1/2"
+          :class="actionsAlwaysVisible ? 'opacity-100' : 'opacity-0 group-focus-visible:opacity-100 group-has-[:focus-visible]:opacity-100 group-hover:opacity-100'"
           @click.stop
           @keydown.stop
           @pointerdown.stop
