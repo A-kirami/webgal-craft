@@ -100,14 +100,12 @@ function handleBlankDblClick(e: MouseEvent) {
     <div v-else-if="statementType === 'say' || statementType === 'command'" class="flex flex-wrap gap-x-3 gap-y-1.5 items-center">
       <div v-if="statementType === 'say'" class="@container flex flex-col gap-1.5 w-full">
         <InputGroup class="h-6 w-full shadow-none overflow-hidden @[16rem]:w-3/5 @[24rem]:w-2/5">
-          <Autocomplete
+          <InputGroupAutocomplete
             :model-value="effectiveSpeaker"
             :options="speakerAutocompleteOptions"
             :placeholder="speakerPlaceholder"
             :disabled="narrationMode"
-            data-slot="input-group-control"
-            container-class="flex-1"
-            class="text-xs pl-2.5 pr-0 border-0 rounded-none bg-transparent h-6 w-full shadow-none focus-visible:ring-0 focus-visible:ring-transparent"
+            class="text-xs pl-2.5 pr-0 h-6 shadow-none"
             @update:model-value="handleSpeakerChange(String($event ?? ''))"
           />
           <InputGroupAddon align="inline-end" class="pr-1.5">

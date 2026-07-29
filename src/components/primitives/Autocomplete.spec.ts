@@ -291,6 +291,7 @@ describe('Autocomplete', () => {
     await input.click()
 
     await expect.element(input).toHaveAttribute('aria-expanded', 'true')
+    await expect.element(page.getByTestId('autocomplete-indicator')).toBeInTheDocument()
     await expect.element(page.getByRole('option', { name: 'start' })).toBeInTheDocument()
   })
 
