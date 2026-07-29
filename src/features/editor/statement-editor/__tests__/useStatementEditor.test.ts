@@ -115,6 +115,18 @@ describe('useStatementEditor', () => {
     ])
   })
 
+  it('say 编辑器暴露当前场景的说话人候选项', () => {
+    const speakers = [{ label: 'Alice', value: 'Alice' }]
+    const { editor } = createHarness('Alice: hello;', {
+      autocompleteOptions: {
+        ...EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
+        speakers,
+      },
+    })
+
+    expect(editor.say.speakerAutocompleteOptions.value).toEqual(speakers)
+  })
+
   it('可视化编辑标准参数时应保留文本中已有的 extraArgs', () => {
     const { editor, updates } = createHarness('setAnimation: bounce -target=fig-left -x=1;')
     const targetField = requireArgField(editor, 'target')
