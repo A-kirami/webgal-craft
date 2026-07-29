@@ -728,6 +728,8 @@ edit:
     resource: Resource
   statusBar:
     frames: "{count} frames"
+    resourceIndexBuilding: Indexing resources
+    resourceIndexUnavailable: Resource index unavailable
     statements: "{count} statements"
     engineMissing: Engine unavailable
     selectEngine: Select Engine

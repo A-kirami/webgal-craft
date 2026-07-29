@@ -728,6 +728,8 @@ edit:
     resource: リソース
   statusBar:
     frames: "{count} フレーム"
+    resourceIndexBuilding: リソースをインデックスしています
+    resourceIndexUnavailable: リソースインデックスを利用できません
     statements: "{count} ステートメント"
     engineMissing: エンジンが利用できません
     selectEngine: エンジンを選択

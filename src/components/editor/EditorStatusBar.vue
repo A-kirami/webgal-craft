@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChartSpline, FileText, Image as ImageIcon, Layers, Link2, Palette } from '@lucide/vue'
+import { ChartSpline, FileText, Image as ImageIcon, Layers, Link2, Loader2, Palette, TriangleAlert } from '@lucide/vue'
 
 import { fsCmds } from '~/commands/fs'
 import { useTemplateLabel } from '~/composables/useTemplateLabel'
@@ -17,6 +17,7 @@ import { formatEngineLabel } from '~/lib/engine-label'
 import dayjs from '~/plugins/dayjs'
 import { getLanguageDisplayName } from '~/plugins/editor'
 import { isEngineUsable } from '~/services/engine-manager'
+import { useResourceIndex } from '~/services/resource-index/service'
 import {
   isEditableEditor,
   useEditorStore,
@@ -31,6 +32,24 @@ const { t, locale } = useI18n()
 const editorStore = useEditorStore()
 const workspaceStore = useWorkspaceStore()
 const modalStore = useModalStore()
+const resourceIndex = useResourceIndex()
+
+const RESOURCE_INDEX_BUILDING_DELAY_MS = 300
+
+let showResourceIndexBuilding = $ref(false)
+watch(() => resourceIndex.status.value, (status, _previousStatus, onCleanup) => {
+  showResourceIndexBuilding = false
+  if (status !== 'building') {
+    return
+  }
+
+  const timer = setTimeout(() => {
+    showResourceIndexBuilding = true
+  }, RESOURCE_INDEX_BUILDING_DELAY_MS)
+  onCleanup(() => clearTimeout(timer))
+}, { immediate: true })
+
+const isResourceIndexDegraded = $computed(() => resourceIndex.status.value === 'degraded')
 
 const currentState = $computed(() => editorStore.currentState)
 
@@ -197,6 +216,24 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
             {{ $t('edit.statusBar.selectTemplate') }}
           </TooltipContent>
         </Tooltip>
+
+        <div
+          v-if="showResourceIndexBuilding"
+          role="status"
+          class="text-muted-foreground flex shrink-0 gap-1 items-center"
+        >
+          <Loader2 class="size-3 animate-spin" aria-hidden="true" />
+          <span>{{ $t('edit.statusBar.resourceIndexBuilding') }}</span>
+        </div>
+
+        <div
+          v-else-if="isResourceIndexDegraded"
+          role="status"
+          class="text-yellow-600 flex shrink-0 gap-1 items-center dark:text-yellow-300"
+        >
+          <TriangleAlert class="size-3" aria-hidden="true" />
+          <span>{{ $t('edit.statusBar.resourceIndexUnavailable') }}</span>
+        </div>
       </TooltipProvider>
     </div>
 
