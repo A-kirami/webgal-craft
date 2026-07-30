@@ -35,6 +35,7 @@ function createStartupOptions(overrides: Partial<RunAppStartupOptions> = {}): Ru
       })),
     },
     resolveMissingStorageSavePaths: vi.fn(async () => ({})),
+    recoverManagedImportSessions: vi.fn(() => Promise.resolve()),
     router: {
       currentRoute: {
         value: {

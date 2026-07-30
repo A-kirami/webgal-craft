@@ -45,6 +45,7 @@ export interface RunAppStartupOptions {
   generalSettingsStore: AppStartupGeneralSettingsStore
   resourceReconcile: AppStartupResourceReconcile
   resolveMissingStorageSavePaths(storageSettings: StorageSavePathState): Promise<Partial<StorageSavePathState>>
+  recoverManagedImportSessions(): Promise<void>
   router: AppStartupRouter
   storageSettingsStore: AppStartupStorageSettingsStore
   templateManager: AppStartupTemplateManager
@@ -113,6 +114,7 @@ export async function runAppStartup(options: RunAppStartupOptions): Promise<void
 
   try {
     await initializeStoragePaths(options)
+    await options.recoverManagedImportSessions()
     const validationResults = await Promise.all([
       runValidation('引擎校验', () => options.engineManager.validateAllEngines()),
       runValidation('游戏校验', () => options.resourceReconcile.reconcileAllGames()),
