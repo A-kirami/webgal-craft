@@ -1,4 +1,3 @@
-import { open } from '@tauri-apps/plugin-dialog'
 import { openPath } from '@tauri-apps/plugin-opener'
 
 import { AbsPath } from '~/domain/path'
@@ -31,11 +30,29 @@ export interface HomeResourceImportMessages {
   gameConfigCorrupted?: I18nLike
   gameSchemaTooNew?: I18nLike
   unsupportedLegacyEngine?: I18nLike
+  providerDenied?: I18nLike
+  copyFailed?: I18nLike
+  unsafeEntry?: I18nLike
+  storageFull?: I18nLike
+  resourceLimit?: I18nLike
+  rollbackFailed?: I18nLike
+  importBusy?: I18nLike
 }
+
+export const managedImportErrorMessages = {
+  providerDenied: t => t('home.managedImport.error.providerDenied'),
+  copyFailed: t => t('home.managedImport.error.copyFailed'),
+  unsafeEntry: t => t('home.managedImport.error.unsafeEntry'),
+  storageFull: t => t('home.managedImport.error.storageFull'),
+  resourceLimit: t => t('home.managedImport.error.resourceLimit'),
+  rollbackFailed: t => t('home.managedImport.error.rollbackFailed'),
+  importBusy: t => t('home.managedImport.error.busy'),
+} satisfies Partial<HomeResourceImportMessages>
 
 interface UseHomeResourceImportActionsOptions {
   activeProgress: ReadonlyMap<string, number>
   importResource: (path: AbsPath) => Promise<HomeResourceImportOutcome | unknown>
+  selectResource: () => Promise<HomeResourceImportOutcome | unknown>
   messages: HomeResourceImportMessages
   t: I18nT
 }
@@ -57,6 +74,13 @@ const NOTIFICATION_MESSAGE_KEYS: Partial<Record<HomeResourceImportNotification['
   'engine-version-too-old': 'engineVersionTooOld',
   'unknown-error': 'unknownError',
   'multiple-folders': 'multipleFolders',
+  'provider-denied': 'providerDenied',
+  'copy-failed': 'copyFailed',
+  'unsafe-entry': 'unsafeEntry',
+  'storage-full': 'storageFull',
+  'resource-limit': 'resourceLimit',
+  'rollback-failed': 'rollbackFailed',
+  'import-busy': 'importBusy',
 }
 
 export function resolveImportNotificationMessage(
@@ -101,12 +125,12 @@ function isImportOutcome(value: unknown): value is HomeResourceImportOutcome {
 export function useHomeResourceImportActions<TResource extends { id: string, path: string }>(
   options: UseHomeResourceImportActionsOptions,
 ) {
-  async function importWithFeedback(path: AbsPath) {
+  async function runWithFeedback(operation: () => Promise<HomeResourceImportOutcome | unknown>) {
     let importError: unknown
     let outcome: HomeResourceImportOutcome | undefined
 
     try {
-      const result = await options.importResource(path)
+      const result = await operation()
       if (isImportOutcome(result)) {
         outcome = result
       }
@@ -118,6 +142,10 @@ export function useHomeResourceImportActions<TResource extends { id: string, pat
     reportHomeResourceImportNotification(notification, options.messages, options.t)
   }
 
+  async function importWithFeedback(path: AbsPath) {
+    await runWithFeedback(() => options.importResource(path))
+  }
+
   function getProgress(resource: Pick<TResource, 'id'>): number {
     return getHomeResourceProgress(options.activeProgress, resource.id)
   }
@@ -127,17 +155,7 @@ export function useHomeResourceImportActions<TResource extends { id: string, pat
   }
 
   async function selectFolder() {
-    const path = await open({
-      title: resolveI18nLike(options.messages.selectFolderTitle, options.t),
-      directory: true,
-      multiple: false,
-    })
-
-    if (typeof path !== 'string') {
-      return
-    }
-
-    await importWithFeedback(AbsPath.from(path))
+    await runWithFeedback(options.selectResource)
   }
 
   async function handleDrop(paths: string[]) {

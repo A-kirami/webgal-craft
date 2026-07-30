@@ -12,6 +12,7 @@ interface Props {
   items: GameCollectionItem[]
   getGameProgress: (game: Game) => number
   hasGameProgress: (game: Game) => boolean
+  importBusy?: boolean
   viewMode: 'grid' | 'list'
 }
 
@@ -19,6 +20,7 @@ const {
   items,
   getGameProgress,
   hasGameProgress,
+  importBusy,
   viewMode,
 } = defineProps<Props>()
 
@@ -142,6 +144,7 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
       <button
         ref="dropZoneGridRef"
         type="button"
+        :disabled="importBusy"
         :aria-label="$t('home.games.importGame')"
         class="p-4 text-center border-1 border-gray-300 rounded-lg border-dashed bg-gray-50 flex flex-col gap-3 h-full w-full cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden dark:border-gray-700 hover:border-purple-300 dark:bg-gray-900 dark:hover:border-purple-700"
         :class="{ 'border-purple-300 bg-purple-50': isOverDropZoneGrid }"
@@ -250,6 +253,7 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
       <button
         ref="dropZoneListRef"
         type="button"
+        :disabled="importBusy"
         :aria-label="$t('home.games.importGame')"
         class="p-3 bg-gray-50/50 flex w-full cursor-pointer transition-colors items-center justify-between dark:bg-gray-800/10 hover:bg-gray-100 dark:hover:bg-gray-800/20"
         :class="{'bg-purple-50': isOverDropZoneList}"

@@ -8,19 +8,15 @@ const {
   toastErrorMock,
   toastInfoMock,
   toastSuccessMock,
-  openDialogMock,
   openPathMock,
+  selectResourceMock,
 } = vi.hoisted(() => ({
   importResourceMock: vi.fn(),
   toastErrorMock: vi.fn(),
   toastInfoMock: vi.fn(),
   toastSuccessMock: vi.fn(),
-  openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
-}))
-
-vi.mock('@tauri-apps/plugin-dialog', () => ({
-  open: openDialogMock,
+  selectResourceMock: vi.fn(),
 }))
 
 vi.mock('@tauri-apps/plugin-opener', () => ({
@@ -39,6 +35,7 @@ function createActions() {
   return useHomeResourceImportActions({
     activeProgress: new Map<string, number>([['resource-1', 55]]),
     importResource: importResourceMock,
+    selectResource: selectResourceMock,
     messages: {
       invalidFolder: t => t('home.engines.importInvalidFolder'),
       multipleFolders: t => t('home.engines.importMultipleFolders'),
@@ -55,21 +52,16 @@ describe('useHomeResourceImportActions', () => {
     vi.resetAllMocks()
 
     importResourceMock.mockResolvedValue(undefined)
-    openDialogMock.mockResolvedValue(undefined)
+    selectResourceMock.mockResolvedValue(undefined)
   })
 
   it('选择目录导入成功时保持静默', async () => {
-    openDialogMock.mockResolvedValue('/engines/selected')
     const actions = createActions()
 
     await actions.selectFolder()
 
-    expect(openDialogMock).toHaveBeenCalledWith(expect.objectContaining({
-      directory: true,
-      multiple: false,
-      title: 'common.dialogs.selectEngineFolder',
-    }))
-    expect(importResourceMock).toHaveBeenCalledWith('/engines/selected')
+    expect(selectResourceMock).toHaveBeenCalledOnce()
+    expect(importResourceMock).not.toHaveBeenCalled()
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastInfoMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
@@ -85,8 +77,7 @@ describe('useHomeResourceImportActions', () => {
   })
 
   it('导入结构错误时会提示无效目录', async () => {
-    openDialogMock.mockResolvedValue('/engines/invalid')
-    importResourceMock.mockRejectedValue(new AppError('INVALID_STRUCTURE', 'invalid'))
+    selectResourceMock.mockRejectedValue(new AppError('INVALID_STRUCTURE', 'invalid'))
     const actions = createActions()
 
     await actions.selectFolder()
@@ -95,8 +86,7 @@ describe('useHomeResourceImportActions', () => {
   })
 
   it('旧版引擎导入错误时会提示用户改走项目导入', async () => {
-    openDialogMock.mockResolvedValue('/engines/legacy')
-    importResourceMock.mockRejectedValue(new AppError('INVALID_MANIFEST', 'legacy', {
+    selectResourceMock.mockRejectedValue(new AppError('INVALID_MANIFEST', 'legacy', {
       details: { reason: 'LEGACY_ENGINE' },
     }))
     const actions = createActions()
@@ -107,8 +97,7 @@ describe('useHomeResourceImportActions', () => {
   })
 
   it('导入被用户取消时保持静默', async () => {
-    openDialogMock.mockResolvedValue('/engines/cancelled')
-    importResourceMock.mockRejectedValue(new AppError('IO_ERROR', 'cancelled', {
+    selectResourceMock.mockRejectedValue(new AppError('IO_ERROR', 'cancelled', {
       details: { reason: 'IMPORT_CANCELLED' },
     }))
     const actions = createActions()

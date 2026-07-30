@@ -9,12 +9,14 @@ import type { EngineGroupCollectionItem } from '~/features/home/home-collection-
 interface Props {
   groups: EngineGroupCollectionItem[]
   getEngineProgress: (engine: Engine) => number | undefined
+  importBusy?: boolean
   viewMode: 'grid' | 'list'
 }
 
 const {
   groups,
   getEngineProgress,
+  importBusy,
   viewMode,
 } = defineProps<Props>()
 
@@ -62,6 +64,7 @@ function getGroupProgress(group: EngineGroupCollectionItem): number | undefined 
     <button
       ref="dropZoneGridRef"
       type="button"
+      :disabled="importBusy"
       :aria-label="$t('home.engines.installEngine')"
       class="p-4 border-1 rounded-lg border-dashed flex gap-4 cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden hover:border-primary/40 dark:hover:border-primary/60"
       :class="{
@@ -100,6 +103,7 @@ function getGroupProgress(group: EngineGroupCollectionItem): number | undefined 
     <button
       ref="dropZoneListRef"
       type="button"
+      :disabled="importBusy"
       :aria-label="$t('home.engines.installEngine')"
       class="p-3 flex w-full cursor-pointer transition-colors items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-800/20"
       :class="{

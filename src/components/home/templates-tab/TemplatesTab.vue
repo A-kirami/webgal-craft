@@ -4,6 +4,7 @@ import { Download, LayoutTemplate, Plus } from '@lucide/vue'
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import { buildTemplateCollectionItems } from '~/features/home/templates-tab/template-collection-items'
 import { useTemplatesTabController } from '~/features/home/templates-tab/useTemplatesTabController'
+import { useManagedImportStore } from '~/stores/managed-import'
 import { useModalStore } from '~/stores/modal'
 import { usePreferenceStore } from '~/stores/preference'
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
@@ -12,6 +13,7 @@ import { useResourceStore } from '~/stores/resource'
 import type { TemplateCollectionItem } from '~/features/home/home-collection-items'
 
 const modalStore = useModalStore()
+const managedImportStore = useManagedImportStore()
 const preferenceStore = usePreferenceStore()
 const previewRuntimeStore = usePreviewRuntimeStore()
 const resourceStore = useResourceStore()
@@ -40,6 +42,7 @@ const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRe
     :view-mode="preferenceStore.viewMode"
     :get-template-progress="controller.getTemplateGroupProgress"
     :has-template-progress="controller.hasTemplateGroupProgress"
+    :import-busy="managedImportStore.isBusy"
     @delete-template="group => controller.handleDelete(group, resourceStore.templates ?? [])"
     @drop="controller.handleDrop"
     @import-click="controller.selectTemplateFolder"
@@ -78,7 +81,12 @@ const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRe
         {{ $t('common.or') }}
       </p>
     </div>
-    <Button variant="outline" class="gap-2" @click="controller.selectTemplateFolder">
+    <Button
+      variant="outline"
+      class="gap-2"
+      :disabled="managedImportStore.isBusy"
+      @click="controller.selectTemplateFolder"
+    >
       <Plus class="h-4 w-4" />
       {{ $t('home.templates.importTemplate') }}
     </Button>

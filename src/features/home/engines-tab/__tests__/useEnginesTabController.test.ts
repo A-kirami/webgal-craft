@@ -1,3 +1,4 @@
+import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestEngine } from '~/__tests__/factories'
@@ -83,6 +84,7 @@ describe('useEnginesTabController', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
+    setActivePinia(createPinia())
 
     openDialogMock.mockResolvedValue(undefined)
     reconcileEngineRecordMock.mockResolvedValue('available')

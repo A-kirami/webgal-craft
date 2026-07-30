@@ -2,7 +2,8 @@ import { openPath } from '@tauri-apps/plugin-opener'
 
 import { db } from '~/database/db'
 import { AbsPath } from '~/domain/path'
-import { useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { managedImportErrorMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { createEngineImportWorkflow } from '~/features/resource-import/resource-import-workflows'
 import { engineManager, MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
 import { resourceReconcile } from '~/services/resource-reconcile'
 
@@ -19,10 +20,13 @@ interface UseEnginesTabControllerOptions {
 }
 
 export function useEnginesTabController(options: UseEnginesTabControllerOptions) {
+  const importWorkflow = createEngineImportWorkflow(options.t('common.dialogs.selectEngineFolder'))
   const importActions = useHomeResourceImportActions<Engine>({
     activeProgress: options.activeProgress,
     importResource: path => engineManager.importEngine(path),
+    selectResource: importWorkflow.importFromPicker,
     messages: {
+      ...managedImportErrorMessages,
       alreadyRegistered: t => t('home.engines.importAlreadyExists'),
       engineEditorIncompatible: t => t('home.engines.importEditorIncompatible'),
       engineVersionInvalid: t => t('home.engines.importVersionInvalid'),
@@ -76,5 +80,9 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
     handleOpenGroupFolder,
     handleSetDefaultEngine: options.setDefaultEngineId,
     selectEngineFolder: importActions.selectFolder,
+    cancelEngineImport: importWorkflow.cancel,
+    get isEngineImportBusy() {
+      return importWorkflow.isBusy
+    },
   }
 }

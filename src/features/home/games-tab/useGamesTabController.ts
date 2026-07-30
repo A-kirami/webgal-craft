@@ -1,6 +1,7 @@
-import { useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { managedImportErrorMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
 import { requestGameRuntimeRebind, resolveRuntimeRebindIssue } from '~/features/modals/import-dependency-resolution/request-game-runtime-rebind'
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
+import { createGameImportWorkflow } from '~/features/resource-import/resource-import-workflows'
 import { isEngineEditorCompatible, MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 import { resourceReconcile } from '~/services/resource-reconcile'
@@ -27,10 +28,17 @@ interface UseGamesTabControllerOptions {
 
 export function useGamesTabController(options: UseGamesTabControllerOptions) {
   const resolveDependencies = options.resolveDependencies ?? requestImportDependencyResolution
+  const importWorkflow = createGameImportWorkflow({
+    selectTitle: options.t('common.dialogs.selectGameFolder'),
+    resolveDependencies,
+    afterManagedCommit: gameId => options.pushRoute(`/edit/${gameId}`),
+  })
   const importActions = useHomeResourceImportActions<Game>({
     activeProgress: options.activeProgress,
     importResource: path => gameManager.importGame(path, { resolveDependencies }),
+    selectResource: importWorkflow.importFromPicker,
     messages: {
+      ...managedImportErrorMessages,
       alreadyRegistered: t => t('home.games.importAlreadyExists'),
       engineEditorIncompatible: t => t('home.games.importEngineEditorIncompatible'),
       engineNotFound: t => t('home.games.importEngineNotFound'),
@@ -112,5 +120,9 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
     handleOpenFolder: importActions.handleOpenFolder,
     hasGameProgress: importActions.hasProgress,
     selectGameFolder: importActions.selectFolder,
+    cancelGameImport: importWorkflow.cancel,
+    get isGameImportBusy() {
+      return importWorkflow.isBusy
+    },
   }
 }

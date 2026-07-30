@@ -15,6 +15,7 @@ interface Props {
   items: TemplateCollectionItem[]
   getTemplateProgress: (group: TemplateGroupViewModel) => number
   hasTemplateProgress: (group: TemplateGroupViewModel) => boolean
+  importBusy?: boolean
   viewMode: 'grid' | 'list'
 }
 
@@ -22,6 +23,7 @@ const {
   items,
   getTemplateProgress,
   hasTemplateProgress,
+  importBusy,
   viewMode,
 } = defineProps<Props>()
 const { t } = useI18n()
@@ -92,6 +94,7 @@ function getMenuItems(item: TemplateCollectionItem): MenuItem[] {
       <button
         ref="dropZoneGridRef"
         type="button"
+        :disabled="importBusy"
         :aria-label="$t('home.templates.importTemplate')"
         class="p-3 border-1 rounded-lg border-dashed flex gap-4 cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden hover:border-primary/40 dark:hover:border-primary/60"
         :class="{
@@ -129,6 +132,7 @@ function getMenuItems(item: TemplateCollectionItem): MenuItem[] {
       <button
         ref="dropZoneListRef"
         type="button"
+        :disabled="importBusy"
         :aria-label="$t('home.templates.importTemplate')"
         class="p-3 flex w-full cursor-pointer transition-colors items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-800/20"
         :class="{

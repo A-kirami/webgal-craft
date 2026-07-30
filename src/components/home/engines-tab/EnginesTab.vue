@@ -4,6 +4,7 @@ import { Box, Download, Plus } from '@lucide/vue'
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import { buildEngineGroupCollectionItems } from '~/features/home/engines-tab/engine-group-view-model'
 import { useEnginesTabController } from '~/features/home/engines-tab/useEnginesTabController'
+import { useManagedImportStore } from '~/stores/managed-import'
 import { useModalStore } from '~/stores/modal'
 import { usePreferenceStore } from '~/stores/preference'
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
@@ -12,6 +13,7 @@ import { useResourceStore } from '~/stores/resource'
 import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
 
 const modalStore = useModalStore()
+const managedImportStore = useManagedImportStore()
 const preferenceStore = usePreferenceStore()
 const previewRuntimeStore = usePreviewRuntimeStore()
 const resourceStore = useResourceStore()
@@ -50,6 +52,7 @@ const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRe
     :groups="engineGroupItems"
     :view-mode="preferenceStore.viewMode"
     :get-engine-progress="controller.getEngineProgress"
+    :import-busy="managedImportStore.isBusy"
     @delete-engine="controller.handleDelete"
     @delete-group="controller.handleDeleteGroup"
     @drop="controller.handleDrop"
@@ -90,7 +93,12 @@ const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRe
         {{ $t('common.or') }}
       </p>
     </div>
-    <Button variant="outline" class="gap-2" @click="controller.selectEngineFolder">
+    <Button
+      variant="outline"
+      class="gap-2"
+      :disabled="managedImportStore.isBusy"
+      @click="controller.selectEngineFolder"
+    >
       <Plus class="h-4 w-4" />
       {{ $t('home.engines.installGameEngine') }}
     </Button>

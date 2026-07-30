@@ -117,6 +117,28 @@ appUpdate:
 
 home:
   unavailableBadge: 已失效
+  managedImport:
+    title: 正在匯入{resource}
+    cancel: 取消匯入
+    copied: "{files} 個檔案 · {bytes}"
+    currentEntry: "{summary} · {entry}"
+    resource:
+      game: 遊戲
+      engine: 引擎
+      template: 模板
+    phase:
+      copying: 正在複製檔案
+      validating: 正在驗證
+      publishing: 正在發佈
+      registering: 正在註冊
+    error:
+      providerDenied: 所選檔案提供方未授予該目錄的讀取權限
+      copyFailed: 無法從所選檔案提供方複製該目錄
+      unsafeEntry: 目錄包含不安全或不支援的項目
+      storageFull: 本機儲存空間不足，無法匯入該目錄
+      resourceLimit: 目錄超出允許匯入的大小或檔案數量上限
+      rollbackFailed: 匯入清理尚未完成，將在應用程式下次啟動時重試
+      busy: 已有其他目錄匯入正在進行
   header:
     about: 關於
   tabs:

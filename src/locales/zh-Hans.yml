@@ -117,6 +117,28 @@ appUpdate:
 
 home:
   unavailableBadge: 已失效
+  managedImport:
+    title: 正在导入{resource}
+    cancel: 取消导入
+    copied: "{files} 个文件 · {bytes}"
+    currentEntry: "{summary} · {entry}"
+    resource:
+      game: 游戏
+      engine: 引擎
+      template: 模板
+    phase:
+      copying: 正在复制文件
+      validating: 正在校验
+      publishing: 正在发布
+      registering: 正在注册
+    error:
+      providerDenied: 所选文件提供方未授予该目录的读取权限
+      copyFailed: 无法从所选文件提供方复制该目录
+      unsafeEntry: 目录包含不安全或不受支持的条目
+      storageFull: 本地存储空间不足，无法导入该目录
+      resourceLimit: 目录超出允许导入的大小或文件数量上限
+      rollbackFailed: 导入清理尚未完成，将在应用下次启动时重试
+      busy: 已有其他目录导入正在进行
   header:
     about: 关于
   tabs:
