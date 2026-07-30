@@ -15,6 +15,7 @@ type EngineAvailabilityCheck = Pick<Engine, 'availability' | 'id' | 'metadata' |
 
 interface UseGamesTabControllerOptions {
   activeProgress: ReadonlyMap<string, number>
+  android: boolean
   engines?: readonly EngineAvailabilityCheck[] | (() => readonly EngineAvailabilityCheck[] | undefined)
   openCreateGameModal: () => void
   openDeleteGameModal: (game: Game) => void
@@ -29,6 +30,7 @@ interface UseGamesTabControllerOptions {
 export function useGamesTabController(options: UseGamesTabControllerOptions) {
   const resolveDependencies = options.resolveDependencies ?? requestImportDependencyResolution
   const importWorkflow = createGameImportWorkflow({
+    android: options.android,
     selectTitle: options.t('common.dialogs.selectGameFolder'),
     resolveDependencies,
     afterManagedCommit: gameId => options.pushRoute(`/edit/${gameId}`),
@@ -120,9 +122,5 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
     handleOpenFolder: importActions.handleOpenFolder,
     hasGameProgress: importActions.hasProgress,
     selectGameFolder: importActions.selectFolder,
-    cancelGameImport: importWorkflow.cancel,
-    get isGameImportBusy() {
-      return importWorkflow.isBusy
-    },
   }
 }

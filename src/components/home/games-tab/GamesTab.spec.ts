@@ -92,6 +92,10 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({
   open: openDialogMock,
 }))
 
+vi.mock('~/services/platform/runtime', () => ({
+  isAndroidRuntime: () => false,
+}))
+
 vi.mock('@tauri-apps/plugin-opener', () => ({
   openPath: openPathMock,
 }))

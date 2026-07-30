@@ -8,17 +8,17 @@ import { AppError } from '~/types/errors'
 import { androidDirectoryMaterializer } from './android-directory-materializer'
 import { desktopDirectoryPicker } from './desktop-directory-picker'
 
-import type {
-  DirectoryMaterializer,
-  ImportResourceKind,
-  PreparedManagedImport,
-} from './directory-materializer'
 import type { AbsPath } from '~/domain/path'
 import type { HomeResourceImportOutcome } from '~/features/home/shared/home-resource-import'
 import type { PreparedEngineManagedImport } from '~/services/engine-manager'
 import type { PreparedGameManagedImport } from '~/services/game-manager'
 import type { PreparedTemplateManagedImport } from '~/services/template-manager'
 import type { ResolveImportDependencies } from '~/types/import-dependency-resolution'
+import type {
+  DirectoryMaterializer,
+  ImportResourceKind,
+  PreparedManagedImport,
+} from '~/types/managed-import'
 
 interface ManagedImportDomain<TPlan> {
   prepare: (stagingPath: AbsPath) => Promise<
@@ -42,8 +42,6 @@ interface ResourceImportWorkflowOptions<TPlan> {
 
 export interface ResourceImportWorkflow {
   importFromPicker: () => Promise<HomeResourceImportOutcome | undefined>
-  cancel: () => Promise<void>
-  readonly isBusy: boolean
 }
 
 async function rollbackPreservingError(
@@ -64,17 +62,7 @@ function createResourceImportWorkflow<TPlan>(
 ): ResourceImportWorkflow {
   const store = useManagedImportStore()
   const materializer = options.materializer ?? androidDirectoryMaterializer
-  function runningOnAndroid(): boolean {
-    if (options.android !== undefined) {
-      return options.android
-    }
-
-    try {
-      return isAndroidRuntime()
-    } catch {
-      return false
-    }
-  }
+  const android = options.android ?? isAndroidRuntime()
 
   async function importManaged(): Promise<HomeResourceImportOutcome | undefined> {
     if (!store.begin(options.kind)) {
@@ -139,7 +127,7 @@ function createResourceImportWorkflow<TPlan>(
   }
 
   async function importFromPicker(): Promise<HomeResourceImportOutcome | undefined> {
-    if (runningOnAndroid()) {
+    if (android) {
       return importManaged()
     }
 
@@ -154,20 +142,7 @@ function createResourceImportWorkflow<TPlan>(
     return result as HomeResourceImportOutcome | undefined
   }
 
-  async function cancel(): Promise<void> {
-    const sessionId = store.activeSessionId
-    if (sessionId) {
-      await materializer.cancel(sessionId)
-    }
-  }
-
-  return {
-    importFromPicker,
-    cancel,
-    get isBusy() {
-      return store.activeKind === options.kind
-    },
-  }
+  return { importFromPicker }
 }
 
 export function createGameImportWorkflow(options: {

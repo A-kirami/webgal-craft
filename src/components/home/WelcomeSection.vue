@@ -9,6 +9,7 @@ import {
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
 import { createGameImportWorkflow } from '~/features/resource-import/resource-import-workflows'
 import { isEngineEditorCompatible, MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
+import { isAndroidRuntime } from '~/services/platform/runtime'
 import { useManagedImportStore } from '~/stores/managed-import'
 import { useModalStore } from '~/stores/modal'
 import { useResourceStore } from '~/stores/resource'
@@ -47,6 +48,7 @@ const gameImportMessages: HomeResourceImportMessages = {
 }
 
 const gameImportWorkflow = createGameImportWorkflow({
+  android: isAndroidRuntime(),
   selectTitle: t('common.dialogs.selectGameFolder'),
   resolveDependencies: requestImportDependencyResolution,
   afterDesktopCommit: gameId => router.push(`/edit/${gameId}`),

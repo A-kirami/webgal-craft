@@ -6,8 +6,8 @@ import { AppError } from '~/types/errors'
 import { androidDirectoryMaterializer } from './android-directory-materializer'
 import { desktopDirectoryPicker } from './desktop-directory-picker'
 
-import type { DirectoryMaterializer } from './directory-materializer'
 import type { Game } from '~/database/model'
+import type { DirectoryMaterializer } from '~/types/managed-import'
 
 interface GameRecoveryWorkflowOptions {
   selectTitle: string
@@ -17,7 +17,6 @@ interface GameRecoveryWorkflowOptions {
 
 export interface GameRecoveryWorkflow {
   relinkFromPicker: (gameId: string) => Promise<Game | undefined>
-  cancel: () => Promise<void>
 }
 
 export function createGameRecoveryWorkflow(options: GameRecoveryWorkflowOptions): GameRecoveryWorkflow {
@@ -92,11 +91,5 @@ export function createGameRecoveryWorkflow(options: GameRecoveryWorkflowOptions)
     return selected ? gameManager.relinkGame(gameId, selected) : undefined
   }
 
-  async function cancel(): Promise<void> {
-    if (store.activeSessionId) {
-      await materializer.cancel(store.activeSessionId)
-    }
-  }
-
-  return { cancel, relinkFromPicker }
+  return { relinkFromPicker }
 }

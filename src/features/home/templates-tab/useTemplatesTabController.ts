@@ -9,6 +9,7 @@ import type { I18nT } from '~/utils/i18n-like'
 
 interface UseTemplatesTabControllerOptions {
   activeProgress: ReadonlyMap<string, number>
+  android: boolean
   openDeleteTemplateModal: (template: Template) => void
   t: I18nT
 }
@@ -22,7 +23,7 @@ function findStandaloneSource(
 }
 
 export function useTemplatesTabController(options: UseTemplatesTabControllerOptions) {
-  const importWorkflow = createTemplateImportWorkflow(options.t('common.dialogs.selectTemplateFolder'))
+  const importWorkflow = createTemplateImportWorkflow(options.t('common.dialogs.selectTemplateFolder'), options.android)
   const importActions = useHomeResourceImportActions<Template>({
     activeProgress: options.activeProgress,
     importResource: path => templateManager.importTemplate(path),
@@ -77,9 +78,5 @@ export function useTemplatesTabController(options: UseTemplatesTabControllerOpti
     handleOpenSourceFolder,
     hasTemplateGroupProgress,
     selectTemplateFolder: importActions.selectFolder,
-    cancelTemplateImport: importWorkflow.cancel,
-    get isTemplateImportBusy() {
-      return importWorkflow.isBusy
-    },
   }
 }

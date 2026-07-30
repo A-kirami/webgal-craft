@@ -9,7 +9,7 @@ import type {
   RecoverableImportSession,
   SelectAndStageOptions,
   SelectAndStageResult,
-} from './directory-materializer'
+} from '~/types/managed-import'
 
 interface NativeStageResult {
   kind: 'cancelled' | 'staged'

@@ -3,6 +3,7 @@ import { Download, Plus, Scroll } from '@lucide/vue'
 
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import { useGamesTabController } from '~/features/home/games-tab/useGamesTabController'
+import { isAndroidRuntime } from '~/services/platform/runtime'
 import { useManagedImportStore } from '~/stores/managed-import'
 import { useModalStore } from '~/stores/modal'
 import { usePreferenceStore } from '~/stores/preference'
@@ -45,6 +46,7 @@ const gameCollectionItems = computed<GameCollectionItem[]>(() =>
 )
 const controller = useGamesTabController({
   activeProgress: resourceStore.activeProgress,
+  android: isAndroidRuntime(),
   engines: () => resourceStore.engines,
   openCreateGameModal: () => modalStore.open('CreateGameModal'),
   openDeleteGameModal: game => modalStore.open('DeleteGameModal', { game }),

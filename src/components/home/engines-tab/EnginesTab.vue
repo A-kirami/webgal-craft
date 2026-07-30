@@ -4,6 +4,7 @@ import { Box, Download, Plus } from '@lucide/vue'
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import { buildEngineGroupCollectionItems } from '~/features/home/engines-tab/engine-group-view-model'
 import { useEnginesTabController } from '~/features/home/engines-tab/useEnginesTabController'
+import { isAndroidRuntime } from '~/services/platform/runtime'
 import { useManagedImportStore } from '~/stores/managed-import'
 import { useModalStore } from '~/stores/modal'
 import { usePreferenceStore } from '~/stores/preference'
@@ -28,6 +29,7 @@ const engineGroupItems = computed<EngineGroupCollectionItem[]>(() =>
 )
 const controller = useEnginesTabController({
   activeProgress: resourceStore.activeProgress,
+  android: isAndroidRuntime(),
   openDeleteEngineGroupModal: (engineId, options) => {
     const group = engineGroupItems.value.find(g => g.engineId === engineId)
     modalStore.open('DeleteEngineGroupModal', {

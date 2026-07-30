@@ -4,7 +4,7 @@ import { toLookupPathKey } from '~/services/resource-path/lookup'
 
 import { androidDirectoryMaterializer } from './android-directory-materializer'
 
-import type { DirectoryMaterializer, ImportResourceKind, RecoverableImportSession } from './directory-materializer'
+import type { DirectoryMaterializer, ImportResourceKind, RecoverableImportSession } from '~/types/managed-import'
 
 interface ManagedImportRecoveryOptions {
   android?: boolean
@@ -75,7 +75,7 @@ export async function recoverManagedImportSessions(
 
   for (const session of sessions) {
     try {
-      // Native rollback may remove a shared engine parent, so recover sessions in persisted order.
+      // 原生层回滚可能删除共用的引擎父目录，因此必须按持久化顺序恢复 session。
       // eslint-disable-next-line no-await-in-loop
       await recoverSession(session, materializer, findResource)
     } catch (error) {

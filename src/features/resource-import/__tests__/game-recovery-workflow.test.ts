@@ -60,7 +60,7 @@ vi.mock('~/services/game-manager', () => ({
 
 import { createGameRecoveryWorkflow } from '../game-recovery-workflow'
 
-describe('game recovery workflow', () => {
+describe('游戏恢复工作流', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.resetAllMocks()

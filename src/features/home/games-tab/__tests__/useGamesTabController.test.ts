@@ -86,6 +86,7 @@ describe('useGamesTabController', () => {
   function createController(overrides?: Partial<Parameters<typeof useGamesTabController>[0]>) {
     return useGamesTabController({
       activeProgress: new Map<string, number>(),
+      android: false,
       engines: [createTestEngine({ id: 'engine-1' })],
       openCreateGameModal: openCreateGameModalMock,
       openDeleteGameModal: openDeleteGameModalMock,

@@ -4,7 +4,7 @@ import { AbsPath } from '~/domain/path'
 
 import { recoverManagedImportSessions } from '../managed-import-recovery'
 
-import type { DirectoryMaterializer, RecoverableImportSession } from '../directory-materializer'
+import type { DirectoryMaterializer, RecoverableImportSession } from '~/types/managed-import'
 
 vi.mock('@tauri-apps/plugin-log', () => ({
   error: vi.fn(),
@@ -35,7 +35,7 @@ function createMaterializer(sessions: RecoverableImportSession[]): DirectoryMate
   }
 }
 
-describe('managed import recovery', () => {
+describe('托管导入恢复流程', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })

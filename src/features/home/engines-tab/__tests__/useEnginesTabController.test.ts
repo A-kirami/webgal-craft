@@ -74,6 +74,7 @@ describe('useEnginesTabController', () => {
   function createController(overrides?: Partial<Parameters<typeof useEnginesTabController>[0]>) {
     return useEnginesTabController({
       activeProgress: new Map<string, number>(),
+      android: false,
       openDeleteEngineGroupModal: openDeleteEngineGroupModalMock,
       openDeleteEngineModal: openDeleteEngineModalMock,
       setDefaultEngineId: setDefaultEngineIdMock,

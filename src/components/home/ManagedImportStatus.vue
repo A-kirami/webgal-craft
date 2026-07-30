@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { X } from '@lucide/vue'
-import { computed } from 'vue'
 
 import { formatFileSize } from '~/utils/format'
 
-import type { ManagedImportProgress } from '~/features/resource-import/directory-materializer'
+import type { ManagedImportProgress } from '~/types/managed-import'
 
 const props = defineProps<{
   canCancel: boolean

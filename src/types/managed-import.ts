@@ -59,7 +59,7 @@ export interface RecoverableImportSession {
   updatedAt: number
 }
 
-/** Android adapter boundary. Source URIs and deletion targets never cross it. */
+/** Android 适配器边界，源 URI 和删除目标均不得越过此处。 */
 export interface DirectoryMaterializer {
   selectAndStage: (
     kind: ImportResourceKind,

@@ -122,7 +122,7 @@ pub fn run() {
             commands::fs::rename_file,
             commands::fs::is_binary_file,
             commands::fs::get_image_dimensions,
-            // Android resource import
+            // Android 资源导入
             resource_import::android_resource_import_resolve_roots,
             resource_import::android_resource_import_select_and_stage,
             resource_import::android_resource_import_publish,

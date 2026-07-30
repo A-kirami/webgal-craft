@@ -31,10 +31,13 @@ import { AppError } from '~/types/errors'
 import { EngineRef } from '~/types/project-config'
 
 import type {
+  ResourceValidationFailure,
+  ResourceValidationSummary,
+} from '~/services/resource-validation-summary'
+import type {
   PreparedManagedImport,
   PrepareManagedImportResult,
-} from '~/features/resource-import/directory-materializer'
-import type { ResourceValidationFailure, ResourceValidationSummary } from '~/services/resource-validation-summary'
+} from '~/types/managed-import'
 
 interface EngineSnapshot {
   engineId: string

@@ -66,7 +66,7 @@ vi.mock('~/services/template-manager', () => ({
 
 import { createGameImportWorkflow } from '../resource-import-workflows'
 
-describe('resource import workflows', () => {
+describe('资源导入工作流', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.resetAllMocks()

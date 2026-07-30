@@ -19,11 +19,11 @@ import { useStorageSettingsStore } from '~/stores/storage-settings'
 import { AppError } from '~/types/errors'
 
 import type { Game, Template } from '~/database/model'
+import type { ResourceValidationFailure, ResourceValidationSummary } from '~/services/resource-validation-summary'
 import type {
   PreparedManagedImport,
   PrepareManagedImportResult,
-} from '~/features/resource-import/directory-materializer'
-import type { ResourceValidationFailure, ResourceValidationSummary } from '~/services/resource-validation-summary'
+} from '~/types/managed-import'
 
 interface RegisterTemplateOptions {
   metadata?: TemplateMetadata

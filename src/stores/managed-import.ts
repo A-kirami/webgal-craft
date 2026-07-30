@@ -1,10 +1,9 @@
 import { defineStore } from 'pinia'
-import { computed, shallowRef } from 'vue'
 
 import type {
   ImportResourceKind,
   ManagedImportProgress,
-} from '~/features/resource-import/directory-materializer'
+} from '~/types/managed-import'
 
 export const useManagedImportStore = defineStore('managed-import', () => {
   const activeKind = shallowRef<ImportResourceKind>()

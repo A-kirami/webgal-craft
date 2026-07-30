@@ -4,6 +4,7 @@ import { Download, LayoutTemplate, Plus } from '@lucide/vue'
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import { buildTemplateCollectionItems } from '~/features/home/templates-tab/template-collection-items'
 import { useTemplatesTabController } from '~/features/home/templates-tab/useTemplatesTabController'
+import { isAndroidRuntime } from '~/services/platform/runtime'
 import { useManagedImportStore } from '~/stores/managed-import'
 import { useModalStore } from '~/stores/modal'
 import { usePreferenceStore } from '~/stores/preference'
@@ -28,6 +29,7 @@ const templateCollectionItems = $computed<TemplateCollectionItem[]>(() =>
 )
 const controller = useTemplatesTabController({
   activeProgress: resourceStore.activeProgress,
+  android: isAndroidRuntime(),
   openDeleteTemplateModal: template => modalStore.open('DeleteTemplateModal', { template }),
   t,
 })

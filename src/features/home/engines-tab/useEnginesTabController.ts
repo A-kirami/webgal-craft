@@ -13,6 +13,7 @@ import type { I18nT } from '~/utils/i18n-like'
 
 interface UseEnginesTabControllerOptions {
   activeProgress: ReadonlyMap<string, number>
+  android: boolean
   openDeleteEngineGroupModal: (engineId: string, options: { allUnavailable: boolean }) => void
   openDeleteEngineModal: (engine: Engine) => void
   setDefaultEngineId: (engineId: string | undefined) => void
@@ -20,7 +21,7 @@ interface UseEnginesTabControllerOptions {
 }
 
 export function useEnginesTabController(options: UseEnginesTabControllerOptions) {
-  const importWorkflow = createEngineImportWorkflow(options.t('common.dialogs.selectEngineFolder'))
+  const importWorkflow = createEngineImportWorkflow(options.t('common.dialogs.selectEngineFolder'), options.android)
   const importActions = useHomeResourceImportActions<Engine>({
     activeProgress: options.activeProgress,
     importResource: path => engineManager.importEngine(path),
@@ -80,9 +81,5 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
     handleOpenGroupFolder,
     handleSetDefaultEngine: options.setDefaultEngineId,
     selectEngineFolder: importActions.selectFolder,
-    cancelEngineImport: importWorkflow.cancel,
-    get isEngineImportBusy() {
-      return importWorkflow.isBusy
-    },
   }
 }

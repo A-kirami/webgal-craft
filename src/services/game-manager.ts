@@ -31,10 +31,6 @@ import { AppError } from '~/types/errors'
 
 import type { GameConfigEntry } from '~/commands/game'
 import type { Engine, Game, Template } from '~/database/model'
-import type {
-  PreparedManagedImport,
-  PrepareManagedImportResult,
-} from '~/features/resource-import/directory-materializer'
 import type { GameIconPathExistsContext } from '~/services/project-icon-assets'
 import type { LookupPathKey } from '~/services/resource-path/lookup'
 import type { GameMetadata, GamePreviewAssets, PreviewAsset } from '~/services/types'
@@ -44,6 +40,10 @@ import type {
   ImportTemplateResolutionResult,
   ResolveImportDependencies,
 } from '~/types/import-dependency-resolution'
+import type {
+  PreparedManagedImport,
+  PrepareManagedImportResult,
+} from '~/types/managed-import'
 import type { EngineRef, ProjectConfig, TemplateBinding } from '~/types/project-config'
 import type { StaticSiteConfig } from '~/types/server'
 

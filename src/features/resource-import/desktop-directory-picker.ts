@@ -2,12 +2,8 @@ import { open } from '@tauri-apps/plugin-dialog'
 
 import { AbsPath } from '~/domain/path'
 
-export interface DesktopDirectoryPicker {
-  selectDirectory: (title: string, defaultPath?: string) => Promise<AbsPath | undefined>
-}
-
-export const desktopDirectoryPicker: DesktopDirectoryPicker = {
-  async selectDirectory(title, defaultPath) {
+export const desktopDirectoryPicker = {
+  async selectDirectory(title: string, defaultPath?: string): Promise<AbsPath | undefined> {
     const selected = await open({
       title,
       directory: true,
