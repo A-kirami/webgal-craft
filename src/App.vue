@@ -2,6 +2,7 @@
 import { useResourcePreviewPrimer } from '~/composables/useResourcePreviewPrimer'
 import { runAppStartup } from '~/features/app-startup/app-startup'
 import { useAppUpdateController } from '~/features/app-update/useAppUpdateController'
+import { cleanupRecoverableAndroidWebExports } from '~/features/export/android-web-export-workflow'
 import { recoverManagedImportSessions } from '~/features/resource-import/managed-import-recovery'
 import { engineManager } from '~/services/engine-manager'
 import { resolveMissingStorageSavePaths } from '~/services/platform/storage-defaults'
@@ -26,6 +27,7 @@ onMounted(async () => {
 
   await runAppStartup({
     appUpdateController,
+    cleanupRecoverableAndroidWebExports,
     engineManager,
     generalSettingsStore,
     resourceReconcile,

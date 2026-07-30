@@ -2,6 +2,7 @@ import sanitize from 'sanitize-filename'
 
 import { exportCmds } from '~/commands/export'
 import { exportManager } from '~/services/export-manager'
+import { isAndroidRuntime } from '~/services/platform/runtime'
 
 import { androidExportPublisher } from './android-export-publisher'
 
@@ -66,5 +67,18 @@ export function createAndroidWebExportWorkflow(
     exportGame,
     openPublished: publisher.openPublished,
     sharePublished: publisher.sharePublished,
+  }
+}
+
+export async function cleanupRecoverableAndroidWebExports(
+  android: boolean = isAndroidRuntime(),
+): Promise<void> {
+  if (!android) {
+    return
+  }
+  try {
+    await exportCmds.cleanupRecoverableAndroidWebExports()
+  } catch (error) {
+    logger.error(`清理遗留 Android Web 导出 staging 失败: ${error}`)
   }
 }

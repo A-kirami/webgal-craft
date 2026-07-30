@@ -33,8 +33,13 @@ function cleanupAndroidWebExport(exportSessionId: string): Promise<void> {
   return safeInvoke('cleanup_android_web_export', { exportSessionId })
 }
 
+function cleanupRecoverableAndroidWebExports(): Promise<void> {
+  return safeInvoke('android_export_cleanup_recoverable')
+}
+
 export const exportCmds = {
   cleanupAndroidWebExport,
+  cleanupRecoverableAndroidWebExports,
   exportAndroidWebZip,
   exportWeb,
 }

@@ -41,6 +41,7 @@ interface AppStartupStorageSettingsStore extends StorageSavePathState {
 
 export interface RunAppStartupOptions {
   appUpdateController: AppStartupUpdateController
+  cleanupRecoverableAndroidWebExports(): Promise<void>
   engineManager: AppStartupEngineManager
   generalSettingsStore: AppStartupGeneralSettingsStore
   resourceReconcile: AppStartupResourceReconcile
@@ -115,6 +116,7 @@ export async function runAppStartup(options: RunAppStartupOptions): Promise<void
   try {
     await initializeStoragePaths(options)
     await options.recoverManagedImportSessions()
+    await options.cleanupRecoverableAndroidWebExports()
     const validationResults = await Promise.all([
       runValidation('引擎校验', () => options.engineManager.validateAllEngines()),
       runValidation('游戏校验', () => options.resourceReconcile.reconcileAllGames()),

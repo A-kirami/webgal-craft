@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestGame } from '~/__tests__/factories'
 
-const { cleanupMock, exportZipMock, openMock, publishMock, shareMock } = vi.hoisted(() => ({
+const { cleanupMock, cleanupRecoverableMock, exportZipMock, openMock, publishMock, shareMock } = vi.hoisted(() => ({
   cleanupMock: vi.fn(),
+  cleanupRecoverableMock: vi.fn(),
   exportZipMock: vi.fn(),
   openMock: vi.fn(),
   publishMock: vi.fn(),
@@ -17,6 +18,7 @@ vi.mock('@tauri-apps/plugin-log', () => ({
 vi.mock('~/commands/export', () => ({
   exportCmds: {
     cleanupAndroidWebExport: cleanupMock,
+    cleanupRecoverableAndroidWebExports: cleanupRecoverableMock,
   },
 }))
 
@@ -26,12 +28,13 @@ vi.mock('~/services/export-manager', () => ({
   },
 }))
 
-import { createAndroidWebExportWorkflow } from '../android-web-export-workflow'
+import { cleanupRecoverableAndroidWebExports, createAndroidWebExportWorkflow } from '../android-web-export-workflow'
 
 describe('Android Web 导出工作流', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     cleanupMock.mockResolvedValue(undefined)
+    cleanupRecoverableMock.mockResolvedValue(undefined)
     exportZipMock.mockResolvedValue(undefined)
     publishMock.mockResolvedValue({
       kind: 'published',
@@ -105,5 +108,18 @@ describe('Android Web 导出工作流', () => {
 
     expect(openMock).toHaveBeenCalledWith(uri)
     expect(shareMock).toHaveBeenCalledWith(uri)
+  })
+
+  it('启动时仅在 Android 清理遗留导出 session', async () => {
+    await cleanupRecoverableAndroidWebExports(true)
+    await cleanupRecoverableAndroidWebExports(false)
+
+    expect(cleanupRecoverableMock).toHaveBeenCalledOnce()
+  })
+
+  it('遗留导出清理失败不阻断应用启动', async () => {
+    cleanupRecoverableMock.mockRejectedValue(new Error('cleanup failed'))
+
+    await expect(cleanupRecoverableAndroidWebExports(true)).resolves.toBeUndefined()
   })
 })
