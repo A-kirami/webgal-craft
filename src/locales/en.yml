@@ -1253,6 +1253,7 @@ settings:
     exportPath:
       label: Default Export Location
       title: Select Default Export Location
+      androidDestination: Downloads/WebGALCraft/exports
     browse: Browse
   backup:
     local: Local History

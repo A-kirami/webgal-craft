@@ -17,6 +17,7 @@ const gameNameFieldId = 'create-game-name'
 const gamePathFieldId = 'create-game-path'
 
 const {
+  canSelectGamePath,
   handleCompositionEnd,
   handleCompositionStart,
   handleGameNameChange,
@@ -79,7 +80,7 @@ const selectedEngineId = useFieldValue<string>('gameEngine')
                     </Tooltip>
                   </TooltipProvider>
                 </FormControl>
-                <Button :aria-label="$t('modals.createGame.selectSaveLocation')" variant="outline" size="icon" type="button" @click="handleSelectFolder">
+                <Button v-if="canSelectGamePath" :aria-label="$t('modals.createGame.selectSaveLocation')" variant="outline" size="icon" type="button" @click="handleSelectFolder">
                   <FolderOpen class="h-4 w-4" />
                 </Button>
               </div>

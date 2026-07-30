@@ -1253,6 +1253,7 @@ settings:
     exportPath:
       label: デフォルトの書き出し先
       title: デフォルトの書き出し先を選択
+      androidDestination: Downloads/WebGALCraft/exports
     browse: 参照
   backup:
     local: ローカル履歴

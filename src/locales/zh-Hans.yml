@@ -1253,6 +1253,7 @@ settings:
     exportPath:
       label: 默认导出位置
       title: 选择默认导出位置
+      androidDestination: 下载/WebGALCraft/exports
     browse: 浏览
   backup:
     local: 本地历史

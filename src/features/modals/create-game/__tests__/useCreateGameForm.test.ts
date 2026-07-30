@@ -13,6 +13,7 @@ const {
   setFieldValueMock,
   useFormMock,
   useStorageSettingsStoreMock,
+  isAndroidRuntimeMock,
 } = vi.hoisted(() => ({
   createGameMock: vi.fn(),
   enginesGetMock: vi.fn(),
@@ -25,6 +26,7 @@ const {
   setFieldValueMock: vi.fn(),
   useFormMock: vi.fn(),
   useStorageSettingsStoreMock: vi.fn(),
+  isAndroidRuntimeMock: vi.fn(),
 }))
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
@@ -80,6 +82,10 @@ vi.mock('~/stores/storage-settings', () => ({
   useStorageSettingsStore: useStorageSettingsStoreMock,
 }))
 
+vi.mock('~/services/platform/runtime', () => ({
+  isAndroidRuntime: isAndroidRuntimeMock,
+}))
+
 import { useCreateGameForm } from '../useCreateGameForm'
 
 let formValues = reactive<Record<string, unknown>>({})
@@ -119,6 +125,7 @@ describe('useCreateGameForm', () => {
     readDirMock.mockResolvedValue([])
     reconcileEngineRecordMock.mockResolvedValue('available')
     isFieldDirtyMock.mockReturnValue(false)
+    isAndroidRuntimeMock.mockReturnValue(false)
 
     useStorageSettingsStoreMock.mockReturnValue({
       gameSavePath: '/games',
@@ -199,6 +206,18 @@ describe('useCreateGameForm', () => {
       defaultPath: '/games',
     })
     expect(setFieldValueMock).toHaveBeenCalledWith('gamePath', '/manual/path', false)
+  })
+
+  it('Android 使用托管游戏根目录且不会打开目录选择器', async () => {
+    isAndroidRuntimeMock.mockReturnValue(true)
+    const open = ref(true)
+    const form = useCreateGameForm({ open })
+
+    await form.handleSelectFolder()
+
+    expect(form.canSelectGamePath).toBe(false)
+    expect(openDialogMock).not.toHaveBeenCalled()
+    expect(formValues.gamePath).toBe('/games')
   })
 
   it('提交时会关闭弹窗并创建游戏且回调 game id', async () => {

@@ -152,6 +152,7 @@ describe('CreateGameModal', () => {
       event?.preventDefault?.()
     })
     useCreateGameFormMock.mockReturnValue({
+      canSelectGamePath: true,
       engineOptions: ref([
         {
           id: 'engine-1',
@@ -186,6 +187,27 @@ describe('CreateGameModal', () => {
     await page.getByRole('button', { name: 'modals.createGame.selectSaveLocation' }).click()
 
     expect(handleSelectFolderMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('Android 托管路径模式不渲染目录选择按钮', async () => {
+    useCreateGameFormMock.mockReturnValue({
+      canSelectGamePath: false,
+      handleCompositionEnd: handleCompositionEndMock,
+      handleCompositionStart: handleCompositionStartMock,
+      handleGameNameChange: handleGameNameChangeMock,
+      handleSelectFolder: handleSelectFolderMock,
+      isFieldDirty: false,
+      onSubmit: onSubmitMock,
+    })
+
+    renderInBrowser(CreateGameModal, {
+      browser: { i18nMode: 'lite' },
+      props: { open: true },
+      global: { stubs: globalStubs },
+    })
+
+    await expect.element(page.getByRole('button', { name: 'modals.createGame.selectSaveLocation' })).not.toBeInTheDocument()
+    expect(handleSelectFolderMock).not.toHaveBeenCalled()
   })
 
   it('输入游戏名时会调用 useCreateGameForm 提供的输入处理器', async () => {
