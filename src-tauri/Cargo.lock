@@ -5627,6 +5627,7 @@ dependencies = [
  "tower",
  "tower-http",
  "trash",
+ "zip",
 ]
 
 [[package]]

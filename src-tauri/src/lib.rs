@@ -86,6 +86,8 @@ pub fn run() {
             commands::engine::read_engine_manifest,
             // export
             commands::export::export_web,
+            commands::export::export_android_web_zip,
+            commands::export::cleanup_android_web_export,
             // project config
             commands::project_config::read_project_config_cmd,
             commands::project_config::write_project_config_cmd,
