@@ -78,7 +78,6 @@ Android 目标当前用于验证横屏平板上的核心编辑流程，支持范
 - 正式验证目标为 arm64 横屏平板，视口至少为 `1024 x 600` CSS 逻辑像素。
 - 应用不限制其他 Android 设备形态或屏幕方向，但 Android 手机、小尺寸平板和竖屏未经验证，不承诺可用性。
 - 继续使用现有桌面布局，不包含完整的移动端触控重设计。
-- 签名密钥和应用商店发布暂不支持。
 - WebGAL Craft 的 Android 目标不包含将 WebGAL 游戏导出为 Android 应用。
 
 命令行构建需要 JDK 21、Android SDK Platform 36、Android NDK r29，以及 Rust 的 `aarch64-linux-android` target。Android Studio 仅用于原生工程调试，不是命令行构建的必要条件。
