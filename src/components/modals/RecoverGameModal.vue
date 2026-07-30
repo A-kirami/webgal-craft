@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { TriangleAlert } from '@lucide/vue'
-import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { openPath } from '@tauri-apps/plugin-opener'
 
-import { AbsPath } from '~/domain/path'
-import { gameManager } from '~/services/game-manager'
+import { createGameRecoveryWorkflow } from '~/features/resource-import/game-recovery-workflow'
 import { resourceReconcile } from '~/services/resource-reconcile'
 import { useEditorViewStateStore } from '~/stores/editor-view-state'
 import { useTabsStore } from '~/stores/tabs'
@@ -21,6 +19,9 @@ const props = defineProps<{
 const router = useRouter()
 const tabsStore = useTabsStore()
 const editorViewStateStore = useEditorViewStateStore()
+const recoveryWorkflow = createGameRecoveryWorkflow({
+  selectTitle: t('modals.recoverGame.selectNewLocation'),
+})
 
 let isRetrying = $ref(false)
 let isRelinking = $ref(false)
@@ -51,18 +52,12 @@ async function handleRelink() {
     return
   }
 
-  const selected = await openDialog({
-    title: t('modals.recoverGame.selectNewLocation'),
-    directory: true,
-    multiple: false,
-  })
-  if (typeof selected !== 'string') {
-    return
-  }
-
   isRelinking = true
   try {
-    const updated = await gameManager.relinkGame(props.game.id, AbsPath.from(selected))
+    const updated = await recoveryWorkflow.relinkFromPicker(props.game.id)
+    if (!updated) {
+      return
+    }
     // 重链接后旧路径绑定的标签页与编辑器视图状态需要清掉，避免污染新工作区
     tabsStore.clearProjectState(updated.id)
     editorViewStateStore.clearProjectStates(updated.id)
