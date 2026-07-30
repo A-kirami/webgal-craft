@@ -46,11 +46,6 @@ body {
   }
 }
 
-.safe-area-scroll-dialog-overlay {
-  padding-block: calc(env(safe-area-inset-top) + 2rem) calc(env(safe-area-inset-bottom) + 2rem);
-  padding-inline: calc(env(safe-area-inset-left) + 1rem) calc(env(safe-area-inset-right) + 1rem);
-}
-
 .bg-checkerboard {
   background-color: #ffffff;
   background-image:
