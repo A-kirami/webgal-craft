@@ -331,6 +331,43 @@ describe('gameManager', () => {
     expect(gameConfigPathMock).toHaveBeenCalledWith('/games/demo')
   })
 
+  it('managed import 预检只读、为每次选择生成独立目录，并在发布后注册而不复制', async () => {
+    mockExistingPaths(
+      '/games/.import-staging/session',
+      '/games/.import-staging/session/game/config.txt',
+    )
+    dbGameAddMock.mockResolvedValue('game-managed')
+    dbEngineGetMock.mockResolvedValue(createTestEngine({ id: 'engine-1' }))
+    const resolveDependencies = vi.fn().mockResolvedValue({ engineId: 'engine-1' })
+
+    const result = await gameManager.prepareManagedImport(
+      AbsPath.from('/games/.import-staging/session'),
+    )
+
+    expect(result).toMatchObject({ kind: 'ready' })
+    expect(result.kind === 'ready' ? result.prepared.finalRelativePath : '').toMatch(
+      /^[0-9a-f-]{36}$/,
+    )
+    expect(dbGameAddMock).not.toHaveBeenCalled()
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
+    expect(writeProjectConfigMock).not.toHaveBeenCalled()
+
+    if (result.kind !== 'ready') {
+      throw new Error('expected a ready managed import')
+    }
+    await expect(gameManager.registerManagedImport(
+      AbsPath.from('/games/imported-game'),
+      result.prepared,
+      { resolveDependencies },
+    )).resolves.toEqual({ id: 'game-managed' })
+
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
+    expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
+      id: expect.any(String),
+      path: '/games/imported-game',
+    }))
+  })
+
   it('getGameMetadata 只返回语义元数据', async () => {
     await expect(gameManager.getGameMetadata(AbsPath.from('/games/demo'))).resolves.toEqual({
       name: 'Demo Game',

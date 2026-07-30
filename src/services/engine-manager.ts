@@ -30,6 +30,10 @@ import { EngineManifest, EngineManifestResult } from '~/types/engine'
 import { AppError } from '~/types/errors'
 import { EngineRef } from '~/types/project-config'
 
+import type {
+  PreparedManagedImport,
+  PrepareManagedImportResult,
+} from '~/features/resource-import/directory-materializer'
 import type { ResourceValidationFailure, ResourceValidationSummary } from '~/services/resource-validation-summary'
 
 interface EngineSnapshot {
@@ -39,6 +43,8 @@ interface EngineSnapshot {
   previewAssets: EnginePreviewAssets
   version?: string
 }
+
+export type PreparedEngineManagedImport = PreparedManagedImport<EngineSnapshot>
 
 interface RegisterEngineOptions extends EngineSnapshot {
   status?: Engine['status']
@@ -137,13 +143,17 @@ function withEnginePreviewCacheVersion(
   }
 }
 
-async function resolveManagedEnginePath(engine: Pick<EngineSnapshot, 'engineId' | 'name' | 'version'>): Promise<AbsPath> {
-  const storageSettingsStore = useStorageSettingsStore()
+function resolveManagedEngineRelativePath(engine: Pick<EngineSnapshot, 'engineId' | 'name' | 'version'>): RelPath {
   const nameSegment = sanitizeEnginePathSegment(engine.name, '引擎名称')
   const versionSegment = sanitizeEnginePathSegment(engine.version ?? engine.engineId, '引擎版本')
-  return AbsPath.append(
-    AbsPath.append(AbsPath.from(storageSettingsStore.engineSavePath), nameSegment),
-    versionSegment,
+  return RelPath.append(RelPath.append(RelPath.empty(), nameSegment), versionSegment)
+}
+
+async function resolveManagedEnginePath(engine: Pick<EngineSnapshot, 'engineId' | 'name' | 'version'>): Promise<AbsPath> {
+  const storageSettingsStore = useStorageSettingsStore()
+  return AbsPath.join(
+    AbsPath.from(storageSettingsStore.engineSavePath),
+    resolveManagedEngineRelativePath(engine),
   )
 }
 
@@ -498,6 +508,41 @@ export interface ImportEngineResult {
   alreadyRegistered: boolean
 }
 
+async function prepareManagedImport(
+  stagingPath: AbsPath,
+): Promise<PrepareManagedImportResult<EngineSnapshot>> {
+  const { normalizedPath } = normalizeImportPath(stagingPath)
+  const snapshot = await assertEngineImportable(normalizedPath)
+  assertEngineEditorCompatible({
+    status: 'created',
+    availability: 'available',
+    metadata: snapshot.metadata,
+  })
+
+  const existing = await findEngineByRef({
+    id: snapshot.engineId,
+    version: snapshot.version,
+  })
+  if (existing) {
+    return { kind: 'duplicate', existingId: existing.id }
+  }
+
+  return {
+    kind: 'ready',
+    prepared: {
+      finalRelativePath: resolveManagedEngineRelativePath(snapshot),
+      plan: snapshot,
+    },
+  }
+}
+
+async function registerManagedImport(
+  finalPath: AbsPath,
+  prepared: PreparedEngineManagedImport,
+): Promise<{ id: string }> {
+  return { id: await registerEngine(finalPath, prepared.plan) }
+}
+
 async function importEngine(enginePath: AbsPath): Promise<ImportEngineResult> {
   const { normalizedPath, lookupKey: sourceLookupKey } = normalizeImportPath(enginePath)
 
@@ -616,6 +661,8 @@ export const engineManager = {
   canDeleteEngineGroup,
   validateAllEngines,
   importEngine,
+  prepareManagedImport,
+  registerManagedImport,
   uninstallEngine,
   uninstallEngineGroup,
   identityKeyOf,
