@@ -645,6 +645,7 @@ export:
   selectDirectoryHint: 請先選擇匯出目錄以繼續
   selectDirectory: 選擇匯出目錄
   selectDirectoryFailed: 無法選擇匯出目錄
+  androidDestination: 下載/WebGALCraft/exports
   start: 開始匯出
   retry: 重新匯出
   exporting: 正在匯出
@@ -653,6 +654,10 @@ export:
     total: 耗時 {seconds} 秒
     separator: ·
   openDirectory: 開啟目錄
+  openFile: 開啟檔案
+  openFileFailed: 無法開啟匯出檔案
+  share: 分享
+  shareFailed: 無法分享匯出檔案
   failed: Web 匯出失敗
   openDirectoryFailed: 無法開啟匯出目錄
   overwrite:
@@ -666,6 +671,7 @@ export:
     copyingGame: 正在複製遊戲資源...
     copyingIcons: 正在複製圖示...
     updatingManifest: 正在更新資訊清單...
+    compressing: 正在產生 ZIP...
     finished: 匯出完成
     failed: 匯出失敗
 

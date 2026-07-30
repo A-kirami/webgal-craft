@@ -10,11 +10,13 @@ import type { ExportProgress } from '~/services/export-manager'
 
 const {
   exportWebCommandMock,
+  exportAndroidWebZipCommandMock,
   listenMock,
   resolvePreviewSiteMock,
   unlistenMock,
 } = vi.hoisted(() => ({
   exportWebCommandMock: vi.fn(),
+  exportAndroidWebZipCommandMock: vi.fn(),
   listenMock: vi.fn(),
   resolvePreviewSiteMock: vi.fn(),
   unlistenMock: vi.fn(),
@@ -28,6 +30,7 @@ vi.mock('@tauri-apps/api/event', () => ({
 
 vi.mock('~/commands/export', () => ({
   exportCmds: {
+    exportAndroidWebZip: exportAndroidWebZipCommandMock,
     exportWeb: exportWebCommandMock,
   },
 }))
@@ -52,6 +55,7 @@ describe('exportManager', () => {
       templatePath: AbsPath.from('/templates/default'),
     })
     exportWebCommandMock.mockResolvedValue(undefined)
+    exportAndroidWebZipCommandMock.mockResolvedValue(undefined)
   })
 
   it('会生成安全目录名并把当前站点三层路径传给导出命令', async () => {
@@ -120,6 +124,42 @@ describe('exportManager', () => {
       outputRoot: AbsPath.from('/exports'),
     })).rejects.toThrow('disk full')
 
+    expect(unlistenMock).toHaveBeenCalledOnce()
+  })
+
+  it('Android 导出把站点写入受控 session 且复用进度事件', async () => {
+    const onProgress = vi.fn()
+    const pending = exportManager.exportAndroidWebZip({
+      exportSessionId: 'session-1',
+      game: createTestGame({ engineId: 'engine-1' }),
+      gameName: 'Demo',
+      onProgress,
+    })
+
+    await vi.waitFor(() => expect(exportAndroidWebZipCommandMock).toHaveBeenCalledOnce())
+    const params = exportAndroidWebZipCommandMock.mock.calls[0][0]
+    progressHandler?.({
+      payload: {
+        exportId: params.exportId,
+        percentage: 96,
+        platform: 'web',
+        step: 'export.progress.compressing',
+      },
+    })
+
+    await expect(pending).resolves.toBeUndefined()
+    expect(exportAndroidWebZipCommandMock).toHaveBeenCalledWith({
+      enginePath: '/engines/webgal',
+      exportId: expect.any(String),
+      exportSessionId: 'session-1',
+      gameName: 'Demo',
+      gamePath: '/games/demo',
+      templatePath: '/templates/default',
+    })
+    expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
+      percentage: 96,
+      step: 'export.progress.compressing',
+    }))
     expect(unlistenMock).toHaveBeenCalledOnce()
   })
 

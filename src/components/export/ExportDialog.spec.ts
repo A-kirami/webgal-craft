@@ -18,16 +18,36 @@ import ExportDialog from './ExportDialog.vue'
 
 const {
   exportWebMock,
+  androidExportMock,
+  androidOpenMock,
+  androidShareMock,
   confirmExportOverwriteMock,
   openDialogMock,
   openPathMock,
   toastErrorMock,
+  isAndroidRuntimeMock,
 } = vi.hoisted(() => ({
+  androidExportMock: vi.fn(),
+  androidOpenMock: vi.fn(),
+  androidShareMock: vi.fn(),
   exportWebMock: vi.fn(),
   confirmExportOverwriteMock: vi.fn(),
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
   toastErrorMock: vi.fn(),
+  isAndroidRuntimeMock: vi.fn(),
+}))
+
+vi.mock('~/services/platform/runtime', () => ({
+  isAndroidRuntime: isAndroidRuntimeMock,
+}))
+
+vi.mock('~/features/export/android-web-export-workflow', () => ({
+  createAndroidWebExportWorkflow: () => ({
+    exportGame: androidExportMock,
+    openPublished: androidOpenMock,
+    sharePublished: androidShareMock,
+  }),
 }))
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
@@ -133,6 +153,14 @@ describe('ExportDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     exportWebMock.mockResolvedValue(AbsPath.from('/exports/Demo Game/web'))
+    androidExportMock.mockResolvedValue({
+      kind: 'published',
+      contentUri: 'content://media/external/downloads/42',
+      displayPath: 'Downloads/WebGALCraft/exports/Demo_Game-web.zip',
+    })
+    androidOpenMock.mockResolvedValue(undefined)
+    androidShareMock.mockResolvedValue(undefined)
+    isAndroidRuntimeMock.mockReturnValue(false)
     confirmExportOverwriteMock.mockResolvedValue(true)
     openDialogMock.mockResolvedValue('/selected-exports')
     openPathMock.mockResolvedValue(undefined)
@@ -432,5 +460,34 @@ describe('ExportDialog', () => {
     expect(toastErrorMock).not.toHaveBeenCalled()
     await expect.element(page.getByText('export.progress.ready')).toBeInTheDocument()
     await expect.element(page.getByRole('button', { name: 'export.start' })).toBeEnabled()
+  })
+
+  it('Android 使用固定 Downloads 目标并提供打开文件和分享操作', async () => {
+    isAndroidRuntimeMock.mockReturnValue(true)
+    renderExportDialog()
+
+    await navigateToConfigureStep()
+    const outputInput = await page.getByLabelText('export.outputDirectory').element() as HTMLInputElement
+    expect(outputInput.value).toBe('export.androidDestination')
+    await expect.element(page.getByRole('button', { name: 'export.browse' })).not.toBeInTheDocument()
+    expect(openDialogMock).not.toHaveBeenCalled()
+
+    await page.getByRole('button', { name: 'export.next' }).click()
+    await page.getByRole('button', { name: 'export.start' }).click()
+
+    await vi.waitFor(() => expect(androidExportMock).toHaveBeenCalledOnce())
+    await expect.element(page.getByText('export.progress.finished')).toBeInTheDocument()
+    await expect.element(page.getByText('Downloads/WebGALCraft/exports/Demo_Game-web.zip')).toBeInTheDocument()
+    const openFileButton = await page.getByRole('button', { name: 'export.openFile' }).element() as HTMLButtonElement
+    const shareButton = await page.getByRole('button', { name: 'export.share' }).element() as HTMLButtonElement
+    openFileButton.click()
+    shareButton.click()
+
+    await vi.waitFor(() => {
+      expect(androidOpenMock).toHaveBeenCalledWith('content://media/external/downloads/42')
+      expect(androidShareMock).toHaveBeenCalledWith('content://media/external/downloads/42')
+    })
+    expect(openPathMock).not.toHaveBeenCalled()
+    expect(confirmExportOverwriteMock).not.toHaveBeenCalled()
   })
 })

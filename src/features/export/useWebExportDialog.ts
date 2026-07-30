@@ -1,8 +1,10 @@
-import { open as openDialog } from '@tauri-apps/plugin-dialog'
 import { openPath } from '@tauri-apps/plugin-opener'
 
+import { createAndroidWebExportWorkflow } from '~/features/export/android-web-export-workflow'
+import { desktopDirectoryPicker } from '~/features/resource-import/desktop-directory-picker'
 import { exportManager, resolveWebExportOutputPath } from '~/services/export-manager'
 import { fromExternalAbsPath } from '~/services/platform/path-boundary'
+import { isAndroidRuntime } from '~/services/platform/runtime'
 import { AppError } from '~/types/errors'
 import { handleError } from '~/utils/error-handler'
 
@@ -14,6 +16,7 @@ import type { AbsPath } from '~/domain/path'
 export type WebExportStatus = 'idle' | 'running' | 'completed' | 'failed'
 
 interface UseWebExportDialogOptions {
+  android?: boolean
   confirmOverwrite: (outputPath: AbsPath) => Promise<boolean>
   defaultOutputRoot: MaybeRefOrGetter<string>
   game: MaybeRefOrGetter<Game>
@@ -22,6 +25,8 @@ interface UseWebExportDialogOptions {
 }
 
 export function useWebExportDialog(options: UseWebExportDialogOptions) {
+  const android = options.android ?? isAndroidRuntime()
+  const androidWorkflow = createAndroidWebExportWorkflow()
   const currentGame = computed(() => toValue(options.game))
   const {
     elapsedMs,
@@ -33,6 +38,7 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
   const gameName = $computed(() => currentGame.value.metadata.name)
   let outputRoot = $ref<AbsPath>()
   let outputPath = $ref<AbsPath>()
+  let publishedExport = $ref<{ contentUri: string, displayPath: string }>()
   let progress = $ref(0)
   let isConfirmingOverwrite = $ref(false)
   let isSelectingDirectory = $ref(false)
@@ -42,13 +48,21 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
 
   const isRunning = $computed(() => status === 'running')
   const isBusy = $computed(() => isConfirmingOverwrite || isSelectingDirectory || isStartingExport || isRunning)
-  const outputPreview = $computed(() => outputRoot
+  const desktopOutputPreview = $computed(() => outputRoot
     ? resolveWebExportOutputPath(outputRoot, gameName)
     : undefined,
   )
-  const canStart = $computed(() => !isBusy && outputPreview !== undefined)
+  const outputPreview = $computed(() => android
+    ? publishedExport?.displayPath ?? options.t('export.androidDestination')
+    : desktopOutputPreview,
+  )
+  const hasOutputTarget = $computed(() => android || outputPreview !== undefined)
+  const canStart = $computed(() => !isBusy && hasOutputTarget)
 
   function configuredOutputRoot(): AbsPath | undefined {
+    if (android) {
+      return
+    }
     const configuredPath = toValue(options.defaultOutputRoot).trim()
     if (!configuredPath) {
       return
@@ -65,6 +79,7 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     resetElapsedTimer()
     outputRoot = configuredOutputRoot()
     outputPath = undefined
+    publishedExport = undefined
     progress = 0
     isConfirmingOverwrite = false
     isSelectingDirectory = false
@@ -94,20 +109,18 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
   }
 
   async function selectOutputRoot(): Promise<void> {
-    if (isBusy) {
+    if (android || isBusy) {
       return
     }
 
     isSelectingDirectory = true
     try {
-      const selected = await openDialog({
-        defaultPath: outputRoot,
-        directory: true,
-        multiple: false,
-        title: options.t('export.selectDirectory'),
-      })
-      if (typeof selected === 'string') {
-        outputRoot = fromExternalAbsPath(selected)
+      const selected = await desktopDirectoryPicker.selectDirectory(
+        options.t('export.selectDirectory'),
+        outputRoot,
+      )
+      if (selected) {
+        outputRoot = selected
       }
     } catch (error) {
       logger.error(`选择 Web 导出目录失败: ${error}`)
@@ -118,28 +131,41 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
   }
 
   async function startExport(): Promise<void> {
-    if (!canStart || !outputRoot) {
+    if (!canStart || (!android && !outputRoot)) {
       return
     }
 
     const selectedGame = currentGame.value
     const selectedGameName = gameName
-    const selectedOutputPath = outputPreview
+    const selectedOutputPath = desktopOutputPreview
     const selectedOutputRoot = outputRoot
 
     async function runExport(replaceExisting: boolean): Promise<void> {
+      if (android) {
+        publishedExport = await androidWorkflow.exportGame({
+          game: selectedGame,
+          gameName: selectedGameName,
+          onProgress: updateProgress,
+        })
+        return
+      }
+      if (!selectedOutputRoot) {
+        return
+      }
       outputPath = await exportManager.exportWeb({
         game: selectedGame,
         gameName: selectedGameName,
         outputRoot: selectedOutputRoot,
         replaceExisting,
-        onProgress: (nextProgress) => {
-          isStartingExport = false
-          status = 'running'
-          progress = nextProgress.percentage
-          stepKey = nextProgress.step
-        },
+        onProgress: updateProgress,
       })
+    }
+
+    function updateProgress(nextProgress: { percentage: number, step: string }): void {
+      isStartingExport = false
+      status = 'running'
+      progress = nextProgress.percentage
+      stepKey = nextProgress.step
     }
 
     function markCompleted(): void {
@@ -167,7 +193,7 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
       await runExport(false)
       markCompleted()
     } catch (error) {
-      if (!(error instanceof AppError) || error.code !== 'TARGET_CONFLICT' || !selectedOutputPath) {
+      if (android || !(error instanceof AppError) || error.code !== 'TARGET_CONFLICT' || !selectedOutputPath) {
         markFailed(error)
         return
       }
@@ -205,6 +231,15 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
   }
 
   async function openExportDirectory(): Promise<void> {
+    if (android && publishedExport) {
+      try {
+        await androidWorkflow.openPublished(publishedExport.contentUri)
+      } catch (error) {
+        logger.error(`打开 Android Web 导出文件失败: ${error}`)
+        toast.error(options.t('export.openFileFailed'))
+      }
+      return
+    }
     if (!outputPath) {
       return
     }
@@ -217,10 +252,24 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     }
   }
 
+  async function shareExport(): Promise<void> {
+    if (!publishedExport) {
+      return
+    }
+    try {
+      await androidWorkflow.sharePublished(publishedExport.contentUri)
+    } catch (error) {
+      logger.error(`分享 Android Web 导出文件失败: ${error}`)
+      toast.error(options.t('export.shareFailed'))
+    }
+  }
+
   return $$({
     canStart,
     elapsedMs,
     handleOpenChange,
+    hasOutputTarget,
+    isAndroid: android,
     isBusy,
     isRunning,
     openExportDirectory,
@@ -228,6 +277,7 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     outputRoot,
     progress,
     selectOutputRoot,
+    shareExport,
     startExport,
     status,
     stepKey,

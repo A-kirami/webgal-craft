@@ -565,14 +565,14 @@ fn collect_zip_entries(directory: &Path, entries: &mut Vec<PathBuf>) -> AppResul
     children.sort_by_key(std::fs::DirEntry::file_name);
     for child in children {
         let path = child.path();
-        let metadata = child.metadata()?;
-        if metadata.is_symlink() {
+        let file_type = child.file_type()?;
+        if file_type.is_symlink() {
             return Err(export_error("导出产物包含不受支持的符号链接"));
         }
         entries.push(path.clone());
-        if metadata.is_dir() {
+        if file_type.is_dir() {
             collect_zip_entries(&path, entries)?;
-        } else if !metadata.is_file() {
+        } else if !file_type.is_file() {
             return Err(export_error("导出产物包含不受支持的文件类型"));
         }
     }
@@ -712,6 +712,8 @@ mod tests {
     use tempfile::tempdir;
     use zip::ZipArchive;
 
+    #[cfg(unix)]
+    use super::collect_zip_entries;
     use super::{
         copy_web_icons, export_web_to_directory, validate_export_session_id, zip_directory,
         AppError, CachedCanonicals, OverlayFs, STEP_COPYING_ICONS, STEP_FINISHED,
@@ -1172,5 +1174,23 @@ mod tests {
             .expect("root file should read");
         assert_eq!(index, "index");
         assert!(archive.by_name("assets/images/cover.txt").is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_symbolic_links_in_zip_source() {
+        use std::os::unix::fs::symlink;
+
+        let root = tempdir().expect("temp root should be created");
+        let source = root.path().join("web");
+        fs::create_dir_all(&source).expect("source should be created");
+        let outside = root.path().join("outside.txt");
+        fs::write(&outside, "outside").expect("outside file should be created");
+        symlink(&outside, source.join("linked.txt")).expect("symlink should be created");
+
+        let error =
+            collect_zip_entries(&source, &mut Vec::new()).expect_err("symlink should be rejected");
+
+        assert!(matches!(error, AppError::Export(message) if message.contains("符号链接")));
     }
 }

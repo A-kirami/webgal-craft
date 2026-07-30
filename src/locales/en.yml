@@ -645,6 +645,7 @@ export:
   selectDirectoryHint: Select an export folder to continue
   selectDirectory: Select export folder
   selectDirectoryFailed: Failed to select the export folder
+  androidDestination: Downloads/WebGALCraft/exports
   start: Export
   retry: Retry export
   exporting: Exporting
@@ -653,6 +654,10 @@ export:
     total: Took {seconds}s
     separator: ·
   openDirectory: Open folder
+  openFile: Open file
+  openFileFailed: Failed to open the exported file
+  share: Share
+  shareFailed: Failed to share the exported file
   failed: Web export failed
   openDirectoryFailed: Failed to open the export folder
   overwrite:
@@ -666,6 +671,7 @@ export:
     copyingGame: Copying game resources...
     copyingIcons: Copying icons...
     updatingManifest: Updating manifest...
+    compressing: Compressing ZIP...
     finished: Export complete
     failed: Export failed
 
