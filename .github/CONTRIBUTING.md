@@ -91,16 +91,20 @@ rustup target add aarch64-linux-android
 连接平板或启动模拟器后运行开发版本：
 
 ```sh
-bun tauri android dev
+bun dev:android
+```
+
+启动开发版本并自动打开 Android Studio：
+
+```sh
+bun dev:android:open
 ```
 
 生成 arm64 未签名 APK：
 
 ```sh
-bun tauri android build --target aarch64 --apk --split-per-abi --ci
+bun build:android:arm64
 ```
-
-APK 位于 `src-tauri/gen/android/app/build/outputs/apk/`，AAB 位于 `src-tauri/gen/android/app/build/outputs/bundle/`。CI 的 `android-arm64` 构建使用相同目标，并将产物上传到对应 workflow run。
 
 ### 代码风格
 
