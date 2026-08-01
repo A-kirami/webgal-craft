@@ -304,8 +304,21 @@ async function validateEngineRecordForBatch(engine: Engine): Promise<ResourceVal
       structureValid,
       semanticsValid: classification?.status === 'ok',
     })
+    const patch: Partial<Pick<Engine, 'availability' | 'previewAssets'>> = {}
     if (engine.availability !== nextAvailability) {
-      await db.engines.update(engine.id, { availability: nextAvailability })
+      patch.availability = nextAvailability
+    }
+    if (classification?.status === 'ok') {
+      const metadata = buildEngineMetadata(classification.manifest)
+      const expectedIconPath = await resolveEngineIconPreviewPath(engine.path, metadata)
+      if (engine.previewAssets.icon.path !== expectedIconPath) {
+        patch.previewAssets = withEnginePreviewCacheVersion({
+          icon: { path: expectedIconPath },
+        })
+      }
+    }
+    if (Object.keys(patch).length > 0) {
+      await db.engines.update(engine.id, patch)
     }
     const manifestIssue = describeEngineManifestValidationIssue(classification)
     return manifestIssue
@@ -543,7 +556,18 @@ async function registerManagedImport(
   finalPath: AbsPath,
   prepared: PreparedEngineManagedImport,
 ): Promise<{ id: string }> {
-  return { id: await registerEngine(finalPath, prepared.plan) }
+  const plan = prepared.plan
+  return {
+    id: await registerEngine(finalPath, {
+      ...plan,
+      previewAssets: {
+        icon: {
+          ...plan.previewAssets.icon,
+          path: await resolveEngineIconPreviewPath(finalPath, plan.metadata),
+        },
+      },
+    }),
+  }
 }
 
 async function importEngine(enginePath: AbsPath): Promise<ImportEngineResult> {

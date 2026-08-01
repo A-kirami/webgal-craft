@@ -330,6 +330,11 @@ describe('engineManager', () => {
 
     expect(addMock).toHaveBeenCalledWith(expect.objectContaining({
       path: '/engines/WebGAL/4.6.2',
+      previewAssets: {
+        icon: expect.objectContaining({
+          path: '/engines/WebGAL/4.6.2/icons/favicon.ico',
+        }),
+      },
       status: 'created',
     }))
     expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
@@ -708,6 +713,9 @@ describe('engineManager', () => {
       createTestEngine({
         id: 'engine-1',
         path: AbsPath.from('/engines/WebGAL/4.5.0'),
+        previewAssets: {
+          icon: { path: '/engines/WebGAL/4.5.0/icons/favicon.ico' },
+        },
         status: 'created',
       }),
     ])
@@ -728,6 +736,43 @@ describe('engineManager', () => {
     await engineManager.validateAllEngines()
 
     expect(enginesUpdateMock).not.toHaveBeenCalled()
+  })
+
+  it('validateAllEngines 会把 managed import 遗留的 staging 图标路径修正为最终目录', async () => {
+    enginesToArrayMock.mockResolvedValue([
+      createTestEngine({
+        id: 'engine-1',
+        path: AbsPath.from('/engines/WebGAL/4.6.2'),
+        previewAssets: {
+          icon: { path: '/engines/.import-staging/session/icons/favicon.ico' },
+        },
+        status: 'created',
+      }),
+    ])
+    existsMock.mockResolvedValue(true)
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.6.2',
+        engineType: 'official',
+        webgalVersion: '4.6.2',
+      },
+    })
+
+    await engineManager.validateAllEngines()
+
+    expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', {
+      previewAssets: {
+        icon: {
+          cacheVersion: expect.any(Number),
+          path: '/engines/WebGAL/4.6.2/icons/favicon.ico',
+        },
+      },
+    })
   })
 
   it('validateAllEngines 在结构有效但 schemaVersion 不受支持时标记为 broken', async () => {
