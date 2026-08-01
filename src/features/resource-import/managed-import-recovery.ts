@@ -46,11 +46,10 @@ async function recoverSession(
     session.resourceKind,
     toLookupPathKey(session.finalPath),
   )
-  const expectedResourceId = session.operation.kind === 'relink'
-    ? session.operation.existingGameId
-    : session.resourceId
-  const matchesExpectedResource = registered
-    && (!expectedResourceId || registered.id === expectedResourceId)
+  const operation = session.operation
+  const matchesExpectedResource = registered && (operation.kind === 'relink'
+    ? operation.existingGameId.length > 0 && registered.id === operation.existingGameId
+    : !session.resourceId || registered.id === session.resourceId)
 
   await (matchesExpectedResource
     ? materializer.commit(session.sessionId, registered.id)
