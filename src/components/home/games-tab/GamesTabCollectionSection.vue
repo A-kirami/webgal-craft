@@ -3,7 +3,6 @@ import { Folder, Scroll, Trash2, TriangleAlert } from '@lucide/vue'
 
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import dayjs from '~/plugins/dayjs'
-import { isAndroidRuntime } from '~/services/platform/runtime'
 
 import type { Game } from '~/database/model'
 import type { GameCollectionItem } from '~/features/home/home-collection-items'
@@ -30,8 +29,6 @@ const emit = defineEmits<{
   openFolder: [game: Game]
   drop: [paths: string[]]
 }>()
-
-const isAndroid = isAndroidRuntime()
 
 const dropZoneGridRef = useTemplateRef<HTMLElement>('dropZoneGridRef')
 const { isOverDropZone: isOverDropZoneGrid } = useTauriDropZone(dropZoneGridRef, paths => emit('drop', paths))
@@ -99,16 +96,6 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
                 <TriangleAlert class="size-3" />
                 {{ $t('home.unavailableBadge') }}
               </Badge>
-              <Button
-                v-if="isAndroid && !hasGameProgress(item.game)"
-                :aria-label="$t('home.games.deleteGame')"
-                variant="destructive"
-                size="icon"
-                class="size-11 shadow-md bottom-2 right-2 absolute z-10"
-                @click.stop="emit('deleteGame', item.game)"
-              >
-                <Trash2 class="size-5" />
-              </Button>
             </div>
             <CardContent class="p-3">
               <div class="flex gap-4 items-center">
