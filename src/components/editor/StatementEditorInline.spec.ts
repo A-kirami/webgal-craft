@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { computed, defineComponent, h } from 'vue'
+import { computed, defineComponent, h, ref } from 'vue'
 
 import {
   createBrowserClickStub,
@@ -35,6 +35,11 @@ vi.mock('~/features/editor/statement-editor/useStatementEditor', () => ({
 import StatementEditorInline from './StatementEditorInline.vue'
 
 import type { StatementEntry } from '~/domain/script/sentence'
+
+const speakerAutocompleteOptions = ref([
+  { label: 'Alice', value: 'Alice' },
+  { label: 'Bob', value: 'Bob' },
+])
 
 function createEditorReturn(overrides: Record<string, unknown> = {}) {
   return {
@@ -73,9 +78,10 @@ function createEditorReturn(overrides: Record<string, unknown> = {}) {
       handleRawTextChange: handleRawTextChangeMock,
     },
     say: {
-      effectiveSpeaker: 'Alice',
+      effectiveSpeaker: '',
       handleSpeakerChange: handleSpeakerChangeMock,
       narrationMode: false,
+      speakerAutocompleteOptions,
       speakerPlaceholder: 'Previous Speaker',
       toggleNarrationMode: toggleNarrationModeMock,
     },
@@ -117,7 +123,6 @@ const globalStubs = {
   InputGroup: createBrowserContainerStub('StubInputGroup'),
   InputGroupAddon: createBrowserContainerStub('StubInputGroupAddon'),
   InputGroupButton: createBrowserClickStub('StubInputGroupButton'),
-  InputGroupInput: createBrowserInputStub('StubInputGroupInput'),
   ParamRenderer: createBrowserTextStub('StubParamRenderer', 'ParamRenderer'),
   StatementCommandFieldsSection: defineComponent({
     name: 'StubStatementCommandFieldsSection',
@@ -155,7 +160,7 @@ describe('StatementEditorInline', () => {
     useStatementEditorMock.mockReset()
   })
 
-  it('say 语句直接处理说话人与旁白切换', async () => {
+  it('say 语句支持选择建议、自由输入与旁白切换', async () => {
     useStatementEditorMock.mockReturnValue(createEditorReturn({
       statementType: 'say',
     }))
@@ -169,11 +174,16 @@ describe('StatementEditorInline', () => {
       },
     })
 
-    await page.getByPlaceholder('Previous Speaker').fill('Bob')
     await page.getByRole('button', { name: 'edit.visualEditor.narrationMode' }).click()
-
-    expect(handleSpeakerChangeMock).toHaveBeenCalledWith('Bob')
     expect(toggleNarrationModeMock).toHaveBeenCalledTimes(1)
+
+    const input = page.getByPlaceholder('Previous Speaker')
+    await input.click()
+    await page.getByRole('option', { name: 'Bob' }).click()
+    expect(handleSpeakerChangeMock).toHaveBeenCalledWith('Bob')
+
+    await input.fill('Carol')
+    expect(handleSpeakerChangeMock).toHaveBeenCalledWith('Carol')
   })
 
   it('command 语句通过命令字段区组件转发动画和效果编辑事件', async () => {

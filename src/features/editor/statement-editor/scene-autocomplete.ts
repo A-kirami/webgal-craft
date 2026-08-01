@@ -1,5 +1,6 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { parseCommandNode } from '~/domain/script/codec'
 import { parseSentence } from '~/domain/script/parser'
 import { ensureParsed, readSentenceArgString, splitStatements } from '~/domain/script/sentence'
 
@@ -18,12 +19,14 @@ interface SceneAutocompleteBuckets {
   figureIds: Set<string>
   sceneLabels: Set<string>
   soundEffectIds: Set<string>
+  speakers: Set<string>
 }
 
 export const EMPTY_SCENE_AUTOCOMPLETE_OPTIONS: SceneAutocompleteOptions = {
   figureIds: [],
   sceneLabels: [],
   soundEffectIds: [],
+  speakers: [],
 }
 
 function createBuckets(): SceneAutocompleteBuckets {
@@ -31,6 +34,7 @@ function createBuckets(): SceneAutocompleteBuckets {
     figureIds: new Set<string>(),
     sceneLabels: new Set<string>(),
     soundEffectIds: new Set<string>(),
+    speakers: new Set<string>(),
   }
 }
 
@@ -46,6 +50,14 @@ function collectSentenceAutocompleteOptions(
   buckets: SceneAutocompleteBuckets,
 ) {
   if (!sentence) {
+    return
+  }
+
+  if (sentence.command === commandType.say) {
+    const commandNode = parseCommandNode(sentence)
+    if (commandNode.type === commandType.say && !commandNode.clear) {
+      addOption(buckets.speakers, commandNode.speaker)
+    }
     return
   }
 
@@ -73,6 +85,7 @@ function buildOptions(buckets: SceneAutocompleteBuckets): SceneAutocompleteOptio
     figureIds: toOptions(buckets.figureIds),
     sceneLabels: toOptions(buckets.sceneLabels),
     soundEffectIds: toOptions(buckets.soundEffectIds),
+    speakers: toOptions(buckets.speakers),
   }
 }
 

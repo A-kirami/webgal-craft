@@ -58,7 +58,7 @@ export type SurfaceAware<V extends string> = V | { inline?: V, panel?: V }
 
 export type InlineLayout = 'default' | 'standalone'
 
-export type SceneAutocompleteCollection = 'figureIds' | 'sceneLabels' | 'soundEffectIds'
+export type SceneAutocompleteCollection = 'figureIds' | 'sceneLabels' | 'soundEffectIds' | 'speakers'
 
 interface TextFieldAutocompleteOption {
   label: I18nLike

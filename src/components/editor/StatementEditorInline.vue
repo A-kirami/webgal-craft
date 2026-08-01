@@ -46,6 +46,7 @@ const {
 
 const {
   effectiveSpeaker,
+  speakerAutocompleteOptions,
   speakerPlaceholder,
   narrationMode,
   handleSpeakerChange,
@@ -99,8 +100,9 @@ function handleBlankDblClick(e: MouseEvent) {
     <div v-else-if="statementType === 'say' || statementType === 'command'" class="flex flex-wrap gap-x-3 gap-y-1.5 items-center">
       <div v-if="statementType === 'say'" class="@container flex flex-col gap-1.5 w-full">
         <InputGroup class="h-6 w-full shadow-none overflow-hidden @[16rem]:w-3/5 @[24rem]:w-2/5">
-          <InputGroupInput
+          <InputGroupAutocomplete
             :model-value="effectiveSpeaker"
+            :options="speakerAutocompleteOptions"
             :placeholder="speakerPlaceholder"
             :disabled="narrationMode"
             class="text-xs pl-2.5 pr-0 h-6 shadow-none"

@@ -5,7 +5,7 @@ import '~/__tests__/mocks/tauri-fs'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { computed, defineComponent, h, reactive } from 'vue'
+import { computed, defineComponent, h, reactive, ref } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import {
@@ -128,6 +128,11 @@ import StatementEditorPanel from './StatementEditorPanel.vue'
 import type { StatementEntry } from '~/domain/script/sentence'
 import type { ComponentProps } from '~/types/index'
 
+const speakerAutocompleteOptions = ref([
+  { label: 'Alice', value: 'Alice' },
+  { label: 'Bob', value: 'Bob' },
+])
+
 function createEditorReturn(overrides: Record<string, unknown> = {}) {
   return {
     parsed: computed(() => ({
@@ -177,9 +182,10 @@ function createEditorReturn(overrides: Record<string, unknown> = {}) {
       handleRawTextChange: handleRawTextChangeMock,
     },
     say: {
-      effectiveSpeaker: 'Alice',
+      effectiveSpeaker: '',
       handleSpeakerChange: handleSpeakerChangeMock,
       narrationMode: false,
+      speakerAutocompleteOptions,
       speakerPlaceholder: 'Previous Speaker',
       toggleNarrationMode: toggleNarrationModeMock,
     },
@@ -240,7 +246,6 @@ const globalStubs = {
   InputGroup: createBrowserContainerStub('StubInputGroup'),
   InputGroupAddon: createBrowserContainerStub('StubInputGroupAddon'),
   InputGroupButton: createBrowserClickStub('StubInputGroupButton'),
-  InputGroupInput: createBrowserInputStub('StubInputGroupInput'),
   Label: createBrowserContainerStub('StubLabel', 'label'),
   ParamRenderer: createBrowserTextStub('StubParamRenderer', 'ParamRenderer'),
   ScrollArea: defineComponent({
@@ -334,6 +339,10 @@ describe('StatementEditorPanel', () => {
     useStatementEffectEditorBridgeMock.mockReset()
     usePreviewSessionStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
+    speakerAutocompleteOptions.value = [
+      { label: 'Alice', value: 'Alice' },
+      { label: 'Bob', value: 'Bob' },
+    ]
 
     useEditSettingsStoreMock.mockReturnValue({
       showSidebarAssetPreview: false,
@@ -452,7 +461,7 @@ describe('StatementEditorPanel', () => {
     expect(openAnimationEditorMock).toHaveBeenCalledTimes(1)
   })
 
-  it('say 语句直接处理说话人与旁白切换', async () => {
+  it('say 语句支持动态说话人建议、自由输入与旁白切换', async () => {
     useStatementEditorMock.mockReturnValue(createEditorReturn({
       statementType: 'say',
     }))
@@ -461,11 +470,20 @@ describe('StatementEditorPanel', () => {
       entry: createStatementEntry(11, 'Alice:hello'),
     })
 
-    await page.getByPlaceholder('Previous Speaker').fill('Bob')
     await page.getByRole('button', { name: '旁白' }).click()
-
-    expect(handleSpeakerChangeMock).toHaveBeenCalledWith('Bob')
     expect(toggleNarrationModeMock).toHaveBeenCalledTimes(1)
+
+    const input = page.getByPlaceholder('Previous Speaker')
+    await input.click()
+    await expect.element(page.getByRole('option', { name: 'Bob' })).toBeInTheDocument()
+
+    speakerAutocompleteOptions.value = [{ label: 'Carol', value: 'Carol' }]
+    await expect.element(page.getByRole('option', { name: 'Bob' })).not.toBeInTheDocument()
+    await page.getByRole('option', { name: 'Carol' }).click()
+    expect(handleSpeakerChangeMock).toHaveBeenCalledWith('Carol')
+
+    await input.fill('Dana')
+    expect(handleSpeakerChangeMock).toHaveBeenCalledWith('Dana')
   })
 
   it('command 语句通过命令字段区组件转发效果与动画编辑事件', async () => {

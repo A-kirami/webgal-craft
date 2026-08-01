@@ -70,6 +70,7 @@ const {
 
 const {
   effectiveSpeaker,
+  speakerAutocompleteOptions,
   speakerPlaceholder,
   narrationMode,
   handleSpeakerChange,
@@ -268,9 +269,10 @@ useShortcutContext({
               {{ $t('edit.visualEditor.params.speaker') }}
             </Label>
             <InputGroup class="h-7 shadow-none overflow-hidden">
-              <InputGroupInput
+              <InputGroupAutocomplete
                 :id="panelSpeakerInputId"
                 :model-value="effectiveSpeaker"
+                :options="speakerAutocompleteOptions"
                 :placeholder="speakerPlaceholder"
                 :disabled="narrationMode"
                 class="text-xs py-1 pr-0 h-7 shadow-none"

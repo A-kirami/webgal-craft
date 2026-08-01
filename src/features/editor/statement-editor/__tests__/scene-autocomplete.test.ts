@@ -5,6 +5,23 @@ import { buildStatements } from '~/domain/script/sentence'
 import { buildSceneAutocompleteOptionsFromStatements, buildSceneAutocompleteOptionsFromText } from '../scene-autocomplete'
 
 describe('buildSceneAutocompleteOptionsFromStatements', () => {
+  it('从显式说话人构建去重且顺序稳定的候选项', () => {
+    const statements = buildStatements([
+      ' Alice : first;',
+      'say: second -speaker=Bob;',
+      'Alice: duplicate;',
+      ': narration;',
+      'say: inherited;',
+      'continued dialogue;',
+      'say: cleared -speaker=Carol -clear;',
+    ].join('\n'))
+
+    expect(buildSceneAutocompleteOptionsFromStatements(statements).speakers).toEqual([
+      { label: 'Alice', value: 'Alice' },
+      { label: 'Bob', value: 'Bob' },
+    ])
+  })
+
   it('按语义提取去重后的候选项', () => {
     const statements = buildStatements([
       'changeFigure: hero.png -id=hero;',
@@ -47,10 +64,11 @@ describe('buildSceneAutocompleteOptionsFromStatements', () => {
 
 describe('buildSceneAutocompleteOptionsFromText', () => {
   it('从纯文本构建候选而不要求创建语句条目', () => {
-    expect(buildSceneAutocompleteOptionsFromText('label:start;\nchangeFigure:hero -id=hero-id;')).toEqual({
+    expect(buildSceneAutocompleteOptionsFromText('Alice:hello;\nlabel:start;\nchangeFigure:hero -id=hero-id;')).toEqual({
       figureIds: [{ label: 'hero-id', value: 'hero-id' }],
       sceneLabels: [{ label: 'start', value: 'start' }],
       soundEffectIds: [],
+      speakers: [{ label: 'Alice', value: 'Alice' }],
     })
   })
 })

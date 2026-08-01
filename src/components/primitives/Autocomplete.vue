@@ -37,13 +37,17 @@ interface AutocompleteInputHandle {
   resetHighlightIntent: () => void
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   class?: HTMLAttributes['class']
+  containerClass?: HTMLAttributes['class']
+  contentReference?: HTMLElement
   id?: string
   options: AutocompleteOption[]
   placeholder?: string
-  containerClass?: HTMLAttributes['class']
-}>()
+  showIndicator?: boolean
+}>(), {
+  showIndicator: true,
+})
 
 const [DefineOptionItem, ReuseOptionItem] = createReusableTemplate<{
   option: AutocompleteOption
@@ -66,6 +70,7 @@ const availableOptions = $computed(() => {
 })
 
 const shouldShowSuggestions = $computed(() => availableOptions.length > 0)
+const shouldShowIndicator = $computed(() => shouldShowSuggestions && props.showIndicator)
 
 const visibleGroupNames = $computed(() => {
   return [...new Set(
@@ -212,14 +217,14 @@ function handleBeforeInput(event: InputEvent) {
           :class="cn(
             'border border-input bg-transparent rounded-md transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
             props.class,
-            shouldShowSuggestions && 'pr-7',
+            shouldShowIndicator && 'pr-7',
           )"
           @beforeinput="handleBeforeInput"
           @compositionstart.capture="beginEditingOptionLabel"
           @keydown.enter="handleEnter"
         />
         <div
-          v-if="shouldShowSuggestions"
+          v-if="shouldShowIndicator"
           aria-hidden="true"
           class="i-lucide-chevron-down opacity-50 shrink-0 h-4 w-4 pointer-events-none right-2 top-1/2 absolute -translate-y-1/2 group-data-[severity=error]/statement-diagnostic:text-destructive! group-data-[severity=warning]/statement-diagnostic:text-yellow-700! dark:group-data-[severity=warning]/statement-diagnostic:text-yellow-300!"
           data-testid="autocomplete-indicator"
@@ -233,6 +238,7 @@ function handleBeforeInput(event: InputEvent) {
         v-if="shouldShowSuggestions"
         align="start"
         position="popper"
+        :reference="props.contentReference"
         :side-offset="4"
         :style="{ minWidth: 'max(8rem, var(--reka-combobox-trigger-width))' }"
         class="text-popover-foreground text-left border rounded-md bg-popover shadow-md z-50 overflow-hidden data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"

@@ -82,6 +82,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     return injectedAutocompleteOptions?.value
       ?? EMPTY_SCENE_AUTOCOMPLETE_OPTIONS
   })
+  const speakerAutocompleteOptions = computed(() => autocompleteOptions.value.speakers)
 
   // ─── 元信息（派生链） ───
   // 卡片内嵌场景：VisualEditorStatementCard 已 provide，直接复用；
@@ -308,6 +309,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     say: {
       effectiveSpeaker: say.effectiveSpeaker,
       narrationMode: say.narrationMode,
+      speakerAutocompleteOptions,
       speakerPlaceholder: say.speakerPlaceholder,
       isNoColonStatement: say.isNoColonStatement,
       handleSpeakerChange: say.handleSpeakerChange,
