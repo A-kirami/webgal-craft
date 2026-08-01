@@ -1,3 +1,4 @@
+pub mod android_export;
 pub mod managed_directory_import;
 
 #[cfg(target_os = "android")]

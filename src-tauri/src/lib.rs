@@ -64,6 +64,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(mobile::managed_directory_import::init())
+        .plugin(mobile::android_export::init())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .target(tauri_plugin_log::Target::new(
@@ -86,8 +87,8 @@ pub fn run() {
             commands::engine::read_engine_manifest,
             // export
             commands::export::export_web,
-            commands::export::export_android_web_zip,
-            commands::export::cleanup_android_web_export,
+            commands::android_export::export_android_web_zip,
+            commands::android_export::cleanup_android_web_export,
             // project config
             commands::project_config::read_project_config_cmd,
             commands::project_config::write_project_config_cmd,
@@ -132,6 +133,10 @@ pub fn run() {
             commands::resource_import::android_resource_import_rollback,
             commands::resource_import::android_resource_import_cancel,
             commands::resource_import::android_resource_import_list_recoverable_sessions,
+            commands::android_export::android_export_publish,
+            commands::android_export::android_export_open,
+            commands::android_export::android_export_share,
+            commands::android_export::android_export_cleanup_recoverable,
             // window
             #[cfg(desktop)]
             commands::window::create_window,

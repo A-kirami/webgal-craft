@@ -1,14 +1,13 @@
 use std::{
     collections::HashSet,
     fs,
-    io::{ErrorKind, Read, Write},
+    io::ErrorKind,
     path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
 };
 
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager};
-use zip::{write::SimpleFileOptions, ZipWriter};
+use tauri::{AppHandle, Emitter};
 
 use super::{game::read_game_config, AppError, AppResult};
 use crate::vfs::{CachedCanonicals, OverlayFs, VfsDirEntry, VfsError};
@@ -19,8 +18,7 @@ const STEP_COPYING_ENGINE: &str = "export.progress.copyingEngine";
 const STEP_COPYING_GAME: &str = "export.progress.copyingGame";
 const STEP_COPYING_ICONS: &str = "export.progress.copyingIcons";
 const STEP_UPDATING_MANIFEST: &str = "export.progress.updatingManifest";
-const STEP_FINISHED: &str = "export.progress.finished";
-const STEP_COMPRESSING: &str = "export.progress.compressing";
+pub(super) const STEP_FINISHED: &str = "export.progress.finished";
 const WEB_ICON_FILE_NAMES: [&str; 6] = [
     "apple-touch-icon.png",
     "favicon.ico",
@@ -46,8 +44,26 @@ enum MaterializedNode {
     File { logical_path: PathBuf },
 }
 
-fn export_error(message: impl Into<String>) -> AppError {
+pub(super) fn export_error(message: impl Into<String>) -> AppError {
     AppError::Export(message.into())
+}
+
+pub(super) fn emit_web_export_progress(
+    app: &AppHandle,
+    export_id: &str,
+    step: &str,
+    percentage: u8,
+) -> AppResult<()> {
+    app.emit(
+        "export-progress",
+        ExportProgress {
+            export_id: export_id.into(),
+            platform: PLATFORM_WEB.into(),
+            step: step.into(),
+            percentage,
+        },
+    )?;
+    Ok(())
 }
 
 fn collect_materialized_nodes(
@@ -323,7 +339,7 @@ fn create_export_work_directory(parent: &Path) -> AppResult<PathBuf> {
     Err(export_error("无法创建唯一的导出工作目录"))
 }
 
-fn cleanup_export_work_directory(work_directory: &Path) {
+pub(super) fn cleanup_export_work_directory(work_directory: &Path) {
     if let Err(error) = fs::remove_dir_all(work_directory) {
         log::warn!(
             "清理 Web 导出工作目录失败: {} - {}",
@@ -365,7 +381,7 @@ fn replace_output_directory(
     Ok(())
 }
 
-fn export_web_to_directory<F>(
+pub(super) fn export_web_to_directory<F>(
     engine_path: &Path,
     game_path: &Path,
     template_path: Option<&Path>,
@@ -519,205 +535,25 @@ pub async fn export_web(
             Path::new(&output_path),
             &game_name,
             replace_existing,
-            |step, percentage| {
-                app.emit(
-                    "export-progress",
-                    ExportProgress {
-                        export_id: export_id.clone(),
-                        platform: PLATFORM_WEB.into(),
-                        step: step.into(),
-                        percentage,
-                    },
-                )?;
-                Ok(())
-            },
+            |step, percentage| emit_web_export_progress(&app, &export_id, step, percentage),
         )
     })
     .await
     .map_err(|error| export_error(format!("导出任务执行失败: {error}")))?
 }
 
-fn validate_export_session_id(session_id: &str) -> AppResult<()> {
-    if session_id.is_empty()
-        || session_id == "."
-        || session_id == ".."
-        || !session_id
-            .chars()
-            .all(|character| character.is_ascii_alphanumeric() || character == '-')
-    {
-        return Err(export_error("无效的导出会话 ID"));
-    }
-    Ok(())
-}
-
-fn android_export_session_directory(app: &AppHandle, session_id: &str) -> AppResult<PathBuf> {
-    validate_export_session_id(session_id)?;
-    let root = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| export_error(format!("无法解析应用数据目录: {error}")))?
-        .join("documents/WebGALCraft/exports/.export-staging");
-    Ok(root.join(session_id))
-}
-
-fn collect_zip_entries(directory: &Path, entries: &mut Vec<PathBuf>) -> AppResult<()> {
-    let mut children = fs::read_dir(directory)?.collect::<Result<Vec<_>, _>>()?;
-    children.sort_by_key(std::fs::DirEntry::file_name);
-    for child in children {
-        let path = child.path();
-        let file_type = child.file_type()?;
-        if file_type.is_symlink() {
-            return Err(export_error("导出产物包含不受支持的符号链接"));
-        }
-        entries.push(path.clone());
-        if file_type.is_dir() {
-            collect_zip_entries(&path, entries)?;
-        } else if !file_type.is_file() {
-            return Err(export_error("导出产物包含不受支持的文件类型"));
-        }
-    }
-    Ok(())
-}
-
-fn zip_directory(source: &Path, destination: &Path) -> AppResult<()> {
-    let file = fs::File::create(destination)?;
-    let mut archive = ZipWriter::new(file);
-    let options = SimpleFileOptions::default();
-    let mut entries = Vec::new();
-    collect_zip_entries(source, &mut entries)?;
-
-    for path in entries {
-        let relative = path
-            .strip_prefix(source)
-            .map_err(|error| export_error(format!("无法生成 ZIP 相对路径: {error}")))?;
-        let name = relative.to_string_lossy().replace('\\', "/");
-        if path.is_dir() {
-            archive
-                .add_directory(format!("{name}/"), options)
-                .map_err(|error| export_error(format!("写入 ZIP 目录失败: {error}")))?;
-            continue;
-        }
-
-        archive
-            .start_file(name, options)
-            .map_err(|error| export_error(format!("写入 ZIP 文件失败: {error}")))?;
-        let mut input = fs::File::open(path)?;
-        let mut buffer = [0_u8; 64 * 1024];
-        loop {
-            let read = input.read(&mut buffer)?;
-            if read == 0 {
-                break;
-            }
-            archive
-                .write_all(&buffer[..read])
-                .map_err(|error| export_error(format!("写入 ZIP 数据失败: {error}")))?;
-        }
-    }
-
-    archive
-        .finish()
-        .map_err(|error| export_error(format!("完成 ZIP 失败: {error}")))?;
-    Ok(())
-}
-
-#[tauri::command]
-pub async fn export_android_web_zip(
-    app: AppHandle,
-    export_id: String,
-    export_session_id: String,
-    engine_path: String,
-    game_path: String,
-    template_path: Option<String>,
-    game_name: String,
-) -> AppResult<()> {
-    let session_directory = android_export_session_directory(&app, &export_session_id)?;
-    tauri::async_runtime::spawn_blocking(move || {
-        if session_directory.exists() {
-            return Err(AppError::TargetConflict(
-                session_directory.display().to_string(),
-            ));
-        }
-        fs::create_dir_all(&session_directory)?;
-        let web_directory = session_directory.join("web");
-        let result = (|| {
-            export_web_to_directory(
-                Path::new(&engine_path),
-                Path::new(&game_path),
-                template_path.as_deref().map(Path::new),
-                &web_directory,
-                &game_name,
-                false,
-                |step, percentage| {
-                    let (step, percentage) = if step == STEP_FINISHED {
-                        (STEP_COMPRESSING, 96)
-                    } else {
-                        (step, percentage.min(95))
-                    };
-                    app.emit(
-                        "export-progress",
-                        ExportProgress {
-                            export_id: export_id.clone(),
-                            platform: PLATFORM_WEB.into(),
-                            step: step.into(),
-                            percentage,
-                        },
-                    )?;
-                    Ok(())
-                },
-            )?;
-            zip_directory(&web_directory, &session_directory.join("export.zip"))?;
-            app.emit(
-                "export-progress",
-                ExportProgress {
-                    export_id,
-                    platform: PLATFORM_WEB.into(),
-                    step: STEP_FINISHED.into(),
-                    percentage: 100,
-                },
-            )?;
-            Ok(())
-        })();
-        if result.is_err() {
-            cleanup_export_work_directory(&session_directory);
-        }
-        result
-    })
-    .await
-    .map_err(|error| export_error(format!("导出任务执行失败: {error}")))?
-}
-
-#[tauri::command]
-pub async fn cleanup_android_web_export(
-    app: AppHandle,
-    export_session_id: String,
-) -> AppResult<()> {
-    let session_directory = android_export_session_directory(&app, &export_session_id)?;
-    tauri::async_runtime::spawn_blocking(move || {
-        if session_directory.exists() {
-            fs::remove_dir_all(session_directory)?;
-        }
-        Ok(())
-    })
-    .await
-    .map_err(|error| export_error(format!("清理导出任务失败: {error}")))?
-}
-
 #[cfg(test)]
 mod tests {
     #[cfg(windows)]
     use std::process::Command;
-    use std::{fs, io::Read, path::Path};
+    use std::{fs, path::Path};
 
+    use super::{
+        copy_web_icons, export_web_to_directory, AppError, CachedCanonicals, OverlayFs,
+        STEP_COPYING_ICONS, STEP_FINISHED,
+    };
     use serde_json::Value;
     use tempfile::tempdir;
-    use zip::ZipArchive;
-
-    #[cfg(unix)]
-    use super::collect_zip_entries;
-    use super::{
-        copy_web_icons, export_web_to_directory, validate_export_session_id, zip_directory,
-        AppError, CachedCanonicals, OverlayFs, STEP_COPYING_ICONS, STEP_FINISHED,
-    };
 
     fn write_file(path: &Path, content: &str) {
         fs::create_dir_all(path.parent().expect("fixture file should have parent"))
@@ -1142,55 +978,5 @@ mod tests {
 
         assert!(matches!(error, AppError::Export(message) if message.contains("源目录内部")));
         assert!(!output_parent.exists());
-    }
-
-    #[test]
-    fn validates_android_export_session_ids() {
-        assert!(validate_export_session_id("2ee2f25e-4425-4ca8-9240-8ca79ee0b09b").is_ok());
-        for invalid in ["", ".", "..", "../other", "other/session", "other\\session"] {
-            assert!(validate_export_session_id(invalid).is_err(), "{invalid}");
-        }
-    }
-
-    #[test]
-    fn creates_zip_with_relative_directory_structure() {
-        let root = tempdir().expect("temp root should be created");
-        let source = root.path().join("web");
-        fs::create_dir_all(source.join("assets/images")).expect("nested source should be created");
-        fs::write(source.join("index.html"), "index").expect("root file should be created");
-        fs::write(source.join("assets/images/cover.txt"), "cover")
-            .expect("nested file should be created");
-        let destination = root.path().join("export.zip");
-
-        zip_directory(&source, &destination).expect("zip should be created");
-
-        let file = fs::File::open(destination).expect("zip should open");
-        let mut archive = ZipArchive::new(file).expect("zip should parse");
-        let mut index = String::new();
-        archive
-            .by_name("index.html")
-            .expect("root file should exist")
-            .read_to_string(&mut index)
-            .expect("root file should read");
-        assert_eq!(index, "index");
-        assert!(archive.by_name("assets/images/cover.txt").is_ok());
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn rejects_symbolic_links_in_zip_source() {
-        use std::os::unix::fs::symlink;
-
-        let root = tempdir().expect("temp root should be created");
-        let source = root.path().join("web");
-        fs::create_dir_all(&source).expect("source should be created");
-        let outside = root.path().join("outside.txt");
-        fs::write(&outside, "outside").expect("outside file should be created");
-        symlink(&outside, source.join("linked.txt")).expect("symlink should be created");
-
-        let error =
-            collect_zip_entries(&source, &mut Vec::new()).expect_err("symlink should be rejected");
-
-        assert!(matches!(error, AppError::Export(message) if message.contains("符号链接")));
     }
 }

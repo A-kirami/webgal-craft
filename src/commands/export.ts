@@ -21,6 +21,12 @@ export interface AndroidWebExportParams {
   templatePath?: AbsPath
 }
 
+export interface PublishedAndroidExport {
+  contentUri: string
+  displayPath: string
+  kind: 'published'
+}
+
 function exportWeb(params: WebExportParams): Promise<void> {
   return safeInvoke('export_web', { ...params })
 }
@@ -37,9 +43,27 @@ function cleanupRecoverableAndroidWebExports(): Promise<void> {
   return safeInvoke('android_export_cleanup_recoverable')
 }
 
+function publishAndroidWebExport(
+  exportSessionId: string,
+  suggestedFileName: string,
+): Promise<PublishedAndroidExport> {
+  return safeInvoke('android_export_publish', { exportSessionId, suggestedFileName })
+}
+
+function openPublishedAndroidWebExport(contentUri: string): Promise<void> {
+  return safeInvoke('android_export_open', { contentUri })
+}
+
+function sharePublishedAndroidWebExport(contentUri: string): Promise<void> {
+  return safeInvoke('android_export_share', { contentUri })
+}
+
 export const exportCmds = {
   cleanupAndroidWebExport,
   cleanupRecoverableAndroidWebExports,
   exportAndroidWebZip,
   exportWeb,
+  openPublishedAndroidWebExport,
+  publishAndroidWebExport,
+  sharePublishedAndroidWebExport,
 }

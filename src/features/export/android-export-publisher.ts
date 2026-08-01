@@ -1,10 +1,8 @@
-import { safeInvoke } from '~/utils/invoke'
+import { exportCmds } from '~/commands/export'
 
-export interface PublishedAndroidExport {
-  kind: 'published'
-  contentUri: string
-  displayPath: string
-}
+import type { PublishedAndroidExport } from '~/commands/export'
+
+export type { PublishedAndroidExport } from '~/commands/export'
 
 export interface AndroidExportPublisher {
   publishZipToDownloads: (input: {
@@ -17,12 +15,12 @@ export interface AndroidExportPublisher {
 
 export const androidExportPublisher: AndroidExportPublisher = {
   publishZipToDownloads(input) {
-    return safeInvoke<PublishedAndroidExport>('android_export_publish', input)
+    return exportCmds.publishAndroidWebExport(input.exportSessionId, input.suggestedFileName)
   },
   openPublished(contentUri) {
-    return safeInvoke<void>('android_export_open', { contentUri })
+    return exportCmds.openPublishedAndroidWebExport(contentUri)
   },
   sharePublished(contentUri) {
-    return safeInvoke<void>('android_export_share', { contentUri })
+    return exportCmds.sharePublishedAndroidWebExport(contentUri)
   },
 }
