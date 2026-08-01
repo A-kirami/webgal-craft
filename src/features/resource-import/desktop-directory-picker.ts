@@ -1,6 +1,8 @@
 import { open } from '@tauri-apps/plugin-dialog'
 
-import { AbsPath } from '~/domain/path'
+import { fromExternalAbsPath } from '~/services/platform/path-boundary'
+
+import type { AbsPath } from '~/domain/path'
 
 export const desktopDirectoryPicker = {
   async selectDirectory(title: string, defaultPath?: string): Promise<AbsPath | undefined> {
@@ -11,6 +13,6 @@ export const desktopDirectoryPicker = {
       defaultPath,
     })
 
-    return typeof selected === 'string' ? AbsPath.from(selected) : undefined
+    return typeof selected === 'string' ? fromExternalAbsPath(selected) : undefined
   },
 }

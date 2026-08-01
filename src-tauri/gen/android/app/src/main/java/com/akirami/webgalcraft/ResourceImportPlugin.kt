@@ -25,7 +25,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import org.json.JSONObject
 
-private const val SESSION_PREFERENCES = "managed-resource-import-sessions"
+private const val IMPORT_SESSION_PREFERENCES = "managed-resource-import-sessions"
 private const val BUFFER_SIZE = 64 * 1024
 private const val MAX_FILES = 50_000L
 private const val MAX_TOTAL_BYTES = 2L * 1024 * 1024 * 1024
@@ -118,16 +118,16 @@ class ResourceImportPlugin(private val activity: Activity) : Plugin(activity) {
   private val cancellation = ConcurrentHashMap<String, AtomicBoolean>()
 
   private val preferences by lazy {
-    activity.getSharedPreferences(SESSION_PREFERENCES, Activity.MODE_PRIVATE)
+    activity.getSharedPreferences(IMPORT_SESSION_PREFERENCES, Activity.MODE_PRIVATE)
   }
 
   @Command
   fun resolveResourceRoots(invoke: Invoke) {
     val roots = JSObject()
     ResourceKind.entries.forEach { kind ->
-      roots.put(kind.directoryName.removeSuffix("s"), ResourceImportPaths.root(activity.filesDir, kind).absolutePath)
+      roots.put(kind.directoryName.removeSuffix("s"), ManagedStoragePaths.root(activity.filesDir, kind).absolutePath)
     }
-    roots.put("export", File(File(activity.filesDir, "documents"), "WebGALCraft/exports").absolutePath)
+    roots.put("export", ManagedStoragePaths.exportRoot(activity.filesDir).absolutePath)
     invoke.resolve(roots)
   }
 
@@ -136,12 +136,18 @@ class ResourceImportPlugin(private val activity: Activity) : Plugin(activity) {
     try {
       val args = parseSelectArgs(invoke)
       val kind = ResourceKind.valueOf(args.kind.uppercase())
+      val operation = args.operation?.kind ?: "import"
+      val existingGameId = args.operation?.existingGameId
+      require(operation == "import" || operation == "relink") { "invalid import operation" }
+      require(operation != "relink" || !existingGameId.isNullOrBlank()) {
+        "relink operation requires an existing game id"
+      }
       val sessionId = UUID.randomUUID().toString()
       val session = ImportSession(
         sessionId = sessionId,
         kind = kind,
-        operation = args.operation?.kind ?: "import",
-        existingGameId = args.operation?.existingGameId,
+        operation = operation,
+        existingGameId = existingGameId,
         stagingRelativePath = "$sessionId",
       )
       saveSession(session)
@@ -233,8 +239,8 @@ class ResourceImportPlugin(private val activity: Activity) : Plugin(activity) {
       val args = invoke.parseArgs(PublishArgs::class.java)
       val session = requireSession(args.sessionId)
       require(session.status == "staged" || session.status == "prepared") { "session is not publishable" }
-      val finalPath = ResourceImportPaths.resolveFinal(
-        ResourceImportPaths.root(activity.filesDir, session.kind),
+      val finalPath = ManagedStoragePaths.resolveFinal(
+        ManagedStoragePaths.root(activity.filesDir, session.kind),
         args.finalRelativePath,
         session.kind.maxRelativeSegments,
       )
@@ -244,7 +250,7 @@ class ResourceImportPlugin(private val activity: Activity) : Plugin(activity) {
       finalPath.parentFile?.let { parent ->
         if (!parent.exists()) {
           require(parent.mkdirs()) { "unable to create target parent" }
-          session.createdParentRelativePath = parent.relativeTo(ResourceImportPaths.root(activity.filesDir, session.kind)).path
+          session.createdParentRelativePath = parent.relativeTo(ManagedStoragePaths.root(activity.filesDir, session.kind)).path
         }
       }
       require(staging.renameTo(finalPath)) { "unable to publish staged directory" }
@@ -298,8 +304,8 @@ class ResourceImportPlugin(private val activity: Activity) : Plugin(activity) {
           "status" to session.status,
           "stagingPath" to stagingDirectory(session).absolutePath,
           "finalPath" to session.finalRelativePath?.let {
-            ResourceImportPaths.resolveFinal(
-              ResourceImportPaths.root(activity.filesDir, session.kind), it, session.kind.maxRelativeSegments,
+            ManagedStoragePaths.resolveFinal(
+              ManagedStoragePaths.root(activity.filesDir, session.kind), it, session.kind.maxRelativeSegments,
             ).absolutePath
           },
           "resourceId" to session.resourceId,
@@ -443,10 +449,10 @@ class ResourceImportPlugin(private val activity: Activity) : Plugin(activity) {
   }
 
   private fun stagingDirectory(session: ImportSession): File =
-    ResourceImportPaths.staging(activity.filesDir, session.kind, session.sessionId)
+    ManagedStoragePaths.staging(activity.filesDir, session.kind, session.sessionId)
 
   private fun requireSession(sessionId: String): ImportSession {
-    require(ResourceImportPaths.validateSessionId(sessionId)) { "invalid import session id" }
+    require(ManagedStoragePaths.validateSessionId(sessionId)) { "invalid import session id" }
     return sessions()[sessionId] ?: throw IOException("unknown import session")
   }
 
@@ -458,11 +464,15 @@ class ResourceImportPlugin(private val activity: Activity) : Plugin(activity) {
 
   private fun saveSession(session: ImportSession) {
     session.updatedAt = System.currentTimeMillis()
-    preferences.edit().putString(session.sessionId, session.toJson()).apply()
+    check(preferences.edit().putString(session.sessionId, session.toJson()).commit()) {
+      "unable to persist import session"
+    }
   }
 
   private fun deleteSession(session: ImportSession) {
-    preferences.edit().remove(session.sessionId).apply()
+    check(preferences.edit().remove(session.sessionId).commit()) {
+      "unable to delete import session"
+    }
   }
 
   private fun releaseGrant(session: ImportSession) {
@@ -483,15 +493,15 @@ class ResourceImportPlugin(private val activity: Activity) : Plugin(activity) {
     saveSession(session)
     var cleanupSucceeded = deleteRecursively(stagingDirectory(session))
     if (session.finalRelativePath != null && shouldDeleteFinal) {
-      val finalPath = ResourceImportPaths.resolveFinal(
-        ResourceImportPaths.root(activity.filesDir, session.kind),
+      val finalPath = ManagedStoragePaths.resolveFinal(
+        ManagedStoragePaths.root(activity.filesDir, session.kind),
         session.finalRelativePath!!,
         session.kind.maxRelativeSegments,
       )
       cleanupSucceeded = deleteRecursively(finalPath) && cleanupSucceeded
       session.createdParentRelativePath?.let { relative ->
-        val parent = ResourceImportPaths.resolveFinal(
-          ResourceImportPaths.root(activity.filesDir, session.kind), relative, session.kind.maxRelativeSegments,
+        val parent = ManagedStoragePaths.resolveFinal(
+          ManagedStoragePaths.root(activity.filesDir, session.kind), relative, session.kind.maxRelativeSegments,
         )
         if (parent.isDirectory && parent.listFiles()?.isEmpty() == true) {
           cleanupSucceeded = parent.delete() && cleanupSucceeded

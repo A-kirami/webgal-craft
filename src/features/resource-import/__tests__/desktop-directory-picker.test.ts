@@ -15,7 +15,7 @@ describe('desktopDirectoryPicker', () => {
     openMock.mockReset()
   })
 
-  it('uses the desktop single-directory dialog', async () => {
+  it('桌面端使用单目录选择器并转换外部绝对路径', async () => {
     openMock.mockResolvedValue(String.raw`C:\Games\Demo`)
 
     await expect(desktopDirectoryPicker.selectDirectory('Select game folder'))
@@ -27,7 +27,7 @@ describe('desktopDirectoryPicker', () => {
     })
   })
 
-  it.each([undefined, ['/games/one', '/games/two']])('treats %j as cancellation', async (selection) => {
+  it.each([undefined, ['/games/one', '/games/two']])('将非单路径结果 %j 视为取消', async (selection) => {
     openMock.mockResolvedValue(selection)
 
     await expect(desktopDirectoryPicker.selectDirectory('Select folder')).resolves.toBeUndefined()

@@ -5,6 +5,7 @@ pub mod export;
 pub mod fs;
 pub mod game;
 pub mod project_config;
+pub mod resource_import;
 pub mod server;
 pub mod vfs;
 #[cfg(desktop)]

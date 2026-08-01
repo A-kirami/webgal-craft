@@ -8,15 +8,28 @@ internal enum class ResourceKind(val directoryName: String, val maxRelativeSegme
   TEMPLATE("templates", 1),
 }
 
-internal object ResourceImportPaths {
+internal object ManagedStoragePaths {
   fun root(filesDir: File, kind: ResourceKind): File =
     File(File(File(filesDir, "documents"), "WebGALCraft"), kind.directoryName)
 
   fun stagingRoot(filesDir: File, kind: ResourceKind): File =
     File(root(filesDir, kind), ".import-staging")
 
-  fun staging(filesDir: File, kind: ResourceKind, sessionId: String): File =
-    File(stagingRoot(filesDir, kind), sessionId)
+  fun staging(filesDir: File, kind: ResourceKind, sessionId: String): File {
+    require(validateSessionId(sessionId)) { "invalid import session id" }
+    return File(stagingRoot(filesDir, kind), sessionId)
+  }
+
+  fun exportRoot(filesDir: File): File =
+    File(File(filesDir, "documents"), "WebGALCraft/exports")
+
+  fun exportStagingRoot(filesDir: File): File =
+    File(exportRoot(filesDir), ".export-staging")
+
+  fun exportStaging(filesDir: File, sessionId: String): File {
+    require(validateSessionId(sessionId)) { "invalid export session id" }
+    return File(exportStagingRoot(filesDir), sessionId)
+  }
 
   fun validateSessionId(sessionId: String): Boolean =
     sessionId.isNotBlank() && sessionId.length <= 80 && sessionId.all { it.isLetterOrDigit() || it == '-' }

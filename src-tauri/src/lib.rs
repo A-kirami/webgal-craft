@@ -1,7 +1,7 @@
 use tauri::Manager;
 mod commands;
 mod generated;
-mod resource_import;
+mod mobile;
 mod vfs;
 #[cfg(desktop)]
 mod window;
@@ -63,7 +63,7 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(resource_import::init())
+        .plugin(mobile::managed_directory_import::init())
         .plugin(
             tauri_plugin_log::Builder::new()
                 .target(tauri_plugin_log::Target::new(
@@ -123,13 +123,13 @@ pub fn run() {
             commands::fs::is_binary_file,
             commands::fs::get_image_dimensions,
             // Android 资源导入
-            resource_import::android_resource_import_resolve_roots,
-            resource_import::android_resource_import_select_and_stage,
-            resource_import::android_resource_import_publish,
-            resource_import::android_resource_import_commit,
-            resource_import::android_resource_import_rollback,
-            resource_import::android_resource_import_cancel,
-            resource_import::android_resource_import_list_recoverable_sessions,
+            commands::resource_import::android_resource_import_resolve_roots,
+            commands::resource_import::android_resource_import_select_and_stage,
+            commands::resource_import::android_resource_import_publish,
+            commands::resource_import::android_resource_import_commit,
+            commands::resource_import::android_resource_import_rollback,
+            commands::resource_import::android_resource_import_cancel,
+            commands::resource_import::android_resource_import_list_recoverable_sessions,
             // window
             #[cfg(desktop)]
             commands::window::create_window,

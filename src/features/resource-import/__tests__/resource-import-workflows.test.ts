@@ -99,7 +99,7 @@ describe('资源导入工作流', () => {
     })
   }
 
-  it('commits after Dexie registration and never copies staged content again', async () => {
+  it('Dexie 注册后提交 session 且不会再次复制暂存内容', async () => {
     const afterCommit = vi.fn()
 
     await expect(createWorkflow(afterCommit).importFromPicker()).resolves.toEqual({
@@ -118,7 +118,7 @@ describe('资源导入工作流', () => {
     expect(rollbackMock).not.toHaveBeenCalled()
   })
 
-  it('treats picker cancellation as a silent outcome', async () => {
+  it('目录选择取消时静默结束', async () => {
     selectAndStageMock.mockResolvedValue({ kind: 'cancelled' })
 
     await expect(createWorkflow().importFromPicker()).resolves.toBeUndefined()
@@ -126,7 +126,7 @@ describe('资源导入工作流', () => {
     expect(publishMock).not.toHaveBeenCalled()
   })
 
-  it('rolls back an unpublished session when registration fails', async () => {
+  it('资源注册失败时回滚未提交的 session', async () => {
     registerMock.mockRejectedValue(new Error('registration failed'))
 
     await expect(createWorkflow().importFromPicker()).rejects.toThrow('registration failed')
@@ -134,7 +134,7 @@ describe('资源导入工作流', () => {
     expect(commitMock).not.toHaveBeenCalled()
   })
 
-  it('does not roll back after registration when post-commit navigation fails', async () => {
+  it('注册提交后导航失败时不会回滚资源', async () => {
     const afterCommit = vi.fn().mockRejectedValue(new Error('navigation failed'))
 
     await expect(createWorkflow(afterCommit).importFromPicker()).rejects.toThrow('navigation failed')
