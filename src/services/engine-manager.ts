@@ -556,14 +556,15 @@ async function registerManagedImport(
   finalPath: AbsPath,
   prepared: PreparedEngineManagedImport,
 ): Promise<{ id: string }> {
+  const { normalizedPath } = normalizeImportPath(finalPath)
   const plan = prepared.plan
   return {
-    id: await registerEngine(finalPath, {
+    id: await registerEngine(normalizedPath, {
       ...plan,
       previewAssets: {
         icon: {
           ...plan.previewAssets.icon,
-          path: await resolveEngineIconPreviewPath(finalPath, plan.metadata),
+          path: await resolveEngineIconPreviewPath(normalizedPath, plan.metadata),
         },
       },
     }),

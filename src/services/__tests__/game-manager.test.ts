@@ -340,24 +340,33 @@ describe('gameManager', () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({ id: 'engine-1' }))
     const resolveDependencies = vi.fn().mockResolvedValue({ engineId: 'engine-1' })
 
-    const result = await gameManager.prepareManagedImport(
+    const firstResult = await gameManager.prepareManagedImport(
+      AbsPath.from('/games/.import-staging/session'),
+    )
+    const secondResult = await gameManager.prepareManagedImport(
       AbsPath.from('/games/.import-staging/session'),
     )
 
-    expect(result).toMatchObject({ kind: 'ready' })
-    expect(result.kind === 'ready' ? result.prepared.finalRelativePath : '').toMatch(
+    expect(firstResult).toMatchObject({ kind: 'ready' })
+    expect(secondResult).toMatchObject({ kind: 'ready' })
+
+    if (firstResult.kind !== 'ready' || secondResult.kind !== 'ready') {
+      throw new Error('expected both managed imports to be ready')
+    }
+    expect(firstResult.prepared.finalRelativePath).toMatch(
       /^[0-9a-f-]{36}$/,
     )
+    expect(secondResult.prepared.finalRelativePath).toMatch(
+      /^[0-9a-f-]{36}$/,
+    )
+    expect(firstResult.prepared.finalRelativePath).not.toBe(secondResult.prepared.finalRelativePath)
     expect(dbGameAddMock).not.toHaveBeenCalled()
     expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
     expect(writeProjectConfigMock).not.toHaveBeenCalled()
 
-    if (result.kind !== 'ready') {
-      throw new Error('expected a ready managed import')
-    }
     await expect(gameManager.registerManagedImport(
       AbsPath.from('/games/imported-game'),
-      result.prepared,
+      firstResult.prepared,
       { resolveDependencies },
     )).resolves.toEqual({ id: 'game-managed' })
 

@@ -979,10 +979,11 @@ async function registerManagedImport(
   prepared: PreparedGameManagedImport,
   options: ImportGameOptions = {},
 ): Promise<{ id: string }> {
+  const { normalizedPath } = normalizeImportPath(finalPath)
   const { inspection, hasProjectConfig } = prepared.plan
   const id = hasProjectConfig
-    ? await importConfiguredGame(finalPath, options, inspection)
-    : await importLegacyGame(finalPath, options, inspection)
+    ? await importConfiguredGame(normalizedPath, options, inspection)
+    : await importLegacyGame(normalizedPath, options, inspection)
   return { id }
 }
 
@@ -1003,19 +1004,20 @@ async function registerManagedRelink(
   finalPath: AbsPath,
   prepared: PreparedGameManagedImport,
 ): Promise<Game> {
+  const { normalizedPath, lookupKey } = normalizeImportPath(finalPath)
   const game = await db.games.get(existingGameId)
   if (!game) {
     throw new AppError('IO_ERROR', '游戏不存在')
   }
 
-  const conflicting = await findRegisteredGameByPath(finalPath)
+  const conflicting = await findRegisteredGameByPath(normalizedPath)
   if (conflicting && conflicting.id !== existingGameId) {
     throw new AppError('DUPLICATE_RESOURCE', '该目录已绑定到其他游戏记录')
   }
 
   const patch: Partial<Game> = {
-    path: finalPath,
-    pathLookupKey: toLookupPathKey(finalPath),
+    path: normalizedPath,
+    pathLookupKey: lookupKey,
     availability: 'available',
     lastModified: Date.now(),
     ...prepared.plan.inspection,

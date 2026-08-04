@@ -6,7 +6,7 @@ import { projectConfigCmds } from '~/commands/project-config'
 import { db } from '~/database/db'
 import { AbsPath } from '~/domain/path'
 import { templateManifestPath } from '~/services/platform/app-paths'
-import { ResourceAvailability } from '~/services/resource-health'
+import { normalizeImportPath, ResourceAvailability } from '~/services/resource-health'
 import { caseFoldedEquals, toLookupPathKey } from '~/services/resource-path/lookup'
 import {
   createResourceValidationFailure,
@@ -319,7 +319,8 @@ async function registerManagedImport(
   finalPath: AbsPath,
   prepared: PreparedTemplateManagedImport,
 ): Promise<{ id: string }> {
-  return { id: await registerTemplate(finalPath, { metadata: prepared.plan.metadata }) }
+  const { normalizedPath } = normalizeImportPath(finalPath)
+  return { id: await registerTemplate(normalizedPath, { metadata: prepared.plan.metadata }) }
 }
 
 async function deleteTemplate(template: Template): Promise<void> {
