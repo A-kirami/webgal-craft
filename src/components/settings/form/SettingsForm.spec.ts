@@ -261,7 +261,10 @@ describe('SettingsForm', () => {
 
     const managedPathInput = [...document.querySelectorAll('input')]
       .find(input => input.value === '托管项目目录')
-    expect(managedPathInput).toBeTruthy()
+    if (!managedPathInput) {
+      throw new Error('managed path input should be rendered')
+    }
+    expect(managedPathInput.disabled || managedPathInput.readOnly).toBe(true)
     await expect.element(page.getByRole('button', { name: '浏览' })).not.toBeInTheDocument()
     expect(openDialogMock).not.toHaveBeenCalled()
 
