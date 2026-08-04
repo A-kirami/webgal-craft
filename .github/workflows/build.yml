@@ -66,7 +66,7 @@ jobs:
             rustTargets: ""
           - os: ubuntu-latest
             platform: android-arm64
-            args: --target aarch64 --apk
+            args: --target aarch64 --apk --split-per-abi --ci
             mobile: android
             rustTargets: aarch64-linux-android
 
@@ -101,6 +101,10 @@ jobs:
         if: matrix.mobile == 'android'
         uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
 
+      - name: Install Android SDK packages
+        if: matrix.mobile == 'android'
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
       - name: Setup Android NDK
         if: matrix.mobile == 'android'
         id: setup-ndk
@@ -121,12 +125,6 @@ jobs:
 
       - name: Install dependencies
         run: bun ci
-
-      - name: Initialize Android project
-        if: matrix.mobile == 'android'
-        run: bun tauri android init --ci --skip-targets-install
-        env:
-          NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
 
       - name: Build app
         id: tauri-build

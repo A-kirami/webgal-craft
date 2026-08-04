@@ -6,7 +6,7 @@ const isDesktop = isDesktopRuntime()
 
 <template>
   <div
-    class="grid h-screen"
+    class="grid h-dvh"
     :class="isDesktop ? 'grid-rows-[auto_minmax(0,1fr)]' : 'grid-rows-[minmax(0,1fr)]'"
   >
     <AppTitlebar v-if="isDesktop" />

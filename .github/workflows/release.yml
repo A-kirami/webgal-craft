@@ -67,26 +67,40 @@ jobs:
           - os: ubuntu-latest
             platform: linux-x64
             releaseLabel: linux-64-bit
-            target: x86_64-unknown-linux-gnu
+            args: -t x86_64-unknown-linux-gnu
+            mobile: ""
+            rustTargets: ""
           - os: macos-latest
             platform: macos-x64
             releaseLabel: macos-intel
-            target: x86_64-apple-darwin
+            args: -t x86_64-apple-darwin
+            mobile: ""
+            rustTargets: x86_64-apple-darwin
           - os: macos-latest
             platform: macos-arm64
             releaseLabel: macos-apple-silicon
-            target: aarch64-apple-darwin
+            args: -t aarch64-apple-darwin
+            mobile: ""
+            rustTargets: aarch64-apple-darwin
           - os: windows-latest
             platform: windows-x64
             releaseLabel: windows-64-bit
-            target: x86_64-pc-windows-msvc
+            args: -t x86_64-pc-windows-msvc
+            mobile: ""
+            rustTargets: ""
+          - os: ubuntu-latest
+            platform: android-arm64
+            releaseLabel: android-arm64
+            args: --target aarch64 --apk --split-per-abi --ci
+            mobile: android
+            rustTargets: aarch64-linux-android
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Install system dependencies (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.platform == 'linux-x64'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
@@ -95,7 +109,51 @@ jobs:
         uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
           toolchain: stable
-          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.rustTargets }}
+
+      - name: Setup Java
+        if: matrix.mobile == 'android'
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Android SDK
+        if: matrix.mobile == 'android'
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+
+      - name: Install Android SDK packages
+        if: matrix.mobile == 'android'
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Setup Android NDK
+        if: matrix.mobile == 'android'
+        id: setup-ndk
+        uses: nttld/setup-ndk@ed92fe6cadad69be94a966a7ee3271275e62f779 # v1.6.0
+        with:
+          ndk-version: r29
+          link-to-sdk: true
+
+      - name: Configure Android signing
+        if: matrix.mobile == 'android'
+        shell: bash
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [[ -z "${ANDROID_KEY_ALIAS}" || -z "${ANDROID_KEY_BASE64}" || -z "${ANDROID_KEY_PASSWORD}" ]]; then
+            echo "Android release signing secrets are not configured."
+            exit 1
+          fi
+
+          keystore_path="${RUNNER_TEMP}/webgal-craft-release.jks"
+          printf '%s' "${ANDROID_KEY_BASE64}" | base64 --decode > "${keystore_path}"
+          {
+            printf 'keyAlias=%s\n' "${ANDROID_KEY_ALIAS}"
+            printf 'password=%s\n' "${ANDROID_KEY_PASSWORD}"
+            printf 'storeFile=%s\n' "${keystore_path}"
+          } > src-tauri/gen/android/keystore.properties
 
       - name: Rust cache
         uses: swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
@@ -115,10 +173,27 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         with:
           tagName: v__VERSION__
           releaseName: WebGAL Craft v__VERSION__
           releaseBody: ${{ needs.changelog.outputs.changelog }}
           releaseDraft: true
           releaseAssetNamePattern: "webgal-craft-v[version]-${{ matrix.releaseLabel }}[setup][ext]"
-          args: -t ${{ matrix.target }}
+          uploadUpdaterJson: ${{ matrix.mobile != 'android' }}
+          mobile: ${{ matrix.mobile }}
+          args: ${{ matrix.args }}
+
+      - name: Verify Android APK signature
+        if: matrix.mobile == 'android'
+        shell: bash
+        run: |
+          mapfile -t apks < <(find src-tauri/gen/android/app/build/outputs/apk -type f -name '*.apk')
+          if [[ "${#apks[@]}" -eq 0 ]]; then
+            echo "Android release APK was not generated."
+            exit 1
+          fi
+
+          for apk in "${apks[@]}"; do
+            "${ANDROID_HOME}/build-tools/36.0.0/apksigner" verify --verbose "${apk}"
+          done

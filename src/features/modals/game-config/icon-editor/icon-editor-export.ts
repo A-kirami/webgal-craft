@@ -133,7 +133,7 @@ export async function saveIconEditorOutputs(gamePath: AbsPath, outputs: IconExpo
     const backgroundSourcePath = AbsPath.join(gamePath, GAME_ICON_DATA_BACKGROUND_RELATIVE_PATH)
 
     if (await exists(backgroundSourcePath)) {
-      await fsCmds.deleteFile(backgroundSourcePath)
+      await fsCmds.deleteFile(backgroundSourcePath, true)
     }
   }
 }

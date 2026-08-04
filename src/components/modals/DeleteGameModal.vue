@@ -6,6 +6,7 @@ import { isDesktopRuntime } from '~/services/platform/runtime'
 import { useModalStore } from '~/stores/modal'
 
 import type { Game } from '~/database/model'
+import type { GameFileRemoval } from '~/services/game-manager'
 
 let open = $(defineModel<boolean>('open'))
 
@@ -24,9 +25,9 @@ const removeFilesLabel = isDesktop
   ? t('modals.deleteGame.moveFilesToTrash')
   : t('modals.deleteGame.deleteFiles')
 
-async function performDelete(removeFiles: boolean): Promise<boolean> {
+async function performDelete(fileRemoval: GameFileRemoval): Promise<boolean> {
   try {
-    await gameManager.deleteGame(game, removeFiles)
+    await gameManager.deleteGame(game, fileRemoval)
     return true
   } catch (error) {
     const fallbackMessage = isUnavailable
@@ -46,7 +47,7 @@ async function handleConfirm() {
   try {
     // 失效游戏：磁盘路径不可达，从列表移除时只删数据库记录，不再触碰文件
     if (isUnavailable) {
-      if (await performDelete(false)) {
+      if (await performDelete('keep')) {
         open = false
       }
       return
@@ -55,10 +56,11 @@ async function handleConfirm() {
     if (removeFiles && !isDesktop) {
       modalStore.open('DeleteGameConfirmModal', {
         game,
-        onConfirm: () => performDelete(true),
+        onConfirm: () => performDelete('permanent'),
       })
     } else {
-      if (await performDelete(removeFiles)) {
+      const fileRemoval: GameFileRemoval = removeFiles ? 'trash' : 'keep'
+      if (await performDelete(fileRemoval)) {
         open = false
       }
     }

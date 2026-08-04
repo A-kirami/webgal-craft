@@ -20,9 +20,11 @@ const {
   getDirtyBufferContentMock,
   getByLabelMock,
   hasUnsavedDocumentsUnderMock,
+  isAndroidRuntimeMock,
   isDesktopRuntimeMock,
   loggerErrorMock,
   modalOpenMock,
+  onBackButtonPressMock,
   routerPushMock,
   saveFileMock,
   toastErrorMock,
@@ -36,9 +38,11 @@ const {
   getDirtyBufferContentMock: vi.fn(),
   getByLabelMock: vi.fn(),
   hasUnsavedDocumentsUnderMock: vi.fn(),
+  isAndroidRuntimeMock: vi.fn(() => false),
   isDesktopRuntimeMock: vi.fn(() => true),
   loggerErrorMock: vi.fn(),
   modalOpenMock: vi.fn(),
+  onBackButtonPressMock: vi.fn(),
   routerPushMock: vi.fn(),
   saveFileMock: vi.fn(),
   toastErrorMock: vi.fn(),
@@ -46,6 +50,10 @@ const {
   useModalStoreMock: vi.fn(),
   usePreviewSessionStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
+}))
+
+vi.mock('@tauri-apps/api/app', () => ({
+  onBackButtonPress: onBackButtonPressMock,
 }))
 
 vi.mock('@tauri-apps/api/webviewWindow', () => ({
@@ -82,6 +90,7 @@ vi.mock('~/services/platform/app-paths', () => ({
 }))
 
 vi.mock('~/services/platform/runtime', () => ({
+  isAndroidRuntime: isAndroidRuntimeMock,
   isDesktopRuntime: isDesktopRuntimeMock,
 }))
 
@@ -166,9 +175,11 @@ describe('EditHeader', () => {
     getDirtyBufferContentMock.mockReset()
     getByLabelMock.mockReset()
     hasUnsavedDocumentsUnderMock.mockReset()
+    isAndroidRuntimeMock.mockReset()
     loggerErrorMock.mockReset()
     modalOpenMock.mockReset()
     isDesktopRuntimeMock.mockReset()
+    onBackButtonPressMock.mockReset()
     routerPushMock.mockReset()
     saveFileMock.mockReset()
     toastErrorMock.mockReset()
@@ -179,7 +190,9 @@ describe('EditHeader', () => {
 
     collectDocumentPathsUnderMock.mockReturnValue([])
     hasUnsavedDocumentsUnderMock.mockReturnValue(false)
+    isAndroidRuntimeMock.mockReturnValue(false)
     isDesktopRuntimeMock.mockReturnValue(true)
+    onBackButtonPressMock.mockResolvedValue({ unregister: vi.fn() })
     useEditorStoreMock.mockReturnValue({
       collectDocumentPathsUnder: collectDocumentPathsUnderMock,
       getDirtyBufferContent: getDirtyBufferContentMock,
@@ -236,6 +249,7 @@ describe('EditHeader', () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.clearAllMocks()
   })
 
@@ -324,6 +338,70 @@ describe('EditHeader', () => {
     })
 
     await expect.element(page.getByRole('button', { name: 'edit.header.testGame' })).not.toBeInTheDocument()
+  })
+
+  it('Android 系统返回键会复用编辑页返回流程', async () => {
+    isAndroidRuntimeMock.mockReturnValue(true)
+    isDesktopRuntimeMock.mockReturnValue(false)
+
+    renderInBrowser(EditHeader, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(onBackButtonPressMock).toHaveBeenCalledOnce()
+    })
+
+    const backButtonHandler = onBackButtonPressMock.mock.calls[0]?.[0] as (() => void) | undefined
+    backButtonHandler?.()
+
+    await vi.waitFor(() => {
+      expect(hasUnsavedDocumentsUnderMock).toHaveBeenCalledWith('/games/test')
+      expect(routerPushMock).toHaveBeenCalledWith('/')
+    })
+  })
+
+  it('Android 进入后台时会保存当前游戏的所有脏文档', async () => {
+    isAndroidRuntimeMock.mockReturnValue(true)
+    isDesktopRuntimeMock.mockReturnValue(false)
+    collectDocumentPathsUnderMock.mockReturnValue(['/games/test/scene/a.txt', '/games/test/scene/b.txt'])
+    getDirtyBufferContentMock.mockImplementation((path: string) => path.endsWith('a.txt') ? 'dirty' : undefined)
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+
+    renderInBrowser(EditHeader, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    document.dispatchEvent(new Event('visibilitychange'))
+
+    await vi.waitFor(() => {
+      expect(saveFileMock).toHaveBeenCalledOnce()
+      expect(saveFileMock).toHaveBeenCalledWith('/games/test/scene/a.txt')
+    })
+  })
+
+  it('桌面端不会注册 Android 系统返回键', async () => {
+    renderInBrowser(EditHeader, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await Promise.resolve()
+    expect(onBackButtonPressMock).not.toHaveBeenCalled()
   })
 
   it('返回主页前无未保存更改时直接跳转', async () => {

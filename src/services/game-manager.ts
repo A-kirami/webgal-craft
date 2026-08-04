@@ -891,9 +891,22 @@ async function createGame(gameName: string, gamePath: AbsPath, engineId: string,
   }
 }
 
-async function deleteGame(game: Game, removeFiles: boolean = false): Promise<void> {
-  if (removeFiles) {
-    await fsCmds.deleteFile(game.path)
+export type GameFileRemoval = 'keep' | 'permanent' | 'trash'
+
+async function deleteGame(game: Game, fileRemoval: GameFileRemoval = 'keep'): Promise<void> {
+  if (fileRemoval === 'permanent') {
+    await db.games.delete(game.id)
+    try {
+      await fsCmds.deleteFile(game.path, true)
+    } catch (error) {
+      await db.games.add(game)
+      throw error
+    }
+    return
+  }
+
+  if (fileRemoval === 'trash') {
+    await fsCmds.deleteFile(game.path, false)
   }
   await db.games.delete(game.id)
 }

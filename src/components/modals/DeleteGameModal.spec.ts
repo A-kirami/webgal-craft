@@ -150,7 +150,7 @@ describe('DeleteGameModal', () => {
 
     await page.getByRole('button', { name: '确认' }).click()
 
-    expect(deleteGameMock).toHaveBeenCalledWith(game, false)
+    expect(deleteGameMock).toHaveBeenCalledWith(game, 'keep')
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(updateOpen).toHaveBeenCalledWith(false)
   })
@@ -161,7 +161,7 @@ describe('DeleteGameModal', () => {
     await page.getByRole('checkbox').click()
     await page.getByRole('button', { name: '移到回收站' }).click()
 
-    expect(deleteGameMock).toHaveBeenCalledWith(game, true)
+    expect(deleteGameMock).toHaveBeenCalledWith(game, 'trash')
     expect(updateOpen).toHaveBeenCalledWith(false)
   })
 
@@ -220,7 +220,7 @@ describe('DeleteGameModal', () => {
       onConfirm: () => Promise<boolean>
     }
     await expect(confirmProps.onConfirm()).resolves.toBe(false)
-    expect(deleteGameMock).toHaveBeenCalledWith(game, true)
+    expect(deleteGameMock).toHaveBeenCalledWith(game, 'permanent')
     expect(toastErrorMock).toHaveBeenCalledWith('游戏删除失败')
     expect(updateOpen).not.toHaveBeenCalledWith(false)
   })

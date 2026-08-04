@@ -8,7 +8,7 @@ vi.mock('@tauri-apps/plugin-os', () => ({
   platform: platformMock,
 }))
 
-import { isDesktopRuntime } from '~/services/platform/runtime'
+import { isAndroidRuntime, isDesktopRuntime } from '~/services/platform/runtime'
 
 describe('isDesktopRuntime', () => {
   it('未传入平台时使用运行时平台', () => {
@@ -22,5 +22,13 @@ describe('isDesktopRuntime', () => {
 
   it.each(['android', 'ios'] as const)('%s 被识别为移动平台', (platform) => {
     expect(isDesktopRuntime(platform)).toBe(false)
+  })
+})
+
+describe('isAndroidRuntime', () => {
+  it('只把 Android 识别为 Android 运行时', () => {
+    expect(isAndroidRuntime('android')).toBe(true)
+    expect(isAndroidRuntime('ios')).toBe(false)
+    expect(isAndroidRuntime('windows')).toBe(false)
   })
 })

@@ -172,6 +172,6 @@ describe('图标编辑器导出流程', () => {
     ])
 
     expect(existsMock).toHaveBeenCalledWith('/games/demo/.webgalcraft/icon-data/background.png')
-    expect(deleteFileMock).toHaveBeenCalledWith('/games/demo/.webgalcraft/icon-data/background.png')
+    expect(deleteFileMock).toHaveBeenCalledWith('/games/demo/.webgalcraft/icon-data/background.png', true)
   })
 })

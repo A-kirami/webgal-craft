@@ -128,6 +128,35 @@ describe('GamesTabCollectionSection', () => {
     await expect.element(page.getByRole('button', { name: 'home.games.deleteGame' })).not.toBeInTheDocument()
   })
 
+  it('网格视图只通过右键菜单提供删除操作', async () => {
+    const game = createTestGame()
+    const onDeleteGame = vi.fn()
+
+    renderInBrowser(GamesTabCollectionSection, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        items: createItems([game]),
+        getGameProgress: () => 0,
+        hasGameProgress: () => false,
+        onDeleteGame,
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('button', { name: 'home.games.deleteGame' })).not.toBeInTheDocument()
+
+    await page.getByTestId(`game-card-${game.id}`).click({ button: 'right' })
+    await page.getByRole('menuitem', { name: 'home.games.deleteGame' }).click()
+
+    expect(onDeleteGame).toHaveBeenCalledOnce()
+    expect(onDeleteGame).toHaveBeenCalledWith(game)
+  })
+
   it('网格视图只为路径仍可达的游戏显示打开文件夹操作', async () => {
     const brokenGame = createTestGame({ id: 'game-broken', availability: 'broken' })
     const missingGame = createTestGame({ id: 'game-missing', availability: 'missing' })

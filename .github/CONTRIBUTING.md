@@ -70,6 +70,42 @@ bun install
 bun dev
 ```
 
+### Android 开发环境
+
+Android 目标当前用于验证横屏平板上的核心编辑流程，支持范围如下：
+
+- Android 10（API 29）或更高版本。
+- 正式验证目标为 arm64 横屏平板，视口至少为 `1024 x 600` CSS 逻辑像素。
+- 应用不限制其他 Android 设备形态或屏幕方向，但 Android 手机、小尺寸平板和竖屏未经验证，不承诺可用性。
+- 继续使用现有桌面布局，不包含完整的移动端触控重设计。
+- WebGAL Craft 的 Android 目标不包含将 WebGAL 游戏导出为 Android 应用。
+
+命令行构建需要 JDK 21、Android SDK Platform 36、Android NDK r29，以及 Rust 的 `aarch64-linux-android` target。Android Studio 仅用于原生工程调试，不是命令行构建的必要条件。
+
+首次构建前安装 Rust target，并让 `JAVA_HOME`、`ANDROID_HOME` 和 `NDK_HOME` 指向对应工具链。Android 原生工程已纳入版本控制，不需要重复执行 `tauri android init`：
+
+```sh
+rustup target add aarch64-linux-android
+```
+
+连接平板或启动模拟器后运行开发版本：
+
+```sh
+bun dev:android
+```
+
+启动开发版本并自动打开 Android Studio：
+
+```sh
+bun dev:android:open
+```
+
+生成 arm64 未签名 APK：
+
+```sh
+bun build:android:arm64
+```
+
 ### 代码风格
 
 WebGAL Craft 使用 `eslint` 和 `stylelint` 来统一代码风格。请确保你的代码：

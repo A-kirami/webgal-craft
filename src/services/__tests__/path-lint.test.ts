@@ -1,12 +1,12 @@
 import { ESLint } from 'eslint'
 import { describe, expect, it } from 'vitest'
 
-async function lintText(code: string) {
-  const eslint = new ESLint({
-    cwd: process.cwd(),
-    overrideConfigFile: 'eslint.config.js',
-  })
+const eslint = new ESLint({
+  cwd: process.cwd(),
+  overrideConfigFile: 'eslint.config.js',
+})
 
+async function lintText(code: string) {
   return eslint.lintText(code, {
     filePath: 'src/__tests__/fixtures/path-lint-fixture.ts',
   })

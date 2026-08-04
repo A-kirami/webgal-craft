@@ -246,6 +246,8 @@ modals:
     folderTitle: 確定要刪除資料夾 {name} 及其內容？
     description: 你可以從資源回收桶還原此檔案。
     folderDescription: 刪除後你可以從資源回收桶還原此資料夾及內容。
+    permanentDescription: 此檔案將被永久刪除，操作無法復原。
+    permanentFolderDescription: 此資料夾及其內容將被永久刪除，操作無法復原。
     skipConfirm: 不再顯示此提示
   deleteGameConfirm:
     title: 最終確認
@@ -742,6 +744,7 @@ edit:
     defaultFolderName: 新資料夾
     rename: 重新命名
     deleteFailed: 刪除失敗
+    refreshFailed: 重新整理失敗
     copy: 複製
     cut: 剪下
     paste: 貼上

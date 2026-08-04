@@ -2015,17 +2015,50 @@ describe('gameManager', () => {
     vi.useRealTimers()
   })
 
-  it('deleteGame 在 removeFiles=true 时会将游戏目录移到回收站后再删除记录', async () => {
+  it('deleteGame 选择 trash 时会将游戏目录移到回收站后再删除记录', async () => {
     await gameManager.deleteGame(createTestGame({
       id: 'game-1',
       path: AbsPath.from('/games/demo'),
-    }), true)
+    }), 'trash')
 
-    expect(deleteFileMock).toHaveBeenCalledWith('/games/demo')
+    expect(deleteFileMock).toHaveBeenCalledWith('/games/demo', false)
     expect(dbGameDeleteMock).toHaveBeenCalledWith('game-1')
     expect(deleteFileMock.mock.invocationCallOrder[0]).toBeLessThan(
       dbGameDeleteMock.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY,
     )
+  })
+
+  it('deleteGame 选择 permanent 时会显式永久删除游戏目录', async () => {
+    await gameManager.deleteGame(createTestGame({
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+    }), 'permanent')
+
+    expect(deleteFileMock).toHaveBeenCalledWith('/games/demo', true)
+    expect(dbGameDeleteMock).toHaveBeenCalledWith('game-1')
+  })
+
+  it('deleteGame 永久删除时数据库删除失败不会触碰游戏目录', async () => {
+    dbGameDeleteMock.mockRejectedValueOnce(new Error('database unavailable'))
+
+    await expect(gameManager.deleteGame(createTestGame({
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+    }), 'permanent')).rejects.toThrow('database unavailable')
+
+    expect(deleteFileMock).not.toHaveBeenCalled()
+  })
+
+  it('deleteGame 永久删除目录失败时会恢复游戏记录', async () => {
+    const game = createTestGame({
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+    })
+    deleteFileMock.mockRejectedValueOnce(new Error('permission denied'))
+
+    await expect(gameManager.deleteGame(game, 'permanent')).rejects.toThrow('permission denied')
+
+    expect(dbGameAddMock).toHaveBeenCalledWith(game)
   })
 
   it('deleteGame 在移动游戏目录失败时会保留游戏记录', async () => {
@@ -2034,7 +2067,7 @@ describe('gameManager', () => {
     await expect(gameManager.deleteGame(createTestGame({
       id: 'game-1',
       path: AbsPath.from('/games/demo'),
-    }), true)).rejects.toThrow('trash unavailable')
+    }), 'trash')).rejects.toThrow('trash unavailable')
 
     expect(dbGameDeleteMock).not.toHaveBeenCalled()
   })

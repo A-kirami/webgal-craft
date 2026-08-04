@@ -246,6 +246,8 @@ modals:
     folderTitle: Are you sure you want to delete the folder {name} and its contents?
     description: You can restore this file from the recycle bin.
     folderDescription: You can restore this folder and its contents from the recycle bin.
+    permanentDescription: This file will be permanently deleted. This action cannot be undone.
+    permanentFolderDescription: This folder and its contents will be permanently deleted. This action cannot be undone.
     skipConfirm: Don't show this prompt again
   deleteGameConfirm:
     title: Final Confirmation
@@ -742,6 +744,7 @@ edit:
     defaultFolderName: New Folder
     rename: Rename
     deleteFailed: Delete failed
+    refreshFailed: Refresh failed
     copy: Copy
     cut: Cut
     paste: Paste
