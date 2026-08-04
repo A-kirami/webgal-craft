@@ -17,16 +17,16 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const phaseLabels: Record<ManagedImportProgress['phase'], string> = {
-  copying: t('home.managedImport.phase.copying'),
-  validating: t('home.managedImport.phase.validating'),
-  publishing: t('home.managedImport.phase.publishing'),
-  registering: t('home.managedImport.phase.registering'),
+  copying: 'home.managedImport.phase.copying',
+  validating: 'home.managedImport.phase.validating',
+  publishing: 'home.managedImport.phase.publishing',
+  registering: 'home.managedImport.phase.registering',
 }
 
 const resourceLabels: Record<ManagedImportProgress['resourceKind'], string> = {
-  game: t('home.managedImport.resource.game'),
-  engine: t('home.managedImport.resource.engine'),
-  template: t('home.managedImport.resource.template'),
+  game: 'home.managedImport.resource.game',
+  engine: 'home.managedImport.resource.engine',
+  template: 'home.managedImport.resource.template',
 }
 
 const percentage = computed(() => {
@@ -37,19 +37,23 @@ const percentage = computed(() => {
   return Math.min(100, Math.round((props.progress.copiedBytes / total) * 100))
 })
 
-const phaseLabel = computed(() => phaseLabels[props.progress?.phase ?? 'copying'])
-const resourceLabel = computed(() => resourceLabels[props.progress?.resourceKind ?? 'game'])
-const progressLabel = computed(() => t('home.managedImport.copied', {
-  bytes: formatFileSize(props.progress?.copiedBytes ?? 0),
-  files: props.progress?.copiedFiles ?? 0,
-}))
-const progressDetail = computed(() => props.progress?.currentEntry
-  ? t('home.managedImport.currentEntry', {
-      entry: props.progress.currentEntry,
-      summary: progressLabel.value,
-    })
-  : progressLabel.value,
-)
+// 映射表中的 key 是固定的本地化资源，只能在运行时按进度类型选择。
+// eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
+const phaseLabel = computed(() => t(phaseLabels[props.progress?.phase ?? 'copying']))
+// eslint-disable-next-line @intlify/vue-i18n/no-dynamic-keys
+const resourceLabel = computed(() => t(resourceLabels[props.progress?.resourceKind ?? 'game']))
+const progressDetail = computed(() => {
+  const progressLabel = t('home.managedImport.copied', {
+    bytes: formatFileSize(props.progress?.copiedBytes ?? 0),
+    files: props.progress?.copiedFiles ?? 0,
+  })
+  return props.progress?.currentEntry
+    ? t('home.managedImport.currentEntry', {
+        entry: props.progress.currentEntry,
+        summary: progressLabel,
+      })
+    : progressLabel
+})
 </script>
 
 <template>
