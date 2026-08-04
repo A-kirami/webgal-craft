@@ -4,15 +4,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const {
   commitMock,
   gameImportMock,
+  loggerErrorMock,
   materializer,
   prepareMock,
   publishMock,
   registerMock,
   rollbackMock,
   selectAndStageMock,
+  templatePrepareMock,
+  templateRegisterMock,
 } = vi.hoisted(() => ({
   commitMock: vi.fn(),
   gameImportMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
   materializer: {
     cancel: vi.fn(),
     commit: vi.fn(),
@@ -26,6 +30,12 @@ const {
   registerMock: vi.fn(),
   rollbackMock: vi.fn(),
   selectAndStageMock: vi.fn(),
+  templatePrepareMock: vi.fn(),
+  templateRegisterMock: vi.fn(),
+}))
+
+vi.mock('@tauri-apps/plugin-log', () => ({
+  error: loggerErrorMock,
 }))
 
 vi.mock('~/services/platform/runtime', () => ({
@@ -59,12 +69,12 @@ vi.mock('~/services/engine-manager', () => ({
 
 vi.mock('~/services/template-manager', () => ({
   templateManager: {
-    prepareManagedImport: vi.fn(),
-    registerManagedImport: vi.fn(),
+    prepareManagedImport: templatePrepareMock,
+    registerManagedImport: templateRegisterMock,
   },
 }))
 
-import { createGameImportWorkflow } from '../resource-import-workflows'
+import { createGameImportWorkflow, createTemplateImportWorkflow } from '../resource-import-workflows'
 
 describe('资源导入工作流', () => {
   beforeEach(() => {
@@ -97,6 +107,10 @@ describe('资源导入工作流', () => {
       resolveDependencies: vi.fn(),
       selectTitle: 'Select game',
     })
+  }
+
+  function createTemplateWorkflow() {
+    return createTemplateImportWorkflow('Select template', true)
   }
 
   it('Dexie 注册后提交 session 且不会再次复制暂存内容', async () => {
@@ -134,11 +148,36 @@ describe('资源导入工作流', () => {
     expect(commitMock).not.toHaveBeenCalled()
   })
 
-  it('注册提交后导航失败时不会回滚资源', async () => {
+  it('重复资源回滚失败时只尝试一次并返回已注册结果', async () => {
+    prepareMock.mockResolvedValue({ kind: 'duplicate', existingId: 'game-existing' })
+    rollbackMock.mockRejectedValue(new Error('cleanup failed'))
+
+    await expect(createWorkflow().importFromPicker()).resolves.toEqual({
+      alreadyRegistered: true,
+    })
+
+    expect(rollbackMock).toHaveBeenCalledOnce()
+    expect(loggerErrorMock).toHaveBeenCalledWith(expect.stringContaining('cleanup failed'))
+  })
+
+  it('重复资源回滚失败时仍返回重复资源错误', async () => {
+    templatePrepareMock.mockResolvedValue({ kind: 'duplicate', existingId: 'template-existing' })
+    rollbackMock.mockRejectedValue(new Error('cleanup failed'))
+
+    await expect(createTemplateWorkflow().importFromPicker()).rejects.toThrow('资源已存在')
+
+    expect(rollbackMock).toHaveBeenCalledOnce()
+    expect(loggerErrorMock).toHaveBeenCalledWith(expect.stringContaining('cleanup failed'))
+  })
+
+  it('注册提交后完成回调失败时保留成功结果且不会回滚资源', async () => {
     const afterCommit = vi.fn().mockRejectedValue(new Error('navigation failed'))
 
-    await expect(createWorkflow(afterCommit).importFromPicker()).rejects.toThrow('navigation failed')
+    await expect(createWorkflow(afterCommit).importFromPicker()).resolves.toEqual({
+      alreadyRegistered: false,
+    })
     expect(commitMock).toHaveBeenCalledWith('session-1', 'game-1')
     expect(rollbackMock).not.toHaveBeenCalled()
+    expect(loggerErrorMock).toHaveBeenCalledWith(expect.stringContaining('navigation failed'))
   })
 })

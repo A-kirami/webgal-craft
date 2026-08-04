@@ -91,7 +91,11 @@ function createResourceImportWorkflow<TPlan>(
       store.updatePhase('validating')
       const preparation = await options.domain.prepare(staged.stagingPath)
       if (preparation.kind === 'duplicate') {
-        await materializer.rollback(sessionId)
+        try {
+          await materializer.rollback(sessionId)
+        } catch (error) {
+          logger.error(`托管导入重复资源回滚失败: session=${sessionId}, error=${error}`)
+        }
         sessionId = undefined
         if (options.domain.duplicateOutcome === 'duplicate-error') {
           throw new AppError('DUPLICATE_RESOURCE', '资源已存在')
@@ -114,7 +118,11 @@ function createResourceImportWorkflow<TPlan>(
         logger.error(`托管导入 native commit 失败，保留 session 供恢复: session=${sessionId}, error=${error}`)
       }
 
-      await options.afterManagedCommit?.(registeredId)
+      try {
+        await options.afterManagedCommit?.(registeredId)
+      } catch (error) {
+        logger.error(`托管导入完成后回调失败: resource=${registeredId}, error=${error}`)
+      }
       return { alreadyRegistered: false }
     } catch (error) {
       if (sessionId && !registeredId) {
