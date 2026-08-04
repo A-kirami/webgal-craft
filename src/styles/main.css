@@ -37,7 +37,7 @@ body {
     appearance: none;
   }
 
-  @media (pointer: coarse) {
+  @media (any-pointer: coarse) {
     button:not(:disabled),
     [role="button"]:not(:disabled) {
       min-width: 44px;
