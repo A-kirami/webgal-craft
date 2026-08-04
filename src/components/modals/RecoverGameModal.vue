@@ -3,6 +3,7 @@ import { TriangleAlert } from '@lucide/vue'
 import { openPath } from '@tauri-apps/plugin-opener'
 
 import { createGameRecoveryWorkflow } from '~/features/resource-import/game-recovery-workflow'
+import { isAndroidRuntime } from '~/services/platform/runtime'
 import { resourceReconcile } from '~/services/resource-reconcile'
 import { useEditorViewStateStore } from '~/stores/editor-view-state'
 import { useTabsStore } from '~/stores/tabs'
@@ -20,6 +21,7 @@ const router = useRouter()
 const tabsStore = useTabsStore()
 const editorViewStateStore = useEditorViewStateStore()
 const recoveryWorkflow = createGameRecoveryWorkflow({
+  android: isAndroidRuntime(),
   selectTitle: t('modals.recoverGame.selectNewLocation'),
 })
 
