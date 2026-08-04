@@ -120,4 +120,30 @@ describe('resourceImportCmds', () => {
       stagingPath: '/private/games/.import-staging/session-1',
     })])
   })
+
+  it('拒绝缺少 existingGameId 的 relink session', async () => {
+    safeInvokeMock.mockResolvedValue([{
+      operation: { kind: 'relink' },
+      resourceKind: 'game',
+      sessionId: 'session-1',
+      status: 'staged',
+      updatedAt: 1,
+    }])
+
+    await expect(resourceImportCmds.listRecoverableSessions())
+      .rejects.toThrow('invalid relink operation')
+  })
+
+  it('拒绝未知 operation kind 的 session', async () => {
+    safeInvokeMock.mockResolvedValue([{
+      operation: { kind: 'unknown' },
+      resourceKind: 'game',
+      sessionId: 'session-1',
+      status: 'staged',
+      updatedAt: 1,
+    }])
+
+    await expect(resourceImportCmds.listRecoverableSessions())
+      .rejects.toThrow('unknown operation kind: unknown')
+  })
 })

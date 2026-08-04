@@ -6,7 +6,6 @@ import { safeInvoke } from '~/utils/invoke'
 import type { AbsPath } from '~/domain/path'
 import type {
   ImportResourceKind,
-  ManagedImportOperation,
   ManagedImportProgress,
   RecoverableImportSession,
   SelectAndStageOptions,
@@ -26,7 +25,7 @@ interface NativePublishedResult {
 
 interface NativeSession {
   finalPath?: string
-  operation: { existingGameId?: string, kind: ManagedImportOperation['kind'] }
+  operation: { existingGameId?: string, kind: string }
   resourceId?: string
   resourceKind: ImportResourceKind
   sessionId: string
@@ -65,12 +64,31 @@ function toStageResult(result: NativeStageResult): SelectAndStageResult {
 }
 
 function toRecoverableSession(session: NativeSession): RecoverableImportSession {
+  let operation: RecoverableImportSession['operation']
+  switch (session.operation.kind) {
+    case 'import': {
+      operation = { kind: 'import' }
+      break
+    }
+    case 'relink': {
+      const { existingGameId } = session.operation
+      if (!existingGameId) {
+        throw new Error(`Recoverable session ${session.sessionId} has an invalid relink operation`)
+      }
+      operation = { kind: 'relink', existingGameId }
+      break
+    }
+    default: {
+      throw new Error(
+        `Recoverable session ${session.sessionId} has an unknown operation kind: ${session.operation.kind}`,
+      )
+    }
+  }
+
   return {
     sessionId: session.sessionId,
     resourceKind: session.resourceKind,
-    operation: session.operation.kind === 'relink'
-      ? { kind: 'relink', existingGameId: session.operation.existingGameId ?? '' }
-      : { kind: 'import' },
+    operation,
     status: session.status,
     stagingPath: session.stagingPath ? fromExternalAbsPath(session.stagingPath) : undefined,
     finalPath: session.finalPath ? fromExternalAbsPath(session.finalPath) : undefined,
