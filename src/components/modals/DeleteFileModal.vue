@@ -26,13 +26,20 @@ let skipConfirm = $ref(preferenceStore.skipDeleteFileConfirm)
 async function handleConfirm() {
   try {
     await gameFs.deleteFile(AbsPath.from(file.path), !isDesktop)
-    if (isDesktop) {
-      preferenceStore.skipDeleteFileConfirm = skipConfirm
-    }
-    await onConfirm?.()
-    open = false
   } catch (error) {
     handleError(error, { context: t('edit.fileTree.deleteFailed') })
+    return
+  }
+
+  open = false
+  if (isDesktop) {
+    preferenceStore.skipDeleteFileConfirm = skipConfirm
+  }
+
+  try {
+    await onConfirm?.()
+  } catch (error) {
+    handleError(error, { context: t('edit.fileTree.refreshFailed') })
   }
 }
 </script>

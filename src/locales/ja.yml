@@ -744,6 +744,7 @@ edit:
     defaultFolderName: 新しいフォルダー
     rename: 名前を変更
     deleteFailed: 削除に失敗しました
+    refreshFailed: 更新に失敗しました
     copy: コピー
     cut: 切り取り
     paste: 貼り付け

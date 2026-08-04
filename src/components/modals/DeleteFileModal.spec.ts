@@ -12,10 +12,12 @@ import DeleteFileModal from './DeleteFileModal.vue'
 
 const {
   deleteFileMock,
+  handleErrorMock,
   isDesktopRuntimeMock,
   usePreferenceStoreMock,
 } = vi.hoisted(() => ({
   deleteFileMock: vi.fn(),
+  handleErrorMock: vi.fn(),
   isDesktopRuntimeMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
 }))
@@ -35,7 +37,7 @@ vi.mock('~/stores/preference', () => ({
 }))
 
 vi.mock('~/utils/error-handler', () => ({
-  handleError: vi.fn(),
+  handleError: handleErrorMock,
 }))
 
 const globalStubs = {
@@ -50,14 +52,21 @@ const globalStubs = {
   Checkbox: createBrowserCheckboxStub('StubCheckbox'),
 }
 
-function renderDeleteFileModal() {
+function renderDeleteFileModal(options: {
+  onConfirm?: () => void | Promise<void>
+  updateOpen?: (value: boolean) => void
+} = {}) {
+  const updateOpen = options.updateOpen ?? vi.fn()
+
   renderInBrowser(DeleteFileModal, {
     props: {
-      open: true,
-      file: {
+      'open': true,
+      'file': {
         path: '/games/demo/game/scene/start.txt',
         name: 'start.txt',
       },
+      'onConfirm': options.onConfirm,
+      'onUpdate:open': updateOpen,
     },
     browser: {
       i18nMode: 'lite',
@@ -66,6 +75,8 @@ function renderDeleteFileModal() {
       stubs: globalStubs,
     },
   })
+
+  return { updateOpen }
 }
 
 describe('DeleteFileModal', () => {
@@ -99,5 +110,34 @@ describe('DeleteFileModal', () => {
     await page.getByRole('button', { name: 'common.delete' }).click()
 
     expect(deleteFileMock).toHaveBeenCalledWith('/games/demo/game/scene/start.txt', true)
+  })
+
+  it('删除失败时不会关闭模态框或执行确认回调', async () => {
+    const error = new Error('delete failed')
+    const onConfirm = vi.fn()
+    const { updateOpen } = renderDeleteFileModal({ onConfirm })
+    deleteFileMock.mockRejectedValueOnce(error)
+
+    await page.getByRole('button', { name: 'common.moveToTrash' }).click()
+
+    await vi.waitFor(() => {
+      expect(handleErrorMock).toHaveBeenCalledWith(error, { context: 'edit.fileTree.deleteFailed' })
+    })
+    expect(onConfirm).not.toHaveBeenCalled()
+    expect(updateOpen).not.toHaveBeenCalledWith(false)
+  })
+
+  it('删除成功但刷新回调失败时仍会关闭模态框并单独报告刷新错误', async () => {
+    const error = new Error('refresh failed')
+    const onConfirm = vi.fn().mockRejectedValueOnce(error)
+    const { updateOpen } = renderDeleteFileModal({ onConfirm })
+
+    await page.getByRole('button', { name: 'common.moveToTrash' }).click()
+
+    await vi.waitFor(() => {
+      expect(onConfirm).toHaveBeenCalledTimes(1)
+      expect(handleErrorMock).toHaveBeenCalledWith(error, { context: 'edit.fileTree.refreshFailed' })
+    })
+    expect(updateOpen).toHaveBeenCalledWith(false)
   })
 })

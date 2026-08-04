@@ -744,6 +744,7 @@ edit:
     defaultFolderName: New Folder
     rename: Rename
     deleteFailed: Delete failed
+    refreshFailed: Refresh failed
     copy: Copy
     cut: Cut
     paste: Paste

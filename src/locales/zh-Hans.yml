@@ -744,6 +744,7 @@ edit:
     defaultFolderName: 新文件夹
     rename: 重命名
     deleteFailed: 删除失败
+    refreshFailed: 刷新失败
     copy: 复制
     cut: 剪切
     paste: 粘贴

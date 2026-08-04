@@ -744,6 +744,7 @@ edit:
     defaultFolderName: 新資料夾
     rename: 重新命名
     deleteFailed: 刪除失敗
+    refreshFailed: 重新整理失敗
     copy: 複製
     cut: 剪下
     paste: 貼上
