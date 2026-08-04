@@ -2038,6 +2038,29 @@ describe('gameManager', () => {
     expect(dbGameDeleteMock).toHaveBeenCalledWith('game-1')
   })
 
+  it('deleteGame 永久删除时数据库删除失败不会触碰游戏目录', async () => {
+    dbGameDeleteMock.mockRejectedValueOnce(new Error('database unavailable'))
+
+    await expect(gameManager.deleteGame(createTestGame({
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+    }), 'permanent')).rejects.toThrow('database unavailable')
+
+    expect(deleteFileMock).not.toHaveBeenCalled()
+  })
+
+  it('deleteGame 永久删除目录失败时会恢复游戏记录', async () => {
+    const game = createTestGame({
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+    })
+    deleteFileMock.mockRejectedValueOnce(new Error('permission denied'))
+
+    await expect(gameManager.deleteGame(game, 'permanent')).rejects.toThrow('permission denied')
+
+    expect(dbGameAddMock).toHaveBeenCalledWith(game)
+  })
+
   it('deleteGame 在移动游戏目录失败时会保留游戏记录', async () => {
     deleteFileMock.mockRejectedValueOnce(new Error('trash unavailable'))
 
