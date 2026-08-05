@@ -100,6 +100,7 @@ function appendUnsupportedMultilineStatementMarkers(
   lines: readonly string[],
   source: string,
 ): void {
+  // 这里必须按新语法解析，才能识别出旧运行时不支持的跨行语句。
   const multilineRanges = buildStatementSourceRanges(source)
     .filter(range => range.startLine !== range.endLine)
 
