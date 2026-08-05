@@ -1,3 +1,4 @@
+import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestEngine } from '~/__tests__/factories'
@@ -73,6 +74,7 @@ describe('useEnginesTabController', () => {
   function createController(overrides?: Partial<Parameters<typeof useEnginesTabController>[0]>) {
     return useEnginesTabController({
       activeProgress: new Map<string, number>(),
+      android: false,
       openDeleteEngineGroupModal: openDeleteEngineGroupModalMock,
       openDeleteEngineModal: openDeleteEngineModalMock,
       setDefaultEngineId: setDefaultEngineIdMock,
@@ -83,6 +85,7 @@ describe('useEnginesTabController', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
+    setActivePinia(createPinia())
 
     openDialogMock.mockResolvedValue(undefined)
     reconcileEngineRecordMock.mockResolvedValue('available')

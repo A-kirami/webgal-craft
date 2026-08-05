@@ -2,7 +2,8 @@ import { openPath } from '@tauri-apps/plugin-opener'
 
 import { db } from '~/database/db'
 import { AbsPath } from '~/domain/path'
-import { useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { managedImportErrorMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { createEngineImportWorkflow } from '~/features/resource-import/resource-import-workflows'
 import { engineManager, MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
 import { resourceReconcile } from '~/services/resource-reconcile'
 
@@ -12,6 +13,7 @@ import type { I18nT } from '~/utils/i18n-like'
 
 interface UseEnginesTabControllerOptions {
   activeProgress: ReadonlyMap<string, number>
+  android: boolean
   openDeleteEngineGroupModal: (engineId: string, options: { allUnavailable: boolean }) => void
   openDeleteEngineModal: (engine: Engine) => void
   setDefaultEngineId: (engineId: string | undefined) => void
@@ -19,10 +21,13 @@ interface UseEnginesTabControllerOptions {
 }
 
 export function useEnginesTabController(options: UseEnginesTabControllerOptions) {
+  const importWorkflow = createEngineImportWorkflow(options.t('common.dialogs.selectEngineFolder'), options.android)
   const importActions = useHomeResourceImportActions<Engine>({
     activeProgress: options.activeProgress,
     importResource: path => engineManager.importEngine(path),
+    selectResource: importWorkflow.importFromPicker,
     messages: {
+      ...managedImportErrorMessages,
       alreadyRegistered: t => t('home.engines.importAlreadyExists'),
       engineEditorIncompatible: t => t('home.engines.importEditorIncompatible'),
       engineVersionInvalid: t => t('home.engines.importVersionInvalid'),

@@ -8,12 +8,17 @@ import { createBrowserCheckboxStub, createBrowserClickStub, createBrowserContain
 import { FormField } from '~/components/ui/form'
 import { defineSettingsSchema } from '~/features/settings/schema'
 
-const { openDialogMock } = vi.hoisted(() => ({
+const { isAndroidRuntimeMock, openDialogMock } = vi.hoisted(() => ({
+  isAndroidRuntimeMock: vi.fn(),
   openDialogMock: vi.fn(),
 }))
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
   open: openDialogMock,
+}))
+
+vi.mock('~/services/platform/runtime', () => ({
+  isAndroidRuntime: isAndroidRuntimeMock,
 }))
 
 import SwitchField from './fields/SwitchField.vue'
@@ -79,11 +84,13 @@ const settingsDefinition = defineSettingsSchema({
       projectPath: {
         type: 'folderPicker',
         default: '',
+        androidDisplayValue: '托管项目目录',
         buttonLabel: '浏览',
         dialogTitle: '选择项目路径',
         label: '项目路径',
         description: '用于存放项目文件',
         immediate: true,
+        readonlyOnAndroid: true,
       },
       language: {
         type: 'select',
@@ -192,6 +199,7 @@ function findBrowseButton() {
 
 describe('SettingsForm', () => {
   beforeEach(() => {
+    isAndroidRuntimeMock.mockReturnValue(false)
     openDialogMock.mockReset()
   })
 
@@ -243,6 +251,22 @@ describe('SettingsForm', () => {
       defaultPath: '/demo/project',
     })
     await expect.element(page.getByTestId('path-probe')).toHaveTextContent('/demo/project-next')
+
+    await result.unmount()
+  })
+
+  it('Android 托管目录字段只读展示且不会调用目录选择器', async () => {
+    isAndroidRuntimeMock.mockReturnValue(true)
+    const result = renderSettingsFormHarness()
+
+    const managedPathInput = [...document.querySelectorAll('input')]
+      .find(input => input.value === '托管项目目录')
+    if (!managedPathInput) {
+      throw new Error('managed path input should be rendered')
+    }
+    expect(managedPathInput.disabled || managedPathInput.readOnly).toBe(true)
+    await expect.element(page.getByRole('button', { name: '浏览' })).not.toBeInTheDocument()
+    expect(openDialogMock).not.toHaveBeenCalled()
 
     await result.unmount()
   })

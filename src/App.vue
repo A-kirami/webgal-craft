@@ -2,6 +2,7 @@
 import { useResourcePreviewPrimer } from '~/composables/useResourcePreviewPrimer'
 import { runAppStartup } from '~/features/app-startup/app-startup'
 import { useAppUpdateController } from '~/features/app-update/useAppUpdateController'
+import { recoverManagedImportSessions } from '~/features/resource-import/managed-import-recovery'
 import { engineManager } from '~/services/engine-manager'
 import { resolveMissingStorageSavePaths } from '~/services/platform/storage-defaults'
 import { resourceReconcile } from '~/services/resource-reconcile'
@@ -29,6 +30,7 @@ onMounted(async () => {
     generalSettingsStore,
     resourceReconcile,
     resolveMissingStorageSavePaths,
+    recoverManagedImportSessions,
     router,
     storageSettingsStore,
     templateManager,

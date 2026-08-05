@@ -192,6 +192,56 @@ describe('templateManager', () => {
     expect(resourceStoreMock.finishProgress).toHaveBeenCalledWith('template-1')
   })
 
+  it('managed import 预检只读并在发布后直接注册最终目录', async () => {
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    readTextFileMock.mockResolvedValue(JSON.stringify({
+      'name': 'Modern Template',
+      'webgal-version': '4.8.1',
+    }))
+    dbTemplatesAddMock.mockResolvedValue('template-managed')
+
+    const result = await templateManager.prepareManagedImport(
+      AbsPath.from('/templates/.import-staging/session'),
+    )
+
+    expect(result).toMatchObject({
+      kind: 'ready',
+      prepared: { finalRelativePath: 'Modern Template' },
+    })
+    expect(dbTemplatesAddMock).not.toHaveBeenCalled()
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
+
+    if (result.kind !== 'ready') {
+      throw new Error('expected a ready managed import')
+    }
+    await expect(templateManager.registerManagedImport(
+      AbsPath.from('/templates/Modern Template'),
+      result.prepared,
+    )).resolves.toEqual({ id: 'template-managed' })
+
+    expect(dbTemplatesAddMock).toHaveBeenCalledWith(expect.objectContaining({
+      path: '/templates/Modern Template',
+      status: 'created',
+    }))
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
+  })
+
+  it('managed import 在同名模板已注册时于发布前返回 duplicate', async () => {
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    readTextFileMock.mockResolvedValue(JSON.stringify({ name: 'Modern Template' }))
+    dbTemplatesFirstMock.mockResolvedValue({
+      id: 'template-existing',
+      metadata: { name: 'Modern Template' },
+    })
+
+    await expect(templateManager.prepareManagedImport(
+      AbsPath.from('/templates/.import-staging/session'),
+    )).resolves.toEqual({ kind: 'duplicate', existingId: 'template-existing' })
+
+    expect(dbTemplatesAddMock).not.toHaveBeenCalled()
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
+  })
+
   it('importTemplate 遇到同名模板时拒绝导入', async () => {
     validateDirectoryStructureMock.mockResolvedValue(true)
     readTextFileMock.mockResolvedValue(JSON.stringify({

@@ -14,6 +14,7 @@ describe('resolveMissingStorageSavePaths', () => {
       templateSavePath: '/templates',
     }, {
       getBaseDir,
+      isAndroid: false,
     })).resolves.toEqual({})
 
     expect(getBaseDir).not.toHaveBeenCalled()
@@ -32,6 +33,7 @@ describe('resolveMissingStorageSavePaths', () => {
       templateSavePath: '',
     }, {
       getBaseDir,
+      isAndroid: false,
       resolveGameSavePath,
       resolveEngineSavePath,
       resolveTemplateSavePath,
@@ -45,5 +47,31 @@ describe('resolveMissingStorageSavePaths', () => {
     expect(resolveGameSavePath).toHaveBeenCalledWith('/documents')
     expect(resolveEngineSavePath).not.toHaveBeenCalled()
     expect(resolveTemplateSavePath).toHaveBeenCalledWith('/documents')
+  })
+
+  it('Android 始终使用 native effective roots 覆盖历史设置', async () => {
+    const resolveAndroidRoots = vi.fn(async () => ({
+      game: AbsPath.from('/private/games'),
+      engine: AbsPath.from('/private/engines'),
+      template: AbsPath.from('/private/templates'),
+      export: AbsPath.from('/private/exports'),
+    }))
+
+    await expect(resolveMissingStorageSavePaths({
+      gameSavePath: '/legacy/games',
+      engineSavePath: '/legacy/engines',
+      exportSavePath: '/legacy/exports',
+      templateSavePath: '/legacy/templates',
+    }, {
+      isAndroid: true,
+      resolveAndroidRoots,
+    })).resolves.toEqual({
+      gameSavePath: '/private/games',
+      engineSavePath: '/private/engines',
+      exportSavePath: '/private/exports',
+      templateSavePath: '/private/templates',
+    })
+
+    expect(resolveAndroidRoots).toHaveBeenCalledOnce()
   })
 })

@@ -14,11 +14,18 @@ import EnginesTabCollectionSection from './EnginesTabCollectionSection.vue'
 import type { Engine } from '~/database/model'
 import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
 
+const { dropHandlers } = vi.hoisted(() => ({
+  dropHandlers: [] as ((paths: string[]) => void)[],
+}))
+
 vi.mock('~/composables/useTauriDropZone', () => ({
-  useTauriDropZone: () => ({
-    files: ref<string[] | undefined>(undefined),
-    isOverDropZone: ref(false),
-  }),
+  useTauriDropZone: (_target: unknown, onDrop: (paths: string[]) => void) => {
+    dropHandlers.push(onDrop)
+    return {
+      files: ref<string[] | undefined>(undefined),
+      isOverDropZone: ref(false),
+    }
+  },
 }))
 
 const globalStubs = {
@@ -99,6 +106,7 @@ function createGroups(): EngineGroupCollectionItem[] {
 describe('EnginesTabCollectionSection', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    dropHandlers.length = 0
   })
 
   it('会渲染引擎族卡片', async () => {
@@ -162,5 +170,60 @@ describe('EnginesTabCollectionSection', () => {
 
     const card = await page.getByTestId('group-card-WebGAL').element()
     expect(card.dataset.progress).toBe('64')
+  })
+
+  it('导入忙时会拒绝网格和列表拖放', async () => {
+    const onDrop = vi.fn()
+
+    renderInBrowser(EnginesTabCollectionSection, {
+      props: {
+        groups: createGroups(),
+        viewMode: 'grid',
+        getEngineProgress: () => undefined,
+        importBusy: true,
+        onDrop,
+      },
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => expect(dropHandlers).toHaveLength(2))
+
+    dropHandlers[0]!(['/engines/grid'])
+    dropHandlers[1]!(['/engines/list'])
+
+    expect(onDrop).not.toHaveBeenCalled()
+  })
+
+  it('导入空闲时会透传网格和列表拖放路径', async () => {
+    const onDrop = vi.fn()
+
+    renderInBrowser(EnginesTabCollectionSection, {
+      props: {
+        groups: createGroups(),
+        viewMode: 'grid',
+        getEngineProgress: () => undefined,
+        importBusy: false,
+        onDrop,
+      },
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => expect(dropHandlers).toHaveLength(2))
+
+    dropHandlers[0]!(['/engines/grid'])
+    dropHandlers[1]!(['/engines/list'])
+
+    expect(onDrop).toHaveBeenNthCalledWith(1, ['/engines/grid'])
+    expect(onDrop).toHaveBeenNthCalledWith(2, ['/engines/list'])
   })
 })

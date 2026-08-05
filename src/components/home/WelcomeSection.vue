@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { FolderOpen, Plus } from '@lucide/vue'
-import { open } from '@tauri-apps/plugin-dialog'
 
-import { AbsPath } from '~/domain/path'
 import { resolveHomeResourceImportNotification } from '~/features/home/shared/home-resource-import'
-import { reportHomeResourceImportNotification } from '~/features/home/shared/useHomeResourceImportActions'
+import {
+  managedImportErrorMessages,
+  reportHomeResourceImportNotification,
+} from '~/features/home/shared/useHomeResourceImportActions'
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
+import { createGameImportWorkflow } from '~/features/resource-import/resource-import-workflows'
 import { isEngineEditorCompatible, MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
-import { gameManager } from '~/services/game-manager'
+import { isAndroidRuntime } from '~/services/platform/runtime'
+import { useManagedImportStore } from '~/stores/managed-import'
 import { useModalStore } from '~/stores/modal'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
@@ -15,6 +18,7 @@ import { useWorkspaceStore } from '~/stores/workspace'
 import type { HomeResourceImportMessages } from '~/features/home/shared/useHomeResourceImportActions'
 
 const workspaceStore = useWorkspaceStore()
+const managedImportStore = useManagedImportStore()
 const resourceStore = useResourceStore()
 const router = useRouter()
 
@@ -28,6 +32,7 @@ const modalStore = useModalStore()
 const { t } = useI18n()
 
 const gameImportMessages: HomeResourceImportMessages = {
+  ...managedImportErrorMessages,
   alreadyRegistered: t => t('home.games.importAlreadyExists'),
   engineEditorIncompatible: t => t('home.games.importEngineEditorIncompatible'),
   engineNotFound: t => t('home.games.importEngineNotFound'),
@@ -41,6 +46,14 @@ const gameImportMessages: HomeResourceImportMessages = {
   selectFolderTitle: t => t('common.dialogs.selectGameFolder'),
   unknownError: t => t('home.games.importUnknownError'),
 }
+
+const gameImportWorkflow = createGameImportWorkflow({
+  android: isAndroidRuntime(),
+  selectTitle: t('common.dialogs.selectGameFolder'),
+  resolveDependencies: requestImportDependencyResolution,
+  afterDesktopCommit: gameId => router.push(`/edit/${gameId}`),
+  afterManagedCommit: gameId => router.push(`/edit/${gameId}`),
+})
 
 function createGame() {
   if (!resourceStore.engines) {
@@ -65,20 +78,10 @@ function createGame() {
 }
 
 async function selectGameFolder() {
-  const path = await open({
-    title: t('common.dialogs.selectGameFolder'),
-    directory: true,
-    multiple: false,
-  })
-  if (typeof path !== 'string') {
-    return
-  }
-
   try {
-    const { id } = await gameManager.importGame(AbsPath.from(path), {
-      resolveDependencies: requestImportDependencyResolution,
-    })
-    router.push(`/edit/${id}`)
+    const outcome = await gameImportWorkflow.importFromPicker()
+    const notification = resolveHomeResourceImportNotification(undefined, outcome)
+    reportHomeResourceImportNotification(notification, gameImportMessages, t)
   } catch (error: unknown) {
     logger.error(`导入游戏时发生错误: ${error}`)
     const notification = resolveHomeResourceImportNotification(error)
@@ -112,7 +115,12 @@ async function selectGameFolder() {
         <Plus class="h-4 w-4" />
         {{ $t('home.welcome.createGame') }}
       </Button>
-      <Button variant="outline" class="gap-2" @click="selectGameFolder">
+      <Button
+        variant="outline"
+        class="gap-2"
+        :disabled="managedImportStore.isBusy"
+        @click="selectGameFolder"
+      >
         <FolderOpen class="h-4 w-4" />
         {{ $t('home.welcome.openGame') }}
       </Button>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { open } from '@tauri-apps/plugin-dialog'
-
+import { desktopDirectoryPicker } from '~/features/resource-import/desktop-directory-picker'
+import { isAndroidRuntime } from '~/services/platform/runtime'
 import { resolveI18nLike } from '~/utils/i18n-like'
 
 import type { FolderPickerFieldDef } from '~/features/settings/schema'
@@ -15,16 +15,25 @@ interface Props {
 const props = defineProps<Props>()
 
 const { t } = useI18n()
+const readonly = computed(() => props.field.readonlyOnAndroid === true && isAndroidRuntime())
+const displayValue = computed(() => {
+  if (readonly.value && props.field.androidDisplayValue) {
+    return resolveI18nLike(props.field.androidDisplayValue, t)
+  }
+  return props.value
+})
 
 async function handleSelectFolder() {
-  const selected = await open({
-    title: resolveI18nLike(props.field.dialogTitle ?? props.field.label, t),
-    directory: true,
-    multiple: false,
-    defaultPath: props.value || undefined,
-  })
+  if (readonly.value) {
+    return
+  }
 
-  if (typeof selected === 'string') {
+  const selected = await desktopDirectoryPicker.selectDirectory(
+    resolveI18nLike(props.field.dialogTitle ?? props.field.label, t),
+    props.value || undefined,
+  )
+
+  if (selected) {
     props.handleChange(selected)
   }
 }
@@ -43,11 +52,11 @@ async function handleSelectFolder() {
     </div>
     <div class="flex gap-2">
       <Input
-        :model-value="value"
+        :model-value="displayValue"
         class="text-xs bg-accent flex-1 h-8 shadow-none cursor-default!"
         disabled
       />
-      <FormControl>
+      <FormControl v-if="!readonly">
         <Button
           v-bind="componentField"
           variant="outline"

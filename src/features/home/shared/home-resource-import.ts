@@ -19,6 +19,13 @@ export interface HomeResourceImportNotification {
     | 'import-cancelled'
     | 'unknown-error'
     | 'multiple-folders'
+    | 'provider-denied'
+    | 'copy-failed'
+    | 'unsafe-entry'
+    | 'storage-full'
+    | 'resource-limit'
+    | 'rollback-failed'
+    | 'import-busy'
   level: 'silent' | 'info' | 'error'
 }
 
@@ -61,7 +68,12 @@ export function resolveHomeResourceImportNotification(
   }
 
   const kind = resolveErrorNotificationKind(error)
-  const level = kind === 'import-cancelled' ? 'silent' : 'error'
+  let level: HomeResourceImportNotification['level'] = 'error'
+  if (kind === 'import-cancelled') {
+    level = 'silent'
+  } else if (kind === 'import-busy') {
+    level = 'info'
+  }
   return { kind, level }
 }
 
@@ -79,6 +91,7 @@ function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotific
     case 'ENGINE_UNAVAILABLE': { return 'engine-unavailable' }
     case 'ENGINE_EDITOR_INCOMPATIBLE': { return resolveEngineEditorIncompatibleNotificationKind(error) }
     case 'IMPORT_CANCELLED': { return 'import-cancelled' }
+    case 'IMPORT_BUSY': { return 'import-busy' }
     default: { break }
   }
 
@@ -91,6 +104,12 @@ function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotific
     case 'INVALID_PROJECT_CONFIG': { return 'game-config-corrupted' }
     case 'SCHEMA_VERSION_TOO_NEW': { return 'game-schema-too-new' }
     case 'ENGINE_EDITOR_INCOMPATIBLE': { return resolveEngineEditorIncompatibleNotificationKind(error) }
+    case 'PROVIDER_DENIED': { return 'provider-denied' }
+    case 'COPY_FAILED': { return 'copy-failed' }
+    case 'UNSAFE_ENTRY': { return 'unsafe-entry' }
+    case 'STORAGE_FULL': { return 'storage-full' }
+    case 'RESOURCE_LIMIT': { return 'resource-limit' }
+    case 'ROLLBACK_FAILED': { return 'rollback-failed' }
     default: { return 'unknown-error' }
   }
 }

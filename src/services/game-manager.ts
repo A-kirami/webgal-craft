@@ -40,6 +40,10 @@ import type {
   ImportTemplateResolutionResult,
   ResolveImportDependencies,
 } from '~/types/import-dependency-resolution'
+import type {
+  PreparedManagedImport,
+  PrepareManagedImportResult,
+} from '~/types/managed-import'
 import type { EngineRef, ProjectConfig, TemplateBinding } from '~/types/project-config'
 import type { StaticSiteConfig } from '~/types/server'
 
@@ -53,6 +57,13 @@ interface RegisterGameOptions {
 interface ImportGameOptions {
   resolveDependencies?: ResolveImportDependencies
 }
+
+interface ManagedGameImportPlan {
+  inspection: GameInspectionPayload
+  hasProjectConfig: boolean
+}
+
+export type PreparedGameManagedImport = PreparedManagedImport<ManagedGameImportPlan>
 
 export type GamePreviewAssetKey = keyof GamePreviewAssets
 export type GamePreviewInvalidation = GamePreviewAssetKey | 'all'
@@ -943,6 +954,79 @@ async function relinkGame(gameId: string, newPath: AbsPath): Promise<Game> {
   return { ...game, ...patch }
 }
 
+async function prepareManagedImport(stagingPath: AbsPath): Promise<PrepareManagedImportResult<ManagedGameImportPlan>> {
+  const { normalizedPath } = normalizeImportPath(stagingPath)
+  const inspection = await inspectGame(normalizedPath)
+  if (inspection.availability !== 'available' || !inspection.payload) {
+    const { code, message, details } = inspection.blockingIssue!
+    throw new AppError(code, message, { details })
+  }
+
+  return {
+    kind: 'ready',
+    prepared: {
+      finalRelativePath: crypto.randomUUID(),
+      plan: {
+        inspection: inspection.payload,
+        hasProjectConfig: await exists(projectConfigPath(normalizedPath)),
+      },
+    },
+  }
+}
+
+async function registerManagedImport(
+  finalPath: AbsPath,
+  prepared: PreparedGameManagedImport,
+  options: ImportGameOptions = {},
+): Promise<{ id: string }> {
+  const { normalizedPath } = normalizeImportPath(finalPath)
+  const { inspection, hasProjectConfig } = prepared.plan
+  const id = hasProjectConfig
+    ? await importConfiguredGame(normalizedPath, options, inspection)
+    : await importLegacyGame(normalizedPath, options, inspection)
+  return { id }
+}
+
+async function prepareManagedRelink(
+  existingGameId: string,
+  stagingPath: AbsPath,
+): Promise<PrepareManagedImportResult<ManagedGameImportPlan>> {
+  const existing = await db.games.get(existingGameId)
+  if (!existing) {
+    throw new AppError('IO_ERROR', '游戏不存在')
+  }
+
+  return prepareManagedImport(stagingPath)
+}
+
+async function registerManagedRelink(
+  existingGameId: string,
+  finalPath: AbsPath,
+  prepared: PreparedGameManagedImport,
+): Promise<Game> {
+  const { normalizedPath, lookupKey } = normalizeImportPath(finalPath)
+  const game = await db.games.get(existingGameId)
+  if (!game) {
+    throw new AppError('IO_ERROR', '游戏不存在')
+  }
+
+  const conflicting = await findRegisteredGameByPath(normalizedPath)
+  if (conflicting && conflicting.id !== existingGameId) {
+    throw new AppError('DUPLICATE_RESOURCE', '该目录已绑定到其他游戏记录')
+  }
+
+  const patch: Partial<Game> = {
+    path: normalizedPath,
+    pathLookupKey: lookupKey,
+    availability: 'available',
+    lastModified: Date.now(),
+    ...prepared.plan.inspection,
+  }
+  await db.games.update(existingGameId, patch)
+
+  return { ...game, ...patch }
+}
+
 async function getGameEnginePath(game: Pick<Game, 'engineId' | 'path'>): Promise<AbsPath | undefined> {
   const { engine } = await resolveBoundEngine(game)
   if (!engine || !isEngineUsable(engine)) {
@@ -1266,6 +1350,10 @@ export const gameManager = {
   createGame,
   deleteGame,
   relinkGame,
+  prepareManagedImport,
+  registerManagedImport,
+  prepareManagedRelink,
+  registerManagedRelink,
   renameGame,
   importGame,
   getGameEnginePath,

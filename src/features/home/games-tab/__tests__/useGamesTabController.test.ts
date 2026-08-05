@@ -1,3 +1,4 @@
+import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestEngine, createTestGame } from '~/__tests__/factories'
@@ -85,6 +86,7 @@ describe('useGamesTabController', () => {
   function createController(overrides?: Partial<Parameters<typeof useGamesTabController>[0]>) {
     return useGamesTabController({
       activeProgress: new Map<string, number>(),
+      android: false,
       engines: [createTestEngine({ id: 'engine-1' })],
       openCreateGameModal: openCreateGameModalMock,
       openDeleteGameModal: openDeleteGameModalMock,
@@ -99,6 +101,7 @@ describe('useGamesTabController', () => {
 
   beforeEach(() => {
     vi.resetAllMocks()
+    setActivePinia(createPinia())
     ensureEditorRuntimeCompatibleMock.mockResolvedValue(undefined)
     reconcileGameRecordMock.mockResolvedValue('available')
     requestGameRuntimeRebindMock.mockResolvedValue(false)

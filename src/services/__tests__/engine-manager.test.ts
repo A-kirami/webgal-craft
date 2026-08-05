@@ -296,6 +296,73 @@ describe('engineManager', () => {
     }))
   })
 
+  it('managed import 预检只读并在发布后直接注册最终目录', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.6.2',
+        engineType: 'official',
+        webgalVersion: '4.6.2',
+      },
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    addMock.mockResolvedValue('engine-managed')
+
+    const result = await engineManager.prepareManagedImport(AbsPath.from('/engines/.import-staging/session'))
+
+    expect(result).toMatchObject({
+      kind: 'ready',
+      prepared: { finalRelativePath: 'WebGAL/4.6.2' },
+    })
+    expect(addMock).not.toHaveBeenCalled()
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
+
+    if (result.kind !== 'ready') {
+      throw new Error('expected a ready managed import')
+    }
+    await expect(engineManager.registerManagedImport(
+      AbsPath.from('/engines/WebGAL/4.6.2'),
+      result.prepared,
+    )).resolves.toEqual({ id: 'engine-managed' })
+
+    expect(addMock).toHaveBeenCalledWith(expect.objectContaining({
+      path: '/engines/WebGAL/4.6.2',
+      previewAssets: {
+        icon: expect.objectContaining({
+          path: '/engines/WebGAL/4.6.2/icons/favicon.ico',
+        }),
+      },
+      status: 'created',
+    }))
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
+  })
+
+  it('managed import 在相同 engineId 和 version 已注册时于发布前返回 duplicate', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.6.2',
+        engineType: 'official',
+        webgalVersion: '4.6.2',
+      },
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    engineWhereFirstMock.mockResolvedValue(createTestEngine({ id: 'engine-existing' }))
+
+    await expect(engineManager.prepareManagedImport(
+      AbsPath.from('/engines/.import-staging/session'),
+    )).resolves.toEqual({ kind: 'duplicate', existingId: 'engine-existing' })
+
+    expect(addMock).not.toHaveBeenCalled()
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
+  })
+
   it('importEngine 会把 Windows 风格托管目录归一化为 POSIX 路径', async () => {
     useStorageSettingsStoreMock.mockReturnValue({ engineSavePath: 'C:\\Engines\\' })
     readEngineManifestMock.mockResolvedValue({
@@ -646,6 +713,9 @@ describe('engineManager', () => {
       createTestEngine({
         id: 'engine-1',
         path: AbsPath.from('/engines/WebGAL/4.5.0'),
+        previewAssets: {
+          icon: { path: '/engines/WebGAL/4.5.0/icons/favicon.ico' },
+        },
         status: 'created',
       }),
     ])
@@ -666,6 +736,43 @@ describe('engineManager', () => {
     await engineManager.validateAllEngines()
 
     expect(enginesUpdateMock).not.toHaveBeenCalled()
+  })
+
+  it('validateAllEngines 会把 managed import 遗留的 staging 图标路径修正为最终目录', async () => {
+    enginesToArrayMock.mockResolvedValue([
+      createTestEngine({
+        id: 'engine-1',
+        path: AbsPath.from('/engines/WebGAL/4.6.2'),
+        previewAssets: {
+          icon: { path: '/engines/.import-staging/session/icons/favicon.ico' },
+        },
+        status: 'created',
+      }),
+    ])
+    existsMock.mockResolvedValue(true)
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.6.2',
+        engineType: 'official',
+        webgalVersion: '4.6.2',
+      },
+    })
+
+    await engineManager.validateAllEngines()
+
+    expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', {
+      previewAssets: {
+        icon: {
+          cacheVersion: expect.any(Number),
+          path: '/engines/WebGAL/4.6.2/icons/favicon.ico',
+        },
+      },
+    })
   })
 
   it('validateAllEngines 在结构有效但 schemaVersion 不受支持时标记为 broken', async () => {

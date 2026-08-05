@@ -1,4 +1,3 @@
-import { open } from '@tauri-apps/plugin-dialog'
 import { exists, readDir } from '@tauri-apps/plugin-fs'
 import { useForm } from 'vee-validate'
 import * as z from 'zod'
@@ -8,8 +7,10 @@ import { AbsPath } from '~/domain/path'
 import {
   resolveCreateGamePathSuggestion,
 } from '~/features/modals/create-game/create-game-modal'
+import { desktopDirectoryPicker } from '~/features/resource-import/desktop-directory-picker'
 import { isEngineEditorCompatible } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
+import { isAndroidRuntime } from '~/services/platform/runtime'
 import { resourceReconcile } from '~/services/resource-reconcile'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 
@@ -23,6 +24,7 @@ interface UseCreateGameFormOptions {
 export function useCreateGameForm(options: UseCreateGameFormOptions) {
   const storageSettingsStore = useStorageSettingsStore()
   const { t } = useI18n()
+  const canSelectGamePath = !isAndroidRuntime()
 
   async function checkPathAvailable(path: string): Promise<boolean> {
     try {
@@ -86,14 +88,16 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
   }
 
   async function handleSelectFolder(): Promise<void> {
-    const selected = await open({
-      title: t('modals.createGame.selectSaveLocation'),
-      directory: true,
-      multiple: false,
-      defaultPath: storageSettingsStore.gameSavePath,
-    })
+    if (!canSelectGamePath) {
+      return
+    }
 
-    if (typeof selected === 'string') {
+    const selected = await desktopDirectoryPicker.selectDirectory(
+      t('modals.createGame.selectSaveLocation'),
+      storageSettingsStore.gameSavePath,
+    )
+
+    if (selected) {
       isPathManuallyChanged = true
       setFieldValue('gamePath', selected, false)
     }
@@ -155,6 +159,7 @@ export function useCreateGameForm(options: UseCreateGameFormOptions) {
   })
 
   return {
+    canSelectGamePath,
     setFieldValue,
     handleCompositionEnd,
     handleCompositionStart,

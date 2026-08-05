@@ -3,6 +3,8 @@ import { Download, Plus, Scroll } from '@lucide/vue'
 
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import { useGamesTabController } from '~/features/home/games-tab/useGamesTabController'
+import { isAndroidRuntime } from '~/services/platform/runtime'
+import { useManagedImportStore } from '~/stores/managed-import'
 import { useModalStore } from '~/stores/modal'
 import { usePreferenceStore } from '~/stores/preference'
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
@@ -13,6 +15,7 @@ import type { Engine } from '~/database/model'
 import type { GameCollectionItem } from '~/features/home/home-collection-items'
 
 const modalStore = useModalStore()
+const managedImportStore = useManagedImportStore()
 const preferenceStore = usePreferenceStore()
 const previewRuntimeStore = usePreviewRuntimeStore()
 const resourceStore = useResourceStore()
@@ -43,6 +46,7 @@ const gameCollectionItems = computed<GameCollectionItem[]>(() =>
 )
 const controller = useGamesTabController({
   activeProgress: resourceStore.activeProgress,
+  android: isAndroidRuntime(),
   engines: () => resourceStore.engines,
   openCreateGameModal: () => modalStore.open('CreateGameModal'),
   openDeleteGameModal: game => modalStore.open('DeleteGameModal', { game }),
@@ -73,6 +77,7 @@ const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRe
     :view-mode="preferenceStore.viewMode"
     :get-game-progress="controller.getGameProgress"
     :has-game-progress="controller.hasGameProgress"
+    :import-busy="managedImportStore.isBusy"
     @delete-game="controller.handleDeleteGame"
     @drop="controller.handleDrop"
     @game-click="controller.handleGameClick"

@@ -331,6 +331,52 @@ describe('gameManager', () => {
     expect(gameConfigPathMock).toHaveBeenCalledWith('/games/demo')
   })
 
+  it('managed import 预检只读、为每次选择生成独立目录，并在发布后注册而不复制', async () => {
+    mockExistingPaths(
+      '/games/.import-staging/session',
+      '/games/.import-staging/session/game/config.txt',
+    )
+    dbGameAddMock.mockResolvedValue('game-managed')
+    dbEngineGetMock.mockResolvedValue(createTestEngine({ id: 'engine-1' }))
+    const resolveDependencies = vi.fn().mockResolvedValue({ engineId: 'engine-1' })
+
+    const firstResult = await gameManager.prepareManagedImport(
+      AbsPath.from('/games/.import-staging/session'),
+    )
+    const secondResult = await gameManager.prepareManagedImport(
+      AbsPath.from('/games/.import-staging/session'),
+    )
+
+    expect(firstResult).toMatchObject({ kind: 'ready' })
+    expect(secondResult).toMatchObject({ kind: 'ready' })
+
+    if (firstResult.kind !== 'ready' || secondResult.kind !== 'ready') {
+      throw new Error('expected both managed imports to be ready')
+    }
+    expect(firstResult.prepared.finalRelativePath).toMatch(
+      /^[0-9a-f-]{36}$/,
+    )
+    expect(secondResult.prepared.finalRelativePath).toMatch(
+      /^[0-9a-f-]{36}$/,
+    )
+    expect(firstResult.prepared.finalRelativePath).not.toBe(secondResult.prepared.finalRelativePath)
+    expect(dbGameAddMock).not.toHaveBeenCalled()
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
+    expect(writeProjectConfigMock).not.toHaveBeenCalled()
+
+    await expect(gameManager.registerManagedImport(
+      AbsPath.from('/games/imported-game'),
+      firstResult.prepared,
+      { resolveDependencies },
+    )).resolves.toEqual({ id: 'game-managed' })
+
+    expect(copyDirectoryWithProgressMock).not.toHaveBeenCalled()
+    expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
+      id: expect.any(String),
+      path: '/games/imported-game',
+    }))
+  })
+
   it('getGameMetadata 只返回语义元数据', async () => {
     await expect(gameManager.getGameMetadata(AbsPath.from('/games/demo'))).resolves.toEqual({
       name: 'Demo Game',

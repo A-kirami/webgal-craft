@@ -1,4 +1,5 @@
-import { useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { managedImportErrorMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { createTemplateImportWorkflow } from '~/features/resource-import/resource-import-workflows'
 import { resourceReconcile } from '~/services/resource-reconcile'
 import { templateManager } from '~/services/template-manager'
 
@@ -8,6 +9,7 @@ import type { I18nT } from '~/utils/i18n-like'
 
 interface UseTemplatesTabControllerOptions {
   activeProgress: ReadonlyMap<string, number>
+  android: boolean
   openDeleteTemplateModal: (template: Template) => void
   t: I18nT
 }
@@ -21,10 +23,13 @@ function findStandaloneSource(
 }
 
 export function useTemplatesTabController(options: UseTemplatesTabControllerOptions) {
+  const importWorkflow = createTemplateImportWorkflow(options.t('common.dialogs.selectTemplateFolder'), options.android)
   const importActions = useHomeResourceImportActions<Template>({
     activeProgress: options.activeProgress,
     importResource: path => templateManager.importTemplate(path),
+    selectResource: importWorkflow.importFromPicker,
     messages: {
+      ...managedImportErrorMessages,
       duplicateResource: t => t('home.templates.importDuplicate'),
       invalidFolder: t => t('home.templates.importInvalidFolder'),
       multipleFolders: t => t('home.templates.importMultipleFolders'),

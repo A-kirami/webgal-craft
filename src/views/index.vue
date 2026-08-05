@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { HOME_TABS } from '~/features/home/home-tabs'
 import { useDiscoverResources } from '~/features/home/useDiscoverResources'
+import { useManagedImportStatus } from '~/features/resource-import/useManagedImportStatus'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { resolveI18nLike } from '~/utils/i18n-like'
@@ -9,6 +10,7 @@ const { t } = useI18n()
 const workspaceStore = useWorkspaceStore()
 const resourceStore = useResourceStore()
 const { checkResourcesForActiveTab } = useDiscoverResources()
+const managedImport = useManagedImportStatus()
 
 watch(() => workspaceStore.activeTab, checkResourcesForActiveTab, { immediate: true })
 </script>
@@ -18,6 +20,12 @@ watch(() => workspaceStore.activeTab, checkResourcesForActiveTab, { immediate: t
     <AppHeader />
     <main class="mx-auto px-4 py-8 container flex flex-1 flex-col min-h-0 overflow-hidden lg:px-8 sm:px-6">
       <WelcomeSection />
+      <ManagedImportStatus
+        v-if="managedImport.isBusy.value"
+        :progress="managedImport.progress.value"
+        :can-cancel="managedImport.canCancel.value"
+        @cancel="managedImport.cancel"
+      />
       <Tabs ::="workspaceStore.activeTab" class="mb-6 flex-1 gap-4 grid grid-rows-[auto_minmax(0,1fr)] min-h-0">
         <div data-testid="home-tabs-header" class="space-y-4">
           <TabsList>

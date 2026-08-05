@@ -6,7 +6,7 @@ import { projectConfigCmds } from '~/commands/project-config'
 import { db } from '~/database/db'
 import { AbsPath } from '~/domain/path'
 import { templateManifestPath } from '~/services/platform/app-paths'
-import { ResourceAvailability } from '~/services/resource-health'
+import { normalizeImportPath, ResourceAvailability } from '~/services/resource-health'
 import { caseFoldedEquals, toLookupPathKey } from '~/services/resource-path/lookup'
 import {
   createResourceValidationFailure,
@@ -20,6 +20,10 @@ import { AppError } from '~/types/errors'
 
 import type { Game, Template } from '~/database/model'
 import type { ResourceValidationFailure, ResourceValidationSummary } from '~/services/resource-validation-summary'
+import type {
+  PreparedManagedImport,
+  PrepareManagedImportResult,
+} from '~/types/managed-import'
 
 interface RegisterTemplateOptions {
   metadata?: TemplateMetadata
@@ -48,6 +52,12 @@ interface TemplateAvailabilityInspection {
   failure?: unknown
   metadata?: TemplateMetadata
 }
+
+interface ManagedTemplateImportPlan {
+  metadata: TemplateMetadata
+}
+
+export type PreparedTemplateManagedImport = PreparedManagedImport<ManagedTemplateImportPlan>
 
 async function validateTemplate(templatePath: AbsPath): Promise<boolean> {
   return fsCmds.validateDirectoryStructure(
@@ -201,7 +211,10 @@ async function deleteTemplateDirectoryIfExists(path: AbsPath): Promise<unknown |
   }
 }
 
-async function assertTemplateImportable(templatePath: AbsPath): Promise<TemplateMetadata> {
+async function inspectTemplateImport(templatePath: AbsPath): Promise<{
+  existing?: Template
+  metadata: TemplateMetadata
+}> {
   if (!(await validateTemplate(templatePath))) {
     logger.warn(`[模板导入] 无效的模板文件夹: ${templatePath}`)
     throw new AppError('INVALID_STRUCTURE', '无效的模板文件夹')
@@ -209,6 +222,11 @@ async function assertTemplateImportable(templatePath: AbsPath): Promise<Template
 
   const metadata = await getTemplateMetadata(templatePath)
   const existing = await findTemplateByName(metadata.name)
+  return { existing, metadata }
+}
+
+async function assertTemplateImportable(templatePath: AbsPath): Promise<TemplateMetadata> {
+  const { existing, metadata } = await inspectTemplateImport(templatePath)
   if (existing) {
     throw new AppError('DUPLICATE_RESOURCE', '同名模板已存在')
   }
@@ -278,6 +296,31 @@ async function importTemplate(templatePath: AbsPath): Promise<void> {
   }
 
   await installTemplate(templatePath, metadata)
+}
+
+async function prepareManagedImport(
+  stagingPath: AbsPath,
+): Promise<PrepareManagedImportResult<ManagedTemplateImportPlan>> {
+  const { existing, metadata } = await inspectTemplateImport(stagingPath)
+  if (existing) {
+    return { kind: 'duplicate', existingId: existing.id }
+  }
+
+  return {
+    kind: 'ready',
+    prepared: {
+      finalRelativePath: sanitizeTemplateDirectoryName(metadata.name),
+      plan: { metadata },
+    },
+  }
+}
+
+async function registerManagedImport(
+  finalPath: AbsPath,
+  prepared: PreparedTemplateManagedImport,
+): Promise<{ id: string }> {
+  const { normalizedPath } = normalizeImportPath(finalPath)
+  return { id: await registerTemplate(normalizedPath, { metadata: prepared.plan.metadata }) }
 }
 
 async function deleteTemplate(template: Template): Promise<void> {
@@ -393,5 +436,7 @@ export const templateManager = {
   getTemplateMetadata,
   canDeleteTemplate,
   importTemplate,
+  prepareManagedImport,
+  registerManagedImport,
   deleteTemplate,
 }

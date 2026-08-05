@@ -1,9 +1,11 @@
+import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 import { createTestEngine } from '~/__tests__/factories'
 import { AbsPath } from '~/domain/path'
+import { useManagedImportStore } from '~/stores/managed-import'
 import { AppError } from '~/types/errors'
 
 import EnginesTab from './EnginesTab.vue'
@@ -23,6 +25,7 @@ const {
   usePreviewRuntimeStoreMock,
   usePreferenceStoreMock,
   useResourceStoreMock,
+  dropHandlers,
 } = vi.hoisted(() => ({
   getServeUrlMock: vi.fn(),
   importEngineMock: vi.fn(),
@@ -35,10 +38,15 @@ const {
   usePreviewRuntimeStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
   useResourceStoreMock: vi.fn(),
+  dropHandlers: [] as ((paths: string[]) => void)[],
 }))
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
   open: openDialogMock,
+}))
+
+vi.mock('~/services/platform/runtime', () => ({
+  isAndroidRuntime: () => false,
 }))
 
 vi.mock('@tauri-apps/plugin-opener', () => ({
@@ -57,10 +65,13 @@ vi.mock('vue-sonner', () => ({
 }))
 
 vi.mock('~/composables/useTauriDropZone', () => ({
-  useTauriDropZone: () => ({
-    files: ref<string[] | undefined>(undefined),
-    isOverDropZone: ref(false),
-  }),
+  useTauriDropZone: (_target: unknown, onDrop: (paths: string[]) => void) => {
+    dropHandlers.push(onDrop)
+    return {
+      files: ref<string[] | undefined>(undefined),
+      isOverDropZone: ref(false),
+    }
+  },
 }))
 
 vi.mock('~/services/engine-manager', async (importActual) => {
@@ -171,6 +182,7 @@ function createResourceStore(options: {
 describe('EnginesTab', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    dropHandlers.length = 0
 
     getServeUrlMock.mockReturnValue('http://127.0.0.1:8899/game/engine/')
     importEngineMock.mockResolvedValue(undefined)
@@ -213,6 +225,32 @@ describe('EnginesTab', () => {
       expect(importEngineMock).toHaveBeenCalledWith('/engines/import-target')
       expect(toastSuccessMock).not.toHaveBeenCalled()
     })
+  })
+
+  it('导入忙时会拒绝空状态的全局拖放', async () => {
+    const pinia = createPinia()
+    const managedImportStore = useManagedImportStore(pinia)
+    expect(managedImportStore.begin('engine')).toBe(true)
+    useResourceStoreMock.mockReturnValue(createResourceStore({
+      engines: [],
+    }))
+
+    renderInBrowser(EnginesTab, {
+      browser: {
+        i18nMode: 'lite',
+        pinia,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => expect(dropHandlers).toHaveLength(1))
+
+    dropHandlers[0]!(['/engines/import-target'])
+
+    expect(importEngineMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
   it('会预先组装包含默认状态与 representative serveUrl 的引擎族展示项', async () => {

@@ -35,6 +35,7 @@ function createStartupOptions(overrides: Partial<RunAppStartupOptions> = {}): Ru
       })),
     },
     resolveMissingStorageSavePaths: vi.fn(async () => ({})),
+    recoverManagedImportSessions: vi.fn(() => Promise.resolve()),
     router: {
       currentRoute: {
         value: {
@@ -105,6 +106,57 @@ describe('runAppStartup', () => {
       gameSavePath: '/games',
       templateSavePath: '/templates',
     })
+  })
+
+  it('会在初始化存储路径后、资源校验前恢复托管导入 session', async () => {
+    const events: string[] = []
+    const validateAllEngines = vi.fn(async () => {
+      events.push('engines')
+      return { failed: 0, failures: [], total: 0 }
+    })
+    const reconcileAllGames = vi.fn(async () => {
+      events.push('games')
+      return { failed: 0, failures: [], total: 0 }
+    })
+    const validateAllTemplates = vi.fn(async () => {
+      events.push('templates')
+      return { failed: 0, failures: [], total: 0 }
+    })
+
+    await runAppStartup(createStartupOptions({
+      resolveMissingStorageSavePaths: vi.fn(async () => {
+        events.push('storage')
+        return {}
+      }),
+      recoverManagedImportSessions: vi.fn(async () => {
+        events.push('recover')
+      }),
+      engineManager: { validateAllEngines },
+      resourceReconcile: { reconcileAllGames },
+      templateManager: { validateAllTemplates },
+    }))
+
+    expect(events).toEqual(['storage', 'recover', 'engines', 'games', 'templates'])
+  })
+
+  it('托管导入 session 恢复失败时会中止启动并跳过资源校验', async () => {
+    const error = new Error('managed import recovery failed')
+    const validateAllEngines = vi.fn()
+    const reconcileAllGames = vi.fn()
+    const validateAllTemplates = vi.fn()
+
+    await expect(runAppStartup(createStartupOptions({
+      recoverManagedImportSessions: vi.fn(async () => {
+        throw error
+      }),
+      engineManager: { validateAllEngines },
+      resourceReconcile: { reconcileAllGames },
+      templateManager: { validateAllTemplates },
+    }))).rejects.toThrow(error)
+
+    expect(validateAllEngines).not.toHaveBeenCalled()
+    expect(reconcileAllGames).not.toHaveBeenCalled()
+    expect(validateAllTemplates).not.toHaveBeenCalled()
   })
 
   it('启动校验失败或返回异常摘要时仍会完成后续启动流程', async () => {

@@ -49,8 +49,10 @@ export interface NumberFieldDef extends BaseSettingsFieldDef {
 export interface FolderPickerFieldDef extends BaseSettingsFieldDef {
   type: 'folderPicker'
   default: string
+  androidDisplayValue?: SettingsI18nLike
   buttonLabel?: SettingsI18nLike
   dialogTitle?: SettingsI18nLike
+  readonlyOnAndroid?: boolean
 }
 
 export type SettingsFieldDef =

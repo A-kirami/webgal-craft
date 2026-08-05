@@ -3,6 +3,10 @@ import { documentDir } from '@tauri-apps/api/path'
 import { AbsPath } from '~/domain/path'
 
 import { defaultEngineSavePath, defaultExportSavePath, defaultGameSavePath, defaultTemplateSavePath } from './app-paths'
+import { resolveManagedResourceRoots } from './managed-resource-roots'
+import { isAndroidRuntime } from './runtime'
+
+import type { ManagedResourceRoots } from './managed-resource-roots'
 
 export interface StorageSavePathState {
   gameSavePath: string
@@ -13,6 +17,8 @@ export interface StorageSavePathState {
 
 interface ResolveMissingStorageSavePathsOptions {
   getBaseDir?: () => Promise<AbsPath>
+  isAndroid?: boolean
+  resolveAndroidRoots?: () => Promise<ManagedResourceRoots>
   resolveGameSavePath?: (baseDir: AbsPath) => string | Promise<string>
   resolveEngineSavePath?: (baseDir: AbsPath) => string | Promise<string>
   resolveExportSavePath?: (baseDir: AbsPath) => string | Promise<string>
@@ -33,6 +39,17 @@ export async function resolveMissingStorageSavePaths(
   storageSettings: StorageSavePathState,
   options: ResolveMissingStorageSavePathsOptions = {},
 ): Promise<Partial<StorageSavePathState>> {
+  const android = options.isAndroid ?? isAndroidRuntime()
+  if (android) {
+    const roots = await (options.resolveAndroidRoots ?? resolveManagedResourceRoots)()
+    return {
+      gameSavePath: roots.game,
+      engineSavePath: roots.engine,
+      templateSavePath: roots.template,
+      exportSavePath: roots.export,
+    }
+  }
+
   const missingKeys = (Object.keys(DEFAULTS) as (keyof StorageSavePathState)[])
     .filter(key => storageSettings[key] === '')
 

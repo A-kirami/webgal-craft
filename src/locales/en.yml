@@ -117,6 +117,28 @@ appUpdate:
 
 home:
   unavailableBadge: Unavailable
+  managedImport:
+    title: Importing {resource}
+    cancel: Cancel import
+    copied: "{files} files · {bytes}"
+    currentEntry: "{summary} · {entry}"
+    resource:
+      game: game
+      engine: engine
+      template: template
+    phase:
+      copying: Copying files
+      validating: Validating
+      publishing: Publishing
+      registering: Registering
+    error:
+      providerDenied: The selected provider did not grant access to this folder.
+      copyFailed: The folder could not be copied from the selected provider.
+      unsafeEntry: The folder contains an unsafe or unsupported entry.
+      storageFull: There is not enough local storage to import this folder.
+      resourceLimit: The folder exceeds the import size or file count limit.
+      rollbackFailed: Import cleanup is incomplete. It will be retried when the app starts.
+      busy: Another folder import is already in progress.
   header:
     about: About
   tabs:
@@ -1231,6 +1253,7 @@ settings:
     exportPath:
       label: Default Export Location
       title: Select Default Export Location
+      androidDestination: Downloads/WebGALCraft/exports
     browse: Browse
   backup:
     local: Local History
