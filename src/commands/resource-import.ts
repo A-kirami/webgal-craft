@@ -35,7 +35,7 @@ interface NativeSession {
 }
 
 interface NativeStageResult {
-  kind: 'cancelled' | 'staged'
+  kind: string
   sessionId?: string
   stagingPath?: string
 }
@@ -48,8 +48,16 @@ export interface NativeResourceRoots {
 }
 
 function toStageResult(result: NativeStageResult): SelectAndStageResult {
-  if (result.kind === 'cancelled') {
-    return { kind: 'cancelled' }
+  switch (result.kind) {
+    case 'cancelled': {
+      return { kind: 'cancelled' }
+    }
+    case 'staged': {
+      break
+    }
+    default: {
+      throw new Error(`Android materializer returned an unknown staging result kind: ${result.kind}`)
+    }
   }
 
   if (!result.sessionId || !result.stagingPath) {

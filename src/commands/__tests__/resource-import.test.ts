@@ -84,6 +84,17 @@ describe('resourceImportCmds', () => {
       .resolves.toEqual({ kind: 'cancelled' })
   })
 
+  it('拒绝 native 返回的未知暂存结果 kind', async () => {
+    safeInvokeMock.mockResolvedValue({
+      kind: 'unknown',
+      sessionId: 'session-1',
+      stagingPath: '/data/user/0/app/files/documents/WebGALCraft/games/.import-staging/session-1',
+    })
+
+    await expect(resourceImportCmds.selectAndStage('game'))
+      .rejects.toThrow('unknown staging result kind: unknown')
+  })
+
   it('拒绝 native 返回的不完整暂存结果', async () => {
     safeInvokeMock.mockResolvedValue({ kind: 'staged', sessionId: 'session-1' })
 
