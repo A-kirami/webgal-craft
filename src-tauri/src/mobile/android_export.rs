@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 use tauri::{plugin::Builder, AppHandle, Runtime};
 
 #[cfg(target_os = "android")]
-use tauri::{plugin::mobile::PluginHandle, Manager};
+use tauri::{plugin::PluginHandle, Manager};
 
 #[cfg(target_os = "android")]
 const ANDROID_PLUGIN_IDENTIFIER: &str = "com.akirami.webgalcraft";

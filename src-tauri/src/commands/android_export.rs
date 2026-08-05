@@ -208,9 +208,6 @@ pub async fn android_export_cleanup_recoverable<R: Runtime>(
 mod tests {
     use std::{fs, io::Read};
 
-    #[cfg(unix)]
-    use std::path::Path;
-
     use tempfile::tempdir;
     use zip::ZipArchive;
 
