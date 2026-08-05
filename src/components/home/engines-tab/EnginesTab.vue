@@ -44,8 +44,17 @@ const controller = useEnginesTabController({
   },
   t,
 })
+
+function handleDrop(paths: string[]): void {
+  if (managedImportStore.isBusy) {
+    return
+  }
+
+  controller.handleDrop(paths)
+}
+
 const dropZoneEmptyRef = useTemplateRef<HTMLElement>('dropZoneEmptyRef')
-const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRef, paths => controller.handleDrop(paths))
+const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRef, handleDrop)
 </script>
 
 <template>

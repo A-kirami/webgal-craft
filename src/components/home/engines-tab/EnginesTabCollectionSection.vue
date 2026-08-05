@@ -29,11 +29,19 @@ const emit = defineEmits<{
   setDefaultEngine: [engineId: string | undefined]
 }>()
 
+function handleDrop(paths: string[]): void {
+  if (importBusy) {
+    return
+  }
+
+  emit('drop', paths)
+}
+
 const dropZoneGridRef = useTemplateRef<HTMLElement>('dropZoneGridRef')
-const { isOverDropZone: isOverDropZoneGrid } = useTauriDropZone(dropZoneGridRef, paths => emit('drop', paths))
+const { isOverDropZone: isOverDropZoneGrid } = useTauriDropZone(dropZoneGridRef, handleDrop)
 
 const dropZoneListRef = useTemplateRef<HTMLElement>('dropZoneListRef')
-const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef, paths => emit('drop', paths))
+const { isOverDropZone: isOverDropZoneList } = useTauriDropZone(dropZoneListRef, handleDrop)
 
 function getGroupProgress(group: EngineGroupCollectionItem): number | undefined {
   for (const item of group.engines) {
