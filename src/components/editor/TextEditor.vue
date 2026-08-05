@@ -394,11 +394,13 @@ onUnmounted(() => {
   border-right: 2px dotted #ffffff;
 }
 
-.monaco-editor.vs .logical-statement-highlight {
+.monaco-editor.vs .logical-statement-highlight,
+.monaco-editor.hc-light .logical-statement-highlight {
   background-color: #e6e3c3;
 }
 
-.monaco-editor.vs-dark .logical-statement-highlight {
+.monaco-editor.vs-dark .logical-statement-highlight,
+.monaco-editor.hc-black .logical-statement-highlight {
   background-color: #212831;
 }
 
