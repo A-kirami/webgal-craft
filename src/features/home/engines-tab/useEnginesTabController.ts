@@ -1,10 +1,11 @@
 import { openPath } from '@tauri-apps/plugin-opener'
 
 import { db } from '~/database/db'
+import { MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
 import { managedImportErrorMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
 import { createEngineImportWorkflow } from '~/features/resource-import/resource-import-workflows'
-import { engineManager, MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
+import { engineManager } from '~/services/engine-manager'
 import { resourceReconcile } from '~/services/resource-reconcile'
 
 import type { Engine } from '~/database/model'

@@ -16,6 +16,7 @@ import { createEditorPreviewSync } from '~/stores/editor-preview-sync'
 import { useFileStore } from '~/stores/file'
 import { usePreferenceStore } from '~/stores/preference'
 import { usePreviewSessionStore } from '~/stores/preview-session'
+import { useResourceStore } from '~/stores/resource'
 import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
@@ -60,6 +61,7 @@ import type {
   VisualProjectionState,
 } from './internal/editor-session'
 import type { TextMetadata } from '~/domain/document/document-model'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { PreviewMediaSession } from '~/features/editor/preview/preview-media-session'
 
 export {
@@ -208,7 +210,12 @@ export const useEditorStore = defineStore('editor', () => {
       return false
     }
 
-    const loadedState = createLoadedDocumentState('scene', content, metadata)
+    const loadedState = createLoadedDocumentState(
+      'scene',
+      content,
+      metadata,
+      session.document.model.runtimeCapabilities,
+    )
     if (session.textState.textSource === 'draft') {
       loadedState.textProjection = {
         content,
@@ -308,6 +315,55 @@ export const useEditorStore = defineStore('editor', () => {
     syncTabModified(path)
   }
 
+  function reconfigureSceneRuntimeCapabilities(
+    runtimeCapabilities: EngineRuntimeCapabilities,
+  ): void {
+    for (const [path, session] of sessions) {
+      if (
+        session.type !== 'editable'
+        || session.document.model.kind !== 'scene'
+        || (
+          session.document.model.runtimeCapabilities.multilineStatements
+          === runtimeCapabilities.multilineStatements
+        )
+      ) {
+        continue
+      }
+
+      const { document, textState } = session
+      const content = getEffectiveSceneBufferContent(session)
+      const savedContent = document.savedTextContent
+      const metadata = { ...document.model.metadata }
+      const wasDirty = isTextProjectionDirty(document, textState)
+      const loadedState = createLoadedDocumentState(
+        'scene',
+        content,
+        metadata,
+        runtimeCapabilities,
+      )
+
+      // 切换能力会合并或拆分语句，旧 statement ID 历史无法安全回放。
+      document.engine.reset()
+      markDocumentClean(document)
+      loadedState.savedTextContent = savedContent
+      applyLoadedDocumentState(session, loadedState, session.activeProjection)
+
+      if (wasDirty) {
+        document.engine.commit(
+          { type: 'replace-all', content },
+          {
+            type: 'replace-all',
+            content: savedContent,
+            metadata,
+          },
+          'text',
+        )
+      }
+
+      syncStateFromDocument(path)
+    }
+  }
+
   function setTextProjectionDraft(path: AbsPath, textContent: string, syncError?: TextProjectionState['syncError']) {
     const session = getEditableSession(path)
     const state = session?.textState
@@ -325,8 +381,14 @@ export const useEditorStore = defineStore('editor', () => {
   const { t } = useI18n()
   const editSettingsStore = useEditSettingsStore()
   const previewSessionStore = usePreviewSessionStore()
+  const resourceStore = useResourceStore()
   const tabsStore = useTabsStore()
   const fileSystemEvents = useFileSystemEvents()
+
+  watch(
+    () => resourceStore.currentEngineRuntimeCapabilities,
+    reconfigureSceneRuntimeCapabilities,
+  )
 
   const currentState = $computed(() => {
     const path = tabsStore.activeTab?.path
@@ -585,6 +647,7 @@ export const useEditorStore = defineStore('editor', () => {
     getEditableState,
     getPreferredProjection: () => usePreferenceStore().editorMode,
     getPreviewBaseUrl: () => previewSessionStore.currentGameServeUrl,
+    getSceneRuntimeCapabilities: () => resourceStore.currentEngineRuntimeCapabilities,
     getSceneSelection,
     getSession: (path: AbsPath) => sessions.get(path),
     getWorkspaceRootPath: () => useWorkspaceStore().CWD,

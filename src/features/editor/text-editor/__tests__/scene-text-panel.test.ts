@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { buildSceneStatements } from '~/domain/script/sentence'
 import {
   createEmptySceneTextPanelSnapshot,
@@ -22,9 +23,12 @@ function createLineSource(lines: string[]) {
 describe('sceneTextPanel', () => {
   it('空快照保持空 entry 和空 previous speaker', () => {
     expect(createEmptySceneTextPanelSnapshot()).toEqual({
+      endLineNumber: undefined,
       entry: undefined,
       lineNumber: undefined,
       previousSpeaker: '',
+      startLineNumber: undefined,
+      statementIndex: undefined,
     })
   })
 
@@ -40,6 +44,9 @@ describe('sceneTextPanel', () => {
       parseError: false,
     })
     expect(snapshot.lineNumber).toBe(2)
+    expect(snapshot.startLineNumber).toBe(2)
+    expect(snapshot.endLineNumber).toBe(2)
+    expect(snapshot.statementIndex).toBe(1)
     expect(snapshot.previousSpeaker).toBe('Alice')
   })
 
@@ -51,22 +58,31 @@ describe('sceneTextPanel', () => {
     ]))
 
     expect(snapshot).toEqual({
+      endLineNumber: undefined,
       entry: undefined,
       lineNumber: undefined,
       previousSpeaker: '',
+      startLineNumber: undefined,
+      statementIndex: undefined,
     })
   })
 
   it('行号越界时返回空快照', () => {
     expect(resolveSceneTextPanelSnapshot(0, createLineSource(['Alice:第一句;']))).toEqual({
+      endLineNumber: undefined,
       entry: undefined,
       lineNumber: undefined,
       previousSpeaker: '',
+      startLineNumber: undefined,
+      statementIndex: undefined,
     })
     expect(resolveSceneTextPanelSnapshot(3, createLineSource(['Alice:第一句;']))).toEqual({
+      endLineNumber: undefined,
       entry: undefined,
       lineNumber: undefined,
       previousSpeaker: '',
+      startLineNumber: undefined,
+      statementIndex: undefined,
     })
   })
 
@@ -106,5 +122,48 @@ describe('sceneTextPanel', () => {
 
     expect(snapshot.entry?.rawText).toBe('接续第二句;')
     expect(snapshot.previousSpeaker).toBe('Alice')
+  })
+
+  it('光标位于续行时返回完整逻辑语句及其范围', () => {
+    const snapshot = resolveSceneTextPanelSnapshotFromContent(2, [
+      'say:第一句',
+      '  -speaker=Alice;',
+      '第二句;',
+    ].join('\n'))
+
+    expect(snapshot.entry).toMatchObject({
+      id: 1,
+      rawText: 'say:第一句\n  -speaker=Alice;',
+      parsed: expect.objectContaining({
+        content: '第一句',
+      }),
+    })
+    expect(snapshot.startLineNumber).toBe(1)
+    expect(snapshot.endLineNumber).toBe(2)
+    expect(snapshot.statementIndex).toBe(0)
+    expect(snapshot.previousSpeaker).toBe('')
+  })
+
+  it('续行中的 speaker 变更会被后续语句继承', () => {
+    const snapshot = resolveSceneTextPanelSnapshotFromContent(3, [
+      'say:第一句',
+      '  -speaker=Alice;',
+      '第二句;',
+    ].join('\n'))
+
+    expect(snapshot.previousSpeaker).toBe('Alice')
+  })
+
+  it('旧运行时在续行上只返回当前物理行', () => {
+    const snapshot = resolveSceneTextPanelSnapshotFromContent(2, [
+      'say:第一句',
+      '  -speaker=Alice;',
+      '第二句;',
+    ].join('\n'), LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(snapshot.entry?.rawText).toBe('  -speaker=Alice;')
+    expect(snapshot.startLineNumber).toBe(2)
+    expect(snapshot.endLineNumber).toBe(2)
+    expect(snapshot.statementIndex).toBe(1)
   })
 })

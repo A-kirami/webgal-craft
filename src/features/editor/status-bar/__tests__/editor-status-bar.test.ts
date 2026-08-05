@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
 import { buildSingleStatement } from '~/domain/script/sentence'
 
@@ -39,6 +40,7 @@ function createSceneVisualState(overrides: Partial<SceneVisualProjectionState> =
     projection: 'visual',
     statements: [],
     ...overrides,
+    runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
   }
 }
 

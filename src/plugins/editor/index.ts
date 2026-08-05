@@ -3,6 +3,7 @@ import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseSceneOrEmpty } from '~/domain/script/parser'
+import { findStatementSourceRangeAtLine } from '~/domain/script/sentence'
 import { getCommandConfig } from '~/features/editor/command-registry'
 import { editorDynamicOptionSources } from '~/features/editor/command-registry/dynamic-options'
 import { readContentField } from '~/features/editor/command-registry/schema'
@@ -10,6 +11,7 @@ import { buildSceneAutocompleteOptionsFromText } from '~/features/editor/stateme
 import { resolveWebgalArgumentCompletionTarget } from '~/features/editor/text-editor/webgal-completion-context'
 import { i18n } from '~/plugins/i18n'
 import { useResourceIndex } from '~/services/resource-index/service'
+import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import { getArgKeyCompletions } from './completion/webgal-argument-keys'
@@ -26,6 +28,7 @@ import './monaco'
 // 常量定义
 const TEMP_SCENE_NAME = 'tempScene'
 const TEMP_SCENE_URL = 'tempUrl'
+const CONTINUATION_MARKER_PATTERN = /^\s*([-|])/
 
 // WebGAL 脚本句子部分枚举
 enum SentencePart {
@@ -202,6 +205,9 @@ monaco.languages.setMonarchTokensProvider('webgalscript', {
   commands: commandStringList,
   tokenizer: {
     root: [
+      // 续行必须先于通用对白规则匹配，否则会被当成普通文本。
+      [/^\s+-/, 'split.common.webgal', '@argumentKey'],
+      [/^\s+\|/, 'split.common.webgal', '@introContent'],
       ...commandRuleList,
 
       // 匹配整行, 其中如果匹配到命令字符串则标记为命令, 否则进入 say 状态重新解析
@@ -461,6 +467,14 @@ function getSentencePartAtPosition(line: string, column: number): SentencePart {
     return SentencePart.Comment
   }
 
+  const continuationMarker = line.match(CONTINUATION_MARKER_PATTERN)?.[1]
+  if (continuationMarker === '-') {
+    return SentencePart.Argument
+  }
+  if (continuationMarker === '|') {
+    return SentencePart.Content
+  }
+
   // 查找最靠近光标的 ' -' 和 ':' 位置
   const argIndex = beforeCursor.lastIndexOf(' -')
   const colonIndex = beforeCursor.lastIndexOf(':')
@@ -506,8 +520,8 @@ function getCommandSuggestion(model: monaco.editor.ITextModel, position: monaco.
 async function getArgumentSuggestion(model: monaco.editor.ITextModel, position: monaco.Position): Promise<monaco.languages.CompletionItem[]> {
   const currentLine = model.getLineContent(position.lineNumber)
 
-  const parsedScene = parseSceneOrEmpty(currentLine, TEMP_SCENE_NAME, TEMP_SCENE_URL)
-  const sentence = parsedScene.sentenceList[0]
+  const sentence = getCompletionSentence(model, position)
+    ?? parseSceneOrEmpty(currentLine, TEMP_SCENE_NAME, TEMP_SCENE_URL).sentenceList[0]
   const command = sentence?.command ?? commandType.say
 
   const target = resolveWebgalArgumentCompletionTarget(currentLine, position.column - 1)
@@ -544,18 +558,28 @@ async function getArgumentSuggestion(model: monaco.editor.ITextModel, position: 
   )
 }
 
+function hasChooseTargetSeparator(lineBeforeCursor: string): boolean {
+  const continuationMatch = lineBeforeCursor.match(CONTINUATION_MARKER_PATTERN)
+  const choiceTextStart = continuationMatch?.[1] === '|'
+    ? continuationMatch[0].length
+    : lineBeforeCursor.indexOf(':') + 1
+
+  // WebGAL 允许在选项文本中用 \: 表示普通冒号，只有未转义冒号才开始目标字段。
+  return choiceTextStart > 0
+    && /(?<!\\):/.test(lineBeforeCursor.slice(choiceTextStart))
+}
+
 /**
  * 获取内容补全
  */
 async function getContentSuggestion(model: monaco.editor.ITextModel, position: monaco.Position): Promise<monaco.languages.CompletionItem[]> {
-  const parsedScene = getParsedSceneFromLine(model, position)
-  const sentence = parsedScene.sentenceList[0]
+  const sentence = getCompletionSentence(model, position)
+    ?? getParsedSceneFromLine(model, position).sentenceList[0]
   const command = sentence?.command ?? commandType.say
   const content = sentence?.content ?? ''
   const contentField = readContentField(getCommandConfig(command))
   const currentLineBeforeCursor = model.getLineContent(position.lineNumber).slice(0, position.column - 1)
-  const colonCount = currentLineBeforeCursor.split(':').length - 1
-  if (command === commandType.choose && colonCount < 2) {
+  if (command === commandType.choose && !hasChooseTargetSeparator(currentLineBeforeCursor)) {
     return []
   }
   const valuePrefix = command === commandType.choose
@@ -629,6 +653,23 @@ function getParsedSceneFromLine(model: monaco.editor.ITextModel, position: monac
   const lineBeforeCursor = line.slice(0, position.column - 1)
 
   return parseSceneOrEmpty(lineBeforeCursor, TEMP_SCENE_NAME, TEMP_SCENE_URL)
+}
+
+/**
+ * 续行没有命令头，必须从整篇脚本解析出的逻辑语句取得命令；
+ * 首行仍由调用方按光标前缀解析，保证输入未完成时也能给出补全。
+ */
+function getCompletionSentence(
+  model: monaco.editor.ITextModel,
+  position: monaco.Position,
+) {
+  const runtimeCapabilities = useResourceStore().currentEngineRuntimeCapabilities
+  const range = findStatementSourceRangeAtLine(
+    model.getValue(),
+    position.lineNumber - 1,
+    runtimeCapabilities,
+  )
+  return range?.startLine === position.lineNumber - 1 ? undefined : range?.parsed
 }
 
 /**

@@ -15,6 +15,7 @@ import {
 import type { DocumentState, LoadedDocumentState, LoadedTextProjectionSnapshot } from './editor-document-state'
 import type { DocumentKind, DocumentModel } from '~/domain/document/document-model'
 import type { SceneSelectionState } from '~/domain/document/scene-selection'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { AbsPath } from '~/domain/path'
 import type { PreviewMediaSession } from '~/features/editor/preview/preview-media-session'
 import type { ScenePresentationState } from '~/features/editor/shared/scene-presentation'
@@ -31,6 +32,7 @@ export interface EditableProjectionBase extends CoreEditorState {
 
 export interface TextProjectionState extends EditableProjectionBase {
   projection: 'text'
+  runtimeCapabilities?: EngineRuntimeCapabilities
   textContent: string
   textSource: 'projection' | 'draft'
   syncError?: 'invalid-animation-json'
@@ -39,6 +41,7 @@ export interface TextProjectionState extends EditableProjectionBase {
 export interface SceneVisualProjectionState extends EditableProjectionBase {
   projection: 'visual'
   kind: 'scene'
+  runtimeCapabilities: EngineRuntimeCapabilities
   statements: StatementEntry[]
 }
 
@@ -95,7 +98,7 @@ export type EditorSession =
 export type SceneProjectionActivation = 'text' | 'visual'
 
 type InitialVisualProjectionState =
-  Pick<SceneVisualProjectionState, 'kind' | 'statements'>
+  Pick<SceneVisualProjectionState, 'kind' | 'runtimeCapabilities' | 'statements'>
   | Pick<AnimationVisualProjectionState, 'kind' | 'frames'>
 
 export function isEditableEditor(state: EditorState): state is EditableEditorState {
@@ -129,6 +132,7 @@ export function createEditableSession(
     isDirty: false,
     projection: 'text',
     kind: model.kind,
+    runtimeCapabilities: model.kind === 'scene' ? model.runtimeCapabilities : undefined,
     textContent: initialTextProjection.content,
     textSource: initialTextProjection.source,
     syncError: initialTextProjection.syncError,
@@ -173,13 +177,16 @@ export function applyLoadedDocumentState(
   session.activeProjection = activeProjection
   applyLoadedTextProjectionSnapshot(
     session.textState,
-    loadedState.model.kind,
+    loadedState.model,
     resolveLoadedTextProjectionSnapshot(loadedState, activeProjection),
   )
   // 外部重载会替换整个文档基线，投影不应继承旧会话中的脏状态。
   session.textState.isDirty = false
   if (session.visualState) {
     session.visualState.isDirty = false
+    if (session.visualState.kind === 'scene' && loadedState.model.kind === 'scene') {
+      session.visualState.runtimeCapabilities = loadedState.model.runtimeCapabilities
+    }
   }
 }
 
@@ -214,6 +221,9 @@ export function syncProjectionStateFromDocument(
     }
 
     textState.isDirty = isTextProjectionDirty(document, textState)
+    textState.runtimeCapabilities = document.model.kind === 'scene'
+      ? document.model.runtimeCapabilities
+      : undefined
   }
 
   if (!visualState) {
@@ -223,6 +233,7 @@ export function syncProjectionStateFromDocument(
   visualState.isDirty = isDocumentDirty(document)
 
   if (visualState.kind === 'scene' && document.model.kind === 'scene') {
+    visualState.runtimeCapabilities = document.model.runtimeCapabilities
     visualState.statements = projectSceneStatements(document.model, visualState.statements)
   }
 
@@ -254,6 +265,7 @@ function createInitialVisualProjectionState(
   if (model.kind === 'scene') {
     return {
       kind: 'scene',
+      runtimeCapabilities: model.runtimeCapabilities,
       statements: projectSceneStatements(model),
     }
   }
@@ -297,10 +309,13 @@ function resolveLoadedTextProjectionSnapshot(
 
 function applyLoadedTextProjectionSnapshot(
   textState: TextProjectionState,
-  kind: DocumentKind,
+  model: DocumentModel,
   snapshot: LoadedTextProjectionSnapshot,
 ): void {
-  textState.kind = kind
+  textState.kind = model.kind
+  textState.runtimeCapabilities = model.kind === 'scene'
+    ? model.runtimeCapabilities
+    : undefined
   textState.textContent = snapshot.content
   textState.textSource = snapshot.source
   textState.syncError = snapshot.syncError

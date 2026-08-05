@@ -131,6 +131,9 @@ function cloneBaseSentence(sentence: ISentence): ISentence {
     sentenceAssets: [],
     subScene: [],
     inlineComment: sentence.inlineComment ?? '',
+    startLine: sentence.startLine,
+    endLine: sentence.endLine,
+    isLineBreakHolder: sentence.isLineBreakHolder,
   }
 }
 

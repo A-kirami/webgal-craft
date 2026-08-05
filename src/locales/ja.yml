@@ -697,6 +697,7 @@ edit:
     duplicateLabel: "ラベル「{label}」は現在のシーンで{count}回定義されているため、ジャンプ先が曖昧です。"
     missingLabel: "ラベル「{label}」は現在のシーンで定義されていません。"
     unsupportedLive2d: 現在のエンジンは Live2D モデルをサポートしていません。
+    unsupportedMultilineStatements: 現在のエンジンは複数行のステートメントをサポートしていません。
     unsupportedSpine: 現在のエンジンは Spine モデルをサポートしていません。
   errors:
     fileSyncFailed: ファイルの同期に失敗しました。しばらくしてからもう一度お試しください。

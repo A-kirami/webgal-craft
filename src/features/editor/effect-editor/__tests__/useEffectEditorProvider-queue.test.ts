@@ -80,6 +80,9 @@ function createBaseSentence(transformJson: string = ''): ISentence {
     sentenceAssets: [],
     subScene: [],
     inlineComment: '',
+    startLine: 0,
+    endLine: 0,
+    isLineBreakHolder: false,
   }
 }
 

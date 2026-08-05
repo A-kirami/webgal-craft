@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+
 import { applyAnimationTransaction, applySceneTransaction } from '../transaction-apply'
 import { projectAnimationFrames, projectSceneStatements } from '../visual-projection'
 
@@ -19,6 +21,7 @@ function createStatement(id: number, rawText: string): StatementEntry {
 function createSceneModel(statements: StatementEntry[]): SceneDocumentModel {
   return {
     kind: 'scene',
+    runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
     statements,
     // eslint-disable-next-line unicorn/text-encoding-identifier-case -- 文档编码元数据沿用项目既有命名
     metadata: { lineEnding: '\n', encoding: 'utf-8' },

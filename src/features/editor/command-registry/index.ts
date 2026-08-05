@@ -142,6 +142,9 @@ function buildFactorySentence(type: commandType): ISentence {
     sentenceAssets: [],
     subScene: [],
     inlineComment: '',
+    startLine: 0,
+    endLine: 0,
+    isLineBreakHolder: false,
   }
 }
 

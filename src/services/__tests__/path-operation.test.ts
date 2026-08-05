@@ -241,6 +241,55 @@ describe('pathOperation', () => {
     expect(deps.fileSystemEvents.emit).not.toHaveBeenCalled()
   })
 
+  it('重命名多行语句中的资源时会整体替换并移除旧续行', async () => {
+    const content = [
+      'changeBg:bg.jpg',
+      '  -next;',
+      'say:done;',
+    ].join('\n')
+    const referencedRecord = {
+      assetKey: createAssetKey('asset', 'background', RelPath.from('bg.jpg')),
+      fieldKey: '__content__',
+      sourceKind: 'scene',
+      sourcePath: AbsPath.from('/project/game/scene/start.txt'),
+      statementId: 1,
+    } satisfies AssetReferenceRecord
+    const deps = createDeps({
+      editor: {
+        peekSceneBuffer: vi.fn(() => ({
+          content,
+          metadata: createTextMetadata(content),
+          revision: 'r1',
+        })),
+      },
+      resourceIndex: {
+        getReferencesTo: vi.fn(() => [referencedRecord]),
+        listByAssetType: vi.fn(() => []),
+        resolveByAbsolutePath: vi.fn(() => ({
+          absolutePath: AbsPath.from('/project/game/background/bg.jpg'),
+          extension: '.jpg',
+          fileName: 'bg.jpg',
+          key: createAssetKey('asset', 'background', RelPath.from('bg.jpg')),
+        })),
+      },
+    })
+    const service = createPathOperationService(deps)
+    const confirm = vi.fn(async (_plan: PathOperationPlan): Promise<PathOperationConfirmDecision> => 'cancel')
+
+    await service.perform({
+      kind: 'rename',
+      sourcePath: AbsPath.from('/project/game/background/bg.jpg'),
+      target: { type: 'name', name: 'renamed.jpg' },
+    }, confirm)
+
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({
+      rewrites: [expect.objectContaining({
+        after: 'changeBg:renamed.jpg -next;\nsay:done;',
+        before: content,
+      })],
+    }))
+  })
+
   it('选择仅重命名时会执行路径操作，但不会写入引用重写', async () => {
     const referencedRecord = {
       assetKey: createAssetKey('asset', 'background', RelPath.from('bg.jpg')),

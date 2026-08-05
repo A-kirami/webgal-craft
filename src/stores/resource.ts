@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 
 import { useEngines, useGames, useTemplates } from '~/composables/useDatabase'
 import { resolveEngineModelCapabilities } from '~/domain/engine/model-capabilities'
+import { LEGACY_ENGINE_RUNTIME_CAPABILITIES, resolveEngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import { createTemplateGroups } from '~/features/home/templates-tab/template-groups'
 import { isEngineEditorCompatible } from '~/services/engine-manager'
 import { useWorkspaceStore } from '~/stores/workspace'
@@ -67,6 +68,18 @@ export const useResourceStore = defineStore('resource', () => {
       : undefined
   })
 
+  const currentEngineRuntimeCapabilities = $computed(() => {
+    const currentEngineId = workspaceStore.currentGame?.engineId
+    if (!engines || !currentEngineId) {
+      return LEGACY_ENGINE_RUNTIME_CAPABILITIES
+    }
+
+    const currentEngine = engines.find(engine => engine.id === currentEngineId)
+    return currentEngine
+      ? resolveEngineRuntimeCapabilities(currentEngine.metadata.webgalVersion)
+      : LEGACY_ENGINE_RUNTIME_CAPABILITIES
+  })
+
   const filteredTemplates = $computed(() =>
     filterBySearchQuery(sortedTemplates, template => template.metadata.name),
   )
@@ -96,6 +109,7 @@ export const useResourceStore = defineStore('resource', () => {
     filteredEngines,
     availableEngines,
     currentEngineCapabilities,
+    currentEngineRuntimeCapabilities,
     // 模板相关
     templates,
     filteredTemplates,

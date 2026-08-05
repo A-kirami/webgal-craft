@@ -28,6 +28,7 @@ export interface StatementIdTarget {
 }
 
 export interface TextLineTarget {
+  endLineNumber: number
   kind: 'line'
   lineNumber: number
 }
@@ -57,8 +58,12 @@ export function createStatementIdTarget(statementId: number): StatementIdTarget 
   }
 }
 
-export function createTextLineTarget(lineNumber: number): TextLineTarget {
+export function createTextLineTarget(
+  lineNumber: number,
+  endLineNumber: number = lineNumber,
+): TextLineTarget {
   return {
+    endLineNumber,
     kind: 'line',
     lineNumber,
   }

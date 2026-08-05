@@ -78,25 +78,6 @@ export function getPreviousSpeakerAtIndex(
   return lastSpeaker
 }
 
-/**
- * 读取指定行号之前应继承到的说话人。
- * `lineNumber` 使用 1-based 语义，与 Monaco 文本模型一致。
- */
-export function getPreviousSpeakerAtLine(
-  lineNumber: number,
-  readLineContent: (lineNumber: number) => string,
-): string {
-  if (lineNumber <= 1) {
-    return ''
-  }
-
-  let lastSpeaker = ''
-  for (let currentLine = 1; currentLine < lineNumber; currentLine++) {
-    lastSpeaker = applySpeakerChange(lastSpeaker, readLineContent(currentLine))
-  }
-  return lastSpeaker
-}
-
 /** 从 say 命令的参数中提取说话人 */
 function extractSpeakerFromSayArgs(text: string): string | undefined {
   const speakerFlag = ' -speaker='

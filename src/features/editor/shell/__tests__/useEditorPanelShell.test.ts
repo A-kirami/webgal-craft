@@ -435,7 +435,7 @@ describe('useEditorPanelShell', () => {
     sidebarPanelMock.activeBinding.value = {
       enableFocusStatement: false,
       getEntry: () => createTransientStatementEntry('changeBg:WebGAL_New_Enter_Image.webp;', 1),
-      getUpdateTarget: () => ({ kind: 'line', lineNumber: 1 }),
+      getUpdateTarget: () => ({ endLineNumber: 1, kind: 'line', lineNumber: 1 }),
       onUpdate: vi.fn(),
     }
     const { scope, shell } = createFixture({

@@ -1,8 +1,10 @@
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { buildSceneStatements } from '~/domain/script/sentence'
 import { AnimationFrame } from '~/domain/stage/types'
 
 import { parseAnimationDocument } from './animation-document-codec'
 
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 // ============================================================
 // 元数据
 // ============================================================
@@ -28,6 +30,7 @@ export interface SceneStatement {
 /** 场景文档：结构化模型，支持可视化编辑（语句卡片 + 参数表单） */
 export interface SceneDocumentModel {
   kind: 'scene'
+  runtimeCapabilities: EngineRuntimeCapabilities
   statements: SceneStatement[]
   metadata: TextMetadata
 }
@@ -98,15 +101,17 @@ export function createDocumentModel(options: {
   kind: DocumentKind
   content: string
   metadata?: Partial<TextMetadata>
+  runtimeCapabilities?: EngineRuntimeCapabilities
 }): DocumentModel {
-  const { kind, content } = options
+  const { kind, content, runtimeCapabilities = LATEST_ENGINE_RUNTIME_CAPABILITIES } = options
   const metadata = createTextMetadata(content, options.metadata)
 
   switch (kind) {
     case 'scene': {
-      const statements = buildSceneStatements(content)
+      const statements = buildSceneStatements(content, runtimeCapabilities)
       return {
         kind: 'scene',
+        runtimeCapabilities,
         statements: statements.map(statement => ({
           id: statement.id,
           rawText: statement.rawText,

@@ -14,6 +14,7 @@ vi.mock('~/plugins/i18n', () => ({
   i18n: { global: { t: (key: string, params: Record<string, unknown> = {}) => `${key}:${Object.values(params).join(':')}` } },
 }))
 
+import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { updateEditorDiagnostics } from '~/plugins/editor/diagnostics'
 
 const OWNER = 'webgal-editor-diagnostics'
@@ -125,6 +126,51 @@ describe('updateEditorDiagnostics', () => {
     updateEditorDiagnostics(model)
 
     expect(readMarkers(model).map(marker => marker.startColumn)).toEqual([14, 34])
+  })
+
+  it('多行 choose 的资源 marker 定位到各自的物理行', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => false),
+    })
+
+    const model = createModel([
+      'choose:First:missing-a.txt',
+      '  |Second:missing-b.txt;',
+    ].join('\n'))
+    updateEditorDiagnostics(model)
+
+    expect(readMarkers(model)).toEqual([
+      expect.objectContaining({
+        startLineNumber: 1,
+        startColumn: 14,
+      }),
+      expect.objectContaining({
+        startLineNumber: 2,
+        startColumn: 11,
+      }),
+    ])
+  })
+
+  it('旧运行时会将多行语句标为错误', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+
+    const model = createModel([
+      'changeFigure:hero.png',
+      '  -id=hero;',
+    ].join('\n'))
+    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(readMarkers(model)).toEqual([expect.objectContaining({
+      startLineNumber: 1,
+      startColumn: 1,
+      endLineNumber: 2,
+      severity: monaco.MarkerSeverity.Error,
+      message: 'edit.diagnostics.unsupportedMultilineStatements:',
+    })])
   })
 
   it('为同一场景中的全部重复标签创建黄色 marker', () => {

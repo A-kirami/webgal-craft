@@ -4,7 +4,6 @@ import {
   buildPreviousSpeakers,
   extractSpeakerChange,
   getPreviousSpeakerAtIndex,
-  getPreviousSpeakerAtLine,
 } from '~/utils/speaker'
 
 describe('extractSpeakerChange', () => {
@@ -108,12 +107,5 @@ describe('speaker', () => {
     expect(getPreviousSpeakerAtIndex(entries, 0)).toBe('')
     expect(getPreviousSpeakerAtIndex(entries, 2)).toBe('Alice')
     expect(getPreviousSpeakerAtIndex(entries, 4)).toBe('')
-  })
-
-  it('按行号读取上一位说话人', () => {
-    const lines = entries.map(entry => entry.rawText)
-    expect(getPreviousSpeakerAtLine(1, lineNumber => lines[lineNumber - 1] ?? '')).toBe('')
-    expect(getPreviousSpeakerAtLine(3, lineNumber => lines[lineNumber - 1] ?? '')).toBe('Alice')
-    expect(getPreviousSpeakerAtLine(5, lineNumber => lines[lineNumber - 1] ?? '')).toBe('')
   })
 })

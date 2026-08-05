@@ -80,6 +80,9 @@ function toSentenceBase(node: CommandNode): Omit<ISentence, 'content' | 'args'> 
     sentenceAssets: [],
     subScene: [],
     inlineComment: node.inlineComment,
+    startLine: 0,
+    endLine: 0,
+    isLineBreakHolder: false,
   }
 }
 

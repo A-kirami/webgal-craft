@@ -1,3 +1,4 @@
+import { computeStatementIdFromLineNumber } from '~/domain/document/scene-selection'
 import { useStatementAnimationDialog } from '~/features/editor/animation/useStatementAnimationDialog'
 import { flipTransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 import { useEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
@@ -81,9 +82,12 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     }
 
     const updateTarget = selectedStatementUpdateTarget.value
-    const statementIndex = updateTarget?.kind === 'line'
-      ? updateTarget.lineNumber - 1
-      : state.statements.findIndex(statement => statement.id === statementId)
+    const statementIndex = selectedStatementIndex.value
+      ?? (updateTarget?.kind === 'line'
+        ? state.statements.findIndex(statement =>
+            statement.id === computeStatementIdFromLineNumber(state.statements, updateTarget.lineNumber),
+          )
+        : state.statements.findIndex(statement => statement.id === statementId))
     if (statementIndex < 0 || statementIndex >= state.statements.length) {
       return []
     }

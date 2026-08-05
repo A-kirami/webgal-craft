@@ -39,4 +39,32 @@ describe('rebuildReferenceSource', () => {
       statementId: 1,
     }])
   })
+
+  it('多行语句的引用归属到首行而不为续行创建记录', async () => {
+    readTextFileMock.mockResolvedValue([
+      'changeBg:background/night.png',
+      '  -next;',
+    ].join('\n'))
+    const gamePath = AbsPath.from('/project')
+    const sourcePath = AbsPath.from('/project/game/scene/start.txt')
+
+    const result = await rebuildReferenceSource(
+      createEmptyAssetReferenceIndexSnapshot(),
+      gamePath,
+      sourcePath,
+      querySentenceResourceReferences,
+    )
+
+    expect(result.snapshot.records).toEqual([{
+      sourcePath,
+      sourceKind: 'scene',
+      assetKey: {
+        root: 'asset',
+        assetType: 'background',
+        relativePath: 'background/night.png',
+      },
+      fieldKey: '__content__',
+      statementId: 1,
+    }])
+  })
 })

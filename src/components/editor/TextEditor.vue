@@ -7,6 +7,7 @@ import { useDroppableRegistry } from '~/composables/useDroppableRegistry'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { buildTextEditorOptions } from '~/features/editor/text-editor/text-editor-options'
 import { createTextEditorPlayToLineController } from '~/features/editor/text-editor/text-editor-play-to-line'
+import { createTextEditorStatementHighlightController } from '~/features/editor/text-editor/text-editor-statement-highlight'
 import { useTextEditorRuntime } from '~/features/editor/text-editor/useTextEditorRuntime'
 import { BASE_EDITOR_OPTIONS, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
 import { updateEditorDiagnostics } from '~/plugins/editor/diagnostics'
@@ -32,6 +33,10 @@ const dropRegistry = useDroppableRegistry()
 const { locale, t } = useI18n()
 const showPlayToLineGlyph = $computed(() => props.state.kind === 'scene')
 const disablePlayToLineGlyph = $computed(() => props.state.kind === 'scene' && props.state.isDirty)
+const showStatementHighlight = $computed(() =>
+  props.state.kind === 'scene'
+  && props.state.runtimeCapabilities?.multilineStatements === true,
+)
 
 const editorOptions = $computed<monaco.editor.IEditorConstructionOptions>(() =>
   ({
@@ -51,9 +56,10 @@ const editorOptions = $computed<monaco.editor.IEditorConstructionOptions>(() =>
 
 let editor = $shallowRef<monaco.editor.IStandaloneCodeEditor>()
 let playToLineController = $shallowRef<ReturnType<typeof createTextEditorPlayToLineController>>()
+let statementHighlightController = $shallowRef<ReturnType<typeof createTextEditorStatementHighlightController>>()
 let editorContainer = $ref<HTMLElement>()
 let textDropTargetElement: HTMLElement | undefined
-let hasPendingPlayToLineGlyphSync = false
+let hasPendingCursorDecorationsSync = false
 const runtime = useTextEditorRuntime({
   editorRef: $$(editor),
   getState: () => props.state,
@@ -72,6 +78,15 @@ const isCurrentTextProjectionActive = $computed(() => {
 
 function syncPlayToLineGlyph() {
   playToLineController?.syncFromEditorPosition()
+}
+
+function syncStatementHighlight() {
+  statementHighlightController?.syncFromEditorPosition()
+}
+
+function syncCursorDecorations() {
+  syncPlayToLineGlyph()
+  syncStatementHighlight()
 }
 
 function readCurrentDragPosition() {
@@ -173,34 +188,44 @@ useShortcutContext({
   trackFocus: true,
 })
 
-function schedulePlayToLineGlyphSync() {
-  if (hasPendingPlayToLineGlyphSync) {
+function scheduleCursorDecorationsSync() {
+  if (hasPendingCursorDecorationsSync) {
     return
   }
 
-  hasPendingPlayToLineGlyphSync = true
+  hasPendingCursorDecorationsSync = true
   queueMicrotask(() => {
-    hasPendingPlayToLineGlyphSync = false
-    syncPlayToLineGlyph()
+    hasPendingCursorDecorationsSync = false
+    syncCursorDecorations()
   })
 }
 
 function handleModelContentChange(event: monaco.editor.IModelContentChangedEvent) {
   runtime.handleContentChange(event)
   updateCurrentModelDiagnostics()
-  schedulePlayToLineGlyphSync()
+  scheduleCursorDecorationsSync()
+}
+
+function updateModelDiagnostics(model: monaco.editor.ITextModel): void {
+  if (props.state.runtimeCapabilities) {
+    updateEditorDiagnostics(model, props.state.runtimeCapabilities)
+    return
+  }
+
+  updateEditorDiagnostics(model)
 }
 
 function updateCurrentModelDiagnostics(): void {
   const model = editor?.getModel()
   if (model) {
-    updateEditorDiagnostics(model)
+    updateModelDiagnostics(model)
   }
 }
 
 function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedEvent) {
   runtime.handleCursorPositionChange(event)
   playToLineController?.syncDecorationsForLine(event.position.lineNumber)
+  statementHighlightController?.syncDecorationsForLine(event.position.lineNumber)
 }
 
 function handleEditorMouseDown(event: monaco.editor.IEditorMouseEvent) {
@@ -236,6 +261,10 @@ function createEditor() {
       editorStore.syncScenePreview(path, lineNumber, lineText, force)
     },
   })
+  statementHighlightController = createTextEditorStatementHighlightController({
+    editor,
+    isEnabled: () => showStatementHighlight,
+  })
 
   editor.onDidChangeCursorPosition(handleCursorPositionChange)
   editor.onDidChangeCursorSelection(runtime.handleCursorSelectionChange)
@@ -244,13 +273,14 @@ function createEditor() {
   editor.onMouseDown(handleEditorMouseDown)
 
   runtime.handleEditorCreated()
-  updateEditorDiagnostics(initialModel)
-  syncPlayToLineGlyph()
+  updateModelDiagnostics(initialModel)
+  syncCursorDecorations()
 }
 
 watch([
   () => resourceIndex.revision.value,
   () => resourceStore.currentEngineCapabilities,
+  () => props.state.runtimeCapabilities,
 ], updateCurrentModelDiagnostics)
 
 watch(() => currentTheme, (newTheme) => {
@@ -270,14 +300,15 @@ watch(
     () => props.state.kind,
     () => props.state.isDirty,
     () => props.state.path,
+    () => props.state.runtimeCapabilities,
   ],
   () => {
-    syncPlayToLineGlyph()
+    syncCursorDecorations()
   },
 )
 
 watch(() => locale.value, () => {
-  syncPlayToLineGlyph()
+  syncCursorDecorations()
   updateCurrentModelDiagnostics()
 })
 
@@ -323,6 +354,8 @@ onUnmounted(() => {
   if (editor) {
     playToLineController?.dispose()
     playToLineController = undefined
+    statementHighlightController?.dispose()
+    statementHighlightController = undefined
     runtime.handleBeforeUnmount()
 
     editor.dispose()
@@ -359,6 +392,14 @@ onUnmounted(() => {
 
 .monaco-editor.hc-black .text-editor-drop-caret {
   border-right: 2px dotted #ffffff;
+}
+
+.monaco-editor.vs .logical-statement-highlight {
+  background-color: #e6e3c3;
+}
+
+.monaco-editor.vs-dark .logical-statement-highlight {
+  background-color: #212831;
 }
 
 </style>

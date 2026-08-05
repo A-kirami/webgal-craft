@@ -245,7 +245,7 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
       return
     }
 
-    const duplicatedStatement = buildStatements(entry.rawText)[0]
+    const duplicatedStatement = buildStatements(entry.rawText, state.value.runtimeCapabilities)[0]
     if (!duplicatedStatement) {
       return
     }
@@ -338,7 +338,9 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
   }
 
   function applyInsertStatementsDropAction(action: Extract<VisualEditorDropAction, { kind: 'insert-statements' }>): boolean {
-    const newEntries = action.rawTexts.flatMap(text => buildStatements(text))
+    const newEntries = action.rawTexts.flatMap(text =>
+      buildStatements(text, state.value.runtimeCapabilities),
+    )
     if (newEntries.length === 0) {
       return false
     }
@@ -405,7 +407,7 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
       return
     }
 
-    const newEntry = buildStatements(statementClipboard)[0]
+    const newEntry = buildStatements(statementClipboard, state.value.runtimeCapabilities)[0]
     const insertAt = resolveInsertIndexAfterSelection()
     editorStore.applySceneStatementInsert(state.value.path, [newEntry], insertAt)
     void restoreSelectedStatementPresentation({
@@ -449,7 +451,9 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
       return
     }
 
-    const newEntries = rawTexts.flatMap(text => buildStatements(text))
+    const newEntries = rawTexts.flatMap(text =>
+      buildStatements(text, state.value.runtimeCapabilities),
+    )
     const insertAt = resolveInsertIndexAfterSelection()
     editorStore.applySceneStatementInsert(state.value.path, newEntries, insertAt)
 

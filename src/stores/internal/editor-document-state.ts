@@ -4,6 +4,7 @@ import { serializeDocument } from '~/domain/document/serializer'
 import { EditHistory } from '~/domain/document/transaction'
 
 import type { DocumentKind, DocumentModel, TextMetadata } from '~/domain/document/document-model'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 
 export interface DocumentState {
   model: DocumentModel
@@ -37,6 +38,7 @@ export function createLoadedDocumentState(
   kind: DocumentKind,
   content: string,
   metadata?: Partial<TextMetadata>,
+  runtimeCapabilities?: EngineRuntimeCapabilities,
 ): LoadedDocumentState {
   if (kind === 'animation' && !isAnimationDocumentTextValid(content)) {
     return {
@@ -44,6 +46,7 @@ export function createLoadedDocumentState(
         kind: 'animation',
         content: '[]',
         metadata,
+        runtimeCapabilities,
       }),
       savedTextContent: content,
       textProjection: {
@@ -60,6 +63,7 @@ export function createLoadedDocumentState(
         kind,
         content,
         metadata,
+        runtimeCapabilities,
       }),
       savedTextContent: content,
       textProjection: {
@@ -74,6 +78,7 @@ export function createLoadedDocumentState(
       kind,
       content,
       metadata,
+      runtimeCapabilities,
     }),
     savedTextContent: content,
   }
