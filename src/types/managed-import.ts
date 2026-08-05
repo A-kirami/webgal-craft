@@ -69,5 +69,6 @@ export interface DirectoryMaterializer {
   commit: (sessionId: string, resourceId: string) => Promise<void>
   rollback: (sessionId: string) => Promise<void>
   cancel: (sessionId: string) => Promise<void>
+  /** 返回结果按 updatedAt 升序排列，以匹配持久化更新时间顺序。 */
   listRecoverableSessions: () => Promise<RecoverableImportSession[]>
 }

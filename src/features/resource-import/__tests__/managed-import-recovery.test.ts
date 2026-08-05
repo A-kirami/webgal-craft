@@ -80,6 +80,22 @@ describe('托管导入恢复流程', () => {
     expect(materializer.rollback).not.toHaveBeenCalled()
   })
 
+  it('按持久化更新时间顺序恢复 session', async () => {
+    const materializer = createMaterializer([
+      createSession({ sessionId: 'newer-session', updatedAt: 20 }),
+      createSession({ sessionId: 'older-session', updatedAt: 10 }),
+    ])
+
+    await recoverManagedImportSessions({
+      android: true,
+      findRegisteredResource: vi.fn(),
+      materializer,
+    })
+
+    expect(materializer.rollback).toHaveBeenNthCalledWith(1, 'older-session')
+    expect(materializer.rollback).toHaveBeenNthCalledWith(2, 'newer-session')
+  })
+
   it('其他资源表存在相同路径不能误判为已提交', async () => {
     const materializer = createMaterializer([createSession({
       finalPath: AbsPath.from('/templates/Shared'),

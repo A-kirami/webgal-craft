@@ -73,7 +73,7 @@ export async function recoverManagedImportSessions(
     return
   }
 
-  for (const session of sessions) {
+  for (const session of sessions.toSorted((left, right) => left.updatedAt - right.updatedAt)) {
     try {
       // 原生层回滚可能删除共用的引擎父目录，因此必须按持久化顺序恢复 session。
       // eslint-disable-next-line no-await-in-loop
