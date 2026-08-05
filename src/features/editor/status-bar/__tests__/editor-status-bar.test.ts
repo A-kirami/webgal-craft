@@ -39,8 +39,8 @@ function createSceneVisualState(overrides: Partial<SceneVisualProjectionState> =
     path: AbsPath.from('/project/scene.txt'),
     projection: 'visual',
     statements: [],
-    ...overrides,
     runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    ...overrides,
   }
 }
 
