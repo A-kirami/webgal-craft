@@ -3,7 +3,7 @@ import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseSceneOrEmpty } from '~/domain/script/parser'
-import { findStatementSourceRangeAtLine } from '~/domain/script/sentence'
+import { buildStatementSourceRanges } from '~/domain/script/sentence'
 import { getCommandConfig } from '~/features/editor/command-registry'
 import { editorDynamicOptionSources } from '~/features/editor/command-registry/dynamic-options'
 import { readContentField } from '~/features/editor/command-registry/schema'
@@ -21,6 +21,7 @@ import darkTheme from './themes/webgal-dark.json'
 import lightTheme from './themes/webgal-light.json'
 
 import type { IScene } from 'webgal-parser/src/interface/sceneInterface'
+import type { StatementSourceRange, StatementSyntaxCapabilities } from '~/domain/script/sentence'
 import type { DynamicOptionsContext, EditorDynamicOptionsKey } from '~/features/editor/command-registry/schema'
 
 import './monaco'
@@ -29,6 +30,17 @@ import './monaco'
 const TEMP_SCENE_NAME = 'tempScene'
 const TEMP_SCENE_URL = 'tempUrl'
 const CONTINUATION_MARKER_PATTERN = /^\s+([-|])/
+
+interface CompletionSourceRangesCacheEntry {
+  multilineStatements: boolean | undefined
+  ranges: StatementSourceRange[]
+  version: number
+}
+
+const completionSourceRangesCache = new WeakMap<
+  monaco.editor.ITextModel,
+  CompletionSourceRangesCacheEntry
+>()
 
 // WebGAL 脚本句子部分枚举
 enum SentencePart {
@@ -655,6 +667,29 @@ function getParsedSceneFromLine(model: monaco.editor.ITextModel, position: monac
   return parseSceneOrEmpty(lineBeforeCursor, TEMP_SCENE_NAME, TEMP_SCENE_URL)
 }
 
+function getCompletionStatementSourceRanges(
+  model: monaco.editor.ITextModel,
+  capabilities: StatementSyntaxCapabilities | undefined,
+): StatementSourceRange[] {
+  const version = model.getVersionId()
+  const multilineStatements = capabilities?.multilineStatements
+  const cached = completionSourceRangesCache.get(model)
+  if (
+    cached?.version === version
+    && cached.multilineStatements === multilineStatements
+  ) {
+    return cached.ranges
+  }
+
+  const ranges = buildStatementSourceRanges(model.getValue(), capabilities)
+  completionSourceRangesCache.set(model, {
+    multilineStatements,
+    ranges,
+    version,
+  })
+  return ranges
+}
+
 /**
  * 续行没有命令头，必须从整篇脚本解析出的逻辑语句取得命令；
  * 首行仍由调用方按光标前缀解析，保证输入未完成时也能给出补全。
@@ -664,11 +699,8 @@ function getCompletionSentence(
   position: monaco.Position,
 ) {
   const runtimeCapabilities = useResourceStore().currentEngineRuntimeCapabilities
-  const range = findStatementSourceRangeAtLine(
-    model.getValue(),
-    position.lineNumber - 1,
-    runtimeCapabilities,
-  )
+  const range = getCompletionStatementSourceRanges(model, runtimeCapabilities)
+    .find(item => position.lineNumber - 1 >= item.startLine && position.lineNumber - 1 <= item.endLine)
   return range?.startLine === position.lineNumber - 1 ? undefined : range?.parsed
 }
 
