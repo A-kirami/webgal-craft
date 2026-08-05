@@ -28,7 +28,7 @@ import './monaco'
 // 常量定义
 const TEMP_SCENE_NAME = 'tempScene'
 const TEMP_SCENE_URL = 'tempUrl'
-const CONTINUATION_MARKER_PATTERN = /^\s*([-|])/
+const CONTINUATION_MARKER_PATTERN = /^\s+([-|])/
 
 // WebGAL 脚本句子部分枚举
 enum SentencePart {
