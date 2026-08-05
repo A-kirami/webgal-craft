@@ -28,6 +28,11 @@ function isWebgalCommentColumn(lineText: string, column: number): boolean {
   return false
 }
 
+function getFirstNonWhitespaceColumn(lineText: string): number {
+  const index = lineText.search(/\S/)
+  return index === -1 ? 1 : index + 1
+}
+
 export function resolveTextEditorFileDropAction(options: {
   editor: monaco.editor.IStandaloneCodeEditor
   capabilities?: StatementSyntaxCapabilities
@@ -52,7 +57,11 @@ export function resolveTextEditorFileDropAction(options: {
   const lineText = model.getLineContent(hit.lineNumber)
   const lineMaxColumn = model.getLineMaxColumn(hit.lineNumber)
   const range = resolveTextEditorStatementRange(model, hit.lineNumber, options.capabilities)
-  if (range && range.startLine !== range.endLine && hit.lineNumber - 1 > range.startLine) {
+  const isMultilineRange = range !== undefined && range.startLine !== range.endLine
+  const isAtStatementLeadingBoundary = isMultilineRange
+    && hit.lineNumber - 1 === range.startLine
+    && hit.column <= getFirstNonWhitespaceColumn(lineText)
+  if (isMultilineRange && !isAtStatementLeadingBoundary) {
     const nextRawText = updateStatementTextForDroppedAsset(range.rawText, asset)
     const parsed = nextRawText ? parseSentence(nextRawText) : undefined
     if (nextRawText && parsed) {

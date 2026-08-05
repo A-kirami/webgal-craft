@@ -181,6 +181,34 @@ describe('text-editor-file-drop', () => {
     })
   })
 
+  it('多行语句首行内部投放会更新完整逻辑语句', () => {
+    const editor = createEditorDouble([
+      'say:world',
+      '  -speaker=Bob;',
+    ])
+    editor.getTargetAtClientPoint = vi.fn(() => createMouseTarget(1, 5))
+
+    const action = resolveTextEditorFileDropAction({
+      editor,
+      gamePath: AbsPath.from('/games/demo'),
+      payload: createPayload('/games/demo/game/vocal/line.ogg'),
+      position: { x: 40, y: 20 },
+    })
+
+    expect(action).toMatchObject({
+      kind: 'update-statement',
+      payload: {
+        target: {
+          kind: 'line',
+          lineNumber: 1,
+          endLineNumber: 2,
+        },
+        rawText: 'say:world -speaker=Bob -line.ogg;',
+      },
+      selectionLineNumber: 1,
+    })
+  })
+
   it('内容空白区命中仍会按 Monaco 返回位置生成插入动作', () => {
     const editor = createEditorDouble(['say:hello;', 'plain text'])
     editor.getTargetAtClientPoint = vi.fn(() => createEmptyMouseTarget(2, 11))
