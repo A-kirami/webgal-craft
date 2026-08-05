@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, FolderOpen, Globe2, Loader2 } from '@lucide/vue'
+import { Check, ExternalLink, FolderOpen, Globe2, Loader2, Share2 } from '@lucide/vue'
 import { storeToRefs } from 'pinia'
 
 import { confirmExportOverwrite } from '~/features/export/confirmExportOverwrite'
@@ -33,6 +33,8 @@ const {
   canStart,
   elapsedMs,
   handleOpenChange,
+  hasOutputTarget,
+  isAndroid,
   isBusy,
   isRunning,
   openExportDirectory,
@@ -40,6 +42,7 @@ const {
   outputRoot,
   progress,
   selectOutputRoot,
+  shareExport,
   startExport,
   status,
   stepKey,
@@ -108,7 +111,7 @@ function isStepDisabled(step: number): boolean {
     return !isWebSelected
   }
   if (step === 3) {
-    return !outputRoot
+    return !hasOutputTarget
   }
   return false
 }
@@ -156,6 +159,9 @@ function progressLabel(key: string): string {
     }
     case 'export.progress.updatingManifest': {
       return t('export.progress.updatingManifest')
+    }
+    case 'export.progress.compressing': {
+      return t('export.progress.compressing')
     }
     case 'export.progress.finished': {
       return t('export.progress.finished')
@@ -237,7 +243,8 @@ const startLabel = $computed(() => status === 'failed'
           <ExportOutputDirectoryField
             :disabled="isBusy"
             :output-preview="outputPreview"
-            :output-root="outputRoot"
+            :output-root="isAndroid ? outputPreview : outputRoot"
+            :readonly="isAndroid"
             @select="selectOutputRoot"
           />
         </div>
@@ -282,14 +289,32 @@ const startLabel = $computed(() => status === 'failed'
                         size="icon"
                         class="shrink-0 size-8 transition-opacity"
                         :class="status !== 'completed' ? 'invisible pointer-events-none' : ''"
-                        :aria-label="$t('export.openDirectory')"
+                        :aria-label="isAndroid ? $t('export.openFile') : $t('export.openDirectory')"
                         @click="openExportDirectory"
                       >
-                        <FolderOpen class="size-4" aria-hidden="true" />
+                        <ExternalLink v-if="isAndroid" class="size-4" aria-hidden="true" />
+                        <FolderOpen v-else class="size-4" aria-hidden="true" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="top">
-                      {{ $t('export.openDirectory') }}
+                      {{ isAndroid ? $t('export.openFile') : $t('export.openDirectory') }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip v-if="isAndroid">
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        class="shrink-0 size-8 transition-opacity"
+                        :class="status !== 'completed' ? 'invisible pointer-events-none' : ''"
+                        :aria-label="$t('export.share')"
+                        @click="shareExport"
+                      >
+                        <Share2 class="size-4" aria-hidden="true" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      {{ $t('export.share') }}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -305,6 +330,13 @@ const startLabel = $computed(() => status === 'failed'
               />
               <span class="text-xs text-muted-foreground text-right shrink-0 w-9 tabular-nums" aria-hidden="true">{{ Math.round(progress) }}%</span>
             </div>
+            <p
+              v-if="isAndroid && status === 'completed'"
+              class="text-xs text-muted-foreground truncate"
+              :title="outputPreview"
+            >
+              {{ outputPreview }}
+            </p>
           </section>
         </div>
       </div>
@@ -327,7 +359,7 @@ const startLabel = $computed(() => status === 'failed'
 
           <Button
             v-if="currentStep < 3"
-            :disabled="currentStep === 1 ? !isWebSelected : !outputRoot"
+            :disabled="currentStep === 1 ? !isWebSelected : !hasOutputTarget"
             @click="goToNextStep"
           >
             {{ $t('export.next') }}

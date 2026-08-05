@@ -17,6 +17,7 @@ function createStartupOptions(overrides: Partial<RunAppStartupOptions> = {}): Ru
     appUpdateController: {
       checkForUpdate: vi.fn(),
     },
+    cleanupRecoverableAndroidWebExports: vi.fn(() => Promise.resolve()),
     engineManager: {
       validateAllEngines: vi.fn(async () => ({
         failed: 0,

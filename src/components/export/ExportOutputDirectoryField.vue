@@ -3,6 +3,7 @@ interface Props {
   disabled?: boolean
   outputPreview?: string
   outputRoot?: string
+  readonly?: boolean
 }
 
 defineProps<Props>()
@@ -22,6 +23,7 @@ const emit = defineEmits<{
         disabled
       />
       <Button
+        v-if="!readonly"
         type="button"
         variant="outline"
         class="text-xs font-normal h-8 w-auto shadow-none"

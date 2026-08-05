@@ -18,7 +18,7 @@ const STEP_COPYING_ENGINE: &str = "export.progress.copyingEngine";
 const STEP_COPYING_GAME: &str = "export.progress.copyingGame";
 const STEP_COPYING_ICONS: &str = "export.progress.copyingIcons";
 const STEP_UPDATING_MANIFEST: &str = "export.progress.updatingManifest";
-const STEP_FINISHED: &str = "export.progress.finished";
+pub(super) const STEP_FINISHED: &str = "export.progress.finished";
 const WEB_ICON_FILE_NAMES: [&str; 6] = [
     "apple-touch-icon.png",
     "favicon.ico",
@@ -44,8 +44,26 @@ enum MaterializedNode {
     File { logical_path: PathBuf },
 }
 
-fn export_error(message: impl Into<String>) -> AppError {
+pub(super) fn export_error(message: impl Into<String>) -> AppError {
     AppError::Export(message.into())
+}
+
+pub(super) fn emit_web_export_progress(
+    app: &AppHandle,
+    export_id: &str,
+    step: &str,
+    percentage: u8,
+) -> AppResult<()> {
+    app.emit(
+        "export-progress",
+        ExportProgress {
+            export_id: export_id.into(),
+            platform: PLATFORM_WEB.into(),
+            step: step.into(),
+            percentage,
+        },
+    )?;
+    Ok(())
 }
 
 fn collect_materialized_nodes(
@@ -321,7 +339,7 @@ fn create_export_work_directory(parent: &Path) -> AppResult<PathBuf> {
     Err(export_error("无法创建唯一的导出工作目录"))
 }
 
-fn cleanup_export_work_directory(work_directory: &Path) {
+pub(super) fn cleanup_export_work_directory(work_directory: &Path) {
     if let Err(error) = fs::remove_dir_all(work_directory) {
         log::warn!(
             "清理 Web 导出工作目录失败: {} - {}",
@@ -363,7 +381,7 @@ fn replace_output_directory(
     Ok(())
 }
 
-fn export_web_to_directory<F>(
+pub(super) fn export_web_to_directory<F>(
     engine_path: &Path,
     game_path: &Path,
     template_path: Option<&Path>,
@@ -517,18 +535,7 @@ pub async fn export_web(
             Path::new(&output_path),
             &game_name,
             replace_existing,
-            |step, percentage| {
-                app.emit(
-                    "export-progress",
-                    ExportProgress {
-                        export_id: export_id.clone(),
-                        platform: PLATFORM_WEB.into(),
-                        step: step.into(),
-                        percentage,
-                    },
-                )?;
-                Ok(())
-            },
+            |step, percentage| emit_web_export_progress(&app, &export_id, step, percentage),
         )
     })
     .await
@@ -541,13 +548,12 @@ mod tests {
     use std::process::Command;
     use std::{fs, path::Path};
 
-    use serde_json::Value;
-    use tempfile::tempdir;
-
     use super::{
         copy_web_icons, export_web_to_directory, AppError, CachedCanonicals, OverlayFs,
         STEP_COPYING_ICONS, STEP_FINISHED,
     };
+    use serde_json::Value;
+    use tempfile::tempdir;
 
     fn write_file(path: &Path, content: &str) {
         fs::create_dir_all(path.parent().expect("fixture file should have parent"))

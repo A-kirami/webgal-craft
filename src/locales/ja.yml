@@ -645,6 +645,7 @@ export:
   selectDirectoryHint: 続行するには、書き出し先フォルダーを選択してください
   selectDirectory: 書き出し先フォルダーを選択
   selectDirectoryFailed: 書き出し先フォルダーを選択できませんでした
+  androidDestination: Downloads/WebGALCraft/exports
   start: 書き出す
   retry: 再度書き出す
   exporting: 書き出し中
@@ -653,6 +654,10 @@ export:
     total: 所要時間 {seconds} 秒
     separator: ·
   openDirectory: フォルダーを開く
+  openFile: ファイルを開く
+  openFileFailed: 書き出したファイルを開けませんでした
+  share: 共有
+  shareFailed: 書き出したファイルを共有できませんでした
   failed: Web 書き出しに失敗しました
   openDirectoryFailed: 書き出し先フォルダーを開けませんでした
   overwrite:
@@ -666,6 +671,7 @@ export:
     copyingGame: ゲームリソースをコピーしています...
     copyingIcons: アイコンをコピーしています...
     updatingManifest: マニフェストを更新しています...
+    compressing: ZIP を作成しています...
     finished: 書き出しが完了しました
     failed: 書き出しに失敗しました
 

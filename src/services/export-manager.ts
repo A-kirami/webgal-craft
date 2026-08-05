@@ -23,6 +23,13 @@ export interface WebExportConfig {
   replaceExisting?: boolean
 }
 
+export interface AndroidWebExportConfig {
+  exportSessionId: string
+  game: Pick<Game, 'engineId' | 'path'>
+  gameName: string
+  onProgress?: (progress: ExportProgress) => void
+}
+
 function createExportDirectoryName(gameName: string): string {
   const trimmed = gameName.trim()
   if (trimmed === '.' || trimmed === '..') {
@@ -83,6 +90,43 @@ async function exportWeb(config: WebExportConfig): Promise<AbsPath> {
   }
 }
 
+async function exportAndroidWebZip(config: AndroidWebExportConfig): Promise<void> {
+  const gameName = config.gameName.trim()
+  if (!gameName || !createExportDirectoryName(gameName)) {
+    throw new AppError('INVALID_CONFIG', '游戏名称不能生成有效的导出文件名')
+  }
+
+  const site = await gameManager.resolvePreviewSite(config.game)
+  if (!site.enginePath) {
+    throw new AppError('ENGINE_EDITOR_INCOMPATIBLE', '当前游戏没有可用的导出引擎')
+  }
+
+  const exportId = crypto.randomUUID()
+  const unlisten = await listen<ExportProgress>('export-progress', (event) => {
+    const progress = event.payload
+    if (progress.exportId === exportId && progress.platform === 'web') {
+      config.onProgress?.({
+        ...progress,
+        percentage: Math.min(100, Math.max(0, progress.percentage)),
+      })
+    }
+  })
+
+  try {
+    await exportCmds.exportAndroidWebZip({
+      enginePath: site.enginePath,
+      exportId,
+      exportSessionId: config.exportSessionId,
+      gameName,
+      gamePath: site.projectPath,
+      templatePath: site.templatePath,
+    })
+  } finally {
+    unlisten()
+  }
+}
+
 export const exportManager = {
+  exportAndroidWebZip,
   exportWeb,
 }
