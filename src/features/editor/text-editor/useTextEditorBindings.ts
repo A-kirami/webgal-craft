@@ -91,7 +91,11 @@ export function useTextEditorBindings(options: UseTextEditorBindingsOptions) {
       return createEmptySceneTextPanelSnapshot()
     }
 
-    return resolveSceneTextPanelSnapshotFromContent(lineNumber, currentState.textContent)
+    return resolveSceneTextPanelSnapshotFromContent(
+      lineNumber,
+      currentState.textContent,
+      currentState.runtimeCapabilities,
+    )
   })
 
   function handleSidebarUpdate(payload: StatementUpdatePayload) {
@@ -109,13 +113,14 @@ export function useTextEditorBindings(options: UseTextEditorBindingsOptions) {
     getEntry: () => sidebarSnapshot.value.entry,
     getEmptyState: () => isSingleStatementEditingSuspended ? 'multiple-edit-targets' : undefined,
     getUpdateTarget: () => {
-      const { lineNumber } = sidebarSnapshot.value
-      if (lineNumber === undefined) {
+      const { startLineNumber, endLineNumber } = sidebarSnapshot.value
+      if (startLineNumber === undefined || endLineNumber === undefined) {
         return
       }
 
-      return createTextLineTarget(lineNumber)
+      return createTextLineTarget(startLineNumber, endLineNumber)
     },
+    getIndex: () => sidebarSnapshot.value.statementIndex,
     getPreviousSpeaker: () => sidebarSnapshot.value.previousSpeaker,
     onUpdate: handleSidebarUpdate,
   })

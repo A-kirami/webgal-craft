@@ -1,5 +1,8 @@
 import * as monaco from 'monaco-editor'
 
+import { findStatementSourceRangeAtLine } from '~/domain/script/sentence'
+
+import type { StatementSourceRange, StatementSyntaxCapabilities } from '~/domain/script/sentence'
 import type { StatementUpdatePayload } from '~/features/editor/statement-editor/useStatementEditor'
 import type { DragPosition } from '~/types/drag-drop'
 
@@ -45,6 +48,21 @@ export function createTextEditorCollapsedRange(position: monaco.IPosition): mona
     endLineNumber: position.lineNumber,
     endColumn: position.column,
   }
+}
+
+/**
+ * 根据物理行找到它所属的逻辑语句，供拖放避免插入多行语句的续行中间。
+ */
+export function resolveTextEditorStatementRange(
+  model: Pick<monaco.editor.ITextModel, 'getLineContent' | 'getLineCount'>,
+  lineNumber: number,
+  capabilities?: StatementSyntaxCapabilities,
+): StatementSourceRange | undefined {
+  const text = Array.from(
+    { length: model.getLineCount() },
+    (_, index) => model.getLineContent(index + 1),
+  ).join('\n')
+  return findStatementSourceRangeAtLine(text, lineNumber - 1, capabilities)
 }
 
 function getFirstNonWhitespaceColumn(lineText: string): number {

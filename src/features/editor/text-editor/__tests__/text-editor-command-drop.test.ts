@@ -41,6 +41,9 @@ function createEditorDouble(lines: string[]) {
     getLineContent(lineNumber: number) {
       return lines[lineNumber - 1] ?? ''
     },
+    getLineCount() {
+      return lines.length
+    },
     getLineMaxColumn(lineNumber: number) {
       return (lines[lineNumber - 1] ?? '').length + 1
     },
@@ -121,6 +124,27 @@ describe('resolveTextEditorCommandDropAction', () => {
       text: '\nchangeBg:room.png;\nbgm:theme.ogg;',
       range: { startLineNumber: 2, startColumn: 11, endLineNumber: 2, endColumn: 11 },
       selectionLineNumber: 4,
+    })
+  })
+
+  it('续行中投放命令会插入到完整逻辑语句之后', () => {
+    const editor = createEditorDouble([
+      'changeFigure:hero.png',
+      '  -id=hero -left;',
+    ])
+    editor.getTargetAtClientPoint = vi.fn(() => createMouseTarget(2, 8))
+
+    const action = resolveTextEditorCommandDropAction({
+      editor,
+      payload: createPayload(['changeBg:room.png;']),
+      position: { x: 120, y: 40 },
+    })
+
+    expect(action).toMatchObject({
+      kind: 'insert-statement-line',
+      text: '\nchangeBg:room.png;',
+      range: { startLineNumber: 2, startColumn: 18, endLineNumber: 2, endColumn: 18 },
+      selectionLineNumber: 3,
     })
   })
 })

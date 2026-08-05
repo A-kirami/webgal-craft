@@ -32,17 +32,26 @@ export function useTextEditorPanel(options: TextEditorPanelOptions) {
     return editorStore.getSceneSelection(getPath())?.lastLineNumber
   }
 
-  function resolveUpdateLineNumber(
+  function resolveUpdateLineRange(
     payload: StatementUpdatePayload,
     editor: monaco.editor.IStandaloneCodeEditor,
     model: monaco.editor.ITextModel,
-  ): number | undefined {
+  ): { endLineNumber: number, startLineNumber: number } | undefined {
     if (payload.target?.kind === 'line') {
-      const { lineNumber } = payload.target
-      if (!Number.isInteger(lineNumber) || lineNumber < 1 || lineNumber > model.getLineCount()) {
+      const { lineNumber, endLineNumber } = payload.target
+      if (
+        !Number.isInteger(lineNumber)
+        || !Number.isInteger(endLineNumber)
+        || lineNumber < 1
+        || endLineNumber < lineNumber
+        || endLineNumber > model.getLineCount()
+      ) {
         return undefined
       }
-      return lineNumber
+      return {
+        endLineNumber,
+        startLineNumber: lineNumber,
+      }
     }
 
     const fallbackLineNumber = editor.getPosition()?.lineNumber
@@ -55,7 +64,10 @@ export function useTextEditorPanel(options: TextEditorPanelOptions) {
       return undefined
     }
 
-    return fallbackLineNumber
+    return {
+      endLineNumber: fallbackLineNumber,
+      startLineNumber: fallbackLineNumber,
+    }
   }
 
   /** 将表单编辑写回 Monaco，由文本事务链路统一同步状态 */
@@ -70,23 +82,26 @@ export function useTextEditorPanel(options: TextEditorPanelOptions) {
       return false
     }
 
-    const lineNumber = resolveUpdateLineNumber(payload, editor, model)
-    if (lineNumber === undefined) {
+    const lineRange = resolveUpdateLineRange(payload, editor, model)
+    if (lineRange === undefined) {
       return false
     }
 
-    const currentLineText = model.getLineContent(lineNumber)
-    if (currentLineText === payload.rawText) {
+    const currentText = Array.from(
+      { length: lineRange.endLineNumber - lineRange.startLineNumber + 1 },
+      (_, index) => model.getLineContent(lineRange.startLineNumber + index),
+    ).join('\n')
+    if (currentText === payload.rawText) {
       return false
     }
 
     captureBeforeContentChange?.()
 
     const range: monaco.IRange = {
-      startLineNumber: lineNumber,
+      startLineNumber: lineRange.startLineNumber,
       startColumn: 1,
-      endLineNumber: lineNumber,
-      endColumn: currentLineText.length + 1,
+      endLineNumber: lineRange.endLineNumber,
+      endColumn: model.getLineContent(lineRange.endLineNumber).length + 1,
     }
 
     model.pushEditOperations(

@@ -74,6 +74,9 @@ function createSentence(command: commandType, commandRaw: string, content: strin
     inlineComment: '',
     sentenceAssets: [],
     subScene: [],
+    startLine: 0,
+    endLine: 0,
+    isLineBreakHolder: false,
   }
 }
 

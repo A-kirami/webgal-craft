@@ -9,10 +9,12 @@ import {
   createTextEditorCollapsedRange,
   createTextEditorStatementLineDropAction,
   resolveTextEditorHitPosition,
+  resolveTextEditorStatementRange,
 } from '~/features/editor/text-editor/text-editor-drop-action'
 
 import type * as monaco from 'monaco-editor'
 import type { AbsPath } from '~/domain/path'
+import type { StatementSyntaxCapabilities } from '~/domain/script/sentence'
 import type { TextEditorDropAction } from '~/features/editor/text-editor/text-editor-drop-action'
 import type { DragPosition, FileSystemDragPayload } from '~/types/drag-drop'
 
@@ -26,8 +28,14 @@ function isWebgalCommentColumn(lineText: string, column: number): boolean {
   return false
 }
 
+function getFirstNonWhitespaceColumn(lineText: string): number {
+  const index = lineText.search(/\S/)
+  return index === -1 ? 1 : index + 1
+}
+
 export function resolveTextEditorFileDropAction(options: {
   editor: monaco.editor.IStandaloneCodeEditor
+  capabilities?: StatementSyntaxCapabilities
   gamePath: AbsPath
   payload: FileSystemDragPayload
   position: DragPosition
@@ -48,6 +56,37 @@ export function resolveTextEditorFileDropAction(options: {
 
   const lineText = model.getLineContent(hit.lineNumber)
   const lineMaxColumn = model.getLineMaxColumn(hit.lineNumber)
+  const range = resolveTextEditorStatementRange(model, hit.lineNumber, options.capabilities)
+  const isMultilineRange = range !== undefined && range.startLine !== range.endLine
+  const isAtStatementLeadingBoundary = isMultilineRange
+    && hit.lineNumber - 1 === range.startLine
+    && hit.column <= getFirstNonWhitespaceColumn(lineText)
+  if (isMultilineRange && !isAtStatementLeadingBoundary) {
+    const nextRawText = updateStatementTextForDroppedAsset(range.rawText, asset)
+    const parsed = nextRawText ? parseSentence(nextRawText) : undefined
+    if (nextRawText && parsed) {
+      return {
+        caretRange: createTextEditorCollapsedRange(hit),
+        kind: 'update-statement',
+        payload: {
+          target: createTextLineTarget(range.startLine + 1, range.endLine + 1),
+          rawText: nextRawText,
+          parsed,
+        },
+        selectionLineNumber: range.startLine + 1,
+      }
+    }
+
+    const endLineNumber = range.endLine + 1
+    return createTextEditorStatementLineDropAction({
+      hit: { lineNumber: endLineNumber, column: model.getLineMaxColumn(endLineNumber) },
+      inlinePlacement: 'after-line',
+      insertedStatementText: buildInsertedStatementText(asset),
+      lineMaxColumn: model.getLineMaxColumn(endLineNumber),
+      lineText: model.getLineContent(endLineNumber),
+    })
+  }
+
   const statementLineAction = createTextEditorStatementLineDropAction({
     hit,
     inlinePlacement: isWebgalCommentColumn(lineText, hit.column) && hit.column >= lineMaxColumn

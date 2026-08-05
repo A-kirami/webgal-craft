@@ -13,6 +13,13 @@ const identityTranslate = (key: string): string => key
 const noFieldStatus = () => 'none' as const
 
 function createSentence(overrides?: Partial<ISentence>): ISentence {
+  const {
+    endLine = 0,
+    isLineBreakHolder = false,
+    startLine = 0,
+    ...sentenceOverrides
+  } = overrides ?? {}
+
   return {
     command: commandType.say,
     commandRaw: '',
@@ -21,7 +28,10 @@ function createSentence(overrides?: Partial<ISentence>): ISentence {
     sentenceAssets: [],
     subScene: [],
     inlineComment: '',
-    ...overrides,
+    startLine,
+    endLine,
+    isLineBreakHolder,
+    ...sentenceOverrides,
   }
 }
 

@@ -27,7 +27,12 @@ function rebuildDocumentModel(
   if (model.kind === 'scene') {
     return {
       kind: 'scene',
-      statements: rebuildStatementsWithStableIds(model.statements, content),
+      runtimeCapabilities: model.runtimeCapabilities,
+      statements: rebuildStatementsWithStableIds(
+        model.statements,
+        content,
+        model.runtimeCapabilities,
+      ),
       metadata: {
         ...model.metadata,
         ...metadata,

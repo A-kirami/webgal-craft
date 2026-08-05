@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
 import { buildSingleStatement } from '~/domain/script/sentence'
 
@@ -38,6 +39,7 @@ function createSceneVisualState(overrides: Partial<SceneVisualProjectionState> =
     path: AbsPath.from('/project/scene.txt'),
     projection: 'visual',
     statements: [],
+    runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
     ...overrides,
   }
 }

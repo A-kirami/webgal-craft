@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { FolderOpen, Plus } from '@lucide/vue'
 
+import { MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/domain/engine/runtime-capabilities'
 import { resolveHomeResourceImportNotification } from '~/features/home/shared/home-resource-import'
 import {
   managedImportErrorMessages,
@@ -8,7 +9,7 @@ import {
 } from '~/features/home/shared/useHomeResourceImportActions'
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
 import { createGameImportWorkflow } from '~/features/resource-import/resource-import-workflows'
-import { isEngineEditorCompatible, MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
+import { isEngineEditorCompatible } from '~/services/engine-manager'
 import { isAndroidRuntime } from '~/services/platform/runtime'
 import { useManagedImportStore } from '~/stores/managed-import'
 import { useModalStore } from '~/stores/modal'

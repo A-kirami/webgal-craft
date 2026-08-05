@@ -174,6 +174,34 @@ describe('useResourceStore', () => {
     expect(store.currentEngineCapabilities).toBeUndefined()
   })
 
+  it('从当前引擎版本派生脚本运行时能力', () => {
+    enginesRef.value = [
+      createTestEngine({
+        id: 'webgal-462',
+        metadata: {
+          description: '',
+          icon: 'icons/favicon.ico',
+          webgalVersion: '4.6.2',
+        },
+      }),
+      createTestEngine({
+        id: 'webgal-463',
+        metadata: {
+          description: '',
+          icon: 'icons/favicon.ico',
+          webgalVersion: '4.6.3',
+        },
+      }),
+    ]
+    workspaceStoreState.currentGame = createTestGame({ engineId: 'webgal-462' })
+
+    const store = useResourceStore()
+    expect(store.currentEngineRuntimeCapabilities).toEqual({ multilineStatements: false })
+
+    workspaceStoreState.currentGame = createTestGame({ engineId: 'webgal-463' })
+    expect(store.currentEngineRuntimeCapabilities).toEqual({ multilineStatements: true })
+  })
+
   it('会把独立模板和引擎内置模板整理为模板族展示模型', () => {
     templatesRef.value = [
       createTemplate('modern', 'Modern Template', 10, '4.8.1'),

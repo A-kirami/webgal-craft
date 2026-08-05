@@ -26,7 +26,11 @@ function createModel(initialLines: string[]) {
     },
     pushEditOperations: vi.fn((_selections, edits: monaco.editor.IIdentifiedSingleEditOperation[]) => {
       for (const edit of edits) {
-        lines[edit.range.startLineNumber - 1] = edit.text ?? ''
+        lines.splice(
+          edit.range.startLineNumber - 1,
+          edit.range.endLineNumber - edit.range.startLineNumber + 1,
+          ...(edit.text ?? '').split('\n'),
+        )
       }
       return []
     }),
@@ -60,6 +64,7 @@ describe('useTextEditorPanel', () => {
       parsed: {} as never,
       rawText: 'Alice:Updated;',
       target: {
+        endLineNumber: 1,
         kind: 'line',
         lineNumber: 1,
       },
@@ -83,6 +88,7 @@ describe('useTextEditorPanel', () => {
       parsed: {} as never,
       rawText: 'Alice:Hello;',
       target: {
+        endLineNumber: 1,
         kind: 'line',
         lineNumber: 1,
       },
@@ -91,5 +97,32 @@ describe('useTextEditorPanel', () => {
     expect(handled).toBe(false)
     expect(captureBeforeContentChange).not.toHaveBeenCalled()
     expect(model.pushEditOperations).not.toHaveBeenCalled()
+  })
+
+  it('按逻辑语句覆盖多行范围', () => {
+    const model = createModel([
+      'changeFigure:hero.png',
+      '  -id=hero -left;',
+      'say:next;',
+    ])
+    const panel = useTextEditorPanel({
+      editorRef: ref(createEditor(model)),
+      getPath: () => AbsPath.from('/game/scene/example.txt'),
+    })
+
+    const handled = panel.handleFormUpdate({
+      parsed: {} as never,
+      rawText: 'changeFigure:hero.png -id=hero -right;',
+      target: {
+        endLineNumber: 2,
+        kind: 'line',
+        lineNumber: 1,
+      },
+    })
+
+    expect(handled).toBe(true)
+    expect(model.getLineCount()).toBe(2)
+    expect(model.getLineContent(1)).toBe('changeFigure:hero.png -id=hero -right;')
+    expect(model.getLineContent(2)).toBe('say:next;')
   })
 })

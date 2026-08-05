@@ -246,9 +246,14 @@ async function buildSceneReferenceSlice(
     const sentences = scene?.sentenceList ?? []
     clearReferenceSourceFailure(sourcePath)
     return {
-      records: sentences.flatMap((sentence, index) =>
-        extractSentenceReferences(sourcePath, sentence, index + 1, querySentenceResourceReferences),
-      ),
+      records: sentences.flatMap(sentence => sentence.isLineBreakHolder
+        ? []
+        : extractSentenceReferences(
+            sourcePath,
+            sentence,
+            sentence.startLine + 1,
+            querySentenceResourceReferences,
+          )),
       failures: [],
     }
   } catch (error) {

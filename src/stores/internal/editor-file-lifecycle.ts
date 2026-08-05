@@ -21,6 +21,7 @@ import type {
 import type { DocumentKind, TextMetadata } from '~/domain/document/document-model'
 import type { DecodeTextFileResult } from '~/domain/document/file-codec'
 import type { SceneSelectionState } from '~/domain/document/scene-selection'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { AppError } from '~/types/errors'
 
 export type ReadTextDocumentResult = DecodeTextFileResult
@@ -76,6 +77,7 @@ export interface EditorFileLifecycleContext extends
   getAssetUrl: (path: AbsPath) => string
   getPreferredProjection: () => 'text' | 'visual'
   getPreviewBaseUrl: () => string | undefined
+  getSceneRuntimeCapabilities: () => EngineRuntimeCapabilities
   getSceneSelection: (path: AbsPath) => SceneSelectionState | undefined
   getWorkspaceRootPath: () => string | undefined
   patchSceneSelection: (path: AbsPath, patch: Partial<SceneSelectionState>) => void
@@ -259,7 +261,12 @@ async function loadEditableDocumentState(
       path,
       createEditableSession(
         path,
-        createLoadedDocumentState(documentKind, content, metadata),
+        createLoadedDocumentState(
+          documentKind,
+          content,
+          metadata,
+          context.getSceneRuntimeCapabilities(),
+        ),
         context.getPreferredProjection(),
       ),
     )
@@ -281,7 +288,12 @@ function replaceDocumentModelFromExternal(
   }
 
   const docEntry = session.document
-  const loadedState = createLoadedDocumentState(docEntry.model.kind, content, metadata)
+  const loadedState = createLoadedDocumentState(
+    docEntry.model.kind,
+    content,
+    metadata,
+    context.getSceneRuntimeCapabilities(),
+  )
 
   // 外部内容一旦成为新的基线版本，旧撤销链必须整体失效，
   // 否则 undo 会把替换前的本地事务回放到新文档上。

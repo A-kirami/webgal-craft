@@ -68,6 +68,9 @@ function createStatementEntry(id: number, rawText: string): StatementEntry {
       sentenceAssets: [],
       subScene: [],
       inlineComment: '',
+      startLine: 0,
+      endLine: 0,
+      isLineBreakHolder: false,
     },
     parseError: false,
   }

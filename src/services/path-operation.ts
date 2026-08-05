@@ -584,8 +584,24 @@ function rewriteSceneContent(
     unsupported.push(record)
   }
 
+  const rewriteTargets: {
+    sentence: ReturnType<typeof cloneReferenceSentence>
+    sourceSentence: ReturnType<typeof parseSceneOrEmpty>['sentenceList'][number]
+  }[] = []
   for (const [statementId, sentence] of changedSentences) {
-    lines[statementId - 1] = serializeSentence(sentence)
+    const sourceSentence = scene.sentenceList[statementId - 1]
+    if (sourceSentence) {
+      rewriteTargets.push({ sentence, sourceSentence })
+    }
+  }
+  rewriteTargets.sort((left, right) => right.sourceSentence.startLine - left.sourceSentence.startLine)
+
+  for (const { sentence, sourceSentence } of rewriteTargets) {
+    lines.splice(
+      sourceSentence.startLine,
+      sourceSentence.endLine - sourceSentence.startLine + 1,
+      serializeSentence(sentence),
+    )
   }
 
   return {

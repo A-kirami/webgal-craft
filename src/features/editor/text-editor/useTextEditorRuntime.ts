@@ -77,6 +77,7 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
     }
 
     return resolveTextEditorFileDropAction({
+      capabilities: state.value.runtimeCapabilities,
       editor,
       gamePath,
       payload,
@@ -94,6 +95,7 @@ export function useTextEditorRuntime(options: UseTextEditorRuntimeOptions) {
     }
 
     return resolveTextEditorCommandDropAction({
+      capabilities: state.value.runtimeCapabilities,
       editor,
       payload,
       position,

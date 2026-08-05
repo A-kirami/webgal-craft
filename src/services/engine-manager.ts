@@ -1,11 +1,11 @@
 import { exists } from '@tauri-apps/plugin-fs'
-import { compareVersions, validateStrict } from 'compare-versions'
 import sanitize from 'sanitize-filename'
 
 import { engineCmds } from '~/commands/engine'
 import { fsCmds } from '~/commands/fs'
 import { db } from '~/database/db'
 import { Engine, Game } from '~/database/model'
+import { isWebgalEditorRuntimeCompatible, normalizeWebgalRuntimeVersion } from '~/domain/engine/runtime-capabilities'
 import { AbsPath, RelPath } from '~/domain/path'
 import { engineIconPath } from '~/services/platform/app-paths'
 import {
@@ -58,8 +58,6 @@ interface DeleteEngineCheckResult {
   canDelete: boolean
   reason?: 'ENGINE_HAS_ASSOCIATED_GAMES'
 }
-
-export const MIN_WEBGAL_EDITOR_RUNTIME_VERSION = '4.6.2'
 
 export type EngineEditorCompatibilityIssue =
   | 'unavailable'
@@ -164,15 +162,6 @@ export function isEngineUsable(engine: Pick<Engine, 'status' | 'availability'>):
   return engine.status === 'created' && engine.availability === 'available'
 }
 
-function normalizeStrictWebgalVersion(version: string | undefined): string | undefined {
-  const trimmed = version?.trim()
-  if (!trimmed || !validateStrict(trimmed)) {
-    return undefined
-  }
-
-  return trimmed
-}
-
 export function evaluateEngineEditorCompatibility(
   engine: Pick<Engine, 'status' | 'availability' | 'metadata'>,
 ): EngineEditorCompatibility {
@@ -180,12 +169,12 @@ export function evaluateEngineEditorCompatibility(
     return { compatible: false, issue: 'unavailable' }
   }
 
-  const webgalVersion = normalizeStrictWebgalVersion(engine.metadata.webgalVersion)
+  const webgalVersion = normalizeWebgalRuntimeVersion(engine.metadata.webgalVersion)
   if (!webgalVersion) {
     return { compatible: false, issue: 'versionInvalid' }
   }
 
-  if (compareVersions(webgalVersion, MIN_WEBGAL_EDITOR_RUNTIME_VERSION) < 0) {
+  if (!isWebgalEditorRuntimeCompatible(webgalVersion)) {
     return { compatible: false, issue: 'versionTooOld' }
   }
 

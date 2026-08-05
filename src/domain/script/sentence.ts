@@ -1,9 +1,10 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { parseSentence } from './parser'
+import { parseScene, parseSentence } from './parser'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { SceneStatement } from '~/domain/document/document-model'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 
 export interface StatementEntry {
   id: number
@@ -11,6 +12,21 @@ export interface StatementEntry {
   parsed: ISentence | undefined
   parseError: boolean
 }
+
+/**
+ * 一条逻辑语句在源文本中覆盖的物理行范围。
+ *
+ * 行号使用 0-based、包含首尾，与 webgal-parser 的 ISentence 保持一致。
+ * rawText 始终从原始文本截取，不能使用预处理后的折叠文本替代。
+ */
+export interface StatementSourceRange {
+  endLine: number
+  parsed?: ISentence
+  rawText: string
+  startLine: number
+}
+
+export type StatementSyntaxCapabilities = Pick<EngineRuntimeCapabilities, 'multilineStatements'>
 
 let nextId = 0
 
@@ -26,20 +42,72 @@ export function createEmptySentence(): ISentence {
     sentenceAssets: [],
     subScene: [],
     inlineComment: '',
+    startLine: 0,
+    endLine: 0,
+    isLineBreakHolder: false,
   }
 }
 
 /**
- * 将全文本按语句边界拆分为原始文本列表。
- * 当前实现：按行拆分（每行一条语句）。
- * 未来支持跨行语句时，只需修改此函数。
+ * 解析全文，并保留每条逻辑语句在原始文本中的行范围。
+ *
+ * 解析器会为续行生成占位语句以保持物理行数量；这里排除占位语句，
+ * 再以解析器给出的范围截取原始行，保留用户的缩进与换行格式。
  */
-export function splitStatements(text: string): string[] {
+export function buildStatementSourceRanges(
+  text: string,
+  capabilities?: StatementSyntaxCapabilities,
+): StatementSourceRange[] {
   if (text === '') {
     return []
   }
 
-  return text.split('\n')
+  const lines = text.split('\n')
+  if (capabilities?.multilineStatements === false) {
+    return lines.map((rawText, line) => ({
+      endLine: line,
+      parsed: parseSentence(rawText),
+      rawText,
+      startLine: line,
+    }))
+  }
+
+  const scene = parseScene(text)
+  if (!scene) {
+    return lines.map((rawText, line) => ({
+      endLine: line,
+      rawText,
+      startLine: line,
+    }))
+  }
+
+  return scene.sentenceList
+    .filter(sentence => !sentence.isLineBreakHolder)
+    .map(sentence => ({
+      endLine: sentence.endLine,
+      parsed: sentence,
+      rawText: lines.slice(sentence.startLine, sentence.endLine + 1).join('\n'),
+      startLine: sentence.startLine,
+    }))
+}
+
+/**
+ * 找到覆盖指定物理行的逻辑语句。
+ */
+export function findStatementSourceRangeAtLine(
+  text: string,
+  line: number,
+  capabilities?: StatementSyntaxCapabilities,
+): StatementSourceRange | undefined {
+  return buildStatementSourceRanges(text, capabilities)
+    .find(range => line >= range.startLine && line <= range.endLine)
+}
+
+/**
+ * 将全文本按逻辑语句边界拆分为原始文本列表。
+ */
+export function splitStatements(text: string, capabilities?: StatementSyntaxCapabilities): string[] {
+  return buildStatementSourceRanges(text, capabilities).map(range => range.rawText)
 }
 
 /**
@@ -90,7 +158,7 @@ function createSceneStatement(
 }
 
 /**
- * 从单行原始文本构建一个 StatementEntry。
+ * 从原始语句文本构建一个 StatementEntry。
  */
 export function buildSingleStatement(rawText: string, id?: number): StatementEntry {
   return createStatementEntry(rawText, { id })
@@ -99,12 +167,12 @@ export function buildSingleStatement(rawText: string, id?: number): StatementEnt
 /**
  * 从全文本构建 StatementEntry 列表，为每条语句分配唯一 id。
  */
-export function buildStatements(text: string): StatementEntry[] {
-  return splitStatements(text).map(raw => buildSingleStatement(raw))
+export function buildStatements(text: string, capabilities?: StatementSyntaxCapabilities): StatementEntry[] {
+  return splitStatements(text, capabilities).map(raw => buildSingleStatement(raw))
 }
 
-export function buildSceneStatements(text: string): SceneStatement[] {
-  return splitStatements(text).map(raw => createSceneStatement(raw))
+export function buildSceneStatements(text: string, capabilities?: StatementSyntaxCapabilities): SceneStatement[] {
+  return splitStatements(text, capabilities).map(raw => createSceneStatement(raw))
 }
 
 /**
@@ -114,8 +182,9 @@ export function buildSceneStatements(text: string): SceneStatement[] {
 export function rebuildStatementsWithStableIds(
   previousEntries: readonly SceneStatement[],
   text: string,
+  capabilities?: StatementSyntaxCapabilities,
 ): SceneStatement[] {
-  const nextRawTexts = splitStatements(text)
+  const nextRawTexts = splitStatements(text, capabilities)
   const previousIndexMap = new Map<string, number[]>()
 
   for (const [index, entry] of previousEntries.entries()) {

@@ -2,8 +2,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestEngine } from '~/__tests__/factories'
+import { MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
-import { MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
 import { AppError } from '~/types/errors'
 
 import { useEnginesTabController } from '../useEnginesTabController'
@@ -41,14 +41,11 @@ vi.mock('vue-sonner', () => ({
   },
 }))
 
-vi.mock('~/services/engine-manager', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('~/services/engine-manager')>()
-
+vi.mock('~/services/engine-manager', () => {
   return {
     engineManager: {
       importEngine: importEngineMock,
     },
-    MIN_WEBGAL_EDITOR_RUNTIME_VERSION: actual.MIN_WEBGAL_EDITOR_RUNTIME_VERSION,
   }
 })
 

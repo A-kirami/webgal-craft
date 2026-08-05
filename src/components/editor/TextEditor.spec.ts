@@ -165,12 +165,23 @@ function createTextState(path: string = '/project/scene-1.txt'): TextProjectionS
 }
 
 function createMonacoModel(lines: string[]) {
+  let content = lines.join('\n')
+  let version = 1
+
   return {
     getLineContent(lineNumber: number) {
       return lines[lineNumber - 1] ?? ''
     },
     getLineCount() {
       return lines.length
+    },
+    getVersionId() {
+      const nextContent = lines.join('\n')
+      if (nextContent !== content) {
+        content = nextContent
+        version += 1
+      }
+      return version
     },
   }
 }
@@ -348,6 +359,19 @@ describe('TextEditor', () => {
     }))
 
     await result.unmount()
+  })
+
+  it('会将场景运行时能力传入诊断器', async () => {
+    const { state } = createHarness()
+    state.runtimeCapabilities = { multilineStatements: false }
+
+    renderTextEditor(state)
+    await nextTick()
+
+    expect(updateEditorDiagnosticsMock).toHaveBeenCalledWith(
+      { id: 'model-1' },
+      { multilineStatements: false },
+    )
   })
 
   it('非场景文本保留 Monaco 文档单词补全', async () => {
@@ -676,6 +700,29 @@ describe('TextEditor', () => {
     await nextTick()
 
     expect(updateEditorDiagnosticsMock).toHaveBeenCalledWith(model)
+  })
+
+  it('场景运行时能力变化后会重新诊断当前模型', async () => {
+    const { state } = createHarness('/project/scene-runtime-capabilities.txt')
+    const model = createMonacoModel(['changeFigure:hero.json;', '  -id=hero;'])
+    monacoMockState.editorInstance.getModel.mockReturnValue(model)
+
+    const result = renderTextEditor(state)
+    await nextTick()
+    updateEditorDiagnosticsMock.mockClear()
+
+    await result.rerender({
+      state: {
+        ...state,
+        runtimeCapabilities: { multilineStatements: false },
+      },
+    })
+    await nextTick()
+
+    expect(updateEditorDiagnosticsMock).toHaveBeenCalledWith(
+      model,
+      { multilineStatements: false },
+    )
   })
 
   it('切换语言后会刷新当前模型的诊断消息', async () => {

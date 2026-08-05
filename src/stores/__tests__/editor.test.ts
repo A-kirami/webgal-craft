@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive, toRaw } from 'vue'
 
 import { encodeTextFile } from '~/domain/document/file-codec'
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
 
 import { useTabsStore } from '../tabs'
@@ -83,6 +84,10 @@ const workspaceStoreMock = reactive({
   },
 })
 
+const resourceStoreMock = reactive({
+  currentEngineRuntimeCapabilities: { multilineStatements: false },
+})
+
 vi.mock('@tauri-apps/plugin-fs', () => ({
   readFile: readFileMock,
   stat: statMock,
@@ -108,6 +113,10 @@ vi.mock('~/stores/preference', () => ({
 
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: () => workspaceStoreMock,
+}))
+
+vi.mock('~/stores/resource', () => ({
+  useResourceStore: () => resourceStoreMock,
 }))
 
 vi.mock('~/stores/preview-session', () => ({
@@ -324,6 +333,7 @@ describe('编辑器文本与文档流程', () => {
     preferenceStoreMock.editorMode = 'text'
     workspaceStoreMock.currentGame = { id: 'game-1', path: '/game' }
     workspaceStoreMock.cwd = '/game'
+    resourceStoreMock.currentEngineRuntimeCapabilities = { multilineStatements: false }
     previewSessionStoreMock.currentGameServeUrl = 'http://127.0.0.1:8899'
   })
 
@@ -731,6 +741,66 @@ describe('编辑器文本与文档流程', () => {
     expect(textProjection.textContent).toBe('hello!')
     expect(visualProjection.statements[0]?.rawText).toBe('hello!')
     expect(editorStore.currentSelectedSceneStatement?.id).toBe(visualProjection.statements[0]?.id)
+  })
+
+  it('运行时能力变化时会重建已打开场景，并保留未保存内容', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/scene/runtime-capabilities.txt')
+    const savedContent = [
+      'changeFigure:hero.png',
+      '  -id=hero;',
+    ].join('\n')
+    const editedContent = `${savedContent}\nsay:hello;`
+
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode(savedContent))
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'runtime-capabilities.txt',
+      path,
+      () => editorStore.hasState(path) && editorStore.currentVisualProjection !== undefined,
+      'load runtime-capabilities scene',
+    )
+
+    const visualProjection = editorStore.currentVisualProjection
+    const textProjection = editorStore.currentTextProjection
+    if (!textProjection || !visualProjection || visualProjection.kind !== 'scene') {
+      throw new TypeError('expected scene projections')
+    }
+
+    expect(visualProjection.statements.map(statement => statement.rawText)).toEqual([
+      'changeFigure:hero.png',
+      '  -id=hero;',
+    ])
+
+    editorStore.applyTextDocumentContent(path, editedContent)
+    resourceStoreMock.currentEngineRuntimeCapabilities = LATEST_ENGINE_RUNTIME_CAPABILITIES
+    await flushEditorWatchers()
+
+    expect(textProjection.runtimeCapabilities).toEqual(LATEST_ENGINE_RUNTIME_CAPABILITIES)
+    expect(visualProjection.runtimeCapabilities).toEqual(LATEST_ENGINE_RUNTIME_CAPABILITIES)
+    expect(visualProjection.statements.map(statement => statement.rawText)).toEqual([
+      savedContent,
+      'say:hello;',
+    ])
+    expect(textProjection.textContent).toBe(editedContent)
+    expect(textProjection.isDirty).toBe(true)
+
+    expect(editorStore.undoDocument(path).applied).toBe(true)
+    expect(textProjection.textContent).toBe(savedContent)
+    expect(editorStore.redoDocument(path).applied).toBe(true)
+    expect(textProjection.textContent).toBe(editedContent)
+
+    resourceStoreMock.currentEngineRuntimeCapabilities = { multilineStatements: false }
+    await flushEditorWatchers()
+
+    expect(textProjection.runtimeCapabilities).toEqual({ multilineStatements: false })
+    expect(visualProjection.statements.map(statement => statement.rawText)).toEqual([
+      'changeFigure:hero.png',
+      '  -id=hero;',
+      'say:hello;',
+    ])
   })
 
   it('切换到可视模式时会记录待激活投影并请求重新聚焦编辑器表面', async () => {

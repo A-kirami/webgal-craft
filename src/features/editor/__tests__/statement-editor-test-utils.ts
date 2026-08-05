@@ -93,17 +93,26 @@ export function createEntry(rawText: string): StatementEntry {
 }
 
 export function createSentence(overrides: Partial<ISentence> = {}): ISentence {
-  const command = overrides.command ?? commandType.say
+  const {
+    endLine = 0,
+    isLineBreakHolder = false,
+    startLine = 0,
+    ...sentenceOverrides
+  } = overrides
+  const command = sentenceOverrides.command ?? commandType.say
 
   return {
     command,
-    commandRaw: overrides.commandRaw ?? commandType[command],
+    commandRaw: sentenceOverrides.commandRaw ?? commandType[command],
     content: '',
     args: [],
     sentenceAssets: [],
     subScene: [],
     inlineComment: '',
-    ...overrides,
+    startLine,
+    endLine,
+    isLineBreakHolder,
+    ...sentenceOverrides,
   }
 }
 

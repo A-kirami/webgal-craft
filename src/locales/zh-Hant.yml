@@ -697,6 +697,7 @@ edit:
     duplicateLabel: "標籤「{label}」在目前場景中定義了 {count} 次，跳轉目標不明確。"
     missingLabel: "標籤「{label}」未在目前場景中定義。"
     unsupportedLive2d: 目前引擎不支援 Live2D 模型。
+    unsupportedMultilineStatements: 目前引擎不支援多行陳述式。
     unsupportedSpine: 目前引擎不支援 Spine 模型。
   errors:
     fileSyncFailed: 檔案同步失敗，請稍後重試

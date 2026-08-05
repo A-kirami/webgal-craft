@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
+import {
+  LATEST_ENGINE_RUNTIME_CAPABILITIES,
+  LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+} from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
 
 import {
@@ -93,6 +97,42 @@ describe('编辑器会话与已加载文档状态', () => {
 
     expect(session.textState.syncError).toBe('invalid-animation-json')
     expect(session.textState.isDirty).toBe(false)
+  })
+
+  it('场景投影保留加载时确定的运行时能力', () => {
+    const session = createEditableSession(
+      AbsPath.from('/game/scene/legacy.txt'),
+      createLoadedDocumentState(
+        'scene',
+        'say:hello\n  -speaker=Alice;',
+        undefined,
+        LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      ),
+      'visual',
+    )
+
+    expect(session.textState.runtimeCapabilities).toEqual(LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    expect(session.visualState).toMatchObject({
+      kind: 'scene',
+      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    })
+
+    applyLoadedDocumentState(
+      session,
+      createLoadedDocumentState(
+        'scene',
+        'say:hello\n  -speaker=Alice;',
+        undefined,
+        LATEST_ENGINE_RUNTIME_CAPABILITIES,
+      ),
+      'visual',
+    )
+
+    expect(session.textState.runtimeCapabilities).toEqual(LATEST_ENGINE_RUNTIME_CAPABILITIES)
+    expect(session.visualState).toMatchObject({
+      kind: 'scene',
+      runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    })
   })
 
   it('resolveSceneCursor 会移除 CRLF 内容中的回车符', () => {

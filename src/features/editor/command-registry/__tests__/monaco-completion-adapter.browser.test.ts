@@ -1,6 +1,22 @@
 import * as monaco from 'monaco-editor'
-import { describe, expect, it } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
+
+const { useResourceIndexMock, useResourceStoreMock, useWorkspaceStoreMock } = vi.hoisted(() => ({
+  useResourceIndexMock: vi.fn(),
+  useResourceStoreMock: Object.assign(vi.fn(), { $id: 'resource' as const }),
+  useWorkspaceStoreMock: Object.assign(vi.fn(), { $id: 'workspace' as const }),
+}))
+
+vi.mock(import('~/services/resource-index/service'), () => ({
+  useResourceIndex: useResourceIndexMock,
+}))
+vi.mock(import('~/stores/resource'), () => ({
+  useResourceStore: useResourceStoreMock,
+}))
+vi.mock(import('~/stores/workspace'), () => ({
+  useWorkspaceStore: useWorkspaceStoreMock,
+}))
 
 import { getArgKeyCompletions } from '~/plugins/editor/completion/webgal-argument-keys'
 import { getCommandCompletions } from '~/plugins/editor/completion/webgal-commands'
@@ -10,6 +26,43 @@ import {
 } from '~/plugins/editor/completion/webgal-values'
 
 const t = (key: string) => key
+
+async function loadWebgalCompletionProvider(): Promise<monaco.languages.CompletionItemProvider> {
+  const registerCompletionItemProvider = vi.spyOn(monaco.languages, 'registerCompletionItemProvider')
+  try {
+    await import('~/plugins/editor')
+
+    const registration = registerCompletionItemProvider.mock.calls
+      .find(([languageId]) => languageId === 'webgalscript')
+    const provider = registration?.[1]
+    if (!provider) {
+      throw new TypeError('webgalscript completion provider was not registered')
+    }
+
+    return provider
+  } finally {
+    registerCompletionItemProvider.mockRestore()
+  }
+}
+
+async function provideWebgalCompletions(
+  provider: monaco.languages.CompletionItemProvider,
+  text: string,
+): Promise<monaco.languages.CompletionItem[]> {
+  const model = monaco.editor.createModel(text, 'webgalscript')
+  const lineNumber = model.getLineCount()
+  try {
+    const result = await provider.provideCompletionItems(
+      model,
+      new monaco.Position(lineNumber, model.getLineMaxColumn(lineNumber)),
+      { triggerKind: monaco.languages.CompletionTriggerKind.Invoke },
+      undefined as never,
+    )
+    return result?.suggestions ?? []
+  } finally {
+    model.dispose()
+  }
+}
 
 describe('getCommandCompletions', () => {
   it('插入完整命令骨架并将光标留在分号前继续补全内容', () => {
@@ -127,5 +180,60 @@ describe('getArgKeyCompletions', () => {
       insertText: 'ruleButtonText=',
     })
     expect(plainText).not.toHaveProperty('command')
+  })
+})
+
+describe('WebGAL Monaco 补全', () => {
+  let provider: monaco.languages.CompletionItemProvider
+
+  beforeAll(async () => {
+    provider = await loadWebgalCompletionProvider()
+  })
+
+  beforeEach(() => {
+    useResourceIndexMock.mockReset()
+    useResourceStoreMock.mockReset()
+    useWorkspaceStoreMock.mockReset()
+
+    useResourceIndexMock.mockReturnValue({
+      listByAssetType: () => [{ key: { relativePath: 'chapter/next.txt' } }],
+    })
+    useResourceStoreMock.mockReturnValue({
+      currentEngineRuntimeCapabilities: { multilineStatements: true },
+    })
+    useWorkspaceStoreMock.mockReturnValue({ currentGame: { path: '/game' } })
+  })
+
+  it('在 choose 续行的场景文件位置提供补全', async () => {
+    const suggestions = await provideWebgalCompletions(
+      provider,
+      'choose:First:chapter/first.txt\n  |Second:',
+    )
+
+    expect(suggestions).toContainEqual(expect.objectContaining({
+      label: 'chapter/next.txt',
+      insertText: 'chapter/next.txt',
+    }))
+  })
+
+  it('在 choose 续行的转义冒号后不提供场景文件补全', async () => {
+    const suggestions = await provideWebgalCompletions(
+      provider,
+      'choose:First:chapter/first.txt\n  |Second\\:',
+    )
+
+    expect(suggestions).toEqual([])
+  })
+
+  it('在含转义冒号的 choose 续行目标分隔符后提供补全', async () => {
+    const suggestions = await provideWebgalCompletions(
+      provider,
+      'choose:First:chapter/first.txt\n  |Second\\:Part:',
+    )
+
+    expect(suggestions).toContainEqual(expect.objectContaining({
+      label: 'chapter/next.txt',
+      insertText: 'chapter/next.txt',
+    }))
   })
 })

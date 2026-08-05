@@ -2,7 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestEngine, createTestGame } from '~/__tests__/factories'
-import { MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/services/engine-manager'
+import { MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/domain/engine/runtime-capabilities'
 import { AppError } from '~/types/errors'
 
 import { useGamesTabController } from '../useGamesTabController'

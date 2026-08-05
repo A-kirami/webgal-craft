@@ -156,6 +156,7 @@ describe('useTextEditorBindings', () => {
     })
     expect(binding?.getPreviousSpeaker?.()).toBe('Alice')
     expect(binding?.getUpdateTarget?.()).toEqual({
+      endLineNumber: 2,
       kind: 'line',
       lineNumber: 2,
     })
@@ -352,6 +353,7 @@ describe('useTextEditorBindings', () => {
     harness.formPanel.handleFormUpdate.mockReturnValue(true)
     expect(harness.bindings.applyProgrammaticStatementUpdate({
       target: {
+        endLineNumber: 1,
         kind: 'line',
         lineNumber: 1,
       },

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { fsCmds } from '~/commands/fs'
+import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { AbsPath, RelPath } from '~/domain/path'
 import { mime } from '~/plugins/mime'
 import { gameAssetDir } from '~/services/platform/app-paths'
@@ -77,6 +78,7 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
     externalContent,
     path: providedPath,
     readTextDocumentFile: providedReadTextDocumentFile,
+    getSceneRuntimeCapabilities: providedGetSceneRuntimeCapabilities,
     syncStateFromDocument: providedSyncStateFromDocument,
     ...contextOverrides
   } = options
@@ -145,6 +147,7 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
     },
     getPreferredProjection: () => 'text' as const,
     getPreviewBaseUrl: () => undefined,
+    getSceneRuntimeCapabilities: () => LEGACY_ENGINE_RUNTIME_CAPABILITIES,
     getSceneSelection: () => undefined,
     getSession(path: string) {
       return sessions.get(path)
@@ -174,6 +177,8 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
   const context = {
     ...baseContext,
     ...contextOverrides,
+    getSceneRuntimeCapabilities: providedGetSceneRuntimeCapabilities
+      ?? baseContext.getSceneRuntimeCapabilities,
     readTextDocumentFile: providedReadTextDocumentFile ?? defaultReadTextDocumentFile,
     syncStateFromDocument,
   } satisfies EditorFileLifecycleContext

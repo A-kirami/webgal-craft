@@ -1,6 +1,7 @@
 import * as monaco from 'monaco-editor'
 
-import { parseSceneOrEmpty } from '~/domain/script/parser'
+import { parseChooseContent } from '~/domain/script/content'
+import { buildStatementSourceRanges } from '~/domain/script/sentence'
 import { getEditorDiagnosticMessage } from '~/features/editor/diagnostics/presentation'
 import { diagnoseScene } from '~/features/editor/diagnostics/scene-diagnostics'
 import { i18n } from '~/plugins/i18n'
@@ -8,13 +9,14 @@ import { useResourceIndex } from '~/services/resource-index/service'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 
+import type { StatementSourceRange, StatementSyntaxCapabilities } from '~/domain/script/sentence'
 import type { ResourceReferenceQuery } from '~/services/resource-index/reference-query'
 
 const OWNER = 'webgal-editor-diagnostics'
-const TEMP_SCENE_NAME = 'tempScene'
-const TEMP_SCENE_URL = 'tempUrl'
-
-export function updateEditorDiagnostics(model: monaco.editor.ITextModel): void {
+export function updateEditorDiagnostics(
+  model: monaco.editor.ITextModel,
+  runtimeCapabilities?: StatementSyntaxCapabilities,
+): void {
   if (model.getLanguageId() !== 'webgalscript') {
     monaco.editor.setModelMarkers(model, OWNER, [])
     return
@@ -26,7 +28,9 @@ export function updateEditorDiagnostics(model: monaco.editor.ITextModel): void {
   const canCheckResources = Boolean(workspace.currentGame?.path) && resourceIndex.status.value === 'ready'
   const markers: monaco.editor.IMarkerData[] = []
   const lines = model.getLinesContent()
-  const sentences = lines.map(line => parseSceneOrEmpty(line, TEMP_SCENE_NAME, TEMP_SCENE_URL).sentenceList[0])
+  const source = lines.join('\n')
+  const ranges = buildStatementSourceRanges(source, runtimeCapabilities)
+  const sentences = ranges.map(range => range.parsed)
 
   const diagnostics = diagnoseScene(sentences, {
     engineCapabilities: resourceStore.currentEngineCapabilities,
@@ -36,17 +40,16 @@ export function updateEditorDiagnostics(model: monaco.editor.ITextModel): void {
   })
 
   for (const diagnostic of diagnostics) {
-    const lineNumber = diagnostic.statementIndex + 1
-    const line = lines[diagnostic.statementIndex] ?? ''
-    const sentence = sentences[diagnostic.statementIndex]
-    if (!sentence) {
+    const range = ranges[diagnostic.statementIndex]
+    const sentence = range?.parsed
+    if (!range || !sentence) {
       continue
     }
     const message = getEditorDiagnosticMessage(diagnostic, i18n.global.t)
 
     if (diagnostic.code === 'duplicate-label') {
       markers.push({
-        ...locateContent(lineNumber, line, sentence.commandRaw, diagnostic.label),
+        ...locateContent(lines, range, diagnostic.label),
         severity: monaco.MarkerSeverity.Warning,
         message,
       })
@@ -55,7 +58,7 @@ export function updateEditorDiagnostics(model: monaco.editor.ITextModel): void {
 
     if (diagnostic.code === 'missing-label') {
       markers.push({
-        ...locateContent(lineNumber, line, sentence.commandRaw, diagnostic.label),
+        ...locateContent(lines, range, diagnostic.label),
         severity: monaco.MarkerSeverity.Error,
         message,
       })
@@ -64,7 +67,7 @@ export function updateEditorDiagnostics(model: monaco.editor.ITextModel): void {
 
     if (diagnostic.code === 'unsupported-live2d' || diagnostic.code === 'unsupported-spine') {
       markers.push({
-        ...locateReference(lineNumber, line, sentence.commandRaw, {
+        ...locateReference(lines, range, sentence, {
           source: diagnostic.field,
           value: diagnostic.value,
         }),
@@ -74,79 +77,178 @@ export function updateEditorDiagnostics(model: monaco.editor.ITextModel): void {
       continue
     }
 
-    const range = locateReference(lineNumber, line, sentence.commandRaw, {
+    const markerRange = locateReference(lines, range, sentence, {
       source: diagnostic.field,
       value: diagnostic.value,
     })
     markers.push({
-      ...range,
+      ...markerRange,
       severity: monaco.MarkerSeverity.Error,
       message,
     })
   }
 
+  if (runtimeCapabilities?.multilineStatements === false) {
+    appendUnsupportedMultilineStatementMarkers(markers, lines, source)
+  }
+
   monaco.editor.setModelMarkers(model, OWNER, markers)
 }
 
-function locateContent(lineNumber: number, line: string, commandRaw: string, value: string): monaco.IRange {
-  const colon = line.indexOf(':', commandRaw.length)
-  const contentStart = colon === -1 ? 0 : colon + 1
-  const contentEnd = findFirstBoundary(line, contentStart, [' -', ';'])
-  const start = findReferenceStart(line, value, contentStart, contentEnd)
+function appendUnsupportedMultilineStatementMarkers(
+  markers: monaco.editor.IMarkerData[],
+  lines: readonly string[],
+  source: string,
+): void {
+  // 这里必须按新语法解析，才能识别出旧运行时不支持的跨行语句。
+  const multilineRanges = buildStatementSourceRanges(source)
+    .filter(range => range.startLine !== range.endLine)
 
-  return {
-    startLineNumber: lineNumber,
-    endLineNumber: lineNumber,
-    startColumn: start + 1,
-    endColumn: start + Math.max(value.length, 1) + 1,
+  for (const range of multilineRanges) {
+    markers.push({
+      startLineNumber: range.startLine + 1,
+      startColumn: 1,
+      endLineNumber: range.endLine + 1,
+      endColumn: Math.max((lines[range.endLine] ?? '').length, 1) + 1,
+      severity: monaco.MarkerSeverity.Error,
+      message: i18n.global.t('edit.diagnostics.unsupportedMultilineStatements'),
+    })
   }
 }
 
 function locateReference(
-  lineNumber: number,
-  line: string,
-  commandRaw: string,
+  lines: readonly string[],
+  range: StatementSourceRange,
+  sentence: NonNullable<StatementSourceRange['parsed']>,
   reference: Pick<ResourceReferenceQuery, 'source' | 'value'>,
 ): monaco.IRange {
-  const fallback = Math.max(0, line.indexOf(reference.value))
-  let start = fallback
-
   if (reference.source.kind === 'content') {
-    return locateContent(lineNumber, line, commandRaw, reference.value)
-  } else if (reference.source.kind === 'choice') {
-    const contentStart = line.indexOf(':', commandRaw.length) + 1
-    if (contentStart > 0) {
-      const choices = line.slice(contentStart).split('|')
-      const choice = choices[reference.source.index]
-      const choiceFileSeparator = choice?.indexOf(':') ?? -1
-      if (choice && choiceFileSeparator !== -1) {
-        const choiceStart = contentStart
-          + choices.slice(0, reference.source.index).reduce((offset, item) => offset + item.length + 1, 0)
-        const valueStart = choiceStart + choiceFileSeparator + 1
-        start = findReferenceStart(line, reference.value, valueStart, choiceStart + choice.length)
-      }
-    }
-  } else {
-    const match = new RegExp(String.raw`(?:^|\s)-${escapeRegExp(reference.source.key)}=([^;\s]*)`).exec(line)
-    if (match?.index !== undefined) {
-      const valueStart = match.index + match[0].lastIndexOf('=') + 1
-      start = findReferenceStart(line, reference.value, valueStart, valueStart + (match[1]?.length ?? 0))
+    return locateContent(lines, range, reference.value)
+  }
+
+  if (reference.source.kind === 'choice') {
+    const choices = parseChooseContent(sentence.content)
+    const position = findChoiceTextPosition(lines, range, choices.map(choice => choice.file), reference.source.index)
+    const choice = choices[reference.source.index]
+    if (position && choice) {
+      return createMarkerRange(position, choice.file.length)
     }
   }
 
-  return {
-    startLineNumber: lineNumber,
-    endLineNumber: lineNumber,
-    startColumn: start + 1,
-    endColumn: start + Math.max(reference.value.length, 1) + 1,
+  if (reference.source.kind === 'argument') {
+    const argumentPattern = new RegExp(String.raw`(?:^|\s)-${escapeRegExp(reference.source.key)}=([^;\s]*)`)
+    for (let line = range.startLine; line <= range.endLine; line++) {
+      const text = lines[line] ?? ''
+      const match = argumentPattern.exec(text)
+      if (match?.index === undefined) {
+        continue
+      }
+
+      const valueStart = match.index + match[0].lastIndexOf('=') + 1
+      return createMarkerRange({
+        line,
+        start: findReferenceStart(text, reference.value, valueStart, valueStart + (match[1]?.length ?? 0)),
+      }, reference.value.length)
+    }
+  }
+
+  return locateContent(lines, range, reference.value)
+}
+
+function locateContent(
+  lines: readonly string[],
+  range: StatementSourceRange,
+  value: string,
+): monaco.IRange {
+  const position = findTextPosition(lines, range, value)
+    ?? findFirstNonWhitespacePosition(lines, range)
+  return createMarkerRange(position, value.length)
+}
+
+function findTextPosition(
+  lines: readonly string[],
+  range: StatementSourceRange,
+  value: string,
+): { line: number, start: number } | undefined {
+  if (value === '') {
+    return
+  }
+
+  for (let line = range.startLine; line <= range.endLine; line++) {
+    const text = lines[line] ?? ''
+    const start = text.indexOf(value)
+    if (start !== -1) {
+      return { line, start }
+    }
   }
 }
 
-function findFirstBoundary(line: string, start: number, boundaries: readonly string[]): number {
-  const positions = boundaries
-    .map(boundary => line.indexOf(boundary, start))
-    .filter(position => position !== -1)
-  return positions.length > 0 ? Math.min(...positions) : line.length
+function findChoiceTextPosition(
+  lines: readonly string[],
+  range: StatementSourceRange,
+  files: readonly string[],
+  targetIndex: number,
+): { line: number, start: number } | undefined {
+  let line = range.startLine
+  let start = 0
+
+  for (const [index, file] of files.entries()) {
+    if (file === '') {
+      continue
+    }
+
+    const position = findTextPositionAfter(lines, range.endLine, file, line, start)
+    if (!position) {
+      return
+    }
+    if (index === targetIndex) {
+      return position
+    }
+
+    line = position.line
+    start = position.start + file.length
+  }
+}
+
+function findTextPositionAfter(
+  lines: readonly string[],
+  endLine: number,
+  value: string,
+  startLine: number,
+  startColumn: number,
+): { line: number, start: number } | undefined {
+  for (let line = startLine; line <= endLine; line++) {
+    const text = lines[line] ?? ''
+    const start = text.indexOf(value, line === startLine ? startColumn : 0)
+    if (start !== -1) {
+      return { line, start }
+    }
+  }
+}
+
+function findFirstNonWhitespacePosition(
+  lines: readonly string[],
+  range: StatementSourceRange,
+): { line: number, start: number } {
+  for (let line = range.startLine; line <= range.endLine; line++) {
+    const start = (lines[line] ?? '').search(/\S/)
+    if (start !== -1) {
+      return { line, start }
+    }
+  }
+  return { line: range.startLine, start: 0 }
+}
+
+function createMarkerRange(
+  position: { line: number, start: number },
+  length: number,
+): monaco.IRange {
+  return {
+    startLineNumber: position.line + 1,
+    endLineNumber: position.line + 1,
+    startColumn: position.start + 1,
+    endColumn: position.start + Math.max(length, 1) + 1,
+  }
 }
 
 function findReferenceStart(line: string, value: string, start: number, end: number): number {
