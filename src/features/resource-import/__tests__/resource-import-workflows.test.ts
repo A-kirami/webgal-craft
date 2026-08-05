@@ -129,6 +129,7 @@ describe('资源导入工作流', () => {
     expect(registerMock).toHaveBeenCalledWith('/games/imported-game', expect.any(Object), expect.anything())
     expect(commitMock).toHaveBeenCalledWith('session-1', 'game-1')
     expect(afterCommit).toHaveBeenCalledWith('game-1')
+    expect(registerMock.mock.invocationCallOrder[0]).toBeLessThan(commitMock.mock.invocationCallOrder[0])
     expect(rollbackMock).not.toHaveBeenCalled()
   })
 
@@ -177,6 +178,7 @@ describe('资源导入工作流', () => {
       alreadyRegistered: false,
     })
     expect(commitMock).toHaveBeenCalledWith('session-1', 'game-1')
+    expect(commitMock.mock.invocationCallOrder[0]).toBeLessThan(afterCommit.mock.invocationCallOrder[0])
     expect(rollbackMock).not.toHaveBeenCalled()
     expect(loggerErrorMock).toHaveBeenCalledWith(expect.stringContaining('navigation failed'))
   })
