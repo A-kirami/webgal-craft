@@ -9,13 +9,14 @@ import { useResourceIndex } from '~/services/resource-index/service'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 
-import type { StatementSourceRange, StatementSyntaxCapabilities } from '~/domain/script/sentence'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
+import type { StatementSourceRange } from '~/domain/script/sentence'
 import type { ResourceReferenceQuery } from '~/services/resource-index/reference-query'
 
 const OWNER = 'webgal-editor-diagnostics'
 export function updateEditorDiagnostics(
   model: monaco.editor.ITextModel,
-  runtimeCapabilities?: StatementSyntaxCapabilities,
+  runtimeCapabilities?: EngineRuntimeCapabilities,
 ): void {
   if (model.getLanguageId() !== 'webgalscript') {
     monaco.editor.setModelMarkers(model, OWNER, [])
@@ -37,6 +38,7 @@ export function updateEditorDiagnostics(
     hasAssetKey: canCheckResources
       ? key => resourceIndex.hasAssetKey(key)
       : undefined,
+    runtimeCapabilities,
   })
 
   for (const diagnostic of diagnostics) {
@@ -65,7 +67,7 @@ export function updateEditorDiagnostics(
       continue
     }
 
-    if (diagnostic.code === 'unsupported-live2d' || diagnostic.code === 'unsupported-spine') {
+    if (['unsupported-live2d', 'unsupported-spine', 'unsupported-opus-vocal'].includes(diagnostic.code)) {
       markers.push({
         ...locateReference(lines, range, sentence, {
           source: diagnostic.field,
@@ -149,6 +151,22 @@ function locateReference(
         line,
         start: findReferenceStart(text, reference.value, valueStart, valueStart + (match[1]?.length ?? 0)),
       }, reference.value.length)
+    }
+
+    if (reference.source.key === 'vocal') {
+      const shorthandPattern = new RegExp(String.raw`(?:^|\s)-${escapeRegExp(reference.value)}(?=\s|;|$)`)
+      for (let line = range.startLine; line <= range.endLine; line++) {
+        const text = lines[line] ?? ''
+        const match = shorthandPattern.exec(text)
+        if (match?.index === undefined) {
+          continue
+        }
+
+        return createMarkerRange({
+          line,
+          start: match.index + match[0].lastIndexOf(reference.value),
+        }, reference.value.length)
+      }
     }
   }
 

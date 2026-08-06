@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { parseSentence } from '~/domain/script/parser'
 
 import { diagnoseEditorDocument } from '../document-diagnostics'
@@ -139,6 +140,29 @@ describe('diagnoseScene', () => {
       parseSentence('changeFigure:live2d/hero.json;'),
       parseSentence('changeFigure:spine/hero.skel;'),
     ])).toEqual([])
+  })
+
+  it('为旧引擎的 say Opus 语音引用生成警告', () => {
+    const sentences = [
+      parseSentence('say:hello -voice.opus;'),
+      parseSentence('say:world -vocal=voice.ogg;'),
+      parseSentence('bgm:theme.opus;'),
+    ]
+
+    expect(diagnoseScene(sentences, {
+      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    })).toEqual([{
+      code: 'unsupported-opus-vocal',
+      field: { kind: 'argument', key: 'vocal' },
+      severity: 'warning',
+      source: 'engine',
+      statementIndex: 0,
+      value: 'voice.opus',
+    }])
+
+    expect(diagnoseScene(sentences, {
+      runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    })).toEqual([])
   })
 })
 

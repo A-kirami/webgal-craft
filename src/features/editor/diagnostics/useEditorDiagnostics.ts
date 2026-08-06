@@ -29,6 +29,7 @@ export function useEditorDiagnostics(): void {
         hasAssetKey: canCheckResources
           ? key => resourceIndex.hasAssetKey(key)
           : undefined,
+        runtimeCapabilities: resourceStore.currentEngineRuntimeCapabilities,
         textProjection,
         visualProjection,
       }))
@@ -54,7 +55,10 @@ export function useEditorDiagnostics(): void {
     publishOpenDocumentDiagnostics()
   })
 
-  watch(() => resourceStore.currentEngineCapabilities, () => {
+  watch(() => [
+    resourceStore.currentEngineCapabilities,
+    resourceStore.currentEngineRuntimeCapabilities,
+  ], () => {
     publishOpenDocumentDiagnostics()
   })
 }

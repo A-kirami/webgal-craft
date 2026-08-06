@@ -698,6 +698,7 @@ edit:
     missingLabel: "標籤「{label}」未在目前場景中定義。"
     unsupportedLive2d: 目前引擎不支援 Live2D 模型。
     unsupportedMultilineStatements: 目前引擎不支援多行陳述式。
+    unsupportedOpusVocal: 目前引擎不支援 say 的 Opus 語音簡寫，請升級至 WebGAL 4.6.3 或更新版本。
     unsupportedSpine: 目前引擎不支援 Spine 模型。
   errors:
     fileSyncFailed: 檔案同步失敗，請稍後重試

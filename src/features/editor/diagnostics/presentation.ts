@@ -53,6 +53,9 @@ export function getEditorDiagnosticMessage(
     case 'unsupported-spine': {
       return t('edit.diagnostics.unsupportedSpine')
     }
+    case 'unsupported-opus-vocal': {
+      return t('edit.diagnostics.unsupportedOpusVocal')
+    }
     default: {
       const exhaustiveCheck: never = diagnostic
       return exhaustiveCheck
