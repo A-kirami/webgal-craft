@@ -199,7 +199,7 @@ describe('WebGAL Monaco 补全', () => {
       listByAssetType: () => [{ key: { relativePath: 'chapter/next.txt' } }],
     })
     useResourceStoreMock.mockReturnValue({
-      currentEngineRuntimeCapabilities: { multilineStatements: true },
+      currentEngineRuntimeCapabilities: { multilineStatements: true, opusVocalShorthand: true },
     })
     useWorkspaceStoreMock.mockReturnValue({ currentGame: { path: '/game' } })
   })

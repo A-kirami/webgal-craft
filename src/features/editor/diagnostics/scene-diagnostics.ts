@@ -2,16 +2,19 @@ import { diagnoseDuplicateSceneLabels, diagnoseMissingSceneLabels } from '~/doma
 import {
   findMissingSentenceResourceReferences,
   findUnsupportedEngineModelReferences,
+  findUnsupportedEngineOpusVocalReferences,
 } from '~/features/editor/command-registry/diagnostics'
 
 import type { SceneEditorDiagnostic } from './types'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { EngineModelCapabilities } from '~/domain/engine/model-capabilities'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { AssetKey } from '~/services/resource-index/keys'
 
 interface DiagnoseSceneOptions {
   engineCapabilities?: EngineModelCapabilities
   hasAssetKey?: (key: AssetKey) => boolean
+  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'opusVocalShorthand'>
 }
 
 export function diagnoseScene(
@@ -60,21 +63,36 @@ export function diagnoseScene(
     }
   }
 
-  if (options.engineCapabilities) {
+  if (options.engineCapabilities || options.runtimeCapabilities) {
     for (const [statementIndex, sentence] of sentences.entries()) {
       if (!sentence) {
         continue
       }
 
-      for (const reference of findUnsupportedEngineModelReferences(sentence, options.engineCapabilities)) {
-        diagnostics.push({
-          code: reference.modelType === 'live2d' ? 'unsupported-live2d' : 'unsupported-spine',
-          field: reference.source,
-          severity: 'warning',
-          source: 'engine',
-          statementIndex,
-          value: reference.value,
-        })
+      if (options.engineCapabilities) {
+        for (const reference of findUnsupportedEngineModelReferences(sentence, options.engineCapabilities)) {
+          diagnostics.push({
+            code: reference.modelType === 'live2d' ? 'unsupported-live2d' : 'unsupported-spine',
+            field: reference.source,
+            severity: 'warning',
+            source: 'engine',
+            statementIndex,
+            value: reference.value,
+          })
+        }
+      }
+
+      if (options.runtimeCapabilities) {
+        for (const reference of findUnsupportedEngineOpusVocalReferences(sentence, options.runtimeCapabilities)) {
+          diagnostics.push({
+            code: 'unsupported-opus-vocal',
+            field: reference.source,
+            severity: 'warning',
+            source: 'engine',
+            statementIndex,
+            value: reference.value,
+          })
+        }
       }
     }
   }

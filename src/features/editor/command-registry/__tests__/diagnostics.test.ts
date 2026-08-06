@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { parseSentence } from '~/domain/script/parser'
 
-import { querySentenceResourceReferences } from '../diagnostics'
+import { findUnsupportedEngineOpusVocalReferences, querySentenceResourceReferences } from '../diagnostics'
 
 describe('querySentenceResourceReferences', () => {
   it('从注册表字段读取内容资源引用', () => {
@@ -42,5 +43,32 @@ describe('querySentenceResourceReferences', () => {
         source: { kind: 'choice', index: 1 },
       },
     ])
+  })
+})
+
+describe('findUnsupportedEngineOpusVocalReferences', () => {
+  it('仅诊断旧引擎的 say Opus 语音参数', () => {
+    expect(findUnsupportedEngineOpusVocalReferences(
+      parseSentence('say:hello -voice.opus;')!,
+      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([{
+      source: { kind: 'argument', key: 'vocal' },
+      value: 'voice.opus',
+    }])
+
+    expect(findUnsupportedEngineOpusVocalReferences(
+      parseSentence('say:hello -vocal=voice.opus;')!,
+      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    )).toHaveLength(1)
+
+    expect(findUnsupportedEngineOpusVocalReferences(
+      parseSentence('bgm:theme.opus;')!,
+      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([])
+
+    expect(findUnsupportedEngineOpusVocalReferences(
+      parseSentence('say:hello -voice.opus;')!,
+      LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([])
   })
 })

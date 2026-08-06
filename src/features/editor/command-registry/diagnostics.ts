@@ -9,12 +9,18 @@ import { deriveArgFieldsFromEditorFields, readEditorFields, readFieldResourceRef
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { EngineModelCapabilities, EngineModelType } from '~/domain/engine/model-capabilities'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { AssetKey } from '~/services/resource-index/keys'
 import type { ResourceReferenceQuery, ResourceReferenceSource } from '~/services/resource-index/reference-query'
 
 export interface UnsupportedEngineModelReference {
   modelType: EngineModelType
   source: { kind: 'content' }
+  value: string
+}
+
+export interface UnsupportedEngineOpusVocalReference {
+  source: { kind: 'argument', key: 'vocal' }
   value: string
 }
 
@@ -76,6 +82,26 @@ export function findUnsupportedEngineModelReferences(
     modelType,
     source: { kind: 'content' },
     value,
+  }]
+}
+
+export function findUnsupportedEngineOpusVocalReferences(
+  sentence: ISentence,
+  capabilities: Pick<EngineRuntimeCapabilities, 'opusVocalShorthand'>,
+): UnsupportedEngineOpusVocalReference[] {
+  if (sentence.command !== commandType.say || capabilities.opusVocalShorthand) {
+    return []
+  }
+
+  // 解析器会把显式 vocal 参数和文件简写归一化为同一字段；Craft 保存时统一输出简写。
+  const vocal = sentence.args.find(arg => arg.key === 'vocal')
+  if (typeof vocal?.value !== 'string' || !vocal.value.toLowerCase().endsWith('.opus')) {
+    return []
+  }
+
+  return [{
+    source: { kind: 'argument', key: 'vocal' },
+    value: vocal.value,
   }]
 }
 

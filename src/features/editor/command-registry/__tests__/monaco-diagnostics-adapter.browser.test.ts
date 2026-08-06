@@ -256,4 +256,22 @@ describe('updateEditorDiagnostics', () => {
       }),
     ])
   })
+
+  it('为旧引擎的 say Opus 语音引用定位黄色 marker', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+
+    const model = createModel('say:voice.opus -voice.opus;')
+    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(readMarkers(model)).toEqual([expect.objectContaining({
+      startLineNumber: 1,
+      startColumn: 17,
+      endColumn: 27,
+      severity: monaco.MarkerSeverity.Warning,
+      message: 'edit.diagnostics.unsupportedOpusVocal:',
+    })])
+  })
 })

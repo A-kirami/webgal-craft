@@ -54,6 +54,14 @@ export interface UnsupportedSpineEditorDiagnostic extends SceneEditorDiagnosticB
   value: string
 }
 
+export interface UnsupportedOpusVocalEditorDiagnostic extends SceneEditorDiagnosticBase {
+  code: 'unsupported-opus-vocal'
+  field: { kind: 'argument', key: 'vocal' }
+  severity: 'warning'
+  source: 'engine'
+  value: string
+}
+
 export interface InvalidAnimationDocumentDiagnostic extends EditorDiagnosticBase {
   code: 'invalid-animation-json'
   severity: 'error'
@@ -66,6 +74,7 @@ export type SceneEditorDiagnostic =
   | MissingResourceEditorDiagnostic
   | UnsupportedLive2dEditorDiagnostic
   | UnsupportedSpineEditorDiagnostic
+  | UnsupportedOpusVocalEditorDiagnostic
 
 export type EditorFieldDiagnostic =
   | Omit<DuplicateLabelEditorDiagnostic, 'statementIndex'>
@@ -73,6 +82,7 @@ export type EditorFieldDiagnostic =
   | Omit<MissingResourceEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedLive2dEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedSpineEditorDiagnostic, 'statementIndex'>
+  | Omit<UnsupportedOpusVocalEditorDiagnostic, 'statementIndex'>
 
 export type EditorDiagnostic =
   | SceneEditorDiagnostic

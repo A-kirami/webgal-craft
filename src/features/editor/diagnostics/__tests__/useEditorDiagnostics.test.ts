@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, reactive, shallowRef } from 'vue'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
 import { buildStatements } from '~/domain/script/sentence'
 
@@ -187,6 +188,48 @@ describe('useEditorDiagnostics', () => {
 
     expect(diagnosticsStore.publish).toHaveBeenLastCalledWith(path, [])
     expect(diagnosticsStore.invalidateSource).not.toHaveBeenCalledWith('resource')
+    scope.stop()
+  })
+
+  it('当前引擎运行时能力变化后重新发布 Opus 兼容性诊断', async () => {
+    const path = AbsPath.from('/game/scene/start.txt')
+    const diagnosticsStore = {
+      invalidateSource: vi.fn(),
+      publish: vi.fn(),
+    }
+    const resourceStore = reactive({
+      currentEngineCapabilities: undefined,
+      currentEngineRuntimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    })
+
+    useEditorDiagnosticsStoreMock.mockReturnValue(diagnosticsStore)
+    useEditorStoreMock.mockReturnValue({
+      getTextProjectionState: vi.fn(() => undefined),
+      getVisualProjectionState: vi.fn(() => reactive({
+        kind: 'scene' as const,
+        statements: buildStatements('say:hello -voice.opus;'),
+      })),
+      peekSceneRevision: vi.fn(() => 'revision-1'),
+    })
+    useResourceIndexMock.mockReturnValue({
+      hasAssetKey: vi.fn(() => true),
+      revision: shallowRef(0),
+      status: shallowRef('ready'),
+    })
+    useResourceStoreMock.mockReturnValue(resourceStore)
+    useTabsStoreMock.mockReturnValue(reactive({ tabs: [{ path }] }))
+
+    const scope = effectScope()
+    scope.run(useEditorDiagnostics)
+
+    expect(diagnosticsStore.publish).toHaveBeenLastCalledWith(path, [
+      expect.objectContaining({ code: 'unsupported-opus-vocal' }),
+    ])
+
+    resourceStore.currentEngineRuntimeCapabilities = LATEST_ENGINE_RUNTIME_CAPABILITIES
+    await nextTick()
+
+    expect(diagnosticsStore.publish).toHaveBeenLastCalledWith(path, [])
     scope.stop()
   })
 })

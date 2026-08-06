@@ -22,7 +22,7 @@ import { resolveI18n } from '~/features/editor/command-registry/schema'
 
 describe('命令注册表通用参数', () => {
   it('背景与立绘扩展名集合覆盖预期资源类型', () => {
-    expect(AUDIO_EXTENSIONS).toEqual(expect.arrayContaining(['.mp3', '.ogg', '.wav']))
+    expect(AUDIO_EXTENSIONS).toEqual(expect.arrayContaining(['.mp3', '.ogg', '.wav', '.opus']))
     expect(IMAGE_EXTENSIONS).toEqual(expect.arrayContaining(['.png', '.jpg', '.jpeg', '.gif', '.webp']))
     expect(VIDEO_EXTENSIONS).toEqual(expect.arrayContaining(['.mp4', '.webm', '.mkv']))
     expect(BACKGROUND_EXTENSIONS).toEqual(expect.arrayContaining(['.png', '.mp4', '.skel']))
