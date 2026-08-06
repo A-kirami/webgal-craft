@@ -4,7 +4,7 @@ import type { AutocompleteTextField, ChoiceField, NumberField, ResourceReference
 
 // ─── WebGAL 支持的文件扩展名 ───
 
-export const AUDIO_EXTENSIONS = ['.mp3', '.ogg', '.wav']
+export const AUDIO_EXTENSIONS = ['.mp3', '.ogg', '.wav', '.opus']
 export const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp']
 export const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.mkv']
 export const BACKGROUND_EXTENSIONS = [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS, '.skel']

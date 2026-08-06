@@ -383,7 +383,7 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
       }
 
       function isBinaryPath(path: string) {
-        return /\.(png|jpe?g|gif|webp|ico|bmp|mp3|wav|ogg|m4a|mp4|webm|mov|ttf|otf|woff2?)$/i.test(path)
+        return /\.(png|jpe?g|gif|webp|ico|bmp|mp3|wav|ogg|m4a|opus|mp4|webm|mov|ttf|otf|woff2?)$/i.test(path)
       }
 
       function isGameContentPath(relPath: string) {

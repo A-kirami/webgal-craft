@@ -163,7 +163,7 @@ describe('GameConfigFieldsSection', () => {
     const result = renderSection()
 
     await expect.element(page.getByLabelText('modals.gameConfig.fields.titleBgm.label')).toHaveAttribute('data-root-path', '/games/demo/game/bgm')
-    await expect.element(page.getByLabelText('modals.gameConfig.fields.titleBgm.label')).toHaveAttribute('data-extensions', '.mp3|.ogg|.wav')
+    await expect.element(page.getByLabelText('modals.gameConfig.fields.titleBgm.label')).toHaveAttribute('data-extensions', '.mp3|.ogg|.wav|.opus')
     await expect.element(page.getByLabelText('modals.gameConfig.fields.titleBgm.label')).toHaveAttribute('data-popover-title', 'modals.gameConfig.fields.titleBgm.pickerTitle')
 
     await result.unmount()
