@@ -701,8 +701,8 @@ edit:
     duplicateLabel: 'Label "{label}" is defined {count} times in this scene, so jump targets are ambiguous.'
     missingLabel: 'Label "{label}" is not defined in this scene.'
     unsupportedLive2d: The current engine does not support Live2D models.
-    unsupportedMultilineStatements: The current engine does not support multiline statements.
-    unsupportedOpusVocal: The current engine does not support Opus vocal shorthand in say statements. Upgrade to WebGAL 4.6.3 or later.
+    unsupportedMultilineStatements: Multiline statements require WebGAL 4.6.3 or later.
+    unsupportedOpusVocal: Opus vocal shorthand requires WebGAL 4.6.3 or later.
     unsupportedFigurePosition: This figure position requires WebGAL 4.6.3 or later.
     unsupportedSpine: The current engine does not support Spine models.
   errors:
