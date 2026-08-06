@@ -1,5 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { isExtendedFigurePosition } from '~/domain/script/types'
+
 import { dedupeAutocompleteOptions, resolveAutocompleteOptions } from './autocomplete-options'
 import { commandEntries, getCommandConfig, getCommandScriptString } from './index'
 import { isFlagChoiceField, readArgFields, readContentField, resolveI18n, UNSPECIFIED } from './schema'
@@ -31,6 +33,7 @@ export interface CompletionQueryContext {
   sceneOptions?: SceneAutocompleteOptionCollections
   listResources?: (assetType: string) => readonly CompletionOption[]
   resolveDynamicOptions?: (key: EditorDynamicOptionsKey, context: DynamicOptionsContext) => Promise<readonly CompletionOption[]> | readonly CompletionOption[]
+  allowExtendedFigurePositions?: boolean
 }
 
 interface CompletionOnlyArgument {
@@ -47,8 +50,12 @@ const WHEN: CompletionOnlyArgument = {
 const completionOnlyArguments = new Map<commandType, CompletionOnlyArgument[]>([
   [commandType.say, [
     { key: 'left', label: t => t('edit.completion.arguments.left'), simplified: true },
-    { key: 'right', label: t => t('edit.completion.arguments.right'), simplified: true },
+    { key: 'left14', label: t => t('edit.completion.arguments.left14'), simplified: true },
+    { key: 'left13', label: t => t('edit.completion.arguments.left13'), simplified: true },
     { key: 'center', label: t => t('edit.completion.arguments.center'), simplified: true },
+    { key: 'right13', label: t => t('edit.completion.arguments.right13'), simplified: true },
+    { key: 'right14', label: t => t('edit.completion.arguments.right14'), simplified: true },
+    { key: 'right', label: t => t('edit.completion.arguments.right'), simplified: true },
   ]],
 ])
 
@@ -129,17 +136,18 @@ function getFieldForCompletion(command: commandType, key: string): FieldDef | un
   return readArgFields(entry).find(item => item.field.key === key)?.field
 }
 
-function resolveStaticOptions(field: FieldDef, t: I18nT, content: string, sceneOptions?: SceneAutocompleteOptionCollections): CompletionOption[] {
+function resolveStaticOptions(field: FieldDef, t: I18nT, content: string, sceneOptions: SceneAutocompleteOptionCollections | undefined, allowExtendedFigurePositions: boolean): CompletionOption[] {
   if (field.type === 'choice') {
     return field.options
       .filter(option => option.value !== UNSPECIFIED)
+      .filter(option => allowExtendedFigurePositions || !isExtendedFigurePosition(option.value))
       .map(option => ({
         label: resolveI18n(option.label, t, content),
         value: option.value,
       }))
   }
   if (field.type === 'text' && field.variant === 'autocomplete') {
-    return resolveAutocompleteOptions(field.autocomplete, { content, sceneOptions, t })
+    return resolveAutocompleteOptions(field.autocomplete, { content, sceneOptions, t, allowExtendedFigurePositions })
       .map(option => ({ label: option.label, value: option.value }))
   }
   return []
@@ -168,7 +176,7 @@ export async function queryArgumentValueCompletions(
       gamePath: context.gamePath,
     })
   } else {
-    options = resolveStaticOptions(field, t, context.content, context.sceneOptions)
+    options = resolveStaticOptions(field, t, context.content, context.sceneOptions, context.allowExtendedFigurePositions !== false)
   }
 
   return dedupeAutocompleteOptions(options)

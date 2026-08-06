@@ -9,6 +9,7 @@ import { useStatementEditorSay } from '~/features/editor/statement-editor/useSta
 import { useStatementEditorScrub } from '~/features/editor/statement-editor/useStatementEditorScrub'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { ResolvedAutocompleteOption } from '~/features/editor/command-registry/autocomplete-options'
 import type { EditorFieldDiagnostic } from '~/features/editor/diagnostics/types'
 import type { SceneAutocompleteOptions } from '~/features/editor/statement-editor/scene-autocomplete'
@@ -21,6 +22,7 @@ interface UseStatementEditorFieldBindingsOptions {
     ReturnType<typeof useStatementEditorSay>,
     'effectiveSpeaker' | 'handleSpeakerChange' | 'isNoColonStatement'
   >
+  runtimeCapabilities: ComputedRef<EngineRuntimeCapabilities>
   content: Pick<
     ReturnType<typeof useStatementEditorContent>,
     | 'contentSelectValue'
@@ -108,6 +110,7 @@ export function useStatementEditorFieldBindings(
     return resolveAutocompleteOptions(field.field.autocomplete, {
       content: options.parsed.value?.content,
       sceneOptions: options.autocompleteOptions.value,
+      allowExtendedFigurePositions: options.runtimeCapabilities.value.figurePositions,
       t,
     })
   }

@@ -1,5 +1,6 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { parseCommandNode, serializeCommandNode } from '~/domain/script/codec'
 import { createEmptySentence, ensureParsed, StatementEntry } from '~/domain/script/sentence'
 import { serializeSentence } from '~/domain/script/serialize'
@@ -20,6 +21,7 @@ import { statementMetaKey, useStatementMeta } from '~/features/editor/statement-
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { TransactionSource } from '~/domain/document/transaction'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 
 export interface StatementIdTarget {
@@ -49,6 +51,7 @@ interface UseStatementEditorOptions {
   previousSpeaker?: MaybeRefOrGetter<string | undefined>
   emitUpdate: (payload: StatementUpdatePayload) => void
   surface?: StatementEditorSurface
+  runtimeCapabilities?: MaybeRefOrGetter<EngineRuntimeCapabilities | undefined>
 }
 
 export function createStatementIdTarget(statementId: number): StatementIdTarget {
@@ -82,6 +85,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   const entry = computed(() => toValue(options.entry))
   const updateTarget = computed(() => toValue(options.updateTarget) ?? createStatementIdTarget(entry.value.id))
   const previousSpeaker = computed(() => toValue(options.previousSpeaker) ?? '')
+  const runtimeCapabilities = computed(() => toValue(options.runtimeCapabilities) ?? LATEST_ENGINE_RUNTIME_CAPABILITIES)
   const injectedAutocompleteOptions = inject(sceneAutocompleteOptionsKey, undefined)
   const autocompleteOptions = computed(() => {
     return injectedAutocompleteOptions?.value
@@ -190,6 +194,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     argFields,
     readEditableArgs,
     emitUpdate,
+    runtimeCapabilities,
   })
 
   // ─── ParamRenderer 视图适配 ───
@@ -213,6 +218,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     say,
     content: contentComposable,
     params,
+    runtimeCapabilities,
     getFieldDiagnostics,
     scrub: {
       canScrubArgField,

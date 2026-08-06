@@ -1,7 +1,7 @@
 import { removeArg, setOrRemoveArg, upsertArg } from '~/domain/script/arg-utils'
 import { serializeCommandNode } from '~/domain/script/codec'
 import { readCommandNodeParamValue } from '~/domain/script/params'
-import { CommandNode } from '~/domain/script/types'
+import { CommandNode, isExtendedFigurePosition } from '~/domain/script/types'
 import { updateCommandNodeParam } from '~/domain/script/update'
 import { ArgField, DynamicOptionsContext, EditorField, isFlagChoiceField, readArgFieldStorageKey, resolveI18n, UNSPECIFIED } from '~/features/editor/command-registry/schema'
 import { resolveDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
@@ -11,6 +11,7 @@ import { isParamVisibleByReader } from '~/features/editor/statement-editor/visib
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 
 export interface UseStatementEditorParamsOptions {
   parsed: ComputedRef<ISentence | undefined>
@@ -18,6 +19,7 @@ export interface UseStatementEditorParamsOptions {
   argFields: ComputedRef<ArgField[]>
   readEditableArgs: () => arg[]
   emitUpdate: (patch: Partial<ISentence>) => void
+  runtimeCapabilities: ComputedRef<EngineRuntimeCapabilities>
 }
 
 /**
@@ -73,10 +75,12 @@ export function useStatementEditorParams(opts: UseStatementEditorParamsOptions) 
     if (argField.field.type !== 'choice') {
       return []
     }
-    return argField.field.options.map(option => ({
-      label: resolveI18n(option.label, t, opts.parsed.value?.content),
-      value: option.value,
-    }))
+    return argField.field.options
+      .filter(option => opts.runtimeCapabilities.value.figurePositions || !isExtendedFigurePosition(option.value))
+      .map(option => ({
+        label: resolveI18n(option.label, t, opts.parsed.value?.content),
+        value: option.value,
+      }))
   }
 
   function createDynamicOptionsContext(): DynamicOptionsContext {

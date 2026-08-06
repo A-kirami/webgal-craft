@@ -39,7 +39,11 @@ describe('命令注册表通用参数', () => {
     if (presetSource.type === 'static') {
       expect(presetSource.options.map(option => option.value)).toEqual([
         'fig-left',
+        'fig-left14',
+        'fig-left13',
         'fig-center',
+        'fig-right13',
+        'fig-right14',
         'fig-right',
         'bg-main',
         'stage-main',

@@ -1,8 +1,11 @@
 import * as monaco from 'monaco-editor'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { isExtendedFigurePosition } from '~/domain/script/types'
 import { buildArgumentCompletionInfo } from '~/features/editor/command-registry/completion'
 import { getI18nLocale, i18n } from '~/plugins/i18n'
+
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 
 const { t } = i18n.global
 
@@ -30,18 +33,21 @@ export function getArgKeyCompletions(
   range: monaco.IRange,
   command: commandType,
   hasLeadingDash: boolean,
+  runtimeCapabilities?: EngineRuntimeCapabilities,
 ): monaco.languages.CompletionItem[] {
-  return readArgumentCompletions(command).map(item => ({
-    label: item.key,
-    insertText: `${hasLeadingDash ? '' : '-'}${item.key}${item.simplified ? '' : '='}`,
-    detail: item.detail,
-    kind: monaco.languages.CompletionItemKind.Function,
-    range,
-    ...(item.hasValueCompletions && {
-      command: {
-        id: 'editor.action.triggerSuggest',
-        title: '',
-      },
-    }),
-  }))
+  return readArgumentCompletions(command)
+    .filter(item => runtimeCapabilities?.figurePositions !== false || !isExtendedFigurePosition(item.key))
+    .map(item => ({
+      label: item.key,
+      insertText: `${hasLeadingDash ? '' : '-'}${item.key}${item.simplified ? '' : '='}`,
+      detail: item.detail,
+      kind: monaco.languages.CompletionItemKind.Function,
+      range,
+      ...(item.hasValueCompletions && {
+        command: {
+          id: 'editor.action.triggerSuggest',
+          title: '',
+        },
+      }),
+    }))
 }

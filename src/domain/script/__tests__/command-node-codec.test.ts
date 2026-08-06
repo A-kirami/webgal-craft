@@ -42,7 +42,7 @@ describe('命令节点编解码', () => {
     expect(serializedArgs).toContainEqual({ key: 'figureId', value: 'hero' })
   })
 
-  it.each(['left', 'center', 'right'])('解析并序列化 say 位置语法糖 -%s', (position) => {
+  it.each(['left', 'left14', 'left13', 'center', 'right13', 'right14', 'right'])('解析并序列化 say 位置语法糖 -%s', (position) => {
     const node = parseCommandNode(mustParse(`Alice: hello -${position};`))
 
     expect(node.type).toBe(commandType.say)

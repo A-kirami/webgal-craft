@@ -690,7 +690,11 @@ edit:
     arguments:
       when: 条件付き実行
       left: 左側位置
+      left14: 左側 1/4 位置
+      left13: 左側 1/3 位置
       right: 右側位置
+      right13: 右側 1/3 位置
+      right14: 右側 1/4 位置
       center: 中央位置
     missingResource: "リソースが見つかりません: {path}"
   diagnostics:
@@ -1136,10 +1140,18 @@ edit:
       notSelected: 未選択
       default: デフォルト
       left: 左
+      left14: 左 1/4
+      left13: 左 1/3
       center: 中央
+      right13: 右 1/3
+      right14: 右 1/4
       right: 右
       figureLeft: 左側立ち絵
+      figureLeft14: 左 1/4 立ち絵
+      figureLeft13: 左 1/3 立ち絵
       figureCenter: 中央立ち絵
+      figureRight13: 右 1/3 立ち絵
+      figureRight14: 右 1/4 立ち絵
       figureRight: 右側立ち絵
       blendNormal: 通常
       blendAdd: 覆い焼きリニア（加算）
@@ -1163,7 +1175,11 @@ edit:
       easeBounceInOut: バウンスインアウト
       easeAnticipate: アンティシペイト
       targetFigLeft: 左側立ち絵
+      targetFigLeft14: 左 1/4 立ち絵
+      targetFigLeft13: 左 1/3 立ち絵
       targetFigCenter: 中央立ち絵
+      targetFigRight13: 右 1/3 立ち絵
+      targetFigRight14: 右 1/4 立ち絵
       targetFigRight: 右側立ち絵
       targetBgMain: 背景画像
       targetStageMain: ステージ

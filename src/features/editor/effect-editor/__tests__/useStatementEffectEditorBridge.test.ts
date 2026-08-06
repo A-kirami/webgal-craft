@@ -148,6 +148,38 @@ describe('applyEffectEditorResultToSentence', () => {
 })
 
 describe('useStatementEffectEditorBridge', () => {
+  it.each([
+    ['left14', 'fig-left14'],
+    ['left13', 'fig-left13'],
+    ['right13', 'fig-right13'],
+    ['right14', 'fig-right14'],
+  ])('打开 changeFigure 扩展位置时使用对应预览目标 %s', (position, target) => {
+    const parsed = createSentence({
+      command: commandType.changeFigure,
+      content: 'hero.png',
+      args: [{ key: position, value: true }],
+    })
+    useEditorStoreMock.mockReturnValue({
+      currentSceneSelection: { lastLineNumber: 1, selectedStatementId: 1 },
+      currentState: {
+        kind: 'scene',
+        path: 'scene/start.txt',
+        projection: 'visual',
+        statements: [{ id: 1, rawText: 'changeFigure:hero.png;' }],
+      },
+    })
+
+    const bridge = createApp({}).runWithContext(() => useStatementEffectEditorBridge({
+      parsed,
+      updateTarget: createStatementIdTarget(1),
+      emitUpdate() { /* no-op */ },
+    }))
+
+    bridge.openEffectEditor()
+
+    expect(effectEditorOpenMock).toHaveBeenCalledWith(expect.objectContaining({ effectTarget: target }))
+  })
+
   it('视觉模式打开当前选中语句时复用已有行号', () => {
     const parsed = createSentence({
       command: commandType.changeFigure,

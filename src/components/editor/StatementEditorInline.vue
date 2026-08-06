@@ -3,6 +3,7 @@ import { StatementEntry } from '~/domain/script/sentence'
 import { statementEditorSurfaceKey } from '~/features/editor/statement-editor/surface-context'
 import { isStatementInteractiveTarget, useStatementEditor } from '~/features/editor/statement-editor/useStatementEditor'
 
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 import type { StatementUpdatePayload, StatementUpdateTarget } from '~/features/editor/statement-editor/useStatementEditor'
 
@@ -13,6 +14,7 @@ const props = defineProps<{
   previousSpeaker?: string
   /** 更新目标定位，默认使用 entry.id 作为语句 id */
   updateTarget?: StatementUpdateTarget
+  runtimeCapabilities?: EngineRuntimeCapabilities
 }>()
 
 provide(statementEditorSurfaceKey, 'inline')
@@ -42,6 +44,7 @@ const {
   previousSpeaker: () => props.previousSpeaker,
   emitUpdate: payload => emit('update', payload),
   surface: 'inline',
+  runtimeCapabilities: () => props.runtimeCapabilities,
 })
 
 const {

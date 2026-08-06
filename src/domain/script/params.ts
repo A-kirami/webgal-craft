@@ -1,7 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { readSayFigureTargetId } from '~/domain/script/say-figure'
-import { CommandNode, GenericCommandNode, isGenericNode } from '~/domain/script/types'
+import { CHANGE_FIGURE_POSITION_FLAGS, CommandNode, GenericCommandNode, isGenericNode } from '~/domain/script/types'
 import { getCommandConfig } from '~/features/editor/command-registry/index'
 import { isFlagChoiceField, readArgFields } from '~/features/editor/command-registry/schema'
 
@@ -82,19 +82,18 @@ export function resolveRegistryFieldMeta(
 export function getRegistryKnownKeys(type: commandType): Set<string> {
   const meta = getRegistryMeta(type)
   const keys = new Set(meta.keys())
-  // changeFigure 的 left/right 是 flag-choice 的选项值而非独立参数 key，
+  // changeFigure 的位置是 flag-choice 的选项值而非独立参数 key，
   // 不在注册表 meta 中，但在 args 数组中以 { key: 'left', value: true } 形式存在，
   // 需要手动补充以确保 upsertArgValue 能正确判断已知/未知参数的插入位置
   if (type === commandType.changeFigure) {
-    keys.add('left')
-    keys.add('right')
+    for (const flag of CHANGE_FIGURE_POSITION_FLAGS) {
+      keys.add(flag)
+    }
   }
   return keys
 }
 
 // ─── typed node 特殊路径 ────────────────────────────
-
-const CHANGE_FIGURE_POSITION_FLAGS = ['left', 'right'] as const
 
 function readChangeFigurePosition(node: GenericCommandNode, key: string): ParamValue | typeof NOT_HANDLED {
   if (node.type !== commandType.changeFigure || key !== 'position') {
