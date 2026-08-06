@@ -504,6 +504,7 @@ function getSentencePartAtPosition(line: string, column: number): SentencePart {
  * 获取命令补全
  */
 function getCommandSuggestion(model: monaco.editor.ITextModel, position: monaco.Position): monaco.languages.CompletionItem[] {
+  const runtimeCapabilities = useResourceStore().currentEngineRuntimeCapabilities
   const currentWord = model.getWordAtPosition(position)
   if (!currentWord) {
     return getCommandCompletions({
@@ -511,7 +512,7 @@ function getCommandSuggestion(model: monaco.editor.ITextModel, position: monaco.
       endLineNumber: position.lineNumber,
       startColumn: position.column,
       endColumn: position.column,
-    })
+    }, runtimeCapabilities)
   }
 
   const charAfterWord = model.getValueInRange({
@@ -526,10 +527,11 @@ function getCommandSuggestion(model: monaco.editor.ITextModel, position: monaco.
     endLineNumber: position.lineNumber,
     startColumn: currentWord.startColumn,
     endColumn: currentWord.endColumn + (isColonAfterWord ? 1 : 0),
-  })
+  }, runtimeCapabilities)
 }
 
 async function getArgumentSuggestion(model: monaco.editor.ITextModel, position: monaco.Position): Promise<monaco.languages.CompletionItem[]> {
+  const runtimeCapabilities = useResourceStore().currentEngineRuntimeCapabilities
   const currentLine = model.getLineContent(position.lineNumber)
 
   const sentence = getCompletionSentence(model, position)
@@ -551,6 +553,7 @@ async function getArgumentSuggestion(model: monaco.editor.ITextModel, position: 
       target.prefix,
       range,
       sentence?.content ?? '',
+      runtimeCapabilities,
     )
   }
 
@@ -567,7 +570,7 @@ async function getArgumentSuggestion(model: monaco.editor.ITextModel, position: 
     },
     command,
     target.hasLeadingDash,
-    useResourceStore().currentEngineRuntimeCapabilities,
+    runtimeCapabilities,
   )
 }
 
@@ -642,6 +645,7 @@ function buildValueCompletions(
   prefix: string,
   range: monaco.IRange,
   contentContext: string,
+  runtimeCapabilities = useResourceStore().currentEngineRuntimeCapabilities,
 ): Promise<monaco.languages.CompletionItem[]> {
   const workspace = useWorkspaceStore()
   const gamePath = workspace.currentGame?.path
@@ -652,10 +656,11 @@ function buildValueCompletions(
     range,
     content: contentContext,
     gamePath,
-    allowExtendedFigurePositions: useResourceStore().currentEngineRuntimeCapabilities.figurePositions,
+    allowExtendedFigurePositions: runtimeCapabilities.figurePositions,
     sceneOptions: buildSceneAutocompleteOptionsFromText(model.getValue()),
     listResources: getResourceOptions,
     resolveDynamicOptions: (dynamicKey, context) => resolveDynamicOptions(dynamicKey, context),
+    runtimeCapabilities,
   }, i18n.global.t)
 }
 

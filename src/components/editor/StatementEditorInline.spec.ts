@@ -72,6 +72,10 @@ function createEditorReturn(overrides: Record<string, unknown> = {}) {
         styleRules: { value: [] },
       },
     },
+    params: {
+      callSceneParameters: computed(() => undefined),
+      handleCallSceneParametersChange: vi.fn(),
+    },
     misc: {
       handleCommentChange: handleCommentChangeMock,
       handleInlineCommentChange: handleInlineCommentChangeMock,

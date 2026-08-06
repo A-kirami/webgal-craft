@@ -160,8 +160,8 @@ describe('命令节点编解码', () => {
     expect(node.extraArgs).toEqual([{ key: 'next', value: true }])
   })
 
-  it('解析类型化 setVar 节点', () => {
-    const sentence = mustParse('setVar: score=10 -global -custom=foo;')
+  it('解析类型化 setVar 节点并规范化互斥作用域', () => {
+    const sentence = mustParse('setVar: score=10 -global -local -custom=foo;')
     const node = parseCommandNode(sentence)
     expect(node.type).toBe(commandType.setVar)
     if (node.type !== commandType.setVar) {
@@ -171,7 +171,41 @@ describe('命令节点编解码', () => {
     expect(node.name).toBe('score')
     expect(node.value).toBe('10')
     expect(node.global).toBe(true)
+    expect(node.local).toBe(false)
     expect(node.extraArgs).toEqual([{ key: 'custom', value: 'foo' }])
+    expect(serializeCommandNode(node).args).toEqual([
+      { key: 'global', value: true },
+      { key: 'custom', value: 'foo' },
+    ])
+  })
+
+  it('解析 callScene 返回值变量与动态参数', () => {
+    const node = parseCommandNode(mustParse('callScene:battle.txt -enemy=slime -hp=100 -writeReturnTo=result;'))
+
+    expect(node).toMatchObject({
+      type: commandType.callScene,
+      file: 'battle.txt',
+      writeReturnTo: 'result',
+      extraArgs: [
+        { key: 'enemy', value: 'slime' },
+        { key: 'hp', value: 100 },
+      ],
+    })
+    expect(serializeCommandNode(node).args).toEqual([
+      { key: 'writeReturnTo', value: 'result' },
+      { key: 'enemy', value: 'slime' },
+      { key: 'hp', value: 100 },
+    ])
+  })
+
+  it('解析 return 命令的可选值', () => {
+    const node = parseCommandNode(mustParse('return:success -trace=1;'))
+
+    expect(node).toMatchObject({
+      type: commandType.return,
+      value: 'success',
+      extraArgs: [{ key: 'trace', value: 1 }],
+    })
   })
 
   it('解析类型化 choose/applyStyle 节点', () => {

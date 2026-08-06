@@ -215,6 +215,45 @@ describe('diagnoseScene', () => {
       runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
     })).toEqual([])
   })
+
+  it('诊断 callScene 的保留参数', () => {
+    expect(diagnoseScene([
+      parseSentence('callScene:battle.txt -next -continue -when=hp>0;'),
+    ])).toEqual([
+      {
+        argument: 'next',
+        code: 'reserved-call-scene-argument',
+        field: { kind: 'argument', key: 'next' },
+        severity: 'warning',
+        source: 'scene',
+        statementIndex: 0,
+      },
+      {
+        argument: 'continue',
+        code: 'reserved-call-scene-argument',
+        field: { kind: 'argument', key: 'continue' },
+        severity: 'warning',
+        source: 'scene',
+        statementIndex: 0,
+      },
+    ])
+  })
+
+  it('旧运行时分别诊断返回命令、局部变量和场景调用参数', () => {
+    expect(diagnoseScene([
+      parseSentence('return:success;'),
+      parseSentence('setVar: result=1 -local;'),
+      parseSentence('callScene:battle.txt -enemy=slime -when=hp>0 -writeReturnTo=result;'),
+    ], {
+      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    })).toEqual([
+      expect.objectContaining({ code: 'unsupported-return-command', statementIndex: 0, value: 'return' }),
+      expect.objectContaining({ code: 'unsupported-local-variable', statementIndex: 1, field: { kind: 'argument', key: 'local' } }),
+      expect.objectContaining({ code: 'unsupported-call-scene-argument', statementIndex: 2, field: { kind: 'argument', key: 'enemy' } }),
+      expect.objectContaining({ code: 'unsupported-call-scene-argument', statementIndex: 2, field: { kind: 'argument', key: 'when' } }),
+      expect.objectContaining({ code: 'unsupported-call-scene-argument', statementIndex: 2, field: { kind: 'argument', key: 'writeReturnTo' } }),
+    ])
+  })
 })
 
 describe('diagnoseEditorDocument', () => {

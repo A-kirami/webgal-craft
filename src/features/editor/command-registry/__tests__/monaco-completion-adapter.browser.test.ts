@@ -187,6 +187,7 @@ describe('getArgKeyCompletions', () => {
       figurePositions: false,
       multilineStatements: false,
       opusVocalShorthand: false,
+      sceneSemantics: false,
     })
 
     expect(completions.map(item => item.label)).not.toContain('left13')

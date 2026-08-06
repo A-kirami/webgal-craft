@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import CallSceneParametersEditor from './CallSceneParametersEditor.vue'
+
 import type {
   ParamRendererCommitSliderPayload,
   ParamRendererLabelPointerPayload,
@@ -8,6 +10,7 @@ import type {
   StatementSpecialContentBindings,
   StatementSpecialContentMode,
 } from './types'
+import type { arg } from 'webgal-parser/src/interface/sceneInterface'
 import type { EditorField } from '~/features/editor/command-registry/schema'
 
 interface Props {
@@ -25,10 +28,14 @@ interface Props {
   onUpdateSelect: (payload: ParamRendererSelectPayload) => void
   onLabelPointerDown: (payload: ParamRendererLabelPointerPayload) => void
   onCommitSlider?: (payload: ParamRendererCommitSliderPayload) => void
+  callSceneParameters?: readonly arg[]
+  onUpdateCallSceneParameters?: (parameters: arg[]) => void
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  callSceneParameters: undefined,
   onCommitSlider: undefined,
+  onUpdateCallSceneParameters: undefined,
   specialContentMode: undefined,
 })
 
@@ -47,6 +54,11 @@ const paramRendererMode = $computed(() => {
 const isCommand = $computed(() => props.statementType === 'command')
 const hasBasicFields = $computed(() => props.basicRenderFields.length > 0)
 const showSpecialContentEditor = $computed(() => isCommand && !!props.specialContentMode)
+const showCallSceneParametersEditor = $computed(() => props.statementType === 'command' && props.callSceneParameters !== undefined)
+
+function handleCallSceneParametersUpdate(parameters: arg[]): void {
+  props.onUpdateCallSceneParameters?.(parameters)
+}
 
 function handleOpenAnimationEditor() {
   emit('openAnimationEditor')
@@ -113,6 +125,12 @@ function handleOpenEffectEditor() {
       @update-select="props.onUpdateSelect"
       @label-pointer-down="props.onLabelPointerDown"
       @commit-slider="props.onCommitSlider"
+    />
+    <CallSceneParametersEditor
+      v-if="showCallSceneParametersEditor"
+      :surface="props.surface"
+      :parameters="props.callSceneParameters ?? []"
+      @update="handleCallSceneParametersUpdate"
     />
     <Button
       v-if="isCommand && props.showEffectEditorButton && !props.effectEditorAtTop"

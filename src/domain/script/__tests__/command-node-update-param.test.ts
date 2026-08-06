@@ -309,6 +309,24 @@ describe('命令节点参数更新器', () => {
     expect(serialized.args).toEqual([{ key: 'global', value: true }])
   })
 
+  it('setVar global 与 local 互斥', () => {
+    const node = parseCommandNode(mustParse('setVar: score=10 -global;'))
+    const updated = updateCommandNodeParam(node, makeParamDef('local', 'switch'), true)
+
+    expect(updated).toBeDefined()
+    expect(serializeCommandNode(updated!).args).toEqual([{ key: 'local', value: true }])
+  })
+
+  it('可更新 callScene 的 writeReturnTo 参数', () => {
+    const node = parseCommandNode(mustParse('callScene:battle.txt -enemy=slime;'))
+    const withReturnTarget = updateCommandNodeParam(node, makeParamDef('writeReturnTo', 'text'), 'result')
+    expect(withReturnTarget).toBeDefined()
+    expect(serializeCommandNode(withReturnTarget!).args).toEqual([
+      { key: 'writeReturnTo', value: 'result' },
+      { key: 'enemy', value: 'slime' },
+    ])
+  })
+
   it('可更新 callSteam achievementId 并保留额外参数', () => {
     const sentence = mustParse('callSteam:  -achievementId=achv-1 -x=1;')
     const node = parseCommandNode(sentence)

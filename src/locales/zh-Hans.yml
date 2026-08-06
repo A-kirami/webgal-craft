@@ -704,7 +704,11 @@ edit:
     unsupportedMultilineStatements: 多行语句需要 WebGAL 4.6.3 或更高版本
     unsupportedOpusVocal: Opus 语音简写需要 WebGAL 4.6.3 或更高版本
     unsupportedFigurePosition: 此立绘位置需要 WebGAL 4.6.3 或更高版本。
+    unsupportedCallSceneArgument: “调用场景”命令向子场景传递参数需要 WebGAL 4.6.3 或更高版本。
+    unsupportedLocalVariable: “局部变量”参数需要 WebGAL 4.6.3 或更高版本。
+    unsupportedReturnCommand: “返回场景”命令需要 WebGAL 4.6.3 或更高版本。
     unsupportedSpine: 当前引擎不支持 Spine 模型。
+    reservedCallSceneArgument: "“{argument}”为保留参数，不能用于 callScene。"
   errors:
     fileSyncFailed: 文件同步失败，请稍后重试
     previewUnavailable: 预览地址不存在，请先启动预览
@@ -927,6 +931,7 @@ edit:
       video: 视频
       changeScene: 切换场景
       callScene: 调用场景
+      return: 返回场景
       choose: 分支选择
       label: 标签
       jumpLabel: 跳转标签
@@ -961,6 +966,7 @@ edit:
       video: 全屏播放一段视频
       changeScene: 结束当前场景并切换到另一个场景
       callScene: 调用子场景，结束后返回当前场景
+      return: 从当前子场景返回，可选地返回一个值
       choose: 显示分支选项供玩家选择
       label: 定义一个可跳转到的标签位置
       jumpLabel: 跳转到当前场景中的指定标签
@@ -1027,6 +1033,11 @@ edit:
       varName: 变量名
       varValue: 变量值
       global: 全局变量
+      local: 局部变量
+      writeReturnTo: 返回值变量
+      parameterKey: 参数名
+      parameterValue: 参数值
+      addParameter: 添加场景参数
       inputTitle: 对话框标题
       buttonText: 确认按钮文本
       defaultValue: 默认值
@@ -1121,6 +1132,9 @@ edit:
       global:
         on: 在所有存档中共用此变量，重新开始游戏后也会保留。
         off: 变量随当前游戏进度保存和读取。
+      local:
+        on: 将此变量限制在当前场景调用中。
+        off: 使用默认变量作用域。
       nobreak:
         on: 等待结束前，玩家操作和自动播放都无法进入下一句。
         off: 玩家操作或自动播放可以提前结束等待。

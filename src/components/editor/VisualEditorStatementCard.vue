@@ -55,7 +55,10 @@ watch(() => collapsed, (isCollapsed) => {
   }
 })
 
-const { parsed, config, contentField, argFields, theme, statementType, commandLabel } = provideStatementMeta(() => props.entry)
+const { parsed, config, contentField, argFields, theme, statementType, commandLabel } = provideStatementMeta(
+  () => props.entry,
+  () => props.runtimeCapabilities,
+)
 
 const { t } = useI18n()
 const sceneAutocompleteOptions = inject(sceneAutocompleteOptionsKey, undefined)

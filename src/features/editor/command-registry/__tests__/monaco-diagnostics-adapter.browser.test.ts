@@ -312,4 +312,49 @@ describe('updateEditorDiagnostics', () => {
       message: 'edit.diagnostics.unsupportedOpusVocal:',
     })])
   })
+
+  it('为旧运行时分别标记返回命令、局部变量和场景调用参数', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+
+    const model = createModel([
+      'return;',
+      'setVar: result=1 -local;',
+      'callScene:battle.txt -enemy=slime -writeReturnTo=result;',
+    ].join('\n'))
+    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(readMarkers(model)).toEqual([
+      expect.objectContaining({
+        startLineNumber: 1,
+        startColumn: 1,
+        endColumn: 7,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.unsupportedReturnCommand:',
+      }),
+      expect.objectContaining({
+        startLineNumber: 2,
+        startColumn: 18,
+        endColumn: 24,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.unsupportedLocalVariable:',
+      }),
+      expect.objectContaining({
+        startLineNumber: 3,
+        startColumn: 29,
+        endColumn: 34,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.unsupportedCallSceneArgument:',
+      }),
+      expect.objectContaining({
+        startLineNumber: 3,
+        startColumn: 50,
+        endColumn: 56,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.unsupportedCallSceneArgument:',
+      }),
+    ])
+  })
 })

@@ -2,7 +2,7 @@ import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseChooseContent, parseSetVarContent, parseStyleRuleContent, stringifyChooseContent, stringifySetVarContent, stringifyStyleRuleContent } from '~/domain/script/content'
-import { ApplyStyleCommandNode, ChooseCommandNode, CommandNode, CommentCommandNode, GenericCommandNode, GenericCommandType, SAY_FIGURE_POSITIONS, SayCommandNode, SetVarCommandNode, TypedCommandNode } from '~/domain/script/types'
+import { ApplyStyleCommandNode, CallSceneCommandNode, ChooseCommandNode, CommandNode, CommentCommandNode, GenericCommandNode, GenericCommandType, ReturnCommandNode, SAY_FIGURE_POSITIONS, SayCommandNode, SetVarCommandNode, TypedCommandNode } from '~/domain/script/types'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
@@ -289,13 +289,15 @@ function serializeCommentNode(node: CommentCommandNode): ISentence {
 function parseSetVarNode(sentence: ISentence): SetVarCommandNode {
   const args = cloneArgs(sentence.args)
   const parsedContent = parseSetVarContent(sentence.content)
+  const global = consumeFlagArg(args, 'global')
   return {
     type: commandType.setVar,
     commandRaw: sentence.commandRaw,
     inlineComment: sentence.inlineComment,
     name: parsedContent.name,
     value: parsedContent.value,
-    global: consumeFlagArg(args, 'global'),
+    global,
+    local: consumeFlagArg(args, 'local') && !global,
     extraArgs: args,
   }
 }
@@ -306,7 +308,48 @@ function serializeSetVarNode(node: SetVarCommandNode): ISentence {
     content: stringifySetVarContent(node.name, node.value),
     args: argBuilder()
       .flag('global', node.global)
+      .flag('local', node.local && !node.global)
       .build(node.extraArgs),
+  }
+}
+
+function parseCallSceneNode(sentence: ISentence): CallSceneCommandNode {
+  const args = cloneArgs(sentence.args)
+  return {
+    type: commandType.callScene,
+    commandRaw: sentence.commandRaw,
+    inlineComment: sentence.inlineComment,
+    file: sentence.content,
+    writeReturnTo: consumeStringArg(args, 'writeReturnTo'),
+    extraArgs: args,
+  }
+}
+
+function serializeCallSceneNode(node: CallSceneCommandNode): ISentence {
+  return {
+    ...toSentenceBase(node),
+    content: node.file,
+    args: argBuilder()
+      .string('writeReturnTo', node.writeReturnTo)
+      .build(node.extraArgs),
+  }
+}
+
+function parseReturnNode(sentence: ISentence): ReturnCommandNode {
+  return {
+    type: commandType.return,
+    commandRaw: sentence.commandRaw,
+    inlineComment: sentence.inlineComment,
+    value: sentence.content,
+    extraArgs: cloneArgs(sentence.args),
+  }
+}
+
+function serializeReturnNode(node: ReturnCommandNode): ISentence {
+  return {
+    ...toSentenceBase(node),
+    content: node.value,
+    args: cloneArgs(node.extraArgs),
   }
 }
 
@@ -372,6 +415,8 @@ const commandCodecMap = buildCommandCodecMap([
   createCommandCodec(commandType.say, parseSayNode, serializeSayNode),
   createCommandCodec(commandType.comment, parseCommentNode, serializeCommentNode),
   createCommandCodec(commandType.setVar, parseSetVarNode, serializeSetVarNode),
+  createCommandCodec(commandType.callScene, parseCallSceneNode, serializeCallSceneNode),
+  createCommandCodec(commandType.return, parseReturnNode, serializeReturnNode),
   createCommandCodec(commandType.choose, parseChooseNode, serializeChooseNode),
   createCommandCodec(commandType.applyStyle, parseApplyStyleNode, serializeApplyStyleNode),
 ])

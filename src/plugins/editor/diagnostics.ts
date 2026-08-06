@@ -14,6 +14,7 @@ import type { StatementSourceRange } from '~/domain/script/sentence'
 import type { ResourceReferenceQuery } from '~/services/resource-index/reference-query'
 
 const OWNER = 'webgal-editor-diagnostics'
+
 export function updateEditorDiagnostics(
   model: monaco.editor.ITextModel,
   runtimeCapabilities?: EngineRuntimeCapabilities,
@@ -67,7 +68,27 @@ export function updateEditorDiagnostics(
       continue
     }
 
-    if (['unsupported-live2d', 'unsupported-spine', 'unsupported-opus-vocal', 'unsupported-figure-position'].includes(diagnostic.code)) {
+    if (diagnostic.code === 'reserved-call-scene-argument') {
+      markers.push({
+        ...locateReference(lines, range, sentence, {
+          source: diagnostic.field,
+          value: diagnostic.argument,
+        }),
+        severity: monaco.MarkerSeverity.Warning,
+        message,
+      })
+      continue
+    }
+
+    if ([
+      'unsupported-live2d',
+      'unsupported-spine',
+      'unsupported-opus-vocal',
+      'unsupported-figure-position',
+      'unsupported-return-command',
+      'unsupported-local-variable',
+      'unsupported-call-scene-argument',
+    ].includes(diagnostic.code) && 'value' in diagnostic) {
       markers.push({
         ...locateReference(lines, range, sentence, {
           source: diagnostic.field,
@@ -138,7 +159,21 @@ function locateReference(
   }
 
   if (reference.source.kind === 'argument') {
-    const argumentPattern = new RegExp(String.raw`(?:^|\s)-${escapeRegExp(reference.source.key)}=([^;\s]*)`)
+    const key = reference.source.key
+    const argument = sentence.args.find(item => item.key === key)
+    if (argument?.value === true) {
+      const argumentPattern = new RegExp(String.raw`(?:^|\s)-${escapeRegExp(key)}(?=\s|;|$)`)
+      for (let line = range.startLine; line <= range.endLine; line++) {
+        const text = lines[line] ?? ''
+        const match = argumentPattern.exec(text)
+        if (match?.index !== undefined) {
+          const start = match.index + match[0].lastIndexOf('-')
+          return createMarkerRange({ line, start }, key.length + 1)
+        }
+      }
+    }
+
+    const argumentPattern = new RegExp(String.raw`(?:^|\s)-${escapeRegExp(key)}=([^;\s]*)`)
     for (let line = range.startLine; line <= range.endLine; line++) {
       const text = lines[line] ?? ''
       const match = argumentPattern.exec(text)

@@ -40,6 +40,17 @@ describe('parser', () => {
     expect(sentence?.content).toBe('A:scene1.txt|B:scene2.txt')
   })
 
+  it('将裸 return 归一化为 return 命令', () => {
+    const sentence = parseSentence('return;')
+
+    expect(sentence).toMatchObject({
+      command: commandType.return,
+      commandRaw: 'return',
+      content: '',
+      args: [],
+    })
+  })
+
   it('parseSceneOrEmpty 在空文本下会返回空场景对象', () => {
     const scene = parseSceneOrEmpty('')
 

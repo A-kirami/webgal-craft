@@ -37,6 +37,9 @@ const SENTENCE_FIXTURES: SentenceFixture[] = [
   { name: 'choose', raw: 'choose: A:scene1.txt|B:scene2.txt;', expectedCommand: commandType.choose },
   { name: 'apply-style', raw: 'applyStyle: old->new,foo->bar;', expectedCommand: commandType.applyStyle },
   { name: 'set-var', raw: 'setVar: score=10;', expectedCommand: commandType.setVar },
+  { name: 'bare-return', raw: 'return;', expectedCommand: commandType.return },
+  { name: 'return-with-value', raw: 'return:success;', expectedCommand: commandType.return },
+  { name: 'call-scene-with-return-value', raw: 'callScene:battle.txt -enemy=slime -writeReturnTo=result;', expectedCommand: commandType.callScene },
   { name: 'change-bg', raw: 'changeBg: bg.jpg -next -duration=300;', expectedCommand: commandType.changeBg },
 ]
 

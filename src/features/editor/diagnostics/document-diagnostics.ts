@@ -14,14 +14,14 @@ interface EditorDiagnosticTextProjection {
 
 interface EditorDiagnosticVisualProjection {
   kind: string
-  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'figurePositions' | 'opusVocalShorthand'>
+  runtimeCapabilities?: EngineRuntimeCapabilities
   statements?: readonly StatementEntry[]
 }
 
 interface DiagnoseEditorDocumentOptions {
   engineCapabilities?: EngineModelCapabilities
+  runtimeCapabilities?: EngineRuntimeCapabilities
   hasAssetKey?: (key: AssetKey) => boolean
-  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'figurePositions' | 'opusVocalShorthand'>
   textProjection?: EditorDiagnosticTextProjection
   visualProjection?: EditorDiagnosticVisualProjection
 }

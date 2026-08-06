@@ -10,6 +10,7 @@ interface Props {
   firstPlaceholder?: string
   secondPlaceholder?: string
   addLabel: string
+  separator?: 'arrow' | 'equals'
 }
 
 const props = defineProps<Props>()
@@ -28,6 +29,7 @@ defineSlots<{
 }>()
 
 const isInline = $computed(() => props.surface === 'inline')
+const separator = $computed(() => props.separator ?? 'arrow')
 const { buildControlId } = useControlId('pair-list')
 
 interface PairListItem {
@@ -136,7 +138,16 @@ function secondInputId(index: number): string {
           class="text-xs px-2.5 flex-1 h-6 min-w-20 shadow-none"
           @update:model-value="emit('updateFirst', { index: i, value: String($event) })"
         />
-        <div class="i-lucide-arrow-right text-muted-foreground shrink-0 size-3.5" />
+        <div
+          v-if="separator === 'equals'"
+          class="text-xs text-muted-foreground shrink-0"
+        >
+          =
+        </div>
+        <div
+          v-else
+          class="i-lucide-arrow-right text-muted-foreground shrink-0 size-3.5"
+        />
         <slot name="second-field" :item="item" :index="i">
           <Input
             :model-value="item.second"

@@ -4,7 +4,7 @@ import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capa
 import { parseCommandNode, serializeCommandNode } from '~/domain/script/codec'
 import { createEmptySentence, ensureParsed, StatementEntry } from '~/domain/script/sentence'
 import { serializeSentence } from '~/domain/script/serialize'
-import { updateCommandNodeInlineComment } from '~/domain/script/update'
+import { readCallSceneCustomArgs, updateCallSceneCustomArgs, updateCommandNodeInlineComment } from '~/domain/script/update'
 import { resolveStatementSpecialContentMode } from '~/features/editor/command-registry/schema'
 import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
 import { sceneAutocompleteOptionsKey } from '~/features/editor/statement-editor/scene-autocomplete-context'
@@ -83,6 +83,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   useEditorDynamicOptionsBootstrap()
 
   const entry = computed(() => toValue(options.entry))
+  const supportsSceneSemantics = computed(() => toValue(options.runtimeCapabilities)?.sceneSemantics ?? true)
   const updateTarget = computed(() => toValue(options.updateTarget) ?? createStatementIdTarget(entry.value.id))
   const previousSpeaker = computed(() => toValue(options.previousSpeaker) ?? '')
   const runtimeCapabilities = computed(() => toValue(options.runtimeCapabilities) ?? LATEST_ENGINE_RUNTIME_CAPABILITIES)
@@ -97,10 +98,13 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   // 卡片内嵌场景：VisualEditorStatementCard 已 provide，直接复用；
   // 侧边栏 StatementEditorPanel 不在卡片组件树内，inject 返回 undefined，自动 fallback；
   const injectedMeta = inject(statementMetaKey, undefined)
-  const meta = injectedMeta ?? useStatementMeta(entry)
+  const meta = injectedMeta ?? useStatementMeta(entry, options.runtimeCapabilities)
   const { parsed: sourceParsed, config, editorFields, argFields, contentField, theme, statementType, commandLabel } = meta
 
   const localDraft = ref<{ rawText: string, parsed: ISentence }>()
+  // callScene 新增参数需要先显示空白编辑行，但空键参数不能写入脚本。
+  // 将这类临时行保存在编辑器草稿中，领域更新仍只保留可序列化参数。
+  const callSceneParameterDrafts = ref<arg[]>([])
   const parsed = computed(() => localDraft.value?.parsed ?? sourceParsed.value)
   const commandNode = computed(() => parsed.value ? parseCommandNode(parsed.value) : undefined)
 
@@ -121,6 +125,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     (rawText) => {
       if (localDraft.value?.rawText !== rawText) {
         localDraft.value = undefined
+        callSceneParameterDrafts.value = []
       }
     },
   )
@@ -306,6 +311,29 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     emitSentenceUpdate(serializeCommandNode(updatedNode))
   }
 
+  const callSceneParameters = computed(() => {
+    if (!supportsSceneSemantics.value || commandNode.value?.type !== commandType.callScene) {
+      return
+    }
+    return [
+      ...readCallSceneCustomArgs(commandNode.value),
+      ...cloneArgs(callSceneParameterDrafts.value),
+    ]
+  })
+
+  function handleCallSceneParametersChange(parameters: arg[]): void {
+    if (!supportsSceneSemantics.value || commandNode.value?.type !== commandType.callScene) {
+      return
+    }
+    callSceneParameterDrafts.value = parameters
+      .filter(parameter => parameter.key.trim() === '')
+      .map(parameter => ({ ...parameter }))
+    const updatedNode = updateCallSceneCustomArgs(commandNode.value, parameters)
+    if (updatedNode) {
+      emitSentenceUpdate(serializeCommandNode(updatedNode))
+    }
+  }
+
   return {
     parsed,
     config,
@@ -355,6 +383,8 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       handleFieldValueChange: fieldBindings.handleFieldValueChange,
       handleFieldSelectChange: fieldBindings.handleFieldSelectChange,
       readArgRuntimeValue: params.readArgRuntimeValue,
+      callSceneParameters,
+      handleCallSceneParametersChange,
     },
 
     misc: {

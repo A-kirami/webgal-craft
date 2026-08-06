@@ -34,6 +34,7 @@ const {
   hasVisibleAdvancedParams,
   content,
   misc,
+  params,
   say,
   view,
   paramRenderer,
@@ -137,6 +138,8 @@ function handleBlankDblClick(e: MouseEvent) {
         :on-update-value="paramRenderer.handleUpdateValue"
         :on-update-select="paramRenderer.handleUpdateSelect"
         :on-label-pointer-down="paramRenderer.handleLabelPointerDown"
+        :call-scene-parameters="params.callSceneParameters.value"
+        :on-update-call-scene-parameters="params.handleCallSceneParametersChange"
         @open-animation-editor="emit('openAnimationEditor')"
         @open-effect-editor="emit('openEffectEditor')"
       />

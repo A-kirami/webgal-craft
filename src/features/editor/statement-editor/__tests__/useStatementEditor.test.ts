@@ -6,6 +6,7 @@ import '~/__tests__/mocks/modal-store'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { SAY_CONTINUATION_RAW } from '~/domain/script/codec'
 import { FIGURE_POSITION_TARGET_IDS } from '~/domain/script/types'
 import {
@@ -29,6 +30,31 @@ beforeEach(() => {
 })
 
 describe('useStatementEditor', () => {
+  it('callScene 编辑器读写动态参数并保留返回值目标', () => {
+    const { editor, updates } = createHarness('callScene:battle.txt -when=hp>0 -writeReturnTo=result -enemy=slime;')
+
+    expect(editor.params.callSceneParameters.value).toEqual([
+      { key: 'when', value: 'hp>0' },
+      { key: 'enemy', value: 'slime' },
+    ])
+    editor.params.handleCallSceneParametersChange([
+      { key: 'when', value: 'hp>0' },
+      { key: 'difficulty', value: 'hard' },
+    ])
+
+    expect(updates.at(-1)?.rawText).toBe('callScene:battle.txt -writeReturnTo=result -when=hp>0 -difficulty=hard;')
+  })
+
+  it('旧运行时隐藏 callScene 动态参数编辑器', () => {
+    const { editor, updates } = createHarness('callScene:battle.txt -enemy=slime;', {
+      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    })
+
+    expect(editor.params.callSceneParameters.value).toBeUndefined()
+    editor.params.handleCallSceneParametersChange([{ key: 'difficulty', value: 'hard' }])
+    expect(updates).toEqual([])
+  })
+
   it('choose 默认分支由特殊内容编辑器托管，不显示独立参数字段', () => {
     const { editor } = createHarness('choose:a:a.txt|b:b.txt -defaultChoose=2;')
 

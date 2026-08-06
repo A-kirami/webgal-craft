@@ -69,6 +69,38 @@ export interface UnsupportedFigurePositionEditorDiagnostic extends SceneEditorDi
   value: string
 }
 
+export interface ReservedCallSceneArgumentEditorDiagnostic extends SceneEditorDiagnosticBase {
+  argument: 'continue' | 'next'
+  code: 'reserved-call-scene-argument'
+  field: { kind: 'argument', key: string }
+  severity: 'warning'
+  source: 'scene'
+}
+
+export interface UnsupportedReturnCommandEditorDiagnostic extends SceneEditorDiagnosticBase {
+  code: 'unsupported-return-command'
+  field: { kind: 'content' }
+  severity: 'warning'
+  source: 'engine'
+  value: string
+}
+
+export interface UnsupportedLocalVariableEditorDiagnostic extends SceneEditorDiagnosticBase {
+  code: 'unsupported-local-variable'
+  field: { kind: 'argument', key: 'local' }
+  severity: 'warning'
+  source: 'engine'
+  value: string
+}
+
+export interface UnsupportedCallSceneArgumentEditorDiagnostic extends SceneEditorDiagnosticBase {
+  code: 'unsupported-call-scene-argument'
+  field: { kind: 'argument', key: string }
+  severity: 'warning'
+  source: 'engine'
+  value: string
+}
+
 export interface InvalidAnimationDocumentDiagnostic extends EditorDiagnosticBase {
   code: 'invalid-animation-json'
   severity: 'error'
@@ -83,6 +115,10 @@ export type SceneEditorDiagnostic =
   | UnsupportedSpineEditorDiagnostic
   | UnsupportedOpusVocalEditorDiagnostic
   | UnsupportedFigurePositionEditorDiagnostic
+  | ReservedCallSceneArgumentEditorDiagnostic
+  | UnsupportedReturnCommandEditorDiagnostic
+  | UnsupportedLocalVariableEditorDiagnostic
+  | UnsupportedCallSceneArgumentEditorDiagnostic
 
 export type EditorFieldDiagnostic =
   | Omit<DuplicateLabelEditorDiagnostic, 'statementIndex'>
@@ -92,6 +128,10 @@ export type EditorFieldDiagnostic =
   | Omit<UnsupportedSpineEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedOpusVocalEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedFigurePositionEditorDiagnostic, 'statementIndex'>
+  | Omit<ReservedCallSceneArgumentEditorDiagnostic, 'statementIndex'>
+  | Omit<UnsupportedReturnCommandEditorDiagnostic, 'statementIndex'>
+  | Omit<UnsupportedLocalVariableEditorDiagnostic, 'statementIndex'>
+  | Omit<UnsupportedCallSceneArgumentEditorDiagnostic, 'statementIndex'>
 
 export type EditorDiagnostic =
   | SceneEditorDiagnostic

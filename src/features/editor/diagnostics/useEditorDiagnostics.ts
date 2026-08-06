@@ -44,6 +44,7 @@ export function useEditorDiagnostics(): void {
         editorStore.peekSceneRevision(tab.path),
         textProjection?.kind,
         textProjection?.syncError,
+        textProjection?.runtimeCapabilities,
       ] as const
     }),
     publishOpenDocumentDiagnostics,

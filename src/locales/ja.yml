@@ -704,7 +704,11 @@ edit:
     unsupportedMultilineStatements: 複数行のステートメントには WebGAL 4.6.3 以降が必要です。
     unsupportedOpusVocal: Opus 音声の省略記法には WebGAL 4.6.3 以降が必要です。
     unsupportedFigurePosition: この立ち絵位置を使用するには WebGAL 4.6.3 以降が必要です。
+    unsupportedCallSceneArgument: 「callScene」コマンドで子シーンに引数を渡すには WebGAL 4.6.3 以降が必要です。
+    unsupportedLocalVariable: 「local」パラメータには WebGAL 4.6.3 以降が必要です。
+    unsupportedReturnCommand: 「return」コマンドには WebGAL 4.6.3 以降が必要です。
     unsupportedSpine: 現在のエンジンは Spine モデルをサポートしていません。
+    reservedCallSceneArgument: '"{argument}" は予約済みのため、callScene では使用できません。'
   errors:
     fileSyncFailed: ファイルの同期に失敗しました。しばらくしてからもう一度お試しください。
     previewUnavailable: プレビューURLがありません。先にプレビューを起動してください。
@@ -927,6 +931,7 @@ edit:
       video: 動画
       changeScene: シーン切替
       callScene: シーン呼出
+      return: シーンから戻る
       choose: 選択肢
       label: ラベル
       jumpLabel: ラベルジャンプ
@@ -961,6 +966,7 @@ edit:
       video: 動画をフルスクリーンで再生します
       changeScene: 現在のシーンを終了し、別のシーンに切り替えます
       callScene: サブシーンを呼び出し、終了後に現在のシーンへ戻ります
+      return: 現在のサブシーンから戻り、必要に応じて値を返します
       choose: プレイヤー向けの分岐選択肢を表示します
       label: ジャンプ可能なラベル位置を定義します
       jumpLabel: 現在のシーン内のラベルへジャンプします
@@ -1027,6 +1033,11 @@ edit:
       varName: 変数名
       varValue: 値
       global: グローバル変数
+      local: ローカル変数
+      writeReturnTo: 戻り値の変数
+      parameterKey: パラメータ名
+      parameterValue: パラメータ値
+      addParameter: シーンパラメータを追加
       inputTitle: ダイアログタイトル
       buttonText: 確認ボタンテキスト
       defaultValue: デフォルト値
@@ -1121,6 +1132,9 @@ edit:
       global:
         on: すべてのセーブデータでこの変数を共有し、ゲームを最初から始めても保持します。
         off: この変数を現在のゲーム進行と一緒にセーブ、ロードします。
+      local:
+        on: この変数を現在のシーン呼び出し内に限定します。
+        off: デフォルトの変数スコープを使用します。
       nobreak:
         on: 待機が終わるまで、プレイヤー操作でもオート再生でも次へ進めません。
         off: プレイヤー操作またはオート再生で待機を途中で終了できます。

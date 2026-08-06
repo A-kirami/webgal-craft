@@ -184,6 +184,15 @@ describe('命令节点内容更新', () => {
     expect(serialized.args).toEqual([{ key: 'x', value: 1 }])
   })
 
+  it('直接更新 return 内容', () => {
+    const node = parseCommandNode(mustParse('return:old;'))
+    const updated = updateCommandNodeContent(node, 'new')
+    const serialized = serializeCommandNode(updated)
+
+    expect(serialized.command).toBe(commandType.return)
+    expect(serialized.content).toBe('new')
+  })
+
   it('直接更新 wait 内容', () => {
     const sentence = mustParse('wait: 1000 -x=1;')
     const node = parseCommandNode(sentence)

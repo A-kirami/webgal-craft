@@ -704,7 +704,11 @@ edit:
     unsupportedMultilineStatements: 多行陳述式需要 WebGAL 4.6.3 或更新版本
     unsupportedOpusVocal: Opus 語音簡寫需要 WebGAL 4.6.3 或更新版本
     unsupportedFigurePosition: 此立繪位置需要 WebGAL 4.6.3 或更新版本。
+    unsupportedCallSceneArgument: 「呼叫場景」命令向子場景傳遞參數需要 WebGAL 4.6.3 或更新版本。
+    unsupportedLocalVariable: 「局部變數」參數需要 WebGAL 4.6.3 或更新版本。
+    unsupportedReturnCommand: 「返回場景」命令需要 WebGAL 4.6.3 或更新版本。
     unsupportedSpine: 目前引擎不支援 Spine 模型。
+    reservedCallSceneArgument: '「{argument}」為保留參數，不能用於 callScene。'
   errors:
     fileSyncFailed: 檔案同步失敗，請稍後重試
     previewUnavailable: 預覽地址不存在，請先啟動預覽
@@ -927,6 +931,7 @@ edit:
       video: 影片
       changeScene: 切換場景
       callScene: 呼叫場景
+      return: 返回場景
       choose: 分支選擇
       label: 標籤
       jumpLabel: 跳轉標籤
@@ -961,6 +966,7 @@ edit:
       video: 全螢幕播放一段影片
       changeScene: 結束目前場景並切換到另一個場景
       callScene: 呼叫子場景，結束後返回目前場景
+      return: 從目前子場景返回，並可選擇回傳一個值
       choose: 顯示分支選項供玩家選擇
       label: 定義一個可跳轉到的標籤位置
       jumpLabel: 跳轉到目前場景中的指定標籤
@@ -1027,6 +1033,11 @@ edit:
       varName: 變數名
       varValue: 變數值
       global: 全域變數
+      local: 區域變數
+      writeReturnTo: 回傳值變數
+      parameterKey: 參數名稱
+      parameterValue: 參數值
+      addParameter: 新增場景參數
       inputTitle: 對話框標題
       buttonText: 確認按鈕文字
       defaultValue: 預設值
@@ -1121,6 +1132,9 @@ edit:
       global:
         on: 在所有存檔中共用此變數，重新開始遊戲後也會保留。
         off: 變數會隨目前遊戲進度儲存和讀取。
+      local:
+        on: 將此變數限制在目前場景呼叫中。
+        off: 使用預設變數作用域。
       nobreak:
         on: 等待結束前，玩家操作和自動播放都無法進入下一句。
         off: 玩家操作或自動播放可以提前結束等待。

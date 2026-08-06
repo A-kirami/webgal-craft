@@ -74,6 +74,10 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
 
     return buildSceneAutocompleteOptionsFromStatements(state.statements)
   })
+  const sceneRuntimeCapabilities = computed(() => {
+    const state = editorStore.currentVisualProjection
+    return state?.kind === 'scene' ? state.runtimeCapabilities : undefined
+  })
   const selectedStatementDiagnostics = computed<readonly SceneEditorDiagnostic[]>(() => {
     const state = editorStore.currentVisualProjection
     const statementId = selectedStatement.value?.id
@@ -272,6 +276,7 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     isCurrentSceneFile,
     isTextMode,
     sceneAutocompleteOptions,
+    sceneRuntimeCapabilities,
     selectedStatement,
     selectedStatementDiagnostics,
     selectedStatementIndex,

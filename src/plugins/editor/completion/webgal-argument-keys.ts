@@ -10,12 +10,15 @@ import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabili
 const { t } = i18n.global
 
 let cachedLocale: string | undefined
+let cachedCapabilitiesKey: string | undefined
 let cachedArgKeyMap = new Map<commandType, ReturnType<typeof buildArgumentCompletionInfo>>()
 
-function readArgumentCompletions(command: commandType) {
+function readArgumentCompletions(command: commandType, capabilities?: EngineRuntimeCapabilities) {
   const currentLocale = getI18nLocale()
-  if (cachedLocale !== currentLocale) {
+  const capabilitiesKey = capabilities ? JSON.stringify(capabilities) : undefined
+  if (cachedLocale !== currentLocale || cachedCapabilitiesKey !== capabilitiesKey) {
     cachedLocale = currentLocale
+    cachedCapabilitiesKey = capabilitiesKey
     cachedArgKeyMap = new Map()
   }
 
@@ -24,7 +27,7 @@ function readArgumentCompletions(command: commandType) {
     return cached
   }
 
-  const completions = buildArgumentCompletionInfo(command, t)
+  const completions = buildArgumentCompletionInfo(command, t, capabilities)
   cachedArgKeyMap.set(command, completions)
   return completions
 }
@@ -33,10 +36,10 @@ export function getArgKeyCompletions(
   range: monaco.IRange,
   command: commandType,
   hasLeadingDash: boolean,
-  runtimeCapabilities?: EngineRuntimeCapabilities,
+  capabilities?: EngineRuntimeCapabilities,
 ): monaco.languages.CompletionItem[] {
-  return readArgumentCompletions(command)
-    .filter(item => runtimeCapabilities?.figurePositions !== false || !isExtendedFigurePosition(item.key))
+  return readArgumentCompletions(command, capabilities)
+    .filter(item => capabilities?.figurePositions !== false || !isExtendedFigurePosition(item.key))
     .map(item => ({
       label: item.key,
       insertText: `${hasLeadingDash ? '' : '-'}${item.key}${item.simplified ? '' : '='}`,

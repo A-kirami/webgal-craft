@@ -310,6 +310,8 @@ useShortcutContext({
           :on-update-select="paramRenderer.handleUpdateSelect"
           :on-label-pointer-down="paramRenderer.handleLabelPointerDown"
           :on-commit-slider="paramRenderer.handleCommitSlider"
+          :call-scene-parameters="params.callSceneParameters.value"
+          :on-update-call-scene-parameters="params.handleCallSceneParametersChange"
           @open-animation-editor="openAnimationEditor"
           @open-effect-editor="openEffectEditor"
         />

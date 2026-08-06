@@ -12,7 +12,10 @@ export const systemEntries: CommandEntry[] = [
     description: t => t('edit.visualEditor.commandDescriptions.setVar'),
     icon: 'i-lucide-variable',
     category: 'system',
-    fields: [arg({ key: 'global', label: t => t('edit.visualEditor.params.global'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.global.on'), off: t => t('edit.visualEditor.paramTooltips.global.off') }, type: 'switch', defaultValue: false })],
+    fields: [
+      arg({ key: 'global', label: t => t('edit.visualEditor.params.global'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.global.on'), off: t => t('edit.visualEditor.paramTooltips.global.off') }, type: 'switch', defaultValue: false }),
+      arg({ key: 'local', label: t => t('edit.visualEditor.params.local'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.local.on'), off: t => t('edit.visualEditor.paramTooltips.local.off') }, type: 'switch', defaultValue: false, requiredCapability: 'sceneSemantics' }),
+    ],
   },
   {
     type: commandType.showVars,
