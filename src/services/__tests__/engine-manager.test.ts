@@ -5,6 +5,8 @@ import { AbsPath } from '~/domain/path'
 import { engineManager, evaluateEngineEditorCompatibility } from '~/services/engine-manager'
 import { AppError } from '~/types/errors'
 
+import type { Platform } from '@tauri-apps/plugin-os'
+
 const {
   addMock,
   copyDirectoryWithProgressMock,
@@ -29,6 +31,7 @@ const {
   useResourceStoreMock,
   useStorageSettingsStoreMock,
   validateDirectoryStructureMock,
+  platformMock,
 } = vi.hoisted(() => ({
   addMock: vi.fn(),
   copyDirectoryWithProgressMock: vi.fn(),
@@ -56,6 +59,11 @@ const {
   useResourceStoreMock: vi.fn(),
   useStorageSettingsStoreMock: vi.fn(),
   validateDirectoryStructureMock: vi.fn(),
+  platformMock: vi.fn((): Platform => 'windows'),
+}))
+
+vi.mock('@tauri-apps/plugin-os', () => ({
+  platform: platformMock,
 }))
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
@@ -137,10 +145,12 @@ describe('engineManager', () => {
     useResourceStoreMock.mockReset()
     useStorageSettingsStoreMock.mockReset()
     validateDirectoryStructureMock.mockReset()
+    platformMock.mockReset()
 
     iconPathMock.mockImplementation((enginePath: string) => `${enginePath}/icons/favicon.ico`)
     useResourceStoreMock.mockReturnValue(resourceStoreMock)
     useStorageSettingsStoreMock.mockReturnValue({ engineSavePath: '/engines' })
+    platformMock.mockReturnValue('windows')
     engineWhereMock.mockReturnValue({
       equals: engineWhereEqualsMock,
     })
@@ -294,6 +304,31 @@ describe('engineManager', () => {
         }),
       },
     }))
+  })
+
+  it('importEngine 复制失败时会永久清理目标目录', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.6.2',
+        engineType: 'official',
+        webgalVersion: '4.6.2',
+      },
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    addMock.mockResolvedValue('engine-1')
+    enginesUpdateMock.mockResolvedValue(undefined)
+    deleteFileMock.mockResolvedValue(undefined)
+    copyDirectoryWithProgressMock.mockRejectedValue(new Error('disk full'))
+    existsMock.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+
+    await expect(engineManager.importEngine(AbsPath.from('/downloads/webgal'))).rejects.toThrow('disk full')
+
+    expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', { status: 'error' })
+    expect(deleteFileMock).toHaveBeenCalledWith('/engines/WebGAL/4.6.2', true)
   })
 
   it('managed import 预检只读并在发布后直接注册最终目录', async () => {
@@ -939,7 +974,7 @@ describe('engineManager', () => {
 
     await engineManager.uninstallEngine(createTestEngine())
 
-    expect(deleteFileMock).toHaveBeenCalledWith('/engines/default', true)
+    expect(deleteFileMock).toHaveBeenCalledWith('/engines/default', false)
     expect(enginesDeleteMock).toHaveBeenCalledWith('engine-1')
   })
 
@@ -949,11 +984,47 @@ describe('engineManager', () => {
 
     await expect(engineManager.uninstallEngine(createTestEngine())).resolves.toBeUndefined()
 
-    expect(deleteFileMock).toHaveBeenCalledWith('/engines/default', true)
+    expect(deleteFileMock).toHaveBeenCalledWith('/engines/default', false)
     expect(enginesDeleteMock).toHaveBeenCalledWith('engine-1')
   })
 
   it('uninstallEngineGroup 会删除整组版本并清理记录', async () => {
+    enginesDeleteMock.mockResolvedValue(undefined)
+    engineWhereToArrayMock.mockResolvedValue([
+      createTestEngine({
+        id: 'engine-1',
+        name: 'WebGAL',
+        path: AbsPath.from('/engines/WebGAL/4.5.0'),
+        version: '4.5.0',
+      }),
+      createTestEngine({
+        id: 'engine-2',
+        name: 'WebGAL',
+        path: AbsPath.from('/engines/WebGAL/4.4.0'),
+        version: '4.4.0',
+      }),
+    ])
+
+    await engineManager.uninstallEngineGroup('open-webgal.webgal')
+
+    expect(deleteFileMock).toHaveBeenNthCalledWith(1, '/engines/WebGAL/4.5.0', false)
+    expect(deleteFileMock).toHaveBeenNthCalledWith(2, '/engines/WebGAL/4.4.0', false)
+    expect(enginesDeleteMock).toHaveBeenNthCalledWith(1, 'engine-1')
+    expect(enginesDeleteMock).toHaveBeenNthCalledWith(2, 'engine-2')
+  })
+
+  it('uninstallEngine 在 Android 上永久删除托管目录', async () => {
+    platformMock.mockReturnValue('android')
+    enginesDeleteMock.mockResolvedValue(undefined)
+
+    await engineManager.uninstallEngine(createTestEngine())
+
+    expect(deleteFileMock).toHaveBeenCalledWith('/engines/default', true)
+    expect(enginesDeleteMock).toHaveBeenCalledWith('engine-1')
+  })
+
+  it('uninstallEngineGroup 在 Android 上永久删除所有版本', async () => {
+    platformMock.mockReturnValue('android')
     enginesDeleteMock.mockResolvedValue(undefined)
     engineWhereToArrayMock.mockResolvedValue([
       createTestEngine({

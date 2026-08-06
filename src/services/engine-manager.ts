@@ -8,6 +8,7 @@ import { Engine, Game } from '~/database/model'
 import { isWebgalEditorRuntimeCompatible, normalizeWebgalRuntimeVersion } from '~/domain/engine/runtime-capabilities'
 import { AbsPath, RelPath } from '~/domain/path'
 import { engineIconPath } from '~/services/platform/app-paths'
+import { isDesktopRuntime } from '~/services/platform/runtime'
 import {
   classifyAvailability,
   createWarning,
@@ -653,7 +654,7 @@ async function uninstallEngine(engine: Engine): Promise<void> {
   logger.info(`[引擎卸载] ${engine.name}@${engine.version ?? '未知'}: ${engine.path}`)
   if (engine.availability === 'available') {
     try {
-      await fsCmds.deleteFile(engine.path, true)
+      await fsCmds.deleteFile(engine.path, !isDesktopRuntime())
     } catch (error) {
       logger.warn(`[引擎卸载] 删除托管目录失败，继续清理数据库记录: ${engine.path} - ${error}`)
     }

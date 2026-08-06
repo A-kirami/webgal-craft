@@ -94,6 +94,7 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({
 
 vi.mock('~/services/platform/runtime', () => ({
   isAndroidRuntime: () => false,
+  isDesktopRuntime: () => true,
 }))
 
 vi.mock('@tauri-apps/plugin-opener', () => ({

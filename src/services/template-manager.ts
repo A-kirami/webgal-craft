@@ -6,6 +6,7 @@ import { projectConfigCmds } from '~/commands/project-config'
 import { db } from '~/database/db'
 import { AbsPath } from '~/domain/path'
 import { templateManifestPath } from '~/services/platform/app-paths'
+import { isDesktopRuntime } from '~/services/platform/runtime'
 import { normalizeImportPath, ResourceAvailability } from '~/services/resource-health'
 import { caseFoldedEquals, toLookupPathKey } from '~/services/resource-path/lookup'
 import {
@@ -336,7 +337,7 @@ async function deleteTemplate(template: Template): Promise<void> {
 
   if (template.availability === 'available') {
     try {
-      await fsCmds.deleteFile(template.path, true)
+      await fsCmds.deleteFile(template.path, !isDesktopRuntime())
     } catch (error) {
       logger.warn(`[模板删除] 删除模板目录失败，继续清理数据库记录: ${template.path} - ${error}`)
     }

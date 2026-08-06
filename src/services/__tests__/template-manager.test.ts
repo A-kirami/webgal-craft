@@ -5,6 +5,8 @@ import { AbsPath } from '~/domain/path'
 import { templateManager } from '~/services/template-manager'
 import { AppError } from '~/types/errors'
 
+import type { Platform } from '@tauri-apps/plugin-os'
+
 const {
   copyDirectoryWithProgressMock,
   dbGamesToArrayMock,
@@ -24,6 +26,7 @@ const {
   useResourceStoreMock,
   useStorageSettingsStoreMock,
   validateDirectoryStructureMock,
+  platformMock,
 } = vi.hoisted(() => ({
   copyDirectoryWithProgressMock: vi.fn(),
   dbGamesToArrayMock: vi.fn(),
@@ -46,6 +49,11 @@ const {
   useResourceStoreMock: vi.fn(),
   useStorageSettingsStoreMock: vi.fn(),
   validateDirectoryStructureMock: vi.fn(),
+  platformMock: vi.fn((): Platform => 'windows'),
+}))
+
+vi.mock('@tauri-apps/plugin-os', () => ({
+  platform: platformMock,
 }))
 
 vi.mock('@tauri-apps/plugin-log', () => ({
@@ -125,6 +133,7 @@ describe('templateManager', () => {
     useStorageSettingsStoreMock.mockReturnValue({
       templateSavePath: '/templates',
     })
+    platformMock.mockReturnValue('windows')
   })
 
   afterEach(() => {
@@ -190,6 +199,22 @@ describe('templateManager', () => {
       status: 'created',
     })
     expect(resourceStoreMock.finishProgress).toHaveBeenCalledWith('template-1')
+  })
+
+  it('importTemplate 安装失败时会永久清理目标目录', async () => {
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    readTextFileMock.mockResolvedValue(JSON.stringify({
+      name: 'Modern Template',
+    }))
+    dbTemplatesAddMock.mockResolvedValue('template-1')
+    dbTemplatesDeleteMock.mockResolvedValue(undefined)
+    copyDirectoryWithProgressMock.mockRejectedValue(new Error('disk full'))
+    existsMock.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+
+    await expect(templateManager.importTemplate(AbsPath.from('/source/template'))).rejects.toThrow('disk full')
+
+    expect(dbTemplatesDeleteMock).toHaveBeenCalledWith('template-1')
+    expect(deleteFileMock).toHaveBeenCalledWith('/templates/Modern Template', true)
   })
 
   it('managed import 预检只读并在发布后直接注册最终目录', async () => {
@@ -593,7 +618,7 @@ describe('templateManager', () => {
       },
     })
 
-    expect(deleteFileMock).toHaveBeenCalledWith('/templates/Modern Template', true)
+    expect(deleteFileMock).toHaveBeenCalledWith('/templates/Modern Template', false)
     expect(dbTemplatesDeleteMock).toHaveBeenCalledWith('template-created')
   })
 
@@ -741,6 +766,25 @@ describe('templateManager', () => {
         name: 'Modern Template',
       },
     })).resolves.toBeUndefined()
+
+    expect(deleteFileMock).toHaveBeenCalledWith('/templates/Modern Template', false)
+    expect(dbTemplatesDeleteMock).toHaveBeenCalledWith('template-created')
+  })
+
+  it('deleteTemplate 在 Android 上永久删除模板目录', async () => {
+    platformMock.mockReturnValue('android')
+
+    await templateManager.deleteTemplate({
+      id: 'template-created',
+      path: AbsPath.from('/templates/Modern Template'),
+      pathLookupKey: '/templates/modern template',
+      createdAt: 0,
+      status: 'created',
+      availability: 'available',
+      metadata: {
+        name: 'Modern Template',
+      },
+    })
 
     expect(deleteFileMock).toHaveBeenCalledWith('/templates/Modern Template', true)
     expect(dbTemplatesDeleteMock).toHaveBeenCalledWith('template-created')
