@@ -2,12 +2,14 @@ import { onTestFinished, vi } from 'vitest'
 import { ref, shallowReactive } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { createTestRenderer } from '~/features/editor/__tests__/utils/createTestRenderer'
 import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
 import { sceneAutocompleteOptionsKey } from '~/features/editor/statement-editor/scene-autocomplete-context'
 import { useStatementEditor } from '~/features/editor/statement-editor/useStatementEditor'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { StatementEntry } from '~/domain/script/sentence'
 import type { ArgField } from '~/features/editor/command-registry/schema'
 import type { SceneAutocompleteOptions } from '~/features/editor/statement-editor/scene-autocomplete'
@@ -144,7 +146,10 @@ function createScopedEditor(
 
 export function createHarness(
   rawText: string,
-  options: { autocompleteOptions?: SceneAutocompleteOptions } = {},
+  options: {
+    autocompleteOptions?: SceneAutocompleteOptions
+    runtimeCapabilities?: EngineRuntimeCapabilities
+  } = {},
 ) {
   const updates: StatementUpdatePayload[] = []
   const editor = createScopedEditor(
@@ -153,6 +158,7 @@ export function createHarness(
       emitUpdate(payload) {
         updates.push(payload)
       },
+      runtimeCapabilities: options.runtimeCapabilities ?? LATEST_ENGINE_RUNTIME_CAPABILITIES,
     }),
     options.autocompleteOptions,
   )

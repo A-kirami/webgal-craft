@@ -67,7 +67,7 @@ export function updateEditorDiagnostics(
       continue
     }
 
-    if (['unsupported-live2d', 'unsupported-spine', 'unsupported-opus-vocal'].includes(diagnostic.code)) {
+    if (['unsupported-live2d', 'unsupported-spine', 'unsupported-opus-vocal', 'unsupported-figure-position'].includes(diagnostic.code)) {
       markers.push({
         ...locateReference(lines, range, sentence, {
           source: diagnostic.field,

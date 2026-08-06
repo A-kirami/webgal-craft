@@ -58,11 +58,13 @@ describe('useParamChoiceFieldViewModel', () => {
       getChoiceFieldMode: () => 'combobox',
       getComboboxPathDelimiter: () => '/',
       getDynamicOptions: () => dynamicOptions.value,
+      getStaticOptions: () => [
+        { label: 'Static Joy', value: 'joy' },
+        { label: 'Static Sad', value: 'sad' },
+      ],
       getPlaceholder: () => placeholder.value,
       getSelectValue: () => selectValue.value,
-      i18nContent: () => '',
       shouldRenderSegmented: () => false,
-      t: key => key,
       visibleFields: () => visibleFields.value,
     })
 
@@ -106,11 +108,10 @@ describe('useParamChoiceFieldViewModel', () => {
         { label: 'charc/group01/item01', value: 'charc/group01/item01' },
         { label: 'charc/default', value: 'charc/default' },
       ],
+      getStaticOptions: () => [],
       getPlaceholder: () => 'Search expression',
       getSelectValue: () => '',
-      i18nContent: () => '',
       shouldRenderSegmented: () => false,
-      t: key => key,
       visibleFields: () => [field],
     })
 
@@ -147,11 +148,10 @@ describe('useParamChoiceFieldViewModel', () => {
       getDynamicOptions: () => [
         { label: 'charc/group01/item01', value: 'charc/group01/item01' },
       ],
+      getStaticOptions: () => [],
       getPlaceholder: () => 'Search expression',
       getSelectValue: () => '',
-      i18nContent: () => '',
       shouldRenderSegmented: () => false,
-      t: key => key,
       visibleFields: () => [field],
     })
 
@@ -172,11 +172,10 @@ describe('useParamChoiceFieldViewModel', () => {
         { label: 'charc/group01/item01', value: 'charc/group01/item01' },
         { label: 'charc/default', value: 'charc/default' },
       ],
+      getStaticOptions: () => [],
       getPlaceholder: () => 'Search expression',
       getSelectValue: () => '',
-      i18nContent: () => '',
       shouldRenderSegmented: () => false,
-      t: key => key,
       visibleFields: () => [field],
     })
 
@@ -193,11 +192,10 @@ describe('useParamChoiceFieldViewModel', () => {
       getDynamicOptions: () => [
         { label: 'charc/group01/item01', value: 'charc/group01/item01' },
       ],
+      getStaticOptions: () => [],
       getPlaceholder: () => 'Search expression',
       getSelectValue: () => '',
-      i18nContent: () => '',
       shouldRenderSegmented: () => false,
-      t: key => key,
       visibleFields: () => [field],
     })
 

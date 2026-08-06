@@ -183,7 +183,7 @@ export interface FlagChoiceField extends FieldBase, OptionsMixin {
   mode: 'flag'
   defaultValue?: string
   placeholder?: I18nLike
-  variant?: SurfaceAware<'select' | 'segmented'>
+  variant?: SurfaceAware<'select' | 'segmented' | 'figure-position'>
   dynamicOptionsKey?: never
 }
 

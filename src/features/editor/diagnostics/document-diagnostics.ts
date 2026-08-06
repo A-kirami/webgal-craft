@@ -14,13 +14,14 @@ interface EditorDiagnosticTextProjection {
 
 interface EditorDiagnosticVisualProjection {
   kind: string
+  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'figurePositions' | 'opusVocalShorthand'>
   statements?: readonly StatementEntry[]
 }
 
 interface DiagnoseEditorDocumentOptions {
   engineCapabilities?: EngineModelCapabilities
   hasAssetKey?: (key: AssetKey) => boolean
-  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'opusVocalShorthand'>
+  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'figurePositions' | 'opusVocalShorthand'>
   textProjection?: EditorDiagnosticTextProjection
   visualProjection?: EditorDiagnosticVisualProjection
 }
@@ -40,6 +41,10 @@ export function diagnoseEditorDocument(options: DiagnoseEditorDocumentOptions): 
 
   return diagnoseScene(
     options.visualProjection.statements.map(statement => ensureParsed(statement)),
-    options,
+    {
+      engineCapabilities: options.engineCapabilities,
+      hasAssetKey: options.hasAssetKey,
+      runtimeCapabilities: options.visualProjection.runtimeCapabilities ?? options.runtimeCapabilities,
+    },
   )
 }

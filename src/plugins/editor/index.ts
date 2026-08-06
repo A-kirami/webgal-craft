@@ -567,6 +567,7 @@ async function getArgumentSuggestion(model: monaco.editor.ITextModel, position: 
     },
     command,
     target.hasLeadingDash,
+    useResourceStore().currentEngineRuntimeCapabilities,
   )
 }
 
@@ -651,6 +652,7 @@ function buildValueCompletions(
     range,
     content: contentContext,
     gamePath,
+    allowExtendedFigurePositions: useResourceStore().currentEngineRuntimeCapabilities.figurePositions,
     sceneOptions: buildSceneAutocompleteOptionsFromText(model.getValue()),
     listResources: getResourceOptions,
     resolveDynamicOptions: (dynamicKey, context) => resolveDynamicOptions(dynamicKey, context),

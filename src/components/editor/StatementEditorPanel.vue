@@ -11,6 +11,7 @@ import { useEditSettingsStore } from '~/stores/edit-settings'
 import { usePreviewSessionStore } from '~/stores/preview-session'
 import { useWorkspaceStore } from '~/stores/workspace'
 
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 import type { StatementUpdatePayload, StatementUpdateTarget } from '~/features/editor/statement-editor/useStatementEditor'
 
@@ -29,6 +30,7 @@ const props = withDefaults(defineProps<{
   showHeader?: boolean
   /** 内联模式 */
   inline?: boolean
+  runtimeCapabilities?: EngineRuntimeCapabilities
 }>(), {
   showHeader: true,
 })
@@ -66,6 +68,7 @@ const {
   previousSpeaker: () => props.previousSpeaker,
   emitUpdate,
   surface: 'panel',
+  runtimeCapabilities: () => props.runtimeCapabilities,
 })
 
 const {

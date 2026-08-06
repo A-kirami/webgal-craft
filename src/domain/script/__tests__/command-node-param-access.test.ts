@@ -58,6 +58,12 @@ describe('命令节点参数访问', () => {
     expect(readCommandNodeParamValue(node, makeParamDef('next', 'switch'))).toBe(true)
   })
 
+  it.each(['left13', 'left14', 'right13', 'right14'])('读取 changeFigure 扩展位置 -%s', (position) => {
+    const node = parseCommandNode(mustParse(`changeFigure: figure.png -${position};`))
+    expect(readCommandNodeParamValue(node, makeParamDef('position', 'select'))).toBe(position)
+    expect(hasCommandNodeParam(node, position)).toBe(true)
+  })
+
   it('读取类型化 setAnimation 参数', () => {
     const sentence = mustParse('setAnimation: bounce -target=fig-left -writeDefault -keep -next;')
     const node = parseCommandNode(sentence)

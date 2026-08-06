@@ -690,7 +690,11 @@ edit:
     arguments:
       when: 执行条件
       left: 左侧位置
+      left14: 左侧 1/4 位置
+      left13: 左侧 1/3 位置
       right: 右侧位置
+      right13: 右侧 1/3 位置
+      right14: 右侧 1/4 位置
       center: 中间位置
     missingResource: "资源不存在：{path}"
   diagnostics:
@@ -699,6 +703,7 @@ edit:
     unsupportedLive2d: 当前引擎不支持 Live2D 模型。
     unsupportedMultilineStatements: 当前引擎不支持多行语句。
     unsupportedOpusVocal: 当前引擎不支持 say 的 Opus 语音简写，请升级到 WebGAL 4.6.3 或更高版本。
+    unsupportedFigurePosition: 此立绘位置需要 WebGAL 4.6.3 或更高版本。
     unsupportedSpine: 当前引擎不支持 Spine 模型。
   errors:
     fileSyncFailed: 文件同步失败，请稍后重试
@@ -1136,10 +1141,18 @@ edit:
       notSelected: 未选择
       default: 默认
       left: 左侧
+      left14: 左侧 1/4
+      left13: 左侧 1/3
       center: 中间
+      right13: 右侧 1/3
+      right14: 右侧 1/4
       right: 右侧
       figureLeft: 左侧立绘
+      figureLeft14: 左侧 1/4 立绘
+      figureLeft13: 左侧 1/3 立绘
       figureCenter: 中间立绘
+      figureRight13: 右侧 1/3 立绘
+      figureRight14: 右侧 1/4 立绘
       figureRight: 右侧立绘
       blendNormal: 正常
       blendAdd: 线性减淡
@@ -1163,7 +1176,11 @@ edit:
       easeBounceInOut: 起止弹跳
       easeAnticipate: 预先反向
       targetFigLeft: 左侧立绘
+      targetFigLeft14: 左侧 1/4 立绘
+      targetFigLeft13: 左侧 1/3 立绘
       targetFigCenter: 中间立绘
+      targetFigRight13: 右侧 1/3 立绘
+      targetFigRight14: 右侧 1/4 立绘
       targetFigRight: 右侧立绘
       targetBgMain: 背景图片
       targetStageMain: 舞台画面

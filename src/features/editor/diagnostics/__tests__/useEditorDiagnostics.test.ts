@@ -232,4 +232,47 @@ describe('useEditorDiagnostics', () => {
     expect(diagnosticsStore.publish).toHaveBeenLastCalledWith(path, [])
     scope.stop()
   })
+
+  it('当前引擎立绘位置能力变化后重新发布兼容性诊断', async () => {
+    const path = AbsPath.from('/game/scene/start.txt')
+    const diagnosticsStore = {
+      invalidateSource: vi.fn(),
+      publish: vi.fn(),
+    }
+    const resourceStore = reactive({
+      currentEngineCapabilities: undefined,
+      currentEngineRuntimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    })
+
+    useEditorDiagnosticsStoreMock.mockReturnValue(diagnosticsStore)
+    useEditorStoreMock.mockReturnValue({
+      getTextProjectionState: vi.fn(() => undefined),
+      getVisualProjectionState: vi.fn(() => reactive({
+        kind: 'scene' as const,
+        runtimeCapabilities: resourceStore.currentEngineRuntimeCapabilities,
+        statements: buildStatements('changeFigure: hero.png -left13;'),
+      })),
+      peekSceneRevision: vi.fn(() => 'revision-1'),
+    })
+    useResourceIndexMock.mockReturnValue({
+      hasAssetKey: vi.fn(() => true),
+      revision: shallowRef(0),
+      status: shallowRef('ready'),
+    })
+    useResourceStoreMock.mockReturnValue(resourceStore)
+    useTabsStoreMock.mockReturnValue(reactive({ tabs: [{ path }] }))
+
+    const scope = effectScope()
+    scope.run(useEditorDiagnostics)
+
+    expect(diagnosticsStore.publish).toHaveBeenLastCalledWith(path, [
+      expect.objectContaining({ code: 'unsupported-figure-position' }),
+    ])
+
+    resourceStore.currentEngineRuntimeCapabilities = LATEST_ENGINE_RUNTIME_CAPABILITIES
+    await nextTick()
+
+    expect(diagnosticsStore.publish).toHaveBeenLastCalledWith(path, [])
+    scope.stop()
+  })
 })

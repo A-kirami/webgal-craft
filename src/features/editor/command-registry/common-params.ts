@@ -49,7 +49,11 @@ export const TARGET: AutocompleteTextField = {
       groupLabel: t => t('edit.visualEditor.autocompleteGroups.preset'),
       options: [
         { label: t => t('edit.visualEditor.options.targetFigLeft'), value: FIGURE_POSITION_TARGET_IDS.left },
+        { label: t => t('edit.visualEditor.options.targetFigLeft14'), value: FIGURE_POSITION_TARGET_IDS.left14 },
+        { label: t => t('edit.visualEditor.options.targetFigLeft13'), value: FIGURE_POSITION_TARGET_IDS.left13 },
         { label: t => t('edit.visualEditor.options.targetFigCenter'), value: FIGURE_POSITION_TARGET_IDS.center },
+        { label: t => t('edit.visualEditor.options.targetFigRight13'), value: FIGURE_POSITION_TARGET_IDS.right13 },
+        { label: t => t('edit.visualEditor.options.targetFigRight14'), value: FIGURE_POSITION_TARGET_IDS.right14 },
         { label: t => t('edit.visualEditor.options.targetFigRight'), value: FIGURE_POSITION_TARGET_IDS.right },
         { label: t => t('edit.visualEditor.options.targetBgMain'), value: 'bg-main' },
         { label: t => t('edit.visualEditor.options.targetStageMain'), value: 'stage-main' },

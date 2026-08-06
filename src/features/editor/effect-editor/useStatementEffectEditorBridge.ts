@@ -3,6 +3,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import { computeLineNumberFromStatementId } from '~/domain/document/scene-selection'
 import { hasSentenceTruthyFlag, readSentenceArgString } from '~/domain/script/sentence'
 import { serializeSentence } from '~/domain/script/serialize'
+import { FIGURE_POSITION_TARGET_IDS } from '~/domain/script/types'
 import { applyEffectEditorResultToSentence, EffectEditorResult } from '~/features/editor/effect-editor/effect-editor-result'
 import { useInjectedEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { createStatementIdTarget, StatementUpdatePayload, StatementUpdateTarget } from '~/features/editor/statement-editor/useStatementEditor'
@@ -22,10 +23,6 @@ interface SceneStatementLineLookupEntry {
 }
 
 const EFFECT_TARGET_BG_MAIN = 'bg-main'
-const EFFECT_TARGET_FIG_LEFT = 'fig-left'
-const EFFECT_TARGET_FIG_CENTER = 'fig-center'
-const EFFECT_TARGET_FIG_RIGHT = 'fig-right'
-
 function resolveEffectPreviewTarget(sentence: ISentence): string {
   switch (sentence.command) {
     case commandType.changeBg: {
@@ -37,13 +34,12 @@ function resolveEffectPreviewTarget(sentence: ISentence): string {
         return figureId
       }
 
-      if (hasSentenceTruthyFlag(sentence, 'left')) {
-        return EFFECT_TARGET_FIG_LEFT
+      for (const [position, targetId] of Object.entries(FIGURE_POSITION_TARGET_IDS)) {
+        if (position !== 'center' && hasSentenceTruthyFlag(sentence, position)) {
+          return targetId
+        }
       }
-      if (hasSentenceTruthyFlag(sentence, 'right')) {
-        return EFFECT_TARGET_FIG_RIGHT
-      }
-      return EFFECT_TARGET_FIG_CENTER
+      return FIGURE_POSITION_TARGET_IDS.center
     }
     default: {
       return readSentenceArgString(sentence, 'target').trim()

@@ -17,14 +17,17 @@ describe('Engine runtime capabilities', () => {
 
   it('从引擎版本派生运行时能力', () => {
     expect(resolveEngineRuntimeCapabilities('4.6.2')).toEqual({
+      figurePositions: false,
       multilineStatements: false,
       opusVocalShorthand: false,
     })
     expect(resolveEngineRuntimeCapabilities('4.6.3')).toEqual({
+      figurePositions: true,
       multilineStatements: true,
       opusVocalShorthand: true,
     })
     expect(resolveEngineRuntimeCapabilities('4.10.0')).toEqual({
+      figurePositions: true,
       multilineStatements: true,
       opusVocalShorthand: true,
     })
@@ -36,6 +39,8 @@ describe('Engine runtime capabilities', () => {
   })
 
   it('无效或早于稳定阈值的预发布版本不会启用运行时能力', () => {
+    expect(supportsEngineRuntimeCapability('4.6.2', 'figurePositions')).toBe(false)
+    expect(supportsEngineRuntimeCapability('4.6.3', 'figurePositions')).toBe(true)
     expect(supportsEngineRuntimeCapability('4.6.3-beta.1', 'multilineStatements')).toBe(false)
     expect(supportsEngineRuntimeCapability(undefined, 'multilineStatements')).toBe(false)
     expect(supportsEngineRuntimeCapability('4.6.3-beta.1', 'opusVocalShorthand')).toBe(false)

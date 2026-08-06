@@ -1,3 +1,4 @@
+import { findUnsupportedFigurePositionReferences } from '~/domain/script/figure-position-diagnostics'
 import {
   findMissingSentenceResourceReferences,
   findUnsupportedEngineModelReferences,
@@ -9,6 +10,7 @@ import { useResourceIndex } from '~/services/resource-index/service'
 import { useResourceStore } from '~/stores/resource'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { UnsupportedEngineModelReference } from '~/features/editor/command-registry/diagnostics'
 import type { DiagnosticFieldStatus } from '~/features/editor/diagnostics/presentation'
 import type { EditorFieldDiagnostic, SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
@@ -18,6 +20,7 @@ export interface UseStatementFieldDiagnosticsOptions {
   parsed: MaybeRefOrGetter<ISentence | undefined>
   /** Undefined only for drafts that are not attached to an analyzed scene document. */
   diagnostics?: MaybeRefOrGetter<readonly SceneEditorDiagnostic[] | undefined>
+  runtimeCapabilities?: MaybeRefOrGetter<Pick<EngineRuntimeCapabilities, 'figurePositions'>>
 }
 
 function toLocalMissingResourceDiagnostic(reference: ResourceReferenceQuery): EditorFieldDiagnostic {
@@ -43,6 +46,19 @@ function toLocalUnsupportedEngineModelDiagnostic(
   }
 }
 
+function toLocalUnsupportedFigurePositionDiagnostic(
+  fieldKey: string,
+  value: string,
+): EditorFieldDiagnostic {
+  return {
+    code: 'unsupported-figure-position',
+    field: { kind: 'argument', key: fieldKey },
+    severity: 'warning',
+    source: 'engine',
+    value,
+  }
+}
+
 export function useStatementFieldDiagnostics(options: UseStatementFieldDiagnosticsOptions) {
   const resourceIndex = useResourceIndex()
   const resourceStore = useResourceStore()
@@ -62,6 +78,12 @@ export function useStatementFieldDiagnostics(options: UseStatementFieldDiagnosti
         parsed,
         resourceStore.currentEngineCapabilities,
       ).map(reference => toLocalUnsupportedEngineModelDiagnostic(reference)))
+    }
+
+    if (toValue(options.runtimeCapabilities)?.figurePositions === false) {
+      diagnostics.push(...findUnsupportedFigurePositionReferences(parsed).map(reference =>
+        toLocalUnsupportedFigurePositionDiagnostic(reference.fieldKey, reference.value),
+      ))
     }
 
     if (resourceIndex.status.value === 'ready') {

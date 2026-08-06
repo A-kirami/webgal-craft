@@ -4,7 +4,7 @@ import { cloneArgs } from '~/domain/script/codec'
 import { parseChooseContent, parseSetVarContent, parseStyleRuleContent } from '~/domain/script/content'
 import { CommandParamDescriptor, getRegistryKnownKeys, resolveRegistryFieldMeta } from '~/domain/script/params'
 import { updateSayFigureTargetId } from '~/domain/script/say-figure'
-import { CommandNode, GenericCommandNode, isGenericNode, TypedCommandNode } from '~/domain/script/types'
+import { CHANGE_FIGURE_POSITION_FLAGS, CommandNode, GenericCommandNode, isGenericNode, TypedCommandNode } from '~/domain/script/types'
 
 import type { arg } from 'webgal-parser/src/interface/sceneInterface'
 
@@ -53,15 +53,15 @@ function updateChangeFigurePosition(node: CommandNode, newValue: ParamUpdateValu
   const nextArgs = cloneArgs(node.args)
   // 记录原 flag 位置后再删除所有旧 flag，新 flag 插入到原位置，
   // 保持 args 数组中参数的相对顺序不变，避免序列化后脚本文本产生无意义 diff
-  const firstFlagIndex = nextArgs.findIndex(item => item.key === 'left' || item.key === 'right')
+  const firstFlagIndex = nextArgs.findIndex(item => (CHANGE_FIGURE_POSITION_FLAGS as readonly string[]).includes(item.key))
 
   for (let index = nextArgs.length - 1; index >= 0; index--) {
-    if (nextArgs[index].key === 'left' || nextArgs[index].key === 'right') {
+    if ((CHANGE_FIGURE_POSITION_FLAGS as readonly string[]).includes(nextArgs[index].key)) {
       nextArgs.splice(index, 1)
     }
   }
 
-  if (value === 'left' || value === 'right') {
+  if ((CHANGE_FIGURE_POSITION_FLAGS as readonly string[]).includes(value)) {
     nextArgs.splice(firstFlagIndex === -1 ? nextArgs.length : firstFlagIndex, 0, { key: value, value: true })
   }
 

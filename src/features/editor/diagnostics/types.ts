@@ -62,6 +62,13 @@ export interface UnsupportedOpusVocalEditorDiagnostic extends SceneEditorDiagnos
   value: string
 }
 
+export interface UnsupportedFigurePositionEditorDiagnostic extends SceneEditorDiagnosticBase {
+  code: 'unsupported-figure-position'
+  severity: 'warning'
+  source: 'engine'
+  value: string
+}
+
 export interface InvalidAnimationDocumentDiagnostic extends EditorDiagnosticBase {
   code: 'invalid-animation-json'
   severity: 'error'
@@ -75,6 +82,7 @@ export type SceneEditorDiagnostic =
   | UnsupportedLive2dEditorDiagnostic
   | UnsupportedSpineEditorDiagnostic
   | UnsupportedOpusVocalEditorDiagnostic
+  | UnsupportedFigurePositionEditorDiagnostic
 
 export type EditorFieldDiagnostic =
   | Omit<DuplicateLabelEditorDiagnostic, 'statementIndex'>
@@ -83,6 +91,7 @@ export type EditorFieldDiagnostic =
   | Omit<UnsupportedLive2dEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedSpineEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedOpusVocalEditorDiagnostic, 'statementIndex'>
+  | Omit<UnsupportedFigurePositionEditorDiagnostic, 'statementIndex'>
 
 export type EditorDiagnostic =
   | SceneEditorDiagnostic

@@ -69,6 +69,10 @@ describe('buildArgumentCompletionInfo', () => {
 
     expect(options).toEqual([
       { label: 'edit.visualEditor.options.left', value: 'left' },
+      { label: 'edit.visualEditor.options.left14', value: 'left14' },
+      { label: 'edit.visualEditor.options.left13', value: 'left13' },
+      { label: 'edit.visualEditor.options.right13', value: 'right13' },
+      { label: 'edit.visualEditor.options.right14', value: 'right14' },
       { label: 'edit.visualEditor.options.right', value: 'right' },
     ])
   })
@@ -127,9 +131,22 @@ describe('buildArgumentCompletionInfo', () => {
 
     expect(options).toEqual([
       { label: 'edit.visualEditor.options.figureLeft', value: 'fig-left' },
+      { label: 'edit.visualEditor.options.figureLeft14', value: 'fig-left14' },
+      { label: 'edit.visualEditor.options.figureLeft13', value: 'fig-left13' },
       { label: 'edit.visualEditor.options.figureCenter', value: 'fig-center' },
+      { label: 'edit.visualEditor.options.figureRight13', value: 'fig-right13' },
+      { label: 'edit.visualEditor.options.figureRight14', value: 'fig-right14' },
       { label: 'edit.visualEditor.options.figureRight', value: 'fig-right' },
       { label: 'hero', value: 'hero' },
     ])
+  })
+
+  it('旧引擎不会补全 4.6.3 扩展立绘位置', async () => {
+    const options = await queryArgumentValueCompletions(commandType.say, 'figureId', {
+      content: '',
+      allowExtendedFigurePositions: false,
+    }, t)
+
+    expect(options.map(option => option.value)).toEqual(['fig-left', 'fig-center', 'fig-right'])
   })
 })

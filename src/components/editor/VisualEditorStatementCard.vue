@@ -9,6 +9,7 @@ import { createStatementIdTarget, StatementUpdatePayload } from '~/features/edit
 import { useStatementFieldDiagnostics } from '~/features/editor/statement-editor/useStatementFieldDiagnostics'
 import { provideStatementMeta } from '~/features/editor/statement-editor/useStatementMeta'
 
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 
 const props = defineProps<{
@@ -20,6 +21,7 @@ const props = defineProps<{
   readonly?: boolean
   /** 上一条 say 语句的说话人（用于 concat 占位符） */
   previousSpeaker?: string
+  runtimeCapabilities?: EngineRuntimeCapabilities
 }>()
 
 const emit = defineEmits<{
@@ -238,6 +240,7 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
             :entry="entry"
             :diagnostics="diagnostics"
             :previous-speaker="previousSpeaker"
+            :runtime-capabilities="runtimeCapabilities"
             :update-target="createStatementIdTarget(entry.id)"
             ::show-inline-comment="showInlineComment"
             @update="emit('update', $event)"

@@ -6,6 +6,7 @@ import '~/__tests__/mocks/modal-store'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { computed } from 'vue'
 
+import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { mustParse } from '~/domain/script/__tests__/utils'
 import { parseCommandNode } from '~/domain/script/codec'
 import {
@@ -83,6 +84,20 @@ describe('useStatementEditorParams', () => {
     ])
   })
 
+  it('旧引擎隐藏 changeFigure 的扩展位置，但保留已有位置 flag', () => {
+    const { editor } = createHarness('changeFigure: hero.png -right14;', {
+      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    })
+    const positionField = requireArgField(editor, 'position')
+
+    expect(editor.params.getArgSelectOptions(positionField).map(option => option.value)).toEqual([
+      'left',
+      '__unspecified__',
+      'right',
+    ])
+    expect(editor.params.getArgSelectValue(positionField)).toBe('right14')
+  })
+
   it('无冒号 say 清空最后一个参数时会直接回写规范化后的 commandRaw', () => {
     const emittedPatches: Partial<ISentence>[] = []
     const sentence = mustParse(' -concat;')
@@ -100,6 +115,7 @@ describe('useStatementEditorParams', () => {
       argFields: computed(() => [concatField]),
       readEditableArgs: () => structuredClone(sentence.args),
       emitUpdate: patch => emittedPatches.push(patch),
+      runtimeCapabilities: computed(() => LEGACY_ENGINE_RUNTIME_CAPABILITIES),
     })
 
     params.handleArgFieldChange(concatField, false)

@@ -93,6 +93,18 @@ describe('命令节点参数更新器', () => {
     ])
   })
 
+  it('可将 changeFigure position 更新为扩展位置并移除旧位置 flag', () => {
+    const sentence = mustParse('changeFigure: figure.png -id=fig-main -left -x=1;')
+    const node = parseCommandNode(sentence)
+    const updated = updateCommandNodeParam(node, makeParamDef('position', 'select'), 'right14')
+
+    expect(serializeCommandNode(updated!).args).toEqual([
+      { key: 'id', value: 'fig-main' },
+      { key: 'right14', value: true },
+      { key: 'x', value: 1 },
+    ])
+  })
+
   it('可更新 setTempAnimation target 并保留额外参数', () => {
     const sentence = mustParse('setTempAnimation: bounce -target=fig-left -x=1;')
     const node = parseCommandNode(sentence)

@@ -85,7 +85,7 @@ const workspaceStoreMock = reactive({
 })
 
 const resourceStoreMock = reactive({
-  currentEngineRuntimeCapabilities: { multilineStatements: false, opusVocalShorthand: false },
+  currentEngineRuntimeCapabilities: { figurePositions: false, multilineStatements: false, opusVocalShorthand: false },
 })
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
@@ -333,7 +333,7 @@ describe('编辑器文本与文档流程', () => {
     preferenceStoreMock.editorMode = 'text'
     workspaceStoreMock.currentGame = { id: 'game-1', path: '/game' }
     workspaceStoreMock.cwd = '/game'
-    resourceStoreMock.currentEngineRuntimeCapabilities = { multilineStatements: false, opusVocalShorthand: false }
+    resourceStoreMock.currentEngineRuntimeCapabilities = { figurePositions: false, multilineStatements: false, opusVocalShorthand: false }
     previewSessionStoreMock.currentGameServeUrl = 'http://127.0.0.1:8899'
   })
 
@@ -792,10 +792,10 @@ describe('编辑器文本与文档流程', () => {
     expect(editorStore.redoDocument(path).applied).toBe(true)
     expect(textProjection.textContent).toBe(editedContent)
 
-    resourceStoreMock.currentEngineRuntimeCapabilities = { multilineStatements: false, opusVocalShorthand: false }
+    resourceStoreMock.currentEngineRuntimeCapabilities = { figurePositions: false, multilineStatements: false, opusVocalShorthand: false }
     await flushEditorWatchers()
 
-    expect(textProjection.runtimeCapabilities).toEqual({ multilineStatements: false, opusVocalShorthand: false })
+    expect(textProjection.runtimeCapabilities).toEqual({ figurePositions: false, multilineStatements: false, opusVocalShorthand: false })
     expect(visualProjection.statements.map(statement => statement.rawText)).toEqual([
       'changeFigure:hero.png',
       '  -id=hero;',

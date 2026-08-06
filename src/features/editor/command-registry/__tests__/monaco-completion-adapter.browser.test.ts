@@ -181,6 +181,19 @@ describe('getArgKeyCompletions', () => {
     })
     expect(plainText).not.toHaveProperty('command')
   })
+
+  it('旧引擎不提供扩展立绘位置参数', () => {
+    const completions = getArgKeyCompletions(range, commandType.say, true, {
+      figurePositions: false,
+      multilineStatements: false,
+      opusVocalShorthand: false,
+    })
+
+    expect(completions.map(item => item.label)).not.toContain('left13')
+    expect(completions.map(item => item.label)).not.toContain('left14')
+    expect(completions.map(item => item.label)).not.toContain('right13')
+    expect(completions.map(item => item.label)).not.toContain('right14')
+  })
 })
 
 describe('WebGAL Monaco 补全', () => {
@@ -199,7 +212,7 @@ describe('WebGAL Monaco 补全', () => {
       listByAssetType: () => [{ key: { relativePath: 'chapter/next.txt' } }],
     })
     useResourceStoreMock.mockReturnValue({
-      currentEngineRuntimeCapabilities: { multilineStatements: true, opusVocalShorthand: true },
+      currentEngineRuntimeCapabilities: { figurePositions: true, multilineStatements: true, opusVocalShorthand: true },
     })
     useWorkspaceStoreMock.mockReturnValue({ currentGame: { path: '/game' } })
   })

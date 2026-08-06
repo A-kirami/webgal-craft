@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { parseSentence } from '~/domain/script/parser'
+import { buildStatements } from '~/domain/script/sentence'
 
 import { diagnoseEditorDocument } from '../document-diagnostics'
 import { diagnoseScene } from '../scene-diagnostics'
@@ -112,6 +113,56 @@ describe('diagnoseScene', () => {
     ])
   })
 
+  it('旧引擎诊断扩展立绘位置和目标', () => {
+    const sentences = [
+      parseSentence('Alice: hello -left13;'),
+      parseSentence('changeFigure: hero.png -right14;'),
+      parseSentence('setAnimation: bounce -target=fig-left14;'),
+      parseSentence('setTransform: {} -target=fig-right13;'),
+    ]
+
+    expect(diagnoseScene(sentences, {
+      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    })).toEqual([
+      {
+        code: 'unsupported-figure-position',
+        field: { kind: 'argument', key: 'figureId' },
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 0,
+        value: 'left13',
+      },
+      {
+        code: 'unsupported-figure-position',
+        field: { kind: 'argument', key: 'position' },
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 1,
+        value: 'right14',
+      },
+      {
+        code: 'unsupported-figure-position',
+        field: { kind: 'argument', key: 'target' },
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 2,
+        value: 'fig-left14',
+      },
+      {
+        code: 'unsupported-figure-position',
+        field: { kind: 'argument', key: 'target' },
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 3,
+        value: 'fig-right13',
+      },
+    ])
+
+    expect(diagnoseScene(sentences, {
+      runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    })).toEqual([])
+  })
+
   it('仅将 .skel 背景作为 Spine 模型诊断', () => {
     const sentences = [
       parseSentence('changeBg:live2d/background.json;'),
@@ -177,6 +228,23 @@ describe('diagnoseEditorDocument', () => {
       code: 'invalid-animation-json',
       severity: 'error',
       source: 'document',
+    }])
+  })
+
+  it('场景文档诊断会使用其运行时能力', () => {
+    expect(diagnoseEditorDocument({
+      visualProjection: {
+        kind: 'scene',
+        runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+        statements: buildStatements('changeFigure: hero.png -left13;'),
+      },
+    })).toEqual([{
+      code: 'unsupported-figure-position',
+      field: { kind: 'argument', key: 'position' },
+      severity: 'warning',
+      source: 'engine',
+      statementIndex: 0,
+      value: 'left13',
     }])
   })
 })

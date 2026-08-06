@@ -20,7 +20,7 @@ import ParamRenderer from './ParamRenderer.vue'
 
 import type { PropType } from 'vue'
 import type { ResolvedAutocompleteOption } from '~/features/editor/command-registry/autocomplete-options'
-import type { AutocompleteTextField, EditorField, FileField, NumberField, PlainTextField, SwitchField, ValueChoiceField } from '~/features/editor/command-registry/schema'
+import type { AutocompleteTextField, EditorField, FileField, FlagChoiceField, NumberField, PlainTextField, SwitchField, ValueChoiceField } from '~/features/editor/command-registry/schema'
 import type { EditorFieldDiagnostic } from '~/features/editor/diagnostics/types'
 import type { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
 
@@ -88,6 +88,27 @@ function createPathChoiceField(): EditorField {
     argField: {
       field,
       storageKey: 'expression',
+    },
+  }
+}
+
+function createFigurePositionChoiceField(): EditorField {
+  const field: FlagChoiceField = {
+    key: 'position',
+    label: 'Position',
+    mode: 'flag',
+    options: [],
+    type: 'choice',
+    variant: { panel: 'figure-position' },
+  }
+
+  return {
+    key: 'position',
+    storage: 'arg',
+    field,
+    argField: {
+      field,
+      storageKey: 'position',
     },
   }
 }
@@ -198,12 +219,48 @@ function createParamChoiceFieldProbeStub() {
         type: Object,
         default: undefined,
       },
+      options: {
+        type: Array as PropType<{ label: string, value: string }[]>,
+        default: () => [],
+      },
+      renderSegmented: {
+        type: Boolean,
+        default: false,
+      },
     },
     setup(props) {
       return () => h('div', {
         'data-testid': 'param-choice-field',
         'data-has-cascading-combobox': props.comboboxData ? 'true' : 'false',
+        'data-options': props.options.map(option => option.value).join(','),
+        'data-render-segmented': String(props.renderSegmented),
       })
+    },
+  })
+}
+
+function createFigurePositionControlProbeStub() {
+  return defineComponent({
+    name: 'FigurePositionControlProbeStub',
+    props: {
+      options: {
+        type: Array as PropType<{ label: string, value: string }[]>,
+        default: () => [],
+      },
+      selectValue: {
+        type: String,
+        default: '',
+      },
+    },
+    emits: ['updateSelect'],
+    setup(props, { emit }) {
+      return () => h('button', {
+        'data-testid': 'figure-position-control',
+        'data-options': props.options.map(option => option.value).join(','),
+        'data-value': props.selectValue,
+        'type': 'button',
+        'onClick': () => emit('updateSelect', 'right13'),
+      }, 'Figure position')
     },
   })
 }
@@ -265,6 +322,7 @@ const globalStubs = {
   Autocomplete: createAutocompleteProbeStub(),
   ColorPicker: createBrowserContainerStub('ColorPickerStub'),
   FilePicker: createBrowserContainerStub('FilePickerStub'),
+  FigurePositionControl: createBrowserContainerStub('FigurePositionControlStub'),
   FocusXYControl: createBrowserContainerStub('FocusXYControlStub'),
   Input: createBrowserInputStub('InputStub'),
   Label: createBrowserContainerStub('LabelStub', 'label'),
@@ -306,6 +364,8 @@ function renderFieldRenderer(
       fileRootPaths: {},
       getAutocompleteOptions: () => [],
       getDynamicOptions: () => [],
+      getFieldSelectOptions: () => [],
+      supportsExtendedFigurePositions: false,
       getFieldSelectValue: () => '',
       getFieldValue: () => '',
       getFieldDiagnostics: () => diagnostics,
@@ -344,6 +404,8 @@ function renderChoiceRenderer(
         { label: 'charc/group01/item01', value: 'charc/group01/item01' },
         { label: 'charc/default', value: 'charc/default' },
       ],
+      getFieldSelectOptions: () => [],
+      supportsExtendedFigurePositions: false,
       getFieldSelectValue: () => '',
       getFieldValue: () => '',
       getFieldDiagnostics: () => diagnostics,
@@ -384,6 +446,8 @@ function renderAutocompleteRenderer(options: RenderAutocompleteOptions = {}) {
       fileRootPaths: {},
       getAutocompleteOptions: () => options.options ?? [{ label: 'hero', value: 'hero' }],
       getDynamicOptions: () => [],
+      getFieldSelectOptions: () => [],
+      supportsExtendedFigurePositions: false,
       getFieldSelectValue: () => '',
       getFieldValue: () => options.value?.() ?? 'hero',
       getFieldDiagnostics: () => options.diagnostics ?? [],
@@ -440,6 +504,8 @@ describe('ParamRenderer', () => {
         fileRootPaths: {},
         getAutocompleteOptions: () => [],
         getDynamicOptions: () => [],
+        getFieldSelectOptions: () => [],
+        supportsExtendedFigurePositions: false,
         getFieldSelectValue: () => '',
         getFieldValue: (field: EditorField) => field.key === 'enabled',
         getFieldDiagnostics: () => [],
@@ -495,6 +561,164 @@ describe('ParamRenderer', () => {
     renderChoiceRenderer(false)
 
     await expect.element(page.getByTestId('param-choice-field')).toHaveAttribute('data-has-cascading-combobox', 'false')
+  })
+
+  it('使用调用方提供的 choice 选项而不是绕过运行时过滤', async () => {
+    const field = createPathChoiceField()
+    if (field.field.type !== 'choice') {
+      throw new TypeError('expected a choice field')
+    }
+    field.field.options = [
+      { label: 'Left', value: 'left' },
+      { label: 'Left 13', value: 'left13' },
+      { label: 'Right', value: 'right' },
+    ]
+
+    renderInBrowser(ParamRenderer, {
+      props: {
+        canScrub: () => false,
+        fields: [field],
+        fileRootPaths: {},
+        getAutocompleteOptions: () => [],
+        getDynamicOptions: () => [],
+        getFieldSelectOptions: () => [{ label: 'Left', value: 'left' }, { label: 'Right', value: 'right' }],
+        supportsExtendedFigurePositions: false,
+        getFieldSelectValue: () => 'left',
+        getFieldValue: () => 'left',
+        getFieldDiagnostics: () => [],
+        isFieldVisible: () => true,
+      },
+      global: {
+        provide: {
+          [statementEditorSurfaceKey]: 'panel',
+        },
+        stubs: {
+          ...globalStubs,
+          ParamChoiceField: createParamChoiceFieldProbeStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('param-choice-field')).toHaveAttribute('data-options', 'left,right')
+  })
+
+  it('4.6.3 面板使用图标立绘位置控件', async () => {
+    const field = createFigurePositionChoiceField()
+    const handleUpdateSelect = vi.fn()
+    const options = [
+      { label: 'Left', value: 'left' },
+      { label: 'Left 14', value: 'left14' },
+      { label: 'Left 13', value: 'left13' },
+      { label: 'Center', value: '__unspecified__' },
+      { label: 'Right 13', value: 'right13' },
+      { label: 'Right 14', value: 'right14' },
+      { label: 'Right', value: 'right' },
+    ]
+
+    renderInBrowser(ParamRenderer, {
+      props: {
+        canScrub: () => false,
+        fields: [field],
+        fileRootPaths: {},
+        getAutocompleteOptions: () => [],
+        getDynamicOptions: () => [],
+        getFieldSelectOptions: () => options,
+        supportsExtendedFigurePositions: true,
+        getFieldSelectValue: () => 'left13',
+        getFieldValue: () => 'left13',
+        getFieldDiagnostics: () => [],
+        isFieldVisible: () => true,
+        onUpdateSelect: handleUpdateSelect,
+      },
+      global: {
+        provide: {
+          [statementEditorSurfaceKey]: 'panel',
+        },
+        stubs: {
+          ...globalStubs,
+          FigurePositionControl: createFigurePositionControlProbeStub(),
+          ParamChoiceField: createParamChoiceFieldProbeStub(),
+        },
+      },
+    })
+
+    const control = page.getByTestId('figure-position-control')
+    await expect.element(control).toHaveAttribute('data-options', options.map(option => option.value).join(','))
+    await expect.element(control).toHaveAttribute('data-value', 'left13')
+    await expect.element(page.getByTestId('param-choice-field')).not.toBeInTheDocument()
+
+    await control.click()
+    expect(handleUpdateSelect).toHaveBeenCalledWith({ field, value: 'right13' })
+  })
+
+  it('旧引擎面板保留分段立绘位置控件', async () => {
+    const field = createFigurePositionChoiceField()
+
+    renderInBrowser(ParamRenderer, {
+      props: {
+        canScrub: () => false,
+        fields: [field],
+        fileRootPaths: {},
+        getAutocompleteOptions: () => [],
+        getDynamicOptions: () => [],
+        getFieldSelectOptions: () => [
+          { label: 'Left', value: 'left' },
+          { label: 'Center', value: '__unspecified__' },
+          { label: 'Right', value: 'right' },
+        ],
+        supportsExtendedFigurePositions: false,
+        getFieldSelectValue: () => '__unspecified__',
+        getFieldValue: () => '__unspecified__',
+        getFieldDiagnostics: () => [],
+        isFieldVisible: () => true,
+      },
+      global: {
+        provide: {
+          [statementEditorSurfaceKey]: 'panel',
+        },
+        stubs: {
+          ...globalStubs,
+          FigurePositionControl: createFigurePositionControlProbeStub(),
+          ParamChoiceField: createParamChoiceFieldProbeStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('figure-position-control')).not.toBeInTheDocument()
+    await expect.element(page.getByTestId('param-choice-field')).toHaveAttribute('data-render-segmented', 'true')
+  })
+
+  it('4.6.3 内联编辑器保留立绘位置下拉菜单', async () => {
+    const field = createFigurePositionChoiceField()
+
+    renderInBrowser(ParamRenderer, {
+      props: {
+        canScrub: () => false,
+        fields: [field],
+        fileRootPaths: {},
+        getAutocompleteOptions: () => [],
+        getDynamicOptions: () => [],
+        getFieldSelectOptions: () => [{ label: 'Left 13', value: 'left13' }],
+        supportsExtendedFigurePositions: true,
+        getFieldSelectValue: () => 'left13',
+        getFieldValue: () => 'left13',
+        getFieldDiagnostics: () => [],
+        isFieldVisible: () => true,
+      },
+      global: {
+        provide: {
+          [statementEditorSurfaceKey]: 'inline',
+        },
+        stubs: {
+          ...globalStubs,
+          FigurePositionControl: createFigurePositionControlProbeStub(),
+          ParamChoiceField: createParamChoiceFieldProbeStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('figure-position-control')).not.toBeInTheDocument()
+    await expect.element(page.getByTestId('param-choice-field')).toHaveAttribute('data-render-segmented', 'false')
   })
 
   it('panel 下 choice 控件占满诊断锚点', async () => {
