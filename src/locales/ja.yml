@@ -701,8 +701,8 @@ edit:
     duplicateLabel: "ラベル「{label}」は現在のシーンで{count}回定義されているため、ジャンプ先が曖昧です。"
     missingLabel: "ラベル「{label}」は現在のシーンで定義されていません。"
     unsupportedLive2d: 現在のエンジンは Live2D モデルをサポートしていません。
-    unsupportedMultilineStatements: 現在のエンジンは複数行のステートメントをサポートしていません。
-    unsupportedOpusVocal: 現在のエンジンは say の Opus 音声省略形式をサポートしていません。WebGAL 4.6.3 以降にアップグレードしてください。
+    unsupportedMultilineStatements: 複数行のステートメントには WebGAL 4.6.3 以降が必要です。
+    unsupportedOpusVocal: Opus 音声の省略記法には WebGAL 4.6.3 以降が必要です。
     unsupportedFigurePosition: この立ち絵位置を使用するには WebGAL 4.6.3 以降が必要です。
     unsupportedSpine: 現在のエンジンは Spine モデルをサポートしていません。
   errors:
