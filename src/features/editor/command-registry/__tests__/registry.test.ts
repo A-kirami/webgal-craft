@@ -165,6 +165,16 @@ describe('命令注册表完整性', () => {
     })
   })
 
+  it('changeFigure 位置字段为面板声明图标位置控件', () => {
+    const fields = readEditorFields(getCommandConfig(commandType.changeFigure))
+    const positionField = fields.find(field => field.key === 'position')?.field
+
+    expect(positionField).toMatchObject({
+      type: 'choice',
+      variant: { panel: 'figure-position' },
+    })
+  })
+
   it('立绘引用和标签名称字段声明对应 autocomplete 来源', () => {
     const sayFields = readEditorFields(getCommandConfig(commandType.say))
     const associatedFigureField = sayFields.find(field => field.key === 'figureId')?.field

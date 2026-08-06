@@ -35,6 +35,7 @@ function createParamRendererSharedProps(): StatementParamRendererSharedProps {
     getAutocompleteOptions: () => [],
     getDynamicOptions: () => [],
     getFieldSelectOptions: () => [],
+    supportsExtendedFigurePositions: false,
     getFieldSelectValue: () => '',
     getFieldValue: () => '',
     getFieldDiagnostics: () => [],

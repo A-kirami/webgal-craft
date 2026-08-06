@@ -234,6 +234,7 @@ export function useStatementEditorFieldBindings(
     getAutocompleteOptions: getFieldAutocompleteOptions,
     getDynamicOptions: getFieldDynamicOptions,
     getFieldSelectOptions,
+    supportsExtendedFigurePositions: options.runtimeCapabilities.value.figurePositions,
     getFieldValue,
     getFieldSelectValue,
     getFieldDiagnostics,

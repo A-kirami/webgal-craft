@@ -125,7 +125,7 @@ export const performEntries: CommandEntry[] = [
         label: t => t('edit.visualEditor.params.position'),
         type: 'choice',
         mode: 'flag',
-        variant: { panel: 'segmented' },
+        variant: { panel: 'figure-position' },
         options: [
           { label: t => t('edit.visualEditor.options.left'), value: 'left' },
           { label: t => t('edit.visualEditor.options.left14'), value: 'left14' },

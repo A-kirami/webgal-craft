@@ -8,6 +8,7 @@ import { statementEditorSurfaceKey } from '~/features/editor/statement-editor/su
 import { cn } from '~/lib/utils'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 
+import FigurePositionControl from './controls/FigurePositionControl.vue'
 import { useParamChoiceFieldViewModel } from './useParamChoiceFieldViewModel'
 import { useParamFieldMeta } from './useParamFieldMeta'
 import { useParamXyPad } from './useParamXyPad'
@@ -25,6 +26,7 @@ interface Props {
   getAutocompleteOptions: (field: EditorField) => ResolvedAutocompleteOption[]
   getDynamicOptions: (field: EditorField) => { label: string, value: string }[]
   getFieldSelectOptions: (field: EditorField) => { label: string, value: string }[]
+  supportsExtendedFigurePositions: boolean
   getFieldSelectValue: (field: EditorField) => string
   getFieldValue: (field: EditorField) => string | number | boolean
   getFieldDiagnostics: (field: EditorField) => readonly EditorFieldDiagnostic[]
@@ -206,8 +208,20 @@ function shouldRenderAutocomplete(field: EditorField): boolean {
 }
 
 function shouldRenderSegmented(field: EditorField): boolean {
+  if (field.field.type !== 'choice') {
+    return false
+  }
+
+  const variant = resolveSurfaceVariant(field.field.variant, surface, 'select')
+  return variant === 'segmented'
+    || (variant === 'figure-position' && !props.supportsExtendedFigurePositions)
+}
+
+function shouldRenderFigurePosition(field: EditorField): boolean {
   return field.field.type === 'choice'
-    && resolveSurfaceVariant(field.field.variant, surface, 'select') === 'segmented'
+    && surface === 'panel'
+    && props.supportsExtendedFigurePositions
+    && resolveSurfaceVariant(field.field.variant, surface, 'select') === 'figure-position'
 }
 
 function handleSelectUpdate(field: EditorField, value: unknown) {
@@ -341,6 +355,15 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
             :unit-label="unitLabel(field)"
             @update-value="emit('updateValue', { field, value: $event })"
             @commit-slider="emit('commitSlider', { field, event: $event })"
+          />
+
+          <FigurePositionControl
+            v-else-if="shouldRenderFigurePosition(field) && choiceFieldViewModels.get(field.key)"
+            :input-id="fieldInputId(field)"
+            :control-class="cn(controlClass(field), fieldStatusClass(field))"
+            :options="choiceFieldViewModels.get(field.key)?.options ?? []"
+            :select-value="choiceFieldViewModels.get(field.key)?.selectValue ?? ''"
+            @update-select="handleSelectUpdate(field, $event)"
           />
 
           <ParamChoiceField

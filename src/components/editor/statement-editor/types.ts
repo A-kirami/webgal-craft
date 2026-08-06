@@ -35,6 +35,7 @@ export interface StatementParamRendererSharedProps {
   getAutocompleteOptions: (field: EditorField) => ResolvedAutocompleteOption[]
   getDynamicOptions: (field: EditorField) => { label: string, value: string }[]
   getFieldSelectOptions: (field: EditorField) => { label: string, value: string }[]
+  supportsExtendedFigurePositions: boolean
   getFieldSelectValue: (field: EditorField) => string
   getFieldValue: (field: EditorField) => string | number | boolean
   getFieldDiagnostics: (field: EditorField) => readonly EditorFieldDiagnostic[]
