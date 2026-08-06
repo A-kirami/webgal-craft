@@ -24,6 +24,7 @@ interface Props {
   fileRootPaths: Record<string, string>
   getAutocompleteOptions: (field: EditorField) => ResolvedAutocompleteOption[]
   getDynamicOptions: (field: EditorField) => { label: string, value: string }[]
+  getFieldSelectOptions: (field: EditorField) => { label: string, value: string }[]
   getFieldSelectValue: (field: EditorField) => string
   getFieldValue: (field: EditorField) => string | number | boolean
   getFieldDiagnostics: (field: EditorField) => readonly EditorFieldDiagnostic[]
@@ -268,11 +269,10 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
     return editSettingsStore.comboboxPathDelimiter
   },
   getDynamicOptions: field => props.getDynamicOptions(field),
+  getStaticOptions: field => props.getFieldSelectOptions(field),
   getPlaceholder: resolvedPlaceholder,
   getSelectValue: field => props.getFieldSelectValue(field),
-  i18nContent: () => i18nContent,
   shouldRenderSegmented,
-  t,
 }).viewModels)
 </script>
 

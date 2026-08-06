@@ -198,11 +198,16 @@ function createParamChoiceFieldProbeStub() {
         type: Object,
         default: undefined,
       },
+      options: {
+        type: Array as PropType<{ label: string, value: string }[]>,
+        default: () => [],
+      },
     },
     setup(props) {
       return () => h('div', {
         'data-testid': 'param-choice-field',
         'data-has-cascading-combobox': props.comboboxData ? 'true' : 'false',
+        'data-options': props.options.map(option => option.value).join(','),
       })
     },
   })
@@ -306,6 +311,7 @@ function renderFieldRenderer(
       fileRootPaths: {},
       getAutocompleteOptions: () => [],
       getDynamicOptions: () => [],
+      getFieldSelectOptions: () => [],
       getFieldSelectValue: () => '',
       getFieldValue: () => '',
       getFieldDiagnostics: () => diagnostics,
@@ -344,6 +350,7 @@ function renderChoiceRenderer(
         { label: 'charc/group01/item01', value: 'charc/group01/item01' },
         { label: 'charc/default', value: 'charc/default' },
       ],
+      getFieldSelectOptions: () => [],
       getFieldSelectValue: () => '',
       getFieldValue: () => '',
       getFieldDiagnostics: () => diagnostics,
@@ -384,6 +391,7 @@ function renderAutocompleteRenderer(options: RenderAutocompleteOptions = {}) {
       fileRootPaths: {},
       getAutocompleteOptions: () => options.options ?? [{ label: 'hero', value: 'hero' }],
       getDynamicOptions: () => [],
+      getFieldSelectOptions: () => [],
       getFieldSelectValue: () => '',
       getFieldValue: () => options.value?.() ?? 'hero',
       getFieldDiagnostics: () => options.diagnostics ?? [],
@@ -440,6 +448,7 @@ describe('ParamRenderer', () => {
         fileRootPaths: {},
         getAutocompleteOptions: () => [],
         getDynamicOptions: () => [],
+        getFieldSelectOptions: () => [],
         getFieldSelectValue: () => '',
         getFieldValue: (field: EditorField) => field.key === 'enabled',
         getFieldDiagnostics: () => [],
@@ -495,6 +504,44 @@ describe('ParamRenderer', () => {
     renderChoiceRenderer(false)
 
     await expect.element(page.getByTestId('param-choice-field')).toHaveAttribute('data-has-cascading-combobox', 'false')
+  })
+
+  it('使用调用方提供的 choice 选项而不是绕过运行时过滤', async () => {
+    const field = createPathChoiceField()
+    if (field.field.type !== 'choice') {
+      throw new TypeError('expected a choice field')
+    }
+    field.field.options = [
+      { label: 'Left', value: 'left' },
+      { label: 'Left 13', value: 'left13' },
+      { label: 'Right', value: 'right' },
+    ]
+
+    renderInBrowser(ParamRenderer, {
+      props: {
+        canScrub: () => false,
+        fields: [field],
+        fileRootPaths: {},
+        getAutocompleteOptions: () => [],
+        getDynamicOptions: () => [],
+        getFieldSelectOptions: () => [{ label: 'Left', value: 'left' }, { label: 'Right', value: 'right' }],
+        getFieldSelectValue: () => 'left',
+        getFieldValue: () => 'left',
+        getFieldDiagnostics: () => [],
+        isFieldVisible: () => true,
+      },
+      global: {
+        provide: {
+          [statementEditorSurfaceKey]: 'panel',
+        },
+        stubs: {
+          ...globalStubs,
+          ParamChoiceField: createParamChoiceFieldProbeStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('param-choice-field')).toHaveAttribute('data-options', 'left,right')
   })
 
   it('panel 下 choice 控件占满诊断锚点', async () => {

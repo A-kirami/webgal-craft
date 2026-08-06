@@ -1,22 +1,20 @@
 import { buildCascadingComboboxData } from '~/components/primitives/combobox/cascading-combobox-data'
-import { isFlagChoiceField, resolveI18n } from '~/features/editor/command-registry/schema'
+import { isFlagChoiceField } from '~/features/editor/command-registry/schema'
 
 import type { ParamSelectOptionItem } from './controls/types'
 import type { CascadingComboboxData } from '~/components/primitives/combobox/cascading-combobox-data'
 import type { EditorField } from '~/features/editor/command-registry/schema'
 
 type ChoiceFieldMode = 'select' | 'combobox'
-type TranslateFn = (key: string, ...args: unknown[]) => string
 
 interface UseParamChoiceFieldViewModelOptions {
   getChoiceFieldMode: (field: EditorField) => ChoiceFieldMode | undefined
   getComboboxPathDelimiter: () => string
   getDynamicOptions: (field: EditorField) => ParamSelectOptionItem[]
+  getStaticOptions: (field: EditorField) => ParamSelectOptionItem[]
   getPlaceholder: (field: EditorField) => string
   getSelectValue: (field: EditorField) => string
-  i18nContent: () => string
   shouldRenderSegmented: (field: EditorField) => boolean
-  t: TranslateFn
   visibleFields: () => EditorField[]
 }
 
@@ -27,21 +25,6 @@ export interface ParamChoiceFieldViewModel {
   placeholder: string
   renderSegmented: boolean
   selectValue: string
-}
-
-function resolveStaticOptions(
-  field: EditorField,
-  t: TranslateFn,
-  i18nContent: string,
-): ParamSelectOptionItem[] {
-  if (field.field.type !== 'choice') {
-    return []
-  }
-
-  return field.field.options.map(option => ({
-    value: option.value,
-    label: resolveI18n(option.label, t, i18nContent),
-  }))
 }
 
 function mergeOptions(
@@ -99,7 +82,7 @@ function createViewModel(
 
   const mergedOptions = mergeOptions(
     options.getDynamicOptions(field),
-    resolveStaticOptions(field, options.t, options.i18nContent()),
+    options.getStaticOptions(field),
   )
 
   return {

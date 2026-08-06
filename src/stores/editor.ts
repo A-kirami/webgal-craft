@@ -115,6 +115,15 @@ function createSceneBufferRevision(session: EditableEditorSession): string {
   ].join(':')
 }
 
+function sameEngineRuntimeCapabilities(
+  current: EngineRuntimeCapabilities,
+  next: EngineRuntimeCapabilities,
+): boolean {
+  return current.figurePositions === next.figurePositions
+    && current.multilineStatements === next.multilineStatements
+    && current.opusVocalShorthand === next.opusVocalShorthand
+}
+
 async function readTextDocumentFile(path: AbsPath): Promise<ReadTextDocumentResult> {
   const fileStore = useFileStore()
   const physicalPath = fileStore.isVfs ? await fileStore.resolveFilePath(path) : path
@@ -322,10 +331,7 @@ export const useEditorStore = defineStore('editor', () => {
       if (
         session.type !== 'editable'
         || session.document.model.kind !== 'scene'
-        || (
-          session.document.model.runtimeCapabilities.multilineStatements
-          === runtimeCapabilities.multilineStatements
-        )
+        || sameEngineRuntimeCapabilities(session.document.model.runtimeCapabilities, runtimeCapabilities)
       ) {
         continue
       }

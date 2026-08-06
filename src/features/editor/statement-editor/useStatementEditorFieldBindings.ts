@@ -233,6 +233,7 @@ export function useStatementEditorFieldBindings(
     parsed: options.parsed.value,
     getAutocompleteOptions: getFieldAutocompleteOptions,
     getDynamicOptions: getFieldDynamicOptions,
+    getFieldSelectOptions,
     getFieldValue,
     getFieldSelectValue,
     getFieldDiagnostics,
