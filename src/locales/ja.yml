@@ -176,6 +176,7 @@ home:
     importEngineVersionInvalid: このプロジェクトに紐付いたエンジンには有効なバージョン情報がありません。別のエンジンを選択してください
     importEngineVersionTooOld: このプロジェクトに紐付いたエンジンは古すぎます。WebGAL {version} 以降に対応したエンジンを選択してください
     importAlreadyExists: このプロジェクトは既に存在します
+    importFailed: インポートに失敗しました
     importInvalidFolder: ゲームプロジェクトフォルダのようには見えません。中身を確認してください。
     importSchemaVersionTooNew: このプロジェクトはより新しいバージョンのアプリで作成されています。アプリをアップグレードしてから再度お試しください。
     importUnknownError: ゲームのインポート中に不明なエラーが発生しました
@@ -191,6 +192,7 @@ home:
     dropEngineFolder: ゲームエンジンフォルダをここにドラッグ＆ドロップ
     engineIcon: "{name} エンジンアイコン"
     importAlreadyExists: このエンジンは既に存在します
+    importFailed: インポートに失敗しました
     importInvalidFolder: エンジンフォルダのようには見えません。中身を確認してください。
     importing: エンジンをインポート中...
     importSchemaTooNew: このエンジンは現在のアプリには新しすぎます。アプリをアップグレードしてから再度お試しください。
@@ -213,6 +215,7 @@ home:
     deleteTemplate: テンプレートを削除
     dropTemplateFolder: テンプレートフォルダをここにドラッグ＆ドロップ
     importInvalidFolder: これは有効なテンプレートフォルダではありません
+    importFailed: インポートに失敗しました
     importDuplicate: 同じ名前のテンプレートが既に存在します
     importUnknownError: テンプレートのインポート中に不明なエラーが発生しました
     importMultipleFolders: 一度にインポートできるテンプレートフォルダは1つだけです

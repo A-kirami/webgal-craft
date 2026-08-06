@@ -5,12 +5,14 @@ import { toLookupPathKey } from '~/services/resource-path/lookup'
 
 const {
   classifyEngineMock,
+  engineImportMock,
   gameIdentityKeyOfMock,
   engineIdentityKeyOfMock,
   existsMock,
   getEnginePreviewAssetsMock,
   getGameSnapshotMock,
   getTemplateMetadataMock,
+  gameImportMock,
   loggerErrorMock,
   modalOpenMock,
   toastErrorMock,
@@ -28,6 +30,7 @@ const {
   validateTemplateMock,
 } = vi.hoisted(() => ({
   classifyEngineMock: vi.fn(),
+  engineImportMock: vi.fn(),
   gameIdentityKeyOfMock: vi.fn((resource: { path: AbsPath }) => toLookupPathKey(resource.path)),
   engineIdentityKeyOfMock: vi.fn((resource: { path: AbsPath, engineId?: string, version?: string }) =>
     resource.engineId && resource.version
@@ -38,6 +41,7 @@ const {
   getEnginePreviewAssetsMock: vi.fn(),
   getGameSnapshotMock: vi.fn(),
   getTemplateMetadataMock: vi.fn(),
+  gameImportMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   modalOpenMock: vi.fn(),
   toastErrorMock: vi.fn(),
@@ -95,7 +99,7 @@ vi.mock('~/services/engine-manager', () => ({
     classifyEngine: classifyEngineMock,
     getEnginePreviewAssets: getEnginePreviewAssetsMock,
     identityKeyOf: engineIdentityKeyOfMock,
-    importEngine: vi.fn(),
+    importEngine: engineImportMock,
     validateEngine: validateEngineMock,
   },
 }))
@@ -104,7 +108,7 @@ vi.mock('~/services/game-manager', () => ({
   gameManager: {
     getGameSnapshot: getGameSnapshotMock,
     identityKeyOf: gameIdentityKeyOfMock,
-    importGame: vi.fn(),
+    importGame: gameImportMock,
     resolvePreviewSite: vi.fn(),
     validateGame: vi.fn(),
   },
@@ -139,12 +143,14 @@ describe('useDiscoverResources', () => {
     vi.resetModules()
 
     classifyEngineMock.mockReset()
+    engineImportMock.mockReset()
     gameIdentityKeyOfMock.mockClear()
     engineIdentityKeyOfMock.mockClear()
     existsMock.mockReset()
     getEnginePreviewAssetsMock.mockReset()
     getGameSnapshotMock.mockReset()
     getTemplateMetadataMock.mockReset()
+    gameImportMock.mockReset()
     loggerErrorMock.mockReset()
     modalOpenMock.mockReset()
     toastErrorMock.mockReset()
@@ -239,6 +245,45 @@ describe('useDiscoverResources', () => {
     }))
     expect(classifyEngineMock).toHaveBeenCalledWith('/engines/WebGAL/4.5.0')
     expect(classifyEngineMock).toHaveBeenCalledWith('/engines/WebGAL/legacy')
+  })
+
+  it('发现引擎单项导入失败时显示具体错误', async () => {
+    const { AppError } = await import('~/types/errors')
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/engines': {
+          return [{ isDirectory: true, name: 'WebGAL' }]
+        }
+        case '/engines/WebGAL': {
+          return [{ isDirectory: true, name: 'legacy' }]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+    validateEngineMock.mockResolvedValue(true)
+    classifyEngineMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        id: 'webgal',
+        name: 'WebGAL',
+        version: 'legacy',
+      },
+    })
+    engineImportMock.mockRejectedValue(new AppError('INVALID_MANIFEST', 'legacy engine', {
+      details: { reason: 'LEGACY_ENGINE' },
+    }))
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    const modalProps = modalOpenMock.mock.calls[0]?.[1] as { onImport?: (paths: AbsPath[]) => Promise<void> } | undefined
+    await modalProps?.onImport?.([AbsPath.from('/engines/WebGAL/legacy')])
+
+    expect(toastErrorMock).toHaveBeenCalledWith('home.engines.importUnsupportedLegacyEngine (1/1)')
   })
 
   it('会把 Windows 风格扫描目录归一化后再发现模板', async () => {
@@ -356,6 +401,35 @@ describe('useDiscoverResources', () => {
     }))
     expect(getTemplateMetadataMock).toHaveBeenCalledWith('/templates/modern')
     expect(getTemplateMetadataMock).toHaveBeenCalledWith('/templates/broken')
+  })
+
+  it('发现模板单项导入失败时显示具体错误', async () => {
+    const { AppError } = await import('~/types/errors')
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'templates' })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'templates' })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/templates': {
+          return [{ isDirectory: true, name: 'duplicate' }]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+    validateTemplateMock.mockResolvedValue(true)
+    getTemplateMetadataMock.mockResolvedValue({ name: 'Duplicate Template' })
+    templateImportMock.mockRejectedValue(new AppError('DUPLICATE_RESOURCE', 'duplicate template'))
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    const modalProps = modalOpenMock.mock.calls[0]?.[1] as { onImport?: (paths: AbsPath[]) => Promise<void> } | undefined
+    await modalProps?.onImport?.([AbsPath.from('/templates/duplicate')])
+
+    expect(toastErrorMock).toHaveBeenCalledWith('home.templates.importDuplicate (1/1)')
   })
 
   it('已导入同名模板时不会再次展示不同路径的重复模板', async () => {
@@ -557,6 +631,45 @@ describe('useDiscoverResources', () => {
     expect(gameIdentityKeyOfMock).toHaveBeenCalled()
   })
 
+  it('发现游戏单项导入失败时显示具体错误', async () => {
+    const { AppError } = await import('~/types/errors')
+    const { gameManager } = await import('~/services/game-manager')
+    vi.mocked(gameManager.validateGame).mockResolvedValue(true)
+    vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
+      projectPath: AbsPath.from('/games/broken-config'),
+    })
+    gameImportMock.mockRejectedValue(new AppError('INVALID_CONFIG', 'broken config', {
+      details: { reason: 'PARSE_FAILED' },
+    }))
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'games' })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'games' })
+    useStorageSettingsStoreMock.mockReturnValue({
+      engineSavePath: '/engines',
+      gameSavePath: '/games',
+      templateSavePath: '/templates',
+    })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/games': {
+          return [{ isDirectory: true, name: 'broken-config' }]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    const modalProps = modalOpenMock.mock.calls[0]?.[1] as { onImport?: (paths: AbsPath[]) => Promise<void> } | undefined
+    await modalProps?.onImport?.([AbsPath.from('/games/broken-config')])
+
+    expect(toastErrorMock).toHaveBeenCalledWith('home.games.importConfigCorrupted (1/1)')
+  })
+
   it('批量导入发现的游戏时会提供组合依赖解析回调', async () => {
     const { gameManager } = await import('~/services/game-manager')
     vi.mocked(gameManager.validateGame).mockResolvedValue(true)
@@ -677,6 +790,50 @@ describe('useDiscoverResources', () => {
     expect(toastErrorMock).not.toHaveBeenCalled()
     expect(toastInfoMock).not.toHaveBeenCalled()
     expect(toastSuccessMock).not.toHaveBeenCalled()
+  })
+
+  it('发现资源批量导入包含多种错误时在同一条通知中列出具体原因', async () => {
+    const { AppError } = await import('~/types/errors')
+    resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'templates' })
+    useWorkspaceStoreMock.mockReturnValue({ activeTab: 'templates' })
+    readDirMock.mockImplementation(async (path: string) => {
+      switch (path) {
+        case '/templates': {
+          return [
+            { isDirectory: true, name: 'invalid' },
+            { isDirectory: true, name: 'duplicate' },
+          ]
+        }
+        default: {
+          return []
+        }
+      }
+    })
+    validateTemplateMock.mockResolvedValue(true)
+    getTemplateMetadataMock.mockImplementation(async (path: AbsPath) => ({
+      name: AbsPath.basename(path),
+    }))
+    templateImportMock.mockImplementation(async (path: AbsPath) => {
+      if (path.endsWith('/invalid')) {
+        throw new AppError('INVALID_STRUCTURE', 'invalid template')
+      }
+      throw new AppError('DUPLICATE_RESOURCE', 'duplicate template')
+    })
+
+    const { useDiscoverResources } = await import('../useDiscoverResources')
+    const discoverResources = useDiscoverResources()
+
+    await discoverResources.checkResourcesForActiveTab()
+
+    const modalProps = modalOpenMock.mock.calls[0]?.[1] as { onImport?: (paths: AbsPath[]) => Promise<void> } | undefined
+    await modalProps?.onImport?.([
+      AbsPath.from('/templates/invalid'),
+      AbsPath.from('/templates/duplicate'),
+    ])
+
+    expect(toastErrorMock).toHaveBeenCalledWith('home.templates.importFailed (2/2)', {
+      description: 'home.templates.importInvalidFolder; home.templates.importDuplicate',
+    })
   })
 
   it('批量导入失败日志只统计样例之外的剩余失败数', async () => {

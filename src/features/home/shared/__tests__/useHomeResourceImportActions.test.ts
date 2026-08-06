@@ -37,6 +37,7 @@ function createActions() {
     importResource: importResourceMock,
     selectResource: selectResourceMock,
     messages: {
+      importFailed: t => t('home.engines.importFailed'),
       invalidFolder: t => t('home.engines.importInvalidFolder'),
       multipleFolders: t => t('home.engines.importMultipleFolders'),
       selectFolderTitle: t => t('common.dialogs.selectEngineFolder'),

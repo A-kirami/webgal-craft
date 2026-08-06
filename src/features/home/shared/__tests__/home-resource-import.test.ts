@@ -79,6 +79,13 @@ describe('首页共享导入纯逻辑', () => {
       kind: 'game-config-corrupted',
       level: 'error',
     })
+
+    expect(resolveHomeResourceImportNotification(new AppError('INVALID_CONFIG', 'broken', {
+      details: { reason: 'PARSE_FAILED' },
+    }))).toEqual({
+      kind: 'game-config-corrupted',
+      level: 'error',
+    })
   })
 
   it('schema 版本过新错误会映射为专用通知', () => {
