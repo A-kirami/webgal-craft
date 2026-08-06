@@ -108,6 +108,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   const { getFieldDiagnostics } = useStatementFieldDiagnostics({
     diagnostics: options.diagnostics,
     parsed,
+    runtimeCapabilities,
   })
 
   const { fileRootPaths } = useStatementFileRoots({

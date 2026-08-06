@@ -186,6 +186,7 @@ describe('getArgKeyCompletions', () => {
     const completions = getArgKeyCompletions(range, commandType.say, true, {
       figurePositions: false,
       multilineStatements: false,
+      opusVocalShorthand: false,
     })
 
     expect(completions.map(item => item.label)).not.toContain('left13')

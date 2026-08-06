@@ -1,4 +1,5 @@
 import { diagnoseDuplicateSceneLabels, diagnoseMissingSceneLabels } from '~/domain/script/diagnostics'
+import { findUnsupportedFigurePositionReferences } from '~/domain/script/figure-position-diagnostics'
 import {
   findMissingSentenceResourceReferences,
   findUnsupportedEngineModelReferences,
@@ -14,7 +15,7 @@ import type { AssetKey } from '~/services/resource-index/keys'
 interface DiagnoseSceneOptions {
   engineCapabilities?: EngineModelCapabilities
   hasAssetKey?: (key: AssetKey) => boolean
-  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'opusVocalShorthand'>
+  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'figurePositions' | 'opusVocalShorthand'>
 }
 
 export function diagnoseScene(
@@ -93,6 +94,25 @@ export function diagnoseScene(
             value: reference.value,
           })
         }
+      }
+    }
+  }
+
+  if (options.runtimeCapabilities?.figurePositions === false) {
+    for (const [statementIndex, sentence] of sentences.entries()) {
+      if (!sentence) {
+        continue
+      }
+
+      for (const reference of findUnsupportedFigurePositionReferences(sentence)) {
+        diagnostics.push({
+          code: 'unsupported-figure-position',
+          field: { kind: 'argument', key: reference.fieldKey },
+          severity: 'warning',
+          source: 'engine',
+          statementIndex,
+          value: reference.value,
+        })
       }
     }
   }

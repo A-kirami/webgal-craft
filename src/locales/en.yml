@@ -703,6 +703,7 @@ edit:
     unsupportedLive2d: The current engine does not support Live2D models.
     unsupportedMultilineStatements: The current engine does not support multiline statements.
     unsupportedOpusVocal: The current engine does not support Opus vocal shorthand in say statements. Upgrade to WebGAL 4.6.3 or later.
+    unsupportedFigurePosition: The current engine does not support this figure position.
     unsupportedSpine: The current engine does not support Spine models.
   errors:
     fileSyncFailed: Failed to sync the file. Please try again shortly.

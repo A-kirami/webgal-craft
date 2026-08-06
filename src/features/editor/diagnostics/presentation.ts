@@ -56,6 +56,9 @@ export function getEditorDiagnosticMessage(
     case 'unsupported-opus-vocal': {
       return t('edit.diagnostics.unsupportedOpusVocal')
     }
+    case 'unsupported-figure-position': {
+      return t('edit.diagnostics.unsupportedFigurePosition')
+    }
     default: {
       const exhaustiveCheck: never = diagnostic
       return exhaustiveCheck

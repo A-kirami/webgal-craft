@@ -173,6 +173,44 @@ describe('updateEditorDiagnostics', () => {
     })])
   })
 
+  it('旧运行时会标记扩展立绘位置', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+
+    const model = createModel([
+      'Alice: hello -left13;',
+      'changeFigure: hero.png -right14;',
+      'setAnimation: bounce -target=fig-left14;',
+      'setTransform: {} -target=fig-right13;',
+    ].join('\n'))
+    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(readMarkers(model)).toEqual([
+      expect.objectContaining({
+        startLineNumber: 1,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.unsupportedFigurePosition:',
+      }),
+      expect.objectContaining({
+        startLineNumber: 2,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.unsupportedFigurePosition:',
+      }),
+      expect.objectContaining({
+        startLineNumber: 3,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.unsupportedFigurePosition:',
+      }),
+      expect.objectContaining({
+        startLineNumber: 4,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.unsupportedFigurePosition:',
+      }),
+    ])
+  })
+
   it('为同一场景中的全部重复标签创建黄色 marker', () => {
     useResourceIndex.mockReturnValue({
       status: { value: 'building' },

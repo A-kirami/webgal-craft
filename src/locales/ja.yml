@@ -703,6 +703,7 @@ edit:
     unsupportedLive2d: 現在のエンジンは Live2D モデルをサポートしていません。
     unsupportedMultilineStatements: 現在のエンジンは複数行のステートメントをサポートしていません。
     unsupportedOpusVocal: 現在のエンジンは say の Opus 音声省略形式をサポートしていません。WebGAL 4.6.3 以降にアップグレードしてください。
+    unsupportedFigurePosition: 現在のエンジンはこの立ち絵位置をサポートしていません。
     unsupportedSpine: 現在のエンジンは Spine モデルをサポートしていません。
   errors:
     fileSyncFailed: ファイルの同期に失敗しました。しばらくしてからもう一度お試しください。
