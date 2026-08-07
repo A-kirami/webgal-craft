@@ -1,5 +1,6 @@
 import { openPath } from '@tauri-apps/plugin-opener'
 
+import { MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
 import { resolveI18nLike } from '~/utils/i18n-like'
 
@@ -14,6 +15,7 @@ import type { HomeResourceImportNotification, HomeResourceImportOutcome } from '
 import type { I18nLike, I18nT } from '~/utils/i18n-like'
 
 export interface HomeResourceImportMessages {
+  importFailed: I18nLike
   invalidFolder: I18nLike
   unknownError: I18nLike
   multipleFolders: I18nLike
@@ -39,6 +41,8 @@ export interface HomeResourceImportMessages {
   importBusy?: I18nLike
 }
 
+export type HomeResourceType = 'games' | 'engines' | 'templates'
+
 export const managedImportErrorMessages = {
   providerDenied: t => t('home.managedImport.error.providerDenied'),
   copyFailed: t => t('home.managedImport.error.copyFailed'),
@@ -48,6 +52,60 @@ export const managedImportErrorMessages = {
   rollbackFailed: t => t('home.managedImport.error.rollbackFailed'),
   importBusy: t => t('home.managedImport.error.busy'),
 } satisfies Partial<HomeResourceImportMessages>
+
+export function createHomeResourceImportMessages(type: HomeResourceType, t: I18nT): HomeResourceImportMessages {
+  switch (type) {
+    case 'games': {
+      return {
+        ...managedImportErrorMessages,
+        alreadyRegistered: t => t('home.games.importAlreadyExists'),
+        engineEditorIncompatible: t => t('home.games.importEngineEditorIncompatible'),
+        engineNotFound: t => t('home.games.importEngineNotFound'),
+        engineUnavailable: t => t('home.games.importEngineUnavailable'),
+        engineVersionInvalid: t => t('home.games.importEngineVersionInvalid'),
+        engineVersionTooOld: t => t('home.games.importEngineVersionTooOld', { version: MIN_WEBGAL_EDITOR_RUNTIME_VERSION }),
+        gameConfigCorrupted: t => t('home.games.importConfigCorrupted'),
+        gameSchemaTooNew: t => t('home.games.importSchemaVersionTooNew'),
+        invalidFolder: t => t('home.games.importInvalidFolder'),
+        importFailed: t => t('home.games.importFailed'),
+        multipleFolders: t => t('home.games.importMultipleFolders'),
+        selectFolderTitle: t('common.dialogs.selectGameFolder'),
+        unknownError: t => t('home.games.importUnknownError'),
+      }
+    }
+    case 'engines': {
+      return {
+        ...managedImportErrorMessages,
+        alreadyRegistered: t => t('home.engines.importAlreadyExists'),
+        engineEditorIncompatible: t => t('home.engines.importEditorIncompatible'),
+        engineSchemaTooNew: t => t('home.engines.importSchemaTooNew'),
+        engineVersionInvalid: t => t('home.engines.importVersionInvalid'),
+        engineVersionTooOld: t => t('home.engines.importVersionTooOld', { version: MIN_WEBGAL_EDITOR_RUNTIME_VERSION }),
+        invalidFolder: t => t('home.engines.importInvalidFolder'),
+        importFailed: t => t('home.engines.importFailed'),
+        multipleFolders: t => t('home.engines.importMultipleFolders'),
+        selectFolderTitle: t('common.dialogs.selectEngineFolder'),
+        targetConflict: t => t('home.engines.importTargetConflict'),
+        unsupportedLegacyEngine: t => t('home.engines.importUnsupportedLegacyEngine'),
+        unknownError: t => t('home.engines.importUnknownError'),
+      }
+    }
+    case 'templates': {
+      return {
+        ...managedImportErrorMessages,
+        duplicateResource: t => t('home.templates.importDuplicate'),
+        invalidFolder: t => t('home.templates.importInvalidFolder'),
+        importFailed: t => t('home.templates.importFailed'),
+        multipleFolders: t => t('home.templates.importMultipleFolders'),
+        selectFolderTitle: t('common.dialogs.selectTemplateFolder'),
+        unknownError: t => t('home.templates.importUnknownError'),
+      }
+    }
+    default: {
+      throw new Error(`未知的资源类型: ${type satisfies never}`)
+    }
+  }
+}
 
 interface UseHomeResourceImportActionsOptions {
   activeProgress: ReadonlyMap<string, number>

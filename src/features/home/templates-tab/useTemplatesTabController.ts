@@ -1,4 +1,4 @@
-import { managedImportErrorMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { createHomeResourceImportMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
 import { createTemplateImportWorkflow } from '~/features/resource-import/resource-import-workflows'
 import { resourceReconcile } from '~/services/resource-reconcile'
 import { templateManager } from '~/services/template-manager'
@@ -28,14 +28,7 @@ export function useTemplatesTabController(options: UseTemplatesTabControllerOpti
     activeProgress: options.activeProgress,
     importResource: path => templateManager.importTemplate(path),
     selectResource: importWorkflow.importFromPicker,
-    messages: {
-      ...managedImportErrorMessages,
-      duplicateResource: t => t('home.templates.importDuplicate'),
-      invalidFolder: t => t('home.templates.importInvalidFolder'),
-      multipleFolders: t => t('home.templates.importMultipleFolders'),
-      selectFolderTitle: t => t('common.dialogs.selectTemplateFolder'),
-      unknownError: t => t('home.templates.importUnknownError'),
-    },
+    messages: createHomeResourceImportMessages('templates', options.t),
     t: options.t,
   })
 

@@ -82,6 +82,10 @@ function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotific
     return 'unknown-error'
   }
 
+  if (error.code === 'INVALID_CONFIG') {
+    return 'game-config-corrupted'
+  }
+
   // 优先按 details.reason 匹配（更具体的错误分类）
   switch (error.details?.reason) {
     case 'PARSE_FAILED': { return 'invalid-folder' }

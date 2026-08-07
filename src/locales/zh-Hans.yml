@@ -176,6 +176,7 @@ home:
     importEngineVersionInvalid: 该项目绑定的引擎缺少有效的版本信息，请重新选择其他引擎
     importEngineVersionTooOld: 该项目绑定的引擎版本过旧，请重新选择 WebGAL {version} 及以上版本的引擎
     importAlreadyExists: 该项目已存在
+    importFailed: 导入失败
     importInvalidFolder: 这不像是游戏项目文件夹，请确认目录结构
     importSchemaVersionTooNew: 该项目由更新版本的应用创建，请升级应用后再尝试打开
     importUnknownError: 导入游戏时发生未知错误
@@ -191,6 +192,7 @@ home:
     dropEngineFolder: 将游戏引擎文件夹拖放到此处
     engineIcon: "{name} 引擎图标"
     importAlreadyExists: 该引擎已存在
+    importFailed: 导入失败
     importInvalidFolder: 这不像是引擎文件夹，请确认目录结构
     importing: 引擎导入中……
     importSchemaTooNew: 该引擎版本过新，请升级应用后再尝试导入
@@ -213,6 +215,7 @@ home:
     deleteTemplate: 删除模板
     dropTemplateFolder: 将模板文件夹拖放到此处
     importInvalidFolder: 这不是一个有效的模板文件夹
+    importFailed: 导入失败
     importDuplicate: 已存在同名模板
     importUnknownError: 导入模板时发生未知错误
     importMultipleFolders: 一次只能导入一个模板文件夹

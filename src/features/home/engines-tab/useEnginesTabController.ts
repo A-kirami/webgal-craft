@@ -1,9 +1,8 @@
 import { openPath } from '@tauri-apps/plugin-opener'
 
 import { db } from '~/database/db'
-import { MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
-import { managedImportErrorMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { createHomeResourceImportMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
 import { createEngineImportWorkflow } from '~/features/resource-import/resource-import-workflows'
 import { engineManager } from '~/services/engine-manager'
 import { resourceReconcile } from '~/services/resource-reconcile'
@@ -27,20 +26,7 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
     activeProgress: options.activeProgress,
     importResource: path => engineManager.importEngine(path),
     selectResource: importWorkflow.importFromPicker,
-    messages: {
-      ...managedImportErrorMessages,
-      alreadyRegistered: t => t('home.engines.importAlreadyExists'),
-      engineEditorIncompatible: t => t('home.engines.importEditorIncompatible'),
-      engineVersionInvalid: t => t('home.engines.importVersionInvalid'),
-      engineVersionTooOld: t => t('home.engines.importVersionTooOld', { version: MIN_WEBGAL_EDITOR_RUNTIME_VERSION }),
-      engineSchemaTooNew: t => t('home.engines.importSchemaTooNew'),
-      invalidFolder: t => t('home.engines.importInvalidFolder'),
-      multipleFolders: t => t('home.engines.importMultipleFolders'),
-      selectFolderTitle: t => t('common.dialogs.selectEngineFolder'),
-      targetConflict: t => t('home.engines.importTargetConflict'),
-      unsupportedLegacyEngine: t => t('home.engines.importUnsupportedLegacyEngine'),
-      unknownError: t => t('home.engines.importUnknownError'),
-    },
+    messages: createHomeResourceImportMessages('engines', options.t),
     t: options.t,
   })
 
