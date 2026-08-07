@@ -207,6 +207,8 @@ function createEditorReturn(overrides: Record<string, unknown> = {}) {
       })),
     },
     params: {
+      callSceneParameters: computed(() => undefined),
+      handleCallSceneParametersChange: vi.fn(),
       isFieldVisible: vi.fn(() => true),
       readArgRuntimeValue: vi.fn(() => undefined),
     },

@@ -17,6 +17,7 @@ import {
   buildStatements,
   buildStatementSourceRanges,
   createEmptySentence,
+  ensureParsed,
   findStatementSourceRangeAtLine,
   joinStatements,
   rebuildStatementsWithStableIds,
@@ -216,6 +217,18 @@ describe('sentence', () => {
 
   it('createEmptySentence 序列化为规范的空 say 语句', () => {
     expect(serializeSentence(createEmptySentence())).toBe(':;')
+  })
+
+  it('ensureParsed 优先返回编辑器临时草稿而不改写原始文本', () => {
+    const [entry] = buildStatements('callScene:battle.txt;')
+    const draft = {
+      ...parseSentence(entry!.rawText)!,
+      args: [{ key: '', value: '' }],
+    }
+    entry!.draftParsed = draft
+
+    expect(ensureParsed(entry!)).toBe(draft)
+    expect(entry!.rawText).toBe('callScene:battle.txt;')
   })
 
   it('rebuildStatementsWithStableIds 会保留未改动语句的稳定 id', () => {

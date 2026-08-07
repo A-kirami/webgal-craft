@@ -176,6 +176,7 @@ export function createReactiveHarness(rawText: string) {
         ...entry.value,
         parseError: false,
         parsed: payload.parsed,
+        draftParsed: payload.draftParsed,
         rawText: payload.rawText,
       }
     },

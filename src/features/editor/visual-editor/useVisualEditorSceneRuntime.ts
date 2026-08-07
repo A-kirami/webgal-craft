@@ -1,3 +1,5 @@
+import { markRaw } from 'vue'
+
 import { computeLineNumberFromStatementId, computeStatementIdFromLineNumber } from '~/domain/document/scene-selection'
 import { buildStatements, StatementEntry } from '~/domain/script/sentence'
 import { useCommandPanelBridgeBinding, useSidebarPanelBinding } from '~/features/editor/shared/useEditorPanelBindings'
@@ -498,6 +500,7 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
 
     const entry = statements[index]
     if (entry.rawText === payload.rawText) {
+      applyStatementDraft(payload)
       return
     }
 
@@ -508,7 +511,29 @@ export function useVisualEditorSceneRuntime(options: UseVisualEditorSceneRuntime
       payload.source ?? 'visual',
     )
 
+    if (payload.draftParsed) {
+      applyStatementDraft(payload)
+    }
+
     requestAutoSave()
+  }
+
+  function applyStatementDraft(payload: StatementUpdatePayload): void {
+    if (payload.target.kind !== 'statement') {
+      return
+    }
+
+    const { statementId } = payload.target
+    const index = state.value.statements.findIndex(entry => entry.id === statementId)
+    const entry = state.value.statements[index]
+    if (!entry || entry.rawText !== payload.rawText) {
+      return
+    }
+
+    state.value.statements[index] = markRaw({
+      ...entry,
+      draftParsed: payload.draftParsed ? structuredClone(payload.draftParsed) : undefined,
+    })
   }
 
   function handleSelect(id: number) {

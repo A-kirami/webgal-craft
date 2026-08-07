@@ -41,6 +41,8 @@ export interface StatementUpdatePayload {
   target: StatementUpdateTarget
   rawText: string
   parsed: ISentence
+  /** 仅供其他编辑器视图显示的临时解析结果，不参与脚本持久化。 */
+  draftParsed?: ISentence
   source?: Extract<TransactionSource, 'visual' | 'effect-editor'>
 }
 
@@ -104,7 +106,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   const localDraft = ref<{ rawText: string, parsed: ISentence }>()
   // callScene 新增参数需要先显示空白编辑行，但空键参数不能写入脚本。
   // 将这类临时行保存在编辑器草稿中，领域更新仍只保留可序列化参数。
-  const callSceneParameterDrafts = ref<arg[]>([])
+  const callSceneParameterDrafts = ref<arg[]>()
   const parsed = computed(() => localDraft.value?.parsed ?? sourceParsed.value)
   const commandNode = computed(() => parsed.value ? parseCommandNode(parsed.value) : undefined)
 
@@ -125,9 +127,22 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     (rawText) => {
       if (localDraft.value?.rawText !== rawText) {
         localDraft.value = undefined
-        callSceneParameterDrafts.value = []
+        callSceneParameterDrafts.value = undefined
       }
     },
+  )
+
+  watch(
+    () => entry.value.draftParsed,
+    (draftParsed) => {
+      if (draftParsed?.command !== commandType.callScene) {
+        callSceneParameterDrafts.value = undefined
+        return
+      }
+
+      callSceneParameterDrafts.value = readCallSceneCustomArgs(parseCommandNode(draftParsed))
+    },
+    { immediate: true },
   )
 
   function cloneSentence(sentence: ISentence): ISentence {
@@ -142,21 +157,31 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     return parsed.value ? cloneArgs(parsed.value.args) : []
   }
 
-  function dispatchUpdate(rawText: string, nextSentence: ISentence) {
+  function dispatchUpdate(
+    rawText: string,
+    nextSentence: ISentence,
+    draftParsed?: ISentence,
+  ) {
     localDraft.value = {
       rawText,
       parsed: cloneSentence(nextSentence),
     }
 
-    options.emitUpdate({
+    const update: StatementUpdatePayload = {
       target: updateTarget.value,
       rawText,
       parsed: nextSentence,
-    })
+      draftParsed: draftParsed ? cloneSentence(draftParsed) : undefined,
+    }
+    options.emitUpdate(update)
   }
 
-  function emitSentenceUpdate(nextSentence: ISentence) {
-    dispatchUpdate(serializeSentence(nextSentence), nextSentence)
+  function emitSentenceUpdate(nextSentence: ISentence, draftParsed?: ISentence) {
+    dispatchUpdate(
+      serializeSentence(nextSentence),
+      nextSentence,
+      draftParsed ?? buildCallSceneDraftParsed(nextSentence),
+    )
   }
 
   // ─── 说话人 / 旁白 ───
@@ -315,22 +340,37 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     if (!supportsSceneSemantics.value || commandNode.value?.type !== commandType.callScene) {
       return
     }
-    return [
-      ...readCallSceneCustomArgs(commandNode.value),
-      ...cloneArgs(callSceneParameterDrafts.value),
-    ]
+    if (callSceneParameterDrafts.value === undefined) {
+      return readCallSceneCustomArgs(commandNode.value)
+    }
+    return cloneArgs(callSceneParameterDrafts.value)
   })
 
   function handleCallSceneParametersChange(parameters: arg[]): void {
     if (!supportsSceneSemantics.value || commandNode.value?.type !== commandType.callScene) {
       return
     }
-    callSceneParameterDrafts.value = parameters
-      .filter(parameter => parameter.key.trim() === '')
-      .map(parameter => ({ ...parameter }))
+    callSceneParameterDrafts.value = cloneArgs(parameters)
     const updatedNode = updateCallSceneCustomArgs(commandNode.value, parameters)
     if (updatedNode) {
-      emitSentenceUpdate(serializeCommandNode(updatedNode))
+      const nextSentence = serializeCommandNode(updatedNode)
+      emitSentenceUpdate(nextSentence)
+    }
+  }
+
+  function buildCallSceneDraftParsed(sentence: ISentence): ISentence | undefined {
+    const parameters = callSceneParameterDrafts.value
+    if (sentence.command !== commandType.callScene || !parameters?.some(parameter => parameter.key.trim() === '')) {
+      return
+    }
+
+    const parameterKeys = new Set(parameters.map(parameter => parameter.key))
+    return {
+      ...sentence,
+      args: [
+        ...sentence.args.filter(parameter => !parameterKeys.has(parameter.key)),
+        ...cloneArgs(parameters),
+      ],
     }
   }
 

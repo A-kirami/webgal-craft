@@ -9,6 +9,8 @@ import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabili
 export interface StatementEntry {
   id: number
   rawText: string
+  /** 仅供编辑器跨视图共享、不会写入脚本的临时解析草稿。 */
+  draftParsed?: ISentence
   parsed: ISentence | undefined
   parseError: boolean
 }
@@ -240,7 +242,7 @@ export function createTransientStatementEntry(rawText: string, id: number): Stat
 
 /**
  * 解析 StatementEntry 的 parsed 字段（按需缓存）。
- * 如果已有缓存且 rawText 未变，直接返回缓存值。
+ * 编辑器存在临时草稿时优先返回草稿；否则如果已有缓存且 rawText 未变，直接返回缓存值。
  *
  * 注意：此函数会在 computed 内被调用，对 entry 产生写入副作用（缓存 parsed）。
  * 这是安全的，因为 entry 始终通过 markRaw 标记为非响应式对象，
@@ -248,6 +250,10 @@ export function createTransientStatementEntry(rawText: string, id: number): Stat
  * 如果移除 markRaw 不变量，此处将产生无限循环。
  */
 export function ensureParsed(entry: StatementEntry): ISentence | undefined {
+  if (entry.draftParsed !== undefined) {
+    return entry.draftParsed
+  }
+
   if (entry.parsed !== undefined || entry.parseError) {
     return entry.parsed
   }

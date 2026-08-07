@@ -71,6 +71,7 @@ function handleDraftUpdate(payload: StatementUpdatePayload): void {
     ...currentEntry,
     rawText: payload.rawText,
     parsed: payload.parsed,
+    draftParsed: payload.draftParsed,
     parseError: false,
   })
 }

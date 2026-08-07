@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { parseSentence } from '~/domain/script/parser'
 
 import { applyAnimationTransaction, applySceneTransaction } from '../transaction-apply'
 import { projectAnimationFrames, projectSceneStatements } from '../visual-projection'
@@ -43,6 +44,7 @@ describe('可视化投影', () => {
       createStatement(1, 'say:hello;'),
       createStatement(2, 'say:world;'),
     ]
+    previousEntries[1]!.draftParsed = parseSentence('say:world;')
 
     const projectedEntries = projectSceneStatements(createSceneModel([
       createStatement(1, 'say:hello;'),
@@ -51,6 +53,7 @@ describe('可视化投影', () => {
 
     expect(projectedEntries[0]).toBe(previousEntries[0])
     expect(projectedEntries[1]).not.toBe(previousEntries[1])
+    expect(projectedEntries[1]?.draftParsed).toBeUndefined()
   })
 
   it('applySceneTransaction 支持 update / insert / delete / reorder / batch', () => {
