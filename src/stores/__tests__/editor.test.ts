@@ -4,6 +4,7 @@ import { nextTick, reactive, toRaw } from 'vue'
 import { encodeTextFile } from '~/domain/document/file-codec'
 import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
+import { parseSentence } from '~/domain/script/parser'
 
 import { useTabsStore } from '../tabs'
 
@@ -692,6 +693,9 @@ describe('编辑器文本与文档流程', () => {
   it('在模式切换后保持文本与可视化投影稳定', async () => {
     const tabsStore = useTabsStore()
     const path = AbsPath.from('/game/scene/example.txt')
+    const rawText = 'callScene:battle.txt -difficulty;'
+
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode(rawText))
 
     const editorStore = useEditorStore()
 
@@ -713,11 +717,27 @@ describe('编辑器文本与文档流程', () => {
 
     editorStore.setActiveProjection('visual', path)
 
+    const visualStatement = visualProjection.statements[0]
+    if (!visualStatement) {
+      throw new TypeError('expected a visual scene statement')
+    }
+    visualStatement.draftParsed = {
+      ...parseSentence(rawText)!,
+      args: [
+        { key: 'difficulty', value: '' },
+        { key: '', value: '' },
+      ],
+    }
+
     expect(toRaw(editorStore.currentState)).toBe(toRaw(visualProjection))
     expect(toRaw(editorStore.currentTextProjection)).toBe(toRaw(textProjection))
     expect(toRaw(editorStore.currentVisualProjection)).toBe(toRaw(visualProjection))
 
     editorStore.setActiveProjection('text', path)
+
+    expect(visualProjection.statements[0]?.draftParsed).toBeUndefined()
+    expect(visualProjection.statements[0]?.rawText).toBe(rawText)
+    expect(textProjection.textContent).toBe(rawText)
 
     expect(toRaw(editorStore.currentState)).toBe(toRaw(textProjection))
     expect(toRaw(editorStore.currentTextProjection)).toBe(toRaw(textProjection))

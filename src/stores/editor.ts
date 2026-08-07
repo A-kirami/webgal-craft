@@ -1,5 +1,6 @@
 import { readFile } from '@tauri-apps/plugin-fs'
 import { defineStore } from 'pinia'
+import { markRaw } from 'vue'
 
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { decodeTextFile } from '~/domain/document/file-codec'
@@ -710,6 +711,18 @@ export const useEditorStore = defineStore('editor', () => {
         }
         patchSceneSelection(path, {
           lastLineNumber: syncedLineNumber,
+        })
+
+        // 文本模式只保留脚本文本可表示的状态，丢弃图形编辑器临时空行。
+        state.statements = state.statements.map((statement) => {
+          if (statement.draftParsed === undefined) {
+            return statement
+          }
+
+          return markRaw({
+            ...statement,
+            draftParsed: undefined,
+          })
         })
       }
       session.activeProjection = 'text'
