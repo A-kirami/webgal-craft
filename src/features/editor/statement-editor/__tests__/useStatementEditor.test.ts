@@ -45,6 +45,20 @@ describe('useStatementEditor', () => {
     expect(updates.at(-1)?.rawText).toBe('callScene:battle.txt -writeReturnTo=result -when=hp>0 -difficulty=hard;')
   })
 
+  it('callScene 只填写键的参数重新打开后仍保持空值', () => {
+    const { editor, updates } = createHarness('callScene:battle.txt;')
+
+    editor.params.handleCallSceneParametersChange([{ key: 'difficulty', value: '' }])
+
+    const rawText = updates.at(-1)?.rawText
+    expect(rawText).toBe('callScene:battle.txt -difficulty;')
+
+    const { editor: reopenedEditor } = createHarness(rawText!)
+    expect(reopenedEditor.params.callSceneParameters.value).toEqual([
+      { key: 'difficulty', value: '' },
+    ])
+  })
+
   it('callScene 新增空参数时将临时行放入草稿而不写入脚本', () => {
     const { editor, updates } = createHarness('callScene:battle.txt;')
 

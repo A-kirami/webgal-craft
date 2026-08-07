@@ -182,7 +182,10 @@ export function readCallSceneCustomArgs(node: CommandNode): arg[] {
     return []
   }
 
-  return cloneArgs(node.extraArgs.filter(item => !CALL_SCENE_RESERVED_KEYS.has(item.key)))
+  // callScene 参数表将裸参数视为未填写值。
+  return node.extraArgs
+    .filter(item => !CALL_SCENE_RESERVED_KEYS.has(item.key))
+    .map(item => ({ ...item, value: item.value === true ? '' : item.value }))
 }
 
 export function updateCallSceneCustomArgs(
@@ -194,10 +197,12 @@ export function updateCallSceneCustomArgs(
   }
 
   const preservedArgs = node.extraArgs.filter(item => CALL_SCENE_RESERVED_KEYS.has(item.key))
-  const editableArgs = customArgs.filter(item => item.key.trim() !== '' && !CALL_SCENE_RESERVED_KEYS.has(item.key))
+  const editableArgs = customArgs
+    .filter(item => item.key.trim() !== '' && !CALL_SCENE_RESERVED_KEYS.has(item.key))
+    .map(item => ({ ...item, value: item.value === '' ? true : item.value }))
   return {
     ...node,
-    extraArgs: [...cloneArgs(preservedArgs), ...cloneArgs(editableArgs)],
+    extraArgs: [...cloneArgs(preservedArgs), ...editableArgs],
   }
 }
 
