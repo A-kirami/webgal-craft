@@ -631,6 +631,9 @@ describe('FileViewer', () => {
     const referenceCounts = page.getByTestId('file-viewer-reference-count')
     await expect.element(referenceCounts.nth(0)).toHaveTextContent('0')
     await expect.element(referenceCounts.nth(1)).toHaveTextContent('3')
+    const referenceIcons = page.getByTestId('file-viewer-reference-icon')
+    await expect.element(referenceIcons.nth(0)).toBeVisible()
+    await expect.element(referenceIcons.nth(1)).toBeVisible()
   })
 
   it('列表模式会显示独立引用数列，并在窄窗口保持可见', async () => {
@@ -653,6 +656,7 @@ describe('FileViewer', () => {
     const referenceCounts = page.getByTestId('file-viewer-reference-count')
     await expect.element(referenceCounts.nth(0)).toHaveTextContent('0')
     await expect.element(referenceCounts.nth(1)).toHaveTextContent('3')
+    await expect.element(page.getByTestId('file-viewer-reference-icon')).not.toBeInTheDocument()
     await expect.element(page.getByRole('columnheader', { name: 'common.fileMeta.size' })).not.toBeInTheDocument()
   })
 
