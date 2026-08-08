@@ -147,6 +147,10 @@ const shouldShowState = computed(() =>
   isLoading || !!errorMsg || isEmptyState.value,
 )
 
+const showListReferenceCount = computed(() =>
+  sortedItems.value.some(item => item.referenceCount !== undefined),
+)
+
 function resolveBuiltInPreviewUrl(item: FileViewerItem, previewSize: FileViewerPreviewSize): string | undefined {
   if (item.isDir || !item.mimeType?.startsWith('image/')) {
     return undefined
@@ -471,6 +475,7 @@ defineExpose(fileViewerExpose)
       :show-list-size="layout.showListSize.value"
       :show-list-modified-at="layout.showListModifiedAt.value"
       :show-list-created-at="layout.showListCreatedAt.value"
+      :show-list-reference-count="showListReferenceCount"
       :sort-by="sortBy"
       :sort-order="sortOrder"
       :sortable-headers="sortableHeaders"
@@ -523,6 +528,7 @@ defineExpose(fileViewerExpose)
           :show-list-size="layout.showListSize.value"
           :show-list-modified-at="layout.showListModifiedAt.value"
           :show-list-created-at="layout.showListCreatedAt.value"
+          :show-list-reference-count="showListReferenceCount"
           :get-grid-row-items="virtualizer.getGridRowItems"
           :get-list-item="virtualizer.getListItem"
           :get-drag-source-props="getDragSourceProps"

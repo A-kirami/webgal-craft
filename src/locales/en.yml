@@ -38,6 +38,8 @@ common:
     size: File size
     modifiedAt: Modified time
     createdAt: Created time
+    referenceCount: References
+    referenceCountValue: "Reference count: {count}"
     unavailableA11y: Unavailable
 
 filePicker:

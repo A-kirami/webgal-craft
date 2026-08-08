@@ -8,6 +8,7 @@ interface FileViewerHeaderProps {
   showListSize: boolean
   showListModifiedAt: boolean
   showListCreatedAt: boolean
+  showListReferenceCount: boolean
   sortBy: FileViewerSortBy
   sortOrder: FileViewerSortOrder
   sortableHeaders: boolean
@@ -18,6 +19,7 @@ const {
   showListSize,
   showListModifiedAt,
   showListCreatedAt,
+  showListReferenceCount,
   sortBy,
   sortOrder,
   sortableHeaders,
@@ -82,6 +84,9 @@ function getHeaderInteractionClass(): string {
       </div>
     </div>
     <div class="text-[11px] ml-2 flex shrink-0 gap-3 items-center">
+      <div v-if="showListReferenceCount" class="text-center w-20" role="columnheader">
+        <span class="text-muted-foreground truncate">{{ $t('common.fileMeta.referenceCount') }}</span>
+      </div>
       <div v-if="showListSize" class="contents" role="columnheader" :aria-sort="getHeaderAriaSort('size')">
         <button
           type="button"

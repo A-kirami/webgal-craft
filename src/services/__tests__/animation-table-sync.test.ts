@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AbsPath, normalizePosix } from '~/domain/path'
-import { isAnimationTableRelatedPath, syncAnimationTable } from '~/services/animation-table-sync'
+import { isAnimationTablePath, isAnimationTableRelatedPath, syncAnimationTable } from '~/services/animation-table-sync'
 
 import type { DirEntry } from '@tauri-apps/plugin-fs'
 
@@ -129,6 +129,14 @@ describe('animationTableSync', () => {
   })
 
   it('只把 animation 目录内非索引路径视为相关路径', () => {
+    expect(isAnimationTablePath(
+      AbsPath.from('/project'),
+      AbsPath.from('/project/game/animation/animationTable.json'),
+    )).toBe(true)
+    expect(isAnimationTablePath(
+      AbsPath.from('/project'),
+      AbsPath.from('/project/game/animation/fade.json'),
+    )).toBe(false)
     expect(isAnimationTableRelatedPath(
       AbsPath.from('/project'),
       AbsPath.from('/project/game/animation/aaa/bbb.json'),

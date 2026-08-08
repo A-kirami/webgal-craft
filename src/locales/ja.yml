@@ -38,6 +38,8 @@ common:
     size: ファイルサイズ
     modifiedAt: 更新日時
     createdAt: 作成日時
+    referenceCount: 参照数
+    referenceCountValue: "{count} 件の参照"
     unavailableA11y: 利用不可
 
 filePicker:

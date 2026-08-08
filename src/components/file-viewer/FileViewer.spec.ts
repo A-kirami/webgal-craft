@@ -265,6 +265,13 @@ function createItem(index: number): FileViewerItem {
   }
 }
 
+function createReferenceCountItem(index: number, referenceCount: number): FileViewerItem {
+  return {
+    ...createItem(index),
+    referenceCount,
+  }
+}
+
 function createImageItem(index: number): FileViewerItem {
   return {
     ...createItem(index),
@@ -603,6 +610,54 @@ describe('FileViewer', () => {
 
     expect(resolveAssetUrlMock).not.toHaveBeenCalled()
     await expect.element(page.getByAltText('file-1.txt')).not.toBeInTheDocument()
+  })
+
+  it('网格模式会显示包含零引用的资源引用计数角标', async () => {
+    viewportWidthMock.value = 780
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [
+          createReferenceCountItem(1, 0),
+          createReferenceCountItem(2, 3),
+        ],
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const referenceCounts = page.getByTestId('file-viewer-reference-count')
+    await expect.element(referenceCounts.nth(0)).toHaveTextContent('0')
+    await expect.element(referenceCounts.nth(1)).toHaveTextContent('3')
+    const referenceIcons = page.getByTestId('file-viewer-reference-icon')
+    await expect.element(referenceIcons.nth(0)).toBeVisible()
+    await expect.element(referenceIcons.nth(1)).toBeVisible()
+  })
+
+  it('列表模式会显示独立引用数列，并在窄窗口保持可见', async () => {
+    viewportWidthMock.value = 520
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [
+          createReferenceCountItem(1, 0),
+          createReferenceCountItem(2, 3),
+        ],
+        viewMode: 'list',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('columnheader', { name: 'common.fileMeta.referenceCount' })).toBeVisible()
+    const referenceCounts = page.getByTestId('file-viewer-reference-count')
+    await expect.element(referenceCounts.nth(0)).toHaveTextContent('0')
+    await expect.element(referenceCounts.nth(1)).toHaveTextContent('3')
+    await expect.element(page.getByTestId('file-viewer-reference-icon')).not.toBeInTheDocument()
+    await expect.element(page.getByRole('columnheader', { name: 'common.fileMeta.size' })).not.toBeInTheDocument()
   })
 
   it('提供预览上下文后会在 FileViewer 内部生成缩略图地址', async () => {
