@@ -1,9 +1,11 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
 import { resolveI18nLike } from '~/utils/i18n-like'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { EngineRuntimeCapabilities, EngineRuntimeCapability } from '~/domain/engine/runtime-capabilities'
 import type { I18nLike as SharedI18nLike, I18nT as SharedI18nT } from '~/utils/i18n-like'
 
 // ─── 共享基础设施（不变） ─────────────────────────
@@ -91,10 +93,12 @@ interface FieldBase {
   advanced?: boolean
   managedByEffectEditor?: boolean
   managedBySpecialContentEditor?: boolean
+  hiddenWhenCapability?: EngineRuntimeCapability
   /** 布局提示：自定义 CSS class */
   className?: string
   /** 效果编辑器分组标识（如 'transform'、'effects'、'colorAdjustment'） */
   effectGroup?: string
+  requiredCapability?: EngineRuntimeCapability
 }
 
 interface NumericMixin {
@@ -322,6 +326,7 @@ function normalizeFlattenedJsonSubField(
     visibleWhenContent: subField.visibleWhenContent ?? parentField.visibleWhenContent,
     advanced: subField.advanced ?? parentField.advanced,
     managedByEffectEditor: subField.managedByEffectEditor ?? parentField.managedByEffectEditor,
+    hiddenWhenCapability: subField.hiddenWhenCapability ?? parentField.hiddenWhenCapability,
   }
 
   if (
@@ -340,9 +345,12 @@ function getStorageArgKey(storage: CommandFieldStorage): string | undefined {
 }
 
 /** 从 CommandEntry 提取并展平所有 arg 字段 */
-export function readArgFields(entry: CommandEntry): ArgField[] {
+export function readArgFields(entry: CommandEntry, capabilities: EngineRuntimeCapabilities = LATEST_ENGINE_RUNTIME_CAPABILITIES): ArgField[] {
   const result: ArgField[] = []
   for (const { storage, field } of entry.fields) {
+    if (!isRuntimeCapabilitySupported(field, capabilities)) {
+      continue
+    }
     const argKey = getStorageArgKey(storage)
     if (!argKey) {
       continue
@@ -350,6 +358,9 @@ export function readArgFields(entry: CommandEntry): ArgField[] {
     if (field.type === 'json-object') {
       for (const sub of field.fields) {
         const flattenedField = normalizeFlattenedJsonSubField(argKey, field, sub)
+        if (!isRuntimeCapabilitySupported(flattenedField, capabilities)) {
+          continue
+        }
         result.push({
           storageKey: argKey,
           field: flattenedField,
@@ -364,9 +375,12 @@ export function readArgFields(entry: CommandEntry): ArgField[] {
 }
 
 /** 从 CommandEntry 提取统一渲染字段（content / commandRaw / arg） */
-export function readEditorFields(entry: CommandEntry): EditorField[] {
+export function readEditorFields(entry: CommandEntry, capabilities: EngineRuntimeCapabilities = LATEST_ENGINE_RUNTIME_CAPABILITIES): EditorField[] {
   const result: EditorField[] = []
   for (const { storage, field } of entry.fields) {
+    if (!isRuntimeCapabilitySupported(field, capabilities)) {
+      continue
+    }
     if (storage === 'content') {
       if (field.type !== 'json-object') {
         result.push({
@@ -396,6 +410,9 @@ export function readEditorFields(entry: CommandEntry): EditorField[] {
     if (field.type === 'json-object') {
       for (const sub of field.fields) {
         const flattenedField = normalizeFlattenedJsonSubField(argKey, field, sub)
+        if (!isRuntimeCapabilitySupported(flattenedField, capabilities)) {
+          continue
+        }
         result.push({
           key: flattenedField.key,
           storage: 'arg',
@@ -459,6 +476,17 @@ export interface CommandEntry {
   hasEffectEditor?: boolean
   hasAnimationEditor?: boolean
   locked?: boolean
+  requiredCapability?: EngineRuntimeCapability
+}
+
+export function isRuntimeCapabilitySupported(
+  item: { requiredCapability?: EngineRuntimeCapability, hiddenWhenCapability?: EngineRuntimeCapability },
+  capabilities: EngineRuntimeCapabilities = LATEST_ENGINE_RUNTIME_CAPABILITIES,
+): boolean {
+  if (item.requiredCapability !== undefined && !capabilities[item.requiredCapability]) {
+    return false
+  }
+  return item.hiddenWhenCapability === undefined || !capabilities[item.hiddenWhenCapability]
 }
 
 // ─── 其他工具函数 ────────────────────────────────

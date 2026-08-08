@@ -9,6 +9,7 @@ import {
 } from '~/features/editor/command-panel/command-panel'
 import {
   categoryTheme,
+  commandEntries,
   commandPanelCategories, CommandPanelCategory,
   getCategoryLabel,
   getCommandDescription,
@@ -17,6 +18,7 @@ import { resolveI18n } from '~/features/editor/command-registry/schema'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { StatementGroup, useCommandPanelStore } from '~/stores/command-panel'
 import { useModalStore } from '~/stores/modal'
+import { useResourceStore } from '~/stores/resource'
 import { handleWheelToHorizontalScroll } from '~/utils/wheel'
 
 import type { StyleValue } from 'vue'
@@ -31,6 +33,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const commandPanelStore = useCommandPanelStore()
+const resourceStore = useResourceStore()
 const activeCategory = $computed(() => commandPanelStore.activeCategory)
 const dragSession = useDragSession()
 
@@ -38,6 +41,8 @@ const isGroupsView = $computed(() => activeCategory === 'groups')
 const visibleCommands = $computed(() => resolveCommandPanelVisibleCommands(
   activeCategory,
   commandPanelStore.favoriteCommandIds,
+  commandEntries,
+  resourceStore.currentEngineRuntimeCapabilities,
 ))
 const isEmptyFavorites = $computed(() => activeCategory === 'favorites' && visibleCommands.length === 0)
 const modalStore = useModalStore()

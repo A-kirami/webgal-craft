@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
 import { buildArgumentCompletionInfo, buildCommandCompletionInfo, filterCompletionOptions, queryArgumentValueCompletions } from '~/features/editor/command-registry/completion'
 
@@ -42,6 +43,24 @@ describe('buildArgumentCompletionInfo', () => {
 
   it('保留只属于文本语法的既有补全', () => {
     expect(keysFor(commandType.say)).toEqual(expect.arrayContaining(['when', 'left', 'right', 'center']))
+  })
+
+  it('补全 Terre 4.6.3 场景语义参数与命令', () => {
+    expect(keysFor(commandType.setVar)).toContain('local')
+    expect(keysFor(commandType.callScene)).toContain('writeReturnTo')
+    expect(keysFor(commandType.callScene)).not.toContain('when')
+    expect(buildCommandCompletionInfo(t).map(item => item.commandRaw)).toContain('return')
+  })
+
+  it('旧运行时不显示 Terre 4.6.3 场景语义补全', () => {
+    const legacySetVarKeys = buildArgumentCompletionInfo(commandType.setVar, t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+      .map(item => item.key)
+    expect(legacySetVarKeys).toContain('global')
+    expect(legacySetVarKeys).not.toContain('local')
+    expect(buildArgumentCompletionInfo(commandType.callScene, t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+      .map(item => item.key)).not.toContain('writeReturnTo')
+    expect(buildCommandCompletionInfo(t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+      .map(item => item.commandRaw)).not.toContain('return')
   })
 
   it('命令候选直接来自注册表并保留脚本关键字', () => {

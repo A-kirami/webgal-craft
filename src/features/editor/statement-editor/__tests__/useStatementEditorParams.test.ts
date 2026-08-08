@@ -98,6 +98,34 @@ describe('useStatementEditorParams', () => {
     expect(editor.params.getArgSelectValue(positionField)).toBe('right14')
   })
 
+  it('setVar 在现代运行时使用三态作用域选择器', () => {
+    const { editor, updates } = createHarness('setVar: score=10 -global;')
+    const scopeField = requireArgField(editor, 'scope')
+
+    expect(editor.params.getArgSelectOptions(scopeField).map(option => option.value)).toEqual([
+      '__unspecified__',
+      'global',
+      'local',
+    ])
+    expect(editor.params.getArgSelectValue(scopeField)).toBe('global')
+
+    editor.params.handleArgFieldChange(scopeField, 'local')
+    expect(updates.at(-1)?.parsed.args).toEqual([{ key: 'local', value: true }])
+  })
+
+  it('旧运行时保留 setVar 的单个 global 开关', () => {
+    const { editor, updates } = createHarness('setVar: score=10 -global;', {
+      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    })
+
+    expect(editor.params.argFields.value.map(field => field.field.key)).toContain('global')
+    expect(editor.params.argFields.value.map(field => field.field.key)).not.toContain('scope')
+
+    const globalField = requireArgField(editor, 'global')
+    editor.params.handleArgFieldChange(globalField, false)
+    expect(updates.at(-1)?.parsed.args).toEqual([])
+  })
+
   it('无冒号 say 清空最后一个参数时会直接回写规范化后的 commandRaw', () => {
     const emittedPatches: Partial<ISentence>[] = []
     const sentence = mustParse(' -concat;')

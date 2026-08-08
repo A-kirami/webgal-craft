@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { commandEntries } from '~/features/editor/command-registry'
 
 import {
@@ -31,6 +32,17 @@ describe('commandPanel', () => {
       commandType.say,
     ])
     expect(favoriteCommands.every(entry => commandEntries.includes(entry))).toBe(true)
+  })
+
+  it('旧运行时隐藏仅在 Terre 4.6.3 中支持的命令', () => {
+    const entries = resolveCommandPanelVisibleCommands(
+      'scene',
+      [],
+      commandEntries,
+      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    )
+
+    expect(entries.map(entry => entry.type)).not.toContain(commandType.return)
   })
 
   it('会按命令标签聚合同类语句组条目', () => {

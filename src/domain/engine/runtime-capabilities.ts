@@ -4,9 +4,10 @@ export interface EngineRuntimeCapabilities {
   figurePositions: boolean
   multilineStatements: boolean
   opusVocalShorthand: boolean
+  sceneSemantics: boolean
 }
 
-type EngineRuntimeCapability = keyof EngineRuntimeCapabilities
+export type EngineRuntimeCapability = keyof EngineRuntimeCapabilities
 
 export const MIN_WEBGAL_EDITOR_RUNTIME_VERSION = '4.6.2'
 
@@ -14,18 +15,21 @@ const CAPABILITY_MINIMUM_VERSIONS: Record<EngineRuntimeCapability, string> = {
   figurePositions: '4.6.3',
   multilineStatements: '4.6.3',
   opusVocalShorthand: '4.6.3',
+  sceneSemantics: '4.6.3',
 }
 
 export const LEGACY_ENGINE_RUNTIME_CAPABILITIES: EngineRuntimeCapabilities = {
   figurePositions: false,
   multilineStatements: false,
   opusVocalShorthand: false,
+  sceneSemantics: false,
 }
 
 export const LATEST_ENGINE_RUNTIME_CAPABILITIES: EngineRuntimeCapabilities = {
   figurePositions: true,
   multilineStatements: true,
   opusVocalShorthand: true,
+  sceneSemantics: true,
 }
 
 export function normalizeWebgalRuntimeVersion(version: string | undefined): string | undefined {
@@ -62,5 +66,6 @@ export function resolveEngineRuntimeCapabilities(
     figurePositions: supportsEngineRuntimeCapability(version, 'figurePositions'),
     multilineStatements: supportsEngineRuntimeCapability(version, 'multilineStatements'),
     opusVocalShorthand: supportsEngineRuntimeCapability(version, 'opusVocalShorthand'),
+    sceneSemantics: supportsEngineRuntimeCapability(version, 'sceneSemantics'),
   }
 }

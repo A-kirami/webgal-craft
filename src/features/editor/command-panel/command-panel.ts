@@ -1,7 +1,8 @@
 import { parseSentence } from '~/domain/script/parser'
 import { commandEntries, getCommandConfig, getCommandId } from '~/features/editor/command-registry'
-import { resolveI18n } from '~/features/editor/command-registry/schema'
+import { isRuntimeCapabilitySupported, resolveI18n } from '~/features/editor/command-registry/schema'
 
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { CommandPanelCategory } from '~/features/editor/command-registry'
 import type { CommandEntry, I18nT } from '~/features/editor/command-registry/schema'
 import type { StatementGroup } from '~/stores/command-panel'
@@ -15,14 +16,16 @@ export function resolveCommandPanelVisibleCommands(
   activeCategory: CommandPanelCategory,
   favoriteCommandIds: readonly string[] = [],
   entries: readonly CommandEntry[] = commandEntries,
+  capabilities?: EngineRuntimeCapabilities,
 ): readonly CommandEntry[] {
+  const supportedEntries = entries.filter(entry => isRuntimeCapabilitySupported(entry, capabilities))
   if (activeCategory === 'all' || activeCategory === 'groups') {
-    return entries
+    return supportedEntries
   }
 
   if (activeCategory === 'favorites') {
     const entriesById = new Map<string, CommandEntry>()
-    for (const entry of entries) {
+    for (const entry of supportedEntries) {
       const id = getCommandId(entry.type)
       if (id !== undefined) {
         entriesById.set(id, entry)
@@ -41,7 +44,7 @@ export function resolveCommandPanelVisibleCommands(
     return favoriteEntries
   }
 
-  return entries.filter(entry => entry.category === activeCategory)
+  return supportedEntries.filter(entry => entry.category === activeCategory)
 }
 
 export function buildCommandPanelGroupTagEntries(

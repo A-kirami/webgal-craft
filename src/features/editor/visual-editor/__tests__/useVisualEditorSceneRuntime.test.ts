@@ -3,10 +3,12 @@ import { computed, effectScope, nextTick, reactive } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { computeLineNumberFromStatementId } from '~/domain/document/scene-selection'
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { buildStatements } from '~/domain/script/sentence'
 
 import { useVisualEditorSceneRuntime } from '../useVisualEditorSceneRuntime'
 
+import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { SceneVisualProjectionState } from '~/stores/editor'
 
 const {
@@ -45,7 +47,11 @@ vi.mock('~/domain/document/scene-selection', () => ({
 }))
 
 vi.mock('~/domain/script/sentence', () => ({
-  buildStatements: vi.fn((rawText: string) => [{ id: 99, rawText }]),
+  buildStatements: vi.fn((rawText: string) => [{
+    id: 99,
+    rawText,
+    syntaxCapabilities: { multilineStatements: true, sceneSemantics: true },
+  }]),
 }))
 
 vi.mock('~/features/editor/shared/useEditorPanelBindings', () => ({
@@ -120,6 +126,21 @@ function createState(
   }) as SceneVisualProjectionState
 }
 
+function createCallSceneSentence(args: ISentence['args'] = []): ISentence {
+  return {
+    args,
+    command: commandType.callScene,
+    commandRaw: 'callScene',
+    content: 'battle.txt',
+    endLine: 0,
+    inlineComment: '',
+    isLineBreakHolder: false,
+    sentenceAssets: [],
+    startLine: 0,
+    subScene: [],
+  }
+}
+
 describe('useVisualEditorSceneRuntime', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -145,6 +166,7 @@ describe('useVisualEditorSceneRuntime', () => {
       parseError: false,
       parsed: undefined,
       rawText,
+      syntaxCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
     }])
 
     useCommandPanelStoreMock.mockReturnValue({
@@ -389,6 +411,89 @@ describe('useVisualEditorSceneRuntime', () => {
       expect.objectContaining({ rawText: 'say:test' }),
     ], 2)
     expect(scheduleAutoSaveIfEnabled).toHaveBeenCalledWith('/project/scene.txt')
+
+    scope.stop()
+  })
+
+  it('rawText 未变化时会同步或清理编辑草稿', () => {
+    const scope = effectScope()
+    const state = createState([{
+      id: 1,
+      parseError: false,
+      parsed: undefined,
+      rawText: 'callScene:battle.txt;',
+    }])
+    const editorStore = useEditorStoreMock()
+    const applySceneStatementUpdate = editorStore.applySceneStatementUpdate
+
+    const runtime = scope.run(() => useVisualEditorSceneRuntime({
+      getScrollArea: () => undefined,
+      getState: () => state,
+    }))
+    const parsed = createCallSceneSentence()
+    const draftParsed = createCallSceneSentence([{ key: '', value: '' }])
+
+    runtime?.handleStatementUpdate({
+      parsed,
+      draftParsed,
+      rawText: 'callScene:battle.txt;',
+      target: { kind: 'statement', statementId: 1 },
+    })
+
+    expect(state.statements[0]?.draftParsed).toEqual(draftParsed)
+    expect(applySceneStatementUpdate).not.toHaveBeenCalled()
+
+    runtime?.handleStatementUpdate({
+      parsed,
+      rawText: 'callScene:battle.txt;',
+      target: { kind: 'statement', statementId: 1 },
+    })
+
+    expect(state.statements[0]?.draftParsed).toBeUndefined()
+
+    scope.stop()
+  })
+
+  it('原文变化时仍保留未提交的空参数草稿', () => {
+    const scope = effectScope()
+    const state = createState([{
+      id: 1,
+      parseError: false,
+      parsed: undefined,
+      rawText: 'callScene:battle.txt;',
+    }])
+    const editorStore = useEditorStoreMock()
+    const applySceneStatementUpdate = editorStore.applySceneStatementUpdate
+    applySceneStatementUpdate.mockImplementation((_path: string, _statementId: number, rawText: string) => {
+      const entry = state.statements[0]!
+      state.statements[0] = { ...entry, rawText }
+    })
+
+    const runtime = scope.run(() => useVisualEditorSceneRuntime({
+      getScrollArea: () => undefined,
+      getState: () => state,
+    }))
+    const parsed = createCallSceneSentence([{ key: 'difficulty', value: 'hard' }])
+    const draftParsed = createCallSceneSentence([
+      ...parsed.args,
+      { key: '', value: '' },
+      { key: '', value: '' },
+    ])
+
+    runtime?.handleStatementUpdate({
+      parsed,
+      draftParsed,
+      rawText: 'callScene:battle.txt -difficulty=hard;',
+      target: { kind: 'statement', statementId: 1 },
+    })
+
+    expect(applySceneStatementUpdate).toHaveBeenCalledWith(
+      '/project/scene.txt',
+      1,
+      'callScene:battle.txt -difficulty=hard;',
+      'visual',
+    )
+    expect(state.statements[0]?.draftParsed).toEqual(draftParsed)
 
     scope.stop()
   })

@@ -15,6 +15,7 @@ import {
   createBrowserTextStub,
   renderInBrowser,
 } from '~/__tests__/browser-render'
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 
 const {
   handleCommentChangeMock,
@@ -207,6 +208,8 @@ function createEditorReturn(overrides: Record<string, unknown> = {}) {
       })),
     },
     params: {
+      callSceneParameters: computed(() => undefined),
+      handleCallSceneParametersChange: vi.fn(),
       isFieldVisible: vi.fn(() => true),
       readArgRuntimeValue: vi.fn(() => undefined),
     },
@@ -218,6 +221,7 @@ function createStatementEntry(id: number, rawText: string): StatementEntry {
   return {
     id,
     rawText,
+    syntaxCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
     parsed: undefined,
     parseError: false,
   }

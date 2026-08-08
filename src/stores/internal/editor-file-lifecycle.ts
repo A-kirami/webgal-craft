@@ -353,6 +353,9 @@ async function confirmExternalDocumentChange(
       allowMerge: snapshot.allowMerge,
       localContent: snapshot.currentContent,
       externalContent: snapshot.content,
+      runtimeCapabilities: snapshot.state.kind === 'scene'
+        ? snapshot.state.runtimeCapabilities
+        : undefined,
       onKeepLocal: () => resolve({ type: 'keep-local' }),
       onLoadExternal: () => resolve({ type: 'load-external' }),
       onMerge: content => resolve({ type: 'merge', content }),

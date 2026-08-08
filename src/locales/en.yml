@@ -707,7 +707,10 @@ edit:
     unsupportedMultilineStatements: Multiline statements require WebGAL 4.6.3 or later.
     unsupportedOpusVocal: Opus vocal shorthand requires WebGAL 4.6.3 or later.
     unsupportedFigurePosition: This figure position requires WebGAL 4.6.3 or later.
+    unsupportedCallSceneArgument: Passing arguments to a child scene with the “callScene” command requires WebGAL 4.6.3 or later.
+    unsupportedLocalVariable: The “local” parameter requires WebGAL 4.6.3 or later.
     unsupportedSpine: The current engine does not support Spine models.
+    reservedCallSceneArgument: '"{argument}" is reserved and cannot be used with callScene.'
   errors:
     fileSyncFailed: Failed to sync the file. Please try again shortly.
     previewUnavailable: Preview URL is not available. Please start preview first.
@@ -930,6 +933,7 @@ edit:
       video: Video
       changeScene: Change Scene
       callScene: Call Scene
+      return: Return from Scene
       choose: Choice
       label: Label
       jumpLabel: Jump to Label
@@ -964,6 +968,7 @@ edit:
       video: Play a video in fullscreen
       changeScene: End the current scene and switch to another
       callScene: Call a sub-scene and return when it ends
+      return: Return from the current sub-scene, optionally with a value
       choose: Display branch choices for the player
       label: Define a label position that can be jumped to
       jumpLabel: Jump to a label in the current scene
@@ -1029,7 +1034,12 @@ edit:
       labelName: Label Name
       varName: Variable Name
       varValue: Value
+      scope: Variable Scope
       global: Global Variable
+      writeReturnTo: Return Value Variable
+      parameterKey: Parameter name
+      parameterValue: Parameter value
+      addParameter: Add scene parameter
       inputTitle: Dialog Title
       buttonText: Confirm Button Text
       defaultValue: Default Value
@@ -1142,6 +1152,10 @@ edit:
       loadFailed: Failed to load
     options:
       notSelected: Not selected
+      variableScope:
+        save: Save
+        global: Global
+        local: Local
       default: Default
       left: Left
       left14: Left 1/4

@@ -150,6 +150,7 @@ export function useStatementGroupDraft(options: UseStatementGroupDraftOptions) {
       ...draftEntries.value[index]!,
       rawText: payload.rawText,
       parsed: payload.parsed,
+      draftParsed: payload.draftParsed,
       parseError: false,
     })
   }

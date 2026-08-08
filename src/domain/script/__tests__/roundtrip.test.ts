@@ -17,6 +17,7 @@ import {
   buildStatements,
   buildStatementSourceRanges,
   createEmptySentence,
+  ensureParsed,
   findStatementSourceRangeAtLine,
   joinStatements,
   rebuildStatementsWithStableIds,
@@ -37,6 +38,9 @@ const SENTENCE_FIXTURES: SentenceFixture[] = [
   { name: 'choose', raw: 'choose: A:scene1.txt|B:scene2.txt;', expectedCommand: commandType.choose },
   { name: 'apply-style', raw: 'applyStyle: old->new,foo->bar;', expectedCommand: commandType.applyStyle },
   { name: 'set-var', raw: 'setVar: score=10;', expectedCommand: commandType.setVar },
+  { name: 'bare-return', raw: 'return;', expectedCommand: commandType.return },
+  { name: 'return-with-value', raw: 'return:success;', expectedCommand: commandType.return },
+  { name: 'call-scene-with-return-value', raw: 'callScene:battle.txt -enemy=slime -writeReturnTo=result;', expectedCommand: commandType.callScene },
   { name: 'change-bg', raw: 'changeBg: bg.jpg -next -duration=300;', expectedCommand: commandType.changeBg },
 ]
 
@@ -213,6 +217,18 @@ describe('sentence', () => {
 
   it('createEmptySentence 序列化为规范的空 say 语句', () => {
     expect(serializeSentence(createEmptySentence())).toBe(':;')
+  })
+
+  it('ensureParsed 优先返回编辑器临时草稿而不改写原始文本', () => {
+    const [entry] = buildStatements('callScene:battle.txt;')
+    const draft = {
+      ...parseSentence(entry!.rawText)!,
+      args: [{ key: '', value: '' }],
+    }
+    entry!.draftParsed = draft
+
+    expect(ensureParsed(entry!)).toBe(draft)
+    expect(entry!.rawText).toBe('callScene:battle.txt;')
   })
 
   it('rebuildStatementsWithStableIds 会保留未改动语句的稳定 id', () => {

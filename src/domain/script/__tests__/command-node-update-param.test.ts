@@ -3,6 +3,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseCommandNode, serializeCommandNode } from '~/domain/script/codec'
 import { updateCommandNodeParam } from '~/domain/script/update'
+import { UNSPECIFIED } from '~/features/editor/command-registry/schema'
 
 import { makeParamDef, mustParse } from './utils'
 
@@ -307,6 +308,37 @@ describe('命令节点参数更新器', () => {
     const serialized = serializeCommandNode(updated!)
     expect(serialized.command).toBe(commandType.setVar)
     expect(serialized.args).toEqual([{ key: 'global', value: true }])
+  })
+
+  it('setVar global 与 local 互斥', () => {
+    const node = parseCommandNode(mustParse('setVar: score=10 -global;'))
+    const updated = updateCommandNodeParam(node, makeParamDef('local', 'switch'), true)
+
+    expect(updated).toBeDefined()
+    expect(serializeCommandNode(updated!).args).toEqual([{ key: 'local', value: true }])
+  })
+
+  it('setVar 作用域选择器映射为兼容的 global/local flags', () => {
+    const saveNode = parseCommandNode(mustParse('setVar: score=10 -global;'))
+    const save = updateCommandNodeParam(saveNode, makeParamDef('scope', 'select'), UNSPECIFIED)
+    expect(serializeCommandNode(save!).args).toEqual([])
+
+    const globalNode = parseCommandNode(mustParse('setVar: score=10;'))
+    const global = updateCommandNodeParam(globalNode, makeParamDef('scope', 'select'), 'global')
+    expect(serializeCommandNode(global!).args).toEqual([{ key: 'global', value: true }])
+
+    const local = updateCommandNodeParam(global!, makeParamDef('scope', 'select'), 'local')
+    expect(serializeCommandNode(local!).args).toEqual([{ key: 'local', value: true }])
+  })
+
+  it('可更新 callScene 的 writeReturnTo 参数', () => {
+    const node = parseCommandNode(mustParse('callScene:battle.txt -enemy=slime;'))
+    const withReturnTarget = updateCommandNodeParam(node, makeParamDef('writeReturnTo', 'text'), 'result')
+    expect(withReturnTarget).toBeDefined()
+    expect(serializeCommandNode(withReturnTarget!).args).toEqual([
+      { key: 'writeReturnTo', value: 'result' },
+      { key: 'enemy', value: 'slime' },
+    ])
   })
 
   it('可更新 callSteam achievementId 并保留额外参数', () => {

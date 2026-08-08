@@ -6,6 +6,7 @@ import '~/__tests__/mocks/modal-store'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { SAY_CONTINUATION_RAW } from '~/domain/script/codec'
 import { FIGURE_POSITION_TARGET_IDS } from '~/domain/script/types'
 import {
@@ -29,6 +30,135 @@ beforeEach(() => {
 })
 
 describe('useStatementEditor', () => {
+  it('callScene 编辑器读写动态参数并保留返回值目标', () => {
+    const { editor, updates } = createHarness('callScene:battle.txt -when=hp>0 -writeReturnTo=result -enemy=slime;')
+
+    expect(editor.params.callSceneParameters.value).toEqual([
+      { key: 'when', value: 'hp>0' },
+      { key: 'enemy', value: 'slime' },
+    ])
+    editor.params.handleCallSceneParametersChange([
+      { key: 'when', value: 'hp>0' },
+      { key: 'difficulty', value: 'hard' },
+    ])
+
+    expect(updates.at(-1)?.rawText).toBe('callScene:battle.txt -writeReturnTo=result -when=hp>0 -difficulty=hard;')
+  })
+
+  it('callScene 只填写键的参数重新打开后仍保持空值', () => {
+    const { editor, updates } = createHarness('callScene:battle.txt;')
+
+    editor.params.handleCallSceneParametersChange([{ key: 'difficulty', value: '' }])
+
+    const rawText = updates.at(-1)?.rawText
+    expect(rawText).toBe('callScene:battle.txt -difficulty;')
+
+    const { editor: reopenedEditor } = createHarness(rawText!)
+    expect(reopenedEditor.params.callSceneParameters.value).toEqual([
+      { key: 'difficulty', value: '' },
+    ])
+  })
+
+  it('callScene 新增空参数时将临时行放入草稿而不写入脚本', () => {
+    const { editor, updates } = createHarness('callScene:battle.txt;')
+
+    editor.params.handleCallSceneParametersChange([{ key: '', value: '' }])
+
+    const latest = updates.at(-1)
+    expect(latest?.rawText).toBe('callScene:battle.txt;')
+    expect(latest?.parsed.args).toEqual([])
+    expect(latest?.draftParsed?.args).toEqual([{ key: '', value: '' }])
+  })
+
+  it('callScene 提交一个参数时保留其他空参数草稿', () => {
+    const { editor, updates } = createHarness('callScene:battle.txt -writeReturnTo=result;')
+
+    editor.params.handleCallSceneParametersChange([
+      { key: '', value: '' },
+      { key: '', value: '' },
+    ])
+    editor.params.handleCallSceneParametersChange([
+      { key: 'difficulty', value: 'hard' },
+      { key: '', value: '' },
+    ])
+
+    const latest = updates.at(-1)
+    expect(latest?.rawText).toBe('callScene:battle.txt -writeReturnTo=result -difficulty=hard;')
+    expect(latest?.draftParsed?.args).toEqual([
+      { key: 'writeReturnTo', value: 'result' },
+      { key: 'difficulty', value: 'hard' },
+      { key: '', value: '' },
+    ])
+  })
+
+  it('callScene 填写后面的参数时保持键值与原行对应', () => {
+    const { editor, updates } = createHarness('callScene:battle.txt;')
+
+    editor.params.handleCallSceneParametersChange([
+      { key: '', value: '' },
+      { key: '', value: '' },
+      { key: '', value: '' },
+    ])
+    editor.params.handleCallSceneParametersChange([
+      { key: '', value: '' },
+      { key: 'x', value: 'second' },
+      { key: '', value: '' },
+    ])
+
+    expect(editor.params.callSceneParameters.value).toEqual([
+      { key: '', value: '' },
+      { key: 'x', value: 'second' },
+      { key: '', value: '' },
+    ])
+    expect(updates.at(-1)?.draftParsed?.args).toEqual([
+      { key: '', value: '' },
+      { key: 'x', value: 'second' },
+      { key: '', value: '' },
+    ])
+  })
+
+  it('共享草稿移除空参数时会清理编辑器本地临时行', async () => {
+    const { editor, entry } = createReactiveHarness('callScene:battle.txt;')
+    const parsed = editor.parsed.value!
+
+    entry.value = {
+      ...entry.value,
+      draftParsed: { ...parsed, args: [{ key: '', value: '' }] },
+    }
+    await flushMicrotasks(2)
+    expect(editor.params.callSceneParameters.value).toEqual([{ key: '', value: '' }])
+
+    entry.value = {
+      ...entry.value,
+      draftParsed: undefined,
+    }
+    await flushMicrotasks(2)
+    expect(editor.params.callSceneParameters.value).toEqual([])
+  })
+
+  it('原始文本变更时重新解析而不是复用旧场景草稿', () => {
+    const { editor, updates } = createReactiveHarness('callScene:battle.txt;')
+
+    editor.params.handleCallSceneParametersChange([{ key: '', value: '' }])
+    editor.misc.handleRawTextChange('changeBg:updated.jpg;')
+
+    expect(updates.at(-1)).toMatchObject({
+      rawText: 'changeBg:updated.jpg;',
+      parsed: { command: commandType.changeBg },
+      draftParsed: undefined,
+    })
+  })
+
+  it('旧运行时隐藏 callScene 动态参数编辑器', () => {
+    const { editor, updates } = createHarness('callScene:battle.txt -enemy=slime;', {
+      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    })
+
+    expect(editor.params.callSceneParameters.value).toBeUndefined()
+    editor.params.handleCallSceneParametersChange([{ key: 'difficulty', value: 'hard' }])
+    expect(updates).toEqual([])
+  })
+
   it('choose 默认分支由特殊内容编辑器托管，不显示独立参数字段', () => {
     const { editor } = createHarness('choose:a:a.txt|b:b.txt -defaultChoose=2;')
 

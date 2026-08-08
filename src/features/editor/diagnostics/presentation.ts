@@ -59,6 +59,15 @@ export function getEditorDiagnosticMessage(
     case 'unsupported-figure-position': {
       return t('edit.diagnostics.unsupportedFigurePosition')
     }
+    case 'reserved-call-scene-argument': {
+      return t('edit.diagnostics.reservedCallSceneArgument', { argument: diagnostic.argument })
+    }
+    case 'unsupported-local-variable': {
+      return t('edit.diagnostics.unsupportedLocalVariable')
+    }
+    case 'unsupported-call-scene-argument': {
+      return t('edit.diagnostics.unsupportedCallSceneArgument')
+    }
     default: {
       const exhaustiveCheck: never = diagnostic
       return exhaustiveCheck

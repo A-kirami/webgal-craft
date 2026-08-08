@@ -1,6 +1,16 @@
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
+
+export const WEBGAL_SCRIPT_LANGUAGE_ID = 'webgalscript'
+export const LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID = 'webgalscript-legacy'
+export const WEBGAL_SCRIPT_LANGUAGE_IDS = [
+  WEBGAL_SCRIPT_LANGUAGE_ID,
+  LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID,
+] as const
+
 export interface TextEditorLanguageState {
   kind: string
   path: string
+  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'sceneSemantics'>
 }
 
 export interface RegisteredTextEditorLanguage {
@@ -14,7 +24,9 @@ export function resolveTextEditorLanguage(
 ): string {
   switch (state.kind) {
     case 'scene': {
-      return 'webgalscript'
+      return state.runtimeCapabilities?.sceneSemantics === false
+        ? LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID
+        : WEBGAL_SCRIPT_LANGUAGE_ID
     }
     case 'animation': {
       return 'json'

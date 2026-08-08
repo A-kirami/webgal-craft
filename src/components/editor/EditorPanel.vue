@@ -6,18 +6,12 @@ import { useShortcut } from '~/features/editor/shortcut/useShortcut'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { sceneAutocompleteOptionsKey } from '~/features/editor/statement-editor/scene-autocomplete-context'
 import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
-import { useEditorStore } from '~/stores/editor'
 
 const commandPanelRef = useTemplateRef<InstanceType<typeof ResizablePanel>>('commandPanel')
 const editorPanelRef = $(useTemplateRef('editorPanel'))
 const { t } = useI18n()
 useEditorDiagnostics()
 const transformOverlayBridge = inject(TRANSFORM_OVERLAY_BRIDGE_KEY, undefined)
-const editorStore = useEditorStore()
-const currentSceneRuntimeCapabilities = computed(() => {
-  const state = editorStore.currentVisualProjection
-  return state?.kind === 'scene' ? state.runtimeCapabilities : undefined
-})
 const EFFECT_EDITOR_INTERACTIVE_REGION_SELECTOR = '[data-effect-editor-interactive-region]'
 const EFFECT_EDITOR_DISMISS_TOP_OFFSET = 28
 
@@ -62,6 +56,7 @@ const {
   isCurrentSceneFile,
   isTextMode,
   sceneAutocompleteOptions,
+  sceneRuntimeCapabilities,
   selectedStatement,
   selectedStatementDiagnostics,
   selectedStatementIndex,
@@ -334,8 +329,8 @@ defineExpose({ toggleCommandPanel })
               :diagnostics="selectedStatementDiagnostics"
               :index="selectedStatementIndex"
               :previous-speaker="selectedStatementPreviousSpeaker"
+              :runtime-capabilities="sceneRuntimeCapabilities"
               :update-target="selectedStatementUpdateTarget"
-              :runtime-capabilities="currentSceneRuntimeCapabilities"
               :enable-focus-statement="enableFocusStatement"
               @update="binding.onUpdate"
               @focus-statement="binding.onFocusStatement?.()"

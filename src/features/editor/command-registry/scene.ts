@@ -19,7 +19,19 @@ export const sceneEntries: CommandEntry[] = [
     description: t => t('edit.visualEditor.commandDescriptions.callScene'),
     icon: 'i-lucide-corner-right-up',
     category: 'scene',
-    fields: [content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'scene', extensions: ['.txt'], title: t => t('edit.visualEditor.filePicker.scene') } })],
+    fields: [
+      content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'scene', extensions: ['.txt'], title: t => t('edit.visualEditor.filePicker.scene') } }),
+      arg({ key: 'writeReturnTo', label: t => t('edit.visualEditor.params.writeReturnTo'), type: 'text', requiredCapability: 'sceneSemantics' }),
+    ],
+  },
+  {
+    type: commandType.return,
+    label: t => t('edit.visualEditor.commands.return'),
+    description: t => t('edit.visualEditor.commandDescriptions.return'),
+    icon: 'i-lucide-undo-2',
+    category: 'scene',
+    requiredCapability: 'sceneSemantics',
+    fields: [content({ key: 'value', label: t => t('edit.visualEditor.params.varValue'), type: 'text' })],
   },
   {
     type: commandType.choose,

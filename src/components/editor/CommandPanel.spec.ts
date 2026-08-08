@@ -9,9 +9,10 @@ import {
   createBrowserContainerStub,
   renderInBrowser,
 } from '~/__tests__/browser-render'
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { useCommandPanelStore } from '~/stores/command-panel'
 
-const { dragSourcePropsMock, lastDragSourceOptions, modalOpenMock, useDragSessionMock, useDragSourceMock, useModalStoreMock } = vi.hoisted(() => ({
+const { dragSourcePropsMock, lastDragSourceOptions, modalOpenMock, useDragSessionMock, useDragSourceMock, useModalStoreMock, useResourceStoreMock } = vi.hoisted(() => ({
   dragSourcePropsMock: vi.fn(() => ({
     onClickCapture: vi.fn(),
     onPointerdown: vi.fn(),
@@ -30,10 +31,15 @@ const { dragSourcePropsMock, lastDragSourceOptions, modalOpenMock, useDragSessio
     }
   }),
   useModalStoreMock: vi.fn(),
+  useResourceStoreMock: vi.fn(),
 }))
 
 vi.mock('~/stores/modal', () => ({
   useModalStore: useModalStoreMock,
+}))
+
+vi.mock('~/stores/resource', () => ({
+  useResourceStore: useResourceStoreMock,
 }))
 
 vi.mock('~/composables/useDragSession', () => ({
@@ -132,6 +138,9 @@ describe('CommandPanel', () => {
     })
     useModalStoreMock.mockReturnValue({
       open: modalOpenMock,
+    })
+    useResourceStoreMock.mockReturnValue({
+      currentEngineRuntimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
     })
   })
 

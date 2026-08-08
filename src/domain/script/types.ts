@@ -35,6 +35,18 @@ export interface SetVarCommandNode extends CommandNodeBase<commandType.setVar> {
   name: string
   value: string
   global: boolean
+  local: boolean
+  extraArgs: arg[]
+}
+
+export interface CallSceneCommandNode extends CommandNodeBase<commandType.callScene> {
+  file: string
+  writeReturnTo?: string
+  extraArgs: arg[]
+}
+
+export interface ReturnCommandNode extends CommandNodeBase<commandType.return> {
+  value: string
   extraArgs: arg[]
 }
 
@@ -53,6 +65,8 @@ export type TypedCommandNode =
   | SayCommandNode
   | CommentCommandNode
   | SetVarCommandNode
+  | CallSceneCommandNode
+  | ReturnCommandNode
   | ChooseCommandNode
   | ApplyStyleCommandNode
 

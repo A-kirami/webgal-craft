@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { parseSentence } from '~/domain/script/parser'
+import { ensureParsed } from '~/domain/script/sentence'
 
 import { applyAnimationTransaction, applySceneTransaction } from '../transaction-apply'
 import { projectAnimationFrames, projectSceneStatements } from '../visual-projection'
@@ -13,15 +16,19 @@ function createStatement(id: number, rawText: string): StatementEntry {
   return {
     id,
     rawText,
+    syntaxCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
     parsed: undefined,
     parseError: false,
   }
 }
 
-function createSceneModel(statements: StatementEntry[]): SceneDocumentModel {
+function createSceneModel(
+  statements: StatementEntry[],
+  runtimeCapabilities = LATEST_ENGINE_RUNTIME_CAPABILITIES,
+): SceneDocumentModel {
   return {
     kind: 'scene',
-    runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    runtimeCapabilities,
     statements,
     // eslint-disable-next-line unicorn/text-encoding-identifier-case -- 文档编码元数据沿用项目既有命名
     metadata: { lineEnding: '\n', encoding: 'utf-8' },
@@ -43,6 +50,7 @@ describe('可视化投影', () => {
       createStatement(1, 'say:hello;'),
       createStatement(2, 'say:world;'),
     ]
+    previousEntries[1]!.draftParsed = parseSentence('say:world;')
 
     const projectedEntries = projectSceneStatements(createSceneModel([
       createStatement(1, 'say:hello;'),
@@ -51,6 +59,23 @@ describe('可视化投影', () => {
 
     expect(projectedEntries[0]).toBe(previousEntries[0])
     expect(projectedEntries[1]).not.toBe(previousEntries[1])
+    expect(projectedEntries[1]?.draftParsed).toBeUndefined()
+  })
+
+  it('运行时能力切换时不复用旧解析缓存，并将 return 作为旁白处理', () => {
+    const [latestEntry] = projectSceneStatements(createSceneModel([
+      createStatement(1, 'return;'),
+    ]))
+    const [legacyEntry] = projectSceneStatements(createSceneModel([
+      createStatement(1, 'return;'),
+    ], LEGACY_ENGINE_RUNTIME_CAPABILITIES), [latestEntry!])
+
+    expect(legacyEntry).not.toBe(latestEntry)
+    expect(ensureParsed(legacyEntry!)).toMatchObject({
+      command: commandType.say,
+      commandRaw: 'return',
+      content: 'return',
+    })
   })
 
   it('applySceneTransaction 支持 update / insert / delete / reorder / batch', () => {

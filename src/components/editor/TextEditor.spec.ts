@@ -363,14 +363,14 @@ describe('TextEditor', () => {
 
   it('会将场景运行时能力传入诊断器', async () => {
     const { state } = createHarness()
-    state.runtimeCapabilities = { figurePositions: false, multilineStatements: false, opusVocalShorthand: false }
+    state.runtimeCapabilities = { figurePositions: false, multilineStatements: false, opusVocalShorthand: false, sceneSemantics: false }
 
     renderTextEditor(state)
     await nextTick()
 
     expect(updateEditorDiagnosticsMock).toHaveBeenCalledWith(
       { id: 'model-1' },
-      { figurePositions: false, multilineStatements: false, opusVocalShorthand: false },
+      { figurePositions: false, multilineStatements: false, opusVocalShorthand: false, sceneSemantics: false },
     )
   })
 

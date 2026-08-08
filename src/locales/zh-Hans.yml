@@ -707,7 +707,10 @@ edit:
     unsupportedMultilineStatements: 多行语句需要 WebGAL 4.6.3 或更高版本
     unsupportedOpusVocal: Opus 语音简写需要 WebGAL 4.6.3 或更高版本
     unsupportedFigurePosition: 此立绘位置需要 WebGAL 4.6.3 或更高版本。
+    unsupportedCallSceneArgument: “调用场景”命令向子场景传递参数需要 WebGAL 4.6.3 或更高版本。
+    unsupportedLocalVariable: “局部变量”参数需要 WebGAL 4.6.3 或更高版本。
     unsupportedSpine: 当前引擎不支持 Spine 模型。
+    reservedCallSceneArgument: "“{argument}”为保留参数，不能用于 callScene。"
   errors:
     fileSyncFailed: 文件同步失败，请稍后重试
     previewUnavailable: 预览地址不存在，请先启动预览
@@ -930,6 +933,7 @@ edit:
       video: 视频
       changeScene: 切换场景
       callScene: 调用场景
+      return: 返回场景
       choose: 分支选择
       label: 标签
       jumpLabel: 跳转标签
@@ -964,6 +968,7 @@ edit:
       video: 全屏播放一段视频
       changeScene: 结束当前场景并切换到另一个场景
       callScene: 调用子场景，结束后返回当前场景
+      return: 从当前子场景返回，可选地返回一个值
       choose: 显示分支选项供玩家选择
       label: 定义一个可跳转到的标签位置
       jumpLabel: 跳转到当前场景中的指定标签
@@ -1029,7 +1034,12 @@ edit:
       labelName: 标签名
       varName: 变量名
       varValue: 变量值
+      scope: 变量作用域
       global: 全局变量
+      writeReturnTo: 返回值变量
+      parameterKey: 参数名
+      parameterValue: 参数值
+      addParameter: 添加场景参数
       inputTitle: 对话框标题
       buttonText: 确认按钮文本
       defaultValue: 默认值
@@ -1142,6 +1152,10 @@ edit:
       loadFailed: 加载失败
     options:
       notSelected: 未选择
+      variableScope:
+        save: 存档
+        global: 全局
+        local: 局部
       default: 默认
       left: 左侧
       left14: 左侧 1/4

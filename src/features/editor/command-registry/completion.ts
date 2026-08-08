@@ -4,10 +4,11 @@ import { isExtendedFigurePosition } from '~/domain/script/types'
 
 import { dedupeAutocompleteOptions, resolveAutocompleteOptions } from './autocomplete-options'
 import { commandEntries, getCommandConfig, getCommandScriptString } from './index'
-import { isFlagChoiceField, readArgFields, readContentField, resolveI18n, UNSPECIFIED } from './schema'
+import { isFlagChoiceField, isRuntimeCapabilitySupported, readArgFields, readContentField, resolveI18n, UNSPECIFIED } from './schema'
 
 import type { SceneAutocompleteOptionCollections } from './autocomplete-options'
 import type { DynamicOptionsContext, EditorDynamicOptionsKey, FieldDef, I18nLike, I18nT } from './schema'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { AbsPath } from '~/domain/path'
 
 export interface ArgumentCompletionInfo {
@@ -34,6 +35,7 @@ export interface CompletionQueryContext {
   listResources?: (assetType: string) => readonly CompletionOption[]
   resolveDynamicOptions?: (key: EditorDynamicOptionsKey, context: DynamicOptionsContext) => Promise<readonly CompletionOption[]> | readonly CompletionOption[]
   allowExtendedFigurePositions?: boolean
+  runtimeCapabilities?: EngineRuntimeCapabilities
 }
 
 interface CompletionOnlyArgument {
@@ -59,14 +61,21 @@ const completionOnlyArguments = new Map<commandType, CompletionOnlyArgument[]>([
   ]],
 ])
 
-export function buildArgumentCompletionInfo(command: commandType, t: I18nT): ArgumentCompletionInfo[] {
+export function buildArgumentCompletionInfo(
+  command: commandType,
+  t: I18nT,
+  capabilities?: EngineRuntimeCapabilities,
+): ArgumentCompletionInfo[] {
   const entry = getCommandConfig(command)
-  const result: ArgumentCompletionInfo[] = [{
-    key: WHEN.key,
-    detail: resolveI18n(WHEN.label, t),
-    simplified: false,
-    hasValueCompletions: false,
-  }]
+  const result: ArgumentCompletionInfo[] = []
+  if (command !== commandType.callScene) {
+    result.push({
+      key: WHEN.key,
+      detail: resolveI18n(WHEN.label, t),
+      simplified: false,
+      hasValueCompletions: false,
+    })
+  }
 
   for (const item of completionOnlyArguments.get(command) ?? []) {
     result.push({
@@ -78,6 +87,9 @@ export function buildArgumentCompletionInfo(command: commandType, t: I18nT): Arg
   }
 
   for (const { storage, field } of entry.fields) {
+    if (!isRuntimeCapabilitySupported(field, capabilities)) {
+      continue
+    }
     if (typeof storage !== 'object') {
       continue
     }
@@ -114,8 +126,14 @@ function fieldHasValueCompletions(field: FieldDef): boolean {
 }
 
 /** 从统一命令注册表生成文本编辑器使用的命令候选。 */
-export function buildCommandCompletionInfo(t: I18nT): CommandCompletionInfo[] {
+export function buildCommandCompletionInfo(
+  t: I18nT,
+  capabilities?: EngineRuntimeCapabilities,
+): CommandCompletionInfo[] {
   return commandEntries.flatMap((entry) => {
+    if (!isRuntimeCapabilitySupported(entry, capabilities)) {
+      return []
+    }
     const commandRaw = getCommandScriptString(entry.type)
     if (!commandRaw) {
       return []
@@ -127,13 +145,17 @@ export function buildCommandCompletionInfo(t: I18nT): CommandCompletionInfo[] {
   })
 }
 
-function getFieldForCompletion(command: commandType, key: string): FieldDef | undefined {
+function getFieldForCompletion(
+  command: commandType,
+  key: string,
+  capabilities?: EngineRuntimeCapabilities,
+): FieldDef | undefined {
   const entry = getCommandConfig(command)
   if (key === 'content') {
     return readContentField(entry)
   }
 
-  return readArgFields(entry).find(item => item.field.key === key)?.field
+  return readArgFields(entry, capabilities).find(item => item.field.key === key)?.field
 }
 
 function resolveStaticOptions(field: FieldDef, t: I18nT, content: string, sceneOptions: SceneAutocompleteOptionCollections | undefined, allowExtendedFigurePositions: boolean): CompletionOption[] {
@@ -160,7 +182,7 @@ export async function queryArgumentValueCompletions(
   context: CompletionQueryContext,
   t: I18nT,
 ): Promise<CompletionOption[]> {
-  const field = getFieldForCompletion(command, key)
+  const field = getFieldForCompletion(command, key, context.runtimeCapabilities)
   if (!field) {
     return []
   }

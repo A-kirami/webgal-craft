@@ -51,7 +51,7 @@ export function resolveSceneTextPanelSnapshot(
     return createEmptySceneTextPanelSnapshot()
   }
 
-  const entry = createTransientStatementEntry(range.rawText, range.startLine + 1)
+  const entry = createTransientStatementEntry(range.rawText, range.startLine + 1, capabilities)
   ensureParsed(entry)
 
   return {

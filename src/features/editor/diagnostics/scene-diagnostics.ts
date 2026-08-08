@@ -2,20 +2,48 @@ import { diagnoseDuplicateSceneLabels, diagnoseMissingSceneLabels } from '~/doma
 import { findUnsupportedFigurePositionReferences } from '~/domain/script/figure-position-diagnostics'
 import {
   findMissingSentenceResourceReferences,
+  findReservedCallSceneArguments,
   findUnsupportedEngineModelReferences,
   findUnsupportedEngineOpusVocalReferences,
+  findUnsupportedSceneSemanticReferences,
 } from '~/features/editor/command-registry/diagnostics'
 
 import type { SceneEditorDiagnostic } from './types'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { EngineModelCapabilities } from '~/domain/engine/model-capabilities'
 import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
+import type { UnsupportedSceneSemanticReference } from '~/features/editor/command-registry/diagnostics'
 import type { AssetKey } from '~/services/resource-index/keys'
 
 interface DiagnoseSceneOptions {
   engineCapabilities?: EngineModelCapabilities
+  runtimeCapabilities?: EngineRuntimeCapabilities
   hasAssetKey?: (key: AssetKey) => boolean
-  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'figurePositions' | 'opusVocalShorthand'>
+}
+
+function createUnsupportedSceneSemanticDiagnostic(
+  reference: UnsupportedSceneSemanticReference,
+  statementIndex: number,
+): SceneEditorDiagnostic {
+  const base = {
+    severity: 'warning' as const,
+    source: 'engine' as const,
+    statementIndex,
+    value: reference.value,
+  }
+
+  switch (reference.code) {
+    case 'unsupported-local-variable': {
+      return { ...base, code: reference.code, field: reference.source }
+    }
+    case 'unsupported-call-scene-argument': {
+      return { ...base, code: reference.code, field: reference.source }
+    }
+    default: {
+      const exhaustiveCheck: never = reference
+      return exhaustiveCheck
+    }
+  }
 }
 
 export function diagnoseScene(
@@ -114,6 +142,31 @@ export function diagnoseScene(
           value: reference.value,
         })
       }
+    }
+  }
+
+  for (const [statementIndex, sentence] of sentences.entries()) {
+    if (!sentence) {
+      continue
+    }
+
+    for (const reference of findReservedCallSceneArguments(sentence)) {
+      diagnostics.push({
+        argument: reference.argument,
+        code: 'reserved-call-scene-argument',
+        field: reference.source,
+        severity: 'warning',
+        source: 'scene',
+        statementIndex,
+      })
+    }
+
+    if (!options.runtimeCapabilities) {
+      continue
+    }
+
+    for (const reference of findUnsupportedSceneSemanticReferences(sentence, options.runtimeCapabilities)) {
+      diagnostics.push(createUnsupportedSceneSemanticDiagnostic(reference, statementIndex))
     }
   }
 

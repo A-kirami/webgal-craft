@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { parseScene, parseSceneOrEmpty, parseSentence } from '~/domain/script/parser'
 
 const parserLoggerTarget = globalThis as { logger?: { error: (message: string) => void } }
@@ -38,6 +39,31 @@ describe('parser', () => {
     expect(sentence).toBeDefined()
     expect(sentence?.command).toBe(commandType.choose)
     expect(sentence?.content).toBe('A:scene1.txt|B:scene2.txt')
+  })
+
+  it('将裸 return 归一化为 return 命令', () => {
+    const sentence = parseSentence('return;')
+
+    expect(sentence).toMatchObject({
+      command: commandType.return,
+      commandRaw: 'return',
+      content: '',
+      args: [],
+    })
+  })
+
+  it('旧运行时将 return 按未识别命令回退为对话', () => {
+    expect(parseSentence('return;', LEGACY_ENGINE_RUNTIME_CAPABILITIES)).toMatchObject({
+      command: commandType.say,
+      commandRaw: 'return',
+      content: 'return',
+    })
+    expect(parseSentence('return:success;', LEGACY_ENGINE_RUNTIME_CAPABILITIES)).toMatchObject({
+      command: commandType.say,
+      commandRaw: 'return',
+      content: 'success',
+      args: [{ key: 'speaker', value: 'return' }],
+    })
   })
 
   it('parseSceneOrEmpty 在空文本下会返回空场景对象', () => {

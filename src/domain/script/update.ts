@@ -121,6 +121,14 @@ export function updateCommandNodeContent(
       return { ...node, rules: parseStyleRuleContent(newContent) }
     }
 
+    case commandType.callScene: {
+      return { ...node, file: newContent }
+    }
+
+    case commandType.return: {
+      return { ...node, value: newContent }
+    }
+
     default: {
       if ('content' in node) {
         return { ...node, content: newContent }
@@ -167,6 +175,37 @@ export function updateTypedCommandNodeExtraArgs(
   }
 }
 
+const CALL_SCENE_RESERVED_KEYS = new Set(['next', 'continue', 'writeReturnTo'])
+
+export function readCallSceneCustomArgs(node: CommandNode): arg[] {
+  if (node.type !== commandType.callScene) {
+    return []
+  }
+
+  // callScene 参数表将裸参数视为未填写值。
+  return node.extraArgs
+    .filter(item => !CALL_SCENE_RESERVED_KEYS.has(item.key))
+    .map(item => ({ ...item, value: item.value === true ? '' : item.value }))
+}
+
+export function updateCallSceneCustomArgs(
+  node: CommandNode,
+  customArgs: arg[],
+): CommandNode | undefined {
+  if (node.type !== commandType.callScene) {
+    return
+  }
+
+  const preservedArgs = node.extraArgs.filter(item => CALL_SCENE_RESERVED_KEYS.has(item.key))
+  const editableArgs = customArgs
+    .filter(item => item.key.trim() !== '' && !CALL_SCENE_RESERVED_KEYS.has(item.key))
+    .map(item => ({ ...item, value: item.value === '' ? true : item.value }))
+  return {
+    ...node,
+    extraArgs: [...cloneArgs(preservedArgs), ...editableArgs],
+  }
+}
+
 function updateFromFieldTable(
   node: CommandNode,
   paramDef: CommandParamDescriptor,
@@ -178,6 +217,33 @@ function updateFromFieldTable(
 
   if (node.type === commandType.changeFigure && paramDef.key === 'position') {
     return updateChangeFigurePosition(node, newValue)
+  }
+
+  if (
+    node.type === commandType.setVar
+    && paramDef.key === 'scope'
+    && paramDef.type === 'select'
+  ) {
+    const scope = String(newValue)
+    return {
+      ...node,
+      global: scope === 'global',
+      local: scope === 'local',
+    }
+  }
+
+  if (
+    node.type === commandType.setVar
+    && (paramDef.key === 'global' || paramDef.key === 'local')
+    && paramDef.type === 'switch'
+  ) {
+    const enabled = newValue === true
+    const conflictingKey = paramDef.key === 'global' ? 'local' : 'global'
+    return {
+      ...node,
+      [paramDef.key]: enabled,
+      ...(enabled && { [conflictingKey]: false }),
+    }
   }
 
   const meta = resolveRegistryFieldMeta(node.type, paramDef.key)

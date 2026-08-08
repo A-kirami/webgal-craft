@@ -4,7 +4,7 @@ import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capa
 import { parseCommandNode, serializeCommandNode } from '~/domain/script/codec'
 import { createEmptySentence, ensureParsed, StatementEntry } from '~/domain/script/sentence'
 import { serializeSentence } from '~/domain/script/serialize'
-import { updateCommandNodeInlineComment } from '~/domain/script/update'
+import { readCallSceneCustomArgs, updateCallSceneCustomArgs, updateCommandNodeInlineComment } from '~/domain/script/update'
 import { resolveStatementSpecialContentMode } from '~/features/editor/command-registry/schema'
 import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
 import { sceneAutocompleteOptionsKey } from '~/features/editor/statement-editor/scene-autocomplete-context'
@@ -41,6 +41,8 @@ export interface StatementUpdatePayload {
   target: StatementUpdateTarget
   rawText: string
   parsed: ISentence
+  /** 仅供其他编辑器视图显示的临时解析结果，不参与脚本持久化。 */
+  draftParsed?: ISentence
   source?: Extract<TransactionSource, 'visual' | 'effect-editor'>
 }
 
@@ -83,6 +85,7 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   useEditorDynamicOptionsBootstrap()
 
   const entry = computed(() => toValue(options.entry))
+  const supportsSceneSemantics = computed(() => toValue(options.runtimeCapabilities)?.sceneSemantics ?? true)
   const updateTarget = computed(() => toValue(options.updateTarget) ?? createStatementIdTarget(entry.value.id))
   const previousSpeaker = computed(() => toValue(options.previousSpeaker) ?? '')
   const runtimeCapabilities = computed(() => toValue(options.runtimeCapabilities) ?? LATEST_ENGINE_RUNTIME_CAPABILITIES)
@@ -97,10 +100,13 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   // 卡片内嵌场景：VisualEditorStatementCard 已 provide，直接复用；
   // 侧边栏 StatementEditorPanel 不在卡片组件树内，inject 返回 undefined，自动 fallback；
   const injectedMeta = inject(statementMetaKey, undefined)
-  const meta = injectedMeta ?? useStatementMeta(entry)
+  const meta = injectedMeta ?? useStatementMeta(entry, options.runtimeCapabilities)
   const { parsed: sourceParsed, config, editorFields, argFields, contentField, theme, statementType, commandLabel } = meta
 
   const localDraft = ref<{ rawText: string, parsed: ISentence }>()
+  // callScene 新增参数需要先显示空白编辑行，但空键参数不能写入脚本。
+  // 将这类临时行保存在编辑器草稿中，领域更新仍只保留可序列化参数。
+  const callSceneParameterDrafts = ref<arg[]>()
   const parsed = computed(() => localDraft.value?.parsed ?? sourceParsed.value)
   const commandNode = computed(() => parsed.value ? parseCommandNode(parsed.value) : undefined)
 
@@ -121,8 +127,22 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     (rawText) => {
       if (localDraft.value?.rawText !== rawText) {
         localDraft.value = undefined
+        callSceneParameterDrafts.value = undefined
       }
     },
+  )
+
+  watch(
+    () => entry.value.draftParsed,
+    (draftParsed) => {
+      if (draftParsed?.command !== commandType.callScene) {
+        callSceneParameterDrafts.value = undefined
+        return
+      }
+
+      callSceneParameterDrafts.value = readCallSceneCustomArgs(parseCommandNode(draftParsed))
+    },
+    { immediate: true },
   )
 
   function cloneSentence(sentence: ISentence): ISentence {
@@ -137,21 +157,31 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     return parsed.value ? cloneArgs(parsed.value.args) : []
   }
 
-  function dispatchUpdate(rawText: string, nextSentence: ISentence) {
+  function dispatchUpdate(
+    rawText: string,
+    nextSentence: ISentence,
+    draftParsed?: ISentence,
+  ) {
     localDraft.value = {
       rawText,
       parsed: cloneSentence(nextSentence),
     }
 
-    options.emitUpdate({
+    const update: StatementUpdatePayload = {
       target: updateTarget.value,
       rawText,
       parsed: nextSentence,
-    })
+      draftParsed: draftParsed ? cloneSentence(draftParsed) : undefined,
+    }
+    options.emitUpdate(update)
   }
 
-  function emitSentenceUpdate(nextSentence: ISentence) {
-    dispatchUpdate(serializeSentence(nextSentence), nextSentence)
+  function emitSentenceUpdate(nextSentence: ISentence, draftParsed?: ISentence) {
+    dispatchUpdate(
+      serializeSentence(nextSentence),
+      nextSentence,
+      draftParsed ?? buildCallSceneDraftParsed(nextSentence),
+    )
   }
 
   // ─── 说话人 / 旁白 ───
@@ -292,7 +322,14 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   }
 
   function handleRawTextChange(value: string) {
-    const newParsed = ensureParsed({ ...entry.value, rawText: value })
+    callSceneParameterDrafts.value = undefined
+    const newParsed = ensureParsed({
+      ...entry.value,
+      rawText: value,
+      draftParsed: undefined,
+      parsed: undefined,
+      parseError: false,
+    })
     if (newParsed) {
       dispatchUpdate(value, newParsed)
     }
@@ -304,6 +341,44 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     }
     const updatedNode = updateCommandNodeInlineComment(commandNode.value, value)
     emitSentenceUpdate(serializeCommandNode(updatedNode))
+  }
+
+  const callSceneParameters = computed(() => {
+    if (!supportsSceneSemantics.value || commandNode.value?.type !== commandType.callScene) {
+      return
+    }
+    if (callSceneParameterDrafts.value === undefined) {
+      return readCallSceneCustomArgs(commandNode.value)
+    }
+    return cloneArgs(callSceneParameterDrafts.value)
+  })
+
+  function handleCallSceneParametersChange(parameters: arg[]): void {
+    if (!supportsSceneSemantics.value || commandNode.value?.type !== commandType.callScene) {
+      return
+    }
+    callSceneParameterDrafts.value = cloneArgs(parameters)
+    const updatedNode = updateCallSceneCustomArgs(commandNode.value, parameters)
+    if (updatedNode) {
+      const nextSentence = serializeCommandNode(updatedNode)
+      emitSentenceUpdate(nextSentence)
+    }
+  }
+
+  function buildCallSceneDraftParsed(sentence: ISentence): ISentence | undefined {
+    const parameters = callSceneParameterDrafts.value
+    if (sentence.command !== commandType.callScene || !parameters?.some(parameter => parameter.key.trim() === '')) {
+      return
+    }
+
+    const parameterKeys = new Set(parameters.map(parameter => parameter.key))
+    return {
+      ...sentence,
+      args: [
+        ...sentence.args.filter(parameter => !parameterKeys.has(parameter.key)),
+        ...cloneArgs(parameters),
+      ],
+    }
   }
 
   return {
@@ -355,6 +430,8 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       handleFieldValueChange: fieldBindings.handleFieldValueChange,
       handleFieldSelectChange: fieldBindings.handleFieldSelectChange,
       readArgRuntimeValue: params.readArgRuntimeValue,
+      callSceneParameters,
+      handleCallSceneParametersChange,
     },
 
     misc: {

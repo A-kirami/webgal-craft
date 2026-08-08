@@ -707,7 +707,10 @@ edit:
     unsupportedMultilineStatements: 多行陳述式需要 WebGAL 4.6.3 或更新版本
     unsupportedOpusVocal: Opus 語音簡寫需要 WebGAL 4.6.3 或更新版本
     unsupportedFigurePosition: 此立繪位置需要 WebGAL 4.6.3 或更新版本。
+    unsupportedCallSceneArgument: 「呼叫場景」命令向子場景傳遞參數需要 WebGAL 4.6.3 或更新版本。
+    unsupportedLocalVariable: 「局部變數」參數需要 WebGAL 4.6.3 或更新版本。
     unsupportedSpine: 目前引擎不支援 Spine 模型。
+    reservedCallSceneArgument: '「{argument}」為保留參數，不能用於 callScene。'
   errors:
     fileSyncFailed: 檔案同步失敗，請稍後重試
     previewUnavailable: 預覽地址不存在，請先啟動預覽
@@ -930,6 +933,7 @@ edit:
       video: 影片
       changeScene: 切換場景
       callScene: 呼叫場景
+      return: 返回場景
       choose: 分支選擇
       label: 標籤
       jumpLabel: 跳轉標籤
@@ -964,6 +968,7 @@ edit:
       video: 全螢幕播放一段影片
       changeScene: 結束目前場景並切換到另一個場景
       callScene: 呼叫子場景，結束後返回目前場景
+      return: 從目前子場景返回，並可選擇回傳一個值
       choose: 顯示分支選項供玩家選擇
       label: 定義一個可跳轉到的標籤位置
       jumpLabel: 跳轉到目前場景中的指定標籤
@@ -1029,7 +1034,12 @@ edit:
       labelName: 標籤名
       varName: 變數名
       varValue: 變數值
+      scope: 變數作用域
       global: 全域變數
+      writeReturnTo: 回傳值變數
+      parameterKey: 參數名稱
+      parameterValue: 參數值
+      addParameter: 新增場景參數
       inputTitle: 對話框標題
       buttonText: 確認按鈕文字
       defaultValue: 預設值
@@ -1142,6 +1152,10 @@ edit:
       loadFailed: 載入失敗
     options:
       notSelected: 未選擇
+      variableScope:
+        save: 儲存
+        global: 全域
+        local: 區域
       default: 預設
       left: 左側
       left14: 左側 1/4

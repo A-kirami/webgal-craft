@@ -25,6 +25,10 @@ export function serializeSentence(sentence: ISentence): string {
     return `;${sentence.content}`
   }
 
+  if (sentence.command === commandType.return && sentence.content === '' && sentence.args.length === 0 && !sentence.inlineComment) {
+    return 'return;'
+  }
+
   const argsText = serializeArgs(sentence)
   const commentText = sentence.inlineComment ? `;${sentence.inlineComment}` : ''
   const statementSuffix = sentence.inlineComment ? '' : ';'

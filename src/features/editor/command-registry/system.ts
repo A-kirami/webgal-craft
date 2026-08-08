@@ -1,7 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { AUDIO_EXTENSIONS, BACKGROUND_EXTENSIONS, ORDER, SERIES } from './common-params'
-import { arg, content } from './schema'
+import { arg, content, UNSPECIFIED } from './schema'
 
 import type { CommandEntry } from './schema'
 
@@ -12,7 +12,22 @@ export const systemEntries: CommandEntry[] = [
     description: t => t('edit.visualEditor.commandDescriptions.setVar'),
     icon: 'i-lucide-variable',
     category: 'system',
-    fields: [arg({ key: 'global', label: t => t('edit.visualEditor.params.global'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.global.on'), off: t => t('edit.visualEditor.paramTooltips.global.off') }, type: 'switch', defaultValue: false })],
+    fields: [
+      arg({ key: 'global', label: t => t('edit.visualEditor.params.global'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.global.on'), off: t => t('edit.visualEditor.paramTooltips.global.off') }, type: 'switch', defaultValue: false, hiddenWhenCapability: 'sceneSemantics' }),
+      arg({
+        key: 'scope',
+        label: t => t('edit.visualEditor.params.scope'),
+        type: 'choice',
+        mode: 'flag',
+        variant: { panel: 'segmented', inline: 'select' },
+        options: [
+          { value: UNSPECIFIED, label: t => t('edit.visualEditor.options.variableScope.save') },
+          { value: 'global', label: t => t('edit.visualEditor.options.variableScope.global') },
+          { value: 'local', label: t => t('edit.visualEditor.options.variableScope.local') },
+        ],
+        requiredCapability: 'sceneSemantics',
+      }),
+    ],
   },
   {
     type: commandType.showVars,
