@@ -1,5 +1,4 @@
-import { MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/domain/engine/runtime-capabilities'
-import { managedImportErrorMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { createHomeResourceImportMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
 import { requestGameRuntimeRebind, resolveRuntimeRebindIssue } from '~/features/modals/import-dependency-resolution/request-game-runtime-rebind'
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
 import { createGameImportWorkflow } from '~/features/resource-import/resource-import-workflows'
@@ -40,21 +39,7 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
     activeProgress: options.activeProgress,
     importResource: path => gameManager.importGame(path, { resolveDependencies }),
     selectResource: importWorkflow.importFromPicker,
-    messages: {
-      ...managedImportErrorMessages,
-      alreadyRegistered: t => t('home.games.importAlreadyExists'),
-      engineEditorIncompatible: t => t('home.games.importEngineEditorIncompatible'),
-      engineNotFound: t => t('home.games.importEngineNotFound'),
-      engineUnavailable: t => t('home.games.importEngineUnavailable'),
-      engineVersionInvalid: t => t('home.games.importEngineVersionInvalid'),
-      engineVersionTooOld: t => t('home.games.importEngineVersionTooOld', { version: MIN_WEBGAL_EDITOR_RUNTIME_VERSION }),
-      gameConfigCorrupted: t => t('home.games.importConfigCorrupted'),
-      gameSchemaTooNew: t => t('home.games.importSchemaVersionTooNew'),
-      invalidFolder: t => t('home.games.importInvalidFolder'),
-      multipleFolders: t => t('home.games.importMultipleFolders'),
-      selectFolderTitle: t => t('common.dialogs.selectGameFolder'),
-      unknownError: t => t('home.games.importUnknownError'),
-    },
+    messages: createHomeResourceImportMessages('games', options.t),
     t: options.t,
   })
 

@@ -3,6 +3,10 @@ import { exists, readDir } from '@tauri-apps/plugin-fs'
 import { AbsPath } from '~/domain/path'
 import { resolveHomeTabDefinition } from '~/features/home/home-tabs'
 import { resolveHomeResourceImportNotification } from '~/features/home/shared/home-resource-import'
+import {
+  createHomeResourceImportMessages,
+  resolveImportNotificationMessage,
+} from '~/features/home/shared/useHomeResourceImportActions'
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
 import { engineManager } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
@@ -11,10 +15,12 @@ import { useModalStore } from '~/stores/modal'
 import { useResourceStore } from '~/stores/resource'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 import { useWorkspaceStore } from '~/stores/workspace'
+import { resolveI18nLike } from '~/utils/i18n-like'
 
 import type { DiscoveredResource } from './discovered-resource'
 import type { Engine, Game, Template } from '~/database/model'
 import type { HomeResourceImportOutcome } from '~/features/home/shared/home-resource-import'
+import type { HomeResourceImportMessages, HomeResourceType } from '~/features/home/shared/useHomeResourceImportActions'
 import type { StaticSiteConfig } from '~/types/server'
 
 export type { DiscoveredResource } from './discovered-resource'
@@ -245,7 +251,7 @@ function filterAlreadyImported(
   return discovered.filter(resource => !existingKeys.has(getDiscoveredResourceKey(type, resource)))
 }
 
-type ResourceType = 'games' | 'engines' | 'templates'
+type ResourceType = HomeResourceType
 
 function discoverByType(type: ResourceType): Promise<DiscoveredResource[]> {
   switch (type) {
@@ -256,36 +262,8 @@ function discoverByType(type: ResourceType): Promise<DiscoveredResource[]> {
   }
 }
 
-interface ImportMessages {
-  alreadyRegistered?: string
-  error: string
-}
-
 function isHomeResourceImportOutcome(value: unknown): value is HomeResourceImportOutcome {
   return typeof value === 'object' && value !== null && 'alreadyRegistered' in value
-}
-
-function resolveImportMessages(type: ResourceType, t: (key: string) => string): ImportMessages {
-  switch (type) {
-    case 'games': {
-      return {
-        alreadyRegistered: t('home.games.importAlreadyExists'),
-        error: t('home.games.importUnknownError'),
-      }
-    }
-    case 'engines': {
-      return {
-        alreadyRegistered: t('home.engines.importAlreadyExists'),
-        error: t('home.engines.importUnknownError'),
-      }
-    }
-    case 'templates': {
-      return {
-        error: t('home.templates.importUnknownError'),
-      }
-    }
-    default: { throw new Error(`未知的资源类型: ${type satisfies never}`) }
-  }
 }
 
 function resolveImportFn(type: ResourceType): (path: AbsPath) => Promise<unknown> {
@@ -340,7 +318,7 @@ export function useDiscoverResources() {
   async function handleImport(
     paths: AbsPath[],
     importFn: (path: AbsPath) => Promise<unknown>,
-    messages: ImportMessages,
+    messages: HomeResourceImportMessages,
   ) {
     const results = await Promise.all(
       paths.map(async (path) => {
@@ -368,6 +346,18 @@ export function useDiscoverResources() {
 
     const alreadyRegisteredCount = notifications.filter(result => result.kind === 'already-registered').length
     const failCount = notifications.filter(result => result.level === 'error').length
+    const failureDetails = new Map<string, number>()
+
+    for (const { notification } of results) {
+      if (notification.level !== 'error') {
+        continue
+      }
+
+      const message = resolveImportNotificationMessage(notification, messages, t)
+      if (message) {
+        failureDetails.set(message, (failureDetails.get(message) ?? 0) + 1)
+      }
+    }
 
     if (failedImports.length > 0) {
       const samplePaths = failedImports
@@ -382,11 +372,29 @@ export function useDiscoverResources() {
       )
     }
 
-    if (alreadyRegisteredCount > 0 && messages.alreadyRegistered) {
-      toast.info(`${messages.alreadyRegistered} (${alreadyRegisteredCount}/${paths.length})`)
+    if (alreadyRegisteredCount > 0) {
+      const message = resolveImportNotificationMessage(
+        { kind: 'already-registered', level: 'info' },
+        messages,
+        t,
+      )
+      if (message) {
+        toast.info(`${message} (${alreadyRegisteredCount}/${paths.length})`)
+      }
     }
     if (failCount > 0) {
-      toast.error(`${messages.error} (${failCount}/${paths.length})`)
+      const details = [...failureDetails.entries()]
+        .map(([message, count]) => count > 1 ? `${message} (${count})` : message)
+        .join('; ')
+      const [singleFailureMessage] = failureDetails.keys()
+
+      if (failureDetails.size === 1 && singleFailureMessage) {
+        toast.error(`${singleFailureMessage} (${failCount}/${paths.length})`)
+      } else {
+        toast.error(`${resolveI18nLike(messages.importFailed, t)} (${failCount}/${paths.length})`, {
+          description: details,
+        })
+      }
     }
   }
 
@@ -406,7 +414,7 @@ export function useDiscoverResources() {
       return
     }
 
-    const messages = resolveImportMessages(type, t)
+    const messages = createHomeResourceImportMessages(type, t)
     const importFn = resolveImportFn(type)
 
     modalStore.open('DiscoveredResourcesModal', {

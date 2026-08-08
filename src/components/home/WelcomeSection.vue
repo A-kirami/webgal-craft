@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { FolderOpen, Plus } from '@lucide/vue'
 
-import { MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/domain/engine/runtime-capabilities'
 import { resolveHomeResourceImportNotification } from '~/features/home/shared/home-resource-import'
 import {
-  managedImportErrorMessages,
+  createHomeResourceImportMessages,
   reportHomeResourceImportNotification,
 } from '~/features/home/shared/useHomeResourceImportActions'
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
@@ -15,8 +14,6 @@ import { useManagedImportStore } from '~/stores/managed-import'
 import { useModalStore } from '~/stores/modal'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
-
-import type { HomeResourceImportMessages } from '~/features/home/shared/useHomeResourceImportActions'
 
 const workspaceStore = useWorkspaceStore()
 const managedImportStore = useManagedImportStore()
@@ -32,21 +29,7 @@ watchOnce(() => resourceStore.games, (games) => {
 const modalStore = useModalStore()
 const { t } = useI18n()
 
-const gameImportMessages: HomeResourceImportMessages = {
-  ...managedImportErrorMessages,
-  alreadyRegistered: t => t('home.games.importAlreadyExists'),
-  engineEditorIncompatible: t => t('home.games.importEngineEditorIncompatible'),
-  engineNotFound: t => t('home.games.importEngineNotFound'),
-  engineUnavailable: t => t('home.games.importEngineUnavailable'),
-  engineVersionInvalid: t => t('home.games.importEngineVersionInvalid'),
-  engineVersionTooOld: t => t('home.games.importEngineVersionTooOld', { version: MIN_WEBGAL_EDITOR_RUNTIME_VERSION }),
-  gameConfigCorrupted: t => t('home.games.importConfigCorrupted'),
-  gameSchemaTooNew: t => t('home.games.importSchemaVersionTooNew'),
-  invalidFolder: t => t('home.games.importInvalidFolder'),
-  multipleFolders: t => t('home.games.importMultipleFolders'),
-  selectFolderTitle: t => t('common.dialogs.selectGameFolder'),
-  unknownError: t => t('home.games.importUnknownError'),
-}
+const gameImportMessages = createHomeResourceImportMessages('games', t)
 
 const gameImportWorkflow = createGameImportWorkflow({
   android: isAndroidRuntime(),

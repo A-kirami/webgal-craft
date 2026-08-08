@@ -176,6 +176,7 @@ home:
     importEngineVersionInvalid: The engine bound to this project does not provide valid version information. Choose another engine.
     importEngineVersionTooOld: The engine bound to this project is too old. Choose an engine for WebGAL {version} or later.
     importAlreadyExists: This project already exists
+    importFailed: Import failed
     importInvalidFolder: This does not look like a game project folder. Please check its contents.
     importSchemaVersionTooNew: This project was created by a newer version of the app. Please upgrade and try again.
     importUnknownError: An unknown error occurred while importing the game
@@ -191,6 +192,7 @@ home:
     dropEngineFolder: Drag and drop game engine folder here
     engineIcon: "{name} engine icon"
     importAlreadyExists: This engine already exists
+    importFailed: Import failed
     importInvalidFolder: This does not look like an engine folder. Please check its contents.
     importing: Importing engine...
     importSchemaTooNew: This engine is too new for the current app. Please upgrade the app and try again.
@@ -213,6 +215,7 @@ home:
     deleteTemplate: Delete Template
     dropTemplateFolder: Drag and drop template folder here
     importInvalidFolder: This is not a valid template folder
+    importFailed: Import failed
     importDuplicate: A template with the same name already exists
     importUnknownError: An unknown error occurred while importing the template
     importMultipleFolders: Only one template folder can be imported at a time
