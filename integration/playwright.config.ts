@@ -27,6 +27,6 @@ export default defineConfig({
       WEBGALCRAFT_INTEGRATION_TEST: '1',
     },
     url: 'http://localhost:1420',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
 })
