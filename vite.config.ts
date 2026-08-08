@@ -20,7 +20,9 @@ import VueRouter from 'vue-router/vite'
 import 'vitest/config'
 
 const host = process.env.TAURI_DEV_HOST
-const isVitest = Boolean(process.env.VITEST)
+const disableDevTools = Boolean(
+  process.env.VITEST || process.env.WEBGALCRAFT_INTEGRATION_TEST,
+)
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -72,8 +74,8 @@ export default defineConfig({
         buildSha: process.env.GITHUB_BUILD_SHA,
       },
     }),
-    !isVitest && TurboConsole(),
-    !isVitest && VueDevTools(),
+    !disableDevTools && TurboConsole(),
+    !disableDevTools && VueDevTools(),
   ],
 
   resolve: {
