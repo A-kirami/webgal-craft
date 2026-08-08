@@ -594,13 +594,13 @@ onUnmounted(() => {
               <span
                 v-if="displayItem.item.referenceCount !== undefined"
                 data-testid="file-viewer-reference-count"
-                class="text-[10px] text-foreground leading-none font-medium px-1 border rounded-sm bg-background/90 inline-flex gap-0.5 h-4 min-w-4 [font-variant-numeric:tabular-nums] items-center justify-center absolute -right-1 -top-1"
+                class="text-[10px] text-secondary-foreground leading-none font-medium px-1 rounded-sm bg-secondary inline-flex gap-0.5 h-4 min-w-4 [font-variant-numeric:tabular-nums] items-center justify-center absolute -right-1 -top-1"
                 :aria-label="$t('common.fileMeta.referenceCountValue', { count: displayItem.item.referenceCount })"
               >
                 <Link2
                   data-testid="file-viewer-reference-icon"
                   aria-hidden="true"
-                  class="text-muted-foreground shrink-0 size-2.5"
+                  class="text-secondary-foreground/70 shrink-0 size-2.5"
                   :stroke-width="1.75"
                 />
                 {{ displayItem.item.referenceCount }}
