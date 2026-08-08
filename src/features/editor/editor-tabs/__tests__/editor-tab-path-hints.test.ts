@@ -97,8 +97,8 @@ describe('getEditorTabPathHints', () => {
       createTab('scene.txt', backgroundPath, '/project/game/background'),
     ])
 
-    expect(hints.get(scenePath)).toBe('scene/chapter-a')
-    expect(hints.get(backgroundPath)).toBe('background/chapter-a')
+    expect(hints.get(scenePath)).toBe('scene')
+    expect(hints.get(backgroundPath)).toBe('background')
   })
 })
 

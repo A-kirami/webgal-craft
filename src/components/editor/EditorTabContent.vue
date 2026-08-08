@@ -30,7 +30,6 @@ function handleCloseClick() {
 
   emit('close')
 }
-
 </script>
 
 <template>

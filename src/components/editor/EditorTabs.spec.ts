@@ -281,6 +281,7 @@ describe('EditorTabs', () => {
     const assetsPathHint = assetsTab?.querySelector('[data-editor-tab-path-hint]')
 
     expect(scenesTab?.querySelector('.text-13px')).toBeTruthy()
+    expect(scenesTab).toHaveAttribute('title', '/project/game/scene/scene.txt')
     expect(scenesPathHint).toHaveTextContent('scene')
     expect(scenesPathHint).toHaveClass('text-[11.7px]')
     expect(assetsPathHint).toHaveTextContent('background')

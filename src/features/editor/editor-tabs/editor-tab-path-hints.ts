@@ -87,10 +87,8 @@ function getDisplayParentPathSegments(
   }
 
   if (tab.resourceRootPath) {
-    const relativeParentPath = getRelativeParentPathSegments(tab.path, tab.resourceRootPath)
-    if (relativeParentPath) {
-      return [AbsPath.basename(tab.resourceRootPath), ...relativeParentPath]
-    }
+    // 不同资源根的根名已经足够区分标签，不再带入根内子目录。
+    return [AbsPath.basename(tab.resourceRootPath)]
   }
 
   return getAbsoluteParentPathSegments(tab.path)
