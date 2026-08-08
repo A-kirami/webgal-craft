@@ -501,6 +501,7 @@ function createAssetFileSystemItem(options: {
   name: string
   path: string
   mimeType?: string
+  source?: FileSystemItem['source']
   size?: number
 }) {
   return {
@@ -509,6 +510,7 @@ function createAssetFileSystemItem(options: {
     name: options.name,
     path: options.path,
     size: options.size ?? 0,
+    source: options.source,
     ...(options.isDir
       ? { isDir: true }
       : { isDir: false, mimeType: options.mimeType }),
@@ -784,6 +786,40 @@ describe('AssetView', () => {
     })
 
     await expect.element(page.getByTestId('reference-count-hero.png')).toHaveTextContent('unavailable')
+  })
+
+  it('模板层文件不会显示引用计数', async () => {
+    const resolveByAbsolutePath = vi.fn()
+    const getReferencesTo = vi.fn()
+    useResourceIndexMock.mockReturnValue({
+      getReferencesTo,
+      resolveByAbsolutePath,
+      revision: resourceIndexRevision,
+      status: resourceIndexStatus,
+    })
+    getFolderContentsMock.mockResolvedValue([
+      createAssetFileSystemItem({
+        isDir: false,
+        mimeType: 'text/css',
+        modifiedAt: 2,
+        name: 'base.scss',
+        path: '/games/demo/game/template/base.scss',
+        source: 'templateLower',
+      }),
+    ])
+
+    renderInBrowser(createHarness('template'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createReferenceCountFileViewerStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('reference-count-base.scss')).toHaveTextContent('unavailable')
+    expect(resolveByAbsolutePath).not.toHaveBeenCalled()
+    expect(getReferencesTo).not.toHaveBeenCalled()
   })
 
   it('FileViewer 上抛中键点击时会以普通标签打开资源', async () => {

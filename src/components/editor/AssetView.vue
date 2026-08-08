@@ -184,7 +184,7 @@ const {
 const items = $computed(() => itemsRef.value)
 
 function resolveReferenceCount(item: FileViewerItem): number | undefined {
-  if (item.isDir || resourceIndex.status.value !== 'ready') {
+  if (item.isDir || item.source === 'templateLower' || resourceIndex.status.value !== 'ready') {
     return
   }
 
