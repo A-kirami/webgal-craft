@@ -1,8 +1,10 @@
 import { AbsPath } from '~/domain/path'
+import { gameRootDir } from '~/services/platform/app-paths'
 
 export interface EditorTabPathIdentity {
   name: string
   path: AbsPath
+  resourceRootPath?: AbsPath
 }
 
 type PathSegments = readonly string[]
@@ -32,21 +34,78 @@ export function getEditorTabPathHints(
       continue
     }
 
-    const parentPaths = sameNameTabs.map(tab => getParentPathSegments(tab.path))
+    const sharedResourceRootPath = getSharedResourceRootPath(sameNameTabs)
+    const parentPaths = sameNameTabs.map(tab => getDisplayParentPathSegments(tab, sharedResourceRootPath))
     const depth = findMinimumUniqueSuffixDepth(parentPaths)
 
     for (const [index, tab] of sameNameTabs.entries()) {
       const parentPath = parentPaths[index]
-      if (parentPath) {
-        pathHints.set(tab.path, getPathSuffix(parentPath, depth))
-      }
+      pathHints.set(tab.path, createPathHint(parentPath, depth))
     }
   }
 
   return pathHints
 }
 
-function getParentPathSegments(path: AbsPath): PathSegments {
+/**
+ * 根据游戏工程路径识别文档所属的资源根目录。
+ *
+ * 场景和资产都位于 game 目录的一级子目录下，标签提示只在该资源根内展示相对路径。
+ */
+export function getEditorTabResourceRootPath(path: AbsPath, gamePath?: AbsPath): AbsPath | undefined {
+  if (!gamePath) {
+    return
+  }
+
+  const gameRootPath = gameRootDir(gamePath)
+  let relativePath: string
+  try {
+    relativePath = AbsPath.relativize(path, gameRootPath)
+  } catch {
+    return
+  }
+
+  const segments = relativePath.split('/').filter(Boolean)
+  return segments.length > 1 ? AbsPath.append(gameRootPath, segments[0]!) : gameRootPath
+}
+
+function getSharedResourceRootPath(tabs: readonly EditorTabPathIdentity[]): AbsPath | undefined {
+  const resourceRootPath = tabs[0]?.resourceRootPath
+  if (!resourceRootPath || tabs.some(tab => tab.resourceRootPath !== resourceRootPath)) {
+    return
+  }
+
+  return resourceRootPath
+}
+
+function getDisplayParentPathSegments(
+  tab: EditorTabPathIdentity,
+  sharedResourceRootPath?: AbsPath,
+): PathSegments {
+  if (sharedResourceRootPath) {
+    return getRelativeParentPathSegments(tab.path, sharedResourceRootPath) ?? getAbsoluteParentPathSegments(tab.path)
+  }
+
+  if (tab.resourceRootPath) {
+    const relativeParentPath = getRelativeParentPathSegments(tab.path, tab.resourceRootPath)
+    if (relativeParentPath) {
+      return [AbsPath.basename(tab.resourceRootPath), ...relativeParentPath]
+    }
+  }
+
+  return getAbsoluteParentPathSegments(tab.path)
+}
+
+function getRelativeParentPathSegments(path: AbsPath, rootPath: AbsPath): PathSegments | undefined {
+  try {
+    const relativePath = AbsPath.relativize(AbsPath.parent(path), rootPath)
+    return relativePath.split('/').filter(Boolean)
+  } catch {
+    return
+  }
+}
+
+function getAbsoluteParentPathSegments(path: AbsPath): PathSegments {
   const segments = path.split('/').filter(Boolean)
   if (path.startsWith('/')) {
     segments.unshift('/')
@@ -70,4 +129,13 @@ function findMinimumUniqueSuffixDepth(paths: readonly PathSegments[]): number {
 
 function getPathSuffix(path: PathSegments, depth: number): string {
   return path.slice(-depth).join('/')
+}
+
+function createPathHint(path: PathSegments, depth: number): string {
+  const suffix = getPathSuffix(path, depth)
+  if (!suffix || suffix === '/') {
+    return './'
+  }
+
+  return depth < path.length ? `.../${suffix}` : suffix
 }

@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest'
 
 import { AbsPath } from '~/domain/path'
 
-import { getEditorTabPathHints } from '../editor-tab-path-hints'
+import { getEditorTabPathHints, getEditorTabResourceRootPath } from '../editor-tab-path-hints'
 
-function createTab(name: string, path: string) {
+function createTab(name: string, path: string, resourceRootPath?: string) {
   return {
     name,
     path: AbsPath.from(path),
+    resourceRootPath: resourceRootPath ? AbsPath.from(resourceRootPath) : undefined,
   }
 }
 
@@ -30,8 +31,8 @@ describe('getEditorTabPathHints', () => {
       createTab('scene.txt', secondPath),
     ])
 
-    expect(hints.get(firstPath)).toBe('scenes')
-    expect(hints.get(secondPath)).toBe('assets')
+    expect(hints.get(firstPath)).toBe('.../scenes')
+    expect(hints.get(secondPath)).toBe('.../assets')
   })
 
   it('父路径互为后缀时会继续追加上级目录直到产生差异', () => {
@@ -43,8 +44,8 @@ describe('getEditorTabPathHints', () => {
       createTab('scene.txt', secondPath),
     ])
 
-    expect(hints.get(firstPath)).toBe('game/route-a')
-    expect(hints.get(secondPath)).toBe('deep/route-a')
+    expect(hints.get(firstPath)).toBe('.../game/route-a')
+    expect(hints.get(secondPath)).toBe('.../deep/route-a')
   })
 
   it('最近父目录也相同时会保留共享目录之后的最短路径', () => {
@@ -56,8 +57,8 @@ describe('getEditorTabPathHints', () => {
       createTab('scene.txt', secondPath),
     ])
 
-    expect(hints.get(firstPath)).toBe('route-a/shared')
-    expect(hints.get(secondPath)).toBe('route-b/shared')
+    expect(hints.get(firstPath)).toBe('.../route-a/shared')
+    expect(hints.get(secondPath)).toBe('.../route-b/shared')
   })
 
   it('根目录文件会使用根标识参与路径区分', () => {
@@ -69,7 +70,53 @@ describe('getEditorTabPathHints', () => {
       createTab('scene.txt', nestedPath),
     ])
 
-    expect(hints.get(rootPath)).toBe('/')
-    expect(hints.get(nestedPath)).toBe('game')
+    expect(hints.get(rootPath)).toBe('./')
+    expect(hints.get(nestedPath)).toBe('.../game')
+  })
+
+  it('同一资源根内使用相对资源根的最短路径提示', () => {
+    const resourceRootPath = '/project/game/scene'
+    const rootPath = AbsPath.from(`${resourceRootPath}/scene.txt`)
+    const nestedPath = AbsPath.from(`${resourceRootPath}/chapter-a/scene.txt`)
+
+    const hints = getEditorTabPathHints([
+      createTab('scene.txt', rootPath, resourceRootPath),
+      createTab('scene.txt', nestedPath, resourceRootPath),
+    ])
+
+    expect(hints.get(rootPath)).toBe('./')
+    expect(hints.get(nestedPath)).toBe('chapter-a')
+  })
+
+  it('跨资源根时保留资源类型目录名', () => {
+    const scenePath = AbsPath.from('/project/game/scene/chapter-a/scene.txt')
+    const backgroundPath = AbsPath.from('/project/game/background/chapter-a/scene.txt')
+
+    const hints = getEditorTabPathHints([
+      createTab('scene.txt', scenePath, '/project/game/scene'),
+      createTab('scene.txt', backgroundPath, '/project/game/background'),
+    ])
+
+    expect(hints.get(scenePath)).toBe('scene/chapter-a')
+    expect(hints.get(backgroundPath)).toBe('background/chapter-a')
+  })
+})
+
+describe('getEditorTabResourceRootPath', () => {
+  const gamePath = AbsPath.from('/project')
+
+  it('将场景文件归入 game/scene 根目录', () => {
+    expect(getEditorTabResourceRootPath(AbsPath.from('/project/game/scene/chapter-a/start.txt'), gamePath))
+      .toBe('/project/game/scene')
+  })
+
+  it('将资产文件归入对应的 game 资源类型根目录', () => {
+    expect(getEditorTabResourceRootPath(AbsPath.from('/project/game/background/chapter-a/start.png'), gamePath))
+      .toBe('/project/game/background')
+  })
+
+  it('路径不属于当前项目时不设置资源根目录', () => {
+    expect(getEditorTabResourceRootPath(AbsPath.from('/other-project/game/scene/start.txt'), gamePath))
+      .toBeUndefined()
   })
 })

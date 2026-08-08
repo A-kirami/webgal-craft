@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useDragSort } from '~/composables/useDragSort'
-import { getEditorTabPathHints } from '~/features/editor/editor-tabs/editor-tab-path-hints'
+import { getEditorTabPathHints, getEditorTabResourceRootPath } from '~/features/editor/editor-tabs/editor-tab-path-hints'
 import { getCloseTabDecision, shouldFixPreviewTab } from '~/features/editor/editor-tabs/editor-tabs'
 import { useEditorStore } from '~/stores/editor'
 import { useEditorDiagnosticsStore } from '~/stores/editor-diagnostics'
 import { useModalStore } from '~/stores/modal'
 import { useTabsStore } from '~/stores/tabs'
+import { useWorkspaceStore } from '~/stores/workspace'
 import { handleWheelToHorizontalScroll } from '~/utils/wheel'
 
 import type { ScrollArea } from '~/components/ui/scroll-area'
@@ -17,9 +18,14 @@ const tabsStore = useTabsStore()
 const diagnosticsStore = useEditorDiagnosticsStore()
 const editorStore = useEditorStore()
 const modalStore = useModalStore()
+const workspaceStore = useWorkspaceStore()
 const tabs = toRef(tabsStore, 'tabs')
 const activeTabPath = $computed(() => tabsStore.activeTab?.path)
-const pathHints = $computed(() => getEditorTabPathHints(tabs.value))
+const pathHints = $computed(() => getEditorTabPathHints(tabs.value.map(tab => ({
+  name: tab.name,
+  path: tab.path,
+  resourceRootPath: getEditorTabResourceRootPath(tab.path, workspaceStore.currentGame?.path),
+}))))
 
 const scrollAreaRef = $(useTemplateRef('scrollAreaRef'))
 const scrollViewportRef = shallowRef<HTMLElement>()

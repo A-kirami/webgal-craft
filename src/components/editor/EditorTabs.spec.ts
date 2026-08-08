@@ -67,6 +67,7 @@ const {
   useEditorDiagnosticsStoreMock,
   useModalStoreMock,
   useTabsStoreMock,
+  useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
   modalOpenMock: vi.fn(),
   saveFileMock: vi.fn(),
@@ -74,6 +75,7 @@ const {
   useEditorDiagnosticsStoreMock: vi.fn(),
   useModalStoreMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
+  useWorkspaceStoreMock: vi.fn(),
 }))
 
 vi.mock('~/stores/editor', () => ({
@@ -91,6 +93,16 @@ vi.mock('~/stores/modal', () => ({
 vi.mock('~/stores/tabs', () => ({
   useTabsStore: useTabsStoreMock,
 }))
+
+vi.mock('~/stores/workspace', () => ({
+  useWorkspaceStore: useWorkspaceStoreMock,
+}))
+
+function createWorkspaceStore(gamePath?: string) {
+  return reactive({
+    currentGame: gamePath ? { path: AbsPath.from(gamePath) } : undefined,
+  })
+}
 
 function createTabsStore(tabs: Tab[], activeTabIndex: number = 0) {
   const store = reactive({
@@ -147,6 +159,7 @@ describe('EditorTabs', () => {
     useEditorDiagnosticsStoreMock.mockReset()
     useModalStoreMock.mockReset()
     useTabsStoreMock.mockReset()
+    useWorkspaceStoreMock.mockReset()
 
     useEditorStoreMock.mockReturnValue({
       saveFile: saveFileMock,
@@ -157,6 +170,7 @@ describe('EditorTabs', () => {
     useModalStoreMock.mockReturnValue({
       open: modalOpenMock,
     })
+    useWorkspaceStoreMock.mockReturnValue(createWorkspaceStore())
   })
 
   it('按文档最高问题等级只给标签名称着色', async () => {
@@ -235,67 +249,69 @@ describe('EditorTabs', () => {
   })
 
   it('同名标签会显示足以区分文件的父目录提示', () => {
+    useWorkspaceStoreMock.mockReturnValue(createWorkspaceStore('/project'))
     useTabsStoreMock.mockReturnValue(createTabsStore([
       {
         activeAt: 1,
         isPreview: false,
         name: 'scene.txt',
-        path: AbsPath.from('/project/scenes/scene.txt'),
+        path: AbsPath.from('/project/game/scene/scene.txt'),
       },
       {
         activeAt: 2,
         isPreview: false,
         name: 'scene.txt',
-        path: AbsPath.from('/project/assets/scene.txt'),
+        path: AbsPath.from('/project/game/background/scene.txt'),
       },
       {
         activeAt: 3,
         isPreview: false,
         name: 'other.txt',
-        path: AbsPath.from('/project/other.txt'),
+        path: AbsPath.from('/project/game/other.txt'),
       },
     ]))
 
     renderInBrowser(EditorTabs, { global: {} })
 
-    const scenesTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/scenes/scene.txt"]')
-    const assetsTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/assets/scene.txt"]')
-    const otherTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/other.txt"]')
+    const scenesTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/game/scene/scene.txt"]')
+    const assetsTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/game/background/scene.txt"]')
+    const otherTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/game/other.txt"]')
 
     const scenesPathHint = scenesTab?.querySelector('[data-editor-tab-path-hint]')
     const assetsPathHint = assetsTab?.querySelector('[data-editor-tab-path-hint]')
 
     expect(scenesTab?.querySelector('.text-13px')).toBeTruthy()
-    expect(scenesPathHint).toHaveTextContent('.../scenes')
+    expect(scenesPathHint).toHaveTextContent('scene')
     expect(scenesPathHint).toHaveClass('text-[11.7px]')
-    expect(assetsPathHint).toHaveTextContent('.../assets')
+    expect(assetsPathHint).toHaveTextContent('background')
     expect(assetsPathHint).toHaveClass('text-[11.7px]')
     expect(otherTab?.querySelector('[data-editor-tab-path-hint]')).toBeNull()
   })
 
-  it('根目录文档使用归一化的当前目录提示', () => {
+  it('同一资源根内的标签使用相对于资源根的路径提示', () => {
+    useWorkspaceStoreMock.mockReturnValue(createWorkspaceStore('/project'))
     useTabsStoreMock.mockReturnValue(createTabsStore([
       {
         activeAt: 1,
         isPreview: false,
-        name: 'test.txt',
-        path: AbsPath.from('/test.txt'),
+        name: 'scene.txt',
+        path: AbsPath.from('/project/game/scene/scene.txt'),
       },
       {
         activeAt: 2,
         isPreview: false,
-        name: 'test.txt',
-        path: AbsPath.from('/x/test.txt'),
+        name: 'scene.txt',
+        path: AbsPath.from('/project/game/scene/chapter-a/scene.txt'),
       },
     ]))
 
     renderInBrowser(EditorTabs, { global: {} })
 
-    const rootTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/test.txt"]')
-    const nestedTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/x/test.txt"]')
+    const rootTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/game/scene/scene.txt"]')
+    const nestedTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/game/scene/chapter-a/scene.txt"]')
 
     expect(rootTab?.querySelector('[data-editor-tab-path-hint]')).toHaveTextContent('./')
-    expect(nestedTab?.querySelector('[data-editor-tab-path-hint]')).toHaveTextContent('.../x')
+    expect(nestedTab?.querySelector('[data-editor-tab-path-hint]')).toHaveTextContent('chapter-a')
   })
 
   it('双击预览标签会将其固定为普通标签', async () => {
