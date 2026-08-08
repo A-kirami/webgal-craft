@@ -692,7 +692,7 @@ function buildValueCompletions(
     content: contentContext,
     gamePath,
     allowExtendedFigurePositions: runtimeCapabilities.figurePositions,
-    sceneOptions: buildSceneAutocompleteOptionsFromText(model.getValue()),
+    sceneOptions: buildSceneAutocompleteOptionsFromText(model.getValue(), runtimeCapabilities),
     listResources: getResourceOptions,
     resolveDynamicOptions: (dynamicKey, context) => resolveDynamicOptions(dynamicKey, context),
     runtimeCapabilities,

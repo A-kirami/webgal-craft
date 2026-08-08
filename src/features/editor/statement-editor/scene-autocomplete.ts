@@ -5,7 +5,7 @@ import { parseSentence } from '~/domain/script/parser'
 import { ensureParsed, readSentenceArgString, splitStatements } from '~/domain/script/sentence'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-import type { StatementEntry } from '~/domain/script/sentence'
+import type { StatementEntry, StatementSyntaxCapabilities } from '~/domain/script/sentence'
 import type { SceneAutocompleteCollection } from '~/features/editor/command-registry/schema'
 
 interface SceneAutocompleteOption {
@@ -105,6 +105,9 @@ export function buildSceneAutocompleteOptionsFromStatements(
   return buildOptionsFromSentences(statements.map(statement => ensureParsed(statement)))
 }
 
-export function buildSceneAutocompleteOptionsFromText(text: string): SceneAutocompleteOptions {
-  return buildOptionsFromSentences(splitStatements(text).map(line => parseSentence(line)))
+export function buildSceneAutocompleteOptionsFromText(
+  text: string,
+  capabilities?: StatementSyntaxCapabilities,
+): SceneAutocompleteOptions {
+  return buildOptionsFromSentences(splitStatements(text, capabilities).map(line => parseSentence(line, capabilities)))
 }
