@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useDragSort } from '~/composables/useDragSort'
+import { getEditorTabPathHints } from '~/features/editor/editor-tabs/editor-tab-path-hints'
 import { getCloseTabDecision, shouldFixPreviewTab } from '~/features/editor/editor-tabs/editor-tabs'
 import { useEditorStore } from '~/stores/editor'
 import { useEditorDiagnosticsStore } from '~/stores/editor-diagnostics'
@@ -18,6 +19,7 @@ const editorStore = useEditorStore()
 const modalStore = useModalStore()
 const tabs = toRef(tabsStore, 'tabs')
 const activeTabPath = $computed(() => tabsStore.activeTab?.path)
+const pathHints = $computed(() => getEditorTabPathHints(tabs.value))
 
 const scrollAreaRef = $(useTemplateRef('scrollAreaRef'))
 const scrollViewportRef = shallowRef<HTMLElement>()
@@ -46,6 +48,10 @@ function updateScrollViewportRef() {
 
 function isActiveTab(tab: Tab): boolean {
   return activeTabPath === tab.path
+}
+
+function getTabPathHint(tab: Tab): string | undefined {
+  return pathHints.get(tab.path)
 }
 
 function getTabTintClass(tab: Tab, isDragOverlay = false): string {
@@ -143,6 +149,7 @@ onMounted(() => {
         :diagnostic-severity="diagnosticsStore.getHighestSeverity(tab.path)"
         :sorting="tabSort.isSorting.value"
         :tab="tab"
+        :path-hint="getTabPathHint(tab)"
         :tint-class="getTabTintClass(tab)"
         :item-style="tabSort.getItemStyle(index)"
         :data-active="isActiveTab(tab)"
@@ -170,6 +177,7 @@ onMounted(() => {
       :close-interactive="false"
       :sorting="tabSort.isSorting.value"
       :tab="tabSort.overlayState.value.item"
+      :path-hint="getTabPathHint(tabSort.overlayState.value.item)"
       :tint-class="getTabTintClass(tabSort.overlayState.value.item, true)"
     />
   </DragOverlay>

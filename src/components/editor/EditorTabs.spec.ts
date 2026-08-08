@@ -234,6 +234,39 @@ describe('EditorTabs', () => {
     }))
   })
 
+  it('同名标签会显示足以区分文件的父目录提示', () => {
+    useTabsStoreMock.mockReturnValue(createTabsStore([
+      {
+        activeAt: 1,
+        isPreview: false,
+        name: 'scene.txt',
+        path: AbsPath.from('/project/scenes/scene.txt'),
+      },
+      {
+        activeAt: 2,
+        isPreview: false,
+        name: 'scene.txt',
+        path: AbsPath.from('/project/assets/scene.txt'),
+      },
+      {
+        activeAt: 3,
+        isPreview: false,
+        name: 'other.txt',
+        path: AbsPath.from('/project/other.txt'),
+      },
+    ]))
+
+    renderInBrowser(EditorTabs, { global: {} })
+
+    const scenesTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/scenes/scene.txt"]')
+    const assetsTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/assets/scene.txt"]')
+    const otherTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/other.txt"]')
+
+    expect(scenesTab?.querySelector('[data-editor-tab-path-hint]')).toHaveTextContent('(scenes)')
+    expect(assetsTab?.querySelector('[data-editor-tab-path-hint]')).toHaveTextContent('(assets)')
+    expect(otherTab?.querySelector('[data-editor-tab-path-hint]')).toBeNull()
+  })
+
   it('双击预览标签会将其固定为普通标签', async () => {
     const tabsStore = createTabsStore([
       {
