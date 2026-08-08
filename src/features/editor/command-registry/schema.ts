@@ -358,6 +358,9 @@ export function readArgFields(entry: CommandEntry, capabilities: EngineRuntimeCa
     if (field.type === 'json-object') {
       for (const sub of field.fields) {
         const flattenedField = normalizeFlattenedJsonSubField(argKey, field, sub)
+        if (!isRuntimeCapabilitySupported(flattenedField, capabilities)) {
+          continue
+        }
         result.push({
           storageKey: argKey,
           field: flattenedField,
@@ -407,6 +410,9 @@ export function readEditorFields(entry: CommandEntry, capabilities: EngineRuntim
     if (field.type === 'json-object') {
       for (const sub of field.fields) {
         const flattenedField = normalizeFlattenedJsonSubField(argKey, field, sub)
+        if (!isRuntimeCapabilitySupported(flattenedField, capabilities)) {
+          continue
+        }
         result.push({
           key: flattenedField.key,
           storage: 'arg',
