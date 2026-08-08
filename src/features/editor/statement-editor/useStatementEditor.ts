@@ -322,7 +322,14 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
   }
 
   function handleRawTextChange(value: string) {
-    const newParsed = ensureParsed({ ...entry.value, rawText: value })
+    callSceneParameterDrafts.value = undefined
+    const newParsed = ensureParsed({
+      ...entry.value,
+      rawText: value,
+      draftParsed: undefined,
+      parsed: undefined,
+      parseError: false,
+    })
     if (newParsed) {
       dispatchUpdate(value, newParsed)
     }

@@ -136,6 +136,19 @@ describe('useStatementEditor', () => {
     expect(editor.params.callSceneParameters.value).toEqual([])
   })
 
+  it('原始文本变更时重新解析而不是复用旧场景草稿', () => {
+    const { editor, updates } = createReactiveHarness('callScene:battle.txt;')
+
+    editor.params.handleCallSceneParametersChange([{ key: '', value: '' }])
+    editor.misc.handleRawTextChange('changeBg:updated.jpg;')
+
+    expect(updates.at(-1)).toMatchObject({
+      rawText: 'changeBg:updated.jpg;',
+      parsed: { command: commandType.changeBg },
+      draftParsed: undefined,
+    })
+  })
+
   it('旧运行时隐藏 callScene 动态参数编辑器', () => {
     const { editor, updates } = createHarness('callScene:battle.txt -enemy=slime;', {
       runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
