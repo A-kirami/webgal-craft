@@ -12,6 +12,7 @@ interface Props {
   closeInteractive?: boolean
   diagnosticSeverity?: DiagnosticSeverity
   itemStyle?: StyleValue
+  pathHint?: string
   sorting?: boolean
   tab: Tab
   tintClass: string
@@ -53,6 +54,7 @@ const attrs = useAttrs()
         :active="props.active"
         :close-interactive="props.closeInteractive"
         :diagnostic-severity="props.diagnosticSeverity"
+        :path-hint="props.pathHint"
         @close="emit('close')"
       />
     </span>

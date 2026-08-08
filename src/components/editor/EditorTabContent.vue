@@ -10,6 +10,7 @@ interface Props {
   active: boolean
   closeInteractive?: boolean
   diagnosticSeverity?: DiagnosticSeverity
+  pathHint?: string
   tab: Tab
 }
 
@@ -33,9 +34,9 @@ function handleCloseClick() {
 
 <template>
   <div class="flex gap-1.5 items-center">
-    <FileText class="size-4" />
+    <FileText class="shrink-0 size-4" />
     <span
-      class="text-sm font-light"
+      class="text-13px font-light shrink-0"
       :class="[
         { 'italic': props.tab.isPreview },
         getDiagnosticSeverityTextClass(props.diagnosticSeverity),
@@ -43,6 +44,13 @@ function handleCloseClick() {
       :data-diagnostic-severity="props.diagnosticSeverity"
     >
       {{ props.tab.name }}
+    </span>
+    <span
+      v-if="props.pathHint"
+      class="text-[11.7px] text-muted-foreground/70 font-light max-w-28 min-w-0 truncate"
+      data-editor-tab-path-hint
+    >
+      {{ props.pathHint }}
     </span>
     <Button
       variant="ghost"
