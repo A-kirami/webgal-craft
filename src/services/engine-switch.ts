@@ -138,7 +138,8 @@ async function switchEngine(
     // 让首页卡片与编辑器头部都能拉到新引擎图标，避免浏览器命中旧缓存
     await runFinalizer(() => gameManager.refreshRegisteredGameSnapshot(game.path, { invalidate: 'all' }), '刷新游戏快照失败')
 
-    // 收尾：关闭打开的模板文档、刷新文件树、通知预览拉取新模板
+    // 收尾：关闭打开的模板文档、刷新文件树。后续重载预览 iframe 会重新加载模板，
+    // 因此不再额外发送模板重载请求。
     // 显式传入 newEngine.path 与 newTemplatePath：此时 workspaceStore.currentGame
     // 仍是切换前快照，file store 单靠它反查会拿到旧引擎/模板路径，
     // 导致首次切换不刷新模板内容。
@@ -147,6 +148,7 @@ async function switchEngine(
       nextEnginePath: newEngine.path,
       // eslint-disable-next-line unicorn/no-null
       nextTemplatePath: newTemplatePath ?? null,
+      skipPreviewTemplateReload: true,
     }), '通知模板变更失败')
 
     // 引擎换的是 runtime 本身（webgal.js、index.html、内置资源等），

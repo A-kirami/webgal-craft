@@ -50,20 +50,27 @@ async function closeOpenedTemplateDocuments(gamePath: AbsPath): Promise<void> {
   }
 }
 
+interface NotifyTemplateChangedOptions {
+  nextEnginePath?: AbsPath
+  nextTemplatePath?: AbsPath | null
+  skipPreviewTemplateReload?: boolean
+}
+
 /**
  * 切换收尾通用清理：
  * - 关闭仍打开的模板文档（联动 editor session 清理与未保存状态丢弃）
  * - 失效 file store 中模板子树缓存并刷新 enginePath / templatePath
- * - broadcast REFETCH_TEMPLATE_FILES 让运行中的预览拉取新模板
+ * - 按调用场景通知运行中的预览拉取新模板
  *
  * @param options.nextEnginePath 引擎切换路径下的新引擎路径。必须由调用方显式
  *   传入，因为此时 `workspaceStore.currentGame.engineId` 仍是切换前的快照。
  * @param options.nextTemplatePath 模板切换后的解析路径。`null` 表示回到
  *   "跟随当前引擎默认"（缺省 binding）。
+ * @param options.skipPreviewTemplateReload 引擎切换已重载预览 iframe 时跳过独立的模板重载请求。
  */
 async function notifyTemplateChanged(
   gamePath: AbsPath,
-  options: { nextEnginePath?: AbsPath, nextTemplatePath?: AbsPath | null } = {},
+  options: NotifyTemplateChangedOptions = {},
 ): Promise<void> {
   await closeOpenedTemplateDocuments(gamePath)
 
@@ -80,11 +87,13 @@ async function notifyTemplateChanged(
     logger.warn(`[模板切换] 失效模板 overlay 缓存失败: ${error}`)
   }
 
-  try {
-    await debugCommander.refetchTemplates()
-  } catch (error) {
-    // 无运行中的预览或站点未连接时忽略
-    logger.warn(`[模板切换] 通知预览刷新模板失败: ${error}`)
+  if (!options.skipPreviewTemplateReload) {
+    try {
+      await debugCommander.refetchTemplates()
+    } catch (error) {
+      // 无运行中的预览或站点未连接时忽略
+      logger.warn(`[模板切换] 通知预览刷新模板失败: ${error}`)
+    }
   }
 }
 

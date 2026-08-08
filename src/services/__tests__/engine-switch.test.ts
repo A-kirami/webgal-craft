@@ -191,6 +191,11 @@ describe('engineSwitch.switchEngine', () => {
     expect(updateSiteEngineMock).toHaveBeenCalledWith('/games/demo', '/engines/new')
     expect(updateSiteTemplateMock).toHaveBeenCalledWith('/games/demo', '/engines/new/game/template')
     expect(refreshRegisteredGameSnapshotMock).toHaveBeenCalledWith('/games/demo', { invalidate: 'all' })
+    expect(notifyTemplateChangedMock).toHaveBeenCalledWith('/games/demo', {
+      nextEnginePath: '/engines/new',
+      nextTemplatePath: '/engines/new/game/template',
+      skipPreviewTemplateReload: true,
+    })
     expect(cleanTemplateUpperMock).not.toHaveBeenCalled()
     expect(refreshIfCurrentGameMock).not.toHaveBeenCalled()
     expect(syncIfCurrentGameMock).toHaveBeenCalledWith({
