@@ -15,6 +15,7 @@ import {
   resolveDroppableFileTreeTransferItems,
   resolveFileTreeDefaultFileDraft,
 } from '~/features/editor/file-tree/file-tree'
+import { isAnimationTablePath } from '~/services/animation-table-sync'
 import { gameFs } from '~/services/game-fs'
 import { pathOperation } from '~/services/path-operation'
 import { createPathOperationRewriteConfirm } from '~/services/path-operation-confirm'
@@ -185,6 +186,11 @@ const items = $computed(() => itemsRef.value)
 
 function resolveReferenceCount(item: FileViewerItem): number | undefined {
   if (item.isDir || item.source === 'templateLower' || resourceIndex.status.value !== 'ready') {
+    return
+  }
+
+  const gamePath = workspaceStore.currentGame?.path
+  if (gamePath && isAnimationTablePath(gamePath, AbsPath.from(item.path))) {
     return
   }
 

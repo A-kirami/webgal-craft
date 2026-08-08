@@ -10,6 +10,11 @@ function getAnimationRootPath(gamePath: AbsPath): AbsPath {
   return AbsPath.join(gamePath, RelPath.from('game/animation'))
 }
 
+export function isAnimationTablePath(gamePath: AbsPath, path: AbsPath): boolean {
+  const animationRootPath = getAnimationRootPath(gamePath)
+  return path.toLowerCase() === `${animationRootPath}/${ANIMATION_TABLE_FILE_NAME}`.toLowerCase()
+}
+
 function toAnimationTableEntry(animationRootPath: AbsPath, path: AbsPath): RelPath | undefined {
   if (!path.startsWith(`${animationRootPath}/`)) {
     return
@@ -68,7 +73,7 @@ export function isAnimationTableRelatedPath(gamePath: AbsPath, path: AbsPath): b
     return false
   }
 
-  return path.toLowerCase() !== `${animationRootPath}/${ANIMATION_TABLE_FILE_NAME}`.toLowerCase()
+  return !isAnimationTablePath(gamePath, path)
 }
 
 export async function syncAnimationTable(gamePath: AbsPath): Promise<void> {

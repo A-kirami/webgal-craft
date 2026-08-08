@@ -822,6 +822,55 @@ describe('AssetView', () => {
     expect(getReferencesTo).not.toHaveBeenCalled()
   })
 
+  it('不会为 animationTable.json 显示引用计数', async () => {
+    const resolveByAbsolutePath = vi.fn(() => ({
+      key: {
+        assetType: 'animation',
+        relativePath: 'fade.json',
+        root: 'asset',
+      },
+    }))
+    const getReferencesTo = vi.fn(() => [])
+    useResourceIndexMock.mockReturnValue({
+      getReferencesTo,
+      resolveByAbsolutePath,
+      revision: resourceIndexRevision,
+      status: resourceIndexStatus,
+    })
+    getFolderContentsMock.mockResolvedValue([
+      createAssetFileSystemItem({
+        isDir: false,
+        mimeType: 'application/json',
+        modifiedAt: 2,
+        name: 'animationTable.json',
+        path: '/games/demo/game/animation/animationTable.json',
+        source: 'upper',
+      }),
+      createAssetFileSystemItem({
+        isDir: false,
+        mimeType: 'application/json',
+        modifiedAt: 3,
+        name: 'fade.json',
+        path: '/games/demo/game/animation/fade.json',
+        source: 'upper',
+      }),
+    ])
+
+    renderInBrowser(createHarness('animation'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createReferenceCountFileViewerStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('reference-count-animationTable.json')).toHaveTextContent('unavailable')
+    await expect.element(page.getByTestId('reference-count-fade.json')).toHaveTextContent('0')
+    expect(resolveByAbsolutePath).toHaveBeenCalledWith('/games/demo/game/animation/fade.json')
+    expect(resolveByAbsolutePath).not.toHaveBeenCalledWith('/games/demo/game/animation/animationTable.json')
+  })
+
   it('FileViewer 上抛中键点击时会以普通标签打开资源', async () => {
     const openTab = vi.fn()
     useTabsStoreMock.mockReturnValue({
