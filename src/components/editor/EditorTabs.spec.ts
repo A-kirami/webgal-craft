@@ -266,11 +266,36 @@ describe('EditorTabs', () => {
     const assetsPathHint = assetsTab?.querySelector('[data-editor-tab-path-hint]')
 
     expect(scenesTab?.querySelector('.text-13px')).toBeTruthy()
-    expect(scenesPathHint).toHaveTextContent(String.raw`...\scenes`)
+    expect(scenesPathHint).toHaveTextContent('.../scenes')
     expect(scenesPathHint).toHaveClass('text-[11.7px]')
-    expect(assetsPathHint).toHaveTextContent(String.raw`...\assets`)
+    expect(assetsPathHint).toHaveTextContent('.../assets')
     expect(assetsPathHint).toHaveClass('text-[11.7px]')
     expect(otherTab?.querySelector('[data-editor-tab-path-hint]')).toBeNull()
+  })
+
+  it('根目录文档使用归一化的当前目录提示', () => {
+    useTabsStoreMock.mockReturnValue(createTabsStore([
+      {
+        activeAt: 1,
+        isPreview: false,
+        name: 'test.txt',
+        path: AbsPath.from('/test.txt'),
+      },
+      {
+        activeAt: 2,
+        isPreview: false,
+        name: 'test.txt',
+        path: AbsPath.from('/x/test.txt'),
+      },
+    ]))
+
+    renderInBrowser(EditorTabs, { global: {} })
+
+    const rootTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/test.txt"]')
+    const nestedTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/x/test.txt"]')
+
+    expect(rootTab?.querySelector('[data-editor-tab-path-hint]')).toHaveTextContent('./')
+    expect(nestedTab?.querySelector('[data-editor-tab-path-hint]')).toHaveTextContent('.../x')
   })
 
   it('双击预览标签会将其固定为普通标签', async () => {

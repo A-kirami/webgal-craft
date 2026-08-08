@@ -30,6 +30,10 @@ function handleCloseClick() {
 
   emit('close')
 }
+
+function getPathHintLabel(pathHint: string): string {
+  return pathHint === '/' ? './' : `.../${pathHint}`
+}
 </script>
 
 <template>
@@ -50,7 +54,7 @@ function handleCloseClick() {
       class="text-[11.7px] text-muted-foreground/70 font-light max-w-28 min-w-0 truncate"
       data-editor-tab-path-hint
     >
-      ...\{{ props.pathHint }}
+      {{ getPathHintLabel(props.pathHint) }}
     </span>
     <Button
       variant="ghost"
