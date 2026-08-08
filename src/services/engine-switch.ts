@@ -86,7 +86,7 @@ async function switchEngine(
     })
   }
 
-  logger.info(`[引擎切换] ${game.path}: 开始切换到引擎 ${newEngine.name}`)
+  logger.info(`[引擎切换] ${game.path}: 开始切换到引擎 ${newEngine.name}@${newEngine.version ?? '未知'}`)
 
   // 仅在模板脏状态时才需要用户决策
   const templateDecision = strategy === 'dirty' ? options.templateDecision : undefined

@@ -14,6 +14,7 @@ const {
   dbEngineGetMock,
   dbGameUpdateMock,
   evaluateTemplateStrategyMock,
+  loggerInfoMock,
   notifyTemplateChangedMock,
   readProjectConfigMock,
   refreshIfCurrentGameMock,
@@ -28,6 +29,7 @@ const {
   dbEngineGetMock: vi.fn(),
   dbGameUpdateMock: vi.fn(),
   evaluateTemplateStrategyMock: vi.fn(),
+  loggerInfoMock: vi.fn(),
   notifyTemplateChangedMock: vi.fn(),
   readProjectConfigMock: vi.fn(),
   refreshIfCurrentGameMock: vi.fn(),
@@ -42,7 +44,7 @@ const {
 vi.mock('@tauri-apps/plugin-log', () => ({
   debug: vi.fn(),
   error: vi.fn(),
-  info: vi.fn(),
+  info: loggerInfoMock,
   warn: vi.fn(),
   attachConsole: vi.fn(),
 }))
@@ -106,6 +108,7 @@ describe('engineSwitch.switchEngine', () => {
     dbEngineGetMock.mockReset()
     dbGameUpdateMock.mockReset()
     evaluateTemplateStrategyMock.mockReset()
+    loggerInfoMock.mockReset()
     notifyTemplateChangedMock.mockReset()
     readProjectConfigMock.mockReset()
     refreshIfCurrentGameMock.mockReset()
@@ -191,6 +194,9 @@ describe('engineSwitch.switchEngine', () => {
     expect(updateSiteEngineMock).toHaveBeenCalledWith('/games/demo', '/engines/new')
     expect(updateSiteTemplateMock).toHaveBeenCalledWith('/games/demo', '/engines/new/game/template')
     expect(refreshRegisteredGameSnapshotMock).toHaveBeenCalledWith('/games/demo', { invalidate: 'all' })
+    expect(loggerInfoMock).toHaveBeenCalledWith(
+      '[引擎切换] /games/demo: 开始切换到引擎 Default Engine@4.6.0',
+    )
     expect(notifyTemplateChangedMock).toHaveBeenCalledWith('/games/demo', {
       nextEnginePath: '/engines/new',
       nextTemplatePath: '/engines/new/game/template',
