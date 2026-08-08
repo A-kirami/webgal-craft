@@ -737,6 +737,7 @@ edit:
       moveConfirm: Move anyway
     errors:
       blockedPlan: Path operation is blocked
+      protectedEntryPoint: The scene entry file start.txt cannot be moved, renamed, or deleted.
       duplicateTarget: Target path already exists or matches the source path.
       inFlightConflict: Another path operation is already in progress on this path. Please try again later.
       crossRootMove: Only reference rewrites within the same resource root are supported.
@@ -796,6 +797,7 @@ edit:
     pastePartialFailed: Partial paste failed ({failed}/{total})
     viewHistory: View Version History
     dragPreviewCount: "{count} file(s)"
+    entryPointBadge: Entry point
   previewPanel:
     copyUrl: Copy URL
     refreshPreview: Refresh Preview
@@ -807,6 +809,8 @@ edit:
     fitToView: Fit to View
     zoomLevel: Zoom Level
     resolution: Preview Resolution
+    missingEntryTitle: Missing entry file
+    missingEntryDescription: The scene root does not contain start.txt, so preview cannot start.
     transformOverlay:
       move: Move target
       rotate: Rotate target

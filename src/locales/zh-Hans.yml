@@ -737,6 +737,7 @@ edit:
       moveConfirm: 仍然移动
     errors:
       blockedPlan: 路径操作被阻断
+      protectedEntryPoint: 场景入口文件 start.txt 不能移动、重命名或删除。
       duplicateTarget: 目标路径已存在或与源路径相同。
       inFlightConflict: 该路径上已有进行中的操作，请稍后再试。
       crossRootMove: 当前仅支持同一资源根目录内的引用重写。
@@ -796,6 +797,7 @@ edit:
     pastePartialFailed: 部分粘贴失败 ({failed}/{total})
     viewHistory: 查看历史版本
     dragPreviewCount: "{count} 个文件"
+    entryPointBadge: 入口
   previewPanel:
     copyUrl: 复制地址
     refreshPreview: 刷新预览
@@ -807,6 +809,8 @@ edit:
     fitToView: 适应视图
     zoomLevel: 缩放比例
     resolution: 预览分辨率
+    missingEntryTitle: 缺少入口文件
+    missingEntryDescription: 场景根目录中未找到 start.txt，无法启动预览。
     transformOverlay:
       move: 移动目标
       rotate: 旋转目标

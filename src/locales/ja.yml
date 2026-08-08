@@ -737,6 +737,7 @@ edit:
       moveConfirm: そのまま移動
     errors:
       blockedPlan: パス操作はブロックされました
+      protectedEntryPoint: シーンのエントリーファイル start.txt は移動、名前変更、削除できません。
       duplicateTarget: その移動先は既に存在するか、移動元と同じです。
       inFlightConflict: このパスでは別のパス操作が進行中です。しばらくしてから再試行してください。
       crossRootMove: 同じリソースルート内の参照更新のみ対応しています。
@@ -796,6 +797,7 @@ edit:
     pastePartialFailed: 一部の貼り付けに失敗しました ({failed}/{total})
     viewHistory: 履歴を表示
     dragPreviewCount: "{count} 個のファイル"
+    entryPointBadge: エントリーポイント
   previewPanel:
     copyUrl: URLをコピー
     refreshPreview: プレビューを更新
@@ -807,6 +809,8 @@ edit:
     fitToView: 表示に合わせる
     zoomLevel: ズーム率
     resolution: プレビュー解像度
+    missingEntryTitle: エントリーファイルがありません
+    missingEntryDescription: シーンルートに start.txt がないため、プレビューを起動できません。
     transformOverlay:
       move: 対象を移動
       rotate: 対象を回転

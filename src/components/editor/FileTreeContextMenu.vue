@@ -8,21 +8,25 @@ interface FileItem {
 
 interface Props {
   item: FileItem
+  selectedItems?: FileItem[]
   onRename?: (item: FileItem) => void
   onCreateFile?: (item: FileItem) => void
   onCreateFolder?: (item: FileItem) => void
   clipboardKey?: string
   disabled?: boolean
+  operationDisabled?: boolean
   isRoot?: boolean
 }
 
 const {
   item,
+  selectedItems,
   onRename,
   onCreateFile,
   onCreateFolder,
   clipboardKey = 'default',
   disabled = false,
+  operationDisabled = false,
   isRoot = false,
 } = defineProps<Props>()
 </script>
@@ -37,9 +41,11 @@ const {
         :clipboard-key="clipboardKey"
         :is-root="isRoot"
         :item="item"
+        :selected-items="selectedItems"
         :on-create-file="onCreateFile"
         :on-create-folder="onCreateFolder"
         :on-rename="onRename"
+        :operation-disabled="operationDisabled"
       />
     </ContextMenuContent>
   </ContextMenu>

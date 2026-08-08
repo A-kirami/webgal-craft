@@ -155,4 +155,24 @@ describe('FileTreeContextMenuContent', () => {
     const openFolderItem = page.getByText('edit.fileTree.revealInExplorer')
     await expect.element(openFolderItem).toBeDisabled()
   })
+
+  it('受保护入口文件会保留但禁用剪切、重命名和删除', async () => {
+    renderInBrowser(FileTreeContextMenuContent, {
+      props: {
+        item: {
+          name: 'start.txt',
+          path: '/games/demo/game/scene/start.txt',
+        },
+        onRename: vi.fn(),
+        operationDisabled: true,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('edit.fileTree.cut')).toBeDisabled()
+    await expect.element(page.getByText('edit.fileTree.rename')).toBeDisabled()
+    await expect.element(page.getByText('common.delete')).toBeDisabled()
+  })
 })

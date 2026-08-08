@@ -3,6 +3,7 @@ import { CopyMinus, FilePlus, FolderPlus, Layers, RotateCw } from '@lucide/vue'
 
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { AbsPath } from '~/domain/path'
+import { isSceneEntryPath } from '~/domain/scene/entry-point'
 import {
   findScenePanelNodeByPath,
   loadScenePanelTreeNodes,
@@ -72,6 +73,10 @@ function getSceneItemDiagnosticSeverity(item: ScenePanelTreeNode): DiagnosticSev
     return
   }
   return diagnosticsStore.getHighestSeverity(AbsPath.from(item.path))
+}
+
+function isProtectedSceneEntry(path: string): boolean {
+  return !!scenePath.value && isSceneEntryPath(AbsPath.from(path), AbsPath.from(scenePath.value))
 }
 
 function handleDoubleClick(item: FlattenedItem<ScenePanelTreeNode>) {
@@ -229,6 +234,7 @@ onScopeDispose(() => {
       ::selected-item="selectedItem"
       :items="items"
       :item-severity="getSceneItemDiagnosticSeverity"
+      :item-badge-text="(item) => isProtectedSceneEntry(item.path) ? $t('edit.fileTree.entryPointBadge') : undefined"
       :get-key="(item) => item.path"
       open-created-file-in-tab
       :enable-tooltip="false"
@@ -237,6 +243,7 @@ onScopeDispose(() => {
       tree-name="scene"
       enable-drag-transfer
       :root-path="scenePath"
+      :is-path-operation-disabled="isProtectedSceneEntry"
       :default-file-name-parts="{ stem: '', extension: '.txt' }"
       @click="handleClick"
       @dblclick="handleDoubleClick"

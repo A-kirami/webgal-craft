@@ -19,6 +19,7 @@ import {
   resolvePreviewPanelStageSize,
 } from '~/features/editor/preview/preview-panel'
 import { resolvePreviewReadySyncTarget } from '~/features/editor/preview/preview-ready-sync-target'
+import { useSceneEntryStatus } from '~/features/editor/scene-entry/useSceneEntryStatus'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
 import { debugCommander } from '~/services/debug-commander'
@@ -42,6 +43,7 @@ const previewRuntimeStore = usePreviewRuntimeStore()
 const previewSessionStore = usePreviewSessionStore()
 const previewSyncStore = usePreviewSyncStore()
 const workspaceStore = useWorkspaceStore()
+const sceneEntryStatus = useSceneEntryStatus()
 const iframeRef = useTemplateRef<HTMLIFrameElement>('iframeRef')
 const previewWorkspaceRef = useTemplateRef<HTMLElement>('previewWorkspace')
 const viewportRef = useTemplateRef<HTMLElement>('viewportRef')
@@ -52,6 +54,8 @@ const transformOverlayDisplayTransform = $computed(() => transformOverlayBridge?
 
 const previewUrl = $computed(() => previewSessionStore.currentGameServeUrl ?? '')
 const hasPreviewUrl = $computed(() => !!previewSessionStore.currentGameServeUrl)
+const hasValidEntryPoint = $computed(() => sceneEntryStatus.status.value === 'valid')
+const canPreview = $computed(() => hasPreviewUrl && hasValidEntryPoint)
 
 const { t } = useI18n()
 const { copy } = useClipboard({ source: $$(previewUrl) })
@@ -155,6 +159,22 @@ function handlePreviewWorkspacePointerDown(event: PointerEvent): void {
   }
 }
 
+function handlePreviewViewportWheel(event: WheelEvent): void {
+  if (!canPreview) {
+    return
+  }
+
+  previewViewport.handleWheel(event)
+}
+
+function handlePreviewViewportPointerDown(event: PointerEvent): void {
+  if (!canPreview) {
+    return
+  }
+
+  previewViewport.handlePointerDown(event)
+}
+
 function applyStageSize(nextStageSize: PreviewPanelStageSize) {
   aspectRatio = nextStageSize.aspectRatio
   stageWidth = nextStageSize.stageWidth
@@ -248,12 +268,12 @@ function updateEmbeddedPreviewSlot(nextEmbeddedLaunchId?: string): void {
 }
 
 function refreshEmbeddedPreviewSlot(): void {
-  const nextEmbeddedLaunchId = hasPreviewUrl ? createEmbeddedPreviewLaunchId() : undefined
+  const nextEmbeddedLaunchId = canPreview ? createEmbeddedPreviewLaunchId() : undefined
   updateEmbeddedPreviewSlot(nextEmbeddedLaunchId)
 }
 
 async function copyUrl(): Promise<void> {
-  if (!hasPreviewUrl) {
+  if (!canPreview) {
     return
   }
 
@@ -269,7 +289,7 @@ function refreshIframe(): void {
 }
 
 async function openPreviewInBrowser(): Promise<void> {
-  if (!hasPreviewUrl) {
+  if (!canPreview) {
     return
   }
 
@@ -464,6 +484,20 @@ watch(
 )
 
 watch(
+  () => sceneEntryStatus.status.value,
+  (status, previousStatus) => {
+    if (status === 'missing') {
+      updateEmbeddedPreviewSlot(undefined)
+      return
+    }
+
+    if (status === 'valid' && previousStatus === 'missing' && hasPreviewUrl) {
+      previewSessionStore.refresh()
+    }
+  },
+)
+
+watch(
   [() => previewSyncStore.isPreviewReady, () => embeddedLaunchId],
   ([isPreviewReady, currentEmbeddedLaunchId]) => {
     if (!isPreviewReady || !currentEmbeddedLaunchId || consumedReadyLaunchId === currentEmbeddedLaunchId) {
@@ -520,7 +554,7 @@ onBeforeUnmount(() => {
         <div class="text-muted-foreground flex flex-shrink-0 gap-1">
           <Tooltip>
             <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon" class="size-6" @click="copyUrl">
+              <Button variant="ghost" size="icon" class="size-6" :disabled="!canPreview" @click="copyUrl">
                 <Copy class="size-4" />
                 <span class="sr-only">{{ $t('edit.previewPanel.copyUrl') }}</span>
               </Button>
@@ -531,7 +565,7 @@ onBeforeUnmount(() => {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon" class="size-6" @click="previewSessionStore.refresh()">
+              <Button variant="ghost" size="icon" class="size-6" :disabled="!canPreview" @click="previewSessionStore.refresh()">
                 <RotateCw class="size-4" />
                 <span class="sr-only">{{ $t('edit.previewPanel.refreshPreview') }}</span>
               </Button>
@@ -542,7 +576,7 @@ onBeforeUnmount(() => {
           </Tooltip>
           <Tooltip>
             <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon" class="size-6" @click="openPreviewInBrowser">
+              <Button variant="ghost" size="icon" class="size-6" :disabled="!canPreview" @click="openPreviewInBrowser">
                 <ExternalLink class="size-4" />
                 <span class="sr-only">{{ $t('edit.previewPanel.openInBrowser') }}</span>
               </Button>
@@ -566,11 +600,11 @@ onBeforeUnmount(() => {
         data-testid="preview-viewport"
         class="bg-muted flex-1 min-h-0 relative overflow-hidden"
         :class="previewViewportClass"
-        @wheel="previewViewport.handleWheel"
-        @pointerdown="previewViewport.handlePointerDown"
+        @wheel="handlePreviewViewportWheel"
+        @pointerdown="handlePreviewViewportPointerDown"
       >
         <div
-          v-if="hasPreviewUrl"
+          v-if="canPreview"
           data-testid="preview-canvas"
           class="bg-background shadow-sm origin-top-left left-0 top-0 absolute"
           :style="previewCanvasStyle"
@@ -585,7 +619,7 @@ onBeforeUnmount(() => {
           />
         </div>
         <TransformOverlay
-          v-if="hasPreviewUrl && transformOverlayEnabled"
+          v-if="canPreview && transformOverlayEnabled"
           :box="transformOverlayReferenceBox"
           :canvas-height="stageHeight"
           :canvas-placement="previewViewport.canvasPlacement.value"
@@ -595,6 +629,19 @@ onBeforeUnmount(() => {
           @commit:display-transform="commitTransformOverlayDisplayTransform"
           @preview:display-transform="previewTransformOverlayDisplayTransform"
         />
+        <div
+          v-if="!hasValidEntryPoint"
+          data-testid="preview-missing-entry-overlay"
+          role="alert"
+          class="p-6 text-center bg-muted flex flex-col gap-1 items-center inset-0 justify-center absolute z-10"
+        >
+          <p class="font-medium">
+            {{ $t('edit.previewPanel.missingEntryTitle') }}
+          </p>
+          <p class="text-sm text-muted-foreground max-w-80">
+            {{ $t('edit.previewPanel.missingEntryDescription') }}
+          </p>
+        </div>
         <div
           v-if="isPreviewInteractionOverlayVisible"
           data-testid="preview-interaction-overlay"
@@ -616,6 +663,7 @@ onBeforeUnmount(() => {
           {{ resolutionLabel }}
         </output>
         <ViewportControls
+          :disabled="!canPreview"
           :zoom-ratio="previewViewport.zoomRatio.value"
           @zoom-in="previewViewport.zoomIn"
           @zoom-out="previewViewport.zoomOut"
