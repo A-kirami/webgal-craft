@@ -1031,8 +1031,8 @@ edit:
       labelName: Label Name
       varName: Variable Name
       varValue: Value
+      scope: Variable Scope
       global: Global Variable
-      local: Local Variable
       writeReturnTo: Return Value Variable
       parameterKey: Parameter name
       parameterValue: Parameter value
@@ -1131,9 +1131,6 @@ edit:
       global:
         on: Share this variable across all saves and keep it even after starting a new game.
         off: Save and load this variable with the current playthrough.
-      local:
-        on: Keep this variable within the current scene call.
-        off: Use the default variable scope.
       nobreak:
         on: Prevent player actions and autoplay from moving on before the wait finishes.
         off: Allow player actions or autoplay to end the wait early.
@@ -1152,6 +1149,10 @@ edit:
       loadFailed: Failed to load
     options:
       notSelected: Not selected
+      variableScope:
+        save: Save
+        global: Global
+        local: Local
       default: Default
       left: Left
       left14: Left 1/4

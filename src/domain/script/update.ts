@@ -221,6 +221,19 @@ function updateFromFieldTable(
 
   if (
     node.type === commandType.setVar
+    && paramDef.key === 'scope'
+    && paramDef.type === 'select'
+  ) {
+    const scope = String(newValue)
+    return {
+      ...node,
+      global: scope === 'global',
+      local: scope === 'local',
+    }
+  }
+
+  if (
+    node.type === commandType.setVar
     && (paramDef.key === 'global' || paramDef.key === 'local')
     && paramDef.type === 'switch'
   ) {

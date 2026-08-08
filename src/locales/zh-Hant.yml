@@ -1031,8 +1031,8 @@ edit:
       labelName: 標籤名
       varName: 變數名
       varValue: 變數值
+      scope: 變數作用域
       global: 全域變數
-      local: 區域變數
       writeReturnTo: 回傳值變數
       parameterKey: 參數名稱
       parameterValue: 參數值
@@ -1131,9 +1131,6 @@ edit:
       global:
         on: 在所有存檔中共用此變數，重新開始遊戲後也會保留。
         off: 變數會隨目前遊戲進度儲存和讀取。
-      local:
-        on: 將此變數限制在目前場景呼叫中。
-        off: 使用預設變數作用域。
       nobreak:
         on: 等待結束前，玩家操作和自動播放都無法進入下一句。
         off: 玩家操作或自動播放可以提前結束等待。
@@ -1152,6 +1149,10 @@ edit:
       loadFailed: 載入失敗
     options:
       notSelected: 未選擇
+      variableScope:
+        save: 儲存
+        global: 全域
+        local: 區域
       default: 預設
       left: 左側
       left14: 左側 1/4

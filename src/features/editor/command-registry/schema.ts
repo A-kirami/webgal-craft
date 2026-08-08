@@ -93,6 +93,7 @@ interface FieldBase {
   advanced?: boolean
   managedByEffectEditor?: boolean
   managedBySpecialContentEditor?: boolean
+  hiddenWhenCapability?: EngineRuntimeCapability
   /** 布局提示：自定义 CSS class */
   className?: string
   /** 效果编辑器分组标识（如 'transform'、'effects'、'colorAdjustment'） */
@@ -325,6 +326,7 @@ function normalizeFlattenedJsonSubField(
     visibleWhenContent: subField.visibleWhenContent ?? parentField.visibleWhenContent,
     advanced: subField.advanced ?? parentField.advanced,
     managedByEffectEditor: subField.managedByEffectEditor ?? parentField.managedByEffectEditor,
+    hiddenWhenCapability: subField.hiddenWhenCapability ?? parentField.hiddenWhenCapability,
   }
 
   if (
@@ -472,10 +474,13 @@ export interface CommandEntry {
 }
 
 export function isRuntimeCapabilitySupported(
-  item: Pick<FieldDef, 'requiredCapability'> | Pick<CommandEntry, 'requiredCapability'>,
+  item: { requiredCapability?: EngineRuntimeCapability, hiddenWhenCapability?: EngineRuntimeCapability },
   capabilities: EngineRuntimeCapabilities = LATEST_ENGINE_RUNTIME_CAPABILITIES,
 ): boolean {
-  return item.requiredCapability === undefined || capabilities[item.requiredCapability]
+  if (item.requiredCapability !== undefined && !capabilities[item.requiredCapability]) {
+    return false
+  }
+  return item.hiddenWhenCapability === undefined || !capabilities[item.hiddenWhenCapability]
 }
 
 // ─── 其他工具函数 ────────────────────────────────

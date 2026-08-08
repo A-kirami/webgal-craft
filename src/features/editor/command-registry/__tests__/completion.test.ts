@@ -53,8 +53,10 @@ describe('buildArgumentCompletionInfo', () => {
   })
 
   it('旧运行时不显示 Terre 4.6.3 场景语义补全', () => {
-    expect(buildArgumentCompletionInfo(commandType.setVar, t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
-      .map(item => item.key)).not.toContain('local')
+    const legacySetVarKeys = buildArgumentCompletionInfo(commandType.setVar, t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+      .map(item => item.key)
+    expect(legacySetVarKeys).toContain('global')
+    expect(legacySetVarKeys).not.toContain('local')
     expect(buildArgumentCompletionInfo(commandType.callScene, t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
       .map(item => item.key)).not.toContain('writeReturnTo')
     expect(buildCommandCompletionInfo(t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)

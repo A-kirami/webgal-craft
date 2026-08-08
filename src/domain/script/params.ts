@@ -3,7 +3,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import { readSayFigureTargetId } from '~/domain/script/say-figure'
 import { CHANGE_FIGURE_POSITION_FLAGS, CommandNode, GenericCommandNode, isGenericNode } from '~/domain/script/types'
 import { getCommandConfig } from '~/features/editor/command-registry/index'
-import { isFlagChoiceField, readArgFields } from '~/features/editor/command-registry/schema'
+import { isFlagChoiceField, readArgFields, UNSPECIFIED } from '~/features/editor/command-registry/schema'
 
 export interface CommandParamDescriptor {
   key: string
@@ -107,6 +107,19 @@ function readChangeFigurePosition(node: GenericCommandNode, key: string): ParamV
   return undefined
 }
 
+function readSetVarScope(node: CommandNode, key: string): ParamValue | typeof NOT_HANDLED {
+  if (node.type !== commandType.setVar || key !== 'scope') {
+    return NOT_HANDLED
+  }
+  if (node.global) {
+    return 'global'
+  }
+  if (node.local) {
+    return 'local'
+  }
+  return UNSPECIFIED
+}
+
 // ─── 字段读取核心 ───────────────────────────────────
 
 function readFromFieldTable(
@@ -114,6 +127,11 @@ function readFromFieldTable(
   key: string,
   overrideType?: string,
 ): ParamValue | typeof NOT_HANDLED {
+  const setVarScope = readSetVarScope(node, key)
+  if (setVarScope !== NOT_HANDLED) {
+    return setVarScope
+  }
+
   if (node.type === commandType.say && key === 'figureId') {
     return readSayFigureTargetId(node)
   }

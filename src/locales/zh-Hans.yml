@@ -1031,8 +1031,8 @@ edit:
       labelName: 标签名
       varName: 变量名
       varValue: 变量值
+      scope: 变量作用域
       global: 全局变量
-      local: 局部变量
       writeReturnTo: 返回值变量
       parameterKey: 参数名
       parameterValue: 参数值
@@ -1131,9 +1131,6 @@ edit:
       global:
         on: 在所有存档中共用此变量，重新开始游戏后也会保留。
         off: 变量随当前游戏进度保存和读取。
-      local:
-        on: 将此变量限制在当前场景调用中。
-        off: 使用默认变量作用域。
       nobreak:
         on: 等待结束前，玩家操作和自动播放都无法进入下一句。
         off: 玩家操作或自动播放可以提前结束等待。
@@ -1152,6 +1149,10 @@ edit:
       loadFailed: 加载失败
     options:
       notSelected: 未选择
+      variableScope:
+        save: 存档
+        global: 全局
+        local: 局部
       default: 默认
       left: 左侧
       left14: 左侧 1/4

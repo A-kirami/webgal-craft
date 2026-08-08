@@ -1031,8 +1031,8 @@ edit:
       labelName: ラベル名
       varName: 変数名
       varValue: 値
+      scope: 変数スコープ
       global: グローバル変数
-      local: ローカル変数
       writeReturnTo: 戻り値の変数
       parameterKey: パラメータ名
       parameterValue: パラメータ値
@@ -1131,9 +1131,6 @@ edit:
       global:
         on: すべてのセーブデータでこの変数を共有し、ゲームを最初から始めても保持します。
         off: この変数を現在のゲーム進行と一緒にセーブ、ロードします。
-      local:
-        on: この変数を現在のシーン呼び出し内に限定します。
-        off: デフォルトの変数スコープを使用します。
       nobreak:
         on: 待機が終わるまで、プレイヤー操作でもオート再生でも次へ進めません。
         off: プレイヤー操作またはオート再生で待機を途中で終了できます。
@@ -1152,6 +1149,10 @@ edit:
       loadFailed: 読み込み失敗
     options:
       notSelected: 未選択
+      variableScope:
+        save: セーブ
+        global: グローバル
+        local: ローカル
       default: デフォルト
       left: 左
       left14: 左 1/4
