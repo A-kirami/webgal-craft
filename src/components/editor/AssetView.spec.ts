@@ -29,6 +29,7 @@ const {
   useFileStoreMock,
   usePreferenceStoreMock,
   usePreviewSessionStoreMock,
+  useResourceIndexMock,
   useTabsStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
@@ -45,6 +46,7 @@ const {
   useFileStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
   usePreviewSessionStoreMock: vi.fn(),
+  useResourceIndexMock: vi.fn(),
   useTabsStoreMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
 }))
@@ -178,6 +180,10 @@ vi.mock('~/stores/preference', () => ({
 
 vi.mock('~/stores/preview-session', () => ({
   usePreviewSessionStore: usePreviewSessionStoreMock,
+}))
+
+vi.mock('~/services/resource-index/service', () => ({
+  useResourceIndex: useResourceIndexMock,
 }))
 
 vi.mock('~/stores/tabs', () => ({
@@ -374,6 +380,25 @@ function createLoadingStateFileViewerStub() {
   })
 }
 
+function createReferenceCountFileViewerStub() {
+  return defineComponent({
+    name: 'StubReferenceCountFileViewer',
+    props: {
+      items: {
+        type: Array as PropType<FileViewerItem[]>,
+        required: true,
+      },
+    },
+    setup(props) {
+      return () => h('div', (props.items ?? []).map(item => h(
+        'output',
+        { 'data-testid': `reference-count-${item.name}` },
+        String(item.referenceCount ?? 'unavailable'),
+      )))
+    },
+  })
+}
+
 function createAuxClickFileViewerStub() {
   return defineComponent({
     name: 'StubAuxClickFileViewer',
@@ -476,6 +501,7 @@ function createAssetFileSystemItem(options: {
   name: string
   path: string
   mimeType?: string
+  source?: FileSystemItem['source']
   size?: number
 }) {
   return {
@@ -484,6 +510,7 @@ function createAssetFileSystemItem(options: {
     name: options.name,
     path: options.path,
     size: options.size ?? 0,
+    source: options.source,
     ...(options.isDir
       ? { isDir: true }
       : { isDir: false, mimeType: options.mimeType }),
@@ -579,6 +606,8 @@ const commonGlobalStubs = {
 let previewSessionStoreState: {
   currentGameServeUrl: string | undefined
 }
+let resourceIndexRevision = ref(0)
+let resourceIndexStatus = ref<'idle' | 'building' | 'ready' | 'degraded'>('ready')
 
 function setPreviewUnavailable() {
   previewSessionStoreState.currentGameServeUrl = undefined
@@ -599,6 +628,7 @@ describe('AssetView', () => {
     useFileStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()
     usePreviewSessionStoreMock.mockReset()
+    useResourceIndexMock.mockReset()
     useTabsStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
 
@@ -632,6 +662,14 @@ describe('AssetView', () => {
       currentGameServeUrl: 'http://127.0.0.1:8899/game/demo/',
     })
     usePreviewSessionStoreMock.mockReturnValue(previewSessionStoreState)
+    resourceIndexRevision = ref(0)
+    resourceIndexStatus = ref('ready')
+    useResourceIndexMock.mockReturnValue({
+      getReferencesTo: vi.fn(() => []),
+      resolveByAbsolutePath: vi.fn(() => undefined),
+      revision: resourceIndexRevision,
+      status: resourceIndexStatus,
+    })
     useWorkspaceStoreMock.mockReturnValue(reactive({
       currentGame: {
         path: '/games/demo',
@@ -669,6 +707,168 @@ describe('AssetView', () => {
 
     await expect.element(page.getByTestId('preview-context')).toHaveAttribute('data-preview-cwd', '/games/demo')
     await expect.element(page.getByTestId('preview-context')).toHaveAttribute('data-preview-base-url', 'http://127.0.0.1:8899/game/demo/')
+  })
+
+  it('会显示零引用和多个引用，并在资源索引修订后刷新计数', async () => {
+    let heroReferenceCount = 2
+    const resolveByAbsolutePath = vi.fn((path: string) => ({
+      key: {
+        assetType: 'background',
+        relativePath: path.endsWith('/hero.png') ? 'hero.png' : 'unused.png',
+        root: 'asset',
+      },
+    }))
+    const getReferencesTo = vi.fn((key: { relativePath: string }) =>
+      Array.from({ length: key.relativePath === 'hero.png' ? heroReferenceCount : 0 }),
+    )
+    useResourceIndexMock.mockReturnValue({
+      getReferencesTo,
+      resolveByAbsolutePath,
+      revision: resourceIndexRevision,
+      status: resourceIndexStatus,
+    })
+    getFolderContentsMock.mockResolvedValue([
+      createAssetFileSystemItem({
+        isDir: false,
+        mimeType: 'image/png',
+        modifiedAt: 2,
+        name: 'hero.png',
+        path: '/games/demo/game/background/hero.png',
+      }),
+      createAssetFileSystemItem({
+        isDir: false,
+        mimeType: 'image/png',
+        modifiedAt: 3,
+        name: 'unused.png',
+        path: '/games/demo/game/background/unused.png',
+      }),
+    ])
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createReferenceCountFileViewerStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('reference-count-hero.png')).toHaveTextContent('2')
+    await expect.element(page.getByTestId('reference-count-unused.png')).toHaveTextContent('0')
+    expect(resolveByAbsolutePath).toHaveBeenCalledWith('/games/demo/game/background/hero.png')
+    expect(getReferencesTo).toHaveBeenCalled()
+
+    heroReferenceCount = 0
+    resourceIndexRevision.value += 1
+
+    await expect.element(page.getByTestId('reference-count-hero.png')).toHaveTextContent('0')
+  })
+
+  it('资源索引未就绪时不会把暂态状态显示为零引用', async () => {
+    resourceIndexStatus.value = 'building'
+    getFolderContentsMock.mockResolvedValue([
+      createAssetFileSystemItem({
+        isDir: false,
+        mimeType: 'image/png',
+        modifiedAt: 2,
+        name: 'hero.png',
+        path: '/games/demo/game/background/hero.png',
+      }),
+    ])
+
+    renderInBrowser(createHarness('background'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createReferenceCountFileViewerStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('reference-count-hero.png')).toHaveTextContent('unavailable')
+  })
+
+  it('模板层文件不会显示引用计数', async () => {
+    const resolveByAbsolutePath = vi.fn()
+    const getReferencesTo = vi.fn()
+    useResourceIndexMock.mockReturnValue({
+      getReferencesTo,
+      resolveByAbsolutePath,
+      revision: resourceIndexRevision,
+      status: resourceIndexStatus,
+    })
+    getFolderContentsMock.mockResolvedValue([
+      createAssetFileSystemItem({
+        isDir: false,
+        mimeType: 'text/css',
+        modifiedAt: 2,
+        name: 'base.scss',
+        path: '/games/demo/game/template/base.scss',
+        source: 'templateLower',
+      }),
+    ])
+
+    renderInBrowser(createHarness('template'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createReferenceCountFileViewerStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('reference-count-base.scss')).toHaveTextContent('unavailable')
+    expect(resolveByAbsolutePath).not.toHaveBeenCalled()
+    expect(getReferencesTo).not.toHaveBeenCalled()
+  })
+
+  it('不会为 animationTable.json 显示引用计数', async () => {
+    const resolveByAbsolutePath = vi.fn(() => ({
+      key: {
+        assetType: 'animation',
+        relativePath: 'fade.json',
+        root: 'asset',
+      },
+    }))
+    const getReferencesTo = vi.fn(() => [])
+    useResourceIndexMock.mockReturnValue({
+      getReferencesTo,
+      resolveByAbsolutePath,
+      revision: resourceIndexRevision,
+      status: resourceIndexStatus,
+    })
+    getFolderContentsMock.mockResolvedValue([
+      createAssetFileSystemItem({
+        isDir: false,
+        mimeType: 'application/json',
+        modifiedAt: 2,
+        name: 'animationTable.json',
+        path: '/games/demo/game/animation/animationTable.json',
+        source: 'upper',
+      }),
+      createAssetFileSystemItem({
+        isDir: false,
+        mimeType: 'application/json',
+        modifiedAt: 3,
+        name: 'fade.json',
+        path: '/games/demo/game/animation/fade.json',
+        source: 'upper',
+      }),
+    ])
+
+    renderInBrowser(createHarness('animation'), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createReferenceCountFileViewerStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('reference-count-animationTable.json')).toHaveTextContent('unavailable')
+    await expect.element(page.getByTestId('reference-count-fade.json')).toHaveTextContent('0')
+    expect(resolveByAbsolutePath).toHaveBeenCalledWith('/games/demo/game/animation/fade.json')
+    expect(resolveByAbsolutePath).not.toHaveBeenCalledWith('/games/demo/game/animation/animationTable.json')
   })
 
   it('FileViewer 上抛中键点击时会以普通标签打开资源', async () => {

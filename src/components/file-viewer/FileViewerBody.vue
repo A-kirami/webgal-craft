@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { File, FileImage, FileJson2, FileMusic, FileVideo, Folder } from '@lucide/vue'
+import { File, FileImage, FileJson2, FileMusic, FileVideo, Folder, Link2 } from '@lucide/vue'
 
 import { loadFileViewerImageDimensions } from '~/components/file-viewer/fileViewerImageDimensions'
 import { useDragSession } from '~/composables/useDragSession'
@@ -51,6 +51,7 @@ interface FileViewerBodyProps {
   showListSize: boolean
   showListModifiedAt: boolean
   showListCreatedAt: boolean
+  showListReferenceCount: boolean
   getGridRowItems: (rowIndex: number) => FileViewerItem[]
   getListItem: (index: number) => FileViewerItem
   resolvePreviewUrl?: (item: FileViewerItem, previewSize: FileViewerPreviewSize) => string | undefined
@@ -73,6 +74,7 @@ const {
   showListSize,
   showListModifiedAt,
   showListCreatedAt,
+  showListReferenceCount,
   getGridRowItems,
   getListItem,
   resolvePreviewUrl,
@@ -551,41 +553,59 @@ onUnmounted(() => {
             @click="handleItemClick(displayItem.item)"
             @auxclick="(event: MouseEvent) => handleItemAuxClick(event, displayItem.item)"
           >
-            <FileViewerImageHoverCard
-              :close-delay="resolveHoverCardCloseDelay(displayItem.item.path)"
-              :item="displayItem.item"
-              :open="openHoverPreviewPath === displayItem.item.path"
-              :preview-size="HOVER_PREVIEW_SIZE"
-              :resolve-preview-url="resolvePreviewUrl"
-              side="top"
-              @update:open="handleHoverCardOpenChange(displayItem.item.path, $event)"
+            <div
+              class="flex shrink-0 items-center justify-center relative"
+              :style="{ width: `${gridPreviewSize}px`, height: `${gridPreviewSize}px` }"
             >
-              <div
-                class="flex shrink-0 items-center justify-center"
-                :style="{ width: `${gridPreviewSize}px`, height: `${gridPreviewSize}px` }"
-                @pointerenter="scheduleHoverPreviewWarmup(displayItem.item)"
-                @pointerleave="clearPendingHoverPreviewWarmup(displayItem.item.path)"
+              <FileViewerImageHoverCard
+                :close-delay="resolveHoverCardCloseDelay(displayItem.item.path)"
+                :item="displayItem.item"
+                :open="openHoverPreviewPath === displayItem.item.path"
+                :preview-size="HOVER_PREVIEW_SIZE"
+                :resolve-preview-url="resolvePreviewUrl"
+                side="top"
+                @update:open="handleHoverCardOpenChange(displayItem.item.path, $event)"
               >
-                <img
-                  v-if="displayItem.previewUrl"
-                  :alt="displayItem.item.name"
-                  :src="displayItem.previewUrl"
-                  class="h-full w-full object-contain"
-                  decoding="async"
-                  draggable="false"
-                  loading="lazy"
-                  @error="handleImageError(displayItem.item.path, displayItem.previewUrl)"
+                <div
+                  class="flex h-full w-full items-center justify-center"
+                  @pointerenter="scheduleHoverPreviewWarmup(displayItem.item)"
+                  @pointerleave="clearPendingHoverPreviewWarmup(displayItem.item.path)"
                 >
-                <slot v-else name="icon" :icon-size="gridIconSize" :item="displayItem.item">
-                  <component
-                    :is="getDefaultIconComponent(displayItem.item)"
-                    class="shrink-0"
-                    :stroke-width="1.25"
-                    :style="{ width: `${gridIconSize}px`, height: `${gridIconSize}px` }"
-                  />
-                </slot>
-              </div>
-            </FileViewerImageHoverCard>
+                  <img
+                    v-if="displayItem.previewUrl"
+                    :alt="displayItem.item.name"
+                    :src="displayItem.previewUrl"
+                    class="h-full w-full object-contain"
+                    decoding="async"
+                    draggable="false"
+                    loading="lazy"
+                    @error="handleImageError(displayItem.item.path, displayItem.previewUrl)"
+                  >
+                  <slot v-else name="icon" :icon-size="gridIconSize" :item="displayItem.item">
+                    <component
+                      :is="getDefaultIconComponent(displayItem.item)"
+                      class="shrink-0"
+                      :stroke-width="1.25"
+                      :style="{ width: `${gridIconSize}px`, height: `${gridIconSize}px` }"
+                    />
+                  </slot>
+                </div>
+              </FileViewerImageHoverCard>
+              <span
+                v-if="displayItem.item.referenceCount !== undefined"
+                data-testid="file-viewer-reference-count"
+                class="text-[10px] text-secondary-foreground leading-none font-medium px-1 rounded-sm bg-secondary inline-flex gap-0.5 h-4 min-w-4 [font-variant-numeric:tabular-nums] items-center justify-center absolute -right-1 -top-1"
+                :aria-label="$t('common.fileMeta.referenceCountValue', { count: displayItem.item.referenceCount })"
+              >
+                <Link2
+                  data-testid="file-viewer-reference-icon"
+                  aria-hidden="true"
+                  class="text-secondary-foreground/70 shrink-0 size-2.5"
+                  :stroke-width="1.75"
+                />
+                {{ displayItem.item.referenceCount }}
+              </span>
+            </div>
             <div
               data-file-viewer-name="true"
               class="text-xs text-center break-all line-clamp-2"
@@ -672,6 +692,17 @@ onUnmounted(() => {
               </div>
             </div>
             <div class="text-[11px] text-muted-foreground ml-2 flex shrink-0 gap-3 [font-variant-numeric:tabular-nums] items-center" role="note">
+              <div v-if="showListReferenceCount" class="text-center w-20" :aria-label="$t('common.fileMeta.referenceCount')">
+                <template v-if="displayItem.item.referenceCount !== undefined">
+                  <span data-testid="file-viewer-reference-count">
+                    {{ displayItem.item.referenceCount }}
+                  </span>
+                </template>
+                <template v-else>
+                  <span aria-hidden="true">--</span>
+                  <span class="sr-only">{{ $t('common.fileMeta.unavailableA11y') }}</span>
+                </template>
+              </div>
               <div v-if="showListSize" class="text-right w-20" :aria-label="$t('common.fileMeta.size')">
                 <template v-if="displayItem.item.isDir">
                   <span aria-hidden="true">--</span>

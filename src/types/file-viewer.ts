@@ -9,6 +9,7 @@ export interface FileViewerItem {
   isDir: boolean
   mimeType?: string
   isSupported?: boolean
+  referenceCount?: number
   size?: number
   modifiedAt?: number
   createdAt?: number

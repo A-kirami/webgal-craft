@@ -38,6 +38,8 @@ common:
     size: 檔案大小
     modifiedAt: 修改時間
     createdAt: 建立時間
+    referenceCount: 引用數
+    referenceCountValue: "{count} 處引用"
     unavailableA11y: 不可用
 
 filePicker:
