@@ -106,7 +106,7 @@ function getRelativeParentPathSegments(path: AbsPath, rootPath: AbsPath): PathSe
 function getAbsoluteParentPathSegments(path: AbsPath): PathSegments {
   const segments = path.split('/').filter(Boolean)
   if (path.startsWith('/')) {
-    segments.unshift('/')
+    segments.unshift('')
   }
   segments.pop()
   return segments

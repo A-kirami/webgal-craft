@@ -74,6 +74,19 @@ describe('getEditorTabPathHints', () => {
     expect(hints.get(nestedPath)).toBe('.../game')
   })
 
+  it('根目录路径提示只保留一个根分隔符', () => {
+    const firstPath = AbsPath.from('/game/scene.txt')
+    const secondPath = AbsPath.from('/other/game/scene.txt')
+
+    const hints = getEditorTabPathHints([
+      createTab('scene.txt', firstPath),
+      createTab('scene.txt', secondPath),
+    ])
+
+    expect(hints.get(firstPath)).toBe('/game')
+    expect(hints.get(secondPath)).toBe('.../other/game')
+  })
+
   it('同一资源根内使用相对资源根的最短路径提示', () => {
     const resourceRootPath = '/project/game/scene'
     const rootPath = AbsPath.from(`${resourceRootPath}/scene.txt`)
