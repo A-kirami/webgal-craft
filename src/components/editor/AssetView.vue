@@ -18,6 +18,7 @@ import {
 import { gameFs } from '~/services/game-fs'
 import { pathOperation } from '~/services/path-operation'
 import { createPathOperationRewriteConfirm } from '~/services/path-operation-confirm'
+import { useResourceIndex } from '~/services/resource-index/service'
 import { FileSystemItem, useFileStore } from '~/stores/file'
 import { usePreferenceStore } from '~/stores/preference'
 import { usePreviewSessionStore } from '~/stores/preview-session'
@@ -62,6 +63,7 @@ const tabsStore = useTabsStore()
 const fileStore = useFileStore()
 const fileSystemEvents = useFileSystemEvents()
 const previewSessionStore = usePreviewSessionStore()
+const resourceIndex = useResourceIndex()
 const workspaceStore = useWorkspaceStore()
 const { t } = useI18n()
 const confirmPathOperationRewrite = createPathOperationRewriteConfirm(t)
@@ -180,6 +182,25 @@ const {
 })
 
 const items = $computed(() => itemsRef.value)
+
+function resolveReferenceCount(item: FileViewerItem): number | undefined {
+  if (item.isDir || resourceIndex.status.value !== 'ready') {
+    return
+  }
+
+  const entry = resourceIndex.resolveByAbsolutePath(AbsPath.from(item.path))
+  return entry ? resourceIndex.getReferencesTo(entry.key).length : 0
+}
+
+const itemsWithReferenceCounts = $computed(() => {
+  // 引用记录的增量更新保持 ready 状态不变，显式订阅 revision 才能刷新当前视图。
+  void resourceIndex.revision.value
+  return items.map(item => ({
+    ...item,
+    referenceCount: resolveReferenceCount(item),
+  }))
+})
+
 const isLoading = $computed(() => isLoadingRef.value)
 const errorMsg = $computed(() => errorMsgRef.value)
 const isRootDirectoryMissing = $computed(() => isRootDirectoryMissingRef.value)
@@ -187,10 +208,10 @@ const isRootDirectoryMissing = $computed(() => isRootDirectoryMissingRef.value)
 const filteredItems = $computed(() => {
   const keyword = searchQuery.trim().toLocaleLowerCase()
   if (!keyword) {
-    return items
+    return itemsWithReferenceCounts
   }
 
-  return items.filter(item => item.name.toLocaleLowerCase().includes(keyword))
+  return itemsWithReferenceCounts.filter(item => item.name.toLocaleLowerCase().includes(keyword))
 })
 const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(assetType))
 
