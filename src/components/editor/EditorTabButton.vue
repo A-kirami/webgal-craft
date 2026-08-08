@@ -39,7 +39,6 @@ const attrs = useAttrs()
       props.sorting ? 'cursor-grabbing' : 'cursor-default',
     ]"
     :style="props.itemStyle"
-    :title="props.tab.path"
     un-before="h-0.5 w-full absolute top-0 inset-x-0 content-empty z-20"
     v-bind="attrs"
   >
