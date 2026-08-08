@@ -14,11 +14,16 @@ export function projectSceneStatements(
 
   return model.statements.map((statement) => {
     const previousEntry = previousEntryMap.get(statement.id)
-    if (previousEntry && previousEntry.rawText === statement.rawText) {
+    if (
+      previousEntry
+      && previousEntry.rawText === statement.rawText
+      && previousEntry.syntaxCapabilities.multilineStatements === model.runtimeCapabilities.multilineStatements
+      && previousEntry.syntaxCapabilities.sceneSemantics === model.runtimeCapabilities.sceneSemantics
+    ) {
       return previousEntry
     }
 
-    return createStatementEntryFromSceneStatement(statement)
+    return createStatementEntryFromSceneStatement(statement, model.runtimeCapabilities)
   })
 }
 

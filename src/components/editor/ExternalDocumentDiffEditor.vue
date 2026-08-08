@@ -8,12 +8,14 @@ import { resolveTextEditorLanguage } from '~/features/editor/text-editor/text-ed
 import { BASE_EDITOR_OPTIONS, THEME_DARK, THEME_LIGHT } from '~/plugins/editor'
 
 import type { DocumentKind } from '~/domain/document/document-model'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 
 interface Props {
-  path: string
+  externalContent: string
   kind: DocumentKind
   localContent: string
-  externalContent: string
+  path: string
+  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'sceneSemantics'>
 }
 
 const props = defineProps<Props>()
@@ -184,6 +186,7 @@ function createDiffEditor(): void {
   const language = resolveTextEditorLanguage({
     kind: props.kind,
     path: props.path,
+    runtimeCapabilities: props.runtimeCapabilities,
   }, monaco.languages.getLanguages())
   const editor = monaco.editor.createDiffEditor(editorContainer, {
     ...BASE_EDITOR_OPTIONS,

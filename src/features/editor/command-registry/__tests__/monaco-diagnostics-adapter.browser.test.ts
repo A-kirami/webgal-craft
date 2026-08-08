@@ -15,6 +15,7 @@ vi.mock('~/plugins/i18n', () => ({
 }))
 
 import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID } from '~/features/editor/text-editor/text-editor-language'
 import { updateEditorDiagnostics } from '~/plugins/editor/diagnostics'
 
 const OWNER = 'webgal-editor-diagnostics'
@@ -38,6 +39,7 @@ function readMarkers(model: monaco.editor.ITextModel): monaco.editor.IMarker[] {
 describe('updateEditorDiagnostics', () => {
   beforeAll(() => {
     monaco.languages.register({ id: 'webgalscript' })
+    monaco.languages.register({ id: LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID })
   })
 
   beforeEach(() => {
@@ -211,6 +213,21 @@ describe('updateEditorDiagnostics', () => {
     ])
   })
 
+  it('legacy 语言模型仍会生成旧运行时诊断', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+
+    const model = createModel('setVar: result=1 -local;', LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID)
+    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(readMarkers(model)).toEqual([expect.objectContaining({
+      message: 'edit.diagnostics.unsupportedLocalVariable:',
+      severity: monaco.MarkerSeverity.Warning,
+    })])
+  })
+
   it('为同一场景中的全部重复标签创建黄色 marker', () => {
     useResourceIndex.mockReturnValue({
       status: { value: 'building' },
@@ -313,7 +330,7 @@ describe('updateEditorDiagnostics', () => {
     })])
   })
 
-  it('为旧运行时分别标记返回命令、局部变量和场景调用参数', () => {
+  it('旧运行时不将 return 识别为返回命令，但仍标记受限场景语义', () => {
     useResourceIndex.mockReturnValue({
       status: { value: 'ready' },
       hasAssetKey: vi.fn(() => true),
@@ -327,13 +344,6 @@ describe('updateEditorDiagnostics', () => {
     updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
 
     expect(readMarkers(model)).toEqual([
-      expect.objectContaining({
-        startLineNumber: 1,
-        startColumn: 1,
-        endColumn: 7,
-        severity: monaco.MarkerSeverity.Warning,
-        message: 'edit.diagnostics.unsupportedReturnCommand:',
-      }),
       expect.objectContaining({
         startLineNumber: 2,
         startColumn: 18,

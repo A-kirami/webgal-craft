@@ -22,6 +22,7 @@ import {
   createBrowserInputStub,
   renderInBrowser,
 } from '~/__tests__/browser-render'
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 
 import StatementEditorInline from './StatementEditorInline.vue'
 
@@ -39,6 +40,7 @@ function createStatementEntry(): StatementEntry {
     parseError: false,
     parsed: undefined,
     rawText: 'callScene:battle.txt;',
+    syntaxCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
   }
 }
 

@@ -6,6 +6,7 @@ import {
   getSelectedSceneStatementPreviousSpeaker,
   resolveSceneSelectionState,
 } from '~/domain/document/scene-selection'
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 
 import type { StatementEntry } from '~/domain/script/sentence'
 
@@ -13,6 +14,7 @@ function createStatement(id: number, rawText: string): StatementEntry {
   return {
     id,
     rawText,
+    syntaxCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
     parsed: undefined,
     parseError: false,
   }

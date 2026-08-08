@@ -706,7 +706,6 @@ edit:
     unsupportedFigurePosition: 此立绘位置需要 WebGAL 4.6.3 或更高版本。
     unsupportedCallSceneArgument: “调用场景”命令向子场景传递参数需要 WebGAL 4.6.3 或更高版本。
     unsupportedLocalVariable: “局部变量”参数需要 WebGAL 4.6.3 或更高版本。
-    unsupportedReturnCommand: “返回场景”命令需要 WebGAL 4.6.3 或更高版本。
     unsupportedSpine: 当前引擎不支持 Spine 模型。
     reservedCallSceneArgument: "“{argument}”为保留参数，不能用于 callScene。"
   errors:

@@ -18,6 +18,7 @@ vi.mock(import('~/stores/workspace'), () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
+import { LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID } from '~/features/editor/text-editor/text-editor-language'
 import { getArgKeyCompletions } from '~/plugins/editor/completion/webgal-argument-keys'
 import { getCommandCompletions } from '~/plugins/editor/completion/webgal-commands'
 import {
@@ -249,5 +250,16 @@ describe('WebGAL Monaco 补全', () => {
       label: 'chapter/next.txt',
       insertText: 'chapter/next.txt',
     }))
+  })
+})
+
+describe('WebGAL Monaco 语法高亮', () => {
+  it('旧运行时将 return 按旁白内容着色，而不是命令', () => {
+    const [tokens] = monaco.editor.tokenize('return;', LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID)
+
+    expect(tokens?.[0]).toMatchObject({
+      offset: 0,
+      type: expect.stringContaining('content.say.webgal'),
+    })
   })
 })

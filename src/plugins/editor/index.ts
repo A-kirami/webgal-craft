@@ -2,12 +2,13 @@ import * as monaco from 'monaco-editor'
 import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { parseSceneOrEmpty } from '~/domain/script/parser'
+import { LEGACY_WEBGAL_SCRIPT_CONFIG, parseSceneOrEmpty } from '~/domain/script/parser'
 import { buildStatementSourceRanges } from '~/domain/script/sentence'
 import { getCommandConfig } from '~/features/editor/command-registry'
 import { editorDynamicOptionSources } from '~/features/editor/command-registry/dynamic-options'
 import { readContentField } from '~/features/editor/command-registry/schema'
 import { buildSceneAutocompleteOptionsFromText } from '~/features/editor/statement-editor/scene-autocomplete'
+import { WEBGAL_SCRIPT_LANGUAGE_IDS } from '~/features/editor/text-editor/text-editor-language'
 import { resolveWebgalArgumentCompletionTarget } from '~/features/editor/text-editor/webgal-completion-context'
 import { i18n } from '~/plugins/i18n'
 import { useResourceIndex } from '~/services/resource-index/service'
@@ -33,6 +34,7 @@ const CONTINUATION_MARKER_PATTERN = /^\s+([-|])/
 
 interface CompletionSourceRangesCacheEntry {
   multilineStatements: boolean | undefined
+  sceneSemantics: boolean | undefined
   ranges: StatementSourceRange[]
   version: number
 }
@@ -78,45 +80,47 @@ export const BASE_EDITOR_OPTIONS = {
 monaco.editor.defineTheme(THEME_LIGHT, lightTheme as monaco.editor.IStandaloneThemeData)
 monaco.editor.defineTheme(THEME_DARK, darkTheme as monaco.editor.IStandaloneThemeData)
 
-// 注册 WebGAL 脚本语言
-monaco.languages.register({ id: 'webgalscript' })
-monaco.languages.setLanguageConfiguration('webgalscript', {
-  comments: { lineComment: ';' },
-  brackets: [['{', '}'], ['[', ']'], ['(', ')']],
-  autoClosingPairs: [
-    { open: '{', close: '}' },
-    { open: '[', close: ']' },
-    { open: '(', close: ')' },
-    { open: '"', close: '"' },
-  ],
-})
+// 注册完整和旧运行时的 WebGAL 脚本语言。
+for (const languageId of WEBGAL_SCRIPT_LANGUAGE_IDS) {
+  monaco.languages.register({ id: languageId })
+  monaco.languages.setLanguageConfiguration(languageId, {
+    comments: { lineComment: ';' },
+    brackets: [['{', '}'], ['[', ']'], ['(', ')']],
+    autoClosingPairs: [
+      { open: '{', close: '}' },
+      { open: '[', close: ']' },
+      { open: '(', close: ')' },
+      { open: '"', close: '"' },
+    ],
+  })
 
-monaco.languages.registerCompletionItemProvider('webgalscript', {
-  triggerCharacters: [':', '-', '=', '/'],
-  provideCompletionItems: async (model, position) => {
-    let suggestions: monaco.languages.CompletionItem[] = []
-    const currentLine = model.getLineContent(position.lineNumber)
+  monaco.languages.registerCompletionItemProvider(languageId, {
+    triggerCharacters: [':', '-', '=', '/'],
+    provideCompletionItems: async (model, position) => {
+      let suggestions: monaco.languages.CompletionItem[] = []
+      const currentLine = model.getLineContent(position.lineNumber)
 
-    const sentencePart = getSentencePartAtPosition(currentLine, position.column)
-    switch (sentencePart) {
-      case SentencePart.Command: {
-        suggestions = getCommandSuggestion(model, position)
-        break
+      const sentencePart = getSentencePartAtPosition(currentLine, position.column)
+      switch (sentencePart) {
+        case SentencePart.Command: {
+          suggestions = getCommandSuggestion(model, position)
+          break
+        }
+        case SentencePart.Content: {
+          suggestions = await getContentSuggestion(model, position)
+          break
+        }
+        case SentencePart.Argument: {
+          suggestions = await getArgumentSuggestion(model, position)
+          break
+        }
+        // no default
       }
-      case SentencePart.Content: {
-        suggestions = await getContentSuggestion(model, position)
-        break
-      }
-      case SentencePart.Argument: {
-        suggestions = await getArgumentSuggestion(model, position)
-        break
-      }
-      // no default
-    }
 
-    return { suggestions }
-  },
-})
+      return { suggestions }
+    },
+  })
+}
 
 // #region 配置 WebGAL 脚本语法高亮
 
@@ -181,8 +185,9 @@ const argumentKeyRule: ([RegExp, string, string] | [RegExp, string])[] = [
   ...buildEolRule(/ -/, 'split.common.webgal', '@argumentKey'),
 ]
 
-// 提取命令字符串列表
+// Monaco 在旧运行时将 return 视为普通旁白内容。
 const commandStringList = SCRIPT_CONFIG.map(item => item.scriptString)
+const legacyCommandStringList = LEGACY_WEBGAL_SCRIPT_CONFIG.map(item => item.scriptString)
 
 // 部分命令内容的特殊高亮规则
 const commandNextRuleMap = new Map<commandType, string>([
@@ -196,12 +201,17 @@ const commandNextRuleMap = new Map<commandType, string>([
 ])
 
 // 形如 commandType: 或 commandType; 的命令匹配规则
-const commandRuleList: [RegExp | string, string, string][] = SCRIPT_CONFIG.map((config) => {
-  const pattern = new RegExp(`^${config.scriptString}(?=:|;)`)
-  // 寻找特定命令的内容高亮规则, 否则回退到默认规则
-  const nextRule = commandNextRuleMap.get(config.scriptType) || '@afterCommand'
-  return [pattern, 'command.common.webgal', nextRule]
-})
+function buildCommandRuleList(scriptConfig: typeof SCRIPT_CONFIG): [RegExp | string, string, string][] {
+  return scriptConfig.map((config) => {
+    const pattern = new RegExp(`^${config.scriptString}(?=:|;)`)
+    // 寻找特定命令的内容高亮规则, 否则回退到默认规则
+    const nextRule = commandNextRuleMap.get(config.scriptType) || '@afterCommand'
+    return [pattern, 'command.common.webgal', nextRule]
+  })
+}
+
+const commandRuleList = buildCommandRuleList(SCRIPT_CONFIG)
+const legacyCommandRuleList = buildCommandRuleList(LEGACY_WEBGAL_SCRIPT_CONFIG)
 
 // 构建匹配完 commandType 后的规则
 function buildAfterCommandRule(nextState: string) {
@@ -211,25 +221,31 @@ function buildAfterCommandRule(nextState: string) {
   ]
 }
 
+function buildWebgalRootRules(
+  commandRules: readonly [RegExp | string, string, string][],
+): monaco.languages.IMonarchLanguageRule[] {
+  return [
+    // 续行必须先于通用对白规则匹配，否则会被当成普通文本。
+    [/^\s+-/, 'split.common.webgal', '@argumentKey'],
+    [/^\s+\|/, 'split.common.webgal', '@introContent'],
+    ...commandRules,
+
+    // 匹配整行；命令字符串标记为命令，其余文本进入 say 状态重新解析。
+    [/^.+$/, {
+      cases: {
+        '@commands': { token: 'command.common.webgal' },
+        '@default': { token: '@rematch', next: '@say' },
+      },
+    }],
+  ]
+}
+
 // #endregion
 
-monaco.languages.setMonarchTokensProvider('webgalscript', {
+const webgalMonarchTokensProvider = {
   commands: commandStringList,
   tokenizer: {
-    root: [
-      // 续行必须先于通用对白规则匹配，否则会被当成普通文本。
-      [/^\s+-/, 'split.common.webgal', '@argumentKey'],
-      [/^\s+\|/, 'split.common.webgal', '@introContent'],
-      ...commandRuleList,
-
-      // 匹配整行, 其中如果匹配到命令字符串则标记为命令, 否则进入 say 状态重新解析
-      [/^.+$/, {
-        cases: {
-          '@commands': { token: 'command.common.webgal' },
-          '@default': { token: '@rematch', next: '@say' },
-        },
-      }],
-    ],
+    root: buildWebgalRootRules(commandRuleList),
     comment: [
       [/.*$/, 'line.comment.webgal', '@root'],
     ],
@@ -440,7 +456,25 @@ monaco.languages.setMonarchTokensProvider('webgalscript', {
     ],
     // #endregion
   },
-})
+} satisfies monaco.languages.IMonarchLanguage
+
+const legacyWebgalMonarchTokensProvider = {
+  ...webgalMonarchTokensProvider,
+  commands: legacyCommandStringList,
+  tokenizer: {
+    ...webgalMonarchTokensProvider.tokenizer,
+    root: buildWebgalRootRules(legacyCommandRuleList),
+  },
+} satisfies monaco.languages.IMonarchLanguage
+
+monaco.languages.setMonarchTokensProvider(
+  WEBGAL_SCRIPT_LANGUAGE_IDS[0],
+  webgalMonarchTokensProvider,
+)
+monaco.languages.setMonarchTokensProvider(
+  WEBGAL_SCRIPT_LANGUAGE_IDS[1],
+  legacyWebgalMonarchTokensProvider,
+)
 
 // #endregion
 
@@ -535,7 +569,7 @@ async function getArgumentSuggestion(model: monaco.editor.ITextModel, position: 
   const currentLine = model.getLineContent(position.lineNumber)
 
   const sentence = getCompletionSentence(model, position)
-    ?? parseSceneOrEmpty(currentLine, TEMP_SCENE_NAME, TEMP_SCENE_URL).sentenceList[0]
+    ?? parseSceneOrEmpty(currentLine, TEMP_SCENE_NAME, TEMP_SCENE_URL, runtimeCapabilities).sentenceList[0]
   const command = sentence?.command ?? commandType.say
 
   const target = resolveWebgalArgumentCompletionTarget(currentLine, position.column - 1)
@@ -589,8 +623,9 @@ function hasChooseTargetSeparator(lineBeforeCursor: string): boolean {
  * 获取内容补全
  */
 async function getContentSuggestion(model: monaco.editor.ITextModel, position: monaco.Position): Promise<monaco.languages.CompletionItem[]> {
+  const runtimeCapabilities = useResourceStore().currentEngineRuntimeCapabilities
   const sentence = getCompletionSentence(model, position)
-    ?? getParsedSceneFromLine(model, position).sentenceList[0]
+    ?? getParsedSceneFromLine(model, position, runtimeCapabilities).sentenceList[0]
   const command = sentence?.command ?? commandType.say
   const content = sentence?.content ?? ''
   const contentField = readContentField(getCommandConfig(command))
@@ -667,11 +702,15 @@ function buildValueCompletions(
 /**
  * 从当前行解析出场景对象，解析失败时返回空场景
  */
-function getParsedSceneFromLine(model: monaco.editor.ITextModel, position: monaco.Position): IScene {
+function getParsedSceneFromLine(
+  model: monaco.editor.ITextModel,
+  position: monaco.Position,
+  capabilities?: StatementSyntaxCapabilities,
+): IScene {
   const line = model.getLineContent(position.lineNumber)
   const lineBeforeCursor = line.slice(0, position.column - 1)
 
-  return parseSceneOrEmpty(lineBeforeCursor, TEMP_SCENE_NAME, TEMP_SCENE_URL)
+  return parseSceneOrEmpty(lineBeforeCursor, TEMP_SCENE_NAME, TEMP_SCENE_URL, capabilities)
 }
 
 function getCompletionStatementSourceRanges(
@@ -680,10 +719,12 @@ function getCompletionStatementSourceRanges(
 ): StatementSourceRange[] {
   const version = model.getVersionId()
   const multilineStatements = capabilities?.multilineStatements
+  const sceneSemantics = capabilities?.sceneSemantics
   const cached = completionSourceRangesCache.get(model)
   if (
     cached?.version === version
     && cached.multilineStatements === multilineStatements
+    && cached.sceneSemantics === sceneSemantics
   ) {
     return cached.ranges
   }
@@ -691,6 +732,7 @@ function getCompletionStatementSourceRanges(
   const ranges = buildStatementSourceRanges(model.getValue(), capabilities)
   completionSourceRangesCache.set(model, {
     multilineStatements,
+    sceneSemantics,
     ranges,
     version,
   })

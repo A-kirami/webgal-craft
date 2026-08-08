@@ -33,9 +33,6 @@ function createUnsupportedSceneSemanticDiagnostic(
   }
 
   switch (reference.code) {
-    case 'unsupported-return-command': {
-      return { ...base, code: reference.code, field: reference.source }
-    }
     case 'unsupported-local-variable': {
       return { ...base, code: reference.code, field: reference.source }
     }

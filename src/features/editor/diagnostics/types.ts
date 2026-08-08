@@ -77,14 +77,6 @@ export interface ReservedCallSceneArgumentEditorDiagnostic extends SceneEditorDi
   source: 'scene'
 }
 
-export interface UnsupportedReturnCommandEditorDiagnostic extends SceneEditorDiagnosticBase {
-  code: 'unsupported-return-command'
-  field: { kind: 'content' }
-  severity: 'warning'
-  source: 'engine'
-  value: string
-}
-
 export interface UnsupportedLocalVariableEditorDiagnostic extends SceneEditorDiagnosticBase {
   code: 'unsupported-local-variable'
   field: { kind: 'argument', key: 'local' }
@@ -116,7 +108,6 @@ export type SceneEditorDiagnostic =
   | UnsupportedOpusVocalEditorDiagnostic
   | UnsupportedFigurePositionEditorDiagnostic
   | ReservedCallSceneArgumentEditorDiagnostic
-  | UnsupportedReturnCommandEditorDiagnostic
   | UnsupportedLocalVariableEditorDiagnostic
   | UnsupportedCallSceneArgumentEditorDiagnostic
 
@@ -129,7 +120,6 @@ export type EditorFieldDiagnostic =
   | Omit<UnsupportedOpusVocalEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedFigurePositionEditorDiagnostic, 'statementIndex'>
   | Omit<ReservedCallSceneArgumentEditorDiagnostic, 'statementIndex'>
-  | Omit<UnsupportedReturnCommandEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedLocalVariableEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedCallSceneArgumentEditorDiagnostic, 'statementIndex'>
 

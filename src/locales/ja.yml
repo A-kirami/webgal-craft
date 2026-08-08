@@ -706,7 +706,6 @@ edit:
     unsupportedFigurePosition: この立ち絵位置を使用するには WebGAL 4.6.3 以降が必要です。
     unsupportedCallSceneArgument: 「callScene」コマンドで子シーンに引数を渡すには WebGAL 4.6.3 以降が必要です。
     unsupportedLocalVariable: 「local」パラメータには WebGAL 4.6.3 以降が必要です。
-    unsupportedReturnCommand: 「return」コマンドには WebGAL 4.6.3 以降が必要です。
     unsupportedSpine: 現在のエンジンは Spine モデルをサポートしていません。
     reservedCallSceneArgument: '"{argument}" は予約済みのため、callScene では使用できません。'
   errors:

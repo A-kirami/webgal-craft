@@ -4,6 +4,7 @@ import { page } from 'vitest/browser'
 import { computed, defineComponent, h, nextTick, reactive, shallowRef, vShow, withDirectives } from 'vue'
 
 import { createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { useShortcutContextRegistry } from '~/features/editor/shortcut/shortcut-context-registry'
 
 import VisualEditorScene from './VisualEditorScene.vue'
@@ -49,6 +50,7 @@ function createStatementEntry(id: number, rawText: string): StatementEntry {
   return {
     id,
     rawText,
+    syntaxCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
     parsed: undefined,
     parseError: false,
   }

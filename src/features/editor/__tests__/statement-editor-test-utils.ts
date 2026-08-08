@@ -89,6 +89,7 @@ export function createEntry(rawText: string): StatementEntry {
   return {
     id: 1,
     rawText,
+    syntaxCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
     parsed: undefined,
     parseError: false,
   }

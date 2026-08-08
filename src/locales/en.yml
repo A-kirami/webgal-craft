@@ -706,7 +706,6 @@ edit:
     unsupportedFigurePosition: This figure position requires WebGAL 4.6.3 or later.
     unsupportedCallSceneArgument: Passing arguments to a child scene with the “callScene” command requires WebGAL 4.6.3 or later.
     unsupportedLocalVariable: The “local” parameter requires WebGAL 4.6.3 or later.
-    unsupportedReturnCommand: The “return” command requires WebGAL 4.6.3 or later.
     unsupportedSpine: The current engine does not support Spine models.
     reservedCallSceneArgument: '"{argument}" is reserved and cannot be used with callScene.'
   errors:

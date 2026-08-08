@@ -4,6 +4,7 @@ import { computed, defineComponent, h } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 
 import VisualEditorStatementCard from './VisualEditorStatementCard.vue'
 
@@ -73,6 +74,7 @@ function createStatementEntry(id: number, rawText: string): StatementEntry {
       isLineBreakHolder: false,
     },
     parseError: false,
+    syntaxCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
   }
 }
 

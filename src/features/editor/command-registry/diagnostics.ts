@@ -26,11 +26,6 @@ export interface UnsupportedEngineOpusVocalReference {
 
 export type UnsupportedSceneSemanticReference =
   | {
-    code: 'unsupported-return-command'
-    source: { kind: 'content' }
-    value: string
-  }
-  | {
     code: 'unsupported-local-variable'
     source: { kind: 'argument', key: 'local' }
     value: 'local'
@@ -148,14 +143,6 @@ export function findUnsupportedSceneSemanticReferences(
 ): UnsupportedSceneSemanticReference[] {
   if (capabilities.sceneSemantics) {
     return []
-  }
-
-  if (sentence.command === commandType.return) {
-    return [{
-      code: 'unsupported-return-command',
-      source: { kind: 'content' },
-      value: sentence.commandRaw,
-    }]
   }
 
   if (sentence.command === commandType.setVar && sentence.args.some(item => item.key === 'local')) {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { buildSceneStatements } from '~/domain/script/sentence'
@@ -165,5 +166,19 @@ describe('sceneTextPanel', () => {
     expect(snapshot.startLineNumber).toBe(2)
     expect(snapshot.endLineNumber).toBe(2)
     expect(snapshot.statementIndex).toBe(1)
+  })
+
+  it('旧运行时不会在侧边栏将 return 识别为返回场景命令', () => {
+    const snapshot = resolveSceneTextPanelSnapshotFromContent(
+      1,
+      'return;',
+      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    )
+
+    expect(snapshot.entry?.parsed).toMatchObject({
+      command: commandType.say,
+      commandRaw: 'return',
+      content: 'return',
+    })
   })
 })

@@ -3,6 +3,7 @@ import { computed, effectScope, nextTick, reactive } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { computeLineNumberFromStatementId } from '~/domain/document/scene-selection'
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { buildStatements } from '~/domain/script/sentence'
 
 import { useVisualEditorSceneRuntime } from '../useVisualEditorSceneRuntime'
@@ -46,7 +47,11 @@ vi.mock('~/domain/document/scene-selection', () => ({
 }))
 
 vi.mock('~/domain/script/sentence', () => ({
-  buildStatements: vi.fn((rawText: string) => [{ id: 99, rawText }]),
+  buildStatements: vi.fn((rawText: string) => [{
+    id: 99,
+    rawText,
+    syntaxCapabilities: { multilineStatements: true, sceneSemantics: true },
+  }]),
 }))
 
 vi.mock('~/features/editor/shared/useEditorPanelBindings', () => ({
@@ -161,6 +166,7 @@ describe('useVisualEditorSceneRuntime', () => {
       parseError: false,
       parsed: undefined,
       rawText,
+      syntaxCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
     }])
 
     useCommandPanelStoreMock.mockReturnValue({

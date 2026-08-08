@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveTextEditorLanguage } from '~/features/editor/text-editor/text-editor-language'
+import {
+  LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID,
+  resolveTextEditorLanguage,
+  WEBGAL_SCRIPT_LANGUAGE_ID,
+} from '~/features/editor/text-editor/text-editor-language'
 
 describe('resolveTextEditorLanguage', () => {
   const registeredLanguages = [
@@ -14,11 +18,20 @@ describe('resolveTextEditorLanguage', () => {
     },
   ]
 
-  it('场景文件固定返回 webgalscript', () => {
+  it('新运行时场景文件使用完整 WebGAL 语法高亮', () => {
     expect(resolveTextEditorLanguage({
       kind: 'scene',
       path: '/game/scene.txt',
-    }, registeredLanguages)).toBe('webgalscript')
+      runtimeCapabilities: { sceneSemantics: true },
+    }, registeredLanguages)).toBe(WEBGAL_SCRIPT_LANGUAGE_ID)
+  })
+
+  it('旧运行时场景文件使用不含 return 命令的语法高亮', () => {
+    expect(resolveTextEditorLanguage({
+      kind: 'scene',
+      path: '/game/scene.txt',
+      runtimeCapabilities: { sceneSemantics: false },
+    }, registeredLanguages)).toBe(LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID)
   })
 
   it('动画文件固定返回 json', () => {

@@ -4,6 +4,7 @@ import { GitCompareArrows, TriangleAlert } from '@lucide/vue'
 import ExternalDocumentDiffEditor from '~/components/editor/ExternalDocumentDiffEditor.vue'
 
 import type { DocumentKind } from '~/domain/document/document-model'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 
 let open = $(defineModel<boolean>('open'))
 
@@ -13,6 +14,7 @@ const {
   allowMerge,
   localContent,
   externalContent,
+  runtimeCapabilities,
   onKeepLocal,
   onLoadExternal,
   onMerge,
@@ -23,6 +25,7 @@ const {
   allowMerge: boolean
   localContent: string
   externalContent: string
+  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'sceneSemantics'>
   onKeepLocal?: () => void | Promise<void>
   onLoadExternal?: () => void | Promise<void>
   onMerge?: (content: string) => void | Promise<void>
@@ -115,6 +118,7 @@ watch(() => open, async (nextOpen, previousOpen) => {
         :kind="documentKind"
         :local-content="localContent"
         :external-content="externalContent"
+        :runtime-capabilities="runtimeCapabilities"
         @apply="handleApplyMerge"
         @back="view = 'decision'"
       />

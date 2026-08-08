@@ -4,10 +4,36 @@ import { page } from 'vitest/browser'
 import { defineComponent, h } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
+import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID } from '~/features/editor/text-editor/text-editor-language'
 
 import ExternalDocumentDiffEditor from './ExternalDocumentDiffEditor.vue'
 
 describe('ExternalDocumentDiffEditor', () => {
+  it('旧运行时的场景差异编辑器使用不含 return 的语法高亮', async () => {
+    let editorHandle: {
+      getModifiedEditor: () => monaco.editor.IStandaloneCodeEditor | undefined
+    } | undefined
+
+    const TestHarness = defineComponent(() => () => h(ExternalDocumentDiffEditor, {
+      ref: (instance) => {
+        editorHandle = instance as unknown as typeof editorHandle
+      },
+      path: '/game/scene/example.txt',
+      kind: 'scene',
+      localContent: 'return;',
+      externalContent: 'return;',
+      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    }))
+
+    renderInBrowser(TestHarness, {
+      browser: { i18nMode: 'lite' },
+    })
+
+    await expect.poll(() => editorHandle?.getModifiedEditor()?.getModel()?.getLanguageId())
+      .toBe(LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID)
+  })
+
   it('采用左侧差异块后应用更新后的合并结果', async () => {
     const onApply = vi.fn()
 

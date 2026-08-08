@@ -1,5 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+
 import { parseScene, parseSentence } from './parser'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
@@ -9,6 +11,7 @@ import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabili
 export interface StatementEntry {
   id: number
   rawText: string
+  syntaxCapabilities: StatementSyntaxCapabilities
   /** 仅供编辑器跨视图共享、不会写入脚本的临时解析草稿。 */
   draftParsed?: ISentence
   parsed: ISentence | undefined
@@ -28,7 +31,7 @@ export interface StatementSourceRange {
   startLine: number
 }
 
-export type StatementSyntaxCapabilities = Pick<EngineRuntimeCapabilities, 'multilineStatements'>
+export type StatementSyntaxCapabilities = Pick<EngineRuntimeCapabilities, 'multilineStatements' | 'sceneSemantics'>
 
 let nextId = 0
 
@@ -68,13 +71,13 @@ export function buildStatementSourceRanges(
   if (capabilities?.multilineStatements === false) {
     return lines.map((rawText, line) => ({
       endLine: line,
-      parsed: parseSentence(rawText),
+      parsed: parseSentence(rawText, capabilities),
       rawText,
       startLine: line,
     }))
   }
 
-  const scene = parseScene(text)
+  const scene = parseScene(text, '', '', capabilities)
   if (!scene) {
     return lines.map((rawText, line) => ({
       endLine: line,
@@ -124,9 +127,14 @@ function createStatementEntry(
   options: {
     advanceAllocator?: boolean
     id?: number
+    syntaxCapabilities?: StatementSyntaxCapabilities
   } = {},
 ): StatementEntry {
-  const { id, advanceAllocator = true } = options
+  const {
+    id,
+    advanceAllocator = true,
+    syntaxCapabilities = LATEST_ENGINE_RUNTIME_CAPABILITIES,
+  } = options
   const nextStatementId = id ?? nextId++
   if (advanceAllocator && id !== undefined) {
     nextId = Math.max(nextId, id + 1)
@@ -135,6 +143,7 @@ function createStatementEntry(
   return markRaw({
     id: nextStatementId,
     rawText,
+    syntaxCapabilities,
     parsed: undefined,
     parseError: false,
   })
@@ -162,15 +171,19 @@ function createSceneStatement(
 /**
  * 从原始语句文本构建一个 StatementEntry。
  */
-export function buildSingleStatement(rawText: string, id?: number): StatementEntry {
-  return createStatementEntry(rawText, { id })
+export function buildSingleStatement(
+  rawText: string,
+  id?: number,
+  syntaxCapabilities?: StatementSyntaxCapabilities,
+): StatementEntry {
+  return createStatementEntry(rawText, { id, syntaxCapabilities })
 }
 
 /**
  * 从全文本构建 StatementEntry 列表，为每条语句分配唯一 id。
  */
 export function buildStatements(text: string, capabilities?: StatementSyntaxCapabilities): StatementEntry[] {
-  return splitStatements(text, capabilities).map(raw => buildSingleStatement(raw))
+  return splitStatements(text, capabilities).map(raw => buildSingleStatement(raw, undefined, capabilities))
 }
 
 export function buildSceneStatements(text: string, capabilities?: StatementSyntaxCapabilities): SceneStatement[] {
@@ -226,17 +239,26 @@ export function rebuildStatementsWithStableIds(
   })
 }
 
-export function createStatementEntryFromSceneStatement(statement: SceneStatement): StatementEntry {
+export function createStatementEntryFromSceneStatement(
+  statement: SceneStatement,
+  syntaxCapabilities?: StatementSyntaxCapabilities,
+): StatementEntry {
   return createStatementEntry(statement.rawText, {
     id: statement.id,
     advanceAllocator: false,
+    syntaxCapabilities,
   })
 }
 
-export function createTransientStatementEntry(rawText: string, id: number): StatementEntry {
+export function createTransientStatementEntry(
+  rawText: string,
+  id: number,
+  syntaxCapabilities?: StatementSyntaxCapabilities,
+): StatementEntry {
   return createStatementEntry(rawText, {
     id,
     advanceAllocator: false,
+    syntaxCapabilities,
   })
 }
 
@@ -258,7 +280,7 @@ export function ensureParsed(entry: StatementEntry): ISentence | undefined {
     return entry.parsed
   }
 
-  entry.parsed = parseSentence(entry.rawText)
+  entry.parsed = parseSentence(entry.rawText, entry.syntaxCapabilities)
   entry.parseError = !entry.parsed
   return entry.parsed
 }

@@ -62,9 +62,6 @@ export function getEditorDiagnosticMessage(
     case 'reserved-call-scene-argument': {
       return t('edit.diagnostics.reservedCallSceneArgument', { argument: diagnostic.argument })
     }
-    case 'unsupported-return-command': {
-      return t('edit.diagnostics.unsupportedReturnCommand')
-    }
     case 'unsupported-local-variable': {
       return t('edit.diagnostics.unsupportedLocalVariable')
     }
