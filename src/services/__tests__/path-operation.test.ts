@@ -163,6 +163,22 @@ describe('pathOperation', () => {
     existsMock.mockResolvedValue(false)
   })
 
+  it('会在任何文件变更前拒绝移动大小写变体的场景入口文件', async () => {
+    const deps = createDeps()
+    const service = createPathOperationService(deps)
+
+    await expect(service.perform({
+      kind: 'move',
+      sourcePath: AbsPath.from('/PROJECT/game/scene/Start.TXT'),
+      target: { type: 'directory', directory: AbsPath.from('/project/game/scene/chapter') },
+    })).rejects.toMatchObject({
+      code: 'blocked-plan',
+      blockedReasons: [expect.objectContaining({ kind: 'protected-entry-point' })],
+    })
+    expect(deps.gameFs.moveFile).not.toHaveBeenCalled()
+    expect(deps.fileStore.applyPathMutation).not.toHaveBeenCalled()
+  })
+
   it('无引用 rename 会执行 FS、副作用提交、事件广播和单次游戏刷新', async () => {
     const deps = createDeps()
     const service = createPathOperationService(deps)
@@ -660,7 +676,7 @@ describe('pathOperation', () => {
     const deps = createDeps({
       fileStore: {
         getItemByPath: vi.fn((path: AbsPath) =>
-          path === AbsPath.from('/project/game/scene/start.txt') ? { isDir: false } : undefined,
+          path === AbsPath.from('/project/game/scene/chapter.txt') ? { isDir: false } : undefined,
         ),
       },
       history: {
@@ -671,7 +687,7 @@ describe('pathOperation', () => {
 
     const plan = await service.plan({
       kind: 'rename',
-      sourcePath: AbsPath.from('/project/game/scene/start.txt'),
+      sourcePath: AbsPath.from('/project/game/scene/chapter.txt'),
       target: { type: 'name', name: 'intro.txt' },
     })
 
@@ -681,7 +697,7 @@ describe('pathOperation', () => {
 
     expect(deps.history.migrateSceneHistory).toHaveBeenCalledWith({
       projectPath: '/project',
-      oldLogicalPath: 'game/scene/start.txt',
+      oldLogicalPath: 'game/scene/chapter.txt',
       newLogicalPath: 'game/scene/intro.txt',
     })
   })
@@ -694,7 +710,7 @@ describe('pathOperation', () => {
     const deps = createDeps({
       fileStore: {
         getItemByPath: vi.fn((path: AbsPath) =>
-          path === AbsPath.from('/project/game/scene/start.txt') ? { isDir: false } : undefined,
+          path === AbsPath.from('/project/game/scene/chapter.txt') ? { isDir: false } : undefined,
         ),
       },
       gameManager: {
@@ -708,7 +724,7 @@ describe('pathOperation', () => {
 
     const plan = await service.plan({
       kind: 'rename',
-      sourcePath: AbsPath.from('/project/game/scene/start.txt'),
+      sourcePath: AbsPath.from('/project/game/scene/chapter.txt'),
       target: { type: 'name', name: 'intro.txt' },
     })
 
@@ -716,23 +732,23 @@ describe('pathOperation', () => {
 
     expect(migrateSceneHistory).toHaveBeenNthCalledWith(1, {
       projectPath: '/project',
-      oldLogicalPath: 'game/scene/start.txt',
+      oldLogicalPath: 'game/scene/chapter.txt',
       newLogicalPath: 'game/scene/intro.txt',
     })
     expect(migrateSceneHistory).toHaveBeenNthCalledWith(2, {
       projectPath: '/project',
       oldLogicalPath: 'game/scene/intro.txt',
-      newLogicalPath: 'game/scene/start.txt',
+      newLogicalPath: 'game/scene/chapter.txt',
     })
     expect(deps.fileStore.applyPathMutation).toHaveBeenNthCalledWith(
       1,
-      '/project/game/scene/start.txt',
+      '/project/game/scene/chapter.txt',
       '/project/game/scene/intro.txt',
     )
     expect(deps.fileStore.applyPathMutation).toHaveBeenNthCalledWith(
       2,
       '/project/game/scene/intro.txt',
-      '/project/game/scene/start.txt',
+      '/project/game/scene/chapter.txt',
     )
     expect(refreshRegisteredGameSnapshot).toHaveBeenCalledTimes(1)
   })
@@ -1244,15 +1260,15 @@ describe('pathOperation', () => {
 
   it.each([
     {
-      firstSourcePath: '/project/game/scene/chapter/start.txt',
+      firstSourcePath: '/project/game/scene/chapter/branch.txt',
       firstTargetDirectory: '/project/game/scene',
-      secondSourcePath: '/project/game/scene/start.txt',
+      secondSourcePath: '/project/game/scene/chapter.txt',
       secondTargetDirectory: '/project/game/scene/chapter',
     },
     {
-      firstSourcePath: '/project/game/scene/start.txt',
+      firstSourcePath: '/project/game/scene/chapter.txt',
       firstTargetDirectory: '/project/game/scene/chapter',
-      secondSourcePath: '/project/game/scene/chapter/start.txt',
+      secondSourcePath: '/project/game/scene/chapter/branch.txt',
       secondTargetDirectory: '/project/game/scene',
     },
   ])('连续反向 move 不会被上一轮 watcher pending 阻断', async ({

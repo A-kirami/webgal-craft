@@ -491,6 +491,10 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
       // 面板关闭时跳过运行时请求，但不阻止脚本层提交效果编辑器草稿。
       return true
     }
+    if (!previewSyncStore.isPreviewReady) {
+      // 预览未启动或暂不可用时，仍允许脚本层提交效果编辑器草稿。
+      return true
+    }
     if (isPreviewTerminalUnsynced()) {
       return false
     }

@@ -312,6 +312,22 @@ describe('useEffectEditorProvider', () => {
     expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
   })
 
+  it('预览未启动时会跳过运行时请求但仍允许应用脚本变更', async () => {
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+    previewSyncStoreMock.isPreviewReady = false
+    const applyMock = vi.fn()
+    const provider = createProvider()
+
+    await provider.open(createOpenTarget({ onApply: applyMock }))
+    provider.updateDraft({ transform: { blur: 12 } })
+
+    await expect(provider.apply()).resolves.toBe(true)
+    expect(applyMock).toHaveBeenCalledWith(expect.objectContaining({
+      transform: { blur: 12 },
+    }))
+    expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
+  })
+
   it('未产生 visual preview 时关闭效果编辑器不会重复恢复场景预览', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
     const provider = createEffectEditorProvider()

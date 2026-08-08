@@ -36,22 +36,26 @@ interface FileItem {
 
 interface Props {
   item: FileItem
+  selectedItems?: FileItem[]
   onRename?: (item: FileItem) => void
   onCreateFile?: (item: FileItem) => void
   onCreateFolder?: (item: FileItem) => void
   clipboardKey?: string
   isRoot?: boolean
   revealInExplorerDisabled?: boolean
+  operationDisabled?: boolean
 }
 
 const {
   item,
+  selectedItems = [],
   onRename,
   onCreateFile,
   onCreateFolder,
   clipboardKey = 'default',
   isRoot = false,
   revealInExplorerDisabled = false,
+  operationDisabled = false,
 } = defineProps<Props>()
 
 const { clipboard, operationType, canPaste, setClipboard, clearClipboard } = $(useFileClipboard(clipboardKey))
@@ -81,20 +85,20 @@ function handleCreateFolder(): void {
   onCreateFolder?.(item)
 }
 
+function updateClipboard(isCut: boolean): void {
+  setClipboard((selectedItems.length > 0 ? selectedItems : [item]).map(selectedItem => ({
+    path: selectedItem.path,
+    isCut,
+    isDir: selectedItem.isDir ?? false,
+  })))
+}
+
 function handleCopy(): void {
-  setClipboard({
-    path: item.path,
-    isCut: false,
-    isDir: item.isDir ?? false,
-  })
+  updateClipboard(false)
 }
 
 function handleCut(): void {
-  setClipboard({
-    path: item.path,
-    isCut: true,
-    isDir: item.isDir ?? false,
-  })
+  updateClipboard(true)
 }
 
 async function handlePaste(): Promise<void> {
@@ -206,7 +210,7 @@ const menuItems = $computed(() => {
   if (!isRoot) {
     items.push(
       { icon: Copy, label: t('edit.fileTree.copy'), onClick: handleCopy },
-      { icon: Scissors, label: t('edit.fileTree.cut'), onClick: handleCut },
+      { icon: Scissors, label: t('edit.fileTree.cut'), onClick: handleCut, disabled: operationDisabled },
     )
   }
 
@@ -223,7 +227,7 @@ const menuItems = $computed(() => {
     pushSeparator(items)
 
     if (onRename) {
-      items.push({ icon: Pencil, label: t('edit.fileTree.rename'), onClick: handleRename })
+      items.push({ icon: Pencil, label: t('edit.fileTree.rename'), onClick: handleRename, disabled: operationDisabled })
     }
 
     if (sceneLogicalPath) {
@@ -234,6 +238,7 @@ const menuItems = $computed(() => {
       icon: Trash2,
       label: t('common.delete'),
       onClick: handleDelete,
+      disabled: operationDisabled,
       class: 'text-destructive focus:text-destructive-foreground focus:bg-destructive',
     })
   }

@@ -3,12 +3,14 @@ import { mkdir, readFile, writeFile as writeBinaryFile, writeTextFile } from '@t
 import { fsCmds } from '~/commands/fs'
 import { vfsCmds } from '~/commands/vfs'
 import { AbsPath, RelPath } from '~/domain/path'
+import { isSceneEntryPath } from '~/domain/scene/entry-point'
 import {
   commitPendingFileWrite,
   registerPendingFileWrite,
   rollbackPendingFileWrite,
 } from '~/services/file-write-echo-registry'
 import { gameManager } from '~/services/game-manager'
+import { gameSceneDir } from '~/services/platform/app-paths'
 import { useFileStore } from '~/stores/file'
 import { useRuntimeTaskStore } from '~/stores/runtime-task'
 import { useWorkspaceStore } from '~/stores/workspace'
@@ -116,6 +118,15 @@ function markPathChanged(path: AbsPath, options: { includeChildren?: boolean } =
   }
 
   gameManager.touchCurrentGameLastModified()
+}
+
+function assertMutableSceneEntry(path: AbsPath): void {
+  const gamePath = useWorkspaceStore().currentGame?.path
+  if (gamePath && isSceneEntryPath(path, gameSceneDir(gamePath))) {
+    throw new AppError('PATH_OPERATION', '场景入口文件受保护，不能移动、重命名或删除', {
+      details: { path },
+    })
+  }
 }
 
 function usesTemplateOverlayPath(path: AbsPath): boolean {
@@ -246,6 +257,7 @@ async function moveTemplateOverlayPath(
 }
 
 async function renameFile(oldPath: AbsPath, newName: string): Promise<PathMutationResult> {
+  assertMutableSceneEntry(oldPath)
   if (usesTemplateOverlayPath(oldPath)) {
     return renameTemplateOverlayPath(oldPath, newName)
   }
@@ -254,6 +266,7 @@ async function renameFile(oldPath: AbsPath, newName: string): Promise<PathMutati
 }
 
 async function deleteFile(path: AbsPath, permanent?: boolean): Promise<void> {
+  assertMutableSceneEntry(path)
   const fileStore = useFileStore()
   if (fileStore.isVfs && await fileStore.deleteEntry(path)) {
     markPathChanged(path, { includeChildren: true })
@@ -334,6 +347,7 @@ async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
 }
 
 async function moveFile(sourcePath: AbsPath, targetPath: AbsPath, targetName?: string): Promise<PathMutationResult> {
+  assertMutableSceneEntry(sourcePath)
   if (usesTemplateOverlayPath(sourcePath) || usesTemplateOverlayPath(targetPath)) {
     return moveTemplateOverlayPath(sourcePath, targetPath, targetName)
   }

@@ -30,6 +30,7 @@ const {
   usePreviewRuntimeStoreMock,
   usePreviewSessionStoreMock,
   usePreviewSyncStoreMock,
+  useSceneEntryStatusMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
   copyMock: vi.fn(),
@@ -47,6 +48,7 @@ const {
   usePreviewRuntimeStoreMock: vi.fn(),
   usePreviewSessionStoreMock: vi.fn(),
   usePreviewSyncStoreMock: vi.fn(),
+  useSceneEntryStatusMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
 }))
 
@@ -93,6 +95,10 @@ vi.mock('~/stores/preview-session', () => ({
 
 vi.mock('~/stores/preview-sync', () => ({
   usePreviewSyncStore: usePreviewSyncStoreMock,
+}))
+
+vi.mock('~/features/editor/scene-entry/useSceneEntryStatus', () => ({
+  useSceneEntryStatus: useSceneEntryStatusMock,
 }))
 
 vi.mock('~/commands/game', async () => {
@@ -147,6 +153,10 @@ let previewSessionStoreState: {
   currentGameServeUrl: string
   reloadVersion: number
   refresh: () => void
+}
+
+let sceneEntryStatusState: {
+  status: ReturnType<typeof ref<'valid' | 'missing'>>
 }
 
 const transformOverlayReferenceBox: ReferenceBox = {
@@ -322,6 +332,7 @@ describe('PreviewPanel', () => {
     usePreviewRuntimeStoreMock.mockReset()
     usePreviewSessionStoreMock.mockReset()
     usePreviewSyncStoreMock.mockReset()
+    useSceneEntryStatusMock.mockReset()
     useWorkspaceStoreMock.mockReset()
 
     workspaceStoreState = reactive({
@@ -343,6 +354,10 @@ describe('PreviewPanel', () => {
       },
     })
     usePreviewSessionStoreMock.mockReturnValue(previewSessionStoreState)
+    sceneEntryStatusState = {
+      status: ref('valid'),
+    }
+    useSceneEntryStatusMock.mockReturnValue(sceneEntryStatusState)
     useClipboardMock.mockReturnValue({
       copied: ref(true),
       copy: copyMock,
@@ -395,6 +410,33 @@ describe('PreviewPanel', () => {
     expect(getGameConfigMock).toHaveBeenCalledWith('/games/demo')
     expect(resetEmbeddedPreviewStateMock).toHaveBeenCalledTimes(1)
     expect(setEmbeddedPreviewLaunchIdMock).toHaveBeenCalledWith(expect.any(String))
+  })
+
+  it('缺少规范入口时只显示错误遮罩，入口恢复后重新挂载预览', async () => {
+    sceneEntryStatusState.status.value = 'missing'
+
+    renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByTestId('preview-missing-entry-overlay')).toHaveRole('alert')
+    expect(document.querySelector('iframe')).toBeNull()
+    await expect.element(page.getByTestId('preview-bottom-toolbar')).toBeVisible()
+    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.zoomOut' })).toBeDisabled()
+    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.zoomIn' })).toBeDisabled()
+    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.fitToView' })).toBeDisabled()
+    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.refreshPreview' })).toBeDisabled()
+    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.copyUrl' })).toBeDisabled()
+    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.openInBrowser' })).toBeDisabled()
+
+    sceneEntryStatusState.status.value = 'valid'
+    await nextTick()
+
+    await expect.element(page.getByTitle('preview-title::Demo Game')).toBeVisible()
+    expect(previewSessionStoreState.reloadVersion).toBeGreaterThan(0)
   })
 
   it('收到同源 iframe 转发的空格按键消息时会让 iframe 上的拖拽交给外层视口平移', async () => {

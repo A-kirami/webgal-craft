@@ -2,6 +2,7 @@
 import { Maximize, Minus, Plus } from '@lucide/vue'
 
 interface Props {
+  disabled?: boolean
   zoomRatio: number
 }
 
@@ -11,7 +12,9 @@ interface Emits {
   zoomOut: []
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  disabled: false,
+})
 const emit = defineEmits<Emits>()
 
 const zoomPercent = $computed(() => `${Math.round(props.zoomRatio * 100)}%`)
@@ -30,6 +33,7 @@ const buttonClass = 'size-6 text-muted-foreground hover:text-foreground'
             variant="ghost"
             size="icon"
             :class="buttonClass"
+            :disabled="props.disabled"
             @click="emit('zoomOut')"
           >
             <Minus class="size-3.5" />
@@ -54,6 +58,7 @@ const buttonClass = 'size-6 text-muted-foreground hover:text-foreground'
             variant="ghost"
             size="icon"
             :class="buttonClass"
+            :disabled="props.disabled"
             @click="emit('zoomIn')"
           >
             <Plus class="size-3.5" />
@@ -73,6 +78,7 @@ const buttonClass = 'size-6 text-muted-foreground hover:text-foreground'
             variant="ghost"
             size="icon"
             :class="[buttonClass, 'ml-0.5']"
+            :disabled="props.disabled"
             @click="emit('fitToView')"
           >
             <Maximize class="size-3.5" />

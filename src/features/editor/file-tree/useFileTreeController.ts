@@ -6,6 +6,7 @@ import {
   findFileTreeItemByPath,
   getFileTreeNameSelectionEnd,
   getFileTreeParentPath,
+  getFileTreeTransferPayloadItems,
   hasFileTreeDuplicateName,
   insertCreatingFileTreeItem,
   resolveDroppableFileTreeTransferItems,
@@ -68,6 +69,7 @@ interface UseFileTreeControllerOptions<T extends object> {
   sortBy: () => FileViewerSortBy
   sortOrder: () => FileViewerSortOrder
   treeName: () => string | undefined
+  isPathOperationDisabled?: (path: string) => boolean
 }
 
 function scheduleFrame(callback: FrameRequestCallback): void {
@@ -120,6 +122,7 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   const { t } = useI18n()
   const confirmPathOperationRewrite = createPathOperationRewriteConfirm(t)
   const pathOperationFeedback = usePathOperationFeedback()
+  const isPathOperationDisabled = (path: string): boolean => options.isPathOperationDisabled?.(path) ?? false
 
   function asRecord(item: T): Record<string, unknown> {
     return item as Record<string, unknown>
@@ -244,7 +247,12 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   }
 
   function startRenaming(item: FlattenedItem<T>): void {
-    if (renameState.value.isStarting || renameState.value.isInProgress || createState.value.isInProgress) {
+    if (
+      isPathOperationDisabled(getItemPath(item.value))
+      || renameState.value.isStarting
+      || renameState.value.isInProgress
+      || createState.value.isInProgress
+    ) {
       return
     }
 
@@ -274,6 +282,10 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
       || renameState.value.isStarting
       || renameState.value.isInProgress
     ) {
+      return
+    }
+
+    if (isPathOperationDisabled(getItemPath(item.value))) {
       return
     }
 
@@ -620,6 +632,10 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
   const itemMap = new Map<string, FlattenedItem<T>>()
 
   function handleContextMenuRename(fileItem: { path: string }): void {
+    if (isPathOperationDisabled(fileItem.path)) {
+      return
+    }
+
     const flattenedItem = itemMap.get(fileItem.path)
     if (flattenedItem) {
       startRenaming(flattenedItem)
@@ -639,6 +655,13 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
     targetDirectoryPath: string,
     operation: DragTransferOperation = 'move',
   ): boolean {
+    if (
+      operation === 'move'
+      && getFileTreeTransferPayloadItems(payload).some(item => isPathOperationDisabled(item.path))
+    ) {
+      return false
+    }
+
     return canDropFileTreeTransferPayloadToDirectory(
       payload,
       targetDirectoryPath,
@@ -656,7 +679,7 @@ export function useFileTreeController<T extends object>(options: UseFileTreeCont
 
   async function moveFileSystemItems(payload: FileSystemDragPayload, targetDirectoryPath: string): Promise<void> {
     const items = resolveDroppableFileTreeTransferItems(payload, targetDirectoryPath)
-    if (!items) {
+    if (!items || items.some(item => isPathOperationDisabled(item.path))) {
       return
     }
 

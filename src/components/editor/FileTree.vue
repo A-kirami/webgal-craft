@@ -39,6 +39,7 @@ interface Props {
   sortOrder?: FileViewerSortOrder
   enableDragTransfer?: boolean
   rootPath?: string
+  isPathOperationDisabled?: (path: string) => boolean
 }
 
 const {
@@ -60,6 +61,7 @@ const {
   sortOrder = 'asc',
   enableDragTransfer = false,
   rootPath,
+  isPathOperationDisabled,
 } = defineProps<Props>()
 const inputRef: Readonly<ShallowRef<unknown>> = useTemplateRef('inputRef')
 const creatingInputRef: Readonly<ShallowRef<unknown>> = useTemplateRef('creatingInputRef')
@@ -132,6 +134,7 @@ const {
   sortBy: () => sortBy,
   sortOrder: () => sortOrder,
   treeName: () => treeName,
+  isPathOperationDisabled: path => isPathOperationDisabled?.(path) ?? false,
 })
 const fileTreeViewportRef = computed(() => getViewportElement())
 
@@ -628,6 +631,15 @@ function getFileTreeDragSourceProps(item: FlattenedItem<T>) {
     : {} as FileTreeDragSourceHandlers
 }
 
+function isOperationDisabledForPath(path: string): boolean {
+  return isPathOperationDisabled?.(path) ?? false
+}
+
+function isOperationDisabledForSelection(path: string): boolean {
+  return isOperationDisabledForPath(path)
+    || selectedFileTreePaths.some(selectedPath => isOperationDisabledForPath(selectedPath))
+}
+
 function getFileTreeItemBind(item: FlattenedItem<T>) {
   const dragSourceProps = getFileTreeDragSourceProps(item)
 
@@ -718,7 +730,7 @@ function handleShortcutRename() {
   }
 
   const fileItem = toShortcutTargetFileItem()
-  if (!fileItem) {
+  if (!fileItem || isOperationDisabledForSelection(fileItem.path)) {
     return
   }
 
@@ -731,7 +743,7 @@ function handleShortcutDelete() {
   }
 
   const fileItem = toShortcutTargetFileItem()
-  if (!fileItem) {
+  if (!fileItem || isOperationDisabledForSelection(fileItem.path)) {
     return
   }
 
@@ -844,9 +856,11 @@ tryOnUnmounted(() => {
             <FileTreeContextMenu
               v-else
               :item="renderItem.fileItem"
+              :selected-items="getFileTreeSelectedItems(renderItem.fileItem)"
               :on-rename="handleContextMenuRename"
               :on-create-file="handleContextMenuCreateFile"
               :on-create-folder="handleContextMenuCreateFolder"
+              :operation-disabled="isOperationDisabledForSelection(renderItem.fileItem.path)"
               :disabled="!enableContextMenu"
             >
               <TreeItem
@@ -920,7 +934,7 @@ tryOnUnmounted(() => {
                           </div>
                           <span
                             v-if="resolveItemBadgeText(renderItem.item.value)"
-                            class="text-[10px] text-muted-foreground leading-none px-1.5 py-0.5 rounded bg-muted shrink-0"
+                            class="text-[10px] text-muted-foreground leading-none px-1.5 py-0.75 rounded bg-muted shrink-0"
                           >
                             {{ resolveItemBadgeText(renderItem.item.value) }}
                           </span>

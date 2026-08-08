@@ -737,6 +737,7 @@ edit:
       moveConfirm: 仍然移動
     errors:
       blockedPlan: 路徑操作被阻擋
+      protectedEntryPoint: 場景入口檔案 start.txt 不能移動、重新命名或刪除。
       duplicateTarget: 目標路徑已存在或與來源路徑相同。
       inFlightConflict: 此路徑上已有進行中的操作，請稍後再試。
       crossRootMove: 目前僅支援同一資源根目錄內的引用重寫。
@@ -796,6 +797,7 @@ edit:
     pastePartialFailed: 部分貼上失敗 ({failed}/{total})
     viewHistory: 檢視歷史版本
     dragPreviewCount: "{count} 個檔案"
+    entryPointBadge: 入口
   previewPanel:
     copyUrl: 複製網址
     refreshPreview: 重新整理預覽
@@ -807,6 +809,8 @@ edit:
     fitToView: 適應視圖
     zoomLevel: 縮放比例
     resolution: 預覽解析度
+    missingEntryTitle: 缺少入口檔案
+    missingEntryDescription: 場景根目錄中找不到 start.txt，無法啟動預覽。
     transformOverlay:
       move: 移動目標
       rotate: 旋轉目標

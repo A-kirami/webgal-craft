@@ -14,6 +14,7 @@ export interface PathOperationBlockReasonMessage {
     | 'unsupported-reference'
     | 'duplicate-target'
     | 'in-flight-conflict'
+    | 'protected-entry-point'
   i18nMessage: I18nLike
 }
 

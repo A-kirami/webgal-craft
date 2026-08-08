@@ -285,6 +285,21 @@ describe('gameFs', () => {
     expect(touchCurrentGameLastModifiedMock).not.toHaveBeenCalled()
   })
 
+  it('底层删除边界也拒绝场景入口文件的大小写变体', async () => {
+    await expect(gameFs.deleteFile(AbsPath.from('/project/game/scene/Start.TXT'), true))
+      .rejects.toMatchObject({ code: 'PATH_OPERATION' })
+    await expect(gameFs.renameFile(AbsPath.from('/project/game/scene/start.txt'), 'intro.txt'))
+      .rejects.toMatchObject({ code: 'PATH_OPERATION' })
+    await expect(gameFs.moveFile(
+      AbsPath.from('/project/game/scene/START.TXT'),
+      AbsPath.from('/project/game/scene/chapter'),
+    )).rejects.toMatchObject({ code: 'PATH_OPERATION' })
+
+    expect(deleteFileMock).not.toHaveBeenCalled()
+    expect(fsRenameFileMock).not.toHaveBeenCalled()
+    expect(fsMoveFileMock).not.toHaveBeenCalled()
+  })
+
   it('VFS 项目中的普通路径 rename 或 move 仍走 native adapter', async () => {
     useFileStoreMock.mockReturnValue({
       copyEntry: copyEntryMock,

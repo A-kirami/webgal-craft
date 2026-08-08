@@ -5,6 +5,7 @@ import { gameCmds } from '~/commands/game'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { decodeTextFile, encodeTextFile } from '~/domain/document/file-codec'
 import { AbsPath, RelPath } from '~/domain/path'
+import { isSceneEntryPath } from '~/domain/scene/entry-point'
 import { parseChooseContent, stringifyChooseContent } from '~/domain/script/content'
 import { parseSceneOrEmpty } from '~/domain/script/parser'
 import { serializeSentence } from '~/domain/script/serialize'
@@ -12,7 +13,7 @@ import { backupManager } from '~/services/backup-manager'
 import { gameFs } from '~/services/game-fs'
 import { gameManager } from '~/services/game-manager'
 import { pathOperationRegistry } from '~/services/path-operation-registry'
-import { gameAssetDir, gameRootDir } from '~/services/platform/app-paths'
+import { gameAssetDir, gameRootDir, gameSceneDir } from '~/services/platform/app-paths'
 import { useResourceIndex } from '~/services/resource-index/service'
 import { useEditorStore } from '~/stores/editor'
 import { useFileStore } from '~/stores/file'
@@ -63,6 +64,7 @@ export interface PathOperationBlockReason {
     | 'unsupported-reference'
     | 'duplicate-target'
     | 'in-flight-conflict'
+    | 'protected-entry-point'
   i18nMessage: PathOperationBlockReasonMessage['i18nMessage']
   filePath?: AbsPath
 }
@@ -1127,6 +1129,14 @@ export function createPathOperationService(deps: PathOperationDeps) {
     const targetPath = await resolveTargetPath(deps, input)
     const blockedReasons: PathOperationBlockReason[] = []
     const gamePath = deps.getGamePath()
+
+    if (gamePath && isSceneEntryPath(input.sourcePath, gameSceneDir(gamePath))) {
+      blockedReasons.push({
+        kind: 'protected-entry-point',
+        i18nMessage: t => t('edit.pathOperation.errors.protectedEntryPoint'),
+        filePath: input.sourcePath,
+      })
+    }
 
     if (
       AbsPath.equals(input.sourcePath, targetPath)

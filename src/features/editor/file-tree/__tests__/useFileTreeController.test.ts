@@ -158,6 +158,7 @@ function createFixture(options: {
     stem: string
   }
   openCreatedFileInTab?: boolean
+  isPathOperationDisabled?: (path: string) => boolean
   savedExpanded?: string[]
   savedScrollPosition?: {
     left: number
@@ -217,6 +218,7 @@ function createFixture(options: {
     sortBy: () => 'name',
     sortOrder: () => 'asc',
     treeName: () => 'scene',
+    isPathOperationDisabled: options.isPathOperationDisabled,
   }))
 
   if (!controller) {
@@ -478,6 +480,27 @@ describe('useFileTreeController', () => {
       value: '',
     })
 
+    scope.stop()
+  })
+
+  it('受保护路径不会进入重命名流程或调用路径操作服务', async () => {
+    const { controller, items, scope } = createFixture({
+      isPathOperationDisabled: path => path.toLowerCase() === '/project/scene/start.txt',
+    })
+    const startItem = createFlattenedItem({
+      name: 'Start.TXT',
+      path: '/project/scene/Start.TXT',
+    }, {
+      hasChildren: false,
+      level: 1,
+    })
+
+    controller.itemMap.set(startItem.value.path, startItem)
+    controller.handleContextMenuRename({ path: startItem.value.path })
+
+    expect(controller.renameState.value.itemKey).toBeUndefined()
+    expect(pathOperation.perform).not.toHaveBeenCalled()
+    expect(items).toHaveLength(1)
     scope.stop()
   })
 
