@@ -895,6 +895,11 @@ edit:
       groupNamePlaceholder: 输入语句组名称
       saveGroup: 保存语句组
       emptyGroup: 先从左侧选择命令，开始构建语句组。
+      editorMode:
+        label: 编辑模式
+        visual: 可视化
+        text: 文本
+        lossWarning: 当前文本包含无法无损转换为可视化语句的内容，请修正后再切换或保存。
       moveUp: 上移
       moveDown: 下移
       groupCount: 共 {count} 条语句
