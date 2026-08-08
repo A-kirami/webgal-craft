@@ -262,8 +262,14 @@ describe('EditorTabs', () => {
     const assetsTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/assets/scene.txt"]')
     const otherTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/other.txt"]')
 
-    expect(scenesTab?.querySelector('[data-editor-tab-path-hint]')).toHaveTextContent('(scenes)')
-    expect(assetsTab?.querySelector('[data-editor-tab-path-hint]')).toHaveTextContent('(assets)')
+    const scenesPathHint = scenesTab?.querySelector('[data-editor-tab-path-hint]')
+    const assetsPathHint = assetsTab?.querySelector('[data-editor-tab-path-hint]')
+
+    expect(scenesTab?.querySelector('.text-13px')).toBeTruthy()
+    expect(scenesPathHint).toHaveTextContent(String.raw`...\scenes`)
+    expect(scenesPathHint).toHaveClass('text-[11.7px]')
+    expect(assetsPathHint).toHaveTextContent(String.raw`...\assets`)
+    expect(assetsPathHint).toHaveClass('text-[11.7px]')
     expect(otherTab?.querySelector('[data-editor-tab-path-hint]')).toBeNull()
   })
 
