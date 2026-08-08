@@ -1,7 +1,7 @@
 import { computed, markRaw, ref, toValue, watch } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { buildSingleStatement } from '~/domain/script/sentence'
+import { buildSingleStatement, splitStatements } from '~/domain/script/sentence'
 import { commandEntries, commandPanelCategories, getFactoryDefaultCommandText } from '~/features/editor/command-registry/index'
 import { buildPreviousSpeakers } from '~/utils/speaker'
 
@@ -28,26 +28,39 @@ interface ModalStoreAdapter {
 
 interface UseStatementGroupDraftOptions {
   group: MaybeRefOrGetter<StatementGroup | undefined>
+  initialEditorMode: MaybeRefOrGetter<StatementGroupEditorMode>
   open: Ref<boolean>
   t: (key: string, params?: Record<string, string>) => string
   commandPanelStore: CommandPanelStoreAdapter
   modalStore: ModalStoreAdapter
 }
 
+export type StatementGroupEditorMode = 'text' | 'visual'
+
 export function useStatementGroupDraft(options: UseStatementGroupDraftOptions) {
   const draftName = ref('')
   const draftEntries = ref<StatementEntry[]>([])
+  const draftText = ref('')
+  const editorMode = ref<StatementGroupEditorMode>('visual')
   const collapsedEntryIds = ref<Partial<Record<number, true>>>({})
   const initialName = ref('')
   const initialRawTexts = ref<string[]>([])
+  const initialText = ref('')
 
   const group = computed(() => toValue(options.group))
   const isEditing = computed(() => !!group.value)
-  const currentRawTexts = computed(() => draftEntries.value.map(entry => entry.rawText))
+  const textRawTexts = computed(() => splitStatements(draftText.value))
+  const textModeHasLoss = computed(() => textRawTexts.value.join('\n') !== draftText.value)
+  const currentRawTexts = computed(() => editorMode.value === 'text'
+    ? textRawTexts.value
+    : draftEntries.value.map(entry => entry.rawText))
   const trimmedDraftName = computed(() => draftName.value.trim())
   const isDirty = computed(() => {
     if (trimmedDraftName.value !== initialName.value) {
       return true
+    }
+    if (editorMode.value === 'text') {
+      return draftText.value !== initialText.value
     }
     if (currentRawTexts.value.length !== initialRawTexts.value.length) {
       return true
@@ -59,7 +72,9 @@ export function useStatementGroupDraft(options: UseStatementGroupDraftOptions) {
     entries: commandEntries.filter(entry => entry.category === category),
   }))
   const previousSpeakers = computed(() => buildPreviousSpeakers(draftEntries.value))
-  const canSave = computed(() => trimmedDraftName.value.length > 0 && draftEntries.value.length > 0)
+  const canSave = computed(() => trimmedDraftName.value.length > 0
+    && currentRawTexts.value.length > 0
+    && !(editorMode.value === 'text' && textModeHasLoss.value))
 
   function closeDialog(): void {
     options.open.value = false
@@ -103,12 +118,16 @@ export function useStatementGroupDraft(options: UseStatementGroupDraftOptions) {
 
   function resetDraft(): void {
     draftName.value = group.value?.name ?? ''
-    draftEntries.value = (group.value?.rawTexts ?? [])
+    const rawTexts = group.value?.rawTexts ?? []
+    draftEntries.value = rawTexts
       .map(rawText => buildSingleStatement(rawText))
       .filter((entry): entry is StatementEntry => entry !== undefined)
+    draftText.value = rawTexts.join('\n')
+    editorMode.value = toValue(options.initialEditorMode)
     collapsedEntryIds.value = {}
     initialName.value = trimmedDraftName.value
-    initialRawTexts.value = draftEntries.value.map(entry => entry.rawText)
+    initialRawTexts.value = [...rawTexts]
+    initialText.value = draftText.value
   }
 
   function isEntryCollapsed(entryId: number): boolean {
@@ -128,7 +147,14 @@ export function useStatementGroupDraft(options: UseStatementGroupDraftOptions) {
   }
 
   function handleAppendCommand(type: commandType): void {
-    const nextEntry = buildSingleStatement(options.commandPanelStore.getInsertText(type))
+    const rawText = options.commandPanelStore.getInsertText(type)
+    if (editorMode.value === 'text') {
+      const separator = draftText.value === '' || draftText.value.endsWith('\n') ? '' : '\n'
+      draftText.value = `${draftText.value}${separator}${rawText}`
+      return
+    }
+
+    const nextEntry = buildSingleStatement(rawText)
     if (!nextEntry) {
       return
     }
@@ -237,6 +263,28 @@ export function useStatementGroupDraft(options: UseStatementGroupDraftOptions) {
     closeDialog()
   }
 
+  function switchEditorMode(nextMode: StatementGroupEditorMode): void {
+    if (nextMode === editorMode.value) {
+      return
+    }
+
+    if (nextMode === 'text') {
+      draftText.value = draftEntries.value.map(entry => entry.rawText).join('\n')
+      editorMode.value = nextMode
+      return
+    }
+
+    if (textModeHasLoss.value) {
+      return
+    }
+
+    draftEntries.value = textRawTexts.value
+      .map(rawText => buildSingleStatement(rawText))
+      .filter((entry): entry is StatementEntry => entry !== undefined)
+    collapsedEntryIds.value = {}
+    editorMode.value = nextMode
+  }
+
   function requestClose(): void {
     if (!isDirty.value) {
       closeDialog()
@@ -269,10 +317,13 @@ export function useStatementGroupDraft(options: UseStatementGroupDraftOptions) {
   return {
     draftName,
     draftEntries,
+    draftText,
+    editorMode,
     isEditing,
     previousSpeakers,
     groupedCommandEntries,
     canSave,
+    textModeHasLoss,
     isDirty,
     isEntryCollapsed,
     isEntryAtFactory,
@@ -285,6 +336,7 @@ export function useStatementGroupDraft(options: UseStatementGroupDraftOptions) {
     deleteEntry,
     resetEntry,
     handleSaveGroup,
+    switchEditorMode,
     requestClose,
   }
 }

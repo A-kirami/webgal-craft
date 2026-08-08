@@ -10,11 +10,13 @@ import {
 
 const {
   useCommandPanelStoreMock,
+  useEditorStoreMock,
   useEffectEditorDialogMock,
   useModalStoreMock,
   useStatementAnimationDialogMock,
 } = vi.hoisted(() => ({
   useCommandPanelStoreMock: vi.fn(),
+  useEditorStoreMock: vi.fn(),
   useEffectEditorDialogMock: vi.fn(),
   useModalStoreMock: vi.fn(),
   useStatementAnimationDialogMock: vi.fn(),
@@ -60,10 +62,16 @@ vi.mock('~/domain/script/sentence', () => ({
     parseError: false,
     rawText,
   }),
+  splitStatements: (text: string) => text === '' ? [] : text.split('\n'),
 }))
 
 vi.mock('~/stores/command-panel', () => ({
   useCommandPanelStore: useCommandPanelStoreMock,
+}))
+
+vi.mock('~/stores/editor', () => ({
+  isEditableEditor: (state: { projection?: string }) => state.projection === 'text' || state.projection === 'visual',
+  useEditorStore: useEditorStoreMock,
 }))
 
 vi.mock('~/stores/modal', () => ({
@@ -82,6 +90,13 @@ vi.mock('/src/components/editor/VisualEditorStatementCard.vue', () => ({
     'previousSpeaker',
     'readonly',
     'selected',
+  ]),
+}))
+
+vi.mock('/src/components/modals/StatementGroupTextEditor.vue', () => ({
+  default: createModuleTextStub('StatementGroupTextEditor', 'Statement Group Text Editor', [
+    'ariaLabel',
+    'modelValue',
   ]),
 }))
 
@@ -144,12 +159,16 @@ describe('StatementGroupModal', () => {
 
   beforeEach(() => {
     useCommandPanelStoreMock.mockReset()
+    useEditorStoreMock.mockReset()
     useEffectEditorDialogMock.mockReset()
     useModalStoreMock.mockReset()
     useStatementAnimationDialogMock.mockReset()
 
     useCommandPanelStoreMock.mockReturnValue({
       saveGroup: vi.fn(),
+    })
+    useEditorStoreMock.mockReturnValue({
+      currentState: { projection: 'visual' },
     })
     useEffectEditorDialogMock.mockReturnValue(effectDialogState)
     useModalStoreMock.mockReturnValue({
@@ -180,5 +199,57 @@ describe('StatementGroupModal', () => {
     await expect.element(page.getByText('Visual Editor Statement Card')).toBeInTheDocument()
     await expect.element(page.getByText('Statement Animation Sub Dialog')).toBeInTheDocument()
     expect(useStatementAnimationDialogMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('在侧栏顶部按文本、可视化顺序显示编辑模式标签', async () => {
+    renderInBrowser(StatementGroupModal, {
+      browser: {
+        i18nMode: 'localized',
+      },
+      props: {
+        group: {
+          createdAt: Date.parse('2026-03-23T00:00:00Z'),
+          id: 'group-1',
+          name: 'Group 1',
+          rawTexts: ['setTempAnimation:[{"duration":0}];'],
+        },
+        open: true,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const tabs = [...document.querySelectorAll('[role="tab"]')]
+    expect(tabs.map(tab => tab.textContent?.trim())).toEqual(['文本', '可视化'])
+
+    await page.getByRole('tab', { name: '文本' }).click()
+    await expect.element(page.getByText('Statement Group Text Editor')).toBeInTheDocument()
+  })
+
+  it('主编辑器处于文本模式时首次打开文本视图', async () => {
+    useEditorStoreMock.mockReturnValue({
+      currentState: { projection: 'text' },
+    })
+
+    renderInBrowser(StatementGroupModal, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        group: {
+          createdAt: Date.parse('2026-03-23T00:00:00Z'),
+          id: 'group-1',
+          name: 'Group 1',
+          rawTexts: ['setTempAnimation:[{"duration":0}];'],
+        },
+        open: true,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('Statement Group Text Editor')).toBeInTheDocument()
   })
 })

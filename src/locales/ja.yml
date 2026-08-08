@@ -895,6 +895,11 @@ edit:
       groupNamePlaceholder: グループ名を入力
       saveGroup: ステートメントグループを保存
       emptyGroup: 左側からコマンドを追加してグループを作成してください。
+      editorMode:
+        label: 編集モード
+        visual: ビジュアル
+        text: テキスト
+        lossWarning: このテキストは内容を失わずにビジュアルステートメントへ変換できません。切り替えまたは保存する前に修正してください。
       moveUp: 上へ移動
       moveDown: 下へ移動
       groupCount: "{count} 件のステートメント"

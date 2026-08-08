@@ -5,6 +5,7 @@ import { resolveI18n } from '~/features/editor/command-registry/schema'
 import { useEffectEditorDialog } from '~/features/editor/effect-editor/useEffectEditorDialog'
 import { useStatementGroupDraft } from '~/features/modals/statement-group/useStatementGroupDraft'
 import { StatementGroup, useCommandPanelStore } from '~/stores/command-panel'
+import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { useModalStore } from '~/stores/modal'
 
 interface Props {
@@ -17,13 +18,21 @@ const open = defineModel<boolean>('open', { default: false })
 
 const { t } = useI18n()
 const commandPanelStore = useCommandPanelStore()
+const editorStore = useEditorStore()
 const modalStore = useModalStore()
 const effectDialog = useEffectEditorDialog()
 const animationDialog = useStatementAnimationDialog()
+const initialEditorMode = computed(() => {
+  const currentState = editorStore.currentState
+  return currentState && isEditableEditor(currentState) ? currentState.projection : 'visual'
+})
+
 const {
   canSave,
   draftEntries,
   draftName,
+  draftText,
+  editorMode,
   groupedCommandEntries,
   handleAppendCommand,
   handleCollapsedUpdate,
@@ -38,38 +47,72 @@ const {
   previousSpeakers,
   requestClose,
   resetEntry,
+  switchEditorMode,
+  textModeHasLoss,
   deleteEntry,
 } = useStatementGroupDraft({
   commandPanelStore,
   group: computed(() => props.group),
+  initialEditorMode,
   modalStore,
   open,
   t,
 })
+
+function handleEditorModeChange(value: unknown): void {
+  const nextMode = Array.isArray(value) ? value[0] : value
+  if (nextMode === 'text' || nextMode === 'visual') {
+    switchEditorMode(nextMode)
+  }
+}
 </script>
 
 <template>
   <Dialog :open="open" @update:open="handleDialogOpenChange">
-    <DialogScrollContent class="max-w-4xl" @open-auto-focus="handleDialogOpenAutoFocus">
-      <div class="flex flex-col gap-4 h-[70vh] min-h-120">
-        <DialogHeader>
-          <DialogTitle class="flex gap-2 items-center">
-            <span v-if="isEditing">{{ $t('edit.visualEditor.commandPanel.editGroup') }}</span>
-            <span v-else>{{ $t('edit.visualEditor.commandPanel.createGroup') }}</span>
-            <span class="text-muted-foreground">—</span>
-            <Input
-              v-model="draftName"
-              :placeholder="$t('edit.visualEditor.commandPanel.groupNamePlaceholder')"
-              class="text-base font-normal h-7 max-w-60 shadow-none"
-            />
-          </DialogTitle>
-          <DialogDescription>
-            {{ $t('edit.visualEditor.commandPanel.groupDescription') }}
-          </DialogDescription>
-        </DialogHeader>
+    <DialogScrollContent
+      class="grid-rows-[auto_minmax(0,1fr)_auto] h-[70vh] max-h-[85vh] max-w-4xl min-h-120 overflow-hidden"
+      @open-auto-focus="handleDialogOpenAutoFocus"
+    >
+      <DialogHeader class="shrink-0">
+        <DialogTitle class="flex gap-2 items-center">
+          <span v-if="isEditing">{{ $t('edit.visualEditor.commandPanel.editGroup') }}</span>
+          <span v-else>{{ $t('edit.visualEditor.commandPanel.createGroup') }}</span>
+          <span class="text-muted-foreground">—</span>
+          <Input
+            v-model="draftName"
+            :placeholder="$t('edit.visualEditor.commandPanel.groupNamePlaceholder')"
+            class="text-sm font-normal h-7 max-w-60 shadow-none placeholder:text-sm"
+          />
+        </DialogTitle>
+        <DialogDescription>
+          {{ $t('edit.visualEditor.commandPanel.groupDescription') }}
+        </DialogDescription>
+        <div
+          v-if="editorMode === 'text' && textModeHasLoss"
+          role="alert"
+          class="text-xs text-destructive px-3 py-2 border border-destructive/30 rounded-md bg-destructive/5"
+        >
+          {{ $t('edit.visualEditor.commandPanel.editorMode.lossWarning') }}
+        </div>
+      </DialogHeader>
 
-        <div class="flex-1 gap-0 grid min-h-0 md:grid-cols-[180px_minmax(0,1fr)]">
-          <ScrollArea class="border-r">
+      <Tabs
+        :model-value="editorMode"
+        :aria-label="$t('edit.visualEditor.commandPanel.editorMode.label')"
+        class="gap-0 grid h-full min-h-0 overflow-hidden md:grid-cols-[180px_minmax(0,1fr)]"
+        @update:model-value="handleEditorModeChange"
+      >
+        <div class="border-r flex flex-col min-h-0">
+          <TabsList class="mb-2 mr-1 p-0.75 shrink-0 h-8">
+            <TabsTrigger value="text" class="text-[13px] flex-1 h-full data-[state=active]:shadow-none">
+              {{ $t('edit.visualEditor.commandPanel.editorMode.text') }}
+            </TabsTrigger>
+            <TabsTrigger value="visual" class="text-[13px] flex-1 h-full data-[state=active]:shadow-none">
+              {{ $t('edit.visualEditor.commandPanel.editorMode.visual') }}
+            </TabsTrigger>
+          </TabsList>
+
+          <ScrollArea class="flex-1 min-h-0">
             <div class="pr-2 flex flex-col gap-4">
               <section v-for="commandGroup in groupedCommandEntries" :key="commandGroup.category" class="flex flex-col gap-2">
                 <h3 class="text-13px text-muted-foreground tracking-wide font-medium uppercase">
@@ -82,14 +125,23 @@ const {
                   class="px-3 py-2 opacity-80 h-8 justify-start hover:opacity-100"
                   @click="handleAppendCommand(entry.type)"
                 >
-                  <div class="mr-2 shrink-0 size-4" :class="entry.icon" />
-                  <span class="text-sm truncate">{{ resolveI18n(entry.label, t) }}</span>
+                  <div class="shrink-0 size-3.5" :class="entry.icon" />
+                  <span class="text-[13px] truncate">{{ resolveI18n(entry.label, t) }}</span>
                 </Button>
               </section>
             </div>
           </ScrollArea>
+        </div>
 
-          <ScrollArea class="flex-scroll-area min-h-0">
+        <TabsContent value="text" class="mt-0 px-2 h-full min-h-0 min-w-0 overflow-hidden">
+          <StatementGroupTextEditor
+            v-model="draftText"
+            :aria-label="$t('edit.visualEditor.commandPanel.editorMode.text')"
+          />
+        </TabsContent>
+
+        <TabsContent value="visual" class="mt-0 h-full min-h-0 min-w-0 overflow-hidden">
+          <ScrollArea class="flex-scroll-area h-full min-h-0">
             <div v-if="draftEntries.length > 0" class="px-2 flex flex-col gap-2">
               <VisualEditorStatementCard
                 v-for="(entry, index) in draftEntries"
@@ -148,17 +200,17 @@ const {
               {{ $t('edit.visualEditor.commandPanel.emptyGroup') }}
             </div>
           </ScrollArea>
-        </div>
+        </TabsContent>
+      </Tabs>
 
-        <DialogFooter>
-          <Button variant="outline" class="h-8" @click="requestClose">
-            {{ $t('common.cancel') }}
-          </Button>
-          <Button class="h-8" :disabled="!canSave" @click="handleSaveGroup">
-            {{ $t('edit.visualEditor.commandPanel.saveGroup') }}
-          </Button>
-        </DialogFooter>
-      </div>
+      <DialogFooter class="shrink-0">
+        <Button variant="outline" class="h-8" @click="requestClose">
+          {{ $t('common.cancel') }}
+        </Button>
+        <Button class="h-8" :disabled="!canSave" @click="handleSaveGroup">
+          {{ $t('edit.visualEditor.commandPanel.saveGroup') }}
+        </Button>
+      </DialogFooter>
     </DialogScrollContent>
 
     <!-- 效果编辑器二级 Dialog -->

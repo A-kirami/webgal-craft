@@ -895,6 +895,11 @@ edit:
       groupNamePlaceholder: Enter group name
       saveGroup: Save Statement Group
       emptyGroup: Add commands from the left to start building this group.
+      editorMode:
+        label: Editor mode
+        visual: Visual
+        text: Text
+        lossWarning: This text contains content that cannot be converted to visual statements without loss. Fix it before switching or saving.
       moveUp: Move up
       moveDown: Move down
       groupCount: "{count} statements"
