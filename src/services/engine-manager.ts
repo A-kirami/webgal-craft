@@ -737,7 +737,6 @@ async function installOfficialEngine(version: string): Promise<OfficialEngineIns
         copiedFiles: progress.extractedFiles ?? 0,
         currentEntry: progress.entry,
         totalBytes: progress.totalBytes,
-        totalFiles: progress.extractedFiles,
       })
     }, generalSettingsStore.officialEngineDownloadProxy)
 
