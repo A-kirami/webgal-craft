@@ -32,10 +32,13 @@ export interface SelectFieldDef<
   placeholder?: SettingsI18nLike
 }
 
+export type InputFieldLayout = 'compact' | 'stacked'
+
 export interface InputFieldDef extends BaseSettingsFieldDef {
   type: 'input'
   default: string
   className?: string
+  layout?: InputFieldLayout
   placeholder?: SettingsI18nLike
 }
 

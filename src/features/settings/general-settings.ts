@@ -31,6 +31,7 @@ export const generalSettingsDefinition = defineSettingsSchema({
       officialEngineDownloadProxy: {
         type: 'input',
         default: '',
+        layout: 'stacked',
         label: t => t('settings.network.officialEngineDownloadProxy.label'),
         description: t => t('settings.network.officialEngineDownloadProxy.description'),
         placeholder: t => t('settings.network.officialEngineDownloadProxy.placeholder'),
