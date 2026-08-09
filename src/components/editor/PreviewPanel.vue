@@ -55,6 +55,7 @@ const transformOverlayDisplayTransform = $computed(() => transformOverlayBridge?
 const previewUrl = $computed(() => previewSessionStore.currentGameServeUrl ?? '')
 const hasPreviewUrl = $computed(() => !!previewSessionStore.currentGameServeUrl)
 const hasValidEntryPoint = $computed(() => sceneEntryStatus.status.value === 'valid')
+const hasMissingEntryPoint = $computed(() => sceneEntryStatus.status.value === 'missing')
 const canPreview = $computed(() => hasPreviewUrl && hasValidEntryPoint)
 
 const { t } = useI18n()
@@ -486,12 +487,12 @@ watch(
 watch(
   () => sceneEntryStatus.status.value,
   (status, previousStatus) => {
-    if (status === 'missing') {
+    if (status !== 'valid') {
       updateEmbeddedPreviewSlot(undefined)
       return
     }
 
-    if (status === 'valid' && previousStatus === 'missing' && hasPreviewUrl) {
+    if (previousStatus !== 'valid' && hasPreviewUrl) {
       previewSessionStore.refresh()
     }
   },
@@ -630,7 +631,7 @@ onBeforeUnmount(() => {
           @preview:display-transform="previewTransformOverlayDisplayTransform"
         />
         <div
-          v-if="!hasValidEntryPoint"
+          v-if="hasMissingEntryPoint"
           data-testid="preview-missing-entry-overlay"
           role="alert"
           class="p-6 text-center bg-muted flex flex-col gap-1 items-center inset-0 justify-center absolute z-10"

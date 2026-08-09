@@ -156,7 +156,7 @@ let previewSessionStoreState: {
 }
 
 let sceneEntryStatusState: {
-  status: ReturnType<typeof ref<'valid' | 'missing'>>
+  status: ReturnType<typeof ref<'checking' | 'valid' | 'missing'>>
 }
 
 const transformOverlayReferenceBox: ReferenceBox = {
@@ -437,6 +437,23 @@ describe('PreviewPanel', () => {
 
     await expect.element(page.getByTitle('preview-title::Demo Game')).toBeVisible()
     expect(previewSessionStoreState.reloadVersion).toBeGreaterThan(0)
+  })
+
+  it('入口校验期间不显示缺失遮罩，校验通过后挂载预览', async () => {
+    sceneEntryStatusState.status.value = 'checking'
+
+    renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    expect(document.querySelector('[data-testid="preview-missing-entry-overlay"]')).toBeNull()
+    expect(document.querySelector('iframe')).toBeNull()
+
+    sceneEntryStatusState.status.value = 'valid'
+    await expect.element(page.getByTitle('preview-title::Demo Game')).toBeVisible()
   })
 
   it('收到同源 iframe 转发的空格按键消息时会让 iframe 上的拖拽交给外层视口平移', async () => {
