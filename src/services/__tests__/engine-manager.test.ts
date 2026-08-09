@@ -323,7 +323,11 @@ describe('engineManager', () => {
     enginesUpdateMock.mockResolvedValue(undefined)
     deleteFileMock.mockResolvedValue(undefined)
     copyDirectoryWithProgressMock.mockRejectedValue(new Error('disk full'))
-    existsMock.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+    existsMock
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true)
 
     await expect(engineManager.importEngine(AbsPath.from('/downloads/webgal'))).rejects.toThrow('disk full')
 
@@ -687,6 +691,88 @@ describe('engineManager', () => {
     })
   })
 
+  it('引擎 manifest 显式声明支持 Live2D 时跳过运行时文件检查', async () => {
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.5.0',
+        engineType: 'official',
+        webgalVersion: '4.5.0',
+        live2dSupport: true,
+      },
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    existsMock.mockImplementation(async (path: string) => {
+      if (path === '/source' || path === '/source/icons/favicon.ico') {
+        return true
+      }
+      throw new Error(`unexpected Live2D file check: ${path}`)
+    })
+
+    await expect(engineManager.inspectEngine(AbsPath.from('/source'))).resolves.toMatchObject({
+      availability: 'available',
+      payload: { metadata: { live2dSupport: true } },
+    })
+  })
+
+  it.each([false, undefined] as const)('manifest live2dSupport 为 %s 时根据两个运行时文件判断可用性', async (declaredSupport) => {
+    const manifest = {
+      schemaVersion: '1.0.0',
+      id: 'open-webgal.webgal',
+      name: 'WebGAL',
+      version: '4.5.0',
+      engineType: 'official',
+      webgalVersion: '4.5.0',
+      ...(declaredSupport === undefined ? {} : { live2dSupport: declaredSupport }),
+    }
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest,
+    })
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    existsMock.mockImplementation(async (path: string) => path !== '/source/lib/live2dcubismcore.min.js')
+
+    await expect(engineManager.inspectEngine(AbsPath.from('/source'))).resolves.toMatchObject({
+      availability: 'available',
+      payload: { metadata: { live2dSupport: false } },
+    })
+    expect(existsMock).toHaveBeenCalledWith('/source/lib/live2d.min.js')
+    expect(existsMock).toHaveBeenCalledWith('/source/lib/live2dcubismcore.min.js')
+  })
+
+  it('批量重检会同步用户直接修改后的 Live2D 文件状态', async () => {
+    const engine = createTestEngine({
+      id: 'engine-1',
+      path: AbsPath.from('/engines/WebGAL/4.5.0'),
+      metadata: { live2dSupport: true },
+      status: 'created',
+    })
+    enginesToArrayMock.mockResolvedValue([engine])
+    existsMock.mockImplementation(async (path: string) => path === '/engines/WebGAL/4.5.0')
+    validateDirectoryStructureMock.mockResolvedValue(true)
+    readEngineManifestMock.mockResolvedValue({
+      status: 'ok',
+      manifest: {
+        schemaVersion: '1.0.0',
+        id: 'open-webgal.webgal',
+        name: 'WebGAL',
+        version: '4.5.0',
+        engineType: 'official',
+        webgalVersion: '4.5.0',
+        live2dSupport: false,
+      },
+    })
+
+    await engineManager.validateAllEngines()
+
+    expect(enginesUpdateMock).toHaveBeenCalledWith('engine-1', expect.objectContaining({
+      metadata: { ...engine.metadata, live2dSupport: false },
+    }))
+  })
+
   it('inspectEngine 检查 manifest 中自定义 icon 路径', async () => {
     readEngineManifestMock.mockResolvedValue({
       status: 'ok',
@@ -748,6 +834,7 @@ describe('engineManager', () => {
       createTestEngine({
         id: 'engine-1',
         path: AbsPath.from('/engines/WebGAL/4.5.0'),
+        metadata: { live2dSupport: true },
         previewAssets: {
           icon: { path: '/engines/WebGAL/4.5.0/icons/favicon.ico' },
         },
@@ -778,6 +865,7 @@ describe('engineManager', () => {
       createTestEngine({
         id: 'engine-1',
         path: AbsPath.from('/engines/WebGAL/4.6.2'),
+        metadata: { live2dSupport: true },
         previewAssets: {
           icon: { path: '/engines/.import-staging/session/icons/favicon.ico' },
         },

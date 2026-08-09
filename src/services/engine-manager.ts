@@ -60,6 +60,11 @@ interface DeleteEngineCheckResult {
   reason?: 'ENGINE_HAS_ASSOCIATED_GAMES'
 }
 
+const LIVE2D_RUNTIME_FILES = [
+  RelPath.from('lib/live2d.min.js'),
+  RelPath.from('lib/live2dcubismcore.min.js'),
+]
+
 export type EngineEditorCompatibilityIssue =
   | 'unavailable'
   | 'versionInvalid'
@@ -78,7 +83,23 @@ function sanitizeEnginePathSegment(value: string, fieldName: '引擎名称' | '�
   return sanitized
 }
 
-function buildEngineMetadata(manifest: EngineManifest): EngineMetadata {
+async function resolveLive2dSupport(
+  enginePath: AbsPath,
+  declaredSupport: boolean | undefined,
+): Promise<boolean> {
+  if (declaredSupport === true) {
+    return true
+  }
+
+  const runtimeFilesExist = await Promise.all(
+    LIVE2D_RUNTIME_FILES.map(file => exists(AbsPath.join(enginePath, file))),
+  )
+  return runtimeFilesExist.every(Boolean)
+}
+
+async function buildEngineMetadata(enginePath: AbsPath, manifest: EngineManifest): Promise<EngineMetadata> {
+  const live2dSupport = await resolveLive2dSupport(enginePath, manifest.live2dSupport)
+
   return {
     type: manifest.engineType as EngineMetadata['type'],
     webgalVersion: manifest.webgalVersion,
@@ -88,7 +109,7 @@ function buildEngineMetadata(manifest: EngineManifest): EngineMetadata {
     license: manifest.license,
     icon: manifest.icon ?? 'icons/favicon.ico',
     urls: manifest.urls,
-    live2dSupport: manifest.live2dSupport,
+    live2dSupport,
     spineSupport: manifest.spineSupport,
   }
 }
@@ -109,7 +130,7 @@ async function classifyEngine(enginePath: AbsPath): Promise<EngineManifestResult
 }
 
 async function buildEngineSnapshot(enginePath: AbsPath, manifest: EngineManifest): Promise<EngineSnapshot> {
-  const metadata = buildEngineMetadata(manifest)
+  const metadata = await buildEngineMetadata(enginePath, manifest)
 
   return {
     engineId: manifest.id,
@@ -294,12 +315,18 @@ async function validateEngineRecordForBatch(engine: Engine): Promise<ResourceVal
       structureValid,
       semanticsValid: classification?.status === 'ok',
     })
-    const patch: Partial<Pick<Engine, 'availability' | 'previewAssets'>> = {}
+    const patch: Partial<Pick<Engine, 'availability' | 'metadata' | 'previewAssets'>> = {}
     if (engine.availability !== nextAvailability) {
       patch.availability = nextAvailability
     }
     if (classification?.status === 'ok') {
-      const metadata = buildEngineMetadata(classification.manifest)
+      const metadata = await buildEngineMetadata(engine.path, classification.manifest)
+      if (engine.metadata.live2dSupport !== metadata.live2dSupport) {
+        patch.metadata = {
+          ...engine.metadata,
+          live2dSupport: metadata.live2dSupport,
+        }
+      }
       const expectedIconPath = await resolveEngineIconPreviewPath(engine.path, metadata)
       if (engine.previewAssets.icon.path !== expectedIconPath) {
         patch.previewAssets = withEnginePreviewCacheVersion({
