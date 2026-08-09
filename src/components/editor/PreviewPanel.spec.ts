@@ -454,6 +454,7 @@ describe('PreviewPanel', () => {
 
     sceneEntryStatusState.status.value = 'valid'
     await expect.element(page.getByTitle('preview-title::Demo Game')).toBeVisible()
+    expect(previewSessionStoreState.reloadVersion).toBeGreaterThan(0)
   })
 
   it('收到同源 iframe 转发的空格按键消息时会让 iframe 上的拖拽交给外层视口平移', async () => {
