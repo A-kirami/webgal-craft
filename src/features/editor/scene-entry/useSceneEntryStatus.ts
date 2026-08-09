@@ -25,16 +25,18 @@ export const useSceneEntryStatus = createGlobalState(() => {
     const gamePath = workspaceStore.currentGame?.path
     return gamePath ? gameSceneDir(AbsPath.from(gamePath)) : undefined
   })
-  const status = ref<SceneEntryStatus>('missing')
+  const status = ref<SceneEntryStatus>('checking')
   let refreshToken = 0
 
   async function refresh(): Promise<void> {
     const currentRoot = sceneRoot.value
     const token = ++refreshToken
     if (!currentRoot) {
-      status.value = 'missing'
+      status.value = 'checking'
       return
     }
+
+    status.value = 'checking'
 
     try {
       await fileStore.initialized
@@ -51,7 +53,7 @@ export const useSceneEntryStatus = createGlobalState(() => {
         return
       }
       logger.warn(`[SceneEntry] 检查入口文件失败: ${error}`)
-      status.value = 'missing'
+      status.value = 'checking'
     }
   }
 

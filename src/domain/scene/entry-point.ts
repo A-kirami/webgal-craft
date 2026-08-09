@@ -2,7 +2,7 @@ import { AbsPath } from '~/domain/path'
 
 export const SCENE_ENTRY_FILE_NAME = 'start.txt'
 
-export type SceneEntryStatus = 'valid' | 'missing'
+export type SceneEntryStatus = 'checking' | 'valid' | 'missing'
 
 function sceneEntryPath(sceneRoot: AbsPath): AbsPath {
   return AbsPath.append(sceneRoot, SCENE_ENTRY_FILE_NAME)
