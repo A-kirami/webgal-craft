@@ -22,4 +22,18 @@ describe('useManagedImportStore', () => {
     expect(store.activeActivity).toBeUndefined()
     expect(store.activeKind).toBeUndefined()
   })
+
+  it('会在已有导入进行中时拒绝新的活动', () => {
+    const store = useManagedImportStore()
+    const activity = {
+      kind: 'official-engine-install' as const,
+      engineName: 'WebGAL',
+      engineVersion: '4.6.5',
+    }
+
+    expect(store.begin('engine', activity)).toBe(true)
+    expect(store.begin('game')).toBe(false)
+    expect(store.activeActivity).toEqual(activity)
+    expect(store.activeKind).toBe('engine')
+  })
 })
