@@ -73,7 +73,7 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
 
   async function loadOfficialEngineReleases(): Promise<void> {
     const hasCachedReleases = officialReleaseCacheStore.releases.length > 0
-    if (!hasCachedReleases) {
+    if (!hasCachedReleases && officialStatus.value !== 'installing') {
       officialStatus.value = 'loading'
     }
     try {
@@ -85,9 +85,13 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
         )
       }
       officialReleases.value = filterSupportedOfficialEngineReleases(officialReleaseCacheStore.releases)
-      officialStatus.value = 'ready'
+      if (officialStatus.value !== 'installing') {
+        officialStatus.value = 'ready'
+      }
     } catch (error) {
-      officialStatus.value = officialReleases.value.length > 0 ? 'ready' : 'error'
+      if (officialStatus.value !== 'installing') {
+        officialStatus.value = officialReleases.value.length > 0 ? 'ready' : 'error'
+      }
       logger.warn(`[官方引擎] 获取版本失败: ${error}`)
     }
   }

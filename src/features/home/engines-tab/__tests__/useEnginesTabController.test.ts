@@ -21,6 +21,7 @@ const {
   reconcileEngineRecordMock,
   getOfficialEngineReleasesMock,
   getLatestOfficialEngineReleaseMock,
+  installOfficialEngineMock,
 } = vi.hoisted(() => ({
   enginesWhereMock: vi.fn(),
   importEngineMock: vi.fn(),
@@ -32,6 +33,7 @@ const {
   reconcileEngineRecordMock: vi.fn(),
   getOfficialEngineReleasesMock: vi.fn(),
   getLatestOfficialEngineReleaseMock: vi.fn(),
+  installOfficialEngineMock: vi.fn(),
 }))
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
@@ -56,6 +58,7 @@ vi.mock('~/services/engine-manager', () => {
       importEngine: importEngineMock,
       getLatestOfficialEngineRelease: getLatestOfficialEngineReleaseMock,
       getOfficialEngineReleases: getOfficialEngineReleasesMock,
+      installOfficialEngine: installOfficialEngineMock,
     },
   }
 })
@@ -243,6 +246,43 @@ describe('useEnginesTabController', () => {
     expect(getOfficialEngineReleasesMock).toHaveBeenCalledOnce()
     expect(cacheStore.latestVersion).toBe('4.6.5')
     expect(controller.officialReleases.value.map(release => release.version)).toEqual(['4.6.5', '4.6.4'])
+  })
+
+  it('版本刷新完成时不会覆盖正在进行的安装状态', async () => {
+    const cachedRelease = createOfficialRelease('4.6.4')
+    useOfficialEngineReleaseCacheStore().replaceReleases([cachedRelease], cachedRelease.version)
+
+    let resolveLatestRelease: ((release: ReturnType<typeof createOfficialRelease>) => void) | undefined
+    const latestReleasePromise = new Promise<ReturnType<typeof createOfficialRelease>>((resolve) => {
+      resolveLatestRelease = resolve
+    })
+    getLatestOfficialEngineReleaseMock.mockReturnValue(latestReleasePromise)
+
+    const installResult = {
+      alreadyRegistered: false,
+      id: 'official-engine',
+      release: cachedRelease,
+    }
+    let resolveInstall: ((result: typeof installResult) => void) | undefined
+    const installPromise = new Promise<typeof installResult>((resolve) => {
+      resolveInstall = resolve
+    })
+    installOfficialEngineMock.mockReturnValue(installPromise)
+
+    const controller = createController()
+    const refreshPromise = controller.loadOfficialEngineReleases()
+    await vi.waitFor(() => expect(getLatestOfficialEngineReleaseMock).toHaveBeenCalledOnce())
+
+    const installOperation = controller.installOfficialEngine('4.6.4')
+    expect(controller.officialStatus.value).toBe('installing')
+
+    resolveLatestRelease?.(cachedRelease)
+    await refreshPromise
+    expect(controller.officialStatus.value).toBe('installing')
+
+    resolveInstall?.(installResult)
+    await installOperation
+    expect(controller.officialStatus.value).toBe('ready')
   })
 
   it('会用最新校验结果打开整组删除弹窗', async () => {
