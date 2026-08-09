@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, shallowRef } from 'vue'
 
 import {
   createBrowserClickStub,
@@ -12,6 +12,7 @@ import { AbsPath } from '~/domain/path'
 
 import EngineGroupCard from './EngineGroupCard.vue'
 
+import type { OfficialEngineRelease } from '~/domain/engine/official-release'
 import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
 
 function createProgressStub() {
@@ -33,6 +34,32 @@ function createProgressStub() {
   })
 }
 
+function createPopoverContentAutoFocusStub() {
+  return defineComponent({
+    name: 'StubPopoverContent',
+    emits: ['openAutoFocus'],
+    setup(_, { attrs, emit, slots }) {
+      const autoFocusPrevented = shallowRef(false)
+
+      function requestAutoFocus(): void {
+        const event = new Event('openAutoFocus', { cancelable: true })
+        emit('openAutoFocus', event)
+        autoFocusPrevented.value = event.defaultPrevented
+      }
+
+      return () => h('div', attrs, [
+        h('button', {
+          'aria-label': 'popover.requestAutoFocus',
+          'onClick': requestAutoFocus,
+          'type': 'button',
+        }),
+        ...(slots.default?.() ?? []),
+        h('output', { 'data-testid': 'popover-auto-focus-prevented' }, String(autoFocusPrevented.value)),
+      ])
+    },
+  })
+}
+
 const globalStubs = {
   AssetImage: createBrowserContainerStub('StubAssetImage', 'img'),
   Badge: createBrowserContainerStub('StubBadge', 'span'),
@@ -49,6 +76,22 @@ const globalStubs = {
   PopoverContent: createBrowserContainerStub('StubPopoverContent'),
   PopoverTrigger: createBrowserContainerStub('StubPopoverTrigger', 'button'),
   Progress: createProgressStub(),
+  Tooltip: createBrowserContainerStub('StubTooltip'),
+  TooltipContent: createBrowserContainerStub('StubTooltipContent'),
+  TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
+  TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
+}
+
+function createOfficialRelease(version: string): OfficialEngineRelease {
+  return {
+    assetName: `WebGAL-${version}-web.zip`,
+    assetUrl: `https://example.com/downloads/${version}.zip`,
+    engineId: 'open-webgal.webgal',
+    name: 'WebGAL',
+    releaseUrl: `https://example.com/releases/${version}`,
+    sha256: 'a'.repeat(64),
+    version,
+  }
 }
 
 function createGroup(): EngineGroupCollectionItem {
@@ -153,6 +196,165 @@ describe('EngineGroupCard', () => {
     await expect.element(page.getByText('4.5.0')).toBeInTheDocument()
   })
 
+  it('官方组会展示绿色官方徽标，并提供总览与版本级发布页入口', async () => {
+    const onDownloadVersion = vi.fn()
+    const onOpenRelease = vi.fn()
+    const onOpenVersionRelease = vi.fn()
+    renderInBrowser(EngineGroupCard, {
+      props: {
+        group: {
+          ...createGroup(),
+          remote: {
+            releases: [createOfficialRelease('4.6.4')],
+            status: 'ready',
+          },
+        },
+        viewMode: 'list',
+        onDownloadVersion,
+        onOpenRelease,
+        onOpenVersionRelease,
+      },
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('home.engines.official.badge')).toHaveClass('bg-emerald-50')
+    await expect.element(page.getByText('home.engines.official.badge')).toHaveClass('text-emerald-700')
+    await expect.element(page.getByText('home.engines.official.badge')).toHaveClass('hover:bg-emerald-50')
+    const openReleaseActions = page.getByRole('button', { name: 'common.openReleasePage' })
+    expect(openReleaseActions.elements()).toHaveLength(3)
+    await openReleaseActions.last().click()
+    await openReleaseActions.first().click()
+    const updateButton = page.getByRole('button', { name: 'home.engines.official.update' })
+    await expect.element(updateButton).toHaveAttribute('variant', 'outline')
+    await updateButton.click()
+
+    expect(onOpenRelease).toHaveBeenCalledOnce()
+    expect(onOpenVersionRelease).toHaveBeenCalledWith('https://example.com/releases/4.6.4')
+    expect(onDownloadVersion).toHaveBeenCalledWith('4.6.4')
+  })
+
+  it('会在卡片摘要中展示最新已安装版本', async () => {
+    renderInBrowser(EngineGroupCard, {
+      props: {
+        group: {
+          ...createGroup(),
+          remote: {
+            releases: [createOfficialRelease('4.6.4')],
+            status: 'ready',
+          },
+        },
+        viewMode: 'list',
+      },
+      browser: {
+        i18nMode: 'localized',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText(
+      '4.6.0 · 已安装 2 个版本 · 共 3 个版本',
+      { exact: true },
+    )).toBeVisible()
+  })
+
+  it('未安装官方引擎时会展示版本总数', async () => {
+    renderInBrowser(EngineGroupCard, {
+      props: {
+        group: {
+          ...createGroup(),
+          engines: [],
+          hasAvailableVersion: false,
+          latestVersionLabel: undefined,
+          remote: {
+            releases: [
+              createOfficialRelease('4.6.4'),
+              createOfficialRelease('4.6.3'),
+              createOfficialRelease('4.6.2'),
+            ],
+            status: 'ready',
+          },
+          representativeItem: undefined,
+          versionCount: 0,
+        },
+        viewMode: 'list',
+      },
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText(
+      'engine.notInstalled · engine.totalVersions',
+      { exact: true },
+    )).toBeVisible()
+    await expect.element(page.getByRole('button', { name: 'home.engines.official.install' })).toBeVisible()
+  })
+
+  it('已安装最新远端版本时不因缺少旧版本显示更新操作', async () => {
+    renderInBrowser(EngineGroupCard, {
+      props: {
+        group: {
+          ...createGroup(),
+          remote: {
+            releases: [
+              createOfficialRelease('4.6.0'),
+              createOfficialRelease('4.5.5'),
+            ],
+            status: 'ready',
+          },
+        },
+        viewMode: 'list',
+      },
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('button', { name: 'home.engines.official.update' })).not.toBeInTheDocument()
+    await expect.element(page.getByRole('button', { name: 'home.engines.official.install' })).not.toBeInTheDocument()
+  })
+
+  it('打开版本列表时不会自动聚焦首个操作按钮', async () => {
+    renderInBrowser(EngineGroupCard, {
+      props: {
+        group: {
+          ...createGroup(),
+          remote: {
+            releases: [createOfficialRelease('4.6.4')],
+            status: 'ready',
+          },
+        },
+        viewMode: 'list',
+      },
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: {
+          ...globalStubs,
+          PopoverContent: createPopoverContentAutoFocusStub(),
+        },
+      },
+    })
+
+    await page.getByRole('button', { name: 'popover.requestAutoFocus' }).click()
+
+    await expect.element(page.getByTestId('popover-auto-focus-prevented')).toHaveTextContent('true')
+  })
+
   it('会暴露组级操作和版本删除操作', async () => {
     const onDeleteEngine = vi.fn()
     const onDeleteGroup = vi.fn()
@@ -227,7 +429,6 @@ describe('EngineGroupCard', () => {
 
     await expect.element(page.getByText('home.unavailableBadge')).not.toBeInTheDocument()
     await expect.element(page.getByText('home.engines.importing')).toBeVisible()
-    await expect.element(page.getByText('engine.noAvailableVersionSummary')).not.toBeInTheDocument()
     await expect.element(page.getByRole('button', { name: 'engine.uninstallAllVersions' })).not.toBeInTheDocument()
     await expect.element(page.getByRole('button', { name: 'engine.deleteVersion' })).not.toBeInTheDocument()
     const progress = await page.getByRole('progressbar').element() as HTMLProgressElement
@@ -249,7 +450,6 @@ describe('EngineGroupCard', () => {
     })
 
     await expect.element(page.getByText('home.engines.importing')).toBeVisible()
-    await expect.element(page.getByText('engine.noAvailableVersionSummary')).not.toBeInTheDocument()
     await expect.element(page.getByRole('progressbar')).not.toBeInTheDocument()
   })
 })

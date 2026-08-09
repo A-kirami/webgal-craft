@@ -25,4 +25,16 @@ export const generalSettingsDefinition = defineSettingsSchema({
       },
     },
   },
+  network: {
+    label: t => t('settings.network.label'),
+    fields: {
+      officialEngineDownloadProxy: {
+        type: 'input',
+        default: '',
+        label: t => t('settings.network.officialEngineDownloadProxy.label'),
+        description: t => t('settings.network.officialEngineDownloadProxy.description'),
+        placeholder: t => t('settings.network.officialEngineDownloadProxy.placeholder'),
+      },
+    },
+  },
 } as const)

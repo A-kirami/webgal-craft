@@ -17,6 +17,7 @@ common:
   or: または
   more: その他
   openFolder: フォルダを開く
+  openReleasePage: リリースページを開く
   search:
     placeholder: ファイルまたはフォルダを検索
     toggle: 検索を切り替え
@@ -124,12 +125,22 @@ home:
     cancel: インポートをキャンセル
     copied: "{files} ファイル · {bytes}"
     currentEntry: "{summary} · {entry}"
+    officialEngine:
+      title: "{engineName} {engineVersion} をインストール中"
+      downloaded: "{downloaded} をダウンロード済み"
+      downloadedWithTotal: "{downloaded} / {total} をダウンロード済み"
+      extracted: "{files} ファイルを展開済み"
+      phase:
+        downloading: ダウンロード中
+        extracting: 展開中
     resource:
       game: ゲーム
       engine: エンジン
       template: テンプレート
     phase:
       copying: ファイルをコピー中
+      downloading: ダウンロード中
+      extracting: 展開中
       validating: 検証中
       publishing: 公開処理中
       registering: 登録中
@@ -205,6 +216,18 @@ home:
     importVersionTooOld: このエンジンは古すぎます。WebGAL {version} 以降に対応したエンジンをインポートしてください
     importUnknownError: エンジンのインポート中に不明なエラーが発生しました
     importMultipleFolders: 一度にインポートできるエンジンフォルダは1つだけです
+    official:
+      badge: 公式
+      checking: バージョンを確認中…
+      installing: ダウンロードとインストール中
+      install: 最新版をインストール
+      update: 更新
+      retry: 再試行
+      loadFailed: 公式バージョン情報を取得できません
+      download: ダウンロード
+      installSuccess: WebGAL {version} をインストールしました
+      alreadyInstalled: このバージョンはインストール済みです
+      installFailed: 公式エンジンのダウンロードまたはインストールに失敗しました
     noEngineTitle: 利用可能なゲームエンジンがありません
     noEngineContent: ゲームを作成するには、まずゲームエンジンをインストールする必要があります
     goToInstall: インストールに移動
@@ -1250,6 +1273,12 @@ settings:
     openLastProject:
       label: 起動時に最後に編集したゲームを開く
       description: アプリケーション起動時に最後に編集したゲームプロジェクトを自動的に読み込む
+  network:
+    label: ネットワーク
+    officialEngineDownloadProxy:
+      label: GitHub ダウンロードプロキシ
+      description: 公式 WebGAL エンジンのダウンロードに使う HTTPS プロキシプレフィックスです。空欄の場合はシステムプロキシまたは直接接続を使用します。
+      placeholder: https://proxy.example/
   edit:
     general: 一般
     preview: プレビュー
@@ -1326,10 +1355,11 @@ engine:
   defaultEngine: デフォルト
   setDefaultEngine: デフォルトエンジンに設定
   unsetDefaultEngine: デフォルトエンジンを解除
-  versionSummary: "{version} ・全 {count} バージョン"
-  noAvailableVersionSummary: 利用可能なバージョンなし ・インストール済み {count} バージョン
+  installedVersions: "インストール済み {count} バージョン"
+  totalVersions: "全 {count} バージョン"
+  notInstalled: 未インストール
   latestBadge: 最新
-  deleteVersion: バージョンを削除
+  deleteVersion: アンインストール
   uninstallAllVersions: すべてのバージョンをアンインストール
   deleteBlocked: 削除できません
   deleteBlockedByGames: 以下のゲームがこのエンジンを使用しています：

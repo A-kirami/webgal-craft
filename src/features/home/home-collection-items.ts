@@ -1,6 +1,12 @@
 import type { Engine, Game } from '~/database/model'
+import type { OfficialEngineRelease } from '~/domain/engine/official-release'
 import type { AbsPath } from '~/domain/path'
 import type { TemplateGroupViewModel } from '~/features/home/templates-tab/template-groups'
+
+export interface EngineGroupRemoteState {
+  releases: readonly OfficialEngineRelease[]
+  status: 'loading' | 'ready' | 'installing' | 'error'
+}
 
 export interface GameCollectionItem {
   game: Game
@@ -36,6 +42,7 @@ export interface EngineGroupCollectionItem {
   summary: string
   unavailableCount: number
   versionCount: number
+  remote?: EngineGroupRemoteState
 }
 
 export interface TemplateCollectionItem {

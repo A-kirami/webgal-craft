@@ -23,8 +23,12 @@ const {
 const emit = defineEmits<{
   deleteEngine: [engine: Engine]
   deleteGroup: [engineId: string]
+  downloadVersion: [version: string]
   importClick: []
   openGroupFolder: [group: EngineGroupCollectionItem]
+  openRelease: []
+  openVersionRelease: [releaseUrl: string]
+  retryRemote: []
   drop: [paths: string[]]
   setDefaultEngine: [engineId: string | undefined]
 }>()
@@ -59,13 +63,17 @@ function getGroupProgress(group: EngineGroupCollectionItem): number | undefined 
   <div v-if="viewMode === 'grid'" class="gap-4 grid grid-cols-1 lg:grid-cols-3 md:grid-cols-2">
     <EngineGroupCard
       v-for="group in groups"
-      :key="group.name"
+      :key="group.engineId"
       :group="group"
       :progress="getGroupProgress(group)"
       view-mode="grid"
       @delete-engine="emit('deleteEngine', $event)"
       @delete-group="emit('deleteGroup', $event)"
+      @download-version="emit('downloadVersion', $event)"
       @open-group-folder="emit('openGroupFolder', $event)"
+      @open-release="emit('openRelease')"
+      @open-version-release="emit('openVersionRelease', $event)"
+      @retry-remote="emit('retryRemote')"
       @set-default-engine="emit('setDefaultEngine', $event)"
     />
 
@@ -98,13 +106,17 @@ function getGroupProgress(group: EngineGroupCollectionItem): number | undefined 
   <div v-else class="border rounded-lg overflow-hidden divide-y">
     <EngineGroupCard
       v-for="group in groups"
-      :key="group.name"
+      :key="group.engineId"
       :group="group"
       :progress="getGroupProgress(group)"
       view-mode="list"
       @delete-engine="emit('deleteEngine', $event)"
       @delete-group="emit('deleteGroup', $event)"
+      @download-version="emit('downloadVersion', $event)"
       @open-group-folder="emit('openGroupFolder', $event)"
+      @open-release="emit('openRelease')"
+      @open-version-release="emit('openVersionRelease', $event)"
+      @retry-remote="emit('retryRemote')"
       @set-default-engine="emit('setDefaultEngine', $event)"
     />
 

@@ -103,4 +103,12 @@ describe('useGeneralSettingsStore', () => {
       { value: 'ja', label: '日本語' },
     ])
   })
+
+  it('官方引擎下载代理默认为空并可由设置更新', () => {
+    const store = useGeneralSettingsStore()
+
+    expect(store.officialEngineDownloadProxy).toBe('')
+    store.officialEngineDownloadProxy = 'https://proxy.example/'
+    expect(store.officialEngineDownloadProxy).toBe('https://proxy.example/')
+  })
 })

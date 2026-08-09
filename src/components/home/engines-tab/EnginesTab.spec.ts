@@ -15,12 +15,16 @@ import type { EngineGroupCollectionItem } from '~/features/home/home-collection-
 
 const {
   getServeUrlMock,
+  getOfficialEngineReleasesMock,
+  getLatestOfficialEngineReleaseMock,
   importEngineMock,
+  installOfficialEngineMock,
   modalOpenMock,
   toastErrorMock,
   toastSuccessMock,
   openDialogMock,
   openPathMock,
+  openUrlMock,
   useModalStoreMock,
   usePreviewRuntimeStoreMock,
   usePreferenceStoreMock,
@@ -28,12 +32,16 @@ const {
   dropHandlers,
 } = vi.hoisted(() => ({
   getServeUrlMock: vi.fn(),
+  getOfficialEngineReleasesMock: vi.fn(),
+  getLatestOfficialEngineReleaseMock: vi.fn(),
   importEngineMock: vi.fn(),
+  installOfficialEngineMock: vi.fn(),
   modalOpenMock: vi.fn(),
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
+  openUrlMock: vi.fn(),
   useModalStoreMock: vi.fn(),
   usePreviewRuntimeStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
@@ -52,6 +60,7 @@ vi.mock('~/services/platform/runtime', () => ({
 
 vi.mock('@tauri-apps/plugin-opener', () => ({
   openPath: openPathMock,
+  openUrl: openUrlMock,
 }))
 
 vi.mock('@tauri-apps/plugin-log', () => ({
@@ -82,7 +91,10 @@ vi.mock('~/services/engine-manager', async (importActual) => {
     ...actual,
     engineManager: {
       ...actual.engineManager,
+      getLatestOfficialEngineRelease: getLatestOfficialEngineReleaseMock,
+      getOfficialEngineReleases: getOfficialEngineReleasesMock,
       importEngine: importEngineMock,
+      installOfficialEngine: installOfficialEngineMock,
     },
   }
 })
@@ -125,11 +137,12 @@ const globalStubs = {
         required: true,
       },
     },
-    emits: ['deleteEngine', 'deleteGroup', 'drop', 'importClick', 'openGroupFolder', 'setDefaultEngine'],
+    emits: ['deleteEngine', 'deleteGroup', 'downloadVersion', 'drop', 'importClick', 'openGroupFolder', 'openRelease', 'openVersionRelease', 'retryRemote', 'setDefaultEngine'],
     setup(props, { emit }) {
       return () => h('div', [
         ...(props.groups as EngineGroupCollectionItem[]).map(group => h('article', {
           'key': group.name,
+          'data-engine-id': group.engineId,
           'data-group-name': group.name,
           'data-is-default': String(group.isDefault),
           'data-serve-url': group.representativeItem?.serveUrl ?? '',
@@ -152,6 +165,13 @@ const globalStubs = {
             type: 'button',
             onClick: () => emit('setDefaultEngine', group.isDefault ? undefined : group.engineId),
           }, group.isDefault ? 'engine.unsetDefaultEngine' : 'engine.setDefaultEngine'),
+          group.engineId === 'open-webgal.webgal'
+            ? h('button', {
+                'type': 'button',
+                'data-testid': 'download-official-engine',
+                'onClick': () => emit('downloadVersion', '4.6.4'),
+              }, 'home.engines.official.download')
+            : undefined,
         ])),
         /* empty state import button */
         h('button', {
@@ -186,6 +206,33 @@ describe('EnginesTab', () => {
     dropHandlers.length = 0
 
     getServeUrlMock.mockReturnValue('http://127.0.0.1:8899/game/engine/')
+    getOfficialEngineReleasesMock.mockResolvedValue([
+      {
+        assetName: 'WebGAL-4.6.4-web.zip',
+        assetUrl: 'https://github.com/OpenWebGAL/WebGAL/releases/download/4.6.4/WebGAL-4.6.4-web.zip',
+        engineId: 'open-webgal.webgal',
+        name: 'WebGAL',
+        releaseUrl: 'https://github.com/OpenWebGAL/WebGAL/releases/tag/4.6.4',
+        sha256: 'a'.repeat(64),
+        version: '4.6.4',
+      },
+    ])
+    getLatestOfficialEngineReleaseMock.mockResolvedValue({
+      version: '4.6.4',
+    })
+    installOfficialEngineMock.mockResolvedValue({
+      id: 'official-engine',
+      alreadyRegistered: false,
+      release: {
+        assetName: 'WebGAL-4.6.4-web.zip',
+        assetUrl: 'https://example.com/WebGAL-4.6.4-web.zip',
+        engineId: 'open-webgal.webgal',
+        name: 'WebGAL',
+        releaseUrl: 'https://example.com/release',
+        sha256: 'a'.repeat(64),
+        version: '4.6.4',
+      },
+    })
     importEngineMock.mockResolvedValue(undefined)
     openDialogMock.mockResolvedValue(undefined)
     useModalStoreMock.mockReturnValue({
@@ -215,7 +262,7 @@ describe('EnginesTab', () => {
       },
     })
 
-    await page.getByRole('button', { name: 'home.engines.installGameEngine' }).click()
+    await page.getByRole('button', { name: 'home.engines.installEngine' }).click()
 
     await vi.waitFor(() => {
       expect(openDialogMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -283,6 +330,38 @@ describe('EnginesTab', () => {
     expect(group.dataset.isDefault).toBe('true')
   })
 
+  it('官方引擎组始终排在其他引擎组之前', async () => {
+    const officialEngine = createTestEngine({
+      engineId: 'open-webgal.webgal',
+      name: 'WebGAL',
+      path: AbsPath.from('/engines/WebGAL/4.6.4'),
+      version: '4.6.4',
+    })
+    const customEngine = createTestEngine({
+      engineId: 'custom.engine',
+      name: 'A Custom Engine',
+      path: AbsPath.from('/engines/Custom/1.0.0'),
+      version: '1.0.0',
+    })
+    useResourceStoreMock.mockReturnValue(createResourceStore({
+      engines: [customEngine, officialEngine],
+    }))
+
+    renderInBrowser(EnginesTab, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const engineIds = page.getByRole('article').elements()
+      .map(element => element.dataset.engineId)
+
+    expect(engineIds).toEqual(['open-webgal.webgal', 'custom.engine'])
+  })
+
   it('导入非法引擎目录时会显示结构错误通知', async () => {
     useResourceStoreMock.mockReturnValue(createResourceStore({
       engines: [],
@@ -299,7 +378,7 @@ describe('EnginesTab', () => {
       },
     })
 
-    await page.getByRole('button', { name: 'home.engines.installGameEngine' }).click()
+    await page.getByRole('button', { name: 'home.engines.installEngine' }).click()
 
     await vi.waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith('home.engines.importInvalidFolder')

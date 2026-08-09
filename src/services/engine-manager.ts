@@ -5,6 +5,7 @@ import { engineCmds } from '~/commands/engine'
 import { fsCmds } from '~/commands/fs'
 import { db } from '~/database/db'
 import { Engine, Game } from '~/database/model'
+import { OFFICIAL_WEBGAL_ENGINE_NAME } from '~/domain/engine/official-release'
 import { isWebgalEditorRuntimeCompatible, normalizeWebgalRuntimeVersion } from '~/domain/engine/runtime-capabilities'
 import { AbsPath, RelPath } from '~/domain/path'
 import { engineIconPath } from '~/services/platform/app-paths'
@@ -24,6 +25,8 @@ import {
   logResourceValidationSummary,
 } from '~/services/resource-validation-summary'
 import { EngineMetadata, EnginePreviewAssets } from '~/services/types'
+import { useGeneralSettingsStore } from '~/stores/general-settings'
+import { useManagedImportStore } from '~/stores/managed-import'
 import { useResourceStore } from '~/stores/resource'
 import { useRuntimeTaskStore } from '~/stores/runtime-task'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
@@ -31,6 +34,7 @@ import { EngineManifest, EngineManifestResult } from '~/types/engine'
 import { AppError } from '~/types/errors'
 import { EngineRef } from '~/types/project-config'
 
+import type { OfficialEngineRelease } from '~/domain/engine/official-release'
 import type {
   ResourceValidationFailure,
   ResourceValidationSummary,
@@ -669,6 +673,87 @@ async function importEngine(enginePath: AbsPath): Promise<ImportEngineResult> {
   }
 }
 
+export interface OfficialEngineInstallResult extends ImportEngineResult {
+  release: OfficialEngineRelease
+}
+
+async function installOfficialEngine(version: string): Promise<OfficialEngineInstallResult> {
+  const managedImportStore = useManagedImportStore()
+  if (!managedImportStore.begin('engine', {
+    kind: 'official-engine-install',
+    engineName: OFFICIAL_WEBGAL_ENGINE_NAME,
+    engineVersion: version,
+  })) {
+    throw new AppError('IO_ERROR', '已有目录导入正在进行', {
+      details: { reason: 'IMPORT_BUSY' },
+    })
+  }
+
+  let stagingPath: AbsPath | undefined
+  try {
+    const releases = await engineCmds.getOfficialEngineReleases()
+    const release = releases.find(item => item.version === version)
+    if (!release) {
+      throw new AppError('IO_ERROR', '官方引擎版本已不可用，请刷新后重试', {
+        details: { reason: 'OFFICIAL_ENGINE_VERSION_NOT_FOUND' },
+      })
+    }
+    const existing = await findEngineByRef({
+      id: release.engineId,
+      version: release.version,
+    })
+    if (existing && isEngineUsable(existing)) {
+      return { id: existing.id, alreadyRegistered: true, release }
+    }
+    if (existing) {
+      throw new AppError('IO_ERROR', '该版本已有不可用记录，请先卸载后重试', {
+        details: { reason: 'OFFICIAL_ENGINE_UNAVAILABLE' },
+      })
+    }
+
+    const storageSettingsStore = useStorageSettingsStore()
+    stagingPath = AbsPath.join(
+      AbsPath.join(AbsPath.from(storageSettingsStore.engineSavePath), RelPath.from('.webgal-downloads')),
+      RelPath.from(sanitizeEnginePathSegment(release.version, '引擎版本')),
+    )
+    if (await exists(stagingPath)) {
+      await fsCmds.deleteFile(stagingPath, true)
+    }
+
+    managedImportStore.updateProgress({
+      sessionId: `official-engine-${release.version}`,
+      resourceKind: 'engine',
+      phase: 'downloading',
+      copiedBytes: 0,
+      copiedFiles: 0,
+    })
+    const generalSettingsStore = useGeneralSettingsStore()
+    await engineCmds.downloadOfficialEngine(release.version, stagingPath, (progress) => {
+      managedImportStore.updateProgress({
+        sessionId: `official-engine-${release.version}`,
+        resourceKind: 'engine',
+        phase: progress.phase,
+        copiedBytes: progress.downloadedBytes,
+        copiedFiles: progress.extractedFiles ?? 0,
+        currentEntry: progress.entry,
+        totalBytes: progress.totalBytes,
+        totalFiles: progress.extractedFiles,
+      })
+    }, generalSettingsStore.officialEngineDownloadProxy)
+
+    managedImportStore.updatePhase('validating')
+    const imported = await importEngine(stagingPath)
+    return { ...imported, release }
+  } finally {
+    if (stagingPath && await exists(stagingPath)) {
+      await fsCmds.deleteFile(stagingPath, true).catch((error) => {
+        logger.warn(`[官方引擎] 清理下载目录失败: ${stagingPath} - ${error}`)
+      })
+    }
+    managedImportStore.finish()
+  }
+}
+
 function assertDeletable(deleteCheck: DeleteEngineCheckResult): void {
   if (!deleteCheck.canDelete) {
     const names = deleteCheck.associatedGames?.map(game => game.metadata.name).join('、') ?? ''
@@ -702,10 +787,13 @@ export const engineManager = {
   inspectEngine,
   getEnginePreviewAssets,
   findEngineByRef,
+  getLatestOfficialEngineRelease: engineCmds.getLatestOfficialEngineRelease,
+  getOfficialEngineReleases: engineCmds.getOfficialEngineReleases,
   canDeleteEngine,
   canDeleteEngineGroup,
   validateAllEngines,
   importEngine,
+  installOfficialEngine,
   prepareManagedImport,
   registerManagedImport,
   uninstallEngine,

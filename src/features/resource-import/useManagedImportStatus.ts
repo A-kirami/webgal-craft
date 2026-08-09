@@ -6,7 +6,7 @@ import { androidDirectoryMaterializer } from './android-directory-materializer'
 
 export function useManagedImportStatus() {
   const store = useManagedImportStore()
-  const { activeSessionId, isBusy, progress } = storeToRefs(store)
+  const { activeActivity, activeKind, activeSessionId, isBusy, progress } = storeToRefs(store)
   const canCancel = computed(() => progress.value?.phase === 'copying' && !!activeSessionId.value)
 
   async function cancel(): Promise<void> {
@@ -16,6 +16,8 @@ export function useManagedImportStatus() {
   }
 
   return {
+    activeActivity,
+    activeKind,
     canCancel,
     isBusy,
     progress,

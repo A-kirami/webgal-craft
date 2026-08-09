@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { EllipsisVertical, Folder, Star, Trash2, TriangleAlert } from '@lucide/vue'
+import { Download, EllipsisVertical, ExternalLink, Folder, LoaderCircle, RefreshCw, ShieldCheck, Star, Trash2, TriangleAlert } from '@lucide/vue'
+
+import { isOfficialWebgalEngine } from '~/domain/engine/official-release'
+import { compareEngineVersions } from '~/domain/engine/version'
 
 import type { Engine } from '~/database/model'
 import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
@@ -22,7 +25,11 @@ const { t } = useI18n()
 const emit = defineEmits<{
   deleteEngine: [engine: Engine]
   deleteGroup: [engineId: string]
+  downloadVersion: [version: string]
   openGroupFolder: [group: EngineGroupCollectionItem]
+  openRelease: []
+  openVersionRelease: [releaseUrl: string]
+  retryRemote: []
   setDefaultEngine: [engineId: string | undefined]
 }>()
 
@@ -30,21 +37,71 @@ const GRID_ICON_THUMBNAIL: AssetThumbnailOptions = { width: 120, height: 120, re
 const LIST_ICON_THUMBNAIL: AssetThumbnailOptions = { width: 80, height: 80, resizeMode: 'cover' }
 
 const isActiveImporting = $computed(() => group.isImporting)
+const isOfficial = $computed(() => isOfficialWebgalEngine(group.engineId))
+const remoteVersions = $computed(() => group.remote?.releases.map(release => release.version) ?? [])
+const installedVersions = $computed(() => new Set(group.engines
+  .map(item => item.engine.version)
+  .filter((version): version is string => version !== undefined)))
+const latestInstalledVersion = $computed(() => [...installedVersions].toSorted(compareEngineVersions)[0])
+const downloadableVersions = $computed(() => remoteVersions.filter(version => !installedVersions.has(version)))
+const latestRemoteVersion = $computed(() => remoteVersions.toSorted(compareEngineVersions)[0])
+const remoteDownloadVersion = $computed(() => {
+  if (latestRemoteVersion && !installedVersions.has(latestRemoteVersion)) {
+    return latestRemoteVersion
+  }
+})
+
+const remoteAction = $computed(() => {
+  if (!group.remote) {
+    return
+  }
+  if (group.remote.status === 'loading') {
+    return { disabled: true, icon: LoaderCircle, label: t('home.engines.official.checking'), kind: 'none' as const }
+  }
+  if (group.remote.status === 'installing') {
+    return { disabled: true, icon: LoaderCircle, label: t('home.engines.official.installing'), kind: 'none' as const }
+  }
+  if (group.remote.status === 'error') {
+    return { disabled: false, icon: RefreshCw, label: t('home.engines.official.retry'), kind: 'retry' as const }
+  }
+  if (!remoteDownloadVersion) {
+    return
+  }
+  return {
+    disabled: false,
+    icon: group.hasAvailableVersion ? RefreshCw : Download,
+    label: group.hasAvailableVersion
+      ? t('home.engines.official.update')
+      : t('home.engines.official.install'),
+    kind: 'download' as const,
+  }
+})
 
 const versionSummary = $computed(() => {
   if (isActiveImporting) {
     return t('home.engines.importing')
   }
 
-  if (!group.hasAvailableVersion || !group.latestVersionLabel) {
-    return t('engine.noAvailableVersionSummary', { count: group.versionCount })
+  const summaries = [
+    ...(latestInstalledVersion ? [latestInstalledVersion] : []),
+    group.versionCount > 0
+      ? t('engine.installedVersions', { count: group.versionCount })
+      : t('engine.notInstalled'),
+  ]
+  if (downloadableVersions.length > 0) {
+    summaries.push(t('engine.totalVersions', { count: group.versionCount + downloadableVersions.length }))
   }
 
-  return t('engine.versionSummary', {
-    count: group.versionCount,
-    version: group.latestVersionLabel,
-  })
+  return summaries.join(' · ')
 })
+
+function handleRemoteAction(): void {
+  if (remoteAction?.kind === 'retry') {
+    emit('retryRemote')
+  } else if (remoteAction?.kind === 'download' && remoteDownloadVersion) {
+    emit('downloadVersion', remoteDownloadVersion)
+  }
+}
 
 const menuItems = $computed<MenuItem[]>(() => {
   const items: MenuItem[] = [
@@ -54,14 +111,23 @@ const menuItems = $computed<MenuItem[]>(() => {
       onClick: () => emit('setDefaultEngine', group.isDefault ? undefined : group.engineId),
       disabled: !group.hasAvailableVersion && !group.isDefault,
     },
-    {
-      icon: Folder,
-      label: t('common.openFolder'),
-      onClick: () => emit('openGroupFolder', group),
-    },
+    ...(group.engines.length > 0
+      ? [{
+          icon: Folder,
+          label: t('common.openFolder'),
+          onClick: () => emit('openGroupFolder', group),
+        }]
+      : []),
+    ...(isOfficial
+      ? [{
+          icon: ExternalLink,
+          label: t('common.openReleasePage'),
+          onClick: () => emit('openRelease'),
+        }]
+      : []),
   ]
 
-  if (!isActiveImporting) {
+  if (!isActiveImporting && group.engines.length > 0) {
     items.push({
       icon: Trash2,
       label: t('engine.uninstallAllVersions'),
@@ -110,6 +176,10 @@ const menuItems = $computed<MenuItem[]>(() => {
                   <h4 class="font-medium">
                     {{ group.name }}
                   </h4>
+                  <Badge v-if="isOfficial" variant="secondary" class="text-emerald-700 bg-emerald-50 gap-1 dark:text-emerald-400 dark:bg-emerald-950/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/40">
+                    <ShieldCheck aria-hidden="true" class="size-3.5" />
+                    {{ $t('home.engines.official.badge') }}
+                  </Badge>
                   <Badge v-if="group.isDefault" variant="secondary">
                     {{ $t('engine.defaultEngine') }}
                   </Badge>
@@ -127,36 +197,54 @@ const menuItems = $computed<MenuItem[]>(() => {
                       </span>
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent align="start" class="px-3 py-2 w-56">
+                  <PopoverContent align="start" class="px-3 py-2 w-56" @open-auto-focus.prevent>
                     <EngineVersionPopover
                       :group="group"
                       :can-delete="!isActiveImporting"
                       @delete-engine="engine => emit('deleteEngine', engine)"
+                      @download-version="version => emit('downloadVersion', version)"
+                      @open-version-release="releaseUrl => emit('openVersionRelease', releaseUrl)"
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger as-child>
-                <Button :aria-label="$t('common.more')" variant="ghost" size="icon" class="h-8 w-8">
-                  <EllipsisVertical class="size-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" class="text-13px w-44">
-                <DropdownMenuItem
-                  v-for="(item, index) in menuItems"
-                  :key="index"
-                  :class="item.class"
-                  :disabled="item.disabled"
-                  @click="item.onClick"
-                >
-                  <component :is="item.icon" class="mr-2 size-3.5" />
-                  {{ item.label }}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div class="flex gap-1 items-center">
+              <Button
+                v-if="isOfficial && remoteAction"
+                :disabled="remoteAction.disabled"
+                variant="outline"
+                class="shrink-0 gap-1.5 h-7 shadow-none [&_svg]:size-3.5"
+                size="sm"
+                @click="handleRemoteAction"
+              >
+                <component
+                  :is="remoteAction.icon"
+                  :class="{ 'animate-spin': group.remote?.status === 'loading' || group.remote?.status === 'installing' }"
+                />
+                {{ remoteAction.label }}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                  <Button :aria-label="$t('common.more')" variant="ghost" size="icon" class="h-8 w-8">
+                    <EllipsisVertical class="size-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" class="text-13px w-44">
+                  <DropdownMenuItem
+                    v-for="(item, index) in menuItems"
+                    :key="index"
+                    :class="item.class"
+                    :disabled="item.disabled"
+                    @click="item.onClick"
+                  >
+                    <component :is="item.icon" class="mr-2 size-3.5" />
+                    {{ item.label }}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           <p v-if="group.summary" class="text-13px text-muted-foreground line-clamp-2">
@@ -201,6 +289,10 @@ const menuItems = $computed<MenuItem[]>(() => {
               <h3 class="font-medium">
                 {{ group.name }}
               </h3>
+              <Badge v-if="isOfficial" variant="secondary" class="text-emerald-700 bg-emerald-50 gap-1 dark:text-emerald-400 dark:bg-emerald-950/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/40">
+                <ShieldCheck aria-hidden="true" class="size-3.5" />
+                {{ $t('home.engines.official.badge') }}
+              </Badge>
               <Badge v-if="group.isDefault" variant="secondary">
                 {{ $t('engine.defaultEngine') }}
               </Badge>
@@ -222,15 +314,32 @@ const menuItems = $computed<MenuItem[]>(() => {
                 {{ versionSummary }}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" class="p-2 w-56">
+            <PopoverContent align="end" class="p-2 w-56" @open-auto-focus.prevent>
               <EngineVersionPopover
                 :group="group"
                 :can-delete="!isActiveImporting"
                 @delete-engine="engine => emit('deleteEngine', engine)"
+                @download-version="version => emit('downloadVersion', version)"
+                @open-version-release="releaseUrl => emit('openVersionRelease', releaseUrl)"
               />
             </PopoverContent>
           </Popover>
 
+          <Button
+            v-if="isOfficial && remoteAction"
+            :disabled="remoteAction.disabled"
+            variant="outline"
+            class="shrink-0 gap-1.5"
+            size="sm"
+            @click="handleRemoteAction"
+          >
+            <component
+              :is="remoteAction.icon"
+              class="size-4"
+              :class="{ 'animate-spin': group.remote?.status === 'loading' || group.remote?.status === 'installing' }"
+            />
+            {{ remoteAction.label }}
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
               <Button :aria-label="$t('common.more')" variant="ghost" size="icon" class="h-8 w-8">
