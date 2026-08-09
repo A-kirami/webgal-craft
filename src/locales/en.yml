@@ -1356,7 +1356,7 @@ engine:
   setDefaultEngine: Set as Default Engine
   unsetDefaultEngine: Unset Default Engine
   installedVersions: "{count} installed"
-  totalVersions: "{count} versions total"
+  totalVersions: "{count} version total | {count} versions total"
   notInstalled: Not installed
   latestBadge: Latest
   deleteVersion: Uninstall
