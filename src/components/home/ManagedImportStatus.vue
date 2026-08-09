@@ -61,7 +61,7 @@ const phaseLabel = computed(() => {
   return phaseLabels.value[phase.value]
 })
 const title = computed(() => {
-  if (props.activity?.kind === 'official-engine-install') {
+  if (isOfficialEngineInstallation.value && props.activity) {
     return t('home.managedImport.officialEngine.title', {
       engineName: props.activity.engineName,
       engineVersion: props.activity.engineVersion,
@@ -71,20 +71,20 @@ const title = computed(() => {
 })
 const progressDetail = computed(() => {
   if (isOfficialEngineInstallation.value) {
-    if (props.progress?.phase === 'downloading') {
-      const downloaded = formatFileSize(props.progress.copiedBytes)
-      return props.progress.totalBytes && props.progress.totalBytes > 0
+    if (phase.value === 'downloading') {
+      const downloaded = formatFileSize(props.progress?.copiedBytes ?? 0)
+      return props.progress?.totalBytes && props.progress.totalBytes > 0
         ? t('home.managedImport.officialEngine.downloadedWithTotal', {
             downloaded,
             total: formatFileSize(props.progress.totalBytes),
           })
         : t('home.managedImport.officialEngine.downloaded', { downloaded })
     }
-    if (props.progress?.phase === 'extracting') {
+    if (phase.value === 'extracting') {
       const summary = t('home.managedImport.officialEngine.extracted', {
-        files: props.progress.copiedFiles,
+        files: props.progress?.copiedFiles ?? 0,
       })
-      return props.progress.currentEntry
+      return props.progress?.currentEntry
         ? t('home.managedImport.currentEntry', {
             entry: props.progress.currentEntry,
             summary,

@@ -43,6 +43,7 @@ describe('ManagedImportStatus', () => {
     })
 
     await expect.element(page.getByText('下载中')).toBeVisible()
+    await expect.element(page.getByText('已下载 0 B')).toBeVisible()
     await expect.element(page.getByText('正在复制文件')).not.toBeInTheDocument()
   })
 
