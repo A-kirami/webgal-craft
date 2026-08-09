@@ -31,7 +31,7 @@ tower-http = { version = "0.6", features = ["fs"] }
 thiserror = "2.0"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "ico"] }
 futures-util = "0.3"
-reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "system-proxy"] }
+reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "system-proxy", "rustls"] }
 tempfile = "3.27"
 percent-encoding = "2.3"
 sha2 = "0.11"
