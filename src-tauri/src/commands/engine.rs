@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     fs::{self, File},
-    io,
+    io::{self, Read},
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -318,7 +318,7 @@ fn extract_archive(
     let mut extracted_bytes = 0u64;
 
     for index in 0..archive.len() {
-        let mut entry = archive
+        let entry = archive
             .by_index(index)
             .map_err(|error| AppError::Server(format!("官方引擎压缩包条目无效: {error}")))?;
         let enclosed_name = entry
@@ -333,11 +333,6 @@ fn extract_archive(
                 "官方引擎压缩包包含不支持的符号链接".into(),
             ));
         }
-        extracted_bytes = extracted_bytes
-            .checked_add(entry.size())
-            .filter(|size| *size <= MAX_OFFICIAL_ENGINE_UNCOMPRESSED_BYTES)
-            .ok_or_else(|| AppError::Server("官方引擎解压内容超过允许大小".into()))?;
-
         let output_path = payload.join(&enclosed_name);
         if entry.is_dir() {
             fs::create_dir_all(&output_path)?;
@@ -346,7 +341,13 @@ fn extract_archive(
                 fs::create_dir_all(parent)?;
             }
             let mut output = File::create(&output_path)?;
-            io::copy(&mut entry, &mut output)?;
+            let remaining = MAX_OFFICIAL_ENGINE_UNCOMPRESSED_BYTES - extracted_bytes;
+            let mut limited_entry = entry.take(remaining + 1);
+            let written = io::copy(&mut limited_entry, &mut output)?;
+            if written > remaining {
+                return Err(AppError::Server("官方引擎解压内容超过允许大小".into()));
+            }
+            extracted_bytes += written;
         }
         emit_download_progress(
             on_progress,
