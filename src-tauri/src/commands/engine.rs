@@ -406,7 +406,22 @@ async fn download_official_engine_inner(
     }
     fs::create_dir_all(destination)?;
     let archive_path = destination.join(".engine-download.zip");
+    let result =
+        download_official_engine_into(release, asset_url, destination, &archive_path, on_progress)
+            .await;
+    if result.is_err() {
+        let _ = fs::remove_dir_all(destination);
+    }
+    result
+}
 
+async fn download_official_engine_into(
+    release: &OfficialEngineRelease,
+    asset_url: &str,
+    destination: &Path,
+    archive_path: &Path,
+    on_progress: &Channel<OfficialEngineDownloadProgress>,
+) -> AppResult<()> {
     let client = reqwest::Client::builder()
         .user_agent("WebGALCraft engine manager")
         .connect_timeout(OFFICIAL_ENGINE_NETWORK_TIMEOUT)
@@ -463,8 +478,8 @@ async fn download_official_engine_inner(
         ));
     }
 
-    let result = extract_archive(&archive_path, destination, on_progress);
-    let _ = fs::remove_file(&archive_path);
+    let result = extract_archive(archive_path, destination, on_progress);
+    let _ = fs::remove_file(archive_path);
     result
 }
 
