@@ -53,7 +53,7 @@ export const useSceneEntryStatus = createGlobalState(() => {
         return
       }
       logger.warn(`[SceneEntry] 检查入口文件失败: ${error}`)
-      status.value = 'missing'
+      status.value = 'checking'
     }
   }
 
