@@ -3,6 +3,7 @@ use std::{
     fs::{self, File},
     io,
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 use futures_util::StreamExt;
@@ -26,6 +27,7 @@ const OFFICIAL_ENGINE_NAME: &str = "WebGAL";
 const MAX_OFFICIAL_ENGINE_BYTES: u64 = 200 * 1024 * 1024;
 const MAX_OFFICIAL_ENGINE_ENTRIES: usize = 100_000;
 const MAX_OFFICIAL_ENGINE_UNCOMPRESSED_BYTES: u64 = 1024 * 1024 * 1024;
+const OFFICIAL_ENGINE_NETWORK_TIMEOUT: Duration = Duration::from_secs(30);
 const OFFICIAL_GITHUB_HOST: &str = "github.com";
 const OFFICIAL_GITHUB_PATH_PREFIX: &str = "/OpenWebGAL/WebGAL/releases/";
 
@@ -229,6 +231,7 @@ fn resolve_official_asset_url(
 async fn request_official_release_endpoint(endpoint: &str) -> AppResult<reqwest::Response> {
     let client = reqwest::Client::builder()
         .user_agent("WebGALCraft engine manager")
+        .timeout(OFFICIAL_ENGINE_NETWORK_TIMEOUT)
         .build()
         .map_err(|error| AppError::Server(format!("无法初始化官方引擎服务: {error}")))?;
     let response = client
@@ -406,6 +409,8 @@ async fn download_official_engine_inner(
 
     let client = reqwest::Client::builder()
         .user_agent("WebGALCraft engine manager")
+        .connect_timeout(OFFICIAL_ENGINE_NETWORK_TIMEOUT)
+        .read_timeout(OFFICIAL_ENGINE_NETWORK_TIMEOUT)
         .build()
         .map_err(|error| AppError::Server(format!("无法初始化官方引擎下载: {error}")))?;
     let response = client
