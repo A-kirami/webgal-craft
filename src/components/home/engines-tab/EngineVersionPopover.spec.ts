@@ -117,4 +117,26 @@ describe('EngineVersionPopover', () => {
     expect(onOpenVersionRelease).toHaveBeenNthCalledWith(1, 'https://example.com/releases/4.6.4')
     expect(onOpenVersionRelease).toHaveBeenNthCalledWith(2, 'https://example.com/releases/4.6.3')
   })
+
+  it('远程版本加载失败时仍显示已安装版本和错误提示', async () => {
+    const group = createGroup()
+    group.remote = { ...group.remote!, status: 'error' }
+
+    renderInBrowser(EngineVersionPopover, {
+      props: {
+        group,
+        onDownloadVersion: vi.fn(),
+        onOpenVersionRelease: vi.fn(),
+      },
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('home.engines.official.loadFailed')).toBeVisible()
+    await expect.element(page.getByText('4.6.3')).toBeVisible()
+  })
 })

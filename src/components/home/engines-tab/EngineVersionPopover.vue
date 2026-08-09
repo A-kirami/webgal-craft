@@ -66,14 +66,14 @@ const latestVersion = computed(() => versionItems.value[0]?.version)
   <TooltipProvider>
     <div class="p-0 flex flex-col gap-1 min-w-0">
       <div
-        v-if="versionItems.length === 0 && group.remote?.status === 'loading'"
+        v-if="group.remote?.status === 'loading'"
         class="text-xs text-muted-foreground px-1 py-2 flex gap-2 items-center"
       >
         <LoaderCircle class="size-3.5 animate-spin" />
         {{ $t('home.engines.official.checking') }}
       </div>
       <div
-        v-else-if="versionItems.length === 0 && group.remote?.status === 'error'"
+        v-else-if="group.remote?.status === 'error'"
         class="text-xs text-destructive px-1 py-2 flex gap-2 items-center"
       >
         <TriangleAlert class="size-3.5" />
