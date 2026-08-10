@@ -128,4 +128,18 @@ describe('templateSwitch.resetTemplate', () => {
     expect(refreshTemplateOverlayMock).not.toHaveBeenCalled()
     expect(debugCommanderMock.refetchTemplates).not.toHaveBeenCalled()
   })
+
+  it('关闭模板标签失败时不会清理覆盖层', async () => {
+    const gamePath = AbsPath.from('/games/demo')
+    tabsStoreMock.tabs = [{ path: '/games/demo/game/template/custom.txt' }]
+    closeTabMock.mockImplementationOnce(() => {
+      throw new Error('close failed')
+    })
+
+    await expect(templateSwitch.resetTemplate(gamePath)).rejects.toThrow('close failed')
+
+    expect(cleanTemplateUpperMock).not.toHaveBeenCalled()
+    expect(refreshTemplateOverlayMock).not.toHaveBeenCalled()
+    expect(debugCommanderMock.refetchTemplates).not.toHaveBeenCalled()
+  })
 })

@@ -43,21 +43,17 @@ async function isTemplateDirty(gamePath: AbsPath): Promise<boolean> {
 }
 
 async function closeOpenedTemplateDocuments(gamePath: AbsPath): Promise<void> {
-  try {
-    const templateRoot = templateUpperPath(gamePath)
-    const tabsStore = useTabsStore()
-    const openedPaths = tabsStore.tabs
-      .filter(tab => isPathWithinDirectory(tab.path, templateRoot))
-      .map(tab => tab.path)
+  const templateRoot = templateUpperPath(gamePath)
+  const tabsStore = useTabsStore()
+  const openedPaths = tabsStore.tabs
+    .filter(tab => isPathWithinDirectory(tab.path, templateRoot))
+    .map(tab => tab.path)
 
-    for (const path of openedPaths) {
-      const index = tabsStore.findTabIndex(path)
-      if (index !== -1) {
-        tabsStore.closeTab(index)
-      }
+  for (const path of openedPaths) {
+    const index = tabsStore.findTabIndex(path)
+    if (index !== -1) {
+      tabsStore.closeTab(index)
     }
-  } catch (error) {
-    logger.warn(`[模板切换] 关闭模板文档失败: ${error}`)
   }
 }
 
