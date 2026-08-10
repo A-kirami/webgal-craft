@@ -722,7 +722,7 @@ edit:
     closeRight: Close Tabs to the Right
     viewHistory: View Version History
     revealInExplorer: Reveal in File Explorer
-    saveChangesTitle: Save changes to {count} tabs before closing?
+    saveChangesTitle: "Save changes to {count} tab before closing? | Save changes to {count} tabs before closing?"
     saveChangesDescription: Some tabs have unsaved changes. Save them before closing?
   completion:
     arguments:
