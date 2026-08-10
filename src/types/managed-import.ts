@@ -2,7 +2,13 @@ import type { AbsPath } from '~/domain/path'
 
 export type ImportResourceKind = 'game' | 'engine' | 'template'
 
-export type ManagedImportPhase = 'copying' | 'validating' | 'publishing' | 'registering'
+export type ManagedImportPhase = 'copying' | 'downloading' | 'extracting' | 'validating' | 'publishing' | 'registering'
+
+export interface ManagedImportActivity {
+  engineName: string
+  engineVersion: string
+  kind: 'official-engine-install'
+}
 
 export interface ManagedImportProgress {
   sessionId: string

@@ -85,6 +85,9 @@ pub fn run() {
             commands::game::set_game_config,
             // engine
             commands::engine::read_engine_manifest,
+            commands::engine::get_latest_official_engine_release,
+            commands::engine::get_official_engine_releases,
+            commands::engine::download_official_engine,
             // export
             commands::export::export_web,
             commands::android_export::export_android_web_zip,

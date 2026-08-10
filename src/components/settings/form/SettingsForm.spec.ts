@@ -103,6 +103,18 @@ const settingsDefinition = defineSettingsSchema({
           { value: 'zh-Hans', label: '简体中文' },
         ],
       },
+      compactInput: {
+        type: 'input',
+        default: '',
+        label: '紧凑输入',
+      },
+      stackedInput: {
+        type: 'input',
+        default: '',
+        label: '换行输入',
+        description: '输入内容',
+        layout: 'stacked',
+      },
     },
   },
 } as const)
@@ -304,6 +316,28 @@ describe('SettingsForm', () => {
     expect(trigger.getAttribute('id')).toBe(label.getAttribute('for'))
     expect(trigger.getAttribute('aria-describedby')).toContain('-form-item-description')
     expect(trigger.getAttribute('aria-invalid')).toBe('false')
+
+    await result.unmount()
+  })
+
+  it('input 字段默认紧凑排列，并支持显式换行排列', async () => {
+    const result = renderSettingsFormHarness()
+
+    function findFieldContainer(labelText: string) {
+      const label = [...document.querySelectorAll('label')]
+        .find(element => element.textContent?.trim() === labelText)
+
+      const fieldContainer = label?.closest('div.max-w-120')
+
+      if (!fieldContainer) {
+        throw new Error(`${labelText} field should be rendered`)
+      }
+
+      return fieldContainer
+    }
+
+    expect(findFieldContainer('紧凑输入').className).toContain('flex-row')
+    expect(findFieldContainer('换行输入').className).toContain('flex-col')
 
     await result.unmount()
   })

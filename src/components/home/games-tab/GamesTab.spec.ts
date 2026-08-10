@@ -135,6 +135,7 @@ vi.mock('~/plugins/dayjs', () => ({
   default: () => ({
     fromNow: () => 'just now',
   }),
+  setDayjsLocale: vi.fn(),
 }))
 
 vi.mock('~/services/game-manager', () => ({

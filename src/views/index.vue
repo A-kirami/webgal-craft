@@ -22,6 +22,8 @@ watch(() => workspaceStore.activeTab, checkResourcesForActiveTab, { immediate: t
       <WelcomeSection />
       <ManagedImportStatus
         v-if="managedImport.isBusy.value"
+        :activity="managedImport.activeActivity.value"
+        :resource-kind="managedImport.activeKind.value"
         :progress="managedImport.progress.value"
         :can-cancel="managedImport.canCancel.value"
         @cancel="managedImport.cancel"

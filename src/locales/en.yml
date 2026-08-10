@@ -17,6 +17,7 @@ common:
   or: or
   more: More
   openFolder: Open Folder
+  openReleasePage: Open Release Page
   search:
     placeholder: Search files or folders
     toggle: Toggle search
@@ -124,12 +125,22 @@ home:
     cancel: Cancel import
     copied: "{files} files · {bytes}"
     currentEntry: "{summary} · {entry}"
+    officialEngine:
+      title: Installing {engineName} {engineVersion}
+      downloaded: Downloaded {downloaded}
+      downloadedWithTotal: Downloaded {downloaded} / {total}
+      extracted: Extracted {files} files
+      phase:
+        downloading: Downloading
+        extracting: Extracting
     resource:
       game: game
       engine: engine
       template: template
     phase:
       copying: Copying files
+      downloading: Downloading
+      extracting: Extracting
       validating: Validating
       publishing: Publishing
       registering: Registering
@@ -205,6 +216,18 @@ home:
     importVersionTooOld: This engine is too old. Import an engine for WebGAL {version} or later.
     importUnknownError: An unknown error occurred while importing the engine
     importMultipleFolders: Only one engine folder can be imported at a time
+    official:
+      badge: Official
+      checking: Checking version…
+      installing: Downloading and installing
+      install: Install latest version
+      update: Update
+      retry: Retry
+      loadFailed: Could not fetch official version information
+      download: Download
+      installSuccess: WebGAL {version} installed
+      alreadyInstalled: This version is already installed
+      installFailed: Official engine download or installation failed
     noEngineTitle: No Available Game Engines
     noEngineContent: You need to install a game engine first to create games
     goToInstall: Go to Install
@@ -1250,6 +1273,12 @@ settings:
     openLastProject:
       label: Open Last Edited Game on Startup
       description: Automatically load the last edited game project when the application starts
+  network:
+    label: Network
+    officialEngineDownloadProxy:
+      label: GitHub download proxy
+      description: Optional HTTPS proxy prefix for official WebGAL engine downloads. Leave empty to use the system proxy or connect directly.
+      placeholder: https://proxy.example/
   edit:
     general: General
     preview: Preview
@@ -1326,10 +1355,11 @@ engine:
   defaultEngine: Default
   setDefaultEngine: Set as Default Engine
   unsetDefaultEngine: Unset Default Engine
-  versionSummary: "{version} · {count} versions"
-  noAvailableVersionSummary: No available version · {count} installed versions
+  installedVersions: "{count} installed"
+  totalVersions: "{count} version total | {count} versions total"
+  notInstalled: Not installed
   latestBadge: Latest
-  deleteVersion: Delete Version
+  deleteVersion: Uninstall
   uninstallAllVersions: Uninstall All Versions
   deleteBlocked: Cannot Delete
   deleteBlockedByGames: "The following games are using this engine:"

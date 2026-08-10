@@ -1,13 +1,19 @@
-import { openPath } from '@tauri-apps/plugin-opener'
+import { openPath, openUrl } from '@tauri-apps/plugin-opener'
 
 import { db } from '~/database/db'
+import {
+  filterSupportedOfficialEngineReleases,
+  OFFICIAL_WEBGAL_REPOSITORY,
+} from '~/domain/engine/official-release'
 import { AbsPath } from '~/domain/path'
 import { createHomeResourceImportMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
 import { createEngineImportWorkflow } from '~/features/resource-import/resource-import-workflows'
 import { engineManager } from '~/services/engine-manager'
 import { resourceReconcile } from '~/services/resource-reconcile'
+import { useOfficialEngineReleaseCacheStore } from '~/stores/official-engine-release-cache'
 
 import type { Engine } from '~/database/model'
+import type { OfficialEngineRelease } from '~/domain/engine/official-release'
 import type { EngineGroupCollectionItem } from '~/features/home/home-collection-items'
 import type { I18nT } from '~/utils/i18n-like'
 
@@ -22,6 +28,13 @@ interface UseEnginesTabControllerOptions {
 
 export function useEnginesTabController(options: UseEnginesTabControllerOptions) {
   const importWorkflow = createEngineImportWorkflow(options.t('common.dialogs.selectEngineFolder'), options.android)
+  const officialReleaseCacheStore = useOfficialEngineReleaseCacheStore()
+  const officialReleases = shallowRef<OfficialEngineRelease[]>(
+    filterSupportedOfficialEngineReleases(officialReleaseCacheStore.releases),
+  )
+  const officialStatus = shallowRef<'loading' | 'ready' | 'installing' | 'error'>(
+    officialReleases.value.length > 0 ? 'ready' : 'loading',
+  )
   const importActions = useHomeResourceImportActions<Engine>({
     activeProgress: options.activeProgress,
     importResource: path => engineManager.importEngine(path),
@@ -58,6 +71,65 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
     options.openDeleteEngineGroupModal(engineId, { allUnavailable })
   }
 
+  async function loadOfficialEngineReleases(): Promise<void> {
+    const hasCachedReleases = officialReleaseCacheStore.releases.length > 0
+    if (!hasCachedReleases && officialStatus.value !== 'installing') {
+      officialStatus.value = 'loading'
+    }
+    try {
+      const latestRelease = await engineManager.getLatestOfficialEngineRelease()
+      if (!hasCachedReleases || officialReleaseCacheStore.latestVersion !== latestRelease.version) {
+        officialReleaseCacheStore.replaceReleases(
+          await engineManager.getOfficialEngineReleases(),
+          latestRelease.version,
+        )
+      }
+      officialReleases.value = filterSupportedOfficialEngineReleases(officialReleaseCacheStore.releases)
+      if (officialStatus.value !== 'installing') {
+        officialStatus.value = 'ready'
+      }
+    } catch (error) {
+      if (officialStatus.value !== 'installing') {
+        officialStatus.value = officialReleases.value.length > 0 ? 'ready' : 'error'
+      }
+      logger.warn(`[官方引擎] 获取版本失败: ${error}`)
+    }
+  }
+
+  async function installOfficialEngine(version: string): Promise<void> {
+    if (officialStatus.value === 'installing') {
+      return
+    }
+
+    officialStatus.value = 'installing'
+    try {
+      const result = await engineManager.installOfficialEngine(version)
+      if (!officialReleases.value.some(release => release.version === result.release.version)) {
+        officialReleaseCacheStore.replaceReleases([
+          ...officialReleaseCacheStore.releases,
+          result.release,
+        ], officialReleaseCacheStore.latestVersion ?? result.release.version)
+        officialReleases.value = filterSupportedOfficialEngineReleases(officialReleaseCacheStore.releases)
+      }
+      officialStatus.value = 'ready'
+      toast.success(result.alreadyRegistered
+        ? options.t('home.engines.official.alreadyInstalled')
+        : options.t('home.engines.official.installSuccess', { version: result.release.version }))
+    } catch (error) {
+      officialStatus.value = officialReleases.value.length > 0 ? 'ready' : 'error'
+      logger.warn(`[官方引擎] 安装失败: ${error}`)
+      toast.error(options.t('home.engines.official.installFailed'))
+    }
+  }
+
+  async function openOfficialRelease(): Promise<void> {
+    await openUrl(`https://github.com/${OFFICIAL_WEBGAL_REPOSITORY}/releases`)
+  }
+
+  async function openOfficialVersionRelease(releaseUrl: string): Promise<void> {
+    await openUrl(releaseUrl)
+  }
+
   return {
     getEngineProgress: (engine: Engine) => importActions.hasProgress(engine)
       ? importActions.getProgress(engine)
@@ -67,6 +139,12 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
     handleDrop: importActions.handleDrop,
     handleOpenGroupFolder,
     handleSetDefaultEngine: options.setDefaultEngineId,
+    installOfficialEngine,
+    loadOfficialEngineReleases,
+    openOfficialRelease,
+    openOfficialVersionRelease,
+    officialReleases,
+    officialStatus,
     selectEngineFolder: importActions.selectFolder,
   }
 }
