@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { TriangleAlert } from '@lucide/vue'
+import { RotateCcw, TriangleAlert } from '@lucide/vue'
 
 import { projectConfigCmds } from '~/commands/project-config'
 import { db } from '~/database/db'
@@ -21,19 +21,24 @@ const props = defineProps<{
 const workspaceStore = useWorkspaceStore()
 
 let isSwitching = $ref(false)
+let isResetting = $ref(false)
 let isDirty = $ref(false)
 let showDirtyConfirm = $ref(false)
+let showResetConfirm = $ref(false)
 let isEngineAvailable = $ref(true)
 let selectedBinding = $ref<TemplateBinding | undefined>(undefined)
 
 watch(() => open.value, async (isOpen) => {
   if (!isOpen) {
     showDirtyConfirm = false
+    showResetConfirm = false
     return
   }
 
   isSwitching = false
+  isResetting = false
   showDirtyConfirm = false
+  showResetConfirm = false
 
   // Initial binding mirrors the project's current state so the dialog reflects reality.
   try {
@@ -50,7 +55,7 @@ watch(() => open.value, async (isOpen) => {
     isEngineAvailable = true
   }
 
-  isDirty = isEngineAvailable ? await templateSwitch.isTemplateDirty(props.game.path) : false
+  isDirty = await templateSwitch.isTemplateDirty(props.game.path)
 }, { immediate: true })
 
 async function performSwitch(skipDirtyCheck: boolean) {
@@ -72,7 +77,7 @@ async function performSwitch(skipDirtyCheck: boolean) {
 }
 
 async function handleConfirm() {
-  if (isSwitching) {
+  if (isSwitching || isResetting) {
     return
   }
 
@@ -88,11 +93,36 @@ async function handleDirtyConfirm() {
   showDirtyConfirm = false
   await performSwitch(true)
 }
+
+function handleResetRequest() {
+  if (isSwitching || isResetting || !isDirty) {
+    return
+  }
+
+  showResetConfirm = true
+}
+
+async function handleResetConfirm() {
+  showResetConfirm = false
+  if (isSwitching || isResetting || !isDirty) {
+    return
+  }
+
+  isResetting = true
+  try {
+    await templateSwitch.resetTemplate(props.game.path)
+    isDirty = false
+  } catch (error) {
+    handleError(error, { context: t('modals.switchTemplate.reset.error') })
+  } finally {
+    isResetting = false
+  }
+}
 </script>
 
 <template>
   <Dialog ::open="open">
-    <DialogContent class="sm:max-w-[425px]">
+    <DialogContent class="sm:max-w-[450px]" :hide-close="isSwitching || isResetting">
       <DialogHeader>
         <DialogTitle>
           {{ $t('modals.switchTemplate.title') }}
@@ -124,15 +154,27 @@ async function handleDirtyConfirm() {
         </div>
       </div>
 
-      <DialogFooter>
-        <DialogClose as-child>
-          <Button variant="outline">
-            {{ $t('common.cancel') }}
-          </Button>
-        </DialogClose>
-        <Button :disabled="isSwitching || !isEngineAvailable" @click="handleConfirm">
-          {{ $t('common.save') }}
+      <DialogFooter class="gap-3 sm:justify-between">
+        <Button
+          v-if="isDirty"
+          variant="ghost"
+          class="text-destructive hover:text-destructive hover:bg-destructive/10"
+          :disabled="isSwitching || isResetting"
+          @click="handleResetRequest"
+        >
+          <RotateCcw class="size-4" aria-hidden="true" />
+          {{ $t('modals.switchTemplate.reset.label') }}
         </Button>
+        <div class="flex gap-2">
+          <DialogClose as-child>
+            <Button variant="outline" :disabled="isSwitching || isResetting">
+              {{ $t('common.cancel') }}
+            </Button>
+          </DialogClose>
+          <Button :disabled="isSwitching || isResetting || !isEngineAvailable" @click="handleConfirm">
+            {{ $t('common.save') }}
+          </Button>
+        </div>
       </DialogFooter>
     </DialogContent>
   </Dialog>
@@ -165,6 +207,39 @@ async function handleDirtyConfirm() {
           @click="handleDirtyConfirm"
         >
           {{ $t('modals.switchTemplate.dirtyConfirm.confirm') }}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
+
+  <AlertDialog ::open="showResetConfirm">
+    <AlertDialogContent>
+      <div class="flex flex-col gap-2 sm:flex-row sm:gap-4 max-sm:items-center">
+        <div
+          class="text-destructive rounded-lg bg-destructive/10 flex shrink-0 size-9 items-center justify-center"
+          aria-hidden="true"
+        >
+          <TriangleAlert class="size-5" aria-hidden="true" />
+        </div>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {{ $t('modals.switchTemplate.reset.title') }}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ $t('modals.switchTemplate.reset.description') }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+      </div>
+      <AlertDialogFooter>
+        <AlertDialogCancel>
+          {{ $t('common.cancel') }}
+        </AlertDialogCancel>
+        <AlertDialogAction
+          variant="destructive"
+          :disabled="isResetting"
+          @click="handleResetConfirm"
+        >
+          {{ $t('modals.switchTemplate.reset.confirm') }}
         </AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>

@@ -350,6 +350,12 @@ modals:
     dirtyConfirm:
       title: Switching will discard modifications
       confirm: Confirm switch
+    reset:
+      label: Reset Template
+      title: Are you sure you want to reset the current template?
+      description: This will clear all overrides under the project's game/template/ directory, including added, modified, unsaved, and deleted files, and restore the initial state of the selected template.
+      confirm: Confirm Reset
+      error: Template reset failed
     error: Template switch failed
     engineUnavailable: The bound engine is unavailable. Restore or reinstall it before switching templates.
   deleteEngineGroup:

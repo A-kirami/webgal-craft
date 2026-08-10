@@ -5,6 +5,7 @@ import { db } from '~/database/db'
 import { AbsPath, RelPath } from '~/domain/path'
 import { debugCommander } from '~/services/debug-commander'
 import { engineManager, isEngineUsable } from '~/services/engine-manager'
+import { isPreviewStateResetError } from '~/services/preview-protocol-client'
 import { useEditorStore } from '~/stores/editor'
 import { useFileStore } from '~/stores/file'
 import { useTabsStore } from '~/stores/tabs'
@@ -17,6 +18,15 @@ type TemplateStrategy = 'explicit' | 'clean' | 'dirty'
 
 function templateUpperPath(gamePath: AbsPath): AbsPath {
   return AbsPath.join(gamePath, RelPath.from('game/template'))
+}
+
+function isPathWithinDirectory(path: AbsPath, directory: AbsPath): boolean {
+  try {
+    AbsPath.relativize(path, directory)
+    return true
+  } catch {
+    return false
+  }
 }
 
 async function isTemplateDirty(gamePath: AbsPath): Promise<boolean> {
@@ -34,19 +44,17 @@ async function isTemplateDirty(gamePath: AbsPath): Promise<boolean> {
 }
 
 async function closeOpenedTemplateDocuments(gamePath: AbsPath): Promise<void> {
-  try {
-    const templateRoot = templateUpperPath(gamePath)
-    const editorStore = useEditorStore()
-    const tabsStore = useTabsStore()
-    const openedPaths = editorStore.collectDocumentPathsUnder(templateRoot)
-    for (const path of openedPaths) {
-      const index = tabsStore.findTabIndex(AbsPath.from(path))
-      if (index !== -1) {
-        tabsStore.closeTab(index)
-      }
+  const templateRoot = templateUpperPath(gamePath)
+  const tabsStore = useTabsStore()
+  const openedPaths = tabsStore.tabs
+    .filter(tab => isPathWithinDirectory(tab.path, templateRoot))
+    .map(tab => tab.path)
+
+  for (const path of openedPaths) {
+    const index = tabsStore.findTabIndex(path)
+    if (index !== -1) {
+      tabsStore.closeTab(index)
     }
-  } catch (error) {
-    logger.warn(`[模板切换] 关闭模板文档失败: ${error}`)
   }
 }
 
@@ -54,6 +62,32 @@ interface NotifyTemplateChangedOptions {
   nextEnginePath?: AbsPath
   nextTemplatePath?: AbsPath | null
   skipPreviewTemplateReload?: boolean
+}
+
+async function refreshTemplateOverlayAndPreview(
+  gamePath: AbsPath,
+  options: NotifyTemplateChangedOptions,
+): Promise<void> {
+  // 失效 file store 中模板子树缓存并刷新 enginePath / templatePath，
+  // 同时由 store 内部 emit `directory:modified` 通知订阅者重读。
+  // 引擎/模板切换不会改动磁盘文件本身（只是 lower 路径变了），
+  // OS watcher 不会触发；必须主动失效，否则 listDir 仍会用旧 lower 配置返回。
+  await useFileStore().refreshTemplateOverlay(gamePath, {
+    nextEnginePath: options.nextEnginePath,
+    nextTemplatePath: options.nextTemplatePath,
+  })
+
+  if (!options.skipPreviewTemplateReload) {
+    try {
+      await debugCommander.refetchTemplates()
+    } catch (error) {
+      if (isPreviewStateResetError(error)) {
+        logger.warn(`[模板切换] 通知预览刷新模板失败: ${error}`)
+        return
+      }
+      throw error
+    }
+  }
 }
 
 /**
@@ -73,28 +107,17 @@ async function notifyTemplateChanged(
   options: NotifyTemplateChangedOptions = {},
 ): Promise<void> {
   await closeOpenedTemplateDocuments(gamePath)
+  await refreshTemplateOverlayAndPreview(gamePath, options)
+}
 
-  // 失效 file store 中模板子树缓存并刷新 enginePath / templatePath，
-  // 同时由 store 内部 emit `directory:modified` 通知订阅者重读。
-  // 引擎/模板切换不会改动磁盘文件本身（只是 lower 路径变了），
-  // OS watcher 不会触发；必须主动失效，否则 listDir 仍会用旧 lower 配置返回。
-  try {
-    await useFileStore().refreshTemplateOverlay(gamePath, {
-      nextEnginePath: options.nextEnginePath,
-      nextTemplatePath: options.nextTemplatePath,
-    })
-  } catch (error) {
-    logger.warn(`[模板切换] 失效模板 overlay 缓存失败: ${error}`)
-  }
-
-  if (!options.skipPreviewTemplateReload) {
-    try {
-      await debugCommander.refetchTemplates()
-    } catch (error) {
-      // 无运行中的预览或站点未连接时忽略
-      logger.warn(`[模板切换] 通知预览刷新模板失败: ${error}`)
-    }
-  }
+/**
+ * 重置项目当前模板的所有覆盖内容，恢复到当前模板的初始状态。
+ * 清理前关闭模板文档，避免打开的文档继续指向已移除的 upper 路径。
+ */
+async function resetTemplate(gamePath: AbsPath): Promise<void> {
+  await closeOpenedTemplateDocuments(gamePath)
+  await vfsCmds.cleanTemplateUpper(gamePath)
+  await refreshTemplateOverlayAndPreview(gamePath, {})
 }
 
 /** 站点未注册时为非致命情形（项目尚未打开预览），吞掉错误并 warn */
@@ -209,6 +232,7 @@ export const templateSwitch = {
   resolveTemplatePath,
   evaluateTemplateStrategy,
   isTemplateDirty,
+  resetTemplate,
   switchTemplate,
   notifyTemplateChanged,
 }
