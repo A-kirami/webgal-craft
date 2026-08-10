@@ -351,18 +351,43 @@ export const useTabsStore = defineStore(
      * 若关闭的是当前激活标签页，则激活最后使用的标签页。
      */
     function closeTab(index: number) {
+      closeTabs([index])
+    }
+
+    /**
+     * 关闭多个标签页，并在当前标签被关闭时恢复最近使用的剩余标签。
+     * 使用索引快照完成一次状态转换，避免连续删除时让调用方维护变化中的索引。
+     */
+    function closeTabs(indices: readonly number[]) {
       const state = ensureProjectState()
-      if (!state || !isValidTabIndex(index)) {
+      if (!state) {
         return
       }
-      const closedPath = state.tabs[index].path
-      state.tabs.splice(index, 1)
-      clearRuntimeTabState(closedPath)
-      if (index === activeTabIndex) {
-        state.activeTabIndex = getLastActiveTabIndex()
-      } else if (index < activeTabIndex) {
-        state.activeTabIndex--
+
+      const pathsToClose = new Set<AbsPath>()
+      for (const index of indices) {
+        if (!isValidTabIndex(index)) {
+          continue
+        }
+        pathsToClose.add(state.tabs[index].path)
       }
+
+      if (pathsToClose.size === 0) {
+        return
+      }
+
+      const activePath = state.activeTabIndex >= 0
+        ? state.tabs[state.activeTabIndex]?.path
+        : undefined
+
+      state.tabs = state.tabs.filter(tab => !pathsToClose.has(tab.path))
+      for (const path of pathsToClose) {
+        clearRuntimeTabState(path)
+      }
+
+      state.activeTabIndex = activePath && !pathsToClose.has(activePath)
+        ? state.tabs.findIndex(tab => tab.path === activePath)
+        : getLastActiveTabIndex()
     }
 
     function reorderTab(fromIndex: number, targetIndex: number): void {
@@ -474,6 +499,7 @@ export const useTabsStore = defineStore(
       activateTab,
       updateTabModified,
       closeTab,
+      closeTabs,
       reorderTab,
       findTabIndex,
       updateTabLoading,

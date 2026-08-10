@@ -140,6 +140,48 @@ describe('useTabsStore', () => {
     expect(store.activeTab?.path).toBe('/game/b.txt')
   })
 
+  it('批量关闭会保留未关闭的激活标签并清理关闭标签的运行时状态', () => {
+    const store = useTabsStore()
+
+    editSettingsStoreState.enablePreviewTab = false
+
+    store.openTab('a.txt', AbsPath.from('/game/a.txt'))
+    store.openTab('b.txt', AbsPath.from('/game/b.txt'))
+    store.openTab('c.txt', AbsPath.from('/game/c.txt'))
+    store.openTab('d.txt', AbsPath.from('/game/d.txt'))
+    store.activateTab(1)
+    store.updateTabModified(2, true)
+    store.updateTabLoading(2, true)
+
+    store.closeTabs([0, 2])
+
+    expect(store.tabs.map(tab => tab.path)).toEqual(['/game/b.txt', '/game/d.txt'])
+    expect(store.activeTab?.path).toBe('/game/b.txt')
+    expect(store.runtimeTabStateMap['game-1']).not.toHaveProperty('/game/c.txt')
+  })
+
+  it('批量关闭当前标签页后会回退到最近使用的剩余标签', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-03-18T00:00:00.000Z'))
+
+    const store = useTabsStore()
+
+    editSettingsStoreState.enablePreviewTab = false
+
+    store.openTab('a.txt', AbsPath.from('/game/a.txt'))
+    vi.setSystemTime(new Date('2026-03-18T00:00:01.000Z'))
+    store.openTab('b.txt', AbsPath.from('/game/b.txt'))
+    vi.setSystemTime(new Date('2026-03-18T00:00:02.000Z'))
+    store.openTab('c.txt', AbsPath.from('/game/c.txt'))
+    vi.setSystemTime(new Date('2026-03-18T00:00:03.000Z'))
+    store.activateTab(1)
+
+    store.closeTabs([1])
+
+    expect(store.tabs.map(tab => tab.path)).toEqual(['/game/a.txt', '/game/c.txt'])
+    expect(store.activeTab?.path).toBe('/game/c.txt')
+  })
+
   it('reorderTab 会按移除源项后的 targetIndex 重排，并保持当前激活标签指向同一文件', () => {
     const store = useTabsStore()
 

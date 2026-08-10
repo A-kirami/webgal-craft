@@ -714,6 +714,16 @@ edit:
     title: 没有打开的文件
     description: 从左侧文件列表中选择一个文件开始编辑，或创建一个新的场景文件
     createScene: 创建场景文件
+  editorTabs:
+    close: 关闭标签页
+    closeOthers: 关闭其他标签页
+    closeSaved: 关闭已保存标签页
+    closeAll: 关闭全部标签页
+    closeRight: 关闭右侧标签页
+    viewHistory: 查看历史版本
+    revealInExplorer: 在文件资源管理器中显示
+    saveChangesTitle: 关闭前保存 {count} 个标签页的更改？
+    saveChangesDescription: 部分标签页存在未保存的更改。关闭前是否保存？
   completion:
     arguments:
       when: 执行条件

@@ -714,6 +714,16 @@ edit:
     title: 開いているファイルがありません
     description: 左側のファイルリストからファイルを選択して編集を開始するか、新しいシーンファイルを作成してください
     createScene: シーンファイルを作成
+  editorTabs:
+    close: タブを閉じる
+    closeOthers: 他のタブを閉じる
+    closeSaved: 保存済みタブを閉じる
+    closeAll: すべてのタブを閉じる
+    closeRight: 右側のタブを閉じる
+    viewHistory: 履歴を表示
+    revealInExplorer: ファイルマネージャーで表示
+    saveChangesTitle: 閉じる前に {count} 個のタブの変更を保存しますか？
+    saveChangesDescription: 未保存の変更があるタブがあります。閉じる前に保存しますか？
   completion:
     arguments:
       when: 条件付き実行

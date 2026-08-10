@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { reactive } from 'vue'
+import { defineComponent, h, reactive } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
 import { AbsPath } from '~/domain/path'
 
 import EditorTabs from './EditorTabs.vue'
 
+import type { EditorTabContextMenuAction } from '~/features/editor/editor-tabs/editor-tabs'
 import type { Tab } from '~/stores/tabs'
 
 function createPointerEvent(type: string, overrides: PointerEventInit = {}): PointerEvent {
@@ -68,8 +69,10 @@ const {
   useModalStoreMock,
   useTabsStoreMock,
   useWorkspaceStoreMock,
+  revealItemInDirMock,
 } = vi.hoisted(() => ({
   modalOpenMock: vi.fn(),
+  revealItemInDirMock: vi.fn(),
   saveFileMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
   useEditorDiagnosticsStoreMock: vi.fn(),
@@ -98,9 +101,15 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
+vi.mock('@tauri-apps/plugin-opener', () => ({
+  revealItemInDir: revealItemInDirMock,
+}))
+
 function createWorkspaceStore(gamePath?: string) {
+  const path = gamePath ? AbsPath.from(gamePath) : undefined
   return reactive({
-    currentGame: gamePath ? { path: AbsPath.from(gamePath) } : undefined,
+    currentGame: path ? { path } : undefined,
+    CWD: path,
   })
 }
 
@@ -121,6 +130,7 @@ function createTabsStore(tabs: Tab[], activeTabIndex: number = 0) {
         store.activeTabIndex = store.tabs.length - 1
       }
     }),
+    closeTabs: vi.fn(),
     findTabIndex: vi.fn((path: AbsPath) => store.tabs.findIndex(tab => tab.path === path)),
     fixPreviewTab: vi.fn((index: number) => {
       if (store.tabs[index]) {
@@ -147,6 +157,22 @@ function createTabsStore(tabs: Tab[], activeTabIndex: number = 0) {
   return store
 }
 
+let contextMenuAction: EditorTabContextMenuAction = 'close'
+const editorTabContextMenuStub = defineComponent({
+  name: 'StubEditorTabContextMenu',
+  emits: ['action'],
+  setup(_, { attrs, emit, slots }) {
+    return () => h('div', attrs, [
+      h('button', {
+        'type': 'button',
+        'data-testid': 'editor-tab-context-menu-action',
+        'onClick': () => emit('action', contextMenuAction),
+      }),
+      ...(slots.default?.() ?? []),
+    ])
+  },
+})
+
 describe('EditorTabs', () => {
   afterEach(() => {
     vi.clearAllMocks()
@@ -154,12 +180,14 @@ describe('EditorTabs', () => {
 
   beforeEach(() => {
     modalOpenMock.mockReset()
+    revealItemInDirMock.mockReset()
     saveFileMock.mockReset()
     useEditorStoreMock.mockReset()
     useEditorDiagnosticsStoreMock.mockReset()
     useModalStoreMock.mockReset()
     useTabsStoreMock.mockReset()
     useWorkspaceStoreMock.mockReset()
+    contextMenuAction = 'close'
 
     useEditorStoreMock.mockReturnValue({
       saveFile: saveFileMock,
@@ -357,6 +385,136 @@ describe('EditorTabs', () => {
 
     expect(tabsStore.closeTab).toHaveBeenCalledWith(0)
     expect(modalOpenMock).not.toHaveBeenCalled()
+  })
+
+  it('右键批量关闭会按当前标签路径调用批量关闭操作', async () => {
+    contextMenuAction = 'closeAll'
+    const tabsStore = createTabsStore([
+      {
+        activeAt: 1,
+        isModified: false,
+        isPreview: false,
+        name: 'a.txt',
+        path: AbsPath.from('/project/a.txt'),
+      },
+      {
+        activeAt: 2,
+        isModified: false,
+        isPreview: false,
+        name: 'b.txt',
+        path: AbsPath.from('/project/b.txt'),
+      },
+    ])
+
+    useTabsStoreMock.mockReturnValue(tabsStore)
+
+    renderInBrowser(EditorTabs, {
+      global: {
+        stubs: {
+          EditorTabContextMenu: editorTabContextMenuStub,
+        },
+      },
+    })
+
+    await page.getByTestId('editor-tab-context-menu-action').first().click()
+
+    expect(tabsStore.closeTabs).toHaveBeenCalledWith([0, 1])
+    expect(modalOpenMock).not.toHaveBeenCalled()
+  })
+
+  it('右键关闭其他标签页时会为未保存标签打开确认模态框', async () => {
+    contextMenuAction = 'closeOthers'
+    const tabsStore = createTabsStore([
+      {
+        activeAt: 1,
+        isModified: false,
+        isPreview: false,
+        name: 'active.txt',
+        path: AbsPath.from('/project/active.txt'),
+      },
+      {
+        activeAt: 2,
+        isModified: true,
+        isPreview: false,
+        name: 'draft.txt',
+        path: AbsPath.from('/project/draft.txt'),
+      },
+    ])
+
+    useTabsStoreMock.mockReturnValue(tabsStore)
+
+    renderInBrowser(EditorTabs, {
+      global: {
+        stubs: {
+          EditorTabContextMenu: editorTabContextMenuStub,
+        },
+      },
+    })
+
+    await page.getByTestId('editor-tab-context-menu-action').first().click()
+
+    expect(modalOpenMock).toHaveBeenCalledWith('SaveChangesModal', expect.objectContaining({
+      onDontSave: expect.any(Function),
+      onSave: expect.any(Function),
+      title: expect.any(String),
+    }))
+    expect(tabsStore.closeTabs).not.toHaveBeenCalled()
+  })
+
+  it('右键场景标签可以打开历史版本', async () => {
+    contextMenuAction = 'viewHistory'
+    useWorkspaceStoreMock.mockReturnValue(createWorkspaceStore('/project'))
+    useTabsStoreMock.mockReturnValue(createTabsStore([
+      {
+        activeAt: 1,
+        isModified: false,
+        isPreview: false,
+        name: 'start.txt',
+        path: AbsPath.from('/project/game/scene/start.txt'),
+      },
+    ]))
+
+    renderInBrowser(EditorTabs, {
+      global: {
+        stubs: {
+          EditorTabContextMenu: editorTabContextMenuStub,
+        },
+      },
+    })
+
+    await page.getByTestId('editor-tab-context-menu-action').click()
+
+    expect(modalOpenMock).toHaveBeenCalledWith('BackupTimelineDialog', {
+      logicalPath: 'game/scene/start.txt',
+      projectPath: '/project',
+    })
+  })
+
+  it('右键标签可以在文件资源管理器中显示', async () => {
+    contextMenuAction = 'revealInExplorer'
+    useTabsStoreMock.mockReturnValue(createTabsStore([
+      {
+        activeAt: 1,
+        isModified: false,
+        isPreview: false,
+        name: 'demo.txt',
+        path: AbsPath.from('/project/demo.txt'),
+      },
+    ]))
+
+    renderInBrowser(EditorTabs, {
+      global: {
+        stubs: {
+          EditorTabContextMenu: editorTabContextMenuStub,
+        },
+      },
+    })
+
+    await page.getByTestId('editor-tab-context-menu-action').click()
+
+    await vi.waitFor(() => {
+      expect(revealItemInDirMock).toHaveBeenCalledWith('/project/demo.txt')
+    })
   })
 
   it('拖拽标签页会按目标位置重排并保持可点击激活', async () => {

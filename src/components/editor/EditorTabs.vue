@@ -1,7 +1,15 @@
 <script setup lang="ts">
+import { revealItemInDir } from '@tauri-apps/plugin-opener'
+
 import { useDragSort } from '~/composables/useDragSort'
+import { AbsPath, RelPath } from '~/domain/path'
 import { getEditorTabPathHints, getEditorTabResourceRootPath } from '~/features/editor/editor-tabs/editor-tab-path-hints'
-import { getCloseTabDecision, shouldFixPreviewTab } from '~/features/editor/editor-tabs/editor-tabs'
+import {
+  getCloseTabDecision,
+  getEditorTabCloseTargets,
+  shouldFixPreviewTab,
+} from '~/features/editor/editor-tabs/editor-tabs'
+import { backupManager } from '~/services/backup-manager'
 import { useEditorStore } from '~/stores/editor'
 import { useEditorDiagnosticsStore } from '~/stores/editor-diagnostics'
 import { useModalStore } from '~/stores/modal'
@@ -10,6 +18,7 @@ import { useWorkspaceStore } from '~/stores/workspace'
 import { handleWheelToHorizontalScroll } from '~/utils/wheel'
 
 import type { ScrollArea } from '~/components/ui/scroll-area'
+import type { EditorTabBatchCloseAction, EditorTabContextMenuAction } from '~/features/editor/editor-tabs/editor-tabs'
 import type { Tab } from '~/stores/tabs'
 
 const { t } = useI18n()
@@ -109,6 +118,112 @@ function handleTabAuxClick(index: number, event: MouseEvent) {
   }
 }
 
+function closeTabPaths(paths: readonly AbsPath[]): void {
+  const indices = paths
+    .map(path => tabsStore.findTabIndex(path))
+    .filter((index): index is number => index !== -1)
+
+  tabsStore.closeTabs(indices)
+}
+
+function getSceneLogicalPath(path: AbsPath): RelPath | undefined {
+  const projectPath = workspaceStore.CWD
+  if (!projectPath) {
+    return
+  }
+
+  const logicalPath = backupManager.toProjectRelative(projectPath, path)
+  return logicalPath && backupManager.isScenePath(logicalPath) ? logicalPath : undefined
+}
+
+function handleCloseTabs(action: EditorTabBatchCloseAction, targetPath: AbsPath): void {
+  const targets = getEditorTabCloseTargets(tabs.value, targetPath, action)
+  if (targets.length === 0) {
+    return
+  }
+
+  const targetPaths = targets.map(tab => tab.path)
+  const modifiedTabs = targets.filter(tab => tab.isModified)
+  if (modifiedTabs.length === 0) {
+    closeTabPaths(targetPaths)
+    return
+  }
+
+  const hasMultipleModifiedTabs = modifiedTabs.length > 1
+  modalStore.open('SaveChangesModal', {
+    title: hasMultipleModifiedTabs
+      ? t('edit.editorTabs.saveChangesTitle', { count: modifiedTabs.length })
+      : t('modals.saveChanges.title', { name: modifiedTabs[0]!.name }),
+    description: hasMultipleModifiedTabs
+      ? t('edit.editorTabs.saveChangesDescription')
+      : undefined,
+    onSave: async () => {
+      try {
+        await Promise.all(modifiedTabs.map(tab => editorStore.saveFile(tab.path)))
+        closeTabPaths(targetPaths)
+      } catch (error) {
+        logger.error(`保存文件失败: ${error}`)
+      }
+    },
+    onDontSave: () => closeTabPaths(targetPaths),
+  })
+}
+
+function handleViewHistory(path: AbsPath): void {
+  const projectPath = workspaceStore.CWD
+  const logicalPath = getSceneLogicalPath(path)
+  if (!projectPath || !logicalPath) {
+    return
+  }
+
+  modalStore.open('BackupTimelineDialog', {
+    projectPath,
+    logicalPath,
+  })
+}
+
+async function handleRevealInExplorer(path: AbsPath): Promise<void> {
+  try {
+    await revealItemInDir(path)
+  } catch (error) {
+    logger.error(`打开文件管理器失败: ${error}`)
+  }
+}
+
+function handleTabContextMenuAction(action: EditorTabContextMenuAction, path: AbsPath): void {
+  if (action === 'close') {
+    const index = tabsStore.findTabIndex(path)
+    if (index !== -1) {
+      handleCloseTab(index)
+    }
+    return
+  }
+
+  if (action === 'viewHistory') {
+    handleViewHistory(path)
+    return
+  }
+
+  if (action === 'revealInExplorer') {
+    void handleRevealInExplorer(path)
+    return
+  }
+
+  handleCloseTabs(action, path)
+}
+
+const canCloseOthers = $computed(() => tabs.value.length > 1)
+
+const canCloseSaved = $computed(() => tabs.value.some(tab => !tab.isModified))
+
+function canCloseRight(index: number): boolean {
+  return index < tabs.value.length - 1
+}
+
+function canViewHistory(path: AbsPath): boolean {
+  return getSceneLogicalPath(path) !== undefined
+}
+
 function scrollToActiveTab() {
   const viewport = scrollAreaRef?.viewport?.viewportElement
   if (!viewport) {
@@ -147,24 +262,32 @@ onMounted(() => {
 <template>
   <ScrollArea ref="scrollAreaRef" @wheel="handleWheelToHorizontalScroll">
     <div :ref="setTabSortContainerRef" class="bg-background flex h-8">
-      <EditorTabButton
+      <EditorTabContextMenu
         v-for="(tab, index) in tabs"
         :key="tab.path"
-        v-bind="tabSort.getItemProps(index)"
-        :active="isActiveTab(tab)"
-        :diagnostic-severity="diagnosticsStore.getHighestSeverity(tab.path)"
-        :sorting="tabSort.isSorting.value"
-        :tab="tab"
-        :path-hint="getTabPathHint(tab)"
-        :tint-class="getTabTintClass(tab)"
-        :item-style="tabSort.getItemStyle(index)"
-        :data-active="isActiveTab(tab)"
-        :data-testid="`editor-tab-${tab.path}`"
-        @click="handleTabClick(index)"
-        @dblclick="handleTabDblClick(index)"
-        @auxclick="handleTabAuxClick(index, $event)"
-        @close="handleCloseTab(index)"
-      />
+        :can-close-others="canCloseOthers"
+        :can-close-right="canCloseRight(index)"
+        :can-close-saved="canCloseSaved"
+        :can-view-history="canViewHistory(tab.path)"
+        @action="handleTabContextMenuAction($event, tab.path)"
+      >
+        <EditorTabButton
+          v-bind="tabSort.getItemProps(index)"
+          :active="isActiveTab(tab)"
+          :diagnostic-severity="diagnosticsStore.getHighestSeverity(tab.path)"
+          :sorting="tabSort.isSorting.value"
+          :tab="tab"
+          :path-hint="getTabPathHint(tab)"
+          :tint-class="getTabTintClass(tab)"
+          :item-style="tabSort.getItemStyle(index)"
+          :data-active="isActiveTab(tab)"
+          :data-testid="`editor-tab-${tab.path}`"
+          @click="handleTabClick(index)"
+          @dblclick="handleTabDblClick(index)"
+          @auxclick="handleTabAuxClick(index, $event)"
+          @close="handleCloseTab(index)"
+        />
+      </EditorTabContextMenu>
     </div>
     <ScrollBar orientation="horizontal" class="opacity-75 h-1.5 -mb-0.25 hover:opacity-100" />
   </ScrollArea>
