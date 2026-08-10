@@ -350,6 +350,12 @@ modals:
     dirtyConfirm:
       title: 切り替えると変更が失われます
       confirm: 切り替えを確認
+    reset:
+      label: テンプレートをリセット
+      title: 現在のテンプレートをリセットしてもよろしいですか？
+      description: この操作では、プロジェクトの game/template/ 以下にある追加・変更・未保存・削除されたファイルを含むすべての上書き内容を消去し、選択中のテンプレートを初期状態に戻します。
+      confirm: リセットを確認
+      error: テンプレートのリセットに失敗しました
     error: テンプレートの切り替えに失敗しました
     engineUnavailable: 紐付けられたエンジンが現在利用できません。エンジンを復旧または再インストールしてからテンプレートを切り替えてください。
   deleteEngineGroup:

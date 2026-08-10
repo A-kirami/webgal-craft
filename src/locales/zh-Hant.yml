@@ -350,6 +350,12 @@ modals:
     dirtyConfirm:
       title: 切換模板將遺失修改
       confirm: 確認切換
+    reset:
+      label: 重設模板
+      title: 確定要重設目前模板嗎？
+      description: 此操作會清空目前專案 game/template/ 下的所有覆蓋內容，包括新增、修改、未儲存和刪除的檔案，並恢復為目前模板的初始狀態。
+      confirm: 確認重設
+      error: 模板重設失敗
     error: 模板切換失敗
     engineUnavailable: 綁定的引擎目前不可用，請先恢復或重新安裝引擎再切換模板。
   deleteEngineGroup:
@@ -745,7 +751,7 @@ edit:
     unsupportedCallSceneArgument: 「呼叫場景」命令向子場景傳遞參數需要 WebGAL 4.6.3 或更新版本。
     unsupportedLocalVariable: 「局部變數」參數需要 WebGAL 4.6.3 或更新版本。
     unsupportedSpine: 目前引擎不支援 Spine 模型。
-    reservedCallSceneArgument: '「{argument}」為保留參數，不能用於 callScene。'
+    reservedCallSceneArgument: "「{argument}」為保留參數，不能用於 callScene。"
   errors:
     fileSyncFailed: 檔案同步失敗，請稍後重試
     previewUnavailable: 預覽地址不存在，請先啟動預覽

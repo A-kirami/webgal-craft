@@ -19,6 +19,15 @@ function templateUpperPath(gamePath: AbsPath): AbsPath {
   return AbsPath.join(gamePath, RelPath.from('game/template'))
 }
 
+function isPathWithinDirectory(path: AbsPath, directory: AbsPath): boolean {
+  try {
+    AbsPath.relativize(path, directory)
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function isTemplateDirty(gamePath: AbsPath): Promise<boolean> {
   if (await vfsCmds.isTemplateDirty(gamePath)) {
     return true
@@ -36,11 +45,13 @@ async function isTemplateDirty(gamePath: AbsPath): Promise<boolean> {
 async function closeOpenedTemplateDocuments(gamePath: AbsPath): Promise<void> {
   try {
     const templateRoot = templateUpperPath(gamePath)
-    const editorStore = useEditorStore()
     const tabsStore = useTabsStore()
-    const openedPaths = editorStore.collectDocumentPathsUnder(templateRoot)
+    const openedPaths = tabsStore.tabs
+      .filter(tab => isPathWithinDirectory(tab.path, templateRoot))
+      .map(tab => tab.path)
+
     for (const path of openedPaths) {
-      const index = tabsStore.findTabIndex(AbsPath.from(path))
+      const index = tabsStore.findTabIndex(path)
       if (index !== -1) {
         tabsStore.closeTab(index)
       }
@@ -56,24 +67,10 @@ interface NotifyTemplateChangedOptions {
   skipPreviewTemplateReload?: boolean
 }
 
-/**
- * 切换收尾通用清理：
- * - 关闭仍打开的模板文档（联动 editor session 清理与未保存状态丢弃）
- * - 失效 file store 中模板子树缓存并刷新 enginePath / templatePath
- * - 按调用场景通知运行中的预览拉取新模板
- *
- * @param options.nextEnginePath 引擎切换路径下的新引擎路径。必须由调用方显式
- *   传入，因为此时 `workspaceStore.currentGame.engineId` 仍是切换前的快照。
- * @param options.nextTemplatePath 模板切换后的解析路径。`null` 表示回到
- *   "跟随当前引擎默认"（缺省 binding）。
- * @param options.skipPreviewTemplateReload 引擎切换已重载预览 iframe 时跳过独立的模板重载请求。
- */
-async function notifyTemplateChanged(
+async function refreshTemplateOverlayAndPreview(
   gamePath: AbsPath,
-  options: NotifyTemplateChangedOptions = {},
+  options: NotifyTemplateChangedOptions,
 ): Promise<void> {
-  await closeOpenedTemplateDocuments(gamePath)
-
   // 失效 file store 中模板子树缓存并刷新 enginePath / templatePath，
   // 同时由 store 内部 emit `directory:modified` 通知订阅者重读。
   // 引擎/模板切换不会改动磁盘文件本身（只是 lower 路径变了），
@@ -95,6 +92,36 @@ async function notifyTemplateChanged(
       logger.warn(`[模板切换] 通知预览刷新模板失败: ${error}`)
     }
   }
+}
+
+/**
+ * 切换收尾通用清理：
+ * - 关闭仍打开的模板文档（联动 editor session 清理与未保存状态丢弃）
+ * - 失效 file store 中模板子树缓存并刷新 enginePath / templatePath
+ * - 按调用场景通知运行中的预览拉取新模板
+ *
+ * @param options.nextEnginePath 引擎切换路径下的新引擎路径。必须由调用方显式
+ *   传入，因为此时 `workspaceStore.currentGame.engineId` 仍是切换前的快照。
+ * @param options.nextTemplatePath 模板切换后的解析路径。`null` 表示回到
+ *   "跟随当前引擎默认"（缺省 binding）。
+ * @param options.skipPreviewTemplateReload 引擎切换已重载预览 iframe 时跳过独立的模板重载请求。
+ */
+async function notifyTemplateChanged(
+  gamePath: AbsPath,
+  options: NotifyTemplateChangedOptions = {},
+): Promise<void> {
+  await closeOpenedTemplateDocuments(gamePath)
+  await refreshTemplateOverlayAndPreview(gamePath, options)
+}
+
+/**
+ * 重置项目当前模板的所有覆盖内容，恢复到当前模板的初始状态。
+ * 清理前关闭模板文档，避免打开的文档继续指向已移除的 upper 路径。
+ */
+async function resetTemplate(gamePath: AbsPath): Promise<void> {
+  await closeOpenedTemplateDocuments(gamePath)
+  await vfsCmds.cleanTemplateUpper(gamePath)
+  await refreshTemplateOverlayAndPreview(gamePath, {})
 }
 
 /** 站点未注册时为非致命情形（项目尚未打开预览），吞掉错误并 warn */
@@ -209,6 +236,7 @@ export const templateSwitch = {
   resolveTemplatePath,
   evaluateTemplateStrategy,
   isTemplateDirty,
+  resetTemplate,
   switchTemplate,
   notifyTemplateChanged,
 }

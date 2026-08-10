@@ -350,6 +350,12 @@ modals:
     dirtyConfirm:
       title: 切换模板将丢失修改
       confirm: 确认切换
+    reset:
+      label: 重置模板
+      title: 确定要重置当前模板吗？
+      description: 此操作会清空当前项目 game/template/ 下的所有覆盖内容，包括新增、修改、未保存和删除的文件，并恢复为当前模板的初始状态。
+      confirm: 确认重置
+      error: 模板重置失败
     error: 模板切换失败
     engineUnavailable: 绑定的引擎当前不可用，请先恢复或重新安装引擎再切换模板。
   deleteEngineGroup:
