@@ -57,13 +57,7 @@ function translate(key: string): string {
       return '重置当前模板'
     }
     case 'modals.switchTemplate.reset.description': {
-      return '确定要重置当前模板吗？'
-    }
-    case 'modals.switchTemplate.reset.warning': {
-      return '此操作会清空当前项目 game/template/ 下的所有覆盖内容，包括新增、修改和删除的文件，并恢复为当前模板的初始状态。'
-    }
-    case 'modals.switchTemplate.reset.unsavedWarning': {
-      return '当前打开但尚未保存的模板文件也会被关闭，未保存内容将丢失。'
+      return '此操作会清空当前项目 game/template/ 下的所有覆盖内容，包括新增、修改、未保存和删除的文件，并恢复为当前模板的初始状态。'
     }
     case 'modals.switchTemplate.dirtyWarning': {
       return '当前模板已被修改，切换将清除所有修改。'
@@ -204,9 +198,8 @@ describe('SwitchTemplateModal', () => {
     await page.getByRole('button', { name: '重置模板' }).click()
 
     await expect.element(page.getByRole('heading', { name: '重置当前模板' })).toBeInTheDocument()
-    await expect.element(page.getByText('game/template/')).toBeInTheDocument()
     await expect.element(
-      page.getByText('当前打开但尚未保存的模板文件也会被关闭，未保存内容将丢失。', { exact: true }),
+      page.getByText('此操作会清空当前项目 game/template/ 下的所有覆盖内容，包括新增、修改、未保存和删除的文件，并恢复为当前模板的初始状态。', { exact: true }),
     ).toBeInTheDocument()
     expect(resetTemplateMock).not.toHaveBeenCalled()
   })
