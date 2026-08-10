@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
+import { defineComponent, h } from 'vue'
 
 import {
   createBrowserClickStub,
@@ -114,8 +115,21 @@ vi.mock('vue-i18n', async importOriginal => ({
   }),
 }))
 
+const AlertDialogStub = defineComponent({
+  name: 'StubAlertDialog',
+  props: {
+    open: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  setup(props, { slots }) {
+    return () => props.open ? h('div', slots.default?.()) : undefined
+  },
+})
+
 const globalStubs = {
-  AlertDialog: createBrowserContainerStub('StubAlertDialog'),
+  AlertDialog: AlertDialogStub,
   AlertDialogAction: createBrowserClickStub('StubAlertDialogAction'),
   AlertDialogCancel: createBrowserClickStub('StubAlertDialogCancel'),
   AlertDialogContent: createBrowserContainerStub('StubAlertDialogContent'),
@@ -195,6 +209,7 @@ describe('SwitchTemplateModal', () => {
     renderSwitchTemplateModal()
 
     await expect.element(page.getByRole('button', { name: '重置模板' })).toBeEnabled()
+    await expect.element(page.getByRole('button', { name: '确认重置' })).not.toBeInTheDocument()
     await page.getByRole('button', { name: '重置模板' }).click()
 
     await expect.element(page.getByRole('heading', { name: '重置当前模板' })).toBeInTheDocument()
