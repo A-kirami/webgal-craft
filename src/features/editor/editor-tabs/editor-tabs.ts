@@ -15,6 +15,10 @@ export interface CloseTabDecisionParams {
   closeTab: (index: number) => void
 }
 
+export type EditorTabBatchCloseAction = 'closeOthers' | 'closeSaved' | 'closeAll' | 'closeRight'
+
+export type EditorTabContextMenuAction = 'close' | EditorTabBatchCloseAction | 'viewHistory' | 'revealInExplorer'
+
 interface SaveChangesModalOptions {
   title: string
   onSave: () => Promise<void>
@@ -24,6 +28,31 @@ interface SaveChangesModalOptions {
 export type CloseTabDecision =
   | { type: 'close', index: number }
   | { type: 'prompt', modal: SaveChangesModalOptions }
+
+export function getEditorTabCloseTargets(
+  tabs: readonly Tab[],
+  targetPath: AbsPath,
+  action: EditorTabBatchCloseAction,
+): Tab[] {
+  const targetIndex = tabs.findIndex(tab => tab.path === targetPath)
+  if (targetIndex === -1) {
+    return []
+  }
+
+  if (action === 'closeOthers') {
+    return tabs.filter((_, index) => index !== targetIndex)
+  }
+
+  if (action === 'closeSaved') {
+    return tabs.filter(tab => !tab.isModified)
+  }
+
+  if (action === 'closeAll') {
+    return [...tabs]
+  }
+
+  return tabs.slice(targetIndex + 1)
+}
 
 function closeCurrentTab(params: CloseTabDecisionParams) {
   const currentIndex = params.findTabIndex(params.tab.path)

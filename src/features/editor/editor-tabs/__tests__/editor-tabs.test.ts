@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { AbsPath } from '~/domain/path'
-import { getCloseTabDecision, shouldFixPreviewTab } from '~/features/editor/editor-tabs/editor-tabs'
+import {
+  getCloseTabDecision,
+  getEditorTabCloseTargets,
+  shouldFixPreviewTab,
+} from '~/features/editor/editor-tabs/editor-tabs'
 
 import type { Tab } from '~/stores/tabs'
 
@@ -15,6 +19,36 @@ const createTab = (overrides: Partial<Tab> = {}): Tab => ({
 })
 
 describe('editorTabs', () => {
+  it('按目标标签计算各批量关闭操作的标签集合', () => {
+    const tabs = [
+      createTab({ name: 'a.txt', path: AbsPath.from('/project/a.txt') }),
+      createTab({ name: 'b.txt', path: AbsPath.from('/project/b.txt'), isModified: true }),
+      createTab({ name: 'c.txt', path: AbsPath.from('/project/c.txt') }),
+      createTab({ name: 'd.txt', path: AbsPath.from('/project/d.txt'), isModified: true }),
+    ]
+    const targetPath = AbsPath.from('/project/b.txt')
+
+    expect(getEditorTabCloseTargets(tabs, targetPath, 'closeOthers').map(tab => tab.name)).toEqual([
+      'a.txt',
+      'c.txt',
+      'd.txt',
+    ])
+    expect(getEditorTabCloseTargets(tabs, targetPath, 'closeSaved').map(tab => tab.name)).toEqual(['a.txt', 'c.txt'])
+    expect(getEditorTabCloseTargets(tabs, targetPath, 'closeAll').map(tab => tab.name)).toEqual([
+      'a.txt',
+      'b.txt',
+      'c.txt',
+      'd.txt',
+    ])
+    expect(getEditorTabCloseTargets(tabs, targetPath, 'closeRight').map(tab => tab.name)).toEqual(['c.txt', 'd.txt'])
+  })
+
+  it('目标标签不存在时不产生关闭目标', () => {
+    const tabs = [createTab()]
+
+    expect(getEditorTabCloseTargets(tabs, AbsPath.from('/project/missing.txt'), 'closeAll')).toEqual([])
+  })
+
   it('未修改的标签会直接关闭且不会触发模态框', () => {
     const closeTab = vi.fn()
     const decision = getCloseTabDecision({
