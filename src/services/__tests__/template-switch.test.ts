@@ -5,6 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AbsPath } from '~/domain/path'
 import { templateSwitch } from '~/services/template-switch'
 
+vi.mock('@tauri-apps/plugin-log', () => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+}))
+
 const {
   cleanTemplateUpperMock,
   closeTabMock,
@@ -141,5 +146,30 @@ describe('templateSwitch.resetTemplate', () => {
     expect(cleanTemplateUpperMock).not.toHaveBeenCalled()
     expect(refreshTemplateOverlayMock).not.toHaveBeenCalled()
     expect(debugCommanderMock.refetchTemplates).not.toHaveBeenCalled()
+  })
+
+  it('刷新模板 overlay 失败时不会报告重置成功', async () => {
+    refreshTemplateOverlayMock.mockRejectedValueOnce(new Error('overlay failed'))
+
+    await expect(templateSwitch.resetTemplate(AbsPath.from('/games/demo'))).rejects.toThrow('overlay failed')
+
+    expect(cleanTemplateUpperMock).toHaveBeenCalledWith('/games/demo')
+    expect(debugCommanderMock.refetchTemplates).not.toHaveBeenCalled()
+  })
+
+  it('预览状态重置时不阻止模板重置', async () => {
+    debugCommanderMock.refetchTemplates.mockRejectedValueOnce(new Error('preview state reset'))
+
+    await expect(templateSwitch.resetTemplate(AbsPath.from('/games/demo'))).resolves.toBeUndefined()
+
+    expect(cleanTemplateUpperMock).toHaveBeenCalledWith('/games/demo')
+  })
+
+  it('其他预览刷新失败会向调用方传播', async () => {
+    debugCommanderMock.refetchTemplates.mockRejectedValueOnce(new Error('preview failed'))
+
+    await expect(templateSwitch.resetTemplate(AbsPath.from('/games/demo'))).rejects.toThrow('preview failed')
+
+    expect(cleanTemplateUpperMock).toHaveBeenCalledWith('/games/demo')
   })
 })
