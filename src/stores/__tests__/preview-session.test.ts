@@ -99,6 +99,7 @@ describe('usePreviewSessionStore', () => {
     expect(setActivePreviewSessionMock).toHaveBeenNthCalledWith(1, undefined)
     expect(setActivePreviewSessionMock).toHaveBeenNthCalledWith(2, 'demo-game-key')
     expect(store.currentGameServeUrl).toBe('http://preview/game-1/')
+    expect(store.serveStatus).toBe('ready')
     expect(store.reloadVersion).toBe(0)
 
     store.refresh()
@@ -108,6 +109,7 @@ describe('usePreviewSessionStore', () => {
 
     expect(setActivePreviewSessionMock).toHaveBeenLastCalledWith(undefined)
     expect(store.currentGameServeUrl).toBeUndefined()
+    expect(store.serveStatus).toBe('idle')
     expect(store.reloadVersion).toBe(0)
 
     store.refresh()
@@ -138,6 +140,7 @@ describe('usePreviewSessionStore', () => {
     }))
 
     expect(store.currentGameServeUrl).toBeUndefined()
+    expect(store.serveStatus).toBe('failed')
     expect(loggerErrorMock).toHaveBeenCalledWith('获取预览链接失败: 预览链接不存在')
 
     store.refreshIfCurrentGame(AbsPath.from('/games/game-1'))
@@ -160,11 +163,13 @@ describe('usePreviewSessionStore', () => {
 
     await secondSyncTask
     expect(store.currentGameServeUrl).toBe('http://preview/game-2/')
+    expect(store.serveStatus).toBe('ready')
 
     firstServeUrl.resolve('http://preview/game-1/')
     await firstSyncTask
 
     expect(store.currentGameServeUrl).toBe('http://preview/game-2/')
+    expect(store.serveStatus).toBe('ready')
   })
 
   it('syncCurrentGame 在预览站点解析失败时会记录错误', async () => {
@@ -176,6 +181,7 @@ describe('usePreviewSessionStore', () => {
     }))
 
     expect(ensureServeUrlMock).not.toHaveBeenCalled()
+    expect(store.serveStatus).toBe('failed')
     expect(loggerErrorMock).toHaveBeenCalledWith('获取预览链接失败: Error: engine unavailable')
   })
 })

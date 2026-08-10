@@ -228,8 +228,10 @@ impl PreviewSessionRegistry {
     }
 
     pub fn preferred_event_source(&self) -> Option<SocketAddr> {
-        self.embedded_preview_addr()
-            .or_else(|| self.session_registrations().map(|(addr, _)| addr).next())
+        self.embedded_preview_addr().or_else(|| {
+            self.session_registrations()
+                .find_map(|(addr, payload)| payload.embedded_launch_id.is_none().then_some(addr))
+        })
     }
 
     fn accepts_preview_game_id(&self, preview_game_id: Option<&str>) -> bool {
@@ -586,6 +588,28 @@ mod tests {
         ));
 
         assert_eq!(registry.preferred_event_source(), Some(embedded_addr));
+    }
+
+    #[test]
+    fn stale_embedded_preview_is_not_used_as_fallback_event_source() {
+        let mut registry = PreviewSessionRegistry::default();
+        registry.set_active_game_id(Some("game-a".to_string()));
+        registry.set_embedded_launch_id(Some("embedded-launch-1".to_string()));
+
+        let stale_embedded_addr = socket_addr(2, 3002);
+        assert!(registry.register(
+            stale_embedded_addr,
+            RegisterPreviewRequestPayload {
+                game_id: Some("game-a".to_string()),
+                embedded_launch_id: Some("embedded-launch-1".to_string()),
+            },
+        ));
+        assert_eq!(registry.preferred_event_source(), Some(stale_embedded_addr));
+
+        registry.set_embedded_launch_id(Some("embedded-launch-2".to_string()));
+
+        assert_eq!(registry.preferred_event_source(), None);
+        assert!(!registry.unregister(stale_embedded_addr));
     }
 
     #[test]

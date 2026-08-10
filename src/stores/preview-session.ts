@@ -9,6 +9,8 @@ import type { AbsPath } from '~/domain/path'
 
 type PreviewGameTarget = Pick<Game, 'engineId' | 'path'>
 
+export type PreviewServeStatus = 'idle' | 'connecting' | 'ready' | 'failed'
+
 const PREVIEW_GAME_KEY_RAW_KEY = 'Game_key'
 
 async function resolvePreviewGameId(gamePath: AbsPath): Promise<string | undefined> {
@@ -25,6 +27,7 @@ async function resolvePreviewGameId(gamePath: AbsPath): Promise<string | undefin
 export const usePreviewSessionStore = defineStore('previewSession', () => {
   let currentGamePath = $ref<AbsPath>()
   let currentGameServeUrl = $ref<string>()
+  let serveStatus = $ref<PreviewServeStatus>('idle')
   let reloadVersion = $ref(0)
   let syncToken = 0
 
@@ -33,6 +36,7 @@ export const usePreviewSessionStore = defineStore('previewSession', () => {
   function resetState(): void {
     currentGamePath = undefined
     currentGameServeUrl = undefined
+    serveStatus = 'idle'
     reloadVersion = 0
   }
 
@@ -46,6 +50,7 @@ export const usePreviewSessionStore = defineStore('previewSession', () => {
 
     currentGamePath = game.path
     currentGameServeUrl = undefined
+    serveStatus = 'connecting'
     reloadVersion = 0
 
     try {
@@ -60,6 +65,7 @@ export const usePreviewSessionStore = defineStore('previewSession', () => {
       }
 
       if (!previewUrl) {
+        serveStatus = 'failed'
         logger.error('获取预览链接失败: 预览链接不存在')
         return
       }
@@ -70,11 +76,13 @@ export const usePreviewSessionStore = defineStore('previewSession', () => {
       }
 
       currentGameServeUrl = previewUrl
+      serveStatus = 'ready'
     } catch (error) {
       if (currentToken !== syncToken) {
         return
       }
 
+      serveStatus = 'failed'
       logger.error(`获取预览链接失败: ${error}`)
     }
   }
@@ -106,6 +114,7 @@ export const usePreviewSessionStore = defineStore('previewSession', () => {
 
   return $$({
     currentGameServeUrl,
+    serveStatus,
     reloadVersion,
     syncCurrentGame,
     refresh,

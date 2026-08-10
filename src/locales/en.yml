@@ -838,7 +838,16 @@ edit:
     dragPreviewCount: "{count} file(s)"
     entryPointBadge: Entry point
   previewPanel:
-    copyUrl: Copy URL
+    preview: Preview
+    connecting: Connecting
+    connected: Connected
+    connectionFailed: Connection failed
+    volume: Volume
+    mute: Mute preview
+    unmute: Unmute preview
+    brightness: Brightness
+    disableBrightness: Disable brightness adjustment
+    enableBrightness: Enable brightness adjustment
     refreshPreview: Refresh Preview
     openInBrowser: Open in Browser
     openFailed: Failed to open preview

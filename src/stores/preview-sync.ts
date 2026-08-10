@@ -70,6 +70,8 @@ export type TransformBaselineQueryResult =
     reason?: string
   }
 
+export type PreviewConnectionStatus = 'connecting' | 'connected' | 'failed'
+
 type PreviewSyncHostMessage =
   | EventEnvelopeByType<HostEventType>
   | ResponseEnvelopeByType<PreviewResponseType>
@@ -99,6 +101,7 @@ function parseHostMessage(rawEvent: string): PreviewSyncHostMessage | undefined 
 
 export const usePreviewSyncStore = defineStore('previewSync', () => {
   let isPreviewReady = $ref(false)
+  let connectionStatus = $ref<PreviewConnectionStatus>('connecting')
   let stageSnapshot = $ref<StageSnapshotUpdatedPayload>()
   let fastPreviewTimeout = $ref<FastPreviewTimeoutPayload>()
   let cachedBaseTransform = $ref<BaseTransformQueryResultPayload['baseTransform']>()
@@ -181,11 +184,17 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
     switch (message.type) {
       case 'preview.ready.updated': {
         if (!message.payload.ready) {
+          if (!isPreviewReady) {
+            return
+          }
+
           resetEmbeddedPreviewState()
+          connectionStatus = 'failed'
           return
         }
 
         isPreviewReady = message.payload.ready
+        connectionStatus = 'connected'
         return
       }
       case 'stage.snapshot.updated': {
@@ -207,6 +216,7 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
 
   function resetEmbeddedPreviewState() {
     isPreviewReady = false
+    connectionStatus = 'connecting'
     stageSnapshot = undefined
     fastPreviewTimeout = undefined
     cachedBaseTransform = undefined
@@ -470,6 +480,7 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
 
   return $$({
     isPreviewReady,
+    connectionStatus,
     stageSnapshot,
     fastPreviewTimeout,
     consumeHostEvent,

@@ -7,24 +7,23 @@ import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } f
 import {
   WEBGAL_PREVIEW_BOOTSTRAP_PROVIDE,
   WEBGAL_PREVIEW_BOOTSTRAP_REQUEST,
+  WEBGAL_PREVIEW_OUTPUT_SETTINGS,
   WEBGAL_PREVIEW_VIEWPORT_POINTER,
   WEBGAL_PREVIEW_VIEWPORT_SPACE_KEY,
   WEBGAL_PREVIEW_VIEWPORT_WHEEL,
 } from '~/features/editor/preview/embedded-preview-messages'
 import { useShortcutContextRegistry } from '~/features/editor/shortcut/shortcut-context-registry'
 import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
+import { usePreferenceStore } from '~/stores/preference'
 
 const {
-  copyMock,
   getGameConfigMock,
   modalOpenMock,
-  toastSuccessMock,
   openUrlMock,
   dismissFastPreviewTimeoutMock,
   resetEmbeddedPreviewStateMock,
   setEmbeddedPreviewLaunchIdMock,
   syncSceneMock,
-  useClipboardMock,
   useEditorStoreMock,
   useModalStoreMock,
   usePreviewRuntimeStoreMock,
@@ -33,16 +32,13 @@ const {
   useSceneEntryStatusMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
-  copyMock: vi.fn(),
   getGameConfigMock: vi.fn(),
   modalOpenMock: vi.fn(),
-  toastSuccessMock: vi.fn(),
   openUrlMock: vi.fn(),
   dismissFastPreviewTimeoutMock: vi.fn(),
   resetEmbeddedPreviewStateMock: vi.fn(),
   setEmbeddedPreviewLaunchIdMock: vi.fn(),
   syncSceneMock: vi.fn(),
-  useClipboardMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
   useModalStoreMock: vi.fn(),
   usePreviewRuntimeStoreMock: vi.fn(),
@@ -63,15 +59,6 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   trace: vi.fn(),
   warn: vi.fn(),
 }))
-
-vi.mock('@vueuse/core', async () => {
-  const actual = await vi.importActual<typeof import('@vueuse/core')>('@vueuse/core')
-
-  return {
-    ...actual,
-    useClipboard: useClipboardMock,
-  }
-})
 
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
@@ -119,12 +106,6 @@ vi.mock('~/services/debug-commander', () => ({
   },
 }))
 
-vi.mock('vue-sonner', () => ({
-  toast: {
-    success: toastSuccessMock,
-  },
-}))
-
 import PreviewPanel from './PreviewPanel.vue'
 
 import type { DisplayTransform } from '~/features/editor/transform-overlay/model'
@@ -133,6 +114,7 @@ import type { ReferenceBox } from '~/types/editorPreviewProtocol'
 
 const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
+  Slider: createBrowserContainerStub('StubSlider'),
   Tooltip: createBrowserContainerStub('StubTooltip'),
   TooltipContent: createBrowserContainerStub('StubTooltipContent'),
   TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
@@ -152,6 +134,7 @@ let workspaceStoreState: {
 let previewSessionStoreState: {
   currentGameServeUrl: string
   reloadVersion: number
+  serveStatus: 'idle' | 'connecting' | 'ready' | 'failed'
   refresh: () => void
 }
 
@@ -317,16 +300,13 @@ describe('PreviewPanel', () => {
   })
 
   beforeEach(() => {
-    copyMock.mockReset()
     dismissFastPreviewTimeoutMock.mockReset()
     getGameConfigMock.mockReset()
     modalOpenMock.mockReset()
-    toastSuccessMock.mockReset()
     openUrlMock.mockReset()
     resetEmbeddedPreviewStateMock.mockReset()
     setEmbeddedPreviewLaunchIdMock.mockReset()
     syncSceneMock.mockReset()
-    useClipboardMock.mockReset()
     useEditorStoreMock.mockReset()
     useModalStoreMock.mockReset()
     usePreviewRuntimeStoreMock.mockReset()
@@ -349,6 +329,7 @@ describe('PreviewPanel', () => {
     previewSessionStoreState = reactive({
       currentGameServeUrl: 'http://127.0.0.1:8899',
       reloadVersion: 0,
+      serveStatus: 'ready',
       refresh: () => {
         previewSessionStoreState.reloadVersion++
       },
@@ -358,10 +339,6 @@ describe('PreviewPanel', () => {
       status: ref('valid'),
     }
     useSceneEntryStatusMock.mockReturnValue(sceneEntryStatusState)
-    useClipboardMock.mockReturnValue({
-      copied: ref(true),
-      copy: copyMock,
-    })
     useEditorStoreMock.mockReturnValue(reactive({
       currentSceneSelection: {
         lastLineNumber: 2,
@@ -381,6 +358,7 @@ describe('PreviewPanel', () => {
       open: modalOpenMock,
     })
     usePreviewSyncStoreMock.mockReturnValue(reactive({
+      connectionStatus: 'connecting',
       fastPreviewTimeout: undefined,
       isPreviewReady: false,
       dismissFastPreviewTimeout: dismissFastPreviewTimeoutMock,
@@ -403,13 +381,40 @@ describe('PreviewPanel', () => {
       },
     })
 
-    await expect.element(page.getByText('http://127.0.0.1:8899')).toBeVisible()
+    expect(document.body).not.toHaveTextContent('http://127.0.0.1:8899')
+    await expect.element(page.getByText('edit.previewPanel.connecting')).toBeVisible()
     await expect.element(page.getByTitle('preview-title::Demo Game')).toHaveAttribute('src', 'http://127.0.0.1:8899')
     await expect.element(page.getByText('1280 x 720')).toBeVisible()
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.fitToView' })).toBeVisible()
     expect(getGameConfigMock).toHaveBeenCalledWith('/games/demo')
     expect(resetEmbeddedPreviewStateMock).toHaveBeenCalledTimes(1)
     expect(setEmbeddedPreviewLaunchIdMock).toHaveBeenCalledWith(expect.any(String))
+  })
+
+  it('按预览地址与引擎就绪状态展示连接状态', async () => {
+    const previewSyncStore = reactive({
+      connectionStatus: 'connecting' as 'connecting' | 'connected' | 'failed',
+      fastPreviewTimeout: undefined,
+      isPreviewReady: false,
+      dismissFastPreviewTimeout: dismissFastPreviewTimeoutMock,
+      resetEmbeddedPreviewState: resetEmbeddedPreviewStateMock,
+    })
+    usePreviewSyncStoreMock.mockReturnValue(previewSyncStore)
+
+    renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByTestId('preview-connection-status')).toHaveAttribute('data-status', 'connecting')
+
+    previewSyncStore.connectionStatus = 'connected'
+    await expect.element(page.getByTestId('preview-connection-status')).toHaveAttribute('data-status', 'connected')
+
+    previewSessionStoreState.serveStatus = 'failed'
+    await expect.element(page.getByTestId('preview-connection-status')).toHaveAttribute('data-status', 'failed')
   })
 
   it('缺少规范入口时只显示错误遮罩，入口恢复后重新挂载预览', async () => {
@@ -429,7 +434,6 @@ describe('PreviewPanel', () => {
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.zoomIn' })).toBeDisabled()
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.fitToView' })).toBeDisabled()
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.refreshPreview' })).toBeDisabled()
-    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.copyUrl' })).toBeDisabled()
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.openInBrowser' })).toBeDisabled()
 
     sceneEntryStatusState.status.value = 'valid'
@@ -641,7 +645,7 @@ describe('PreviewPanel', () => {
     expect(iframe.style.pointerEvents).toBe('')
   })
 
-  it('点击复制和浏览器打开按钮会调用对应动作', async () => {
+  it('点击浏览器打开按钮会调用外部打开动作', async () => {
     renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
@@ -649,11 +653,8 @@ describe('PreviewPanel', () => {
       },
     })
 
-    await page.getByRole('button', { name: 'edit.previewPanel.copyUrl' }).click()
     await page.getByRole('button', { name: 'edit.previewPanel.openInBrowser' }).click()
 
-    expect(copyMock).toHaveBeenCalledTimes(1)
-    expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(openUrlMock).toHaveBeenCalledWith('http://127.0.0.1:8899')
   })
 
@@ -801,8 +802,71 @@ describe('PreviewPanel', () => {
     )
   })
 
+  it('亮度调整作用于预览视口视觉层', async () => {
+    const rendered = renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+    const preferenceStore = usePreferenceStore(rendered.pinia)
+
+    preferenceStore.previewBrightness = [65]
+    preferenceStore.previewBrightnessEnabled = true
+    await nextTick()
+
+    const viewport = page.getByTestId('preview-viewport').element()
+    const outputSurface = page.getByTestId('preview-output-surface').element()
+    expect(outputSurface.parentElement).toBe(viewport)
+    expect(outputSurface.style.filter).toBe('brightness(0.65)')
+    expect(viewport.style.filter).toBe('')
+
+    preferenceStore.previewBrightnessEnabled = false
+    await nextTick()
+
+    expect(outputSurface.style.filter).toBe('')
+  })
+
+  it('偏好变化时只向同源内嵌预览同步有效音量', async () => {
+    const sameOriginPreviewUrl = new URL('/__webgal_preview_output_settings_test__', globalThis.location.href)
+    previewSessionStoreState.currentGameServeUrl = sameOriginPreviewUrl.href
+
+    const rendered = renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+    const { iframeWindow } = getPreviewIframe()
+    const postMessageSpy = vi.spyOn(iframeWindow, 'postMessage').mockImplementation(() => undefined)
+    const preferenceStore = usePreferenceStore(rendered.pinia)
+
+    preferenceStore.previewVolume = [35]
+    preferenceStore.previewMuted = true
+    preferenceStore.previewBrightness = [65]
+    preferenceStore.previewBrightnessEnabled = false
+    await nextTick()
+
+    expect(postMessageSpy).toHaveBeenLastCalledWith({
+      type: WEBGAL_PREVIEW_OUTPUT_SETTINGS,
+      muted: true,
+      volume: 0.35,
+    }, sameOriginPreviewUrl.origin)
+
+    preferenceStore.previewMuted = false
+    preferenceStore.previewBrightnessEnabled = true
+    await nextTick()
+
+    expect(postMessageSpy).toHaveBeenLastCalledWith({
+      type: WEBGAL_PREVIEW_OUTPUT_SETTINGS,
+      muted: false,
+      volume: 0.35,
+    }, sameOriginPreviewUrl.origin)
+  })
+
   it('预览就绪事件触发后会按当前场景行初始化预览', async () => {
     const previewSyncStore = reactive({
+      connectionStatus: 'connecting',
       fastPreviewTimeout: undefined,
       isPreviewReady: false,
       dismissFastPreviewTimeout: dismissFastPreviewTimeoutMock,
@@ -867,6 +931,7 @@ describe('PreviewPanel', () => {
 
   it('收到快速预览超时事件后会通过全局 modal store 打开警告弹窗', async () => {
     const previewSyncStore = reactive({
+      connectionStatus: 'connecting',
       fastPreviewTimeout: undefined as {
         sceneName: string
         sentenceId: number

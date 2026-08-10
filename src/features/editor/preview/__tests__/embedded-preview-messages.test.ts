@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   createPreviewBootstrapProvideMessage,
+  createPreviewOutputSettingsMessage,
   createPreviewViewportSpaceKeyMessage,
   isPreviewBootstrapRequestMessage,
   isPreviewViewportPointerMessage,
@@ -21,6 +22,19 @@ describe('isPreviewBootstrapRequestMessage', () => {
     expect(createPreviewBootstrapProvideMessage('embedded-launch-1')).toEqual({
       type: 'webgal.preview.bootstrap.provide',
       embeddedLaunchId: 'embedded-launch-1',
+    })
+  })
+})
+
+describe('createPreviewOutputSettingsMessage', () => {
+  it('构造内嵌预览输出设置消息', () => {
+    expect(createPreviewOutputSettingsMessage({
+      muted: true,
+      volume: 0.4,
+    })).toEqual({
+      type: 'webgal.preview.output-settings',
+      muted: true,
+      volume: 0.4,
     })
   })
 })

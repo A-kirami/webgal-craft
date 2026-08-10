@@ -55,6 +55,7 @@ describe('usePreviewSyncStore', () => {
     }))
 
     expect(store.isPreviewReady).toBe(true)
+    expect(store.connectionStatus).toBe('connected')
     expect(store.stageSnapshot).toEqual({
       sceneName: 'start.txt',
       sentenceId: 3,
@@ -62,6 +63,44 @@ describe('usePreviewSyncStore', () => {
         showTitle: false,
       },
     })
+  })
+
+  it('预览连接断开后会标记连接失败', () => {
+    const store = usePreviewSyncStore()
+
+    store.consumeHostEvent(JSON.stringify({
+      kind: 'event',
+      type: 'preview.ready.updated',
+      payload: {
+        ready: true,
+      },
+    }))
+    store.consumeHostEvent(JSON.stringify({
+      kind: 'event',
+      type: 'preview.ready.updated',
+      payload: {
+        ready: false,
+      },
+    }))
+
+    expect(store.isPreviewReady).toBe(false)
+    expect(store.connectionStatus).toBe('failed')
+  })
+
+  it('刷新重置后忽略旧 iframe 的断开事件', () => {
+    const store = usePreviewSyncStore()
+
+    store.resetEmbeddedPreviewState()
+    store.consumeHostEvent(JSON.stringify({
+      kind: 'event',
+      type: 'preview.ready.updated',
+      payload: {
+        ready: false,
+      },
+    }))
+
+    expect(store.isPreviewReady).toBe(false)
+    expect(store.connectionStatus).toBe('connecting')
   })
 
   it('消费快速预览超时事件后会记录超时诊断信息', () => {
@@ -126,6 +165,7 @@ describe('usePreviewSyncStore', () => {
     store.resetEmbeddedPreviewState()
 
     expect(store.isPreviewReady).toBe(false)
+    expect(store.connectionStatus).toBe('connecting')
     expect(store.stageSnapshot).toBeUndefined()
     expect(store.fastPreviewTimeout).toBeUndefined()
   })
