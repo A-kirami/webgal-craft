@@ -32,6 +32,7 @@ pub fn run() {
 
         app.manage(OverlayFactoryCache::default());
         app.manage(Mutex::new(ServerState::new()));
+        app.manage(commands::archive_import::ArchiveImportState::default());
 
         Ok(())
     });
@@ -126,6 +127,8 @@ pub fn run() {
             commands::fs::validate_directory_structure,
             commands::fs::delete_file,
             commands::external_import::import_external_entry,
+            commands::archive_import::extract_resource_archive,
+            commands::archive_import::cleanup_resource_archive,
             commands::fs::rename_file,
             commands::fs::is_binary_file,
             commands::fs::get_image_dimensions,

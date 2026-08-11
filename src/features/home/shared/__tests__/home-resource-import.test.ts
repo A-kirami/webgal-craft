@@ -37,6 +37,17 @@ describe('首页共享导入纯逻辑', () => {
     })
   })
 
+  it('压缩包读取和格式错误会映射为可恢复的专用通知', () => {
+    expect(resolveHomeResourceImportNotification(new AppError('INVALID_ARCHIVE', 'damaged'))).toEqual({
+      kind: 'invalid-archive',
+      level: 'error',
+    })
+    expect(resolveHomeResourceImportNotification(new AppError('UNSUPPORTED_ARCHIVE', 'rar'))).toEqual({
+      kind: 'unsupported-archive',
+      level: 'error',
+    })
+  })
+
   it('TARGET_CONFLICT 会映射为目标冲突通知', () => {
     expect(resolveHomeResourceImportNotification(new AppError('TARGET_CONFLICT', '目标引擎目录已存在'))).toEqual({
       kind: 'target-conflict',

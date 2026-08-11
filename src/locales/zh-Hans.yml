@@ -120,6 +120,10 @@ appUpdate:
 
 home:
   unavailableBadge: 已失效
+  archiveImport:
+    error:
+      invalidArchive: 无法读取压缩包，请确认文件未损坏后重试
+      unsupportedArchive: 不支持该压缩格式，请使用 ZIP、TAR、TAR.GZ 或 TGZ
   managedImport:
     title: 正在导入{resource}
     cancel: 取消导入
@@ -147,9 +151,9 @@ home:
     error:
       providerDenied: 所选文件提供方未授予该目录的读取权限
       copyFailed: 无法从所选文件提供方复制该目录
-      unsafeEntry: 目录包含不安全或不受支持的条目
+      unsafeEntry: 所选内容包含不安全或不受支持的条目
       storageFull: 本地存储空间不足，无法导入该目录
-      resourceLimit: 目录超出允许导入的大小或文件数量上限
+      resourceLimit: 所选内容超出允许导入的大小或文件数量上限
       rollbackFailed: 导入清理尚未完成，将在应用下次启动时重试
       busy: 已有其他目录导入正在进行
   header:

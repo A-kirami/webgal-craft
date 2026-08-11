@@ -120,6 +120,10 @@ appUpdate:
 
 home:
   unavailableBadge: 已失效
+  archiveImport:
+    error:
+      invalidArchive: 無法讀取壓縮檔，請確認檔案未損壞後再試
+      unsupportedArchive: 不支援此壓縮格式，請使用 ZIP、TAR、TAR.GZ 或 TGZ
   managedImport:
     title: 正在匯入{resource}
     cancel: 取消匯入
@@ -147,9 +151,9 @@ home:
     error:
       providerDenied: 所選檔案提供方未授予該目錄的讀取權限
       copyFailed: 無法從所選檔案提供方複製該目錄
-      unsafeEntry: 目錄包含不安全或不支援的項目
+      unsafeEntry: 所選內容包含不安全或不支援的項目
       storageFull: 本機儲存空間不足，無法匯入該目錄
-      resourceLimit: 目錄超出允許匯入的大小或檔案數量上限
+      resourceLimit: 所選內容超出允許匯入的大小或檔案數量上限
       rollbackFailed: 匯入清理尚未完成，將在應用程式下次啟動時重試
       busy: 已有其他目錄匯入正在進行
   header:
