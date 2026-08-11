@@ -1,7 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fs::{self, File},
-    io::{self, Read},
+    io::{self, Read, Seek, SeekFrom},
     path::{Component, Path, PathBuf},
 };
 
@@ -16,6 +16,7 @@ use super::{AppError, AppResult};
 
 const MAX_ARCHIVE_BYTES: u64 = 1024 * 1024 * 1024;
 const MAX_ARCHIVE_ENTRIES: usize = 100_000;
+const MAX_CENTRAL_DIRECTORY_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_EXTRACTED_BYTES: u64 = 4 * 1024 * 1024 * 1024;
 
 #[derive(Default)]
@@ -144,8 +145,52 @@ fn collect_resource_root(path: &Path, manifest_name: &str, roots: &mut Vec<PathB
     }
 }
 
+fn read_u16(bytes: &[u8], offset: usize) -> Option<u16> {
+    bytes
+        .get(offset..offset + 2)
+        .map(|value| u16::from_le_bytes([value[0], value[1]]))
+}
+
+fn read_u32(bytes: &[u8], offset: usize) -> Option<u32> {
+    bytes
+        .get(offset..offset + 4)
+        .map(|value| u32::from_le_bytes([value[0], value[1], value[2], value[3]]))
+}
+
+fn validate_zip_central_directory(file: &mut File) -> AppResult<()> {
+    let file_size = file.metadata()?.len();
+    let scan_size = file_size.min(22 + u16::MAX as u64);
+    file.seek(SeekFrom::End(-(scan_size as i64)))?;
+    let mut footer = vec![0; scan_size as usize];
+    file.read_exact(&mut footer)?;
+    let eocd_offset = footer
+        .windows(4)
+        .rposition(|window| window == b"PK\x05\x06")
+        .ok_or_else(|| AppError::InvalidArchive("ZIP 目录结束记录缺失".into()))?;
+    let entry_count = read_u16(&footer, eocd_offset + 10)
+        .ok_or_else(|| AppError::InvalidArchive("ZIP 目录结束记录无效".into()))?;
+    let central_directory_bytes = read_u32(&footer, eocd_offset + 12)
+        .ok_or_else(|| AppError::InvalidArchive("ZIP 目录结束记录无效".into()))?;
+
+    if entry_count == u16::MAX || entry_count as usize > MAX_ARCHIVE_ENTRIES {
+        return Err(AppError::ArchiveResourceLimit(
+            "压缩包条目数超过 100000".into(),
+        ));
+    }
+    if central_directory_bytes == u32::MAX
+        || central_directory_bytes as u64 > MAX_CENTRAL_DIRECTORY_BYTES
+    {
+        return Err(AppError::ArchiveResourceLimit(
+            "压缩包中央目录超过 64 MiB".into(),
+        ));
+    }
+    Ok(())
+}
+
 fn extract_zip(path: &Path, destination: &Path, manifest_name: &str) -> AppResult<Vec<PathBuf>> {
-    let file = File::open(path)?;
+    let mut file = File::open(path)?;
+    validate_zip_central_directory(&mut file)?;
+    file.seek(SeekFrom::Start(0))?;
     let mut archive =
         ZipArchive::new(file).map_err(|error| AppError::InvalidArchive(error.to_string()))?;
     if archive.len() > MAX_ARCHIVE_ENTRIES {
