@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { page } from 'vitest/browser'
+import { page, userEvent } from 'vitest/browser'
 import { defineComponent, nextTick } from 'vue'
 
 import { createBrowserLiteI18n } from '~/__tests__/browser'
@@ -41,6 +41,12 @@ function getSliderTrack(testId: string) {
   const sliderTrack = page.getByTestId(testId).element().querySelector<HTMLElement>(':scope > [data-orientation="horizontal"]')
   expect(sliderTrack).not.toBeNull()
   return page.elementLocator(sliderTrack!)
+}
+
+function getSliderThumb(testId: string) {
+  const sliderThumb = page.getByTestId(testId).element().querySelector<HTMLElement>('[role="slider"]')
+  expect(sliderThumb).not.toBeNull()
+  return page.elementLocator(sliderThumb!)
 }
 
 function clickWithoutPointerMovement(element: HTMLElement | SVGElement): void {
@@ -91,6 +97,28 @@ describe('PreviewToolbar', () => {
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.enableBrightness' })).toBeVisible()
     await expect.element(page.getByTestId('preview-volume-muted-icon')).toBeVisible()
     await expect.element(page.getByTestId('preview-volume-zero-icon')).not.toBeInTheDocument()
+  })
+
+  it('通过键盘打开音量和亮度浮层时将焦点移到对应滑块', async () => {
+    const rendered = renderToolbar('connected')
+    const preferenceStore = usePreferenceStore(rendered.pinia)
+
+    preferenceStore.previewMuted = true
+    preferenceStore.previewBrightnessEnabled = false
+    await nextTick()
+
+    const volumeButton = page.getByRole('button', { name: 'edit.previewPanel.unmute' })
+    volumeButton.element().focus()
+    await userEvent.keyboard('{Enter}')
+    await expect.element(getSliderThumb('preview-volume-slider')).toHaveFocus()
+
+    await userEvent.keyboard('{Escape}')
+    await expect.element(page.getByText('edit.previewPanel.volume', { exact: true })).not.toBeInTheDocument()
+
+    const brightnessButton = page.getByRole('button', { name: 'edit.previewPanel.enableBrightness' })
+    brightnessButton.element().focus()
+    await userEvent.keyboard('{Enter}')
+    await expect.element(getSliderThumb('preview-brightness-slider')).toHaveFocus()
   })
 
   it('关闭音量或亮度后 hover 不显示控制浮层', async () => {

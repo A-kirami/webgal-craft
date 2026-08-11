@@ -21,7 +21,9 @@ const preferenceStore = usePreferenceStore()
 const { t } = useI18n()
 const controlsCloseDelay = 100
 type PreviewOutputControl = 'brightness' | 'volume'
+type PreviewOutputControlOpenSource = 'keyboard' | 'pointer'
 let activeOutputControl = $ref<PreviewOutputControl>()
+let activeOutputControlOpenSource = $ref<PreviewOutputControlOpenSource>()
 
 const volumeControlsOpen = $computed(() => activeOutputControl === 'volume')
 const brightnessControlsOpen = $computed(() => activeOutputControl === 'brightness')
@@ -83,7 +85,7 @@ const brightnessButtonLabel = $computed(() => preferenceStore.previewBrightnessE
   ? t('edit.previewPanel.disableBrightness')
   : t('edit.previewPanel.enableBrightness'))
 
-function toggleMute(): void {
+function toggleMute(event: MouseEvent): void {
   preferenceStore.previewMuted = !preferenceStore.previewMuted
   volumeControlsClose.cancel()
   if (preferenceStore.previewMuted) {
@@ -91,10 +93,10 @@ function toggleMute(): void {
     return
   }
 
-  showOutputControl('volume')
+  showOutputControl('volume', getOutputControlOpenSource(event))
 }
 
-function toggleBrightness(): void {
+function toggleBrightness(event: MouseEvent): void {
   preferenceStore.previewBrightnessEnabled = !preferenceStore.previewBrightnessEnabled
   brightnessControlsClose.cancel()
   if (!preferenceStore.previewBrightnessEnabled) {
@@ -102,13 +104,13 @@ function toggleBrightness(): void {
     return
   }
 
-  showOutputControl('brightness')
+  showOutputControl('brightness', getOutputControlOpenSource(event))
 }
 
 function handleVolumeControlsOpenChange(open: boolean): void {
   volumeControlsClose.cancel()
   if (open && !preferenceStore.previewMuted) {
-    showOutputControl('volume')
+    showOutputControl('volume', 'pointer')
     return
   }
 
@@ -118,7 +120,7 @@ function handleVolumeControlsOpenChange(open: boolean): void {
 function handleBrightnessControlsOpenChange(open: boolean): void {
   brightnessControlsClose.cancel()
   if (open && preferenceStore.previewBrightnessEnabled) {
-    showOutputControl('brightness')
+    showOutputControl('brightness', 'pointer')
     return
   }
 
@@ -128,26 +130,38 @@ function handleBrightnessControlsOpenChange(open: boolean): void {
 function showVolumeControls(): void {
   volumeControlsClose.cancel()
   if (!preferenceStore.previewMuted) {
-    showOutputControl('volume')
+    showOutputControl('volume', 'pointer')
   }
 }
 
 function showBrightnessControls(): void {
   brightnessControlsClose.cancel()
   if (preferenceStore.previewBrightnessEnabled) {
-    showOutputControl('brightness')
+    showOutputControl('brightness', 'pointer')
   }
 }
 
-function showOutputControl(control: PreviewOutputControl): void {
+function getOutputControlOpenSource(event: MouseEvent): PreviewOutputControlOpenSource {
+  return event.detail === 0 ? 'keyboard' : 'pointer'
+}
+
+function handleOutputControlOpenAutoFocus(event: Event): void {
+  if (activeOutputControlOpenSource !== 'keyboard') {
+    event.preventDefault()
+  }
+}
+
+function showOutputControl(control: PreviewOutputControl, openSource: PreviewOutputControlOpenSource): void {
   volumeControlsClose.cancel()
   brightnessControlsClose.cancel()
   activeOutputControl = control
+  activeOutputControlOpenSource = openSource
 }
 
 function closeOutputControl(control: PreviewOutputControl): void {
   if (activeOutputControl === control) {
     activeOutputControl = undefined
+    activeOutputControlOpenSource = undefined
   }
 }
 </script>
@@ -212,7 +226,7 @@ function closeOutputControl(control: PreviewOutputControl): void {
             align="end"
             class="p-3 w-48"
             :style="{ pointerEvents: volumeControlsOpen ? undefined : 'none' }"
-            @open-auto-focus.prevent
+            @open-auto-focus="handleOutputControlOpenAutoFocus"
             @close-auto-focus.prevent
             @pointerenter="volumeControlsClose.cancel"
             @pointerleave="volumeControlsClose.schedule"
@@ -256,7 +270,7 @@ function closeOutputControl(control: PreviewOutputControl): void {
             align="end"
             class="p-3 w-48"
             :style="{ pointerEvents: brightnessControlsOpen ? undefined : 'none' }"
-            @open-auto-focus.prevent
+            @open-auto-focus="handleOutputControlOpenAutoFocus"
             @close-auto-focus.prevent
             @pointerenter="brightnessControlsClose.cancel"
             @pointerleave="brightnessControlsClose.schedule"
