@@ -154,8 +154,8 @@ function closeOutputControl(control: PreviewOutputControl): void {
 
 <template>
   <div data-testid="preview-toolbar" class="px-2 py-1 flex flex-shrink-0 gap-2 items-center justify-between">
-    <div class="flex min-w-0 items-center overflow-hidden">
-      <h2 class="text-sm text-foreground font-medium px-1.5 shrink-0">
+    <div class="flex flex-1 min-w-0 items-center overflow-hidden">
+      <h2 class="text-sm text-foreground font-medium px-1.5 min-w-0 truncate">
         {{ $t('edit.previewPanel.preview') }}
       </h2>
       <div
