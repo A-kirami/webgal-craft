@@ -2,6 +2,7 @@ import { openPath } from '@tauri-apps/plugin-opener'
 
 import { MIN_WEBGAL_EDITOR_RUNTIME_VERSION } from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
+import { fromExternalAbsPath } from '~/services/platform/path-boundary'
 import { resolveI18nLike } from '~/utils/i18n-like'
 
 import {
@@ -17,6 +18,8 @@ import type { I18nLike, I18nT } from '~/utils/i18n-like'
 export interface HomeResourceImportMessages {
   importFailed: I18nLike
   invalidFolder: I18nLike
+  invalidArchive?: I18nLike
+  unsupportedArchive?: I18nLike
   unknownError: I18nLike
   multipleFolders: I18nLike
   selectFolderTitle: I18nLike
@@ -53,11 +56,17 @@ export const managedImportErrorMessages = {
   importBusy: t => t('home.managedImport.error.busy'),
 } satisfies Partial<HomeResourceImportMessages>
 
+const archiveImportErrorMessages = {
+  invalidArchive: t => t('home.archiveImport.error.invalidArchive'),
+  unsupportedArchive: t => t('home.archiveImport.error.unsupportedArchive'),
+} satisfies Partial<HomeResourceImportMessages>
+
 export function createHomeResourceImportMessages(type: HomeResourceType, t: I18nT): HomeResourceImportMessages {
   switch (type) {
     case 'games': {
       return {
         ...managedImportErrorMessages,
+        ...archiveImportErrorMessages,
         alreadyRegistered: t => t('home.games.importAlreadyExists'),
         engineEditorIncompatible: t => t('home.games.importEngineEditorIncompatible'),
         engineNotFound: t => t('home.games.importEngineNotFound'),
@@ -76,6 +85,7 @@ export function createHomeResourceImportMessages(type: HomeResourceType, t: I18n
     case 'engines': {
       return {
         ...managedImportErrorMessages,
+        ...archiveImportErrorMessages,
         alreadyRegistered: t => t('home.engines.importAlreadyExists'),
         engineEditorIncompatible: t => t('home.engines.importEditorIncompatible'),
         engineSchemaTooNew: t => t('home.engines.importSchemaTooNew'),
@@ -93,6 +103,7 @@ export function createHomeResourceImportMessages(type: HomeResourceType, t: I18n
     case 'templates': {
       return {
         ...managedImportErrorMessages,
+        ...archiveImportErrorMessages,
         duplicateResource: t => t('home.templates.importDuplicate'),
         invalidFolder: t => t('home.templates.importInvalidFolder'),
         importFailed: t => t('home.templates.importFailed'),
@@ -119,6 +130,8 @@ interface UseHomeResourceImportActionsOptions {
 const NOTIFICATION_MESSAGE_KEYS: Partial<Record<HomeResourceImportNotification['kind'], keyof HomeResourceImportMessages>> = {
   'already-registered': 'alreadyRegistered',
   'invalid-folder': 'invalidFolder',
+  'invalid-archive': 'invalidArchive',
+  'unsupported-archive': 'unsupportedArchive',
   'duplicate-resource': 'duplicateResource',
   'target-conflict': 'targetConflict',
   'unsupported-legacy-engine': 'unsupportedLegacyEngine',
@@ -225,7 +238,7 @@ export function useHomeResourceImportActions<TResource extends { id: string, pat
       return
     }
 
-    await importWithFeedback(AbsPath.from(decision.path))
+    await importWithFeedback(fromExternalAbsPath(decision.path))
   }
 
   async function handleOpenFolder(resource: { path: string }) {

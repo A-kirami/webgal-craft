@@ -120,6 +120,10 @@ appUpdate:
 
 home:
   unavailableBadge: Unavailable
+  archiveImport:
+    error:
+      invalidArchive: The archive could not be read. Check that it is not damaged and try again.
+      unsupportedArchive: This archive format is not supported. Use ZIP, TAR, TAR.GZ, or TGZ.
   managedImport:
     title: Importing {resource}
     cancel: Cancel import
@@ -147,9 +151,9 @@ home:
     error:
       providerDenied: The selected provider did not grant access to this folder.
       copyFailed: The folder could not be copied from the selected provider.
-      unsafeEntry: The folder contains an unsafe or unsupported entry.
+      unsafeEntry: The selected content contains an unsafe or unsupported entry.
       storageFull: There is not enough local storage to import this folder.
-      resourceLimit: The folder exceeds the import size or file count limit.
+      resourceLimit: The selected content exceeds the import size or file count limit.
       rollbackFailed: Import cleanup is incomplete. It will be retried when the app starts.
       busy: Another folder import is already in progress.
   header:

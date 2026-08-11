@@ -1,7 +1,6 @@
 import { createHomeResourceImportMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
 import { createTemplateImportWorkflow } from '~/features/resource-import/resource-import-workflows'
 import { resourceReconcile } from '~/services/resource-reconcile'
-import { templateManager } from '~/services/template-manager'
 
 import type { Template } from '~/database/model'
 import type { TemplateGroupSourceItem, TemplateGroupViewModel } from '~/features/home/templates-tab/template-groups'
@@ -23,10 +22,13 @@ function findStandaloneSource(
 }
 
 export function useTemplatesTabController(options: UseTemplatesTabControllerOptions) {
-  const importWorkflow = createTemplateImportWorkflow(options.t('common.dialogs.selectTemplateFolder'), options.android)
+  const importWorkflow = createTemplateImportWorkflow({
+    android: options.android,
+    selectTitle: options.t('common.dialogs.selectTemplateFolder'),
+  })
   const importActions = useHomeResourceImportActions<Template>({
     activeProgress: options.activeProgress,
-    importResource: path => templateManager.importTemplate(path),
+    importResource: importWorkflow.importFromPath,
     selectResource: importWorkflow.importFromPicker,
     messages: createHomeResourceImportMessages('templates', options.t),
     t: options.t,

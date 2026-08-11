@@ -27,7 +27,10 @@ interface UseEnginesTabControllerOptions {
 }
 
 export function useEnginesTabController(options: UseEnginesTabControllerOptions) {
-  const importWorkflow = createEngineImportWorkflow(options.t('common.dialogs.selectEngineFolder'), options.android)
+  const importWorkflow = createEngineImportWorkflow({
+    android: options.android,
+    selectTitle: options.t('common.dialogs.selectEngineFolder'),
+  })
   const officialReleaseCacheStore = useOfficialEngineReleaseCacheStore()
   const officialReleases = shallowRef<OfficialEngineRelease[]>(
     filterSupportedOfficialEngineReleases(officialReleaseCacheStore.releases),
@@ -37,7 +40,7 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
   )
   const importActions = useHomeResourceImportActions<Engine>({
     activeProgress: options.activeProgress,
-    importResource: path => engineManager.importEngine(path),
+    importResource: importWorkflow.importFromPath,
     selectResource: importWorkflow.importFromPicker,
     messages: createHomeResourceImportMessages('engines', options.t),
     t: options.t,

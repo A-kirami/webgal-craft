@@ -5,6 +5,8 @@ export interface HomeResourceImportNotification {
     | 'success'
     | 'already-registered'
     | 'invalid-folder'
+    | 'invalid-archive'
+    | 'unsupported-archive'
     | 'duplicate-resource'
     | 'target-conflict'
     | 'unsupported-legacy-engine'
@@ -102,6 +104,8 @@ function resolveErrorNotificationKind(error: unknown): HomeResourceImportNotific
   // 按 error.code 匹配
   switch (error.code) {
     case 'INVALID_STRUCTURE': { return 'invalid-folder' }
+    case 'INVALID_ARCHIVE': { return 'invalid-archive' }
+    case 'UNSUPPORTED_ARCHIVE': { return 'unsupported-archive' }
     case 'INVALID_MANIFEST': { return 'invalid-folder' }
     case 'TARGET_CONFLICT': { return 'target-conflict' }
     case 'DUPLICATE_RESOURCE': { return 'duplicate-resource' }

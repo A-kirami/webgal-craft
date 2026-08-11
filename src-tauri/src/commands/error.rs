@@ -25,6 +25,21 @@ pub enum AppError {
     #[error("导出错误: {0}")]
     Export(String),
 
+    #[error("压缩包无法读取: {0}")]
+    InvalidArchive(String),
+
+    #[error("不支持的压缩格式: {0}")]
+    UnsupportedArchive(String),
+
+    #[error("压缩包结构无效: {0}")]
+    InvalidArchiveStructure(String),
+
+    #[error("压缩包包含不安全条目: {0}")]
+    UnsafeArchiveEntry(String),
+
+    #[error("压缩包超出资源限制: {0}")]
+    ArchiveResourceLimit(String),
+
     #[error("目标目录已存在: {0}")]
     TargetConflict(String),
 
@@ -58,6 +73,11 @@ impl AppError {
             #[cfg(desktop)]
             Self::Window(_) => "WINDOW_ERROR",
             Self::Export(_) => "EXPORT_ERROR",
+            Self::InvalidArchive(_) => "INVALID_ARCHIVE",
+            Self::UnsupportedArchive(_) => "UNSUPPORTED_ARCHIVE",
+            Self::InvalidArchiveStructure(_) => "INVALID_STRUCTURE",
+            Self::UnsafeArchiveEntry(_) => "UNSAFE_ENTRY",
+            Self::ArchiveResourceLimit(_) => "RESOURCE_LIMIT",
             Self::TargetConflict(_) => "TARGET_CONFLICT",
             Self::Vfs(error) => error.code(),
             Self::SchemaVersionTooNew { .. } => "SCHEMA_VERSION_TOO_NEW",
@@ -120,6 +140,26 @@ mod tests {
         #[cfg(desktop)]
         assert_eq!(AppError::Window("window".into()).code(), "WINDOW_ERROR");
         assert_eq!(AppError::Export("export".into()).code(), "EXPORT_ERROR");
+        assert_eq!(
+            AppError::InvalidArchive("invalid".into()).code(),
+            "INVALID_ARCHIVE"
+        );
+        assert_eq!(
+            AppError::UnsupportedArchive("rar".into()).code(),
+            "UNSUPPORTED_ARCHIVE"
+        );
+        assert_eq!(
+            AppError::InvalidArchiveStructure("missing manifest".into()).code(),
+            "INVALID_STRUCTURE"
+        );
+        assert_eq!(
+            AppError::UnsafeArchiveEntry("symlink".into()).code(),
+            "UNSAFE_ENTRY"
+        );
+        assert_eq!(
+            AppError::ArchiveResourceLimit("too large".into()).code(),
+            "RESOURCE_LIMIT"
+        );
         assert_eq!(
             AppError::TargetConflict("C:/exports/Demo".into()).code(),
             "TARGET_CONFLICT"

@@ -110,7 +110,10 @@ describe('资源导入工作流', () => {
   }
 
   function createTemplateWorkflow() {
-    return createTemplateImportWorkflow('Select template', true)
+    return createTemplateImportWorkflow({
+      android: true,
+      selectTitle: 'Select template',
+    })
   }
 
   it('Dexie 注册后提交 session 且不会再次复制暂存内容', async () => {

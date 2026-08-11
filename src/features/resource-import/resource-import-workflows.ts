@@ -6,6 +6,7 @@ import { useManagedImportStore } from '~/stores/managed-import'
 import { AppError } from '~/types/errors'
 
 import { androidDirectoryMaterializer } from './android-directory-materializer'
+import { importResourceArchive, isArchiveImportPath } from './archive-resource-import'
 import { desktopDirectoryPicker } from './desktop-directory-picker'
 
 import type { AbsPath } from '~/domain/path'
@@ -42,6 +43,7 @@ interface ResourceImportWorkflowOptions<TPlan> {
 
 export interface ResourceImportWorkflow {
   importFromPicker: () => Promise<HomeResourceImportOutcome | undefined>
+  importFromPath: (path: AbsPath) => Promise<HomeResourceImportOutcome | undefined>
 }
 
 async function rollbackPreservingError(
@@ -143,14 +145,20 @@ function createResourceImportWorkflow<TPlan>(
     if (!path) {
       return
     }
-    const result = await options.desktopImport(path)
+    return importFromPath(path)
+  }
+
+  async function importFromPath(path: AbsPath): Promise<HomeResourceImportOutcome | undefined> {
+    const result = isArchiveImportPath(path)
+      ? await importResourceArchive(options.kind, path, options.desktopImport)
+      : await options.desktopImport(path)
     if (result && typeof result === 'object' && 'id' in result && typeof result.id === 'string') {
       await options.afterDesktopCommit?.(result.id)
     }
     return result as HomeResourceImportOutcome | undefined
   }
 
-  return { importFromPicker }
+  return { importFromPath, importFromPicker }
 }
 
 export function createGameImportWorkflow(options: {
@@ -177,30 +185,34 @@ export function createGameImportWorkflow(options: {
   })
 }
 
-export function createEngineImportWorkflow(selectTitle: string, android?: boolean): ResourceImportWorkflow {
+export function createEngineImportWorkflow(
+  options: { android?: boolean, selectTitle: string },
+): ResourceImportWorkflow {
   return createResourceImportWorkflow<PreparedEngineManagedImport['plan']>({
     kind: 'engine',
-    selectTitle,
+    selectTitle: options.selectTitle,
     desktopImport: path => engineManager.importEngine(path),
     domain: {
       prepare: engineManager.prepareManagedImport,
       register: engineManager.registerManagedImport,
       duplicateOutcome: 'already-registered',
     },
-    android,
+    android: options.android,
   })
 }
 
-export function createTemplateImportWorkflow(selectTitle: string, android?: boolean): ResourceImportWorkflow {
+export function createTemplateImportWorkflow(
+  options: { android?: boolean, selectTitle: string },
+): ResourceImportWorkflow {
   return createResourceImportWorkflow<PreparedTemplateManagedImport['plan']>({
     kind: 'template',
-    selectTitle,
+    selectTitle: options.selectTitle,
     desktopImport: path => templateManager.importTemplate(path),
     domain: {
       prepare: templateManager.prepareManagedImport,
       register: templateManager.registerManagedImport,
       duplicateOutcome: 'duplicate-error',
     },
-    android,
+    android: options.android,
   })
 }
