@@ -811,6 +811,12 @@ edit:
   scenePanel:
     scene: 场景
     resource: 资源
+  externalFileImport:
+    partial: 已导入 {successCount} 个项目，{failedCount} 个失败
+    failed: "{count} 个项目导入失败"
+    failedItems: "失败项目：{names}"
+    renamedConflicts: 已自动重命名 {count} 个同名项目
+    busy: 另一批文件仍在导入中
   statusBar:
     frames: "{count} 帧"
     resourceIndexBuilding: 正在构建资源索引

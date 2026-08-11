@@ -811,6 +811,12 @@ edit:
   scenePanel:
     scene: Scene
     resource: Resource
+  externalFileImport:
+    partial: Imported {successCount} item(s); {failedCount} failed
+    failed: Failed to import {count} item(s)
+    failedItems: "Failed: {names}"
+    renamedConflicts: Renamed {count} conflicting item(s)
+    busy: Another file import is still running
   statusBar:
     frames: "{count} frames"
     resourceIndexBuilding: Indexing resources

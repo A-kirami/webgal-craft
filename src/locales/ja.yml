@@ -811,6 +811,12 @@ edit:
   scenePanel:
     scene: シーン
     resource: リソース
+  externalFileImport:
+    partial: "{successCount} 件をインポートし、{failedCount} 件が失敗しました"
+    failed: "{count} 件のインポートに失敗しました"
+    failedItems: "失敗: {names}"
+    renamedConflicts: "同名の {count} 件を自動的に名前変更しました"
+    busy: 別のファイルインポートが実行中です
   statusBar:
     frames: "{count} フレーム"
     resourceIndexBuilding: リソースをインデックスしています

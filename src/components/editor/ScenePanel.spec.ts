@@ -7,6 +7,7 @@ const {
   fileSystemEventHandlers,
   fileSystemEventsOnMock,
   gameSceneDirMock,
+  externalDropTargetPath,
   scrollIntoViewMock,
   useFileStoreMock,
   useEditorDiagnosticsStoreMock,
@@ -16,6 +17,7 @@ const {
   fileSystemEventHandlers: new Map<string, (event: unknown) => void>(),
   fileSystemEventsOnMock: vi.fn(),
   gameSceneDirMock: vi.fn(),
+  externalDropTargetPath: { value: undefined as string | undefined },
   scrollIntoViewMock: vi.fn(),
   useFileStoreMock: vi.fn(),
   useEditorDiagnosticsStoreMock: vi.fn(),
@@ -66,6 +68,12 @@ vi.mock('~/stores/workspace', () => ({
 vi.mock('~/composables/useFileSystemEvents', () => ({
   useFileSystemEvents: () => ({
     on: fileSystemEventsOnMock,
+  }),
+}))
+
+vi.mock('~/features/editor/external-file-import/useExternalFileDropImport', () => ({
+  useExternalFileDropImport: () => ({
+    targetDirectory: externalDropTargetPath,
   }),
 }))
 
@@ -146,6 +154,10 @@ const globalStubs = {
         type: Object,
         default: undefined,
       },
+      externalDropTargetPath: {
+        type: String,
+        default: undefined,
+      },
     },
     emits: ['auxclick', 'click', 'dblclick', 'update:selectedItem'],
     setup(props, { emit, expose }) {
@@ -214,7 +226,13 @@ const globalStubs = {
       return () => h('div', {
         'ref': setViewportElement,
         'data-testid': 'scene-panel-viewport',
-      }, renderItems(props.items as TreeNode[]))
+      }, [
+        h('output', {
+          'data-testid': 'scene-panel-external-drop-target',
+          'data-path': props.externalDropTargetPath ?? '',
+        }),
+        ...renderItems(props.items as TreeNode[]),
+      ])
     },
   }),
 }
@@ -265,6 +283,7 @@ describe('ScenePanel', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     fileSystemEventHandlers.clear()
+    externalDropTargetPath.value = undefined
 
     fileSystemEventsOnMock.mockImplementation((eventType: string, handler: (event: unknown) => void) => {
       fileSystemEventHandlers.set(eventType, handler)
@@ -308,6 +327,27 @@ describe('ScenePanel', () => {
     const fileStore = useFileStoreMock.mock.results[0]?.value as ReturnType<typeof createFileStore>
     expect(fileStore.getFolderContents).toHaveBeenCalledWith('/games/demo/game/scene')
     expect(fileStore.getFolderContents).toHaveBeenCalledWith('/games/demo/game/scene/chapter-1')
+  })
+
+  it('会把外部拖拽目标传给文件树', async () => {
+    externalDropTargetPath.value = '/games/demo/game/scene/chapter-1'
+
+    renderInBrowser(ScenePanel, {
+      browser: {
+        i18nMode: 'localized',
+        messages: {
+          'zh-Hans': {
+            edit: {},
+          },
+        },
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByTestId('scene-panel-external-drop-target'))
+      .toHaveAttribute('data-path', '/games/demo/game/scene/chapter-1')
   })
 
   it('只给诊断索引中存在问题的已分析场景文件着色', async () => {

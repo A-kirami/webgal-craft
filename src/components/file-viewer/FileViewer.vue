@@ -11,6 +11,7 @@ import { FileViewerItem, FileViewerPreviewSize, FileViewerSortBy, FileViewerSort
 import { createItemComparator } from '~/utils/sort'
 
 import type { StyleValue } from 'vue'
+import type { AbsPath } from '~/domain/path'
 import type { DragTransferOperation, FileSystemDragPayload } from '~/types/drag-drop'
 import type { SortableItemAccessor } from '~/utils/sort'
 
@@ -19,6 +20,8 @@ interface FileViewerProps {
   items: FileViewerItem[]
   /** 当前需要额外高亮的条目路径 */
   highlightedItemPath?: string
+  /** 系统文件拖放当前命中的目录路径 */
+  externalDropTargetPath?: AbsPath
   /** 资源预览的工作区根目录 */
   previewCwd?: string
   /** 资源预览服务地址 */
@@ -85,6 +88,7 @@ defineSlots<{
 const {
   items,
   highlightedItemPath,
+  externalDropTargetPath,
   previewCwd,
   previewBaseUrl,
   viewMode = 'list',
@@ -483,9 +487,10 @@ defineExpose(fileViewerExpose)
       @update:sort-order="(nextSortOrder) => emit('update:sortOrder', nextSortOrder)"
     />
     <div
+      data-file-viewer-root-surface="true"
       :class="[
         'flex-1 min-h-0',
-        isRootDropTargetActive ? 'bg-accent/35' : '',
+        isRootDropTargetActive || externalDropTargetPath === dropTargetDirectory?.path ? 'bg-accent/35' : '',
       ]"
     >
       <ScrollArea ref="scrollAreaRef" class="flex-scroll-area h-full min-h-0">
@@ -513,9 +518,10 @@ defineExpose(fileViewerExpose)
 
         <FileViewerBody
           v-else
-          :active-root-drop-target="isRootDropTargetActive"
+          :active-root-drop-target="isRootDropTargetActive || externalDropTargetPath === dropTargetDirectory?.path"
           :can-drop-file-transfer="canDropFileTransfer"
           :enable-drag-transfer="enableDragTransfer"
+          :external-drop-target-path="externalDropTargetPath"
           :highlighted-item-path="highlightedItemPath"
           :view-mode="viewMode"
           :virtual-rows="virtualizer.virtualRows.value"

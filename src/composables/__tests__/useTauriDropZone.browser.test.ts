@@ -37,11 +37,21 @@ function setDevicePixelRatio(value: number): void {
 }
 
 async function renderDropZone() {
+  const onEnter = vi.fn()
   const onDrop = vi.fn()
+  const onDropTarget = vi.fn()
+  const onLeave = vi.fn()
   const Harness = defineComponent({
     setup() {
       const target = ref<HTMLElement>()
-      useTauriDropZone(target, onDrop)
+      const dropZone = useTauriDropZone(target, {
+        onEnter,
+        onLeave,
+        onDrop(paths) {
+          onDrop(paths)
+          onDropTarget(dropZone.targetElement.value)
+        },
+      })
 
       return () => h('div', {
         ref: target,
@@ -60,19 +70,19 @@ async function renderDropZone() {
   const result = render(Harness)
   await vi.waitFor(() => expect(webviewMockState.handler).toBeTypeOf('function'))
 
-  return { onDrop, result }
+  return { onDrop, onDropTarget, onEnter, onLeave, result }
 }
 
-function emitDrop(paths: string[], position: PhysicalPosition): void {
+function emitDragDrop(payload: DragDropEvent): void {
   webviewMockState.handler?.({
     event: 'tauri://drag-drop',
     id: 1,
-    payload: {
-      paths,
-      position,
-      type: 'drop',
-    },
+    payload,
   })
+}
+
+function emitDrop(paths: string[], position: PhysicalPosition): void {
+  emitDragDrop({ paths, position, type: 'drop' })
 }
 
 beforeEach(() => {
@@ -91,11 +101,12 @@ afterEach(() => {
 describe('useTauriDropZone', () => {
   it('在 1x DPI 下使用原生坐标命中放置区域', async () => {
     setDevicePixelRatio(1)
-    const { onDrop, result } = await renderDropZone()
+    const { onDrop, onDropTarget, result } = await renderDropZone()
 
     emitDrop([standardDpiPath], new PhysicalPosition(75, 75))
 
     expect(onDrop).toHaveBeenCalledWith([standardDpiPath])
+    expect(onDropTarget).toHaveBeenCalledWith(expect.any(HTMLElement))
     result.unmount()
   })
 
@@ -116,6 +127,46 @@ describe('useTauriDropZone', () => {
     emitDrop([outsidePath], new PhysicalPosition(250, 250))
 
     expect(onDrop).not.toHaveBeenCalled()
+    result.unmount()
+  })
+
+  it('文件先进入放置区域再在区域外放下时会清理拖放状态', async () => {
+    setDevicePixelRatio(1)
+    const { onDrop, onEnter, onLeave, result } = await renderDropZone()
+
+    emitDragDrop({
+      paths: [standardDpiPath],
+      position: new PhysicalPosition(75, 75),
+      type: 'enter',
+    })
+    expect(onEnter).toHaveBeenCalledWith([standardDpiPath])
+
+    emitDrop([standardDpiPath], new PhysicalPosition(250, 250))
+
+    expect(onDrop).not.toHaveBeenCalled()
+    expect(onLeave).toHaveBeenCalledOnce()
+    result.unmount()
+  })
+
+  it('文件先进入窗口其他区域再移入放置区域时会沿用 enter 的路径', async () => {
+    setDevicePixelRatio(1)
+    const { onDrop, onEnter, result } = await renderDropZone()
+
+    emitDragDrop({
+      paths: [outsidePath],
+      position: new PhysicalPosition(10, 10),
+      type: 'enter',
+    })
+    expect(onEnter).not.toHaveBeenCalled()
+
+    emitDragDrop({
+      position: new PhysicalPosition(75, 75),
+      type: 'over',
+    })
+    expect(onEnter).toHaveBeenCalledWith([outsidePath])
+
+    emitDrop([outsidePath], new PhysicalPosition(75, 75))
+    expect(onDrop).toHaveBeenCalledWith([outsidePath])
     result.unmount()
   })
 })

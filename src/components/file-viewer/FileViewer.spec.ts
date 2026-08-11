@@ -1682,6 +1682,50 @@ describe('FileViewer', () => {
     }])
   })
 
+  it('外部文件拖拽时只高亮命中的目录项', async () => {
+    viewportWidthMock.value = 780
+
+    const file = createItem(1)
+    const directory = createDirectoryItem(2, {
+      name: 'folder',
+      path: '/assets/folder',
+    })
+
+    renderInBrowser(FileViewer, {
+      props: {
+        externalDropTargetPath: directory.path,
+        items: [file, directory],
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    expect(getFileViewerItemElement(directory)).toHaveClass('bg-accent')
+    expect(getFileViewerItemElement(directory)).not.toHaveClass('outline')
+    expect(getFileViewerItemElement(file)).not.toHaveClass('outline')
+  })
+
+  it('外部文件拖拽到当前目录时会高亮资源根区域', async () => {
+    const rootDirectory = createDirectoryItem(0, { path: '/assets' })
+
+    renderInBrowser(FileViewer, {
+      props: {
+        dropTargetDirectory: rootDirectory,
+        externalDropTargetPath: rootDirectory.path,
+        items: [createItem(1)],
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    expect(document.querySelector('[data-file-viewer-root-surface]')).toHaveClass('bg-accent/35')
+  })
+
   it('投放判断拒绝时不会触发 fileTransferDrop', async () => {
     viewportWidthMock.value = 780
 

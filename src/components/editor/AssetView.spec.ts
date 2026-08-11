@@ -19,6 +19,7 @@ const {
   copyFileMock,
   createFileMock,
   createFolderMock,
+  externalDropTargetPath,
   existsMock,
   fileSystemEventHandlers,
   fileSystemEventsOnMock,
@@ -36,6 +37,7 @@ const {
   copyFileMock: vi.fn(),
   createFileMock: vi.fn(),
   createFolderMock: vi.fn(),
+  externalDropTargetPath: { value: undefined as string | undefined },
   existsMock: vi.fn(),
   fileSystemEventHandlers: new Map<string, ((event: Record<string, unknown>) => void)[]>(),
   fileSystemEventsOnMock: vi.fn(),
@@ -156,6 +158,12 @@ vi.mock('~/composables/useFileSystemEvents', () => ({
   }),
 }))
 
+vi.mock('~/features/editor/external-file-import/useExternalFileDropImport', () => ({
+  useExternalFileDropImport: () => ({
+    targetDirectory: externalDropTargetPath,
+  }),
+}))
+
 vi.mock('~/services/game-fs', () => ({
   gameFs: {
     copyFile: copyFileMock,
@@ -210,6 +218,10 @@ function createPreviewFileViewerStub() {
         type: String,
         required: false,
       },
+      externalDropTargetPath: {
+        type: String,
+        required: false,
+      },
     },
     setup(props, { expose }) {
       expose({
@@ -222,6 +234,7 @@ function createPreviewFileViewerStub() {
         'data-testid': 'preview-context',
         'data-preview-base-url': props.previewBaseUrl ?? '',
         'data-preview-cwd': props.previewCwd ?? '',
+        'data-external-drop-target-path': props.externalDropTargetPath ?? '',
       })
     },
   })
@@ -616,6 +629,7 @@ function setPreviewUnavailable() {
 describe('AssetView', () => {
   beforeEach(() => {
     fileSystemEventHandlers.clear()
+    externalDropTargetPath.value = undefined
     fileSystemEventsOnMock.mockReset()
     copyFileMock.mockReset()
     createFileMock.mockReset()
@@ -707,6 +721,22 @@ describe('AssetView', () => {
 
     await expect.element(page.getByTestId('preview-context')).toHaveAttribute('data-preview-cwd', '/games/demo')
     await expect.element(page.getByTestId('preview-context')).toHaveAttribute('data-preview-base-url', 'http://127.0.0.1:8899/game/demo/')
+  })
+
+  it('会把外部拖拽目标传给资源浏览器', async () => {
+    externalDropTargetPath.value = '/games/demo/game/background/shared'
+
+    renderInBrowser(createHarness(), {
+      global: {
+        stubs: {
+          ...commonGlobalStubs,
+          FileViewer: createPreviewFileViewerStub(),
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('preview-context'))
+      .toHaveAttribute('data-external-drop-target-path', '/games/demo/game/background/shared')
   })
 
   it('会显示零引用和多个引用，并在资源索引修订后刷新计数', async () => {

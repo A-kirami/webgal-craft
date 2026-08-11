@@ -540,6 +540,72 @@ describe('FileTree', () => {
     await expect.element(page.getByRole('status', { name: 'common.loading' })).toBeInTheDocument()
   })
 
+  it('外部文件拖拽到目录子层级时会高亮目标目录及其子树', () => {
+    renderFileTree({
+      externalDropTargetPath: '/project/chapter',
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [
+        {
+          name: 'chapter',
+          path: '/project/chapter',
+          children: [
+            {
+              name: 'opening.txt',
+              path: '/project/chapter/opening.txt',
+            },
+          ],
+        },
+        {
+          name: 'scene.txt',
+          path: '/project/scene.txt',
+        },
+      ],
+      rootPath: '/project',
+    })
+
+    const directory = document.querySelector<HTMLElement>('[data-file-tree-path="/project/chapter"]')
+    const child = document.querySelector<HTMLElement>('[data-file-tree-path="/project/chapter/opening.txt"]')
+    const sibling = document.querySelector<HTMLElement>('[data-file-tree-path="/project/scene.txt"]')
+
+    expect(directory).toHaveClass('bg-accent', 'outline', 'outline-primary/50')
+    expect(child).toHaveAttribute('data-file-tree-drop-target-path', '/project/chapter')
+    expect(child).toHaveClass('bg-accent/60')
+    expect(sibling).not.toHaveClass('bg-accent/60')
+    expect(sibling).not.toHaveClass('outline')
+  })
+
+  it('外部文件拖拽到根目录时会高亮整棵树', () => {
+    renderFileTree({
+      externalDropTargetPath: '/project',
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [
+        {
+          name: 'chapter',
+          path: '/project/chapter',
+          children: [
+            {
+              name: 'opening.txt',
+              path: '/project/chapter/opening.txt',
+            },
+          ],
+        },
+        {
+          name: 'scene.txt',
+          path: '/project/scene.txt',
+        },
+      ],
+      rootPath: '/project',
+    })
+
+    const treeItems = document.querySelectorAll<HTMLElement>('[data-file-tree-path]')
+
+    expect(treeItems).toHaveLength(3)
+    for (const treeItem of treeItems) {
+      expect(treeItem).toHaveClass('bg-accent/60')
+    }
+    expect(document.querySelector('[data-file-tree-root-surface]')).toHaveClass('bg-accent/35')
+  })
+
   it('点击文件项会发出 click 事件', async () => {
     const onClick = vi.fn()
 

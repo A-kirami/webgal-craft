@@ -31,6 +31,10 @@ export interface UseTauriDropZoneReturn {
    * 是否在拖放区域上方
    */
   isOverDropZone: Ref<boolean>
+  /**
+   * 当前原生拖拽坐标命中的最深层 DOM 元素
+   */
+  targetElement: Ref<Element | undefined>
 }
 
 export function useTauriDropZone(
@@ -39,7 +43,8 @@ export function useTauriDropZone(
 ): UseTauriDropZoneReturn {
   const isOverDropZone = ref(false)
   const files = ref<string[] | undefined>(undefined)
-  let counter = 0
+  const targetElement = shallowRef<Element>()
+  let dragPaths: string[] | undefined
   let unlisten: (() => void) | undefined
 
   // 处理简化的参数形式
@@ -60,18 +65,15 @@ export function useTauriDropZone(
     const isOverTarget = isElementInTarget(element)
 
     if (isOverTarget && !wasOverDropZone) {
-      counter += 1
       isOverDropZone.value = true
-      if (paths) {
-        normalizedOptions.onEnter?.(paths)
-      }
+      targetElement.value = element ?? undefined
+      normalizedOptions.onEnter?.(paths ?? dragPaths ?? [])
     } else if (!isOverTarget && wasOverDropZone) {
-      counter = Math.max(0, counter - 1)
-      if (counter === 0) {
-        isOverDropZone.value = false
-      }
+      isOverDropZone.value = false
+      targetElement.value = undefined
       normalizedOptions.onLeave?.()
     } else if (isOverTarget && wasOverDropZone) {
+      targetElement.value = element ?? undefined
       normalizedOptions.onOver?.()
     }
   }
@@ -84,6 +86,8 @@ export function useTauriDropZone(
   function handleDragDropEvent(payload: DragDropEvent): void {
     switch (payload.type) {
       case 'enter': {
+        dragPaths = payload.paths
+        files.value = payload.paths
         if (payload.position) {
           updateDropZoneState(elementAtPosition(payload.position), payload.paths)
         }
@@ -92,28 +96,35 @@ export function useTauriDropZone(
 
       case 'over': {
         if (payload.position) {
-          updateDropZoneState(elementAtPosition(payload.position))
+          updateDropZoneState(elementAtPosition(payload.position), dragPaths)
         }
         break
       }
 
       case 'drop': {
+        let handledDrop = false
         if (payload.position) {
-          if (isElementInTarget(elementAtPosition(payload.position)) && payload.paths) {
+          const element = elementAtPosition(payload.position)
+          if (isElementInTarget(element) && payload.paths) {
+            targetElement.value = element ?? undefined
             files.value = payload.paths
             normalizedOptions.onDrop?.(payload.paths)
+            handledDrop = true
           }
-          counter = 0
-          isOverDropZone.value = false
+        }
+        isOverDropZone.value = false
+        targetElement.value = undefined
+        dragPaths = undefined
+        if (!handledDrop) {
+          normalizedOptions.onLeave?.()
         }
         break
       }
 
       case 'leave': {
-        counter = Math.max(0, counter - 1)
-        if (counter === 0) {
-          isOverDropZone.value = false
-        }
+        isOverDropZone.value = false
+        targetElement.value = undefined
+        dragPaths = undefined
         normalizedOptions.onLeave?.()
         break
       }
@@ -134,5 +145,6 @@ export function useTauriDropZone(
   return {
     files,
     isOverDropZone,
+    targetElement,
   }
 }
