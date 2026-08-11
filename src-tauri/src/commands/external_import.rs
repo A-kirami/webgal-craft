@@ -1,5 +1,3 @@
-#[cfg(windows)]
-use cap_std::fs::MetadataExt as CapMetadataExt;
 use cap_std::{
     ambient_authority,
     fs::{Dir, File, Metadata, OpenOptions},
@@ -32,21 +30,8 @@ fn is_link_or_reparse_point(metadata: &fs::Metadata) -> bool {
     }
 }
 
-fn is_cap_link_or_reparse_point(metadata: &Metadata) -> bool {
-    if metadata.is_symlink() {
-        return true;
-    }
-
-    #[cfg(windows)]
-    {
-        const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
-        metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
-    }
-
-    #[cfg(not(windows))]
-    {
-        false
-    }
+fn is_cap_symlink(metadata: &Metadata) -> bool {
+    metadata.is_symlink()
 }
 
 fn path_denied() -> AppError {
@@ -108,7 +93,7 @@ fn copy_directory(source: &Dir, destination: &Dir) -> AppResult<()> {
         let file_name = entry.file_name();
         let metadata = source.symlink_metadata(&file_name)?;
 
-        if is_cap_link_or_reparse_point(&metadata) {
+        if is_cap_symlink(&metadata) {
             return Err(path_denied());
         }
 
