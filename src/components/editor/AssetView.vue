@@ -8,6 +8,7 @@ import { PopoverAnchor } from '~/components/ui/popover'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { usePathOperationFeedback } from '~/composables/usePathOperationFeedback'
 import { AbsPath, RelPath } from '~/domain/path'
+import { useExternalFileDropImport } from '~/features/editor/external-file-import/useExternalFileDropImport'
 import {
   canDropFileTreeTransferItemsToDirectory,
   getFileTreeNameSelectionEnd,
@@ -71,6 +72,7 @@ const confirmPathOperationRewrite = createPathOperationRewriteConfirm(t)
 const pathOperationFeedback = usePathOperationFeedback()
 
 const fileViewerRef = useTemplateRef<InstanceType<typeof FileViewer>>('fileViewerRef')
+const externalDropZoneRef = useTemplateRef<HTMLElement>('externalDropZoneRef')
 const renameInputRef = useTemplateRef('renameInputRef')
 
 let scrollTop = 0
@@ -237,6 +239,11 @@ const currentDirectoryContextMenuItem = $computed(() => {
     path: directoryPath,
     source: fileStore.getItemByPath(AbsPath.from(directoryPath))?.source,
   }
+})
+
+const externalFileImport = useExternalFileDropImport({
+  dropZone: externalDropZoneRef,
+  rootDirectory: () => currentDirectoryPath || undefined,
 })
 
 function canDropFileTransferItems(
@@ -780,13 +787,14 @@ for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
 </script>
 
 <template>
-  <div class="h-full">
+  <div ref="externalDropZoneRef" class="h-full">
     <FileViewer
       ref="fileViewerRef"
       :error-msg="errorMsg"
       :can-drop-file-transfer="canDropFileTransfer"
       :drop-target-directory="currentDirectoryContextMenuItem"
       enable-drag-transfer
+      :external-drop-target-path="externalFileImport.targetDirectory.value"
       :highlighted-item-path="renameTargetItem?.path"
       :is-loading="isLoading"
       :items="filteredItems"

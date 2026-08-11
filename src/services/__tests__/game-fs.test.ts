@@ -10,6 +10,7 @@ const {
   createFileMock,
   createFolderMock,
   copyFileMock,
+  importExternalEntryMock,
   deleteFileMock,
   ensureWritableMock,
   getFolderContentsMock,
@@ -19,6 +20,7 @@ const {
   resolvePreviewSiteMock,
   registerPendingFileWriteMock,
   rollbackPendingFileWriteMock,
+  statMock,
   fsRenameFileMock,
   vfsRenamePathMock,
   readFileMock,
@@ -36,6 +38,7 @@ const {
   createFileMock: vi.fn(),
   createFolderMock: vi.fn(),
   copyFileMock: vi.fn(),
+  importExternalEntryMock: vi.fn(),
   deleteFileMock: vi.fn(),
   ensureWritableMock: vi.fn(),
   getFolderContentsMock: vi.fn(),
@@ -45,6 +48,7 @@ const {
   resolvePreviewSiteMock: vi.fn(),
   registerPendingFileWriteMock: vi.fn(),
   rollbackPendingFileWriteMock: vi.fn(),
+  statMock: vi.fn(),
   fsRenameFileMock: vi.fn(),
   vfsRenamePathMock: vi.fn(),
   readFileMock: vi.fn(),
@@ -60,6 +64,7 @@ const {
 vi.mock('@tauri-apps/plugin-fs', () => ({
   mkdir: mkdirMock,
   readFile: readFileMock,
+  stat: statMock,
   writeFile: writeBinaryFileMock,
   writeTextFile: writeTextFileMock,
 }))
@@ -85,6 +90,7 @@ vi.mock('~/commands/fs', () => ({
     createFile: createFileMock,
     createFolder: createFolderMock,
     copyFile: copyFileMock,
+    importExternalEntry: importExternalEntryMock,
     moveFile: fsMoveFileMock,
     renameFile: fsRenameFileMock,
   },
@@ -112,6 +118,7 @@ describe('gameFs', () => {
     createFileMock.mockReset()
     createFolderMock.mockReset()
     copyFileMock.mockReset()
+    importExternalEntryMock.mockReset()
     deleteFileMock.mockReset()
     ensureWritableMock.mockReset()
     getFolderContentsMock.mockReset()
@@ -122,6 +129,7 @@ describe('gameFs', () => {
     resolvePreviewSiteMock.mockReset()
     registerPendingFileWriteMock.mockReset()
     rollbackPendingFileWriteMock.mockReset()
+    statMock.mockReset()
     readFileMock.mockReset()
     fsRenameFileMock.mockReset()
     vfsRenamePathMock.mockReset()
@@ -141,6 +149,7 @@ describe('gameFs', () => {
     getFolderContentsMock.mockResolvedValue([])
     readFileMock.mockResolvedValue(new Uint8Array([1, 2, 3]))
     resolveFilePathMock.mockImplementation(async (path: string) => path)
+    statMock.mockResolvedValue({ isDirectory: false })
     useWorkspaceStoreMock.mockReturnValue({
       CWD: '/project',
       currentGame: {
@@ -458,5 +467,92 @@ describe('gameFs', () => {
     expect(mkdirMock).toHaveBeenCalledWith('/game/bgm (1)', { recursive: true })
     expect(createFileMock).not.toHaveBeenCalled()
     expect(createFolderMock).not.toHaveBeenCalled()
+  })
+
+  it('从外部导入时会按 overlay 可见内容避让同名项并写入 upper 路径', async () => {
+    useFileStoreMock.mockReturnValue({
+      copyEntry: copyEntryMock,
+      deleteEntry: vi.fn(async () => false),
+      ensureWritable: ensureWritableMock,
+      getFolderContents: getFolderContentsMock,
+      initialized: Promise.resolve(),
+      isVfs: true,
+      resolveFilePath: resolveFilePathMock,
+    })
+    getFolderContentsMock.mockResolvedValueOnce([{ name: 'hero.png' }])
+    ensureWritableMock.mockResolvedValueOnce('/project/.overlay/game/background/hero (1).png')
+    importExternalEntryMock.mockResolvedValueOnce('hero (1).png')
+
+    await expect(gameFs.importExternalEntry(
+      AbsPath.from('C:/Downloads/hero.png'),
+      AbsPath.from('/project/game/background'),
+    )).resolves.toBe('/project/game/background/hero (1).png')
+
+    expect(ensureWritableMock).toHaveBeenCalledWith('/project/game/background/hero (1).png')
+    expect(importExternalEntryMock).toHaveBeenCalledWith(
+      'C:/Downloads/hero.png',
+      '/project/.overlay/game/background',
+      'hero (1).png',
+      '/project',
+    )
+    expect(copyEntryMock).not.toHaveBeenCalled()
+    expect(resolveFilePathMock).not.toHaveBeenCalled()
+    expect(touchCurrentGameLastModifiedMock).toHaveBeenCalledOnce()
+  })
+
+  it('普通文件系统模式下会把物理目标目录传给外部导入命令', async () => {
+    statMock.mockResolvedValueOnce({ isDirectory: false })
+    importExternalEntryMock.mockResolvedValueOnce('hero.png')
+
+    await expect(gameFs.importExternalEntry(
+      AbsPath.from('C:/Downloads/hero.png'),
+      AbsPath.from('/project/game/background'),
+    )).resolves.toBe('/project/game/background/hero.png')
+
+    expect(importExternalEntryMock).toHaveBeenCalledWith(
+      'C:/Downloads/hero.png',
+      '/project/game/background',
+      'hero.png',
+      '/project',
+    )
+    expect(touchCurrentGameLastModifiedMock).toHaveBeenCalledOnce()
+  })
+
+  it('Rust 原子占名发现物理冲突时会采用命令返回的最终名称', async () => {
+    useFileStoreMock.mockReturnValue({
+      copyEntry: copyEntryMock,
+      deleteEntry: vi.fn(async () => false),
+      ensureWritable: ensureWritableMock,
+      getFolderContents: getFolderContentsMock,
+      initialized: Promise.resolve(),
+      isVfs: true,
+      resolveFilePath: resolveFilePathMock,
+    })
+    getFolderContentsMock.mockResolvedValueOnce([{ name: 'hero.png' }])
+    ensureWritableMock.mockImplementation(async (path: string) => path.replace('/game/', '/.overlay/game/'))
+    importExternalEntryMock.mockResolvedValueOnce('hero (2).png')
+
+    await expect(gameFs.importExternalEntry(
+      AbsPath.from('C:/Other/hero.png'),
+      AbsPath.from('/project/game/background'),
+    )).resolves.toBe('/project/game/background/hero (2).png')
+
+    expect(ensureWritableMock).toHaveBeenCalledOnce()
+    expect(ensureWritableMock).toHaveBeenCalledWith('/project/game/background/hero (1).png')
+    expect(importExternalEntryMock).toHaveBeenCalledWith(
+      'C:/Other/hero.png',
+      '/project/.overlay/game/background',
+      'hero (1).png',
+      '/project',
+    )
+  })
+
+  it('拒绝把外部内容写到当前项目外', async () => {
+    await expect(gameFs.importExternalEntry(
+      AbsPath.from('C:/Downloads/hero.png'),
+      AbsPath.from('/other/game/background'),
+    )).rejects.toMatchObject({ code: 'PATH_DENIED' })
+
+    expect(importExternalEntryMock).not.toHaveBeenCalled()
   })
 })

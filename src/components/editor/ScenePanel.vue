@@ -4,6 +4,7 @@ import { CopyMinus, FilePlus, FolderPlus, Layers, RotateCw } from '@lucide/vue'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { AbsPath } from '~/domain/path'
 import { isSceneEntryPath } from '~/domain/scene/entry-point'
+import { useExternalFileDropImport } from '~/features/editor/external-file-import/useExternalFileDropImport'
 import {
   findScenePanelNodeByPath,
   loadScenePanelTreeNodes,
@@ -24,10 +25,16 @@ const diagnosticsStore = useEditorDiagnosticsStore()
 const workspaceStore = useWorkspaceStore()
 const tabsStore = useTabsStore()
 const fileSystemEvents = useFileSystemEvents()
+const externalDropZoneRef = useTemplateRef<HTMLElement>('externalDropZoneRef')
 
 const scenePath = computedAsync(async () => {
   const gamePath = workspaceStore.currentGame?.path
   return gamePath ? gameSceneDir(AbsPath.from(gamePath)) : ''
+})
+
+const externalFileImport = useExternalFileDropImport({
+  dropZone: externalDropZoneRef,
+  rootDirectory: () => scenePath.value || undefined,
 })
 
 let isLoading = $ref(false)
@@ -207,7 +214,7 @@ onScopeDispose(() => {
 </script>
 
 <template>
-  <div class="group/scene rounded flex flex-col h-full divide-y">
+  <div ref="externalDropZoneRef" class="group/scene rounded flex flex-col h-full divide-y">
     <div class="px-2 py-1 flex items-center justify-between">
       <h3 class="text-sm font-medium flex text-nowrap items-center">
         <Layers class="mr-2 shrink-0 h-4 w-4" />
@@ -242,6 +249,7 @@ onScopeDispose(() => {
       :is-loading="isLoading"
       tree-name="scene"
       enable-drag-transfer
+      :external-drop-target-path="externalFileImport.targetDirectory.value"
       :root-path="scenePath"
       :is-path-operation-disabled="isProtectedSceneEntry"
       :default-file-name-parts="{ stem: '', extension: '.txt' }"

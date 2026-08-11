@@ -38,6 +38,7 @@ interface Props {
   sortBy?: FileViewerSortBy
   sortOrder?: FileViewerSortOrder
   enableDragTransfer?: boolean
+  externalDropTargetPath?: AbsPath
   rootPath?: string
   isPathOperationDisabled?: (path: string) => boolean
 }
@@ -60,6 +61,7 @@ const {
   sortBy = 'name',
   sortOrder = 'asc',
   enableDragTransfer = false,
+  externalDropTargetPath,
   rootPath,
   isPathOperationDisabled,
 } = defineProps<Props>()
@@ -209,6 +211,7 @@ const fileDragSource = useDragSource<FileSystemDragPayload>({
 })
 
 const effectiveRootPath = $computed(() => rootPath ?? getRootPath())
+const highlightedDropTargetPath = $computed(() => activeDropTargetPath ?? externalDropTargetPath)
 
 const activeFileTreePayload = $computed(() => {
   const state = dragSession.state.value
@@ -661,10 +664,10 @@ function getFileTreeItemBind(item: FlattenedItem<T>) {
 
 function isFileTreeDropRangeActive(renderItem: FileTreeFileRenderItem): boolean {
   return Boolean(
-    activeDropTargetPath !== undefined
+    highlightedDropTargetPath !== undefined
     && (
-      activeDropTargetPath === renderItem.fileItem.path
-      || renderItem.ancestorDirectoryPaths.includes(activeDropTargetPath)
+      highlightedDropTargetPath === renderItem.fileItem.path
+      || renderItem.ancestorDirectoryPaths.includes(highlightedDropTargetPath)
     ),
   )
 }
@@ -674,13 +677,13 @@ function getFileTreeDropTargetClass(renderItem: FileTreeFileRenderItem): string 
     return ''
   }
 
-  return activeDropTargetPath === renderItem.fileItem.path
+  return highlightedDropTargetPath === renderItem.fileItem.path
     ? 'bg-accent outline outline-1 outline-primary/50'
     : 'bg-accent/60'
 }
 
 const isRootDropTargetActive = $computed(() =>
-  activeDropTargetPath !== undefined && activeDropTargetPath === effectiveRootPath,
+  highlightedDropTargetPath === effectiveRootPath,
 )
 
 function isItemDimmed(item: T): boolean {
@@ -811,6 +814,7 @@ tryOnUnmounted(() => {
       <TooltipProvider :skip-delay-duration="0" :ignore-non-keyboard-focus="true">
         <div
           :ref="setFileTreeContainerElement"
+          data-file-tree-root-surface="true"
           :class="[
             'relative shrink-0',
             isRootDropTargetActive ? 'bg-accent/35' : '',
@@ -870,6 +874,7 @@ tryOnUnmounted(() => {
                 :level="renderItem.item.level"
                 :has-children="renderItem.item.hasChildren"
                 :data-file-tree-path="renderItem.fileItem.path"
+                :data-file-tree-drop-target-path="renderItem.dropTarget.path"
                 :data-file-tree-is-dir="renderItem.fileItem.isDir ? 'true' : 'false'"
                 :data-file-tree-name="renderItem.fileItem.name"
                 :data-file-tree-selected="isFileTreePathSelected(renderItem.fileItem.path) ? 'true' : undefined"
@@ -965,6 +970,7 @@ tryOnUnmounted(() => {
       >
         <div
           :ref="setRootDropAreaElement"
+          data-file-tree-root-surface="true"
           :class="[
             'flex-1 min-h-[26px]',
             isRootDropTargetActive ? 'bg-accent/60' : '',

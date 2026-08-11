@@ -125,6 +125,7 @@ pub fn run() {
             commands::fs::copy_directory_with_progress,
             commands::fs::validate_directory_structure,
             commands::fs::delete_file,
+            commands::external_import::import_external_entry,
             commands::fs::rename_file,
             commands::fs::is_binary_file,
             commands::fs::get_image_dimensions,

@@ -157,6 +157,20 @@ async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
   return destPath
 }
 
+async function importExternalEntry(
+  sourcePath: AbsPath,
+  targetDirectory: AbsPath,
+  preferredName: string,
+  projectRoot: AbsPath,
+): Promise<string> {
+  return safeInvoke<string>('import_external_entry', {
+    source: sourcePath,
+    targetDirectory,
+    preferredName,
+    projectRoot,
+  })
+}
+
 async function moveFile(sourcePath: AbsPath, targetPath: AbsPath, targetName?: string): Promise<AbsPath> {
   const { destPath } = await getDestinationPath(sourcePath, targetPath, targetName)
   await rename(sourcePath, destPath)
@@ -182,6 +196,7 @@ export const fsCmds = {
   deleteFile,
   renameFile,
   copyFile,
+  importExternalEntry,
   moveFile,
   isBinaryFile,
   getImageDimensions,

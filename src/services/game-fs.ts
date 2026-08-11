@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile as writeBinaryFile, writeTextFile } from '@tauri-apps/plugin-fs'
+import { mkdir, readFile, stat, writeFile as writeBinaryFile, writeTextFile } from '@tauri-apps/plugin-fs'
 
 import { fsCmds } from '~/commands/fs'
 import { vfsCmds } from '~/commands/vfs'
@@ -346,6 +346,76 @@ async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPa
   }
 }
 
+function getExternalImportProjectRoot(targetPath: AbsPath): AbsPath {
+  const gamePath = useWorkspaceStore().currentGame?.path
+  if (!gamePath || !isPathWithinOrEqual(targetPath, gamePath)) {
+    throw new AppError('PATH_DENIED', '外部文件只能导入当前项目目录')
+  }
+
+  return gamePath
+}
+
+interface ExternalImportTarget {
+  logicalPath: AbsPath
+  writablePath: AbsPath
+}
+
+async function resolveExternalImportTarget(
+  sourceName: string,
+  sourceIsDirectory: boolean,
+  targetPath: AbsPath,
+): Promise<ExternalImportTarget> {
+  const fileStore = useFileStore()
+  const existingItems = await fileStore.getFolderContents(targetPath)
+  const uniqueName = buildUniqueEntryName(
+    sourceName,
+    sourceIsDirectory,
+    new Set(existingItems.map(item => item.name)),
+  )
+  const logicalPath = AbsPath.append(targetPath, uniqueName)
+  return {
+    logicalPath,
+    writablePath: await resolveWritablePath(logicalPath),
+  }
+}
+
+async function importExternalEntry(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath> {
+  const projectRoot = getExternalImportProjectRoot(targetPath)
+
+  const sourceInfo = await stat(sourcePath)
+  const sourceName = AbsPath.basename(sourcePath)
+  if (!sourceName) {
+    throw new AppError('FS_ERROR', '不能导入文件系统根目录')
+  }
+
+  const fileStore = useFileStore()
+  const finishUpdateBlocker = useRuntimeTaskStore()
+    .beginBlockingTask(`import-external-entry:${crypto.randomUUID()}`)
+
+  try {
+    await fileStore.initialized
+    const importTarget = await resolveExternalImportTarget(
+      sourceName,
+      sourceInfo.isDirectory,
+      targetPath,
+    )
+    const importedName = await fsCmds.importExternalEntry(
+      sourcePath,
+      AbsPath.parent(importTarget.writablePath),
+      AbsPath.basename(importTarget.writablePath),
+      projectRoot,
+    )
+    const importedPath = importedName === AbsPath.basename(importTarget.writablePath)
+      ? importTarget.logicalPath
+      : AbsPath.append(targetPath, importedName)
+
+    markPathChanged(importedPath, { includeChildren: sourceInfo.isDirectory })
+    return importedPath
+  } finally {
+    finishUpdateBlocker()
+  }
+}
+
 async function moveFile(sourcePath: AbsPath, targetPath: AbsPath, targetName?: string): Promise<PathMutationResult> {
   assertMutableSceneEntry(sourcePath)
   if (usesTemplateOverlayPath(sourcePath) || usesTemplateOverlayPath(targetPath)) {
@@ -364,5 +434,6 @@ export const gameFs = {
   createFile,
   createFolder,
   copyFile,
+  importExternalEntry,
   moveFile,
 }

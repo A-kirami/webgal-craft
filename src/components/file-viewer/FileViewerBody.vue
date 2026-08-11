@@ -7,6 +7,7 @@ import { useDroppableRegistry } from '~/composables/useDroppableRegistry'
 import { formatFileSize } from '~/utils/format'
 import { isValidPositiveNumber } from '~/utils/sort'
 
+import type { AbsPath } from '~/domain/path'
 import type { DragTransferOperation, FileSystemDragPayload } from '~/types/drag-drop'
 import type { FileViewerItem, FileViewerPreviewSize, FileViewerVirtualRow } from '~/types/file-viewer'
 
@@ -39,6 +40,7 @@ interface FileViewerBodyProps {
     operation: DragTransferOperation,
   ) => boolean
   getDragSourceProps?: () => FileViewerDragSourceHandlers
+  externalDropTargetPath?: AbsPath
   highlightedItemPath?: string
   viewMode: 'list' | 'grid'
   virtualRows: FileViewerVirtualRow[]
@@ -62,6 +64,7 @@ const {
   enableDragTransfer = false,
   canDropFileTransfer,
   getDragSourceProps,
+  externalDropTargetPath,
   highlightedItemPath,
   viewMode,
   virtualRows,
@@ -277,7 +280,13 @@ function getFileViewerItemBind(item: FileViewerItem): FileViewerDragSourceHandle
 }
 
 function getFileViewerDropTargetClass(item: FileViewerItem): string {
-  if (!item.isDir || activeDropTargetPath !== item.path) {
+  if (
+    !item.isDir
+    || (
+      activeDropTargetPath !== item.path
+      && externalDropTargetPath !== item.path
+    )
+  ) {
     return ''
   }
 
