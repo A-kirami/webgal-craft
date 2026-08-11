@@ -102,16 +102,21 @@ export function useTauriDropZone(
       }
 
       case 'drop': {
+        let handledDrop = false
         if (payload.position) {
           const element = elementAtPosition(payload.position)
           if (isElementInTarget(element) && payload.paths) {
             targetElement.value = element ?? undefined
             files.value = payload.paths
             normalizedOptions.onDrop?.(payload.paths)
+            handledDrop = true
           }
-          isOverDropZone.value = false
-          targetElement.value = undefined
-          dragPaths = undefined
+        }
+        isOverDropZone.value = false
+        targetElement.value = undefined
+        dragPaths = undefined
+        if (!handledDrop) {
+          normalizedOptions.onLeave?.()
         }
         break
       }

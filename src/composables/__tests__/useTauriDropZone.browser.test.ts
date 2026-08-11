@@ -40,11 +40,13 @@ async function renderDropZone() {
   const onEnter = vi.fn()
   const onDrop = vi.fn()
   const onDropTarget = vi.fn()
+  const onLeave = vi.fn()
   const Harness = defineComponent({
     setup() {
       const target = ref<HTMLElement>()
       const dropZone = useTauriDropZone(target, {
         onEnter,
+        onLeave,
         onDrop(paths) {
           onDrop(paths)
           onDropTarget(dropZone.targetElement.value)
@@ -68,7 +70,7 @@ async function renderDropZone() {
   const result = render(Harness)
   await vi.waitFor(() => expect(webviewMockState.handler).toBeTypeOf('function'))
 
-  return { onDrop, onDropTarget, onEnter, result }
+  return { onDrop, onDropTarget, onEnter, onLeave, result }
 }
 
 function emitDragDrop(payload: DragDropEvent): void {
@@ -125,6 +127,24 @@ describe('useTauriDropZone', () => {
     emitDrop([outsidePath], new PhysicalPosition(250, 250))
 
     expect(onDrop).not.toHaveBeenCalled()
+    result.unmount()
+  })
+
+  it('文件先进入放置区域再在区域外放下时会清理拖放状态', async () => {
+    setDevicePixelRatio(1)
+    const { onDrop, onEnter, onLeave, result } = await renderDropZone()
+
+    emitDragDrop({
+      paths: [standardDpiPath],
+      position: new PhysicalPosition(75, 75),
+      type: 'enter',
+    })
+    expect(onEnter).toHaveBeenCalledWith([standardDpiPath])
+
+    emitDrop([standardDpiPath], new PhysicalPosition(250, 250))
+
+    expect(onDrop).not.toHaveBeenCalled()
+    expect(onLeave).toHaveBeenCalledOnce()
     result.unmount()
   })
 
