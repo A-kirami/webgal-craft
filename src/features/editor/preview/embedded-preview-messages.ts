@@ -3,6 +3,7 @@ export const WEBGAL_PREVIEW_BOOTSTRAP_PROVIDE = 'webgal.preview.bootstrap.provid
 export const WEBGAL_PREVIEW_VIEWPORT_POINTER = 'webgal.preview.viewport.pointer' as const
 export const WEBGAL_PREVIEW_VIEWPORT_SPACE_KEY = 'webgal.preview.viewport.space-key' as const
 export const WEBGAL_PREVIEW_VIEWPORT_WHEEL = 'webgal.preview.viewport.wheel' as const
+export const WEBGAL_PREVIEW_OUTPUT_SETTINGS = 'webgal.preview.output-settings' as const
 
 export type PreviewViewportPointerEventType = 'pointercancel' | 'pointerdown' | 'pointermove' | 'pointerup'
 
@@ -37,6 +38,12 @@ export interface PreviewViewportWheelMessage {
   ctrlKey: boolean
   deltaY: number
   metaKey: boolean
+}
+
+export interface PreviewOutputSettingsMessage {
+  type: typeof WEBGAL_PREVIEW_OUTPUT_SETTINGS
+  muted: boolean
+  volume: number
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -96,5 +103,14 @@ export function createPreviewViewportSpaceKeyMessage(pressed: boolean): PreviewV
   return {
     type: WEBGAL_PREVIEW_VIEWPORT_SPACE_KEY,
     pressed,
+  }
+}
+
+export function createPreviewOutputSettingsMessage(
+  settings: Omit<PreviewOutputSettingsMessage, 'type'>,
+): PreviewOutputSettingsMessage {
+  return {
+    type: WEBGAL_PREVIEW_OUTPUT_SETTINGS,
+    ...settings,
   }
 }

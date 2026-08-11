@@ -59,9 +59,9 @@ const STATIC_FILE_ALLOWED_CORS_ORIGINS: [&str; 4] = [
     "http://tauri.localhost",
     "tauri://localhost",
 ];
-const PREVIEW_VIEWPORT_BRIDGE_MARKER: &str = "webgal-craft-preview-viewport-bridge";
-const PREVIEW_VIEWPORT_BRIDGE_MAX_HTML_BYTES: u64 = 2 * 1024 * 1024;
-const PREVIEW_VIEWPORT_BRIDGE_SCRIPT: &str = r#"<script data-webgal-craft-preview-viewport-bridge>
+const PREVIEW_FRAME_BRIDGE_MARKER: &str = "webgal-craft-preview-frame-bridge";
+const PREVIEW_FRAME_BRIDGE_MAX_HTML_BYTES: u64 = 2 * 1024 * 1024;
+const PREVIEW_FRAME_BRIDGE_SCRIPT: &str = r#"<script data-webgal-craft-preview-frame-bridge>
 (() => {
   if (window.parent === window) {
     return;
@@ -70,6 +70,7 @@ const PREVIEW_VIEWPORT_BRIDGE_SCRIPT: &str = r#"<script data-webgal-craft-previe
   const spaceKeyMessageType = 'webgal.preview.viewport.space-key';
   const pointerMessageType = 'webgal.preview.viewport.pointer';
   const wheelMessageType = 'webgal.preview.viewport.wheel';
+  const outputSettingsMessageType = 'webgal.preview.output-settings';
   const spaceCursorAttribute = 'data-webgal-craft-preview-viewport-space';
   const style = document.createElement('style');
   style.textContent = `
@@ -92,6 +93,55 @@ const PREVIEW_VIEWPORT_BRIDGE_SCRIPT: &str = r#"<script data-webgal-craft-previe
   if (styleHost) {
     styleHost.append(style);
   }
+
+  const mediaVolumeDescriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'volume');
+  const nativeMediaPlay = HTMLMediaElement.prototype.play;
+  const mediaVolumes = new WeakMap();
+  let outputVolume = 1;
+
+  const clampRatio = (value) => Math.min(Math.max(value, 0), 1);
+  const rememberMediaElement = (mediaElement) => {
+    if (!mediaVolumes.has(mediaElement) && mediaVolumeDescriptor?.get) {
+      mediaVolumes.set(mediaElement, mediaVolumeDescriptor.get.call(mediaElement));
+    }
+  };
+  const applyMediaVolume = (mediaElement) => {
+    if (!mediaVolumeDescriptor?.set) {
+      return;
+    }
+
+    rememberMediaElement(mediaElement);
+    const mediaVolume = mediaVolumes.get(mediaElement) ?? 1;
+    mediaVolumeDescriptor.set.call(mediaElement, clampRatio(mediaVolume) * outputVolume);
+  };
+  const applyOutputVolume = () => {
+    document.querySelectorAll('audio, video').forEach(applyMediaVolume);
+  };
+
+  if (mediaVolumeDescriptor?.configurable && mediaVolumeDescriptor.get && mediaVolumeDescriptor.set) {
+    Object.defineProperty(HTMLMediaElement.prototype, 'volume', {
+      configurable: mediaVolumeDescriptor.configurable,
+      enumerable: mediaVolumeDescriptor.enumerable,
+      get() {
+        return mediaVolumes.get(this) ?? mediaVolumeDescriptor.get.call(this);
+      },
+      set(value) {
+        const mediaVolume = clampRatio(Number(value));
+        mediaVolumes.set(this, mediaVolume);
+        mediaVolumeDescriptor.set.call(this, mediaVolume * outputVolume);
+      },
+    });
+
+    HTMLMediaElement.prototype.play = function (...args) {
+      applyMediaVolume(this);
+      return nativeMediaPlay.apply(this, args);
+    };
+  }
+
+  const applyOutputSettings = (settings) => {
+    outputVolume = settings.muted ? 0 : settings.volume;
+    applyOutputVolume();
+  };
 
   const parentTargetOrigin = (() => {
     if (!document.referrer) {
@@ -315,6 +365,25 @@ const PREVIEW_VIEWPORT_BRIDGE_SCRIPT: &str = r#"<script data-webgal-craft-previe
     setSpaceCursor(data.pressed);
   });
 
+  window.addEventListener('message', (event) => {
+    if (event.source !== window.parent) {
+      return;
+    }
+
+    const data = event.data;
+    const hasValidVolume = typeof data?.volume === 'number'
+      && Number.isFinite(data.volume)
+      && data.volume >= 0
+      && data.volume <= 1;
+    if (data?.type !== outputSettingsMessageType
+      || typeof data.muted !== 'boolean'
+      || !hasValidVolume) {
+      return;
+    }
+
+    applyOutputSettings(data);
+  });
+
   window.addEventListener('wheel', (event) => {
     if (!event.ctrlKey && !event.metaKey) {
       return;
@@ -535,7 +604,7 @@ fn finalize_cors(mut response: Response, origin: Option<&'static str>) -> Respon
     response
 }
 
-fn should_inject_preview_viewport_bridge(logical_path: &Path, response: &Response) -> bool {
+fn should_inject_preview_frame_bridge(logical_path: &Path, response: &Response) -> bool {
     if response.status() != StatusCode::OK || logical_path != Path::new("index.html") {
         return false;
     }
@@ -545,39 +614,36 @@ fn should_inject_preview_viewport_bridge(logical_path: &Path, response: &Respons
         .get(CONTENT_LENGTH)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.parse::<u64>().ok())
-        .is_some_and(|length| length <= PREVIEW_VIEWPORT_BRIDGE_MAX_HTML_BYTES)
+        .is_some_and(|length| length <= PREVIEW_FRAME_BRIDGE_MAX_HTML_BYTES)
 }
 
-fn inject_preview_viewport_bridge(html: &str) -> String {
-    if html.contains(PREVIEW_VIEWPORT_BRIDGE_MARKER) {
+fn inject_preview_frame_bridge(html: &str) -> String {
+    if html.contains(PREVIEW_FRAME_BRIDGE_MARKER) {
         return html.to_string();
     }
 
     let index = html.find("</head>").unwrap_or_default();
-    let mut output = String::with_capacity(html.len() + PREVIEW_VIEWPORT_BRIDGE_SCRIPT.len());
+    let mut output = String::with_capacity(html.len() + PREVIEW_FRAME_BRIDGE_SCRIPT.len());
     output.push_str(&html[..index]);
-    output.push_str(PREVIEW_VIEWPORT_BRIDGE_SCRIPT);
+    output.push_str(PREVIEW_FRAME_BRIDGE_SCRIPT);
     output.push_str(&html[index..]);
     output
 }
 
-async fn inject_preview_viewport_bridge_response(
-    logical_path: &Path,
-    response: Response,
-) -> Response {
-    if !should_inject_preview_viewport_bridge(logical_path, &response) {
+async fn inject_preview_frame_bridge_response(logical_path: &Path, response: Response) -> Response {
+    if !should_inject_preview_frame_bridge(logical_path, &response) {
         return response;
     }
 
     let (mut parts, body) = response.into_parts();
-    let Ok(bytes) = to_bytes(body, PREVIEW_VIEWPORT_BRIDGE_MAX_HTML_BYTES as usize).await else {
+    let Ok(bytes) = to_bytes(body, PREVIEW_FRAME_BRIDGE_MAX_HTML_BYTES as usize).await else {
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     };
     let Ok(html) = String::from_utf8(bytes.to_vec()) else {
         return Response::from_parts(parts, Body::from(bytes));
     };
 
-    let injected_html = inject_preview_viewport_bridge(&html);
+    let injected_html = inject_preview_frame_bridge(&html);
     parts.headers.remove(CONTENT_LENGTH);
     let mut response = Response::from_parts(parts, Body::from(injected_html));
     response.headers_mut().insert(
@@ -658,7 +724,7 @@ async fn handle_static_request(
         .await
         .map(IntoResponse::into_response)
         .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response());
-    let response = inject_preview_viewport_bridge_response(&logical_path, response).await;
+    let response = inject_preview_frame_bridge_response(&logical_path, response).await;
 
     finalize_cors(
         apply_cache_control(response, CacheControlPolicy::StaticAsset),
@@ -1428,11 +1494,11 @@ mod tests {
 
     use super::{
         append_cors_headers, apply_cache_control, handle_static_request,
-        inject_preview_viewport_bridge, resolve_cors_origin, resolve_thumbnail_request,
-        should_inject_preview_viewport_bridge, supports_thumbnail, AppState, CacheControlPolicy,
+        inject_preview_frame_bridge, resolve_cors_origin, resolve_thumbnail_request,
+        should_inject_preview_frame_bridge, supports_thumbnail, AppState, CacheControlPolicy,
         EncodedThumbnail, ServerState, StaticAssetQuery, ThumbnailCache, ThumbnailCacheConfig,
         ThumbnailContentKey, ThumbnailRequest, ThumbnailRequestAlias, ThumbnailResizeMode,
-        PREVIEW_VIEWPORT_BRIDGE_MARKER,
+        PREVIEW_FRAME_BRIDGE_MARKER,
     };
     use crate::vfs::CachedCanonicals;
 
@@ -1581,11 +1647,11 @@ mod tests {
     }
 
     #[test]
-    fn preview_index_html_injection_adds_viewport_bridge() {
+    fn preview_index_html_injection_adds_frame_bridge() {
         let html = "<!doctype html><html><head></head><body></body></html>";
-        let injected = inject_preview_viewport_bridge(html);
+        let injected = inject_preview_frame_bridge(html);
         let script_index = injected
-            .find(PREVIEW_VIEWPORT_BRIDGE_MARKER)
+            .find(PREVIEW_FRAME_BRIDGE_MARKER)
             .expect("预览桥接脚本应被插入");
         let head_end_index = injected
             .find("</head>")
@@ -1598,6 +1664,9 @@ mod tests {
         assert!(injected.contains("webgal.preview.viewport.space-key"));
         assert!(injected.contains("webgal.preview.viewport.wheel"));
         assert!(injected.contains("webgal.preview.viewport.pointer"));
+        assert!(injected.contains("webgal.preview.output-settings"));
+        assert!(injected.contains("HTMLMediaElement.prototype, 'volume'"));
+        assert!(!injected.contains("hasValidBrightness"));
         assert!(injected.contains("pointerdown"));
     }
 
@@ -1605,9 +1674,9 @@ mod tests {
     fn preview_index_html_injection_is_idempotent() {
         let html = format!(
             "<!doctype html><html><head>{}</head><body></body></html>",
-            PREVIEW_VIEWPORT_BRIDGE_MARKER
+            PREVIEW_FRAME_BRIDGE_MARKER
         );
-        let injected = inject_preview_viewport_bridge(&html);
+        let injected = inject_preview_frame_bridge(&html);
 
         assert_eq!(injected, html);
     }
@@ -1616,7 +1685,7 @@ mod tests {
     fn preview_index_html_injection_requires_ok_response() {
         let response = StatusCode::PARTIAL_CONTENT.into_response();
 
-        assert!(!should_inject_preview_viewport_bridge(
+        assert!(!should_inject_preview_frame_bridge(
             Path::new("index.html"),
             &response
         ));

@@ -838,7 +838,16 @@ edit:
     dragPreviewCount: "{count} 個のファイル"
     entryPointBadge: エントリーポイント
   previewPanel:
-    copyUrl: URLをコピー
+    preview: プレビュー
+    connecting: 接続中
+    connected: 接続済み
+    connectionFailed: 接続に失敗
+    volume: 音量
+    mute: プレビューをミュート
+    unmute: プレビューのミュートを解除
+    brightness: 明るさ
+    disableBrightness: 明るさ調整を無効化
+    enableBrightness: 明るさ調整を有効化
     refreshPreview: プレビューを更新
     openInBrowser: ブラウザで開く
     openFailed: プレビューの開始に失敗しました

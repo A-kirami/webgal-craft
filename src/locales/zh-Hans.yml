@@ -838,7 +838,16 @@ edit:
     dragPreviewCount: "{count} 个文件"
     entryPointBadge: 入口
   previewPanel:
-    copyUrl: 复制地址
+    preview: 预览
+    connecting: 正在连接
+    connected: 已连接
+    connectionFailed: 连接失败
+    volume: 音量
+    mute: 静音预览
+    unmute: 恢复预览声音
+    brightness: 亮度
+    disableBrightness: 关闭亮度调整
+    enableBrightness: 开启亮度调整
     refreshPreview: 刷新预览
     openInBrowser: 在浏览器中打开
     openFailed: 打开预览失败

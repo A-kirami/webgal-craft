@@ -838,7 +838,16 @@ edit:
     dragPreviewCount: "{count} 個檔案"
     entryPointBadge: 入口
   previewPanel:
-    copyUrl: 複製網址
+    preview: 預覽
+    connecting: 正在連線
+    connected: 已連線
+    connectionFailed: 連線失敗
+    volume: 音量
+    mute: 靜音預覽
+    unmute: 恢復預覽聲音
+    brightness: 亮度
+    disableBrightness: 關閉亮度調整
+    enableBrightness: 開啟亮度調整
     refreshPreview: 重新整理預覽
     openInBrowser: 在瀏覽器中開啟
     openFailed: 開啟預覽失敗

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Copy, ExternalLink, Link, RotateCw } from '@lucide/vue'
 import { openUrl } from '@tauri-apps/plugin-opener'
 
 import { findGameConfigEntryValue, gameCmds } from '~/commands/game'
 import { usePreviewViewport } from '~/composables/usePreviewViewport'
 import {
   createPreviewBootstrapProvideMessage,
+  createPreviewOutputSettingsMessage,
   createPreviewViewportSpaceKeyMessage,
   isPreviewBootstrapRequestMessage,
   isPreviewViewportPointerMessage,
@@ -25,20 +25,24 @@ import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overla
 import { debugCommander } from '~/services/debug-commander'
 import { useEditorStore } from '~/stores/editor'
 import { useModalStore } from '~/stores/modal'
+import { usePreferenceStore } from '~/stores/preference'
 import { usePreviewRuntimeStore } from '~/stores/preview-runtime'
 import { usePreviewSessionStore } from '~/stores/preview-session'
 import { usePreviewSyncStore } from '~/stores/preview-sync'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
 
+import PreviewToolbar from './PreviewToolbar.vue'
 import TransformOverlay from './TransformOverlay.vue'
 import ViewportControls from './ViewportControls.vue'
 
 import type { PreviewPanelStageSize } from '~/features/editor/preview/preview-panel'
 import type { DisplayTransform } from '~/features/editor/transform-overlay/model'
+import type { PreviewConnectionStatus } from '~/stores/preview-sync'
 
 const editorStore = useEditorStore()
 const modalStore = useModalStore()
+const preferenceStore = usePreferenceStore()
 const previewRuntimeStore = usePreviewRuntimeStore()
 const previewSessionStore = usePreviewSessionStore()
 const previewSyncStore = usePreviewSyncStore()
@@ -57,9 +61,18 @@ const hasPreviewUrl = $computed(() => !!previewSessionStore.currentGameServeUrl)
 const hasValidEntryPoint = $computed(() => sceneEntryStatus.status.value === 'valid')
 const hasMissingEntryPoint = $computed(() => sceneEntryStatus.status.value === 'missing')
 const canPreview = $computed(() => hasPreviewUrl && hasValidEntryPoint)
+const previewConnectionStatus = $computed((): PreviewConnectionStatus => {
+  if (previewSessionStore.serveStatus === 'failed') {
+    return 'failed'
+  }
+  if (previewSessionStore.serveStatus !== 'ready') {
+    return 'connecting'
+  }
+
+  return previewSyncStore.connectionStatus
+})
 
 const { t } = useI18n()
-const { copy } = useClipboard({ source: $$(previewUrl) })
 const previewTitle = $computed(() => t('edit.previewPanel.previewTitle', { name: workspaceStore.currentGame?.metadata.name }))
 const resolutionLabel = $computed(() => `${stageWidth} x ${stageHeight}`)
 
@@ -87,6 +100,11 @@ const previewCanvasStyle = $computed(() => ({
   height: `${stageHeight}px`,
   transform: previewViewport.viewportTransform.value,
   width: `${stageWidth}px`,
+}))
+const previewOutputSurfaceStyle = $computed(() => ({
+  filter: preferenceStore.previewBrightnessEnabled
+    ? `brightness(${percentageToRatio(preferenceStore.previewBrightness[0])})`
+    : undefined,
 }))
 const isPreviewInteractionActive = $computed(() => previewViewport.isPanning.value
   || previewViewport.isSpacePressed.value)
@@ -273,14 +291,6 @@ function refreshEmbeddedPreviewSlot(): void {
   updateEmbeddedPreviewSlot(nextEmbeddedLaunchId)
 }
 
-async function copyUrl(): Promise<void> {
-  if (!canPreview) {
-    return
-  }
-
-  await copy()
-}
-
 let refreshKey = $ref(0)
 
 function refreshIframe(): void {
@@ -347,6 +357,26 @@ function resolvePreviewOrigin(): string | undefined {
   } catch {
     return undefined
   }
+}
+
+function percentageToRatio(percentage: number): number {
+  return Math.min(Math.max(percentage / 100, 0), 1)
+}
+
+function postPreviewOutputSettings(): void {
+  const iframeWindow = iframeRef.value?.contentWindow
+  const previewOrigin = resolvePreviewOrigin()
+  if (!iframeWindow || !previewOrigin) {
+    return
+  }
+
+  iframeWindow.postMessage(
+    createPreviewOutputSettingsMessage({
+      muted: preferenceStore.previewMuted,
+      volume: percentageToRatio(preferenceStore.previewVolume[0]),
+    }),
+    previewOrigin,
+  )
 }
 
 function postEmbeddedPreviewSpaceKey(pressed: boolean): void {
@@ -485,6 +515,15 @@ watch(
 )
 
 watch(
+  [
+    () => preferenceStore.previewVolume[0],
+    () => preferenceStore.previewMuted,
+  ],
+  postPreviewOutputSettings,
+  { flush: 'post' },
+)
+
+watch(
   () => sceneEntryStatus.status.value,
   (status, previousStatus) => {
     if (status !== 'valid') {
@@ -546,49 +585,12 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="flex flex-col h-full divide-y">
-    <div class="px-2 py-1 flex flex-shrink-0 gap-2 items-center justify-between">
-      <div class="text-muted-foreground px-2 py-0.25 border border-border/50 rounded-md bg-muted/50 flex flex-1 gap-1.5 items-center overflow-hidden">
-        <Link class="shrink-0 size-3" />
-        <span class="text-sm font-mono cursor-default select-text truncate">{{ previewUrl }}</span>
-      </div>
-      <TooltipProvider>
-        <div class="text-muted-foreground flex flex-shrink-0 gap-1">
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon" class="size-6" :disabled="!canPreview" @click="copyUrl">
-                <Copy class="size-4" />
-                <span class="sr-only">{{ $t('edit.previewPanel.copyUrl') }}</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{{ $t('edit.previewPanel.copyUrl') }}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon" class="size-6" :disabled="!canPreview" @click="previewSessionStore.refresh()">
-                <RotateCw class="size-4" />
-                <span class="sr-only">{{ $t('edit.previewPanel.refreshPreview') }}</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{{ $t('edit.previewPanel.refreshPreview') }}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger as-child>
-              <Button variant="ghost" size="icon" class="size-6" :disabled="!canPreview" @click="openPreviewInBrowser">
-                <ExternalLink class="size-4" />
-                <span class="sr-only">{{ $t('edit.previewPanel.openInBrowser') }}</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{{ $t('edit.previewPanel.openInBrowser') }}</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      </TooltipProvider>
-    </div>
+    <PreviewToolbar
+      :connection-status="previewConnectionStatus"
+      :preview-available="canPreview"
+      @open-in-browser="openPreviewInBrowser"
+      @refresh="previewSessionStore.refresh()"
+    />
     <div
       ref="previewWorkspace"
       data-effect-editor-interactive-region
@@ -599,25 +601,32 @@ onBeforeUnmount(() => {
       <div
         ref="viewportRef"
         data-testid="preview-viewport"
-        class="bg-muted flex-1 min-h-0 relative overflow-hidden"
+        class="flex-1 min-h-0 relative overflow-hidden"
         :class="previewViewportClass"
         @wheel="handlePreviewViewportWheel"
         @pointerdown="handlePreviewViewportPointerDown"
       >
         <div
-          v-if="canPreview"
-          data-testid="preview-canvas"
-          class="bg-background shadow-sm origin-top-left left-0 top-0 absolute"
-          :style="previewCanvasStyle"
+          data-testid="preview-output-surface"
+          class="bg-muted inset-0 absolute"
+          :style="previewOutputSurfaceStyle"
         >
-          <iframe
-            ref="iframeRef"
-            :key="refreshKey"
-            :src="previewUrl"
-            :title="previewTitle"
-            class="border-0 size-full"
-            :style="previewIframeStyle"
-          />
+          <div
+            v-if="canPreview"
+            data-testid="preview-canvas"
+            class="bg-background shadow-sm origin-top-left left-0 top-0 absolute"
+            :style="previewCanvasStyle"
+          >
+            <iframe
+              ref="iframeRef"
+              :key="refreshKey"
+              :src="previewUrl"
+              :title="previewTitle"
+              class="border-0 size-full"
+              :style="previewIframeStyle"
+              @load="postPreviewOutputSettings"
+            />
+          </div>
         </div>
         <TransformOverlay
           v-if="canPreview && transformOverlayEnabled"

@@ -13,6 +13,10 @@ export const usePreferenceStore = defineStore(
     const editorMode = $ref<'text' | 'visual'>('text')
     const showSidebar = $ref(false)
     const showPreviewPanel = $ref(true)
+    const previewVolume = $ref<[number]>([100])
+    const previewMuted = $ref(false)
+    const previewBrightness = $ref<[number]>([100])
+    const previewBrightnessEnabled = $ref(true)
     const leftPanelView = $ref<'scene' | 'resource'>('scene')
     const assetTab = $ref<'figure' | 'background' | 'bgm' | 'vocal' | 'video' | 'animation' | 'template'>('figure')
     const assetZoom = $ref<[number]>([100])
@@ -31,6 +35,10 @@ export const usePreferenceStore = defineStore(
       editorMode,
       showSidebar,
       showPreviewPanel,
+      previewVolume,
+      previewMuted,
+      previewBrightness,
+      previewBrightnessEnabled,
       leftPanelView,
       assetTab,
       assetZoom,
