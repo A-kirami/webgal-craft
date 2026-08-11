@@ -1,5 +1,11 @@
+#[cfg(windows)]
+use cap_std::fs::MetadataExt as CapMetadataExt;
+use cap_std::{
+    ambient_authority,
+    fs::{Dir, File, Metadata, OpenOptions},
+};
 use std::{
-    fs::{self, OpenOptions},
+    fs,
     io::{self, ErrorKind},
     path::{Component, Path},
 };
@@ -16,6 +22,23 @@ fn is_link_or_reparse_point(metadata: &fs::Metadata) -> bool {
     {
         use std::os::windows::fs::MetadataExt;
 
+        const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
+        metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
+    }
+
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
+fn is_cap_link_or_reparse_point(metadata: &Metadata) -> bool {
+    if metadata.is_symlink() {
+        return true;
+    }
+
+    #[cfg(windows)]
+    {
         const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
         metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
     }
@@ -79,35 +102,25 @@ fn next_conflict_counter(
     counter.checked_add(1).ok_or_else(path_denied)
 }
 
-fn validate_created_destination(destination: &Path, project_root: &Path) -> AppResult<()> {
-    let canonical_destination = destination.canonicalize()?;
-    if canonical_destination != destination || !canonical_destination.starts_with(project_root) {
-        return Err(path_denied());
-    }
-
-    Ok(())
-}
-
-fn copy_directory(source: &Path, destination: &Path) -> AppResult<()> {
-    for entry in fs::read_dir(source)? {
+fn copy_directory(source: &Dir, destination: &Dir) -> AppResult<()> {
+    for entry in source.entries()? {
         let entry = entry?;
-        let source_path = entry.path();
-        let destination_path = destination.join(entry.file_name());
-        let metadata = fs::symlink_metadata(&source_path)?;
+        let file_name = entry.file_name();
+        let metadata = source.symlink_metadata(&file_name)?;
 
-        if is_link_or_reparse_point(&metadata) {
+        if is_cap_link_or_reparse_point(&metadata) {
             return Err(path_denied());
         }
 
         if metadata.is_dir() {
-            fs::create_dir(&destination_path)?;
-            copy_directory(&source_path, &destination_path)?;
+            let source_child = entry.open_dir()?;
+            destination.create_dir(&file_name)?;
+            let destination_child = destination.open_dir(&file_name)?;
+            copy_directory(&source_child, &destination_child)?;
         } else if metadata.is_file() {
-            let mut source_file = fs::File::open(&source_path)?;
-            let mut destination_file = OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&destination_path)?;
+            let mut source_file = entry.open()?;
+            let mut destination_file = destination
+                .open_with(&file_name, OpenOptions::new().write(true).create_new(true))?;
             io::copy(&mut source_file, &mut destination_file)?;
         } else {
             return Err(path_denied());
@@ -117,23 +130,112 @@ fn copy_directory(source: &Path, destination: &Path) -> AppResult<()> {
     Ok(())
 }
 
-fn rollback_destination(
+fn rollback_result(
     destination: &Path,
-    is_directory: bool,
     import_error: AppError,
+    cleanup_result: io::Result<()>,
 ) -> AppError {
-    let cleanup_result = if is_directory {
-        fs::remove_dir_all(destination)
-    } else {
-        fs::remove_file(destination)
-    };
-
     match cleanup_result {
         Ok(()) => import_error,
         Err(cleanup_error) => AppError::Server(format!(
             "外部导入失败且无法清理目标 {}：导入错误: {import_error}；清理错误: {cleanup_error}",
             destination.display(),
         )),
+    }
+}
+
+fn open_project_target_directory(project_root: &Path, target_directory: &Path) -> AppResult<Dir> {
+    let project_directory = Dir::open_ambient_dir(project_root, ambient_authority())?;
+    let relative_target = target_directory
+        .strip_prefix(project_root)
+        .map_err(|_| path_denied())?;
+    let relative_target = if relative_target.as_os_str().is_empty() {
+        Path::new(".")
+    } else {
+        relative_target
+    };
+
+    Ok(project_directory.open_dir(relative_target)?)
+}
+
+fn import_directory(
+    source: &Dir,
+    target_directory: &Dir,
+    target_path: &Path,
+    source_name: &str,
+    preferred_name: &str,
+) -> AppResult<String> {
+    let mut candidate_name = preferred_name.to_owned();
+    let mut counter = next_conflict_counter(source_name, true, preferred_name)?;
+
+    loop {
+        let candidate_path = target_path.join(&candidate_name);
+        match target_directory.create_dir(&candidate_name) {
+            Ok(()) => {
+                let destination = match target_directory.open_dir(&candidate_name) {
+                    Ok(destination) => destination,
+                    Err(error) => {
+                        let import_error: AppError = error.into();
+                        return Err(rollback_result(
+                            &candidate_path,
+                            import_error,
+                            target_directory.remove_dir(&candidate_name),
+                        ));
+                    }
+                };
+                if let Err(error) = copy_directory(source, &destination) {
+                    return Err(rollback_result(
+                        &candidate_path,
+                        error,
+                        destination.remove_open_dir_all(),
+                    ));
+                }
+                return Ok(candidate_name);
+            }
+            Err(error) if error.kind() == ErrorKind::AlreadyExists => {}
+            Err(error) => return Err(error.into()),
+        }
+
+        candidate_name = numbered_import_name(source_name, true, counter);
+        counter = counter.checked_add(1).ok_or_else(path_denied)?;
+    }
+}
+
+fn import_file(
+    source: &mut File,
+    target_directory: &Dir,
+    target_path: &Path,
+    source_name: &str,
+    preferred_name: &str,
+) -> AppResult<String> {
+    let mut candidate_name = preferred_name.to_owned();
+    let mut counter = next_conflict_counter(source_name, false, preferred_name)?;
+
+    loop {
+        let candidate_path = target_path.join(&candidate_name);
+        match target_directory.open_with(
+            &candidate_name,
+            OpenOptions::new().write(true).create_new(true),
+        ) {
+            Ok(mut destination_file) => {
+                let copy_result = io::copy(source, &mut destination_file).map(|_| ());
+                drop(destination_file);
+                if let Err(error) = copy_result {
+                    let import_error: AppError = error.into();
+                    return Err(rollback_result(
+                        &candidate_path,
+                        import_error,
+                        target_directory.remove_file(&candidate_name),
+                    ));
+                }
+                return Ok(candidate_name);
+            }
+            Err(error) if error.kind() == ErrorKind::AlreadyExists => {}
+            Err(error) => return Err(error.into()),
+        }
+
+        candidate_name = numbered_import_name(source_name, false, counter);
+        counter = counter.checked_add(1).ok_or_else(path_denied)?;
     }
 }
 
@@ -171,55 +273,30 @@ fn import_external_entry_impl(
         .file_name()
         .and_then(|name| name.to_str())
         .ok_or_else(path_denied)?;
-    let mut candidate_name = preferred_name.to_owned();
-    let mut counter = next_conflict_counter(source_name, is_directory, preferred_name)?;
+    let target_directory_handle =
+        open_project_target_directory(&canonical_project_root, &canonical_target_directory)?;
 
-    loop {
-        let destination = canonical_target_directory.join(&candidate_name);
-
-        if is_directory {
-            match fs::create_dir(&destination) {
-                Ok(()) => {
-                    let copy_result =
-                        validate_created_destination(&destination, &canonical_project_root)
-                            .and_then(|()| copy_directory(&canonical_source, &destination));
-
-                    if let Err(error) = copy_result {
-                        return Err(rollback_destination(&destination, true, error));
-                    }
-                    return Ok(candidate_name);
-                }
-                Err(error) if error.kind() == ErrorKind::AlreadyExists => {}
-                Err(error) => return Err(error.into()),
-            }
-        } else {
-            match OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&destination)
-            {
-                Ok(mut destination_file) => {
-                    let copy_result =
-                        validate_created_destination(&destination, &canonical_project_root)
-                            .and_then(|()| {
-                                let mut source_file = fs::File::open(&canonical_source)?;
-                                io::copy(&mut source_file, &mut destination_file)?;
-                                Ok(())
-                            });
-                    drop(destination_file);
-
-                    if let Err(error) = copy_result {
-                        return Err(rollback_destination(&destination, false, error));
-                    }
-                    return Ok(candidate_name);
-                }
-                Err(error) if error.kind() == ErrorKind::AlreadyExists => {}
-                Err(error) => return Err(error.into()),
-            }
-        }
-
-        candidate_name = numbered_import_name(source_name, is_directory, counter);
-        counter = counter.checked_add(1).ok_or_else(path_denied)?;
+    if is_directory {
+        let source_directory = Dir::open_ambient_dir(&canonical_source, ambient_authority())?;
+        import_directory(
+            &source_directory,
+            &target_directory_handle,
+            &canonical_target_directory,
+            source_name,
+            preferred_name,
+        )
+    } else {
+        let source_parent = canonical_source.parent().ok_or_else(path_denied)?;
+        let source_file_name = canonical_source.file_name().ok_or_else(path_denied)?;
+        let source_directory = Dir::open_ambient_dir(source_parent, ambient_authority())?;
+        let mut source_file = source_directory.open(source_file_name)?;
+        import_file(
+            &mut source_file,
+            &target_directory_handle,
+            &canonical_target_directory,
+            source_name,
+            preferred_name,
+        )
     }
 }
 
