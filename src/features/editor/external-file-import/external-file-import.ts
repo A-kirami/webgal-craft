@@ -1,7 +1,6 @@
 import { AbsPath } from '~/domain/path'
 import { gameFs } from '~/services/game-fs'
 import { fromExternalAbsPath } from '~/services/platform/path-boundary'
-import { toLookupPathKey } from '~/services/resource-path/lookup'
 
 export interface ExternalFileImportSuccess {
   sourcePath: AbsPath
@@ -32,15 +31,12 @@ const externalDropRootSurfaceSelector = '[data-file-tree-root-surface], [data-fi
 
 function normalizeExternalPaths(rawPaths: readonly string[]): NormalizedExternalPaths {
   const failures: ExternalFileImportFailure[] = []
-  const paths = new Map<ReturnType<typeof toLookupPathKey>, AbsPath>()
+  const paths = new Set<AbsPath>()
 
   for (const rawPath of rawPaths) {
     try {
       const path = fromExternalAbsPath(rawPath)
-      const key = toLookupPathKey(path)
-      if (!paths.has(key)) {
-        paths.set(key, path)
-      }
+      paths.add(path)
     } catch (error) {
       failures.push({ sourcePath: rawPath, error })
     }
@@ -48,7 +44,7 @@ function normalizeExternalPaths(rawPaths: readonly string[]): NormalizedExternal
 
   return {
     failures,
-    paths: [...paths.values()],
+    paths: [...paths],
   }
 }
 

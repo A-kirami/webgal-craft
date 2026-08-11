@@ -4,14 +4,14 @@ import { AbsPath } from '~/domain/path'
 import { importExternalFiles } from '~/features/editor/external-file-import/external-file-import'
 
 describe('importExternalFiles', () => {
-  it('会规范化并按路径查找键去重外部路径', async () => {
+  it('会规范化并按路径去重外部路径', async () => {
     const importExternalEntry = vi.fn(async (sourcePath: AbsPath, targetDirectory: AbsPath) =>
       AbsPath.append(targetDirectory, AbsPath.basename(sourcePath)),
     )
 
     const result = await importExternalFiles([
       String.raw`c:\Assets\Hero.png`,
-      'C:/assets/hero.png',
+      'C:/Assets/Hero.png',
     ], AbsPath.from('D:/Game/game/figure'), { importExternalEntry })
 
     expect(importExternalEntry).toHaveBeenCalledOnce()
@@ -22,6 +22,32 @@ describe('importExternalFiles', () => {
         sourcePath: 'C:/Assets/Hero.png',
         targetPath: 'D:/Game/game/figure/Hero.png',
       }],
+    })
+  })
+
+  it('不会合并大小写不同的外部路径', async () => {
+    const importExternalEntry = vi.fn(async (sourcePath: AbsPath, targetDirectory: AbsPath) =>
+      AbsPath.append(targetDirectory, AbsPath.basename(sourcePath)),
+    )
+
+    const result = await importExternalFiles([
+      'C:/Assets/Hero.png',
+      'C:/assets/hero.png',
+    ], AbsPath.from('D:/Game/game/figure'), { importExternalEntry })
+
+    expect(importExternalEntry).toHaveBeenCalledTimes(2)
+    expect(result).toEqual({
+      failures: [],
+      successes: [
+        {
+          sourcePath: 'C:/Assets/Hero.png',
+          targetPath: 'D:/Game/game/figure/Hero.png',
+        },
+        {
+          sourcePath: 'C:/assets/hero.png',
+          targetPath: 'D:/Game/game/figure/hero.png',
+        },
+      ],
     })
   })
 
