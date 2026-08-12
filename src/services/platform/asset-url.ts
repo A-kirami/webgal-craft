@@ -118,7 +118,10 @@ export function resolveAssetUrl(assetPath: string, options: AssetUrlOptions): st
     throw new Error(`资源路径不在当前工作区内: ${assetPath}`)
   }
 
-  const relativePath = resolvedPath.segments.slice(resolvedCwd.segments.length).join('/')
+  const relativePath = resolvedPath.segments
+    .slice(resolvedCwd.segments.length)
+    .map(segment => encodeURIComponent(segment))
+    .join('/')
   const previewBaseUrl = options.previewBaseUrl.endsWith('/')
     ? options.previewBaseUrl
     : `${options.previewBaseUrl}/`

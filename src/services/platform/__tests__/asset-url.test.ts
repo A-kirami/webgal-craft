@@ -41,6 +41,24 @@ describe('assetUrl', () => {
     expect(getAssetUrl(String.raw`/games/demo/assets\bg\cover image.png`)).toBe('http://127.0.0.1:8899/game/demo/assets/bg/cover%20image.png')
   })
 
+  it('会将文件名中的 # 编码为路径内容而不是 URL fragment', () => {
+    expect(resolveAssetUrl('/games/demo/game/figure/file#with#hash-测试.png', {
+      cwd: '/games/demo',
+      previewBaseUrl: 'http://127.0.0.1:8899/game/demo/',
+      cacheVersion: CACHE_VERSION,
+      thumbnail: { width: 64, height: 64, resizeMode: 'contain' },
+    })).toBe(
+      'http://127.0.0.1:8899/game/demo/game/figure/file%23with%23hash-%E6%B5%8B%E8%AF%95.png?t=1710000000000&w=64&h=64&fit=contain',
+    )
+  })
+
+  it('会将文件名中的 URL 保留字符编码为路径内容', () => {
+    expect(resolveAssetUrl('/games/demo/assets/100%?#.png', {
+      cwd: '/games/demo',
+      previewBaseUrl: 'http://127.0.0.1:8899/game/demo/',
+    })).toBe('http://127.0.0.1:8899/game/demo/assets/100%25%3F%23.png')
+  })
+
   it('传入 cacheVersion 时会附带时间戳参数用于缓存破坏', () => {
     const getAssetUrlWithCacheVersion = getAssetUrl as (
       assetPath: string,
