@@ -674,7 +674,7 @@ export:
   platformAndroid: Android
   platformAndroidDescription: Android APK を書き出します
   comingSoon: 近日公開
-  selectPlatformHint: 続行するには、プラットフォームを 1 つ以上選択してください
+  selectPlatformHint: 続行するには、プラットフォームを 1 つ選択してください
   next: 次へ
   previousStep: 前へ
   outputDirectory: 書き出し先フォルダー
@@ -709,7 +709,7 @@ export:
   openDirectory: フォルダーを開く
   openFile: ファイルを開く
   share: 共有
-  failed: Web 書き出しに失敗しました
+  failed: 書き出しに失敗しました
   openDirectoryFailed: 書き出し先フォルダーを開けませんでした
   overwrite:
     title: 書き出し先が既に存在します

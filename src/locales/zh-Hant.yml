@@ -674,7 +674,7 @@ export:
   platformAndroid: Android
   platformAndroidDescription: 匯出 Android APK 安裝套件
   comingSoon: 即將推出
-  selectPlatformHint: 請至少選擇一個平台以繼續
+  selectPlatformHint: 請選擇一個平台以繼續
   next: 下一步
   previousStep: 上一步
   outputDirectory: 匯出目錄
@@ -709,7 +709,7 @@ export:
   openDirectory: 開啟目錄
   openFile: 開啟檔案
   share: 分享
-  failed: Web 匯出失敗
+  failed: 匯出失敗
   openDirectoryFailed: 無法開啟匯出目錄
   overwrite:
     title: 匯出目錄已存在

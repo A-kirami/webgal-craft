@@ -674,7 +674,7 @@ export:
   platformAndroid: Android
   platformAndroidDescription: 导出 Android APK 安装包
   comingSoon: 即将推出
-  selectPlatformHint: 请至少选择一个平台以继续
+  selectPlatformHint: 请选择一个平台以继续
   next: 下一步
   previousStep: 上一步
   outputDirectory: 导出目录
@@ -709,7 +709,7 @@ export:
   openDirectory: 打开目录
   openFile: 打开文件
   share: 分享
-  failed: Web 导出失败
+  failed: 导出失败
   openDirectoryFailed: 无法打开导出目录
   overwrite:
     title: 导出目录已存在

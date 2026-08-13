@@ -674,7 +674,7 @@ export:
   platformAndroid: Android
   platformAndroidDescription: Export an Android APK
   comingSoon: Coming soon
-  selectPlatformHint: Select at least one platform to continue
+  selectPlatformHint: Select a platform to continue
   next: Next
   previousStep: Previous
   outputDirectory: Export folder
@@ -709,7 +709,7 @@ export:
   openDirectory: Open folder
   openFile: Open file
   share: Share
-  failed: Web export failed
+  failed: Export failed
   openDirectoryFailed: Failed to open the export folder
   overwrite:
     title: Export folder already exists
