@@ -4,10 +4,13 @@ use std::{
     io::{BufWriter, Cursor, ErrorKind, Read, Write},
     path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
+    time::Duration,
 };
 
+use futures_util::StreamExt;
 use image::{imageops, DynamicImage, RgbaImage};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Emitter, Manager};
 
 use super::{game::read_game_config, AppError, AppResult};
@@ -34,6 +37,11 @@ const STEP_WRITING_CONFIG: &str = "export.progress.writingConfig";
 const NEUTRALINO_RUNTIME_VERSION: &str = "6.9.0";
 const NEUTRALINO_RUNTIME_ARCHIVE_URL: &str =
     "https://github.com/neutralinojs/neutralinojs/releases/download/v6.9.0/neutralinojs-v6.9.0.zip";
+const NEUTRALINO_RUNTIME_ARCHIVE_SHA256: &str =
+    "ff33dd68979cffc36e4e7e73d1bab4cbcdf2c036aad72ca32876fde51a32df14";
+const NEUTRALINO_RUNTIME_CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
+const NEUTRALINO_RUNTIME_DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(5 * 60);
+const MAX_NEUTRALINO_RUNTIME_ARCHIVE_BYTES: u64 = 16 * 1024 * 1024;
 const NEUTRALINO_CLIENT: &[u8] = include_bytes!("../../resources/neutralino/6.9.0/neutralino.js");
 const NEUTRALINO_CLIENT_LICENSE: &[u8] = include_bytes!("../../resources/neutralino/6.9.0/LICENSE");
 const NEUTRALINO_FULLSCREEN_BRIDGE: &[u8] =
@@ -155,6 +163,19 @@ fn extract_neutralino_runtime(archive: &[u8], entry_name: &str) -> AppResult<Vec
     let mut bytes = Vec::with_capacity(entry.size() as usize);
     entry.read_to_end(&mut bytes)?;
     Ok(bytes)
+}
+
+fn verify_neutralino_runtime_archive(archive: &[u8]) -> AppResult<()> {
+    let actual_sha256 = Sha256::digest(archive)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    if actual_sha256 != NEUTRALINO_RUNTIME_ARCHIVE_SHA256 {
+        return Err(export_error(
+            "Neutralinojs 运行时校验失败，文件可能已被篡改",
+        ));
+    }
+    Ok(())
 }
 
 fn resolve_neutralino_runtime_url(proxy_prefix: Option<&str>) -> AppResult<String> {
@@ -1359,15 +1380,36 @@ pub async fn ensure_pc_runtime(
     }
 
     let download_url = resolve_neutralino_runtime_url(proxy_prefix.as_deref())?;
-    let response = reqwest::get(download_url)
+    let client = reqwest::Client::builder()
+        .user_agent("WebGALCraft PC exporter")
+        .connect_timeout(NEUTRALINO_RUNTIME_CONNECT_TIMEOUT)
+        .timeout(NEUTRALINO_RUNTIME_DOWNLOAD_TIMEOUT)
+        .build()
+        .map_err(|error| export_error(format!("无法初始化运行时下载: {error}")))?;
+    let response = client
+        .get(download_url)
+        .send()
         .await
         .map_err(|error| export_error(format!("运行时下载失败: {error}")))?
         .error_for_status()
         .map_err(|error| export_error(format!("运行时下载失败: {error}")))?;
-    let archive = response
-        .bytes()
-        .await
-        .map_err(|error| export_error(format!("运行时读取失败: {error}")))?;
+    if response
+        .content_length()
+        .is_some_and(|size| size > MAX_NEUTRALINO_RUNTIME_ARCHIVE_BYTES)
+    {
+        return Err(export_error("Neutralinojs 运行时压缩包超过允许大小"));
+    }
+    let mut archive = Vec::new();
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|error| export_error(format!("运行时读取失败: {error}")))?;
+        if archive.len().saturating_add(chunk.len()) > MAX_NEUTRALINO_RUNTIME_ARCHIVE_BYTES as usize
+        {
+            return Err(export_error("Neutralinojs 运行时压缩包超过允许大小"));
+        }
+        archive.extend_from_slice(&chunk);
+    }
+    verify_neutralino_runtime_archive(&archive)?;
     let entry_name = neutralino_runtime_entry(&target_os, &target_arch)?;
     let runtime = tauri::async_runtime::spawn_blocking(move || {
         extract_neutralino_runtime(&archive, entry_name)
@@ -1400,9 +1442,10 @@ mod tests {
     use super::{
         copy_web_icons, export_pc_to_directory, export_web_to_directory,
         extract_neutralino_runtime, neutralino_runtime_entry, resolve_neutralino_runtime_url,
-        resolve_pc_icon, sanitize_desktop_name, AppError, CachedCanonicals, OverlayFs,
-        PcExportRequest, PcWindowConfig, NEUTRALINO_RUNTIME_ARCHIVE_URL, STEP_COPYING_ICONS,
-        STEP_COPYING_RUNTIME, STEP_FINISHED, STEP_PACKING_RESOURCES,
+        resolve_pc_icon, sanitize_desktop_name, verify_neutralino_runtime_archive, AppError,
+        CachedCanonicals, OverlayFs, PcExportRequest, PcWindowConfig,
+        NEUTRALINO_RUNTIME_ARCHIVE_URL, STEP_COPYING_ICONS, STEP_COPYING_RUNTIME, STEP_FINISHED,
+        STEP_PACKING_RESOURCES,
     };
     use serde_json::Value;
     use tempfile::tempdir;
@@ -2163,6 +2206,14 @@ mod tests {
             b"macos"
         );
         assert!(extract_neutralino_runtime(&bytes, "neutralino-linux_x64").is_err());
+    }
+
+    #[test]
+    fn rejects_neutralino_runtime_archive_with_unexpected_digest() {
+        let error = verify_neutralino_runtime_archive(b"not the official archive")
+            .expect_err("unexpected runtime archive should be rejected");
+
+        assert!(matches!(error, AppError::Export(message) if message.contains("校验失败")));
     }
 
     #[test]
