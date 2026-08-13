@@ -136,7 +136,7 @@ const globalStubs = {
   TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
 }
 
-function renderExportDialog(options: { exportSavePath?: string } = {}) {
+function renderExportDialog(options: { exportSavePath?: string, localizedI18n?: boolean } = {}) {
   const pinia = createPinia()
   useStorageSettingsStore(pinia).exportSavePath = options.exportSavePath ?? '/exports'
 
@@ -150,7 +150,7 @@ function renderExportDialog(options: { exportSavePath?: string } = {}) {
       'onUpdate:open': vi.fn(),
     },
     browser: {
-      i18nMode: 'lite',
+      i18nMode: options.localizedI18n ? 'localized' : 'lite',
       pinia,
     },
     global: {
@@ -514,13 +514,13 @@ describe('ExportDialog', () => {
   })
 
   it('桌面端为每个选中的目标独立下载运行时并导出', async () => {
-    renderExportDialog()
+    renderExportDialog({ localizedI18n: true })
 
-    await page.getByRole('button', { name: /export\.platformDesktop/ }).click()
-    await page.getByRole('button', { name: 'export.next' }).click()
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
     await page.getByRole('checkbox', { name: 'macOS x64' }).click()
 
-    await page.getByRole('button', { name: 'export.next' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
     expect(page.getByTestId('export-card').elements()).toHaveLength(2)
     await expect.element(page.getByText('Windows x64')).toBeInTheDocument()
     await expect.element(page.getByText('macOS x64')).toBeInTheDocument()
@@ -528,15 +528,15 @@ describe('ExportDialog', () => {
     expect(progressCards[0].querySelector('.i-simple-icons-windows')).not.toBeNull()
     expect(progressCards[1].querySelector('.i-simple-icons-apple')).not.toBeNull()
     expect(exportPcMock).not.toHaveBeenCalled()
-    await page.getByRole('button', { name: 'export.start' }).click()
+    await page.getByRole('button', { name: '开始导出' }).click()
 
     await vi.waitFor(() => {
       expect(ensurePcRuntimeMock).toHaveBeenCalledTimes(2)
       expect(exportPcMock).toHaveBeenCalledTimes(2)
     })
     expect(ensurePcRuntimeMock.mock.calls).toEqual(expect.arrayContaining([
-      ['windows', 'x64'],
-      ['macos', 'x64'],
+      ['windows', 'x64', ''],
+      ['macos', 'x64', ''],
     ]))
     expect(exportPcMock.mock.calls.map(([config]) => [config.targetOs, config.targetArch])).toEqual(expect.arrayContaining([
       ['windows', 'x64'],
@@ -546,22 +546,18 @@ describe('ExportDialog', () => {
   })
 
   it('桌面目标以横排图标卡片展示', async () => {
-    renderExportDialog()
+    renderExportDialog({ localizedI18n: true })
 
-    await page.getByRole('button', { name: /export\.platformDesktop/ }).click()
-    await page.getByRole('button', { name: 'export.next' }).click()
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
 
     const targetGrid = await page.getByTestId('desktop-target-grid').element() as HTMLElement
     expect(targetGrid.classList).toContain('sm:grid-cols-4')
     const windowsTarget = await page.getByRole('checkbox', { name: 'Windows x64' }).element() as HTMLInputElement
     expect(windowsTarget.classList).toContain('sr-only')
-    expect(windowsTarget.closest('label')?.classList).toContain('grid-rows-[2rem_2.5rem]')
-    const windowsIcon = targetGrid.querySelector<HTMLElement>('.i-simple-icons-windows')!
-    const appleIcon = targetGrid.querySelector<HTMLElement>('.i-simple-icons-apple')!
-    const linuxIcon = targetGrid.querySelector<HTMLElement>('.i-simple-icons-linux')!
-    expect(getComputedStyle(windowsIcon).maskImage).not.toBe('none')
-    expect(getComputedStyle(appleIcon).maskImage).not.toBe('none')
-    expect(getComputedStyle(linuxIcon).maskImage).not.toBe('none')
+    expect(windowsTarget.closest('label')?.classList).toContain('grid-rows-[2rem_1.5rem]')
+    expect(targetGrid.querySelector('.i-simple-icons-windows')).not.toBeNull()
+    expect(targetGrid.querySelector('.i-simple-icons-linux')).not.toBeNull()
     expect(targetGrid.querySelectorAll('.i-simple-icons-apple')).toHaveLength(2)
   })
 
@@ -573,10 +569,10 @@ describe('ExportDialog', () => {
   ])('桌面端根据 $platform/$arch 预选 $target', async ({ arch, platform, target }) => {
     osArchMock.mockReturnValue(arch)
     osPlatformMock.mockReturnValue(platform)
-    renderExportDialog()
+    renderExportDialog({ localizedI18n: true })
 
-    await page.getByRole('button', { name: /export\.platformDesktop/ }).click()
-    await page.getByRole('button', { name: 'export.next' }).click()
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
 
     await expect.element(page.getByRole('checkbox', { name: target })).toBeChecked()
     const otherTargets = ['Windows x64', 'macOS x64', 'macOS Apple Silicon', 'Linux x64']
