@@ -107,7 +107,8 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
       return
     }
     const [targetOs, targetArch] = parsePcTarget(target)
-    return resolvePcExportOutputPath(outputRoot.value, gameName.value, targetOs, targetArch)
+    const outputPath = resolvePcExportOutputPath(outputRoot.value, gameName.value, targetOs, targetArch)
+    return outputPath && AbsPath.parent(outputPath)
   })
 
   function configuredOutputRoot(): AbsPath | undefined {

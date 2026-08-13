@@ -527,6 +527,7 @@ describe('ExportDialog', () => {
     await page.getByRole('button', { name: '桌面端' }).click()
     await page.getByRole('button', { name: '下一步' }).click()
     await page.getByRole('checkbox', { name: 'macOS x64' }).click()
+    await expect.element(page.getByText('最终输出位置: /exports/Demo Game')).toBeInTheDocument()
 
     await page.getByRole('button', { name: '下一步' }).click()
     expect(page.getByTestId('export-card').elements()).toHaveLength(2)
