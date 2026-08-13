@@ -578,6 +578,32 @@ describe('ExportDialog', () => {
     })
   })
 
+  it('桌面目标按顺序导出', async () => {
+    let completeWindows: (() => void) | undefined
+    exportPcMock.mockImplementation(config => new Promise<AbsPath>((resolve) => {
+      if (config.targetOs === 'windows') {
+        completeWindows = () => resolve(AbsPath.from('/exports/Demo Game/windows-x64'))
+      }
+    }))
+    renderExportDialog({ localizedI18n: true })
+
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('checkbox', { name: 'macOS x64' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('button', { name: '开始导出' }).click()
+    await vi.waitFor(() => expect(exportPcMock).toHaveBeenCalledOnce())
+    expect(exportPcMock.mock.calls[0][0].targetOs).toBe('windows')
+
+    completeWindows?.()
+    await vi.waitFor(() => {
+      expect(exportPcMock.mock.calls.map(([config]) => config.targetOs)).toEqual([
+        'windows',
+        'macos',
+      ])
+    })
+  })
+
   it('桌面目标以横排图标卡片展示', async () => {
     renderExportDialog({ localizedI18n: true })
 

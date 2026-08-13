@@ -328,20 +328,26 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     }
 
     try {
-      const results = await Promise.allSettled(android ? [runOne('web', false)] : platforms.map(platform => runWithOverwrite(platform)))
-      for (const [index, result] of results.entries()) {
-        const platform = android ? 'web' : platforms[index]
-        if (result.status === 'rejected') {
-          failTask(platform, result.reason)
-          continue
-        }
-        if (result.value !== false) {
-          const task = exportTasks.value.find(item => item.platform === platform)
-          if (task?.status !== 'completed') {
-            completeTask(platform)
+      const tasksToRun: ExportPlatform[] = android ? ['web'] : platforms
+      let sequence = Promise.resolve()
+      for (const platform of tasksToRun) {
+        sequence = sequence.then(async () => {
+          try {
+            const completed = android
+              ? (await runOne(platform, false), true)
+              : await runWithOverwrite(platform)
+            if (completed) {
+              const task = exportTasks.value.find(item => item.platform === platform)
+              if (task?.status !== 'completed') {
+                completeTask(platform)
+              }
+            }
+          } catch (error) {
+            failTask(platform, error)
           }
-        }
+        })
       }
+      await sequence
     } finally {
       stopElapsedTimer()
       isStartingExport.value = false
