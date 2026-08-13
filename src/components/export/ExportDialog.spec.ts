@@ -25,6 +25,7 @@ const {
   androidOpenMock,
   androidShareMock,
   confirmExportOverwriteMock,
+  existsMock,
   openDialogMock,
   openPathMock,
   toastErrorMock,
@@ -39,6 +40,7 @@ const {
   exportPcMock: vi.fn(),
   ensurePcRuntimeMock: vi.fn(),
   confirmExportOverwriteMock: vi.fn(),
+  existsMock: vi.fn(),
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
   toastErrorMock: vi.fn(),
@@ -50,6 +52,10 @@ const {
 vi.mock('@tauri-apps/plugin-os', () => ({
   arch: osArchMock,
   platform: osPlatformMock,
+}))
+
+vi.mock('@tauri-apps/plugin-fs', () => ({
+  exists: existsMock,
 }))
 
 vi.mock('~/services/platform/runtime', () => ({
@@ -186,6 +192,7 @@ describe('ExportDialog', () => {
     osArchMock.mockReturnValue('x86_64')
     osPlatformMock.mockReturnValue('windows')
     confirmExportOverwriteMock.mockResolvedValue(true)
+    existsMock.mockResolvedValue(false)
     openDialogMock.mockResolvedValue('/selected-exports')
     openPathMock.mockResolvedValue(undefined)
   })
@@ -553,6 +560,34 @@ describe('ExportDialog', () => {
       ['macos', 'x64'],
     ]))
     expect(exportPcMock.mock.calls.every(([config]) => config.windowConfig.height === 760)).toBe(true)
+  })
+
+  it('桌面端存在目标目录时在下载运行时前确认覆盖', async () => {
+    existsMock.mockResolvedValue(true)
+    let confirmOverwrite: (() => void) | undefined
+    confirmExportOverwriteMock.mockImplementationOnce(() => new Promise<boolean>((resolve) => {
+      confirmOverwrite = () => resolve(true)
+    }))
+    renderExportDialog({ localizedI18n: true })
+
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('button', { name: '开始导出' }).click()
+
+    await vi.waitFor(() => {
+      expect(confirmExportOverwriteMock).toHaveBeenCalledWith(
+        '/exports/Demo Game/windows-x64',
+        expect.any(Function),
+      )
+    })
+    expect(ensurePcRuntimeMock).not.toHaveBeenCalled()
+
+    confirmOverwrite?.()
+    await vi.waitFor(() => {
+      expect(ensurePcRuntimeMock).toHaveBeenCalledOnce()
+      expect(exportPcMock).toHaveBeenCalledWith(expect.objectContaining({ replaceExisting: true }))
+    })
   })
 
   it('重试仅重新导出失败的桌面目标', async () => {

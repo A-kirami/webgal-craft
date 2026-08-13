@@ -1,3 +1,4 @@
+import { exists } from '@tauri-apps/plugin-fs'
 import { openPath } from '@tauri-apps/plugin-opener'
 import { arch, platform } from '@tauri-apps/plugin-os'
 
@@ -302,14 +303,27 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
       completeTask(platform, outputPath)
     }
     const runWithOverwrite = async (platform: ExportPlatform): Promise<boolean> => {
+      const target = platform === 'web' ? undefined : parsePcTarget(platform)
+      const targetPath = selectedOutputRoot && !android
+        ? (platform === 'web' ? resolveWebExportOutputPath(selectedOutputRoot, selectedGameName) : desktopOutputPath(selectedOutputRoot, selectedGameName, target![0], target![1]))
+        : undefined
+      const existingDesktopOutput = platform !== 'web' && targetPath && await exists(targetPath)
       try {
-        await runOne(platform, false)
+        if (existingDesktopOutput) {
+          pendingOverwriteConfirmations.value++
+          let confirmed: boolean
+          try {
+            confirmed = await options.confirmOverwrite(targetPath)
+          } finally {
+            pendingOverwriteConfirmations.value--
+          }
+          if (!confirmed) {
+            return false
+          }
+        }
+        await runOne(platform, Boolean(existingDesktopOutput))
         return true
       } catch (error) {
-        const target = platform === 'web' ? undefined : parsePcTarget(platform)
-        const targetPath = selectedOutputRoot && !android
-          ? (platform === 'web' ? resolveWebExportOutputPath(selectedOutputRoot, selectedGameName) : desktopOutputPath(selectedOutputRoot, selectedGameName, target![0], target![1]))
-          : undefined
         if (!(error instanceof AppError) || error.code !== 'TARGET_CONFLICT' || !targetPath) {
           throw error
         }
