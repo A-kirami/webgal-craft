@@ -561,6 +561,29 @@ describe('ExportDialog', () => {
     expect(targetGrid.querySelectorAll('.i-simple-icons-apple')).toHaveLength(2)
   })
 
+  it('窗口尺寸输入始终保持有效且不小于最小尺寸', async () => {
+    renderExportDialog({ localizedI18n: true })
+
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    const width = page.getByRole('spinbutton', { name: '宽度', exact: true })
+    const minWidth = page.getByRole('spinbutton', { name: '最小宽度', exact: true })
+
+    await width.fill('640')
+    await expect.element(minWidth).toHaveValue(640)
+    await width.fill('')
+    await expect.element(width).toHaveValue(1)
+    await minWidth.fill('900')
+
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('button', { name: '开始导出' }).click()
+    await vi.waitFor(() => {
+      expect(exportPcMock).toHaveBeenCalledWith(expect.objectContaining({
+        windowConfig: expect.objectContaining({ minWidth: 1, width: 1 }),
+      }))
+    })
+  })
+
   it.each([
     { arch: 'x86_64', platform: 'windows', target: 'Windows x64' },
     { arch: 'x86_64', platform: 'linux', target: 'Linux x64' },

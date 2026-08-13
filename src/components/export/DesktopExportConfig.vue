@@ -12,6 +12,7 @@ const { t } = useI18n()
 
 const targets = defineModel<PcTarget[]>('targets', { required: true })
 const windowConfig = defineModel<PcWindowConfig>('windowConfig', { required: true })
+type SizeKey = 'width' | 'height' | 'minWidth' | 'minHeight'
 
 const platformOptions = computed<{ label: string, value: PcTarget }[]>(() => [
   { label: t('export.desktopConfig.targets.windowsX64'), value: 'windows-x64' },
@@ -24,6 +25,32 @@ function updateTarget(target: PcTarget, selected: boolean): void {
   targets.value = selected
     ? [...targets.value, target]
     : targets.value.filter(value => value !== target)
+}
+
+function updateSize(key: SizeKey, value: unknown): void {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) {
+    return
+  }
+  const size = Math.max(1, Math.round(parsed))
+  const next = { ...windowConfig.value }
+  if (key === 'width' || key === 'minWidth') {
+    if (key === 'width') {
+      next.width = size
+      next.minWidth = Math.min(next.minWidth, size)
+    } else {
+      next.minWidth = Math.min(size, next.width)
+    }
+    windowConfig.value = next
+    return
+  }
+  if (key === 'height') {
+    next.height = size
+    next.minHeight = Math.min(next.minHeight, size)
+  } else {
+    next.minHeight = Math.min(size, next.height)
+  }
+  windowConfig.value = next
 }
 </script>
 
@@ -68,19 +95,19 @@ function updateTarget(target: PcTarget, selected: boolean): void {
       <div class="gap-3 grid grid-cols-2 sm:grid-cols-4">
         <label class="text-xs text-muted-foreground gap-1 grid">
           {{ $t('export.desktopConfig.width') }}
-          <Input v-model.number="windowConfig.width" class="h-8 shadow-none" :disabled="disabled" min="1" type="number" />
+          <Input :model-value="windowConfig.width" class="h-8 shadow-none" :disabled="disabled" min="1" type="number" @update:model-value="updateSize('width', $event)" />
         </label>
         <label class="text-xs text-muted-foreground gap-1 grid">
           {{ $t('export.desktopConfig.height') }}
-          <Input v-model.number="windowConfig.height" class="h-8 shadow-none" :disabled="disabled" min="1" type="number" />
+          <Input :model-value="windowConfig.height" class="h-8 shadow-none" :disabled="disabled" min="1" type="number" @update:model-value="updateSize('height', $event)" />
         </label>
         <label class="text-xs text-muted-foreground gap-1 grid">
           {{ $t('export.desktopConfig.minWidth') }}
-          <Input v-model.number="windowConfig.minWidth" class="h-8 shadow-none" :disabled="disabled" min="1" type="number" />
+          <Input :model-value="windowConfig.minWidth" class="h-8 shadow-none" :disabled="disabled" min="1" type="number" @update:model-value="updateSize('minWidth', $event)" />
         </label>
         <label class="text-xs text-muted-foreground gap-1 grid">
           {{ $t('export.desktopConfig.minHeight') }}
-          <Input v-model.number="windowConfig.minHeight" class="h-8 shadow-none" :disabled="disabled" min="1" type="number" />
+          <Input :model-value="windowConfig.minHeight" class="h-8 shadow-none" :disabled="disabled" min="1" type="number" @update:model-value="updateSize('minHeight', $event)" />
         </label>
       </div>
       <div class="flex flex-wrap gap-x-6 gap-y-3">
