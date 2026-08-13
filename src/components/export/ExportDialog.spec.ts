@@ -513,6 +513,14 @@ describe('ExportDialog', () => {
     expect(confirmExportOverwriteMock).not.toHaveBeenCalled()
   })
 
+  it('Android 保持 Web 导出可选但禁用桌面端', async () => {
+    isAndroidRuntimeMock.mockReturnValue(true)
+    renderExportDialog()
+
+    await expect.element(page.getByRole('button', { name: /export\.platformWeb/ })).toBeEnabled()
+    await expect.element(page.getByRole('button', { name: /export\.platformDesktop/ })).toBeDisabled()
+  })
+
   it('桌面端为每个选中的目标独立下载运行时并导出', async () => {
     renderExportDialog({ localizedI18n: true })
 

@@ -234,6 +234,9 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     if (!canStart.value || (!android && !outputRoot.value)) {
       return
     }
+    if (android && selectedPlatform !== 'web') {
+      return
+    }
     const selectedGame = currentGame.value
     const selectedGameName = gameName.value
     const selectedOutputRoot = outputRoot.value

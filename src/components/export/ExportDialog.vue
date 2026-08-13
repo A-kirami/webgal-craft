@@ -235,6 +235,7 @@ function progressIndicatorClass(task: ExportTask): string {
         <div v-if="currentStep === 1" class="flex flex-col gap-3">
           <ExportPlatformSelector
             :disabled="isBusy"
+            :disabled-desktop="isAndroid"
             :selected-platform="selectedPlatform"
             @select="selectedPlatform = $event"
           />
