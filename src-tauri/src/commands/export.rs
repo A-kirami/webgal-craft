@@ -178,6 +178,31 @@ fn verify_neutralino_runtime_archive(archive: &[u8]) -> AppResult<()> {
     Ok(())
 }
 
+fn cache_pc_runtime(runtime_path: &Path, runtime: &[u8]) -> AppResult<()> {
+    let temporary = runtime_path.with_extension(format!(
+        "download-{}-{}",
+        std::process::id(),
+        EXPORT_WORK_ID.fetch_add(1, Ordering::Relaxed),
+    ));
+    let result = (|| {
+        fs::write(&temporary, runtime)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&temporary, fs::Permissions::from_mode(0o755))?;
+        }
+        match fs::rename(&temporary, runtime_path) {
+            Ok(()) => Ok(()),
+            Err(_) if runtime_path.is_file() => Ok(()),
+            Err(error) => Err(error.into()),
+        }
+    })();
+    if temporary.exists() {
+        let _ = fs::remove_file(temporary);
+    }
+    result
+}
+
 fn resolve_neutralino_runtime_url(proxy_prefix: Option<&str>) -> AppResult<String> {
     let Some(raw_prefix) = proxy_prefix
         .map(str::trim)
@@ -1422,14 +1447,7 @@ pub async fn ensure_pc_runtime(
     if !parent.exists() {
         fs::create_dir_all(parent)?;
     }
-    let temporary = runtime_path.with_extension("download");
-    fs::write(&temporary, runtime)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        fs::set_permissions(&temporary, fs::Permissions::from_mode(0o755))?;
-    }
-    fs::rename(&temporary, &runtime_path)?;
+    cache_pc_runtime(&runtime_path, &runtime)?;
     Ok(runtime_path.to_string_lossy().into_owned())
 }
 
@@ -1440,7 +1458,7 @@ mod tests {
     use std::{fs, io::Write, path::Path};
 
     use super::{
-        copy_web_icons, export_pc_to_directory, export_web_to_directory,
+        cache_pc_runtime, copy_web_icons, export_pc_to_directory, export_web_to_directory,
         extract_neutralino_runtime, neutralino_runtime_entry, resolve_neutralino_runtime_url,
         resolve_pc_icon, sanitize_desktop_name, verify_neutralino_runtime_archive, AppError,
         CachedCanonicals, OverlayFs, PcExportRequest, PcWindowConfig,
@@ -2214,6 +2232,28 @@ mod tests {
             .expect_err("unexpected runtime archive should be rejected");
 
         assert!(matches!(error, AppError::Export(message) if message.contains("校验失败")));
+    }
+
+    #[test]
+    fn caches_concurrent_runtime_writes_without_temporary_files() {
+        let root = tempdir().expect("temp root should be created");
+        let runtime_path = root.path().join("neutralino-win_x64.exe");
+        let handles = (0..4)
+            .map(|_| {
+                let runtime_path = runtime_path.clone();
+                std::thread::spawn(move || cache_pc_runtime(&runtime_path, b"runtime"))
+            })
+            .collect::<Vec<_>>();
+
+        for handle in handles {
+            handle
+                .join()
+                .expect("runtime cache worker should finish")
+                .expect("runtime should be cached");
+        }
+
+        assert_eq!(fs::read(&runtime_path).unwrap(), b"runtime");
+        assert_eq!(fs::read_dir(root.path()).unwrap().count(), 1);
     }
 
     #[test]
