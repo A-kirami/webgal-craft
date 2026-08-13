@@ -609,7 +609,7 @@ pub(super) fn export_pc_to_directory(
         fs::copy(runtime_path, &executable_path)?;
         #[cfg(unix)]
         fs::set_permissions(&executable_path, fs::metadata(runtime_path)?.permissions())?;
-        let resource_root = app_root.clone();
+        let resource_root = executable_directory.clone();
         fs::create_dir_all(&resource_root)?;
         let icon_root = if target_os == "macos" {
             app_root.join("Resources")
@@ -2097,11 +2097,11 @@ mod tests {
         assert!(info.contains("<key>CFBundleExecutable</key><string>My Game</string>"));
         assert!(info.contains("My Game"));
         assert!(read_asar_file(
-            &fs::read(contents.join("resources.neu")).unwrap(),
+            &fs::read(contents.join("MacOS/resources.neu")).unwrap(),
             "index.html"
         )
         .is_some());
-        let bundle = fs::read(contents.join("resources.neu")).unwrap();
+        let bundle = fs::read(contents.join("MacOS/resources.neu")).unwrap();
         assert!(read_asar_file(&bundle, "icon.png").is_some());
         let config: Value =
             serde_json::from_slice(&read_asar_file(&bundle, "neutralino.config.json").unwrap())
