@@ -671,6 +671,7 @@ export:
   platformWebDescription: 単独で配信できる静的サイトを書き出します
   platformDesktop: デスクトップ
   platformDesktopDescription: Windows、macOS、Linux の対象を複数選択できます
+  desktopOnly: デスクトップアプリのみ
   platformAndroid: Android
   platformAndroidDescription: Android APK を書き出します
   comingSoon: 近日公開

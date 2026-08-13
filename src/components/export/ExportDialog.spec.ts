@@ -519,6 +519,7 @@ describe('ExportDialog', () => {
 
     await expect.element(page.getByRole('button', { name: /export\.platformWeb/ })).toBeEnabled()
     await expect.element(page.getByRole('button', { name: /export\.platformDesktop/ })).toBeDisabled()
+    await expect.element(page.getByText('export.desktopOnly')).toBeInTheDocument()
   })
 
   it('桌面端为每个选中的目标独立下载运行时并导出', async () => {

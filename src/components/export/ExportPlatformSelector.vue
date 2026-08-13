@@ -56,7 +56,11 @@ const emit = defineEmits<{
           {{ $t('export.platformDesktopDescription') }}
         </div>
       </div>
+      <Badge v-if="disabledDesktop" variant="secondary" class="shrink-0">
+        {{ $t('export.desktopOnly') }}
+      </Badge>
       <Check
+        v-else
         class="text-primary shrink-0 size-4 transition-opacity"
         :class="selectedPlatform === 'desktop' ? 'opacity-100' : 'opacity-0'"
         aria-hidden="true"

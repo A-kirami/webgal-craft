@@ -671,6 +671,7 @@ export:
   platformWebDescription: 导出为可独立部署的静态网站
   platformDesktop: 桌面端
   platformDesktopDescription: Windows、macOS、Linux 目标可多选
+  desktopOnly: 仅桌面版应用可用
   platformAndroid: Android
   platformAndroidDescription: 导出 Android APK 安装包
   comingSoon: 即将推出

@@ -671,6 +671,7 @@ export:
   platformWebDescription: Export a standalone static website
   platformDesktop: Desktop
   platformDesktopDescription: Choose one or more Windows, macOS, or Linux targets
+  desktopOnly: Desktop app only
   platformAndroid: Android
   platformAndroidDescription: Export an Android APK
   comingSoon: Coming soon
