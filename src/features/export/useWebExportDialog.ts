@@ -344,25 +344,27 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
 
     try {
       const tasksToRun: ExportPlatform[] = android ? ['web'] : platforms
-      let sequence = Promise.resolve()
       for (const platform of tasksToRun) {
-        sequence = sequence.then(async () => {
-          try {
-            const completed = android
-              ? (await runOne(platform, false), true)
-              : await runWithOverwrite(platform)
-            if (completed) {
-              const task = exportTasks.value.find(item => item.platform === platform)
-              if (task?.status !== 'completed') {
-                completeTask(platform)
-              }
-            }
-          } catch (error) {
-            failTask(platform, error)
+        try {
+          let completed = true
+          if (android) {
+            // 导出任务必须串行执行，避免同时出现多个覆盖确认。
+            // eslint-disable-next-line no-await-in-loop
+            await runOne(platform, false)
+          } else {
+            // eslint-disable-next-line no-await-in-loop
+            completed = await runWithOverwrite(platform)
           }
-        })
+          if (completed) {
+            const task = exportTasks.value.find(item => item.platform === platform)
+            if (task?.status !== 'completed') {
+              completeTask(platform)
+            }
+          }
+        } catch (error) {
+          failTask(platform, error)
+        }
       }
-      await sequence
     } finally {
       stopElapsedTimer()
       isStartingExport.value = false
