@@ -269,16 +269,21 @@ fn package_resources(
     archive.write_all(&header_size.to_le_bytes())?;
     archive.write_all(&header)?;
     report(STEP_PACKING_RESOURCES, 35)?;
+    let mut last_percentage = 35;
     for (index, (path, _)) in files.into_iter().enumerate() {
         let mut source = fs::File::open(path)?;
         std::io::copy(&mut source, &mut archive)?;
-        report(
-            STEP_PACKING_RESOURCES,
-            35 + ((index + 1) * 45 / total) as u8,
-        )?;
+        let percentage = 35 + ((index + 1) * 45 / total) as u8;
+        if percentage > last_percentage {
+            report(STEP_PACKING_RESOURCES, percentage)?;
+            last_percentage = percentage;
+        }
     }
     archive.flush()?;
-    report(STEP_PACKING_RESOURCES, 80)
+    if last_percentage < 80 {
+        report(STEP_PACKING_RESOURCES, 80)?;
+    }
+    Ok(())
 }
 
 fn add_asar_file(
@@ -2052,6 +2057,16 @@ mod tests {
         assert!(
             progress.windows(2).all(|pair| pair[0].1 <= pair[1].1),
             "desktop export progress should not move backwards: {progress:?}",
+        );
+        let packing_percentages = progress
+            .iter()
+            .filter_map(|(step, percentage)| {
+                (step == STEP_PACKING_RESOURCES).then_some(*percentage)
+            })
+            .collect::<Vec<_>>();
+        assert!(
+            packing_percentages.windows(2).all(|pair| pair[0] < pair[1]),
+            "resource packing progress should not repeat: {packing_percentages:?}",
         );
         assert_eq!(progress.last(), Some(&(STEP_FINISHED.to_owned(), 100)));
     }
