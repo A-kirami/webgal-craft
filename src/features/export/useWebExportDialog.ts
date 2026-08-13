@@ -237,12 +237,19 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     const selectedGame = currentGame.value
     const selectedGameName = gameName.value
     const selectedOutputRoot = outputRoot.value
-    const platforms = selectedPlatforms(selectedPlatform)
+    const failedPlatforms = exportTasks.value
+      .filter(task => task.status === 'failed')
+      .map(task => task.platform)
+    const platforms = failedPlatforms.length > 0
+      ? failedPlatforms
+      : selectedPlatforms(selectedPlatform)
     if (selectedPlatform === 'desktop' && !hasDesktopTargets.value) {
       return
     }
 
-    prepareExportTasks(selectedPlatform)
+    if (failedPlatforms.length === 0) {
+      prepareExportTasks(selectedPlatform)
+    }
     startElapsedTimer()
     isStartingExport.value = true
 

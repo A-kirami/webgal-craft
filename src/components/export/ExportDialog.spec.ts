@@ -545,6 +545,31 @@ describe('ExportDialog', () => {
     expect(exportPcMock.mock.calls.every(([config]) => config.windowConfig.height === 760)).toBe(true)
   })
 
+  it('重试仅重新导出失败的桌面目标', async () => {
+    exportPcMock.mockImplementation(config => config.targetOs === 'windows'
+      ? Promise.resolve(AbsPath.from('/exports/Demo Game/windows-x64'))
+      : Promise.reject(new Error('disk full')))
+    renderExportDialog({ localizedI18n: true })
+
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('checkbox', { name: 'macOS x64' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('button', { name: '开始导出' }).click()
+
+    await expect.element(page.getByRole('button', { name: '重新导出' })).toBeEnabled()
+    exportPcMock.mockResolvedValue(AbsPath.from('/exports/Demo Game/macos-x64'))
+    await page.getByRole('button', { name: '重新导出' }).click()
+
+    await vi.waitFor(() => {
+      expect(exportPcMock.mock.calls.map(([config]) => config.targetOs)).toEqual([
+        'windows',
+        'macos',
+        'macos',
+      ])
+    })
+  })
+
   it('桌面目标以横排图标卡片展示', async () => {
     renderExportDialog({ localizedI18n: true })
 
