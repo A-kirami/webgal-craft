@@ -671,15 +671,32 @@ export:
   platformWebDescription: 导出为可独立部署的静态网站
   platformDesktop: 桌面端
   platformDesktopDescription: Windows、macOS、Linux 目标可多选
+  desktopOnly: 仅桌面版应用可用
   platformAndroid: Android
   platformAndroidDescription: 导出 Android APK 安装包
   comingSoon: 即将推出
-  selectPlatformHint: 请至少选择一个平台以继续
+  selectPlatformHint: 请选择一个平台以继续
   next: 下一步
   previousStep: 上一步
   outputDirectory: 导出目录
   browse: 浏览
   finalOutputPath: 最终输出位置
+  desktopConfig:
+    title: 桌面端目标
+    notSelected: 未选择桌面端，无需额外配置
+    targetRequired: 请至少选择一个桌面端目标
+    window: 窗口
+    width: 宽度
+    height: 高度
+    minWidth: 最小宽度
+    minHeight: 最小高度
+    fullScreen: 全屏
+    resizable: 可调整大小
+    targets:
+      windowsX64: Windows x64
+      macosX64: macOS x64
+      macosArm64: macOS Apple Silicon
+      linuxX64: Linux x64
   selectDirectoryHint: 请先选择导出目录以继续
   selectDirectory: 选择导出目录
   selectDirectoryFailed: 无法选择导出目录
@@ -690,13 +707,10 @@ export:
   done: 完成
   elapsed:
     total: 耗时 {seconds} 秒
-    separator: ·
   openDirectory: 打开目录
   openFile: 打开文件
-  openFileFailed: 无法打开导出文件
   share: 分享
-  shareFailed: 无法分享导出文件
-  failed: Web 导出失败
+  failed: 导出失败
   openDirectoryFailed: 无法打开导出目录
   overwrite:
     title: 导出目录已存在
@@ -704,12 +718,15 @@ export:
     confirm: 覆盖导出
   progress:
     ready: 等待开始导出
+    downloadingRuntime: 正在下载桌面运行时...
     preparing: 正在准备导出...
     copyingEngine: 正在复制引擎文件...
     copyingGame: 正在复制游戏资源...
     copyingIcons: 正在复制图标...
     updatingManifest: 正在更新清单...
-    compressing: 正在生成 ZIP...
+    packingResources: 正在打包桌面资源...
+    copyingRuntime: 正在复制桌面运行时...
+    writingConfig: 正在生成桌面配置...
     finished: 导出完成
     failed: 导出失败
 
@@ -1311,8 +1328,8 @@ settings:
   network:
     label: 网络
     officialEngineDownloadProxy:
-      label: GitHub 下载代理
-      description: 可选的官方 WebGAL 引擎 HTTPS 下载代理前缀。留空则使用系统代理或直接连接。
+      label: 下载代理
+      description: 可选的 HTTPS 下载代理前缀。留空则使用系统代理或直接连接。
       placeholder: https://proxy.example/
   edit:
     general: 通用

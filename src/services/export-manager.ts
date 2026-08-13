@@ -6,14 +6,22 @@ import { AbsPath } from '~/domain/path'
 import { gameManager } from '~/services/game-manager'
 import { AppError } from '~/types/errors'
 
+import type { PcWindowConfig } from '~/commands/export'
 import type { Game } from '~/database/model'
+
+export type { PcWindowConfig } from '~/commands/export'
 
 export interface ExportProgress {
   exportId: string
   percentage: number
-  platform: 'web'
+  platform: ExportPlatform
   step: string
 }
+
+export type PcTargetOs = 'windows' | 'macos' | 'linux'
+export type PcTargetArch = 'x64' | 'arm64'
+export type PcTarget = 'windows-x64' | 'macos-x64' | 'macos-arm64' | 'linux-x64'
+export type ExportPlatform = 'web' | PcTarget
 
 export interface WebExportConfig {
   game: Pick<Game, 'engineId' | 'path'>
@@ -28,6 +36,36 @@ export interface AndroidWebExportConfig {
   game: Pick<Game, 'engineId' | 'path'>
   gameName: string
   onProgress?: (progress: ExportProgress) => void
+}
+
+export interface PcExportConfig {
+  game: Pick<Game, 'engineId' | 'path'>
+  gameName: string
+  onProgress?: (progress: ExportProgress) => void
+  outputRoot: AbsPath
+  replaceExisting?: boolean
+  runtimePath: AbsPath
+  targetArch: PcTargetArch
+  targetOs: PcTargetOs
+  windowConfig: PcWindowConfig
+}
+
+const PC_TARGETS = new Set<PcTarget>(['windows-x64', 'macos-x64', 'macos-arm64', 'linux-x64'])
+
+export function pcTargetKey(targetOs: PcTargetOs, targetArch: PcTargetArch): PcTarget {
+  const target = `${targetOs}-${targetArch}`
+  if (!PC_TARGETS.has(target as PcTarget)) {
+    throw new AppError('INVALID_CONFIG', '不支持的 PC 目标平台或架构')
+  }
+  return target as PcTarget
+}
+
+export function resolvePcExportOutputPath(outputRoot: AbsPath, gameName: string, targetOs: PcTargetOs, targetArch: PcTargetArch): AbsPath | undefined {
+  const directoryName = createExportDirectoryName(gameName)
+  if (!directoryName) {
+    return
+  }
+  return AbsPath.append(AbsPath.append(outputRoot, directoryName), pcTargetKey(targetOs, targetArch))
 }
 
 function createExportDirectoryName(gameName: string): string {
@@ -126,7 +164,52 @@ async function exportAndroidWebZip(config: AndroidWebExportConfig): Promise<void
   }
 }
 
+async function exportPc(config: PcExportConfig): Promise<AbsPath> {
+  const gameName = config.gameName.trim()
+  const directoryName = createExportDirectoryName(gameName)
+  if (!gameName || !directoryName) {
+    throw new AppError('INVALID_CONFIG', '游戏名称不能生成有效的导出目录')
+  }
+  const outputPath = resolvePcExportOutputPath(config.outputRoot, gameName, config.targetOs, config.targetArch)!
+  const site = await gameManager.resolvePreviewSite(config.game)
+  if (!site.enginePath) {
+    throw new AppError('ENGINE_EDITOR_INCOMPATIBLE', '当前游戏没有可用的导出引擎')
+  }
+  const exportId = crypto.randomUUID()
+  const unlisten = await listen<ExportProgress>('export-progress', (event) => {
+    const progress = event.payload
+    if (progress.exportId !== exportId || progress.platform !== pcTargetKey(config.targetOs, config.targetArch)) {
+      return
+    }
+    config.onProgress?.({ ...progress, percentage: Math.min(100, Math.max(0, progress.percentage)) })
+  })
+  try {
+    await exportCmds.exportPc({
+      enginePath: site.enginePath,
+      exportId,
+      gameName,
+      gamePath: site.projectPath,
+      outputPath,
+      replaceExisting: config.replaceExisting ?? false,
+      runtimePath: config.runtimePath,
+      targetArch: config.targetArch,
+      targetOs: config.targetOs,
+      templatePath: site.templatePath,
+      windowConfig: config.windowConfig,
+    })
+    return outputPath
+  } finally {
+    unlisten()
+  }
+}
+
+async function ensurePcRuntime(targetOs: PcTargetOs, targetArch: PcTargetArch, proxyPrefix?: string): Promise<AbsPath> {
+  return exportCmds.ensurePcRuntime({ proxyPrefix, targetArch, targetOs })
+}
+
 export const exportManager = {
   exportAndroidWebZip,
+  exportPc,
   exportWeb,
+  ensurePcRuntime,
 }

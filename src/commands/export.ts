@@ -21,6 +21,35 @@ export interface AndroidWebExportParams {
   templatePath?: AbsPath
 }
 
+export interface PcWindowConfig {
+  width: number
+  height: number
+  minWidth: number
+  minHeight: number
+  fullScreen: boolean
+  resizable: boolean
+}
+
+export interface PcExportParams {
+  enginePath: AbsPath
+  exportId: string
+  gameName: string
+  gamePath: AbsPath
+  outputPath: AbsPath
+  replaceExisting: boolean
+  runtimePath: AbsPath
+  targetArch: 'x64' | 'arm64'
+  targetOs: 'windows' | 'macos' | 'linux'
+  templatePath?: AbsPath
+  windowConfig: PcWindowConfig
+}
+
+export interface EnsurePcRuntimeParams {
+  targetArch: 'x64' | 'arm64'
+  targetOs: 'windows' | 'macos' | 'linux'
+  proxyPrefix?: string
+}
+
 export interface PublishedAndroidExport {
   contentUri: string
   displayPath: string
@@ -33,6 +62,14 @@ function exportWeb(params: WebExportParams): Promise<void> {
 
 function exportAndroidWebZip(params: AndroidWebExportParams): Promise<void> {
   return safeInvoke('export_android_web_zip', { ...params })
+}
+
+function exportPc(params: PcExportParams): Promise<void> {
+  return safeInvoke('export_pc', { ...params })
+}
+
+function ensurePcRuntime(params: EnsurePcRuntimeParams): Promise<AbsPath> {
+  return safeInvoke('ensure_pc_runtime', { ...params })
 }
 
 function cleanupAndroidWebExport(exportSessionId: string): Promise<void> {
@@ -61,7 +98,9 @@ function sharePublishedAndroidWebExport(contentUri: string): Promise<void> {
 export const exportCmds = {
   cleanupAndroidWebExport,
   cleanupRecoverableAndroidWebExports,
+  ensurePcRuntime,
   exportAndroidWebZip,
+  exportPc,
   exportWeb,
   openPublishedAndroidWebExport,
   publishAndroidWebExport,

@@ -91,6 +91,8 @@ pub fn run() {
             commands::engine::download_official_engine,
             // export
             commands::export::export_web,
+            commands::export::export_pc,
+            commands::export::ensure_pc_runtime,
             commands::android_export::export_android_web_zip,
             commands::android_export::cleanup_android_web_export,
             // project config

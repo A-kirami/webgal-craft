@@ -1,19 +1,28 @@
+import { exists } from '@tauri-apps/plugin-fs'
 import { openPath } from '@tauri-apps/plugin-opener'
+import { arch, platform } from '@tauri-apps/plugin-os'
 
+import { AbsPath } from '~/domain/path'
 import { createAndroidWebExportWorkflow } from '~/features/export/android-web-export-workflow'
 import { desktopDirectoryPicker } from '~/features/resource-import/desktop-directory-picker'
-import { exportManager, resolveWebExportOutputPath } from '~/services/export-manager'
+import {
+  exportManager,
+  resolvePcExportOutputPath,
+  resolveWebExportOutputPath,
+} from '~/services/export-manager'
 import { fromExternalAbsPath } from '~/services/platform/path-boundary'
 import { isAndroidRuntime } from '~/services/platform/runtime'
+import { useGeneralSettingsStore } from '~/stores/general-settings'
 import { AppError } from '~/types/errors'
 import { handleError } from '~/utils/error-handler'
 
 import { useExportElapsedTimer } from './useExportElapsedTimer'
 
 import type { Game } from '~/database/model'
-import type { AbsPath } from '~/domain/path'
+import type { ExportPlatform, ExportProgress, PcTarget, PcTargetArch, PcTargetOs, PcWindowConfig } from '~/services/export-manager'
 
 export type WebExportStatus = 'idle' | 'running' | 'completed' | 'failed'
+export type ExportType = 'web' | 'desktop'
 
 interface UseWebExportDialogOptions {
   android?: boolean
@@ -24,40 +33,84 @@ interface UseWebExportDialogOptions {
   t: (key: string, values?: Record<string, unknown>) => string
 }
 
+export interface ExportTask {
+  elapsedMs?: number
+  outputPath?: AbsPath
+  platform: ExportPlatform
+  progress: number
+  status: WebExportStatus
+  stepKey: string
+}
+
+const DEFAULT_WINDOW_CONFIG: PcWindowConfig = {
+  fullScreen: false,
+  height: 760,
+  minHeight: 600,
+  minWidth: 800,
+  resizable: true,
+  width: 1280,
+}
+
+function currentDevicePcTarget(): PcTarget[] {
+  switch (platform()) {
+    case 'windows': {
+      return ['windows-x64']
+    }
+    case 'linux': {
+      return ['linux-x64']
+    }
+    case 'macos': {
+      if (arch() === 'x86_64') {
+        return ['macos-x64']
+      }
+      if (arch() === 'aarch64') {
+        return ['macos-arm64']
+      }
+      return []
+    }
+    default: {
+      return []
+    }
+  }
+}
+
 export function useWebExportDialog(options: UseWebExportDialogOptions) {
   const android = options.android ?? isAndroidRuntime()
+  const generalSettingsStore = useGeneralSettingsStore()
   const androidWorkflow = createAndroidWebExportWorkflow()
   const currentGame = computed(() => toValue(options.game))
-  const {
-    elapsedMs,
-    reset: resetElapsedTimer,
-    start: startElapsedTimer,
-    stop: stopElapsedTimer,
-  } = $(useExportElapsedTimer())
+  const gameName = computed(() => currentGame.value.metadata.name)
+  const selectedDesktopTargets = ref<PcTarget[]>(currentDevicePcTarget())
+  const windowConfig = ref<PcWindowConfig>({ ...DEFAULT_WINDOW_CONFIG })
+  const exportTasks = ref<ExportTask[]>([])
+  const { elapsedMs, reset: resetElapsedTimer, start: startElapsedTimer, stop: stopElapsedTimer } = useExportElapsedTimer()
 
-  const gameName = $computed(() => currentGame.value.metadata.name)
-  let outputRoot = $ref<AbsPath>()
-  let outputPath = $ref<AbsPath>()
-  let publishedExport = $ref<{ contentUri: string, displayPath: string }>()
-  let progress = $ref(0)
-  let isConfirmingOverwrite = $ref(false)
-  let isSelectingDirectory = $ref(false)
-  let isStartingExport = $ref(false)
-  let status = $ref<WebExportStatus>('idle')
-  let stepKey = $ref('export.progress.ready')
+  const outputRoot = shallowRef<AbsPath>()
+  const publishedExport = shallowRef<{ contentUri: string, displayPath: string }>()
+  const pendingOverwriteConfirmations = shallowRef(0)
+  const isSelectingDirectory = shallowRef(false)
+  const isStartingExport = shallowRef(false)
 
-  const isRunning = $computed(() => status === 'running')
-  const isBusy = $computed(() => isConfirmingOverwrite || isSelectingDirectory || isStartingExport || isRunning)
-  const desktopOutputPreview = $computed(() => outputRoot
-    ? resolveWebExportOutputPath(outputRoot, gameName)
-    : undefined,
-  )
-  const outputPreview = $computed(() => android
-    ? publishedExport?.displayPath ?? options.t('export.androidDestination')
-    : desktopOutputPreview,
-  )
-  const hasOutputTarget = $computed(() => android || outputPreview !== undefined)
-  const canStart = $computed(() => !isBusy && hasOutputTarget)
+  const isRunning = computed(() => exportTasks.value.some(task => task.status === 'running'))
+  const isBusy = computed(() => pendingOverwriteConfirmations.value > 0 || isSelectingDirectory.value || isStartingExport.value || isRunning.value)
+  const outputPreview = computed(() => {
+    if (android) {
+      return publishedExport.value?.displayPath ?? options.t('export.androidDestination')
+    }
+    return outputRoot.value && resolveWebExportOutputPath(outputRoot.value, gameName.value)
+  })
+  const hasOutputTarget = computed(() => android || outputPreview.value !== undefined)
+  const canStart = computed(() => !isBusy.value && hasOutputTarget.value)
+  const hasDesktopTargets = computed(() => selectedDesktopTargets.value.length > 0)
+  const desktopOutputPreview = computed(() => {
+    const target = selectedDesktopTargets.value[0]
+    if (!outputRoot.value || !target) {
+      return
+    }
+    const [targetOs, targetArch] = parsePcTarget(target)
+    const outputPath = resolvePcExportOutputPath(outputRoot.value, gameName.value, targetOs, targetArch)
+    return outputPath && AbsPath.parent(outputPath)
+  })
 
   function configuredOutputRoot(): AbsPath | undefined {
     if (android) {
@@ -67,7 +120,6 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     if (!configuredPath) {
       return
     }
-
     try {
       return fromExternalAbsPath(configuredPath)
     } catch (error) {
@@ -77,15 +129,13 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
 
   function reset(): void {
     resetElapsedTimer()
-    outputRoot = configuredOutputRoot()
-    outputPath = undefined
-    publishedExport = undefined
-    progress = 0
-    isConfirmingOverwrite = false
-    isSelectingDirectory = false
-    isStartingExport = false
-    status = 'idle'
-    stepKey = 'export.progress.ready'
+    outputRoot.value = configuredOutputRoot()
+    selectedDesktopTargets.value = currentDevicePcTarget()
+    publishedExport.value = undefined
+    exportTasks.value = []
+    pendingOverwriteConfirmations.value = 0
+    isSelectingDirectory.value = false
+    isStartingExport.value = false
   }
 
   watch(options.open, (isOpen) => {
@@ -95,179 +145,262 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
   }, { immediate: true })
 
   watch(() => toValue(options.defaultOutputRoot), () => {
-    if (options.open.value && !outputRoot) {
-      outputRoot = configuredOutputRoot()
+    if (options.open.value && !outputRoot.value) {
+      outputRoot.value = configuredOutputRoot()
     }
   })
 
   function handleOpenChange(nextOpen: boolean): void {
-    if (!nextOpen && isBusy) {
+    if (!nextOpen && isBusy.value) {
       return
     }
-
     options.open.value = nextOpen
   }
 
   async function selectOutputRoot(): Promise<void> {
-    if (android || isBusy) {
+    if (android || isBusy.value) {
       return
     }
-
-    isSelectingDirectory = true
+    isSelectingDirectory.value = true
     try {
-      const selected = await desktopDirectoryPicker.selectDirectory(
-        options.t('export.selectDirectory'),
-        outputRoot,
-      )
+      const selected = await desktopDirectoryPicker.selectDirectory(options.t('export.selectDirectory'), outputRoot.value)
       if (selected) {
-        outputRoot = selected
+        outputRoot.value = selected
       }
     } catch (error) {
-      logger.error(`选择 Web 导出目录失败: ${error}`)
+      logger.error(`选择导出目录失败: ${error}`)
       toast.error(options.t('export.selectDirectoryFailed'))
     } finally {
-      isSelectingDirectory = false
+      isSelectingDirectory.value = false
     }
   }
 
-  async function startExport(): Promise<void> {
-    if (!canStart || (!android && !outputRoot)) {
+  function createTask(platform: ExportProgress['platform']): ExportTask {
+    return { platform, progress: 0, status: 'idle', stepKey: 'export.progress.ready' }
+  }
+
+  function selectedPlatforms(selectedPlatform: ExportType | undefined): ExportPlatform[] {
+    if (selectedPlatform === 'web') {
+      return ['web']
+    }
+    if (selectedPlatform === 'desktop') {
+      return selectedDesktopTargets.value
+    }
+    return []
+  }
+
+  function prepareExportTasks(selectedPlatform: ExportType | undefined): void {
+    const platforms = selectedPlatforms(selectedPlatform)
+    exportTasks.value = android
+      ? (selectedPlatform === 'web' ? [createTask('web')] : [])
+      : platforms.map(platform => createTask(platform))
+  }
+
+  function updateTask(platform: ExportProgress['platform'], update: Partial<ExportTask>): void {
+    const task = exportTasks.value.find(item => item.platform === platform)
+    if (task) {
+      Object.assign(task, update)
+    }
+  }
+
+  async function runtimePath(targetOs: PcTargetOs, targetArch: PcTargetArch): Promise<AbsPath> {
+    return exportManager.ensurePcRuntime(targetOs, targetArch, generalSettingsStore.officialEngineDownloadProxy)
+  }
+
+  function desktopOutputPath(root: AbsPath, name: string, targetOs: PcTargetOs, targetArch: PcTargetArch): AbsPath {
+    return resolvePcExportOutputPath(root, name, targetOs, targetArch)!
+  }
+
+  function parsePcTarget(target: PcTarget): [PcTargetOs, PcTargetArch] {
+    switch (target) {
+      case 'windows-x64': {
+        return ['windows', 'x64']
+      }
+      case 'macos-x64': {
+        return ['macos', 'x64']
+      }
+      case 'macos-arm64': {
+        return ['macos', 'arm64']
+      }
+      case 'linux-x64': {
+        return ['linux', 'x64']
+      }
+      default: {
+        const exhaustiveTarget: never = target
+        throw new Error(`不支持的 PC 目标平台: ${exhaustiveTarget}`)
+      }
+    }
+  }
+
+  async function startExport(selectedPlatform: ExportType | undefined): Promise<void> {
+    if (!canStart.value || (!android && !outputRoot.value)) {
+      return
+    }
+    if (android && selectedPlatform !== 'web') {
+      return
+    }
+    const selectedGame = currentGame.value
+    const selectedGameName = gameName.value
+    const selectedOutputRoot = outputRoot.value
+    const failedPlatforms = exportTasks.value
+      .filter(task => task.status === 'failed')
+      .map(task => task.platform)
+    const platforms = failedPlatforms.length > 0
+      ? failedPlatforms
+      : selectedPlatforms(selectedPlatform)
+    if (selectedPlatform === 'desktop' && !hasDesktopTargets.value) {
       return
     }
 
-    const selectedGame = currentGame.value
-    const selectedGameName = gameName
-    const selectedOutputPath = desktopOutputPreview
-    const selectedOutputRoot = outputRoot
+    if (failedPlatforms.length === 0) {
+      prepareExportTasks(selectedPlatform)
+    }
+    startElapsedTimer()
+    isStartingExport.value = true
 
-    async function runExport(replaceExisting: boolean): Promise<void> {
+    const updateProgress = (progress: ExportProgress) => {
+      isStartingExport.value = false
+      updateTask(progress.platform, {
+        progress: progress.percentage,
+        status: 'running',
+        stepKey: progress.step,
+      })
+    }
+    const completeTask = (platform: ExportProgress['platform'], outputPath?: AbsPath) => {
+      updateTask(platform, { elapsedMs: elapsedMs.value, outputPath, progress: 100, status: 'completed', stepKey: 'export.progress.finished' })
+    }
+    const failTask = (platform: ExportProgress['platform'], error: unknown) => {
+      updateTask(platform, { elapsedMs: elapsedMs.value, status: 'failed', stepKey: 'export.progress.failed' })
+      handleError(error, { context: options.t('export.failed') })
+    }
+    const runOne = async (platform: ExportPlatform, replaceExisting: boolean) => {
       if (android) {
-        publishedExport = await androidWorkflow.exportGame({
-          game: selectedGame,
-          gameName: selectedGameName,
-          onProgress: updateProgress,
-        })
+        publishedExport.value = await androidWorkflow.exportGame({ game: selectedGame, gameName: selectedGameName, onProgress: updateProgress })
         return
       }
       if (!selectedOutputRoot) {
         return
       }
-      outputPath = await exportManager.exportWeb({
+      if (platform === 'web') {
+        const outputPath = await exportManager.exportWeb({ game: selectedGame, gameName: selectedGameName, onProgress: updateProgress, outputRoot: selectedOutputRoot, replaceExisting })
+        completeTask(platform, outputPath)
+        return
+      }
+      const [targetOs, targetArch] = parsePcTarget(platform)
+      updateTask(platform, { status: 'running', stepKey: 'export.progress.downloadingRuntime' })
+      const runtimePathForTarget = await runtimePath(targetOs, targetArch)
+      const outputPath = await exportManager.exportPc({
         game: selectedGame,
         gameName: selectedGameName,
+        onProgress: updateProgress,
         outputRoot: selectedOutputRoot,
         replaceExisting,
-        onProgress: updateProgress,
+        runtimePath: runtimePathForTarget,
+        targetArch,
+        targetOs,
+        windowConfig: windowConfig.value,
       })
+      completeTask(platform, outputPath)
     }
-
-    function updateProgress(nextProgress: { percentage: number, step: string }): void {
-      isStartingExport = false
-      status = 'running'
-      progress = nextProgress.percentage
-      stepKey = nextProgress.step
+    const runWithOverwrite = async (platform: ExportPlatform): Promise<boolean> => {
+      const target = platform === 'web' ? undefined : parsePcTarget(platform)
+      const targetPath = selectedOutputRoot && !android
+        ? (platform === 'web' ? resolveWebExportOutputPath(selectedOutputRoot, selectedGameName) : desktopOutputPath(selectedOutputRoot, selectedGameName, target![0], target![1]))
+        : undefined
+      const existingDesktopOutput = platform !== 'web' && targetPath && await exists(targetPath)
+      try {
+        if (existingDesktopOutput) {
+          pendingOverwriteConfirmations.value++
+          let confirmed: boolean
+          try {
+            confirmed = await options.confirmOverwrite(targetPath)
+          } finally {
+            pendingOverwriteConfirmations.value--
+          }
+          if (!confirmed) {
+            return false
+          }
+        }
+        await runOne(platform, Boolean(existingDesktopOutput))
+        return true
+      } catch (error) {
+        if (!(error instanceof AppError) || error.code !== 'TARGET_CONFLICT' || !targetPath) {
+          throw error
+        }
+        pendingOverwriteConfirmations.value++
+        let confirmed: boolean
+        try {
+          confirmed = await options.confirmOverwrite(targetPath)
+        } finally {
+          pendingOverwriteConfirmations.value--
+        }
+        if (!confirmed) {
+          return false
+        }
+        await runOne(platform, true)
+        return true
+      }
     }
-
-    function markCompleted(): void {
-      stopElapsedTimer()
-      isStartingExport = false
-      progress = 100
-      status = 'completed'
-      stepKey = 'export.progress.finished'
-    }
-
-    function markFailed(error: unknown): void {
-      stopElapsedTimer()
-      isStartingExport = false
-      status = 'failed'
-      stepKey = 'export.progress.failed'
-      handleError(error, { context: options.t('export.failed') })
-    }
-
-    outputPath = undefined
-    progress = 0
-    startElapsedTimer()
-    isStartingExport = true
 
     try {
-      await runExport(false)
-      markCompleted()
-    } catch (error) {
-      if (android || !(error instanceof AppError) || error.code !== 'TARGET_CONFLICT' || !selectedOutputPath) {
-        markFailed(error)
-        return
+      const tasksToRun: ExportPlatform[] = android ? ['web'] : platforms
+      for (const platform of tasksToRun) {
+        try {
+          let completed = true
+          if (android) {
+            // 导出任务必须串行执行，避免同时出现多个覆盖确认。
+            // eslint-disable-next-line no-await-in-loop
+            await runOne(platform, false)
+          } else {
+            // eslint-disable-next-line no-await-in-loop
+            completed = await runWithOverwrite(platform)
+          }
+          if (completed) {
+            const task = exportTasks.value.find(item => item.platform === platform)
+            if (task?.status !== 'completed') {
+              completeTask(platform)
+            }
+          }
+        } catch (error) {
+          failTask(platform, error)
+        }
       }
-
-      resetElapsedTimer()
-      isStartingExport = false
-      progress = 0
-      status = 'idle'
-      stepKey = 'export.progress.ready'
-      isConfirmingOverwrite = true
-
-      let confirmed = false
-      try {
-        confirmed = await options.confirmOverwrite(selectedOutputPath)
-      } catch (confirmationError) {
-        markFailed(confirmationError)
-        return
-      } finally {
-        isConfirmingOverwrite = false
-      }
-
-      if (!confirmed) {
-        return
-      }
-
-      startElapsedTimer()
-      isStartingExport = true
-      try {
-        await runExport(true)
-        markCompleted()
-      } catch (replacementError) {
-        markFailed(replacementError)
-      }
+    } finally {
+      stopElapsedTimer()
+      isStartingExport.value = false
+      pendingOverwriteConfirmations.value = 0
     }
   }
 
-  async function openExportDirectory(): Promise<void> {
-    if (android && publishedExport) {
-      try {
-        await androidWorkflow.openPublished(publishedExport.contentUri)
-      } catch (error) {
-        logger.error(`打开 Android Web 导出文件失败: ${error}`)
-        toast.error(options.t('export.openFileFailed'))
-      }
+  async function openExportDirectory(task: ExportTask): Promise<void> {
+    if (android && publishedExport.value) {
+      await androidWorkflow.openPublished(publishedExport.value.contentUri)
       return
     }
-    if (!outputPath) {
+    if (!task.outputPath) {
       return
     }
-
     try {
-      await openPath(outputPath)
+      await openPath(task.outputPath)
     } catch (error) {
-      logger.error(`打开 Web 导出目录失败: ${error}`)
+      logger.error(`打开导出目录失败: ${error}`)
       toast.error(options.t('export.openDirectoryFailed'))
     }
   }
 
   async function shareExport(): Promise<void> {
-    if (!publishedExport) {
-      return
-    }
-    try {
-      await androidWorkflow.sharePublished(publishedExport.contentUri)
-    } catch (error) {
-      logger.error(`分享 Android Web 导出文件失败: ${error}`)
-      toast.error(options.t('export.shareFailed'))
+    if (publishedExport.value) {
+      await androidWorkflow.sharePublished(publishedExport.value.contentUri)
     }
   }
 
-  return $$({
+  return {
     canStart,
+    desktopOutputPreview,
     elapsedMs,
+    exportTasks,
     handleOpenChange,
+    hasDesktopTargets,
     hasOutputTarget,
     isAndroid: android,
     isBusy,
@@ -275,11 +408,11 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     openExportDirectory,
     outputPreview,
     outputRoot,
-    progress,
+    prepareExportTasks,
     selectOutputRoot,
+    selectedDesktopTargets,
     shareExport,
     startExport,
-    status,
-    stepKey,
-  })
+    windowConfig,
+  }
 }

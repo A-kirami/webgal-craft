@@ -80,6 +80,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@iconify-json/lucide": "^1.2.111",
+    "@iconify-json/simple-icons": "^1.2.93",
     "@intlify/eslint-plugin-vue-i18n": "^4.5.1",
     "@intlify/unplugin-vue-i18n": "^11.2.3",
     "@playwright/test": "^1.60.0",

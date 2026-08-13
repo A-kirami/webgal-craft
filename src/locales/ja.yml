@@ -671,15 +671,32 @@ export:
   platformWebDescription: 単独で配信できる静的サイトを書き出します
   platformDesktop: デスクトップ
   platformDesktopDescription: Windows、macOS、Linux の対象を複数選択できます
+  desktopOnly: デスクトップアプリのみ
   platformAndroid: Android
   platformAndroidDescription: Android APK を書き出します
   comingSoon: 近日公開
-  selectPlatformHint: 続行するには、プラットフォームを 1 つ以上選択してください
+  selectPlatformHint: 続行するには、プラットフォームを 1 つ選択してください
   next: 次へ
   previousStep: 前へ
   outputDirectory: 書き出し先フォルダー
   browse: 参照
   finalOutputPath: 最終出力先
+  desktopConfig:
+    title: デスクトップ対象
+    notSelected: デスクトップ対象が選択されていないため、追加設定は不要です
+    targetRequired: 少なくとも 1 つのデスクトップ対象を選択してください
+    window: ウィンドウ
+    width: 幅
+    height: 高さ
+    minWidth: 最小幅
+    minHeight: 最小高さ
+    fullScreen: フルスクリーン
+    resizable: サイズ変更可能
+    targets:
+      windowsX64: Windows x64
+      macosX64: macOS x64
+      macosArm64: macOS Apple Silicon
+      linuxX64: Linux x64
   selectDirectoryHint: 続行するには、書き出し先フォルダーを選択してください
   selectDirectory: 書き出し先フォルダーを選択
   selectDirectoryFailed: 書き出し先フォルダーを選択できませんでした
@@ -690,13 +707,10 @@ export:
   done: 完了
   elapsed:
     total: 所要時間 {seconds} 秒
-    separator: ·
   openDirectory: フォルダーを開く
   openFile: ファイルを開く
-  openFileFailed: 書き出したファイルを開けませんでした
   share: 共有
-  shareFailed: 書き出したファイルを共有できませんでした
-  failed: Web 書き出しに失敗しました
+  failed: 書き出しに失敗しました
   openDirectoryFailed: 書き出し先フォルダーを開けませんでした
   overwrite:
     title: 書き出し先が既に存在します
@@ -704,12 +718,15 @@ export:
     confirm: 上書きする
   progress:
     ready: 書き出しの準備ができました
+    downloadingRuntime: デスクトップランタイムをダウンロード中...
     preparing: 書き出しを準備しています...
     copyingEngine: エンジンファイルをコピーしています...
     copyingGame: ゲームリソースをコピーしています...
     copyingIcons: アイコンをコピーしています...
     updatingManifest: マニフェストを更新しています...
-    compressing: ZIP を作成しています...
+    packingResources: デスクトップ用リソースをパッケージ中...
+    copyingRuntime: デスクトップランタイムをコピー中...
+    writingConfig: デスクトップ設定を生成中...
     finished: 書き出しが完了しました
     failed: 書き出しに失敗しました
 
@@ -1311,8 +1328,8 @@ settings:
   network:
     label: ネットワーク
     officialEngineDownloadProxy:
-      label: GitHub ダウンロードプロキシ
-      description: 公式 WebGAL エンジンのダウンロードに使う HTTPS プロキシプレフィックスです。空欄の場合はシステムプロキシまたは直接接続を使用します。
+      label: ダウンロードプロキシ
+      description: ダウンロードに使用する HTTPS プロキシプレフィックスです。空欄の場合はシステムプロキシまたは直接接続を使用します。
       placeholder: https://proxy.example/
   edit:
     general: 一般

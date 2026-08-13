@@ -4,6 +4,7 @@ import { page } from 'vitest/browser'
 import { defineComponent, h } from 'vue'
 
 import {
+  createBrowserCheckboxStub,
   createBrowserClickStub,
   createBrowserContainerStub,
   createBrowserInputStub,
@@ -18,24 +19,43 @@ import ExportDialog from './ExportDialog.vue'
 
 const {
   exportWebMock,
+  exportPcMock,
+  ensurePcRuntimeMock,
   androidExportMock,
   androidOpenMock,
   androidShareMock,
   confirmExportOverwriteMock,
+  existsMock,
   openDialogMock,
   openPathMock,
   toastErrorMock,
   isAndroidRuntimeMock,
+  osArchMock,
+  osPlatformMock,
 } = vi.hoisted(() => ({
   androidExportMock: vi.fn(),
   androidOpenMock: vi.fn(),
   androidShareMock: vi.fn(),
   exportWebMock: vi.fn(),
+  exportPcMock: vi.fn(),
+  ensurePcRuntimeMock: vi.fn(),
   confirmExportOverwriteMock: vi.fn(),
+  existsMock: vi.fn(),
   openDialogMock: vi.fn(),
   openPathMock: vi.fn(),
   toastErrorMock: vi.fn(),
   isAndroidRuntimeMock: vi.fn(),
+  osArchMock: vi.fn(),
+  osPlatformMock: vi.fn(),
+}))
+
+vi.mock('@tauri-apps/plugin-os', () => ({
+  arch: osArchMock,
+  platform: osPlatformMock,
+}))
+
+vi.mock('@tauri-apps/plugin-fs', () => ({
+  exists: existsMock,
 }))
 
 vi.mock('~/services/platform/runtime', () => ({
@@ -68,8 +88,11 @@ vi.mock('~/features/export/confirmExportOverwrite', () => ({
 
 vi.mock('~/services/export-manager', () => ({
   exportManager: {
+    ensurePcRuntime: ensurePcRuntimeMock,
+    exportPc: exportPcMock,
     exportWeb: exportWebMock,
   },
+  resolvePcExportOutputPath: (outputRoot: string, gameName: string, targetOs: string, targetArch: string) => `${outputRoot}/${gameName}/${targetOs}-${targetArch}`,
   resolveWebExportOutputPath: (outputRoot: string, gameName: string) => `${outputRoot}/${gameName}/web`,
 }))
 
@@ -102,6 +125,7 @@ const ProgressStub = defineComponent({
 
 const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
+  Checkbox: createBrowserCheckboxStub('StubCheckbox'),
   Dialog: createBrowserContainerStub('StubDialog'),
   DialogContent: createBrowserContainerStub('StubDialogContent'),
   DialogDescription: createBrowserContainerStub('StubDialogDescription'),
@@ -111,13 +135,14 @@ const globalStubs = {
   Input: createBrowserInputStub('StubInput'),
   Label: createBrowserContainerStub('StubLabel', 'label'),
   Progress: ProgressStub,
+  Switch: createBrowserCheckboxStub('StubSwitch'),
   Tooltip: createBrowserContainerStub('StubTooltip'),
   TooltipContent: createBrowserContainerStub('StubTooltipContent'),
   TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
   TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
 }
 
-function renderExportDialog(options: { exportSavePath?: string } = {}) {
+function renderExportDialog(options: { exportSavePath?: string, localizedI18n?: boolean } = {}) {
   const pinia = createPinia()
   useStorageSettingsStore(pinia).exportSavePath = options.exportSavePath ?? '/exports'
 
@@ -131,7 +156,7 @@ function renderExportDialog(options: { exportSavePath?: string } = {}) {
       'onUpdate:open': vi.fn(),
     },
     browser: {
-      i18nMode: 'lite',
+      i18nMode: options.localizedI18n ? 'localized' : 'lite',
       pinia,
     },
     global: {
@@ -141,11 +166,12 @@ function renderExportDialog(options: { exportSavePath?: string } = {}) {
 }
 
 async function navigateToConfigureStep(): Promise<void> {
+  await page.getByRole('button', { name: /export\.platformWeb/ }).click()
   await page.getByRole('button', { name: 'export.next' }).click()
 }
 
 async function navigateToExportStep(): Promise<void> {
-  await page.getByRole('button', { name: 'export.next' }).click()
+  await navigateToConfigureStep()
   await page.getByRole('button', { name: 'export.next' }).click()
 }
 
@@ -153,6 +179,8 @@ describe('ExportDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     exportWebMock.mockResolvedValue(AbsPath.from('/exports/Demo Game/web'))
+    exportPcMock.mockResolvedValue(AbsPath.from('/exports/Demo Game/windows-x64'))
+    ensurePcRuntimeMock.mockResolvedValue(AbsPath.from('/app-data/cache/runtime.exe'))
     androidExportMock.mockResolvedValue({
       kind: 'published',
       contentUri: 'content://media/external/downloads/42',
@@ -161,26 +189,26 @@ describe('ExportDialog', () => {
     androidOpenMock.mockResolvedValue(undefined)
     androidShareMock.mockResolvedValue(undefined)
     isAndroidRuntimeMock.mockReturnValue(false)
+    osArchMock.mockReturnValue('x86_64')
+    osPlatformMock.mockReturnValue('windows')
     confirmExportOverwriteMock.mockResolvedValue(true)
+    existsMock.mockResolvedValue(false)
     openDialogMock.mockResolvedValue('/selected-exports')
     openPathMock.mockResolvedValue(undefined)
   })
 
-  it('展示所有导出平台，并禁用尚未支持的平台', async () => {
+  it('展示所有导出平台且默认不选择任何平台', async () => {
     renderExportDialog()
 
-    await expect.element(page.getByRole('button', { name: /export\.platformWeb/ })).toBeEnabled()
-    await expect.element(page.getByRole('button', { name: /export\.platformDesktop/ })).toBeDisabled()
+    await expect.element(page.getByRole('button', { name: /export\.platformWeb/ })).toHaveAttribute('aria-pressed', 'false')
+    await expect.element(page.getByRole('button', { name: /export\.platformDesktop/ })).toHaveAttribute('aria-pressed', 'false')
     await expect.element(page.getByRole('button', { name: /export\.platformAndroid/ })).toBeDisabled()
-    expect(page.getByText('export.comingSoon').elements()).toHaveLength(2)
+    await expect.element(page.getByRole('button', { name: 'export.next' })).toBeDisabled()
+    expect(page.getByText('export.comingSoon').elements()).toHaveLength(1)
   })
 
-  it('取消选中所有平台时提示至少选择一个平台并禁用下一步', async () => {
+  it('选择平台后移除提示并允许进入下一步', async () => {
     renderExportDialog()
-
-    await expect.element(page.getByText('export.selectPlatformHint')).not.toBeInTheDocument()
-
-    await page.getByRole('button', { name: /export\.platformWeb/ }).click()
 
     await expect.element(page.getByText('export.selectPlatformHint')).toBeInTheDocument()
     await expect.element(page.getByRole('button', { name: 'export.next' })).toBeDisabled()
@@ -188,6 +216,19 @@ describe('ExportDialog', () => {
     await page.getByRole('button', { name: /export\.platformWeb/ }).click()
     await expect.element(page.getByText('export.selectPlatformHint')).not.toBeInTheDocument()
     await expect.element(page.getByRole('button', { name: 'export.next' })).toBeEnabled()
+  })
+
+  it('平台类型只能选择一项', async () => {
+    renderExportDialog()
+
+    const webPlatform = page.getByRole('button', { name: /export\.platformWeb/ })
+    const desktopPlatform = page.getByRole('button', { name: /export\.platformDesktop/ })
+    await webPlatform.click()
+    await expect.element(webPlatform).toHaveAttribute('aria-pressed', 'true')
+
+    await desktopPlatform.click()
+    await expect.element(webPlatform).toHaveAttribute('aria-pressed', 'false')
+    await expect.element(desktopPlatform).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('Web 配置步骤可正常导航，并允许返回已到达步骤', async () => {
@@ -199,6 +240,7 @@ describe('ExportDialog', () => {
     await expect.element(exportStep).toBeDisabled()
     await expect.element(page.getByText('export.steps.notRequired')).not.toBeInTheDocument()
 
+    await page.getByRole('button', { name: /export\.platformWeb/ }).click()
     await page.getByRole('button', { name: 'export.next' }).click()
 
     await expect.element(page.getByLabelText('export.outputDirectory')).toBeInTheDocument()
@@ -246,6 +288,11 @@ describe('ExportDialog', () => {
 
     await page.getByRole('button', { name: 'export.next' }).click()
 
+    expect(page.getByTestId('export-card').elements()).toHaveLength(1)
+    await expect.element(page.getByText('export.platformWeb')).toBeInTheDocument()
+    await expect.element(page.getByText('export.progress.ready')).toBeInTheDocument()
+    expect(exportWebMock).not.toHaveBeenCalled()
+
     await page.getByRole('button', { name: 'export.start' }).click()
 
     await vi.waitFor(() => {
@@ -263,27 +310,16 @@ describe('ExportDialog', () => {
 
     completeExport?.()
     await expect.element(page.getByText('export.progress.finished')).toBeInTheDocument()
-    await expect.element(page.getByText(/export\.elapsed\.total/)).toBeInTheDocument()
     await expect.element(page.getByText('export.status.completed')).not.toBeInTheDocument()
     const platformName = await page.getByText('export.platformWeb').element() as HTMLElement
     const exportLog = await page.getByText('export.progress.finished').element() as HTMLElement
-    const logSummary = await page.getByTestId('export-log-summary').element() as HTMLElement
-    const logSummaryText = logSummary.textContent ?? ''
     expect(exportLog.getBoundingClientRect().top).toBeGreaterThanOrEqual(platformName.getBoundingClientRect().bottom)
-    expect(logSummary.classList).toContain('leading-4')
-    expect(exportLog.parentElement).toBe(logSummary)
-    expect(logSummaryText.indexOf('export.progress.finished')).toBeLessThan(logSummaryText.indexOf('export.elapsed.total'))
     const exportCard = await page.getByTestId('export-card').element() as HTMLElement
-    const platformIcon = await page.getByTestId('export-platform-icon').element() as HTMLElement
     expect(exportCard.classList).toContain('border-emerald-500/40')
-    expect(platformIcon.classList).toContain('bg-emerald-500/10')
-    expect(platformIcon.classList).toContain('text-emerald-600')
     expect(progress.classList).toContain('bg-emerald-500')
     const exportStep = await page.getByRole('button', { name: /export\.steps\.export/ }).element() as HTMLButtonElement
     expect(exportStep.querySelector('svg')).not.toBeNull()
     await expect.element(page.getByRole('button', { name: 'common.close' })).not.toBeInTheDocument()
-    const footer = await page.getByTestId('export-dialog-footer').element() as HTMLElement
-    expect(footer.classList).toContain('min-h-9')
     await expect.element(page.getByRole('button', { name: 'export.done' })).toBeInTheDocument()
     expect(progress.value).toBe(100)
 
@@ -377,12 +413,8 @@ describe('ExportDialog', () => {
       expect(toastErrorMock).toHaveBeenCalledWith('export.failed: disk full')
     })
     await expect.element(page.getByText('export.progress.failed')).toBeInTheDocument()
-    await expect.element(page.getByText(/export\.elapsed\.total/)).toBeInTheDocument()
     const exportCard = await page.getByTestId('export-card').element() as HTMLElement
-    const platformIcon = await page.getByTestId('export-platform-icon').element() as HTMLElement
     expect(exportCard.classList).toContain('border-destructive/40')
-    expect(platformIcon.classList).toContain('bg-destructive/10')
-    expect(platformIcon.classList).toContain('text-destructive')
     const progress = await page.getByRole('progressbar').element() as HTMLProgressElement
     expect(progress.classList).toContain('bg-destructive')
     const exportStep = await page.getByRole('button', { name: /export\.steps\.export/ }).element() as HTMLButtonElement
@@ -430,9 +462,7 @@ describe('ExportDialog', () => {
     await vi.waitFor(() => {
       expect(exportWebMock).toHaveBeenCalledOnce()
     })
-    const exportLog = await page.getByTestId('export-log-summary').element() as HTMLElement
-    expect(exportLog.textContent).toContain('export.progress.ready')
-    expect(exportLog.textContent).not.toContain('export.progress.preparing')
+    await expect.element(page.getByText('export.progress.ready')).toBeInTheDocument()
     expect(startButton.disabled).toBe(true)
 
     startButton.click()
@@ -477,7 +507,6 @@ describe('ExportDialog', () => {
 
     await vi.waitFor(() => expect(androidExportMock).toHaveBeenCalledOnce())
     await expect.element(page.getByText('export.progress.finished')).toBeInTheDocument()
-    await expect.element(page.getByText('Downloads/WebGALCraft/exports/Demo_Game-web.zip')).toBeInTheDocument()
     const openFileButton = await page.getByRole('button', { name: 'export.openFile' }).element() as HTMLButtonElement
     const shareButton = await page.getByRole('button', { name: 'export.share' }).element() as HTMLButtonElement
     openFileButton.click()
@@ -489,5 +518,186 @@ describe('ExportDialog', () => {
     })
     expect(openPathMock).not.toHaveBeenCalled()
     expect(confirmExportOverwriteMock).not.toHaveBeenCalled()
+  })
+
+  it('Android 保持 Web 导出可选但禁用桌面端', async () => {
+    isAndroidRuntimeMock.mockReturnValue(true)
+    renderExportDialog()
+
+    await expect.element(page.getByRole('button', { name: /export\.platformWeb/ })).toBeEnabled()
+    await expect.element(page.getByRole('button', { name: /export\.platformDesktop/ })).toBeDisabled()
+    await expect.element(page.getByText('export.desktopOnly')).toBeInTheDocument()
+  })
+
+  it('桌面端为每个选中的目标独立下载运行时并导出', async () => {
+    renderExportDialog({ localizedI18n: true })
+
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('checkbox', { name: 'macOS x64' }).click()
+    await expect.element(page.getByText('最终输出位置: /exports/Demo Game')).toBeInTheDocument()
+
+    await page.getByRole('button', { name: '下一步' }).click()
+    expect(page.getByTestId('export-card').elements()).toHaveLength(2)
+    await expect.element(page.getByText('Windows x64')).toBeInTheDocument()
+    await expect.element(page.getByText('macOS x64')).toBeInTheDocument()
+    const progressCards = page.getByTestId('export-card').elements()
+    expect(progressCards[0].querySelector('.i-simple-icons-windows')).not.toBeNull()
+    expect(progressCards[1].querySelector('.i-simple-icons-apple')).not.toBeNull()
+    expect(exportPcMock).not.toHaveBeenCalled()
+    await page.getByRole('button', { name: '开始导出' }).click()
+
+    await vi.waitFor(() => {
+      expect(ensurePcRuntimeMock).toHaveBeenCalledTimes(2)
+      expect(exportPcMock).toHaveBeenCalledTimes(2)
+    })
+    expect(ensurePcRuntimeMock.mock.calls).toEqual(expect.arrayContaining([
+      ['windows', 'x64', ''],
+      ['macos', 'x64', ''],
+    ]))
+    expect(exportPcMock.mock.calls.map(([config]) => [config.targetOs, config.targetArch])).toEqual(expect.arrayContaining([
+      ['windows', 'x64'],
+      ['macos', 'x64'],
+    ]))
+    expect(exportPcMock.mock.calls.every(([config]) => config.windowConfig.height === 760)).toBe(true)
+  })
+
+  it('桌面端存在目标目录时在下载运行时前确认覆盖', async () => {
+    existsMock.mockResolvedValue(true)
+    let confirmOverwrite: (() => void) | undefined
+    confirmExportOverwriteMock.mockImplementationOnce(() => new Promise<boolean>((resolve) => {
+      confirmOverwrite = () => resolve(true)
+    }))
+    renderExportDialog({ localizedI18n: true })
+
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('button', { name: '开始导出' }).click()
+
+    await vi.waitFor(() => {
+      expect(confirmExportOverwriteMock).toHaveBeenCalledWith(
+        '/exports/Demo Game/windows-x64',
+        expect.any(Function),
+      )
+    })
+    expect(ensurePcRuntimeMock).not.toHaveBeenCalled()
+
+    confirmOverwrite?.()
+    await vi.waitFor(() => {
+      expect(ensurePcRuntimeMock).toHaveBeenCalledOnce()
+      expect(exportPcMock).toHaveBeenCalledWith(expect.objectContaining({ replaceExisting: true }))
+    })
+  })
+
+  it('重试仅重新导出失败的桌面目标', async () => {
+    exportPcMock.mockImplementation(config => config.targetOs === 'windows'
+      ? Promise.resolve(AbsPath.from('/exports/Demo Game/windows-x64'))
+      : Promise.reject(new Error('disk full')))
+    renderExportDialog({ localizedI18n: true })
+
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('checkbox', { name: 'macOS x64' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('button', { name: '开始导出' }).click()
+
+    await expect.element(page.getByRole('button', { name: '重新导出' })).toBeEnabled()
+    exportPcMock.mockResolvedValue(AbsPath.from('/exports/Demo Game/macos-x64'))
+    await page.getByRole('button', { name: '重新导出' }).click()
+
+    await vi.waitFor(() => {
+      expect(exportPcMock.mock.calls.map(([config]) => config.targetOs)).toEqual([
+        'windows',
+        'macos',
+        'macos',
+      ])
+    })
+  })
+
+  it('桌面目标按顺序导出', async () => {
+    let completeWindows: (() => void) | undefined
+    exportPcMock.mockImplementation(config => new Promise<AbsPath>((resolve) => {
+      if (config.targetOs === 'windows') {
+        completeWindows = () => resolve(AbsPath.from('/exports/Demo Game/windows-x64'))
+      }
+    }))
+    renderExportDialog({ localizedI18n: true })
+
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('checkbox', { name: 'macOS x64' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('button', { name: '开始导出' }).click()
+    await vi.waitFor(() => expect(exportPcMock).toHaveBeenCalledOnce())
+    expect(exportPcMock.mock.calls[0][0].targetOs).toBe('windows')
+
+    completeWindows?.()
+    await vi.waitFor(() => {
+      expect(exportPcMock.mock.calls.map(([config]) => config.targetOs)).toEqual([
+        'windows',
+        'macos',
+      ])
+    })
+  })
+
+  it('桌面目标以横排图标卡片展示', async () => {
+    renderExportDialog({ localizedI18n: true })
+
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+
+    const targetGrid = await page.getByTestId('desktop-target-grid').element() as HTMLElement
+    expect(targetGrid.classList).toContain('sm:grid-cols-4')
+    const windowsTarget = await page.getByRole('checkbox', { name: 'Windows x64' }).element() as HTMLInputElement
+    expect(windowsTarget.classList).toContain('sr-only')
+    expect(windowsTarget.closest('label')?.classList).toContain('grid-rows-[2rem_1.5rem]')
+    expect(targetGrid.querySelector('.i-simple-icons-windows')).not.toBeNull()
+    expect(targetGrid.querySelector('.i-simple-icons-linux')).not.toBeNull()
+    expect(targetGrid.querySelectorAll('.i-simple-icons-apple')).toHaveLength(2)
+  })
+
+  it('窗口尺寸输入始终保持有效且不小于最小尺寸', async () => {
+    renderExportDialog({ localizedI18n: true })
+
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    const width = page.getByRole('spinbutton', { name: '宽度', exact: true })
+    const minWidth = page.getByRole('spinbutton', { name: '最小宽度', exact: true })
+
+    await width.fill('640')
+    await expect.element(minWidth).toHaveValue(640)
+    await width.fill('')
+    await expect.element(width).toHaveValue(1)
+    await minWidth.fill('900')
+
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('button', { name: '开始导出' }).click()
+    await vi.waitFor(() => {
+      expect(exportPcMock).toHaveBeenCalledWith(expect.objectContaining({
+        windowConfig: expect.objectContaining({ minWidth: 1, width: 1 }),
+      }))
+    })
+  })
+
+  it.each([
+    { arch: 'x86_64', platform: 'windows', target: 'Windows x64' },
+    { arch: 'x86_64', platform: 'linux', target: 'Linux x64' },
+    { arch: 'x86_64', platform: 'macos', target: 'macOS x64' },
+    { arch: 'aarch64', platform: 'macos', target: 'macOS Apple Silicon' },
+  ])('桌面端根据 $platform/$arch 预选 $target', async ({ arch, platform, target }) => {
+    osArchMock.mockReturnValue(arch)
+    osPlatformMock.mockReturnValue(platform)
+    renderExportDialog({ localizedI18n: true })
+
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+
+    await expect.element(page.getByRole('checkbox', { name: target })).toBeChecked()
+    const otherTargets = ['Windows x64', 'macOS x64', 'macOS Apple Silicon', 'Linux x64']
+      .filter(label => label !== target)
+    await Promise.all(otherTargets.map(label => (
+      expect.element(page.getByRole('checkbox', { name: label })).not.toBeChecked()
+    )))
   })
 })
