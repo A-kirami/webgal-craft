@@ -680,6 +680,22 @@ export:
   outputDirectory: 匯出目錄
   browse: 瀏覽
   finalOutputPath: 最終輸出位置
+  desktopConfig:
+    title: 桌面端目標
+    notSelected: 未選擇桌面端，不需要額外設定
+    targetRequired: 請至少選擇一個桌面端目標
+    window: 視窗
+    width: 寬度
+    height: 高度
+    minWidth: 最小寬度
+    minHeight: 最小高度
+    fullScreen: 全螢幕
+    resizable: 可調整大小
+    targets:
+      windowsX64: Windows x64
+      macosX64: macOS x64
+      macosArm64: macOS Apple Silicon
+      linuxX64: Linux x64
   selectDirectoryHint: 請先選擇匯出目錄以繼續
   selectDirectory: 選擇匯出目錄
   selectDirectoryFailed: 無法選擇匯出目錄
@@ -690,12 +706,9 @@ export:
   done: 完成
   elapsed:
     total: 耗時 {seconds} 秒
-    separator: ·
   openDirectory: 開啟目錄
   openFile: 開啟檔案
-  openFileFailed: 無法開啟匯出檔案
   share: 分享
-  shareFailed: 無法分享匯出檔案
   failed: Web 匯出失敗
   openDirectoryFailed: 無法開啟匯出目錄
   overwrite:
@@ -704,12 +717,15 @@ export:
     confirm: 覆蓋匯出
   progress:
     ready: 等待開始匯出
+    downloadingRuntime: 正在下載桌面執行時...
     preparing: 正在準備匯出...
     copyingEngine: 正在複製引擎檔案...
     copyingGame: 正在複製遊戲資源...
     copyingIcons: 正在複製圖示...
     updatingManifest: 正在更新資訊清單...
-    compressing: 正在產生 ZIP...
+    packingResources: 正在打包桌面資源...
+    copyingRuntime: 正在複製桌面執行時...
+    writingConfig: 正在產生桌面設定...
     finished: 匯出完成
     failed: 匯出失敗
 
@@ -1311,8 +1327,8 @@ settings:
   network:
     label: 網路
     officialEngineDownloadProxy:
-      label: GitHub 下載代理
-      description: 可選的官方 WebGAL 引擎 HTTPS 下載代理前綴。留空則使用系統代理或直接連線。
+      label: 下載代理
+      description: 可選的 HTTPS 下載代理前綴。留空則使用系統代理或直接連線。
       placeholder: https://proxy.example/
   edit:
     general: 通用

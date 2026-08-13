@@ -2,13 +2,13 @@
 import { Check, Globe2, Monitor, Smartphone } from '@lucide/vue'
 
 interface Props {
-  selected: boolean
+  selectedPlatform?: 'web' | 'desktop'
   disabled?: boolean
 }
 
 defineProps<Props>()
 const emit = defineEmits<{
-  toggle: []
+  select: [platform: 'web' | 'desktop']
 }>()
 </script>
 
@@ -17,10 +17,10 @@ const emit = defineEmits<{
     <button
       type="button"
       class="p-3 text-left border rounded-md flex gap-3 transition-colors items-center relative disabled:opacity-60 disabled:cursor-not-allowed"
-      :class="selected ? 'border-primary bg-accent/50' : 'hover:bg-accent/40'"
+      :class="selectedPlatform === 'web' ? 'border-primary bg-accent/50' : 'hover:bg-accent/40'"
       :disabled="disabled"
-      :aria-pressed="selected"
-      @click="emit('toggle')"
+      :aria-pressed="selectedPlatform === 'web'"
+      @click="emit('select', 'web')"
     >
       <Globe2 class="shrink-0 size-5" aria-hidden="true" />
       <div class="flex-1 min-w-0">
@@ -33,7 +33,7 @@ const emit = defineEmits<{
       </div>
       <Check
         class="text-primary shrink-0 size-4 transition-opacity"
-        :class="selected ? 'opacity-100' : 'opacity-0'"
+        :class="selectedPlatform === 'web' ? 'opacity-100' : 'opacity-0'"
         aria-hidden="true"
       />
     </button>
@@ -41,7 +41,10 @@ const emit = defineEmits<{
     <button
       type="button"
       class="p-3 text-left border rounded-md flex gap-3 items-center relative disabled:opacity-50 disabled:cursor-not-allowed"
-      disabled
+      :disabled="disabled"
+      :aria-pressed="selectedPlatform === 'desktop'"
+      :class="selectedPlatform === 'desktop' ? 'border-primary bg-accent/50' : 'hover:bg-accent/40'"
+      @click="emit('select', 'desktop')"
     >
       <Monitor class="shrink-0 size-5" aria-hidden="true" />
       <div class="flex-1 min-w-0">
@@ -52,9 +55,11 @@ const emit = defineEmits<{
           {{ $t('export.platformDesktopDescription') }}
         </div>
       </div>
-      <Badge variant="secondary" class="shrink-0">
-        {{ $t('export.comingSoon') }}
-      </Badge>
+      <Check
+        class="text-primary shrink-0 size-4 transition-opacity"
+        :class="selectedPlatform === 'desktop' ? 'opacity-100' : 'opacity-0'"
+        aria-hidden="true"
+      />
     </button>
 
     <button

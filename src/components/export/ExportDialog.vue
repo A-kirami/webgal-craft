@@ -8,6 +8,7 @@ import { useWebExportDialog } from '~/features/export/useWebExportDialog'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 
 import type { Game } from '~/database/model'
+import type { ExportTask, ExportType } from '~/features/export/useWebExportDialog'
 
 interface Props {
   game: Game
@@ -16,23 +17,24 @@ interface Props {
 const props = defineProps<Props>()
 const open = defineModel<boolean>('open', { default: false })
 const { locale, t } = useI18n()
-const storageSettingsStore = useStorageSettingsStore()
-const { exportSavePath } = storeToRefs(storageSettingsStore)
+const { exportSavePath } = storeToRefs(useStorageSettingsStore())
 
-const steps = $computed(() => [
+const steps = computed(() => [
   { step: 1, label: t('export.steps.platform') },
   { step: 2, label: t('export.steps.configure') },
   { step: 3, label: t('export.steps.export') },
 ])
-
-let currentStep = $ref(1)
-let furthestStep = $ref(1)
-let isWebSelected = $ref(true)
+const currentStep = shallowRef(1)
+const furthestStep = shallowRef(1)
+const selectedPlatform = shallowRef<ExportType>()
 
 const {
   canStart,
+  desktopOutputPreview,
   elapsedMs,
+  exportTasks,
   handleOpenChange,
+  hasDesktopTargets,
   hasOutputTarget,
   isAndroid,
   isBusy,
@@ -40,110 +42,94 @@ const {
   openExportDirectory,
   outputPreview,
   outputRoot,
-  progress,
+  prepareExportTasks,
   selectOutputRoot,
+  selectedDesktopTargets,
   shareExport,
   startExport,
-  status,
-  stepKey,
-} = $(useWebExportDialog({
+  windowConfig,
+} = useWebExportDialog({
   confirmOverwrite: outputPath => confirmExportOverwrite(outputPath, t),
   defaultOutputRoot: exportSavePath,
   game: () => props.game,
   open,
   t,
-}))
-const elapsedLabel = $computed(() => {
-  if (elapsedMs === undefined || status === 'idle' || status === 'running') {
-    return
-  }
-
-  const seconds = formatExportElapsedSeconds(
-    Math.max(0.1, elapsedMs / 1000),
-    toValue(locale),
-  )
-  return t('export.elapsed.total', { seconds })
-})
-const exportCardStateClass = $computed(() => {
-  if (status === 'completed') {
-    return 'border-emerald-500/40'
-  }
-  if (status === 'failed') {
-    return 'border-destructive/40'
-  }
-  return ''
-})
-const exportPlatformIconStateClass = $computed(() => {
-  if (status === 'completed') {
-    return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-  }
-  if (status === 'failed') {
-    return 'border-destructive/30 bg-destructive/10 text-destructive'
-  }
-  return 'bg-muted/40'
-})
-const exportProgressIndicatorClass = $computed(() => {
-  if (status === 'completed') {
-    return 'bg-emerald-500 duration-200'
-  }
-  if (status === 'failed') {
-    return 'bg-destructive duration-200'
-  }
-  return ''
 })
 
 watch(open, (isOpen) => {
-  if (isOpen) {
-    currentStep = 1
-    furthestStep = 1
-    isWebSelected = true
+  if (!isOpen) {
+    return
   }
+  currentStep.value = 1
+  furthestStep.value = 1
+  selectedPlatform.value = undefined
 }, { immediate: true })
 
+const selectedPlatformValid = computed(() => selectedPlatform.value === 'web' || (selectedPlatform.value === 'desktop' && hasDesktopTargets.value))
+const canAdvance = computed(() => currentStep.value === 1 ? selectedPlatformValid.value : hasOutputTarget.value)
+const hasFinishedTasks = computed(() => exportTasks.value.length > 0
+  && !isBusy.value
+  && exportTasks.value.every(task => task.status === 'completed' || task.status === 'failed'))
+const hasFailedTasks = computed(() => exportTasks.value.some(task => task.status === 'failed'))
+
 function isStepDisabled(step: number): boolean {
-  if (isBusy || status === 'completed') {
-    return step !== currentStep
+  if (isBusy.value || exportTasks.value.some(task => task.status === 'completed')) {
+    return step !== currentStep.value
   }
-  if (step > furthestStep) {
+  if (step > furthestStep.value) {
     return true
   }
   if (step === 2) {
-    return !isWebSelected
+    return !selectedPlatformValid.value
   }
-  if (step === 3) {
-    return !hasOutputTarget
-  }
-  return false
+  return step === 3 && !hasOutputTarget.value
 }
 
 function isStepComplete(step: number): boolean {
-  return currentStep > step || (step === steps.length && status === 'completed')
+  return currentStep.value > step || (step === steps.value.length && exportTasks.value.every(task => task.status === 'completed') && exportTasks.value.length > 0)
 }
 
 function handleStepChange(step: number | undefined): void {
-  if (step === undefined || isStepDisabled(step)) {
-    return
+  if (step !== undefined && !isStepDisabled(step)) {
+    if (step === 3) {
+      prepareExportTasks(selectedPlatform.value)
+    }
+    currentStep.value = step
   }
-
-  currentStep = step
 }
 
 function goToNextStep(): void {
-  if (currentStep >= steps.length) {
-    return
-  }
-
-  currentStep++
-  furthestStep = Math.max(furthestStep, currentStep)
-}
-
-function goToPreviousStep(): void {
-  if (currentStep > 1) {
-    currentStep--
+  currentStep.value++
+  furthestStep.value = Math.max(furthestStep.value, currentStep.value)
+  if (currentStep.value === 3) {
+    prepareExportTasks(selectedPlatform.value)
   }
 }
 
-function progressLabel(key: string): string {
+function taskLabel(task: ExportTask): string {
+  switch (task.platform) {
+    case 'web': {
+      return t('export.platformWeb')
+    }
+    case 'windows-x64': {
+      return t('export.desktopConfig.targets.windowsX64')
+    }
+    case 'macos-x64': {
+      return t('export.desktopConfig.targets.macosX64')
+    }
+    case 'macos-arm64': {
+      return t('export.desktopConfig.targets.macosArm64')
+    }
+    case 'linux-x64': {
+      return t('export.desktopConfig.targets.linuxX64')
+    }
+    default: {
+      return t('export.platformDesktop')
+    }
+  }
+}
+
+function progressLabel(key: ExportTask['stepKey']): string {
   switch (key) {
     case 'export.progress.preparing': {
       return t('export.progress.preparing')
@@ -160,8 +146,17 @@ function progressLabel(key: string): string {
     case 'export.progress.updatingManifest': {
       return t('export.progress.updatingManifest')
     }
-    case 'export.progress.compressing': {
-      return t('export.progress.compressing')
+    case 'export.progress.packingResources': {
+      return t('export.progress.packingResources')
+    }
+    case 'export.progress.downloadingRuntime': {
+      return t('export.progress.downloadingRuntime')
+    }
+    case 'export.progress.copyingRuntime': {
+      return t('export.progress.copyingRuntime')
+    }
+    case 'export.progress.writingConfig': {
+      return t('export.progress.writingConfig')
     }
     case 'export.progress.finished': {
       return t('export.progress.finished')
@@ -175,10 +170,33 @@ function progressLabel(key: string): string {
   }
 }
 
-const startLabel = $computed(() => status === 'failed'
-  ? t('export.retry')
-  : t('export.start'),
-)
+function elapsedLabel(task: ExportTask): string | undefined {
+  const duration = task.status === 'running' ? elapsedMs.value : task.elapsedMs
+  if (duration === undefined || duration < 3000) {
+    return
+  }
+  return t('export.elapsed.total', { seconds: formatExportElapsedSeconds(duration / 1000, toValue(locale)) })
+}
+
+function taskCardClass(task: ExportTask): string {
+  if (task.status === 'completed') {
+    return 'border-emerald-500/40'
+  }
+  if (task.status === 'failed') {
+    return 'border-destructive/40'
+  }
+  return ''
+}
+
+function progressIndicatorClass(task: ExportTask): string {
+  if (task.status === 'completed') {
+    return 'bg-emerald-500 duration-200'
+  }
+  if (task.status === 'failed') {
+    return 'bg-destructive duration-200'
+  }
+  return ''
+}
 </script>
 
 <template>
@@ -186,17 +204,10 @@ const startLabel = $computed(() => status === 'failed'
     <DialogContent class="max-w-2xl" @open-auto-focus="event => event.preventDefault()">
       <DialogHeader>
         <DialogTitle>{{ $t('export.title') }}</DialogTitle>
-        <DialogDescription>
-          {{ $t('export.description') }}
-        </DialogDescription>
+        <DialogDescription>{{ $t('export.description') }}</DialogDescription>
       </DialogHeader>
 
-      <Stepper
-        :model-value="currentStep"
-        :linear="false"
-        class="w-full items-start"
-        @update:model-value="handleStepChange"
-      >
+      <Stepper :model-value="currentStep" :linear="false" class="w-full items-start" @update:model-value="handleStepChange">
         <StepperItem
           v-for="item in steps"
           :key="item.step"
@@ -216,10 +227,7 @@ const startLabel = $computed(() => status === 'failed'
               <span aria-hidden="true">&nbsp;</span>
             </StepperDescription>
           </StepperTrigger>
-          <StepperSeparator
-            v-if="item.step < steps.length"
-            class="h-px w-[calc(100%-3rem)] left-[calc(50%+1.5rem)] top-4 absolute"
-          />
+          <StepperSeparator v-if="item.step < steps.length" class="h-px w-[calc(100%-3rem)] left-[calc(50%+1.5rem)] top-4 absolute" />
         </StepperItem>
       </Stepper>
 
@@ -227,151 +235,110 @@ const startLabel = $computed(() => status === 'failed'
         <div v-if="currentStep === 1" class="flex flex-col gap-3">
           <ExportPlatformSelector
             :disabled="isBusy"
-            :selected="isWebSelected"
-            @toggle="isWebSelected = !isWebSelected"
+            :selected-platform="selectedPlatform"
+            @select="selectedPlatform = $event"
           />
-          <p
-            v-if="!isWebSelected"
-            class="text-xs text-muted-foreground"
-            role="status"
-          >
+          <p v-if="!selectedPlatformValid" class="text-xs text-muted-foreground" role="status">
             {{ $t('export.selectPlatformHint') }}
           </p>
         </div>
 
-        <div v-else-if="currentStep === 2" class="flex flex-col gap-3">
+        <div v-else-if="currentStep === 2" class="flex flex-col gap-5">
+          <DesktopExportConfig
+            v-if="selectedPlatform === 'desktop'"
+            v-model:targets="selectedDesktopTargets"
+            v-model:window-config="windowConfig"
+            :disabled="isBusy"
+          />
+          <p v-else class="text-sm text-muted-foreground">
+            {{ $t('export.desktopConfig.notSelected') }}
+          </p>
           <ExportOutputDirectoryField
             :disabled="isBusy"
-            :output-preview="outputPreview"
+            :output-preview="selectedPlatform === 'desktop' ? desktopOutputPreview : outputPreview"
             :output-root="isAndroid ? outputPreview : outputRoot"
             :readonly="isAndroid"
             @select="selectOutputRoot"
           />
         </div>
 
-        <div v-else-if="currentStep === 3" class="flex flex-col gap-5">
+        <div v-else class="flex flex-col gap-3">
           <section
-            class="p-3 border rounded-md flex flex-col gap-2 transition-colors duration-200"
-            :class="exportCardStateClass"
+            v-for="task in exportTasks"
+            :key="task.platform"
+            class="p-3 border rounded-md flex flex-col gap-2 transition-colors"
+            :class="taskCardClass(task)"
             aria-live="polite"
             data-testid="export-card"
           >
-            <!-- 行1：平台图标 + 名称/日志 + 打开目录（始终占位） -->
             <div class="flex gap-3 items-center">
-              <div
-                class="border rounded-md flex shrink-0 size-9 transition-colors duration-200 items-center justify-center"
-                :class="exportPlatformIconStateClass"
-                data-testid="export-platform-icon"
-              >
-                <Globe2 class="size-4.5" aria-hidden="true" />
+              <div class="border rounded-md bg-muted/40 shrink-0 grid size-9 place-content-center">
+                <Globe2 v-if="task.platform === 'web'" class="size-4.5" aria-hidden="true" />
+                <span v-else-if="task.platform === 'windows-x64'" class="i-simple-icons-windows size-4.5" aria-hidden="true" />
+                <span v-else-if="task.platform === 'linux-x64'" class="i-simple-icons-linux size-4.5" aria-hidden="true" />
+                <span v-else class="i-simple-icons-apple size-4.5" aria-hidden="true" />
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm leading-none font-medium truncate">
-                  {{ $t('export.platformWeb') }}
+                  {{ taskLabel(task) }}
                 </p>
-                <p
-                  class="text-xs text-muted-foreground leading-4 mt-1.5 flex gap-1 min-w-0 items-center"
-                  data-testid="export-log-summary"
-                >
-                  <span class="min-w-0 truncate">{{ progressLabel(stepKey) }}</span>
-                  <template v-if="elapsedLabel">
-                    <span class="shrink-0" aria-hidden="true">{{ $t('export.elapsed.separator') }}</span>
-                    <span class="shrink-0 tabular-nums">{{ elapsedLabel }}</span>
-                  </template>
+                <p class="text-xs text-muted-foreground leading-4 mt-1.5 flex gap-1 min-w-0">
+                  <span class="min-w-0 truncate">{{ progressLabel(task.stepKey) }}</span>
+                  <span v-if="elapsedLabel(task)" class="shrink-0 tabular-nums">{{ elapsedLabel(task) }}</span>
                 </p>
               </div>
-              <div class="flex shrink-0 items-center">
-                <TooltipProvider :delay-duration="300">
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        class="shrink-0 size-8 transition-opacity"
-                        :class="status !== 'completed' ? 'invisible pointer-events-none' : ''"
-                        :aria-label="isAndroid ? $t('export.openFile') : $t('export.openDirectory')"
-                        @click="openExportDirectory"
-                      >
-                        <ExternalLink v-if="isAndroid" class="size-4" aria-hidden="true" />
-                        <FolderOpen v-else class="size-4" aria-hidden="true" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      {{ isAndroid ? $t('export.openFile') : $t('export.openDirectory') }}
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip v-if="isAndroid">
-                    <TooltipTrigger as-child>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        class="shrink-0 size-8 transition-opacity"
-                        :class="status !== 'completed' ? 'invisible pointer-events-none' : ''"
-                        :aria-label="$t('export.share')"
-                        @click="shareExport"
-                      >
-                        <Share2 class="size-4" aria-hidden="true" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      {{ $t('export.share') }}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
+              <TooltipProvider :delay-duration="300">
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      class="shrink-0 size-8"
+                      :class="task.status === 'completed' ? '' : 'invisible pointer-events-none'"
+                      :aria-label="isAndroid ? $t('export.openFile') : $t('export.openDirectory')"
+                      @click="openExportDirectory(task)"
+                    >
+                      <ExternalLink v-if="isAndroid" class="size-4" aria-hidden="true" />
+                      <FolderOpen v-else class="size-4" aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{{ isAndroid ? $t('export.openFile') : $t('export.openDirectory') }}</TooltipContent>
+                </Tooltip>
+                <Tooltip v-if="isAndroid">
+                  <TooltipTrigger as-child>
+                    <Button variant="ghost" size="icon" class="shrink-0 size-8" :aria-label="$t('export.share')" @click="shareExport">
+                      <Share2 class="size-4" aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{{ $t('export.share') }}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
-
-            <!-- 行2：进度条 + 百分比（固定，不受其他内容影响） -->
             <div class="flex gap-2 items-center">
-              <Progress
-                :model-value="progress"
-                class="flex-1"
-                :indicator-class="exportProgressIndicatorClass"
-              />
-              <span class="text-xs text-muted-foreground text-right shrink-0 w-9 tabular-nums" aria-hidden="true">{{ Math.round(progress) }}%</span>
+              <Progress :model-value="task.progress" class="flex-1" :indicator-class="progressIndicatorClass(task)" />
+              <span class="text-xs text-muted-foreground text-right shrink-0 w-9 tabular-nums">{{ Math.round(task.progress) }}%</span>
             </div>
-            <p
-              v-if="isAndroid && status === 'completed'"
-              class="text-xs text-muted-foreground truncate"
-              :title="outputPreview"
-            >
-              {{ outputPreview }}
-            </p>
           </section>
+          <p v-if="exportTasks.length === 0" class="text-sm text-muted-foreground">
+            {{ $t('export.progress.ready') }}
+          </p>
         </div>
       </div>
 
-      <DialogFooter class="min-h-9" data-testid="export-dialog-footer">
-        <template v-if="status === 'completed'">
-          <Button @click="handleOpenChange(false)">
-            {{ $t('export.done') }}
-          </Button>
-        </template>
+      <DialogFooter class="min-h-9">
+        <Button v-if="hasFinishedTasks && !hasFailedTasks" @click="handleOpenChange(false)">
+          {{ $t('export.done') }}
+        </Button>
         <template v-else>
-          <Button
-            v-if="currentStep > 1"
-            variant="outline"
-            :disabled="isBusy"
-            @click="goToPreviousStep"
-          >
+          <Button v-if="currentStep > 1" variant="outline" :disabled="isBusy" @click="currentStep--">
             {{ $t('export.previousStep') }}
           </Button>
-
-          <Button
-            v-if="currentStep < 3"
-            :disabled="currentStep === 1 ? !isWebSelected : !hasOutputTarget"
-            @click="goToNextStep"
-          >
+          <Button v-if="currentStep < 3" :disabled="!canAdvance || isBusy" @click="goToNextStep">
             {{ $t('export.next') }}
           </Button>
-          <Button
-            v-else
-            class="gap-1.5"
-            :disabled="!canStart"
-            @click="startExport"
-          >
+          <Button v-else class="gap-1.5" :disabled="!canStart || !selectedPlatformValid" @click="startExport(selectedPlatform)">
             <Loader2 v-if="isRunning" class="size-4 animate-spin" aria-hidden="true" />
-            {{ isRunning ? $t('export.exporting') : startLabel }}
+            {{ isRunning ? $t('export.exporting') : hasFailedTasks ? $t('export.retry') : $t('export.start') }}
           </Button>
         </template>
       </DialogFooter>

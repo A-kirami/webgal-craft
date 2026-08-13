@@ -680,6 +680,22 @@ export:
   outputDirectory: Export folder
   browse: Browse
   finalOutputPath: Final output
+  desktopConfig:
+    title: Desktop targets
+    notSelected: No desktop-specific configuration is needed
+    targetRequired: Select at least one desktop target
+    window: Window
+    width: Width
+    height: Height
+    minWidth: Minimum width
+    minHeight: Minimum height
+    fullScreen: Full screen
+    resizable: Resizable
+    targets:
+      windowsX64: Windows x64
+      macosX64: macOS x64
+      macosArm64: macOS Apple Silicon
+      linuxX64: Linux x64
   selectDirectoryHint: Select an export folder to continue
   selectDirectory: Select export folder
   selectDirectoryFailed: Failed to select the export folder
@@ -690,12 +706,9 @@ export:
   done: Done
   elapsed:
     total: Took {seconds}s
-    separator: ·
   openDirectory: Open folder
   openFile: Open file
-  openFileFailed: Failed to open the exported file
   share: Share
-  shareFailed: Failed to share the exported file
   failed: Web export failed
   openDirectoryFailed: Failed to open the export folder
   overwrite:
@@ -704,12 +717,15 @@ export:
     confirm: Overwrite export
   progress:
     ready: Ready to export
+    downloadingRuntime: Downloading desktop runtime...
     preparing: Preparing export...
     copyingEngine: Copying engine files...
     copyingGame: Copying game resources...
     copyingIcons: Copying icons...
     updatingManifest: Updating manifest...
-    compressing: Compressing ZIP...
+    packingResources: Packaging desktop resources...
+    copyingRuntime: Copying desktop runtime...
+    writingConfig: Generating desktop configuration...
     finished: Export complete
     failed: Export failed
 
@@ -1311,8 +1327,8 @@ settings:
   network:
     label: Network
     officialEngineDownloadProxy:
-      label: GitHub download proxy
-      description: Optional HTTPS proxy prefix for official WebGAL engine downloads. Leave empty to use the system proxy or connect directly.
+      label: Download proxy
+      description: Optional HTTPS proxy prefix for downloads. Leave empty to use the system proxy or connect directly.
       placeholder: https://proxy.example/
   edit:
     general: General

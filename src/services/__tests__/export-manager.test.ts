@@ -11,12 +11,16 @@ import type { ExportProgress } from '~/services/export-manager'
 const {
   exportWebCommandMock,
   exportAndroidWebZipCommandMock,
+  exportPcCommandMock,
+  ensurePcRuntimeCommandMock,
   listenMock,
   resolvePreviewSiteMock,
   unlistenMock,
 } = vi.hoisted(() => ({
   exportWebCommandMock: vi.fn(),
   exportAndroidWebZipCommandMock: vi.fn(),
+  exportPcCommandMock: vi.fn(),
+  ensurePcRuntimeCommandMock: vi.fn(),
   listenMock: vi.fn(),
   resolvePreviewSiteMock: vi.fn(),
   unlistenMock: vi.fn(),
@@ -31,6 +35,8 @@ vi.mock('@tauri-apps/api/event', () => ({
 vi.mock('~/commands/export', () => ({
   exportCmds: {
     exportAndroidWebZip: exportAndroidWebZipCommandMock,
+    ensurePcRuntime: ensurePcRuntimeCommandMock,
+    exportPc: exportPcCommandMock,
     exportWeb: exportWebCommandMock,
   },
 }))
@@ -56,6 +62,8 @@ describe('exportManager', () => {
     })
     exportWebCommandMock.mockResolvedValue(undefined)
     exportAndroidWebZipCommandMock.mockResolvedValue(undefined)
+    exportPcCommandMock.mockResolvedValue(undefined)
+    ensurePcRuntimeCommandMock.mockResolvedValue(AbsPath.from('/cache/neutralinojs-win_x64.exe'))
   })
 
   it('会生成安全目录名并把当前站点三层路径传给导出命令', async () => {
@@ -125,6 +133,74 @@ describe('exportManager', () => {
     })).rejects.toThrow('disk full')
 
     expect(unlistenMock).toHaveBeenCalledOnce()
+  })
+
+  it('PC 导出把窗口配置、运行时和独立平台进度传给命令', async () => {
+    const onProgress = vi.fn()
+    const pending = exportManager.exportPc({
+      game: createTestGame({ engineId: 'engine-1' }),
+      gameName: ' Demo/Game ',
+      onProgress,
+      outputRoot: AbsPath.from('/exports'),
+      runtimePath: AbsPath.from('/cache/neutralinojs-win_x64.exe'),
+      targetArch: 'x64',
+      targetOs: 'windows',
+      windowConfig: {
+        fullScreen: false,
+        height: 720,
+        minHeight: 600,
+        minWidth: 800,
+        resizable: true,
+        width: 1280,
+      },
+    })
+
+    await vi.waitFor(() => expect(exportPcCommandMock).toHaveBeenCalledOnce())
+    const params = exportPcCommandMock.mock.calls[0][0]
+    progressHandler?.({
+      payload: {
+        exportId: params.exportId,
+        percentage: 80,
+        platform: 'windows-x64',
+        step: 'export.progress.packingResources',
+      },
+    })
+
+    await expect(pending).resolves.toBe('/exports/Demo_Game/windows-x64')
+    expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
+      platform: 'windows-x64',
+      step: 'export.progress.packingResources',
+    }))
+    expect(exportPcCommandMock).toHaveBeenCalledWith({
+      enginePath: '/engines/webgal',
+      exportId: expect.any(String),
+      gameName: 'Demo/Game',
+      gamePath: '/games/demo',
+      outputPath: '/exports/Demo_Game/windows-x64',
+      replaceExisting: false,
+      runtimePath: '/cache/neutralinojs-win_x64.exe',
+      targetArch: 'x64',
+      targetOs: 'windows',
+      templatePath: '/templates/default',
+      windowConfig: {
+        fullScreen: false,
+        height: 720,
+        minHeight: 600,
+        minWidth: 800,
+        resizable: true,
+        width: 1280,
+      },
+    })
+    expect(unlistenMock).toHaveBeenCalledOnce()
+  })
+
+  it('按目标操作系统和架构确保运行时', async () => {
+    await expect(exportManager.ensurePcRuntime('macos', 'arm64', 'https://proxy.example/')).resolves.toBe('/cache/neutralinojs-win_x64.exe')
+    expect(ensurePcRuntimeCommandMock).toHaveBeenCalledWith({
+      proxyPrefix: 'https://proxy.example/',
+      targetArch: 'arm64',
+      targetOs: 'macos',
+    })
   })
 
   it('Android 导出把站点写入受控 session 且复用进度事件', async () => {
