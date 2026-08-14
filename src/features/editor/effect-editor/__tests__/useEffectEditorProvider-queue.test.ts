@@ -656,6 +656,38 @@ describe('useEffectEditorProvider', () => {
     })
   })
 
+  it('已位于帧回调的预览会取代同帧内排队的默认预览', async () => {
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+
+    const frameCallbacks = new Map<number, FrameRequestCallback>()
+    const provider = createProvider()
+
+    await provider.open(createOpenTarget({
+      baseSentence: createBaseSentence('{"blur":8}'),
+    }))
+
+    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
+      const frameId = frameCallbacks.size + 1
+      frameCallbacks.set(frameId, callback)
+      return frameId
+    }))
+    vi.stubGlobal('cancelAnimationFrame', vi.fn((frameId: number) => {
+      frameCallbacks.delete(frameId)
+    }))
+
+    provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
+    provider.requestPreview({})
+    provider.requestPreview({ frameReady: true })
+
+    expect(frameCallbacks.size).toBe(0)
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
+    })
+    expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 12 }, {
+      phase: 'preview',
+    })
+  })
+
   it('预览覆盖态不会改写响应式 draft，且同一帧只发送最新覆盖值', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
 

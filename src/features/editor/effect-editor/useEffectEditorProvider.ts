@@ -634,6 +634,7 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
     }
 
     if (payload.frameReady) {
+      cancelScheduledPreview()
       enqueuePreview()
       return
     }
