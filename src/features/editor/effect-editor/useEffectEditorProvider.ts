@@ -17,10 +17,9 @@ import type { EmitTransformOptions } from '~/features/editor/effect-editor/types
 import type { TransformBaselineSessionClient } from '~/features/editor/transform-resolution/baseline-session'
 import type { TransformBaselineSource } from '~/features/editor/transform-resolution/model'
 
-export type EffectEditorPreviewSchedule = 'continuous' | 'color' | 'frame' | 'immediate'
-
 export interface EffectEditorPreviewPayload {
-  schedule: EffectEditorPreviewSchedule
+  /** 预览请求已在 requestAnimationFrame 回调中触发。 */
+  frameReady?: boolean
   flush?: boolean
 }
 
@@ -79,8 +78,6 @@ const EFFECT_EDITOR_PROVIDER_KEY: InjectionKey<ReturnType<typeof createEffectEdi
 type EffectEditorCloseAction = 'save' | 'discard' | 'cancel'
 type EffectPreviewRequestKind = 'preview' | 'commit' | 'restore'
 type PreviewRuntimeSyncState = 'ready' | 'terminal-unsynced'
-const CONTINUOUS_PREVIEW_THROTTLE_MS = 40
-
 interface EffectPreviewOwnerRequest {
   draftSnapshot: EffectEditorDraft
   errorMessage: string
@@ -103,8 +100,12 @@ function cloneDraft(draft: EffectEditorDraft): EffectEditorDraft {
 }
 
 export function createEffectPreviewEmitter(options: EffectPreviewEmitterOptions) {
-  function emitPreview(schedule: EffectEditorPreviewSchedule, flush: boolean = false) {
-    options.emitPreview({ schedule, flush })
+  function emitPreview(flush: boolean = false, frameReady: boolean = false) {
+    const payload: EffectEditorPreviewPayload = { flush }
+    if (frameReady) {
+      payload.frameReady = true
+    }
+    options.emitPreview(payload)
   }
 
   function emitTransform(fields: Record<string, string>, emitOptions: EmitTransformOptions) {
@@ -113,7 +114,7 @@ export function createEffectPreviewEmitter(options: EffectPreviewEmitterOptions)
       deferAutoApply: emitOptions.deferAutoApply,
       flush: emitOptions.flush,
     })
-    emitPreview(emitOptions.schedule, emitOptions.flush)
+    emitPreview(emitOptions.flush, emitOptions.frameReady)
   }
 
   return {
@@ -189,41 +190,7 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
   let visualPreviewDirty = false
   let previewSyncState: PreviewRuntimeSyncState = 'ready'
   let previewSyncStateWarned = false
-  let continuousPreviewTimerId: ReturnType<typeof setTimeout> | undefined
-  let lastContinuousPreviewAt = 0
   let isClosing = false
-
-  function clearContinuousPreviewTimer(): void {
-    if (continuousPreviewTimerId === undefined) {
-      return
-    }
-
-    clearTimeout(continuousPreviewTimerId)
-    continuousPreviewTimerId = undefined
-  }
-
-  function sendContinuousPreviewNow(): void {
-    clearContinuousPreviewTimer()
-    lastContinuousPreviewAt = Date.now()
-    scheduleFramePreviewBoundary()
-  }
-
-  function scheduleContinuousPreview(): void {
-    const elapsed = Date.now() - lastContinuousPreviewAt
-    if (elapsed >= CONTINUOUS_PREVIEW_THROTTLE_MS) {
-      sendContinuousPreviewNow()
-      return
-    }
-
-    if (continuousPreviewTimerId !== undefined) {
-      return
-    }
-
-    continuousPreviewTimerId = setTimeout(() => {
-      continuousPreviewTimerId = undefined
-      sendContinuousPreviewNow()
-    }, CONTINUOUS_PREVIEW_THROTTLE_MS - elapsed)
-  }
 
   function canSendPreview(): boolean {
     return editSettings.enableLivePreview
@@ -286,7 +253,6 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
   }
 
   function cancelScheduledPreview() {
-    clearContinuousPreviewTimer()
     cancelFramePreview?.()
     cancelFramePreview = undefined
   }
@@ -368,14 +334,6 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
 
     const frameId = requestAnimationFrame(run)
     cancelFramePreview = () => cancelAnimationFrame(frameId)
-  }
-
-  function requestFramePreview(): void {
-    scheduleFramePreviewBoundary()
-  }
-
-  function requestColorPreview(): void {
-    scheduleFramePreviewBoundary()
   }
 
   async function commitDraft(
@@ -675,29 +633,13 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
       return
     }
 
-    // 预览调度策略：
-    // - immediate: 进入全局帧边界（用于离散操作如 segmented 切换）
-    // - frame: 通过 rAF 合并同帧内的多次交互态更新（如变换控件拖拽）
-    // - color: 通过 rAF 合并同帧内的多次颜色变更（color picker 高频触发）
-    // - continuous（default）: 节流发送（用于拖拽滑块等连续操作）
-    switch (payload.schedule) {
-      case 'immediate': {
-        requestFramePreview()
-        break
-      }
-      case 'frame': {
-        requestFramePreview()
-        break
-      }
-      case 'color': {
-        requestColorPreview()
-        break
-      }
-      default: {
-        scheduleContinuousPreview()
-        break
-      }
+    if (payload.frameReady) {
+      enqueuePreview()
+      return
     }
+
+    // 尚未位于帧回调的交互在全局帧边界合并。
+    scheduleFramePreviewBoundary()
   }
 
   function updateDraft(
@@ -1193,8 +1135,6 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
     previewTransformOverride = undefined
     visualPreviewDirty = false
     resetPreviewSyncState()
-    clearContinuousPreviewTimer()
-    lastContinuousPreviewAt = 0
     isClosing = false
     scheduleSessionBaselineResolution(sessionId, target, lineCommandString)
     return true

@@ -256,7 +256,7 @@ describe('useEffectContinuousControls', () => {
     vi.unstubAllGlobals()
   })
 
-  it('updateNumberField 支持裁剪并按 continuous 模式 flush', () => {
+  it('updateNumberField 支持裁剪并 flush 最终值', () => {
     const { deps, emitTransform, fields } = createDeps()
     const controls = useEffectContinuousControls(deps)
 
@@ -267,7 +267,6 @@ describe('useEffectContinuousControls', () => {
 
     expect(fields.x).toBe('10')
     expect(emitTransform).toHaveBeenCalledWith(fields, {
-      schedule: 'continuous',
       flush: true,
       deferAutoApply: false,
     })
@@ -296,16 +295,15 @@ describe('useEffectContinuousControls', () => {
 
     expect(emitTransform).toHaveBeenCalledTimes(1)
     expect(emitTransform).toHaveBeenLastCalledWith(fields, {
-      schedule: 'continuous',
       flush: false,
       deferAutoApply: true,
+      frameReady: true,
     })
 
     numberScrub.end(createPointerEvent({ clientX: 105 }))
 
     expect(emitTransform).toHaveBeenCalledTimes(2)
     expect(emitTransform).toHaveBeenLastCalledWith(fields, {
-      schedule: 'continuous',
       flush: true,
       deferAutoApply: false,
     })
@@ -333,9 +331,9 @@ describe('useEffectContinuousControls', () => {
     expect(cancelPreview).toHaveBeenCalledOnce()
     expect(emitTransform).toHaveBeenCalledTimes(1)
     expect(emitTransform).toHaveBeenLastCalledWith(expect.any(Object), {
-      schedule: 'continuous',
       flush: false,
       deferAutoApply: true,
+      frameReady: true,
     })
   })
 
@@ -360,9 +358,9 @@ describe('useEffectContinuousControls', () => {
 
     expect(emitTransform).toHaveBeenCalledTimes(1)
     expect(emitTransform).toHaveBeenLastCalledWith(fields, {
-      schedule: 'continuous',
       flush: undefined,
       deferAutoApply: true,
+      frameReady: true,
     })
   })
 
@@ -411,7 +409,6 @@ describe('useEffectContinuousControls', () => {
     expect(fields.alpha).toBe('0.6')
     expect(emitTransform).toHaveBeenCalledTimes(1)
     expect(emitTransform).toHaveBeenLastCalledWith(fields, {
-      schedule: 'continuous',
       flush: true,
       deferAutoApply: false,
     })
@@ -507,9 +504,9 @@ describe('useEffectContinuousControls', () => {
     expect(emitTransform).toHaveBeenLastCalledWith(expect.objectContaining({
       blur: '8',
     }), {
-      schedule: 'continuous',
       flush: undefined,
       deferAutoApply: true,
+      frameReady: true,
     })
   })
 
@@ -538,9 +535,9 @@ describe('useEffectContinuousControls', () => {
     expect(emitTransform).toHaveBeenLastCalledWith(expect.objectContaining({
       alpha: '0.8',
     }), {
-      schedule: 'continuous',
       flush: undefined,
       deferAutoApply: true,
+      frameReady: true,
     })
   })
 
@@ -590,9 +587,9 @@ describe('useEffectContinuousControls', () => {
     expect(emitTransform).toHaveBeenLastCalledWith(expect.objectContaining({
       blur: '8',
     }), {
-      schedule: 'continuous',
       flush: undefined,
       deferAutoApply: true,
+      frameReady: true,
     })
   })
 
@@ -644,9 +641,9 @@ describe('useEffectContinuousControls', () => {
     expect(cancelPreview).toHaveBeenCalledOnce()
     expect(emitTransform).toHaveBeenCalledTimes(1)
     expect(emitTransform).toHaveBeenLastCalledWith(expect.any(Object), {
-      schedule: 'continuous',
       flush: false,
       deferAutoApply: true,
+      frameReady: true,
     })
   })
 

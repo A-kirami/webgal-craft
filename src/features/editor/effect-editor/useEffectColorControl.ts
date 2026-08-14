@@ -37,7 +37,7 @@ export function useEffectColorControl(deps: EffectControlDeps) {
     deps.setNumericField(fields, param.colorPaths[1], color[1])
     deps.setNumericField(fields, param.colorPaths[2], color[2])
 
-    deps.emitTransform(fields, { schedule: 'color', ...options })
+    deps.emitTransform(fields, options)
   }
 
   function flushColorInteraction(param: EffectColorField) {

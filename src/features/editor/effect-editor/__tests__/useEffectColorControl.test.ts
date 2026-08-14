@@ -75,7 +75,6 @@ describe('useEffectColorControl', () => {
       b: '56',
     })
     expect(emitTransform).toHaveBeenLastCalledWith(fields, {
-      schedule: 'color',
       flush: true,
       deferAutoApply: false,
     })
@@ -105,7 +104,6 @@ describe('useEffectColorControl', () => {
     control.handleColorPickerChange(field, { rgba: { r: 10, g: 20, b: 30 } })
 
     expect(emitTransform).toHaveBeenLastCalledWith(fields, {
-      schedule: 'color',
       deferAutoApply: true,
     })
 
@@ -113,7 +111,6 @@ describe('useEffectColorControl', () => {
 
     expect(emitTransform).toHaveBeenCalledTimes(2)
     expect(emitTransform).toHaveBeenLastCalledWith(fields, {
-      schedule: 'color',
       flush: true,
       deferAutoApply: false,
     })
@@ -138,7 +135,6 @@ describe('useEffectColorControl', () => {
     expect(cancelPreview).toHaveBeenCalledOnce()
     expect(emitTransform).toHaveBeenCalledTimes(1)
     expect(emitTransform).toHaveBeenLastCalledWith(expect.any(Object), {
-      schedule: 'color',
       deferAutoApply: true,
     })
   })

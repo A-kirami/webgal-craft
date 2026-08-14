@@ -20,8 +20,7 @@ const props = defineProps<Props>()
 type EffectDraftRenderItem = EffectDraftCategoryRenderModel['items'][number]
 type EffectDraftClearableItem = Exclude<EffectDraftRenderItem, { kind: 'choice' | 'flip-actions' | 'position' }>
 
-const CLEAR_IMMEDIATE_OPTIONS = {
-  schedule: 'immediate',
+const CLEAR_OPTIONS = {
   flush: true,
 } as const
 const LINKED_SLIDER_AXES = [0, 1] as const
@@ -60,7 +59,7 @@ function getClearButtonClass(paths: readonly string[]): string {
 }
 
 function clearPaths(paths: readonly string[]): void {
-  props.controls.clearPaths(paths, CLEAR_IMMEDIATE_OPTIONS)
+  props.controls.clearPaths(paths, CLEAR_OPTIONS)
 }
 
 function getClearPropertyLabel(label: Parameters<EffectDraftLabelResolver>[0]): string {

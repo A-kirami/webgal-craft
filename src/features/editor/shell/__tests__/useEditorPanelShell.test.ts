@@ -341,7 +341,6 @@ describe('useEditorPanelShell', () => {
     expect(effectEditorProviderMock.requestPreview).toHaveBeenCalledTimes(2)
     expect(effectEditorProviderMock.requestPreview).toHaveBeenCalledWith({
       flush: true,
-      schedule: 'immediate',
     })
 
     scope.stop()

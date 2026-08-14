@@ -28,8 +28,8 @@ describe('createEffectPreviewEmitter', () => {
         blur: '8',
       },
       {
-        schedule: 'continuous',
         deferAutoApply: true,
+        frameReady: true,
       },
     )
 
@@ -41,8 +41,8 @@ describe('createEffectPreviewEmitter', () => {
     ])
     expect(previewPayloads).toEqual([
       {
-        schedule: 'continuous',
         flush: false,
+        frameReady: true,
       },
     ])
   })
@@ -62,7 +62,6 @@ describe('createEffectPreviewEmitter', () => {
     emitter.emitTransform(
       { alpha: '1' },
       {
-        schedule: 'immediate',
         flush: true,
         deferAutoApply: false,
       },
@@ -74,7 +73,6 @@ describe('createEffectPreviewEmitter', () => {
       flush: true,
     })
     expect(previewPayloads.at(-1)).toEqual({
-      schedule: 'immediate',
       flush: true,
     })
   })

@@ -25,8 +25,8 @@ const SLIDER_CENTER_SNAP_TOLERANCE = 0.02
 // 按住 Shift 时旋钮的角度吸附步进（每 15 度）
 const DIAL_DEGREE_SNAP = 15
 
-function createContinuousTransformOptions(flush?: boolean): EmitTransformOptions {
-  return { schedule: 'continuous', flush, deferAutoApply: !flush }
+function createTransformUpdateOptions(flush?: boolean): EmitTransformOptions {
+  return { flush, deferAutoApply: !flush }
 }
 
 function getFieldValueWithDefault(
@@ -135,7 +135,10 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
       if (!pending) {
         return
       }
-      deps.emitTransform(pending.fields, pending.options)
+      deps.emitTransform(pending.fields, {
+        ...pending.options,
+        frameReady: true,
+      })
     })
   }
 
@@ -174,7 +177,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     const fields = deps.getFields()
     if (!rawValue && rawValue !== 0) {
       delete fields[path]
-      emitContinuousTransform(fields, createContinuousTransformOptions(options?.flush), {
+      emitContinuousTransform(fields, createTransformUpdateOptions(options?.flush), {
         touchedPaths: [path],
       })
       return undefined
@@ -205,7 +208,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     deps.setNumericField(result.fields, param.key, finalValue)
     emitContinuousTransform(
       result.fields,
-      createContinuousTransformOptions(options.flush),
+      createTransformUpdateOptions(options.flush),
       { timing: emitTiming, touchedPaths: [param.key] },
     )
   }
@@ -330,7 +333,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     deps.setNumericField(result.fields, param.key, normalized)
     emitContinuousTransform(
       result.fields,
-      createContinuousTransformOptions(options.flush),
+      createTransformUpdateOptions(options.flush),
       {
         timing: options.fromSlider ? 'nextFrame' : 'immediate',
         touchedPaths: [param.key],
@@ -422,7 +425,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
         delete fields[passivePath]
         emitContinuousTransform(
           fields,
-          createContinuousTransformOptions(options.flush),
+          createTransformUpdateOptions(options.flush),
           {
             timing: options.fromSlider ? 'nextFrame' : 'immediate',
             touchedPaths: [activePath, passivePath],
@@ -465,7 +468,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
 
     emitContinuousTransform(
       result.fields,
-      createContinuousTransformOptions(options.flush),
+      createTransformUpdateOptions(options.flush),
       {
         timing: options.fromSlider ? 'nextFrame' : 'immediate',
         touchedPaths,
@@ -518,7 +521,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     deps.setNumericField(result.fields, param.key, storeValue)
     emitContinuousTransform(
       result.fields,
-      createContinuousTransformOptions(options.flush),
+      createTransformUpdateOptions(options.flush),
       { timing: emitTiming, touchedPaths: [param.key] },
     )
   }

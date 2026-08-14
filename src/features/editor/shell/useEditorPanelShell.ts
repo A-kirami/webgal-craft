@@ -126,7 +126,6 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     })
     effectEditorProvider.requestPreview({
       flush: true,
-      schedule: 'immediate',
     })
   }
 

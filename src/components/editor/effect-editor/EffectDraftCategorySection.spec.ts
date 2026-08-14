@@ -296,19 +296,15 @@ describe('EffectDraftCategorySection', () => {
     await page.getByRole('button', { name: '清除 Tint' }).click()
 
     expect(clearPaths).toHaveBeenCalledWith(['position.x'], {
-      schedule: 'immediate',
       flush: true,
     })
     expect(clearPaths).toHaveBeenCalledWith(['alpha'], {
-      schedule: 'immediate',
       flush: true,
     })
     expect(clearPaths).toHaveBeenCalledWith(['scale.x', 'scale.y'], {
-      schedule: 'immediate',
       flush: true,
     })
     expect(clearPaths).toHaveBeenCalledWith(['colorRed', 'colorGreen', 'colorBlue'], {
-      schedule: 'immediate',
       flush: true,
     })
   })

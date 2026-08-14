@@ -299,7 +299,7 @@ describe('useEffectEditorProvider', () => {
 
     await provider.open(createOpenTarget({ onApply: applyMock }))
     provider.updateDraft({ transform: { blur: 12 } })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(provider.canApply).toBe(true)
     })
@@ -437,7 +437,7 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { alpha: 0.5 } })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
     })
@@ -461,7 +461,7 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: {} })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
     })
@@ -483,7 +483,7 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
     })
@@ -507,12 +507,12 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
     })
 
-    provider.requestPreview({ schedule: 'immediate', flush: true })
+    provider.requestPreview({ flush: true })
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(2)
     })
@@ -593,7 +593,7 @@ describe('useEffectEditorProvider', () => {
     ])
   })
 
-  it('同一帧内多次 immediate preview 只发送最新草稿', async () => {
+  it('同一帧内多次预览只发送最新草稿', async () => {
     useEditSettingsStore().autoApplyEffectEditorChanges = false
 
     const frameCallbacks: FrameRequestCallback[] = []
@@ -610,11 +610,11 @@ describe('useEffectEditorProvider', () => {
     vi.stubGlobal('cancelAnimationFrame', vi.fn())
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     provider.updateDraft({ transform: { blur: 16 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     provider.updateDraft({ transform: { blur: 20 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
     expect(frameCallbacks).toHaveLength(1)
@@ -626,6 +626,33 @@ describe('useEffectEditorProvider', () => {
     })
     expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 20 }, {
       phase: 'preview',
+    })
+  })
+
+  it('已位于帧回调的预览不会等待下一帧', async () => {
+    useEditSettingsStore().autoApplyEffectEditorChanges = false
+
+    const frameCallbacks: FrameRequestCallback[] = []
+    const provider = createProvider()
+
+    await provider.open(createOpenTarget({
+      baseSentence: createBaseSentence('{"blur":8}'),
+    }))
+
+    vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
+      frameCallbacks.push(callback)
+      return frameCallbacks.length
+    }))
+    vi.stubGlobal('cancelAnimationFrame', vi.fn())
+
+    provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
+    provider.requestPreview({ frameReady: true })
+
+    expect(frameCallbacks).toHaveLength(0)
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 12 }, {
+        phase: 'preview',
+      })
     })
   })
 
@@ -646,9 +673,9 @@ describe('useEffectEditorProvider', () => {
     vi.stubGlobal('cancelAnimationFrame', vi.fn())
 
     provider.updatePreviewTransform(() => ({ blur: 12 }))
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     provider.updatePreviewTransform(() => ({ blur: 20 }))
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     expect(provider.session?.draft.transform).toEqual({ blur: 8 })
     expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
@@ -684,15 +711,15 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(previewCalls).toEqual([{ blur: 12 }])
     })
 
     provider.updateDraft({ transform: { blur: 16 } })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     provider.updateDraft({ transform: { blur: 20 } })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     expect(previewCalls).toEqual([{ blur: 12 }])
 
@@ -728,7 +755,7 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
@@ -761,7 +788,7 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 12 }, {
@@ -799,7 +826,7 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 12 }, {
@@ -841,7 +868,7 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 12 }, {
@@ -875,7 +902,7 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
@@ -883,7 +910,7 @@ describe('useEffectEditorProvider', () => {
 
     debugCommanderMock.setEffect.mockClear()
     provider.updateDraft({ transform: { blur: 20 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 20 }, {
@@ -918,7 +945,7 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(order).toEqual(['preview:start'])
@@ -961,16 +988,16 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(order).toEqual(['preview:start:12'])
     })
 
     provider.updateDraft({ transform: { blur: 16 } })
-    provider.requestPreview({ schedule: 'immediate', flush: true })
+    provider.requestPreview({ flush: true })
     provider.updateDraft({ transform: { blur: 20 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     previewResolvers[0]?.()
     await vi.waitFor(() => {
@@ -988,13 +1015,13 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
     })
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: false })
-    provider.requestPreview({ schedule: 'continuous', flush: true })
+    provider.requestPreview({ flush: true })
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(2)
@@ -1015,7 +1042,7 @@ describe('useEffectEditorProvider', () => {
       baseSentence: createBaseSentence('{"blur":8}'),
     }))
 
-    provider.requestPreview({ schedule: 'immediate', flush: true })
+    provider.requestPreview({ flush: true })
     await Promise.resolve()
 
     expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
@@ -1031,7 +1058,7 @@ describe('useEffectEditorProvider', () => {
       effectTarget: '',
     }))
 
-    provider.requestPreview({ schedule: 'immediate', flush: true })
+    provider.requestPreview({ flush: true })
     await Promise.resolve()
 
     expect(loggerWarnMock).not.toHaveBeenCalled()
@@ -1122,7 +1149,7 @@ describe('useEffectEditorProvider', () => {
     vi.mocked(baselineClient.syncScene).mockClear()
 
     provider.updateDraft({ transform: { blur: 12 } })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', {
         blur: 12,
@@ -1180,7 +1207,7 @@ describe('useEffectEditorProvider', () => {
     vi.mocked(baselineClient.syncScene).mockClear()
 
     provider.updateDraft({ transform: { blur: 12 } })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(order).toEqual(['preview:start'])
     })
@@ -1207,7 +1234,7 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 16 } })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 16 }, {
@@ -1218,7 +1245,7 @@ describe('useEffectEditorProvider', () => {
     debugCommanderMock.setEffect.mockClear()
 
     provider.updateDraft({ transform: { blur: 20 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 20 }, {
@@ -1258,7 +1285,7 @@ describe('useEffectEditorProvider', () => {
     debugCommanderMock.setEffect.mockClear()
 
     provider.updateDraft({ transform: { blur: 20 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 20 }, {
@@ -1289,7 +1316,7 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 16 } })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 16 }, {
@@ -1299,7 +1326,7 @@ describe('useEffectEditorProvider', () => {
     debugCommanderMock.setEffect.mockClear()
 
     provider.updateDraft({ transform: { blur: 20 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 20 }, {
@@ -1335,7 +1362,7 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 12 }, {
         phase: 'preview',
@@ -1376,7 +1403,7 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 12 }, {
         phase: 'preview',
@@ -1420,7 +1447,7 @@ describe('useEffectEditorProvider', () => {
 
     debugCommanderMock.setEffect.mockClear()
     provider.updateDraft({ transform: { blur: 20 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 20 }, {
@@ -1450,7 +1477,7 @@ describe('useEffectEditorProvider', () => {
 
     debugCommanderMock.setEffect.mockClear()
     provider.updateDraft({ transform: { blur: 20 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
     expect(provider.session?.draft.transform).toEqual({ blur: 12 })
@@ -1516,7 +1543,7 @@ describe('useEffectEditorProvider', () => {
 
     debugCommanderMock.setEffect.mockClear()
     provider.updateDraft({ transform: { blur: 20 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 20 }, {
@@ -1731,16 +1758,16 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(order).toEqual(['preview:start:12'])
     })
 
     provider.updateDraft({ transform: { blur: 16 } })
-    provider.requestPreview({ schedule: 'immediate', flush: true })
+    provider.requestPreview({ flush: true })
     provider.updateDraft({ transform: { blur: 20 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     previewResolvers[0]?.()
 
@@ -1780,16 +1807,16 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(order).toEqual(['preview:start:12'])
     })
 
     provider.updateDraft({ transform: { blur: 16 } })
-    provider.requestPreview({ schedule: 'immediate', flush: true })
+    provider.requestPreview({ flush: true })
     provider.updateDraft({ transform: { blur: 20 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     previewResolvers[0]?.()
 
@@ -1859,39 +1886,11 @@ describe('useEffectEditorProvider', () => {
     }))
 
     provider.updateDraft({ transform: { blur: 12 } })
-    provider.requestPreview({ schedule: 'frame' })
+    provider.requestPreview({})
     await provider.cancelPreview()
 
     expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
     expect(baselineClient.syncScene).not.toHaveBeenCalled()
-  })
-
-  it('取消交互会丢弃尚未触发的 continuous trailing preview', async () => {
-    useEditSettingsStore().autoApplyEffectEditorChanges = false
-    vi.useFakeTimers()
-    vi.setSystemTime(0)
-
-    try {
-      const provider = createProvider()
-
-      await provider.open(createOpenTarget({
-        baseSentence: createBaseSentence('{"blur":8}'),
-      }))
-
-      provider.updateDraft({ transform: { blur: 16 } })
-      provider.updateDraft({ transform: { blur: 20 } }, { deferAutoApply: true })
-      provider.requestPreview({ schedule: 'continuous' })
-
-      expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
-
-      await provider.cancelPreview()
-      await vi.advanceTimersByTimeAsync(40)
-
-      expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
-      expect(provider.session?.draft.transform).toEqual({ blur: 16 })
-    } finally {
-      vi.useRealTimers()
-    }
   })
 
   it('取消已发送 preview 时会等待 preview 后发送 rollback draft restore', async () => {
@@ -1928,7 +1927,7 @@ describe('useEffectEditorProvider', () => {
     vi.mocked(baselineClient.syncScene).mockClear()
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(order).toEqual(['preview:start'])
     })
@@ -1958,7 +1957,7 @@ describe('useEffectEditorProvider', () => {
     vi.mocked(baselineClient.syncScene).mockClear()
 
     provider.updateDraft({ transform: { blur: 12 } })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledTimes(1)
     })
@@ -1966,7 +1965,7 @@ describe('useEffectEditorProvider', () => {
     await provider.cancelPreview()
     debugCommanderMock.setEffect.mockClear()
 
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 12 }, {
@@ -2009,7 +2008,7 @@ describe('useEffectEditorProvider', () => {
     vi.mocked(baselineClient.syncScene).mockClear()
 
     provider.updateDraft({ transform: { blur: 12 } })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(order).toEqual(['preview:start'])
     })
@@ -2107,7 +2106,7 @@ describe('useEffectEditorProvider', () => {
       duration: '100',
       transform: { alpha: 0.2 },
     })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     await vi.waitFor(() => {
       expect(runtimeCalls.length).toBe(1)
     })
@@ -2121,7 +2120,7 @@ describe('useEffectEditorProvider', () => {
       duration: '200',
       transform: { alpha: 0.8 },
     })
-    provider.requestPreview({ schedule: 'immediate' })
+    provider.requestPreview({})
     expect(applyCalls).toHaveLength(0)
     expect(runtimeCalls.length).toBe(1)
 
@@ -2166,7 +2165,7 @@ describe('useEffectEditorProvider', () => {
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
     provider.updateDraft({ transform: { blur: 16 } })
-    provider.requestPreview({ schedule: 'immediate', flush: true })
+    provider.requestPreview({ flush: true })
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 16 }, {
@@ -2211,7 +2210,7 @@ describe('useEffectEditorProvider', () => {
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
     provider.updateDraft({ transform: { blur: 16 } })
-    provider.requestPreview({ schedule: 'immediate', flush: true })
+    provider.requestPreview({ flush: true })
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 16 }, {
@@ -2272,7 +2271,7 @@ describe('useEffectEditorProvider', () => {
 
     provider.updateDraft({ transform: { blur: 12 } }, { deferAutoApply: true })
     provider.updateDraft({ transform: { blur: 16 } })
-    provider.requestPreview({ schedule: 'immediate', flush: true })
+    provider.requestPreview({ flush: true })
 
     await vi.waitFor(() => {
       expect(debugCommanderMock.setEffect).toHaveBeenCalledWith('fig-center', { blur: 16 }, {
