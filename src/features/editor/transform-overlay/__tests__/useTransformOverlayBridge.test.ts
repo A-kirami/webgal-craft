@@ -194,7 +194,6 @@ describe('useTransformOverlayBridge', () => {
     })
     expect(provider.requestPreview).toHaveBeenCalledWith({
       flush: undefined,
-      schedule: 'frame',
     })
   })
 
@@ -318,7 +317,6 @@ describe('useTransformOverlayBridge', () => {
     })
     expect(provider.requestPreview).toHaveBeenLastCalledWith({
       flush: true,
-      schedule: 'immediate',
     })
   })
 

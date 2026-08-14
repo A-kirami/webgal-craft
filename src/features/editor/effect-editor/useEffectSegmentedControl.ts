@@ -79,7 +79,7 @@ export function useEffectSegmentedControl(options: UseEffectSegmentedControlOpti
       delete fields[param.key]
     }
 
-    options.emitTransform(fields, { schedule: 'immediate', flush: true })
+    options.emitTransform(fields, { flush: true })
   }
 
   function segmentedControlId(path: string): string {

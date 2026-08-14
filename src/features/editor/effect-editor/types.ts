@@ -1,7 +1,7 @@
-/** emitTransform 的调度选项 */
+/** emitTransform 的提交选项 */
 export interface EmitTransformOptions {
-  schedule: 'continuous' | 'color' | 'immediate'
   deferAutoApply?: boolean
+  frameReady?: boolean
   flush?: boolean
 }
 

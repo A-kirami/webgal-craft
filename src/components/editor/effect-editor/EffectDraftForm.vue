@@ -250,7 +250,6 @@ function flipScaleAxis(axis: TransformScaleAxis): void {
   emitTransform(transformToFields(nextTransform), {
     deferAutoApply: false,
     flush: true,
-    schedule: 'immediate',
   })
 }
 

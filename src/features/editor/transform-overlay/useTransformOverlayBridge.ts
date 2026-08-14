@@ -160,7 +160,6 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
 
     options.provider.requestPreview({
       flush: options_.flush,
-      schedule: options_.flush ? 'immediate' : 'frame',
     })
   }
 

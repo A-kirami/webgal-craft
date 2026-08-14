@@ -33,7 +33,6 @@ describe('useEffectClearControls', () => {
     expect(controls.canClearPaths(['scale.x', 'scale.y'])).toBe(true)
 
     controls.clearPaths(['scale.x', 'scale.y'], {
-      schedule: 'immediate',
       flush: true,
     })
 
@@ -41,7 +40,6 @@ describe('useEffectClearControls', () => {
     expect(fields['scale.y']).toBeUndefined()
     expect(fields.alpha).toBe('0.5')
     expect(emitTransform).toHaveBeenCalledWith(fields, {
-      schedule: 'immediate',
       flush: true,
       deferAutoApply: false,
     })
@@ -54,7 +52,6 @@ describe('useEffectClearControls', () => {
     expect(controls.canClearPaths(['blur'])).toBe(false)
 
     controls.clearPaths(['blur'], {
-      schedule: 'immediate',
       flush: true,
     })
 
