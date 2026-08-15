@@ -21,7 +21,7 @@
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/license-MPL--2.0-blue" alt="License MPL-2.0" />
   </a>
-  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-6f42c1" alt="Supported platforms: Windows, macOS, Linux" />
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android-6f42c1" alt="Supported platforms: Windows, macOS, Linux, Android" />
   <br />
   <a href="https://github.com/A-kirami/webgal-craft/releases" target="__blank"
     ><img src="https://img.shields.io/github/v/release/A-kirami/webgal-craft?include_prereleases&&color=70aeff&style=social" alt="Release Version"
@@ -81,6 +81,7 @@ WebGAL Craft 是一款为 [WebGAL](https://github.com/OpenWebGAL/WebGAL) 游戏�
 | Windows | 64-bit | `.exe` |
 | macOS | Intel / Apple Silicon | `.dmg` |
 | Linux | x64 | `.AppImage` / `.deb` |
+| Android | arm64 | `.apk` |
 
 ## 快速上手
 
