@@ -82,7 +82,7 @@ function updateZoomLevelValue(value: AcceptableValue) {
     <Button
       variant="outline"
       size="icon"
-      class="size-7 hidden shadow-none sm:inline-flex"
+      class="size-7 hidden sm:inline-flex"
       :title="viewMode === 'grid' ? $t('common.view.grid') : $t('common.view.list')"
       :aria-label="viewMode === 'grid' ? $t('common.view.grid') : $t('common.view.list')"
       @click="toggleViewMode"
@@ -92,7 +92,7 @@ function updateZoomLevelValue(value: AcceptableValue) {
     </Button>
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
-        <Button variant="outline" size="icon" class="size-7 shadow-none" :title="$t('filePicker.more.title')" :aria-label="$t('filePicker.more.title')">
+        <Button variant="outline" size="icon" class="size-7" :title="$t('filePicker.more.title')" :aria-label="$t('filePicker.more.title')">
           <EllipsisVertical class="size-3.5" />
         </Button>
       </DropdownMenuTrigger>

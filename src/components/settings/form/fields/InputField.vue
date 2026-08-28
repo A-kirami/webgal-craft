@@ -35,7 +35,7 @@ const { t } = useI18n()
         <Input
           v-bind="componentField"
           type="text"
-          :class="cn('text-xs h-8 shadow-none', field.layout === 'stacked' ? 'w-full' : 'w-64', field.className)"
+          :class="cn('text-xs h-8', field.layout === 'stacked' ? 'w-full' : 'w-64', field.className)"
           :placeholder="field.placeholder ? resolveI18nLike(field.placeholder, t) : undefined"
         />
       </FormControl>

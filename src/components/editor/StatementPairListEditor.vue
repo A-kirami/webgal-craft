@@ -135,7 +135,7 @@ function secondInputId(index: number): string {
         <Input
           :model-value="item.first"
           :placeholder="firstPlaceholder"
-          class="text-xs px-2.5 flex-1 h-6 min-w-20 shadow-none"
+          class="text-xs px-2.5 flex-1 h-6 min-w-20"
           @update:model-value="emit('updateFirst', { index: i, value: String($event) })"
         />
         <div
@@ -152,7 +152,7 @@ function secondInputId(index: number): string {
           <Input
             :model-value="item.second"
             :placeholder="secondPlaceholder"
-            class="text-xs px-2.5 flex-1 h-6 shadow-none"
+          class="text-xs px-2.5 flex-1 h-6"
             @update:model-value="emit('updateSecond', { index: i, value: String($event) })"
           />
         </slot>
@@ -194,7 +194,7 @@ function secondInputId(index: number): string {
           <Input
             :id="firstInputId(i)"
             :model-value="item.first"
-            class="text-xs h-7 shadow-none"
+            class="text-xs h-7"
             @update:model-value="emit('updateFirst', { index: i, value: String($event) })"
           />
         </div>
@@ -214,7 +214,7 @@ function secondInputId(index: number): string {
             <Input
               :id="secondInputId(i)"
               :model-value="item.second"
-              class="text-xs h-7 shadow-none"
+            class="text-xs h-7"
               @update:model-value="emit('updateSecond', { index: i, value: String($event) })"
             />
           </slot>
@@ -224,7 +224,7 @@ function secondInputId(index: number): string {
     <Button
       variant="outline"
       size="sm"
-      class="text-xs h-6 w-full shadow-none group-data-[surface=panel]:h-7"
+      class="text-xs h-6 w-full group-data-[surface=panel]:h-7"
       @click="handleAdd"
     >
       <div class="i-lucide-plus mr-1 size-3.5" />

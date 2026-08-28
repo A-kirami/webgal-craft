@@ -62,7 +62,7 @@ const inspectorSelectedFrame = $computed<AnimationEditorSelectedFrameState>(() =
               <div class="i-lucide-plus size-3.5" />
               {{ $t('edit.visualEditor.animation.toolbar.addFrame') }}
             </Button>
-            <Button size="sm" variant="outline" class="px-2.5 h-7 shadow-none" :disabled="!props.canDeleteFrame" @click="emit('delete-frame')">
+            <Button size="sm" variant="outline" class="px-2.5 h-7" :disabled="!props.canDeleteFrame" @click="emit('delete-frame')">
               {{ $t('edit.visualEditor.animation.toolbar.delete') }}
             </Button>
             <template v-if="props.showHistoryActions">

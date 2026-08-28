@@ -44,7 +44,7 @@ function emitSelect(value: unknown) {
     :model-value="selectValue"
     @update:model-value="emitSelect"
   >
-    <SelectTrigger :id="inputId" :class="cn('text-xs h-6 px-2.5 shadow-none group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-3', controlClass)">
+    <SelectTrigger :id="inputId" :class="cn('text-xs h-6 px-2.5 group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-3', controlClass)">
       <SelectValue :placeholder="notSelectedLabel" />
     </SelectTrigger>
     <SelectContent>

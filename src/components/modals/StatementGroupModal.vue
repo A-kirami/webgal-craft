@@ -81,7 +81,7 @@ function handleEditorModeChange(value: unknown): void {
           <Input
             v-model="draftName"
             :placeholder="$t('edit.visualEditor.commandPanel.groupNamePlaceholder')"
-            class="text-sm font-normal h-7 max-w-60 shadow-none placeholder:text-sm"
+            class="text-sm font-normal h-7 max-w-60 placeholder:text-sm"
           />
         </DialogTitle>
         <DialogDescription>
@@ -104,10 +104,10 @@ function handleEditorModeChange(value: unknown): void {
       >
         <div class="border-r flex flex-col min-h-0">
           <TabsList class="mb-2 mr-1 p-0.75 shrink-0 h-8">
-            <TabsTrigger value="text" class="text-[13px] flex-1 h-full data-[state=active]:shadow-none">
+            <TabsTrigger value="text" class="text-[13px] flex-1 h-full">
               {{ $t('edit.visualEditor.commandPanel.editorMode.text') }}
             </TabsTrigger>
-            <TabsTrigger value="visual" class="text-[13px] flex-1 h-full data-[state=active]:shadow-none">
+            <TabsTrigger value="visual" class="text-[13px] flex-1 h-full">
               {{ $t('edit.visualEditor.commandPanel.editorMode.visual') }}
             </TabsTrigger>
           </TabsList>

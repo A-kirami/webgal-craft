@@ -110,7 +110,7 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
                 <span>
                   <TabsTrigger
                     :value="item.tab"
-                    class="p-1.75 data-[state=active]:bg-accent data-[state=active]:shadow-none"
+                    class="p-1.75 data-[state=active]:bg-accent"
                   >
                     <component :is="item.icon" class="size-4.5" />
                   </TabsTrigger>
@@ -139,7 +139,7 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
               <Button
                 variant="outline"
                 size="icon"
-                class="shrink-0 size-7 shadow-none"
+                class="shrink-0 size-7"
                 :title="$t('common.create')"
                 :aria-label="$t('common.create')"
               >
@@ -208,7 +208,7 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
                 <Button
                   variant="ghost"
                   size="sm"
-                  class="text-xs px-2 gap-1.5 h-6 max-w-36 min-w-0 shadow-none"
+                  class="text-xs px-2 gap-1.5 h-6 max-w-36 min-w-0"
                   :title="$t('edit.assetPanel.actions.sortField')"
                 >
                   <ArrowUpDown class="text-muted-foreground shrink-0 size-3.5" />
@@ -234,7 +234,7 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
             <Button
               variant="ghost"
               size="icon"
-              class="size-6 shadow-none"
+              class="size-6"
               :title="$t('edit.assetPanel.actions.sortOrder')"
               :aria-label="$t('edit.assetPanel.actions.sortOrder')"
               @click="toggleSortOrder"

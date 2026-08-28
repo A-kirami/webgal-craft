@@ -849,7 +849,7 @@ for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
           ref="renameInputRef"
           ::="renameValue"
           :class="[
-            'h-7 text-xs shadow-none field-sizing-content w-auto max-w-full',
+            'h-7 text-xs field-sizing-content w-auto max-w-full',
             isRenameDuplicate ? 'text-destructive focus-visible:ring-destructive' : ''
           ]"
           :disabled="isRenameSubmitting"

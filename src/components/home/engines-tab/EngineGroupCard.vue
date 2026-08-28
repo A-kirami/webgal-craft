@@ -215,7 +215,7 @@ const menuItems = $computed<MenuItem[]>(() => {
                 v-if="isOfficial && remoteAction"
                 :disabled="remoteAction.disabled"
                 variant="outline"
-                class="shrink-0 gap-1.5 h-7 shadow-none [&_svg]:size-3.5"
+                class="shrink-0 gap-1.5 h-7 [&_svg]:size-3.5"
                 size="sm"
                 @click="handleRemoteAction"
               >

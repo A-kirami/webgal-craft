@@ -76,10 +76,10 @@ function handlePreviewExpand() {
       <Tabs ::="preferenceStore.leftPanelView" class="flex flex-col h-full">
         <!-- 顶部横向标签栏：场景 / 资源 -->
         <TabsList class="mx-2 mt-1 p-0.75 shrink-0 h-8">
-          <TabsTrigger value="scene" class="flex-1 h-full data-[state=active]:shadow-none">
+          <TabsTrigger value="scene" class="flex-1 h-full">
             {{ $t('edit.scenePanel.scene') }}
           </TabsTrigger>
-          <TabsTrigger value="resource" class="flex-1 h-full data-[state=active]:shadow-none">
+          <TabsTrigger value="resource" class="flex-1 h-full">
             {{ $t('edit.scenePanel.resource') }}
           </TabsTrigger>
         </TabsList>

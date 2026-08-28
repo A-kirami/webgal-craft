@@ -5,7 +5,7 @@ const TabItem = (props: { value: string, label: string }) => {
   return (
     <TabsTrigger
       value={props.value}
-      class="py-1.5 w-full justify-start data-[state=active]:bg-muted data-[state=active]:shadow-none"
+      class="py-1.5 w-full justify-start data-[state=active]:bg-muted"
     >
       {props.label}
     </TabsTrigger>

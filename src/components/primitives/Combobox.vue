@@ -197,7 +197,7 @@ watch(() => searchQuery, async (nextQuery) => {
         role="combobox"
         :aria-expanded="open"
         aria-haspopup="listbox"
-        :class="cn('text-xs shadow-none justify-between font-normal px-2 py-1.5', props.class)"
+        :class="cn('text-xs justify-between font-normal px-2 py-1.5', props.class)"
       >
         <span class="truncate" :class="!selectedLabel && 'text-muted-foreground'">
           {{ selectedLabel || placeholder }}

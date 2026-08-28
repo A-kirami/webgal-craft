@@ -261,7 +261,7 @@ onUnmounted(cancelScheduledEmit)
     </div>
 
     <div class="flex flex-wrap gap-2 w-full">
-      <InputGroup class="flex-1 basis-20 h-7 min-w-0 w-full shadow-none">
+      <InputGroup class="flex-1 basis-20 h-7 min-w-0 w-full">
         <InputGroupAddon class="text-xs text-muted-foreground min-w-5">
           {{ xLabel }}
         </InputGroupAddon>
@@ -272,14 +272,14 @@ onUnmounted(cancelScheduledEmit)
           :max="maxValue"
           :step="stepValue"
           :model-value="xInput"
-          class="text-xs pr-1 h-7 shadow-none"
+          class="text-xs pr-1 h-7"
           @update:model-value="handleAxisInputUpdate('x', $event)"
           @blur="commitInputs"
           @keydown="handleAxisInputKeydown"
         />
       </InputGroup>
 
-      <InputGroup class="flex-1 basis-20 h-7 min-w-0 w-full shadow-none">
+      <InputGroup class="flex-1 basis-20 h-7 min-w-0 w-full">
         <InputGroupAddon class="text-xs text-muted-foreground min-w-5">
           {{ yLabel }}
         </InputGroupAddon>
@@ -290,7 +290,7 @@ onUnmounted(cancelScheduledEmit)
           :max="maxValue"
           :step="stepValue"
           :model-value="yInput"
-          class="text-xs pr-1 h-7 shadow-none"
+          class="text-xs pr-1 h-7"
           @update:model-value="handleAxisInputUpdate('y', $event)"
           @blur="commitInputs"
           @keydown="handleAxisInputKeydown"

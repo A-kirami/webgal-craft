@@ -53,7 +53,7 @@ async function handleSelectFolder() {
     <div class="flex gap-2">
       <Input
         :model-value="displayValue"
-        class="text-xs bg-accent flex-1 h-8 shadow-none cursor-default!"
+        class="text-xs bg-accent flex-1 h-8 cursor-default!"
         disabled
       />
       <FormControl v-if="!readonly">
@@ -61,7 +61,7 @@ async function handleSelectFolder() {
           v-bind="componentField"
           variant="outline"
           type="button"
-          class="text-xs font-normal h-8 w-auto shadow-none"
+        class="text-xs font-normal h-8 w-auto"
           @click="handleSelectFolder"
         >
           {{ resolveI18nLike(field.buttonLabel ?? ((translator) => translator('common.openFolder')), t) }}

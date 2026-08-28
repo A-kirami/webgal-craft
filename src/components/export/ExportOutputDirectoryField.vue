@@ -19,14 +19,14 @@ const emit = defineEmits<{
       <Input
         id="web-export-output-root"
         :model-value="outputRoot ?? ''"
-        class="text-xs bg-accent flex-1 h-8 shadow-none cursor-default!"
+        class="text-xs bg-accent flex-1 h-8 cursor-default!"
         disabled
       />
       <Button
         v-if="!readonly"
         type="button"
         variant="outline"
-        class="text-xs font-normal h-8 w-auto shadow-none"
+        class="text-xs font-normal h-8 w-auto"
         :disabled="disabled"
         @click="emit('select')"
       >

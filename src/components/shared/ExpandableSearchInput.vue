@@ -69,7 +69,7 @@ async function handleClearInput() {
         :disabled="disabled"
         :placeholder="resolvedPlaceholder"
         :aria-label="resolvedPlaceholder"
-        :class="cn('text-xs shadow-none', inputClass)"
+        :class="cn('text-xs', inputClass)"
       />
       <InputGroupAddon v-if="modelValue" align="inline-end">
         <InputGroupButton
@@ -86,7 +86,7 @@ async function handleClearInput() {
       :disabled="disabled"
       :variant="isInputVisible ? 'default' : 'outline'"
       size="icon"
-      class="shrink-0 size-7 shadow-none"
+      class="shrink-0 size-7"
       :title="resolvedToggleLabel"
       :aria-label="resolvedToggleLabel"
       @click="handleToggle"

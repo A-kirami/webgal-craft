@@ -72,7 +72,7 @@ function handleRemoveImage(index: number) {
             type="button"
             size="icon"
             variant="secondary"
-            class="text-muted-foreground border-2 border-background rounded-full bg-muted size-6 shadow-none absolute hover:text-destructive focus-visible:border-background hover:bg-muted -right-2 -top-2"
+            class="text-muted-foreground border-2 border-background rounded-full bg-muted size-6 absolute hover:text-destructive focus-visible:border-background hover:bg-muted -right-2 -top-2"
             :aria-label="$t('modals.gameConfig.gameLogo.remove')"
             @click="handleRemoveImage(index)"
           >

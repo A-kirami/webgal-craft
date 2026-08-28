@@ -47,7 +47,7 @@ function handlePanelSliderUpdate(values?: number[]) {
     <Input
       :id="id"
       type="number"
-      class="text-xs px-2 py-1 h-7 w-12 shadow-none"
+      class="text-xs px-2 py-1 h-7 w-12"
       inputmode="decimal"
       :model-value="String(value ?? '')"
       @blur="$emit('commitSlider', $event)"
@@ -57,7 +57,7 @@ function handlePanelSliderUpdate(values?: number[]) {
 
   <InputGroup
     v-else-if="variant === 'input-with-unit'"
-    :class="cn('h-6 w-24 shadow-none group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-auto', props.class)"
+    :class="cn('h-6 w-24 group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-auto', props.class)"
   >
     <InputGroupInput
       :id="id"
@@ -65,7 +65,7 @@ function handlePanelSliderUpdate(values?: number[]) {
       :min="min"
       :max="max"
       :model-value="resolveFieldModelStringValue(value)"
-      class="text-xs px-2.5 pr-1 h-6 shadow-none group-data-[surface=panel]:px-3 group-data-[surface=panel]:h-7"
+      class="text-xs px-2.5 pr-1 h-6 group-data-[surface=panel]:px-3 group-data-[surface=panel]:h-7"
       @update:model-value="emitNormalizedValue"
     />
     <InputGroupAddon align="inline-end" class="text-xs">
@@ -81,7 +81,7 @@ function handlePanelSliderUpdate(values?: number[]) {
     :max="max"
     :model-value="resolveFieldModelStringValue(value)"
     :class="cn(
-      'text-xs h-6 px-2.5 w-16 shadow-none group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-3 group-data-[surface=panel]:w-auto',
+      'text-xs h-6 px-2.5 w-16 group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-3 group-data-[surface=panel]:w-auto',
       autoWidthByContent && 'field-sizing-content w-auto max-w-full min-w-16',
       props.class,
     )"
