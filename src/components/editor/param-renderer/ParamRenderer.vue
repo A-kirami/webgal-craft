@@ -324,7 +324,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
           <Switch
             v-if="fieldMode(field) === 'switch'"
             :id="fieldInputId(field)"
-            :class="cn('scale-75 group-data-[surface=panel]:scale-100', controlClass(field))"
+            :class="cn('scale-90 group-data-[surface=panel]:scale-100', controlClass(field))"
             :model-value="switchModelValue(field)"
             @update:model-value="emit('updateValue', { field, value: !!$event })"
           />
