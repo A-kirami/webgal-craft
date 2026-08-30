@@ -24,7 +24,7 @@ function emitSelect(value: unknown) {
 </script>
 
 <template>
-  <TooltipProvider :delay-duration="300">
+  <TooltipProvider :delay-duration="0">
     <ToggleGroup
       :id="props.inputId"
       type="single"
