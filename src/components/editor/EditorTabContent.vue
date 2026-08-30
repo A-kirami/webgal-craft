@@ -36,7 +36,7 @@ function handleCloseClick() {
   <div class="flex gap-1.5 items-center">
     <FileText class="shrink-0 size-4" />
     <span
-      class="text-13px font-light shrink-0"
+      class="text-13px font-normal shrink-0"
       :class="[
         { 'italic': props.tab.isPreview },
         getDiagnosticSeverityTextClass(props.diagnosticSeverity),
@@ -47,7 +47,7 @@ function handleCloseClick() {
     </span>
     <span
       v-if="props.pathHint"
-      class="text-[11.7px] text-muted-foreground/70 font-light max-w-28 min-w-0 truncate"
+      class="text-12px text-muted-foreground/70 font-normal max-w-28 min-w-0 truncate"
       data-editor-tab-path-hint
     >
       {{ props.pathHint }}
