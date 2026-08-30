@@ -10,7 +10,7 @@ const props = defineProps<Props>()
 
 <template>
   <Dialog :open="props.effectDialog.isOpen" @update:open="val => { if (!val) props.effectDialog.requestClose() }">
-    <DialogScrollContent class="max-w-102" @open-auto-focus.prevent>
+    <DialogScrollContent class="max-w-120" @open-auto-focus.prevent>
       <DialogHeader>
         <DialogTitle>{{ $t('modals.effectEditor.title') }}</DialogTitle>
         <DialogDescription>
