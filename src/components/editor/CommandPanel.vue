@@ -212,7 +212,7 @@ useShortcutContext({
         <ScrollBar orientation="horizontal" class="opacity-75 h-1.5 -mb-0.25 hover:opacity-100" />
       </ScrollArea>
 
-      <Separator orientation="vertical" class="h-5" />
+      <Separator orientation="vertical" class="h-4" />
 
       <div class="flex gap-1 items-center">
         <Button
