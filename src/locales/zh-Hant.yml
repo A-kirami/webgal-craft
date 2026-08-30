@@ -1304,11 +1304,6 @@ edit:
     effectEditor: 效果編輯器
     statementList: 語句列表
     noSelection: 請選擇一條語句進行編輯
-  welcome:
-    startEditing: 開始編輯
-    selectOrCreate: 選擇一個檔案開始編輯，或建立新檔案
-    newFile: 新建檔案
-
 settings:
   experimental:
     tooltip: 這是一個實驗性功能，使用過程中可能會遇到問題

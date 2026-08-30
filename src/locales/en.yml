@@ -1304,11 +1304,6 @@ edit:
     effectEditor: Effect Editor
     statementList: Statement list
     noSelection: Select a statement to edit
-  welcome:
-    startEditing: Start Editing
-    selectOrCreate: Select a file to start editing, or create a new file
-    newFile: New File
-
 settings:
   experimental:
     tooltip: This is an experimental feature and may encounter issues during use

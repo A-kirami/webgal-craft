@@ -1304,11 +1304,6 @@ edit:
     effectEditor: エフェクトエディター
     statementList: ステートメントリスト
     noSelection: 編集するステートメントを選択してください
-  welcome:
-    startEditing: 編集を開始
-    selectOrCreate: ファイルを選択して編集を開始するか、新しいファイルを作成
-    newFile: 新しいファイル
-
 settings:
   experimental:
     tooltip: これは実験的な機能であり、使用中に問題が発生する可能性があります
