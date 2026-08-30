@@ -85,11 +85,10 @@ const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRe
     </div>
     <Button
       variant="outline"
-      class="gap-2"
       :disabled="managedImportStore.isBusy"
       @click="controller.selectTemplateFolder"
     >
-      <Plus class="h-4 w-4" />
+      <Plus />
       {{ $t('home.templates.importTemplate') }}
     </Button>
   </div>

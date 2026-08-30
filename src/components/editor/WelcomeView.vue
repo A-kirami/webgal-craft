@@ -15,7 +15,7 @@ import { FileText, Plus } from '@lucide/vue'
         {{ $t('edit.welcome.selectOrCreate') }}
       </p>
       <Button>
-        <Plus class="mr-2 h-4 w-4" />
+        <Plus class="mr-2" />
         {{ $t('edit.welcome.newFile') }}
       </Button>
     </div>

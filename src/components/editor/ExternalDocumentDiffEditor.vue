@@ -261,13 +261,12 @@ onBeforeUnmount(disposeDiffEditor)
               <TooltipTrigger as-child>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  class="size-7"
+                  size="icon-sm"
                   :disabled="lineChanges.length === 0"
                   :aria-label="$t('modals.externalDocumentChange.diff.previousChange')"
                   @click="selectPreviousChange"
                 >
-                  <ChevronUp class="size-4" />
+                  <ChevronUp />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{{ $t('modals.externalDocumentChange.diff.previousChange') }}</TooltipContent>
@@ -276,13 +275,12 @@ onBeforeUnmount(disposeDiffEditor)
               <TooltipTrigger as-child>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  class="size-7"
+                  size="icon-sm"
                   :disabled="lineChanges.length === 0"
                   :aria-label="$t('modals.externalDocumentChange.diff.nextChange')"
                   @click="selectNextChange"
                 >
-                  <ChevronDown class="size-4" />
+                  <ChevronDown />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{{ $t('modals.externalDocumentChange.diff.nextChange') }}</TooltipContent>
@@ -295,7 +293,7 @@ onBeforeUnmount(disposeDiffEditor)
             :disabled="!currentChange"
             @click="adoptLeftChange"
           >
-            <ArrowRight class="mr-1.5 size-4" />
+            <ArrowRight />
             {{ $t('modals.externalDocumentChange.diff.useLeft') }}
           </Button>
           <Button
@@ -304,7 +302,7 @@ onBeforeUnmount(disposeDiffEditor)
             :disabled="!currentChange"
             @click="keepRightChange"
           >
-            <Check class="mr-1.5 size-4" />
+            <Check />
             {{ $t('modals.externalDocumentChange.diff.keepRight') }}
           </Button>
         </div>

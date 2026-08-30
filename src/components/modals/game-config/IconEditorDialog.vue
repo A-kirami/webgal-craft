@@ -138,10 +138,9 @@ const previewItems = $computed((): PreviewItem[] => [
                   variant="outline"
                   size="sm"
                   data-testid="icon-editor-select-foreground"
-                  class="shrink-0 h-7"
                   @click="selectForeground"
                 >
-                  <ImagePlus class="size-3.5" />
+                  <ImagePlus />
                   {{ foregroundSelectLabel }}
                 </Button>
               </div>
@@ -218,10 +217,9 @@ const previewItems = $computed((): PreviewItem[] => [
                       variant="outline"
                       size="sm"
                       data-testid="icon-editor-select-background"
-                      class="h-7"
                       @click="selectBackgroundImage"
                     >
-                      <ImagePlus class="size-3.5" />
+                      <ImagePlus />
                       {{ backgroundSelectLabel }}
                     </Button>
                   </div>

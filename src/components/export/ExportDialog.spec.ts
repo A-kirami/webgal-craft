@@ -250,7 +250,6 @@ describe('ExportDialog', () => {
     expect(outputRootInput.classList).toContain('h-8')
     expect(browseButton.classList).toContain('text-xs')
     expect(browseButton.classList).toContain('font-normal')
-    expect(browseButton.classList).toContain('h-8')
     expect(browseButton.querySelector('svg')).toBeNull()
     await expect.element(configureStep).toBeEnabled()
     await expect.element(page.getByRole('button', { name: 'export.previousStep' })).toBeEnabled()

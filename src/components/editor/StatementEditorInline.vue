@@ -80,7 +80,7 @@ function handleBlankDblClick(e: MouseEvent) {
 </script>
 
 <template>
-  <div class="px-3 pb-2 flex flex-col gap-2" @dblclick="handleBlankDblClick">
+  <div class="px-3 pb-1 flex flex-col gap-2" @dblclick="handleBlankDblClick">
     <!-- 空行 / 注释 -->
     <template v-if="statementType === 'empty' || statementType === 'comment'">
       <Input

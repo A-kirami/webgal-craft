@@ -105,11 +105,10 @@ const latestVersion = computed(() => versionItems.value[0]?.version)
               <Button
                 :aria-label="$t('common.openReleasePage')"
                 variant="ghost"
-                size="icon"
-                class="size-6"
+                size="icon-xs"
                 @click="emit('openVersionRelease', item.releaseUrl)"
               >
-                <ExternalLink class="size-3.5" />
+                <ExternalLink />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -122,11 +121,10 @@ const latestVersion = computed(() => versionItems.value[0]?.version)
                 :aria-label="$t('home.engines.official.download')"
                 :disabled="group.remote?.status !== 'ready'"
                 variant="ghost"
-                size="icon"
-                class="size-6"
+                size="icon-xs"
                 @click="item.version && emit('downloadVersion', item.version)"
               >
-                <Download class="size-3.5" />
+                <Download />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -138,11 +136,11 @@ const latestVersion = computed(() => versionItems.value[0]?.version)
               <Button
                 :aria-label="$t('engine.deleteVersion')"
                 variant="ghost"
-                size="icon"
-                class="text-destructive size-6 hover:text-destructive-foreground hover:bg-destructive"
+                size="icon-xs"
+                class="text-destructive hover:text-destructive-foreground hover:bg-destructive"
                 @click="emit('deleteEngine', item.engine)"
               >
-                <Trash2 class="size-3.5" />
+                <Trash2 />
               </Button>
             </TooltipTrigger>
             <TooltipContent>

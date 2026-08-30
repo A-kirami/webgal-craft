@@ -221,17 +221,17 @@ onScopeDispose(() => {
         {{ $t('edit.scenePanel.scene') }}
       </h3>
       <div class="opacity-0 flex gap-1 transition-opacity group-hover/scene:opacity-100">
-        <Button variant="ghost" size="icon" class="rounded h-6 w-6" @click="handleCreateFile">
-          <FilePlus class="h-4 w-4" :stroke-width="1.5" />
+        <Button variant="ghost" size="icon-xs" class="text-muted-foreground rounded" @click="handleCreateFile">
+          <FilePlus />
         </Button>
-        <Button variant="ghost" size="icon" class="rounded h-6 w-6" @click="handleCreateFolder">
-          <FolderPlus class="h-4 w-4" :stroke-width="1.5" />
+        <Button variant="ghost" size="icon-xs" class="text-muted-foreground rounded" @click="handleCreateFolder">
+          <FolderPlus />
         </Button>
-        <Button variant="ghost" size="icon" class="rounded h-6 w-6" :disabled="isLoading" data-testid="scene-panel-refresh" @click="handleRefresh">
-          <RotateCw class="h-4 w-4" :stroke-width="1.5" />
+        <Button variant="ghost" size="icon-xs" class="text-muted-foreground rounded" :disabled="isLoading" data-testid="scene-panel-refresh" @click="handleRefresh">
+          <RotateCw />
         </Button>
-        <Button variant="ghost" size="icon" class="rounded h-6 w-6" @click="handleCollapseAll">
-          <CopyMinus class="h-4 w-4" :stroke-width="1.5" />
+        <Button variant="ghost" size="icon-xs" class="text-muted-foreground rounded" @click="handleCollapseAll">
+          <CopyMinus />
         </Button>
       </div>
     </div>

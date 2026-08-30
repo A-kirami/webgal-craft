@@ -137,10 +137,9 @@ const progressDetail = computed(() => {
       size="icon"
       variant="ghost"
       :aria-label="$t('home.managedImport.cancel')"
-      class="shrink-0 size-9"
       @click="emit('cancel')"
     >
-      <X class="size-4" />
+      <X />
     </Button>
   </div>
 </template>

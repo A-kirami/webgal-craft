@@ -81,19 +81,19 @@ function updateZoomLevelValue(value: AcceptableValue) {
     />
     <Button
       variant="outline"
-      size="icon"
-      class="size-7 hidden sm:inline-flex"
+      size="icon-sm"
+      class="hidden sm:inline-flex"
       :title="viewMode === 'grid' ? $t('common.view.grid') : $t('common.view.list')"
       :aria-label="viewMode === 'grid' ? $t('common.view.grid') : $t('common.view.list')"
       @click="toggleViewMode"
     >
-      <LayoutGrid v-if="viewMode === 'grid'" class="size-3.5" />
-      <LayoutList v-else class="size-3.5" />
+      <LayoutGrid v-if="viewMode === 'grid'" />
+      <LayoutList v-else />
     </Button>
     <DropdownMenu>
       <DropdownMenuTrigger as-child>
-        <Button variant="outline" size="icon" class="size-7" :title="$t('filePicker.more.title')" :aria-label="$t('filePicker.more.title')">
-          <EllipsisVertical class="size-3.5" />
+        <Button variant="outline" size="icon-sm" :title="$t('filePicker.more.title')" :aria-label="$t('filePicker.more.title')">
+          <EllipsisVertical />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" class="w-30">

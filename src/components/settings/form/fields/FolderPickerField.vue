@@ -61,7 +61,7 @@ async function handleSelectFolder() {
           v-bind="componentField"
           variant="outline"
           type="button"
-        class="text-xs font-normal h-8 w-auto"
+          class="text-xs w-auto"
           @click="handleSelectFolder"
         >
           {{ resolveI18nLike(field.buttonLabel ?? ((translator) => translator('common.openFolder')), t) }}

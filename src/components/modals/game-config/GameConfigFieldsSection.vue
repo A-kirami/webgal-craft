@@ -614,12 +614,12 @@ function scrollCustomAddButtonIntoView() {
                   type="button"
                   variant="ghost"
                   size="icon"
-              class="text-muted-foreground size-8 self-start hover:text-destructive"
+                  class="text-muted-foreground self-start hover:text-destructive"
                   :aria-label="$t('modals.gameConfig.custom.remove')"
                   :data-testid="`game-config-custom-remove-${index}`"
                   @click="handleRemoveCustomConfig(index)"
                 >
-                  <X class="size-3.5" />
+                  <X />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" class="px-2 py-1">
@@ -633,7 +633,7 @@ function scrollCustomAddButtonIntoView() {
           <Button
             type="button"
             variant="outline"
-            class="text-xs h-8 w-full"
+            class="text-xs w-full"
             data-testid="game-config-custom-add"
             @click="handleAddCustomConfig"
           >

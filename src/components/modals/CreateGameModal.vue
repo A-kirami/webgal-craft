@@ -81,7 +81,7 @@ const selectedEngineId = useFieldValue<string>('gameEngine')
                   </TooltipProvider>
                 </FormControl>
                 <Button v-if="canSelectGamePath" :aria-label="$t('modals.createGame.selectSaveLocation')" variant="outline" size="icon" type="button" @click="handleSelectFolder">
-                  <FolderOpen class="h-4 w-4" />
+                  <FolderOpen />
                 </Button>
               </div>
               <FormMessage class="col-start-2" />

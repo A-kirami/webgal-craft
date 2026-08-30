@@ -18,7 +18,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>()
 
 const zoomPercent = $computed(() => `${Math.round(props.zoomRatio * 100)}%`)
-const buttonClass = 'size-6 text-muted-foreground hover:text-foreground'
+const buttonClass = 'size-6 text-muted-foreground hover:text-foreground [&_svg]:size-3.5'
 </script>
 
 <template>
@@ -36,7 +36,7 @@ const buttonClass = 'size-6 text-muted-foreground hover:text-foreground'
             :disabled="props.disabled"
             @click="emit('zoomOut')"
           >
-            <Minus class="size-3.5" />
+            <Minus />
             <span class="sr-only">{{ $t('edit.previewPanel.zoomOut') }}</span>
           </Button>
         </TooltipTrigger>
@@ -61,7 +61,7 @@ const buttonClass = 'size-6 text-muted-foreground hover:text-foreground'
             :disabled="props.disabled"
             @click="emit('zoomIn')"
           >
-            <Plus class="size-3.5" />
+            <Plus />
             <span class="sr-only">{{ $t('edit.previewPanel.zoomIn') }}</span>
           </Button>
         </TooltipTrigger>
@@ -81,7 +81,7 @@ const buttonClass = 'size-6 text-muted-foreground hover:text-foreground'
             :disabled="props.disabled"
             @click="emit('fitToView')"
           >
-            <Maximize class="size-3.5" />
+            <Maximize />
             <span class="sr-only">{{ $t('edit.previewPanel.fitToView') }}</span>
           </Button>
         </TooltipTrigger>

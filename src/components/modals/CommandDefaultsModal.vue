@@ -143,10 +143,10 @@ function requestClose(): void {
       </div>
 
       <DialogFooter>
-        <Button variant="outline" class="h-8" :disabled="isFactory" @click="handleResetToFactory">
+        <Button variant="outline" :disabled="isFactory" @click="handleResetToFactory">
           {{ $t('edit.visualEditor.commandPanel.resetDefaults') }}
         </Button>
-        <Button class="h-8" @click="handleSave">
+        <Button @click="handleSave">
           {{ $t('common.save') }}
         </Button>
       </DialogFooter>

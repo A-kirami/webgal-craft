@@ -31,10 +31,10 @@ const props = defineProps<Props>()
         />
       </div>
       <DialogFooter>
-        <Button variant="outline" class="h-8" :disabled="props.effectDialog.isDefault" @click="props.effectDialog.resetToDefault">
+        <Button variant="outline" :disabled="props.effectDialog.isDefault" @click="props.effectDialog.resetToDefault">
           {{ $t('edit.visualEditor.commandPanel.resetDefaults') }}
         </Button>
-        <Button class="h-8" @click="props.effectDialog.handleApply">
+        <Button @click="props.effectDialog.handleApply">
           {{ $t('common.confirm') }}
         </Button>
       </DialogFooter>

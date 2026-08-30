@@ -78,20 +78,19 @@ async function handleClearInput() {
           :aria-label="resolvedClearLabel"
           @click.prevent="handleClearInput"
         >
-          <X class="size-4" aria-hidden="true" />
+          <X aria-hidden="true" />
         </InputGroupButton>
       </InputGroupAddon>
     </InputGroup>
     <Button
       :disabled="disabled"
       :variant="isInputVisible ? 'default' : 'outline'"
-      size="icon"
-      class="shrink-0 size-7"
+      size="icon-sm"
       :title="resolvedToggleLabel"
       :aria-label="resolvedToggleLabel"
       @click="handleToggle"
     >
-      <Search class="size-3.5" />
+      <Search />
     </Button>
   </div>
 </template>

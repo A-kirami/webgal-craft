@@ -215,7 +215,7 @@ const menuItems = $computed<MenuItem[]>(() => {
                 v-if="isOfficial && remoteAction"
                 :disabled="remoteAction.disabled"
                 variant="outline"
-                class="shrink-0 gap-1.5 h-7 [&_svg]:size-3.5"
+                class="shrink-0"
                 size="sm"
                 @click="handleRemoteAction"
               >
@@ -227,8 +227,8 @@ const menuItems = $computed<MenuItem[]>(() => {
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
-                  <Button :aria-label="$t('common.more')" variant="ghost" size="icon" class="h-8 w-8">
-                    <EllipsisVertical class="size-4" />
+                  <Button :aria-label="$t('common.more')" variant="ghost" size="icon-sm">
+                    <EllipsisVertical />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" class="text-13px w-44">
@@ -329,21 +329,20 @@ const menuItems = $computed<MenuItem[]>(() => {
             v-if="isOfficial && remoteAction"
             :disabled="remoteAction.disabled"
             variant="outline"
-            class="shrink-0 gap-1.5"
+            class="shrink-0"
             size="sm"
             @click="handleRemoteAction"
           >
             <component
               :is="remoteAction.icon"
-              class="size-4"
               :class="{ 'animate-spin': group.remote?.status === 'loading' || group.remote?.status === 'installing' }"
             />
             {{ remoteAction.label }}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
-              <Button :aria-label="$t('common.more')" variant="ghost" size="icon" class="h-8 w-8">
-                <EllipsisVertical class="size-4" />
+              <Button :aria-label="$t('common.more')" variant="ghost" size="icon-sm">
+                <EllipsisVertical />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" class="w-44">

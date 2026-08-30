@@ -26,7 +26,7 @@ const emit = defineEmits<{
         v-if="!readonly"
         type="button"
         variant="outline"
-        class="text-xs font-normal h-8 w-auto"
+        class="text-xs w-auto"
         :disabled="disabled"
         @click="emit('select')"
       >

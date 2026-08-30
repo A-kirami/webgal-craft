@@ -246,11 +246,11 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button
-                    size="icon"
+                    size="icon-sm"
                     variant="ghost"
                     :aria-label="controls.isLinkedSliderLocked(item.param) ? $t('modals.effectEditor.unlinkScale') : $t('modals.effectEditor.linkScale')"
                     :aria-pressed="controls.isLinkedSliderLocked(item.param)"
-                    :class="['h-7 w-7', controls.isLinkedSliderLocked(item.param) && 'bg-accent text-accent-foreground hover:bg-accent/80']"
+                    :class="[controls.isLinkedSliderLocked(item.param) && 'bg-accent text-accent-foreground hover:bg-accent/80']"
                     @click="controls.toggleLinkedSliderLock(item.param)"
                   >
                     <div :class="controls.isLinkedSliderLocked(item.param) ? 'i-lucide-link' : 'i-lucide-unlink'" class="size-3.5" />
@@ -369,9 +369,9 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               <TooltipTrigger as-child>
                 <Button
                   type="button"
-                  size="icon"
+                  size="icon-sm"
                   variant="ghost"
-                  class="h-7 w-9"
+                  class="w-9"
                   :aria-label="$t('modals.effectEditor.flipHorizontal')"
                   @click="controls.flipScaleAxis('x')"
                 >
@@ -386,9 +386,9 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               <TooltipTrigger as-child>
                 <Button
                   type="button"
-                  size="icon"
+                  size="icon-sm"
                   variant="ghost"
-                  class="h-7 w-9"
+                  class="w-9"
                   :aria-label="$t('modals.effectEditor.flipVertical')"
                   @click="controls.flipScaleAxis('y')"
                 >

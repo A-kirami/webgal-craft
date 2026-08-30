@@ -219,11 +219,10 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
                 <Button
                   :aria-label="$t('common.openFolder')"
                   variant="ghost"
-                  size="icon"
-                  class="h-8 w-8"
+                  size="icon-sm"
                   @click.stop="emit('openFolder', item.game)"
                 >
-                  <Folder class="h-4 w-4" />
+                  <Folder />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -235,11 +234,11 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
                 <Button
                   :aria-label="$t('home.games.deleteGame')"
                   variant="ghost"
-                  size="icon"
-                  class="text-destructive h-8 w-8 hover:text-destructive-foreground hover:bg-destructive"
+                  size="icon-sm"
+                  class="text-destructive hover:text-destructive-foreground hover:bg-destructive"
                   @click.stop="emit('deleteGame', item.game)"
                 >
-                  <Trash2 class="h-4 w-4" />
+                  <Trash2 />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>

@@ -199,8 +199,7 @@ function closeOutputControl(control: PreviewOutputControl): void {
           <PopoverTrigger as-child>
             <Button
               variant="ghost"
-              size="icon"
-              class="size-6"
+              size="icon-xs"
               :aria-label="volumeButtonLabel"
               :aria-pressed="preferenceStore.previewMuted"
               @click="toggleMute"
@@ -210,15 +209,13 @@ function closeOutputControl(control: PreviewOutputControl): void {
               <VolumeX
                 v-if="preferenceStore.previewMuted"
                 data-testid="preview-volume-muted-icon"
-                class="size-4"
               />
               <Volume
                 v-else-if="preferenceStore.previewVolume[0] === 0"
                 data-testid="preview-volume-zero-icon"
-                class="size-4"
               />
-              <Volume1 v-else-if="preferenceStore.previewVolume[0] < 50" class="size-4" />
-              <Volume2 v-else class="size-4" />
+              <Volume1 v-else-if="preferenceStore.previewVolume[0] < 50" />
+              <Volume2 v-else />
             </Button>
           </PopoverTrigger>
           <PopoverContent
@@ -253,16 +250,15 @@ function closeOutputControl(control: PreviewOutputControl): void {
           <PopoverTrigger as-child>
             <Button
               variant="ghost"
-              size="icon"
-              class="size-6"
+              size="icon-xs"
               :aria-label="brightnessButtonLabel"
               :aria-pressed="preferenceStore.previewBrightnessEnabled"
               @click="toggleBrightness"
               @pointerenter="showBrightnessControls"
               @pointerleave="brightnessControlsClose.schedule"
             >
-              <Lightbulb v-if="preferenceStore.previewBrightnessEnabled" class="size-4" />
-              <LightbulbOff v-else class="size-4" />
+              <Lightbulb v-if="preferenceStore.previewBrightnessEnabled" />
+              <LightbulbOff v-else />
             </Button>
           </PopoverTrigger>
           <PopoverContent
@@ -295,12 +291,11 @@ function closeOutputControl(control: PreviewOutputControl): void {
           <TooltipTrigger as-child>
             <Button
               variant="ghost"
-              size="icon"
-              class="size-6"
+              size="icon-xs"
               :disabled="!previewAvailable"
               @click="emit('refresh')"
             >
-              <RotateCw class="size-4" />
+              <RotateCw />
               <span class="sr-only">{{ $t('edit.previewPanel.refreshPreview') }}</span>
             </Button>
           </TooltipTrigger>
@@ -313,12 +308,11 @@ function closeOutputControl(control: PreviewOutputControl): void {
           <TooltipTrigger as-child>
             <Button
               variant="ghost"
-              size="icon"
-              class="size-6"
+              size="icon-xs"
               :disabled="!previewAvailable"
               @click="emit('openInBrowser')"
             >
-              <ExternalLink class="size-4" />
+              <ExternalLink />
               <span class="sr-only">{{ $t('edit.previewPanel.openInBrowser') }}</span>
             </Button>
           </TooltipTrigger>

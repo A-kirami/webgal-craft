@@ -141,8 +141,8 @@ const iconThumbnail = $computed(() =>
 
             <DropdownMenu v-if="menuItems.length > 0">
               <DropdownMenuTrigger as-child>
-                <Button :aria-label="$t('home.templates.actions.more')" variant="ghost" size="icon" class="shrink-0 h-8 w-8">
-                  <EllipsisVertical class="size-4" />
+                <Button :aria-label="$t('home.templates.actions.more')" variant="ghost" size="icon-sm">
+                  <EllipsisVertical />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" class="text-13px w-44">
@@ -236,8 +236,8 @@ const iconThumbnail = $computed(() =>
         <div v-if="menuItems.length > 0" class="flex shrink-0 items-center">
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
-              <Button :aria-label="$t('home.templates.actions.more')" variant="ghost" size="icon" class="shrink-0 h-8 w-8">
-                <EllipsisVertical class="size-4" />
+              <Button :aria-label="$t('home.templates.actions.more')" variant="ghost" size="icon-sm">
+                <EllipsisVertical />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" class="w-44">

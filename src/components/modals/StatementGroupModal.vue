@@ -122,7 +122,7 @@ function handleEditorModeChange(value: unknown): void {
                   v-for="entry in commandGroup.entries"
                   :key="entry.type"
                   variant="ghost"
-                  class="px-3 py-2 opacity-80 h-8 justify-start hover:opacity-100"
+                  class="opacity-80 justify-start hover:opacity-100"
                   @click="handleAppendCommand(entry.type)"
                 >
                   <div class="shrink-0 size-3.5" :class="entry.icon" />
@@ -156,42 +156,42 @@ function handleEditorModeChange(value: unknown): void {
                 <template #actions>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    class="p-1 opacity-70 size-7 hover:opacity-100"
+                    size="icon-sm"
+                    class="opacity-70 hover:opacity-100"
                     :disabled="index === 0"
                     :title="$t('edit.visualEditor.commandPanel.moveUp')"
                     @click.stop="moveEntry(index, -1)"
                   >
-                    <div class="i-lucide-arrow-up size-3" />
+                    <div class="i-lucide-arrow-up size-3.5" />
                   </Button>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    class="p-1 opacity-70 size-7 hover:opacity-100"
+                    size="icon-sm"
+                    class="opacity-70 hover:opacity-100"
                     :disabled="index === draftEntries.length - 1"
                     :title="$t('edit.visualEditor.commandPanel.moveDown')"
                     @click.stop="moveEntry(index, 1)"
                   >
-                    <div class="i-lucide-arrow-down size-3" />
+                    <div class="i-lucide-arrow-down size-3.5" />
                   </Button>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    class="p-1 opacity-70 size-7 hover:opacity-100"
+                    size="icon-sm"
+                    class="opacity-70 hover:opacity-100"
                     :disabled="isEntryAtFactory(entry)"
                     :title="$t('edit.visualEditor.commandPanel.resetDefaults')"
                     @click.stop="resetEntry(entry.id)"
                   >
-                    <div class="i-lucide-rotate-ccw size-3" />
+                    <div class="i-lucide-rotate-ccw size-3.5" />
                   </Button>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    class="p-1 opacity-70 size-7 hover:text-destructive hover:opacity-100"
+                    size="icon-sm"
+                    class="opacity-70 hover:text-destructive hover:opacity-100"
                     :title="$t('common.delete')"
                     @click.stop="deleteEntry(entry.id)"
                   >
-                    <div class="i-lucide-trash-2 size-3" />
+                    <div class="i-lucide-trash-2 size-3.5" />
                   </Button>
                 </template>
               </VisualEditorStatementCard>
@@ -204,10 +204,10 @@ function handleEditorModeChange(value: unknown): void {
       </Tabs>
 
       <DialogFooter class="shrink-0">
-        <Button variant="outline" class="h-8" @click="requestClose">
+        <Button variant="outline" @click="requestClose">
           {{ $t('common.cancel') }}
         </Button>
-        <Button class="h-8" :disabled="!canSave" @click="handleSaveGroup">
+        <Button :disabled="!canSave" @click="handleSaveGroup">
           {{ $t('edit.visualEditor.commandPanel.saveGroup') }}
         </Button>
       </DialogFooter>
