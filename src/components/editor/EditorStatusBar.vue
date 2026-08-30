@@ -183,7 +183,7 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
 <template>
   <div class="text-xs px-3 border-t bg-gray-50 flex h-6 items-center dark:bg-gray-900">
     <div class="flex gap-3 min-w-0 items-center">
-      <TooltipProvider>
+      <TooltipProvider :delay-duration="0">
         <Tooltip v-if="isEngineBound">
           <TooltipTrigger as-child>
             <button
