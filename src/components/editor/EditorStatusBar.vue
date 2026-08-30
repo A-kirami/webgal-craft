@@ -257,23 +257,23 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
       <!-- 文件语言 -->
       <div v-if="fileLanguage" class="flex gap-1 items-center">
         <FileText class="text-muted-foreground h-3 w-3" :stroke-width="1" />
-        <span class="font-medium">{{ fileLanguage }}</span>
+        <span>{{ fileLanguage }}</span>
       </div>
 
       <!-- 统计 -->
       <div class="flex gap-1 items-center">
         <ChartSpline class="text-muted-foreground h-3 w-3" />
-        <span v-if="isSceneMode" class="font-medium">
+        <span v-if="isSceneMode">
           {{ $t('edit.statusBar.statements', { count: statementCount }) }}
         </span>
-        <span v-else-if="isAnimationMode" class="font-medium">
+        <span v-else-if="isAnimationMode">
           {{ $t('edit.statusBar.frames', { count: frameCount }) }}
         </span>
         <template v-else>
-          <span class="font-medium">
+          <span>
             {{ $t('edit.textEditor.stats.lines', { count: lineCount }) }}
           </span>
-          <span class="font-medium">
+          <span>
             {{ $t('edit.textEditor.stats.words', { count: wordCount }) }}
           </span>
         </template>
@@ -285,11 +285,11 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
       <!-- 图片分辨率 -->
       <div v-if="isImagePreview && imageWidth && imageHeight" class="flex gap-1 items-center">
         <ImageIcon class="text-muted-foreground h-3 w-3" :stroke-width="1" />
-        <span class="font-medium">{{ imageWidth }} × {{ imageHeight }}</span>
+        <span>{{ imageWidth }} × {{ imageHeight }}</span>
       </div>
 
       <!-- 文件大小 -->
-      <span v-if="previewState.fileSize !== undefined" class="text-muted-foreground font-medium">
+      <span v-if="previewState.fileSize !== undefined" class="text-muted-foreground">
         {{ formatFileSize(previewState.fileSize) }}
       </span>
     </div>
