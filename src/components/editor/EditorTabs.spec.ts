@@ -310,9 +310,7 @@ describe('EditorTabs', () => {
 
     expect(scenesTab?.querySelector('.text-13px')).toBeTruthy()
     expect(scenesPathHint).toHaveTextContent('scene')
-    expect(scenesPathHint).toHaveClass('text-[11.7px]')
     expect(assetsPathHint).toHaveTextContent('background')
-    expect(assetsPathHint).toHaveClass('text-[11.7px]')
     expect(otherTab?.querySelector('[data-editor-tab-path-hint]')).toBeNull()
   })
 

@@ -86,7 +86,7 @@ function handleBlankDblClick(e: MouseEvent) {
       <Input
         :model-value="parsed?.content ?? ''"
         :placeholder="$t('edit.visualEditor.placeholder.comment')"
-        class="text-xs text-muted-foreground px-2.5 border-transparent h-6 focus:text-foreground focus-visible:border-input"
+        class="text-xs text-muted-foreground px-2 border-transparent h-6 focus:text-foreground focus-visible:border-input"
         @update:model-value="misc.handleCommentChange(String($event ?? ''))"
       />
     </template>
@@ -95,7 +95,7 @@ function handleBlankDblClick(e: MouseEvent) {
     <template v-else-if="statementType === 'unsupported'">
       <Input
         :model-value="entry.rawText"
-        class="text-xs font-mono px-2.5 flex-1 h-6"
+        class="text-xs font-mono px-2 flex-1 h-6"
         @update:model-value="misc.handleRawTextChange(String($event ?? ''))"
       />
     </template>
@@ -109,7 +109,7 @@ function handleBlankDblClick(e: MouseEvent) {
             :options="speakerAutocompleteOptions"
             :placeholder="speakerPlaceholder"
             :disabled="narrationMode"
-            class="text-xs pl-2.5 pr-0 h-6"
+            class="text-xs pl-2 pr-0 h-6"
             @update:model-value="handleSpeakerChange(String($event ?? ''))"
           />
           <InputGroupAddon align="inline-end" class="pr-1.5">
@@ -169,7 +169,7 @@ function handleBlankDblClick(e: MouseEvent) {
       v-if="(parsed?.inlineComment || showInlineComment) && statementType !== 'empty' && statementType !== 'comment' && statementType !== 'unsupported'"
       :model-value="parsed?.inlineComment ?? ''"
       :placeholder="$t('edit.visualEditor.placeholder.comment')"
-      class="text-xs text-muted-foreground px-2.5 border-transparent h-6 focus:text-foreground focus-visible:border-input"
+      class="text-xs text-muted-foreground px-2 border-transparent h-6 focus:text-foreground focus-visible:border-input"
       @update:model-value="misc.handleInlineCommentChange(String($event ?? ''))"
     />
   </div>

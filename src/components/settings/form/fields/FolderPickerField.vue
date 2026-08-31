@@ -53,7 +53,7 @@ async function handleSelectFolder() {
     <div class="flex gap-2">
       <Input
         :model-value="displayValue"
-        class="text-xs bg-accent flex-1 h-8 cursor-default!"
+        class="text-xs bg-accent flex-1 cursor-default!"
         disabled
       />
       <FormControl v-if="!readonly">

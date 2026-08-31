@@ -147,7 +147,7 @@ function scrollCustomAddButtonIntoView() {
               id="game-config-game-name"
               data-testid="game-config-game-name"
               v-bind="componentField"
-              class="text-xs h-8"
+              class="text-xs"
             />
           </FormControl>
           <FormMessage class="text-xs" />
@@ -211,7 +211,7 @@ function scrollCustomAddButtonIntoView() {
               :extensions="AUDIO_EXTENSIONS"
               :popover-title="$t('modals.gameConfig.fields.titleBgm.pickerTitle')"
               history-scope-key="game-config-title-bgm"
-              class="w-full [&_input]:text-xs [&_input]:h-8 [&_input]:w-full"
+              class="w-full [&_input]:text-xs"
               @update:model-value="componentField['onUpdate:modelValue']"
             />
           </FormControl>
@@ -373,7 +373,7 @@ function scrollCustomAddButtonIntoView() {
                 data-testid="game-config-max-line"
                 type="number"
                 :model-value="value === '' ? '' : String(value ?? '')"
-                class="text-xs h-8 w-26"
+                class="text-xs w-26"
                 @update:model-value="handleOptionalNumberChange(handleChange, $event)"
               />
             </FormControl>
@@ -398,7 +398,7 @@ function scrollCustomAddButtonIntoView() {
                 data-testid="game-config-line-height"
                 type="number"
                 :model-value="value === '' ? '' : String(value ?? '')"
-                class="text-xs h-8 w-26"
+                class="text-xs w-26"
                 @update:model-value="handleOptionalNumberChange(handleChange, $event)"
               />
             </FormControl>
@@ -439,7 +439,7 @@ function scrollCustomAddButtonIntoView() {
               id="game-config-steam-app-id"
               data-testid="game-config-steam-app-id"
               v-bind="componentField"
-              class="text-xs h-8"
+              class="text-xs"
             />
           </FormControl>
           <FormMessage class="text-xs" />
@@ -478,7 +478,7 @@ function scrollCustomAddButtonIntoView() {
               id="game-config-package-name"
               data-testid="game-config-package-name"
               v-bind="componentField"
-              class="text-xs h-8"
+              class="text-xs"
               :placeholder="$t('modals.gameConfig.fields.packageName.placeholder')"
             />
           </FormControl>
@@ -515,14 +515,14 @@ function scrollCustomAddButtonIntoView() {
           <FormControl>
             <InputGroup
               data-testid="game-config-game-key-group"
-              class="bg-accent h-8 overflow-hidden"
+              class="bg-accent overflow-hidden"
             >
               <InputGroupInput
                 id="game-config-game-key"
                 data-testid="game-config-game-key"
                 :model-value="typeof value === 'string' ? value : ''"
                 readonly
-                class="text-xs text-muted-foreground font-mono h-8 cursor-default!"
+                class="text-xs text-muted-foreground font-mono cursor-default!"
               />
               <InputGroupAddon align="inline-end" class="pr-1.5">
                 <TooltipProvider :delay-duration="0">
@@ -576,7 +576,7 @@ function scrollCustomAddButtonIntoView() {
                   :id="`game-config-custom-key-${index}`"
                   :data-testid="`game-config-custom-key-${index}`"
                   :model-value="typeof value === 'string' ? value : field.value.key"
-                  class="text-xs h-8"
+                  class="text-xs"
                   :placeholder="$t('modals.gameConfig.custom.keyPlaceholder')"
                   @update:model-value="handleTextInputChange(handleChange, $event)"
                 />
@@ -598,7 +598,7 @@ function scrollCustomAddButtonIntoView() {
                   :id="`game-config-custom-value-${index}`"
                   :data-testid="`game-config-custom-value-${index}`"
                   :model-value="typeof value === 'string' ? value : field.value.value"
-                  class="text-xs h-8"
+                  class="text-xs"
                   :placeholder="$t('modals.gameConfig.custom.valuePlaceholder')"
                   @update:model-value="handleTextInputChange(handleChange, $event)"
                 />

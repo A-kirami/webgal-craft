@@ -19,7 +19,7 @@ const emit = defineEmits<{
       <Input
         id="web-export-output-root"
         :model-value="outputRoot ?? ''"
-        class="text-xs bg-accent flex-1 h-8 cursor-default!"
+        class="text-xs bg-accent flex-1 cursor-default!"
         disabled
       />
       <Button

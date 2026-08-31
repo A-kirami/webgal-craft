@@ -65,7 +65,7 @@ function handlePanelSliderUpdate(values?: number[]) {
       :min="min"
       :max="max"
       :model-value="resolveFieldModelStringValue(value)"
-      class="text-xs px-2.5 pr-1 h-6 group-data-[surface=panel]:px-3 group-data-[surface=panel]:h-7"
+      class="text-xs px-2 pr-1 h-6 group-data-[surface=panel]:px-2.5 group-data-[surface=panel]:h-7"
       @update:model-value="emitNormalizedValue"
     />
     <InputGroupAddon align="inline-end" class="text-xs">
@@ -81,7 +81,7 @@ function handlePanelSliderUpdate(values?: number[]) {
     :max="max"
     :model-value="resolveFieldModelStringValue(value)"
     :class="cn(
-      'text-xs h-6 px-2.5 w-16 group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-3 group-data-[surface=panel]:w-auto',
+      'text-xs h-6 px-2 w-16 group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-2.5 group-data-[surface=panel]:w-auto',
       autoWidthByContent && 'field-sizing-content w-auto max-w-full min-w-16',
       props.class,
     )"

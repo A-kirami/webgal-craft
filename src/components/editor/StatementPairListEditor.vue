@@ -135,7 +135,7 @@ function secondInputId(index: number): string {
         <Input
           :model-value="item.first"
           :placeholder="firstPlaceholder"
-          class="text-xs px-2.5 flex-1 h-6 min-w-20"
+          class="text-xs px-2 flex-1 h-6 min-w-20"
           @update:model-value="emit('updateFirst', { index: i, value: String($event) })"
         />
         <div
@@ -152,7 +152,7 @@ function secondInputId(index: number): string {
           <Input
             :model-value="item.second"
             :placeholder="secondPlaceholder"
-            class="text-xs px-2.5 flex-1 h-6"
+            class="text-xs px-2 flex-1 h-6"
             @update:model-value="emit('updateSecond', { index: i, value: String($event) })"
           />
         </slot>

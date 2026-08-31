@@ -64,14 +64,14 @@ function choiceStatus(index: number) {
       <Input
         :model-value="setVarContent.name"
         :placeholder="$t('edit.visualEditor.params.varName')"
-        class="text-xs px-2.5 h-6 max-w-full min-w-24 w-auto field-sizing-content"
+        class="text-xs px-2 h-6 max-w-full min-w-24 w-auto field-sizing-content"
         @update:model-value="emit('setVarName', String($event))"
       />
       <span class="text-xs text-muted-foreground shrink-0">=</span>
       <Input
         :model-value="setVarContent.value"
         :placeholder="$t('edit.visualEditor.params.varValue')"
-        class="text-xs px-2.5 h-6 max-w-full min-w-24 w-auto field-sizing-content"
+        class="text-xs px-2 h-6 max-w-full min-w-24 w-auto field-sizing-content"
         @update:model-value="emit('setVarValue', String($event))"
       />
     </template>
@@ -140,7 +140,7 @@ function choiceStatus(index: number) {
           :extensions="['.txt']"
           :popover-title="$t('edit.visualEditor.filePicker.scene')"
           :placeholder="$t('edit.visualEditor.filePicker.scene')"
-          class="flex-1 [&_input]:(text-xs pl-2.5 h-6 min-w-24 field-sizing-content)"
+          class="flex-1 [&_input]:(text-xs pl-2 h-6 min-w-24 field-sizing-content)"
           @update:model-value="emit('chooseFile', { index, file: String($event) })"
         />
       </StatementDiagnosticTooltip>
