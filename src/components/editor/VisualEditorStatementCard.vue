@@ -168,12 +168,11 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
             <span
               v-for="(param, i) in previewParams"
               :key="i"
-              class="rounded inline-flex text-nowrap items-center overflow-hidden animate-in animate-duration-200 animate-ease-out animate-backwards fade-in slide-in-from-left-1.5"
+              class="rounded inline-flex text-nowrap items-center overflow-hidden"
               :class="[
                 paramBadgeClass(param),
                 'shrink-0',
               ]"
-              :style="{ animationDelay: `${i * 40}ms` }"
             >
               <span
                 v-if="param.label"
