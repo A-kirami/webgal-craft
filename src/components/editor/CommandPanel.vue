@@ -276,7 +276,7 @@ useShortcutContext({
                   v-if="!entry.locked"
                   variant="ghost"
                   size="icon-xs"
-                  class="opacity-0 group-focus-visible:opacity-60 group-has-[:focus-visible]:opacity-60 group-hover:opacity-60 hover:opacity-100"
+                  class="opacity-0 transition-all group-focus-visible:opacity-60 group-has-[:focus-visible]:opacity-60 group-hover:opacity-60 hover:opacity-100"
                   :title="$t('edit.visualEditor.commandPanel.editDefaults')"
                   @click="openDefaultsModal(entry.type)"
                 >
