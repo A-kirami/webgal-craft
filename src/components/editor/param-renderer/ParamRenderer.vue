@@ -199,7 +199,10 @@ function fieldStatusClass(field: EditorField): string {
 }
 
 function diagnosticTriggerClass(field: EditorField): string {
-  return shouldFillControlWidth(field) ? 'w-full flex-col' : ''
+  return cn(
+    shouldFillControlWidth(field) && 'w-full flex-col',
+    fieldMode(field) === 'switch' && 'scale-80 group-data-[surface=panel]:scale-90',
+  )
 }
 
 function shouldRenderAutocomplete(field: EditorField): boolean {
@@ -324,7 +327,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
           <Switch
             v-if="fieldMode(field) === 'switch'"
             :id="fieldInputId(field)"
-            :class="cn('scale-80 group-data-[surface=panel]:scale-90', controlClass(field))"
+            :class="controlClass(field)"
             :model-value="switchModelValue(field)"
             @update:model-value="emit('updateValue', { field, value: !!$event })"
           />
