@@ -227,7 +227,7 @@ function secondInputId(index: number): string {
       class="rounded-md w-full group-data-[surface=panel]:h-7"
       @click="handleAdd"
     >
-      <div class="i-lucide-plus mr-1 size-3.5" />
+      <div class="i-lucide-plus size-3.5" />
       {{ addLabel }}
     </Button>
   </div>

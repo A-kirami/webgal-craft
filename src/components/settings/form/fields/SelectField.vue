@@ -28,7 +28,7 @@ const { t } = useI18n()
     </div>
     <Select :model-value="value" @update:model-value="handleChange">
       <FormControl>
-        <SelectTrigger class="text-xs h-8 min-w-28 w-40">
+        <SelectTrigger class="text-xs min-w-28 w-40">
           <SelectValue :placeholder="field.placeholder ? resolveI18nLike(field.placeholder, t) : undefined" />
         </SelectTrigger>
       </FormControl>

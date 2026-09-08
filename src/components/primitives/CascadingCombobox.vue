@@ -335,7 +335,7 @@ watch(() => searchQuery, (nextQuery, previousQuery) => {
         <span class="truncate" :class="!selectedLabel && 'text-muted-foreground'">
           {{ selectedLabel || placeholder }}
         </span>
-        <div class="i-lucide-chevrons-up-down ml-1 opacity-50 shrink-0 size-3" />
+        <div class="i-lucide-chevrons-up-down ml-1 opacity-50 shrink-0 size-3.5" />
       </Button>
     </PopoverTrigger>
     <PopoverContent

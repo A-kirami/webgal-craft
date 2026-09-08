@@ -47,7 +47,7 @@ function handlePanelSliderUpdate(values?: number[]) {
     <Input
       :id="id"
       type="number"
-      class="text-xs px-2 py-1 h-7 w-12"
+      class="text-xs h-7 w-12"
       inputmode="decimal"
       :model-value="String(value ?? '')"
       @blur="$emit('commitSlider', $event)"
@@ -65,7 +65,7 @@ function handlePanelSliderUpdate(values?: number[]) {
       :min="min"
       :max="max"
       :model-value="resolveFieldModelStringValue(value)"
-      class="text-xs px-2 pr-1 h-6 group-data-[surface=panel]:px-2.5 group-data-[surface=panel]:h-7"
+      class="text-xs px-2 pr-1 h-6 group-data-[surface=panel]:pl-2.5 group-data-[surface=panel]:h-7"
       @update:model-value="emitNormalizedValue"
     />
     <InputGroupAddon align="inline-end" class="text-xs">

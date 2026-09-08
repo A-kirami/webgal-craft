@@ -333,7 +333,7 @@ onUnmounted(() => {
           {{ $t('edit.visualEditor.params.ease') }}
         </Label>
         <Select :model-value="easeModelValue" :disabled="props.easeDisabled" @update:model-value="updateEase">
-          <SelectTrigger :id="easeTriggerId" :class="isPanelLayout ? 'w-42' : 'w-28'" class="text-xs grow h-7">
+          <SelectTrigger :id="easeTriggerId" :class="isPanelLayout ? 'w-42' : 'w-28'" class="text-xs grow h-7 [&_svg]:size-3.5">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

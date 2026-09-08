@@ -120,7 +120,7 @@ const selectedLabel = $computed(() => {
 
 <template>
   <Select v-model="selectedValue" :disabled="props.disabled">
-    <SelectTrigger class="w-full">
+    <SelectTrigger>
       <SelectValue>{{ selectedLabel }}</SelectValue>
     </SelectTrigger>
     <SelectContent>

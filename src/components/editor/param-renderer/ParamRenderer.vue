@@ -324,7 +324,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
           <Switch
             v-if="fieldMode(field) === 'switch'"
             :id="fieldInputId(field)"
-            :class="cn('scale-90 group-data-[surface=panel]:scale-100', controlClass(field))"
+            :class="cn('scale-80 group-data-[surface=panel]:scale-90', controlClass(field))"
             :model-value="switchModelValue(field)"
             @update:model-value="emit('updateValue', { field, value: !!$event })"
           />
@@ -383,7 +383,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
           <ColorPicker
             v-else-if="fieldMode(field) === 'color'"
             :trigger-id="fieldInputId(field)"
-            :class="controlClass(field)"
+            :class="cn('group-data-[surface=panel]:h-7', controlClass(field))"
             :model-value="String(getFieldValue(field) || '')"
             @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
           />

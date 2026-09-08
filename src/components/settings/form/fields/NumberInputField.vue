@@ -47,7 +47,7 @@ function handleNumberChange(nextValue: string | number) {
           @update:model-value="handleNumberChange"
         >
           <NumberFieldContent class="w-26">
-            <NumberFieldInput class="h-8" />
+            <NumberFieldInput />
             <NumberFieldIncrement class="p-2" />
             <NumberFieldDecrement class="p-2" />
           </NumberFieldContent>

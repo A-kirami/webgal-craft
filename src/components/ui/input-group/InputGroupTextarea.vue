@@ -12,7 +12,7 @@ const props = defineProps<{
   <Textarea
     data-slot="input-group-control"
     :class="cn(
-      'flex-1 resize-none rounded-none border-0 bg-transparent py-3 focus-visible:ring-0 focus-visible:ring-transparent ring-offset-transparent dark:bg-transparent',
+      'flex-1 resize-none rounded-none border-0 bg-transparent py-2 focus-visible:ring-0 focus-visible:ring-transparent ring-offset-transparent dark:bg-transparent',
       props.class,
     )"
   />

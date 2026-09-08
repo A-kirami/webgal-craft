@@ -103,7 +103,7 @@ function handleBlankDblClick(e: MouseEvent) {
     <!-- 统一字段渲染（say + command） -->
     <div v-else-if="statementType === 'say' || statementType === 'command'" class="flex flex-wrap gap-x-3 gap-y-1.5 items-center">
       <div v-if="statementType === 'say'" class="@container flex flex-col gap-1.5 w-full">
-        <InputGroup class="h-6 w-full overflow-hidden @[16rem]:w-3/5 @[24rem]:w-2/5">
+        <InputGroup class="h-6 overflow-hidden @[16rem]:w-3/5 @[24rem]:w-2/5">
           <InputGroupAutocomplete
             :model-value="effectiveSpeaker"
             :options="speakerAutocompleteOptions"
@@ -112,9 +112,9 @@ function handleBlankDblClick(e: MouseEvent) {
             class="text-xs pl-2 pr-0 h-6"
             @update:model-value="handleSpeakerChange(String($event ?? ''))"
           />
-          <InputGroupAddon align="inline-end" class="pr-1.5">
+          <InputGroupAddon align="inline-end" class="p-0 self-stretch has-[>button]:mr-0">
             <InputGroupButton
-              class="text-xs"
+              class="text-xs rounded-none h-full"
               :variant="narrationMode ? 'default' : 'ghost'"
               @click="toggleNarrationMode"
             >

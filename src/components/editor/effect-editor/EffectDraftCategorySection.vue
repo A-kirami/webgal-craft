@@ -119,7 +119,7 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                 </Button>
               </div>
             </div>
-            <InputGroup class="flex-1 h-7 min-w-0">
+            <InputGroup class="flex-1 h-7">
               <EffectDraftNumberInput
                 :id="controls.numberInputId(param.key)"
                 :model-value="controls.getFieldValue(param.key)"
@@ -445,8 +445,8 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               :id="controls.segmentedControlId(item.param.key)"
               :model-value="controls.getSegmentedValue(item.param)"
               :options="controls.getSegmentedOptions(item.param)"
-              group-class="p-0.5 border border-border/60 rounded-md bg-muted/20 inline-flex gap-0.5 w-full h-7"
-              item-class="text-xs leading-none px-2 border-0 rounded-sm gap-1.5 h-5.5 flex-1 data-[state=on]:text-accent-foreground data-[state=on]:bg-accent hover:bg-muted/60"
+              group-class="w-full h-7"
+              item-class="gap-1.5 h-5.5"
               @update-value="controls.updateSegmentedField(item.param, String($event ?? UNSPECIFIED))"
             />
           </div>

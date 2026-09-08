@@ -261,7 +261,7 @@ onUnmounted(cancelScheduledEmit)
     </div>
 
     <div class="flex flex-wrap gap-2 w-full">
-      <InputGroup class="flex-1 basis-20 h-7 min-w-0 w-full">
+      <InputGroup class="flex-1 basis-20 h-7">
         <InputGroupAddon class="text-xs text-muted-foreground min-w-5">
           {{ xLabel }}
         </InputGroupAddon>
@@ -279,7 +279,7 @@ onUnmounted(cancelScheduledEmit)
         />
       </InputGroup>
 
-      <InputGroup class="flex-1 basis-20 h-7 min-w-0 w-full">
+      <InputGroup class="flex-1 basis-20 h-7">
         <InputGroupAddon class="text-xs text-muted-foreground min-w-5">
           {{ yLabel }}
         </InputGroupAddon>

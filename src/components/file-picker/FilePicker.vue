@@ -268,12 +268,12 @@ function handleFileListKeydown(event: KeyboardEvent) {
         <button
           v-if="inputText"
           type="button"
-          class="size-4 right-2 top-1/2 absolute -translate-y-1/2"
+          class="flex size-4 items-center right-2 top-1/2 justify-center absolute -translate-y-1/2"
           :class="CLEAR_BUTTON_STATUS_CLASS[status]"
           :aria-label="$t('filePicker.clearInput')"
           @click="handleClear"
         >
-          <X class="size-4" />
+          <X class="size-3.5" />
         </button>
       </div>
     </PopoverTrigger>

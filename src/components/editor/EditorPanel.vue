@@ -285,7 +285,7 @@ defineExpose({ toggleCommandPanel })
 
 <template>
   <div class="flex flex-col h-full overflow-hidden">
-    <div class="pr-4 border-b flex gap-2 items-center justify-between">
+    <div class="pr-3 border-b flex gap-2 items-center justify-between">
       <EditorTabs />
       <EditorToolbar />
     </div>

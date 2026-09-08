@@ -43,7 +43,7 @@ function emitNormalizedSelect(value: unknown) {
       v-for="opt in options"
       :key="opt.value"
       :value="opt.value"
-      :class="cn('text-xs leading-none px-2 border-0 rounded-sm gap-1 h-4.5 justify-center min-w-0 flex-1 data-[state=on]:text-accent-foreground data-[state=on]:bg-accent hover:bg-muted/60 group-data-[surface=panel]:h-5.5 ', itemClass)"
+      :class="cn('text-xs leading-none px-2 border-0 rounded-sm h-4.5 min-w-0 flex-1 data-[state=on]:text-accent-foreground data-[state=on]:bg-accent hover:bg-muted/60 group-data-[surface=panel]:h-5.5 ', itemClass)"
     >
       <span v-if="opt.iconClass" :class="opt.iconClass" class="shrink-0 size-3.5" />
       <span class="truncate">

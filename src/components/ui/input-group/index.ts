@@ -21,9 +21,9 @@ export const inputGroupAddonVariants = cva(
         "inline-end":
           "order-last pr-2 has-[>button]:mr-[-0.3rem] has-[>kbd]:mr-[-0.15rem]",
         "block-start":
-          "order-first w-full justify-start px-2.5 pt-2 [.border-b]:pb-2 group-has-[>input]/input-group:pt-2.5",
+          "order-first w-full justify-start px-2.5 pt-2 [.border-b]:pb-2 group-has-[>input]/input-group:pt-2",
         "block-end":
-          "order-last w-full justify-start px-2.5 pb-2 [.border-t]:pt-2 group-has-[>input]/input-group:pb-2.5",
+          "order-last w-full justify-start px-2.5 pb-2 [.border-t]:pt-2 group-has-[>input]/input-group:pb-2",
       },
     },
     defaultVariants: {
@@ -39,8 +39,8 @@ export const inputGroupButtonVariants = cva(
   {
     variants: {
       size: {
-        "xs": "h-6 gap-1 px-2 rounded-[calc(var(--radius)-5px)] [&>svg:not([class*='size-'])]:size-3.5 has-[>svg]:px-2",
-        "sm": "h-8 px-2.5 gap-1.5 rounded-md has-[>svg]:px-2.5",
+        "xs": "h-6 gap-1 px-1.5 rounded-[calc(var(--radius)-5px)] [&>svg:not([class*='size-'])]:size-3.5 has-[>svg]:px-1.5",
+        "sm": "gap-1.5 px-2.5",
         "icon-xs": "size-6 rounded-[calc(var(--radius)-5px)] p-0 has-[>svg]:p-0",
         "icon-sm": "size-8 p-0 has-[>svg]:p-0",
       },

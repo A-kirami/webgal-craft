@@ -841,7 +841,7 @@ for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
       <PopoverContent
         v-if="renameTargetItem"
         :align="renamePopoverAlign"
-        class="p-2 max-w-56 w-auto"
+        class="px-2 py-1.5 max-w-56 w-auto"
         side="bottom"
         @close-auto-focus.prevent
       >

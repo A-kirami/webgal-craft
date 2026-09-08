@@ -59,9 +59,7 @@ function commitDraft(): void {
 </script>
 
 <template>
-  <Input
-    data-slot="input-group-control"
-    class="border-0 rounded-none bg-transparent flex-1 ring-offset-transparent dark:bg-transparent focus-visible:ring-0 focus-visible:ring-transparent"
+  <InputGroupInput
     type="text"
     inputmode="decimal"
     :model-value="draftValue"

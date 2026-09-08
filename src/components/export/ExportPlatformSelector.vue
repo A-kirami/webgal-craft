@@ -56,7 +56,7 @@ const emit = defineEmits<{
           {{ $t('export.platformDesktopDescription') }}
         </div>
       </div>
-      <Badge v-if="disabledDesktop" variant="secondary" class="shrink-0">
+      <Badge v-if="disabledDesktop" variant="secondary">
         {{ $t('export.desktopOnly') }}
       </Badge>
       <Check
@@ -81,7 +81,7 @@ const emit = defineEmits<{
           {{ $t('export.platformAndroidDescription') }}
         </div>
       </div>
-      <Badge variant="secondary" class="shrink-0">
+      <Badge variant="secondary">
         {{ $t('export.comingSoon') }}
       </Badge>
     </button>

@@ -51,12 +51,12 @@ function handleRemoveImage(index: number) {
 
 <template>
   <ScrollArea data-testid="game-logo-scroll-area" class="pr-1 max-h-[10rem]">
-    <div class="px-1.5 pt-2 gap-3 grid grid-cols-3 content-start">
+    <div class="px-1.5 pb-0.5 pt-2 gap-3 grid grid-cols-3 content-start">
       <article
         v-for="(fileName, index) in modelValue"
         :key="fileName"
       >
-        <div class="bg-muted/30 aspect-video relative">
+        <div class="border border-border rounded-md bg-muted/30 aspect-video relative">
           <AssetImage
             :path="buildPreviewPath(fileName)"
             :root-path="gamePath"

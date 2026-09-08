@@ -278,12 +278,12 @@ useShortcutContext({
                 :options="speakerAutocompleteOptions"
                 :placeholder="speakerPlaceholder"
                 :disabled="narrationMode"
-                class="text-xs py-1 pr-0 h-7"
+                class="text-xs pr-0 h-7"
                 @update:model-value="handleSpeakerChange(String($event ?? ''))"
               />
-              <InputGroupAddon align="inline-end" class="pr-1.5">
+              <InputGroupAddon align="inline-end" class="p-0 self-stretch has-[>button]:mr-0">
                 <InputGroupButton
-                  class="text-xs rounded-none h-7"
+                  class="text-xs rounded-none h-full"
                   :variant="narrationMode ? 'default' : 'ghost'"
                   @click="toggleNarrationMode"
                 >

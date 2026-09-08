@@ -52,7 +52,6 @@ const selectedEngineId = useFieldValue<string>('gameEngine')
                 <Input
                   :id="gameNameFieldId"
                   v-bind="componentField"
-                  class="w-full"
                   @input="handleGameNameChange"
                   @compositionstart="handleCompositionStart"
                   @compositionend="handleCompositionEnd"

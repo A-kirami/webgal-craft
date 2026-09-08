@@ -27,7 +27,7 @@ const updateSearch = useDebounceFn((value: string | number) => {
       <Input
         type="search"
         :placeholder="searchPlaceholder"
-        class="pl-8 bg-background w-full"
+        class="pl-8 bg-background"
         :model-value="workspaceStore.searchQuery"
         @update:model-value="updateSearch"
       />

@@ -122,14 +122,14 @@ const inspectorSelectedFrame = $computed<AnimationEditorSelectedFrameState>(() =
           </span>
           <Badge
             variant="secondary"
-            class="text-[10px] rounded-sm h-5 transition-opacity"
+            class="text-10px rounded-sm transition-opacity"
             :class="props.selectedFrame?.isStartFrame ? 'opacity-100' : 'opacity-0 pointer-events-none'"
             :aria-hidden="!props.selectedFrame?.isStartFrame"
           >
             {{ $t('edit.visualEditor.animation.startFrame') }}
           </Badge>
           <span
-            class="text-[11px] text-primary/80 inline-flex gap-1 transition-opacity items-center"
+            class="text-11px text-primary/80 inline-flex gap-1 transition-opacity items-center"
             :class="props.selectedFrame?.isStartFrame ? 'opacity-100' : 'opacity-0 pointer-events-none'"
             :aria-hidden="!props.selectedFrame?.isStartFrame"
           >
