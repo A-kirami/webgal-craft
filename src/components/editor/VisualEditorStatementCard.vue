@@ -127,7 +127,7 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
       role="option"
       :aria-selected="selected"
       tabindex="-1"
-      class="group px-3 py-1 border border-border rounded-lg bg-card transition-[border-color,background-color,box-shadow] duration-150 relative focus-visible:outline-none hover:border-primary/25 hover:shadow-sm"
+      class="group px-3 py-1.5 border border-border rounded-lg bg-card transition-[border-color,background-color,box-shadow] duration-150 relative focus-visible:outline-none hover:border-primary/25 hover:shadow-sm"
       :class="{
         'border-primary/45 ring-1 ring-primary/20 shadow-sm': selected,
       }"
@@ -168,12 +168,11 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
             <span
               v-for="(param, i) in previewParams"
               :key="i"
-              class="rounded inline-flex text-nowrap items-center overflow-hidden animate-in animate-duration-200 animate-ease-out animate-backwards fade-in slide-in-from-left-1.5"
+              class="rounded inline-flex text-nowrap items-center overflow-hidden"
               :class="[
                 paramBadgeClass(param),
                 'shrink-0',
               ]"
-              :style="{ animationDelay: `${i * 40}ms` }"
             >
               <span
                 v-if="param.label"
@@ -201,33 +200,33 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
           <slot name="actions" :collapsed="collapsed" :entry="entry">
             <Button
               variant="ghost"
-              size="sm"
-              class="p-0 opacity-60 h-7 w-0 transition-all overflow-hidden disabled:text-muted-foreground/50 hover:text-green-600 group-hover:p-1 disabled:opacity-100 hover:opacity-100 group-hover:w-7 disabled:cursor-not-allowed disabled:pointer-events-none"
+              size="icon-xs"
+              class="opacity-60 w-0 transition-all overflow-hidden disabled:text-muted-foreground/50 hover:text-green-600 group-hover:p-1 disabled:opacity-100 hover:opacity-100 group-hover:w-6 disabled:cursor-not-allowed disabled:pointer-events-none"
               :disabled="playToDisabled"
               :title="$t('edit.visualEditor.playToLine')"
               @click.stop="emit('playTo', entry.id)"
             >
-              <div class="i-lucide-play size-3" />
+              <div class="i-lucide-play size-3.5" />
             </Button>
             <Button
               variant="ghost"
-              size="sm"
-              class="p-0 opacity-60 h-7 w-0 transition-all overflow-hidden hover:text-destructive group-hover:p-1 hover:opacity-100 group-hover:w-7"
+              size="icon-xs"
+              class="opacity-60 w-0 transition-all overflow-hidden hover:text-destructive group-hover:p-1 hover:opacity-100 group-hover:w-6"
               :title="$t('common.delete')"
               @click.stop="emit('delete', entry.id)"
             >
-              <div class="i-lucide-trash-2 size-3" />
+              <div class="i-lucide-trash-2 size-3.5" />
             </Button>
 
             <Button
               v-if="!readonly && !config.locked"
               variant="ghost"
-              size="sm"
-              class="p-1 opacity-60 size-7 transition-all hover:opacity-100"
+              size="icon-xs"
+              class="opacity-60 transition-all hover:opacity-100"
               @click.stop="collapsed = !collapsed"
             >
               <div
-                class="i-lucide-chevron-right size-3 transition-transform"
+                class="i-lucide-chevron-right size-3.5 transition-transform"
                 :class="!collapsed && 'rotate-90'"
               />
             </Button>

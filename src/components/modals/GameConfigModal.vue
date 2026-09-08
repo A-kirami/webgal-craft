@@ -238,6 +238,7 @@ async function handleSave() {
 
       <DialogFooter>
         <Button
+          class="w-full"
           :disabled="!props.gamePath || isSaving || !isDirty"
           @click="handleSave"
         >

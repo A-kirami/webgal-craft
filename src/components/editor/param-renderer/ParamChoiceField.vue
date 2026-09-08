@@ -44,14 +44,14 @@ function emitSelect(value: unknown) {
     :model-value="selectValue"
     @update:model-value="emitSelect"
   >
-    <SelectTrigger :id="inputId" :class="cn('text-xs h-6 px-2.5 shadow-none group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-3', controlClass)">
+    <SelectTrigger :id="inputId" :class="cn('text-xs h-6 min-w-18 px-2 [&_svg]:size-3.5 group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-2.5', controlClass)">
       <SelectValue :placeholder="notSelectedLabel" />
     </SelectTrigger>
     <SelectContent>
       <SelectItem
         v-for="opt in options"
         :key="opt.value"
-        class="py-1.25 text-xs! group-data-[surface=panel]:py-1.5"
+        class="py-1.25 text-xs!"
         :value="opt.value"
       >
         {{ opt.label }}
@@ -67,7 +67,7 @@ function emitSelect(value: unknown) {
     :search-documents="comboboxData.searchDocuments"
     :placeholder="notSelectedLabel"
     :search-placeholder="placeholder || notSelectedLabel"
-    :class="cn('px-2.5 h-6 min-w-24 group-data-[surface=panel]:px-3 group-data-[surface=panel]:h-7', controlClass)"
+    :class="cn('h-6 min-w-24 group-data-[surface=panel]:px-2.5 group-data-[surface=panel]:h-7', controlClass)"
     @update:model-value="emitSelect"
   />
 
@@ -78,7 +78,7 @@ function emitSelect(value: unknown) {
     :options="options"
     :placeholder="notSelectedLabel"
     :search-placeholder="placeholder || notSelectedLabel"
-    :class="cn('px-2.5 h-6 min-w-24 group-data-[surface=panel]:px-3 group-data-[surface=panel]:h-7', controlClass)"
+    :class="cn('h-6 min-w-24 group-data-[surface=panel]:px-2.5 group-data-[surface=panel]:h-7', controlClass)"
     @update:model-value="emitSelect"
   />
 </template>

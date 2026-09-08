@@ -294,21 +294,20 @@ function progressIndicatorClass(task: ExportTask): string {
                     <Button
                       variant="ghost"
                       size="icon"
-                      class="shrink-0 size-8"
                       :class="task.status === 'completed' ? '' : 'invisible pointer-events-none'"
                       :aria-label="isAndroid ? $t('export.openFile') : $t('export.openDirectory')"
                       @click="openExportDirectory(task)"
                     >
-                      <ExternalLink v-if="isAndroid" class="size-4" aria-hidden="true" />
-                      <FolderOpen v-else class="size-4" aria-hidden="true" />
+                      <ExternalLink v-if="isAndroid" aria-hidden="true" />
+                      <FolderOpen v-else aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>{{ isAndroid ? $t('export.openFile') : $t('export.openDirectory') }}</TooltipContent>
                 </Tooltip>
                 <Tooltip v-if="isAndroid">
                   <TooltipTrigger as-child>
-                    <Button variant="ghost" size="icon" class="shrink-0 size-8" :aria-label="$t('export.share')" @click="shareExport">
-                      <Share2 class="size-4" aria-hidden="true" />
+                    <Button variant="ghost" size="icon" :aria-label="$t('export.share')" @click="shareExport">
+                      <Share2 aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>{{ $t('export.share') }}</TooltipContent>
@@ -337,8 +336,8 @@ function progressIndicatorClass(task: ExportTask): string {
           <Button v-if="currentStep < 3" :disabled="!canAdvance || isBusy" @click="goToNextStep">
             {{ $t('export.next') }}
           </Button>
-          <Button v-else class="gap-1.5" :disabled="!canStart || !selectedPlatformValid" @click="startExport(selectedPlatform)">
-            <Loader2 v-if="isRunning" class="size-4 animate-spin" aria-hidden="true" />
+          <Button v-else :disabled="!canStart || !selectedPlatformValid" @click="startExport(selectedPlatform)">
+            <Loader2 v-if="isRunning" class="animate-spin" aria-hidden="true" />
             {{ isRunning ? $t('export.exporting') : hasFailedTasks ? $t('export.retry') : $t('export.start') }}
           </Button>
         </template>

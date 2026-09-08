@@ -180,7 +180,7 @@ function resolveResourceServeUrl(resource: DiscoveredResource): string | undefin
 
       <div class="py-2 space-y-3">
         <div class="flex items-center justify-between">
-          <Button variant="ghost" size="sm" class="text-xs h-7" @click="toggleAll">
+          <Button variant="ghost" size="sm" @click="toggleAll">
             {{ isAllSelected ? $t('modals.discoveredResources.deselectAll') : $t('modals.discoveredResources.selectAll') }}
           </Button>
           <span class="text-xs text-muted-foreground">

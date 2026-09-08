@@ -74,10 +74,10 @@ async function handleClear(): Promise<void> {
     />
 
     <div v-if="props.showFooter" class="mt-4 flex gap-2 justify-end">
-      <Button variant="outline" class="text-xs px-3 h-7 shadow-none" :disabled="!props.canClear" @click="handleClear">
+      <Button size="sm" variant="outline" :disabled="!props.canClear" @click="handleClear">
         {{ $t('modals.effectEditor.clear') }}
       </Button>
-      <Button class="text-xs px-3 h-7" :disabled="!props.canApply" @click="emit('apply')">
+      <Button size="sm" :disabled="!props.canApply" @click="emit('apply')">
         {{ $t('modals.effectEditor.apply') }}
       </Button>
     </div>

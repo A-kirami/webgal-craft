@@ -26,10 +26,10 @@ const props = defineProps<Props>()
         />
       </div>
       <DialogFooter class="shrink-0">
-        <Button variant="outline" class="h-8" @click="props.animationDialog.requestClose">
+        <Button variant="outline" @click="props.animationDialog.requestClose">
           {{ $t('common.cancel') }}
         </Button>
-        <Button class="h-8" @click="props.animationDialog.handleApply">
+        <Button @click="props.animationDialog.handleApply">
           {{ $t('common.confirm') }}
         </Button>
       </DialogFooter>

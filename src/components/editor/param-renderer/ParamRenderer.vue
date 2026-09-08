@@ -199,7 +199,10 @@ function fieldStatusClass(field: EditorField): string {
 }
 
 function diagnosticTriggerClass(field: EditorField): string {
-  return shouldFillControlWidth(field) ? 'w-full flex-col' : ''
+  return cn(
+    shouldFillControlWidth(field) && 'w-full flex-col',
+    fieldMode(field) === 'switch' && 'scale-80 group-data-[surface=panel]:scale-90',
+  )
 }
 
 function shouldRenderAutocomplete(field: EditorField): boolean {
@@ -324,7 +327,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
           <Switch
             v-if="fieldMode(field) === 'switch'"
             :id="fieldInputId(field)"
-            :class="cn('scale-75 group-data-[surface=panel]:scale-100', controlClass(field))"
+            :class="controlClass(field)"
             :model-value="switchModelValue(field)"
             @update:model-value="emit('updateValue', { field, value: !!$event })"
           />
@@ -383,7 +386,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
           <ColorPicker
             v-else-if="fieldMode(field) === 'color'"
             :trigger-id="fieldInputId(field)"
-            :class="controlClass(field)"
+            :class="cn('group-data-[surface=panel]:h-7', controlClass(field))"
             :model-value="String(getFieldValue(field) || '')"
             @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
           />
@@ -394,7 +397,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
             :model-value="String(getFieldValue(field) || '')"
             :placeholder="resolvedPlaceholder(field)"
             :class="cn(
-              'text-xs py-1 shadow-none resize-none overflow-y-auto px-2.5 w-32 group-data-[surface=panel]:flex-1 group-data-[surface=panel]:px-3 group-data-[surface=panel]:w-full',
+              'text-xs py-1 resize-none overflow-y-auto px-2 w-32 group-data-[surface=panel]:flex-1 group-data-[surface=panel]:px-2.5 group-data-[surface=panel]:w-full',
               fieldMode(field) === 'textareaGrow' ? 'min-h-14.5 max-h-[50vh] field-sizing-content' : 'min-h-6 max-h-14.5 field-sizing-content group-data-[surface=panel]:min-h-7',
               isInlineStandalone(field) && 'w-full min-w-0',
               controlClass(field)
@@ -413,7 +416,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
             :popover-title="fileTitle(field) || undefined"
             :placeholder="fileTitle(field) || undefined"
             :class="cn(
-              'w-auto max-w-full min-w-0 group-data-[surface=panel]:w-full [&_input]:text-xs [&_input]:h-6 [&_input]:pl-2.5 [&_input]:field-sizing-content [&_input]:w-auto [&_input]:max-w-full [&_input]:min-w-24 [&_input]:shadow-none group-data-[surface=panel]:[&_input]:h-7 group-data-[surface=panel]:[&_input]:pl-3 group-data-[surface=panel]:[&_input]:w-full',
+              'w-auto max-w-full min-w-0 group-data-[surface=panel]:w-full [&_input]:text-xs [&_input]:h-6 [&_input]:pl-2 [&_input]:field-sizing-content [&_input]:w-auto [&_input]:max-w-full [&_input]:min-w-24 group-data-[surface=panel]:[&_input]:h-7 group-data-[surface=panel]:[&_input]:pl-2.5 group-data-[surface=panel]:[&_input]:w-full',
               controlClass(field),
             )"
             @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
@@ -431,8 +434,8 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
               isInlineStandalone(field) && !shouldUseInputAutoWidth(field) && 'w-full min-w-0',
             )"
             :class="cn(
-              'text-xs h-6 px-2.5 w-24 shadow-none',
-              !isInline && 'h-7 px-3 w-full',
+              'text-xs h-6 px-2 w-24',
+              !isInline && 'h-7 px-2.5 w-full',
               shouldUseInputAutoWidth(field) && isInline && 'field-sizing-content w-auto max-w-full min-w-22',
               isInlineStandalone(field) && !shouldUseInputAutoWidth(field) && 'w-full min-w-0',
               fieldStatusClass(field),
@@ -446,7 +449,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
             :id="fieldInputId(field)"
             :model-value="String(getFieldValue(field) || '')"
             :class="cn(
-              'text-xs h-6 px-2.5 w-24 shadow-none group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-3 group-data-[surface=panel]:w-auto',
+              'text-xs h-6 px-2 w-24 group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-2.5 group-data-[surface=panel]:w-auto',
               shouldUseInputAutoWidth(field) && 'field-sizing-content w-auto max-w-full min-w-24',
               isInlineStandalone(field) && 'w-full min-w-0',
               controlClass(field),

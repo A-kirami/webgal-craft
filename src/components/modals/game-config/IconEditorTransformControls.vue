@@ -38,7 +38,7 @@ function controlTestId(control: IconEditorTransformControl, suffix: string) {
           @update:model-value="control.update($event, { fromSlider: true })"
           @value-commit="control.update($event, { fromSlider: true })"
         />
-        <InputGroup class="h-7 w-18 shadow-none">
+        <InputGroup class="h-7 w-18">
           <InputGroupInput
             :id="controlTestId(control, 'input')"
             type="number"
@@ -48,12 +48,12 @@ function controlTestId(control: IconEditorTransformControl, suffix: string) {
             :step="control.step"
             :aria-label="control.label"
             :data-testid="controlTestId(control, 'input')"
-            class="text-xs pr-1 h-auto shadow-none"
+            class="text-xs pr-1 h-7"
             @update:model-value="control.update"
           />
           <InputGroupAddon
             align="inline-end"
-            class="text-xs text-muted-foreground pr-1.5"
+            class="text-xs"
             :data-testid="controlTestId(control, 'unit')"
           >
             %

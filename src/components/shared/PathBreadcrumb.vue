@@ -152,10 +152,9 @@ watch(
                 <DropdownMenuItem
                   v-for="(segment, index) in hiddenSegments"
                   :key="`${segment}-${index}`"
-                  class="cursor-pointer"
                   @click="handleNavigate(getPathByIndex(index))"
                 >
-                  <span class="text-xs">{{ segment }}</span>
+                  {{ segment }}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -305,7 +305,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full min-h-0 [&_button]:shadow-none [&_input]:shadow-none">
+  <div class="flex flex-col h-full min-h-0">
     <div class="mb-3 px-1 flex flex-wrap gap-3 items-center" :class="isPanelLayout ? 'w-full max-w-[44rem]' : ''">
       <div class="flex flex-auto gap-2 items-center" :class="isPanelLayout ? 'grow-0 basis-auto' : ''">
         <Label
@@ -315,12 +315,12 @@ onUnmounted(() => {
         >
           {{ $t('edit.visualEditor.params.duration') }}
         </Label>
-        <InputGroup :class="isPanelLayout ? 'w-42' : 'w-28'" class="grow h-7 shadow-none">
+        <InputGroup :class="isPanelLayout ? 'w-42' : 'w-28'" class="grow h-7">
           <InputGroupInput
             :id="durationInputId"
             type="number"
             :model-value="props.duration"
-            class="text-xs pr-1 h-7 shadow-none"
+            class="text-xs pr-1 h-7"
             @update:model-value="updateDuration"
           />
           <InputGroupAddon align="inline-end" class="text-xs">
@@ -333,7 +333,7 @@ onUnmounted(() => {
           {{ $t('edit.visualEditor.params.ease') }}
         </Label>
         <Select :model-value="easeModelValue" :disabled="props.easeDisabled" @update:model-value="updateEase">
-          <SelectTrigger :id="easeTriggerId" :class="isPanelLayout ? 'w-42' : 'w-28'" class="text-xs grow h-7">
+          <SelectTrigger :id="easeTriggerId" :class="isPanelLayout ? 'w-42' : 'w-28'" class="text-xs grow h-7 [&_svg]:size-3.5">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

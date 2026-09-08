@@ -245,14 +245,7 @@ describe('ExportDialog', () => {
 
     await expect.element(page.getByLabelText('export.outputDirectory')).toBeInTheDocument()
     await expect.element(page.getByLabelText('export.gameName')).not.toBeInTheDocument()
-    const outputRootInput = await page.getByLabelText('export.outputDirectory').element() as HTMLInputElement
     const browseButton = await page.getByRole('button', { name: 'export.browse' }).element() as HTMLButtonElement
-    expect(outputRootInput.classList).toContain('h-8')
-    expect(outputRootInput.classList).toContain('shadow-none')
-    expect(browseButton.classList).toContain('text-xs')
-    expect(browseButton.classList).toContain('font-normal')
-    expect(browseButton.classList).toContain('h-8')
-    expect(browseButton.classList).toContain('shadow-none')
     expect(browseButton.querySelector('svg')).toBeNull()
     await expect.element(configureStep).toBeEnabled()
     await expect.element(page.getByRole('button', { name: 'export.previousStep' })).toBeEnabled()
@@ -314,9 +307,6 @@ describe('ExportDialog', () => {
     const platformName = await page.getByText('export.platformWeb').element() as HTMLElement
     const exportLog = await page.getByText('export.progress.finished').element() as HTMLElement
     expect(exportLog.getBoundingClientRect().top).toBeGreaterThanOrEqual(platformName.getBoundingClientRect().bottom)
-    const exportCard = await page.getByTestId('export-card').element() as HTMLElement
-    expect(exportCard.classList).toContain('border-emerald-500/40')
-    expect(progress.classList).toContain('bg-emerald-500')
     const exportStep = await page.getByRole('button', { name: /export\.steps\.export/ }).element() as HTMLButtonElement
     expect(exportStep.querySelector('svg')).not.toBeNull()
     await expect.element(page.getByRole('button', { name: 'common.close' })).not.toBeInTheDocument()
@@ -413,10 +403,6 @@ describe('ExportDialog', () => {
       expect(toastErrorMock).toHaveBeenCalledWith('export.failed: disk full')
     })
     await expect.element(page.getByText('export.progress.failed')).toBeInTheDocument()
-    const exportCard = await page.getByTestId('export-card').element() as HTMLElement
-    expect(exportCard.classList).toContain('border-destructive/40')
-    const progress = await page.getByRole('progressbar').element() as HTMLProgressElement
-    expect(progress.classList).toContain('bg-destructive')
     const exportStep = await page.getByRole('button', { name: /export\.steps\.export/ }).element() as HTMLButtonElement
     expect(exportStep.querySelector('svg')).toBeNull()
     expect(exportStep.textContent).toContain('3')
@@ -648,10 +634,6 @@ describe('ExportDialog', () => {
     await page.getByRole('button', { name: '下一步' }).click()
 
     const targetGrid = await page.getByTestId('desktop-target-grid').element() as HTMLElement
-    expect(targetGrid.classList).toContain('sm:grid-cols-4')
-    const windowsTarget = await page.getByRole('checkbox', { name: 'Windows x64' }).element() as HTMLInputElement
-    expect(windowsTarget.classList).toContain('sr-only')
-    expect(windowsTarget.closest('label')?.classList).toContain('grid-rows-[2rem_1.5rem]')
     expect(targetGrid.querySelector('.i-simple-icons-windows')).not.toBeNull()
     expect(targetGrid.querySelector('.i-simple-icons-linux')).not.toBeNull()
     expect(targetGrid.querySelectorAll('.i-simple-icons-apple')).toHaveLength(2)

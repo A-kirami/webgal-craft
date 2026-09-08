@@ -243,7 +243,7 @@ useShortcutContext({
               :id="panelCommentContentInputId"
               :model-value="parsed?.content ?? ''"
               :placeholder="$t('edit.visualEditor.placeholder.comment')"
-              class="text-xs py-1 flex-1 min-h-14.5 resize-none shadow-none field-sizing-content"
+              class="text-xs py-1 flex-1 min-h-14.5 resize-none field-sizing-content"
               @keydown.enter="handleSingleLineTextareaEnter"
               @update:model-value="handleSingleLineCommentChange(String($event ?? ''))"
             />
@@ -259,7 +259,7 @@ useShortcutContext({
             <Textarea
               :id="panelRawTextInputId"
               :model-value="entry.rawText"
-              class="text-xs font-mono py-1 flex-1 min-h-14.5 resize-none shadow-none field-sizing-content"
+              class="text-xs font-mono py-1 flex-1 min-h-14.5 resize-none field-sizing-content"
               @keydown.enter="handleSingleLineTextareaEnter"
               @update:model-value="handleSingleLineRawTextChange(String($event ?? ''))"
             />
@@ -271,19 +271,19 @@ useShortcutContext({
             <Label :for="panelSpeakerInputId" class="text-xs text-muted-foreground font-medium w-fit">
               {{ $t('edit.visualEditor.params.speaker') }}
             </Label>
-            <InputGroup class="h-7 shadow-none overflow-hidden">
+            <InputGroup class="h-7 overflow-hidden">
               <InputGroupAutocomplete
                 :id="panelSpeakerInputId"
                 :model-value="effectiveSpeaker"
                 :options="speakerAutocompleteOptions"
                 :placeholder="speakerPlaceholder"
                 :disabled="narrationMode"
-                class="text-xs py-1 pr-0 h-7 shadow-none"
+                class="text-xs pr-0 h-7"
                 @update:model-value="handleSpeakerChange(String($event ?? ''))"
               />
-              <InputGroupAddon align="inline-end" class="pr-1.5">
+              <InputGroupAddon align="inline-end" class="p-0 self-stretch has-[>button]:mr-0">
                 <InputGroupButton
-                  class="text-xs rounded-none h-7"
+                  class="text-xs rounded-none h-full"
                   :variant="narrationMode ? 'default' : 'ghost'"
                   @click="toggleNarrationMode"
                 >
@@ -341,7 +341,7 @@ useShortcutContext({
           <Textarea
             :model-value="parsed?.inlineComment ?? ''"
             :placeholder="$t('edit.visualEditor.placeholder.comment')"
-            class="text-xs text-muted-foreground py-1 border-transparent min-h-14.5 resize-none shadow-none field-sizing-content focus:text-foreground focus-visible:border-input"
+            class="text-xs text-muted-foreground py-1 border-transparent min-h-14.5 resize-none field-sizing-content focus:text-foreground focus-visible:border-input"
             @keydown.enter="handleSingleLineTextareaEnter"
             @update:model-value="handleSingleLineInlineCommentChange(String($event ?? ''))"
           />
@@ -355,7 +355,7 @@ useShortcutContext({
         <Textarea
           :model-value="parsed?.inlineComment ?? ''"
           :placeholder="$t('edit.visualEditor.placeholder.comment')"
-          class="text-xs text-muted-foreground py-1 border-transparent min-h-14.5 resize-none shadow-none field-sizing-content focus:text-foreground focus-visible:border-input"
+          class="text-xs text-muted-foreground py-1 border-transparent min-h-14.5 resize-none field-sizing-content focus:text-foreground focus-visible:border-input"
           @keydown.enter="handleSingleLineTextareaEnter"
           @update:model-value="handleSingleLineInlineCommentChange(String($event ?? ''))"
         />

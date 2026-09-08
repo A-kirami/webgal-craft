@@ -36,7 +36,7 @@ function handleSidebarToggle() {
             :aria-label="isVisualMode ? $t('edit.editorMode.textMode') : $t('edit.editorMode.visualMode')"
             :data-state="isVisualMode ? 'on' : 'off'"
             :disabled="!canToggleMode"
-            class="data-[state=on]:bg-transparent disabled:opacity-40 disabled:pointer-events-none"
+            class="px-0! data-[state=on]:bg-transparent disabled:opacity-40 disabled:pointer-events-none"
             @click="handleModeToggle"
           >
             <Paintbrush v-if="isVisualMode" class="size-4" />
@@ -55,7 +55,7 @@ function handleSidebarToggle() {
             :class="toggleVariants({ size: 'sm' })"
             :data-state="preferenceStore.showSidebar ? 'on' : 'off'"
             :disabled="!canToggleSidebar"
-            class="disabled:opacity-40 disabled:pointer-events-none"
+            class="px-0! disabled:opacity-40 disabled:pointer-events-none"
             @click="handleSidebarToggle"
           >
             <PanelRight class="size-4" />

@@ -141,19 +141,19 @@ const iconThumbnail = $computed(() =>
 
             <DropdownMenu v-if="menuItems.length > 0">
               <DropdownMenuTrigger as-child>
-                <Button :aria-label="$t('home.templates.actions.more')" variant="ghost" size="icon" class="shrink-0 h-8 w-8">
-                  <EllipsisVertical class="size-4" />
+                <Button :aria-label="$t('home.templates.actions.more')" variant="ghost" size="icon-sm">
+                  <EllipsisVertical />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" class="text-13px w-44">
+              <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   v-for="(menuItem, menuIndex) in menuItems"
                   :key="menuIndex"
-                  :class="menuItem.class"
+                  :variant="menuItem.variant"
                   :disabled="menuItem.disabled"
                   @click="menuItem.onClick"
                 >
-                  <component :is="menuItem.icon" class="mr-2 size-3.5" />
+                  <component :is="menuItem.icon" />
                   {{ menuItem.label }}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -236,19 +236,19 @@ const iconThumbnail = $computed(() =>
         <div v-if="menuItems.length > 0" class="flex shrink-0 items-center">
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
-              <Button :aria-label="$t('home.templates.actions.more')" variant="ghost" size="icon" class="shrink-0 h-8 w-8">
-                <EllipsisVertical class="size-4" />
+              <Button :aria-label="$t('home.templates.actions.more')" variant="ghost" size="icon-sm">
+                <EllipsisVertical />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" class="w-44">
+            <DropdownMenuContent align="end">
               <DropdownMenuItem
                 v-for="(menuItem, menuIndex) in menuItems"
                 :key="menuIndex"
-                :class="menuItem.class"
+                :variant="menuItem.variant"
                 :disabled="menuItem.disabled"
                 @click="menuItem.onClick"
               >
-                <component :is="menuItem.icon" class="mr-2 size-3.5" />
+                <component :is="menuItem.icon" />
                 {{ menuItem.label }}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -265,17 +265,16 @@ const iconThumbnail = $computed(() =>
 
     <ContextMenuContent
       v-if="menuItems.length > 0"
-      class="w-44"
       @close-auto-focus.prevent
     >
       <ContextMenuItem
         v-for="(menuItem, menuIndex) in menuItems"
         :key="menuIndex"
-        :class="menuItem.class"
+        :variant="menuItem.variant"
         :disabled="menuItem.disabled"
         @click="menuItem.onClick"
       >
-        <component :is="menuItem.icon" class="mr-2 size-3.5" />
+        <component :is="menuItem.icon" />
         {{ menuItem.label }}
       </ContextMenuItem>
     </ContextMenuContent>

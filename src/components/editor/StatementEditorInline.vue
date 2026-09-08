@@ -80,13 +80,13 @@ function handleBlankDblClick(e: MouseEvent) {
 </script>
 
 <template>
-  <div class="px-3 pb-2 flex flex-col gap-2" @dblclick="handleBlankDblClick">
+  <div class="px-3 pb-1 flex flex-col gap-2" @dblclick="handleBlankDblClick">
     <!-- 空行 / 注释 -->
     <template v-if="statementType === 'empty' || statementType === 'comment'">
       <Input
         :model-value="parsed?.content ?? ''"
         :placeholder="$t('edit.visualEditor.placeholder.comment')"
-        class="text-xs text-muted-foreground px-2.5 border-transparent h-6 shadow-none focus:text-foreground focus-visible:border-input"
+        class="text-xs text-muted-foreground px-2 border-transparent h-6 focus:text-foreground focus-visible:border-input"
         @update:model-value="misc.handleCommentChange(String($event ?? ''))"
       />
     </template>
@@ -95,7 +95,7 @@ function handleBlankDblClick(e: MouseEvent) {
     <template v-else-if="statementType === 'unsupported'">
       <Input
         :model-value="entry.rawText"
-        class="text-xs font-mono px-2.5 flex-1 h-6 shadow-none"
+        class="text-xs font-mono px-2 flex-1 h-6"
         @update:model-value="misc.handleRawTextChange(String($event ?? ''))"
       />
     </template>
@@ -103,18 +103,18 @@ function handleBlankDblClick(e: MouseEvent) {
     <!-- 统一字段渲染（say + command） -->
     <div v-else-if="statementType === 'say' || statementType === 'command'" class="flex flex-wrap gap-x-3 gap-y-1.5 items-center">
       <div v-if="statementType === 'say'" class="@container flex flex-col gap-1.5 w-full">
-        <InputGroup class="h-6 w-full shadow-none overflow-hidden @[16rem]:w-3/5 @[24rem]:w-2/5">
+        <InputGroup class="h-6 overflow-hidden @[16rem]:w-3/5 @[24rem]:w-2/5">
           <InputGroupAutocomplete
             :model-value="effectiveSpeaker"
             :options="speakerAutocompleteOptions"
             :placeholder="speakerPlaceholder"
             :disabled="narrationMode"
-            class="text-xs pl-2.5 pr-0 h-6 shadow-none"
+            class="text-xs pl-2 pr-0 h-6"
             @update:model-value="handleSpeakerChange(String($event ?? ''))"
           />
-          <InputGroupAddon align="inline-end" class="pr-1.5">
+          <InputGroupAddon align="inline-end" class="p-0 self-stretch has-[>button]:mr-0">
             <InputGroupButton
-              class="text-xs"
+              class="text-xs rounded-none h-full"
               :variant="narrationMode ? 'default' : 'ghost'"
               @click="toggleNarrationMode"
             >
@@ -169,7 +169,7 @@ function handleBlankDblClick(e: MouseEvent) {
       v-if="(parsed?.inlineComment || showInlineComment) && statementType !== 'empty' && statementType !== 'comment' && statementType !== 'unsupported'"
       :model-value="parsed?.inlineComment ?? ''"
       :placeholder="$t('edit.visualEditor.placeholder.comment')"
-      class="text-xs text-muted-foreground px-2.5 border-transparent h-6 shadow-none focus:text-foreground focus-visible:border-input"
+      class="text-xs text-muted-foreground px-2 border-transparent h-6 focus:text-foreground focus-visible:border-input"
       @update:model-value="misc.handleInlineCommentChange(String($event ?? ''))"
     />
   </div>

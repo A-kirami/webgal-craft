@@ -504,7 +504,7 @@ defineExpose(fileViewerExpose)
               />
             </div>
           </ContextMenuTrigger>
-          <ContextMenuContent class="w-52" @close-auto-focus.prevent>
+          <ContextMenuContent @close-auto-focus.prevent>
             <slot name="background-context-menu" />
           </ContextMenuContent>
         </ContextMenu>

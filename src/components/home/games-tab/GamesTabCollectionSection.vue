@@ -120,23 +120,23 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
                 </div>
               </div>
             </CardContent>
-            <Progress v-if="hasGameProgress(item.game)" :model-value="getGameProgress(item.game)" class="rounded-none h-1 inset-x-0 bottom-0 absolute" />
+            <Progress v-if="hasGameProgress(item.game)" :model-value="getGameProgress(item.game)" class="rounded-none inset-x-0 bottom-0 absolute" />
           </Card>
         </ContextMenuTrigger>
-        <ContextMenuContent class="w-42">
+        <ContextMenuContent>
           <ContextMenuItem
             v-if="item.game.availability !== 'missing'"
             @click="emit('openFolder', item.game)"
           >
-            <Folder class="mr-2 size-3.5" />
+            <Folder />
             {{ $t('common.openFolder') }}
           </ContextMenuItem>
           <ContextMenuItem
             v-if="!hasGameProgress(item.game)"
-            class="text-destructive focus:text-destructive-foreground focus:bg-destructive"
+            variant="destructive"
             @click="emit('deleteGame', item.game)"
           >
-            <Trash2 class="mr-2 size-3.5" />
+            <Trash2 />
             {{ $t('home.games.deleteGame') }}
           </ContextMenuItem>
         </ContextMenuContent>
@@ -146,7 +146,7 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
         type="button"
         :disabled="importBusy"
         :aria-label="$t('home.games.importGame')"
-        class="p-4 text-center border-1 border-gray-300 rounded-lg border-dashed bg-gray-50 flex flex-col gap-3 h-full w-full cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden dark:border-gray-700 hover:border-purple-300 dark:bg-gray-900 dark:hover:border-purple-700"
+        class="p-4 text-center border-1 border-gray-300 rounded-lg border-dashed bg-gray-50 flex flex-col gap-3 h-full w-full cursor-pointer transition-colors items-center justify-center overflow-hidden dark:border-gray-700 hover:border-purple-300 dark:bg-gray-900 dark:hover:border-purple-700"
         :class="{ 'border-purple-300 bg-purple-50': isOverDropZoneGrid }"
         @click="emit('importClick')"
       >
@@ -219,11 +219,10 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
                 <Button
                   :aria-label="$t('common.openFolder')"
                   variant="ghost"
-                  size="icon"
-                  class="h-8 w-8"
+                  size="icon-sm"
                   @click.stop="emit('openFolder', item.game)"
                 >
-                  <Folder class="h-4 w-4" />
+                  <Folder />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -235,11 +234,11 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
                 <Button
                   :aria-label="$t('home.games.deleteGame')"
                   variant="ghost"
-                  size="icon"
-                  class="text-destructive h-8 w-8 hover:text-destructive-foreground hover:bg-destructive"
+                  size="icon-sm"
+                  class="text-destructive hover:text-destructive-foreground hover:bg-destructive"
                   @click.stop="emit('deleteGame', item.game)"
                 >
-                  <Trash2 class="h-4 w-4" />
+                  <Trash2 />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>

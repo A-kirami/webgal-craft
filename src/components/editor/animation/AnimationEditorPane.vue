@@ -58,19 +58,18 @@ const inspectorSelectedFrame = $computed<AnimationEditorSelectedFrameState>(() =
           </div>
 
           <div class="flex flex-wrap gap-1.5 items-center justify-end">
-            <Button size="sm" class="px-2.5 gap-1.5 h-7" @click="emit('add-frame')">
+            <Button size="sm" @click="emit('add-frame')">
               <div class="i-lucide-plus size-3.5" />
               {{ $t('edit.visualEditor.animation.toolbar.addFrame') }}
             </Button>
-            <Button size="sm" variant="outline" class="px-2.5 h-7 shadow-none" :disabled="!props.canDeleteFrame" @click="emit('delete-frame')">
+            <Button size="sm" variant="outline" :disabled="!props.canDeleteFrame" @click="emit('delete-frame')">
               {{ $t('edit.visualEditor.animation.toolbar.delete') }}
             </Button>
             <template v-if="props.showHistoryActions">
               <Separator orientation="vertical" class="mx-0.5 h-4" />
               <Button
-                size="icon"
+                size="icon-sm"
                 variant="ghost"
-                class="h-7 w-7"
                 :disabled="!props.canUndo"
                 :title="$t('edit.visualEditor.animation.toolbar.undo')"
                 @click="emit('undo')"
@@ -79,9 +78,8 @@ const inspectorSelectedFrame = $computed<AnimationEditorSelectedFrameState>(() =
                 <span class="sr-only">{{ $t('edit.visualEditor.animation.toolbar.undo') }}</span>
               </Button>
               <Button
-                size="icon"
+                size="icon-sm"
                 variant="ghost"
-                class="h-7 w-7"
                 :disabled="!props.canRedo"
                 :title="$t('edit.visualEditor.animation.toolbar.redo')"
                 @click="emit('redo')"
@@ -124,14 +122,14 @@ const inspectorSelectedFrame = $computed<AnimationEditorSelectedFrameState>(() =
           </span>
           <Badge
             variant="secondary"
-            class="text-[10px] rounded-sm h-5 transition-opacity"
+            class="text-10px rounded-sm transition-opacity"
             :class="props.selectedFrame?.isStartFrame ? 'opacity-100' : 'opacity-0 pointer-events-none'"
             :aria-hidden="!props.selectedFrame?.isStartFrame"
           >
             {{ $t('edit.visualEditor.animation.startFrame') }}
           </Badge>
           <span
-            class="text-[11px] text-primary/80 inline-flex gap-1 transition-opacity items-center"
+            class="text-11px text-primary/80 inline-flex gap-1 transition-opacity items-center"
             :class="props.selectedFrame?.isStartFrame ? 'opacity-100' : 'opacity-0 pointer-events-none'"
             :aria-hidden="!props.selectedFrame?.isStartFrame"
           >

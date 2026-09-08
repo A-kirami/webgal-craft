@@ -81,7 +81,7 @@ watch([() => selectedGroupId, () => selectedEngineId], ([nextGroupId, nextEngine
 <template>
   <div class="flex flex-col gap-2 sm:grid sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
     <Select v-model="selectedGroupId">
-      <SelectTrigger class="w-full">
+      <SelectTrigger>
         <SelectValue :placeholder="$t('engine.selectName')" />
       </SelectTrigger>
       <SelectContent>
@@ -99,7 +99,7 @@ watch([() => selectedGroupId, () => selectedEngineId], ([nextGroupId, nextEngine
       v-if="currentGroup && versionOptions.length > 0"
       v-model="selectedEngineId"
     >
-      <SelectTrigger class="w-full">
+      <SelectTrigger>
         <SelectValue :placeholder="$t('engine.selectVersion')" />
       </SelectTrigger>
       <SelectContent>

@@ -119,11 +119,11 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                 </Button>
               </div>
             </div>
-            <InputGroup class="flex-1 h-7 min-w-0 shadow-none">
+            <InputGroup class="flex-1 h-7">
               <EffectDraftNumberInput
                 :id="controls.numberInputId(param.key)"
                 :model-value="controls.getFieldValue(param.key)"
-                class="text-xs pr-1 flex-1 h-7 min-w-0 shadow-none"
+                class="text-xs pr-1 flex-1 h-7 min-w-0"
                 :placeholder="controls.getSliderInputValue(param)"
                 @update:model-value="controls.updateNumberField(param, String($event ?? ''))"
                 @commit="controls.updateNumberField(param, $event, { flush: true })"
@@ -160,11 +160,11 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               </Button>
             </div>
           </div>
-          <InputGroup class="flex-1 h-7 shadow-none">
+          <InputGroup class="flex-1 h-7">
             <EffectDraftNumberInput
               :id="controls.numberInputId(item.param.key)"
               :model-value="controls.getFieldValue(item.param.key)"
-              class="text-xs pr-1 h-7 shadow-none"
+              class="text-xs pr-1 h-7"
               :placeholder="controls.getSliderInputValue(item.param)"
               @update:model-value="controls.updateNumberField(item.param, String($event ?? ''))"
               @commit="controls.updateNumberField(item.param, $event, { flush: true })"
@@ -206,11 +206,11 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                 @value-commit="$event && controls.updateSliderField(item.param, $event[0] ?? 0, { fromSlider: true, flush: true })"
               />
             </div>
-            <InputGroup class="h-7 shadow-none" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-12.5'">
+            <InputGroup class="h-7" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-12.5'">
               <EffectDraftNumberInput
                 :id="controls.sliderInputId(item.param.key)"
                 :model-value="controls.getSliderInputValue(item.param)"
-                class="text-xs pr-1 h-7 shadow-none"
+                class="text-xs pr-1 h-7"
                 @update:model-value="controls.updateSliderField(item.param, String($event ?? ''))"
                 @commit="controls.updateSliderField(item.param, $event, { flush: true })"
               />
@@ -246,11 +246,11 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               <Tooltip>
                 <TooltipTrigger as-child>
                   <Button
-                    size="icon"
+                    size="icon-sm"
                     variant="ghost"
                     :aria-label="controls.isLinkedSliderLocked(item.param) ? $t('modals.effectEditor.unlinkScale') : $t('modals.effectEditor.linkScale')"
                     :aria-pressed="controls.isLinkedSliderLocked(item.param)"
-                    :class="['h-7 w-7', controls.isLinkedSliderLocked(item.param) && 'bg-accent text-accent-foreground hover:bg-accent/80']"
+                    :class="[controls.isLinkedSliderLocked(item.param) && 'bg-accent text-accent-foreground hover:bg-accent/80']"
                     @click="controls.toggleLinkedSliderLock(item.param)"
                   >
                     <div :class="controls.isLinkedSliderLocked(item.param) ? 'i-lucide-link' : 'i-lucide-unlink'" class="size-3.5" />
@@ -282,11 +282,11 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                   @value-commit="$event && controls.updateLinkedSliderField(item.param, axisIndex, $event[0] ?? 0, { fromSlider: true, flush: true })"
                 />
               </div>
-              <InputGroup class="h-7 shadow-none" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-12.5'">
+              <InputGroup class="h-7" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-12.5'">
                 <EffectDraftNumberInput
                   :model-value="controls.getLinkedSliderInputValue(item.param, axisIndex)"
                   :aria-label="controls.getLinkedSliderInputAriaLabel(item.param, axisIndex)"
-                  class="text-xs pr-1 h-7 shadow-none"
+                  class="text-xs pr-1 h-7"
                   @update:model-value="controls.updateLinkedSliderField(item.param, axisIndex, String($event ?? ''))"
                   @commit="controls.updateLinkedSliderField(item.param, axisIndex, $event, { flush: true })"
                 />
@@ -339,11 +339,11 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                   :style="{ transform: `translateY(-50%) rotate(${controls.getDialIndicatorDegree(controls.getDialDegree(item.param))}deg)` }"
                 />
               </button>
-              <InputGroup class="h-7 shadow-none" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-15'">
+              <InputGroup class="h-7" :class="controls.getFieldUnit(item.param) ? 'w-18' : 'w-15'">
                 <EffectDraftNumberInput
                   :id="controls.dialInputId(item.param.key)"
                   :model-value="controls.getDialInputValue(item.param)"
-                  class="text-xs pr-1 h-7 shadow-none"
+                  class="text-xs pr-1 h-7"
                   @update:model-value="controls.updateDialField(item.param, String($event ?? ''))"
                   @commit="controls.updateDialField(item.param, $event, { flush: true })"
                 />
@@ -369,9 +369,9 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               <TooltipTrigger as-child>
                 <Button
                   type="button"
-                  size="icon"
+                  size="icon-sm"
                   variant="ghost"
-                  class="h-7 w-9"
+                  class="w-9"
                   :aria-label="$t('modals.effectEditor.flipHorizontal')"
                   @click="controls.flipScaleAxis('x')"
                 >
@@ -386,9 +386,9 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               <TooltipTrigger as-child>
                 <Button
                   type="button"
-                  size="icon"
+                  size="icon-sm"
                   variant="ghost"
-                  class="h-7 w-9"
+                  class="w-9"
                   :aria-label="$t('modals.effectEditor.flipVertical')"
                   @click="controls.flipScaleAxis('y')"
                 >
@@ -445,8 +445,8 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               :id="controls.segmentedControlId(item.param.key)"
               :model-value="controls.getSegmentedValue(item.param)"
               :options="controls.getSegmentedOptions(item.param)"
-              group-class="p-0.5 border border-border/60 rounded-md bg-muted/20 inline-flex gap-0.5 w-full h-7"
-              item-class="text-xs leading-none px-2 border-0 rounded-sm gap-1.5 h-5.5 flex-1 shadow-none data-[state=on]:text-accent-foreground data-[state=on]:bg-accent hover:bg-muted/60"
+              group-class="w-full h-7"
+              item-class="gap-1.5 h-5.5"
               @update-value="controls.updateSegmentedField(item.param, String($event ?? UNSPECIFIED))"
             />
           </div>

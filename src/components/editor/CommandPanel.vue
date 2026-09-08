@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Pencil, Star } from '@lucide/vue'
+import { Pencil, Star, Trash2 } from '@lucide/vue'
 
 import { useDragSession } from '~/composables/useDragSession'
 import { useDragSource } from '~/composables/useDragTransfer'
@@ -190,8 +190,7 @@ useShortcutContext({
         <div class="flex flex-1 gap-1">
           <Button
             variant="ghost"
-            size="sm"
-            class="px-3 rounded-sm shrink-0 h-6"
+            size="xs"
             :class="activeCategory === 'all' && 'bg-accent text-accent-foreground'"
             :aria-pressed="activeCategory === 'all'"
             @click="handleCategoryClick('all')"
@@ -202,8 +201,7 @@ useShortcutContext({
             v-for="category in commandPanelCategories"
             :key="category"
             variant="ghost"
-            size="sm"
-            class="px-3 rounded-sm shrink-0 h-6"
+            size="xs"
             :class="activeCategory === category && `${categoryTheme[category].bg} ${categoryTheme[category].text} ${categoryTheme[category].hoverBg} ${categoryTheme[category].hoverText}`"
             :aria-pressed="activeCategory === category"
             @click="handleCategoryClick(category)"
@@ -214,13 +212,12 @@ useShortcutContext({
         <ScrollBar orientation="horizontal" class="opacity-75 h-1.5 -mb-0.25 hover:opacity-100" />
       </ScrollArea>
 
-      <Separator orientation="vertical" class="h-5" />
+      <Separator orientation="vertical" class="h-4" />
 
       <div class="flex gap-1 items-center">
         <Button
           variant="ghost"
-          size="sm"
-          class="px-3 py-1 rounded-sm shrink-0 h-6"
+          size="xs"
           :class="activeCategory === 'favorites' && 'bg-cyan-50 dark:bg-cyan-950 text-cyan-500 hover:bg-cyan-100 dark:hover:bg-cyan-900 hover:text-cyan-600 dark:hover:text-cyan-400'"
           :aria-pressed="activeCategory === 'favorites'"
           @click="handleCategoryClick('favorites')"
@@ -229,8 +226,7 @@ useShortcutContext({
         </Button>
         <Button
           variant="ghost"
-          size="sm"
-          class="px-3 py-1 rounded-sm shrink-0 h-6"
+          size="xs"
           :class="activeCategory === 'groups' && 'bg-violet-50 dark:bg-violet-950 text-violet-500 hover:bg-violet-100 dark:hover:bg-violet-900 hover:text-violet-600 dark:hover:text-violet-400'"
           :aria-pressed="activeCategory === 'groups'"
           @click="handleCategoryClick('groups')"
@@ -279,8 +275,8 @@ useShortcutContext({
                 <Button
                   v-if="!entry.locked"
                   variant="ghost"
-                  size="sm"
-                  class="p-0 opacity-0 size-6 group-focus-visible:opacity-60 group-has-[:focus-visible]:opacity-60 group-hover:opacity-60 hover:opacity-100 [&_svg]:size-3.5"
+                  size="icon-xs"
+                  class="opacity-0 transition-all group-focus-visible:opacity-60 group-has-[:focus-visible]:opacity-60 group-hover:opacity-60 hover:opacity-100"
                   :title="$t('edit.visualEditor.commandPanel.editDefaults')"
                   @click="openDefaultsModal(entry.type)"
                 >
@@ -288,8 +284,8 @@ useShortcutContext({
                 </Button>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  class="p-0 size-6 transition-all hover:text-amber-500 hover:opacity-100 [&_svg]:size-3.5"
+                  size="icon-xs"
+                  class="transition-all hover:text-amber-500 hover:opacity-100"
                   :class="commandPanelStore.isFavorite(entry.type) ? 'text-amber-500 opacity-100' : 'opacity-60'"
                   :title="getFavoriteActionLabel(entry.type)"
                   :aria-label="getFavoriteActionLabel(entry.type)"
@@ -343,8 +339,8 @@ useShortcutContext({
               <template #actions>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  class="p-0 opacity-60 size-6 hover:opacity-100 [&_svg]:size-3"
+                  size="icon-xs"
+                  class="opacity-60 hover:opacity-100"
                   :title="$t('common.edit')"
                   @click="openGroupModal(group)"
                 >
@@ -354,12 +350,12 @@ useShortcutContext({
                   <PopoverTrigger as-child>
                     <Button
                       variant="ghost"
-                      size="sm"
-                      class="p-0 opacity-60 size-6 hover:text-destructive hover:opacity-100"
+                      size="icon-xs"
+                      class="opacity-60 hover:text-destructive hover:opacity-100"
                       :title="$t('common.delete')"
                       @click="requestDeleteGroup(group.id)"
                     >
-                      <div class="i-lucide-trash-2 size-3" />
+                      <Trash2 aria-hidden="true" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent class="p-3 w-auto" side="top" align="end" @click.stop>
@@ -367,10 +363,10 @@ useShortcutContext({
                       {{ $t('edit.visualEditor.commandPanel.confirmDeleteGroup') }}
                     </p>
                     <div class="flex gap-2 justify-end">
-                      <Button variant="outline" size="sm" class="h-6" @click="clearPendingDeleteGroup">
+                      <Button variant="outline" size="xs" @click="clearPendingDeleteGroup">
                         {{ $t('common.cancel') }}
                       </Button>
-                      <Button variant="destructive" size="sm" class="h-6" @click="deleteGroup(group.id)">
+                      <Button variant="destructive" size="xs" @click="deleteGroup(group.id)">
                         {{ $t('common.delete') }}
                       </Button>
                     </div>

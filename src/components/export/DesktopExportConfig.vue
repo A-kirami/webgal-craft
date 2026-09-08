@@ -95,19 +95,19 @@ function updateSize(key: SizeKey, value: unknown): void {
       <div class="gap-3 grid grid-cols-2 sm:grid-cols-4">
         <label class="text-xs text-muted-foreground gap-1 grid">
           {{ $t('export.desktopConfig.width') }}
-          <Input :model-value="windowConfig.width" class="h-8 shadow-none" :disabled="disabled" min="1" type="number" @update:model-value="updateSize('width', $event)" />
+          <Input :model-value="windowConfig.width" :disabled="disabled" min="1" type="number" @update:model-value="updateSize('width', $event)" />
         </label>
         <label class="text-xs text-muted-foreground gap-1 grid">
           {{ $t('export.desktopConfig.height') }}
-          <Input :model-value="windowConfig.height" class="h-8 shadow-none" :disabled="disabled" min="1" type="number" @update:model-value="updateSize('height', $event)" />
+          <Input :model-value="windowConfig.height" :disabled="disabled" min="1" type="number" @update:model-value="updateSize('height', $event)" />
         </label>
         <label class="text-xs text-muted-foreground gap-1 grid">
           {{ $t('export.desktopConfig.minWidth') }}
-          <Input :model-value="windowConfig.minWidth" class="h-8 shadow-none" :disabled="disabled" min="1" type="number" @update:model-value="updateSize('minWidth', $event)" />
+          <Input :model-value="windowConfig.minWidth" :disabled="disabled" min="1" type="number" @update:model-value="updateSize('minWidth', $event)" />
         </label>
         <label class="text-xs text-muted-foreground gap-1 grid">
           {{ $t('export.desktopConfig.minHeight') }}
-          <Input :model-value="windowConfig.minHeight" class="h-8 shadow-none" :disabled="disabled" min="1" type="number" @update:model-value="updateSize('minHeight', $event)" />
+          <Input :model-value="windowConfig.minHeight" :disabled="disabled" min="1" type="number" @update:model-value="updateSize('minHeight', $event)" />
         </label>
       </div>
       <div class="flex flex-wrap gap-x-6 gap-y-3">

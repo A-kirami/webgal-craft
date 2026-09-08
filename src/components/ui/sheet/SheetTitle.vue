@@ -12,7 +12,7 @@ const delegatedProps = reactiveOmit(props, "class")
 
 <template>
   <DialogTitle
-    :class="cn('text-lg font-semibold text-foreground', props.class)"
+    :class="cn('text-base font-semibold text-foreground', props.class)"
     v-bind="delegatedProps"
   >
     <slot />

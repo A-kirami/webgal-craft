@@ -82,7 +82,7 @@ function getGroupProgress(group: EngineGroupCollectionItem): number | undefined 
       type="button"
       :disabled="importBusy"
       :aria-label="$t('home.engines.installEngine')"
-      class="p-4 border-1 rounded-lg border-dashed flex gap-4 cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden hover:border-primary/40 dark:hover:border-primary/60"
+      class="p-4 border-1 rounded-lg border-dashed flex gap-4 cursor-pointer transition-colors items-center justify-center overflow-hidden hover:border-primary/40 dark:hover:border-primary/60"
       :class="{
         'border-primary/40 bg-primary/5': isOverDropZoneGrid,
         'border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900': !isOverDropZoneGrid,

@@ -138,10 +138,9 @@ const previewItems = $computed((): PreviewItem[] => [
                   variant="outline"
                   size="sm"
                   data-testid="icon-editor-select-foreground"
-                  class="shrink-0 h-7 shadow-none"
                   @click="selectForeground"
                 >
-                  <ImagePlus class="size-3.5" />
+                  <ImagePlus />
                   {{ foregroundSelectLabel }}
                 </Button>
               </div>
@@ -155,30 +154,31 @@ const previewItems = $computed((): PreviewItem[] => [
             </section>
 
             <section class="pt-4 border-t flex flex-col gap-2.5">
-              <h3 class="text-sm font-medium">
-                {{ $t('modals.gameConfig.iconEditor.background.title') }}
-              </h3>
-
               <Tabs
                 :model-value="state.backgroundType"
                 @update:model-value="setBackgroundType"
               >
-                <TabsList class="p-0.75 h-8 w-full">
-                  <TabsTrigger
-                    value="color"
-                    class="flex-1 data-[state=active]:shadow-none"
-                    data-testid="icon-editor-background-color-tab"
-                  >
-                    {{ $t('modals.gameConfig.iconEditor.background.color') }}
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="image"
-                    class="flex-1 data-[state=active]:shadow-none"
-                    data-testid="icon-editor-background-image-tab"
-                  >
-                    {{ $t('modals.gameConfig.iconEditor.background.image') }}
-                  </TabsTrigger>
-                </TabsList>
+                <div class="flex gap-3 items-center justify-between">
+                  <h3 class="text-sm font-medium">
+                    {{ $t('modals.gameConfig.iconEditor.background.title') }}
+                  </h3>
+                  <TabsList class="w-32">
+                    <TabsTrigger
+                      value="color"
+                      class="text-xs"
+                      data-testid="icon-editor-background-color-tab"
+                    >
+                      {{ $t('modals.gameConfig.iconEditor.background.color') }}
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="image"
+                      class="text-xs"
+                      data-testid="icon-editor-background-image-tab"
+                    >
+                      {{ $t('modals.gameConfig.iconEditor.background.image') }}
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
 
                 <TabsContent
                   value="color"
@@ -218,10 +218,9 @@ const previewItems = $computed((): PreviewItem[] => [
                       variant="outline"
                       size="sm"
                       data-testid="icon-editor-select-background"
-                      class="h-7 shadow-none"
                       @click="selectBackgroundImage"
                     >
-                      <ImagePlus class="size-3.5" />
+                      <ImagePlus />
                       {{ backgroundSelectLabel }}
                     </Button>
                   </div>
@@ -251,26 +250,26 @@ const previewItems = $computed((): PreviewItem[] => [
               @update:model-value="setIconShape"
             >
               <TabsList
-                class="p-0.5 rounded-md grid grid-cols-3 h-7.5 w-40"
+                class="w-40"
                 :aria-label="$t('modals.gameConfig.iconEditor.shape.title')"
               >
                 <TabsTrigger
                   value="square"
-                  class="text-xs h-full data-[state=active]:shadow-none"
+                  class="text-xs"
                   data-testid="icon-editor-shape-square-tab"
                 >
                   {{ $t('modals.gameConfig.iconEditor.shape.square') }}
                 </TabsTrigger>
                 <TabsTrigger
                   value="rounded"
-                  class="text-xs h-full data-[state=active]:shadow-none"
+                  class="text-xs"
                   data-testid="icon-editor-shape-rounded-tab"
                 >
                   {{ $t('modals.gameConfig.iconEditor.shape.rounded') }}
                 </TabsTrigger>
                 <TabsTrigger
                   value="circle"
-                  class="text-xs h-full data-[state=active]:shadow-none"
+                  class="text-xs"
                   data-testid="icon-editor-shape-circle-tab"
                 >
                   {{ $t('modals.gameConfig.iconEditor.shape.circle') }}
@@ -280,7 +279,7 @@ const previewItems = $computed((): PreviewItem[] => [
           </div>
 
           <div
-            class="rounded-lg bg-muted/20 flex-1 min-h-0 overflow-hidden"
+            class="bg-muted/20 flex-1 min-h-0 overflow-hidden"
             data-testid="icon-editor-preview-panel"
           >
             <div

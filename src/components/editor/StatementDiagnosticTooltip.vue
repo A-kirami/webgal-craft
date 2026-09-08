@@ -37,7 +37,7 @@ const contentClass = $computed(() => cn(
 </script>
 
 <template>
-  <TooltipProvider :delay-duration="250" :skip-delay-duration="0">
+  <TooltipProvider :delay-duration="250" :skip-delay-duration="0" :disable-closing-trigger="true">
     <Tooltip :disabled="!hasTooltipContent">
       <TooltipTrigger as-child>
         <div

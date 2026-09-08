@@ -24,12 +24,12 @@ function emitSelect(value: unknown) {
 </script>
 
 <template>
-  <TooltipProvider :delay-duration="300">
+  <TooltipProvider :delay-duration="0">
     <ToggleGroup
       :id="props.inputId"
       type="single"
       :model-value="props.selectValue"
-      :class="cn('border border-border/60 rounded-md bg-muted/20 flex w-full p-0.5 gap-0.5 h-7', props.controlClass)"
+      :class="cn('border border-border/60 rounded-md bg-muted/20 w-full p-0.5 gap-0.5 h-7', props.controlClass)"
       :aria-label="$t('edit.visualEditor.params.position')"
       @update:model-value="emitSelect"
     >
@@ -41,7 +41,7 @@ function emitSelect(value: unknown) {
           <ToggleGroupItem
             :value="option.value"
             :aria-label="option.label"
-            :class="cn('border-0 rounded-sm h-6 min-w-0 flex-1 p-0 text-muted-foreground/40 shadow-none justify-center hover:bg-muted/60 hover:text-muted-foreground', option.value === props.selectValue && 'bg-accent text-foreground')"
+            :class="cn('border-0 rounded-sm h-6 min-w-0 flex-1 p-0 text-muted-foreground/40 hover:bg-muted/60 hover:text-muted-foreground', option.value === props.selectValue && 'bg-accent text-foreground')"
           >
             <svg
               aria-hidden="true"

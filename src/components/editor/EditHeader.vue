@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, Download, Loader2, MonitorPlay, Pencil, Play, Settings } from '@lucide/vue'
+import { ArrowLeft, Download, Loader2, MonitorPlay, Play, Settings2, Settings } from '@lucide/vue'
 import { onBackButtonPress } from '@tauri-apps/api/app'
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 
@@ -270,8 +270,8 @@ onBeforeUnmount(() => {
 <template>
   <header class="px-4 border-b bg-white flex h-12 items-center justify-between dark:bg-gray-950">
     <div class="flex gap-2 items-center">
-      <Button variant="ghost" size="icon" class="size-8" @click="void handleBack()">
-        <ArrowLeft class="size-5!" />
+      <Button variant="ghost" size="icon" class="[&_svg]:size-5" @click="void handleBack()">
+        <ArrowLeft />
         <span class="sr-only">{{ $t('common.back') }}</span>
       </Button>
       <div class="flex gap-2 items-center">
@@ -291,11 +291,10 @@ onBeforeUnmount(() => {
         v-if="canOpenGameConfig"
         variant="ghost"
         size="icon"
-        class="size-8"
         :title="$t('edit.header.gameSettings')"
         @click="handleOpenGameConfig"
       >
-        <Pencil class="size-4" />
+        <Settings2 />
         <span class="sr-only">{{ $t('edit.header.gameSettings') }}</span>
       </Button>
     </div>
@@ -303,29 +302,25 @@ onBeforeUnmount(() => {
       <Button
         v-if="isDesktop"
         :variant="isTestWindowActive ? 'outline' : 'default'"
-        size="sm"
-        class="gap-1 h-8"
         :class="isTestWindowActive ? 'text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-800' : ''"
         :disabled="!canTestGame || isTestOpening"
         @click="handleTestGame"
       >
-        <Loader2 v-if="isTestOpening" class="size-4 animate-spin" />
-        <MonitorPlay v-else-if="isTestWindowActive" class="size-4" />
-        <Play v-else class="size-4" />
+        <Loader2 v-if="isTestOpening" class="animate-spin" />
+        <MonitorPlay v-else-if="isTestWindowActive" />
+        <Play v-else />
         {{ $t('edit.header.testGame') }}
       </Button>
       <Button
         variant="outline"
-        size="sm"
-        class="gap-1 h-8"
         :disabled="!canExportGame"
         @click="handleOpenExport"
       >
-        <Download class="size-4" />
+        <Download />
         {{ $t('edit.header.export') }}
       </Button>
-      <Button variant="ghost" size="icon" class="h-8 w-8" @click="modalStore.open('SettingsModal')">
-        <Settings class="size-4" />
+      <Button variant="ghost" size="icon" @click="modalStore.open('SettingsModal')">
+        <Settings />
         <span class="sr-only">{{ $t('common.settings') }}</span>
       </Button>
     </div>

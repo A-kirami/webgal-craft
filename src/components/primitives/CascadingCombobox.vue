@@ -330,12 +330,12 @@ watch(() => searchQuery, (nextQuery, previousQuery) => {
         role="combobox"
         :aria-expanded="open"
         aria-haspopup="listbox"
-        :class="cn('text-xs shadow-none justify-between font-normal px-2 py-1.5', props.class)"
+        :class="cn('text-xs justify-between font-normal px-2 py-1.5', props.class)"
       >
         <span class="truncate" :class="!selectedLabel && 'text-muted-foreground'">
           {{ selectedLabel || placeholder }}
         </span>
-        <div class="i-lucide-chevrons-up-down ml-1 opacity-50 shrink-0 size-3" />
+        <div class="i-lucide-chevrons-up-down ml-1 opacity-50 shrink-0 size-3.5" />
       </Button>
     </PopoverTrigger>
     <PopoverContent

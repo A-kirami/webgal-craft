@@ -5,5 +5,5 @@ export interface MenuItem {
   label: string
   onClick: () => void
   disabled?: boolean
-  class?: string
+  variant?: 'default' | 'destructive'
 }

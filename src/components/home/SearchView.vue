@@ -27,7 +27,7 @@ const updateSearch = useDebounceFn((value: string | number) => {
       <Input
         type="search"
         :placeholder="searchPlaceholder"
-        class="pl-8 bg-background w-full shadow-none"
+        class="pl-8 bg-background"
         :model-value="workspaceStore.searchQuery"
         @update:model-value="updateSearch"
       />
@@ -38,7 +38,7 @@ const updateSearch = useDebounceFn((value: string | number) => {
         size="icon"
         @click="preferenceStore.viewMode = 'grid'"
       >
-        <Grid class="h-4 w-4" />
+        <Grid />
         <span class="sr-only">{{ $t('common.view.grid') }}</span>
       </Button>
       <Button
@@ -46,7 +46,7 @@ const updateSearch = useDebounceFn((value: string | number) => {
         size="icon"
         @click="preferenceStore.viewMode = 'list'"
       >
-        <List class="h-4 w-4" />
+        <List />
         <span class="sr-only">{{ $t('common.view.list') }}</span>
       </Button>
     </div>

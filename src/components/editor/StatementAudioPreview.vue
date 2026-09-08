@@ -326,7 +326,6 @@ onBeforeUnmount(() => {
       variant="ghost"
       size="icon-sm"
       data-testid="statement-audio-preview-toggle"
-      class="rounded-md shrink-0 size-7"
       :aria-label="!canTogglePlayback
         ? $t('edit.visualEditor.audioPreview.unavailable')
         : isPlaying
@@ -335,8 +334,8 @@ onBeforeUnmount(() => {
       :disabled="!canTogglePlayback"
       @click="handleTogglePlayback"
     >
-      <Pause v-if="isPlaying" class="size-3.5" />
-      <Play v-else class="size-3.5 translate-x-0.25" />
+      <Pause v-if="isPlaying" />
+      <Play v-else class="translate-x-0.25" />
     </Button>
     <div class="flex-1 h-full min-w-0 relative overflow-hidden">
       <div

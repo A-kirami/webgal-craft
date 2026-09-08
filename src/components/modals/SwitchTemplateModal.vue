@@ -162,7 +162,7 @@ async function handleResetConfirm() {
           :disabled="isSwitching || isResetting"
           @click="handleResetRequest"
         >
-          <RotateCcw class="size-4" aria-hidden="true" />
+          <RotateCcw aria-hidden="true" />
           {{ $t('modals.switchTemplate.reset.label') }}
         </Button>
         <div class="flex gap-2">

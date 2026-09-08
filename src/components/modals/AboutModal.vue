@@ -85,7 +85,7 @@ function handleOpenBugReport(): void {
         <div class="flex gap-2 items-center">
           <button
             :class="[
-              'text-sm font-mono font-semibold px-3 py-1.5 rounded-md bg-muted inline-flex gap-1.5 transition-all items-center',
+              'text-xs font-mono font-semibold px-3 py-1.5 rounded-md bg-muted inline-flex gap-1.5 transition-all items-center',
               version.link ? 'text-primary' : 'text-muted-foreground cursor-default',
             ]"
             @click="handleVersionClick"
@@ -95,14 +95,14 @@ function handleOpenBugReport(): void {
           </button>
           <Button
             v-if="canCheckForUpdate"
-            size="icon"
+            size="icon-sm"
             variant="ghost"
-            class="text-muted-foreground bg-muted size-8"
+            class="text-muted-foreground bg-muted"
             :title="$t('appUpdate.action.checkForUpdate')"
             :aria-label="$t('appUpdate.action.checkForUpdate')"
             @click="handleCheckForUpdate"
           >
-            <RefreshCw class="size-4" aria-hidden="true" />
+            <RefreshCw aria-hidden="true" />
           </Button>
         </div>
       </div>

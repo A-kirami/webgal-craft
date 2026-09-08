@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Check, Image, LayoutGrid, LayoutList, LayoutTemplate, MicVocal, Minus, Music, Plus, UserRound, Video } from '@lucide/vue'
+import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Image, LayoutGrid, LayoutList, LayoutTemplate, MicVocal, Minus, Music, Plus, UserRound, Video } from '@lucide/vue'
 
 import { canCreateAssetFile } from '~/components/editor/asset-file-defaults'
 import { usePreferenceStore } from '~/stores/preference'
@@ -101,16 +101,16 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
 
 <template>
   <div class="flex h-full">
-    <ScrollArea>
-      <Tabs ::="preferenceStore.assetTab" orientation="vertical" class="flex h-full">
-        <TabsList class="p-0.5 border-r rounded-none bg-transparent flex-col gap-0.5 h-full justify-start">
+    <ScrollArea class="border-r">
+      <Tabs ::="preferenceStore.assetTab" orientation="vertical" class="h-full">
+        <TabsList class="p-0.5 rounded-none bg-transparent gap-0.5 h-full justify-start">
           <TooltipProvider :delay-duration="0">
             <Tooltip v-for="item in assetTabItems" :key="item.tab">
               <TooltipTrigger as-child>
                 <span>
                   <TabsTrigger
                     :value="item.tab"
-                    class="p-1.75 data-[state=active]:bg-accent data-[state=active]:shadow-none"
+                    class="p-1.75 data-[state=active]:bg-accent"
                   >
                     <component :is="item.icon" class="size-4.5" />
                   </TabsTrigger>
@@ -138,24 +138,22 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
             <DropdownMenuTrigger as-child>
               <Button
                 variant="outline"
-                size="icon"
-                class="shrink-0 size-7 shadow-none"
+                size="icon-sm"
                 :title="$t('common.create')"
                 :aria-label="$t('common.create')"
               >
-                <Plus class="size-3.5" />
+                <Plus />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" class="min-w-34">
+            <DropdownMenuContent align="end">
               <DropdownMenuItem
                 v-if="canCreateFileInCurrentDirectory"
-                class="text-xs gap-2"
                 @select="handleCreateFile"
               >
-                <span class="flex-1">{{ $t('edit.fileTree.newFile') }}</span>
+                {{ $t('edit.fileTree.newFile') }}
               </DropdownMenuItem>
-              <DropdownMenuItem class="text-xs gap-2" @select="handleCreateFolder">
-                <span class="flex-1">{{ $t('edit.fileTree.newFolder') }}</span>
+              <DropdownMenuItem @select="handleCreateFolder">
+                {{ $t('edit.fileTree.newFolder') }}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -207,40 +205,38 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
               <DropdownMenuTrigger as-child>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  class="text-xs px-2 gap-1.5 h-6 max-w-36 min-w-0 shadow-none"
+                  size="xs"
                   :title="$t('edit.assetPanel.actions.sortField')"
                 >
-                  <ArrowUpDown class="text-muted-foreground shrink-0 size-3.5" />
+                  <ArrowUpDown />
                   <span class="hidden truncate @[500px]:inline">{{ currentSortLabel }}</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" class="min-w-34">
-                <DropdownMenuLabel class="text-xs">
+              <DropdownMenuContent align="start">
+                <DropdownMenuLabel>
                   {{ $t('edit.assetPanel.sort.by') }}
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  v-for="option in sortOptions"
-                  :key="option.value"
-                  class="text-xs gap-2"
-                  @select="() => handleSortFieldSelect(option.value)"
-                >
-                  <span class="flex-1">{{ option.label }}</span>
-                  <Check v-if="preferenceStore.assetSortBy === option.value" class="size-3.5" />
-                </DropdownMenuItem>
+                <DropdownMenuRadioGroup :model-value="preferenceStore.assetSortBy">
+                  <DropdownMenuRadioItem
+                    v-for="option in sortOptions"
+                    :key="option.value"
+                    :value="option.value"
+                    @select="() => handleSortFieldSelect(option.value)"
+                  >
+                    {{ option.label }}
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button
               variant="ghost"
-              size="icon"
-              class="size-6 shadow-none"
+              size="icon-xs"
               :title="$t('edit.assetPanel.actions.sortOrder')"
               :aria-label="$t('edit.assetPanel.actions.sortOrder')"
               @click="toggleSortOrder"
             >
-              <ArrowUp v-if="isSortAsc" class="size-3.5" />
-              <ArrowDown v-else class="size-3.5" />
+              <ArrowUp v-if="isSortAsc" />
+              <ArrowDown v-else />
               <span class="sr-only">
                 {{ isSortAsc ? $t('edit.assetPanel.sort.directionAsc') : $t('edit.assetPanel.sort.directionDesc') }}
               </span>
@@ -250,14 +246,13 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
         <div class="inline-flex gap-0.5 items-center">
           <Button
             variant="ghost"
-            size="icon"
-            class="size-6"
+            size="icon-xs"
             :disabled="isMinZoom"
             :title="$t('edit.assetPanel.actions.zoomOut')"
             :aria-label="$t('edit.assetPanel.actions.zoomOut')"
             @click="handleZoomChange(-5)"
           >
-            <Minus class="size-3.5" />
+            <Minus />
           </Button>
           <Slider
             ::="preferenceStore.assetZoom"
@@ -268,8 +263,8 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
           />
           <Button
             variant="ghost"
-            size="sm"
-            class="text-xs px-1.5 h-6 min-w-10 tabular-nums"
+            size="xs"
+            class="px-0 min-w-10"
             :title="$t('edit.assetPanel.actions.zoomReset')"
             :aria-label="$t('edit.assetPanel.actions.zoomReset')"
             @click="resetZoom"
@@ -278,14 +273,13 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
           </Button>
           <Button
             variant="ghost"
-            size="icon"
-            class="size-6"
+            size="icon-xs"
             :disabled="isMaxZoom"
             :title="$t('edit.assetPanel.actions.zoomIn')"
             :aria-label="$t('edit.assetPanel.actions.zoomIn')"
             @click="handleZoomChange(5)"
           >
-            <Plus class="size-3.5" />
+            <Plus />
           </Button>
         </div>
       </div>

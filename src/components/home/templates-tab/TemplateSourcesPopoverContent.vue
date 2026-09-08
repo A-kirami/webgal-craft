@@ -37,11 +37,10 @@ function resolveSourceLabel(source: TemplateGroupSourceItem): string {
         <Button
           :aria-label="$t('home.templates.actions.openTemplateFolder')"
           variant="ghost"
-          size="icon"
-          class="size-6"
+          size="icon-xs"
           @click="emit('openSourceFolder', source)"
         >
-          <Folder class="size-3.5" />
+          <Folder />
         </Button>
       </div>
     </div>

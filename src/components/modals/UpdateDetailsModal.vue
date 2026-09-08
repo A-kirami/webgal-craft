@@ -108,7 +108,7 @@ async function handleOpenReleasePage(): Promise<void> {
 
       <AlertDialogFooter class="shrink-0 gap-2 sm:justify-between">
         <Button variant="ghost" class="text-muted-foreground mr-auto" @click="handleOpenReleasePage">
-          <ExternalLink class="size-4" aria-hidden="true" />
+          <ExternalLink aria-hidden="true" />
           {{ $t('appUpdate.details.openReleasePage') }}
         </Button>
         <AlertDialogCancel>

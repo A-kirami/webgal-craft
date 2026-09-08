@@ -51,12 +51,12 @@ function handleRemoveImage(index: number) {
 
 <template>
   <ScrollArea data-testid="game-logo-scroll-area" class="pr-1 max-h-[10rem]">
-    <div class="px-1.5 pt-2 gap-3 grid grid-cols-3 content-start">
+    <div class="px-1.5 pb-0.5 pt-2 gap-3 grid grid-cols-3 content-start">
       <article
         v-for="(fileName, index) in modelValue"
         :key="fileName"
       >
-        <div class="bg-muted/30 aspect-video relative">
+        <div class="border border-border rounded-md bg-muted/30 aspect-video relative">
           <AssetImage
             :path="buildPreviewPath(fileName)"
             :root-path="gamePath"
@@ -70,13 +70,13 @@ function handleRemoveImage(index: number) {
 
           <Button
             type="button"
-            size="icon"
+            size="icon-xs"
             variant="secondary"
-            class="text-muted-foreground border-2 border-background rounded-full bg-muted size-6 shadow-none absolute hover:text-destructive focus-visible:border-background hover:bg-muted -right-2 -top-2"
+            class="text-muted-foreground border-2 border-background rounded-full bg-muted absolute hover:text-destructive focus-visible:border-background hover:bg-muted -right-2 -top-2"
             :aria-label="$t('modals.gameConfig.gameLogo.remove')"
             @click="handleRemoveImage(index)"
           >
-            <X class="size-3.5" />
+            <X />
           </Button>
         </div>
       </article>

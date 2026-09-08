@@ -36,7 +36,7 @@ function handleCloseClick() {
   <div class="flex gap-1.5 items-center">
     <FileText class="shrink-0 size-4" />
     <span
-      class="text-13px font-light shrink-0"
+      class="text-13px font-normal shrink-0"
       :class="[
         { 'italic': props.tab.isPreview },
         getDiagnosticSeverityTextClass(props.diagnosticSeverity),
@@ -47,7 +47,7 @@ function handleCloseClick() {
     </span>
     <span
       v-if="props.pathHint"
-      class="text-[11.7px] text-muted-foreground/70 font-light max-w-28 min-w-0 truncate"
+      class="text-12px text-muted-foreground/70 font-normal max-w-28 min-w-0 truncate"
       data-editor-tab-path-hint
     >
       {{ props.pathHint }}
@@ -55,7 +55,7 @@ function handleCloseClick() {
     <Button
       variant="ghost"
       size="icon"
-      class="group/close rounded flex h-5 w-5 items-center justify-center relative hover:bg-muted-foreground/20"
+      class="group/close rounded flex size-5 items-center justify-center relative hover:bg-muted-foreground/20 [&_svg]:size-3"
       as="div"
       tabindex="-1"
       data-drag-ignore
@@ -67,7 +67,7 @@ function handleCloseClick() {
           class="rounded-full bg-muted-foreground/50 opacity-100 size-2 transition-opacity absolute group-hover/close:opacity-0"
         />
         <X
-          class="size-3 transition-opacity"
+          class="transition-opacity"
           :class="[
             !props.tab.isModified && props.active ? 'opacity-100' :
             props.tab.isModified ? 'opacity-0 group-hover/close:opacity-100' :

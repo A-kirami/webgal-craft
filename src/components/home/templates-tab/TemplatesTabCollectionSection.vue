@@ -58,7 +58,7 @@ function buildMenuItems(item: TemplateCollectionItem): MenuItem[] {
       icon: Trash2,
       label: t('home.templates.deleteTemplate'),
       onClick: () => emit('deleteTemplate', item.templateGroup),
-      class: 'text-destructive focus:text-destructive-foreground focus:bg-destructive',
+      variant: 'destructive',
     })
   }
   return menuItems
@@ -96,7 +96,7 @@ function getMenuItems(item: TemplateCollectionItem): MenuItem[] {
         type="button"
         :disabled="importBusy"
         :aria-label="$t('home.templates.importTemplate')"
-        class="p-3 border-1 rounded-lg border-dashed flex gap-4 cursor-pointer shadow-none transition-colors items-center justify-center overflow-hidden hover:border-primary/40 dark:hover:border-primary/60"
+        class="p-3 border-1 rounded-lg border-dashed flex gap-4 cursor-pointer transition-colors items-center justify-center overflow-hidden hover:border-primary/40 dark:hover:border-primary/60"
         :class="{
           'border-primary/40 bg-primary/5': isOverDropZoneGrid,
           'border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900': !isOverDropZoneGrid,

@@ -97,7 +97,7 @@ const shouldShowPlaceholder = $computed(() =>
           </EmptyDescription>
         </EmptyHeader>
         <Button @click="handleSwitchToTextMode">
-          <Code class="size-4" />
+          <Code />
           {{ $t('edit.editorMode.switchToText') }}
         </Button>
       </EmptyContent>
@@ -127,7 +127,7 @@ const shouldShowPlaceholder = $computed(() =>
           </EmptyDescription>
         </EmptyHeader>
         <Button @click="handleCreateScene">
-          <FilePlus2 class="size-4" />
+          <FilePlus2 />
           {{ $t('edit.empty.createScene') }}
         </Button>
       </EmptyContent>

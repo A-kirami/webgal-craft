@@ -16,20 +16,20 @@ const InputGroupStyleHarness = defineComponent({
   },
   template: `
     <div style="width: 320px;">
-      <InputGroup class="h-7 shadow-none overflow-hidden">
+      <InputGroup class="h-7 overflow-hidden">
         <InputGroupInput
           data-testid="input-group-reference"
-          class="text-xs py-1 pr-0 h-7 shadow-none"
+          class="text-xs py-1 pr-0 h-7"
         />
         <InputGroupAddon align="inline-end" class="pr-1.5">
           <InputGroupButton class="text-xs rounded-none h-7">Narration</InputGroupButton>
         </InputGroupAddon>
       </InputGroup>
-      <InputGroup class="h-7 shadow-none overflow-hidden">
+      <InputGroup class="h-7 overflow-hidden">
         <InputGroupAutocomplete
           data-testid="input-group-autocomplete"
           :options="options"
-          class="text-xs py-1 pr-0 h-7 shadow-none"
+          class="text-xs py-1 pr-0 h-7"
         />
         <InputGroupAddon align="inline-end" class="pr-1.5">
           <InputGroupButton class="text-xs rounded-none h-7">Narration</InputGroupButton>

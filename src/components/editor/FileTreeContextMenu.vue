@@ -36,7 +36,7 @@ const {
     <ContextMenuTrigger as-child :disabled="disabled">
       <slot />
     </ContextMenuTrigger>
-    <ContextMenuContent class="w-52" @close-auto-focus.prevent>
+    <ContextMenuContent @close-auto-focus.prevent>
       <FileTreeContextMenuContent
         :clipboard-key="clipboardKey"
         :is-root="isRoot"

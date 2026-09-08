@@ -95,17 +95,16 @@ async function selectGameFolder() {
       </template>
     </div>
     <div class="ml-auto flex gap-2">
-      <Button class="gap-2" @click="createGame">
-        <Plus class="h-4 w-4" />
+      <Button @click="createGame">
+        <Plus />
         {{ $t('home.welcome.createGame') }}
       </Button>
       <Button
         variant="outline"
-        class="gap-2"
         :disabled="managedImportStore.isBusy"
         @click="selectGameFolder"
       >
-        <FolderOpen class="h-4 w-4" />
+        <FolderOpen />
         {{ $t('home.welcome.openGame') }}
       </Button>
     </div>

@@ -70,12 +70,12 @@ function handleChipKeydown(event: KeyboardEvent, index: number) {
       <Button
         variant="ghost"
         size="icon"
-        class="text-muted-foreground shrink-0 size-5 hover:text-primary"
+        class="text-muted-foreground size-5 hover:text-primary [&_svg]:size-3"
         :title="clearLabel"
         :aria-label="clearLabel"
         @click="emit('clear')"
       >
-        <Trash2 class="size-3!" />
+        <Trash2 />
       </Button>
     </div>
     <div class="py-1 max-h-[3.5rem] overflow-hidden">

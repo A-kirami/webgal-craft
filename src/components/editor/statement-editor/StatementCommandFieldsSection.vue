@@ -77,21 +77,21 @@ function handleOpenEffectEditor() {
     <Button
       v-if="isCommand && props.showAnimationEditorButton"
       variant="outline"
-      size="sm"
-      class="btn-animation-editor px-2 h-6 group-data-[surface=panel]:px-3 group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-full group-data-[surface=panel]:justify-center"
+      size="xs"
+      class="btn-animation-editor rounded-md group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-full"
       @click="handleOpenAnimationEditor"
     >
-      <div class="i-lucide-clapperboard size-3" />
+      <div class="i-lucide-clapperboard size-3 group-data-[surface=panel]:size-3.5" />
       {{ $t('edit.visualEditor.animation.title') }}
     </Button>
     <Button
       v-if="isCommand && props.effectEditorAtTop && props.showEffectEditorButton"
       variant="outline"
-      size="sm"
-      class="btn-effect-editor px-2 h-6 group-data-[surface=panel]:px-3 group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-full group-data-[surface=panel]:justify-center"
+      size="xs"
+      class="btn-effect-editor rounded-md group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-full"
       @click="handleOpenEffectEditor"
     >
-      <div class="i-lucide-sparkles size-3" />
+      <div class="i-lucide-sparkles size-3 group-data-[surface=panel]:size-3.5" />
       {{ $t('edit.visualEditor.effectEditor') }}
     </Button>
     <StatementSpecialContentEditor
@@ -135,11 +135,11 @@ function handleOpenEffectEditor() {
     <Button
       v-if="isCommand && props.showEffectEditorButton && !props.effectEditorAtTop"
       variant="outline"
-      size="sm"
-      class="btn-effect-editor px-2 h-6 group-data-[surface=panel]:px-3 group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-full group-data-[surface=panel]:justify-center"
+      size="xs"
+      class="btn-effect-editor rounded-md group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-full"
       @click="handleOpenEffectEditor"
     >
-      <div class="i-lucide-sparkles size-3" />
+      <div class="i-lucide-sparkles size-3 group-data-[surface=panel]:size-3.5" />
       {{ $t('edit.visualEditor.effectEditor') }}
     </Button>
   </div>

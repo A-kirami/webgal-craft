@@ -117,8 +117,8 @@ const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRe
         {{ $t('common.or') }}
       </p>
     </div>
-    <Button class="gap-2" @click="controller.createGame">
-      <Plus class="h-4 w-4" />
+    <Button @click="controller.createGame">
+      <Plus />
       {{ $t('home.games.createNewGame') }}
     </Button>
   </div>

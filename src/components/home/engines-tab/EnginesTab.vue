@@ -131,11 +131,10 @@ const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRe
       </div>
       <Button
         variant="outline"
-        class="gap-2"
         :disabled="managedImportStore.isBusy"
         @click="controller.selectEngineFolder"
       >
-        <Plus class="h-4 w-4" />
+        <Plus />
         {{ $t('home.engines.installGameEngine') }}
       </Button>
     </div>

@@ -64,14 +64,14 @@ function choiceStatus(index: number) {
       <Input
         :model-value="setVarContent.name"
         :placeholder="$t('edit.visualEditor.params.varName')"
-        class="text-xs px-2.5 h-6 max-w-full min-w-24 w-auto shadow-none field-sizing-content"
+        class="text-xs px-2 h-6 max-w-full min-w-24 w-auto field-sizing-content"
         @update:model-value="emit('setVarName', String($event))"
       />
       <span class="text-xs text-muted-foreground shrink-0">=</span>
       <Input
         :model-value="setVarContent.value"
         :placeholder="$t('edit.visualEditor.params.varValue')"
-        class="text-xs px-2.5 h-6 max-w-full min-w-24 w-auto shadow-none field-sizing-content"
+        class="text-xs px-2 h-6 max-w-full min-w-24 w-auto field-sizing-content"
         @update:model-value="emit('setVarValue', String($event))"
       />
     </template>
@@ -83,7 +83,7 @@ function choiceStatus(index: number) {
         <Input
           :id="setVarNameInputId"
           :model-value="setVarContent.name"
-          class="text-xs h-7 shadow-none"
+          class="text-xs h-7"
           @update:model-value="emit('setVarName', String($event))"
         />
       </div>
@@ -94,7 +94,7 @@ function choiceStatus(index: number) {
         <Input
           :id="setVarValueInputId"
           :model-value="setVarContent.value"
-          class="text-xs h-7 shadow-none"
+          class="text-xs h-7"
           @update:model-value="emit('setVarValue', String($event))"
         />
       </div>
@@ -119,13 +119,13 @@ function choiceStatus(index: number) {
       <Button
         type="button"
         variant="ghost"
-        size="sm"
+        size="xs"
         :aria-label="defaultChooseIndex === index
           ? $t('edit.visualEditor.accessibility.clearDefaultChoice', { index: index + 1 })
           : $t('edit.visualEditor.accessibility.setDefaultChoice', { index: index + 1 })"
         :aria-pressed="defaultChooseIndex === index"
         :data-state="defaultChooseIndex === index ? 'on' : 'off'"
-        class="text-xs text-muted-foreground px-2 shrink-0 h-6 whitespace-nowrap shadow-none data-[state=on]:(text-accent-foreground bg-accent)"
+        class="text-muted-foreground font-normal rounded-md shrink-0 whitespace-nowrap data-[state=on]:(text-accent-foreground bg-accent)"
         @click="emit('chooseDefault', index)"
       >
         {{ $t('edit.visualEditor.options.default') }}
@@ -140,7 +140,7 @@ function choiceStatus(index: number) {
           :extensions="['.txt']"
           :popover-title="$t('edit.visualEditor.filePicker.scene')"
           :placeholder="$t('edit.visualEditor.filePicker.scene')"
-          class="flex-1 [&_input]:(text-xs pl-2.5 h-6 min-w-24 shadow-none field-sizing-content)"
+          class="flex-1 [&_input]:(text-xs pl-2 h-6 min-w-24 field-sizing-content)"
           @update:model-value="emit('chooseFile', { index, file: String($event) })"
         />
       </StatementDiagnosticTooltip>
@@ -155,7 +155,7 @@ function choiceStatus(index: number) {
           :extensions="['.txt']"
           :popover-title="$t('edit.visualEditor.filePicker.scene')"
           :placeholder="$t('edit.visualEditor.filePicker.scene')"
-          class="[&_input]:(text-xs h-7 shadow-none)"
+          class="[&_input]:(text-xs h-7)"
           @update:model-value="emit('chooseFile', { index, file: String($event) })"
         />
       </StatementDiagnosticTooltip>

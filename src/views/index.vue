@@ -28,14 +28,14 @@ watch(() => workspaceStore.activeTab, checkResourcesForActiveTab, { immediate: t
         :can-cancel="managedImport.canCancel.value"
         @cancel="managedImport.cancel"
       />
-      <Tabs ::="workspaceStore.activeTab" class="mb-6 flex-1 gap-4 grid grid-rows-[auto_minmax(0,1fr)] min-h-0">
-        <div data-testid="home-tabs-header" class="space-y-4">
-          <TabsList>
+      <Tabs ::="workspaceStore.activeTab" class="flex-1 gap-2.5 grid grid-rows-[auto_minmax(0,1fr)] min-h-0">
+        <div data-testid="home-tabs-header" class="flex flex-col gap-2.5">
+          <TabsList class="max-w-72 w-full">
             <TabsTrigger
               v-for="tab in HOME_TABS"
               :key="tab.id"
               :value="tab.id"
-              class="py-1.5 rounded-sm"
+              class="rounded-sm"
             >
               {{ resolveI18nLike(tab.label, t) }}
             </TabsTrigger>
@@ -43,13 +43,13 @@ watch(() => workspaceStore.activeTab, checkResourcesForActiveTab, { immediate: t
           <SearchView />
         </div>
         <div data-testid="home-tabs-body" class="min-h-0 overflow-hidden">
-          <TabsContent value="recent" class="mt-0 h-full min-h-0 overflow-hidden">
+          <TabsContent value="recent" class="h-full min-h-0 overflow-hidden">
             <GamesTab v-if="resourceStore.games" />
           </TabsContent>
-          <TabsContent value="engines" class="mt-0 h-full min-h-0 overflow-hidden">
+          <TabsContent value="engines" class="h-full min-h-0 overflow-hidden">
             <EnginesTab v-if="resourceStore.engines" />
           </TabsContent>
-          <TabsContent value="templates" class="mt-0 h-full min-h-0 overflow-hidden">
+          <TabsContent value="templates" class="h-full min-h-0 overflow-hidden">
             <TemplatesTab v-if="resourceStore.templates && resourceStore.engines" />
           </TabsContent>
         </div>
