@@ -64,7 +64,7 @@ function handleAction(action: EditorTabContextMenuAction): void {
     <ContextMenuTrigger as-child>
       <slot />
     </ContextMenuTrigger>
-    <ContextMenuContent class="w-52" @close-auto-focus.prevent>
+    <ContextMenuContent @close-auto-focus.prevent>
       <template v-for="(menuItem, index) in menuItems" :key="menuItem === 'separator' ? `separator-${index}` : menuItem.action">
         <ContextMenuSeparator v-if="menuItem === 'separator'" />
         <ContextMenuItem
@@ -72,7 +72,7 @@ function handleAction(action: EditorTabContextMenuAction): void {
           :disabled="menuItem.disabled"
           @click="handleAction(menuItem.action)"
         >
-          <component :is="menuItem.icon" class="mr-2 size-3.5" />
+          <component :is="menuItem.icon" />
           {{ menuItem.label }}
         </ContextMenuItem>
       </template>

@@ -58,7 +58,7 @@ function buildMenuItems(item: TemplateCollectionItem): MenuItem[] {
       icon: Trash2,
       label: t('home.templates.deleteTemplate'),
       onClick: () => emit('deleteTemplate', item.templateGroup),
-      class: 'text-destructive focus:text-destructive-foreground focus:bg-destructive',
+      variant: 'destructive',
     })
   }
   return menuItems

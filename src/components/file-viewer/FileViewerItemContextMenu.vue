@@ -17,7 +17,7 @@ const {
     <ContextMenuTrigger as-child>
       <slot />
     </ContextMenuTrigger>
-    <ContextMenuContent class="w-52" @close-auto-focus.prevent>
+    <ContextMenuContent @close-auto-focus.prevent>
       <slot name="context-menu" :item="item" />
     </ContextMenuContent>
   </ContextMenu>

@@ -132,7 +132,7 @@ const menuItems = $computed<MenuItem[]>(() => {
       icon: Trash2,
       label: t('engine.uninstallAllVersions'),
       onClick: () => emit('deleteGroup', group.engineId),
-      class: 'text-destructive focus:text-destructive-foreground focus:bg-destructive',
+      variant: 'destructive',
     })
   }
 
@@ -176,7 +176,7 @@ const menuItems = $computed<MenuItem[]>(() => {
                   <h4 class="font-medium">
                     {{ group.name }}
                   </h4>
-                  <Badge v-if="isOfficial" variant="secondary" class="text-emerald-700 bg-emerald-50 gap-1 dark:text-emerald-400 dark:bg-emerald-950/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/40">
+                  <Badge v-if="isOfficial" variant="secondary" class="text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/40">
                     <ShieldCheck aria-hidden="true" class="size-3.5" />
                     {{ $t('home.engines.official.badge') }}
                   </Badge>
@@ -231,15 +231,15 @@ const menuItems = $computed<MenuItem[]>(() => {
                     <EllipsisVertical />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" class="text-13px w-44">
+                <DropdownMenuContent align="end">
                   <DropdownMenuItem
                     v-for="(item, index) in menuItems"
                     :key="index"
-                    :class="item.class"
+                    :variant="item.variant"
                     :disabled="item.disabled"
                     @click="item.onClick"
                   >
-                    <component :is="item.icon" class="mr-2 size-3.5" />
+                    <component :is="item.icon" />
                     {{ item.label }}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -289,7 +289,7 @@ const menuItems = $computed<MenuItem[]>(() => {
               <h3 class="font-medium">
                 {{ group.name }}
               </h3>
-              <Badge v-if="isOfficial" variant="secondary" class="text-emerald-700 bg-emerald-50 gap-1 dark:text-emerald-400 dark:bg-emerald-950/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/40">
+              <Badge v-if="isOfficial" variant="secondary" class="text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/40">
                 <ShieldCheck aria-hidden="true" class="size-3.5" />
                 {{ $t('home.engines.official.badge') }}
               </Badge>
@@ -345,15 +345,15 @@ const menuItems = $computed<MenuItem[]>(() => {
                 <EllipsisVertical />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" class="w-44">
+            <DropdownMenuContent align="end">
               <DropdownMenuItem
                 v-for="(item, index) in menuItems"
                 :key="index"
-                :class="item.class"
+                :variant="item.variant"
                 :disabled="item.disabled"
                 @click="item.onClick"
               >
-                <component :is="item.icon" class="mr-2 size-3.5" />
+                <component :is="item.icon" />
                 {{ item.label }}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -367,15 +367,15 @@ const menuItems = $computed<MenuItem[]>(() => {
       </div>
     </ContextMenuTrigger>
 
-    <ContextMenuContent class="w-44" @close-auto-focus.prevent>
+    <ContextMenuContent @close-auto-focus.prevent>
       <ContextMenuItem
         v-for="(item, index) in menuItems"
         :key="index"
-        :class="item.class"
+        :variant="item.variant"
         :disabled="item.disabled"
         @click="item.onClick"
       >
-        <component :is="item.icon" class="mr-2 size-3.5" />
+        <component :is="item.icon" />
         {{ item.label }}
       </ContextMenuItem>
     </ContextMenuContent>

@@ -120,23 +120,23 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
                 </div>
               </div>
             </CardContent>
-            <Progress v-if="hasGameProgress(item.game)" :model-value="getGameProgress(item.game)" class="rounded-none h-1 inset-x-0 bottom-0 absolute" />
+            <Progress v-if="hasGameProgress(item.game)" :model-value="getGameProgress(item.game)" class="rounded-none inset-x-0 bottom-0 absolute" />
           </Card>
         </ContextMenuTrigger>
-        <ContextMenuContent class="w-42">
+        <ContextMenuContent>
           <ContextMenuItem
             v-if="item.game.availability !== 'missing'"
             @click="emit('openFolder', item.game)"
           >
-            <Folder class="mr-2 size-3.5" />
+            <Folder />
             {{ $t('common.openFolder') }}
           </ContextMenuItem>
           <ContextMenuItem
             v-if="!hasGameProgress(item.game)"
-            class="text-destructive focus:text-destructive-foreground focus:bg-destructive"
+            variant="destructive"
             @click="emit('deleteGame', item.game)"
           >
-            <Trash2 class="mr-2 size-3.5" />
+            <Trash2 />
             {{ $t('home.games.deleteGame') }}
           </ContextMenuItem>
         </ContextMenuContent>

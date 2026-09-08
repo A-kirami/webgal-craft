@@ -145,15 +145,15 @@ const iconThumbnail = $computed(() =>
                   <EllipsisVertical />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" class="text-13px w-44">
+              <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   v-for="(menuItem, menuIndex) in menuItems"
                   :key="menuIndex"
-                  :class="menuItem.class"
+                  :variant="menuItem.variant"
                   :disabled="menuItem.disabled"
                   @click="menuItem.onClick"
                 >
-                  <component :is="menuItem.icon" class="mr-2 size-3.5" />
+                  <component :is="menuItem.icon" />
                   {{ menuItem.label }}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -240,15 +240,15 @@ const iconThumbnail = $computed(() =>
                 <EllipsisVertical />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" class="w-44">
+            <DropdownMenuContent align="end">
               <DropdownMenuItem
                 v-for="(menuItem, menuIndex) in menuItems"
                 :key="menuIndex"
-                :class="menuItem.class"
+                :variant="menuItem.variant"
                 :disabled="menuItem.disabled"
                 @click="menuItem.onClick"
               >
-                <component :is="menuItem.icon" class="mr-2 size-3.5" />
+                <component :is="menuItem.icon" />
                 {{ menuItem.label }}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -265,17 +265,16 @@ const iconThumbnail = $computed(() =>
 
     <ContextMenuContent
       v-if="menuItems.length > 0"
-      class="w-44"
       @close-auto-focus.prevent
     >
       <ContextMenuItem
         v-for="(menuItem, menuIndex) in menuItems"
         :key="menuIndex"
-        :class="menuItem.class"
+        :variant="menuItem.variant"
         :disabled="menuItem.disabled"
         @click="menuItem.onClick"
       >
-        <component :is="menuItem.icon" class="mr-2 size-3.5" />
+        <component :is="menuItem.icon" />
         {{ menuItem.label }}
       </ContextMenuItem>
     </ContextMenuContent>

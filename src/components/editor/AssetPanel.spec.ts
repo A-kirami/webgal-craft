@@ -44,6 +44,8 @@ const globalStubs = {
   DropdownMenuContent: createBrowserContainerStub('StubDropdownMenuContent'),
   DropdownMenuItem: createBrowserEmitStub('StubDropdownMenuItem', { eventName: 'select', tag: 'button' }),
   DropdownMenuLabel: createBrowserContainerStub('StubDropdownMenuLabel'),
+  DropdownMenuRadioGroup: createBrowserContainerStub('StubDropdownMenuRadioGroup'),
+  DropdownMenuRadioItem: createBrowserEmitStub('StubDropdownMenuRadioItem', { eventName: 'select', tag: 'button' }),
   DropdownMenuSeparator: createBrowserContainerStub('StubDropdownMenuSeparator'),
   DropdownMenuTrigger: createBrowserContainerStub('StubDropdownMenuTrigger'),
   Input: createBrowserInputStub('StubInput'),

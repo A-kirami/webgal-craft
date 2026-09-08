@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Check, Image, LayoutGrid, LayoutList, LayoutTemplate, MicVocal, Minus, Music, Plus, UserRound, Video } from '@lucide/vue'
+import { ArrowDown, ArrowUp, ArrowUpDown, Blend, Image, LayoutGrid, LayoutList, LayoutTemplate, MicVocal, Minus, Music, Plus, UserRound, Video } from '@lucide/vue'
 
 import { canCreateAssetFile } from '~/components/editor/asset-file-defaults'
 import { usePreferenceStore } from '~/stores/preference'
@@ -145,16 +145,15 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
                 <Plus />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" class="min-w-34">
+            <DropdownMenuContent align="end">
               <DropdownMenuItem
                 v-if="canCreateFileInCurrentDirectory"
-                class="text-xs gap-2"
                 @select="handleCreateFile"
               >
-                <span class="flex-1">{{ $t('edit.fileTree.newFile') }}</span>
+                {{ $t('edit.fileTree.newFile') }}
               </DropdownMenuItem>
-              <DropdownMenuItem class="text-xs gap-2" @select="handleCreateFolder">
-                <span class="flex-1">{{ $t('edit.fileTree.newFolder') }}</span>
+              <DropdownMenuItem @select="handleCreateFolder">
+                {{ $t('edit.fileTree.newFolder') }}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -213,20 +212,20 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
                   <span class="hidden truncate @[500px]:inline">{{ currentSortLabel }}</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" class="min-w-34">
-                <DropdownMenuLabel class="text-xs">
+              <DropdownMenuContent align="start">
+                <DropdownMenuLabel>
                   {{ $t('edit.assetPanel.sort.by') }}
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  v-for="option in sortOptions"
-                  :key="option.value"
-                  class="text-xs gap-2"
-                  @select="() => handleSortFieldSelect(option.value)"
-                >
-                  <span class="flex-1">{{ option.label }}</span>
-                  <Check v-if="preferenceStore.assetSortBy === option.value" class="size-3.5" />
-                </DropdownMenuItem>
+                <DropdownMenuRadioGroup :model-value="preferenceStore.assetSortBy">
+                  <DropdownMenuRadioItem
+                    v-for="option in sortOptions"
+                    :key="option.value"
+                    :value="option.value"
+                    @select="() => handleSortFieldSelect(option.value)"
+                  >
+                    {{ option.label }}
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button

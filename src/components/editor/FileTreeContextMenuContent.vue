@@ -239,7 +239,7 @@ const menuItems = $computed(() => {
       label: t('common.delete'),
       onClick: handleDelete,
       disabled: operationDisabled,
-      class: 'text-destructive focus:text-destructive-foreground focus:bg-destructive',
+      variant: 'destructive',
     })
   }
 
@@ -262,11 +262,11 @@ const menuItems = $computed(() => {
     <ContextMenuSeparator v-if="menuItem === 'separator'" />
     <ContextMenuItem
       v-else
-      :class="menuItem.class"
+      :variant="menuItem.variant"
       :disabled="menuItem.disabled"
       @click="menuItem.onClick"
     >
-      <component :is="menuItem.icon" class="mr-2 size-3.5" />
+      <component :is="menuItem.icon" />
       {{ menuItem.label }}
     </ContextMenuItem>
   </template>

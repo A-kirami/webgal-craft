@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowUp, EllipsisVertical, LayoutGrid, LayoutList } from '@lucide/vue'
+import { EllipsisVertical, LayoutGrid, LayoutList } from '@lucide/vue'
 
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
@@ -96,91 +96,87 @@ function updateZoomLevelValue(value: AcceptableValue) {
           <EllipsisVertical />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" class="w-30">
+      <DropdownMenuContent align="end">
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger class="text-xs">
+          <DropdownMenuSubTrigger>
             {{ $t('filePicker.more.sortTitle') }}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            <DropdownMenuLabel class="text-xs">
+            <DropdownMenuLabel>
               {{ $t('filePicker.more.sortFieldTitle') }}
             </DropdownMenuLabel>
             <DropdownMenuRadioGroup :model-value="sortBy" @update:model-value="updateSortByValue">
-              <DropdownMenuRadioItem value="name" class="text-xs">
+              <DropdownMenuRadioItem value="name">
                 {{ $t('filePicker.sort.name') }}
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="modifiedTime" class="text-xs">
+              <DropdownMenuRadioItem value="modifiedTime">
                 {{ $t('filePicker.sort.modifiedTime') }}
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="createdTime" class="text-xs">
+              <DropdownMenuRadioItem value="createdTime">
                 {{ $t('filePicker.sort.createdTime') }}
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="size" class="text-xs">
+              <DropdownMenuRadioItem value="size">
                 {{ $t('filePicker.sort.size') }}
               </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel class="text-xs">
+            <DropdownMenuLabel>
               {{ $t('filePicker.more.sortOrderTitle') }}
             </DropdownMenuLabel>
             <DropdownMenuRadioGroup :model-value="sortOrder" @update:model-value="updateSortOrderValue">
-              <DropdownMenuRadioItem value="asc" class="text-xs">
-                <span class="flex-1">{{ $t('filePicker.sort.directionAsc') }}</span>
-                <ArrowUp class="text-muted-foreground shrink-0 size-3.5" />
+              <DropdownMenuRadioItem value="asc">
+                {{ $t('filePicker.sort.directionAsc') }}
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="desc" class="text-xs">
-                <span class="flex-1">{{ $t('filePicker.sort.directionDesc') }}</span>
-                <ArrowDown class="text-muted-foreground shrink-0 size-3.5" />
+              <DropdownMenuRadioItem value="desc">
+                {{ $t('filePicker.sort.directionDesc') }}
               </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger class="text-xs">
+          <DropdownMenuSubTrigger>
             {{ $t('filePicker.more.zoomTitle') }}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuRadioGroup :model-value="zoomLevel" @update:model-value="updateZoomLevelValue">
-              <DropdownMenuRadioItem value="small" class="text-xs">
+              <DropdownMenuRadioItem value="small">
                 {{ $t('filePicker.zoom.small') }}
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="medium" class="text-xs">
+              <DropdownMenuRadioItem value="medium">
                 {{ $t('filePicker.zoom.medium') }}
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="large" class="text-xs">
+              <DropdownMenuRadioItem value="large">
                 {{ $t('filePicker.zoom.large') }}
               </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="extraLarge" class="text-xs">
+              <DropdownMenuRadioItem value="extraLarge">
                 {{ $t('filePicker.zoom.extraLarge') }}
               </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger class="text-xs">
+          <DropdownMenuSubTrigger>
             {{ $t('filePicker.more.filtersTitle') }}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuCheckboxItem
               :model-value="showSupportedOnly"
-              class="text-xs"
               @update:model-value="emit('updateShowSupportedOnly', $event === true)"
             >
-              <span class="flex-1">{{ $t('filePicker.more.showSupportedOnly') }}</span>
+              {{ $t('filePicker.more.showSupportedOnly') }}
             </DropdownMenuCheckboxItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger class="text-xs">
+          <DropdownMenuSubTrigger>
             {{ $t('filePicker.more.recentTitle') }}
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuCheckboxItem
               :model-value="showRecentHistory"
-              class="text-xs"
               @update:model-value="emit('updateShowRecentHistory', $event === true)"
             >
-              <span class="flex-1">{{ $t('filePicker.more.showRecentHistory') }}</span>
+              {{ $t('filePicker.more.showRecentHistory') }}
             </DropdownMenuCheckboxItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
