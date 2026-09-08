@@ -101,9 +101,9 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
 
 <template>
   <div class="flex h-full">
-    <ScrollArea>
-      <Tabs ::="preferenceStore.assetTab" orientation="vertical" class="flex h-full">
-        <TabsList class="p-0.5 border-r rounded-none bg-transparent flex-col gap-0.5 h-full justify-start">
+    <ScrollArea class="border-r">
+      <Tabs ::="preferenceStore.assetTab" orientation="vertical" class="h-full">
+        <TabsList class="p-0.5 rounded-none bg-transparent gap-0.5 h-full justify-start">
           <TooltipProvider :delay-duration="0">
             <Tooltip v-for="item in assetTabItems" :key="item.tab">
               <TooltipTrigger as-child>

@@ -81,7 +81,7 @@ function handleEditorModeChange(value: unknown): void {
           <Input
             v-model="draftName"
             :placeholder="$t('edit.visualEditor.commandPanel.groupNamePlaceholder')"
-            class="text-sm font-normal h-7 max-w-60 placeholder:text-sm"
+            class="font-normal h-7 max-w-60"
           />
         </DialogTitle>
         <DialogDescription>
@@ -103,14 +103,16 @@ function handleEditorModeChange(value: unknown): void {
         @update:model-value="handleEditorModeChange"
       >
         <div class="border-r flex flex-col min-h-0">
-          <TabsList class="mb-2 mr-1 p-0.75 shrink-0 h-8">
-            <TabsTrigger value="text" class="text-[13px] flex-1 h-full">
-              {{ $t('edit.visualEditor.commandPanel.editorMode.text') }}
-            </TabsTrigger>
-            <TabsTrigger value="visual" class="text-[13px] flex-1 h-full">
-              {{ $t('edit.visualEditor.commandPanel.editorMode.visual') }}
-            </TabsTrigger>
-          </TabsList>
+          <div class="mb-2 pr-2">
+            <TabsList class="w-full">
+              <TabsTrigger value="text" class="text-xs">
+                {{ $t('edit.visualEditor.commandPanel.editorMode.text') }}
+              </TabsTrigger>
+              <TabsTrigger value="visual" class="text-xs">
+                {{ $t('edit.visualEditor.commandPanel.editorMode.visual') }}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <ScrollArea class="flex-1 min-h-0">
             <div class="pr-2 flex flex-col gap-4">
@@ -133,14 +135,14 @@ function handleEditorModeChange(value: unknown): void {
           </ScrollArea>
         </div>
 
-        <TabsContent value="text" class="mt-0 px-2 h-full min-h-0 min-w-0 overflow-hidden">
+        <TabsContent value="text" class="px-2 h-full min-h-0 min-w-0 overflow-hidden">
           <StatementGroupTextEditor
             v-model="draftText"
             :aria-label="$t('edit.visualEditor.commandPanel.editorMode.text')"
           />
         </TabsContent>
 
-        <TabsContent value="visual" class="mt-0 h-full min-h-0 min-w-0 overflow-hidden">
+        <TabsContent value="visual" class="h-full min-h-0 min-w-0 overflow-hidden">
           <ScrollArea class="flex-scroll-area h-full min-h-0">
             <div v-if="draftEntries.length > 0" class="px-2 flex flex-col gap-2">
               <VisualEditorStatementCard

@@ -73,16 +73,18 @@ function handlePreviewExpand() {
     <ResizableHandle />
     <!-- 场景/资源面板 -->
     <ResizablePanel size-unit="px" :min-size="240">
-      <Tabs ::="preferenceStore.leftPanelView" class="flex flex-col h-full">
+      <Tabs ::="preferenceStore.leftPanelView" class="pt-1 h-full">
         <!-- 顶部横向标签栏：场景 / 资源 -->
-        <TabsList class="mx-2 mt-1 p-0.75 shrink-0 h-8">
-          <TabsTrigger value="scene" class="flex-1 h-full">
-            {{ $t('edit.scenePanel.scene') }}
-          </TabsTrigger>
-          <TabsTrigger value="resource" class="flex-1 h-full">
-            {{ $t('edit.scenePanel.resource') }}
-          </TabsTrigger>
-        </TabsList>
+        <div class="px-2">
+          <TabsList class="shrink-0 w-full">
+            <TabsTrigger value="scene">
+              {{ $t('edit.scenePanel.scene') }}
+            </TabsTrigger>
+            <TabsTrigger value="resource">
+              {{ $t('edit.scenePanel.resource') }}
+            </TabsTrigger>
+          </TabsList>
+        </div>
         <div v-show="preferenceStore.leftPanelView === 'scene'" class="flex-1 min-h-0">
           <ScenePanel />
         </div>

@@ -5,7 +5,7 @@ const TabItem = (props: { value: string, label: string }) => {
   return (
     <TabsTrigger
       value={props.value}
-      class="py-1.5 w-full justify-start data-[state=active]:bg-muted"
+      class="py-1.5 data-[state=active]:bg-muted"
     >
       {props.label}
     </TabsTrigger>
@@ -22,12 +22,12 @@ const TabItem = (props: { value: string, label: string }) => {
           {{ $t('modals.settings.description') }}
         </DialogDescription>
       </DialogHeader>
-      <Tabs default-value="general" orientation="vertical" class="flex flex-row gap-2 w-full overflow-hidden">
-        <TabsList class="p-0 bg-transparent flex-col gap-1 min-w-40 justify-start">
-          <TabItem value="general" :label="$t('modals.settings.tabs.general')" />
-          <TabItem value="edit" :label="$t('modals.settings.tabs.edit')" />
-          <TabItem value="backup" :label="$t('modals.settings.tabs.backup')" />
-          <TabItem value="storage" :label="$t('modals.settings.tabs.storage')" />
+      <Tabs default-value="general" orientation="vertical" class="gap-2 w-full overflow-hidden">
+        <TabsList class="p-0 bg-transparent gap-1 min-w-40 justify-start">
+          <TabItem class="px-3" value="general" :label="$t('modals.settings.tabs.general')" />
+          <TabItem class="px-3" value="edit" :label="$t('modals.settings.tabs.edit')" />
+          <TabItem class="px-3" value="backup" :label="$t('modals.settings.tabs.backup')" />
+          <TabItem class="px-3" value="storage" :label="$t('modals.settings.tabs.storage')" />
         </TabsList>
         <ScrollArea class="w-full">
           <TabsContent value="general" class="mt-1 px-4">
