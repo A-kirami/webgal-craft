@@ -367,7 +367,7 @@ defineExpose({ toggleCommandPanel })
         >
           <div class="flex flex-col h-full">
             <SheetHeader class="pr-8 gap-y-0.5">
-              <SheetTitle class="text-base">
+              <SheetTitle>
                 {{ $t('modals.effectEditor.title') }}
               </SheetTitle>
               <SheetDescription class="text-13px!">
