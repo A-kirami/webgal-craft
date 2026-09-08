@@ -73,18 +73,22 @@ function handlePreviewExpand() {
     <ResizableHandle />
     <!-- 场景/资源面板 -->
     <ResizablePanel size-unit="px" :min-size="240">
-      <Tabs ::="preferenceStore.leftPanelView" class="pt-1 h-full">
+      <Tabs ::="preferenceStore.leftPanelView" class="h-full">
         <!-- 顶部横向标签栏：场景 / 资源 -->
-        <div class="px-2">
-          <TabsList class="shrink-0 w-full">
-            <TabsTrigger value="scene">
-              {{ $t('edit.scenePanel.scene') }}
-            </TabsTrigger>
-            <TabsTrigger value="resource">
-              {{ $t('edit.scenePanel.resource') }}
-            </TabsTrigger>
-          </TabsList>
-        </div>
+        <TabsList class="p-0 border-b border-border rounded-none bg-transparent shrink-0 w-full">
+          <TabsTrigger
+            value="scene"
+            class="rounded-none h-full hover:text-foreground after:rounded-full data-[state=active]:bg-transparent after:h-0.5 after:content-empty after:transition-colors after:inset-x-3 after:bottom-0 after:absolute data-[state=active]:after:bg-foreground"
+          >
+            {{ $t('edit.scenePanel.scene') }}
+          </TabsTrigger>
+          <TabsTrigger
+            value="resource"
+            class="rounded-none h-full hover:text-foreground after:rounded-full data-[state=active]:bg-transparent after:h-0.5 after:content-empty after:transition-colors after:inset-x-3 after:bottom-0 after:absolute data-[state=active]:after:bg-foreground"
+          >
+            {{ $t('edit.scenePanel.resource') }}
+          </TabsTrigger>
+        </TabsList>
         <div v-show="preferenceStore.leftPanelView === 'scene'" class="flex-1 min-h-0">
           <ScenePanel />
         </div>
