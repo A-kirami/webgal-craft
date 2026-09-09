@@ -487,6 +487,70 @@ describe('PreviewPanel', () => {
     expect(getComputedStyle(overlay as HTMLElement).cursor).toBe('grab')
   })
 
+  it('放大预览后 viewport 外的编辑器区域不会命中 iframe', async () => {
+    const rendered = renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+    rendered.container.style.height = '500px'
+    rendered.container.style.position = 'relative'
+    rendered.container.style.width = '200px'
+
+    await vi.waitFor(() => {
+      expect(getGameConfigMock).toHaveBeenCalledTimes(1)
+    })
+
+    const viewport = document.querySelector<HTMLElement>('[data-testid="preview-viewport"]')
+    const outputSurface = document.querySelector<HTMLElement>('[data-testid="preview-output-surface"]')
+    const canvas = document.querySelector<HTMLElement>('[data-testid="preview-canvas"]')
+    const { iframe, iframeWindow } = getPreviewIframe()
+    expect(viewport).not.toBeNull()
+    expect(outputSurface).not.toBeNull()
+    expect(canvas).not.toBeNull()
+
+    await vi.waitFor(() => {
+      expect(parsePreviewTransform(canvas?.style.transform ?? '').zoom).not.toBe(1)
+    })
+
+    const editor = document.createElement('div')
+    editor.dataset.testid = 'editor-hit-sentinel'
+    editor.style.position = 'fixed'
+    editor.style.left = `${viewport?.getBoundingClientRect().right ?? 0}px`
+    editor.style.top = '0'
+    editor.style.width = '32px'
+    editor.style.height = '100vh'
+    document.body.append(editor)
+
+    try {
+      for (let index = 0; index < 10; index++) {
+        dispatchPreviewWheelMessage(iframeWindow, {
+          clientX: 100,
+          clientY: 100,
+          ctrlKey: true,
+          deltaY: -1,
+          metaKey: false,
+        })
+      }
+      await nextTick()
+
+      const viewportRect = viewport?.getBoundingClientRect()
+      const canvasRect = canvas?.getBoundingClientRect()
+      expect(outputSurface?.classList.contains('overflow-hidden')).toBe(true)
+      expect(canvasRect?.right).toBeGreaterThan(viewportRect?.right ?? 0)
+
+      const hitTarget = document.elementFromPoint(
+        (viewportRect?.right ?? 0) + 8,
+        8,
+      )
+      expect(hitTarget).toBe(editor)
+      expect(hitTarget).not.toBe(iframe)
+    } finally {
+      editor.remove()
+    }
+  })
+
   it('iframe 内松开空格后会立即用 auto 光标重置覆盖层', async () => {
     renderInBrowser(PreviewPanel, {
       global: {

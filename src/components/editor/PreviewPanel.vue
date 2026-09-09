@@ -608,7 +608,7 @@ onBeforeUnmount(() => {
       >
         <div
           data-testid="preview-output-surface"
-          class="bg-muted inset-0 absolute"
+          class="bg-muted inset-0 absolute overflow-hidden"
           :style="previewOutputSurfaceStyle"
         >
           <div
