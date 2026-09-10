@@ -580,6 +580,15 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
       const firstMainStart = firstProjectedItem.mainStartInContent
       const lastMainEnd = lastProjectedItem.mainStartInContent + lastProjectedItem.mainSize
 
+      // 投影末尾不含被拖拽行，因此尾部目标优先于估算尺寸命中。
+      if (
+        isMovingDown
+        && lastProjectedItem.index === adapter.getItemCount() - 1
+        && leadingMainInContent >= lastProjectedItem.projectedMainStartInContent + lastProjectedItem.mainSize
+      ) {
+        return adapter.getItemCount() - 1
+      }
+
       if (leadingMainInContent >= firstMainStart && leadingMainInContent <= lastMainEnd) {
         const targetItem = projectedItems.find((item) => {
           const midpoint = item.mainStartInContent + item.mainSize / 2
