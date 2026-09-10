@@ -267,7 +267,7 @@ describe('VisualEditorScene', () => {
       reorderStatements: reorderStatementsMock,
       selectedStatementId: 2,
       statementSortVirtualAdapter: statementSortVirtualAdapterMock,
-      totalSize: 120,
+      totalSize: computed(() => 120),
       virtualRows: [
         { index: 0, key: 0, start: 0 },
         { index: 1, key: 1, start: 48 },
@@ -345,7 +345,7 @@ describe('VisualEditorScene', () => {
       reorderStatements: reorderStatementsMock,
       selectedStatementId: 1,
       statementSortVirtualAdapter: statementSortVirtualAdapterMock,
-      totalSize: 144,
+      totalSize: computed(() => 144),
       virtualRows: [
         { index: 0, key: 1, start: 0 },
         { index: 1, key: 2, start: 48 },
@@ -548,7 +548,7 @@ describe('VisualEditorScene', () => {
       reorderStatements: reorderStatementsMock,
       selectedStatementId: 1,
       statementSortVirtualAdapter: statementSortVirtualAdapterMock,
-      totalSize: 300,
+      totalSize: computed(() => 300),
       virtualRows: [
         { index: 0, key: 1, start: 0 },
         { index: 1, key: 2, start: 100 },
@@ -593,6 +593,39 @@ describe('VisualEditorScene', () => {
     expect(gapDropSlot).not.toBeNull()
     expect(headDropSlot!.classList.contains('pointer-events-none')).toBe(true)
     expect(gapDropSlot!.classList.contains('pointer-events-none')).toBe(true)
+  })
+
+  it('尾部投放区仅以标准插入带侵入最后一行并覆盖底部空白', async () => {
+    const editSettings = reactive({
+      collapseStatementsOnSidebarOpen: true,
+    })
+    useEditSettingsStoreMock.mockReturnValue(editSettings)
+
+    renderInBrowser(VisualEditorScene, {
+      props: { state: createSceneState() },
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    const tailDropSlot = document.querySelector<HTMLElement>('[data-visual-drop-slot="tail"]')
+    const statementList = document.querySelector<HTMLElement>('[role="listbox"]')
+
+    expect(tailDropSlot).not.toBeNull()
+    expect(statementList).not.toBeNull()
+    expect(statementList!.style.height).toBe('calc(120px - 0.25rem)')
+    // 起点只侵入最后一行 8px，其余命中层脱离布局流并向下覆盖空白。
+    expect(tailDropSlot!.classList.contains('absolute')).toBe(true)
+    expect(tailDropSlot!.classList.contains('bottom-0')).toBe(true)
+    expect(tailDropSlot!.style.top).toBe('calc(104px - 0.25rem)')
+
+    editSettings.collapseStatementsOnSidebarOpen = false
+    await nextTick()
+
+    expect(statementList!.style.height).toBe('calc(120px - 0.375rem)')
+    expect(tailDropSlot!.style.top).toBe('calc(104px - 0.375rem)')
   })
 
   it('为 head / gap / update / tail 注册 drop target，并把 drop 目标传给 runtime', async () => {
@@ -771,6 +804,15 @@ describe('VisualEditorScene', () => {
     expect(insertIndicator!.className).toContain('drop-insert-indicator-before')
     expect((insertIndicator as HTMLElement).style.top).toBe('-0.125rem')
     expect(result.container.querySelector('[data-visual-drop-indicator="update"]')).toBeNull()
+
+    const tailConfig = registerDroppable.mock.calls.find(([, config]) =>
+      config.id === 'visual-editor:tail',
+    )?.[1]
+    gapConfig.onDragLeave(payload)
+    tailConfig.onDragEnter(payload)
+    await nextTick()
+
+    expect((result.container.querySelector('[data-visual-drop-indicator="insert"]') as HTMLElement).style.top).toBe('12px')
   })
 
   it('拖过更新区时会显示语义化更新指示器', async () => {

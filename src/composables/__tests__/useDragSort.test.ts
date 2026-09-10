@@ -927,6 +927,61 @@ describe('useDragSort', () => {
     expect(sort.targetIndex.value).toBe(22)
   })
 
+  it('虚拟列表折叠行拖到列表底部时会落到最后一项', () => {
+    vi.useFakeTimers()
+    setupDragDocument()
+    setupAnimationFrame()
+    setupGlobalListeners()
+
+    const itemsRef = shallowRef(['item-0', 'item-1'])
+    const elements = [
+      createDragElement(0, createVerticalRect(0, 48)),
+      createDragElement(1, createVerticalRect(48, 48)),
+    ]
+    const onSort = vi.fn()
+    const sort = useDragSort<string>({
+      autoScroll: false,
+      direction: 'vertical',
+      getKey: item => item,
+      getPayload: () => tabPayload,
+      items: itemsRef,
+      onSort,
+      virtualAdapter: {
+        getEstimatedItemSize: () => 100,
+        getItemCount: () => itemsRef.value.length,
+        getScrollOffset: () => 0,
+        getVisibleItems: () => [
+          { index: 0, size: 48, start: 0 },
+          { index: 1, size: 48, start: 48 },
+        ],
+        invalidate: vi.fn(),
+      },
+    })
+    sort.containerRef.value = createContainer(elements, createVerticalRect(0, 1000))
+
+    sort.getItemProps(0).onPointerdown(createPointerEvent({
+      clientX: 10,
+      clientY: 10,
+      currentTarget: elements[0],
+      pointerId: 28,
+      target: elements[0],
+    }))
+    startDrag(elements[0], 28, 10, 10)
+    moveDrag(28, 10, 24)
+
+    expect(sort.targetIndex.value).toBe(1)
+
+    elements[0].dispatch('pointerup', {
+      clientX: 10,
+      clientY: 24,
+      pointerId: 28,
+      target: elements[0],
+    })
+    vi.runOnlyPendingTimers()
+
+    expect(onSort).toHaveBeenCalledWith(0, 1)
+  })
+
   it('虚拟列表排序提交后会通知 virtualizer 重新测量', async () => {
     vi.useFakeTimers()
     setupDragDocument()

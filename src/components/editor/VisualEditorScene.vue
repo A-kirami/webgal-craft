@@ -154,9 +154,12 @@ const statementRowGapSize = computed(() =>
 const statementRowGapHalfSize = computed(() =>
   editSettings.collapseStatementsOnSidebarOpen ? '0.125rem' : '0.1875rem',
 )
-const tailDropAreaSize = `${INSERT_BAND_SIZE_PX * 4}px`
-const tailDropAreaOffset = computed(() =>
-  `calc(-${INSERT_BAND_SIZE_PX * 2}px - ${statementRowGapSize.value})`,
+const statementListHeight = computed(() =>
+  `calc(${totalSize.value}px - ${statementRowGapSize.value})`,
+)
+// 与普通插入槽保持一致：先向上侵入最后一张卡片 8px，再向下延伸覆盖尾部空白。
+const tailDropAreaTop = computed(() =>
+  `calc(${totalSize.value}px - ${INSERT_BAND_SIZE_PX * 2}px - ${statementRowGapSize.value})`,
 )
 const headDropTargetTopInset = `-${INSERT_BAND_SIZE_PX}px`
 const headDropIndicatorTopInset = `-${INSERT_BAND_SIZE_PX / 2}px`
@@ -325,7 +328,7 @@ tryOnUnmounted(() => {
   <div ref="editorSurfaceRef" tabindex="-1" class="outline-none h-full">
     <ScrollArea ref="scrollAreaRef" class="h-full" :style="{ opacity: isPositioning ? 0 : 1 }">
       <div
-        class="flex flex-col"
+        class="flex flex-col relative"
         data-visual-editor-content
         :style="{ minHeight: contentMinHeight }"
       >
@@ -356,7 +359,17 @@ tryOnUnmounted(() => {
           />
         </div>
 
-        <div v-else ref="statementListRef" role="listbox" :aria-label="$t('edit.visualEditor.statementList')" :style="{ height: `${totalSize}px`, width: '100%', position: 'relative' }">
+        <div
+          v-else
+          ref="statementListRef"
+          role="listbox"
+          :aria-label="$t('edit.visualEditor.statementList')"
+          :style="{
+            height: statementListHeight,
+            width: '100%',
+            position: 'relative',
+          }"
+        >
           <div
             v-for="row in renderedStatementRows"
             :key="row.key"
@@ -429,11 +442,9 @@ tryOnUnmounted(() => {
           :ref="value => registerDropTarget('tail', resolveHTMLElement(value), tailDropTarget)"
           data-visual-drop-slot="tail"
           :class="{'pointer-events-none': !isDropHitTestingEnabled}"
-          class="mx-2 flex-1 relative"
+          class="inset-x-2 bottom-0 absolute"
           :style="{
-            flexBasis: tailDropAreaSize,
-            minHeight: tailDropAreaSize,
-            marginTop: tailDropAreaOffset,
+            top: tailDropAreaTop,
           }"
         >
           <div
