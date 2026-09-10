@@ -121,7 +121,9 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
     } catch (error) {
       officialStatus.value = officialReleases.value.length > 0 ? 'ready' : 'error'
       logger.warn(`[官方引擎] 安装失败: ${error}`)
-      toast.error(options.t('home.engines.official.installFailed'))
+      toast.error(options.t('home.engines.official.installFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      })
     }
   }
 
