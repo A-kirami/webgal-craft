@@ -521,13 +521,15 @@ describe('PreviewPanel', () => {
     editor.style.top = '0'
     editor.style.width = '32px'
     editor.style.height = '100vh'
+    // 哨兵必须位于预览画布下方，命中断言才能证明 iframe 越界已被裁剪
+    editor.style.zIndex = '-1'
     document.body.append(editor)
 
     try {
-      for (let index = 0; index < 10; index++) {
+      for (let index = 0; index < 32; index++) {
         dispatchPreviewWheelMessage(iframeWindow, {
           clientX: 100,
-          clientY: 100,
+          clientY: 400,
           ctrlKey: true,
           deltaY: -1,
           metaKey: false,
@@ -537,7 +539,6 @@ describe('PreviewPanel', () => {
 
       const viewportRect = viewport?.getBoundingClientRect()
       const canvasRect = canvas?.getBoundingClientRect()
-      expect(outputSurface?.classList.contains('overflow-hidden')).toBe(true)
       expect(canvasRect?.right).toBeGreaterThan(viewportRect?.right ?? 0)
 
       const hitTarget = document.elementFromPoint(

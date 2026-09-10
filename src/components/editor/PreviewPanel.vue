@@ -102,6 +102,8 @@ const previewCanvasStyle = $computed(() => ({
   width: `${stageWidth}px`,
 }))
 const previewOutputSurfaceStyle = $computed(() => ({
+  // 裁剪经过 transform 放大的 iframe，避免其命中区域越出预览边界响应编辑器事件
+  overflow: 'hidden' as const,
   filter: preferenceStore.previewBrightnessEnabled
     ? `brightness(${percentageToRatio(preferenceStore.previewBrightness[0])})`
     : undefined,
@@ -608,7 +610,7 @@ onBeforeUnmount(() => {
       >
         <div
           data-testid="preview-output-surface"
-          class="bg-muted inset-0 absolute overflow-hidden"
+          class="bg-muted inset-0 absolute"
           :style="previewOutputSurfaceStyle"
         >
           <div
