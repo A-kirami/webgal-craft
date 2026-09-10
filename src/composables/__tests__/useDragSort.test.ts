@@ -250,6 +250,32 @@ function styleRecord(style: StyleValue | undefined): Record<string, string> {
   return (style ?? {}) as Record<string, string>
 }
 
+function parseOverlayBox(style: StyleValue | undefined): { height: number, width: number, x: number, y: number } {
+  const record = styleRecord(style)
+
+  return {
+    height: Number.parseFloat(record.height ?? ''),
+    width: Number.parseFloat(record.width ?? ''),
+    x: Number.parseFloat(record.left ?? ''),
+    y: Number.parseFloat(record.top ?? ''),
+  }
+}
+
+function parseOverlayClip(style: StyleValue | undefined): { bottom: number, left: number, right: number, top: number } {
+  const clipPath = styleRecord(style).clipPath ?? ''
+  const match = /^inset\((-?[\d.]+)px calc\(100% - (-?[\d.]+)px\) calc\(100% - (-?[\d.]+)px\) (-?[\d.]+)px\)$/.exec(clipPath)
+  if (!match) {
+    throw new Error(`无法解析浮层 clip-path: ${clipPath}`)
+  }
+
+  return {
+    bottom: Number(match[3]),
+    left: Number(match[4]),
+    right: Number(match[2]),
+    top: Number(match[1]),
+  }
+}
+
 function createSortFixture(itemsRef: Ref<string[]> = shallowRef(['a', 'b', 'c'])) {
   const elements = [
     createDragElement(0, createRect(0, 100)),
@@ -477,7 +503,8 @@ describe('useDragSort', () => {
     startDrag(elements[0], 8, 60)
 
     expect(styleRecord(sort.overlayState.value?.overlayStyle)).toMatchObject({
-      transform: 'translate3d(50px, 0px, 0)',
+      left: '50px',
+      top: '0px',
     })
     expect(sort.targetIndex.value).toBe(1)
     expect(sort.getItemStyle(1)).toMatchObject({
@@ -673,8 +700,59 @@ describe('useDragSort', () => {
     expect(sort.targetIndex.value).toBe(2)
     expect(styleRecord(sort.overlayState.value?.overlayStyle)).toMatchObject({
       height: '32px',
-      transform: 'translate3d(150px, 8px, 0)',
+      left: '150px',
+      top: '8px',
       width: '100px',
+    })
+  })
+
+  it('分数坐标下浮层与源元素逐像素重合，裁剪框不侵入源元素', () => {
+    setupDragDocument()
+    setupAnimationFrame()
+    setupGlobalListeners()
+    // 复现真实编辑器标签栏的分数坐标：Windows 125%/150% 缩放下布局位置不是整数 CSS 像素。
+    vi.stubGlobal('devicePixelRatio', 1.5)
+    const tabRect = createRect(380.859375, 111.1875, 71.5625, 32)
+    const elements = [createDragElement(0, tabRect)]
+    const sort = useDragSort<string>({
+      autoScroll: false,
+      direction: 'horizontal',
+      getKey: item => item,
+      getPayload: () => tabPayload,
+      items: shallowRef(['a']),
+      onSort: vi.fn(),
+    })
+    sort.containerRef.value = createContainer(elements, tabRect)
+
+    sort.getItemProps(0).onPointerdown(createPointerEvent({
+      clientX: 400,
+      clientY: 80,
+      currentTarget: elements[0],
+      pointerId: 9,
+      target: elements[0],
+    }))
+    elements[0].dispatch('pointermove', {
+      clientX: 410,
+      clientY: 80,
+      pointerId: 9,
+      target: elements[0],
+    })
+
+    // 浮层位置保留 rect 原始值：任何取整都会让浮层与源元素错开，进而在标签边缘露出底色缝隙或让文字跳动。
+    expect(parseOverlayBox(sort.overlayState.value?.overlayStyle)).toEqual({
+      height: 32,
+      width: 111.1875,
+      x: 380.859375,
+      y: 71.5625,
+    })
+
+    // 裁剪框等价于窗口内缩到视口边缘，这里视口与源元素同框，因此四条边必须与源元素完全一致，
+    // 否则 1px 的 border-r 会被裁掉一半而看起来消失。
+    expect(parseOverlayClip(sort.overlayState.value?.overlayFrameStyle)).toEqual({
+      bottom: 103.5625,
+      left: 380.859375,
+      right: 492.046875,
+      top: 71.5625,
     })
   })
 
@@ -1035,7 +1113,8 @@ describe('useDragSort', () => {
     expect(sort.phase.value).toBe('settling')
     expect(sort.targetIndex.value).toBe(22)
     expect(styleRecord(sort.overlayState.value?.overlayStyle)).toMatchObject({
-      transform: 'translate3d(0px, 200px, 0)',
+      left: '0px',
+      top: '200px',
     })
     expect(styleRecord(sort.overlayState.value?.overlayFrameStyle)).toMatchObject({
       clipPath: 'inset(0px calc(100% - 320px) calc(100% - 250px) 0px)',
