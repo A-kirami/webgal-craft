@@ -36,7 +36,6 @@ export const editSettingsDefinition = defineSettingsSchema({
       enableRealtimeEffectPreview: {
         type: 'switch',
         default: true,
-        experimental: true,
         visibleWhen: 'enableLivePreview',
         label: t => t('settings.edit.enableRealtimeEffectPreview.label'),
         description: t => t('settings.edit.enableRealtimeEffectPreview.description'),
