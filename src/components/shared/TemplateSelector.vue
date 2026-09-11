@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useEngines, useTemplates } from '~/composables/useDatabase'
-import { formatEngineLabel } from '~/lib/engine-label'
 import { isEngineEditorCompatible } from '~/services/engine-manager'
+import { formatEngineLabel } from '~/utils/format'
 
 import type { Engine } from '~/database/model'
 import type { TemplateBinding } from '~/types/project-config'

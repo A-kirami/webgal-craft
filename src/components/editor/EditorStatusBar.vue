@@ -13,7 +13,6 @@ import {
   resolveEditorStatusBarMetrics,
   shouldShowEditorStatusBarRelativeTime,
 } from '~/features/editor/status-bar/editor-status-bar'
-import { formatEngineLabel } from '~/lib/engine-label'
 import dayjs from '~/plugins/dayjs'
 import { getLanguageDisplayName } from '~/plugins/editor'
 import { isEngineUsable } from '~/services/engine-manager'
@@ -25,7 +24,7 @@ import {
 import { useModalStore } from '~/stores/modal'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
-import { formatFileSize } from '~/utils/format'
+import { formatEngineLabel, formatFileSize } from '~/utils/format'
 
 const { t, locale } = useI18n()
 

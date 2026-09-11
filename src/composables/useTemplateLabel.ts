@@ -1,11 +1,11 @@
 import { projectConfigCmds } from '~/commands/project-config'
 import { db } from '~/database/db'
 import { AbsPath, RelPath } from '~/domain/path'
-import { formatEngineLabel } from '~/lib/engine-label'
 import { isEngineUsable } from '~/services/engine-manager'
 import { caseFoldedEquals, toLookupPathKey } from '~/services/resource-path/lookup'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
+import { formatEngineLabel } from '~/utils/format'
 
 import { useFileSystemEvents } from './useFileSystemEvents'
 

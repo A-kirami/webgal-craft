@@ -30,7 +30,7 @@ vi.mock('~/database/db', () => ({
   },
 }))
 
-vi.mock('~/lib/engine-label', () => ({
+vi.mock('~/utils/format', () => ({
   formatEngineLabel: vi.fn((engine: { name?: string, engineId?: string }) => engine.name ?? engine.engineId ?? ''),
 }))
 
