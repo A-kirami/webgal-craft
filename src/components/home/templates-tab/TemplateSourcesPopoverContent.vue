@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Folder } from '@lucide/vue'
 
+import { formatNameWithVersion } from '~/utils/format'
+
 import type { TemplateGroupSourceItem } from '~/features/home/templates-tab/template-groups'
 
 defineProps<{
@@ -15,9 +17,7 @@ function resolveSourceLabel(source: TemplateGroupSourceItem): string {
   if (source.kind === 'standalone') {
     return source.name
   }
-  return source.engineVersion
-    ? `${source.engineName} ${source.engineVersion}`
-    : source.engineName
+  return formatNameWithVersion(source.engineName, source.engineVersion)
 }
 </script>
 

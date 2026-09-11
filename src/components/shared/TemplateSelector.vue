@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useEngines, useTemplates } from '~/composables/useDatabase'
 import { isEngineEditorCompatible } from '~/services/engine-manager'
-import { formatEngineLabel } from '~/utils/format'
+import { formatNameWithVersion } from '~/utils/format'
 
 import type { Engine } from '~/database/model'
 import type { TemplateBinding } from '~/types/project-config'
@@ -44,7 +44,7 @@ const followEngineLabel = $computed(() => {
     return t('modals.createGame.templateFollowEngine')
   }
   return t('modals.createGame.templateFollowEngineWithName', {
-    name: formatEngineLabel(currentEngine),
+    name: formatNameWithVersion(currentEngine.name, currentEngine.version),
   })
 })
 
@@ -109,10 +109,8 @@ const selectedLabel = $computed(() => {
       item => item.engineId === binding.engine.id && item.version === binding.engine.version,
     )
     return engine
-      ? formatEngineLabel(engine)
-      : (binding.engine.version
-          ? `${binding.engine.id} ${binding.engine.version}`
-          : binding.engine.id)
+      ? formatNameWithVersion(engine.name, engine.version)
+      : formatNameWithVersion(binding.engine.id, binding.engine.version)
   }
   return binding.name
 })
@@ -151,7 +149,7 @@ const selectedLabel = $computed(() => {
             :key="engine.id"
             :value="encodeEngineRef(engine.engineId, engine.version)"
           >
-            {{ formatEngineLabel(engine) }}
+            {{ formatNameWithVersion(engine.name, engine.version) }}
           </SelectItem>
         </SelectGroup>
       </template>

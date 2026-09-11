@@ -28,6 +28,7 @@ import { useResourceStore } from '~/stores/resource'
 import { useRuntimeTaskStore } from '~/stores/runtime-task'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
+import { formatNameWithVersion } from '~/utils/format'
 
 import type { GameConfigEntry } from '~/commands/game'
 import type { Engine, Game, Template } from '~/database/model'
@@ -505,9 +506,7 @@ function formatTemplateBindingName(binding: TemplateBinding): string {
       return binding.name
     }
     case 'engineBuiltin': {
-      return binding.engine.version
-        ? `${binding.engine.id} ${binding.engine.version}`
-        : binding.engine.id
+      return formatNameWithVersion(binding.engine.id, binding.engine.version)
     }
     default: {
       return binding satisfies never

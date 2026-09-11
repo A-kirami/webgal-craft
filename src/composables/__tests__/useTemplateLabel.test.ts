@@ -30,10 +30,6 @@ vi.mock('~/database/db', () => ({
   },
 }))
 
-vi.mock('~/utils/format', () => ({
-  formatEngineLabel: vi.fn((engine: { name?: string, engineId?: string }) => engine.name ?? engine.engineId ?? ''),
-}))
-
 vi.mock('~/services/engine-manager', () => ({
   isEngineUsable: vi.fn(() => true),
 }))

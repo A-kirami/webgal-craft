@@ -5,7 +5,7 @@ import { isEngineUsable } from '~/services/engine-manager'
 import { caseFoldedEquals, toLookupPathKey } from '~/services/resource-path/lookup'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
-import { formatEngineLabel } from '~/utils/format'
+import { formatNameWithVersion } from '~/utils/format'
 
 import { useFileSystemEvents } from './useFileSystemEvents'
 
@@ -26,10 +26,6 @@ function isPathWithinOrEqual(path: AbsPath, root: AbsPath): boolean {
   return toLookupPathKey(path).startsWith(`${toLookupPathKey(root)}/`)
 }
 
-function formatBuiltinFallbackLabel(id: string, version: string | undefined): string {
-  return version ? `${id} ${version}` : id
-}
-
 async function resolveBindingLabel(
   binding: TemplateBinding | undefined,
   fallbackEngineId: string | undefined,
@@ -44,9 +40,9 @@ async function resolveBindingLabel(
       ? undefined
       : await db.engines.where('[engineId+version]').equals([id, version]).first()
     if (!engine) {
-      return { label: formatBuiltinFallbackLabel(id, version), followingEngine: false }
+      return { label: formatNameWithVersion(id, version), followingEngine: false }
     }
-    return { label: isEngineUsable(engine) ? formatEngineLabel(engine) : undefined, followingEngine: false }
+    return { label: isEngineUsable(engine) ? formatNameWithVersion(engine.name, engine.version) : undefined, followingEngine: false }
   }
 
   // 缺省 → 跟随当前引擎；引擎记录缺失或不可用时不暴露 UUID/旧名，由调用方按 followingEngine + label undefined 决定占位文案
@@ -54,7 +50,7 @@ async function resolveBindingLabel(
     return EMPTY_STATE
   }
   const engine = await db.engines.get(fallbackEngineId)
-  const label = engine && isEngineUsable(engine) ? formatEngineLabel(engine) : undefined
+  const label = engine && isEngineUsable(engine) ? formatNameWithVersion(engine.name, engine.version) : undefined
   return { label, followingEngine: true }
 }
 

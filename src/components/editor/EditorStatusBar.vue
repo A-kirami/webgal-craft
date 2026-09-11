@@ -24,7 +24,7 @@ import {
 import { useModalStore } from '~/stores/modal'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
-import { formatEngineLabel, formatFileSize } from '~/utils/format'
+import { formatFileSize, formatNameWithVersion } from '~/utils/format'
 
 const { t, locale } = useI18n()
 
@@ -67,7 +67,9 @@ watch(() => workspaceStore.currentGame?.engineId, async (engineId) => {
   if (workspaceStore.currentGame?.engineId !== engineId) {
     return
   }
-  engineLabel = engine && isEngineUsable(engine) ? formatEngineLabel(engine) : undefined
+  engineLabel = engine && isEngineUsable(engine)
+    ? formatNameWithVersion(engine.name, engine.version)
+    : undefined
 }, { immediate: true })
 
 function openSwitchEngine() {

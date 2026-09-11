@@ -19,9 +19,9 @@ export function formatFileSize(bytes: number): string {
 }
 
 /**
- * 引擎显示标签格式化：`${name} ${version}`，没有版本时只返回名称。
- * 用于状态栏、模板/引擎选择器以及切换弹窗等所有需要展示引擎的位置。
+ * 名称与可选版本的展示格式：`${name} ${version}`，没有版本时只返回名称。
+ * 引擎记录、引擎引用（记录不可解析时降级用 id）以及模板来源等需要展示带版本标识的位置共用此规则。
  */
-export function formatEngineLabel(engine: { name: string, version?: string }): string {
-  return engine.version ? `${engine.name} ${engine.version}` : engine.name
+export function formatNameWithVersion(name: string, version?: string): string {
+  return version ? `${name} ${version}` : name
 }
