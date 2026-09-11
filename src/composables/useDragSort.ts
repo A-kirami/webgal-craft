@@ -167,12 +167,15 @@ function createTranslate(direction: DragSortDirection, distance: number): string
     : `translate3d(0, ${distance}px, 0)`
 }
 
+// 浮层必须与源元素逐像素重合：用 transform 定位会把浮层提升为合成层，分数缩放下合成层落在半个设备像素上，
+// 边缘发虚、内容偏移；改用 left/top 让浮层走与源元素相同的布局与绘制路径，盒模型与文字都由浏览器按同一
+// 规则吸附，因此位置取 rect 原始值即可，不做任何取整。
 function getFixedRect(direction: DragSortDirection, rect: LayoutRect): FixedRect {
   return {
-    height: Math.round(direction === 'horizontal' ? rect.crossSize : rect.mainSize),
-    width: Math.round(direction === 'horizontal' ? rect.mainSize : rect.crossSize),
-    x: Math.round(direction === 'horizontal' ? rect.mainStart : rect.crossStart),
-    y: Math.round(direction === 'horizontal' ? rect.crossStart : rect.mainStart),
+    height: direction === 'horizontal' ? rect.crossSize : rect.mainSize,
+    width: direction === 'horizontal' ? rect.mainSize : rect.crossSize,
+    x: direction === 'horizontal' ? rect.mainStart : rect.crossStart,
+    y: direction === 'horizontal' ? rect.crossStart : rect.mainStart,
   }
 }
 
@@ -191,7 +194,8 @@ function createOverlayStyle(direction: DragSortDirection, rect: LayoutRect, tran
 
   return {
     height: `${height}px`,
-    transform: `translate3d(${x}px, ${y}px, 0)`,
+    left: `${x}px`,
+    top: `${y}px`,
     transition,
     width: `${width}px`,
     zIndex: '9999',
@@ -895,7 +899,7 @@ export function useDragSort<T>(options: UseDragSortOptions<T>): UseDragSortRetur
       targetIndex: clamp(targetIndex.value, 0, Math.max(0, options.items.value.length - 1)),
     }
     phase.value = 'settling'
-    updateOverlay(position, 'settling', `transform ${SETTLING_DURATION_MS}ms ease`)
+    updateOverlay(position, 'settling', `left ${SETTLING_DURATION_MS}ms ease, top ${SETTLING_DURATION_MS}ms ease`)
     scheduleCommit()
   }
 
