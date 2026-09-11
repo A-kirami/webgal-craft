@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 
+import { ColorPickerFormat } from '~/types/color-picker'
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 
 export const usePreferenceStore = defineStore(
@@ -25,6 +26,8 @@ export const usePreferenceStore = defineStore(
     const filePickerShowRecentHistory = $ref<boolean | undefined>()
     const skipDeleteFileConfirm = $ref(false)
     const effectEditorLinkedSliderLocks = $ref<Record<string, boolean>>({})
+    const recentColors = $ref<string[]>([])
+    const colorPickerFormat = $ref<ColorPickerFormat>('hex')
 
     return $$({
       viewMode,
@@ -47,6 +50,8 @@ export const usePreferenceStore = defineStore(
       filePickerShowRecentHistory,
       skipDeleteFileConfirm,
       effectEditorLinkedSliderLocks,
+      recentColors,
+      colorPickerFormat,
     })
   },
   {

@@ -23,6 +23,7 @@ common:
     toggle: 切换搜索
     clear: 清空输入
   unknown: 未知
+  notSelected: 未选择
   dialogs:
     selectGameFolder: 选择游戏文件夹
     selectEngineFolder: 选择引擎文件夹
@@ -42,6 +43,11 @@ common:
     referenceCount: 引用数
     referenceCountValue: "{count} 处引用"
     unavailableA11y: 不可用
+  colorPicker:
+    recentColors: 最近使用的颜色
+    switchFormat: 切换颜色格式
+    switchFormatA11y: "切换颜色格式（当前 {format}）"
+    alpha: 透明度
 
 filePicker:
   placeholder: 请选择文件路径
@@ -1237,7 +1243,6 @@ edit:
     assetPreview:
       loadFailed: 加载失败
     options:
-      notSelected: 未选择
       variableScope:
         save: 存档
         global: 全局

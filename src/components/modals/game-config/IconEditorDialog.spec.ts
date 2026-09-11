@@ -111,7 +111,7 @@ function createColorPickerUpdateStub(payload: unknown) {
     name: 'StubColorPicker',
     props: {
       modelValue: {
-        type: [Object, String],
+        type: String,
         default: undefined,
       },
     },
@@ -123,6 +123,33 @@ function createColorPickerUpdateStub(payload: unknown) {
         value: String(props.modelValue ?? ''),
         onClick: () => emit('update:modelValue', payload),
       }, 'color')
+    },
+  })
+}
+
+/** 提交与实时值分开触发：子节点模拟拖拽中的实时流，按钮自身仍是权威提交 */
+function createColorPickerPreviewStub(commitPayload: unknown, previewPayload: unknown) {
+  return defineComponent({
+    name: 'StubColorPicker',
+    props: {
+      modelValue: {
+        type: String,
+        default: undefined,
+      },
+    },
+    emits: ['preview', 'update:modelValue'],
+    setup(props, { attrs, emit }) {
+      return () => h('button', {
+        ...attrs,
+        type: 'button',
+        value: String(props.modelValue ?? ''),
+        onClick: () => emit('update:modelValue', commitPayload),
+      }, [
+        h('span', {
+          'data-stub-color-preview': '',
+          'onPointerdown': () => emit('preview', previewPayload),
+        }, 'preview'),
+      ])
     },
   })
 }
@@ -746,7 +773,7 @@ describe('IconEditorDialog', () => {
       global: {
         stubs: {
           ...globalStubs,
-          ColorPicker: createColorPickerUpdateStub({ rgba: { r: 12, g: 34, b: 56, a: 0.5 } }),
+          ColorPicker: createColorPickerUpdateStub('#0C223880'),
         },
       },
     })
@@ -757,7 +784,40 @@ describe('IconEditorDialog', () => {
 
     await vi.waitFor(() => {
       expect(buildIconExportOutputsMock).toHaveBeenCalledWith(expect.objectContaining({
-        backgroundColor: 'rgba(12, 34, 56, 0.5)',
+        backgroundColor: '#0C223880',
+        backgroundType: 'color',
+      }))
+    })
+  })
+
+  it('拖拽中的实时值会立即写入图标背景状态', async () => {
+    renderInBrowser(IconEditorDialog, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      props: {
+        open: true,
+        gamePath: '/games/demo',
+      },
+      global: {
+        stubs: {
+          ...globalStubs,
+          ColorPicker: createColorPickerPreviewStub('#0C223880', '#445566'),
+        },
+      },
+    })
+
+    await page.getByTestId('icon-editor-select-foreground').click()
+
+    // 只发实时值（不提交）：图标背景状态要跟着走，否则预览不会随拖拽更新
+    const picker = page.getByTestId('icon-editor-background-color-picker').element()
+    picker.querySelector('[data-stub-color-preview]')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+
+    await page.getByTestId('icon-editor-generate').click()
+
+    await vi.waitFor(() => {
+      expect(buildIconExportOutputsMock).toHaveBeenCalledWith(expect.objectContaining({
+        backgroundColor: '#445566',
         backgroundType: 'color',
       }))
     })

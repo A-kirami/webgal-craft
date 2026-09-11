@@ -23,6 +23,7 @@ common:
     toggle: Toggle search
     clear: Clear input
   unknown: Unknown
+  notSelected: Not selected
   dialogs:
     selectGameFolder: Select Game Folder
     selectEngineFolder: Select Engine Folder
@@ -42,6 +43,11 @@ common:
     referenceCount: References
     referenceCountValue: "Reference count: {count}"
     unavailableA11y: Unavailable
+  colorPicker:
+    recentColors: Recently used colors
+    switchFormat: Switch color format
+    switchFormatA11y: "Switch color format (current: {format})"
+    alpha: Alpha
 
 filePicker:
   placeholder: Select a file path
@@ -1237,7 +1243,6 @@ edit:
     assetPreview:
       loadFailed: Failed to load
     options:
-      notSelected: Not selected
       variableScope:
         save: Save
         global: Global

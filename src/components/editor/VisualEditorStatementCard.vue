@@ -181,10 +181,11 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
                   ? 'bg-destructive/15'
                   : param.status === 'warning' ? 'bg-yellow/15' : 'bg-muted-foreground/10'"
               >{{ param.label }}</span>
-              <span
+              <!-- 色块占满值块高度并贴右边缘：外层胶囊的 overflow-hidden + rounded 负责右侧圆角，色块自身不需要圆角 -->
+              <ColorSwatchBox
                 v-if="param.color"
-                class="m-0.5 border border-foreground/10 rounded size-4"
-                :style="{ backgroundColor: param.color }"
+                :color="param.color"
+                class="rounded-none w-5 ring-1 ring-foreground/10 ring-inset self-stretch"
               />
               <template v-else-if="param.isEffect">
                 <div v-if="param.effectIcon" class="ml-1.5 shrink-0 size-3" :class="param.effectIcon" />

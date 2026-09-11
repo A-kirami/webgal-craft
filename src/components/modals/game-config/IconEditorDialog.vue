@@ -196,9 +196,10 @@ const previewItems = $computed((): PreviewItem[] => [
                       <ColorPicker
                         id="icon-editor-background-color-picker"
                         :model-value="state.backgroundColor"
-                        class="h-7 w-24"
+                        class="h-7"
                         data-testid="icon-editor-background-color-picker"
                         @update:model-value="setBackgroundColor"
+                        @preview="setBackgroundColor"
                       />
                     </div>
                   </div>

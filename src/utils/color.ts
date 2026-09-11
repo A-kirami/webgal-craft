@@ -1,15 +1,5 @@
 import { clamp } from '~/utils/math'
 
-export interface RgbColor {
-  r: number
-  g: number
-  b: number
-}
-
-export interface RgbaPayload {
-  rgba: RgbColor
-}
-
 export function normalizeColorChannel(raw: number, fallback: number): number {
   return Number.isFinite(raw) ? clamp(Math.round(raw), 0, 255) : fallback
 }
@@ -24,7 +14,11 @@ export function parseHexColor(value: string): [number, number, number] | undefin
   if (hex.length === 3) {
     hex = [...hex].map(char => `${char}${char}`).join('')
   }
-  if (hex.length !== 6 || /[^a-fA-F\d]/.test(hex)) {
+  // 8 位 hex 携带 alpha 通道，这里只取 RGB 三通道
+  if (hex.length !== 6 && hex.length !== 8) {
+    return undefined
+  }
+  if (/[^a-fA-F\d]/.test(hex)) {
     return undefined
   }
 
@@ -34,39 +28,11 @@ export function parseHexColor(value: string): [number, number, number] | undefin
   return [red, green, blue]
 }
 
-export function isRgbColor(value: unknown): value is RgbColor {
-  if (!value || typeof value !== 'object') {
-    return false
-  }
-  const record = value as Record<string, unknown>
-  return typeof record.r === 'number' && typeof record.g === 'number' && typeof record.b === 'number'
-}
-
-export function isRgbaPayload(value: unknown): value is RgbaPayload {
-  if (!value || typeof value !== 'object') {
-    return false
-  }
-  return isRgbColor((value as Record<string, unknown>).rgba)
-}
-
-export function extractRgbColor(rawValue: unknown): [number, number, number] | undefined {
-  if (typeof rawValue === 'string') {
-    return parseHexColor(rawValue)
-  }
-
-  if (isRgbaPayload(rawValue)) {
-    return [
-      normalizeColorChannel(rawValue.rgba.r, 0),
-      normalizeColorChannel(rawValue.rgba.g, 0),
-      normalizeColorChannel(rawValue.rgba.b, 0),
-    ]
-  }
-
-  if (isRgbColor(rawValue)) {
-    return [
-      normalizeColorChannel(rawValue.r, 0),
-      normalizeColorChannel(rawValue.g, 0),
-      normalizeColorChannel(rawValue.b, 0),
-    ]
-  }
+export function rgbToHex(red: number, green: number, blue: number): string {
+  // 应用内颜色字符串统一为大写 hex
+  const toHex = (channel: number) => normalizeColorChannel(channel, 0)
+    .toString(16)
+    .padStart(2, '0')
+    .toUpperCase()
+  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`
 }

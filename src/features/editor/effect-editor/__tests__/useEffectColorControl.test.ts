@@ -47,7 +47,7 @@ function createColorField(
 }
 
 describe('useEffectColorControl', () => {
-  it('读取颜色值时会归一化通道并生成 picker payload', () => {
+  it('读取颜色值时会归一化通道并生成 picker hex 值', () => {
     const { deps } = createDeps({
       r: '300',
       g: '-5',
@@ -59,7 +59,7 @@ describe('useEffectColorControl', () => {
     })
 
     expect(control.getColorValue(field)).toEqual([255, 0, 128])
-    expect(control.getColorPickerValue(field)).toEqual({ r: 255, g: 0, b: 128 })
+    expect(control.getColorPickerValue(field)).toBe('#FF0080')
   })
 
   it('选择器未打开时变更颜色会立即 flush', () => {
@@ -67,7 +67,7 @@ describe('useEffectColorControl', () => {
     const control = useEffectColorControl(deps)
     const field = createColorField()
 
-    control.handleColorPickerChange(field, { rgba: { r: 12, g: 34, b: 56 } })
+    control.handleColorPickerChange(field, '#0c2238')
 
     expect(fields).toMatchObject({
       r: '12',
@@ -88,8 +88,20 @@ describe('useEffectColorControl', () => {
     })
 
     control.handleColorPickerOpenChange(field, true)
-    control.handleColorPickerChange(field, { rgba: { r: 255, g: 255, b: 255 } })
+    control.handleColorPickerChange(field, '#ffffff')
     control.handleColorPickerOpenChange(field, false)
+
+    expect(fields).toEqual({})
+    expect(emitTransform).not.toHaveBeenCalled()
+  })
+
+  // 效果编辑器的颜色由三个数值通道定义，"未设置"由清除按钮负责，选择器回传空值不构成本地状态
+  it('选择器回传空值时不写入通道也不触发更新', () => {
+    const { deps, emitTransform, fields } = createDeps()
+    const control = useEffectColorControl(deps)
+    const field = createColorField()
+
+    control.handleColorPickerChange(field, '')
 
     expect(fields).toEqual({})
     expect(emitTransform).not.toHaveBeenCalled()
@@ -101,7 +113,7 @@ describe('useEffectColorControl', () => {
     const field = createColorField()
 
     control.handleColorPickerOpenChange(field, true)
-    control.handleColorPickerChange(field, { rgba: { r: 10, g: 20, b: 30 } })
+    control.handleColorPickerChange(field, '#0a141e')
 
     expect(emitTransform).toHaveBeenLastCalledWith(fields, {
       deferAutoApply: true,
@@ -129,7 +141,7 @@ describe('useEffectColorControl', () => {
     const field = createColorField()
 
     control.handleColorPickerOpenChange(field, true)
-    control.handleColorPickerChange(field, { rgba: { r: 10, g: 20, b: 30 } })
+    control.handleColorPickerChange(field, '#0a141e')
     control.cancelColorInteraction()
 
     expect(cancelPreview).toHaveBeenCalledOnce()
