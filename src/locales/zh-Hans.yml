@@ -778,6 +778,8 @@ edit:
     unsupportedCallSceneArgument: “调用场景”命令向子场景传递参数需要 WebGAL 4.6.3 或更高版本。
     unsupportedLocalVariable: “局部变量”参数需要 WebGAL 4.6.3 或更高版本。
     unsupportedSpine: 当前引擎不支持 Spine 模型。
+    unsupportedColorFormat: "色值“{value}”的格式无法显示和编辑。"
+    invalidColorFormat: "“{value}”不是有效的颜色值。"
     reservedCallSceneArgument: "“{argument}”为保留参数，不能用于 callScene。"
   errors:
     fileSyncFailed: 文件同步失败，请稍后重试

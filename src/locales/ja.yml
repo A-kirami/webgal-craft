@@ -778,6 +778,8 @@ edit:
     unsupportedCallSceneArgument: 「callScene」コマンドで子シーンに引数を渡すには WebGAL 4.6.3 以降が必要です。
     unsupportedLocalVariable: 「local」パラメータには WebGAL 4.6.3 以降が必要です。
     unsupportedSpine: 現在のエンジンは Spine モデルをサポートしていません。
+    unsupportedColorFormat: "色値「{value}」の形式は表示・編集できません。"
+    invalidColorFormat: "「{value}」は有効な色値ではありません。"
     reservedCallSceneArgument: '"{argument}" は予約済みのため、callScene では使用できません。'
   errors:
     fileSyncFailed: ファイルの同期に失敗しました。しばらくしてからもう一度お試しください。

@@ -367,4 +367,30 @@ describe('updateEditorDiagnostics', () => {
       }),
     ])
   })
+
+  it('色值格式诊断按声明的等级生成 marker', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+
+    const model = createModel([
+      'intro: 你好 -fontColor=red;',
+      'intro: 你好 -fontColor=#zzz;',
+    ].join('\n'))
+    updateEditorDiagnostics(model)
+
+    expect(readMarkers(model)).toEqual([
+      expect.objectContaining({
+        startLineNumber: 1,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.unsupportedColorFormat:red',
+      }),
+      expect.objectContaining({
+        startLineNumber: 2,
+        severity: monaco.MarkerSeverity.Error,
+        message: 'edit.diagnostics.invalidColorFormat:#zzz',
+      }),
+    ])
+  })
 })

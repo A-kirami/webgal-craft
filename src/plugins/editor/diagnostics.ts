@@ -12,9 +12,18 @@ import { useWorkspaceStore } from '~/stores/workspace'
 
 import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { StatementSourceRange } from '~/domain/script/sentence'
+import type { DiagnosticSeverity, SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 import type { ResourceReferenceQuery } from '~/services/resource-index/reference-query'
 
 const OWNER = 'webgal-editor-diagnostics'
+
+// marker 等级只由诊断自己声明的 severity 决定，投影层不再按 code 复判一遍
+const MARKER_SEVERITY: Record<DiagnosticSeverity, monaco.MarkerSeverity> = {
+  error: monaco.MarkerSeverity.Error,
+  hint: monaco.MarkerSeverity.Hint,
+  info: monaco.MarkerSeverity.Info,
+  warning: monaco.MarkerSeverity.Warning,
+}
 
 export function updateEditorDiagnostics(
   model: monaco.editor.ITextModel,
@@ -49,65 +58,11 @@ export function updateEditorDiagnostics(
     if (!range || !sentence) {
       continue
     }
-    const message = getEditorDiagnosticMessage(diagnostic, i18n.global.t)
 
-    if (diagnostic.code === 'duplicate-label') {
-      markers.push({
-        ...locateContent(lines, range, diagnostic.label),
-        severity: monaco.MarkerSeverity.Warning,
-        message,
-      })
-      continue
-    }
-
-    if (diagnostic.code === 'missing-label') {
-      markers.push({
-        ...locateContent(lines, range, diagnostic.label),
-        severity: monaco.MarkerSeverity.Error,
-        message,
-      })
-      continue
-    }
-
-    if (diagnostic.code === 'reserved-call-scene-argument') {
-      markers.push({
-        ...locateReference(lines, range, sentence, {
-          source: diagnostic.field,
-          value: diagnostic.argument,
-        }),
-        severity: monaco.MarkerSeverity.Warning,
-        message,
-      })
-      continue
-    }
-
-    if ([
-      'unsupported-live2d',
-      'unsupported-spine',
-      'unsupported-opus-vocal',
-      'unsupported-figure-position',
-      'unsupported-local-variable',
-      'unsupported-call-scene-argument',
-    ].includes(diagnostic.code) && 'value' in diagnostic) {
-      markers.push({
-        ...locateReference(lines, range, sentence, {
-          source: diagnostic.field,
-          value: diagnostic.value,
-        }),
-        severity: monaco.MarkerSeverity.Warning,
-        message,
-      })
-      continue
-    }
-
-    const markerRange = locateReference(lines, range, sentence, {
-      source: diagnostic.field,
-      value: diagnostic.value,
-    })
     markers.push({
-      ...markerRange,
-      severity: monaco.MarkerSeverity.Error,
-      message,
+      ...locateDiagnosticRange(lines, range, sentence, diagnostic),
+      severity: MARKER_SEVERITY[diagnostic.severity],
+      message: getEditorDiagnosticMessage(diagnostic, i18n.global.t),
     })
   }
 
@@ -136,6 +91,34 @@ function appendUnsupportedMultilineStatementMarkers(
       severity: monaco.MarkerSeverity.Error,
       message: i18n.global.t('edit.diagnostics.unsupportedMultilineStatements'),
     })
+  }
+}
+
+/** marker 的定位范围按诊断的字段来源决定（标签定位到标签本身，参数定位到参数值） */
+function locateDiagnosticRange(
+  lines: readonly string[],
+  range: StatementSourceRange,
+  sentence: NonNullable<StatementSourceRange['parsed']>,
+  diagnostic: SceneEditorDiagnostic,
+): monaco.IRange {
+  switch (diagnostic.code) {
+    case 'duplicate-label':
+    case 'missing-label': {
+      return locateContent(lines, range, diagnostic.label)
+    }
+    case 'reserved-call-scene-argument': {
+      return locateReference(lines, range, sentence, {
+        source: diagnostic.field,
+        value: diagnostic.argument,
+      })
+    }
+
+    default: {
+      return locateReference(lines, range, sentence, {
+        source: diagnostic.field,
+        value: diagnostic.value,
+      })
+    }
   }
 }
 

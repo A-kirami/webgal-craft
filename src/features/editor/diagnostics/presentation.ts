@@ -68,6 +68,12 @@ export function getEditorDiagnosticMessage(
     case 'unsupported-call-scene-argument': {
       return t('edit.diagnostics.unsupportedCallSceneArgument')
     }
+    case 'unsupported-color-format': {
+      return t('edit.diagnostics.unsupportedColorFormat', { value: diagnostic.value })
+    }
+    case 'invalid-color-format': {
+      return t('edit.diagnostics.invalidColorFormat', { value: diagnostic.value })
+    }
     default: {
       const exhaustiveCheck: never = diagnostic
       return exhaustiveCheck
