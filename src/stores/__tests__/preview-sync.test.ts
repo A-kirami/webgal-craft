@@ -7,9 +7,11 @@ import { PREVIEW_CONNECTION_REPLY_TIMEOUT_MS, usePreviewSyncStore } from '../pre
 
 const {
   loggerErrorMock,
+  loggerWarnMock,
   sendPreviewCommandMock,
 } = vi.hoisted(() => ({
   loggerErrorMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
   sendPreviewCommandMock: vi.fn(),
 }))
 
@@ -22,12 +24,13 @@ vi.mock('~/commands/server', () => ({
 vi.mock('@tauri-apps/plugin-log', () => ({
   debug: vi.fn(),
   error: loggerErrorMock,
-  warn: vi.fn(),
+  warn: loggerWarnMock,
 }))
 
 describe('usePreviewSyncStore', () => {
   beforeEach(() => {
     loggerErrorMock.mockReset()
+    loggerWarnMock.mockReset()
     sendPreviewCommandMock.mockReset()
     vi.useRealTimers()
   })
@@ -103,24 +106,36 @@ describe('usePreviewSyncStore', () => {
     expect(store.connectionStatus).toBe('connecting')
   })
 
-  it('连接阶段超过答复时限仍未收到协议消息时标记连接失败', async () => {
+  it('没有启动预览时重置不会开启答复时限', async () => {
     vi.useFakeTimers()
     const store = usePreviewSyncStore()
 
     store.resetEmbeddedPreviewState()
+
+    await vi.advanceTimersByTimeAsync(PREVIEW_CONNECTION_REPLY_TIMEOUT_MS)
+    expect(store.connectionStatus).toBe('connecting')
+    expect(loggerWarnMock).not.toHaveBeenCalled()
+  })
+
+  it('连接阶段超过答复时限仍未收到协议消息时标记连接失败', async () => {
+    vi.useFakeTimers()
+    const store = usePreviewSyncStore()
+
+    store.startEmbeddedPreviewConnection()
 
     await vi.advanceTimersByTimeAsync(PREVIEW_CONNECTION_REPLY_TIMEOUT_MS - 1)
     expect(store.connectionStatus).toBe('connecting')
 
     await vi.advanceTimersByTimeAsync(1)
     expect(store.connectionStatus).toBe('failed')
+    expect(loggerWarnMock).toHaveBeenCalledTimes(1)
   })
 
   it('连接阶段收到预览端协议答复后不再因超出答复时限标记失败', async () => {
     vi.useFakeTimers()
     const store = usePreviewSyncStore()
 
-    store.resetEmbeddedPreviewState()
+    store.startEmbeddedPreviewConnection()
     store.consumeHostEvent(JSON.stringify({
       kind: 'event',
       type: 'stage.snapshot.updated',
@@ -143,7 +158,7 @@ describe('usePreviewSyncStore', () => {
     vi.useFakeTimers()
     const store = usePreviewSyncStore()
 
-    store.resetEmbeddedPreviewState()
+    store.startEmbeddedPreviewConnection()
     await vi.advanceTimersByTimeAsync(PREVIEW_CONNECTION_REPLY_TIMEOUT_MS)
     expect(store.connectionStatus).toBe('failed')
 

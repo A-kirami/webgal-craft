@@ -253,9 +253,16 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
     settlePendingPreviewResponses(PREVIEW_STATE_RESET_REASON)
   }
 
+  /** 重置内嵌预览状态并取消遗留的答复时限；没有启动预览的路径（缺少入口、面板卸载）用它 */
   function resetEmbeddedPreviewState(): void {
     resetPreviewState()
+    clearConnectionReplyTimeout()
     connectionStatus = 'connecting'
+  }
+
+  /** 启动内嵌预览连接：重置状态并等待预览端在答复时限内回传协议消息 */
+  function startEmbeddedPreviewConnection(): void {
+    resetEmbeddedPreviewState()
     armConnectionReplyTimeout()
   }
 
@@ -523,6 +530,7 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
     fastPreviewTimeout,
     consumeHostEvent,
     resetEmbeddedPreviewState,
+    startEmbeddedPreviewConnection,
     dismissFastPreviewTimeout,
     queryReferenceBox,
     queryBaseTransform,

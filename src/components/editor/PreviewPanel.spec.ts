@@ -23,6 +23,7 @@ const {
   dismissFastPreviewTimeoutMock,
   resetEmbeddedPreviewStateMock,
   setEmbeddedPreviewLaunchIdMock,
+  startEmbeddedPreviewConnectionMock,
   syncSceneMock,
   useEditorStoreMock,
   useModalStoreMock,
@@ -38,6 +39,7 @@ const {
   dismissFastPreviewTimeoutMock: vi.fn(),
   resetEmbeddedPreviewStateMock: vi.fn(),
   setEmbeddedPreviewLaunchIdMock: vi.fn(),
+  startEmbeddedPreviewConnectionMock: vi.fn(),
   syncSceneMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
   useModalStoreMock: vi.fn(),
@@ -306,6 +308,7 @@ describe('PreviewPanel', () => {
     openUrlMock.mockReset()
     resetEmbeddedPreviewStateMock.mockReset()
     setEmbeddedPreviewLaunchIdMock.mockReset()
+    startEmbeddedPreviewConnectionMock.mockReset()
     syncSceneMock.mockReset()
     useEditorStoreMock.mockReset()
     useModalStoreMock.mockReset()
@@ -363,6 +366,7 @@ describe('PreviewPanel', () => {
       isPreviewReady: false,
       dismissFastPreviewTimeout: dismissFastPreviewTimeoutMock,
       resetEmbeddedPreviewState: resetEmbeddedPreviewStateMock,
+      startEmbeddedPreviewConnection: startEmbeddedPreviewConnectionMock,
     }))
     getGameConfigMock.mockResolvedValue({
       entries: [
@@ -387,7 +391,7 @@ describe('PreviewPanel', () => {
     await expect.element(page.getByText('1280 x 720')).toBeVisible()
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.fitToView' })).toBeVisible()
     expect(getGameConfigMock).toHaveBeenCalledWith('/games/demo')
-    expect(resetEmbeddedPreviewStateMock).toHaveBeenCalledTimes(1)
+    expect(startEmbeddedPreviewConnectionMock).toHaveBeenCalledTimes(1)
     expect(setEmbeddedPreviewLaunchIdMock).toHaveBeenCalledWith(expect.any(String))
   })
 
@@ -398,6 +402,7 @@ describe('PreviewPanel', () => {
       isPreviewReady: false,
       dismissFastPreviewTimeout: dismissFastPreviewTimeoutMock,
       resetEmbeddedPreviewState: resetEmbeddedPreviewStateMock,
+      startEmbeddedPreviewConnection: startEmbeddedPreviewConnectionMock,
     })
     usePreviewSyncStoreMock.mockReturnValue(previewSyncStore)
 
@@ -436,12 +441,15 @@ describe('PreviewPanel', () => {
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.fitToView' })).toBeDisabled()
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.refreshPreview' })).toBeDisabled()
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.openInBrowser' })).toBeDisabled()
+    expect(startEmbeddedPreviewConnectionMock).not.toHaveBeenCalled()
+    expect(resetEmbeddedPreviewStateMock).toHaveBeenCalledTimes(1)
 
     sceneEntryStatusState.status.value = 'valid'
     await nextTick()
 
     await expect.element(page.getByTitle('preview-title::Demo Game')).toBeVisible()
     await expect.element(page.getByTestId('preview-connection-status')).toHaveAttribute('data-status', 'connecting')
+    expect(startEmbeddedPreviewConnectionMock).toHaveBeenCalledTimes(1)
     expect(previewSessionStoreState.reloadVersion).toBeGreaterThan(0)
   })
 
@@ -776,7 +784,7 @@ describe('PreviewPanel', () => {
 
     expect(getGameConfigMock).toHaveBeenCalledTimes(2)
     expect(setEmbeddedPreviewLaunchIdMock).toHaveBeenCalledTimes(2)
-    expect(resetEmbeddedPreviewStateMock).toHaveBeenCalledTimes(2)
+    expect(startEmbeddedPreviewConnectionMock).toHaveBeenCalledTimes(2)
   })
 
   it('会串行更新宿主端内嵌预览槽位，避免旧槽位异步晚到覆盖新槽位', async () => {
@@ -808,7 +816,7 @@ describe('PreviewPanel', () => {
     await page.getByRole('button', { name: 'edit.previewPanel.refreshPreview' }).click()
 
     await vi.waitFor(() => {
-      expect(resetEmbeddedPreviewStateMock).toHaveBeenCalledTimes(2)
+      expect(startEmbeddedPreviewConnectionMock).toHaveBeenCalledTimes(2)
     })
     expect(setEmbeddedPreviewLaunchIdMock).toHaveBeenCalledTimes(1)
 
@@ -940,6 +948,7 @@ describe('PreviewPanel', () => {
       isPreviewReady: false,
       dismissFastPreviewTimeout: dismissFastPreviewTimeoutMock,
       resetEmbeddedPreviewState: resetEmbeddedPreviewStateMock,
+      startEmbeddedPreviewConnection: startEmbeddedPreviewConnectionMock,
     })
     usePreviewSyncStoreMock.mockReturnValue(previewSyncStore)
 
@@ -1012,6 +1021,7 @@ describe('PreviewPanel', () => {
       isPreviewReady: false,
       dismissFastPreviewTimeout: dismissFastPreviewTimeoutMock,
       resetEmbeddedPreviewState: resetEmbeddedPreviewStateMock,
+      startEmbeddedPreviewConnection: startEmbeddedPreviewConnectionMock,
     })
     usePreviewSyncStoreMock.mockReturnValue(previewSyncStore)
 

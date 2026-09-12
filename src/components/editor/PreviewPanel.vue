@@ -275,7 +275,11 @@ function updateEmbeddedPreviewSlot(nextEmbeddedLaunchId?: string): void {
   const revision = ++embeddedPreviewSlotRevision
   embeddedLaunchId = nextEmbeddedLaunchId
   consumedReadyLaunchId = undefined
-  previewSyncStore.resetEmbeddedPreviewState()
+  if (nextEmbeddedLaunchId) {
+    previewSyncStore.startEmbeddedPreviewConnection()
+  } else {
+    previewSyncStore.resetEmbeddedPreviewState()
+  }
 
   embeddedPreviewSlotUpdateQueue = embeddedPreviewSlotUpdateQueue
     .catch(() => undefined)
