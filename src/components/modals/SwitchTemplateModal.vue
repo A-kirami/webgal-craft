@@ -154,7 +154,7 @@ async function handleResetConfirm() {
         </div>
       </div>
 
-      <DialogFooter class="gap-3 sm:justify-between">
+      <DialogFooter class="gap-3" :class="{ 'sm:justify-between': isDirty }">
         <Button
           v-if="isDirty"
           variant="ghost"
