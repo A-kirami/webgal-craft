@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 
 import {
   parseChooseContent,
@@ -248,5 +248,36 @@ describe('sentence', () => {
     })
     expect('parsed' in (statement as object)).toBe(false)
     expect('parseError' in (statement as object)).toBe(false)
+  })
+
+  it('同一份文本的整篇解析结果在多个消费者之间共享', () => {
+    const raw = ['Alice:hello;', 'Bob:world;'].join('\n')
+    const first = buildStatementSourceRanges(raw, LATEST_ENGINE_RUNTIME_CAPABILITIES)
+    // 内容相同的独立字符串同样命中，一次编辑只解析一次
+    const second = buildStatementSourceRanges(['Alice:hello;', 'Bob:world;'].join('\n'), LATEST_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(second).toBe(first)
+    expect(first.map(range => range.rawText)).toEqual(['Alice:hello;', 'Bob:world;'])
+  })
+
+  it('行尾不同的同一份文本共享解析结果', () => {
+    const lf = ['Alice:hello;', 'Bob:world;'].join('\n')
+    const first = buildStatementSourceRanges(lf, LATEST_ENGINE_RUNTIME_CAPABILITIES)
+    const second = buildStatementSourceRanges(lf.replaceAll('\n', '\r\n'), LATEST_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(second).toBe(first)
+    expect(first.map(range => range.rawText)).toEqual(['Alice:hello;', 'Bob:world;'])
+  })
+
+  it('语法能力不同的整篇解析结果不共用缓存', () => {
+    const raw = ['changeFigure:hero.png', '  -id=hero -left;'].join('\n')
+
+    const multiline = buildStatementSourceRanges(raw, LATEST_ENGINE_RUNTIME_CAPABILITIES)
+    const perLine = buildStatementSourceRanges(raw, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(multiline).toHaveLength(1)
+    expect(perLine).toHaveLength(2)
+    expect(buildStatementSourceRanges(raw, LEGACY_ENGINE_RUNTIME_CAPABILITIES)).toBe(perLine)
+    expect(buildStatementSourceRanges(raw, LATEST_ENGINE_RUNTIME_CAPABILITIES)).toBe(multiline)
   })
 })

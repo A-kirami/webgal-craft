@@ -71,7 +71,7 @@ describe('useEditorDiagnostics', () => {
       })],
     ])
     const resourceRevision = shallowRef(0)
-    const sceneRevision = shallowRef('revision-1')
+    const sceneToken = shallowRef('token-1')
     const tabsStore = reactive({
       tabs: [{ path: openPath }],
     })
@@ -80,7 +80,7 @@ describe('useEditorDiagnostics', () => {
     useEditorStoreMock.mockReturnValue({
       getTextProjectionState: vi.fn(() => undefined),
       getVisualProjectionState: (path: AbsPath) => visualProjections.get(path),
-      peekSceneRevision: vi.fn(() => sceneRevision.value),
+      peekSceneContentChangeToken: vi.fn(() => sceneToken.value),
     })
     useResourceIndexMock.mockReturnValue({
       hasAssetKey: vi.fn(() => false),
@@ -104,7 +104,7 @@ describe('useEditorDiagnostics', () => {
     expect(diagnosticsStore.invalidateSource).toHaveBeenCalledWith('resource')
     expect(diagnosticsStore.publish).toHaveBeenCalledTimes(2)
 
-    sceneRevision.value = 'revision-2'
+    sceneToken.value = 'token-2'
     await nextTick()
 
     expect(diagnosticsStore.publish).toHaveBeenCalledTimes(3)
@@ -126,7 +126,7 @@ describe('useEditorDiagnostics', () => {
     useEditorStoreMock.mockReturnValue({
       getTextProjectionState: vi.fn(() => undefined),
       getVisualProjectionState: vi.fn(() => visualProjection),
-      peekSceneRevision: vi.fn(() => visualProjection.kind),
+      peekSceneContentChangeToken: vi.fn(() => visualProjection.kind),
     })
     useResourceIndexMock.mockReturnValue({
       hasAssetKey: vi.fn(() => true),
@@ -166,7 +166,7 @@ describe('useEditorDiagnostics', () => {
         kind: 'scene' as const,
         statements: buildStatements('changeFigure:hero.json;'),
       })),
-      peekSceneRevision: vi.fn(() => 'revision-1'),
+      peekSceneContentChangeToken: vi.fn(() => 'revision-1'),
     })
     useResourceIndexMock.mockReturnValue({
       hasAssetKey: vi.fn(() => true),
@@ -209,7 +209,7 @@ describe('useEditorDiagnostics', () => {
         kind: 'scene' as const,
         statements: buildStatements('say:hello -voice.opus;'),
       })),
-      peekSceneRevision: vi.fn(() => 'revision-1'),
+      peekSceneContentChangeToken: vi.fn(() => 'revision-1'),
     })
     useResourceIndexMock.mockReturnValue({
       hasAssetKey: vi.fn(() => true),
@@ -252,7 +252,7 @@ describe('useEditorDiagnostics', () => {
         runtimeCapabilities: resourceStore.currentEngineRuntimeCapabilities,
         statements: buildStatements('changeFigure: hero.png -left13;'),
       })),
-      peekSceneRevision: vi.fn(() => 'revision-1'),
+      peekSceneContentChangeToken: vi.fn(() => 'revision-1'),
     })
     useResourceIndexMock.mockReturnValue({
       hasAssetKey: vi.fn(() => true),
@@ -273,6 +273,150 @@ describe('useEditorDiagnostics', () => {
     await nextTick()
 
     expect(diagnosticsStore.publish).toHaveBeenLastCalledWith(path, [])
+    scope.stop()
+  })
+
+  it('只重新诊断内容令牌变化的标签页', async () => {
+    const changedPath = AbsPath.from('/game/scene/changed.txt')
+    const stablePath = AbsPath.from('/game/scene/stable.txt')
+    const diagnosticsStore = {
+      invalidateSource: vi.fn(),
+      publish: vi.fn(),
+    }
+    const tokens = reactive(new Map<AbsPath, string>([
+      [changedPath, 'token-1'],
+      [stablePath, 'token-2'],
+    ]))
+    const visualProjections = new Map([
+      [changedPath, reactive({
+        kind: 'scene' as const,
+        statements: buildStatements('label:start;\nlabel:start;'),
+      })],
+      [stablePath, reactive({
+        kind: 'scene' as const,
+        statements: buildStatements('label:other;\nlabel:other;'),
+      })],
+    ])
+
+    useEditorDiagnosticsStoreMock.mockReturnValue(diagnosticsStore)
+    useEditorStoreMock.mockReturnValue({
+      getTextProjectionState: vi.fn(() => undefined),
+      getVisualProjectionState: (path: AbsPath) => visualProjections.get(path),
+      peekSceneContentChangeToken: (path: AbsPath) => tokens.get(path),
+    })
+    useResourceIndexMock.mockReturnValue({
+      hasAssetKey: vi.fn(() => true),
+      revision: shallowRef(0),
+      status: shallowRef('ready'),
+    })
+    useTabsStoreMock.mockReturnValue(reactive({
+      tabs: [{ path: changedPath }, { path: stablePath }],
+    }))
+
+    const scope = effectScope()
+    scope.run(useEditorDiagnostics)
+    expect(diagnosticsStore.publish).toHaveBeenCalledTimes(2)
+    diagnosticsStore.publish.mockClear()
+
+    tokens.set(changedPath, 'token-1-updated')
+    await nextTick()
+
+    expect(diagnosticsStore.publish).toHaveBeenCalledTimes(1)
+    expect(diagnosticsStore.publish).toHaveBeenCalledWith(changedPath, expect.arrayContaining([
+      expect.objectContaining({ code: 'duplicate-label' }),
+    ]))
+    scope.stop()
+  })
+
+  it('没有场景内容令牌的文档（动画草稿）等长编辑后仍重新发布诊断', async () => {
+    const path = AbsPath.from('/game/animation/story.json')
+    const diagnosticsStore = {
+      invalidateSource: vi.fn(),
+      publish: vi.fn(),
+    }
+    const textProjection = reactive({
+      kind: 'animation' as const,
+      syncError: 'invalid-animation-json' as const,
+      textContent: '{invalid',
+    })
+
+    useEditorDiagnosticsStoreMock.mockReturnValue(diagnosticsStore)
+    useEditorStoreMock.mockReturnValue({
+      getTextProjectionState: () => textProjection,
+      getVisualProjectionState: () => undefined,
+      peekSceneContentChangeToken: () => undefined,
+    })
+    useResourceIndexMock.mockReturnValue({
+      hasAssetKey: vi.fn(() => false),
+      revision: shallowRef(0),
+      status: shallowRef('ready'),
+    })
+    useTabsStoreMock.mockReturnValue(reactive({ tabs: [{ path }] }))
+
+    const scope = effectScope()
+    scope.run(useEditorDiagnostics)
+    expect(diagnosticsStore.publish).toHaveBeenLastCalledWith(path, [
+      expect.objectContaining({ code: 'invalid-animation-json' }),
+    ])
+    diagnosticsStore.publish.mockClear()
+
+    // 等长替换：除内容本身外没有任何字段变化
+    textProjection.textContent = '{invaliX'
+    await nextTick()
+
+    expect(diagnosticsStore.publish).toHaveBeenCalledTimes(1)
+    scope.stop()
+  })
+
+  it('资源索引变化时令牌未变也强制重算所有打开文档', async () => {
+    const firstPath = AbsPath.from('/game/scene/first.txt')
+    const secondPath = AbsPath.from('/game/scene/second.txt')
+    const diagnosticsStore = {
+      invalidateSource: vi.fn(),
+      publish: vi.fn(),
+    }
+    const resourceRevision = shallowRef(0)
+    const visualProjections = new Map([
+      [firstPath, reactive({
+        kind: 'scene' as const,
+        statements: buildStatements('changeBg:missing.png;'),
+      })],
+      [secondPath, reactive({
+        kind: 'scene' as const,
+        statements: buildStatements('changeBg:missing.png;'),
+      })],
+    ])
+
+    useEditorDiagnosticsStoreMock.mockReturnValue(diagnosticsStore)
+    useEditorStoreMock.mockReturnValue({
+      getTextProjectionState: vi.fn(() => undefined),
+      getVisualProjectionState: (path: AbsPath) => visualProjections.get(path),
+      peekSceneContentChangeToken: vi.fn(() => 'unchanged-token'),
+    })
+    useResourceIndexMock.mockReturnValue({
+      hasAssetKey: vi.fn(() => false),
+      revision: resourceRevision,
+      status: shallowRef('ready'),
+    })
+    useTabsStoreMock.mockReturnValue(reactive({
+      tabs: [{ path: firstPath }, { path: secondPath }],
+    }))
+
+    const scope = effectScope()
+    scope.run(useEditorDiagnostics)
+    diagnosticsStore.publish.mockClear()
+
+    resourceRevision.value++
+    await nextTick()
+
+    expect(diagnosticsStore.invalidateSource).toHaveBeenCalledWith('resource')
+    expect(diagnosticsStore.publish).toHaveBeenCalledTimes(2)
+    expect(diagnosticsStore.publish).toHaveBeenCalledWith(firstPath, [
+      expect.objectContaining({ code: 'missing-resource' }),
+    ])
+    expect(diagnosticsStore.publish).toHaveBeenCalledWith(secondPath, [
+      expect.objectContaining({ code: 'missing-resource' }),
+    ])
     scope.stop()
   })
 })

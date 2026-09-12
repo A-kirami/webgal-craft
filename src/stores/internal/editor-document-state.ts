@@ -16,6 +16,8 @@ export interface DocumentState {
   savedTextContent: string
   /** 缓存的文本内容，model 变更后置为 undefined，按需重新序列化 */
   cachedTextContent: string | undefined
+  /** 内容版本号：model 被替换时递增，供消费者判断内容是否变化而无需重算内容哈希 */
+  contentVersion: number
 }
 
 export type DocumentStateOfKind<TKind extends DocumentKind> = DocumentState & {
@@ -95,6 +97,7 @@ export function createDocumentState(model: DocumentModel, savedTextContent: stri
     savedSequenceNumber: 0,
     savedTextContent,
     cachedTextContent: undefined,
+    contentVersion: 0,
   }) as DocumentState
 }
 
@@ -114,9 +117,10 @@ export function getDocumentTextContent(doc: DocumentState): string {
   return content
 }
 
-/** model 变更后调用，使文本缓存失效 */
+/** model 变更后调用：使文本缓存失效并推进内容版本号；所有替换 model 的路径都必须经过这里 */
 export function invalidateDocumentTextCache(doc: DocumentState): void {
   doc.cachedTextContent = undefined
+  doc.contentVersion++
 }
 
 export function isDocumentDirty(document: DocumentState): boolean {

@@ -53,13 +53,24 @@ export function createEmptySentence(): ISentence {
   }
 }
 
-/**
- * 解析全文，并保留每条逻辑语句在原始文本中的行范围。
- *
- * 解析器会为续行生成占位语句以保持物理行数量；这里排除占位语句，
- * 再以解析器给出的范围截取原始行，保留用户的缩进与换行格式。
- */
-export function buildStatementSourceRanges(
+interface StatementSourceRangesCacheEntry {
+  capabilitiesKey: string
+  ranges: StatementSourceRange[]
+  text: string
+}
+
+/** 一次编辑里文档模型重建、诊断标记、语句高亮与侧栏快照会解析同一份文本，这里共享最近的结果 */
+const sourceRangesCache: StatementSourceRangesCacheEntry[] = []
+
+/** 上限 2 覆盖「当前文本 + 上一份（如语句组弹窗草稿）」，再多会长期占用整篇解析结果的内存 */
+const SOURCE_RANGES_CACHE_LIMIT = 2
+
+/** 缓存键只需包含影响切分的两个能力开关 */
+function createSyntaxCapabilitiesKey(capabilities?: StatementSyntaxCapabilities): string {
+  return `${capabilities?.multilineStatements ?? 'default'}|${capabilities?.sceneSemantics ?? 'default'}`
+}
+
+function parseStatementSourceRanges(
   text: string,
   capabilities?: StatementSyntaxCapabilities,
 ): StatementSourceRange[] {
@@ -94,6 +105,36 @@ export function buildStatementSourceRanges(
       rawText: lines.slice(sentence.startLine, sentence.endLine + 1).join('\n'),
       startLine: sentence.startLine,
     }))
+}
+
+/**
+ * 解析全文，并保留每条逻辑语句在原始文本中的行范围。
+ *
+ * 解析器会为续行生成占位语句以保持物理行数量；这里排除占位语句，
+ * 再以解析器给出的范围截取原始行，保留用户的缩进与语句内换行。
+ *
+ * 行尾统一成 LF 后解析与比较：调用方拿到的文本行尾并不一致（Monaco 原样文本是 CRLF，
+ * 逐行截取后拼回来的却是 LF），统一后同一份文本只解析一次；写回时由文档 metadata 还原。
+ *
+ * 返回值由多个调用方共享，必须视为只读。
+ */
+export function buildStatementSourceRanges(
+  text: string,
+  capabilities?: StatementSyntaxCapabilities,
+): StatementSourceRange[] {
+  const normalizedText = text.includes('\r') ? text.replaceAll('\r\n', '\n') : text
+  const capabilitiesKey = createSyntaxCapabilitiesKey(capabilities)
+
+  for (const entry of sourceRangesCache) {
+    if (entry.text === normalizedText && entry.capabilitiesKey === capabilitiesKey) {
+      return entry.ranges
+    }
+  }
+
+  const ranges = parseStatementSourceRanges(normalizedText, capabilities)
+  sourceRangesCache.unshift({ capabilitiesKey, ranges, text: normalizedText })
+  sourceRangesCache.length = Math.min(sourceRangesCache.length, SOURCE_RANGES_CACHE_LIMIT)
+  return ranges
 }
 
 /**
