@@ -174,6 +174,48 @@ describe('usePreviewSyncStore', () => {
     expect(store.isPreviewReady).toBe(true)
   })
 
+  it('答复超时后收到不匹配的合法响应会恢复连接状态', async () => {
+    vi.useFakeTimers()
+    const store = usePreviewSyncStore()
+
+    store.startEmbeddedPreviewConnection()
+    await vi.advanceTimersByTimeAsync(PREVIEW_CONNECTION_REPLY_TIMEOUT_MS)
+    expect(store.connectionStatus).toBe('failed')
+
+    store.consumeHostEvent(JSON.stringify({
+      kind: 'response',
+      type: 'preview.query.reference-box',
+      requestId: 'already-timed-out-request',
+      payload: {
+        target: 'fig-center',
+        status: 'unsupported',
+      },
+    }))
+
+    expect(store.connectionStatus).toBe('connected')
+  })
+
+  it('答复超时后收到不匹配的合法错误答复会恢复连接状态', async () => {
+    vi.useFakeTimers()
+    const store = usePreviewSyncStore()
+
+    store.startEmbeddedPreviewConnection()
+    await vi.advanceTimersByTimeAsync(PREVIEW_CONNECTION_REPLY_TIMEOUT_MS)
+    expect(store.connectionStatus).toBe('failed')
+
+    store.consumeHostEvent(JSON.stringify({
+      kind: 'error',
+      type: 'preview.query.transform-baseline',
+      requestId: 'already-timed-out-request',
+      error: {
+        code: 'unsupported-request-type',
+        message: 'transform baseline query is not supported',
+      },
+    }))
+
+    expect(store.connectionStatus).toBe('connected')
+  })
+
   it('消费快速预览超时事件后会记录超时诊断信息', () => {
     const store = usePreviewSyncStore()
 

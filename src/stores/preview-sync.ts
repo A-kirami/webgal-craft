@@ -267,6 +267,9 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
   }
 
   function consumePreviewResponse(message: ResponseEnvelopeByType<PreviewResponseType>): void {
+    // 合法答复已证明预览端可通信，与本地是否还记着这个请求无关
+    confirmPreviewProtocolReply()
+
     const pending = pendingPreviewResponses.get(message.requestId)
     if (!pending || pending.type !== message.type) {
       return
@@ -274,11 +277,12 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
 
     pendingPreviewResponses.delete(message.requestId)
     clearTimeout(pending.timeoutId)
-    confirmPreviewProtocolReply()
     pending.settleResponse(message)
   }
 
   function consumePreviewRequestError(message: PreviewRequestErrorEnvelopeByType<PreviewRequestType>): void {
+    confirmPreviewProtocolReply()
+
     const pending = pendingPreviewResponses.get(message.requestId)
     if (!pending || pending.type !== message.type) {
       return
@@ -286,7 +290,6 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
 
     pendingPreviewResponses.delete(message.requestId)
     clearTimeout(pending.timeoutId)
-    confirmPreviewProtocolReply()
     pending.settleFailure(message.error.message ?? message.error.code)
   }
 
