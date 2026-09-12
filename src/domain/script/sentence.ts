@@ -53,13 +53,24 @@ export function createEmptySentence(): ISentence {
   }
 }
 
-/**
- * 解析全文，并保留每条逻辑语句在原始文本中的行范围。
- *
- * 解析器会为续行生成占位语句以保持物理行数量；这里排除占位语句，
- * 再以解析器给出的范围截取原始行，保留用户的缩进与换行格式。
- */
-export function buildStatementSourceRanges(
+interface StatementSourceRangesCacheEntry {
+  capabilitiesKey: string
+  ranges: StatementSourceRange[]
+  text: string
+}
+
+/** 一次编辑里文档模型重建、诊断标记、语句高亮与侧栏快照会解析同一份文本，这里共享最近的结果 */
+const sourceRangesCache: StatementSourceRangesCacheEntry[] = []
+
+/** 上限 2 覆盖「当前文本 + 上一份（如语句组弹窗草稿）」，再多会长期占用整篇解析结果的内存 */
+const SOURCE_RANGES_CACHE_LIMIT = 2
+
+/** 缓存键只需包含影响切分的两个能力开关 */
+function createSyntaxCapabilitiesKey(capabilities?: StatementSyntaxCapabilities): string {
+  return `${capabilities?.multilineStatements ?? 'default'}|${capabilities?.sceneSemantics ?? 'default'}`
+}
+
+function parseStatementSourceRanges(
   text: string,
   capabilities?: StatementSyntaxCapabilities,
 ): StatementSourceRange[] {
@@ -94,6 +105,32 @@ export function buildStatementSourceRanges(
       rawText: lines.slice(sentence.startLine, sentence.endLine + 1).join('\n'),
       startLine: sentence.startLine,
     }))
+}
+
+/**
+ * 解析全文，并保留每条逻辑语句在原始文本中的行范围。
+ *
+ * 解析器会为续行生成占位语句以保持物理行数量；这里排除占位语句，
+ * 再以解析器给出的范围截取原始行，保留用户的缩进与换行格式。
+ *
+ * 返回值由多个调用方共享，必须视为只读。
+ */
+export function buildStatementSourceRanges(
+  text: string,
+  capabilities?: StatementSyntaxCapabilities,
+): StatementSourceRange[] {
+  const capabilitiesKey = createSyntaxCapabilitiesKey(capabilities)
+
+  for (const entry of sourceRangesCache) {
+    if (entry.text === text && entry.capabilitiesKey === capabilitiesKey) {
+      return entry.ranges
+    }
+  }
+
+  const ranges = parseStatementSourceRanges(text, capabilities)
+  sourceRangesCache.unshift({ capabilitiesKey, ranges, text })
+  sourceRangesCache.length = Math.min(sourceRangesCache.length, SOURCE_RANGES_CACHE_LIMIT)
+  return ranges
 }
 
 /**

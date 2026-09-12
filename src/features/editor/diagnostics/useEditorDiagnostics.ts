@@ -5,6 +5,13 @@ import { useEditorDiagnosticsStore } from '~/stores/editor-diagnostics'
 import { useResourceStore } from '~/stores/resource'
 import { useTabsStore } from '~/stores/tabs'
 
+import type { AbsPath } from '~/domain/path'
+
+interface PublishDiagnosticsOptions {
+  /** 资源索引或引擎能力变化时，诊断结论整体失效，必须无视令牌强制重算 */
+  force?: boolean
+}
+
 export function useEditorDiagnostics(): void {
   const diagnosticsStore = useEditorDiagnosticsStore()
   const editorStore = useEditorStore()
@@ -12,10 +19,37 @@ export function useEditorDiagnostics(): void {
   const resourceStore = useResourceStore()
   const tabsStore = useTabsStore()
 
-  function publishOpenDocumentDiagnostics(): void {
+  // 各标签页已发布诊断对应的内容令牌；watcher 整体触发时跳过令牌未变的文档
+  const publishedTokens = new Map<AbsPath, string>()
+
+  function readDiagnosticsToken(path: AbsPath): string {
+    const textProjection = editorStore.getTextProjectionState(path)
+    const visualProjection = editorStore.getVisualProjectionState(path)
+    return [
+      editorStore.peekSceneContentChangeToken(path) ?? '',
+      textProjection?.kind ?? '',
+      textProjection?.syncError ?? '',
+      textProjection?.textContent.length ?? '',
+      visualProjection?.kind ?? '',
+    ].join('|')
+  }
+
+  function publishOpenDocumentDiagnostics(options: PublishDiagnosticsOptions = {}): void {
     const canCheckResources = resourceIndex.status.value === 'ready'
+    const openPaths = new Set(tabsStore.tabs.map(tab => tab.path))
+    for (const path of publishedTokens.keys()) {
+      if (!openPaths.has(path)) {
+        publishedTokens.delete(path)
+      }
+    }
 
     for (const tab of tabsStore.tabs) {
+      const token = readDiagnosticsToken(tab.path)
+      if (!options.force && publishedTokens.get(tab.path) === token) {
+        continue
+      }
+      publishedTokens.set(tab.path, token)
+
       const textProjection = editorStore.getTextProjectionState(tab.path)
       const visualProjection = editorStore.getVisualProjectionState(tab.path)
       const canDiagnose = visualProjection?.kind === 'scene' || textProjection?.kind === 'animation'
@@ -41,25 +75,27 @@ export function useEditorDiagnostics(): void {
       const textProjection = editorStore.getTextProjectionState(tab.path)
       return [
         tab.path,
-        editorStore.peekSceneRevision(tab.path),
+        editorStore.peekSceneContentChangeToken(tab.path),
         textProjection?.kind,
         textProjection?.syncError,
         textProjection?.runtimeCapabilities,
+        // 草稿内容不落事务（非法动画 JSON），用字符串身份兜底
+        textProjection?.textContent,
       ] as const
     }),
-    publishOpenDocumentDiagnostics,
-    { deep: true, immediate: true },
+    () => publishOpenDocumentDiagnostics(),
+    { immediate: true },
   )
 
   watch(() => resourceIndex.revision.value, () => {
     diagnosticsStore.invalidateSource('resource')
-    publishOpenDocumentDiagnostics()
+    publishOpenDocumentDiagnostics({ force: true })
   })
 
   watch(() => [
     resourceStore.currentEngineCapabilities,
     resourceStore.currentEngineRuntimeCapabilities,
   ], () => {
-    publishOpenDocumentDiagnostics()
+    publishOpenDocumentDiagnostics({ force: true })
   })
 }

@@ -40,7 +40,9 @@ export function updateEditorDiagnostics(
   const canCheckResources = Boolean(workspace.currentGame?.path) && resourceIndex.status.value === 'ready'
   const markers: monaco.editor.IMarkerData[] = []
   const lines = model.getLinesContent()
-  const source = lines.join('\n')
+  // 用 model.getValue() 而非 lines.join('\n')：前者与事务写入文档模型的文本一致（含 CRLF），
+  // 可命中整篇解析缓存；lines 仍用于行列定位。
+  const source = model.getValue()
   const ranges = buildStatementSourceRanges(source, runtimeCapabilities)
   const sentences = ranges.map(range => range.parsed)
 

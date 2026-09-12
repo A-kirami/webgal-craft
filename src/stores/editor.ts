@@ -24,6 +24,11 @@ import { AppError } from '~/types/errors'
 import { handleError } from '~/utils/error-handler'
 
 import { createEditorDocumentActions } from './internal/editor-document-actions'
+import {
+  createSceneBufferRevision,
+  createSceneContentChangeToken,
+  getEffectiveSceneBufferContent,
+} from './internal/editor-document-revision'
 import { createEditorDocumentSaveSnapshot, saveEditorDocument } from './internal/editor-document-save'
 import {
   createLoadedDocumentState,
@@ -87,34 +92,6 @@ export type {
 
 const PREVIEW_SYNC_DEDUPE_WINDOW_MS = 160
 const AUTO_SAVE_DEBOUNCE_MS = 500
-const REVISION_HASH_MODULUS = 2 ** 32
-
-function hashRevisionContent(content: string): string {
-  let hash = 0
-  for (const char of content) {
-    hash = Math.trunc(Math.imul(31, hash) + (char.codePointAt(0) ?? 0)) % REVISION_HASH_MODULUS
-  }
-  return hash.toString(16)
-}
-
-function getEffectiveSceneBufferContent(session: EditableEditorSession): string {
-  return session.textState.textSource === 'draft'
-    ? session.textState.textContent
-    : getDocumentTextContent(session.document)
-}
-
-function createSceneBufferRevision(session: EditableEditorSession): string {
-  const content = getEffectiveSceneBufferContent(session)
-  const { document, textState } = session
-  return [
-    document.historyRevision,
-    document.engine.sequenceNumber,
-    document.savedSequenceNumber,
-    textState.textSource,
-    content.length,
-    hashRevisionContent(content),
-  ].join(':')
-}
 
 function sameEngineRuntimeCapabilities(
   current: EngineRuntimeCapabilities,
@@ -203,6 +180,19 @@ export const useEditorStore = defineStore('editor', () => {
     }
 
     return createSceneBufferRevision(session)
+  }
+
+  /**
+   * 内容变更令牌：不遍历内容，供响应式消费者判断内容是否变化。
+   * 外部重构/回滚的并发校验必须用 peekSceneRevision。
+   */
+  function peekSceneContentChangeToken(path: AbsPath): string | undefined {
+    const session = getEditableSession(path)
+    if (!session || session.document.model.kind !== 'scene') {
+      return undefined
+    }
+
+    return createSceneContentChangeToken(session)
   }
 
   function applySystemRefactor(
@@ -886,6 +876,7 @@ export const useEditorStore = defineStore('editor', () => {
     canRedoDocument,
     getDirtyBufferContent,
     peekSceneBuffer,
+    peekSceneContentChangeToken,
     peekSceneRevision,
     readTextDocumentFile,
     applySystemRefactor,
