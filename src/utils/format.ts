@@ -17,3 +17,11 @@ export function formatFileSize(bytes: number): string {
   const value = size < 10 ? size.toFixed(1) : String(Math.round(size))
   return `${value} ${FILE_SIZE_UNITS[unitIndex]}`
 }
+
+/**
+ * 名称与可选版本的展示格式：`${name} ${version}`，没有版本时只返回名称。
+ * 引擎记录、引擎引用（记录不可解析时降级用 id）以及模板来源等需要展示带版本标识的位置共用此规则。
+ */
+export function formatNameWithVersion(name: string, version?: string): string {
+  return version ? `${name} ${version}` : name
+}

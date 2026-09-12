@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { usePreferenceStore } from '~/stores/preference'
+import { formatNameWithVersion } from '~/utils/format'
 
 import type {
   ImportDependencyIssueReason,
@@ -8,7 +9,7 @@ import type {
   ImportEngineDependencyIssue,
   ImportTemplateResolutionResult,
 } from '~/types/import-dependency-resolution'
-import type { EngineRef, TemplateBinding } from '~/types/project-config'
+import type { TemplateBinding } from '~/types/project-config'
 
 let open = $(defineModel<boolean>('open'))
 
@@ -39,11 +40,10 @@ const preferredEngineId = $computed(() =>
   props.context.engine?.current?.id ?? preferenceStore.defaultEngineId,
 )
 
-const engineReference = $computed(() =>
-  props.context.engine?.current
-    ? formatEngineReference(props.context.engine.current)
-    : undefined,
-)
+const engineReference = $computed(() => {
+  const engine = props.context.engine?.current
+  return engine ? formatNameWithVersion(engine.id, engine.version) : undefined
+})
 const templateReference = $computed(() => props.context.template?.displayName)
 const isRuntimeRebind = $computed(() => props.context.purpose === 'runtimeRebind')
 const title = $computed(() =>
@@ -107,10 +107,6 @@ const canConfirm = $computed(() =>
   (!needsEngine || !!selectedEngineId)
   && (!needsTemplate || !!selectedTemplateDecision),
 )
-
-function formatEngineReference(engine: EngineRef) {
-  return engine.version ? `${engine.id} ${engine.version}` : engine.id
-}
 
 function resolveEngineReasonLabel(issue: ImportEngineDependencyIssue | undefined) {
   if (!issue) {

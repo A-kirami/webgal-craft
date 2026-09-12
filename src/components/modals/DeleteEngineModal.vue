@@ -3,6 +3,7 @@ import { TriangleAlert } from '@lucide/vue'
 
 import { useDeleteConfirmation } from '~/composables/useDeleteConfirmation'
 import { engineManager } from '~/services/engine-manager'
+import { formatNameWithVersion } from '~/utils/format'
 
 import type { Engine } from '~/database/model'
 
@@ -15,7 +16,7 @@ const props = defineProps<{
 
 const isUnavailable = $computed(() => props.engine.availability !== 'available')
 const engineDisplayName = $computed(() =>
-  props.engine.version ? `${props.engine.name} ${props.engine.version}` : props.engine.name,
+  formatNameWithVersion(props.engine.name, props.engine.version),
 )
 
 const { associatedGames, isDeleteBlocked, isConfirmDisabled, handleConfirm } =
