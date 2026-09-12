@@ -90,6 +90,8 @@ afterEach(() => {
 
   globalThis.addEventListener = originalAddEventListener
   globalThis.removeEventListener = originalRemoveEventListener
+
+  vi.unstubAllGlobals()
 })
 
 describe('useColorCommit', () => {
