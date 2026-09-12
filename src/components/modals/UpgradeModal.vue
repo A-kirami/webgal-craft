@@ -5,7 +5,7 @@ const open = defineModel<boolean>('open')
 
 <template>
   <Dialog ::open="open">
-    <DialogContent class="sm:max-w-[425px]">
+    <DialogContent class="sm:max-w-[425px]" @open-auto-focus.prevent>
       <DialogHeader>
         <DialogTitle>{{ $t('modals.upgrade.title') }}</DialogTitle>
         <DialogDescription>
