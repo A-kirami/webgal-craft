@@ -417,7 +417,7 @@ describe('PreviewPanel', () => {
     await expect.element(page.getByTestId('preview-connection-status')).toHaveAttribute('data-status', 'failed')
   })
 
-  it('缺少规范入口时只显示错误遮罩，入口恢复后重新挂载预览', async () => {
+  it('缺少规范入口时只显示错误遮罩且不展示连接状态，入口恢复后重新挂载预览', async () => {
     sceneEntryStatusState.status.value = 'missing'
 
     renderInBrowser(PreviewPanel, {
@@ -429,6 +429,7 @@ describe('PreviewPanel', () => {
 
     await expect.element(page.getByTestId('preview-missing-entry-overlay')).toHaveRole('alert')
     expect(document.querySelector('iframe')).toBeNull()
+    expect(document.querySelector('[data-testid="preview-connection-status"]')).toBeNull()
     await expect.element(page.getByTestId('preview-bottom-toolbar')).toBeVisible()
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.zoomOut' })).toBeDisabled()
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.zoomIn' })).toBeDisabled()
@@ -440,10 +441,11 @@ describe('PreviewPanel', () => {
     await nextTick()
 
     await expect.element(page.getByTitle('preview-title::Demo Game')).toBeVisible()
+    await expect.element(page.getByTestId('preview-connection-status')).toHaveAttribute('data-status', 'connecting')
     expect(previewSessionStoreState.reloadVersion).toBeGreaterThan(0)
   })
 
-  it('入口校验期间不显示缺失遮罩，校验通过后挂载预览', async () => {
+  it('入口校验期间不显示缺失遮罩与连接状态，校验通过后挂载预览', async () => {
     sceneEntryStatusState.status.value = 'checking'
 
     renderInBrowser(PreviewPanel, {
@@ -454,10 +456,12 @@ describe('PreviewPanel', () => {
     })
 
     expect(document.querySelector('[data-testid="preview-missing-entry-overlay"]')).toBeNull()
+    expect(document.querySelector('[data-testid="preview-connection-status"]')).toBeNull()
     expect(document.querySelector('iframe')).toBeNull()
 
     sceneEntryStatusState.status.value = 'valid'
     await expect.element(page.getByTitle('preview-title::Demo Game')).toBeVisible()
+    await expect.element(page.getByTestId('preview-connection-status')).toHaveAttribute('data-status', 'connecting')
     expect(previewSessionStoreState.reloadVersion).toBeGreaterThan(0)
   })
 

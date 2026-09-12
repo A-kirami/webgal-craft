@@ -3,7 +3,7 @@ import '~/__tests__/setup'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { usePreferenceStore } from '../preference'
-import { usePreviewSyncStore } from '../preview-sync'
+import { PREVIEW_CONNECTION_REPLY_TIMEOUT_MS, usePreviewSyncStore } from '../preview-sync'
 
 const {
   loggerErrorMock,
@@ -101,6 +101,62 @@ describe('usePreviewSyncStore', () => {
 
     expect(store.isPreviewReady).toBe(false)
     expect(store.connectionStatus).toBe('connecting')
+  })
+
+  it('连接阶段超过答复时限仍未收到协议消息时标记连接失败', async () => {
+    vi.useFakeTimers()
+    const store = usePreviewSyncStore()
+
+    store.resetEmbeddedPreviewState()
+
+    await vi.advanceTimersByTimeAsync(PREVIEW_CONNECTION_REPLY_TIMEOUT_MS - 1)
+    expect(store.connectionStatus).toBe('connecting')
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(store.connectionStatus).toBe('failed')
+  })
+
+  it('连接阶段收到预览端协议答复后不再因超出答复时限标记失败', async () => {
+    vi.useFakeTimers()
+    const store = usePreviewSyncStore()
+
+    store.resetEmbeddedPreviewState()
+    store.consumeHostEvent(JSON.stringify({
+      kind: 'event',
+      type: 'stage.snapshot.updated',
+      payload: {
+        sceneName: 'start.txt',
+        sentenceId: 1,
+        stageState: {
+          showTitle: false,
+        },
+      },
+    }))
+
+    expect(store.connectionStatus).toBe('connected')
+
+    await vi.advanceTimersByTimeAsync(PREVIEW_CONNECTION_REPLY_TIMEOUT_MS)
+    expect(store.connectionStatus).toBe('connected')
+  })
+
+  it('答复超时标记失败后收到迟到的就绪事件会恢复连接状态', async () => {
+    vi.useFakeTimers()
+    const store = usePreviewSyncStore()
+
+    store.resetEmbeddedPreviewState()
+    await vi.advanceTimersByTimeAsync(PREVIEW_CONNECTION_REPLY_TIMEOUT_MS)
+    expect(store.connectionStatus).toBe('failed')
+
+    store.consumeHostEvent(JSON.stringify({
+      kind: 'event',
+      type: 'preview.ready.updated',
+      payload: {
+        ready: true,
+      },
+    }))
+
+    expect(store.connectionStatus).toBe('connected')
+    expect(store.isPreviewReady).toBe(true)
   })
 
   it('消费快速预览超时事件后会记录超时诊断信息', () => {

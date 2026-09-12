@@ -6,7 +6,8 @@ import { usePreferenceStore } from '~/stores/preference'
 import type { PreviewConnectionStatus } from '~/stores/preview-sync'
 
 interface Props {
-  connectionStatus: PreviewConnectionStatus
+  /** 没有可用入口时预览端不会启动，父组件传 undefined 表示不展示连接状态 */
+  connectionStatus?: PreviewConnectionStatus
   previewAvailable: boolean
 }
 
@@ -68,16 +69,30 @@ const statusLabel = $computed(() => {
     case 'failed': {
       return t('edit.previewPanel.connectionFailed')
     }
-    default: {
+    case 'connecting': {
       return t('edit.previewPanel.connecting')
+    }
+    default: {
+      return ''
     }
   }
 })
-const statusDotClass = $computed(() => ({
-  connected: 'bg-emerald-500',
-  connecting: 'bg-blue-500',
-  failed: 'bg-red-500',
-})[props.connectionStatus])
+const statusDotClass = $computed(() => {
+  switch (props.connectionStatus) {
+    case 'connected': {
+      return 'bg-emerald-500'
+    }
+    case 'failed': {
+      return 'bg-red-500'
+    }
+    case 'connecting': {
+      return 'bg-blue-500'
+    }
+    default: {
+      return ''
+    }
+  }
+})
 const volumeButtonLabel = $computed(() => preferenceStore.previewMuted
   ? t('edit.previewPanel.unmute')
   : t('edit.previewPanel.mute'))
@@ -173,6 +188,7 @@ function closeOutputControl(control: PreviewOutputControl): void {
         {{ $t('edit.previewPanel.preview') }}
       </h2>
       <div
+        v-if="connectionStatus"
         role="status"
         aria-live="polite"
         data-testid="preview-connection-status"

@@ -81,6 +81,9 @@ const DEFAULT_REFERENCE_BOX_QUERY_TIMEOUT_MS = 300
 const DEFAULT_TRANSFORM_QUERY_TIMEOUT_MS = 500
 const DEFAULT_PREVIEW_COMMAND_TIMEOUT_MS = 1000
 
+/** 连接阶段等待预览端协议答复的上限，超时即视为连接失败，避免状态停留在连接中 */
+export const PREVIEW_CONNECTION_REPLY_TIMEOUT_MS = 3000
+
 function parseHostMessage(rawEvent: string): PreviewSyncHostMessage | undefined {
   try {
     const parsed = JSON.parse(rawEvent) as unknown
@@ -106,9 +109,34 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
   let fastPreviewTimeout = $ref<FastPreviewTimeoutPayload>()
   let cachedBaseTransform = $ref<BaseTransformQueryResultPayload['baseTransform']>()
   const pendingPreviewResponses = new Map<string, PendingPreviewResponse>()
+  let connectionReplyTimeoutId: ReturnType<typeof setTimeout> | undefined
 
   function cloneCachedBaseTransform(): BaseTransformQueryResultPayload['baseTransform'] | undefined {
     return cachedBaseTransform ? structuredClone(toRaw(cachedBaseTransform)) : undefined
+  }
+
+  function clearConnectionReplyTimeout(): void {
+    if (connectionReplyTimeoutId === undefined) {
+      return
+    }
+
+    clearTimeout(connectionReplyTimeoutId)
+    connectionReplyTimeoutId = undefined
+  }
+
+  function armConnectionReplyTimeout(): void {
+    clearConnectionReplyTimeout()
+    connectionReplyTimeoutId = setTimeout(() => {
+      connectionReplyTimeoutId = undefined
+      connectionStatus = 'failed'
+      logger.warn(`预览端在 ${PREVIEW_CONNECTION_REPLY_TIMEOUT_MS}ms 内未答复预览协议消息，视为连接失败`)
+    }, PREVIEW_CONNECTION_REPLY_TIMEOUT_MS)
+  }
+
+  // 预览端答复任何协议消息都说明通信通道可用；就绪标记仍只由 preview.ready.updated 决定
+  function confirmPreviewProtocolReply(): void {
+    clearConnectionReplyTimeout()
+    connectionStatus = 'connected'
   }
 
   function isRecord(value: unknown): value is Record<string, unknown> {
@@ -188,21 +216,24 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
             return
           }
 
-          resetEmbeddedPreviewState()
+          resetPreviewState()
+          clearConnectionReplyTimeout()
           connectionStatus = 'failed'
           return
         }
 
         isPreviewReady = message.payload.ready
-        connectionStatus = 'connected'
+        confirmPreviewProtocolReply()
         return
       }
       case 'stage.snapshot.updated': {
         stageSnapshot = message.payload
+        confirmPreviewProtocolReply()
         return
       }
       case 'preview.event.fast-preview-timeout': {
         fastPreviewTimeout = message.payload
+        confirmPreviewProtocolReply()
         logger.debug(
           `实时预览快进超时: scene=${message.payload.sceneName}, target=${message.payload.targetSentenceId}, stopped=${message.payload.sentenceId}, forwarded=${message.payload.forwardedLineCount}, elapsed=${message.payload.elapsedMs}/${message.payload.maxDurationMs}ms`,
         )
@@ -214,13 +245,18 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
     }
   }
 
-  function resetEmbeddedPreviewState() {
+  function resetPreviewState(): void {
     isPreviewReady = false
-    connectionStatus = 'connecting'
     stageSnapshot = undefined
     fastPreviewTimeout = undefined
     cachedBaseTransform = undefined
     settlePendingPreviewResponses(PREVIEW_STATE_RESET_REASON)
+  }
+
+  function resetEmbeddedPreviewState(): void {
+    resetPreviewState()
+    connectionStatus = 'connecting'
+    armConnectionReplyTimeout()
   }
 
   function consumePreviewResponse(message: ResponseEnvelopeByType<PreviewResponseType>): void {
@@ -231,6 +267,7 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
 
     pendingPreviewResponses.delete(message.requestId)
     clearTimeout(pending.timeoutId)
+    confirmPreviewProtocolReply()
     pending.settleResponse(message)
   }
 
@@ -242,6 +279,7 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
 
     pendingPreviewResponses.delete(message.requestId)
     clearTimeout(pending.timeoutId)
+    confirmPreviewProtocolReply()
     pending.settleFailure(message.error.message ?? message.error.code)
   }
 

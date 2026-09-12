@@ -61,7 +61,11 @@ const hasPreviewUrl = $computed(() => !!previewSessionStore.currentGameServeUrl)
 const hasValidEntryPoint = $computed(() => sceneEntryStatus.status.value === 'valid')
 const hasMissingEntryPoint = $computed(() => sceneEntryStatus.status.value === 'missing')
 const canPreview = $computed(() => hasPreviewUrl && hasValidEntryPoint)
-const previewConnectionStatus = $computed((): PreviewConnectionStatus => {
+const previewConnectionStatus = $computed((): PreviewConnectionStatus | undefined => {
+  // 入口不可用时预览端不会启动，连接状态没有可展示的语义，交由缺少入口遮罩说明
+  if (!hasValidEntryPoint) {
+    return undefined
+  }
   if (previewSessionStore.serveStatus === 'failed') {
     return 'failed'
   }
