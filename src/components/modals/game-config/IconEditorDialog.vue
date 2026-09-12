@@ -293,7 +293,7 @@ const previewItems = $computed((): PreviewItem[] => [
               >
                 <article
                   v-for="preview in previewItems"
-                  :key="`${preview.key}-${previewVersion}`"
+                  :key="preview.key"
                   class="flex max-w-[clamp(8rem,22vh,11rem)] min-w-0 w-full items-center"
                   data-testid="icon-editor-preview-item"
                 >
@@ -309,6 +309,7 @@ const previewItems = $computed((): PreviewItem[] => [
                         :state="state"
                         :kind="preview.key"
                         :label="preview.label"
+                        :version="previewVersion"
                         class="size-full"
                       />
                     </div>
