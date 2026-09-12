@@ -22,16 +22,21 @@ export function useEditorDiagnostics(): void {
   // 各标签页已发布诊断对应的内容令牌；watcher 整体触发时跳过令牌未变的文档
   const publishedTokens = new Map<AbsPath, string>()
 
-  function readDiagnosticsToken(path: AbsPath): string {
+  function readDiagnosticsToken(path: AbsPath): { skippable: boolean, token: string } {
     const textProjection = editorStore.getTextProjectionState(path)
     const visualProjection = editorStore.getVisualProjectionState(path)
-    return [
-      editorStore.peekSceneContentChangeToken(path) ?? '',
-      textProjection?.kind ?? '',
-      textProjection?.syncError ?? '',
-      textProjection?.textContent.length ?? '',
-      visualProjection?.kind ?? '',
-    ].join('|')
+    const sceneContentToken = editorStore.peekSceneContentChangeToken(path)
+    return {
+      // 场景文档的内容变更必然替换 model 并推进令牌，可以按令牌跳过；
+      // 动画草稿这类内容变化不落事务、令牌反映不了，必须每次触发都重算
+      skippable: sceneContentToken !== undefined,
+      token: [
+        sceneContentToken ?? '',
+        textProjection?.kind ?? '',
+        textProjection?.syncError ?? '',
+        visualProjection?.kind ?? '',
+      ].join('|'),
+    }
   }
 
   function publishOpenDocumentDiagnostics(options: PublishDiagnosticsOptions = {}): void {
@@ -44,8 +49,8 @@ export function useEditorDiagnostics(): void {
     }
 
     for (const tab of tabsStore.tabs) {
-      const token = readDiagnosticsToken(tab.path)
-      if (!options.force && publishedTokens.get(tab.path) === token) {
+      const { skippable, token } = readDiagnosticsToken(tab.path)
+      if (!options.force && skippable && publishedTokens.get(tab.path) === token) {
         continue
       }
       publishedTokens.set(tab.path, token)

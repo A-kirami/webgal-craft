@@ -328,6 +328,46 @@ describe('useEditorDiagnostics', () => {
     scope.stop()
   })
 
+  it('没有场景内容令牌的文档（动画草稿）等长编辑后仍重新发布诊断', async () => {
+    const path = AbsPath.from('/game/animation/story.json')
+    const diagnosticsStore = {
+      invalidateSource: vi.fn(),
+      publish: vi.fn(),
+    }
+    const textProjection = reactive({
+      kind: 'animation' as const,
+      syncError: 'invalid-animation-json' as const,
+      textContent: '{invalid',
+    })
+
+    useEditorDiagnosticsStoreMock.mockReturnValue(diagnosticsStore)
+    useEditorStoreMock.mockReturnValue({
+      getTextProjectionState: () => textProjection,
+      getVisualProjectionState: () => undefined,
+      peekSceneContentChangeToken: () => undefined,
+    })
+    useResourceIndexMock.mockReturnValue({
+      hasAssetKey: vi.fn(() => false),
+      revision: shallowRef(0),
+      status: shallowRef('ready'),
+    })
+    useTabsStoreMock.mockReturnValue(reactive({ tabs: [{ path }] }))
+
+    const scope = effectScope()
+    scope.run(useEditorDiagnostics)
+    expect(diagnosticsStore.publish).toHaveBeenLastCalledWith(path, [
+      expect.objectContaining({ code: 'invalid-animation-json' }),
+    ])
+    diagnosticsStore.publish.mockClear()
+
+    // 等长替换：除内容本身外没有任何字段变化
+    textProjection.textContent = '{invaliX'
+    await nextTick()
+
+    expect(diagnosticsStore.publish).toHaveBeenCalledTimes(1)
+    scope.stop()
+  })
+
   it('资源索引变化时令牌未变也强制重算所有打开文档', async () => {
     const firstPath = AbsPath.from('/game/scene/first.txt')
     const secondPath = AbsPath.from('/game/scene/second.txt')
