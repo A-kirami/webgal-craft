@@ -111,7 +111,10 @@ function parseStatementSourceRanges(
  * 解析全文，并保留每条逻辑语句在原始文本中的行范围。
  *
  * 解析器会为续行生成占位语句以保持物理行数量；这里排除占位语句，
- * 再以解析器给出的范围截取原始行，保留用户的缩进与换行格式。
+ * 再以解析器给出的范围截取原始行，保留用户的缩进与语句内换行。
+ *
+ * 行尾统一成 LF 后解析与比较：调用方拿到的文本行尾并不一致（Monaco 原样文本是 CRLF，
+ * 逐行截取后拼回来的却是 LF），统一后同一份文本只解析一次；写回时由文档 metadata 还原。
  *
  * 返回值由多个调用方共享，必须视为只读。
  */
@@ -119,16 +122,17 @@ export function buildStatementSourceRanges(
   text: string,
   capabilities?: StatementSyntaxCapabilities,
 ): StatementSourceRange[] {
+  const normalizedText = text.includes('\r') ? text.replaceAll('\r\n', '\n') : text
   const capabilitiesKey = createSyntaxCapabilitiesKey(capabilities)
 
   for (const entry of sourceRangesCache) {
-    if (entry.text === text && entry.capabilitiesKey === capabilitiesKey) {
+    if (entry.text === normalizedText && entry.capabilitiesKey === capabilitiesKey) {
       return entry.ranges
     }
   }
 
-  const ranges = parseStatementSourceRanges(text, capabilities)
-  sourceRangesCache.unshift({ capabilitiesKey, ranges, text })
+  const ranges = parseStatementSourceRanges(normalizedText, capabilities)
+  sourceRangesCache.unshift({ capabilitiesKey, ranges, text: normalizedText })
   sourceRangesCache.length = Math.min(sourceRangesCache.length, SOURCE_RANGES_CACHE_LIMIT)
   return ranges
 }

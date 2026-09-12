@@ -260,6 +260,15 @@ describe('sentence', () => {
     expect(first.map(range => range.rawText)).toEqual(['Alice:hello;', 'Bob:world;'])
   })
 
+  it('行尾不同的同一份文本共享解析结果', () => {
+    const lf = ['Alice:hello;', 'Bob:world;'].join('\n')
+    const first = buildStatementSourceRanges(lf, LATEST_ENGINE_RUNTIME_CAPABILITIES)
+    const second = buildStatementSourceRanges(lf.replaceAll('\n', '\r\n'), LATEST_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(second).toBe(first)
+    expect(first.map(range => range.rawText)).toEqual(['Alice:hello;', 'Bob:world;'])
+  })
+
   it('语法能力不同的整篇解析结果不共用缓存', () => {
     const raw = ['changeFigure:hero.png', '  -id=hero -left;'].join('\n')
 
