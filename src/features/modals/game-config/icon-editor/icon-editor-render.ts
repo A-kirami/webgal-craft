@@ -18,6 +18,11 @@ export type IconPreviewKind =
 export interface IconRenderOptions {
   kind: IconPreviewKind
   size: number
+  /**
+   * 组合画布的分辨率，默认按导出分辨率 {@link ICON_EDITOR_CANVAS_SIZE}。
+   * 预览按显示尺寸取值即可：画布成本随面积下降，颜色/变换调整不必按导出分辨率重算。
+   */
+  sourceSize?: number
 }
 
 interface IconClipOptions {
@@ -56,6 +61,50 @@ function get2dContext(canvas: HTMLCanvasElement | OffscreenCanvas): CanvasRender
     throw new Error('无法创建图标画布')
   }
   return context
+}
+
+type RenderContext = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
+
+interface RenderTarget {
+  canvas: HTMLCanvasElement | OffscreenCanvas
+  context: RenderContext
+}
+
+/**
+ * 一次渲染要经过组合、裁剪、缩放多个中间画布；预览还会连续渲染多个变体。
+ * 复用这些画布可以省掉重复的分配与取上下文（实测占单次预览渲染的大头），
+ * 每次取用时按角色清空，语义与新建画布一致。
+ */
+export type IconRenderScratch = Map<string, RenderTarget>
+
+export function createIconRenderScratch(): IconRenderScratch {
+  return new Map()
+}
+
+function acquireRenderTarget(
+  scratch: IconRenderScratch | undefined,
+  role: string,
+  width: number,
+  height = width,
+): RenderTarget {
+  const targetWidth = Math.max(1, Math.round(width))
+  const targetHeight = Math.max(1, Math.round(height))
+  if (!scratch) {
+    const canvas = createCanvas(targetWidth, targetHeight)
+    return { canvas, context: get2dContext(canvas) }
+  }
+
+  const key = `${role}:${targetWidth}x${targetHeight}`
+  const existing = scratch.get(key)
+  if (existing) {
+    existing.context.clearRect(0, 0, targetWidth, targetHeight)
+    return existing
+  }
+
+  const canvas = createCanvas(targetWidth, targetHeight)
+  const target: RenderTarget = { canvas, context: get2dContext(canvas) }
+  scratch.set(key, target)
+  return target
 }
 
 function getSourceSize(image: HTMLImageElement): { height: number, width: number } {
@@ -120,6 +169,7 @@ function drawCenteredImage(
   source: IconEditorImageSource,
   offsetRatio: IconEditorOffsetRatio,
   scale: number,
+  baseSize: number,
 ) {
   const { height, width } = getSourceSize(source.image)
   if (width <= 0 || height <= 0) {
@@ -127,10 +177,10 @@ function drawCenteredImage(
   }
 
   const imageAspectRatio = width / height
-  const targetWidth = (imageAspectRatio > 1 ? ICON_EDITOR_CANVAS_SIZE : ICON_EDITOR_CANVAS_SIZE * imageAspectRatio) * scale
-  const targetHeight = (imageAspectRatio > 1 ? ICON_EDITOR_CANVAS_SIZE / imageAspectRatio : ICON_EDITOR_CANVAS_SIZE) * scale
-  const targetX = (ICON_EDITOR_CANVAS_SIZE - targetWidth) / 2 + offsetRatio.x * ICON_EDITOR_CANVAS_SIZE
-  const targetY = (ICON_EDITOR_CANVAS_SIZE - targetHeight) / 2 + offsetRatio.y * ICON_EDITOR_CANVAS_SIZE
+  const targetWidth = (imageAspectRatio > 1 ? baseSize : baseSize * imageAspectRatio) * scale
+  const targetHeight = (imageAspectRatio > 1 ? baseSize / imageAspectRatio : baseSize) * scale
+  const targetX = (baseSize - targetWidth) / 2 + offsetRatio.x * baseSize
+  const targetY = (baseSize - targetHeight) / 2 + offsetRatio.y * baseSize
 
   context.drawImage(source.image, targetX, targetY, targetWidth, targetHeight)
 }
@@ -138,31 +188,34 @@ function drawCenteredImage(
 function drawComposedIcon(
   context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   state: IconEditorState,
+  baseSize: number,
 ) {
-  context.clearRect(0, 0, ICON_EDITOR_CANVAS_SIZE, ICON_EDITOR_CANVAS_SIZE)
+  context.clearRect(0, 0, baseSize, baseSize)
 
   if (state.backgroundType === 'image' && state.backgroundImage) {
-    drawCenteredImage(context, state.backgroundImage, state.backgroundOffsetRatio, state.backgroundScale)
+    drawCenteredImage(context, state.backgroundImage, state.backgroundOffsetRatio, state.backgroundScale, baseSize)
   } else {
     context.fillStyle = state.backgroundColor
-    context.fillRect(0, 0, ICON_EDITOR_CANVAS_SIZE, ICON_EDITOR_CANVAS_SIZE)
+    context.fillRect(0, 0, baseSize, baseSize)
   }
 
   if (state.foregroundImage) {
-    drawCenteredImage(context, state.foregroundImage, state.foregroundOffsetRatio, state.foregroundScale)
+    drawCenteredImage(context, state.foregroundImage, state.foregroundOffsetRatio, state.foregroundScale, baseSize)
   }
 }
 
 function clipToCanvas(
   sourceCanvas: HTMLCanvasElement | OffscreenCanvas,
   options: IconClipOptions,
+  scratch: IconRenderScratch | undefined,
 ): HTMLCanvasElement | OffscreenCanvas {
   const insetWidth = sourceCanvas.width * options.inset
   const insetHeight = sourceCanvas.height * options.inset
   const clippedWidth = sourceCanvas.width - insetWidth * 2
   const clippedHeight = sourceCanvas.height - insetHeight * 2
-  const clippedCanvas = createCanvas(clippedWidth, clippedHeight)
-  const clippedContext = get2dContext(clippedCanvas)
+  const clippedTarget = acquireRenderTarget(scratch, 'clip', clippedWidth, clippedHeight)
+  const clippedCanvas = clippedTarget.canvas
+  const clippedContext = clippedTarget.context
 
   clippedContext.imageSmoothingEnabled = true
   clippedContext.imageSmoothingQuality = 'high'
@@ -191,23 +244,21 @@ function clipToCanvas(
     return clippedCanvas
   }
 
-  const paddedCanvas = createCanvas(sourceCanvas.width, sourceCanvas.height)
-  const paddedContext = get2dContext(paddedCanvas)
+  const paddedTarget = acquireRenderTarget(scratch, 'padded', sourceCanvas.width, sourceCanvas.height)
+  const paddedContext = paddedTarget.context
   paddedContext.imageSmoothingEnabled = true
   paddedContext.imageSmoothingQuality = 'high'
   paddedContext.drawImage(clippedCanvas, insetWidth, insetHeight)
-  return paddedCanvas
+  return paddedTarget.canvas
 }
 
 function createPreviewCanvas(
   sourceCanvas: HTMLCanvasElement | OffscreenCanvas,
+  maskableCanvas: HTMLCanvasElement | OffscreenCanvas,
   kind: IconPreviewKind,
   shape: IconEditorShape,
+  scratch: IconRenderScratch | undefined,
 ): HTMLCanvasElement | OffscreenCanvas {
-  const maskableCanvas = clipToCanvas(sourceCanvas, {
-    inset: CLIP_INSET.main,
-    shape: 'square',
-  })
   const roundedClipRadius = resolveRoundedClipRadius(maskableCanvas)
 
   switch (kind) {
@@ -220,28 +271,28 @@ function createPreviewCanvas(
         preservePadding: true,
         radius: roundedClipRadius,
         shape: 'rounded',
-      })
+      }, scratch)
     }
     case 'android-round': {
       return clipToCanvas(maskableCanvas, {
         inset: CLIP_INSET.android.round,
         preservePadding: true,
         shape: 'circle',
-      })
+      }, scratch)
     }
     case 'desktop': {
       return clipToCanvas(maskableCanvas, {
         inset: CLIP_INSET.desktop,
         radius: roundedClipRadius,
         shape,
-      })
+      }, scratch)
     }
     case 'web': {
       return clipToCanvas(maskableCanvas, {
         inset: CLIP_INSET.web,
         radius: roundedClipRadius,
         shape,
-      })
+      }, scratch)
     }
     case 'web-maskable': {
       return maskableCanvas
@@ -253,15 +304,84 @@ function createPreviewCanvas(
   }
 }
 
-export function renderIconCanvas(state: IconEditorState, options: IconRenderOptions): HTMLCanvasElement | OffscreenCanvas {
-  const sourceCanvas = createCanvas(ICON_EDITOR_CANVAS_SIZE)
-  const sourceContext = get2dContext(sourceCanvas)
-  drawComposedIcon(sourceContext, state)
-  const previewCanvas = createPreviewCanvas(sourceCanvas, options.kind, state.iconShape)
+function createMaskableCanvas(
+  sourceCanvas: HTMLCanvasElement | OffscreenCanvas,
+  scratch: IconRenderScratch | undefined,
+): HTMLCanvasElement | OffscreenCanvas {
+  return clipToCanvas(sourceCanvas, {
+    inset: CLIP_INSET.main,
+    shape: 'square',
+  }, scratch)
+}
 
-  const outputCanvas = createCanvas(options.size)
-  get2dContext(outputCanvas).drawImage(previewCanvas, 0, 0, options.size, options.size)
-  return outputCanvas
+export function renderIconCanvas(
+  state: IconEditorState,
+  options: IconRenderOptions,
+): HTMLCanvasElement | OffscreenCanvas {
+  const baseSize = options.sourceSize ?? ICON_EDITOR_CANVAS_SIZE
+  const sourceTarget = acquireRenderTarget(undefined, 'source', baseSize)
+  drawComposedIcon(sourceTarget.context, state, baseSize)
+  const maskableCanvas = createMaskableCanvas(sourceTarget.canvas, undefined)
+  const previewCanvas = createPreviewCanvas(sourceTarget.canvas, maskableCanvas, options.kind, state.iconShape, undefined)
+
+  const outputTarget = acquireRenderTarget(undefined, 'output', options.size)
+  outputTarget.context.drawImage(previewCanvas, 0, 0, options.size, options.size)
+  return outputTarget.canvas
+}
+
+/** 同一次改动的多个预览变体共用的组合结果 */
+interface IconPreviewComposition {
+  maskableCanvas: HTMLCanvasElement | OffscreenCanvas
+  revision: number
+  sourceCanvas: HTMLCanvasElement | OffscreenCanvas
+  sourceSize: number
+}
+
+let previewComposition: IconPreviewComposition | undefined
+
+export interface IconPreviewRenderOptions {
+  kind: IconPreviewKind
+  /** 每次改动递增，用于判断能否复用上一次的组合结果 */
+  revision: number
+  size: number
+  sourceSize?: number
+  scratch?: IconRenderScratch
+}
+
+/**
+ * 预览渲染：一次改动会渲染多个变体（不同裁剪方式），组合与主安全区裁剪对所有变体相同。
+ * 按 revision 复用这两步，只让各变体做自己那一段裁剪与缩放。
+ */
+export function renderIconPreviewCanvas(
+  state: IconEditorState,
+  options: IconPreviewRenderOptions,
+): HTMLCanvasElement | OffscreenCanvas {
+  const sourceSize = options.sourceSize ?? ICON_EDITOR_CANVAS_SIZE
+  if (
+    !previewComposition
+    || previewComposition.revision !== options.revision
+    || previewComposition.sourceSize !== sourceSize
+  ) {
+    const sourceTarget = acquireRenderTarget(options.scratch, 'source', sourceSize)
+    drawComposedIcon(sourceTarget.context, state, sourceSize)
+    previewComposition = {
+      maskableCanvas: createMaskableCanvas(sourceTarget.canvas, options.scratch),
+      revision: options.revision,
+      sourceCanvas: sourceTarget.canvas,
+      sourceSize,
+    }
+  }
+
+  const previewCanvas = createPreviewCanvas(
+    previewComposition.sourceCanvas,
+    previewComposition.maskableCanvas,
+    options.kind,
+    state.iconShape,
+    options.scratch,
+  )
+  const outputTarget = acquireRenderTarget(options.scratch, 'output', options.size)
+  outputTarget.context.drawImage(previewCanvas, 0, 0, options.size, options.size)
+  return outputTarget.canvas
 }
 
 export function renderIconSourceSnapshotCanvas(source: IconEditorImageSource): HTMLCanvasElement | OffscreenCanvas {

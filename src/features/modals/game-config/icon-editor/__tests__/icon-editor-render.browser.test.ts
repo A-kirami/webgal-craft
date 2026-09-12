@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { renderIconCanvas } from '../icon-editor-render'
+import { renderIconCanvas, renderIconPreviewCanvas } from '../icon-editor-render'
 import { createDefaultIconEditorState } from '../icon-editor-state'
 
 import type { IconEditorImageSource } from '../icon-editor-state'
@@ -190,5 +190,52 @@ describe('renderIconCanvas', () => {
 
     expect(readAlpha(canvas, 1, 48)).toBe(0)
     expect(readAlpha(canvas, 6, 48)).toBe(255)
+  })
+
+  it('降低组合画布分辨率不改动构图，只影响采样精度', () => {
+    const state = createDefaultIconEditorState()
+    state.foregroundImage = createWideImageSource()
+    state.iconShape = 'square'
+
+    const canvas = renderIconCanvas(state, {
+      kind: 'android-full-bleed',
+      size: 64,
+      sourceSize: 384,
+    })
+
+    expect(canvas.width).toBe(64)
+    expect(canvas.height).toBe(64)
+    // 长边适配：上下留白仍是底色，左右中段仍是前景图
+    expect(readPixel(canvas, 0, 0)).toEqual(new Uint8ClampedArray([255, 255, 255, 255]))
+    expect(readAlpha(canvas, 0, 32)).toBe(255)
+    expect(readAlpha(canvas, 32, 32)).toBe(255)
+    expect(readPixel(canvas, 63, 63)).toEqual(new Uint8ClampedArray([255, 255, 255, 255]))
+  })
+
+  it('预览变体按 revision 复用组合结果，递增后才反映新状态', () => {
+    const state = createDefaultIconEditorState()
+
+    const first = renderIconPreviewCanvas(state, { kind: 'android-full-bleed', revision: 1, size: 8, sourceSize: 32 })
+    expect(readPixel(first, 0, 0)).toEqual(new Uint8ClampedArray([255, 255, 255, 255]))
+
+    // 不递增 revision：组合结果被复用，改动要等下一次 revision 才可见
+    state.backgroundColor = '#FF0000'
+    const reused = renderIconPreviewCanvas(state, { kind: 'android-full-bleed', revision: 1, size: 8, sourceSize: 32 })
+    expect(readPixel(reused, 0, 0)).toEqual(new Uint8ClampedArray([255, 255, 255, 255]))
+
+    const recomposed = renderIconPreviewCanvas(state, { kind: 'android-full-bleed', revision: 2, size: 8, sourceSize: 32 })
+    expect(readPixel(recomposed, 0, 0)).toEqual(new Uint8ClampedArray([255, 0, 0, 255]))
+  })
+
+  it('预览路径的裁剪变体共用主安全区裁剪', () => {
+    const state = createDefaultIconEditorState()
+    state.foregroundImage = createSolidImageSource()
+
+    const round = renderIconPreviewCanvas(state, { kind: 'android-round', revision: 3, size: 96, sourceSize: 384 })
+    const maskable = renderIconPreviewCanvas(state, { kind: 'web-maskable', revision: 3, size: 96, sourceSize: 384 })
+
+    expect(readAlpha(round, 1, 48)).toBe(0)
+    expect(readAlpha(round, 48, 48)).toBe(255)
+    expect(readAlpha(maskable, 48, 48)).toBe(255)
   })
 })

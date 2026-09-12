@@ -5,8 +5,9 @@ import { createDefaultIconEditorState } from '~/features/modals/game-config/icon
 
 import IconEditorPreviewCanvas from './IconEditorPreviewCanvas.vue'
 
-const { renderIconCanvasMock } = vi.hoisted(() => ({
+const { renderIconCanvasMock, renderIconPreviewCanvasMock } = vi.hoisted(() => ({
   renderIconCanvasMock: vi.fn(() => document.createElement('canvas')),
+  renderIconPreviewCanvasMock: vi.fn(() => document.createElement('canvas')),
 }))
 
 vi.mock('~/features/modals/game-config/icon-editor/icon-editor-render', async () => {
@@ -17,6 +18,7 @@ vi.mock('~/features/modals/game-config/icon-editor/icon-editor-render', async ()
   return {
     ...actual,
     renderIconCanvas: renderIconCanvasMock,
+    renderIconPreviewCanvas: renderIconPreviewCanvasMock,
   }
 })
 
@@ -28,6 +30,7 @@ describe('IconEditorPreviewCanvas', () => {
     nextFrameId = 0
     scheduledFrames = []
     renderIconCanvasMock.mockClear()
+    renderIconPreviewCanvasMock.mockClear()
     vi.stubGlobal('requestAnimationFrame', vi.fn((callback: FrameRequestCallback) => {
       scheduledFrames.push(callback)
       nextFrameId += 1
@@ -54,10 +57,10 @@ describe('IconEditorPreviewCanvas', () => {
     const result = await renderInBrowser(Harness)
 
     expect(scheduledFrames).toHaveLength(1)
-    expect(renderIconCanvasMock).not.toHaveBeenCalled()
+    expect(renderIconPreviewCanvasMock).not.toHaveBeenCalled()
 
     scheduledFrames.shift()?.(performance.now())
-    expect(renderIconCanvasMock).toHaveBeenCalledOnce()
+    expect(renderIconPreviewCanvasMock).toHaveBeenCalledOnce()
 
     state.foregroundScale = 1.25
     state.foregroundOffsetRatio = { x: 0.1, y: 0.2 }
@@ -66,8 +69,58 @@ describe('IconEditorPreviewCanvas', () => {
     expect(scheduledFrames).toHaveLength(1)
 
     scheduledFrames.shift()?.(performance.now())
-    expect(renderIconCanvasMock).toHaveBeenCalledTimes(2)
+    expect(renderIconPreviewCanvasMock).toHaveBeenCalledTimes(2)
 
     await result.unmount()
+  })
+
+  it('按预览显示尺寸组合画布，不按导出分辨率重算', async () => {
+    const state = reactive(createDefaultIconEditorState())
+    const Harness = defineComponent({
+      setup() {
+        return () => h(IconEditorPreviewCanvas, {
+          kind: 'web',
+          label: 'preview',
+          state,
+        })
+      },
+    })
+    await renderInBrowser(Harness)
+
+    scheduledFrames.shift()?.(performance.now())
+
+    expect(renderIconPreviewCanvasMock).toHaveBeenCalledWith(state, expect.objectContaining({
+      kind: 'web',
+      size: 192,
+      sourceSize: 384,
+    }))
+  })
+
+  it('版本号变化触发重绘而不重建画布', async () => {
+    const state = reactive(createDefaultIconEditorState())
+    const version = ref(0)
+    const Harness = defineComponent({
+      setup() {
+        return () => h(IconEditorPreviewCanvas, {
+          kind: 'web',
+          label: 'preview',
+          state,
+          version: version.value,
+        })
+      },
+    })
+    const result = await renderInBrowser(Harness)
+
+    scheduledFrames.shift()?.(performance.now())
+    expect(renderIconPreviewCanvasMock).toHaveBeenCalledOnce()
+    const canvas = result.container.querySelector('canvas')
+
+    // 载入还原这类改动不经过响应式 state，靠版本号触发重绘；画布节点必须复用，否则每次更新都重建
+    version.value = 1
+    await nextTick()
+    scheduledFrames.shift()?.(performance.now())
+
+    expect(renderIconPreviewCanvasMock).toHaveBeenCalledTimes(2)
+    expect(result.container.querySelector('canvas')).toBe(canvas)
   })
 })
