@@ -3,13 +3,15 @@ import '~/__tests__/setup'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { usePreferenceStore } from '../preference'
-import { usePreviewSyncStore } from '../preview-sync'
+import { PREVIEW_CONNECTION_REPLY_TIMEOUT_MS, usePreviewSyncStore } from '../preview-sync'
 
 const {
   loggerErrorMock,
+  loggerWarnMock,
   sendPreviewCommandMock,
 } = vi.hoisted(() => ({
   loggerErrorMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
   sendPreviewCommandMock: vi.fn(),
 }))
 
@@ -22,12 +24,13 @@ vi.mock('~/commands/server', () => ({
 vi.mock('@tauri-apps/plugin-log', () => ({
   debug: vi.fn(),
   error: loggerErrorMock,
-  warn: vi.fn(),
+  warn: loggerWarnMock,
 }))
 
 describe('usePreviewSyncStore', () => {
   beforeEach(() => {
     loggerErrorMock.mockReset()
+    loggerWarnMock.mockReset()
     sendPreviewCommandMock.mockReset()
     vi.useRealTimers()
   })
@@ -101,6 +104,116 @@ describe('usePreviewSyncStore', () => {
 
     expect(store.isPreviewReady).toBe(false)
     expect(store.connectionStatus).toBe('connecting')
+  })
+
+  it('没有启动预览时重置不会开启答复时限', async () => {
+    vi.useFakeTimers()
+    const store = usePreviewSyncStore()
+
+    store.resetEmbeddedPreviewState()
+
+    await vi.advanceTimersByTimeAsync(PREVIEW_CONNECTION_REPLY_TIMEOUT_MS)
+    expect(store.connectionStatus).toBe('connecting')
+    expect(loggerWarnMock).not.toHaveBeenCalled()
+  })
+
+  it('连接阶段超过答复时限仍未收到协议消息时标记连接失败', async () => {
+    vi.useFakeTimers()
+    const store = usePreviewSyncStore()
+
+    store.startEmbeddedPreviewConnection()
+
+    await vi.advanceTimersByTimeAsync(PREVIEW_CONNECTION_REPLY_TIMEOUT_MS - 1)
+    expect(store.connectionStatus).toBe('connecting')
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(store.connectionStatus).toBe('failed')
+    expect(loggerWarnMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('连接阶段收到预览端协议答复后不再因超出答复时限标记失败', async () => {
+    vi.useFakeTimers()
+    const store = usePreviewSyncStore()
+
+    store.startEmbeddedPreviewConnection()
+    store.consumeHostEvent(JSON.stringify({
+      kind: 'event',
+      type: 'stage.snapshot.updated',
+      payload: {
+        sceneName: 'start.txt',
+        sentenceId: 1,
+        stageState: {
+          showTitle: false,
+        },
+      },
+    }))
+
+    expect(store.connectionStatus).toBe('connected')
+
+    await vi.advanceTimersByTimeAsync(PREVIEW_CONNECTION_REPLY_TIMEOUT_MS)
+    expect(store.connectionStatus).toBe('connected')
+  })
+
+  it('答复超时标记失败后收到迟到的就绪事件会恢复连接状态', async () => {
+    vi.useFakeTimers()
+    const store = usePreviewSyncStore()
+
+    store.startEmbeddedPreviewConnection()
+    await vi.advanceTimersByTimeAsync(PREVIEW_CONNECTION_REPLY_TIMEOUT_MS)
+    expect(store.connectionStatus).toBe('failed')
+
+    store.consumeHostEvent(JSON.stringify({
+      kind: 'event',
+      type: 'preview.ready.updated',
+      payload: {
+        ready: true,
+      },
+    }))
+
+    expect(store.connectionStatus).toBe('connected')
+    expect(store.isPreviewReady).toBe(true)
+  })
+
+  it('答复超时后收到不匹配的合法响应会恢复连接状态', async () => {
+    vi.useFakeTimers()
+    const store = usePreviewSyncStore()
+
+    store.startEmbeddedPreviewConnection()
+    await vi.advanceTimersByTimeAsync(PREVIEW_CONNECTION_REPLY_TIMEOUT_MS)
+    expect(store.connectionStatus).toBe('failed')
+
+    store.consumeHostEvent(JSON.stringify({
+      kind: 'response',
+      type: 'preview.query.reference-box',
+      requestId: 'already-timed-out-request',
+      payload: {
+        target: 'fig-center',
+        status: 'unsupported',
+      },
+    }))
+
+    expect(store.connectionStatus).toBe('connected')
+  })
+
+  it('答复超时后收到不匹配的合法错误答复会恢复连接状态', async () => {
+    vi.useFakeTimers()
+    const store = usePreviewSyncStore()
+
+    store.startEmbeddedPreviewConnection()
+    await vi.advanceTimersByTimeAsync(PREVIEW_CONNECTION_REPLY_TIMEOUT_MS)
+    expect(store.connectionStatus).toBe('failed')
+
+    store.consumeHostEvent(JSON.stringify({
+      kind: 'error',
+      type: 'preview.query.transform-baseline',
+      requestId: 'already-timed-out-request',
+      error: {
+        code: 'unsupported-request-type',
+        message: 'transform baseline query is not supported',
+      },
+    }))
+
+    expect(store.connectionStatus).toBe('connected')
   })
 
   it('消费快速预览超时事件后会记录超时诊断信息', () => {

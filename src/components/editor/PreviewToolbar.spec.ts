@@ -80,6 +80,22 @@ describe('PreviewToolbar', () => {
     expect(document.querySelector('[role="status"] .animate-ping')).not.toBeNull()
   })
 
+  it('未提供连接状态时只显示标题', async () => {
+    renderInBrowser(PreviewToolbar, {
+      props: {
+        connectionStatus: undefined,
+        previewAvailable: true,
+      },
+      global: {
+        plugins: [createBrowserLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('heading', { name: 'edit.previewPanel.preview' })).toBeVisible()
+    expect(document.querySelector('[data-testid="preview-connection-status"]')).toBeNull()
+  })
+
   it('点击音量和亮度按钮切换对应偏好', async () => {
     const rendered = renderToolbar('connected')
     const preferenceStore = usePreferenceStore(rendered.pinia)
