@@ -177,7 +177,6 @@ export default defineConfig({
             'dayjs/plugin/relativeTime',
             'dexie',
             'sanitize-filename',
-            'vue-color',
           ],
         },
       },

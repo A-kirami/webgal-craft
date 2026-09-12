@@ -427,9 +427,10 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               :id="controls.colorControlId(item.param)"
               :model-value="controls.getColorPickerValue(item.param)"
               disable-alpha
-              class="h-7 w-24"
+              class="h-7"
               @update:open="controls.handleColorPickerOpenChange(item.param, $event)"
               @update:model-value="controls.handleColorPickerChange(item.param, $event)"
+              @preview="controls.handleColorPickerChange(item.param, $event)"
             />
           </div>
         </div>

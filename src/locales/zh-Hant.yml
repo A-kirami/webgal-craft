@@ -23,6 +23,7 @@ common:
     toggle: 切換搜尋
     clear: 清空輸入
   unknown: 未知
+  notSelected: 未選擇
   dialogs:
     selectGameFolder: 選擇遊戲資料夾
     selectEngineFolder: 選擇引擎資料夾
@@ -42,6 +43,11 @@ common:
     referenceCount: 引用數
     referenceCountValue: "{count} 處引用"
     unavailableA11y: 不可用
+  colorPicker:
+    recentColors: 最近使用的顏色
+    switchFormat: 切換顏色格式
+    switchFormatA11y: "切換顏色格式（目前 {format}）"
+    alpha: 透明度
 
 filePicker:
   placeholder: 請選擇檔案路徑
@@ -772,6 +778,8 @@ edit:
     unsupportedCallSceneArgument: 「呼叫場景」命令向子場景傳遞參數需要 WebGAL 4.6.3 或更新版本。
     unsupportedLocalVariable: 「局部變數」參數需要 WebGAL 4.6.3 或更新版本。
     unsupportedSpine: 目前引擎不支援 Spine 模型。
+    unsupportedColorFormat: "色值「{value}」的格式無法顯示和編輯。"
+    invalidColorFormat: "「{value}」不是有效的顏色值。"
     reservedCallSceneArgument: "「{argument}」為保留參數，不能用於 callScene。"
   errors:
     fileSyncFailed: 檔案同步失敗，請稍後重試
@@ -1237,7 +1245,6 @@ edit:
     assetPreview:
       loadFailed: 載入失敗
     options:
-      notSelected: 未選擇
       variableScope:
         save: 儲存
         global: 全域

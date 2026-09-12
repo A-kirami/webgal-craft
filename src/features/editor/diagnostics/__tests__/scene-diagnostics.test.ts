@@ -253,6 +253,37 @@ describe('diagnoseScene', () => {
       expect.objectContaining({ code: 'unsupported-call-scene-argument', statementIndex: 2, field: { kind: 'argument', key: 'writeReturnTo' } }),
     ])
   })
+
+  it('诊断编辑器无法编辑或无法识别的色值格式', () => {
+    expect(diagnoseScene([
+      parseSentence('intro: 你好 -fontColor=red;'),
+      parseSentence('intro: 你好 -fontColor=#zzz;'),
+      parseSentence('intro: 你好 -fontColor=#4A90E2 -backgroundColor=rgb(300, 0, 0);'),
+    ])).toEqual([
+      {
+        code: 'unsupported-color-format',
+        field: { kind: 'argument', key: 'fontColor' },
+        severity: 'warning',
+        source: 'scene',
+        statementIndex: 0,
+        value: 'red',
+      },
+      {
+        code: 'invalid-color-format',
+        field: { kind: 'argument', key: 'fontColor' },
+        severity: 'error',
+        source: 'scene',
+        statementIndex: 1,
+        value: '#zzz',
+      },
+    ])
+  })
+
+  it('空色值参数不生成诊断', () => {
+    expect(diagnoseScene([
+      parseSentence('intro: 你好 -fontColor=;'),
+    ])).toEqual([])
+  })
 })
 
 describe('diagnoseEditorDocument', () => {

@@ -9,6 +9,10 @@ vi.mock('~/stores/workspace', () => ({
 
 import EffectDraftForm from './EffectDraftForm.vue'
 
+// 浏览器测试环境 uno.css 不含按需工具类，可见性相关的类必须 safelist
+// @unocss-safelist h-7 w-24 h-6 min-w-14 w-12 w-full h-full w-64 h-40 block relative inline-flex items-center justify-center gap-1.5 p-2px aspect-square shrink-0 flex-1 min-w-0 text-xs truncate flex flex-col gap-3 overflow-hidden self-stretch p-0 p-0.5 gap-0.5 px-1 px-1.5 py-0 pr-0.5 w-8 text-right text-center font-mono w-px h-px bg-border
+import 'virtual:uno.css'
+
 const globalStubs = {
   Button: createBrowserValueStub('StubButton', 'button'),
   InputGroup: createBrowserValueStub('StubInputGroup'),
@@ -41,7 +45,8 @@ describe('EffectDraftForm', () => {
     await trigger.click()
 
     await expect.element(trigger).toHaveAttribute('aria-expanded', 'true')
-    await expect.element(page.getByRole('application', { name: 'Chrome Color Picker' })).toBeVisible()
+    await expect.element(page.getByTestId('color-picker-area')).toBeVisible()
+    await expect.element(page.getByTestId('color-picker-format-switch')).toBeVisible()
   })
 
   it('在真实色板交互期间延迟更新并在选择器关闭后刷新最终颜色', async () => {
@@ -59,7 +64,7 @@ describe('EffectDraftForm', () => {
 
     const trigger = page.getByRole('button', { name: '颜色' }).first()
     await trigger.click()
-    await page.getByRole('application', { name: 'Saturation and brightness picker' }).click({
+    await page.getByTestId('color-picker-area').click({
       position: { x: 32, y: 24 },
     })
 

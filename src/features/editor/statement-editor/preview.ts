@@ -1,3 +1,4 @@
+import { isValidColor } from 'reka-ui'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseCommandNode } from '~/domain/script/codec'
@@ -352,14 +353,16 @@ export function buildStatementPreviewParams(input: BuildStatementPreviewParamsIn
       continue
     }
 
-    const isColor = /color/i.test(item.key)
     const isFileParam = argField?.field.type === 'file'
     const status = getFieldStatus({ kind: 'argument', key: item.key })
     const unit = argField && 'unit' in argField.field ? ` ${resolveI18n(argField.field.unit, t, content)}` : ''
+    // 预览只在色值可解析时渲染色块：空值/非法值不显示斜线占位，中文等不支持的颜色写法也在此挡掉
+    const colorValue = String(item.value)
+    const isColor = /color/i.test(item.key) && isValidColor(colorValue)
     params.push({
       label: resolveArgDisplayLabel(argFieldByStorageKey, item.key, argFields, t, content),
-      value: `${resolveArgDisplayValue(argFieldByStorageKey, item.key, String(item.value), t, content, autocompleteOptions)}${unit}`,
-      color: isColor ? String(item.value) : undefined,
+      value: `${resolveArgDisplayValue(argFieldByStorageKey, item.key, colorValue, t, content, autocompleteOptions)}${unit}`,
+      color: isColor ? colorValue : undefined,
       isFile: isFileParam,
       ...resolvePreviewStatus(status),
     })

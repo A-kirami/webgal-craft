@@ -1,11 +1,12 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { classifyEngineModelReference } from '~/domain/engine/model-capabilities'
+import { classifyColorText } from '~/domain/script/color'
 import { parseChooseContent } from '~/domain/script/content'
 import { createReferencedAssetKey } from '~/services/resource-index/values'
 
 import { getCommandConfig } from './index'
-import { deriveArgFieldsFromEditorFields, readEditorFields, readFieldResourceReference } from './schema'
+import { deriveArgFieldsFromEditorFields, readArgFields, readEditorFields, readFieldResourceReference } from './schema'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { EngineModelCapabilities, EngineModelType } from '~/domain/engine/model-capabilities'
@@ -39,6 +40,12 @@ export type UnsupportedSceneSemanticReference =
 export interface ReservedCallSceneArgument {
   argument: 'continue' | 'next'
   source: { kind: 'argument', key: string }
+}
+
+export interface ColorFormatReference {
+  code: 'unsupported-color-format' | 'invalid-color-format'
+  source: { kind: 'argument', key: string }
+  value: string
 }
 
 const RESERVED_CALL_SCENE_ARGUMENTS = ['next', 'continue'] as const
@@ -164,6 +171,39 @@ export function findUnsupportedSceneSemanticReferences(
       source: { kind: 'argument', key: item.key },
       value: typeof item.value === 'string' ? item.value : item.key,
     }))
+}
+
+/**
+ * 找出 color 参数里编辑器无法编辑（unsupported）或根本不是色值（invalid）的值。
+ * 越界但语法合法的值（如 `rgb(300, 0, 0)`）按 CSS 语义裁剪，与引擎渲染结果一致，不算异常。
+ */
+export function findColorFormatReferences(sentence: ISentence): ColorFormatReference[] {
+  const references: ColorFormatReference[] = []
+
+  for (const argField of readArgFields(getCommandConfig(sentence.command))) {
+    if (argField.field.type !== 'color' || argField.jsonMeta) {
+      continue
+    }
+
+    const item = sentence.args.find(candidate => candidate.key === argField.storageKey)
+    const value = typeof item?.value === 'string' ? item.value.trim() : ''
+    if (!value) {
+      continue
+    }
+
+    const syntax = classifyColorText(value)
+    if (syntax === 'supported') {
+      continue
+    }
+
+    references.push({
+      code: syntax === 'unsupported' ? 'unsupported-color-format' : 'invalid-color-format',
+      source: { kind: 'argument', key: argField.storageKey },
+      value,
+    })
+  }
+
+  return references
 }
 
 function classifySentenceEngineModelReference(

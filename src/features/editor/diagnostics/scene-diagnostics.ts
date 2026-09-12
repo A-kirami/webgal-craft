@@ -1,6 +1,7 @@
 import { diagnoseDuplicateSceneLabels, diagnoseMissingSceneLabels } from '~/domain/script/diagnostics'
 import { findUnsupportedFigurePositionReferences } from '~/domain/script/figure-position-diagnostics'
 import {
+  findColorFormatReferences,
   findMissingSentenceResourceReferences,
   findReservedCallSceneArguments,
   findUnsupportedEngineModelReferences,
@@ -12,7 +13,7 @@ import type { SceneEditorDiagnostic } from './types'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { EngineModelCapabilities } from '~/domain/engine/model-capabilities'
 import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
-import type { UnsupportedSceneSemanticReference } from '~/features/editor/command-registry/diagnostics'
+import type { ColorFormatReference, UnsupportedSceneSemanticReference } from '~/features/editor/command-registry/diagnostics'
 import type { AssetKey } from '~/services/resource-index/keys'
 
 interface DiagnoseSceneOptions {
@@ -43,6 +44,29 @@ function createUnsupportedSceneSemanticDiagnostic(
       const exhaustiveCheck: never = reference
       return exhaustiveCheck
     }
+  }
+}
+
+function createColorFormatDiagnostic(
+  reference: ColorFormatReference,
+  statementIndex: number,
+): SceneEditorDiagnostic {
+  const base = {
+    field: reference.source,
+    source: 'scene' as const,
+    statementIndex,
+    value: reference.value,
+  }
+
+  switch (reference.code) {
+    case 'unsupported-color-format': {
+      return { ...base, code: reference.code, severity: 'warning' }
+    }
+    case 'invalid-color-format': {
+      return { ...base, code: reference.code, severity: 'error' }
+    }
+
+    // no default
   }
 }
 
@@ -159,6 +183,10 @@ export function diagnoseScene(
         source: 'scene',
         statementIndex,
       })
+    }
+
+    for (const reference of findColorFormatReferences(sentence)) {
+      diagnostics.push(createColorFormatDiagnostic(reference, statementIndex))
     }
 
     if (!options.runtimeCapabilities) {

@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { extractRgbColor, isRgbaPayload, isRgbColor, normalizeColorChannel, parseHexColor } from '~/utils/color'
-
-function createNullValue(): unknown {
-  // eslint-disable-next-line unicorn/no-null -- 测试需要显式传入 null
-  return null
-}
+import { normalizeColorChannel, parseHexColor, rgbToHex } from '~/utils/color'
 
 describe('normalizeColorChannel', () => {
   it('对正常范围内的值进行四舍五入', () => {
@@ -58,53 +53,33 @@ describe('parseHexColor', () => {
     expect(parseHexColor('#gggggg')).toBeUndefined()
   })
 
+  it('解析 8 位 hex 并忽略 alpha 通道', () => {
+    expect(parseHexColor('#0c223880')).toEqual([12, 34, 56])
+  })
+
+  it('8 位 hex 含非法字符返回 undefined', () => {
+    expect(parseHexColor('#0c2238zz')).toBeUndefined()
+  })
+
   it('空字符串返回 undefined', () => {
     expect(parseHexColor('')).toBeUndefined()
   })
 })
 
-describe('isRgbColor', () => {
-  it('合法 RgbColor 返回 true', () => {
-    expect(isRgbColor({ r: 0, g: 128, b: 255 })).toBe(true)
+describe('rgbToHex', () => {
+  it('拼接三通道为 6 位大写 hex', () => {
+    expect(rgbToHex(12, 34, 56)).toBe('#0C2238')
   })
 
-  it('null 返回 false', () => {
-    expect(isRgbColor(createNullValue())).toBe(false)
+  it('0 与 255 边界正确补零', () => {
+    expect(rgbToHex(0, 255, 0)).toBe('#00FF00')
   })
 
-  it('缺少属性返回 false', () => {
-    expect(isRgbColor({ r: 0, g: 128 })).toBe(false)
-  })
-})
-
-describe('isRgbaPayload', () => {
-  it('合法 RgbaPayload 返回 true', () => {
-    expect(isRgbaPayload({ rgba: { r: 0, g: 0, b: 0 } })).toBe(true)
+  it('超出范围的通道被钳制并取整', () => {
+    expect(rgbToHex(300, -1, 127.6)).toBe('#FF0080')
   })
 
-  it('rgba 不是 RgbColor 返回 false', () => {
-    expect(isRgbaPayload({ rgba: 'red' })).toBe(false)
-  })
-})
-
-describe('extractRgbColor', () => {
-  it('字符串走 parseHexColor 路径', () => {
-    expect(extractRgbColor('#ff8000')).toEqual([255, 128, 0])
-  })
-
-  it('RgbaPayload 走归一化路径', () => {
-    expect(extractRgbColor({ rgba: { r: 300, g: -1, b: 127.7 } })).toEqual([255, 0, 128])
-  })
-
-  it('RgbColor 走归一化路径', () => {
-    expect(extractRgbColor({ r: 0.4, g: 254.6, b: 100 })).toEqual([0, 255, 100])
-  })
-
-  it('null 返回 undefined', () => {
-    expect(extractRgbColor(createNullValue())).toBeUndefined()
-  })
-
-  it('undefined 返回 undefined', () => {
-    expect(extractRgbColor(undefined)).toBeUndefined()
+  it('非有限通道回退为 0', () => {
+    expect(rgbToHex(Number.NaN, 0, 0)).toBe('#000000')
   })
 })

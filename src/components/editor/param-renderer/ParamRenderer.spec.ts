@@ -20,7 +20,7 @@ import ParamRenderer from './ParamRenderer.vue'
 
 import type { PropType } from 'vue'
 import type { ResolvedAutocompleteOption } from '~/features/editor/command-registry/autocomplete-options'
-import type { AutocompleteTextField, EditorField, FileField, FlagChoiceField, NumberField, PlainTextField, SwitchField, ValueChoiceField } from '~/features/editor/command-registry/schema'
+import type { AutocompleteTextField, ColorField, EditorField, FileField, FlagChoiceField, NumberField, PlainTextField, SwitchField, ValueChoiceField } from '~/features/editor/command-registry/schema'
 import type { EditorFieldDiagnostic } from '~/features/editor/diagnostics/types'
 import type { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
 
@@ -145,6 +145,23 @@ function createNumberField(): EditorField {
   return { key: 'time', storage: 'content', field }
 }
 
+function createColorField(): EditorField {
+  const field: ColorField = {
+    key: 'fontColor',
+    label: 'Font color',
+    type: 'color',
+  }
+  return {
+    key: 'fontColor',
+    storage: 'arg',
+    field,
+    argField: {
+      field,
+      storageKey: 'fontColor',
+    },
+  }
+}
+
 function createFileField(): EditorField {
   const field: FileField = {
     key: 'file',
@@ -174,6 +191,22 @@ const errorDiagnostic: EditorFieldDiagnostic = {
   label: 'missing',
   severity: 'error',
   source: 'scene',
+}
+
+const unsupportedColorFormatDiagnostic: EditorFieldDiagnostic = {
+  code: 'unsupported-color-format',
+  field: { kind: 'argument', key: 'fontColor' },
+  severity: 'warning',
+  source: 'scene',
+  value: 'red',
+}
+
+const invalidColorFormatDiagnostic: EditorFieldDiagnostic = {
+  code: 'invalid-color-format',
+  field: { kind: 'argument', key: 'fontColor' },
+  severity: 'error',
+  source: 'scene',
+  value: '#zzz',
 }
 
 function createTextareaStub() {
@@ -774,6 +807,25 @@ describe('ParamRenderer', () => {
       'focus-visible:ring-yellow/30',
     )
     await expect.element(autocomplete).not.toHaveClass('text-destructive!')
+  })
+
+  it('color 字段的色值格式诊断使用黄色状态样式', () => {
+    renderFieldRenderer('panel', createColorField(), globalStubs, [unsupportedColorFormatDiagnostic])
+
+    const trigger = requireHtmlElement(document.querySelector('[data-statement-diagnostic-trigger]'))
+    expect(trigger).toHaveAttribute('data-severity', 'warning')
+
+    const control = requireHtmlElement(trigger.firstElementChild)
+    expect(control).toHaveClass('text-yellow-700!', 'bg-yellow/5', 'border-yellow/50', 'focus-visible:ring-yellow/30')
+    expect(control).not.toHaveClass('text-destructive!')
+  })
+
+  it('color 字段的无效色值诊断使用 destructive 状态样式', () => {
+    renderFieldRenderer('panel', createColorField(), globalStubs, [invalidColorFormatDiagnostic])
+
+    const trigger = requireHtmlElement(document.querySelector('[data-statement-diagnostic-trigger]'))
+    expect(trigger).toHaveAttribute('data-severity', 'error')
+    expect(requireHtmlElement(trigger.firstElementChild)).toHaveClass('text-destructive!', 'bg-destructive/5')
   })
 
   it('warning 文件字段向 FilePicker 传递 warning 状态', async () => {

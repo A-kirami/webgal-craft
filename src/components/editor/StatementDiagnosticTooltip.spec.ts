@@ -31,6 +31,22 @@ const errorDiagnostic: EditorFieldDiagnostic = {
   value: 'missing.png',
 }
 
+const unsupportedColorFormatDiagnostic: EditorFieldDiagnostic = {
+  code: 'unsupported-color-format',
+  field: { kind: 'argument', key: 'fontColor' },
+  severity: 'warning',
+  source: 'scene',
+  value: 'red',
+}
+
+const invalidColorFormatDiagnostic: EditorFieldDiagnostic = {
+  code: 'invalid-color-format',
+  field: { kind: 'argument', key: 'fontColor' },
+  severity: 'error',
+  source: 'scene',
+  value: '#zzz',
+}
+
 function renderTooltip(diagnostics: readonly EditorFieldDiagnostic[], description?: string) {
   renderInBrowser(StatementDiagnosticTooltip, {
     props: { description, diagnostics },
@@ -68,6 +84,28 @@ describe('StatementDiagnosticTooltip', () => {
     const tooltip = message.element().closest('[data-statement-diagnostic-tooltip]')
     expect(tooltip).toHaveClass('bg-destructive', 'text-destructive-foreground')
     expect(tooltip).not.toHaveClass('bg-yellow-100')
+  })
+
+  it('hover 不支持的色值格式诊断时说明该格式无法显示和编辑', async () => {
+    renderTooltip([unsupportedColorFormatDiagnostic])
+
+    await page.getByRole('button', { name: 'Field control' }).hover()
+
+    const message = page.getByRole('listitem')
+    await expect.element(message).toBeVisible()
+    await expect.element(message).toHaveTextContent('色值“red”的格式无法显示和编辑。')
+  })
+
+  it('hover 无效色值诊断时说明该值不是有效颜色值', async () => {
+    renderTooltip([invalidColorFormatDiagnostic])
+
+    await page.getByRole('button', { name: 'Field control' }).hover()
+
+    const message = page.getByRole('listitem')
+    await expect.element(message).toBeVisible()
+    await expect.element(message).toHaveTextContent('“#zzz”不是有效的颜色值。')
+    const tooltip = message.element().closest('[data-statement-diagnostic-tooltip]')
+    expect(tooltip).toHaveClass('bg-destructive', 'text-destructive-foreground')
   })
 
   it('无诊断时 hover 控件不显示 tooltip', async () => {

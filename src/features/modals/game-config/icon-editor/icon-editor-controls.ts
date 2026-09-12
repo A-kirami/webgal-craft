@@ -100,59 +100,8 @@ export function percentToRatio(value: number): number {
   return value / 100
 }
 
-function parseNumberLike(value: unknown): number {
-  if (typeof value === 'number') {
-    return value
-  }
-
-  if (typeof value === 'string') {
-    return Number(value)
-  }
-
-  return Number.NaN
-}
-
-function normalizeColorChannelValue(value: unknown, fallback: number): number {
-  const parsed = parseNumberLike(value)
-  return Number.isFinite(parsed) ? clamp(Math.round(parsed), 0, 255) : fallback
-}
-
-function normalizeAlphaValue(value: unknown): number {
-  const parsed = parseNumberLike(value)
-  return Number.isFinite(parsed) ? clamp(parsed, 0, 1) : 1
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object'
-}
-
-function formatCssColorFromRecord(value: Record<string, unknown>): string | undefined {
-  if (!('r' in value) || !('g' in value) || !('b' in value)) {
-    return
-  }
-
-  const red = normalizeColorChannelValue(value.r, 0)
-  const green = normalizeColorChannelValue(value.g, 0)
-  const blue = normalizeColorChannelValue(value.b, 0)
-  if ('a' in value) {
-    return `rgba(${red}, ${green}, ${blue}, ${normalizeAlphaValue(value.a)})`
-  }
-
-  return `rgb(${red}, ${green}, ${blue})`
-}
-
 export function resolveBackgroundColor(value: unknown): string | undefined {
-  if (typeof value === 'string') {
-    return value
-  }
-
-  if (!isRecord(value)) {
-    return
-  }
-
-  return formatCssColorFromRecord(isRecord(value.rgba) ? value.rgba : value)
-    ?? (typeof value.hex8 === 'string' ? value.hex8 : undefined)
-    ?? (typeof value.hex === 'string' ? value.hex : undefined)
+  return typeof value === 'string' ? value : undefined
 }
 
 export function isIconEditorBackgroundType(value: unknown): value is IconEditorBackgroundType {

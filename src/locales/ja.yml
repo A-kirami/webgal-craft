@@ -23,6 +23,7 @@ common:
     toggle: 検索を切り替え
     clear: 入力をクリア
   unknown: 不明
+  notSelected: 未選択
   dialogs:
     selectGameFolder: ゲームフォルダを選択
     selectEngineFolder: エンジンフォルダを選択
@@ -42,6 +43,11 @@ common:
     referenceCount: 参照数
     referenceCountValue: "{count} 件の参照"
     unavailableA11y: 利用不可
+  colorPicker:
+    recentColors: 最近使用した色
+    switchFormat: カラーフォーマットを切り替え
+    switchFormatA11y: "カラーフォーマットを切り替え（現在 {format}）"
+    alpha: 不透明度
 
 filePicker:
   placeholder: ファイルパスを選択
@@ -772,6 +778,8 @@ edit:
     unsupportedCallSceneArgument: 「callScene」コマンドで子シーンに引数を渡すには WebGAL 4.6.3 以降が必要です。
     unsupportedLocalVariable: 「local」パラメータには WebGAL 4.6.3 以降が必要です。
     unsupportedSpine: 現在のエンジンは Spine モデルをサポートしていません。
+    unsupportedColorFormat: "色値「{value}」の形式は表示・編集できません。"
+    invalidColorFormat: "「{value}」は有効な色値ではありません。"
     reservedCallSceneArgument: '"{argument}" は予約済みのため、callScene では使用できません。'
   errors:
     fileSyncFailed: ファイルの同期に失敗しました。しばらくしてからもう一度お試しください。
@@ -1237,7 +1245,6 @@ edit:
     assetPreview:
       loadFailed: 読み込み失敗
     options:
-      notSelected: 未選択
       variableScope:
         save: セーブ
         global: グローバル

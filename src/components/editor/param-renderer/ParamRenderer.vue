@@ -71,7 +71,7 @@ const visibleFieldIndexMap = $computed(() => {
 })
 
 const isInline = $computed(() => surface === 'inline')
-const notSelectedLabel = $computed(() => t('edit.visualEditor.options.notSelected'))
+const notSelectedLabel = $computed(() => t('common.notSelected'))
 
 function label(field: EditorField): string {
   return resolveI18n(field.field.label, t, i18nContent)
@@ -137,8 +137,14 @@ function isInlineStandalone(field: EditorField): boolean {
 }
 
 function shouldFillControlWidth(field: EditorField): boolean {
+  // 颜色控件各字段宽度固定，按内容收缩即可，撑满整行反而会在右侧留出空档
   return isInlineStandalone(field)
-    || (!isInline && fieldMode(field) !== 'switch')
+    || (!isInline && fieldMode(field) !== 'switch' && fieldMode(field) !== 'color')
+}
+
+// 面板下颜色控件独占整行宽度；宽度不足时换行到标签下方，避免胶囊被压缩后内容越出边框
+function isPanelColorControl(field: EditorField): boolean {
+  return !isInline && fieldMode(field) === 'color'
 }
 
 function fieldLayout(field: EditorField): 'row' | 'column' {
@@ -202,6 +208,9 @@ function diagnosticTriggerClass(field: EditorField): string {
   return cn(
     shouldFillControlWidth(field) && 'w-full flex-col',
     fieldMode(field) === 'switch' && 'scale-80 group-data-[surface=panel]:scale-90',
+    // 诊断锚点是胶囊的父级 flex item，默认会被压缩到容器的剩余宽度；
+    // 颜色胶囊按内容定宽，父级必须保持内容宽度，否则内部字段会越出胶囊边框
+    fieldMode(field) === 'color' && 'shrink-0 max-w-none',
   )
 }
 
@@ -302,7 +311,9 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
       <div
         :class="cn(
           'group w-full flex gap-1',
-          fieldLayout(field) === 'row' ? 'w-auto flex-row gap-1.5 items-center' : 'flex-col',
+          fieldLayout(field) === 'row' ? 'flex-row gap-1.5 items-center' : 'flex-col',
+          fieldLayout(field) === 'row' && !isPanelColorControl(field) && 'w-auto',
+          fieldLayout(field) === 'row' && isPanelColorControl(field) && 'flex-wrap',
           shouldUseInputAutoWidth(field) && 'max-w-full min-w-0',
           isFileField(field) && 'max-w-full min-w-0',
           isInlineStandalone(field) && 'w-full',
@@ -385,8 +396,8 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
 
           <ColorPicker
             v-else-if="fieldMode(field) === 'color'"
-            :trigger-id="fieldInputId(field)"
-            :class="cn('group-data-[surface=panel]:h-7', controlClass(field))"
+            :id="fieldInputId(field)"
+            :class="cn('group-data-[surface=panel]:h-7', controlClass(field), fieldStatusClass(field))"
             :model-value="String(getFieldValue(field) || '')"
             @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
           />

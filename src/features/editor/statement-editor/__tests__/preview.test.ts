@@ -413,6 +413,54 @@ describe('buildStatementPreviewParams', () => {
     expect(result.some(item => item.label === '颜色' && item.color === '#ffffff')).toBe(true)
   })
 
+  describe('颜色参数', () => {
+    function buildColorPreview(fontColor: string) {
+      return buildStatementPreviewParams({
+        autocompleteOptions: EMPTY_SCENE_AUTOCOMPLETE_OPTIONS,
+        parsed: createSentence({
+          command: commandType.changeFigure,
+          content: 'figureA',
+          args: [{ key: 'fontColor', value: fontColor }],
+        }),
+        statementType: 'command',
+        entryRawText: '',
+        previousSpeaker: '',
+        contentField: createContentField('text'),
+        argFields: [
+          createArgField('fontColor', 'color', {
+            field: {
+              label: () => '字体颜色',
+            },
+          }),
+        ],
+        getFieldStatus: noFieldStatus,
+        t: identityTranslate,
+      })
+    }
+
+    function findColorParam(params: ReturnType<typeof buildStatementPreviewParams>) {
+      const param = params.find(item => item.label === '字体颜色')
+      if (!param) {
+        throw new TypeError('预览里没有渲染字体颜色参数')
+      }
+      return param
+    }
+
+    it('可解析的色值渲染色块并保留原始写法', () => {
+      const param = findColorParam(buildColorPreview('rgb(105, 217, 255)'))
+
+      expect(param.color).toBe('rgb(105, 217, 255)')
+    })
+
+    it('未设置颜色时不渲染色块', () => {
+      expect(findColorParam(buildColorPreview('')).color).toBeUndefined()
+    })
+
+    it('不可解析的色值不渲染色块', () => {
+      expect(findColorParam(buildColorPreview('skyblue')).color).toBeUndefined()
+    })
+  })
+
   it('flattened json 参数会按子字段展开并应用 select 标签映射', () => {
     const argFields: ArgField[] = [
       createArgField('transform.x', 'number', {

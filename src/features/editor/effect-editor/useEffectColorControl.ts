@@ -1,6 +1,6 @@
 import { ColorField } from '~/features/editor/command-registry/schema'
 import { EffectControlDeps } from '~/features/editor/effect-editor/types'
-import { extractRgbColor, normalizeColorChannel } from '~/utils/color'
+import { normalizeColorChannel, parseHexColor, rgbToHex } from '~/utils/color'
 
 /** ColorField 且必定有 colorPaths/colorDefaults 的子类型（用于效果编辑器 color 控件） */
 type EffectColorField = ColorField & { colorPaths: [string, string, string], colorDefaults: [number, number, number] }
@@ -22,9 +22,9 @@ export function useEffectColorControl(deps: EffectControlDeps) {
     return [red, green, blue]
   }
 
-  function getColorPickerValue(param: EffectColorField): { b: number, g: number, r: number } {
-    const [r, g, b] = getColorValue(param)
-    return { r, g, b }
+  function getColorPickerValue(param: EffectColorField): string {
+    const [red, green, blue] = getColorValue(param)
+    return rgbToHex(red, green, blue)
   }
 
   function updateColorField(
@@ -71,8 +71,9 @@ export function useEffectColorControl(deps: EffectControlDeps) {
     pendingColorFlushValue = undefined
   }
 
-  function handleColorPickerChange(param: EffectColorField, rawValue: unknown) {
-    const parsed = extractRgbColor(rawValue)
+  /** 选择器只回传 hex 字符串；空值与非法值都表示没有要写入的颜色 */
+  function handleColorPickerChange(param: EffectColorField, value: string) {
+    const parsed = parseHexColor(value)
     if (!parsed) {
       return
     }

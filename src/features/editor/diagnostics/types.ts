@@ -93,6 +93,22 @@ export interface UnsupportedCallSceneArgumentEditorDiagnostic extends SceneEdito
   value: string
 }
 
+export interface UnsupportedColorFormatEditorDiagnostic extends SceneEditorDiagnosticBase {
+  code: 'unsupported-color-format'
+  field: { kind: 'argument', key: string }
+  severity: 'warning'
+  source: 'scene'
+  value: string
+}
+
+export interface InvalidColorFormatEditorDiagnostic extends SceneEditorDiagnosticBase {
+  code: 'invalid-color-format'
+  field: { kind: 'argument', key: string }
+  severity: 'error'
+  source: 'scene'
+  value: string
+}
+
 export interface InvalidAnimationDocumentDiagnostic extends EditorDiagnosticBase {
   code: 'invalid-animation-json'
   severity: 'error'
@@ -110,6 +126,8 @@ export type SceneEditorDiagnostic =
   | ReservedCallSceneArgumentEditorDiagnostic
   | UnsupportedLocalVariableEditorDiagnostic
   | UnsupportedCallSceneArgumentEditorDiagnostic
+  | UnsupportedColorFormatEditorDiagnostic
+  | InvalidColorFormatEditorDiagnostic
 
 export type EditorFieldDiagnostic =
   | Omit<DuplicateLabelEditorDiagnostic, 'statementIndex'>
@@ -122,6 +140,8 @@ export type EditorFieldDiagnostic =
   | Omit<ReservedCallSceneArgumentEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedLocalVariableEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedCallSceneArgumentEditorDiagnostic, 'statementIndex'>
+  | Omit<UnsupportedColorFormatEditorDiagnostic, 'statementIndex'>
+  | Omit<InvalidColorFormatEditorDiagnostic, 'statementIndex'>
 
 export type EditorDiagnostic =
   | SceneEditorDiagnostic
