@@ -122,7 +122,7 @@ async function handleResetConfirm() {
 
 <template>
   <Dialog ::open="open">
-    <DialogContent class="sm:max-w-[450px]" :hide-close="isSwitching || isResetting">
+    <DialogContent class="sm:max-w-[450px]" :hide-close="isSwitching || isResetting" @open-auto-focus.prevent>
       <DialogHeader>
         <DialogTitle>
           {{ $t('modals.switchTemplate.title') }}

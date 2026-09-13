@@ -152,7 +152,7 @@ function handleCancelFailed(): void {
 
 <template>
   <Dialog ::open="open">
-    <DialogContent class="sm:max-w-[425px]" :hide-close="isSwitching">
+    <DialogContent class="sm:max-w-[425px]" :hide-close="isSwitching" @open-auto-focus.prevent>
       <DialogHeader>
         <DialogTitle>
           {{ $t('modals.switchEngine.title') }}

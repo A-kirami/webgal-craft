@@ -71,7 +71,7 @@ function handleOpenBugReport(): void {
 
 <template>
   <Dialog ::open="open">
-    <DialogContent class="sm:max-w-[480px]" @copy="handleCopy">
+    <DialogContent class="sm:max-w-[480px]" @open-auto-focus.prevent @copy="handleCopy">
       <div class="mt-4 flex flex-col gap-4 items-center">
         <img src="/webgal-craft-logo.svg" alt="WebGAL Craft Logo" class="size-20">
         <div class="text-center space-y-2">

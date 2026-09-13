@@ -168,7 +168,7 @@ function resolveResourceServeUrl(resource: DiscoveredResource): string | undefin
 
 <template>
   <Dialog ::open="open">
-    <DialogScrollContent class="max-h-[80vh] max-w-2xl">
+    <DialogScrollContent class="max-h-[80vh] max-w-2xl" @open-auto-focus.prevent>
       <DialogHeader>
         <DialogTitle class="flex gap-2 items-center">
           {{ title }}

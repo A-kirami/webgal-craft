@@ -211,7 +211,7 @@ watch(
 
 <template>
   <Dialog :open="open" @update:open="handleDialogOpenChange">
-    <DialogContent class="sm:max-w-[520px]">
+    <DialogContent class="sm:max-w-[520px]" @open-auto-focus.prevent>
       <DialogHeader>
         <DialogTitle>{{ title }}</DialogTitle>
         <DialogDescription>
