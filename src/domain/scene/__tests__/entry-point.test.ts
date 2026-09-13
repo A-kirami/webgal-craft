@@ -16,8 +16,9 @@ describe('scene entry point', () => {
     expect(isSceneEntryPath(AbsPath.from('/games/demo/game/scene/chapter/start.txt'), sceneRoot)).toBe(false)
   })
 
-  it('只接受规范拼写作为可用入口', () => {
-    expect(resolveSceneEntryStatus(['Start.txt'])).toBe('missing')
+  it('将大小写变体同样视为可用入口', () => {
+    expect(resolveSceneEntryStatus(['Start.txt'])).toBe('valid')
     expect(resolveSceneEntryStatus(['start.txt'])).toBe('valid')
+    expect(resolveSceneEntryStatus(['prologue.txt', 'chapter'])).toBe('missing')
   })
 })
