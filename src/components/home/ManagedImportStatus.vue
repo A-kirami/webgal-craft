@@ -51,15 +51,6 @@ const percentage = computed(() => {
   return Math.min(100, Math.round((props.progress.copiedBytes / total) * 100))
 })
 
-const phaseLabel = computed(() => {
-  if (isOfficialEngineInstallation.value && phase.value === 'downloading') {
-    return t('home.managedImport.officialEngine.phase.downloading')
-  }
-  if (isOfficialEngineInstallation.value && phase.value === 'extracting') {
-    return t('home.managedImport.officialEngine.phase.extracting')
-  }
-  return phaseLabels.value[phase.value]
-})
 const title = computed(() => {
   if (isOfficialEngineInstallation.value && props.activity) {
     return t('home.managedImport.officialEngine.title', {
@@ -118,11 +109,11 @@ const progressDetail = computed(() => {
         <span class="font-medium truncate">
           {{ title }}
         </span>
-        <span class="text-xs text-muted-foreground shrink-0">{{ phaseLabel }}</span>
+        <span class="text-xs text-muted-foreground shrink-0">{{ phaseLabels[phase] }}</span>
       </div>
       <Progress
         :model-value="percentage ?? 100"
-        :aria-label="phaseLabel"
+        :aria-label="phaseLabels[phase]"
         :aria-valuenow="percentage"
         :indicator-class="percentage === undefined ? 'managed-import-indeterminate' : undefined"
         class="h-1.5"

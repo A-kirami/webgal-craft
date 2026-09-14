@@ -23,7 +23,7 @@ const globalStubs = {
 }
 
 describe('ManagedImportStatus', () => {
-  it('官方安装尚未收到进度时显示下载中', async () => {
+  it('官方安装尚未收到进度时显示正在下载', async () => {
     renderInBrowser(ManagedImportStatus, {
       props: {
         activity: {
@@ -42,7 +42,7 @@ describe('ManagedImportStatus', () => {
       },
     })
 
-    await expect.element(page.getByText('下载中')).toBeVisible()
+    await expect.element(page.getByText('正在下载')).toBeVisible()
     await expect.element(page.getByText('已下载 0 B')).toBeVisible()
     await expect.element(page.getByText('正在复制文件')).not.toBeInTheDocument()
   })
@@ -75,7 +75,7 @@ describe('ManagedImportStatus', () => {
     })
 
     await expect.element(page.getByText('正在安装 WebGAL 4.6.5')).toBeVisible()
-    await expect.element(page.getByText('下载中')).toBeVisible()
+    await expect.element(page.getByText('正在下载')).toBeVisible()
     await expect.element(page.getByText('已下载 9.0 MiB / 32 MiB')).toBeVisible()
     await expect.element(page.getByText('0 个文件 · 9.0 MiB')).not.toBeInTheDocument()
   })
@@ -108,7 +108,7 @@ describe('ManagedImportStatus', () => {
     })
 
     await expect.element(page.getByText('已解压 96 个文件 · game/vocal/v2.wav')).toBeVisible()
-    await expect.element(page.getByText('解压中')).toBeVisible()
+    await expect.element(page.getByText('正在解压')).toBeVisible()
     await expect.element(page.getByText('96 个文件 · 0 B')).not.toBeInTheDocument()
   })
 

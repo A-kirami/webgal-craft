@@ -1,5 +1,5 @@
 common:
-  loading: 加载中...
+  loading: 正在加载……
   noOptions: 无可用选项
   noResults: 未找到结果
   cancel: 取消
@@ -50,7 +50,7 @@ common:
     alpha: 透明度
 
 filePicker:
-  placeholder: 请选择文件路径
+  placeholder: 选择文件路径
   clearInput: 清空输入
   sort:
     name: 名称
@@ -100,14 +100,14 @@ appUpdate:
     updateDownloadingDescription: 正在获取更新包……
     updateDownloadingProgressDescription: 下载进度：{percent}%
     downloadedTitle: 更新包已就绪
-    downloadedDescription: 安装前请先保存文档，并等待导入、文件操作或备份任务完成。
+    downloadedDescription: 安装前先保存文档，等导入、文件操作或备份任务结束后再安装。
     installUpdateNow: 安装更新
     updateInstallingTitle: 正在安装更新
     updateInstallingDescription: 安装完成后会尝试重启应用。
     installBlockedTitle: 现在还不能安装
-    installBlockedDescription: 请先保存文档，并等待导入、文件操作或备份任务完成后再试。
+    installBlockedDescription: 先保存文档，等导入、文件操作或备份任务结束后再试。
     restartBlockedTitle: 现在还不能重启
-    restartBlockedDescription: 请先保存文档，并等待导入、文件操作或备份任务完成后再试。
+    restartBlockedDescription: 先保存文档，等导入、文件操作或备份任务结束后再试。
     retry: 重试
   details:
     title: 发现新版本 {version}
@@ -128,8 +128,8 @@ home:
   unavailableBadge: 已失效
   archiveImport:
     error:
-      invalidArchive: 无法读取压缩包，请确认文件未损坏后重试
-      unsupportedArchive: 不支持该压缩格式，请使用 ZIP、TAR、TAR.GZ 或 TGZ
+      invalidArchive: 无法读取压缩包，确认文件未损坏后重试
+      unsupportedArchive: 不支持该压缩格式，改用 ZIP、TAR、TAR.GZ 或 TGZ
   managedImport:
     title: 正在导入{resource}
     cancel: 取消导入
@@ -140,9 +140,6 @@ home:
       downloaded: 已下载 {downloaded}
       downloadedWithTotal: 已下载 {downloaded} / {total}
       extracted: 已解压 {files} 个文件
-      phase:
-        downloading: 下载中
-        extracting: 解压中
     resource:
       game: 游戏
       engine: 引擎
@@ -170,21 +167,21 @@ home:
     templates: 游戏模板
   search:
     placeholder:
-      recent: 搜索最近创作...
-      engines: 搜索游戏引擎...
-      templates: 搜索模板...
+      recent: 搜索最近创作……
+      engines: 搜索游戏引擎……
+      templates: 搜索模板……
   welcome:
     title: 欢迎使用 WebGAL Craft
-    subtitle: 开始你的游戏创作之旅，编写属于你的故事
+    subtitle: 开始创作你的游戏，写下属于你的故事
     welcomeBack: 欢迎回来
-    welcomeBackSubtitle: 继续你的游戏编辑或开始新的创作
+    welcomeBackSubtitle: 继续编辑游戏，或开始新的创作
     createGame: 创建游戏
     openGame: 打开游戏
   games:
-    creating: 游戏创建中……
+    creating: 正在创建游戏……
     modifiedAt: 修改于 {time}
-    noGames: 没有找到最近的创作
-    noGamesDesc: 你还没有创建或打开过任何游戏
+    noGames: 还没有最近创作
+    noGamesDesc: 创建或打开一个游戏后，它会显示在这里
     importGame: 导入游戏
     importGameHint: 点击浏览或拖放游戏文件夹到此处
     createNewGame: 创建新游戏
@@ -192,23 +189,23 @@ home:
     dropGameFolder: 将游戏文件夹拖放到此处导入
     gameCover: "{name} 游戏封面"
     gameIcon: "{name} 游戏图标"
-    importConfigCorrupted: 项目文件已损坏，无法读取
-    importEngineNotFound: 该项目所需的引擎尚未安装
-    importEngineUnavailable: 该项目所需的引擎当前不可用
-    importEngineEditorIncompatible: 该项目绑定的引擎无法在 WebGAL Craft 中使用，请重新选择其他引擎
-    importEngineVersionInvalid: 该项目绑定的引擎缺少有效的版本信息，请重新选择其他引擎
-    importEngineVersionTooOld: 该项目绑定的引擎版本过旧，请重新选择 WebGAL {version} 及以上版本的引擎
-    importAlreadyExists: 该项目已存在
+    importConfigCorrupted: 配置文件已损坏，无法读取
+    importEngineNotFound: 这个游戏所需的引擎尚未安装
+    importEngineUnavailable: 这个游戏所需的引擎当前不可用
+    importEngineEditorIncompatible: 这个游戏绑定的引擎无法在 WebGAL Craft 中使用，重新选择一个引擎
+    importEngineVersionInvalid: 这个游戏绑定的引擎缺少有效的版本信息，重新选择一个引擎
+    importEngineVersionTooOld: 这个游戏绑定的引擎版本过旧，重新选择 WebGAL {version} 或更高版本的引擎
+    importAlreadyExists: 这个游戏已经存在
     importFailed: 导入失败
-    importInvalidFolder: 这不像是游戏项目文件夹，请确认目录结构
-    importSchemaVersionTooNew: 该项目由更新版本的应用创建，请升级应用后再尝试打开
+    importInvalidFolder: 这不像是游戏文件夹，检查目录结构是否正确
+    importSchemaVersionTooNew: 这个游戏由更新版本的 WebGAL Craft 创建，升级后再打开
     importUnknownError: 导入游戏时发生未知错误
     importMultipleFolders: 一次只能导入一个游戏文件夹
-    importCreating: 游戏正在创建中，请等待创建完成
-    openLastProjectUnavailable: 最近项目「{name}」当前不可用，已停留在主页
+    importCreating: 游戏正在创建，等创建完成后再试
+    openLastProjectUnavailable: 最近打开的游戏“{name}”当前不可用，已停留在主页
   engines:
     noEngines: 没有可用的游戏引擎
-    noEnginesDesc: 你需要安装游戏引擎才能创建游戏
+    noEnginesDesc: 安装游戏引擎后才能创建游戏
     installEngine: 安装引擎
     installEngineHint: 点击浏览或拖放引擎文件夹到此处
     installGameEngine: 安装游戏引擎
@@ -216,19 +213,19 @@ home:
     engineIcon: "{name} 引擎图标"
     importAlreadyExists: 该引擎已存在
     importFailed: 导入失败
-    importInvalidFolder: 这不像是引擎文件夹，请确认目录结构
-    importing: 引擎导入中……
-    importSchemaTooNew: 该引擎版本过新，请升级应用后再尝试导入
-    importTargetConflict: 安装位置已被占用，请先删除冲突的文件夹后重试
-    importUnsupportedLegacyEngine: 该引擎版本过旧，请改用新版本
+    importInvalidFolder: 这不像是引擎文件夹，检查目录结构是否正确
+    importing: 正在导入引擎……
+    importSchemaTooNew: 该引擎版本过新，升级 WebGAL Craft 后再导入
+    importTargetConflict: 安装位置已被占用，删除冲突的文件夹后重试
+    importUnsupportedLegacyEngine: 该引擎版本过旧，改用新版本
     importEditorIncompatible: 该引擎无法在 WebGAL Craft 中使用
     importVersionInvalid: 该引擎缺少有效的 WebGAL 版本信息
-    importVersionTooOld: 该引擎版本过旧，请导入 WebGAL {version} 及以上版本的引擎
+    importVersionTooOld: 该引擎版本过旧，导入 WebGAL {version} 或更高版本的引擎
     importUnknownError: 导入引擎时发生未知错误
     importMultipleFolders: 一次只能导入一个引擎文件夹
     official:
       badge: 官方
-      checking: 检查版本中……
+      checking: 正在检查版本……
       installing: 正在下载并安装
       install: 安装最新版本
       update: 更新
@@ -238,10 +235,10 @@ home:
       installSuccess: 已安装 WebGAL {version}
       alreadyInstalled: 该版本已经安装
       installFailed: 官方引擎下载或安装失败
-    noEngineTitle: 没有找到可用的游戏引擎
-    noEngineContent: 需要先安装游戏引擎，才能创建游戏
+    noEngineTitle: 没有可用的游戏引擎
+    noEngineContent: 安装游戏引擎后才能创建游戏
     goToInstall: 前往安装
-    later: 之后再说
+    later: 稍后
   templates:
     noTemplates: 没有可用的模板
     noTemplatesDesc: 导入独立模板，或安装带有内置模板的引擎
@@ -249,7 +246,7 @@ home:
     importTemplateHint: 点击浏览或拖放模板文件夹到此处
     deleteTemplate: 删除模板
     dropTemplateFolder: 将模板文件夹拖放到此处
-    importInvalidFolder: 这不是一个有效的模板文件夹
+    importInvalidFolder: 这不是有效的模板文件夹
     importFailed: 导入失败
     importDuplicate: 已存在同名模板
     importUnknownError: 导入模板时发生未知错误
@@ -286,9 +283,9 @@ modals:
     templateGroupStandalone: 独立模板
     create: 创建
     createFailed: 创建游戏失败
-    engineUnavailable: 所选引擎当前不可用，请重新选择
-    engineIncompatible: 所选引擎无法在 WebGAL Craft 中使用，请重新选择
-    templateUnavailable: 所选模板当前不可用，请重新选择
+    engineUnavailable: 所选引擎当前不可用，重新选择
+    engineIncompatible: 所选引擎无法在 WebGAL Craft 中使用，重新选择
+    templateUnavailable: 所选模板当前不可用，重新选择
     pathNotEmpty: 游戏保存目录必须不存在或为空
     selectSaveLocation: 游戏保存位置
   deleteGame:
@@ -299,11 +296,11 @@ modals:
     deleteFailed: 游戏删除失败
     removeTitle: 移除游戏记录
     removeDescription: 确定要移除游戏 {name} 的记录吗？
-    removeWarning: 项目目录已不可用，此操作只会移除本地记录，不会删除任何文件。
+    removeWarning: 游戏目录已不可用。此操作只会移除本地记录，不会删除任何文件。
     removeFailed: 游戏记录移除失败
   deleteFile:
     title: 确定要删除文件 {name} 吗？
-    folderTitle: 确定要删除文件夹 {name} 及其内容？
+    folderTitle: 确定要删除文件夹 {name} 及其内容吗？
     description: 你可以从回收站还原此文件。
     folderDescription: 删除后你可以从回收站还原此文件夹及内容。
     permanentDescription: 此文件将被永久删除，操作无法撤销。
@@ -311,14 +308,14 @@ modals:
     skipConfirm: 不再显示此提示
   deleteGameConfirm:
     title: 最终确认
-    description: 此操作无法撤销。请输入游戏名称 {name} 以确认删除。
+    description: 此操作无法撤销。输入游戏名称 {name} 以确认删除。
     gameName: 游戏名称
-    placeholder: "请输入 {name} 以确认"
+    placeholder: "输入 {name} 以确认"
     confirmDelete: 确认删除
   deleteEngine:
     title: 卸载引擎
     description: 确定要卸载引擎 {name} 吗？
-    warning: 此操作将把引擎文件移到回收站，你可以稍后从回收站恢复。
+    warning: 此操作会把引擎文件移到回收站，你可以稍后还原。
     removeTitle: 移除引擎记录
     removeDescription: 确定要移除引擎 {name} 的记录吗？
     removeWarning: 引擎目录已不可用，此操作只会移除本地记录，不会删除任何文件。
@@ -327,10 +324,10 @@ modals:
   deleteTemplate:
     blockedTitle: 无法删除
     blockedByGames: 以下游戏正在使用此模板：
-    blockedByUncheckedGames: 以下游戏的项目配置无法读取，无法确认是否正在使用此模板：
+    blockedByUncheckedGames: 以下游戏的配置无法读取，无法确认是否正在使用此模板：
     title: 删除模板
     description: 确定要删除模板 {name} 吗？
-    warning: 此操作将把模板文件移到回收站，你可以稍后从回收站恢复。
+    warning: 此操作会把模板文件移到回收站，你可以稍后还原。
     deleteFailed: 模板删除失败
     removeTitle: 移除模板记录
     removeDescription: 确定要移除模板 {name} 的记录吗？
@@ -340,10 +337,10 @@ modals:
     title: 切换引擎
     description: 选择要切换的游戏引擎
     engineLabel: 游戏引擎
-    switching: 正在切换引擎，请稍候...
+    switching: 正在切换引擎……
     templateDirty:
       title: 模板已被修改
-      description: 切换引擎会影响当前模板中的本地修改，请选择处理方式
+      description: 切换引擎会影响当前模板中的本地修改，选择处理方式
       keep: 保留并固定模板
       discard: 丢弃模板修改
     failed:
@@ -363,31 +360,31 @@ modals:
     reset:
       label: 重置模板
       title: 确定要重置当前模板吗？
-      description: 此操作会清空当前项目 game/template/ 下的所有覆盖内容，包括新增、修改、未保存和删除的文件，并恢复为当前模板的初始状态。
+      description: 此操作会清空当前游戏 game/template/ 目录下的所有覆盖内容，包括新增、修改、未保存和删除的文件，恢复到当前模板的初始状态。
       confirm: 确认重置
       error: 模板重置失败
     error: 模板切换失败
-    engineUnavailable: 绑定的引擎当前不可用，请先恢复或重新安装引擎再切换模板。
+    engineUnavailable: 绑定的引擎当前不可用。先重新选择或安装引擎，再切换模板。
   deleteEngineGroup:
     title: 卸载全部版本
     description: 确定要卸载引擎 {name} 的全部版本吗？
-    warning: 此操作会将该引擎的全部已安装版本移到回收站，你可以稍后从回收站恢复。
+    warning: 此操作会把该引擎的全部已安装版本移到回收站，你可以稍后还原。
     failed: 引擎全部版本卸载失败
     removeTitle: 移除全部版本记录
     removeDescription: 确定要移除引擎 {name} 全部版本的记录吗？
     removeWarning: 引擎目录已不可用，此操作只会移除本地记录，不会删除任何文件。
     removeFailed: 引擎全部版本记录移除失败
   recoverGame:
-    title: 项目当前不可用
-    descriptionMissing: 找不到项目 {name} 的目录，可能外置盘未连接或目录已被外部移除。
-    descriptionBroken: 项目 {name} 的目录可访问，但核心文件已损坏或缺失，无法正常打开。
-    selectNewLocation: 选择项目新的位置
+    title: 游戏当前不可用
+    descriptionMissing: 找不到游戏 {name} 的目录。可能是外置盘未连接，或目录已被移动或删除。
+    descriptionBroken: 游戏 {name} 的目录可以访问，但核心文件已损坏或缺失，无法正常打开。
+    selectNewLocation: 选择游戏新的位置
     retry: 重试连接
     recheck: 重新检测
-    retryFailed: 项目仍然不可用
+    retryFailed: 游戏仍然不可用
     relink: 重新链接路径
     relinkFailed: 重新链接失败
-    openFolderFailed: 打开项目目录失败
+    openFolderFailed: 打开游戏目录失败
     backToHome: 返回主页
   discoveredResources:
     gamesTitle: 发现游戏
@@ -410,21 +407,21 @@ modals:
     saveFailed: 保存游戏配置失败
     fields:
       gameName:
-        description: 游戏名称，用作窗口标题与导出后的应用名称
+        description: 游戏名称，用作窗口标题和导出后的应用名称
         label: 名称
       description:
-        description: 游戏简介，用于介绍作品内容。只能填写单行文本，且不能包含分号
+        description: 游戏简介，用于介绍作品内容。只能填单行文本，不能包含分号
         label: 简介
       gameKey:
         label: 游戏识别码
-        description: 当前游戏的唯一标识，用于与其他游戏隔离数据
+        description: 这个游戏的唯一标识，用于区分不同游戏的数据
         regenerate: 重新生成
       packageName:
         label: 应用包名
         description: 打包与导出时使用的应用标识
         placeholder: org.example.demo
       defaultLanguage:
-        description: 玩家还未在标题界面选择过语言时使用的语言
+        description: 玩家在标题界面选择语言之前使用的语言
         label: 默认语言
         placeholder: 选择语言
         empty: 自动检测
@@ -443,16 +440,16 @@ modals:
         description: 在标题界面菜单中显示鉴赏模式
       enableContinue:
         label: 继续游戏按钮
-        description: 关闭后，标题界面不再显示继续游戏按钮
+        description: 在标题界面显示继续游戏按钮
       showPanic:
         label: 紧急回避
         description: 启用后，按下 Esc 键可显示紧急回避画面
       steamAppId:
         label: Steam AppID
-        description: Steam 平台识别当前游戏所需的 AppID，调用 Steam 功能依赖此项
+        description: Steam 平台识别这个游戏所需的 AppID，调用 Steam 功能需要先填写
       legacyExpressionBlendMode:
         label: Live2D 旧版表情混合模式
-        description: 为旧版 Live2D 表情混合提供兼容回退，显示异常时可尝试开启
+        description: 旧版 Live2D 表情混合的兼容选项，表情显示异常时可以开启
       maxLine:
         description: 文本框同时显示的最大行数
         label: 文本框最大行数
@@ -540,7 +537,7 @@ modals:
     apply: 应用
     clear: 清除
     previewUnsyncedCloseBlockedTitle: 运行时预览未同步
-    previewUnsyncedCloseBlockedMessage: 当前效果可能已经提交到预览运行时，但编辑器尚未确认同步状态。请重新选择目标行，或显式丢弃后重新打开效果编辑器。
+    previewUnsyncedCloseBlockedMessage: 效果可能已经应用到预览，但编辑器无法确认同步状态。重新选择目标行，或丢弃更改后重新打开效果编辑器。
     clearProperty: 清除{name}
     flip: 翻转
     flipHorizontal: 水平翻转
@@ -592,40 +589,40 @@ modals:
   createFile:
     title: 创建场景文件
     description: 开始一个新的场景
-    fileNamePlaceholder: 请输入文件名
+    fileNamePlaceholder: 输入文件名
     fileNameRequired: 文件名不能为空
     fileExists: 文件已存在
     create: 创建
   settings:
-    description: 在这里管理您的设置，根据需要个性化您的体验
+    description: 在这里调整各项设置，让 WebGAL Craft 更符合你的使用习惯
     tabs:
       general: 常规
       edit: 编辑
       backup: 备份
       storage: 存储
   saveChanges:
-    title: 是否要保存对 {name} 的更改?
-    description: 如果不保存，你的更改将丢失。
+    title: 要保存对 {name} 的更改吗？
+    description: 不保存的话，你的更改会丢失。
     save: 保存
     dontSave: 不保存
   saveCommandDefaults:
-    title: 是否要保存对 {name} 默认值的更改？
+    title: 要保存对 {name} 默认值的更改吗？
   confirmEffectChanges:
-    title: 是否确认效果编辑器的更改？
-    description: 如果不确认，你的更改将被丢弃。
+    title: 要应用效果编辑器的更改吗？
+    description: 不应用的话，你的更改会被丢弃。
     discard: 丢弃
   confirmAnimationChanges:
-    title: 是否确认动画编辑器的更改？
-    description: 如果不确认，你的更改将被丢弃。
+    title: 要应用动画编辑器的更改吗？
+    description: 不应用的话，你的更改会被丢弃。
     discard: 丢弃
   discardEffectChanges:
-    title: 是否要应用效果编辑器的更改？
-    description: 如果不应用，你的更改将被丢弃。
+    title: 要应用效果编辑器的更改吗？
+    description: 不应用的话，你的更改会被丢弃。
     apply: 应用
     discard: 丢弃
   externalDocumentChange:
     title: 检测到外部文件变更
-    description: 文件 {path} 已在外部发生变化。请选择保留本地修改、加载外部修改，或先查看两侧差异再合并。
+    description: 文件 {path} 已在编辑器外发生变化。选择保留本地修改、加载外部修改，或先查看差异再合并。
     keepLocal: 保留本地修改
     loadExternal: 加载外部修改
     reviewAndMerge: 查看并合并
@@ -636,7 +633,7 @@ modals:
       mergeResult: 合并结果
       readOnly: 只读
       editable: 可编辑，初始为外部版本
-      computing: 正在计算差异...
+      computing: 正在计算差异……
       noDifferences: 两侧内容已一致
       changeStatus: 第 {current} / {total} 个差异块
       previousChange: 上一个差异块
@@ -646,11 +643,11 @@ modals:
       applyResult: 应用合并结果
   fastPreviewTimeout:
     title: 实时预览已停止
-    summary: 预览在尝试跳转到目标行时超过时间限制，已停止本次同步。
+    summary: 跳转到目标行时超时，已停止本次同步。
     suggestionsTitle: 建议检查
-    suggestionLoop: 目标行之前是否存在反复跳回的跳转或条件分支。
-    suggestionDistance: 目标行之前是否有过多需要快进执行的语句。
-    suggestionBlocking: 是否有语句在预览运行时阻塞推进。
+    suggestionLoop: 检查目标行之前是否有反复跳回的跳转或条件分支。
+    suggestionDistance: 检查目标行之前是否有过多需要快进执行的语句。
+    suggestionBlocking: 检查是否有语句卡住了预览推进。
     nextStep: 调整脚本后，重新选择目标行或刷新预览。
     scene: 当前场景
     targetSentence: 目标行
@@ -665,7 +662,7 @@ modals:
     empty: 此场景暂无历史记录
     restore: 还原
     restoreConfirmTitle: 还原此版本？
-    restoreConfirmContent: 将还原 {time} 保存的版本。当前内容会先作为「还原操作」条目自动备份。
+    restoreConfirmContent: 将还原 {time} 保存的版本。当前内容会先作为“还原操作”条目自动备份。
     sourceKind:
       manualSave: 手动保存
       autoSave: 自动保存
@@ -693,7 +690,7 @@ export:
   platformAndroid: Android
   platformAndroidDescription: 导出 Android APK 安装包
   comingSoon: 即将推出
-  selectPlatformHint: 请选择一个平台以继续
+  selectPlatformHint: 选择一个平台以继续
   next: 下一步
   previousStep: 上一步
   outputDirectory: 导出目录
@@ -702,7 +699,7 @@ export:
   desktopConfig:
     title: 桌面端目标
     notSelected: 未选择桌面端，无需额外配置
-    targetRequired: 请至少选择一个桌面端目标
+    targetRequired: 至少选择一个桌面端目标
     window: 窗口
     width: 宽度
     height: 高度
@@ -715,7 +712,7 @@ export:
       macosX64: macOS x64
       macosArm64: macOS Apple Silicon
       linuxX64: Linux x64
-  selectDirectoryHint: 请先选择导出目录以继续
+  selectDirectoryHint: 先选择导出目录以继续
   selectDirectory: 选择导出目录
   selectDirectoryFailed: 无法选择导出目录
   androidDestination: 下载/WebGALCraft/exports
@@ -736,15 +733,15 @@ export:
     confirm: 覆盖导出
   progress:
     ready: 等待开始导出
-    downloadingRuntime: 正在下载桌面运行时...
-    preparing: 正在准备导出...
-    copyingEngine: 正在复制引擎文件...
-    copyingGame: 正在复制游戏资源...
-    copyingIcons: 正在复制图标...
-    updatingManifest: 正在更新清单...
-    packingResources: 正在打包桌面资源...
-    copyingRuntime: 正在复制桌面运行时...
-    writingConfig: 正在生成桌面配置...
+    downloadingRuntime: 正在下载桌面运行时……
+    preparing: 正在准备导出……
+    copyingEngine: 正在复制引擎文件……
+    copyingGame: 正在复制游戏资源……
+    copyingIcons: 正在复制图标……
+    updatingManifest: 正在更新清单……
+    packingResources: 正在打包桌面资源……
+    copyingRuntime: 正在复制桌面运行时……
+    writingConfig: 正在生成桌面配置……
     finished: 导出完成
     failed: 导出失败
 
@@ -753,7 +750,7 @@ edit:
     testGame: 测试游戏
     export: 导出
     gameSettings: 游戏设置
-    missingPreviewUrl: 预览地址不存在，请先启动预览
+    missingPreviewUrl: 预览地址不存在，先启动预览
     openFailed: 打开测试窗口失败
   empty:
     title: 没有打开的文件
@@ -768,7 +765,7 @@ edit:
     viewHistory: 查看历史版本
     revealInExplorer: 在文件资源管理器中显示
     saveChangesTitle: 关闭前保存 {count} 个标签页的更改？
-    saveChangesDescription: 部分标签页存在未保存的更改。关闭前是否保存？
+    saveChangesDescription: 部分标签页有未保存的更改。关闭前要保存吗？
   completion:
     arguments:
       when: 执行条件
@@ -784,8 +781,8 @@ edit:
     duplicateLabel: "标签“{label}”在当前场景中定义了 {count} 次，跳转目标不明确。"
     missingLabel: "标签“{label}”未在当前场景中定义。"
     unsupportedLive2d: 当前引擎不支持 Live2D 模型。
-    unsupportedMultilineStatements: 多行语句需要 WebGAL 4.6.3 或更高版本
-    unsupportedOpusVocal: Opus 语音简写需要 WebGAL 4.6.3 或更高版本
+    unsupportedMultilineStatements: 多行语句需要 WebGAL 4.6.3 或更高版本。
+    unsupportedOpusVocal: Opus 语音简写需要 WebGAL 4.6.3 或更高版本。
     unsupportedFigurePosition: 此立绘位置需要 WebGAL 4.6.3 或更高版本。
     unsupportedCallSceneArgument: “调用场景”命令向子场景传递参数需要 WebGAL 4.6.3 或更高版本。
     unsupportedLocalVariable: “局部变量”参数需要 WebGAL 4.6.3 或更高版本。
@@ -794,11 +791,11 @@ edit:
     invalidColorFormat: "“{value}”不是有效的颜色值。"
     reservedCallSceneArgument: "“{argument}”为保留参数，不能用于 callScene。"
   errors:
-    fileSyncFailed: 文件同步失败，请稍后重试
-    previewUnavailable: 预览地址不存在，请先启动预览
-    workspaceUnavailable: 工作区尚未初始化，请稍后重试
+    fileSyncFailed: 文件同步失败，稍后重试
+    previewUnavailable: 预览地址不存在，先启动预览
+    workspaceUnavailable: 编辑器尚未准备就绪，稍后重试
   unsupported:
-    unsupportedFile: 该文件是二进制文件或使用了不受支持的文本编码，无法在编辑器中显示
+    unsupportedFile: 该文件是二进制文件，或使用了不受支持的文本编码，无法在编辑器中显示
   pathOperation:
     confirmRewrite:
       title: 是否同步更新“{name}”的资源引用？
@@ -819,14 +816,14 @@ edit:
       blockedPlan: 路径操作被阻断
       protectedEntryPoint: 场景入口文件 start.txt 不能移动、重命名或删除。
       duplicateTarget: 目标路径已存在或与源路径相同。
-      inFlightConflict: 该路径上已有进行中的操作，请稍后再试。
-      crossRootMove: 当前仅支持同一资源根目录内的引用重写。
+      inFlightConflict: 该路径上已有操作正在进行，稍后再试。
+      crossRootMove: 只能在同一个资源根目录内更新引用。
       unsupportedReferenceField: 无法安全更新引用字段：{fieldKey}
       unsupportedReferenceConfigField: 无法安全更新配置引用字段：{fieldKey}
       unsupportedReferenceSource: 无法安全更新引用来源：{sourceKind}
       unsupportedText: 无法读取文本文件：{path}
       stalePlan: 路径操作计划已过期：{path}
-      currentProjectUnavailable: 当前项目不可用。
+      currentProjectUnavailable: 当前游戏不可用。
       missingTextMetadata: 路径操作计划缺少文本元数据：{path}
       editorContentChanged: 编辑器内容已变化：{path}
       targetPathMismatch: 实际目标路径与计划不一致：{path}
@@ -846,17 +843,17 @@ edit:
       lines: "{count} 行,"
       words: "{count} 字"
     formPanel:
-      noStatement: 移动光标到语句行以编辑
-      multipleEditTargets: 当前存在多个编辑目标，语句编辑已暂停
-    invalidAnimationVisualMessage: 当前动画文件存在错误，无法在可视化模式下编辑，请切换到文本模式修复
+      noStatement: 将光标移到语句行即可编辑
+      multipleEditTargets: 同时选中了多个编辑目标，语句编辑已暂停
+    invalidAnimationVisualMessage: 当前动画文件存在错误，无法在可视化模式下编辑，切换到文本模式修复
   scenePanel:
     scene: 场景
     resource: 资源
   externalFileImport:
-    partial: 已导入 {successCount} 个项目，{failedCount} 个失败
-    failed: "{count} 个项目导入失败"
-    failedItems: "失败项目：{names}"
-    renamedConflicts: 已自动重命名 {count} 个同名项目
+    partial: 已导入 {successCount} 项，{failedCount} 项失败
+    failed: "{count} 项导入失败"
+    failedItems: "失败项：{names}"
+    renamedConflicts: 已自动重命名 {count} 个同名项
     busy: 另一批文件仍在导入中
   statusBar:
     frames: "{count} 帧"
@@ -947,7 +944,7 @@ edit:
       setDefaultChoice: 将第 {index} 个选项设为默认
       clearDefaultChoice: 取消第 {index} 个选项的默认设置
     emptyTitle: 场景还是空的
-    emptyDescription: 从命令面板添加语句，或拖拽资源文件直接插入。
+    emptyDescription: 从命令面板添加语句，或拖放资源文件直接插入。
     audioPreview:
       play: 播放音频
       pause: 暂停音频
@@ -957,13 +954,13 @@ edit:
     animation:
       title: 动画编辑器
       description: 调整当前动画各关键帧的时长、缓动和变换
-      invalidJson: 当前高级动画内容存在错误，无法打开动画编辑器，请在文本模式中修复
+      invalidJson: 当前高级动画内容存在错误，无法打开动画编辑器，切换到文本模式修复
       timelineTitle: 时间轴
       inspectorTitle: 帧属性
       startFrame: 起始帧
       firstFrameHint: 起始帧用于定义初始状态，不支持缓动效果
       emptyTitle: 还没有帧
-      emptyDescription: 先添加一个关键帧来开始编辑动画
+      emptyDescription: 添加一个关键帧即可开始编辑动画
       unitMs: ms
       unitPercent: "%"
       unitPx: px
@@ -994,7 +991,7 @@ edit:
         label: 编辑模式
         visual: 可视化
         text: 文本
-        lossWarning: 当前文本包含无法无损转换为可视化语句的内容，请修正后再切换或保存。
+        lossWarning: 当前文本包含无法完整转换为可视化语句的内容，修正后再切换或保存。
       moveUp: 上移
       moveDown: 下移
       groupCount: 共 {count} 条语句
@@ -1105,7 +1102,7 @@ edit:
       ignoreDefault: 忽略默认效果
       order: 展示顺序
       concat: 接续上段
-      notend: 继续播放
+      notend: 自动继续
       vocal: 语音
       volume: 音量
       associatedFigure: 关联立绘
@@ -1135,7 +1132,7 @@ edit:
       series: 所属系列
       id: ID
       achievementId: 解锁成就 ID
-      skipOff: 禁止跳过
+      skipOff: 禁止跳过视频
       choiceText: 选项文本
       labelName: 标签名
       varName: 变量名
@@ -1149,13 +1146,13 @@ edit:
       inputTitle: 对话框标题
       buttonText: 确认按钮文本
       defaultValue: 默认值
-      rule: 校验正则
-      ruleFlag: 正则标记
+      rule: 校验正则表达式
+      ruleFlag: 正则表达式标记
       ruleText: 校验失败提示
-      ruleButtonText: 校验提示按钮
+      ruleButtonText: 校验提示按钮文本
       defaultChoose: 默认选项
       waitTime: 时间
-      nobreak: 禁止跳过
+      nobreak: 不可打断
       unitMs: 毫秒
       textboxState: 显示
       textboxStateOff: 隐藏
@@ -1188,8 +1185,8 @@ edit:
       closingDuration: 闭眼时长
       closedDuration: 保持闭眼
       focus: 注视参数
-      focusX: 注视点X
-      focusY: 注视点Y
+      focusX: 注视点 X
+      focusY: 注视点 Y
       focusInstant: 立即注视
       zIndex: 显示层级
       writeDefault: 继承默认
@@ -1226,7 +1223,7 @@ edit:
         on: 每次玩家操作时显示下一段全屏文字。
         off: 按设置的间隔自动逐段显示全屏文字。
       skipOff:
-        on: 视频播放期间，玩家无法提前结束视频。
+        on: 视频播放期间，玩家无法跳过或提前结束。
         off: 玩家可以双击画面提前结束视频。
       filmModeState:
         on: 显示宽银幕黑边，并使用沉浸式对话布局。
@@ -1322,10 +1319,10 @@ edit:
       universalSoftOff: 通用透明度淡出
     effectEditor: 效果编辑器
     statementList: 语句列表
-    noSelection: 请选择一条语句进行编辑
+    noSelection: 选择一条语句开始编辑
 settings:
   experimental:
-    tooltip: 这是一个实验性功能，使用过程中可能会遇到问题
+    tooltip: 实验性功能，使用过程中可能会遇到问题
   general:
     followSystem: 跟随系统
     theme:
@@ -1336,15 +1333,15 @@ settings:
     language:
       description: 界面显示语言
       label: 语言
-      placeholder: 请选择语言
+      placeholder: 选择语言
     openLastProject:
-      label: 启动时打开最后编辑的游戏
-      description: 应用启动时自动加载最后编辑的游戏项目
+      label: 启动时打开上次编辑的游戏
+      description: 每次启动 WebGAL Craft 时自动打开上次编辑的游戏
   network:
     label: 网络
     officialEngineDownloadProxy:
       label: 下载代理
-      description: 可选的 HTTPS 下载代理前缀。留空则使用系统代理或直接连接。
+      description: HTTPS 下载代理前缀。留空时使用系统代理或直接连接。
       placeholder: https://proxy.example/
   edit:
     general: 通用
@@ -1352,21 +1349,21 @@ settings:
     textEditor: 文本编辑器
     visualEditor: 可视化编辑器
     fontFamily:
-      description: 代码和文本使用的字体，有多个时用英文逗号分隔
+      description: 代码和文本使用的字体，多个字体之间用英文逗号分隔
       label: 字体
       placeholder: 字体名称
     fontSize:
-      description: 编辑器中文字的字号，单位为像素
+      description: 编辑器里文字的字体大小，单位为像素
       label: 字体大小
     wordWrap:
       label: 自动换行
       description: 超出编辑器宽度的行自动换行显示
     minimap:
       label: 代码缩略图
-      description: 在编辑器右侧显示代码缩略图，方便快速定位
+      description: 在编辑器右侧显示代码缩略图，便于快速定位
     autoSave:
       label: 自动保存
-      description: 启用后，编辑器将自动保存您的更改
+      description: 启用后，编辑器会自动保存你的更改
     enablePreviewTab:
       label: 启用预览标签页
       description: 单击文件时以预览模式打开，双击或编辑后固定为普通标签页
@@ -1378,13 +1375,13 @@ settings:
       description: 在效果编辑器中调整参数时实时渲染预览效果
     autoApplyEffectEditorChanges:
       label: 自动应用效果编辑器改动
-      description: 开启后，效果编辑器中的参数更改会自动写回语句
+      description: 开启后，效果编辑器的参数更改会自动保存到语句
     collapseStatementsOnSidebarOpen:
-      label: 展开辅助面板时强制折叠全部语句
-      description: 打开辅助面板时，锁定所有语句卡片为折叠状态
+      label: 打开辅助面板时折叠全部语句
+      description: 打开辅助面板时，所有语句卡片都会折叠起来
     showSidebarAssetPreview:
-      label: 辅助面板语句资源预览
-      description: 在编辑器辅助面板中预览语句引用的图片等资源
+      label: 辅助面板中的资源预览
+      description: 在辅助面板中预览语句引用的图片等资源
     enableComboboxPathDelimiter:
       label: 启用级联选择
       description: 将可分组选项按多级分类方式展示，便于在选项较多时定位和选择
@@ -1393,19 +1390,19 @@ settings:
       description: 指定用于划分选项层级的分隔符，例如 /
   storage:
     gamePath:
-      description: 新建或导入的游戏存放的目录，修改后立即生效
+      description: 新建或导入的游戏都保存在这里，修改后立即生效
       label: 游戏保存位置
       title: 选择游戏保存位置
     enginePath:
-      description: 导入的引擎版本存放的目录，修改后立即生效
+      description: 导入的引擎都保存在这里，修改后立即生效
       label: 引擎保存位置
       title: 选择引擎保存位置
     templatePath:
-      description: 导入的项目模板存放的目录，修改后立即生效
+      description: 导入的模板都保存在这里，修改后立即生效
       label: 模板保存位置
       title: 选择模板保存位置
     exportPath:
-      description: 导出游戏时默认保存到的位置
+      description: 导出游戏时默认保存到这里
       label: 默认导出位置
       title: 选择默认导出位置
       androidDestination: 下载/WebGALCraft/exports
@@ -1434,26 +1431,26 @@ engine:
   latestBadge: 最新
   deleteVersion: 卸载
   uninstallAllVersions: 卸载全部版本
-  deleteBlocked: 无法删除
+  deleteBlocked: 无法卸载
   deleteBlockedByGames: 以下游戏正在使用此引擎：
   unavailable: 不可用
 
 game:
   selectTemplatePlaceholder: 选择一个可用模板
-  gameDependencyResolutionTitle: 选择项目所需资源
-  gameDependencyResolutionRuntimeRebindTitle: 为项目更换引擎
-  gameDependencyResolutionDescription: 该项目所需的引擎或模板当前不可用。请选择可用资源，应用会更新项目配置后继续导入。
-  gameDependencyResolutionDescriptionWithName: 「{name}」所需的引擎或模板当前不可用。请选择可用资源，应用会更新项目配置后继续导入。
-  gameDependencyResolutionRuntimeRebindDescription: 当前项目绑定的引擎不可用，或无法在 WebGAL Craft 中使用。请选择一个可用引擎，应用会更新项目配置后继续打开项目。
-  gameDependencyResolutionRuntimeRebindDescriptionWithName: 「{name}」绑定的引擎不可用，或无法在 WebGAL Craft 中使用。请选择一个可用引擎，应用会更新项目配置后继续打开项目。
-  gameDependencyResolutionLegacyDescription: 该旧版项目需要选择一个可在 WebGAL Craft 中使用的引擎。应用会创建项目配置后继续导入。
-  gameDependencyResolutionLegacyDescriptionWithName: 「{name}」是旧版项目，需要选择一个可在 WebGAL Craft 中使用的引擎。应用会创建项目配置后继续导入。
+  gameDependencyResolutionTitle: 选择游戏所需资源
+  gameDependencyResolutionRuntimeRebindTitle: 为游戏更换引擎
+  gameDependencyResolutionDescription: 这个游戏所需的引擎或模板当前不可用。选择一个可用资源，WebGAL Craft 会更新游戏配置后继续导入。
+  gameDependencyResolutionDescriptionWithName: “{name}”所需的引擎或模板当前不可用。选择一个可用资源，WebGAL Craft 会更新游戏配置后继续导入。
+  gameDependencyResolutionRuntimeRebindDescription: 这个游戏绑定的引擎不可用，或无法在 WebGAL Craft 中使用。选择一个可用引擎，WebGAL Craft 会更新游戏配置后继续打开。
+  gameDependencyResolutionRuntimeRebindDescriptionWithName: “{name}”绑定的引擎不可用，或无法在 WebGAL Craft 中使用。选择一个可用引擎，WebGAL Craft 会更新游戏配置后继续打开。
+  gameDependencyResolutionLegacyDescription: 这是旧版游戏，需要选择一个可在 WebGAL Craft 中使用的引擎。WebGAL Craft 会创建游戏配置后继续导入。
+  gameDependencyResolutionLegacyDescriptionWithName: “{name}”是旧版游戏，需要选择一个可在 WebGAL Craft 中使用的引擎。WebGAL Craft 会创建游戏配置后继续导入。
   gameDependencyResolutionEngineTitle: 选择引擎
   gameDependencyResolutionTemplateTitle: 选择模板
-  gameDependencyResolutionEngineIssue: 请选择一个可在 WebGAL Craft 中使用的引擎。导入后，项目会使用它打开和预览。
-  gameDependencyResolutionRuntimeRebindEngineIssue: 请选择一个可在 WebGAL Craft 中使用的引擎。更换后，项目会改用它打开和预览。
-  gameDependencyResolutionEngineLegacyIssue: 旧版项目需要先选择一个可在 WebGAL Craft 中使用的引擎，才能继续导入。
-  gameDependencyResolutionTemplateIssue: 请选择一个可用模板，或使用所选引擎的默认模板。
+  gameDependencyResolutionEngineIssue: 选择一个可在 WebGAL Craft 中使用的引擎。导入后，游戏会用它打开和预览。
+  gameDependencyResolutionRuntimeRebindEngineIssue: 选择一个可在 WebGAL Craft 中使用的引擎。更换后，游戏会改用它打开和预览。
+  gameDependencyResolutionEngineLegacyIssue: 旧版游戏需要先选择一个可在 WebGAL Craft 中使用的引擎，才能继续导入。
+  gameDependencyResolutionTemplateIssue: 选择一个可用模板，或使用所选引擎的默认模板。
   gameDependencyResolutionOriginalEngine: 当前引擎
   gameDependencyResolutionOriginalTemplate: 当前模板
   gameDependencyResolutionReasonMissing: 未安装
@@ -1462,9 +1459,9 @@ game:
   gameDependencyResolutionReasonVersionInvalid: 版本信息无效
   gameDependencyResolutionReasonVersionTooOld: 版本过旧
   gameDependencyResolutionReasonSelectionRequired: 需要选择
-  gameDependencyResolutionTemplateFollowEngineHint: 选择“跟随引擎默认模板”后，项目将不再单独指定模板。
-  gameDependencyResolutionScopeHint: 只会更新该项目的配置，不会移动或删除已安装资源。
-  gameDependencyResolutionRuntimeRebindScopeHint: 只会更新该项目使用的引擎，不会移动或删除已安装资源。
+  gameDependencyResolutionTemplateFollowEngineHint: 选择“跟随当前引擎”后，游戏不再单独指定模板。
+  gameDependencyResolutionScopeHint: 只会更新这个游戏的配置，不会移动或删除已安装资源。
+  gameDependencyResolutionRuntimeRebindScopeHint: 只会更新这个游戏使用的引擎，不会移动或删除已安装资源。
   gameDependencyResolutionCancel: 取消导入
   gameDependencyResolutionRuntimeRebindCancel: 取消
   gameDependencyResolutionConfirm: 继续导入

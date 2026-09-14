@@ -1,5 +1,5 @@
 common:
-  loading: Loading...
+  loading: Loading…
   noOptions: No options available
   noResults: No results found
   cancel: Cancel
@@ -88,7 +88,7 @@ appUpdate:
   toast:
     availableTitle: Version {version} is available
     availableDescription: You are on {currentVersion}. Update to get the latest improvements.
-    checkStartedTitle: Checking for updates...
+    checkStartedTitle: Checking for updates…
     checkUpToDateTitle: You are on the latest version
     checkUpToDateDescription: Your current version is already the latest release.
     checkFailedDescription: Could not reach the update service. Try again later or view the releases manually.
@@ -97,7 +97,7 @@ appUpdate:
     viewUpdate: View update
     updateStartedDescription: The update package will download in the background, so you can keep using the app.
     updateStartedProgressTitle: Downloading update
-    updateDownloadingDescription: Fetching update package...
+    updateDownloadingDescription: Fetching the update package…
     updateDownloadingProgressDescription: "Download progress: {percent}%"
     downloadedTitle: Update package ready
     downloadedDescription: Before installing, save your work and wait for imports, file operations, or backups to finish.
@@ -140,9 +140,6 @@ home:
       downloaded: Downloaded {downloaded}
       downloadedWithTotal: Downloaded {downloaded} / {total}
       extracted: Extracted {files} files
-      phase:
-        downloading: Downloading
-        extracting: Extracting
     resource:
       game: game
       engine: engine
@@ -170,21 +167,21 @@ home:
     templates: Game Templates
   search:
     placeholder:
-      recent: Search recent creations...
-      engines: Search game engines...
-      templates: Search templates...
+      recent: Search recent creations…
+      engines: Search game engines…
+      templates: Search templates…
   welcome:
     title: Welcome to WebGAL Craft
-    subtitle: Start your game creation journey and write your story
+    subtitle: Start creating your game and write your story
     welcomeBack: Welcome Back
-    welcomeBackSubtitle: Continue editing your game or start a new creation
+    welcomeBackSubtitle: Keep editing your game, or start something new
     createGame: Create Game
     openGame: Open Game
   games:
-    creating: Creating game...
+    creating: Creating game…
     modifiedAt: Modified {time}
-    noGames: No Recent Creations Found
-    noGamesDesc: You haven't created or opened any games yet
+    noGames: No recent creations yet
+    noGamesDesc: Games you create or open will show up here
     importGame: Import Game
     importGameHint: Click to browse or drag and drop game folder here
     createNewGame: Create New Game
@@ -192,23 +189,23 @@ home:
     dropGameFolder: Drag and drop game folder here to import
     gameCover: "{name} game cover"
     gameIcon: "{name} game icon"
-    importConfigCorrupted: The project file is damaged and cannot be read.
-    importEngineNotFound: The engine required by this project is not installed.
-    importEngineUnavailable: The engine required by this project is unavailable.
-    importEngineEditorIncompatible: The engine bound to this project cannot be used in WebGAL Craft. Choose another engine.
-    importEngineVersionInvalid: The engine bound to this project does not provide valid version information. Choose another engine.
-    importEngineVersionTooOld: The engine bound to this project is too old. Choose an engine for WebGAL {version} or later.
-    importAlreadyExists: This project already exists
+    importConfigCorrupted: The config file is damaged and cannot be read
+    importEngineNotFound: The engine this game needs is not installed
+    importEngineUnavailable: The engine this game needs is currently unavailable
+    importEngineEditorIncompatible: The engine bound to this game cannot be used in WebGAL Craft. Choose another engine.
+    importEngineVersionInvalid: The engine bound to this game does not provide valid version information. Choose another engine.
+    importEngineVersionTooOld: The engine bound to this game is too old. Choose an engine for WebGAL {version} or later.
+    importAlreadyExists: This game already exists
     importFailed: Import failed
-    importInvalidFolder: This does not look like a game project folder. Please check its contents.
-    importSchemaVersionTooNew: This project was created by a newer version of the app. Please upgrade and try again.
+    importInvalidFolder: This does not look like a game folder. Check the folder structure.
+    importSchemaVersionTooNew: This game was created by a newer version of WebGAL Craft. Upgrade and open it again.
     importUnknownError: An unknown error occurred while importing the game
     importMultipleFolders: Only one game folder can be imported at a time
-    importCreating: Game is being created, please wait for the creation to complete
-    openLastProjectUnavailable: Last project "{name}" is currently unavailable; staying on the home page
+    importCreating: The game is being created. Try again when it finishes.
+    openLastProjectUnavailable: Last game "{name}" is currently unavailable; staying on the home page
   engines:
-    noEngines: No Available Game Engines
-    noEnginesDesc: You need to install a game engine to create games
+    noEngines: No available game engines
+    noEnginesDesc: Install a game engine to create games
     installEngine: Install Engine
     installEngineHint: Click to browse or drag and drop engine folder here
     installGameEngine: Install Game Engine
@@ -216,11 +213,11 @@ home:
     engineIcon: "{name} engine icon"
     importAlreadyExists: This engine already exists
     importFailed: Import failed
-    importInvalidFolder: This does not look like an engine folder. Please check its contents.
-    importing: Importing engine...
-    importSchemaTooNew: This engine is too new for the current app. Please upgrade the app and try again.
-    importTargetConflict: The install location is already in use. Please remove the conflicting folder and retry.
-    importUnsupportedLegacyEngine: This engine is too old. Please use a newer version.
+    importInvalidFolder: This does not look like an engine folder. Check the folder structure.
+    importing: Importing engine…
+    importSchemaTooNew: This engine is too new for this version of WebGAL Craft. Upgrade and import it again.
+    importTargetConflict: The install location is already in use. Remove the conflicting folder and try again.
+    importUnsupportedLegacyEngine: This engine is too old. Use a newer version.
     importEditorIncompatible: This engine cannot be used in WebGAL Craft.
     importVersionInvalid: This engine does not provide valid WebGAL version information.
     importVersionTooOld: This engine is too old. Import an engine for WebGAL {version} or later.
@@ -238,13 +235,13 @@ home:
       installSuccess: WebGAL {version} installed
       alreadyInstalled: This version is already installed
       installFailed: Official engine download or installation failed
-    noEngineTitle: No Available Game Engines
-    noEngineContent: You need to install a game engine first to create games
+    noEngineTitle: No available game engines
+    noEngineContent: Install a game engine to create games
     goToInstall: Go to Install
     later: Later
   templates:
-    noTemplates: No Available Templates
-    noTemplatesDesc: Import standalone templates or install engines with built-in templates
+    noTemplates: No available templates
+    noTemplatesDesc: Import standalone templates, or install engines with built-in templates
     importTemplate: Import Template
     importTemplateHint: Click to browse or drag and drop template folder here
     deleteTemplate: Delete Template
@@ -286,9 +283,9 @@ modals:
     templateGroupStandalone: Standalone Templates
     create: Create
     createFailed: Failed to create game
-    engineUnavailable: The selected engine is currently unavailable, please choose another one
+    engineUnavailable: The selected engine is currently unavailable. Choose another one.
     engineIncompatible: The selected engine cannot be used in WebGAL Craft. Choose another one.
-    templateUnavailable: The selected template is currently unavailable, please choose another one
+    templateUnavailable: The selected template is currently unavailable. Choose another one.
     pathNotEmpty: The game save directory must not exist or be empty
     selectSaveLocation: Game Save Location
   deleteGame:
@@ -299,7 +296,7 @@ modals:
     deleteFailed: Failed to delete game
     removeTitle: Remove Game Record
     removeDescription: Are you sure you want to remove the record for {name}?
-    removeWarning: The project directory is unavailable. This will only remove the local record and will not delete any files.
+    removeWarning: The game folder is unavailable. This only removes the local record and does not delete any files.
     removeFailed: Failed to remove game record
   deleteFile:
     title: Are you sure you want to delete the file {name}?
@@ -318,32 +315,32 @@ modals:
   deleteEngine:
     title: Uninstall Engine
     description: Are you sure you want to uninstall the engine {name}?
-    warning: This operation will move engine files to the recycle bin. You can restore them from there.
+    warning: This moves engine files to the recycle bin. You can restore them later.
     removeTitle: Remove Engine Record
     removeDescription: Remove the record for engine {name}?
-    removeWarning: The engine directory is no longer available. This only removes the local record and will not delete any files.
+    removeWarning: The engine folder is unavailable. This only removes the local record and does not delete any files.
     removeFailed: Failed to remove engine record
     uninstallFailed: Failed to uninstall engine
   deleteTemplate:
     blockedTitle: Cannot Delete
     blockedByGames: "The following games are using this template:"
-    blockedByUncheckedGames: "The following games' project configs cannot be read, so template usage cannot be confirmed:"
+    blockedByUncheckedGames: "The following games' configs cannot be read, so template usage cannot be confirmed:"
     title: Delete Template
     description: Are you sure you want to delete the template {name}?
-    warning: This operation will move template files to the recycle bin. You can restore them from there.
+    warning: This moves template files to the recycle bin. You can restore them later.
     deleteFailed: Failed to delete template
     removeTitle: Remove Template Record
     removeDescription: Are you sure you want to remove the record for template {name}?
-    removeWarning: The template directory is unavailable. This will only remove the local record and will not delete any files.
+    removeWarning: The template folder is unavailable. This only removes the local record and does not delete any files.
     removeFailed: Failed to remove template record
   switchEngine:
     title: Switch Engine
     description: Select the game engine to switch to
     engineLabel: Game Engine
-    switching: Switching engine, please wait...
+    switching: Switching engine…
     templateDirty:
       title: Template has been modified
-      description: Switching engines will affect local modifications in the current template. Please choose how to handle them
+      description: Switching engines affects local changes in the current template. Choose how to handle them.
       keep: Keep and pin template
       discard: Discard template changes
     failed:
@@ -363,31 +360,31 @@ modals:
     reset:
       label: Reset Template
       title: Are you sure you want to reset the current template?
-      description: This will clear all overrides under the project's game/template/ directory, including added, modified, unsaved, and deleted files, and restore the initial state of the selected template.
+      description: This clears all overrides under the game's game/template/ folder, including added, modified, unsaved, and deleted files, and restores the current template's initial state.
       confirm: Confirm Reset
       error: Template reset failed
     error: Template switch failed
-    engineUnavailable: The bound engine is unavailable. Restore or reinstall it before switching templates.
+    engineUnavailable: The bound engine is unavailable. Reselect or install an engine before switching templates.
   deleteEngineGroup:
     title: Uninstall All Versions
     description: Are you sure you want to uninstall all versions of engine {name}?
-    warning: This operation will move all installed versions of this engine to the recycle bin. You can restore them later.
+    warning: This moves all installed versions of this engine to the recycle bin. You can restore them later.
     failed: Failed to uninstall all engine versions
     removeTitle: Remove All Version Records
     removeDescription: Are you sure you want to remove records for all versions of engine {name}?
-    removeWarning: The engine directory is unavailable. This will only remove the local records and will not delete any files.
+    removeWarning: The engine folder is unavailable. This only removes the local records and does not delete any files.
     removeFailed: Failed to remove engine version records
   recoverGame:
-    title: Project Currently Unavailable
-    descriptionMissing: Could not locate the directory for project {name}. The drive may be disconnected, or the directory may have been removed externally.
-    descriptionBroken: The directory for project {name} is reachable, but core files are missing or corrupted.
-    selectNewLocation: Select the new location for the project
+    title: Game Currently Unavailable
+    descriptionMissing: Could not find the folder for game {name}. The drive may be disconnected, or the folder may have been moved or deleted.
+    descriptionBroken: The folder for game {name} is reachable, but core files are missing or corrupted.
+    selectNewLocation: Select the game's new location
     retry: Retry connection
     recheck: Recheck
-    retryFailed: Project is still unavailable
+    retryFailed: Game is still unavailable
     relink: Relink path
     relinkFailed: Failed to relink
-    openFolderFailed: Failed to open project folder
+    openFolderFailed: Failed to open the game folder
     backToHome: Back to home
   discoveredResources:
     gamesTitle: Discovered Games
@@ -413,11 +410,11 @@ modals:
         description: Game name, used as the window title and the app name after export
         label: Name
       description:
-        description: Game summary describing the work. A single line only, and semicolons are not allowed
+        description: Game summary. Single line only; semicolons are not allowed
         label: Summary
       gameKey:
         label: Game ID
-        description: Unique identifier for this game, used to isolate data from other games
+        description: Unique identifier for this game, used to keep its data separate from other games
         regenerate: Regenerate
       packageName:
         label: App Package Name
@@ -443,16 +440,16 @@ modals:
         description: Show Appreciation Mode in the title screen menu
       enableContinue:
         label: Continue Button
-        description: When disabled, the title screen does not show the Continue button
+        description: Show the Continue button on the title screen
       showPanic:
         label: Panic Overlay
         description: When enabled, pressing Esc shows the panic screen
       steamAppId:
         label: Steam AppID
-        description: AppID required for Steam to identify this game, Steam features depend on this value
+        description: AppID Steam uses to identify this game. Required for Steam features.
       legacyExpressionBlendMode:
         label: Legacy Live2D Expression Blend Mode
-        description: Compatibility fallback for legacy Live2D expression blending, try enabling this if expressions render incorrectly
+        description: Compatibility option for legacy Live2D expression blending. Enable it if expressions render incorrectly.
       maxLine:
         description: Maximum lines shown in the text box at once
         label: Text Box Max Lines
@@ -540,7 +537,7 @@ modals:
     apply: Apply
     clear: Clear
     previewUnsyncedCloseBlockedTitle: Runtime preview is out of sync
-    previewUnsyncedCloseBlockedMessage: The current effect may already be committed to the preview runtime, but the editor could not confirm the sync state. Select the target line again, or explicitly discard before reopening the effect editor.
+    previewUnsyncedCloseBlockedMessage: The effect may already be applied to the preview, but the editor cannot confirm the sync state. Reselect the target line, or discard the change before reopening the effect editor.
     clearProperty: Clear {name}
     flip: Flip
     flipHorizontal: Flip Horizontal
@@ -597,35 +594,35 @@ modals:
     fileExists: File already exists
     create: Create
   settings:
-    description: Manage your settings here and personalize your experience as needed
+    description: Adjust settings to make WebGAL Craft work the way you do
     tabs:
       general: General
       edit: Edit
       backup: Backup
       storage: Storage
   saveChanges:
-    title: Do you want to save changes to {name}?
-    description: Your changes will be lost if you don't save them.
+    title: Save changes to {name}?
+    description: If you don't save, your changes will be lost.
     save: Save
     dontSave: Don't Save
   saveCommandDefaults:
-    title: Do you want to save changes to {name} defaults?
+    title: Save changes to {name} defaults?
   confirmEffectChanges:
-    title: Confirm changes from the effect editor?
-    description: Your changes will be discarded if you don't confirm them.
+    title: Apply changes from the effect editor?
+    description: If you don't apply, your changes will be discarded.
     discard: Discard
   confirmAnimationChanges:
-    title: Confirm changes from the animation editor?
-    description: Your changes will be discarded if you don't confirm them.
+    title: Apply changes from the animation editor?
+    description: If you don't apply, your changes will be discarded.
     discard: Discard
   discardEffectChanges:
     title: Apply changes from the effect editor?
-    description: Your changes will be discarded if you don't apply them.
+    description: If you don't apply, your changes will be discarded.
     apply: Apply
     discard: Discard
   externalDocumentChange:
     title: External file change detected
-    description: File {path} changed outside the editor. Keep local changes, load the external version, or review both sides before merging.
+    description: File {path} changed outside the editor. Keep local changes, load the external version, or review the differences before merging.
     keepLocal: Keep local
     loadExternal: Load external
     reviewAndMerge: Review and merge
@@ -636,7 +633,7 @@ modals:
       mergeResult: Merge result
       readOnly: Read-only
       editable: Editable, starts from the external version
-      computing: Computing differences...
+      computing: Computing differences…
       noDifferences: Both sides now match
       changeStatus: Change {current} of {total}
       previousChange: Previous change
@@ -646,7 +643,7 @@ modals:
       applyResult: Apply merge result
   fastPreviewTimeout:
     title: Live preview stopped
-    summary: Preview exceeded the time limit while trying to jump to the target line, so this sync was stopped.
+    summary: Jumping to the target line timed out, so this sync was stopped.
     suggestionsTitle: Suggested checks
     suggestionLoop: Check whether a jump or conditional branch before the target line repeatedly jumps back.
     suggestionDistance: Check whether too many statements need to be fast-forwarded before the target line.
@@ -736,15 +733,15 @@ export:
     confirm: Overwrite export
   progress:
     ready: Ready to export
-    downloadingRuntime: Downloading desktop runtime...
-    preparing: Preparing export...
-    copyingEngine: Copying engine files...
-    copyingGame: Copying game resources...
-    copyingIcons: Copying icons...
-    updatingManifest: Updating manifest...
-    packingResources: Packaging desktop resources...
-    copyingRuntime: Copying desktop runtime...
-    writingConfig: Generating desktop configuration...
+    downloadingRuntime: Downloading desktop runtime…
+    preparing: Preparing export…
+    copyingEngine: Copying engine files…
+    copyingGame: Copying game resources…
+    copyingIcons: Copying icons…
+    updatingManifest: Updating manifest…
+    packingResources: Packaging desktop resources…
+    copyingRuntime: Copying desktop runtime…
+    writingConfig: Generating desktop configuration…
     finished: Export complete
     failed: Export failed
 
@@ -753,7 +750,7 @@ edit:
     testGame: Test Game
     export: Export
     gameSettings: Game Settings
-    missingPreviewUrl: Preview URL is not available. Please start preview first.
+    missingPreviewUrl: Preview URL is not available. Start the preview first.
     openFailed: Failed to open test window
   empty:
     title: No Open Files
@@ -787,16 +784,16 @@ edit:
     unsupportedMultilineStatements: Multiline statements require WebGAL 4.6.3 or later.
     unsupportedOpusVocal: Opus vocal shorthand requires WebGAL 4.6.3 or later.
     unsupportedFigurePosition: This figure position requires WebGAL 4.6.3 or later.
-    unsupportedCallSceneArgument: Passing arguments to a child scene with the “callScene” command requires WebGAL 4.6.3 or later.
-    unsupportedLocalVariable: The “local” parameter requires WebGAL 4.6.3 or later.
+    unsupportedCallSceneArgument: Passing arguments to a child scene with the "callScene" command requires WebGAL 4.6.3 or later.
+    unsupportedLocalVariable: The "local" parameter requires WebGAL 4.6.3 or later.
     unsupportedSpine: The current engine does not support Spine models.
     unsupportedColorFormat: 'The color format "{value}" cannot be displayed or edited.'
     invalidColorFormat: '"{value}" is not a valid color value.'
     reservedCallSceneArgument: '"{argument}" is reserved and cannot be used with callScene.'
   errors:
-    fileSyncFailed: Failed to sync the file. Please try again shortly.
-    previewUnavailable: Preview URL is not available. Please start preview first.
-    workspaceUnavailable: Workspace is not initialized yet. Please try again shortly.
+    fileSyncFailed: Failed to sync the file. Try again shortly.
+    previewUnavailable: Preview URL is not available. Start the preview first.
+    workspaceUnavailable: The editor is not ready yet. Try again shortly.
   unsupported:
     unsupportedFile: This file is binary or uses an unsupported text encoding and cannot be displayed in the editor
   pathOperation:
@@ -819,14 +816,14 @@ edit:
       blockedPlan: Path operation is blocked
       protectedEntryPoint: The scene entry file start.txt cannot be moved, renamed, or deleted.
       duplicateTarget: Target path already exists or matches the source path.
-      inFlightConflict: Another path operation is already in progress on this path. Please try again later.
-      crossRootMove: Only reference rewrites within the same resource root are supported.
+      inFlightConflict: Another operation is already in progress on this path. Try again later.
+      crossRootMove: References can only be updated within the same resource root.
       unsupportedReferenceField: "Cannot safely update reference field: {fieldKey}"
       unsupportedReferenceConfigField: "Cannot safely update game config reference field: {fieldKey}"
       unsupportedReferenceSource: "Cannot safely update references from {sourceKind}"
       unsupportedText: "Cannot read text file: {path}"
       stalePlan: "Path operation plan has expired: {path}"
-      currentProjectUnavailable: Current project is unavailable.
+      currentProjectUnavailable: The current game is unavailable.
       missingTextMetadata: "Path operation plan is missing text metadata: {path}"
       editorContentChanged: "Editor content has changed: {path}"
       targetPathMismatch: "The actual target path does not match the plan: {path}"
@@ -846,8 +843,8 @@ edit:
       lines: "{count} lines,"
       words: "{count} words"
     formPanel:
-      noStatement: Move cursor to a statement line to edit
-      multipleEditTargets: Single-statement editing is paused while multiple edit targets are active
+      noStatement: Move the cursor to a statement line to edit it
+      multipleEditTargets: Statement editing is paused while multiple edit targets are selected
     invalidAnimationVisualMessage: The current animation file contains errors and cannot be edited in visual mode. Switch to text mode to fix it
   scenePanel:
     scene: Scene
@@ -939,7 +936,7 @@ edit:
     textMode: Switch to Text
     switchToText: Switch to Text
     visualMode: Switch to Visual
-    toggleSidebar: Toggle Auxiliary Panel
+    toggleSidebar: Toggle Sidebar
   visualEditor:
     playToLine: Play to this line
     unnamedChoice: Unnamed Choice
@@ -957,7 +954,7 @@ edit:
     animation:
       title: Animation Editor
       description: Adjust the duration, easing, and transforms of each keyframe in the current animation
-      invalidJson: The current advanced animation content contains errors and the animation editor cannot be opened. Please fix it in text mode
+      invalidJson: The current advanced animation content contains errors and the animation editor cannot be opened. Switch to text mode to fix it
       timelineTitle: Timeline
       inspectorTitle: Frame Properties
       startFrame: Start Frame
@@ -994,7 +991,7 @@ edit:
         label: Editor mode
         visual: Visual
         text: Text
-        lossWarning: This text contains content that cannot be converted to visual statements without loss. Fix it before switching or saving.
+        lossWarning: This text contains content that cannot be fully converted to visual statements. Fix it before switching or saving.
       moveUp: Move up
       moveDown: Move down
       groupCount: "{count} statements"
@@ -1015,7 +1012,7 @@ edit:
       comment: Comment
       narration: Narration
     placeholder:
-      comment: Enter comment...
+      comment: Enter comment…
       speaker: Character
       optionName: Option text
       sceneFile: Scene file name
@@ -1105,7 +1102,7 @@ edit:
       ignoreDefault: Ignore default effect
       order: Display order
       concat: Concatenate
-      notend: Not End
+      notend: Auto Continue
       vocal: Voice
       volume: Volume
       associatedFigure: Associated Figure
@@ -1135,7 +1132,7 @@ edit:
       series: Series
       id: ID
       achievementId: Achievement ID
-      skipOff: Disable Skip
+      skipOff: Disable Video Skip
       choiceText: Choice Text
       labelName: Label Name
       varName: Variable Name
@@ -1149,13 +1146,13 @@ edit:
       inputTitle: Dialog Title
       buttonText: Confirm Button Text
       defaultValue: Default Value
-      rule: Validation Pattern
-      ruleFlag: Regular Expression Flags
+      rule: Validation Regex
+      ruleFlag: Regex Flags
       ruleText: Validation Error Message
-      ruleButtonText: Validation Dialog Button
+      ruleButtonText: Validation Button Text
       defaultChoose: Default Choice
       waitTime: Time
-      nobreak: Disable Skip
+      nobreak: Uninterruptible
       unitMs: ms
       textboxState: Show
       textboxStateOff: Hide
@@ -1226,7 +1223,7 @@ edit:
         on: Show the next fullscreen text segment each time the player provides input.
         off: Show each fullscreen text segment automatically at the configured interval.
       skipOff:
-        on: Prevent the player from ending the video early.
+        on: Prevent the player from skipping or ending the video early.
         off: Allow the player to double-click the screen to end the video early.
       filmModeState:
         on: Show widescreen black bars and use an immersive dialogue layout.
@@ -1322,10 +1319,10 @@ edit:
       universalSoftOff: Fade Out
     effectEditor: Effect Editor
     statementList: Statement list
-    noSelection: Select a statement to edit
+    noSelection: Select a statement to start editing
 settings:
   experimental:
-    tooltip: This is an experimental feature and may encounter issues during use
+    tooltip: Experimental feature that may have issues
   general:
     followSystem: Follow System
     theme:
@@ -1336,15 +1333,15 @@ settings:
     language:
       description: Language used by the interface
       label: Language
-      placeholder: Please select a language
+      placeholder: Select a language
     openLastProject:
-      label: Open Last Edited Game on Startup
-      description: Automatically load the last edited game project when the application starts
+      label: Open the Last Edited Game on Startup
+      description: Automatically open the last edited game when WebGAL Craft starts
   network:
     label: Network
     officialEngineDownloadProxy:
       label: Download proxy
-      description: Optional HTTPS proxy prefix for downloads. Leave empty to use the system proxy or connect directly.
+      description: HTTPS proxy prefix for downloads. Leave empty to use the system proxy or connect directly.
       placeholder: https://proxy.example/
   edit:
     general: General
@@ -1352,7 +1349,7 @@ settings:
     textEditor: Text Editor
     visualEditor: Visual Editor
     fontFamily:
-      description: Font used for code and text. Separate several fonts with commas
+      description: Font used for code and text. Separate multiple fonts with commas
       label: Font Family
       placeholder: Font Name
     fontSize:
@@ -1363,10 +1360,10 @@ settings:
       description: Automatically wrap lines that exceed the editor width
     minimap:
       label: Minimap
-      description: Display code minimap on the right side of the editor for quick navigation
+      description: Show a code minimap on the right side of the editor for quick navigation
     autoSave:
       label: Auto Save
-      description: When enabled, the editor will automatically save your changes
+      description: The editor saves your changes automatically
     enablePreviewTab:
       label: Enable Preview Tabs
       description: Open files in preview mode on single click, pin to regular tab on double click or edit
@@ -1378,13 +1375,13 @@ settings:
       description: Render effect updates in real-time while adjusting parameters in the effect editor
     autoApplyEffectEditorChanges:
       label: Auto Apply Effect Editor Changes
-      description: Automatically write effect editor parameter changes back to the statement
+      description: Automatically save effect editor parameter changes to the statement
     collapseStatementsOnSidebarOpen:
-      label: Collapse All Statements When Auxiliary Panel Opens
-      description: Lock all statement cards in collapsed state when the auxiliary panel is opened
+      label: Collapse All Statements When the Sidebar Opens
+      description: Collapse all statement cards when the sidebar opens
     showSidebarAssetPreview:
-      label: Auxiliary Panel Statement Asset Preview
-      description: Preview images and other assets referenced by statements in the editor auxiliary panel
+      label: Asset Preview in Sidebar
+      description: Preview images and other assets referenced by statements in the sidebar
     enableComboboxPathDelimiter:
       label: Enable Cascading Selection
       description: Display groupable options in multiple levels to make them easier to find and select when there are many options
@@ -1393,19 +1390,19 @@ settings:
       description: Specify the delimiter used to separate option hierarchy levels, for example /
   storage:
     gamePath:
-      description: Folder where new and imported games are stored, applied immediately after change
+      description: New and imported games are stored here. Changes apply immediately.
       label: Game Save Location
       title: Select Game Save Location
     enginePath:
-      description: Folder where imported engine versions are stored, applied immediately after change
+      description: Imported engines are stored here. Changes apply immediately.
       label: Engine Save Location
       title: Select Engine Save Location
     templatePath:
-      description: Folder where imported project templates are stored, applied immediately after change
+      description: Imported templates are stored here. Changes apply immediately.
       label: Template Save Location
       title: Select Template Save Location
     exportPath:
-      description: Location games are saved to by default when exporting
+      description: Games are exported here by default
       label: Default Export Location
       title: Select Default Export Location
       androidDestination: Downloads/WebGALCraft/exports
@@ -1434,25 +1431,25 @@ engine:
   latestBadge: Latest
   deleteVersion: Uninstall
   uninstallAllVersions: Uninstall All Versions
-  deleteBlocked: Cannot Delete
+  deleteBlocked: Cannot Uninstall
   deleteBlockedByGames: "The following games are using this engine:"
   unavailable: Unavailable
 
 game:
   selectTemplatePlaceholder: Select an available template
-  gameDependencyResolutionTitle: Select Required Resources
-  gameDependencyResolutionRuntimeRebindTitle: Change Project Engine
-  gameDependencyResolutionDescription: The engine or template required by this project is currently unavailable. Select an available resource, and the app will update the project config before continuing the import.
-  gameDependencyResolutionDescriptionWithName: 'The engine or template required by "{name}" is currently unavailable. Select an available resource, and the app will update the project config before continuing the import.'
-  gameDependencyResolutionRuntimeRebindDescription: The engine bound to this project is unavailable or cannot be used in WebGAL Craft. Select an available engine, and the app will update the project config before reopening the project.
-  gameDependencyResolutionRuntimeRebindDescriptionWithName: 'The engine bound to "{name}" is unavailable or cannot be used in WebGAL Craft. Select an available engine, and the app will update the project config before reopening the project.'
-  gameDependencyResolutionLegacyDescription: This legacy project needs an engine that can be used in WebGAL Craft. The app will create a project config and continue importing.
-  gameDependencyResolutionLegacyDescriptionWithName: '"{name}" is a legacy project and needs an engine that can be used in WebGAL Craft. The app will create a project config and continue importing.'
+  gameDependencyResolutionTitle: Select Required Resources for the Game
+  gameDependencyResolutionRuntimeRebindTitle: Change the Game's Engine
+  gameDependencyResolutionDescription: The engine or template this game needs is currently unavailable. Select an available resource, and WebGAL Craft will update the game config before continuing the import.
+  gameDependencyResolutionDescriptionWithName: 'The engine or template "{name}" needs is currently unavailable. Select an available resource, and WebGAL Craft will update the game config before continuing the import.'
+  gameDependencyResolutionRuntimeRebindDescription: The engine bound to this game is unavailable or cannot be used in WebGAL Craft. Select an available engine, and WebGAL Craft will update the game config before reopening it.
+  gameDependencyResolutionRuntimeRebindDescriptionWithName: 'The engine bound to "{name}" is unavailable or cannot be used in WebGAL Craft. Select an available engine, and WebGAL Craft will update the game config before reopening it.'
+  gameDependencyResolutionLegacyDescription: This is a legacy game, and it needs an engine that can be used in WebGAL Craft. WebGAL Craft will create a game config and continue the import.
+  gameDependencyResolutionLegacyDescriptionWithName: '"{name}" is a legacy game, and it needs an engine that can be used in WebGAL Craft. WebGAL Craft will create a game config and continue the import.'
   gameDependencyResolutionEngineTitle: Select Engine
   gameDependencyResolutionTemplateTitle: Select Template
-  gameDependencyResolutionEngineIssue: Select an engine that can be used in WebGAL Craft. After import, the project will use it for opening and previewing.
-  gameDependencyResolutionRuntimeRebindEngineIssue: Select an engine that can be used in WebGAL Craft. After the change, the project will use it for opening and previewing.
-  gameDependencyResolutionEngineLegacyIssue: Legacy projects need an engine that can be used in WebGAL Craft before they can be imported.
+  gameDependencyResolutionEngineIssue: Select an engine that can be used in WebGAL Craft. After the import, the game will use it to open and preview.
+  gameDependencyResolutionRuntimeRebindEngineIssue: Select an engine that can be used in WebGAL Craft. After the change, the game will use it to open and preview.
+  gameDependencyResolutionEngineLegacyIssue: A legacy game needs an engine that can be used in WebGAL Craft before it can be imported.
   gameDependencyResolutionTemplateIssue: Select an available template, or use the selected engine's default template.
   gameDependencyResolutionOriginalEngine: Current Engine
   gameDependencyResolutionOriginalTemplate: Current Template
@@ -1462,9 +1459,9 @@ game:
   gameDependencyResolutionReasonVersionInvalid: Invalid Version
   gameDependencyResolutionReasonVersionTooOld: Version Too Old
   gameDependencyResolutionReasonSelectionRequired: Selection Required
-  gameDependencyResolutionTemplateFollowEngineHint: Choosing "follow the engine default template" removes the project's separate template selection.
-  gameDependencyResolutionScopeHint: Only this project's config will be updated. Installed resources will not be moved or deleted.
-  gameDependencyResolutionRuntimeRebindScopeHint: Only the engine used by this project will be updated. Installed resources will not be moved or deleted.
+  gameDependencyResolutionTemplateFollowEngineHint: Choosing "Follow Current Engine" removes the game's separate template selection.
+  gameDependencyResolutionScopeHint: Only this game's config will be updated. Installed resources will not be moved or deleted.
+  gameDependencyResolutionRuntimeRebindScopeHint: Only the engine this game uses will be updated. Installed resources will not be moved or deleted.
   gameDependencyResolutionCancel: Cancel Import
   gameDependencyResolutionRuntimeRebindCancel: Cancel
   gameDependencyResolutionConfirm: Continue Import

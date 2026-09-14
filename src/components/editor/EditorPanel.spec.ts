@@ -498,7 +498,7 @@ describe('EditorPanel', () => {
 
     renderEditorPanel()
 
-    await expect.element(page.getByText('移动光标到语句行以编辑')).toBeVisible()
+    await expect.element(page.getByText('将光标移到语句行即可编辑')).toBeVisible()
     await expect.element(page.getByText('Statement Editor Panel')).not.toBeInTheDocument()
   })
 
@@ -522,7 +522,7 @@ describe('EditorPanel', () => {
 
     renderEditorPanel()
 
-    await expect.element(page.getByText('当前存在多个编辑目标，语句编辑已暂停')).toBeVisible()
+    await expect.element(page.getByText('同时选中了多个编辑目标，语句编辑已暂停')).toBeVisible()
     await expect.element(page.getByText('Statement Editor Panel')).not.toBeInTheDocument()
   })
 

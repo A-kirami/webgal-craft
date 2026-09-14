@@ -264,7 +264,7 @@ describe('EditHeader', () => {
       },
     })
 
-    const iconImage = await page.getByAltText('测试游戏 游戏图标').element()
+    const iconImage = await page.getByAltText('home.games.gameIcon').element()
 
     expect(iconImage.dataset.path).toBe(String.raw`C:\Users\Akirami\Documents\WebGALCraft\games\test\icons\favicon.ico`)
     expect(iconImage.dataset.rootPath).toBe(String.raw`C:\Users\Akirami\Documents\WebGALCraft\games\test`)
