@@ -410,8 +410,10 @@ modals:
     saveFailed: ゲーム設定の保存に失敗しました
     fields:
       gameName:
+        description: ゲーム名です。ウィンドウタイトルと書き出したアプリの名前として使われます
         label: 名称
       description:
+        description: 作品の内容を紹介するゲームの概要です。1 行のみ入力でき、セミコロンは使えません
         label: 概要
       gameKey:
         label: ゲーム識別コード
@@ -422,13 +424,16 @@ modals:
         description: パッケージ化とエクスポート時に使うアプリ識別子です
         placeholder: org.example.demo
       defaultLanguage:
+        description: プレイヤーがタイトル画面でまだ言語を選んでいない場合に使う言語です
         label: デフォルト言語
         placeholder: 言語を選択
         empty: 自動検出
       titleBgm:
+        description: タイトル画面で再生する BGM です。ゲームの BGM フォルダーから選択します
         label: タイトル背景音楽
         pickerTitle: タイトル背景音楽を選択
       titleImg:
+        description: タイトル画面の背景画像です。ゲームの背景画像フォルダーから選択します
         label: タイトル背景画像
       gameLogo:
         label: 起動画像
@@ -446,8 +451,10 @@ modals:
         label: Live2D 旧式表情ブレンドモード
         description: 旧来の Live2D 表情ブレンド向けの互換フォールバックで、表示が崩れる場合にお試しください
       maxLine:
+        description: テキストボックスに同時に表示する最大行数です
         label: テキストボックス最大行数
       lineHeight:
+        description: テキスト行の間隔を文字サイズに対する比率で指定します
         label: テキストボックス行高
     validation:
       gameNameRequired: ゲーム名は空にできません
@@ -465,6 +472,7 @@ modals:
       customConfigKeyDuplicate: カスタム設定キーは重複できません
       customConfigValueSingleLine: カスタム設定値は1行で入力してください
     custom:
+      description: ゲームエンジンが対応していて、ここにはまだ用意されていない設定項目を追加できます
       title: カスタム設定項目
       keyLabel: キー
       valueLabel: 値
@@ -487,6 +495,7 @@ modals:
     iconEditor:
       title: アイコンエディター
       description: Web、デスクトップ、モバイル向けのアイコンを生成します。
+      entryDescription: ゲームのアイコンです。デスクトップやアプリ一覧で表示されます
       entryTitle: アイコン
       previewAlt: 現在のゲームアイコン
       noIcon: アイコンはまだ生成されていません
