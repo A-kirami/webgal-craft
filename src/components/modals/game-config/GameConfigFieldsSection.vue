@@ -21,7 +21,9 @@ interface Props {
 
 defineProps<Props>()
 
-const DEFAULT_LANGUAGE_EMPTY_VALUE = '__runtime_fallback__'
+// “自动检测”选项需要一个非空取值，这里用含分号的哨兵：引擎在分号处截断取值，表单校验也拒绝分号，
+// 因此它不可能与 Default_Language 的真实取值重名。
+const DEFAULT_LANGUAGE_EMPTY_VALUE = 'auto-detect;'
 const {
   fields: customConfigFields,
   push: pushCustomConfig,
