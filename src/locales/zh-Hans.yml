@@ -441,6 +441,9 @@ modals:
       enableAppreciation:
         label: 鉴赏模式
         description: 在标题界面菜单中显示鉴赏模式
+      enableContinue:
+        label: 继续游戏按钮
+        description: 关闭后，标题界面不再显示继续游戏按钮
       showPanic:
         label: 紧急回避
         description: 启用后，按下 Esc 键可显示紧急回避画面

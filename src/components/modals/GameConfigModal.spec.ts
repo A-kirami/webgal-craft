@@ -59,6 +59,7 @@ const preparedModalProps = {
     description: 'An introductory story',
     customConfig: [],
     enableAppreciation: false,
+    enableContinue: true,
     gameKey: 'demo-key',
     gameLogo: ['opening.webp', 'enter.webp'],
     gameName: 'Demo Game',

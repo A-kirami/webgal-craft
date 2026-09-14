@@ -441,6 +441,9 @@ modals:
       enableAppreciation:
         label: 鑑賞モード
         description: タイトル画面のメニューに鑑賞モードを表示します
+      enableContinue:
+        label: 続きからボタン
+        description: 無効にすると、タイトル画面に「続きから」ボタンを表示しません
       showPanic:
         label: 緊急回避
         description: 有効にすると、Esc キーで緊急回避画面を表示します

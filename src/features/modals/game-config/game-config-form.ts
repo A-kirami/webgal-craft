@@ -11,6 +11,7 @@ import type {
 } from '~/commands/game'
 import type { I18nT } from '~/utils/i18n-like'
 
+// 编辑器提供标签的语言取值；引擎还接受其他取值，遇到时按原样保留
 export const GAME_CONFIG_DEFAULT_LANGUAGES = [
   'zh_CN',
   'zh_TW',
@@ -18,6 +19,8 @@ export const GAME_CONFIG_DEFAULT_LANGUAGES = [
   'ja',
   'fr',
   'de',
+  'pt_BR',
+  'ko',
 ] as const
 
 export type GameConfigDefaultLanguage = (typeof GAME_CONFIG_DEFAULT_LANGUAGES)[number]
@@ -26,9 +29,10 @@ const BUILT_IN_GAME_CONFIG_RAW_KEY_SET: ReadonlySet<string> = new Set(BUILT_IN_G
 
 export interface GameConfigFormValues {
   customConfig: GameConfigEntry[]
-  defaultLanguage: '' | GameConfigDefaultLanguage
+  defaultLanguage: string
   description: string
   enableAppreciation: boolean
+  enableContinue: boolean
   gameKey: string
   gameName: string
   gameLogo: string[]
@@ -47,6 +51,7 @@ const EMPTY_GAME_CONFIG_FORM_VALUES = {
   defaultLanguage: '',
   description: '',
   enableAppreciation: false,
+  enableContinue: true,
   gameKey: '',
   gameName: '',
   gameLogo: [],
@@ -259,12 +264,6 @@ function parseOptionalNumberValue(
   return isValid(parsedValue) ? parsedValue : ''
 }
 
-function parseDefaultLanguage(value: string | undefined): '' | GameConfigDefaultLanguage {
-  return GAME_CONFIG_DEFAULT_LANGUAGES.includes(value as GameConfigDefaultLanguage)
-    ? value as GameConfigDefaultLanguage
-    : ''
-}
-
 function createEntryValueMap(entries: readonly GameConfigEntry[]): ReadonlyMap<string, string> {
   return new Map(entries.map(entry => [entry.key, entry.value]))
 }
@@ -292,12 +291,10 @@ export function createGameConfigKey(): string {
 export function createGameConfigSchema(t: I18nT) {
   return z.object({
     customConfig: createCustomConfigSchema(t),
-    defaultLanguage: z.union([
-      z.literal(''),
-      z.enum(GAME_CONFIG_DEFAULT_LANGUAGES),
-    ]),
+    defaultLanguage: createConfigValueSchema(t),
     description: createConfigValueSchema(t),
     enableAppreciation: z.boolean(),
+    enableContinue: z.boolean(),
     gameKey: createConfigValueSchema(t),
     gameName: createRequiredGameNameSchema(t),
     gameLogo: z.array(createConfigValueSchema(t)),
@@ -321,9 +318,10 @@ export function parseGameConfigFormValues(config: GameConfigReadResult): GameCon
   return {
     ...createEmptyGameConfigFormValues(),
     customConfig,
-    defaultLanguage: parseDefaultLanguage(readEntryValue(entryValueMap, 'Default_Language')),
+    defaultLanguage: readEntryValue(entryValueMap, 'Default_Language') ?? '',
     description: readEntryValue(entryValueMap, 'Description') ?? '',
     enableAppreciation: parseBooleanValue(readEntryValue(entryValueMap, 'Enable_Appreciation'), false),
+    enableContinue: parseBooleanValue(readEntryValue(entryValueMap, 'Enable_Continue'), true),
     gameKey: readEntryValue(entryValueMap, 'Game_key') ?? '',
     gameName: readEntryValue(entryValueMap, 'Game_name') ?? '',
     gameLogo: parseGameLogoImages(readEntryValue(entryValueMap, 'Game_Logo') ?? ''),
@@ -373,6 +371,10 @@ export function serializeGameConfigEntries(values: GameConfigFormValues): GameCo
     {
       key: 'Enable_Appreciation',
       value: String(values.enableAppreciation),
+    },
+    {
+      key: 'Enable_Continue',
+      value: String(values.enableContinue),
     },
     {
       key: 'Legacy_Expression_Blend_Mode',

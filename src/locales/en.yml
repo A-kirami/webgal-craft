@@ -441,6 +441,9 @@ modals:
       enableAppreciation:
         label: Appreciation Mode
         description: Show Appreciation Mode in the title screen menu
+      enableContinue:
+        label: Continue Button
+        description: When disabled, the title screen does not show the Continue button
       showPanic:
         label: Panic Overlay
         description: When enabled, pressing Esc shows the panic screen

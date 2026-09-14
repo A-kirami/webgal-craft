@@ -227,6 +227,7 @@ describe('EditHeader', () => {
         { key: 'Default_Language', value: 'zh_CN' },
         { key: 'Description', value: 'Intro' },
         { key: 'Enable_Appreciation', value: 'false' },
+        { key: 'Enable_Continue', value: 'false' },
         { key: 'Game_key', value: 'demo-key' },
         { key: 'Game_name', value: '测试游戏' },
         { key: 'Title_img', value: 'cover.webp' },
@@ -562,6 +563,7 @@ describe('EditHeader', () => {
             },
           ],
           enableAppreciation: false,
+          enableContinue: false,
           gameKey: 'demo-key',
           gameLogo: ['opening.webp', 'enter.webp'],
           gameName: '测试游戏',
@@ -577,6 +579,34 @@ describe('EditHeader', () => {
         unmanagedLineCount: 1,
         serveUrl: 'http://127.0.0.1:8899/game/test/',
       })
+    })
+  })
+
+  it('预取到无法识别的默认语言时会原样传给游戏配置模态框', async () => {
+    getConfigMock.mockResolvedValue({
+      entries: [
+        { key: 'Default_Language', value: 'es' },
+      ],
+      unmanagedLineCount: 0,
+    })
+
+    renderInBrowser(EditHeader, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'edit.header.gameSettings' }).click()
+
+    await vi.waitFor(() => {
+      expect(modalOpenMock).toHaveBeenCalledWith('GameConfigModal', expect.objectContaining({
+        initialValues: expect.objectContaining({
+          defaultLanguage: 'es',
+        }),
+      }))
     })
   })
 

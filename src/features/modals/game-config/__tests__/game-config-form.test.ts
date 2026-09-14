@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   cloneGameConfigFormValues,
   createGameConfigSchema,
+  GAME_CONFIG_DEFAULT_LANGUAGES,
   parseGameConfigFormValues,
   serializeGameConfigEntries,
 } from '../game-config-form'
@@ -18,6 +19,7 @@ function createFormValues(overrides: Partial<GameConfigFormValues> = {}): GameCo
     defaultLanguage: '',
     description: '',
     enableAppreciation: false,
+    enableContinue: true,
     gameKey: '',
     gameName: 'Demo',
     legacyExpressionBlendMode: false,
@@ -57,6 +59,10 @@ describe('gameConfigForm', () => {
         {
           key: 'Enable_Appreciation',
           value: 'TRUE',
+        },
+        {
+          key: 'Enable_Continue',
+          value: 'false',
         },
         {
           key: 'Game_key',
@@ -134,6 +140,7 @@ describe('gameConfigForm', () => {
         },
       ],
       enableAppreciation: true,
+      enableContinue: false,
       gameKey: 'demo-key',
       gameName: 'Demo',
       legacyExpressionBlendMode: false,
@@ -151,12 +158,12 @@ describe('gameConfigForm', () => {
     expect(parseGameConfigFormValues(createReadResult({
       entries: [
         {
-          key: 'Default_Language',
-          value: 'ko',
-        },
-        {
           key: 'Enable_Appreciation',
           value: 'unexpected',
+        },
+        {
+          key: 'Enable_Continue',
+          value: 'yes',
         },
         {
           key: 'Line_height',
@@ -207,13 +214,43 @@ describe('gameConfigForm', () => {
     }))
   })
 
-  it('createGameConfigSchema 会拒绝不支持的默认语言', () => {
+  it('createGameConfigSchema 会接受引擎支持的全部默认语言', () => {
     const schema = createGameConfigSchema(t)
 
-    expect(schema.safeParse({
-      ...createFormValues(),
-      defaultLanguage: 'ko',
-    }).success).toBe(false)
+    for (const defaultLanguage of GAME_CONFIG_DEFAULT_LANGUAGES) {
+      expect(schema.safeParse(createFormValues({
+        defaultLanguage,
+      })).success).toBe(true)
+    }
+  })
+
+  it('createGameConfigSchema 会保留引擎支持列表之外的默认语言，但拒绝包含分号的取值', () => {
+    const schema = createGameConfigSchema(t)
+
+    expect(schema.parse(createFormValues({
+      defaultLanguage: 'es',
+    })).defaultLanguage).toBe('es')
+
+    expect(schema.safeParse(createFormValues({
+      defaultLanguage: 'es;comment',
+    })).success).toBe(false)
+  })
+
+  it('无法识别的默认语言会按原样解析并写回', () => {
+    const parsed = parseGameConfigFormValues(createReadResult({
+      entries: [
+        {
+          key: 'Default_Language',
+          value: 'es',
+        },
+      ],
+    }))
+
+    expect(parsed.defaultLanguage).toBe('es')
+    expect(serializeGameConfigEntries(parsed).entries).toContainEqual({
+      key: 'Default_Language',
+      value: 'es',
+    })
   })
 
   it('createGameConfigSchema 会拒绝空白游戏名称', () => {
@@ -430,6 +467,7 @@ describe('gameConfigForm', () => {
         },
       ],
       enableAppreciation: true,
+      enableContinue: false,
       gameKey: 'demo-key',
       packageName: 'com.demo.game',
       gameLogo: ['opening.webp', 'enter.webp'],
@@ -460,6 +498,10 @@ describe('gameConfigForm', () => {
         {
           key: 'Enable_Appreciation',
           value: 'true',
+        },
+        {
+          key: 'Enable_Continue',
+          value: 'false',
         },
         {
           key: 'Legacy_Expression_Blend_Mode',
@@ -527,6 +569,10 @@ describe('gameConfigForm', () => {
         {
           key: 'Enable_Appreciation',
           value: 'false',
+        },
+        {
+          key: 'Enable_Continue',
+          value: 'true',
         },
         {
           key: 'Legacy_Expression_Blend_Mode',
