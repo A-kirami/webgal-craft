@@ -445,14 +445,28 @@ async function readProjectConfigSafe(gamePath: AbsPath): Promise<ProjectConfig |
   }
 }
 
+// id 仅用于自愈绑定：探测性调用方（如图标解析、资源发现）只持有路径，不携带游戏记录 id
+type BoundGameRef = Pick<Game, 'engineId' | 'path'> & Partial<Pick<Game, 'id'>>
+
 async function resolveBoundEngine(
-  game: Pick<Game, 'engineId' | 'path'>,
+  game: BoundGameRef,
 ): Promise<{ config?: ProjectConfig, engine?: Engine }> {
   const config = await readProjectConfigSafe(game.path)
 
   if (game.engineId) {
     const engine = await db.engines.get(game.engineId)
-    return { config, engine }
+    if (engine) {
+      return { config, engine }
+    }
+
+    // 引擎记录重建后主键引用会悬空，回退到 project.wgcp 的引擎引用找回记录
+    const rebound = config?.engine
+      ? await engineManager.findEngineByRef(config.engine)
+      : undefined
+    if (rebound) {
+      await healStaleEngineBinding(game, rebound)
+    }
+    return { config, engine: rebound }
   }
 
   if (!config?.engine) {
@@ -461,6 +475,22 @@ async function resolveBoundEngine(
 
   const engine = await engineManager.findEngineByRef(config.engine)
   return { config, engine }
+}
+
+async function healStaleEngineBinding(game: BoundGameRef, engine: Engine): Promise<void> {
+  if (!game.id) {
+    return
+  }
+
+  try {
+    await db.games.update(game.id, { engineId: engine.id })
+    logger.info(
+      `[引擎绑定修复] 游戏 ${game.path} 绑定的引擎记录已失效，`
+      + `已按项目配置重新绑定到 ${engine.name}@${engine.version ?? '未知'}(${engine.id})`,
+    )
+  } catch (error) {
+    logger.warn(`[引擎绑定修复] 更新绑定失败: 游戏ID=${game.id} - ${error}`)
+  }
 }
 
 function assertBoundEngineFound(isEngineBound: boolean, engine: Engine | undefined): void {
@@ -1026,7 +1056,7 @@ async function registerManagedRelink(
   return { ...game, ...patch }
 }
 
-async function getGameEnginePath(game: Pick<Game, 'engineId' | 'path'>): Promise<AbsPath | undefined> {
+async function getGameEnginePath(game: BoundGameRef): Promise<AbsPath | undefined> {
   const { engine } = await resolveBoundEngine(game)
   if (!engine || !isEngineUsable(engine)) {
     return undefined
@@ -1035,7 +1065,7 @@ async function getGameEnginePath(game: Pick<Game, 'engineId' | 'path'>): Promise
   return engine.path
 }
 
-async function ensureConfigWritable(game: Pick<Game, 'engineId' | 'path'>): Promise<void> {
+async function ensureConfigWritable(game: BoundGameRef): Promise<void> {
   const enginePath = await getGameEnginePath(game)
   if (!enginePath) {
     return
@@ -1221,7 +1251,7 @@ async function importGame(gamePath: AbsPath, options: ImportGameOptions = {}): P
   return { id, alreadyRegistered: false }
 }
 
-async function resolvePreviewSite(game: Pick<Game, 'engineId' | 'path'>): Promise<StaticSiteConfig> {
+async function resolvePreviewSite(game: BoundGameRef): Promise<StaticSiteConfig> {
   const { config, engine } = await resolveBoundEngine(game)
   const isEngineBound = !!game.engineId || !!config?.engine
 
@@ -1236,7 +1266,7 @@ async function resolvePreviewSite(game: Pick<Game, 'engineId' | 'path'>): Promis
   }
 }
 
-async function resolveStaticAssetSite(game: Pick<Game, 'engineId' | 'path'>): Promise<StaticSiteConfig> {
+async function resolveStaticAssetSite(game: BoundGameRef): Promise<StaticSiteConfig> {
   const { config, engine } = await resolveBoundEngine(game)
 
   if (!engine || !isEngineEditorCompatible(engine)) {
@@ -1252,7 +1282,7 @@ async function resolveStaticAssetSite(game: Pick<Game, 'engineId' | 'path'>): Pr
   }
 }
 
-async function ensureEditorRuntimeCompatible(game: Pick<Game, 'engineId' | 'path'>): Promise<void> {
+async function ensureEditorRuntimeCompatible(game: BoundGameRef): Promise<void> {
   const { config, engine } = await resolveBoundEngine(game)
   const isEngineBound = !!game.engineId || !!config?.engine
 

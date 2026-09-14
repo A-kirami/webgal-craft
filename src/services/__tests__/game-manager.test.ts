@@ -1586,8 +1586,9 @@ describe('gameManager', () => {
     })
   })
 
-  it('resolvePreviewSite 会在已绑定引擎记录缺失时返回结构化缺失原因', async () => {
+  it('resolvePreviewSite 会在已绑定引擎记录缺失且配置引用无匹配时返回结构化缺失原因', async () => {
     dbEngineGetMock.mockResolvedValue(undefined)
+    engineFindByRefMock.mockResolvedValue(undefined)
     readProjectConfigMock.mockResolvedValue({
       version: 1,
       engine: {
@@ -1605,6 +1606,36 @@ describe('gameManager', () => {
         reason: 'ENGINE_NOT_FOUND',
       },
     })
+  })
+
+  it('resolvePreviewSite 会在引擎主键失效时按项目配置引用回退引擎', async () => {
+    dbEngineGetMock.mockResolvedValue(undefined)
+    engineFindByRefMock.mockResolvedValue(createTestEngine({
+      id: 'engine-reinstalled',
+      path: AbsPath.from('/engines/WebGAL/4.6.2'),
+    }))
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: {
+        id: 'default-publisher.default-engine',
+        version: '4.6.2',
+      },
+    })
+
+    await expect(gameManager.resolvePreviewSite({
+      path: AbsPath.from('/games/demo'),
+      engineId: 'engine-stale',
+    })).resolves.toMatchObject({
+      projectPath: '/games/demo',
+      enginePath: '/engines/WebGAL/4.6.2',
+    })
+
+    expect(engineFindByRefMock).toHaveBeenCalledWith({
+      id: 'default-publisher.default-engine',
+      version: '4.6.2',
+    })
+    // 探测性调用不携带游戏记录 id，不写库修复
+    expect(dbGameUpdateMock).not.toHaveBeenCalled()
   })
 
   it('resolvePreviewSite 会拒绝协议不兼容的已绑定引擎', async () => {
@@ -1714,8 +1745,9 @@ describe('gameManager', () => {
     expect(dbGameUpdateMock).not.toHaveBeenCalled()
   })
 
-  it('ensureEditorRuntimeCompatible 会在已绑定引擎记录缺失时返回结构化缺失原因', async () => {
+  it('ensureEditorRuntimeCompatible 会在已绑定引擎记录缺失且配置引用无匹配时返回结构化缺失原因', async () => {
     dbEngineGetMock.mockResolvedValue(undefined)
+    engineFindByRefMock.mockResolvedValue(undefined)
     readProjectConfigMock.mockResolvedValue({
       version: 1,
       engine: {
@@ -1733,6 +1765,57 @@ describe('gameManager', () => {
         reason: 'ENGINE_NOT_FOUND',
       },
     })
+  })
+
+  it('ensureEditorRuntimeCompatible 会在引擎主键失效时按项目配置找回引擎并修复绑定', async () => {
+    dbEngineGetMock.mockResolvedValue(undefined)
+    engineFindByRefMock.mockResolvedValue(createTestEngine({ id: 'engine-reinstalled' }))
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: {
+        id: 'default-publisher.default-engine',
+        version: '4.6.2',
+      },
+    })
+
+    const game = createTestGame({
+      availability: 'available',
+      engineId: 'engine-stale',
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+    })
+
+    await expect(gameManager.ensureEditorRuntimeCompatible(game)).resolves.toBeUndefined()
+
+    expect(engineFindByRefMock).toHaveBeenCalledWith({
+      id: 'default-publisher.default-engine',
+      version: '4.6.2',
+    })
+    expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', { engineId: 'engine-reinstalled' })
+  })
+
+  it('ensureEditorRuntimeCompatible 在绑定修复写库失败时仍正常放行', async () => {
+    dbEngineGetMock.mockResolvedValue(undefined)
+    engineFindByRefMock.mockResolvedValue(createTestEngine({ id: 'engine-reinstalled' }))
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: {
+        id: 'default-publisher.default-engine',
+        version: '4.6.2',
+      },
+    })
+    dbGameUpdateMock.mockRejectedValue(new Error('write failed'))
+
+    const game = createTestGame({
+      availability: 'available',
+      engineId: 'engine-stale',
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+    })
+
+    await expect(gameManager.ensureEditorRuntimeCompatible(game)).resolves.toBeUndefined()
+
+    expect(warnMock).toHaveBeenCalledWith(expect.stringContaining('[引擎绑定修复]'))
   })
 
   it('importGame 遇到不存在的目录时抛出 DIR_NOT_FOUND', async () => {
