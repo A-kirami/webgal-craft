@@ -158,10 +158,6 @@ describe('gameConfigForm', () => {
     expect(parseGameConfigFormValues(createReadResult({
       entries: [
         {
-          key: 'Default_Language',
-          value: 'es',
-        },
-        {
           key: 'Enable_Appreciation',
           value: 'unexpected',
         },
@@ -228,13 +224,33 @@ describe('gameConfigForm', () => {
     }
   })
 
-  it('createGameConfigSchema 会拒绝不支持的默认语言', () => {
+  it('createGameConfigSchema 会保留引擎支持列表之外的默认语言，但拒绝包含分号的取值', () => {
     const schema = createGameConfigSchema(t)
 
-    expect(schema.safeParse({
-      ...createFormValues(),
+    expect(schema.parse(createFormValues({
       defaultLanguage: 'es',
-    }).success).toBe(false)
+    })).defaultLanguage).toBe('es')
+
+    expect(schema.safeParse(createFormValues({
+      defaultLanguage: 'es;comment',
+    })).success).toBe(false)
+  })
+
+  it('无法识别的默认语言会按原样解析并写回', () => {
+    const parsed = parseGameConfigFormValues(createReadResult({
+      entries: [
+        {
+          key: 'Default_Language',
+          value: 'es',
+        },
+      ],
+    }))
+
+    expect(parsed.defaultLanguage).toBe('es')
+    expect(serializeGameConfigEntries(parsed).entries).toContainEqual({
+      key: 'Default_Language',
+      value: 'es',
+    })
   })
 
   it('createGameConfigSchema 会拒绝空白游戏名称', () => {

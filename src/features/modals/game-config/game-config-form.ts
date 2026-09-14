@@ -11,6 +11,7 @@ import type {
 } from '~/commands/game'
 import type { I18nT } from '~/utils/i18n-like'
 
+// 编辑器提供标签的语言取值；引擎还接受其他取值，遇到时按原样保留
 export const GAME_CONFIG_DEFAULT_LANGUAGES = [
   'zh_CN',
   'zh_TW',
@@ -28,7 +29,7 @@ const BUILT_IN_GAME_CONFIG_RAW_KEY_SET: ReadonlySet<string> = new Set(BUILT_IN_G
 
 export interface GameConfigFormValues {
   customConfig: GameConfigEntry[]
-  defaultLanguage: '' | GameConfigDefaultLanguage
+  defaultLanguage: string
   description: string
   enableAppreciation: boolean
   enableContinue: boolean
@@ -263,12 +264,6 @@ function parseOptionalNumberValue(
   return isValid(parsedValue) ? parsedValue : ''
 }
 
-function parseDefaultLanguage(value: string | undefined): '' | GameConfigDefaultLanguage {
-  return GAME_CONFIG_DEFAULT_LANGUAGES.includes(value as GameConfigDefaultLanguage)
-    ? value as GameConfigDefaultLanguage
-    : ''
-}
-
 function createEntryValueMap(entries: readonly GameConfigEntry[]): ReadonlyMap<string, string> {
   return new Map(entries.map(entry => [entry.key, entry.value]))
 }
@@ -296,10 +291,7 @@ export function createGameConfigKey(): string {
 export function createGameConfigSchema(t: I18nT) {
   return z.object({
     customConfig: createCustomConfigSchema(t),
-    defaultLanguage: z.union([
-      z.literal(''),
-      z.enum(GAME_CONFIG_DEFAULT_LANGUAGES),
-    ]),
+    defaultLanguage: createConfigValueSchema(t),
     description: createConfigValueSchema(t),
     enableAppreciation: z.boolean(),
     enableContinue: z.boolean(),
@@ -326,7 +318,7 @@ export function parseGameConfigFormValues(config: GameConfigReadResult): GameCon
   return {
     ...createEmptyGameConfigFormValues(),
     customConfig,
-    defaultLanguage: parseDefaultLanguage(readEntryValue(entryValueMap, 'Default_Language')),
+    defaultLanguage: readEntryValue(entryValueMap, 'Default_Language') ?? '',
     description: readEntryValue(entryValueMap, 'Description') ?? '',
     enableAppreciation: parseBooleanValue(readEntryValue(entryValueMap, 'Enable_Appreciation'), false),
     enableContinue: parseBooleanValue(readEntryValue(entryValueMap, 'Enable_Continue'), true),

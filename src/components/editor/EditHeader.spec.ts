@@ -582,6 +582,34 @@ describe('EditHeader', () => {
     })
   })
 
+  it('预取到无法识别的默认语言时会原样传给游戏配置模态框', async () => {
+    getConfigMock.mockResolvedValue({
+      entries: [
+        { key: 'Default_Language', value: 'es' },
+      ],
+      unmanagedLineCount: 0,
+    })
+
+    renderInBrowser(EditHeader, {
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'edit.header.gameSettings' }).click()
+
+    await vi.waitFor(() => {
+      expect(modalOpenMock).toHaveBeenCalledWith('GameConfigModal', expect.objectContaining({
+        initialValues: expect.objectContaining({
+          defaultLanguage: 'es',
+        }),
+      }))
+    })
+  })
+
   it('预取游戏配置失败时会弹出错误提示，且不打开模态框', async () => {
     getConfigMock.mockRejectedValue(new Error('boom'))
 

@@ -47,6 +47,8 @@ const defaultLanguageOptions = GAME_CONFIG_DEFAULT_LANGUAGES.map(value => ({
   value,
 }))
 
+const SUPPORTED_DEFAULT_LANGUAGES: ReadonlySet<string> = new Set(GAME_CONFIG_DEFAULT_LANGUAGES)
+
 function handleOptionalNumberChange(handleChange: (value: '' | number) => void, nextValue: string | number) {
   if (nextValue === '') {
     handleChange('')
@@ -298,6 +300,12 @@ function scrollCustomAddButtonIntoView() {
                 :value="option.value"
               >
                 {{ option.label }}
+              </SelectItem>
+              <SelectItem
+                v-if="typeof value === 'string' && value !== '' && !SUPPORTED_DEFAULT_LANGUAGES.has(value)"
+                :value="value"
+              >
+                {{ value }}
               </SelectItem>
             </SelectContent>
           </Select>
