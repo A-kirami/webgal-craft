@@ -8,6 +8,7 @@ export const generalSettingsDefinition = defineSettingsSchema({
         default: 'system',
         immediate: true,
         label: t => t('settings.general.language.label'),
+        description: t => t('settings.general.language.description'),
         placeholder: t => t('settings.general.language.placeholder'),
         options: [
           { value: 'system', label: t => t('settings.general.followSystem') },

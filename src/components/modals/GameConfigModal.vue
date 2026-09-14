@@ -171,12 +171,17 @@ async function handleSave() {
           data-testid="game-config-icon-editor-field"
           class="mx-2 mb-5 flex flex-col gap-2"
         >
-          <h3
-            id="game-config-icon-editor-label"
-            class="text-sm font-medium"
-          >
-            {{ $t('modals.gameConfig.iconEditor.entryTitle') }}
-          </h3>
+          <div class="flex flex-col gap-1">
+            <h3
+              id="game-config-icon-editor-label"
+              class="text-sm font-medium"
+            >
+              {{ $t('modals.gameConfig.iconEditor.entryTitle') }}
+            </h3>
+            <p class="text-xs text-muted-foreground">
+              {{ $t('modals.gameConfig.iconEditor.entryDescription') }}
+            </p>
+          </div>
           <button
             type="button"
             class="group text-left max-w-24 w-full"

@@ -410,8 +410,10 @@ modals:
     saveFailed: 保存游戏配置失败
     fields:
       gameName:
+        description: 游戏名称，用作窗口标题与导出后的应用名称
         label: 名称
       description:
+        description: 游戏简介，用于介绍作品内容。只能填写单行文本，且不能包含分号
         label: 简介
       gameKey:
         label: 游戏识别码
@@ -422,17 +424,20 @@ modals:
         description: 打包与导出时使用的应用标识
         placeholder: org.example.demo
       defaultLanguage:
+        description: 玩家还未在标题界面选择过语言时使用的语言
         label: 默认语言
         placeholder: 选择语言
         empty: 自动检测
       titleBgm:
+        description: 标题界面播放的背景音乐，从游戏的背景音乐目录中选择
         label: 标题背景音乐
         pickerTitle: 选择标题背景音乐
       titleImg:
+        description: 标题界面的背景图片，从游戏的背景图片目录中选择
         label: 标题背景图片
       gameLogo:
         label: 启动图片
-        description: 启动图片会在游戏进入时按顺序播放
+        description: 启动图片会在游戏启动时按顺序播放
       enableAppreciation:
         label: 鉴赏模式
         description: 在标题界面菜单中显示鉴赏模式
@@ -446,8 +451,10 @@ modals:
         label: Live2D 旧版表情混合模式
         description: 为旧版 Live2D 表情混合提供兼容回退，显示异常时可尝试开启
       maxLine:
+        description: 文本框同时显示的最大行数
         label: 文本框最大行数
       lineHeight:
+        description: 文本行之间的间距，以文字大小的倍数表示
         label: 文本框行高
     validation:
       gameNameRequired: 游戏名称不能为空
@@ -465,6 +472,7 @@ modals:
       customConfigKeyDuplicate: 自定义配置键不能重复
       customConfigValueSingleLine: 自定义配置值必须是单行文本
     custom:
+      description: 填写游戏引擎支持、但此处尚未提供的配置项
       title: 自定义配置项
       keyLabel: 键
       valueLabel: 值
@@ -487,6 +495,7 @@ modals:
     iconEditor:
       title: 图标编辑器
       description: 生成适配 Web、桌面与移动端的图标
+      entryDescription: 游戏图标，用于桌面与应用列表中的图标显示
       entryTitle: 图标
       previewAlt: 当前游戏图标
       noIcon: 尚未生成图标
@@ -1322,6 +1331,7 @@ settings:
         light: 浅色
         dark: 深色
     language:
+      description: 界面显示语言
       label: 语言
       placeholder: 请选择语言
     openLastProject:
@@ -1339,9 +1349,11 @@ settings:
     textEditor: 文本编辑器
     visualEditor: 可视化编辑器
     fontFamily:
+      description: 代码和文本使用的字体，有多个时用英文逗号分隔
       label: 字体
       placeholder: 字体名称
     fontSize:
+      description: 编辑器中文字的字号，单位为像素
       label: 字体大小
     wordWrap:
       label: 自动换行
@@ -1378,15 +1390,19 @@ settings:
       description: 指定用于划分选项层级的分隔符，例如 /
   storage:
     gamePath:
+      description: 新建或导入的游戏存放的目录，修改后立即生效
       label: 游戏保存位置
       title: 选择游戏保存位置
     enginePath:
+      description: 导入的引擎版本存放的目录，修改后立即生效
       label: 引擎保存位置
       title: 选择引擎保存位置
     templatePath:
+      description: 导入的项目模板存放的目录，修改后立即生效
       label: 模板保存位置
       title: 选择模板保存位置
     exportPath:
+      description: 导出游戏时默认保存到的位置
       label: 默认导出位置
       title: 选择默认导出位置
       androidDestination: 下载/WebGALCraft/exports

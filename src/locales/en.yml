@@ -410,8 +410,10 @@ modals:
     saveFailed: Failed to save the game configuration
     fields:
       gameName:
+        description: Game name, used as the window title and the app name after export
         label: Name
       description:
+        description: Game summary describing the work. A single line only, and semicolons are not allowed
         label: Summary
       gameKey:
         label: Game ID
@@ -422,13 +424,16 @@ modals:
         description: Application identifier used during packaging and export
         placeholder: org.example.demo
       defaultLanguage:
+        description: Language used before players have chosen a language on the title screen
         label: Default Language
         placeholder: Select a language
         empty: Auto Detect
       titleBgm:
+        description: Music played on the title screen, chosen from the game's BGM folder
         label: Title Background Music
         pickerTitle: Choose Title Background Music
       titleImg:
+        description: Background image of the title screen, chosen from the game's background folder
         label: Title Background Image
       gameLogo:
         label: Startup Images
@@ -446,8 +451,10 @@ modals:
         label: Legacy Live2D Expression Blend Mode
         description: Compatibility fallback for legacy Live2D expression blending, try enabling this if expressions render incorrectly
       maxLine:
+        description: Maximum lines shown in the text box at once
         label: Text Box Max Lines
       lineHeight:
+        description: Spacing between text lines, as a multiple of the text size
         label: Text Line Height
     validation:
       gameNameRequired: Game name cannot be empty
@@ -465,6 +472,7 @@ modals:
       customConfigKeyDuplicate: Custom keys cannot repeat
       customConfigValueSingleLine: Custom value must be a single line
     custom:
+      description: Add options that the game engine supports but are not offered here yet
       title: Custom Configuration Items
       keyLabel: Key
       valueLabel: Value
@@ -487,6 +495,7 @@ modals:
     iconEditor:
       title: Icon Editor
       description: Generate icons for Web, desktop, and mobile.
+      entryDescription: Game icon, shown in desktop and app lists
       entryTitle: Icon
       previewAlt: Current game icon
       noIcon: No icon generated yet
@@ -1322,6 +1331,7 @@ settings:
         light: Light
         dark: Dark
     language:
+      description: Language used by the interface
       label: Language
       placeholder: Please select a language
     openLastProject:
@@ -1339,9 +1349,11 @@ settings:
     textEditor: Text Editor
     visualEditor: Visual Editor
     fontFamily:
+      description: Font used for code and text. Separate several fonts with commas
       label: Font Family
       placeholder: Font Name
     fontSize:
+      description: Size of the text in the editor, in pixels
       label: Font Size
     wordWrap:
       label: Word Wrap
@@ -1378,15 +1390,19 @@ settings:
       description: Specify the delimiter used to separate option hierarchy levels, for example /
   storage:
     gamePath:
+      description: Folder where new and imported games are stored, applied immediately after change
       label: Game Save Location
       title: Select Game Save Location
     enginePath:
+      description: Folder where imported engine versions are stored, applied immediately after change
       label: Engine Save Location
       title: Select Engine Save Location
     templatePath:
+      description: Folder where imported project templates are stored, applied immediately after change
       label: Template Save Location
       title: Select Template Save Location
     exportPath:
+      description: Location games are saved to by default when exporting
       label: Default Export Location
       title: Select Default Export Location
       androidDestination: Downloads/WebGALCraft/exports

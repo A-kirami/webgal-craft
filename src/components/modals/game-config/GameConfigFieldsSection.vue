@@ -139,9 +139,14 @@ function scrollCustomAddButtonIntoView() {
         name="gameName"
       >
         <FormItem class="flex flex-col gap-2">
-          <FormLabel for="game-config-game-name">
-            {{ $t('modals.gameConfig.fields.gameName.label') }}
-          </FormLabel>
+          <div class="flex flex-col gap-1">
+            <FormLabel for="game-config-game-name">
+              {{ $t('modals.gameConfig.fields.gameName.label') }}
+            </FormLabel>
+            <FormDescription class="text-xs">
+              {{ $t('modals.gameConfig.fields.gameName.description') }}
+            </FormDescription>
+          </div>
           <FormControl>
             <Input
               id="game-config-game-name"
@@ -159,9 +164,14 @@ function scrollCustomAddButtonIntoView() {
         name="description"
       >
         <FormItem class="flex flex-col gap-2">
-          <FormLabel for="game-config-description">
-            {{ $t('modals.gameConfig.fields.description.label') }}
-          </FormLabel>
+          <div class="flex flex-col gap-1">
+            <FormLabel for="game-config-description">
+              {{ $t('modals.gameConfig.fields.description.label') }}
+            </FormLabel>
+            <FormDescription class="text-xs">
+              {{ $t('modals.gameConfig.fields.description.description') }}
+            </FormDescription>
+          </div>
           <FormControl>
             <Textarea
               id="game-config-description"
@@ -180,9 +190,14 @@ function scrollCustomAddButtonIntoView() {
         name="titleImg"
       >
         <FormItem class="flex flex-col gap-2">
-          <FormLabel>
-            {{ $t('modals.gameConfig.fields.titleImg.label') }}
-          </FormLabel>
+          <div class="flex flex-col gap-1">
+            <FormLabel>
+              {{ $t('modals.gameConfig.fields.titleImg.label') }}
+            </FormLabel>
+            <FormDescription class="text-xs">
+              {{ $t('modals.gameConfig.fields.titleImg.description') }}
+            </FormDescription>
+          </div>
           <FormControl>
             <TitleImgPicker
               :model-value="typeof value === 'string' ? value : ''"
@@ -200,9 +215,14 @@ function scrollCustomAddButtonIntoView() {
         name="titleBgm"
       >
         <FormItem class="flex flex-col gap-2">
-          <FormLabel for="game-config-title-bgm">
-            {{ $t('modals.gameConfig.fields.titleBgm.label') }}
-          </FormLabel>
+          <div class="flex flex-col gap-1">
+            <FormLabel for="game-config-title-bgm">
+              {{ $t('modals.gameConfig.fields.titleBgm.label') }}
+            </FormLabel>
+            <FormDescription class="text-xs">
+              {{ $t('modals.gameConfig.fields.titleBgm.description') }}
+            </FormDescription>
+          </div>
           <FormControl>
             <FilePicker
               input-id="game-config-title-bgm"
@@ -251,8 +271,15 @@ function scrollCustomAddButtonIntoView() {
         v-slot="{ handleChange, value }"
         name="defaultLanguage"
       >
-        <FormItem class="flex flex-row gap-2 items-center justify-between">
-          <FormLabel>{{ $t('modals.gameConfig.fields.defaultLanguage.label') }}</FormLabel>
+        <FormItem class="gap-x-2 gap-y-1 grid grid-cols-[1fr_auto] items-center">
+          <div class="flex flex-col gap-1">
+            <FormLabel>
+              {{ $t('modals.gameConfig.fields.defaultLanguage.label') }}
+            </FormLabel>
+            <FormDescription class="text-xs">
+              {{ $t('modals.gameConfig.fields.defaultLanguage.description') }}
+            </FormDescription>
+          </div>
           <Select
             data-testid="game-config-default-language"
             :model-value="typeof value === 'string' && value ? value : DEFAULT_LANGUAGE_EMPTY_VALUE"
@@ -362,23 +389,26 @@ function scrollCustomAddButtonIntoView() {
         name="maxLine"
         :validate-on-model-update="false"
       >
-        <FormItem class="flex flex-col gap-2">
-          <div class="flex flex-row gap-2 items-center justify-between">
+        <FormItem class="gap-x-2 gap-y-1 grid grid-cols-[1fr_auto] items-center">
+          <div class="flex flex-col gap-1">
             <FormLabel for="game-config-max-line">
               {{ $t('modals.gameConfig.fields.maxLine.label') }}
             </FormLabel>
-            <FormControl>
-              <Input
-                id="game-config-max-line"
-                data-testid="game-config-max-line"
-                type="number"
-                :model-value="value === '' ? '' : String(value ?? '')"
-                class="text-xs w-26"
-                @update:model-value="handleOptionalNumberChange(handleChange, $event)"
-              />
-            </FormControl>
+            <FormDescription class="text-xs">
+              {{ $t('modals.gameConfig.fields.maxLine.description') }}
+            </FormDescription>
           </div>
-          <FormMessage class="text-xs" />
+          <FormControl>
+            <Input
+              id="game-config-max-line"
+              data-testid="game-config-max-line"
+              type="number"
+              :model-value="value === '' ? '' : String(value ?? '')"
+              class="text-xs w-26"
+              @update:model-value="handleOptionalNumberChange(handleChange, $event)"
+            />
+          </FormControl>
+          <FormMessage class="text-xs col-span-2" />
         </FormItem>
       </FormField>
 
@@ -387,23 +417,26 @@ function scrollCustomAddButtonIntoView() {
         name="lineHeight"
         :validate-on-model-update="false"
       >
-        <FormItem class="flex flex-col gap-2">
-          <div class="flex flex-row gap-2 items-center justify-between">
+        <FormItem class="gap-x-2 gap-y-1 grid grid-cols-[1fr_auto] items-center">
+          <div class="flex flex-col gap-1">
             <FormLabel for="game-config-line-height">
               {{ $t('modals.gameConfig.fields.lineHeight.label') }}
             </FormLabel>
-            <FormControl>
-              <Input
-                id="game-config-line-height"
-                data-testid="game-config-line-height"
-                type="number"
-                :model-value="value === '' ? '' : String(value ?? '')"
-                class="text-xs w-26"
-                @update:model-value="handleOptionalNumberChange(handleChange, $event)"
-              />
-            </FormControl>
+            <FormDescription class="text-xs">
+              {{ $t('modals.gameConfig.fields.lineHeight.description') }}
+            </FormDescription>
           </div>
-          <FormMessage class="text-xs" />
+          <FormControl>
+            <Input
+              id="game-config-line-height"
+              data-testid="game-config-line-height"
+              type="number"
+              :model-value="value === '' ? '' : String(value ?? '')"
+              class="text-xs w-26"
+              @update:model-value="handleOptionalNumberChange(handleChange, $event)"
+            />
+          </FormControl>
+          <FormMessage class="text-xs col-span-2" />
         </FormItem>
       </FormField>
 
@@ -413,26 +446,13 @@ function scrollCustomAddButtonIntoView() {
         :validate-on-model-update="false"
       >
         <FormItem class="flex flex-col gap-2">
-          <div class="flex gap-1.5 items-center">
+          <div class="flex flex-col gap-1">
             <FormLabel for="game-config-steam-app-id">
               {{ $t('modals.gameConfig.fields.steamAppId.label') }}
             </FormLabel>
-            <TooltipProvider :delay-duration="0">
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <button
-                    type="button"
-                    class="text-muted-foreground/80 transition-colors hover:text-foreground"
-                    :aria-label="$t('modals.gameConfig.fields.steamAppId.description')"
-                  >
-                    <div class="i-lucide-circle-help size-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" class="px-2 py-1 max-w-64">
-                  {{ $t('modals.gameConfig.fields.steamAppId.description') }}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <FormDescription class="text-xs">
+              {{ $t('modals.gameConfig.fields.steamAppId.description') }}
+            </FormDescription>
           </div>
           <FormControl>
             <Input
@@ -452,26 +472,13 @@ function scrollCustomAddButtonIntoView() {
         :validate-on-model-update="false"
       >
         <FormItem class="flex flex-col gap-2">
-          <div class="flex gap-1.5 items-center">
+          <div class="flex flex-col gap-1">
             <FormLabel for="game-config-package-name">
               {{ $t('modals.gameConfig.fields.packageName.label') }}
             </FormLabel>
-            <TooltipProvider :delay-duration="0">
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <button
-                    type="button"
-                    class="text-muted-foreground/80 transition-colors hover:text-foreground"
-                    :aria-label="$t('modals.gameConfig.fields.packageName.description')"
-                  >
-                    <div class="i-lucide-circle-help size-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" class="px-2 py-1 max-w-64">
-                  {{ $t('modals.gameConfig.fields.packageName.description') }}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <FormDescription class="text-xs">
+              {{ $t('modals.gameConfig.fields.packageName.description') }}
+            </FormDescription>
           </div>
           <FormControl>
             <Input
@@ -491,26 +498,13 @@ function scrollCustomAddButtonIntoView() {
         name="gameKey"
       >
         <FormItem class="flex flex-col gap-2">
-          <div class="flex gap-1.5 items-center">
+          <div class="flex flex-col gap-1">
             <FormLabel for="game-config-game-key">
               {{ $t('modals.gameConfig.fields.gameKey.label') }}
             </FormLabel>
-            <TooltipProvider :delay-duration="0">
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <button
-                    type="button"
-                    class="text-muted-foreground/80 transition-colors hover:text-foreground"
-                    :aria-label="$t('modals.gameConfig.fields.gameKey.description')"
-                  >
-                    <div class="i-lucide-circle-help size-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" class="px-2 py-1 max-w-64">
-                  {{ $t('modals.gameConfig.fields.gameKey.description') }}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <FormDescription class="text-xs">
+              {{ $t('modals.gameConfig.fields.gameKey.description') }}
+            </FormDescription>
           </div>
           <FormControl>
             <InputGroup
@@ -551,10 +545,13 @@ function scrollCustomAddButtonIntoView() {
     </div>
 
     <section class="flex flex-col gap-3" data-testid="game-config-custom-section">
-      <div>
+      <div class="flex flex-col gap-1">
         <h3 class="text-sm font-medium">
           {{ $t('modals.gameConfig.custom.title') }}
         </h3>
+        <p class="text-xs text-muted-foreground">
+          {{ $t('modals.gameConfig.custom.description') }}
+        </p>
       </div>
 
       <div class="flex flex-col gap-3" data-testid="game-config-custom-list">
