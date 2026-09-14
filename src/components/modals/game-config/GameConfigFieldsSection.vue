@@ -336,6 +336,31 @@ function scrollCustomAddButtonIntoView() {
 
       <FormField
         v-slot="{ handleChange, value }"
+        name="enableContinue"
+      >
+        <FormItem
+          data-testid="game-config-enable-continue-row"
+          class="flex flex-row gap-2 items-center justify-between"
+        >
+          <div class="flex flex-col gap-1">
+            <FormLabel>{{ $t('modals.gameConfig.fields.enableContinue.label') }}</FormLabel>
+            <FormDescription class="text-xs">
+              {{ $t('modals.gameConfig.fields.enableContinue.description') }}
+            </FormDescription>
+          </div>
+          <div class="flex flex-col gap-1 items-end">
+            <FormControl>
+              <Switch
+                :model-value="Boolean(value)"
+                @update:model-value="handleChange"
+              />
+            </FormControl>
+          </div>
+        </FormItem>
+      </FormField>
+
+      <FormField
+        v-slot="{ handleChange, value }"
         name="showPanic"
       >
         <FormItem

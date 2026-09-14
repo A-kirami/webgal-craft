@@ -441,6 +441,9 @@ modals:
       enableAppreciation:
         label: 鑑賞模式
         description: 在標題畫面選單中顯示鑑賞模式
+      enableContinue:
+        label: 繼續遊戲按鈕
+        description: 關閉後，標題介面不再顯示繼續遊戲按鈕
       showPanic:
         label: 緊急回避
         description: 啟用後，按下 Esc 鍵可顯示緊急回避畫面

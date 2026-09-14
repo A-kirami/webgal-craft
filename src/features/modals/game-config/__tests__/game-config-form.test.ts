@@ -18,6 +18,7 @@ function createFormValues(overrides: Partial<GameConfigFormValues> = {}): GameCo
     defaultLanguage: '',
     description: '',
     enableAppreciation: false,
+    enableContinue: true,
     gameKey: '',
     gameName: 'Demo',
     legacyExpressionBlendMode: false,
@@ -57,6 +58,10 @@ describe('gameConfigForm', () => {
         {
           key: 'Enable_Appreciation',
           value: 'TRUE',
+        },
+        {
+          key: 'Enable_Continue',
+          value: 'false',
         },
         {
           key: 'Game_key',
@@ -134,6 +139,7 @@ describe('gameConfigForm', () => {
         },
       ],
       enableAppreciation: true,
+      enableContinue: false,
       gameKey: 'demo-key',
       gameName: 'Demo',
       legacyExpressionBlendMode: false,
@@ -157,6 +163,10 @@ describe('gameConfigForm', () => {
         {
           key: 'Enable_Appreciation',
           value: 'unexpected',
+        },
+        {
+          key: 'Enable_Continue',
+          value: 'yes',
         },
         {
           key: 'Line_height',
@@ -430,6 +440,7 @@ describe('gameConfigForm', () => {
         },
       ],
       enableAppreciation: true,
+      enableContinue: false,
       gameKey: 'demo-key',
       packageName: 'com.demo.game',
       gameLogo: ['opening.webp', 'enter.webp'],
@@ -460,6 +471,10 @@ describe('gameConfigForm', () => {
         {
           key: 'Enable_Appreciation',
           value: 'true',
+        },
+        {
+          key: 'Enable_Continue',
+          value: 'false',
         },
         {
           key: 'Legacy_Expression_Blend_Mode',
@@ -527,6 +542,10 @@ describe('gameConfigForm', () => {
         {
           key: 'Enable_Appreciation',
           value: 'false',
+        },
+        {
+          key: 'Enable_Continue',
+          value: 'true',
         },
         {
           key: 'Legacy_Expression_Blend_Mode',

@@ -9,6 +9,7 @@ export const BUILT_IN_GAME_CONFIG_RAW_KEYS = [
   'Title_bgm',
   'Game_Logo',
   'Enable_Appreciation',
+  'Enable_Continue',
   'Legacy_Expression_Blend_Mode',
   'Steam_AppID',
   'Default_Language',

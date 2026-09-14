@@ -29,6 +29,7 @@ export interface GameConfigFormValues {
   defaultLanguage: '' | GameConfigDefaultLanguage
   description: string
   enableAppreciation: boolean
+  enableContinue: boolean
   gameKey: string
   gameName: string
   gameLogo: string[]
@@ -47,6 +48,7 @@ const EMPTY_GAME_CONFIG_FORM_VALUES = {
   defaultLanguage: '',
   description: '',
   enableAppreciation: false,
+  enableContinue: true,
   gameKey: '',
   gameName: '',
   gameLogo: [],
@@ -298,6 +300,7 @@ export function createGameConfigSchema(t: I18nT) {
     ]),
     description: createConfigValueSchema(t),
     enableAppreciation: z.boolean(),
+    enableContinue: z.boolean(),
     gameKey: createConfigValueSchema(t),
     gameName: createRequiredGameNameSchema(t),
     gameLogo: z.array(createConfigValueSchema(t)),
@@ -324,6 +327,7 @@ export function parseGameConfigFormValues(config: GameConfigReadResult): GameCon
     defaultLanguage: parseDefaultLanguage(readEntryValue(entryValueMap, 'Default_Language')),
     description: readEntryValue(entryValueMap, 'Description') ?? '',
     enableAppreciation: parseBooleanValue(readEntryValue(entryValueMap, 'Enable_Appreciation'), false),
+    enableContinue: parseBooleanValue(readEntryValue(entryValueMap, 'Enable_Continue'), true),
     gameKey: readEntryValue(entryValueMap, 'Game_key') ?? '',
     gameName: readEntryValue(entryValueMap, 'Game_name') ?? '',
     gameLogo: parseGameLogoImages(readEntryValue(entryValueMap, 'Game_Logo') ?? ''),
@@ -373,6 +377,10 @@ export function serializeGameConfigEntries(values: GameConfigFormValues): GameCo
     {
       key: 'Enable_Appreciation',
       value: String(values.enableAppreciation),
+    },
+    {
+      key: 'Enable_Continue',
+      value: String(values.enableContinue),
     },
     {
       key: 'Legacy_Expression_Blend_Mode',
