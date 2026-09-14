@@ -140,9 +140,6 @@ home:
       downloaded: 已下载 {downloaded}
       downloadedWithTotal: 已下载 {downloaded} / {total}
       extracted: 已解压 {files} 个文件
-      phase:
-        downloading: 正在下载
-        extracting: 正在解压
     resource:
       game: 游戏
       engine: 引擎

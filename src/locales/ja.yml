@@ -140,9 +140,6 @@ home:
       downloaded: "{downloaded} をダウンロード済み"
       downloadedWithTotal: "{downloaded} / {total} をダウンロード済み"
       extracted: "{files} ファイルを展開済み"
-      phase:
-        downloading: ダウンロード中
-        extracting: 展開中
     resource:
       game: ゲーム
       engine: エンジン

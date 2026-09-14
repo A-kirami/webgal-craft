@@ -140,9 +140,6 @@ home:
       downloaded: Downloaded {downloaded}
       downloadedWithTotal: Downloaded {downloaded} / {total}
       extracted: Extracted {files} files
-      phase:
-        downloading: Downloading
-        extracting: Extracting
     resource:
       game: game
       engine: engine
