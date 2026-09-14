@@ -1322,6 +1322,7 @@ settings:
         light: ライト
         dark: ダーク
     language:
+      description: インターフェースの表示言語です
       label: 言語
       placeholder: 言語を選択してください
     openLastProject:
@@ -1339,9 +1340,11 @@ settings:
     textEditor: テキストエディター
     visualEditor: ビジュアルエディター
     fontFamily:
+      description: コードとテキストに使うフォントです。複数指定する場合はカンマで区切ります
       label: フォント
       placeholder: フォント名
     fontSize:
+      description: エディター内の文字サイズです。単位はピクセル
       label: フォントサイズ
     wordWrap:
       label: 自動折り返し
@@ -1378,15 +1381,19 @@ settings:
       description: 候補の階層を区切るための区切り文字を指定します。例：/
   storage:
     gamePath:
+      description: 新規作成またはインポートしたゲームの保存先です。変更するとすぐに反映されます
       label: ゲーム保存場所
       title: ゲーム保存場所を選択
     enginePath:
+      description: インポートしたエンジンバージョンの保存先です。変更するとすぐに反映されます
       label: エンジン保存場所
       title: エンジン保存場所を選択
     templatePath:
+      description: インポートしたプロジェクトテンプレートの保存先です。変更するとすぐに反映されます
       label: テンプレート保存場所
       title: テンプレート保存場所を選択
     exportPath:
+      description: ゲームを書き出すときに既定で保存される場所です
       label: デフォルトの書き出し先
       title: デフォルトの書き出し先を選択
       androidDestination: Downloads/WebGALCraft/exports

@@ -1322,6 +1322,7 @@ settings:
         light: 淺色
         dark: 深色
     language:
+      description: 介面顯示語言
       label: 語言
       placeholder: 請選擇語言
     openLastProject:
@@ -1339,9 +1340,11 @@ settings:
     textEditor: 文字編輯器
     visualEditor: 視覺化編輯器
     fontFamily:
+      description: 程式碼和文字使用的字體，有多個時以英文逗號分隔
       label: 字體
       placeholder: 字體名稱
     fontSize:
+      description: 編輯器中文字的字號，單位為像素
       label: 字體大小
     wordWrap:
       label: 自動換行
@@ -1378,15 +1381,19 @@ settings:
       description: 指定用於劃分選項層級的分隔符，例如 /
   storage:
     gamePath:
+      description: 新建或匯入的遊戲存放目錄，修改後立即生效
       label: 遊戲儲存位置
       title: 選擇遊戲儲存位置
     enginePath:
+      description: 匯入的引擎版本存放目錄，修改後立即生效
       label: 引擎儲存位置
       title: 選擇引擎儲存位置
     templatePath:
+      description: 匯入的專案模板存放目錄，修改後立即生效
       label: 模板儲存位置
       title: 選擇模板儲存位置
     exportPath:
+      description: 匯出遊戲時預設儲存到的位置
       label: 預設匯出位置
       title: 選擇預設匯出位置
       androidDestination: 下載/WebGALCraft/exports

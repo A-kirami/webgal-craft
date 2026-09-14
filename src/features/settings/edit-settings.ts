@@ -49,6 +49,7 @@ export const editSettingsDefinition = defineSettingsSchema({
         type: 'input',
         default: 'FiraCode, SourceHanSans, Consolas, "Courier New", monospace',
         label: t => t('settings.edit.fontFamily.label'),
+        description: t => t('settings.edit.fontFamily.description'),
         placeholder: t => t('settings.edit.fontFamily.placeholder'),
       },
       fontSize: {
@@ -57,6 +58,7 @@ export const editSettingsDefinition = defineSettingsSchema({
         min: 8,
         max: 48,
         label: t => t('settings.edit.fontSize.label'),
+        description: t => t('settings.edit.fontSize.description'),
       },
       wordWrap: {
         type: 'switch',
