@@ -155,6 +155,8 @@ const localizedDefaultLanguageOptions = Object.fromEntries([
   ['ja', 'Test Japanese'],
   ['fr', 'Test French'],
   ['de', 'Test German'],
+  ['pt_BR', 'Test Portuguese'],
+  ['ko', 'Test Korean'],
 ])
 
 describe('GameConfigFieldsSection', () => {
@@ -191,6 +193,8 @@ describe('GameConfigFieldsSection', () => {
     await expect.element(page.getByText(/^日本語$/)).toBeInTheDocument()
     await expect.element(page.getByText(/^Français$/)).toBeInTheDocument()
     await expect.element(page.getByText(/^Deutsch$/)).toBeInTheDocument()
+    await expect.element(page.getByText(/^Português do Brasil$/)).toBeInTheDocument()
+    await expect.element(page.getByText(/^한국어$/)).toBeInTheDocument()
 
     await expect.element(page.getByText(/^测试简中$/)).not.toBeInTheDocument()
     await expect.element(page.getByText(/^测试繁中$/)).not.toBeInTheDocument()
@@ -198,6 +202,8 @@ describe('GameConfigFieldsSection', () => {
     await expect.element(page.getByText(/^Test Japanese$/)).not.toBeInTheDocument()
     await expect.element(page.getByText(/^Test French$/)).not.toBeInTheDocument()
     await expect.element(page.getByText(/^Test German$/)).not.toBeInTheDocument()
+    await expect.element(page.getByText(/^Test Portuguese$/)).not.toBeInTheDocument()
+    await expect.element(page.getByText(/^Test Korean$/)).not.toBeInTheDocument()
 
     await result.unmount()
   })

@@ -4,10 +4,13 @@ import { useFieldArray } from 'vee-validate'
 
 import { FormField } from '~/components/ui/form'
 import { AUDIO_EXTENSIONS } from '~/features/editor/command-registry/common-params'
-import { createGameConfigKey } from '~/features/modals/game-config/game-config-form'
+import { createGameConfigKey, GAME_CONFIG_DEFAULT_LANGUAGES } from '~/features/modals/game-config/game-config-form'
 
 import type { AbsPath } from '~/domain/path'
-import type { GameConfigFormValues } from '~/features/modals/game-config/game-config-form'
+import type {
+  GameConfigDefaultLanguage,
+  GameConfigFormValues,
+} from '~/features/modals/game-config/game-config-form'
 
 interface Props {
   backgroundRootPath: AbsPath
@@ -25,32 +28,24 @@ const {
   remove: removeCustomConfig,
 } = useFieldArray<GameConfigFormValues['customConfig'][number]>('customConfig')
 
-const defaultLanguageOptions = [
-  {
-    label: '简体中文',
-    value: 'zh_CN',
-  },
-  {
-    label: '繁體中文',
-    value: 'zh_TW',
-  },
-  {
-    label: 'English',
-    value: 'en',
-  },
-  {
-    label: '日本語',
-    value: 'ja',
-  },
-  {
-    label: 'Français',
-    value: 'fr',
-  },
-  {
-    label: 'Deutsch',
-    value: 'de',
-  },
-] as const
+// 语言名固定用各语言自身的写法，不跟随界面语言翻译
+/* eslint-disable camelcase -- 键是引擎 config.txt 的语言取值，不能改写成 camelCase */
+const DEFAULT_LANGUAGE_LABELS: Record<GameConfigDefaultLanguage, string> = {
+  zh_CN: '简体中文',
+  zh_TW: '繁體中文',
+  en: 'English',
+  ja: '日本語',
+  fr: 'Français',
+  de: 'Deutsch',
+  pt_BR: 'Português do Brasil',
+  ko: '한국어',
+}
+/* eslint-enable camelcase */
+
+const defaultLanguageOptions = GAME_CONFIG_DEFAULT_LANGUAGES.map(value => ({
+  label: DEFAULT_LANGUAGE_LABELS[value],
+  value,
+}))
 
 function handleOptionalNumberChange(handleChange: (value: '' | number) => void, nextValue: string | number) {
   if (nextValue === '') {

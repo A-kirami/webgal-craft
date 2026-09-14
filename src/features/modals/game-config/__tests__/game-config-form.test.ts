@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   cloneGameConfigFormValues,
   createGameConfigSchema,
+  GAME_CONFIG_DEFAULT_LANGUAGES,
   parseGameConfigFormValues,
   serializeGameConfigEntries,
 } from '../game-config-form'
@@ -158,7 +159,7 @@ describe('gameConfigForm', () => {
       entries: [
         {
           key: 'Default_Language',
-          value: 'ko',
+          value: 'es',
         },
         {
           key: 'Enable_Appreciation',
@@ -217,12 +218,22 @@ describe('gameConfigForm', () => {
     }))
   })
 
+  it('createGameConfigSchema 会接受引擎支持的全部默认语言', () => {
+    const schema = createGameConfigSchema(t)
+
+    for (const defaultLanguage of GAME_CONFIG_DEFAULT_LANGUAGES) {
+      expect(schema.safeParse(createFormValues({
+        defaultLanguage,
+      })).success).toBe(true)
+    }
+  })
+
   it('createGameConfigSchema 会拒绝不支持的默认语言', () => {
     const schema = createGameConfigSchema(t)
 
     expect(schema.safeParse({
       ...createFormValues(),
-      defaultLanguage: 'ko',
+      defaultLanguage: 'es',
     }).success).toBe(false)
   })
 

@@ -18,6 +18,8 @@ export const GAME_CONFIG_DEFAULT_LANGUAGES = [
   'ja',
   'fr',
   'de',
+  'pt_BR',
+  'ko',
 ] as const
 
 export type GameConfigDefaultLanguage = (typeof GAME_CONFIG_DEFAULT_LANGUAGES)[number]
