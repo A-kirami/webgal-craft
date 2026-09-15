@@ -1590,6 +1590,7 @@ mod tests {
     };
 
     use flate2::read::GzDecoder;
+    use sha2::{Digest, Sha256};
 
     use super::{
         cache_pc_runtime, copy_web_icons, export_pc_to_directory, export_web_to_directory,
@@ -1824,6 +1825,20 @@ mod tests {
         );
     }
 
+    /// 写入高熵内容，压缩后不会变小，用于覆盖「压缩无收益」分支。
+    fn write_incompressible_file(path: &Path, size: usize) {
+        let mut bytes = Vec::with_capacity(size);
+        let mut block = 0_u64;
+        while bytes.len() < size {
+            bytes.extend_from_slice(&Sha256::digest(block.to_le_bytes()));
+            block += 1;
+        }
+        bytes.truncate(size);
+        fs::create_dir_all(path.parent().expect("fixture file should have parent"))
+            .expect("fixture parent should be created");
+        fs::write(path, bytes).expect("fixture file should be written");
+    }
+
     #[test]
     fn recognizes_precompressible_asset_extensions() {
         for name in [
@@ -1866,6 +1881,7 @@ mod tests {
         let root = tempdir().expect("temp root should be created");
         create_export_fixture(root.path());
         write_compressible_file(&root.path().join("engine/assets/runtime.js"), 200);
+        write_incompressible_file(&root.path().join("engine/assets/decoder.wasm"), 4096);
         let output = root.path().join("output/Demo");
 
         export_web_to_directory(
@@ -1891,9 +1907,10 @@ mod tests {
             .expect("precompressed copy should be valid gzip");
         assert_eq!(decoded, source);
         assert!(compressed.len() < source.len());
-        // 二进制资源与小文件都不生成副本。
+        // 二进制资源与小文件都不生成副本；压缩后没有变小的也不保留副本。
         assert!(!output.join("icons/favicon.ico.gz").exists());
         assert!(!output.join("game/scene/start.txt.gz").exists());
+        assert!(!output.join("assets/decoder.wasm.gz").exists());
         assert!(output.join("index.html").is_file());
     }
 
