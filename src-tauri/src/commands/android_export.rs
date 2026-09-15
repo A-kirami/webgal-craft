@@ -11,7 +11,7 @@ use zip::{write::SimpleFileOptions, ZipWriter};
 use super::{
     export::{
         cleanup_export_work_directory, emit_web_export_progress, export_error,
-        export_web_to_directory, STEP_FINISHED,
+        export_web_to_directory, WebExportOptions, STEP_FINISHED,
     },
     AppError, AppResult,
 };
@@ -121,7 +121,10 @@ pub async fn export_android_web_zip(
                 template_path.as_deref().map(Path::new),
                 &web_directory,
                 &game_name,
-                false,
+                WebExportOptions {
+                    precompress: false,
+                    replace_existing: false,
+                },
                 |step, percentage| {
                     let (step, percentage) = if step == STEP_FINISHED {
                         (STEP_COMPRESSING, 96)
