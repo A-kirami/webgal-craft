@@ -11,16 +11,6 @@ const props = defineProps<ToasterProps>()
     v-bind="props"
     close-button
     class="group toaster pointer-events-auto"
-    :toast-options="{
-      classes: {
-        toast:
-          'group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg',
-        description: 'group-[.toast]:text-muted-foreground',
-        actionButton: 'group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
-        cancelButton: 'group-[.toast]:bg-muted group-[.toast]:text-muted-foreground',
-        closeButton: 'group-[.toast]:bg-background group-[.toast]:text-muted-foreground',
-      },
-    }"
   >
     <template #loading-icon>
       <ToastIcon type="loading" />
@@ -48,10 +38,18 @@ const props = defineProps<ToasterProps>()
   --offset: 1.25rem !important;
 
   & [data-sonner-toast] {
-    @apply flex;
+    @apply flex px-4 py-3 bg-background text-foreground border-border shadow;
+
+    /* vue-sonner 内置给图标 svg -1px 左外边距(补偿自家图标),会破坏色环居中,归零 */
+    --toast-svg-margin-start: 0px;
 
     & [data-icon] {
       @apply w-auto h-auto;
+    }
+
+    /* 无关闭按钮的 toast(loading)走 flex,图标贴标题第一行而非整行居中 */
+    &:not(:has([data-close-button]), :has([data-button])) [data-icon] {
+      align-self: flex-start;
     }
 
     & [data-content] {
@@ -59,37 +57,46 @@ const props = defineProps<ToasterProps>()
     }
 
     & [data-title] {
-      @apply text-sm font-semibold;
+      @apply text-sm font-medium;
     }
 
     & [data-description] {
-      @apply text-sm;
+      @apply text-[13px] text-muted-foreground;
     }
 
     & [data-button] {
       @apply ml-auto;
     }
 
+    & [data-action] {
+      @apply bg-primary text-primary-foreground rounded px-3 py-1.5 text-xs font-medium;
+    }
+
+    & [data-cancel] {
+      @apply bg-muted text-muted-foreground rounded px-3 py-1.5 text-xs font-medium;
+    }
+
+    /* 触发区 24px(Button icon-xs 档),-m-0.5 补偿保持字形光学位置 */
     & [data-close-button] {
-      @apply static border-none rounded-sm size-5 transform-none hover:bg-muted;
+      @apply static border-none rounded-md size-6 -m-0.5 transform-none text-muted-foreground hover:bg-accent hover:text-accent-foreground;
 
       bottom: auto;
       left: auto;
 
       & svg {
-        @apply w-4 h-4;
+        @apply size-3.5;
       }
     }
 
     &:has([data-close-button]),
     &:has([data-button]) {
-      @apply grid gap-x-3 items-start;
+      @apply grid gap-x-2 items-start;
 
       grid-template-areas:
         "icon title title close"
         "icon description description description";
       grid-template-columns: auto minmax(0, 1fr) auto auto;
-      row-gap: 0.125rem;
+      row-gap: 0.25rem;
 
       & [data-icon] {
         grid-area: icon;
@@ -134,7 +141,7 @@ const props = defineProps<ToasterProps>()
 
         justify-self: end;
         width: max-content;
-        margin-top: 0.375rem;
+        margin-top: 0.5rem;
         white-space: nowrap;
       }
     }
