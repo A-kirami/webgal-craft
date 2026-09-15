@@ -1069,28 +1069,30 @@ fn is_precompressible(relative_path: &Path) -> bool {
 /// 小文件压缩后只省几百字节，不值得让产物多出一份副本。
 const MIN_PRECOMPRESSED_SOURCE_BYTES: u64 = 1024;
 
-/// 写出 `.gz` 副本；源文件过小或压缩后未变小时不保留副本。
+/// 写出 `.gz` 副本；已存在同名副本、源文件过小或压缩后未变小时都不生成。
 fn precompress_file(source: &Path) -> AppResult<()> {
     let mut destination = source.as_os_str().to_os_string();
     destination.push(".gz");
     let destination = PathBuf::from(destination);
-    let source_size = fs::metadata(source)?.len();
-
-    if source_size >= MIN_PRECOMPRESSED_SOURCE_BYTES {
-        // 副本只压一次、由所有访客下载，取最高档：比默认档小不到 1%，耗时差异可忽略。
-        let mut encoder = GzEncoder::new(
-            BufWriter::new(fs::File::create(&destination)?),
-            Compression::best(),
-        );
-        std::io::copy(&mut fs::File::open(source)?, &mut encoder)?;
-        encoder.finish()?.flush()?;
-        if fs::metadata(&destination)?.len() < source_size {
-            return Ok(());
-        }
+    // 已有的副本来自引擎产物或游戏目录，属于调用方自己的文件，导出不覆盖也不删除。
+    if destination.exists() {
+        return Ok(());
     }
 
-    // 不保留副本时必须清掉同名旧副本，否则 `gzip_static` 会继续分发与当前内容不符的文件。
-    if destination.exists() {
+    let source_size = fs::metadata(source)?.len();
+    if source_size < MIN_PRECOMPRESSED_SOURCE_BYTES {
+        return Ok(());
+    }
+
+    // 副本只压一次、由所有访客下载，取最高档：比默认档小不到 1%，耗时差异可忽略。
+    let mut encoder = GzEncoder::new(
+        BufWriter::new(fs::File::create(&destination)?),
+        Compression::best(),
+    );
+    std::io::copy(&mut fs::File::open(source)?, &mut encoder)?;
+    encoder.finish()?.flush()?;
+    if fs::metadata(&destination)?.len() >= source_size {
+        // 压缩没有收益；能走到这里说明副本是本次生成的，直接删掉。
         fs::remove_file(&destination)?;
     }
     Ok(())
@@ -1896,7 +1898,63 @@ mod tests {
     }
 
     #[test]
-    fn rewrites_precompressed_copies_deterministically() {
+    fn preserves_source_provided_precompressed_copies() {
+        let root = tempdir().expect("temp root should be created");
+        create_export_fixture(root.path());
+        write_compressible_file(&root.path().join("engine/assets/runtime.js"), 200);
+        write_compressible_file(&root.path().join("engine/assets/style.css"), 200);
+        write_file(
+            &root.path().join("engine/assets/runtime.js.gz"),
+            "engine copy",
+        );
+        write_file(
+            &root.path().join("game/game/scene/start.txt.gz"),
+            "project copy",
+        );
+        let output = root.path().join("output/Demo");
+
+        export_web_to_directory(
+            &root.path().join("engine"),
+            &root.path().join("game"),
+            Some(&root.path().join("template")),
+            &output,
+            "My Game",
+            WebExportOptions {
+                precompress: true,
+                replace_existing: false,
+            },
+            |_, _| Ok(()),
+        )
+        .expect("web export should succeed");
+
+        // 自带副本的资源原样保留，只有缺少副本的资源才补生成。
+        assert_eq!(
+            fs::read_to_string(output.join("assets/runtime.js.gz")).unwrap(),
+            "engine copy"
+        );
+        assert_eq!(
+            fs::read_to_string(output.join("game/scene/start.txt.gz")).unwrap(),
+            "project copy"
+        );
+        assert!(output.join("assets/style.css.gz").is_file());
+    }
+
+    #[test]
+    fn keeps_existing_precompressed_copies() {
+        let root = tempdir().expect("temp root should be created");
+        let source = root.path().join("assets/runtime.js");
+        write_compressible_file(&source, 200);
+        let destination = root.path().join("assets/runtime.js.gz");
+        fs::write(&destination, b"engine copy").expect("existing copy should be written");
+
+        precompress_file(&source).expect("precompression should succeed");
+
+        // 调用方自带的副本属于其自己的文件，导出原样保留。
+        assert_eq!(fs::read(&destination).unwrap(), b"engine copy");
+    }
+
+    #[test]
+    fn generates_reproducible_precompressed_copies() {
         let root = tempdir().expect("temp root should be created");
         let source = root.path().join("assets/runtime.js");
         write_compressible_file(&source, 200);
@@ -1904,29 +1962,27 @@ mod tests {
 
         precompress_file(&source).expect("first precompression should succeed");
         let first = fs::read(&destination).expect("first copy should be readable");
-        fs::write(&destination, b"stale").expect("stale copy should be written");
+        fs::remove_file(&destination).expect("first copy should be removable");
         precompress_file(&source).expect("second precompression should succeed");
         let second = fs::read(&destination).expect("second copy should be readable");
 
-        // 过期副本会被重写，且 gzip 头不带时间戳，同一输入重压得到相同字节。
+        // gzip 头不带时间戳，同一输入两次生成的字节一致，重复导出不会无故产生文件变动。
         assert_eq!(&first[4..8], &[0, 0, 0, 0]);
         assert_eq!(first, second);
     }
 
     #[test]
-    fn skips_and_clears_small_scene_files() {
+    fn skips_small_scene_files() {
         let root = tempdir().expect("temp root should be created");
         fs::create_dir_all(root.path().join("game/scene"))
             .expect("scene directory should be created");
-        let scene = root.path().join("game/scene/start.txt");
-        fs::write(&scene, "say: hi;").expect("scene should be written");
-        let stale = root.path().join("game/scene/start.txt.gz");
-        fs::write(&stale, b"stale engine copy").expect("stale copy should be written");
+        let plain = root.path().join("game/scene/plain.txt");
+        fs::write(&plain, "say: hi;").expect("scene should be written");
 
-        precompress_file(&scene).expect("precompression should succeed");
+        precompress_file(&plain).expect("precompression should succeed");
 
-        // 小文件不生成副本，遗留的过期副本也要清掉。
-        assert!(!stale.exists());
+        // 小文件压缩后只省几百字节，不生成副本。
+        assert!(!root.path().join("game/scene/plain.txt.gz").exists());
     }
 
     #[test]
