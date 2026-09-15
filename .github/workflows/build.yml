@@ -100,6 +100,9 @@ jobs:
       - name: Setup Android SDK
         if: matrix.mobile == 'android'
         uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          # 覆盖动作默认的 'tools platform-tools'：legacy tools 已被 Google 下架，保留即失败
+          packages: platform-tools
 
       - name: Install Android SDK packages
         if: matrix.mobile == 'android'
