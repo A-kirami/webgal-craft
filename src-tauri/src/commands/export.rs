@@ -7,6 +7,7 @@ use std::{
     time::Duration,
 };
 
+use flate2::{write::GzEncoder, Compression};
 use futures_util::StreamExt;
 use image::{imageops, DynamicImage, RgbaImage};
 use serde::{Deserialize, Serialize};
@@ -22,6 +23,7 @@ const STEP_COPYING_ENGINE: &str = "export.progress.copyingEngine";
 const STEP_COPYING_GAME: &str = "export.progress.copyingGame";
 const STEP_COPYING_ICONS: &str = "export.progress.copyingIcons";
 const STEP_UPDATING_MANIFEST: &str = "export.progress.updatingManifest";
+const STEP_PRECOMPRESSING: &str = "export.progress.precompressing";
 pub(super) const STEP_FINISHED: &str = "export.progress.finished";
 const WEB_ICON_FILE_NAMES: [&str; 6] = [
     "apple-touch-icon.png",
@@ -30,6 +32,30 @@ const WEB_ICON_FILE_NAMES: [&str; 6] = [
     "icon-192.png",
     "icon-512-maskable.png",
     "icon-512.png",
+];
+// 白名单：文本、未压缩的 sfnt 字体（ttf/otf/ttc）、Live2D 与 Spine 的模型和动作数据；
+// Cubism 3/4 的旁挂文件落在 `json` 上。图片、有损音频、视频、woff/woff2 已自带压缩，
+// PCM 音频（wav）收益过低。新增资产格式时须同步检查这里。
+const PRECOMPRESSIBLE_EXTENSIONS: [&str; 19] = [
+    "atlas",
+    "css",
+    "htm",
+    "html",
+    "js",
+    "json",
+    "map",
+    "mjs",
+    "moc",
+    "moc3",
+    "mtn",
+    "otf",
+    "skel",
+    "svg",
+    "ttc",
+    "ttf",
+    "txt",
+    "wasm",
+    "webmanifest",
 ];
 const STEP_PACKING_RESOURCES: &str = "export.progress.packingResources";
 const STEP_COPYING_RUNTIME: &str = "export.progress.copyingRuntime";
@@ -94,6 +120,14 @@ struct ExportProgress {
 enum MaterializedNode {
     Directory { logical_path: PathBuf },
     File { logical_path: PathBuf },
+}
+
+/// Web 导出的产物策略。
+pub(super) struct WebExportOptions {
+    /// 为可压缩资源写出 `.gz` 副本；打包进运行时的产物不经过 HTTP 内容编码，传 `false`。
+    pub precompress: bool,
+    /// 目标目录已存在时是否整体替换其内容。
+    pub replace_existing: bool,
 }
 
 pub(super) fn export_error(message: impl Into<String>) -> AppError {
@@ -634,7 +668,10 @@ pub(super) fn export_pc_to_directory(
             template_path,
             &site_root,
             game_name,
-            false,
+            WebExportOptions {
+                precompress: false,
+                replace_existing: false,
+            },
             |step, percentage| report(step, percentage.min(30)),
         )?;
         fs::create_dir(&staged_output)?;
@@ -1018,6 +1055,77 @@ where
     report(STEP_COPYING_ICONS, range.1)
 }
 
+fn is_precompressible(relative_path: &Path) -> bool {
+    relative_path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| {
+            PRECOMPRESSIBLE_EXTENSIONS
+                .iter()
+                .any(|candidate| extension.eq_ignore_ascii_case(candidate))
+        })
+}
+
+/// 小文件压缩后只省几百字节，不值得让产物多出一份副本。
+const MIN_PRECOMPRESSED_SOURCE_BYTES: u64 = 1024;
+
+/// 写出 `.gz` 副本；源文件过小或压缩后未变小时不保留副本。
+fn precompress_file(source: &Path) -> AppResult<()> {
+    let mut destination = source.as_os_str().to_os_string();
+    destination.push(".gz");
+    let destination = PathBuf::from(destination);
+    let source_size = fs::metadata(source)?.len();
+
+    if source_size >= MIN_PRECOMPRESSED_SOURCE_BYTES {
+        // 副本只压一次、由所有访客下载，取最高档：比默认档小不到 1%，耗时差异可忽略。
+        let mut encoder = GzEncoder::new(
+            BufWriter::new(fs::File::create(&destination)?),
+            Compression::best(),
+        );
+        std::io::copy(&mut fs::File::open(source)?, &mut encoder)?;
+        encoder.finish()?.flush()?;
+        if fs::metadata(&destination)?.len() < source_size {
+            return Ok(());
+        }
+    }
+
+    // 不保留副本时必须清掉同名旧副本，否则 `gzip_static` 会继续分发与当前内容不符的文件。
+    if destination.exists() {
+        fs::remove_file(&destination)?;
+    }
+    Ok(())
+}
+
+fn precompress_web_assets<F>(root: &Path, range: (u8, u8), report: &mut F) -> AppResult<()>
+where
+    F: FnMut(&str, u8) -> AppResult<()>,
+{
+    report(STEP_PRECOMPRESSING, range.0)?;
+
+    let mut files = Vec::new();
+    collect_files(root, root, &mut files)?;
+    let candidates = files
+        .into_iter()
+        .filter(|(_, relative_path)| is_precompressible(relative_path))
+        .collect::<Vec<_>>();
+    let total_files = candidates.len();
+    let mut last_reported_percentage = range.0;
+
+    for (index, (path, _)) in candidates.into_iter().enumerate() {
+        precompress_file(&path)?;
+
+        let span = usize::from(range.1 - range.0);
+        let progress = usize::from(range.0) + span * (index + 1) / total_files;
+        let percentage = progress as u8;
+        if percentage > last_reported_percentage && percentage < range.1 {
+            report(STEP_PRECOMPRESSING, percentage)?;
+            last_reported_percentage = percentage;
+        }
+    }
+
+    report(STEP_PRECOMPRESSING, range.1)
+}
+
 fn update_manifest(export_path: &Path, game_name: &str, game_description: &str) -> AppResult<()> {
     let manifest_path = export_path.join("manifest.json");
     let content = fs::read_to_string(&manifest_path)?;
@@ -1191,12 +1299,16 @@ pub(super) fn export_web_to_directory<F>(
     template_path: Option<&Path>,
     output_path: &Path,
     game_name: &str,
-    replace_existing: bool,
+    options: WebExportOptions,
     mut report: F,
 ) -> AppResult<()>
 where
     F: FnMut(&str, u8) -> AppResult<()>,
 {
+    let WebExportOptions {
+        precompress,
+        replace_existing,
+    } = options;
     if !engine_path.is_dir() {
         return Err(export_error("引擎目录不存在或不可访问"));
     }
@@ -1293,7 +1405,13 @@ where
             .into_iter()
             .find(|entry| entry.key == "Description")
             .map_or_else(String::new, |entry| entry.value);
-        update_manifest(&materialized_output, game_name, &game_description)
+        update_manifest(&materialized_output, game_name, &game_description)?;
+
+        if precompress {
+            // 必须在 manifest.json 更新后执行，否则副本是旧清单。
+            precompress_web_assets(&materialized_output, (96, 99), &mut report)?;
+        }
+        Ok(())
     })();
 
     if result.is_err() {
@@ -1338,7 +1456,10 @@ pub async fn export_web(
             template_path.as_deref().map(Path::new),
             Path::new(&output_path),
             &game_name,
-            replace_existing,
+            WebExportOptions {
+                precompress: true,
+                replace_existing,
+            },
             |step, percentage| emit_web_export_progress(&app, &export_id, step, percentage),
         )
     })
@@ -1460,15 +1581,21 @@ pub async fn ensure_pc_runtime(
 mod tests {
     #[cfg(windows)]
     use std::process::Command;
-    use std::{fs, io::Write, path::Path};
+    use std::{
+        fs,
+        io::{Read, Write},
+        path::Path,
+    };
+
+    use flate2::read::GzDecoder;
 
     use super::{
         cache_pc_runtime, copy_web_icons, export_pc_to_directory, export_web_to_directory,
-        extract_neutralino_runtime, neutralino_runtime_entry, resolve_neutralino_runtime_url,
-        resolve_pc_icon, sanitize_desktop_name, verify_neutralino_runtime_archive, AppError,
-        CachedCanonicals, OverlayFs, PcExportRequest, PcWindowConfig,
-        NEUTRALINO_RUNTIME_ARCHIVE_URL, STEP_COPYING_ICONS, STEP_COPYING_RUNTIME, STEP_FINISHED,
-        STEP_PACKING_RESOURCES,
+        extract_neutralino_runtime, is_precompressible, neutralino_runtime_entry, precompress_file,
+        resolve_neutralino_runtime_url, resolve_pc_icon, sanitize_desktop_name,
+        verify_neutralino_runtime_archive, AppError, CachedCanonicals, OverlayFs, PcExportRequest,
+        PcWindowConfig, WebExportOptions, NEUTRALINO_RUNTIME_ARCHIVE_URL, STEP_COPYING_ICONS,
+        STEP_COPYING_RUNTIME, STEP_FINISHED, STEP_PACKING_RESOURCES,
     };
     use serde_json::Value;
     use tempfile::tempdir;
@@ -1635,7 +1762,10 @@ mod tests {
             Some(&root.path().join("template")),
             &output,
             "My Game",
-            false,
+            WebExportOptions {
+                precompress: true,
+                replace_existing: false,
+            },
             |step, percentage| {
                 progress.push((step.to_owned(), percentage));
                 Ok(())
@@ -1685,6 +1815,134 @@ mod tests {
         assert!(progress.windows(2).all(|pair| pair[0] != pair[1]));
     }
 
+    fn write_compressible_file(path: &Path, repetitions: usize) {
+        write_file(
+            path,
+            &"const webgalRuntime = 'webgal';\n".repeat(repetitions),
+        );
+    }
+
+    #[test]
+    fn recognizes_precompressible_asset_extensions() {
+        for name in [
+            "index.html",
+            "assets/runtime.JS",
+            "assets/style.css",
+            "game/scene/start.txt",
+            "models/character.json",
+            "icons/logo.svg",
+            "assets/decoder.wasm",
+            "fonts/main.ttf",
+            "fonts/main.OTF",
+            "fonts/system.ttc",
+            "figure/live2d/haru.moc3",
+            "figure/haru/haru.model3.json",
+            "figure/haru/motion/haru_idle.motion3.json",
+            "figure/haru/expressions/F01.exp3.json",
+            "figure/anon/live_default/live2d/model.moc",
+            "figure/anon/_mtn_emp/anon/idle01.mtn",
+            "figure/spine/dragon-ess.skel",
+            "figure/spine/dragon.atlas",
+        ] {
+            assert!(is_precompressible(Path::new(name)), "{name}");
+        }
+        for name in [
+            "bg/room.png",
+            "bgm/theme.mp3",
+            "video/opening.mp4",
+            "fonts/main.woff",
+            "fonts/main.woff2",
+            "manifest.json.gz",
+            "README",
+        ] {
+            assert!(!is_precompressible(Path::new(name)), "{name}");
+        }
+    }
+
+    #[test]
+    fn precompresses_static_hosting_assets_and_skips_incompressible_files() {
+        let root = tempdir().expect("temp root should be created");
+        create_export_fixture(root.path());
+        write_compressible_file(&root.path().join("engine/assets/runtime.js"), 200);
+        let output = root.path().join("output/Demo");
+
+        export_web_to_directory(
+            &root.path().join("engine"),
+            &root.path().join("game"),
+            Some(&root.path().join("template")),
+            &output,
+            "My Game",
+            WebExportOptions {
+                precompress: true,
+                replace_existing: false,
+            },
+            |_, _| Ok(()),
+        )
+        .expect("web export should succeed");
+
+        let source = fs::read(output.join("assets/runtime.js")).expect("source should be readable");
+        let compressed = fs::read(output.join("assets/runtime.js.gz"))
+            .expect("precompressed copy should be created");
+        let mut decoded = Vec::new();
+        GzDecoder::new(compressed.as_slice())
+            .read_to_end(&mut decoded)
+            .expect("precompressed copy should be valid gzip");
+        assert_eq!(decoded, source);
+        assert!(compressed.len() < source.len());
+        // 二进制资源与小文件都不生成副本。
+        assert!(!output.join("icons/favicon.ico.gz").exists());
+        assert!(!output.join("game/scene/start.txt.gz").exists());
+        assert!(output.join("index.html").is_file());
+    }
+
+    #[test]
+    fn rewrites_precompressed_copies_deterministically() {
+        let root = tempdir().expect("temp root should be created");
+        let source = root.path().join("assets/runtime.js");
+        write_compressible_file(&source, 200);
+        let destination = root.path().join("assets/runtime.js.gz");
+
+        precompress_file(&source).expect("first precompression should succeed");
+        let first = fs::read(&destination).expect("first copy should be readable");
+        fs::write(&destination, b"stale").expect("stale copy should be written");
+        precompress_file(&source).expect("second precompression should succeed");
+        let second = fs::read(&destination).expect("second copy should be readable");
+
+        // 过期副本会被重写，且 gzip 头不带时间戳，同一输入重压得到相同字节。
+        assert_eq!(&first[4..8], &[0, 0, 0, 0]);
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn skips_and_clears_small_scene_files() {
+        let root = tempdir().expect("temp root should be created");
+        fs::create_dir_all(root.path().join("game/scene"))
+            .expect("scene directory should be created");
+        let scene = root.path().join("game/scene/start.txt");
+        fs::write(&scene, "say: hi;").expect("scene should be written");
+        let stale = root.path().join("game/scene/start.txt.gz");
+        fs::write(&stale, b"stale engine copy").expect("stale copy should be written");
+
+        precompress_file(&scene).expect("precompression should succeed");
+
+        // 小文件不生成副本，遗留的过期副本也要清掉。
+        assert!(!stale.exists());
+    }
+
+    #[test]
+    fn skips_precompression_for_embedded_runtime_bundles() {
+        let root = tempdir().expect("temp root should be created");
+        create_export_fixture(root.path());
+        write_compressible_file(&root.path().join("engine/assets/runtime.js"), 200);
+        let output = root.path().join("output/Demo/windows");
+
+        export_pc_fixture(root.path(), "windows", "x64", &output);
+
+        let bundle = fs::read(output.join("resources.neu")).expect("bundle should be readable");
+        assert!(read_asar_file(&bundle, "assets/runtime.js").is_some());
+        assert!(read_asar_file(&bundle, "assets/runtime.js.gz").is_none());
+    }
+
     #[test]
     fn exports_without_an_icons_directory() {
         let root = tempdir().expect("temp root should be created");
@@ -1700,7 +1958,10 @@ mod tests {
             Some(&root.path().join("template")),
             &output,
             "My Game",
-            false,
+            WebExportOptions {
+                precompress: true,
+                replace_existing: false,
+            },
             |_, _| Ok(()),
         )
         .expect("web export should succeed without icons");
@@ -1760,7 +2021,10 @@ mod tests {
             Some(&root.path().join("template")),
             &output,
             "My Game",
-            false,
+            WebExportOptions {
+                precompress: true,
+                replace_existing: false,
+            },
             |_, _| Ok(()),
         )
         .expect("web export should create a missing output root");
@@ -1785,7 +2049,10 @@ mod tests {
             Some(&root.path().join("template")),
             &output,
             "My Game",
-            false,
+            WebExportOptions {
+                precompress: true,
+                replace_existing: false,
+            },
             |_, _| Ok(()),
         )
         .expect_err("directory cycles should be rejected");
@@ -1808,7 +2075,10 @@ mod tests {
             Some(&root.path().join("template")),
             &output,
             "My Game",
-            false,
+            WebExportOptions {
+                precompress: true,
+                replace_existing: false,
+            },
             |step, percentage| {
                 progress.push((step.to_owned(), percentage));
                 Ok(())
@@ -1834,7 +2104,10 @@ mod tests {
             Some(&root.path().join("template")),
             &output,
             "My Game",
-            true,
+            WebExportOptions {
+                precompress: true,
+                replace_existing: true,
+            },
             |_, _| Ok(()),
         )
         .expect("confirmed replacement should succeed");
@@ -1858,7 +2131,10 @@ mod tests {
             Some(&root.path().join("template")),
             &output,
             "My Game",
-            true,
+            WebExportOptions {
+                precompress: true,
+                replace_existing: true,
+            },
             |_, _| Ok(()),
         )
         .expect_err("failed replacement should keep the existing output");
@@ -1885,7 +2161,10 @@ mod tests {
             Some(&root.path().join("template")),
             &output,
             "My Game",
-            false,
+            WebExportOptions {
+                precompress: true,
+                replace_existing: false,
+            },
             |_, _| Ok(()),
         )
         .expect_err("invalid manifest should fail");
@@ -1911,7 +2190,10 @@ mod tests {
                 Some(&root.path().join("template")),
                 &output,
                 "My Game",
-                false,
+                WebExportOptions {
+                    precompress: true,
+                    replace_existing: false,
+                },
                 |_, _| Ok(()),
             )
             .expect_err("source-nested output should be rejected");
@@ -1932,7 +2214,10 @@ mod tests {
             Some(&root.path().join("template")),
             root.path(),
             "My Game",
-            true,
+            WebExportOptions {
+                precompress: true,
+                replace_existing: true,
+            },
             |_, _| Ok(()),
         )
         .expect_err("source-containing output should be rejected");
@@ -1955,7 +2240,10 @@ mod tests {
             Some(&root.path().join("template")),
             &output,
             "My Game",
-            false,
+            WebExportOptions {
+                precompress: true,
+                replace_existing: false,
+            },
             |_, _| Ok(()),
         )
         .expect_err("source-nested output should be rejected before creating its parent");
