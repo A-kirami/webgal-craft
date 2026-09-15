@@ -1150,7 +1150,14 @@ fn update_manifest(export_path: &Path, game_name: &str, game_description: &str) 
     let mut serialized = serde_json::to_vec_pretty(&manifest)
         .map_err(|error| export_error(format!("manifest.json 序列化失败: {error}")))?;
     serialized.push(b'\n');
-    fs::write(manifest_path, serialized)?;
+    fs::write(&manifest_path, serialized)?;
+
+    // 自定义引擎产物可能自带根级 `manifest.json.gz`，它按改写前的内容生成，留着就会与新的
+    // `manifest.json` 不一致；这里只让被本流程改写的文件失效，随后由预压缩步骤按新内容补生成。
+    let precompressed_path = export_path.join("manifest.json.gz");
+    if precompressed_path.exists() {
+        fs::remove_file(precompressed_path)?;
+    }
     Ok(())
 }
 
@@ -1912,6 +1919,45 @@ mod tests {
         assert!(!output.join("game/scene/start.txt.gz").exists());
         assert!(!output.join("assets/decoder.wasm.gz").exists());
         assert!(output.join("index.html").is_file());
+    }
+
+    #[test]
+    fn refreshes_the_precompressed_manifest_it_rewrites() {
+        let root = tempdir().expect("temp root should be created");
+        create_export_fixture(root.path());
+        // 自定义引擎产物可能自带根级副本，它是按改写前的内容生成的。
+        write_file(
+            &root.path().join("engine/manifest.json"),
+            &format!(r#"{{"name":"WebGAL","extra":"{}"}}"#, "x".repeat(2048)),
+        );
+        write_file(
+            &root.path().join("engine/manifest.json.gz"),
+            "stale manifest",
+        );
+        let output = root.path().join("output/Demo");
+
+        export_web_to_directory(
+            &root.path().join("engine"),
+            &root.path().join("game"),
+            Some(&root.path().join("template")),
+            &output,
+            "My Game",
+            WebExportOptions {
+                precompress: true,
+                replace_existing: false,
+            },
+            |_, _| Ok(()),
+        )
+        .expect("web export should succeed");
+
+        let compressed =
+            fs::read(output.join("manifest.json.gz")).expect("copy should be regenerated");
+        let mut decoded = String::new();
+        GzDecoder::new(compressed.as_slice())
+            .read_to_string(&mut decoded)
+            .expect("copy should be valid gzip");
+        assert!(decoded.contains("My Game"));
+        assert!(!decoded.contains("stale manifest"));
     }
 
     #[test]
