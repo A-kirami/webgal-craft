@@ -71,6 +71,9 @@ const visibleFieldIndexMap = $computed(() => {
 })
 
 const isInline = $computed(() => surface === 'inline')
+// 选择器弹层经 portal 挂到 body，group-data-[surface=panel] 变体无法命中。
+// 面板下各选择器的候选行本来就是 28px，沿用其默认内边距即可；内联触发器是 h-6，候选行收紧到 26px。
+const selectorItemClass = isInline ? 'py-1.25' : undefined
 const notSelectedLabel = $computed(() => t('common.notSelected'))
 
 function label(field: EditorField): string {
@@ -386,6 +389,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
             :input-id="fieldInputId(field)"
             :combobox-data="choiceFieldViewModels.get(field.key)?.comboboxData"
             :control-class="cn(controlClass(field), fieldStatusClass(field))"
+            :item-class="selectorItemClass"
             :options="choiceFieldViewModels.get(field.key)?.options ?? []"
             :select-value="choiceFieldViewModels.get(field.key)?.selectValue ?? ''"
             :not-selected-label="notSelectedLabel"
@@ -452,6 +456,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
               fieldStatusClass(field),
               controlClass(field),
             )"
+            :item-class="selectorItemClass"
             @update:model-value="emit('updateValue', { field, value: normalizeFieldStringValue($event) })"
           />
 

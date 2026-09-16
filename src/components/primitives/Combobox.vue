@@ -19,6 +19,7 @@ interface ScrollAreaViewportHandle {
 
 const props = defineProps<{
   class?: HTMLAttributes['class']
+  itemClass?: HTMLAttributes['class']
   modelValue?: string
   options: { label: string, value: string }[]
   placeholder?: string
@@ -246,6 +247,7 @@ watch(() => searchQuery, async (nextQuery) => {
               :data-active-highlighted="index === highlightedIndex ? 'true' : undefined"
               :class="cn(
                 'flex cursor-pointer list-none items-center gap-2 rounded-sm px-2 py-1.5',
+                props.itemClass,
                 index === activeHighlightedIndex && 'bg-muted',
                 props.modelValue === option.value && 'font-medium',
               )"

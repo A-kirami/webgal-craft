@@ -36,6 +36,7 @@ const { t } = useI18n()
         <SelectItem
           v-for="option in field.options"
           :key="option.value"
+          class="text-xs py-1.5"
           :value="option.value"
         >
           {{ resolveI18nLike(option.label, t) }}

@@ -110,6 +110,7 @@ function handleBlankDblClick(e: MouseEvent) {
             :placeholder="speakerPlaceholder"
             :disabled="narrationMode"
             class="text-xs pl-2 pr-0 h-6"
+            item-class="py-1.25"
             @update:model-value="handleSpeakerChange(String($event ?? ''))"
           />
           <InputGroupAddon align="inline-end" class="p-0 self-stretch has-[>button]:mr-0">

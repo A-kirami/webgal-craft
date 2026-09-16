@@ -39,6 +39,23 @@ const InputGroupStyleHarness = defineComponent({
   `,
 })
 
+const ItemClassHarness = defineComponent({
+  components: { InputGroup, InputGroupAutocomplete },
+  setup() {
+    return { options }
+  },
+  template: `
+    <InputGroup class="h-6 overflow-hidden">
+      <InputGroupAutocomplete
+        data-testid="item-class-autocomplete"
+        :options="options"
+        class="text-xs pl-2 pr-0 h-6"
+        item-class="py-1.25"
+      />
+    </InputGroup>
+  `,
+})
+
 function requireHtmlElement(element: HTMLElement | SVGElement): HTMLElement {
   if (!(element instanceof HTMLElement)) {
     throw new TypeError('expected an HTML element')
@@ -105,11 +122,44 @@ describe('InputGroupAutocomplete', () => {
     const inputGroup = requireInputGroup(input)
     const autocompleteGroup = requireInputGroup(autocomplete)
 
+    // 焦点环由 InputGroup 的 :has([data-slot=input-group-control]:focus-visible) 规则绘制。
+    // 无头 Chromium 不保证在合成焦点变化后重新计算该祖先规则的样式（同一用例时有时无），
+    // 因此这里断言规则的输入条件——两个控件都作为组内焦点目标并进入 :focus-visible——
+    // 以及两个组最终解析出的焦点样式一致，而不单独断言绘制出的 box-shadow 是否为 none。
+    expect(input.dataset.slot).toBe('input-group-control')
+    expect(autocomplete.dataset.slot).toBe('input-group-control')
+
     await inputLocator.click()
+    expect(document.activeElement).toBe(input)
+    expect(input.matches(':focus-visible')).toBe(true)
     const inputGroupFocusShadow = getComputedStyle(inputGroup).boxShadow
-    expect(inputGroupFocusShadow).not.toBe('none')
+
     await autocompleteLocator.click()
+    expect(document.activeElement).toBe(autocomplete)
+    expect(autocomplete.matches(':focus-visible')).toBe(true)
 
     expect(getComputedStyle(autocompleteGroup).boxShadow).toBe(inputGroupFocusShadow)
+  })
+
+  it('itemClass 透传到候选行并收紧行高', async () => {
+    renderInBrowser(ItemClassHarness)
+
+    await page.getByTestId('item-class-autocomplete').click()
+
+    const option = requireHtmlElement(await page.getByRole('option', { name: 'char' }).element())
+    expect(option).toHaveClass('py-1.25')
+    expect(option).not.toHaveClass('py-1.5')
+    expect(getComputedStyle(option).paddingTop).toBe('5px')
+    expect(option.offsetHeight).toBe(26)
+  })
+
+  it('未传 itemClass 时候选行沿用默认的 28px 行高', async () => {
+    renderInBrowser(InputGroupStyleHarness)
+
+    await page.getByTestId('input-group-autocomplete').click()
+
+    const option = requireHtmlElement(await page.getByRole('option', { name: 'char' }).element())
+    expect(getComputedStyle(option).paddingTop).toBe('6px')
+    expect(option.offsetHeight).toBe(28)
   })
 })

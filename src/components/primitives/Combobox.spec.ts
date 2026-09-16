@@ -153,6 +153,28 @@ const MultiKeywordComboboxHarness = defineComponent({
   `,
 })
 
+const ItemClassComboboxHarness = defineComponent({
+  components: { Combobox },
+  setup() {
+    const modelValue = ref('')
+
+    return {
+      baseOptions,
+      modelValue,
+    }
+  },
+  template: `
+    <Combobox
+      v-model="modelValue"
+      data-testid="item-class-trigger"
+      :options="baseOptions"
+      placeholder="Select motion"
+      search-placeholder="Search motion"
+      item-class="py-1.25"
+    />
+  `,
+})
+
 describe('Combobox', () => {
   it('候选集合为空时显示无可用选项', async () => {
     renderInBrowser(EmptyComboboxHarness, {
@@ -264,5 +286,19 @@ describe('Combobox', () => {
     await expect.element(page.getByRole('option', { name: 'Dark Joy' })).toBeInTheDocument()
     await expect.element(page.getByRole('option', { name: 'Dark Sad' })).not.toBeInTheDocument()
     await expect.element(page.getByRole('option', { name: 'Bright Joy' })).not.toBeInTheDocument()
+  })
+
+  it('itemClass 覆盖候选项默认内边距', async () => {
+    renderInBrowser(ItemClassComboboxHarness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByTestId('item-class-trigger').click()
+
+    const option = page.getByRole('option', { name: 'Idle' })
+    await expect.element(option).toHaveClass('py-1.25')
+    await expect.element(option).not.toHaveClass('py-1.5')
   })
 })

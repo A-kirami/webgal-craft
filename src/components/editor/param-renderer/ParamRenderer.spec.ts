@@ -252,6 +252,10 @@ function createParamChoiceFieldProbeStub() {
         type: Object,
         default: undefined,
       },
+      itemClass: {
+        type: String,
+        default: '',
+      },
       options: {
         type: Array as PropType<{ label: string, value: string }[]>,
         default: () => [],
@@ -265,6 +269,7 @@ function createParamChoiceFieldProbeStub() {
       return () => h('div', {
         'data-testid': 'param-choice-field',
         'data-has-cascading-combobox': props.comboboxData ? 'true' : 'false',
+        'data-item-class': props.itemClass,
         'data-options': props.options.map(option => option.value).join(','),
         'data-render-segmented': String(props.renderSegmented),
       })
@@ -306,6 +311,10 @@ function createAutocompleteProbeStub() {
         type: String,
         default: undefined,
       },
+      itemClass: {
+        type: String,
+        default: '',
+      },
       modelValue: {
         type: String,
         default: '',
@@ -323,6 +332,7 @@ function createAutocompleteProbeStub() {
     setup(props, { emit }) {
       return () => h('input', {
         'data-testid': 'autocomplete',
+        'data-item-class': props.itemClass,
         'data-options': props.options.map(option => option.value).join(','),
         'id': props.id,
         'placeholder': props.placeholder,
@@ -754,6 +764,15 @@ describe('ParamRenderer', () => {
     await expect.element(page.getByTestId('param-choice-field')).toHaveAttribute('data-render-segmented', 'false')
   })
 
+  it('inline 下选择器候选行收紧到 py-1.25', async () => {
+    renderFieldRenderer('inline', createPathChoiceField(), {
+      ...globalStubs,
+      ParamChoiceField: createParamChoiceFieldProbeStub(),
+    })
+
+    await expect.element(page.getByTestId('param-choice-field')).toHaveAttribute('data-item-class', 'py-1.25')
+  })
+
   it('panel 下 choice 控件占满诊断锚点', async () => {
     renderChoiceRenderer(true, true)
 
@@ -842,5 +861,11 @@ describe('ParamRenderer', () => {
 
     const autocomplete = page.getByRole('combobox')
     await expect.element(autocomplete).toHaveClass('text-destructive!')
+  })
+
+  it('inline 下 autocomplete 候选行收紧到 py-1.25', async () => {
+    renderAutocompleteRenderer({ surface: 'inline' })
+
+    await expect.element(page.getByTestId('autocomplete')).toHaveAttribute('data-item-class', 'py-1.25')
   })
 })

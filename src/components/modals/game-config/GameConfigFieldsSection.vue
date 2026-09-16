@@ -293,18 +293,20 @@ function scrollCustomAddButtonIntoView() {
               </SelectTrigger>
             </FormControl>
             <SelectContent>
-              <SelectItem :value="DEFAULT_LANGUAGE_EMPTY_VALUE">
+              <SelectItem class="text-xs py-1.5" :value="DEFAULT_LANGUAGE_EMPTY_VALUE">
                 {{ $t('modals.gameConfig.fields.defaultLanguage.empty') }}
               </SelectItem>
               <SelectItem
                 v-for="option in defaultLanguageOptions"
                 :key="option.value"
+                class="text-xs py-1.5"
                 :value="option.value"
               >
                 {{ option.label }}
               </SelectItem>
               <SelectItem
                 v-if="typeof value === 'string' && value !== '' && !SUPPORTED_DEFAULT_LANGUAGES.has(value)"
+                class="text-xs py-1.5"
                 :value="value"
               >
                 {{ value }}

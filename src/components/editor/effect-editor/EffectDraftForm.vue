@@ -341,7 +341,7 @@ onUnmounted(() => {
               v-for="opt in EFFECT_EASE_OPTIONS"
               :key="opt.value"
               :value="opt.value"
-              class="text-xs"
+              class="text-xs py-1.5"
             >
               {{ resolveI18n(opt.label, t) }}
             </SelectItem>

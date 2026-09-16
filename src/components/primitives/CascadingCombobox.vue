@@ -18,6 +18,7 @@ defineOptions({
 const props = defineProps<{
   browseNodes: CascadingComboboxNode[]
   class?: HTMLAttributes['class']
+  itemClass?: HTMLAttributes['class']
   modelValue?: string
   placeholder?: string
   searchDocuments: SearchOptionDocument[]
@@ -388,6 +389,7 @@ watch(() => searchQuery, (nextQuery, previousQuery) => {
                 :nodes="props.browseNodes"
                 :menu-open="open"
                 :model-value="props.modelValue"
+                :item-class="props.itemClass"
                 :scroll-request-key="browseScrollRequestKey"
                 :scroll-request-target-depth="browseScrollTargetDepth"
                 :highlighted-path="highlightedPath"
@@ -429,6 +431,7 @@ watch(() => searchQuery, (nextQuery, previousQuery) => {
                 :data-active-search="index === activeSearchIndex ? 'true' : undefined"
                 :class="cn(
                   'flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5',
+                  props.itemClass,
                   index === activeSearchIndex && 'bg-muted',
                   props.modelValue === result.value && 'font-medium',
                 )"
