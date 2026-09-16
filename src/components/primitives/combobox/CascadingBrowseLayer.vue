@@ -2,7 +2,7 @@
 import { cn } from '~/lib/utils'
 
 import type { CascadingComboboxNode } from './cascading-combobox-data'
-import type { ComponentPublicInstance } from 'vue'
+import type { ComponentPublicInstance, HTMLAttributes } from 'vue'
 
 defineOptions({
   name: 'CascadingBrowseLayer',
@@ -13,6 +13,7 @@ const HOVER_OPEN_DELAY_MS = 60
 const props = withDefaults(defineProps<{
   expandedGroupPath: string[]
   highlightedPath: string[]
+  itemClass?: HTMLAttributes['class']
   layerPath?: string[]
   menuOpen?: boolean
   modelValue?: string
@@ -169,6 +170,7 @@ onBeforeUnmount(() => {
         :data-selected-browse-item="node.kind === 'item' && props.modelValue === node.value ? 'true' : undefined"
         :class="cn(
           'flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs',
+          props.itemClass,
           activeNodeId === node.id && 'bg-muted',
           node.kind === 'item' && props.modelValue === node.value && 'font-medium',
         )"
@@ -195,6 +197,7 @@ onBeforeUnmount(() => {
             :menu-open="props.menuOpen"
             :highlighted-path="props.highlightedPath"
             :expanded-group-path="props.expandedGroupPath"
+            :item-class="props.itemClass"
             :model-value="props.modelValue"
             :preferred-subpanel-side="placedSide"
             :scroll-request-key="props.scrollRequestKey"

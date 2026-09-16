@@ -3,12 +3,14 @@ import { normalizeFieldStringValue } from '~/features/editor/statement-editor/fi
 import { cn } from '~/lib/utils'
 
 import type { ParamSelectOptionItem } from './controls/types'
+import type { HTMLAttributes } from 'vue'
 import type { CascadingComboboxData } from '~/components/primitives/combobox/cascading-combobox-data'
 
 interface Props {
   comboboxData?: CascadingComboboxData
   controlClass?: string
   inputId: string
+  itemClass?: HTMLAttributes['class']
   mode: 'select' | 'combobox'
   notSelectedLabel: string
   options: ParamSelectOptionItem[]
@@ -51,7 +53,7 @@ function emitSelect(value: unknown) {
       <SelectItem
         v-for="opt in options"
         :key="opt.value"
-        class="py-1.25 text-xs!"
+        :class="cn('text-xs py-1.5', itemClass)"
         :value="opt.value"
       >
         {{ opt.label }}
@@ -68,6 +70,7 @@ function emitSelect(value: unknown) {
     :placeholder="notSelectedLabel"
     :search-placeholder="placeholder || notSelectedLabel"
     :class="cn('h-6 min-w-24 group-data-[surface=panel]:px-2.5 group-data-[surface=panel]:h-7', controlClass)"
+    :item-class="itemClass"
     @update:model-value="emitSelect"
   />
 
@@ -79,6 +82,7 @@ function emitSelect(value: unknown) {
     :placeholder="notSelectedLabel"
     :search-placeholder="placeholder || notSelectedLabel"
     :class="cn('h-6 min-w-24 group-data-[surface=panel]:px-2.5 group-data-[surface=panel]:h-7', controlClass)"
+    :item-class="itemClass"
     @update:model-value="emitSelect"
   />
 </template>

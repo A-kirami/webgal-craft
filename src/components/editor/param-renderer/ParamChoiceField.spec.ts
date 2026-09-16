@@ -39,6 +39,10 @@ function createCascadingComboboxStub() {
         type: Array,
         default: () => [],
       },
+      itemClass: {
+        type: String,
+        default: '',
+      },
       searchDocuments: {
         type: Array,
         default: () => [],
@@ -49,6 +53,7 @@ function createCascadingComboboxStub() {
       return () => h('button', {
         'data-testid': 'cascading-combobox-update',
         'data-browse-count': String(props.browseNodes.length),
+        'data-item-class': props.itemClass,
         'data-search-count': String(props.searchDocuments.length),
         'type': 'button',
         'onClick': () => emit('update:model-value', 77),
@@ -142,6 +147,7 @@ describe('ParamChoiceField', () => {
           ],
         },
         inputId: 'target-input',
+        itemClass: 'py-1.25',
         mode: 'combobox',
         notSelectedLabel: 'Not selected',
         options: baseOptions,
@@ -157,6 +163,7 @@ describe('ParamChoiceField', () => {
 
     await expect.element(page.getByTestId('cascading-combobox-update')).toHaveAttribute('data-browse-count', '1')
     await expect.element(page.getByTestId('cascading-combobox-update')).toHaveAttribute('data-search-count', '1')
+    await expect.element(page.getByTestId('cascading-combobox-update')).toHaveAttribute('data-item-class', 'py-1.25')
     await page.getByTestId('cascading-combobox-update').click()
     expect(onUpdateSelect).toHaveBeenCalledWith('77')
   })
@@ -183,5 +190,50 @@ describe('ParamChoiceField', () => {
 
     await page.getByTestId('combobox-update').click()
     expect(onUpdateSelect).toHaveBeenCalledWith('77')
+  })
+
+  it('select 分支候选项在未传 itemClass 时保持 py-1.5 行高', async () => {
+    renderInBrowser(ParamChoiceField, {
+      props: {
+        comboboxData: undefined,
+        inputId: 'target-input',
+        mode: 'select',
+        notSelectedLabel: 'Not selected',
+        options: baseOptions,
+        placeholder: 'Select target',
+        renderSegmented: false,
+        selectValue: '',
+        onUpdateSelect: vi.fn(),
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('Hero')).toHaveClass('py-1.5')
+  })
+
+  it('select 分支候选项会应用 itemClass 的行内边距覆盖', async () => {
+    renderInBrowser(ParamChoiceField, {
+      props: {
+        comboboxData: undefined,
+        inputId: 'target-input',
+        itemClass: 'py-1.25',
+        mode: 'select',
+        notSelectedLabel: 'Not selected',
+        options: baseOptions,
+        placeholder: 'Select target',
+        renderSegmented: false,
+        selectValue: '',
+        onUpdateSelect: vi.fn(),
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const item = page.getByText('Hero')
+    await expect.element(item).toHaveClass('py-1.25')
+    await expect.element(item).not.toHaveClass('py-1.5')
   })
 })

@@ -42,6 +42,7 @@ const props = withDefaults(defineProps<{
   containerClass?: HTMLAttributes['class']
   contentReference?: HTMLElement
   id?: string
+  itemClass?: HTMLAttributes['class']
   options: AutocompleteOption[]
   placeholder?: string
   showIndicator?: boolean
@@ -248,7 +249,10 @@ function handleBeforeInput(event: InputEvent) {
             <ComboboxItem
               :value="option.value"
               :text-value="formatSearchText(option)"
-              class="text-xs px-2 py-1.5 text-left outline-none rounded-sm flex gap-2 w-full cursor-default select-none items-center justify-start data-[highlighted]:text-accent-foreground data-[highlighted]:bg-accent"
+              :class="cn(
+                'text-xs px-2 py-1.5 text-left outline-none rounded-sm flex gap-2 w-full cursor-default select-none items-center justify-start data-[highlighted]:text-accent-foreground data-[highlighted]:bg-accent',
+                props.itemClass,
+              )"
               @pointermove.capture="markManualHighlightIntent"
             >
               <span class="flex shrink-0 size-3.5 items-center justify-center">
