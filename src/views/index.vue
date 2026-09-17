@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { HOME_TABS } from '~/features/home/home-tabs'
 import { useDiscoverResources } from '~/features/home/useDiscoverResources'
+import { useEnginesTour } from '~/features/onboarding/useEnginesTour'
+import { useHomeTour } from '~/features/onboarding/useHomeTour'
 import { useManagedImportStatus } from '~/features/resource-import/useManagedImportStatus'
 import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
@@ -12,7 +14,29 @@ const resourceStore = useResourceStore()
 const { checkResourcesForActiveTab } = useDiscoverResources()
 const managedImport = useManagedImportStatus()
 
-watch(() => workspaceStore.activeTab, checkResourcesForActiveTab, { immediate: true })
+let isHomeSettled = $ref(false)
+// 快速切换标签会并发触发不同资源类型的发现，早结束的那个不代表全部结束
+let pendingDiscoveries = 0
+
+// 首次资源发现会打开弹窗，引导必须等它结束再开始，否则会先闪一下引导遮罩再弹发现
+async function settleInitialDiscovery() {
+  pendingDiscoveries += 1
+  isHomeSettled = false
+  try {
+    await checkResourcesForActiveTab()
+  } finally {
+    pendingDiscoveries -= 1
+    isHomeSettled = pendingDiscoveries === 0
+  }
+}
+
+watch(() => workspaceStore.activeTab, settleInitialDiscovery, { immediate: true })
+
+useHomeTour({
+  isPageReady: () => isHomeSettled,
+})
+
+useEnginesTour()
 </script>
 
 <template>

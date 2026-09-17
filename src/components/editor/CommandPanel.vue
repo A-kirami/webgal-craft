@@ -184,7 +184,7 @@ useShortcutContext({
 </script>
 
 <template>
-  <div class="flex flex-col h-full min-h-0">
+  <div data-tour="command-panel" class="flex flex-col h-full min-h-0">
     <div class="px-2 py-1 border-b flex gap-3 items-center">
       <ScrollArea @wheel="handleWheelToHorizontalScroll">
         <div class="flex flex-1 gap-1">

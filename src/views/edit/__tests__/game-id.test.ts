@@ -219,6 +219,7 @@ describe('edit/[gameId]', () => {
     }))
     useFileStoreMock.mockReturnValue(undefined)
     useModalStoreMock.mockReturnValue(reactive({
+      hasOpenModal: false,
       modalStack: reactive(new Map()),
       open: modalOpenMock,
     }))

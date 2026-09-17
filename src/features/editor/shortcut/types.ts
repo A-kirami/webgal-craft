@@ -1,3 +1,5 @@
+import type { SystemPlatform } from '~/utils/platform'
+
 export type ShortcutContextValue = string | boolean | undefined
 
 export type ShortcutContext = Record<string, ShortcutContextValue>
@@ -15,4 +17,4 @@ export interface ShortcutDefinition<TExecuteContext = void> {
   when?: ShortcutWhen
 }
 
-export type ShortcutPlatform = 'linux' | 'mac' | 'windows'
+export type ShortcutPlatform = SystemPlatform

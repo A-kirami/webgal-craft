@@ -22,6 +22,8 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
   const previewSyncStore = usePreviewSyncStore()
 
   let referenceBoxResult = $ref<ReferenceBoxQueryResultPayload>()
+  // 用户是否已在预览里拖拽过：只由 overlay 拖拽（updateDisplayTransform）置位，表单改动不算
+  let hasOverlayInteraction = $ref(false)
   let liveDisplayTransform = $ref<DisplayTransform>()
   let formDisplayTransform = $ref<DisplayTransform>()
   let pendingFormDisplayTransform = $ref<DisplayTransform>()
@@ -122,6 +124,8 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
     nextDisplayTransform: DisplayTransform,
     options_: { flush?: boolean } = {},
   ): void {
+    hasOverlayInteraction = true
+
     const currentSession = session.value
     if (!currentSession) {
       return
@@ -218,6 +222,7 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
     displayTransform,
     enabled,
     formDisplayTransform: displayFormTransform,
+    hasOverlayInteraction: computed(() => hasOverlayInteraction),
     cancelDisplayTransform,
     handlePanelTransformUpdate,
     referenceBox,

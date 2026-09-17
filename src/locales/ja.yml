@@ -1467,3 +1467,50 @@ game:
   gameDependencyResolutionRuntimeRebindCancel: キャンセル
   gameDependencyResolutionConfirm: インポートを続行
   gameDependencyResolutionRuntimeRebindConfirm: 変更して続行
+
+tour:
+  common:
+    done: 完了
+    next: 次へ
+    prev: 前へ
+    skip: スキップ
+  home:
+    welcome:
+      title: WebGAL Craft へようこそ
+      description: WebGAL Craft はビジュアルノベルを作成・編集するツールです。これからいくつかの手順で主な機能を確認します。
+    createGame:
+      title: ゲームを作成
+      description: ここから最初のビジュアルノベルを作成します。
+    importGame:
+      title: ゲームをインポート
+      description: 他のツールで作成した WebGAL ゲームは、フォルダーや圧縮ファイルをここにドラッグしてインポートできます。右上の「ゲームを開く」からフォルダーを選択しても構いません。
+  engines:
+    official:
+      title: 公式エンジン
+      description: ゲームの作成には WebGAL エンジンが必要です。公式エンジンのカードでバージョンを選べば、ワンクリックでダウンロードできます。
+    customImport:
+      title: カスタムエンジンのインポート
+      description: 自分や他の人がカスタマイズした WebGAL エンジンは、ここをクリックしてフォルダーを選ぶか、フォルダーや圧縮ファイルを直接ドラッグしてインポートできます。
+  editor:
+    previewPanel:
+      title: プレビューパネル
+      description: 編集しながらゲーム画面をプレビューできます。{modifier} を押しながらホイールでズーム、スペースキーまたはマウスの中ボタンを押しながらドラッグで移動します。
+    sceneResource:
+      title: シーンとリソース
+      description: ここでシーンファイルとリソースを管理します。立ち絵・背景・音楽などのリソースをエディターに直接ドラッグできます。ステートメントの間にドロップすると新しいステートメントを挿入、既存のステートメント上にドロップすると内容を置き換えます。
+    modeSwitch:
+      title: 編集モード
+      description: このボタンでテキストとビジュアルの 2 つの編集モードを切り替えます。切り替えると、次の手順に自動で進みます。
+    editorArea:
+      title: 編集エリア
+      description: シーンの内容はここで編集します。テキストモードはスクリプトを直接編集し、ビジュアルモードはステートメントをカードで表示します。
+    commandPanel:
+      title: コマンドパネル
+      description: コマンドカードをクリックすると現在のステートメントの後に挿入します。カードをエディターに直接ドラッグすれば任意の位置に挿入できます。
+  effectEditor:
+    panel:
+      title: エフェクトエディター
+      description: ここで変換、フィルター、色彩などのパラメーターを調整します。変更はプレビューにリアルタイムで反映されます。
+    previewDrag:
+      title: プレビューでドラッグ
+      description: プレビュー上の立ち絵や背景を直接ドラッグして調整できます。ドラッグで移動、角をドラッグで拡大縮小、回転ハンドルで回転します。

@@ -110,6 +110,13 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
   const isCommandPanelCollapsed = computed(() => readResizablePanelCollapsed(options.commandPanelRef.value))
   const effectEditorSession = computed(() => effectEditorProvider.session)
 
+  function expandCommandPanel(): void {
+    const panel = options.commandPanelRef.value
+    if (panel && readResizablePanelCollapsed(panel)) {
+      panel.expand()
+    }
+  }
+
   function flipEffectScaleAxis(axis: TransformScaleAxis): void {
     const currentSession = effectEditorSession.value
     if (!currentSession) {
@@ -283,6 +290,7 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     selectedStatementUpdateTarget,
     statementAnimationDialog,
     closeEffectEditor,
+    expandCommandPanel,
     handleEffectApply,
     handleEffectEditorSheetOpenChange,
     handleEffectTransformUpdate,

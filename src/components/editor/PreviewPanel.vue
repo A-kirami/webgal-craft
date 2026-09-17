@@ -594,7 +594,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full divide-y">
+  <div data-tour="preview-panel" class="flex flex-col h-full divide-y">
     <PreviewToolbar
       :connection-status="previewConnectionStatus"
       :preview-available="canPreview"

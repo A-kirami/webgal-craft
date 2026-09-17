@@ -1467,3 +1467,50 @@ game:
   gameDependencyResolutionRuntimeRebindCancel: Cancel
   gameDependencyResolutionConfirm: Continue Import
   gameDependencyResolutionRuntimeRebindConfirm: Change and Continue
+
+tour:
+  common:
+    done: Done
+    next: Next
+    prev: Previous
+    skip: Skip
+  home:
+    welcome:
+      title: Welcome to WebGAL Craft
+      description: WebGAL Craft creates and edits visual novels. The next few steps cover the main features.
+    createGame:
+      title: Create a Game
+      description: Start here to create your first visual novel.
+    importGame:
+      title: Import a Game
+      description: If you already built a WebGAL game with other tools, drop its folder or an archive here to import it, or select a folder via "Open Game" at the top right.
+  engines:
+    official:
+      title: Official Engine
+      description: Creating a game requires a WebGAL engine. Pick a version on the official engine card to download and install it in one click.
+    customImport:
+      title: Import a Custom Engine
+      description: If you or someone else customized a WebGAL engine, select its folder here, or just drop the folder or an archive in to import it.
+  editor:
+    previewPanel:
+      title: Preview Panel
+      description: Preview the game as you edit. Hold {modifier} and scroll to zoom the view. Hold Space or the middle mouse button and drag to pan.
+    sceneResource:
+      title: Scenes and Resources
+      description: Manage scene files and game assets here. Drag figures, backgrounds, and music straight into the editor. Drop between statements to insert a new one, or drop on an existing statement to replace its content.
+    modeSwitch:
+      title: Edit Mode
+      description: Select this button to switch between text and visual editing modes. The next step appears automatically.
+    editorArea:
+      title: Editor Area
+      description: Scene content is edited here. Text mode edits the script directly, and visual mode shows the statements as cards.
+    commandPanel:
+      title: Command Panel
+      description: Select a command card to insert it after the current statement, or drag a card into the editor and drop it anywhere.
+  effectEditor:
+    panel:
+      title: Effect Editor
+      description: Adjust transforms, filters, and color settings here. Changes appear in the preview in real time.
+    previewDrag:
+      title: Drag in the Preview
+      description: Drag figures and backgrounds directly in the preview. Drag to move, drag corners to scale, and drag the rotate handle to rotate.

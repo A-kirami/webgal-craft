@@ -1,0 +1,74 @@
+/* driver.js 默认样式覆盖：让引导弹窗对齐项目的设计 token */
+
+.driver-popover.webgal-tour {
+  padding: 1rem 1.25rem;
+  font-family: inherit;
+  color: oklch(var(--popover-foreground));
+  background-color: oklch(var(--popover));
+  border: 1px solid oklch(var(--border));
+  border-radius: calc(var(--radius));
+  box-shadow: 0 12px 32px oklch(0% 0 0deg / 16%);
+
+  /* 高亮镂空已经指出了目标位置，去掉箭头以贴近项目内其他浮层 */
+  .driver-popover-arrow {
+    display: none;
+  }
+
+  .driver-popover-title {
+    padding-right: 3rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .driver-popover-description {
+    margin-top: 0.375rem;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: oklch(var(--muted-foreground));
+  }
+
+  /*
+   * 对齐 ~/components/ui/button 的 buttonVariants（基础类 + size=sm，次要 outline、主要 default）。
+   * driver.js 的两处实现要在这里让步：它用行内 display 控制显隐，按钮无法改成 inline-flex 居中，
+   * 改用与 h-7 等高的 leading-7；all: unset 清掉了 border-style，需显式补 border-solid。
+   */
+  .driver-popover-footer-btn {
+    @apply whitespace-nowrap rounded-md text-xs font-medium transition-colors;
+    @apply h-7 border-0 border-solid px-3 py-0 leading-7;
+    @apply text-popover-foreground disabled:pointer-events-none disabled:opacity-50;
+    @apply focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring;
+  }
+
+  .driver-popover-prev-btn {
+    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
+  }
+
+  .driver-popover-next-btn {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+
+  /* 跳过按钮对齐 variant=ghost + size=xs */
+  .driver-popover-close-btn {
+    @apply text-xs font-medium rounded transition-colors;
+    @apply top-3 right-3.5 w-auto h-auto px-2 py-0.5;
+    @apply text-muted-foreground hover:bg-accent hover:text-accent-foreground;
+    @apply focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring;
+  }
+
+  .driver-popover-footer {
+    gap: 0.5rem;
+    margin-top: 0.875rem;
+  }
+
+  /* driver.js 给相邻按钮留了 4px margin，间距统一交给 footer 的 gap */
+  .driver-popover-navigation-btns > button + button {
+    margin-left: 0;
+  }
+}
+
+/* driver.js 通过行内样式写入遮罩颜色，只能在这里用 !important 覆盖暗色遮罩 */
+html.dark .driver-overlay path {
+  opacity: 0.65 !important;
+  fill: #000000 !important;
+}

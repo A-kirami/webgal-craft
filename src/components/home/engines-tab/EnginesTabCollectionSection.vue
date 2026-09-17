@@ -82,6 +82,7 @@ function getGroupProgress(group: EngineGroupCollectionItem): number | undefined 
       type="button"
       :disabled="importBusy"
       :aria-label="$t('home.engines.installEngine')"
+      data-tour="custom-engine-import"
       class="p-4 border-1 rounded-lg border-dashed flex gap-4 cursor-pointer transition-colors items-center justify-center overflow-hidden hover:border-primary/40 dark:hover:border-primary/60"
       :class="{
         'border-primary/40 bg-primary/5': isOverDropZoneGrid,
@@ -125,6 +126,7 @@ function getGroupProgress(group: EngineGroupCollectionItem): number | undefined 
       type="button"
       :disabled="importBusy"
       :aria-label="$t('home.engines.installEngine')"
+      data-tour="custom-engine-import"
       class="p-3 flex w-full cursor-pointer transition-colors items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-800/20"
       :class="{
         'bg-primary/5': isOverDropZoneList,
