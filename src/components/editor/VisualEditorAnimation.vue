@@ -89,7 +89,7 @@ onUnmounted(controller.dispose)
 </script>
 
 <template>
-  <div ref="editorSurfaceRef" tabindex="-1" class="outline-none h-full min-h-0">
+  <div ref="editorSurfaceRef" tabindex="-1" class="px-4 py-2 outline-none h-full min-h-0">
     <AnimationEditorPane
       :keyframes="controller.session.keyframes"
       :selected-frame-id="controller.session.selectedFrameId"

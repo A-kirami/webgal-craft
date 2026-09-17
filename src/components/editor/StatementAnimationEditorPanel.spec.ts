@@ -7,6 +7,7 @@ import {
   createBrowserTextStub,
   renderInBrowser,
 } from '~/__tests__/browser-render'
+import { useShortcutContextRegistry } from '~/features/editor/shortcut/shortcut-context-registry'
 
 import StatementAnimationEditorPanel from './StatementAnimationEditorPanel.vue'
 
@@ -82,6 +83,54 @@ function createAnimationEditorPaneStub() {
 }
 
 describe('StatementAnimationEditorPanel', () => {
+  it('关闭后会把焦点还给打开它的元素', async () => {
+    const harness = defineComponent({
+      name: 'StatementAnimationEditorPanelHarness',
+      setup() {
+        const isOpen = ref(false)
+
+        return () => h('div', [
+          h('button', {
+            'data-testid': 'open-animation-editor',
+            'onClick': () => {
+              isOpen.value = true
+            },
+            'type': 'button',
+          }, 'open'),
+          h('button', {
+            'data-testid': 'close-animation-editor',
+            'onClick': () => {
+              isOpen.value = false
+            },
+            'type': 'button',
+          }, 'close'),
+          isOpen.value
+            ? h(StatementAnimationEditorPanel, {
+                frames: [{ duration: 200 }],
+              })
+            : undefined,
+        ])
+      },
+    })
+
+    renderInBrowser(harness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const panel = page.getByTestId('statement-animation-editor-panel')
+    await page.getByTestId('open-animation-editor').click()
+    await expect.element(panel).toBeVisible()
+
+    await page.getByTestId('close-animation-editor').click()
+
+    await expect.element(panel).not.toBeInTheDocument()
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(document.querySelector('[data-testid="open-animation-editor"]'))
+    })
+  })
+
   it('在模态框场景中隐藏历史操作按钮', async () => {
     renderInBrowser(StatementAnimationEditorPanel, {
       props: {
@@ -99,6 +148,25 @@ describe('StatementAnimationEditorPanel', () => {
 
     expect(textContent).not.toContain('edit.visualEditor.animation.toolbar.undo')
     expect(textContent).not.toContain('edit.visualEditor.animation.toolbar.redo')
+  })
+
+  it('聚焦面板时会把快捷键上下文切换为动画编辑器', async () => {
+    renderInBrowser(StatementAnimationEditorPanel, {
+      props: {
+        frames: [{
+          duration: 200,
+        }],
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByTestId('statement-animation-editor-panel').click()
+
+    await vi.waitFor(() => {
+      expect(useShortcutContextRegistry().resolveContext().panelFocus).toBe('animationEditor')
+    })
   })
 
   it('删除当前帧前会先清空草稿，避免旧草稿挂到重排后的帧上', async () => {

@@ -603,7 +603,7 @@ onBeforeUnmount(() => {
     />
     <div
       ref="previewWorkspace"
-      data-effect-editor-interactive-region
+      data-drawer-interactive-region
       tabindex="-1"
       class="outline-none flex flex-1 flex-col min-h-0 divide-y"
       @pointerdown="handlePreviewWorkspacePointerDown"

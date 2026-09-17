@@ -11,7 +11,10 @@ export { default as SheetTitle } from "./SheetTitle.vue"
 export { default as SheetTrigger } from "./SheetTrigger.vue"
 
 export const sheetVariants = cva(
-  "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+  // duration-* 写入的是可继承的 --un-duration，而 transition-* 用 var(--un-duration, 150ms) 取值，
+  // 挂在容器上会把抽屉内容（按钮、提示等）的过渡一起拉长到 500ms/300ms；进场/退场动画时长
+  // 由 animate-in / animate-out 自己给出，需要调整时用 animate-duration-*，不要用 duration-*
+  "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out",
   {
     variants: {
       side: {
