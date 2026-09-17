@@ -10,6 +10,8 @@ import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overla
 import { useTransformOverlayBridge } from '~/features/editor/transform-overlay/useTransformOverlayBridge'
 import { requestGameRuntimeRebind, resolveRuntimeRebindIssue } from '~/features/modals/import-dependency-resolution/request-game-runtime-rebind'
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
+import { useEditorTour } from '~/features/onboarding/useEditorTour'
+import { useEffectEditorTour } from '~/features/onboarding/useEffectEditorTour'
 import { gameManager } from '~/services/game-manager'
 import { useResourceIndexBootstrap } from '~/services/resource-index/service'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
@@ -20,6 +22,7 @@ import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
 
 interface EditorPanelHandle {
+  expandCommandPanel?: () => void
   toggleCommandPanel?: () => void
 }
 
@@ -46,6 +49,15 @@ function exitEditMode(): Promise<void> {
 
 useAnimationTableSyncBootstrap()
 useResourceIndexBootstrap(querySentenceResourceReferences)
+
+useEditorTour({
+  expandCommandPanel: () => editorPanelRef.value?.expandCommandPanel?.(),
+})
+
+useEffectEditorTour({
+  enabled: () => transformOverlayBridge.enabled.value,
+  hasInteracted: () => transformOverlayBridge.hasOverlayInteraction.value,
+})
 
 // 进入工作区时即时校验：失效则进入阻断式恢复弹窗，由用户决定重试 / 重链接 / 返回主页
 watch(() => workspaceStore.currentGame?.id, async (gameId) => {
@@ -125,7 +137,7 @@ const isDirty = computed(() => {
   const currentState = editorStore.currentState
   return Boolean(currentState && isEditableEditor(currentState) && currentState.isDirty)
 })
-const isModalOpen = computed(() => [...modalStore.modalStack.values()].some(modal => modal.isOpen))
+const isModalOpen = computed(() => modalStore.hasOpenModal)
 
 async function saveCurrentFile() {
   const currentState = editorStore.currentState

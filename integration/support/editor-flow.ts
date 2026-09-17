@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test'
 
 import { installMockTauri, waitForMockTauriReady } from './mock-tauri'
+import { TOUR_PERSISTENCE } from '../../src/features/onboarding/tour-version'
 
 import type { InstallMockTauriOptions } from './mock-tauri'
 import type { Page } from '@playwright/test'
@@ -17,14 +18,25 @@ interface LaunchCraftAppOptions {
 export const HOME_CREATE_GAME_BUTTON_NAME = /Create Game|创建游戏|建立遊戲|ゲームを作成/
 const EDITOR_TEST_GAME_BUTTON_NAME = /Test Game|测试游戏|測試遊戲|ゲームをテスト/
 
+/** 引导遮罩会拦截整页点击，集成测试关注业务流程，统一以「引导已完成」启动 */
+const COMPLETED_TOUR_VERSIONS = Object.fromEntries(
+  Object.values(TOUR_PERSISTENCE).map(({ storageKey, version }) => [storageKey, version]),
+)
+
 export async function launchCraftApp(page: Page, options: LaunchCraftAppOptions = {}) {
-  if (options.persistedStores) {
-    await page.addInitScript((stores: Record<string, unknown>) => {
-      for (const [key, value] of Object.entries(stores)) {
-        globalThis.localStorage.setItem(key, JSON.stringify(value))
-      }
-    }, options.persistedStores)
-  }
+  await page.addInitScript((seed: { raw: Record<string, string>, json: Record<string, unknown> }) => {
+    // VueUse useStorage 的 string 序列化器直接读写原始字符串，Pinia 持久化才是 JSON
+    for (const [key, value] of Object.entries(seed.raw)) {
+      globalThis.localStorage.setItem(key, value)
+    }
+
+    for (const [key, value] of Object.entries(seed.json)) {
+      globalThis.localStorage.setItem(key, JSON.stringify(value))
+    }
+  }, {
+    json: options.persistedStores ?? {},
+    raw: COMPLETED_TOUR_VERSIONS,
+  })
 
   await installMockTauri(page, options.mockTauri)
   await page.goto('/')

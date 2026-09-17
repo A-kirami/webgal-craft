@@ -104,6 +104,7 @@ const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRe
     </p>
     <div class="mb-3 flex flex-col items-center">
       <div
+        data-tour="import-game"
         class="mb-3 px-6 py-4 border-2 rounded-md border-dashed flex transition-colors items-center justify-center"
         :class="{
           'border-primary/35 bg-primary/5': isOverDropZoneEmpty,

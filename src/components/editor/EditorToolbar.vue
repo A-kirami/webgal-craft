@@ -35,6 +35,7 @@ function handleSidebarToggle() {
             :class="toggleVariants({ size: 'sm' })"
             :aria-label="isVisualMode ? $t('edit.editorMode.textMode') : $t('edit.editorMode.visualMode')"
             :data-state="isVisualMode ? 'on' : 'off'"
+            data-tour="mode-switch"
             :disabled="!canToggleMode"
             class="px-0! data-[state=on]:bg-transparent disabled:opacity-40 disabled:pointer-events-none"
             @click="handleModeToggle"

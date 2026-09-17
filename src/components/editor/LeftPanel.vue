@@ -72,7 +72,7 @@ function handlePreviewExpand() {
     </ResizablePanel>
     <ResizableHandle />
     <!-- 场景/资源面板 -->
-    <ResizablePanel size-unit="px" :min-size="240">
+    <ResizablePanel data-tour="scene-resource-panel" size-unit="px" :min-size="240">
       <Tabs ::="preferenceStore.leftPanelView" class="h-full">
         <!-- 顶部横向标签栏：场景 / 资源 -->
         <TabsList class="p-0 border-b border-border rounded-none bg-transparent shrink-0 w-full">

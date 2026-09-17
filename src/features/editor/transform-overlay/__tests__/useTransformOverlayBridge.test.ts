@@ -197,6 +197,28 @@ describe('useTransformOverlayBridge', () => {
     })
   })
 
+  it('预览里的拖拽会标记为已交互，表单改动不算', () => {
+    const provider = createProvider(createSession())
+    const bridge = createBridge({
+      provider,
+    })
+
+    expect(bridge.hasOverlayInteraction.value).toBe(false)
+
+    bridge.handlePanelTransformUpdate({
+      deferAutoApply: false,
+      value: {},
+    } as Parameters<typeof bridge.handlePanelTransformUpdate>[0])
+    expect(bridge.hasOverlayInteraction.value).toBe(false)
+
+    bridge.updateDisplayTransform({
+      position: { x: 24, y: 12 },
+      scale: { x: 1, y: 1 },
+      rotation: 0,
+    })
+    expect(bridge.hasOverlayInteraction.value).toBe(true)
+  })
+
   it('拖拽中的表单显示变换会节流到最新值但不延迟浮层显示', () => {
     vi.useFakeTimers()
 

@@ -58,6 +58,7 @@
     "dayjs": "^1.11.21",
     "dexie": "^4.4.3",
     "dompurify": "^3.4.8",
+    "driver.js": "^1.8.0",
     "lru-cache": "^11.5.1",
     "markdown-it": "^14.2.0",
     "mime": "^4.1.0",

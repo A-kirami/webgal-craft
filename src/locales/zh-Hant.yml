@@ -1467,3 +1467,50 @@ game:
   gameDependencyResolutionRuntimeRebindCancel: 取消
   gameDependencyResolutionConfirm: 繼續匯入
   gameDependencyResolutionRuntimeRebindConfirm: 更換並繼續
+
+tour:
+  common:
+    done: 完成
+    next: 下一步
+    prev: 上一步
+    skip: 跳過
+  home:
+    welcome:
+      title: 歡迎使用 WebGAL Craft
+      description: WebGAL Craft 用來建立和編輯視覺小說。接下來用幾步認識主要功能。
+    createGame:
+      title: 建立遊戲
+      description: 從這裡開始建立你的第一個視覺小說。
+    importGame:
+      title: 匯入遊戲
+      description: 如果已經用其他工具建立 WebGAL 遊戲，把遊戲資料夾或壓縮包拖進來即可匯入，也可以點右上角的「開啟遊戲」選擇資料夾。
+  engines:
+    official:
+      title: 官方引擎
+      description: 建立遊戲需要先安裝 WebGAL 引擎。在官方引擎卡片上選擇版本，一鍵下載安裝。
+    customImport:
+      title: 匯入自訂引擎
+      description: 如果你或其他人自訂過 WebGAL 引擎，點擊這裡選擇引擎資料夾，或直接把資料夾、壓縮包拖進來匯入。
+  editor:
+    previewPanel:
+      title: 預覽面板
+      description: 編輯時即時預覽遊戲畫面。按住 {modifier} 滾動滾輪縮放視圖，按住空格或滑鼠中鍵拖曳平移。
+    sceneResource:
+      title: 場景與資源
+      description: 在這裡管理場景檔案和遊戲資源。立繪、背景、音樂等資源可以直接拖放到編輯器：拖到語句之間插入新語句，拖到已有語句上替換內容。
+    modeSwitch:
+      title: 編輯模式
+      description: 點擊這個按鈕在文字和視覺化兩種編輯模式之間切換，切換後會自動進入下一步。
+    editorArea:
+      title: 編輯區
+      description: 場景內容在這裡編輯：文字模式直接編輯腳本，視覺化模式把語句顯示為卡片。
+    commandPanel:
+      title: 命令面板
+      description: 點擊命令卡片插入到目前語句之後；也可以把卡片直接拖放到編輯器，插入到任意位置。
+  effectEditor:
+    panel:
+      title: 效果編輯器
+      description: 在這裡調整變換、濾鏡和色彩等參數，改動會即時反映到預覽。
+    previewDrag:
+      title: 在預覽中拖曳
+      description: 直接拖曳預覽中的立繪或背景即可調整：拖曳移動位置，拖邊角縮放，拖旋轉手柄旋轉。

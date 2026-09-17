@@ -95,7 +95,7 @@ async function selectGameFolder() {
       </template>
     </div>
     <div class="ml-auto flex gap-2">
-      <Button @click="createGame">
+      <Button data-tour="create-game" @click="createGame">
         <Plus />
         {{ $t('home.welcome.createGame') }}
       </Button>

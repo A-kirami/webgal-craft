@@ -1,5 +1,7 @@
 import { getActivePinia } from 'pinia'
 
+import { detectSystemPlatform } from '~/utils/platform'
+
 import { dispatchShortcut } from './dispatcher'
 import { useShortcutContextRegistry } from './shortcut-context-registry'
 
@@ -20,23 +22,6 @@ interface UseShortcutDispatcherOptions<TExecuteContext> {
   platform?: ShortcutPlatform
 }
 
-function resolveShortcutPlatform(): ShortcutPlatform {
-  if (typeof navigator === 'undefined') {
-    return 'windows'
-  }
-
-  const platform = navigator.userAgent.toLowerCase()
-  if (platform.includes('mac') || platform.includes('iphone') || platform.includes('ipad')) {
-    return 'mac'
-  }
-
-  if (platform.includes('win')) {
-    return 'windows'
-  }
-
-  return 'linux'
-}
-
 export function useShortcutDispatcher<TExecuteContext>(
   options: UseShortcutDispatcherOptions<TExecuteContext>,
 ) {
@@ -48,7 +33,7 @@ export function useShortcutDispatcher<TExecuteContext>(
 
   const shortcutContextRegistry = useShortcutContextRegistry()
   const dynamicBindings = new Map<symbol, ShortcutDefinition<unknown>>()
-  const platform = options.platform ?? resolveShortcutPlatform()
+  const platform = options.platform ?? detectSystemPlatform()
 
   function registerBinding(): symbol {
     return Symbol('shortcut-binding')

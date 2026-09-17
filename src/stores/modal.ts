@@ -78,6 +78,11 @@ interface ModalState {
 export const useModalStore = defineStore('modal', () => {
   let modalStack = $ref(new Map<string, ModalState>())
 
+  // keepAlive 的模态框关闭后仍留在栈里，判断是否遮挡界面只能看 isOpen
+  const hasOpenModal = $computed(() =>
+    [...modalStack.values()].some(modal => modal.isOpen),
+  )
+
   function open<M extends ModalComponent>(modal: M, props?: ModalProps[M], key?: string, keepAlive: boolean = false) {
     const modalKey = key ? `${modal}-${key}` : modal
     const modalState = {
@@ -109,6 +114,7 @@ export const useModalStore = defineStore('modal', () => {
 
   return $$({
     modalStack,
+    hasOpenModal,
     open,
   })
 })

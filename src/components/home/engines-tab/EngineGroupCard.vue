@@ -146,6 +146,7 @@ const menuItems = $computed<MenuItem[]>(() => {
       <Card
         v-if="viewMode === 'grid'"
         :data-availability="group.isUnavailable ? 'unavailable' : 'available'"
+        :data-tour="isOfficial ? 'official-engine' : undefined"
         class="rounded-lg shadow-sm relative overflow-hidden"
         :class="{
           'cursor-wait': isActiveImporting,
@@ -261,6 +262,7 @@ const menuItems = $computed<MenuItem[]>(() => {
       <div
         v-else
         :data-availability="group.isUnavailable ? 'unavailable' : 'available'"
+        :data-tour="isOfficial ? 'official-engine' : undefined"
         class="p-3 flex transition-colors duration-200 items-center justify-between relative hover:bg-primary/5 dark:hover:bg-primary/10"
         :class="{
           'cursor-wait': isActiveImporting,

@@ -47,6 +47,7 @@ const {
   effectEditorSession,
   effectiveShowSidebar,
   enableFocusStatement,
+  expandCommandPanel,
   handleEffectApply,
   handleEffectEditorSheetOpenChange,
   handleEffectTransformUpdate,
@@ -280,7 +281,7 @@ useShortcut({
   when: { panelFocus: 'effectEditor' },
 })
 
-defineExpose({ toggleCommandPanel })
+defineExpose({ expandCommandPanel, toggleCommandPanel })
 </script>
 
 <template>
@@ -294,7 +295,7 @@ defineExpose({ toggleCommandPanel })
         <div class="flex flex-col h-full relative overflow-hidden">
           <!-- 场景文件：编辑器 + 命令面板纵向分割 -->
           <ResizablePanelGroup auto-save-id="editor-vertical" direction="vertical" class="flex-1 min-h-0">
-            <ResizablePanel size-unit="px" :min-size="200">
+            <ResizablePanel data-tour="editor-area" size-unit="px" :min-size="200">
               <FileEditor />
             </ResizablePanel>
             <ResizableHandle />
@@ -359,6 +360,7 @@ defineExpose({ toggleCommandPanel })
           :to="editorPanelRef ?? undefined"
           :overlay="false"
           side="right"
+          data-tour="effect-editor"
           class="p-4 max-w-none w-108 absolute sm:max-w-none"
           @open-auto-focus.prevent
           @close-auto-focus.prevent
