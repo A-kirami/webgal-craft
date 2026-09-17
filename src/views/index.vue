@@ -15,13 +15,18 @@ const { checkResourcesForActiveTab } = useDiscoverResources()
 const managedImport = useManagedImportStatus()
 
 let isHomeSettled = $ref(false)
+// 快速切换标签会并发触发不同资源类型的发现，早结束的那个不代表全部结束
+let pendingDiscoveries = 0
 
 // 首次资源发现会打开弹窗，引导必须等它结束再开始，否则会先闪一下引导遮罩再弹发现
 async function settleInitialDiscovery() {
+  pendingDiscoveries += 1
+  isHomeSettled = false
   try {
     await checkResourcesForActiveTab()
   } finally {
-    isHomeSettled = true
+    pendingDiscoveries -= 1
+    isHomeSettled = pendingDiscoveries === 0
   }
 }
 
