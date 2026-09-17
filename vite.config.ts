@@ -110,11 +110,17 @@ export default defineConfig({
         }
       : undefined,
     watch: {
-      // 3. tell vite to ignore watching backend and test files
+      // 3. tell vite to ignore watching backend, test files and generated types
       ignored: [
         '**/src-tauri/**',
         '**/{__tests__,integration}/**',
         '**/*.{spec,test}.{js,jsx,ts,tsx,mjs,mts,cjs,cts}',
+        // Plugins rewrite these declarations on every startup even when the
+        // content is unchanged; they are never part of the module graph, so a
+        // watch event on them can only degrade into a full page reload.
+        '**/auto-imports.d.ts',
+        '**/components.d.ts',
+        '**/route-map.d.ts',
       ],
     },
   },
