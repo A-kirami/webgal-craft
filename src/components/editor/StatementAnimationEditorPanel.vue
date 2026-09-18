@@ -20,8 +20,8 @@ const emit = defineEmits<{
 
 const panelRef = useTemplateRef<HTMLElement>('panelRef')
 
-// 面板挂载即接管焦点，卸载时必须把焦点还给打开它的元素：容器不会替我们记住，
-// 焦点若随着面板被移除而落到 body，语句编辑器与可视化编辑器的快捷键上下文会整片失效
+// 面板挂载即接管焦点，卸载时把焦点还给打开它的元素：抽屉宿主会请求编辑器表面回焦，
+// 但模态宿主、以及当前没有可回焦表面的场景仍要靠这一步兜底
 const focusOrigin = document.activeElement instanceof HTMLElement ? document.activeElement : undefined
 
 const controller = useStatementAnimationEditorPanel({

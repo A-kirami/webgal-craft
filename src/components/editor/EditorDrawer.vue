@@ -12,8 +12,8 @@ interface Props {
   /** 打开期间保持可交互的区域选择器；省略时点击任意抽屉外区域都会请求关闭 */
   interactiveRegionSelector?: string
   open: boolean
-  /** 打开期间由整个抽屉表面（含头部、页脚与内置关闭按钮）接管的快捷键上下文标识；省略时不注册 */
-  panelFocus?: string
+  /** 打开期间由整个抽屉表面（含头部、页脚与内置关闭按钮）接管的快捷键上下文标识 */
+  panelFocus: string
 }
 
 const props = defineProps<Props>()
@@ -33,7 +33,6 @@ const dismissLayers = useDrawerDismissLayers({
 useShortcutContext({
   panelFocus: () => props.panelFocus,
 }, {
-  active: () => props.panelFocus !== undefined,
   target: () => contentRef.value?.contentElement,
   trackFocus: true,
 })
