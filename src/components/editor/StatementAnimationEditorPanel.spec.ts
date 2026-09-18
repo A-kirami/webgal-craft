@@ -122,61 +122,13 @@ describe('StatementAnimationEditorPanel', () => {
 
     await page.getByTestId('drawer-trigger').click()
     await expect.element(page.getByTestId('statement-animation-editor-panel')).toBeVisible()
-    expect(document.activeElement?.getAttribute('data-testid')).toBe('statement-animation-editor-panel')
+    expect(document.activeElement).toBe(document.querySelector('[data-testid="statement-animation-editor-panel"]'))
 
     await page.getByRole('button', { name: 'Close' }).click()
     await expect.element(page.getByTestId('statement-animation-editor-panel')).not.toBeInTheDocument()
 
     await vi.waitFor(() => {
       expect(document.activeElement).toBe(document.querySelector('[data-testid="drawer-trigger"]'))
-    })
-  })
-
-  it('关闭后会把焦点还给打开它的元素', async () => {
-    const harness = defineComponent({
-      name: 'StatementAnimationEditorPanelHarness',
-      setup() {
-        const isOpen = ref(false)
-
-        return () => h('div', [
-          h('button', {
-            'data-testid': 'open-animation-editor',
-            'onClick': () => {
-              isOpen.value = true
-            },
-            'type': 'button',
-          }, 'open'),
-          h('button', {
-            'data-testid': 'close-animation-editor',
-            'onClick': () => {
-              isOpen.value = false
-            },
-            'type': 'button',
-          }, 'close'),
-          isOpen.value
-            ? h(StatementAnimationEditorPanel, {
-                frames: [{ duration: 200 }],
-              })
-            : undefined,
-        ])
-      },
-    })
-
-    renderInBrowser(harness, {
-      global: {
-        stubs: globalStubs,
-      },
-    })
-
-    const panel = page.getByTestId('statement-animation-editor-panel')
-    await page.getByTestId('open-animation-editor').click()
-    await expect.element(panel).toBeVisible()
-
-    await page.getByTestId('close-animation-editor').click()
-
-    await expect.element(panel).not.toBeInTheDocument()
-    await vi.waitFor(() => {
-      expect(document.activeElement).toBe(document.querySelector('[data-testid="open-animation-editor"]'))
     })
   })
 
