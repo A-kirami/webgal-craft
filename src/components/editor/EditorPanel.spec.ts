@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h, nextTick, reactive, shallowRef } from 'vue'
+import { computed, defineComponent, h, nextTick, reactive, ref, shallowRef } from 'vue'
 
 import { createBrowserLocalizedI18n } from '~/__tests__/browser'
 import { renderInBrowser } from '~/__tests__/browser-render'
@@ -294,8 +294,14 @@ const globalStubs = {
   }),
   SheetContent: defineComponent({
     name: 'StubSheetContent',
-    setup(_, { attrs, slots }) {
-      return () => h('div', attrs, slots.default?.())
+    setup(_, { attrs, expose, slots }) {
+      const elementRef = ref<HTMLElement>()
+
+      // 与真实 SheetContent 一样暴露 contentElement；桩保持挂载，用来在没有 CSS 动画的测试环境里
+      // 覆盖「退场动画期间内容仍在 DOM」这一状态
+      expose({ contentElement: computed(() => elementRef.value) })
+
+      return () => h('div', { ...attrs, ref: elementRef }, slots.default?.())
     },
   }),
   SheetDescription: defineComponent({
@@ -668,14 +674,24 @@ describe('EditorPanel', () => {
   it('动画编辑器抽屉内容获得焦点时仍保持动画编辑器快捷键上下文', async () => {
     statementAnimationDialogMock.isOpen = true
 
-    // 上下文挂在抽屉表面上，桩掉 SheetContent 就拿不到表面元素，这里用真实浮层
-    renderEditorPanel({ stubs: { Sheet: false, SheetContent: false } })
+    renderEditorPanel()
 
     await page.getByRole('button', { name: 'Statement Animation Editor Panel' }).click()
 
     await vi.waitFor(() => {
       expect(useShortcutContextRegistry().resolveContext().panelFocus).toBe('animationEditor')
     })
+  })
+
+  it('抽屉关闭后不再占用快捷键上下文', async () => {
+    statementAnimationDialogMock.isOpen = false
+
+    renderEditorPanel()
+
+    await page.getByRole('button', { name: 'Statement Animation Editor Panel' }).click()
+
+    // 关闭动画期间内容可能仍在 DOM 内且持有焦点，上下文必须由 open 而不是 target 决定去留
+    expect(useShortcutContextRegistry().resolveContext().panelFocus).not.toBe('animationEditor')
   })
 
   it('动画编辑器抽屉聚焦到内置关闭按钮时仍保持动画编辑器快捷键上下文', async () => {

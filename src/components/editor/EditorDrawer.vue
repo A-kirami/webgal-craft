@@ -29,10 +29,13 @@ const dismissLayers = useDrawerDismissLayers({
   isOpen: () => props.open,
 })
 
-// 上下文挂在抽屉表面上而不是某个子面板上：焦点落在头部、页脚或关闭按钮时快捷键同样成立
+// 上下文挂在抽屉表面上而不是某个子面板上：焦点落在头部、页脚或关闭按钮时快捷键同样成立。
+// active 必须跟随 open：Presence 会等退场动画结束才卸载内容，这段时间 target 仍在、焦点也可能仍留在
+// 抽屉内，只靠 target 判定会让已关闭的抽屉继续占用快捷键上下文并覆盖其他编辑器
 useShortcutContext({
   panelFocus: () => props.panelFocus,
 }, {
+  active: () => props.open,
   target: () => contentRef.value?.contentElement,
   trackFocus: true,
 })
