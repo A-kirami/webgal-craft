@@ -358,6 +358,11 @@ export const useFileStore = defineStore('file', () => {
   function createFileSystemItemFromVfsEntry(entry: VfsDirEntry, parentPath: AbsPath, parentId: string | undefined): FileSystemItem {
     const path = AbsPath.append(parentPath, entry.name)
     const id = getOrCreateItemId(path)
+    const metadata = {
+      size: entry.size,
+      modifiedAt: entry.modifiedAt,
+      createdAt: entry.createdAt,
+    }
 
     if (entry.isDir) {
       return {
@@ -370,6 +375,7 @@ export const useFileStore = defineStore('file', () => {
         isLoaded: false,
         loadRevision: 0,
         source: entry.source,
+        ...metadata,
       }
     }
 
@@ -381,6 +387,7 @@ export const useFileStore = defineStore('file', () => {
       isDir: false,
       mimeType: mime.getType(path) || '',
       source: entry.source,
+      ...metadata,
     }
   }
 

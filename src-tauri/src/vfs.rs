@@ -4,6 +4,7 @@ use std::{
     io::ErrorKind,
     io::Write,
     path::{Component, Path, PathBuf},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use percent_encoding::percent_decode_str;
@@ -108,6 +109,30 @@ pub struct VfsDirEntry {
     pub name: String,
     pub is_dir: bool,
     pub source: VfsSource,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub modified_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<i64>,
+}
+
+/// 读取目录项的物理属性。元信息或创建时间在部分平台/文件系统上不可用，
+/// 缺失字段由前端按“不可用”呈现，不影响目录列举结果。
+fn read_entry_metadata(entry: &fs::DirEntry) -> (Option<u64>, Option<i64>, Option<i64>) {
+    let Ok(metadata) = entry.metadata() else {
+        return (None, None, None);
+    };
+
+    (
+        Some(metadata.len()),
+        metadata.modified().ok().and_then(system_time_to_millis),
+        metadata.created().ok().and_then(system_time_to_millis),
+    )
+}
+
+fn system_time_to_millis(time: SystemTime) -> Option<i64> {
+    i64::try_from(time.duration_since(UNIX_EPOCH).ok()?.as_millis()).ok()
 }
 
 #[derive(Debug, Error)]
@@ -462,12 +487,16 @@ impl OverlayFs {
                 }
 
                 let is_dir = entry.file_type()?.is_dir();
+                let (size, modified_at, created_at) = read_entry_metadata(&entry);
                 entries.insert(
                     name.clone(),
                     VfsDirEntry {
                         is_dir,
                         name,
                         source: VfsSource::Upper,
+                        size,
+                        modified_at,
+                        created_at,
                     },
                 );
             }
@@ -506,12 +535,16 @@ impl OverlayFs {
             return Ok(());
         }
 
+        // 合成项不对应真实目录项，不附带物理属性。
         entries
             .entry(String::from("template"))
             .or_insert(VfsDirEntry {
                 is_dir: true,
                 name: String::from("template"),
                 source: VfsSource::TemplateLower,
+                size: None,
+                modified_at: None,
+                created_at: None,
             });
 
         Ok(())
@@ -551,10 +584,15 @@ impl OverlayFs {
                 source
             };
 
+            let (size, modified_at, created_at) = read_entry_metadata(&entry);
+
             entries.entry(name.clone()).or_insert(VfsDirEntry {
                 is_dir,
                 name,
                 source: entry_source,
+                size,
+                modified_at,
+                created_at,
             });
         }
 
@@ -2016,6 +2054,9 @@ mod tests {
             name: String::from("scene"),
             is_dir: true,
             source: VfsSource::Upper,
+            size: Some(2048),
+            modified_at: Some(1_700_000_100_000),
+            created_at: Some(1_700_000_000_000),
         };
 
         let serialized =
@@ -2033,9 +2074,111 @@ mod tests {
             serialized.get("source").and_then(serde_json::Value::as_str),
             Some("upper")
         );
+        assert_eq!(
+            serialized.get("size").and_then(serde_json::Value::as_u64),
+            Some(2048)
+        );
+        assert_eq!(
+            serialized
+                .get("modifiedAt")
+                .and_then(serde_json::Value::as_i64),
+            Some(1_700_000_100_000)
+        );
+        assert_eq!(
+            serialized
+                .get("createdAt")
+                .and_then(serde_json::Value::as_i64),
+            Some(1_700_000_000_000)
+        );
         assert!(
             serialized.get("is_dir").is_none(),
             "frontend contract should not leak Rust snake_case fields"
         );
+        assert!(
+            serialized.get("modified_at").is_none(),
+            "frontend contract should not leak Rust snake_case fields"
+        );
+    }
+
+    #[test]
+    fn vfs_dir_entry_omits_unavailable_metadata() {
+        let entry = VfsDirEntry {
+            name: String::from("scene"),
+            is_dir: true,
+            source: VfsSource::Upper,
+            size: None,
+            modified_at: None,
+            created_at: None,
+        };
+
+        let serialized =
+            serde_json::to_value(&entry).expect("vfs dir entry should serialize to json value");
+
+        assert_eq!(
+            serialized,
+            serde_json::json!({
+                "name": "scene",
+                "isDir": true,
+                "source": "upper",
+            })
+        );
+    }
+
+    #[test]
+    fn list_entries_reports_metadata_from_the_winning_layer() {
+        let upper_dir = create_temp_dir();
+        let upper = upper_dir.path().to_path_buf();
+        let engine_dir = create_temp_dir();
+        let engine = engine_dir.path().to_path_buf();
+
+        fs::create_dir_all(upper.join("icons")).expect("upper icons directory should be created");
+        fs::create_dir_all(engine.join("icons")).expect("engine icons directory should be created");
+        fs::create_dir_all(engine.join("game").join("template"))
+            .expect("template directory should be created");
+        fs::write(upper.join("icons").join("upper.ico"), "upper").expect("upper icon written");
+        fs::write(upper.join("icons").join("shared.ico"), "upper").expect("upper icon written");
+        fs::write(engine.join("icons").join("lower.ico"), "engine")
+            .expect("engine lower icon written");
+        fs::write(engine.join("icons").join("shared.ico"), "engine lower icon")
+            .expect("engine lower icon written");
+
+        let overlay = OverlayFs::new(
+            upper,
+            Some(engine.clone()),
+            Some(engine.join("game").join("template")),
+        )
+        .expect("overlay should be created");
+
+        let entries = overlay
+            .list_entries(Path::new("icons"))
+            .expect("icon entries should be listed");
+        let find_entry = |name: &str| {
+            entries
+                .iter()
+                .find(|entry| entry.name == name)
+                .unwrap_or_else(|| panic!("{name} should be listed"))
+        };
+
+        let upper_entry = find_entry("upper.ico");
+        assert_eq!(upper_entry.size, Some(5));
+        assert!(
+            upper_entry.modified_at.is_some(),
+            "upper icon should report its modification time"
+        );
+
+        let lower_entry = find_entry("lower.ico");
+        assert_eq!(lower_entry.size, Some(6));
+        assert!(
+            lower_entry.modified_at.is_some(),
+            "engine lower icon should report its modification time"
+        );
+
+        let shadowed_entry = find_entry("shared.ico");
+        assert_eq!(
+            shadowed_entry.size,
+            Some(5),
+            "shadowed lower entry must not leak its size into the upper entry"
+        );
+        assert_eq!(shadowed_entry.source, VfsSource::Upper);
     }
 }
