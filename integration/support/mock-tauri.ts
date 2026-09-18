@@ -43,6 +43,15 @@ interface VirtualEntry {
   birthtime?: number
 }
 
+interface VirtualVfsDirEntry {
+  name: string
+  isDir: boolean
+  source: 'upper' | 'engineLower' | 'templateLower'
+  size?: number
+  modifiedAt?: number
+  createdAt?: number
+}
+
 interface TauriMockGlobal {
   __TAURI_EVENT_PLUGIN_INTERNALS__?: {
     unregisterListener(): void
@@ -732,15 +741,25 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
               const upperDir = resolveProjectLogicalPath(projectPath, relPath)
               const lowerDir = resolveEngineLogicalPath(enginePath, relPath)
 
-              const merged = new Map<string, { name: string, isDir: boolean, source: string }>()
-              if (lowerDir) {
-                for (const entry of listDirectory(lowerDir)) {
-                  merged.set(entry.name, { name: entry.name, isDir: entry.isDirectory, source: 'engineLower' })
+              const merged = new Map<string, VirtualVfsDirEntry>()
+              function mergeEntries(dir: string, source: VirtualVfsDirEntry['source']) {
+                for (const entry of listDirectory(dir)) {
+                  const virtualEntry = fileSystem.get(joinPaths([dir, entry.name]))
+                  merged.set(entry.name, {
+                    name: entry.name,
+                    isDir: entry.isDirectory,
+                    source,
+                    size: virtualEntry?.size,
+                    modifiedAt: virtualEntry?.mtime,
+                    createdAt: virtualEntry?.birthtime,
+                  })
                 }
               }
-              for (const entry of listDirectory(upperDir)) {
-                merged.set(entry.name, { name: entry.name, isDir: entry.isDirectory, source: 'upper' })
+
+              if (lowerDir) {
+                mergeEntries(lowerDir, 'engineLower')
               }
+              mergeEntries(upperDir, 'upper')
               return [...merged.values()]
             }
             case 'ensure_vfs_writable': {

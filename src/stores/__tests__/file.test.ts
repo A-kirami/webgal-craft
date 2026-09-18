@@ -672,6 +672,40 @@ describe('useFileStore', () => {
     ])
   })
 
+  it('VFS 模式下列表项会携带大小与时间属性', async () => {
+    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
+    getGameEnginePathMock.mockResolvedValue('/engines/webgal')
+    vfsListDirMock.mockResolvedValueOnce([{
+      createdAt: 1700_0000_0000,
+      isDir: false,
+      modifiedAt: 1700_0001_0000,
+      name: 'scene.txt',
+      size: 2048,
+      source: 'upper',
+    }])
+
+    workspaceStoreState = reactive({
+      CWD: '/workspace',
+      currentGame: {
+        engineId: 'engine-1',
+        path: '/workspace',
+      },
+    })
+    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+
+    const store = useFileStore()
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+
+    const [item] = await store.getFolderContents(AbsPath.from('/workspace/game'))
+    expect(item).toEqual(expect.objectContaining({
+      createdAt: 1700_0000_0000,
+      modifiedAt: 1700_0001_0000,
+      size: 2048,
+    }))
+  })
+
   it('applyPathMutation 会立即更新目录视图路径', async () => {
     existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
     getGameEnginePathMock.mockResolvedValue('/engines/webgal')

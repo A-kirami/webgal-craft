@@ -27,4 +27,7 @@ export interface VfsDirEntry {
   name: string
   isDir: boolean
   source: VfsSource
+  size?: number
+  modifiedAt?: number
+  createdAt?: number
 }
