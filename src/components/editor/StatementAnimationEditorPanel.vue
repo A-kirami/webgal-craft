@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useStatementAnimationEditorPanel } from '~/features/editor/animation/useStatementAnimationEditorPanel'
-import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 
 import type { AnimationFrame } from '~/domain/stage/types'
 
@@ -23,13 +22,6 @@ const focusOrigin = document.activeElement instanceof HTMLElement ? document.act
 const controller = useStatementAnimationEditorPanel({
   emitFrames: frames => emit('update:frames', frames),
   frames: () => props.frames,
-})
-
-useShortcutContext({
-  panelFocus: 'animationEditor',
-}, {
-  target: panelRef,
-  trackFocus: true,
 })
 
 onMounted(() => {

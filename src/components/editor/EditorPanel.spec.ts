@@ -663,6 +663,32 @@ describe('EditorPanel', () => {
     expect(statementAnimationDialogMock.requestClose).toHaveBeenCalledOnce()
   })
 
+  it('动画编辑器抽屉的页脚获得焦点时仍保持动画编辑器快捷键上下文', async () => {
+    statementAnimationDialogMock.isOpen = true
+
+    // 上下文挂在抽屉表面上，桩掉 SheetContent 就拿不到表面元素，这里用真实浮层
+    renderEditorPanel({ stubs: { Sheet: false, SheetContent: false } })
+
+    await page.getByRole('button', { name: '确认' }).click()
+
+    await vi.waitFor(() => {
+      expect(useShortcutContextRegistry().resolveContext().panelFocus).toBe('animationEditor')
+    })
+  })
+
+  it('动画编辑器抽屉聚焦到内置关闭按钮时仍保持动画编辑器快捷键上下文', async () => {
+    statementAnimationDialogMock.isOpen = true
+
+    // 关闭按钮由 SheetContent 在插槽之外渲染，只有按整个抽屉表面注册上下文才覆盖得到
+    renderEditorPanel({ stubs: { Sheet: false, SheetContent: false } })
+
+    await page.getByRole('button', { name: 'Close' }).click()
+
+    await vi.waitFor(() => {
+      expect(useShortcutContextRegistry().resolveContext().panelFocus).toBe('animationEditor')
+    })
+  })
+
   it('动画编辑器抽屉打开时不会把界面标记为全局模态', async () => {
     statementAnimationDialogMock.isOpen = true
 

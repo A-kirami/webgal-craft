@@ -241,6 +241,7 @@ defineExpose({ expandCommandPanel, toggleCommandPanel })
         :anchor="editorPanelRef ?? undefined"
         :interactive-region-selector="effectEditorInteractiveRegionSelector"
         :open="effectEditorProvider.isOpen"
+        panel-focus="effectEditor"
         data-tour="effect-editor"
         class="p-4 max-w-none w-108 sm:max-w-none"
         @update:open="handleEffectEditorSheetOpenChange"
@@ -280,6 +281,7 @@ defineExpose({ expandCommandPanel, toggleCommandPanel })
       <EditorDrawer
         :anchor="editorPanelRef ?? undefined"
         :open="statementAnimationDialog.isOpen"
+        panel-focus="animationEditor"
         class="p-4 max-w-full w-160 sm:max-w-full"
         @update:open="handleAnimationEditorDrawerOpenChange"
       >

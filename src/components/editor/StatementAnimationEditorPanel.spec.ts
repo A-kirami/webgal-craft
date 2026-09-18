@@ -7,7 +7,6 @@ import {
   createBrowserTextStub,
   renderInBrowser,
 } from '~/__tests__/browser-render'
-import { useShortcutContextRegistry } from '~/features/editor/shortcut/shortcut-context-registry'
 
 import StatementAnimationEditorPanel from './StatementAnimationEditorPanel.vue'
 
@@ -148,25 +147,6 @@ describe('StatementAnimationEditorPanel', () => {
 
     expect(textContent).not.toContain('edit.visualEditor.animation.toolbar.undo')
     expect(textContent).not.toContain('edit.visualEditor.animation.toolbar.redo')
-  })
-
-  it('聚焦面板时会把快捷键上下文切换为动画编辑器', async () => {
-    renderInBrowser(StatementAnimationEditorPanel, {
-      props: {
-        frames: [{
-          duration: 200,
-        }],
-      },
-      global: {
-        stubs: globalStubs,
-      },
-    })
-
-    await page.getByTestId('statement-animation-editor-panel').click()
-
-    await vi.waitFor(() => {
-      expect(useShortcutContextRegistry().resolveContext().panelFocus).toBe('animationEditor')
-    })
   })
 
   it('删除当前帧前会先清空草稿，避免旧草稿挂到重排后的帧上', async () => {
