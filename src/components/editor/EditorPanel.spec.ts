@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h, nextTick, reactive, shallowRef } from 'vue'
+import { computed, defineComponent, h, nextTick, reactive, ref, shallowRef } from 'vue'
 
 import { createBrowserLocalizedI18n } from '~/__tests__/browser'
 import { renderInBrowser } from '~/__tests__/browser-render'
+import { useShortcutContextRegistry } from '~/features/editor/shortcut/shortcut-context-registry'
 import { shortcutDispatcherRegistryKey } from '~/features/editor/shortcut/useShortcutDispatcher'
 import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
 
@@ -247,7 +248,7 @@ const globalStubs = {
       return () => h('div', [
         h('div', 'File Editor'),
         h('div', {
-          'data-effect-editor-interactive-region': '',
+          'data-drawer-interactive-region': '',
           'data-testid': 'preview-interactive-region',
           'style': {
             height: '120px',
@@ -293,11 +294,14 @@ const globalStubs = {
   }),
   SheetContent: defineComponent({
     name: 'StubSheetContent',
-    setup(_, { attrs, slots }) {
-      return () => h('div', {
-        'data-testid': 'effect-editor-sheet',
-        ...attrs,
-      }, slots.default?.())
+    setup(_, { attrs, expose, slots }) {
+      const elementRef = ref<HTMLElement>()
+
+      // 与真实 SheetContent 一样暴露 contentElement；桩保持挂载，用来在没有 CSS 动画的测试环境里
+      // 覆盖「退场动画期间内容仍在 DOM」这一状态
+      expose({ contentElement: computed(() => elementRef.value) })
+
+      return () => h('div', { ...attrs, ref: elementRef }, slots.default?.())
     },
   }),
   SheetDescription: defineComponent({
@@ -326,10 +330,12 @@ const globalStubs = {
       }, 'Statement Editor Panel')
     },
   }),
-  StatementAnimationSubDialog: defineComponent({
-    name: 'StubStatementAnimationSubDialog',
+  StatementAnimationEditorPanel: defineComponent({
+    name: 'StubStatementAnimationEditorPanel',
     setup() {
-      return () => h('div', 'Statement Animation Dialog')
+      return () => h('button', {
+        type: 'button',
+      }, 'Statement Animation Editor Panel')
     },
   }),
 }
@@ -340,12 +346,16 @@ function createEditorPanelI18n() {
 
 function renderEditorPanel(options: {
   provide?: Record<symbol, unknown>
+  stubs?: Record<string, unknown>
 } = {}) {
   renderInBrowser(EditorPanel, {
     global: {
       plugins: [createEditorPanelI18n()],
       provide: options.provide,
-      stubs: globalStubs,
+      stubs: {
+        ...globalStubs,
+        ...options.stubs,
+      },
     },
   })
 }
@@ -375,13 +385,13 @@ function createTransformOverlayBridge(enabled: boolean) {
   }
 }
 
-async function updateEffectEditorInteractiveRegion(): Promise<void> {
+async function refreshDrawerDismissLayers(): Promise<void> {
   globalThis.dispatchEvent(new Event('resize'))
   await nextTick()
 }
 
-function getEffectEditorDismissLayers(): HTMLElement[] {
-  return [...document.querySelectorAll<HTMLElement>('[data-testid="effect-editor-dismiss-layer"]')]
+function getDrawerDismissLayers(): HTMLElement[] {
+  return [...document.querySelectorAll<HTMLElement>('[data-testid="editor-drawer-dismiss-layer"]')]
 }
 
 describe('EditorPanel', () => {
@@ -402,6 +412,7 @@ describe('EditorPanel', () => {
     effectEditorProviderMock.canClear = false
     effectEditorProviderMock.isOpen = false
     effectEditorProviderMock.session = undefined
+    statementAnimationDialogMock.isOpen = false
     useStatementAnimationDialogMock.mockReset()
     useEditorStoreMock.mockReset()
     useEditorDiagnosticsStoreMock.mockReset()
@@ -576,9 +587,9 @@ describe('EditorPanel', () => {
     const region = document.querySelector<HTMLElement>('[data-testid="preview-interactive-region"]')
     expect(region?.getBoundingClientRect().width).toBeGreaterThan(0)
 
-    await updateEffectEditorInteractiveRegion()
+    await refreshDrawerDismissLayers()
 
-    expect(getEffectEditorDismissLayers()).toHaveLength(1)
+    expect(getDrawerDismissLayers()).toHaveLength(1)
   })
 
   it('效果编辑器打开且变换框可用时会保留预览交互区域', async () => {
@@ -593,12 +604,12 @@ describe('EditorPanel', () => {
     const region = document.querySelector<HTMLElement>('[data-testid="preview-interactive-region"]')
     expect(region?.getBoundingClientRect().width).toBeGreaterThan(0)
 
-    await updateEffectEditorInteractiveRegion()
+    await refreshDrawerDismissLayers()
 
-    expect(getEffectEditorDismissLayers().length).toBeGreaterThan(1)
+    expect(getDrawerDismissLayers().length).toBeGreaterThan(1)
   })
 
-  it('效果编辑器初始打开且变换框可用时会立即保留预览交互区域', async () => {
+  it('效果编辑器初始打开且变换框可用时无需额外交互即可保留预览交互区域', async () => {
     effectEditorProviderMock.isOpen = true
 
     renderEditorPanel({
@@ -607,8 +618,118 @@ describe('EditorPanel', () => {
       },
     })
 
-    await nextTick()
+    await vi.waitFor(() => {
+      expect(getDrawerDismissLayers().length).toBeGreaterThan(1)
+    })
+  })
 
-    expect(getEffectEditorDismissLayers().length).toBeGreaterThan(1)
+  it('预览工作区尺寸变化时遮罩分段会跟随', async () => {
+    effectEditorProviderMock.isOpen = true
+
+    renderEditorPanel({
+      provide: {
+        [TRANSFORM_OVERLAY_BRIDGE_KEY as symbol]: createTransformOverlayBridge(true),
+      },
+    })
+    await vi.waitFor(() => {
+      expect(getDrawerDismissLayers().length).toBeGreaterThan(1)
+    })
+
+    const region = document.querySelector<HTMLElement>('[data-testid="preview-interactive-region"]')!
+    const widthsBefore = getDrawerDismissLayers().map(element => element.style.width)
+    region.style.width = '400px'
+
+    // 拖动编辑器分栏只改变预览区尺寸、不触发窗口 resize，遮罩必须靠元素尺寸观察跟上
+    await vi.waitFor(() => {
+      expect(getDrawerDismissLayers().map(element => element.style.width)).not.toEqual(widthsBefore)
+    })
+  })
+
+  it('动画编辑器抽屉打开时预览区仍属于抽屉外区域', async () => {
+    statementAnimationDialogMock.isOpen = true
+
+    renderEditorPanel()
+    await refreshDrawerDismissLayers()
+
+    // 帧级预览浮层尚未交付，预览区不是动画编辑器的编辑面，遮罩应当整层接管
+    const region = document.querySelector<HTMLElement>('[data-drawer-interactive-region]')
+    expect(region?.getBoundingClientRect().width).toBeGreaterThan(0)
+    expect(getDrawerDismissLayers()).toHaveLength(1)
+  })
+
+  it('点击抽屉外区域会请求关闭动画编辑器', async () => {
+    statementAnimationDialogMock.isOpen = true
+
+    renderEditorPanel()
+    await refreshDrawerDismissLayers()
+
+    const [dismissLayer] = getDrawerDismissLayers()
+    expect(dismissLayer).toBeDefined()
+    // 浏览器测试不加载 UnoCSS，遮罩分段没有 position: fixed，命中检测不可用，直接派发点击
+    dismissLayer!.click()
+
+    expect(statementAnimationDialogMock.requestClose).toHaveBeenCalledOnce()
+  })
+
+  it('动画编辑器抽屉内容获得焦点时仍保持动画编辑器快捷键上下文', async () => {
+    statementAnimationDialogMock.isOpen = true
+
+    renderEditorPanel()
+
+    await page.getByRole('button', { name: 'Statement Animation Editor Panel' }).click()
+
+    await vi.waitFor(() => {
+      expect(useShortcutContextRegistry().resolveContext().panelFocus).toBe('animationEditor')
+    })
+  })
+
+  it('抽屉关闭后不再占用快捷键上下文', async () => {
+    statementAnimationDialogMock.isOpen = false
+
+    renderEditorPanel()
+
+    await page.getByRole('button', { name: 'Statement Animation Editor Panel' }).click()
+
+    // 关闭动画期间内容可能仍在 DOM 内且持有焦点，上下文必须由 open 而不是 target 决定去留
+    expect(useShortcutContextRegistry().resolveContext().panelFocus).not.toBe('animationEditor')
+  })
+
+  it('动画编辑器抽屉聚焦到内置关闭按钮时仍保持动画编辑器快捷键上下文', async () => {
+    statementAnimationDialogMock.isOpen = true
+
+    // 关闭按钮由 SheetContent 在插槽之外渲染，只有按整个抽屉表面注册上下文才覆盖得到
+    renderEditorPanel({ stubs: { Sheet: false, SheetContent: false } })
+
+    await page.getByRole('button', { name: 'Close' }).click()
+
+    await vi.waitFor(() => {
+      expect(useShortcutContextRegistry().resolveContext().panelFocus).toBe('animationEditor')
+    })
+  })
+
+  it('动画编辑器抽屉打开时不会把界面标记为全局模态', async () => {
+    statementAnimationDialogMock.isOpen = true
+
+    renderEditorPanel()
+
+    expect(useShortcutContextRegistry().resolveContext().isModalOpen).toBeFalsy()
+  })
+
+  it('动画编辑器抽屉聚焦时会注册应用与关闭快捷键', async () => {
+    const bindings = renderEditorPanelWithShortcutRegistry()
+    await vi.waitFor(() => {
+      expect(bindings.size).toBeGreaterThan(0)
+    })
+
+    const applyBinding = [...bindings.values()].find(item => item.id === 'animation.apply')
+    const closeBinding = [...bindings.values()].find(item => item.id === 'animation.close')
+    expect(applyBinding?.when).toEqual({ panelFocus: 'animationEditor' })
+    expect(closeBinding?.when).toEqual({ panelFocus: 'animationEditor' })
+
+    await applyBinding!.execute(undefined)
+    await closeBinding!.execute(undefined)
+
+    expect(statementAnimationDialogMock.handleApply).toHaveBeenCalledOnce()
+    expect(statementAnimationDialogMock.requestClose).toHaveBeenCalledOnce()
   })
 })

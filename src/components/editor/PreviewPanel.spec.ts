@@ -772,6 +772,24 @@ describe('PreviewPanel', () => {
     }
   })
 
+  it('抽屉可交互区域只覆盖预览工作区，不含刷新所在的顶部工具栏', async () => {
+    renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    const drawerRegion = document.querySelector<HTMLElement>('[data-drawer-interactive-region]')
+    const refreshButton = await page.getByRole('button', { name: 'edit.previewPanel.refreshPreview' }).element()
+    const viewport = document.querySelector<HTMLElement>('[data-testid="preview-viewport"]')
+
+    expect(drawerRegion).toBeVisible()
+    expect(drawerRegion?.contains(viewport)).toBe(true)
+    // 刷新会重建预览会话、丢掉当前语句的执行状态，工具栏必须始终留在遮罩里（即点击等同于点抽屉外）
+    expect(drawerRegion?.contains(refreshButton)).toBe(false)
+  })
+
   it('点击刷新按钮会重新读取游戏配置并刷新内嵌预览槽位', async () => {
     renderInBrowser(PreviewPanel, {
       global: {

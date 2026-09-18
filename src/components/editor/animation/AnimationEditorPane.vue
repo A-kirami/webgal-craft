@@ -49,9 +49,9 @@ const inspectorSelectedFrame = $computed<AnimationEditorSelectedFrameState>(() =
   <div class="bg-background flex flex-col h-full overflow-hidden">
     <div class="flex flex-1 flex-col min-h-0">
       <div class="border-b flex shrink-0 flex-col min-h-0">
-        <div class="px-3 py-1.5 flex gap-2 items-center justify-between">
+        <div class="pb-1.5 flex gap-2 items-center justify-between">
           <div class="flex gap-1.5 items-center">
-            <div class="i-lucide-timer text-muted-foreground size-3.5" />
+            <div class="i-lucide-timer text-muted-foreground size-4" />
             <h3 class="text-sm font-semibold">
               {{ $t('edit.visualEditor.animation.timelineTitle') }}
             </h3>
@@ -91,7 +91,7 @@ const inspectorSelectedFrame = $computed<AnimationEditorSelectedFrameState>(() =
           </div>
         </div>
 
-        <div class="px-3 pt-1 flex-1 min-h-0">
+        <div class="pt-1 flex-1 min-h-0">
           <AnimationTimeline
             class="h-full min-h-0"
             :keyframes="props.keyframes"
@@ -103,7 +103,7 @@ const inspectorSelectedFrame = $computed<AnimationEditorSelectedFrameState>(() =
           />
         </div>
 
-        <div class="px-3 pb-2.5 pt-1.5 flex justify-end">
+        <div class="pb-2.5 pt-1.5 flex justify-end">
           <div class="text-xs text-muted-foreground flex gap-3 whitespace-nowrap items-center">
             <span>{{ $t('edit.visualEditor.animation.toolbar.zoom') }} {{ props.timelineZoomPercent }}%</span>
             <span>{{ $t('edit.visualEditor.animation.toolbar.totalDuration') }} {{ props.totalDuration }}{{ $t('edit.visualEditor.animation.unitMs') }}</span>
@@ -111,9 +111,9 @@ const inspectorSelectedFrame = $computed<AnimationEditorSelectedFrameState>(() =
         </div>
       </div>
 
-      <div v-if="props.keyframes.length > 0" class="px-3 flex flex-1 flex-col min-h-0">
+      <div v-if="props.keyframes.length > 0" class="flex flex-1 flex-col min-h-0">
         <div class="py-2.5 flex gap-1.5 items-center">
-          <div class="i-lucide-settings-2 text-muted-foreground size-3.5" />
+          <div class="i-lucide-settings-2 text-muted-foreground size-4" />
           <h3 class="text-sm font-semibold">
             {{ $t('edit.visualEditor.animation.inspectorTitle') }}
           </h3>

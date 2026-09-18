@@ -8,6 +8,7 @@ import {
   renderInBrowser,
 } from '~/__tests__/browser-render'
 
+import EditorDrawer from './EditorDrawer.vue'
 import StatementAnimationEditorPanel from './StatementAnimationEditorPanel.vue'
 
 import type { AnimationFrame } from '~/domain/stage/types'
@@ -82,6 +83,55 @@ function createAnimationEditorPaneStub() {
 }
 
 describe('StatementAnimationEditorPanel', () => {
+  it('关闭抽屉且宿主未接管焦点时把焦点还给触发元素', async () => {
+    const harness = defineComponent({
+      name: 'AnimationDrawerFocusHarness',
+      setup() {
+        const isOpen = ref(false)
+
+        return () => h('div', [
+          h('button', {
+            'data-testid': 'drawer-trigger',
+            'onClick': () => {
+              isOpen.value = true
+            },
+            'type': 'button',
+          }, 'open'),
+          h(EditorDrawer, {
+            'open': isOpen.value,
+            'panelFocus': 'animationEditor',
+            'onUpdate:open': (value: boolean) => {
+              if (!value) {
+                isOpen.value = false
+              }
+            },
+          }, {
+            default: () => h(StatementAnimationEditorPanel, {
+              frames: [{ duration: 200 }],
+            }),
+          }),
+        ])
+      },
+    })
+
+    renderInBrowser(harness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByTestId('drawer-trigger').click()
+    await expect.element(page.getByTestId('statement-animation-editor-panel')).toBeVisible()
+    expect(document.activeElement).toBe(document.querySelector('[data-testid="statement-animation-editor-panel"]'))
+
+    await page.getByRole('button', { name: 'Close' }).click()
+    await expect.element(page.getByTestId('statement-animation-editor-panel')).not.toBeInTheDocument()
+
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(document.querySelector('[data-testid="drawer-trigger"]'))
+    })
+  })
+
   it('在模态框场景中隐藏历史操作按钮', async () => {
     renderInBrowser(StatementAnimationEditorPanel, {
       props: {
@@ -99,6 +149,46 @@ describe('StatementAnimationEditorPanel', () => {
 
     expect(textContent).not.toContain('edit.visualEditor.animation.toolbar.undo')
     expect(textContent).not.toContain('edit.visualEditor.animation.toolbar.redo')
+  })
+
+  it('页脚按钮分别发出取消与应用事件', async () => {
+    const onApply = vi.fn()
+    const onCancel = vi.fn()
+
+    renderInBrowser(StatementAnimationEditorPanel, {
+      props: {
+        frames: [{
+          duration: 200,
+        }],
+        onApply,
+        onCancel,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'common.cancel' }).click()
+    await page.getByRole('button', { name: 'common.confirm' }).click()
+
+    expect(onCancel).toHaveBeenCalledOnce()
+    expect(onApply).toHaveBeenCalledOnce()
+  })
+
+  it('宿主提供自己的页脚时可以隐藏面板页脚', async () => {
+    renderInBrowser(StatementAnimationEditorPanel, {
+      props: {
+        frames: [{
+          duration: 200,
+        }],
+        showFooter: false,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('button', { name: 'common.confirm' })).not.toBeInTheDocument()
   })
 
   it('删除当前帧前会先清空草稿，避免旧草稿挂到重排后的帧上', async () => {

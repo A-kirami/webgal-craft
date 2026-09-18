@@ -12,22 +12,7 @@ const editorPanelRef = $(useTemplateRef('editorPanel'))
 const { t } = useI18n()
 useEditorDiagnostics()
 const transformOverlayBridge = inject(TRANSFORM_OVERLAY_BRIDGE_KEY, undefined)
-const EFFECT_EDITOR_INTERACTIVE_REGION_SELECTOR = '[data-effect-editor-interactive-region]'
-const EFFECT_EDITOR_DISMISS_TOP_OFFSET = 28
-
-interface EffectEditorDismissLayerSegment {
-  height: number
-  key: string
-  style: Record<string, string>
-  width?: number
-}
-
-interface EffectEditorInteractiveBounds {
-  bottom: number
-  left: number
-  right: number
-  top: number
-}
+const DRAWER_INTERACTIVE_REGION_SELECTOR = '[data-drawer-interactive-region]'
 
 const TRANSFORM_OVERLAY_FIELD_PATHS = new Set([
   'position.x',
@@ -36,9 +21,6 @@ const TRANSFORM_OVERLAY_FIELD_PATHS = new Set([
   'scale.y',
   'rotation',
 ])
-
-let effectEditorInteractiveRegion = $ref<HTMLElement>()
-let effectEditorInteractiveRect = $ref<DOMRectReadOnly>()
 
 const {
   binding,
@@ -71,111 +53,16 @@ const {
 
 provide(sceneAutocompleteOptionsKey, sceneAutocompleteOptions)
 
-const canUseEffectEditorPreviewRegion = $computed(() => transformOverlayBridge?.enabled.value === true)
+// 预览工作区只在该抽屉的编辑面确实落在预览区时才豁免遮罩：效果编辑器对应变换浮层可用，
+// 动画编辑器的帧级浮层尚未交付，因此它打开期间点预览等同于点抽屉外
+const effectEditorInteractiveRegionSelector = $computed(() =>
+  transformOverlayBridge?.enabled.value === true ? DRAWER_INTERACTIVE_REGION_SELECTOR : undefined,
+)
 
-const effectEditorDismissLayerSegments = $computed<EffectEditorDismissLayerSegment[]>(() => {
-  if (!effectEditorProvider.isOpen) {
-    return []
+function handleAnimationEditorDrawerOpenChange(nextOpen: boolean): void {
+  if (!nextOpen) {
+    statementAnimationDialog.requestClose()
   }
-
-  if (!canUseEffectEditorPreviewRegion) {
-    return [createFullEffectEditorDismissLayerSegment()]
-  }
-
-  const bounds = resolveEffectEditorInteractiveBounds(effectEditorInteractiveRect)
-  if (!bounds) {
-    return [createFullEffectEditorDismissLayerSegment()]
-  }
-
-  const { bottom, left, right, top } = bounds
-  const segments: EffectEditorDismissLayerSegment[] = [
-    {
-      height: top - EFFECT_EDITOR_DISMISS_TOP_OFFSET,
-      key: 'top',
-      style: {
-        height: `${top - EFFECT_EDITOR_DISMISS_TOP_OFFSET}px`,
-        insetInline: '0',
-        top: `${EFFECT_EDITOR_DISMISS_TOP_OFFSET}px`,
-      },
-      width: globalThis.innerWidth,
-    },
-    {
-      height: bottom - top,
-      key: 'left',
-      style: {
-        height: `${bottom - top}px`,
-        left: '0',
-        top: `${top}px`,
-        width: `${left}px`,
-      },
-      width: left,
-    },
-    {
-      height: bottom - top,
-      key: 'right',
-      style: {
-        height: `${bottom - top}px`,
-        left: `${right}px`,
-        right: '0',
-        top: `${top}px`,
-      },
-      width: globalThis.innerWidth - right,
-    },
-    {
-      height: globalThis.innerHeight - bottom,
-      key: 'bottom',
-      style: {
-        bottom: '0',
-        insetInline: '0',
-        top: `${bottom}px`,
-      },
-      width: globalThis.innerWidth,
-    },
-  ]
-
-  return segments.filter(segment => segment.height > 0 && (segment.width ?? 1) > 0)
-})
-
-function createFullEffectEditorDismissLayerSegment(): EffectEditorDismissLayerSegment {
-  return {
-    height: globalThis.innerHeight - EFFECT_EDITOR_DISMISS_TOP_OFFSET,
-    key: 'full',
-    style: {
-      inset: `${EFFECT_EDITOR_DISMISS_TOP_OFFSET}px 0 0 0`,
-    },
-    width: globalThis.innerWidth,
-  }
-}
-
-function resolveEffectEditorInteractiveBounds(
-  rect: DOMRectReadOnly | undefined,
-): EffectEditorInteractiveBounds | undefined {
-  if (!rect) {
-    return undefined
-  }
-
-  const bounds = {
-    bottom: Math.min(globalThis.innerHeight, rect.bottom),
-    left: Math.max(0, rect.left),
-    right: Math.min(globalThis.innerWidth, rect.right),
-    top: Math.max(EFFECT_EDITOR_DISMISS_TOP_OFFSET, rect.top),
-  }
-
-  return bounds.right > bounds.left && bounds.bottom > bounds.top
-    ? bounds
-    : undefined
-}
-
-function updateEffectEditorInteractiveRegion(): void {
-  if (!effectEditorProvider.isOpen) {
-    effectEditorInteractiveRegion = undefined
-    effectEditorInteractiveRect = undefined
-    return
-  }
-
-  const region = document.querySelector<HTMLElement>(EFFECT_EDITOR_INTERACTIVE_REGION_SELECTOR) ?? undefined
-  effectEditorInteractiveRegion = region
-  effectEditorInteractiveRect = region?.getBoundingClientRect()
 }
 
 function handleEffectEditorTransformUpdate(payload: Parameters<typeof handleEffectTransformUpdate>[0]): void {
@@ -219,23 +106,6 @@ function getTransformOverlayFieldValue(path: string): string | undefined {
   }
 }
 
-useEventListener(globalThis, 'resize', updateEffectEditorInteractiveRegion)
-useResizeObserver($$(effectEditorInteractiveRegion), updateEffectEditorInteractiveRegion)
-
-watch(
-  () => effectEditorProvider.isOpen,
-  async (isOpen) => {
-    if (!isOpen) {
-      updateEffectEditorInteractiveRegion()
-      return
-    }
-
-    await nextTick()
-    updateEffectEditorInteractiveRegion()
-  },
-  { flush: 'post', immediate: true },
-)
-
 const sidebarEmptyText = $computed(() => (
   binding.value?.getEmptyState?.() === 'multiple-edit-targets'
     ? t('edit.textEditor.formPanel.multipleEditTargets')
@@ -246,7 +116,6 @@ const sidebarEmptyText = $computed(() => (
 
 useShortcutContext({
   commandPanelOpen: computed(() => !isCommandPanelCollapsed.value),
-  isModalOpen: computed(() => statementAnimationDialog.isOpen),
 })
 
 useShortcut({
@@ -279,6 +148,28 @@ useShortcut({
   id: 'effect.close',
   keys: 'Escape',
   when: { panelFocus: 'effectEditor' },
+})
+
+useShortcut({
+  allowInInput: true,
+  execute: () => {
+    statementAnimationDialog.handleApply()
+  },
+  i18nKey: 'shortcut.animation.apply',
+  id: 'animation.apply',
+  keys: 'Mod+Enter',
+  when: { panelFocus: 'animationEditor' },
+})
+
+useShortcut({
+  allowInInput: true,
+  execute: () => {
+    statementAnimationDialog.requestClose()
+  },
+  i18nKey: 'shortcut.animation.close',
+  id: 'animation.close',
+  keys: 'Escape',
+  when: { panelFocus: 'animationEditor' },
 })
 
 defineExpose({ expandCommandPanel, toggleCommandPanel })
@@ -346,61 +237,73 @@ defineExpose({ expandCommandPanel, toggleCommandPanel })
         <FileEditor class="flex-1 min-h-0" />
       </div>
 
-      <Sheet :open="effectEditorProvider.isOpen" :modal="false" @update:open="handleEffectEditorSheetOpenChange">
-        <div
-          v-for="segment in effectEditorDismissLayerSegments"
-          :key="segment.key"
-          data-testid="effect-editor-dismiss-layer"
-          class="fixed z-40"
-          :style="segment.style"
-          aria-hidden="true"
-          @click="closeEffectEditor"
-        />
-        <SheetContent
-          :to="editorPanelRef ?? undefined"
-          :overlay="false"
-          side="right"
-          data-tour="effect-editor"
-          class="p-4 max-w-none w-108 absolute sm:max-w-none"
-          @open-auto-focus.prevent
-          @close-auto-focus.prevent
-          @pointer-down-outside.prevent
-          @interact-outside.prevent
-        >
-          <div class="flex flex-col h-full">
-            <SheetHeader class="pr-8 gap-y-0.5">
-              <SheetTitle>
-                {{ $t('modals.effectEditor.title') }}
-              </SheetTitle>
-              <SheetDescription class="text-13px!">
-                {{ $t('modals.effectEditor.description') }}
-              </SheetDescription>
-            </SheetHeader>
-            <Separator class="mb-4 mt-2" />
-            <EffectEditorPanel
-              v-if="effectEditorSession"
-              class="flex-1 min-h-0"
-              :transform="effectEditorSession.draft.transform"
-              :baseline-source="effectEditorSession.baselineSource"
-              :baseline-transform="effectEditorSession.baselineTransform"
-              :preview-field-value="getTransformOverlayFieldValue"
-              :duration="effectEditorSession.draft.duration"
-              :ease="effectEditorSession.draft.ease"
-              :can-apply="effectEditorProvider.canApply"
-              :can-clear="effectEditorProvider.canClear"
-              @update:transform="handleEffectEditorTransformUpdate"
-              @update:duration="effectEditorProvider.updateDraft({ duration: $event })"
-              @update:ease="effectEditorProvider.updateDraft({ ease: $event })"
-              @preview="effectEditorProvider.requestPreview"
-              @cancel-preview="effectEditorProvider.cancelPreview"
-              @apply="handleEffectApply"
-              @clear="effectEditorProvider.clearDraft"
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <EditorDrawer
+        :anchor="editorPanelRef ?? undefined"
+        :interactive-region-selector="effectEditorInteractiveRegionSelector"
+        :open="effectEditorProvider.isOpen"
+        panel-focus="effectEditor"
+        data-tour="effect-editor"
+        class="p-4 max-w-none w-108 sm:max-w-none"
+        @update:open="handleEffectEditorSheetOpenChange"
+      >
+        <div class="flex flex-col h-full">
+          <SheetHeader class="pr-8 gap-y-0.5">
+            <SheetTitle>
+              {{ $t('modals.effectEditor.title') }}
+            </SheetTitle>
+            <SheetDescription class="text-13px!">
+              {{ $t('modals.effectEditor.description') }}
+            </SheetDescription>
+          </SheetHeader>
+          <Separator class="mb-4 mt-2" />
+          <EffectEditorPanel
+            v-if="effectEditorSession"
+            class="flex-1 min-h-0"
+            :transform="effectEditorSession.draft.transform"
+            :baseline-source="effectEditorSession.baselineSource"
+            :baseline-transform="effectEditorSession.baselineTransform"
+            :preview-field-value="getTransformOverlayFieldValue"
+            :duration="effectEditorSession.draft.duration"
+            :ease="effectEditorSession.draft.ease"
+            :can-apply="effectEditorProvider.canApply"
+            :can-clear="effectEditorProvider.canClear"
+            @update:transform="handleEffectEditorTransformUpdate"
+            @update:duration="effectEditorProvider.updateDraft({ duration: $event })"
+            @update:ease="effectEditorProvider.updateDraft({ ease: $event })"
+            @preview="effectEditorProvider.requestPreview"
+            @cancel-preview="effectEditorProvider.cancelPreview"
+            @apply="handleEffectApply"
+            @clear="effectEditorProvider.clearDraft"
+          />
+        </div>
+      </EditorDrawer>
 
-      <StatementAnimationSubDialog :animation-dialog="statementAnimationDialog" />
+      <EditorDrawer
+        :anchor="editorPanelRef ?? undefined"
+        :open="statementAnimationDialog.isOpen"
+        panel-focus="animationEditor"
+        class="p-4 max-w-full w-160 sm:max-w-full"
+        @update:open="handleAnimationEditorDrawerOpenChange"
+      >
+        <div class="flex flex-col h-full">
+          <SheetHeader class="pr-8 gap-y-0.5">
+            <SheetTitle>
+              {{ $t('edit.visualEditor.animation.title') }}
+            </SheetTitle>
+            <SheetDescription class="text-13px!">
+              {{ $t('edit.visualEditor.animation.description') }}
+            </SheetDescription>
+          </SheetHeader>
+          <Separator class="mb-4 mt-2" />
+          <StatementAnimationEditorPanel
+            class="flex-1 min-h-0"
+            :frames="statementAnimationDialog.draftFrames"
+            @update:frames="statementAnimationDialog.updateFrames"
+            @apply="statementAnimationDialog.handleApply"
+            @cancel="statementAnimationDialog.requestClose"
+          />
+        </div>
+      </EditorDrawer>
     </div>
   </div>
 </template>

@@ -5,6 +5,7 @@ import { defineComponent, h, ref } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
 import CommandPanelCard from '~/components/editor/CommandPanelCard.vue'
+import EditorDrawer from '~/components/editor/EditorDrawer.vue'
 import EffectEditorPanel from '~/components/editor/EffectEditorPanel.vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '~/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '~/components/ui/tabs'
@@ -333,15 +334,20 @@ function createEffectEditorFocusHarness() {
         },
       })
 
-      return () => h(EffectEditorPanel, {
-        canApply: false,
-        canClear: canClear.value,
-        duration: '',
-        ease: '',
-        onClear: () => {
-          canClear.value = false
-        },
-        transform: { blur: 8 },
+      return () => h(EditorDrawer, {
+        open: true,
+        panelFocus: 'effectEditor',
+      }, {
+        default: () => h(EffectEditorPanel, {
+          canApply: false,
+          canClear: canClear.value,
+          duration: '',
+          ease: '',
+          onClear: () => {
+            canClear.value = false
+          },
+          transform: { blur: 8 },
+        }),
       })
     },
   })

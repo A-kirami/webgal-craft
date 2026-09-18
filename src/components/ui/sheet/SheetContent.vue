@@ -36,6 +36,16 @@ const delegatedProps = reactiveOmit(props, "class", "side", "overlay", "to")
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 
+const contentRef = useTemplateRef<InstanceType<typeof DialogContent>>('contentRef')
+
+// 浮层宿主需要按「整个表面」注册快捷键上下文；本组件根节点是 Teleport，$el 不可靠，故显式暴露内容元素
+const contentElement = computed(() => {
+  const element = contentRef.value?.$el
+  return element instanceof HTMLElement ? element : undefined
+})
+
+defineExpose({ contentElement })
+
 const contentStyle = computed(() => {
   if (!props.to) {
     return
@@ -54,6 +64,7 @@ const contentStyle = computed(() => {
       class="fixed inset-0 z-50 bg-black/10 supports-[backdrop-filter:blur(2px)]:backdrop-blur-xs duration-100 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
     />
     <DialogContent
+      ref="contentRef"
       :class="cn(sheetVariants({ side }), props.class)"
       :style="contentStyle"
       v-bind="{ ...forwarded, ...$attrs }"

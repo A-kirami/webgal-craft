@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
-
 import type { Transform } from '~/domain/stage/types'
 import type {
   EffectEditorPreviewPayload,
@@ -35,13 +33,6 @@ const emit = defineEmits<{
   'apply': []
   'clear': []
 }>()
-
-useShortcutContext({
-  panelFocus: 'effectEditor',
-}, {
-  target: panelRef,
-  trackFocus: true,
-})
 
 onMounted(() => {
   panelRef.value?.focus({ preventScroll: true })
