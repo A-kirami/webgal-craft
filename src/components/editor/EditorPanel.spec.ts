@@ -327,7 +327,9 @@ const globalStubs = {
   StatementAnimationEditorPanel: defineComponent({
     name: 'StubStatementAnimationEditorPanel',
     setup() {
-      return () => h('div', 'Statement Animation Editor Panel')
+      return () => h('button', {
+        type: 'button',
+      }, 'Statement Animation Editor Panel')
     },
   }),
 }
@@ -663,13 +665,13 @@ describe('EditorPanel', () => {
     expect(statementAnimationDialogMock.requestClose).toHaveBeenCalledOnce()
   })
 
-  it('动画编辑器抽屉的页脚获得焦点时仍保持动画编辑器快捷键上下文', async () => {
+  it('动画编辑器抽屉内容获得焦点时仍保持动画编辑器快捷键上下文', async () => {
     statementAnimationDialogMock.isOpen = true
 
     // 上下文挂在抽屉表面上，桩掉 SheetContent 就拿不到表面元素，这里用真实浮层
     renderEditorPanel({ stubs: { Sheet: false, SheetContent: false } })
 
-    await page.getByRole('button', { name: '确认' }).click()
+    await page.getByRole('button', { name: 'Statement Animation Editor Panel' }).click()
 
     await vi.waitFor(() => {
       expect(useShortcutContextRegistry().resolveContext().panelFocus).toBe('animationEditor')

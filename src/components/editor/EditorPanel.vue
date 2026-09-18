@@ -299,15 +299,9 @@ defineExpose({ expandCommandPanel, toggleCommandPanel })
             class="flex-1 min-h-0"
             :frames="statementAnimationDialog.draftFrames"
             @update:frames="statementAnimationDialog.updateFrames"
+            @apply="statementAnimationDialog.handleApply"
+            @cancel="statementAnimationDialog.requestClose"
           />
-          <div class="mt-4 flex gap-2 justify-end">
-            <Button size="sm" variant="outline" @click="statementAnimationDialog.requestClose">
-              {{ $t('common.cancel') }}
-            </Button>
-            <Button size="sm" @click="statementAnimationDialog.handleApply">
-              {{ $t('common.confirm') }}
-            </Button>
-          </div>
         </div>
       </EditorDrawer>
     </div>

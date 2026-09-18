@@ -149,6 +149,46 @@ describe('StatementAnimationEditorPanel', () => {
     expect(textContent).not.toContain('edit.visualEditor.animation.toolbar.redo')
   })
 
+  it('页脚按钮分别发出取消与应用事件', async () => {
+    const onApply = vi.fn()
+    const onCancel = vi.fn()
+
+    renderInBrowser(StatementAnimationEditorPanel, {
+      props: {
+        frames: [{
+          duration: 200,
+        }],
+        onApply,
+        onCancel,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'common.cancel' }).click()
+    await page.getByRole('button', { name: 'common.confirm' }).click()
+
+    expect(onCancel).toHaveBeenCalledOnce()
+    expect(onApply).toHaveBeenCalledOnce()
+  })
+
+  it('宿主提供自己的页脚时可以隐藏面板页脚', async () => {
+    renderInBrowser(StatementAnimationEditorPanel, {
+      props: {
+        frames: [{
+          duration: 200,
+        }],
+        showFooter: false,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('button', { name: 'common.confirm' })).not.toBeInTheDocument()
+  })
+
   it('删除当前帧前会先清空草稿，避免旧草稿挂到重排后的帧上', async () => {
     const { state, stub } = createAnimationEditorPaneStub()
     const frames = reactive<AnimationFrame[]>([

@@ -22,6 +22,7 @@ const props = defineProps<Props>()
       <div class="h-full min-h-0 overflow-hidden">
         <StatementAnimationEditorPanel
           :frames="props.animationDialog.draftFrames"
+          :show-footer="false"
           @update:frames="props.animationDialog.updateFrames"
         />
       </div>

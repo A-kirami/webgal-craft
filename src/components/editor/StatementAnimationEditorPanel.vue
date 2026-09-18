@@ -5,12 +5,17 @@ import type { AnimationFrame } from '~/domain/stage/types'
 
 interface Props {
   frames: readonly AnimationFrame[]
+  showFooter?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  showFooter: true,
+})
 
 const emit = defineEmits<{
   'update:frames': [frames: AnimationFrame[]]
+  'apply': []
+  'cancel': []
 }>()
 
 const panelRef = useTemplateRef<HTMLElement>('panelRef')
@@ -57,5 +62,14 @@ onBeforeUnmount(() => {
       @update:selected-frame-duration="controller.handleDurationUpdate"
       @update:selected-frame-ease="controller.handleEaseUpdate"
     />
+
+    <div v-if="props.showFooter" class="mt-4 flex gap-2 justify-end">
+      <Button size="sm" variant="outline" @click="emit('cancel')">
+        {{ $t('common.cancel') }}
+      </Button>
+      <Button size="sm" @click="emit('apply')">
+        {{ $t('common.confirm') }}
+      </Button>
+    </div>
   </div>
 </template>
