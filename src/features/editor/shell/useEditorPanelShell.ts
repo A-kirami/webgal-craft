@@ -224,16 +224,26 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     }
   }
 
-  function focusTextEditorAfterEffectEditorClose(): void {
-    if (currentProjection.value === 'text') {
-      tabsStore.shouldFocusEditor = true
-    }
+  // 用 shouldFocusEditor 请求编辑器表面重新聚焦，而不是记住某个元素：文本与可视化投影各自消费该信号
+  // （Monaco / 选中语句卡片），投影切换或节点重建都不会失效
+  function requestEditorSurfaceFocus(): void {
+    tabsStore.shouldFocusEditor = true
   }
+
+  // 关闭路径不止一条（直接关闭、二次确认后放弃、应用），统一在抽屉会话结束时交还焦点
+  watch(
+    () => statementAnimationDialog.isOpen,
+    (isOpen, wasOpen) => {
+      if (wasOpen && !isOpen) {
+        requestEditorSurfaceFocus()
+      }
+    },
+  )
 
   async function closeEffectEditor(): Promise<void> {
     const closed = await effectEditorProvider.close()
     if (closed) {
-      focusTextEditorAfterEffectEditorClose()
+      requestEditorSurfaceFocus()
     }
   }
 
@@ -267,7 +277,7 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
 
     const applied = await effectEditorProvider.apply()
     if (applied) {
-      focusTextEditorAfterEffectEditorClose()
+      requestEditorSurfaceFocus()
     }
   }
 

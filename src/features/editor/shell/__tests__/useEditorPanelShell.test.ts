@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { computed, effectScope, reactive, shallowRef } from 'vue'
+import { computed, effectScope, nextTick, reactive, shallowRef } from 'vue'
 
 import { buildSingleStatement, buildStatements, createTransientStatementEntry } from '~/domain/script/sentence'
 
@@ -93,8 +93,11 @@ vi.mock('~/features/editor/shortcut/useShortcut', () => ({
   useShortcut: useShortcutMock,
 }))
 
+// 抽屉关闭会驱动 shell 的 isOpen 侦听，mock 必须是响应式的才能覆盖这条路径
+const statementAnimationDialogState = reactive(statementAnimationDialogMock)
+
 vi.mock('~/features/editor/animation/useStatementAnimationDialog', () => ({
-  useStatementAnimationDialog: () => statementAnimationDialogMock,
+  useStatementAnimationDialog: () => statementAnimationDialogState,
 }))
 
 vi.mock('~/features/editor/effect-editor/useEffectEditorProvider', () => ({
@@ -359,14 +362,27 @@ describe('useEditorPanelShell', () => {
     scope.stop()
   })
 
-  it('文本模式关闭 effect editor 后会请求重新聚焦文本编辑器', async () => {
-    const { scope, shell, tabsStore } = createFixture({
-      currentProjection: 'text',
-    })
+  it('关闭 effect editor 后请求编辑器表面重新聚焦', async () => {
+    const { scope, shell, tabsStore } = createFixture()
 
     await shell.closeEffectEditor()
 
     expect(effectEditorProviderMock.close).toHaveBeenCalledTimes(1)
+    expect(tabsStore.shouldFocusEditor).toBe(true)
+
+    scope.stop()
+  })
+
+  it('动画编辑器抽屉关闭后请求编辑器表面重新聚焦', async () => {
+    const { scope, shell, tabsStore } = createFixture()
+
+    shell.statementAnimationDialog.isOpen = true
+    await nextTick()
+    expect(tabsStore.shouldFocusEditor).toBe(false)
+
+    shell.statementAnimationDialog.isOpen = false
+    await nextTick()
+
     expect(tabsStore.shouldFocusEditor).toBe(true)
 
     scope.stop()

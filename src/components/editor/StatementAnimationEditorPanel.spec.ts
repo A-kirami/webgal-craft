@@ -8,6 +8,7 @@ import {
   renderInBrowser,
 } from '~/__tests__/browser-render'
 
+import EditorDrawer from './EditorDrawer.vue'
 import StatementAnimationEditorPanel from './StatementAnimationEditorPanel.vue'
 
 import type { AnimationFrame } from '~/domain/stage/types'
@@ -82,6 +83,55 @@ function createAnimationEditorPaneStub() {
 }
 
 describe('StatementAnimationEditorPanel', () => {
+  it('关闭抽屉且宿主未接管焦点时把焦点还给触发元素', async () => {
+    const harness = defineComponent({
+      name: 'AnimationDrawerFocusHarness',
+      setup() {
+        const isOpen = ref(false)
+
+        return () => h('div', [
+          h('button', {
+            'data-testid': 'drawer-trigger',
+            'onClick': () => {
+              isOpen.value = true
+            },
+            'type': 'button',
+          }, 'open'),
+          h(EditorDrawer, {
+            'open': isOpen.value,
+            'panelFocus': 'animationEditor',
+            'onUpdate:open': (value: boolean) => {
+              if (!value) {
+                isOpen.value = false
+              }
+            },
+          }, {
+            default: () => h(StatementAnimationEditorPanel, {
+              frames: [{ duration: 200 }],
+            }),
+          }),
+        ])
+      },
+    })
+
+    renderInBrowser(harness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByTestId('drawer-trigger').click()
+    await expect.element(page.getByTestId('statement-animation-editor-panel')).toBeVisible()
+    expect(document.activeElement?.getAttribute('data-testid')).toBe('statement-animation-editor-panel')
+
+    await page.getByRole('button', { name: 'Close' }).click()
+    await expect.element(page.getByTestId('statement-animation-editor-panel')).not.toBeInTheDocument()
+
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(document.querySelector('[data-testid="drawer-trigger"]'))
+    })
+  })
+
   it('关闭后会把焦点还给打开它的元素', async () => {
     const harness = defineComponent({
       name: 'StatementAnimationEditorPanelHarness',
