@@ -593,8 +593,12 @@ describe('PreviewPanel', () => {
     expect(iframe.style.pointerEvents).toBe('')
   })
 
-  it('空格平移模式下按在悬浮工具栏上不会启动视口平移', async () => {
-    renderInBrowser(PreviewPanel, {
+  it.each([
+    ['放大按钮', (root: HTMLElement) => root.querySelectorAll('button')[1]],
+    ['缩放百分比读数', (root: HTMLElement) => root.querySelector<HTMLElement>('[aria-label="edit.previewPanel.zoomLevel"]')],
+    ['分辨率读数', (root: HTMLElement) => root.querySelector<HTMLElement>('[data-testid="preview-resolution"]')],
+  ])('空格平移模式下按在悬浮%s上不会启动视口平移', async (_name, resolveTarget) => {
+    const rendered = renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -605,10 +609,10 @@ describe('PreviewPanel', () => {
       expect(getGameConfigMock).toHaveBeenCalledTimes(1)
     })
 
-    const toolbar = document.querySelector<HTMLElement>('[data-testid="preview-bottom-toolbar"]')
-    const zoomIn = toolbar?.querySelectorAll('button')[1]
+    const target = resolveTarget(rendered.container)
     const { iframeWindow } = getPreviewIframe()
-    expect(zoomIn).toBeInstanceOf(HTMLButtonElement)
+    expect(target).not.toBeNull()
+    expect(target).toBeInstanceOf(HTMLElement)
 
     dispatchPreviewSpaceKeyMessage(iframeWindow, true)
     await nextTick()
@@ -616,7 +620,7 @@ describe('PreviewPanel', () => {
     expect(interactionOverlay).not.toBeNull()
     expect(getComputedStyle(interactionOverlay as HTMLElement).cursor).toBe('grab')
 
-    zoomIn?.dispatchEvent(new PointerEvent('pointerdown', {
+    target?.dispatchEvent(new PointerEvent('pointerdown', {
       bubbles: true,
       button: 0,
       buttons: 1,

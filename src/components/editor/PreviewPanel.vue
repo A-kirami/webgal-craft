@@ -81,6 +81,9 @@ const previewTitle = $computed(() => t('edit.previewPanel.previewTitle', { name:
 const resolutionLabel = $computed(() => `${stageWidth} x ${stageHeight}`)
 
 const PREVIEW_WORKSPACE_FOCUSABLE_SELECTOR = 'a[href], button, input, textarea, select, [contenteditable="true"], [tabindex]:not([tabindex="-1"])'
+// 悬浮在预览画面上的分辨率与缩放读数不是可聚焦控件，无法由聚焦选择器识别
+const PREVIEW_VIEWPORT_CHROME_SELECTOR = '[data-preview-viewport-chrome]'
+const PREVIEW_VIEWPORT_TARGET_SELECTOR = `${PREVIEW_WORKSPACE_FOCUSABLE_SELECTOR}, ${PREVIEW_VIEWPORT_CHROME_SELECTOR}`
 
 let aspectRatio = $ref(DEFAULT_PREVIEW_PANEL_ASPECT_RATIO)
 let stageWidth = $ref(DEFAULT_PREVIEW_PANEL_STAGE_WIDTH)
@@ -174,6 +177,11 @@ function isPointerFocusManagedByTarget(target: EventTarget | null): boolean {
     && target.closest(PREVIEW_WORKSPACE_FOCUSABLE_SELECTOR) !== null
 }
 
+function isPreviewViewportTarget(target: EventTarget | null): boolean {
+  return target instanceof Element
+    && target.closest(PREVIEW_VIEWPORT_TARGET_SELECTOR) !== null
+}
+
 function handlePreviewWorkspacePointerDown(event: PointerEvent): void {
   if (!transformOverlayEnabled || isPointerFocusManagedByTarget(event.target)) {
     return
@@ -193,8 +201,8 @@ function handlePreviewViewportWheel(event: WheelEvent): void {
 }
 
 function handlePreviewViewportPointerDown(event: PointerEvent): void {
-  // 悬浮工具栏等控件位于视口内部，其按下不应进入空格/中键平移
-  if (!canPreview || isPointerFocusManagedByTarget(event.target)) {
+  // 悬浮在视口内的工具栏与读数按下时不应进入空格/中键平移，平移只作用于预览画面
+  if (!canPreview || isPreviewViewportTarget(event.target)) {
     return
   }
 
@@ -673,6 +681,7 @@ onBeforeUnmount(() => {
         <output
           v-if="canPreview"
           data-testid="preview-resolution"
+          data-preview-viewport-chrome
           class="text-xs text-muted-foreground leading-none font-medium font-mono px-2 border rounded-md bg-background/80 flex h-7 pointer-events-none select-none whitespace-nowrap items-center bottom-1 left-1 absolute z-10 backdrop-blur-sm tabular-nums"
           :aria-label="$t('edit.previewPanel.resolution')"
         >
@@ -681,6 +690,7 @@ onBeforeUnmount(() => {
         <div
           v-if="canPreview"
           data-testid="preview-bottom-toolbar"
+          data-preview-viewport-chrome
           class="text-muted-foreground px-0.5 border rounded-md bg-background/80 flex h-7 items-center bottom-1 right-1 absolute z-10 backdrop-blur-sm"
         >
           <ViewportControls
