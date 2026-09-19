@@ -595,9 +595,9 @@ describe('PreviewPanel', () => {
 
   it.each([
     ['放大按钮', (root: HTMLElement) => root.querySelectorAll('button')[1]],
-    ['缩放百分比读数', (root: HTMLElement) => root.querySelector<HTMLElement>('[aria-label="edit.previewPanel.zoomLevel"]')],
-    ['分辨率读数', (root: HTMLElement) => root.querySelector<HTMLElement>('[data-testid="preview-resolution"]')],
-  ])('空格平移模式下按在悬浮%s上不会启动视口平移', async (_name, resolveTarget) => {
+    ['缩放百分比读数', (root: HTMLElement) => root.querySelector('[data-testid="preview-bottom-toolbar"] output')],
+    ['工具栏空白处', (root: HTMLElement) => root.querySelector<HTMLElement>('[data-testid="preview-bottom-toolbar"]')],
+  ])('空格平移模式下按在悬浮工具栏的%s上不会启动视口平移', async (_name, resolveTarget) => {
     const rendered = renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],

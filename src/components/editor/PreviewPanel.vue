@@ -81,7 +81,7 @@ const previewTitle = $computed(() => t('edit.previewPanel.previewTitle', { name:
 const resolutionLabel = $computed(() => `${stageWidth} x ${stageHeight}`)
 
 const PREVIEW_WORKSPACE_FOCUSABLE_SELECTOR = 'a[href], button, input, textarea, select, [contenteditable="true"], [tabindex]:not([tabindex="-1"])'
-// 悬浮在预览画面上的分辨率与缩放读数不是可聚焦控件，无法由聚焦选择器识别
+// 悬浮工具栏内的读数与容器不是可聚焦控件，无法由聚焦选择器识别
 const PREVIEW_VIEWPORT_CHROME_SELECTOR = '[data-preview-viewport-chrome]'
 const PREVIEW_VIEWPORT_TARGET_SELECTOR = `${PREVIEW_WORKSPACE_FOCUSABLE_SELECTOR}, ${PREVIEW_VIEWPORT_CHROME_SELECTOR}`
 
@@ -681,7 +681,6 @@ onBeforeUnmount(() => {
         <output
           v-if="canPreview"
           data-testid="preview-resolution"
-          data-preview-viewport-chrome
           class="text-xs text-muted-foreground leading-none font-medium font-mono px-2 border rounded-md bg-background/80 flex h-7 pointer-events-none select-none whitespace-nowrap items-center bottom-1 left-1 absolute z-10 backdrop-blur-sm tabular-nums"
           :aria-label="$t('edit.previewPanel.resolution')"
         >
