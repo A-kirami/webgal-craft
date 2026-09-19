@@ -690,7 +690,7 @@ onBeforeUnmount(() => {
           v-if="canPreview"
           data-testid="preview-bottom-toolbar"
           data-preview-viewport-chrome
-          class="text-muted-foreground px-0.5 border rounded-md bg-background/80 flex h-7 items-center bottom-1 right-1 absolute z-10 backdrop-blur-sm"
+          class="text-muted-foreground px-0.5 border rounded-md bg-background/80 flex h-7 cursor-default items-center bottom-1 right-1 absolute z-10 backdrop-blur-sm"
         >
           <ViewportControls
             :zoom-ratio="previewViewport.zoomRatio.value"
