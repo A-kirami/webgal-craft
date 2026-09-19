@@ -593,6 +593,42 @@ describe('PreviewPanel', () => {
     expect(iframe.style.pointerEvents).toBe('')
   })
 
+  it('空格平移模式下按在悬浮工具栏上不会启动视口平移', async () => {
+    renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getGameConfigMock).toHaveBeenCalledTimes(1)
+    })
+
+    const toolbar = document.querySelector<HTMLElement>('[data-testid="preview-bottom-toolbar"]')
+    const zoomIn = toolbar?.querySelectorAll('button')[1]
+    const { iframeWindow } = getPreviewIframe()
+    expect(zoomIn).toBeInstanceOf(HTMLButtonElement)
+
+    dispatchPreviewSpaceKeyMessage(iframeWindow, true)
+    await nextTick()
+    const interactionOverlay = document.querySelector<HTMLElement>('[data-testid="preview-interaction-overlay"]')
+    expect(interactionOverlay).not.toBeNull()
+    expect(getComputedStyle(interactionOverlay as HTMLElement).cursor).toBe('grab')
+
+    zoomIn?.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      buttons: 1,
+      clientX: 10,
+      clientY: 10,
+      pointerId: 3,
+    }))
+    await nextTick()
+
+    expect(getComputedStyle(interactionOverlay as HTMLElement).cursor).toBe('grab')
+  })
+
   it('按下 Ctrl 不会进入抓手交互态', async () => {
     renderInBrowser(PreviewPanel, {
       global: {

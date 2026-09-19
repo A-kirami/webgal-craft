@@ -193,7 +193,8 @@ function handlePreviewViewportWheel(event: WheelEvent): void {
 }
 
 function handlePreviewViewportPointerDown(event: PointerEvent): void {
-  if (!canPreview) {
+  // 悬浮工具栏等控件位于视口内部，其按下不应进入空格/中键平移
+  if (!canPreview || isPointerFocusManagedByTarget(event.target)) {
     return
   }
 
