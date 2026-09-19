@@ -605,7 +605,7 @@ onBeforeUnmount(() => {
       ref="previewWorkspace"
       data-drawer-interactive-region
       tabindex="-1"
-      class="outline-none flex flex-1 flex-col min-h-0 divide-y"
+      class="outline-none flex flex-1 flex-col min-h-0"
       @pointerdown="handlePreviewWorkspacePointerDown"
     >
       <div
@@ -669,26 +669,27 @@ onBeforeUnmount(() => {
           class="inset-0 absolute z-5"
           :style="previewInteractionOverlayStyle"
         />
-      </div>
-      <div
-        v-if="hasPreviewUrl"
-        data-testid="preview-bottom-toolbar"
-        class="text-muted-foreground px-2 bg-background/80 flex flex-shrink-0 h-6.5 items-center justify-between"
-      >
         <output
+          v-if="hasPreviewUrl"
           data-testid="preview-resolution"
-          class="text-xs leading-none font-medium font-mono pointer-events-none select-none tabular-nums"
+          class="text-xs text-muted-foreground leading-none font-medium font-mono px-2 border rounded-md bg-background/80 flex h-7 pointer-events-none select-none whitespace-nowrap items-center bottom-1 left-1 absolute z-10 backdrop-blur-sm tabular-nums"
           :aria-label="$t('edit.previewPanel.resolution')"
         >
           {{ resolutionLabel }}
         </output>
-        <ViewportControls
-          :disabled="!canPreview"
-          :zoom-ratio="previewViewport.zoomRatio.value"
-          @zoom-in="previewViewport.zoomIn"
-          @zoom-out="previewViewport.zoomOut"
-          @fit-to-view="previewViewport.fitToView"
-        />
+        <div
+          v-if="hasPreviewUrl"
+          data-testid="preview-bottom-toolbar"
+          class="text-muted-foreground px-0.5 border rounded-md bg-background/80 flex h-7 items-center bottom-1 right-1 absolute z-10 backdrop-blur-sm"
+        >
+          <ViewportControls
+            :disabled="!canPreview"
+            :zoom-ratio="previewViewport.zoomRatio.value"
+            @zoom-in="previewViewport.zoomIn"
+            @zoom-out="previewViewport.zoomOut"
+            @fit-to-view="previewViewport.fitToView"
+          />
+        </div>
       </div>
     </div>
   </div>
