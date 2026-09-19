@@ -435,10 +435,8 @@ describe('PreviewPanel', () => {
     await expect.element(page.getByTestId('preview-missing-entry-overlay')).toHaveRole('alert')
     expect(document.querySelector('iframe')).toBeNull()
     expect(document.querySelector('[data-testid="preview-connection-status"]')).toBeNull()
-    await expect.element(page.getByTestId('preview-bottom-toolbar')).toBeVisible()
-    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.zoomOut' })).toBeDisabled()
-    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.zoomIn' })).toBeDisabled()
-    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.fitToView' })).toBeDisabled()
+    expect(document.querySelector('[data-testid="preview-bottom-toolbar"]')).toBeNull()
+    expect(document.querySelector('[data-testid="preview-resolution"]')).toBeNull()
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.refreshPreview' })).toBeDisabled()
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.openInBrowser' })).toBeDisabled()
     expect(startEmbeddedPreviewConnectionMock).not.toHaveBeenCalled()
@@ -593,6 +591,46 @@ describe('PreviewPanel', () => {
 
     expect(document.querySelector('[data-testid="preview-interaction-overlay"]')).toBeNull()
     expect(iframe.style.pointerEvents).toBe('')
+  })
+
+  it.each([
+    ['放大按钮', (root: HTMLElement) => root.querySelectorAll('button')[1]],
+    ['缩放百分比读数', (root: HTMLElement) => root.querySelector('[data-testid="preview-bottom-toolbar"] output')],
+    ['工具栏空白处', (root: HTMLElement) => root.querySelector<HTMLElement>('[data-testid="preview-bottom-toolbar"]')],
+  ])('空格平移模式下按在悬浮工具栏的%s上不会启动视口平移', async (_name, resolveTarget) => {
+    const rendered = renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await vi.waitFor(() => {
+      expect(getGameConfigMock).toHaveBeenCalledTimes(1)
+    })
+
+    const target = resolveTarget(rendered.container)
+    const { iframeWindow } = getPreviewIframe()
+    expect(target).not.toBeNull()
+    expect(target).toBeInstanceOf(HTMLElement)
+
+    dispatchPreviewSpaceKeyMessage(iframeWindow, true)
+    await nextTick()
+    const interactionOverlay = document.querySelector<HTMLElement>('[data-testid="preview-interaction-overlay"]')
+    expect(interactionOverlay).not.toBeNull()
+    expect(getComputedStyle(interactionOverlay as HTMLElement).cursor).toBe('grab')
+
+    target?.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      buttons: 1,
+      clientX: 10,
+      clientY: 10,
+      pointerId: 3,
+    }))
+    await nextTick()
+
+    expect(getComputedStyle(interactionOverlay as HTMLElement).cursor).toBe('grab')
   })
 
   it('按下 Ctrl 不会进入抓手交互态', async () => {
