@@ -670,7 +670,7 @@ onBeforeUnmount(() => {
           :style="previewInteractionOverlayStyle"
         />
         <output
-          v-if="hasPreviewUrl"
+          v-if="canPreview"
           data-testid="preview-resolution"
           class="text-xs text-muted-foreground leading-none font-medium font-mono px-2 border rounded-md bg-background/80 flex h-7 pointer-events-none select-none whitespace-nowrap items-center bottom-1 left-1 absolute z-10 backdrop-blur-sm tabular-nums"
           :aria-label="$t('edit.previewPanel.resolution')"
@@ -678,12 +678,11 @@ onBeforeUnmount(() => {
           {{ resolutionLabel }}
         </output>
         <div
-          v-if="hasPreviewUrl"
+          v-if="canPreview"
           data-testid="preview-bottom-toolbar"
           class="text-muted-foreground px-0.5 border rounded-md bg-background/80 flex h-7 items-center bottom-1 right-1 absolute z-10 backdrop-blur-sm"
         >
           <ViewportControls
-            :disabled="!canPreview"
             :zoom-ratio="previewViewport.zoomRatio.value"
             @zoom-in="previewViewport.zoomIn"
             @zoom-out="previewViewport.zoomOut"
