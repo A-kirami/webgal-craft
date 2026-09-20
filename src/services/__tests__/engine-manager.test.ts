@@ -11,6 +11,7 @@ const {
   addMock,
   copyDirectoryWithProgressMock,
   deleteFileMock,
+  engineGetMock,
   enginesDeleteMock,
   engineWhereFilterFirstMock,
   engineWhereFilterMock,
@@ -22,11 +23,13 @@ const {
   engineWhereMock,
   existsMock,
   findGamesToArrayMock,
+  gamesToArrayMock,
   gameWhereEqualsMock,
   gameWhereMock,
   iconPathMock,
   loggerWarnMock,
   readEngineManifestMock,
+  readProjectConfigMock,
   resourceStoreMock,
   useResourceStoreMock,
   useStorageSettingsStoreMock,
@@ -36,6 +39,7 @@ const {
   addMock: vi.fn(),
   copyDirectoryWithProgressMock: vi.fn(),
   deleteFileMock: vi.fn(),
+  engineGetMock: vi.fn(),
   enginesDeleteMock: vi.fn(),
   engineWhereFilterFirstMock: vi.fn(),
   engineWhereFilterMock: vi.fn(),
@@ -47,11 +51,13 @@ const {
   engineWhereMock: vi.fn(),
   existsMock: vi.fn(),
   findGamesToArrayMock: vi.fn(),
+  gamesToArrayMock: vi.fn(),
   gameWhereEqualsMock: vi.fn(),
   gameWhereMock: vi.fn(),
   iconPathMock: vi.fn(),
   loggerWarnMock: vi.fn(),
   readEngineManifestMock: vi.fn(),
+  readProjectConfigMock: vi.fn(),
   resourceStoreMock: {
     finishProgress: vi.fn(),
     updateProgress: vi.fn(),
@@ -92,16 +98,24 @@ vi.mock('~/commands/fs', () => ({
   },
 }))
 
+vi.mock('~/commands/project-config', () => ({
+  projectConfigCmds: {
+    readProjectConfig: readProjectConfigMock,
+  },
+}))
+
 vi.mock('~/database/db', () => ({
   db: {
     engines: {
       add: addMock,
       delete: enginesDeleteMock,
+      get: engineGetMock,
       toArray: enginesToArrayMock,
       update: enginesUpdateMock,
       where: engineWhereMock,
     },
     games: {
+      toArray: gamesToArrayMock,
       where: gameWhereMock,
     },
   },
@@ -124,6 +138,7 @@ describe('engineManager', () => {
     addMock.mockReset()
     copyDirectoryWithProgressMock.mockReset()
     deleteFileMock.mockReset()
+    engineGetMock.mockReset()
     enginesDeleteMock.mockReset()
     engineWhereFilterFirstMock.mockReset()
     engineWhereFilterMock.mockReset()
@@ -135,11 +150,13 @@ describe('engineManager', () => {
     engineWhereMock.mockReset()
     existsMock.mockReset()
     findGamesToArrayMock.mockReset()
+    gamesToArrayMock.mockReset()
     gameWhereEqualsMock.mockReset()
     gameWhereMock.mockReset()
     iconPathMock.mockReset()
     loggerWarnMock.mockReset()
     readEngineManifestMock.mockReset()
+    readProjectConfigMock.mockReset()
     resourceStoreMock.finishProgress.mockReset()
     resourceStoreMock.updateProgress.mockReset()
     useResourceStoreMock.mockReset()
@@ -172,7 +189,10 @@ describe('engineManager', () => {
     engineWhereFilterFirstMock.mockResolvedValue(undefined)
     engineWhereToArrayMock.mockResolvedValue([])
     enginesToArrayMock.mockResolvedValue([])
+    engineGetMock.mockResolvedValue(undefined)
     findGamesToArrayMock.mockResolvedValue([])
+    gamesToArrayMock.mockResolvedValue([])
+    readProjectConfigMock.mockResolvedValue({ version: 1 })
     existsMock.mockResolvedValue(false)
   })
 
@@ -1022,6 +1042,96 @@ describe('engineManager', () => {
     })
   })
 
+  it('canDeleteEngine 会阻止删除被其他游戏模板绑定的引擎', async () => {
+    const boundGame = createTestGame({
+      id: 'game-2',
+      metadata: { name: 'Bound Game' },
+    })
+    engineGetMock.mockResolvedValue(createTestEngine({
+      engineId: 'open-webgal.webgal',
+      id: 'engine-1',
+      version: '4.5.0',
+    }))
+    gamesToArrayMock.mockResolvedValue([boundGame])
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: { id: 'other.engine', version: '4.6.0' },
+      template: {
+        engine: { id: 'open-webgal.webgal', version: '4.5.0' },
+        kind: 'engineBuiltin',
+      },
+    })
+
+    await expect(engineManager.canDeleteEngine('engine-1')).resolves.toEqual({
+      canDelete: false,
+      associatedGames: [boundGame],
+      reason: 'ENGINE_HAS_ASSOCIATED_GAMES',
+    })
+  })
+
+  it('canDeleteEngine 会阻止删除被其他游戏项目配置引用的引擎', async () => {
+    const boundGame = createTestGame({
+      id: 'game-2',
+      metadata: { name: 'Bound Game' },
+    })
+    engineGetMock.mockResolvedValue(createTestEngine({
+      engineId: 'open-webgal.webgal',
+      id: 'engine-1',
+      version: '4.5.0',
+    }))
+    gamesToArrayMock.mockResolvedValue([boundGame])
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: { id: 'open-webgal.webgal', version: '4.5.0' },
+    })
+
+    await expect(engineManager.canDeleteEngine('engine-1')).resolves.toEqual({
+      canDelete: false,
+      associatedGames: [boundGame],
+      reason: 'ENGINE_HAS_ASSOCIATED_GAMES',
+    })
+  })
+
+  it('canDeleteEngine 不会因为其他版本的引用而误伤', async () => {
+    engineGetMock.mockResolvedValue(createTestEngine({
+      engineId: 'open-webgal.webgal',
+      id: 'engine-1',
+      version: '4.5.0',
+    }))
+    gamesToArrayMock.mockResolvedValue([createTestGame({ id: 'game-2' })])
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      template: {
+        engine: { id: 'open-webgal.webgal', version: '4.4.0' },
+        kind: 'engineBuiltin',
+      },
+    })
+
+    await expect(engineManager.canDeleteEngine('engine-1')).resolves.toEqual({
+      canDelete: true,
+    })
+  })
+
+  it('canDeleteEngine 在项目配置读取失败时阻止删除', async () => {
+    const brokenGame = createTestGame({
+      id: 'game-2',
+      metadata: { name: 'Broken Game' },
+    })
+    engineGetMock.mockResolvedValue(createTestEngine({
+      engineId: 'open-webgal.webgal',
+      id: 'engine-1',
+      version: '4.5.0',
+    }))
+    gamesToArrayMock.mockResolvedValue([brokenGame])
+    readProjectConfigMock.mockRejectedValue(new Error('config unreadable'))
+
+    await expect(engineManager.canDeleteEngine('engine-1')).resolves.toEqual({
+      canDelete: false,
+      reason: 'ENGINE_REFERENCE_CHECK_FAILED',
+      uncheckedGames: [brokenGame],
+    })
+  })
+
   it('canDeleteEngineGroup 会汇总整组关联游戏', async () => {
     const stable = createTestEngine({
       id: 'engine-1',
@@ -1055,6 +1165,55 @@ describe('engineManager', () => {
 
     expect(engineWhereMock).toHaveBeenCalledWith('engineId')
     expect(engineWhereEqualsMock).toHaveBeenCalledWith('open-webgal.webgal')
+  })
+
+  it('canDeleteEngineGroup 会按 engineId 阻止任意版本的模板绑定', async () => {
+    const boundGame = createTestGame({
+      id: 'game-2',
+      metadata: { name: 'Bound Game' },
+    })
+    engineWhereToArrayMock.mockResolvedValue([
+      createTestEngine({ engineId: 'open-webgal.webgal', id: 'engine-1', version: '4.5.0' }),
+    ])
+    gamesToArrayMock.mockResolvedValue([boundGame])
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      template: {
+        engine: { id: 'open-webgal.webgal', version: '4.4.0' },
+        kind: 'engineBuiltin',
+      },
+    })
+
+    await expect(engineManager.canDeleteEngineGroup('open-webgal.webgal')).resolves.toEqual({
+      canDelete: false,
+      associatedGames: [boundGame],
+      reason: 'ENGINE_HAS_ASSOCIATED_GAMES',
+    })
+  })
+
+  it('uninstallEngine 会阻止删除仅被模板绑定引用的引擎', async () => {
+    const engine = createTestEngine({
+      engineId: 'open-webgal.webgal',
+      id: 'engine-1',
+      version: '4.5.0',
+    })
+    engineGetMock.mockResolvedValue(engine)
+    gamesToArrayMock.mockResolvedValue([
+      createTestGame({ id: 'game-2', metadata: { name: 'Bound Game' } }),
+    ])
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      template: {
+        engine: { id: 'open-webgal.webgal', version: '4.5.0' },
+        kind: 'engineBuiltin',
+      },
+    })
+    enginesDeleteMock.mockResolvedValue(undefined)
+
+    await expect(engineManager.uninstallEngine(engine)).rejects.toEqual(
+      new AppError('IO_ERROR', '无法删除引擎，以下游戏正在使用此引擎：Bound Game'),
+    )
+    expect(enginesDeleteMock).not.toHaveBeenCalled()
   })
 
   it('uninstallEngine 会删除托管目录和数据库记录', async () => {

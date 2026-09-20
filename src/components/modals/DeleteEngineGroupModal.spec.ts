@@ -36,6 +36,9 @@ function translate(key: string, params?: Record<string, unknown>): string {
     case 'engine.deleteBlockedByGames': {
       return '以下游戏正在使用此引擎：'
     }
+    case 'engine.deleteBlockedByUncheckedGames': {
+      return '以下游戏的配置无法读取，无法确认是否正在使用此引擎：'
+    }
     case 'modals.deleteEngineGroup.title': {
       return '卸载全部版本'
     }
@@ -132,6 +135,26 @@ describe('DeleteEngineGroupModal', () => {
     await expect.element(page.getByText('无法删除')).toBeInTheDocument()
     await expect.element(page.getByText('以下游戏正在使用此引擎：')).toBeInTheDocument()
     await expect.element(page.getByText('Demo Game')).toBeInTheDocument()
+    await expect.element(page.getByRole('button', { name: '确认' })).toBeDisabled()
+  })
+
+  it('项目配置无法读取时会说明无法确认引用并列出相关游戏', async () => {
+    canDeleteEngineGroupMock.mockResolvedValue({
+      canDelete: false,
+      reason: 'ENGINE_REFERENCE_CHECK_FAILED',
+      uncheckedGames: [
+        createTestGame({
+          id: 'game-1',
+          metadata: { name: 'Broken Game' },
+        }),
+      ],
+    })
+
+    renderDeleteEngineGroupModal()
+
+    await expect.element(page.getByText('无法删除')).toBeInTheDocument()
+    await expect.element(page.getByText('以下游戏的配置无法读取，无法确认是否正在使用此引擎：')).toBeInTheDocument()
+    await expect.element(page.getByText('Broken Game')).toBeInTheDocument()
     await expect.element(page.getByRole('button', { name: '确认' })).toBeDisabled()
   })
 

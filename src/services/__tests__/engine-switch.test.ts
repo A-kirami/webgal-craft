@@ -266,6 +266,40 @@ describe('engineSwitch.switchEngine', () => {
     expect(updateSiteTemplateMock).toHaveBeenCalledWith('/games/demo', '/engines/new/game/template')
   })
 
+  it('显式模板绑定在切换引擎后保持原有引用，且不做模板清理', async () => {
+    const oldEngine = createTestEngine({ id: 'engine-old', path: AbsPath.from('/engines/old') })
+    const newEngine = createTestEngine({
+      engineId: 'open-webgal.webgal',
+      id: 'engine-new',
+      path: AbsPath.from('/engines/new'),
+      version: '4.6.0',
+    })
+    const pinnedTemplate = {
+      engine: { id: 'other-publisher.engine', version: '4.4.0' },
+      kind: 'engineBuiltin' as const,
+    }
+    dbEngineGetMock.mockResolvedValue(oldEngine)
+    evaluateTemplateStrategyMock.mockResolvedValue('explicit')
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: { id: 'open-webgal.webgal', version: '4.5.0' },
+      template: pinnedTemplate,
+    })
+    resolveTemplatePathMock.mockResolvedValue(AbsPath.from('/engines/other/game/template'))
+
+    await engineSwitch.switchEngine(
+      createTestGame({ id: 'game-1', engineId: 'engine-old', path: AbsPath.from('/games/demo') }),
+      newEngine,
+    )
+
+    expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/demo', {
+      version: 1,
+      engine: { id: 'open-webgal.webgal', version: '4.6.0' },
+      template: pinnedTemplate,
+    })
+    expect(cleanTemplateUpperMock).not.toHaveBeenCalled()
+  })
+
   describe('回滚', () => {
     function setupBaseSwitch() {
       const oldEngine = createTestEngine({ id: 'engine-old', path: AbsPath.from('/engines/old') })

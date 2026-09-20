@@ -600,6 +600,7 @@ modals:
       edit: 編輯
       backup: 備份
       storage: 儲存
+      help: 說明
   saveChanges:
     title: 要儲存對 {name} 的變更嗎？
     description: 不儲存的話，你的變更會遺失。
@@ -1322,6 +1323,12 @@ edit:
     statementList: 語句列表
     noSelection: 選擇一條語句開始編輯
 settings:
+  help:
+    reset:
+      label: 重設全部引導進度
+      description: 清除所有引導的完成記錄。
+      action: 重設進度
+      done: 已重設。關閉設定後，本頁的引導會重新開始；其他頁面的引導會在下次開啟時顯示。
   experimental:
     tooltip: 實驗性功能，使用過程中可能會遇到問題
   general:
@@ -1434,6 +1441,7 @@ engine:
   uninstallAllVersions: 解除安裝所有版本
   deleteBlocked: 無法卸載
   deleteBlockedByGames: 以下遊戲正在使用此引擎：
+  deleteBlockedByUncheckedGames: 以下遊戲的設定無法讀取，無法確認是否正在使用此引擎：
   unavailable: 不可用
 
 game:
@@ -1471,6 +1479,7 @@ game:
 tour:
   common:
     done: 完成
+    gotIt: 知道了
     next: 下一步
     prev: 上一步
     skip: 跳過
@@ -1495,15 +1504,19 @@ tour:
     previewPanel:
       title: 預覽面板
       description: 編輯時即時預覽遊戲畫面。按住 {modifier} 滾動滾輪縮放視圖，按住空格或滑鼠中鍵拖曳平移。
-    sceneResource:
-      title: 場景與資源
-      description: 在這裡管理場景檔案和遊戲資源。立繪、背景、音樂等資源可以直接拖放到編輯器：拖到語句之間插入新語句，拖到已有語句上替換內容。
+    resource:
+      title: 資源
+      description: 立繪、背景、音樂等資源都存放在這裡，把外部檔案拖放進來即可匯入。
+    scene:
+      title: 場景
+      description: 遊戲的場景檔案都在這裡，開啟任意一個就能開始編輯。
+  editorWorkspace:
     modeSwitch:
       title: 編輯模式
-      description: 點擊這個按鈕在文字和視覺化兩種編輯模式之間切換，切換後會自動進入下一步。
+      description: 編輯區有文字和視覺化兩種編輯模式，在這裡切換。
     editorArea:
       title: 編輯區
-      description: 場景內容在這裡編輯：文字模式直接編輯腳本，視覺化模式把語句顯示為卡片。
+      description: 場景內容在這裡編輯：文字模式直接編輯腳本，視覺化模式把語句顯示為卡片。「場景」裡的場景檔案和「資源」裡的立繪、背景、音樂都能直接拖放進來，拖到語句之間插入新語句，拖到已有語句上替換內容。
     commandPanel:
       title: 命令面板
       description: 點擊命令卡片插入到目前語句之後；也可以把卡片直接拖放到編輯器，插入到任意位置。
@@ -1514,3 +1527,16 @@ tour:
     previewDrag:
       title: 在預覽中拖曳
       description: 直接拖曳預覽中的立繪或背景即可調整：拖曳移動位置，拖邊角縮放，拖旋轉手柄旋轉。
+  resourceSwitch:
+    statusBar:
+      title: 切換引擎與模板
+      description: 編輯器底部左側顯示目前遊戲使用的引擎和模板，點擊就能切換。接下來看看它們分別能做什麼。
+    engineDialog:
+      title: 切換引擎
+      description: 在這裡選擇引擎，可以更換目前引擎的版本，也可以改用其他引擎。
+    templateDialog:
+      title: 切換模板
+      description: 在這裡選擇模板，可以用獨立模板，也可以用某個引擎內建的模板。
+  sidebarCollapse:
+    title: 語句已摺疊
+    description: 開啟輔助面板後，語句卡片會全部摺疊，方便用面板裡的表單編輯。想直接在卡片上編輯，到「設定 → 編輯 → 視覺化編輯器」裡關掉「開啟輔助面板時摺疊全部語句」。

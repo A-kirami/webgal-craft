@@ -11,7 +11,10 @@ import { useTransformOverlayBridge } from '~/features/editor/transform-overlay/u
 import { requestGameRuntimeRebind, resolveRuntimeRebindIssue } from '~/features/modals/import-dependency-resolution/request-game-runtime-rebind'
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
 import { useEditorTour } from '~/features/onboarding/useEditorTour'
+import { useEditorWorkspaceTour } from '~/features/onboarding/useEditorWorkspaceTour'
 import { useEffectEditorTour } from '~/features/onboarding/useEffectEditorTour'
+import { useResourceSwitchTour } from '~/features/onboarding/useResourceSwitchTour'
+import { useSidebarCollapseTour } from '~/features/onboarding/useSidebarCollapseTour'
 import { gameManager } from '~/services/game-manager'
 import { useResourceIndexBootstrap } from '~/services/resource-index/service'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
@@ -50,7 +53,9 @@ function exitEditMode(): Promise<void> {
 useAnimationTableSyncBootstrap()
 useResourceIndexBootstrap(querySentenceResourceReferences)
 
-useEditorTour({
+useEditorTour()
+
+useEditorWorkspaceTour({
   expandCommandPanel: () => editorPanelRef.value?.expandCommandPanel?.(),
 })
 
@@ -58,6 +63,10 @@ useEffectEditorTour({
   enabled: () => transformOverlayBridge.enabled.value,
   hasInteracted: () => transformOverlayBridge.hasOverlayInteraction.value,
 })
+
+useResourceSwitchTour()
+
+useSidebarCollapseTour()
 
 // 进入工作区时即时校验：失效则进入阻断式恢复弹窗，由用户决定重试 / 重链接 / 返回主页
 watch(() => workspaceStore.currentGame?.id, async (gameId) => {

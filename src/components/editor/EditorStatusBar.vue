@@ -55,13 +55,16 @@ const currentState = $computed(() => editorStore.currentState)
 const isEngineBound = $computed(() => !!workspaceStore.currentGame?.engineId)
 
 let engineLabel = $ref<string>()
+let isEngineResolved = $ref(false)
 watch(() => workspaceStore.currentGame?.engineId, async (engineId) => {
-  if (!engineId) {
-    engineLabel = undefined
-    return
-  }
+  isEngineResolved = false
   // 切换 engineId 时立即清空，避免显示旧引擎名
   engineLabel = undefined
+  if (!engineId) {
+    isEngineResolved = true
+    return
+  }
+
   const engine = await db.engines.get(engineId)
   // 异步过程中引擎可能切换，丢弃过时结果
   if (workspaceStore.currentGame?.engineId !== engineId) {
@@ -70,7 +73,29 @@ watch(() => workspaceStore.currentGame?.engineId, async (engineId) => {
   engineLabel = engine && isEngineUsable(engine)
     ? formatNameWithVersion(engine.name, engine.version)
     : undefined
+  isEngineResolved = true
 }, { immediate: true })
+
+// 绑定引擎不可用（记录缺失或资源不可用）时，两个切换入口都改用警告外观。
+// 解析完成前不算不可用，否则每次进入编辑器都会闪一下警告色。
+const isBoundEngineUnavailable = $computed(() =>
+  isEngineBound && isEngineResolved && !engineLabel,
+)
+
+const STATUS_CHIP_CLASS = 'flex gap-1 items-center cursor-pointer transition-colors'
+
+// 模板层解析不出来时（例如绑定的引擎已被卸载）也要警告，
+// 否则模板层已经断掉，外观却还和正常配置一样
+const isTemplateEntryUnavailable = $computed(() =>
+  isBoundEngineUnavailable || (isEngineBound && toValue(isTemplateResolvable) === false),
+)
+
+/** 引擎不可用时入口仍然保留（那是修复路径），但外观要说明当前状态 */
+function resolveStatusChipClass(isUnavailable: boolean): string {
+  return isUnavailable
+    ? `${STATUS_CHIP_CLASS} text-yellow-600 dark:text-yellow-300`
+    : `${STATUS_CHIP_CLASS} text-muted-foreground hover:text-foreground`
+}
 
 function openSwitchEngine() {
   const game = workspaceStore.currentGame
@@ -86,7 +111,11 @@ function openSwitchTemplate() {
   }
 }
 
-const { label: templateLabel, followingEngine: isFollowingEngine } = useTemplateLabel()
+const {
+  label: templateLabel,
+  followingEngine: isFollowingEngine,
+  resolvable: isTemplateResolvable,
+} = useTemplateLabel()
 
 const editableState = $computed(() =>
   currentState && isEditableEditor(currentState) ? currentState : undefined,
@@ -183,13 +212,13 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
 
 <template>
   <div class="text-xs px-3 border-t bg-gray-50 flex h-6 items-center dark:bg-gray-900">
-    <div class="flex gap-3 min-w-0 items-center">
+    <div data-tour="resource-switch" class="flex gap-3 min-w-0 items-center">
       <TooltipProvider :delay-duration="0">
         <Tooltip v-if="isEngineBound">
           <TooltipTrigger as-child>
             <button
               :aria-label="$t('edit.statusBar.selectEngine')"
-              class="text-muted-foreground flex gap-1 cursor-pointer transition-colors items-center hover:text-foreground"
+              :class="resolveStatusChipClass(isBoundEngineUnavailable)"
               @click="openSwitchEngine"
             >
               <Layers class="h-3 w-3" :stroke-width="1.5" />
@@ -201,11 +230,11 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
           </TooltipContent>
         </Tooltip>
 
-        <Tooltip v-if="isEngineBound && (templateLabel || isFollowingEngine)">
+        <Tooltip v-if="isEngineBound">
           <TooltipTrigger as-child>
             <button
               :aria-label="$t('edit.statusBar.selectTemplate')"
-              class="text-muted-foreground flex gap-1 cursor-pointer transition-colors items-center hover:text-foreground"
+              :class="resolveStatusChipClass(isTemplateEntryUnavailable)"
               @click="openSwitchTemplate"
             >
               <Palette class="h-3 w-3" :stroke-width="1.5" />

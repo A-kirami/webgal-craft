@@ -28,6 +28,7 @@ const TabItem = (props: { value: string, label: string }) => {
           <TabItem class="px-3" value="edit" :label="$t('modals.settings.tabs.edit')" />
           <TabItem class="px-3" value="backup" :label="$t('modals.settings.tabs.backup')" />
           <TabItem class="px-3" value="storage" :label="$t('modals.settings.tabs.storage')" />
+          <TabItem class="px-3" value="help" :label="$t('modals.settings.tabs.help')" />
         </TabsList>
         <ScrollArea class="w-full">
           <TabsContent value="general" class="mt-1 px-4">
@@ -41,6 +42,9 @@ const TabItem = (props: { value: string, label: string }) => {
           </TabsContent>
           <TabsContent value="storage" class="mt-1 px-4">
             <StorageSettings />
+          </TabsContent>
+          <TabsContent value="help" class="mt-1 px-4">
+            <HelpSettings />
           </TabsContent>
         </ScrollArea>
       </Tabs>
