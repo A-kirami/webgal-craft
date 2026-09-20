@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { page } from 'vitest/browser'
+import { page, userEvent } from 'vitest/browser'
 import { defineComponent, h } from 'vue'
 
+import { clickOutsideDialog, withRealDialogStubs } from '~/__tests__/browser-dialog'
 import {
   createBrowserClickStub,
   createBrowserContainerStub,
@@ -149,7 +150,9 @@ const globalStubs = {
   TemplateSelector: createBrowserContainerStub('StubTemplateSelector'),
 }
 
-function renderSwitchTemplateModal() {
+const stubsWithRealDialog = withRealDialogStubs(globalStubs)
+
+function renderSwitchTemplateModal(options: { realDialog?: boolean } = {}) {
   const game = createTestGame({
     id: 'game-1',
     engineId: 'engine-current',
@@ -166,11 +169,21 @@ function renderSwitchTemplateModal() {
       mocks: {
         $t: translate,
       },
-      stubs: globalStubs,
+      stubs: options.realDialog ? stubsWithRealDialog : globalStubs,
     },
   })
 
   return game
+}
+
+function createDeferred<T = void>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
 }
 
 describe('SwitchTemplateModal', () => {
@@ -254,6 +267,35 @@ describe('SwitchTemplateModal', () => {
         expect.any(Error),
         { context: '模板重置失败' },
       )
+    })
+  })
+
+  it('切换进行中关闭按钮、Escape 与点击遮罩都不会关闭弹窗，切换失败后恢复可关闭', async () => {
+    isTemplateDirtyMock.mockResolvedValue(false)
+    const switching = createDeferred()
+    switchTemplateMock.mockImplementation(() => switching.promise)
+
+    renderSwitchTemplateModal({ realDialog: true })
+
+    await page.getByRole('button', { name: '保存' }).click()
+    await vi.waitFor(() => {
+      expect(switchTemplateMock).toHaveBeenCalledTimes(1)
+    })
+
+    await expect.element(page.getByRole('button', { name: 'Close' })).not.toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    await clickOutsideDialog()
+    expect(updateOpenMock).not.toHaveBeenCalled()
+
+    // 失败后关闭能力恢复，Escape 能重新请求关闭
+    switching.reject(new Error('switch failed'))
+    await vi.waitFor(() => {
+      expect(handleErrorMock).toHaveBeenCalled()
+    })
+
+    await userEvent.keyboard('{Escape}')
+    await vi.waitFor(() => {
+      expect(updateOpenMock).toHaveBeenCalledWith(false)
     })
   })
 })

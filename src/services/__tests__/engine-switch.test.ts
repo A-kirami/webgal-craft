@@ -102,6 +102,16 @@ const OLD_CONFIG: ProjectConfig = {
   engine: { id: 'open-webgal.webgal', version: '4.5.0' },
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
 describe('engineSwitch.switchEngine', () => {
   beforeEach(() => {
     cleanTemplateUpperMock.mockReset()
@@ -388,6 +398,100 @@ describe('engineSwitch.switchEngine', () => {
 
       await expect(engineSwitch.switchEngine(game, newEngine)).resolves.toBeUndefined()
       expect(dbGameUpdateMock).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('并发', () => {
+    const gamePath = AbsPath.from('/games/demo')
+
+    function setupSwitch() {
+      const oldEngine = createTestEngine({ id: 'engine-old', path: AbsPath.from('/engines/old') })
+      const newEngine = createTestEngine({
+        id: 'engine-new',
+        path: AbsPath.from('/engines/new'),
+        engineId: 'open-webgal.webgal',
+        version: '4.6.0',
+      })
+      dbEngineGetMock.mockResolvedValue(oldEngine)
+      resolveTemplatePathMock.mockResolvedValue('/engines/new/game/template')
+
+      return {
+        game: createTestGame({ id: 'game-1', engineId: 'engine-old', path: gamePath }),
+        newEngine,
+      }
+    }
+
+    it('同一游戏切换进行中时，第二次切换被拒绝且不产生任何写入', async () => {
+      const { game, newEngine } = setupSwitch()
+      const readConfig = createDeferred<ProjectConfig>()
+      readProjectConfigMock.mockReturnValueOnce(readConfig.promise)
+
+      const first = engineSwitch.switchEngine(game, newEngine)
+
+      await expect(engineSwitch.switchEngine(game, newEngine)).rejects.toMatchObject({
+        code: 'IO_ERROR',
+        details: { reason: 'GAME_SWITCH_IN_FLIGHT' },
+      })
+      expect(readProjectConfigMock).toHaveBeenCalledTimes(1)
+      expect(writeProjectConfigMock).not.toHaveBeenCalled()
+      expect(dbGameUpdateMock).not.toHaveBeenCalled()
+      expect(updateSiteEngineMock).not.toHaveBeenCalled()
+
+      readConfig.resolve(OLD_CONFIG)
+      await expect(first).resolves.toBeUndefined()
+      expect(writeProjectConfigMock).toHaveBeenCalledTimes(1)
+      expect(updateSiteEngineMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('前一次失败回滚与后一次前向写入不会交织', async () => {
+      const { game, newEngine } = setupSwitch()
+      const dbUpdate = createDeferred<undefined>()
+      dbGameUpdateMock.mockReturnValueOnce(dbUpdate.promise)
+
+      const first = engineSwitch.switchEngine(game, newEngine)
+      await vi.waitFor(() => {
+        expect(writeProjectConfigMock).toHaveBeenCalledTimes(1)
+      })
+
+      // 前一次切换停在步骤 2、还没回滚，此时重入必须被拒绝
+      await expect(engineSwitch.switchEngine(game, newEngine)).rejects.toMatchObject({
+        details: { reason: 'GAME_SWITCH_IN_FLIGHT' },
+      })
+
+      dbUpdate.reject(new Error('db down'))
+      await expect(first).rejects.toThrow('db down')
+
+      // 只有第一次切换的前向写入与回滚写入，重入没有插进第三次写入
+      expect(writeProjectConfigMock.mock.calls).toEqual([
+        ['/games/demo', expect.objectContaining({ engine: { id: 'open-webgal.webgal', version: '4.6.0' } })],
+        ['/games/demo', OLD_CONFIG],
+      ])
+      expect(dbGameUpdateMock).toHaveBeenCalledTimes(1)
+      expect(updateSiteEngineMock).not.toHaveBeenCalled()
+    })
+
+    it('不同游戏可以并发切换，互不阻塞', async () => {
+      const { newEngine } = setupSwitch()
+      const readConfig = createDeferred<ProjectConfig>()
+      readProjectConfigMock.mockReturnValueOnce(readConfig.promise)
+
+      const first = engineSwitch.switchEngine(
+        createTestGame({ id: 'game-a', engineId: 'engine-old', path: AbsPath.from('/games/a') }),
+        newEngine,
+      )
+      const second = engineSwitch.switchEngine(
+        createTestGame({ id: 'game-b', engineId: 'engine-old', path: AbsPath.from('/games/b') }),
+        newEngine,
+      )
+
+      await expect(second).resolves.toBeUndefined()
+      expect(writeProjectConfigMock).toHaveBeenCalledTimes(1)
+      expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/b', expect.anything())
+
+      readConfig.resolve(OLD_CONFIG)
+      await expect(first).resolves.toBeUndefined()
+      expect(writeProjectConfigMock).toHaveBeenCalledTimes(2)
+      expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/a', expect.anything())
     })
   })
 })

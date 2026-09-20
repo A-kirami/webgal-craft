@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { page } from 'vitest/browser'
+import { page, userEvent } from 'vitest/browser'
+import { defineComponent, h } from 'vue'
 
+import { clickOutsideDialog, withRealDialogStubs } from '~/__tests__/browser-dialog'
 import {
   createBrowserClickStub,
   createBrowserContainerStub,
@@ -189,7 +191,19 @@ const OLD_CONFIG: ProjectConfig = {
   engine: { id: 'open-webgal.webgal', version: '4.5.0' },
 }
 
-function renderSwitchEngineModal() {
+const stubsWithRealDialog = withRealDialogStubs(globalStubs)
+
+function createDeferred<T = void>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
+function renderSwitchEngineModal(options: { realDialog?: boolean } = {}) {
   const game = createTestGame({
     id: 'game-1',
     engineId: 'engine-current',
@@ -206,7 +220,7 @@ function renderSwitchEngineModal() {
       mocks: {
         $t: translate,
       },
-      stubs: globalStubs,
+      stubs: options.realDialog ? stubsWithRealDialog : globalStubs,
     },
   })
 
@@ -424,5 +438,36 @@ describe('SwitchEngineModal', () => {
       expect.anything(),
       { templateDecision: 'keep' },
     )
+  })
+
+  it('切换进行中关闭按钮、Escape 与点击遮罩都不会关闭弹窗，切换失败后恢复可关闭', async () => {
+    const switching = createDeferred()
+    engineSwitchMock.mockImplementation(() => switching.promise)
+
+    renderSwitchEngineModal({ realDialog: true })
+
+    await page.getByTestId('select-new-engine').click()
+    await page.getByRole('button', { name: '确认' }).click()
+    await expect.element(page.getByText('正在切换引擎...')).toBeInTheDocument()
+
+    await expect.element(page.getByRole('button', { name: 'Close' })).not.toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    await clickOutsideDialog()
+    expect(updateOpenMock).not.toHaveBeenCalled()
+
+    // 失败后关闭能力恢复：Escape 与点击遮罩都能正常请求关闭
+    switching.reject(new Error('switch failed'))
+    await expect.element(page.getByText('切换失败')).toBeInTheDocument()
+
+    await userEvent.keyboard('{Escape}')
+    await vi.waitFor(() => {
+      expect(updateOpenMock).toHaveBeenCalledWith(false)
+    })
+
+    updateOpenMock.mockClear()
+    await clickOutsideDialog()
+    await vi.waitFor(() => {
+      expect(updateOpenMock).toHaveBeenCalledWith(false)
+    })
   })
 })

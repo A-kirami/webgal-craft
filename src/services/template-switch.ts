@@ -5,6 +5,7 @@ import { db } from '~/database/db'
 import { AbsPath, RelPath } from '~/domain/path'
 import { debugCommander } from '~/services/debug-commander'
 import { engineManager, isEngineUsable } from '~/services/engine-manager'
+import { runExclusiveGameSwitch } from '~/services/game-switch-guard'
 import { isPreviewStateResetError } from '~/services/preview-protocol-client'
 import { useEditorStore } from '~/stores/editor'
 import { useFileStore } from '~/stores/file'
@@ -178,7 +179,20 @@ interface SwitchTemplateOptions {
   skipDirtyCheck?: boolean
 }
 
-async function switchTemplate(
+/**
+ * 模板切换入口。它与引擎切换共享同一工程的 project.wgcp、模板 upper 与站点注册，
+ * 并发进入会让失败回滚与另一次的前向写入交织，因此先按工程取切换权再执行。
+ */
+function switchTemplate(
+  game: Game,
+  newBinding: TemplateBinding | undefined,
+  options: SwitchTemplateOptions = {},
+): Promise<void> {
+  return runExclusiveGameSwitch(game.path, () => performSwitchTemplate(game, newBinding, options))
+}
+
+/** 实际切换流程；调用方必须已经通过 {@link switchTemplate} 取得该工程的切换权 */
+async function performSwitchTemplate(
   game: Game,
   newBinding: TemplateBinding | undefined,
   options: SwitchTemplateOptions = {},

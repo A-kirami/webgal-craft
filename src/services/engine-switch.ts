@@ -4,6 +4,7 @@ import { vfsCmds } from '~/commands/vfs'
 import { db } from '~/database/db'
 import { assertEngineEditorCompatible } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
+import { runExclusiveGameSwitch } from '~/services/game-switch-guard'
 import { templateSwitch } from '~/services/template-switch'
 import { usePreviewSessionStore } from '~/stores/preview-session'
 import { AppError } from '~/types/errors'
@@ -61,7 +62,20 @@ interface SwitchEngineOptions {
   templateDecision?: TemplateDecision
 }
 
-async function switchEngine(
+/**
+ * 引擎切换入口。同一工程的引擎切换与模板切换共享 project.wgcp、模板 upper 与站点注册，
+ * 并发进入会让失败回滚与另一次的前向写入交织，因此先按工程取切换权再执行。
+ */
+function switchEngine(
+  game: Game,
+  newEngine: Engine,
+  options: SwitchEngineOptions = {},
+): Promise<void> {
+  return runExclusiveGameSwitch(game.path, () => performSwitchEngine(game, newEngine, options))
+}
+
+/** 实际切换流程；调用方必须已经通过 {@link switchEngine} 取得该工程的切换权 */
+async function performSwitchEngine(
   game: Game,
   newEngine: Engine,
   options: SwitchEngineOptions = {},
