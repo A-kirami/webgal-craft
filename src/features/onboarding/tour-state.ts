@@ -34,6 +34,7 @@ export function registerTourReset(storageKey: string, reset: () => void): () => 
 /** 清除全部引导的完成记录，并让已挂载的引导立即复位 */
 export function resetAllTourProgress(): void {
   for (const { storageKey } of Object.values(TOUR_PERSISTENCE)) {
+    completedVersions.delete(storageKey)
     localStorage.removeItem(storageKey)
     resetHandlers.get(storageKey)?.()
   }

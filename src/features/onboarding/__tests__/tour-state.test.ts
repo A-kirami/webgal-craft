@@ -38,4 +38,16 @@ describe('tour-state', () => {
     resetAllTourProgress()
     expect(reset).toHaveBeenCalledTimes(1)
   })
+
+  it('重置会清除没有复位回调的引导的内存完成状态', () => {
+    publishTourCompletion(
+      TOUR_PERSISTENCE.editorWorkspace.storageKey,
+      TOUR_PERSISTENCE.editorWorkspace.version,
+    )
+    expect(isTourCompleted(TOUR_PERSISTENCE.editorWorkspace)).toBe(true)
+
+    resetAllTourProgress()
+
+    expect(isTourCompleted(TOUR_PERSISTENCE.editorWorkspace)).toBe(false)
+  })
 })
