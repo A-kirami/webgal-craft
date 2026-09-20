@@ -111,10 +111,14 @@ function createEditorStatusBarLocalizedI18n() {
             },
           },
           statusBar: {
+            engineMissing: '引擎不可用',
             frames: '{count} 帧',
             resourceIndexBuilding: '正在构建资源索引',
             resourceIndexUnavailable: '资源索引不可用',
+            selectEngine: '选择引擎',
+            selectTemplate: '选择模板',
             statements: '{count} 条语句',
+            templateMissing: '模板不可用',
           },
           textEditor: {
             languages: {
@@ -258,5 +262,96 @@ describe('EditorStatusBar', () => {
 
     resourceIndexStatus.value = 'ready'
     await expect.element(page.getByText('资源索引不可用')).not.toBeInTheDocument()
+  })
+
+  it('已绑定引擎时状态栏显示引擎名与版本', async () => {
+    dbEngineGetMock.mockResolvedValue({
+      availability: 'available',
+      id: 'engine-1',
+      name: 'WebGAL',
+      path: '/engines/webgal',
+      status: 'created',
+      version: '4.6.2',
+    })
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: { engineId: 'engine-1', id: 'game-1', path: '/games/demo' },
+    }))
+    useEditorStoreMock.mockReturnValue(createEditorStore())
+
+    renderEditorStatusBar()
+
+    await expect.element(page.getByText('WebGAL 4.6.2')).toBeVisible()
+    await expect.element(page.getByText('引擎不可用')).not.toBeInTheDocument()
+  })
+
+  it('绑定引擎不可用时保留引擎与模板入口并提示不可用', async () => {
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: { engineId: 'engine-1', id: 'game-1', path: '/games/demo' },
+    }))
+    useEditorStoreMock.mockReturnValue(createEditorStore())
+
+    renderEditorStatusBar()
+
+    await expect.element(page.getByText('引擎不可用')).toBeVisible()
+    await expect.element(page.getByText('模板不可用')).toBeVisible()
+  })
+
+  it('模板绑定在不可用的引擎内建模板上时入口不会消失', async () => {
+    dbEngineWhereFirstMock.mockResolvedValue({
+      availability: 'unavailable',
+      id: 'engine-builtin',
+      name: 'WebGAL',
+      status: 'created',
+      version: '4.6.2',
+    })
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      template: {
+        engine: {
+          id: 'default-publisher.default-engine',
+          version: '4.6.2',
+        },
+        kind: 'engineBuiltin',
+      },
+    })
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: { engineId: 'engine-1', id: 'game-1', path: '/games/demo' },
+    }))
+    useEditorStoreMock.mockReturnValue(createEditorStore())
+
+    renderEditorStatusBar()
+
+    await expect.element(page.getByText('模板不可用')).toBeVisible()
+  })
+
+  it('模板绑定的引擎记录已消失时模板入口进入警告态而引擎入口保持正常', async () => {
+    dbEngineGetMock.mockResolvedValue({
+      availability: 'available',
+      id: 'engine-1',
+      name: 'WebGAL',
+      path: '/engines/webgal',
+      status: 'created',
+      version: '4.6.2',
+    })
+    dbEngineWhereFirstMock.mockResolvedValue(undefined)
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      template: {
+        engine: {
+          id: 'default-publisher.default-engine',
+          version: '4.5.0',
+        },
+        kind: 'engineBuiltin',
+      },
+    })
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame: { engineId: 'engine-1', id: 'game-1', path: '/games/demo' },
+    }))
+    useEditorStoreMock.mockReturnValue(createEditorStore())
+
+    renderEditorStatusBar()
+
+    await expect.element(page.getByRole('button', { name: '选择模板' })).toHaveClass('text-yellow-600')
+    await expect.element(page.getByRole('button', { name: '选择引擎' })).not.toHaveClass('text-yellow-600')
   })
 })

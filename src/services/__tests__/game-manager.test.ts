@@ -1794,6 +1794,30 @@ describe('gameManager', () => {
     expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', { engineId: 'engine-reinstalled' })
   })
 
+  it('重装引擎后首次进入编辑器会同步刷新当前游戏快照，状态栏不再读到悬空绑定', async () => {
+    dbEngineGetMock.mockResolvedValue(undefined)
+    engineFindByRefMock.mockResolvedValue(createTestEngine({ id: 'engine-reinstalled' }))
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: {
+        id: 'default-publisher.default-engine',
+        version: '4.6.2',
+      },
+    })
+
+    const game = createTestGame({
+      availability: 'available',
+      engineId: 'engine-stale',
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+    })
+    workspaceStoreState.currentGame = game
+
+    await gameManager.ensureEditorRuntimeCompatible(game)
+
+    expect(workspaceStoreState.currentGame?.engineId).toBe('engine-reinstalled')
+  })
+
   it('ensureEditorRuntimeCompatible 在绑定修复写库失败时仍正常放行', async () => {
     dbEngineGetMock.mockResolvedValue(undefined)
     engineFindByRefMock.mockResolvedValue(createTestEngine({ id: 'engine-reinstalled' }))

@@ -484,6 +484,9 @@ async function healStaleEngineBinding(game: BoundGameRef, engine: Engine): Promi
 
   try {
     await db.games.update(game.id, { engineId: engine.id })
+    // 内存快照必须一起跟上：状态栏、模板标签与切换弹窗都读 currentGame.engineId，
+    // 只修 DB 会让它们在本次会话内继续停留在悬空旧值上
+    applyCurrentGamePatch(game.id, { engineId: engine.id })
     logger.info(
       `[引擎绑定修复] 游戏 ${game.path} 绑定的引擎记录已失效，`
       + `已按项目配置重新绑定到 ${engine.name}@${engine.version ?? '未知'}(${engine.id})`,

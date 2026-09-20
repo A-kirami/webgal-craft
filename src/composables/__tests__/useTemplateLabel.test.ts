@@ -6,8 +6,17 @@ import { AbsPath } from '~/domain/path'
 import { useFileSystemEvents } from '../useFileSystemEvents'
 import { useTemplateLabel } from '../useTemplateLabel'
 
-const { readProjectConfigMock, useWorkspaceStoreMock } = vi.hoisted(() => ({
+const {
+  engineGetMock,
+  engineWhereFirstMock,
+  readProjectConfigMock,
+  templateFilterFirstMock,
+  useWorkspaceStoreMock,
+} = vi.hoisted(() => ({
+  engineGetMock: vi.fn(),
+  engineWhereFirstMock: vi.fn(),
   readProjectConfigMock: vi.fn(),
+  templateFilterFirstMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
 }))
 
@@ -20,11 +29,16 @@ vi.mock('~/commands/project-config', () => ({
 vi.mock('~/database/db', () => ({
   db: {
     engines: {
-      get: vi.fn(),
+      get: engineGetMock,
       where: () => ({
         equals: () => ({
-          first: vi.fn(),
+          first: engineWhereFirstMock,
         }),
+      }),
+    },
+    templates: {
+      filter: () => ({
+        first: templateFilterFirstMock,
       }),
     },
   },
@@ -64,6 +78,12 @@ describe('useTemplateLabel', () => {
       },
     })
     useWorkspaceStoreMock.mockReturnValue(currentGameStore)
+    engineGetMock.mockReset()
+    engineGetMock.mockResolvedValue(undefined)
+    engineWhereFirstMock.mockReset()
+    engineWhereFirstMock.mockResolvedValue(undefined)
+    templateFilterFirstMock.mockReset()
+    templateFilterFirstMock.mockResolvedValue(undefined)
     readProjectConfigMock.mockReset()
     readProjectConfigMock.mockResolvedValue({
       template: {
@@ -133,6 +153,86 @@ describe('useTemplateLabel', () => {
     await flushTemplateTasks()
 
     expect(readProjectConfigMock).toHaveBeenCalledTimes(2)
+
+    scope.stop()
+  })
+
+  it('跟随引擎且引擎可用时模板可解析', async () => {
+    const scope = effectScope()
+    currentGameStore.currentGame.engineId = 'engine-1'
+    readProjectConfigMock.mockResolvedValue({ version: 1 })
+    engineGetMock.mockResolvedValue({
+      id: 'engine-1',
+      name: 'WebGAL',
+      path: '/engines/webgal',
+      version: '4.5.0',
+    })
+
+    const state = scope.run(() => useTemplateLabel())!
+    await flushTemplateTasks()
+
+    expect(state.resolvable.value).toBe(true)
+
+    scope.stop()
+  })
+
+  it('跟随引擎但引擎记录缺失时模板不可解析', async () => {
+    const scope = effectScope()
+    currentGameStore.currentGame.engineId = 'engine-1'
+    readProjectConfigMock.mockResolvedValue({ version: 1 })
+    engineGetMock.mockResolvedValue(undefined)
+
+    const state = scope.run(() => useTemplateLabel())!
+    await flushTemplateTasks()
+
+    expect(state.resolvable.value).toBe(false)
+    expect(state.followingEngine.value).toBe(true)
+
+    scope.stop()
+  })
+
+  it('引擎内建模板绑定的引擎记录缺失时模板不可解析', async () => {
+    const scope = effectScope()
+    currentGameStore.currentGame.engineId = 'engine-1'
+    readProjectConfigMock.mockResolvedValue({
+      template: {
+        engine: { id: 'open-webgal.webgal', version: '4.5.0' },
+        kind: 'engineBuiltin',
+      },
+      version: 1,
+    })
+    engineWhereFirstMock.mockResolvedValue(undefined)
+
+    const state = scope.run(() => useTemplateLabel())!
+    await flushTemplateTasks()
+
+    expect(state.resolvable.value).toBe(false)
+
+    scope.stop()
+  })
+
+  it('独立模板记录缺失时模板不可解析', async () => {
+    const scope = effectScope()
+
+    const state = scope.run(() => useTemplateLabel())!
+    await flushTemplateTasks()
+
+    expect(state.resolvable.value).toBe(false)
+
+    scope.stop()
+  })
+
+  it('独立模板记录存在时模板可解析', async () => {
+    const scope = effectScope()
+    templateFilterFirstMock.mockResolvedValue({
+      path: '/templates/default',
+      status: 'created',
+    })
+
+    const state = scope.run(() => useTemplateLabel())!
+    await flushTemplateTasks()
+
+    expect(state.resolvable.value).toBe(true)
 
     scope.stop()
   })
