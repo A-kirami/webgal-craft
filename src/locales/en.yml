@@ -1441,6 +1441,7 @@ engine:
   uninstallAllVersions: Uninstall All Versions
   deleteBlocked: Cannot Uninstall
   deleteBlockedByGames: "The following games are using this engine:"
+  deleteBlockedByUncheckedGames: "The following games' configs cannot be read, so engine usage cannot be confirmed:"
   unavailable: Unavailable
 
 game:

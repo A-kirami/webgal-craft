@@ -1441,6 +1441,7 @@ engine:
   uninstallAllVersions: 解除安裝所有版本
   deleteBlocked: 無法卸載
   deleteBlockedByGames: 以下遊戲正在使用此引擎：
+  deleteBlockedByUncheckedGames: 以下遊戲的設定無法讀取，無法確認是否正在使用此引擎：
   unavailable: 不可用
 
 game:

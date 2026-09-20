@@ -3,6 +3,7 @@ import sanitize from 'sanitize-filename'
 
 import { engineCmds } from '~/commands/engine'
 import { fsCmds } from '~/commands/fs'
+import { projectConfigCmds } from '~/commands/project-config'
 import { db } from '~/database/db'
 import { Engine, Game } from '~/database/model'
 import { OFFICIAL_WEBGAL_ENGINE_NAME } from '~/domain/engine/official-release'
@@ -61,7 +62,8 @@ interface RegisterEngineOptions extends EngineSnapshot {
 interface DeleteEngineCheckResult {
   associatedGames?: Game[]
   canDelete: boolean
-  reason?: 'ENGINE_HAS_ASSOCIATED_GAMES'
+  reason?: 'ENGINE_HAS_ASSOCIATED_GAMES' | 'ENGINE_REFERENCE_CHECK_FAILED'
+  uncheckedGames?: Game[]
 }
 
 const LIVE2D_RUNTIME_FILES = [
@@ -290,21 +292,98 @@ async function findEnginesByEngineId(engineId: string) {
   return db.engines.where('engineId').equals(engineId).toArray()
 }
 
+interface EngineReferenceInspection {
+  associatedGame?: Game
+  uncheckedGame?: Game
+}
+
+interface EngineReferenceBlockers {
+  associatedGames: Game[]
+  uncheckedGames: Game[]
+}
+
+/**
+ * project.wgcp 里的 `engine` 字段与 `engineBuiltin` 模板绑定都按逻辑引用（engineId + version）
+ * 记录引擎依赖，与 games.engineId（数据库主键）不同源：前者决定游戏用哪个引擎运行，
+ * 后者决定游戏还能不能解析出模板层。删除引擎必须两者都查，否则会悄悄删掉游戏依赖的引擎。
+ */
+async function inspectGameEngineReferences(
+  matchesEngineRef: (ref: EngineRef) => boolean,
+  game: Game,
+): Promise<EngineReferenceInspection> {
+  try {
+    const config = await projectConfigCmds.readProjectConfig(game.path)
+    if (config.engine && matchesEngineRef(config.engine)) {
+      return { associatedGame: game }
+    }
+    if (config.template?.kind === 'engineBuiltin' && matchesEngineRef(config.template.engine)) {
+      return { associatedGame: game }
+    }
+  } catch (error) {
+    // 与模板删除一致：读不出配置就无法确认引用关系，阻止删除以避免打断游戏
+    logger.warn(`[引擎删除] 读取游戏项目配置失败，阻止删除以避免误删引用: ${game.path} - ${error}`)
+    return { uncheckedGame: game }
+  }
+
+  return {}
+}
+
+async function findEngineReferenceBlockers(
+  matchesEngineRef: (ref: EngineRef) => boolean,
+): Promise<EngineReferenceBlockers> {
+  const games = await db.games.toArray()
+  const inspections = await Promise.all(games.map(game => inspectGameEngineReferences(matchesEngineRef, game)))
+
+  return {
+    associatedGames: inspections
+      .map(inspection => inspection.associatedGame)
+      .filter(game => game !== undefined),
+    uncheckedGames: inspections
+      .map(inspection => inspection.uncheckedGame)
+      .filter(game => game !== undefined),
+  }
+}
+
+/** 直接绑定与逻辑引用可能命中同一个游戏，按 id 去重 */
+function uniqueGames(games: Game[]): Game[] {
+  return [...new Map(games.map(game => [game.id, game])).values()]
+}
+
 async function canDeleteEngine(id: string): Promise<DeleteEngineCheckResult> {
-  const associatedGames = await findAssociatedGames(id)
-  return buildDeleteCheckResult(associatedGames)
+  const engine = await db.engines.get(id)
+  const boundGames = await findAssociatedGames(id)
+  // 记录已不存在时无法确定逻辑引用，退回只检查直接绑定
+  const references = engine
+    ? await findEngineReferenceBlockers(ref => ref.id === engine.engineId && ref.version === engine.version)
+    : { associatedGames: [], uncheckedGames: [] }
+
+  return buildDeleteCheckResult([...boundGames, ...references.associatedGames], references.uncheckedGames)
 }
 
 async function canDeleteEngineGroup(engineId: string): Promise<DeleteEngineCheckResult> {
   const engines = await findEnginesByEngineId(engineId)
-  const gamesByEngine = await Promise.all(engines.map(engine => findAssociatedGames(engine.id)))
-  const uniqueGames = [...new Map(gamesByEngine.flat().map(game => [game.id, game])).values()]
-  return buildDeleteCheckResult(uniqueGames)
+  const [gamesByEngine, references] = await Promise.all([
+    Promise.all(engines.map(engine => findAssociatedGames(engine.id))),
+    // 整组卸载会移除该 engineId 的所有版本，因此按 id 匹配即可
+    findEngineReferenceBlockers(ref => ref.id === engineId),
+  ])
+
+  return buildDeleteCheckResult(
+    [...gamesByEngine.flat(), ...references.associatedGames],
+    references.uncheckedGames,
+  )
 }
 
-function buildDeleteCheckResult(associatedGames: Game[]): DeleteEngineCheckResult {
-  if (associatedGames.length > 0) {
-    return { canDelete: false, reason: 'ENGINE_HAS_ASSOCIATED_GAMES', associatedGames }
+function buildDeleteCheckResult(
+  associatedGames: Game[],
+  uncheckedGames: Game[],
+): DeleteEngineCheckResult {
+  const uniqueAssociatedGames = uniqueGames(associatedGames)
+  if (uniqueAssociatedGames.length > 0) {
+    return { canDelete: false, reason: 'ENGINE_HAS_ASSOCIATED_GAMES', associatedGames: uniqueAssociatedGames }
+  }
+  if (uncheckedGames.length > 0) {
+    return { canDelete: false, reason: 'ENGINE_REFERENCE_CHECK_FAILED', uncheckedGames }
   }
   return { canDelete: true }
 }

@@ -13,7 +13,7 @@ const props = defineProps<{
   allUnavailable?: boolean
 }>()
 
-const { associatedGames, isDeleteBlocked, isConfirmDisabled, handleConfirm } =
+const { associatedGames, uncheckedGames, isDeleteBlocked, isConfirmDisabled, handleConfirm } =
   $(useDeleteConfirmation({
     open,
     identifier: () => props.engineId,
@@ -25,6 +25,9 @@ const { associatedGames, isDeleteBlocked, isConfirmDisabled, handleConfirm } =
     logPrefix: '读取引擎分组删除状态失败',
     deleteLogPrefix: '删除引擎分组失败',
   }))
+
+// 两种阻断原因二选一：有关联游戏时列出它们，否则列出配置读不出、无法确认的游戏
+const blockedGames = $computed(() => uncheckedGames.length > 0 ? uncheckedGames : associatedGames)
 
 const dialogTitle = $computed(() => {
   if (isDeleteBlocked) {
@@ -40,6 +43,10 @@ const dialogTitle = $computed(() => {
 
 const dialogDescription = $computed(() => {
   if (isDeleteBlocked) {
+    if (uncheckedGames.length > 0) {
+      return t('engine.deleteBlockedByUncheckedGames')
+    }
+
     return t('engine.deleteBlockedByGames')
   }
 
@@ -77,8 +84,8 @@ const dialogWarning = $computed(() => {
           </AlertDialogTitle>
           <AlertDialogDescription>
             <p>{{ dialogDescription }}</p>
-            <ul v-if="isDeleteBlocked" class="text-sm mt-3 pl-5 list-disc">
-              <li v-for="game in associatedGames" :key="game.id">
+            <ul v-if="blockedGames.length > 0" class="text-sm mt-3 pl-5 list-disc">
+              <li v-for="game in blockedGames" :key="game.id">
                 {{ game.metadata.name }}
               </li>
             </ul>

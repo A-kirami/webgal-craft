@@ -1441,6 +1441,7 @@ engine:
   uninstallAllVersions: すべてのバージョンをアンインストール
   deleteBlocked: アンインストールできません
   deleteBlockedByGames: 以下のゲームがこのエンジンを使用しています：
+  deleteBlockedByUncheckedGames: 以下のゲームの設定を読み取れないため、このエンジンを使用しているか確認できません：
   unavailable: 利用不可
 
 game:
