@@ -600,6 +600,7 @@ modals:
       edit: 编辑
       backup: 备份
       storage: 存储
+      help: 帮助
   saveChanges:
     title: 要保存对 {name} 的更改吗？
     description: 不保存的话，你的更改会丢失。
@@ -1322,6 +1323,12 @@ edit:
     statementList: 语句列表
     noSelection: 选择一条语句开始编辑
 settings:
+  help:
+    reset:
+      label: 重置全部引导进度
+      description: 清除所有引导的完成记录。
+      action: 重置进度
+      done: 已重置。关闭设置后，本页的引导会重新开始；其他页面的引导会在下次打开时显示。
   experimental:
     tooltip: 实验性功能，使用过程中可能会遇到问题
   general:

@@ -5,11 +5,15 @@ import { defineComponent, nextTick, reactive, ref } from 'vue'
 
 import { createTestRenderer } from '~/features/editor/__tests__/utils/createTestRenderer'
 
+import { isTourCompleted, resetAllTourProgress } from '../tour-state'
+import { TOUR_PERSISTENCE } from '../tour-version'
 import { useOnboardingTour } from '../useOnboardingTour'
 
 import type { TourDriverOptions } from '../tour'
+import type { TourPersistence } from '../tour-version'
 import type { OnboardingTourControls, UseOnboardingTourOptions } from '../useOnboardingTour'
 import type { DriveStep } from 'driver.js'
+import type { Ref } from 'vue'
 import type { TestNode } from '~/features/editor/__tests__/utils/createTestRenderer'
 
 const { createTourDriverMock, driverMock, useStorageMock } = vi.hoisted(() => {
@@ -93,6 +97,25 @@ function mountTour(
   return controls
 }
 
+/** 用独立就绪条件与持久化键挂载，便于验证多条引导之间的串行 */
+function mountTourWithReady(ready: Ref<boolean>, persistence: TourPersistence): void {
+  const Harness = defineComponent({
+    setup() {
+      useOnboardingTour({
+        persistence,
+        ready: () => ready.value,
+        steps: () => [{ popover: { description: 'description', title: 'title' } }],
+      })
+      return () => undefined
+    },
+  })
+
+  const container: TestNode = { type: 'root', children: [] }
+  const app = renderer.createApp(Harness)
+  app.mount(container)
+  mountedApps.push(app)
+}
+
 beforeEach(() => {
   isReady.value = false
   modalStoreMock.hasOpenModal = false
@@ -113,6 +136,38 @@ afterEach(() => {
 })
 
 describe('useOnboardingTour', () => {
+  it('完成引导后向同文档广播完成状态', async () => {
+    mountTour()
+
+    isReady.value = true
+    await nextTick()
+    expect(isTourCompleted(PERSISTENCE)).toBe(false)
+
+    driverMock.destroy()
+    await nextTick()
+
+    expect(isTourCompleted(PERSISTENCE)).toBe(true)
+  })
+
+  it('已有引导在显示时不重叠启动，等它结束后再启动', async () => {
+    const firstReady = ref(false)
+    const secondReady = ref(false)
+    mountTourWithReady(firstReady, { storageKey: 'tour-a-version', version: '1' })
+    mountTourWithReady(secondReady, { storageKey: 'tour-b-version', version: '1' })
+
+    firstReady.value = true
+    secondReady.value = true
+    await nextTick()
+    await nextTick()
+
+    expect(createTourDriverMock).toHaveBeenCalledTimes(1)
+
+    driverMock.destroy()
+    await nextTick()
+
+    expect(createTourDriverMock).toHaveBeenCalledTimes(2)
+  })
+
   it('就绪时启动引导并挂上版本持久化', async () => {
     mountTour()
 
@@ -212,6 +267,37 @@ describe('useOnboardingTour', () => {
     await nextTick()
 
     expect(driverMock.drive).toHaveBeenCalledTimes(1)
+  })
+
+  it('清空完成记录后引导会重新启动', async () => {
+    vi.stubGlobal('localStorage', { removeItem: vi.fn() })
+    mountTour({ persistence: TOUR_PERSISTENCE.editor })
+
+    isReady.value = true
+    await nextTick()
+    expect(driverMock.drive).toHaveBeenCalledTimes(1)
+
+    // 走完引导会写入完成版本
+    driverMock.destroy()
+    await nextTick()
+
+    resetAllTourProgress()
+    await nextTick()
+
+    expect(driverMock.drive).toHaveBeenCalledTimes(2)
+  })
+
+  it('引导自己打开的弹窗不算让位，不会销毁进行中的引导', async () => {
+    mountTour({ ownsOpenModal: () => true })
+
+    isReady.value = true
+    await nextTick()
+    expect(driverMock.drive).toHaveBeenCalledTimes(1)
+
+    modalStoreMock.hasOpenModal = true
+    await nextTick()
+
+    expect(driverMock.destroy).not.toHaveBeenCalled()
   })
 
   it('引导进行中出现弹窗时立即让位且不写入版本，弹窗关闭后重新开始', async () => {

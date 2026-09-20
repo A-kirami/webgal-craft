@@ -600,6 +600,7 @@ modals:
       edit: 編輯
       backup: 備份
       storage: 儲存
+      help: 說明
   saveChanges:
     title: 要儲存對 {name} 的變更嗎？
     description: 不儲存的話，你的變更會遺失。
@@ -1322,6 +1323,12 @@ edit:
     statementList: 語句列表
     noSelection: 選擇一條語句開始編輯
 settings:
+  help:
+    reset:
+      label: 重設全部引導進度
+      description: 清除所有引導的完成記錄。
+      action: 重設進度
+      done: 已重設。關閉設定後，本頁的引導會重新開始；其他頁面的引導會在下次開啟時顯示。
   experimental:
     tooltip: 實驗性功能，使用過程中可能會遇到問題
   general:

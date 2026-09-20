@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
 
+import { TOUR_PERSISTENCE } from '~/features/onboarding/tour-version'
 
 import type { TourPersistence } from '~/features/onboarding/tour-version'
 
@@ -27,5 +28,13 @@ export function registerTourReset(storageKey: string, reset: () => void): () => 
 
   return () => {
     resetHandlers.delete(storageKey)
+  }
+}
+
+/** 清除全部引导的完成记录，并让已挂载的引导立即复位 */
+export function resetAllTourProgress(): void {
+  for (const { storageKey } of Object.values(TOUR_PERSISTENCE)) {
+    localStorage.removeItem(storageKey)
+    resetHandlers.get(storageKey)?.()
   }
 }

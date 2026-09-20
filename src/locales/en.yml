@@ -600,6 +600,7 @@ modals:
       edit: Edit
       backup: Backup
       storage: Storage
+      help: Help
   saveChanges:
     title: Save changes to {name}?
     description: If you don't save, your changes will be lost.
@@ -1322,6 +1323,12 @@ edit:
     statementList: Statement list
     noSelection: Select a statement to start editing
 settings:
+  help:
+    reset:
+      label: Reset All Guide Progress
+      description: Clear the completion record for every guide.
+      action: Reset Progress
+      done: Reset. Guides on this page start again after you close Settings. Guides on other pages appear the next time you open them.
   experimental:
     tooltip: Experimental feature that may have issues
   general:

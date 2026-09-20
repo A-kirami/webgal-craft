@@ -84,8 +84,8 @@ export function createTourConfig(options: TourDriverOptions): Config {
     overlayColor: '#000000',
     overlayOpacity: 0.5,
     /*
-     * 引导是一次性的：完成或跳过后都不会再弹，也没有重新触发的入口。
-     * 遮罩覆盖高亮区以外的整屏，误点一下就会永久丢掉后面的步骤，
+     * 完成或跳过的引导不会自动重弹，要补看只能去设置里重置进度。
+     * 遮罩覆盖高亮区以外的整屏，误点一下就会丢掉后面的步骤，
      * 所以这里不吃遮罩点击，只保留卡片上的「跳过」与 Esc 两个显式出口。
      */
     overlayClickBehavior: () => {

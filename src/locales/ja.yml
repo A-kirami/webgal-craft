@@ -600,6 +600,7 @@ modals:
       edit: 編集
       backup: バックアップ
       storage: ストレージ
+      help: ヘルプ
   saveChanges:
     title: "「{name}」への変更を保存しますか？"
     description: 保存しない場合、変更は失われます。
@@ -1322,6 +1323,12 @@ edit:
     statementList: ステートメントリスト
     noSelection: ステートメントを選択して編集を開始
 settings:
+  help:
+    reset:
+      label: すべてのガイドの進行状況をリセット
+      description: すべてのガイドの完了記録を消去します。
+      action: リセット
+      done: リセットしました。設定を閉じるとこのページのガイドが再開します。他のページのガイドは次に開いたときに表示されます。
   experimental:
     tooltip: 実験的な機能のため、使用中に問題が発生する可能性があります
   general:
