@@ -144,6 +144,14 @@ export default defineConfig(
     },
   },
   {
+    files: ['**/*.{yaml,yml}'],
+    rules: {
+      // @intlify 的 YAML 解析块只关闭了核心 spaced-comment，@stylistic 的同名规则需要单独关闭：
+      // yaml-eslint-parser 把 YAML 注释解析为块注释，该规则会要求注释结尾留白而逐条误报
+      '@stylistic/spaced-comment': 'off',
+    },
+  },
+  {
     files: ['**/*.vue'],
     rules: {
       'vue/multi-word-component-names': 'off',
