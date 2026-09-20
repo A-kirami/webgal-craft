@@ -95,6 +95,17 @@ export const useModalStore = defineStore('modal', () => {
     modalStack.set(modalKey, modalState)
   }
 
+  /**
+   * 关闭指定弹窗。弹窗组件自身通过 `::open` 双向绑定关闭，外部流程（如引导演示）
+   * 需要主动收回自己打开的弹窗时走这里。
+   */
+  function close(key: string): void {
+    const modal = modalStack.get(key)
+    if (modal) {
+      modal.isOpen = false
+    }
+  }
+
   // 等待模态框退出动画结束后清理已关闭的非 keepAlive 模态框
   watchDebounced($$(modalStack), () => {
     let cleaned = false
@@ -116,5 +127,6 @@ export const useModalStore = defineStore('modal', () => {
     modalStack,
     hasOpenModal,
     open,
+    close,
   })
 })

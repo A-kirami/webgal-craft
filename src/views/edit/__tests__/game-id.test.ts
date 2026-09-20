@@ -133,6 +133,19 @@ vi.mock('~/services/resource-index/service', () => ({
   useResourceIndexBootstrap: useResourceIndexBootstrapMock,
 }))
 
+// 引导会自己起 driver 并依赖 DOM，页面壳层测试只关心装配关系，这里整体替换掉
+vi.mock('~/features/onboarding/useEditorTour', () => ({
+  useEditorTour: vi.fn(),
+}))
+
+vi.mock('~/features/onboarding/useEditorWorkspaceTour', () => ({
+  useEditorWorkspaceTour: vi.fn(),
+}))
+
+vi.mock('~/features/onboarding/useSidebarCollapseTour', () => ({
+  useSidebarCollapseTour: vi.fn(),
+}))
+
 vi.mock('~/services/game-manager', () => ({
   gameManager: {
     ensureEditorRuntimeCompatible: ensureEditorRuntimeCompatibleMock,

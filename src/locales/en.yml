@@ -1471,6 +1471,7 @@ game:
 tour:
   common:
     done: Done
+    gotIt: Got it
     next: Next
     prev: Previous
     skip: Skip
@@ -1495,15 +1496,19 @@ tour:
     previewPanel:
       title: Preview Panel
       description: Preview the game as you edit. Hold {modifier} and scroll to zoom the view. Hold Space or the middle mouse button and drag to pan.
-    sceneResource:
-      title: Scenes and Resources
-      description: Manage scene files and game assets here. Drag figures, backgrounds, and music straight into the editor. Drop between statements to insert a new one, or drop on an existing statement to replace its content.
+    resource:
+      title: Resources
+      description: All figures, backgrounds, music, and other assets are stored here. Drag files in to import them.
+    scene:
+      title: Scenes
+      description: All the game's scene files are stored here. Open one to start editing.
+  editorWorkspace:
     modeSwitch:
       title: Edit Mode
-      description: Select this button to switch between text and visual editing modes. The next step appears automatically.
+      description: The editor area has text and visual editing modes. Switch between them here.
     editorArea:
       title: Editor Area
-      description: Scene content is edited here. Text mode edits the script directly, and visual mode shows the statements as cards.
+      description: Scene content is edited here. Text mode edits the script directly, and visual mode shows the statements as cards. Drag a scene file from the Scene tab or an asset from the Resource tab into the editor. Drop it between statements to insert a new statement, or drop it on an existing statement to replace its content.
     commandPanel:
       title: Command Panel
       description: Select a command card to insert it after the current statement, or drag a card into the editor and drop it anywhere.
@@ -1514,3 +1519,16 @@ tour:
     previewDrag:
       title: Drag in the Preview
       description: Drag figures and backgrounds directly in the preview. Drag to move, drag corners to scale, and drag the rotate handle to rotate.
+  resourceSwitch:
+    statusBar:
+      title: Switch Engine and Template
+      description: The bottom left of the editor shows the engine and template this game uses. Select either one to switch. Next, see what each one offers.
+    engineDialog:
+      title: Switch Engine
+      description: Select an engine here. Switch to another version of this engine, or choose a different engine.
+    templateDialog:
+      title: Switch Template
+      description: Select a template here. Use a standalone template or one built into an engine.
+  sidebarCollapse:
+    title: Statements Collapsed
+    description: With the sidebar open, all statement cards collapse so you can edit the statements in the sidebar form. To edit directly on the cards instead, turn off "Collapse All Statements When the Sidebar Opens" in Settings → Edit → Visual Editor.

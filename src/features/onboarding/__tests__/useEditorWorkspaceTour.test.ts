@@ -4,13 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, nextTick, reactive, ref } from 'vue'
 
 import { createTestRenderer } from '~/features/editor/__tests__/utils/createTestRenderer'
-import { usePreferenceStore } from '~/stores/preference'
 
 import { TOUR_LAYOUT_SETTLE_DELAY_MS } from '../tour'
-import { createEditorTourSteps, useEditorTour } from '../useEditorTour'
+import { createEditorWorkspaceTourSteps, useEditorWorkspaceTour } from '../useEditorWorkspaceTour'
 
 import type { TourDriverOptions } from '../tour'
-import type { DriverHook, DriveStep } from 'driver.js'
 import type { TestNode } from '~/features/editor/__tests__/utils/createTestRenderer'
 import type { I18nT } from '~/utils/i18n-like'
 
@@ -27,6 +25,7 @@ const { createTourDriverMock, driverMock } = vi.hoisted(() => {
   }
 })
 
+const editorStoreMock = reactive({ isCurrentSceneFile: false })
 const modalStoreMock = reactive({ hasOpenModal: false })
 
 vi.mock('@vueuse/core', async (importOriginal) => {
@@ -41,17 +40,22 @@ vi.mock('~/features/onboarding/tour', async (importOriginal) => {
   return { ...actual, createTourDriver: createTourDriverMock }
 })
 
+vi.mock('~/stores/editor', () => ({
+  useEditorStore: () => editorStoreMock,
+}))
+
 vi.mock('~/stores/modal', () => ({
   useModalStore: () => modalStoreMock,
 }))
 
 const renderer = createTestRenderer()
 const mountedApps: { unmount: () => void }[] = []
+const expandCommandPanelMock = vi.fn()
 
-function mountEditorTour(): void {
+function mountEditorWorkspaceTour(): void {
   const Harness = defineComponent({
     setup() {
-      useEditorTour()
+      useEditorWorkspaceTour({ expandCommandPanel: expandCommandPanelMock })
       return () => undefined
     },
   })
@@ -71,22 +75,10 @@ function lastDriverOptions(): TourDriverOptions {
   return options
 }
 
-function callHook(hook: DriverHook | undefined): void {
-  hook?.(undefined, {} as DriveStep, {} as Parameters<DriverHook>[2])
-}
-
-function findPanelStep(index: number): DriveStep {
-  const step = lastDriverOptions().steps
-    .filter(candidate => candidate.element === '[data-tour="scene-resource-panel"]')[index]
-  if (!step) {
-    throw new TypeError(`引导步骤缺少第 ${index} 个场景/资源面板步骤`)
-  }
-
-  return step
-}
-
-/** 等待 prepare 展开面板并越过布局稳定延时 */
-async function settleLayout(): Promise<void> {
+/** 打开场景文件并等待布局稳定，走完 useEditorWorkspaceTour 的启动路径 */
+async function openSceneFile(): Promise<void> {
+  editorStoreMock.isCurrentSceneFile = true
+  await nextTick()
   await nextTick()
   await vi.advanceTimersByTimeAsync(TOUR_LAYOUT_SETTLE_DELAY_MS)
   await nextTick()
@@ -94,15 +86,13 @@ async function settleLayout(): Promise<void> {
 
 beforeEach(() => {
   vi.useFakeTimers()
+  editorStoreMock.isCurrentSceneFile = false
   modalStoreMock.hasOpenModal = false
+  expandCommandPanelMock.mockReset()
   createTourDriverMock.mockReset()
   createTourDriverMock.mockImplementation(() => driverMock)
   driverMock.drive.mockReset()
   driverMock.moveNext.mockReset()
-
-  const preferenceStore = usePreferenceStore()
-  preferenceStore.leftPanelView = 'scene'
-  preferenceStore.showPreviewPanel = true
 })
 
 afterEach(() => {
@@ -112,65 +102,48 @@ afterEach(() => {
   }
 })
 
-describe('createEditorTourSteps', () => {
-  const hooks = {
-    onResourceStepHighlighted: vi.fn(),
-    onSceneStepHighlighted: vi.fn(),
-  }
-
-  it('依次指向预览面板、资源与场景', () => {
+describe('createEditorWorkspaceTourSteps', () => {
+  it('依次指向模式切换、编辑区与命令面板', () => {
     const echoT = ((key: string) => key) as unknown as I18nT
 
-    const steps = createEditorTourSteps(echoT, hooks)
+    const steps = createEditorWorkspaceTourSteps(echoT)
 
     expect(steps.map(step => step.element)).toEqual([
-      '[data-tour="preview-panel"]',
-      '[data-tour="scene-resource-panel"]',
-      '[data-tour="scene-resource-panel"]',
+      '[data-tour="mode-switch"]',
+      '[data-tour="editor-area"]',
+      '[data-tour="command-panel"]',
     ])
+    // 首步没有可返回的上一步，只保留「下一步 / 跳过」
     expect(steps[0]?.popover?.showButtons).toEqual(['next', 'close'])
   })
 
-  it('两个面板步骤各自把标签切到对应那一栏', () => {
+  it('模式切换步骤不做点击演示，用户只能按「下一步」继续', () => {
     const echoT = ((key: string) => key) as unknown as I18nT
 
-    const steps = createEditorTourSteps(echoT, hooks)
+    const modeStep = createEditorWorkspaceTourSteps(echoT)[0]
 
-    expect(steps[1]?.onHighlightStarted).toBe(hooks.onResourceStepHighlighted)
-    expect(steps[2]?.onHighlightStarted).toBe(hooks.onSceneStepHighlighted)
+    // 其余步骤都屏蔽交互，这一步保持同样行为，避免用户以为引导里可以操作
+    expect(modeStep?.disableActiveInteraction).toBeUndefined()
+    expect(modeStep?.onHighlightStarted).toBeUndefined()
+    expect(modeStep?.onDeselected).toBeUndefined()
   })
 })
 
-describe('useEditorTour', () => {
-  it('没有打开场景文件也启动，只介绍打开场景前就存在的面板', async () => {
-    mountEditorTour()
-    await settleLayout()
+describe('useEditorWorkspaceTour', () => {
+  it('编辑器还没有打开场景文件时不启动引导', async () => {
+    mountEditorWorkspaceTour()
+    await nextTick()
+    await vi.advanceTimersByTimeAsync(TOUR_LAYOUT_SETTLE_DELAY_MS)
 
+    expect(createTourDriverMock).not.toHaveBeenCalled()
+  })
+
+  it('打开场景文件后展开命令面板，等布局稳定再启动引导', async () => {
+    mountEditorWorkspaceTour()
+    await openSceneFile()
+
+    expect(expandCommandPanelMock).toHaveBeenCalledTimes(1)
     expect(driverMock.drive).toHaveBeenCalledTimes(1)
     expect(lastDriverOptions().steps).toHaveLength(3)
-  })
-
-  it('展开被收起的预览面板，等布局稳定再启动引导', async () => {
-    const preferenceStore = usePreferenceStore()
-    preferenceStore.showPreviewPanel = false
-
-    mountEditorTour()
-    await settleLayout()
-
-    expect(preferenceStore.showPreviewPanel).toBe(true)
-    expect(driverMock.drive).toHaveBeenCalledTimes(1)
-  })
-
-  it('高亮资源步骤切到资源标签，高亮场景步骤切回场景标签', async () => {
-    const preferenceStore = usePreferenceStore()
-
-    mountEditorTour()
-    await settleLayout()
-
-    callHook(findPanelStep(0).onHighlightStarted)
-    expect(preferenceStore.leftPanelView).toBe('resource')
-
-    callHook(findPanelStep(1).onHighlightStarted)
-    expect(preferenceStore.leftPanelView).toBe('scene')
   })
 })

@@ -72,3 +72,30 @@ html.dark .driver-overlay path {
   opacity: 0.65 !important;
   fill: #000000 !important;
 }
+
+/*
+ * 引导期间遮罩下方的应用整体不接收指针事件。
+ *
+ * driver.css 自带 `.driver-active * { pointer-events: none }`，但那条规则只有 0,1,0 特异性，
+ * 会被应用内的 pointer-events 工具类在层叠里压过；一旦被压过，高亮镂空外扩的那一圈
+ * （没有遮罩几何）就会把鼠标事件交给下层，紧贴目标的相邻元素（如状态栏上方的文件列表）
+ * 变得可 hover、可点击。这里用 !important 再压一层，并复刻 driver 的两处放行：
+ * 活动元素放行给需要用户动手的步骤（disableActiveInteraction: false），
+ * driver-no-interaction 再把它按回去；弹窗挂在 body 上、不在 #app 内，天然不受影响。
+ * 不要去调小 stagePadding 绕开它——那样会把高亮外观做得和其它引导不一致。
+ * 三条规则的选择器特异性依次为 1,1,1 / 1,2,1 / 1,2,1，所以 .driver-no-interaction 必须排在最末。
+ */
+body.driver-active #app,
+body.driver-active #app * {
+  pointer-events: none !important;
+}
+
+body.driver-active #app .driver-active-element,
+body.driver-active #app .driver-active-element * {
+  pointer-events: auto !important;
+}
+
+body.driver-active #app .driver-no-interaction,
+body.driver-active #app .driver-no-interaction * {
+  pointer-events: none !important;
+}

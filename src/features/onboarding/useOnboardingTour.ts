@@ -1,10 +1,17 @@
 import { createTourDriver, createTourLabels } from '~/features/onboarding/tour'
+import { publishTourCompletion, registerTourReset } from '~/features/onboarding/tour-state'
 import { useModalStore } from '~/stores/modal'
 
 import type { Driver, DriveStep } from 'driver.js'
 import type { TourOverrides } from '~/features/onboarding/tour'
 import type { TourPersistence } from '~/features/onboarding/tour-version'
 import type { I18nT } from '~/utils/i18n-like'
+
+/**
+ * 同屏只允许一条引导。多条引导同时就绪时（例如重置引导进度会同时清掉编辑器内几条
+ * 引导的完成记录）靠它按挂载顺序排队，否则两条 driver 遮罩会叠在一起。
+ */
+const activeTourCount = ref(0)
 
 export interface OnboardingTourControls {
   /** 用户已用行动学会（如首次真实拖拽）时调用：销毁引导并记录完成版本 */
@@ -19,6 +26,11 @@ export interface OnboardingTourStepControls {
 export interface UseOnboardingTourOptions {
   /** 驱动销毁后的额外清理（移除锚点、停止步骤监听等） */
   onDriverDestroyed?(): void
+  /**
+   * 引导自己打开弹窗时返回 true。此时「有弹窗打开」是引导的预期状态，不能按让位处理：
+   * 让位销毁不写完成版本，弹窗一关引导就会从头再来。只对主动演示弹窗的引导开放此出口。
+   */
+  ownsOpenModal?(): boolean
   /** 启动前的异步准备（展开面板、等布局稳定） */
   prepare?(): Promise<void> | void
   /** 引导可以出现的条件：目标就绪等；条件消失时进行中的引导立即让位 */
@@ -39,13 +51,43 @@ export function useOnboardingTour(options: UseOnboardingTourOptions): Onboarding
   const modalStore = useModalStore()
   const completedVersion = useStorage(options.persistence.storageKey, '')
 
+  // 设置里的「重置全部引导进度」要让已挂载的引导立即复位：完成记录存在这里的 ref 上，
+  // 同文档内改写 localStorage 不会传播过来，所以由 tour-state 反向回调
+  onScopeDispose(registerTourReset(options.persistence.storageKey, () => {
+    completedVersion.value = ''
+  }))
+
+  // 广播给同文档内的其它引导，供引导之间的顺序编排（useStorage 不跨实例同步）
+  watch(completedVersion, (version) => {
+    publishTourCompletion(options.persistence.storageKey, version)
+  }, { immediate: true })
+
   let activeDriver: Driver | undefined
   let isAborting = false
   let isStarting = false
   let isUnmounting = false
 
   function isReady(): boolean {
-    return options.ready() && !modalStore.hasOpenModal
+    if (!options.ready()) {
+      return false
+    }
+
+    if (options.ownsOpenModal?.() !== true && modalStore.hasOpenModal) {
+      return false
+    }
+
+    // 本引导已经在运行时忽略计数：否则它会被自己算出来的「有引导在显示」挤掉
+    return activeDriver ? true : activeTourCount.value === 0
+  }
+
+  /** 清掉当前驱动并释放占位，保证计数只减一次 */
+  function clearActiveDriver(): void {
+    if (!activeDriver) {
+      return
+    }
+
+    activeDriver = undefined
+    activeTourCount.value -= 1
   }
 
   function canStart(): boolean {
@@ -61,14 +103,14 @@ export function useOnboardingTour(options: UseOnboardingTourOptions): Onboarding
       return
     }
 
-    activeDriver = undefined
+    clearActiveDriver()
     isAborting = true
     driver.destroy()
     isAborting = false
   }
 
   function handleDestroyed(): void {
-    activeDriver = undefined
+    clearActiveDriver()
     options.onDriverDestroyed?.()
     if (!isUnmounting && !isAborting) {
       completedVersion.value = options.persistence.version
@@ -95,17 +137,16 @@ export function useOnboardingTour(options: UseOnboardingTourOptions): Onboarding
         overrides: options.overrides,
         steps: options.steps(t, { moveNext: () => activeDriver?.moveNext() }),
       })
+      activeTourCount.value += 1
       activeDriver.drive()
     } finally {
       isStarting = false
-      // 启动耗时期间条件反复过：就绪时的再次触发被并发守卫吞掉，这里补上
-      if (!activeDriver && canStart()) {
-        void startTour()
-      }
     }
   }
 
-  watch(isReady, (ready) => {
+  // completedVersion 也要作为依赖：清空完成记录不会改变就绪条件，
+  // 只监听 isReady 的话引导不会重新启动
+  watch([isReady, completedVersion], ([ready]) => {
     if (ready) {
       void startTour()
       return

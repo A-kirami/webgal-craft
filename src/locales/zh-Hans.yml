@@ -1471,6 +1471,7 @@ game:
 tour:
   common:
     done: 完成
+    gotIt: 知道了
     next: 下一步
     prev: 上一步
     skip: 跳过
@@ -1495,15 +1496,19 @@ tour:
     previewPanel:
       title: 预览面板
       description: 编辑时实时预览游戏画面。按住 {modifier} 滚动滚轮缩放视图，按住空格或鼠标中键拖动平移。
-    sceneResource:
-      title: 场景与资源
-      description: 在这里管理场景文件和游戏资源。立绘、背景、音乐等资源可以直接拖放到编辑器：拖到语句之间插入新语句，拖到已有语句上替换内容。
+    resource:
+      title: 资源
+      description: 立绘、背景、音乐等资源都存放在这里，把外部文件拖放进来即可导入。
+    scene:
+      title: 场景
+      description: 游戏的场景文件都在这里，打开任意一个就能开始编辑。
+  editorWorkspace:
     modeSwitch:
       title: 编辑模式
-      description: 点击这个按钮在文本和可视化两种编辑模式之间切换，切换后会自动进入下一步。
+      description: 编辑区有文本和可视化两种编辑模式，在这里切换。
     editorArea:
       title: 编辑区
-      description: 场景内容在这里编辑：文本模式直接编辑脚本，可视化模式把语句显示为卡片。
+      description: 场景内容在这里编辑：文本模式直接编辑脚本，可视化模式把语句显示为卡片。“场景”里的场景文件和“资源”里的立绘、背景、音乐都能直接拖放进来，拖到语句之间插入新语句，拖到已有语句上替换内容。
     commandPanel:
       title: 命令面板
       description: 点击命令卡片插入到当前语句之后；也可以把卡片直接拖放到编辑器，插入到任意位置。
@@ -1514,3 +1519,16 @@ tour:
     previewDrag:
       title: 在预览中拖动
       description: 直接拖动预览中的立绘或背景即可调整：拖动移动位置，拖边角缩放，拖旋转手柄旋转。
+  resourceSwitch:
+    statusBar:
+      title: 切换引擎与模板
+      description: 编辑器底部左侧显示当前游戏使用的引擎和模板，点击就能切换。接下来看看它们分别能做什么。
+    engineDialog:
+      title: 切换引擎
+      description: 在这里选择引擎，可以更换当前引擎的版本，也可以改用其他引擎。
+    templateDialog:
+      title: 切换模板
+      description: 在这里选择模板，可以用独立模板，也可以用某个引擎内置的模板。
+  sidebarCollapse:
+    title: 语句已折叠
+    description: 打开辅助面板后，语句卡片会全部折叠，方便用面板里的表单编辑。想直接在卡片上编辑，到“设置 → 编辑 → 可视化编辑器”里关掉“打开辅助面板时折叠全部语句”。

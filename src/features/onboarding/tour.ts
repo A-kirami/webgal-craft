@@ -16,6 +16,12 @@ export const TOUR_FIRST_STEP_BUTTONS: AllowedButtons[] = ['next', 'close']
 const TOUR_WAIT_FOR_ELEMENT_MS = 3000
 
 /**
+ * 面板展开、语句折叠等布局变化后等待稳定的时长。高亮框按启动瞬间的矩形定位，
+ * 布局动画没结束就启动会让高亮落在旧位置上。
+ */
+export const TOUR_LAYOUT_SETTLE_DELAY_MS = 300
+
+/**
  * 高亮镂空圆角：模态框圆角 `rounded-lg` 在这里是 8px（`--radius-lg` = `--radius` = 0.5rem），
  * 引导在此之上放大 2px。tour.css 的卡片圆角用 `calc(var(--radius) + 2px)` 表达同一规则，
  * 改这里要同步改那边。
