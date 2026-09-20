@@ -17,10 +17,10 @@ defineOptions({
   inheritAttrs: false,
 })
 
-const props = defineProps<DialogContentProps & { class?: HTMLAttributes["class"] }>()
+const props = defineProps<DialogContentProps & { class?: HTMLAttributes["class"], hideClose?: boolean }>()
 const emits = defineEmits<DialogContentEmits>()
 
-const delegatedProps = reactiveOmit(props, "class")
+const delegatedProps = reactiveOmit(props, "class", "hideClose")
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 </script>
@@ -40,7 +40,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     >
       <slot />
 
-      <DialogClose as-child>
+      <DialogClose v-if="!hideClose" as-child>
         <Button variant="ghost" size="icon-sm" class="absolute top-3 right-3">
           <X />
           <span class="sr-only">Close</span>

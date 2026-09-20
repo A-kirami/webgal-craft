@@ -148,11 +148,28 @@ async function handleDirtyDiscard(): Promise<void> {
 function handleCancelFailed(): void {
   open.value = false
 }
+
+/**
+ * 切换进行中收回关闭能力。关掉弹窗并不等于取消切换：`performSwitch` 仍在后台读写工程，
+ * 用户却会以为已经中止。reka 的 Escape 与点击遮罩关闭都靠 preventDefault 拦截。
+ */
+function preventDismissWhileSwitching(event: Event): void {
+  if (isSwitching) {
+    event.preventDefault()
+  }
+}
 </script>
 
 <template>
   <Dialog ::open="open">
-    <DialogContent data-tour="switch-engine-dialog" class="sm:max-w-[425px]" :hide-close="isSwitching" @open-auto-focus.prevent>
+    <DialogContent
+      data-tour="switch-engine-dialog"
+      class="sm:max-w-[425px]"
+      :hide-close="isSwitching"
+      @escape-key-down="preventDismissWhileSwitching"
+      @interact-outside="preventDismissWhileSwitching"
+      @open-auto-focus.prevent
+    >
       <DialogHeader>
         <DialogTitle>
           {{ $t('modals.switchEngine.title') }}

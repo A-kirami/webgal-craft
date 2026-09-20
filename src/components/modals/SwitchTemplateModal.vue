@@ -118,11 +118,28 @@ async function handleResetConfirm() {
     isResetting = false
   }
 }
+
+/**
+ * 切换或重置进行中收回关闭能力。关掉弹窗并不等于取消：服务仍在后台改写工程，
+ * 用户却会以为已经中止。reka 的 Escape 与点击遮罩关闭都靠 preventDefault 拦截。
+ */
+function preventDismissWhileBusy(event: Event): void {
+  if (isSwitching || isResetting) {
+    event.preventDefault()
+  }
+}
 </script>
 
 <template>
   <Dialog ::open="open">
-    <DialogContent data-tour="switch-template-dialog" class="sm:max-w-[450px]" :hide-close="isSwitching || isResetting" @open-auto-focus.prevent>
+    <DialogContent
+      data-tour="switch-template-dialog"
+      class="sm:max-w-[450px]"
+      :hide-close="isSwitching || isResetting"
+      @escape-key-down="preventDismissWhileBusy"
+      @interact-outside="preventDismissWhileBusy"
+      @open-auto-focus.prevent
+    >
       <DialogHeader>
         <DialogTitle>
           {{ $t('modals.switchTemplate.title') }}
