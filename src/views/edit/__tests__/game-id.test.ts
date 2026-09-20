@@ -146,6 +146,10 @@ vi.mock('~/features/onboarding/useSidebarCollapseTour', () => ({
   useSidebarCollapseTour: vi.fn(),
 }))
 
+vi.mock('~/features/onboarding/useResourceSwitchTour', () => ({
+  useResourceSwitchTour: vi.fn(),
+}))
+
 vi.mock('~/services/game-manager', () => ({
   gameManager: {
     ensureEditorRuntimeCompatible: ensureEditorRuntimeCompatibleMock,
