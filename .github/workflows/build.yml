@@ -15,6 +15,7 @@ on:
       - "*.config.ts"
       - "tsconfig*.json"
       - ".github/workflows/build.yml"
+      - ".github/actions/**"
   pull_request:
     paths:
       - "src/**"
@@ -28,6 +29,7 @@ on:
       - "*.config.ts"
       - "tsconfig*.json"
       - ".github/workflows/build.yml"
+      - ".github/actions/**"
   workflow_dispatch:
 
 concurrency:
@@ -78,63 +80,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
-      - name: Install system dependencies (Ubuntu)
-        if: matrix.platform == 'linux-x64'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      # 构建环境准备统一在 .github/actions/prepare-build，勿在此复制等价步骤
+      - name: Prepare build environment
+        id: prepare
+        uses: $/.github/actions/prepare-build
         with:
-          toolchain: stable
-          targets: ${{ matrix.rustTargets }}
-
-      - name: Setup Java
-        if: matrix.mobile == 'android'
-        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
-        with:
-          distribution: temurin
-          java-version: 21
-
-      - name: Setup Android SDK
-        if: matrix.mobile == 'android'
-        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
-        with:
-          # 覆盖动作默认的 'tools platform-tools'：legacy tools 已被 Google 下架，保留即失败
-          packages: platform-tools
-
-      - name: Install Android SDK packages
-        if: matrix.mobile == 'android'
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
-
-      - name: Setup Android NDK
-        if: matrix.mobile == 'android'
-        id: setup-ndk
-        uses: nttld/setup-ndk@ed92fe6cadad69be94a966a7ee3271275e62f779 # v1.6.0
-        with:
-          ndk-version: r29
-          link-to-sdk: true
-
-      - name: Rust cache
-        uses: swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        with:
-          workspaces: ./src-tauri -> target
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: package.json
-
-      - name: Install dependencies
-        run: bun ci
+          platform: ${{ matrix.platform }}
+          mobile: ${{ matrix.mobile }}
+          rust-targets: ${{ matrix.rustTargets }}
 
       - name: Build app
         id: tauri-build
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # action-v1.0.0
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+          NDK_HOME: ${{ steps.prepare.outputs.ndk-path }}
         with:
           args: ${{ matrix.args }} -c '{"bundle":{"createUpdaterArtifacts":false}}' ${{ github.event_name == 'pull_request' && '--debug' || '' }}
           mobile: ${{ matrix.mobile }}

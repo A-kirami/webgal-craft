@@ -1,0 +1,85 @@
+name: Prepare build environment
+description: 准备 Tauri 桌面端与 Android 端的构建环境，供 build 与 release 工作流共用
+
+inputs:
+  platform:
+    description: 矩阵中的 platform 值，用于判断是否需要 Linux 系统依赖
+    required: true
+  mobile:
+    description: 矩阵中的 mobile 值，为 android 时安装 Android 工具链
+    required: false
+    default: ""
+  rust-targets:
+    description: 传给 Rust 工具链的额外编译目标，逗号分隔
+    required: false
+    default: ""
+  android-build-tools:
+    description: Android 构建使用的 Build-Tools 版本
+    required: false
+    default: 36.0.0
+
+outputs:
+  ndk-path:
+    description: Android NDK 安装路径，供 NDK_HOME 使用
+    value: ${{ steps.setup-ndk.outputs.ndk-path }}
+  android-build-tools:
+    description: 与 android-build-tools 输入一致的 Build-Tools 版本，供 apksigner 等工具定位
+    value: ${{ inputs.android-build-tools }}
+
+runs:
+  using: composite
+  steps:
+    # 两个工作流共用同一份工具链安装逻辑；任一平台调整只改这里，避免只改一边造成漂移。
+    - name: Install system dependencies (Ubuntu)
+      if: inputs.platform == 'linux-x64'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+    - name: Setup Rust toolchain
+      uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      with:
+        toolchain: stable
+        targets: ${{ inputs.rust-targets }}
+
+    - name: Setup Java
+      if: inputs.mobile == 'android'
+      uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+      with:
+        distribution: temurin
+        java-version: 21
+
+    - name: Setup Android SDK
+      if: inputs.mobile == 'android'
+      uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+      with:
+        # 覆盖动作默认的 'tools platform-tools'：legacy tools 已被 Google 下架，保留即失败
+        packages: platform-tools
+
+    - name: Install Android SDK packages
+      if: inputs.mobile == 'android'
+      shell: bash
+      run: sdkmanager "platforms;android-36" "build-tools;${{ inputs.android-build-tools }}"
+
+    - name: Setup Android NDK
+      if: inputs.mobile == 'android'
+      id: setup-ndk
+      uses: nttld/setup-ndk@ed92fe6cadad69be94a966a7ee3271275e62f779 # v1.6.0
+      with:
+        ndk-version: r29
+        link-to-sdk: true
+
+    - name: Rust cache
+      uses: swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      with:
+        workspaces: ./src-tauri -> target
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      with:
+        bun-version-file: package.json
+
+    - name: Install dependencies
+      shell: bash
+      run: bun ci
