@@ -113,7 +113,7 @@ async function handleConfirm() {
       <AlertDialogFooter>
         <AlertDialogCancel>{{ $t('common.cancel') }}</AlertDialogCancel>
         <Button variant="destructive" :disabled="isConfirming" @click="handleConfirm">
-          {{ removeFiles && isDesktop ? $t('common.moveToTrash') : $t('common.confirm') }}
+          {{ $t('common.confirm') }}
         </Button>
       </AlertDialogFooter>
     </AlertDialogContent>
