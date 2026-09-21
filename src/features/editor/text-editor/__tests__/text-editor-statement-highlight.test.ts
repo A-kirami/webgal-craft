@@ -41,6 +41,7 @@ describe('createTextEditorStatementHighlightController', () => {
           'say:xxxx;',
         ]),
         getPosition: () => ({ lineNumber: 3 }),
+        getSelections: () => [],
       },
       isEnabled: () => true,
     })
@@ -74,6 +75,7 @@ describe('createTextEditorStatementHighlightController', () => {
           'say:xxxx;',
         ]),
         getPosition: () => ({ lineNumber: 2 }),
+        getSelections: () => [],
       },
       isEnabled: () => true,
     })
@@ -91,6 +93,7 @@ describe('createTextEditorStatementHighlightController', () => {
         createDecorationsCollection: () => decorations,
         getModel: () => createModel(['say:xxxx;']),
         getPosition: () => ({ lineNumber: 1 }),
+        getSelections: () => [],
       },
       isEnabled: () => true,
     })
@@ -98,5 +101,57 @@ describe('createTextEditorStatementHighlightController', () => {
     controller.syncFromEditorPosition()
 
     expect(decorations.set).not.toHaveBeenCalled()
+  })
+
+  it('出现非空选区时移除整行高亮', () => {
+    const decorations = createDecorationsCollectionMock()
+    let selections: { isEmpty: () => boolean }[] = []
+    const controller = createTextEditorStatementHighlightController({
+      editor: {
+        createDecorationsCollection: () => decorations,
+        getModel: () => createModel([
+          'changeFigure:stand.webp',
+          '  -id=hero;',
+          'say:xxxx;',
+        ]),
+        getPosition: () => ({ lineNumber: 2 }),
+        getSelections: () => selections,
+      },
+      isEnabled: () => true,
+    })
+
+    controller.syncFromEditorPosition()
+    expect(decorations.set).toHaveBeenCalledTimes(1)
+
+    selections = [{ isEmpty: () => false }]
+    controller.syncFromEditorPosition()
+
+    expect(decorations.clear).toHaveBeenCalledTimes(1)
+  })
+
+  it('选区收起到单光标后恢复整行高亮', () => {
+    const decorations = createDecorationsCollectionMock()
+    let selections: { isEmpty: () => boolean }[] = [{ isEmpty: () => false }]
+    const controller = createTextEditorStatementHighlightController({
+      editor: {
+        createDecorationsCollection: () => decorations,
+        getModel: () => createModel([
+          'changeFigure:stand.webp',
+          '  -id=hero;',
+          'say:xxxx;',
+        ]),
+        getPosition: () => ({ lineNumber: 2 }),
+        getSelections: () => selections,
+      },
+      isEnabled: () => true,
+    })
+
+    controller.syncFromEditorPosition()
+    expect(decorations.set).not.toHaveBeenCalled()
+
+    selections = []
+    controller.syncFromEditorPosition()
+
+    expect(decorations.set).toHaveBeenCalledTimes(1)
   })
 })

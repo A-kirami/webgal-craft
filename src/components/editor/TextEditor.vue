@@ -228,6 +228,12 @@ function handleCursorPositionChange(event: monaco.editor.ICursorPositionChangedE
   statementHighlightController?.syncDecorationsForLine(event.position.lineNumber)
 }
 
+function handleCursorSelectionChange(event: monaco.editor.ICursorSelectionChangedEvent) {
+  runtime.handleCursorSelectionChange(event)
+  // 选区变化不一定改变光标位置（如双击选词），整行高亮需要跟着选区有无重新判断
+  statementHighlightController?.syncFromEditorPosition()
+}
+
 function handleEditorMouseDown(event: monaco.editor.IEditorMouseEvent) {
   runtime.handleEditorClick()
   playToLineController?.handleMouseDown(event)
@@ -267,7 +273,7 @@ function createEditor() {
   })
 
   editor.onDidChangeCursorPosition(handleCursorPositionChange)
-  editor.onDidChangeCursorSelection(runtime.handleCursorSelectionChange)
+  editor.onDidChangeCursorSelection(handleCursorSelectionChange)
   editor.onDidChangeModelContent(handleModelContentChange)
   editor.onDidScrollChange(runtime.handleScrollChange)
   editor.onMouseDown(handleEditorMouseDown)
