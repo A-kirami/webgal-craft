@@ -910,6 +910,8 @@ edit:
       rotate: Rotate target
       scale: Scale target
   assetPanel:
+    emptyTitle: No assets here yet
+    emptyHint: Drag and drop files in to import them
     tabs:
       figure: Figure
       background: Background

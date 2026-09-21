@@ -910,6 +910,8 @@ edit:
       rotate: 旋轉目標
       scale: 縮放目標
   assetPanel:
+    emptyTitle: 這裡還沒有資源
+    emptyHint: 把外部檔案拖放進來即可匯入
     tabs:
       figure: 立繪
       background: 背景
