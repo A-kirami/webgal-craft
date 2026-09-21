@@ -37,9 +37,6 @@ function translate(key: string): string {
     case 'common.confirm': {
       return '确认'
     }
-    case 'common.moveToTrash': {
-      return '移到回收站'
-    }
     case 'modals.deleteGame.deleteFiles': {
       return '同时删除游戏文件'
     }
@@ -159,7 +156,8 @@ describe('DeleteGameModal', () => {
     const { game, updateOpen } = renderDeleteGameModal()
 
     await page.getByRole('checkbox').click()
-    await page.getByRole('button', { name: '移到回收站' }).click()
+    // 勾选后按钮文案保持不变，仅由复选框表达“移到回收站”语义
+    await page.getByRole('button', { name: '确认' }).click()
 
     expect(deleteGameMock).toHaveBeenCalledWith(game, 'trash')
     expect(updateOpen).toHaveBeenCalledWith(false)
