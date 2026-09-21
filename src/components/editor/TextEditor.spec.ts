@@ -228,6 +228,15 @@ function readPlayToLineDecorations() {
   return collection
 }
 
+function readStatementHighlightDecorations() {
+  const collection = monacoMockState.editorInstance.createDecorationsCollection.mock.results[1]?.value
+  if (!collection) {
+    throw new Error('预期 TextEditor 创建整行语句高亮装饰集合')
+  }
+
+  return collection
+}
+
 function createHarness(path: string = '/project/scene-1.txt') {
   const editSettingsStore = reactive<EditSettingsStoreMock>({
     fontFamily: 'Fira Code',
@@ -799,6 +808,32 @@ describe('TextEditor', () => {
         }),
       }),
     ])
+  })
+
+  it('出现非空选区时会清除多行语句高亮', async () => {
+    const { state } = createHarness('/project/scene-statement-highlight.txt')
+    state.runtimeCapabilities = { figurePositions: true, multilineStatements: true, opusVocalShorthand: true, sceneSemantics: true }
+    monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel([
+      'changeFigure:stand.webp',
+      '  -id=hero;',
+      'say:next;',
+    ]))
+    monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 2 })
+
+    renderTextEditor(state)
+    await nextTick()
+
+    const decorations = readStatementHighlightDecorations()
+    expect(decorations.set).toHaveBeenCalledTimes(1)
+
+    monacoMockState.editorInstance.getSelections.mockReturnValue([{ isEmpty: () => false }])
+    const handleCursorSelectionChange = monacoMockState.editorInstance.onDidChangeCursorSelection.mock.calls[0]?.[0]
+
+    expect(handleCursorSelectionChange).toBeTypeOf('function')
+
+    handleCursorSelectionChange?.({ selection: { positionLineNumber: 2 } })
+
+    expect(decorations.clear).toHaveBeenCalledTimes(1)
   })
 
   it('鼠标按下编辑器时会通知 runtime 处理点击', async () => {

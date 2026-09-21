@@ -58,6 +58,7 @@ export interface MonacoEditorInstanceMock {
   getDomNode: Mock<() => MonacoDomNodeMock | null>
   getModel: Mock<() => unknown>
   getPosition: Mock<() => unknown>
+  getSelections: Mock<() => unknown>
   onDidCompositionEnd: Mock<(listener: () => void) => MonacoDisposableMock>
   onDidCompositionStart: Mock<(listener: () => void) => MonacoDisposableMock>
   onDidChangeCursorPosition: MonacoListenerMock
@@ -135,6 +136,7 @@ function applyEditorInstanceMockDefaults(editorInstance: MonacoEditorInstanceMoc
   editorInstance.getDomNode.mockImplementation(() => domNode)
   editorInstance.getModel.mockReturnValue(undefined)
   editorInstance.getPosition.mockReturnValue(undefined)
+  editorInstance.getSelections.mockReturnValue([])
   editorInstance.onDidCompositionEnd.mockImplementation(() => createDisposable())
   editorInstance.onDidCompositionStart.mockImplementation(() => createDisposable())
   editorInstance.onKeyDown.mockImplementation(() => createDisposable())
@@ -151,6 +153,7 @@ function createEditorInstanceMock(): MonacoEditorInstanceMock {
     getDomNode: vi.fn<() => MonacoDomNodeMock | null>(),
     getModel: vi.fn<() => unknown>(),
     getPosition: vi.fn<() => unknown>(),
+    getSelections: vi.fn<() => unknown>(),
     onDidCompositionEnd: createDisposableListenerMock(),
     onDidCompositionStart: createDisposableListenerMock(),
     onDidChangeCursorPosition: createDisposableListenerMock(),

@@ -32,6 +32,7 @@ export interface TextEditorStatementHighlightEditor {
   createDecorationsCollection: () => TextEditorStatementHighlightDecorationsCollection
   getModel: () => TextEditorStatementHighlightModel | null | undefined
   getPosition: () => { lineNumber: number } | null | undefined
+  getSelections: () => readonly { isEmpty: () => boolean }[] | null | undefined
 }
 
 interface CreateTextEditorStatementHighlightControllerOptions {
@@ -67,6 +68,9 @@ function readModelText(model: TextEditorStatementHighlightModel): string {
 /**
  * 将当前光标所在的多行逻辑语句作为整体高亮。
  * 单行语句继续使用 Monaco 内置的当前行高亮，避免重复 decoration。
+ *
+ * 与 Monaco 内置的当前行高亮保持一致：存在非空选区时不渲染整行高亮，
+ * 让选区成为唯一的选中反馈（见 AbstractLineHighlightOverlay._shouldRenderInContent）。
  */
 export function createTextEditorStatementHighlightController(
   options: CreateTextEditorStatementHighlightControllerOptions,
@@ -97,8 +101,13 @@ export function createTextEditorStatementHighlightController(
     decorations.clear()
   }
 
+  function hasNonEmptySelection(): boolean {
+    const selections = options.editor.getSelections()
+    return selections?.some(selection => !selection.isEmpty()) ?? false
+  }
+
   function syncDecorationsForLine(lineNumber: number | undefined) {
-    if (!options.isEnabled() || !lineNumber) {
+    if (!options.isEnabled() || !lineNumber || hasNonEmptySelection()) {
       clearDecorations()
       return
     }
