@@ -36,6 +36,6 @@ const {
   <div v-else-if="isEmpty" class="flex flex-col h-full w-full items-center justify-center">
     <FolderOpen class="text-muted-foreground mb-2 size-10" :stroke-width="1.25" />
     <span class="text-xs text-muted-foreground">{{ emptyTitle || $t('common.fileViewer.noContent') }}</span>
-    <span v-if="emptyHint" class="text-muted-foreground/70 mt-1 text-xs">{{ emptyHint }}</span>
+    <span v-if="emptyHint" class="text-xs text-muted-foreground/70 mt-1">{{ emptyHint }}</span>
   </div>
 </template>
