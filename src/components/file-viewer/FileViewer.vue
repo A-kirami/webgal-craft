@@ -38,6 +38,10 @@ interface FileViewerProps {
   isLoading?: boolean
   /** 错误信息 */
   errorMsg?: string
+  /** 空状态标题，未提供时使用通用文案 */
+  emptyTitle?: string
+  /** 空状态的补充提示，未提供时只显示通用空状态文案 */
+  emptyHint?: string
   /** 网格模式下单个项的最小宽度 */
   gridItemMinWidth?: number
   /** 缩放比例（50-150） */
@@ -97,6 +101,8 @@ const {
   sortableHeaders = true,
   isLoading = false,
   errorMsg = '',
+  emptyTitle = '',
+  emptyHint = '',
   gridItemMinWidth = 80,
   zoom,
   enableDragTransfer = false,
@@ -498,6 +504,8 @@ defineExpose(fileViewerExpose)
           <ContextMenuTrigger as-child>
             <div class="h-full min-h-0">
               <FileViewerState
+                :empty-title="emptyTitle"
+                :empty-hint="emptyHint"
                 :is-loading="isLoading"
                 :error-msg="errorMsg"
                 :is-empty="isEmptyState"
@@ -511,6 +519,8 @@ defineExpose(fileViewerExpose)
 
         <FileViewerState
           v-else-if="shouldShowState"
+          :empty-title="emptyTitle"
+          :empty-hint="emptyHint"
           :is-loading="isLoading"
           :error-msg="errorMsg"
           :is-empty="isEmptyState"

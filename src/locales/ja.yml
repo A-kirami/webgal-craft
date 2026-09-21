@@ -910,6 +910,8 @@ edit:
       rotate: 対象を回転
       scale: 対象を拡大縮小
   assetPanel:
+    emptyTitle: まだリソースがありません
+    emptyHint: 外部のファイルをドラッグ＆ドロップするとインポートできます
     tabs:
       figure: 立ち絵
       background: 背景

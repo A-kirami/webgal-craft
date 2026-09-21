@@ -910,6 +910,8 @@ edit:
       rotate: 旋转目标
       scale: 缩放目标
   assetPanel:
+    emptyTitle: 这里还没有资源
+    emptyHint: 把外部文件拖放进来即可导入
     tabs:
       figure: 立绘
       background: 背景

@@ -221,6 +221,19 @@ const filteredItems = $computed(() => {
 
   return itemsWithReferenceCounts.filter(item => item.name.toLocaleLowerCase().includes(keyword))
 })
+
+const emptyState = $computed(() => {
+  // 搜索过滤后为空不代表目录为空，此时保留通用空状态文案。
+  if (searchQuery.trim() && items.length > 0) {
+    return { emptyHint: '', emptyTitle: '' }
+  }
+
+  return {
+    emptyHint: t('edit.assetPanel.emptyHint'),
+    emptyTitle: t('edit.assetPanel.emptyTitle'),
+  }
+})
+
 const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(assetType))
 
 const currentDirectoryContextMenuItem = $computed(() => {
@@ -793,6 +806,8 @@ for (const eventType of FILE_SYSTEM_REFRESH_EVENT_TYPES) {
       :error-msg="errorMsg"
       :can-drop-file-transfer="canDropFileTransfer"
       :drop-target-directory="currentDirectoryContextMenuItem"
+      :empty-title="emptyState.emptyTitle"
+      :empty-hint="emptyState.emptyHint"
       enable-drag-transfer
       :external-drop-target-path="externalFileImport.targetDirectory.value"
       :highlighted-item-path="renameTargetItem?.path"

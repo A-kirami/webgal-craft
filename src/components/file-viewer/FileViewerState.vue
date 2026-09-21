@@ -5,12 +5,18 @@ interface FileViewerStateProps {
   isLoading: boolean
   errorMsg: string
   isEmpty: boolean
+  /** 空状态标题，未提供时使用通用文案 */
+  emptyTitle?: string
+  /** 空状态补充提示，例如当前上下文支持的导入方式 */
+  emptyHint?: string
 }
 
 const {
   isLoading,
   errorMsg,
   isEmpty,
+  emptyTitle = '',
+  emptyHint = '',
 } = defineProps<FileViewerStateProps>()
 </script>
 
@@ -29,6 +35,7 @@ const {
 
   <div v-else-if="isEmpty" class="flex flex-col h-full w-full items-center justify-center">
     <FolderOpen class="text-muted-foreground mb-2 size-10" :stroke-width="1.25" />
-    <span class="text-xs text-muted-foreground">{{ $t('common.fileViewer.noContent') }}</span>
+    <span class="text-xs text-muted-foreground">{{ emptyTitle || $t('common.fileViewer.noContent') }}</span>
+    <span v-if="emptyHint" class="text-muted-foreground/70 mt-1 text-xs">{{ emptyHint }}</span>
   </div>
 </template>

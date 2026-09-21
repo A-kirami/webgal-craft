@@ -1523,6 +1523,44 @@ describe('FileViewer', () => {
     await expect.element(page.getByTestId('empty-background-context-menu-content')).toHaveTextContent('empty-background')
   })
 
+  it('空状态会先展示调用方传入的标题，再展示补充提示', async () => {
+    viewportWidthMock.value = 780
+
+    renderInBrowser(FileViewer, {
+      props: {
+        emptyTitle: '这里还没有资源',
+        emptyHint: '把外部文件拖放进来即可导入',
+        items: [],
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('这里还没有资源')).toBeVisible()
+    await expect.element(page.getByText('把外部文件拖放进来即可导入')).toBeVisible()
+    await expect.element(page.getByText('common.fileViewer.noContent')).not.toBeInTheDocument()
+  })
+
+  it('未提供空状态文案时只显示通用空状态文案', async () => {
+    viewportWidthMock.value = 780
+
+    renderInBrowser(FileViewer, {
+      props: {
+        items: [],
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('common.fileViewer.noContent')).toBeVisible()
+    await expect.element(page.getByText('这里还没有资源')).not.toBeInTheDocument()
+    await expect.element(page.getByText('把外部文件拖放进来即可导入')).not.toBeInTheDocument()
+  })
+
   it('窄列表视图下会同时隐藏 modifiedAt 列头和内容', async () => {
     viewportWidthMock.value = 520
 
