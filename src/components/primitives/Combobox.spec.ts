@@ -153,6 +153,31 @@ const MultiKeywordComboboxHarness = defineComponent({
   `,
 })
 
+const LabelComboboxHarness = defineComponent({
+  components: { Combobox },
+  setup() {
+    const modelValue = ref('')
+
+    return {
+      baseOptions,
+      modelValue,
+    }
+  },
+  template: `
+    <div>
+      <label for="label-motion">Scene label</label>
+      <Combobox
+        id="label-motion"
+        v-model="modelValue"
+        data-testid="label-motion-trigger"
+        :options="baseOptions"
+        placeholder="Select motion"
+        search-placeholder="Search motion"
+      />
+    </div>
+  `,
+})
+
 const ItemClassComboboxHarness = defineComponent({
   components: { Combobox },
   setup() {
@@ -188,6 +213,82 @@ describe('Combobox', () => {
     await expect.element(page.getByRole('status')).toBeVisible()
     await expect.element(page.getByRole('status')).toHaveTextContent('common.noOptions')
     await expect.element(page.getByRole('option')).not.toBeInTheDocument()
+  })
+
+  it('点击关联标签时只聚焦控件，直接点击控件时才展开候选项', async () => {
+    renderInBrowser(LabelComboboxHarness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const trigger = page.getByTestId('label-motion-trigger')
+    await page.getByText('Scene label').click()
+
+    await expect.element(trigger).toHaveFocus()
+    // 程序化聚焦不满足 :focus-visible，需要 focus: 变体保证激活反馈可见
+    await expect.element(trigger).toHaveClass('focus:ring-1')
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
+    await expect.element(page.getByRole('listbox')).not.toBeInTheDocument()
+
+    await trigger.click()
+
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'true')
+    await expect.element(page.getByRole('option', { name: 'Idle' })).toBeInTheDocument()
+
+    await page.getByText('Scene label').click()
+
+    await expect.element(trigger).toHaveFocus()
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
+    await expect.element(page.getByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('聚焦控件后按 Enter 仍会展开候选项', async () => {
+    renderInBrowser(ComboboxHarness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const trigger = page.getByTestId('motion-trigger')
+    trigger.element().focus()
+    await userEvent.keyboard('{Enter}')
+
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'true')
+    await expect.element(page.getByRole('option', { name: 'Idle' })).toBeInTheDocument()
+  })
+
+  it('聚焦控件后按 ArrowDown 会展开候选项', async () => {
+    renderInBrowser(ComboboxHarness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const trigger = page.getByTestId('motion-trigger')
+    trigger.element().focus()
+    await userEvent.keyboard('{ArrowDown}')
+
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'true')
+    await expect.element(page.getByRole('option', { name: 'Idle' })).toBeInTheDocument()
+  })
+
+  it('选择候选项或按 Escape 关闭后，焦点回到触发器', async () => {
+    renderInBrowser(ComboboxHarness)
+
+    const trigger = page.getByTestId('motion-trigger')
+
+    await trigger.click()
+    await page.getByRole('option', { name: 'Idle' }).click()
+
+    await expect.element(trigger).toHaveFocus()
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
+
+    await trigger.click()
+    await userEvent.keyboard('{Escape}')
+
+    await expect.element(trigger).toHaveFocus()
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('打开后会把焦点交给搜索框', async () => {

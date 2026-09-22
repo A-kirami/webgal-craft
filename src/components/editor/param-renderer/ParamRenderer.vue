@@ -251,6 +251,11 @@ function handleLabelPointerDown(event: PointerEvent, field: EditorField) {
   emit('labelPointerDown', { field, event })
 }
 
+function handleLabelClick(field: EditorField) {
+  // 分段、立绘位置等 div 控件不是 labelable，浏览器不会执行 label 的聚焦步骤，需要显式聚焦
+  document.querySelector<HTMLElement>(`#${fieldInputId(field)}`)?.focus()
+}
+
 function getNumericField(field: EditorField): NumberField | undefined {
   if (field.field.type === 'number') {
     return field.field
@@ -329,6 +334,7 @@ const choiceFieldViewModels = $(useParamChoiceFieldViewModel({
           :for="fieldInputId(field)"
           :class="cn('text-xs text-muted-foreground w-fit group-data-[surface=panel]:font-medium', fieldLayout(field) === 'row' && 'shrink-0', canScrub(field) && 'cursor-ew-resize select-none touch-none')"
           @pointerdown="handleLabelPointerDown($event, field)"
+          @click="handleLabelClick(field)"
         >
           {{ xyPad?.displayLabel(field) ?? label(field) }}
         </Label>

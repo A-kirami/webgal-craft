@@ -14,6 +14,7 @@ import { statementEditorSurfaceKey } from '~/features/editor/statement-editor/su
 import { useEditSettingsStore } from '~/stores/edit-settings'
 import 'virtual:uno.css'
 
+import FigurePositionControl from './controls/FigurePositionControl.vue'
 import NumberControl from './controls/NumberControl.vue'
 import ParamChoiceField from './ParamChoiceField.vue'
 import ParamRenderer from './ParamRenderer.vue'
@@ -643,6 +644,51 @@ describe('ParamRenderer', () => {
     })
 
     await expect.element(page.getByTestId('param-choice-field')).toHaveAttribute('data-options', 'left,right')
+  })
+
+  it('点击字段标签会把焦点交给非 labelable 的位置控件', async () => {
+    const field = createFigurePositionChoiceField()
+
+    renderInBrowser(ParamRenderer, {
+      props: {
+        canScrub: () => false,
+        fields: [field],
+        fileRootPaths: {},
+        getAutocompleteOptions: () => [],
+        getDynamicOptions: () => [],
+        getFieldSelectOptions: () => [
+          { label: 'Left', value: 'left' },
+          { label: 'Right', value: 'right' },
+        ],
+        supportsExtendedFigurePositions: true,
+        getFieldSelectValue: () => 'left',
+        getFieldValue: () => 'left',
+        getFieldDiagnostics: () => [],
+        isFieldVisible: () => true,
+      },
+      global: {
+        provide: {
+          [statementEditorSurfaceKey]: 'panel',
+        },
+        stubs: {
+          ...globalStubs,
+          FigurePositionControl,
+          ParamChoiceField: createParamChoiceFieldProbeStub(),
+        },
+      },
+    })
+
+    const label = document.querySelector<HTMLLabelElement>('label[for]')
+    if (!label) {
+      throw new TypeError('expected the field label to render')
+    }
+    const control = requireHtmlElement(document.querySelector(`#${label.htmlFor}`))
+
+    await page.getByText('Position').click()
+
+    // 组控件获得焦点后，RovingFocus 会把焦点交给组内当前项
+    const activeElement = requireHtmlElement(document.activeElement)
+    expect(control.contains(activeElement)).toBe(true)
   })
 
   it('4.6.3 面板使用图标立绘位置控件', async () => {

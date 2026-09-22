@@ -4,6 +4,7 @@ import { Search } from '@lucide/vue'
 import { cn } from '~/lib/utils'
 
 import { createSearchOptionDocuments, filterSearchOptionDocuments } from './combobox/search'
+import { useComboboxTrigger } from './combobox/useComboboxTrigger'
 
 import type { HTMLAttributes } from 'vue'
 
@@ -30,11 +31,21 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
-let open = $ref(false)
 let searchQuery = $ref('')
 let highlightedIndex = $ref(-1)
 let hoveredIndex = $ref<number | undefined>(undefined)
 
+const {
+  closeWithTriggerFocus,
+  handleOpenChange,
+  handleTriggerKeydown,
+  handleTriggerPointerDown,
+  handleTriggerPointerEnter,
+  handleTriggerPointerLeave,
+  isTriggerHovered,
+  open,
+  triggerElementRef,
+} = useComboboxTrigger()
 const attrs = useAttrs()
 const inputRef = $(useTemplateRef<HTMLInputElement>('inputRef'))
 const listRef = $(useTemplateRef<HTMLElement>('listRef'))
@@ -97,7 +108,7 @@ async function scrollHighlightedOptionAfterNextTick(block: ScrollLogicalPosition
 
 function selectOption(value: string) {
   emit('update:modelValue', value)
-  open = false
+  closeWithTriggerFocus()
 }
 
 async function handleInputKeydown(event: KeyboardEvent) {
@@ -137,12 +148,12 @@ async function handleInputKeydown(event: KeyboardEvent) {
 
   if (event.key === 'Escape') {
     event.preventDefault()
-    open = false
+    closeWithTriggerFocus()
   }
 }
 
 watch(() => filteredDocuments, (nextOptions) => {
-  if (!open) {
+  if (!open.value) {
     return
   }
 
@@ -159,7 +170,7 @@ watch(() => filteredDocuments, (nextOptions) => {
   syncHighlightFromSelectedValue()
 })
 
-watch(() => open, async (isOpen) => {
+watch(open, async (isOpen) => {
   if (!isOpen) {
     searchQuery = ''
     highlightedIndex = -1
@@ -178,7 +189,7 @@ watch(() => open, async (isOpen) => {
 })
 
 watch(() => searchQuery, async (nextQuery) => {
-  if (!open || !nextQuery.trim()) {
+  if (!open.value || !nextQuery.trim()) {
     return
   }
 
@@ -190,15 +201,23 @@ watch(() => searchQuery, async (nextQuery) => {
 </script>
 
 <template>
-  <Popover ::open="open">
-    <PopoverTrigger as-child>
+  <Popover :open="open" @update:open="handleOpenChange">
+    <PopoverTrigger ref="triggerElementRef" as-child>
       <Button
         v-bind="attrs"
         variant="outline"
         role="combobox"
         :aria-expanded="open"
         aria-haspopup="listbox"
-        :class="cn('text-xs justify-between font-normal px-2 py-1.5', props.class)"
+        :class="cn(
+          'text-xs justify-between font-normal px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring',
+          !isTriggerHovered && 'hover:bg-background!',
+          props.class,
+        )"
+        @pointerdown="handleTriggerPointerDown"
+        @pointerenter="handleTriggerPointerEnter"
+        @pointerleave="handleTriggerPointerLeave"
+        @keydown="handleTriggerKeydown"
       >
         <span class="truncate" :class="!selectedLabel && 'text-muted-foreground'">
           {{ selectedLabel || placeholder }}

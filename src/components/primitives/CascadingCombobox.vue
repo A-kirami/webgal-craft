@@ -6,6 +6,7 @@ import { cn } from '~/lib/utils'
 
 import { filterSearchOptionDocuments } from './combobox/search'
 import { useCascadingComboboxState } from './combobox/useCascadingComboboxState'
+import { useComboboxTrigger } from './combobox/useComboboxTrigger'
 
 import type { CascadingComboboxNode } from './combobox/cascading-combobox-data'
 import type { SearchOptionDocument } from './combobox/search'
@@ -29,13 +30,23 @@ const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
-let open = $ref(false)
 let browseScrollRequestKey = $ref(0)
 let browseScrollTargetDepth = $ref<number | 'all'>('all')
 let hoveredSearchIndex = $ref<number | undefined>(undefined)
 let searchHighlightedIndex = $ref(-1)
 let searchQuery = $ref('')
 
+const {
+  closeWithTriggerFocus,
+  handleOpenChange,
+  handleTriggerKeydown,
+  handleTriggerPointerDown,
+  handleTriggerPointerEnter,
+  handleTriggerPointerLeave,
+  isTriggerHovered,
+  open,
+  triggerElementRef,
+} = useComboboxTrigger()
 const attrs = useAttrs()
 const inputRef = $(useTemplateRef<HTMLInputElement>('inputRef'))
 const panelRef = $(useTemplateRef<HTMLElement>('panelRef'))
@@ -153,7 +164,7 @@ function handleRootInteractOutside(event: Event) {
 
 function selectOption(value: string) {
   emit('update:modelValue', value)
-  open = false
+  closeWithTriggerFocus()
 }
 
 async function moveSearchHighlight(step: 1 | -1) {
@@ -202,7 +213,7 @@ async function scrollKeyboardBrowseStateAfterNextTick() {
 async function handleInputKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
     event.preventDefault()
-    open = false
+    closeWithTriggerFocus()
     return
   }
 
@@ -283,7 +294,7 @@ async function handleInputKeydown(event: KeyboardEvent) {
   }
 }
 
-watch(() => open, async (isOpen) => {
+watch(open, async (isOpen) => {
   if (!isOpen) {
     searchQuery = ''
     searchHighlightedIndex = -1
@@ -323,15 +334,23 @@ watch(() => searchQuery, (nextQuery, previousQuery) => {
 </script>
 
 <template>
-  <Popover ::open="open">
-    <PopoverTrigger as-child>
+  <Popover :open="open" @update:open="handleOpenChange">
+    <PopoverTrigger ref="triggerElementRef" as-child>
       <Button
         v-bind="attrs"
         variant="outline"
         role="combobox"
         :aria-expanded="open"
         aria-haspopup="listbox"
-        :class="cn('text-xs justify-between font-normal px-2 py-1.5', props.class)"
+        :class="cn(
+          'text-xs justify-between font-normal px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring',
+          !isTriggerHovered && 'hover:bg-background!',
+          props.class,
+        )"
+        @pointerdown="handleTriggerPointerDown"
+        @pointerenter="handleTriggerPointerEnter"
+        @pointerleave="handleTriggerPointerLeave"
+        @keydown="handleTriggerKeydown"
       >
         <span class="truncate" :class="!selectedLabel && 'text-muted-foreground'">
           {{ selectedLabel || placeholder }}
