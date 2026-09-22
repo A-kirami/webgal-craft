@@ -243,6 +243,63 @@ describe('Combobox', () => {
     await expect.element(page.getByRole('listbox')).not.toBeInTheDocument()
   })
 
+  it('按住指针拖出触发器后，再点击关联标签不会展开候选项', async () => {
+    renderInBrowser(LabelComboboxHarness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const trigger = page.getByTestId('label-motion-trigger')
+    const triggerElement = trigger.element()
+
+    triggerElement.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, buttons: 1 }))
+    triggerElement.dispatchEvent(new PointerEvent('pointerleave', { buttons: 1 }))
+
+    await page.getByText('Scene label').click()
+
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
+    await expect.element(page.getByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('按住指针拖出触发器再移回，释放时的点击仍会展开候选项', async () => {
+    renderInBrowser(LabelComboboxHarness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const trigger = page.getByTestId('label-motion-trigger')
+    const triggerElement = trigger.element()
+
+    triggerElement.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, buttons: 1 }))
+    triggerElement.dispatchEvent(new PointerEvent('pointerleave', { buttons: 1 }))
+    triggerElement.dispatchEvent(new PointerEvent('pointerenter', { buttons: 1 }))
+    triggerElement.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'true')
+    await expect.element(page.getByRole('option', { name: 'Idle' })).toBeInTheDocument()
+  })
+
+  it('触摸抬起后分发的 pointerleave 不影响随后的点击展开', async () => {
+    renderInBrowser(LabelComboboxHarness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const trigger = page.getByTestId('label-motion-trigger')
+    const triggerElement = trigger.element()
+
+    triggerElement.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, buttons: 1 }))
+    triggerElement.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
+    triggerElement.dispatchEvent(new PointerEvent('pointerleave'))
+    triggerElement.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'true')
+    await expect.element(page.getByRole('option', { name: 'Idle' })).toBeInTheDocument()
+  })
+
   it('聚焦控件后按 Enter 仍会展开候选项', async () => {
     renderInBrowser(ComboboxHarness, {
       global: {

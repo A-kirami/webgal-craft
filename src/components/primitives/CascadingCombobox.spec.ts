@@ -478,6 +478,21 @@ describe('CascadingCombobox', () => {
     await expect.element(page.getByRole('searchbox')).not.toBeInTheDocument()
   })
 
+  it('指针交互被取消后，再点击关联标签不会展开候选面板', async () => {
+    renderInBrowser(LabelGroupedHarness)
+
+    const trigger = page.getByTestId('label-grouped-trigger')
+    const triggerElement = trigger.element()
+
+    triggerElement.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, buttons: 1 }))
+    triggerElement.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }))
+
+    await page.getByText('Scene label').click()
+
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
+    await expect.element(page.getByRole('searchbox')).not.toBeInTheDocument()
+  })
+
   it('聚焦控件后按 ArrowDown 会展开候选面板', async () => {
     renderInBrowser(GroupedHarness)
 

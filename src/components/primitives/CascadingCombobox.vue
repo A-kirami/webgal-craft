@@ -40,6 +40,7 @@ const {
   closeWithTriggerFocus,
   handleOpenChange,
   handleTriggerKeydown,
+  handleTriggerPointerCancel,
   handleTriggerPointerDown,
   handleTriggerPointerEnter,
   handleTriggerPointerLeave,
@@ -347,6 +348,7 @@ watch(() => searchQuery, (nextQuery, previousQuery) => {
           !isTriggerHovered && 'hover:bg-background!',
           props.class,
         )"
+        @pointercancel="handleTriggerPointerCancel"
         @pointerdown="handleTriggerPointerDown"
         @pointerenter="handleTriggerPointerEnter"
         @pointerleave="handleTriggerPointerLeave"

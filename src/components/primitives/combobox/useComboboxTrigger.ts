@@ -19,12 +19,27 @@ export function useComboboxTrigger() {
     hasOpenIntent = true
   }
 
-  function handleTriggerPointerEnter() {
+  function handleTriggerPointerEnter(event: PointerEvent) {
     isTriggerHovered.value = true
+
+    // 按住指针移回触发器：pointerdown 发生在这里，此时释放仍会点击触发器
+    if (event.buttons !== 0) {
+      hasOpenIntent = true
+    }
   }
 
-  function handleTriggerPointerLeave() {
+  function handleTriggerPointerLeave(event: PointerEvent) {
     isTriggerHovered.value = false
+
+    // 只在按住指针拖出时清除：抬起后的 pointerleave（如触摸）先于 click 分发，清除会让点击失效
+    if (event.buttons !== 0) {
+      hasOpenIntent = false
+    }
+  }
+
+  // 指针流被取消（如触摸滚动）后不会再产生 click，清除意图避免残留到后续的标签激活
+  function handleTriggerPointerCancel() {
+    hasOpenIntent = false
   }
 
   function handleTriggerKeydown(event: KeyboardEvent) {
@@ -59,6 +74,7 @@ export function useComboboxTrigger() {
     closeWithTriggerFocus,
     handleOpenChange,
     handleTriggerKeydown,
+    handleTriggerPointerCancel,
     handleTriggerPointerDown,
     handleTriggerPointerEnter,
     handleTriggerPointerLeave,
