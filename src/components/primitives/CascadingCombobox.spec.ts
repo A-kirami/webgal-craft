@@ -264,6 +264,32 @@ const DynamicSearchDocumentsHarness = defineComponent({
   `,
 })
 
+const LabelGroupedHarness = defineComponent({
+  components: { CascadingCombobox },
+  setup() {
+    const modelValue = ref('')
+
+    return {
+      groupedData,
+      modelValue,
+    }
+  },
+  template: `
+    <div>
+      <label for="label-grouped">Scene label</label>
+      <CascadingCombobox
+        id="label-grouped"
+        v-model="modelValue"
+        data-testid="label-grouped-trigger"
+        :browse-nodes="groupedData.browseNodes"
+        :search-documents="groupedData.searchDocuments"
+        placeholder="Select motion"
+        search-placeholder="Search motion"
+      />
+    </div>
+  `,
+})
+
 function getFloatingRects(): FloatingRect[] {
   return [...document.querySelectorAll<HTMLElement>('[data-reka-popper-content-wrapper]')].map((element) => {
     const rect = element.getBoundingClientRect()
@@ -426,6 +452,56 @@ describe('CascadingCombobox', () => {
     await expect.element(page.getByRole('status')).toBeVisible()
     await expect.element(page.getByRole('status')).toHaveTextContent('common.noOptions')
     await expect.element(page.getByRole('option')).not.toBeInTheDocument()
+  })
+
+  it('点击关联标签时只聚焦控件，直接点击控件时才展开候选面板', async () => {
+    renderInBrowser(LabelGroupedHarness)
+
+    const trigger = page.getByTestId('label-grouped-trigger')
+    await page.getByText('Scene label').click()
+
+    await expect.element(trigger).toHaveFocus()
+    // 程序化聚焦不满足 :focus-visible，需要 focus: 变体保证激活反馈可见
+    await expect.element(trigger).toHaveClass('focus:ring-1')
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
+    await expect.element(page.getByRole('searchbox')).not.toBeInTheDocument()
+
+    await trigger.click()
+
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'true')
+    await expect.element(page.getByRole('searchbox')).toBeInTheDocument()
+
+    await page.getByText('Scene label').click()
+
+    await expect.element(trigger).toHaveFocus()
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
+    await expect.element(page.getByRole('searchbox')).not.toBeInTheDocument()
+  })
+
+  it('指针交互被取消后，再点击关联标签不会展开候选面板', async () => {
+    renderInBrowser(LabelGroupedHarness)
+
+    const trigger = page.getByTestId('label-grouped-trigger')
+    const triggerElement = trigger.element()
+
+    triggerElement.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, buttons: 1 }))
+    triggerElement.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true }))
+
+    await page.getByText('Scene label').click()
+
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
+    await expect.element(page.getByRole('searchbox')).not.toBeInTheDocument()
+  })
+
+  it('聚焦控件后按 ArrowDown 会展开候选面板', async () => {
+    renderInBrowser(GroupedHarness)
+
+    const trigger = page.getByTestId('grouped-trigger')
+    trigger.element().focus()
+    await userEvent.keyboard('{ArrowDown}')
+
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'true')
+    await expect.element(page.getByRole('searchbox')).toBeInTheDocument()
   })
 
   it('首次打开已选嵌套值时，根层与级联子层作为独立浮层渲染，并保持向右级联展开', async () => {
@@ -636,6 +712,24 @@ describe('CascadingCombobox', () => {
     expect(getSubpanelRects()).toHaveLength(1)
     expect(getLayerActiveBrowseText(0)).toContain('chara')
     await expect.element(page.getByText('variant01', { exact: true })).toBeInTheDocument()
+  })
+
+  it('选择候选项或按 Escape 关闭后，焦点回到触发器', async () => {
+    renderInBrowser(FlatHarness)
+
+    const trigger = page.getByTestId('flat-trigger')
+
+    await trigger.click()
+    await page.getByText('Joy', { exact: true }).click()
+
+    await expect.element(trigger).toHaveFocus()
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
+
+    await trigger.click()
+    await userEvent.keyboard('{Escape}')
+
+    await expect.element(trigger).toHaveFocus()
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('未启用路径分组时浏览态保持扁平列表', async () => {
