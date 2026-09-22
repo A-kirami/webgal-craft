@@ -15,15 +15,20 @@ export function useComboboxTrigger() {
   const isTriggerHovered = ref(false)
   let hasOpenIntent = false
 
-  function handleTriggerPointerDown() {
+  function handleTriggerPointerDown(event: PointerEvent) {
+    // 右键、中键分别触发 contextmenu/auxclick，不产生 click，不能算作打开意图
+    if (event.button !== 0) {
+      return
+    }
+
     hasOpenIntent = true
   }
 
   function handleTriggerPointerEnter(event: PointerEvent) {
     isTriggerHovered.value = true
 
-    // 按住指针移回触发器：pointerdown 发生在这里，此时释放仍会点击触发器
-    if (event.buttons !== 0) {
+    // 按住主按钮移回触发器：pointerdown 发生在这里，此时释放仍会点击触发器
+    if ((event.buttons & 1) !== 0) {
       hasOpenIntent = true
     }
   }

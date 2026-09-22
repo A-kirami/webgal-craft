@@ -300,6 +300,42 @@ describe('Combobox', () => {
     await expect.element(page.getByRole('option', { name: 'Idle' })).toBeInTheDocument()
   })
 
+  it('按下非主按键不会留下打开意图', async () => {
+    renderInBrowser(LabelComboboxHarness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const trigger = page.getByTestId('label-motion-trigger')
+    const triggerElement = trigger.element()
+
+    triggerElement.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 2, buttons: 2 }))
+
+    await page.getByText('Scene label').click()
+
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
+    await expect.element(page.getByRole('listbox')).not.toBeInTheDocument()
+  })
+
+  it('按住非主按键移入触发器不会留下打开意图', async () => {
+    renderInBrowser(LabelComboboxHarness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const trigger = page.getByTestId('label-motion-trigger')
+    const triggerElement = trigger.element()
+
+    triggerElement.dispatchEvent(new PointerEvent('pointerenter', { buttons: 2 }))
+
+    await page.getByText('Scene label').click()
+
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'false')
+    await expect.element(page.getByRole('listbox')).not.toBeInTheDocument()
+  })
+
   it('聚焦控件后按 Enter 仍会展开候选项', async () => {
     renderInBrowser(ComboboxHarness, {
       global: {
