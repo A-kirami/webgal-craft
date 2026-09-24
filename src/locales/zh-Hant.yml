@@ -1326,6 +1326,9 @@ edit:
     noSelection: 選擇一條語句開始編輯
 settings:
   help:
+    shortcuts:
+      title: 快捷操作
+      description: 在編輯器與預覽中可用的鍵盤快速鍵與滑鼠操作。
     reset:
       label: 重設全部引導進度
       description: 清除所有引導的完成記錄。
@@ -1428,6 +1431,78 @@ settings:
     maxDays:
       label: 版本保留天數
       description: 超過此天數的舊版本會被自動清理
+
+shortcut:
+  groups:
+    general: 一般
+    visualEditor: 視覺化編輯器
+    textEditor: 文字編輯器
+    effectEditor: 效果編輯器
+    animationEditor: 動畫編輯器
+    fileTree: 檔案樹
+    preview: 預覽畫面
+    transform: 變換調整
+  save: 儲存目前檔案
+  commandPanel: 顯示或隱藏命令面板
+  toggleSidebar: 顯示或隱藏輔助面板
+  togglePreview: 顯示或隱藏預覽面板
+  sidebarScene: 切換到場景檢視
+  sidebarResource: 切換到資源檢視
+  visual:
+    undo: 復原
+    redo: 重做
+    copy: 複製語句
+    cut: 剪下語句
+    paste: 貼上語句
+    duplicate: 建立副本
+    delete: 刪除語句
+    selectFirst: 選取第一條語句
+    selectLast: 選取最後一條語句
+    moveUp: 上移語句
+    moveDown: 下移語句
+  textEditor:
+    find: 尋找
+    replace: 取代
+  fileTree:
+    rename: 重新命名
+    delete: 刪除
+  effect:
+    undo: 復原
+    redo: 重做
+    copy: 複製效果
+    paste: 貼上效果
+    flipHorizontal: 水平翻轉
+    flipVertical: 垂直翻轉
+    apply: 套用變更
+    close: 取消並關閉
+  animation:
+    deleteFrame: 刪除影格
+    apply: 套用變更
+    close: 取消並關閉
+  transform:
+    nudge: 微調位置
+    nudgeFast: 快速微調位置
+  mouse:
+    drag: 拖曳
+    handleDrag: 拖曳控點
+    rotateDrag: 拖曳旋轉
+    wheel: 滾輪
+    dragLabel: 拖曳標籤
+    middleDrag: 中鍵拖曳
+    spaceDrag: 空白鍵 + 拖曳
+    panCanvas: 平移畫面
+    zoomCanvas: 縮放畫面
+    moveElement: 移動選取元素
+    scaleElement: 縮放選取元素
+    rotateElement: 旋轉選取元素
+    lockAxis: 鎖定水平或垂直移動
+    toggleUniformScale: 切換等比縮放
+    rotateSnap: 以 15° 吸附旋轉
+    zoomTimeline: 縮放動畫時間軸
+  scrub:
+    adjust: 調整數值
+    coarse: 粗調數值
+    fine: 微調數值
 
 notFound:
   message: 頁面不存在
