@@ -13,6 +13,8 @@ import { AbsPath } from '~/domain/path'
 
 import SwitchTemplateModal from './SwitchTemplateModal.vue'
 
+import type { ProjectConfig } from '~/types/project-config'
+
 const {
   dbEngineGetMock,
   handleErrorMock,
@@ -352,6 +354,37 @@ describe('SwitchTemplateModal', () => {
     await nextTick()
     open.value = true
     await nextTick()
+
+    await expect.element(page.getByRole('button', { name: '确认', exact: true })).toBeDisabled()
+  })
+
+  it('重开时未完成的首次绑定读取不会覆盖当前状态', async () => {
+    const firstRead = createDeferred<ProjectConfig>()
+    readProjectConfigMock
+      .mockReturnValueOnce(firstRead.promise)
+      .mockRejectedValueOnce(new Error('read failed'))
+
+    const open = renderReopenableModal()
+
+    await vi.waitFor(() => {
+      expect(readProjectConfigMock).toHaveBeenCalledTimes(1)
+    })
+
+    open.value = false
+    await nextTick()
+    open.value = true
+    await vi.waitFor(() => {
+      expect(readProjectConfigMock).toHaveBeenCalledTimes(2)
+    })
+
+    firstRead.resolve({
+      version: 1,
+      engine: { id: 'open-webgal.webgal', version: '4.5.0' },
+      template: { kind: 'standalone', name: 'Current' },
+    })
+    await nextTick()
+
+    await page.getByTestId('select-other-template').click()
 
     await expect.element(page.getByRole('button', { name: '确认', exact: true })).toBeDisabled()
   })

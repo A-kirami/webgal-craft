@@ -29,6 +29,7 @@ let isEngineAvailable = $ref(true)
 let selectedBinding = $ref<TemplateBinding | undefined>(undefined)
 let initialBinding = $ref<TemplateBinding | undefined>(undefined)
 let isBindingKnown = $ref(false)
+let bindingReadGeneration = 0
 
 /** 选择是否与打开弹窗时项目当前的模板绑定一致；一致时无需切换（清理覆盖另有「重置模板」入口） */
 function isSameTemplateBinding(
@@ -56,6 +57,9 @@ const canConfirm = $computed(() =>
 )
 
 watch(() => open.value, async (isOpen) => {
+  // 每次开/关都让上一次未完成的绑定读取失效，避免过期结果覆盖当前状态
+  const generation = ++bindingReadGeneration
+
   if (!isOpen) {
     showDirtyConfirm = false
     showResetConfirm = false
@@ -72,10 +76,16 @@ watch(() => open.value, async (isOpen) => {
   // Initial binding mirrors the project's current state so the dialog reflects reality.
   try {
     const config = await projectConfigCmds.readProjectConfig(props.game.path)
+    if (generation !== bindingReadGeneration) {
+      return
+    }
     selectedBinding = config?.template
     initialBinding = config?.template
     isBindingKnown = true
   } catch {
+    if (generation !== bindingReadGeneration) {
+      return
+    }
     selectedBinding = undefined
     initialBinding = undefined
     isBindingKnown = false
