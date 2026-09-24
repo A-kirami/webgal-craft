@@ -27,8 +27,39 @@ let showDirtyConfirm = $ref(false)
 let showResetConfirm = $ref(false)
 let isEngineAvailable = $ref(true)
 let selectedBinding = $ref<TemplateBinding | undefined>(undefined)
+let initialBinding = $ref<TemplateBinding | undefined>(undefined)
+let isBindingKnown = $ref(false)
+let bindingReadGeneration = 0
+
+/** 选择是否与打开弹窗时项目当前的模板绑定一致；一致时无需切换（清理覆盖另有「重置模板」入口） */
+function isSameTemplateBinding(
+  left: TemplateBinding | undefined,
+  right: TemplateBinding | undefined,
+): boolean {
+  if (!left || !right) {
+    return left === right
+  }
+  if (left.kind === 'standalone') {
+    return right.kind === 'standalone' && left.name === right.name
+  }
+  return right.kind === 'engineBuiltin'
+    && left.engine.id === right.engine.id
+    && left.engine.version === right.engine.version
+}
+
+const isSameBinding = $computed(() =>
+  isSameTemplateBinding(selectedBinding, initialBinding),
+)
+
+// 读取失败时当前绑定未知，不能凭选择器的回退值发起切换
+const canConfirm = $computed(() =>
+  !isSwitching && !isResetting && isEngineAvailable && isBindingKnown && !isSameBinding,
+)
 
 watch(() => open.value, async (isOpen) => {
+  // 每次开/关都让上一次未完成的绑定读取失效，避免过期结果覆盖当前状态
+  const generation = ++bindingReadGeneration
+
   if (!isOpen) {
     showDirtyConfirm = false
     showResetConfirm = false
@@ -39,13 +70,25 @@ watch(() => open.value, async (isOpen) => {
   isResetting = false
   showDirtyConfirm = false
   showResetConfirm = false
+  // 实例可能被复用时，读取完成前不能沿用上次打开留下的绑定状态
+  isBindingKnown = false
 
   // Initial binding mirrors the project's current state so the dialog reflects reality.
   try {
     const config = await projectConfigCmds.readProjectConfig(props.game.path)
+    if (generation !== bindingReadGeneration) {
+      return
+    }
     selectedBinding = config?.template
+    initialBinding = config?.template
+    isBindingKnown = true
   } catch {
+    if (generation !== bindingReadGeneration) {
+      return
+    }
     selectedBinding = undefined
+    initialBinding = undefined
+    isBindingKnown = false
   }
 
   if (props.game.engineId) {
@@ -188,8 +231,11 @@ function preventDismissWhileBusy(event: Event): void {
               {{ $t('common.cancel') }}
             </Button>
           </DialogClose>
-          <Button :disabled="isSwitching || isResetting || !isEngineAvailable" @click="handleConfirm">
-            {{ $t('common.save') }}
+          <Button
+            :disabled="!canConfirm"
+            @click="handleConfirm"
+          >
+            {{ $t('common.confirm') }}
           </Button>
         </div>
       </DialogFooter>
