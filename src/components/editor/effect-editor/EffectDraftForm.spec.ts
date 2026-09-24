@@ -4,7 +4,8 @@ import { page } from 'vitest/browser'
 
 import { createBrowserConsoleMonitor, createBrowserLocalizedI18n } from '~/__tests__/browser'
 import { createBrowserInputStub, createBrowserValueStub, renderInBrowser } from '~/__tests__/browser-render'
-import { EFFECT_CATEGORIES } from '~/features/editor/effect-editor/effect-editor-config'
+import { EFFECT_CATEGORIES, EFFECT_EASE_OPTIONS } from '~/features/editor/effect-editor/effect-editor-config'
+import { useEditSettingsStore } from '~/stores/edit-settings'
 
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: () => ({
@@ -250,5 +251,36 @@ describe('EffectDraftForm', () => {
       deferAutoApply: true,
       flush: undefined,
     })
+  })
+
+  it('开启滚轮选择后，缓动选择器聚焦时滚轮切换到下一个选项', () => {
+    const pinia = createPinia()
+    useEditSettingsStore(pinia).enableWheelSelect = true
+    const easeUpdates = vi.fn()
+
+    renderInBrowser(EffectDraftForm, {
+      props: {
+        'duration': '200',
+        'ease': '',
+        'onUpdate:ease': easeUpdates,
+        'transform': {},
+      },
+      browser: {
+        pinia,
+      },
+      global: {
+        plugins: [createBrowserLocalizedI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    const trigger = document.querySelector('button[id$="-ease"]')
+    if (!(trigger instanceof HTMLButtonElement)) {
+      throw new TypeError('expected the ease selector trigger')
+    }
+    trigger.focus()
+    trigger.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: 100 }))
+
+    expect(easeUpdates).toHaveBeenCalledWith(EFFECT_EASE_OPTIONS[1]?.value)
   })
 })

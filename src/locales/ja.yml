@@ -1398,6 +1398,9 @@ settings:
     comboboxPathDelimiter:
       label: カスケード選択の区切り文字
       description: 候補の階層を区切るための区切り文字を指定します。例：/
+    enableWheelSelect:
+      label: ホイールでクイック選択
+      description: セレクターにフォーカスがあるとき、ホバーしてホイールを回すと候補を切り替えられます
   storage:
     gamePath:
       description: 新規作成またはインポートしたゲームの保存先です。変更するとすぐに反映されます

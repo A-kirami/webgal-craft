@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useWheelSelect } from '~/features/editor/shared/useWheelSelect'
 import { normalizeFieldStringValue } from '~/features/editor/statement-editor/field-utils'
 import { cn } from '~/lib/utils'
 
@@ -19,7 +20,7 @@ interface Props {
   selectValue: string
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   updateSelect: [value: string]
@@ -28,6 +29,12 @@ const emit = defineEmits<{
 function emitSelect(value: unknown) {
   emit('updateSelect', normalizeFieldStringValue(value))
 }
+
+const { handleWheelSelect } = useWheelSelect({
+  getOptionValues: () => props.options.map(option => option.value),
+  getValue: () => props.selectValue,
+  onChange: emitSelect,
+})
 </script>
 
 <template>
@@ -46,7 +53,11 @@ function emitSelect(value: unknown) {
     :model-value="selectValue"
     @update:model-value="emitSelect"
   >
-    <SelectTrigger :id="inputId" :class="cn('text-xs h-6 min-w-18 px-2 [&_svg]:size-3.5 group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-2.5', controlClass)">
+    <SelectTrigger
+      :id="inputId"
+      :class="cn('text-xs h-6 min-w-18 px-2 [&_svg]:size-3.5 group-data-[surface=panel]:h-7 group-data-[surface=panel]:px-2.5', controlClass)"
+      @wheel="handleWheelSelect"
+    >
       <SelectValue :placeholder="notSelectedLabel" />
     </SelectTrigger>
     <SelectContent>
@@ -72,6 +83,7 @@ function emitSelect(value: unknown) {
     :class="cn('h-6 min-w-24 group-data-[surface=panel]:px-2.5 group-data-[surface=panel]:h-7', controlClass)"
     :item-class="itemClass"
     @update:model-value="emitSelect"
+    @wheel="handleWheelSelect"
   />
 
   <Combobox
@@ -84,5 +96,6 @@ function emitSelect(value: unknown) {
     :class="cn('h-6 min-w-24 group-data-[surface=panel]:px-2.5 group-data-[surface=panel]:h-7', controlClass)"
     :item-class="itemClass"
     @update:model-value="emitSelect"
+    @wheel="handleWheelSelect"
   />
 </template>

@@ -103,6 +103,12 @@ export const editSettingsDefinition = defineSettingsSchema({
         description: t => t('settings.edit.comboboxPathDelimiter.description'),
         visibleWhen: 'enableComboboxPathDelimiter',
       },
+      enableWheelSelect: {
+        type: 'switch',
+        default: false,
+        label: t => t('settings.edit.enableWheelSelect.label'),
+        description: t => t('settings.edit.enableWheelSelect.description'),
+      },
     },
   },
 } as const)

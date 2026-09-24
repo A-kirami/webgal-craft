@@ -1398,6 +1398,9 @@ settings:
     comboboxPathDelimiter:
       label: 级联选择分隔符
       description: 指定用于划分选项层级的分隔符，例如 /
+    enableWheelSelect:
+      label: 滚轮快速选择
+      description: 选择器聚焦后，鼠标悬停并滚动滚轮即可切换候选项
   storage:
     gamePath:
       description: 新建或导入的游戏都保存在这里，修改后立即生效
