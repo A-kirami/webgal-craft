@@ -8,7 +8,7 @@ const props = defineProps<{
   preferredEngineId?: string
 }>()
 
-const { groups } = $(useEngineGroups())
+const { groups, loaded } = $(useEngineGroups())
 
 const availableGroups = $computed(() =>
   groups
@@ -32,8 +32,13 @@ const versionOptions = $computed(() =>
 
 // Sync internal selection when available groups, modelValue, or preferred group change.
 watch(
-  [() => availableGroups, () => modelValue, () => props.preferredEngineId],
+  [() => availableGroups, () => modelValue, () => props.preferredEngineId, () => loaded],
   ([nextGroups, nextModelValue]) => {
+    // 引擎列表尚未加载时不能按空列表回退，否则会覆盖父组件已经解析出的当前引擎选择
+    if (!loaded) {
+      return
+    }
+
     if (nextGroups.length === 0) {
       selectedGroupId = ''
       selectedEngineId = ''
