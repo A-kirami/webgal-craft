@@ -1398,6 +1398,9 @@ settings:
     comboboxPathDelimiter:
       label: Cascading Selection Delimiter
       description: Specify the delimiter used to separate option hierarchy levels, for example /
+    enableWheelSelect:
+      label: Wheel Quick Select
+      description: When a selector is focused, hover it and scroll to switch between options
   storage:
     gamePath:
       description: New and imported games are stored here. Changes apply immediately.

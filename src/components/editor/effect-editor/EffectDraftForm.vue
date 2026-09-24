@@ -26,6 +26,7 @@ import {
   createEffectPreviewEmitter,
 } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { useEffectSegmentedControl } from '~/features/editor/effect-editor/useEffectSegmentedControl'
+import { useWheelSelect } from '~/features/editor/shared/useWheelSelect'
 import { resolveTransformDraftDisplay } from '~/features/editor/transform-resolution/model'
 import { useWorkspaceStore } from '~/stores/workspace'
 
@@ -108,6 +109,12 @@ const {
   emitDuration: value => emit('update:duration', value),
   emitEase: value => emit('update:ease', value),
   defaultEaseValue: DEFAULT_EASE_OPTION_VALUE,
+})
+
+const { handleWheelSelect: handleEaseWheelSelect } = useWheelSelect({
+  getOptionValues: () => EFFECT_EASE_OPTIONS.map(option => option.value),
+  getValue: () => easeModelValue,
+  onChange: updateEase,
 })
 
 function getFieldValue(path: string): string {
@@ -333,7 +340,12 @@ onUnmounted(() => {
           {{ $t('edit.visualEditor.params.ease') }}
         </Label>
         <Select :model-value="easeModelValue" :disabled="props.easeDisabled" @update:model-value="updateEase">
-          <SelectTrigger :id="easeTriggerId" :class="isPanelLayout ? 'w-42' : 'w-28'" class="text-xs grow h-7 [&_svg]:size-3.5">
+          <SelectTrigger
+            :id="easeTriggerId"
+            :class="isPanelLayout ? 'w-42' : 'w-28'"
+            class="text-xs grow h-7 [&_svg]:size-3.5"
+            @wheel="handleEaseWheelSelect"
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
