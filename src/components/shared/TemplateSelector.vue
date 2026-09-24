@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { groupEngines } from '~/composables/use-engine-groups'
 import { useEngines, useTemplates } from '~/composables/useDatabase'
 import { isEngineEditorCompatible } from '~/services/engine-manager'
 import { formatNameWithVersion } from '~/utils/format'
@@ -25,14 +26,21 @@ const { t } = useI18n()
 const templates = $(useTemplates())
 const engines = $(useEngines())
 
+// 与引擎内置模板按引擎名分组排序保持一致：独立模板按名称升序，避免落在主键（随机 UUID）顺序上
 const availableTemplates = $computed(() =>
-  (templates ?? []).filter(template =>
-    template.status === 'created' && template.availability === 'available',
-  ),
+  (templates ?? [])
+    .filter(template =>
+      template.status === 'created' && template.availability === 'available',
+    )
+    .toSorted((a, b) =>
+      a.metadata.name.localeCompare(b.metadata.name, undefined, { sensitivity: 'base' }),
+    ),
 )
 
+// 与 EngineSelector 一致：按引擎分组、组内版本降序，避免同一引擎的多个版本被其他引擎穿插
 const availableEngines = $computed(() =>
-  (engines ?? []).filter(isEngineEditorCompatible),
+  groupEngines((engines ?? []).filter(isEngineEditorCompatible))
+    .flatMap(group => group.engines),
 )
 
 const currentEngine = $computed(() =>
