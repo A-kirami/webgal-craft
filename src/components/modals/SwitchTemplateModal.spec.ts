@@ -40,8 +40,8 @@ function translate(key: string): string {
     case 'common.cancel': {
       return '取消'
     }
-    case 'common.save': {
-      return '保存'
+    case 'common.confirm': {
+      return '确认'
     }
     case 'modals.switchTemplate.title': {
       return '切换模板'
@@ -129,6 +129,44 @@ const AlertDialogStub = defineComponent({
   },
 })
 
+const OTHER_STANDALONE_BINDING = { kind: 'standalone', name: 'Other' } as const
+
+const TemplateSelectorStub = defineComponent({
+  name: 'StubTemplateSelector',
+  props: {
+    modelValue: {
+      type: Object,
+      default: undefined,
+    },
+    engineId: {
+      type: String,
+      default: undefined,
+    },
+    disabled: {
+      type: Boolean,
+      default: undefined,
+    },
+  },
+  emits: ['update:modelValue'],
+  setup(_, { emit }) {
+    return () => h('div', [
+      h('button', {
+        'type': 'button',
+        'data-testid': 'select-other-template',
+        'onClick': () => emit('update:modelValue', OTHER_STANDALONE_BINDING),
+      }, 'select-other-template'),
+      h('button', {
+        'type': 'button',
+        'data-testid': 'select-same-engine-binding',
+        'onClick': () => emit('update:modelValue', {
+          kind: 'engineBuiltin',
+          engine: { id: 'open-webgal.webgal', version: '4.5.0' },
+        }),
+      }, 'select-same-engine-binding'),
+    ])
+  },
+})
+
 const globalStubs = {
   AlertDialog: AlertDialogStub,
   AlertDialogAction: createBrowserClickStub('StubAlertDialogAction'),
@@ -147,7 +185,7 @@ const globalStubs = {
   DialogHeader: createBrowserContainerStub('StubDialogHeader'),
   DialogTitle: createBrowserContainerStub('StubDialogTitle', 'h2'),
   Label: createBrowserContainerStub('StubLabel', 'label'),
-  TemplateSelector: createBrowserContainerStub('StubTemplateSelector'),
+  TemplateSelector: TemplateSelectorStub,
 }
 
 const stubsWithRealDialog = withRealDialogStubs(globalStubs)
@@ -218,6 +256,39 @@ describe('SwitchTemplateModal', () => {
     })
   })
 
+  it('选择与项目当前独立模板一致时确认按钮禁用，改动后启用', async () => {
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: { id: 'open-webgal.webgal', version: '4.5.0' },
+      template: { kind: 'standalone', name: 'Current' },
+    })
+
+    renderSwitchTemplateModal()
+
+    await expect.element(page.getByRole('button', { name: '确认', exact: true })).toBeDisabled()
+
+    await page.getByTestId('select-other-template').click()
+
+    await expect.element(page.getByRole('button', { name: '确认', exact: true })).toBeEnabled()
+  })
+
+  it('选择与当前引擎内置模板一致时确认按钮保持禁用', async () => {
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: { id: 'open-webgal.webgal', version: '4.5.0' },
+      template: { kind: 'engineBuiltin', engine: { id: 'open-webgal.webgal', version: '4.5.0' } },
+    })
+
+    renderSwitchTemplateModal()
+
+    await expect.element(page.getByRole('button', { name: '确认', exact: true })).toBeDisabled()
+
+    // 选择器回传的是内容相同的新对象，仍应判定为未改动
+    await page.getByTestId('select-same-engine-binding').click()
+
+    await expect.element(page.getByRole('button', { name: '确认', exact: true })).toBeDisabled()
+  })
+
   it('点击重置入口时先展示影响范围确认，不会立即清理模板', async () => {
     renderSwitchTemplateModal()
 
@@ -277,7 +348,8 @@ describe('SwitchTemplateModal', () => {
 
     renderSwitchTemplateModal({ realDialog: true })
 
-    await page.getByRole('button', { name: '保存' }).click()
+    await page.getByTestId('select-other-template').click()
+    await page.getByRole('button', { name: '确认', exact: true }).click()
     await vi.waitFor(() => {
       expect(switchTemplateMock).toHaveBeenCalledTimes(1)
     })

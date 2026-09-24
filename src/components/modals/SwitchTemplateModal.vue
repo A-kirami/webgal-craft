@@ -27,6 +27,27 @@ let showDirtyConfirm = $ref(false)
 let showResetConfirm = $ref(false)
 let isEngineAvailable = $ref(true)
 let selectedBinding = $ref<TemplateBinding | undefined>(undefined)
+let initialBinding = $ref<TemplateBinding | undefined>(undefined)
+
+/** 选择是否与打开弹窗时项目当前的模板绑定一致；一致时无需切换（清理覆盖另有「重置模板」入口） */
+function isSameTemplateBinding(
+  left: TemplateBinding | undefined,
+  right: TemplateBinding | undefined,
+): boolean {
+  if (!left || !right) {
+    return left === right
+  }
+  if (left.kind === 'standalone') {
+    return right.kind === 'standalone' && left.name === right.name
+  }
+  return right.kind === 'engineBuiltin'
+    && left.engine.id === right.engine.id
+    && left.engine.version === right.engine.version
+}
+
+const isSameBinding = $computed(() =>
+  isSameTemplateBinding(selectedBinding, initialBinding),
+)
 
 watch(() => open.value, async (isOpen) => {
   if (!isOpen) {
@@ -44,8 +65,10 @@ watch(() => open.value, async (isOpen) => {
   try {
     const config = await projectConfigCmds.readProjectConfig(props.game.path)
     selectedBinding = config?.template
+    initialBinding = config?.template
   } catch {
     selectedBinding = undefined
+    initialBinding = undefined
   }
 
   if (props.game.engineId) {
@@ -188,8 +211,11 @@ function preventDismissWhileBusy(event: Event): void {
               {{ $t('common.cancel') }}
             </Button>
           </DialogClose>
-          <Button :disabled="isSwitching || isResetting || !isEngineAvailable" @click="handleConfirm">
-            {{ $t('common.save') }}
+          <Button
+            :disabled="isSwitching || isResetting || !isEngineAvailable || isSameBinding"
+            @click="handleConfirm"
+          >
+            {{ $t('common.confirm') }}
           </Button>
         </div>
       </DialogFooter>
