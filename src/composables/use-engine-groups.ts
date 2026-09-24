@@ -35,8 +35,11 @@ export function useEngineGroups() {
   const engines = $(useEngines())
 
   const groups = $computed(() => groupEngines(engines ?? []))
+  // liveQuery 首次发帧前 engines 为 undefined，此时「引擎为空」并不代表真的没有引擎
+  const loaded = $computed(() => engines !== undefined)
 
   return $$({
     groups,
+    loaded,
   })
 }
