@@ -289,6 +289,16 @@ describe('SwitchTemplateModal', () => {
     await expect.element(page.getByRole('button', { name: '确认', exact: true })).toBeDisabled()
   })
 
+  it('工程配置读取失败时确认按钮保持禁用', async () => {
+    readProjectConfigMock.mockRejectedValue(new Error('read failed'))
+
+    renderSwitchTemplateModal()
+
+    await page.getByTestId('select-other-template').click()
+
+    await expect.element(page.getByRole('button', { name: '确认', exact: true })).toBeDisabled()
+  })
+
   it('点击重置入口时先展示影响范围确认，不会立即清理模板', async () => {
     renderSwitchTemplateModal()
 
