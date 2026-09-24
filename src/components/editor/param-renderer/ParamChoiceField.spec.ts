@@ -369,6 +369,20 @@ describe('ParamChoiceField', () => {
       expect(onUpdateSelect).not.toHaveBeenCalled()
     })
 
+    it('单次事件的多格滚轮量一次消费完，反向滚动不被余量抵消', () => {
+      const onUpdateSelect = vi.fn()
+      renderWheelChoiceField({ enableWheelSelect: true, mode: 'select', onUpdateSelect, selectValue: 'hero' })
+
+      const trigger = requireWheelTrigger('#target-input')
+      trigger.focus()
+      dispatchWheel(trigger, 300)
+      expect(onUpdateSelect).toHaveBeenCalledTimes(1)
+      expect(onUpdateSelect).toHaveBeenCalledWith('guide')
+
+      dispatchWheel(trigger, -100)
+      expect(onUpdateSelect).toHaveBeenCalledTimes(1)
+    })
+
     it('触控板小幅滚动累计满一格才切换', () => {
       const onUpdateSelect = vi.fn()
       renderWheelChoiceField({ enableWheelSelect: true, mode: 'select', onUpdateSelect, selectValue: 'hero' })

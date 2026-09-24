@@ -45,14 +45,27 @@ export function useWheelSelect(options: UseWheelSelectOptions) {
     }
     lastWheelTimestamp = event.timeStamp
     accumulatedNotches += notches
-    if (Math.abs(accumulatedNotches) < 1) {
+
+    // 一次事件可能携带多格滚轮量，必须全部消费，否则余量会逆转后续滚动的方向
+    const stepCount = Math.trunc(accumulatedNotches)
+    if (stepCount === 0) {
       return
     }
 
-    const direction = accumulatedNotches > 0 ? 1 : -1
-    accumulatedNotches -= direction
-    const nextValue = resolveWheelSelectValue(options.getOptionValues(), options.getValue(), direction)
-    if (nextValue !== undefined) {
+    accumulatedNotches -= stepCount
+    const optionValues = options.getOptionValues()
+    const currentValue = options.getValue()
+    const direction = stepCount > 0 ? 1 : -1
+    let nextValue = currentValue
+    for (let step = 0; step < Math.abs(stepCount); step++) {
+      const steppedValue = resolveWheelSelectValue(optionValues, nextValue, direction)
+      if (steppedValue === undefined) {
+        break
+      }
+      nextValue = steppedValue
+    }
+
+    if (nextValue !== currentValue) {
       options.onChange(nextValue)
     }
   }
