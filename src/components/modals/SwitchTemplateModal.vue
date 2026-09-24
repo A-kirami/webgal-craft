@@ -66,6 +66,8 @@ watch(() => open.value, async (isOpen) => {
   isResetting = false
   showDirtyConfirm = false
   showResetConfirm = false
+  // 实例可能被复用时，读取完成前不能沿用上次打开留下的绑定状态
+  isBindingKnown = false
 
   // Initial binding mirrors the project's current state so the dialog reflects reality.
   try {

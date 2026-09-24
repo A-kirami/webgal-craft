@@ -224,6 +224,40 @@ function createDeferred<T = void>() {
   return { promise, resolve, reject }
 }
 
+/** 用受控 open 渲染弹窗，用于验证关闭后未销毁又立即重开（实例复用）时的行为 */
+function renderReopenableModal() {
+  const open = ref(true)
+  const game = createTestGame({
+    id: 'game-1',
+    engineId: 'engine-current',
+    path: AbsPath.from('/games/demo'),
+  })
+
+  const Host = defineComponent({
+    name: 'SwitchTemplateModalHost',
+    setup() {
+      return () => h(SwitchTemplateModal, {
+        game,
+        'open': open.value,
+        'onUpdate:open': (value: boolean | undefined) => {
+          open.value = value ?? false
+        },
+      })
+    },
+  })
+
+  renderInBrowser(Host, {
+    global: {
+      mocks: {
+        $t: translate,
+      },
+      stubs: globalStubs,
+    },
+  })
+
+  return open
+}
+
 describe('SwitchTemplateModal', () => {
   beforeEach(() => {
     vi.resetAllMocks()
@@ -295,6 +329,29 @@ describe('SwitchTemplateModal', () => {
     renderSwitchTemplateModal()
 
     await page.getByTestId('select-other-template').click()
+
+    await expect.element(page.getByRole('button', { name: '确认', exact: true })).toBeDisabled()
+  })
+
+  it('实例复用时重新打开，配置读取完成前确认按钮不可用', async () => {
+    const reopening = createDeferred()
+    readProjectConfigMock
+      .mockResolvedValueOnce({
+        version: 1,
+        engine: { id: 'open-webgal.webgal', version: '4.5.0' },
+        template: { kind: 'standalone', name: 'Current' },
+      })
+      .mockReturnValueOnce(reopening.promise)
+
+    const open = renderReopenableModal()
+
+    await page.getByTestId('select-other-template').click()
+    await expect.element(page.getByRole('button', { name: '确认', exact: true })).toBeEnabled()
+
+    open.value = false
+    await nextTick()
+    open.value = true
+    await nextTick()
 
     await expect.element(page.getByRole('button', { name: '确认', exact: true })).toBeDisabled()
   })
