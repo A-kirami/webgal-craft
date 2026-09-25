@@ -190,7 +190,7 @@ export function createShortcutGuide(
         entry(t('shortcut.effect.redo'), redoKeys),
         entry(t('shortcut.effect.flipHorizontal'), 'Shift+H'),
         entry(t('shortcut.effect.flipVertical'), 'Shift+V'),
-        entry(t('shortcut.effect.apply'), ['Enter', 'Mod+Enter']),
+        entry(t('shortcut.effect.apply'), 'Mod+Enter'),
         entry(t('shortcut.effect.close'), 'Escape'),
         gestureEntry(t('shortcut.mouse.moveElement'), t('shortcut.mouse.drag')),
         gestureEntry(t('shortcut.mouse.scaleElement'), t('shortcut.mouse.handleDrag')),
