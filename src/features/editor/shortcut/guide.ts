@@ -112,7 +112,7 @@ export function createShortcutGuide(
         entry(t('shortcut.save'), 'Mod+S'),
         entry(t('shortcut.commandPanel'), 'Mod+P'),
         entry(t('shortcut.toggleSidebar'), 'Mod+B'),
-        entry(t('shortcut.togglePreview'), 'Mod+Q'),
+        entry(t('shortcut.togglePreview'), 'Mod+J'),
         entry(t('shortcut.sidebarScene'), 'Mod+1'),
         entry(t('shortcut.sidebarResource'), 'Mod+2'),
         gestureEntry(t('shortcut.scrub.adjust'), t('shortcut.mouse.dragLabel')),

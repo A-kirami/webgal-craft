@@ -36,6 +36,36 @@ describe('createEditorShortcutDefinitions', () => {
       keys: 'Mod+P',
       overrideMonaco: true,
     })
+    // ⌘Q 在 macOS 由系统默认菜单用于退出应用，预览面板开关改用 VS Code 同义的 ⌘J
+    expect(definitions.find(item => item.id === 'editor.togglePreview')).toMatchObject({
+      keys: 'Mod+J',
+      overrideMonaco: true,
+    })
+  })
+
+  it('全局快捷键避开 macOS 默认菜单占用的键位', () => {
+    // 未设置 menu 时 Tauri 会在 macOS 自动创建默认菜单，muda 的 PredefinedMenuItem
+    // 把 ⌘Q / ⌘W / ⌘H / ⌘M 以及 Edit 菜单的 ⌘Z / ⌘C / ⌘X / ⌘V / ⌘A / ⇧⌘Z 注册为原生快捷键，
+    // 同键的应用绑定会被菜单抢占（⌘Q 会直接退出应用），因此全局绑定不得占用这些组合。
+    const reservedKeys = new Set([
+      'Mod+Q',
+      'Mod+W',
+      'Mod+H',
+      'Mod+M',
+      'Mod+Z',
+      'Mod+C',
+      'Mod+X',
+      'Mod+V',
+      'Mod+A',
+      'Mod+Shift+Z',
+      'Mod+Alt+H',
+      'Ctrl+Mod+F',
+    ])
+
+    for (const definition of createEditorShortcutDefinitions()) {
+      const keys = Array.isArray(definition.keys) ? definition.keys : [definition.keys]
+      expect(keys.filter(key => reservedKeys.has(key))).toEqual([])
+    }
   })
 
   it('执行静态快捷键时会调用对应页面动作', () => {
