@@ -1326,6 +1326,9 @@ edit:
     noSelection: 选择一条语句开始编辑
 settings:
   help:
+    shortcuts:
+      title: 快捷操作
+      description: 在编辑器和预览中可用的键盘快捷键与鼠标操作。
     reset:
       label: 重置全部引导进度
       description: 清除所有引导的完成记录。
@@ -1428,6 +1431,78 @@ settings:
     maxDays:
       label: 版本保留天数
       description: 超过此天数的旧版本会被自动清理
+
+shortcut:
+  groups:
+    general: 通用
+    visualEditor: 可视化编辑器
+    textEditor: 文本编辑器
+    effectEditor: 效果编辑器
+    animationEditor: 动画编辑器
+    fileTree: 文件树
+    preview: 预览画面
+    transform: 变换调整
+  save: 保存当前文件
+  commandPanel: 显示或隐藏命令面板
+  toggleSidebar: 显示或隐藏辅助面板
+  togglePreview: 显示或隐藏预览面板
+  sidebarScene: 切换到场景视图
+  sidebarResource: 切换到资源视图
+  visual:
+    undo: 撤销
+    redo: 重做
+    copy: 复制语句
+    cut: 剪切语句
+    paste: 粘贴语句
+    duplicate: 创建副本
+    delete: 删除语句
+    selectFirst: 选中第一条语句
+    selectLast: 选中最后一条语句
+    moveUp: 上移语句
+    moveDown: 下移语句
+  textEditor:
+    find: 查找
+    replace: 替换
+  fileTree:
+    rename: 重命名
+    delete: 删除
+  effect:
+    undo: 撤销
+    redo: 重做
+    copy: 复制效果
+    paste: 粘贴效果
+    flipHorizontal: 水平翻转
+    flipVertical: 垂直翻转
+    apply: 应用更改
+    close: 取消并关闭
+  animation:
+    deleteFrame: 删除帧
+    apply: 应用更改
+    close: 取消并关闭
+  transform:
+    nudge: 微调位置
+    nudgeFast: 快速微调位置
+  mouse:
+    drag: 拖拽
+    handleDrag: 拖拽手柄
+    rotateDrag: 拖拽旋转
+    wheel: 滚轮
+    dragLabel: 拖拽标签
+    middleDrag: 中键拖拽
+    spaceDrag: 空格 + 拖拽
+    panCanvas: 平移画面
+    zoomCanvas: 缩放画面
+    moveElement: 移动选中元素
+    scaleElement: 缩放选中元素
+    rotateElement: 旋转选中元素
+    lockAxis: 锁定水平或垂直移动
+    toggleUniformScale: 切换等比缩放
+    rotateSnap: 按 15° 吸附旋转
+    zoomTimeline: 缩放动画时间轴
+  scrub:
+    adjust: 调整数值
+    coarse: 粗调数值
+    fine: 微调数值
 
 notFound:
   message: 页面不存在

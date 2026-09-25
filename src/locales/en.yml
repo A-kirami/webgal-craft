@@ -1326,6 +1326,9 @@ edit:
     noSelection: Select a statement to start editing
 settings:
   help:
+    shortcuts:
+      title: Shortcuts
+      description: Keyboard shortcuts and mouse gestures available in the editor and preview.
     reset:
       label: Reset All Guide Progress
       description: Clear the completion record for every guide.
@@ -1428,6 +1431,78 @@ settings:
     maxDays:
       label: Retention Days
       description: Versions older than this number of days are removed automatically
+
+shortcut:
+  groups:
+    general: General
+    visualEditor: Visual Editor
+    textEditor: Text Editor
+    effectEditor: Effect Editor
+    animationEditor: Animation Editor
+    fileTree: File Tree
+    preview: Preview
+    transform: Transform Adjustment
+  save: Save Current File
+  commandPanel: Show or Hide Command Panel
+  toggleSidebar: Show or Hide Side Panel
+  togglePreview: Show or Hide Preview Panel
+  sidebarScene: Switch to Scene View
+  sidebarResource: Switch to Resource View
+  visual:
+    undo: Undo
+    redo: Redo
+    copy: Copy Statement
+    cut: Cut Statement
+    paste: Paste Statement
+    duplicate: Duplicate Statement
+    delete: Delete Statement
+    selectFirst: Select First Statement
+    selectLast: Select Last Statement
+    moveUp: Move Statement Up
+    moveDown: Move Statement Down
+  textEditor:
+    find: Find
+    replace: Replace
+  fileTree:
+    rename: Rename
+    delete: Delete
+  effect:
+    undo: Undo
+    redo: Redo
+    copy: Copy Effect
+    paste: Paste Effect
+    flipHorizontal: Flip Horizontally
+    flipVertical: Flip Vertically
+    apply: Apply Changes
+    close: Cancel and Close
+  animation:
+    deleteFrame: Delete Frame
+    apply: Apply Changes
+    close: Cancel and Close
+  transform:
+    nudge: Nudge Position
+    nudgeFast: Nudge Position Faster
+  mouse:
+    drag: Drag
+    handleDrag: Drag a Handle
+    rotateDrag: Drag to Rotate
+    wheel: Scroll Wheel
+    dragLabel: Drag Label
+    middleDrag: Middle-Button Drag
+    spaceDrag: Space + Drag
+    panCanvas: Pan the Canvas
+    zoomCanvas: Zoom the Canvas
+    moveElement: Move Selected Element
+    scaleElement: Scale Selected Element
+    rotateElement: Rotate Selected Element
+    lockAxis: Lock to Horizontal or Vertical Movement
+    toggleUniformScale: Toggle Uniform Scaling
+    rotateSnap: Snap Rotation to 15°
+    zoomTimeline: Zoom the Animation Timeline
+  scrub:
+    adjust: Adjust the Value
+    coarse: Coarse Adjustment
+    fine: Fine Adjustment
 
 notFound:
   message: Page not found

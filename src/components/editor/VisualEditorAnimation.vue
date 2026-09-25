@@ -76,7 +76,7 @@ useShortcut({
   execute: () => {
     controller.handleDeleteFrame()
   },
-  i18nKey: 'shortcut.visual.delete',
+  i18nKey: 'shortcut.animation.deleteFrame',
   id: 'visual.delete',
   keys: 'Delete',
   when: {

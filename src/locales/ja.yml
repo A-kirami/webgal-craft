@@ -1326,6 +1326,9 @@ edit:
     noSelection: ステートメントを選択して編集を開始
 settings:
   help:
+    shortcuts:
+      title: ショートカット
+      description: エディターとプレビューで使用できるキーボードショートカットとマウス操作です。
     reset:
       label: すべてのガイドの進行状況をリセット
       description: すべてのガイドの完了記録を消去します。
@@ -1428,6 +1431,78 @@ settings:
     maxDays:
       label: 保持日数
       description: この日数を超えた古いバージョンは自動的に削除されます
+
+shortcut:
+  groups:
+    general: 全般
+    visualEditor: ビジュアルエディター
+    textEditor: テキストエディター
+    effectEditor: エフェクトエディター
+    animationEditor: アニメーションエディター
+    fileTree: ファイルツリー
+    preview: プレビュー
+    transform: 変形調整
+  save: 現在のファイルを保存
+  commandPanel: コマンドパネルの表示切り替え
+  toggleSidebar: 補助パネルの表示切り替え
+  togglePreview: プレビューパネルの表示切り替え
+  sidebarScene: シーン表示に切り替え
+  sidebarResource: リソース表示に切り替え
+  visual:
+    undo: 元に戻す
+    redo: やり直す
+    copy: 文をコピー
+    cut: 文を切り取り
+    paste: 文を貼り付け
+    duplicate: 複製を作成
+    delete: 文を削除
+    selectFirst: 最初の文を選択
+    selectLast: 最後の文を選択
+    moveUp: 文を上へ移動
+    moveDown: 文を下へ移動
+  textEditor:
+    find: 検索
+    replace: 置換
+  fileTree:
+    rename: 名前を変更
+    delete: 削除
+  effect:
+    undo: 元に戻す
+    redo: やり直す
+    copy: エフェクトをコピー
+    paste: エフェクトを貼り付け
+    flipHorizontal: 水平方向に反転
+    flipVertical: 垂直方向に反転
+    apply: 変更を適用
+    close: キャンセルして閉じる
+  animation:
+    deleteFrame: フレームを削除
+    apply: 変更を適用
+    close: キャンセルして閉じる
+  transform:
+    nudge: 位置を微調整
+    nudgeFast: 位置を大きく微調整
+  mouse:
+    drag: ドラッグ
+    handleDrag: ハンドルをドラッグ
+    rotateDrag: ドラッグして回転
+    wheel: ホイール
+    dragLabel: ラベルをドラッグ
+    middleDrag: 中ボタンでドラッグ
+    spaceDrag: スペース + ドラッグ
+    panCanvas: 画面を移動
+    zoomCanvas: 画面を拡大縮小
+    moveElement: 選択した要素を移動
+    scaleElement: 選択した要素を拡大縮小
+    rotateElement: 選択した要素を回転
+    lockAxis: 水平または垂直方向に固定
+    toggleUniformScale: 等比縮小を切り替え
+    rotateSnap: 15° 単位で回転をスナップ
+    zoomTimeline: アニメーションタイムラインを拡大縮小
+  scrub:
+    adjust: 数値を調整
+    coarse: 大きく調整
+    fine: 細かく調整
 
 notFound:
   message: ページが見つかりません
