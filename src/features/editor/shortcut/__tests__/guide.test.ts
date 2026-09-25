@@ -83,12 +83,12 @@ describe('createShortcutGuide', () => {
     expect(labelsOf('animationEditor')).toContain('shortcut.animation.deleteFrame')
   })
 
-  it('变换调整的应用与效果编辑器共用同一文案键', () => {
+  it('变换调整与效果编辑器共用同一应用文案键且只保留组合回车', () => {
     const applyEntry = createShortcutGuide(key => key, 'windows')
       .find(group => group.id === 'transform')
       ?.entries.find(entry => entry.label === 'shortcut.effect.apply')
 
-    expect(applyEntry?.chords).toEqual([['Enter'], ['Ctrl', 'Enter']])
+    expect(applyEntry?.chords).toEqual([['Ctrl', 'Enter']])
   })
 
   it('标签拖拽 scrub 跨编辑器只在通用分组列出一次', () => {

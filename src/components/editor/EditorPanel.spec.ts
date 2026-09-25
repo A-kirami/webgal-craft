@@ -537,7 +537,7 @@ describe('EditorPanel', () => {
     await expect.element(page.getByText('Statement Editor Panel')).not.toBeInTheDocument()
   })
 
-  it('变换浮层聚焦时按下回车或组合回车会应用效果编辑器变更', async () => {
+  it('变换浮层聚焦时只接受组合回车来应用效果编辑器变更', async () => {
     effectEditorProviderMock.canApply = true
     effectEditorProviderMock.apply.mockResolvedValue(true)
 
@@ -546,12 +546,9 @@ describe('EditorPanel', () => {
       expect(bindings.size).toBeGreaterThan(0)
     })
 
-    const binding = [...bindings.values()].find(item =>
-      item.when?.panelFocus === 'transformOverlay'
-      && item.keys.includes('Enter')
-      && item.keys.includes('Mod+Enter'),
-    )
-    expect(binding).toBeDefined()
+    const binding = [...bindings.values()].find(item => item.id === 'effect.applyFromTransformOverlay')
+    expect(binding?.when).toEqual({ panelFocus: 'transformOverlay' })
+    expect(binding?.keys).toBe('Mod+Enter')
 
     await binding!.execute(undefined)
 

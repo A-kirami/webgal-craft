@@ -57,7 +57,7 @@ export function createEditorShortcutDefinitions(): ShortcutDefinition<EditorShor
       },
       i18nKey: 'shortcut.togglePreview',
       id: 'editor.togglePreview',
-      keys: 'Mod+Q',
+      keys: 'Mod+J',
       overrideMonaco: true,
     },
     {

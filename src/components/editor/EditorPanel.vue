@@ -135,7 +135,7 @@ useShortcut({
   },
   i18nKey: 'shortcut.effect.apply',
   id: 'effect.applyFromTransformOverlay',
-  keys: ['Enter', 'Mod+Enter'],
+  keys: 'Mod+Enter',
   when: { panelFocus: 'transformOverlay' },
 })
 
