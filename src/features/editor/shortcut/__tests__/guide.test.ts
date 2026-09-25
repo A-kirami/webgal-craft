@@ -123,4 +123,15 @@ describe('createShortcutGuide', () => {
 
     expect(replaceEntry?.chords).toEqual([['⌘', '⌥', 'F']])
   })
+
+  it('重做的 Ctrl+Y 备选只在 Windows/Linux 展示', () => {
+    const chordsOf = (platform: 'windows' | 'mac') =>
+      createShortcutGuide(key => key, platform)
+        .find(group => group.id === 'textEditor')
+        ?.entries.find(entry => entry.label === 'shortcut.visual.redo')
+        ?.chords
+
+    expect(chordsOf('windows')).toEqual([['Ctrl', 'Shift', 'Z'], ['Ctrl', 'Y']])
+    expect(chordsOf('mac')).toEqual([['⌘', '⇧', 'Z']])
+  })
 })

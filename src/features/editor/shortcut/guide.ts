@@ -101,6 +101,11 @@ export function createShortcutGuide(
     }
   }
 
+  // macOS 上 ⌘Y 不是标准重做键，指南只在 Windows/Linux 展示 Ctrl+Y
+  const redoKeys: string | string[] = platform === 'mac'
+    ? 'Mod+Shift+Z'
+    : ['Mod+Shift+Z', 'Mod+Y']
+
   return [
     {
       entries: [
@@ -120,7 +125,7 @@ export function createShortcutGuide(
     {
       entries: [
         entry(t('shortcut.visual.undo'), 'Mod+Z'),
-        entry(t('shortcut.visual.redo'), ['Mod+Shift+Z', 'Mod+Y']),
+        entry(t('shortcut.visual.redo'), redoKeys),
         entry(t('shortcut.textEditor.find'), 'Mod+F'),
         entry(t('shortcut.textEditor.replace'), platform === 'mac' ? 'Mod+Alt+F' : 'Mod+H'),
       ],
@@ -130,7 +135,7 @@ export function createShortcutGuide(
     {
       entries: [
         entry(t('shortcut.visual.undo'), 'Mod+Z'),
-        entry(t('shortcut.visual.redo'), ['Mod+Shift+Z', 'Mod+Y']),
+        entry(t('shortcut.visual.redo'), redoKeys),
         entry(t('shortcut.visual.copy'), 'Mod+C'),
         entry(t('shortcut.visual.cut'), 'Mod+X'),
         entry(t('shortcut.visual.paste'), 'Mod+V'),
@@ -147,7 +152,7 @@ export function createShortcutGuide(
     {
       entries: [
         entry(t('shortcut.effect.undo'), 'Mod+Z'),
-        entry(t('shortcut.effect.redo'), ['Mod+Shift+Z', 'Mod+Y']),
+        entry(t('shortcut.effect.redo'), redoKeys),
         entry(t('shortcut.effect.copy'), 'Mod+C'),
         entry(t('shortcut.effect.paste'), 'Mod+V'),
         entry(t('shortcut.effect.flipHorizontal'), 'Shift+H'),
@@ -161,7 +166,7 @@ export function createShortcutGuide(
     {
       entries: [
         entry(t('shortcut.visual.undo'), 'Mod+Z'),
-        entry(t('shortcut.visual.redo'), ['Mod+Shift+Z', 'Mod+Y']),
+        entry(t('shortcut.visual.redo'), redoKeys),
         entry(t('shortcut.animation.deleteFrame'), 'Delete'),
         entry(t('shortcut.animation.apply'), 'Mod+Enter'),
         entry(t('shortcut.animation.close'), 'Escape'),
@@ -182,7 +187,7 @@ export function createShortcutGuide(
     {
       entries: [
         entry(t('shortcut.effect.undo'), 'Mod+Z'),
-        entry(t('shortcut.effect.redo'), ['Mod+Shift+Z', 'Mod+Y']),
+        entry(t('shortcut.effect.redo'), redoKeys),
         entry(t('shortcut.effect.flipHorizontal'), 'Shift+H'),
         entry(t('shortcut.effect.flipVertical'), 'Shift+V'),
         entry(t('shortcut.effect.apply'), ['Enter', 'Mod+Enter']),
