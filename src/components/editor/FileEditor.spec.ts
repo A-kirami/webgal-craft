@@ -122,7 +122,7 @@ describe('FileEditor', () => {
       open: vi.fn(),
     })
 
-    renderInBrowser(FileEditor, {
+    await renderInBrowser(FileEditor, {
       global: {
         plugins: [createFileEditorLocalizedI18n()],
         stubs: globalStubs,

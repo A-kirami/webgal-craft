@@ -9,7 +9,7 @@ import DialogContent from './DialogContent.vue'
 import DialogDescription from './DialogDescription.vue'
 import DialogTitle from './DialogTitle.vue'
 
-function renderDialogContent(props: { hideClose?: boolean } = {}) {
+async function renderDialogContent(props: { hideClose?: boolean } = {}) {
   const Harness = defineComponent({
     name: 'DialogContentHarness',
     setup() {
@@ -23,19 +23,19 @@ function renderDialogContent(props: { hideClose?: boolean } = {}) {
     },
   })
 
-  renderInBrowser(Harness)
+  await renderInBrowser(Harness)
 }
 
 describe('DialogContent', () => {
   it('默认渲染关闭按钮', async () => {
-    renderDialogContent()
+    await renderDialogContent()
 
     await expect.element(page.getByText('弹窗内容')).toBeInTheDocument()
     await expect.element(page.getByRole('button', { name: 'Close' })).toBeInTheDocument()
   })
 
   it('hideClose 时隐藏关闭按钮，且不把该 prop 透传成元素属性', async () => {
-    renderDialogContent({ hideClose: true })
+    await renderDialogContent({ hideClose: true })
 
     await expect.element(page.getByText('弹窗内容')).toBeInTheDocument()
     await expect.element(page.getByRole('button', { name: 'Close' })).not.toBeInTheDocument()

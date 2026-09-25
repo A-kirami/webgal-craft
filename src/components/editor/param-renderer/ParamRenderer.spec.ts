@@ -395,13 +395,13 @@ const statementTooltipProbe = defineComponent({
 type BrowserRenderOptions = NonNullable<Parameters<typeof renderInBrowser>[1]>
 type BrowserStubs = NonNullable<NonNullable<BrowserRenderOptions['global']>['stubs']>
 
-function renderFieldRenderer(
+async function renderFieldRenderer(
   surface: StatementEditorSurface,
   field: EditorField,
   stubs: BrowserStubs = globalStubs,
   diagnostics: readonly EditorFieldDiagnostic[] = [],
 ) {
-  return renderInBrowser(ParamRenderer, {
+  return await renderInBrowser(ParamRenderer, {
     props: {
       canScrub: () => false,
       fields: [field],
@@ -424,11 +424,11 @@ function renderFieldRenderer(
   })
 }
 
-function renderRenderer(surface: StatementEditorSurface, fieldOverrides: Partial<PlainTextField> = {}) {
-  return renderFieldRenderer(surface, createStandaloneTextField(fieldOverrides))
+async function renderRenderer(surface: StatementEditorSurface, fieldOverrides: Partial<PlainTextField> = {}) {
+  return await renderFieldRenderer(surface, createStandaloneTextField(fieldOverrides))
 }
 
-function renderChoiceRenderer(
+async function renderChoiceRenderer(
   enableComboboxPathDelimiter: boolean,
   useRealControl: boolean = false,
   diagnostics: readonly EditorFieldDiagnostic[] = [],
@@ -438,7 +438,7 @@ function renderChoiceRenderer(
   const store = useEditSettingsStore(pinia)
   store.enableComboboxPathDelimiter = enableComboboxPathDelimiter
 
-  return renderInBrowser(ParamRenderer, {
+  return await renderInBrowser(ParamRenderer, {
     props: {
       canScrub: () => false,
       fields: [field],
@@ -480,10 +480,10 @@ interface RenderAutocompleteOptions {
   value?: () => string
 }
 
-function renderAutocompleteRenderer(options: RenderAutocompleteOptions = {}) {
+async function renderAutocompleteRenderer(options: RenderAutocompleteOptions = {}) {
   const field = options.field ?? createStandaloneAutocompleteField()
 
-  renderInBrowser(ParamRenderer, {
+  await renderInBrowser(ParamRenderer, {
     props: {
       canScrub: () => false,
       fields: [field],
@@ -527,8 +527,8 @@ describe('ParamRenderer', () => {
     expect(trigger).toHaveClass('w-full', 'flex-col')
   })
 
-  it('panel 下 switch 的诊断锚点与控件等宽且不占满字段', () => {
-    renderFieldRenderer('panel', createSwitchField(), {
+  it('panel 下 switch 的诊断锚点与控件等宽且不占满字段', async () => {
+    await renderFieldRenderer('panel', createSwitchField(), {
       ...globalStubs,
       Switch,
     })
@@ -540,8 +540,8 @@ describe('ParamRenderer', () => {
     expect(trigger.getBoundingClientRect().width).toBeLessThan(field.getBoundingClientRect().width)
   })
 
-  it('switch tooltip 按当前开关状态展示对应效果', () => {
-    renderInBrowser(ParamRenderer, {
+  it('switch tooltip 按当前开关状态展示对应效果', async () => {
+    await renderInBrowser(ParamRenderer, {
       props: {
         canScrub: () => false,
         fields: [createSwitchField('disabled'), createSwitchField('enabled')],
@@ -595,14 +595,14 @@ describe('ParamRenderer', () => {
   })
 
   it('启用路径分隔符时，为 path grouping 字段构建级联 combobox 数据', async () => {
-    renderChoiceRenderer(true)
+    await renderChoiceRenderer(true)
 
     const control = page.getByTestId('param-choice-field')
     await expect.element(control).toHaveAttribute('data-has-cascading-combobox', 'true')
   })
 
   it('关闭路径分隔符时，path grouping 字段回退为基础 combobox 数据', async () => {
-    renderChoiceRenderer(false)
+    await renderChoiceRenderer(false)
 
     await expect.element(page.getByTestId('param-choice-field')).toHaveAttribute('data-has-cascading-combobox', 'false')
   })
@@ -618,7 +618,7 @@ describe('ParamRenderer', () => {
       { label: 'Right', value: 'right' },
     ]
 
-    renderInBrowser(ParamRenderer, {
+    await renderInBrowser(ParamRenderer, {
       props: {
         canScrub: () => false,
         fields: [field],
@@ -649,7 +649,7 @@ describe('ParamRenderer', () => {
   it('点击字段标签会把焦点交给非 labelable 的位置控件', async () => {
     const field = createFigurePositionChoiceField()
 
-    renderInBrowser(ParamRenderer, {
+    await renderInBrowser(ParamRenderer, {
       props: {
         canScrub: () => false,
         fields: [field],
@@ -704,7 +704,7 @@ describe('ParamRenderer', () => {
       { label: 'Right', value: 'right' },
     ]
 
-    renderInBrowser(ParamRenderer, {
+    await renderInBrowser(ParamRenderer, {
       props: {
         canScrub: () => false,
         fields: [field],
@@ -743,7 +743,7 @@ describe('ParamRenderer', () => {
   it('旧引擎面板保留分段立绘位置控件', async () => {
     const field = createFigurePositionChoiceField()
 
-    renderInBrowser(ParamRenderer, {
+    await renderInBrowser(ParamRenderer, {
       props: {
         canScrub: () => false,
         fields: [field],
@@ -780,7 +780,7 @@ describe('ParamRenderer', () => {
   it('4.6.3 内联编辑器保留立绘位置下拉菜单', async () => {
     const field = createFigurePositionChoiceField()
 
-    renderInBrowser(ParamRenderer, {
+    await renderInBrowser(ParamRenderer, {
       props: {
         canScrub: () => false,
         fields: [field],
@@ -811,7 +811,7 @@ describe('ParamRenderer', () => {
   })
 
   it('inline 下选择器候选行收紧到 py-1.25', async () => {
-    renderFieldRenderer('inline', createPathChoiceField(), {
+    await renderFieldRenderer('inline', createPathChoiceField(), {
       ...globalStubs,
       ParamChoiceField: createParamChoiceFieldProbeStub(),
     })
@@ -820,7 +820,7 @@ describe('ParamRenderer', () => {
   })
 
   it('panel 下 choice 控件占满诊断锚点', async () => {
-    renderChoiceRenderer(true, true)
+    await renderChoiceRenderer(true, true)
 
     const trigger = requireHtmlElement(document.querySelector('[data-statement-diagnostic-trigger]'))
     const choice = requireHtmlElement(await page.getByRole('combobox').element())
@@ -828,7 +828,7 @@ describe('ParamRenderer', () => {
   })
 
   it('error combobox 使用 destructive 状态样式', async () => {
-    renderChoiceRenderer(true, true, [errorDiagnostic])
+    await renderChoiceRenderer(true, true, [errorDiagnostic])
 
     await expect.element(page.getByRole('combobox')).toHaveClass(
       'text-destructive!',
@@ -838,8 +838,8 @@ describe('ParamRenderer', () => {
     )
   })
 
-  it('panel 下 number 控件占满诊断锚点', () => {
-    renderFieldRenderer('panel', createNumberField(), {
+  it('panel 下 number 控件占满诊断锚点', async () => {
+    await renderFieldRenderer('panel', createNumberField(), {
       ...globalStubs,
       NumberControl,
     })
@@ -851,7 +851,7 @@ describe('ParamRenderer', () => {
 
   it('普通文本 autocomplete 字段渲染 Autocomplete 并保留自由输入', async () => {
     const handleUpdateValue = vi.fn()
-    const field = renderAutocompleteRenderer({ onUpdateValue: handleUpdateValue })
+    const field = await renderAutocompleteRenderer({ onUpdateValue: handleUpdateValue })
 
     const autocomplete = page.getByTestId('autocomplete')
     await expect.element(autocomplete).toHaveAttribute('data-options', 'hero')
@@ -862,7 +862,7 @@ describe('ParamRenderer', () => {
   })
 
   it('warning autocomplete 使用与 destructive 同层级的黄色状态样式', async () => {
-    renderAutocompleteRenderer({ diagnostics: [warningDiagnostic], useRealAutocomplete: true })
+    await renderAutocompleteRenderer({ diagnostics: [warningDiagnostic], useRealAutocomplete: true })
 
     const autocomplete = page.getByRole('combobox')
     await expect.element(autocomplete).toHaveClass(
@@ -874,8 +874,8 @@ describe('ParamRenderer', () => {
     await expect.element(autocomplete).not.toHaveClass('text-destructive!')
   })
 
-  it('color 字段的色值格式诊断使用黄色状态样式', () => {
-    renderFieldRenderer('panel', createColorField(), globalStubs, [unsupportedColorFormatDiagnostic])
+  it('color 字段的色值格式诊断使用黄色状态样式', async () => {
+    await renderFieldRenderer('panel', createColorField(), globalStubs, [unsupportedColorFormatDiagnostic])
 
     const trigger = requireHtmlElement(document.querySelector('[data-statement-diagnostic-trigger]'))
     expect(trigger).toHaveAttribute('data-severity', 'warning')
@@ -885,8 +885,8 @@ describe('ParamRenderer', () => {
     expect(control).not.toHaveClass('text-destructive!')
   })
 
-  it('color 字段的无效色值诊断使用 destructive 状态样式', () => {
-    renderFieldRenderer('panel', createColorField(), globalStubs, [invalidColorFormatDiagnostic])
+  it('color 字段的无效色值诊断使用 destructive 状态样式', async () => {
+    await renderFieldRenderer('panel', createColorField(), globalStubs, [invalidColorFormatDiagnostic])
 
     const trigger = requireHtmlElement(document.querySelector('[data-statement-diagnostic-trigger]'))
     expect(trigger).toHaveAttribute('data-severity', 'error')
@@ -894,7 +894,7 @@ describe('ParamRenderer', () => {
   })
 
   it('warning 文件字段向 FilePicker 传递 warning 状态', async () => {
-    renderFieldRenderer('panel', createFileField(), {
+    await renderFieldRenderer('panel', createFileField(), {
       ...globalStubs,
       FilePicker: createFilePickerProbeStub(),
     }, [warningDiagnostic])
@@ -903,14 +903,14 @@ describe('ParamRenderer', () => {
   })
 
   it('error autocomplete 使用 destructive 状态样式', async () => {
-    renderAutocompleteRenderer({ diagnostics: [errorDiagnostic], useRealAutocomplete: true })
+    await renderAutocompleteRenderer({ diagnostics: [errorDiagnostic], useRealAutocomplete: true })
 
     const autocomplete = page.getByRole('combobox')
     await expect.element(autocomplete).toHaveClass('text-destructive!')
   })
 
   it('inline 下 autocomplete 候选行收紧到 py-1.25', async () => {
-    renderAutocompleteRenderer({ surface: 'inline' })
+    await renderAutocompleteRenderer({ surface: 'inline' })
 
     await expect.element(page.getByTestId('autocomplete')).toHaveAttribute('data-item-class', 'py-1.25')
   })

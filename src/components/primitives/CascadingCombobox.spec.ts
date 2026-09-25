@@ -445,7 +445,7 @@ function findSearchOptionElement(label: string): HTMLElement | undefined {
 
 describe('CascadingCombobox', () => {
   it('空候选面板显示可播报且不可选择的状态', async () => {
-    renderInBrowser(EmptyHarness)
+    await renderInBrowser(EmptyHarness)
 
     await page.getByTestId('empty-trigger').click()
 
@@ -455,7 +455,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('点击关联标签时只聚焦控件，直接点击控件时才展开候选面板', async () => {
-    renderInBrowser(LabelGroupedHarness)
+    await renderInBrowser(LabelGroupedHarness)
 
     const trigger = page.getByTestId('label-grouped-trigger')
     await page.getByText('Scene label').click()
@@ -479,7 +479,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('指针交互被取消后，再点击关联标签不会展开候选面板', async () => {
-    renderInBrowser(LabelGroupedHarness)
+    await renderInBrowser(LabelGroupedHarness)
 
     const trigger = page.getByTestId('label-grouped-trigger')
     const triggerElement = trigger.element()
@@ -494,7 +494,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('聚焦控件后按 ArrowDown 会展开候选面板', async () => {
-    renderInBrowser(GroupedHarness)
+    await renderInBrowser(GroupedHarness)
 
     const trigger = page.getByTestId('grouped-trigger')
     trigger.element().focus()
@@ -505,7 +505,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('首次打开已选嵌套值时，根层与级联子层作为独立浮层渲染，并保持向右级联展开', async () => {
-    renderInBrowser(GroupedHarness, {
+    await renderInBrowser(GroupedHarness, {
       props: {
         initialValue: 'charc/group01/item01',
       },
@@ -529,7 +529,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('搜索态会挂起 submenu，并在清空搜索后恢复之前的 browse path', async () => {
-    renderInBrowser(GroupedHarness, {
+    await renderInBrowser(GroupedHarness, {
       props: {
         initialValue: 'charc/group01/item01',
       },
@@ -549,7 +549,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('靠近右侧视口边界时，submenu 会翻转到左侧', async () => {
-    renderInBrowser(NearEdgeHarness)
+    await renderInBrowser(NearEdgeHarness)
 
     await page.getByTestId('edge-trigger').click()
     await expect.element(page.getByText('item01', { exact: true })).toBeInTheDocument()
@@ -563,7 +563,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('ArrowRight、ArrowLeft 和 Enter 的层级导航保持稳定', async () => {
-    renderInBrowser(GroupedHarness)
+    await renderInBrowser(GroupedHarness)
 
     await page.getByTestId('grouped-trigger').click()
     await userEvent.keyboard('{ArrowDown}{ArrowRight}{ArrowLeft}{ArrowRight}{Enter}')
@@ -572,7 +572,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('搜索结果列表暴露 listbox/option 语义，并把当前高亮项关联到搜索框', async () => {
-    renderInBrowser(GroupedHarness, {
+    await renderInBrowser(GroupedHarness, {
       props: {
         initialValue: 'charc/default',
       },
@@ -597,7 +597,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('搜索无匹配项时显示可播报且不可选择的空状态', async () => {
-    renderInBrowser(GroupedHarness)
+    await renderInBrowser(GroupedHarness)
 
     await page.getByTestId('grouped-trigger').click()
     await page.getByPlaceholder('Search motion').fill('zzz')
@@ -608,7 +608,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('会把搜索词按空格拆分并要求所有关键词都命中完整路径文本', async () => {
-    renderInBrowser(GroupedHarness, {
+    await renderInBrowser(GroupedHarness, {
       props: {
         initialValue: 'charc/default',
       },
@@ -623,7 +623,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('鼠标离开搜索结果列表时，不会回退到已有的键盘高亮项', async () => {
-    renderInBrowser(GroupedHarness, {
+    await renderInBrowser(GroupedHarness, {
       props: {
         initialValue: 'charc/default',
       },
@@ -648,7 +648,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('搜索结果在收缩后，Enter 会忽略过期高亮而不是抛错', async () => {
-    renderInBrowser(DynamicSearchDocumentsHarness)
+    await renderInBrowser(DynamicSearchDocumentsHarness)
 
     await page.getByTestId('dynamic-trigger').click()
     await page.getByPlaceholder('Search motion').fill('variant')
@@ -666,7 +666,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('点击子菜单叶子项时，会更新选中值并关闭浮层', async () => {
-    renderInBrowser(GroupedHarness, {
+    await renderInBrowser(GroupedHarness, {
       props: {
         initialValue: 'charc/group01/item01',
       },
@@ -685,7 +685,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('ArrowLeft 返回上级层时保留当前父层 submenu，ArrowUp/Down 移到其他组项时会自动展开对应 submenu', async () => {
-    renderInBrowser(GroupedHarness, {
+    await renderInBrowser(GroupedHarness, {
       props: {
         initialValue: 'charc/group01/item01',
       },
@@ -715,7 +715,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('选择候选项或按 Escape 关闭后，焦点回到触发器', async () => {
-    renderInBrowser(FlatHarness)
+    await renderInBrowser(FlatHarness)
 
     const trigger = page.getByTestId('flat-trigger')
 
@@ -733,7 +733,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('未启用路径分组时浏览态保持扁平列表', async () => {
-    renderInBrowser(FlatHarness)
+    await renderInBrowser(FlatHarness)
 
     await page.getByTestId('flat-trigger').click()
 
@@ -743,7 +743,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('打开已选嵌套值时，根层与子层都会把激活项滚动到各自菜单中部', async () => {
-    renderInBrowser(TallGroupedHarness)
+    await renderInBrowser(TallGroupedHarness)
 
     await page.getByTestId('tall-trigger').click()
     await expect.element(page.getByText('item-24', { exact: true })).toBeInTheDocument()
@@ -784,7 +784,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('内容未溢出时，根层与子层滚动区域不显示滚动条', async () => {
-    renderInBrowser(GroupedHarness, {
+    await renderInBrowser(GroupedHarness, {
       props: {
         initialValue: 'charc/group01/item01',
       },
@@ -803,7 +803,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('内容溢出时，根层与子层滚动区域才显示滚动条', async () => {
-    renderInBrowser(TallGroupedHarness)
+    await renderInBrowser(TallGroupedHarness)
 
     await page.getByTestId('tall-trigger').click()
     await expect.element(page.getByText('item-24', { exact: true })).toBeInTheDocument()
@@ -818,7 +818,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('点击打开后，从外部 hover 回当前已选组时，不会让已展开的子菜单先收起再重新打开', async () => {
-    renderInBrowser(GroupedHarness, {
+    await renderInBrowser(GroupedHarness, {
       props: {
         initialValue: 'charc/group01/item01',
       },
@@ -843,7 +843,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('hover 组项只展开子菜单，不会自动高亮子层首项', async () => {
-    renderInBrowser(TallGroupedHarness)
+    await renderInBrowser(TallGroupedHarness)
 
     await page.getByTestId('tall-trigger').click()
     await expect.element(page.getByText('item-24', { exact: true })).toBeInTheDocument()
@@ -859,7 +859,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('重新 hover 到包含当前选中值的组时，会恢复已选子项高亮并滚到选中项附近', async () => {
-    renderInBrowser(TallGroupedHarness)
+    await renderInBrowser(TallGroupedHarness)
 
     await page.getByTestId('tall-trigger').click()
     await expect.element(page.getByText('item-24', { exact: true })).toBeInTheDocument()
@@ -883,7 +883,7 @@ describe('CascadingCombobox', () => {
   })
 
   it('子菜单里的组项 hover 展开时，不会把当前子菜单突然滚回顶部', async () => {
-    renderInBrowser(NestedGroupedHarness)
+    await renderInBrowser(NestedGroupedHarness)
 
     await page.getByTestId('nested-trigger').click()
     await expect.element(page.getByText('group-48', { exact: true })).toBeInTheDocument()

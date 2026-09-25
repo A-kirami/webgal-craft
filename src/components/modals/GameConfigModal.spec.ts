@@ -270,7 +270,7 @@ describe('GameConfigModal', () => {
   })
 
   it('打开时会渲染预取配置中的关键字段', async () => {
-    renderInBrowser(GameConfigModal, {
+    await renderInBrowser(GameConfigModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -296,7 +296,7 @@ describe('GameConfigModal', () => {
   })
 
   it('点击图标图片入口会打开图标编辑器', async () => {
-    renderInBrowser(GameConfigModal, {
+    await renderInBrowser(GameConfigModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -337,7 +337,7 @@ describe('GameConfigModal', () => {
       },
     }
 
-    renderInBrowser(GameConfigModal, {
+    await renderInBrowser(GameConfigModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -380,7 +380,7 @@ describe('GameConfigModal', () => {
   })
 
   it('非法包名会在失焦后才显示校验信息', async () => {
-    renderInBrowser(GameConfigModal, {
+    await renderInBrowser(GameConfigModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -406,7 +406,7 @@ describe('GameConfigModal', () => {
   it('多行简介会在输入阶段被压成单行后再保存', async () => {
     const updateOpen = vi.fn()
 
-    renderInBrowser(GameConfigModal, {
+    await renderInBrowser(GameConfigModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -448,7 +448,7 @@ describe('GameConfigModal', () => {
   it('缺失 gameKey 的旧配置会在打开时补上 UUID，并允许直接保存', async () => {
     const randomUuidSpy = vi.spyOn(crypto, 'randomUUID').mockReturnValue('22222222-2222-2222-2222-222222222222')
 
-    renderInBrowser(GameConfigModal, {
+    await renderInBrowser(GameConfigModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -487,7 +487,7 @@ describe('GameConfigModal', () => {
   it('已有 gameKey 时点击重新生成会立即替换', async () => {
     const randomUuidSpy = vi.spyOn(crypto, 'randomUUID').mockReturnValue('33333333-3333-3333-3333-333333333333')
 
-    renderInBrowser(GameConfigModal, {
+    await renderInBrowser(GameConfigModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -512,7 +512,7 @@ describe('GameConfigModal', () => {
   it('有修改时请求关闭并选择不保存后，才真正关闭弹窗', async () => {
     const updateOpen = vi.fn()
 
-    renderInBrowser(GameConfigModal, {
+    await renderInBrowser(GameConfigModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -557,7 +557,7 @@ describe('GameConfigModal', () => {
   })
 
   it('打开时会渲染自定义配置项并显示未托管配置提示', async () => {
-    renderInBrowser(GameConfigModal, {
+    await renderInBrowser(GameConfigModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -588,7 +588,7 @@ describe('GameConfigModal', () => {
   })
 
   it('底部添加的自定义配置项会随保存一起提交', async () => {
-    renderInBrowser(GameConfigModal, {
+    await renderInBrowser(GameConfigModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -620,7 +620,7 @@ describe('GameConfigModal', () => {
   })
 
   it('清空自定义配置列表后仍可直接保存', async () => {
-    renderInBrowser(GameConfigModal, {
+    await renderInBrowser(GameConfigModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -669,7 +669,7 @@ describe('GameConfigModal', () => {
       ],
     } as const
 
-    renderInBrowser(GameConfigModal, {
+    await renderInBrowser(GameConfigModal, {
       browser: {
         i18nMode: 'lite',
       },

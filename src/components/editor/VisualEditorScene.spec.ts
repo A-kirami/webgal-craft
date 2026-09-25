@@ -286,7 +286,7 @@ describe('VisualEditorScene', () => {
   })
 
   it('会渲染可视化语句列表和卡片内容', async () => {
-    renderInBrowser(VisualEditorScene, {
+    await renderInBrowser(VisualEditorScene, {
       props: {
         state: createSceneState(),
       },
@@ -353,7 +353,7 @@ describe('VisualEditorScene', () => {
       ],
     })
 
-    renderInBrowser(VisualEditorScene, {
+    await renderInBrowser(VisualEditorScene, {
       props: { state },
       global: {
         plugins: [createPinia()],
@@ -370,7 +370,7 @@ describe('VisualEditorScene', () => {
     const state = createSceneState()
     state.statements = []
 
-    renderInBrowser(VisualEditorScene, {
+    await renderInBrowser(VisualEditorScene, {
       props: {
         state,
       },
@@ -387,7 +387,7 @@ describe('VisualEditorScene', () => {
 
   it('快捷键上下文会反映场景是否存在语句', async () => {
     const state = reactive(createSceneState())
-    const result = renderInBrowser(VisualEditorScene, {
+    const result = await renderInBrowser(VisualEditorScene, {
       props: {
         state,
       },
@@ -425,7 +425,7 @@ describe('VisualEditorScene', () => {
     const state = createSceneState()
     state.statements = []
 
-    const result = renderInBrowser(VisualEditorScene, {
+    const result = await renderInBrowser(VisualEditorScene, {
       props: { state },
       global: {
         plugins: [createPinia()],
@@ -484,7 +484,7 @@ describe('VisualEditorScene', () => {
   })
 
   it('卡片事件会转发到 runtime 处理函数', async () => {
-    renderInBrowser(VisualEditorScene, {
+    await renderInBrowser(VisualEditorScene, {
       props: {
         state: createSceneState(),
       },
@@ -507,7 +507,7 @@ describe('VisualEditorScene', () => {
     const state = createSceneState()
     state.isDirty = true
 
-    renderInBrowser(VisualEditorScene, {
+    await renderInBrowser(VisualEditorScene, {
       props: {
         state,
       },
@@ -556,7 +556,7 @@ describe('VisualEditorScene', () => {
       ],
     })
 
-    renderInBrowser(VisualEditorScene, {
+    await renderInBrowser(VisualEditorScene, {
       props: {
         state,
       },
@@ -574,7 +574,7 @@ describe('VisualEditorScene', () => {
 
   it('普通状态下插入投放区会放行指针事件', async () => {
     const state = createSceneState()
-    renderInBrowser(VisualEditorScene, {
+    await renderInBrowser(VisualEditorScene, {
       props: {
         state,
       },
@@ -601,7 +601,7 @@ describe('VisualEditorScene', () => {
     })
     useEditSettingsStoreMock.mockReturnValue(editSettings)
 
-    renderInBrowser(VisualEditorScene, {
+    await renderInBrowser(VisualEditorScene, {
       props: { state: createSceneState() },
       global: {
         plugins: [createPinia()],
@@ -642,7 +642,7 @@ describe('VisualEditorScene', () => {
     })
 
     const state = createSceneState()
-    renderInBrowser(VisualEditorScene, {
+    await renderInBrowser(VisualEditorScene, {
       props: { state },
       global: {
         plugins: [createPinia()],
@@ -739,7 +739,7 @@ describe('VisualEditorScene', () => {
       updateHover: vi.fn(),
     })
 
-    renderInBrowser(VisualEditorScene, {
+    await renderInBrowser(VisualEditorScene, {
       props: { state: createSceneState() },
       global: {
         plugins: [createPinia()],
@@ -777,7 +777,7 @@ describe('VisualEditorScene', () => {
       updateHover: vi.fn(),
     })
 
-    const result = renderInBrowser(VisualEditorScene, {
+    const result = await renderInBrowser(VisualEditorScene, {
       props: { state: createSceneState() },
       global: {
         plugins: [createPinia()],
@@ -828,7 +828,7 @@ describe('VisualEditorScene', () => {
       updateHover: vi.fn(),
     })
 
-    const result = renderInBrowser(VisualEditorScene, {
+    const result = await renderInBrowser(VisualEditorScene, {
       props: { state: createSceneState() },
       global: {
         plugins: [createPinia()],
@@ -858,21 +858,20 @@ describe('VisualEditorScene', () => {
     const state = createSceneState()
     state.statements = [createStatementEntry(1, 'say:only')]
 
-    expect(() => renderInBrowser(VisualEditorScene, {
+    await renderInBrowser(VisualEditorScene, {
       props: { state },
       global: {
         plugins: [createPinia()],
         stubs: globalStubs,
       },
-    })).not.toThrow()
-
+    })
     await nextTick()
     await expect.element(page.getByText('say:only')).toBeVisible()
     await expect.element(page.getByText('say:world')).not.toBeInTheDocument()
   })
 
   it('拖拽语句手柄会提交语句重排', async () => {
-    renderInBrowser(VisualEditorScene, {
+    await renderInBrowser(VisualEditorScene, {
       props: {
         state: createSceneState(),
       },
@@ -920,7 +919,7 @@ describe('VisualEditorScene', () => {
       },
     })
 
-    renderInBrowser(Harness, {
+    await renderInBrowser(Harness, {
       global: {
         plugins: [createPinia()],
         stubs: globalStubs,
@@ -963,7 +962,7 @@ describe('VisualEditorScene', () => {
   })
 
   it('拖拽语句排序后会恢复可视化编辑器快捷键焦点上下文', async () => {
-    renderInBrowser(VisualEditorScene, {
+    await renderInBrowser(VisualEditorScene, {
       props: {
         state: createSceneState(),
       },
@@ -1000,7 +999,7 @@ describe('VisualEditorScene', () => {
     expect(useShortcutContextRegistry().resolveContext().panelFocus).toBe('editor')
   })
 
-  it('根节点可承载父级运行时 directive', () => {
+  it('根节点可承载父级运行时 directive', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const state = createSceneState()
     const WrappedScene = defineComponent({
@@ -1013,7 +1012,7 @@ describe('VisualEditorScene', () => {
     })
 
     try {
-      renderInBrowser(WrappedScene, {
+      await renderInBrowser(WrappedScene, {
         global: {
           plugins: [createPinia()],
           stubs: globalStubs,
@@ -1038,7 +1037,7 @@ describe('VisualEditorScene', () => {
 
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(VisualEditorScene, {
+    await renderInBrowser(VisualEditorScene, {
       props: {
         state: createSceneState(),
       },

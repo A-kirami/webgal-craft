@@ -11,8 +11,8 @@ const globalStubs = {
   Label: createBrowserContainerStub('StubLabel', 'label'),
 }
 
-function renderEditor(surface: 'inline' | 'panel') {
-  return renderInBrowser(CallSceneParametersEditor, {
+async function renderEditor(surface: 'inline' | 'panel') {
+  return await renderInBrowser(CallSceneParametersEditor, {
     props: {
       surface,
       parameters: [{ key: 'enemy', value: 'slime' }],
@@ -25,14 +25,14 @@ function renderEditor(surface: 'inline' | 'panel') {
 
 describe('CallSceneParametersEditor', () => {
   it('inline 中使用等号连接场景参数的键和值', async () => {
-    renderEditor('inline')
+    await renderEditor('inline')
 
     await expect.element(page.getByText('=')).toBeInTheDocument()
     expect(document.querySelector('.i-lucide-arrow-right')).toBeNull()
   })
 
-  it('panel 中复用样式数组的卡片和标签布局', () => {
-    renderEditor('panel')
+  it('panel 中复用样式数组的卡片和标签布局', async () => {
+    await renderEditor('panel')
 
     const row = document.querySelector<HTMLElement>('[data-surface="panel"] > div')
     expect(row?.className).toContain('group-data-[surface=panel]:border')
@@ -45,7 +45,7 @@ describe('CallSceneParametersEditor', () => {
   it('编辑键和值时保留其他参数并发出 arg 数组', async () => {
     const onUpdate = vi.fn()
 
-    renderInBrowser(CallSceneParametersEditor, {
+    await renderInBrowser(CallSceneParametersEditor, {
       props: {
         surface: 'inline',
         parameters: [

@@ -54,7 +54,7 @@ describe('FastPreviewTimeoutModal', () => {
     const onClose = vi.fn()
     const updateOpen = vi.fn()
 
-    renderInBrowser(FastPreviewTimeoutModal, {
+    await renderInBrowser(FastPreviewTimeoutModal, {
       global: {
         plugins: [createFastPreviewTimeoutModalI18n()],
       },
@@ -104,7 +104,7 @@ describe('FastPreviewTimeoutModal', () => {
     const onClose = vi.fn().mockRejectedValue(new Error('close failed'))
     const updateOpen = vi.fn()
 
-    renderInBrowser(FastPreviewTimeoutModal, {
+    await renderInBrowser(FastPreviewTimeoutModal, {
       global: {
         plugins: [createFastPreviewTimeoutModalI18n()],
       },
@@ -135,7 +135,7 @@ describe('FastPreviewTimeoutModal', () => {
       open: true,
     })
 
-    renderInBrowser({
+    await renderInBrowser({
       setup() {
         return () => h(FastPreviewTimeoutModal, {
           'open': state.open,
@@ -171,7 +171,7 @@ describe('FastPreviewTimeoutModal', () => {
       open: true,
     })
 
-    renderInBrowser({
+    await renderInBrowser({
       setup() {
         return () => h(FastPreviewTimeoutModal, {
           'open': state.open,
@@ -214,7 +214,7 @@ describe('FastPreviewTimeoutModal', () => {
       open: true,
     })
 
-    renderInBrowser({
+    await renderInBrowser({
       setup() {
         return () => h(FastPreviewTimeoutModal, {
           'open': state.open,

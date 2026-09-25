@@ -106,7 +106,7 @@ describe('EffectDraftCategorySection', () => {
   it('提交各类浮点输入时转发原始文本并立即刷新', async () => {
     const { controls } = createControls()
 
-    renderInBrowser(EffectDraftCategorySection, {
+    await renderInBrowser(EffectDraftCategorySection, {
       props: {
         category: {
           key: 'continuous',
@@ -199,7 +199,7 @@ describe('EffectDraftCategorySection', () => {
   it('只允许可清除字段交互，并将不同控件映射到正确的路径组', async () => {
     const { controls, canClearPaths, clearPaths } = createControls()
 
-    renderInBrowser(EffectDraftCategorySection, {
+    await renderInBrowser(EffectDraftCategorySection, {
       props: {
         category: {
           key: 'transform',
@@ -312,7 +312,7 @@ describe('EffectDraftCategorySection', () => {
   it('按独立渲染项输出翻转分组并委托对应轴向操作', async () => {
     const { controls } = createControls()
 
-    renderInBrowser(EffectDraftCategorySection, {
+    await renderInBrowser(EffectDraftCategorySection, {
       props: {
         category: {
           key: 'transform',
@@ -356,7 +356,7 @@ describe('EffectDraftCategorySection', () => {
       },
     })
 
-    renderInBrowser(EffectDraftCategorySection, {
+    await renderInBrowser(EffectDraftCategorySection, {
       props: {
         category: {
           key: 'transform',
@@ -413,7 +413,7 @@ describe('EffectDraftCategorySection', () => {
   it('将固定宽度放在标签与按钮的公共头部容器上，让按钮贴近标签文本', async () => {
     const { controls } = createControls()
 
-    renderInBrowser(EffectDraftCategorySection, {
+    await renderInBrowser(EffectDraftCategorySection, {
       props: {
         category: {
           key: 'effects',
@@ -451,7 +451,7 @@ describe('EffectDraftCategorySection', () => {
   it('位移项不应继续使用固定头部和固定输入宽度，以避免在双列网格中把输入框挤出容器', async () => {
     const { controls } = createControls()
 
-    renderInBrowser(EffectDraftCategorySection, {
+    await renderInBrowser(EffectDraftCategorySection, {
       props: {
         category: {
           key: 'transform',
@@ -490,7 +490,7 @@ describe('EffectDraftCategorySection', () => {
   it('将清除按钮与对应输入放进同一个 row 或 group 容器，以支持 focus-within 高亮', async () => {
     const { controls } = createControls()
 
-    renderInBrowser(EffectDraftCategorySection, {
+    await renderInBrowser(EffectDraftCategorySection, {
       props: {
         category: {
           key: 'effects',

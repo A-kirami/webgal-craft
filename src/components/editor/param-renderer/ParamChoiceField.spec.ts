@@ -126,11 +126,11 @@ interface RenderWheelChoiceFieldOptions {
   stubs?: Record<string, Component>
 }
 
-function renderWheelChoiceField(options: RenderWheelChoiceFieldOptions) {
+async function renderWheelChoiceField(options: RenderWheelChoiceFieldOptions) {
   const pinia = createPinia()
   useEditSettingsStore(pinia).enableWheelSelect = options.enableWheelSelect
 
-  renderInBrowser(ParamChoiceField, {
+  await renderInBrowser(ParamChoiceField, {
     props: {
       comboboxData: undefined,
       inputId: 'target-input',
@@ -155,7 +155,7 @@ describe('ParamChoiceField', () => {
   it('segmented 选择会归一化后触发 updateSelect', async () => {
     const onUpdateSelect = vi.fn()
 
-    renderInBrowser(ParamChoiceField, {
+    await renderInBrowser(ParamChoiceField, {
       props: {
         comboboxData: undefined,
         inputId: 'target-input',
@@ -179,7 +179,7 @@ describe('ParamChoiceField', () => {
   it('select 分支会透传并归一化 updateSelect', async () => {
     const onUpdateSelect = vi.fn()
 
-    renderInBrowser(ParamChoiceField, {
+    await renderInBrowser(ParamChoiceField, {
       props: {
         comboboxData: undefined,
         inputId: 'target-input',
@@ -203,7 +203,7 @@ describe('ParamChoiceField', () => {
   it('combobox 分支会透传结构化数据并归一化 updateSelect', async () => {
     const onUpdateSelect = vi.fn()
 
-    renderInBrowser(ParamChoiceField, {
+    await renderInBrowser(ParamChoiceField, {
       props: {
         comboboxData: {
           browseNodes: [
@@ -238,7 +238,7 @@ describe('ParamChoiceField', () => {
   it('combobox 分支在没有级联数据时回退到基础 Combobox', async () => {
     const onUpdateSelect = vi.fn()
 
-    renderInBrowser(ParamChoiceField, {
+    await renderInBrowser(ParamChoiceField, {
       props: {
         comboboxData: undefined,
         inputId: 'target-input',
@@ -260,7 +260,7 @@ describe('ParamChoiceField', () => {
   })
 
   it('select 分支候选项在未传 itemClass 时保持 py-1.5 行高', async () => {
-    renderInBrowser(ParamChoiceField, {
+    await renderInBrowser(ParamChoiceField, {
       props: {
         comboboxData: undefined,
         inputId: 'target-input',
@@ -281,7 +281,7 @@ describe('ParamChoiceField', () => {
   })
 
   it('select 分支候选项会应用 itemClass 的行内边距覆盖', async () => {
-    renderInBrowser(ParamChoiceField, {
+    await renderInBrowser(ParamChoiceField, {
       props: {
         comboboxData: undefined,
         inputId: 'target-input',
@@ -305,9 +305,9 @@ describe('ParamChoiceField', () => {
   })
 
   describe('聚焦后的滚轮切换', () => {
-    it('开启后，聚焦的 Select 滚轮切换到下一个候选项并阻止外层滚动', () => {
+    it('开启后，聚焦的 Select 滚轮切换到下一个候选项并阻止外层滚动', async () => {
       const onUpdateSelect = vi.fn()
-      renderWheelChoiceField({
+      await renderWheelChoiceField({
         enableWheelSelect: true,
         mode: 'select',
         onUpdateSelect,
@@ -323,9 +323,9 @@ describe('ParamChoiceField', () => {
       expect(event.defaultPrevented).toBe(true)
     })
 
-    it('向上滚动切换到上一个候选项', () => {
+    it('向上滚动切换到上一个候选项', async () => {
       const onUpdateSelect = vi.fn()
-      renderWheelChoiceField({ enableWheelSelect: true, mode: 'select', onUpdateSelect, selectValue: 'villain' })
+      await renderWheelChoiceField({ enableWheelSelect: true, mode: 'select', onUpdateSelect, selectValue: 'villain' })
 
       const trigger = requireWheelTrigger('#target-input')
       trigger.focus()
@@ -334,9 +334,9 @@ describe('ParamChoiceField', () => {
       expect(onUpdateSelect).toHaveBeenCalledWith('hero')
     })
 
-    it('未开启滚轮选择时不响应且不拦截外层滚动', () => {
+    it('未开启滚轮选择时不响应且不拦截外层滚动', async () => {
       const onUpdateSelect = vi.fn()
-      renderWheelChoiceField({ enableWheelSelect: false, mode: 'select', onUpdateSelect, selectValue: 'hero' })
+      await renderWheelChoiceField({ enableWheelSelect: false, mode: 'select', onUpdateSelect, selectValue: 'hero' })
 
       const trigger = requireWheelTrigger('#target-input')
       trigger.focus()
@@ -346,9 +346,9 @@ describe('ParamChoiceField', () => {
       expect(event.defaultPrevented).toBe(false)
     })
 
-    it('控件未聚焦时不响应滚轮', () => {
+    it('控件未聚焦时不响应滚轮', async () => {
       const onUpdateSelect = vi.fn()
-      renderWheelChoiceField({ enableWheelSelect: true, mode: 'select', onUpdateSelect, selectValue: 'hero' })
+      await renderWheelChoiceField({ enableWheelSelect: true, mode: 'select', onUpdateSelect, selectValue: 'hero' })
 
       const trigger = requireWheelTrigger('#target-input')
       trigger.focus()
@@ -358,9 +358,9 @@ describe('ParamChoiceField', () => {
       expect(onUpdateSelect).not.toHaveBeenCalled()
     })
 
-    it('已在最后一个候选项时继续向下滚动不切换', () => {
+    it('已在最后一个候选项时继续向下滚动不切换', async () => {
       const onUpdateSelect = vi.fn()
-      renderWheelChoiceField({ enableWheelSelect: true, mode: 'select', onUpdateSelect, selectValue: 'guide' })
+      await renderWheelChoiceField({ enableWheelSelect: true, mode: 'select', onUpdateSelect, selectValue: 'guide' })
 
       const trigger = requireWheelTrigger('#target-input')
       trigger.focus()
@@ -369,9 +369,9 @@ describe('ParamChoiceField', () => {
       expect(onUpdateSelect).not.toHaveBeenCalled()
     })
 
-    it('单次事件的多格滚轮量一次消费完，反向滚动不被余量抵消', () => {
+    it('单次事件的多格滚轮量一次消费完，反向滚动不被余量抵消', async () => {
       const onUpdateSelect = vi.fn()
-      renderWheelChoiceField({ enableWheelSelect: true, mode: 'select', onUpdateSelect, selectValue: 'hero' })
+      await renderWheelChoiceField({ enableWheelSelect: true, mode: 'select', onUpdateSelect, selectValue: 'hero' })
 
       const trigger = requireWheelTrigger('#target-input')
       trigger.focus()
@@ -383,9 +383,9 @@ describe('ParamChoiceField', () => {
       expect(onUpdateSelect).toHaveBeenCalledTimes(1)
     })
 
-    it('触控板小幅滚动累计满一格才切换', () => {
+    it('触控板小幅滚动累计满一格才切换', async () => {
       const onUpdateSelect = vi.fn()
-      renderWheelChoiceField({ enableWheelSelect: true, mode: 'select', onUpdateSelect, selectValue: 'hero' })
+      await renderWheelChoiceField({ enableWheelSelect: true, mode: 'select', onUpdateSelect, selectValue: 'hero' })
 
       const trigger = requireWheelTrigger('#target-input')
       trigger.focus()
@@ -398,9 +398,9 @@ describe('ParamChoiceField', () => {
       expect(onUpdateSelect).toHaveBeenCalledWith('villain')
     })
 
-    it('Combobox 分支聚焦后同样响应滚轮', () => {
+    it('Combobox 分支聚焦后同样响应滚轮', async () => {
       const onUpdateSelect = vi.fn()
-      renderWheelChoiceField({
+      await renderWheelChoiceField({
         enableWheelSelect: true,
         mode: 'combobox',
         onUpdateSelect,

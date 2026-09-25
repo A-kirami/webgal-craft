@@ -253,7 +253,7 @@ describe('EnginesTab', () => {
     }))
     openDialogMock.mockResolvedValue('/engines/import-target')
 
-    renderInBrowser(EnginesTab, {
+    await renderInBrowser(EnginesTab, {
       browser: {
         i18nMode: 'lite',
       },
@@ -283,7 +283,7 @@ describe('EnginesTab', () => {
       engines: [],
     }))
 
-    renderInBrowser(EnginesTab, {
+    await renderInBrowser(EnginesTab, {
       browser: {
         i18nMode: 'lite',
         pinia,
@@ -314,7 +314,7 @@ describe('EnginesTab', () => {
     }))
     getServeUrlMock.mockReturnValue('http://127.0.0.1:8899/game/engine/custom/')
 
-    renderInBrowser(EnginesTab, {
+    await renderInBrowser(EnginesTab, {
       browser: {
         i18nMode: 'lite',
       },
@@ -347,7 +347,7 @@ describe('EnginesTab', () => {
       engines: [customEngine, officialEngine],
     }))
 
-    renderInBrowser(EnginesTab, {
+    await renderInBrowser(EnginesTab, {
       browser: {
         i18nMode: 'lite',
       },
@@ -369,7 +369,7 @@ describe('EnginesTab', () => {
     openDialogMock.mockResolvedValue('/engines/import-target')
     importEngineMock.mockRejectedValue(new AppError('INVALID_STRUCTURE', 'invalid'))
 
-    renderInBrowser(EnginesTab, {
+    await renderInBrowser(EnginesTab, {
       browser: {
         i18nMode: 'lite',
       },
@@ -402,7 +402,7 @@ describe('EnginesTab', () => {
     }))
     usePreferenceStoreMock.mockReturnValue(preferenceStore)
 
-    renderInBrowser(EnginesTab, {
+    await renderInBrowser(EnginesTab, {
       browser: {
         i18nMode: 'lite',
       },
@@ -441,7 +441,7 @@ describe('EnginesTab', () => {
     }))
     usePreferenceStoreMock.mockReturnValue(preferenceStore)
 
-    renderInBrowser(EnginesTab, {
+    await renderInBrowser(EnginesTab, {
       browser: {
         i18nMode: 'lite',
       },

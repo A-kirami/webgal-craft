@@ -24,8 +24,8 @@ const globalStubs = {
   TooltipTrigger: passThroughStub,
 }
 
-function renderToolbar(connectionStatus: 'connecting' | 'connected' | 'failed' = 'connecting') {
-  return renderInBrowser(PreviewToolbar, {
+async function renderToolbar(connectionStatus: 'connecting' | 'connected' | 'failed' = 'connecting') {
+  return await renderInBrowser(PreviewToolbar, {
     props: {
       connectionStatus,
       previewAvailable: true,
@@ -55,14 +55,14 @@ function clickWithoutPointerMovement(element: HTMLElement | SVGElement): void {
 
 describe('PreviewToolbar', () => {
   it('显示预览标题和连接状态', async () => {
-    renderToolbar('connected')
+    await renderToolbar('connected')
 
     await expect.element(page.getByRole('heading', { name: 'edit.previewPanel.preview' })).toBeVisible()
     await expect.element(page.getByTestId('preview-connection-status')).toHaveAttribute('data-status', 'connected')
   })
 
   it('窄面板中连接状态不会与操作按钮重叠', async () => {
-    renderToolbar('connected')
+    await renderToolbar('connected')
     const toolbar = page.getByTestId('preview-toolbar').element()
     toolbar.style.width = '180px'
     await nextTick()
@@ -73,7 +73,7 @@ describe('PreviewToolbar', () => {
   })
 
   it('显示带波动圆点的连接中状态', async () => {
-    renderToolbar()
+    await renderToolbar()
 
     await expect.element(page.getByTestId('preview-connection-status')).toHaveAttribute('data-status', 'connecting')
     await expect.element(page.getByText('edit.previewPanel.connecting')).toBeVisible()
@@ -81,7 +81,7 @@ describe('PreviewToolbar', () => {
   })
 
   it('未提供连接状态时只显示标题', async () => {
-    renderInBrowser(PreviewToolbar, {
+    await renderInBrowser(PreviewToolbar, {
       props: {
         connectionStatus: undefined,
         previewAvailable: true,
@@ -97,7 +97,7 @@ describe('PreviewToolbar', () => {
   })
 
   it('点击音量和亮度按钮切换对应偏好', async () => {
-    const rendered = renderToolbar('connected')
+    const rendered = await renderToolbar('connected')
     const preferenceStore = usePreferenceStore(rendered.pinia)
 
     preferenceStore.previewVolume = [0]
@@ -116,7 +116,7 @@ describe('PreviewToolbar', () => {
   })
 
   it('通过键盘打开音量和亮度浮层时将焦点移到对应滑块', async () => {
-    const rendered = renderToolbar('connected')
+    const rendered = await renderToolbar('connected')
     const preferenceStore = usePreferenceStore(rendered.pinia)
 
     preferenceStore.previewMuted = true
@@ -138,7 +138,7 @@ describe('PreviewToolbar', () => {
   })
 
   it('关闭音量或亮度后 hover 不显示控制浮层', async () => {
-    renderToolbar('connected')
+    await renderToolbar('connected')
     const muteButton = page.getByRole('button', { name: 'edit.previewPanel.mute' })
     const volumeLabel = page.getByText('edit.previewPanel.volume', { exact: true })
     const brightnessButton = page.getByRole('button', { name: 'edit.previewPanel.disableBrightness' })
@@ -164,7 +164,7 @@ describe('PreviewToolbar', () => {
   })
 
   it('原地关闭再开启音量或亮度后重新显示控制浮层', async () => {
-    const rendered = renderToolbar('connected')
+    const rendered = await renderToolbar('connected')
     const preferenceStore = usePreferenceStore(rendered.pinia)
     const muteButton = page.getByRole('button', { name: 'edit.previewPanel.mute' })
     const volumeLabel = page.getByText('edit.previewPanel.volume', { exact: true })
@@ -199,7 +199,7 @@ describe('PreviewToolbar', () => {
   })
 
   it('原地重新开启后操作音量或亮度滑块保持控制浮层打开', async () => {
-    const rendered = renderToolbar('connected')
+    const rendered = await renderToolbar('connected')
     const preferenceStore = usePreferenceStore(rendered.pinia)
     const muteButton = page.getByRole('button', { name: 'edit.previewPanel.mute' })
     const volumeLabel = page.getByText('edit.previewPanel.volume', { exact: true })
@@ -243,7 +243,7 @@ describe('PreviewToolbar', () => {
   })
 
   it('显示当前音量和亮度百分比', async () => {
-    const rendered = renderToolbar('connected')
+    const rendered = await renderToolbar('connected')
     const preferenceStore = usePreferenceStore(rendered.pinia)
 
     preferenceStore.previewVolume = [44]
@@ -257,7 +257,7 @@ describe('PreviewToolbar', () => {
   })
 
   it('从亮度切换到音量时立即关闭亮度浮层并停止命中', async () => {
-    renderToolbar('connected')
+    await renderToolbar('connected')
     const brightnessLabel = page.getByText('edit.previewPanel.brightness', { exact: true })
     const volumeLabel = page.getByText('edit.previewPanel.volume', { exact: true })
 

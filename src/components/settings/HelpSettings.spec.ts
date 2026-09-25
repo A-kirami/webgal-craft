@@ -9,8 +9,8 @@ const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
 }
 
-function renderHelpSettings() {
-  return renderInBrowser(HelpSettings, {
+async function renderHelpSettings() {
+  return await renderInBrowser(HelpSettings, {
     browser: {
       i18nMode: 'localized',
     },
@@ -22,7 +22,7 @@ function renderHelpSettings() {
 
 describe('HelpSettings', () => {
   it('按场景分组展示快捷键指南', async () => {
-    renderHelpSettings()
+    await renderHelpSettings()
 
     await expect.element(page.getByRole('heading', { name: '快捷操作' })).toBeInTheDocument()
     await expect.element(page.getByRole('heading', { name: '通用' })).toBeInTheDocument()
@@ -37,8 +37,8 @@ describe('HelpSettings', () => {
     expect(renderedText).not.toContain('settings.help.')
   })
 
-  it('把绑定键渲染成独立的按键片段', () => {
-    renderHelpSettings()
+  it('把绑定键渲染成独立的按键片段', async () => {
+    await renderHelpSettings()
 
     const keyLabels = [...document.querySelectorAll('kbd')].map(element => element.textContent?.trim())
 

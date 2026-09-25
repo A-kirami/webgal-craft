@@ -110,8 +110,8 @@ const globalStubs = {
   'i18n-t': createBrowserContainerStub('MockI18nT', 'span'),
 }
 
-function renderDeleteGameModal(updateOpen = vi.fn(), game = createTestGame()) {
-  renderInBrowser(DeleteGameModal, {
+async function renderDeleteGameModal(updateOpen = vi.fn(), game = createTestGame()) {
+  await renderInBrowser(DeleteGameModal, {
     props: {
       'open': true,
       game,
@@ -143,7 +143,7 @@ describe('DeleteGameModal', () => {
   })
 
   it('默认确认只移除游戏记录并关闭模态框', async () => {
-    const { game, updateOpen } = renderDeleteGameModal()
+    const { game, updateOpen } = await renderDeleteGameModal()
 
     await page.getByRole('button', { name: '确认' }).click()
 
@@ -153,7 +153,7 @@ describe('DeleteGameModal', () => {
   })
 
   it('桌面端勾选删除文件后会直接移到回收站并关闭模态框', async () => {
-    const { game, updateOpen } = renderDeleteGameModal()
+    const { game, updateOpen } = await renderDeleteGameModal()
 
     await page.getByRole('checkbox').click()
     // 勾选后按钮文案保持不变，仅由复选框表达“移到回收站”语义
@@ -165,7 +165,7 @@ describe('DeleteGameModal', () => {
 
   it('移动端勾选删除文件后会打开二次确认模态框', async () => {
     isDesktopRuntimeMock.mockReturnValue(false)
-    const { game } = renderDeleteGameModal()
+    const { game } = await renderDeleteGameModal()
 
     await page.getByRole('checkbox').click()
     await page.getByRole('button', { name: '确认' }).click()
@@ -179,7 +179,7 @@ describe('DeleteGameModal', () => {
 
   it('移除可用游戏记录失败时记录原因、展示兜底消息且保持模态框打开', async () => {
     deleteGameMock.mockRejectedValueOnce(new Error('permission denied'))
-    const { updateOpen } = renderDeleteGameModal()
+    const { updateOpen } = await renderDeleteGameModal()
 
     await page.getByRole('button', { name: '确认' }).click()
 
@@ -192,7 +192,7 @@ describe('DeleteGameModal', () => {
 
   it('移除不可用游戏记录失败时展示兜底消息且保持模态框打开', async () => {
     deleteGameMock.mockRejectedValueOnce('unknown failure')
-    const { updateOpen } = renderDeleteGameModal(
+    const { updateOpen } = await renderDeleteGameModal(
       vi.fn(),
       createTestGame({ availability: 'missing' }),
     )
@@ -209,7 +209,7 @@ describe('DeleteGameModal', () => {
   it('移动端二次确认删除失败时展示兜底消息并保持两个模态框打开', async () => {
     isDesktopRuntimeMock.mockReturnValue(false)
     deleteGameMock.mockRejectedValueOnce('unknown failure')
-    const { game, updateOpen } = renderDeleteGameModal()
+    const { game, updateOpen } = await renderDeleteGameModal()
 
     await page.getByRole('checkbox').click()
     await page.getByRole('button', { name: '确认' }).click()

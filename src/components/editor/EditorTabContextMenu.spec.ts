@@ -21,7 +21,7 @@ describe('EditorTabContextMenu', () => {
   it('会展示全部操作并发出对应动作', async () => {
     const onAction = vi.fn()
 
-    renderInBrowser(EditorTabContextMenu, {
+    await renderInBrowser(EditorTabContextMenu, {
       props: {
         canCloseOthers: true,
         canCloseRight: true,
@@ -52,7 +52,7 @@ describe('EditorTabContextMenu', () => {
   })
 
   it('没有对应标签时会禁用相对关闭操作，并隐藏历史版本入口', async () => {
-    renderInBrowser(EditorTabContextMenu, {
+    await renderInBrowser(EditorTabContextMenu, {
       props: {
         canCloseOthers: false,
         canCloseRight: false,

@@ -598,7 +598,7 @@ describe('FileViewer', () => {
   it('默认不会为图片项私自生成预览 URL', async () => {
     viewportWidthMock.value = 780
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         items: [createImageItem(1)],
         viewMode: 'grid',
@@ -615,7 +615,7 @@ describe('FileViewer', () => {
   it('网格模式会显示包含零引用的资源引用计数角标', async () => {
     viewportWidthMock.value = 780
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         items: [
           createReferenceCountItem(1, 0),
@@ -639,7 +639,7 @@ describe('FileViewer', () => {
   it('列表模式会显示独立引用数列，并在窄窗口保持可见', async () => {
     viewportWidthMock.value = 520
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         items: [
           createReferenceCountItem(1, 0),
@@ -665,7 +665,7 @@ describe('FileViewer', () => {
     viewportWidthMock.value = 780
     resolveAssetUrlMock.mockReturnValue('http://127.0.0.1:8899/game/demo/assets/file-1.png?t=1700000000001&w=64&h=64&fit=contain')
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
@@ -690,7 +690,7 @@ describe('FileViewer', () => {
       createInMemoryPreviewUrl(resolvedItem, preview),
     )
 
-    renderInBrowser(FileViewerImageHoverCard, {
+    await renderInBrowser(FileViewerImageHoverCard, {
       props: {
         item,
         open: true,
@@ -754,7 +754,7 @@ describe('FileViewer', () => {
       },
     })
 
-    renderInBrowser(FileViewerImageHoverCardHarness)
+    await renderInBrowser(FileViewerImageHoverCardHarness)
 
     await vi.waitFor(() => {
       expect(resolvePreviewUrlMock).toHaveBeenCalled()
@@ -786,7 +786,7 @@ describe('FileViewer', () => {
     viewportWidthMock.value = 780
     mockBuiltInPreviewResolution()
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
@@ -812,7 +812,7 @@ describe('FileViewer', () => {
     viewportWidthMock.value = 780
     mockBuiltInPreviewResolution()
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
@@ -837,7 +837,7 @@ describe('FileViewer', () => {
     viewportWidthMock.value = 780
     mockBuiltInPreviewResolution()
 
-    renderInBrowser(createImageFallbackHarness('grid'), {
+    await renderInBrowser(createImageFallbackHarness('grid'), {
       global: {
         stubs: globalStubs,
       },
@@ -855,7 +855,7 @@ describe('FileViewer', () => {
     viewportWidthMock.value = 780
     mockBuiltInPreviewResolution()
 
-    renderInBrowser(createImageFallbackHarness('list'), {
+    await renderInBrowser(createImageFallbackHarness('list'), {
       global: {
         stubs: globalStubs,
       },
@@ -920,7 +920,7 @@ describe('FileViewer', () => {
     getImageDimensionsMock.mockResolvedValue([1920, 1080])
     mockBuiltInPreviewResolution()
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
@@ -947,7 +947,7 @@ describe('FileViewer', () => {
     getImageDimensionsMock.mockResolvedValue([320, 180])
     mockBuiltInPreviewResolution()
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
@@ -979,7 +979,7 @@ describe('FileViewer', () => {
     getImageDimensionsMock.mockResolvedValue([1600, 900])
     resolveAssetUrlMock.mockReturnValue(IMAGE_DATA_URL)
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
@@ -1006,7 +1006,7 @@ describe('FileViewer', () => {
     getImageDimensionsMock.mockResolvedValue([1024, 1024])
     resolveAssetUrlMock.mockReturnValue(IMAGE_DATA_URL)
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
@@ -1041,7 +1041,7 @@ describe('FileViewer', () => {
       getImageDimensionsMock.mockResolvedValue([1024, 1024])
       resolveAssetUrlMock.mockReturnValue(IMAGE_DATA_URL)
 
-      renderInBrowser(FileViewer, {
+      await renderInBrowser(FileViewer, {
         props: {
           ...FILE_VIEWER_PREVIEW_PROPS,
           items: [item],
@@ -1078,7 +1078,7 @@ describe('FileViewer', () => {
     getImageDimensionsMock.mockResolvedValue([1280, 720])
     mockBuiltInPreviewResolution()
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
@@ -1103,7 +1103,7 @@ describe('FileViewer', () => {
     getImageDimensionsMock.mockResolvedValue([1280, 720])
     mockBuiltInPreviewResolution()
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
@@ -1133,7 +1133,7 @@ describe('FileViewer', () => {
     getImageDimensionsMock.mockResolvedValue([1280, 720])
     resolveAssetUrlMock.mockReturnValue(IMAGE_DATA_URL)
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
@@ -1169,7 +1169,7 @@ describe('FileViewer', () => {
     getImageDimensionsMock.mockResolvedValue([1280, 720])
     resolveAssetUrlMock.mockReturnValue(IMAGE_DATA_URL)
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
@@ -1205,7 +1205,7 @@ describe('FileViewer', () => {
     getImageDimensionsMock.mockResolvedValue([1280, 720])
     mockBuiltInPreviewResolution()
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [
@@ -1267,7 +1267,7 @@ describe('FileViewer', () => {
     getImageDimensionsMock.mockResolvedValue([1280, 720])
     mockBuiltInPreviewResolution()
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
@@ -1336,7 +1336,7 @@ describe('FileViewer', () => {
     viewportWidthMock.value = 780
     mockBuiltInPreviewResolution()
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
@@ -1357,7 +1357,7 @@ describe('FileViewer', () => {
   it('非图片项不会渲染 hover 预览触发器', async () => {
     viewportWidthMock.value = 780
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [createItem(1)],
@@ -1379,7 +1379,7 @@ describe('FileViewer', () => {
     viewportWidthMock.value = 780
     resolveAssetUrlMock.mockReturnValue(IMAGE_DATA_URL)
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         items: [item],
@@ -1399,7 +1399,7 @@ describe('FileViewer', () => {
   it('未提供 #context-menu slot 时不会渲染 ContextMenu 包裹', async () => {
     viewportWidthMock.value = 780
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         items: [createItem(1), createItem(2)],
         viewMode: 'grid',
@@ -1415,7 +1415,7 @@ describe('FileViewer', () => {
   it('未提供 #background-context-menu slot 时不会渲染空白区右键触发层', async () => {
     viewportWidthMock.value = 780
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         items: [createItem(1), createItem(2)],
         viewMode: 'grid',
@@ -1434,7 +1434,7 @@ describe('FileViewer', () => {
     const onSelect = vi.fn()
     const onAuxclick = vi.fn()
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         items: [item],
         onAuxclick,
@@ -1457,7 +1457,7 @@ describe('FileViewer', () => {
   it('提供 #context-menu slot 时会向每个条目透传当前 item', async () => {
     viewportWidthMock.value = 780
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         items: [createItem(1), createItem(2)],
         viewMode: 'grid',
@@ -1479,7 +1479,7 @@ describe('FileViewer', () => {
   it('提供 #background-context-menu slot 时会为文件视图空白区单独渲染菜单', async () => {
     viewportWidthMock.value = 780
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         items: [createItem(1), createItem(2)],
         viewMode: 'grid',
@@ -1505,7 +1505,7 @@ describe('FileViewer', () => {
   it('空目录时提供 #background-context-menu slot 仍会渲染背景菜单', async () => {
     viewportWidthMock.value = 780
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         items: [],
         viewMode: 'grid',
@@ -1526,7 +1526,7 @@ describe('FileViewer', () => {
   it('空状态会先展示调用方传入的标题，再展示补充提示', async () => {
     viewportWidthMock.value = 780
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         emptyTitle: '这里还没有资源',
         emptyHint: '把外部文件拖放进来即可导入',
@@ -1546,7 +1546,7 @@ describe('FileViewer', () => {
   it('未提供空状态文案时只显示通用空状态文案', async () => {
     viewportWidthMock.value = 780
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         items: [],
         viewMode: 'grid',
@@ -1564,7 +1564,7 @@ describe('FileViewer', () => {
   it('窄列表视图下会同时隐藏 modifiedAt 列头和内容', async () => {
     viewportWidthMock.value = 520
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         items: [createItem(1)],
         viewMode: 'list',
@@ -1616,14 +1616,14 @@ describe('FileViewer', () => {
       },
     })
 
-    renderInBrowser(FileViewerHarness, {
+    await renderInBrowser(FileViewerHarness, {
       global: {
         stubs: globalStubs,
       },
     })
 
     await expect.element(page.getByTestId('viewport-ready')).toHaveTextContent('yes')
-    await expect.element(page.getByTestId('icon-slot-probe')).toHaveTextContent(/^file-1\.txt:\d+$/)
+    await expect.element(page.getByTestId('icon-slot-probe')).toMatchTextContent(/^file-1\.txt:\d+$/)
 
     await page.getByTestId('scroll-trigger').click()
     expect(scrollToIndexMock).toHaveBeenCalled()
@@ -1663,7 +1663,7 @@ describe('FileViewer', () => {
       },
     })
 
-    renderInBrowser(FileViewerHarness, {
+    await renderInBrowser(FileViewerHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -1690,7 +1690,7 @@ describe('FileViewer', () => {
       target: FileViewerItem
     }[] = []
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         canDropFileTransfer: () => true,
         enableDragTransfer: true,
@@ -1729,7 +1729,7 @@ describe('FileViewer', () => {
       path: '/assets/folder',
     })
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         externalDropTargetPath: directory.path,
         items: [file, directory],
@@ -1749,7 +1749,7 @@ describe('FileViewer', () => {
   it('外部文件拖拽到当前目录时会高亮资源根区域', async () => {
     const rootDirectory = createDirectoryItem(0, { path: '/assets' })
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         dropTargetDirectory: rootDirectory,
         externalDropTargetPath: rootDirectory.path,
@@ -1771,7 +1771,7 @@ describe('FileViewer', () => {
     const targetDirectory = createDirectoryItem(2)
     const onFileTransferDrop = vi.fn()
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         canDropFileTransfer: () => false,
         enableDragTransfer: true,
@@ -1800,7 +1800,7 @@ describe('FileViewer', () => {
     const targetDirectory = createDirectoryItem(2)
     const onFileTransferDrop = vi.fn()
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         enableDragTransfer: true,
         items: [sourceItem, targetDirectory],
@@ -1827,7 +1827,7 @@ describe('FileViewer', () => {
 
     const sourceItem = createImageItem(1)
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         enableDragTransfer: true,
@@ -1881,7 +1881,7 @@ describe('FileViewer', () => {
       },
     })
 
-    renderInBrowser(FileViewerHarness, {
+    await renderInBrowser(FileViewerHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -1922,7 +1922,7 @@ describe('FileViewer', () => {
       },
     })
 
-    renderInBrowser(FileViewerHarness, {
+    await renderInBrowser(FileViewerHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -1947,7 +1947,7 @@ describe('FileViewer', () => {
 
     const sourceItem = createImageItem(1)
 
-    renderInBrowser(FileViewer, {
+    await renderInBrowser(FileViewer, {
       props: {
         ...FILE_VIEWER_PREVIEW_PROPS,
         enableDragTransfer: true,

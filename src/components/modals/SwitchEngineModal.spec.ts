@@ -203,14 +203,14 @@ function createDeferred<T = void>() {
   return { promise, resolve, reject }
 }
 
-function renderSwitchEngineModal(options: { realDialog?: boolean } = {}) {
+async function renderSwitchEngineModal(options: { realDialog?: boolean } = {}) {
   const game = createTestGame({
     id: 'game-1',
     engineId: 'engine-current',
     path: AbsPath.from('/games/demo'),
   })
 
-  renderInBrowser(SwitchEngineModal, {
+  await renderInBrowser(SwitchEngineModal, {
     props: {
       game,
       'open': true,
@@ -273,7 +273,7 @@ describe('SwitchEngineModal', () => {
       .mockRejectedValueOnce(new Error('init failed'))
       .mockResolvedValueOnce(OLD_CONFIG)
 
-    renderSwitchEngineModal()
+    await renderSwitchEngineModal()
 
     await expect.element(page.getByText('切换失败')).toBeInTheDocument()
     await expect.element(page.getByText('init failed')).toBeInTheDocument()
@@ -296,7 +296,7 @@ describe('SwitchEngineModal', () => {
       .mockRejectedValueOnce(new Error('switch failed'))
       .mockResolvedValueOnce(undefined)
 
-    renderSwitchEngineModal()
+    await renderSwitchEngineModal()
 
     await page.getByTestId('select-new-engine').click()
     await page.getByRole('button', { name: '确认' }).click()
@@ -313,7 +313,7 @@ describe('SwitchEngineModal', () => {
   })
 
   it('切换当前工作区游戏后会刷新当前快照', async () => {
-    renderSwitchEngineModal()
+    await renderSwitchEngineModal()
 
     await page.getByTestId('select-new-engine').click()
     await page.getByRole('button', { name: '确认' }).click()
@@ -337,7 +337,7 @@ describe('SwitchEngineModal', () => {
       return
     })
 
-    renderSwitchEngineModal()
+    await renderSwitchEngineModal()
 
     await page.getByTestId('select-new-engine').click()
     await page.getByRole('button', { name: '确认' }).click()
@@ -349,7 +349,7 @@ describe('SwitchEngineModal', () => {
   it('刷新当前快照失败时仍然保持切换成功', async () => {
     refreshCurrentGameSnapshotMock.mockRejectedValueOnce(new Error('refresh failed'))
 
-    renderSwitchEngineModal()
+    await renderSwitchEngineModal()
 
     await page.getByTestId('select-new-engine').click()
     await page.getByRole('button', { name: '确认' }).click()
@@ -367,7 +367,7 @@ describe('SwitchEngineModal', () => {
   it('templateStrategy 为 dirty 时确认会先弹出模板改动确认', async () => {
     evaluateTemplateStrategyMock.mockResolvedValue('dirty')
 
-    renderSwitchEngineModal()
+    await renderSwitchEngineModal()
 
     await page.getByTestId('select-new-engine').click()
     await page.getByRole('button', { name: '确认' }).click()
@@ -379,7 +379,7 @@ describe('SwitchEngineModal', () => {
   it('dirty 模板下选择保留改动会以 keep 调用 switchEngine', async () => {
     evaluateTemplateStrategyMock.mockResolvedValue('dirty')
 
-    renderSwitchEngineModal()
+    await renderSwitchEngineModal()
 
     await page.getByTestId('select-new-engine').click()
     await page.getByRole('button', { name: '确认' }).click()
@@ -398,7 +398,7 @@ describe('SwitchEngineModal', () => {
   it('dirty 模板下选择丢弃改动会以 discard 调用 switchEngine', async () => {
     evaluateTemplateStrategyMock.mockResolvedValue('dirty')
 
-    renderSwitchEngineModal()
+    await renderSwitchEngineModal()
 
     await page.getByTestId('select-new-engine').click()
     await page.getByRole('button', { name: '确认' }).click()
@@ -420,7 +420,7 @@ describe('SwitchEngineModal', () => {
       .mockRejectedValueOnce(new Error('switch failed'))
       .mockResolvedValueOnce(undefined)
 
-    renderSwitchEngineModal()
+    await renderSwitchEngineModal()
 
     await page.getByTestId('select-new-engine').click()
     await page.getByRole('button', { name: '确认' }).click()
@@ -444,7 +444,7 @@ describe('SwitchEngineModal', () => {
     const switching = createDeferred()
     engineSwitchMock.mockImplementation(() => switching.promise)
 
-    renderSwitchEngineModal({ realDialog: true })
+    await renderSwitchEngineModal({ realDialog: true })
 
     await page.getByTestId('select-new-engine').click()
     await page.getByRole('button', { name: '确认' }).click()

@@ -28,8 +28,8 @@ const ExternalDocumentDiffEditorStub = defineComponent({
   `,
 })
 
-function renderModal(props: Record<string, unknown>) {
-  return renderInBrowser(ExternalDocumentChangeModal, {
+async function renderModal(props: Record<string, unknown>) {
+  return await renderInBrowser(ExternalDocumentChangeModal, {
     browser: {
       i18nMode: 'lite',
     },
@@ -52,7 +52,7 @@ function renderModal(props: Record<string, unknown>) {
 
 describe('ExternalDocumentChangeModal', () => {
   it('打开时聚焦取消操作', async () => {
-    renderModal({})
+    await renderModal({})
 
     await expect.element(page.getByRole('button', { name: 'common.cancel' })).toHaveFocus()
   })
@@ -61,7 +61,7 @@ describe('ExternalDocumentChangeModal', () => {
     const onMerge = vi.fn(async () => undefined)
     const updateOpen = vi.fn()
 
-    renderModal({
+    await renderModal({
       onMerge,
       'onUpdate:open': updateOpen,
     })
@@ -81,7 +81,7 @@ describe('ExternalDocumentChangeModal', () => {
     const onCancel = vi.fn()
     const updateOpen = vi.fn()
 
-    renderModal({
+    await renderModal({
       onCancel,
       'onUpdate:open': updateOpen,
     })
@@ -98,7 +98,7 @@ describe('ExternalDocumentChangeModal', () => {
     const onKeepLocal = vi.fn(async () => undefined)
     const updateOpen = vi.fn()
 
-    renderModal({
+    await renderModal({
       'allowMerge': false,
       onKeepLocal,
       'onUpdate:open': updateOpen,

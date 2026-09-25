@@ -52,13 +52,13 @@ const globalStubs = {
   Checkbox: createBrowserCheckboxStub('StubCheckbox'),
 }
 
-function renderDeleteFileModal(options: {
+async function renderDeleteFileModal(options: {
   onConfirm?: () => void | Promise<void>
   updateOpen?: (value: boolean) => void
 } = {}) {
   const updateOpen = options.updateOpen ?? vi.fn()
 
-  renderInBrowser(DeleteFileModal, {
+  await renderInBrowser(DeleteFileModal, {
     props: {
       'open': true,
       'file': {
@@ -92,7 +92,7 @@ describe('DeleteFileModal', () => {
   it('桌面端仍将文件移到回收站并允许记录跳过确认偏好', async () => {
     const preferenceStore = { skipDeleteFileConfirm: false }
     usePreferenceStoreMock.mockReturnValue(preferenceStore)
-    renderDeleteFileModal()
+    await renderDeleteFileModal()
 
     await page.getByRole('checkbox').click()
     await page.getByRole('button', { name: 'common.moveToTrash' }).click()
@@ -103,7 +103,7 @@ describe('DeleteFileModal', () => {
 
   it('Android 端要求确认永久删除且不提供跳过确认', async () => {
     isDesktopRuntimeMock.mockReturnValue(false)
-    renderDeleteFileModal()
+    await renderDeleteFileModal()
 
     await expect.element(page.getByText('modals.deleteFile.permanentDescription')).toBeInTheDocument()
     await expect.element(page.getByRole('checkbox')).not.toBeInTheDocument()
@@ -115,7 +115,7 @@ describe('DeleteFileModal', () => {
   it('删除失败时不会关闭模态框或执行确认回调', async () => {
     const error = new Error('delete failed')
     const onConfirm = vi.fn()
-    const { updateOpen } = renderDeleteFileModal({ onConfirm })
+    const { updateOpen } = await renderDeleteFileModal({ onConfirm })
     deleteFileMock.mockRejectedValueOnce(error)
 
     await page.getByRole('button', { name: 'common.moveToTrash' }).click()
@@ -130,7 +130,7 @@ describe('DeleteFileModal', () => {
   it('删除成功但刷新回调失败时仍会关闭模态框并单独报告刷新错误', async () => {
     const error = new Error('refresh failed')
     const onConfirm = vi.fn().mockRejectedValueOnce(error)
-    const { updateOpen } = renderDeleteFileModal({ onConfirm })
+    const { updateOpen } = await renderDeleteFileModal({ onConfirm })
 
     await page.getByRole('button', { name: 'common.moveToTrash' }).click()
 

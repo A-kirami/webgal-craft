@@ -2,7 +2,7 @@ import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { renderMock } = vi.hoisted(() => ({
-  renderMock: vi.fn(() => ({
+  renderMock: vi.fn(async () => ({
     unmount: vi.fn(),
   })),
 }))
@@ -31,10 +31,10 @@ describe('renderInBrowser', () => {
     renderMock.mockClear()
   })
 
-  it('global.plugins 已显式提供测试 i18n 时不会重复注入默认 i18n', () => {
+  it('global.plugins 已显式提供测试 i18n 时不会重复注入默认 i18n', async () => {
     const localizedI18n = createBrowserLocalizedI18n()
 
-    const rendered = renderInBrowser({} as never, {
+    const rendered = await renderInBrowser({} as never, {
       global: {
         plugins: [localizedI18n],
       },
@@ -46,11 +46,11 @@ describe('renderInBrowser', () => {
     expect(renderOptions?.global?.plugins?.[1]).toBe(localizedI18n)
   })
 
-  it('global.plugins 以 tuple 形式提供测试 i18n 时不会重复注入默认 i18n', () => {
+  it('global.plugins 以 tuple 形式提供测试 i18n 时不会重复注入默认 i18n', async () => {
     const localizedI18n = createBrowserLocalizedI18n()
     const localizedI18nTuple: [typeof localizedI18n] = [localizedI18n]
 
-    const rendered = renderInBrowser({} as never, {
+    const rendered = await renderInBrowser({} as never, {
       global: {
         plugins: [localizedI18nTuple],
       },
@@ -62,8 +62,8 @@ describe('renderInBrowser', () => {
     expect(renderOptions?.global?.plugins?.[1]).toBe(localizedI18nTuple)
   })
 
-  it('未显式提供 Pinia 时会默认注入 Pinia', () => {
-    const rendered = renderInBrowser({} as never)
+  it('未显式提供 Pinia 时会默认注入 Pinia', async () => {
+    const rendered = await renderInBrowser({} as never)
 
     const renderOptions = getRenderedOptions()
     expect(rendered.pinia).toBeDefined()
@@ -71,8 +71,8 @@ describe('renderInBrowser', () => {
     expect(renderOptions?.global?.plugins?.[0]).toBe(rendered.pinia)
   })
 
-  it('未显式提供测试 i18n 时会默认注入 browser i18n', () => {
-    renderInBrowser({} as never)
+  it('未显式提供测试 i18n 时会默认注入 browser i18n', async () => {
+    await renderInBrowser({} as never)
 
     const renderOptions = getRenderedOptions()
     expect(renderOptions?.global?.plugins).toHaveLength(2)
@@ -85,10 +85,10 @@ describe('renderInBrowser', () => {
     expect(translate('common.confirm')).toBe('common.confirm')
   })
 
-  it('显式提供测试 i18n 时仍会保留其它 browser plugins', () => {
+  it('显式提供测试 i18n 时仍会保留其它 browser plugins', async () => {
     const localizedI18n = createBrowserLocalizedI18n()
 
-    const rendered = renderInBrowser({} as never, {
+    const rendered = await renderInBrowser({} as never, {
       global: {
         plugins: [localizedI18n],
       },
@@ -100,8 +100,8 @@ describe('renderInBrowser', () => {
     expect(renderOptions?.global?.plugins?.at(-1)).toBe(localizedI18n)
   })
 
-  it('显式关闭 pinia 时不会注入默认 Pinia', () => {
-    const rendered = renderInBrowser({} as never, {
+  it('显式关闭 pinia 时不会注入默认 Pinia', async () => {
+    const rendered = await renderInBrowser({} as never, {
       browser: {
         pinia: false,
       },
@@ -113,10 +113,10 @@ describe('renderInBrowser', () => {
     expect(isBrowserTestI18nPlugin(renderOptions?.global?.plugins?.[0])).toBe(true)
   })
 
-  it('global.plugins 已显式提供 Pinia 时不会重复注入默认 Pinia', () => {
+  it('global.plugins 已显式提供 Pinia 时不会重复注入默认 Pinia', async () => {
     const pinia = createPinia()
 
-    const rendered = renderInBrowser({} as never, {
+    const rendered = await renderInBrowser({} as never, {
       global: {
         plugins: [pinia],
       },

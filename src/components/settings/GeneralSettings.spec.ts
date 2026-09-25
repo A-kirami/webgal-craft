@@ -26,7 +26,7 @@ const globalStubs = {
 
 describe('GeneralSettings', () => {
   it('渲染主题设置且不依赖 FormField 上下文', async () => {
-    renderInBrowser(GeneralSettings, {
+    await renderInBrowser(GeneralSettings, {
       browser: {
         i18nMode: 'localized',
       },
@@ -45,7 +45,7 @@ describe('GeneralSettings', () => {
   })
 
   it('主题 radio 共享同一个 name，保持原生单选组语义', async () => {
-    renderInBrowser(GeneralSettings, {
+    await renderInBrowser(GeneralSettings, {
       browser: {
         i18nMode: 'localized',
       },

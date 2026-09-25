@@ -47,8 +47,8 @@ const invalidColorFormatDiagnostic: EditorFieldDiagnostic = {
   value: '#zzz',
 }
 
-function renderTooltip(diagnostics: readonly EditorFieldDiagnostic[], description?: string) {
-  renderInBrowser(StatementDiagnosticTooltip, {
+async function renderTooltip(diagnostics: readonly EditorFieldDiagnostic[], description?: string) {
+  await renderInBrowser(StatementDiagnosticTooltip, {
     props: { description, diagnostics },
     browser: {
       i18nMode: 'localized',
@@ -61,7 +61,7 @@ function renderTooltip(diagnostics: readonly EditorFieldDiagnostic[], descriptio
 
 describe('StatementDiagnosticTooltip', () => {
   it('hover warning 控件时显示诊断文案和黄色等级样式', async () => {
-    renderTooltip([warningDiagnostic])
+    await renderTooltip([warningDiagnostic])
 
     await page.getByRole('button', { name: 'Field control' }).hover()
 
@@ -74,7 +74,7 @@ describe('StatementDiagnosticTooltip', () => {
   })
 
   it('hover error 控件时显示资源诊断和 destructive 等级样式', async () => {
-    renderTooltip([errorDiagnostic])
+    await renderTooltip([errorDiagnostic])
 
     await page.getByRole('button', { name: 'Field control' }).hover()
 
@@ -87,7 +87,7 @@ describe('StatementDiagnosticTooltip', () => {
   })
 
   it('hover 不支持的色值格式诊断时说明该格式无法显示和编辑', async () => {
-    renderTooltip([unsupportedColorFormatDiagnostic])
+    await renderTooltip([unsupportedColorFormatDiagnostic])
 
     await page.getByRole('button', { name: 'Field control' }).hover()
 
@@ -97,7 +97,7 @@ describe('StatementDiagnosticTooltip', () => {
   })
 
   it('hover 无效色值诊断时说明该值不是有效颜色值', async () => {
-    renderTooltip([invalidColorFormatDiagnostic])
+    await renderTooltip([invalidColorFormatDiagnostic])
 
     await page.getByRole('button', { name: 'Field control' }).hover()
 
@@ -109,7 +109,7 @@ describe('StatementDiagnosticTooltip', () => {
   })
 
   it('无诊断时 hover 控件不显示 tooltip', async () => {
-    renderTooltip([])
+    await renderTooltip([])
 
     await page.getByRole('button', { name: 'Field control' }).hover()
 
@@ -117,7 +117,7 @@ describe('StatementDiagnosticTooltip', () => {
   })
 
   it('无诊断时通过 tooltip 文案说明控件效果', async () => {
-    renderTooltip([], 'The next statement runs immediately.')
+    await renderTooltip([], 'The next statement runs immediately.')
 
     await page.getByRole('button', { name: 'Field control' }).hover()
 

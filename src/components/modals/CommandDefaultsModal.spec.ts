@@ -162,7 +162,7 @@ describe('CommandDefaultsModal', () => {
   })
 
   it('在命令默认值弹窗中接入动画编辑器子对话框提供器', async () => {
-    renderInBrowser(CommandDefaultsModal, {
+    await renderInBrowser(CommandDefaultsModal, {
       browser: {
         i18nMode: 'lite',
       },

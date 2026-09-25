@@ -344,11 +344,11 @@ function createEditorPanelI18n() {
   return createBrowserLocalizedI18n()
 }
 
-function renderEditorPanel(options: {
+async function renderEditorPanel(options: {
   provide?: Record<symbol, unknown>
   stubs?: Record<string, unknown>
 } = {}) {
-  renderInBrowser(EditorPanel, {
+  await renderInBrowser(EditorPanel, {
     global: {
       plugins: [createEditorPanelI18n()],
       provide: options.provide,
@@ -360,9 +360,9 @@ function renderEditorPanel(options: {
   })
 }
 
-function renderEditorPanelWithShortcutRegistry() {
+async function renderEditorPanelWithShortcutRegistry() {
   const bindings = new Map<symbol, ShortcutDefinition<unknown>>()
-  renderEditorPanel({
+  await renderEditorPanel({
     provide: {
       [shortcutDispatcherRegistryKey as symbol]: {
         registerBinding: () => Symbol('shortcut-binding'),
@@ -449,7 +449,7 @@ describe('EditorPanel', () => {
       insertGroup,
     }
 
-    renderEditorPanel()
+    await renderEditorPanel()
 
     await page.getByRole('button', { name: 'insert-command' }).click()
     await page.getByRole('button', { name: 'insert-group' }).click()
@@ -468,7 +468,7 @@ describe('EditorPanel', () => {
       isCurrentSceneFile: false,
     }))
 
-    renderEditorPanel()
+    await renderEditorPanel()
 
     await expect.element(page.getByText('File Editor')).toBeVisible()
     await expect.element(page.getByText('Editor Toolbar')).toBeVisible()
@@ -484,7 +484,7 @@ describe('EditorPanel', () => {
       showSidebar: true,
     }))
 
-    renderEditorPanel()
+    await renderEditorPanel()
 
     await expect.element(page.getByText('File Editor')).toBeVisible()
     await expect.element(page.getByTestId('sidebar-slot')).not.toBeInTheDocument()
@@ -507,7 +507,7 @@ describe('EditorPanel', () => {
       onUpdate: vi.fn(),
     }
 
-    renderEditorPanel()
+    await renderEditorPanel()
 
     await expect.element(page.getByText('将光标移到语句行即可编辑')).toBeVisible()
     await expect.element(page.getByText('Statement Editor Panel')).not.toBeInTheDocument()
@@ -531,7 +531,7 @@ describe('EditorPanel', () => {
       onUpdate: vi.fn(),
     }
 
-    renderEditorPanel()
+    await renderEditorPanel()
 
     await expect.element(page.getByText('同时选中了多个编辑目标，语句编辑已暂停')).toBeVisible()
     await expect.element(page.getByText('Statement Editor Panel')).not.toBeInTheDocument()
@@ -541,9 +541,9 @@ describe('EditorPanel', () => {
     effectEditorProviderMock.canApply = true
     effectEditorProviderMock.apply.mockResolvedValue(true)
 
-    const bindings = renderEditorPanelWithShortcutRegistry()
-    await vi.waitFor(() => {
-      expect(bindings.size).toBeGreaterThan(0)
+    const bindings = await renderEditorPanelWithShortcutRegistry()
+    await vi.waitFor(async () => {
+      await expect(bindings.size).toBeGreaterThan(0)
     })
 
     const binding = [...bindings.values()].find(item => item.id === 'effect.applyFromTransformOverlay')
@@ -566,7 +566,7 @@ describe('EditorPanel', () => {
       },
     }
 
-    renderEditorPanel()
+    await renderEditorPanel()
     await page.getByRole('button', { name: 'clear-effect' }).click()
 
     expect(effectEditorProviderMock.clearDraft).toHaveBeenCalledOnce()
@@ -575,7 +575,7 @@ describe('EditorPanel', () => {
   it('效果编辑器打开但变换框不可用时不会放行预览交互区域', async () => {
     effectEditorProviderMock.isOpen = true
 
-    renderEditorPanel({
+    await renderEditorPanel({
       provide: {
         [TRANSFORM_OVERLAY_BRIDGE_KEY as symbol]: createTransformOverlayBridge(false),
       },
@@ -592,7 +592,7 @@ describe('EditorPanel', () => {
   it('效果编辑器打开且变换框可用时会保留预览交互区域', async () => {
     effectEditorProviderMock.isOpen = true
 
-    renderEditorPanel({
+    await renderEditorPanel({
       provide: {
         [TRANSFORM_OVERLAY_BRIDGE_KEY as symbol]: createTransformOverlayBridge(true),
       },
@@ -609,7 +609,7 @@ describe('EditorPanel', () => {
   it('效果编辑器初始打开且变换框可用时无需额外交互即可保留预览交互区域', async () => {
     effectEditorProviderMock.isOpen = true
 
-    renderEditorPanel({
+    await renderEditorPanel({
       provide: {
         [TRANSFORM_OVERLAY_BRIDGE_KEY as symbol]: createTransformOverlayBridge(true),
       },
@@ -623,7 +623,7 @@ describe('EditorPanel', () => {
   it('预览工作区尺寸变化时遮罩分段会跟随', async () => {
     effectEditorProviderMock.isOpen = true
 
-    renderEditorPanel({
+    await renderEditorPanel({
       provide: {
         [TRANSFORM_OVERLAY_BRIDGE_KEY as symbol]: createTransformOverlayBridge(true),
       },
@@ -645,7 +645,7 @@ describe('EditorPanel', () => {
   it('动画编辑器抽屉打开时预览区仍属于抽屉外区域', async () => {
     statementAnimationDialogMock.isOpen = true
 
-    renderEditorPanel()
+    await renderEditorPanel()
     await refreshDrawerDismissLayers()
 
     // 帧级预览浮层尚未交付，预览区不是动画编辑器的编辑面，遮罩应当整层接管
@@ -657,7 +657,7 @@ describe('EditorPanel', () => {
   it('点击抽屉外区域会请求关闭动画编辑器', async () => {
     statementAnimationDialogMock.isOpen = true
 
-    renderEditorPanel()
+    await renderEditorPanel()
     await refreshDrawerDismissLayers()
 
     const [dismissLayer] = getDrawerDismissLayers()
@@ -671,7 +671,7 @@ describe('EditorPanel', () => {
   it('动画编辑器抽屉内容获得焦点时仍保持动画编辑器快捷键上下文', async () => {
     statementAnimationDialogMock.isOpen = true
 
-    renderEditorPanel()
+    await renderEditorPanel()
 
     await page.getByRole('button', { name: 'Statement Animation Editor Panel' }).click()
 
@@ -683,7 +683,7 @@ describe('EditorPanel', () => {
   it('抽屉关闭后不再占用快捷键上下文', async () => {
     statementAnimationDialogMock.isOpen = false
 
-    renderEditorPanel()
+    await renderEditorPanel()
 
     await page.getByRole('button', { name: 'Statement Animation Editor Panel' }).click()
 
@@ -695,7 +695,7 @@ describe('EditorPanel', () => {
     statementAnimationDialogMock.isOpen = true
 
     // 关闭按钮由 SheetContent 在插槽之外渲染，只有按整个抽屉表面注册上下文才覆盖得到
-    renderEditorPanel({ stubs: { Sheet: false, SheetContent: false } })
+    await renderEditorPanel({ stubs: { Sheet: false, SheetContent: false } })
 
     await page.getByRole('button', { name: 'Close' }).click()
 
@@ -707,15 +707,15 @@ describe('EditorPanel', () => {
   it('动画编辑器抽屉打开时不会把界面标记为全局模态', async () => {
     statementAnimationDialogMock.isOpen = true
 
-    renderEditorPanel()
+    await renderEditorPanel()
 
     expect(useShortcutContextRegistry().resolveContext().isModalOpen).toBeFalsy()
   })
 
   it('动画编辑器抽屉聚焦时会注册应用与关闭快捷键', async () => {
-    const bindings = renderEditorPanelWithShortcutRegistry()
-    await vi.waitFor(() => {
-      expect(bindings.size).toBeGreaterThan(0)
+    const bindings = await renderEditorPanelWithShortcutRegistry()
+    await vi.waitFor(async () => {
+      await expect(bindings.size).toBeGreaterThan(0)
     })
 
     const applyBinding = [...bindings.values()].find(item => item.id === 'animation.apply')

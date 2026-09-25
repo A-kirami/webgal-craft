@@ -15,11 +15,11 @@ const globalStubs = {
   EffectDraftForm: createBrowserTextStub('StubEffectDraftForm', 'Effect Draft Form'),
 }
 
-function renderPanel(options: {
+async function renderPanel(options: {
   canClear: boolean
   onClear?: () => void
 }) {
-  renderInBrowser(EffectEditorPanel, {
+  await renderInBrowser(EffectEditorPanel, {
     props: {
       canApply: false,
       canClear: options.canClear,
@@ -37,7 +37,7 @@ function renderPanel(options: {
 
 describe('EffectEditorPanel', () => {
   it('草稿为空时显示禁用的次要清除按钮', async () => {
-    renderPanel({ canClear: false })
+    await renderPanel({ canClear: false })
 
     const clearButton = page.getByRole('button', { name: '清除' })
 
@@ -48,7 +48,7 @@ describe('EffectEditorPanel', () => {
 
   it('草稿非空时点击清除会发出清除事件', async () => {
     const onClear = vi.fn()
-    renderPanel({ canClear: true, onClear })
+    await renderPanel({ canClear: true, onClear })
 
     const clearButton = page.getByRole('button', { name: '清除' })
     await expect.element(clearButton).toBeEnabled()

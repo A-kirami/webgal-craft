@@ -114,7 +114,7 @@ describe('StatementAnimationEditorPanel', () => {
       },
     })
 
-    renderInBrowser(harness, {
+    await renderInBrowser(harness, {
       global: {
         stubs: globalStubs,
       },
@@ -133,7 +133,7 @@ describe('StatementAnimationEditorPanel', () => {
   })
 
   it('在模态框场景中隐藏历史操作按钮', async () => {
-    renderInBrowser(StatementAnimationEditorPanel, {
+    await renderInBrowser(StatementAnimationEditorPanel, {
       props: {
         frames: [{
           duration: 200,
@@ -155,7 +155,7 @@ describe('StatementAnimationEditorPanel', () => {
     const onApply = vi.fn()
     const onCancel = vi.fn()
 
-    renderInBrowser(StatementAnimationEditorPanel, {
+    await renderInBrowser(StatementAnimationEditorPanel, {
       props: {
         frames: [{
           duration: 200,
@@ -176,7 +176,7 @@ describe('StatementAnimationEditorPanel', () => {
   })
 
   it('宿主提供自己的页脚时可以隐藏面板页脚', async () => {
-    renderInBrowser(StatementAnimationEditorPanel, {
+    await renderInBrowser(StatementAnimationEditorPanel, {
       props: {
         frames: [{
           duration: 200,
@@ -211,7 +211,7 @@ describe('StatementAnimationEditorPanel', () => {
       frames.splice(0, frames.length, ...nextFrames)
     })
 
-    renderInBrowser(StatementAnimationEditorPanel, {
+    await renderInBrowser(StatementAnimationEditorPanel, {
       props: {
         frames,
         'onUpdate:frames': handleUpdateFrames,

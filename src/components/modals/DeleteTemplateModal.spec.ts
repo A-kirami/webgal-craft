@@ -101,12 +101,12 @@ const globalStubs = {
   AlertDialogTitle: createBrowserContainerStub('StubAlertDialogTitle', 'h2'),
 }
 
-function renderDeleteTemplateModal(updateOpen = vi.fn(), template = createTestTemplate({
+async function renderDeleteTemplateModal(updateOpen = vi.fn(), template = createTestTemplate({
   metadata: {
     name: 'Modern Template',
   },
 })) {
-  renderInBrowser(DeleteTemplateModal, {
+  await renderInBrowser(DeleteTemplateModal, {
     props: {
       'open': true,
       template,
@@ -150,7 +150,7 @@ describe('DeleteTemplateModal', () => {
       reason: 'TEMPLATE_HAS_ASSOCIATED_GAMES',
     })
 
-    renderDeleteTemplateModal()
+    await renderDeleteTemplateModal()
 
     await expect.element(page.getByText('无法删除')).toBeInTheDocument()
     await expect.element(page.getByText('以下游戏正在使用此模板：')).toBeInTheDocument()
@@ -171,7 +171,7 @@ describe('DeleteTemplateModal', () => {
       ],
     })
 
-    renderDeleteTemplateModal()
+    await renderDeleteTemplateModal()
 
     await expect.element(page.getByText('无法删除')).toBeInTheDocument()
     await expect.element(page.getByText('以下游戏的项目配置无法读取，无法确认是否正在使用此模板：')).toBeInTheDocument()
@@ -180,7 +180,7 @@ describe('DeleteTemplateModal', () => {
   })
 
   it('可删除时确认会执行删除并关闭模态框', async () => {
-    const { template, updateOpen } = renderDeleteTemplateModal()
+    const { template, updateOpen } = await renderDeleteTemplateModal()
 
     await page.getByRole('button', { name: '确认' }).click()
 
@@ -190,7 +190,7 @@ describe('DeleteTemplateModal', () => {
   })
 
   it('不可用模板会带入名称渲染移除说明', async () => {
-    renderDeleteTemplateModal(
+    await renderDeleteTemplateModal(
       vi.fn(),
       createTestTemplate({
         availability: 'broken',

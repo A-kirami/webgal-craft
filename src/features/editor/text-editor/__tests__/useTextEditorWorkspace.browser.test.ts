@@ -161,7 +161,7 @@ function createEditor(path: AbsPath, viewState: EditorViewState): EditorStub {
   }
 }
 
-function renderWorkspaceHarness(options: WorkspaceHarnessOptions): WorkspaceHarness {
+async function renderWorkspaceHarness(options: WorkspaceHarnessOptions): Promise<WorkspaceHarness> {
   const focusEditor = vi.fn()
   const editorRef = shallowRef(options.editor)
   let workspaceApi: ReturnType<typeof useTextEditorWorkspace> | undefined
@@ -193,7 +193,7 @@ function renderWorkspaceHarness(options: WorkspaceHarnessOptions): WorkspaceHarn
     i18nMode: 'lite',
     pinia: currentPinia,
   })
-  const result = render(Harness, {
+  const result = await render(Harness, {
     global: {
       plugins,
     },
@@ -266,7 +266,7 @@ describe('useTextEditorWorkspace', () => {
     tabsStoreState.tabs = [{ path }]
 
     const firstEditor = createEditor(path, savedViewState)
-    const firstHarness = renderWorkspaceHarness({
+    const firstHarness = await renderWorkspaceHarness({
       editor: firstEditor,
       path,
     })
@@ -280,7 +280,7 @@ describe('useTextEditorWorkspace', () => {
     await firstHarness.unmount()
 
     const secondEditor = createEditor(path, createViewState(0))
-    const secondHarness = renderWorkspaceHarness({
+    const secondHarness = await renderWorkspaceHarness({
       editor: secondEditor,
       path,
       restoreOnMount: true,
@@ -303,7 +303,7 @@ describe('useTextEditorWorkspace', () => {
     const editor = createEditor(oldPath, savedViewState)
     let restoredCursorLine: number | undefined
 
-    const harness = renderWorkspaceHarness({
+    const harness = await renderWorkspaceHarness({
       editor,
       initializeSceneSelectionFromRestoredCursor: () => {
         restoredCursorLine = editor.getPosition().lineNumber
@@ -329,7 +329,7 @@ describe('useTextEditorWorkspace', () => {
     const newPath = AbsPath.from(String.raw`X:\Project\WebGALCraft\game\story\chapter\start.txt`)
     const savedViewState = createViewState(320)
 
-    const firstHarness = renderWorkspaceHarness({
+    const firstHarness = await renderWorkspaceHarness({
       editor: createEditor(oldPath, savedViewState),
       path: oldPath,
     })
@@ -339,7 +339,7 @@ describe('useTextEditorWorkspace', () => {
     await firstHarness.unmount()
 
     const secondEditor = createEditor(newPath, createViewState(0))
-    const secondHarness = renderWorkspaceHarness({
+    const secondHarness = await renderWorkspaceHarness({
       editor: secondEditor,
       path: newPath,
       restoreOnMount: true,

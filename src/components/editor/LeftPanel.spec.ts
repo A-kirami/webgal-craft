@@ -101,7 +101,7 @@ describe('LeftPanel', () => {
       showPreviewPanel: false,
     }))
 
-    renderInBrowser(LeftPanel, {
+    await renderInBrowser(LeftPanel, {
       global: {
         stubs: globalStubs,
       },
@@ -117,7 +117,7 @@ describe('LeftPanel', () => {
       showPreviewPanel: true,
     }))
 
-    renderInBrowser(LeftPanel, {
+    await renderInBrowser(LeftPanel, {
       global: {
         stubs: globalStubs,
       },
@@ -134,7 +134,7 @@ describe('LeftPanel', () => {
       showPreviewPanel: true,
     }))
 
-    renderInBrowser(LeftPanel, {
+    await renderInBrowser(LeftPanel, {
       global: {
         stubs: globalStubs,
       },
@@ -152,7 +152,7 @@ describe('LeftPanel', () => {
     })
     usePreferenceStoreMock.mockReturnValue(preferenceStore)
 
-    renderInBrowser(LeftPanel, {
+    await renderInBrowser(LeftPanel, {
       global: {
         stubs: globalStubs,
       },
@@ -172,7 +172,7 @@ describe('LeftPanel', () => {
       showPreviewPanel: true,
     }))
 
-    renderInBrowser(LeftPanel, {
+    await renderInBrowser(LeftPanel, {
       global: {
         stubs: globalStubs,
       },

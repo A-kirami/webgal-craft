@@ -87,7 +87,7 @@ describe('DiscoveredResourcesModal', () => {
   })
 
   it('发现资源图标会请求固定 64x64 contain 缩略图', async () => {
-    renderInBrowser(DiscoveredResourcesModal, {
+    await renderInBrowser(DiscoveredResourcesModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -116,7 +116,7 @@ describe('DiscoveredResourcesModal', () => {
   })
 
   it('发现资源图标会为预览失败场景提供可见回退图', async () => {
-    renderInBrowser(DiscoveredResourcesModal, {
+    await renderInBrowser(DiscoveredResourcesModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -141,7 +141,7 @@ describe('DiscoveredResourcesModal', () => {
   })
 
   it('发现资源支持传入完整预览站点配置以保留 VFS lower', async () => {
-    renderInBrowser(DiscoveredResourcesModal, {
+    await renderInBrowser(DiscoveredResourcesModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -220,7 +220,7 @@ describe('DiscoveredResourcesModal', () => {
       },
     })
 
-    renderInBrowser(ResourceSelectionHarness, {
+    await renderInBrowser(ResourceSelectionHarness, {
       browser: {
         i18nMode: 'lite',
       },
@@ -245,7 +245,7 @@ describe('DiscoveredResourcesModal', () => {
   })
 
   it('模板资源不会请求预览运行时 serve url', async () => {
-    renderInBrowser(DiscoveredResourcesModal, {
+    await renderInBrowser(DiscoveredResourcesModal, {
       browser: {
         i18nMode: 'lite',
       },

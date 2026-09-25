@@ -157,7 +157,8 @@ const lastSavedTime = $computed(() => editableState?.lastSavedTime)
 
 const shouldShowTime = $computed(() => shouldShowEditorStatusBarRelativeTime(isSaved, lastSavedTime))
 const { now, pause, resume } = useNow({
-  interval: 30 * 1000,
+  // VueUse 15 起 useNow 用 scheduler 取代 interval 选项，保持 30 秒刷新一次
+  scheduler: update => useIntervalFn(update, 30 * 1000),
   controls: true,
 })
 

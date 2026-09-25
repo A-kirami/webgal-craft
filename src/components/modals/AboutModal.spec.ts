@@ -90,8 +90,8 @@ const globalStubs = {
   Separator: createBrowserContainerStub('StubSeparator', 'hr'),
 }
 
-function renderAboutModal(open: boolean = true) {
-  return renderInBrowser(AboutModal, {
+async function renderAboutModal(open: boolean = true) {
+  return await renderInBrowser(AboutModal, {
     props: {
       open,
     },
@@ -123,16 +123,16 @@ describe('AboutModal', () => {
     globalThis.getSelection()?.removeAllRanges()
   })
 
-  it('移动端不显示桌面应用更新入口', () => {
+  it('移动端不显示桌面应用更新入口', async () => {
     platformMock.mockReturnValue('android')
 
-    renderAboutModal()
+    await renderAboutModal()
 
     expect(page.getByRole('button', { name: 'appUpdate.action.checkForUpdate' })).not.toBeInTheDocument()
   })
 
   it('弹窗内没有可复制内容时通过复制快捷键写入稳定的版本和环境信息', async () => {
-    renderAboutModal()
+    await renderAboutModal()
     const dialog = document.querySelector<HTMLElement>('[role="dialog"]')
     let copyEvent: ClipboardEvent | undefined
 
@@ -154,7 +154,7 @@ describe('AboutModal', () => {
   })
 
   it('弹窗外或弹窗关闭时不接管复制', async () => {
-    const { unmount } = renderAboutModal()
+    const { unmount } = await renderAboutModal()
     const outsideCopy = createCopyEvent()
 
     document.body.dispatchEvent(outsideCopy.event)
@@ -163,7 +163,7 @@ describe('AboutModal', () => {
     expect(outsideCopy.clipboardData.getData('text/plain')).toBe('')
 
     await unmount()
-    renderAboutModal(false)
+    await renderAboutModal(false)
     const closedCopy = createCopyEvent()
 
     document.body.dispatchEvent(closedCopy.event)
@@ -172,8 +172,8 @@ describe('AboutModal', () => {
     expect(closedCopy.event.defaultPrevented).toBe(false)
   })
 
-  it('保留文本选择和可编辑内容的原生复制行为', () => {
-    renderAboutModal()
+  it('保留文本选择和可编辑内容的原生复制行为', async () => {
+    await renderAboutModal()
     const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!
     const versionText = [...dialog.querySelectorAll('span')]
       .find(element => element.textContent === '1.0.0-alpha.4-build.abc 123')!
@@ -201,7 +201,7 @@ describe('AboutModal', () => {
   })
 
   it('问题反馈打开错误报告模板并预填对应字段', async () => {
-    renderAboutModal()
+    await renderAboutModal()
 
     await page.getByRole('button', { name: 'modals.about.issues' }).click()
 

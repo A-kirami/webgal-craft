@@ -118,7 +118,7 @@ function scrubAlphaPercent(testId: string, deltaX: number, modifiers: ScrubModif
 
 describe('ColorPicker', () => {
   it('触发器显示色块与可直接编辑的色值/透明度输入框', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56d799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56d799' }))
 
     const trigger = page.getByTestId('color-picker-trigger')
     await expect.element(trigger).toBeInTheDocument()
@@ -130,14 +130,14 @@ describe('ColorPicker', () => {
   })
 
   it('半透明颜色在触发器显示 6 位裸 hex 与透明度', async () => {
-    renderInBrowser(createHarness({ initialValue: 'rgba(86, 215, 153, 0.5)' }))
+    await renderInBrowser(createHarness({ initialValue: 'rgba(86, 215, 153, 0.5)' }))
 
     await expect.element(page.getByTestId('color-picker-hex-field')).toHaveValue('56D799')
     await expect.element(page.getByTestId('color-picker-row-alpha-field')).toHaveValue(50)
   })
 
   it('在触发器 hex 字段提交会保留当前透明度', async () => {
-    renderInBrowser(createHarness({ initialValue: 'rgba(86, 215, 153, 0.5)' }))
+    await renderInBrowser(createHarness({ initialValue: 'rgba(86, 215, 153, 0.5)' }))
 
     await page.getByTestId('color-picker-hex-field').fill('#00ff00')
     await userEvent.keyboard('{Enter}')
@@ -146,7 +146,7 @@ describe('ColorPicker', () => {
   })
 
   it('空值下在触发器 hex 字段粘贴 8 位 hex 会采用其中的透明度', async () => {
-    renderInBrowser(createHarness({ initialValue: '' }))
+    await renderInBrowser(createHarness({ initialValue: '' }))
 
     await page.getByTestId('color-picker-hex-field').fill('#66ccff80')
     await userEvent.keyboard('{Enter}')
@@ -159,7 +159,7 @@ describe('ColorPicker', () => {
     { label: 'rgba 串', input: 'rgba(102, 204, 255, 0.5)', expected: '#66CCFF80' },
     { label: 'hsla 串', input: 'hsla(210, 100%, 70%, 0.5)', expected: '#66B2FF80' },
   ])('粘贴$label时采用其中的透明度而不是当前透明度', async ({ input, expected }) => {
-    renderInBrowser(createHarness({ initialValue: '#ff000033' }))
+    await renderInBrowser(createHarness({ initialValue: '#ff000033' }))
 
     await page.getByTestId('color-picker-hex-field').fill(input)
     await userEvent.keyboard('{Enter}')
@@ -168,7 +168,7 @@ describe('ColorPicker', () => {
   })
 
   it('粘贴越界分量的色值时按 CSS 语义裁剪', async () => {
-    renderInBrowser(createHarness({ initialValue: '#000000' }))
+    await renderInBrowser(createHarness({ initialValue: '#000000' }))
 
     await page.getByTestId('color-picker-hex-field').fill('rgb(300, 0, 0)')
     await userEvent.keyboard('{Enter}')
@@ -177,7 +177,7 @@ describe('ColorPicker', () => {
   })
 
   it('非法颜色不显示色值', async () => {
-    renderInBrowser(createHarness({ initialValue: 'not-a-color' }))
+    await renderInBrowser(createHarness({ initialValue: 'not-a-color' }))
 
     await expect.element(page.getByTestId('color-picker-hex-field')).toHaveValue('')
   })
@@ -186,7 +186,7 @@ describe('ColorPicker', () => {
     { label: '中文', locale: 'zh-Hans', placeholder: '未选择', messages: undefined },
     { label: '英文', locale: 'en', placeholder: 'Not selected', messages: { en: enMessages } },
   ])('空值时色值框留空、显示$label占位符且宽度容得下', async ({ locale, placeholder, messages }) => {
-    renderInBrowser(createHarness({ initialValue: '' }), {
+    await renderInBrowser(createHarness({ initialValue: '' }), {
       browser: { i18nMode: 'localized', locale, messages },
     })
 
@@ -201,8 +201,8 @@ describe('ColorPicker', () => {
   it.each([
     { label: '空值', value: '' },
     { label: '无法解析的值', value: 'not-a-color' },
-  ])('$label 时色块显示未设置斜线且背景保持透明', ({ value }) => {
-    renderInBrowser(createHarness({ initialValue: value }))
+  ])('$label 时色块显示未设置斜线且背景保持透明', async ({ value }) => {
+    await renderInBrowser(createHarness({ initialValue: value }))
 
     const swatch = page.getByTestId('color-picker-trigger').element().querySelector<HTMLElement>('[role="presentation"]')
     expect(swatch?.dataset.empty).toBe('true')
@@ -222,8 +222,8 @@ describe('ColorPicker', () => {
     expect(backgroundImage).toContain('calc(50% + 1px)')
   })
 
-  it('有颜色值时色块铺棋盘格衬底且不带斜线', () => {
-    renderInBrowser(createHarness({ initialValue: 'rgba(86, 215, 153, 0.5)' }))
+  it('有颜色值时色块铺棋盘格衬底且不带斜线', async () => {
+    await renderInBrowser(createHarness({ initialValue: 'rgba(86, 215, 153, 0.5)' }))
 
     const swatch = page.getByTestId('color-picker-trigger').element().querySelector<HTMLElement>('[role="presentation"]')
     expect(swatch?.dataset.empty).toBeUndefined()
@@ -235,7 +235,7 @@ describe('ColorPicker', () => {
   })
 
   it('在触发器色值框直接输入并提交会更新 model', async () => {
-    renderInBrowser(createHarness({}))
+    await renderInBrowser(createHarness({}))
 
     await page.getByTestId('color-picker-hex-field').fill('#00ff00')
     await userEvent.keyboard('{Enter}')
@@ -244,7 +244,7 @@ describe('ColorPicker', () => {
   })
 
   it('在触发器透明度框提交后 emit 8 位 hex', async () => {
-    renderInBrowser(createHarness({}))
+    await renderInBrowser(createHarness({}))
 
     await page.getByTestId('color-picker-row-alpha-field').fill('50')
     await userEvent.keyboard('{Enter}')
@@ -253,7 +253,7 @@ describe('ColorPicker', () => {
   })
 
   it('在触发器色值框输入后失焦也会提交', async () => {
-    renderInBrowser(createHarness({}))
+    await renderInBrowser(createHarness({}))
 
     await page.getByTestId('color-picker-hex-field').fill('#00ff00')
     await blurField()
@@ -262,7 +262,7 @@ describe('ColorPicker', () => {
   })
 
   it('空值时触发器色值框聚焦后失焦不写入颜色', async () => {
-    renderInBrowser(createHarness({ initialValue: '' }))
+    await renderInBrowser(createHarness({ initialValue: '' }))
 
     await page.getByTestId('color-picker-hex-field').click()
     await blurField()
@@ -271,7 +271,7 @@ describe('ColorPicker', () => {
   })
 
   it('空值时在色值框输入非法值后失焦不写入颜色', async () => {
-    renderInBrowser(createHarness({ initialValue: '' }))
+    await renderInBrowser(createHarness({ initialValue: '' }))
 
     await page.getByTestId('color-picker-hex-field').fill('#zzz')
     await blurField()
@@ -280,7 +280,7 @@ describe('ColorPicker', () => {
   })
 
   it('空值时在色值框输入裸 hex 会写入', async () => {
-    renderInBrowser(createHarness({ initialValue: '' }))
+    await renderInBrowser(createHarness({ initialValue: '' }))
 
     await page.getByTestId('color-picker-hex-field').fill('000000')
     await blurField()
@@ -289,8 +289,8 @@ describe('ColorPicker', () => {
     await expect.element(page.getByTestId('color-picker-hex-field')).toHaveValue('000000')
   })
 
-  it('空值时触发器透明度控件不可用', () => {
-    renderInBrowser(createHarness({ initialValue: '' }))
+  it('空值时触发器透明度控件不可用', async () => {
+    await renderInBrowser(createHarness({ initialValue: '' }))
 
     const alphaField = page.getByTestId('color-picker-row-alpha-field').element() as HTMLInputElement
     expect(alphaField.disabled).toBe(true)
@@ -299,7 +299,7 @@ describe('ColorPicker', () => {
   })
 
   it('输入色值后触发器透明度控件恢复可用', async () => {
-    renderInBrowser(createHarness({ initialValue: '' }))
+    await renderInBrowser(createHarness({ initialValue: '' }))
 
     await page.getByTestId('color-picker-hex-field').fill('000000')
     await blurField()
@@ -314,7 +314,7 @@ describe('ColorPicker', () => {
 
   // 未提交时 model 保持调用方传入的写法：picker 只把"自己写入"的值统一为大写
   it('色值框输入非法值后失焦保留原色值', async () => {
-    renderInBrowser(createHarness({ initialValue: '#00ff00' }))
+    await renderInBrowser(createHarness({ initialValue: '#00ff00' }))
 
     await page.getByTestId('color-picker-hex-field').fill('#zzz')
     await blurField()
@@ -324,7 +324,7 @@ describe('ColorPicker', () => {
   })
 
   it('清空色值框后失焦清除颜色', async () => {
-    renderInBrowser(createHarness({ initialValue: '#00ff00' }))
+    await renderInBrowser(createHarness({ initialValue: '#00ff00' }))
 
     await page.getByTestId('color-picker-hex-field').fill('')
     await blurField()
@@ -336,7 +336,7 @@ describe('ColorPicker', () => {
   })
 
   it('清空色值框后按 Enter 清除颜色', async () => {
-    renderInBrowser(createHarness({ initialValue: '#00ff00' }))
+    await renderInBrowser(createHarness({ initialValue: '#00ff00' }))
 
     await page.getByTestId('color-picker-hex-field').fill('')
     await userEvent.keyboard('{Enter}')
@@ -345,7 +345,7 @@ describe('ColorPicker', () => {
   })
 
   it('清空颜色后打开面板不会被面板的基线色写回', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56d799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56d799' }))
 
     await page.getByTestId('color-picker-hex-field').fill('')
     await blurField()
@@ -362,7 +362,7 @@ describe('ColorPicker', () => {
   })
 
   it('色值框容忍带 # 的输入', async () => {
-    renderInBrowser(createHarness({ initialValue: '' }))
+    await renderInBrowser(createHarness({ initialValue: '' }))
 
     await page.getByTestId('color-picker-hex-field').fill('#ff0000')
     await blurField()
@@ -372,7 +372,7 @@ describe('ColorPicker', () => {
   })
 
   it('色值框的 Home 仍是文本编辑键', async () => {
-    renderInBrowser(createHarness({ initialValue: '#123456' }))
+    await renderInBrowser(createHarness({ initialValue: '#123456' }))
 
     const hexField = page.getByTestId('color-picker-hex-field')
     await hexField.click()
@@ -384,7 +384,7 @@ describe('ColorPicker', () => {
   })
 
   it('空值时面板色值框聚焦后失焦不写入颜色', async () => {
-    renderInBrowser(createHarness({ initialValue: '' }))
+    await renderInBrowser(createHarness({ initialValue: '' }))
     await openPanel()
 
     await page.getByTestId('color-picker-panel-hex-field').click()
@@ -394,7 +394,7 @@ describe('ColorPicker', () => {
   })
 
   it('空值时面板通道框聚焦后失焦不写入颜色', async () => {
-    renderInBrowser(createHarness({ initialValue: '' }))
+    await renderInBrowser(createHarness({ initialValue: '' }))
     await openPanel()
     await page.getByTestId('color-picker-format-switch').click()
 
@@ -405,7 +405,7 @@ describe('ColorPicker', () => {
   })
 
   it('面板通道框输入后失焦会提交', async () => {
-    renderInBrowser(createHarness({ initialValue: '#000000' }))
+    await renderInBrowser(createHarness({ initialValue: '#000000' }))
     await openPanel()
     await page.getByTestId('color-picker-format-switch').click()
 
@@ -416,7 +416,7 @@ describe('ColorPicker', () => {
   })
 
   it('色值与透明度之间渲染分割线', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56d799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56d799' }))
 
     // 触发器没有独立的分割线元素，由透明度输入框的左边框承担
     const hexField = page.getByTestId('color-picker-hex-field').element()
@@ -441,7 +441,7 @@ describe('ColorPicker', () => {
   })
 
   it('透明度输入框宽度只够容纳最大值 100', async () => {
-    renderInBrowser(createHarness({ initialValue: '#26B3FF' }))
+    await renderInBrowser(createHarness({ initialValue: '#26B3FF' }))
 
     const alphaField = page.getByTestId('color-picker-row-alpha-field').element() as HTMLInputElement
     expect(alphaField.value).toBe('100')
@@ -449,7 +449,7 @@ describe('ColorPicker', () => {
   })
 
   it('色值输入框按内容宽度收缩，胶囊不撑满容器', async () => {
-    renderInBrowser(createHarness({ initialValue: '#26B3FF' }))
+    await renderInBrowser(createHarness({ initialValue: '#26B3FF' }))
 
     const hexField = page.getByTestId('color-picker-hex-field').element() as HTMLInputElement
     const pill = document.querySelector<HTMLElement>('[data-slot="input-group"]')!
@@ -461,7 +461,7 @@ describe('ColorPicker', () => {
   })
 
   it('从空值开始输入第一个字符时色值框不塌陷', async () => {
-    renderInBrowser(createHarness({ initialValue: '' }), {
+    await renderInBrowser(createHarness({ initialValue: '' }), {
       browser: { i18nMode: 'localized', locale: 'zh-Hans' },
     })
 
@@ -475,7 +475,7 @@ describe('ColorPicker', () => {
   })
 
   it('disableAlpha 时触发器不渲染透明度输入框且提交会剥离透明度', async () => {
-    renderInBrowser(createHarness({ disableAlpha: true, initialValue: '#56d799' }))
+    await renderInBrowser(createHarness({ disableAlpha: true, initialValue: '#56d799' }))
 
     await expect.element(page.getByTestId('color-picker-row-alpha-field')).not.toBeInTheDocument()
 
@@ -486,7 +486,7 @@ describe('ColorPicker', () => {
   })
 
   it('打开面板渲染色板、滑条与字段', async () => {
-    renderInBrowser(createHarness({}))
+    await renderInBrowser(createHarness({}))
     await openPanel()
 
     // 色板 thumb + 色相滑条 thumb + 透明度滑条 thumb
@@ -498,7 +498,7 @@ describe('ColorPicker', () => {
   })
 
   it('色板 thumb 中心填充当前颜色且不含透明度', async () => {
-    renderInBrowser(createHarness({ initialValue: 'rgba(86, 215, 153, 0.5)' }))
+    await renderInBrowser(createHarness({ initialValue: 'rgba(86, 215, 153, 0.5)' }))
     await openPanel()
 
     const thumb = document.querySelector<HTMLElement>('[data-testid="color-picker-area-thumb"]')
@@ -506,7 +506,7 @@ describe('ColorPicker', () => {
   })
 
   it('透明度滑条 thumb 保持透明以透出轨道', async () => {
-    renderInBrowser(createHarness({ initialValue: 'rgba(86, 215, 153, 0.5)' }))
+    await renderInBrowser(createHarness({ initialValue: 'rgba(86, 215, 153, 0.5)' }))
     await openPanel()
 
     const thumb = document.querySelector<HTMLElement>('[data-testid="color-picker-alpha-thumb"]')
@@ -515,7 +515,7 @@ describe('ColorPicker', () => {
   })
 
   it('色相滑条 thumb 填充当前色相的纯色', async () => {
-    renderInBrowser(createHarness({ initialValue: '#800000' }))
+    await renderInBrowser(createHarness({ initialValue: '#800000' }))
     await openPanel()
 
     // 当前颜色是暗红 rgb(128, 0, 0)，但 thumb 应对应轨道位置显示满饱和度的纯红
@@ -524,7 +524,7 @@ describe('ColorPicker', () => {
   })
 
   it('hex 字段提交合法值后 emit 规范化 hex', async () => {
-    renderInBrowser(createHarness({}))
+    await renderInBrowser(createHarness({}))
     await openPanel()
 
     await page.getByTestId('color-picker-panel-hex-field').fill('ff0000')
@@ -534,7 +534,7 @@ describe('ColorPicker', () => {
   })
 
   it('面板 hex 字段对半透明颜色显示 6 位裸 hex 且提交时保留透明度', async () => {
-    renderInBrowser(createHarness({ initialValue: 'rgba(86, 215, 153, 0.5)' }))
+    await renderInBrowser(createHarness({ initialValue: 'rgba(86, 215, 153, 0.5)' }))
     await openPanel()
 
     await expect.element(page.getByTestId('color-picker-panel-hex-field')).toHaveValue('56D799')
@@ -546,7 +546,7 @@ describe('ColorPicker', () => {
   })
 
   it('hex 字段输入非法值时不 emit', async () => {
-    renderInBrowser(createHarness({ initialValue: '#00ff00' }))
+    await renderInBrowser(createHarness({ initialValue: '#00ff00' }))
     await openPanel()
 
     await page.getByTestId('color-picker-panel-hex-field').fill('#zzz')
@@ -556,7 +556,7 @@ describe('ColorPicker', () => {
   })
 
   it('格式循环钮依次切换 HEX → RGB → HSL 并记住选择', async () => {
-    const { pinia } = renderInBrowser(createHarness({}))
+    const { pinia } = await renderInBrowser(createHarness({}))
     await openPanel()
 
     const formatSwitch = page.getByTestId('color-picker-format-switch')
@@ -577,7 +577,7 @@ describe('ColorPicker', () => {
   })
 
   it('格式循环钮 Shift 点击反向循环', async () => {
-    renderInBrowser(createHarness({}))
+    await renderInBrowser(createHarness({}))
     await openPanel()
 
     const formatSwitch = page.getByTestId('color-picker-format-switch')
@@ -593,7 +593,7 @@ describe('ColorPicker', () => {
   })
 
   it('格式钮的可访问名带出当前格式', async () => {
-    renderInBrowser(createHarness({}), { browser: { i18nMode: 'localized', locale: 'zh-Hans' } })
+    await renderInBrowser(createHarness({}), { browser: { i18nMode: 'localized', locale: 'zh-Hans' } })
     await openPanel()
 
     const formatSwitch = page.getByTestId('color-picker-format-switch')
@@ -604,16 +604,17 @@ describe('ColorPicker', () => {
   })
 
   it('格式钮的提示以 tooltip 呈现', async () => {
-    renderInBrowser(createHarness({}), { browser: { i18nMode: 'localized', locale: 'zh-Hans' } })
+    await renderInBrowser(createHarness({}), { browser: { i18nMode: 'localized', locale: 'zh-Hans' } })
     await openPanel()
 
     await page.getByTestId('color-picker-format-switch').hover()
 
-    await expect.element(page.getByTestId('color-picker-format-tooltip')).toHaveTextContent('切换颜色格式')
+    // tooltip 元素同时承载可访问文本与视觉文本，v5 的 toHaveTextContent 为全等比较，这里用子串匹配
+    await expect.element(page.getByTestId('color-picker-format-tooltip')).toMatchTextContent('切换颜色格式')
   })
 
   it('透明度字段提交后 emit 8 位 hex', async () => {
-    renderInBrowser(createHarness({}))
+    await renderInBrowser(createHarness({}))
     await openPanel()
 
     await page.getByTestId('color-picker-alpha-field').fill('50')
@@ -623,7 +624,7 @@ describe('ColorPicker', () => {
   })
 
   it('透明度与通道框为 number 类型，色值框保持文本类型', async () => {
-    renderInBrowser(createHarness({}))
+    await renderInBrowser(createHarness({}))
     await openPanel()
 
     expect((page.getByTestId('color-picker-hex-field').element() as HTMLInputElement).type).toBe('text')
@@ -639,7 +640,7 @@ describe('ColorPicker', () => {
   })
 
   it('数值框把范围下发给原生 min/max', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56D799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56D799' }))
     await openPanel()
 
     const triggerAlpha = page.getByTestId('color-picker-row-alpha-field').element() as HTMLInputElement
@@ -657,7 +658,7 @@ describe('ColorPicker', () => {
   })
 
   it('触发器透明度框聚焦后滚轮向下按 1 减小透明度', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56D799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56D799' }))
 
     const field = page.getByTestId('color-picker-row-alpha-field')
     await field.click()
@@ -668,7 +669,7 @@ describe('ColorPicker', () => {
   })
 
   it('触发器透明度框未聚焦时滚轮不改变颜色', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56D799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56D799' }))
 
     const field = page.getByTestId('color-picker-row-alpha-field')
     await userEvent.wheel(field, { delta: { y: 120 } })
@@ -678,7 +679,7 @@ describe('ColorPicker', () => {
   })
 
   it('滚轮把数值推到边界外时裁剪到合法范围', async () => {
-    renderInBrowser(createHarness({ initialValue: '#00000000' }))
+    await renderInBrowser(createHarness({ initialValue: '#00000000' }))
 
     const field = page.getByTestId('color-picker-row-alpha-field')
     await field.click()
@@ -689,7 +690,7 @@ describe('ColorPicker', () => {
   })
 
   it('面板通道框聚焦后滚轮按 1 调整并同步颜色', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56D799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56D799' }))
     await openPanel()
     await page.getByTestId('color-picker-format-switch').click()
 
@@ -702,7 +703,7 @@ describe('ColorPicker', () => {
   })
 
   it('触发器透明度框 Home/End 跳到 0 与 100', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56D799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56D799' }))
 
     const field = page.getByTestId('color-picker-row-alpha-field')
     await field.click()
@@ -717,7 +718,7 @@ describe('ColorPicker', () => {
   })
 
   it('面板透明度框 Home/End 跳到 0 与 100', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56D799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56D799' }))
     await openPanel()
 
     const field = page.getByTestId('color-picker-alpha-field')
@@ -733,7 +734,7 @@ describe('ColorPicker', () => {
   })
 
   it('透明度框方向键在上限处停住', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56D799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56D799' }))
 
     const field = page.getByTestId('color-picker-row-alpha-field')
     await field.click()
@@ -745,7 +746,7 @@ describe('ColorPicker', () => {
   })
 
   it('面板通道框 Home/End 跳到该通道的范围两端', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56D799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56D799' }))
     await openPanel()
     await page.getByTestId('color-picker-format-switch').click()
 
@@ -762,7 +763,7 @@ describe('ColorPicker', () => {
   })
 
   it('方向键在通道边界处停住', async () => {
-    renderInBrowser(createHarness({ initialValue: '#000000' }))
+    await renderInBrowser(createHarness({ initialValue: '#000000' }))
     await openPanel()
     await page.getByTestId('color-picker-format-switch').click()
 
@@ -776,7 +777,7 @@ describe('ColorPicker', () => {
   })
 
   it('在触发器透明度 % 上向左拖拽按 1%/px 降低透明度', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56D799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56D799' }))
 
     scrubAlphaPercent('color-picker-row-alpha-scrubber', -20)
 
@@ -785,7 +786,7 @@ describe('ColorPicker', () => {
   })
 
   it('在触发器透明度 % 上按住 Shift 拖拽按 10%/px 调整', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56D799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56D799' }))
 
     scrubAlphaPercent('color-picker-row-alpha-scrubber', -3, { shiftKey: true })
 
@@ -794,7 +795,7 @@ describe('ColorPicker', () => {
   })
 
   it('在触发器透明度 % 上拖拽后焦点落在透明度框而不是色值框', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56D799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56D799' }))
 
     scrubAlphaPercent('color-picker-row-alpha-scrubber', -20)
 
@@ -803,7 +804,7 @@ describe('ColorPicker', () => {
   })
 
   it('在触发器透明度 % 上拖拽时把结果裁剪到 0-100', async () => {
-    renderInBrowser(createHarness({ initialValue: '#000000' }))
+    await renderInBrowser(createHarness({ initialValue: '#000000' }))
 
     // 已在不透明端：继续向右拖拽不写入新颜色
     scrubAlphaPercent('color-picker-row-alpha-scrubber', 60)
@@ -814,8 +815,8 @@ describe('ColorPicker', () => {
     await expect.element(page.getByTestId('color-picker-row-alpha-field')).toHaveValue(0)
   })
 
-  it('空值时在触发器透明度 % 上拖拽不写入颜色', () => {
-    renderInBrowser(createHarness({ initialValue: '' }))
+  it('空值时在触发器透明度 % 上拖拽不写入颜色', async () => {
+    await renderInBrowser(createHarness({ initialValue: '' }))
 
     scrubAlphaPercent('color-picker-row-alpha-scrubber', -25)
 
@@ -823,7 +824,7 @@ describe('ColorPicker', () => {
   })
 
   it('在面板透明度 % 上拖拽调整透明度', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56D799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56D799' }))
     await openPanel()
 
     scrubAlphaPercent('color-picker-alpha-scrubber', -30)
@@ -837,7 +838,7 @@ describe('ColorPicker', () => {
 
   // 面板是取色面：空值由它归一成基线色，交互即产生具体颜色；触发器的透明度控件相反（见上）
   it('空值时在面板透明度 % 上拖拽以基线色写入', async () => {
-    renderInBrowser(createHarness({ initialValue: '' }))
+    await renderInBrowser(createHarness({ initialValue: '' }))
     await openPanel()
 
     scrubAlphaPercent('color-picker-alpha-scrubber', -25)
@@ -846,7 +847,7 @@ describe('ColorPicker', () => {
   })
 
   it('在面板 RGB 透明度 % 上拖拽后焦点落在透明度框而不是通道框', async () => {
-    renderInBrowser(createHarness({ initialValue: '#56D799' }))
+    await renderInBrowser(createHarness({ initialValue: '#56D799' }))
     await openPanel()
     await page.getByTestId('color-picker-format-switch').click()
 
@@ -857,7 +858,7 @@ describe('ColorPicker', () => {
   })
 
   it('disableAlpha 时不渲染透明度滑条与字段', async () => {
-    renderInBrowser(createHarness({ disableAlpha: true }))
+    await renderInBrowser(createHarness({ disableAlpha: true }))
     await openPanel()
 
     // 只剩色板 thumb 与色相滑条 thumb
@@ -868,7 +869,7 @@ describe('ColorPicker', () => {
   })
 
   it('色相滑条支持键盘调整', async () => {
-    renderInBrowser(createHarness({ initialValue: '#ff0000' }))
+    await renderInBrowser(createHarness({ initialValue: '#ff0000' }))
     await openPanel()
 
     const hueThumb = document.querySelectorAll<HTMLElement>('[role="slider"]')[1]
@@ -883,7 +884,7 @@ describe('ColorPicker', () => {
   })
 
   it('选中最近使用的颜色会应用到当前值', async () => {
-    const { pinia } = renderInBrowser(createHarness({}))
+    const { pinia } = await renderInBrowser(createHarness({}))
     usePreferenceStore(pinia).recentColors = ['#ff0000']
     await openPanel()
 
@@ -894,7 +895,7 @@ describe('ColorPicker', () => {
   })
 
   it('关闭选择器时把当前颜色写入最近使用', async () => {
-    const { pinia } = renderInBrowser(createHarness({ initialValue: '#56d799' }))
+    const { pinia } = await renderInBrowser(createHarness({ initialValue: '#56d799' }))
     await openPanel()
 
     expect(usePreferenceStore(pinia).recentColors).toEqual([])
@@ -942,7 +943,7 @@ describe('ColorPicker', () => {
   }
 
   it('焦点落在面板内时宿主表面的快捷键上下文保持有效', async () => {
-    renderInBrowser(createSurfaceHarness())
+    await renderInBrowser(createSurfaceHarness())
     await openPanel()
 
     // 面板渲染在 teleport 出来的浮层里，触发按钮仍留在宿主表面内
@@ -959,7 +960,7 @@ describe('ColorPicker', () => {
   })
 
   it('模态浮层打开时不回算浮层内的焦点', async () => {
-    renderInBrowser(createSurfaceHarness({ isModalOpen: true }))
+    await renderInBrowser(createSurfaceHarness({ isModalOpen: true }))
     await openPanel()
 
     const panelField = page.getByTestId('color-picker-panel-hex-field').element() as HTMLInputElement
@@ -969,7 +970,7 @@ describe('ColorPicker', () => {
   })
 
   it('焦点被移到面板外不会关闭面板，点击面板外才关闭', async () => {
-    renderInBrowser(defineComponent({
+    await renderInBrowser(defineComponent({
       components: { ColorPicker },
       setup() {
         return {}
@@ -995,7 +996,7 @@ describe('ColorPicker', () => {
 
   it('拖拽中透传实时值，模型要等松手才写入', async () => {
     const previews: string[] = []
-    renderInBrowser(defineComponent({
+    await renderInBrowser(defineComponent({
       components: { ColorPicker },
       setup() {
         const modelValue = ref('#FF0000')

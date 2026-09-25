@@ -130,8 +130,8 @@ function setCustomConfigFields(entries: { key: string, value: string }[]) {
   })
 }
 
-function renderSection(i18nMode: 'lite' | 'localized' = 'lite', messages?: Record<string, unknown>) {
-  return renderInBrowser(GameConfigFieldsSection, {
+async function renderSection(i18nMode: 'lite' | 'localized' = 'lite', messages?: Record<string, unknown>) {
+  return await renderInBrowser(GameConfigFieldsSection, {
     browser: {
       i18nMode,
       messages,
@@ -162,7 +162,7 @@ const localizedDefaultLanguageOptions = Object.fromEntries([
 describe('GameConfigFieldsSection', () => {
   it('titleBgm 使用限定在 bgm 目录的文件选择器', async () => {
     setCustomConfigFields([])
-    const result = renderSection()
+    const result = await renderSection()
 
     await expect.element(page.getByLabelText('modals.gameConfig.fields.titleBgm.label')).toHaveAttribute('data-root-path', '/games/demo/game/bgm')
     await expect.element(page.getByLabelText('modals.gameConfig.fields.titleBgm.label')).toHaveAttribute('data-extensions', '.mp3|.ogg|.wav|.opus')
@@ -173,7 +173,7 @@ describe('GameConfigFieldsSection', () => {
 
   it('默认游戏语言选项使用固定语言名，不跟随界面 i18n 文案改变', async () => {
     setCustomConfigFields([])
-    const result = renderSection('localized', {
+    const result = await renderSection('localized', {
       'zh-Hans': {
         modals: {
           gameConfig: {
@@ -210,7 +210,7 @@ describe('GameConfigFieldsSection', () => {
 
   it('空列表时仍会渲染底部添加自定义配置项按钮', async () => {
     setCustomConfigFields([])
-    const result = renderSection()
+    const result = await renderSection()
 
     await expect.element(page.getByTestId('game-config-custom-add')).toBeVisible()
 
@@ -224,7 +224,7 @@ describe('GameConfigFieldsSection', () => {
         value: 'enabled',
       },
     ])
-    const result = renderInBrowser(GameConfigFieldsSection, {
+    const result = await renderInBrowser(GameConfigFieldsSection, {
       browser: {
         i18nMode: 'lite',
       },

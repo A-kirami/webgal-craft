@@ -45,13 +45,13 @@ const globalStubs = {
   'i18n-t': createBrowserContainerStub('MockI18nT', 'span'),
 }
 
-function renderDeleteGameConfirmModal(
+async function renderDeleteGameConfirmModal(
   onConfirm: () => Promise<boolean>,
   updateOpen = vi.fn(),
 ) {
   const game = createTestGame()
 
-  renderInBrowser(DeleteGameConfirmModal, {
+  await renderInBrowser(DeleteGameConfirmModal, {
     props: {
       'open': true,
       game,
@@ -78,7 +78,7 @@ describe('DeleteGameConfirmModal', () => {
     { confirmed: false, shouldClose: false, title: '删除失败' },
   ])('$title时按操作结果决定是否关闭模态框', async ({ confirmed, shouldClose }) => {
     const onConfirm = vi.fn(async () => confirmed)
-    const { game, updateOpen } = renderDeleteGameConfirmModal(onConfirm)
+    const { game, updateOpen } = await renderDeleteGameConfirmModal(onConfirm)
 
     await page.getByRole('textbox').fill(game.metadata.name)
     await page.getByRole('button', { name: '确认删除' }).click()

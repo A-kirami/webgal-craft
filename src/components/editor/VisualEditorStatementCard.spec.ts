@@ -147,7 +147,7 @@ describe('VisualEditorStatementCard', () => {
       events.push('openEffectEditor')
     })
 
-    renderInBrowser(VisualEditorStatementCard, {
+    await renderInBrowser(VisualEditorStatementCard, {
       props: {
         collapsed: false,
         entry,
@@ -173,7 +173,7 @@ describe('VisualEditorStatementCard', () => {
       value: 'start',
     }])
 
-    renderInBrowser(VisualEditorStatementCard, {
+    await renderInBrowser(VisualEditorStatementCard, {
       props: {
         collapsed: true,
         entry: createStatementEntry(7, 'label:start;'),
@@ -196,7 +196,7 @@ describe('VisualEditorStatementCard', () => {
       value: '#69D9FF',
     }])
 
-    renderInBrowser(VisualEditorStatementCard, {
+    await renderInBrowser(VisualEditorStatementCard, {
       props: {
         collapsed: true,
         entry: createStatementEntry(7, 'changeBg:bg.jpg'),

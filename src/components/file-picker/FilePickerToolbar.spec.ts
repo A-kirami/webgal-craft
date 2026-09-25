@@ -85,7 +85,7 @@ describe('FilePickerToolbar', () => {
   it('点击视图切换按钮时会更新 viewMode', async () => {
     const onUpdateViewMode = vi.fn()
 
-    renderInBrowser(FilePickerToolbar, {
+    await renderInBrowser(FilePickerToolbar, {
       props: {
         currentDir: 'images',
         onUpdateViewMode,
@@ -111,7 +111,7 @@ describe('FilePickerToolbar', () => {
   it('面包屑导航时会发出 navigate 事件', async () => {
     const onNavigate = vi.fn()
 
-    renderInBrowser(FilePickerToolbar, {
+    await renderInBrowser(FilePickerToolbar, {
       props: {
         currentDir: 'images',
         onNavigate,
@@ -138,7 +138,7 @@ describe('FilePickerToolbar', () => {
     const onUpdateSortBy = vi.fn()
     const onUpdateSortOrder = vi.fn()
 
-    renderInBrowser(FilePickerToolbar, {
+    await renderInBrowser(FilePickerToolbar, {
       props: {
         currentDir: 'images',
         onUpdateSortBy,
@@ -169,7 +169,7 @@ describe('FilePickerToolbar', () => {
     const onUpdateShowSupportedOnly = vi.fn()
     const onUpdateZoomLevel = vi.fn()
 
-    renderInBrowser(FilePickerToolbar, {
+    await renderInBrowser(FilePickerToolbar, {
       props: {
         currentDir: 'images',
         onUpdateShowRecentHistory,

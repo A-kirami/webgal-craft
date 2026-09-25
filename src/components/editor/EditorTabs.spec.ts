@@ -233,7 +233,7 @@ describe('EditorTabs', () => {
       },
     })
 
-    renderInBrowser(EditorTabs, { global: {} })
+    await renderInBrowser(EditorTabs, { global: {} })
 
     const warning = page.getByText('warning.txt').element().closest('[data-diagnostic-severity]')
     const error = page.getByText('error.txt').element().closest('[data-diagnostic-severity]')
@@ -263,7 +263,7 @@ describe('EditorTabs', () => {
       },
     ]))
 
-    renderInBrowser(EditorTabs, {
+    await renderInBrowser(EditorTabs, {
       global: {},
     })
 
@@ -276,7 +276,7 @@ describe('EditorTabs', () => {
     }))
   })
 
-  it('同名标签会显示足以区分文件的父目录提示', () => {
+  it('同名标签会显示足以区分文件的父目录提示', async () => {
     useWorkspaceStoreMock.mockReturnValue(createWorkspaceStore('/project'))
     useTabsStoreMock.mockReturnValue(createTabsStore([
       {
@@ -299,7 +299,7 @@ describe('EditorTabs', () => {
       },
     ]))
 
-    renderInBrowser(EditorTabs, { global: {} })
+    await renderInBrowser(EditorTabs, { global: {} })
 
     const scenesTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/game/scene/scene.txt"]')
     const assetsTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/game/background/scene.txt"]')
@@ -314,7 +314,7 @@ describe('EditorTabs', () => {
     expect(otherTab?.querySelector('[data-editor-tab-path-hint]')).toBeNull()
   })
 
-  it('同一资源根内的标签使用相对于资源根的路径提示', () => {
+  it('同一资源根内的标签使用相对于资源根的路径提示', async () => {
     useWorkspaceStoreMock.mockReturnValue(createWorkspaceStore('/project'))
     useTabsStoreMock.mockReturnValue(createTabsStore([
       {
@@ -331,7 +331,7 @@ describe('EditorTabs', () => {
       },
     ]))
 
-    renderInBrowser(EditorTabs, { global: {} })
+    await renderInBrowser(EditorTabs, { global: {} })
 
     const rootTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/game/scene/scene.txt"]')
     const nestedTab = document.querySelector<HTMLElement>('[data-testid="editor-tab-/project/game/scene/chapter-a/scene.txt"]')
@@ -352,7 +352,7 @@ describe('EditorTabs', () => {
 
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(EditorTabs, {
+    await renderInBrowser(EditorTabs, {
       global: {},
     })
 
@@ -375,7 +375,7 @@ describe('EditorTabs', () => {
 
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(EditorTabs, {
+    await renderInBrowser(EditorTabs, {
       global: {},
     })
 
@@ -406,7 +406,7 @@ describe('EditorTabs', () => {
 
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(EditorTabs, {
+    await renderInBrowser(EditorTabs, {
       global: {
         stubs: {
           EditorTabContextMenu: editorTabContextMenuStub,
@@ -441,7 +441,7 @@ describe('EditorTabs', () => {
 
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(EditorTabs, {
+    await renderInBrowser(EditorTabs, {
       global: {
         stubs: {
           EditorTabContextMenu: editorTabContextMenuStub,
@@ -472,7 +472,7 @@ describe('EditorTabs', () => {
       },
     ]))
 
-    renderInBrowser(EditorTabs, {
+    await renderInBrowser(EditorTabs, {
       global: {
         stubs: {
           EditorTabContextMenu: editorTabContextMenuStub,
@@ -500,7 +500,7 @@ describe('EditorTabs', () => {
       },
     ]))
 
-    renderInBrowser(EditorTabs, {
+    await renderInBrowser(EditorTabs, {
       global: {
         stubs: {
           EditorTabContextMenu: editorTabContextMenuStub,
@@ -539,7 +539,7 @@ describe('EditorTabs', () => {
 
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(EditorTabs, {
+    await renderInBrowser(EditorTabs, {
       global: {},
     })
 
@@ -586,7 +586,7 @@ describe('EditorTabs', () => {
 
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(EditorTabs, {
+    await renderInBrowser(EditorTabs, {
       global: {},
     })
 

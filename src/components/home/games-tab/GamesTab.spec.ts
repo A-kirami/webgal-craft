@@ -251,8 +251,8 @@ describe('GamesTab', () => {
     }))
   })
 
-  function renderGamesTab() {
-    renderInBrowser(GamesTab, {
+  async function renderGamesTab() {
+    await renderInBrowser(GamesTab, {
       global: {
         mocks: {
           $t: translate,
@@ -268,7 +268,7 @@ describe('GamesTab', () => {
       games: [],
     }))
 
-    renderGamesTab()
+    await renderGamesTab()
 
     await page.getByRole('button', { name: '创建新游戏' }).click()
 
@@ -286,7 +286,7 @@ describe('GamesTab', () => {
       games: [],
     }))
 
-    renderGamesTab()
+    await renderGamesTab()
 
     await page.getByRole('button', { name: '创建新游戏' }).click()
 
@@ -310,7 +310,7 @@ describe('GamesTab', () => {
       games: [game],
     }))
 
-    renderGamesTab()
+    await renderGamesTab()
 
     await page.getByRole('button', { name: '打开文件夹' }).click()
     await page.getByRole('button', { name: '删除游戏' }).click()
@@ -328,7 +328,7 @@ describe('GamesTab', () => {
     }))
     getServeUrlMock.mockReturnValue('http://127.0.0.1:8899/game/custom/')
 
-    renderGamesTab()
+    await renderGamesTab()
 
     const item = await page.getByTestId('game-item-game-1').element()
 
@@ -346,7 +346,7 @@ describe('GamesTab', () => {
       games: [game],
     }))
 
-    renderGamesTab()
+    await renderGamesTab()
 
     await page.getByRole('heading', { name: 'Demo Game' }).click()
 
@@ -362,7 +362,7 @@ describe('GamesTab', () => {
     openDialogMock.mockResolvedValue('/games/import-target')
     importGameMock.mockRejectedValue(new AppError('INVALID_STRUCTURE', 'invalid'))
 
-    renderGamesTab()
+    await renderGamesTab()
 
     await page.getByRole('button', { name: '导入游戏' }).click()
 

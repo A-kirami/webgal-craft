@@ -30,7 +30,7 @@ describe('SafeMarkdown', () => {
   }
 
   it('渲染受支持的安全 HTML', async () => {
-    const result = renderInBrowser(SafeMarkdown, {
+    const result = await renderInBrowser(SafeMarkdown, {
       props: {
         source: [
           '## Notes',
@@ -60,7 +60,7 @@ describe('SafeMarkdown', () => {
   })
 
   it('清理危险 HTML 和非 Web 图片地址', async () => {
-    const result = renderInBrowser(SafeMarkdown, {
+    const result = await renderInBrowser(SafeMarkdown, {
       props: {
         source: [
           '<script>alert(1)</script>',
@@ -82,7 +82,7 @@ describe('SafeMarkdown', () => {
   })
 
   it('渲染只读任务列表', async () => {
-    const result = renderInBrowser(SafeMarkdown, {
+    const result = await renderInBrowser(SafeMarkdown, {
       props: {
         source: [
           '- [x] 已完成',
@@ -108,7 +108,7 @@ describe('SafeMarkdown', () => {
   })
 
   it('点击 http/https 外链时使用 opener 打开，不在 WebView 内直接导航', async () => {
-    const result = renderInBrowser(SafeMarkdown, {
+    const result = await renderInBrowser(SafeMarkdown, {
       props: {
         source: '[Release](https://example.com/release) [Unsafe](javascript:alert(1))',
       },

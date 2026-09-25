@@ -193,7 +193,7 @@ describe('TemplatesTabCollectionSection', () => {
   })
 
   it('网格视图中会为所有内置模板统一显示来源详情，并且只为独立模板暴露组级菜单', async () => {
-    renderInBrowser(TemplatesTabCollectionSection, {
+    await renderInBrowser(TemplatesTabCollectionSection, {
       browser: {
         i18nMode: 'lite',
       },
@@ -229,7 +229,7 @@ describe('TemplatesTabCollectionSection', () => {
     const onDeleteTemplate = vi.fn()
     const onOpenSourceFolder = vi.fn()
 
-    renderInBrowser(TemplatesTabCollectionSection, {
+    await renderInBrowser(TemplatesTabCollectionSection, {
       browser: {
         i18nMode: 'lite',
       },

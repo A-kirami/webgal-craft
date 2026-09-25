@@ -113,7 +113,7 @@ describe('FileTreeContextMenuContent', () => {
   })
 
   it('cut 粘贴被取消时不会清空剪贴板，也不会显示成功提示', async () => {
-    renderInBrowser(FileTreeContextMenuContent, {
+    await renderInBrowser(FileTreeContextMenuContent, {
       props: {
         item: {
           isDir: true,
@@ -137,7 +137,7 @@ describe('FileTreeContextMenuContent', () => {
   })
 
   it('根目录打开文件夹操作可按目录状态禁用', async () => {
-    renderInBrowser(FileTreeContextMenuContent, {
+    await renderInBrowser(FileTreeContextMenuContent, {
       props: {
         isRoot: true,
         item: {
@@ -157,7 +157,7 @@ describe('FileTreeContextMenuContent', () => {
   })
 
   it('受保护入口文件会保留但禁用剪切、重命名和删除', async () => {
-    renderInBrowser(FileTreeContextMenuContent, {
+    await renderInBrowser(FileTreeContextMenuContent, {
       props: {
         item: {
           name: 'start.txt',

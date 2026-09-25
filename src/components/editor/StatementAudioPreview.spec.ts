@@ -98,8 +98,8 @@ const audioPreviewStubs = {
   Play: createBrowserTextStub('StubPlayIcon', 'play'),
 }
 
-function renderStatementAudioPreview(src: string = '/audio/theme.ogg') {
-  return renderInBrowser(StatementAudioPreview, {
+async function renderStatementAudioPreview(src: string = '/audio/theme.ogg') {
+  return await renderInBrowser(StatementAudioPreview, {
     props: { src },
     global: {
       mocks: {

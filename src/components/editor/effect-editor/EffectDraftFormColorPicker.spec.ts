@@ -31,7 +31,7 @@ const globalStubs = {
 
 describe('EffectDraftForm', () => {
   it('点击颜色按钮会打开真实颜色选择器', async () => {
-    renderInBrowser(EffectDraftForm, {
+    await renderInBrowser(EffectDraftForm, {
       props: {
         duration: '300',
         ease: '',
@@ -51,7 +51,7 @@ describe('EffectDraftForm', () => {
 
   it('在真实色板交互期间延迟更新并在选择器关闭后刷新最终颜色', async () => {
     const transformUpdates = vi.fn()
-    renderInBrowser(EffectDraftForm, {
+    await renderInBrowser(EffectDraftForm, {
       props: {
         'duration': '300',
         'ease': '',

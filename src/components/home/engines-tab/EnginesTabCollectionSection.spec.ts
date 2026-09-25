@@ -110,7 +110,7 @@ describe('EnginesTabCollectionSection', () => {
   })
 
   it('会渲染引擎族卡片', async () => {
-    renderInBrowser(EnginesTabCollectionSection, {
+    await renderInBrowser(EnginesTabCollectionSection, {
       props: {
         groups: createGroups(),
         viewMode: 'grid',
@@ -130,7 +130,7 @@ describe('EnginesTabCollectionSection', () => {
   it('会透传卡片操作事件', async () => {
     const onDeleteGroup = vi.fn()
 
-    renderInBrowser(EnginesTabCollectionSection, {
+    await renderInBrowser(EnginesTabCollectionSection, {
       props: {
         groups: createGroups(),
         viewMode: 'list',
@@ -154,7 +154,7 @@ describe('EnginesTabCollectionSection', () => {
     const groups = createGroups()
     const importingEngine = groups[0]!.engines[0]!.engine
 
-    renderInBrowser(EnginesTabCollectionSection, {
+    await renderInBrowser(EnginesTabCollectionSection, {
       props: {
         groups,
         viewMode: 'grid',
@@ -175,7 +175,7 @@ describe('EnginesTabCollectionSection', () => {
   it('导入忙时会拒绝网格和列表拖放', async () => {
     const onDrop = vi.fn()
 
-    renderInBrowser(EnginesTabCollectionSection, {
+    await renderInBrowser(EnginesTabCollectionSection, {
       props: {
         groups: createGroups(),
         viewMode: 'grid',
@@ -202,7 +202,7 @@ describe('EnginesTabCollectionSection', () => {
   it('导入空闲时会透传网格和列表拖放路径', async () => {
     const onDrop = vi.fn()
 
-    renderInBrowser(EnginesTabCollectionSection, {
+    await renderInBrowser(EnginesTabCollectionSection, {
       props: {
         groups: createGroups(),
         viewMode: 'grid',

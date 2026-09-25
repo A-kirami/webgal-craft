@@ -57,7 +57,7 @@ const globalStubs = {
   AlertDialogTitle: createBrowserContainerStub('StubAlertDialogTitle', 'h2'),
 }
 
-function renderUpdateDetailsModal(props: Record<string, unknown> = {}) {
+async function renderUpdateDetailsModal(props: Record<string, unknown> = {}) {
   const updateOpen = vi.fn()
   const onUpdateNow = vi.fn()
   const onSkipVersion = vi.fn()
@@ -65,7 +65,7 @@ function renderUpdateDetailsModal(props: Record<string, unknown> = {}) {
   const pinia = createPinia()
   setActivePinia(pinia)
 
-  const result = renderInBrowser(UpdateDetailsModal, {
+  const result = await renderInBrowser(UpdateDetailsModal, {
     props: {
       'open': true,
       'update': {
@@ -107,7 +107,7 @@ describe('UpdateDetailsModal', () => {
   })
 
   it('展示版本、本地化更新日期和更新内容', async () => {
-    renderUpdateDetailsModal()
+    await renderUpdateDetailsModal()
 
     await expect.element(page.getByText('发现新版本 1.1.0')).toBeInTheDocument()
     await expect.element(page.getByText('当前版本 1.0.0')).toBeInTheDocument()
@@ -118,7 +118,7 @@ describe('UpdateDetailsModal', () => {
   })
 
   it('立即更新和跳过此版本会触发对应事件并关闭弹窗', async () => {
-    const { onUpdateNow, unmount, updateOpen } = renderUpdateDetailsModal()
+    const { onUpdateNow, unmount, updateOpen } = await renderUpdateDetailsModal()
 
     await page.getByRole('button', { name: '立即更新' }).click()
 
@@ -126,7 +126,7 @@ describe('UpdateDetailsModal', () => {
     expect(updateOpen).toHaveBeenCalledWith(false)
     await unmount()
 
-    const skipped = renderUpdateDetailsModal()
+    const skipped = await renderUpdateDetailsModal()
     await page.getByRole('button', { name: '跳过此版本' }).click()
 
     expect(skipped.onSkipVersion).toHaveBeenCalledTimes(1)
@@ -134,7 +134,7 @@ describe('UpdateDetailsModal', () => {
   })
 
   it('已下载更新时主操作显示安装更新', async () => {
-    const { pinia } = renderUpdateDetailsModal()
+    const { pinia } = await renderUpdateDetailsModal()
     const store = useAppUpdateStore(pinia)
     store.setAvailableUpdate({
       currentVersion: '1.0.0',
@@ -147,7 +147,7 @@ describe('UpdateDetailsModal', () => {
   })
 
   it('在 GitHub 查看会传入当前更新版本', async () => {
-    const { onOpenReleasePage } = renderUpdateDetailsModal()
+    const { onOpenReleasePage } = await renderUpdateDetailsModal()
 
     await page.getByRole('button', { name: '在 GitHub 查看' }).click()
 

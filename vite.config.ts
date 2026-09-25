@@ -164,6 +164,7 @@ export default defineConfig({
             headless: true,
             screenshotFailures: false,
             instances: [{ browser: 'chromium' }],
+            locators: { exact: false },
           },
           // 组件浏览器测试使用 .spec.ts，非组件但依赖浏览器环境的测试使用 __tests__/*.browser.test.ts。
           include: [

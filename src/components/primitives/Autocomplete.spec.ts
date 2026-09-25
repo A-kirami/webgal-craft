@@ -140,7 +140,7 @@ async function readSizingWidths(
   inputWidth: number,
   sizingOptions: { label: string, value: string }[] = options,
 ) {
-  renderInBrowser(createSizingHarness(inputWidth, sizingOptions))
+  await renderInBrowser(createSizingHarness(inputWidth, sizingOptions))
 
   const input = page.getByTestId('sizing-autocomplete')
   await input.click()
@@ -279,7 +279,7 @@ const ReactiveOptionsHarness = defineComponent({
 
 describe('Autocomplete', () => {
   it('点击关联标签时只聚焦输入框，直接点击输入框时才展开候选项', async () => {
-    renderInBrowser(LabelHarness)
+    await renderInBrowser(LabelHarness)
 
     const input = page.getByTestId('label-autocomplete')
     await page.getByText('Scene label').click()
@@ -296,7 +296,7 @@ describe('Autocomplete', () => {
   })
 
   it('候选项动态变空后关闭浮层，继续输入也不会进入幽灵展开状态', async () => {
-    renderInBrowser(ReactiveOptionsHarness)
+    await renderInBrowser(ReactiveOptionsHarness)
 
     const input = page.getByTestId('reactive-options-autocomplete')
     await input.click()
@@ -316,7 +316,7 @@ describe('Autocomplete', () => {
   })
 
   it('候选浮层通过 Portal 渲染，避免被局部容器裁剪', async () => {
-    renderInBrowser(PortalHarness)
+    await renderInBrowser(PortalHarness)
 
     await page.getByTestId('scene-autocomplete').click()
     await expect.element(page.getByRole('option', { name: 'start' })).toBeInTheDocument()
@@ -328,7 +328,7 @@ describe('Autocomplete', () => {
   })
 
   it('候选项保留标签中的连续空格', async () => {
-    renderInBrowser(createSizingHarness(320, whitespaceOptions))
+    await renderInBrowser(createSizingHarness(320, whitespaceOptions))
 
     await page.getByTestId('sizing-autocomplete').click()
     const option = requireHtmlElement(await page.getByRole('option').element())
@@ -361,7 +361,7 @@ describe('Autocomplete', () => {
   })
 
   it('存在匹配候选项时直接按回车保留原始输入', async () => {
-    renderInBrowser(PortalHarness)
+    await renderInBrowser(PortalHarness)
 
     const input = page.getByTestId('scene-autocomplete')
     await input.fill('sta')
@@ -378,7 +378,7 @@ describe('Autocomplete', () => {
   })
 
   it.each(['Home', 'End'])('候选浮层关闭时按 %s 后重新展开不会保留自动高亮', async (key) => {
-    renderInBrowser(ClosedValueHarness)
+    await renderInBrowser(ClosedValueHarness)
 
     const input = page.getByTestId('closed-value-autocomplete')
     const inputElement = await input.element() as HTMLInputElement
@@ -402,7 +402,7 @@ describe('Autocomplete', () => {
   })
 
   it('候选浮层关闭时方向键仍可展开并选择候选项', async () => {
-    renderInBrowser(ClosedValueHarness)
+    await renderInBrowser(ClosedValueHarness)
 
     const input = page.getByTestId('closed-value-autocomplete')
     const inputElement = await input.element() as HTMLInputElement
@@ -415,7 +415,7 @@ describe('Autocomplete', () => {
   })
 
   it('输入法候选导航不会高亮 Autocomplete 候选项', async () => {
-    renderInBrowser(PortalHarness)
+    await renderInBrowser(PortalHarness)
 
     const input = page.getByTestId('scene-autocomplete')
     await input.click()
@@ -440,7 +440,7 @@ describe('Autocomplete', () => {
   })
 
   it('输入自定义值后按回车关闭候选浮层，并可再次触发候选项', async () => {
-    renderInBrowser(PortalHarness)
+    await renderInBrowser(PortalHarness)
 
     const input = page.getByTestId('scene-autocomplete')
     await input.fill('custom')
@@ -460,7 +460,7 @@ describe('Autocomplete', () => {
   })
 
   it('候选浮层已展开时再次点击输入框不会清空筛选条件', async () => {
-    renderInBrowser(PortalHarness)
+    await renderInBrowser(PortalHarness)
 
     const input = page.getByTestId('scene-autocomplete')
     await input.fill('sta')
@@ -474,7 +474,7 @@ describe('Autocomplete', () => {
   })
 
   it('使用方向键和回车选择候选项', async () => {
-    renderInBrowser(PortalHarness)
+    await renderInBrowser(PortalHarness)
 
     const input = page.getByTestId('scene-autocomplete')
     await input.click()
@@ -489,7 +489,7 @@ describe('Autocomplete', () => {
   })
 
   it('指针移入候选项后才高亮该项', async () => {
-    renderInBrowser(PortalHarness)
+    await renderInBrowser(PortalHarness)
 
     const input = page.getByTestId('scene-autocomplete')
     await input.click()
@@ -503,7 +503,7 @@ describe('Autocomplete', () => {
   })
 
   it('点击候选项后恢复输入框焦点', async () => {
-    renderInBrowser(PortalHarness)
+    await renderInBrowser(PortalHarness)
 
     const input = page.getByTestId('scene-autocomplete')
     await input.click()
@@ -514,7 +514,7 @@ describe('Autocomplete', () => {
   })
 
   it('输入自定义值后点击外部时立即关闭候选浮层', async () => {
-    renderInBrowser(PortalHarness)
+    await renderInBrowser(PortalHarness)
 
     const input = page.getByTestId('scene-autocomplete')
     const outsideTarget = page.getByTestId('outside-target')
@@ -530,7 +530,7 @@ describe('Autocomplete', () => {
   })
 
   it('存在多个语义分组时显示分组标题', async () => {
-    renderInBrowser(GroupedHarness)
+    await renderInBrowser(GroupedHarness)
 
     await page.getByTestId('target-autocomplete').click()
 
@@ -543,7 +543,7 @@ describe('Autocomplete', () => {
   })
 
   it('过滤候选项时隐藏没有匹配项的分组', async () => {
-    renderInBrowser(GroupedHarness)
+    await renderInBrowser(GroupedHarness)
 
     await page.getByTestId('target-autocomplete').fill('her')
 
@@ -554,7 +554,7 @@ describe('Autocomplete', () => {
   })
 
   it('只有一个语义分组时隐藏分组标题', async () => {
-    renderInBrowser(SingleGroupHarness)
+    await renderInBrowser(SingleGroupHarness)
 
     await page.getByTestId('figure-autocomplete').click()
 
@@ -564,7 +564,7 @@ describe('Autocomplete', () => {
   })
 
   it('输入框显示候选项名称，同时 v-model 保留候选项值', async () => {
-    renderInBrowser(DisplayValueHarness)
+    await renderInBrowser(DisplayValueHarness)
 
     await expect.element(page.getByTestId('display-autocomplete')).toHaveValue('Center Figure')
     await expect.element(page.getByTestId('model-value')).toHaveTextContent('fig-center')
@@ -577,7 +577,7 @@ describe('Autocomplete', () => {
   })
 
   it('自由输入时输入框和 v-model 都使用输入文本', async () => {
-    renderInBrowser(DisplayValueHarness)
+    await renderInBrowser(DisplayValueHarness)
 
     await page.getByTestId('display-autocomplete').fill('custom-target')
 
@@ -586,7 +586,7 @@ describe('Autocomplete', () => {
   })
 
   it('在候选项显示名中移动光标后键入时整体替换显示名', async () => {
-    renderInBrowser(DisplayValueHarness)
+    await renderInBrowser(DisplayValueHarness)
 
     const input = page.getByTestId('display-autocomplete')
     await input.click()
@@ -600,7 +600,7 @@ describe('Autocomplete', () => {
   })
 
   it('删除候选项显示名时清空字段值而不是保存残缺名称', async () => {
-    renderInBrowser(DisplayValueHarness)
+    await renderInBrowser(DisplayValueHarness)
 
     const input = page.getByTestId('display-autocomplete')
     await input.click()
@@ -614,7 +614,7 @@ describe('Autocomplete', () => {
   })
 
   it('使用输入法输入自定义值时替换候选项显示名', async () => {
-    renderInBrowser(DisplayValueHarness)
+    await renderInBrowser(DisplayValueHarness)
 
     const input = page.getByTestId('display-autocomplete')
     await input.click()
@@ -633,7 +633,7 @@ describe('Autocomplete', () => {
   })
 
   it('候选项标签变化时更新非编辑状态下的显示名', async () => {
-    renderInBrowser(ReactiveLabelHarness)
+    await renderInBrowser(ReactiveLabelHarness)
 
     const input = page.getByTestId('reactive-label-autocomplete')
     await expect.element(input).toHaveValue('Center Figure')

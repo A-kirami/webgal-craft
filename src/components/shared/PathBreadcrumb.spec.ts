@@ -37,7 +37,7 @@ const TestHarness = defineComponent({
 
 describe('PathBreadcrumb', () => {
   it('rootPath 为空时不会抛错', async () => {
-    renderInBrowser(TestHarness, {
+    await renderInBrowser(TestHarness, {
       global: {
         stubs: globalStubs,
       },

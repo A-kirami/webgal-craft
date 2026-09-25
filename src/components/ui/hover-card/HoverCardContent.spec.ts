@@ -57,7 +57,7 @@ describe('HoverCardContent', () => {
       },
     })
 
-    renderInBrowser(Harness)
+    await renderInBrowser(Harness)
 
     const content = await page.getByTestId('reka-hover-card-content').element()
     expect(content.getAttribute('data-file-viewer-hover-preview')).toBe('true')

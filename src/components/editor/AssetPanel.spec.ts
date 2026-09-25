@@ -85,7 +85,7 @@ describe('AssetPanel', () => {
   })
 
   it('搜索右侧的创建菜单会调用当前 AssetView 的新建文件夹入口', async () => {
-    renderInBrowser(AssetPanel, {
+    await renderInBrowser(AssetPanel, {
       global: {
         stubs: globalStubs,
       },
@@ -106,7 +106,7 @@ describe('AssetPanel', () => {
       assetZoom: [100],
     }))
 
-    renderInBrowser(AssetPanel, {
+    await renderInBrowser(AssetPanel, {
       global: {
         stubs: globalStubs,
       },
@@ -119,7 +119,7 @@ describe('AssetPanel', () => {
   })
 
   it('background 标签页的创建菜单不会显示新建文件入口', async () => {
-    renderInBrowser(AssetPanel, {
+    await renderInBrowser(AssetPanel, {
       global: {
         stubs: globalStubs,
       },

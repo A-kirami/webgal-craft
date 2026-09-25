@@ -13,7 +13,7 @@ describe('FilePickerRecentHistory', () => {
   it('点击历史项时会发出 select 事件', async () => {
     const onSelect = vi.fn()
 
-    renderInBrowser(FilePickerRecentHistory, {
+    await renderInBrowser(FilePickerRecentHistory, {
       props: {
         clearLabel: 'Clear recent history',
         invalidMap: {},
@@ -34,7 +34,7 @@ describe('FilePickerRecentHistory', () => {
   it('点击清空按钮时会发出 clear 事件', async () => {
     const onClear = vi.fn()
 
-    renderInBrowser(FilePickerRecentHistory, {
+    await renderInBrowser(FilePickerRecentHistory, {
       props: {
         clearLabel: 'Clear recent history',
         invalidMap: {},
@@ -53,7 +53,7 @@ describe('FilePickerRecentHistory', () => {
   })
 
   it('按左右方向键时会在历史项之间移动焦点', async () => {
-    renderInBrowser(FilePickerRecentHistory, {
+    await renderInBrowser(FilePickerRecentHistory, {
       props: {
         clearLabel: 'Clear recent history',
         invalidMap: {},

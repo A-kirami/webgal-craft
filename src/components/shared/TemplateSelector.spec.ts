@@ -48,8 +48,8 @@ function readStandaloneOptionLabels(): string[] {
     .map(element => element.textContent?.trim() ?? '')
 }
 
-function renderSelector() {
-  return renderInBrowser(TemplateSelector, {
+async function renderSelector() {
+  return await renderInBrowser(TemplateSelector, {
     props: { modelValue: undefined },
     global: {
       mocks: { $t: translate },
@@ -67,7 +67,7 @@ describe('TemplateSelector', () => {
       createTestTemplate({ id: 'uuid-7d4e', metadata: { name: 'Beta' } }),
     ]))
 
-    renderSelector()
+    await renderSelector()
 
     await expect.poll(readStandaloneOptionLabels).toEqual(['alpha', 'Beta', 'Zeta'])
   })
@@ -81,7 +81,7 @@ describe('TemplateSelector', () => {
     ]))
     useTemplatesMock.mockReturnValue(ref([]))
 
-    renderSelector()
+    await renderSelector()
 
     await expect.poll(readEngineOptionLabels).toEqual([
       'Alpha 4.8.1',
@@ -104,7 +104,7 @@ describe('TemplateSelector', () => {
     ]))
     useTemplatesMock.mockReturnValue(ref([]))
 
-    renderSelector()
+    await renderSelector()
 
     await expect.poll(readEngineOptionLabels).toEqual(['Alpha 4.8.1'])
   })

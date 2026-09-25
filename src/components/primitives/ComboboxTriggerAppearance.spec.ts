@@ -84,7 +84,7 @@ function backgroundOf(testId: string) {
 function describeTriggerHover(name: string, harness: Component, testId: string) {
   describe(name, () => {
     it('关联标签悬停不会让控件呈现悬停态，指针进入控件才呈现', async () => {
-      renderInBrowser(harness)
+      await renderInBrowser(harness)
 
       const restBackground = backgroundOf(testId)
 
@@ -99,5 +99,5 @@ function describeTriggerHover(name: string, harness: Component, testId: string) 
   })
 }
 
-describeTriggerHover('Combobox 触发器', ComboboxHarness, 'appearance-combobox')
-describeTriggerHover('CascadingCombobox 触发器', CascadingComboboxHarness, 'appearance-cascading')
+await describeTriggerHover('Combobox 触发器', ComboboxHarness, 'appearance-combobox')
+await describeTriggerHover('CascadingCombobox 触发器', CascadingComboboxHarness, 'appearance-cascading')

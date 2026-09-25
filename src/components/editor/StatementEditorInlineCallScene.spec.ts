@@ -48,7 +48,7 @@ describe('StatementEditorInline callScene parameters', () => {
   it('点击添加参数后保留可编辑的空参数行', async () => {
     const onUpdate = vi.fn()
 
-    renderInBrowser(StatementEditorInline, {
+    await renderInBrowser(StatementEditorInline, {
       props: {
         entry: createStatementEntry(),
         onUpdate,
@@ -70,7 +70,7 @@ describe('StatementEditorInline callScene parameters', () => {
   it('连续填写多个参数键时不会重排已有参数行', async () => {
     const onUpdate = vi.fn()
 
-    renderInBrowser(StatementEditorInline, {
+    await renderInBrowser(StatementEditorInline, {
       props: {
         entry: createStatementEntry(),
         onUpdate,

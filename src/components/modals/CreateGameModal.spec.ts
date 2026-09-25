@@ -172,7 +172,7 @@ describe('CreateGameModal', () => {
   })
 
   it('点击选择目录按钮时会调用 useCreateGameForm 提供的目录选择处理器', async () => {
-    renderInBrowser(CreateGameModal, {
+    await renderInBrowser(CreateGameModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -200,7 +200,7 @@ describe('CreateGameModal', () => {
       onSubmit: onSubmitMock,
     })
 
-    renderInBrowser(CreateGameModal, {
+    await renderInBrowser(CreateGameModal, {
       browser: { i18nMode: 'lite' },
       props: { open: true },
       global: { stubs: globalStubs },
@@ -211,7 +211,7 @@ describe('CreateGameModal', () => {
   })
 
   it('输入游戏名时会调用 useCreateGameForm 提供的输入处理器', async () => {
-    renderInBrowser(CreateGameModal, {
+    await renderInBrowser(CreateGameModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -229,7 +229,7 @@ describe('CreateGameModal', () => {
   })
 
   it('点击创建按钮时会提交表单并调用 useCreateGameForm 提供的 onSubmit', async () => {
-    renderInBrowser(CreateGameModal, {
+    await renderInBrowser(CreateGameModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -249,7 +249,7 @@ describe('CreateGameModal', () => {
   })
 
   it('会把默认引擎 ID 传给 EngineSelector 作为首选引擎族', async () => {
-    renderInBrowser(CreateGameModal, {
+    await renderInBrowser(CreateGameModal, {
       browser: {
         i18nMode: 'lite',
       },

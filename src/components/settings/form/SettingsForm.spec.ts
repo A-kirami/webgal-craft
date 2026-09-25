@@ -119,7 +119,7 @@ const settingsDefinition = defineSettingsSchema({
   },
 } as const)
 
-function renderSettingsFormHarness() {
+async function renderSettingsFormHarness() {
   const store = createSettingsStore(settingsDefinition.defaults)
 
   const Harness = defineComponent({
@@ -136,7 +136,7 @@ function renderSettingsFormHarness() {
     },
   })
 
-  const result = renderInBrowser(Harness, {
+  const result = await renderInBrowser(Harness, {
     browser: { i18nMode: 'lite' },
     global: {
       stubs: globalStubs,
@@ -149,7 +149,7 @@ function renderSettingsFormHarness() {
   }
 }
 
-function renderSwitchFieldValidationHarness() {
+async function renderSwitchFieldValidationHarness() {
   const Harness = defineComponent({
     name: 'SwitchFieldValidationHarness',
     setup() {
@@ -190,7 +190,7 @@ function renderSwitchFieldValidationHarness() {
     },
   })
 
-  return renderInBrowser(Harness, {
+  return await renderInBrowser(Harness, {
     browser: { i18nMode: 'lite' },
     global: {
       stubs: globalStubs,
@@ -220,7 +220,7 @@ describe('SettingsForm', () => {
   })
 
   it('根据 visibleWhen 切换字段可见性，并为实验性字段渲染标记', async () => {
-    const result = renderSettingsFormHarness()
+    const result = await renderSettingsFormHarness()
     const experimentalLabel = page.getByText('实验开关')
 
     await expect.element(page.getByText('常规')).toBeInTheDocument()
@@ -239,7 +239,7 @@ describe('SettingsForm', () => {
 
   it('folderPicker 字段会打开目录选择器，并在选择后更新表单与 store', async () => {
     openDialogMock.mockResolvedValue('/demo/project')
-    const result = renderSettingsFormHarness()
+    const result = await renderSettingsFormHarness()
 
     findBrowseButton().click()
     await nextTick()
@@ -269,7 +269,7 @@ describe('SettingsForm', () => {
 
   it('Android 托管目录字段只读展示且不会调用目录选择器', async () => {
     isAndroidRuntimeMock.mockReturnValue(true)
-    const result = renderSettingsFormHarness()
+    const result = await renderSettingsFormHarness()
 
     const managedPathInput = [...document.querySelectorAll('input')]
       .find(input => input.value === '托管项目目录')
@@ -284,7 +284,7 @@ describe('SettingsForm', () => {
   })
 
   it('folderPicker 字段会把 label 与描述信息绑定到真正可聚焦的按钮', async () => {
-    const result = renderSettingsFormHarness()
+    const result = await renderSettingsFormHarness()
     const trigger = findBrowseButton()
     const label = [...document.querySelectorAll('label')]
       .find(element => element.textContent?.trim() === '项目路径')
@@ -302,7 +302,7 @@ describe('SettingsForm', () => {
   })
 
   it('select 字段会把 label 与描述信息绑定到真正可聚焦的 trigger', async () => {
-    const result = renderSettingsFormHarness()
+    const result = await renderSettingsFormHarness()
 
     const trigger = await page.getByRole('combobox').element()
     const label = [...document.querySelectorAll('label')]
@@ -321,7 +321,7 @@ describe('SettingsForm', () => {
   })
 
   it('input 字段默认紧凑排列，并支持显式换行排列', async () => {
-    const result = renderSettingsFormHarness()
+    const result = await renderSettingsFormHarness()
 
     function findFieldContainer(labelText: string) {
       const label = [...document.querySelectorAll('label')]
@@ -343,7 +343,7 @@ describe('SettingsForm', () => {
   })
 
   it('switch 字段校验失败时会显示错误消息', async () => {
-    const result = renderSwitchFieldValidationHarness()
+    const result = await renderSwitchFieldValidationHarness()
     const control = await page.getByRole('checkbox').element()
 
     await expect.element(page.getByText('必须开启')).toBeInTheDocument()

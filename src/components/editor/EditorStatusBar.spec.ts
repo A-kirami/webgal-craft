@@ -143,8 +143,8 @@ function createEditorStore() {
   })
 }
 
-function renderEditorStatusBar() {
-  renderInBrowser(EditorStatusBar, {
+async function renderEditorStatusBar() {
+  await renderInBrowser(EditorStatusBar, {
     global: {
       plugins: [createEditorStatusBarLocalizedI18n()],
     },
@@ -194,7 +194,7 @@ describe('EditorStatusBar', () => {
 
     useEditorStoreMock.mockReturnValue(editorStore)
 
-    renderEditorStatusBar()
+    await renderEditorStatusBar()
 
     await expect.element(page.getByText('已保存')).toBeVisible()
     await expect.element(page.getByText('just now')).toBeVisible()
@@ -215,7 +215,7 @@ describe('EditorStatusBar', () => {
     getImageDimensionsMock.mockResolvedValue([1280, 720])
     useEditorStoreMock.mockReturnValue(editorStore)
 
-    renderEditorStatusBar()
+    await renderEditorStatusBar()
 
     await expect.element(page.getByText('1280 × 720')).toBeVisible()
     await expect.element(page.getByText('2.0 KiB')).toBeVisible()
@@ -227,7 +227,7 @@ describe('EditorStatusBar', () => {
     resourceIndexStatus.value = 'building'
     useEditorStoreMock.mockReturnValue(createEditorStore())
 
-    renderEditorStatusBar()
+    await renderEditorStatusBar()
 
     await expect.element(page.getByText('正在构建资源索引')).not.toBeInTheDocument()
 
@@ -243,7 +243,7 @@ describe('EditorStatusBar', () => {
     resourceIndexStatus.value = 'building'
     useEditorStoreMock.mockReturnValue(createEditorStore())
 
-    renderEditorStatusBar()
+    await renderEditorStatusBar()
 
     resourceIndexStatus.value = 'ready'
     await nextTick()
@@ -256,7 +256,7 @@ describe('EditorStatusBar', () => {
     resourceIndexStatus.value = 'degraded'
     useEditorStoreMock.mockReturnValue(createEditorStore())
 
-    renderEditorStatusBar()
+    await renderEditorStatusBar()
 
     await expect.element(page.getByText('资源索引不可用')).toBeVisible()
 
@@ -278,9 +278,10 @@ describe('EditorStatusBar', () => {
     }))
     useEditorStoreMock.mockReturnValue(createEditorStore())
 
-    renderEditorStatusBar()
+    await renderEditorStatusBar()
 
-    await expect.element(page.getByText('WebGAL 4.6.2')).toBeVisible()
+    // 引擎与模板入口会显示同一份版本号，v5 的严格模式要求先按入口限定范围
+    await expect.element(page.getByRole('button', { name: /选择引擎/ }).getByText('WebGAL 4.6.2')).toBeVisible()
     await expect.element(page.getByText('引擎不可用')).not.toBeInTheDocument()
   })
 
@@ -290,7 +291,7 @@ describe('EditorStatusBar', () => {
     }))
     useEditorStoreMock.mockReturnValue(createEditorStore())
 
-    renderEditorStatusBar()
+    await renderEditorStatusBar()
 
     await expect.element(page.getByText('引擎不可用')).toBeVisible()
     await expect.element(page.getByText('模板不可用')).toBeVisible()
@@ -319,7 +320,7 @@ describe('EditorStatusBar', () => {
     }))
     useEditorStoreMock.mockReturnValue(createEditorStore())
 
-    renderEditorStatusBar()
+    await renderEditorStatusBar()
 
     await expect.element(page.getByText('模板不可用')).toBeVisible()
   })
@@ -349,7 +350,7 @@ describe('EditorStatusBar', () => {
     }))
     useEditorStoreMock.mockReturnValue(createEditorStore())
 
-    renderEditorStatusBar()
+    await renderEditorStatusBar()
 
     await expect.element(page.getByRole('button', { name: '选择模板' })).toHaveClass('text-yellow-600')
     await expect.element(page.getByRole('button', { name: '选择引擎' })).not.toHaveClass('text-yellow-600')

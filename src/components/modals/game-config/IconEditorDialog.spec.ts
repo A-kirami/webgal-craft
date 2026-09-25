@@ -222,10 +222,10 @@ function createDeferred<T>(): Deferred<T> {
   }
 }
 
-function renderOpenIconEditorDialog() {
+async function renderOpenIconEditorDialog() {
   const updateOpen = vi.fn()
 
-  renderInBrowser(IconEditorDialog, {
+  await renderInBrowser(IconEditorDialog, {
     browser: {
       i18nMode: 'lite',
     },
@@ -277,7 +277,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('默认纯色背景也会显示预览但仍不能生成', async () => {
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -297,7 +297,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('修改后请求关闭会二次确认而不是直接退出', async () => {
-    const updateOpen = renderOpenIconEditorDialog()
+    const updateOpen = await renderOpenIconEditorDialog()
 
     await page.getByTestId('icon-editor-select-foreground').click()
     await page.getByTestId('icon-editor-close-request').click()
@@ -314,7 +314,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('未修改时请求关闭会直接退出', async () => {
-    const updateOpen = renderOpenIconEditorDialog()
+    const updateOpen = await renderOpenIconEditorDialog()
 
     await page.getByTestId('icon-editor-close-request').click()
 
@@ -337,7 +337,7 @@ describe('IconEditorDialog', () => {
       },
     } satisfies IconEditorSourceData)
 
-    const updateOpen = renderOpenIconEditorDialog()
+    const updateOpen = await renderOpenIconEditorDialog()
 
     await vi.waitFor(() => {
       expect(page.getByTestId('icon-editor-generate').element()).not.toBeDisabled()
@@ -349,7 +349,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('修改后确认保存会生成图标并关闭编辑器', async () => {
-    const updateOpen = renderOpenIconEditorDialog()
+    const updateOpen = await renderOpenIconEditorDialog()
 
     await page.getByTestId('icon-editor-select-foreground').click()
     await page.getByTestId('icon-editor-close-request').click()
@@ -363,7 +363,7 @@ describe('IconEditorDialog', () => {
   it('生成期间忽略关闭请求', async () => {
     const save = createDeferred<void>()
     saveIconEditorOutputsMock.mockReturnValueOnce(save.promise)
-    const updateOpen = renderOpenIconEditorDialog()
+    const updateOpen = await renderOpenIconEditorDialog()
 
     await page.getByTestId('icon-editor-select-foreground').click()
     await page.getByTestId('icon-editor-generate').click()
@@ -398,7 +398,7 @@ describe('IconEditorDialog', () => {
       },
     })
 
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -439,7 +439,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('关闭后重新打开会回到默认配置且保留默认预览', async () => {
-    const result = renderInBrowser(IconEditorDialog, {
+    const result = await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -481,7 +481,7 @@ describe('IconEditorDialog', () => {
         },
       } satisfies IconEditorSourceData)
 
-    const result = renderInBrowser(IconEditorDialog, {
+    const result = await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -541,7 +541,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('偏移控件以百分比输入并向导出流程传递比例值', async () => {
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -577,7 +577,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('缩放控件以百分比输入并向导出流程传递倍率值', async () => {
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -613,7 +613,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('拖拽偏移滑条后不会在输入框泄漏浮点误差', async () => {
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -645,7 +645,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('滑条接近中心值时会吸附到中心但数字输入不吸附', async () => {
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -686,7 +686,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('更换前景图时只重置前景图调整', async () => {
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -724,7 +724,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('更换背景图时只重置背景图调整', async () => {
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -762,7 +762,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('背景颜色选择器的 rgba 结果会写入可渲染的 CSS 颜色', async () => {
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -791,7 +791,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('拖拽中的实时值会立即写入图标背景状态', async () => {
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -826,7 +826,7 @@ describe('IconEditorDialog', () => {
   it('选择前景图后允许生成并在完成后关闭弹窗', async () => {
     const updateOpen = vi.fn()
 
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -865,7 +865,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('选择裁剪形状后会参与生成', async () => {
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -890,7 +890,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('选择背景图会切换到图片背景并参与生成', async () => {
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -922,7 +922,7 @@ describe('IconEditorDialog', () => {
   })
 
   it('背景模式切回纯色后会按纯色背景生成', async () => {
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },
@@ -954,7 +954,7 @@ describe('IconEditorDialog', () => {
   it('取消系统文件选择时保持生成按钮禁用', async () => {
     vi.mocked(openDialog).mockResolvedValue(undefined)
 
-    renderInBrowser(IconEditorDialog, {
+    await renderInBrowser(IconEditorDialog, {
       browser: {
         i18nMode: 'lite',
       },

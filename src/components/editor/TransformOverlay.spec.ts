@@ -26,14 +26,14 @@ const displayTransform: DisplayTransform = {
   rotation: 0,
 }
 
-function renderTransformOverlay(options: {
+async function renderTransformOverlay(options: {
   box?: ReferenceBox
   displayTransform?: DisplayTransform
   onCancel?: ReturnType<typeof vi.fn>
   onCommit?: ReturnType<typeof vi.fn>
   onPreview?: ReturnType<typeof vi.fn>
 } = {}) {
-  return renderInBrowser(TransformOverlay, {
+  return await renderInBrowser(TransformOverlay, {
     props: {
       'box': options.box ?? referenceBox,
       'canvasHeight': 720,
@@ -83,7 +83,7 @@ describe('TransformOverlay', () => {
   it('方向键会先预览移动并在松开时提交', async () => {
     const onCommit = vi.fn()
     const onPreview = vi.fn()
-    renderTransformOverlay({ onCommit, onPreview })
+    await renderTransformOverlay({ onCommit, onPreview })
 
     const keydownEvent = dispatchKeydown('ArrowRight')
     await nextTick()
@@ -109,7 +109,7 @@ describe('TransformOverlay', () => {
   it('方向键自动重复时会持续预览并只在松开时提交一次', async () => {
     const onCommit = vi.fn()
     const onPreview = vi.fn()
-    renderTransformOverlay({ onCommit, onPreview })
+    await renderTransformOverlay({ onCommit, onPreview })
 
     const firstEvent = dispatchKeydown('ArrowRight')
     await nextTick()
@@ -140,7 +140,7 @@ describe('TransformOverlay', () => {
 
   it('输入控件聚焦时方向键不会抢占表单操作', async () => {
     const onUpdate = vi.fn()
-    renderTransformOverlay({ onCommit: onUpdate, onPreview: onUpdate })
+    await renderTransformOverlay({ onCommit: onUpdate, onPreview: onUpdate })
 
     const input = document.createElement('input')
     document.body.append(input)
@@ -154,7 +154,7 @@ describe('TransformOverlay', () => {
   })
 
   it('变换控件聚焦时会声明浮层快捷键上下文', async () => {
-    renderTransformOverlay()
+    await renderTransformOverlay()
 
     const moveHandle = findMoveHandle()
     expect(moveHandle).not.toBeNull()
@@ -169,7 +169,7 @@ describe('TransformOverlay', () => {
     const onCancel = vi.fn()
     const onCommit = vi.fn()
     const onPreview = vi.fn()
-    renderTransformOverlay({ onCancel, onCommit, onPreview })
+    await renderTransformOverlay({ onCancel, onCommit, onPreview })
 
     const moveHandle = findMoveHandle()
     expect(moveHandle).not.toBeNull()
@@ -197,7 +197,7 @@ describe('TransformOverlay', () => {
     const onCancel = vi.fn()
     const onCommit = vi.fn()
     const onPreview = vi.fn()
-    renderTransformOverlay({ onCancel, onCommit, onPreview })
+    await renderTransformOverlay({ onCancel, onCommit, onPreview })
 
     dispatchKeydown('ArrowRight')
     await nextTick()
@@ -216,7 +216,7 @@ describe('TransformOverlay', () => {
     const onCancel = vi.fn()
     const onCommit = vi.fn()
     const onPreview = vi.fn()
-    renderTransformOverlay({ onCancel, onCommit, onPreview })
+    await renderTransformOverlay({ onCancel, onCommit, onPreview })
 
     dispatchKeydown('ArrowDown')
     await nextTick()
@@ -239,7 +239,7 @@ describe('TransformOverlay', () => {
     const onCancel = vi.fn()
     const onCommit = vi.fn()
     const onPreview = vi.fn()
-    renderTransformOverlay({ onCancel, onCommit, onPreview })
+    await renderTransformOverlay({ onCancel, onCommit, onPreview })
 
     const moveHandle = findMoveHandle()
     expect(moveHandle).not.toBeNull()
@@ -273,7 +273,7 @@ describe('TransformOverlay', () => {
     const onCancel = vi.fn()
     const onCommit = vi.fn()
     const onPreview = vi.fn()
-    renderTransformOverlay({ onCancel, onCommit, onPreview })
+    await renderTransformOverlay({ onCancel, onCommit, onPreview })
 
     const moveHandle = findMoveHandle()
     expect(moveHandle).not.toBeNull()

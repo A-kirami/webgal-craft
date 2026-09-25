@@ -20,7 +20,7 @@ const positionOptions: ParamSelectOptionItem[] = [
 
 describe('FigurePositionControl', () => {
   it('连续渲染所有位置图标并高亮当前选项', async () => {
-    renderInBrowser(FigurePositionControl, {
+    await renderInBrowser(FigurePositionControl, {
       props: {
         inputId: 'figure-position',
         options: positionOptions,
@@ -39,7 +39,7 @@ describe('FigurePositionControl', () => {
   it('选择位置时向上层提交对应值', async () => {
     const handleUpdateSelect = vi.fn()
 
-    renderInBrowser(FigurePositionControl, {
+    await renderInBrowser(FigurePositionControl, {
       props: {
         inputId: 'figure-position',
         options: positionOptions,
@@ -54,7 +54,7 @@ describe('FigurePositionControl', () => {
   })
 
   it('悬停位置图标时通过 tooltip 显示位置文本', async () => {
-    renderInBrowser(FigurePositionControl, {
+    await renderInBrowser(FigurePositionControl, {
       props: {
         inputId: 'figure-position',
         options: positionOptions,
