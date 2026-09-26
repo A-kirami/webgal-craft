@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { openUrl } from '@tauri-apps/plugin-opener'
 
 import { findGameConfigEntryValue, gameCmds } from '~/commands/game'
@@ -12,6 +13,7 @@ import {
   isPreviewViewportSpaceKeyMessage,
   isPreviewViewportWheelMessage,
 } from '~/features/editor/preview/embedded-preview-messages'
+import { applyPreviewFullscreenAction, previewFullscreenTransition } from '~/features/editor/preview/preview-fullscreen'
 import {
   DEFAULT_PREVIEW_PANEL_ASPECT_RATIO,
   DEFAULT_PREVIEW_PANEL_STAGE_HEIGHT,
@@ -36,6 +38,9 @@ import PreviewToolbar from './PreviewToolbar.vue'
 import TransformOverlay from './TransformOverlay.vue'
 import ViewportControls from './ViewportControls.vue'
 
+import type { UnlistenFn } from '@tauri-apps/api/event'
+import type { WebviewWindow } from '@tauri-apps/api/webviewWindow'
+import type { PreviewFullscreenStatus, PreviewFullscreenWindow } from '~/features/editor/preview/preview-fullscreen'
 import type { PreviewPanelStageSize } from '~/features/editor/preview/preview-panel'
 import type { DisplayTransform } from '~/features/editor/transform-overlay/model'
 import type { PreviewConnectionStatus } from '~/stores/preview-sync'
@@ -96,6 +101,12 @@ let isPreviewInteractionReleasePending = $ref(false)
 let previewInteractionReleaseFrameId: number | undefined
 // 预览里的游戏是否正处于全屏（引擎点“全屏”后 iframe 会成为全屏元素）
 let isPreviewFullscreen = $ref(false)
+// 窗口侧的全屏补正：状态机在 ~/features/editor/preview/preview-fullscreen，这里只负责跟上窗口形态
+let previewFullscreenWindow: PreviewFullscreenWindow | undefined
+let previewFullscreenStatus: PreviewFullscreenStatus = { mirrored: false, corrected: false }
+let previewWindowWasMaximized = false
+let previewWindowResizeUnlisten: UnlistenFn | undefined
+let isPreviewPanelDisposed = false
 
 const previewViewport = usePreviewViewport({
   getCanvasSize: () => ({
@@ -487,14 +498,67 @@ async function initializeEmbeddedPreview(currentEmbeddedLaunchId: string): Promi
 }
 
 /**
- * 同步“预览正在全屏”这个状态。
- *
- * 引擎底栏的全屏按钮走的是页面 Fullscreen API，iframe 获批后会成为顶层文档的全屏元素。
- * 全屏元素虽然位于顶部图层，包含块却仍可能被祖先的 transform / filter 拉回画布，所以全屏
- * 期间要把这两者让开，否则元素全屏只会撑满画布那一小块，而不是整个窗口。
+ * 预览全屏状态变化：全屏期间让开画布的 transform / filter，并让窗口跟上
+ * （最大化窗口直接进全屏会留下任务栏高度的黑边，见 preview-fullscreen.ts）。
  */
 function handlePreviewFullscreenChange(): void {
   isPreviewFullscreen = document.fullscreenElement === iframeRef.value
+  const appWindow = previewFullscreenWindow
+  if (!appWindow) {
+    return
+  }
+
+  const next = previewFullscreenTransition(previewFullscreenStatus, {
+    fullscreenActive: isPreviewFullscreen,
+    windowWasMaximized: previewWindowWasMaximized,
+  })
+  previewFullscreenStatus = { mirrored: next.mirrored, corrected: next.corrected }
+  void applyPreviewFullscreenAction(appWindow, next.action).catch((error: unknown) => {
+    logger.warn(`预览全屏的窗口处理失败: ${error}`)
+  })
+}
+
+/** 记录进入全屏前的窗口形态；全屏期间那一次 resize 正是要修的形态变化，不能当作依据。 */
+function syncPreviewWindowMaximized(): void {
+  const appWindow = previewFullscreenWindow
+  if (!appWindow || document.fullscreenElement !== null) {
+    return
+  }
+
+  void appWindow.isMaximized()
+    .then((maximized) => {
+      previewWindowWasMaximized = maximized
+    })
+    .catch(() => {
+      // 问不到就按非最大化处理
+    })
+}
+
+/** 接上窗口；前端跑在浏览器里（没有 Tauri 运行时）时安静跳过。 */
+function installPreviewWindowTracking(): void {
+  let appWindow: WebviewWindow | undefined
+  try {
+    appWindow = getCurrentWebviewWindow()
+  } catch {
+    // 没有 Tauri 运行时就没有窗口可接
+  }
+  if (!appWindow) {
+    return
+  }
+
+  previewFullscreenWindow = appWindow
+  syncPreviewWindowMaximized()
+  void appWindow.onResized(syncPreviewWindowMaximized)
+    .then((unlisten) => {
+      if (isPreviewPanelDisposed) {
+        unlisten()
+        return
+      }
+      previewWindowResizeUnlisten = unlisten
+    })
+    .catch(() => {
+      // 接不上窗口形态变化就按非最大化处理
+    })
 }
 
 useEventListener(globalThis, 'message', handleEmbeddedPreviewBootstrap)
@@ -611,11 +675,22 @@ useShortcutContext({
 
 onMounted(() => {
   void fitViewportToCurrentStage()
+  installPreviewWindowTracking()
 })
 
 onBeforeUnmount(() => {
   cancelPreviewInteractionRelease()
   updateEmbeddedPreviewSlot(undefined)
+  isPreviewPanelDisposed = true
+  previewWindowResizeUnlisten?.()
+  // 面板卸载会把 iframe 一起摘掉，元素全屏随之结束，而那次 fullscreenchange 我们未必还能听到
+  const appWindow = previewFullscreenWindow
+  if (appWindow && previewFullscreenStatus.corrected) {
+    previewFullscreenStatus = { mirrored: false, corrected: false }
+    void applyPreviewFullscreenAction(appWindow, { kind: 'restore-maximized' }).catch(() => {
+      // 还原失败只能留给用户自己恢复窗口形态，不该影响卸载流程
+    })
+  }
 })
 </script>
 
