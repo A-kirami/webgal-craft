@@ -156,8 +156,7 @@ export default defineConfig({
       {
         test: {
           name: 'browser',
-          fileParallelism: false,
-          maxWorkers: 1,
+          maxWorkers: 4,
           browser: {
             enabled: true,
             provider: playwright(),
