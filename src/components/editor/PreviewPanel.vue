@@ -94,6 +94,8 @@ let embeddedPreviewSlotRevision = 0
 let embeddedPreviewSlotUpdateQueue = Promise.resolve()
 let isPreviewInteractionReleasePending = $ref(false)
 let previewInteractionReleaseFrameId: number | undefined
+// 预览里的游戏是否正处于全屏（引擎点“全屏”后 iframe 会成为全屏元素）
+let isPreviewFullscreen = $ref(false)
 
 const previewViewport = usePreviewViewport({
   getCanvasSize: () => ({
@@ -105,13 +107,16 @@ const previewViewport = usePreviewViewport({
 const previewCanvasStyle = $computed(() => ({
   aspectRatio,
   height: `${stageHeight}px`,
-  transform: previewViewport.viewportTransform.value,
+  // 全屏时把画布的缩放让开：祖先的 transform 会成为全屏 iframe 的包含块，不让开的话元素全屏
+  // 只会撑满画布那一小块，而不是整个窗口
+  transform: isPreviewFullscreen ? undefined : previewViewport.viewportTransform.value,
   width: `${stageWidth}px`,
 }))
 const previewOutputSurfaceStyle = $computed(() => ({
   // 裁剪经过 transform 放大的 iframe，避免其命中区域越出预览边界响应编辑器事件
   overflow: 'hidden' as const,
-  filter: preferenceStore.previewBrightnessEnabled
+  // 同上，filter 也会成为全屏 iframe 的包含块
+  filter: !isPreviewFullscreen && preferenceStore.previewBrightnessEnabled
     ? `brightness(${percentageToRatio(preferenceStore.previewBrightness[0])})`
     : undefined,
 }))
@@ -481,10 +486,22 @@ async function initializeEmbeddedPreview(currentEmbeddedLaunchId: string): Promi
   }
 }
 
+/**
+ * 同步“预览正在全屏”这个状态。
+ *
+ * 引擎底栏的全屏按钮走的是页面 Fullscreen API，iframe 获批后会成为顶层文档的全屏元素。
+ * 全屏元素虽然位于顶部图层，包含块却仍可能被祖先的 transform / filter 拉回画布，所以全屏
+ * 期间要把这两者让开，否则元素全屏只会撑满画布那一小块，而不是整个窗口。
+ */
+function handlePreviewFullscreenChange(): void {
+  isPreviewFullscreen = document.fullscreenElement === iframeRef.value
+}
+
 useEventListener(globalThis, 'message', handleEmbeddedPreviewBootstrap)
 useEventListener(globalThis, 'message', handleEmbeddedPreviewPointer)
 useEventListener(globalThis, 'message', handleEmbeddedPreviewSpaceKey)
 useEventListener(globalThis, 'message', handleEmbeddedPreviewWheel)
+useEventListener(document, 'fullscreenchange', handlePreviewFullscreenChange)
 useResizeObserver(viewportRef, () => {
   previewViewport.syncFitToViewport()
 })
@@ -643,6 +660,8 @@ onBeforeUnmount(() => {
               :title="previewTitle"
               class="border-0 size-full"
               :style="previewIframeStyle"
+              allow="fullscreen"
+              allowfullscreen
               @load="postPreviewOutputSettings"
             />
           </div>
