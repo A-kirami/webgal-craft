@@ -269,6 +269,26 @@ describe('createPreviewFullscreenDriver', () => {
     expect(calls).toContain('maximize')
   })
 
+  it('还原最大化失败时保留所有权，卸载时再试一次', async () => {
+    const { appWindow, calls, failOn, setMaximized } = createFakeWindow()
+    setMaximized(true)
+    const onError = vi.fn()
+    const driver = createPreviewFullscreenDriver(appWindow, onError)
+    await flushQueue()
+
+    driver.notify(true)
+    await flushQueue()
+    failOn('maximize')
+    driver.notify(false)
+    await flushQueue()
+    expect(onError).toHaveBeenCalledOnce()
+
+    failOn(undefined)
+    await driver.dispose()
+
+    expect(calls.filter(call => call === 'maximize')).toHaveLength(2)
+  })
+
   it('没动过窗口时卸载不碰窗口', async () => {
     const { calls, appWindow } = createFakeWindow()
     const driver = createPreviewFullscreenDriver(appWindow)

@@ -106,7 +106,8 @@ export async function applyPreviewFullscreenAction(
 /**
  * 接上窗口，返回一个只在 editor 侧驱动窗口的驱动器。
  *
- * 窗口动作串行执行：快速进出全屏或面板卸载都不会让两次动作交错。
+ * 窗口动作串行执行（快速进出全屏或面板卸载都不会让两次动作交错），失败时保留还原窗口的所有权，
+ * 交给后续事件或卸载重试。
  */
 export function createPreviewFullscreenDriver(
   appWindow: PreviewFullscreenWindow,
@@ -140,6 +141,10 @@ export function createPreviewFullscreenDriver(
         try {
           await applyPreviewFullscreenAction(appWindow, action)
         } catch (error) {
+          if (action.kind === 'restore-maximized') {
+            // 还原失败就把所有权记回去，交给后续事件或卸载再试
+            status = { ...status, corrected: true }
+          }
           onError?.(error)
         }
       })
