@@ -156,8 +156,7 @@ export default defineConfig({
       {
         test: {
           name: 'browser',
-          fileParallelism: false,
-          maxWorkers: 1,
+          maxWorkers: 4,
           browser: {
             enabled: true,
             provider: playwright(),
@@ -173,9 +172,38 @@ export default defineConfig({
           ],
         },
         extends: true,
+        // 浏览器测试可达的运行时依赖必须在此登记。
+        //
+        // noDiscovery: true 关闭了 Vite 的运行期依赖发现，未登记的依赖只能按源文件逐个请求；
+        // 浏览器模式默认每个测试文件新建 iframe 并重新导入整张模块图，这份成本会乘以测试文件数。
+        // 反过来也不能取消 noDiscovery：运行期重新预构建会触发 iframe 整页 reload，
+        // 轻则重复执行用例，重则让整轮运行永久挂起。
+        //
+        // 名单与依赖之间没有自动约束。新增依赖后如果相关测试变慢，先检查这里是否漏登记；
+        // 校验方法是 node_modules/.vite/vitest/<hash>/deps/_metadata.json 的 optimized 键数量。
         optimizeDeps: {
           noDiscovery: true,
           include: [
+            '@floating-ui/vue',
+            '@lucide/vue',
+            '@tanstack/vue-virtual',
+            '@tauri-apps/api/app',
+            '@tauri-apps/api/core',
+            '@tauri-apps/api/dpi',
+            '@tauri-apps/api/event',
+            '@tauri-apps/api/path',
+            '@tauri-apps/api/webview',
+            '@tauri-apps/api/webviewWindow',
+            '@tauri-apps/plugin-dialog',
+            '@tauri-apps/plugin-fs',
+            '@tauri-apps/plugin-log',
+            '@tauri-apps/plugin-opener',
+            '@tauri-apps/plugin-os',
+            '@tauri-apps/plugin-process',
+            '@tauri-apps/plugin-updater',
+            '@vueuse/core',
+            'class-variance-authority',
+            'compare-versions',
             'dayjs',
             'dayjs/locale/en',
             'dayjs/locale/ja',
@@ -183,7 +211,27 @@ export default defineConfig({
             'dayjs/locale/zh-tw',
             'dayjs/plugin/relativeTime',
             'dexie',
+            'dompurify',
+            'driver.js',
+            'lru-cache',
+            'markdown-it',
+            'mime',
+            'monaco-editor',
+            'pinia',
+            'pinia-plugin-persistedstate',
+            'reka-ui',
             'sanitize-filename',
+            'tailwind-merge',
+            'vee-validate',
+            'vue',
+            'vue-i18n',
+            'vue-router',
+            'vue-sonner',
+            'wavesurfer.js',
+            'webgal-parser',
+            'webgal-parser/src/config/scriptConfig',
+            'webgal-parser/src/interface/sceneInterface',
+            'zod',
           ],
         },
       },
