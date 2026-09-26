@@ -27,7 +27,7 @@ const sharedRenderOptions = {
 
 describe('ExpandableSearchInput', () => {
   it('点击展开后会自动聚焦搜索输入框', async () => {
-    renderInBrowser(ExpandableSearchInput, sharedRenderOptions)
+    await renderInBrowser(ExpandableSearchInput, sharedRenderOptions)
 
     await page.getByRole('button', { name: 'Toggle search' }).click()
 
@@ -35,7 +35,7 @@ describe('ExpandableSearchInput', () => {
   })
 
   it('有值时会显示清除按钮，点击后清空并保持焦点', async () => {
-    renderInBrowser(ExpandableSearchInput, sharedRenderOptions)
+    await renderInBrowser(ExpandableSearchInput, sharedRenderOptions)
 
     await page.getByRole('button', { name: 'Toggle search' }).click()
     await page.getByRole('searchbox', { name: 'Search files' }).fill('opening')

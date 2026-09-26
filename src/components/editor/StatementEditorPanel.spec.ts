@@ -305,8 +305,8 @@ const globalStubs = {
   Textarea: createBrowserInputStub('StubTextarea', 'textarea'),
 }
 
-function renderStatementEditorPanel(props: ComponentProps<typeof StatementEditorPanel>) {
-  renderInBrowser(StatementEditorPanel, {
+async function renderStatementEditorPanel(props: ComponentProps<typeof StatementEditorPanel>) {
+  await renderInBrowser(StatementEditorPanel, {
     props,
     global: {
       mocks: {
@@ -384,7 +384,7 @@ describe('StatementEditorPanel', () => {
       },
     }))
 
-    renderStatementEditorPanel({
+    await renderStatementEditorPanel({
       enableFocusStatement: true,
       entry: createStatementEntry(7, 'say:hello'),
       onFocusStatement,
@@ -411,7 +411,7 @@ describe('StatementEditorPanel', () => {
       },
     }))
 
-    renderStatementEditorPanel({
+    await renderStatementEditorPanel({
       entry: createStatementEntry(8, 'old raw text'),
     })
 
@@ -433,7 +433,7 @@ describe('StatementEditorPanel', () => {
       },
     }))
 
-    renderStatementEditorPanel({
+    await renderStatementEditorPanel({
       entry: createStatementEntry(9, 'changeBg:bg.jpg'),
     })
 
@@ -456,7 +456,7 @@ describe('StatementEditorPanel', () => {
       },
     }))
 
-    renderStatementEditorPanel({
+    await renderStatementEditorPanel({
       entry: createStatementEntry(10, 'setTempAnimation: [{"duration":0}];'),
     })
 
@@ -470,7 +470,7 @@ describe('StatementEditorPanel', () => {
       statementType: 'say',
     }))
 
-    renderStatementEditorPanel({
+    await renderStatementEditorPanel({
       entry: createStatementEntry(11, 'Alice:hello'),
     })
 
@@ -503,7 +503,7 @@ describe('StatementEditorPanel', () => {
       },
     }))
 
-    renderStatementEditorPanel({
+    await renderStatementEditorPanel({
       entry: createStatementEntry(12, 'changeBg:bg.jpg'),
     })
 
@@ -555,7 +555,7 @@ describe('StatementEditorPanel', () => {
       },
     }))
 
-    renderStatementEditorPanel({
+    await renderStatementEditorPanel({
       entry: createStatementEntry(13, 'video:opening.webm'),
     })
 
@@ -573,7 +573,7 @@ describe('StatementEditorPanel', () => {
     })
     useStatementEditorMock.mockImplementation(options => useStatementEditor(options))
 
-    renderStatementEditorPanel({
+    await renderStatementEditorPanel({
       entry: createStatementEntry(14, 'Alice:Hello -vocal=voice/theme.ogg'),
     })
 

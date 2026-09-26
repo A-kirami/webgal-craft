@@ -202,7 +202,7 @@ const ItemClassComboboxHarness = defineComponent({
 
 describe('Combobox', () => {
   it('候选集合为空时显示无可用选项', async () => {
-    renderInBrowser(EmptyComboboxHarness, {
+    await renderInBrowser(EmptyComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -216,7 +216,7 @@ describe('Combobox', () => {
   })
 
   it('点击关联标签时只聚焦控件，直接点击控件时才展开候选项', async () => {
-    renderInBrowser(LabelComboboxHarness, {
+    await renderInBrowser(LabelComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -244,7 +244,7 @@ describe('Combobox', () => {
   })
 
   it('按住指针拖出触发器后，再点击关联标签不会展开候选项', async () => {
-    renderInBrowser(LabelComboboxHarness, {
+    await renderInBrowser(LabelComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -263,7 +263,7 @@ describe('Combobox', () => {
   })
 
   it('按住指针拖出触发器再移回，释放时的点击仍会展开候选项', async () => {
-    renderInBrowser(LabelComboboxHarness, {
+    await renderInBrowser(LabelComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -282,7 +282,7 @@ describe('Combobox', () => {
   })
 
   it('触摸抬起后分发的 pointerleave 不影响随后的点击展开', async () => {
-    renderInBrowser(LabelComboboxHarness, {
+    await renderInBrowser(LabelComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -301,7 +301,7 @@ describe('Combobox', () => {
   })
 
   it('按下非主按键不会留下打开意图', async () => {
-    renderInBrowser(LabelComboboxHarness, {
+    await renderInBrowser(LabelComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -319,7 +319,7 @@ describe('Combobox', () => {
   })
 
   it('按住非主按键移入触发器不会留下打开意图', async () => {
-    renderInBrowser(LabelComboboxHarness, {
+    await renderInBrowser(LabelComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -337,7 +337,7 @@ describe('Combobox', () => {
   })
 
   it('聚焦控件后按 Enter 仍会展开候选项', async () => {
-    renderInBrowser(ComboboxHarness, {
+    await renderInBrowser(ComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -352,7 +352,7 @@ describe('Combobox', () => {
   })
 
   it('聚焦控件后按 ArrowDown 会展开候选项', async () => {
-    renderInBrowser(ComboboxHarness, {
+    await renderInBrowser(ComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -367,7 +367,7 @@ describe('Combobox', () => {
   })
 
   it('选择候选项或按 Escape 关闭后，焦点回到触发器', async () => {
-    renderInBrowser(ComboboxHarness)
+    await renderInBrowser(ComboboxHarness)
 
     const trigger = page.getByTestId('motion-trigger')
 
@@ -385,7 +385,7 @@ describe('Combobox', () => {
   })
 
   it('打开后会把焦点交给搜索框', async () => {
-    renderInBrowser(ComboboxHarness, {
+    await renderInBrowser(ComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -398,7 +398,7 @@ describe('Combobox', () => {
   })
 
   it('会根据搜索词过滤候选项', async () => {
-    renderInBrowser(ComboboxHarness, {
+    await renderInBrowser(ComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -412,7 +412,7 @@ describe('Combobox', () => {
   })
 
   it('搜索后方向键导航会从第一个匹配项开始', async () => {
-    renderInBrowser(CenteredComboboxHarness, {
+    await renderInBrowser(CenteredComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -426,7 +426,7 @@ describe('Combobox', () => {
   })
 
   it('搜索后直接按 Enter 不会误选最后一个匹配项', async () => {
-    renderInBrowser(CenteredComboboxHarness, {
+    await renderInBrowser(CenteredComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -440,7 +440,7 @@ describe('Combobox', () => {
   })
 
   it('支持方向键高亮并用 Enter 提交', async () => {
-    renderInBrowser(ComboboxHarness, {
+    await renderInBrowser(ComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -453,7 +453,7 @@ describe('Combobox', () => {
   })
 
   it('无匹配项时显示可播报且不可选择的空状态', async () => {
-    renderInBrowser(ComboboxHarness, {
+    await renderInBrowser(ComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -468,7 +468,7 @@ describe('Combobox', () => {
   })
 
   it('会把搜索词按空格拆分并要求所有关键词都命中', async () => {
-    renderInBrowser(MultiKeywordComboboxHarness, {
+    await renderInBrowser(MultiKeywordComboboxHarness, {
       global: {
         stubs: globalStubs,
       },
@@ -483,7 +483,7 @@ describe('Combobox', () => {
   })
 
   it('itemClass 覆盖候选项默认内边距', async () => {
-    renderInBrowser(ItemClassComboboxHarness, {
+    await renderInBrowser(ItemClassComboboxHarness, {
       global: {
         stubs: globalStubs,
       },

@@ -139,7 +139,7 @@ interface RenderGameDependencyResolutionModalOptions {
   updateOpen?: (open: boolean) => void
 }
 
-function renderGameDependencyResolutionModal(options: RenderGameDependencyResolutionModalOptions) {
+async function renderGameDependencyResolutionModal(options: RenderGameDependencyResolutionModalOptions) {
   const { updateOpen, ...props } = options
   const modalProps = {
     open: true,
@@ -149,7 +149,7 @@ function renderGameDependencyResolutionModal(options: RenderGameDependencyResolu
     Object.assign(modalProps, { 'onUpdate:open': updateOpen })
   }
 
-  renderInBrowser(GameDependencyResolutionModal, {
+  await renderInBrowser(GameDependencyResolutionModal, {
     props: modalProps,
     global: {
       stubs: globalStubs,
@@ -163,7 +163,7 @@ describe('GameDependencyResolutionModal', () => {
   })
 
   it('只需要引擎时只显示引擎选择', async () => {
-    renderGameDependencyResolutionModal({
+    await renderGameDependencyResolutionModal({
       context: configuredEngineContext,
     })
 
@@ -172,7 +172,7 @@ describe('GameDependencyResolutionModal', () => {
   })
 
   it('只需要模板时只显示模板选择并使用已解析引擎', async () => {
-    renderGameDependencyResolutionModal({
+    await renderGameDependencyResolutionModal({
       context: configuredTemplateContext,
     })
 
@@ -183,7 +183,7 @@ describe('GameDependencyResolutionModal', () => {
   })
 
   it('引擎和模板都需要修复时模板选择随当前引擎联动', async () => {
-    renderGameDependencyResolutionModal({
+    await renderGameDependencyResolutionModal({
       context: {
         ...configuredTemplateContext,
         resolvedEngineId: undefined,
@@ -200,7 +200,7 @@ describe('GameDependencyResolutionModal', () => {
   it('确认会返回组合结果', async () => {
     const onConfirm = vi.fn()
 
-    renderGameDependencyResolutionModal({
+    await renderGameDependencyResolutionModal({
       context: {
         ...configuredTemplateContext,
         resolvedEngineId: undefined,
@@ -225,7 +225,7 @@ describe('GameDependencyResolutionModal', () => {
   it('允许确认跟随所选引擎默认模板', async () => {
     const onConfirm = vi.fn()
 
-    renderGameDependencyResolutionModal({
+    await renderGameDependencyResolutionModal({
       context: configuredTemplateContext,
       onConfirm,
     })
@@ -243,7 +243,7 @@ describe('GameDependencyResolutionModal', () => {
   it('被动关闭走取消流程', async () => {
     const onCancel = vi.fn()
     const updateOpen = vi.fn()
-    renderGameDependencyResolutionModal({
+    await renderGameDependencyResolutionModal({
       context: configuredEngineContext,
       onCancel,
       updateOpen,

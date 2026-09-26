@@ -378,7 +378,7 @@ describe('PreviewPanel', () => {
   })
 
   it('挂载时会读取预览宽高比并渲染 iframe', async () => {
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -406,7 +406,7 @@ describe('PreviewPanel', () => {
     })
     usePreviewSyncStoreMock.mockReturnValue(previewSyncStore)
 
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -425,7 +425,7 @@ describe('PreviewPanel', () => {
   it('缺少规范入口时只显示错误遮罩且不展示连接状态，入口恢复后重新挂载预览', async () => {
     sceneEntryStatusState.status.value = 'missing'
 
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -454,7 +454,7 @@ describe('PreviewPanel', () => {
   it('入口校验期间不显示缺失遮罩与连接状态，校验通过后挂载预览', async () => {
     sceneEntryStatusState.status.value = 'checking'
 
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -472,7 +472,7 @@ describe('PreviewPanel', () => {
   })
 
   it('收到同源 iframe 转发的空格按键消息时会让 iframe 上的拖拽交给外层视口平移', async () => {
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -498,7 +498,7 @@ describe('PreviewPanel', () => {
   })
 
   it('放大预览后 viewport 外的编辑器区域不会命中 iframe', async () => {
-    const rendered = renderInBrowser(PreviewPanel, {
+    const rendered = await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -563,7 +563,7 @@ describe('PreviewPanel', () => {
   })
 
   it('iframe 内松开空格后会立即用 auto 光标重置覆盖层', async () => {
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -598,7 +598,7 @@ describe('PreviewPanel', () => {
     ['缩放百分比读数', (root: HTMLElement) => root.querySelector('[data-testid="preview-bottom-toolbar"] output')],
     ['工具栏空白处', (root: HTMLElement) => root.querySelector<HTMLElement>('[data-testid="preview-bottom-toolbar"]')],
   ])('空格平移模式下按在悬浮工具栏的%s上不会启动视口平移', async (_name, resolveTarget) => {
-    const rendered = renderInBrowser(PreviewPanel, {
+    const rendered = await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -634,7 +634,7 @@ describe('PreviewPanel', () => {
   })
 
   it('按下 Ctrl 不会进入抓手交互态', async () => {
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -658,7 +658,7 @@ describe('PreviewPanel', () => {
   })
 
   it('收到同源 iframe 转发的 Cmd 或 Ctrl 滚轮消息时会缩放视口', async () => {
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -697,7 +697,7 @@ describe('PreviewPanel', () => {
   })
 
   it('收到同源 iframe 转发的中键指针消息时会平移视口', async () => {
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -761,7 +761,7 @@ describe('PreviewPanel', () => {
   })
 
   it('点击浏览器打开按钮会调用外部打开动作', async () => {
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -774,7 +774,7 @@ describe('PreviewPanel', () => {
   })
 
   it('变换浮层开启时点击预览空白区域和底部工具栏会保持浮层快捷键上下文', async () => {
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         provide: {
@@ -811,7 +811,7 @@ describe('PreviewPanel', () => {
   })
 
   it('抽屉可交互区域只覆盖预览工作区，不含刷新所在的顶部工具栏', async () => {
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -829,7 +829,7 @@ describe('PreviewPanel', () => {
   })
 
   it('点击刷新按钮会重新读取游戏配置并刷新内嵌预览槽位', async () => {
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -858,7 +858,7 @@ describe('PreviewPanel', () => {
       })
     })
 
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -893,7 +893,7 @@ describe('PreviewPanel', () => {
     const sameOriginPreviewUrl = new URL('/__webgal_preview_bootstrap_test__', globalThis.location.href)
     previewSessionStoreState.currentGameServeUrl = sameOriginPreviewUrl.href
 
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -936,7 +936,7 @@ describe('PreviewPanel', () => {
   })
 
   it('亮度调整作用于预览视口视觉层', async () => {
-    const rendered = renderInBrowser(PreviewPanel, {
+    const rendered = await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -964,7 +964,7 @@ describe('PreviewPanel', () => {
     const sameOriginPreviewUrl = new URL('/__webgal_preview_output_settings_test__', globalThis.location.href)
     previewSessionStoreState.currentGameServeUrl = sameOriginPreviewUrl.href
 
-    const rendered = renderInBrowser(PreviewPanel, {
+    const rendered = await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -1008,7 +1008,7 @@ describe('PreviewPanel', () => {
     })
     usePreviewSyncStoreMock.mockReturnValue(previewSyncStore)
 
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -1027,7 +1027,7 @@ describe('PreviewPanel', () => {
   })
 
   it('当前游戏快照更新时间变化时不会自动重新读取游戏配置', async () => {
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -1045,7 +1045,7 @@ describe('PreviewPanel', () => {
   })
 
   it('预览 reloadVersion 变化时会自动重新读取游戏配置', async () => {
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,
@@ -1081,7 +1081,7 @@ describe('PreviewPanel', () => {
     })
     usePreviewSyncStoreMock.mockReturnValue(previewSyncStore)
 
-    renderInBrowser(PreviewPanel, {
+    await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
         stubs: globalStubs,

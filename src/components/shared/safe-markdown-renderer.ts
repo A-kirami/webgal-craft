@@ -1,7 +1,7 @@
 import purifier from 'dompurify'
 import MarkdownIt from 'markdown-it'
 
-import type Token from 'markdown-it/lib/token.mjs'
+import type { Token } from 'markdown-it'
 
 const safeUrlProtocols = new Set(['http:', 'https:'])
 const taskListMarkerPattern = /^\[([ xX])\]\s+/
@@ -38,6 +38,17 @@ function findParentListItem(
   }
 }
 
+// markdown-it 15 起 attrGet 返回 string | number，本项目只处理字符串属性，数值属性统一转为字符串
+function readTokenAttribute(token: Token, name: string): string | null {
+  const value = token.attrGet(name)
+  if (value === null || value === undefined) {
+    // eslint-disable-next-line unicorn/no-null -- null 表示属性不存在，与 Token.attrGet 契约一致
+    return null
+  }
+
+  return typeof value === 'string' ? value : String(value)
+}
+
 export function isSafeWebUrl(value: string | null | undefined): value is string {
   if (!value) {
     return false
@@ -53,7 +64,7 @@ export function isSafeWebUrl(value: string | null | undefined): value is string 
 
 markdown.renderer.rules[linkOpenRule] = (tokens, index, options, env, self) => {
   const token = tokens[index]
-  const href = token.attrGet('href')
+  const href = readTokenAttribute(token, 'href')
   const safe = isSafeWebUrl(href)
   getRenderEnv(env).linkSafetyStack.push(safe)
   if (!safe) {
@@ -74,7 +85,7 @@ markdown.renderer.rules[linkCloseRule] = (tokens, index, options, env, self) => 
 
 markdown.renderer.rules.image = (tokens, index, options, env, self) => {
   const token = tokens[index]
-  const href = token.attrGet('src')
+  const href = readTokenAttribute(token, 'src')
   const label = self.renderInlineAsText(token.children ?? [], options, env) || href
   if (!isSafeWebUrl(href)) {
     return markdown.utils.escapeHtml(label ?? '')

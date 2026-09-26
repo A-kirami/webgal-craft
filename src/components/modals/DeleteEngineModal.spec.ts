@@ -98,8 +98,8 @@ const globalStubs = {
   AlertDialogTitle: createBrowserContainerStub('StubAlertDialogTitle', 'h2'),
 }
 
-function renderDeleteEngineModal(updateOpen = vi.fn(), engine = createTestEngine()) {
-  renderInBrowser(DeleteEngineModal, {
+async function renderDeleteEngineModal(updateOpen = vi.fn(), engine = createTestEngine()) {
+  await renderInBrowser(DeleteEngineModal, {
     props: {
       'open': true,
       engine,
@@ -143,7 +143,7 @@ describe('DeleteEngineModal', () => {
       reason: 'ENGINE_HAS_ASSOCIATED_GAMES',
     })
 
-    renderDeleteEngineModal()
+    await renderDeleteEngineModal()
 
     await expect.element(page.getByText('无法删除')).toBeInTheDocument()
     await expect.element(page.getByText('以下游戏正在使用此引擎：')).toBeInTheDocument()
@@ -153,7 +153,7 @@ describe('DeleteEngineModal', () => {
   })
 
   it('可删除时确认会执行卸载并关闭模态框', async () => {
-    const { engine, updateOpen } = renderDeleteEngineModal()
+    const { engine, updateOpen } = await renderDeleteEngineModal()
 
     await page.getByRole('button', { name: '确认' }).click()
 
@@ -163,7 +163,7 @@ describe('DeleteEngineModal', () => {
   })
 
   it('可用引擎会在卸载说明中展示版本号', async () => {
-    renderDeleteEngineModal(
+    await renderDeleteEngineModal(
       vi.fn(),
       createTestEngine({
         name: 'WebGAL',
@@ -175,7 +175,7 @@ describe('DeleteEngineModal', () => {
   })
 
   it('不可用引擎会带入名称渲染移除说明', async () => {
-    renderDeleteEngineModal(
+    await renderDeleteEngineModal(
       vi.fn(),
       createTestEngine({
         name: 'WebGAL',

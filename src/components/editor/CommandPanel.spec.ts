@@ -144,8 +144,8 @@ describe('CommandPanel', () => {
     })
   })
 
-  function renderCommandPanel() {
-    const { pinia } = renderInBrowser(CommandPanel, {
+  async function renderCommandPanel() {
+    const { pinia } = await renderInBrowser(CommandPanel, {
       browser: createCommandPanelBrowserOptions(),
       global: {
         stubs: globalStubs,
@@ -172,7 +172,7 @@ describe('CommandPanel', () => {
   }
 
   it('渲染分类标签栏', async () => {
-    renderCommandPanel()
+    await renderCommandPanel()
 
     const allTab = page.getByRole('button', {
       name: 'all-category',
@@ -197,7 +197,7 @@ describe('CommandPanel', () => {
   })
 
   it('点击分类标签切换视图', async () => {
-    const { pinia } = renderCommandPanel()
+    const { pinia } = await renderCommandPanel()
 
     // 默认 activeCategory 为 'all'
     const store = useCommandPanelStore(pinia)
@@ -213,7 +213,7 @@ describe('CommandPanel', () => {
   })
 
   it('可以跨分类添加、取消并重新添加常用命令', async () => {
-    const { pinia } = renderCommandPanel()
+    const { pinia } = await renderCommandPanel()
     const store = useCommandPanelStore(pinia)
 
     const addDialogueFavorite = getFavoriteButton('dialogue-command', '将此语句加入常用')
@@ -244,7 +244,7 @@ describe('CommandPanel', () => {
   })
 
   it('常用列表为空或只包含失效项时显示稳定空状态', async () => {
-    const { pinia } = renderCommandPanel()
+    const { pinia } = await renderCommandPanel()
     const store = useCommandPanelStore(pinia)
     store.favoriteCommandIds = ['removed-command']
     store.setActiveCategory('favorites')
@@ -258,7 +258,7 @@ describe('CommandPanel', () => {
   it('从常用分类点击命令卡片会发出 insertCommand 事件', async () => {
     const onInsertCommand = vi.fn()
 
-    const { pinia } = renderInBrowser(CommandPanel, {
+    const { pinia } = await renderInBrowser(CommandPanel, {
       browser: createCommandPanelBrowserOptions(),
       props: {
         onInsertCommand,
@@ -280,8 +280,8 @@ describe('CommandPanel', () => {
     expect(onInsertCommand).toHaveBeenCalledWith(commandType.say)
   })
 
-  it('命令卡片拖拽会使用当前用户默认值生成 payload', () => {
-    const { pinia } = renderCommandPanel()
+  it('命令卡片拖拽会使用当前用户默认值生成 payload', async () => {
+    const { pinia } = await renderCommandPanel()
     const store = useCommandPanelStore(pinia)
     store.saveDefault(commandType.say, 'say:custom;')
     const getData = lastDragSourceOptions.value?.getData
@@ -299,8 +299,8 @@ describe('CommandPanel', () => {
     })
   })
 
-  it('语句组卡片拖拽会生成语句组 payload', () => {
-    const { pinia } = renderCommandPanel()
+  it('语句组卡片拖拽会生成语句组 payload', async () => {
+    const { pinia } = await renderCommandPanel()
     const store = useCommandPanelStore(pinia)
     const group = store.saveGroup({
       name: 'My Group',
@@ -322,7 +322,7 @@ describe('CommandPanel', () => {
   })
 
   it('点击命令默认值按钮会打开默认值模态框', async () => {
-    renderCommandPanel()
+    await renderCommandPanel()
 
     await page.getByTitle('edit-defaults').first().click()
 
@@ -332,7 +332,7 @@ describe('CommandPanel', () => {
   })
 
   it('在语句组视图删除组后会更新 store', async () => {
-    const { pinia } = renderCommandPanel()
+    const { pinia } = await renderCommandPanel()
     const store = useCommandPanelStore(pinia)
 
     const group = store.saveGroup({

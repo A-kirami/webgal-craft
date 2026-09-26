@@ -13,13 +13,13 @@ import {
 
 describe('browser-render helper stubs', () => {
   it('createBrowserTextStub 会渲染固定占位文本', async () => {
-    renderInBrowser(createBrowserTextStub('StubText', 'placeholder-text'))
+    await renderInBrowser(createBrowserTextStub('StubText', 'placeholder-text'))
 
     await expect.element(page.getByText('placeholder-text')).toBeInTheDocument()
   })
 
   it('createBrowserValueStub 会透传 id 并把数组 modelValue 映射为 value', async () => {
-    renderInBrowser(createBrowserValueStub('StubValue', 'input'), {
+    await renderInBrowser(createBrowserValueStub('StubValue', 'input'), {
       props: {
         id: 'value-probe',
         modelValue: ['first-item'],
@@ -33,7 +33,7 @@ describe('browser-render helper stubs', () => {
   it('createBrowserInputStub 会转发 update:modelValue', async () => {
     const handleUpdate = vi.fn()
 
-    renderInBrowser(createBrowserInputStub('StubInput'), {
+    await renderInBrowser(createBrowserInputStub('StubInput'), {
       props: {
         'id': 'input-probe',
         'modelValue': 'before',
@@ -50,7 +50,7 @@ describe('browser-render helper stubs', () => {
   it('createBrowserCheckboxStub 会转发 update:modelValue', async () => {
     const handleUpdate = vi.fn()
 
-    renderInBrowser(createBrowserCheckboxStub('StubCheckbox'), {
+    await renderInBrowser(createBrowserCheckboxStub('StubCheckbox'), {
       props: {
         'id': 'checkbox-probe',
         'modelValue': false,
@@ -66,7 +66,7 @@ describe('browser-render helper stubs', () => {
   it('createBrowserEmitStub 会在点击时发出指定事件和 payload', async () => {
     const handleNavigate = vi.fn()
 
-    renderInBrowser(createBrowserEmitStub('StubEmit', {
+    await renderInBrowser(createBrowserEmitStub('StubEmit', {
       eventName: 'navigate',
       payload: 'images/bg',
       text: 'emit-trigger',
@@ -84,7 +84,7 @@ describe('browser-render helper stubs', () => {
   it('createBrowserActionStub 会渲染动作按钮、默认插槽和命名插槽，并发出计算后的 payload', async () => {
     const handleSelect = vi.fn()
 
-    renderInBrowser(createBrowserActionStub('StubAction', {
+    await renderInBrowser(createBrowserActionStub('StubAction', {
       eventName: 'select',
       includeDefaultSlot: true,
       namedSlots: ['actions', 'tooltip'],

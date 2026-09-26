@@ -97,13 +97,13 @@ const narrowStartKeyframes: AnimationEditorKeyframe[] = [
   },
 ]
 
-function renderTimeline(options: {
+async function renderTimeline(options: {
   keyframes: readonly AnimationEditorKeyframe[]
   onResizeDuration?: (payload: { duration: number, flush: boolean, id: number }) => void
   selectedId?: number
   totalDuration: number
 }) {
-  renderInBrowser(AnimationTimeline, {
+  await renderInBrowser(AnimationTimeline, {
     props: {
       keyframes: options.keyframes,
       onResizeDuration: options.onResizeDuration,
@@ -125,8 +125,8 @@ describe('AnimationTimeline', () => {
     document.body.innerHTML = ''
   })
 
-  it('结束标记与顶部刻度共享锚点，并在时间轴边界保持正确对齐', () => {
-    renderTimeline({
+  it('结束标记与顶部刻度共享锚点，并在时间轴边界保持正确对齐', async () => {
+    await renderTimeline({
       keyframes: zeroStartThreeKeyframes,
       totalDuration: 450,
     })
@@ -157,8 +157,8 @@ describe('AnimationTimeline', () => {
     expect(lastEndMarkerLabel?.className).toContain('-translate-x-full')
   })
 
-  it('最后一个时间块可以贴到时间轨道末端，不为显式末端缓冲区预留空白', () => {
-    renderTimeline({
+  it('最后一个时间块可以贴到时间轨道末端，不为显式末端缓冲区预留空白', async () => {
+    await renderTimeline({
       keyframes: linearTwoKeyframes,
       totalDuration: 320,
     })
@@ -173,8 +173,8 @@ describe('AnimationTimeline', () => {
     expect(left + width).toBeCloseTo(100)
   })
 
-  it('单个结束标记仍然使用末端对齐，避免贴在右边界时向外溢出', () => {
-    renderTimeline({
+  it('单个结束标记仍然使用末端对齐，避免贴在右边界时向外溢出', async () => {
+    await renderTimeline({
       keyframes: [
         {
           cumulativeTime: 320,
@@ -192,10 +192,10 @@ describe('AnimationTimeline', () => {
     expect(endMarkerLabel?.className).toContain('-translate-x-full')
   })
 
-  it('被最小宽度撑开的 9ms 起始帧可以继续拖拽回 0ms', () => {
+  it('被最小宽度撑开的 9ms 起始帧可以继续拖拽回 0ms', async () => {
     const onResizeDuration = vi.fn()
 
-    renderTimeline({
+    await renderTimeline({
       keyframes: narrowStartKeyframes,
       onResizeDuration,
       totalDuration: 209,

@@ -177,7 +177,7 @@ describe('EngineGroupCard', () => {
   })
 
   it('会展示引擎摘要、默认标记和版本信息', async () => {
-    renderInBrowser(EngineGroupCard, {
+    await renderInBrowser(EngineGroupCard, {
       props: {
         group: createGroup(),
         viewMode: 'grid',
@@ -200,7 +200,7 @@ describe('EngineGroupCard', () => {
     const onDownloadVersion = vi.fn()
     const onOpenRelease = vi.fn()
     const onOpenVersionRelease = vi.fn()
-    renderInBrowser(EngineGroupCard, {
+    await renderInBrowser(EngineGroupCard, {
       props: {
         group: {
           ...createGroup(),
@@ -239,7 +239,7 @@ describe('EngineGroupCard', () => {
   })
 
   it('会在卡片摘要中展示最新已安装版本', async () => {
-    renderInBrowser(EngineGroupCard, {
+    await renderInBrowser(EngineGroupCard, {
       props: {
         group: {
           ...createGroup(),
@@ -265,7 +265,7 @@ describe('EngineGroupCard', () => {
   })
 
   it('未安装官方引擎时会展示版本总数', async () => {
-    renderInBrowser(EngineGroupCard, {
+    await renderInBrowser(EngineGroupCard, {
       props: {
         group: {
           ...createGroup(),
@@ -301,7 +301,7 @@ describe('EngineGroupCard', () => {
   })
 
   it('已安装最新远端版本时不因缺少旧版本显示更新操作', async () => {
-    renderInBrowser(EngineGroupCard, {
+    await renderInBrowser(EngineGroupCard, {
       props: {
         group: {
           ...createGroup(),
@@ -328,7 +328,7 @@ describe('EngineGroupCard', () => {
   })
 
   it('打开版本列表时不会自动聚焦首个操作按钮', async () => {
-    renderInBrowser(EngineGroupCard, {
+    await renderInBrowser(EngineGroupCard, {
       props: {
         group: {
           ...createGroup(),
@@ -361,7 +361,7 @@ describe('EngineGroupCard', () => {
     const onOpenGroupFolder = vi.fn()
     const onSetDefaultEngine = vi.fn()
 
-    renderInBrowser(EngineGroupCard, {
+    await renderInBrowser(EngineGroupCard, {
       props: {
         group: createGroup(),
         viewMode: 'list',
@@ -390,7 +390,7 @@ describe('EngineGroupCard', () => {
   })
 
   it('当前默认组即使没有可用版本也允许取消默认', async () => {
-    renderInBrowser(EngineGroupCard, {
+    await renderInBrowser(EngineGroupCard, {
       props: {
         group: {
           ...createGroup(),
@@ -413,7 +413,7 @@ describe('EngineGroupCard', () => {
   })
 
   it('导入中的引擎组不会显示失效徽标', async () => {
-    renderInBrowser(EngineGroupCard, {
+    await renderInBrowser(EngineGroupCard, {
       props: {
         group: createImportingGroup(),
         progress: 42,
@@ -436,7 +436,7 @@ describe('EngineGroupCard', () => {
   })
 
   it('导入进度尚未开始时也会显示导入中状态', async () => {
-    renderInBrowser(EngineGroupCard, {
+    await renderInBrowser(EngineGroupCard, {
       props: {
         group: createImportingGroup(),
         viewMode: 'list',

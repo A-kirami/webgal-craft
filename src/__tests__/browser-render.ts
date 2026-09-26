@@ -241,7 +241,8 @@ export function createBrowserCheckboxStub(name: string) {
   })
 }
 
-export function renderInBrowser(component: BrowserRenderComponent, options: BrowserRenderOptions = {}) {
+// vitest-browser-vue 3 起 render 返回 Promise，渲染完成前拿不到 container，因此所有调用点需要 await
+export async function renderInBrowser(component: BrowserRenderComponent, options: BrowserRenderOptions = {}) {
   const { browser, global, ...renderOptions } = options
   const globalPlugins = global?.plugins ?? []
   let explicitPinia: import('pinia').Pinia | undefined
@@ -266,7 +267,7 @@ export function renderInBrowser(component: BrowserRenderComponent, options: Brow
   })
   const plugins = [...browserPlugins, ...normalizedGlobalPlugins]
 
-  const result = render(component, {
+  const result = await render(component, {
     ...renderOptions,
     global: {
       ...global,

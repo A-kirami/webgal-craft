@@ -191,7 +191,7 @@ describe('TemplatesTab', () => {
     useResourceStoreMock.mockReturnValue(createResourceStore())
     openDialogMock.mockResolvedValue('/templates/import-target')
 
-    renderInBrowser(TemplatesTab, {
+    await renderInBrowser(TemplatesTab, {
       browser: {
         i18nMode: 'lite',
       },
@@ -216,7 +216,7 @@ describe('TemplatesTab', () => {
   it('会打开模板目录并触发删除模板模态框', async () => {
     useResourceStoreMock.mockReturnValue(createResourceStore())
 
-    renderInBrowser(TemplatesTab, {
+    await renderInBrowser(TemplatesTab, {
       browser: {
         i18nMode: 'lite',
       },
@@ -283,7 +283,7 @@ describe('TemplatesTab', () => {
     getServeUrlMock.mockReturnValue('http://127.0.0.1:8899/game/engine/webgal/')
     useResourceStoreMock.mockReturnValue(store)
 
-    renderInBrowser(TemplatesTab, {
+    await renderInBrowser(TemplatesTab, {
       browser: {
         i18nMode: 'lite',
       },

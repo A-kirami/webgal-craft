@@ -72,14 +72,14 @@ function requireInputGroup(element: HTMLElement): HTMLElement {
 }
 
 describe('InputGroupAutocomplete', () => {
-  it('有候选项时不显示独立输入框的行尾图标', () => {
-    renderInBrowser(InputGroupStyleHarness)
+  it('有候选项时不显示独立输入框的行尾图标', async () => {
+    await renderInBrowser(InputGroupStyleHarness)
 
     expect(document.querySelector('[data-testid="autocomplete-indicator"]')).toBeNull()
   })
 
   it('候选弹层至少覆盖整个 InputGroup 宽度', async () => {
-    renderInBrowser(InputGroupStyleHarness)
+    await renderInBrowser(InputGroupStyleHarness)
 
     const autocomplete = requireHtmlElement(await page.getByTestId('input-group-autocomplete').element())
     const inputGroup = requireInputGroup(autocomplete)
@@ -95,7 +95,7 @@ describe('InputGroupAutocomplete', () => {
   })
 
   it('与 InputGroupInput 使用相同的输入区和焦点样式', async () => {
-    renderInBrowser(InputGroupStyleHarness)
+    await renderInBrowser(InputGroupStyleHarness)
 
     const inputLocator = page.getByTestId('input-group-reference')
     const autocompleteLocator = page.getByTestId('input-group-autocomplete')
@@ -142,7 +142,7 @@ describe('InputGroupAutocomplete', () => {
   })
 
   it('itemClass 透传到候选行并收紧行高', async () => {
-    renderInBrowser(ItemClassHarness)
+    await renderInBrowser(ItemClassHarness)
 
     await page.getByTestId('item-class-autocomplete').click()
 
@@ -154,7 +154,7 @@ describe('InputGroupAutocomplete', () => {
   })
 
   it('未传 itemClass 时候选行沿用默认的 28px 行高', async () => {
-    renderInBrowser(InputGroupStyleHarness)
+    await renderInBrowser(InputGroupStyleHarness)
 
     await page.getByTestId('input-group-autocomplete').click()
 

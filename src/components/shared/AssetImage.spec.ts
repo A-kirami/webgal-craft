@@ -111,7 +111,7 @@ describe('AssetImage', () => {
       throw new Error('预览地址不存在')
     })
 
-    renderInBrowser(createHarness('pendingExternal'))
+    await renderInBrowser(createHarness('pendingExternal'))
 
     await expect.element(page.getByAltText('pending-external-asset-image')).toHaveAttribute('src', '/placeholder.svg')
     expect(resolveAssetUrlMock).not.toHaveBeenCalled()
@@ -123,7 +123,7 @@ describe('AssetImage', () => {
     getAssetUrlMock.mockReturnValue(imageDataUrl)
     resolveAssetUrlMock.mockReturnValue(imageDataUrl)
 
-    renderInBrowser(createHarness('fixed'))
+    await renderInBrowser(createHarness('fixed'))
 
     await expect.element(page.getByAltText('fixed-asset-image')).toBeVisible()
     const element = await page.getByAltText('fixed-asset-image').element()
@@ -136,7 +136,7 @@ describe('AssetImage', () => {
     getAssetUrlMock.mockReturnValue(imageDataUrl)
     resolveAssetUrlMock.mockReturnValue(imageDataUrl)
 
-    renderInBrowser(createHarness('fill'))
+    await renderInBrowser(createHarness('fill'))
 
     await expect.element(page.getByAltText('fill-asset-image')).toBeVisible()
     const element = await page.getByAltText('fill-asset-image').element()
@@ -148,7 +148,7 @@ describe('AssetImage', () => {
     getAssetUrlMock.mockReturnValue(imageDataUrl)
     resolveAssetUrlMock.mockReturnValue(imageDataUrl)
 
-    renderInBrowser(createHarness('cover'))
+    await renderInBrowser(createHarness('cover'))
 
     await expect.element(page.getByAltText('cover-asset-image')).toBeVisible()
     const element = await page.getByAltText('cover-asset-image').element()
@@ -160,7 +160,7 @@ describe('AssetImage', () => {
     getAssetUrlMock.mockReturnValue(imageDataUrl)
     resolveAssetUrlMock.mockReturnValue(imageDataUrl)
 
-    renderInBrowser(createHarness('thumbnail'))
+    await renderInBrowser(createHarness('thumbnail'))
 
     await expect.element(page.getByAltText('thumbnail-asset-image')).toBeVisible()
     expect(resolveAssetUrlMock).toHaveBeenCalledWith('/assets/cover.png', {
@@ -207,7 +207,7 @@ describe('AssetImage', () => {
       },
     })
 
-    renderInBrowser(InlineThumbnailHarness)
+    await renderInBrowser(InlineThumbnailHarness)
 
     const image = await page.getByAltText('inline-thumbnail-asset-image').element()
     expect(image.getAttribute('src')).toBe('/broken-image.png')

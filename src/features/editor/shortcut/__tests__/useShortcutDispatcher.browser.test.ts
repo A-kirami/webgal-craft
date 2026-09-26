@@ -456,7 +456,7 @@ describe('useShortcutDispatcher', () => {
   })
 
   it('会响应静态注册的全局快捷键', async () => {
-    renderInBrowser(createHarnessComponent(), {
+    await renderInBrowser(createHarnessComponent(), {
       global: {
         plugins: [createPinia()],
       },
@@ -468,7 +468,7 @@ describe('useShortcutDispatcher', () => {
   })
 
   it('会响应命令面板切换快捷键', async () => {
-    renderInBrowser(createHarnessComponent(), {
+    await renderInBrowser(createHarnessComponent(), {
       global: {
         plugins: [createPinia()],
       },
@@ -480,7 +480,7 @@ describe('useShortcutDispatcher', () => {
   })
 
   it('事件已被焦点元素 preventDefault 时仍会响应允许穿透的全局快捷键', async () => {
-    renderInBrowser(createHarnessComponent(), {
+    await renderInBrowser(createHarnessComponent(), {
       global: {
         plugins: [createPinia()],
       },
@@ -495,7 +495,7 @@ describe('useShortcutDispatcher', () => {
   })
 
   it('会在焦点上下文满足时响应动态注册的组件快捷键', async () => {
-    renderInBrowser(createHarnessComponent(), {
+    await renderInBrowser(createHarnessComponent(), {
       global: {
         plugins: [createPinia()],
       },
@@ -510,7 +510,7 @@ describe('useShortcutDispatcher', () => {
   })
 
   it('组件实例公开 value 字段时，仍会解析到真实焦点元素', async () => {
-    renderInBrowser(createComponentTargetHarnessComponent(), {
+    await renderInBrowser(createComponentTargetHarnessComponent(), {
       global: {
         plugins: [createPinia()],
       },
@@ -525,7 +525,7 @@ describe('useShortcutDispatcher', () => {
   })
 
   it('点击命令面板卡片后，立即按键不应继续命中 editor undo', async () => {
-    renderInBrowser(createFocusIsolationHarnessComponent(), {
+    await renderInBrowser(createFocusIsolationHarnessComponent(), {
       global: {
         plugins: [createPinia()],
       },
@@ -547,7 +547,7 @@ describe('useShortcutDispatcher', () => {
   })
 
   it('点击未注册的 TabsTrigger 后，立即按键不应继续命中 editor undo', async () => {
-    renderInBrowser(createFocusIsolationHarnessComponent(), {
+    await renderInBrowser(createFocusIsolationHarnessComponent(), {
       global: {
         plugins: [createPinia()],
       },
@@ -569,7 +569,7 @@ describe('useShortcutDispatcher', () => {
   })
 
   it('语句编辑器 Select 选择后会保持快捷键焦点上下文', async () => {
-    renderInBrowser(createStatementEditorSelectHarnessComponent(), {
+    await renderInBrowser(createStatementEditorSelectHarnessComponent(), {
       global: {
         plugins: [createPinia()],
       },
@@ -598,7 +598,7 @@ describe('useShortcutDispatcher', () => {
   it('效果编辑器打开后会接管焦点上下文并响应自身快捷键', async () => {
     const { component, openEffectEditor } = createEffectEditorFocusHarness()
 
-    renderInBrowser(component, {
+    await renderInBrowser(component, {
       global: {
         plugins: [createPinia()],
         stubs: {
@@ -646,7 +646,7 @@ describe('useShortcutDispatcher', () => {
   it('点击清除后仍保持效果编辑器快捷键焦点上下文', async () => {
     const { component, openEffectEditor } = createEffectEditorFocusHarness()
 
-    renderInBrowser(component, {
+    await renderInBrowser(component, {
       global: {
         plugins: [createPinia()],
         stubs: {

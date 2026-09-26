@@ -15,8 +15,8 @@ const globalStubs = {
 }
 
 describe('CommandPanelCard', () => {
-  it('开启常显动作时动作区保持可见', () => {
-    renderInBrowser(CommandPanelCard, {
+  it('开启常显动作时动作区保持可见', async () => {
+    await renderInBrowser(CommandPanelCard, {
       props: {
         actionsAlwaysVisible: true,
         title: 'Dialogue',
@@ -40,7 +40,7 @@ describe('CommandPanelCard', () => {
   it('点击动作区按钮不会触发卡片点击', async () => {
     const handleClick = vi.fn()
 
-    renderInBrowser(CommandPanelCard, {
+    await renderInBrowser(CommandPanelCard, {
       props: {
         onClick: handleClick,
         title: 'Dialogue',
@@ -60,7 +60,7 @@ describe('CommandPanelCard', () => {
   })
 
   it('键盘焦点位于卡片或动作按钮时动作区保持可见', async () => {
-    renderInBrowser(CommandPanelCard, {
+    await renderInBrowser(CommandPanelCard, {
       props: {
         title: 'Dialogue',
       },
@@ -90,7 +90,7 @@ describe('CommandPanelCard', () => {
   it('点击卡片主体仍会触发卡片点击', async () => {
     const handleClick = vi.fn()
 
-    renderInBrowser(CommandPanelCard, {
+    await renderInBrowser(CommandPanelCard, {
       props: {
         onClick: handleClick,
         title: 'Dialogue',

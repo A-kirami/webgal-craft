@@ -124,7 +124,8 @@ const triggerFieldClass = 'h-full flex-none px-1 text-xs'
 // 上限只挡住无效草稿撑宽。不支持 field-sizing 的环境回退到 6 位裸 hex 的固定宽度（w-16）
 const hexFieldClass = 'w-16 min-w-14 max-w-24 supports-[field-sizing:content]:w-auto supports-[field-sizing:content]:field-sizing-content'
 // 透明度框：分割线由左边框充当，self-stretch + 负外边距跨过容器内边距（p-0.5）；宽度按最长值 100 取齐
-const alphaFieldClass = 'h-auto self-stretch -my-0.5 w-8 text-right border-l border-border tabular-nums'
+// border-l 必须重要：ui/Input 的基础类带 border-0（全局清零边框），普通优先级下会被它覆盖
+const alphaFieldClass = 'h-auto self-stretch -my-0.5 w-8 text-right border-l! border-solid! border-border tabular-nums'
 </script>
 
 <template>

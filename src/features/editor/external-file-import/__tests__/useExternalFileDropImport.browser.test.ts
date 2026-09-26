@@ -69,7 +69,7 @@ const messages = {
   },
 }
 
-function renderComposable() {
+async function renderComposable() {
   let result: ReturnType<typeof useExternalFileDropImport> | undefined
   const Harness = defineComponent({
     setup() {
@@ -81,7 +81,7 @@ function renderComposable() {
     },
   })
 
-  const rendered = renderInBrowser(Harness, {
+  const rendered = await renderInBrowser(Harness, {
     browser: {
       i18nMode: 'localized',
       messages,
@@ -117,7 +117,7 @@ beforeEach(() => {
 describe('useExternalFileDropImport', () => {
   it('命中子目录时会把该目录传给导入流程', async () => {
     importExternalFilesMock.mockResolvedValue({ failures: [], successes: [] })
-    const { rendered, result } = renderComposable()
+    const { rendered, result } = await renderComposable()
     const directory = document.createElement('div')
     const child = document.createElement('span')
     directory.dataset.fileTreeDropTargetPath = '/project/game/scene/chapter-1'
@@ -140,8 +140,8 @@ describe('useExternalFileDropImport', () => {
     rendered.unmount()
   })
 
-  it('拖拽经过不同目录并离开时会同步清理目标高亮', () => {
-    const { rendered, result } = renderComposable()
+  it('拖拽经过不同目录并离开时会同步清理目标高亮', async () => {
+    const { rendered, result } = await renderComposable()
     const firstDirectory = document.createElement('div')
     firstDirectory.dataset.fileTreeDropTargetPath = '/project/game/scene/chapter-1'
     firstDirectory.dataset.fileTreePath = '/project/game/scene/chapter-1'
@@ -176,7 +176,7 @@ describe('useExternalFileDropImport', () => {
         targetPath: AbsPath.from('/project/game/scene/hero.png'),
       }],
     })
-    const { rendered } = renderComposable()
+    const { rendered } = await renderComposable()
 
     drop(['/downloads/hero.png'])
     await vi.waitFor(() => expect(importExternalFilesMock).toHaveBeenCalledOnce())
@@ -194,7 +194,7 @@ describe('useExternalFileDropImport', () => {
         targetPath: AbsPath.from('/project/game/scene/hero (1).png'),
       }],
     })
-    const { rendered } = renderComposable()
+    const { rendered } = await renderComposable()
 
     drop(['/downloads/hero.png'])
     await vi.waitFor(() => expect(importExternalFilesMock).toHaveBeenCalledOnce())
@@ -212,7 +212,7 @@ describe('useExternalFileDropImport', () => {
         targetPath: AbsPath.from('/project/game/scene/hero (1).png'),
       }],
     })
-    const { rendered } = renderComposable()
+    const { rendered } = await renderComposable()
 
     drop(['/downloads/broken.png', '/downloads/hero.png'])
 
@@ -234,7 +234,7 @@ describe('useExternalFileDropImport', () => {
       ],
       successes: [],
     })
-    const { rendered } = renderComposable()
+    const { rendered } = await renderComposable()
 
     drop(['/downloads/a.png', '/downloads/b.png', '/downloads/c.png', '/downloads/d.png'])
 
@@ -252,7 +252,7 @@ describe('useExternalFileDropImport', () => {
         finishImport = resolve
       }))
       .mockResolvedValue({ failures: [], successes: [] })
-    const { rendered } = renderComposable()
+    const { rendered } = await renderComposable()
 
     drop(['/downloads/first.png'])
     await vi.waitFor(() => expect(importExternalFilesMock).toHaveBeenCalledOnce())

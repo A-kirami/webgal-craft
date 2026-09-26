@@ -48,7 +48,7 @@ function createDialogScrollContentStub() {
 
 describe('StatementAnimationSubDialog', () => {
   it('在弹窗头部复用共享的动画说明文案', async () => {
-    renderInBrowser(StatementAnimationSubDialog, {
+    await renderInBrowser(StatementAnimationSubDialog, {
       browser: {
         i18nMode: 'localized',
       },
@@ -77,7 +77,7 @@ describe('StatementAnimationSubDialog', () => {
   it('打开时不会阻止对话框内容接管键盘焦点', async () => {
     const { state, stub } = createDialogScrollContentStub()
 
-    renderInBrowser(StatementAnimationSubDialog, {
+    await renderInBrowser(StatementAnimationSubDialog, {
       browser: {
         i18nMode: 'localized',
       },

@@ -171,7 +171,7 @@ describe('StatementEditorInline', () => {
       statementType: 'say',
     }))
 
-    renderInBrowser(StatementEditorInline, {
+    await renderInBrowser(StatementEditorInline, {
       props: {
         entry: createStatementEntry(21, 'Alice:hello'),
       },
@@ -208,7 +208,7 @@ describe('StatementEditorInline', () => {
       },
     }))
 
-    renderInBrowser(StatementEditorInline, {
+    await renderInBrowser(StatementEditorInline, {
       props: {
         entry: createStatementEntry(22, 'changeBg:bg.jpg'),
         onOpenAnimationEditor,

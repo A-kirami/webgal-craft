@@ -50,7 +50,7 @@ describe('EditorToolbar', () => {
     usePreferenceStoreMock.mockReturnValue(preferenceStore)
     useEditorStoreMock.mockReturnValue(editorStore)
 
-    renderInBrowser(EditorToolbar, {
+    await renderInBrowser(EditorToolbar, {
       global: {},
     })
 
@@ -77,7 +77,7 @@ describe('EditorToolbar', () => {
     usePreferenceStoreMock.mockReturnValue(preferenceStore)
     useEditorStoreMock.mockReturnValue(editorStore)
 
-    renderInBrowser(EditorToolbar, {
+    await renderInBrowser(EditorToolbar, {
       global: {},
     })
 
@@ -104,7 +104,7 @@ describe('EditorToolbar', () => {
     usePreferenceStoreMock.mockReturnValue(preferenceStore)
     useEditorStoreMock.mockReturnValue(editorStore)
 
-    renderInBrowser(EditorToolbar, {
+    await renderInBrowser(EditorToolbar, {
       global: {},
     })
 

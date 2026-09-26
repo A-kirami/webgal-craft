@@ -192,14 +192,14 @@ const globalStubs = {
 
 const stubsWithRealDialog = withRealDialogStubs(globalStubs)
 
-function renderSwitchTemplateModal(options: { realDialog?: boolean } = {}) {
+async function renderSwitchTemplateModal(options: { realDialog?: boolean } = {}) {
   const game = createTestGame({
     id: 'game-1',
     engineId: 'engine-current',
     path: AbsPath.from('/games/demo'),
   })
 
-  renderInBrowser(SwitchTemplateModal, {
+  await renderInBrowser(SwitchTemplateModal, {
     props: {
       game,
       'open': true,
@@ -227,7 +227,7 @@ function createDeferred<T = void>() {
 }
 
 /** 用受控 open 渲染弹窗，用于验证关闭后未销毁又立即重开（实例复用）时的行为 */
-function renderReopenableModal() {
+async function renderReopenableModal() {
   const open = ref(true)
   const game = createTestGame({
     id: 'game-1',
@@ -248,7 +248,7 @@ function renderReopenableModal() {
     },
   })
 
-  renderInBrowser(Host, {
+  await renderInBrowser(Host, {
     global: {
       mocks: {
         $t: translate,
@@ -299,7 +299,7 @@ describe('SwitchTemplateModal', () => {
       template: { kind: 'standalone', name: 'Current' },
     })
 
-    renderSwitchTemplateModal()
+    await renderSwitchTemplateModal()
 
     await expect.element(page.getByRole('button', { name: '确认', exact: true })).toBeDisabled()
 
@@ -315,7 +315,7 @@ describe('SwitchTemplateModal', () => {
       template: { kind: 'engineBuiltin', engine: { id: 'open-webgal.webgal', version: '4.5.0' } },
     })
 
-    renderSwitchTemplateModal()
+    await renderSwitchTemplateModal()
 
     await expect.element(page.getByRole('button', { name: '确认', exact: true })).toBeDisabled()
 
@@ -328,7 +328,7 @@ describe('SwitchTemplateModal', () => {
   it('工程配置读取失败时确认按钮保持禁用', async () => {
     readProjectConfigMock.mockRejectedValue(new Error('read failed'))
 
-    renderSwitchTemplateModal()
+    await renderSwitchTemplateModal()
 
     await page.getByTestId('select-other-template').click()
 
@@ -345,7 +345,7 @@ describe('SwitchTemplateModal', () => {
       })
       .mockReturnValueOnce(reopening.promise)
 
-    const open = renderReopenableModal()
+    const open = await renderReopenableModal()
 
     await page.getByTestId('select-other-template').click()
     await expect.element(page.getByRole('button', { name: '确认', exact: true })).toBeEnabled()
@@ -364,7 +364,7 @@ describe('SwitchTemplateModal', () => {
       .mockReturnValueOnce(firstRead.promise)
       .mockRejectedValueOnce(new Error('read failed'))
 
-    const open = renderReopenableModal()
+    const open = await renderReopenableModal()
 
     await vi.waitFor(() => {
       expect(readProjectConfigMock).toHaveBeenCalledTimes(1)
@@ -390,7 +390,7 @@ describe('SwitchTemplateModal', () => {
   })
 
   it('点击重置入口时先展示影响范围确认，不会立即清理模板', async () => {
-    renderSwitchTemplateModal()
+    await renderSwitchTemplateModal()
 
     await expect.element(page.getByRole('button', { name: '重置模板' })).toBeEnabled()
     await expect.element(page.getByRole('button', { name: '确认重置' })).not.toBeInTheDocument()
@@ -406,13 +406,13 @@ describe('SwitchTemplateModal', () => {
   it('模板没有覆盖内容时隐藏重置入口', async () => {
     isTemplateDirtyMock.mockResolvedValue(false)
 
-    renderSwitchTemplateModal()
+    await renderSwitchTemplateModal()
 
     await expect.element(page.getByRole('button', { name: '重置模板' })).not.toBeInTheDocument()
   })
 
   it('确认重置后清理当前模板并隐藏入口', async () => {
-    const game = renderSwitchTemplateModal()
+    const game = await renderSwitchTemplateModal()
 
     await expect.element(page.getByRole('button', { name: '重置模板' })).toBeEnabled()
     await page.getByRole('button', { name: '重置模板' }).click()
@@ -427,7 +427,7 @@ describe('SwitchTemplateModal', () => {
   it('重置失败时通过错误处理器反馈失败原因', async () => {
     resetTemplateMock.mockRejectedValueOnce(new Error('reset failed'))
 
-    renderSwitchTemplateModal()
+    await renderSwitchTemplateModal()
 
     await expect.element(page.getByRole('button', { name: '重置模板' })).toBeEnabled()
     await page.getByRole('button', { name: '重置模板' }).click()
@@ -446,7 +446,7 @@ describe('SwitchTemplateModal', () => {
     const switching = createDeferred()
     switchTemplateMock.mockImplementation(() => switching.promise)
 
-    renderSwitchTemplateModal({ realDialog: true })
+    await renderSwitchTemplateModal({ realDialog: true })
 
     await page.getByTestId('select-other-template').click()
     await page.getByRole('button', { name: '确认', exact: true }).click()

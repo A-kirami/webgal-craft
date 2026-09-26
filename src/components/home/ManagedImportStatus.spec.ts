@@ -24,7 +24,7 @@ const globalStubs = {
 
 describe('ManagedImportStatus', () => {
   it('官方安装尚未收到进度时显示正在下载', async () => {
-    renderInBrowser(ManagedImportStatus, {
+    await renderInBrowser(ManagedImportStatus, {
       props: {
         activity: {
           kind: 'official-engine-install',
@@ -48,7 +48,7 @@ describe('ManagedImportStatus', () => {
   })
 
   it('官方引擎下载时展示安装标题和下载大小', async () => {
-    renderInBrowser(ManagedImportStatus, {
+    await renderInBrowser(ManagedImportStatus, {
       props: {
         activity: {
           kind: 'official-engine-install',
@@ -81,7 +81,7 @@ describe('ManagedImportStatus', () => {
   })
 
   it('官方引擎解压时展示文件数和当前文件', async () => {
-    renderInBrowser(ManagedImportStatus, {
+    await renderInBrowser(ManagedImportStatus, {
       props: {
         activity: {
           kind: 'official-engine-install',
@@ -113,7 +113,7 @@ describe('ManagedImportStatus', () => {
   })
 
   it('普通导入仍展示资源类型和复制详情', async () => {
-    renderInBrowser(ManagedImportStatus, {
+    await renderInBrowser(ManagedImportStatus, {
       props: {
         canCancel: false,
         resourceKind: 'engine',

@@ -36,7 +36,7 @@ const { expectNoConsoleMessage } = createBrowserConsoleMonitor()
 
 describe('EffectDraftForm', () => {
   it('按字段元数据显示单位并转换原始数值', async () => {
-    renderInBrowser(EffectDraftForm, {
+    await renderInBrowser(EffectDraftForm, {
       props: {
         duration: '200',
         ease: '',
@@ -67,7 +67,7 @@ describe('EffectDraftForm', () => {
   })
 
   it('为联动滑条的 X/Y 数字输入提供唯一的可访问名称', async () => {
-    renderInBrowser(EffectDraftForm, {
+    await renderInBrowser(EffectDraftForm, {
       props: {
         duration: '200',
         ease: '',
@@ -92,7 +92,7 @@ describe('EffectDraftForm', () => {
   it('在旋转控件旁提供水平和垂直翻转按钮', async () => {
     const transformUpdates = vi.fn()
 
-    renderInBrowser(EffectDraftForm, {
+    await renderInBrowser(EffectDraftForm, {
       props: {
         'duration': '200',
         'ease': '',
@@ -142,7 +142,7 @@ describe('EffectDraftForm', () => {
   })
 
   it('渲染顶部控件并按分类输出特效参数区域', async () => {
-    renderInBrowser(EffectDraftForm, {
+    await renderInBrowser(EffectDraftForm, {
       props: {
         duration: '300',
         ease: '',
@@ -166,7 +166,7 @@ describe('EffectDraftForm', () => {
   it('显示基线字段后修改其他字段不会把基线写入变换', async () => {
     const transformUpdates = vi.fn()
 
-    renderInBrowser(EffectDraftForm, {
+    await renderInBrowser(EffectDraftForm, {
       props: {
         'baselineTransform': {
           position: { x: 1000, y: 20 },
@@ -197,7 +197,7 @@ describe('EffectDraftForm', () => {
   })
 
   it('基线或浮层预览展示值不会启用清除按钮', async () => {
-    renderInBrowser(EffectDraftForm, {
+    await renderInBrowser(EffectDraftForm, {
       props: {
         baselineTransform: {
           position: { x: 1000 },
@@ -222,7 +222,7 @@ describe('EffectDraftForm', () => {
   it('显示浮层预览字段后修改其他字段不会把预览值写入变换', async () => {
     const transformUpdates = vi.fn()
 
-    renderInBrowser(EffectDraftForm, {
+    await renderInBrowser(EffectDraftForm, {
       props: {
         'duration': '300',
         'ease': '',
@@ -253,12 +253,12 @@ describe('EffectDraftForm', () => {
     })
   })
 
-  it('开启滚轮选择后，缓动选择器聚焦时滚轮切换到下一个选项', () => {
+  it('开启滚轮选择后，缓动选择器聚焦时滚轮切换到下一个选项', async () => {
     const pinia = createPinia()
     useEditSettingsStore(pinia).enableWheelSelect = true
     const easeUpdates = vi.fn()
 
-    renderInBrowser(EffectDraftForm, {
+    await renderInBrowser(EffectDraftForm, {
       props: {
         'duration': '200',
         'ease': '',

@@ -51,7 +51,7 @@ const globalStubs = {
 
 describe('StatementCommandFieldsSection', () => {
   it('顶部效果按钮受 showEffectEditorButton 控制', async () => {
-    renderInBrowser(StatementCommandFieldsSection, {
+    await renderInBrowser(StatementCommandFieldsSection, {
       props: {
         surface: 'inline',
         statementType: 'command',
@@ -75,7 +75,7 @@ describe('StatementCommandFieldsSection', () => {
   })
 
   it('顶部效果按钮在 showEffectEditorButton 为 true 时显示', async () => {
-    renderInBrowser(StatementCommandFieldsSection, {
+    await renderInBrowser(StatementCommandFieldsSection, {
       props: {
         surface: 'inline',
         statementType: 'command',

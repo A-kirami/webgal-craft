@@ -178,7 +178,7 @@ describe('StatementGroupModal', () => {
   })
 
   it('在语句组弹窗中接入动画编辑器子对话框提供器', async () => {
-    renderInBrowser(StatementGroupModal, {
+    await renderInBrowser(StatementGroupModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -202,7 +202,7 @@ describe('StatementGroupModal', () => {
   })
 
   it('在侧栏顶部按文本、可视化顺序显示编辑模式标签', async () => {
-    renderInBrowser(StatementGroupModal, {
+    await renderInBrowser(StatementGroupModal, {
       browser: {
         i18nMode: 'localized',
       },
@@ -232,7 +232,7 @@ describe('StatementGroupModal', () => {
       currentState: { projection: 'text' },
     })
 
-    renderInBrowser(StatementGroupModal, {
+    await renderInBrowser(StatementGroupModal, {
       browser: {
         i18nMode: 'lite',
       },

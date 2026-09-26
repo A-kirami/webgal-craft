@@ -44,6 +44,8 @@ export default {
       },
     ],
     'at-rule-no-deprecated': null,
+    // @apply 的 prelude 是 UnoCSS 工具类而非 CSS 语法，stylelint 17.15 起会逐条判为无效
+    'at-rule-prelude-no-invalid': null,
     '@stylistic/max-line-length': null,
     'plugin/declaration-block-no-ignored-properties': true,
     'no-invalid-position-declaration': null,

@@ -89,8 +89,8 @@ const globalStubs = {
   AlertDialogTitle: createBrowserContainerStub('StubAlertDialogTitle', 'h2'),
 }
 
-function renderDeleteEngineGroupModal(updateOpen = vi.fn()) {
-  renderInBrowser(DeleteEngineGroupModal, {
+async function renderDeleteEngineGroupModal(updateOpen = vi.fn()) {
+  await renderInBrowser(DeleteEngineGroupModal, {
     props: {
       'engineId': 'WebGAL',
       'groupName': 'WebGAL',
@@ -130,7 +130,7 @@ describe('DeleteEngineGroupModal', () => {
       reason: 'ENGINE_HAS_ASSOCIATED_GAMES',
     })
 
-    renderDeleteEngineGroupModal()
+    await renderDeleteEngineGroupModal()
 
     await expect.element(page.getByText('无法删除')).toBeInTheDocument()
     await expect.element(page.getByText('以下游戏正在使用此引擎：')).toBeInTheDocument()
@@ -150,7 +150,7 @@ describe('DeleteEngineGroupModal', () => {
       ],
     })
 
-    renderDeleteEngineGroupModal()
+    await renderDeleteEngineGroupModal()
 
     await expect.element(page.getByText('无法删除')).toBeInTheDocument()
     await expect.element(page.getByText('以下游戏的配置无法读取，无法确认是否正在使用此引擎：')).toBeInTheDocument()
@@ -159,7 +159,7 @@ describe('DeleteEngineGroupModal', () => {
   })
 
   it('可删除时确认会执行整组卸载并关闭模态框', async () => {
-    const { updateOpen } = renderDeleteEngineGroupModal()
+    const { updateOpen } = await renderDeleteEngineGroupModal()
 
     await page.getByRole('button', { name: '确认' }).click()
 

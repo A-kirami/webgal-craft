@@ -79,7 +79,7 @@ describe('EngineVersionPopover', () => {
   it('将已安装和可下载版本合并为降序列表，并为缓存版本提供发布页入口', async () => {
     const onDownloadVersion = vi.fn()
     const onOpenVersionRelease = vi.fn()
-    renderInBrowser(EngineVersionPopover, {
+    await renderInBrowser(EngineVersionPopover, {
       props: {
         group: createGroup(),
         onDownloadVersion,
@@ -122,7 +122,7 @@ describe('EngineVersionPopover', () => {
     const group = createGroup()
     group.remote = { ...group.remote!, status: 'error' }
 
-    renderInBrowser(EngineVersionPopover, {
+    await renderInBrowser(EngineVersionPopover, {
       props: {
         group,
         onDownloadVersion: vi.fn(),

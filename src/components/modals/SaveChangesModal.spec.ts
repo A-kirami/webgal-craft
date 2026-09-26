@@ -10,7 +10,7 @@ describe('SaveChangesModal', () => {
     const onSave = vi.fn(async () => undefined)
     const updateOpen = vi.fn()
 
-    renderInBrowser(SaveChangesModal, {
+    await renderInBrowser(SaveChangesModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -36,7 +36,7 @@ describe('SaveChangesModal', () => {
     const onDontSave = vi.fn(async () => undefined)
     const updateOpen = vi.fn()
 
-    renderInBrowser(SaveChangesModal, {
+    await renderInBrowser(SaveChangesModal, {
       browser: {
         i18nMode: 'lite',
       },

@@ -26,7 +26,7 @@ describe('ExternalDocumentDiffEditor', () => {
       runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
     }))
 
-    renderInBrowser(TestHarness, {
+    await renderInBrowser(TestHarness, {
       browser: { i18nMode: 'lite' },
     })
 
@@ -37,7 +37,7 @@ describe('ExternalDocumentDiffEditor', () => {
   it('采用左侧差异块后应用更新后的合并结果', async () => {
     const onApply = vi.fn()
 
-    renderInBrowser(ExternalDocumentDiffEditor, {
+    await renderInBrowser(ExternalDocumentDiffEditor, {
       browser: {
         i18nMode: 'lite',
       },
@@ -66,7 +66,7 @@ describe('ExternalDocumentDiffEditor', () => {
   it('保留右侧差异块时继续导航且不修改合并结果', async () => {
     const onApply = vi.fn()
 
-    renderInBrowser(ExternalDocumentDiffEditor, {
+    await renderInBrowser(ExternalDocumentDiffEditor, {
       browser: {
         i18nMode: 'lite',
         messages: {
@@ -99,7 +99,7 @@ describe('ExternalDocumentDiffEditor', () => {
   })
 
   it('采用当前差异块后继续审阅最近的剩余差异块', async () => {
-    renderInBrowser(ExternalDocumentDiffEditor, {
+    await renderInBrowser(ExternalDocumentDiffEditor, {
       browser: {
         i18nMode: 'lite',
         messages: {
@@ -149,7 +149,7 @@ describe('ExternalDocumentDiffEditor', () => {
       onApply,
     }))
 
-    renderInBrowser(TestHarness, {
+    await renderInBrowser(TestHarness, {
       browser: {
         i18nMode: 'lite',
         messages: {
@@ -187,7 +187,7 @@ describe('ExternalDocumentDiffEditor', () => {
   })
 
   it('纯空白变化也会作为差异块展示', async () => {
-    renderInBrowser(ExternalDocumentDiffEditor, {
+    await renderInBrowser(ExternalDocumentDiffEditor, {
       browser: {
         i18nMode: 'lite',
       },

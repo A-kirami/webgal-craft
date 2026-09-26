@@ -128,7 +128,7 @@ describe('TitleImgPicker', () => {
   it('会把当前封面图渲染为预览卡片，并把文件夹约束传给 FilePicker', async () => {
     filePickerRenderSpy.mockReset()
 
-    renderInBrowser(TitleImgPickerHarness, {
+    await renderInBrowser(TitleImgPickerHarness, {
       props: {
         initialValue: 'cover.webp',
       },
@@ -152,7 +152,7 @@ describe('TitleImgPicker', () => {
   })
 
   it('空值时会显示空态文案', async () => {
-    renderInBrowser(TitleImgPickerHarness, {
+    await renderInBrowser(TitleImgPickerHarness, {
       browser: {
         i18nMode: 'lite',
       },
@@ -166,7 +166,7 @@ describe('TitleImgPicker', () => {
   })
 
   it('选中新图片后会更新 v-model', async () => {
-    renderInBrowser(TitleImgPickerHarness, {
+    await renderInBrowser(TitleImgPickerHarness, {
       props: {
         initialValue: 'cover.webp',
       },

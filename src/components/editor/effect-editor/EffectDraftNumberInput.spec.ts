@@ -40,7 +40,7 @@ describe('EffectDraftNumberInput', () => {
   it('未编辑时失焦或按下 Enter 不会提交展示值', async () => {
     const commit = vi.fn()
 
-    renderInBrowser(EffectDraftNumberInput, {
+    await renderInBrowser(EffectDraftNumberInput, {
       props: {
         'aria-label': 'Alpha',
         'modelValue': '1',
@@ -65,7 +65,7 @@ describe('EffectDraftNumberInput', () => {
   it('按下 Enter 只提交一次当前草稿', async () => {
     const commit = vi.fn()
 
-    renderInBrowser(EffectDraftNumberInput, {
+    await renderInBrowser(EffectDraftNumberInput, {
       props: {
         'aria-label': 'Alpha',
         'modelValue': '1.2',
@@ -90,7 +90,7 @@ describe('EffectDraftNumberInput', () => {
   })
 
   it('编辑时保留浮点中间文本，失焦后同步归一化值', async () => {
-    renderInBrowser(ControlledInput)
+    await renderInBrowser(ControlledInput)
 
     const input = page.getByRole('textbox', { name: 'Alpha' })
 
@@ -134,7 +134,7 @@ describe('EffectDraftNumberInput', () => {
   })
 
   it('编辑期间的外部更新会接管草稿且不会被失焦覆盖', async () => {
-    renderInBrowser(ControlledInput)
+    await renderInBrowser(ControlledInput)
 
     const input = page.getByRole('textbox', { name: 'Alpha' })
     const inputElement = await input.element() as HTMLInputElement

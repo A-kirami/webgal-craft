@@ -11,7 +11,7 @@ describe('PathOperationRewriteModal', () => {
     const onDefault = vi.fn(async () => undefined)
     const updateOpen = vi.fn()
 
-    renderInBrowser(PathOperationRewriteModal, {
+    await renderInBrowser(PathOperationRewriteModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -69,7 +69,7 @@ describe('PathOperationRewriteModal', () => {
       },
     })
 
-    const result = renderInBrowser(ErrorBoundary, {
+    const result = await renderInBrowser(ErrorBoundary, {
       browser: {
         i18nMode: 'lite',
       },
@@ -97,7 +97,7 @@ describe('PathOperationRewriteModal', () => {
     const onDanger = vi.fn(async () => undefined)
     const updateOpen = vi.fn()
 
-    renderInBrowser(PathOperationRewriteModal, {
+    await renderInBrowser(PathOperationRewriteModal, {
       browser: {
         i18nMode: 'lite',
       },
@@ -125,7 +125,7 @@ describe('PathOperationRewriteModal', () => {
     const onDanger = vi.fn(async () => true)
     const updateOpen = vi.fn()
 
-    renderInBrowser(PathOperationRewriteModal, {
+    await renderInBrowser(PathOperationRewriteModal, {
       browser: {
         i18nMode: 'lite',
       },

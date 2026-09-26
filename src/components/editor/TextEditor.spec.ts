@@ -208,8 +208,8 @@ function createTextEditorLiteI18n(locale = 'zh-Hans') {
   })
 }
 
-function renderTextEditor(state: TextProjectionState, i18n = createTextEditorLiteI18n()) {
-  return renderInBrowser(TextEditor, {
+async function renderTextEditor(state: TextProjectionState, i18n = createTextEditorLiteI18n()) {
+  return await renderInBrowser(TextEditor, {
     props: {
       state,
     },
@@ -337,7 +337,7 @@ describe('TextEditor', () => {
 
   it('激活的文本投影挂载时会创建 Monaco 编辑器', async () => {
     const { state } = createHarness()
-    const result = renderTextEditor(state)
+    const result = await renderTextEditor(state)
 
     await nextTick()
 
@@ -374,7 +374,7 @@ describe('TextEditor', () => {
     const { state } = createHarness()
     state.runtimeCapabilities = { figurePositions: false, multilineStatements: false, opusVocalShorthand: false, sceneSemantics: false }
 
-    renderTextEditor(state)
+    await renderTextEditor(state)
     await nextTick()
 
     expect(updateEditorDiagnosticsMock).toHaveBeenCalledWith(
@@ -387,7 +387,7 @@ describe('TextEditor', () => {
     const { state } = createHarness('/project/animation.json')
     state.kind = 'animation'
 
-    const result = renderTextEditor(state)
+    const result = await renderTextEditor(state)
     await nextTick()
 
     expect(monacoMockState.create).toHaveBeenCalledWith(
@@ -412,7 +412,7 @@ describe('TextEditor', () => {
       path: AbsPath.from('/project/other.txt'),
     }
 
-    renderTextEditor(state)
+    await renderTextEditor(state)
 
     await nextTick()
     expect(monacoMockState.create).not.toHaveBeenCalled()
@@ -432,7 +432,7 @@ describe('TextEditor', () => {
   it('编辑器设置变化后会把最新选项同步给现有 Monaco 实例', async () => {
     const { editSettingsStore, state } = createHarness('/project/scene-3.txt')
 
-    renderTextEditor(state)
+    await renderTextEditor(state)
 
     await nextTick()
 
@@ -455,7 +455,7 @@ describe('TextEditor', () => {
   it('卸载时会先通知 runtime，再释放 Monaco 实例', async () => {
     const { state } = createHarness('/project/scene-4.txt')
 
-    const result = renderTextEditor(state)
+    const result = await renderTextEditor(state)
 
     await nextTick()
     await result.unmount()
@@ -497,7 +497,7 @@ describe('TextEditor', () => {
     })
 
     const { state } = createHarness()
-    const result = renderTextEditor(state)
+    const result = await renderTextEditor(state)
     await nextTick()
 
     const [, config] = registerDroppable.mock.calls[0]
@@ -536,7 +536,7 @@ describe('TextEditor', () => {
     runtimeReturnValue.handleFileDrop.mockReturnValue(true)
 
     const { state } = createHarness('/project/scene-drop-focus.txt')
-    renderTextEditor(state)
+    await renderTextEditor(state)
     await nextTick()
 
     const [, config] = registerDroppable.mock.calls[0]
@@ -583,7 +583,7 @@ describe('TextEditor', () => {
     })
 
     const { state } = createHarness('/project/scene-command-drop.txt')
-    renderTextEditor(state)
+    await renderTextEditor(state)
     await nextTick()
 
     const [, config] = registerDroppable.mock.calls[0]
@@ -624,7 +624,7 @@ describe('TextEditor', () => {
     state.kind = 'animation'
     state.textContent = '{}'
 
-    renderTextEditor(state)
+    await renderTextEditor(state)
     await nextTick()
 
     const config = registerDroppable.mock.calls[0]?.[1]
@@ -640,7 +640,7 @@ describe('TextEditor', () => {
     const { state } = createHarness('/project/effect.anim')
     state.kind = 'animation'
 
-    renderTextEditor(state)
+    await renderTextEditor(state)
 
     await nextTick()
 
@@ -656,7 +656,7 @@ describe('TextEditor', () => {
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(lines))
     monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 1 })
 
-    renderTextEditor(state)
+    await renderTextEditor(state)
 
     await nextTick()
 
@@ -686,7 +686,7 @@ describe('TextEditor', () => {
     const model = createMonacoModel(['changeBg:missing.png;'])
     monacoMockState.editorInstance.getModel.mockReturnValue(model)
 
-    renderTextEditor(state)
+    await renderTextEditor(state)
     await nextTick()
     updateEditorDiagnosticsMock.mockClear()
 
@@ -701,7 +701,7 @@ describe('TextEditor', () => {
     const model = createMonacoModel(['changeFigure:hero.json;'])
     monacoMockState.editorInstance.getModel.mockReturnValue(model)
 
-    renderTextEditor(state)
+    await renderTextEditor(state)
     await nextTick()
     updateEditorDiagnosticsMock.mockClear()
 
@@ -716,7 +716,7 @@ describe('TextEditor', () => {
     const model = createMonacoModel(['changeFigure:hero.json;', '  -id=hero;'])
     monacoMockState.editorInstance.getModel.mockReturnValue(model)
 
-    const result = renderTextEditor(state)
+    const result = await renderTextEditor(state)
     await nextTick()
     updateEditorDiagnosticsMock.mockClear()
 
@@ -740,7 +740,7 @@ describe('TextEditor', () => {
     monacoMockState.editorInstance.getModel.mockReturnValue(model)
     const i18n = createTextEditorLiteI18n()
 
-    renderTextEditor(state, i18n)
+    await renderTextEditor(state, i18n)
     await nextTick()
     updateEditorDiagnosticsMock.mockClear()
 
@@ -757,7 +757,7 @@ describe('TextEditor', () => {
     const model = createMonacoModel(['label:start;'])
     monacoMockState.editorInstance.getModel.mockReturnValue(model)
 
-    const result = renderTextEditor(state)
+    const result = await renderTextEditor(state)
     await nextTick()
     updateEditorDiagnosticsMock.mockClear()
 
@@ -779,7 +779,7 @@ describe('TextEditor', () => {
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(lines))
     monacoMockState.editorInstance.getPosition.mockImplementation(() => currentPosition)
 
-    renderTextEditor(state)
+    await renderTextEditor(state)
 
     await nextTick()
     const decorations = readPlayToLineDecorations()
@@ -820,7 +820,7 @@ describe('TextEditor', () => {
     ]))
     monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 2 })
 
-    renderTextEditor(state)
+    await renderTextEditor(state)
     await nextTick()
 
     const decorations = readStatementHighlightDecorations()
@@ -841,7 +841,7 @@ describe('TextEditor', () => {
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(['say:hello']))
     monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 1 })
 
-    renderTextEditor(state)
+    await renderTextEditor(state)
 
     await nextTick()
 
@@ -869,7 +869,7 @@ describe('TextEditor', () => {
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(['say:hello']))
     monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 1 })
 
-    renderTextEditor(state)
+    await renderTextEditor(state)
 
     await nextTick()
 
@@ -899,7 +899,7 @@ describe('TextEditor', () => {
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel(['say:hello']))
     monacoMockState.editorInstance.getPosition.mockReturnValue({ lineNumber: 1 })
 
-    renderTextEditor(state)
+    await renderTextEditor(state)
 
     await nextTick()
 

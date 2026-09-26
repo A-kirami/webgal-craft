@@ -710,7 +710,7 @@ describe('AssetView', () => {
   })
 
   it('会向 FileViewer 传递图片预览上下文', async () => {
-    renderInBrowser(createHarness(), {
+    await renderInBrowser(createHarness(), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -726,7 +726,7 @@ describe('AssetView', () => {
   it('会把外部拖拽目标传给资源浏览器', async () => {
     externalDropTargetPath.value = '/games/demo/game/background/shared'
 
-    renderInBrowser(createHarness(), {
+    await renderInBrowser(createHarness(), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -774,7 +774,7 @@ describe('AssetView', () => {
       }),
     ])
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -806,7 +806,7 @@ describe('AssetView', () => {
       }),
     ])
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -838,7 +838,7 @@ describe('AssetView', () => {
       }),
     ])
 
-    renderInBrowser(createHarness('template'), {
+    await renderInBrowser(createHarness('template'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -886,7 +886,7 @@ describe('AssetView', () => {
       }),
     ])
 
-    renderInBrowser(createHarness('animation'), {
+    await renderInBrowser(createHarness('animation'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -921,7 +921,7 @@ describe('AssetView', () => {
     ])
     setPreviewUnavailable()
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -961,7 +961,7 @@ describe('AssetView', () => {
     }))
     setPreviewUnavailable()
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1016,7 +1016,7 @@ describe('AssetView', () => {
     }))
     setPreviewUnavailable()
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1061,7 +1061,7 @@ describe('AssetView', () => {
     }))
     setPreviewUnavailable()
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1099,7 +1099,7 @@ describe('AssetView', () => {
       assetZoom: [100],
     }))
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1133,7 +1133,7 @@ describe('AssetView', () => {
     }))
     setPreviewUnavailable()
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1171,7 +1171,7 @@ describe('AssetView', () => {
         },
       ])
 
-    renderInBrowser(createHarness(), {
+    await renderInBrowser(createHarness(), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1213,7 +1213,7 @@ describe('AssetView', () => {
         },
       ])
 
-    renderInBrowser(createHarness(), {
+    await renderInBrowser(createHarness(), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1245,7 +1245,7 @@ describe('AssetView', () => {
   it('父目录删除事件也会触发当前子目录刷新', async () => {
     vi.useFakeTimers()
 
-    renderInBrowser(createHarness('bg', { currentPath: 'chapter-1' }), {
+    await renderInBrowser(createHarness('bg', { currentPath: 'chapter-1' }), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1273,7 +1273,7 @@ describe('AssetView', () => {
   it('父目录重命名事件也会触发当前子目录刷新', async () => {
     vi.useFakeTimers()
 
-    renderInBrowser(createHarness('bg', { currentPath: 'chapter-1' }), {
+    await renderInBrowser(createHarness('bg', { currentPath: 'chapter-1' }), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1302,7 +1302,7 @@ describe('AssetView', () => {
   it('归一化后逃出当前目录的事件不会触发刷新', async () => {
     vi.useFakeTimers()
 
-    renderInBrowser(createHarness('bg', { currentPath: 'chapter-1' }), {
+    await renderInBrowser(createHarness('bg', { currentPath: 'chapter-1' }), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1348,7 +1348,7 @@ describe('AssetView', () => {
         },
       ])
 
-    renderInBrowser(createHarness(), {
+    await renderInBrowser(createHarness(), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1394,7 +1394,7 @@ describe('AssetView', () => {
       .mockReturnValueOnce(secondLoad)
       .mockReturnValueOnce(thirdLoad)
 
-    renderInBrowser(createCreateFolderAndChangePathHarness(), {
+    await renderInBrowser(createCreateFolderAndChangePathHarness(), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1424,7 +1424,7 @@ describe('AssetView', () => {
   })
 
   it('会为文件视图空白区提供当前目录右键菜单', async () => {
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1441,7 +1441,7 @@ describe('AssetView', () => {
   it('资源根目录不存在时会禁用根目录菜单的打开文件夹操作', async () => {
     existsMock.mockResolvedValue(false)
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1460,7 +1460,7 @@ describe('AssetView', () => {
   it('会把 FileViewer 的 move drop 交给 pathOperation 执行', async () => {
     mockDragTransferFolderContents()
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1487,7 +1487,7 @@ describe('AssetView', () => {
   it('会把 FileViewer 的 copy drop 交给 gameFs.copyFile 执行', async () => {
     mockDragTransferFolderContents()
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1505,7 +1505,7 @@ describe('AssetView', () => {
   })
 
   it('仅 animation 和 template 目录的右键菜单会显示创建文件入口', async () => {
-    renderInBrowser(createHarness('animation'), {
+    await renderInBrowser(createHarness('animation'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1518,7 +1518,7 @@ describe('AssetView', () => {
 
     document.body.innerHTML = ''
 
-    renderInBrowser(createHarness('template'), {
+    await renderInBrowser(createHarness('template'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1531,7 +1531,7 @@ describe('AssetView', () => {
 
     document.body.innerHTML = ''
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1567,7 +1567,7 @@ describe('AssetView', () => {
     }))
     setPreviewUnavailable()
 
-    renderInBrowser(createHarness('animation'), {
+    await renderInBrowser(createHarness('animation'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1593,7 +1593,7 @@ describe('AssetView', () => {
   })
 
   it('template 空白区右键菜单新建文件时会使用 .scss 默认后缀', async () => {
-    renderInBrowser(createHarness('template'), {
+    await renderInBrowser(createHarness('template'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1631,7 +1631,7 @@ describe('AssetView', () => {
     }))
     setPreviewUnavailable()
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1669,7 +1669,7 @@ describe('AssetView', () => {
     }))
     setPreviewUnavailable()
 
-    renderInBrowser(createCreateFolderAndChangePathHarness('background'), {
+    await renderInBrowser(createCreateFolderAndChangePathHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1735,7 +1735,7 @@ describe('AssetView', () => {
     }))
     setPreviewUnavailable()
 
-    renderInBrowser(createHarness('background', { searchQuery: 'hero' }), {
+    await renderInBrowser(createHarness('background', { searchQuery: 'hero' }), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1852,7 +1852,7 @@ describe('AssetView', () => {
     }))
     setPreviewUnavailable()
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,
@@ -1888,7 +1888,7 @@ describe('AssetView', () => {
       },
     ])
 
-    renderInBrowser(createHarness('background'), {
+    await renderInBrowser(createHarness('background'), {
       global: {
         stubs: {
           ...commonGlobalStubs,

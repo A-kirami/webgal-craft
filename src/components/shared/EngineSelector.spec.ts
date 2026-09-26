@@ -46,7 +46,7 @@ const globalStubs = {
 }
 
 /** 用真实 EngineSelector 渲染一个受控 v-model 的宿主，返回宿主侧的选中引擎 */
-function renderSelectorHost(initialEngineId?: string) {
+async function renderSelectorHost(initialEngineId?: string) {
   const selectedEngineId = ref<string | undefined>(initialEngineId)
 
   const Host = defineComponent({
@@ -62,7 +62,7 @@ function renderSelectorHost(initialEngineId?: string) {
     },
   })
 
-  renderInBrowser(Host, {
+  await renderInBrowser(Host, {
     global: {
       mocks: {
         $t: translate,
@@ -129,7 +129,7 @@ describe('EngineSelector', () => {
 
     const updateModelValue = vi.fn()
 
-    renderInBrowser(EngineSelector, {
+    await renderInBrowser(EngineSelector, {
       props: {
         'modelValue': undefined,
         'preferredEngineId': 'open-webgal.webgal',
@@ -189,7 +189,7 @@ describe('EngineSelector', () => {
 
     const updateModelValue = vi.fn()
 
-    renderInBrowser(EngineSelector, {
+    await renderInBrowser(EngineSelector, {
       props: {
         'modelValue': undefined,
         'preferredEngineId': 'open-webgal.webgal',
@@ -212,7 +212,7 @@ describe('EngineSelector', () => {
     const groups = ref<EngineGroup[]>([])
     const loaded = ref(false)
     useEngineGroupsMock.mockReturnValue({ groups, loaded })
-    const selectedEngineId = renderSelectorHost()
+    const selectedEngineId = await renderSelectorHost()
 
     // 模拟 SwitchEngineModal：先解析出游戏当前使用的引擎，此时引擎列表仍未发帧
     selectedEngineId.value = 'engine-current'
@@ -241,7 +241,7 @@ describe('EngineSelector', () => {
     const groups = ref<EngineGroup[]>([])
     const loaded = ref(false)
     useEngineGroupsMock.mockReturnValue({ groups, loaded })
-    const selectedEngineId = renderSelectorHost('engine-current')
+    const selectedEngineId = await renderSelectorHost('engine-current')
 
     loaded.value = true
     await nextTick()

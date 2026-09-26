@@ -36,8 +36,8 @@ function createColorField(): EditorField {
 }
 
 /** 渲染面板下的真实颜色字段，并把容器收窄到指定宽度 */
-function renderColorField(width: number) {
-  const { container } = renderInBrowser(ParamRenderer, {
+async function renderColorField(width: number) {
+  const { container } = await renderInBrowser(ParamRenderer, {
     props: {
       canScrub: () => false,
       fields: [createColorField()],
@@ -86,15 +86,15 @@ function expectFieldsInsidePill(pill: HTMLElement) {
 }
 
 describe('ParamRenderer 颜色字段布局', () => {
-  it('面板宽度不足时换行到标签下方，字段不越出胶囊边框', () => {
-    const { label, pill } = renderColorField(NARROW_WIDTH)
+  it('面板宽度不足时换行到标签下方，字段不越出胶囊边框', async () => {
+    const { label, pill } = await renderColorField(NARROW_WIDTH)
 
     expect(box(pill).top).toBeGreaterThanOrEqual(box(label).bottom)
     expectFieldsInsidePill(pill)
   })
 
-  it('面板宽度充足时标签与胶囊保持同行', () => {
-    const { label, pill } = renderColorField(WIDE_WIDTH)
+  it('面板宽度充足时标签与胶囊保持同行', async () => {
+    const { label, pill } = await renderColorField(WIDE_WIDTH)
 
     const labelBox = box(label)
     const pillBox = box(pill)

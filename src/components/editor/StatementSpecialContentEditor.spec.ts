@@ -31,8 +31,8 @@ const missingChoiceDiagnostic: EditorFieldDiagnostic = {
 }
 
 describe('StatementSpecialContentEditor', () => {
-  it('panel 中 setVar 编辑器独占整行并让输入框占满宽度', () => {
-    renderInBrowser(StatementSpecialContentEditor, {
+  it('panel 中 setVar 编辑器独占整行并让输入框占满宽度', async () => {
+    await renderInBrowser(StatementSpecialContentEditor, {
       props: {
         surface: 'panel',
         mode: 'setVar',
@@ -64,7 +64,7 @@ describe('StatementSpecialContentEditor', () => {
   it.each(['inline', 'panel'] as const)('在 %s 分支行尾显示唯一的默认状态并发出对应索引', async (surface) => {
     const handleChooseDefault = vi.fn()
 
-    renderInBrowser(StatementSpecialContentEditor, {
+    await renderInBrowser(StatementSpecialContentEditor, {
       props: {
         surface,
         mode: 'choose',
@@ -98,8 +98,8 @@ describe('StatementSpecialContentEditor', () => {
     expect(handleChooseDefault).toHaveBeenNthCalledWith(2, 1)
   })
 
-  it.each(['inline', 'panel'] as const)('在 %s 中只标记诊断对应的 choose 文件控件', (surface) => {
-    renderInBrowser(StatementSpecialContentEditor, {
+  it.each(['inline', 'panel'] as const)('在 %s 中只标记诊断对应的 choose 文件控件', async (surface) => {
+    await renderInBrowser(StatementSpecialContentEditor, {
       props: {
         surface,
         mode: 'choose',

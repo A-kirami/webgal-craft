@@ -142,11 +142,11 @@ const globalStubs = {
   TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
 }
 
-function renderExportDialog(options: { exportSavePath?: string, localizedI18n?: boolean } = {}) {
+async function renderExportDialog(options: { exportSavePath?: string, localizedI18n?: boolean } = {}) {
   const pinia = createPinia()
   useStorageSettingsStore(pinia).exportSavePath = options.exportSavePath ?? '/exports'
 
-  renderInBrowser(ExportDialog, {
+  await renderInBrowser(ExportDialog, {
     props: {
       'game': createTestGame({
         engineId: 'engine-1',
@@ -198,7 +198,7 @@ describe('ExportDialog', () => {
   })
 
   it('展示所有导出平台且默认不选择任何平台', async () => {
-    renderExportDialog()
+    await renderExportDialog()
 
     await expect.element(page.getByRole('button', { name: /export\.platformWeb/ })).toHaveAttribute('aria-pressed', 'false')
     await expect.element(page.getByRole('button', { name: /export\.platformDesktop/ })).toHaveAttribute('aria-pressed', 'false')
@@ -208,7 +208,7 @@ describe('ExportDialog', () => {
   })
 
   it('选择平台后移除提示并允许进入下一步', async () => {
-    renderExportDialog()
+    await renderExportDialog()
 
     await expect.element(page.getByText('export.selectPlatformHint')).toBeInTheDocument()
     await expect.element(page.getByRole('button', { name: 'export.next' })).toBeDisabled()
@@ -219,7 +219,7 @@ describe('ExportDialog', () => {
   })
 
   it('平台类型只能选择一项', async () => {
-    renderExportDialog()
+    await renderExportDialog()
 
     const webPlatform = page.getByRole('button', { name: /export\.platformWeb/ })
     const desktopPlatform = page.getByRole('button', { name: /export\.platformDesktop/ })
@@ -232,7 +232,7 @@ describe('ExportDialog', () => {
   })
 
   it('Web 配置步骤可正常导航，并允许返回已到达步骤', async () => {
-    renderExportDialog()
+    await renderExportDialog()
 
     const configureStep = page.getByRole('button', { name: /export\.steps\.configure/ })
     const exportStep = page.getByRole('button', { name: /export\.steps\.export/ })
@@ -272,7 +272,7 @@ describe('ExportDialog', () => {
       })
       completeExport = () => resolve(AbsPath.from('/exports/Demo Game/web'))
     }))
-    renderExportDialog()
+    await renderExportDialog()
 
     await navigateToConfigureStep()
     const outputRootInput = await page.getByLabelText('export.outputDirectory').element() as HTMLInputElement
@@ -321,7 +321,7 @@ describe('ExportDialog', () => {
 
   it('没有默认目录且取消目录选择时不启动导出', async () => {
     openDialogMock.mockResolvedValue(undefined)
-    renderExportDialog({ exportSavePath: '' })
+    await renderExportDialog({ exportSavePath: '' })
     await navigateToConfigureStep()
 
     await expect.element(page.getByText('export.selectDirectoryHint')).toBeInTheDocument()
@@ -335,7 +335,7 @@ describe('ExportDialog', () => {
   })
 
   it('允许临时覆盖默认导出目录', async () => {
-    renderExportDialog()
+    await renderExportDialog()
     await navigateToConfigureStep()
 
     await page.getByRole('button', { name: 'export.browse' }).click()
@@ -359,7 +359,7 @@ describe('ExportDialog', () => {
 
   it('拒绝目录选择器返回的非绝对路径', async () => {
     openDialogMock.mockResolvedValue('relative/exports')
-    renderExportDialog({ exportSavePath: '' })
+    await renderExportDialog({ exportSavePath: '' })
     await navigateToConfigureStep()
 
     await page.getByRole('button', { name: 'export.browse' }).click()
@@ -373,7 +373,7 @@ describe('ExportDialog', () => {
     openDialogMock.mockImplementation(() => new Promise<undefined>((resolve) => {
       resolveSelection = resolve
     }))
-    renderExportDialog({ exportSavePath: '' })
+    await renderExportDialog({ exportSavePath: '' })
     await navigateToConfigureStep()
 
     const browseButton = await page.getByRole('button', { name: 'export.browse' }).element() as HTMLButtonElement
@@ -394,7 +394,7 @@ describe('ExportDialog', () => {
 
   it('导出失败时保留弹窗并提供重试入口', async () => {
     exportWebMock.mockRejectedValue(new Error('disk full'))
-    renderExportDialog()
+    await renderExportDialog()
     await navigateToExportStep()
 
     await page.getByRole('button', { name: 'export.start' }).click()
@@ -413,7 +413,7 @@ describe('ExportDialog', () => {
     exportWebMock
       .mockRejectedValueOnce(new AppError('TARGET_CONFLICT', 'target exists'))
       .mockResolvedValueOnce(AbsPath.from('/exports/Demo Game/web'))
-    renderExportDialog()
+    await renderExportDialog()
     await navigateToExportStep()
 
     await page.getByRole('button', { name: 'export.start' }).click()
@@ -439,7 +439,7 @@ describe('ExportDialog', () => {
       })
     })
     confirmExportOverwriteMock.mockResolvedValue(false)
-    renderExportDialog()
+    await renderExportDialog()
     await navigateToExportStep()
 
     const startButton = await page.getByRole('button', { name: 'export.start' }).element() as HTMLButtonElement
@@ -464,7 +464,7 @@ describe('ExportDialog', () => {
   it('取消覆盖后保留待导出状态且不显示错误 Toast', async () => {
     exportWebMock.mockRejectedValueOnce(new AppError('TARGET_CONFLICT', 'target exists'))
     confirmExportOverwriteMock.mockResolvedValue(false)
-    renderExportDialog()
+    await renderExportDialog()
     await navigateToExportStep()
 
     await page.getByRole('button', { name: 'export.start' }).click()
@@ -480,7 +480,7 @@ describe('ExportDialog', () => {
 
   it('Android 使用固定 Downloads 目标并提供打开文件和分享操作', async () => {
     isAndroidRuntimeMock.mockReturnValue(true)
-    renderExportDialog()
+    await renderExportDialog()
 
     await navigateToConfigureStep()
     const outputInput = await page.getByLabelText('export.outputDirectory').element() as HTMLInputElement
@@ -508,7 +508,7 @@ describe('ExportDialog', () => {
 
   it('Android 保持 Web 导出可选但禁用桌面端', async () => {
     isAndroidRuntimeMock.mockReturnValue(true)
-    renderExportDialog()
+    await renderExportDialog()
 
     await expect.element(page.getByRole('button', { name: /export\.platformWeb/ })).toBeEnabled()
     await expect.element(page.getByRole('button', { name: /export\.platformDesktop/ })).toBeDisabled()
@@ -516,7 +516,7 @@ describe('ExportDialog', () => {
   })
 
   it('桌面端为每个选中的目标独立下载运行时并导出', async () => {
-    renderExportDialog({ localizedI18n: true })
+    await renderExportDialog({ localizedI18n: true })
 
     await page.getByRole('button', { name: '桌面端' }).click()
     await page.getByRole('button', { name: '下一步' }).click()
@@ -554,7 +554,7 @@ describe('ExportDialog', () => {
     confirmExportOverwriteMock.mockImplementationOnce(() => new Promise<boolean>((resolve) => {
       confirmOverwrite = () => resolve(true)
     }))
-    renderExportDialog({ localizedI18n: true })
+    await renderExportDialog({ localizedI18n: true })
 
     await page.getByRole('button', { name: '桌面端' }).click()
     await page.getByRole('button', { name: '下一步' }).click()
@@ -580,7 +580,7 @@ describe('ExportDialog', () => {
     exportPcMock.mockImplementation(config => config.targetOs === 'windows'
       ? Promise.resolve(AbsPath.from('/exports/Demo Game/windows-x64'))
       : Promise.reject(new Error('disk full')))
-    renderExportDialog({ localizedI18n: true })
+    await renderExportDialog({ localizedI18n: true })
 
     await page.getByRole('button', { name: '桌面端' }).click()
     await page.getByRole('button', { name: '下一步' }).click()
@@ -608,7 +608,7 @@ describe('ExportDialog', () => {
         completeWindows = () => resolve(AbsPath.from('/exports/Demo Game/windows-x64'))
       }
     }))
-    renderExportDialog({ localizedI18n: true })
+    await renderExportDialog({ localizedI18n: true })
 
     await page.getByRole('button', { name: '桌面端' }).click()
     await page.getByRole('button', { name: '下一步' }).click()
@@ -628,7 +628,7 @@ describe('ExportDialog', () => {
   })
 
   it('桌面目标以横排图标卡片展示', async () => {
-    renderExportDialog({ localizedI18n: true })
+    await renderExportDialog({ localizedI18n: true })
 
     await page.getByRole('button', { name: '桌面端' }).click()
     await page.getByRole('button', { name: '下一步' }).click()
@@ -640,7 +640,7 @@ describe('ExportDialog', () => {
   })
 
   it('窗口尺寸输入始终保持有效且不小于最小尺寸', async () => {
-    renderExportDialog({ localizedI18n: true })
+    await renderExportDialog({ localizedI18n: true })
 
     await page.getByRole('button', { name: '桌面端' }).click()
     await page.getByRole('button', { name: '下一步' }).click()
@@ -670,7 +670,7 @@ describe('ExportDialog', () => {
   ])('桌面端根据 $platform/$arch 预选 $target', async ({ arch, platform, target }) => {
     osArchMock.mockReturnValue(arch)
     osPlatformMock.mockReturnValue(platform)
-    renderExportDialog({ localizedI18n: true })
+    await renderExportDialog({ localizedI18n: true })
 
     await page.getByRole('button', { name: '桌面端' }).click()
     await page.getByRole('button', { name: '下一步' }).click()

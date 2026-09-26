@@ -396,7 +396,7 @@ const globalStubs = {
   }),
 }
 
-function renderFileTree(props: Record<string, unknown>) {
+async function renderFileTree(props: Record<string, unknown>) {
   const ShortcutHarness = defineComponent({
     name: 'FileTreeShortcutHarness',
     setup() {
@@ -420,7 +420,7 @@ function renderFileTree(props: Record<string, unknown>) {
     },
   })
 
-  return renderInBrowser(ShortcutHarness, {
+  return await renderInBrowser(ShortcutHarness, {
     browser: fileTreeBrowserOptions,
     global: {
       plugins: [createPinia()],
@@ -429,7 +429,7 @@ function renderFileTree(props: Record<string, unknown>) {
   })
 }
 
-function renderReactiveFileTree(initialProps: Record<string, unknown>) {
+async function renderReactiveFileTree(initialProps: Record<string, unknown>) {
   const reactiveProps = reactive({ ...initialProps })
 
   const ShortcutHarness = defineComponent({
@@ -455,7 +455,7 @@ function renderReactiveFileTree(initialProps: Record<string, unknown>) {
     },
   })
 
-  renderInBrowser(ShortcutHarness, {
+  await renderInBrowser(ShortcutHarness, {
     browser: fileTreeBrowserOptions,
     global: {
       plugins: [createPinia()],
@@ -470,7 +470,7 @@ function renderReactiveFileTree(initialProps: Record<string, unknown>) {
 
 describe('FileTree', () => {
   it('通过 itemSeverity 投影只给文件名称应用问题等级', async () => {
-    renderFileTree({
+    await renderFileTree({
       getKey: (item: Record<string, unknown>) => String(item.path),
       itemSeverity: (item: Record<string, unknown>) => item.path === '/project/error.txt' ? 'error' : undefined,
       items: [
@@ -531,7 +531,7 @@ describe('FileTree', () => {
   })
 
   it('加载中时会显示加载指示', async () => {
-    renderFileTree({
+    await renderFileTree({
       getKey: (item: Record<string, unknown>) => String(item.path),
       isLoading: true,
       items: [],
@@ -540,8 +540,8 @@ describe('FileTree', () => {
     await expect.element(page.getByRole('status', { name: 'common.loading' })).toBeInTheDocument()
   })
 
-  it('外部文件拖拽到目录子层级时会高亮目标目录及其子树', () => {
-    renderFileTree({
+  it('外部文件拖拽到目录子层级时会高亮目标目录及其子树', async () => {
+    await renderFileTree({
       externalDropTargetPath: '/project/chapter',
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -574,8 +574,8 @@ describe('FileTree', () => {
     expect(sibling).not.toHaveClass('outline')
   })
 
-  it('外部文件拖拽到根目录时会高亮整棵树', () => {
-    renderFileTree({
+  it('外部文件拖拽到根目录时会高亮整棵树', async () => {
+    await renderFileTree({
       externalDropTargetPath: '/project',
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -609,7 +609,7 @@ describe('FileTree', () => {
   it('点击文件项会发出 click 事件', async () => {
     const onClick = vi.fn()
 
-    renderFileTree({
+    await renderFileTree({
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
         {
@@ -630,7 +630,7 @@ describe('FileTree', () => {
   })
 
   it('外部 selectedItem 变化时会同步文件树高亮', async () => {
-    const { reactiveProps } = renderReactiveFileTree({
+    const { reactiveProps } = await renderReactiveFileTree({
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
         {
@@ -667,7 +667,7 @@ describe('FileTree', () => {
   it('Ctrl 点击会累加选中，拖拽已选中项时会移动整个选中集合', async () => {
     vi.useFakeTimers()
     const onClick = vi.fn()
-    renderFileTree({
+    await renderFileTree({
       enableDragTransfer: true,
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -725,7 +725,7 @@ describe('FileTree', () => {
 
   it('拖拽集合包含祖先目录时会忽略其子项，避免重复移动失效路径', async () => {
     vi.useFakeTimers()
-    renderFileTree({
+    await renderFileTree({
       enableDragTransfer: true,
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -769,7 +769,7 @@ describe('FileTree', () => {
 
   it('Ctrl 点击已选中项会取消选中并从拖拽集合中移除', async () => {
     vi.useFakeTimers()
-    renderFileTree({
+    await renderFileTree({
       enableDragTransfer: true,
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -817,7 +817,7 @@ describe('FileTree', () => {
   it('Shift 点击会按当前可见顺序范围选中并支持拖拽整个范围', async () => {
     vi.useFakeTimers()
     const onClick = vi.fn()
-    renderFileTree({
+    await renderFileTree({
       enableDragTransfer: true,
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -878,7 +878,7 @@ describe('FileTree', () => {
   })
 
   it('按 F2 重命名后回车会调用 pathOperation.perform', async () => {
-    renderFileTree({
+    await renderFileTree({
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
         {
@@ -912,7 +912,7 @@ describe('FileTree', () => {
     }>()
     pathOperationPerformMock.mockReturnValueOnce(renameDeferred.promise)
 
-    const { reactiveProps } = renderReactiveFileTree({
+    const { reactiveProps } = await renderReactiveFileTree({
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
         {
@@ -956,7 +956,7 @@ describe('FileTree', () => {
   })
 
   it('禁用上下文菜单后，按 F2 不会触发重命名', async () => {
-    renderFileTree({
+    await renderFileTree({
       enableContextMenu: false,
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -976,7 +976,7 @@ describe('FileTree', () => {
   })
 
   it('键盘焦点移动到其他条目后，F2 会重命名当前焦点条目', async () => {
-    renderFileTree({
+    await renderFileTree({
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
         {
@@ -1017,7 +1017,7 @@ describe('FileTree', () => {
     }
     useModalStoreMock.mockReturnValue(modalStore)
 
-    renderFileTree({
+    await renderFileTree({
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
         {
@@ -1046,7 +1046,7 @@ describe('FileTree', () => {
     }
     useModalStoreMock.mockReturnValue(modalStore)
 
-    renderFileTree({
+    await renderFileTree({
       enableContextMenu: false,
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -1065,7 +1065,7 @@ describe('FileTree', () => {
   })
 
   it('运行时启用上下文菜单后，F2 会开始触发重命名', async () => {
-    const { reactiveProps } = renderReactiveFileTree({
+    const { reactiveProps } = await renderReactiveFileTree({
       enableContextMenu: false,
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -1094,7 +1094,7 @@ describe('FileTree', () => {
     }
     useModalStoreMock.mockReturnValue(modalStore)
 
-    renderFileTree({
+    await renderFileTree({
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
         {
@@ -1133,7 +1133,7 @@ describe('FileTree', () => {
       getFileTreeExpanded: vi.fn(() => []),
       setFileTreeExpanded: setFileTreeExpandedMock,
     })
-    renderFileTree({
+    await renderFileTree({
       enableDragTransfer: true,
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -1175,7 +1175,7 @@ describe('FileTree', () => {
 
   it('rootPath 异步更新后会重新注册根目录拖拽目标', async () => {
     vi.useFakeTimers()
-    const { reactiveProps } = renderReactiveFileTree({
+    const { reactiveProps } = await renderReactiveFileTree({
       enableDragTransfer: true,
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -1217,7 +1217,7 @@ describe('FileTree', () => {
 
   it('按住 Ctrl 拖拽文件到目录时会复制而不是移动', async () => {
     vi.useFakeTimers()
-    renderFileTree({
+    await renderFileTree({
       enableDragTransfer: true,
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -1248,7 +1248,7 @@ describe('FileTree', () => {
 
   it('拖拽文件到展开目录中的子文件时会以父目录为目标', async () => {
     vi.useFakeTimers()
-    renderFileTree({
+    await renderFileTree({
       enableDragTransfer: true,
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -1289,7 +1289,7 @@ describe('FileTree', () => {
 
   it('拖拽目录到它的父目录时不会调用 pathOperation.perform', async () => {
     vi.useFakeTimers()
-    renderFileTree({
+    await renderFileTree({
       enableDragTransfer: true,
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -1321,7 +1321,7 @@ describe('FileTree', () => {
 
   it('父子目录间连续反向拖拽时会使用更新后的源路径和目标目录', async () => {
     vi.useFakeTimers()
-    const { reactiveProps } = renderReactiveFileTree({
+    const { reactiveProps } = await renderReactiveFileTree({
       enableDragTransfer: true,
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [
@@ -1386,7 +1386,7 @@ describe('FileTree', () => {
 
   it('拖拽到文件行时不会触发移动', async () => {
     vi.useFakeTimers()
-    renderFileTree({
+    await renderFileTree({
       enableDragTransfer: true,
       getKey: (item: Record<string, unknown>) => String(item.path),
       items: [

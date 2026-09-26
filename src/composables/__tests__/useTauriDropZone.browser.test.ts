@@ -67,7 +67,7 @@ async function renderDropZone() {
     },
   })
 
-  const result = render(Harness)
+  const result = await render(Harness)
   await vi.waitFor(() => expect(webviewMockState.handler).toBeTypeOf('function'))
 
   return { onDrop, onDropTarget, onEnter, onLeave, result }
@@ -107,7 +107,7 @@ describe('useTauriDropZone', () => {
 
     expect(onDrop).toHaveBeenCalledWith([standardDpiPath])
     expect(onDropTarget).toHaveBeenCalledWith(expect.any(HTMLElement))
-    result.unmount()
+    await result.unmount()
   })
 
   it('在高 DPI 下将物理坐标转换为 CSS 坐标后命中放置区域', async () => {
@@ -117,7 +117,7 @@ describe('useTauriDropZone', () => {
     emitDrop([highDpiPath], new PhysicalPosition(150, 150))
 
     expect(onDrop).toHaveBeenCalledWith([highDpiPath])
-    result.unmount()
+    await result.unmount()
   })
 
   it('高 DPI 坐标换算后位于区域外时不触发放置', async () => {
@@ -127,7 +127,7 @@ describe('useTauriDropZone', () => {
     emitDrop([outsidePath], new PhysicalPosition(250, 250))
 
     expect(onDrop).not.toHaveBeenCalled()
-    result.unmount()
+    await result.unmount()
   })
 
   it('文件先进入放置区域再在区域外放下时会清理拖放状态', async () => {
@@ -145,7 +145,7 @@ describe('useTauriDropZone', () => {
 
     expect(onDrop).not.toHaveBeenCalled()
     expect(onLeave).toHaveBeenCalledOnce()
-    result.unmount()
+    await result.unmount()
   })
 
   it('文件先进入窗口其他区域再移入放置区域时会沿用 enter 的路径', async () => {
@@ -167,6 +167,6 @@ describe('useTauriDropZone', () => {
 
     emitDrop([outsidePath], new PhysicalPosition(75, 75))
     expect(onDrop).toHaveBeenCalledWith([outsidePath])
-    result.unmount()
+    await result.unmount()
   })
 })

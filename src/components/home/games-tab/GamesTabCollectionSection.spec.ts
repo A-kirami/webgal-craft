@@ -90,7 +90,7 @@ describe('GamesTabCollectionSection', () => {
   }
 
   it('列表视图中处理中的游戏会显示创建中状态', async () => {
-    renderInBrowser(GamesTabCollectionSection, {
+    await renderInBrowser(GamesTabCollectionSection, {
       browser: {
         i18nMode: 'lite',
       },
@@ -110,7 +110,7 @@ describe('GamesTabCollectionSection', () => {
   })
 
   it('网格视图中处理中的游戏不会显示删除操作', async () => {
-    renderInBrowser(GamesTabCollectionSection, {
+    await renderInBrowser(GamesTabCollectionSection, {
       browser: {
         i18nMode: 'lite',
       },
@@ -132,7 +132,7 @@ describe('GamesTabCollectionSection', () => {
     const game = createTestGame()
     const onDeleteGame = vi.fn()
 
-    renderInBrowser(GamesTabCollectionSection, {
+    await renderInBrowser(GamesTabCollectionSection, {
       browser: {
         i18nMode: 'lite',
       },
@@ -162,7 +162,7 @@ describe('GamesTabCollectionSection', () => {
     const missingGame = createTestGame({ id: 'game-missing', availability: 'missing' })
     const onOpenFolder = vi.fn()
 
-    renderInBrowser(GamesTabCollectionSection, {
+    await renderInBrowser(GamesTabCollectionSection, {
       browser: {
         i18nMode: 'lite',
       },
@@ -192,7 +192,7 @@ describe('GamesTabCollectionSection', () => {
   })
 
   it('列表视图不会为路径已失效的游戏显示打开文件夹快捷操作', async () => {
-    renderInBrowser(GamesTabCollectionSection, {
+    await renderInBrowser(GamesTabCollectionSection, {
       browser: {
         i18nMode: 'lite',
       },
@@ -213,7 +213,7 @@ describe('GamesTabCollectionSection', () => {
   it('导入入口使用按钮语义并会触发 importClick', async () => {
     const onImportClick = vi.fn()
 
-    renderInBrowser(GamesTabCollectionSection, {
+    await renderInBrowser(GamesTabCollectionSection, {
       browser: {
         i18nMode: 'lite',
       },
@@ -237,7 +237,7 @@ describe('GamesTabCollectionSection', () => {
   it('列表视图中的导入入口也使用按钮语义并会触发 importClick', async () => {
     const onImportClick = vi.fn()
 
-    renderInBrowser(GamesTabCollectionSection, {
+    await renderInBrowser(GamesTabCollectionSection, {
       browser: {
         i18nMode: 'lite',
       },
@@ -259,7 +259,7 @@ describe('GamesTabCollectionSection', () => {
   })
 
   it('会为网格视图中的封面和图标传入固定缩略图尺寸', async () => {
-    renderInBrowser(GamesTabCollectionSection, {
+    await renderInBrowser(GamesTabCollectionSection, {
       browser: {
         i18nMode: 'lite',
       },
@@ -282,7 +282,7 @@ describe('GamesTabCollectionSection', () => {
   })
 
   it('会为列表视图中的封面传入固定缩略图尺寸', async () => {
-    renderInBrowser(GamesTabCollectionSection, {
+    await renderInBrowser(GamesTabCollectionSection, {
       browser: {
         i18nMode: 'lite',
       },
@@ -322,7 +322,7 @@ describe('GamesTabCollectionSection', () => {
       },
     }
 
-    renderInBrowser(GamesTabCollectionSection, {
+    await renderInBrowser(GamesTabCollectionSection, {
       browser: {
         i18nMode: 'lite',
       },

@@ -134,7 +134,7 @@ describe('GameLogoPicker', () => {
   it('会渲染启动图列表和添加入口', async () => {
     filePickerRenderSpy.mockReset()
 
-    renderInBrowser(GameLogoPickerHarness, {
+    await renderInBrowser(GameLogoPickerHarness, {
       props: {
         initialValue: ['opening.webp', 'enter.webp'],
       },
@@ -158,7 +158,7 @@ describe('GameLogoPicker', () => {
   })
 
   it('点击删除按钮后会更新启动图数组', async () => {
-    renderInBrowser(GameLogoPickerHarness, {
+    await renderInBrowser(GameLogoPickerHarness, {
       props: {
         initialValue: ['opening.webp', 'enter.webp'],
       },
@@ -176,7 +176,7 @@ describe('GameLogoPicker', () => {
   })
 
   it('点击添加入口后会追加图片', async () => {
-    renderInBrowser(GameLogoPickerHarness, {
+    await renderInBrowser(GameLogoPickerHarness, {
       props: {
         initialValue: ['opening.webp'],
       },
@@ -194,7 +194,7 @@ describe('GameLogoPicker', () => {
   })
 
   it('重复选择已有图片时不会重复追加', async () => {
-    renderInBrowser(GameLogoPickerHarness, {
+    await renderInBrowser(GameLogoPickerHarness, {
       props: {
         initialValue: ['opening.webp'],
       },
@@ -208,6 +208,6 @@ describe('GameLogoPicker', () => {
 
     await page.getByTestId('add-duplicate-game-logo').click()
 
-    await expect.element(page.getByTestId('game-logo-value')).toHaveTextContent(/^opening\.webp$/)
+    await expect.element(page.getByTestId('game-logo-value')).toMatchTextContent(/^opening\.webp$/)
   })
 })

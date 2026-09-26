@@ -528,7 +528,7 @@ onUnmounted(() => {
           :style="getTimeAnchorStyle(getDistortedPercent(item.span.end))"
         >
           <div
-            class="border-x-4 border-b-6 border-x-transparent border-b-muted-foreground/70 h-0 w-0 left-0 top-20 absolute"
+            class="border-x-4 border-x-transparent border-b-6 border-b-muted-foreground/70 h-0 w-0 left-0 top-20 absolute"
             :class="resolveEdgeAlignedClass(index, dedupedEndMarkers.length, resolveEndMarkerAlignment(item.span.end))"
           />
           <span

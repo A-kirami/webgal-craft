@@ -131,7 +131,7 @@ describe('VisualEditorAnimation', () => {
     }))
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(createShortcutHarness(
+    await renderInBrowser(createShortcutHarness(
       createAnimationState('/game/animation/opening.json'),
       {
         editorMode: 'visual',
@@ -184,7 +184,7 @@ describe('VisualEditorAnimation', () => {
     }))
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(createShortcutHarness(
+    await renderInBrowser(createShortcutHarness(
       createAnimationState('/game/animation/opening.json'),
       {
         editorMode: 'visual',
@@ -238,7 +238,7 @@ describe('VisualEditorAnimation', () => {
     }))
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(createShortcutHarness(
+    await renderInBrowser(createShortcutHarness(
       createAnimationState('/game/animation/opening.json'),
       {
         editorMode: 'visual',
@@ -292,7 +292,7 @@ describe('VisualEditorAnimation', () => {
     }))
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(createShortcutHarness(
+    await renderInBrowser(createShortcutHarness(
       createAnimationState('/game/animation/opening.json'),
       {
         editorMode: 'visual',
@@ -342,7 +342,7 @@ describe('VisualEditorAnimation', () => {
     }))
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(VisualEditorAnimation, {
+    await renderInBrowser(VisualEditorAnimation, {
       props: {
         state: createAnimationState('/game/animation/opening.json'),
       },
@@ -384,7 +384,7 @@ describe('VisualEditorAnimation', () => {
     }))
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(createShortcutHarness(
+    await renderInBrowser(createShortcutHarness(
       createAnimationState('/game/animation/opening.json'),
       {
         editorMode: 'visual',

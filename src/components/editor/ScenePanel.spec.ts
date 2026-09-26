@@ -307,7 +307,7 @@ describe('ScenePanel', () => {
   })
 
   it('会读取场景目录并渲染文件树', async () => {
-    renderInBrowser(ScenePanel, {
+    await renderInBrowser(ScenePanel, {
       browser: {
         i18nMode: 'localized',
         messages: {
@@ -332,7 +332,7 @@ describe('ScenePanel', () => {
   it('会把外部拖拽目标传给文件树', async () => {
     externalDropTargetPath.value = '/games/demo/game/scene/chapter-1'
 
-    renderInBrowser(ScenePanel, {
+    await renderInBrowser(ScenePanel, {
       browser: {
         i18nMode: 'localized',
         messages: {
@@ -355,7 +355,7 @@ describe('ScenePanel', () => {
       getHighestSeverity: (path: string) => path.endsWith('/start.txt') ? 'error' : undefined,
     })
 
-    renderInBrowser(ScenePanel, {
+    await renderInBrowser(ScenePanel, {
       browser: {
         i18nMode: 'localized',
         messages: {
@@ -381,7 +381,7 @@ describe('ScenePanel', () => {
 
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(ScenePanel, {
+    await renderInBrowser(ScenePanel, {
       browser: {
         i18nMode: 'localized',
         messages: {
@@ -401,7 +401,7 @@ describe('ScenePanel', () => {
   })
 
   it('会监听目录修改事件以刷新 overlay 视图', async () => {
-    renderInBrowser(ScenePanel, {
+    await renderInBrowser(ScenePanel, {
       browser: {
         i18nMode: 'localized',
         messages: {
@@ -423,7 +423,7 @@ describe('ScenePanel', () => {
     const fileStore = createFileStore()
     useFileStoreMock.mockReturnValue(fileStore)
 
-    renderInBrowser(ScenePanel, {
+    await renderInBrowser(ScenePanel, {
       browser: {
         i18nMode: 'localized',
         messages: {
@@ -452,7 +452,7 @@ describe('ScenePanel', () => {
     const fileStore = createFileStore()
     useFileStoreMock.mockReturnValue(fileStore)
 
-    renderInBrowser(ScenePanel, {
+    await renderInBrowser(ScenePanel, {
       browser: {
         i18nMode: 'localized',
         messages: {
@@ -483,7 +483,7 @@ describe('ScenePanel', () => {
     const tabsStore = createTabsStore()
     useTabsStoreMock.mockReturnValue(tabsStore)
 
-    renderInBrowser(ScenePanel, {
+    await renderInBrowser(ScenePanel, {
       browser: {
         i18nMode: 'localized',
         messages: {

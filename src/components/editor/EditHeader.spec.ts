@@ -255,7 +255,7 @@ describe('EditHeader', () => {
   })
 
   it('会把当前工作区根路径传给顶部图标，避免预览地址未就绪时误报错', async () => {
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
@@ -281,7 +281,7 @@ describe('EditHeader', () => {
       currentGameServeUrl: undefined,
     }))
 
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
@@ -294,7 +294,7 @@ describe('EditHeader', () => {
   })
 
   it('点击导出会把当前游戏交给导出弹窗', async () => {
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
@@ -314,7 +314,7 @@ describe('EditHeader', () => {
   })
 
   it('桌面端显示测试窗口入口', async () => {
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
@@ -329,7 +329,7 @@ describe('EditHeader', () => {
   it('移动端不显示桌面测试窗口入口', async () => {
     isDesktopRuntimeMock.mockReturnValue(false)
 
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
@@ -345,7 +345,7 @@ describe('EditHeader', () => {
     isAndroidRuntimeMock.mockReturnValue(true)
     isDesktopRuntimeMock.mockReturnValue(false)
 
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
@@ -374,7 +374,7 @@ describe('EditHeader', () => {
     getDirtyBufferContentMock.mockImplementation((path: string) => path.endsWith('a.txt') ? 'dirty' : undefined)
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
 
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
@@ -392,7 +392,7 @@ describe('EditHeader', () => {
   })
 
   it('桌面端不会注册 Android 系统返回键', async () => {
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
@@ -406,7 +406,7 @@ describe('EditHeader', () => {
   })
 
   it('返回主页前无未保存更改时直接跳转', async () => {
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
@@ -427,7 +427,7 @@ describe('EditHeader', () => {
   it('返回主页前有未保存更改时会打开确认弹窗', async () => {
     hasUnsavedDocumentsUnderMock.mockReturnValue(true)
 
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
@@ -466,7 +466,7 @@ describe('EditHeader', () => {
       }
     })
 
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
@@ -499,7 +499,7 @@ describe('EditHeader', () => {
   it('确认不保存时会直接返回主页且不会触发保存', async () => {
     hasUnsavedDocumentsUnderMock.mockReturnValue(true)
 
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
@@ -528,7 +528,7 @@ describe('EditHeader', () => {
   })
 
   it('打开游戏配置前会先预取配置，再带着准备好的数据打开模态框', async () => {
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
@@ -590,7 +590,7 @@ describe('EditHeader', () => {
       unmanagedLineCount: 0,
     })
 
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
@@ -613,7 +613,7 @@ describe('EditHeader', () => {
   it('预取游戏配置失败时会弹出错误提示，且不打开模态框', async () => {
     getConfigMock.mockRejectedValue(new Error('boom'))
 
-    renderInBrowser(EditHeader, {
+    await renderInBrowser(EditHeader, {
       browser: {
         i18nMode: 'lite',
       },
