@@ -1,4 +1,4 @@
-// 预览全屏的窗口侧处理：把一次 fullscreenchange 折算成「窗口要不要动、怎么动」。
+// 预览全屏的窗口侧处理：把 iframe 的全屏状态折算成窗口动作，并串行执行。
 //
 // Windows 上 Tauri 会把「webview 里有全屏元素」映射成窗口全屏，而从最大化窗口进无边框全屏时
 // tao 不会清掉最大化状态，客户端区停在任务栏之上，底部会留下一条未绘制的黑边（tao#1087）。
@@ -18,7 +18,7 @@ export type PreviewFullscreenAction =
 export interface PreviewFullscreenStatus {
   /** 预览 iframe 现在是不是全屏元素 */
   mirrored: boolean
-  /** 是否为了让全屏生效而取消过最大化（退出时要还原） */
+  /** 窗口形态被预览改过（取消过最大化），还欠一次还原 */
   corrected: boolean
 }
 
@@ -37,8 +37,16 @@ export interface PreviewFullscreenTransition extends PreviewFullscreenStatus {
 export interface PreviewFullscreenWindow {
   isMaximized(): Promise<boolean>
   maximize(): Promise<void>
+  onResized(handler: () => void): Promise<() => void>
   setFullscreen(value: boolean): Promise<void>
   unmaximize(): Promise<void>
+}
+
+export interface PreviewFullscreenDriver {
+  /** 每次 fullscreenchange 调用一次 */
+  notify(fullscreenActive: boolean): void
+  /** 面板卸载时调用：把预览带来的窗口形态收干净 */
+  dispose(): Promise<void>
 }
 
 /** 折算状态与动作；windowWasMaximized 必须是进入全屏之前的形态。 */
@@ -92,5 +100,90 @@ export async function applyPreviewFullscreenAction(
     default: {
       return
     }
+  }
+}
+
+/**
+ * 接上窗口，返回一个只在 editor 侧驱动窗口的驱动器。
+ *
+ * 窗口动作串行执行：快速进出全屏或面板卸载都不会让两次动作交错。
+ */
+export function createPreviewFullscreenDriver(
+  appWindow: PreviewFullscreenWindow,
+  onError?: (error: unknown) => void,
+): PreviewFullscreenDriver {
+  let status: PreviewFullscreenStatus = { mirrored: false, corrected: false }
+  let windowWasMaximized = false
+  let queue = Promise.resolve()
+  let unlistenResize: (() => void) | undefined
+  let disposed = false
+
+  // 全屏那一次 resize 正是要修的形态变化，只在非全屏时记录
+  function syncWindowWasMaximized(): void {
+    if (status.mirrored) {
+      return
+    }
+
+    void appWindow.isMaximized()
+      .then((maximized) => {
+        windowWasMaximized = maximized
+      })
+      .catch(() => {
+        // 问不到就按非最大化处理
+      })
+  }
+
+  function run(action: PreviewFullscreenAction): void {
+    queue = queue
+      .catch(() => undefined)
+      .then(async () => {
+        try {
+          await applyPreviewFullscreenAction(appWindow, action)
+        } catch (error) {
+          onError?.(error)
+        }
+      })
+  }
+
+  syncWindowWasMaximized()
+  void appWindow.onResized(syncWindowWasMaximized)
+    .then((unlisten) => {
+      if (disposed) {
+        unlisten()
+        return
+      }
+      unlistenResize = unlisten
+    })
+    .catch((error: unknown) => {
+      onError?.(error)
+    })
+
+  return {
+    notify(fullscreenActive) {
+      if (disposed) {
+        return
+      }
+
+      const next = previewFullscreenTransition(status, { fullscreenActive, windowWasMaximized })
+      status = { mirrored: next.mirrored, corrected: next.corrected }
+      if (next.action.kind !== 'none') {
+        run(next.action)
+      }
+    },
+    async dispose() {
+      disposed = true
+      unlistenResize?.()
+      await queue.catch(() => undefined)
+
+      if (!status.corrected) {
+        return
+      }
+
+      try {
+        await applyPreviewFullscreenAction(appWindow, { kind: 'restore-maximized' })
+      } catch (error) {
+        onError?.(error)
+      }
+    },
   }
 }
