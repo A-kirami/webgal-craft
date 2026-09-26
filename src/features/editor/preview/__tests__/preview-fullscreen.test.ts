@@ -289,6 +289,18 @@ describe('createPreviewFullscreenDriver', () => {
     expect(calls.filter(call => call === 'maximize')).toHaveLength(2)
   })
 
+  it('卸载时仍处于全屏则退出窗口全屏', async () => {
+    const { calls, appWindow } = createFakeWindow()
+    const driver = createPreviewFullscreenDriver(appWindow)
+    await flushQueue()
+
+    driver.notify(true)
+    await flushQueue()
+    await driver.dispose()
+
+    expect(calls).toEqual(['setFullscreen(true)', 'setFullscreen(false)'])
+  })
+
   it('没动过窗口时卸载不碰窗口', async () => {
     const { calls, appWindow } = createFakeWindow()
     const driver = createPreviewFullscreenDriver(appWindow)
