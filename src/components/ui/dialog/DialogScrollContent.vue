@@ -10,6 +10,7 @@ import {
   DialogPortal,
   useForwardPropsEmits,
 } from "reka-ui"
+import { useDialogContentElement } from '~/composables/useDialogContentElement'
 import { cn } from '~/lib/utils'
 import { Button } from '~/components/ui/button'
 
@@ -23,6 +24,11 @@ const emits = defineEmits<DialogContentEmits>()
 const delegatedProps = reactiveOmit(props, "class")
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
+
+// 浮层宿主需要按「整个表面」注册焦点上下文；本组件根节点是 Teleport，$el 不可靠，故显式暴露内容元素
+const contentElement = useDialogContentElement()
+
+defineExpose({ contentElement })
 </script>
 
 <template>

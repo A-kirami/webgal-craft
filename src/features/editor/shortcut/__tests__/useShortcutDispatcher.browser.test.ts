@@ -285,6 +285,26 @@ function createStatementEditorSelectHarnessComponent() {
   })
 }
 
+function createEffectEditorFocusStubs() {
+  return {
+    Button: defineComponent({
+      name: 'TestButtonStub',
+      setup(_, { attrs, slots }) {
+        return () => h('button', {
+          ...attrs,
+          type: 'button',
+        }, slots.default?.())
+      },
+    }),
+    EffectDraftForm: defineComponent({
+      name: 'EffectDraftForm',
+      setup() {
+        return () => h('div', 'effect-draft-form')
+      },
+    }),
+  }
+}
+
 function createEffectEditorFocusHarness() {
   const EditorShortcutTarget = defineComponent({
     name: 'EffectEditorFocusEditorTarget',
@@ -319,7 +339,13 @@ function createEffectEditorFocusHarness() {
 
   const EffectEditorShortcutTarget = defineComponent({
     name: 'EffectEditorFocusEffectTarget',
-    setup() {
+    props: {
+      open: {
+        type: Boolean,
+        required: true,
+      },
+    },
+    setup(props) {
       const canClear = ref(true)
 
       useShortcut({
@@ -335,7 +361,7 @@ function createEffectEditorFocusHarness() {
       })
 
       return () => h(EditorDrawer, {
-        open: true,
+        open: props.open,
         panelFocus: 'effectEditor',
       }, {
         default: () => h(EffectEditorPanel, {
@@ -373,9 +399,7 @@ function createEffectEditorFocusHarness() {
 
       return () => h('div', [
         h(EditorShortcutTarget),
-        isEffectEditorOpen.value
-          ? h(EffectEditorShortcutTarget)
-          : undefined,
+        h(EffectEditorShortcutTarget, { open: isEffectEditorOpen.value }),
       ])
     },
   })
@@ -601,23 +625,7 @@ describe('useShortcutDispatcher', () => {
     await renderInBrowser(component, {
       global: {
         plugins: [createPinia()],
-        stubs: {
-          Button: defineComponent({
-            name: 'TestButtonStub',
-            setup(_, { attrs, slots }) {
-              return () => h('button', {
-                ...attrs,
-                type: 'button',
-              }, slots.default?.())
-            },
-          }),
-          EffectDraftForm: defineComponent({
-            name: 'EffectDraftForm',
-            setup() {
-              return () => h('div', 'effect-draft-form')
-            },
-          }),
-        },
+        stubs: createEffectEditorFocusStubs(),
       },
     })
 
@@ -627,6 +635,7 @@ describe('useShortcutDispatcher', () => {
     editorElement.focus()
     expect(document.activeElement).toBe(editorElement)
 
+    // 抽屉先以关闭状态挂载、之后才被打开：内容元素要等挂载提交后才可用
     openEffectEditor()
 
     await expect.element(page.getByText('effect-draft-form')).toBeVisible()
@@ -649,23 +658,7 @@ describe('useShortcutDispatcher', () => {
     await renderInBrowser(component, {
       global: {
         plugins: [createPinia()],
-        stubs: {
-          Button: defineComponent({
-            name: 'TestButtonStub',
-            setup(_, { attrs, slots }) {
-              return () => h('button', {
-                ...attrs,
-                type: 'button',
-              }, slots.default?.())
-            },
-          }),
-          EffectDraftForm: defineComponent({
-            name: 'EffectDraftForm',
-            setup() {
-              return () => h('div', 'effect-draft-form')
-            },
-          }),
-        },
+        stubs: createEffectEditorFocusStubs(),
       },
     })
 
