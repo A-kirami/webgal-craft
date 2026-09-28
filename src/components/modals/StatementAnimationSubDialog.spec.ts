@@ -7,8 +7,12 @@ import {
   createBrowserTextStub,
   renderInBrowser,
 } from '~/__tests__/browser-render'
+import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
+import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
 
 import StatementAnimationSubDialog from './StatementAnimationSubDialog.vue'
+
+import type { useStatementAnimationDialog } from '~/features/editor/animation/useStatementAnimationDialog'
 
 const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
@@ -19,6 +23,19 @@ const globalStubs = {
   DialogScrollContent: createBrowserContainerStub('StubDialogScrollContent'),
   DialogTitle: createBrowserContainerStub('StubDialogTitle', 'h2'),
   StatementAnimationEditorPanel: createBrowserTextStub('StubStatementAnimationEditorPanel', 'Statement Animation Editor Panel'),
+}
+
+function createAnimationDialogMock(): ReturnType<typeof useStatementAnimationDialog> {
+  return {
+    draftFrames: [],
+    handleApply: vi.fn(),
+    isDefault: true,
+    isDirty: false,
+    isOpen: true,
+    requestClose: vi.fn(),
+    resetToDefault: vi.fn(),
+    updateFrames: vi.fn(),
+  }
 }
 
 function createDialogScrollContentStub() {
@@ -53,16 +70,7 @@ describe('StatementAnimationSubDialog', () => {
         i18nMode: 'localized',
       },
       props: {
-        animationDialog: {
-          draftFrames: [],
-          handleApply: vi.fn(),
-          isDefault: true,
-          isDirty: false,
-          isOpen: true,
-          requestClose: vi.fn(),
-          resetToDefault: vi.fn(),
-          updateFrames: vi.fn(),
-        },
+        animationDialog: createAnimationDialogMock(),
       },
       global: {
         stubs: globalStubs,
@@ -82,16 +90,7 @@ describe('StatementAnimationSubDialog', () => {
         i18nMode: 'localized',
       },
       props: {
-        animationDialog: {
-          draftFrames: [],
-          handleApply: vi.fn(),
-          isDefault: true,
-          isDirty: false,
-          isOpen: true,
-          requestClose: vi.fn(),
-          resetToDefault: vi.fn(),
-          updateFrames: vi.fn(),
-        },
+        animationDialog: createAnimationDialogMock(),
       },
       global: {
         stubs: {
@@ -102,5 +101,38 @@ describe('StatementAnimationSubDialog', () => {
     })
 
     await expect.poll(() => state.defaultPrevented).toBe(false)
+  })
+
+  it('模态框场景下响应应用快捷键', async () => {
+    const animationDialog = createAnimationDialogMock()
+
+    const harness = defineComponent({
+      name: 'StatementAnimationSubDialogShortcutHarness',
+      setup() {
+        useShortcutDispatcher({
+          bindings: [],
+          executeContext: undefined,
+          platform: 'windows',
+        })
+
+        // 模态宿主打开期间窗口级 isModalOpen 为 true，绑定必须显式放行模态场景
+        useShortcutContext({ isModalOpen: true, panelFocus: 'animationEditor' })
+
+        return () => h(StatementAnimationSubDialog, { animationDialog })
+      },
+    })
+
+    await renderInBrowser(harness, {
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', {
+      ctrlKey: true,
+      key: 'Enter',
+    }))
+
+    expect(animationDialog.handleApply).toHaveBeenCalledOnce()
   })
 })

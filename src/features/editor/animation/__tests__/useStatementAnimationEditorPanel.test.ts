@@ -82,4 +82,66 @@ describe('useStatementAnimationEditorPanel', () => {
 
     scope.stop()
   })
+
+  it('撤销与重做按整份帧回放已提交的改动', () => {
+    const { controller, frames, scope } = createFixture()
+
+    controller.session.selectedFrameId = 2
+    controller.handleDurationUpdate('300')
+    expect(frames[1]?.duration).toBe(300)
+
+    controller.handleUndo()
+    expect(frames[1]?.duration).toBe(180)
+
+    controller.handleRedo()
+    expect(frames[1]?.duration).toBe(300)
+
+    scope.stop()
+  })
+
+  it('新增或删除帧后可以撤销回原列表', () => {
+    const { controller, frames, scope } = createFixture()
+
+    controller.session.selectedFrameId = 3
+    controller.handleDeleteFrame()
+    expect(frames).toHaveLength(2)
+
+    controller.handleUndo()
+    expect(frames).toHaveLength(3)
+
+    controller.handleAddFrame()
+    expect(frames).toHaveLength(4)
+
+    controller.handleUndo()
+    expect(frames).toHaveLength(3)
+
+    scope.stop()
+  })
+
+  it('撤销后再提交新改动会清空重做栈', () => {
+    const { controller, frames, scope } = createFixture()
+
+    controller.session.selectedFrameId = 1
+    controller.handleDurationUpdate('300')
+    controller.handleUndo()
+    expect(frames[0]?.duration).toBe(120)
+
+    controller.handleDurationUpdate('400')
+    controller.handleRedo()
+
+    expect(frames[0]?.duration).toBe(400)
+
+    scope.stop()
+  })
+
+  it('没有历史时撤销与重做不会写回帧列表', () => {
+    const { controller, emitFrames, scope } = createFixture()
+
+    controller.handleUndo()
+    controller.handleRedo()
+
+    expect(emitFrames).not.toHaveBeenCalled()
+
+    scope.stop()
+  })
 })

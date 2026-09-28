@@ -7,6 +7,9 @@ import {
   createBrowserTextStub,
   renderInBrowser,
 } from '~/__tests__/browser-render'
+import { useShortcutContextRegistry } from '~/features/editor/shortcut/shortcut-context-registry'
+import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
+import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
 
 import EditorDrawer from './EditorDrawer.vue'
 import StatementAnimationEditorPanel from './StatementAnimationEditorPanel.vue'
@@ -80,6 +83,65 @@ function createAnimationEditorPaneStub() {
     state,
     stub,
   }
+}
+
+function createShortcutHarness(options: { enableHistoryShortcuts: boolean, isModalOpen: boolean }) {
+  const frames = reactive<AnimationFrame[]>([
+    {
+      duration: 120,
+    },
+    {
+      duration: 180,
+    },
+  ])
+  const handleUpdateFrames = vi.fn((nextFrames: AnimationFrame[]) => {
+    frames.splice(0, frames.length, ...nextFrames)
+  })
+  const { stub } = createAnimationEditorPaneStub()
+
+  const harness = defineComponent({
+    name: 'AnimationShortcutHarness',
+    setup() {
+      useShortcutDispatcher({
+        bindings: [],
+        executeContext: undefined,
+        platform: 'windows',
+      })
+
+      // 模态宿主打开期间窗口级 isModalOpen 为 true，面板自己的绑定必须显式放行模态场景
+      useShortcutContext({ isModalOpen: options.isModalOpen })
+
+      return () => h(StatementAnimationEditorPanel, {
+        'enableHistoryShortcuts': options.enableHistoryShortcuts,
+        frames,
+        'onUpdate:frames': handleUpdateFrames,
+      })
+    },
+  })
+
+  return { frames, harness, stub }
+}
+
+async function renderShortcutHarness(options: { enableHistoryShortcuts: boolean, isModalOpen: boolean }) {
+  const fixture = createShortcutHarness(options)
+
+  await renderInBrowser(fixture.harness, {
+    global: {
+      stubs: {
+        ...globalStubs,
+        AnimationEditorPane: fixture.stub,
+      },
+    },
+  })
+
+  const panelElement = await page.getByTestId('statement-animation-editor-panel').element()
+  panelElement.focus()
+
+  await vi.waitFor(() => {
+    expect(useShortcutContextRegistry().resolveContext().panelFocus).toBe('animationEditor')
+  })
+
+  return fixture
 }
 
 describe('StatementAnimationEditorPanel', () => {
@@ -189,6 +251,54 @@ describe('StatementAnimationEditorPanel', () => {
     })
 
     await expect.element(page.getByRole('button', { name: 'common.confirm' })).not.toBeInTheDocument()
+  })
+
+  it('抽屉场景下响应撤销、重做与删除帧快捷键', async () => {
+    const { frames } = await renderShortcutHarness({ enableHistoryShortcuts: true, isModalOpen: false })
+
+    await page.getByRole('button', { name: 'select-frame-2' }).click()
+    await nextTick()
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }))
+    await vi.waitFor(() => {
+      expect(frames).toHaveLength(1)
+    })
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, key: 'z' }))
+    await vi.waitFor(() => {
+      expect(frames).toHaveLength(2)
+    })
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, shiftKey: true, key: 'Z' }))
+    await vi.waitFor(() => {
+      expect(frames).toHaveLength(1)
+    })
+  })
+
+  it('模态框宿主没有撤销体系时只响应删除帧快捷键', async () => {
+    const { frames } = await renderShortcutHarness({ enableHistoryShortcuts: false, isModalOpen: true })
+
+    const handled: boolean[] = []
+    globalThis.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === 'z') {
+        handled.push(event.defaultPrevented)
+      }
+    })
+
+    await page.getByRole('button', { name: 'select-frame-2' }).click()
+    await nextTick()
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete' }))
+    await vi.waitFor(() => {
+      expect(frames).toHaveLength(1)
+    })
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, key: 'z' }))
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, shiftKey: true, key: 'Z' }))
+
+    // 模态框宿主自己没有撤销体系，面板不应单独接管这两个键
+    expect(handled).toEqual([false, false])
+    expect(frames).toHaveLength(1)
   })
 
   it('删除当前帧前会先清空草稿，避免旧草稿挂到重排后的帧上', async () => {

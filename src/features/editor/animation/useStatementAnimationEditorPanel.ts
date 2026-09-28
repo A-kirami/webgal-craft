@@ -1,5 +1,6 @@
 import { reactive, toValue, watch } from 'vue'
 
+import { cloneAnimationFrames } from '~/domain/stage/animation-frame'
 import {
   deleteAnimationFrameAtSelection,
   insertAnimationFrameAfterSelection,
@@ -23,11 +24,49 @@ interface UseStatementAnimationEditorPanelOptions {
 
 export function useStatementAnimationEditorPanel(options: UseStatementAnimationEditorPanelOptions) {
   const session = useAnimationEditorSession(() => toValue(options.frames))
+  const undoStack: AnimationFrame[][] = []
+  const redoStack: AnimationFrame[][] = []
 
   watch(
     () => session.selectedFrameId,
     session.resetSelectedFrameDrafts,
   )
+
+  /**
+   * 草稿改动的唯一入口：提交前记录改动前的整份帧，供撤销/重做回放。
+   * 面板只把已提交的改动交给宿主（拖拽中的中间值留在 session 草稿里），所以每次提交正好一条历史。
+   */
+  function commitFrames(nextFrames: AnimationFrame[]): void {
+    undoStack.push(cloneAnimationFrames(toValue(options.frames)))
+    redoStack.length = 0
+    options.emitFrames(nextFrames)
+  }
+
+  function restoreFrames(frames: AnimationFrame[]): void {
+    session.resetSelectedFrameDrafts()
+    // 历史快照本身就是克隆，宿主写入草稿时还会再克隆一次
+    options.emitFrames(frames)
+  }
+
+  function handleUndo(): void {
+    const previousFrames = undoStack.pop()
+    if (!previousFrames) {
+      return
+    }
+
+    redoStack.push(cloneAnimationFrames(toValue(options.frames)))
+    restoreFrames(previousFrames)
+  }
+
+  function handleRedo(): void {
+    const nextFrames = redoStack.pop()
+    if (!nextFrames) {
+      return
+    }
+
+    undoStack.push(cloneAnimationFrames(toValue(options.frames)))
+    restoreFrames(nextFrames)
+  }
 
   function updateFrame(frameIndex: number, patch: Partial<AnimationFrame>): void {
     const nextFrames = updateAnimationFrameAt(toValue(options.frames), frameIndex, patch)
@@ -35,7 +74,7 @@ export function useStatementAnimationEditorPanel(options: UseStatementAnimationE
       return
     }
 
-    options.emitFrames(nextFrames)
+    commitFrames(nextFrames)
   }
 
   function handleAddFrame(): void {
@@ -45,7 +84,7 @@ export function useStatementAnimationEditorPanel(options: UseStatementAnimationE
       createDefaultAnimationFrame(),
     )
 
-    options.emitFrames(result.nextFrames)
+    commitFrames(result.nextFrames)
     session.selectedFrameId = result.selectedFrameId
   }
 
@@ -56,7 +95,7 @@ export function useStatementAnimationEditorPanel(options: UseStatementAnimationE
     }
 
     session.resetSelectedFrameDrafts()
-    options.emitFrames(result.nextFrames)
+    commitFrames(result.nextFrames)
     session.selectedFrameId = result.selectedFrameId
   }
 
@@ -114,9 +153,11 @@ export function useStatementAnimationEditorPanel(options: UseStatementAnimationE
     session,
     handleAddFrame,
     handleDeleteFrame,
-    handleTransformUpdate,
     handleDurationUpdate,
-    handleTimelineResizeDuration,
     handleEaseUpdate,
+    handleRedo,
+    handleTimelineResizeDuration,
+    handleTransformUpdate,
+    handleUndo,
   })
 }

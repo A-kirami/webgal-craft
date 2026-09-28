@@ -1,14 +1,22 @@
 <script setup lang="ts">
 import { useStatementAnimationEditorPanel } from '~/features/editor/animation/useStatementAnimationEditorPanel'
+import { useShortcut } from '~/features/editor/shortcut/useShortcut'
+import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 
 import type { AnimationFrame } from '~/domain/stage/types'
 
 interface Props {
+  /**
+   * 是否提供撤销/重做快捷键。宿主没有撤销体系时（模态框宿主）应当关掉：
+   * 子面板单独支持撤销会让用户以为模态里的改动都能撤销。
+   */
+  enableHistoryShortcuts?: boolean
   frames: readonly AnimationFrame[]
   showFooter?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  enableHistoryShortcuts: true,
   showFooter: true,
 })
 
@@ -27,6 +35,49 @@ const focusOrigin = document.activeElement instanceof HTMLElement ? document.act
 const controller = useStatementAnimationEditorPanel({
   emitFrames: frames => emit('update:frames', frames),
   frames: () => props.frames,
+})
+
+// 帧级快捷键跟着面板走，而不是跟着宿主：抽屉与模态框共用这个面板，各自只操作自己那份草稿。
+// 宿主（如模态框）打开期间窗口级 isModalOpen 为 true，因此这些绑定必须显式放行模态场景。
+useShortcutContext({
+  animationHistoryShortcuts: () => props.enableHistoryShortcuts,
+  panelFocus: 'animationEditor',
+}, {
+  target: panelRef,
+  trackFocus: true,
+})
+
+useShortcut({
+  allowInModal: true,
+  execute: () => {
+    controller.handleUndo()
+  },
+  i18nKey: 'shortcut.visual.undo',
+  id: 'animation.undo',
+  keys: 'Mod+Z',
+  when: { animationHistoryShortcuts: true, panelFocus: 'animationEditor' },
+})
+
+useShortcut({
+  allowInModal: true,
+  execute: () => {
+    controller.handleRedo()
+  },
+  i18nKey: 'shortcut.visual.redo',
+  id: 'animation.redo',
+  keys: ['Mod+Shift+Z', 'Mod+Y'],
+  when: { animationHistoryShortcuts: true, panelFocus: 'animationEditor' },
+})
+
+useShortcut({
+  allowInModal: true,
+  execute: () => {
+    controller.handleDeleteFrame()
+  },
+  i18nKey: 'shortcut.animation.deleteFrame',
+  id: 'animation.deleteFrame',
+  keys: 'Delete',
+  when: { panelFocus: 'animationEditor' },
 })
 
 onMounted(() => {
