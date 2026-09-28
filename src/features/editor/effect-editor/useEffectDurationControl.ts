@@ -115,6 +115,9 @@ export function useEffectDurationControl(options: UseEffectDurationControlOption
 
       updateDuration(normalizedFinalValue)
     },
+    onCancel() {
+      suppressNextClick = false
+    },
   })
 
   function handleDurationLabelPointerDown(event: PointerEvent) {
