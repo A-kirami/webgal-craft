@@ -2,13 +2,15 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { readSentenceArgString } from '~/domain/script/sentence'
 import { parseTransformJson, serializeTransform } from '~/features/editor/effect-editor/effect-editor-config'
+import { flipTransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 import { EFFECT_EDITOR_OPEN_OVERRIDE_KEY } from '~/features/editor/effect-editor/useStatementEffectEditorBridge'
 import { useModalStore } from '~/stores/modal'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { Transform } from '~/domain/stage/types'
 import type { EffectEditorResult } from '~/features/editor/effect-editor/effect-editor-result'
-import type { EffectEditorTransformUpdatePayload } from '~/features/editor/effect-editor/useEffectEditorProvider'
+import type { TransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
+import type { EffectEditorDraft, EffectEditorTransformUpdatePayload } from '~/features/editor/effect-editor/useEffectEditorProvider'
 
 /**
  * 为模态框上下文提供效果编辑器的二级 Dialog 支持。
@@ -24,6 +26,10 @@ export function useEffectEditorDialog() {
   // 打开时的初始值快照，用于脏检测
   let initialSnapshot = ''
 
+  // 模态框里没有撤销/重做（宿主 CommandDefaultsModal / StatementGroupModal 自己也没有），
+  // 只保留跨语句复用的效果剪贴板
+  let effectClipboard: EffectEditorDraft | undefined
+
   const { t } = useI18n()
   const modalStore = useModalStore()
 
@@ -35,6 +41,20 @@ export function useEffectEditorDialog() {
   const defaultSnapshot = snapshotDraft(parseTransformJson(''), '', '')
   const isDirty = $computed(() => currentSnapshot !== initialSnapshot)
   const isDefault = $computed(() => currentSnapshot === defaultSnapshot)
+
+  function captureDraft(): EffectEditorDraft {
+    return {
+      transform: structuredClone(toRaw(draftTransform)),
+      duration: draftDuration,
+      ease: draftEase,
+    }
+  }
+
+  function restoreDraft(draft: EffectEditorDraft): void {
+    draftTransform = structuredClone(draft.transform)
+    draftDuration = draft.duration
+    draftEase = draft.ease
+  }
 
   function openDialog(
     parsed: ISentence,
@@ -66,6 +86,32 @@ export function useEffectEditorDialog() {
 
   function updateEase(value: string) {
     draftEase = value
+  }
+
+  function copyCurrentEffect(): boolean {
+    effectClipboard = captureDraft()
+    return true
+  }
+
+  function pasteCurrentEffect(): boolean {
+    if (!effectClipboard) {
+      return false
+    }
+
+    if (currentSnapshot === snapshotDraft(effectClipboard.transform, effectClipboard.duration, effectClipboard.ease)) {
+      return false
+    }
+
+    restoreDraft(effectClipboard)
+    return true
+  }
+
+  /** 翻转缩放轴。模态框里的草稿本身就是显式值，没有 baseline 需要参与解析。 */
+  function flipScaleAxis(axis: TransformScaleAxis): void {
+    draftTransform = flipTransformScaleAxis({
+      axis,
+      transform: draftTransform,
+    })
   }
 
   function handleApply() {
@@ -125,5 +171,8 @@ export function useEffectEditorDialog() {
     handleCancel,
     requestClose,
     resetToDefault,
+    copyCurrentEffect,
+    pasteCurrentEffect,
+    flipScaleAxis,
   })
 }

@@ -33,6 +33,7 @@ export interface EffectDraftCategoryControls {
   getNumberValue: (path: string, fallback: number) => number
   updateNumberField: (param: EffectNumberField, rawValue: string, options?: { flush?: boolean, clampValue?: boolean }) => void
   canScrubNumber: (param: EffectNumberField) => boolean
+  handleNumberLabelClick: (event: MouseEvent) => void
   handleNumberLabelPointerDown: (event: PointerEvent, param: EffectNumberField) => void
   getSliderTrackValue: (param: EffectNumberField) => number[]
   getSliderMin: (param: EffectNumberField) => number | undefined

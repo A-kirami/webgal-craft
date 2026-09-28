@@ -2,6 +2,7 @@
 import { useResourcePreviewPrimer } from '~/composables/useResourcePreviewPrimer'
 import { runAppStartup } from '~/features/app-startup/app-startup'
 import { useAppUpdateController } from '~/features/app-update/useAppUpdateController'
+import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
 import { cleanupRecoverableAndroidWebExports } from '~/features/export/android-web-export-workflow'
 import { recoverManagedImportSessions } from '~/features/resource-import/managed-import-recovery'
 import { engineManager } from '~/services/engine-manager'
@@ -12,6 +13,10 @@ import { useGeneralSettingsStore } from '~/stores/general-settings'
 import { useStorageSettingsStore } from '~/stores/storage-settings'
 
 import { isDebug } from '~build/meta'
+
+// 根窗模态挂在 App 下、编辑视图之外：派发器必须由 App 提供，模态里的浮层编辑器才能注册快捷键。
+// 编辑视图自己的 useShortcutDispatcher 会把静态绑定与执行上下文贡献给这个宿主。
+useShortcutDispatcher({ executeContext: undefined })
 
 useResourcePreviewPrimer()
 const generalSettingsStore = useGeneralSettingsStore()

@@ -43,6 +43,7 @@ function createControls(options: CreateControlsOptions = {}) {
     getNumberValue: () => 1,
     updateNumberField: vi.fn(),
     canScrubNumber: () => false,
+    handleNumberLabelClick: vi.fn(),
     handleNumberLabelPointerDown: vi.fn(),
     getSliderTrackValue: () => [1],
     getSliderMin: () => 0,

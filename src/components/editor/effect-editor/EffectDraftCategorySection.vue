@@ -100,6 +100,7 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                 :for="controls.numberInputId(param.key)"
                 class="text-xs text-muted-foreground shrink min-w-0"
                 :class="controls.canScrubNumber(param) ? 'cursor-ew-resize select-none touch-none' : ''"
+                @click="controls.handleNumberLabelClick($event)"
                 @pointerdown="controls.handleNumberLabelPointerDown($event, param)"
               >
                 <span class="block truncate">{{ resolveLabel(param.label) }}</span>
@@ -141,6 +142,7 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               :for="controls.numberInputId(item.param.key)"
               class="text-xs text-muted-foreground shrink min-w-0"
               :class="controls.canScrubNumber(item.param) ? 'cursor-ew-resize select-none touch-none' : ''"
+              @click="controls.handleNumberLabelClick($event)"
               @pointerdown="controls.handleNumberLabelPointerDown($event, item.param)"
             >
               <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>

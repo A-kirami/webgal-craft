@@ -89,6 +89,68 @@ describe('EffectDraftForm', () => {
     expectNoConsoleMessage('Invalid prop: type check failed for prop "modelValue"')
   })
 
+  it('拖拽数值 label 之后会吞掉这次点击的默认聚焦，纯点击不吞', async () => {
+    const transformUpdates = vi.fn()
+
+    await renderInBrowser(EffectDraftForm, {
+      props: {
+        'duration': '200',
+        'ease': '',
+        'onUpdate:transform': transformUpdates,
+        'transform': {
+          position: { x: 12, y: 0 },
+        },
+      },
+      global: {
+        plugins: [createPinia(), createBrowserLocalizedI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    const input = page.getByRole('group', { name: '变换' }).getByRole('textbox', { name: 'X 位移' })
+    const inputElement = await input.element()
+    const labelElement = document.querySelector<HTMLElement>(`label[for="${CSS.escape(inputElement.id)}"]`)
+
+    if (!labelElement) {
+      throw new TypeError('未找到与 X 位移输入框关联的 label')
+    }
+
+    // 纯点击不阻止默认行为，浏览器会把焦点送进关联输入框
+    const plainClick = new MouseEvent('click', { bubbles: true, cancelable: true })
+    labelElement.dispatchEvent(plainClick)
+
+    expect(plainClick.defaultPrevented).toBe(false)
+
+    // 拖拽 scrub：pointerdown → pointermove → pointerup
+    labelElement.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      button: 0,
+      buttons: 1,
+      clientX: 100,
+      pointerId: 7,
+    }))
+    globalThis.dispatchEvent(new PointerEvent('pointermove', {
+      bubbles: true,
+      buttons: 1,
+      clientX: 120,
+      pointerId: 7,
+    }))
+    globalThis.dispatchEvent(new PointerEvent('pointerup', {
+      bubbles: true,
+      clientX: 120,
+      pointerId: 7,
+    }))
+
+    const dragClick = new MouseEvent('click', { bubbles: true, cancelable: true })
+    labelElement.dispatchEvent(dragClick)
+
+    // 拖拽确实改了值，说明这段指针序列走完了 scrub
+    expect(transformUpdates).toHaveBeenCalled()
+
+    // 阻止 label 点击的默认行为即取消聚焦激活，真实点击下浏览器不会再聚焦输入框
+    expect(dragClick.defaultPrevented).toBe(true)
+  })
+
   it('在旋转控件旁提供水平和垂直翻转按钮', async () => {
     const transformUpdates = vi.fn()
 
