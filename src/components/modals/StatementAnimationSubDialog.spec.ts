@@ -34,6 +34,7 @@ function createAnimationDialogMock(): ReturnType<typeof useStatementAnimationDia
     isOpen: true,
     requestClose: vi.fn(),
     resetToDefault: vi.fn(),
+    sessionId: 1,
     updateFrames: vi.fn(),
   }
 }

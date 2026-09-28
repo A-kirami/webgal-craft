@@ -35,6 +35,7 @@ useShortcut({
       </DialogHeader>
       <div class="h-full min-h-0 overflow-hidden">
         <StatementAnimationEditorPanel
+          :key="props.animationDialog.sessionId"
           :frames="props.animationDialog.draftFrames"
           :enable-history-shortcuts="false"
           :show-footer="false"
