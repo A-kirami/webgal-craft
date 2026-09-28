@@ -233,7 +233,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     })
   }
 
-  const { drag: numberScrub, start: startNumberScrub } = createParamDrag<
+  const { drag: numberScrub, handleClick: handleNumberLabelClick, start: startNumberScrub } = createParamDrag<
     EffectNumberField,
     { lastValue: number, startValue: number, startX: number }
   >({
@@ -595,6 +595,7 @@ export function useEffectContinuousControls(deps: EffectControlDeps) {
     // number
     updateNumberField,
     canScrubNumber,
+    handleNumberLabelClick,
     handleNumberLabelPointerDown,
     numberScrub,
     // slider

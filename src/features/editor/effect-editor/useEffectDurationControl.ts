@@ -14,6 +14,9 @@ export function useEffectDurationControl(options: UseEffectDurationControlOption
   let pendingDurationValue: string | undefined
   let pendingDurationFrameId: number | undefined
   let suppressDurationCommitOnEnd = false
+  // 拖动过就吞掉紧接着的那次点击：label 的点击激活会把焦点送进时长输入框，
+  // 而效果编辑器里撤销、复制这类快捷键只在非输入态生效，焦点一进输入框就整片失效
+  let suppressNextClick = false
 
   function updateDuration(value: string | number) {
     options.emitDuration(String(value ?? ''))
@@ -73,6 +76,7 @@ export function useEffectDurationControl(options: UseEffectDurationControlOption
     startX: number
   }>({
     onStart(event) {
+      suppressNextClick = false
       if (event.button !== 0 || event.pointerType === 'touch') {
         return
       }
@@ -85,6 +89,7 @@ export function useEffectDurationControl(options: UseEffectDurationControlOption
       }
     },
     onMove(event, state) {
+      suppressNextClick = true
       const step = resolveDurationScrubStep(event)
       const deltaX = event.clientX - state.startX
       const nextValue = Math.max(0, Math.round(state.startValue + (deltaX * step)))
@@ -117,6 +122,16 @@ export function useEffectDurationControl(options: UseEffectDurationControlOption
     durationScrub.start(event)
   }
 
+  /** 挂在时长 label 的 click 上：拖动过就阻止默认的聚焦，纯点击仍保留原生行为 */
+  function handleDurationLabelClick(event: MouseEvent): void {
+    if (!suppressNextClick) {
+      return
+    }
+
+    suppressNextClick = false
+    event.preventDefault()
+  }
+
   function updateEase(value: unknown) {
     const nextValue = String(value ?? '')
     options.emitEase(nextValue === options.defaultEaseValue ? '' : nextValue)
@@ -124,6 +139,7 @@ export function useEffectDurationControl(options: UseEffectDurationControlOption
 
   return {
     updateDuration,
+    handleDurationLabelClick,
     handleDurationLabelPointerDown,
     updateEase,
     stopDurationScrub: () => {

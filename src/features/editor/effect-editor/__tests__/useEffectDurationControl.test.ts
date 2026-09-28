@@ -119,6 +119,28 @@ describe('useEffectDurationControl', () => {
     expect(emitDuration).toHaveBeenLastCalledWith('12')
   })
 
+  it('拖动时长 label 之后的点击会被阻止一次', () => {
+    const control = useEffectDurationControl({
+      getDuration: () => '10',
+      emitDuration: vi.fn(),
+      emitEase: vi.fn(),
+      defaultEaseValue: '__default__',
+    })
+
+    control.handleDurationLabelPointerDown(createPointerEvent())
+    dragRuntime.callbacks?.onMove(createPointerEvent({ clientX: 5 }), dragRuntime.state!)
+
+    const dragClick = createPointerEvent()
+    control.handleDurationLabelClick(dragClick)
+
+    expect(dragClick.preventDefault).toHaveBeenCalledOnce()
+
+    const nextClick = createPointerEvent()
+    control.handleDurationLabelClick(nextClick)
+
+    expect(nextClick.preventDefault).not.toHaveBeenCalled()
+  })
+
   it('重复开始拖拽时先提交上一次拖拽的最终值', () => {
     let currentDuration = '10'
     const emitDuration = vi.fn((value: string) => {
