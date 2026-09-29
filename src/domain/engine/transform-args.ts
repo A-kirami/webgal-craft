@@ -67,6 +67,11 @@ export function readTransformFromMode(sentence: ArgsSource): TransformFromMode |
   return transformFrom === 'default' ? 'default' : 'current'
 }
 
+/** 语句是否显式写了旧写入参数（引擎按 key 存在判定，与取值无关） */
+export function hasLegacyTransformWriteArgs(sentence: ArgsSource): boolean {
+  return hasArg(sentence.args, 'writeDefault') || hasArg(sentence.args, 'ignoreDefault')
+}
+
 /** 4.6.4 的旧参数规则：writeDefault 取值决定写回源，parallel / ignoreDefault 决定是否完整写入 */
 function resolveLegacyWriteMode(sentence: ArgsSource, parallel: boolean): TransformWriteMode {
   const writeDefault = readArgBoolean(sentence.args, 'writeDefault') ?? false
@@ -116,7 +121,7 @@ export function resolveTransformWriteMode(
 
   // 引擎按旧参数的 key 是否存在判定是否走旧分支，与参数取值无关：
   // -writeDefault=false / -ignoreDefault=false 是表达 (writeDefault=false, writeFullEffect=true) 的唯一写法。
-  if (hasArg(sentence.args, 'writeDefault') || hasArg(sentence.args, 'ignoreDefault')) {
+  if (hasLegacyTransformWriteArgs(sentence)) {
     return resolveLegacyWriteMode(sentence, parallel)
   }
 
