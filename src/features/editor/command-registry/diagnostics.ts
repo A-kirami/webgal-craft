@@ -59,7 +59,7 @@ export type TransformWriteModeCompatReference =
     code: 'legacy-transform-write-arg'
     source: { kind: 'argument', key: string }
     value: string
-    /** 同句已写 transformFrom：当前引擎忽略旧参数；未写则旧参数仍是生效写法 */
+    /** 同句的 transformFrom 被引擎识别到非空取值：旧参数被忽略；否则旧参数仍是生效写法 */
     overriddenByTransformFrom: boolean
   }
 
@@ -156,7 +156,8 @@ export function findUnsupportedEngineOpusVocalReferences(
 }
 
 /**
- * 变换写入参数的跨版本兼容诊断，按 key 存在判定、不看取值：
+ * 变换写入参数的跨版本兼容诊断：
+ * 旧参数按 key 存在判定（不看取值）；它是否被当前引擎忽略，按 transformFrom 是否被识别到非空取值判定。
  * 4.6.5 之前不认 transformFrom；4.6.5+ 以 transformFrom 为准，旧参数只为 4.6.4 或更低版本保留。
  * changeFigure / changeBg / setTransition 的 ignoreDefault 与写入模式无关，不在此列。
  */
