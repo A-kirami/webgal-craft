@@ -44,6 +44,7 @@ function createSession(options: {
     missingTargetWarned: false,
     baselineResolved: options.baselineResolved ?? true,
     baselineSource: 'unknown',
+    baselineContentStale: false,
     writeDefault: false,
     onApply() { /* no-op */ },
   }) as EffectEditorSession
@@ -93,6 +94,10 @@ describe('useTransformOverlayBridge', () => {
   beforeEach(() => {
     previewSyncStore.isPreviewReady = true
     previewSyncStore.queryReferenceBox.mockReset()
+    previewSyncStore.queryReferenceBox.mockResolvedValue({
+      target: 'fig-center',
+      status: 'unsupported',
+    })
     vi.useRealTimers()
   })
 
@@ -406,5 +411,53 @@ describe('useTransformOverlayBridge', () => {
       position: { x: 32, y: 16 },
     })
     expect(provider.requestPreview).not.toHaveBeenCalled()
+  })
+
+  it('运行时就绪早于目标加载时，引用框查询失败会重试到控件出现', async () => {
+    vi.useFakeTimers()
+    previewSyncStore.queryReferenceBox
+      .mockResolvedValueOnce({
+        target: 'fig-center',
+        status: 'unsupported',
+      })
+      .mockResolvedValueOnce({
+        target: 'fig-center',
+        status: 'ready',
+        box: {
+          originX: 640,
+          originY: 360,
+          width: 200,
+          height: 100,
+          anchorX: 0.5,
+          anchorY: 0.5,
+          stageWidth: 1280,
+          stageHeight: 720,
+        },
+      })
+
+    const bridge = createBridge({
+      provider: createProvider(createSession()),
+    })
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(previewSyncStore.queryReferenceBox).toHaveBeenCalledTimes(1)
+    expect(bridge.enabled.value).toBe(false)
+
+    await vi.advanceTimersByTimeAsync(120)
+    expect(previewSyncStore.queryReferenceBox).toHaveBeenCalledTimes(2)
+    expect(bridge.referenceBox.value).toBeDefined()
+    expect(bridge.enabled.value).toBe(true)
+  })
+
+  it('引用框持续不可用时会按固定节奏停止重试', async () => {
+    vi.useFakeTimers()
+
+    createBridge({
+      provider: createProvider(createSession()),
+    })
+
+    await vi.advanceTimersByTimeAsync(5000)
+
+    expect(previewSyncStore.queryReferenceBox).toHaveBeenCalledTimes(5)
   })
 })

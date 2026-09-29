@@ -50,6 +50,24 @@ vi.mock('~/stores/preview-sync', () => ({
   usePreviewSyncStore: () => previewSyncStoreMock,
 }))
 
+const editorStoreMock = vi.hoisted(() => ({
+  currentState: undefined as {
+    path: string
+    projection: 'text' | 'visual'
+    isDirty: boolean
+    lastSavedTime?: Date
+  } | undefined,
+  currentTextProjection: undefined as { path: string, textContent: string } | undefined,
+}))
+
+vi.mock('~/stores/editor', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('~/stores/editor')>()
+  return {
+    ...actual,
+    useEditorStore: () => editorStoreMock,
+  }
+})
+
 vi.mock('~/stores/modal', () => ({
   useModalStore: () => ({
     open: modalOpenMock,

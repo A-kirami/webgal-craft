@@ -18,6 +18,9 @@ export interface UseTransformOverlayBridgeOptions {
 
 const FORM_DISPLAY_THROTTLE_MS = 32
 
+/** 运行时就绪可能早于目标加载：引用框查询失败后按这个节奏重试，目标出现即恢复控件 */
+const REFERENCE_BOX_RETRY_DELAYS_MS = [120, 300, 700, 1500] as const
+
 export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOptions) {
   const previewSyncStore = usePreviewSyncStore()
 
@@ -29,6 +32,8 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
   let pendingFormDisplayTransform = $ref<DisplayTransform>()
   let formDisplayTimeoutId: ReturnType<typeof setTimeout> | undefined
   let queryRevision = 0
+  let referenceBoxRetryAttempt = 0
+  let referenceBoxRetryTimeoutId: ReturnType<typeof setTimeout> | undefined
 
   const session = computed(() => options.provider.session)
   const referenceBox = computed(() => referenceBoxResult?.status === 'ready' ? referenceBoxResult.box : undefined)
@@ -53,6 +58,28 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
     && displayTransform.value,
   ))
 
+  function cancelReferenceBoxRetry(): void {
+    if (referenceBoxRetryTimeoutId === undefined) {
+      return
+    }
+
+    clearTimeout(referenceBoxRetryTimeoutId)
+    referenceBoxRetryTimeoutId = undefined
+  }
+
+  function scheduleReferenceBoxRetry(): void {
+    const delay = REFERENCE_BOX_RETRY_DELAYS_MS[referenceBoxRetryAttempt]
+    if (delay === undefined) {
+      return
+    }
+
+    referenceBoxRetryAttempt++
+    referenceBoxRetryTimeoutId = setTimeout(() => {
+      referenceBoxRetryTimeoutId = undefined
+      void queryReferenceBox()
+    }, delay)
+  }
+
   async function queryReferenceBox(): Promise<void> {
     const currentSession = session.value
     if (
@@ -73,6 +100,12 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
     }
 
     referenceBoxResult = result
+    if (result.status === 'ready') {
+      referenceBoxRetryAttempt = 0
+      return
+    }
+
+    scheduleReferenceBoxRetry()
   }
 
   function cancelScheduledFormDisplayTransform(): void {
@@ -201,6 +234,8 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
     ],
     () => {
       liveDisplayTransform = undefined
+      cancelReferenceBoxRetry()
+      referenceBoxRetryAttempt = 0
       resetFormDisplayTransform()
       void queryReferenceBox()
     },
@@ -216,7 +251,10 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
     { deep: true },
   )
 
-  tryOnScopeDispose(resetFormDisplayTransform)
+  tryOnScopeDispose(() => {
+    resetFormDisplayTransform()
+    cancelReferenceBoxRetry()
+  })
 
   return {
     displayTransform,

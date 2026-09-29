@@ -19,6 +19,8 @@ import { useShortcutDispatcher } from '../useShortcutDispatcher'
 
 import type { ComponentPublicInstance } from 'vue'
 
+const effectEditorOpen = ref(false)
+
 const shortcutActions = vi.hoisted(() => ({
   rename: vi.fn(),
   save: vi.fn(),
@@ -99,6 +101,7 @@ function createHarnessComponent() {
       useShortcutContext({
         commandPanelOpen: false,
         editorMode: 'visual',
+        effectEditorOpen,
         hasSelection: true,
         isDirty: true,
         isModalOpen: false,
@@ -553,9 +556,26 @@ function createComponentTargetHarnessComponent() {
 
 describe('useShortcutDispatcher', () => {
   beforeEach(() => {
+    effectEditorOpen.value = false
     for (const action of Object.values(shortcutActions)) {
       action.mockReset()
     }
+  })
+
+  it('效果编辑器打开时屏蔽会打扰会话的全局快捷键', async () => {
+    effectEditorOpen.value = true
+
+    await renderInBrowser(createHarnessComponent(), {
+      global: {
+        plugins: [createPinia()],
+      },
+    })
+
+    await userEvent.keyboard('{Control>}s{/Control}')
+    await userEvent.keyboard('{Control>}j{/Control}')
+
+    expect(shortcutActions.save).not.toHaveBeenCalled()
+    expect(shortcutActions.togglePreviewPanel).not.toHaveBeenCalled()
   })
 
   it('会响应静态注册的全局快捷键', async () => {

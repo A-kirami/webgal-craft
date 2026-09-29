@@ -27,7 +27,8 @@ export function createEditorShortcutDefinitions(): ShortcutDefinition<EditorShor
       id: 'editor.save',
       keys: 'Mod+S',
       overrideMonaco: true,
-      when: { editorMode: '!none' },
+      // 效果编辑器会话拥有运行时预览：保存会让运行时重跑场景并冲掉未应用的草稿预览，按误操作屏蔽
+      when: { editorMode: '!none', effectEditorOpen: false },
     },
     {
       allowInInput: true,
@@ -59,6 +60,8 @@ export function createEditorShortcutDefinitions(): ShortcutDefinition<EditorShor
       id: 'editor.togglePreview',
       keys: 'Mod+J',
       overrideMonaco: true,
+      // 同上：效果编辑器打开期间切换预览面板会重建运行时，属于误操作
+      when: { effectEditorOpen: false },
     },
     {
       allowInInput: true,
