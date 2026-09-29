@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAnimationFrameShortcuts } from '~/features/editor/animation/useAnimationFrameShortcuts'
 import { useStatementAnimationEditorPanel } from '~/features/editor/animation/useStatementAnimationEditorPanel'
 import { useShortcut } from '~/features/editor/shortcut/useShortcut'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
@@ -69,14 +70,9 @@ useShortcut({
   when: { animationHistoryShortcuts: true, panelFocus: 'animationEditor' },
 })
 
-useShortcut({
+useAnimationFrameShortcuts({
+  actions: controller,
   allowInModal: true,
-  execute: () => {
-    controller.handleDeleteFrame()
-  },
-  i18nKey: 'shortcut.animation.deleteFrame',
-  id: 'animation.deleteFrame',
-  keys: 'Delete',
   when: { panelFocus: 'animationEditor' },
 })
 

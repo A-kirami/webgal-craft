@@ -1476,7 +1476,16 @@ shortcut:
     apply: 应用更改
     close: 取消并关闭
   animation:
+    addFrame: 新建帧
+    copyFrame: 复制帧
+    cutFrame: 剪切帧
+    pasteFrame: 粘贴帧
+    duplicateFrame: 创建帧副本
     deleteFrame: 删除帧
+    moveEarlier: 前移帧
+    moveLater: 后移帧
+    selectFirstFrame: 选中第一帧
+    selectLastFrame: 选中最后一帧
     apply: 应用更改
     close: 取消并关闭
   transform:

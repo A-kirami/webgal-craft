@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAnimationFrameShortcuts } from '~/features/editor/animation/useAnimationFrameShortcuts'
 import { useVisualEditorAnimation } from '~/features/editor/animation/useVisualEditorAnimation'
 import { useShortcut } from '~/features/editor/shortcut/useShortcut'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
@@ -20,6 +21,8 @@ const controller = useVisualEditorAnimation({
   applyAnimationFrameDelete: (path, frameIndex) => editorStore.applyAnimationFrameDelete(path, frameIndex),
   applyAnimationFrameInsert: (path, insertAfterIndex, frame) =>
     editorStore.applyAnimationFrameInsert(path, insertAfterIndex, frame),
+  applyAnimationFrameReorder: (path, fromIndex, toIndex) =>
+    editorStore.applyAnimationFrameReorder(path, fromIndex, toIndex),
   applyAnimationFrameUpdate: (path, frameIndex, patch) =>
     editorStore.applyAnimationFrameUpdate(path, frameIndex, patch),
   canRedo: path => editorStore.canRedoDocument(path),
@@ -72,13 +75,8 @@ useShortcut({
   },
 })
 
-useShortcut({
-  execute: () => {
-    controller.handleDeleteFrame()
-  },
-  i18nKey: 'shortcut.animation.deleteFrame',
-  id: 'visual.delete',
-  keys: 'Delete',
+useAnimationFrameShortcuts({
+  actions: controller,
   when: {
     panelFocus: 'editor',
     visualType: 'animation',

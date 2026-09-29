@@ -1476,7 +1476,16 @@ shortcut:
     apply: Apply Changes
     close: Cancel and Close
   animation:
+    addFrame: New Frame
+    copyFrame: Copy Frame
+    cutFrame: Cut Frame
+    pasteFrame: Paste Frame
+    duplicateFrame: Duplicate Frame
     deleteFrame: Delete Frame
+    moveEarlier: Move Frame Earlier
+    moveLater: Move Frame Later
+    selectFirstFrame: Select First Frame
+    selectLastFrame: Select Last Frame
     apply: Apply Changes
     close: Cancel and Close
   transform:
