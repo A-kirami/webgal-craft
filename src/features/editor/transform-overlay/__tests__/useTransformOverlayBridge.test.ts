@@ -44,6 +44,7 @@ function createSession(options: {
     missingTargetWarned: false,
     baselineResolved: options.baselineResolved ?? true,
     baselineSource: 'unknown',
+    baselineContentStale: false,
     writeDefault: false,
     onApply() { /* no-op */ },
   }) as EffectEditorSession
