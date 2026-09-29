@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   deleteAnimationFrameAtSelection,
   insertAnimationFrameAfterSelection,
+  moveAnimationFrameAtSelection,
   normalizeAnimationFrameDurationInput,
   normalizeAnimationFrameEaseInput,
   resolveAnimationTimelineDurationChange,
@@ -59,6 +60,47 @@ describe('animationFrameEditor', () => {
     })
 
     expect(deleteAnimationFrameAtSelection([{ duration: 120 }], -1)).toBeUndefined()
+  })
+
+  it('前移或后移选中帧时返回重排后的帧与新的选中帧 id', () => {
+    const frames = reactive<AnimationFrame[]>([
+      { duration: 120, alpha: 0.2 },
+      { duration: 240, alpha: 0.8 },
+      { duration: 360, alpha: 1 },
+    ])
+
+    const movedEarlier = moveAnimationFrameAtSelection(frames, 1, -1)
+
+    expect(movedEarlier).toEqual({
+      nextFrames: [
+        { duration: 240, alpha: 0.8 },
+        { duration: 120, alpha: 0.2 },
+        { duration: 360, alpha: 1 },
+      ],
+      selectedFrameId: 1,
+    })
+    expect(movedEarlier?.nextFrames).not.toBe(frames)
+    expect(movedEarlier?.nextFrames[1]).not.toBe(frames[0])
+
+    expect(moveAnimationFrameAtSelection(frames, 1, 1)).toEqual({
+      nextFrames: [
+        { duration: 120, alpha: 0.2 },
+        { duration: 360, alpha: 1 },
+        { duration: 240, alpha: 0.8 },
+      ],
+      selectedFrameId: 3,
+    })
+  })
+
+  it('选中帧已处于边界时不会重排', () => {
+    const frames = reactive<AnimationFrame[]>([
+      { duration: 120 },
+      { duration: 240 },
+    ])
+
+    expect(moveAnimationFrameAtSelection(frames, 0, -1)).toBeUndefined()
+    expect(moveAnimationFrameAtSelection(frames, 1, 1)).toBeUndefined()
+    expect(moveAnimationFrameAtSelection(frames, -1, 1)).toBeUndefined()
   })
 
   it('更新指定帧时会克隆原数组并仅合并目标 patch', () => {

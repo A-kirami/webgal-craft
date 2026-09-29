@@ -85,8 +85,12 @@ function createAnimationEditorPaneStub() {
   }
 }
 
-function createShortcutHarness(options: { enableHistoryShortcuts: boolean, isModalOpen: boolean }) {
-  const frames = reactive<AnimationFrame[]>([
+function createShortcutHarness(options: {
+  enableHistoryShortcuts: boolean
+  frames?: AnimationFrame[]
+  isModalOpen: boolean
+}) {
+  const frames = reactive<AnimationFrame[]>(options.frames ?? [
     {
       duration: 120,
     },
@@ -97,7 +101,7 @@ function createShortcutHarness(options: { enableHistoryShortcuts: boolean, isMod
   const handleUpdateFrames = vi.fn((nextFrames: AnimationFrame[]) => {
     frames.splice(0, frames.length, ...nextFrames)
   })
-  const { stub } = createAnimationEditorPaneStub()
+  const { state, stub } = createAnimationEditorPaneStub()
 
   const harness = defineComponent({
     name: 'AnimationShortcutHarness',
@@ -119,10 +123,14 @@ function createShortcutHarness(options: { enableHistoryShortcuts: boolean, isMod
     },
   })
 
-  return { frames, harness, stub }
+  return { frames, harness, state, stub }
 }
 
-async function renderShortcutHarness(options: { enableHistoryShortcuts: boolean, isModalOpen: boolean }) {
+async function renderShortcutHarness(options: {
+  enableHistoryShortcuts: boolean
+  frames?: AnimationFrame[]
+  isModalOpen: boolean
+}) {
   const fixture = createShortcutHarness(options)
 
   await renderInBrowser(fixture.harness, {
@@ -272,6 +280,68 @@ describe('StatementAnimationEditorPanel', () => {
     globalThis.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, shiftKey: true, key: 'Z' }))
     await vi.waitFor(() => {
       expect(frames).toHaveLength(1)
+    })
+  })
+
+  it('抽屉场景下响应帧编辑与首尾选择快捷键', async () => {
+    const { frames, state } = await renderShortcutHarness({
+      enableHistoryShortcuts: true,
+      frames: [
+        { duration: 120, alpha: 0.1 },
+        { duration: 180, alpha: 0.2 },
+        { duration: 240, alpha: 0.3 },
+      ],
+      isModalOpen: false,
+    })
+
+    // End 选中最后一帧后左移
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'End' }))
+    await vi.waitFor(() => {
+      expect(state.selectedFrameId).toBe(3)
+    })
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, key: 'ArrowLeft' }))
+    await vi.waitFor(() => {
+      expect(frames.map(frame => frame.duration)).toEqual([120, 240, 180])
+    })
+    expect(state.selectedFrameId).toBe(2)
+
+    // 创建副本会把选中帧的克隆插到其后
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, key: 'd' }))
+    await vi.waitFor(() => {
+      expect(frames.map(frame => frame.alpha)).toEqual([0.1, 0.3, 0.3, 0.2])
+    })
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, key: 'n' }))
+    await vi.waitFor(() => {
+      expect(frames.map(frame => frame.duration)).toEqual([120, 240, 240, 0, 180])
+    })
+
+    // Home 回到第一帧后水平翻转，再用复制粘贴把翻转结果插到其后
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }))
+    await vi.waitFor(() => {
+      expect(state.selectedFrameId).toBe(1)
+    })
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'H', shiftKey: true }))
+    await vi.waitFor(() => {
+      expect(frames[0]?.scale).toEqual({ x: -1 })
+    })
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, key: 'c' }))
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, key: 'v' }))
+    await vi.waitFor(() => {
+      expect(frames).toHaveLength(6)
+    })
+    expect(frames[1]).toEqual({
+      alpha: 0.1,
+      duration: 120,
+      scale: { x: -1 },
+    })
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, key: 'x' }))
+    await vi.waitFor(() => {
+      expect(frames).toHaveLength(5)
     })
   })
 

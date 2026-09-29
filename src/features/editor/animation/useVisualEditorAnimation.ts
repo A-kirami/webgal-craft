@@ -1,5 +1,6 @@
 import { computed, reactive, toValue, watch } from 'vue'
 
+import { cloneAnimationFrame } from '~/domain/stage/animation-frame'
 import {
   normalizeAnimationFrameDurationInput,
   normalizeAnimationFrameEaseInput,
@@ -7,11 +8,13 @@ import {
 } from '~/features/editor/animation/animation-frame-editor'
 import { createAnimationTransformPatch } from '~/features/editor/animation/animation-inspector'
 import { createDefaultAnimationFrame, useAnimationEditorSession } from '~/features/editor/animation/useAnimationEditorSession'
+import { flipTransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 
 import type { MaybeRefOrGetter } from 'vue'
 import type { AbsPath } from '~/domain/path'
 import type { AnimationFrame, Transform } from '~/domain/stage/types'
 import type { AnimationTimelineResizeDurationPayload } from '~/features/editor/animation/animation-editor-contract'
+import type { TransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 import type { EffectEditorTransformUpdatePayload } from '~/features/editor/effect-editor/useEffectEditorProvider'
 
 interface VisualAnimationStateLike {
@@ -30,6 +33,7 @@ interface UseVisualEditorAnimationOptions {
     insertAfterIndex: number | undefined,
     frame: AnimationFrame,
   ) => void
+  applyAnimationFrameReorder: (path: AbsPath, fromIndex: number, toIndex: number) => void
   applyAnimationFrameUpdate: (
     path: AbsPath,
     frameIndex: number,
@@ -48,6 +52,8 @@ export function useVisualEditorAnimation(options: UseVisualEditorAnimationOption
   const session = useAnimationEditorSession(() => state.value.frames)
   let pendingTransformDraft = $ref<Transform>()
   let pendingTransformDraftFrameId = $ref<number>()
+  // 剪贴板只属于当前编辑会话：动画可视化投影与其他动画编辑器宿主各自复制、各自粘贴
+  let frameClipboard: AnimationFrame | undefined
 
   const canUndo = computed(() => options.canUndo(state.value.path))
   const canRedo = computed(() => options.canRedo(state.value.path))
@@ -114,16 +120,20 @@ export function useVisualEditorAnimation(options: UseVisualEditorAnimationOption
     options.scheduleAutoSaveIfEnabled(state.value.path)
   }
 
-  function handleAddFrame(): void {
+  function insertFrameAfterSelection(frame: AnimationFrame): void {
     resetSelectedFrameTransformDraft()
     resetSelectedFrameDurationDraft()
 
     const insertAfterIndex = session.selectedFrameIndex >= 0
       ? session.selectedFrameIndex
       : undefined
-    options.applyAnimationFrameInsert(state.value.path, insertAfterIndex, createDefaultAnimationFrame())
+    options.applyAnimationFrameInsert(state.value.path, insertAfterIndex, frame)
     session.selectedFrameId = insertAfterIndex === undefined ? 1 : insertAfterIndex + 2
     options.scheduleAutoSaveIfEnabled(state.value.path)
+  }
+
+  function handleAddFrame(): void {
+    insertFrameAfterSelection(createDefaultAnimationFrame())
   }
 
   function handleDeleteFrame(): void {
@@ -139,6 +149,79 @@ export function useVisualEditorAnimation(options: UseVisualEditorAnimationOption
     options.applyAnimationFrameDelete(state.value.path, frameIndex)
     session.selectedFrameId = nextSelectedIndex >= 0 ? nextSelectedIndex + 1 : 1
     options.scheduleAutoSaveIfEnabled(state.value.path)
+  }
+
+  function handleCopyFrame(): void {
+    const frame = session.selectedFrame
+    if (!frame) {
+      return
+    }
+
+    frameClipboard = cloneAnimationFrame(frame)
+  }
+
+  function handleCutFrame(): void {
+    if (!session.selectedFrame) {
+      return
+    }
+
+    handleCopyFrame()
+    handleDeleteFrame()
+  }
+
+  function handlePasteFrame(): void {
+    if (frameClipboard) {
+      insertFrameAfterSelection(frameClipboard)
+    }
+  }
+
+  function handleDuplicateFrame(): void {
+    const frame = session.selectedFrame
+    if (frame) {
+      insertFrameAfterSelection(frame)
+    }
+  }
+
+  function handleMoveFrame(offset: -1 | 1): void {
+    const frameIndex = session.selectedFrameIndex
+    const targetIndex = frameIndex + offset
+    if (frameIndex < 0 || targetIndex < 0 || targetIndex >= state.value.frames.length) {
+      return
+    }
+
+    resetSelectedFrameTransformDraft()
+    resetSelectedFrameDurationDraft()
+    options.applyAnimationFrameReorder(state.value.path, frameIndex, targetIndex)
+    session.selectedFrameId = targetIndex + 1
+    options.scheduleAutoSaveIfEnabled(state.value.path)
+  }
+
+  function handleSelectFirstFrame(): void {
+    if (session.keyframes.length > 0) {
+      session.selectedFrameId = 1
+    }
+  }
+
+  function handleSelectLastFrame(): void {
+    const lastKeyframe = session.keyframes.at(-1)
+    if (lastKeyframe) {
+      session.selectedFrameId = lastKeyframe.id
+    }
+  }
+
+  function handleFlipScaleAxis(axis: TransformScaleAxis): void {
+    const selectedFrame = session.selectedFrameState
+    if (!selectedFrame) {
+      return
+    }
+
+    handleTransformUpdate({
+      flush: true,
+      value: flipTransformScaleAxis({
+        axis,
+        transform: selectedFrame.transform,
+      }),
+    })
   }
 
   function handleTransformUpdate(payload: EffectEditorTransformUpdatePayload): void {
@@ -245,10 +328,18 @@ export function useVisualEditorAnimation(options: UseVisualEditorAnimationOption
     canUndo,
     session,
     handleAddFrame,
+    handleCopyFrame,
+    handleCutFrame,
     handleDeleteFrame,
+    handleDuplicateFrame,
     handleDurationUpdate,
     handleEaseUpdate,
+    handleFlipScaleAxis,
+    handleMoveFrame,
+    handlePasteFrame,
     handleRedo,
+    handleSelectFirstFrame,
+    handleSelectLastFrame,
     handleTimelineResizeDuration,
     handleTransformUpdate,
     handleUndo,

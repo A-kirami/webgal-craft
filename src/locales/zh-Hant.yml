@@ -1476,7 +1476,16 @@ shortcut:
     apply: 套用變更
     close: 取消並關閉
   animation:
+    addFrame: 新增影格
+    copyFrame: 複製影格
+    cutFrame: 剪下影格
+    pasteFrame: 貼上影格
+    duplicateFrame: 建立影格副本
     deleteFrame: 刪除影格
+    moveEarlier: 前移影格
+    moveLater: 後移影格
+    selectFirstFrame: 選取第一個影格
+    selectLastFrame: 選取最後一個影格
     apply: 套用變更
     close: 取消並關閉
   transform:

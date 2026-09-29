@@ -1,9 +1,10 @@
 import { reactive, toValue, watch } from 'vue'
 
-import { cloneAnimationFrames } from '~/domain/stage/animation-frame'
+import { cloneAnimationFrame, cloneAnimationFrames } from '~/domain/stage/animation-frame'
 import {
   deleteAnimationFrameAtSelection,
   insertAnimationFrameAfterSelection,
+  moveAnimationFrameAtSelection,
   normalizeAnimationFrameDurationInput,
   normalizeAnimationFrameEaseInput,
   resolveAnimationTimelineDurationChange,
@@ -11,10 +12,12 @@ import {
 } from '~/features/editor/animation/animation-frame-editor'
 import { createAnimationTransformPatch } from '~/features/editor/animation/animation-inspector'
 import { createDefaultAnimationFrame, useAnimationEditorSession } from '~/features/editor/animation/useAnimationEditorSession'
+import { flipTransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 
 import type { MaybeRefOrGetter } from 'vue'
 import type { AnimationFrame } from '~/domain/stage/types'
 import type { AnimationTimelineResizeDurationPayload } from '~/features/editor/animation/animation-editor-contract'
+import type { TransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 import type { EffectEditorTransformUpdatePayload } from '~/features/editor/effect-editor/useEffectEditorProvider'
 
 interface UseStatementAnimationEditorPanelOptions {
@@ -26,6 +29,8 @@ export function useStatementAnimationEditorPanel(options: UseStatementAnimationE
   const session = useAnimationEditorSession(() => toValue(options.frames))
   const undoStack: AnimationFrame[][] = []
   const redoStack: AnimationFrame[][] = []
+  // 剪贴板跟着这份草稿走：抽屉与模态框各自持有独立面板，互不污染对方的帧列表
+  let frameClipboard: AnimationFrame | undefined
 
   watch(
     () => session.selectedFrameId,
@@ -77,15 +82,19 @@ export function useStatementAnimationEditorPanel(options: UseStatementAnimationE
     commitFrames(nextFrames)
   }
 
-  function handleAddFrame(): void {
+  function insertFrameAfterSelection(frame: AnimationFrame): void {
     const result = insertAnimationFrameAfterSelection(
       toValue(options.frames),
       session.selectedFrameIndex,
-      createDefaultAnimationFrame(),
+      frame,
     )
 
     commitFrames(result.nextFrames)
     session.selectedFrameId = result.selectedFrameId
+  }
+
+  function handleAddFrame(): void {
+    insertFrameAfterSelection(createDefaultAnimationFrame())
   }
 
   function handleDeleteFrame(): void {
@@ -97,6 +106,79 @@ export function useStatementAnimationEditorPanel(options: UseStatementAnimationE
     session.resetSelectedFrameDrafts()
     commitFrames(result.nextFrames)
     session.selectedFrameId = result.selectedFrameId
+  }
+
+  function handleCopyFrame(): void {
+    const frame = session.selectedFrame
+    if (!frame) {
+      return
+    }
+
+    frameClipboard = cloneAnimationFrame(frame)
+  }
+
+  function handleCutFrame(): void {
+    if (!session.selectedFrame) {
+      return
+    }
+
+    handleCopyFrame()
+    handleDeleteFrame()
+  }
+
+  function handlePasteFrame(): void {
+    if (frameClipboard) {
+      insertFrameAfterSelection(frameClipboard)
+    }
+  }
+
+  function handleDuplicateFrame(): void {
+    const frame = session.selectedFrame
+    if (frame) {
+      insertFrameAfterSelection(frame)
+    }
+  }
+
+  function handleMoveFrame(offset: -1 | 1): void {
+    const result = moveAnimationFrameAtSelection(
+      toValue(options.frames),
+      session.selectedFrameIndex,
+      offset,
+    )
+    if (!result) {
+      return
+    }
+
+    commitFrames(result.nextFrames)
+    session.selectedFrameId = result.selectedFrameId
+  }
+
+  function handleSelectFirstFrame(): void {
+    if (session.keyframes.length > 0) {
+      session.selectedFrameId = 1
+    }
+  }
+
+  function handleSelectLastFrame(): void {
+    const lastKeyframe = session.keyframes.at(-1)
+    if (lastKeyframe) {
+      session.selectedFrameId = lastKeyframe.id
+    }
+  }
+
+  function handleFlipScaleAxis(axis: TransformScaleAxis): void {
+    const selectedFrame = session.selectedFrameState
+    if (!selectedFrame) {
+      return
+    }
+
+    handleTransformUpdate({
+      flush: true,
+      value: flipTransformScaleAxis({
+        axis,
+        transform: selectedFrame.transform,
+      }),
+    })
   }
 
   function handleTransformUpdate(payload: EffectEditorTransformUpdatePayload): void {
@@ -152,10 +234,18 @@ export function useStatementAnimationEditorPanel(options: UseStatementAnimationE
   return reactive({
     session,
     handleAddFrame,
+    handleCopyFrame,
+    handleCutFrame,
     handleDeleteFrame,
+    handleDuplicateFrame,
     handleDurationUpdate,
     handleEaseUpdate,
+    handleFlipScaleAxis,
+    handleMoveFrame,
+    handlePasteFrame,
     handleRedo,
+    handleSelectFirstFrame,
+    handleSelectLastFrame,
     handleTimelineResizeDuration,
     handleTransformUpdate,
     handleUndo,

@@ -144,4 +144,130 @@ describe('useStatementAnimationEditorPanel', () => {
 
     scope.stop()
   })
+
+  it('复制后粘贴会在选中帧之后插入克隆的帧', () => {
+    const { controller, emitFrames, frames, scope } = createFixture()
+
+    controller.handleCopyFrame()
+    expect(emitFrames).not.toHaveBeenCalled()
+
+    controller.session.selectedFrameId = 3
+    controller.handlePasteFrame()
+    expect(frames).toHaveLength(4)
+    expect(frames[3]).toEqual({ duration: 120, position: { x: 10 } })
+    expect(controller.session.selectedFrameId).toBe(4)
+
+    scope.stop()
+  })
+
+  it('剪贴板为空时粘贴不会改动帧列表', () => {
+    const { controller, emitFrames, scope } = createFixture()
+
+    controller.handlePasteFrame()
+
+    expect(emitFrames).not.toHaveBeenCalled()
+
+    scope.stop()
+  })
+
+  it('剪切会复制选中帧并移除它，之后可以粘贴回来', () => {
+    const { controller, frames, scope } = createFixture()
+
+    controller.session.selectedFrameId = 2
+    controller.handleCutFrame()
+
+    expect(frames).toEqual([
+      { duration: 120, position: { x: 10 } },
+      { duration: 240, position: { x: 30 } },
+    ])
+
+    controller.handlePasteFrame()
+
+    expect(frames).toEqual([
+      { duration: 120, position: { x: 10 } },
+      { duration: 240, position: { x: 30 } },
+      { duration: 180, alpha: 0.5 },
+    ])
+    expect(controller.session.selectedFrameId).toBe(3)
+
+    scope.stop()
+  })
+
+  it('创建副本会在选中帧后插入克隆并选中副本', () => {
+    const { controller, frames, scope } = createFixture()
+
+    controller.session.selectedFrameId = 2
+    controller.handleDuplicateFrame()
+
+    expect(frames).toEqual([
+      { duration: 120, position: { x: 10 } },
+      { duration: 180, alpha: 0.5 },
+      { duration: 180, alpha: 0.5 },
+      { duration: 240, position: { x: 30 } },
+    ])
+    expect(controller.session.selectedFrameId).toBe(3)
+
+    scope.stop()
+  })
+
+  it('前移与后移会重排帧并保持选中同一帧', () => {
+    const { controller, frames, scope } = createFixture()
+
+    controller.session.selectedFrameId = 3
+    controller.handleMoveFrame(-1)
+
+    expect(frames.map(frame => frame.duration)).toEqual([120, 240, 180])
+    expect(controller.session.selectedFrameId).toBe(2)
+
+    controller.handleMoveFrame(1)
+
+    expect(frames.map(frame => frame.duration)).toEqual([120, 180, 240])
+    expect(controller.session.selectedFrameId).toBe(3)
+
+    scope.stop()
+  })
+
+  it('选中帧已在边界时前移与后移不会改动帧列表', () => {
+    const { controller, emitFrames, scope } = createFixture()
+
+    controller.session.selectedFrameId = 1
+    controller.handleMoveFrame(-1)
+    controller.session.selectedFrameId = 3
+    controller.handleMoveFrame(1)
+
+    expect(emitFrames).not.toHaveBeenCalled()
+
+    scope.stop()
+  })
+
+  it('选中第一帧与最后一帧只更新选中状态', () => {
+    const { controller, emitFrames, scope } = createFixture()
+
+    controller.handleSelectLastFrame()
+    expect(controller.session.selectedFrameId).toBe(3)
+
+    controller.handleSelectFirstFrame()
+    expect(controller.session.selectedFrameId).toBe(1)
+    expect(emitFrames).not.toHaveBeenCalled()
+
+    scope.stop()
+  })
+
+  it('水平翻转会写入翻转后的缩放轴并可撤销', () => {
+    const { controller, frames, scope } = createFixture()
+
+    controller.session.selectedFrameId = 1
+    controller.handleFlipScaleAxis('x')
+
+    expect(frames[0]).toEqual({
+      duration: 120,
+      position: { x: 10 },
+      scale: { x: -1 },
+    })
+
+    controller.handleUndo()
+    expect(frames[0]).toEqual({ duration: 120, position: { x: 10 } })
+
+    scope.stop()
+  })
 })
