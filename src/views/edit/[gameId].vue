@@ -191,6 +191,8 @@ useShortcutDispatcher({
 useShortcutContext({
   commandPanelOpen: false,
   editorMode: currentEditorMode,
+  // 效果编辑器打开期间屏蔽会打扰会话的全局快捷键（保存、预览面板开关）
+  effectEditorOpen: () => effectEditorProvider.isOpen,
   hasSelection,
   isDirty,
   isModalOpen,
