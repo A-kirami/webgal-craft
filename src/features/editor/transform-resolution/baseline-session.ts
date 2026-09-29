@@ -1,10 +1,12 @@
 import {
   isSetTransformCommand,
   selectTransformBaseline,
+  usesBaseTransformBaseline,
 } from './model'
 
 import type { ResolvedTransformBaseline } from './model'
 import type { commandType } from 'webgal-parser/src/interface/sceneInterface'
+import type { TransformWriteMode } from '~/domain/engine/transform-args'
 import type { Transform } from '~/domain/stage/types'
 
 export type BaseTransformQueryResult =
@@ -36,7 +38,7 @@ export interface TransformBaselineSessionRequest {
   scenePath: string
   sentenceId: number
   target?: string
-  writeDefault: boolean
+  writeMode: TransformWriteMode
 }
 
 export interface TransformBaselineSessionClient {
@@ -132,7 +134,7 @@ export async function resolveTransformBaselineSession(
 
   if (
     !isSetTransformCommand(request.command)
-    || request.writeDefault
+    || usesBaseTransformBaseline(request.writeMode)
     || !request.target
     || !readyBaseTransform
   ) {
@@ -147,7 +149,7 @@ export async function resolveTransformBaselineSession(
     return selectTransformBaseline({
       baseTransform: readyBaseTransform,
       command: request.command,
-      writeDefault: request.writeDefault,
+      writeMode: request.writeMode,
     })
   }
 
@@ -175,6 +177,6 @@ export async function resolveTransformBaselineSession(
     targetTransform: transformBaselineResult.status === 'ready'
       ? transformBaselineResult.transform
       : undefined,
-    writeDefault: request.writeDefault,
+    writeMode: request.writeMode,
   })
 }

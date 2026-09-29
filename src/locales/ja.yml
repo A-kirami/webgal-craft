@@ -792,6 +792,9 @@ edit:
     unsupportedColorFormat: "色値「{value}」の形式は表示・編集できません。"
     invalidColorFormat: "「{value}」は有効な色値ではありません。"
     reservedCallSceneArgument: '"{argument}" は予約済みのため、callScene では使用できません。'
+    unsupportedTransformFrom: このパラメータは現在のエンジンでは無視されます。変形の起点には WebGAL 4.6.5 以降が必要です。
+    legacyTransformWriteArg: このステートメントは旧書き込みパラメータを使用しており、現在のエンジンはそれを適用します。変形の起点を書き込むと、旧パラメータは WebGAL 4.6.4 以前でのみ有効になります。
+    legacyTransformWriteArgOverridden: このステートメントは変形の起点と旧書き込みパラメータの両方を指定しています。現在のエンジンは変形の起点を優先し、旧パラメータは WebGAL 4.6.4 以前でのみ有効になります。
   errors:
     fileSyncFailed: ファイルの同期に失敗しました。しばらくしてからもう一度お試しください。
     previewUnavailable: プレビューURLがありません。先にプレビューを起動してください。
@@ -1193,6 +1196,7 @@ edit:
       focusY: 注視点 Y
       focusInstant: 即時注視
       zIndex: 表示レイヤー
+      transformFrom: 変形の起点
       writeDefault: デフォルト継承
       keep: 跨文再生
     paramTooltips:
@@ -1321,6 +1325,8 @@ edit:
       effectCherryBlossoms: 桜
       universalSoftIn: フェードイン
       universalSoftOff: フェードアウト
+      transformFromCurrent: 現在の状態
+      transformFromDefault: デフォルト状態
     effectEditor: エフェクトエディター
     statementList: ステートメントリスト
     noSelection: ステートメントを選択して編集を開始

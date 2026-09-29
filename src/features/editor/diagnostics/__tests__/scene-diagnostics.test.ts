@@ -284,6 +284,48 @@ describe('diagnoseScene', () => {
       parseSentence('intro: 你好 -fontColor=;'),
     ])).toEqual([])
   })
+
+  it('按引擎能力诊断变换写入参数', () => {
+    const sentences = [
+      parseSentence('setTransform: {} -transformFrom=default;'),
+      parseSentence('setTransform: {} -writeDefault -ignoreDefault;'),
+      parseSentence('changeBg: bg.png -ignoreDefault;'),
+    ]
+
+    expect(diagnoseScene(sentences, {
+      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    })).toEqual([{
+      code: 'unsupported-transform-from',
+      field: { kind: 'argument', key: 'transformFrom' },
+      severity: 'warning',
+      source: 'engine',
+      statementIndex: 0,
+      value: 'default',
+    }])
+
+    expect(diagnoseScene(sentences, {
+      runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    })).toEqual([
+      {
+        code: 'legacy-transform-write-arg',
+        field: { kind: 'argument', key: 'writeDefault' },
+        overriddenByTransformFrom: false,
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 1,
+        value: 'writeDefault',
+      },
+      {
+        code: 'legacy-transform-write-arg',
+        field: { kind: 'argument', key: 'ignoreDefault' },
+        overriddenByTransformFrom: false,
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 1,
+        value: 'ignoreDefault',
+      },
+    ])
+  })
 })
 
 describe('diagnoseEditorDocument', () => {

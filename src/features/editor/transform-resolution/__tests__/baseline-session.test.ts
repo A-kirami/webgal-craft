@@ -8,6 +8,19 @@ import type {
   TransformBaselineQueryResult,
   TransformBaselineSessionClient,
 } from '../baseline-session'
+import type { TransformWriteMode } from '~/domain/engine/transform-args'
+
+const CURRENT_WRITE_MODE: TransformWriteMode = {
+  transformFrom: 'current',
+  writeDefault: false,
+  writeFullEffect: false,
+}
+
+const DEFAULT_WRITE_MODE: TransformWriteMode = {
+  transformFrom: 'default',
+  writeDefault: true,
+  writeFullEffect: true,
+}
 
 function createClient(options: {
   baseTransform: BaseTransformQueryResult
@@ -63,7 +76,7 @@ describe('resolveTransformBaselineSession', () => {
         scenePath: 'scene/start.txt',
         sentenceId: 3,
         target: 'fig-center',
-        writeDefault: false,
+        writeMode: CURRENT_WRITE_MODE,
       },
     })).resolves.toEqual({
       baselineSource: 'base',
@@ -101,7 +114,7 @@ describe('resolveTransformBaselineSession', () => {
         scenePath: 'scene/start.txt',
         sentenceId: 4,
         target: 'fig-center',
-        writeDefault: true,
+        writeMode: DEFAULT_WRITE_MODE,
       },
       createTransformBaselineRevision: () => 'rev-effect-1',
     })).resolves.toEqual({
@@ -151,7 +164,7 @@ describe('resolveTransformBaselineSession', () => {
         scenePath: 'scene/start.txt',
         sentenceId: 5,
         target: 'fig-center',
-        writeDefault: false,
+        writeMode: CURRENT_WRITE_MODE,
       },
       createTransformBaselineRevision: () => 'rev-effect-1',
     })).resolves.toEqual({
@@ -208,7 +221,7 @@ describe('resolveTransformBaselineSession', () => {
           scenePath: 'scene/start.txt',
           sentenceId: 5,
           target: 'fig-center',
-          writeDefault: false,
+          writeMode: CURRENT_WRITE_MODE,
         },
         createTransformBaselineRevision: () => 'rev-effect-1',
       })
@@ -257,12 +270,63 @@ describe('resolveTransformBaselineSession', () => {
         scenePath: 'scene/start.txt',
         sentenceId: 5,
         target: 'fig-center',
-        writeDefault: false,
+        writeMode: CURRENT_WRITE_MODE,
       },
       createTransformBaselineRevision: () => 'rev-effect-1',
       maxTargetLoadingRetries: 0,
     })).resolves.toEqual({
       baselineSource: 'unknown',
     })
+  })
+
+  it('写入默认值但并行播放时仍按语句前基线解析', async () => {
+    const client = createClient({
+      baseTransform: {
+        status: 'ready',
+        transform: {
+          position: { x: 0, y: 20 },
+        },
+      },
+      transformBaselines: [
+        {
+          status: 'ready',
+          transform: {
+            position: { x: 1000 },
+          },
+        },
+      ],
+    })
+
+    await expect(resolveTransformBaselineSession({
+      client,
+      request: {
+        command: commandType.setTransform,
+        lineCommandString: 'setTransform: {} -transformFrom=default -parallel;',
+        scenePath: 'scene/start.txt',
+        sentenceId: 6,
+        target: 'fig-center',
+        writeMode: {
+          transformFrom: 'default',
+          writeDefault: true,
+          writeFullEffect: false,
+        },
+      },
+      createTransformBaselineRevision: () => 'rev-effect-1',
+    })).resolves.toEqual({
+      baselineSource: 'protocol',
+      baselineTransform: {
+        position: { x: 1000, y: 20 },
+      },
+    })
+
+    expect(client.syncScene).toHaveBeenCalledWith(
+      'scene/start.txt',
+      6,
+      'setTransform: {} -transformFrom=default -parallel;',
+      {
+        transformBaselineRevision: 'rev-effect-1',
+        settleMode: 'immediate',
+      },
+    )
   })
 })

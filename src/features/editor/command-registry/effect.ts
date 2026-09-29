@@ -1,6 +1,6 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { ANIMATION_RESOURCE_REFERENCE, CONTINUE, DURATION, EFFECT_DURATION, EFFECT_EASE, ENTER_ANIMATION, EXIT_ANIMATION, IGNORE_DEFAULT, KEEP, NEXT, PARALLEL, TARGET, WRITE_DEFAULT } from './common-params'
+import { ANIMATION_RESOURCE_REFERENCE, CONTINUE, DURATION, EFFECT_DURATION, EFFECT_EASE, ENTER_ANIMATION, EXIT_ANIMATION, IGNORE_DEFAULT, KEEP, LEGACY_IGNORE_DEFAULT, LEGACY_WRITE_DEFAULT, NEXT, PARALLEL, TARGET, TRANSFORM_FROM } from './common-params'
 import { arg, content } from './schema'
 
 import type { CommandEntry } from './schema'
@@ -18,10 +18,11 @@ export const effectEntries: CommandEntry[] = [
       arg(TARGET),
       arg(EFFECT_DURATION),
       arg(EFFECT_EASE),
-      arg(WRITE_DEFAULT),
+      arg(TRANSFORM_FROM),
+      arg(LEGACY_WRITE_DEFAULT),
       arg(KEEP),
       arg(PARALLEL),
-      arg(IGNORE_DEFAULT),
+      arg(LEGACY_IGNORE_DEFAULT),
       arg(NEXT),
       arg(CONTINUE),
     ],
@@ -36,10 +37,11 @@ export const effectEntries: CommandEntry[] = [
     fields: [
       content({ key: 'animation', label: t => t('edit.visualEditor.params.animationName'), type: 'text' }),
       arg(TARGET),
-      arg(WRITE_DEFAULT),
+      arg(TRANSFORM_FROM),
+      arg(LEGACY_WRITE_DEFAULT),
       arg(KEEP),
       arg(PARALLEL),
-      arg(IGNORE_DEFAULT),
+      arg(LEGACY_IGNORE_DEFAULT),
       arg(NEXT),
       arg(CONTINUE),
     ],
@@ -53,10 +55,11 @@ export const effectEntries: CommandEntry[] = [
     fields: [
       content({ key: 'animation', label: t => t('edit.visualEditor.params.animationName'), type: 'choice', resourceReference: ANIMATION_RESOURCE_REFERENCE, variant: 'combobox', placeholder: t => t('edit.visualEditor.placeholder.searchAnimation'), dynamicOptionsKey: 'animationTableEntries', grouping: { mode: 'path' }, options: [] }),
       arg(TARGET),
-      arg(WRITE_DEFAULT),
+      arg(TRANSFORM_FROM),
+      arg(LEGACY_WRITE_DEFAULT),
       arg(KEEP),
       arg(PARALLEL),
-      arg(IGNORE_DEFAULT),
+      arg(LEGACY_IGNORE_DEFAULT),
       arg(NEXT),
       arg(CONTINUE),
     ],

@@ -14,7 +14,7 @@ vi.mock('~/plugins/i18n', () => ({
   i18n: { global: { t: (key: string, params: Record<string, unknown> = {}) => `${key}:${Object.values(params).join(':')}` } },
 }))
 
-import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID } from '~/features/editor/text-editor/text-editor-language'
 import { updateEditorDiagnostics } from '~/plugins/editor/diagnostics'
 
@@ -213,6 +213,90 @@ describe('updateEditorDiagnostics', () => {
     ])
   })
 
+  it('旧引擎标记整个 transformFrom 参数而不是它的取值', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+
+    const model = createModel('setTransform: {} -target=fig-center -transformFrom=default;')
+    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(readMarkers(model)).toEqual([expect.objectContaining({
+      startLineNumber: 1,
+      startColumn: 37,
+      endColumn: 59,
+      severity: monaco.MarkerSeverity.Warning,
+      message: 'edit.diagnostics.unsupportedTransformFrom:',
+    })])
+  })
+
+  it('多行语句中的 transformFrom 定位到参数所在的物理行', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+
+    const model = createModel([
+      'setTransform:',
+      '  -transformFrom=default;',
+    ].join('\n'))
+    updateEditorDiagnostics(model, { ...LATEST_ENGINE_RUNTIME_CAPABILITIES, transformFrom: false })
+
+    expect(readMarkers(model)).toEqual([expect.objectContaining({
+      startLineNumber: 2,
+      startColumn: 3,
+      endColumn: 25,
+      severity: monaco.MarkerSeverity.Warning,
+      message: 'edit.diagnostics.unsupportedTransformFrom:',
+    })])
+  })
+
+  it('新引擎标记整个旧写入参数 token', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+
+    const model = createModel('setTransform: {} -writeDefault -ignoreDefault=false;')
+    updateEditorDiagnostics(model, LATEST_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(readMarkers(model)).toEqual([
+      expect.objectContaining({
+        startLineNumber: 1,
+        startColumn: 18,
+        endColumn: 31,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.legacyTransformWriteArg:',
+      }),
+      expect.objectContaining({
+        startLineNumber: 1,
+        startColumn: 32,
+        endColumn: 52,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.legacyTransformWriteArg:',
+      }),
+    ])
+  })
+
+  it('同句含 transformFrom 时旧写入参数提示被当前引擎忽略', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+
+    const model = createModel('setTransform: {} -transformFrom=current -writeDefault;')
+    updateEditorDiagnostics(model, LATEST_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(readMarkers(model)).toEqual([expect.objectContaining({
+      startLineNumber: 1,
+      startColumn: 41,
+      endColumn: 54,
+      severity: monaco.MarkerSeverity.Warning,
+      message: 'edit.diagnostics.legacyTransformWriteArgOverridden:',
+    })])
+  })
+
   it('legacy 语言模型仍会生成旧运行时诊断', () => {
     useResourceIndex.mockReturnValue({
       status: { value: 'ready' },
@@ -353,15 +437,42 @@ describe('updateEditorDiagnostics', () => {
       }),
       expect.objectContaining({
         startLineNumber: 3,
-        startColumn: 29,
+        startColumn: 22,
         endColumn: 34,
         severity: monaco.MarkerSeverity.Warning,
         message: 'edit.diagnostics.unsupportedCallSceneArgument:',
       }),
       expect.objectContaining({
         startLineNumber: 3,
-        startColumn: 50,
+        startColumn: 35,
         endColumn: 56,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.unsupportedCallSceneArgument:',
+      }),
+    ])
+  })
+
+  it('callScene 的保留参数与不支持参数都标记整个参数 token', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+
+    const model = createModel('callScene:battle.txt -next=false -enemy=slime;')
+    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(readMarkers(model)).toEqual([
+      expect.objectContaining({
+        startLineNumber: 1,
+        startColumn: 22,
+        endColumn: 33,
+        severity: monaco.MarkerSeverity.Warning,
+        message: 'edit.diagnostics.reservedCallSceneArgument:next',
+      }),
+      expect.objectContaining({
+        startLineNumber: 1,
+        startColumn: 34,
+        endColumn: 46,
         severity: monaco.MarkerSeverity.Warning,
         message: 'edit.diagnostics.unsupportedCallSceneArgument:',
       }),

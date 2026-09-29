@@ -21,18 +21,28 @@ describe('Engine runtime capabilities', () => {
       multilineStatements: false,
       opusVocalShorthand: false,
       sceneSemantics: false,
+      transformFrom: false,
     })
     expect(resolveEngineRuntimeCapabilities('4.6.3')).toEqual({
       figurePositions: true,
       multilineStatements: true,
       opusVocalShorthand: true,
       sceneSemantics: true,
+      transformFrom: false,
+    })
+    expect(resolveEngineRuntimeCapabilities('4.6.5')).toEqual({
+      figurePositions: true,
+      multilineStatements: true,
+      opusVocalShorthand: true,
+      sceneSemantics: true,
+      transformFrom: true,
     })
     expect(resolveEngineRuntimeCapabilities('4.10.0')).toEqual({
       figurePositions: true,
       multilineStatements: true,
       opusVocalShorthand: true,
       sceneSemantics: true,
+      transformFrom: true,
     })
   })
 
@@ -47,8 +57,12 @@ describe('Engine runtime capabilities', () => {
     expect(supportsEngineRuntimeCapability('4.6.3-beta.1', 'multilineStatements')).toBe(false)
     expect(supportsEngineRuntimeCapability('4.6.3-beta.1', 'opusVocalShorthand')).toBe(false)
     expect(supportsEngineRuntimeCapability('4.6.3-beta.1', 'sceneSemantics')).toBe(false)
+    expect(supportsEngineRuntimeCapability('4.6.5-beta.1', 'transformFrom')).toBe(false)
+    expect(supportsEngineRuntimeCapability('4.6.4', 'transformFrom')).toBe(false)
+    expect(supportsEngineRuntimeCapability('4.6.5', 'transformFrom')).toBe(true)
     expect(supportsEngineRuntimeCapability(undefined, 'multilineStatements')).toBe(false)
     expect(supportsEngineRuntimeCapability(undefined, 'opusVocalShorthand')).toBe(false)
     expect(supportsEngineRuntimeCapability(undefined, 'sceneSemantics')).toBe(false)
+    expect(supportsEngineRuntimeCapability(undefined, 'transformFrom')).toBe(false)
   })
 })

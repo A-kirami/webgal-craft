@@ -826,6 +826,28 @@ describe('编辑器文本与文档流程', () => {
     ])
   })
 
+  it('仅 transformFrom 能力变化时也会刷新已打开场景的能力快照', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/scene/transform-from-capabilities.txt')
+
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode('setTransform: {};'))
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'transform-from-capabilities.txt',
+      path,
+      () => editorStore.hasState(path) && editorStore.currentTextProjection !== undefined,
+      'load transformFrom scene',
+    )
+
+    const capabilities = { ...LEGACY_ENGINE_RUNTIME_CAPABILITIES, transformFrom: true }
+    resourceStoreMock.currentEngineRuntimeCapabilities = capabilities
+    await flushEditorWatchers()
+
+    expect(editorStore.currentTextProjection?.runtimeCapabilities).toEqual(capabilities)
+  })
+
   it('切换到可视模式时会记录待激活投影并请求重新聚焦编辑器表面', async () => {
     const tabsStore = useTabsStore()
     const path = AbsPath.from('/game/scene/switch-mode-focus.txt')

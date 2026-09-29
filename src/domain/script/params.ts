@@ -3,7 +3,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import { readSayFigureTargetId } from '~/domain/script/say-figure'
 import { CHANGE_FIGURE_POSITION_FLAGS, CommandNode, GenericCommandNode, isGenericNode } from '~/domain/script/types'
 import { getCommandConfig } from '~/features/editor/command-registry/index'
-import { isFlagChoiceField, readArgFields, UNSPECIFIED } from '~/features/editor/command-registry/schema'
+import { isFlagChoiceField, readAllArgFields, UNSPECIFIED } from '~/features/editor/command-registry/schema'
 
 export interface CommandParamDescriptor {
   key: string
@@ -52,7 +52,9 @@ function getRegistryMeta(type: commandType): Map<string, ResolvedFieldMeta> {
 
   cached = new Map<string, ResolvedFieldMeta>()
   const entry = getCommandConfig(type)
-  const argFields = readArgFields(entry)
+  // 存储元信息与展示能力无关：hiddenWhenCapability 隐藏的字段仍是已知参数，
+  // 否则隐藏会改变参数顺序与未知参数判定
+  const argFields = readAllArgFields(entry)
 
   for (const af of argFields) {
     if (af.jsonMeta) {

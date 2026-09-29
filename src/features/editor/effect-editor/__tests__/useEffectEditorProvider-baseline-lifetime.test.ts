@@ -4,11 +4,13 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { effectScope, nextTick, reactive } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { createEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 
 import type { EffectScope } from 'vue'
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type {
   EffectEditorOpenTarget,
   EffectEditorProvider,
@@ -108,12 +110,12 @@ afterAll(() => {
   runtimeGlobals.logger = originalRuntimeGlobals.logger
 })
 
-function createSetTransformSentence(): ISentence {
+function createSetTransformSentence(args: arg[] = []): ISentence {
   return {
     command: commandType.setTransform,
     commandRaw: 'setTransform',
     content: '{"scale":{"x":2}}',
-    args: [],
+    args,
     sentenceAssets: [],
     subScene: [],
     inlineComment: '',
@@ -123,10 +125,15 @@ function createSetTransformSentence(): ISentence {
   }
 }
 
-function createOpenTarget(options: { onApply?: EffectEditorOpenTarget['onApply'] } = {}): EffectEditorOpenTarget {
+function createOpenTarget(options: {
+  baseSentence?: ISentence
+  runtimeCapabilities?: EngineRuntimeCapabilities
+  onApply?: EffectEditorOpenTarget['onApply']
+} = {}): EffectEditorOpenTarget {
   return {
-    baseSentence: createSetTransformSentence(),
+    baseSentence: options.baseSentence ?? createSetTransformSentence(),
     effectTarget: 'fig-center',
+    runtimeCapabilities: options.runtimeCapabilities,
     scenePath: 'scene/start.txt',
     sentenceId: 3,
     onApply: options.onApply ?? (() => { /* no-op */ }),
@@ -280,5 +287,79 @@ describe('useEffectEditorProvider 预览基线生命周期', () => {
     await new Promise(resolve => setTimeout(resolve, 30))
 
     expect(client.syncScene).toHaveBeenCalledTimes(1)
+  })
+
+  it('transformFrom=current 与 writeDefault=false 取同样的语句前基线', async () => {
+    const client = createBaselineClient()
+    const provider = createProvider(client)
+    await provider.open(createOpenTarget({
+      baseSentence: createSetTransformSentence([{ key: 'transformFrom', value: 'current' }]),
+      runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    }))
+    await vi.waitFor(() => {
+      expect(provider.session?.baselineResolved).toBe(true)
+    })
+
+    expect(provider.session?.writeMode).toEqual({
+      transformFrom: 'current',
+      writeDefault: false,
+      writeFullEffect: false,
+    })
+    expect(provider.session?.baselineSource).toBe('protocol')
+    expect(client.queryTransformBaseline).toHaveBeenCalledTimes(1)
+    expect(client.syncScene).toHaveBeenCalledWith(
+      'scene/start.txt',
+      3,
+      expect.any(String),
+      expect.objectContaining({
+        settleMode: 'immediate',
+        transformBaselineRevision: expect.any(String),
+      }),
+    )
+  })
+
+  it('transformFrom=default 取基础默认值基线且不查询语句前快照', async () => {
+    const client = createBaselineClient()
+    const provider = createProvider(client)
+    await provider.open(createOpenTarget({
+      baseSentence: createSetTransformSentence([{ key: 'transformFrom', value: 'default' }]),
+      runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    }))
+    await vi.waitFor(() => {
+      expect(provider.session?.baselineResolved).toBe(true)
+    })
+
+    expect(provider.session?.writeMode).toEqual({
+      transformFrom: 'default',
+      writeDefault: true,
+      writeFullEffect: true,
+    })
+    expect(provider.session?.baselineSource).toBe('base')
+    expect(client.queryTransformBaseline).not.toHaveBeenCalled()
+    expect(client.syncScene).toHaveBeenCalledWith(
+      'scene/start.txt',
+      3,
+      expect.any(String),
+      { settleMode: 'immediate' },
+    )
+  })
+
+  it('旧引擎忽略 transformFrom 并沿用旧解析结果', async () => {
+    const client = createBaselineClient()
+    const provider = createProvider(client)
+    await provider.open(createOpenTarget({
+      baseSentence: createSetTransformSentence([{ key: 'transformFrom', value: 'default' }]),
+      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    }))
+    await vi.waitFor(() => {
+      expect(provider.session?.baselineResolved).toBe(true)
+    })
+
+    expect(provider.session?.writeMode).toEqual({
+      transformFrom: 'current',
+      writeDefault: false,
+      writeFullEffect: true,
+    })
+    expect(provider.session?.baselineSource).toBe('protocol')
   })
 })
